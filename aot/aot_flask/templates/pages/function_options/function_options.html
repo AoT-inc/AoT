@@ -1,0 +1,87 @@
+<div id="mod_function_{{each_function.unique_id}}">
+  <form id="mod_function_form" method="post" action="/function">
+    {{form_conditional.csrf_token}}
+    {{form_conditional.function_id(value=each_function.unique_id)}}
+    {{form_conditional.function_type(value='function')}}
+  
+    <div class="row small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em;">
+      <div class="col-auto">
+        <button type="button" class="form-control btn btn-primary btn-sm btn-block" data-dismiss="modal">{{_('닫기')}}</button>
+      </div>
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'function_mod');" name="function_mod" value="{{_('저장')}}" class="form-control btn btn-primary btn-sm btn-block" type="button"/>
+      </div>
+      <div class="col-auto">
+        <input onclick="return confirm('{{_('삭제하시겠습니까?')}}') && $(this).processRequest(this, 'function_delete');" name="function_delete" value="{{_('삭제')}}" class="form-control btn btn-primary btn-sm btn-block" type="button"/>
+      </div>
+      {% if each_function.function_type == 'function_actions' %}
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'execute_all_actions');" name="execute_all_actions" value="{{_('모든 동작 실행')}}" class="form-control btn btn-primary btn-sm btn-block" type="button"/>
+      </div>
+      {% endif %}
+    </div>
+  
+    <div id="return_text_{{each_function.unique_id}}" class="col-12"></div>
+  
+  {% if each_function.function_type == 'function_actions' %}
+  
+    <div class="row small-gutters" style="padding: 0.5em">
+  
+      <div class="col-12">
+        {{_("이름")}}: 동작 실행
+      </div>
+  
+      <div class="col-12" style="padding-top: 0.3em">
+        나열된 모든 동작을 순차적으로 실행합니다.
+      </div>
+  
+    </div>
+  
+    <div class="row small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em;">
+      <div class="col-auto">
+        {{form_function_base.name.label(class_='control-label')}}
+        <div>
+          {{form_function_base.name(class_='form-control', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+        </div>
+      </div>
+      <div class="col-auto">
+        {{form_function_base.log_level_debug.label(class_='control-label')}}
+        <div class="input-group-text">
+          <input id="log_level_debug" name="log_level_debug" type="checkbox" title="{{dict_translation['log_level_debug']['phrase']}}" value="y"{% if each_function.log_level_debug %} checked{% endif %}>
+        </div>
+      </div>
+    </div>
+  
+  </form>
+  
+  <form method="post" action="/function">
+    {{form_actions.csrf_token}}
+    {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
+    {{form_actions.function_type(class_='form-control', value='function')}}
+  
+    <div class="row align-items-end small-gutters" style="border-bottom: 1px solid #ddd; padding: 1.5em 0 0.2em 0.1em">
+      <div class="col-auto">
+        <select class="selectpicker" data-style="btn btn-primary" data-live-search="true" title="{{_('동작')}}: {{dict_translation['select_one']['title']}}" id="action_type_{{each_function.unique_id}}" name="action_type">
+        {% for value, name in choices_actions %}
+          <option value="{{value}}">{{name}}</option>
+        {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'add_action');" name="add_action" value="{{_('추가')}}" class="form-control btn btn-primary btn-sm btn-block" type="button"/>
+      </div>
+    </div>
+  
+  </form>
+  
+  {% set post_action = "/function" %}
+  
+  <div id="mod_function_actions_{{each_function.unique_id}}">
+  {% for each_action in action if each_action.function_id == each_function.unique_id %}
+    {% include 'pages/actions.html' %}
+  {% endfor %}
+  </div>
+  
+  {% endif %}
+  
+</div>

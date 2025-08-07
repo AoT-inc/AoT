@@ -1,0 +1,126 @@
+{% extends "layout.html" %}
+{% set active_page = "export" %}
+{% set help_page = ["https://aot-inc.github.io/AoT/Export-Import/", "내보내기 가져오기"] %}
+
+{% block title %} - 내보내기 가져오기{% endblock %}
+
+{% block head %}
+<script type="text/javascript" src="/static/js/moment.min.js"></script>
+<script type="text/javascript" src="/static/js/daterangepicker.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/daterangepicker.css" />
+{% endblock %}
+
+{% block body %}
+<!-- 경로: /export -->
+<div class="container">
+  {% include 'flash_messages.html' %}
+
+  <h4>내보내기 가져오기 <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+
+  <h4 style="padding-top: 1em">CSV로 측정 데이터 내보내기</h4>
+
+  <p>이 기능은 지정한 날짜/시간 범위 내의 모든 측정 데이터를 쉼표로 구분된 값(CSV) 형식(타임스탬프, 측정값)으로 내보냅니다.</p>
+  <p>참고 1: 대용량 데이터 요청 시 처리에 오랜 시간이 소요될 수 있습니다.</p>
+  <p>참고 2: 날짜와 시간은 InfluxDB에 UTC로 저장되므로, 현지 시간에 맞게 시간대를 조정해야 합니다.</p>
+
+  <form method="post" action="/export">
+    {{form_export_measurements.csrf_token}}
+    <div class="row small-gutters" style="padding-top: 1em; margin-left: 0;">
+      <div class="col-auto px-0">
+        {{form_export_measurements.measurement.label(class_='control-label')}}
+        <div>
+          <select class="selectpicker" data-style="btn btn-primary" id="measurement" name="measurement">
+            {% for each_input_form in choices_input -%}
+              <option value="{{each_input_form['value']}}">{{each_input_form['item']}}</option>
+            {% endfor -%}
+            {% for each_output_form in choices_output  -%}
+              <option value="{{each_output_form['value']}}">{{each_output_form['item']}}</option>
+            {% endfor -%}
+            {% for each_function_form in choices_function -%}
+              <option value="{{each_function_form['value']}}">{{each_function_form['item']}}</option>
+            {% endfor -%}
+          </select>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        {{form_export_measurements.date_range.label(class_='control-label')}}
+        <div>
+          <input class="form-control" type="text" name="date_range" value="{{start_picker}} - {{end_picker}}" />
+        </div>
+      </div>
+    </div>
+  
+    <!-- 여기에 margin-top을 추가해서 버튼과 위쪽 컨텐츠 간격 확보 -->
+    <div class="form-inline" style="margin-top: 1em;">
+      <div class="form-group">
+        {{form_export_measurements.export_data_csv(class_='btn btn-primary')}}
+      </div>
+    </div>
+  </form>
+
+  <h4 style="padding-top: 2em">InfluxDB 데이터베이스 및 메타스토어를 ZIP 파일로 내보내기</h4>
+
+  <p>이 기능은 모든 측정 데이터가 포함된 InfluxDB 백업 파일들을 ZIP 파일로 생성합니다. 이 파일들은 버전 1.x의 경우 "influxd backup -portable" 명령, 버전 2.x의 경우 "influx backup" 명령으로 생성됩니다. 백업 복원 방법은 InfluxDB 문서를 참조하세요.</p>
+
+  <form method="post" action="/export">
+  {{form_export_influxdb.csrf_token}}
+  <div class="form-inline">
+    <div class="form-group">
+      {{form_export_influxdb.export_influxdb_zip(class_='btn btn-primary')}}
+    </div>
+  </div>
+  </form>
+
+  <h4 style="padding-top: 2em">AoT 설정 데이터를 ZIP 파일로 내보내기</h4>
+
+  <p>이 기능은 AoT 구성 및 사용자 정보가 포함된 설정 데이터베이스를 ZIP 파일로 생성합니다. 또한, 사용자 지정 함수, 입력, 출력, 위젯도 포함됩니다.</p>
+
+  <form method="post" action="/export">
+  {{form_export_settings.csrf_token}}
+  <div class="form-inline">
+    <div class="form-group">
+      {{form_export_settings.export_settings_zip(class_='btn btn-primary')}}
+    </div>
+  </div>
+  </form>
+
+  <h4 style="padding-top: 2em">ZIP 파일로부터 AoT 설정 데이터 가져오기</h4>
+
+  <p>경고: 설정 데이터를 가져오기 전에 <a href="/admin/backup">AoT 백업</a>을 반드시 생성하세요!</p>
+
+  <p>이 기능은 AoT 설정 데이터베이스와 사용자 지정 함수/입력/출력/위젯을 포함하는 ZIP 파일을 업로드하여 현재 설정을 대체할 수 있도록 합니다. 현재 AoT 버전과 동일하거나 이전 버전의 데이터베이스만 가져와야 합니다. 이를 확인하는 절차는 없으나, 현재 버전보다 높은 버전의 데이터베이스를 가져올 경우 문제가 발생할 수 있습니다. 또한, 사용자 지정 컨트롤러가 가져오는 AoT 버전과 호환되지 않을 경우에도 문제가 발생할 수 있습니다.</p>
+
+  <p>참고 1: 이 기능은 모든 설정, 사용자 계정, 사용자 지정 함수/입력/출력/위젯을 덮어쓰며, 웹 UI에서 로그아웃됩니다. 현재 데이터베이스의 백업은 /opt/AoT/databases/aot.db.backup_DATE_TIME 경로에 생성됩니다.</p>
+
+  <p>참고 2: 이 과정 중에 새 데이터베이스는 현재 AoT 버전으로 업그레이드되며, 충족되지 않은 모든 종속성이 설치됩니다. 종속성이 많을 경우 이 과정은 완료하는 데 다소 시간이 소요될 수 있으므로, 인내심을 가지세요.</p>
+
+  <form method="post" action="/export" enctype="multipart/form-data">
+  {{form_import_settings.csrf_token}}
+  <div class="form-inline">
+    <div class="form-group fileinput fileinput-new" data-provides="fileinput">
+      <span class="btn btn-sm btn-file"><input id="settings_import_file" name="settings_import_file" type="file" /></span>
+    </div>
+    <div class="form-group">
+      {{form_import_settings.settings_import_upload(class_='btn btn-primary')}}
+    </div>
+  </div>
+  </form>
+
+  <div style="padding-top: 2em"></div>
+
+</div>
+
+<script type="text/javascript">
+$(function() {
+    $('input[name="date_range"]').daterangepicker({
+        timePicker: true,
+        timePicker24Hour: true,
+        timePickerIncrement: 1,
+        locale: {
+            format: 'MM/DD/YYYY HH:mm'
+        }
+    });
+});
+</script>
+
+{% endblock %}

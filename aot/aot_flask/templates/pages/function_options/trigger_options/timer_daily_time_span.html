@@ -1,0 +1,28 @@
+<div class="col-auto">
+  {{form_trigger.timer_start_time.label(class_='control-label')}}
+  <div>
+    <div class="input-group clockpicker">
+      <input type="text" class="form-control" id="timer_start_time" name="timer_start_time" value="{{each_function.timer_start_time}}">
+      <span class="input-group-addon">
+        <span class="glyphicon glyphicon-time"></span>
+      </span>
+    </div>
+  </div>
+</div>
+<div class="col-auto">
+  {{form_trigger.timer_end_time.label(class_='control-label')}}
+  <div>
+    <div class="input-group clockpicker">
+      <input type="text" class="form-control" id="timer_end_time" name="timer_end_time" value="{{each_function.timer_end_time}}">
+      <span class="input-group-addon">
+        <span class="glyphicon glyphicon-time"></span>
+      </span>
+    </div>
+  </div>
+</div>
+<div class="col-auto">
+  {{form_trigger.period.label(class_='control-label')}}
+  <div>
+    {{form_trigger.period(class_='form-control', value=each_function.period, **{'title':_('동작(Action)과 동작 사이의 시간 간격.')})}}
+  </div>
+</div>

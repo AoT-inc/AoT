@@ -1,0 +1,23 @@
+/*
+/ Custom Dark CSS
+*/
+
+.nav .upgrade_available {
+    background: #660000;
+}
+
+.active-background {
+    background-color: #003002 !important
+}
+
+.inactive-background {
+    background-color: #370100 !important
+}
+
+.pause-background {
+    background-color: #3c3600 !important
+}
+
+.hold-background {
+    background-color: #000239 !important
+}

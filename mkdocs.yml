@@ -1,0 +1,238 @@
+site_name: AoT
+site_url: https://aot-inc.github.io/AoT
+site_author: AoT Inc.
+site_description: AoT Documentation
+repo_name: 'aot-inc/AoT'
+repo_url: 'https://github.com/aot-inc/AoT'
+
+plugins:
+  - search:
+  - i18n:
+      default_language: 'ko'
+#      add_lang_links: False  # option staged to be merged for mkdocs-i18n, hides language links at top of all pages
+      languages:
+        ko: "한국어"
+        en: "English"
+        de: "Deutsche"
+        es: "Español"
+        fr: "Français"
+        id: "Bahasa Indonesia"
+        it: "Italiano"
+        nl: "Nederlands"
+        nn: "Norsk"
+        pl: "Polski"
+        pt: "Português"
+        ru: "русский язык"
+        sr: "српски"
+        sv: "Svenska"
+        tr: "Türkçe"
+        zh: "中文"
+      no_translation:
+        ko: "이 페이지는 한국어로 번역되지 않았습니다."
+        en: "This page isn't translated to English."
+        de: "Deze pagina is niet vertaald naar het Duits."
+        es: "Esta página no está traducida al castellano."
+        fr: "Cette page n'est pas traduite en français."
+        id: "Halaman ini tidak diterjemahkan ke bahasa Indonesia."
+        it: "Questa pagina non è tradotta in italiano."
+        nl: ""
+        nn: "Denne siden er ikke oversatt til norsk."
+        pl: "Ta strona nie jest przetłumaczona na język polski."
+        pt: "Esta página não está traduzida para o português."
+        ru: "Эта страница не переведена на русский язык."
+        sr: "Ова страница није преведена на српски."
+        sv: "Denna sida är inte översatt till svenska."
+        tr: "Bu sayfa Türkçe'ye çevrilmemiştir."
+        zh: "此页面未翻译成中文."
+      translate_nav:
+        en:
+          Usage: "Usage"
+          Supported Devices: "Supported Devices"
+        es:
+          Usage: "Uso"
+          Supported Devices: "Dispositivos Soportados"
+
+  - minify:
+      minify_html: true
+
+extra_css:
+  - css/hide_lang_links.css
+
+theme:
+  name: material
+  language: ko
+  logo: images/favicon.png
+  favicon: images/favicon.png
+  features:
+    - navigation.tabs
+    - navigation.top
+  palette:
+    - scheme: preference
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  font:
+    text: Barlow
+    code: Roboto Mono
+
+markdown_extensions:
+  - admonition
+  - toc:
+     permalink: "~"
+     toc_depth: 4
+  - pymdownx.mark
+  - pymdownx.tabbed
+  - pymdownx.emoji:
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - meta
+
+nav:
+  - Home: index.md
+  - Home: index.en.md
+  - Home: index.de.md
+  - Hogar: index.es.md
+  - Home: index.fr.md
+  - Home: index.id.md
+  - Home: index.it.md
+  - Home: index.nn.md
+  - Home: index.nl.md
+  - Home: index.pl.md
+  - Home: index.pt.md
+  - Home: index.ru.md
+  - Home: index.sr.md
+  - Home: index.sv.md
+  - Home: index.tr.md
+  - Home: index.zh.md
+  - About: About.md
+  - About: About.en.md
+  - About: About.de.md
+  - Sobre: About.es.md
+  - About: About.fr.md
+  - About: About.id.md
+  - About: About.it.md
+  - About: About.nn.md
+  - About: About.nl.md
+  - About: About.pl.md
+  - About: About.pt.md
+  - About: About.ru.md
+  - About: About.sr.md
+  - About: About.sv.md
+  - About: About.tr.md
+  - About: About.zh.md
+  - Usage:
+    - Data Viewing: Data-Viewing.md
+    - Data Viewing: Data-Viewing.en.md
+    - Data Viewing: Data-Viewing.de.md
+    - Data Viewing: Data-Viewing.es.md
+    - Data Viewing: Data-Viewing.fr.md
+    - Data Viewing: Data-Viewing.id.md
+    - Data Viewing: Data-Viewing.it.md
+    - Data Viewing: Data-Viewing.nn.md
+    - Data Viewing: Data-Viewing.nl.md
+    - Data Viewing: Data-Viewing.pl.md
+    - Data Viewing: Data-Viewing.pt.md
+    - Data Viewing: Data-Viewing.ru.md
+    - Data Viewing: Data-Viewing.sr.md
+    - Data Viewing: Data-Viewing.sv.md
+    - Data Viewing: Data-Viewing.tr.md
+    - Data Viewing: Data-Viewing.zh.md
+    - Inputs.md
+    - Outputs.md
+    - Functions.md
+    - Actions.md
+    - Calibration.md
+    - Methods.md
+    - Alerts.md
+    - Notes.md
+    - Camera.md
+    - Energy Usage: Energy-Usage.md
+    - Python-Code.md
+  - Supported Devices:
+    - Inputs Sorted by Measurement: Supported-Inputs-By-Measurement.md
+    - Supported Inputs: Supported-Inputs.md
+    - Supported Outputs: Supported-Outputs.md
+    - Supported Functions: Supported-Functions.md
+    - Supported Actions: Supported-Actions.md
+    - Supported Widgets: Supported-Widgets.md
+    - I2C Multiplexers: I2C-Multiplexers.md
+    - Analog-To-Digital Converters: Analog-To-Digital-Converters.md
+    - Interfaces.md
+    - Dependencies.md
+    - Device Notes: Device-Notes.md
+  - System:
+    - System Information: System-Information.md
+    - System Configuration: Configuration-Settings.md
+    - Upgrade/Backup/Restore: Upgrade-Backup-Restore.md
+    - Export/Import: Export-Import.md
+    - Error Codes: Error-Codes.md
+    - AoT Client: AoT-Client.md
+    - API.md
+  - Troubleshooting.md
+
+extra:
+  version: 8.16.0
+  alternate:
+    - name: 한국어
+      link: ""
+      lang: ko
+    - name: English
+      link: index.en/
+      lang: en
+    - name: Deutsche
+      link: index.de/
+      lang: de
+    - name: Español
+      link: index.es/
+      lang: es
+    - name: Français
+      link: index.fr/
+      lang: fr
+    - name: Bahasa Indonesia
+      link: index.id/
+      lang: id
+    - name: Italiano
+      link: index.it/
+      lang: it
+    - name: Nederlands
+      link: index.nl/
+      lang: nl
+    - name: Norsk
+      link: index.nn/
+      lang: nn
+    - name: Polski
+      link: index.pl/
+      lang: pl
+    - name: Português
+      link: index.pt/
+      lang: pt
+    - name: русский язык
+      link: index.ru/
+      lang: ru
+    - name: српски
+      link: index.sr/
+      lang: sr
+    - name: Svenska
+      link: index.sv/
+      lang: sv
+    - name: Türkçe
+      link: index.tr/
+      lang: tr
+    - name: 中文
+      link: index.zh/
+      lang: zh

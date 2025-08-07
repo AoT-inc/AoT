@@ -1,0 +1,20 @@
+<html>
+  <head>
+    <title>오류 500: 내부 서버 오류</title>
+  </head>
+  <body>
+    <h2>오류 500: 내부 서버 오류</h2>
+
+    <p>문제가 발생했지만, 아마도 사용자 잘못은 아닙니다. 이 문제에 대해 개발자에게 알리는 것은 AoT 지원에 매우 중요합니다. 그러나 먼저 <a href="https://github.com/aot-inc/AoT/issues" target="_blank">GitHub 이슈</a>와 <a href="https://forum.radicaldiy.com/search" target="_blank">포럼</a>에서 이 문제가 이미 보고되었는지 확인하십시오. 만약 보고되지 않았다면, 아래의 진단 정보와 오류 추적 기록(전체 추적 기록을 복사)을 포함하여 <a href="https://github.com/aot-inc/AoT/issues/new?template=problem-bug-report.md" target="_blank">GitHub에 새 이슈를 제출</a>해 주십시오.</p>
+
+    <p>
+      버전: {{dict_return["version_aot"]}}
+      <br/>데이터베이스: {{dict_return["version_alembic"]}}
+      <br/>모델: {{dict_return["model"]}}
+    </p>
+    <p>릴리즈:<br/>{{dict_return["lsb_release"]|safe}}</p>
+
+    <p>오류 (전체 추적 기록):</p>
+    <pre>{{dict_return["trace"]}}</pre>
+  </body>
+</html>

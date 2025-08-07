@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% set dashboard_dict = dict() %}
+
+{% block title %} - 10초만 기다려 주세요{% endblock %}
+
+{% block head %}
+  <meta http-equiv="refresh" content="10;url=/dashboard/{{dashboard_id}}" />
+{% endblock %}
+
+{% block body %}
+  <!-- Route: /dashboard -->
+  <div class="container">
+  {% include 'flash_messages.html' %}
+  </div>
+
+  <div class="container-fluid" style="text-align: center">
+    이 위젯을 추가하려면 HTML이 생성되고 프런트엔드가 새로고침되어야 합니다. 프런트엔드가 다시 로드될 때까지 잠시 기다려 주세요. 10초 후 자동으로 이동됩니다.
+    10초가 지나도록 이동되지 않으면, <a href="/dashboard/{{dashboard_id}}">여기</a>를 클릭하거나, 새로고침을 눌러주세요.
+  </div>
+
+{% endblock %}

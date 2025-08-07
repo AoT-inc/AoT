@@ -1,0 +1,40 @@
+<div class="col-auto">
+  <label class='control-label'>지속 시간 방식</label>
+  <div>
+    <select class="form-control form-tooltip form-dropdown" id="unique_id_1" name="unique_id_1" data-placement="top" title="{{_('이 지속 시간 방식을 실행하여 출력 값을 사용해 PWM 출력의 듀티 사이클을 설정합니다.')}}">
+      <option value="">{{dict_translation['select_one']['title']}}</option>
+      {%- for each_method in method -%}
+        <option value="{{each_method.unique_id}}"{% if each_function.unique_id_1 == each_method.unique_id %} selected{% endif %}>[{{'%02d' % each_method.id}}] {{each_method.name}}</option>
+      {%- endfor -%}
+    </select>
+  </div>
+</div>
+<div class="col-auto">
+  <label class='control-label'>PWM 출력</label>
+  <div>
+    <select class="form-control form-tooltip form-dropdown" id="unique_id_2" name="unique_id_2" data-placement="top" title="{{_('이 PWM 출력에 듀티 사이클을 적용합니다.')}}">
+      <option value="">{{dict_translation['select_one']['title']}}</option>
+      {%- for each_output in choices_output_channels if 'pwm' in each_output['types'] -%}
+        <option value="{{each_output['value']}}"{% if each_function.unique_id_2 == each_output['value'].split(",")[0] and each_function.unique_id_3 == each_output['value'].split(",")[1] %} selected{% endif %}>{{each_output['item']}}</option>
+      {%- endfor -%}
+    </select>
+  </div>
+</div>
+<div class="col-auto">
+  {{form_trigger.period.label(class_='control-label')}}
+  <div>
+    {{form_trigger.period(class_='form-control', value=each_function.period, **{'title':_('PWM 출력의 듀티 사이클을 계산하여 설정하는 사이의 지속 시간')})}}
+  </div>
+</div>
+<div class="col-auto">
+  {{form_trigger.trigger_actions_at_period.label(class_='control-label')}}
+  <div class="input-group-text">
+    <input id="trigger_actions_at_period" name="trigger_actions_at_period" type="checkbox" value="y"{% if each_function.trigger_actions_at_period %} checked{% endif %}>
+  </div>
+</div>
+<div class="col-auto">
+  {{form_trigger.trigger_actions_at_start.label(class_='control-label')}}
+  <div class="input-group-text">
+    <input id="trigger_actions_at_start" name="trigger_actions_at_start" type="checkbox" value="y"{% if each_function.trigger_actions_at_start %} checked{% endif %}>
+  </div>
+</div>

@@ -1,0 +1,19 @@
+{{form_mod_pid_pwm_lower.csrf_token}}
+<div class="col-auto">
+  {{form_mod_pid_pwm_lower.lower_min_duty_cycle.label(class_='control-label')}}
+  <div>
+    {{form_mod_pid_pwm_lower.lower_min_duty_cycle(class_='form-control', value=each_function.lower_min_duration, **{'title':_('PWM 최소 듀티 사이클 (in %%) - 최소 출력 수준을 설정하세요. 0에서 100 사이의 값을 입력하세요.')})}}
+  </div>
+</div>
+<div class="col-auto">
+  {{form_mod_pid_pwm_lower.lower_max_duty_cycle.label(class_='control-label')}}
+  <div>
+    {{form_mod_pid_pwm_lower.lower_max_duty_cycle(class_='form-control', value=each_function.lower_max_duration, **{'title':_('PWM 최대 듀티 사이클 (in %%) - 최대 출력 수준을 설정하세요. 0에서 100 사이의 값을 입력하세요.')})}}
+  </div>
+</div>
+<div class="col-auto">
+  {{form_mod_pid_pwm_lower.lower_always_min_pwm.label(class_='control-label')}}
+  <div class="input-group-text">
+    <input id="lower_always_min_pwm" name="lower_always_min_pwm" type="checkbox" title="{{dict_translation['lower_always_min_pwm']['phrase']}}" value="y"{% if each_function.lower_always_min_pwm %} checked{% endif %}>
+  </div>
+</div>

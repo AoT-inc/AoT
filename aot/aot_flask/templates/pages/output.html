@@ -1,0 +1,325 @@
+{% extends "layout.html" %}
+{% set active_page = "output" %}
+{% set help_page = ["https://aot-inc.github.io/AoT/Outputs/", dict_translation['output']['title']] %}
+
+{% block title %} - {{dict_translation['output']['title']}}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css" />
+<script src="/static/js/gridstack-all.js"></script>
+
+<link href="/static/css/toastr.min.css" rel="stylesheet"/>
+<script src="/static/js/toastr.min.js"></script>
+
+<script type="text/javascript">
+  $(document).ready(function () {
+    toastr.options = {
+      "closeButton": true,
+      "debug": false,
+      "newestOnTop": false,
+      "progressBar": false,
+      "positionClass": "toast-top-left",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "1000",
+      "timeOut": "15000",
+      "extendedTimeOut": "10000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    }
+
+    function getAjax(endpoint) {
+      $.ajax({
+        type: 'GET',
+        url: '/output_mod/' + endpoint,
+      {% if not misc.hide_alert_success %}
+        success: function(data) {
+          if (data.startsWith("SUCCESS")) toastr['success']("Output " + endpoint.split("/")[0] + ": " + data);
+          else toastr['error']("Output " + endpoint.split("/")[0] + ": " + data);
+        },
+      {% endif %}
+      {% if not misc.hide_alert_warning %}
+        error: function(data) {
+          toastr['error']("Output " + endpoint.split("/")[0] + ": " + data);
+        }
+      {% endif %}
+      });
+    }
+
+    // Output On Button
+    jQuery.fn.turn_on = function(button, output_id, channel_id) {
+      getAjax(output_id + '/' + channel_id + '/on/sec/0');
+    }
+
+    // Output Off Button
+    jQuery.fn.turn_off = function(button, output_id, channel_id) {
+      getAjax(output_id + '/' + channel_id + '/off/sec/0');
+    }
+
+    // Output Send Amount Input/Button
+    jQuery.fn.output_on_amt = function(button, output_id, channel_id, out_type) {
+      let result = {};
+      $.each($(button).parents('form').serializeArray(), function() {
+          result[this.name] = this.value;
+      });
+      if (out_type === 'seconds' && 'on_seconds_' + output_id + '_' + channel_id in result) {
+        getAjax(output_id + '/' + channel_id + '/on/sec/' + result['on_seconds_' + output_id + '_' + channel_id]);
+      }
+      else if (out_type === 'value' && 'on_value_' + output_id + '_' + channel_id in result) {
+        getAjax(output_id + '/' + channel_id + '/on/value/' + result['on_value_' + output_id + '_' + channel_id]);
+      }
+      else if (out_type === 'volume' && 'on_volume_' + output_id + '_' + channel_id in result) {
+        getAjax(output_id + '/' + channel_id + '/on/vol/' + result['on_volume_' + output_id + '_' + channel_id]);
+      }
+      else if (out_type === 'pwm' && 'on_duty_cycle_' + output_id + '_' + channel_id in result) {
+        getAjax(output_id + '/' + channel_id + '/on/pwm/' + result['on_duty_cycle_' + output_id + '_' + channel_id]);
+      }
+    }
+
+    function gpioState() {
+      const url = '/outputstate';
+      $.getJSON(url,
+        function(data, responseText, jqXHR) {
+          if (jqXHR.status !== 204) {
+            $.each(data,
+              function(output_id, states) {
+                for (let i = 0; i < Object.keys(states).length; i++) {
+                  if (states[i] !== null && document.getElementById(output_id + "-" + i + "-output-state") != null) {
+                    document.getElementById(output_id + "-" + i + "-output-state").className = "item_channel row small-gutters active-background";
+                    if (states[i] !== 'off') {
+                      document.getElementById(output_id + "-" + i + "-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block active-background';
+                      if (states[i] === 'on') {
+                        document.getElementById(output_id + "-" + i + "-input-output-state").value = '{{_('Active')}}';
+                      } else {
+                        document.getElementById(output_id + "-" + i + "-input-output-state").value = '{{_('Active')}}, ' + states[i].toFixed(1);
+                      }
+                    } else {
+                      document.getElementById(output_id + "-" + i + "-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block inactive-background';
+                      document.getElementById(output_id + "-" + i + "-input-output-state").value = '{{_('Inactive')}}';
+                      document.getElementById(output_id + "-" + i + "-output-state").className = "item_channel row small-gutters inactive-background";
+                    }
+                  }
+                }
+              }
+            );
+          }
+          else {
+            {% for each_output in output %}
+              {% for each_output_channel in dict_outputs[each_output.output_type]['channels_dict'] %}
+            document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block pause-background';
+            document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = '{{_('No Connection')}}';
+            document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state").className = "item_channel row small-gutters pause-background";
+              {% endfor %}
+            {% endfor %}
+          }
+        }
+      );
+    }
+
+    $(function() {
+      gpioState();  // Update when page first loads
+      setInterval(function () {  // Refresh every 5 seconds
+        gpioState();
+      }, 5000);
+    });
+  });
+</script>
+{% endblock %}
+
+{% block body %}
+  <!-- Route: /output -->
+  <main role="main" class="container">
+    {% include 'flash_messages.html' %}
+
+    <h4>{{_('출력')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+
+    <p>{{_('출력은 AoT가 출력(유선 및 무선), PWM 신호, 명령 실행을 통해 사물을 제어할 수 있도록 합니다. 입력과 함께 PID 컨트롤러에 연결되면 출력 장치는 피드백 조절에 사용할 수 있습니다.')}}</p>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    <form id="new_output_form" method="post" action="/output" style="padding-bottom: 0.5em">
+      {{form_add_output.hidden_tag()}}
+      <div class="row small-gutters" style="padding-left: 0.75em">
+        <div class="col-auto">
+          {{form_add_output.output_type(class_='selectpicker', **{'data-style': 'btn btn-primary', 'data-live-search': 'true', 'title': _('출력') + ': ' + _('선택')}) }}
+        </div>
+        <div class="col-auto">
+          <input onclick="return $(this).processRequest(this, 'output_add');" name="output_add" value="{{_('추가')}}" class="btn btn-primary" type="button"/>
+        </div>
+      </div>
+    </form>
+
+    <div style="clear: both; padding: 1em 0;"></div>
+
+    <div class="grid-stack">
+    {% for each_output in output -%}
+      <div id="gridstack_output_{{each_output.unique_id}}"
+        class="grid-stack-item"
+        gs-id="{{each_output.unique_id}}"
+        gs-x="0"
+        gs-y="{{each_output.position_y}}"
+        gs-w="24"
+        gs-h="{{each_output.size_y}}"
+        data-gs-no-resize="true">
+        {% include 'pages/output_entry.html' %}
+      </div> <!-- grid-stack-item -->
+    {%- endfor -%}
+    </div> <!-- grid-stack -->
+
+  </main>
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  {% include 'admin/dependencies_install.html' %}
+
+  <script>
+    let gridstack_item_height = $(".item_channel").eq(0).outerHeight(true);
+
+    // Grid
+    let options = {
+      cellHeight: gridstack_item_height,
+      column: 24,
+      margin: 0,
+      draggable: {
+        handle: '.panel-heading'
+      },
+      float: false
+    };
+    let grid = GridStack.init(options);
+
+    grid.on('change', function (event, items) {
+      let gridstack_channel_height = $(".item_channel").eq(0).outerHeight(true);
+      if (gridstack_channel_height) {
+        grid.cellHeight(gridstack_channel_height);
+      }
+      let serializedFull = grid.save(false);
+      $.ajax({
+        type: "POST",
+        url: "/save_output_layout",
+        headers: {"X-CSRFToken": "{{form_mod_output.csrf_token._value()}}"},
+        data: JSON.stringify(serializedFull, null, '  '),
+        contentType: "application/json; charset=utf-8",
+        success: function (data) {}
+      });
+    });
+
+    function popup_response(data) {
+      if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
+        toastr['error']('Error: ' + data.data.messages.error.join(", "));
+      }
+      {% if not misc.hide_alert_warning %}
+      if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
+        toastr['warning']('Warning: ' + data.data.messages.warning.join(", "));
+      }
+      {% endif %}
+      {% if not misc.hide_alert_info %}
+      if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
+        toastr['info']('Info: ' + data.data.messages.info.join(", "));
+      }
+      {% endif %}
+      {% if not misc.hide_alert_success %}
+      if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+        toastr['success']('Success: ' + data.data.messages.success.join(", "));
+      }
+      {% endif %}
+    }
+
+    jQuery.fn.processRequest = function(button, action) {
+      console.log("Action: ", action)
+      if (action === 'output_add' ||
+          action === 'output_mod' ||
+          action === 'output_delete'||
+          action.startsWith('custom_button_')) {
+        {% if not misc.hide_alert_info %}toastr['info']('Command sent. Please wait...');{% endif %}
+        $.ajax({
+          type: "POST",
+          url: '/output_submit',
+          headers: {"X-CSRFToken": "{{form_mod_output.csrf_token._value()}}"},
+          data: $(button).parents('form').serialize() + '&' + action + '=1',
+          success: function (data) {
+            if (action === 'output_add' && 'output_id' in data.data) {
+              if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+                $(".dependencies_device_name").text(data.data.dep_name);
+                $(".dependencies_device").text(data.data.dep_unmet);
+                $(".dependencies_unmet").text(data.data.dep_list.join(", "));
+                document.getElementById("dependency_unmet").value = data.data.dep_unmet;
+                if (data.data.dep_message.length > 0) {
+                  document.getElementById("dependencies_message").innerHTML = "<p>Message about dependencies: " + data.data.dep_message + "</p>";
+                }
+                $('#modal_config_dependency_install').modal('show');
+                popup_response(data);
+              } else {
+                $.ajax({
+                  type: "GET",
+                  url: '/output?output_type=entry&output_id=' + data.data.output_id,
+                  success: function (new_entry) {
+                    if (data.data.messages.success.length !== 0) {
+                      grid.addWidget('<div class="grid-stack-item" id="gridstack_output_' + data.data.output_id + '" gs-id="' + data.data.output_id + '">' + new_entry + '</div>', {
+                        w: 24,
+                        h: data.data.size_y
+                      });
+                      {% if not hide_tooltips %}$('input[title]').tooltip({placement: 'top'});{% endif %}
+                    }
+                    popup_response(data);
+                  },
+                  error: function() {
+                    toastr['error']('Error: Could not get new output entry');
+                  }
+                });
+              }
+              return;
+            }
+            if (data.data.messages.error.length === 0) {
+              if (action === 'output_mod' && 'output_id' in data.data) {
+                if ('return_text' in data.data.messages &&
+                    data.data.messages.return_text.length > 0 &&
+                    document.getElementById("return_text_" + data.data.output_id)) {
+                  document.getElementById("return_text_" + data.data.output_id).innerHTML = data.data.messages.return_text.join("<br/><br/>");
+                }
+                if ('name' in data.data.messages &&
+                    document.getElementById("output_name_" + data.data.output_id)) {
+                  if (document.getElementById("output_name_" + data.data.output_id).tagName === "DIV") {
+                    document.getElementById("output_name_" + data.data.output_id).innerHTML = data.data.messages.name;
+                  } else if (document.getElementById("output_name_" + data.data.output_id).tagName === "INPUT") {
+                    document.getElementById("output_name_" + data.data.output_id).value = data.data.messages.name;
+                  }
+                }
+              }
+              else if (action === 'output_delete' && 'output_id' in data.data) {
+                $('#modal_config_' + data.data.output_id).modal('hide');
+                $('.modal-backdrop').remove();
+                $(document.body).removeClass("modal-open");
+                grid.removeWidget('#gridstack_output_' + data.data.output_id);
+              }
+              if ('page_refresh' in data.data && data.data.page_refresh) {
+                $.ajax({
+                  type: "GET",
+                  url: '/output?output_type=options&output_id=' + data.data.output_id,
+                  success: function (new_options) {
+                    $('#mod_output_' + data.data.output_id).html(new_options);
+                    popup_response(data);
+                  },
+                  error: function() {
+                    toastr['error']('Error: Could not get new output options');
+                  }
+                });
+              } else {
+                popup_response(data);
+              }
+            } else {
+              popup_response(data);
+            }
+          },
+          error: function() {
+            toastr['error']('Error: Could not communicate with server');
+          }
+        });
+      }
+    }
+  </script>
+
+{% endblock %}

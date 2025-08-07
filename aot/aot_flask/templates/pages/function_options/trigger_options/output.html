@@ -1,0 +1,32 @@
+<div class="col-auto">
+  <label class='control-label'>출력</label>
+  <div>
+    <select class="form-control form-tooltip form-dropdown" id="unique_id_1" name="unique_id_1" data-placement="top" title="{{_('이 출력이 켜지거나 꺼질 때 이 조건을 실행합니다.')}}">
+      <option value="">{{dict_translation['select_one']['title']}}</option>
+      {%- for each_output in choices_output_channels if 'on_off' in each_output['types'] -%}
+        <option value="{{each_output['value']}}"{% if each_function.unique_id_1 == each_output['value'].split(",")[0] and each_function.unique_id_2 == each_output['value'].split(",")[1] %} selected{% endif %}>{{each_output['item']}}</option>
+      {%- endfor -%}
+    </select>
+  </div>
+</div>
+<div class="col-auto">
+  {{form_trigger.output_state.label(class_='control-label')}}
+  <select class="form-control form-tooltip form-dropdown" id="output_state" name="output_state" data-placement="top" title="{{_('어떤 동작이 이 조건을 실행할지 선택하세요 (켜짐 또는 꺼짐)')}}">
+    <option value="">{{dict_translation['select_one']['title']}}</option>
+    <option value="on_duration_none"{% if each_function.output_state == 'on_duration_none' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간 없음')}})</option>
+    <option value="on_duration_any"{% if each_function.output_state == 'on_duration_any' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('임의의 지속 시간')}})</option>
+    <option value="on_duration_none_any"{% if each_function.output_state == 'on_duration_none_any' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간 없음 또는 임의의 지속 시간')}})</option>
+    <option value="on_duration_equal"{% if each_function.output_state == 'on_duration_equal' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간과 동일함')}})</option>
+    <option value="on_duration_greater_than"{% if each_function.output_state == 'on_duration_greater_than' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간보다 큼')}})</option>
+    <option value="on_duration_equal_greater_than"{% if each_function.output_state == 'on_duration_equal_greater_than' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간보다 크거나 같음')}})</option>
+    <option value="on_duration_less_than"{% if each_function.output_state == 'on_duration_less_than' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간보다 작음')}})</option>
+    <option value="on_duration_equal_less_than"{% if each_function.output_state == 'on_duration_equal_less_than' %} selected{% endif %}>{{dict_translation['on']['title']}} ({{_('지속 시간보다 작거나 같음')}})</option>
+    <option value="off"{% if each_function.output_state == 'off' %} selected{% endif %}>{{dict_translation['off']['title']}}</option>
+  </select>
+</div>
+<div class="col-auto">
+  {{form_trigger.output_duration.label(class_='control-label')}}
+  <div>
+   {{form_trigger.output_duration(class_='form-control', value=each_function.output_duration, **{'title':_('(선택 사항) 출력 켜짐 지속 시간이 이 값과 같을 때 조건이 실행되도록 특정 지속 시간을 설정합니다'), 'size':'3'})}}
+  </div>
+</div>

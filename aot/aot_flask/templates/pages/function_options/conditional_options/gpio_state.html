@@ -1,0 +1,10 @@
+<div class="col-12">
+  <strong>[{{_('조건')}}] {{_('GPIO 상태')}}</strong>: <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong> 
+  {{_('GPIO 핀이 HIGH이면 True를 반환하고, LOW이면 False를 반환합니다. On/Off GPIO 출력 상태를 확인하는 용도로 이 기능을 사용하지 마세요. (이 기능을 사용하면 GPIO 핀이 OUTPUT에서 INPUT으로 변경되어 출력으로 작동하지 않게 됩니다.) 출력 상태를 확인하려면 "출력 상태 조건"을 사용하세요.')}}
+</div>
+<div class="col-auto">
+  {{form_conditional_conditions.gpio_pin.label(class_='control-label', title="GPIO 핀 선택")}}
+  <div>
+    {{form_conditional_conditions.gpio_pin(class_='form-control', value=each_condition.gpio_pin, **{'title': '상태를 가져올 GPIO 핀을 설정하세요'})}}
+  </div>
+</div>

@@ -1,0 +1,12 @@
+<div class="col-auto">
+  {{ form_trigger.period.label(class_='control-label') }}
+  <div>
+    {{ form_trigger.period(class_='form-control', value=each_function.period, **{'title': _('일정 시간 간격으로 조건부 동작을 실행합니다.')}) }}
+  </div>
+</div>
+<div class="col-auto">
+  {{ form_trigger.timer_start_offset.label(class_='control-label') }}
+  <div>
+    {{ form_trigger.timer_start_offset(class_='form-control', value=each_function.timer_start_offset, **{'title': _('타이머를 시작하기 전에 대기하는 시간')}) }}
+  </div>
+</div>

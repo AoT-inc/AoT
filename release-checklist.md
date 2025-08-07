@@ -1,0 +1,32 @@
+### Pre-Release Checklist
+새 릴리스를 만드는 데 필요한 단계들을 기록하기 위한 참고 사항입니다.
+
+- [ ] /aot/scripts/generate_manual_api.sh 파일에 설정된 IP 주소가 접근 가능하며, 아직 릴리스되지 않은 최신 AoT 버전인지 확인합니다.
+- [ ] ```sudo /opt/AoT/aot/scripts/upgrade_commands.sh setup-virtualenv-full``` 명령어를 사용하여 virtualenv가 존재하는지 확인합니다.
+- [ ] ```/opt/AoT/env/bin/pip install --break-system-packages -r /opt/AoT/docs/requirements.txt``` 명령어로 virtualenv 내 pip 패키지를 업데이트합니다.
+- [ ] generate_manual_api.sh 파일 상단에 나열된 종속성을 설치합니다.
+- [ ] ```source /opt/AoT/env/bin/activate``` 명령어로 virtualenv를 활성화합니다.
+- [ ] ```sudo /bin/bash /opt/AoT/aot/scripts/generate_all.sh``` 명령어를 실행합니다.
+   - AoT/docs/에 Input/Output/Function/Widget/API 매뉴얼 페이지를 생성하고, AoT/aot/aot_flask/translations에 번역 가능한 .po 파일 및 번역된 문서를 생성합니다.
+- [ ] Input 정보가 AoT 매뉴얼에 성공적으로 삽입되었는지 확인합니다.
+- [ ] https://translate.kylegabriel.com/projects/aot/translations/ 에서 단어/문구를 번역하고 Pull Request를 제출한 후 AoT 저장소에 병합합니다.
+    - 참고: f-strings는 번역을 위해 gettext()와 함께 사용할 수 없으므로 format()을 사용합니다.
+- [ ] config.py 파일의 AOT_VERSION 및 ALEMBIC_VERSION 변수를 업데이트합니다(해당되는 경우).
+- [ ] README.rst 파일의 버전을 업데이트합니다.
+- [ ] mkdocs.yml 파일의 버전을 업데이트합니다.
+- [ ] CHANGELOG.md 파일의 변경 사항을 업데이트합니다.
+   - 제목 형식은 "## 8.5.3 (2020-06-06)"이며, 현재 날짜를 사용합니다.
+   - 섹션 헤더는 "### Bugfixes", "### Features", "### Miscellaneous"입니다.
+   - 각 섹션 헤더 아래에 변경 사항을 불릿 리스트로 작성하며, 각 짧은 설명 끝에 관련 이슈 링크를 추가합니다(해당되는 경우).
+- [ ] 변경 사항을 커밋하고 TravisCI가 pytests를 실행하여 모두 성공했는지 확인합니다.
+- [ ] mkdocs 종속성을 설치합니다:
+   - ```sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libopenjp2-7```
+   - ```/opt/AoT/env/bin/python -m pip install --break-system-packages -r /opt/AoT/docs/requirements.txt```
+- [ ] AoT를 새 디렉터리에 새로 클론하고, ```cd AoT && sudo aot/scripts/upgrade_commands.sh setup-virtualenv && sudo env/bin/python -m pip install --break-system-packages -r docs/requirements.txt``` 명령어를 실행하여 mkdocs pip 요구 사항이 설치되었는지 확인합니다.
+- [ ] ```cd AoT && env/bin/python -m mkdocs gh-deploy``` 명령어를 실행하여 문서를 gh-pages 브랜치에 생성 및 푸시합니다(https://aot-inc.github.io/AoT).
+- [ ] 선택적으로, 아직 릴리스되지 않은 버전 이전의 코드로 구성된 단순 AoT 시스템을 master로 업그레이드하여 업그레이드 가능성을 테스트합니다(실험적인 데이터베이스 스키마 변경이 업그레이드 중 수행되는 경우 유용).
+- [ ] GitHub 릴리스를 만듭니다.
+   - 태그 버전은 "vMAJOR.MINOR.BUGFIX" 형식을 따릅니다(예: v8.0.3).
+   - 릴리스 제목은 "v"를 제외한 동일한 형식입니다(예: 8.0.3).
+   - 설명은 CHANGELOG.md에서 복사합니다.
+- [ ] 새로운 릴리스 이전의 릴리스 상태의 단순 AoT에서 업그레이드를 시도합니다.

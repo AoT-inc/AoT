@@ -1,0 +1,173 @@
+/*
+ * Custom CSS
+ */
+
+.dropdown-upgrade {
+  color: #ededed;
+  background-color: #f92f44;
+}
+
+.dropdown-item-upgrade {
+  display: block;
+  width: 100%;
+  padding: 0.25rem 1.5rem;
+  clear: both;
+  font-weight: 400;
+  color: #ededed;
+  text-align: inherit;
+  white-space: nowrap;
+  background-color: #f92f44;
+  border: 0;
+}
+
+.checkbox-big {
+    width: 1.5em;
+    height: 1.5em
+}
+
+.icon-fw {
+    width: 1.28571429em;
+    text-align: center
+}
+
+.icon-fh {
+    font-size: 0.9em;
+}
+
+.row.small-gutters > [class^="col-"],
+.row.small-gutters > [class*=" col-"] {
+  padding-right: 0.1em;
+  padding-left: 0.1em;
+}
+
+.form-row.small-gutters > [class^="col-"],
+.form-row.small-gutters > [class*=" col-"] {
+  padding-right: 0.1em;
+  padding-left: 0.1em;
+}
+
+.small-gutters {
+    padding: 0 0.2em
+}
+
+.row.no-gutters > [class^="col-"],
+.row.no-gutters > [class*=" col-"] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.form-row.no-gutters > [class^="col-"],
+.formrow.no-gutters > [class*=" col-"] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.no-gutters {
+    padding: 0 0;
+}
+
+.checkbox-nopad {
+  padding-top: 0 !important;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.widget-heading {
+  flex: 0 1 auto;
+  padding: 0.5em 0;
+}
+
+.widget-drag-handle {
+  position: absolute;
+  left: 0.75em;
+  top: 0.75em;
+  opacity: 0.4;
+}
+
+.widget-title {
+  width: 100%;
+  margin: 0 1.5em;
+  text-align: center;
+}
+
+/*.widget-title span {*/
+/*  padding: 0 0.5em;*/
+/*}*/
+
+.widget-settings {
+  position: absolute;
+  right: 0.75em;
+  top: 0.75em;
+}
+
+.widget-settings a {
+  padding: 0;
+  opacity: 0.4;
+  outline: 0;
+  border: 0;
+}
+
+.widget-settings a:hover,
+.widget-settings a:active {
+  opacity: 1.0;
+}
+
+.widget-graph-controls {
+  position: absolute;
+  right: 3em;
+  top: 0.5em;
+  text-align: right;
+}
+
+.widget-graph-controls a.menu {
+  border-color: rgba(0, 0, 0, 0.0);
+  opacity: 0.4;
+  outline: 0;
+}
+
+.widget-graph-controls a.menu:hover,
+.widget-graph-controls a.menu:active {
+  border-color: rgba(0, 0, 0, 0.0);
+  opacity: 1.0;
+  outline: 0;
+}
+
+.widget-graph-responsive-controls {
+  display: none;
+}
+
+.widget-graph-responsive-controls a {
+  background-image: -webkit-gradient(linear, left top, left bottom, from(#78cc78), color-stop(60%, #62c462), to(#53be53));
+  background-color: linear-gradient(#78cc78, #62c462 60%, #53be53);
+  background-repeat: no-repeat;
+  color: #fff !important;
+}
+
+.widget-graph-responsive-controls.responsive {
+  display: inline-block;
+  padding: 0 0.5em;
+  text-align: right;
+}
+
+@media screen and (max-width: 768px) {
+  .widget-graph-title.responsive {
+    padding-left: 0.5em;
+    text-align: left;
+  }
+}
+
+.widget-indicator-body {
+  text-align: center;
+}
+
+.widget-indicator-body img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-right: -50%;
+  transform: translate(-50%, -50%);
+  max-width: 60%;
+  max-height: 60%;
+}

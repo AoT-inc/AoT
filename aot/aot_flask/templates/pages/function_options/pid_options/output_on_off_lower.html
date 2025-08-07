@@ -1,0 +1,22 @@
+{{form_mod_pid_output_lower.csrf_token}}
+
+<div class="col-auto">
+  {{form_mod_pid_output_lower.lower_min_duration.label(class_='control-label')}}
+  <div>
+    {{form_mod_pid_output_lower.lower_min_duration(class_='form-control', value=each_function.lower_min_duration, **{'title':_('하향 출력이 활성화되기 위해 필요한 최소 지속 시간(초 단위)입니다. ON 지속 시간이 이 값보다 짧으면 하위 출력이 켜지지 않습니다.')})}}
+  </div>
+</div>
+
+<div class="col-auto">
+  {{form_mod_pid_output_lower.lower_max_duration.label(class_='control-label')}}
+  <div>
+    {{form_mod_pid_output_lower.lower_max_duration(class_='form-control', value=each_function.lower_max_duration, **{'title':_('하향 출력이 한 주기 동안 켜질 수 있는 최대 지속 시간(초 단위)입니다. ON 지속 시간이 이 값보다 크면 하위 출력이 설정된 지속 시간 동안만 켜집니다. 0을 입력하면 이 기능이 비활성화됩니다.')})}}
+  </div>
+</div>
+
+<div class="col-auto">
+  {{form_mod_pid_output_lower.lower_min_off_duration.label(class_='control-label')}}
+  <div>
+    {{form_mod_pid_output_lower.lower_min_off_duration(class_='form-control', value=each_function.lower_min_off_duration, **{'title':_('이 출력은 최소한 이 시간 동안 꺼진 상태를 유지합니다.')})}}
+  </div>
+</div>

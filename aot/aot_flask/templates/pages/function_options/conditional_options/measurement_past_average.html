@@ -1,0 +1,33 @@
+<div class="col-12">
+  <strong>[{{_('조건')}}] {{_('측정값')}} ({{_('단일')}}, {{_('과거')}}, {{_('평균')}})</strong>: 
+  <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong> 
+  {{_('설정한 최대 시간 내에서 발견된 값들의 평균을 반환하며, 그렇지 않으면 None을 반환합니다.')}}
+</div>
+
+<div class="col-auto">
+  {{form_conditional_conditions.measurement.label(class_='control-label')}}
+  <div>
+    <select class="form-control form-tooltip form-dropdown" id="measurement" name="measurement" style="width: 100%;" title="" data-original-title="{{_('입력으로 사용할 측정값을 선택하세요')}}">
+        <option value="">{{dict_translation['select_one']['title']}}</option>
+      {% for each_input_form in choices_input if each_input_form['value'].split(',')[1] != 'edge' -%}
+        <option value="{{each_input_form['value']}}"{% if each_condition.measurement == each_input_form['value'] %} selected{% endif %}>{{each_input_form['item']}}</option>
+      {% endfor -%}
+      {% for each_output_form in choices_output -%}
+        <option value="{{each_output_form['value']}}"{% if each_condition.measurement == each_output_form['value'] %} selected{% endif %}>{{each_output_form['item']}}</option>
+      {% endfor -%}
+      {% for each_function_form in choices_function -%}
+        <option value="{{each_function_form['value']}}"{% if each_condition.measurement == each_function_form['value'] %} selected{% endif %}>{{each_function_form['item']}}</option>
+      {% endfor -%}
+      {% for each_pid_form in choices_pid -%}
+        <option value="{{each_pid_form['value']}}"{% if each_condition.measurement == each_pid_form['value'] %} selected{% endif %}>{{each_pid_form['item']}}</option>
+      {% endfor -%}
+    </select>
+  </div>
+</div>
+
+<div class="col-auto">
+  {{form_conditional_conditions.max_age.label(class_='control-label')}}
+  <div>
+    {{form_conditional_conditions.max_age(class_='form-control', value=each_condition.max_age, **{'title':_('이 시간보다 오래된 측정값은 허용되지 않습니다.')})}}
+  </div>
+</div>

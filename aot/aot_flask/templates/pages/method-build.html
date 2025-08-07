@@ -1,0 +1,324 @@
+{% extends "layout.html" %}
+{% set active_page = "method_list" %}
+{% set help_page = ["https://aot-inc.github.io/AoT/Methods/", dict_translation['method']['title']] %}
+
+{% block title %} - {{dict_translation['method']['title']}}{% endblock %}
+
+{% block head %}
+  <script src="/static/js/user_js/highcharts-9.1.2.js"></script>
+  {% if current_user.theme in dark_themes %}
+    <script src="/static/js/dark-unica-custom.js"></script>
+  {% endif %}
+{% endblock %}
+
+{% block body %}
+  <!-- Route: /method-build -->
+  <div class="container">
+    {% include 'flash_messages.html' %}
+
+    {%- set method_setpoint = [] -%}
+    {%- for each_method_line in method_data
+          if each_method_line.method_id == method.unique_id and
+              each_method_line.setpoint_start != None -%}
+      {%- do method_setpoint.append(1) -%}
+    {%- endfor -%}
+
+    <a href="/method" class="btn btn-sm" role="button">&lt;&lt; {{_('참조궤적 관리로 돌아가기')}}</a>
+
+    <div style="clear: both; padding:0.5em 0;"></div>
+
+    <div class="container" style="margin-bottom: 1.5em; padding: 1em; border: 2px solid #ddd; border-radius: 5px;">
+      <div>
+        {{ _('참조궤적') }}: [{{ method.unique_id }}] {{ method.method_type }}
+      </div>
+      <form method="post" action="/method-build/{{method.unique_id}}">
+      <input type="hidden" name="form-name" value="renameMethod">
+      {{form_mod_method.csrf_token}}
+      {{form_mod_method.method_id(class_='form-control', value=method.unique_id)}}
+
+      <div class="row small-gutters" style="padding: 0.7em">
+        <div class="col-auto">
+          {{form_mod_method.name.label(class_='control-label')}}
+          <div>
+            {{form_mod_method.name(class_='form-control', value=method.name, **{'title': dict_translation['name']['phrase']})}}
+          </div>
+        </div>
+        <div class="col-auto">
+          <label style="padding-top: 1em"></label>
+          <div>
+            {{form_mod_method.rename(class_='btn btn-primary')}}
+          </div>
+        </div>
+      </div>
+
+      </form>
+
+      <form method="post" action="/method-build/{{method.unique_id}}">
+      <input type="hidden" name="form-name" value="addMethod">
+      {{form_add_method.csrf_token}}
+      {{form_add_method.method_id(class_='form-control', value=method.unique_id)}}
+
+        {%- if method.method_type == "Duration" -%}
+          {% include 'pages/method_options/build_duration.html' %}
+        {%- elif method.method_type == "Date" -%}
+          {% include 'pages/method_options/build_date.html' %}
+        {%- elif method.method_type == "Daily" -%}
+          {% include 'pages/method_options/build_daily.html' %}
+        {%- elif method.method_type == "DailySine" -%}
+          {% include 'pages/method_options/build_daily_sine.html' %}
+        {%- elif method.method_type == "DailyBezier" -%}
+          {% include 'pages/method_options/build_daily_bezier.html' %}
+        {%- elif method.method_type == "Cascade" -%}
+          {% include 'pages/method_options/build_cascade.html' %}
+        {%- endif -%}
+
+      </form>
+
+    {%- if method_setpoint or
+           method.method_type in ["DailySine", "DailyBezier"] -%}
+
+      <div class="row">
+        <div class="col-sm-12" id="container" style="padding-top: 1.5em; height: 400px; width: 100%;"></div>
+      </div>
+
+    {%- endif -%}
+
+    {%- if method.method_type == "Cascade" -%}
+      <div class="row small-gutters" style="padding: 0.7em">
+        <div class="col-sm-12">
+          {{_('이 참조궤적 값을 계산하기 위해 호출된 참조궤적')}}:
+        </div>
+      </div>
+
+      {%- for each_method in method_data if each_method.method_id == method.unique_id -%}
+      <form method="post" action="/method-build/{{method.unique_id}}">
+        <input type="hidden" name="form-name" value="modMethod">
+        {{form_mod_method.csrf_token}}
+        {{form_mod_method.method_id(class_='form-control', value=method.unique_id)}}
+        {{form_mod_method.method_data_id(class_='form-control', value=each_method.unique_id)}}
+
+        <div class="row align-items-end small-gutters" style="padding: 0.7em">
+
+          <div class="col-auto">
+            {%- for linked_method in cascade_method if linked_method.unique_id == each_method.linked_method_id -%}
+            <div class="form-control">[{{'%02d' % linked_method.id}}] {{linked_method.name}}</div>
+            {%- endfor -%}
+          </div>
+
+          <div class="col-auto">
+            {{form_mod_method.delete(class_='btn btn-primary')}}
+          </div>
+
+        </div>
+
+      </form>
+      {%- endfor -%}
+    {%- endif -%}
+
+    {%- if method_setpoint -%}
+
+      <div class="row small-gutters" style="margin: 1em 0 0 0; padding: 1em; border: 2px solid #ddd; border-radius: 5px;">
+        <div class="col-12" style="padding-bottom: 1em">
+          <h3>설정값 추적</h3>
+        </div>
+
+      {%- for each_method in method_data if each_method.method_id == method.unique_id -%}
+
+        <form method="post" action="/method-build/{{method.unique_id}}">
+        <input type="hidden" name="form-name" value="modMethod">
+        {{form_mod_method.csrf_token}}
+        {{form_mod_method.method_id(class_='form-control', value=method.unique_id)}}
+        {{form_mod_method.method_data_id(class_='form-control', value=each_method.unique_id)}}
+
+        <div class="row align-items-end small-gutters" style="padding: 0.7em">
+
+          {% if method.method_type == "Date" -%}
+
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.time_start.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.time_start(class_='form-control', value=each_method.time_start)}}
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.time_end.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.time_end(class_='form-control', value=each_method.time_end)}}
+            </div>
+          </div>
+
+          {% elif method.method_type == "Daily" -%}
+
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.daily_time_start.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.daily_time_start(class_='form-control', value=each_method.time_start)}}
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.daily_time_end.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.daily_time_end(class_='form-control', value=each_method.time_end)}}
+            </div>
+          </div>
+
+          {% elif method.method_type == "Duration" and each_method.duration_sec -%}
+
+          <div class="col-auto">
+            {{form_mod_method.duration.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.duration(class_='form-control', value=each_method.duration_sec)}}
+            </div>
+          </div>
+
+          {% endif -%}
+
+          {% if method.method_type == "Duration" and not each_method.duration_sec %}
+
+          <div class="col-auto">
+            {{form_mod_method.duration_end.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.duration_end(class_='form-control', value=each_method.duration_end)}}
+            </div>
+          </div>
+          <div class="col-auto">
+            <input class="form-control btn btn-primary btn-sm" disabled="" value="메서드 종료" type="text">
+          </div>
+          <div class="col-auto">
+            {{form_mod_method.save(class_='form-control btn btn-primary')}}
+          </div>
+          <div class="col-auto">
+            {{form_mod_method.delete(class_='btn btn-primary',**{'onclick':'return confirm("정말 삭제하시겠습니까??")'})}}
+          </div>
+
+          {% else %}
+
+          <div class="col-auto">
+            {{form_mod_method.setpoint_start.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.setpoint_start(class_='form-control', value=each_method.setpoint_start)}}
+            </div>
+          </div>
+          <div class="col-auto">
+            {{form_mod_method.setpoint_end.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.setpoint_end(class_='form-control', value=each_method.setpoint_end)}}
+            </div>
+          </div>
+          <div class="col-auto">
+            {{form_mod_method.save(class_='form-control btn btn-primary')}}
+          </div>
+          <div class="col-auto">
+            {{form_mod_method.delete(class_='btn btn-primary',**{'onclick':'return confirm("정말 삭제하시겠습니까?")'})}}
+          </div>
+
+          {% endif %}
+
+        </div>
+
+        </form>
+
+      {%- endfor -%}
+
+      </div>
+    {%- endif -%}
+
+  </div>
+
+  <script>
+  $(document).ready(function() {
+    // Retrieve initial chart data set from the past (duration set by user)
+    function getPastData(method_id) {
+      const url = '/method-data/' + method_id;
+      let units = '';
+      {% if method.method_type == "Duration" %}
+      units = 'seconds';
+      {% endif %}
+      $.getJSON(url,
+        function(data, responseText, jqXHR) {
+          if (jqXHR.status !== 204) {
+            chart.addSeries({
+              name: 'Setpoint',
+              data : data
+            });
+          }
+        }
+      );
+    }
+
+    const x = new Date();
+    const currentTimeZoneOffsetInHours = x.getTimezoneOffset();
+
+    Highcharts.setOptions({
+      global: {
+        useUTC: true
+      },
+      lang: {
+        thousandsSep: ','
+      }
+    });
+
+    let chart = new Highcharts.Chart({
+      chart : {
+        renderTo: 'container',
+        zoomType: 'x',
+        resetZoomButton: {
+          theme: {
+            display: 'none'
+          }
+        },
+        events: {
+          load: function () {
+            getPastData("{{method.unique_id}}");
+          }
+        }
+      },
+      title: {
+        text: null
+      },
+      tooltip: {
+        {% if method.method_type == "Duration" -%}
+          headerFormat: '<span style="font-size: 10px">{point.key} Seconds</span><br/>',
+        {%- endif -%}
+        {% if method.method_type == "Date" -%}
+          xDateFormat: '%a, %b %e, %Y %H:%M:%S',
+        {% elif method.method_type in ["Daily", "DailySine", "DailyBezier"] -%}
+          xDateFormat: '%H:%M:%S',
+        {%- endif -%}
+        valueDecimals: 2
+      },
+      legend: {
+        enabled: false
+      },
+      navigator: {
+        enabled: false
+      },
+      rangeSelector: {
+        enabled: false
+      },
+      scrollbar: {
+        enabled: false
+      },
+      xAxis: {
+        type: '{%- if method.method_type == "Duration" -%}linear{%- elif method.method_type in ["Date", "Daily", "DailySine", "DailyBezier"] -%}datetime{%- endif -%}',
+        ordinal: false
+      },
+      yAxis: [
+      {   
+        title: {
+          text: null,
+        },
+        labels: {
+          format: '{value}',
+        },
+        opposite: false
+      }],
+      credits: {
+        enabled: false
+      }
+    });
+
+  });
+  </script>
+
+{% endblock %}

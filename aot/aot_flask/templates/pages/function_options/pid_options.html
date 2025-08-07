@@ -1,0 +1,350 @@
+{% set dict_output_type = ({
+  "on_off": "온/오프",
+  "pwm": "PWM",
+  "value": "값",
+  "volume": "볼륨"
+  })
+%}
+
+<div id="mod_function_{{each_function.unique_id}}">
+<form id="mod_function_form" method="post" action="/function">
+{{form_mod_pid_base.csrf_token}}
+{{form_mod_pid_base.function_id(value=each_function.unique_id)}}
+{{form_mod_pid_base.function_type(value='pid')}}
+
+  <div class="row small-gutters" style="padding: 0.5em;">
+    <div class="col-auto">
+      <button type="button" class="form-control btn btn-primary btn-block" data-dismiss="modal">{{_('닫기')}}</button>
+    </div>
+    <div class="col-auto small-gutters">
+      <input onclick="return $(this).processRequest(this, 'function_mod');" name="function_mod" value="{{_('저장')}}" class="form-control btn btn-primary btn-block" type="button"/>
+    </div>
+    <div class="col-auto small-gutters">
+      <input onclick="return confirm('{{_('삭제하시겠습니까?')}}') && $(this).processRequest(this, 'function_delete');" name="function_delete" value="{{_('삭제')}}" class="form-control btn btn-primary btn-block" type="button"/>
+    </div>
+  </div>
+
+  <div class="row small-gutters">
+    <div class="col-12" style="padding-top: 0.5em; padding-bottom: 0.5em">
+      상승 및/또는 하강 출력을 선택한 후, 각 출력에 대해 추가 옵션이 나타나며 구성해야 합니다. 나타나는 옵션은 선택된 출력 유형에 따라 결정됩니다. 따라서 PID 제어기가 활성화되기 전에 저장 후 모든 설정을 검토하여 완전히 구성되었는지 확인하십시오.
+    </div>
+  </div>
+
+  <div id="status_activated_enable_{{each_function.unique_id}}" class="row small-gutters align-items-end" style="{% if not each_function.is_activated %}display: none; {% endif %}padding: 0.5em">
+    <div class="col-12">
+      <h5>{{_('상태')}}</h5>
+    </div>
+    <div class="col-12">
+      <span id="function_status_activated_{{each_function.unique_id}}"></span>
+    </div>
+  </div>
+
+  <div id="return_text_{{each_function.unique_id}}" class="col-12"></div>
+
+  <div class="row small-gutters">
+    <div class="col-auto">
+      {{form_mod_pid_base.name.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.name(class_='form-control', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.measurement.label(class_='control-label')}}
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="measurement" name="measurement" style="width: 100%;" title="" data-original-title="{{_('입력으로 사용할 측정값을 선택하십시오')}}">
+          <option value="">{{_('선택된 항목 없음')}}</option>
+        {% for each_input_form in choices_input -%}
+          <option value="{{each_input_form['value']}}"{% if each_function.measurement == each_input_form['value'] %} selected{% endif %}>{{each_input_form['item']}}</option>
+        {% endfor -%}
+        {% for each_function_form in choices_function -%}
+          <option value="{{each_function_form['value']}}"{% if each_function.measurement == each_function_form['value'] %} selected{% endif %}>{{each_function_form['item']}}</option>
+        {% endfor -%}
+        </select>
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.direction.label(class_='control-label')}}
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="direction" name="direction" title="" data-original-title="{{_('조절할 방향을 선택하십시오')}}">
+          <option value="raise"{% if each_function.direction == 'raise' %} selected{% endif %}>{{_('상승')}}</option>
+          <option value="lower"{% if each_function.direction == 'lower' %} selected{% endif %}>{{_('하강')}}</option>
+          <option value="both"{% if each_function.direction == 'both' %} selected{% endif %}>{{_('둘 다')}}</option>
+        </select>
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.period.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.period(class_='form-control', value=each_function.period, **{'title': dict_translation['period']['phrase']})}}
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.start_offset.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.start_offset(class_='form-control', value=each_function.start_offset, **{'title': dict_translation['start_offset']['phrase']})}}
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.max_measure_age.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.max_measure_age(class_='form-control', value=each_function.max_measure_age, **{'title': dict_translation['max_age']['phrase']})}}
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.log_level_debug.label(class_='control-label')}}
+      <div class="input-group-text">
+        <input id="log_level_debug" name="log_level_debug" type="checkbox" title="{{dict_translation['log_level_debug']['phrase']}}" value="y"{% if each_function.log_level_debug %} checked{% endif %}>
+      </div>
+    </div>
+  </div>
+
+  <div class="row small-gutters">
+    <div class="col-auto">
+      {{form_mod_pid_base.setpoint.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.setpoint(class_='form-control', value=each_function.setpoint, **{'title':_('이는 특정 환경 조건의 원하는 상태입니다. 예를 들어, 원하는 섭씨 온도를 입력할 수 있습니다.')})}}
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.band.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.band(class_='form-control', value=each_function.band, **{'title':_('설정값을 중심으로 한 제어 히스테리시스입니다. 설정값 ±밴드 값으로 적용되며, 0이면 비활성화됩니다.')})}}
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.send_lower_as_negative.label(class_='control-label')}}
+      <div class="input-group-text">
+        <input id="send_lower_as_negative" name="send_lower_as_negative" type="checkbox" title="{{_('하강 값을 출력에 음수로 전송합니다.')}}" value="y"{% if each_function.send_lower_as_negative %} checked{% endif %}>
+      </div>
+    </div>
+    <div class="col-auto">
+      {{form_mod_pid_base.store_lower_as_negative.label(class_='control-label')}}
+      <div class="input-group-text">
+        <input id="store_lower_as_negative" name="store_lower_as_negative" type="checkbox" title="{{_('하강 측정값을 음수로 저장합니다.')}}" value="y"{% if each_function.store_lower_as_negative %} checked{% endif %}>
+      </div>
+    </div>
+  </div>
+
+  <div class="row small-gutters">
+    <div class="col-sm-4 col-lg-2">
+      {{form_mod_pid_base.k_p.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.k_p(class_='form-control', value=each_function.p, **{'title':_('비례 이득')})}}
+      </div>
+    </div>
+    <div class="col-sm-4 col-lg-2">
+      {{form_mod_pid_base.k_i.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.k_i(class_='form-control', value=each_function.i, **{'title':_('적분 이득')})}}
+      </div>
+    </div>
+    <div class="col-sm-4 col-lg-2">
+      {{form_mod_pid_base.k_d.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.k_d(class_='form-control', value=each_function.d, **{'title':_('미분 이득')})}}
+      </div>
+    </div>
+    <div class="col-sm-4 col-lg-3">
+      {{form_mod_pid_base.integrator_max.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.integrator_max(class_='form-control', value=each_function.integrator_min, **{'title':_('적분기의 최소 한계를 제한합니다 (Ki_total = Ki * 적분값; PID 출력 = Kp_total + Ki_total + Kd_total)')})}}
+      </div>
+    </div>
+    <div class="col-sm-4 col-lg-3">
+      {{form_mod_pid_base.integrator_min.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.integrator_min(class_='form-control', value=each_function.integrator_max, **{'title':_('적분기의 최대 한계를 제한합니다 (Ki_total = Ki * 적분값; PID 출력 = Kp_total + Ki_total + Kd_total)')})}}
+      </div>
+    </div>
+  </div>
+
+  <div class="row small-gutters">
+    <div class="col-auto">
+      {{form_mod_pid_base.raise_output_id.label(class_='control-label')}}
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="raise_output_id" name="raise_output_id" title="" data-original-title="{{_('선택한 환경 조건(측정값)을 상승시키는 출력을 선택하십시오')}}">
+          <option value="">{{_('비활성')}}</option>
+          {%- for each_output in choices_output_channels -%}
+            <option value="{{each_output['value']}}"{% if each_function.raise_output_id == each_output['value'] %} selected{% endif %}>{{each_output['item']}}</option>
+          {%- endfor -%}
+        </select>
+      </div>
+    </div>
+
+  {% for each_output in output if each_function.raise_output_id and
+                                  "," in each_function.raise_output_id and
+                                  each_function.raise_output_id.split(",")[0] == each_output.unique_id %}
+
+    {% if 'output_types' in dict_outputs[each_output.output_type] and dict_outputs[each_output.output_type]['output_types']|length > 1 %}
+    <div class="col-auto">
+      {{form_mod_pid_base.raise_output_type.label(class_='control-label')}}
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="raise_output_type" name="raise_output_type" title="" data-original-title="{{_('출력 동작 (온/오프, PWM, 값, 볼륨 등)')}}">
+          <option value="">{{_('하나 선택')}}</option>
+          {%- for each_type in dict_outputs[each_output.output_type]['output_types'] -%}
+            <option value="{{each_type}}"{% if each_function.raise_output_type == each_type %} selected{% endif %}>{{dict_output_type[each_type]}}</option>
+          {%- endfor -%}
+        </select>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-auto">
+      {{form_mod_pid_base.raise_output_type.label(class_='control-label')}}
+      <div>
+        <input class="form-control" disabled="" value="{{dict_output_type[dict_outputs[each_output.output_type]['output_types'][0]]}}" type="text">
+        <input type="hidden" id="raise_output_type" name="raise_output_type" value="{{each_function.raise_output_type}}">
+      </div>
+    </div>
+    {% endif %}
+
+    {% if each_function.raise_output_type == 'pwm' %}
+      {% include 'pages/function_options/pid_options/output_pwm_raise.html' %}
+    {% elif each_function.raise_output_type == 'on_off' %}
+      {% include 'pages/function_options/pid_options/output_on_off_raise.html' %}
+    {% elif each_function.raise_output_type == 'value' %}
+      {% include 'pages/function_options/pid_options/output_value_raise.html' %}
+    {% elif each_function.raise_output_type == 'volume' %}
+      {% include 'pages/function_options/pid_options/output_volume_raise.html' %}
+    {% endif %}
+  {% endfor %}
+
+  </div>
+
+  <div class="row small-gutters">
+    <div class="col-auto">
+      {{form_mod_pid_base.lower_output_id.label(class_='control-label')}}
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="lower_output_id" name="lower_output_id" title="" data-original-title="{{_('선택한 환경 조건(측정값)을 하강시키는 출력을 선택하십시오')}}">
+          <option value="">{{_('비활성')}}</option>
+          {%- for each_output in choices_output_channels -%}
+            <option value="{{each_output['value']}}"{% if each_function.lower_output_id == each_output['value'] %} selected{% endif %}>{{each_output['item']}}</option>
+          {%- endfor -%}
+        </select>
+      </div>
+    </div>
+
+  {% for each_output in output if each_function.lower_output_id and
+                                  "," in each_function.lower_output_id and
+                                  each_function.lower_output_id.split(",")[0] == each_output.unique_id %}
+
+    {% if 'output_types' in dict_outputs[each_output.output_type] and dict_outputs[each_output.output_type]['output_types']|length > 1 %}
+    <div class="col-auto">
+      {{form_mod_pid_base.lower_output_type.label(class_='control-label')}}
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="lower_output_type" name="lower_output_type" title="" data-original-title="{{_('출력 동작 (온/오프, PWM, 볼륨 등)')}}">
+          <option value="">{{_('하나 선택')}}</option>
+          {%- for each_type in dict_outputs[each_output.output_type]['output_types'] -%}
+            <option value="{{each_type}}"{% if each_function.lower_output_type == each_type %} selected{% endif %}>{{dict_output_type[each_type]}}</option>
+          {%- endfor -%}
+        </select>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-auto">
+      {{form_mod_pid_base.lower_output_type.label(class_='control-label')}}
+      <div>
+        <input class="form-control" disabled="" value="{{dict_output_type[dict_outputs[each_output.output_type]['output_types'][0]]}}" type="text">
+        <input type="hidden" id="lower_output_type" name="lower_output_type" value="{{each_function.lower_output_type}}">
+      </div>
+    </div>
+    {% endif %}
+
+    {% if each_function.lower_output_type == 'pwm' %}
+      {% include 'pages/function_options/pid_options/output_pwm_lower.html' %}
+    {% elif each_function.lower_output_type == 'on_off' %}
+      {% include 'pages/function_options/pid_options/output_on_off_lower.html' %}
+    {% elif each_function.lower_output_type == 'value' %}
+      {% include 'pages/function_options/pid_options/output_value_lower.html' %}
+    {% elif each_function.lower_output_type == 'volume' %}
+      {% include 'pages/function_options/pid_options/output_volume_lower.html' %}
+    {% endif %}
+  {% endfor %}
+
+  </div>
+
+  <div class="row align-items-end small-gutters" style="padding-bottom: 0.5em;">
+    <div class="col-auto">
+      <div>
+        {{form_mod_pid_base.setpoint_tracking_type.label(class_='control-label')}}
+      </div>
+      <select class="form-control form-tooltip form-dropdown" id="setpoint_tracking_type_{{each_function.unique_id}}" name="setpoint_tracking_type" title="" data-original-title="{{dict_translation['setpoint_tracking_type']['phrase']}}">
+        <option value="">{{_('비활성')}}</option>
+        <option value="method"{% if each_function.setpoint_tracking_type == 'method' %} selected{% endif %}>{{_('메소드')}}</option>
+        <option value="input-math"{% if each_function.setpoint_tracking_type == 'input-math' %} selected{% endif %}>{{_('입력')}}</option>
+      </select>
+    </div>
+
+    <div class="col-auto" id="method_id_{{each_function.unique_id}}">
+      <div>
+        {{form_mod_pid_base.setpoint_tracking_method_id.label(class_='control-label')}}
+      </div>
+      <select class="form-control form-tooltip form-dropdown" id="setpoint_tracking_method_id" name="setpoint_tracking_method_id" title="" data-original-title="{{_('설정값 계산을 위해 하나를 선택하십시오. 활성화되면 측정값이 PID 설정값을 대체합니다')}}">
+        <option value="">{{_('하나 선택')}}</option>
+
+        {%- set valid_saved_method = [] -%}
+        {%- for each_method in method -%}
+          {%- if each_method.unique_id == each_function.setpoint_tracking_id -%}
+            {%- do valid_saved_method.append(1) -%}
+          {%- endif -%}
+          <option value="{{each_method.unique_id}}"{% if each_function.setpoint_tracking_id == each_method.unique_id %} selected{% endif %}>[{{'%02d' % each_method.id}}] {{each_method.name}}</option>
+        {%- endfor -%}
+        {%- if not valid_saved_method and each_function.setpoint_tracking_id != '' -%}
+          <option value="" selected>{{_('유효하지 않은 저장 ID입니다. 목록에서 다른 항목을 선택해 저장하십시오.')}}</option>
+        {%- endif -%}
+      </select>
+    </div>
+    <div class="col-auto" id="method_button_{{each_function.unique_id}}">
+      <a href="/method" class="form-control btn" role="button">{{_('메소드 관리')}}</a>
+    </div>
+
+    <div class="col-auto" id="input_math_id_{{each_function.unique_id}}">
+      <div>
+        {{form_mod_pid_base.setpoint_tracking_input_math_id.label(class_='control-label')}}
+      </div>
+      <select class="form-control form-tooltip form-dropdown" id="setpoint_tracking_input_math_id" name="setpoint_tracking_input_math_id" title="" data-original-title="{{_('설정값 계산을 위해 하나를 선택하십시오. 활성화되면 측정값이 PID 설정값을 대체합니다')}}">
+        <option value="">{{_('하나 선택')}}</option>
+        {% for each_input_form in choices_input -%}
+          <option value="{{each_input_form['value']}}"{% if each_function.setpoint_tracking_id == each_input_form['value'] %} selected{% endif %}>{{each_input_form['item']}}</option>
+        {% endfor -%}
+        {% for each_function_form in choices_function -%}
+          <option value="{{each_function_form['value']}}"{% if each_function.setpoint_tracking_id == each_function_form['value'] %} selected{% endif %}>{{each_function_form['item']}}</option>
+        {% endfor -%}
+      </select>
+    </div>
+    <div class="col-auto" id="input_math_max_age_{{each_function.unique_id}}">
+      {{form_mod_pid_base.setpoint_tracking_max_age.label(class_='control-label')}}
+      <div>
+        {{form_mod_pid_base.setpoint_tracking_max_age(class_='form-control', value=each_function.setpoint_tracking_max_age, **{'title':_('최대 허용 측정값 경과 시간')})}}
+      </div>
+    </div>
+  </div>
+
+</form>
+</div>
+
+<script>
+$(document).ready(function(){
+  let checkPattern = function () {
+    if ($('#setpoint_tracking_type_{{each_function.unique_id}}').val() === 'method') {
+      $("#method_id_{{each_function.unique_id}}").show();
+      $("#method_button_{{each_function.unique_id}}").show();
+      $("#input_math_id_{{each_function.unique_id}}").hide();
+      $("#input_math_max_age_{{each_function.unique_id}}").hide();
+    }
+    else if ($('#setpoint_tracking_type_{{each_function.unique_id}}').val() === 'input-math') {
+      $("#method_id_{{each_function.unique_id}}").hide();
+      $("#method_button_{{each_function.unique_id}}").hide();
+      $("#input_math_id_{{each_function.unique_id}}").show();
+      $("#input_math_max_age_{{each_function.unique_id}}").show();
+    }
+    else {
+      $("#method_id_{{each_function.unique_id}}").hide();
+      $("#method_button_{{each_function.unique_id}}").hide();
+      $("#input_math_id_{{each_function.unique_id}}").hide();
+      $("#input_math_max_age_{{each_function.unique_id}}").hide();
+    }
+  };
+  $('#setpoint_tracking_type_{{each_function.unique_id}}').on('change', checkPattern);
+  checkPattern();
+});
+</script>

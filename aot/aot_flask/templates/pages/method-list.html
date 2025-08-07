@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+{% set active_page = "method_list" %}
+{% set help_page = ["https://aot-inc.github.io/AoT/Methods/", dict_translation['method']['title']] %}
+
+{% block title %} - {{dict_translation['method']['title']}}{% endblock %}
+
+{% block head %}
+  {% if method %}
+  <script src="/static/js/user_js/highcharts-9.1.2.js"></script>
+    {% if current_user.theme in dark_themes %}
+  <script src="/static/js/dark-unica-custom.js"></script>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block body %}
+  <!-- Route: /method -->
+  <div class="container">
+    {% include 'flash_messages.html' %}
+
+    <h4>{{_('참조궤적')}} <a href="{{help_page[0]}}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+
+    <p>{{_('참조궤적은 PID 컨트롤러에서 다양한 유형의 설정값 참조를 위해 사용합니다. 일반적으로 PID 컨트롤러는 고정된 설정값에 맞춰 장치를 제어 합니다. 설정값이 시간에 따라 변하도록 하고 싶다면, 참조궤적에서 시간에 따라 설정값을 변화시키고 PID 컨트롤러에서 값을 추적하여 제어에 활용할 수 있습니다.')}}</p>
+    
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    <form method="post" action="/method-build/0">
+    <input type="hidden" name="form-name" value="createMethod">
+    {{form_create_method.csrf_token}}
+
+    <div class="row small-gutters" style="padding-left: 1em">
+      <div class="col-auto">
+        {{form_create_method.name.label(class_='control-label')}}
+        <div>
+          {{form_create_method.name(class_='form-control')}}
+        </div>
+      </div>
+      <div class="col-auto">
+        {{form_create_method.method_type.label(class_='control-label')}}
+        <div>
+          {{form_create_method.method_type(class_='selectpicker', **{'data-style': 'btn btn-primary', 'title': _('참조궤적') + ': ' + _('선택')}) }}
+        </div>
+      </div>
+      <div class="col-auto">
+        <label class='control-label' style="padding-top: 1em"></label>
+        <div>
+          {{form_create_method.Submit(class_='btn btn-primary')}}
+        </div>
+      </div>
+    </div>
+
+    </form>
+
+    <div style="clear: both; padding: 1em 0;">
+
+      <h4>
+      {%- if method == [] -%}
+        {{_('저장된 참조궤적이 없습니다.')}}
+      {%- else -%}
+        {{_('참조궤적 저장')}}
+      {%- endif -%}
+      </h4>
+    </div>
+
+    {%- for each_method in method -%}
+      {%- set chart_number = loop.index -%}
+      <div style="margin-bottom: 1em; border: 2px solid #ddd; border-radius: 5px;">
+        <div class="row small-gutters" style="padding: 0 1em">
+          <div class="col-12 col-sm-6">
+            <input class="form-control btn btn-primary btn-sm" type="button" onclick="setClipboard('{{each_method.unique_id}}')" title="[{{'%02d' % each_method.id}} UUID: {{each_method.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="[{{method_info[each_method.method_type]['name']}}] {{each_method.name}}" type="text">
+          </div>
+          <div class="col-auto">
+            <a href="/method-delete/{{each_method.unique_id}}" class="btn btn-primary" role="button" onclick="return confirm('Are you sure you want to delete this?')">{{dict_translation['delete']['title']}}</a>
+          </div>
+          <div class="col-auto">
+            <a href="/method-build/{{each_method.unique_id}}" class="btn btn-primary" role="button">{{_('Edit')}}</a>
+          </div>
+        </div>
+
+        {%- set method_setpoint = [] -%}
+        {%- for each_method_all in method_all if each_method_all.method_id == each_method.unique_id and each_method_all.setpoint_start -%}
+          {%- do method_setpoint.append(1) -%}
+        {%- endfor -%}
+
+        {%- if method_setpoint or each_method.method_type in ["DailySine", "DailyBezier"] -%}
+          <div id="container{{chart_number}}" style="height: 300px; width: 100%;"></div>
+        {%- endif -%}
+
+      </div>
+    {%- endfor -%}
+    <div style="clear: both; padding:1em 0;"></div>
+  </div>
+
+  <script>
+  $(document).ready(function() {
+    let chart = [];
+    // Retrieve initial chart data set from the past (duration set by user)
+    function getPastData(chart_number, method_id) {
+      const url = '/method-data/' + method_id;
+      $.getJSON(url,
+        function(data, responseText, jqXHR) {
+          if (jqXHR.status !== 204) chart[chart_number].addSeries({name: 'Setpoint', data: data});
+        }
+      );
+    }
+    {% for each_method in method -%}
+      {%- set method_setpoint = [] -%}
+      {%- for each_method_all in method_all if each_method_all.method_id == each_method.unique_id and each_method_all.setpoint_start -%}
+        {%- do method_setpoint.append(1) -%}
+      {%- endfor -%}
+      {%- set chart_number = loop.index -%}
+
+      {%- if method_setpoint or each_method.method_type in ['DailySine', 'DailyBezier'] -%}
+        chart[{{chart_number}}] = new Highcharts.Chart({
+          chart : {
+            renderTo: 'container{{chart_number}}',
+            zoomType: 'x',
+            resetZoomButton: {
+              theme: {
+                display: 'none'
+              }
+            },
+            events: {
+              load: function () {
+                getPastData({{chart_number}}, "{{each_method.unique_id}}");
+              }
+            }
+          },
+          title: {
+            text: null
+          },
+          tooltip: {
+            {% if each_method.method_type == "Duration" -%}
+              headerFormat: '<span style="font-size: 10px">{point.key} Seconds</span><br/>',
+            {%- endif -%}
+            {% if each_method.method_type == "Date" -%}
+              xDateFormat: '%a, %b %e, %Y %H:%M:%S',
+            {% elif each_method.method_type in ["Daily", "DailySine", 'DailyBezier'] -%}
+              xDateFormat: '%H:%M:%S',
+            {%- endif %}
+            valueDecimals: 2
+          },
+          legend: {
+            enabled: false
+          },
+          navigator: {
+            enabled: false
+          },
+          rangeSelector: {
+            enabled: false
+          },
+          scrollbar: {
+            enabled: false
+          },
+          xAxis: {
+            type: '{%- if each_method.method_type == "Duration" -%}linear{%- elif each_method.method_type in ["Date", "Daily", "DailySine", "DailyBezier"] -%}datetime{%- endif -%}',
+            ordinal: false
+          },
+          yAxis: [
+          {   
+            title: {
+              text: null
+            },
+            labels: {
+              format: '{value}'
+            },
+            opposite: false
+          }],
+          credits: {
+            enabled: false
+          }
+        });
+      {%- endif -%}
+    {%- endfor -%}
+
+  });
+  </script>
+
+{% endblock %}

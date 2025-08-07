@@ -1,0 +1,132 @@
+version: "3.7"
+
+services:
+
+  aot_influxdb:
+    container_name: aot_influxdb
+    build:
+      context: ../
+      dockerfile: docker/influxdb/Dockerfile
+    env_file:
+      - 'influxdb/env.influxdb'
+    volumes:
+      - aot_influxdb:/var/lib/influxdb
+
+  aot_nginx:
+    container_name: aot_nginx
+    restart: always
+    build:
+      context: ../
+      dockerfile: docker/nginx/Dockerfile
+    volumes:
+      - aot:/usr/local/aot
+      - aot_log:/var/log/aot
+      - aot_ssl_certs:/home/aot/aot/aot_flask/ssl_certs
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - aot_flask
+
+  aot_daemon:
+    container_name: aot_daemon
+    image: app
+    restart: always
+    environment:
+      - TZ=America/New_York  # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for valid time zones
+    volumes:
+      - aot:/usr/local/aot
+      - aot_env:/home/aot/env
+      - aot_databases:/home/aot/databases
+      - aot_cameras:/home/aot/cameras
+      - aot_custom_functions:/home/aot/aot/functions/custom_functions
+      - aot_custom_actions:/home/aot/aot/actions/custom_actions
+      - aot_custom_inputs:/home/aot/aot/inputs/custom_inputs
+      - aot_custom_outputs:/home/aot/aot/outputs/custom_outputs
+      - aot_custom_widgets:/home/aot/aot/widgets/custom_widgets
+      - aot_custom_user_scripts:/home/aot/aot/user_scripts
+      - aot_log:/var/log/aot
+      - aot_ssl_certs:/home/aot/aot/aot_flask/ssl_certs
+      - /dev:/dev
+      - /sys:/sys
+      - /opt:/opt
+    privileged: true
+    command: bash -c "wget --quiet --no-check-certificate -p http://aot_nginx/ -O /dev/null && 
+                      PYTHONPATH=/home/aot /home/aot/env/bin/python aot_daemon.py"
+    depends_on:
+      - aot_flask
+
+  aot_flask:
+    container_name: aot_flask
+    image: app
+    hostname: AoT  # Change to your desired hostname
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    restart: always
+    environment:
+      - TZ=America/New_York  # See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for valid time zones
+    volumes:
+      - aot:/usr/local/aot
+      - aot_env:/home/aot/env
+      - aot_databases:/home/aot/databases
+      - aot_cameras:/home/aot/cameras
+      - aot_custom_functions:/home/aot/aot/functions/custom_functions
+      - aot_custom_actions:/home/aot/aot/actions/custom_actions
+      - aot_custom_inputs:/home/aot/aot/inputs/custom_inputs
+      - aot_custom_outputs:/home/aot/aot/outputs/custom_outputs
+      - aot_custom_widgets:/home/aot/aot/widgets/custom_widgets
+      - aot_custom_user_scripts:/home/aot/aot/user_scripts
+      - aot_custom_user_css:/home/aot/aot/aot_flask/static/css/user_css
+      - aot_custom_user_js:/home/aot/aot/aot_flask/static/js/user_js
+      - aot_custom_user_fonts:/home/aot/aot/aot_flask/static/fonts/user_fonts
+      - aot_log:/var/log/aot
+      - aot_ssl_certs:/home/aot/aot/aot_flask/ssl_certs
+      - aot_influxdb:/var/lib/influxdb
+      - /dev:/dev
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Permits container to restart itself
+    privileged: true
+    command: /home/aot/env/bin/python -m gunicorn --workers 1 --bind unix:/usr/local/aot/aotflask.sock start_flask_ui:app
+    depends_on:
+      - aot_influxdb
+
+# Uncomment the following blocks and rebuild to enable Grafana and/or Telegraf
+
+#  aot_telegraf:
+#    image: telegraf:latest
+#    container_name: aot_telegraf
+#    volumes:
+#      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+#    depends_on:
+#      - aot_influxdb
+
+#  aot_grafana:
+#    image: grafana/grafana:latest
+#    container_name: aot_grafana
+#    env_file:
+#      - './grafana/env.grafana'
+#    volumes:
+#      - aot_grafana:/var/lib/grafana
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - aot_influxdb
+
+volumes:
+  aot:
+  aot_env:
+  aot_cameras:
+  aot_custom_functions:
+  aot_custom_actions:
+  aot_custom_inputs:
+  aot_custom_outputs:
+  aot_custom_widgets:
+  aot_custom_user_scripts:
+  aot_custom_user_css:
+  aot_custom_user_js:
+  aot_custom_user_fonts:
+  aot_databases:
+  aot_ssl_certs:
+  aot_log:
+  aot_influxdb:
+  aot_grafana:

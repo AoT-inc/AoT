@@ -1,0 +1,31 @@
+<div class="col-12 col-md-4">
+  {{form_trigger.measurement.label(class_='control-label')}}
+  <div>
+    <select class="form-control form-tooltip form-dropdown" id="measurement" name="measurement" style="width: 100%;" title="" data-original-title="{{_('입력으로 사용할 측정을 선택하세요')}}">
+      <option value="">{{dict_translation['select_one']['title']}}</option>
+    {% set edge_sensor = [] %}
+    {% for each_input_form in choices_input -%}
+      {% set input_ = table_input.query.filter(table_input.unique_id == each_input_form['value'].split(',')[0]).first() %}
+      {% if input_ and input_.device in dict_inputs and 'edge_input' in dict_inputs[input_.device] and dict_inputs[input_.device]['edge_input'] %}
+        {% do edge_sensor.append(1) %}
+      <option value="{{each_input_form['value'].split(',')[0]}}"{% if each_function.measurement == each_input_form['value'].split(',')[0] %} selected{% endif %}>{{each_input_form['item']}}</option>
+      {%- endif -%}
+    {% endfor -%}
+
+    {% if not edge_sensor -%}
+      <option value="">{{dict_translation['none_available']['title']}}</option>
+    {% endif -%}
+    </select>
+  </div>
+</div>
+<div class="col-10 col-sm-3 col-md-2">
+  {{form_trigger.edge_detected.label(class_='control-label')}}
+  <div>
+    <select class="form-control form-tooltip form-dropdown" data-placement="top" id="edge_detected" name="edge_detected" title="{{_('낮음에서 높음(상승), 높음에서 낮음(하강) 또는 양방향')}}">
+      <option value=""></option>
+      <option value="rising"{% if each_function.edge_detected == 'rising' %} selected{% endif %}>{{_('상승')}}</option>
+      <option value="falling"{% if each_function.edge_detected == 'falling' %} selected{% endif %}>{{_('하강')}}</option>
+      <option value="both"{% if each_function.edge_detected == 'both' %} selected{% endif %}>{{_('둘 다')}}</option>
+    </select>
+  </div>
+</div>

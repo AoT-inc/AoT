@@ -1,0 +1,184 @@
+{% set all_measurements = table_device_measurements.query.filter(
+                              and_(table_device_measurements.device_id == each_device.unique_id,
+                                   table_device_measurements.is_enabled)).all() %}
+{% if all_measurements %}
+
+<div class="row small-gutters" style="padding: 0.5em">
+  <div class="col-12">
+    <h5>Configure Measurements</h5>
+  </div>
+</div>
+
+  {% if 'measurements_rescale' in dict_options and dict_options['measurements_rescale'] %}
+
+<div class="col-12">
+    Rescaling: If rescaling, set the Rescaled Measurement to the new measurement and unit and the Rescale Method to {{_('Linear')}} or {{_('Equation')}}. {{_('Linear')}} rescaling requires the {{dict_translation['scale_to_min']['title']}} and {{dict_translation['scale_to_max']['title']}} options be set. {{_('Equation')}} rescaling requires the {{_('Equation')}} option be set, with the variable "x" being replaced with the measurement and the result of the calculation being stored in the database.
+</div>
+
+  {% endif %}
+
+  {% for each_measurement in all_measurements %}
+
+  <input id="measurement_id_config_{{each_measurement.unique_id}}" name="measurement_id_config_{{each_measurement.unique_id}}" type="hidden" value="{{each_measurement.unique_id}}">
+
+{% if each_measurement.measurement and each_measurement.measurement not in dict_measurements %}
+  <div class="row small-gutters" style="padding: 0.5em">
+    <div class="col-auto" style="color: red">
+      Warning: Saved measurement with ID "{{each_measurement.measurement}}" not found in database. Add the missing unit on the Configure -> Measurement page or change the set measurement.
+    </div>
+  </div>
+{% endif %}
+{% if each_measurement.unit and each_measurement.unit not in dict_units %}
+  <div class="row small-gutters" style="padding: 0.5em">
+    <div class="col-auto" style="color: red">
+      Warning: Saved unit with ID "{{each_measurement.unit}}" not found in database. Add the missing unit on the Configure -> Measurement page or change the set unit.
+    </div>
+  </div>
+{% endif %}
+
+<div class="row small-gutters align-items-end" style="border-bottom: 1px solid #ddd; padding: 0.5em">
+
+    {% if each_measurement.unit and each_measurement.measurement %}
+
+  <div class="col-auto">
+    <input class="form-control btn btn-primary btn-block" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="
+    {%- if each_measurement.channel != None -%}
+      CH{{each_measurement.channel}}
+    {%- endif -%}
+    {%- if each_measurement.measurement in dict_measurements -%}
+      {{' ' + dict_measurements[each_measurement.measurement]['name']}}
+    {%- endif -%}
+    {%- if each_measurement.unit in dict_units and dict_units[each_measurement.unit]['unit'] -%}
+      {{' (' + dict_units[each_measurement.unit]['unit'] + ')'}}
+    {%- endif -%}
+    ">
+  </div>
+
+    {% else %}
+
+  <div class="col-auto">
+    <input class="form-control btn btn-primary btn-block" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="
+    {%- if each_measurement.channel != None -%}
+      CH{{each_measurement.channel}}
+    {%- endif -%}">
+  </div>
+
+    {% endif %}
+
+  <div class="col-auto">
+    <label class="control-label" for="measurement_id_{{each_measurement.unique_id}}">{{dict_translation['unique_id']['title']}}</label>
+    <div>
+      <input class="form-control" id="measurement_id_{{each_measurement.unique_id}}" name="measurement_id_{{each_measurement.unique_id}}" title="{{dict_translation['unique_id']['phrase']}}" type="text" value="{{each_measurement.unique_id}}">
+    </div>
+  </div>
+
+  <div class="col-auto">
+    <label class="control-label" for="measurement_convert_name_{{each_measurement.unique_id}}">{{dict_translation['name']['title']}}</label>
+    <div>
+      <input class="form-control" id="measurement_convert_name_{{each_measurement.unique_id}}" name="measurement_convert_name_{{each_measurement.unique_id}}" title="{{dict_translation['name']['phrase']}}" type="text" value="{{each_measurement.name}}">
+    </div>
+  </div>
+
+    {% if 'measurements_rescale' in dict_options and dict_options['measurements_rescale'] %}
+
+  <div class="col-auto">
+    <label class="control-label" for="measurement_scale_from_min_{{each_measurement.unique_id}}">{{dict_translation['scale_from_min']['title']}}</label>
+    <div>
+      <input class="form-control" id="measurement_scale_from_min_{{each_measurement.unique_id}}" name="measurement_scale_from_min_{{each_measurement.unique_id}}" step="any" type="number" value="{{each_measurement.scale_from_min}}">
+    </div>
+  </div>
+  <div class="col-auto">
+    <label class="control-label" for="measurement_scale_from_max_{{each_measurement.unique_id}}">{{dict_translation['scale_from_max']['title']}}</label>
+    <div>
+      <input class="form-control" id="measurement_scale_from_max_{{each_measurement.unique_id}}" name="measurement_scale_from_max_{{each_measurement.unique_id}}" step="any" type="number" value="{{each_measurement.scale_from_max}}">
+    </div>
+  </div>
+    <div class="col-auto">
+      <label class="control-label" for="measurement_rescale_method_{{each_measurement.unique_id}}">{{_('Rescale Method')}}</label>
+      <div>
+        <select class="form-control form-tooltip form-dropdown" id="measurement_rescale_method_{{each_measurement.unique_id}}" name="measurement_rescale_method_{{each_measurement.unique_id}}" data-placement="top" title="The method to employ to rescale">
+          <option value="linear"{% if each_measurement.rescale_method == "linear" %} selected{% endif %}>{{_('Linear')}}</option>
+          <option value="equation"{% if each_measurement.rescale_method == "equation" %} selected{% endif %}>{{_('Equation')}}</option>
+        </select>
+      </div>
+  </div>
+  <div class="col-auto">
+    <label class="control-label" for="measurement_scale_to_min_{{each_measurement.unique_id}}">{{dict_translation['scale_to_min']['title']}}</label>
+    <div>
+      <input class="form-control" id="measurement_scale_to_min_{{each_measurement.unique_id}}" name="measurement_scale_to_min_{{each_measurement.unique_id}}" step="any" type="number" value="{{each_measurement.scale_to_min}}">
+    </div>
+  </div>
+  <div class="col-auto">
+    <label class="control-label" for="measurement_scale_to_max_{{each_measurement.unique_id}}">{{dict_translation['scale_to_max']['title']}}</label>
+    <div>
+      <input class="form-control" id="measurement_scale_to_max_{{each_measurement.unique_id}}" name="measurement_scale_to_max_{{each_measurement.unique_id}}" step="any" type="number" value="{{each_measurement.scale_to_max}}">
+    </div>
+  </div>
+  <div class="col-auto">
+    <label class="control-label" for="measurement_rescale_equation_{{each_measurement.unique_id}}">{{_('Equation')}}</label>
+    <div>
+      <input class="form-control" id="measurement_rescale_equation_{{each_measurement.unique_id}}" name="measurement_rescale_equation_{{each_measurement.unique_id}}" title="The equation to rescale the measurement (variable x)" type="text" value="{{each_measurement.rescale_equation}}">
+    </div>
+  </div>
+  <div class="col-auto">
+    <label class="control-label" for="measurement_rescaled_meas_unit_{{each_measurement.unique_id}}">{{_('Rescaled Measurement')}}</label>
+    <div>
+      <select class="form-control" id="measurement_rescaled_meas_unit_{{each_measurement.unique_id}}" name="measurement_rescaled_meas_unit_{{each_measurement.unique_id}}">
+        <option value="">{{_('Do Not Rescale')}}</option>
+        {% for each_measure_unit in choices_measurements_units %}
+        <option value="{{each_measure_unit['value']}}"{% if each_measure_unit['value'] == each_measurement.rescaled_measurement + ',' + each_measurement.rescaled_unit %} selected{% endif %}>{{each_measure_unit['item']}}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="col-auto">
+    <label class="control-label" for="measurement_invert_scale_{{each_measurement.unique_id}}">{{dict_translation['invert']['title']}}: {{dict_translation['scale']['title']}}</label>
+    <div class="input-group-text">
+      <input id="measurement_invert_scale_{{each_measurement.unique_id}}" name="measurement_invert_scale_{{each_measurement.unique_id}}" type="checkbox" value="y"{% if each_measurement.invert_scale %} checked{% endif %}>
+    </div>
+  </div>
+
+    {% endif %}
+
+    {% if 'measurements_select_measurement_unit' in dict_options['options_enabled'] %}
+
+  <div class="col-auto">
+    <label class="control-label" for="measurement_meas_unit_{{each_measurement.unique_id}}">{{dict_translation['select_measurement_unit']['title']}}</label>
+    <div>
+      <select class="form-control" id="measurement_meas_unit_{{each_measurement.unique_id}}" name="measurement_meas_unit_{{each_measurement.unique_id}}" title="{{dict_translation['select_measurement_unit']['phrase']}}">
+        <option value="">{{dict_translation['select_one']['title']}}</option>
+        {% for each_measure_unit in choices_measurements_units %}
+        <option value="{{each_measure_unit['value']}}"{% if each_measure_unit['value'] == each_measurement.measurement + ',' + each_measurement.unit %} selected{% endif %}>{{each_measure_unit['item']}}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+    {% else %}
+
+  <div class="col-auto">
+    <label class="control-label" for="measurement_conversion_id_{{each_measurement.unique_id}}">{{dict_translation['convert_to_measurement_unit']['title']}}</label>
+    <div>
+      <select class="form-control form-tooltip form-dropdown" id="measurement_conversion_id_{{each_measurement.unique_id}}" name="measurement_conversion_id_{{each_measurement.unique_id}}" data-placement="top" title="{{dict_translation['convert_to_measurement_unit']['phrase']}}">
+        <option value="">{{_('Do Not Convert')}}</option>
+      {%- set all_conversion = table_conversion.query.all() -%}
+      {%- if all_conversion -%}
+        {% for each_conversion in all_conversion %}
+          {%- if each_conversion.convert_unit_to in dict_units and
+                (each_conversion.convert_unit_from == each_measurement.unit or
+                 each_conversion.convert_unit_from == each_measurement.rescaled_unit)
+          -%}
+        <option value="{{each_conversion.unique_id}}"{% if each_conversion.unique_id == each_measurement.conversion_id %} selected{% endif %}>[{{each_conversion.id + 1}}] Convert to {{dict_units[each_conversion.convert_unit_to]['name']}} ({{dict_units[each_conversion.convert_unit_to]['unit']}})</option>
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+      </select>
+    </div>
+  </div>
+
+    {% endif %}
+
+</div>
+
+  {% endfor %}
+{% endif %}

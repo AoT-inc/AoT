@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <link rel="icon" href="/favicon.png">
+
+  <title>AoT - {{_('Create Admin')}} - {{host}}</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom styles for this template -->
+  <link href="/static/css/signin.css" rel="stylesheet">
+
+  <script src="/static/js/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+<!-- Route: /create_admin -->
+<div class="container">
+  {% include 'flash_messages.html' %}
+
+  {% if not dismiss_notification %}
+
+  <div class="row justify-content-center">
+    <div class="col-12" style="max-width: 40em;">
+
+      <p style="padding: 1em 0 0.1em 0; text-align: center; font-size: 2em; font-weight: bold;">{{_('Welcome to AoT')}}</p>
+      <h4 class="form-signin-heading" style="text-align: center;">{{host}}</h4>
+
+      <p>
+        <form method="post" action="/create_admin">
+          <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <label class="input-group-text" for="inputGroupSelect01">{{_('Language')}}</label>
+            </div>
+            <select onchange="this.form.submit()" class="custom-select" id="inputGroupSelect01" name="language">
+              {% for each_lang, each_name in languages.items() %}
+                <option value="{{each_lang}}"{% if language == each_lang %} selected{% endif %}>{{each_name}}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      </p>
+
+      <p>
+        {{_("새로운 AoT 설치를 시작합니다. 관리자 사용자를 생성해주세요. 시작하려면 약관을 읽고 동의해주세요.")}}</p>
+
+      <p style="padding: 1em 0; text-align: center; font-size: 1.2em; font-weight: bold;">
+        {{_('품질 보증 알림')}}
+      </p>
+
+      <p>
+        {{_('AoT는 Mycodo를 기반으로한 농업용 제어시스템 입니다. 사용자는 별도 계약에 따라 AoT에서 추가한 소프트웨어에 대해서 보증 받을 수 있습니다.  AoT에 관련된 부분은 아래의 보증 안내를 따릅니다.')}}
+        {{_('AoT는 무료 소프트웨어입니다. 무료 소프트웨어 재단에서 공표한 GNU 일반 공중 사용 허가서(GNU GPL) 버전 3 또는 그 이후 버전에 따라 재배포 및 수정이 가능합니다. AoT는 유용할 것이라는 희망에서 배포되지만, 어떠한 형태의 보증도 제공하지 않습니다. 또한 상품성이나 특정 목적에의 적합성에 대한 묵시적 보증 역시 제공되지 않습니다. 자세한 내용은 GNU 일반 공중 사용 허가서를 참조하세요. AoT와 함께 GNU 일반 공중 사용 허가서 사본을 받으셨을 것입니다. 받지 못하셨다면, 링크를 참조하시기 바랍니다. <a href="http://www.gnu.org/licenses/" target="_blank">http://www.gnu.org/licenses/</a>.')}}
+        <br/>&nbsp;<br/>
+        {{_('AoT는 개발을 돕기 위해 익명 사용 통계를 수집합니다. 로그인 후 관리 페이지에서 언제든지 수집을 거부하실 수 있습니다.')}}
+      </p>
+
+      <p>
+        <form method="post" action="/create_admin">
+          {{form_notice.csrf_token}}
+          {{form_notice.acknowledge(class_='form-control btn btn-primary btn-sm')}}
+        </form>
+      </p>
+
+    </div>
+  </div>
+
+  {% else %}
+
+  <div class="row justify-content-center">
+    <div class="col-12" style="max-width: 30em;">
+
+      <h2 class="form-signin-heading" style="text-align: center;">AoT</h2>
+      <h4 class="form-signin-heading" style="text-align: center;">{{host}}</h4>
+      <h3 class="form-signin-heading" style="text-align: center;">{{_('Create Admin')}}</h3>
+
+      <form method="post" action="/create_admin">
+        <div class="input-group mb-3">
+          <div class="input-group-prepend">
+            <label class="input-group-text" for="inputGroupSelect01">{{_('Language')}}</label>
+          </div>
+          <select onchange="this.form.submit()" class="custom-select" id="inputGroupSelect01" name="language">
+            {% for each_lang, each_name in languages.items() %}
+              <option value="{{each_lang}}"{% if language == each_lang %} selected{% endif %}>{{each_name}}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+
+      <h6 style="text-align: center;">{{_('Login information is stored locally')}}</h6>
+      <h6 style="text-align: center;">{{_('Usernames must be 3 to 64 characters, passwords >3 characters, and contain only letters and numbers')}}</h6>
+
+      <form id='create_admin_form' class="form-signin" name="create_admin" action="/create_admin" method="POST">
+        <input type="hidden" name="form-name" value="create_admin">
+        {{form_create_admin.hidden_tag()}}
+        {{form_create_admin.username.label(class_='sr-only')}}
+        {{form_create_admin.username(class_='form-control', autofocus=true)}}
+        {{form_create_admin.email.label(class_='sr-only')}}
+        {{form_create_admin.email(class_='form-control')}}
+        {{form_create_admin.password.label(class_='sr-only')}}
+        {{form_create_admin.password(class_='form-control')}}
+        {{form_create_admin.password_repeat.label(class_='sr-only')}}
+        {{form_create_admin.password_repeat(class_='form-control')}}
+        <button class="btn btn-lg btn-primary btn-block" type="submit">{{_('관리자 생성하기')}}</button>
+      </form>
+
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<script src="/static/js/bootstrap.min.js"></script>
+</body>
+</html>

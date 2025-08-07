@@ -1,0 +1,22 @@
+<div class="row small-gutters" style="padding: 0.7em">
+  <div class="col-sm-12">
+    {{_('여러 방법의 출력을 결합합니다. 나열된 모든 방법은 병렬로 실행되며, 그 출력은 곱해집니다. 계단식 방법 중 하나가 종료되면 결합된 방법도 종료됩니다.')}}
+  </div>
+</div>
+<div class="row small-gutters" style="padding: 0.7em">
+  <div class="col-auto">
+    <div>
+      <select class="form-control form-tooltip form-dropdown" id="linked_method_id" name="linked_method_id" data-placement="top" title="{{_('출력 값을 이용하여 PWM 출력의 듀티 사이클을 설정하는 이 지속 시간 방법을 실행합니다')}}">
+        <option value="">{{dict_translation['select_one']['title']}}</option>
+        {%- for each_method in cascade_method -%}
+          <option value="{{each_method.unique_id}}">[{{'%02d' % each_method.id}}] {{each_method.name}}</option>
+        {%- endfor -%}
+      </select>
+    </div>
+  </div>
+  <div class="col-auto">
+    <div>
+      {{form_add_method.save(class_='form-control btn btn-primary btn-sm')}}
+    </div>
+  </div>
+</div>

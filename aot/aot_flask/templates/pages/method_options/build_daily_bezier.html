@@ -1,0 +1,69 @@
+<div class="row small-gutters" style="padding: 0.7em">
+  <div class="col-sm-12">
+    {{_('하루 동안의 설정값을 3차 베지어 곡선을 기반으로 정의합니다. 베지어 곡선에 익숙하지 않다면 <a href="https://www.desmos.com/calculator/cahqdxeshd" target="_blank">그래픽 베지어 곡선 생성기</a>를 사용하여 4개의 점(각각 x와 y)의 8개 변수를 활용하는 것을 권장합니다. x축의 시작점(x3)과 끝점(x0)은 자동으로 24시간에 맞게 늘어나거나 기울어지며, 이 방법은 매일 반복됩니다.')}}
+  </div>
+
+  <div class="col-md-3">
+    {{form_add_method.x0.label(class_='control-label')}}
+    <div>
+      {{form_add_method.x0(class_='form-control', value=last_bezier_method.x0)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.y0.label(class_='control-label')}}
+    <div>
+      {{form_add_method.y0(class_='form-control', value=last_bezier_method.y0)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.x1.label(class_='control-label')}}
+    <div>
+      {{form_add_method.x1(class_='form-control', value=last_bezier_method.x1)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.y1.label(class_='control-label')}}
+    <div>
+      {{form_add_method.y1(class_='form-control', value=last_bezier_method.y1)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.x2.label(class_='control-label')}}
+    <div>
+      {{form_add_method.x2(class_='form-control', value=last_bezier_method.x2)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.y2.label(class_='control-label')}}
+    <div>
+      {{form_add_method.y2(class_='form-control', value=last_bezier_method.y2)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.x3.label(class_='control-label')}}
+    <div>
+      {{form_add_method.x3(class_='form-control', value=last_bezier_method.x3)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.y3.label(class_='control-label')}}
+    <div>
+      {{form_add_method.y3(class_='form-control', value=last_bezier_method.y3)}}
+    </div>
+  </div>
+  <div class="col-md-3">
+    {{form_add_method.shift_angle.label(class_='control-label')}}
+    <div>
+      {{form_add_method.shift_angle(class_='form-control', value=last_bezier_method.shift_angle)}}
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-3">
+    <label class='control-label'></label>
+    <div>
+      {{form_add_method.save(class_='btn btn-primary', value=dict_translation['save']['title'])}}
+    </div>
+  </div>
+</div>

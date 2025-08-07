@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% set active_page = "logview" %}
+{% block title %} - 로그 보기{% endblock %}
+
+{% block body %}
+  <!-- 경로: /logview -->
+  <div class="container">
+    {% include 'flash_messages.html' %}
+
+    <form class="row" method="post" action="/logview" style="padding-top: 0.5em">
+      <input type="hidden" name="form-name" value="logview">
+      {{form_log_view.hidden_tag()}}
+      <div class="col-12 col-sm-2">
+        {{form_log_view.lines(class_='form-control', type="number", value=lines)}}
+      </div>
+      <div class="col-auto">
+        <select class="form-control form-tooltip form-dropdown" data-placement="top" id="log" name="log" title="로그 선택">
+          <option value="log_daemon"{% if log_field == "log_daemon" %} selected{% endif %}>데몬</option>
+          <option value="log_pid_settings"{% if log_field == "log_pid_settings" %} selected{% endif %}>데몬 (PID 설정)</option>
+          <option value="log_keepup"{% if log_field == "log_keepup" %} selected{% endif %}>데몬 유지</option>
+          <option value="log_dependency"{% if log_field == "log_dependency" %} selected{% endif %}>의존성</option>
+          <option value="log_import"{% if log_field == "log_import" %} selected{% endif %}>설정 가져오기</option>
+          <option value="log_nginx"{% if log_field == "log_nginx" %} selected{% endif %}>Nginx</option>
+          <option value="log_backup"{% if log_field == "log_backup" %} selected{% endif %}>AoT 백업</option>
+          <option value="log_restore"{% if log_field == "log_restore" %} selected{% endif %}>AoT 복원</option>
+          <option value="log_upgrade"{% if log_field == "log_upgrade" %} selected{% endif %}>AoT 업그레이드</option>
+          <option value="log_flask"{% if log_field == "log_flask" %} selected{% endif %}>웹</option>
+          <option value="log_http_access"{% if log_field == "log_http_access" %} selected{% endif %}>웹 접근</option>
+          <option value="log_http_error"{% if log_field == "log_http_error" %} selected{% endif %}>웹 오류</option>
+          <option value="log_login"{% if log_field == "log_login" %} selected{% endif %}>웹 로그인</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        {{form_log_view.search(class_='form-control', value=search)}}
+      </div>
+      <div class="col-auto">
+        {{form_log_view.log_view(class_='btn btn-primary btn-block')}}
+      </div>
+    </form>
+
+    {%- if log_output != None -%}
+    <div style="padding-top:1.5em">
+      {%- if log_output == 404 -%}
+        파일을 찾을 수 없습니다: {{logfile}}
+      {%- elif log_output == '' -%}
+        파일이 비어있습니다: {{logfile}}
+      {%- else -%}
+        파일 {{logfile}}의 마지막 {{lines}} 줄:
+        <pre style="resize: vertical; padding: 0.5em; border: 1px solid Black;">{{log_output}}</pre>
+      {%- endif -%}
+    </div>
+    {%- endif -%}
+
+  </div>
+
+{% endblock %}

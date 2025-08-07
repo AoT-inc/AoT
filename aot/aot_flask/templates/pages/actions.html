@@ -1,0 +1,46 @@
+{% set dict_options = dict_actions[each_action.action_type] %}
+{% set each_device = each_action %}
+{% set custom_options_values = custom_options_values_actions %}
+{% set force_default_value = false %}
+
+<div id="mod_action_{{each_action.unique_id}}">
+  <form method="post" action="{{post_action}}">
+  {{form_actions.csrf_token}}
+  {{form_actions.device_id(class_='form-control', value=unique_id)}}
+  {{form_actions.action_id(class_='form-control', value=each_action.unique_id)}}
+
+  {% set unique_id = each_action.unique_id %}
+
+    <div class="row align-items-end small-gutters" style="border-bottom: 1px solid #ddd; padding-bottom: 0.3em">
+
+  {% if 'name' in dict_options and 'message' in dict_options %}
+      <div class="col-12">
+        <strong title="UUID: {{unique_id}}">[{{_('동작')}} {{unique_id.split('-')[0]}}] {{dict_options["name"]}}</strong>: {{dict_options["message"]}}
+      </div>
+  {% endif %}
+
+  {% if 'usage' in dict_options and controller_type == "Conditional" %}
+      <div class="col-12">
+        <strong>사용법</strong>: {{dict_options['usage']|safe|replace("ACTION_ID", unique_id.split('-')[0])}}
+      </div>
+  {% endif %}
+
+  {% if 'custom_options' in dict_options and unique_id in custom_options_values %}
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'save_action');" name="save_action" value="{{_('저장')}}" class="form-control btn btn-primary btn-block" type="button"/>
+      </div>
+  {% endif %}
+
+      <div class="col-auto">
+        <input onclick="return confirm('{{_('삭제하시겠습니까??')}}') && $(this).processRequest(this, 'delete_action');" name="delete_action" value="{{_('Delete')}}" class="form-control btn btn-primary btn-block" type="button"/>
+      </div>
+
+  {% if 'custom_options' in dict_options and unique_id in custom_options_values %}
+    {% for each_option in dict_options['custom_options'] %}
+      {% include 'pages/form_options/Custom_Options.html' %}
+    {% endfor %}
+  {% endif %}
+
+    </div>
+  </form>
+</div>
