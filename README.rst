@@ -59,7 +59,7 @@ AoT 소프트웨어에 버그가 있다고 생각되면 먼저 github의 `Issues
 후원하기
 ------
 
-AoT는 항상 무료로 제공되고 있으며, 앞으로도 그럴 예정입니다. AoT가 유용하다고 느끼신다면 `github.com/sponsors/aot-inc <https://github.com/sponsors/aot-inc>`__에서 후원하거나 `kylegabriel.com/donate <https://kylegabriel.com/donate>`__에서 기부해 주세요.
+AoT는 항상 무료로 제공되고 있으며, 앞으로도 그럴 예정입니다. AoT가 유용하다고 느끼신다면 `github.com/sponsors/aot-inc <https://github.com/sponsors/aot-inc>`__에서 후원해주세요.
 
 주요 기능
 --------
@@ -76,11 +76,6 @@ AoT는 항상 무료로 제공되고 있으며, 앞으로도 그럴 예정입니
 -  전력 소비 및 비용을 추적하는 `에너지 사용량 측정 <https://aot-inc.github.io/AoT/Energy-Usage/>`__.
 -  시스템을 최신 버전으로 쉽게 업그레이드하거나 백업/복원할 수 있는 `업그레이드 시스템 <https://aot-inc.github.io/AoT/Upgrade-Backup-Restore/>`__.
 -  다양한 `언어 <https://github.com/aot-inc/AoT#features>`__로 웹 인터페이스를 사용할 수 있는 `번역 <https://aot-inc.github.io/AoT/Translations/>`__ 지원.
-
-.. image:: https://kylegabriel.com/projects/wp-content/uploads/sites/3/2020/06/Screenshot_2020-04-25-hydra-Default-Dashboard-AoT-8-4-0-dashboard_2.png
-   :target: https://kylegabriel.com/projects/wp-content/uploads/sites/3/2020/06/Screenshot_2020-04-25-hydra-Default-Dashboard-AoT-8-4-0-dashboard_2.png
-
-그림: `자동화 수경재배 시스템 구축 <https://kylegabriel.com/projects/2020/06/automated-hydroponic-system-build.html>`__
 
 
 
