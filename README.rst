@@ -49,17 +49,14 @@ AoT는 라즈베리 파이에서 동작하는 오픈소스 소프트웨어로, �
 
 `AoT 포럼 <https://forum.radicaldiy.com>`__
 
-`AoT 디스코드 <https://discord.gg/kmDNky4ZHZ>`__
+
 
 AoT 소프트웨어 버그 신고
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 AoT 소프트웨어에 버그가 있다고 생각되면 먼저 github의 `Issues <https://github.com/aot-inc/AoT/issues>`__에서 이미 논의되었거나 해결된 문제가 있는지 검색하세요. 새로운 이슈이거나 최근의 이슈라면 `새 이슈 생성 <https://github.com/aot-inc/AoT/issues/new>`__을 통해 등록해 주세요. 이슈를 생성할 때는 템플릿의 안내를 잘 읽고 요청된 정보를 최대한 자세히 작성해 주세요. 정보가 부족하면 문제 재현이 어렵고, 해결이 지연될 수 있습니다.
 
-후원하기
-------
 
-AoT는 항상 무료로 제공되고 있으며, 앞으로도 그럴 예정입니다. AoT가 유용하다고 느끼신다면 `github.com/sponsors/aot-inc <https://github.com/sponsors/aot-inc>`__에서 후원해주세요.
 
 주요 기능
 --------
@@ -160,6 +157,7 @@ AoT는 커스텀 입력, 출력, 함수, 액션, 위젯 모듈을 가져와 사�
 
 또한, 기본 제공되지 않는 커스텀 모듈은 별도의 저장소(`aot-inc/AoT-custom <https://github.com/aot-inc/AoT-custom>`__)에서 관리됩니다.
 
+
 링크
 -----
 
@@ -167,9 +165,7 @@ AoT는 커스텀 입력, 출력, 함수, 액션, 위젯 모듈을 가져와 사�
 
 https://github.com/aot-inc/AoT
 
-https://KyleGabriel.com
 
-https://RadicalDIY.com
 
 라이선스
 -------

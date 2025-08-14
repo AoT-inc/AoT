@@ -1,49 +1,50 @@
 # coding=utf-8
 #
-# remote_output_on_off.py - Output for controlling a remote AoT On/Off Output
+# on_off_ecowitt.py - Minimal On/Off over Ecowitt Local HTTP IoT API
+# (GPIO-style layout: single class with __init__, initialize, output_switch, is_on, is_setup, stop_output)
 #
-import json
+import requests
 import time
-from threading import Thread
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-import random
-
 from flask_babel import lazy_gettext
+
+from aot.utils.influx import add_measurements_influxdb
 
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
 
+# Measurements
 measurements_dict = {
     0: {
         'measurement': 'duration_time',
         'unit': 's'
+    },
+    1: {
+        'measurement': 'water_flow_velocity',
+        'unit': 'l_min'
     }
 }
 
 channels_dict = {
     0: {
         'types': ['on_off'],
-        'measurements': [0]
+        'measurements': [0, 1]
     }
 }
 
-# Output information
+# Output information (kept small)
 OUTPUT_INFORMATION = {
     'output_name_unique': 'ecowitt_output',
-    'output_name': "ecowitt Output: On/Off",
+    'output_name': "{}: Ecowitt Local HTTP".format(lazy_gettext('On/Off')),
+    'output_library': 'requests',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
-    'output_library': 'requests',
     'output_types': ['on_off'],
 
-    'message': 'Ecowitt 장치 IP, 서브디바이스 ID, 모델을 입력해 주세요. WFC01과 WFC02는 모델 1을 사용하고, AC1100은 모델 2를 사용합니다. 저장하면 HTTP IoT API를 통해 로컬 제어가 가능해집니다.',
+    'message': 'Ecowitt 허브 IP, 서브디바이스 ID, 모델(WFC01/02=1, WFC02 신펌=3, AC1100=2)을 입력하면 로컬 HTTP API로 On/Off 제어합니다.',
 
     'options_enabled': [
-        'button_on',
-        'button_send_duration'
+        'button_on'
     ],
     'options_disabled': ['interface'],
 
@@ -51,10 +52,9 @@ OUTPUT_INFORMATION = {
         ('pip-pypi', 'requests', 'requests==2.31.0'),
     ],
 
-    'interfaces': ['API'],
+    'interfaces': ['IP'],
 
-    'custom_options_message': 'Ecowitt 장치 IP, 서브디바이스 ID, 모델을 입력하세요. WFC01과 WFC02는 모델 1을 사용하고, AC1100은 모델 2를 사용합니다. 저장하면 HTTP IoT API를 통해 로컬 제어를 사용할 수 있습니다.',
-
+    # Device options kept minimal (GPIO-like)
     'custom_options': [
         {
             'id': 'ecowitt_device_ip',
@@ -62,34 +62,41 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': 'Ecowitt Device IP',
-            'phrase': 'Local IP address of the Ecowitt hub (e.g., 192.168.4.1)'
-        },
-        {
-            'id': 'state_query_period',
-            'type': 'integer',
-            'default_value': 120,
-            'name': "State Query Period (Seconds)",
-            'phrase': '출력 상태를 조회하는 주기(초)'
+            'phrase': 'Local IP address of the Ecowitt hub (e.g., 192.168.1.100)'
         },
         {
             'id': 'ecowitt_device_id',
-            'type': 'select_custom_choices',
+            'type': 'text',
             'default_value': '',
-            'custom_choices': [],
             'required': True,
             'name': 'Ecowitt Sub-device ID',
-            'phrase': '제어할 WFC01 또는 AC1100의 ID(예: 4371)'
+            'phrase': 'ID of WFC01/WFC02/AC1100 (e.g., 11044)'
         },
         {
             'id': 'ecowitt_model',
             'type': 'select',
-            'default_value': 1,
+            'default_value': 3,
             'options_select': [
-                (1, 'WFC01 / WFC02'),
+                (1, 'WFC01'),
+                (3, 'WFC02'),
                 (2, 'AC1100')
             ],
             'name': 'Ecowitt Device Model',
-            'phrase': 'Model number for Ecowitt device: 1=WFC01 or WFC02, 2=AC1100'
+            'phrase': '1=WFC01/대부분 WFC02, 3=일부 WFC02(신펌), 2=AC1100'
+        },
+        {
+            'id': 'valve_open_percent',
+            'type': 'integer',
+            'default_value': 100,
+            'name': 'Valve Open %',
+            'phrase': 'When turning on, open valve to this percent (0-100)'
+        },
+        {
+            'id': 'state_query_period',
+            'type': 'integer',
+            'default_value': 60,
+            'name': "State Query Period (Seconds)",
+            'phrase': 'How often to query the state of the output'
         }
     ],
 
@@ -97,359 +104,513 @@ OUTPUT_INFORMATION = {
         {
             'id': 'state_startup',
             'type': 'select',
-            'default_value': -1,
-            'options_select': [(-1, '무동작'), (0, '꺼짐'), (1, '켜짐')],
-            'name': lazy_gettext('시작 시 상태'),
-            'phrase': 'AoT가 시작될 때 설정할 상태'
+            'default_value': 0,
+            'options_select': [
+                (0, 'Off'),
+                (1, 'On')
+            ],
+            'name': lazy_gettext('Startup State'),
+            'phrase': 'Set the state when AoT starts'
         },
         {
             'id': 'state_shutdown',
             'type': 'select',
-            'default_value': -1,
-            'options_select': [(-1, '무동작'), (0, '꺼짐'), (1, '켜짐')],
-            'name': lazy_gettext('종료 시 상태'),
-            'phrase': 'AoT가 종료될 때 설정할 상태'
-        },
-        {
-            'id': 'command_force',
-            'type': 'bool',
-            'default_value': False,
-            'name': lazy_gettext('강제 명령'),
-            'phrase': '현재 상태와 상관없이 명령을 항상 전송합니다.'
+            'default_value': 0,
+            'options_select': [
+                (0, 'Off'),
+                (1, 'On')
+            ],
+            'name': lazy_gettext('Shutdown State'),
+            'phrase': 'Set the state when AoT shuts down'
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('시작 시 함수 트리거'),
-            'phrase': '시작할 때 출력 상태 변경 시 함수 실행 여부'
-        },
-        {
-            'id': 'confirmation_reads',
-            'type': 'integer',
-            'default_value': 2,
-            'name': '상태 확인 횟수',
-            'phrase': '상태 변화 확정 전에 연속으로 동일한 값을 읽는 횟수'
-        },
-        {
-            'id': 'failsafe_timeout',
-            'type': 'integer',
-            'default_value': 30,
-            'name': '펄세이프 타임아웃(초)',
-            'phrase': '상태 불명 지속 시 안전한 상태로 전환하기 전까지 대기 시간(초)'
-        },
-        {
-            'id': 'degraded_threshold',
-            'type': 'integer',
-            'default_value': 5,
-            'name': '감소 모드 임계',
-            'phrase': '연속 실패 횟수 초과 시 degraded mode로 진입하는 기준'
+            'name': lazy_gettext('Trigger Functions at Startup'),
+            'phrase': 'Whether to trigger functions when the output switches at startup'
         }
     ]
 }
 
-def normalize_status(raw_status, model, previous_state):
-    try:
-        if model == 1:  # valve (water_status) covers WFC01 and WFC02
-            val = raw_status.get('water_status')
-        elif model == 2:  # relay (ac_status)
-            val = raw_status.get('ac_status')
-        else:
-            return previous_state
-
-        if isinstance(val, str):
-            low = val.strip().lower()
-            if low in ('1', 'true', 'on'):
-                val_int = 1
-            elif low in ('0', 'false', 'off'):
-                val_int = 0
-            elif low.isdigit():
-                val_int = int(low)
-            else:
-                return previous_state
-        elif isinstance(val, int):
-            val_int = val
-        else:
-            return previous_state
-
-        return True if val_int == 1 else False
-    except Exception:
-        return previous_state
 
 class OutputModule(AbstractOutput):
-    """An output support class that operates an output."""
-    def _get_opt(self, key):
-        if hasattr(self.output, 'get_option'):
-            try:
-                return self.output.get_option(key)
-            except Exception:
-                pass
-        opts = getattr(self.output, 'options', None)
-        if isinstance(opts, dict):
-            return opts.get(key)
-        if hasattr(self, 'get_option'):
-            try:
-                return self.get_option(key)
-            except Exception:
-                pass
-        return None
+    """Minimal Ecowitt On/Off output (GPIO-style)."""
 
-    def _set_opt(self, key, value):
-        if hasattr(self, 'set_option'):
-            try:
-                self.set_option(key, value)
-                return
-            except Exception:
-                pass
-        if hasattr(self.output, 'set_option'):
-            try:
-                self.output.set_option(key, value)
-                return
-            except Exception:
-                pass
-        opts = getattr(self.output, 'options', None)
-        if isinstance(opts, dict):
-            opts[key] = value
+    # ==== 1) Construction (GPIO-style) ====
     def __init__(self, output, testing=False):
         super().__init__(output, testing=testing, name=__name__)
 
+        # Ensure options always exists
+        self.options = {}
+
+        # Runtime state
+        self.output_setup = False
+        self.running = False
+        self.last_state = None  # cached bool
+        self.query_timer = 0
         self.state_query_period = None
 
-        self.ecowitt_device_ip = None
-        self.ecowitt_device_id = None
-        self.ecowitt_model = None
+        # Populate internal/output option stores; do not assign return (None)
+        self.setup_custom_options(OUTPUT_INFORMATION['custom_options'], output)
 
-        self.api_output = None
-        self.query_timer = 0
-
-        self.setup_custom_options(
-            OUTPUT_INFORMATION['custom_options'], output)
-
+        # Load channel options (GPIO parity)
         output_channels = db_retrieve_table_daemon(
             OutputChannel).filter(OutputChannel.output_id == self.output.unique_id).all()
         self.options_channels = self.setup_custom_channel_options_json(
             OUTPUT_INFORMATION['custom_channel_options'], output_channels)
 
+    # ==== 2) Initialization (GPIO-style) ====
     def initialize(self):
         self.setup_output_variables(OUTPUT_INFORMATION)
 
-        # load Ecowitt local API configuration
-        self.ecowitt_device_ip = self._get_opt('ecowitt_device_ip')
-        self.ecowitt_device_id = self._get_opt('ecowitt_device_id')
-        self.ecowitt_model = self._get_opt('ecowitt_model')
-        # Normalize model for WFC02 to model 1 API semantics (WFC01 and WFC02 share model 1)
-        # Since option list now combines WFC01 and WFC02 as model 1, no remapping needed here.
+        # Refresh option stores from DB/UI
+        self.setup_custom_options(OUTPUT_INFORMATION['custom_options'], self.output)
+        self.logger.debug(f"Post-setup options snapshot: output.options={getattr(self.output, 'options', None)!r}, options_json={getattr(self.output, 'options_json', None)!r}")
 
-        if not self.ecowitt_device_id and self.ecowitt_device_ip:
-            candidates = [d for d in self.discover_subdevices() if d.get('model') == int(self.ecowitt_model)]
-            if len(candidates) == 1:
-                candidate = candidates[0]
-                self.ecowitt_device_id = candidate['id']
-                self._set_opt('ecowitt_device_id', candidate['id'])
-                self.logger.info(f"Auto-selected Ecowitt sub-device ID: {candidate['id']}")
-            elif len(candidates) > 1:
-                choice_list = [(str(d['id']), f"model {d['model']} id {d['id']}") for d in candidates]
-                # Try to set custom option choices if possible, else fallback
-                try:
-                    self.set_custom_option('ecowitt_device_id', 'custom_choices', choice_list)
-                except Exception:
-                    self.output.options['ecowitt_device_id_choices'] = choice_list
-                    self.logger.info(f"Multiple Ecowitt sub-devices found, choices: {choice_list}")
+        # Prefer attributes populated by setup_custom_options; fall back to _opt
+        ip = getattr(self, 'ecowitt_device_ip', None) or self._opt('ecowitt_device_ip')
+        dev_id = getattr(self, 'ecowitt_device_id', None) or self._opt('ecowitt_device_id')
+        model = getattr(self, 'ecowitt_model', None) or self._opt('ecowitt_model')
 
-        if not self.ecowitt_device_ip or not self.ecowitt_device_id or not self.ecowitt_model:
-            self.logger.error('Ecowitt device configuration incomplete')
-            self.output_setup = False
-        else:
-            self.output_setup = True
+        if isinstance(ip, str):
+            ip = ip.strip()
+        try:
+            if isinstance(dev_id, str):
+                dev_id = dev_id.strip()
+                if dev_id.isdigit():
+                    dev_id = int(dev_id)
+            elif isinstance(dev_id, (float, int)):
+                dev_id = int(dev_id)
+        except Exception:
+            dev_id = None
+        try:
+            if isinstance(model, str):
+                model = int(model.strip())
+            elif isinstance(model, (float, int)):
+                model = int(model)
+        except Exception:
+            model = None
+
+        self.ip = ip
+        self.dev_id = dev_id
+        self.model = model
 
         try:
-            if self.output_setup:
-                # Set up thread to query output states
-                query_states = Thread(target=self.remote_state_query)
-                query_states.daemon = True
-                query_states.start()
+            self.state_query_period = int(self._opt('state_query_period') or 0)
+        except Exception:
+            self.state_query_period = 0
 
-                for channel in channels_dict:
-                    if self.options_channels['state_startup'][channel] == 1:
-                        self.output_switch("on", output_channel=channel)
-                    elif self.options_channels['state_startup'][channel] == 0:
-                        self.output_switch("off", output_channel=channel)
-                    else:
-                        continue
+        self.logger.debug(
+            f"Attr-sourced before parse -> ip={getattr(self, 'ecowitt_device_ip', None)!r}, id={getattr(self, 'ecowitt_device_id', None)!r}, model={getattr(self, 'ecowitt_model', None)!r}")
+        self.logger.debug(
+            f"Ecowitt config parsed -> ip={self.ip!r}, id={self.dev_id!r}, model={self.model!r}, state_query_period={self.state_query_period!r}")
 
-                    startup = 'ON' if self.options_channels['state_startup'][channel] else 'OFF'
-                    self.logger.info(f"Output setup and turned {startup}")
+        if not (self.ip and self.dev_id is not None and self.model is not None):
+            missing = []
+            if not self.ip: missing.append('ip')
+            if self.dev_id is None: missing.append('id')
+            if self.model is None: missing.append('model')
+            self.logger.error(
+                f"Ecowitt device configuration incomplete (missing: {', '.join(missing)}). "
+                f"Parsed values: ip={self.ip!r}, id={self.dev_id!r}, model={self.model!r}")
+            self.logger.debug(f"Raw options dict: {self.options!r}; output.options: {getattr(self.output, 'options', None)!r}; options_json: {getattr(self.output, 'options_json', None)!r}")
+            self.output_setup = False
+            return
 
-                    if self.options_channels['trigger_functions_startup'][channel]:
-                        try:
-                            self.check_triggers(self.unique_id, output_channel=channel)
-                        except Exception as err:
-                            self.logger.error(
-                                f"Could not check Trigger for channel {channel} of output {self.unique_id}: {err}")
+        # Mark ready (no threads, keep it simple)
+        self.output_setup = True
+        self.running = True
+
+        # Immediate first state query to warm the cache
+        try:
+            self._do_state_query()
+        except Exception:
+            pass
+
+        # Apply startup state (same pattern as GPIO)
+        try:
+            if self.options_channels['state_startup'][0] == 1:
+                self.output_switch('on', output_channel=0)
+            elif self.options_channels['state_startup'][0] == 0:
+                self.output_switch('off', output_channel=0)
+            if self.options_channels['trigger_functions_startup'][0]:
+                try:
+                    self.check_triggers(self.unique_id, output_channel=0)
+                except Exception as err:
+                    self.logger.error(
+                        "Could not check Trigger for channel 0 of output {}: {}".format(
+                            self.unique_id, err))
+            # Start background state query loop (runs after first initialize and then every period)
+            if self.state_query_period and self.state_query_period > 0:
+                from threading import Thread
+                t = Thread(target=self._state_query_loop)
+                t.daemon = True
+                t.start()
         except Exception as except_msg:
             self.logger.exception(
-                "Output was unable to be setup: {err}".format(err=except_msg))
-
-    def get_ecowitt_device_status_for_discovery(self, max_retries=2):
-        import requests
-        url = f'http://{self.ecowitt_device_ip}/parse_quick_cmd_iot'
-        headers = {'Content-Type': 'application/json'}
-        payload = {"command":[{"cmd":"read_quick"}]}
-        backoff = 1
-        for attempt in range(1, max_retries + 1):
-            try:
-                response = requests.post(url, json=payload, headers=headers, timeout=3)
-            except Exception as e:
-                self.logger.warning(f'Discovery attempt {attempt} error: {e}')
-                if attempt < max_retries:
-                    time.sleep(backoff)
-                    backoff *= 2
-                    continue
-                return {}
-            if response.status_code != 200:
-                self.logger.warning(f'Discovery attempt {attempt}: status {response.status_code}')
-                if attempt < max_retries:
-                    time.sleep(backoff)
-                    backoff *= 2
-                    continue
-                return {}
-            try:
-                return response.json()
-            except Exception:
-                self.logger.warning('Failed to parse discovery response JSON')
-                if attempt < max_retries:
-                    time.sleep(backoff)
-                    backoff *= 2
-                    continue
-                return {}
-        return {}
-
-    def discover_subdevices(self):
-        raw = self.get_ecowitt_device_status_for_discovery()
-        devices = []
-        if not raw or 'command' not in raw:
-            return devices
-        for entry in raw['command']:
-            try:
-                model = entry.get('model')
-                dev_id = entry.get('id')
-                if model is None or dev_id is None:
-                    continue
-                devices.append({'model': int(model), 'id': int(dev_id), 'raw': entry})
-            except Exception:
-                continue
-        return devices
-
-    def remote_state_query(self):
-        consecutive_failures = 0
-        while self.running:
-            status = self.get_ecowitt_device_status()
-            prev = self.output_states.get(0, None)
-            new_state = normalize_status(status, int(self.ecowitt_model), prev)
-            if new_state is None:
-                consecutive_failures += 1
-                self.logger.debug(f'State normalization failed ({consecutive_failures} consecutive)')
-            else:
-                consecutive_failures = 0
-                self.output_states[0] = new_state
-            if consecutive_failures >= 5:
-                self.logger.error('Too many consecutive status failures, entering degraded mode')
-                time.sleep(10)
-            else:
-                time.sleep(2)
-
-    def get_ecowitt_device_status(self, max_retries=3):
-        import requests
-        url = f'http://{self.ecowitt_device_ip}/parse_quick_cmd_iot'
-        headers = {'Content-Type': 'application/json'}
-        payload = {"command":[{"cmd":"read_device","id":int(self.ecowitt_device_id),"model":int(self.ecowitt_model)}]}
-        backoff = 1
-        for attempt in range(1, max_retries + 1):
-            try:
-                response = requests.post(url, json=payload, headers=headers, timeout=5)
-            except Exception as e:
-                self.logger.warning(f'Attempt {attempt}: error contacting Ecowitt device: {e}')
-                if attempt < max_retries:
-                    time.sleep(backoff + random.random() * 0.5)
-                    backoff *= 2
-                    continue
-                return {}
-            if response.status_code != 200:
-                self.logger.warning(f'Attempt {attempt}: Ecowitt API returned status {response.status_code}')
-                if attempt < max_retries:
-                    time.sleep(backoff + random.random() * 0.5)
-                    backoff *= 2
-                    continue
-                return {}
-            try:
-                resp = response.json()
-            except Exception:
-                self.logger.warning(f'Attempt {attempt}: failed to parse JSON from Ecowitt response')
-                if attempt < max_retries:
-                    time.sleep(backoff + random.random() * 0.5)
-                    backoff *= 2
-                    continue
-                return {}
-            return resp.get('command', [{}])[0]
-        return {}
-
-    def send_remote_output(self, channel, state):
-        import requests
-        url = f'http://{self.ecowitt_device_ip}/parse_quick_cmd_iot'
-        headers = {'Content-Type': 'application/json'}
-        payload = {"command":[{"cmd":"quick_run","on_type":0,"off_type":0,"always_on":1,"on_time":0,"off_time":0,"val_type":0,"val":0,"id":int(self.ecowitt_device_id),"model":int(self.ecowitt_model)}]} if state else {"command":[{"cmd":"quick_stop","id":int(self.ecowitt_device_id),"model":int(self.ecowitt_model)}]}
+                "Output was unable to be setup with startup actions: {err}".format(err=except_msg))
+            
+    def _do_state_query(self):
+        if not self.is_setup():
+            self.logger.error(f"Cannot query Output {self.unique_id}: Output not set up.")
+            return None
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=5)
+            status = self._read_status()
+            state = self._status_to_bool(status)
+            if state is not None:
+                self.last_state = state
+                # Reflect state to server/UI state cache
+                try:
+                    self.output_states[0] = 1.0 if state else 0.0
+                except Exception:
+                    pass
+            # Parse flow velocity from response and write to measurements
+            flow_v = None
+            if isinstance(status, dict):
+                # Per Ecowitt Local API, the canonical key is 'flow_velocity' (l_min).
+                for k in ('flow_velocity', 'wfc02_flow_velocity', 'velocity', 'flow'):
+                    if k in status:
+                        try:
+                            v = status.get(k)
+                            if isinstance(v, str):
+                                v = v.strip()
+                            flow_v = float(v)
+                        except Exception:
+                            flow_v = None
+                        break
+            if flow_v is not None:
+                try:
+                    # Write only the flow velocity measurement (index 1) to InfluxDB in l_min
+                    measure_dict = {
+                        1: {
+                            'measurement': 'water_flow_velocity',
+                            'unit': 'l_min',
+                            'value': flow_v
+                        }
+                    }
+                    add_measurements_influxdb(self.unique_id, measure_dict)
+                except Exception as e:
+                    self.logger.error(f"Error writing flow velocity measurement: {e}")
+            return bool(self.last_state) if self.last_state is not None else None
         except Exception as e:
-            self.logger.error(f'Error sending command to Ecowitt device: {e}')
-            return False
-        if response.status_code != 200:
-            self.logger.error(f'Ecowitt command failed with status {response.status_code}')
-            return False
-        try:
-            _ = response.json()
-        except Exception:
-            self.logger.warning('Failed to parse Ecowitt command response')
-        status = self.get_ecowitt_device_status()
-        prev = self.output_states.get(channel, None)
-        actual = normalize_status(status, int(self.ecowitt_model), prev)
-        desired = True if state else False
-        if actual is None:
-            self.logger.warning('Unable to determine actual state after command')
-            return False
-        if actual == desired:
-            self.output_states[channel] = actual
-            return True
-        self.logger.warning(f'State mismatch after command. Desired={desired}, Actual={actual}')
-        return False
+            self.logger.error(f"State query error: {e}")
+            return bool(self.last_state) if self.last_state is not None else None
 
+    def _state_query_loop(self):
+        while self.running:
+            now = time.time()
+            if self.state_query_period and now >= self.query_timer:
+                self._do_state_query()
+                self.query_timer = now + int(self.state_query_period)
+            time.sleep(1)
+    # ==== 3) Public API (GPIO parity) ====
     def output_switch(self, state, output_type=None, amount=None, output_channel=0):
-        success = False
-        if state == 'on':
-            success = self.send_remote_output(output_channel, True)
-        elif state == 'off':
-            success = self.send_remote_output(output_channel, False)
-        msg = 'success' if success else 'failure'
-        if not success:
+        # Lazy initialize if not yet set up
+        if not self.is_setup():
+            self.logger.debug("Output not set up on first call to output_switch; attempting initialize().")
+            try:
+                self.initialize()
+            except Exception as e:
+                self.logger.exception(f"initialize() raised during lazy init: {e}")
+        if not self.is_setup():
+            self.logger.error(f"Cannot manipulate Output {self.unique_id}: Output not set up.")
+            return 'failure'
+        try:
+            if state == 'on':
+                try:
+                    # Prefer attribute populated by setup_custom_options, then _opt, then provided amount, then 100
+                    pos_raw = getattr(self, 'valve_open_percent', None)
+                    if pos_raw in (None, ''):
+                        pos_raw = self._opt('valve_open_percent')
+                    if pos_raw in (None, '') and amount is not None:
+                        pos_raw = amount
+                    if isinstance(pos_raw, str):
+                        pos = int(float(pos_raw.strip()))
+                    elif isinstance(pos_raw, (float, int)):
+                        pos = int(pos_raw)
+                    else:
+                        pos = 100
+                except Exception:
+                    pos = 100
+                pos = max(0, min(100, pos))
+                self.logger.debug(f"Applying ON with valve_open_percent={pos}")
+                ok = self._apply(True, position=pos)
+            elif state == 'off':
+                ok = self._apply(False)
+            else:
+                ok = False
+            if ok:
+                return 'success'
             self.logger.warning(f'Failed to set state {state} on channel {output_channel}')
-        return msg
+            return 'failure'
+        except Exception as e:
+            msg = f"State change error: {e}"
+            self.logger.exception(msg)
+            return 'failure'
 
     def is_on(self, output_channel=0):
-        if self.output_setup:
+        if not self.is_setup():
+            self.logger.debug("Output not set up on first call to is_on; attempting initialize().")
             try:
-                return self.output_states[output_channel]
+                self.initialize()
             except Exception as e:
-                self.logger.error("Status check error: {}".format(e))
+                self.logger.exception(f"initialize() raised during lazy init: {e}")
+        if not self.is_setup():
+            return False
+        try:
+            status = self._read_status()
+            state = self._status_to_bool(status)
+            if state is not None:
+                self.last_state = state
+                return bool(state)
+            # Fallback to cached
+            return bool(self.last_state) if self.last_state is not None else False
+        except Exception as e:
+            self.logger.error(f"Status check error: {e}")
+            return bool(self.last_state) if self.last_state is not None else False
 
     def is_setup(self):
         return self.output_setup
 
     def stop_output(self):
         """Called when Output is stopped."""
-        if self.output_setup:
-            for channel in channels_dict:
-                if self.options_channels['state_shutdown'][channel] == 1:
-                    self.output_switch('on', output_channel=channel)
-                elif self.options_channels['state_shutdown'][channel] == 0:
-                    self.output_switch('off', output_channel=channel)
+        if self.is_setup():
+            if self.options_channels['state_shutdown'][0] == 1:
+                self.output_switch('on', output_channel=0)
+            elif self.options_channels['state_shutdown'][0] == 0:
+                self.output_switch('off', output_channel=0)
         self.running = False
+
+    # ==== 4) Minimal helpers (private) ====
+    def _opt(self, key):
+        # Ensure self.options always exists
+        if not hasattr(self, 'options') or self.options is None:
+            self.options = {}
+        """Read from multiple option sources with minor alias support, similar to on_off_gpio pin handling."""
+        aliases = {
+            'ecowitt_device_ip': ['ecowitt_device_ip', 'device_ip', 'ecowitt_ip', 'hub_ip', 'ip'],
+            'ecowitt_device_id': ['ecowitt_device_id', 'device_id', 'subdevice_id', 'ecowitt_id', 'id'],
+            'ecowitt_model': ['ecowitt_model', 'device_model', 'model']
+        }
+        alias_keys = aliases.get(key, [key])
+
+        # Check self.options dictionary first
+        if isinstance(self.options, dict):
+            for k in alias_keys:
+                if k in self.options and self.options[k] not in (None, ''):
+                    v = self.options[k]
+                    if isinstance(v, (list, tuple)) and len(v) > 0:
+                        return v[0]
+                    return v
+
+        # Check self.output.options dict
+        if hasattr(self.output, 'options') and isinstance(self.output.options, dict):
+            for k in alias_keys:
+                if k in self.output.options and self.output.options[k] not in (None, ''):
+                    v = self.output.options[k]
+                    if isinstance(v, (list, tuple)) and len(v) > 0:
+                        return v[0]
+                    return v
+
+        # Check self.output.options_json list/dict
+        if hasattr(self.output, 'options_json'):
+            opt_json = self.output.options_json
+            if isinstance(opt_json, dict):
+                for k in alias_keys:
+                    if k in opt_json and opt_json[k] not in (None, ''):
+                        v = opt_json[k]
+                        if isinstance(v, (list, tuple)) and len(v) > 0:
+                            return v[0]
+                        return v
+            elif isinstance(opt_json, (list, tuple)):
+                for item in opt_json:
+                    if not isinstance(item, dict):
+                        continue
+                    for k in alias_keys:
+                        # Match by id, key, or name
+                        if (item.get('id') == k or item.get('key') == k or item.get('name') == k) and item.get('value') not in (None, ''):
+                            v = item.get('value')
+                            if isinstance(v, (list, tuple)) and len(v) > 0:
+                                return v[0]
+                            return v
+
+        # Check options_channels dict for the key
+        if isinstance(self.options_channels, dict):
+            if key in self.options_channels:
+                v = self.options_channels[key]
+                if isinstance(v, (list, tuple)) and len(v) > 0:
+                    return v[0]
+                return v
+
+        return None
+
+    def _status_to_bool(self, status_obj):
+        """Convert Ecowitt read_device response (cmd object) to boolean."""
+        if not isinstance(status_obj, dict):
+            return None
+        # Model-aware but forgiving
+        v = None
+        # WFC02 new FW
+        if 'wfc02_status' in status_obj:
+            v = status_obj.get('wfc02_status')
+        # Legacy WFC01/WFC02
+        if v is None and 'water_status' in status_obj:
+            v = status_obj.get('water_status')
+        # Running fallback
+        if v is None and 'water_running' in status_obj:
+            v = status_obj.get('water_running')
+        # AC1100
+        if v is None and 'ac_status' in status_obj:
+            v = status_obj.get('ac_status')
+        if v is None and 'ac_running' in status_obj:
+            v = status_obj.get('ac_running')
+
+        if v is None:
+            return None
+        try:
+            if isinstance(v, str):
+                v = v.strip().lower()
+                if v in ('1', 'true', 'on'): return True
+                if v in ('0', 'false', 'off'): return False
+                if v.isdigit(): return int(v) == 1
+                return None
+            if isinstance(v, (int, float)):
+                return int(v) == 1
+        except Exception:
+            return None
+        return None
+
+    def _apply(self, turn_on: bool, position: int = 100) -> bool:
+        """Send quick_run/quick_stop; then verify with retries via read_device."""
+        url = f'http://{self.ip}/parse_quick_cmd_iot'
+        headers = {'Content-Type': 'application/json'}
+        mid = int(self.model)
+        did = int(self.dev_id)
+
+        if turn_on:
+            sent = False
+            if mid == 3:
+                # Attempt 1: try position (newer WFC02 FW supports it, undocumented)
+                payload_try1 = {
+                    "command": [{
+                        "cmd": "quick_run",
+                        "always_on": 1,
+                        "val_type": 0,
+                        "val": 0,
+                        "position": int(position),
+                        "id": did,
+                        "model": mid
+                    }]}
+                # Attempt 2: spec-compatible fallback (no position)
+                payload_try2 = {
+                    "command": [{
+                        "cmd": "quick_run",
+                        "on_type": 0,
+                        "off_type": 0,
+                        "always_on": 1,
+                        "on_time": 0,
+                        "off_time": 0,
+                        "val_type": 0,
+                        "val": 0,
+                        "id": did,
+                        "model": mid
+                    }]}
+                # Send try1; on non-200 or error, fall back to try2
+                try:
+                    r = requests.post(url, json=payload_try1, headers=headers, timeout=5)
+                except Exception as e:
+                    self.logger.error(f'Error sending command (try1): {e}')
+                    r = None
+                if not r or r.status_code != 200:
+                    try:
+                        r = requests.post(url, json=payload_try2, headers=headers, timeout=5)
+                    except Exception as e:
+                        self.logger.error(f'Error sending command (try2): {e}')
+                        return False
+                if r.status_code != 200:
+                    body = ''
+                    try:
+                        body = r.text[:200]
+                    except Exception:
+                        pass
+                    self.logger.error(f'Ecowitt command failed: {r.status_code}, body={body}')
+                    return False
+                # After sending, verify below (common path)
+                sent = True
+            else:
+                payload = {
+                    "command": [{
+                        "cmd": "quick_run",
+                        "on_type": 0,
+                        "off_type": 0,
+                        "always_on": 1,
+                        "on_time": 0,
+                        "off_time": 0,
+                        "val_type": 0,
+                        "val": 0,
+                        "id": did,
+                        "model": mid
+                    }]}
+                try:
+                    r = requests.post(url, json=payload, headers=headers, timeout=5)
+                except Exception as e:
+                    self.logger.error(f'Error sending command: {e}')
+                    return False
+                if r.status_code != 200:
+                    body = ''
+                    try:
+                        body = r.text[:200]
+                    except Exception:
+                        pass
+                    self.logger.error(f'Ecowitt command failed: {r.status_code}, body={body}')
+                    return False
+                sent = True
+        else:
+            payload = {"command": [{"cmd": "quick_stop", "id": did, "model": mid}]}
+            try:
+                r = requests.post(url, json=payload, headers=headers, timeout=5)
+            except Exception as e:
+                self.logger.error(f'Error sending command: {e}')
+                return False
+            if r.status_code != 200:
+                body = ''
+                try:
+                    body = r.text[:200]
+                except Exception:
+                    pass
+                self.logger.error(f'Ecowitt command failed: {r.status_code}, body={body}')
+                return False
+
+        # Verify with limited retries (2s interval, up to ~6s total)
+        desired = True if turn_on else False
+        actual = None
+        for _ in range(3):
+            status = self._read_status()
+            actual = self._status_to_bool(status)
+            if actual is not None and actual == desired:
+                break
+            time.sleep(2)
+        if actual is None:
+            self.logger.warning('Unable to determine state after command')
+            return False
+        self.last_state = actual
+        try:
+            self.output_states[0] = 1.0 if actual else 0.0
+        except Exception:
+            pass
+        return actual is True if turn_on else actual is False
+
+    def _read_status(self):
+        url = f'http://{self.ip}/parse_quick_cmd_iot'
+        headers = {'Content-Type': 'application/json'}
+        payload = {"command": [{"cmd": "read_device", "id": int(self.dev_id), "model": int(self.model)}]}
+        try:
+            r = requests.post(url, json=payload, headers=headers, timeout=5)
+            if r.status_code != 200:
+                return {}
+            j = r.json()
+            return (j or {}).get('command', [{}])[0]
+        except Exception as e:
+            self.logger.error(f'Read status error: {e}')
+            return {}
