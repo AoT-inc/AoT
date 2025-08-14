@@ -28,38 +28,6 @@ AoT는 라즈베리 파이에서 동작하는 오픈소스 소프트웨어로, �
 
 자세한 내용은 `AoT 설치 <#install-aot>`__ 섹션을 참고하세요.
 
-지원
--------
-
-문서
-~~~~~~~~~~~~~
-
-`AoT 매뉴얼 <https://aot-inc.github.io/AoT>`__
-
-`AoT API <https://aot-inc.github.io/AoT/aot-api.html>`__ (버전: v1)
-
-`AoT 위키 <https://github.com/aot-inc/AoT/wiki>`__
-
-`AoT 커스텀 모듈 저장소 <https://github.com/aot-inc/AoT-custom>`__
-
-토론
-~~~~~~~~~~
-
-`AoT 이슈(버그 신고/기능 요청) <https://github.com/aot-inc/AoT/issues>`__
-
-`AoT 포럼 <https://forum.radicaldiy.com>`__
-
-`AoT 디스코드 <https://discord.gg/kmDNky4ZHZ>`__
-
-AoT 소프트웨어 버그 신고
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-AoT 소프트웨어에 버그가 있다고 생각되면 먼저 github의 `Issues <https://github.com/aot-inc/AoT/issues>`__에서 이미 논의되었거나 해결된 문제가 있는지 검색하세요. 새로운 이슈이거나 최근의 이슈라면 `새 이슈 생성 <https://github.com/aot-inc/AoT/issues/new>`__을 통해 등록해 주세요. 이슈를 생성할 때는 템플릿의 안내를 잘 읽고 요청된 정보를 최대한 자세히 작성해 주세요. 정보가 부족하면 문제 재현이 어렵고, 해결이 지연될 수 있습니다.
-
-후원하기
-------
-
-AoT는 항상 무료로 제공되고 있으며, 앞으로도 그럴 예정입니다. AoT가 유용하다고 느끼신다면 `github.com/sponsors/aot-inc <https://github.com/sponsors/aot-inc>`__에서 후원해주세요.
 
 주요 기능
 --------
@@ -75,7 +43,6 @@ AoT는 항상 무료로 제공되고 있으며, 앞으로도 그럴 예정입니
 -  원격 라이브 스트리밍, 이미지 캡처, 타임랩스 촬영이 가능한 `카메라 <https://aot-inc.github.io/AoT/Camera/>`__.
 -  전력 소비 및 비용을 추적하는 `에너지 사용량 측정 <https://aot-inc.github.io/AoT/Energy-Usage/>`__.
 -  시스템을 최신 버전으로 쉽게 업그레이드하거나 백업/복원할 수 있는 `업그레이드 시스템 <https://aot-inc.github.io/AoT/Upgrade-Backup-Restore/>`__.
--  다양한 `언어 <https://github.com/aot-inc/AoT#features>`__로 웹 인터페이스를 사용할 수 있는 `번역 <https://aot-inc.github.io/AoT/Translations/>`__ 지원.
 
 
 
@@ -113,8 +80,6 @@ AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트에서 테스
 
 설치가 성공하면 웹 브라우저에서 ``https://127.0.0.1/``(설치한 컴퓨터의 IP로 변경)로 접속해 웹 인터페이스를 사용할 수 있습니다. 첫 방문 시 관리자 계정을 생성해야 하며, 로그인 후 좌측 상단의 시간이 올바른지 확인하세요. 시간이 맞지 않으면 데이터 저장/조회에 문제가 생길 수 있습니다. 또한 호스트명과 버전이 초록색이어야 데몬이 정상 동작 중임을 의미합니다. 빨간색이면 데몬이 비활성/응답 없음 상태입니다. 웹 인터페이스의 모든 기능이 정상 동작하려면 브라우저의 자바 차단 플러그인을 비활성화해야 합니다.
 
-설치 중 오류가 발생해 시스템이 정상 동작하지 않는다면, 설치 로그를 첨부해 `이슈를 등록 <https://github.com/aot-inc/AoT/issues>`__해 주세요. 직접 진단을 원한다면 `문제 진단 <#diagnosing-issues>`__을 참고하세요.
-
 개발 개선을 위해 최소한의 익명 사용 통계가 수집됩니다. 식별 정보는 저장되지 않으며, 개발팀만 접근할 수 있고 외부에 판매되지 않습니다. 어떤 기능이 얼마나 사용되는지 등만 수집되며, '설정 -> 일반' 페이지에서 '수집된 통계 보기' 링크로 확인할 수 있습니다. 일반 설정에서 수집 비활성화도 가능합니다.
 
 측정 데이터베이스
@@ -122,29 +87,6 @@ AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트에서 테스
 
 AoT는 측정값 저장을 위해 InfluxDB(1.x: 32비트, 2.x: 64비트)를 지원합니다. 설치 중 1.x, 2.x, 또는 직접 설정(로컬/원격) 중 선택할 수 있습니다. 설치 후에도 설정 변경이 가능합니다.
 
-도커(Docker)
-~~~~~~
-
-도커 지원은 실험적입니다. 사용을 원한다면 docker `README.md <https://github.com/aot-inc/AoT/blob/master/docker/README.md>`__를 참고하세요. 개발에 참여하고 싶다면 github의 `Docker 이슈(#637) <https://github.com/aot-inc/AoT/issues/637>`__를 참고하세요.
-
-REST API
---------
-
-최신 API 문서는 `API 정보 <https://aot-inc.github.io/AoT/API/>`__ 및 `API 엔드포인트 문서 <https://aot-inc.github.io/AoT/aot-api.html>`__에서 확인할 수 있습니다.
-
-PID 제어란?
------------------
-
-`비례-적분-미분(PID) 제어기 <https://ko.wikipedia.org/wiki/PID_제어기>`__는 산업 현장에서 널리 사용되는 피드백 제어 방식입니다. 온도 등 측정값을 원하는 상태(설정값)로 효율적으로 맞춥니다. 잘 튜닝된 PID 제어기는 빠르게 설정값에 도달하고, 오버슈트와 진동이 적으며, 안정적으로 유지합니다.
-
-.. figure:: docs/images/PID-Animation.gif
-   :alt: PID Animation
-
-|AoT|
-
-위 그래프는 온도 조절 예시입니다. 빨간 선은 시간에 따라 변하는 설정값, 파란 선은 실제 온도, 초록 막대는 20초마다 히터가 동작한 시간을 나타냅니다. 최소한의 튜닝만으로도 ±0.5°C 이내로 안정적으로 제어할 수 있습니다. 추가 튜닝 시 변동폭을 더 줄일 수 있습니다.
-
-자세한 내용은 `PID 컨트롤러 <https://aot-inc.github.io/AoT/Functions/#pid-controller>`__ 및 `PID 튜닝 <https://aot-inc.github.io/AoT/Functions/#pid-tuning>`__을 참고하세요.
 
 지원 입력 및 출력
 ----------------------------
