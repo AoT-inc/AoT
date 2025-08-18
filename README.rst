@@ -31,7 +31,7 @@ AoT는 라즈베리 파이에서 동작하는 오픈소스 소프트웨어로, �
 지원
 -------
 
-[![광합성 촉진 방법](https://www.youtube.com/watch?v=q-QhT4KU1Dc)
+
 
 AoT 설치
 --------------
@@ -79,7 +79,7 @@ AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트에서 테스
 
 https://github.com/aot-inc/AoT
 
-
+[![광합성 촉진 방법 - 유튜브 영상](https://www.youtube.com/watch?v=q-QhT4KU1Dc)
 
 라이선스
 -------
