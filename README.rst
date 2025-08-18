@@ -31,7 +31,7 @@ AoT는 라즈베리 파이에서 동작하는 오픈소스 소프트웨어로, �
 지원
 -------
 
-[![광합성 촉진 방법](https://img.youtube.com/vi/q-QhT4KU1Dc/0.jpg)](https://www.youtube.com/watch?v=q-QhT4KU1Dc)
+[![광합성 촉진 방법](https://www.youtube.com/watch?v=q-QhT4KU1Dc)
 
 AoT 설치
 --------------
