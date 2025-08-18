@@ -49,7 +49,7 @@ AoT 설치
 -  `라즈베리 파이 <https://www.raspberrypi.org>`__ 3, 4, 5 (Zero, 1, 2는 권장하지 않음)
 -  `라즈베리 파이 OS <https://www.raspberrypi.com/software/>`__를 micro SD 카드 또는 SSD에 설치
 
-AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트에서 테스트되었습니다.
+AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트와 Debian 12 arm 64비트에서 테스트되었습니다.
 
 설치 명령어
 ~~~~~~~~~~~~~~~
@@ -67,7 +67,7 @@ AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트에서 테스
 
 설치가 성공하면 웹 브라우저에서 ``https://127.0.0.1/``(설치한 컴퓨터의 IP로 변경)로 접속해 웹 인터페이스를 사용할 수 있습니다. 첫 방문 시 관리자 계정을 생성해야 하며, 로그인 후 좌측 상단의 시간이 올바른지 확인하세요. 시간이 맞지 않으면 데이터 저장/조회에 문제가 생길 수 있습니다. 또한 호스트명과 버전이 초록색이어야 데몬이 정상 동작 중임을 의미합니다. 빨간색이면 데몬이 비활성/응답 없음 상태입니다. 웹 인터페이스의 모든 기능이 정상 동작하려면 브라우저의 자바 차단 플러그인을 비활성화해야 합니다.
 
-설치 중 오류가 발생해 시스템이 정상 동작하지 않는다면, 설치 로그를 첨부해 `이슈를 등록 <https://github.com/aot-inc/AoT/issues>`__해 주세요. 직접 진단을 원한다면 `문제 진단 <#diagnosing-issues>`__을 참고하세요.
+프로그램에서 도움 항목은 아직 작동하지 않습니다. - 페이지 생성중
 
 개발 개선을 위해 최소한의 익명 사용 통계가 수집됩니다. 식별 정보는 저장되지 않으며, 개발팀만 접근할 수 있고 외부에 판매되지 않습니다. 어떤 기능이 얼마나 사용되는지 등만 수집되며, '설정 -> 일반' 페이지에서 '수집된 통계 보기' 링크로 확인할 수 있습니다. 일반 설정에서 수집 비활성화도 가능합니다.
 
@@ -136,6 +136,7 @@ AoT는 오픈소스 Mycodo 프로젝트(© Kyle T. Gabriel)를 기반으로 대�
 -  `influxdb_client <https://github.com/influxdata/influxdb-client-python>`__
 -  `jQuery <https://jquery.com>`__
 -  `Marshmallow_SQLAlchemy <https://pypi.org/project/marshmallow_sqlalchemy>`__
+-  'Mosquitto <https://mosquitto.org/>'__
 -  `Pyro5 <https://github.com/irmen/Pyro5>`__
 -  `SQLAlchemy <https://www.sqlalchemy.org>`__
 -  `SQLite <https://www.sqlite.org>`__
