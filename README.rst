@@ -136,7 +136,7 @@ AoT는 오픈소스 Mycodo 프로젝트(© Kyle T. Gabriel)를 기반으로 대�
 -  `influxdb_client <https://github.com/influxdata/influxdb-client-python>`__
 -  `jQuery <https://jquery.com>`__
 -  `Marshmallow_SQLAlchemy <https://pypi.org/project/marshmallow_sqlalchemy>`__
--  'Mosquitto <https://mosquitto.org/>'__
+-  `Mosquitto <https://mosquitto.org/>`__
 -  `Pyro5 <https://github.com/irmen/Pyro5>`__
 -  `SQLAlchemy <https://www.sqlalchemy.org>`__
 -  `SQLite <https://www.sqlite.org>`__
