@@ -86,21 +86,54 @@ def execute_at_modification(
     page_refresh = True
     error = []
 
-    # 사용자 색상 구간 파싱 (구간 끝은 자동 계산)
-    sorted_colors, error = custom_colors_gauge(request_form, error)
-    sorted_colors = fill_missing_highs(custom_options_json_postsave, sorted_colors)
-
     # 불필요 키 제거
     if 'stops' in custom_options_json_postsave:
         del custom_options_json_postsave['stops']
     if 'preset_config' in custom_options_json_postsave:
         del custom_options_json_postsave['preset_config']
 
-    custom_options_json_postsave['range_colors'] = sorted_colors
-
     # 풍향 범위 고정
     custom_options_json_postsave['min'] = 0
     custom_options_json_postsave['max'] = 360
+
+    # --- Persist color/size options explicitly (avoid framework merge issues) ---
+    def _norm_hex(val, default_val):
+        if val is None:
+            return default_val
+        s = str(val).strip()
+        if not s:
+            return default_val
+        # add leading '#'
+        if re.fullmatch(r'[0-9a-fA-F]{6}', s):
+            s = '#' + s
+        if is_rgb_color(s):
+            return s
+        return default_val
+
+    try:
+        if 'border_color' in request_form:
+            custom_options_json_postsave['border_color'] = _norm_hex(request_form.get('border_color'), custom_options_json_postsave.get('border_color', '#D5D5D5'))
+        if 'direction_color' in request_form:
+            custom_options_json_postsave['direction_color'] = _norm_hex(request_form.get('direction_color'), custom_options_json_postsave.get('direction_color', '#F4D624'))
+    except Exception:
+        logger.exception('Color option parse failed')
+
+    # numeric options that may come as strings
+    def _to_float(val, default_val):
+        try:
+            if val is None:
+                return default_val
+            f = float(val)
+            return f
+        except Exception:
+            return default_val
+
+    if 'direction_dot_px' in request_form:
+        custom_options_json_postsave['direction_dot_px'] = _to_float(request_form.get('direction_dot_px'), custom_options_json_postsave.get('direction_dot_px', 10))
+    if 'text_y_offset' in request_form:
+        custom_options_json_postsave['text_y_offset'] = _to_float(request_form.get('text_y_offset'), custom_options_json_postsave.get('text_y_offset', 5))
+    if 'direction_label_font_em' in request_form:
+        custom_options_json_postsave['direction_label_font_em'] = _to_float(request_form.get('direction_label_font_em'), custom_options_json_postsave.get('direction_label_font_em', 1.5))
 
     return allow_saving, page_refresh, mod_widget, custom_options_json_postsave
 
@@ -215,19 +248,39 @@ WIDGET_INFORMATION = {
             'phrase': '게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.'
         },
         {
-            # ★ 단위 폰트 크기
-            'id': 'unit_font_tick',
+            'id': 'border_color',
+            'type': 'hidden',
+            'default_value': '#D5D5D5',
+            'name': '테두리 색상',
+            'phrase': '팔레트에서 선택됩니다. 기본 #D5D5D5'
+        },
+        {
+            'id': 'direction_color',
+            'type': 'hidden',
+            'default_value': '#F4D624',
+            'name': '바람 방향 표시 색상',
+            'phrase': '팔레트에서 선택됩니다. 기본 #F4D624'
+        },
+        {
+            'id': 'direction_dot_px',
             'type': 'float',
-            'default_value': 500,
-            'name': '단위 문자 굵기',
-            'phrase': '게이지 내부 문자 굵기를 설정하세요. 기본값 500은 중간 굵기입니다.'
+            'default_value': 10,
+            'name': '방향 점 크기(px)',
+            'phrase': '바람 방향 원형 점의 반지름(px)을 지정합니다. 예: 10'
+        },
+        {
+            'id': 'direction_label_font_em',
+            'type': 'float',
+            'default_value': 1.5,
+            'name': '방위 문자 크기(em)',
+            'phrase': '풍향(남/동/북서 등) 문자 크기를 em 배율로 설정합니다. 기본 1.0'
         },
         {
             'id': 'text_y_offset',
             'type': 'float',
-            'default_value': 30,
+            'default_value': 5,
             'name': '데이터 위치 오프셋',
-            'phrase': '게이지 내부 데이터 텍스트의 수직 위치 오프셋을 설정하세요 (숫자만 입력, 단위는 자동 처리)'
+            'phrase': '게이지 내부 데이터 텍스트의 수직 위치 오프셋(%)을 설정하세요. 기본 5는 중심보다 약간 아래입니다.'
         }
     ],
 
@@ -241,44 +294,84 @@ WIDGET_INFORMATION = {
     # 설정 화면에서 색상 구간 수정하는 부분
     # "구간 끝" 필드 완전히 제거. 구간 시작, 색상만 표시
     'widget_dashboard_configure_options': """
-        {% for n in range(widget_variables['colors_gauge_angular']|length) %}
-          {% set index = '{0:0>2}'.format(n) %}
-        <div class="form-row">
-          <div class="col-auto">
-            <label class="control-label" for="color_low_number{{index}}">[{{n}}] 구간 시작</label>
-            <div>
-              <input class="form-control" id="color_low_number{{index}}" name="color_low_number{{index}}" type="text" value="{{widget_variables['colors_gauge_angular'][n]['low']}}">
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label" for="color_hex_number{{index}}">[{{n}}] 색상</label>
-            <div>
-              <input id="color_hex_number{{index}}" name="color_hex_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_gauge_angular'][n]['hex']}}">
-            </div>
-          </div>
-        </div>
+      <style>
+        .aot-color-preset { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #bbb; display: inline-block; cursor: pointer; margin: 0 6px 0 0; }
+        .aot-color-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+        .aot-color-row label { font-weight:600; margin-right:6px; }
+      </style>
+      <div class=\"aot-color-row\">
+        <label for=\"border_color\">테두리 색상</label>
+        <input id=\"border_color\" name=\"border_color\" type=\"color\" value=\"{{ widget_options.get('border_color', '#D5D5D5') }}\" class=\"form-control\" style=\"width: 42px; height: 28px; padding: 0;\">
+        {% set border_palette = ['#F4D624','#3E3F46','#8BC1C1','#2AA876','#1F78B4','#FEA60B'] %}
+        {% for c in border_palette %}
+          <span class=\"aot-color-preset\" title=\"{{c}}\" style=\"background:{{c}}\" onclick=\"var inp=document.getElementById('border_color'); inp.value='{{c}}'; this.parentElement.querySelectorAll('.aot-color-preset').forEach(e=>e.style.outline='none'); this.style.outline='3px solid #666'\"></span>
         {% endfor %}
+      </div>
+      <div class=\"aot-color-row\">
+        <label for=\"direction_color\">바람 방향 표시 색상</label>
+        <input id=\"direction_color\" name=\"direction_color\" type=\"color\" value=\"{{ widget_options.get('direction_color', '#F4D624') }}\" class=\"form-control\" style=\"width: 42px; height: 28px; padding: 0;\">
+        {% set dir_palette = ['#DF5353','#1F78B4','#2AA876','#7B5EA7','#000000','#FF7F0E'] %}
+        {% for c in dir_palette %}
+          <span class=\"aot-color-preset\" title=\"{{c}}\" style=\"background:{{c}}\" onclick=\"var inp=document.getElementById('direction_color'); inp.value='{{c}}'; this.parentElement.querySelectorAll('.aot-color-preset').forEach(e=>e.style.outline='none'); this.style.outline='3px solid #666'\"></span>
+        {% endfor %}
+      </div>
+      <div class=\"form-row\" style=\"align-items:center; gap:10px;\">
+        <div class=\"col-auto\">
+          <label class=\"control-label\" for=\"direction_dot_px\">방향 점 크기(px)</label>
+          <input id=\"direction_dot_px\" name=\"direction_dot_px\" class=\"form-control\" type=\"number\" min=\"2\" max=\"20\" step=\"1\" value=\"{{ widget_options.get('direction_dot_px', 10) }}\">
+        </div>
+        <div class=\"col-auto\">
+          <label class=\"control-label\" for=\"text_y_offset\">데이터 위치 오프셋(%)</label>
+          <input id=\"text_y_offset\" name=\"text_y_offset\" class=\"form-control\" type=\"number\" min=\"-30\" max=\"40\" step=\"1\" value=\"{{ widget_options.get('text_y_offset', 5) }}\">
+        </div>
+      </div>
     """,
 
     'widget_dashboard_js': """
   // --- SVG Gauge helpers (no external libs) ---
-  function aotEnsureGauge(widget_id) {
+  function aotWindEnsureGauge(widget_id) {
     if (!window.widget) window.widget = {};
     if (!window.widget[widget_id]) window.widget[widget_id] = {};
     var el = document.getElementById('container-gauge-' + widget_id);
     if (!el) return;
 
-    // Avoid duplicate build
-    if (document.getElementById('svg-' + widget_id)) return;
+    // Rebuild every call to apply latest geometry/needle (remove legacy long-needle SVG if present)
+    var existing = document.getElementById('svg-' + widget_id);
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
 
     // Compute size
     var w = el.clientWidth || 300;
     var h = el.clientHeight || 240;
     var size = Math.min(w, h);
-    var cx = size / 2, cy = size / 2;
-    var rOuter = size * 0.45;
+    // outer padding like general gauge mock (~10%)
+    var pad = size * 0.1;
+    var cx = size * 0.50, cy = size * 0.45; // align center with AoT_gauge_angular, keep current radius
+    var rOuter = (size / 2) - pad;
     var rTicks = rOuter;
-    var rNeedle = rOuter * 0.9;
+
+    // helper: sanitize color strings coming from options/inputs
+    function sanitizeColor(c, fallback){
+      if (c === undefined || c === null) return fallback;
+      var s = String(c).trim();
+      if (!s || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null') return fallback;
+      if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+      if (/^[0-9a-fA-F]{6}$/.test(s)) return '#' + s; // accept hex without '#'
+      return fallback;
+    }
+
+    // Colors and text offset from runtime options (set in ready_end)
+    var _opts = (window.widget[widget_id] && window.widget[widget_id].opts) ? window.widget[widget_id].opts : {};
+    var borderColor = sanitizeColor(_opts.border_color, '#D5D5D5');
+    var dirColor = sanitizeColor(_opts.direction_color, '#F4D624');
+    var dotR = parseFloat(_opts.direction_dot_px);
+    if (!isFinite(dotR) || dotR <= 0) dotR = 10;
+    var textOffsetPct = parseFloat(_opts.text_y_offset); if (!isFinite(textOffsetPct)) textOffsetPct = 5;
+    var dirFontEm = parseFloat(_opts.direction_label_font_em); if (!isFinite(dirFontEm)) dirFontEm = 1.5;
+
+    // Fixed border thickness (~4% of size)
+    var borderStroke = Math.max(3, size * 0.04);
 
     // Build SVG
     var svgNS = 'http://www.w3.org/2000/svg';
@@ -295,66 +388,42 @@ WIDGET_INFORMATION = {
     bg.setAttribute('cy', cy);
     bg.setAttribute('r', rOuter);
     bg.setAttribute('fill', 'none');
-    bg.setAttribute('stroke', '#e0e0e0');
-    bg.setAttribute('stroke-width', 2);
+    bg.setAttribute('stroke', borderColor);
+    bg.setAttribute('stroke-width', borderStroke);
     svg.appendChild(bg);
 
-    // 8-direction tick lines (every 45°)
-    var directions = [0,45,90,135,180,225,270,315];
-    directions.forEach(function(deg){
-      var rad = (deg - 90) * Math.PI / 180.0; // start at North
-      var x1 = cx + Math.cos(rad) * (rTicks - 8);
-      var y1 = cy + Math.sin(rad) * (rTicks - 8);
-      var x2 = cx + Math.cos(rad) * (rTicks);
-      var y2 = cy + Math.sin(rad) * (rTicks);
-      var line = document.createElementNS(svgNS, 'line');
-      line.setAttribute('x1', x1);
-      line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2);
-      line.setAttribute('y2', y2);
-      line.setAttribute('stroke', '#cccccc');
-      line.setAttribute('stroke-width', 2);
-      svg.appendChild(line);
-    });
+    // Ticks removed per spec; only labels remain.
 
     // Cardinal labels N/E/S/W
     var labels = [{d:0,t:'N'},{d:90,t:'E'},{d:180,t:'S'},{d:270,t:'W'}];
     labels.forEach(function(o){
       var rad = (o.d - 90) * Math.PI / 180.0;
-      var rx = cx + Math.cos(rad) * (rOuter - 18);
-      var ry = cy + Math.sin(rad) * (rOuter - 18) + 4;
+      var rx = cx + Math.cos(rad) * (rOuter - 19);
+      var ry = cy + Math.sin(rad) * (rOuter - 19) + 4;
       var text = document.createElementNS(svgNS, 'text');
       text.setAttribute('x', rx);
       text.setAttribute('y', ry);
       text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('font-size', Math.max(10, size * 0.06));
-      text.setAttribute('fill', '#666666');
+      text.setAttribute('font-size', Math.max(10, size * 0.055));
+      text.setAttribute('fill', '#9aa0a6');
       text.textContent = o.t;
       svg.appendChild(text);
     });
 
-    // Needle group
+    // Direction marker group (small circle at outer ring)
     var needleGroup = document.createElementNS(svgNS, 'g');
     needleGroup.setAttribute('id', 'needle-' + widget_id);
     needleGroup.setAttribute('transform', 'rotate(0 ' + cx + ' ' + cy + ')');
 
-    var needle = document.createElementNS(svgNS, 'line');
-    needle.setAttribute('x1', cx);
-    needle.setAttribute('y1', cy);
-    needle.setAttribute('x2', cx);
-    needle.setAttribute('y2', cy - rNeedle);
-    needle.setAttribute('stroke', '#3e3f46');
-    needle.setAttribute('stroke-width', 4);
-    needle.setAttribute('stroke-linecap', 'round');
-    needleGroup.appendChild(needle);
-
-    // Needle center cap
-    var cap = document.createElementNS(svgNS, 'circle');
-    cap.setAttribute('cx', cx);
-    cap.setAttribute('cy', cy);
-    cap.setAttribute('r', 6);
-    cap.setAttribute('fill', '#3e3f46');
-    needleGroup.appendChild(cap);
+    // Circle positioned at the exact center of the ring stroke
+    var marker = document.createElementNS(svgNS, 'circle');
+    marker.setAttribute('cx', cx);
+    marker.setAttribute('cy', cy - (rOuter));
+    marker.setAttribute('r', dotR);
+    marker.setAttribute('fill', dirColor);
+    marker.setAttribute('stroke', dirColor);
+    marker.setAttribute('stroke-width', 1);
+    needleGroup.appendChild(marker);
 
     svg.appendChild(needleGroup);
 
@@ -362,30 +431,87 @@ WIDGET_INFORMATION = {
     var speedText = document.createElementNS(svgNS, 'text');
     speedText.setAttribute('id', 'speed-' + widget_id);
     speedText.setAttribute('x', cx);
-    speedText.setAttribute('y', cy + (size * 0.12));
+    speedText.setAttribute('y', cy + (size * (textOffsetPct/100.0)));
     speedText.setAttribute('text-anchor', 'middle');
+    speedText.setAttribute('font-weight', '700');
+    // speedText.setAttribute('font-family', 'Inter, "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif');
     speedText.setAttribute('font-size', Math.max(12, size * 0.12));
-    speedText.setAttribute('fill', '#3e3f46');
+    speedText.setAttribute('fill', '#111');
     speedText.textContent = '';
     svg.appendChild(speedText);
 
+    // Direction text under speed
+    var dirText = document.createElementNS(svgNS, 'text');
+    dirText.setAttribute('id', 'dirtext-' + widget_id);
+    dirText.setAttribute('x', cx);
+    dirText.setAttribute('y', cy + (size * (textOffsetPct/100.0)) + Math.max(18, size*0.10));
+    dirText.setAttribute('text-anchor', 'middle');
+    dirText.setAttribute('font-size', Math.max(10, size * 0.06) * dirFontEm);
+    // dirText.setAttribute('font-family', 'Inter, "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif');
+    dirText.setAttribute('fill', '#333');
+    dirText.textContent = '';
+    svg.appendChild(dirText);
+
     el.appendChild(svg);
+
+    // Adjust dirText Y based on computed speed font-size (to keep spacing tidy)
+    setTimeout(function(){
+      try{
+        var t = document.getElementById('speed-' + widget_id);
+        var dtxt = document.getElementById('dirtext-' + widget_id);
+        if (t && dtxt){
+          var fs = parseFloat(getComputedStyle(t).fontSize) || (size*0.12);
+          var baseY = cy + (size * (textOffsetPct/100.0));
+          // place direction ~0.75 of speed font below baseline + small padding
+          dtxt.setAttribute('y', baseY + fs*0.75 + Math.max(6, size*0.02));
+        }
+      }catch(e){}
+    }, 0);
 
     // store geometry for updates
     window.widget[widget_id].__cx = cx;
     window.widget[widget_id].__cy = cy;
+    window.widget[widget_id].__rOuter = rOuter;
   }
 
-  function aotUpdateNeedle(widget_id, deg) {
+  function aotWindAngleToKorean8(deg){
+    var d = ((Number(deg)%360)+360)%360;
+    var card = function(x){ return ['북','동','남','서'][x]; };
+    // If within 22.5° of a cardinal, return it directly
+    var near = [0,90,180,270];
+    for (var i=0;i<near.length;i++){
+      if (Math.abs(d - near[i]) <= 22.5 || Math.abs(d - near[i] + 360) <= 22.5) {
+        return card(i);
+      }
+    }
+    // Determine quadrant and order by closeness
+    if (d > 0 && d < 90){ // N-E
+      return (Math.abs(d-0) < Math.abs(d-90)) ? '북동' : '동북';
+    } else if (d > 90 && d < 180){ // E-S
+      return (Math.abs(d-90) < Math.abs(d-180)) ? '동남' : '남동';
+    } else if (d > 180 && d < 270){ // S-W
+      return (Math.abs(d-180) < Math.abs(d-270)) ? '남서' : '서남';
+    } else { // 270..360 or 0
+      return (Math.abs(d-270) < Math.abs(d-360)) ? '서북' : '북서';
+    }
+  }
+
+  function aotWindUpdateNeedle(widget_id, deg) {
     var g = document.getElementById('needle-' + widget_id);
     if (!g) return;
     var cx = window.widget[widget_id].__cx || 0;
     var cy = window.widget[widget_id].__cy || 0;
-    // SVG 0° is to the right; we want 0° at North -> rotate(deg)
-    g.setAttribute('transform', 'rotate(' + deg + ' ' + cx + ' ' + cy + ')');
+    // Normalize input (handles strings, NaN, negatives, >360)
+    var d = Number(deg);
+    if (!isFinite(d)) d = 0;
+    d = ((d % 360) + 360) % 360; // wrap into [0,360)
+    // Our needle geometry points to North when 0°, so rotate by d directly.
+    g.setAttribute('transform', 'rotate(' + d + ' ' + cx + ' ' + cy + ')');
+    var lbl = document.getElementById('dirtext-' + widget_id);
+    if (lbl) lbl.textContent = aotWindAngleToKorean8(d);
   }
 
-  function aotUpdateSpeed(widget_id, val, unit, decimals, dataFontSizeEm, unitFontSizeEm) {
+  function aotWindUpdateSpeed(widget_id, val, unit, decimals, dataFontSizeEm, unitFontSizeEm) {
     var t = document.getElementById('speed-' + widget_id);
     if (!t) return;
     var v = (val === null || val === undefined) ? '' : Number(val).toFixed(decimals || 1);
@@ -395,7 +521,7 @@ WIDGET_INFORMATION = {
   }
 
   // --- Data fetchers (unchanged endpoints) ---
-  function getLastDataGaugeAngular(widget_id,
+  function aotWindGetLastDir(widget_id,
                        unique_id,
                        measure_type,
                        measurement_id,
@@ -407,33 +533,33 @@ WIDGET_INFORMATION = {
           if (!window.widget) window.widget = {};
           if (!window.widget[widget_id]) window.widget[widget_id] = {};
           window.widget[widget_id].lastDir = null;
-          aotUpdateNeedle(widget_id, 0);
+          aotWindUpdateNeedle(widget_id, 0);
         }
         else {
           const measurement = data[1];
           if (!window.widget) window.widget = {};
           if (!window.widget[widget_id]) window.widget[widget_id] = {};
           window.widget[widget_id].lastDir = measurement;
-          aotUpdateNeedle(widget_id, measurement);
+          aotWindUpdateNeedle(widget_id, measurement);
         }
       },
       error: function() {
         if (!window.widget) window.widget = {};
         if (!window.widget[widget_id]) window.widget[widget_id] = {};
         window.widget[widget_id].lastDir = null;
-        aotUpdateNeedle(widget_id, 0);
+        aotWindUpdateNeedle(widget_id, 0);
       }
     });
   }
 
-  function repeatLastDataGaugeAngular(widget_id,
+  function aotWindRepeatLastDir(widget_id,
                           dev_id,
                           measure_type,
                           measurement_id,
                           period_sec,
                           max_measure_age_sec) {
     setInterval(function () {
-      getLastDataGaugeAngular(widget_id,
+      aotWindGetLastDir(widget_id,
                   dev_id,
                   measure_type,
                   measurement_id,
@@ -441,7 +567,7 @@ WIDGET_INFORMATION = {
     }, period_sec * 1000);
   }
 
-  function getLastDataWindSpeed(widget_id,
+  function aotWindGetLastSpeed(widget_id,
                                 unique_id,
                                 measure_type,
                                 measurement_id,
@@ -460,18 +586,18 @@ WIDGET_INFORMATION = {
         } else {
           window.widget[widget_id].lastSpeed = data[1];
         }
-        aotUpdateSpeed(widget_id, window.widget[widget_id].lastSpeed, unitLabel, decimals, dataFontEm, unitFontEm);
+        aotWindUpdateSpeed(widget_id, window.widget[widget_id].lastSpeed, unitLabel, decimals, dataFontEm, unitFontEm);
       },
       error: function() {
         if (!window.widget) window.widget = {};
         if (!window.widget[widget_id]) window.widget[widget_id] = {};
         window.widget[widget_id].lastSpeed = null;
-        aotUpdateSpeed(widget_id, window.widget[widget_id].lastSpeed, unitLabel, decimals, dataFontEm, unitFontEm);
+        aotWindUpdateSpeed(widget_id, window.widget[widget_id].lastSpeed, unitLabel, decimals, dataFontEm, unitFontEm);
       }
     });
   }
 
-  function repeatLastDataWindSpeed(widget_id,
+  function aotWindRepeatLastSpeed(widget_id,
                                    dev_id,
                                    measure_type,
                                    measurement_id,
@@ -482,7 +608,7 @@ WIDGET_INFORMATION = {
                                    unitFontEm,
                                    unitLabel) {
     setInterval(function () {
-      getLastDataWindSpeed(widget_id,
+      aotWindGetLastSpeed(widget_id,
                            dev_id,
                            measure_type,
                            measurement_id,
@@ -510,88 +636,82 @@ WIDGET_INFORMATION = {
 
   (function(){
     try {
-      // --- Ensure SVG helpers are loaded ---
-      if (typeof window.aotEnsureGauge === 'undefined') {
-        var s = document.createElement('script');
-        s.src = '/static/js/aot_gauge_svg.js';
-        document.head.appendChild(s);
+      if (typeof window.widget === 'undefined') window.widget = {};
+      var wid = '{{each_widget.unique_id}}';
+      if (!window.widget[wid]) window.widget[wid] = {};
+
+      // Pass customizable options to JS FIRST (so build picks them up)
+      window.widget[wid].opts = {
+        border_color: '{{ widget_options.get('border_color', '#D5D5D5') }}',
+        direction_color: '{{ widget_options.get('direction_color', '#F4D624') }}',
+        direction_dot_px: {{ widget_options.get('direction_dot_px', 10) | float }},
+        text_y_offset: {{ widget_options.get('text_y_offset', 5) | float }},
+        direction_label_font_em: {{ widget_options.get('direction_label_font_em', 1.5) | float }}
+      };
+
+      // Prepare container styles
+      var el = document.getElementById('container-gauge-' + wid);
+      if (el) {
+        if (!el.offsetHeight || !el.offsetWidth) el.style.minHeight = '120px';
+        if (!el.style.zIndex) el.style.zIndex = '1';
+        if (el.parentElement && getComputedStyle(el.parentElement).position === 'static') {
+          el.parentElement.style.position = 'relative';
+        }
       }
-      // Continue only after helpers are loaded
-      function aotInitWidget() {
-        if (typeof window.aotEnsureGauge === 'undefined') {
-          setTimeout(aotInitWidget, 50);
-          return;
-        }
-        if (typeof window.widget === 'undefined') {
-          window.widget = {};
-        }
-        var el = document.getElementById('container-gauge-{{each_widget.unique_id}}');
-        if (el) {
-          if (!el.offsetHeight || !el.offsetWidth) {
-            el.style.minHeight = '120px';
-          }
-          if (!el.style.zIndex) {
-            el.style.zIndex = '1';
-          }
-          if (el.parentElement && getComputedStyle(el.parentElement).position === 'static') {
-            el.parentElement.style.position = 'relative';
-          }
-        }
-        // Build SVG once
-        aotEnsureGauge('{{each_widget.unique_id}}');
 
-        // Initialize storage
-        window.widget['{{each_widget.unique_id}}'].lastDir = null;
-        window.widget['{{each_widget.unique_id}}'].lastSpeed = null;
+      // Build SVG once (uses options above)
+      aotWindEnsureGauge(wid);
 
-        // Direction fetchers (guarded)
-        {% if device_id_dir and measurement_id_dir %}
-        {% for each_input in input  if each_input.unique_id == device_id_dir %}
-        getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id_dir}}', 'input', '{{measurement_id_dir}}', {{widget_options['max_measure_age']}});
-        repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id_dir}}', 'input', '{{measurement_id_dir}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
-        {%- endfor -%}
-        {% for each_function in function if each_function.unique_id == device_id_dir %}
-        getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id_dir}}', 'function', '{{measurement_id_dir}}', {{widget_options['max_measure_age']}});
-        repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id_dir}}', 'function', '{{measurement_id_dir}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
-        {%- endfor -%}
-        {% for each_pid in pid if each_pid.unique_id == device_id_dir %}
-        getLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id_dir}}', 'pid', '{{measurement_id_dir}}', {{widget_options['max_measure_age']}});
-        repeatLastDataGaugeAngular('{{each_widget.unique_id}}', '{{device_id_dir}}', 'pid', '{{measurement_id_dir}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
-        {%- endfor -%}
-        {% endif %}
+      // Initialize storage
+      window.widget[wid].lastDir = null;
+      window.widget[wid].lastSpeed = null;
 
-        // Determine unit label for speed (server dictionaries if available)
-        var unitLabel = (function(){
-          {% if measurement_id_spd %}
-            {% if measurement_id_spd in dict_measure_units and dict_measure_units[measurement_id_spd] in dict_units and dict_units[dict_measure_units[measurement_id_spd]]['unit'] %}
-              return '{{ dict_units[dict_measure_units[measurement_id_spd]]["unit"] }}';
-            {% elif measurement_id_spd in device_measurements_dict %}
-              return '{{ dict_units[device_measurements_dict[measurement_id_spd].unit]["unit"] }}';
-            {% else %}
-              return '';
-            {% endif %}
+      // Direction fetchers (guarded)
+      {% if device_id_dir and measurement_id_dir %}
+      {% for each_input in input  if each_input.unique_id == device_id_dir %}
+      aotWindGetLastDir(wid, '{{device_id_dir}}', 'input', '{{measurement_id_dir}}', {{widget_options['max_measure_age']}});
+      aotWindRepeatLastDir(wid, '{{device_id_dir}}', 'input', '{{measurement_id_dir}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
+      {%- endfor -%}
+      {% for each_function in function if each_function.unique_id == device_id_dir %}
+      aotWindGetLastDir(wid, '{{device_id_dir}}', 'function', '{{measurement_id_dir}}', {{widget_options['max_measure_age']}});
+      aotWindRepeatLastDir(wid, '{{device_id_dir}}', 'function', '{{measurement_id_dir}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
+      {%- endfor -%}
+      {% for each_pid in pid if each_pid.unique_id == device_id_dir %}
+      aotWindGetLastDir(wid, '{{device_id_dir}}', 'pid', '{{measurement_id_dir}}', {{widget_options['max_measure_age']}});
+      aotWindRepeatLastDir(wid, '{{device_id_dir}}', 'pid', '{{measurement_id_dir}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}});
+      {%- endfor -%}
+      {% endif %}
+
+      // Determine unit label for speed
+      var unitLabel = (function(){
+        {% if measurement_id_spd %}
+          {% if measurement_id_spd in dict_measure_units and dict_measure_units[measurement_id_spd] in dict_units and dict_units[dict_measure_units[measurement_id_spd]]['unit'] %}
+            return '{{ dict_units[dict_measure_units[measurement_id_spd]]["unit"] }}';
+          {% elif measurement_id_spd in device_measurements_dict %}
+            return '{{ dict_units[device_measurements_dict[measurement_id_spd].unit]["unit"] }}';
           {% else %}
             return '';
           {% endif %}
-        })();
-
-        // Speed fetchers (guarded)
-        {% if device_id_spd and measurement_id_spd %}
-        {% for each_input in input  if each_input.unique_id == device_id_spd %}
-        getLastDataWindSpeed('{{each_widget.unique_id}}', '{{device_id_spd}}', 'input', '{{measurement_id_spd}}', {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
-        repeatLastDataWindSpeed('{{each_widget.unique_id}}', '{{device_id_spd}}', 'input', '{{measurement_id_spd}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
-        {%- endfor -%}
-        {% for each_function in function if each_function.unique_id == device_id_spd %}
-        getLastDataWindSpeed('{{each_widget.unique_id}}', '{{device_id_spd}}', 'function', '{{measurement_id_spd}}', {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
-        repeatLastDataWindSpeed('{{each_widget.unique_id}}', '{{device_id_spd}}', 'function', '{{measurement_id_spd}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
-        {%- endfor -%}
-        {% for each_pid in pid if each_pid.unique_id == device_id_spd %}
-        getLastDataWindSpeed('{{each_widget.unique_id}}', '{{device_id_spd}}', 'pid', '{{measurement_id_spd}}', {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
-        repeatLastDataWindSpeed('{{each_widget.unique_id}}', '{{device_id_spd}}', 'pid', '{{measurement_id_spd}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
-        {%- endfor -%}
+        {% else %}
+          return '';
         {% endif %}
-      }
-      aotInitWidget();
+      })();
+
+      // Speed fetchers (guarded)
+      {% if device_id_spd and measurement_id_spd %}
+      {% for each_input in input  if each_input.unique_id == device_id_spd %}
+      aotWindGetLastSpeed(wid, '{{device_id_spd}}', 'input', '{{measurement_id_spd}}', {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
+      aotWindRepeatLastSpeed(wid, '{{device_id_spd}}', 'input', '{{measurement_id_spd}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
+      {%- endfor -%}
+      {% for each_function in function if each_function.unique_id == device_id_spd %}
+      aotWindGetLastSpeed(wid, '{{device_id_spd}}', 'function', '{{measurement_id_spd}}', {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
+      aotWindRepeatLastSpeed(wid, '{{device_id_spd}}', 'function', '{{measurement_id_spd}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
+      {%- endfor -%}
+      {% for each_pid in pid if each_pid.unique_id == device_id_spd %}
+      aotWindGetLastSpeed(wid, '{{device_id_spd}}', 'pid', '{{measurement_id_spd}}', {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
+      aotWindRepeatLastSpeed(wid, '{{device_id_spd}}', 'pid', '{{measurement_id_spd}}', {{widget_options['refresh_seconds']}}, {{widget_options['max_measure_age']}}, {{ widget_options.get("decimal_places", 1) }}, {{ widget_options.get("text_font_size", 1.5) }}, {{ widget_options.get("unit_font_size", 0.7) }}, unitLabel);
+      {%- endfor -%}
+      {% endif %}
     } catch (e) {
       console && console.error && console.error('AoT_wind_angular init error:', e);
     }
@@ -612,37 +732,40 @@ def is_rgb_color(color_hex):
 def custom_colors_gauge(form, error):
     """
     "구간 시작"(low), "색상"(hex)만 파싱한다. "구간 끝"(high)은 비워둔 채로 sorted_colors에 저장.
+    폼에 아무 항목이 없거나 일부만 있어도 안전하게 동작.
     """
     sorted_colors = []
     colors_hex = {}
 
     for key in form.keys():
-        # "color_low_number##" / "color_hex_number##" 만 존재
-        if 'color_low_number' in key or 'color_hex_number' in key:
-            idx = int(key[16:])  # 예: color_low_number00 → 인덱스 00 → int(0)
+        if key.startswith('color_low_number'):
+            try:
+                idx = int(key.replace('color_low_number', ''))
+            except Exception:
+                continue
             if idx not in colors_hex:
                 colors_hex[idx] = {}
-
-        if 'color_hex_number' in key:
+            for value in form.getlist(key):
+                colors_hex[idx]['low'] = value
+        elif key.startswith('color_hex_number'):
+            try:
+                idx = int(key.replace('color_hex_number', ''))
+            except Exception:
+                continue
+            if idx not in colors_hex:
+                colors_hex[idx] = {}
             for value in form.getlist(key):
                 if not is_rgb_color(value):
                     error.append('Invalid hex color value')
                 colors_hex[idx]['hex'] = value
 
-        elif 'color_low_number' in key:
-            for value in form.getlist(key):
-                colors_hex[idx]['low'] = value
-
-    # 인덱스 순서대로 "low,,hex" 형태로 임시 저장
+    # 인덱스 순서대로 "low,,hex" 형태로 임시 저장 (둘 다 있어야 추가)
     for i in sorted(colors_hex.keys()):
-        try:
-            low_val = colors_hex[i].get('low', '0')
-            hex_val = colors_hex[i].get('hex', '#000000')
-            # middle(High)은 비워둠
-            sorted_colors.append(f"{low_val},,{hex_val}")
-        except Exception as err_msg:
-            logger.exception(1)
-            error.append(str(err_msg))
+        low_val = colors_hex[i].get('low')
+        hex_val = colors_hex[i].get('hex')
+        if low_val is None or hex_val is None:
+            continue
+        sorted_colors.append(f"{low_val},,{hex_val}")
 
     return sorted_colors, error
 
@@ -654,23 +777,36 @@ def fill_missing_highs(custom_options_json, sorted_colors):
     middle(High)이 비어 있는 경우 자동 계산:
     - 다음 구간의 Low → 현재 구간 High
     - 마지막 구간은 widget 'max' 값이 High
+    안전장치:
+    - sorted_colors가 비어 있으면 빈 리스트를 반환
+    - 잘못된 형식의 항목은 건너뜀
     """
-    max_val = custom_options_json['max']
+    if not sorted_colors:
+        return []
 
-    for i in range(len(sorted_colors) - 1):
-        low_i, high_i, color_i = sorted_colors[i].split(',')
-        low_next, high_next, color_next = sorted_colors[i+1].split(',')
+    max_val = custom_options_json.get('max', 360)
+    # 먼저 파싱: "low,high,hex" 혹은 "low,,hex"
+    parsed = []
+    for item in sorted_colors:
+        parts = item.split(',')
+        if len(parts) != 3:
+            continue
+        low_i, high_i, color_i = parts[0].strip(), parts[1].strip(), parts[2].strip()
+        parsed.append([low_i, high_i, color_i])
 
-        # 현재 구간 High가 비어 있으면 다음 구간 Low를 대입
-        if not high_i.strip():
-            high_i = low_next
-            sorted_colors[i] = f"{low_i},{high_i},{color_i}"
+    if not parsed:
+        return []
 
-    # 마지막 구간 처리
-    last_idx = len(sorted_colors) - 1
-    low_last, high_last, color_last = sorted_colors[last_idx].split(',')
-    if not high_last.strip():
-        high_last = str(max_val)  # 마지막 구간 끝은 max
-        sorted_colors[last_idx] = f"{low_last},{high_last},{color_last}"
+    # 다음 구간의 Low를 이용해 High 채우기
+    for i in range(len(parsed) - 1):
+        low_i, high_i, color_i = parsed[i]
+        low_next, _, _ = parsed[i + 1]
+        if not high_i:
+            parsed[i][1] = low_next
 
-    return sorted_colors
+    # 마지막 구간 High가 비어 있으면 max로
+    if not parsed[-1][1]:
+        parsed[-1][1] = str(max_val)
+
+    # 문자열로 재조합
+    return [f"{low},{high},{color}" for (low, high, color) in parsed]
