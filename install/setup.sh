@@ -195,22 +195,44 @@ ${INSTALL_CMD} update-pip3-packages 2>&1 | tee -a "${LOG_LOCATION}"
 
 # Install mosquitto MQTT broker and configure for external connections
 echo "#### 설치중: mosquitto MQTT broker" | tee -a "${LOG_LOCATION}"
-apt-get install -y mosquitto mosquitto-clients >> "${LOG_LOCATION}" 2>&1
+if ! dpkg -s mosquitto >/dev/null 2>&1; then
+  apt-get install -y mosquitto mosquitto-clients >> "${LOG_LOCATION}" 2>&1
+else
+  echo "#### mosquitto 이미 설치됨 - 설치 단계 건너뜀" | tee -a "${LOG_LOCATION}"
+fi
 
 echo "#### mosquitto를 외부 연결 허용으로 설정 중" | tee -a "${LOG_LOCATION}"
-echo "#### mosquitto 설정 파일 생성 중" | tee -a "${LOG_LOCATION}"
+echo "#### mosquitto 설정 파일 생성/검증 중" | tee -a "${LOG_LOCATION}"
 MOSQUITTO_CONF="/etc/mosquitto/conf.d/aot.conf"
-cat <<EOF > "$MOSQUITTO_CONF"
+
+# 기존 파일이 있으면 덮어쓰지 않음(사용자 설정 보존)
+if [ ! -f "$MOSQUITTO_CONF" ]; then
+  cat <<EOF > "$MOSQUITTO_CONF"
 listener 1883
 allow_anonymous true
 EOF
+  echo "#### ${MOSQUITTO_CONF} 생성 완료" | tee -a "${LOG_LOCATION}"
+else
+  echo "#### ${MOSQUITTO_CONF} 이미 존재 - 덮어쓰지 않음" | tee -a "${LOG_LOCATION}"
+fi
 
 # Ensure main config includes conf.d
-if ! grep -q '^include_dir /etc/mosquitto/conf.d' /etc/mosquitto/mosquitto.conf; then
+if ! grep -q '^include_dir /etc/mosquitto/conf.d' /etc/mosquitto/mosquitto.conf 2>/dev/null; then
   echo "include_dir /etc/mosquitto/conf.d" >> /etc/mosquitto/mosquitto.conf
+  echo "#### /etc/mosquitto/mosquitto.conf 에 include_dir 추가" | tee -a "${LOG_LOCATION}"
 fi
+
+# 서비스 활성화/재시작 - 실패해도 설치를 중단하지 않음
+set +e
 systemctl enable mosquitto >> "${LOG_LOCATION}" 2>&1
 systemctl restart mosquitto >> "${LOG_LOCATION}" 2>&1
+MOSQ_STATUS=$?
+set -e
+
+if [ $MOSQ_STATUS -ne 0 ]; then
+  echo "#### 경고: mosquitto 재시작 실패. 설치는 계속 진행합니다." | tee -a "${LOG_LOCATION}"
+  echo "#### 진단: systemctl status mosquitto --no-pager -l ; journalctl -u mosquitto -n 200 --no-pager" | tee -a "${LOG_LOCATION}"
+fi
 
 ${INSTALL_CMD} install-wiringpi 2>&1 | tee -a "${LOG_LOCATION}"
 if [[ ${INFLUX_B} == '0)' ]]; then

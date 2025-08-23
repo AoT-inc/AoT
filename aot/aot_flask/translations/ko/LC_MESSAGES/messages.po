@@ -1968,7 +1968,7 @@ msgid ""
 "computers (SBCs). It couples inputs and outputs in interesting ways to "
 "sense and manipulate the environment."
 msgstr ""
-"마이코도는 [라즈베리 파이](https://en.wikipedia.org/wiki/Raspberry_Pi) 및 기타 단일 보드 "
+"AoT는 [라즈베리 파이](https://en.wikipedia.org/wiki/Raspberry_Pi) 및 기타 단일 보드 "
 "컴퓨터(SBC)에서 실행되도록 설계된 오픈 소스 소프트웨어입니다. 입력과 출력을 흥미로운 방식으로 결합하여 환경을 감지하고 "
 "조작합니다."
 
