@@ -4013,7 +4013,7 @@ msgstr ""
 
 #: aot_flask/templates/create_admin.html:32
 msgid "Welcome to AoT"
-msgstr "마이코도에 오신 것을 환영합니다"
+msgstr "AoT에 오신 것을 환영합니다"
 
 #: aot_flask/templates/create_admin.html:51
 msgid ""
