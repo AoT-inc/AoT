@@ -299,6 +299,11 @@ class InputModule(AbstractInput):
                 f"Error parsing payload '{payload}': {err}")
             return
 
+        # If the parsed payload is empty, skip further processing
+        if not json_values:
+            self.logger.debug("Payload parsed but contains no data; skipping.")
+            return
+
         datetime_utc = datetime.datetime.utcnow()
         measurement = {}
         for each_channel in self.channels_measurement:
@@ -307,7 +312,18 @@ class InputModule(AbstractInput):
 
             try:
                 jmesexpression = self.jmespath.compile(json_name)
-                value = float(jmesexpression.search(json_values))
+                result = jmesexpression.search(json_values)
+                if result in (None, ''):
+                    self.logger.debug(
+                        f"No value for '{json_name}' in payload; skipping channel {each_channel}.")
+                    continue
+                try:
+                    value = float(result)
+                except (TypeError, ValueError):
+                    self.logger.debug(
+                        f"Non-numeric value for '{json_name}' (result={result}); skipping channel {each_channel}.")
+                    continue
+
                 self.logger.debug(
                     "Found key: {}, value: {}".format(json_name, value))
                 measurement[each_channel] = {}
@@ -320,6 +336,11 @@ class InputModule(AbstractInput):
                 self.logger.error(
                     "Error in JSON '{}' finding '{}': {}".format(
                         json_values, json_name, err))
+
+        # If no valid measurements were extracted, do not write to the database
+        if not measurement:
+            self.logger.debug("No valid measurements extracted from payload; not writing to InfluxDB.")
+            return
 
         message, measurement = run_input_actions(self.unique_id, "", measurement, self.log_level_debug)
 

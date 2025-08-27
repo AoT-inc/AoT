@@ -448,16 +448,20 @@ WIDGET_INFORMATION = {
     },
 
     pane: {
-        center: [ '50%', '45%' ],
+        // Align with wind gauge layout:
+        // - Horizontal padding 12% ⇒ size ≈ 76%
+        // - Top padding ~4% ⇒ centerY ≈ 42% (since size/2 = 38%, 42-38 = 4%)
+        center: [ '50%', '42%' ],
+        size: '76%',
         startAngle: -120,
         endAngle: 120,
         background: [{
-        backgroundColor: 'none',
+          backgroundColor: 'none',
           borderWidth: 0,
           outerRadius: '0%',
           innerRadius: '0%'
         }]
-        },
+    },
 
     yAxis: {
         min: {{widget_options['min']}},

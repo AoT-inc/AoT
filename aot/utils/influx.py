@@ -13,6 +13,8 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import return_measurement_info
 
 logger = logging.getLogger("aot.influx")
+logger.setLevel(logging.DEBUG)
+logger.info("aot.influx loaded: build=duration-int-cast+sync-off, ts=2025-08-25 KST")
 
 
 #
@@ -73,11 +75,26 @@ def write_influxdb_value(unique_id, unit, value, measure=None, channel=None, tim
         if measure:
             point = point.tag("measure", measure)
         if channel is not None:
-            point = point.tag("channel", channel)
+            point = point.tag("channel", str(channel))  # ensure channel tag is string
         if timestamp:
             point = point.time(timestamp)
 
-        point = point.field("value", value)
+        # Coerce value: duration_time / unit 's' stored as INT to match legacy series; booleans kept; else float
+        try:
+            if measure == 'duration_time' or unit == 's':
+                coerced_value = int(float(value))
+            elif isinstance(value, bool):
+                coerced_value = value
+            else:
+                coerced_value = float(value)
+        except (TypeError, ValueError):
+            logger.debug(f"Skip write: non-numeric value for measure={measure} unique_id={unique_id} value={value!r}")
+            return 1
+
+        point = point.field("value", coerced_value)
+        logger.debug(
+            f"influx write: unit={unit} measure={measure} ch={str(channel)} value={coerced_value!r} type={type(coerced_value).__name__} ts={timestamp}"
+        )
 
         try:
             write_api.write(bucket=bucket, record=point)
@@ -143,20 +160,41 @@ def add_measurements_influxdb_flux(unique_id, measurements, use_same_timestamp=T
             if each_measurement['measurement']:
                 point = point.tag("measure", each_measurement['measurement'])
             if each_channel is not None:
-                point = point.tag("channel", each_channel)
+                point = point.tag("channel", str(each_channel))
             if timestamp:
                 point = point.time(timestamp)
 
-            point = point.field("value", each_measurement['value'])
+            raw_val = each_measurement['value']
+            try:
+                if each_measurement.get('measurement') == 'duration_time' or each_measurement.get('unit') == 's':
+                    coerced_val = int(float(raw_val))
+                elif isinstance(raw_val, bool):
+                    coerced_val = raw_val
+                else:
+                    coerced_val = float(raw_val)
+            except (TypeError, ValueError):
+                logger.debug(f"Skip write: non-numeric measurement value for device_id={unique_id} measure={each_measurement.get('measurement')} value={raw_val!r}")
+                continue
+
+            point = point.field("value", coerced_val)
+            logger.debug(
+                f"influx write(batch): unit={each_measurement['unit']} measure={each_measurement.get('measurement')} ch={str(each_channel)} value={coerced_val!r} type={type(coerced_val).__name__} ts={timestamp}"
+            )
             write_api.write(bucket=bucket, record=point)
 
 
 def write_fail(point_data, written_data, err):
-    logger.debug(f"Write point fail: {err}: {written_data}")
+    try:
+        logger.debug(f"Write point fail: {err}: record={written_data}")
+    except Exception:
+        logger.debug(f"Write point fail: {err}")
 
 
 def write_success(point_data, written_data):
-    logger.debug(f"Write point success: {written_data}")
+    try:
+        logger.debug(f"Write point success: record={written_data}")
+    except Exception:
+        logger.debug("Write point success")
 
 
 def add_measurements_influxdb(unique_id, measurements, use_same_timestamp=True, block=False):
