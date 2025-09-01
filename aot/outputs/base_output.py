@@ -306,27 +306,23 @@ class AbstractOutput(AbstractBaseController):
                     # Write the amount the output was ON to the
                     # database at the timestamp it turned ON
                     if time_on > 0:
-                        # Make sure the recorded value is recorded negative if instructed to do so
+                        # Make sure the recorded value is recorded negative
+                        # if instructed to do so
                         if self.output_last_duration[output_channel] < 0:
                             duration_on = float(-time_on)
                         else:
                             duration_on = float(time_on)
                         timestamp = datetime.datetime.utcnow() - datetime.timedelta(seconds=abs(duration_on))
 
-                        try:
-                            rc = write_influxdb_value(
-                                self.unique_id,
-                                's',
-                                duration_on,
-                                measure='duration_time',
-                                channel=output_channel,
-                                timestamp=timestamp,
-                            )
-                            self.logger.debug(
-                                f"duration_time(partial) write rc={rc} device={self.unique_id} ch={output_channel} sec={duration_on}")
-                        except Exception as e:
-                            self.logger.error(
-                                f"duration_time(partial) write exception: device={self.unique_id} ch={output_channel} sec={duration_on} err={e}")
+                        write_db = threading.Thread(
+                            target=write_influxdb_value,
+                            args=(self.unique_id,
+                                  's',
+                                  duration_on,),
+                            kwargs={'measure': 'duration_time',
+                                    'channel': output_channel,
+                                    'timestamp': timestamp})
+                        write_db.start()
 
                     return 0, msg
 
@@ -437,35 +433,15 @@ class AbstractOutput(AbstractBaseController):
                             measurement_channel = each_measure_channel
                             break
 
-                # ---- BEGIN: ensure duration write happens synchronously ----
-                if measurement_channel is None:
-                    measurement_channel = output_channel  # fallback to raw output channel
-
-                if duration_sec is None:
-                    self.logger.debug(
-                        f"Skip duration write: duration_sec is None (device={self.unique_id}, ch={output_channel})")
-                else:
-                    try:
-                        duration_sec = float(duration_sec)
-                    except (TypeError, ValueError):
-                        self.logger.debug(
-                            f"Skip duration write: non-numeric duration_sec={duration_sec!r} (device={self.unique_id}, ch={output_channel})")
-                    else:
-                        try:
-                            rc = write_influxdb_value(
-                                self.unique_id,
-                                's',
-                                duration_sec,
-                                measure='duration_time',
-                                channel=measurement_channel,
-                                timestamp=timestamp,
-                            )
-                            self.logger.debug(
-                                f"duration_time write rc={rc} device={self.unique_id} ch={measurement_channel} sec={duration_sec}")
-                        except Exception as e:
-                            self.logger.error(
-                                f"duration_time write exception: device={self.unique_id} ch={measurement_channel} sec={duration_sec} err={e}")
-                # ---- END: ensure duration write happens synchronously ----
+                write_db = threading.Thread(
+                    target=write_influxdb_value,
+                    args=(self.unique_id,
+                          's',
+                          duration_sec,),
+                    kwargs={'measure': 'duration_time',
+                            'channel': measurement_channel,
+                            'timestamp': timestamp})
+                write_db.start()
 
             self.output_off_triggered[output_channel] = False
 
