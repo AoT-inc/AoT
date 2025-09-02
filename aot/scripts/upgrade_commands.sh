@@ -13,6 +13,10 @@ fi
 # Current AoT major version number
 AOT_MAJOR_VERSION="8"
 
+# Runtime service user/group (Mycodo-like default). Can be overridden via environment.
+AOT_USER="${AOT_USER:-aot}"
+AOT_GROUP="${AOT_GROUP:-${AOT_USER}}"
+
 # Dependency versions/URLs
 PIGPIO_URL="https://github.com/joan2937/pigpio/archive/v79.tar.gz"
 MCB2835_URL="http://www.airspayce.com/mikem/bcm2835/bcm2835-1.50.tar.gz"
@@ -113,7 +117,7 @@ case "${1:-''}" in
     'compile-aot-wrapper')
         printf "\n#### Compiling aot_wrapper\n"
         gcc "${AOT_PATH}"/aot/scripts/aot_wrapper.c -o "${AOT_PATH}"/aot/scripts/aot_wrapper
-        chown root:${USER} "${AOT_PATH}"/aot/scripts/aot_wrapper
+        chown root:${AOT_USER} "${AOT_PATH}"/aot/scripts/aot_wrapper
         chmod 4770 "${AOT_PATH}"/aot/scripts/aot_wrapper
     ;;
     'compile-translations')
@@ -167,6 +171,10 @@ case "${1:-''}" in
         if [[ ! -e ${AOT_PATH}/databases/aot.db ]]; then
             touch "${AOT_PATH}"/databases/aot.db
         fi
+
+        chown -R "${AOT_USER}:${AOT_GROUP}" /var/log/aot /var/AoT-backups || true
+        chown -R "${AOT_USER}:${AOT_GROUP}" "${AOT_PATH}" || true
+        
     ;;
     'create-symlinks')
         printf "\n#### Creating symlinks to AoT executables\n"
@@ -181,20 +189,20 @@ case "${1:-''}" in
         ln -sfn "${AOT_PATH}"/env/bin/python /usr/bin/aot-python
     ;;
     'create-user')
-        printf "\n#### Creating aot user\n"
-        useradd -M aot
-        adduser aot adm
-        adduser aot dialout
-        adduser aot i2c
-        adduser aot kmem
-        adduser aot video
-
-        if getent group gpio; then
-            adduser aot gpio
+        printf "\n#### Creating/ensuring ${AOT_USER} service user\n"
+        if ! id -u "${AOT_USER}" >/dev/null 2>&1; then
+            # system user with home; no interactive shell
+            useradd --system --create-home --shell /usr/sbin/nologin "${AOT_USER}"
         fi
 
-        usermod -aG aot $USER
-        usermod -aG $USER aot
+        for g in adm dialout i2c kmem video; do
+            adduser "${AOT_USER}" "$g" 2>/dev/null || true
+        done
+        if getent group gpio >/dev/null 2>&1; then
+            adduser "${AOT_USER}" gpio 2>/dev/null || true
+        fi
+
+        # Do NOT mix current $USER with the service account (avoid cross-ownership)
     ;;
     'generate-widget-html')
         printf "\n#### Generating widget HTML files\n"
@@ -520,30 +528,34 @@ case "${1:-''}" in
         done
     ;;
     'update-influxdb-2-db-user')
-        if influx config | grep -q 'aot'; then
-            printf "#### InfluxDB v2.x config already present, skipping DB/user creation...\n"
+        printf "\n#### Creating InfluxDB 2.x org/bucket (idempotent)\n"
+        # If influx is initialized, org list returns 0; otherwise setup is required
+        if influx ping >/dev/null 2>&1 && influx org list >/dev/null 2>&1; then
+            printf "#### InfluxDB v2.x already initialized. Skipping setup.\n"
         else
-            printf "\n#### Creating InfluxDB 2.x database and user\n"
-            # Attempt to connect to influxdb 10 times, sleeping 60 seconds every fail
+            printf "#### Attempting to initialize InfluxDB v2.x...\n"
             for _ in {1..10}; do
-                # Check if influxdb has successfully started and be connected to
-                printf "#### Attempting to connect...\n" &&
-                curl -sL -I localhost:8086/ping > /dev/null &&
-                printf "#### Attempting to set up user...\n" &&
+                curl -sL -I localhost:8086/ping >/dev/null && \
                 influx setup \
                        --org aot \
                        --bucket aot_db \
                        --username aot \
                        --password mmdu77sj3nIoiajjs \
-                       --force &&
-                printf "#### Influxdb database and user successfully created\n" &&
-                break ||
-                # Else wait 60 seconds if the influxd port is not accepting connections
-                # Everything below will begin executing if an error occurs before the break
-                printf "#### Could not connect to Influxdb. Waiting 60 seconds then trying again...\n" &&
-                sleep 60
+                       --force && \
+                printf "#### InfluxDB v2.x initialized (org/bucket created).\n" && \
+                break || {
+                    printf "#### Could not connect to InfluxDB. Waiting 60 seconds then trying again...\n";
+                    sleep 60;
+                }
             done
         fi
+    ;;
+    'fix-influx-perms')
+        printf "\n#### Fixing InfluxDB directories ownership to match service account\n"
+        INFLUXD_USER="$(systemctl show -p User --value influxdb)"; [ -z "$INFLUXD_USER" ] && INFLUXD_USER=influxdb
+        for d in /var/lib/influxdb /var/lib/influxdb2 /etc/influxdb /etc/influxdb2 /var/log/influxdb; do
+            [ -d "$d" ] && chown -R "$INFLUXD_USER:$INFLUXD_USER" "$d"
+        done
     ;;
     'recreate-influxdb-1-db')
         printf "\n#### Recreating InfluxDB 1.x database (deletes all measurement data!)\n"
@@ -611,17 +623,16 @@ case "${1:-''}" in
         apt clean
     ;;
     'update-permissions')
-        printf "\n#### Setting permissions\n"
-        chown -LR ${USER}:${USER} "${AOT_PATH}"
-        chown -R ${USER}:${USER} /var/log/aot
-        chown -R ${USER}:${USER} /var/AoT-backups
-        chown -R ${USER}:${USER} /opt/AoT
+        chown -LR "${AOT_USER}:${AOT_GROUP}" "${AOT_PATH}"
+        chown -R  "${AOT_USER}:${AOT_GROUP}" /var/log/aot
+        chown -R  "${AOT_USER}:${AOT_GROUP}" /var/AoT-backups
+        chown -R  "${AOT_USER}:${AOT_GROUP}" /opt/AoT
 
         find "${AOT_PATH}" -type d -exec chmod u+wx,g+wx {} +
         find "${AOT_PATH}" -type f -exec chmod u+w,g+w,o+r {} +
         chmod 770 /opt/AoT  # Exclude other users from viewing files
 
-        chown root:${USER} "${AOT_PATH}"/aot/scripts/aot_wrapper
+        chown root:"${AOT_USER}" "${AOT_PATH}"/aot/scripts/aot_wrapper
         chmod 4770 "${AOT_PATH}"/aot/scripts/aot_wrapper
     ;;
     'update-pip3')

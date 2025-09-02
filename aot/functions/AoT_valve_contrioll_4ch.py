@@ -27,20 +27,16 @@ from aot.utils.database import db_retrieve_table_daemon
 # Minimal channel/measurement descriptors so at least 1 channel exists on first load
 measurements_dict = {}
 channels_dict = {
-    0: {'name': 'Valve 1', 'time': [], 'time_sign': [], 'output': []},
-    1: {'name': 'Valve 2', 'time': [], 'time_sign': [], 'output': []},
-    2: {'name': 'Valve 3', 'time': [], 'time_sign': [], 'output': []},
-    3: {'name': 'Valve 4', 'time': [], 'time_sign': [], 'output': []},
-    4: {'name': 'Valve 5', 'time': [], 'time_sign': [], 'output': []},
-    5: {'name': 'Valve 6', 'time': [], 'time_sign': [], 'output': []},
-    6: {'name': 'Valve 7', 'time': [], 'time_sign': [], 'output': []},
-    7: {'name': 'Valve 8', 'time': [], 'time_sign': [], 'output': []}
+    0: {'name': 'Valve 1', 'enabled': [], 'time': [], 'time_sign': [], 'output': []},
+    1: {'name': 'Valve 2', 'enabled': [], 'time': [], 'time_sign': [], 'output': []},
+    2: {'name': 'Valve 3', 'enabled': [], 'time': [], 'time_sign': [], 'output': []},
+    3: {'name': 'Valve 4', 'enabled': [], 'time': [], 'time_sign': [], 'output': []}
 }
 
 FUNCTION_INFORMATION = {
-    'function_name_unique': 'irrigation_control',
-    'function_name': 'AoT: 펌프밸브제어',
-    'function_name_short': '펌프밸브제어',
+    'function_name_unique': 'valve_control_4ch',
+    'function_name': 'AoT: 밸브제어 4ch',
+    'function_name_short': '밸브제어 4ch',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
 
@@ -94,6 +90,15 @@ FUNCTION_INFORMATION = {
         }
     ],
     'custom_channel_options': [
+        {
+            'id': 'enabled',
+            'type': 'select',
+            'default_value': 'False',
+            'required': False,
+            'options_select': [('True', lazy_gettext('사용')), ('False', lazy_gettext('미사용'))],
+            'name': lazy_gettext('채널 사용'),
+            'phrase': lazy_gettext('이 채널을 작동에 포함합니다.')
+        },
         {
             'id': 'time',
             'type': 'select_measurement',
@@ -346,12 +351,12 @@ class CustomModule(AbstractFunction):
                 FUNCTION_INFORMATION['custom_channel_options'], function_channels)
             # Normalize options_channels: convert list-of-dicts to dict keyed by channel index
             if isinstance(self.options_channels, list):
-                norm = {'time': {}, 'time_sign': {}, 'output': {}, 'output_channel_id': {}}
+                norm = {'enabled': {}, 'time': {}, 'time_sign': {}, 'output': {}, 'output_channel_id': {}}
                 for i, row in enumerate(self.options_channels):
                     if not isinstance(row, dict):
                         continue
                     idx = row.get('index', i)
-                    for k in ('time', 'time_sign', 'output', 'output_channel_id'):
+                    for k in ('enabled', 'time', 'time_sign', 'output', 'output_channel_id'):
                         if k in row:
                             norm[k][str(idx)] = row[k]
                 self.options_channels = norm
@@ -403,17 +408,38 @@ class CustomModule(AbstractFunction):
         # --- Dynamic channel handling: run channels defined via custom_channel_options ---
         dyn = self.options_channels if hasattr(self, 'options_channels') else None
         if isinstance(dyn, list):
-            norm = {'time': {}, 'time_sign': {}, 'output': {}, 'output_channel_id': {}}
+            norm = {'enabled': {}, 'time': {}, 'time_sign': {}, 'output': {}, 'output_channel_id': {}}
             for i, row in enumerate(dyn):
                 if not isinstance(row, dict):
                     continue
                 idx = row.get('index', i)
-                for k in ('time', 'time_sign', 'output', 'output_channel_id'):
+                for k in ('enabled', 'time', 'time_sign', 'output', 'output_channel_id'):
                     if k in row:
                         norm[k][str(idx)] = row[k]
             dyn = norm
         dyn_out_ch_objs = getattr(self, 'output_channels_dyn', {}) or {}
         dyn_out_ch_ids = (dyn.get('output_channel_id') or dyn.get('output') or {}) if isinstance(dyn, dict) else {}
+        dyn_enabled = dyn.get('enabled') or {}
+        def _is_enabled(k):
+            v = dyn_enabled.get(k)
+            if v is None:
+                try:
+                    v = dyn_enabled.get(int(k))
+                except Exception:
+                    v = None
+            # Default to True if unset to preserve backward compatibility
+            if v is None:
+                return True
+            # Accept common truthy forms
+            try:
+                if isinstance(v, bool):
+                    return v
+                if isinstance(v, (int, float)):
+                    return v != 0
+                s = str(v).strip().lower()
+                return s in ('1', 'true', 'on', 'yes', 'y')
+            except Exception:
+                return False
         if isinstance(dyn_out_ch_ids, dict):
             for kk, vv in list(dyn_out_ch_ids.items()):
                 if isinstance(vv, dict):
@@ -489,19 +515,32 @@ class CustomModule(AbstractFunction):
                     pass
             return bool(cid)
 
-        keys_allowed = [k for k in keys_allowed if _has_time_ref(k) and _has_output(k)]
+        keys_allowed = [k for k in keys_allowed if _is_enabled(k) and _has_time_ref(k) and _has_output(k)]
         if not keys_allowed:
             self._next_run = now + period_sec
             self._in_cycle = False
             return
 
-        # Safety cap: per-valve max seconds = period / number of configured valves
-        max_per_valve_sec = int(period_sec / len(keys_allowed)) if len(keys_allowed) > 0 else 0
+        # Safety cap: per-valve max seconds = period / number of **enabled** valves
+        try:
+            candidates = dyn_enabled.keys() if isinstance(dyn_enabled, dict) else []
+            enabled_keys_all = [str(k) for k in candidates if _is_enabled(str(k))]
+        except Exception:
+            enabled_keys_all = []
+        num_enabled = len(enabled_keys_all)
+        if num_enabled <= 0:
+            # Fallback to actually schedulable keys if no explicit enabled map is present
+            num_enabled = len(keys_allowed)
+        max_per_valve_sec = int(period_sec / num_enabled) if num_enabled > 0 else 0
 
         # Build plan
         plan = []  # (key, None, ch_obj, seconds)
         reasons_map = {}
         for ch_key in keys_allowed:
+            # Skip if channel disabled (double guard)
+            if not _is_enabled(ch_key):
+                reasons_map[str(ch_key)] = 'disabled'
+                continue
             # Resolve measurement identifiers
             dev_id = dyn_time_dev.get(ch_key)
             if dev_id is None:

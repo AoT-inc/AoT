@@ -30,10 +30,15 @@ fi
 # https://github.com/aot-inc/AoT/issues/1149
 export SETUPTOOLS_USE_DISTUTILS=stdlib
 
+
 if [ "$EUID" -ne 0 ]; then
     printf "오류: 이 스크립트는 root 권한으로 실행해야 합니다. \"sudo /bin/bash %s/install/setup.sh\"를 사용하세요.\n" "${INSTALL_DIRECTORY}"
     exit 1
 fi
+
+# Ensure upgrade_commands.sh receives consistent service user
+export AOT_USER="${AOT_USER:-aot}"
+export AOT_GROUP="${AOT_GROUP:-$AOT_USER}"
 
 printf "Python 버전 확인 중...\n"
 if hash python3 2>/dev/null; then
@@ -185,6 +190,7 @@ SECONDS=0
 START_B=$(date)
 printf "#### AoT 설치가 시작됩니다. %s\n" "${START_B}" 2>&1 | tee -a "${LOG_LOCATION}"
 
+${INSTALL_CMD} create-user 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-swap-size 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-apt 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} uninstall-apt-pip 2>&1 | tee -a "${LOG_LOCATION}"
