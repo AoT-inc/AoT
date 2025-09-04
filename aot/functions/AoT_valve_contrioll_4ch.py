@@ -40,7 +40,7 @@ FUNCTION_INFORMATION = {
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
 
-    'message': lazy_gettext('최대 8개 밸브를 순차 제어하고, 펌프를 총합 시간만큼 동작하는 관수 제어입니다.'),
+    'message': lazy_gettext('최대 4개 밸브를 순차 제어하고, 펌프를 밸브와 함께 작동 시키는 함수 입니다.'),
 
     'options_enabled': [
         'custom_options',

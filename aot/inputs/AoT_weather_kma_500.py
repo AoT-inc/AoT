@@ -37,10 +37,56 @@
 import copy
 import requests
 import datetime
+from datetime import timezone
+
+# Optional AoT DB/Influx helpers for backfill (guarded imports)
+try:
+    from aot.config import AOT_DB_PATH
+    from aot.databases.models import Input
+    from aot.databases.utils import session_scope
+    from aot.utils.influx import add_measurements_influxdb
+    _AOT_BACKFILL_AVAILABLE = True
+except Exception:
+    _AOT_BACKFILL_AVAILABLE = False
+
+# --- Simple QC bounds (conservative) ---
+QC_BOUNDS = {
+    'ta': (-50.0, 60.0),        # Celsius
+    'hm': (0.1, 100.0),         # percent; 0 is treated as invalid glitch
+    'pa': (850.0, 1100.0),      # hPa; 0 or out of range invalid
+    'ws_10m': (0.0, 60.0),      # m/s
+    'wd_10m': (0.0, 360.0),     # bearing
+    'rn_ox': (0.0, 1.0),        # indicator (0/1); 0 can be valid
+    'rn_15m': (0.0, 500.0),     # mm/15min (large upper bound)
+    'vs': (0.0, 100.0),         # km
+    'sd_tot': (0.0, 500.0)      # cm
+}
+
+def _in_bounds(key, val):
+    lo, hi = QC_BOUNDS[key]
+    try:
+        return lo <= float(val) <= hi
+    except Exception:
+        return False
 
 from aot.inputs.base_input import AbstractInput
 from aot.inputs.sensorutils import calculate_dewpoint
 from aot.utils.constraints_pass import constraints_pass_positive_value
+
+# Helper: read option from either custom_options or custom_channel_options
+def _get_opt(inst, key, default=None):
+    try:
+        val = inst.get_custom_option(key)
+        if val is not None:
+            return val
+    except Exception:
+        pass
+    try:
+        if hasattr(inst, 'input_dev') and isinstance(inst.input_dev.options, dict):
+            return inst.input_dev.options.get(key, default)
+    except Exception:
+        pass
+    return default
 
 measurements_dict = {
     0: {'measurement': 'temperature', 'unit': 'C', 'name': '기온'},
@@ -58,8 +104,8 @@ measurements_dict = {
 INPUT_INFORMATION = {
     'input_name_unique': 'AoT_weather_kma_500',
     'input_manufacturer': 'AoT_KMA',
-    'input_name': '기상청 고해상도 500m 격자',
-    'input_name_short': '기상청 고해상도',
+    'input_name': '기상청 고해상도 500m 격자 v2',
+    'input_name_short': '기상청 환경데이터',
     'measurements_dict': measurements_dict,
     'url_additional': 'https://apihub.kma.go.kr',
     'measurements_rescale': False,
@@ -69,6 +115,7 @@ INPUT_INFORMATION = {
 
     'options_enabled': [
         'measurements_select',
+        'custom_channel_options',
         'pre_output'
     ],
 
@@ -106,6 +153,68 @@ INPUT_INFORMATION = {
             'name': "위도 (lat)",
             'phrase': "측정위치의 위도를 입력하세요."
         }
+    ],
+    'custom_channel_options': [
+        {
+            'id': 'qc_enable',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': "품질검사(QC) 사용",
+            'phrase': "명백한 이상치(예: 습도 0%, 기압 0hPa 등)를 무시하거나 보정합니다."
+        },
+        {
+            'id': 'qc_hold_seconds',
+            'type': 'float',
+            'default_value': 1800,
+            'required': False,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': "QC 보정 유지시간(초)",
+            'phrase': "이 시간 내의 마지막 정상값으로 대체합니다."
+        },
+        # --- Inserted manual backfill options here ---
+        {
+            'id': 'backfill_minutes',
+            'type': 'float',
+            'default_value': 1440,
+            'required': False,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': "수동 백필 기간(분)",
+            'phrase': "사용자 요청 시 과거 이 기간만큼 데이터를 불러옵니다. 기본 1440분(1일)."
+        },
+        {
+            'id': 'backfill_request',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': "지금 백필 실행",
+            'phrase': "저장 후 활성화하면 즉시 백필을 1회 수행하고 자동으로 해제됩니다."
+        },
+        {
+            'id': 'kma_tz_offset_hours',
+            'type': 'float',
+            'default_value': 9,
+            'required': False,
+            'name': "KMA 타임스탬프 오프셋(시간)",
+            'phrase': "KMA 응답 시각이 로컬(KST,+9) 기준일 때 UTC로 저장하기 위해 빼줄 시간 (기본 9)."
+        },
+        {
+            'id': 'split_precip_measurements',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': "강수 계열 시계열 분리",
+            'phrase': "강수 지표(rn_ox)와 15분 강수(rn_15m)를 서로 다른 측정명으로 기록해 충돌을 방지합니다."
+        },
+        {
+            'id': 'qc_zero_accept_margin_deg',
+            'type': 'float',
+            'default_value': 3.0,
+            'required': False,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': "QC: 0°C 허용 범위(±°C)",
+            'phrase': "직전 정상값이 0°C에서 이 범위 이내일 때만 0°C를 허용합니다. 기본 ±3°C."
+        }
     ]
 }
 
@@ -123,13 +232,238 @@ class InputModule(AbstractInput):
             self.lat = None
             self.period = 600  # 기본값 600초
 
+        self._last_good = None
+        self._last_good_ts = None
+
+        self.first_run = True
+        self.latest_datetime = None
+
         if not testing:
             self.setup_custom_options(INPUT_INFORMATION['custom_options'], input_dev)
+            try:
+                self.setup_custom_options(INPUT_INFORMATION.get('custom_channel_options', []), input_dev)
+            except Exception:
+                pass
             self.try_initialize()
 
     def initialize(self):
-        # 필요한 경우 초기화 로직 구현
-        pass
+        # Load basic runtime config and last timestamp if available
+        try:
+            self.period = int(self.get_custom_option('period') or 300)
+        except Exception:
+            self.period = 300
+        # If controller persisted a last datetime, keep it for backfill window
+        try:
+            self.latest_datetime = getattr(self.input_dev, 'datetime', None)
+        except Exception:
+            self.latest_datetime = None
+
+    def get_new_data(self, past_minutes):
+        """Backfill: fetch [now - past_minutes, now] at 5-min interval and write to InfluxDB.
+        This mirrors the TTN input's initial backfill behavior.
+        """
+        if not _AOT_BACKFILL_AVAILABLE:
+            self.logger.info("Backfill helpers unavailable in this build; skipping backfill.")
+            return
+        try:
+            minutes = int(past_minutes)
+        except Exception:
+            self.logger.error("past_minutes must be integer-like")
+            return
+
+        now = datetime.datetime.now()
+        tm1_dt = now - datetime.timedelta(minutes=minutes)
+        tm1 = tm1_dt.strftime("%Y%m%d%H%M")
+        tm2 = now.strftime("%Y%m%d%H%M")
+        # Safety: Ensure tm1 < tm2 and window >= 5 minutes
+        if tm1 >= tm2:
+            self.logger.info("Backfill window collapsed (tm1>=tm2). Skipping.")
+            return
+        if minutes < 5:
+            self.logger.info("Backfill window <5 minutes; skipping.")
+            return
+        itv = 5
+
+        url = (
+            "https://apihub.kma.go.kr/api/typ01/url/sfc_nc_var.php"
+            f"?tm1={tm1}&tm2={tm2}&lon={self.lon}&lat={self.lat}"
+            f"&obs=ta,hm,wd_10m,ws_10m,pa,rn_ox,rn_15m,vs,sd_tot"
+            f"&itv={itv}&help=0&authKey={self.api_key}"
+        )
+        self.logger.debug("Backfill URL: {}".format(url))
+
+        try:
+            response = requests.get(url, timeout=180)
+            response.raise_for_status()
+        except Exception as e:
+            self.logger.error(f"Backfill request error: {e}")
+            return
+
+        lines = response.text.strip().split('\n')
+        rows = []
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            cols = [col.strip() for col in line.split(',')]
+            if len(cols) != 10:
+                continue
+            pub_timestamp = cols[0]
+            if len(pub_timestamp) != 12:
+                continue
+            # Skip obviously bogus triple-zero rows
+            try:
+                if (float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[5]) == 0.0):
+                    self.logger.info(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
+                    continue
+            except Exception:
+                pass
+            try:
+                row = {
+                    'pub_timestamp': pub_timestamp,
+                    'ta': float(cols[1].replace(',', '')),
+                    'hm': float(cols[2].replace(',', '')),
+                    'wd_10m': float(cols[3].replace(',', '')),
+                    'ws_10m': float(cols[4].replace(',', '')),
+                    'pa': float(cols[5].replace(',', '')),
+                    'rn_ox': float(cols[6].replace(',', '')),
+                    'rn_15m': float(cols[7].replace(',', '')),
+                    'vs': float(cols[8].replace(',', '')),
+                    'sd_tot': float(cols[9].replace(',', '')),
+                }
+            except Exception as e:
+                self.logger.error(f"Parsing error during backfill: {e}")
+                continue
+            rows.append(row)
+
+        if not rows:
+            self.logger.info("No rows parsed for backfill window.")
+            return
+
+        rows.sort(key=lambda r: r['pub_timestamp'])
+        latest_ts_seen = None
+
+        # QC options
+        qc_enable = bool(_get_opt(self, 'qc_enable', True))
+        qc_hold_seconds = float(_get_opt(self, 'qc_hold_seconds', 1800))
+
+        for row in rows:
+            # Build timestamp, convert KMA local to UTC
+            try:
+                ts_local = datetime.datetime.strptime(row['pub_timestamp'], "%Y%m%d%H%M")
+                try:
+                    tz_off = float(_get_opt(self, 'kma_tz_offset_hours', 9))
+                except Exception:
+                    tz_off = 9.0
+                ts = (ts_local - datetime.timedelta(hours=tz_off)).replace(tzinfo=timezone.utc)  # store as UTC, tz-aware
+                # Guard: if computed UTC is in the future by >2 minutes, clamp to now-2min
+                utc_now = datetime.datetime.now(timezone.utc)
+                if ts > utc_now + datetime.timedelta(minutes=2):
+                    self.logger.warning(f"Backfill ts in future after TZ adjust ({ts} > now). Clamping.")
+                    ts = utc_now - datetime.timedelta(minutes=2)
+            except Exception:
+                continue
+
+            if qc_enable:
+                now_ts = datetime.datetime.now()
+                for k in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
+                    if not _in_bounds(k, row[k]):
+                        if self._last_good and self._last_good_ts and (now_ts - self._last_good_ts).total_seconds() <= qc_hold_seconds:
+                            self.logger.warning(f"QC replacing invalid {k} with last good value during backfill.")
+                            row[k] = self._last_good.get(k, row[k])
+                        else:
+                            self.logger.warning(f"QC dropping field {k} (no fallback) during backfill: {row[k]}")
+                            row[k] = None
+
+            # --- QC: accept 0°C only if previous good is within ±margin ---
+            try:
+                margin = float(_get_opt(self, 'qc_zero_accept_margin_deg', 3.0))
+            except Exception:
+                margin = 3.0
+            prev_ta = self._last_good.get('ta') if self._last_good else None
+            curr_ta = row.get('ta')
+            if curr_ta is not None and float(curr_ta) == 0.0:
+                if not (prev_ta is not None and abs(float(prev_ta) - 0.0) <= margin):
+                    self.logger.warning(f"Backfill QC dropping suspicious 0°C temperature (prev={prev_ta}, margin=±{margin}°C).")
+                    row['ta'] = None
+
+            measurements = {}
+            if self.is_enabled(0) and row.get('ta') is not None:
+                measurements[0] = {'measurement': 'temperature', 'unit': 'C', 'value': row['ta'], 'timestamp_utc': ts}
+            if self.is_enabled(1) and row.get('hm') is not None:
+                measurements[1] = {'measurement': 'humidity', 'unit': 'percent', 'value': row['hm'], 'timestamp_utc': ts}
+            if self.is_enabled(2) and row.get('pa') is not None:
+                measurements[2] = {'measurement': 'pressure', 'unit': 'hPa', 'value': row['pa'], 'timestamp_utc': ts}
+            if self.is_enabled(3) and row.get('wd_10m') is not None:
+                measurements[3] = {'measurement': 'direction', 'unit': 'bearing', 'value': row['wd_10m'], 'timestamp_utc': ts}
+            if self.is_enabled(4) and row.get('ws_10m') is not None:
+                measurements[4] = {'measurement': 'speed', 'unit': 'm_s', 'value': row['ws_10m'], 'timestamp_utc': ts}
+            # Choose measurement names for precipitation series to avoid overwrite
+            split_precip = bool(_get_opt(self, 'split_precip_measurements', True))
+            meas_rn_flag = 'precipitation_flag' if split_precip else 'precipitation'
+            meas_rn_15m = 'precipitation_mm_15m' if split_precip else 'precipitation'
+            if self.is_enabled(5) and row.get('rn_ox') is not None:
+                measurements[5] = {'measurement': meas_rn_flag, 'unit': 'none', 'value': row['rn_ox'], 'timestamp_utc': ts}
+            if self.is_enabled(6) and row.get('rn_15m') is not None:
+                measurements[6] = {'measurement': meas_rn_15m, 'unit': 'mm', 'value': row['rn_15m'], 'timestamp_utc': ts}
+            if self.is_enabled(7) and row.get('vs') is not None:
+                measurements[7] = {'measurement': 'visibility', 'unit': 'km', 'value': row['vs'], 'timestamp_utc': ts}
+            if self.is_enabled(8) and row.get('sd_tot') is not None:
+                measurements[8] = {'measurement': 'snowfall', 'unit': 'cm', 'value': row['sd_tot'], 'timestamp_utc': ts}
+            if self.is_enabled(9) and row.get('ta') is not None and row.get('hm') is not None:
+                dp = calculate_dewpoint(row['ta'], row['hm'])
+                measurements[9] = {'measurement': 'dewpoint', 'unit': 'C', 'value': dp, 'timestamp_utc': ts}
+
+            # Apply the same pre-output actions as live pipeline (if available)
+            try:
+                if hasattr(self, 'run_input_actions') and callable(getattr(self, 'run_input_actions')):
+                    processed = self.run_input_actions(copy.deepcopy(measurements))
+                    if isinstance(processed, dict) and processed:
+                        measurements = processed
+                else:
+                    self.logger.info("Pre-output action pipeline not available; writing raw measurements.")
+            except Exception as e:
+                self.logger.warning(f"pre-output actions during backfill failed: {e}")
+
+            # Ensure per-point timestamps survive any action processing
+            if isinstance(measurements, dict) and measurements:
+                for _ch, pt in measurements.items():
+                    if isinstance(pt, dict):
+                        pt['timestamp_utc'] = ts
+                        pt['timestamp'] = ts  # some builds expect 'timestamp'
+
+            if measurements:
+                try:
+                    # Use per-point timestamps (do NOT collapse to now)
+                    add_measurements_influxdb(self.unique_id, measurements, use_same_timestamp=False)
+                    latest_ts_seen = ts
+                    rows_written += 1
+                    if rows_written <= 3:
+                        try:
+                            self.logger.debug(f"Backfill sample write[{rows_written}] ts={ts}")
+                        except Exception:
+                            pass
+                except Exception as e:
+                    self.logger.error(f"Failed to write backfill measurements: {e}")
+
+            # update last-good cache (skip None)
+            self._last_good = {}
+            for key in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
+                val = row.get(key)
+                if val is not None:
+                    self._last_good[key] = val
+            self._last_good_ts = datetime.datetime.now()
+
+        # Persist latest timestamp for this input (if newer)
+        if latest_ts_seen:
+            try:
+                with session_scope(AOT_DB_PATH) as new_session:
+                    mod_input = new_session.query(Input).filter(Input.unique_id == self.unique_id).first()
+                    if mod_input is not None and (not mod_input.datetime or mod_input.datetime < latest_ts_seen):
+                        mod_input.datetime = latest_ts_seen
+                        new_session.commit()
+            except Exception as e:
+                self.logger.error(f"Persisting latest datetime failed: {e}")
 
     def pre_fetch_data(self):
         """API 호출 및 응답 파싱을 수행하여, 최신 데이터를 담은 딕셔너리를 반환합니다."""
@@ -162,10 +496,10 @@ class InputModule(AbstractInput):
                 self.logger.error("No data available for this time. The response data is empty.")
                 continue
             
-            # If the three consecutive values following the timestamp are all 0.0, skip this row
+            # Skip rows that are obviously bogus (core metrics all zero)
             try:
-                if float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[3]) == 0.0:
-                    self.logger.info(f"Ignoring invalid data row with 3 consecutive 0.0 values at {pub_timestamp}")
+                if (float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[5]) == 0.0):
+                    self.logger.info(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
                     continue
             except Exception:
                 pass
@@ -204,11 +538,73 @@ class InputModule(AbstractInput):
         return data
 
     def get_measurement(self):
-        # Custom 옵션에서 값을 읽어옴
-        self.api_key = self.get_custom_option('api_key')
-        self.lon = self.get_custom_option('lon')
-        self.lat = self.get_custom_option('lat')
-        self.period = int(self.get_custom_option('period') or 300)
+        # Custom 옵션에서 값을 읽어옴 (now uses _get_opt)
+        self.api_key = _get_opt(self, 'api_key', '')
+        self.lon = _get_opt(self, 'lon', '')
+        self.lat = _get_opt(self, 'lat', '')
+        try:
+            self.period = int(_get_opt(self, 'period', 300))
+        except Exception:
+            self.period = 300
+
+        # Manual backfill on user request (TTN-like)
+        try:
+            backfill_request = bool(_get_opt(self, 'backfill_request', False))
+            backfill_minutes = int(float(_get_opt(self, 'backfill_minutes', 1440)))
+        except Exception:
+            backfill_request = False
+            backfill_minutes = 1440
+
+        did_backfill = False
+        if backfill_request:
+            self.logger.info(f"Manual backfill requested: fetching ~{backfill_minutes} minutes of past data...")
+            try:
+                self.get_new_data(backfill_minutes)
+                did_backfill = True
+            except Exception:
+                self.logger.exception("Manual backfill get_new_data crashed")
+            # Auto-reset toggle in DB to avoid repeated runs
+            try:
+                if _AOT_BACKFILL_AVAILABLE:
+                    with session_scope(AOT_DB_PATH) as new_session:
+                        mod_input = new_session.query(Input).filter(Input.unique_id == self.unique_id).first()
+                        if mod_input is not None:
+                            opts = dict(mod_input.options) if isinstance(mod_input.options, dict) else {}
+                            if opts.get('backfill_request'):
+                                opts['backfill_request'] = False
+                                mod_input.options = opts
+                                new_session.commit()
+            except Exception as e:
+                self.logger.error(f"Failed to auto-reset backfill_request: {e}")
+
+        # First-run backfill up to 1 day (or since last seen)
+        if self.first_run:
+            self.first_run = False
+            one_day_sec = 86400
+            seconds_download = one_day_sec
+            try:
+                if self.latest_datetime:
+                    utc_now = datetime.datetime.utcnow()
+                    seconds_since_last = (utc_now - self.latest_datetime).total_seconds()
+                    if 0 < seconds_since_last < one_day_sec:
+                        seconds_download = seconds_since_last
+            except Exception:
+                pass
+            minutes_download = int(max(5, round(seconds_download / 60.0)))
+            self.logger.info(f"Initial backfill: downloading ~{minutes_download} minutes of past data...")
+            try:
+                self.get_new_data(minutes_download)
+                did_backfill = True
+            except Exception:
+                self.logger.exception("Backfill get_new_data crashed")
+
+        # If any backfill ran this cycle, skip the live 5-min fetch once
+        if did_backfill:
+            self.logger.info("Skipping live fetch this cycle to avoid overlapping with backfill request.")
+            return
+
+        qc_enable = bool(_get_opt(self, 'qc_enable', True))
+        qc_hold_seconds = float(_get_opt(self, 'qc_hold_seconds', 1800))
 
         if self.api_key and self.lon and self.lat:
             # 요청 시간: 지금 시간에서 5분 전부터 지금 시간까지의 데이터를 요청
@@ -231,28 +627,73 @@ class InputModule(AbstractInput):
             return
 
         self.return_dict = copy.deepcopy(measurements_dict)
+        # Align live measurement names with split option (to match backfill)
+        try:
+            split_precip = bool(_get_opt(self, 'split_precip_measurements', True))
+        except Exception:
+            split_precip = True
+        if split_precip:
+            self.return_dict[5]['measurement'] = 'precipitation_flag'
+            self.return_dict[6]['measurement'] = 'precipitation_mm_15m'
+        else:
+            self.return_dict[5]['measurement'] = 'precipitation'
+            self.return_dict[6]['measurement'] = 'precipitation'
         data = self.pre_fetch_data()
         if data is None:
             return
 
-        ta = data["ta"]
-        hm = data["hm"]
-        wd_10m = data["wd_10m"]
-        ws_10m = data["ws_10m"]
-        pa = data["pa"]
-        rn_ox = data["rn_ox"]
-        rn_15m = data["rn_15m"]
-        vs = data["vs"]
-        sd_tot = data["sd_tot"]
+        # --- QC: guard against impossible zeros or out-of-range spikes ---
+        if qc_enable:
+            now_ts = datetime.datetime.now()
+            for k in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
+                if not _in_bounds(k, data[k]):
+                    if self._last_good and self._last_good_ts and (now_ts - self._last_good_ts).total_seconds() <= qc_hold_seconds:
+                        self.logger.warning(f"QC replacing invalid {k} with last good value.")
+                        data[k] = self._last_good.get(k, data[k])
+                    else:
+                        self.logger.warning(f"QC dropping field {k} due to invalid value {data[k]} with no fallback.")
+                        data[k] = None
+
+        # --- QC: accept 0°C only if previous good is within ±margin ---
+        try:
+            margin = float(_get_opt(self, 'qc_zero_accept_margin_deg', 3.0))
+        except Exception:
+            margin = 3.0
+        prev_ta = self._last_good.get('ta') if self._last_good else None
+        curr_ta = data.get('ta')
+        if curr_ta is not None and float(curr_ta) == 0.0:
+            if not (prev_ta is not None and abs(float(prev_ta) - 0.0) <= margin):
+                self.logger.warning(f"QC dropping suspicious 0°C temperature (prev={prev_ta}, margin=±{margin}°C).")
+                data['ta'] = None
+
+        ta = data.get("ta")
+        hm = data.get("hm")
+        wd_10m = data.get("wd_10m")
+        ws_10m = data.get("ws_10m")
+        pa = data.get("pa")
+        rn_ox = data.get("rn_ox")
+        rn_15m = data.get("rn_15m")
+        vs = data.get("vs")
+        sd_tot = data.get("sd_tot")
 
         pressure = pa
-        dew_point = calculate_dewpoint(ta, hm)
+        dew_point = None
+        if ta is not None and hm is not None:
+            dew_point = calculate_dewpoint(ta, hm)
 
         self.logger.debug(
             "Parsed -> Temp: {}, Hum: {}, Pressure: {}, Wind Dir: {}, Wind Speed: {}, "
             "Precipitation Indicator: {}, 15min Precip: {}, Visibility: {}, Snowfall: {}"
             .format(ta, hm, pressure, wd_10m, ws_10m, rn_ox, rn_15m, vs, sd_tot)
         )
+
+        # Update last-good cache only with QC-passed values (skip None)
+        self._last_good = {}
+        for key in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
+            val = data.get(key)
+            if val is not None:
+                self._last_good[key] = val
+        self._last_good_ts = datetime.datetime.now()
 
         # 데이터를 분류하여 self.return_dict에 저장
         if self.is_enabled(0) and ta is not None:
