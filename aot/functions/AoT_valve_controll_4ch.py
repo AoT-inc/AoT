@@ -248,6 +248,17 @@ class CustomModule(AbstractFunction):
             pass
         return int(seconds)
 
+    def _extract_value(self, last):
+        if last is None:
+            return None
+        if isinstance(last, dict):
+            for k in ('value', 'last_value', 'measurement'):
+                if k in last:
+                    return last[k]
+        if isinstance(last, (list, tuple)) and len(last) >= 2:
+            return last[1]
+        return last
+
     def __init__(self, function, testing=False):
         super().__init__(function, testing=testing, name=__name__)
 
@@ -535,8 +546,6 @@ class CustomModule(AbstractFunction):
 
             keys_allowed = [k for k in keys_allowed if _is_enabled(k) and _has_time_ref(k) and _has_output(k)]
             if not keys_allowed:
-                self._in_cycle = False
-                self._next_run = now + period_sec
                 return
 
             # Safety cap: per-valve max seconds = period / number of **enabled** valves
@@ -650,7 +659,7 @@ class CustomModule(AbstractFunction):
                     reasons_map[str(ch_key)] = 'no_recent_measurement'
                     continue
 
-                raw_value = last.get('value') if isinstance(last, dict) else last
+                raw_value = self._extract_value(last)
                 sec, reason = self._parse_seconds_from_measurement(raw_value, sign)
                 if reason != 'ok':
                     reasons_map[str(ch_key)] = reason
@@ -688,8 +697,6 @@ class CustomModule(AbstractFunction):
                 total_sec += sec
 
             if not filtered:
-                self._in_cycle = False
-                self._next_run = now + period_sec
                 return
 
             # Optional: keep within period budget (leave 1s guard)
@@ -698,8 +705,6 @@ class CustomModule(AbstractFunction):
                 remain = int(period_sec) - 1
                 if remain <= 0:
                     self.logger.warning("[IrrigationControl] total_sec(%s) > period(%s). Skipping cycle.", total_sec, period_sec)
-                    self._in_cycle = False
-                    self._next_run = now + period_sec
                     return
                 ratio = float(remain) / float(total_sec)
                 total_sec = 0
@@ -714,8 +719,6 @@ class CustomModule(AbstractFunction):
                     total_sec += new_sec
                 filtered = scaled
                 if not filtered:
-                    self._in_cycle = False
-                    self._next_run = now + period_sec
                     return
 
             # --- Resolve pump output id/channel ---
@@ -753,7 +756,7 @@ class CustomModule(AbstractFunction):
 
             for (_, a, b, sec) in filtered:
                 _ = _valve_on_for_sec(a, b, sec)
-                time.sleep(max(0, int(sec)))
+                time.sleep(float(sec))
 
             # --- Ensure everything is OFF at the end (pump + all candidate valves) ---
             try:
@@ -762,28 +765,31 @@ class CustomModule(AbstractFunction):
             except Exception:
                 pass
 
-            try:
-                seen = set()
-                def _off_pair(a, b):
-                    if a is None:
-                        ch_obj = b
-                        out_id = self._resolve_output_device_id(ch_obj, fallback=None)
-                        ch_idx = self._resolve_channel_index(ch_obj, fallback=None)
-                    else:
-                        out_id, ch_idx = a, b
-                    if out_id is None or ch_idx is None:
-                        return
-                    key = (out_id, ch_idx)
-                    if key in seen:
-                        return
-                    seen.add(key)
+            # Deduplicated OFF sweep for all valves that ran in this cycle
+            seen = set()
+            for (_, a, b, _) in filtered:
+                if a is None:
+                    ch_obj = b
+                    out_id = self._resolve_output_device_id(ch_obj, fallback=None)
+                    ch_idx = self._resolve_channel_index(ch_obj, fallback=None)
+                else:
+                    out_id, ch_idx = a, b
+                if out_id is None or ch_idx is None:
+                    self.logger.warning("[IrrigationControl] OFF sweep skipped (unresolved id/channel)")
+                    continue
+                try:
+                    pair = (str(out_id), int(ch_idx))
+                except Exception:
+                    self.logger.warning("[IrrigationControl] OFF sweep skipped (unhashable id/channel)")
+                    continue
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                try:
                     self.control.output_on_off(out_id, "off", output_type='sec', amount=0, output_channel=ch_idx)
-
-                for (_, a, b, _) in filtered:
-                    _off_pair(a, b)
-            except Exception:
-                pass
-
-            self._in_cycle = False
+                except Exception as e:
+                    self.logger.error("[IrrigationControl] OFF sweep failed (out_id=%s, ch=%s): %s", out_id, ch_idx, e)
+        finally:
             self._next_run = time.time() + period_sec
+            self._in_cycle = False
             return

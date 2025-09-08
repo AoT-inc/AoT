@@ -38,7 +38,7 @@ channels_dict = {
 }
 
 FUNCTION_INFORMATION = {
-    'function_name_unique': 'valve_control_8ch',
+    'function_name_unique': 'valve_8ch',
     'function_name': 'AoT: 밸브제어 8ch',
     'function_name_short': '밸브제어 8ch',
     'measurements_dict': measurements_dict,
@@ -251,6 +251,17 @@ class CustomModule(AbstractFunction):
         except Exception:
             pass
         return int(seconds)
+
+    def _extract_value(self, last):
+        if last is None:
+            return None
+        if isinstance(last, dict):
+            for k in ('value', 'last_value', 'measurement'):
+                if k in last:
+                    return last[k]
+        if isinstance(last, (list, tuple)) and len(last) >= 2:
+            return last[1]
+        return last
 
     def __init__(self, function, testing=False):
         super().__init__(function, testing=testing, name=__name__)
@@ -704,7 +715,8 @@ class CustomModule(AbstractFunction):
                     reasons_map[str(ch_key)] = reason
                     continue
 
-                sec, reason = self._parse_seconds_from_measurement(last[1], sign)
+                raw_val = self._extract_value(last)
+                sec, reason = self._parse_seconds_from_measurement(raw_val, sign)
                 sec = self._clamp_seconds(sec, max_per_valve_sec)
                 if sec < min_runtime_sec:
                     reason = 'below_min_runtime_cap'
@@ -840,17 +852,26 @@ class CustomModule(AbstractFunction):
             except Exception:
                 pass
 
-            try:
-                seen = set()
-                for (key, out_id, ch_idx, _) in plan:
-                    pair = (out_id, ch_idx)
-                    if pair in seen:
-                        continue
-                    seen.add(pair)
-                    try:
-                        self.control.output_on_off(out_id, "off", output_type='sec', amount=0, output_channel=ch_idx)
-                    except Exception:
-                        pass
+            # Deduplicated OFF sweep for all valves that ran in this cycle
+            seen = set()
+            for (key, out_id, ch_idx, _) in plan:
+                # Guard: skip if identifiers are missing
+                if out_id is None or ch_idx is None:
+                    self.logger.warning("[IrrigationControl] OFF sweep skipped (unresolved id/channel) for key=%s", key)
+                    continue
+                # Normalize pair for set hashing; avoid unhashable types
+                try:
+                    pair = (str(out_id), int(ch_idx))
+                except Exception:
+                    self.logger.warning("[IrrigationControl] OFF sweep skipped (unhashable id/channel) for key=%s", key)
+                    continue
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                try:
+                    self.control.output_on_off(out_id, "off", output_type='sec', amount=0, output_channel=ch_idx)
+                except Exception as e:
+                    self.logger.error("[IrrigationControl] OFF sweep failed for key=%s (out_id=%s, ch=%s): %s", key, out_id, ch_idx, e)
 
             # Log partial skips if any
             if reasons_map:
