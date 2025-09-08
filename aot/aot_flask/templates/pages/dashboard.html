@@ -43,6 +43,16 @@
       flex: 0 0 40px !important; /* prevent flex grow/shrink */
     }
 
+    /* Always show modals above dashboard/gridstack */
+    .modal { z-index: 20000; }
+    .modal-backdrop { z-index: 19990; }
+    /* When a modal is open, block pointer events on underlying interactive layers */
+    body.modal-open .grid-stack,
+    body.modal-open #dash-tabs {
+      pointer-events: none;
+    }
+    body.modal-open .modal { pointer-events: auto; }
+
     /* Mobile: show at most 3 numbered tabs at once; overflow to scroll for more, enable scroll snap */
     @media (max-width: 768px) {
       #dash-tabs {
@@ -279,6 +289,23 @@
     {% include 'user_templates/{}'.format(file_js_ready) %}
     <!-- Widget {{widget_type}} widget_dashboard_js_ready template end -->
   {% endfor %}
+
+    // ---- Ensure widget/dashboard modals are attached to <body> (z-index/stacking fix) ----
+    (function() {
+      try {
+        // Move existing modals under body once
+        $('.modal').each(function(){
+          const $m = $(this);
+          if (!$m.parent().is('body')) { $m.appendTo('body'); }
+        });
+        // On show, ensure any dynamically created/modals-included are also moved
+        $(document).on('shown.bs.modal', function(ev){
+          const $m = $(ev.target);
+          if ($m && !$m.parent().is('body')) { $m.appendTo('body'); }
+        });
+      } catch (e) { /* no-op if jQuery/Bootstrap not present */ }
+    })();
+    // ---- end modal attach fix ----
 
     // ---- Dashboard tabs order: append new ids to right end (no drag) ----
     (function() {
