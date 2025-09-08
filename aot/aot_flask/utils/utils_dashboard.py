@@ -35,6 +35,11 @@ def dashboard_add():
 
     new_dash = Dashboard()
     new_dash.name = f"{TRANSLATIONS['dashboard']['title']} {last_dashboard.id + 1}"
+    try:
+        # Put new dashboard at the end by default
+        new_dash.sort_order = last_dashboard.id + 1
+    except Exception:
+        pass
 
     if not error:
         new_dash.save()
@@ -326,6 +331,66 @@ def widget_del(form_base):
 
         control = DaemonControl()
         control.widget_remove(form_base.widget_id.data)
+    except Exception as except_msg:
+        error.append(except_msg)
+
+    flash_success_errors(
+        error, action, url_for('routes_dashboard.page_dashboard',
+                               dashboard_id=form_base.dashboard_id.data))
+
+
+# 복제 위젯 함수 추가
+def widget_duplicate(form_base):
+    """대시보드에서 위젯을 복제합니다."""
+    action = '{action} {controller}'.format(
+        action=TRANSLATIONS['duplicate']['title'],
+        controller=TRANSLATIONS['widget']['title'])
+    error = []
+
+    dict_widgets = parse_widget_information()
+    orig_widget = Widget.query.filter(
+        Widget.unique_id == form_base.widget_id.data).first()
+
+    if not orig_widget:
+        error.append(gettext("원본 위젯을 찾을 수 없습니다."))
+        flash_success_errors(
+            error, action, url_for('routes_dashboard.page_dashboard',
+                                   dashboard_id=form_base.dashboard_id.data))
+        return
+
+    try:
+        # 새 위치: 현 대시보드 최하단(y 최대)
+        position_y_start = 0
+        for each_widget in Widget.query.filter(
+                Widget.dashboard_id == orig_widget.dashboard_id).all():
+            highest_position = each_widget.position_y + each_widget.height
+            if highest_position > position_y_start:
+                position_y_start = highest_position
+
+        # 본체 복제
+        new_widget = clone_model(
+            orig_widget,
+            unique_id=set_uuid(),
+            name=f"{orig_widget.name} (copy)",
+            position_y=position_y_start,
+        )
+
+        # 방어적 초기화: 복제 즉시 자동 갱신/실행 방지 옵션이 있다면 필요 시 끌 수 있음
+        # (현재는 원본과 동일 옵션 사용)
+
+        # 저장
+        new_widget.save()
+
+        # 프론트엔드에 갱신 알림
+        control = DaemonControl()
+        control.widget_add_refresh(new_widget.unique_id)
+
+        flash(gettext("%(dev)s 위젯(ID %(id)s)을 복제했습니다.", dev=dict_widgets[orig_widget.graph_type]['widget_name'], id=new_widget.id), "success")
+
+    except sqlalchemy.exc.OperationalError as except_msg:
+        error.append(except_msg)
+    except sqlalchemy.exc.IntegrityError as except_msg:
+        error.append(except_msg)
     except Exception as except_msg:
         error.append(except_msg)
 

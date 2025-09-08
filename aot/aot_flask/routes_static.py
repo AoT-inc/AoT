@@ -22,6 +22,7 @@ from aot.aot_client import DaemonControl
 from aot.aot_flask.forms import forms_dashboard
 from aot.aot_flask.routes_authentication import admin_exists
 from aot.aot_flask.utils.utils_general import user_has_permission
+from aot.aot_flask.extensions import db
 
 blueprint = Blueprint('routes_static',
                       __name__,
@@ -50,9 +51,27 @@ def template_exists(path):
 @blueprint.context_processor
 def inject_variables():
     """Variables to send with every page request."""
+    try:
+        db.session.expire_all()
+    except Exception:
+        pass
+    
     form_dashboard = forms_dashboard.DashboardConfig()  # Dashboard configuration in layout
 
-    dashboards = Dashboard.query.all()
+    # Order dashboards via raw SQL to avoid any ORM caching/NULLS LAST portability issues
+    try:
+        rows = db.session.execute(db.text(
+            "SELECT unique_id FROM dashboard ORDER BY COALESCE(sort_order, 999999), id"
+        ))
+        ordered_uids = [r[0] for r in rows]
+        if ordered_uids:
+            dash_map = {d.unique_id: d for d in Dashboard.query.filter(Dashboard.unique_id.in_(ordered_uids)).all()}
+            dashboards = [dash_map[uid] for uid in ordered_uids if uid in dash_map]
+        else:
+            dashboards = Dashboard.query.order_by(Dashboard.id.asc()).all()
+    except Exception:
+        # Fallback: at least return something if the table/column isn't ready yet
+        dashboards = Dashboard.query.order_by(Dashboard.id.asc()).all()
     misc = Misc.query.first()
 
     try:

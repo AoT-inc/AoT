@@ -13,6 +13,9 @@
         {{form_base.widget_mod(class_='form-control btn btn-primary btn-block')}}
       </div>
       <div class="col-auto">
+        {{form_base.widget_duplicate(class_='form-control btn btn-primary btn-block', value=_('복제'))}}
+      </div>
+      <div class="col-auto">
         {{form_base.widget_delete(class_='form-control btn btn-primary btn-block', **{'onclick':'return confirm("이 위젯을 삭제하시겠습니까?")'})}}
       </div>
     </div>

@@ -16,6 +16,48 @@
 
   <link rel="stylesheet" href="/static/css/gridstack.css" />
   <link rel="stylesheet" href="/static/css/gridstack-custom.css" />
+  <style>
+    /* ensure the main content area can be used as a drag handle */
+    .grid-stack-item-content { cursor: move; }
+    /* optional explicit handle class used by some widgets */
+    .widget-drag-handle { cursor: move; }
+    /* make tabs clearly draggable and prevent accidental text selection */
+    #dash-tabs { -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+    .dash-tab[draggable="true"] { cursor: grab; }
+    .dash-tab[draggable="true"]:active { cursor: grabbing; }
+
+    /* fixed-size buttons for + and settings gear */
+    .btn-fixed-40 {
+      width: 40px !important;
+      height: 40px !important;
+      flex: 0 0 40px !important; /* prevent flex grow/shrink */
+    }
+
+    /* Mobile: show at most 3 numbered tabs at once; overflow to scroll for more, enable scroll snap */
+    @media (max-width: 768px) {
+      #dash-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        flex-wrap: nowrap !important; /* enforce single row */
+        scroll-snap-type: x proximity;
+        scroll-padding-left: 8px;
+      }
+      #dash-tabs .dash-tab {
+        /* exactly 3 tabs visible within the container width; override inline flex */
+        flex: 0 0 calc(100% / 3) !important;
+        max-width: calc(100% / 3) !important;
+        scroll-snap-align: center;
+      }
+      #dash-tabs .btn.btn-aot-dash {
+        padding-left: 0.4rem;
+        padding-right: 0.4rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  </style>
   <script src="/static/js/gridstack-all.js"></script>
 
   {% for widget_type, file_head in list_html_files_head.items() %}
@@ -49,26 +91,25 @@
   <div class="container-fluid mb-3">
     <div class="d-flex align-items-center">
         <!-- + button fixed size -->
-        <a href="/dashboard-add" class="btn btn-aot-dash-plus text-center" style="width: 40px; height: 40px; margin-right: 5px; margin-left: 0;">
+        <a href="/dashboard-add" class="btn btn-aot-dash-plus text-center btn-fixed-40">
             <span class="d-none d-md-inline">+</span>
             <span class="d-md-none">+</span>
         </a>
-        {% set dash_count = dashboards[0:6]|length %}
-        {% for each_dash in dashboards[0:6] %}
-          <a href="/dashboard/{{ each_dash.unique_id }}" class="btn btn-aot-dash text-center{% if each_dash.unique_id == dashboard_id %} active{% endif %}" style="flex: 1; margin-right: 5px;">
-            <span class="d-none d-md-inline">{{ loop.index }} {{ each_dash.name }}</span>
-            <span class="d-md-none">
-              {% if dash_count > 2 %}
-                {{ loop.index }}
-              {% else %}
-                {{ loop.index }} {{ each_dash.name }}
-              {% endif %}
-            </span>
-          </a>
+        {% set dash_count = dashboards|length %}
+        <div id="dash-tabs" class="d-flex align-items-center" style="flex:1 1 auto; min-width:0; gap:8px; margin: 0 8px; flex-wrap: nowrap; overflow-x: auto;">
+        {% for each_dash in dashboards %}
+          <div class="dash-tab" data-id="{{ each_dash.unique_id }}" draggable="true" style="flex:1 1 0;">
+            <a href="/dashboard/{{ each_dash.unique_id }}" class="btn btn-aot-dash text-center{% if each_dash.unique_id == dashboard_id %} active{% endif %}" style="width: 100%;">
+              <span class="d-none d-md-inline">{{ each_dash.name }}</span>
+              <span class="d-md-none">{{ each_dash.name }}</span>
+            </a>
+          </div>
         {% endfor %}
+        </div>
+        <!-- DEBUG server order: {% for each_dash in dashboards %}{{ loop.index }}={{ each_dash.name }}(so={{ each_dash.sort_order }}) {% endfor %} -->
         {% for each_dash in dashboards if each_dash.unique_id == dashboard_id %}
         <!-- Settings button fixed size -->
-        <a href="#" data-toggle="modal" class="btn btn-aot-dash-plus text-center" data-target="#modal_config_{{ each_dash.unique_id }}" style="width: 40px; height: 40px; margin-right: 0;">
+        <a href="#" data-toggle="modal" class="btn btn-aot-dash-plus text-center btn-fixed-40" data-target="#modal_config_{{ each_dash.unique_id }}">
             <i class="fa fa-cog"></i>
         </a>
         {% endfor %}
@@ -163,10 +204,12 @@
       handles: 'se, sw'
     },
     draggable: {
-      handle: '.panel-heading'
+      // allow drag by content wrapper if present, legacy headers, explicit handle, or fallback to entire item
+      handle: '.grid-stack-item-content, .panel-heading, .card-header, .widget-drag-handle, .grid-stack-item'
     },
     alwaysShowResizeHandle: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-    float: false
+    float: false,
+    disableOneColumnMode: true
   };
   let grid = GridStack.init(options);
 
@@ -180,18 +223,23 @@
   {% if not this_dashboard.locked %}
 
   grid.on('change', function (event, items) {
-    const width = Math.max(
-      document.documentElement.clientWidth,
-      window.innerWidth || 0
-    )
-    if (width > 768) {
+    // Persist layout changes for desktop & large tablets alike
+    try {
+      const payload = JSON.stringify(grid.save(false), null, '  ');
       $.ajax({
         url: "/save_dashboard_layout",
         type: "POST",
-        data: JSON.stringify(grid.save(false), null, '  '),
+        data: payload,
         contentType: "application/json; charset=utf-8",
-        success: function (data) {}
+        success: function () {
+          // no toast spam; silent success
+        },
+        error: function () {
+          try { toastr.error('위젯 배치 저장 실패'); } catch (e) {}
+        }
       });
+    } catch (e) {
+      try { toastr.error('레이아웃 직렬화 오류'); } catch (e2) {}
     }
   });
 
@@ -221,6 +269,100 @@
     {% include 'user_templates/{}'.format(file_js_ready) %}
     <!-- Widget {{widget_type}} widget_dashboard_js_ready template end -->
   {% endfor %}
+
+    // ---- Dashboard tabs order: append new ids to right end (no drag) ----
+    (function() {
+      const key = 'dashboard_order_v1';
+      const container = document.getElementById('dash-tabs');
+      if (!container) return;
+
+      // Server order is source of truth; sync localStorage to match DOM
+      const domIds = Array.from(container.querySelectorAll(':scope > .dash-tab')).map(ch => ch.dataset.id);
+      try { localStorage.setItem(key, JSON.stringify(domIds)); } catch (e) { /* ignore */ }
+    })();
+    // ---- end append-new-to-right ----
+
+    // ---- Dashboard tabs basic drag-reorder (text-style) ----
+    (function() {
+      const key = 'dashboard_order_v1';
+      const container = document.getElementById('dash-tabs');
+      if (!container) return;
+
+      let dragSrc = null;
+      let dragging = false;
+
+      // Safeguard: only treat direct .dash-tab children as reorderable
+      const directTabs = () => Array.from(container.querySelectorAll(':scope > .dash-tab'));
+
+      container.addEventListener('click', (ev) => {
+        if (dragging) { ev.preventDefault(); ev.stopPropagation(); }
+      }, true);
+
+      container.addEventListener('dragstart', (ev) => {
+        const tab = ev.target.closest('.dash-tab');
+        if (!tab || !container.contains(tab)) return;
+        if (!directTabs().includes(tab)) return;
+        dragSrc = tab;
+        dragging = true;
+        if (ev.dataTransfer) {
+          ev.dataTransfer.setData('text/plain', tab.dataset.id || 'drag');
+          ev.dataTransfer.effectAllowed = 'move';
+        }
+      });
+
+      container.addEventListener('dragover', (ev) => {
+        if (!dragSrc) return; ev.preventDefault();
+        if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+      });
+
+      container.addEventListener('drop', (ev) => {
+        if (!dragSrc) return; ev.preventDefault();
+        const target = ev.target.closest('.dash-tab');
+        if (!target || target === dragSrc || !directTabs().includes(target)) return;
+        const rect = target.getBoundingClientRect();
+        const before = (ev.clientX - rect.left) < rect.width / 2;
+        container.insertBefore(dragSrc, before ? target : target.nextSibling);
+
+        const ids = directTabs().map(ch => ch.dataset.id);
+        try { localStorage.setItem(key, JSON.stringify(ids)); } catch (e) {}
+
+        // persist to server
+        $.ajax({
+          url: "/save_dashboard_order",
+          type: "POST",
+          data: JSON.stringify(ids),
+          contentType: "application/json; charset=utf-8"
+        }).fail(function(){ try { toastr.error('대시보드 순서 저장 실패'); } catch (e) {} })
+          .always(function(){ setTimeout(() => { dragging = false; }, 80); });
+      });
+
+      container.addEventListener('dragend', () => {
+        setTimeout(() => { dragging = false; }, 50);
+        dragSrc = null;
+      });
+    })();
+    // ---- end basic drag-reorder ----
+
+    // ---- Ensure active tab is visible on mobile (center it) ----
+    function scrollActiveTabIntoView() {
+      const container = document.getElementById('dash-tabs');
+      if (!container) return;
+      const active = container.querySelector('.btn.btn-aot-dash.active');
+      if (!active) return;
+      try {
+        active.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+      } catch (e) {
+        const tab = active.closest('.dash-tab') || active;
+        const tabRect = tab.getBoundingClientRect();
+        const contRect = container.getBoundingClientRect();
+        const current = container.scrollLeft;
+        const target = current + (tabRect.left - contRect.left) + (tabRect.width / 2) - (contRect.width / 2);
+        container.scrollLeft = Math.max(0, target);
+      }
+    }
+    setTimeout(scrollActiveTabIntoView, 0);
+    // ---- end ensure active visible ----
+
   });
 
   $('.selectpicker').selectpicker();

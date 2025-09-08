@@ -54,7 +54,7 @@ class DashboardBase(FlaskForm):
     widget_add = SubmitField('추가')
     widget_mod = SubmitField('저장')
     widget_delete = SubmitField('삭제')
-
+    widget_duplicate = SubmitField('복제')
 
 class DashboardConfig(FlaskForm):
     dashboard_id = StringField('Dashboard ID', widget=widgets.HiddenInput())

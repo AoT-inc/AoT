@@ -53,7 +53,7 @@ INPUT_INFORMATION = {
         'measurements_select'
     ],
     'options_disabled': ['interface'],
-
+    'options_enabled': ['period'],
     'interfaces': ['AoT'],
 
     'dependencies_module': [

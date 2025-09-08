@@ -4,9 +4,9 @@ import flask_login
 import logging
 import os
 import subprocess
-from flask import redirect, render_template, request, url_for
+from flask import redirect, render_template, request, url_for, jsonify
 from flask.blueprints import Blueprint
-from sqlalchemy import and_
+from sqlalchemy import and_, text
 
 from aot.config import INSTALL_DIRECTORY
 from aot.config import PATH_TEMPLATE_USER
@@ -57,6 +57,80 @@ def save_dashboard_layout():
                 widget_mod.height = each_widget['h']
     db.session.commit()
     return "success"
+
+
+
+# Route for saving dashboard tab order (after blueprint and imports)
+@blueprint.route('/save_dashboard_order', methods=['POST'])
+@flask_login.login_required
+def save_dashboard_order():
+    """Persist user-defined dashboard ordering and return server order."""
+    try:
+        if not utils_general.user_has_permission('edit_controllers'):
+            return jsonify({"status": "forbidden"}), 403
+
+        try:
+            order_list = request.get_json(force=True)
+        except Exception as e:
+            return jsonify({"status": "bad_request", "error": str(e)}), 400
+
+        if not isinstance(order_list, list):
+            return jsonify({"status": "bad_request", "error": "expected list"}), 400
+
+        # Normalize using raw SQL to avoid any ORM attribute dependency
+        updated = 0
+
+        # fetch current full order from DB (portable NULLS LAST)
+        result = db.session.execute(text(
+            "SELECT unique_id FROM dashboard ORDER BY COALESCE(sort_order, 999999), id"
+        ))
+        all_uids = [row[0] for row in result]
+
+        # build final order: payload first (dedup), then remaining
+        seen = set()
+        ordered_uids = []
+        for uid in order_list:
+            if uid not in seen:
+                ordered_uids.append(uid)
+                seen.add(uid)
+        for uid in all_uids:
+            if uid not in seen:
+                ordered_uids.append(uid)
+                seen.add(uid)
+
+        # apply contiguous sort_order via raw UPDATEs
+        pos = 0
+        for uid in ordered_uids:
+            res = db.session.execute(
+                text("UPDATE dashboard SET sort_order = :pos WHERE unique_id = :uid"),
+                {"pos": pos, "uid": uid}
+            )
+            if res.rowcount:
+                updated += res.rowcount
+            pos += 1
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"status": "db_error", "error": str(e)}), 500
+
+        # Compute server-side order using raw SQL (portable across dialects)
+        result = db.session.execute(text(
+            "SELECT unique_id FROM dashboard ORDER BY COALESCE(sort_order, 999999), id"
+        ))
+        ordered = [row[0] for row in result]
+
+        return jsonify({"status": "ok", "updated": updated, "server_order": ordered}), 200
+    except Exception as e:
+        # Catch-all to avoid 500 with HTML; return JSON so frontend can display
+        return jsonify({"status": "error", "error": str(e)}), 500
+    finally:
+        # Ensure no stale identity map within this worker
+        try:
+            db.session.remove()
+        except Exception:
+            pass
 
 
 @blueprint.route('/dashboard', methods=('GET', 'POST'))
@@ -133,6 +207,8 @@ def page_dashboard(dashboard_id):
                     dashboard_id=this_dashboard.unique_id))
         elif form_base.widget_mod.data:
             utils_dashboard.widget_mod(form_base, request.form)
+        elif form_base.widget_duplicate.data:
+            utils_dashboard.widget_duplicate(form_base)
         elif form_base.widget_delete.data:
             utils_dashboard.widget_del(form_base)
 

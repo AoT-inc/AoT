@@ -78,6 +78,15 @@ FUNCTION_INFORMATION = {
             'phrase': lazy_gettext('측정값의 최대 허용 시간입니다.'),
         },
         {
+            'id': 'min_runtime_sec',
+            'type': 'integer',
+            'default_value': 15,
+            'required': True,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': "{} ({})".format(lazy_gettext('최소 작동시간'), lazy_gettext('초')),
+            'phrase': lazy_gettext('이 시간(초) 미만의 밸브 동작은 무시됩니다.')
+        },
+        {
             'id': 'output_pump',
             'type': 'select_channel',
             'default_value': '',
@@ -404,139 +413,143 @@ class CustomModule(AbstractFunction):
             # Prevent overlap if previous cycle is still running
             return
         self._in_cycle = True
-
-        # --- Dynamic channel handling: run channels defined via custom_channel_options ---
-        dyn = self.options_channels if hasattr(self, 'options_channels') else None
-        if isinstance(dyn, list):
-            norm = {'enabled': {}, 'time': {}, 'time_sign': {}, 'output': {}, 'output_channel_id': {}}
-            for i, row in enumerate(dyn):
-                if not isinstance(row, dict):
-                    continue
-                idx = row.get('index', i)
-                for k in ('enabled', 'time', 'time_sign', 'output', 'output_channel_id'):
-                    if k in row:
-                        norm[k][str(idx)] = row[k]
-            dyn = norm
-        dyn_out_ch_objs = getattr(self, 'output_channels_dyn', {}) or {}
-        dyn_out_ch_ids = (dyn.get('output_channel_id') or dyn.get('output') or {}) if isinstance(dyn, dict) else {}
-        dyn_enabled = dyn.get('enabled') or {}
-        def _is_enabled(k):
-            v = dyn_enabled.get(k)
-            if v is None:
-                try:
-                    v = dyn_enabled.get(int(k))
-                except Exception:
-                    v = None
-            # Default to True if unset to preserve backward compatibility
-            if v is None:
-                return True
-            # Accept common truthy forms
-            try:
-                if isinstance(v, bool):
-                    return v
-                if isinstance(v, (int, float)):
-                    return v != 0
-                s = str(v).strip().lower()
-                return s in ('1', 'true', 'on', 'yes', 'y')
-            except Exception:
-                return False
-        if isinstance(dyn_out_ch_ids, dict):
-            for kk, vv in list(dyn_out_ch_ids.items()):
-                if isinstance(vv, dict):
-                    cid = vv.get('channel_id') or vv.get('output_channel_id') or vv.get('unique_id') or vv.get('id') or vv.get('channel')
-                    if cid:
-                        dyn_out_ch_ids[kk] = cid
-        if not dyn or not isinstance(dyn, dict):
-            self._next_run = now + period_sec
-            self._in_cycle = False
-            return
-
-        # Keys: support both legacy split maps and unified 'time'
-        dyn_time = dyn.get('time') or {}
-        dyn_time_dev = dyn.get('time_device_id') or {}
-        dyn_time_meas = dyn.get('time_measurement_id') or {}
-        dyn_sign = dyn.get('time_sign') or {}
-        # Channel objects resolved in initialize(); prefer these over raw ids
-        dyn_out_ch_objs = dyn_out_ch_objs
-
-        def _key_index(k):
-            try:
-                return int(k)
-            except Exception:
-                # Non-integer keys are placed at the end
-                return 10**9
-
-        # Merge keys from all channel maps (some deployments store keys as strings)
-        key_sets = [dyn_time.keys(), dyn_time_dev.keys(), dyn_time_meas.keys(), dyn_sign.keys(), dyn_out_ch_objs.keys()]
-        keys_allowed = list({str(k) for ks in key_sets for k in ks})
-        # Sort by numeric index to ensure deterministic execution order
-        keys_allowed.sort(key=_key_index)
-
-        # Filter to keys that have BOTH a time reference and an output channel configured
-        def _has_time_ref(k):
-            m = dyn_time.get(k)
-            if not m:
-                try:
-                    m = dyn_time.get(int(k))
-                except Exception:
-                    pass
-            if m in (None, '', 'None'):
-                # try legacy split maps
-                md = dyn_time_dev.get(k)
-                mm = dyn_time_meas.get(k)
-                if md is None:
-                    try:
-                        md = dyn_time_dev.get(int(k))
-                    except Exception:
-                        pass
-                if mm is None:
-                    try:
-                        mm = dyn_time_meas.get(int(k))
-                    except Exception:
-                        pass
-                return bool(md and mm)
-            return True
-
-        def _has_output(k):
-            ch = dyn_out_ch_objs.get(k)
-            if ch is None:
-                try:
-                    ch = dyn_out_ch_objs.get(int(k))
-                except Exception:
-                    pass
-            if ch is not None:
-                return True
-            # fallback: accept presence of a channel id string
-            cid = dyn_out_ch_ids.get(k)
-            if cid is None:
-                try:
-                    cid = dyn_out_ch_ids.get(int(k))
-                except Exception:
-                    pass
-            return bool(cid)
-
-        keys_allowed = [k for k in keys_allowed if _is_enabled(k) and _has_time_ref(k) and _has_output(k)]
-        if not keys_allowed:
-            self._next_run = now + period_sec
-            self._in_cycle = False
-            return
-
-        # Safety cap: per-valve max seconds = period / number of **enabled** valves
         try:
-            candidates = dyn_enabled.keys() if isinstance(dyn_enabled, dict) else []
-            enabled_keys_all = [str(k) for k in candidates if _is_enabled(str(k))]
-        except Exception:
-            enabled_keys_all = []
-        num_enabled = len(enabled_keys_all)
-        if num_enabled <= 0:
-            # Fallback to actually schedulable keys if no explicit enabled map is present
-            num_enabled = len(keys_allowed)
-        max_per_valve_sec = int(period_sec / num_enabled) if num_enabled > 0 else 0
+            # --- Dynamic channel handling: run channels defined via custom_channel_options ---
+            dyn = self.options_channels if hasattr(self, 'options_channels') else None
+            if isinstance(dyn, list):
+                norm = {'enabled': {}, 'time': {}, 'time_sign': {}, 'output': {}, 'output_channel_id': {}}
+                for i, row in enumerate(dyn):
+                    if not isinstance(row, dict):
+                        continue
+                    idx = row.get('index', i)
+                    for k in ('enabled', 'time', 'time_sign', 'output', 'output_channel_id'):
+                        if k in row:
+                            norm[k][str(idx)] = row[k]
+                dyn = norm
+            dyn_out_ch_objs = getattr(self, 'output_channels_dyn', {}) or {}
+            dyn_out_ch_ids = (dyn.get('output_channel_id') or dyn.get('output') or {}) if isinstance(dyn, dict) else {}
+            dyn_enabled = dyn.get('enabled') or {}
+            def _is_enabled(k):
+                v = dyn_enabled.get(k)
+                if v is None:
+                    try:
+                        v = dyn_enabled.get(int(k))
+                    except Exception:
+                        v = None
+                # Default to False if unset (safer default)
+                if v is None:
+                    return False
+                # Accept common truthy forms
+                try:
+                    if isinstance(v, bool):
+                        return v
+                    if isinstance(v, (int, float)):
+                        return v != 0
+                    s = str(v).strip().lower()
+                    return s in ('1', 'true', 'on', 'yes', 'y')
+                except Exception:
+                    return False
+            if isinstance(dyn_out_ch_ids, dict):
+                for kk, vv in list(dyn_out_ch_ids.items()):
+                    if isinstance(vv, dict):
+                        cid = vv.get('channel_id') or vv.get('output_channel_id') or vv.get('unique_id') or vv.get('id') or vv.get('channel')
+                        if cid:
+                            dyn_out_ch_ids[kk] = cid
+            if not dyn or not isinstance(dyn, dict):
+                return
 
-        # Build plan
-        plan = []  # (key, None, ch_obj, seconds)
-        reasons_map = {}
-        for ch_key in keys_allowed:
+            # Keys: support both legacy split maps and unified 'time'
+            dyn_time = dyn.get('time') or {}
+            dyn_time_dev = dyn.get('time_device_id') or {}
+            dyn_time_meas = dyn.get('time_measurement_id') or {}
+            dyn_sign = dyn.get('time_sign') or {}
+            # Channel objects resolved in initialize(); prefer these over raw ids
+            dyn_out_ch_objs = dyn_out_ch_objs
+
+            def _key_index(k):
+                try:
+                    return int(k)
+                except Exception:
+                    # Non-integer keys are placed at the end
+                    return 10**9
+
+            # Merge keys from all channel maps (some deployments store keys as strings)
+            key_sets = [dyn_time.keys(), dyn_time_dev.keys(), dyn_time_meas.keys(), dyn_sign.keys(), dyn_out_ch_objs.keys()]
+            keys_allowed = list({str(k) for ks in key_sets for k in ks})
+            # Sort by numeric index to ensure deterministic execution order
+            keys_allowed.sort(key=_key_index)
+
+            # Filter to keys that have BOTH a time reference and an output channel configured
+            def _has_time_ref(k):
+                m = dyn_time.get(k)
+                if not m:
+                    try:
+                        m = dyn_time.get(int(k))
+                    except Exception:
+                        pass
+                if m in (None, '', 'None'):
+                    # try legacy split maps
+                    md = dyn_time_dev.get(k)
+                    mm = dyn_time_meas.get(k)
+                    if md is None:
+                        try:
+                            md = dyn_time_dev.get(int(k))
+                        except Exception:
+                            pass
+                    if mm is None:
+                        try:
+                            mm = dyn_time_meas.get(int(k))
+                        except Exception:
+                            pass
+                    return bool(md and mm)
+                return True
+
+            def _has_output(k):
+                ch = dyn_out_ch_objs.get(k)
+                if ch is None:
+                    try:
+                        ch = dyn_out_ch_objs.get(int(k))
+                    except Exception:
+                        pass
+                if ch is not None:
+                    return True
+                # fallback: accept presence of a channel id string
+                cid = dyn_out_ch_ids.get(k)
+                if cid is None:
+                    try:
+                        cid = dyn_out_ch_ids.get(int(k))
+                    except Exception:
+                        pass
+                return bool(cid)
+
+            keys_allowed = [k for k in keys_allowed if _is_enabled(k) and _has_time_ref(k) and _has_output(k)]
+            if not keys_allowed:
+                return
+
+            # Safety cap: per-valve max seconds = period / number of **enabled** valves
+            try:
+                candidates = dyn_enabled.keys() if isinstance(dyn_enabled, dict) else []
+                enabled_keys_all = [str(k) for k in candidates if _is_enabled(str(k))]
+            except Exception:
+                enabled_keys_all = []
+            num_enabled = len(enabled_keys_all)
+            if num_enabled <= 0:
+                # Fallback to actually schedulable keys if no explicit enabled map is present
+                num_enabled = len(keys_allowed)
+            max_per_valve_sec = int(period_sec / num_enabled) if num_enabled > 0 else 0
+
+            # --- Minimum runtime cap (sec) ---
+            try:
+                min_runtime_sec = int(getattr(self, 'min_runtime_sec', 15) or 0)
+            except Exception:
+                min_runtime_sec = 15
+            if min_runtime_sec < 0:
+                min_runtime_sec = 0
+
+            # Build plan
+            plan = []  # (key, None, ch_obj, seconds)
+            reasons_map = {}
+            for ch_key in keys_allowed:
             # Skip if channel disabled (double guard)
             if not _is_enabled(ch_key):
                 reasons_map[str(ch_key)] = 'disabled'
@@ -682,6 +695,9 @@ class CustomModule(AbstractFunction):
                 sec, reason = self._parse_seconds_from_measurement(last[1], sign)
                 # Apply dynamic safety cap: max per valve within one period
                 sec = self._clamp_seconds(sec, max_per_valve_sec)
+                # Drop if below minimum runtime
+                if sec < min_runtime_sec:
+                    reason = 'below_min_runtime_cap'
                 if reason != 'ok' or sec <= 0:
                     reasons_map[str(ch_key)] = reason
 
@@ -765,76 +781,75 @@ class CustomModule(AbstractFunction):
             # Push final plan tuple: (key, out_id, ch_idx, seconds)
             plan.append((ch_key, out_id_resolved, ch_idx_resolved, sec))
 
-        if not plan:
-            self._next_run = now + period_sec
-            self._in_cycle = False
-            return
+            if not plan:
+                return
 
+            total_pump = sum(p[3] for p in plan)
+            pump_dev = getattr(self, 'output_pump_device_id', None)
+            pump_ch  = self.output_pump_channel
 
-        total_pump = sum(p[3] for p in plan)
-        pump_dev = getattr(self, 'output_pump_device_id', None)
-        pump_ch  = self.output_pump_channel
+            # Start pump if we have a pump channel; device id is optional (resolved from channel if possible)
+            if total_pump > 0 and pump_ch is not None:
+                try:
+                    out_id = self._resolve_output_device_id(pump_ch, fallback=pump_dev)
+                    chan_idx = self._resolve_channel_index(pump_ch, fallback=getattr(pump_ch, 'channel', None))
 
-        if total_pump > 0 and pump_dev is not None and pump_ch is not None:
-            try:
-                out_id = self._resolve_output_device_id(pump_ch, fallback=pump_dev)
-                chan_idx = self._resolve_channel_index(pump_ch, fallback=getattr(pump_ch, 'channel', None))
-
-                # If channel index is still unknown, try DB lookup by pump channel unique_id, then by parent output_id
-                if chan_idx is None:
-                    try:
-                        from aot.databases.models import OutputChannel as _OC
-                        pump_ch_uid = getattr(pump_ch, 'unique_id', None) or getattr(self, 'output_pump_channel_id', None) or getattr(self, 'output_pump', None)
-                        if pump_ch_uid:
-                            row = db_retrieve_table_daemon(_OC, unique_id=pump_ch_uid)
-                            if row:
-                                rc = getattr(row, 'channel', None)
-                                if isinstance(rc, str) and rc.isdigit():
-                                    rc = int(rc)
-                                if isinstance(rc, int):
-                                    chan_idx = rc
-                        if chan_idx is None and out_id is not None:
-                            rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id).all()
-                            if rows:
-                                # Prefer channel 0 if present, else pick the smallest channel number
-                                preferred = None
-                                smallest = None
-                                for r in rows:
-                                    rc = getattr(r, 'channel', None)
+                    # If channel index is still unknown, try DB lookup by pump channel unique_id, then by parent output_id
+                    if chan_idx is None:
+                        try:
+                            from aot.databases.models import OutputChannel as _OC
+                            pump_ch_uid = getattr(pump_ch, 'unique_id', None) or getattr(self, 'output_pump_channel_id', None) or getattr(self, 'output_pump', None)
+                            if pump_ch_uid:
+                                row = db_retrieve_table_daemon(_OC, unique_id=pump_ch_uid)
+                                if row:
+                                    rc = getattr(row, 'channel', None)
                                     if isinstance(rc, str) and rc.isdigit():
                                         rc = int(rc)
-                                    if rc == 0:
-                                        preferred = 0
-                                        break
                                     if isinstance(rc, int):
-                                        if smallest is None or rc < smallest:
-                                            smallest = rc
-                                chan_idx = 0 if preferred == 0 else smallest
-                    except Exception:
-                        pass
+                                        chan_idx = rc
+                            if chan_idx is None and out_id is not None:
+                                rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id).all()
+                                if rows:
+                                    # Prefer channel 0 if present, else pick the smallest channel number
+                                    preferred = None
+                                    smallest = None
+                                    for r in rows:
+                                        rc = getattr(r, 'channel', None)
+                                        if isinstance(rc, str) and rc.isdigit():
+                                            rc = int(rc)
+                                        if rc == 0:
+                                            preferred = 0
+                                            break
+                                        if isinstance(rc, int):
+                                            if smallest is None or rc < smallest:
+                                                smallest = rc
+                                    chan_idx = 0 if preferred == 0 else smallest
+                        except Exception:
+                            pass
 
-                # self.logger.debug(f"[IrrigationControl] Pump resolve: output_id={out_id}, channel_idx={chan_idx}")
-                if out_id is None or chan_idx is None:
-                    raise RuntimeError(f"pump unresolvable output/channel (out_id={out_id}, ch_idx={chan_idx})")
+                    # self.logger.debug(f"[IrrigationControl] Pump resolve: output_id={out_id}, channel_idx={chan_idx}")
+                    if out_id is None or chan_idx is None:
+                        raise RuntimeError(f"pump unresolvable output/channel (out_id={out_id}, ch_idx={chan_idx})")
 
-                self.control.output_on_off(out_id, "on", output_type='sec', amount=float(total_pump), output_channel=chan_idx)
-                self.logger.info(f"[IrrigationControl] Pump ON for {total_pump}s (dyn channels={len(plan)})")
-            except Exception as e:
-                self.logger.error(f"[IrrigationControl] Pump start failed: {e}")
-        else:
-            pass
+                    self.control.output_on_off(out_id, "on", output_type='sec', amount=float(total_pump), output_channel=chan_idx)
+                    self.logger.info(f"[IrrigationControl] Pump ON for {total_pump}s (dyn channels={len(plan)})")
+                except Exception as e:
+                    self.logger.error(f"[IrrigationControl] Pump start failed: {e}")
+            else:
+                pass
 
-        for entry in plan:
-            key = entry[0]
-            out_id = entry[1]
-            ch_idx = entry[2]
-            sec = entry[3]
-            try:
-                self.control.output_on_off(out_id, "on", output_type='sec', amount=float(sec), output_channel=ch_idx)
-                time.sleep(sec)
-            except Exception as e:
-                self.logger.error(f"[IrrigationControl] Channel {key} failed: {e}")
-
-        self._next_run = now + period_sec
-        self._in_cycle = False
-        return
+            for entry in plan:
+                key = entry[0]
+                out_id = entry[1]
+                ch_idx = entry[2]
+                sec = entry[3]
+                try:
+                    self.control.output_on_off(out_id, "on", output_type='sec', amount=float(sec), output_channel=ch_idx)
+                    time.sleep(sec)
+                except Exception as e:
+                    self.logger.error(f"[IrrigationControl] Channel {key} failed: {e}")
+        finally:
+            # Schedule next run based on end-of-cycle time to avoid drift/overrun
+            self._next_run = time.time() + period_sec
+            self._in_cycle = False
+            return

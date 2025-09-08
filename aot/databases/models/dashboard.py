@@ -14,6 +14,7 @@ class Dashboard(CRUDMixin, db.Model):
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
     name = db.Column(db.Text, nullable=False, unique=True)
     locked = db.Column(db.Boolean, default=False)
+    sort_order = db.Column(db.Integer, default=0, index=True)
 
 
 class Widget(CRUDMixin, db.Model):
