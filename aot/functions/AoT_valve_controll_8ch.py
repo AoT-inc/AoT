@@ -566,8 +566,8 @@ class CustomModule(AbstractFunction):
             if min_runtime_sec < 0:
                 min_runtime_sec = 0
 
-            # Build plan
-            plan = []  # (key, out_id, ch_idx, seconds)
+            # Build plan (key, out_id, ch_idx, seconds)
+            plan = []
             reasons_map = {}
             for ch_key in keys_allowed:
                 # Skip if channel disabled (double guard)
@@ -642,17 +642,13 @@ class CustomModule(AbstractFunction):
                 else:
                     sign = 'positive'
 
-                sec = 0
-                reason = 'ok'
                 # Use measurement-derived seconds (apply sign policy)
                 last = None
-                # Preferred path: if dev_id and meas_id are both available
                 if dev_id and meas_id:
                     try:
                         last = self.get_last_measurement(dev_id, meas_id, max_age=self.measurement_max_age)
                     except Exception:
                         last = None
-                # Fallback: by measurement id only
                 if last is None and meas_id:
                     try:
                         if hasattr(self, 'get_last_measurement_by_measurement_id'):
@@ -660,11 +656,9 @@ class CustomModule(AbstractFunction):
                     except Exception:
                         last = None
                     if last is None:
-                        # Direct DB fallback by measurement unique_id
                         try:
                             row = db_retrieve_table_daemon('measurements', unique_id=meas_id, max_age=self.measurement_max_age)
                             if row:
-                                # normalize into (timestamp, value)
                                 if isinstance(row, dict):
                                     ts = row.get('timestamp') or row.get('last_timestamp') or row.get('ts')
                                     val = row.get('value') or row.get('last_value') or row.get('measurement')
@@ -675,7 +669,6 @@ class CustomModule(AbstractFunction):
                                     last = (ts, val)
                         except Exception:
                             last = None
-                # Final fallback: try without max_age constraint if previous attempts failed
                 if last is None and dev_id and meas_id:
                     try:
                         last = self.get_last_measurement(dev_id, meas_id)
@@ -701,9 +694,7 @@ class CustomModule(AbstractFunction):
                     except Exception:
                         pass
 
-                # Treat empty-like measurement ids as missing
                 if not last:
-                    # Guard against bogus measurement ids that are actually empty-ish strings
                     if isinstance(meas_id, str) and meas_id.strip().lower() in ('', 'none', 'null'):
                         meas_id = None
                     if not meas_id:
@@ -711,28 +702,20 @@ class CustomModule(AbstractFunction):
                     else:
                         reason = 'stale_or_missing_value'
                     reasons_map[str(ch_key)] = reason
-                else:
-                    sec, reason = self._parse_seconds_from_measurement(last[1], sign)
-                    # Apply dynamic safety cap: max per valve within one period
-                    sec = self._clamp_seconds(sec, max_per_valve_sec)
-                    # Drop if below minimum runtime cap
-                    if sec < min_runtime_sec:
-                        reason = 'below_min_runtime_cap'
-                    if reason != 'ok' or sec <= 0:
-                        reasons_map[str(ch_key)] = reason
+                    continue
 
-                if sec <= 0:
+                sec, reason = self._parse_seconds_from_measurement(last[1], sign)
+                sec = self._clamp_seconds(sec, max_per_valve_sec)
+                if sec < min_runtime_sec:
+                    reason = 'below_min_runtime_cap'
+                if reason != 'ok' or sec <= 0:
                     reasons_map[str(ch_key)] = reason
                     continue
-                if out_ch is None:
-                    reasons_map[str(ch_key)] = 'no_output_configured'
-                    continue
 
-                # Resolve output_id (parent Output) and channel index now.
+                # Resolve output/channel indices now
                 out_id_resolved = None
                 ch_idx_resolved = None
                 try:
-                    # 1) If we have a channel object, derive output_id/index directly
                     if out_ch is not None:
                         try:
                             out_id_resolved = getattr(out_ch, 'output_id', None) or getattr(getattr(out_ch, 'output', None), 'unique_id', None) or getattr(getattr(out_ch, 'device', None), 'unique_id', None)
@@ -746,8 +729,6 @@ class CustomModule(AbstractFunction):
                                 ch_idx_resolved = ci
                         except Exception:
                             pass
-
-                    # 2) If only an id is stored (could be OutputChannel id OR Output (device) id), resolve via DB
                     if out_id_resolved is None or ch_idx_resolved is None:
                         cid = dyn_out_ch_ids.get(ch_key)
                         if cid is None:
@@ -760,7 +741,6 @@ class CustomModule(AbstractFunction):
                                 from aot.databases.models import OutputChannel as _OC
                                 row = db_retrieve_table_daemon(_OC, unique_id=cid)
                                 if row:
-                                    # cid is an OutputChannel unique_id
                                     out_id_resolved = out_id_resolved or getattr(row, 'output_id', None) or getattr(row, 'device_id', None)
                                     if ch_idx_resolved is None:
                                         rc = getattr(row, 'channel', None)
@@ -768,11 +748,9 @@ class CustomModule(AbstractFunction):
                                             rc = int(rc)
                                         if isinstance(rc, int):
                                             ch_idx_resolved = rc
-                                # If not found as channel, treat cid as Output (device) unique_id
                                 if out_id_resolved is None:
                                     out_id_resolved = cid
                                 if ch_idx_resolved is None:
-                                    # Choose 0 if present, else the smallest available channel number for this output
                                     rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id_resolved).all()
                                     if rows:
                                         preferred = None
@@ -798,76 +776,83 @@ class CustomModule(AbstractFunction):
                     reasons_map[str(ch_key)] = 'unresolvable_output_or_channel'
                     continue
 
-                # Push final plan tuple: (key, out_id, ch_idx, seconds)
                 plan.append((ch_key, out_id_resolved, ch_idx_resolved, sec))
 
             if not plan:
-                if reasons_map:
-                    self.logger.info(f"[IrrigationControl] Skips: {reasons_map}")
+                self.logger.info(f"[IrrigationControl] Skips: {reasons_map}")
                 return
 
-            total_pump = sum(p[3] for p in plan)
+            # --- Keep within period budget (leave 1s guard) ---
+            total_sec = sum(p[3] for p in plan)
+            if total_sec > int(period_sec) - 1:
+                remain = int(period_sec) - 1
+                if remain <= 0:
+                    self.logger.warning("[IrrigationControl] total_sec(%s) > period(%s). Skipping cycle.", total_sec, period_sec)
+                    return
+                ratio = float(remain) / float(total_sec)
+                scaled = []
+                new_total = 0
+                for (k, oid, chidx, sec) in plan:
+                    new_sec = max(min_runtime_sec, int(sec * ratio))
+                    new_sec = self._clamp_seconds(new_sec, max_per_valve_sec)
+                    if new_sec < min_runtime_sec:
+                        reasons_map[str(k)] = 'dropped_after_scaling'
+                        continue
+                    scaled.append((k, oid, chidx, new_sec))
+                    new_total += new_sec
+                plan = scaled
+                total_sec = new_total
+                if not plan:
+                    return
+
+            # --- Turn pump ON for the entire total_sec, then sequentially run valves ---
+            pump_started = False
             pump_dev = getattr(self, 'output_pump_device_id', None)
             pump_ch = self.output_pump_channel
-
-            # Start pump if we have a pump channel; device id is optional (resolved from channel if possible)
-            if total_pump > 0 and pump_ch is not None:
+            if total_sec > 0 and pump_ch is not None:
                 try:
                     out_id = self._resolve_output_device_id(pump_ch, fallback=pump_dev)
                     chan_idx = self._resolve_channel_index(pump_ch, fallback=getattr(pump_ch, 'channel', None))
-
-                    # If channel index is still unknown, try DB lookup by pump channel unique_id, then by parent output_id
-                    if chan_idx is None:
-                        try:
-                            from aot.databases.models import OutputChannel as _OC
-                            pump_ch_uid = getattr(pump_ch, 'unique_id', None) or getattr(self, 'output_pump_channel_id', None) or getattr(self, 'output_pump', None)
-                            if pump_ch_uid:
-                                row = db_retrieve_table_daemon(_OC, unique_id=pump_ch_uid)
-                                if row:
-                                    rc = getattr(row, 'channel', None)
-                                    if isinstance(rc, str) and rc.isdigit():
-                                        rc = int(rc)
-                                    if isinstance(rc, int):
-                                        chan_idx = rc
-                            if chan_idx is None and out_id is not None:
-                                rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id).all()
-                                if rows:
-                                    # Prefer channel 0 if present, else pick the smallest channel number
-                                    preferred = None
-                                    smallest = None
-                                    for r in rows:
-                                        rc = getattr(r, 'channel', None)
-                                        if isinstance(rc, str) and rc.isdigit():
-                                            rc = int(rc)
-                                        if rc == 0:
-                                            preferred = 0
-                                            break
-                                        if isinstance(rc, int):
-                                            if smallest is None or rc < smallest:
-                                                smallest = rc
-                                    chan_idx = 0 if preferred == 0 else smallest
-                        except Exception:
-                            pass
-
                     if out_id is None or chan_idx is None:
                         raise RuntimeError(f"pump unresolvable output/channel (out_id={out_id}, ch_idx={chan_idx})")
-
-                    self.control.output_on_off(out_id, "on", output_type='sec', amount=float(total_pump), output_channel=chan_idx)
-                    self.logger.info(f"[IrrigationControl] Pump ON for {total_pump}s (dyn channels={len(plan)})")
+                    self.control.output_on_off(out_id, "on", output_type='sec', amount=float(total_sec), output_channel=chan_idx)
+                    self.logger.info(f"[IrrigationControl] Pump ON for {total_sec}s (dyn channels={len(plan)})")
+                    pump_started = True
                 except Exception as e:
                     self.logger.error(f"[IrrigationControl] Pump start failed: {e}")
-            else:
-                pass
+                    return
 
             # Execute channels sequentially (blocking)
-            for entry in plan:
-                key, out_id, ch_idx, sec = entry
+            for (key, out_id, ch_idx, sec) in plan:
                 try:
                     self.control.output_on_off(out_id, "on", output_type='sec', amount=float(sec), output_channel=ch_idx)
                     time.sleep(sec)
                 except Exception as e:
                     self.logger.error(f"[IrrigationControl] Channel {key} failed: {e}")
 
+            # --- Explicit OFF sweep at end of cycle (pump + all candidate valves) ---
+            try:
+                if pump_started and pump_ch is not None:
+                    out_id = self._resolve_output_device_id(pump_ch, fallback=pump_dev)
+                    chan_idx = self._resolve_channel_index(pump_ch, fallback=getattr(pump_ch, 'channel', None))
+                    if out_id is not None and chan_idx is not None:
+                        self.control.output_on_off(out_id, "off", output_type='sec', amount=0, output_channel=chan_idx)
+            except Exception:
+                pass
+
+            try:
+                seen = set()
+                for (key, out_id, ch_idx, _) in plan:
+                    pair = (out_id, ch_idx)
+                    if pair in seen:
+                        continue
+                    seen.add(pair)
+                    try:
+                        self.control.output_on_off(out_id, "off", output_type='sec', amount=0, output_channel=ch_idx)
+                    except Exception:
+                        pass
+
+            # Log partial skips if any
             if reasons_map:
                 self.logger.info(f"[IrrigationControl] Partial skips: {reasons_map}")
         finally:

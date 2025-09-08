@@ -405,6 +405,17 @@ class CustomModule(AbstractFunction):
             period_sec = 0
         if period_sec <= 0:
             period_sec = 1.0  # minimal backoff to avoid tight loop if misconfigured
+        # Ensure measurement_max_age is not shorter than period (avoids stale filtering on every cycle)
+        try:
+            mma = getattr(self, 'measurement_max_age', None)
+            if mma is not None and int(mma) < int(period_sec):
+                self.logger.warning(
+                    "[IrrigationControl] measurement_max_age (%ss) < period (%ss); adjusting to period",
+                    mma, period_sec
+                )
+                self.measurement_max_age = int(period_sec)
+        except Exception:
+            pass
         # gate
         now = time.time()
         if now < getattr(self, '_next_run', 0):
@@ -524,6 +535,8 @@ class CustomModule(AbstractFunction):
 
             keys_allowed = [k for k in keys_allowed if _is_enabled(k) and _has_time_ref(k) and _has_output(k)]
             if not keys_allowed:
+                self._in_cycle = False
+                self._next_run = now + period_sec
                 return
 
             # Safety cap: per-valve max seconds = period / number of **enabled** valves
@@ -538,7 +551,116 @@ class CustomModule(AbstractFunction):
                 num_enabled = len(keys_allowed)
             max_per_valve_sec = int(period_sec / num_enabled) if num_enabled > 0 else 0
 
-            # --- Minimum runtime cap (sec) ---
+            # --- Build plan (key, None, out_ch_obj, seconds) ---
+            plan = []
+            reasons_map = {}
+
+            def _resolve_out_ch(k):
+                ch = dyn_out_ch_objs.get(k)
+                if ch is None:
+                    try:
+                        ch = dyn_out_ch_objs.get(int(k))
+                    except Exception:
+                        pass
+                if ch is None:
+                    # try resolving from stored channel id on the fly
+                    cid = dyn_out_ch_ids.get(k)
+                    if cid is None:
+                        try:
+                            cid = dyn_out_ch_ids.get(int(k))
+                        except Exception:
+                            cid = None
+                    if cid:
+                        try:
+                            ch = self.get_output_channel_from_channel_id(cid)
+                        except Exception:
+                            ch = None
+                return ch
+
+            for ch_key in keys_allowed:
+                if not _is_enabled(ch_key):
+                    reasons_map[str(ch_key)] = 'disabled'
+                    continue
+
+                # Resolve measurement identifiers
+                dev_id = dyn_time_dev.get(ch_key)
+                if dev_id is None:
+                    try:
+                        dev_id = dyn_time_dev.get(int(ch_key))
+                    except Exception:
+                        pass
+                meas_id = dyn_time_meas.get(ch_key)
+                if meas_id is None:
+                    try:
+                        meas_id = dyn_time_meas.get(int(ch_key))
+                    except Exception:
+                        pass
+                # Fallback: unified 'time' may store a measurement id directly
+                if meas_id is None:
+                    meas_id = dyn_time.get(ch_key)
+                    if meas_id is None:
+                        try:
+                            meas_id = dyn_time.get(int(ch_key))
+                        except Exception:
+                            pass
+                # Support dict-shaped unified time entries like {'device_id': '...', 'measurement_id': '...'}
+                if (not dev_id or not meas_id) and isinstance(meas_id, dict):
+                    try:
+                        dev_id = meas_id.get('device_id', dev_id)
+                        meas_id = meas_id.get('measurement_id', meas_id)
+                    except Exception:
+                        pass
+                if isinstance(meas_id, dict):
+                    # Accept {'device_id': '...', 'measurement_id': '...'} or {'id': '...'}
+                    dev_id = meas_id.get('device_id', dev_id)
+                    meas_id = meas_id.get('measurement_id') or meas_id.get('id') or meas_id
+
+                # Resolve output channel OBJECT
+                out_ch = _resolve_out_ch(ch_key)
+
+                # Normalize sign
+                sign = dyn_sign.get(ch_key)
+                if sign is None:
+                    try:
+                        sign = dyn_sign.get(int(ch_key))
+                    except Exception:
+                        sign = None
+                if sign in ('+양수', '+', 'pos', 'positive', None, ''):
+                    sign = 'positive'
+                elif sign in ('-음수', '-', 'neg', 'negative'):
+                    sign = 'negative'
+                else:
+                    sign = 'positive'
+
+                # Fetch last measurement
+                last = None
+                if dev_id and meas_id:
+                    try:
+                        last = self.get_last_measurement(dev_id, meas_id, max_age=self.measurement_max_age)
+                    except Exception:
+                        last = None
+                if last is None and meas_id:
+                    try:
+                        if hasattr(self, 'get_last_measurement_by_measurement_id'):
+                            last = self.get_last_measurement_by_measurement_id(meas_id, max_age=self.measurement_max_age)
+                    except Exception:
+                        last = None
+
+                if last is None:
+                    reasons_map[str(ch_key)] = 'no_recent_measurement'
+                    continue
+
+                raw_value = last.get('value') if isinstance(last, dict) else last
+                sec, reason = self._parse_seconds_from_measurement(raw_value, sign)
+                if reason != 'ok':
+                    reasons_map[str(ch_key)] = reason
+                    continue
+
+                plan.append((ch_key, None, out_ch, int(sec)))
+
+            # --- Build final sequential execution plan with min/max filtering ---
+            filtered = []
+            total_sec = 0
             try:
                 min_runtime_sec = int(getattr(self, 'min_runtime_sec', 15) or 0)
             except Exception:
@@ -546,310 +668,122 @@ class CustomModule(AbstractFunction):
             if min_runtime_sec < 0:
                 min_runtime_sec = 0
 
-            # Build plan
-            plan = []  # (key, None, ch_obj, seconds)
-            reasons_map = {}
-            for ch_key in keys_allowed:
-            # Skip if channel disabled (double guard)
-            if not _is_enabled(ch_key):
-                reasons_map[str(ch_key)] = 'disabled'
-                continue
-            # Resolve measurement identifiers
-            dev_id = dyn_time_dev.get(ch_key)
-            if dev_id is None:
+            for item in plan:
+                if len(item) != 4:
+                    continue
+                k, a, b, sec = item
                 try:
-                    dev_id = dyn_time_dev.get(int(ch_key))
+                    sec = int(sec)
                 except Exception:
-                    pass
-            meas_id = dyn_time_meas.get(ch_key)
-            if meas_id is None:
-                try:
-                    meas_id = dyn_time_meas.get(int(ch_key))
-                except Exception:
-                    pass
-            # Fallback: unified 'time' may store a measurement id directly
-            if meas_id is None:
-                meas_id = dyn_time.get(ch_key)
-                if meas_id is None:
-                    try:
-                        meas_id = dyn_time.get(int(ch_key))
-                    except Exception:
-                        pass
-            # Support dict-shaped unified time entries like {'device_id': '...', 'measurement_id': '...'}
-            if (not dev_id or not meas_id) and isinstance(meas_id, dict):
-                try:
-                    dev_id = meas_id.get('device_id', dev_id)
-                    meas_id = meas_id.get('measurement_id', meas_id)
-                except Exception:
-                    pass
-            if isinstance(meas_id, dict):
-                # Accept {'device_id': '...', 'measurement_id': '...'} or {'id': '...'}
-                dev_id = meas_id.get('device_id', dev_id)
-                meas_id = meas_id.get('measurement_id') or meas_id.get('id') or meas_id
-
-            # Resolve output channel OBJECT (from initialize())
-            out_ch = dyn_out_ch_objs.get(ch_key)
-            if out_ch is None:
-                try:
-                    out_ch = dyn_out_ch_objs.get(int(ch_key))
-                except Exception:
-                    pass
-            if out_ch is None:
-                # try resolving from stored channel id on the fly
-                cid = dyn_out_ch_ids.get(ch_key)
-                if cid is None:
-                    try:
-                        cid = dyn_out_ch_ids.get(int(ch_key))
-                    except Exception:
-                        cid = None
-                if cid:
-                    try:
-                        out_ch = self.get_output_channel_from_channel_id(cid)
-                    except Exception:
-                        out_ch = None
-
-            sign = dyn_sign.get(ch_key)
-            if sign is None:
-                try:
-                    sign = dyn_sign.get(int(ch_key))
-                except Exception:
-                    sign = None
-            # Normalize to internal values
-            if sign in ('+양수', '+', 'pos', 'positive', None, ''):
-                sign = 'positive'
-            elif sign in ('-음수', '-', 'neg', 'negative'):
-                sign = 'negative'
-            else:
-                sign = 'positive'
-
-            sec = 0
-            reason = 'ok'
-            # Use measurement-derived seconds (apply sign policy)
-            last = None
-            # Preferred path: if dev_id and meas_id are both available
-            if dev_id and meas_id:
-                try:
-                    last = self.get_last_measurement(dev_id, meas_id, max_age=self.measurement_max_age)
-                except Exception:
-                    last = None
-            # Fallback: by measurement id only
-            if last is None and meas_id:
-                try:
-                    if hasattr(self, 'get_last_measurement_by_measurement_id'):
-                        last = self.get_last_measurement_by_measurement_id(meas_id, max_age=self.measurement_max_age)
-                except Exception:
-                    last = None
-                if last is None:
-                    # Direct DB fallback by measurement unique_id
-                    try:
-                        row = db_retrieve_table_daemon('measurements', unique_id=meas_id, max_age=self.measurement_max_age)
-                        if row:
-                            # normalize into (timestamp, value)
-                            if isinstance(row, dict):
-                                ts = row.get('timestamp') or row.get('last_timestamp') or row.get('ts')
-                                val = row.get('value') or row.get('last_value') or row.get('measurement')
-                            else:
-                                ts = getattr(row, 'timestamp', None) or getattr(row, 'last_timestamp', None) or getattr(row, 'ts', None)
-                                val = getattr(row, 'value', None) or getattr(row, 'last_value', None) or getattr(row, 'measurement', None)
-                            if val is not None:
-                                last = (ts, val)
-                    except Exception:
-                        last = None
-            # Final fallback: try without max_age constraint if previous attempts failed
-            if last is None and dev_id and meas_id:
-                try:
-                    last = self.get_last_measurement(dev_id, meas_id)
-                except Exception:
-                    last = None
-            if last is None and meas_id and hasattr(self, 'get_last_measurement_by_measurement_id'):
-                try:
-                    last = self.get_last_measurement_by_measurement_id(meas_id)
-                except Exception:
-                    last = None
-            if last is None and meas_id:
-                try:
-                    row = db_retrieve_table_daemon('measurements', unique_id=meas_id)
-                    if row:
-                        if isinstance(row, dict):
-                            ts = row.get('timestamp') or row.get('last_timestamp') or row.get('ts')
-                            val = row.get('value') or row.get('last_value') or row.get('measurement')
-                        else:
-                            ts = getattr(row, 'timestamp', None) or getattr(row, 'last_timestamp', None) or getattr(row, 'ts', None)
-                            val = getattr(row, 'value', None) or getattr(row, 'last_value', None) or getattr(row, 'measurement', None)
-                        if val is not None:
-                            last = (ts, val)
-                except Exception:
-                    pass
-
-            # Treat empty-like measurement ids as missing
-            if not last:
-                # Guard against bogus measurement ids that are actually empty-ish strings
-                if isinstance(meas_id, str) and meas_id.strip().lower() in ('', 'none', 'null'):
-                    meas_id = None
-                if not meas_id:
-                    reason = 'no_measurement_ref(measurement)'
-                else:
-                    reason = 'stale_or_missing_value'
-                reasons_map[str(ch_key)] = reason
-            else:
-                sec, reason = self._parse_seconds_from_measurement(last[1], sign)
-                # Apply dynamic safety cap: max per valve within one period
-                sec = self._clamp_seconds(sec, max_per_valve_sec)
-                # Drop if below minimum runtime
+                    continue
                 if sec < min_runtime_sec:
-                    reason = 'below_min_runtime_cap'
-                if reason != 'ok' or sec <= 0:
-                    reasons_map[str(ch_key)] = reason
+                    reasons_map[str(k)] = f'skipped_below_min_runtime({sec}s < {min_runtime_sec}s)'
+                    continue
+                if max_per_valve_sec > 0 and sec > max_per_valve_sec:
+                    sec = self._clamp_seconds(sec, max_per_valve_sec)
+                if sec <= 0:
+                    reasons_map[str(k)] = 'zero_after_clamp'
+                    continue
+                filtered.append((k, a, b, sec))
+                total_sec += sec
 
-            if sec <= 0:
-                reasons_map[str(ch_key)] = reason
-                continue
-            if out_ch is None:
-                reasons_map[str(ch_key)] = 'no_output_configured'
-                continue
+            if not filtered:
+                self._in_cycle = False
+                self._next_run = now + period_sec
+                return
 
-            # Resolve output_id (parent Output) and channel index now.
-            out_id_resolved = None
-            ch_idx_resolved = None
+            # Optional: keep within period budget (leave 1s guard)
+            if total_sec > int(period_sec) - 1:
+                scaled = []
+                remain = int(period_sec) - 1
+                if remain <= 0:
+                    self.logger.warning("[IrrigationControl] total_sec(%s) > period(%s). Skipping cycle.", total_sec, period_sec)
+                    self._in_cycle = False
+                    self._next_run = now + period_sec
+                    return
+                ratio = float(remain) / float(total_sec)
+                total_sec = 0
+                for (k, a, b, sec) in filtered:
+                    new_sec = max(min_runtime_sec, int(sec * ratio))
+                    if max_per_valve_sec > 0:
+                        new_sec = self._clamp_seconds(new_sec, max_per_valve_sec)
+                    if new_sec < min_runtime_sec:
+                        reasons_map[str(k)] = 'dropped_after_scaling'
+                        continue
+                    scaled.append((k, a, b, new_sec))
+                    total_sec += new_sec
+                filtered = scaled
+                if not filtered:
+                    self._in_cycle = False
+                    self._next_run = now + period_sec
+                    return
+
+            # --- Resolve pump output id/channel ---
+            pump_out_id = self._resolve_output_device_id(self.output_pump_channel, fallback=None)
+            pump_ch_idx = self._resolve_channel_index(self.output_pump_channel, fallback=None)
+
+            # --- Turn pump ON for the entire total_sec, then sequentially run valves ---
+            pump_started = False
+            if pump_out_id is not None and pump_ch_idx is not None:
+                try:
+                    self.control.output_on_off(pump_out_id, "on", output_type='sec', amount=total_sec, output_channel=pump_ch_idx)
+                    pump_started = True
+                except Exception as e:
+                    self.logger.error("[IrrigationControl] Failed to turn pump ON: %s", e)
+                    # Safety: do not run valves if pump couldn't start
+                    self._in_cycle = False
+                    self._next_run = now + period_sec
+                    return
+
+            def _valve_on_for_sec(a, b, sec):
+                try:
+                    if a is None:
+                        ch_obj = b
+                        out_id = self._resolve_output_device_id(ch_obj, fallback=None)
+                        ch_idx = self._resolve_channel_index(ch_obj, fallback=None)
+                    else:
+                        out_id, ch_idx = a, b
+                    if out_id is None or ch_idx is None:
+                        return False
+                    self.control.output_on_off(out_id, "on", output_type='sec', amount=int(sec), output_channel=int(ch_idx))
+                    return True
+                except Exception as e:
+                    self.logger.error("[IrrigationControl] Valve ON failed: %s", e)
+                    return False
+
+            for (_, a, b, sec) in filtered:
+                _ = _valve_on_for_sec(a, b, sec)
+                time.sleep(max(0, int(sec)))
+
+            # --- Ensure everything is OFF at the end (pump + all candidate valves) ---
             try:
-                # 1) If we have a channel object, derive output_id/index directly
-                if out_ch is not None:
-                    try:
-                        out_id_resolved = getattr(out_ch, 'output_id', None) or getattr(getattr(out_ch, 'output', None), 'unique_id', None) or getattr(getattr(out_ch, 'device', None), 'unique_id', None)
-                    except Exception:
-                        pass
-                    try:
-                        ci = getattr(out_ch, 'channel', None)
-                        if isinstance(ci, str) and ci.isdigit():
-                            ci = int(ci)
-                        if isinstance(ci, int):
-                            ch_idx_resolved = ci
-                    except Exception:
-                        pass
-
-                # 2) If only an id is stored (could be OutputChannel id OR Output (device) id), resolve via DB
-                if out_id_resolved is None or ch_idx_resolved is None:
-                    cid = dyn_out_ch_ids.get(ch_key)
-                    if cid is None:
-                        try:
-                            cid = dyn_out_ch_ids.get(int(ch_key))
-                        except Exception:
-                            cid = None
-                    if cid:
-                        try:
-                            from aot.databases.models import OutputChannel as _OC
-                            row = db_retrieve_table_daemon(_OC, unique_id=cid)
-                            if row:
-                                # cid is an OutputChannel unique_id
-                                out_id_resolved = out_id_resolved or getattr(row, 'output_id', None) or getattr(row, 'device_id', None)
-                                if ch_idx_resolved is None:
-                                    rc = getattr(row, 'channel', None)
-                                    if isinstance(rc, str) and rc.isdigit():
-                                        rc = int(rc)
-                                    if isinstance(rc, int):
-                                        ch_idx_resolved = rc
-                            # If not found as channel, treat cid as Output (device) unique_id
-                            if out_id_resolved is None:
-                                out_id_resolved = cid
-                            if ch_idx_resolved is None:
-                                # Choose 0 if present, else the smallest available channel number for this output
-                                rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id_resolved).all()
-                                if rows:
-                                    preferred = None
-                                    smallest = None
-                                    for r in rows:
-                                        rc = getattr(r, 'channel', None)
-                                        if isinstance(rc, str) and rc.isdigit():
-                                            rc = int(rc)
-                                        if rc == 0:
-                                            preferred = 0
-                                            break
-                                        if isinstance(rc, int):
-                                            if smallest is None or rc < smallest:
-                                                smallest = rc
-                                    ch_idx_resolved = 0 if preferred == 0 else smallest
-                        except Exception:
-                            pass
+                if pump_started and pump_out_id is not None and pump_ch_idx is not None:
+                    self.control.output_on_off(pump_out_id, "off", output_type='sec', amount=0, output_channel=pump_ch_idx)
             except Exception:
                 pass
 
-            if out_id_resolved is None or ch_idx_resolved is None:
-                self.logger.error(f"[IrrigationControl] Channel {ch_key} cannot resolve output/channel (out_id={out_id_resolved}, ch_idx={ch_idx_resolved})")
-                reasons_map[str(ch_key)] = 'unresolvable_output_or_channel'
-                continue
+            try:
+                seen = set()
+                def _off_pair(a, b):
+                    if a is None:
+                        ch_obj = b
+                        out_id = self._resolve_output_device_id(ch_obj, fallback=None)
+                        ch_idx = self._resolve_channel_index(ch_obj, fallback=None)
+                    else:
+                        out_id, ch_idx = a, b
+                    if out_id is None or ch_idx is None:
+                        return
+                    key = (out_id, ch_idx)
+                    if key in seen:
+                        return
+                    seen.add(key)
+                    self.control.output_on_off(out_id, "off", output_type='sec', amount=0, output_channel=ch_idx)
 
-            # Push final plan tuple: (key, out_id, ch_idx, seconds)
-            plan.append((ch_key, out_id_resolved, ch_idx_resolved, sec))
-
-            if not plan:
-                return
-
-            total_pump = sum(p[3] for p in plan)
-            pump_dev = getattr(self, 'output_pump_device_id', None)
-            pump_ch  = self.output_pump_channel
-
-            # Start pump if we have a pump channel; device id is optional (resolved from channel if possible)
-            if total_pump > 0 and pump_ch is not None:
-                try:
-                    out_id = self._resolve_output_device_id(pump_ch, fallback=pump_dev)
-                    chan_idx = self._resolve_channel_index(pump_ch, fallback=getattr(pump_ch, 'channel', None))
-
-                    # If channel index is still unknown, try DB lookup by pump channel unique_id, then by parent output_id
-                    if chan_idx is None:
-                        try:
-                            from aot.databases.models import OutputChannel as _OC
-                            pump_ch_uid = getattr(pump_ch, 'unique_id', None) or getattr(self, 'output_pump_channel_id', None) or getattr(self, 'output_pump', None)
-                            if pump_ch_uid:
-                                row = db_retrieve_table_daemon(_OC, unique_id=pump_ch_uid)
-                                if row:
-                                    rc = getattr(row, 'channel', None)
-                                    if isinstance(rc, str) and rc.isdigit():
-                                        rc = int(rc)
-                                    if isinstance(rc, int):
-                                        chan_idx = rc
-                            if chan_idx is None and out_id is not None:
-                                rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id).all()
-                                if rows:
-                                    # Prefer channel 0 if present, else pick the smallest channel number
-                                    preferred = None
-                                    smallest = None
-                                    for r in rows:
-                                        rc = getattr(r, 'channel', None)
-                                        if isinstance(rc, str) and rc.isdigit():
-                                            rc = int(rc)
-                                        if rc == 0:
-                                            preferred = 0
-                                            break
-                                        if isinstance(rc, int):
-                                            if smallest is None or rc < smallest:
-                                                smallest = rc
-                                    chan_idx = 0 if preferred == 0 else smallest
-                        except Exception:
-                            pass
-
-                    # self.logger.debug(f"[IrrigationControl] Pump resolve: output_id={out_id}, channel_idx={chan_idx}")
-                    if out_id is None or chan_idx is None:
-                        raise RuntimeError(f"pump unresolvable output/channel (out_id={out_id}, ch_idx={chan_idx})")
-
-                    self.control.output_on_off(out_id, "on", output_type='sec', amount=float(total_pump), output_channel=chan_idx)
-                    self.logger.info(f"[IrrigationControl] Pump ON for {total_pump}s (dyn channels={len(plan)})")
-                except Exception as e:
-                    self.logger.error(f"[IrrigationControl] Pump start failed: {e}")
-            else:
+                for (_, a, b, _) in filtered:
+                    _off_pair(a, b)
+            except Exception:
                 pass
 
-            for entry in plan:
-                key = entry[0]
-                out_id = entry[1]
-                ch_idx = entry[2]
-                sec = entry[3]
-                try:
-                    self.control.output_on_off(out_id, "on", output_type='sec', amount=float(sec), output_channel=ch_idx)
-                    time.sleep(sec)
-                except Exception as e:
-                    self.logger.error(f"[IrrigationControl] Channel {key} failed: {e}")
-        finally:
-            # Schedule next run based on end-of-cycle time to avoid drift/overrun
-            self._next_run = time.time() + period_sec
             self._in_cycle = False
+            self._next_run = time.time() + period_sec
             return
