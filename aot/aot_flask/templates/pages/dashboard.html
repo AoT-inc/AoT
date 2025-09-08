@@ -26,6 +26,16 @@
     .dash-tab[draggable="true"] { cursor: grab; }
     .dash-tab[draggable="true"]:active { cursor: grabbing; }
 
+    /* drag feedback for tabs */
+    .dash-tab.dragging { opacity: 0.6; transform: scale(0.98); }
+    .dash-tab.drop-target { position: relative; }
+    .dash-tab.drop-target::after {
+      content: "";
+      position: absolute;
+      left: -4px; top: 10%; bottom: 10%; width: 2px;
+      background: currentColor; opacity: 0.35;
+    }
+
     /* fixed-size buttons for + and settings gear */
     .btn-fixed-40 {
       width: 40px !important;
@@ -282,7 +292,7 @@
     })();
     // ---- end append-new-to-right ----
 
-    // ---- Dashboard tabs basic drag-reorder (text-style) ----
+    // ---- Dashboard tabs drag-reorder (drag whole tab UI) ----
     (function() {
       const key = 'dashboard_order_v1';
       const container = document.getElementById('dash-tabs');
@@ -304,6 +314,11 @@
         if (!directTabs().includes(tab)) return;
         dragSrc = tab;
         dragging = true;
+        tab.classList.add('dragging');
+        // Use the tab (or its anchor) as drag image for a proper ghost preview
+        const anchor = tab.querySelector('a');
+        const imgEl = anchor || tab;
+        try { if (ev.dataTransfer && imgEl) ev.dataTransfer.setDragImage(imgEl, imgEl.offsetWidth/2, imgEl.offsetHeight/2); } catch (e) {}
         if (ev.dataTransfer) {
           ev.dataTransfer.setData('text/plain', tab.dataset.id || 'drag');
           ev.dataTransfer.effectAllowed = 'move';
@@ -311,12 +326,18 @@
       });
 
       container.addEventListener('dragover', (ev) => {
-        if (!dragSrc) return; ev.preventDefault();
+        if (!dragSrc) return;
+        const over = ev.target.closest('.dash-tab');
+        directTabs().forEach(t => t.classList.remove('drop-target'));
+        if (over && over !== dragSrc) over.classList.add('drop-target');
+        ev.preventDefault();
         if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
       });
 
       container.addEventListener('drop', (ev) => {
-        if (!dragSrc) return; ev.preventDefault();
+        if (!dragSrc) return;
+        ev.preventDefault();
+        directTabs().forEach(t => t.classList.remove('drop-target'));
         const target = ev.target.closest('.dash-tab');
         if (!target || target === dragSrc || !directTabs().includes(target)) return;
         const rect = target.getBoundingClientRect();
@@ -337,6 +358,8 @@
       });
 
       container.addEventListener('dragend', () => {
+        directTabs().forEach(t => t.classList.remove('drop-target'));
+        const src = dragSrc; if (src) src.classList.remove('dragging');
         setTimeout(() => { dragging = false; }, 50);
         dragSrc = null;
       });
