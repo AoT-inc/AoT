@@ -77,6 +77,14 @@
         white-space: nowrap;
       }
     }
+    /* Sticky tabbar surface color (synced to page background via JS) */
+    :root { --aot-surface: transparent; }
+    #dash-sticky { background-color: var(--aot-surface, #fff); }
+    /* Ensure main navbar always stacks above the dashboard tab bar */
+    .navbar.main-navbar { z-index: 2000 !important; }
+    /* Tabbar vertical spacing: compact by default, roomy only when stuck to top */
+    #dash-sticky { padding: 4px 0.7em; transition: padding 120ms ease; }
+    #dash-sticky.is-stuck { padding: 8px 0.7em; }
   </style>
   <script src="/static/js/gridstack-all.js"></script>
 
@@ -108,7 +116,7 @@
   </div>
 
 <div class="container-fluid" style="padding-left: 0.5em; padding-right: 0.5em;">
-  <div class="container-fluid mb-3">
+  <div id="dash-sticky" class="container-fluid mb-1 position-sticky" style="top: 60px; z-index:1020;">
     <div class="d-flex align-items-center">
         <!-- + button fixed size -->
         <a href="/dashboard-add" class="btn btn-aot-dash-plus text-center btn-fixed-40">
@@ -116,7 +124,7 @@
             <span class="d-md-none">+</span>
         </a>
         {% set dash_count = dashboards|length %}
-        <div id="dash-tabs" class="d-flex align-items-center" style="flex:1 1 auto; min-width:0; gap:8px; margin: 0 8px; flex-wrap: nowrap; overflow-x: auto;">
+        <div id="dash-tabs" class="d-flex align-items-center" style="flex:1 1 auto; min-width:0; gap:6px; margin: 0 6px; flex-wrap: nowrap; overflow-x: auto;">
         {% for each_dash in dashboards %}
           <div class="dash-tab" data-id="{{ each_dash.unique_id }}" draggable="true" style="flex:1 1 0;">
             <a href="/dashboard/{{ each_dash.unique_id }}" class="btn btn-aot-dash text-center{% if each_dash.unique_id == dashboard_id %} active{% endif %}" style="width: 100%;">
@@ -135,6 +143,67 @@
         {% endfor %}
     </div>
   </div>
+
+  <script>
+    (function() {
+      var rafId = null;
+      function computeTop() {
+        try {
+          var navbar = document.querySelector('.navbar.main-navbar');
+          var sticky = document.getElementById('dash-sticky');
+          if (!navbar || !sticky) return;
+          var rect = navbar.getBoundingClientRect();
+          var h = rect.height || 0;
+          // Read inline/computed top shift applied by layout_default.js on scroll
+          var computedTop = 0;
+          try {
+            var cs = window.getComputedStyle(navbar);
+            var t = cs && cs.top ? parseFloat(cs.top) : 0; // typically 0 or -60
+            if (!isNaN(t)) computedTop = t;
+          } catch (e) {}
+          // Desired offset: navbar height + its current top shift, clamped to >= 0
+          var desired = Math.max(h + computedTop, 0);
+          // Apply only if changed to avoid layout thrash
+          if (sticky.__aot_last_top !== desired) {
+            sticky.style.top = desired + 'px';
+            sticky.__aot_last_top = desired;
+            // Toggle roomy padding only when the tabbar is stuck at the very top
+            var nowStuck = desired <= 0.5; // treat near-zero as stuck
+            if (sticky.__aot_is_stuck !== nowStuck) {
+              sticky.classList.toggle('is-stuck', nowStuck);
+              sticky.__aot_is_stuck = nowStuck;
+            }
+          }
+        } catch (e) {}
+      }
+      function scheduleCompute() {
+        if (rafId) return;
+        rafId = requestAnimationFrame(function(){
+          rafId = null; computeTop();
+        });
+      }
+      function setDashSurfaceBg() {
+        try {
+          var bodyBg = window.getComputedStyle(document.body).backgroundColor;
+          // Fallback if transparent: try html element background
+          if (!bodyBg || bodyBg === 'rgba(0, 0, 0, 0)' || bodyBg === 'transparent') {
+            var htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+            bodyBg = (htmlBg && htmlBg !== 'rgba(0, 0, 0, 0)' && htmlBg !== 'transparent') ? htmlBg : '#fff';
+          }
+          document.documentElement.style.setProperty('--aot-surface', bodyBg);
+        } catch (e) {}
+      }
+      // Initial
+      computeTop();
+      setDashSurfaceBg();
+      // Resize & scroll listeners
+      window.addEventListener('resize', function(){ scheduleCompute(); setDashSurfaceBg(); }, {passive:true});
+      window.addEventListener('scroll', scheduleCompute, {passive:true});
+      // Navbar collapse open/close can change height
+      document.addEventListener('shown.bs.collapse', scheduleCompute);
+      document.addEventListener('hidden.bs.collapse', scheduleCompute);
+    })();
+  </script>
 
     <div class="grid-stack">
     {% for each_widget in table_widget.query.filter(table_widget.dashboard_id == dashboard_id).all() -%}
