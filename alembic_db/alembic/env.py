@@ -1,10 +1,24 @@
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from logging.config import fileConfig
+import os
+
+# Bring in the Flask app so Alembic knows the real DB URL and metadata
+from aot.aot_flask.app import create_app
+from aot.aot_flask.extensions import db
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Initialize Flask app context for Alembic
+app = create_app()
+app.app_context().push()
+
+# If the Flask app provides the DB URL, inject it into Alembic's config
+db_url = app.config.get("SQLALCHEMY_DATABASE_URI")
+if db_url:
+  config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -14,7 +28,7 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -35,8 +49,14 @@ def run_migrations_offline():
     script output.
     """
     url = config.get_main_option("sqlalchemy.url")
+    is_sqlite = (config.get_main_option("sqlalchemy.url") or "").startswith("sqlite")
     context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True)
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        compare_type=True,
+        render_as_batch=is_sqlite,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -55,9 +75,12 @@ def run_migrations_online():
         poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
+        is_sqlite = (config.get_main_option("sqlalchemy.url") or "").startswith("sqlite")
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            compare_type=True,
+            render_as_batch=is_sqlite,
         )
 
         with context.begin_transaction():

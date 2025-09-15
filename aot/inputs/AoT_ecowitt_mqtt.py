@@ -44,8 +44,8 @@ DEVICE_CHANNELS = {
         {'json_name': 'tempf',      'label': '온도'},
     ],
     'soil_moisture_sensor': [
-        {'json_name': 'soilmoisture1', 'label': '토양 수분'},
-        {'json_name': 'soilbatt1',     'label': '토양 센서 배터리'},
+        {'json_name': 'soilmoisture', 'label': '토양 수분'},
+        {'json_name': 'soilbatt',     'label': '토양 배터리'},
     ],
     'leaf_sensor': [
         {'json_name': 'leafwetness', 'label': '잎 습윤도'},
@@ -76,7 +76,8 @@ INPUT_INFORMATION = {
     'channels_dict': channels_dict,
 
     'options_enabled': [
-        'measurements_select'
+        'measurements_select',
+        'period'
     ],
 
     'measurements_variable_amount': True,
@@ -113,15 +114,6 @@ INPUT_INFORMATION = {
                 ('distance_sensor', '거리 측정기'),
                 ('air_quality_sensor', '공기질 측정기'),
             ]
-        },
-        {
-            'id': 'period',
-            'type': 'float',
-            'default_value': 300,
-            'required': False,
-            'constraints_pass': constraints_pass_positive_value,
-            'name': "측정 기간(초)",
-            'phrase': "측정 주기를 초 단위로 입력하세요."
         },
         {
             'id': 'mqtt_hostname',

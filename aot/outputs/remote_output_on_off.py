@@ -200,16 +200,17 @@ class OutputModule(AbstractOutput):
     def get_remote_output_information(self):
         import requests
 
-        endpoint = 'outputs'
+        endpoint = 'outputs/'
         url = 'https://{ip}/api/{ep}'.format(ip=self.host, ep=endpoint)
         headers = {
             'Accept': 'application/vnd.aot.v1+json',
             'X-API-KEY': self.api_key
         }
 
-        response = requests.get(url, headers=headers, verify=False)
+        response = requests.get(url, headers=headers, verify=False, timeout=5)
         self.logger.debug(f"Response Status: {response.status_code}")
         self.logger.debug(f"Response Headers: {response.headers}")
+        self.logger.debug(f"Response Body (trunc): {response.text[:300] if response and hasattr(response, 'text') else ''}")
 
         try:
             response_dict = json.loads(response.text)
@@ -296,9 +297,10 @@ class OutputModule(AbstractOutput):
             "state": state
         }
 
-        response = requests.post(url, json=data, headers=headers, verify=False)
+        response = requests.post(url, json=data, headers=headers, verify=False, timeout=5)
         self.logger.debug(f"Response Status: {response.status_code}")
         self.logger.debug(f"Response Headers: {response.headers}")
+        self.logger.debug(f"Response Body (trunc): {response.text[:300] if response and hasattr(response, 'text') else ''}")
 
         try:
             response_dict = json.loads(response.text)

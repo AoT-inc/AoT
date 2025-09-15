@@ -41,9 +41,6 @@
     {% if custom_css %}
       <link href="/custom.css" rel="stylesheet">
     {% endif %}
-    <style>
-      :root { --navbar-height: 60px; } /* fallback; will be updated by JS */
-    </style>
     {% block head %}{% endblock %}
 
     <title>
@@ -79,16 +76,6 @@
         check_daemon_status();
         $('[data-toggle="tooltip"]').tooltip();
         $('.selectpicker').selectpicker();
-
-        // Expose navbar height as a CSS variable so sticky dashboard bar can sit right under it
-        function setNavbarHeightVar() {
-          try {
-            var h = $('.navbar.main-navbar').outerHeight() || 0;
-            document.documentElement.style.setProperty('--navbar-height', h + 'px');
-          } catch (e) {}
-        }
-        setNavbarHeightVar();
-        $(window).on('resize', setNavbarHeightVar);
 
         // 모바일: 메뉴 토글 시 아이콘 전환 및 로고 숨김/보이기
         $('#navbarCollapse').on('show.bs.collapse', function () {
@@ -359,9 +346,6 @@
           }
         });
         setInterval(check_daemon_status, 60000);
-
-        // keep CSS var fresh if navbar height changes due to responsive layout
-        if (typeof setNavbarHeightVar === 'function') { setNavbarHeightVar(); }
 
         let lastScrollTop = 0;
         const navbar = $('.navbar.main-navbar');
