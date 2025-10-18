@@ -17,10 +17,9 @@
   <link rel="stylesheet" href="/static/css/gridstack.css" />
   <link rel="stylesheet" href="/static/css/gridstack-custom.css" />
   <style>
-    /* ensure the main content area can be used as a drag handle */
-    .grid-stack-item-content { cursor: move; }
     /* optional explicit handle class used by some widgets */
     .widget-drag-handle { cursor: move; }
+    .panel-heading, .card-header, .widget-drag-handle { cursor: move; }
     /* make tabs clearly draggable and prevent accidental text selection */
     #dash-tabs { -webkit-user-select: none; -moz-user-select: none; user-select: none; }
     .dash-tab[draggable="true"] { cursor: grab; }
@@ -293,8 +292,8 @@
       handles: 'se, sw'
     },
     draggable: {
-      // allow drag by content wrapper if present, legacy headers, explicit handle, or fallback to entire item
-      handle: '.grid-stack-item-content, .panel-heading, .card-header, .widget-drag-handle, .grid-stack-item'
+      handle: '.panel-heading, .card-header, .widget-drag-handle',
+      cancel: 'input, textarea, select, button, a, .no-drag, .modal, .dropdown-menu, .list-group, .table, .form-control'
     },
     alwaysShowResizeHandle: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
     float: false,

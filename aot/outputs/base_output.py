@@ -7,6 +7,7 @@ Output.
 
 All Outputs should inherit from this class and overwrite methods that raise
 NotImplementedErrors
+2025-10-11
 """
 import datetime
 import logging
@@ -53,6 +54,7 @@ class AbstractOutput(AbstractBaseController):
         self.output_off_until = {}
         self.output_off_triggered = {}
         self.output_states = {}
+        self._started_at_written = {}
 
         self.output = output
         self.running = True
@@ -142,6 +144,7 @@ class AbstractOutput(AbstractBaseController):
         self.output_on_duration = {}
         self.output_last_duration = {}
         self.output_off_until = {}
+        self._started_at_written = {}
 
         if "on_off" in output_information['output_types']:
             self.output_on_until = {}
@@ -153,9 +156,66 @@ class AbstractOutput(AbstractBaseController):
             self.output_on_duration[each_output_channel] = False
             self.output_last_duration[each_output_channel] = 0
             self.output_off_until[each_output_channel] = 0
+            self._started_at_written[each_output_channel] = False
 
             if "on_off" in output_information['output_types']:
                 self.output_on_until[each_output_channel] = datetime.datetime.now()
+    def _write_output_started_at_async(self, output_channel):
+        """Write an 'output_started_at' point to Influx asynchronously (epoch seconds in value).
+        IMPORTANT: write to the *measurement channel* whose unit == 's' (like duration_time does),
+        not necessarily the raw output_channel index. This keeps read/write channels aligned.
+        """
+        try:
+            # Resolve measurement channel (unit 's') like OFF branch does for duration_time
+            measurement_channel = output_channel
+            try:
+                if ('channels_dict' in self.OUTPUT_INFORMATION and
+                        'measurements_dict' in self.OUTPUT_INFORMATION):
+                    measurement_channels = self.OUTPUT_INFORMATION['channels_dict'][output_channel]['measurements']
+                    for each_measure_channel in measurement_channels:
+                        if self.OUTPUT_INFORMATION['measurements_dict'][each_measure_channel]['unit'] == 's':
+                            measurement_channel = each_measure_channel
+                            break
+            except Exception:
+                pass
+
+            started_at_utc = datetime.datetime.utcnow()
+            started_epoch = float(int(started_at_utc.timestamp()))  # normalize to float seconds
+
+            def _writer():
+                try:
+                    write_influxdb_value(
+                        self.unique_id,
+                        's',
+                        started_epoch,
+                        measure='output_started_at',
+                        channel=measurement_channel,
+                        timestamp=started_at_utc
+                    )
+                    if self.logger:
+                        self.logger.debug(
+                            f"[START_MARK] wrote output_started_at uid={self.unique_id} ch={measurement_channel} epoch={started_epoch}")
+                except Exception as e:
+                    if self.logger:
+                        self.logger.warning(
+                            f"Failed to write output_started_at for Output {self.unique_id} CH{measurement_channel}: {e}")
+
+            threading.Thread(target=_writer, daemon=True).start()
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"Failed to write output_started_at for Output {self.unique_id} CH{output_channel}: {e}")
+
+    def _ensure_started_marked(self, output_channel):
+        """Mark start-time once per ON sequence per channel. Idempotent.
+        This avoids per-output edits: any subclass that routes through output_on_off() benefits.
+        """
+        try:
+            if not self._started_at_written.get(output_channel):
+                self._write_output_started_at_async(output_channel)
+                self._started_at_written[output_channel] = True
+        except Exception:
+            # Never fail the main flow due to metrics
+            pass
 
     def shutdown(self, shutdown_timer):
         self.stop_output()
@@ -249,7 +309,7 @@ class AbstractOutput(AbstractBaseController):
                     output_type='value',
                     amount=amount,
                     output_channel=output_channel)
-
+                self._ensure_started_marked(output_channel)
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
                       f"({self.output_name}) value: {amount:.1f} "
 
@@ -260,7 +320,7 @@ class AbstractOutput(AbstractBaseController):
                     output_type='vol',
                     amount=amount,
                     output_channel=output_channel)
-
+                self._ensure_started_marked(output_channel)
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
                       f"({self.output_name}) volume: {amount:.1f} "
 
@@ -271,7 +331,7 @@ class AbstractOutput(AbstractBaseController):
                     output_type='pwm',
                     amount=amount,
                     output_channel=output_channel)
-
+                self._ensure_started_marked(output_channel)
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
                       f"duty cycle: {amount:.2f} %. Output returned: {out_ret}"
 
@@ -352,6 +412,8 @@ class AbstractOutput(AbstractBaseController):
                     self.output_last_duration[output_channel] = amount
                     self.output_on_duration[output_channel] = True
 
+                    self._ensure_started_marked(output_channel)
+
             # No duration specific, so just turn output on
             elif ('output_types' in self.OUTPUT_INFORMATION and
                     'on_off' in self.OUTPUT_INFORMATION['output_types'] and
@@ -367,7 +429,7 @@ class AbstractOutput(AbstractBaseController):
                 if output_is_on and not force_output_channel:
                     msg = f"Output {self.unique_id} CH{output_channel} ({self.output_name}) is already on."
                     self.logger.debug(msg)
-                    return 1, msg
+                    return 1    , msg
                 else:
                     # Record the time the output was turned on in order to
                     # calculate and log the total amount was on, when
@@ -381,6 +443,8 @@ class AbstractOutput(AbstractBaseController):
                     msg = f"Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
                           f"ON at {self.output_time_turned_on[output_channel]}. Output returned: {ret_value}"
                     self.logger.debug(msg)
+
+                    self._ensure_started_marked(output_channel)
 
         #
         # Signaled to turn output off
@@ -444,6 +508,8 @@ class AbstractOutput(AbstractBaseController):
                 write_db.start()
 
             self.output_off_triggered[output_channel] = False
+            # Allow next ON to record a fresh start marker
+            self._started_at_written[output_channel] = False
 
         if trigger_conditionals:
             try:

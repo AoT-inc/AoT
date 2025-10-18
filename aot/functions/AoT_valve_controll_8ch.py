@@ -138,7 +138,15 @@ FUNCTION_INFORMATION = {
             'options_select': ['Output_Channels'],
             'name': lazy_gettext('출력'),
             'phrase': lazy_gettext('이 채널의 밸브로 사용할 출력을 선택합니다.')
-        }
+        },
+        {
+            'id': 'duration_min',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': "{} ({})".format(lazy_gettext('작동시간'), lazy_gettext('분')),
+            'phrase': lazy_gettext('이 채널의 밸브를 작동할 시간(분 단위)입니다. (채널 미사용 시 비워두어도 됩니다)')
+        },
     ],
 
 }
@@ -585,6 +593,116 @@ class CustomModule(AbstractFunction):
                 if not _is_enabled(ch_key):
                     reasons_map[str(ch_key)] = 'disabled'
                     continue
+                # Check for direct duration_min option for this channel
+                dur = None
+                if 'duration_min' in dyn:
+                    dur = dyn['duration_min'].get(ch_key)
+                    if dur is None:
+                        try:
+                            dur = dyn['duration_min'].get(int(ch_key))
+                        except Exception:
+                            pass
+                # If duration_min is set, use it (override measurement)
+                if dur is not None and str(dur).strip() != '':
+                    try:
+                        dur_min = float(dur or 0.0)
+                    except Exception:
+                        dur_min = 0.0
+                    # 시간은 양수만 처리: 0 이하이면 동작하지 않음 (검증 에러 없이 스킵)
+                    if dur_min <= 0:
+                        continue
+                    sec = int(dur_min * 60.0)
+                    try:
+                        min_runtime_sec = int(getattr(self, 'min_runtime_sec', 15) or 0)
+                    except Exception:
+                        min_runtime_sec = 15
+                    if sec < min_runtime_sec:
+                        continue
+                    out_ch = dyn_out_ch_objs.get(ch_key)
+                    if out_ch is None:
+                        try:
+                            out_ch = dyn_out_ch_objs.get(int(ch_key))
+                        except Exception:
+                            pass
+                    if out_ch is None:
+                        # try resolving from stored channel id on the fly
+                        cid = dyn_out_ch_ids.get(ch_key)
+                        if cid is None:
+                            try:
+                                cid = dyn_out_ch_ids.get(int(ch_key))
+                            except Exception:
+                                cid = None
+                        if cid:
+                            try:
+                                out_ch = self.get_output_channel_from_channel_id(cid)
+                            except Exception:
+                                out_ch = None
+                    if out_ch is None:
+                        self.logger.warning(f"[ValveTime] Channel {ch_key} skipped: no output selected or resolvable.")
+                        continue
+                    out_id_resolved = None
+                    ch_idx_resolved = None
+                    try:
+                        if out_ch is not None:
+                            try:
+                                out_id_resolved = getattr(out_ch, 'output_id', None) or getattr(getattr(out_ch, 'output', None), 'unique_id', None) or getattr(getattr(out_ch, 'device', None), 'unique_id', None)
+                            except Exception:
+                                pass
+                            try:
+                                ci = getattr(out_ch, 'channel', None)
+                                if isinstance(ci, str) and ci.isdigit():
+                                    ci = int(ci)
+                                if isinstance(ci, int):
+                                    ch_idx_resolved = ci
+                            except Exception:
+                                pass
+                        if out_id_resolved is None or ch_idx_resolved is None:
+                            cid = dyn_out_ch_ids.get(ch_key)
+                            if cid is None:
+                                try:
+                                    cid = dyn_out_ch_ids.get(int(ch_key))
+                                except Exception:
+                                    cid = None
+                            if cid:
+                                try:
+                                    from aot.databases.models import OutputChannel as _OC
+                                    row = db_retrieve_table_daemon(_OC, unique_id=cid)
+                                    if row:
+                                        out_id_resolved = out_id_resolved or getattr(row, 'output_id', None) or getattr(row, 'device_id', None)
+                                        if ch_idx_resolved is None:
+                                            rc = getattr(row, 'channel', None)
+                                            if isinstance(rc, str) and rc.isdigit():
+                                                rc = int(rc)
+                                            if isinstance(rc, int):
+                                                ch_idx_resolved = rc
+                                    if out_id_resolved is None:
+                                        out_id_resolved = cid
+                                    if ch_idx_resolved is None:
+                                        rows = db_retrieve_table_daemon(_OC).filter(_OC.output_id == out_id_resolved).all()
+                                        if rows:
+                                            preferred = None
+                                            smallest = None
+                                            for r in rows:
+                                                rc = getattr(r, 'channel', None)
+                                                if isinstance(rc, str) and rc.isdigit():
+                                                    rc = int(rc)
+                                                if rc == 0:
+                                                    preferred = 0
+                                                    break
+                                                if isinstance(rc, int):
+                                                    if smallest is None or rc < smallest:
+                                                        smallest = rc
+                                            ch_idx_resolved = 0 if preferred == 0 else smallest
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+                    if out_id_resolved is None or ch_idx_resolved is None:
+                        self.logger.warning(f"[ValveTime] Channel {ch_key} skipped: no output selected or resolvable.")
+                        continue
+                    plan.append((ch_key, out_id_resolved, ch_idx_resolved, sec))
+                    continue  # done with duration_min override
+                # ---- default: original measurement-based logic ----
                 # Resolve measurement identifiers
                 dev_id = dyn_time_dev.get(ch_key)
                 if dev_id is None:
@@ -638,6 +756,9 @@ class CustomModule(AbstractFunction):
                             out_ch = self.get_output_channel_from_channel_id(cid)
                         except Exception:
                             out_ch = None
+                if out_ch is None:
+                    self.logger.warning(f"[ValveTime] Channel {ch_key} skipped: no output selected or resolvable.")
+                    continue
 
                 sign = dyn_sign.get(ch_key)
                 if sign is None:
@@ -718,6 +839,10 @@ class CustomModule(AbstractFunction):
                 raw_val = self._extract_value(last)
                 sec, reason = self._parse_seconds_from_measurement(raw_val, sign)
                 sec = self._clamp_seconds(sec, max_per_valve_sec)
+                try:
+                    min_runtime_sec = int(getattr(self, 'min_runtime_sec', 15) or 0)
+                except Exception:
+                    min_runtime_sec = 15
                 if sec < min_runtime_sec:
                     reason = 'below_min_runtime_cap'
                 if reason != 'ok' or sec <= 0:
@@ -784,8 +909,7 @@ class CustomModule(AbstractFunction):
                     pass
 
                 if out_id_resolved is None or ch_idx_resolved is None:
-                    self.logger.error(f"[IrrigationControl] Channel {ch_key} cannot resolve output/channel (out_id={out_id_resolved}, ch_idx={ch_idx_resolved})")
-                    reasons_map[str(ch_key)] = 'unresolvable_output_or_channel'
+                    self.logger.warning(f"[ValveTime] Channel {ch_key} skipped: no output selected or resolvable.")
                     continue
 
                 plan.append((ch_key, out_id_resolved, ch_idx_resolved, sec))

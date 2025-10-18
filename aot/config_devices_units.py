@@ -265,6 +265,10 @@ MEASUREMENTS = {
         'name': lazy_gettext('Rotation'),
         'meas': 'rotation',
         'units': ['steps']},
+    'rssi': {
+        'name': lazy_gettext('RSSI'),
+        'meas': 'rssi',
+        'units': ['dBm']},
     'revolutions': {  # TODO: Move revolutions to rotations
         'name': lazy_gettext('Revolutions'),
         'meas': 'revolutions',
@@ -297,6 +301,10 @@ MEASUREMENTS = {
         'name': lazy_gettext('신적설'),
         'meas': 'snowfall',
         'units': ['cm']},
+    'snr': {
+        'name': lazy_gettext('SNR'),
+        'meas': 'snr',
+        'units': ['dB']},
     'specific_gravity': {
         'name': lazy_gettext('Specific Gravity'),
         'meas': 'specific_gravity',
@@ -413,6 +421,12 @@ UNITS = {
     'day': {
         'name': lazy_gettext('Day'),
         'unit': 'day'},
+    'dB': {
+        'name': lazy_gettext('Decibel'),
+        'unit': 'dB'},
+    'dBm': {
+        'name': lazy_gettext('Decibel-milliwatts'),
+        'unit': 'dBm'},
     'decimal': {
         'name': lazy_gettext('Decimal'),
         'unit': ''},

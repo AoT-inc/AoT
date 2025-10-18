@@ -307,7 +307,15 @@ class InputModule(AbstractInput):
 
             try:
                 jmesexpression = self.jmespath.compile(json_name)
-                value = float(jmesexpression.search(json_values))
+                result = jmesexpression.search(json_values)
+                if result is None or (isinstance(result, str) and not result.strip()):
+                    self.logger.debug(f"Value for {json_name} not found or empty; skipping.")
+                    continue
+                try:
+                    value = float(result)
+                except (TypeError, ValueError):
+                    self.logger.debug(f"Non-numeric value for {json_name}: {result}; skipping.")
+                    continue
                 self.logger.debug(
                     "Found key: {}, value: {}".format(json_name, value))
                 measurement[each_channel] = {}

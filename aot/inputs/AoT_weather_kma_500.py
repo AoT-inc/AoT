@@ -342,6 +342,7 @@ class InputModule(AbstractInput):
 
         rows.sort(key=lambda r: r['pub_timestamp'])
         latest_ts_seen = None
+        rows_written = 0
 
         # QC options
         qc_enable = bool(_get_opt(self, 'qc_enable', True))
@@ -457,11 +458,25 @@ class InputModule(AbstractInput):
         # Persist latest timestamp for this input (if newer)
         if latest_ts_seen:
             try:
+                # Normalize to naive UTC for DB comparison/storage to avoid naive/aware TypeError
+                latest_ts_aware = latest_ts_seen
+                if latest_ts_aware.tzinfo is not None:
+                    latest_ts_naive_utc = latest_ts_aware.astimezone(timezone.utc).replace(tzinfo=None)
+                else:
+                    latest_ts_naive_utc = latest_ts_aware
+
                 with session_scope(AOT_DB_PATH) as new_session:
                     mod_input = new_session.query(Input).filter(Input.unique_id == self.unique_id).first()
-                    if mod_input is not None and (not mod_input.datetime or mod_input.datetime < latest_ts_seen):
-                        mod_input.datetime = latest_ts_seen
-                        new_session.commit()
+                    if mod_input is not None:
+                        db_dt = getattr(mod_input, 'datetime', None)
+                        if db_dt is not None and getattr(db_dt, 'tzinfo', None) is not None:
+                            db_dt_naive_utc = db_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                        else:
+                            db_dt_naive_utc = db_dt
+
+                        if db_dt_naive_utc is None or db_dt_naive_utc < latest_ts_naive _utc:
+                            mod_input.datetime = latest_ts_naive_utc
+                            new_session.commit()
             except Exception as e:
                 self.logger.error(f"Persisting latest datetime failed: {e}")
 

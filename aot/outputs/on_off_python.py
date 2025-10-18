@@ -342,10 +342,19 @@ class OutputModule(AbstractOutput):
         return self.output_setup
 
     def stop_output(self):
-        """Called when Output is stopped."""
-        if self.is_setup():
-            if self.options_channels['state_shutdown'][0] == 1:
-                self.output_switch('on')
-            elif self.options_channels['state_shutdown'][0] == 0:
-                self.output_switch('off')
+        """Called when Output is stopped.
+        Signal user code to stop, then apply configured shutdown state on channel 0.
+        """
+        # 1) First, signal any long-running user code loops to stop
         self.running = False
+
+        # 2) Then, if this output is initialized, apply shutdown state
+        try:
+            if self.is_setup():
+                state = self.options_channels['state_shutdown'][0]
+                if state == 1:
+                    self.output_switch('on', output_channel=0)
+                elif state == 0:
+                    self.output_switch('off', output_channel=0)
+        except Exception as err:
+            self.logger.error(f"Stop (shutdown state) failed: {err}")
