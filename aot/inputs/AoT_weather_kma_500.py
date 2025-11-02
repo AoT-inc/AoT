@@ -62,12 +62,25 @@ QC_BOUNDS = {
     'sd_tot': (0.0, 500.0)      # cm
 }
 
+
 def _in_bounds(key, val):
     lo, hi = QC_BOUNDS[key]
     try:
         return lo <= float(val) <= hi
     except Exception:
         return False
+
+# Helper: safely parse float or return None if invalid/empty
+def _to_float_or_none(s):
+    try:
+        if s is None:
+            return None
+        s = str(s).strip()
+        if s == "" or s.lower() == "nan":
+            return None
+        return float(s.replace(',', ''))
+    except Exception:
+        return None
 
 from aot.inputs.base_input import AbstractInput
 from aot.inputs.sensorutils import calculate_dewpoint
@@ -103,8 +116,8 @@ measurements_dict = {
 
 INPUT_INFORMATION = {
     'input_name_unique': 'AoT_weather_kma_500',
-    'input_manufacturer': 'AoT_KMA',
-    'input_name': '기상청 고해상도 500m 격자 v2',
+    'input_manufacturer': 'KMA',
+    'input_name': '기상청 고해상도 500m',
     'input_name_short': '기상청 환경데이터',
     'measurements_dict': measurements_dict,
     'url_additional': 'https://apihub.kma.go.kr',
@@ -226,11 +239,20 @@ class InputModule(AbstractInput):
         super().__init__(input_dev, testing=testing, name=__name__)
         if not hasattr(self.input_dev, 'options'):
             self.input_dev.options = {}
-            self.api_url = None
-            self.api_key = None
-            self.lon = None
-            self.lat = None
-            self.period = 600  # 기본값 600초
+        self.api_url = None
+        self.api_key = None
+        self.lon = None
+        self.lat = None
+        self.period = 600  # 기본값 600초
+        self._pre_output_pipeline_warned = False
+
+        # Aggregated QC counters (reset per cycle)
+        self._qc_live_replaced = 0
+        self._qc_live_dropped = 0
+        self._qc_live_zero_ta_dropped = 0
+        self._qc_backfill_replaced = 0
+        self._qc_backfill_dropped = 0
+        self._qc_backfill_zero_ta_dropped = 0
 
         self._last_good = None
         self._last_good_ts = None
@@ -270,6 +292,11 @@ class InputModule(AbstractInput):
         except Exception:
             self.logger.error("past_minutes must be integer-like")
             return
+
+        # reset QC aggregation counters for backfill cycle
+        self._qc_backfill_replaced = 0
+        self._qc_backfill_dropped = 0
+        self._qc_backfill_zero_ta_dropped = 0
 
         now = datetime.datetime.now()
         tm1_dt = now - datetime.timedelta(minutes=minutes)
@@ -314,25 +341,24 @@ class InputModule(AbstractInput):
             # Skip obviously bogus triple-zero rows
             try:
                 if (float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[5]) == 0.0):
-                    self.logger.info(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
+                    self.logger.debug(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
                     continue
             except Exception:
                 pass
-            try:
-                row = {
-                    'pub_timestamp': pub_timestamp,
-                    'ta': float(cols[1].replace(',', '')),
-                    'hm': float(cols[2].replace(',', '')),
-                    'wd_10m': float(cols[3].replace(',', '')),
-                    'ws_10m': float(cols[4].replace(',', '')),
-                    'pa': float(cols[5].replace(',', '')),
-                    'rn_ox': float(cols[6].replace(',', '')),
-                    'rn_15m': float(cols[7].replace(',', '')),
-                    'vs': float(cols[8].replace(',', '')),
-                    'sd_tot': float(cols[9].replace(',', '')),
-                }
-            except Exception as e:
-                self.logger.error(f"Parsing error during backfill: {e}")
+            row = {
+                'pub_timestamp': pub_timestamp,
+                'ta': _to_float_or_none(cols[1] if len(cols) > 1 else None),
+                'hm': _to_float_or_none(cols[2] if len(cols) > 2 else None),
+                'wd_10m': _to_float_or_none(cols[3] if len(cols) > 3 else None),
+                'ws_10m': _to_float_or_none(cols[4] if len(cols) > 4 else None),
+                'pa': _to_float_or_none(cols[5] if len(cols) > 5 else None),
+                'rn_ox': _to_float_or_none(cols[6] if len(cols) > 6 else None),
+                'rn_15m': _to_float_or_none(cols[7] if len(cols) > 7 else None),
+                'vs': _to_float_or_none(cols[8] if len(cols) > 8 else None),
+                'sd_tot': _to_float_or_none(cols[9] if len(cols) > 9 else None),
+            }
+            # if all numeric fields are None, skip this row
+            if all(v is None for k, v in row.items() if k != 'pub_timestamp'):
                 continue
             rows.append(row)
 
@@ -370,11 +396,13 @@ class InputModule(AbstractInput):
                 for k in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
                     if not _in_bounds(k, row[k]):
                         if self._last_good and self._last_good_ts and (now_ts - self._last_good_ts).total_seconds() <= qc_hold_seconds:
-                            self.logger.warning(f"QC replacing invalid {k} with last good value during backfill.")
+                            self.logger.debug(f"QC replacing invalid {k} with last good value during backfill.")
                             row[k] = self._last_good.get(k, row[k])
+                            self._qc_backfill_replaced += 1
                         else:
-                            self.logger.warning(f"QC dropping field {k} (no fallback) during backfill: {row[k]}")
+                            self.logger.debug(f"QC dropping field {k} (no fallback) during backfill: {row[k]}")
                             row[k] = None
+                            self._qc_backfill_dropped += 1
 
             # --- QC: accept 0°C only if previous good is within ±margin ---
             try:
@@ -385,8 +413,9 @@ class InputModule(AbstractInput):
             curr_ta = row.get('ta')
             if curr_ta is not None and float(curr_ta) == 0.0:
                 if not (prev_ta is not None and abs(float(prev_ta) - 0.0) <= margin):
-                    self.logger.warning(f"Backfill QC dropping suspicious 0°C temperature (prev={prev_ta}, margin=±{margin}°C).")
+                    self.logger.debug(f"Backfill QC dropping suspicious 0°C temperature (prev={prev_ta}, margin=±{margin}°C).")
                     row['ta'] = None
+                    self._qc_backfill_zero_ta_dropped += 1
 
             measurements = {}
             if self.is_enabled(0) and row.get('ta') is not None:
@@ -422,7 +451,13 @@ class InputModule(AbstractInput):
                     if isinstance(processed, dict) and processed:
                         measurements = processed
                 else:
-                    self.logger.info("Pre-output action pipeline not available; writing raw measurements.")
+                    try:
+                        if not getattr(self, '_pre_output_pipeline_warned', False):
+                            self.logger.debug("Pre-output action pipeline not available; writing raw measurements (subsequent messages suppressed).")
+                            self._pre_output_pipeline_warned = True
+                    except Exception:
+                        # Fallback: single debug log if attribute access fails
+                        self.logger.debug("Pre-output action pipeline not available; writing raw measurements.")
             except Exception as e:
                 self.logger.warning(f"pre-output actions during backfill failed: {e}")
 
@@ -455,6 +490,16 @@ class InputModule(AbstractInput):
                     self._last_good[key] = val
             self._last_good_ts = datetime.datetime.now()
 
+        # Aggregated QC summary for backfill (single line per cycle)
+        try:
+            if (self._qc_backfill_replaced + self._qc_backfill_dropped + self._qc_backfill_zero_ta_dropped) > 0:
+                self.logger.debug(
+                    "QC(backfill) summary: replaced=%d, dropped=%d, zero_ta_dropped=%d",
+                    self._qc_backfill_replaced, self._qc_backfill_dropped, self._qc_backfill_zero_ta_dropped
+                )
+        except Exception:
+            pass
+
         # Persist latest timestamp for this input (if newer)
         if latest_ts_seen:
             try:
@@ -474,7 +519,7 @@ class InputModule(AbstractInput):
                         else:
                             db_dt_naive_utc = db_dt
 
-                        if db_dt_naive_utc is None or db_dt_naive_utc < latest_ts_naive _utc:
+                        if db_dt_naive_utc is None or db_dt_naive_utc < latest_ts_naive_utc:
                             mod_input.datetime = latest_ts_naive_utc
                             new_session.commit()
             except Exception as e:
@@ -514,23 +559,22 @@ class InputModule(AbstractInput):
             # Skip rows that are obviously bogus (core metrics all zero)
             try:
                 if (float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[5]) == 0.0):
-                    self.logger.info(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
+                    self.logger.debug(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
                     continue
             except Exception:
                 pass
-            
-            try:
-                curr_ta = float(cols[1].replace(',', ''))
-                curr_hm = float(cols[2].replace(',', ''))
-                curr_wd_10m = float(cols[3].replace(',', ''))
-                curr_ws_10m = float(cols[4].replace(',', ''))
-                curr_pa = float(cols[5].replace(',', ''))
-                curr_rn_ox = float(cols[6].replace(',', ''))
-                curr_rn_15m = float(cols[7].replace(',', ''))
-                curr_vs = float(cols[8].replace(',', ''))
-                curr_sd_tot = float(cols[9].replace(',', ''))
-            except (ValueError, IndexError) as e:
-                self.logger.error(f"Parsing error: {e}")
+
+            curr_ta = _to_float_or_none(cols[1] if len(cols) > 1 else None)
+            curr_hm = _to_float_or_none(cols[2] if len(cols) > 2 else None)
+            curr_wd_10m = _to_float_or_none(cols[3] if len(cols) > 3 else None)
+            curr_ws_10m = _to_float_or_none(cols[4] if len(cols) > 4 else None)
+            curr_pa = _to_float_or_none(cols[5] if len(cols) > 5 else None)
+            curr_rn_ox = _to_float_or_none(cols[6] if len(cols) > 6 else None)
+            curr_rn_15m = _to_float_or_none(cols[7] if len(cols) > 7 else None)
+            curr_vs = _to_float_or_none(cols[8] if len(cols) > 8 else None)
+            curr_sd_tot = _to_float_or_none(cols[9] if len(cols) > 9 else None)
+            # if all parsed values are None, skip this row
+            if all(v is None for v in (curr_ta, curr_hm, curr_wd_10m, curr_ws_10m, curr_pa, curr_rn_ox, curr_rn_15m, curr_vs, curr_sd_tot)):
                 continue
             # YYYYMMDDHHMM 포맷이므로 문자열 비교로 최신 pub_timestamp 선택
             if best_ts is None or pub_timestamp > best_ts:
@@ -592,26 +636,39 @@ class InputModule(AbstractInput):
             except Exception as e:
                 self.logger.error(f"Failed to auto-reset backfill_request: {e}")
 
-        # First-run backfill up to 1 day (or since last seen)
+        # First-run backfill policy:
+        # - If DB has data within the last 7 days, SKIP the initial weekly backfill.
+        # - Otherwise, backfill up to 7 days (or since last data, whichever is smaller).
         if self.first_run:
             self.first_run = False
-            one_day_sec = 86400
-            seconds_download = one_day_sec
+            week_sec = 7 * 86400
+            do_backfill = True
+            seconds_download = week_sec
             try:
+                utc_now = datetime.datetime.utcnow()
                 if self.latest_datetime:
-                    utc_now = datetime.datetime.utcnow()
+                    # self.latest_datetime is stored as naive UTC (see get_new_data persist)
                     seconds_since_last = (utc_now - self.latest_datetime).total_seconds()
-                    if 0 < seconds_since_last < one_day_sec:
-                        seconds_download = seconds_since_last
+                    if 0 <= seconds_since_last <= week_sec:
+                        # Recent data exists within 7 days → skip heavy initial backfill
+                        self.logger.info("Recent data found in DB within 7 days; skipping initial weekly backfill.")
+                        do_backfill = False
+                    else:
+                        # No recent data (or very old gap) → cap initial backfill to 7 days
+                        seconds_download = min(max(0, seconds_since_last), week_sec) if seconds_since_last > 0 else week_sec
             except Exception:
-                pass
-            minutes_download = int(max(5, round(seconds_download / 60.0)))
-            self.logger.info(f"Initial backfill: downloading ~{minutes_download} minutes of past data...")
-            try:
-                self.get_new_data(minutes_download)
-                did_backfill = True
-            except Exception:
-                self.logger.exception("Backfill get_new_data crashed")
+                # On any error, fall back to a 7-day backfill to heal gaps
+                seconds_download = week_sec
+                do_backfill = True
+            if do_backfill:
+                minutes_download = int(max(5, round(seconds_download / 60.0)))
+                days_hint = round(minutes_download / 1440.0, 2)
+                self.logger.info(f"Initial backfill: downloading ~{minutes_download} minutes (~{days_hint} days) of past data...")
+                try:
+                    self.get_new_data(minutes_download)
+                    did_backfill = True
+                except Exception:
+                    self.logger.exception("Backfill get_new_data crashed")
 
         # If any backfill ran this cycle, skip the live 5-min fetch once
         if did_backfill:
@@ -657,17 +714,24 @@ class InputModule(AbstractInput):
         if data is None:
             return
 
+        # reset QC aggregation counters for live cycle
+        self._qc_live_replaced = 0
+        self._qc_live_dropped = 0
+        self._qc_live_zero_ta_dropped = 0
+
         # --- QC: guard against impossible zeros or out-of-range spikes ---
         if qc_enable:
             now_ts = datetime.datetime.now()
             for k in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
                 if not _in_bounds(k, data[k]):
                     if self._last_good and self._last_good_ts and (now_ts - self._last_good_ts).total_seconds() <= qc_hold_seconds:
-                        self.logger.warning(f"QC replacing invalid {k} with last good value.")
+                        self.logger.debug(f"QC replacing invalid {k} with last good value.")
                         data[k] = self._last_good.get(k, data[k])
+                        self._qc_live_replaced += 1
                     else:
-                        self.logger.warning(f"QC dropping field {k} due to invalid value {data[k]} with no fallback.")
+                        self.logger.debug(f"QC dropping field {k} due to invalid value {data[k]} with no fallback.")
                         data[k] = None
+                        self._qc_live_dropped += 1
 
         # --- QC: accept 0°C only if previous good is within ±margin ---
         try:
@@ -678,8 +742,9 @@ class InputModule(AbstractInput):
         curr_ta = data.get('ta')
         if curr_ta is not None and float(curr_ta) == 0.0:
             if not (prev_ta is not None and abs(float(prev_ta) - 0.0) <= margin):
-                self.logger.warning(f"QC dropping suspicious 0°C temperature (prev={prev_ta}, margin=±{margin}°C).")
+                self.logger.debug(f"QC dropping suspicious 0°C temperature (prev={prev_ta}, margin=±{margin}°C).")
                 data['ta'] = None
+                self._qc_live_zero_ta_dropped += 1
 
         ta = data.get("ta")
         hm = data.get("hm")
@@ -709,6 +774,16 @@ class InputModule(AbstractInput):
             if val is not None:
                 self._last_good[key] = val
         self._last_good_ts = datetime.datetime.now()
+
+        # Aggregated QC summary for live cycle (single line per cycle)
+        try:
+            if (self._qc_live_replaced + self._qc_live_dropped + self._qc_live_zero_ta_dropped) > 0:
+                self.logger.debug(
+                    "QC(live) summary: replaced=%d, dropped=%d, zero_ta_dropped=%d",
+                    self._qc_live_replaced, self._qc_live_dropped, self._qc_live_zero_ta_dropped
+                )
+        except Exception:
+            pass
 
         # 데이터를 분류하여 self.return_dict에 저장
         if self.is_enabled(0) and ta is not None:

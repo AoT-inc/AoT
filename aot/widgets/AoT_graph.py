@@ -149,6 +149,7 @@ def past_data(unique_id, measure_type, measurement_id, past_seconds):
 def execute_at_creation(error, new_widget, dict_widget):
     # Create initial default values
     custom_options_json = json.loads(new_widget.custom_options)
+    custom_options_json['use_custom_colors'] = "y"
     custom_options_json['disable_data_grouping'] = ""
     custom_options_json['series_type'] = ""
     custom_options_json['custom_yaxes'] = ""
@@ -910,11 +911,11 @@ WIDGET_INFORMATION = {
         }
       }
     },
-  {% if widget_options['use_custom_colors'] and widget_options['custom_colors'] -%}
-    {% set color_list = widget_options['custom_colors'] %}
+  {% if widget_options['use_custom_colors'] and widget_variables['colors_graph'] -%}
+    {% set color_list = widget_variables['colors_graph'] %}
       colors: [
-    {%- for each_color in color_list -%}
-      "{{each_color}}",
+    {%- for each_series in color_list if each_series['color'] -%}
+      "{{each_series['color']}}"{% if not loop.last %},{% endif %}
      {%- endfor -%}],
   {%- endif -%}
 
