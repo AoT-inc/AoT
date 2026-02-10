@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import subprocess
+import mimetypes
 from importlib import import_module
 from io import StringIO
 
@@ -31,6 +32,8 @@ from aot.utils.influx import (influx_to_list, influxdb_get_count_points,
                                  influxdb_get_first_point, query_string)
 from aot.utils.system_pi import (assure_path_exists, is_int,
                                     return_measurement_info, str_is_float)
+from aot.utils.influx import read_influxdb_list
+from pytz import timezone
 
 blueprint = Blueprint('routes_general',
                       __name__,
@@ -140,17 +143,52 @@ def output_mod(output_id, channel, state, output_type, amount):
                f'state: {state}, output_type: {output_type}, amount: {amount}'
 
 
-@blueprint.route('/note_attachment/<filename>')
+@blueprint.route('/note_attachment/<path:filename>')
 @flask_login.login_required
 def send_note_attachment(filename):
-    """Return a file from the note attachment directory."""
+    """Return a file from the note attachment directory (supporting legacy paths)."""
+    from flask import current_app
+    
+    # Check new path first (filename handles subdirectories like 2026/01/...)
     file_path = os.path.join(PATH_NOTE_ATTACHMENTS, filename)
-    if file_path is not None:
-        try:
-            if os.path.abspath(file_path).startswith(PATH_NOTE_ATTACHMENTS):
-                return send_file(file_path, as_attachment=True)
-        except Exception:
-            logger.exception("Send note attachment")
+    if not os.path.exists(file_path):
+        # Fallback to legacy static path
+        legacy_path = os.path.join(current_app.static_folder, 'uploads', 'notes', filename)
+        if os.path.exists(legacy_path):
+            file_path = legacy_path
+        else:
+            return "File not found", 404
+
+    try:
+        # Serve inline (no as_attachment=True)
+        # Explicitly guess mimetype to ensure correct rendering (e.g. for images)
+        mime_type, _ = mimetypes.guess_type(file_path)
+        return send_file(file_path, mimetype=mime_type)
+    except Exception:
+        logger.exception("Send note attachment failed")
+        return "Internal error", 500
+@blueprint.route('/note_gallery/<unique_id>')
+@flask_login.login_required
+def note_gallery(unique_id):
+    """Render a full-screen gallery for a specific note."""
+    note = Notes.query.filter(Notes.unique_id == unique_id).first()
+    if not note:
+        return "Note not found", 404
+    
+    # Process files
+    image_files = []
+    if note.files:
+        all_files = note.files.split(',')
+        for f in all_files:
+            f = f.trim() if hasattr(f, 'trim') else f.strip()
+            ext = f.split('.')[-1].lower()
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic']:
+                image_files.append(f)
+                
+    if not image_files:
+        return "No images in this note", 404
+        
+    return render_template('tools/note_gallery.html', note=note, image_files=image_files)
 
 
 @blueprint.route('/camera/<unique_id>/<img_type>/<filename>')
@@ -267,10 +305,35 @@ def gpio_state():
 @flask_login.login_required
 def gpio_state_unique_id(unique_id, channel_id):
     """Return the GPIO state, for dashboard output."""
+    # Robustly handle composite IDs (uuid::channel)
+    if unique_id and '::' in unique_id:
+        unique_id = unique_id.split('::')[0]
+
     channel = OutputChannel.query.filter(OutputChannel.unique_id == channel_id).first()
     daemon_control = DaemonControl()
-    state = daemon_control.output_state(unique_id, channel.channel)
+    if channel:
+        state = daemon_control.output_state(unique_id, channel.channel)
+    else:
+        # If looking up by channel UUID failed, try using channel_id as int if possible, or default to 0
+        # This is a fallback for legacy or mismatched data
+        try:
+             chan_idx = int(channel_id)
+        except:
+             chan_idx = 0
+        state = daemon_control.output_state(unique_id, chan_idx)
+    
     return jsonify(state)
+
+
+@blueprint.route('/inputstate')
+@flask_login.login_required
+def input_state_all():
+    """Return activation states of all inputs."""
+    states = {}
+    inputs = Input.query.all()
+    for inp in inputs:
+        states[inp.unique_id] = bool(getattr(inp, 'is_activated', False))
+    return jsonify(states)
 
 
 @blueprint.route('/widget_execute/<unique_id>')
@@ -402,7 +465,7 @@ def export_data(unique_id, measurement_id, start_seconds, end_seconds):
         start_str=start_str, end_str=end_str)
 
     if not data:
-        flash('No measurements to export in this time period', 'error')
+        flash(gettext('No measurements to export in this time period'), 'error')
         return redirect(url_for('routes_page.page_export'))
 
     # Generate column names
@@ -908,3 +971,55 @@ def computer_command(action):
 #         return send_file(path_file, mimetype='image/jpeg')
 #     else:
 #         return "Could not generate image"
+
+# ==============================================================================
+#  Decoupled Timestamp API (Formerly in AoT_timer.py)
+# ==============================================================================
+
+def _resolve_channel_index(device_unique_id, channel_id):
+    """
+    Returns an integer channel index if resolvable, else None.
+    Accepts either plain integer strings (e.g., '0') or OutputChannel.unique_id (UUID).
+    """
+    # Fast path: integer-like channel_id
+    try:
+        if isinstance(channel_id, int): return channel_id
+        return int(channel_id)
+    except Exception:
+        pass
+    # UUID path: look up OutputChannel by unique_id
+    try:
+        from aot.utils.database import db_retrieve_table_daemon # Import locally to avoid circular
+        oc = db_retrieve_table_daemon(OutputChannel).filter(OutputChannel.unique_id == channel_id).first()
+        if oc is not None and getattr(oc, 'channel', None) is not None:
+            return int(getattr(oc, 'channel'))
+    except Exception as e:
+        logger.debug(f"_resolve_channel_index lookup failed for device {device_unique_id}, channel_id {channel_id}: {e}")
+    return None
+
+# Note: _read_latest_started_at_safe is now handled by aot.utils.runtime.get_started_at
+
+@blueprint.route('/output_started_at_public/<string:device_unique_id>/<string:channel_id>')
+def output_started_at_public(device_unique_id, channel_id):
+    """
+    Public variant. Returns the most recent ON start timestamp for this output/channel
+    using the aot.utils.runtime centralized service.
+    """
+    try:
+        from aot.utils.runtime import get_started_at
+        
+        started_ts = get_started_at(device_unique_id, channel_id)
+        if started_ts is None:
+            return '', 204
+
+        started_dt = datetime.datetime.utcfromtimestamp(int(started_ts)).replace(tzinfo=timezone('UTC'))
+        payload = {
+            "started_at_epoch": int(started_ts),
+            "started_at_iso": started_dt.isoformat(),
+            # Simplified metadata as it's now handled by runtime.py
+            "source": "runtime_service"
+        }
+        return jsonify(payload)
+    except Exception as e:
+        logger.debug(f"output_started_at_public error: {e}")
+        return '', 204

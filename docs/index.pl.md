@@ -36,8 +36,3 @@ https://127.0.0.1
 *   [Forum dyskusyjne](https://forum.radicaldiy.com)
 *   [Najczęściej zadawane pytania](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 
-### Darowizna
-
-Zostań sponsorem: [github.com/sponsors/aot-inc](https://github.com/sponsors/aot-inc)
-
-Inne metody: [KyleGabriel.com/donate](https://kylegabriel.com/donate)

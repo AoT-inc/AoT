@@ -1,0 +1,171 @@
+extracting messages from __init__.py
+extracting messages from abstract_base_controller.py
+extracting messages from aot_client.py
+extracting messages from aot_daemon.py
+extracting messages from check_startup.py
+extracting messages from config.py
+extracting messages from config_devices_units.py
+extracting messages from config_translations.py
+extracting messages from config_translations_docs.py
+extracting messages from start_flask_ui.py
+extracting messages from actions/__init__.py
+extracting messages from actions/base_action.py
+extracting messages from actions/camera_timelapse_pause.py
+extracting messages from actions/camera_timelapse_resume.py
+extracting messages from actions/clear_total_kWh.py
+extracting messages from actions/clear_total_volume.py
+extracting messages from actions/command_bash.py
+extracting messages from actions/controller_activate.py
+extracting messages from actions/controller_deactivate.py
+extracting messages from actions/create_log_line.py
+extracting messages from actions/create_note.py
+extracting messages from actions/display_backlight_color.py
+extracting messages from actions/display_backlight_off.py
+extracting messages from actions/display_backlight_on.py
+extracting messages from actions/display_flash_off.py
+extracting messages from actions/display_flash_on.py
+extracting messages from actions/email.py
+extracting messages from actions/force_input_measurements.py
+extracting messages from actions/input_action_equation.py
+extracting messages from actions/input_action_execute_python_code.py
+extracting messages from actions/input_action_mqtt_publish.py
+extracting messages from actions/led_kasa_bulb_change_color.py
+extracting messages from actions/led_neopixel_change_color.py
+extracting messages from actions/led_neopixel_flash_off.py
+extracting messages from actions/led_neopixel_flash_on.py
+extracting messages from actions/mqtt_publish.py
+extracting messages from actions/output_on_off.py
+extracting messages from actions/output_pwm.py
+extracting messages from actions/output_ramp_pwm.py
+extracting messages from actions/output_value.py
+extracting messages from actions/output_volume.py
+extracting messages from actions/pause_actions.py
+extracting messages from actions/photo.py
+extracting messages from actions/photo_email.py
+extracting messages from actions/pid_method.py
+extracting messages from actions/pid_pause.py
+extracting messages from actions/pid_resume.py
+extracting messages from actions/pid_setpoint.py
+extracting messages from actions/pid_setpoint_lower.py
+extracting messages from actions/pid_setpoint_raise.py
+extracting messages from actions/system_restart.py
+extracting messages from actions/system_shutdown.py
+extracting messages from actions/webhook.py
+extracting messages from actions/examples/example_action_for_function.py
+extracting messages from actions/examples/example_action_for_input.py
+extracting messages from aot_flask/__init__.py
+extracting messages from aot_flask/app.py
+extracting messages from aot_flask/debug_overlay.py
+extracting messages from aot_flask/extensions.py
+extracting messages from aot_flask/routes_admin.py
+extracting messages from aot_flask/routes_ai_api.py
+extracting messages from aot_flask/routes_authentication.py
+extracting messages from aot_flask/routes_dashboard.py
+extracting messages from aot_flask/routes_function.py
+extracting messages from aot_flask/routes_general.py
+extracting messages from aot_flask/routes_geo.py
+extracting messages from aot_flask/routes_input.py
+extracting messages from aot_flask/routes_locale_api.py
+extracting messages from aot_flask/routes_method.py
+extracting messages from aot_flask/routes_notes_api.py
+extracting messages from aot_flask/routes_output.py
+extracting messages from aot_flask/routes_page.py
+extracting messages from aot_flask/routes_password_reset.py
+extracting messages from aot_flask/routes_remote_admin.py
+extracting messages from aot_flask/routes_settings.py
+extracting messages from aot_flask/routes_static.py
+extracting messages from aot_flask/api/__init__.py
+extracting messages from aot_flask/api/camera.py
+extracting messages from aot_flask/api/choices.py
+extracting messages from aot_flask/api/controller.py
+extracting messages from aot_flask/api/daemon.py
+extracting messages from aot_flask/api/design_ref.py
+extracting messages from aot_flask/api/export_import.py
+extracting messages from aot_flask/api/function.py
+extracting messages from aot_flask/api/geo.py
+extracting messages from aot_flask/api/input.py
+extracting messages from aot_flask/api/measurement.py
+extracting messages from aot_flask/api/note.py
+extracting messages from aot_flask/api/output.py
+extracting messages from aot_flask/api/pid.py
+extracting messages from aot_flask/api/settings.py
+extracting messages from aot_flask/api/sql_schema_fields.py
+extracting messages from aot_flask/api/utils.py
+extracting messages from aot_flask/camera/__init__.py
+extracting messages from aot_flask/camera/base_camera.py
+extracting messages from aot_flask/camera/camera_http_address.py
+extracting messages from aot_flask/camera/camera_opencv.py
+extracting messages from aot_flask/camera/camera_picamera.py
+extracting messages from aot_flask/camera/camera_stream_direct.py
+extracting messages from aot_flask/design_engine/irrigation_processor.py
+extracting messages from aot_flask/forms/__init__.py
+extracting messages from aot_flask/forms/forms_action.py
+extracting messages from aot_flask/forms/forms_authentication.py
+extracting messages from aot_flask/forms/forms_camera.py
+extracting messages from aot_flask/forms/forms_conditional.py
+extracting messages from aot_flask/forms/forms_custom_controller.py
+extracting messages from aot_flask/forms/forms_dashboard.py
+extracting messages from aot_flask/forms/forms_dependencies.py
+extracting messages from aot_flask/forms/forms_function.py
+extracting messages from aot_flask/forms/forms_geo.py
+extracting messages from aot_flask/forms/forms_input.py
+extracting messages from aot_flask/forms/forms_method.py
+extracting messages from aot_flask/forms/forms_misc.py
+extracting messages from aot_flask/forms/forms_notes.py
+extracting messages from aot_flask/forms/forms_output.py
+extracting messages from aot_flask/forms/forms_pid.py
+extracting messages from aot_flask/forms/forms_settings.py
+extracting messages from aot_flask/forms/forms_trigger.py
+extracting messages from aot_flask/geo/__init__.py
+extracting messages from aot_flask/geo/geo_design.py
+extracting messages from aot_flask/geo/geo_io.py
+extracting messages from aot_flask/geo/geo_overlays.py
+extracting messages from aot_flask/geo/widget/__init__.py
+extracting messages from aot_flask/geo/widget/maps.py
+extracting messages from aot_flask/static/apps/notes-widget/index.html (silent="false", extensions="jinja2.ext.do")
+extracting messages from aot_flask/static/apps/notes-widget/node_modules/flatted/python/flatted.py
+extracting messages from aot_flask/static/dist/notes/index.html (silent="false", extensions="jinja2.ext.do")
+extracting messages from aot_flask/static/js/notes/index.html (silent="false", extensions="jinja2.ext.do")
+extracting messages from aot_flask/static/manual/aot-api.html (silent="false", extensions="jinja2.ext.do")
+Traceback (most recent call last):
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/bin/pybabel", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/frontend.py", line 998, in main
+    return CommandLineInterface().run(sys.argv)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/frontend.py", line 924, in run
+    return cmdinst.run()
+           ~~~~~~~~~~~^^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/frontend.py", line 522, in run
+    for filename, lineno, message, comments, context in extracted:
+                                                        ^^^^^^^^^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/extract.py", line 217, in extract_from_dir
+    yield from check_and_call_extract_file(
+    ...<8 lines>...
+    )
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/extract.py", line 282, in check_and_call_extract_file
+    for message_tuple in extract_from_file(
+                         ~~~~~~~~~~~~~~~~~^
+        method, filepath,
+        ^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        strip_comment_tags=strip_comment_tags,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/extract.py", line 324, in extract_from_file
+    return list(extract(method, fileobj, keywords, comment_tags,
+                        options, strip_comment_tags))
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/babel/messages/extract.py", line 451, in extract
+    for lineno, funcname, messages, comments in results:
+                                                ^^^^^^^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/jinja2/ext.py", line 853, in babel_extract
+    node = environment.parse(source)
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/jinja2/environment.py", line 616, in parse
+    self.handle_exception(source=source)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/gwansuk/Library/CloudStorage/SynologyDrive-developments/AoT_dev/env/lib/python3.13/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "<unknown>", line 63, in template
+jinja2.exceptions.TemplateSyntaxError: expected token 'end of print statement', got '{'

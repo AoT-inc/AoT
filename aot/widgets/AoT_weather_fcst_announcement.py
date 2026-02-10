@@ -71,7 +71,8 @@ WIDGET_INFORMATION = {
       },
       {
           'id': 'refresh_seconds',
-          'type': 'float',
+          'type': 'text',
+          'class': 'aot-time-input',
           'default_value': 1800,
           'constraints_pass': constraints_pass_positive_value,
           'name': '새로고침',
@@ -192,6 +193,9 @@ $(document).ready(function(){
 
   // 헬퍼 함수: "yyyymmddhhmm" 형식의 문자열을 Date 객체로 변환
   function parseDateString(dstr) {
+    if (!dstr || dstr.length < 12) {
+      return new Date();
+    }
     var year = parseInt(dstr.substr(0,4));
     var month = parseInt(dstr.substr(4,2)) - 1;
     var day = parseInt(dstr.substr(6,2));
@@ -322,33 +326,35 @@ $(document).ready(function(){
 
   // (3) updateForecast()
   function updateForecast(hour) {
-    // 기존: var dataForHour = forecastData.forecasts[hour.toString()];
-    // 추가: forecast.json의 now와 위젯의 현재시간(widget_now) 비교 및 보정
+    hour = Math.max(-24, Math.min(48, parseInt(hour)));
+    if (!forecastData || !forecastData.forecasts) {
+      iconContainer.innerHTML = '<div>예보 데이터를 찾을 수 없습니다.</div>';
+      textContainer.innerHTML = "";
+      tmpContainer.innerHTML = "";
+      tmnContainer.innerHTML = "";
+      tmxContainer.innerHTML = "";
+      widgetTitleBar.innerHTML = "";
+      container.classList.remove("day-background", "night-background");
+      return;
+    }
+
     var widget_now_str = getWidgetNow();
-    var forecast_now_str = forecastData.now;  // forecast.json 내 "now" 필드
+    var forecast_now_str = forecastData.now || widget_now_str;
     var widget_now = parseDateString(widget_now_str);
     var forecast_now = parseDateString(forecast_now_str);
     var deltaHours = Math.round((widget_now - forecast_now) / (1000 * 3600));
-    
+
     var adjustedHour = parseInt(hour) - deltaHours;
-    // 로그로 보정값 확인
-    console.log("Widget now: " + widget_now_str + ", Forecast now: " + forecast_now_str + ", Delta hours: " + deltaHours + ", Adjusted hour: " + adjustedHour);
-    
     var dataForHour = forecastData.forecasts[adjustedHour.toString()];
+
     if (!dataForHour) {
-      iconContainer.innerHTML = "예보 데이터 없음";
+      iconContainer.innerHTML = '<div>선택한 시간의 예보가 없습니다.</div>';
       textContainer.innerHTML = "";
-      return;
-    }
-    if (!forecastData || !forecastData.forecasts) {
-      iconContainer.innerHTML = "예보 데이터를 찾을 수 없습니다.";
-      textContainer.innerHTML = "";
-      return;
-    }
-    var dataForHour = forecastData.forecasts[hour.toString()];
-    if (!dataForHour) {
-      iconContainer.innerHTML = "예보 데이터 없음";
-      textContainer.innerHTML = "";
+      tmpContainer.innerHTML = "";
+      tmnContainer.innerHTML = "";
+      tmxContainer.innerHTML = "";
+      widgetTitleBar.innerHTML = "";
+      container.classList.remove("day-background", "night-background");
       return;
     }
 
@@ -366,7 +372,7 @@ $(document).ready(function(){
     }
 
     // 타이틀바
-    var offset = parseInt(hour);
+    var offset = hour;
     var forecastTime = new Date();
     forecastTime.setHours(forecastTime.getHours() + offset);
     var forecastHour = forecastTime.getHours();
@@ -402,26 +408,45 @@ $(document).ready(function(){
     }
 
     // 값 추출
-    var tmp = dataForHour.TMP || "-";
-    var reh = dataForHour.REH || "-";
-    var tmn = dataForHour.TMN || "-";
-    var tmx = dataForHour.TMX || "-";
-    var pop = dataForHour.POP || "-";
-    var rn1 = dataForHour.RN1 || "-";
-    var sno = dataForHour.SNO || "-";
-    var windSpeed = dataForHour.WSD || "-";
+    function formatNumber(val, decimals) {
+      if (val === undefined || val === null || val === "") return null;
+      var num = parseFloat(val);
+      if (isNaN(num)) return null;
+      if (decimals === 0) {
+        return Math.round(num).toString();
+      }
+      return num.toFixed(decimals);
+    }
+
+    var tmp = formatNumber(dataForHour.TMP, 0);
+    var reh = formatNumber(dataForHour.REH, 0);
+    var tmn = formatNumber(dataForHour.TMN, 0);
+    var tmx = formatNumber(dataForHour.TMX, 0);
+    var pop = formatNumber(dataForHour.POP, 0);
+    var rn1 = formatNumber(dataForHour.RN1, 1);
+    var sno = formatNumber(dataForHour.SNO, 1);
+    var windSpeed = formatNumber(dataForHour.WSD, 1);
     var windDirVal = dataForHour.VEC || 0;
     var directionStr = windDirection(windDirVal);
 
     // [1] TMP(현재 온도): font_em_tmp 사용
+    var tmpDisplay = tmp !== null ? tmp + '°' : '-';
     tmpContainer.innerHTML =
-      '<span style="font-size:' + parseFloat(fontTmp).toFixed(1) + 'em; font-weight:600;">' + tmp + '°</span>';
+      '<span style="font-size:' + parseFloat(fontTmp).toFixed(1) + 'em; font-weight:600;">' + tmpDisplay + '</span>';
 
     // [2] TMN, TMX, 예보문 등 나머지 텍스트: font_em_text 사용
+    var tmnDisplay = tmn !== null ? tmn + '°' : '-';
+    var tmxDisplay = tmx !== null ? tmx + '°' : '-';
     tmnContainer.innerHTML =
-      '<span style="font-size:' + fontText + 'em;">최저: ' + tmn + '°</span>';
+      '<div style="display:flex; justify-content:space-between; width:100%; font-size:' + fontText + 'em;">' +
+      '<span>최저:</span>' +
+      '<span>' + tmnDisplay + '</span>' +
+      '</div>';
     tmxContainer.innerHTML =
-      '<span style="font-size:' + fontText + 'em;">최고: ' + tmx + '°</span>';
+      '<div style="display:flex; justify-content:space-between; width:100%; font-size:' + fontText + 'em;">' +
+      '<span>최고:</span>' +
+      '<span>' + tmxDisplay + '</span>' +
+      '</div>';
 
     directionStr += " ";  // 풍향 뒤에 공백
 
@@ -432,7 +457,7 @@ $(document).ready(function(){
     forecastText += '  <td style="width:33%; padding: 0 8px; vertical-align: bottom;">'
                   + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
                   + '      <span style="font-size:' + fontText + 'em;">습도:</span>'
-                  + '      <b style="font-size:' + fontText + 'em;">' + reh + '</b>'
+                  + '      <b style="font-size:' + fontText + 'em;">' + (reh !== null ? reh : '-') + '</b>'
                   + '      <span style="font-size:' + fontText + ';">%</span>'
                   + '    </div>'
                   + '  </td>';
@@ -441,26 +466,24 @@ $(document).ready(function(){
     forecastText += '  <td style="width:33%; padding: 0 8px; vertical-align: bottom;">'
                   + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
                   + '      <span style="font-size:' + fontText + 'em;">강수:</span>'
-                  + '      <b style="font-size:' + fontText + 'em;">' + pop + '</b>'
+                  + '      <b style="font-size:' + fontText + 'em;">' + (pop !== null ? pop : '-') + '</b>'
                   + '      <span style="font-size:' + fontText + ';">%</span>'
                   + '    </div>'
                   + '  </td>';
 
     // (3) 적설 or 강수량
-    if (parseFloat(sno) > 0) {
+    if (sno !== null && parseFloat(sno) > 0) {
       forecastText += '  <td style="width:34%; padding: 0 8px; vertical-align: bottom;">'
                     + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-      + '      <span style="font-size:' + fontText + 'em;">적설:</span>'
-                    + '      <b style="font-size:' + fontText + 'em;">' + sno + '</b>'
-                    + '      <span style="font-size:' + fontText + ';">cm</span>'
+                    + '      <span style="font-size:' + fontText + 'em;">적설:</span>'
+                    + '      <b style="font-size:' + fontText + 'em;">' + sno + 'cm</b>'
                     + '    </div>'
                     + '  </td>';
     } else {
       forecastText += '  <td style="width:34%; padding: 0 8px; vertical-align: bottom;">'
                     + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-      + '      <span style="font-size:' + fontText + 'em;">강수:</span>'
-                    + '      <b style="font-size:' + fontText + 'em;">' + rn1 + '</b>'
-                    + '      <span style="font-size:' + fontText + ';">mm</span>'
+                    + '      <span style="font-size:' + fontText + 'em;">강수량:</span>'
+                    + '      <b style="font-size:' + fontText + 'em;">' + (rn1 !== null ? rn1 + 'mm' : '-') + '</b>'
                     + '    </div>'
                     + '  </td>';
     }
@@ -494,14 +517,21 @@ $(document).ready(function(){
         forecastData = data;
         if (callback) callback();
       })
-      .fail(function(jqxhr, textStatus, error) {
+      .fail(function() {
+        forecastData = null;
         iconContainer.innerHTML = '<div>예보 데이터를 불러올 수 없습니다.</div>';
+        textContainer.innerHTML = "";
+        tmpContainer.innerHTML = "";
+        tmnContainer.innerHTML = "";
+        tmxContainer.innerHTML = "";
+        widgetTitleBar.innerHTML = "";
+        container.classList.remove("day-background", "night-background");
       });
   }
 
   // 슬라이더 이벤트
   slider.addEventListener("input", function() {
-    var hour = this.value;
+    var hour = parseInt(this.value);
     localStorage.setItem('forecast_slider_' + unique_id, hour);
     updateForecast(hour);
   });
@@ -513,13 +543,45 @@ $(document).ready(function(){
   }
 
   fetchForecastData(function() {
-    updateForecast(slider.value);
+    updateForecast(parseInt(slider.value));
   });
+
+  // [AoT] Responsive Resize Logic (ResizeObserver)
+  if (window.ResizeObserver && container) {
+      var baseFontTmp = parseFloat("{{ widget_options.font_em_tmp  | default(4.0) }}");
+      var baseFontText = parseFloat("{{ widget_options.font_em_text | default(1.2) }}");
+      // [Tuning] Mobile-First Base Width (375px)
+      var baseWidth = 375; 
+
+      var resizeObserver = new ResizeObserver(function(entries) {
+          for (var i = 0; i < entries.length; i++) {
+              // width from contentRect
+              var width = entries[i].contentRect.width;
+              if (width > 0) {
+                  var scale = width / baseWidth;
+                  
+                  // [Tuning] Apply clamping (0.8 ~ 1.0)
+                  // Mobile (375px): 1.0x (Standard)
+                  // Desktop (800px+): Max 1.0x (Capped at standard size)
+                  // Small: Min 0.8x
+                  scale = Math.min(Math.max(scale, 0.8), 1.0);
+
+                  // Update global font variables
+                  fontTmp = (baseFontTmp * scale).toFixed(2);
+                  fontText = (baseFontText * scale).toFixed(2);
+
+                  // Trigger re-render immediately
+                  updateForecast(parseInt(slider.value));
+              }
+          }
+      });
+      resizeObserver.observe(container);
+  }
 
   // 주기적 갱신
   setInterval(function(){
     fetchForecastData(function(){
-      updateForecast(slider.value);
+      updateForecast(parseInt(slider.value));
     });
   }, refreshSeconds * 1000);
 });

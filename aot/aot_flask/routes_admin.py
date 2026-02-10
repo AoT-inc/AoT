@@ -178,6 +178,8 @@ def install_dependencies(dependencies):
         f.write("\n[{time}] Dependency installation beginning. Installing: {deps}\n\n".format(
             time=now, deps=", ".join(dependency_list)))
 
+    failures = []
+
     for each_dep in dependencies:
         if each_dep[2] == 'bash-commands':
             for each_command in each_dep[1]:
@@ -195,6 +197,9 @@ def install_dependencies(dependencies):
                     with open(DEPENDENCY_LOG_FILE, 'a+') as f:
                         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         f.write(f"\n[{now}] Command returned: out: {cmd_out}, error: {cmd_err}, status: {cmd_status}\n")
+
+                    if cmd_status != 0:
+                        failures.append(each_command)
                 except:
                     logger.exception("Executing command")
         else:
@@ -205,10 +210,21 @@ def install_dependencies(dependencies):
                     dep=each_dep[1])
             dep = subprocess.Popen(cmd, shell=True)
             dep.wait()
+            if dep.returncode:
+                failures.append(each_dep[1])
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(DEPENDENCY_LOG_FILE, 'a+') as f:
                 f.write("\n[{time}] End install of {dep}\n\n".format(
                     time=now, dep=each_dep[0]))
+
+    if failures:
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(DEPENDENCY_LOG_FILE, 'a+') as f:
+            f.write("\n[{time}] #### Dependency install encountered errors. Failed items: {fails}\n\n".format(
+                time=now, fails=", ".join(failures)))
+        with open(DEPENDENCY_INIT_FILE, 'w') as f:
+            f.write('0')
+        return
 
     cmd = "{pth}/aot/scripts/aot_wrapper update_permissions" \
           " | ts '[%Y-%m-%d %H:%M:%S]' >> {log}  2>&1".format(

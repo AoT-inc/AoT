@@ -12,10 +12,10 @@
     {% include 'flash_messages.html' %}
 
     <div style="padding-bottom: 2em">
-      원격 AoT 호스트를 추가하여 데이터를 제어하고 확인합니다.
+      {{_('Add remote AoT hosts to control and monitor data.')}}
     </div>
     <div style="padding-bottom: 2em">
-      추가하려는 원격 AoT 호스트의 사용자는 해당 호스트의 <i>관리자</i> 그룹에 속해 있어야 합니다 (관리자/설정/사용자 메뉴). 원격 호스트에서 포트 443(HTTPS)이 열려 있고 접근 가능해야 합니다. 비로컬 네트워크를 통해 통신하려는 경우 라우터 설정에서 포트 포워딩이 활성화되어 있는지 확인하십시오. 호스트를 추가한 후, 새로운 호스트 항목 옆에 접근 가능 여부를 나타내는 상태 아이콘이 표시됩니다.
+      {{_('Users on the remote AoT host must belong to the "Admin" group (Admin/Settings/Users menu). Port 443 (HTTPS) must be open and accessible on the remote host. Confirm port forwarding is enabled in router settings if communicating through a non-local network. After adding, a status icon next to the host entry indicates accessibility.')}}
     </div>
 
     <form method="post" action="/remote/setup">
@@ -79,7 +79,7 @@
             </div>
           </div>
           <div class="col-auto">
-            <label class='control-label'>{{_('상태')}}</label>
+            <label class='control-label'>{{_('Status')}}</label>
             <div class="text-center justify-content-center">
               {% if host_auth[each_host.host] == 'authenticated' %}
                 <img src="/static/img/on.png" style="width: 30px">

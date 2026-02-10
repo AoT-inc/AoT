@@ -19,15 +19,16 @@ from aot.aot_flask.utils.utils_general import (
     custom_options_return_json, delete_entry_with_id, flash_success_errors,
     return_dependencies, use_unit_generate)
 from aot.utils.widgets import parse_widget_information
+from aot.utils.widget_generate_html import generate_widget_html
 
 logger = logging.getLogger(__name__)
 
 #
-# 대시보드
+# Dashboard
 #
 
 def dashboard_add():
-    """대시보드를 추가합니다."""
+    """Add a dashboard."""
     error = []
 
     last_dashboard = Dashboard.query.order_by(
@@ -44,13 +45,13 @@ def dashboard_add():
     if not error:
         new_dash.save()
 
-        flash(gettext("ID %(id)s의 대시보드가 성공적으로 추가되었습니다.", id=new_dash.id), "success")
+        flash(gettext("Dashboard with ID %(id)s has been successfully added.", id=new_dash.id), "success")
 
     return new_dash.unique_id
 
 
 def dashboard_mod(form):
-    """대시보드를 수정합니다."""
+    """Modify a dashboard."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['modify']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
@@ -62,7 +63,7 @@ def dashboard_mod(form):
     name_exists = Dashboard.query.filter(
         Dashboard.name == form.name.data).first()
     if dash_mod.name != form.name.data and name_exists:
-        flash(gettext("대시보드 이름이 이미 사용 중입니다."), 'error')
+        flash(gettext("Dashboard name is already in use."), 'error')
 
     dash_mod.name = form.name.data
 
@@ -74,7 +75,7 @@ def dashboard_mod(form):
 
 
 def dashboard_lock(dashboard_id, lock):
-    """대시보드를 잠급니다."""
+    """Lock a dashboard."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['lock']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
@@ -91,43 +92,43 @@ def dashboard_lock(dashboard_id, lock):
 
     except Exception as msg:
         error.append(msg)
-        logger.exception("대시보드 잠금 중 예외 발생")
+        logger.exception("Exception occurred while locking dashboard")
 
     flash_success_errors(
         error, action, url_for('routes_dashboard.page_dashboard_default'))
 
 
 def dashboard_copy(form):
-    """대시보드와 위젯들을 복제합니다."""
+    """Duplicate dashboard and widgets."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['duplicate']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
     error = []
 
     try:
-        # 현재 대시보드와 그 위젯들을 가져옵니다.
+        # Get current dashboard and its widgets.
         dashboard = Dashboard.query.filter(
             Dashboard.unique_id == form.dashboard_id.data).first()
         widgets = Widget.query.filter(
             Widget.dashboard_id == dashboard.unique_id).all()
 
-        # 새로운 고유 ID와 이름으로 대시보드를 복제합니다.
+        # Clone dashboard with new unique ID and name.
         new_dashboard = clone_model(
-            dashboard, unique_id=set_uuid(), name=gettext("새 대시보드"))
+            dashboard, unique_id=set_uuid(), name=gettext("New Dashboard"))
 
-        # 모든 위젯을 복제하여 새로운 대시보드에 할당합니다.
+        # Clone all widgets and assign them to the new dashboard.
         for each_widget in widgets:
             clone_model(each_widget, unique_id=set_uuid(), dashboard_id=new_dashboard.unique_id)
     except Exception as msg:
         error.append(msg)
-        logger.exception("대시보드 복제 중 예외 발생")
+        logger.exception("Exception occurred while duplicating dashboard")
 
     flash_success_errors(
         error, action, url_for('routes_dashboard.page_dashboard_default'))
 
 
 def dashboard_del(form):
-    """대시보드를 삭제합니다."""
+    """Delete a dashboard."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['delete']['title'],
         controller=TRANSLATIONS['dashboard']['title'])
@@ -147,7 +148,7 @@ def dashboard_del(form):
 
     if create_new_dash:
         new_dash = Dashboard()
-        new_dash.name = gettext("새 대시보드")
+        new_dash.name = gettext("New Dashboard")
         new_dash.save()
 
     flash_success_errors(
@@ -155,11 +156,11 @@ def dashboard_del(form):
 
 
 #
-# 위젯
+# Widget
 #
 
 def widget_add(form_base, request_form):
-    """대시보드에 위젯을 추가합니다."""
+    """Add a widget to the dashboard."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['add']['title'],
         controller=TRANSLATIONS['widget']['title'])
@@ -173,7 +174,7 @@ def widget_add(form_base, request_form):
         widget_name = form_base.widget_type.data
     else:
         widget_name = ''
-        error.append(gettext("위젯 이름이 누락되었습니다."))
+        error.append(gettext("Widget name is missing."))
 
     if current_app.config['TESTING']:
         dep_unmet = False
@@ -183,7 +184,7 @@ def widget_add(form_base, request_form):
             list_unmet_deps = []
             for each_dep in dep_unmet:
                 list_unmet_deps.append(each_dep[3])
-            error.append(gettext("추가하려는 %(dev)s 장치의 종속성이 충족되지 않았습니다: %(dep)s", dev=widget_name, dep=', '.join(list_unmet_deps)))
+            error.append(gettext("Dependencies not met for %(dev)s: %(dep)s", dev=widget_name, dep=', '.join(list_unmet_deps)))
 
     new_widget = Widget()
     new_widget.dashboard_id = form_base.dashboard_id.data
@@ -193,7 +194,7 @@ def widget_add(form_base, request_form):
     new_widget.enable_drag_handle = form_base.enable_drag_handle.data
     new_widget.refresh_duration = form_base.refresh_duration.data
 
-    # 새로운 위젯의 시작 위치를 결정합니다.
+    # Determine the starting position of the new widget.
     position_y_start = 0
     for each_widget in Widget.query.filter(
             Widget.dashboard_id == form_base.dashboard_id.data).all():
@@ -202,7 +203,7 @@ def widget_add(form_base, request_form):
             position_y_start = highest_position
     new_widget.position_y = position_y_start
 
-    # 위젯 옵션 설정
+    # Set widget options
     if widget_name in dict_widgets:
         def dict_has_value(key):
             if (key in dict_widgets[widget_name] and
@@ -214,7 +215,7 @@ def widget_add(form_base, request_form):
         if dict_has_value('widget_height'):
             new_widget.height = dict_widgets[widget_name]['widget_height']
 
-    # 사용자 지정 옵션을 JSON 문자열로 생성합니다.
+    # Generate custom options as a JSON string.
     error, custom_options = custom_options_return_json(
         error, dict_widgets, request_form, device=widget_name, use_defaults=True)
     new_widget.custom_options = custom_options
@@ -232,16 +233,22 @@ def widget_add(form_base, request_form):
         if not error:
             new_widget.save()
 
-            # 해당 위젯이 처음 추가된 경우, 플라스크를 재시작합니다.
+            # If this widget is added for the first time, restart Flask.
             if Widget.query.filter(Widget.graph_type == widget_name).count() == 1:
                 reload_flask = True
 
+            # Ensure latest HTML template when added to dashboard even if widget module already exists.
+            try:
+                generate_widget_html()
+            except Exception as exc:
+                logger.warning("Failed to regenerate widget HTML: %s", exc)
+
             if not current_app.config['TESTING']:
-                # 위젯 설정 새로 고침
+                # Refresh widget settings
                 control = DaemonControl()
                 control.widget_add_refresh(new_widget.unique_id)
 
-            flash(gettext("%(dev)s (ID %(id)s)가 성공적으로 추가되었습니다.", dev=dict_widgets[form_base.widget_type.data]['widget_name'], id=new_widget.id), "success")
+            flash(gettext("%(dev)s (ID %(id)s) has been successfully added.", dev=dict_widgets[form_base.widget_type.data]['widget_name'], id=new_widget.id), "success")
     except sqlalchemy.exc.OperationalError as except_msg:
         error.append(except_msg)
     except sqlalchemy.exc.IntegrityError as except_msg:
@@ -254,7 +261,7 @@ def widget_add(form_base, request_form):
 
 
 def widget_mod(form_base, request_form):
-    """대시보드 항목의 설정을 수정합니다."""
+    """Modify settings of a dashboard item."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['modify']['title'],
         controller=TRANSLATIONS['widget']['title'])
@@ -275,7 +282,7 @@ def widget_mod(form_base, request_form):
         logger.error("Malformed JSON")
         custom_options_json_presave = {}
 
-    # 사용자 지정 옵션을 JSON 문자열로 생성합니다.
+    # Generate custom options as a JSON string.
     error, custom_options_json_postsave = custom_options_return_json(
         error, dict_widgets, request_form, mod_dev=mod_widget, device=mod_widget.graph_type)
 
@@ -285,9 +292,9 @@ def widget_mod(form_base, request_form):
          mod_widget,
          custom_options) = dict_widgets[mod_widget.graph_type]['execute_at_modification'](
             mod_widget, request_form, custom_options_json_presave, json.loads(custom_options_json_postsave))
-        custom_options = json.dumps(custom_options)  # 딕셔너리를 JSON 문자열로 변환
+        custom_options = json.dumps(custom_options)  # Convert dictionary to JSON string
         if not allow_saving:
-            error.append(gettext("execute_at_modification()이 위젯 옵션 저장을 허용하지 않습니다."))
+            error.append(gettext("execute_at_modification() does not allow saving widget options."))
     else:
         custom_options = custom_options_json_postsave
 
@@ -310,7 +317,7 @@ def widget_mod(form_base, request_form):
 
 
 def widget_del(form_base):
-    """대시보드에서 위젯을 삭제합니다."""
+    """Delete a widget from the dashboard."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['delete']['title'],
         controller=TRANSLATIONS['widget']['title'])
@@ -341,7 +348,7 @@ def widget_del(form_base):
 
 # 복제 위젯 함수 추가
 def widget_duplicate(form_base):
-    """대시보드에서 위젯을 복제합니다."""
+    """Duplicate a widget from the dashboard."""
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['duplicate']['title'],
         controller=TRANSLATIONS['widget']['title'])
@@ -352,14 +359,14 @@ def widget_duplicate(form_base):
         Widget.unique_id == form_base.widget_id.data).first()
 
     if not orig_widget:
-        error.append(gettext("원본 위젯을 찾을 수 없습니다."))
+        error.append(gettext("Original widget not found."))
         flash_success_errors(
             error, action, url_for('routes_dashboard.page_dashboard',
                                    dashboard_id=form_base.dashboard_id.data))
         return
 
     try:
-        # 새 위치: 현 대시보드 최하단(y 최대)
+        # New position: Bottom of current dashboard (max y)
         position_y_start = 0
         for each_widget in Widget.query.filter(
                 Widget.dashboard_id == orig_widget.dashboard_id).all():
@@ -367,7 +374,7 @@ def widget_duplicate(form_base):
             if highest_position > position_y_start:
                 position_y_start = highest_position
 
-        # 본체 복제
+        # Clone body
         new_widget = clone_model(
             orig_widget,
             unique_id=set_uuid(),
@@ -375,17 +382,17 @@ def widget_duplicate(form_base):
             position_y=position_y_start,
         )
 
-        # 방어적 초기화: 복제 즉시 자동 갱신/실행 방지 옵션이 있다면 필요 시 끌 수 있음
+        # Defensive initialization: can turn off auto-refresh/execution prevention options if needed.
         # (현재는 원본과 동일 옵션 사용)
 
-        # 저장
+        # Save
         new_widget.save()
 
-        # 프론트엔드에 갱신 알림
+        # Notify frontend of refresh
         control = DaemonControl()
         control.widget_add_refresh(new_widget.unique_id)
 
-        flash(gettext("%(dev)s 위젯(ID %(id)s)을 복제했습니다.", dev=dict_widgets[orig_widget.graph_type]['widget_name'], id=new_widget.id), "success")
+        flash(gettext("Duplicated %(dev)s widget (ID %(id)s).", dev=dict_widgets[orig_widget.graph_type]['widget_name'], id=new_widget.id), "success")
 
     except sqlalchemy.exc.OperationalError as except_msg:
         error.append(except_msg)
@@ -400,7 +407,7 @@ def widget_duplicate(form_base):
 
 
 def graph_y_axes_async(dict_measurements, ids_measures):
-    """각 그래프에 사용할 y축을 결정합니다."""
+    """Determine the y-axis to use for each graph."""
     if not ids_measures:
         return
 
@@ -414,10 +421,10 @@ def graph_y_axes_async(dict_measurements, ids_measures):
 
     devices_list = [input_dev, output, pid]
 
-    # 각 기기 테이블을 반복합니다.
+    # Iterate through each device table.
     for each_device in devices_list:
 
-        # 대시보드 요소의 각 ID 및 측정값 집합을 반복합니다.
+        # Iterate through each ID and measurement set of the dashboard elements.
         for each_id_measure in ids_measures:
 
             if ',' in each_id_measure:
@@ -461,10 +468,10 @@ def graph_y_axes_async(dict_measurements, ids_measures):
                     unique_id = each_id_measure.split(',')[0]
                     measurement = each_id_measure.split(',')[1]
 
-                    # 각 기기 항목을 반복합니다.
+                    # Iterate through each device entry.
                     for each_device_entry in each_device:
 
-                        # 대시보드 요소에 저장된 ID가 테이블 항목의 ID와 일치하면
+                        # If the ID stored in the dashboard element matches the ID of the table entry
                         if each_device_entry.unique_id == unique_id:
                             y_axes = check_func(each_device,
                                                 unique_id,
@@ -481,10 +488,10 @@ def graph_y_axes_async(dict_measurements, ids_measures):
                     measurement = each_id_measure.split(',')[1]
                     unit = each_id_measure.split(',')[2]
 
-                    # 각 기기 항목을 반복합니다.
+                    # Iterate through each device entry.
                     for each_device_entry in each_device:
 
-                        # 대시보드 요소에 저장된 ID가 테이블 항목의 ID와 일치하면
+                        # If the ID stored in the dashboard element matches the ID of the table entry
                         if each_device_entry.unique_id == unique_id:
                             y_axes = check_func(each_device,
                                                 unique_id,
@@ -511,39 +518,39 @@ def check_func(all_devices,
                function,
                unit=None):
     """
-    y축 목록을 생성합니다.
-    :param all_devices: Input, Output, 및 PID SQL 항목
-    :param unique_id: 측정값의 ID
-    :param y_axes: 채워질 빈 리스트
-    :param measurement: 측정값
-    :param dict_measurements: 측정값 딕셔너리
-    :param device_measurements: 기기 측정값
-    :param input_dev: 입력 장치
-    :param output: 출력 장치
-    :param function: 함수
-    :param unit: 단위 (선택 사항)
-    :return: y축 목록
+    Generate a list of y-axes.
+    :param all_devices: Input, Output, and PID SQL entry
+    :param unique_id: ID of the measurement
+    :param y_axes: Empty list to be filled
+    :param measurement: Measurement
+    :param dict_measurements: Measurement dictionary
+    :param device_measurements: Device measurements
+    :param input_dev: Input device
+    :param output: Output device
+    :param function: Function
+    :param unit: Unit (Optional)
+    :return: List of y-axes
     """
-    # 각 기기 항목을 반복합니다.
+    # Iterate through each device entry.
     for each_device in all_devices:
 
-        # 대시보드 요소에 저장된 ID가 테이블 항목의 ID와 일치하면
+        # If the ID stored in the dashboard element matches the ID of the table entry
         if each_device.unique_id == unique_id:
 
             use_unit = use_unit_generate(
                 device_measurements, input_dev, output, function)
 
-            # 지속 시간 추가
+            # Add duration
             if measurement == 'duration_time':
                 if 'second' not in y_axes:
                     y_axes.append('second')
 
-            # 듀티 사이클 추가
+            # Add duty cycle
             elif measurement == 'duty_cycle':
                 if 'percent' not in y_axes:
                     y_axes.append('percent')
 
-            # 사용자 지정 변환 단위 사용
+            # Use custom conversion unit
             elif (unique_id in use_unit and
                   measurement in use_unit[unique_id] and
                   use_unit[unique_id][measurement]):
@@ -551,33 +558,33 @@ def check_func(all_devices,
                 if measure_short not in y_axes:
                     y_axes.append(measure_short)
 
-            # 세트포인트 또는 밴드에 적용되는 y축 찾기
+            # Find y-axis applicable to setpoint or band
             elif measurement in ['setpoint', 'setpoint_band_min', 'setpoint_band_max']:
                 for each_input in input_dev:
                     if each_input.unique_id == each_device.measurement.split(',')[0]:
                         pid_measurement = each_device.measurement.split(',')[1]
 
-                        # PID가 사용자 지정 변환을 사용하는 입력을 사용하는 경우, 사용자 지정 단위를 사용
+                        # If PID uses an input that uses a custom conversion, use the custom unit
                         if (each_input.unique_id in use_unit and
                             pid_measurement in use_unit[each_input.unique_id] and
                             use_unit[each_input.unique_id][pid_measurement]):
                             measure_short = use_unit[each_input.unique_id][pid_measurement]
                             if measure_short not in y_axes:
                                 y_axes.append(measure_short)
-                        # 그렇지 않으면 입력 측정값의 기본 단위를 사용
+                        # Otherwise use the default unit of the input measurement
                         else:
                             if pid_measurement in dict_measurements:
                                 measure_short = dict_measurements[pid_measurement]['meas']
                                 if measure_short not in y_axes:
                                     y_axes.append(measure_short)
 
-            # 기타 모든 측정값을 추가
+            # Add all other measurements
             elif measurement in dict_measurements and not unit:
                 measure_short = dict_measurements[measurement]['meas']
                 if measure_short not in y_axes:
                     y_axes.append(measure_short)
 
-            # 사용자 지정 y축 사용
+            # Use custom y-axis
             elif measurement not in dict_measurements or unit not in dict_measurements[measurement]['units']:
                 meas_name = f'{measurement}_{unit}'
                 if meas_name not in y_axes and unit:

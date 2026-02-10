@@ -5,6 +5,7 @@ import traceback
 import flask_login
 from flask_accept import accept
 from flask_restx import Resource, abort, fields
+from flask_babel import gettext as _
 
 from aot.databases.models import NoteTags
 from aot.databases.models import Notes
@@ -28,7 +29,23 @@ note_create_fields = ns_note.model('Note Creation Fields', {
     'note': fields.String(
         description='The note text.',
         required=True,
-        example='My Note.')
+        example='My Note.'),
+    'target_id': fields.String(
+        description='The unique_id of the target entity (device, site, zone)',
+        required=False,
+        example='uuid-string'),
+    'target_type': fields.String(
+        description='The type of the target entity',
+        required=False,
+        example='device'),
+    'gps_lat': fields.Float(
+        description='GPS Latitude',
+        required=False,
+        example=37.12345),
+    'gps_lng': fields.Float(
+        description='GPS Longitude',
+        required=False,
+        example=127.12345)
 })
 
 
@@ -51,6 +68,10 @@ class MeasurementsCreate(Resource):
         tags = None
         name = None
         note = None
+        target_id = None
+        target_type = None
+        gps_lat = None
+        gps_lng = None
 
         if ns_note.payload:
             if 'tags' in ns_note.payload:
@@ -77,6 +98,18 @@ class MeasurementsCreate(Resource):
                     except Exception:
                         abort(422, message='note must represent a string')
 
+            if 'target_id' in ns_note.payload:
+                target_id = ns_note.payload["target_id"]
+
+            if 'target_type' in ns_note.payload:
+                target_type = ns_note.payload["target_type"]
+
+            if 'gps_lat' in ns_note.payload:
+                gps_lat = ns_note.payload["gps_lat"]
+
+            if 'gps_lng' in ns_note.payload:
+                gps_lng = ns_note.payload["gps_lng"]
+
         try:
             error = []
             list_tags = []
@@ -93,8 +126,25 @@ class MeasurementsCreate(Resource):
             new_note.tags = ",".join(list_tags)
 
             if not error:
-                new_note.name = name
+                # [Smart Subject] If name is generic or empty, extract from note body
+                final_name = name.strip() if name else ""
+                if not final_name or final_name == _("New Note"):
+                    body = note.strip() if note else ""
+                    if body:
+                        # Take the first line, limit to 50 chars
+                        first_line = body.split('\n')[0].strip()
+                        if len(first_line) > 50:
+                            first_line = first_line[:47] + "..."
+                        final_name = first_line if first_line else _("New Note")
+                    else:
+                        final_name = _("New Note")
+                
+                new_note.name = final_name
                 new_note.note = note
+                new_note.target_id = target_id
+                new_note.target_type = target_type
+                new_note.gps_lat = gps_lat
+                new_note.gps_lng = gps_lng
                 new_note.save()
             else:
                 abort(500,
@@ -105,3 +155,35 @@ class MeasurementsCreate(Resource):
             abort(500,
                   message='An exception occurred',
                   error=traceback.format_exc())
+
+
+@ns_note.route('/target/<string:target_id>')
+class NotesByTarget(Resource):
+    """Get notes for a specific target."""
+
+    @accept('application/vnd.aot.v1+json')
+    @flask_login.login_required
+    def get(self, target_id):
+        """Get all notes associated with a specific target_id."""
+        try:
+            notes = Notes.query.filter_by(target_id=target_id).order_by(Notes.date_time.desc()).all()
+            
+            result = []
+            for n in notes:
+                result.append({
+                    'id': n.id,
+                    'unique_id': n.unique_id,
+                    'date_time': n.date_time.isoformat(),
+                    'name': n.name,
+                    'note': n.note,
+                    'tags': n.tags,
+                    'files': n.files,
+                    'target_id': n.target_id,
+                    'target_type': n.target_type,
+                    'gps_lat': n.gps_lat,
+                    'gps_lng': n.gps_lng
+                })
+            
+            return result, 200
+        except Exception:
+            abort(500, message='An exception occurred', error=traceback.format_exc())

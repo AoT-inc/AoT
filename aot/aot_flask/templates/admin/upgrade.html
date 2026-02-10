@@ -19,7 +19,7 @@
           }
         }
         else {
-          document.getElementById("upgrade_status").innerHTML = "AoT 업그레이드 로그를 읽는 중입니다. 잠시만 기다려 주세요...";
+          document.getElementById("upgrade_status").innerHTML = "{{_('Reading AoT upgrade logs. Please wait...')}}";
         }
       },
       cache: false
@@ -35,24 +35,24 @@
 {% endblock %}
 
 {% block body %}
-  <!-- 경로: /admin/upgrade -->
+  <!-- Path: /admin/upgrade -->
   <div class="container">
     {% include 'flash_messages.html' %}
 
     {% if not is_internet %}
 
     <div style="padding: 0.5em 0">
-      {{_('인터넷 연결이 감지되지 않았습니다. AoT을 자동으로 업그레이드하려면 인터넷 연결이 필요합니다. 연결된 후 페이지를 새로고침하세요.')}}
-      인터넷 연결 감지 설정은 구성 페이지의 업그레이드 옵션 섹션에서 확인할 수 있습니다.
+      {{_('Internet connection not detected. An internet connection is required to automatically upgrade AoT. Please refresh the page after connecting.')}}
+      {{_('Internet connection detection settings can be found in the Upgrade Options section of the configuration page.')}}
     </div>
 
     {% elif upgrade == 1 %}
 
     <div style="padding: 0.5em 0">
-      <p>{{_('AoT이 현재 업그레이드 중입니다.')}}</p>
-      <p>{{_('업그레이드가 진행 중이 아니라면, /opt/AoT/.upgrade 파일을 삭제하여 업그레이드 프로세스를 다시 시작할 수 있습니다.')}}</p>
-      <p>{{_('업그레이드는 일반적으로 몇 분 정도 걸리며, 경우에 따라 더 오래 걸릴 수도 있습니다. 업그레이드가 완료될 때까지 충분한 시간을 두고 기다려 주세요. 성공적으로 완료되면, 왼쪽 상단의 데몬 상태 표시기가 빨간색에서 녹색으로 변경됩니다. 일부 드라이버는 백엔드를 다시 시작해야 활성화됩니다. 오류가 발생하면, 먼저 백엔드를 재시작한 후 GitHub 이슈를 생성해 주세요.')}}</p>
-      <p>{{_('아래의 실시간 로그 뷰를 통해 업그레이드 진행 상황을 모니터링할 수 있습니다. 로그를 확인하려면 설정 -> AoT 로그 -> 업그레이드 로그로 이동하거나, /var/log/aot/aotupgrade.log 파일을 열어보세요. 오류가 발생하면 전체 로그를 점검하여 원인을 파악하는 것이 좋습니다.')}}</p>
+      <p>{{_('AoT is currently upgrading.')}}</p>
+      <p>{{_('If an upgrade is not in progress, you can delete the /opt/AoT/.upgrade file to restart the upgrade process.')}}</p>
+      <p>{{_('Upgrades typically take a few minutes, but can take longer in some cases. Please wait for enough time until the upgrade is complete. Upon successful completion, the daemon status indicator in the top-left will change from red to green. Some drivers require a backend restart to activate. If an error occurs, please restart the backend first and then create a GitHub issue.')}}</p>
+      <p>{{_('You can monitor the upgrade progress through the real-time log view below. To check the logs, go to Settings -> AoT Logs -> Upgrade Log, or open the /var/log/aot/aotupgrade.log file. If an error occurs, it is recommended to check the full log to identify the cause.')}}</p>
     </div>
     <pre style="overflow:auto; resize: vertical; height:400px" id="upgrade_status"></pre>
 
@@ -63,15 +63,15 @@
           upgrade != 1 %}
 
     <p style="padding-top: 0.5em">
-      설치된 버전: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
-      <br>최신 버전: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_latest_release}}" target="_blank">{{current_latest_release}}</a>
+      {{_('Installed Version')}}: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
+      <br>{{_('Latest Version')}}: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_latest_release}}" target="_blank">{{current_latest_release}}</a>
     </p>
     <p>
-      <a href="https://github.com/aot-inc/AoT/blob/master/CHANGELOG.md" target="_blank">변경 로그</a>에서 모든 변경 사항을 확인할 수 있습니다.
-      <br>주요 버전 변경 사항: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_latest_major_version}}.0.0" target="_blank">{{current_latest_major_version}}.0.0</a>
+      <a href="https://github.com/aot-inc/AoT/blob/master/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
+      <br>{{_('Major Version Changes')}}: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_latest_major_version}}.0.0" target="_blank">{{current_latest_major_version}}.0.0</a>
     </p>
-    <p style="font-weight: bold; color: red">주요 버전 변경이 감지되었습니다!</p>
-    <p>GitHub에 새로운 주요 버전이 출시되었습니다: v{{current_latest_major_version}}.x.x (현재 최신 버전 v{{current_latest_release}}). 이 업데이트에는 일부 사용자에게 시스템 변경이 발생할 수 있으며, 업그레이드할 경우 기존 시스템 설정이 유지되지 않을 수도 있습니다. 업그레이드 전에 <a href="/export">설정 데이터베이스 내보내기</a>를 수행하거나, 중요한 정보를 기록해 두는 것이 좋습니다(GPIO 핀, PID 설정 등).</p>
+    <p style="font-weight: bold; color: red">{{_('Major version change detected!')}}</p>
+    <p>{{_('A new major version has been released on GitHub: v')}}{{current_latest_major_version}}{{"."}}{{_('x.x (current latest version v')}}{{current_latest_release}}{{_('). This update may cause system changes for some users, and existing system settings may not be maintained if upgraded. Before upgrading, it is recommended to perform a settings database export or record important information (GPIO pins, PID settings, etc.).')}}</p>
 
     <div class="form-inline" style="padding-bottom: 1em">
       <form method="post" action="/admin/upgrade">
@@ -79,7 +79,7 @@
         {{form_upgrade.csrf_token}}
         <div>
           <div class="form-group">
-            {{form_upgrade.upgrade_next_major_version(class_='btn btn-primary', **{'onclick':'return confirm("업그레이드를 진행하면 설정 데이터베이스가 유지되지 않을 수도 있습니다. 계속하시겠습니까?")'})}}
+            {{form_upgrade.upgrade_next_major_version(class_='btn btn-primary', **{'onclick':'return confirm("' + _("Settings database may not be maintained if you proceed with the upgrade. Do you want to continue?") + '")'})}}
           </div>
         </div>
       </form>
@@ -88,25 +88,25 @@
     {% elif upgrade == 2 %}
 
     <div style="padding: 0.5em 0">
-      <p>{{_('업그레이드 중 오류가 발생했습니다.')}}</p>
-      <p>{{_('업그레이드 로그를 확인하세요: /var/log/aot/aotupgrade.log.')}}</p>
-      <p>{{_('/opt/AoT/.upgrade 파일을 삭제하면 이 메시지를 확인한 것으로 간주되며, 업그레이드 기능이 복원됩니다.')}}</p>
+      <p>{{_('An error occurred during the upgrade.')}}</p>
+      <p>{{_('Check the upgrade log')}}: /var/log/aot/aotupgrade.log.</p>
+      <p>{{_('Deleting the /opt/AoT/.upgrade file will acknowledge this message and restore upgrade functionality.')}}</p>
     </div>
 
     {% elif not upgrade_available %}
 
     <div style="padding: 0.5em 0">
-      {{_('업그레이드할 수 있는 새로운 버전이 없습니다. 현재 최신 버전을 사용 중입니다:')}} 
+      {{_('There is no new version available for upgrade. You are currently using the latest version:')}} 
       <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{ current_release }}</a>
     </div>
 
     {% elif force_upgrade_master %}
 
     <div style="padding: 1em 0 1.5em 0">
-      <p>수동 업그레이드 모드</p>
-      <p>/opt/AoT/config.py에서 FORCE_UPGRADE_MASTER가 True로 설정되었습니다.</p>
-      <p>아래 업그레이드 버튼을 누르면 <a href="https://github.com/aot-inc/AoT/archive/master.tar.gz">master.tar.gz</a> 아카이브를 통해 <a href="https://github.com/aot-inc/AoT/tree/master">AoT 마스터 브랜치</a>에서 업그레이드가 수행됩니다.</p>
-      <p>최신 릴리즈 버전으로 업그레이드하려면 /opt/AoT/aot/config.py에서 <code>FORCE_UPGRADE_MASTER = False</code>로 설정한 후, <code>sudo service aotflask restart</code> 명령어로 웹 UI를 재시작하고 이 페이지를 새로고침하세요.</p>
+      <p>{{_('Manual Upgrade Mode')}}</p>
+      <p>{{_('FORCE_UPGRADE_MASTER is set to True in /opt/AoT/config.py.')}}</p>
+      <p>{{_('Clicking the upgrade button below will perform an upgrade from the AoT master branch via the master.tar.gz archive.')}}</p>
+      <p>{{_('To upgrade to the latest release version, set FORCE_UPGRADE_MASTER = False in /opt/AoT/aot/config.py, restart the web UI with the sudo service aotflask restart command, and refresh this page.')}}</p>
     </div>
     <div class="form-inline" style="padding-bottom: 1em">
       <form method="post" action="/admin/upgrade">
@@ -123,22 +123,22 @@
     {% elif not upgrade_available %}
 
     <div style="padding: 0.5em 0">
-      {{_('업그레이드할 수 있는 새로운 버전이 없습니다. 현재 최신 버전을 사용 중입니다:')}} 
+      {{_('There is no new version available for upgrade. You are currently using the latest version:')}} 
       <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{ current_release }}</a>
     </div>
 
     {% elif upgrade_available %}
 
     <div style="padding: 0.5em 0">
-      설치된 버전: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
-      <br>최신 버전: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_major_release}}" target="_blank">{{current_major_release}}</a>
+      {{_('Installed Version')}}: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
+      <br>{{_('Latest Version')}}: <a href="https://github.com/aot-inc/AoT/releases/tag/v{{current_major_release}}" target="_blank">{{current_major_release}}</a>
     </div>
     <div style="padding: 0.5em 0">
-      현재 버전보다 {{releases_behind}}개 릴리즈가 뒤처져 있습니다.
-      <br>모든 변경 사항은 <a href="https://github.com/aot-inc/AoT/blob/master/CHANGELOG.md" target="_blank">변경 로그</a>에서 확인할 수 있습니다.
+      {{_('You are')}} {{releases_behind}} {{_('releases behind current version.')}}
+      <br>{{_('All changes can be found in the')}} <a href="https://github.com/aot-inc/AoT/blob/master/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a>.
     </div>
     <div style="padding: 1em 0 1.5em 0">
-      {{_('아래 버튼을 클릭하여 업그레이드를 시작하세요. 업그레이드는 일반적으로 몇 분 정도 걸리지만, 드물게 몇 시간까지 소요될 수 있습니다. 이 기간 동안 AoT 웹 인터페이스 및 서버 센서 데이터 기록, 출력 조작 등의 기능이 완전히 중단됩니다.')}}
+      {{_('Click the button below to start the upgrade. Upgrades typically take a few minutes, but can rarely take up to several hours. During this period, functions such as AoT web interface and server sensor data recording, and output manipulation will be completely suspended.')}}
     </div>
     <div class="form-inline" style="padding-bottom: 1em">
       <form method="post" action="/admin/upgrade">
@@ -157,7 +157,7 @@
     <div style="font-family: 'Courier New', monospace;">
       <table class="table" style="width: auto">
         <tr>
-          <th>{{_('현재 버전부터 최신 버전까지')}}</th>
+          <th>{{_('From current version to latest version')}}</th>
         </tr>
         {% for each_release in current_releases %}
           <tr>
@@ -165,7 +165,7 @@
               <a href="https://github.com/aot-inc/AoT/releases/tag/v{{ each_release }}" target="_blank" {% if current_release == each_release %}style="color: red"{% endif %}>v{{ each_release }}</a>
             </td>
             <td>
-              {% if each_release == current_release %}{{_('현재 버전')}}{% elif each_release == current_major_release %}{{_('최신 버전')}}{% endif %}
+              {% if each_release == current_release %}{{_('Current Version')}}{% elif each_release == current_major_release %}{{_('Latest Version')}}{% endif %}
             </td>
           </tr>
         {% endfor %}

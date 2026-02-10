@@ -57,6 +57,11 @@ class Misc(CRUDMixin, db.Model):
     custom_css = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
     custom_layout = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
 
+    # Common map location (used as default center/device seed)
+    map_latitude = db.Column(db.Float, default=None)
+    map_longitude = db.Column(db.Float, default=None)
+    map_location_label = db.Column(db.Text, default='')
+
     # Measurement database
     db_name = 'influxdb'  # Default
     db_version = ''  # Default

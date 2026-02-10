@@ -38,7 +38,7 @@
           submitter_btn.attr("name") === 'user_save' ||
           submitter_btn.attr("name") === 'user_role_save' ||
           submitter_btn.attr("name") === 'user_role_delete') {
-        {% if not misc.hide_alert_info %}toastr['info']('명령이 전송되었습니다. 잠시만 기다려 주세요.');{% endif %}
+        {% if not misc.hide_alert_info %}toastr['info']('{{_("Command sent. Please wait.")}}');{% endif %}
         $.ajax({
           type: "POST",
           url: '/settings/users_submit',
@@ -65,25 +65,25 @@
               }
               {% if not misc.hide_alert_warning %}
               if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-                toastr['warning']('경고: ' + data.data.messages.warning.join(", "));
+                toastr['warning']('{{_("Warning")}}: ' + data.data.messages.warning.join(", "));
               }
               {% endif %}
               {% if not misc.hide_alert_info %}
               if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-                toastr['info']('정보: ' + data.data.messages.info.join(", "));
+                toastr['info']('{{_("Info")}}: ' + data.data.messages.info.join(", "));
               }
               {% endif %}
               {% if not misc.hide_alert_success %}
               if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-                toastr['success']('성공: ' + data.data.messages.success.join(", "));
+                toastr['success']('{{_("Success")}}: ' + data.data.messages.success.join(", "));
               }
               {% endif %}
             } else {
-              toastr['error']('오류: ' + data.data.messages.error.join(", "));
+              toastr['error']('{{_("Error")}}: ' + data.data.messages.error.join(", "));
             }
           },
           error: function() {
-            toastr['error']('오류: 서버와 통신할 수 없습니다.');
+            toastr['error']('{{_("Error: Unable to communicate with server.")}}');
           }
         });
         e.preventDefault();
@@ -104,7 +104,7 @@
 {% block settings %}
   <!-- Route: /settings/users -->
   <div class="container">
-    <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#users" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('사용자 설정')}}</h3>
+    <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#users" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('User Settings')}}</h3>
 
     <form class="form-horizontal" method="post" action="/settings/users">
       {{form_user.csrf_token}}
@@ -114,8 +114,8 @@
           {{form_user.default_login_page.label(class_='control-label')}}
           <div>
             <select class="form-control form-tooltip form-dropdown" data-placement="top" id="default_login_page" name="default_login_page" title="{{_('Which page to land on before logging in')}}">
-              <option value="password"{% if misc.default_login_page == 'password' %} selected{% endif %}>{{_('암호')}}</option>
-              <option value="keypad"{% if misc.default_login_page == 'keypad' %} selected{% endif %}>{{_('키패드')}}</option>
+              <option value="password"{% if misc.default_login_page == 'password' %} selected{% endif %}>{{_('Password')}}</option>
+              <option value="keypad"{% if misc.default_login_page == 'keypad' %} selected{% endif %}>{{_('Keypad')}}</option>
             </select>
           </div>
         </div>
@@ -127,9 +127,9 @@
 
     <div style="clear: both; padding: 1em 0;"></div>
 
-    <h3>{{_('사용자 추가')}}</h3>
+    <h3>{{_('Add User')}}</h3>
 
-    <p>참고: 키패드 코드를 사용할 경우 4자리 이상의 숫자여야 합니다.</p>
+    <p>{{_('Note: Keypad codes must be at least 4 digits.')}}</p>
 
     <form class="form-horizontal" method="post" action="/settings/users">
     {{form_add_user.hidden_tag()}}
@@ -196,17 +196,16 @@
 
     <div style="clear: both; padding: 1em 0;"></div>
 
-    <h3>{{_('사용자')}}</h3>
+    <h3>{{_('Users')}}</h3>
 
-    <p>참고: 비밀번호 및 키패드 코드 필드는 비워져 있습니다. 변경하려면 값을 입력한 후 저장을 누르세요.  
-      비워두면 현재 설정이 유지됩니다. 키패드 코드를 비활성화하려면 0을 입력하고 저장하세요.</p>
+    <p>{{_('Note: Password and keypad code fields are empty. Enter values and save to change. Leave empty to keep current settings. To disable keypad code, enter 0 and save.')}}</p>
 
     {% for user in users %}
 
     <form method="post" id="user_{{user.unique_id}}" action="/settings/users">
       {{form_mod_user.csrf_token}}
       {{form_mod_user.user_id(value=user.unique_id)}}
-      <h6>사용자: {{user.name}}, 키패드 코드 설정됨: {% if user.code %}예{% else %}아니오{% endif %}</h6>
+      <h6>{{_('User')}}: {{user.name}}, {{_('Keypad Code Set')}}: {% if user.code %}{{_('Yes')}}{% else %}{{_('No')}}{% endif %}</h6>
 
       <div class="row small-gutters">
         <div class="col-sm-6 col-md-3">
@@ -249,7 +248,7 @@
           {{form_mod_user.user_save(class_='btn btn-primary btn-block')}}
         </div>
         <div class="col-sm-6 col-md-3 small-gutters">
-          {{form_mod_user.user_delete(class_='btn btn-primary btn-block', **{'onclick':'return confirm("사용자 삭제하시겠습니까?")'})}}
+          {{form_mod_user.user_delete(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this user?') + '")'})}}
         </div>
       </div>
 
@@ -261,7 +260,7 @@
 
     <hr>
 
-    <h3>{{_('역할')}} <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#roles"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h3>
+    <h3>{{_('Roles')}} <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#roles"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h3>
 
     <form method="post" action="/settings/users">
     {{form_user_roles.csrf_token}}
@@ -333,7 +332,7 @@
             {{form_user_roles.user_role_save(class_='btn btn-primary')}}
           </div>
           <div class="col-auto">
-            {{form_user_roles.user_role_delete(class_='btn btn-primary', **{'onclick':'return confirm("역할을 삭제하시겠습니까?")'})}}
+            {{form_user_roles.user_role_delete(class_='btn btn-primary', **{'onclick':'return confirm("' + _('Are you sure you want to delete this role?') + '")'})}}
           </div>
         </div>
 

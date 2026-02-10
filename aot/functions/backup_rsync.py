@@ -62,7 +62,8 @@ FUNCTION_INFORMATION = {
     'custom_options': [
         {
             'id': 'period',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 1296000,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,

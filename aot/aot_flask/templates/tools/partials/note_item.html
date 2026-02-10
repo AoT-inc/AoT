@@ -1,0 +1,127 @@
+        <div class="note-card lazy-card" style="display: none;">
+            <div class="note-card-header">
+                <div class="d-flex align-items-center">
+                    <div class="mr-2">
+                        <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center font-weight-bold note-avatar-circle">
+                            {{ each_note.author.name[0] | upper if each_note.author else '?' }}
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 font-weight-bold text-dark text-truncate" style="max-width: 150px;">{{each_note.name}}</h6>
+                        <small class="text-muted">{{utc_to_local_time(each_note.date_time)}}</small>
+                    </div>
+                </div>
+                <!-- Actions Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-secondary p-0" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right border-0 shadow-sm rounded-lg">
+                        <button class="dropdown-item small edit-note-btn" 
+                                data-id="{{each_note.unique_id}}" 
+                                data-title="{{each_note.name}}" 
+                                data-content="{{each_note.note}}" 
+                                data-tags="{{each_note.tags}}"
+                                data-date="{{utc_to_local_time(each_note.date_time)}}"
+                                data-target-type="{{each_note.target_type}}"
+                                data-files="{{each_note.files if each_note.files else ''}}">
+                            <i class="fas fa-edit mr-2 text-dark"></i> Edit
+                        </button>
+                        <form method="post" action="/notes" class="d-inline">
+                            {{form_note_options.csrf_token}}
+                            {{form_note_options.note_unique_id(value=each_note.unique_id)}}
+                            <button name="note_del" value="y" class="dropdown-item small text-danger" onclick="return confirm('{{_('Delete this note?')}}')">
+                                <i class="fas fa-trash-alt mr-2"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {% if each_note.files %}
+                {% set all_files = each_note.files.split(',') %}
+                {% set image_files = [] %}
+                {% set other_files = [] %}
+                {% for f in all_files %}
+                    {% set ext = f.split('.')[-1].lower() %}
+                    {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'mp4', 'webm', 'mov'] %}
+                        {% set _ = image_files.append(f|trim) %}
+                    {% else %}
+                        {% set _ = other_files.append(f|trim) %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {% set image_files = [] %}
+                {% set other_files = [] %}
+            {% endif %}
+
+            <!-- Truncation Wrapper: IMAGES + TEXT are now both INSIDE -->
+            <div class="note-truncate-wrapper collapsed" id="wrapper-{{each_note.unique_id}}">
+                
+                {% if image_files %}
+                <div class="note-gallery-container bg-light border-bottom" id="gallery-{{each_note.unique_id}}" data-media='{{ image_files | tojson }}'>
+                    <div class="note-main-image position-relative" style="background: #f1f5f9;">
+                        <div class="main-img-link" onclick="openGlobalGallery('{{each_note.unique_id}}')" style="cursor: zoom-in;">
+                            <img src="/note_attachment/{{image_files[0]}}" class="img-fluid w-100 main-img-display" alt="Main" loading="lazy" style="max-height: 380px; min-height: 100px; object-fit: cover;">
+                        </div>
+                    </div>
+                    
+                    {% if image_files|length > 1 %}
+                    <div class="note-thumbnails-wrapper position-relative p-2 bg-white border-top d-none">
+                        <button class="nav-arrow prev position-absolute" onclick="scrollGallery('{{each_note.unique_id}}', 'left')" style="left: 5px; top: 50%; transform: translateY(-50%); z-index: 5; border: none; background: rgba(255,255,255,0.9); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;">
+                            <i class="fas fa-chevron-left text-dark" style="font-size: 12px;"></i>
+                        </button>
+                        <div class="note-thumbnails d-flex gap-2 overflow-auto no-scrollbar scroll-smooth p-1" id="thumb-container-{{each_note.unique_id}}" style="gap: 8px; overflow-x: auto; scroll-behavior: smooth;">
+                            {% for img_file in image_files %}
+                                <div class="thumb-item flex-shrink-0 {{ 'active' if loop.first else '' }}" 
+                                     onclick="swapMainImage('{{each_note.unique_id}}', '/note_attachment/{{img_file}}', {{loop.index0}}, this)"
+                                     style="width: 54px; height: 54px; cursor: pointer; border: 2px solid transparent; border-radius: 6px; overflow: hidden; transition: all 0.2s; {{ 'border-color: #007bff; opacity: 1;' if loop.first else 'opacity: 0.6;' }}">
+                                    <img src="/note_attachment/{{img_file}}" alt="Thumb" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button class="nav-arrow next position-absolute" onclick="scrollGallery('{{each_note.unique_id}}', 'right')" style="right: 5px; top: 50%; transform: translateY(-50%); z-index: 5; border: none; background: rgba(255,255,255,0.9); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;">
+                            <i class="fas fa-chevron-right text-dark" style="font-size: 12px;"></i>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="note-card-body p-4" id="body-{{each_note.unique_id}}" style="white-space: pre-wrap; font-weight: 500; font-size: 0.95rem; line-height: 1.6; padding-bottom: 30px;">{{ each_note.note }}</div>
+            </div>
+
+            <div class="text-center pb-3 note-more-ctrl" id="ctrl-{{each_note.unique_id}}" style="display:none;">
+                <button class="btn btn-sm btn-link expand-toggle-btn text-primary font-weight-bold" data-id="{{each_note.unique_id}}">
+                    {{ _("Read More") }} <i class="fas fa-chevron-down ml-1"></i>
+                </button>
+            </div>
+                
+            {% if other_files %}
+            <div class="px-4 py-2 border-top bg-light">
+                {% for file in other_files %}
+                    <a href="/note_attachment/{{file}}" class="d-flex align-items-center gap-2 small text-secondary text-decoration-none mb-1 group" target="_blank">
+                         <div class="bg-white rounded p-1 shadow-sm border"><i class="fas fa-paperclip text-muted"></i></div>
+                         <span class="text-truncate" style="max-width: 250px;">{{ file.split('/')[-1][37:] if '/' in file else file[37:] }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="note-card-footer">
+                <div class="d-flex flex-wrap align-items-center w-100">
+                    {% if each_note.tags %}
+                        {% for each_tag_id in each_note.tags.split(',') %}
+                            <a href="#" class="note-tag-chip" onclick="filterByTag('{{get_note_tag_from_unique_id(each_tag_id)}}'); return false;">
+                                #{{ get_note_tag_from_unique_id(each_tag_id) }}
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <small class="text-muted font-italic">No tags</small>
+                    {% endif %}
+                </div>
+                <div class="small text-muted ml-auto pl-2">
+                    #{{each_note.id}}
+                </div>
+            </div>
+        </div>

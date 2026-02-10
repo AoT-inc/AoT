@@ -46,6 +46,7 @@ from aot.controllers.controller_input import InputController
 from aot.controllers.controller_output import OutputController
 from aot.controllers.controller_pid import PIDController
 from aot.controllers.controller_trigger import TriggerController
+from aot.controllers.controller_trigger_sequence import SequenceTriggerController
 from aot.controllers.controller_widget import WidgetController
 from aot.databases.models import (PID, Camera, Conditional,
                                      CustomController, Input, Misc, Trigger)
@@ -63,13 +64,22 @@ from aot.utils.tools import generate_output_usage_report, next_schedule
 
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+
+# File handler
 logHandler = logging.FileHandler(DAEMON_LOG_FILE)
 logHandler.setLevel(logging.DEBUG)
 logHandler.setFormatter(formatter)
 
+# Stream handler (for Docker logs)
+streamHandler = logging.StreamHandler(sys.stdout)
+streamHandler.setLevel(logging.DEBUG)
+streamHandler.setFormatter(formatter)
+
 logger = logging.getLogger('aot')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logHandler)
+logger.addHandler(streamHandler)
+logger.propagate = False
 
 
 class DaemonController:
@@ -251,7 +261,12 @@ class DaemonController:
             controller_manage['function'] = PIDController
         elif cont_type == 'Trigger':
             controller_manage['type'] = Trigger
-            controller_manage['function'] = TriggerController
+            # Check for specific Trigger types requiring different controllers
+            trig_check = db_retrieve_table_daemon(Trigger, unique_id=cont_id)
+            if trig_check and trig_check.trigger_type == 'trigger_sequence':
+                controller_manage['function'] = SequenceTriggerController
+            else:
+                controller_manage['function'] = TriggerController
         elif cont_type == 'Function':
             controller_manage['type'] = CustomController
             controller_manage['function'] = FunctionController
@@ -411,10 +426,12 @@ class DaemonController:
             for controller_id in self.controller['Function']:
                 if not self.controller['Function'][controller_id].is_running():
                     return f"Error: Function ID {controller_id}"
-            if not self.controller['Output'].is_running():
-                return "Error: Output controller"
-            if not self.controller['Widget'].is_running():
-                return "Error: Widget controller"
+            if self.controller.get('Output') and hasattr(self.controller['Output'], 'is_running'):
+                if not self.controller['Output'].is_running():
+                    return "Error: Output controller"
+            if self.controller.get('Widget') and hasattr(self.controller['Widget'], 'is_running'):
+                if not self.controller['Widget'].is_running():
+                    return "Error: Widget controller"
         except Exception as except_msg:
             message = f"Could not check running threads: {except_msg}"
             self.logger.exception(message)
@@ -500,6 +517,11 @@ class DaemonController:
         elif function_id in self.controller["PID"]:
             try:
                 return self.controller["PID"][function_id].function_status()
+            except Exception:
+                return {'error': [f"Error getting Function status: {traceback.format_exc()}"]}
+        elif function_id in self.controller["Trigger"]:
+            try:
+                return self.controller["Trigger"][function_id].function_status()
             except Exception:
                 return {'error': [f"Error getting Function status: {traceback.format_exc()}"]}
         else:
@@ -713,7 +735,10 @@ class DaemonController:
 
     def refresh_daemon_trigger_settings(self, unique_id):
         try:
-            return self.controller['Trigger'][unique_id].refresh_settings()
+            if unique_id in self.controller['Trigger']:
+                return self.controller['Trigger'][unique_id].refresh_settings()
+            else:
+                return "Trigger not active, settings updated in DB only"
         except Exception:
             self.logger.exception("Could not refresh trigger settings")
 
@@ -1088,6 +1113,7 @@ class PyroServer(object):
     """
     def __init__(self, aot):
         self.aot = aot
+        self.logger = logging.getLogger('aot.pyro_server')
 
     def lcd_reset(self, lcd_id):
         """Resets an LCD."""
@@ -1373,8 +1399,8 @@ def parse_args():
 
 if __name__ == '__main__':
     # Check for root privileges
-    if not os.geteuid() == 0:
-        sys.exit("Script must be executed as root")
+    # if not os.geteuid() == 0:
+    #     sys.exit("Script must be executed as root")
 
     # Parse commandline arguments
     args = parse_args()

@@ -91,3 +91,5 @@ def db_retrieve_table_daemon(
 
         time.sleep(1)
         tries -= 1
+    
+    return []

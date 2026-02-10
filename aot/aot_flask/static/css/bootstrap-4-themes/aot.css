@@ -4,14 +4,16 @@
  * Copyright 2012-2019 Thomas Park
  * Licensed under MIT
  * Based on Bootstrap
-*//*!
+*/
+/*!
  * Bootstrap v4.4.1 (https://getbootstrap.com/)
  * Copyright 2011-2019 The Bootstrap Authors
  * Copyright 2011-2019 Twitter, Inc.
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
- */@import url("https://fonts.googleapis.com/css?family=Gothic+A1:400,700|Ubuntu:400,700&display=swap");
+ */
+@import url("https://fonts.googleapis.com/css?family=Gothic+A1:400,700|Ubuntu:400,700&display=swap");
 
- :root {
+:root {
   --blue: #007bff;
   --indigo: #6610f2;
   --purple: #9B479F;
@@ -23,7 +25,7 @@
   --teal: #20c997;
   --cyan: #029ACF;
   --white: #fff;
-  --gray: #d2d1d1;
+  --gray: #eeebeb;
   --gray-dark: #888888;
   --primary: #F2D524;
   --secondary: #fdf2cf;
@@ -34,14 +36,18 @@
   --light: #fdf2cf;
   --dark: #141414;
 
-  --bg-active: #fdf2cf;        /* 작동(활성) 상태 배경 */
-  --bg-paused: #e6be9bc9;        /* 일시정지 상태 배경 */
-  --bg-inactive: #d2d1d1;  
-  
+  --bg-active: #fdf2cf;
+  /* 작동(활성) 상태 배경 */
+  --bg-paused: #e6be9bc9;
+  /* 일시정지 상태 배경 */
+  --bg-inactive: #d2d1d1;
+
   --btn-outline: #6e6947;
 
-  --aot-btn-bg: var(--primary);       /* 버튼 기본 배경 (기존 디자인 참고) */
-  --aot-btn-hover-bg: var(--gray-dark);  /* 버튼 호버 배경 */
+  --aot-btn-bg: var(--primary);
+  /* 버튼 기본 배경 (기존 디자인 참고) */
+  --aot-btn-hover-bg: var(--gray-dark);
+  /* 버튼 호버 배경 */
   --aot-btn-hover-text-color: var(--primary);
   --aot-text-color: #373632;
   --aot-text-color: #000;
@@ -62,33 +68,44 @@
   --breakpoint-lg: 992px;
   --breakpoint-xl: 1200px;
 
-  --font-family-sans-serif: "Gothic A1", "Ubuntu", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-family-sans-serif: "Roboto", "Gothic A1", "Ubuntu", "Open Sans", "Nanum Gothic", "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* 전체 요소 기본 박스 사이징 설정 */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 /* HTML 기본 폰트 및 설정 */
 html {
-  font-family: 'Gothic A1';
+  font-family: var(--font-family-sans-serif);
   line-height: 1.15;
   transform: 0.2em;
   -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 
 /* 기본 블록 요소 설정 */
-article, aside, figcaption, figure, footer, header, hgroup, main, nav, section {
+article,
+aside,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+main,
+nav,
+section {
   display: block;
 }
 
 /* body 기본 스타일 설정 */
 body {
   margin: 0;
-  font-family: 'Gothic A1';
+  font-family: var(--font-family-sans-serif);
   font-size: 0.87rem;
   font-weight: 400;
   line-height: 1.8;
@@ -98,10 +115,11 @@ body {
 }
 
 .navbar-brand {
-  font-family: 'Gothic A1', sans-serif !important;
+  font-family: 'Roboto', sans-serif !important;
   font-size: 1em !important;
   font-weight: bold !important;
 }
+
 /* Navbar 메인 스타일 */
 .navbar.main-navbar {
   background-color: var(--primary);
@@ -113,12 +131,14 @@ body {
 }
 
 .navbar.main-navbar {
-  position: fixed; /* 중요! fixed로 설정 필수 */
+  position: fixed;
+  /* 중요! fixed로 설정 필수 */
   top: 0;
   width: 100%;
   z-index: 2000;
   transition: top 0.3s ease-in-out;
 }
+
 body {
   padding-top: calc(50px + 1em);
 }
@@ -131,8 +151,10 @@ body {
 }
 
 .navbar.main-navbar .nav-link:hover {
-  color: #000 !important; /* 호버 시 색상만 변경 */
-  text-decoration: none; /* 밑줄 제거 유지 */
+  color: #000 !important;
+  /* 호버 시 색상만 변경 */
+  text-decoration: none;
+  /* 밑줄 제거 유지 */
 }
 
 
@@ -147,17 +169,22 @@ body {
   margin: 0;
   width: auto;
 }
+
 .navbar.main-navbar .dropdown-menu {
-  min-width: 180px !important; /* 필요하면 길이에 따라 이 값을 조정하세요. */
+  min-width: 180px !important;
+  /* 필요하면 길이에 따라 이 값을 조정하세요. */
   width: auto !important;
 }
+
 .navbar.main-navbar .dropdown-menu .dropdown-item {
   font-weight: normal !important;
   white-space: nowrap !important;
 }
+
 .navbar.main-navbar .dropdown-menu .dropdown-item {
   position: relative;
 }
+
 .navbar.main-navbar .dropdown-menu .dropdown-item::after {
   content: attr(data-text);
   font-weight: bold;
@@ -166,6 +193,7 @@ body {
   visibility: hidden;
   display: block;
 }
+
 .navbar.main-navbar .dropdown-menu .dropdown-item:hover {
   background-color: var(--primary);
   font-weight: bold !important;
@@ -193,36 +221,46 @@ body,
 .google-gothic-a1 {
   font-family: 'Gothic A1', sans-serif;
 }
+
 .navbar.main-navbar .fa-shopping-cart {
   margin-right: 30px !important;
 }
+
 .form-check.form-check-inline input.form-control[type="checkbox"] {
-  accent-color: #000 !important;   /* 체크 표시 및 배경을 검정으로 */
+  accent-color: #000 !important;
+  /* 체크 표시 및 배경을 검정으로 */
   margin-right: 4px;
 }
 
 /* 데스크탑 환경 스타일 */
 @media (min-width: 768px) {
+
   .navbar.main-navbar .nav-link:not(:has(img)):not(.navbar-toggler),
   .navbar.main-navbar .navbar-brand:not(:has(img)) {
     display: inline-block !important;
     transform: translateY(1px) !important;
   }
+
   .navbar.main-navbar .dropdown-toggle {
     pointer-events: none !important;
   }
+
   .navbar.main-navbar .nav-link,
   .navbar.main-navbar .navbar-brand {
     font-size: 1.1em !important;
   }
+
   .navbar.main-navbar .nav-item.dropdown:hover .dropdown-menu {
     display: block !important;
   }
+
   .navbar.main-navbar .nav-item.dropdown:hover .dropdown-menu {
     display: block !important;
   }
+
   .form-check-input[type="checkbox"] {
-    accent-color: #000;    /* 체크 표시 및 배경 검정 */
+    accent-color: #000;
+    /* 체크 표시 및 배경 검정 */
   }
 }
 
@@ -239,12 +277,12 @@ body,
   body {
     padding-top: calc(50px + 1em);
   }
-  
+
   .navbar.main-navbar .dropdown-menu .dropdown-item:hover {
     font-weight: bold !important;
   }
 
-  .navbar.main-navbar .navbar-nav > li > a.nav-link:not(:has(img)),
+  .navbar.main-navbar .navbar-nav>li>a.nav-link:not(:has(img)),
   .navbar.main-navbar .navbar-brand:not(:has(img)) {
     display: inline-block !important;
     transform: translateY(1px) !important;
@@ -267,12 +305,13 @@ body,
     overflow-y: auto;
   }
 
-  .navbar.main-navbar .navbar-nav > li > a.nav-link {
+  .navbar.main-navbar .navbar-nav>li>a.nav-link {
     position: relative;
     font-size: 2em !important;
     font-weight: bold !important;
     padding-left: 2rem !important;
   }
+
   .navbar-dashboard-config.mr-2 {
     font-size: 1.1em !important;
     color: #000 !important;
@@ -286,8 +325,10 @@ body,
     font-size: 1.5em !important;
     padding-left: 4rem !important;
   }
+
   .navbar-nav .dropdown-menu.show .dropdown-item {
-    font-size: 1.5em !important; /* 이것만 추가하면 해결됨 */
+    font-size: 1.5em !important;
+    /* 이것만 추가하면 해결됨 */
   }
 
   .navbar-nav .dropdown-menu a::before {
@@ -325,13 +366,17 @@ body,
     box-shadow: none !important;
   }
 
-    /* 1) form-check-inline 전체를 한 줄에 정렬 */
+  /* 1) form-check-inline 전체를 한 줄에 정렬 */
   .form-check.form-check-inline {
-    display: inline-flex !important;     /* 강제로 가로 배치 */
-    align-items: center !important;      /* 수직 중앙 정렬 */
-    justify-content: flex-start !important; /* 왼쪽 정렬 */
+    display: inline-flex !important;
+    /* 강제로 가로 배치 */
+    align-items: center !important;
+    /* 수직 중앙 정렬 */
+    justify-content: flex-start !important;
+    /* 왼쪽 정렬 */
     margin-top: 1em;
-    gap: 0.4em;                          /* 체크박스와 라벨 사이 간격(여유분) */
+    gap: 0.4em;
+    /* 체크박스와 라벨 사이 간격(여유분) */
   }
 
   /* 2) 체크박스 자체 스타일 재정의 */
@@ -341,11 +386,14 @@ body,
     width: auto !important;
     height: auto !important;
     margin: 0 !important;
-    margin-right: 0.3em !important;  /* 체크박스와 텍스트 사이 약간 간격 */
-    
+    margin-right: 0.3em !important;
+    /* 체크박스와 텍스트 사이 약간 간격 */
+
     /* 체크박스 색상 & 크기 조절(현대 브라우저) */
-    accent-color: #000 !important;   /* 체크 표시 및 배경을 검정으로 */
-    transform: scale(1.2) !important;/* 필요 시 크기 0.7~1.0 등으로 조절 */
+    accent-color: #000 !important;
+    /* 체크 표시 및 배경을 검정으로 */
+    transform: scale(1.2) !important;
+    /* 필요 시 크기 0.7~1.0 등으로 조절 */
 
     /* Bootstrap .form-control의 테두리·배경 제거 */
     border: none !important;
@@ -362,14 +410,16 @@ body,
     font-size: 1.2em !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: #000 !important;      /* 텍스트 색상 검정 */
+    color: #000 !important;
+    /* 텍스트 색상 검정 */
     vertical-align: middle !important;
-    white-space: nowrap;         /* 필요 시 텍스트 줄바꿈 방지 */
+    white-space: nowrap;
+    /* 필요 시 텍스트 줄바꿈 방지 */
   }
 }
 
 .widget-outer {
-  box-shadow: 0 0 10px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
   border-radius: 0.7em !important;
   border: 1px solid #c9c9c9;
 }
@@ -416,6 +466,7 @@ body,
   background-color: #141414 !important;
   color: #F2D524 !important;
 }
+
 /* 페이지 콘텐츠 영역 기본 패딩 설정 */
 #page-content-wrapper {
   padding: 20px !important;
@@ -460,16 +511,20 @@ body,
 .bootstrap-select .btn-primary:active,
 .bootstrap-select .btn-primary.active,
 .bootstrap-select.show .btn-primary.dropdown-toggle {
-  outline: none !important; /* 브라우저 기본 포커스 테두리 제거 */
-  border: 1px solid #141414 !important; /* 테두리 명확히 설정 */
-  box-shadow: none !important; /* 그림자 제거 */
+  outline: none !important;
+  /* 브라우저 기본 포커스 테두리 제거 */
+  border: 1px solid #141414 !important;
+  /* 테두리 명확히 설정 */
+  box-shadow: none !important;
+  /* 그림자 제거 */
   text-align: center !important;
 }
 
 .bootstrap-select .dropdown-toggle:focus {
   background-color: #000 !important;
   color: var(--primary) !important;
-  outline: none !important; /* 추가 포커스 outline 제거 */
+  outline: none !important;
+  /* 추가 포커스 outline 제거 */
 }
 
 /* 입력창 스타일 */
@@ -509,26 +564,36 @@ input.form-control.btn.btn-primary {
 .bootstrap-select .dropdown-menu.inner {
   font-size: 1em !important;
 }
+
 .bootstrap-select .dropdown-item {
   font-size: 1em !important;
 }
+
 .bootstrap-select .filter-option-inner-inner {
   font-size: 1em !important;
 }
+
 .dropdown-menu.show {
   font-size: 1em !important;
 }
+
 .dropdown-menu.show .dropdown-item {
   font-size: 1em !important;
 }
+
 button.dropdown-toggle.btn.btn-primary {
-  text-align: center !important; /* 중앙 정렬 */
+  text-align: center !important;
+  /* 중앙 정렬 */
   border: none !important;
 }
+
 button.dropdown-toggle.btn.btn-primary:hover {
-  background-color: var(--dark) !important; /* 배경색 검정 */
-  color: #F2D524 !important; /* 문자색 노란색 */
+  background-color: var(--dark) !important;
+  /* 배경색 검정 */
+  color: #F2D524 !important;
+  /* 문자색 노란색 */
 }
+
 .dropdown-menu.inner.show .dropdown-item,
 .bootstrap-select .dropdown-menu.inner.show .dropdown-item:hover,
 .bootstrap-select .dropdown-menu.inner.show .dropdown-item:focus,
@@ -545,6 +610,7 @@ div[id^="pid_"] input.form-control {
   text-align: center !important;
   color: #000 !important;
 }
+
 .col-3 input.form-control:hover,
 .col-6 input.form-control:hover,
 .col-4 input.form-control:hover,
@@ -628,87 +694,133 @@ input[name="function_activate"].btn-primary.hover {
   border: 1px solid #DF5353 !important;
   text-align: center !important;
 }
+
 .bootstrap-select .btn-primary,
 .bootstrap-select .btn-primary:hover,
 .bootstrap-select .btn-primary:focus,
 .bootstrap-select .btn-primary:active,
 .bootstrap-select .btn-primary.active,
 .bootstrap-select.show .btn-primary.dropdown-toggle {
-  outline: none !important; /* 브라우저 기본 포커스 테두리 제거 */
-  border: 1px solid #141414 !important; /* 테두리 명확히 설정 */
-  box-shadow: none !important; /* 그림자 제거 */
+  outline: none !important;
+  /* 브라우저 기본 포커스 테두리 제거 */
+  border: 1px solid #141414 !important;
+  /* 테두리 명확히 설정 */
+  box-shadow: none !important;
+  /* 그림자 제거 */
   text-align: center !important;
 }
 
 .bootstrap-select .dropdown-toggle:focus {
-  outline: none !important; /* 추가 포커스 outline 제거 */
+  outline: none !important;
+  /* 추가 포커스 outline 제거 */
 }
 
 /* 배경 상태 클래스: JS에서 토글(활성, 일시정지, 비활성) */
 .active-background {
   background-color: var(--light) !important;
 }
+
 .pause-background {
   background-color: var(--warning) !important;
 }
+
 .inactive-background {
   background-color: var(--gray) !important;
 }
 
 
-.bootstrap-select .dropdown-menu.inner.show .inner > li > a,
+.bootstrap-select .dropdown-menu.inner.show .inner>li>a,
 .bootstrap-select .dropdown-menu .bs-title-option {
   font-size: 1em !important;
 }
+
 input.form-control[type="text"]:disabled {
   font-size: 1em !important;
   text-align: center !important;
 }
+
 input.form-control[name="name"][type="text"] {
   font-size: 1em !important;
   text-align: left !important;
 }
+
 select.form-control.form-dropdown {
   font-size: 1em !important;
 }
+
 .bootstrap-select.selectpicker,
 .bootstrap-select.selectpicker .dropdown-item,
 .bootstrap-select.selectpicker .bs-title-option {
   font-size: 1em !important;
 }
+
 .dropdown-menu.inner.show .dropdown-item {
   font-size: 1em !important;
 }
 
-main.container > p {
+main.container>p {
   font-size: 1.2em !important;
 }
 
 .widget-drag-handle {
   transform: translateY(-1px) !important;
 }
+
 .widget-cog-icon {
   font-size: 0.8em;
   transform: translateY(-4px) !important;
 }
+
 .widget-graph-controls {
   position: absolute !important;
-  top: 4px !important; /* 위로 이동 (적절한 값으로 미세조정) */
+  top: 4px !important;
+  /* 위로 이동 (적절한 값으로 미세조정) */
   right: 35px !important;
   z-index: 999 !important;
 }
+
 .widget-graph-controls .fa-bars {
-  transform: translateY(0); /* 기존 이동 제거 */
+  transform: translateY(0);
+  /* 기존 이동 제거 */
 }
+
+/* Modal Layout Improvements */
 .modal {
   margin-top: calc(50px + 1em) !important;
-  max-height: calc(100vh - 10rem);
+  overflow: hidden !important;
 }
+
+.modal-dialog {
+  /* [Fix] Disabled flex/fixed-height that causes width shrinking issues */
+  /* height: calc(100vh - (50px + 4rem)); */
+  /* display: flex; */
+  /* align-items: center; */
+  margin: 1.75rem auto;
+}
+
+.modal-content {
+  max-height: 100%;
+  height: 100%;
+  border-radius: 20px !important;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Critical for flex scrolling */
+}
+
 /* 모달 내부 폼의 col-auto 요소 간격 조정 */
 .modal .col-auto {
   margin-top: 5px;
   margin-bottom: 10px;
 }
+
 .modal .control-label {
   margin-bottom: 0 !important;
   margin-top: 3px;
@@ -720,8 +832,10 @@ main.container > p {
   flex-direction: column;
   width: 100%;
   min-height: 100%;
-  padding-left: 0.8em; /* 8px -> 0.5em (16px 기준) */
-  padding-right: 0.8em; /* 8px -> 0.5em (16px 기준) */
+  padding-left: 0.8em;
+  /* 8px -> 0.5em (16px 기준) */
+  padding-right: 0.8em;
+  /* 8px -> 0.5em (16px 기준) */
 }
 
 /* 행(row) 컨테이너 */
@@ -731,18 +845,21 @@ main.container > p {
   height: 64px;
   align-items: center !important;
 }
+
 .row-aot-1-1 {
   display: flex;
   width: 100%;
   height: 64px;
   align-items: center !important;
 }
+
 .row-aot-2 {
   height: 40px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 8px; /* input-time과 btn-time 간격 정의(4px) */
+  gap: 8px;
+  /* input-time과 btn-time 간격 정의(4px) */
 }
 
 /* 컬럼 설정 */
@@ -764,17 +881,23 @@ main.container > p {
 /* 텍스트(prt-text) */
 .prt-text {
   display: flex;
-  flex-direction: column;  /* 세로로 배치 */
-  align-items: flex-start; /* 왼쪽 정렬 */
+  flex-direction: column;
+  /* 세로로 배치 */
+  align-items: flex-start;
+  /* 왼쪽 정렬 */
   font-size: 1.1em;
-  gap: 0em;          /* 예: 0.2em 정도로 간격 축소 */
+  gap: 0em;
+  /* 예: 0.2em 정도로 간격 축소 */
   margin: 0;
   padding: 0;
 }
+
 .prt-text-inline {
   display: flex;
-  flex-direction: row;    /* 가로로 배치 */
-  align-items: center;    /* 수직 중앙 정렬 */
+  flex-direction: row;
+  /* 가로로 배치 */
+  align-items: center;
+  /* 수직 중앙 정렬 */
   font-size: 1.1em;
   text-align: left !important;
 }
@@ -784,7 +907,8 @@ main.container > p {
 .btn-time,
 .btn-aot-pid {
   display: flex;
-  gap: 4px; /* 약 4px 간격 */
+  gap: 4px;
+  /* 약 4px 간격 */
   align-items: center !important;
   border-color: #8b845b !important;
   border-width: 0.3px;
@@ -796,7 +920,8 @@ main.container > p {
 .input-time-ss {
   width: 42px;
   height: 32px;
-  border-radius: 0.2em; /* 2px */
+  border-radius: 0.2em;
+  /* 2px */
   border-color: #8b845b !important;
   border-width: 0.3px;
   font-size: 1em !important;
@@ -822,9 +947,11 @@ main.container > p {
 .btn-time-item {
   width: 54px;
   height: 32px;
-  font-size: 1em; /* 약 14px */
+  font-size: 1em;
+  /* 약 14px */
   font-weight: 400;
-  border-radius: 0.2em; /* 2px */
+  border-radius: 0.2em;
+  /* 2px */
   background-color: var(--primary);
   cursor: pointer;
   transition: background-color 0.2s;
@@ -862,7 +989,10 @@ main.container > p {
   cursor: pointer;
   border-radius: 32px;
   transition: background-color 0.3s;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .btn-toggle-thumb {
@@ -871,36 +1001,47 @@ main.container > p {
   width: 28px;
   border-radius: 50%;
   background-color: white;
-  bottom: 2px;  /* 바닥에서 0.3em만큼 띄움 */
-  left: 2px;    /* 왼쪽에서 0.3em만큼 띄움 */
+  bottom: 2px;
+  /* 바닥에서 0.3em만큼 띄움 */
+  left: 2px;
+  /* 왼쪽에서 0.3em만큼 띄움 */
   transition: transform 0.3s;
 }
 
 /* 토글 버튼 활성화 스타일 */
-.btn-toggle-input:checked + .btn-toggle-slider {
+.btn-toggle-input:checked+.btn-toggle-slider {
   background-color: var(--primary);
 }
 
-.btn-toggle-input:checked + .btn-toggle-slider .btn-toggle-thumb {
+.btn-toggle-input:checked+.btn-toggle-slider .btn-toggle-thumb {
   transform: translateX(22px);
 }
 
 
 /* 배경색 처리 (투명 처리) */
-.row-aot-1, .row-aot-2, .col-aot-1, .col-aot-2, .prt-text, .input-time, .btn-time {
+.row-aot-1,
+.row-aot-2,
+.col-aot-1,
+.col-aot-2,
+.prt-text,
+.input-time,
+.btn-time {
   background-color: transparent;
 }
 
 /* input-time, btn-time 컨테이너 수직 중앙정렬 필수 */
-.input-time, .btn-time {
-  height: 100%; /* 컨테이너 높이를 행과 동일하게 */
+.input-time,
+.btn-time {
+  height: 100%;
+  /* 컨테이너 높이를 행과 동일하게 */
   display: flex;
-  align-items: center; /* 수직 중앙 정렬 필수 */
+  align-items: center;
+  /* 수직 중앙 정렬 필수 */
 }
 
 /* col-aot-2 내부 명확한 우측 끝 정렬 (토글 버튼 확실한 우측정렬) */
 
-.btn-time > .btn-time-item {
+.btn-time>.btn-time-item {
   width: 54px;
   height: 32px;
   font-size: 1em !important;
@@ -915,6 +1056,7 @@ main.container > p {
 .btn-aot-pid {
   gap: 4px;
 }
+
 .btn-aot-pid-sm,
 .btn-aot-pid-resume {
   background-color: #F4D624 !important;
@@ -925,14 +1067,17 @@ main.container > p {
   border-color: #8b845b !important;
   border-width: 0.3px;
 }
+
 .btn-aot-pid-sm:hover,
 .btn-aot-pid-resume:hover {
   background-color: var(--dark) !important;
   color: var(--primary);
 }
+
 .btn-aot-pid-sm {
   width: 54px !important;
 }
+
 .btn-aot-pid-resume {
   width: 112px !important;
 }
@@ -981,7 +1126,8 @@ main.container > p {
 .input-aot-pid {
   width: 54px;
   height: 32px;
-  border-radius: 0.2em; /* 2px */
+  border-radius: 0.2em;
+  /* 2px */
   font-size: 1em !important;
   font-weight: 700;
   text-align: center;
@@ -1045,6 +1191,7 @@ textarea::-moz-focus-inner {
   background-color: #F4D624 !important;
   font-weight: 700;
 }
+
 .btn-aot-dash.active:hover {
   color: #373632 !important;
 }
@@ -1072,12 +1219,18 @@ textarea::-moz-focus-inner {
 
 /* col-wether-graphic: 아이콘 및 풍향 정보를 세로로 배치 */
 .col-wether-graphic {
-  display: flex;             /* flex 컨테이너 */
-  align-items: center;       /* 수직 중앙 정렬 */
-  justify-content: center;   /* 수평 중앙 정렬 */
-  width: 38% !important;   /* 아이콘보다 살짝 여유 있는 크기 */
-  height: auto !important;  /* 아이콘 크기에 맞춤 */
+  display: flex;
+  /* flex 컨테이너 */
+  align-items: center;
+  /* 수직 중앙 정렬 */
+  justify-content: center;
+  /* 수평 중앙 정렬 */
+  width: 38% !important;
+  /* 아이콘보다 살짝 여유 있는 크기 */
+  height: auto !important;
+  /* 아이콘 크기에 맞춤 */
 }
+
 .icon-aot-weather {
   align-self: center;
   width: 120% !important;
@@ -1085,6 +1238,7 @@ textarea::-moz-focus-inner {
   margin: 0;
   padding: 0;
 }
+
 .col-wether-tmp {
   margin-top: 6px;
   display: flex;
@@ -1094,6 +1248,7 @@ textarea::-moz-focus-inner {
   width: 32% !important;
   height: auto !important;
 }
+
 .col-wether-tmntmx {
   display: flex;
   flex-direction: column;
@@ -1102,6 +1257,7 @@ textarea::-moz-focus-inner {
   width: 30% !important;
   height: auto !important;
 }
+
 /* col-wether-announcment: 오른쪽에 배치되고, 세로 중앙 정렬 */
 .col-wether-announcment {
   flex: 1;
@@ -1109,24 +1265,29 @@ textarea::-moz-focus-inner {
   padding: 0;
   align-items: left !important;
 }
+
 .row-aot-weather-2 {
   display: flex;
   justify-content: center;
-  align-items: flex-end; /* or flex-start, depending on desired vertical alignment */
+  align-items: flex-end;
+  /* or flex-start, depending on desired vertical alignment */
   min-width: 300px;
   max-width: 420px;
   margin: 10px auto;
 }
+
 .row-aot-weather-3 {
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* or flex-start, depending on desired vertical alignment */
+  align-items: flex-start;
+  /* or flex-start, depending on desired vertical alignment */
   min-width: 100px;
   max-width: 420px;
   width: 100%;
   height: 54px;
   margin: 10px auto;
 }
+
 .col-weather-slider {
   display: flex;
   margin-top: 0;
@@ -1134,25 +1295,37 @@ textarea::-moz-focus-inner {
   width: 100%;
   align-items: center;
 }
+
 .btn-aot-slide-time {
-  -webkit-appearance: none; /* 브라우저 기본 스타일 제거 */
+  -webkit-appearance: none;
+  /* 브라우저 기본 스타일 제거 */
   appearance: none;
-  width: 80%;        /* 슬라이더 전체 너비 */
-  height: 8px;        /* 트랙 높이 */
-  background: #999;   /* 트랙 배경색 */
-  border-radius: 4px; /* 트랙 둥근 모서리 */
-  outline: none;      /* 포커스 시 테두리 제거 */
+  width: 80%;
+  /* 슬라이더 전체 너비 */
+  height: 8px;
+  /* 트랙 높이 */
+  background: #999;
+  /* 트랙 배경색 */
+  border-radius: 4px;
+  /* 트랙 둥근 모서리 */
+  outline: none;
+  /* 포커스 시 테두리 제거 */
 }
 
 /* WebKit 기반 브라우저용 썸 스타일 */
 .btn-aot-slide-time::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 30px;        /* 썸 너비 */
-  height: 30px;       /* 썸 높이 */
-  background: #F4D624; /* 썸 배경색 */
-  border-radius: 50%; /* 썸을 원형으로 */
-  cursor: pointer;    /* 마우스 커서 포인터 */
+  width: 30px;
+  /* 썸 너비 */
+  height: 30px;
+  /* 썸 높이 */
+  background: #F4D624;
+  /* 썸 배경색 */
+  border-radius: 50%;
+  /* 썸을 원형으로 */
+  cursor: pointer;
+  /* 마우스 커서 포인터 */
 }
 
 /* Firefox용 썸 스타일 */
@@ -1163,13 +1336,19 @@ textarea::-moz-focus-inner {
   border-radius: 50%;
   cursor: pointer;
 }
+
 .day-background {
-  background-color: var(--light) !important; /* 밝은 배경 (예: 흰색) */
-  color: #000 !important; /* 글자색 검정 */
+  background-color: var(--light) !important;
+  /* 밝은 배경 (예: 흰색) */
+  color: #000 !important;
+  /* 글자색 검정 */
 }
+
 .night-background {
-  background-color: #2E435B !important; /* 어두운 배경 (예: 진한 회색) */
-  color: #fff !important; /* 글자색 흰색 */
+  background-color: #2E435B !important;
+  /* 어두운 배경 (예: 진한 회색) */
+  color: #fff !important;
+  /* 글자색 흰색 */
 }
 
 /* 기본 드롭다운 토글 ::after 가상 요소 제거 */
@@ -1186,17 +1365,115 @@ textarea::-moz-focus-inner {
 /* 오른쪽 커스텀 화살표 영역 설정 */
 .bootstrap-select .dropdown-toggle .filter-option-inner-inner {
   position: relative;
-  padding-right: 1.8em;  /* 화살표가 들어갈 공간 확보 (필요에 따라 조절) */
+  padding-right: 1.8em;
+  /* 화살표가 들어갈 공간 확보 (필요에 따라 조절) */
 }
 
 /* 오른쪽 위치에 작은 삼각형(▼) 추가 */
 .bootstrap-select .dropdown-toggle .filter-option-inner-inner::after {
-  content: "\25BC";        /* ▼ 문자 */
+  content: "\25BC";
+  /* ▼ 문자 */
   position: absolute;
-  right: 0;            /* 오른쪽 여백 (디자인에 맞게 조절) */
+  right: 0;
+  /* 오른쪽 여백 (디자인에 맞게 조절) */
   top: 50%;
   transform: translateY(-50%);
-  font-size: 8px;         /* 원하는 작은 크기로 설정 */
-  color: #000;             /* 색상 설정 (원하는 색으로 조절) */
+  font-size: 8px;
+  /* 원하는 작은 크기로 설정 */
+  color: #000;
+  /* 색상 설정 (원하는 색으로 조절) */
   pointer-events: none;
+}
+
+/* Animated Text Input Styles (Reusable) */
+.aot-animated-input-group {
+  position: relative;
+  width: 100%;
+  --aot-input-border-color: rgba(221, 221, 221, 0.39);
+  --aot-input-focus-color: var(--primary, #F2D524);
+  /* AoT Primary */
+  --aot-input-hover-bg: rgba(73, 133, 224, 0.12);
+  display: flex;
+  align-items: center;
+}
+
+.aot-animated-input {
+  font-family: inherit;
+  font-size: 1em;
+  background-color: transparent;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5em 0.5em 0.7em 0.5em;
+  border: none;
+  border-bottom: 1px solid var(--aot-input-border-color);
+  transition: background-color 0.2s;
+  color: inherit;
+}
+
+.aot-animated-input:hover {
+  background: var(--aot-input-hover-bg);
+}
+
+.aot-animated-input:focus {
+  outline: none;
+}
+
+.aot-animated-input-border {
+  position: absolute;
+  background: var(--aot-input-focus-color);
+  width: 0%;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  transition: 0.3s;
+  pointer-events: none;
+}
+
+.aot-animated-input:focus~.aot-animated-input-border {
+  width: 100%;
+}
+
+/* ==========================================================================
+   AOT RESPONSIVE BREAKPOINTS (UNIFIED)
+   Mobile: < 768px
+   Desktop: >= 768px
+   Standardizing modal sizes across the application.
+   ========================================================================== */
+
+/* Unified Modal Styling Class */
+.aot-unified-modal .modal-dialog {
+    /* Reset default bootstrap behaviors that might interfere */
+    max-width: none; 
+}
+
+/* Mobile View (< 768px) */
+@media (max-width: 767.98px) {
+    .aot-unified-modal .modal-dialog {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        /* Full screen feel on mobile */
+        min-height: 100%; 
+    }
+    
+    .aot-unified-modal .modal-content {
+        border-radius: 0 !important;
+        border: none !important;
+        min-height: 100vh; /* Ensure full height */
+    }
+}
+
+/* Desktop View (>= 768px) */
+@media (min-width: 768px) {
+    .aot-unified-modal .modal-dialog {
+        /* USER REQUEST: "Desktop max width 600px" */
+        max-width: 600px !important; 
+        width: 600px !important;
+        margin: 1.75rem auto; /* Standard Bootstrap vertical margin */
+    }
+    
+    .aot-unified-modal .modal-content {
+        border-radius: 0.5rem; /* Standard rounded corners */
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
 }

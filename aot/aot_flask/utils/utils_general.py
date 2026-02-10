@@ -4,8 +4,10 @@ import importlib
 import json
 import logging
 import os
+import shutil
 from collections import OrderedDict
 from datetime import datetime
+from werkzeug.datastructures import MultiDict
 
 import flask_login
 import sqlalchemy
@@ -18,7 +20,7 @@ from aot.config import (CAMERA_INFO, DEPENDENCIES_GENERAL, FUNCTION_INFO,
                            METHOD_INFO, PATH_CAMERAS)
 from aot.config_devices_units import MEASUREMENTS, UNITS
 from aot.config_translations import TRANSLATIONS
-from aot.databases.models import (PID, Camera, Conditional, Conversion,
+from aot.databases.models import (PID, APIKey, Camera, Conditional, Conversion,
                                      CustomController, Dashboard,
                                      DeviceMeasurements, Input, Output, Role,
                                      Trigger, User, Widget)
@@ -35,6 +37,72 @@ from aot.utils.system_pi import (add_custom_measurements, add_custom_units,
 from aot.utils.widgets import parse_widget_information
 
 logger = logging.getLogger(__name__)
+_NULLISH_STRINGS = {'', 'none', 'null', 'false'}
+
+
+def normalize_nullish_value(value, empty_value=''):
+    """Normalize placeholder/nullish values to a consistent empty representation."""
+    if value is None:
+        return empty_value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.lower() in _NULLISH_STRINGS:
+            return empty_value
+        return stripped
+    return value
+
+
+def sanitize_nullish_sequence(seq):
+    """Return list stripped of nullish placeholders."""
+    if not seq:
+        return []
+    cleaned = []
+    for val in seq:
+        norm = normalize_nullish_value(val, '')
+        if norm == '':
+            continue
+        cleaned.append(norm)
+    return cleaned
+
+
+def sanitize_form(form):
+    """
+    Normalize an incoming request.form (or MultiDict-like) by removing nullish placeholders.
+    - Keys are preserved; values are normalized to '' when nullish so WTForms still binds.
+    """
+    cleaned = MultiDict()
+    if not form:
+        return cleaned
+    try:
+        iterator = form.lists()
+    except Exception:
+        iterator = []
+    for key, values in iterator:
+        norm_key = normalize_nullish_value(key, '')
+        for val in values:
+            norm_val = normalize_nullish_value(val, '')
+            cleaned.add(norm_key, norm_val)
+    return cleaned
+
+# Backward compatibility alias
+normalize_request_form_payload = sanitize_form
+
+
+def normalize_option_value(val, empty_value=None):
+    """Normalize custom option payloads by stripping nullish placeholders."""
+    if isinstance(val, list):
+        return [v for v in (normalize_option_value(v, empty_value) for v in val) if v not in [None, '']]
+    if isinstance(val, dict):
+        cleaned = {}
+        for k, v in val.items():
+            norm_key = normalize_nullish_value(k, '')
+            norm_val = normalize_option_value(v, empty_value)
+            cleaned[norm_key] = norm_val
+        return cleaned
+    normalized = normalize_nullish_value(val, '')
+    if normalized == '':
+        return empty_value
+    return normalized
 
 #
 # Custom options
@@ -111,7 +179,9 @@ def custom_options_return_string(error, dict_options, mod_dev, request_form):
                             'select_measurement_channel',
                             'select_type_measurement',
                             'select_type_unit',
-                            'select_device']:
+                            'select_type_unit',
+                            'select_device',
+                            'color']:
                         if 'constraints_pass' in each_option:
                             (constraints_pass,
                              constraints_errors,
@@ -128,6 +198,16 @@ def custom_options_return_string(error, dict_options, mod_dev, request_form):
                                 mod_dev, request_form.get(key))
                         if constraints_pass:
                             value = ",".join(request_form.getlist(key))
+
+                    elif each_option['type'] == 'select_multi_device':
+                        if 'constraints_pass' in each_option:
+                            (constraints_pass,
+                             constraints_errors,
+                             mod_dev) = each_option['constraints_pass'](
+                                mod_dev, request_form.get(key))
+                        if constraints_pass:
+                            # Return raw list for JSON serialization (safer for UUIDs)
+                            value = request_form.getlist(key)
 
                     elif each_option['type'] == 'bool':
                         value = bool(request_form.get(key))
@@ -167,10 +247,17 @@ def custom_options_return_json(
         use_defaults=False,
         custom_options=None):
     # Custom options
-    if custom_options:
-        dict_options_return = copy.deepcopy(custom_options)
-    else:
-        dict_options_return = {}
+    if isinstance(custom_options, str):
+        try:
+            if custom_options.strip().lower() in ['none', 'null', '']:
+                custom_options = {}
+            else:
+                custom_options = json.loads(custom_options)
+        except Exception:
+            custom_options = {}
+    if not isinstance(custom_options, dict):
+        custom_options = {}
+    dict_options_return = copy.deepcopy(custom_options)
 
     # TODO: name these the same in next major release
     if mod_dev is None:
@@ -184,8 +271,12 @@ def custom_options_return_json(
     elif hasattr(mod_dev, 'action_type'):
         device = mod_dev.action_type
     else:
-        logger.error("Unknown device")
-        return None, None
+        logger.error("custom_options_return_json: Unknown device; returning empty {}")
+        return error, json.dumps({})
+
+    if device not in dict_options:
+        logger.error("custom_options_return_json: device %s not found in dict_options; returning empty {}", device)
+        return error, json.dumps({})
 
     if 'custom_options' in dict_options[device]:
         for each_option in dict_options[device]['custom_options']:
@@ -194,6 +285,11 @@ def custom_options_return_json(
 
             null_value = True
 
+            # [Fix] If request_form is None, do not overwrite existing options with defaults/None.
+            # This prevents configuration loss during initial setup or background tasks.
+            if not request_form:
+                continue
+
             if request_form:
                 for key in request_form.keys():
                     if each_option['id'] == key:
@@ -201,15 +297,16 @@ def custom_options_return_json(
                         constraints_errors = []
                         value = None
 
+                        raw_val = request_form.get(key)
                         if each_option['type'] == 'float':
-                            if str_is_float(request_form.get(key)):
+                            if str_is_float(raw_val):
                                 if 'constraints_pass' in each_option:
                                     (constraints_pass,
                                      constraints_errors,
                                      mod_dev) = each_option['constraints_pass'](
-                                        mod_dev, float(request_form.get(key)))
+                                        mod_dev, float(raw_val))
                                 if constraints_pass:
-                                    value = float(request_form.get(key))
+                                    value = float(raw_val)
                             elif 'required' in each_option and not each_option['required']:
                                 value = None
                             else:
@@ -217,17 +314,17 @@ def custom_options_return_json(
                                     "{name} must represent a float/decimal value "
                                     "(submitted '{value}')".format(
                                         name=each_option['name'],
-                                        value=request_form.get(key)))
+                                        value=raw_val))
 
                         elif each_option['type'] == 'integer':
-                            if is_int(request_form.get(key)):
+                            if is_int(raw_val):
                                 if 'constraints_pass' in each_option:
                                     (constraints_pass,
                                      constraints_errors,
                                      mod_dev) = each_option['constraints_pass'](
-                                        mod_dev, int(request_form.get(key)))
+                                        mod_dev, int(raw_val))
                                 if constraints_pass:
-                                    value = int(request_form.get(key))
+                                    value = int(raw_val)
                             elif 'required' in each_option and not each_option['required']:
                                 value = None
                             else:
@@ -235,7 +332,7 @@ def custom_options_return_json(
                                     "{name} must represent an integer value "
                                     "(submitted '{value}')".format(
                                         name=each_option['name'],
-                                        value=request_form.get(key)))
+                                        value=raw_val))
 
                         elif each_option['type'] in [
                                 'multiline_text',
@@ -248,26 +345,27 @@ def custom_options_return_json(
                                 'select_measurement_channel',
                                 'select_type_measurement',
                                 'select_type_unit',
-                                'select_device']:
+                                'select_device',
+                                'color']:
                             if 'constraints_pass' in each_option:
                                 (constraints_pass,
                                  constraints_errors,
                                  mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, request_form.get(key))
+                                    mod_dev, normalize_option_value(raw_val))
                             if constraints_pass:
-                                value = request_form.get(key)
+                                value = normalize_option_value(raw_val)
 
-                        elif each_option['type'] == 'select_multi_measurement':
+                        elif each_option['type'] in ['select_multi_measurement', 'channel_selector', 'select_multi_device']:
                             if 'constraints_pass' in each_option:
                                 (constraints_pass,
                                  constraints_errors,
                                  mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, request_form.get(key))
+                                    mod_dev, normalize_option_value(raw_val))
                             if constraints_pass:
-                                value = request_form.getlist(key)
+                                value = normalize_option_value(request_form.getlist(key), empty_value=[])
 
                         elif each_option['type'] == 'bool':
-                            value = bool(request_form.get(key))
+                            value = bool(normalize_option_value(raw_val, False))
 
                         for each_error in constraints_errors:
                             error.append(
@@ -278,6 +376,59 @@ def custom_options_return_json(
                         if value is not None:
                             null_value = False
                             dict_options_return[key] = value
+
+                            # [Auto-Save API Key/Token]
+                            auth_keywords = ['api_key', 'token', 'secret', 'access_key', 'auth_key', 'client_id', 'client_secret']
+                            is_auth_field = any(kw in key.lower() for kw in auth_keywords)
+                            
+                            if is_auth_field and isinstance(value, str) and len(value) > 5:
+                                try:
+                                    device_info = dict_options.get(device, {})
+                                    
+                                    # [Metadata Extraction]
+                                    # Try to get manufacturer (provider)
+                                    provider = (device_info.get('input_manufacturer') or 
+                                                device_info.get('output_manufacturer') or 
+                                                device_info.get('function_manufacturer') or 
+                                                device)
+                                    
+                                    # Try to get descriptive name
+                                    display_name = (device_info.get('input_name') or 
+                                                   device_info.get('output_name') or 
+                                                   device_info.get('function_name') or 
+                                                   device)
+                                    
+                                    # Gather URLs
+                                    url_list = []
+                                    for url_key in ['url_additional', 'url_manufacturer', 'url_datasheet', 'url_product_purchase']:
+                                        urls = device_info.get(url_key, [])
+                                        if isinstance(urls, list):
+                                            url_list.extend([u for u in urls if u])
+                                        elif urls:
+                                            url_list.append(urls)
+                                    
+                                    # Deduplicate URLs while preserving order
+                                    url_list = list(dict.fromkeys(url_list))
+                                    primary_url = url_list[0] if url_list else None
+                                    
+                                    existing = APIKey.query.filter(APIKey.key == value).first()
+                                    if not existing:
+                                        new_api_key = APIKey()
+                                        new_api_key.name = f"{display_name} {each_option['name']} (Auto-saved)"
+                                        new_api_key.provider = provider
+                                        new_api_key.key = value
+                                        new_api_key.tag = each_option['id']
+                                        new_api_key.url = primary_url
+                                        
+                                        desc = f"Automatically saved from {display_name} ({device}) configuration."
+                                        if len(url_list) > 1:
+                                            desc += "\nRelated URLs:\n" + "\n".join(url_list)
+                                        new_api_key.description = desc
+                                        
+                                        new_api_key.save()
+                                        logger.info(f"Auth field '{each_option['id']}' for {provider} auto-saved with metadata.")
+                                except Exception as e:
+                                    logger.error(f"Failed to auto-save auth field with metadata: {e}")
 
             if (request_form and
                     each_option['type'] == 'bool' and
@@ -317,8 +468,12 @@ def custom_channel_options_return_json(
     elif hasattr(mod_dev, 'output_type'):
         device = mod_dev.output_type
     else:
-        logger.error("Unknown device")
-        return None, None
+        logger.error("custom_channel_options_return_json: Unknown device; returning empty {}")
+        return error, json.dumps({})
+
+    if device not in dict_options:
+        logger.error("custom_channel_options_return_json: device %s not found in dict_options; returning empty {}", device)
+        return error, json.dumps({})
 
     if 'custom_channel_options' in dict_options[device]:
         for each_option in dict_options[device]['custom_channel_options']:
@@ -341,14 +496,15 @@ def custom_channel_options_return_json(
                         value = None
 
                         if each_option['type'] == 'float':
-                            if str_is_float(request_form.get(key)):
+                            raw_val = request_form.get(key)
+                            if str_is_float(raw_val):
                                 if 'constraints_pass' in each_option:
                                     (constraints_pass,
                                      constraints_errors,
                                      mod_dev) = each_option['constraints_pass'](
-                                        mod_dev, float(request_form.get(key)))
+                                        mod_dev, float(raw_val))
                                 if constraints_pass:
-                                    value = float(request_form.get(key))
+                                    value = float(raw_val)
                             elif 'required' in each_option and not each_option['required']:
                                 value = None
                             else:
@@ -356,17 +512,18 @@ def custom_channel_options_return_json(
                                     "{name} must represent a float/decimal value "
                                     "(submitted '{value}')".format(
                                         name=each_option['name'],
-                                        value=request_form.get(key)))
+                                        value=raw_val))
 
                         elif each_option['type'] == 'integer':
-                            if is_int(request_form.get(key)):
+                            raw_val = request_form.get(key)
+                            if is_int(raw_val):
                                 if 'constraints_pass' in each_option:
                                     (constraints_pass,
                                      constraints_errors,
                                      mod_dev) = each_option['constraints_pass'](
-                                        mod_dev, int(request_form.get(key)))
+                                        mod_dev, int(raw_val))
                                 if constraints_pass:
-                                    value = int(request_form.get(key))
+                                    value = int(raw_val)
                             elif 'required' in each_option and not each_option['required']:
                                 value = None
                             else:
@@ -374,20 +531,21 @@ def custom_channel_options_return_json(
                                     "{name} must represent an integer value "
                                     "(submitted '{value}')".format(
                                         name=each_option['name'],
-                                        value=request_form.get(key)))
+                                        value=raw_val))
 
                         elif each_option['type'] in ['select', 'select_custom_choices']:
+                            raw_val = request_form.get(key)
                             if 'constraints_pass' in each_option:
                                 (constraints_pass,
                                  constraints_errors,
                                  mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, request_form.get(key))
+                                    mod_dev, normalize_option_value(raw_val))
                             if constraints_pass:
-                                value = request_form.get(key)
-                                if is_int(request_form.get(key)):
-                                    value = int(request_form.get(key))
-                                elif str_is_float(request_form.get(key)):
-                                    value = float(request_form.get(key))
+                                value = normalize_option_value(raw_val)
+                                if is_int(raw_val):
+                                    value = int(raw_val)
+                                elif str_is_float(raw_val):
+                                    value = float(raw_val)
 
                         elif each_option['type'] in [
                                 'multiline_text',
@@ -398,25 +556,27 @@ def custom_channel_options_return_json(
                                 'select_type_measurement',
                                 'select_type_unit',
                                 'select_device']:
+                            raw_val = request_form.get(key)
                             if 'constraints_pass' in each_option:
                                 (constraints_pass,
                                  constraints_errors,
                                  mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, request_form.get(key))
+                                    mod_dev, normalize_option_value(raw_val))
                             if constraints_pass:
-                                value = request_form.get(key)
+                                value = normalize_option_value(raw_val)
 
-                        elif each_option['type'] == 'select_multi_measurement':
+                        elif each_option['type'] in ['select_multi_measurement', 'channel_selector']:
+                            raw_val = request_form.get(key)
                             if 'constraints_pass' in each_option:
                                 (constraints_pass,
                                  constraints_errors,
                                  mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, request_form.get(key))
+                                    mod_dev, normalize_option_value(raw_val))
                             if constraints_pass:
-                                value = request_form.getlist(key)
+                                value = normalize_option_value(request_form.getlist(key), empty_value=[])
 
                         elif each_option['type'] == 'bool':
-                            value = bool(request_form.get(key))
+                            value = bool(normalize_option_value(request_form.get(key), False))
 
                         for each_error in constraints_errors:
                             error.append(
@@ -427,6 +587,55 @@ def custom_channel_options_return_json(
                         if value is not None:
                             null_value = False
                             dict_options_return[each_option['id']] = value
+
+                            # [Auto-Save API Key/Token]
+                            auth_keywords = ['api_key', 'token', 'secret', 'access_key', 'auth_key', 'client_id', 'client_secret']
+                            is_auth_field = any(kw in each_option['id'].lower() for kw in auth_keywords)
+
+                            if is_auth_field and isinstance(value, str) and len(value) > 5:
+                                try:
+                                    device_info = dict_options.get(device, {})
+                                    
+                                    # [Metadata Extraction]
+                                    provider = (device_info.get('input_manufacturer') or 
+                                                device_info.get('output_manufacturer') or 
+                                                device_info.get('function_manufacturer') or 
+                                                device)
+                                    
+                                    display_name = (device_info.get('input_name') or 
+                                                   device_info.get('output_name') or 
+                                                   device_info.get('function_name') or 
+                                                   device)
+                                    
+                                    url_list = []
+                                    for url_key in ['url_additional', 'url_manufacturer', 'url_datasheet', 'url_product_purchase']:
+                                        urls = device_info.get(url_key, [])
+                                        if isinstance(urls, list):
+                                            url_list.extend([u for u in urls if u])
+                                        elif urls:
+                                            url_list.append(urls)
+                                    
+                                    url_list = list(dict.fromkeys(url_list))
+                                    primary_url = url_list[0] if url_list else None
+                                    
+                                    existing = APIKey.query.filter(APIKey.key == value).first()
+                                    if not existing:
+                                        new_api_key = APIKey()
+                                        new_api_key.name = f"{display_name} {each_option['name']} (Auto-saved)"
+                                        new_api_key.provider = provider
+                                        new_api_key.key = value
+                                        new_api_key.tag = each_option['id']
+                                        new_api_key.url = primary_url
+                                        
+                                        desc = f"Automatically saved from {display_name} ({device}) channel {channel} configuration."
+                                        if len(url_list) > 1:
+                                            desc += "\nRelated URLs:\n" + "\n".join(url_list)
+                                        new_api_key.description = desc
+                                        
+                                        new_api_key.save()
+                                        logger.info(f"Auth field '{each_option['id']}' for {provider} auto-saved from channel {channel} with metadata.")
+                                except Exception as e:
+                                    logger.error(f"Failed to auto-save auth field from channel with metadata: {e}")
 
             if (request_form and
                     each_option['type'] == 'bool' and
@@ -513,7 +722,7 @@ def controller_activate_deactivate(messages,
     """
     if not user_has_permission('edit_controllers'):
         messages["error"].append(
-            "컨트롤러 활성화/비활성화 권한이 없습니다.")
+            gettext("You do not have permission to activate/deactivate controllers."))
         return messages
 
     activated = bool(controller_action == 'activate')
@@ -542,7 +751,7 @@ def controller_activate_deactivate(messages,
             CustomController.unique_id == controller_id).first()
 
     if mod_controller is None:
-        messages["error"].append("{type} 컨트롤러 {id}가 존재하지 않습니다.".format(
+        messages["error"].append(gettext("{type} controller {id} does not exist.").format(
             type=controller_type, id=controller_id))
         return messages
 
@@ -585,27 +794,27 @@ def choices_controller_ids():
     """populate form multi-select choices from Controller IDs."""
     choices = []
     for each_input in Input.query.all():
-        display = '[Input {id:02d}] {name}'.format(
+        display = '{name} [Input {id:02d}]'.format(
             id=each_input.id,
             name=each_input.name)
         choices.append({'value': each_input.unique_id, 'item': display})
     for each_pid in PID.query.all():
-        display = '[PID {id:02d}] {name}'.format(
+        display = '{name} [PID {id:02d}]'.format(
             id=each_pid.id,
             name=each_pid.name)
         choices.append({'value': each_pid.unique_id, 'item': display})
     for each_cond in Conditional.query.all():
-        display = '[Conditional {id:02d}] {name}'.format(
+        display = '{name} [Conditional {id:02d}]'.format(
             id=each_cond.id,
             name=each_cond.name)
         choices.append({'value': each_cond.unique_id, 'item': display})
     for each_trigger in Trigger.query.all():
-        display = '[Trigger {id:02d}] {name}'.format(
+        display = '{name} [Trigger {id:02d}]'.format(
             id=each_trigger.id,
             name=each_trigger.name)
         choices.append({'value': each_trigger.unique_id, 'item': display})
     for each_custom in CustomController.query.all():
-        display = '[Function {id:02d}] {name}'.format(
+        display = '{name} [Function {id:02d}]'.format(
             id=each_custom.id,
             name=each_custom.name)
         choices.append({'value': each_custom.unique_id, 'item': display})
@@ -628,9 +837,37 @@ def choices_custom_functions():
 def choices_inputs(inputs, dict_units, dict_measurements):
     """populate form multi-select choices from Input entries."""
     choices = []
+    if not inputs:
+        return choices
+
+    # Pre-fetch measurements
+    input_ids = [inp.unique_id for inp in inputs]
+    all_measurements = DeviceMeasurements.query.filter(
+        DeviceMeasurements.device_id.in_(input_ids)
+    ).all()
+
+    # Group measurements by device
+    meas_by_device = {}
+    conversion_ids = set()
+    for m in all_measurements:
+        meas_by_device.setdefault(m.device_id, []).append(m)
+        if m.conversion_id:
+            conversion_ids.add(m.conversion_id)
+
+    # Pre-fetch conversions
+    conversions_map = {}
+    if conversion_ids:
+        conversions = Conversion.query.filter(
+            Conversion.unique_id.in_(conversion_ids)
+        ).all()
+        conversions_map = {c.unique_id: c for c in conversions}
+
     for each_input in inputs:
         choices = form_input_choices(
-            choices, each_input, dict_units, dict_measurements)
+            choices, each_input, dict_units, dict_measurements,
+            prefetched_measurements=meas_by_device.get(each_input.unique_id),
+            prefetched_conversions=conversions_map
+        )
     return choices
 
 
@@ -645,18 +882,71 @@ def choices_input_devices(input_dev):
 def choices_actions(actions, dict_units, dict_measurements):
     """populate form multi-select choices from Action entries."""
     choices = []
+    if not actions:
+        return choices
+
+    # Pre-fetch measurements
+    action_ids = [a.unique_id for a in actions]
+    all_measurements = DeviceMeasurements.query.filter(
+        DeviceMeasurements.device_id.in_(action_ids)
+    ).all()
+
+    meas_by_device = {}
+    conversion_ids = set()
+    for m in all_measurements:
+        meas_by_device.setdefault(m.device_id, []).append(m)
+        if m.conversion_id:
+            conversion_ids.add(m.conversion_id)
+
+    conversions_map = {}
+    if conversion_ids:
+        conversions = Conversion.query.filter(
+            Conversion.unique_id.in_(conversion_ids)
+        ).all()
+        conversions_map = {c.unique_id: c for c in conversions}
+
     for each_function in actions:
         choices = form_function_choices(
-            choices, each_function, dict_units, dict_measurements)
+            choices, each_function, dict_units, dict_measurements,
+            prefetched_measurements=meas_by_device.get(each_function.unique_id),
+            prefetched_conversions=conversions_map
+        )
     return choices
 
 
 def choices_functions(functions, dict_units, dict_measurements):
     """populate form multi-select choices from Function entries."""
     choices = []
+    if not functions:
+        return choices
+
+    # Pre-fetch measurements
+    func_ids = [f.unique_id for f in functions]
+    all_measurements = DeviceMeasurements.query.filter(
+        DeviceMeasurements.device_id.in_(func_ids)
+    ).all()
+
+    meas_by_device = {}
+    conversion_ids = set()
+    for m in all_measurements:
+        meas_by_device.setdefault(m.device_id, []).append(m)
+        if m.conversion_id:
+            conversion_ids.add(m.conversion_id)
+
+    # Pre-fetch conversions
+    conversions_map = {}
+    if conversion_ids:
+        conversions = Conversion.query.filter(
+            Conversion.unique_id.in_(conversion_ids)
+        ).all()
+        conversions_map = {c.unique_id: c for c in conversions}
+
     for each_function in functions:
         choices = form_function_choices(
-            choices, each_function, dict_units, dict_measurements)
+            choices, each_function, dict_units, dict_measurements,
+            prefetched_measurements=meas_by_device.get(each_function.unique_id),
+            prefetched_conversions=conversions_map
+        )
     return choices
 
 
@@ -715,11 +1005,44 @@ def choices_measurements_units(measurements, units):
 def choices_outputs(output, table_output_channel, dict_outputs, dict_units, dict_measurements):
     """populate form multi-select choices from Output entries."""
     choices = []
+    if not output:
+        return choices
+
+    # Pre-fetch output channels
+    output_ids = [o.unique_id for o in output]
+    all_channels = table_output_channel.query.filter(
+        table_output_channel.output_id.in_(output_ids)
+    ).all()
+    channels_by_output = {}
+    for ch in all_channels:
+        channels_by_output.setdefault(ch.output_id, []).append(ch)
+
+    # Pre-fetch device measurements
+    all_measurements = DeviceMeasurements.query.filter(
+        DeviceMeasurements.device_id.in_(output_ids)
+    ).all()
+    meas_by_device = {}
+    conversion_ids = set()
+    for m in all_measurements:
+        meas_by_device.setdefault(m.device_id, []).append(m)
+        if m.conversion_id:
+            conversion_ids.add(m.conversion_id)
+
+    # Pre-fetch conversions
+    conversions_map = {}
+    if conversion_ids:
+        conversions = Conversion.query.filter(
+            Conversion.unique_id.in_(conversion_ids)
+        ).all()
+        conversions_map = {c.unique_id: c for c in conversions}
+
     for each_output in output:
-        output_channels = table_output_channel.query.filter(
-            table_output_channel.output_id == each_output.unique_id).all()
+        output_channels = channels_by_output.get(each_output.unique_id, [])
         choices = form_output_choices(
-            choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements)
+            choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements,
+            prefetched_measurements=meas_by_device.get(each_output.unique_id),
+            prefetched_conversions=conversions_map
+        )
     return choices
 
 
@@ -770,9 +1093,36 @@ def choices_outputs_pwm(output, table_output_channel, dict_outputs, dict_units, 
 def choices_pids(pid, dict_units, dict_measurements):
     """populate form multi-select choices from PID entries."""
     choices = []
+    if not pid:
+        return choices
+
+    # Pre-fetch measurements
+    pid_ids = [p.unique_id for p in pid]
+    all_measurements = DeviceMeasurements.query.filter(
+        DeviceMeasurements.device_id.in_(pid_ids)
+    ).all()
+
+    meas_by_device = {}
+    conversion_ids = set()
+    for m in all_measurements:
+        meas_by_device.setdefault(m.device_id, []).append(m)
+        if m.conversion_id:
+            conversion_ids.add(m.conversion_id)
+
+    # Pre-fetch conversions
+    conversions_map = {}
+    if conversion_ids:
+        conversions = Conversion.query.filter(
+            Conversion.unique_id.in_(conversion_ids)
+        ).all()
+        conversions_map = {c.unique_id: c for c in conversions}
+
     for each_pid in pid:
         choices = form_pid_choices(
-            choices, each_pid, dict_units, dict_measurements)
+            choices, each_pid, dict_units, dict_measurements,
+            prefetched_measurements=meas_by_device.get(each_pid.unique_id),
+            prefetched_conversions=conversions_map
+        )
     return choices
 
 
@@ -827,13 +1177,21 @@ def choices_units(units):
     return choices
 
 
-def form_input_choices(choices, each_input, dict_units, dict_measurements):
-    device_measurements = DeviceMeasurements.query.filter(
-        DeviceMeasurements.device_id == each_input.unique_id).all()
+def form_input_choices(choices, each_input, dict_units, dict_measurements, prefetched_measurements=None, prefetched_conversions=None):
+    if prefetched_measurements is not None:
+        device_measurements = prefetched_measurements
+    else:
+        device_measurements = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == each_input.unique_id).all()
 
     for each_measure in device_measurements:
-        conversion = Conversion.query.filter(
-            Conversion.unique_id == each_measure.conversion_id).first()
+        if prefetched_conversions is not None and each_measure.conversion_id:
+             conversion = prefetched_conversions.get(each_measure.conversion_id)
+        elif each_measure.conversion_id:
+            conversion = Conversion.query.filter(
+                Conversion.unique_id == each_measure.conversion_id).first()
+        else:
+            conversion = None
         channel, unit, measurement = return_measurement_info(
             each_measure, conversion)
 
@@ -887,13 +1245,21 @@ def form_input_choices_devices(choices, each_input):
     return choices
 
 
-def form_function_choices(choices, each_function, dict_units, dict_measurements):
-    device_measurements = DeviceMeasurements.query.filter(
-        DeviceMeasurements.device_id == each_function.unique_id).all()
+def form_function_choices(choices, each_function, dict_units, dict_measurements, prefetched_measurements=None, prefetched_conversions=None):
+    if prefetched_measurements is not None:
+        device_measurements = prefetched_measurements
+    else:
+        device_measurements = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == each_function.unique_id).all()
 
     for each_measure in device_measurements:
-        conversion = Conversion.query.filter(
-            Conversion.unique_id == each_measure.conversion_id).first()
+        if prefetched_conversions is not None and each_measure.conversion_id:
+             conversion = prefetched_conversions.get(each_measure.conversion_id)
+        elif each_measure.conversion_id:
+            conversion = Conversion.query.filter(
+                Conversion.unique_id == each_measure.conversion_id).first()
+        else:
+            conversion = None
         channel, unit, measurement = return_measurement_info(
             each_measure, conversion)
 
@@ -932,24 +1298,38 @@ def form_function_choices(choices, each_function, dict_units, dict_measurements)
     return choices
 
 
-def form_output_choices(choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements):
+def form_output_choices(choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements, prefetched_measurements=None, prefetched_conversions=None):
     return form_output_channel_measurement_choices(
-        choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements, include_channel_id_in_value=False)
+        choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements, include_channel_id_in_value=False,
+        prefetched_measurements=prefetched_measurements, prefetched_conversions=prefetched_conversions)
 
 
 def form_output_channel_measurement_choices(
-        choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements, include_channel_id_in_value=True):
+        choices, each_output, output_channels, dict_outputs, dict_units, dict_measurements, include_channel_id_in_value=True,
+        prefetched_measurements=None, prefetched_conversions=None):
     for each_channel in output_channels:
         measurement_channels = dict_outputs[each_output.output_type]['channels_dict'][each_channel.channel]['measurements']
         for measurement_channel in measurement_channels:
-            device_measurement = DeviceMeasurements.query.filter(
-                and_(DeviceMeasurements.device_id == each_output.unique_id,
-                     DeviceMeasurements.channel == measurement_channel)).first()
+            device_measurement = None
+            if prefetched_measurements is not None:
+                for m in prefetched_measurements:
+                    if m.channel == measurement_channel:
+                        device_measurement = m
+                        break
+            else:
+                device_measurement = DeviceMeasurements.query.filter(
+                    and_(DeviceMeasurements.device_id == each_output.unique_id,
+                         DeviceMeasurements.channel == measurement_channel)).first()
+
             if not device_measurement:
                 continue
 
-            conversion = Conversion.query.filter(
-                Conversion.unique_id == device_measurement.conversion_id).first()
+            conversion = None
+            if prefetched_conversions is not None and device_measurement.conversion_id:
+                conversion = prefetched_conversions.get(device_measurement.conversion_id)
+            elif device_measurement.conversion_id:
+                conversion = Conversion.query.filter(
+                    Conversion.unique_id == device_measurement.conversion_id).first()
             channel, unit, measurement = return_measurement_info(
                 device_measurement, conversion)
 
@@ -1002,7 +1382,7 @@ def form_output_channel_choices(choices, each_output, each_channel, dict_outputs
         output_id=each_output.unique_id,
         chan_id=each_channel.unique_id)
 
-    display = '[Output {id:02d} CH{ch}] {name}'.format(
+    display = '{name} [CH{ch} Output {id:02d}]'.format(
         id=each_output.id,
         name=each_output.name,
         ch=each_channel.channel)
@@ -1028,20 +1408,28 @@ def form_output_channel_choices(choices, each_output, each_channel, dict_outputs
 
 def form_output_choices_devices(choices, each_output):
     value = '{id},output'.format(id=each_output.unique_id)
-    display = '[Output {id:02d}] {name}'.format(
+    display = '{name} [Output {id:02d}]'.format(
         id=each_output.id,
         name=each_output.name)
     choices.append({'value': value, 'item': display})
     return choices
 
 
-def form_pid_choices(choices, each_pid, dict_units, dict_measurements):
-    device_measurements = DeviceMeasurements.query.filter(
-        DeviceMeasurements.device_id == each_pid.unique_id).all()
+def form_pid_choices(choices, each_pid, dict_units, dict_measurements, prefetched_measurements=None, prefetched_conversions=None):
+    if prefetched_measurements is not None:
+        device_measurements = prefetched_measurements
+    else:
+        device_measurements = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == each_pid.unique_id).all()
 
     for each_measure in device_measurements:
-        conversion = Conversion.query.filter(
-            Conversion.unique_id == each_measure.conversion_id).first()
+        if prefetched_conversions is not None and each_measure.conversion_id:
+             conversion = prefetched_conversions.get(each_measure.conversion_id)
+        elif each_measure.conversion_id:
+            conversion = Conversion.query.filter(
+                Conversion.unique_id == each_measure.conversion_id).first()
+        else:
+            conversion = None
         channel, unit, measurement = return_measurement_info(
             each_measure, conversion)
 
@@ -1152,7 +1540,7 @@ def user_has_permission(permission, silent=False):
             (permission == 'reset_password' and role.reset_password)):
         return True
     if not silent:
-        flash("권한이 부족합니다: {}".format(permission), "error")
+        flash(gettext("Insufficient permission: %(permission)s", permission=permission), "error")
     return False
 
 
@@ -1222,8 +1610,22 @@ def dashboard_widget_get_info(dashboard_id=None):
 def delete_entry_with_id(table, entry_id, flash_message=True):
     """Delete SQL database entry with specific id."""
     try:
+        logger.debug("delete_entry_with_id called for table=%s id=%s", getattr(table, '__tablename__', table), entry_id)
         entry = table.query.filter(
             table.unique_id == entry_id).first()
+        if entry is None:
+            msg = '{action} {id}: {err}'.format(
+                action=TRANSLATIONS['delete']['title'],
+                id=entry_id,
+                err=gettext("Could not find ID %(id)s.",
+                    id=entry_id))
+            if flash_message:
+                flash(gettext("%(msg)s", msg=msg), "error")
+            else:
+                logger.error(msg)
+            return 0
+        else:
+            logger.debug("delete_entry_with_id fetched entry type=%s repr=%s", type(entry), entry)
         db.session.delete(entry)
         db.session.commit()
         msg = '{action} {table} with ID: {id}'.format(
@@ -1239,7 +1641,7 @@ def delete_entry_with_id(table, entry_id, flash_message=True):
         msg = '{action} {id}: {err}'.format(
             action=TRANSLATIONS['delete']['title'],
             id=entry_id,
-            err=gettext("ID %(id)s를 찾을 수 없습니다.",
+            err=gettext("Could not find ID %(id)s.",
                 id=entry_id))
         if flash_message:
             flash(gettext("%(msg)s", msg=msg), "error")
@@ -1252,7 +1654,7 @@ def flash_form_errors(form):
     """Flashes form errors for easier display."""
     for field, errors in form.errors.items():
         for error in errors:
-            flash(gettext("%(field)s 필드에서 오류 발생 - %(err)s",
+            flash(gettext("Error in field %(field)s - %(err)s",
                           field=getattr(form, field).label.text,
                           err=error),
                   "error")
@@ -1263,7 +1665,7 @@ def form_error_messages(form, error):
     for field, errors in form.errors.items():
         for each_error in errors:
             error.append(
-                gettext("%(field)s 필드에서 오류 발생 - %(err)s",
+                gettext("Error in field %(field)s - %(err)s",
                     field=getattr(form, field).label.text,
                     err=each_error))
     return error
@@ -1301,8 +1703,8 @@ def reorder(display_order, device_id, direction):
             device_id,
             'down')
     else:
-        status = "실패"
-        reord_list = "알 수 없는 명령"
+        status = _("Failed")
+        reord_list = _("Unknown command")
     return status, reord_list
 
 
@@ -1311,11 +1713,11 @@ def reorder_list(modified_list, item, direction):
     from_position = modified_list.index(item)
     if direction == "up":
         if from_position == 0:
-            return 'error', gettext('목록의 첫 번째 항목 위로 이동할 수 없습니다.')
+            return 'error', gettext('Cannot move above the first item in the list.')
         to_position = from_position - 1
     elif direction == 'down':
         if from_position == len(modified_list) - 1:
-            return 'error', gettext('목록의 마지막 항목 아래로 이동할 수 없습니다.')
+            return 'error', gettext('Cannot move below the last item in the list.')
         to_position = from_position + 1
     else:
         return 'error', []
@@ -1740,15 +2142,15 @@ def custom_command(controller_type, dict_device, unique_id, form):
             Input.unique_id == unique_id).first()
         device_type = controller.device
     else:
-        messages["error"].append("알 수 없는 컨트롤러 유형: {}".format(controller_type))
+        messages["error"].append(_("Unknown controller type: {}").format(controller_type))
         return messages
 
     if not controller:
-        messages["error"].append("버튼 ID를 찾을 수 없습니다.")
+        messages["error"].append(_("Could not find button ID."))
         return messages
 
     if controller_type != "Output" and not controller.is_activated:
-        messages["error"].append("사용자 정의 명령을 실행하기 전에 컨트롤러를 활성화하세요.")
+        messages["error"].append(_("Please activate the controller before executing a custom command."))
         return messages
 
     try:
@@ -1787,10 +2189,10 @@ def custom_command(controller_type, dict_device, unique_id, form):
                             except:
                                 logger.error("옵션 '{}'의 값이 문자열이 아닙니다: '{}'".format(key, value))
                         else:
-                            messages["error"].append("알 수 없는 키 유형. 키: {}, 유형: {}".format(key, options[key]['type']))
+                            messages["error"].append(_("Unknown key type. Key: {}, Type: {}").format(key, options[key]['type']))
 
         if not button_id:
-            messages["error"].append("버튼 ID를 찾을 수 없습니다.")
+            messages["error"].append(_("Could not find button ID."))
             return messages
 
         if not messages["error"]:
@@ -1803,12 +2205,34 @@ def custom_command(controller_type, dict_device, unique_id, form):
             status, msg = control.module_function(
                 controller_type, unique_id, button_id, args_dict, use_thread)
             if status:
-                messages["error"].append("사용자 정의 버튼 오류: {}".format(msg))
+                messages["error"].append(_("Custom button error: {}").format(msg))
             else:
-                messages["success"].append("사용자 정의 버튼 오류: {}".format(msg))
+                messages["success"].append(_("Custom button executed successfully: {}").format(msg))
 
     except Exception as except_msg:
         logger.exception(1)
         messages["error"].append(str(except_msg))
 
     return messages
+
+
+def sudo_present():
+    """
+    Return True if 'sudo' exists on the current PATH.
+    Used by settings_pi to conditionally show sudo-related UI.
+    """
+    return shutil.which("sudo") is not None
+
+
+import calendar
+import datetime
+
+def utc_to_local_time(utc_dt):
+    try:
+        if not utc_dt:
+            return ""
+        utc_timestamp = calendar.timegm(utc_dt.timetuple())
+        local_dt = datetime.datetime.fromtimestamp(utc_timestamp)
+        return local_dt.strftime("%Y-%m-%d %H:%M:%S")
+    except:
+        return "TIMESTAMP ERROR"

@@ -45,6 +45,9 @@ from aot.utils.modules import load_module_from_file
 logger = logging.getLogger("aot.utils.functions")
 
 
+from functools import lru_cache
+
+@lru_cache(maxsize=4)
 def parse_function_information(exclude_custom=False):
     """Parses the variables assigned in each Function and return a dictionary of IDs and values."""
     def dict_has_value(dict_inp, controller_cus, key):
@@ -73,6 +76,9 @@ def parse_function_information(exclude_custom=False):
 
         for each_file in os.listdir(real_path):
             if each_file in excluded_files:
+                continue
+
+            if each_file.startswith('._'):
                 continue
 
             full_path = "{}/{}".format(real_path, each_file)

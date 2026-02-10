@@ -1,178 +1,244 @@
 <div id="mod_function_{{each_function.unique_id}}">
-  <form id="mod_function_form" method="post" action="/function">
-    {{form_conditional.csrf_token}}
-    {{form_conditional.function_id(value=each_function.unique_id)}}
-    {{form_conditional.function_type(value='conditional')}}
+    <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_conditional.csrf_token}}
+        {{form_conditional.function_id(value=each_function.unique_id)}}
+        {{form_conditional.function_type(value='conditional')}}
+    
+    {# Location settings and map: integrated with macro #}
+    {# Moved to below button group #}
 
-    <div class="row small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em;">
-      <div class="col-auto">
-        <button type="button" class="form-control btn btn-primary btn-block" data-dismiss="modal">{{_('닫기')}}</button>
-      </div>
-      <div class="col-auto">
-        <input onclick="return $(this).processRequest(this, 'function_mod');" name="function_mod" value="{{_('저장')}}" class="form-control btn btn-primary btn-block" type="button"/>
-      </div>
-      <div class="col-auto">
-        <input onclick="return confirm('{{_('정말 삭제하시겠습니까?')}}') && $(this).processRequest(this, 'function_delete');" name="function_delete" value="{{_('삭제')}}" class="form-control btn btn-primary btn-block" type="button"/>
-      </div>
-      <div class="col-auto">
-        <input onclick="return $(this).processRequest(this, 'execute_all_actions');" name="execute_all_actions" value="{{_('모든 동작 실행')}}" class="form-control btn btn-primary btn-block" type="button"/>
-      </div>
-      <div class="col-auto my-auto">
-        <h5>{{_('도움말')}} <a href="https://aot-inc.github.io/AoT/Functions/#conditional" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h5>
+    <div class="d-flex flex-wrap mb-3">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" data-dismiss="modal">{{_('Close')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return confirm({{_('Are you sure you want to delete?')|tojson}}) && $(this).processRequest(this, 'function_delete');"
+            class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button" name="function_delete">{{_('Delete')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return confirm({{_('Are you sure you want to duplicate?')|tojson}}) && $(this).processRequest(this, 'function_duplicate');"
+            class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button" name="function_duplicate">{{_('Duplicate')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'function_mod');" 
+            class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button" name="function_mod">{{_('Save')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'execute_all_actions');" 
+            class="btn aot-pill-btn aot-pill-btn-primary mb-2" style="height: 32px;" type="button" name="execute_all_actions">{{_('Execute All Actions')}}</button>
+    </div>
+
+    {# Location settings and map #}
+    <div class="mt-3 mb-3">
+        {{ render_device_map(
+        'function',
+        each_function.unique_id,
+        form_conditional.latitude,
+        form_conditional.longitude,
+        form_conditional.location_source,
+        each_function.latitude,
+        each_function.longitude,
+        each_function.location_source,
+        'function_mod',
+        'modal_config_' ~ each_function.unique_id,
+        '280px',
+        None,
+        None,
+        None,
+        form_id='form_function_' ~ each_function.unique_id,
+        map_config_id=(each_function.map_config_id if each_function.map_config_id else (map_config_id if map_config_id is defined else '')),
+        map_configs=(map_configs if map_configs is defined else []),
+        map_overlays=map_overlays,
+        save_id='mod_function_save_' ~ each_function.unique_id
+        ) }}
+    </div>
+
+    <div class="aot-modal-container mb-3">
+      <div class="aot-modal-body-text">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>{{_('Help')}}</strong>
+            <a href="https://aot-inc.github.io/AoT/Functions/#conditional" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+        </div>
+        {{_("Conditional functions can not only execute Python 3 code, but also interact with AoT using conditions and actions within the code.")}}
+        {{_("For more information, see the <a href='https://aot-inc.github.io/AoT/Functions/#conditional'>Conditional Functions documentation</a>.")}}
       </div>
     </div>
 
-    <div class="row small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em">
-      <div class="col-12" style="padding-top: 0.3em">
-        조건부 함수는 Python 3 코드를 실행할 수 있을 뿐만 아니라, 코드 내에서 조건과 동작을 사용하여 AoT과 상호작용할 수 있습니다. 조건은 보통 입력 측정값 등 AoT의 데이터를 획득하며, 동작은 출력 작동이나 PID 컨트롤러 일시 정지와 같이 AoT에 영향을 미칩니다. 추가하는 각 조건과 동작은 사용법을 보여주는 설명과 예제 코드를 포함합니다. 자세한 내용은 <a href="https://aot-inc.github.io/AoT/Functions/#conditional">조건부 함수 문서</a>를 참조하십시오.
-      </div>
+    <div id="status_activated_enable_{{each_function.unique_id}}" style="{% if not each_function.is_activated %}display: none; {% endif %}">
+        <div class="aot-modal-group-title">{{_('Status')}}</div>
+        <div class="aot-modal-container">
+            <span id="function_status_activated_{{each_function.unique_id}}"></span>
+        </div>
     </div>
 
-    <div id="status_activated_enable_{{each_function.unique_id}}" class="row small-gutters align-items-end" style="{% if not each_function.is_activated %}display: none; {% endif %}padding: 0.5em 0.2em 0.5em 0.3em">
-      <div class="col-12">
-        <h5>{{_('상태')}}</h5>
-      </div>
-      <div class="col-12">
-        <span id="function_status_activated_{{each_function.unique_id}}"></span>
-      </div>
-    </div>
+    <div id="return_text_{{each_function.unique_id}}" class="mb-3"></div>
 
-    <div id="return_text_{{each_function.unique_id}}" class="col-12"></div>
+    <div class="aot-modal-group-title">{{_('Options')}}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.name.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.name(class_='form-control aot-modern-input', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+            </div>
+        </div>
 
-    <div class="row small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em">
-      <div class="col-12">
-        {{form_conditional.conditional_import.label(class_='control-label')}}
-        <div>
-          <textarea style="font-family:monospace;" class="form-control" id="conditional_import" name="conditional_import" rows="4" type="text">{{each_function.conditional_import}}</textarea>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.period.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.period(class_='form-control aot-modern-input', value=each_function.period, **{'title':_('Interval between Python code executions')})}}
+            </div>
         </div>
-      </div>
-      <div class="col-12">
-        {{form_conditional.conditional_initialize.label(class_='control-label')}}
-        <div>
-          <textarea style="font-family:monospace;" class="form-control" id="conditional_initialize" name="conditional_initialize" rows="4" type="text">{{each_function.conditional_initialize}}</textarea>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.start_offset.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.start_offset(class_='form-control aot-modern-input', value=each_function.start_offset, **{'title':_('Time to wait before the first operation')})}}
+            </div>
         </div>
-      </div>
-      <div class="col-12">
-        {{form_conditional.conditional_statement.label(class_='control-label')}}
-        <div>
-          <textarea style="font-family:monospace;" class="form-control" id="conditional_statement" name="conditional_statement" rows="12" type="text">{{each_function.conditional_statement}}</textarea>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.pyro_timeout.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.pyro_timeout(class_='form-control aot-modern-input', value=each_function.pyro_timeout, **{'title':_('Timeout for Python code execution')})}}
+            </div>
         </div>
-      </div>
-      <div class="col-12">
-        {{form_conditional.conditional_status.label(class_='control-label')}}
-        <div>
-          <textarea style="font-family:monospace;" class="form-control" id="conditional_status" name="conditional_status" rows="8" type="text">{{each_function.conditional_status}}</textarea>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.log_level_debug.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.log_level_debug %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.name.label(class_='control-label')}}
-        <div>
-          {{form_conditional.name(class_='form-control', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.use_pylint.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="use_pylint" name="use_pylint" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.use_pylint %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.period.label(class_='control-label')}}
-        <div>
-          {{form_conditional.period(class_='form-control', value=each_function.period, **{'title':_('파이썬 코드 실행 간의 간격')})}}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.message_include_code.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="message_include_code" name="message_include_code" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.message_include_code %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.start_offset.label(class_='control-label')}}
-        <div>
-          {{form_conditional.start_offset(class_='form-control', value=each_function.start_offset, **{'title':_('첫 번째 작업 전에 대기하는 시간')})}}
+
+        <hr class="my-3">
+
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_import.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_import"
+                name="conditional_import" rows="4" type="text">{{each_function.conditional_import}}</textarea>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.pyro_timeout.label(class_='control-label')}}
-        <div>
-          {{form_conditional.pyro_timeout(class_='form-control', value=each_function.pyro_timeout, **{'title':_('파이썬 코드 실행의 타임아웃')})}}
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_initialize.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_initialize"
+                name="conditional_initialize" rows="4" type="text">{{each_function.conditional_initialize}}</textarea>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.log_level_debug.label(class_='control-label')}}
-        <div class="input-group-text">
-          <input id="log_level_debug" name="log_level_debug" type="checkbox" title="{{dict_translation['log_level_debug']['phrase']}}" value="y"{% if each_function.log_level_debug %} checked{% endif %}>
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_statement.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_statement"
+                name="conditional_statement" rows="12" type="text">{{each_function.conditional_statement}}</textarea>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.use_pylint.label(class_='control-label')}}
-        <div class="input-group-text">
-          <input id="use_pylint" name="use_pylint" type="checkbox" title="{{dict_translation['use_pylint']['phrase']}}" value="y"{% if each_function.use_pylint %} checked{% endif %}>
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_status.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_status"
+                name="conditional_status" rows="8" type="text">{{each_function.conditional_status}}</textarea>
         </div>
-      </div>
-      <div class="col-auto">
-        {{form_conditional.message_include_code.label(class_='control-label')}}
-        <div class="input-group-text">
-          <input id="message_include_code" name="message_include_code" type="checkbox" title="{{dict_translation['message_include_code']['phrase']}}" value="y"{% if each_function.message_include_code %} checked{% endif %}>
-        </div>
-      </div>
     </div>
 
   </form>
 
-  <div class="row align-items-end small-gutters" style="border-top: 1px solid #ddd; padding-top: 0.5em">
-    <h5>{{_('조건')}} <a href="https://aot-inc.github.io/AoT/Functions/#conditional-options" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h5>
+  <div class="aot-modal-group-title">
+    {{_('Conditions')}} 
+    <a href="https://aot-inc.github.io/AoT/Functions/#conditional-options" target="_blank">
+        <span style="font-size: 16px" class="fas fa-question-circle"></span>
+    </a>
   </div>
 
-  <form method="post" action="/function">
-    {{form_conditional.csrf_token}}
-    {{form_conditional.function_id(value=each_function.unique_id)}}
-    {{form_conditional.function_type(value='conditional')}}
+  <div class="aot-modal-container">
+    <form method="post" action="/function">
+        {{form_conditional.csrf_token}}
+        {{form_conditional.function_id(value=each_function.unique_id)}}
+        {{form_conditional.function_type(value='conditional')}}
 
-    <div class="row align-items-end small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em">
-      <div class="col-auto">
-        <select class="selectpicker" data-style="btn btn-primary" data-live-search="true" title="{{_('조건')}}: {{dict_translation['select_one']['title']}}" id="condition_type_{{each_function.unique_id}}" name="condition_type">
-        {% for value, name in conditional_conditions_list %}
-          <option value="{{value}}">{{name}}</option>
-        {% endfor %}
-        </select>
-      </div>
-      <div class="col-auto">
-        <input onclick="return $(this).processRequest(this, 'add_condition');" name="add_condition" value="{{_('추가')}}" class="form-control btn btn-primary btn-sm btn-block" type="button"/>
-      </div>
-    </div>
-  </form>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Add Condition')}}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+                        title="{{_('Select')}}" id="condition_type_{{each_function.unique_id}}" name="condition_type"
+                        data-selected-text-format="static">
+                        {% for value, name in conditional_conditions_list %}
+                        <option value="{{value}}">{{name}}</option>
+                        {% endfor %}
+                    </select>
+                    <button onclick="return $(this).processRequest(this, 'add_condition');" name="add_condition" 
+                        class="btn btn-primary aot-modern-btn aot-pill-btn" type="button">{{_('Add')}}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+  </div>
 
-  <div id="mod_function_conditions_{{each_function.unique_id}}">
-  {% for each_condition in conditional_conditions if each_condition.conditional_id == each_function.unique_id %}
+  <div id="mod_function_conditions_{{each_function.unique_id}}" class="mb-3">
+    {% for each_condition in conditional_conditions if each_condition.conditional_id == each_function.unique_id %}
     {% include 'pages/function_options/conditional_condition.html' %}
-  {% endfor %}
+    {% endfor %}
   </div>
 
-  <div class="row align-items-end small-gutters" style="border-top: 1px solid #ddd; padding-top: 0.5em">
-    <h5>{{_('동작')}} <a href="https://aot-inc.github.io/AoT/Actions" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h5>
+  <div class="aot-modal-group-title">
+      {{_('Actions')}} 
+      <a href="https://aot-inc.github.io/AoT/Actions" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
   </div>
 
-  <form method="post" action="/function">
-    {{form_actions.csrf_token}}
-    {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
-    {{form_actions.function_type(class_='form-control', value='conditional')}}
+  <div class="aot-modal-container">
+    <form id="form_actions_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_actions.csrf_token}}
+        {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
+        {{form_actions.function_type(class_='form-control', value='conditional')}}
 
-    <div class="row align-items-end small-gutters" style="padding: 0.3em 0.2em 0.3em 0.3em">
-      <div class="col-auto">
-        <select class="selectpicker" data-style="btn btn-primary" data-live-search="true" title="{{_('동작')}}: {{dict_translation['select_one']['title']}}" id="action_type_{{each_function.unique_id}}" name="action_type">
-        {% for value, name in choices_actions %}
-          <option value="{{value}}">{{name}}</option>
-        {% endfor %}
-        </select>
-      </div>
-      <div class="col-auto">
-        <input onclick="return $(this).processRequest(this, 'add_action');" name="add_action" value="{{_('추가')}}" class="form-control btn btn-primary btn-sm btn-block" type="button"/>
-      </div>
-    </div>
-  </form>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Add Action')}}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+                        title="{{_('Select')}}" id="action_type_{{each_function.unique_id}}"
+                        name="action_type" data-selected-text-format="static">
+                        {% for value, name in choices_actions %}
+                        <option value="{{value}}">{{name}}</option>
+                        {% endfor %}
+                    </select>
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                        name="add_action" class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+  </div>
 
   {% set post_action = "/function" %}
 
-  <div id="mod_function_actions_{{each_function.unique_id}}">
-    <div class="row small-gutters" style="border-bottom: 1px solid #ddd; padding: 0.3em">
-      <div class="col-12">
-        <strong>사용법</strong>: <strong>self.run_all_actions()</strong>를 호출하면 아래의 모든 동작이 순차적으로 실행됩니다.
-      </div>
-    </div>
-  {% for each_action in action if each_action.function_id == each_function.unique_id %}
-    {% include 'pages/actions.html' %}
-  {% endfor %}
+  {% from 'pages/function_options/gridstack_helper.html' import init_gridstack_actions with context %}
+  {% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+
+  <div class="grid-stack" id="mod_function_actions_{{each_function.unique_id}}">
+    {% for each_action in action|sort(attribute='position') if each_action.function_id == each_function.unique_id %}
+    {% call gridstack_action_item(each_action, each_function, is_sequence=False, gs_h=1) %}{% endcall %}
+    {% endfor %}
   </div>
 
+  {{ init_gridstack_actions(each_function.unique_id, cell_height=48) }}
+
+  <script>
+    if (typeof jQuery !== 'undefined') {
+        var $ctx = $('#mod_function_{{each_function.unique_id}}');
+        $ctx.find('.selectpicker').each(function() {
+            var $el = $(this);
+            $el.data('selectpicker') ? $el.selectpicker('refresh') : $el.selectpicker();
+        });
+    }
+    $('.clockpicker').clockpicker();
+  </script>
 </div>

@@ -26,55 +26,30 @@
   </div>
 {% endif %}
 
-<div class="row small-gutters align-items-end" style="border-bottom: 1px solid #ddd; padding: 0.5em">
-
+<div class="aot-modal-option-row" style="border-bottom: none; padding-bottom: 0.2rem;">
+  <div class="d-flex align-items-center">
     {% if each_measurement.unit and each_measurement.measurement %}
-
-  <div class="col-auto">
-    <input class="form-control btn btn-primary btn-block" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="
-    {%- if each_measurement.channel != None -%}
-      CH{{each_measurement.channel}}
-    {%- endif -%}
-    {%- if each_measurement.measurement in dict_measurements -%}
-      {{' ' + dict_measurements[each_measurement.measurement]['name']}}
-    {%- endif -%}
-    {%- if each_measurement.unit in dict_units -%}
-      {{' (' + dict_units[each_measurement.unit]['unit'] + ') '}}
-    {%- endif -%}
-    ">
-  </div>
-
+    <input class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="{%- if each_measurement.channel != None -%}CH{{each_measurement.channel}}{%- endif -%}">
     {% else %}
-
-  <div class="col-auto">
-    <input class="form-control btn btn-primary btn-block" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="
-    {%- if each_measurement.channel != None -%}
-      CH{{each_measurement.channel}}
-    {%- endif -%}
-    ">
-  </div>
-
+    <input class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="{%- if each_measurement.channel != None -%}CH{{each_measurement.channel}}{%- endif -%}">
     {% endif %}
-
-  <div class="col-auto">
-    <label class="control-label" for="measurement_meas_name_{{each_measurement.unique_id}}">{{dict_translation['select_measurement_unit']['name']}}</label>
-    <div>
-      <input class="form-control" id="measurement_meas_name_{{each_measurement.unique_id}}" name="measurement_meas_name_{{each_measurement.unique_id}}" title="{{dict_translation['name']['phrase']}}" type="text" value="{{each_measurement.name}}">
-    </div>
   </div>
 
-  <div class="col-auto">
-    <label class="control-label" for="measurement_meas_unit_{{each_measurement.unique_id}}">{{dict_translation['select_measurement_unit']['title']}}</label>
-    <div>
-      <select class="form-control" id="measurement_meas_unit_{{each_measurement.unique_id}}" name="measurement_meas_unit_{{each_measurement.unique_id}}" title="{{dict_translation['select_measurement_unit']['phrase']}}">
-        <option value="">{{dict_translation['select_one']['title']}}</option>
-        {% for each_measure_unit in choices_measurements_units %}
-        <option value="{{each_measure_unit['value']}}"{% if each_measure_unit['value'] == each_measurement.measurement + ',' + each_measurement.unit %} selected{% endif %}>{{each_measure_unit['item']}}</option>
-        {% endfor %}
-      </select>
-    </div>
+  <div class="aot-modal-option-control">
+    <input class="form-control aot-modern-input" id="measurement_meas_name_{{each_measurement.unique_id}}" name="measurement_meas_name_{{each_measurement.unique_id}}" title="{{dict_translation['name']['phrase']}}" type="text" value="{{each_measurement.name}}">
   </div>
+</div>
 
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="measurement_meas_unit_{{each_measurement.unique_id}}">{{dict_translation['select_measurement_unit']['title']}}</label>
+  <div class="aot-modal-option-control">
+    <select class="form-control aot-modern-select" id="measurement_meas_unit_{{each_measurement.unique_id}}" name="measurement_meas_unit_{{each_measurement.unique_id}}" title="{{dict_translation['select_measurement_unit']['phrase']}}">
+      <option value="">{{dict_translation['select_one']['title']}}</option>
+      {% for each_measure_unit in choices_measurements_units %}
+      <option value="{{each_measure_unit['value']}}"{% if each_measure_unit['value'] == each_measurement.measurement + ',' + each_measurement.unit %} selected{% endif %}>{{each_measure_unit['item']}}</option>
+      {% endfor %}
+    </select>
+  </div>
 </div>
 
   {% endfor %}

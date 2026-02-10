@@ -19,13 +19,13 @@ from aot.config_translations import TRANSLATIONS
 
 
 class MethodCreate(FlaskForm):
-    name = StringField('이름')
+    name = StringField(lazy_gettext('Name'))
     method_type = SelectField(
         choices=METHODS,
         validators=[DataRequired()]
     )
     controller_type = HiddenField('Controller Type')
-    Submit = SubmitField('추가')
+    Submit = SubmitField(lazy_gettext('Add'))
 
 
 class MethodAdd(FlaskForm):
@@ -33,44 +33,44 @@ class MethodAdd(FlaskForm):
         'Method ID', widget=widgets.HiddenInput())
     method_type = HiddenField('Method Type')
     daily_time_start = StringField(
-        '시작 시간 (HH:MM:SS)',
+        lazy_gettext('Start Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"}
     )
     daily_time_end = StringField(
-        '종료 시간 (HH:MM:SS)',
+        lazy_gettext('End Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"}
     )
     time_start = StringField(
-        '시작 일시 (YYYY-MM-DD HH:MM:SS)',
+        lazy_gettext('Start Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"}
     )
     time_end = StringField(
-        '종료 일시 (YYYY-MM-DD HH:MM:SS)',
+        lazy_gettext('End Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"}
     )
     setpoint_start = DecimalField(
-        '시작 설정값',
+        lazy_gettext('Start Setpoint'),
         widget=NumberInput(step='any'))
     setpoint_end = DecimalField(
-        '종료 설정값 (선택)',
+        lazy_gettext('End Setpoint (Optional)'),
         widget=NumberInput(step='any'))
     duration = DecimalField(
-        '지속 시간 (초)',
+        lazy_gettext('Duration (sec)'),
         widget=NumberInput(step='any'))
     duration_end = DecimalField(
-        '종료까지 지속 시간 (초)',
+        lazy_gettext('Duration to End (sec)'),
         widget=NumberInput(step='any'))
     amplitude = DecimalField(
-        '진폭',
+        lazy_gettext('Amplitude'),
         widget=NumberInput(step='any'))
     frequency = DecimalField(
-        '주파수',
+        lazy_gettext('Frequency'),
         widget=NumberInput(step='any'))
     shift_angle = DecimalField(
-        '위상각 이동 (0~360)',
+        lazy_gettext('Phase Shift (0-360)'),
         widget=NumberInput(step='any'))
     shiftY = DecimalField(
-        'Y축 이동',
+        lazy_gettext('Y-axis Shift'),
         widget=NumberInput(step='any'))
     x0 = DecimalField('X0', widget=NumberInput(step='any'))
     y0 = DecimalField('Y0', widget=NumberInput(step='any'))
@@ -81,13 +81,13 @@ class MethodAdd(FlaskForm):
     x3 = DecimalField('X3', widget=NumberInput(step='any'))
     y3 = DecimalField('Y3', widget=NumberInput(step='any'))
     output_daily_time = StringField(
-        '출력 시간 (HH:MM:SS)',
+        lazy_gettext('Output Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"})
     output_time = StringField(
-        '출력 일시 (YYYY-MM-DD HH:MM:SS)',
+        lazy_gettext('Output Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"})
-    save = SubmitField('메서드에 추가')
-    restart = SubmitField('반복 옵션 설정')
+    save = SubmitField(lazy_gettext('Add to Method'))
+    restart = SubmitField(lazy_gettext('Set Repeat Options'))
     linked_method_id = StringField('Linked Method Id')
 
 
@@ -95,37 +95,37 @@ class MethodMod(FlaskForm):
     method_id = StringField('Method ID', widget=widgets.HiddenInput())
     method_data_id = StringField('Method Data ID', widget=widgets.HiddenInput())
     method_type = HiddenField('Method Type')
-    name = StringField('이름')
+    name = StringField(lazy_gettext('Name'))
     daily_time_start = StringField(
-        '시작 시간 (HH:MM:SS)',
+        lazy_gettext('Start Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"})
     daily_time_end = StringField(
-        '종료 시간 (HH:MM:SS)',
+        lazy_gettext('End Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"})
     time_start = StringField(
-        '시작 일시 (YYYY-MM-DD HH:MM:SS)',
+        lazy_gettext('Start Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"})
     time_end = StringField(
-        '종료 일시 (YYYY-MM-DD HH:MM:SS)',
+        lazy_gettext('End Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"})
     output_daily_time = StringField(
-        '출력 시간 (HH:MM:SS)',
-        render_kw={"placeholder": "HH:MM:SS"})
+        lazy_gettext('Output Time (HH:MM:SS)'),
+        render_kw={"placeholder": lazy_gettext("HH:MM:SS")})
     output_time = StringField(
-        '출력 일시 (YYYY-MM-DD HH:MM:SS)',
-        render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"})
+        lazy_gettext('Output Date/Time (YYYY-MM-DD HH:MM:SS)'),
+        render_kw={"placeholder": lazy_gettext("YYYY-MM-DD HH:MM:SS")})
     duration = DecimalField(
-        '지속 시간 (초)',
+        lazy_gettext('Duration (sec)'),
         widget=NumberInput(step='any'))
     duration_end = DecimalField(
-        '종료까지 지속 시간 (초)',
+        lazy_gettext('Duration to End (sec)'),
         widget=NumberInput(step='any'))
     setpoint_start = DecimalField(
-        '시작 설정값',
+        lazy_gettext('Start Setpoint'),
         widget=NumberInput(step='any'))
     setpoint_end = DecimalField(
-        '종료 설정값',
+        lazy_gettext('End Setpoint'),
         widget=NumberInput(step='any'))
-    rename = SubmitField('이름 변경')
-    save = SubmitField('저장')
-    delete = SubmitField('삭제')
+    rename = SubmitField(lazy_gettext('Rename'))
+    save = SubmitField(lazy_gettext('Save'))
+    delete = SubmitField(lazy_gettext('Delete'))

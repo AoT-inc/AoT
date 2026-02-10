@@ -1,35 +1,21 @@
-{% if each_device.interface == 'FTDI' %}
+{% if 'ftdi_address' in dict_options['options_enabled'] or
+      'ftdi_address' in dict_options['options_disabled']
+  %}
 
-  {% if 'ftdi_location' in dict_options['options_disabled'] %}
-
-<div class="col-auto">
-  {{form.ftdi_location.label(class_='control-label')}}
-  <div>
-    {{form.ftdi_location(class_='form-control', value=each_device.ftdi_location, disabled=True)}}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['ftdi_address']['title']}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'ftdi_address' in dict_options['options_disabled'] -%}
+    {{form.ftdi_address(class_='form-control aot-modern-input', value=each_device.ftdi_address, disabled=True, **{'title': dict_translation['ftdi_address']['phrase']})}}
+  {% else %}
+    <div class="input-group">
+      {{form.ftdi_address(class_='form-control aot-modern-input', value=each_device.ftdi_address, **{'title': dict_translation['ftdi_address']['phrase']})}}
+      <div class="input-group-append">
+        <button onclick="return $(this).processRequest(this, 'ftdi_scan');" class="btn btn-primary aot-modern-btn ml-1" type="button"><i class="fas fa-search"></i></button>
+      </div>
+    </div>
+  {%- endif -%}
   </div>
 </div>
-
-  {% endif %}
-
-  {% if 'ftdi_location' in dict_options['options_enabled']  %}
-
-<div class="col-auto">
-  {{form.ftdi_location.label(class_='control-label')}}
-  <div>
-    <select class="form-control form-tooltip form-dropdown" id="ftdi_location" name="ftdi_location" data-placement="top" title="{{dict_translation['ftdi_location']['phrase']}}">
-    {% if not ftdi_devices %}
-      <option value="">{{_('None Found')}}</option>
-    {% else %}
-      <option value="">{{_('Select One')}}</option>
-      {% for each_dev in ftdi_devices %}
-      <option value="{{each_dev}}"{% if each_device.ftdi_location == each_dev %} selected{% endif %}>{{loop.index - 1}}: {{each_dev}}</option>
-      {% endfor %}
-    {% endif %}
-    </select>
-  </div>
-</div>
-
-  {% endif %}
 
 {% endif %}
-

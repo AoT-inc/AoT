@@ -1,17 +1,17 @@
 {% extends "layout-settings.html" %}
-{% set active_page = "설정" %}
+{% set active_page = "settings" %}
 {% set active_settings = "pi" %}
 {% set help_page = ["https://aot-inc.github.io/AoT/Configuration-Settings/#pi-settings", dict_translation['settings']['title'] + ': ' + _('Raspberry Pi')] %}
 
 {% block title %} - {{dict_translation['settings']['title'] + ': ' + _('Raspberry Pi')}}{% endblock %}
 
 {% block settings %}
-  <!-- 경로: /settings/pi -->
+  <!-- Route: /settings/pi -->
   <div class="container">
     <h3 style="text-align: right; padding-bottom: 1.3em;">
       <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#pi-settings" target="_blank">
         <span style="font-size: 16px" class="fas fa-question-circle"></span>
-      </a> {{ _('라즈베리 파이 설정') }}
+      </a> {{ _('Raspberry Pi Settings') }}
     </h3>
 
     <form class="form-horizontal" method="post" action="/settings/pi">
@@ -20,13 +20,13 @@
 
       <div class="row small-gutters" style="padding: 1em 0">
         <div class="col-12">
-          다음 설정은 비대화형 raspi-config를 통해 구성됩니다. 여기에서 변경한 내용은 시스템을 재부팅해야 적용되며, 재부팅은 상단 메뉴(설정 -> 시스템 재시작)에서 실행할 수 있습니다.
+          {{_('The following settings are configured via non-interactive raspi-config. Changes made here require a system reboot, which can be performed from the top menu (Settings -> Restart System).')}}
         </div>
       </div>
 
       <div class="row small-gutters">
         <div class="col">
-          I<sup>2</sup>C {% if pi_settings['i2c_enabled'] %}사용 가능{% else %}사용 불가{% endif %}
+          I<sup>2</sup>C {% if pi_settings['i2c_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}
         </div>
         <div class="col">
           {% if pi_settings['i2c_enabled'] %}
@@ -39,7 +39,7 @@
 
       <div class="row small-gutters">
         <div class="col">
-          1-Wire {% if pi_settings['one_wire_enabled'] %}사용 가능{% else %}사용 불가{% endif %}
+          1-Wire {% if pi_settings['one_wire_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}
         </div>
         <div class="col">
           {% if pi_settings['one_wire_enabled'] %}
@@ -52,7 +52,7 @@
 
       <div class="row small-gutters">
         <div class="col">
-          직렬 통신 {% if pi_settings['serial_enabled'] %}사용 가능{% else %}사용 불가{% endif %}
+          {{_('Serial')}} {% if pi_settings['serial_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}
         </div>
         <div class="col">
           {% if pi_settings['serial_enabled'] %}
@@ -65,7 +65,7 @@
 
       <div class="row small-gutters">
         <div class="col">
-          SPI {% if pi_settings['spi_enabled'] %}사용 가능{% else %}사용 불가{% endif %}
+          SPI {% if pi_settings['spi_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}
         </div>
         <div class="col">
           {% if pi_settings['spi_enabled'] %}
@@ -78,7 +78,7 @@
 
       <div class="row small-gutters">
         <div class="col">
-          SSH {% if pi_settings['ssh_enabled'] %}사용 가능{% else %}사용 불가{% endif %}
+          SSH {% if pi_settings['ssh_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}
         </div>
         <div class="col">
           {% if pi_settings['ssh_enabled'] %}
@@ -100,7 +100,7 @@
 
       <div class="row small-gutters" style="padding-top: 2em">
         <div class="col-12">
-          서비스 옵션:
+          {{_('Service Options')}}:
         </div>
       </div>
 
@@ -112,16 +112,16 @@
 
       <div class="row small-gutters">
         <div class="col">
-          <select class="form-control form-tooltip form-dropdown" id="pigpiod_sample_rate" name="pigpiod_sample_rate" title="" data-original-title="pigpiod의 샘플링 속도를 밀리초 단위로 선택하세요.">
+          <select class="form-control form-tooltip form-dropdown" id="pigpiod_sample_rate" name="pigpiod_sample_rate" title="" data-original-title="{{_('Select pigpiod sampling rate in milliseconds.')}}">
             <option value=""></option>
-            <option value="uninstalled"{% if pigpiod_sample_rate == 'uninstalled' %} selected{% endif %}>pigpiod 제거</option>
-            <option value="disabled"{% if pigpiod_sample_rate == 'disabled' %} selected{% endif %}>pigpiod 비활성화</option>
-            <option value="low"{% if pigpiod_sample_rate == 'low' %} selected{% endif %}>1 ms (빠름)</option>
-            <option value="high"{% if pigpiod_sample_rate == 'high' %} selected{% endif %}>5 ms (느림)</option>
+            <option value="uninstalled"{% if pigpiod_sample_rate == 'uninstalled' %} selected{% endif %}>{{_('Uninstall pigpiod')}}</option>
+            <option value="disabled"{% if pigpiod_sample_rate == 'disabled' %} selected{% endif %}>{{_('Disable pigpiod')}}</option>
+            <option value="low"{% if pigpiod_sample_rate == 'low' %} selected{% endif %}>{{_('1 ms (Fast)')}}</option>
+            <option value="high"{% if pigpiod_sample_rate == 'high' %} selected{% endif %}>{{_('5 ms (Slow)')}}</option>
           </select>
         </div>
         <div class="col">
-          {{ form_settings_pi.change_pigpiod_sample_rate(class_='btn btn-primary', **{'onclick':'return confirm("pigpiod 샘플 속도를 변경하면 pigpiod 및 AoT 데몬을 다시 시작해야 합니다. 계속하시겠습니까?")'}) }}
+          {{ form_settings_pi.change_pigpiod_sample_rate(class_='btn btn-primary', **{'onclick':'return confirm("' + _('Changing pigpiod sample rate requires restarting pigpiod and AoT daemon. Continue?') + '")'}) }}
         </div>
       </div>
 

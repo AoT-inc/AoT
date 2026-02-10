@@ -14,7 +14,7 @@ from aot.utils.database import db_retrieve_table_daemon
 
 ACTION_INFORMATION = {
     'name_unique': 'setpoint_pid_lower',
-    'name': "{}: {}: {}".format(TRANSLATIONS['pid']['title'], lazy_gettext('Lower'), lazy_gettext("Setpoint")),
+    'name': lazy_gettext('PID: Lower: Setpoint'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

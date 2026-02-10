@@ -22,14 +22,14 @@
 <body>
 
 {% if current_user.is_authenticated %}
-  <p>{{_("이미 로그인되어 있습니다!")}}</p>
+  <p>{{_("You are already logged in!")}}</p>
 {% else %}
   <!-- Route: /login_keypad -->
   <div class="container">
   {% include 'flash_messages.html' %}
 
     <div class="text-center">
-      <h2 class="form-signin-heading">키패드 로그인 {{dict_translation['title']}}</h2>
+      <h2 class="form-signin-heading">{{_('Pinpad Log In')}} {{dict_translation['title']}}</h2>
       <h4 style="text-align: center;">{{host}}</h4>
       <div class="btn-group-vertical btn-group-justified" role="group" aria-label="Keypad Login">
         <div class="btn-group">
@@ -61,7 +61,7 @@
       </div>
 
       <div style="text-align: center; padding-top: 1em">
-        <a href="/login_password">{{_('암호로 로그인하기')}}</a>
+        <a href="/login_password">{{_('Log in with password')}}</a>
       </div>
     </div>
 

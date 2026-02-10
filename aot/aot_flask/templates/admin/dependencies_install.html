@@ -5,11 +5,11 @@
           <h5 class="modal-title">Install Dependencies for <span class="dependencies_device_name"></span></h5>
         </div>
         <div id="container_confirm_install" >
-          <p>다음 장치를 추가하는 동안 충족되지 않은 구성요소가 발견되었습니다: <span class="dependencies_device_name"></span> (<span class="dependencies_device"></span>)</p>
-          <p>설치되지 않은 구성요소: <span class="dependencies_unmet"></span></p>
+          <p>{{_('Unmet components were found while adding the following device')}}: <span class="dependencies_device_name"></span> (<span class="dependencies_device"></span>)</p>
+          <p>{{_('Unmet components')}}: <span class="dependencies_unmet"></span></p>
           <div id="dependencies_message"></div>
           
-          <p>이 구성요소을 설치하려면 아래의 "설치" 버튼을 클릭하고, 설치가 완료될 때까지 기다린 후 장치를 다시 추가하십시오. 설치가 완료된 후, 새로 설치된 모듈을 감지할 수 있도록 프론트엔드와 백엔드가 자동으로 다시 시작됩니다.</p>
+          <p>{{_('To install these components, click the "Install" button below and wait until the installation is complete before re-adding the device. After installation, the frontend and backend will automatically restart to detect the newly installed modules.')}}</p>
 
           <form id="form_dependency_install" method="post">
             <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
@@ -25,10 +25,10 @@
         </div>
 
         <div id="container_install" style="display: none;">
-          <p>다음 구성요소에 대한 설치가 시작되었습니다: <span class="dependencies_unmet"></span></p>
+          <p>{{_('Installation has started for the following components')}}: <span class="dependencies_unmet"></span></p>
 
-          <p>아래의 구성요소 설치 로그는 5초마다 새로고침됩니다. 모든 구성요소가 설치되고 프론트엔드 및 백엔드가 다시 시작될 때까지 기다린 후, 관련 장치를 다시 추가하십시오. 설치 과정이 완료되면 로그의 마지막에 "#### 구성요소 설치 완료" 메시지가 나타납니다.</p>
-          <p>설치 과정에 문제가 발생하여 설치 상태를 재설정해야 하는 경우, /opt/AoT/.dependency 파일을 삭제하면 구성요소 설치 함수가 복원됩니다.</p>
+          <p>{{_('The component installation log below refreshes every 5 seconds. Please wait until all components are installed and the frontend and backend restart before re-adding the associated device. When the installation process is complete, the message "#### Component installation complete" will appear at the end of the log.')}}</p>
+          <p>{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore component installation functions.')}}</p>
 
           <div class="row small-gutters" style="padding: 0.5em">
             <div class="col-auto">

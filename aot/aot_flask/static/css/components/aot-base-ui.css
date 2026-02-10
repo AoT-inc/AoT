@@ -1,0 +1,1569 @@
+/* 
+ * AoT Design Base UI Components 
+ * Defines foundational UI elements for building consistency across the application.
+ */
+
+:root {
+    /* Default Dimensions */
+    --aot-base-size: 28px;
+    --aot-roundbox-width: 60px;
+
+    /* Scaling Steps (4px increments) */
+    --aot-step-size: 4px;
+}
+
+/* ------------------------------------------------------------
+   1. AoT Cycle (Circle)
+   - Default Diameter: 28px
+   - Shape: Circle (50% border-radius)
+   - Behavior: Flex center for icon/text containment
+------------------------------------------------------------ */
+.aot-cycle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+
+    width: var(--aot-base-size);
+    height: var(--aot-base-size);
+    border-radius: 50%;
+
+    /* Default: No Border */
+    border: none;
+
+    /* Prevent shrinking in flex containers */
+    flex-shrink: 0;
+
+    /* Overflow hidden for contained images/backgrounds */
+    overflow: hidden;
+}
+
+/* Size Modifiers: 4px +/- Steps */
+
+/* 24px */
+.aot-cycle.sm {
+    width: calc(var(--aot-base-size) - var(--aot-step-size));
+    height: calc(var(--aot-base-size) - var(--aot-step-size));
+}
+
+/* 20px */
+.aot-cycle.xs {
+    width: calc(var(--aot-base-size) - (var(--aot-step-size) * 2));
+    height: calc(var(--aot-base-size) - (var(--aot-step-size) * 2));
+}
+
+/* 32px */
+.aot-cycle.lg {
+    width: calc(var(--aot-base-size) + var(--aot-step-size));
+    height: calc(var(--aot-base-size) + var(--aot-step-size));
+}
+
+/* 36px */
+.aot-cycle.xl {
+    width: calc(var(--aot-base-size) + (var(--aot-step-size) * 2));
+    height: calc(var(--aot-base-size) + (var(--aot-step-size) * 2));
+}
+
+
+/* ------------------------------------------------------------
+   2. AoT Roundbox (Pill/Oval)
+   - Dimensions: 60px width x 28px height
+   - Shape: Full Pill (Left/Right rounded 50% relative to height)
+   - Behavior: Container
+------------------------------------------------------------ */
+.aot-roundbox {
+    display: inline-block;
+    /* or inline-flex if centering needed */
+    box-sizing: border-box;
+
+    width: var(--aot-roundbox-width);
+    height: var(--aot-base-size);
+
+    /* "Box Left/Right Rounding 50%" typically means full pill shape */
+    border-radius: 9999px;
+    /* Ensures perfect semicircles on ends regardless of exact height */
+
+    /* Default: No Border */
+    border: none;
+
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+/* ------------------------------------------------------------
+   3. Common Utilities
+------------------------------------------------------------ */
+
+/* Pill-shaped Button Utility */
+.aot-btn-pill {
+    border-radius: 9999px !important;
+    /* Optional: ensure min-height if desired, e.g. 28px */
+}
+
+/* ------------------------------------------------------------
+   4. Global Button Overrides (Experiment)
+   - Applies strict pill shape to all standard buttons.
+   - Excludes Input-Group, and Button-Group contexts.
+------------------------------------------------------------ */
+.btn:not(.input-group-btn > .btn):not(.input-group-append > .btn):not(.input-group-prepend > .btn):not(.btn-group > .btn):not(.dropdown-toggle) {
+    border-radius: 9999px !important;
+    padding-left: 1.2em;
+    padding-right: 1.2em;
+}
+
+/* ------------------------------------------------------------
+   5. AoT Widget Specific Overrides (.frame-aot)
+   - Applies pill shape to buttons and inputs within widgets.
+------------------------------------------------------------ */
+.frame-aot input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+.frame-aot button {
+    border-radius: 9999px !important;
+    /* Ensure padding for text inputs so text doesn't hit the curve */
+    padding-left: 0.8em;
+    padding-right: 0.8em;
+    border: 1px solid #ccc;
+    /* Ensure visibility if border is missing */
+}
+
+/* Optional 1px border */
+.aot-border {
+    border: 1px solid #ddd;
+    /* Default gray, override as needed */
+}
+
+/* Utility to center content if .aot-roundbox is used as a flex container */
+.aot-flex-center {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ------------------------------------------------------------
+   5.1. Flat Gray Button Style (User Requested)
+   - Background: #D2D1D1
+   - Text: Black
+   - Border: None
+------------------------------------------------------------ */
+.aot-btn-flat {
+    background-color: #D2D1D1 !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.aot-btn-flat:hover {
+    background-color: #bdbdbd !important;
+    /* Slightly darker on hover */
+    color: #000000 !important;
+}
+
+.aot-btn-flat:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------
+   6. Animated Hamburger Button (Refined)
+   - Size: 28x28px
+   - Default: Hamburger (3 lines)
+   - Active: X shape
+------------------------------------------------------------ */
+.burger {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    cursor: pointer;
+    transition: 300ms;
+    border-radius: 6px;
+    /* Reduced radius for smaller size */
+    margin-bottom: 0;
+    position: relative;
+    /* Ensure absolute children are relative to this */
+}
+
+
+.burger .line,
+.burger::before,
+.burger::after {
+    content: "";
+    width: 18px;
+    /* Scaled for 28px */
+    height: 2px;
+    display: block;
+    background-color: #333;
+    /* Standard dark color */
+    border-radius: 2px;
+    position: absolute;
+    transition: all 0.2s !important;
+    /* Ensure centering mechanism is robust */
+    left: 50%;
+    top: 50%;
+    /* Start centered, Y-offsets applied below */
+    transform: translate(-50%, -50%);
+}
+
+/* Middle Line */
+.burger .line {
+    /* Stays in center */
+    opacity: 1;
+}
+
+/* Top Line */
+.burger::before {
+    /* Move up by 6px (approx 1/4 of container or slightly less) */
+    transform: translate(-50%, calc(-50% - 6px));
+}
+
+/* Bottom Line */
+.burger::after {
+    /* Move down by 6px */
+    transform: translate(-50%, calc(-50% + 6px));
+}
+
+/* ------------------------------------------------------------
+   Checked State (Menu Open -> X Shape)
+------------------------------------------------------------ */
+
+/* Hide Middle Line */
+.burger.active .line {
+    width: 0;
+    opacity: 0;
+}
+
+/* Rotate Top Line to form / */
+.burger.active::before {
+    /* Return to center Y, then rotate */
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* Rotate Bottom Line to form \ */
+.burger.active::after {
+    /* Return to center Y, then rotate */
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* ------------------------------------------------------------
+   Hover State (Animation Only - No Background)
+------------------------------------------------------------ */
+/* Hover effects removed as requested */
+.burger:active {
+    transform: scale(0.95);
+}
+
+/* ------------------------------------------------------------
+   7. Layout Utilities
+   - Gap utilities for flexbox (Bootstrap 4/Older compat)
+------------------------------------------------------------ */
+.gap-1 {
+    gap: 0.25rem !important;
+}
+
+/* 4px */
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
+/* 8px */
+.gap-3 {
+    gap: 1rem !important;
+}
+
+/* 16px */
+.gap-4 {
+    gap: 1.5rem !important;
+}
+
+/* 24px */
+.gap-5 {
+    gap: 3rem !important;
+}
+
+/* 48px */
+
+/* ------------------------------------------------------------
+   8. AoT Tabs Visualization (Universal)
+   ------------------------------------------------------------ */
+
+/* Shared Sticky Container Style (Unified Dashboard/Map) */
+.aot-tabs-sticky-container {
+    /* Visuals from Map Style */
+    background-color: #fff !important;
+    /* Force White (variable is transparent in map.css) */
+
+    /* Enforce full width (override container-fluid padding) */
+    padding: 4px 0;
+
+    transition: padding 120ms ease;
+
+    /* Positioning */
+    position: sticky;
+    /* Use variable for dynamic offset (controlled by JS based on Navbar) */
+    /* Default to 50px (navbar height) to avoid hiding behind navbar if JS delays */
+    top: var(--aot-sticky-top, 50px);
+
+
+    /* Tier 2: Sticky Tabs */
+    z-index: 2100;
+    margin-bottom: 0.25rem !important;
+
+    /* Background handled by ::before below for extensions, plus this container background */
+    box-shadow: none !important;
+}
+
+.aot-tabs-sticky-container::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -200px;
+    bottom: -16px;
+
+    background-color: #fff !important;
+    /* Force White */
+
+    /* Layer 3: Behind Tabs (z:10) but inside Sticky Context */
+    z-index: -1;
+
+    /* Ensure no pointer events blocking if it overlaps something interactive (though it's behind) */
+    pointer-events: none;
+}
+
+/* Shared Wrapper logic */
+.aot-tabs-wrapper {
+    flex: 1 1 0px;
+    min-width: 0;
+    gap: 6px;
+    /* Remove padding on container so content scrolls full width (behind buttons) */
+    margin: 0;
+    padding: 0 !important;
+
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* Scrollbar hiding */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    user-select: none;
+
+    /* Layering: Place below buttons (z:20) */
+    position: relative;
+    z-index: 10;
+
+    /* Removed gradient mask */
+}
+
+/* Ensure initial/final items have space to be seen, but scroll INTO the masked area */
+.aot-tabs-wrapper .aot-tab-item:first-child {
+    /* margin-left: 80px !important; <--- Removed, replaced by dummy-spacer in HTML */
+    margin-left: 0 !important;
+}
+
+.aot-tabs-wrapper .aot-tab-item:last-child {
+    /* margin-right: 50px !important; */
+    margin-right: 0 !important;
+}
+
+.aot-tabs-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+/* Nav Container for Absolute Buttons */
+.aot-tabs-nav-container {
+    position: relative;
+    width: 100%;
+}
+
+/* Floating Buttons (Add / Settings) */
+.aot-tabs-nav-container .btn-fixed-40 {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    /* Solid background matches the button color, but we need the MASK to be the page background */
+    /* Wait, the button IS the yellow circle. The MASK is the white gap. */
+    /* Solution: The button element itself has a thick WHITE border. */
+    /* The inner content (yellow circle) is maintained by the button properties. */
+
+    /* Create the 'Gap' mask using the border */
+    border: 6px solid #fff !important;
+    /* Explicit White */
+
+    /* Ensure circular shape */
+    border-radius: 50% !important;
+
+    /* Box sizing: Border box means width includes border. */
+    /* If button is 40px, and border is 6px, inner is 28px. */
+    /* This might shrink the button too much. */
+    /* Better: Make the button larger (e.g. 52px) and use border to cut it down to 40px visual? */
+    /* Or: Use box-shadow for the white mask? box-shadow: 0 0 0 6px #fff; */
+    /* Box-shadow is better because it doesn't affect flow layout or inner dimensions as much. */
+    border: none !important;
+    box-shadow: 0 0 0 6px #fff;
+    /* Explicit White Mask */
+}
+
+/* Left Button (Add) */
+.aot-tabs-nav-container #btn-map-create,
+.aot-tabs-nav-container .btn-left {
+    left: 0;
+}
+
+/* Right Button (Settings) */
+.aot-tabs-nav-container #btn-map-settings,
+.aot-tabs-nav-container .btn-right {
+    right: 0;
+}
+
+.aot-tab-item {
+    flex: 0 0 auto;
+    position: relative;
+    border-radius: 9999px;
+    /* Pill Shape */
+    transition: transform 0.1s ease, opacity 0.2s;
+}
+
+/* Button styling to match requirements */
+.aot-tab-item .btn {
+    border-radius: 9999px;
+    /* Text in straight section: padding approx half height (assuming ~40px height) */
+    padding-left: 10px;
+    padding-right: 10px;
+    width: 100%;
+    height: 100%;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Dragging Visuals */
+.aot-tab-item[draggable="true"] {
+    cursor: grab;
+}
+
+.aot-tab-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.aot-tab-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+/* Concise Drop Indicator */
+.aot-tab-item.drop-target::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 25%;
+    bottom: 25%;
+    width: 4px;
+    border-radius: 2px;
+    background-color: #555;
+    /* Neutral high-contrast */
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* Fixed Button (Moved from dashboard.html) */
+.btn-fixed-40 {
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 40px !important;
+    flex-shrink: 0 !important;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+}
+
+/* Mobile Tabs (Now includes Tablets up to 991px) */
+/* Force mobile layout on more devices to resolve 'visual' mobile expectations */
+@media (max-width: 991px) {
+    .aot-tabs-wrapper {
+        scroll-snap-type: x mandatory;
+    }
+
+    .aot-tab-item {
+        flex: 0 0 auto;
+        /* Default: Fit 3 items exactly using VW physics */
+        /* Max 3 visible -> strict calculation with safety margin for round edges */
+        /* User request: "Mobile 3rd tab right round cut off, include in calculation" */
+        /* Formula: (100vw - [Buttons 80px] - [Container Pads 30px] - [Gaps 24px]) / 3 */
+        /* Using 150px as Safe Deductible for 3 items */
+
+        /* min-width: calc((100vw - 134px) / 3); */
+        min-width: calc((100vw - 150px) / 3);
+        /* max-width removed to allow scrolling if content exceeds 1/3 width */
+
+        /* Floor: Ensure they don't get impossibly small */
+        min-width: max(70px, calc((100vw - 150px) / 3));
+        transition: 300ms;
+
+        /* Force equal width */
+        scroll-snap-align: start;
+        flex-shrink: 0;
+    }
+
+    /* Ensure text truncates if it doesn't fit in the calculated width */
+    .aot-tab-item .btn {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-left: 10px;
+        /* Reduces padding on mobile for space */
+        padding-right: 10px;
+    }
+}
+
+/* Desktop Rules */
+@media (min-width: 769px) {
+    .aot-tab-item {
+        /* Round 4 Final: Natural Width + No Shrink */
+        /* "Don't force arbitrary width. Just text width + height." */
+        /* flex: grow shrink basis */
+        flex: 1 0 auto !important;
+        flex-shrink: 0 !important;
+        /* CRITICAL: Never squash. Trigger scroll instead. */
+
+        /* Round 5 User Request: "Max 10 tabs" */
+        /* Force every tab to be at least 1/10th of the available space */
+        /* (100% - 60px gaps) / 10. If 11 tabs exist, 11*10% > 100% -> SCROLL */
+        min-width: calc((100% - 60px) / 10);
+        max-width: none;
+    }
+
+    .aot-tab-item .btn {
+        /* Text in straight section: padding 36px !important */
+        padding-left: 10px;
+        padding-right: 10px;
+        white-space: nowrap !important;
+        /* Text determines width. No wrapping. */
+    }
+}
+
+/* ------------------------------------------------------------
+   5.2. Bootstrap Select Override for aot-roundbox
+   - Resets fixed width/height from aot-roundbox to allow flexible content
+   - Maintains the pill shape (border-radius)
+   - Ensures visibility with white background and border
+------------------------------------------------------------ */
+/* Generic Bootstrap Select Toggle Rounding (User Request) */
+.bootstrap-select > .dropdown-toggle {
+    border-radius: 9999px !important;
+}
+
+.bootstrap-select .btn.aot-roundbox {
+    width: 100% !important;
+    /* Allow button to fill the container */
+    height: auto !important;
+    /* Allow height to adjust to content */
+    min-height: var(--aot-base-size);
+    padding-left: 1em;
+    /* Restore padding for readability */
+    padding-right: 1em;
+    border-radius: 9999px !important;
+    /* Force pill shape */
+}
+
+/* Grid Stack Item Styling */
+/* Provide gutter via Absolute Inset Strategy */
+/* This ensures physical separation regardless of GridStack positioning */
+.grid-stack-item {
+    padding: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
+}
+
+/* ------------------------------------------------------------
+   Bootstrap-Select Screen-Aware Constraints
+   - Enforce 15px horizontal padding safety
+   - Enforce 120px bottom safety margin for mobile OS UI/Browser bars
+   - Uses dvh (dynamic viewport height) for modern mobile browsers
+   ------------------------------------------------------------ */
+.bootstrap-select .dropdown-menu {
+    max-width: calc(100vw - 30px) !important;
+    min-width: 0 !important;
+    width: auto !important;
+}
+
+/* Default: Left-aligned */
+.bootstrap-select .dropdown-menu:not(.dropdown-menu-right) {
+    left: 0 !important;
+    right: auto !important;
+}
+
+/* Right-aligned support */
+.bootstrap-select .dropdown-menu.dropdown-menu-right {
+    left: auto !important;
+    right: 0 !important;
+}
+
+.bootstrap-select .dropdown-menu .inner {
+    max-width: 100% !important;
+    /* Enforce strict bottom margin regardless of trigger position */
+    max-height: calc(100dvh - 180px) !important; 
+    /* 120px safety + 60px estimated header/trigger space */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+/* Ensure selected item and search are visible */
+.bootstrap-select .dropdown-menu.show {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.bootstrap-select .dropdown-menu .bs-searchbox {
+    flex: 0 0 auto !important;
+}
+
+.bootstrap-select .dropdown-menu .inner {
+    flex: 1 1 auto !important;
+}
+
+.bootstrap-select .dropdown-menu li a span.text {
+    display: inline-block !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Entry Container Margins */
+.aot-entry-container {
+    margin: 0 0.75em;
+}
+
+
+/* Pill Input Style */
+.aot-pill-input {
+    background-color: #fff !important;
+    border-radius: 9999px !important;
+    /* Pill shape */
+    border: none !important;
+    text-align: center !important;
+    height: 28px !important;
+    /* Fixed height for consistency */
+    color: #000 !important;
+}
+
+.aot-pill-input:disabled {
+    background-color: #fff !important;
+    /* Ensure white background even when disabled */
+    color: #000 !important;
+}
+
+/* ------------------------------------------------------------
+   8.1 Compact Caret-less Select (Minimalist Style)
+   ------------------------------------------------------------ */
+.aot-no-caret-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: none !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    text-align: center !important;
+    text-align-last: center !important;
+    border-radius: 14px !important;
+}
+
+/* Support for bootstrap-select buttons when using aot-no-caret-select */
+.bootstrap-select.aot-no-caret-select > .dropdown-toggle::after {
+    display: none !important;
+}
+
+.bootstrap-select.aot-no-caret-select > .dropdown-toggle {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    text-align: center !important;
+    border-radius: 14px !important;
+}
+
+.aot-no-caret-select::-ms-expand {
+    display: none !important;
+}
+
+/* ------------------------------------------------------------
+   8.2 Bootstrap Select Dropdown Menu Refinement
+   ------------------------------------------------------------ */
+.bootstrap-select .dropdown-menu {
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.bootstrap-select .dropdown-menu li a {
+    text-align: left !important; /* System standard: Left align for lists */
+    padding: 4px 12px !important; /* Reduced height (approx 70%) */
+    display: flex !important;
+    align-items: center !important; /* Vertical centering */
+    min-height: 28px !important;
+    font-size: 0.85rem !important;
+}
+
+.bootstrap-select .dropdown-menu li a span.text {
+    line-height: normal !important;
+    display: block !important;
+}
+
+/* Fix for optgroup labels if any */
+.bootstrap-select .dropdown-menu .dropdown-header {
+    text-align: left !important;
+    padding: 4px 12px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: #888 !important;
+}
+
+/* Toggle Switch Styling */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    /* Inactive gray */
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: #28a745;
+    /* Success Green */
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px #28a745;
+}
+
+input:checked+.slider:before {
+    -webkit-transform: translateX(22px);
+    -ms-transform: translateX(22px);
+    transform: translateX(22px);
+}
+
+/* ------------------------------------------------------------
+   9. AoT Mode Panel & Tabs (Migrated from geo_design.html)
+   ------------------------------------------------------------ */
+
+/* Mode Panel Container */
+/* Mode Panel Container */
+.mode-panel {
+    display: flex !important; /* [Fix] V10: Restore visibility */
+    flex-direction: column;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 35px; /* [Fix] V8: Restore position */
+    max-height: 50vh; /* [Fix] V8: Enable scroll */
+    z-index: 3200 !important; /* [Fix] V8: Z-Index above map controls */
+    /* ... Legacy styles hidden ... */
+}
+
+/* Mode Tabs Flex Container */
+.mode-tabs {
+    display: flex;
+    justify-content: center;
+    /* User Req: Center Align */
+    margin-top: 8px;
+    /* User Req: Add 8px top spacing */
+}
+
+/* Individual Mode Tab Button */
+/* Individual Mode Tab Button */
+.mode-tab {
+    /* User Req: Min Width 60px, Height 32px, Radius 16px */
+    min-width: 60px;
+    height: 32px;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    /* Default border */
+    background: #fff;
+    color: #363636;
+
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 200px;
+    opacity: 1;
+    margin-left: 5px;
+}
+
+.mode-tab:first-child {
+    margin-left: 0;
+}
+
+/* Base Active Style */
+.mode-tab.active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    color: white !important;
+}
+
+/* Sliding Hide Animation */
+.mode-tab.hidden-slide {
+    min-width: 0 !important;
+    max-width: 0 !important;
+    width: 0 !important;
+    opacity: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+/* Specific Mode Theme Colors (Logic: Inactive = Border, Active = Background) */
+/* Site: Yellow */
+.mode-tab[data-mode="site"] {
+    border-color: #ffcc00;
+    color: #856404;
+}
+
+.mode-tab[data-mode="site"].active {
+    background: #ffcc00;
+}
+
+/* Zone: Green */
+.mode-tab[data-mode="zone"] {
+    border-color: #28a745;
+    color: #28a745;
+}
+
+.mode-tab[data-mode="zone"].active {
+    background: #28a745;
+}
+
+/* Facility: Grey */
+.mode-tab[data-mode="facility"] {
+    border-color: #82898f;
+    color: #5a6268;
+}
+
+.mode-tab[data-mode="facility"].active {
+    background: #82898f;
+}
+
+/* Equipment: Blue */
+.mode-tab[data-mode="equipment"] {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.mode-tab[data-mode="equipment"].active {
+    background: #007bff;
+}
+
+/* Close state for Equipment (Requested: White Background, Theme Border, Height 32) */
+.mode-tab[data-mode="equipment"].is-closing {
+    background: #fff !important;
+    color: #007bff !important;
+    border-color: #007bff !important;
+    box-shadow: none !important;
+    height: 32px !important;
+    border-radius: 16px !important;
+}
+
+/* AoT Device: Purple */
+.mode-tab[data-mode="aot_device"] {
+    border-color: #995aff;
+    color: #995aff;
+}
+
+.mode-tab[data-mode="aot_device"].active {
+    background: #995aff;
+}
+
+/* Standardized Mode Tab Button (User Req: 32px) */
+.btn-mode-tab {
+    min-width: 60px;
+    height: 32px;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #363636;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s !important;
+    font-size: 0.85rem;
+    white-space: nowrap;
+
+    /* [Refined] Clickability: Ensure button precedence */
+    position: relative;
+    z-index: 20;
+    /* [Refined] Touch Optimization */
+    touch-action: manipulation;
+}
+
+/* Small Pill Buttons for Mode Rows (28px height) */
+.btn-aot-pill {
+    height: 28px !important;
+    border-radius: 14px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid transparent !important;
+}
+
+.btn-aot-outline {
+    background: #fff !important;
+    border-color: #ddd !important;
+    color: #444 !important;
+}
+
+.btn-aot-outline:hover {
+    background: #f8f9fa !important;
+    border-color: #ccc !important;
+}
+
+.btn-aot-action {
+    background: #007bff !important;
+    color: #fff !important;
+    border: none !important;
+}
+
+.btn-aot-action:hover {
+    background: #0056b3 !important;
+}
+
+/* --- New Tiered Navigation Mode Panel --- */
+.nav-v-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    max-width: calc(100% - 20px);
+    /* [Refined] Optimal Height: 90px (10+30+10+30+10) */
+    height: 90px;
+    /* 45px * 2 (36px button + ~9px padding) */
+    background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    z-index: 1200;
+    overflow: hidden;
+    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    /* [Refined] Remove Padding to allow exact 45px rows */
+    padding: 0;
+    /* Theme Color Variable Default */
+    --active-theme-color: #007bff;
+}
+
+.nav-tier-viewport {
+    height: 100%;
+    width: 100%;
+    /* [Refined] Explicit Width */
+    overflow: hidden;
+    /* [Refined] No Vertical Scroll needed per user */
+
+    /* [Refined] Flex column layout to properly contain tiers */
+    display: flex;
+    flex-direction: column;
+
+    padding-top: 10px;
+}
+
+.nav-tier-viewport::-webkit-scrollbar {
+    display: none;
+}
+
+.nav-tier {
+    /* [Refined] Button Height (28px) + 2px buffer */
+    height: 30px;
+    width: 100%;
+    /* [Refined] Force container width */
+    max-width: 100%;
+    /* [Refined] Ensure no overflow beyond panel */
+    margin: 0 0 10px 0;
+    padding: 0 16px;
+    /* Padding for the container */
+
+    /* [Refined] Scroll Strategy: Block Container + Fit-Content Inner */
+    display: block;
+    /* Standard Block for scrolling behavior */
+    overflow-x: auto;
+    /* Enable horizontal scrolling */
+    white-space: nowrap;
+
+    /* Hide Scrollbar visuals but keep functionality */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* [Refined] Inner Wrapper for Safe Centering */
+.nav-tier-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Slightly increased for touch comfort */
+
+    /* [Refined] Center Logic: fit-content width + margin: auto 
+       Small content -> Centered by margin: auto
+       Large content -> Naturally aligns to start (left) in standard scroll containers */
+    width: fit-content;
+    min-width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    justify-content: center;
+
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+/* [Bugfix] Mobile Alignment: Ensure padding and remove forced flex-start */
+@media (max-width: 991px) {
+    .nav-tier-inner {
+        padding: 0 16px; /* Horizontal buffer for scroll ends */
+        /* margin: 0 auto and justify-content: center are inherited from base */
+    }
+}
+
+/* Trigger min-width 100% just in case for small contents to allow spacing?
+   No, user wants PACKED center strings.
+*/
+
+/* [Refined] Prevent items from squishing in inner wrapper */
+.nav-tier-inner>* {
+    flex-shrink: 0;
+}
+
+/* Tier 1 Layout: Force Fit Override */
+.nav-tier[data-tier-id="main"] {
+    padding: 0 10px;
+    overflow-x: hidden;
+}
+
+.nav-tier[data-tier-id="main"] .nav-tier-inner {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab {
+    flex: 1;
+    /* Distribute space evenly */
+    margin: 0 2px;
+    padding: 0;
+    /* Compact padding */
+    min-width: 0;
+    /* Allow shrinking below content size if needed */
+}
+
+.nav-tier::-webkit-scrollbar {
+    display: none;
+}
+
+/* Tiered Tabs Styling */
+
+.nav-tier .mode-tab {
+    /* [Correction] User Req: Keep Button Height 28px (Do not increase) */
+    height: 28px;
+    padding: 0 14px;
+    border-radius: 999px;
+    /* [Refined] Force Pill Shape */
+    background: #fff;
+    /* [Refined] Force Solid White Background for Hit Area */
+    /* [Refined] Tier 1 & 2 Default: White Background, Gray Border default, but Tier 1 overrides below */
+    border: 1px solid #ddd;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    cursor: pointer;
+    /* [Refined] Only animate color properties to prevent layout "flinch" */
+    transition: all 0.2s !important;
+    flex-shrink: 0;
+
+    /* [Refined] Clickability: Ensure buttons sit above any swipe/scroll layers */
+    position: relative;
+    z-index: 20;
+    /* [Refined] Touch Optimization */
+    touch-action: manipulation;
+}
+
+/* Tier 1 Specific: Default Border is Theme Color (PER BUTTON) */
+/* Site (Default Red) */
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="site"] {
+    border-color: var(--theme-site, #DF5353);
+    /* [Refined] Tier 1 Border: 3px */
+    border-width: 3px;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="site"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="site"]:hover {
+    background: var(--theme-site, #DF5353);
+    border-color: var(--theme-site, #DF5353);
+    color: #fff;
+}
+
+/* Zone (Orange) */
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="zone"] {
+    border-color: var(--theme-zone, #F5A623);
+    border-width: 3px;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="zone"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="zone"]:hover {
+    background: var(--theme-zone, #F5A623);
+    border-color: var(--theme-zone, #F5A623);
+    color: #fff;
+}
+
+/* Facility (Green) */
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="facility"] {
+    border-color: var(--theme-facility, #7ED321);
+    border-width: 3px;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="facility"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="facility"]:hover {
+    background: var(--theme-facility, #7ED321);
+    border-color: var(--theme-facility, #7ED321);
+    color: #fff;
+}
+
+/* Equipment (Blue) */
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="equipment"] {
+    border-color: var(--theme-equipment, #4A90E2);
+    border-width: 3px;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="equipment"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="equipment"]:hover {
+    background: var(--theme-equipment, #4A90E2);
+    border-color: var(--theme-equipment, #4A90E2);
+    color: #fff;
+}
+
+/* Device (Purple) */
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="aot_device"] {
+    border-color: var(--theme-device, #9013FE);
+    border-width: 3px;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="aot_device"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="aot_device"]:hover {
+    background: var(--theme-device, #9013FE);
+    border-color: var(--theme-device, #9013FE);
+    color: #fff;
+}
+
+/* General Active/Hover for Tier 2+ (Uses Global Active Theme) */
+.nav-tier:not([data-tier-id="main"]) .mode-tab:hover {
+    background: #fff;
+    border-color: var(--active-theme-color);
+    color: var(--active-theme-color);
+}
+
+.nav-tier:not([data-tier-id="main"]) .mode-tab:active {
+    transform: scale(0.95);
+}
+
+/* Active: Theme BG */
+.nav-tier:not([data-tier-id="main"]) .mode-tab.active {
+    background: var(--active-theme-color);
+    color: #fff;
+    border-color: var(--active-theme-color);
+    box-shadow: none;
+}
+
+/* Tiered 'Back' Button */
+.btn-nav-back {
+    margin-right: 8px;
+    /* Circular Style */
+    width: 28px !important;
+    /* [Refined] Height Reverted */
+    min-width: 28px !important;
+    height: 28px !important;
+    /* [Refined] Height Reverted */
+    border-radius: 50% !important;
+    padding: 0 !important;
+    /* [Refined] Round 6 Fix: Visible White Background + Shadow */
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+    font-size: 14px !important;
+    color: #444 !important;
+    /* [Refined] Position & Z-index for Clickability */
+    position: relative;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.btn-nav-back:active {
+    transform: scale(0.95);
+    background: #f0f0f0 !important;
+}
+
+/* [Refined] Hover State */
+.btn-nav-back:hover {
+    background: #f8f9fa !important;
+    color: #000 !important;
+    transform: scale(0.95);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-nav-back:active {
+    background: #e9ecef !important;
+    transform: scale(0.95);
+    box-shadow: none !important;
+}
+
+
+.btn-nav-back:active {
+    background: #e9ecef !important;
+    transform: scale(0.95);
+}
+
+/* Compact Form Control for Tool Inputs */
+.form-control-compact {
+    height: 28px !important;
+    /* Matched to taller row */
+    padding: 2px 8px !important;
+    font-size: 11px !important;
+    border-radius: 14px !important;
+    border: 1px solid #ced4da;
+    width: 60px;
+    text-align: center;
+}
+
+.form-control-compact:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Animations */
+/* Animations Removed to prevent Flinch */
+
+
+@media (max-width: 768px) {
+    .nav-v-panel {
+        width: calc(100% - 24px);
+    }
+}
+
+/* Fixed 2-Row Layout Container for Mode Panel (Deprecated) */
+.mode-panel-content-fixed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 68px;
+    overflow: hidden;
+    padding: 2px 0;
+}
+
+.mode-panel-content-fixed .mode-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------
+   10. Specialized Equipment Panel Styles
+   ------------------------------------------------------------ */
+
+/* Base Pill Button - Fixed Specificity & Border */
+.btn-aot-pill {
+    min-width: 60px !important;
+    height: 28px !important;
+    /* [Refined] Reverted to 28px */
+    border-radius: 999px !important;
+    /* [Refined] Force Pill Shape */
+    font-size: 0.75rem !important;
+    /* Slight bump */
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 18px !important;
+    /* [Refined] Round 5: Increased padding (12px -> 18px) for text margin */
+    transition: all 0.2s !important;
+    white-space: nowrap !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+    background: #fff !important;
+    /* [Refined] Default White Background */
+}
+
+/* Outline Style: Theme Border (1px), Solid White Background (Clickable) */
+.btn-aot-outline {
+    background: #fff !important;
+    border: 2px solid #ddd !important;
+    color: #444 !important;
+    transition: all 0.2s !important;
+}
+
+.btn-aot-outline:hover {
+    border-color: var(--active-theme-color) !important;
+    color: var(--active-theme-color) !important;
+    background: #fff !important;
+}
+
+.btn-aot-outline:active {
+    transform: scale(0.95);
+}
+
+.btn-aot-outline.active {
+    background: #fff !important;
+    border-color: var(--active-theme-color) !important;
+    color: #333 !important;
+    /* Text Black */
+    font-weight: bold !important;
+}
+
+/* Action Style: Solid Background, Black Text, No Border (stays 1px but matches bg) */
+/* Action Style: Outline Default, Solid on Hover */
+.btn-aot-action {
+    background: #fff !important;
+    color: #333 !important;
+    /* Text Black */
+    border: 2px solid #007bff !important;
+    /* Blue Border */
+    font-weight: bold !important;
+}
+
+.btn-aot-action:hover {
+    background: #007bff !important;
+    color: #fff !important;
+    border-color: #007bff !important;
+}
+
+/* Equipment Sub-Navigation - Horizontal & Compact */
+.equipment-sub-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+    border-bottom: 1px solid #eee !important;
+    padding-bottom: 4px !important;
+    align-items: center !important;
+}
+
+.sub-nav-item {
+    font-size: 0.8rem !important;
+    padding: 4px 10px !important;
+    cursor: pointer !important;
+    color: #666 !important;
+    border-radius: 999px !important;
+    transition: all 0.2s !important;
+}
+
+.sub-nav-item.active {
+    color: #007bff !important;
+    font-weight: bold !important;
+    background: #eef6ff !important;
+}
+
+/* Tiered Layout for Inputs */
+.tier-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.tier-row {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+/* Mobile: Stack Angle/Offset Sliders Vertically */
+@media (max-width: 768px) {
+    .tier-slider-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        background: transparent !important;
+        /* Remove bg to avoid looking like one big block */
+        padding: 0 !important;
+        gap: 8px !important;
+    }
+
+    .tier-slider-group {
+        width: 100% !important;
+        background: #f8f9fa !important;
+        border-radius: 999px !important;
+        /* Pill shape per group */
+        padding: 4px 12px !important;
+        margin: 0 !important;
+    }
+
+    /* Mobile: 2x2 Layout for Sprinkler Inputs */
+    .sprinkler-inputs {
+        flex-wrap: wrap !important;
+    }
+
+    .sprinkler-input-group {
+        width: 48% !important;
+        /* Forces 2 per row */
+        justify-content: center !important;
+    }
+}
+
+/* Sprinkler Field Specifics */
+.sprinkler-field {
+    min-width: 90px !important;
+    max-width: 150px !important;
+    text-align: right !important;
+    width: auto !important;
+    /* Allow flex growth within limits */
+}
+
+/* Compact Input Groups */
+.aot-input-pill {
+    height: 28px !important;
+    border-radius: 14px !important;
+    border: 1px solid #ddd !important;
+    text-align: center !important;
+    font-size: 0.75rem !important;
+    padding: 0 8px !important;
+    width: 65px !important;
+    background: white !important;
+}
+
+.aot-input-pill:focus {
+    border-color: #007bff !important;
+    outline: none !important;
+}
+
+/* --- Mode Sub-Tabs (Sliding animation) --- */
+.mode-sub-tabs-container {
+    display: flex;
+    gap: 5px;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.5s ease-in-out, opacity 0.3s ease-in-out, margin 0.5s ease-in-out;
+    margin-left: 0;
+    align-items: center;
+}
+
+.mode-sub-tabs-container.visible {
+    max-width: 600px;
+    /* Sufficient for 3-4 sub-tabs */
+    opacity: 1;
+    margin-left: 5px;
+}
+
+.mode-sub-tab {
+    min-width: 70px;
+    height: 32px;
+    border-radius: 16px;
+    border: 1px solid #007bff;
+    /* Equipment Blue */
+    background: #ffffff;
+    color: #007bff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s !important;
+}
+
+
+.mode-sub-tab:hover {
+    background: #f0f7ff;
+    transform: scale(0.95);
+}
+
+.mode-sub-tab.active {
+    background: #007bff;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+/* Animation Removed per User Request */
+
+/* ------------------------------------------------------------
+   11. Global Modal Spacing & Mobile Toolbar Fix
+   ------------------------------------------------------------ */
+
+/* Default (Desktop) - Symmetric Vertical Margins */
+.modal-dialog {
+    margin-top: 2rem !important;
+    margin-bottom: 2rem !important;
+}
+
+/* Ensure modal content respects safe areas */
+.modal-content {
+    /* Add safe area padding to bottom to prevent content overlap with home indicator */
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile/Tablet - Safe Bottom Spacing for OS Toolbars */
+@media (max-width: 991px) {
+    .modal-dialog {
+        /* Keep top consistent */
+        margin-top: 1.5rem !important;
+        /* Dynamic bottom margin: Increased Base 3rem + Safe Area (Home Indicator) */
+        /* Provided extra buffer (3rem) to ensure web controller doesn't cover content */
+        margin-bottom: calc(3rem + env(safe-area-inset-bottom)) !important;
+    }
+}

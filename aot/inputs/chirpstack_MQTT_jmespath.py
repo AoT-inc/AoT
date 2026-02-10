@@ -18,10 +18,8 @@ import datetime
 import json
 import ssl
 import threading
-from typing import Any, Dict, List, Optional
 
-import paho.mqtt.client as mqtt
-
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from aot.config import AOT_DB_PATH
 from aot.config_translations import TRANSLATIONS
 from aot.databases.models import Conversion, Input, InputChannel
@@ -39,7 +37,7 @@ measurements_dict = {}
 channels_dict = {0: {}}
 
 INPUT_INFORMATION = {
-    'input_name_unique': 'CHIRPSTACK_MQTT_JMESPATH',
+    'input_name_unique': 'chirpstack_mqtt_jmespath',
     'input_manufacturer': 'ChirpStack',
     'input_name': 'ChirpStack: MQTT (Payload JMESPath Expression)',
     'input_name_short': 'ChirpStack MQTT',
@@ -192,8 +190,10 @@ class InputModule(AbstractInput):
         super().__init__(input_dev, testing=testing, name=__name__)
 
         self.jmespath = None
-        self.mqtt_client: Optional[mqtt.Client] = None
+        self.mqtt_client: Optional["mqtt.Client"] = None
         self._mqtt_thread: Optional[threading.Thread] = None
+        self._stop_event: Optional[threading.Event] = None
+        self._compiled_expressions: Dict[int, Optional[Any]] = {}
 
         # Options
         self.mqtt_host: str = 'localhost'
@@ -202,7 +202,7 @@ class InputModule(AbstractInput):
         self.mqtt_password: str = ''
         self.mqtt_tls_enable: bool = False
         self.mqtt_ca_cert: str = ''
-        self.mqtt_client_id: str = ''
+        self.mqtt_clientid: str = ''
         self.mqtt_keepalive: int = 60
         self.mqtt_topics: str = 'application/+/device/+/event/up'
         self.mqtt_qos: int = 0
@@ -234,25 +234,53 @@ class InputModule(AbstractInput):
         except Exception:
             return default
 
+    def _coerce_bool(self, value, default: bool = False) -> bool:
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return default
+        try:
+            if isinstance(value, (int, float)):
+                return bool(value)
+            return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+        except Exception:
+            return default
+
     def initialize(self):
         import jmespath
+        import paho.mqtt.client as mqtt
+
         self.jmespath = jmespath
+        self._stop_event = threading.Event()
 
         self.log_level_debug = self.input_dev.log_level_debug
         self.interface = self.input_dev.interface
         self.period = self.input_dev.period
         self.latest_datetime = self.input_dev.datetime
 
-        # Normalize ints
+        # Normalize option types
         self.mqtt_port = self._coerce_int(getattr(self, 'mqtt_port', 1883), 1883)
         self.mqtt_keepalive = self._coerce_int(getattr(self, 'mqtt_keepalive', 60), 60)
         self.mqtt_qos = max(0, min(2, self._coerce_int(getattr(self, 'mqtt_qos', 0), 0)))
+        self.mqtt_tls_enable = self._coerce_bool(getattr(self, 'mqtt_tls_enable', False), False)
 
         # Channel options
         input_channels = db_retrieve_table_daemon(InputChannel).filter(
             InputChannel.input_id == self.input_dev.unique_id).all()
         self.options_channels = self.setup_custom_channel_options_json(
             INPUT_INFORMATION['custom_channel_options'], input_channels)
+
+        self._compiled_expressions = {}
+        channel_exprs = self.options_channels.get('jmespath_expression', {})
+        for channel_id, expression in channel_exprs.items():
+            if not expression:
+                self._compiled_expressions[channel_id] = None
+                continue
+            try:
+                self._compiled_expressions[channel_id] = self.jmespath.compile(expression)
+            except Exception as err:
+                self.logger.error(f"Invalid JMESPath expression for channel {channel_id}: {expression} ({err})")
+                self._compiled_expressions[channel_id] = None
 
         # Device filters
         try:
@@ -262,15 +290,19 @@ class InputModule(AbstractInput):
             self.device_euis = []
 
         # MQTT client
-        cid = self.mqtt_client_id or f"AoT-{self.unique_id}"
+        cid = getattr(self, 'mqtt_clientid', '') or f"AoT-{self.unique_id}"
         self.mqtt_client = mqtt.Client(client_id=cid, clean_session=True)
+        self.mqtt_client.reconnect_delay_set(min_delay=1, max_delay=60)
 
         if self.mqtt_username or self.mqtt_password:
             self.mqtt_client.username_pw_set(self.mqtt_username or None, self.mqtt_password or None)
 
         if self.mqtt_tls_enable:
-            ctx = ssl.create_default_context(cafile=self.mqtt_ca_cert or None)
-            self.mqtt_client.tls_set_context(ctx)
+            try:
+                ctx = ssl.create_default_context(cafile=self.mqtt_ca_cert or None)
+                self.mqtt_client.tls_set_context(ctx)
+            except Exception as err:
+                self.logger.error(f"Failed to configure TLS context: {err}")
 
         self.mqtt_client.on_connect = self._on_connect
         self.mqtt_client.on_message = self._on_message
@@ -283,11 +315,27 @@ class InputModule(AbstractInput):
     # --------------- MQTT callbacks ---------------
 
     def _mqtt_loop(self):
-        try:
-            self.mqtt_client.connect(self.mqtt_host, self.mqtt_port, keepalive=self.mqtt_keepalive)
-            self.mqtt_client.loop_forever()
-        except Exception as e:
-            self.logger.error(f"MQTT loop error: {e}")
+        if not self.mqtt_client:
+            return
+
+        backoff = 1
+        while not (self._stop_event and self._stop_event.is_set()):
+            try:
+                self.mqtt_client.connect(self.mqtt_host, self.mqtt_port, keepalive=self.mqtt_keepalive)
+                self.mqtt_client.loop_forever()
+                backoff = 1
+            except Exception as e:
+                self.logger.error(f"MQTT loop error: {e}")
+                if self._stop_event and self._stop_event.wait(backoff):
+                    break
+                backoff = min(backoff * 2, 60)
+            else:
+                if self._stop_event and self._stop_event.is_set():
+                    break
+                if self._stop_event and self._stop_event.wait(1):
+                    break
+
+        self.logger.debug("MQTT networking thread exiting")
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
@@ -302,7 +350,10 @@ class InputModule(AbstractInput):
             self.logger.error(f"MQTT connect failed: rc={rc}")
 
     def _on_disconnect(self, client, userdata, rc):
-        self.logger.warning(f"MQTT disconnected: rc={rc}")
+        if self._stop_event and self._stop_event.is_set():
+            self.logger.debug(f"MQTT disconnected (shutdown): rc={rc}")
+        else:
+            self.logger.warning(f"MQTT disconnected: rc={rc}")
 
     def _parse_time(self, iso: Optional[str]) -> datetime.datetime:
         if not iso:
@@ -351,11 +402,16 @@ class InputModule(AbstractInput):
             self.latest_datetime = dt_utc
 
         # 채널별 JMESPath 평가
+        expr_map = self.options_channels.get('jmespath_expression', {})
         measurements = {}
         for channel in self.channels_measurement:
-            jexpr = self.options_channels['jmespath_expression'][channel]
+            jexpr = expr_map.get(channel, '')
+            compiled = self._compiled_expressions.get(channel)
+            if not compiled:
+                if jexpr:
+                    self.logger.debug(f"Skipping channel {channel}; expression pre-compilation failed for '{jexpr}'")
+                continue
             try:
-                compiled = self.jmespath.compile(jexpr)
                 value = compiled.search(data)
                 self.logger.debug(f"Expression: {jexpr}, value: {value}")
             except Exception as err:
@@ -414,6 +470,25 @@ class InputModule(AbstractInput):
                 self.logger.warning(f"Could not persist latest timestamp: {e}")
 
     # --------------- AoT entrypoints ---------------
+
+    def stop_input(self):
+        super().stop_input()
+
+        if self._stop_event:
+            self._stop_event.set()
+
+        if self.mqtt_client:
+            try:
+                self.mqtt_client.disconnect()
+            except Exception as err:
+                self.logger.debug(f"MQTT disconnect raised: {err}")
+
+        if self._mqtt_thread and self._mqtt_thread.is_alive():
+            self._mqtt_thread.join(timeout=5)
+            self._mqtt_thread = None
+
+        self.mqtt_client = None
+        self._stop_event = None
 
     def listener(self):
         """AoT가 백그라운드로 실행하는 리스너 진입점.

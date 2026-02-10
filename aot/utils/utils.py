@@ -56,7 +56,7 @@ def is_email(email):
         return True
 
 
-def pass_length_min(pw, min_len=4):
+def pass_length_min(pw, min_len=8):
     """
     Validate password length
 

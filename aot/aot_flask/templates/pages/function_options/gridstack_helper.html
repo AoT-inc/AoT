@@ -1,0 +1,85 @@
+{% macro init_gridstack_actions(function_unique_id, cell_height=42) %}
+<style>
+    #mod_function_actions_{{function_unique_id}} .grid-stack-item-content {
+        left: 4px !important;
+        right: 4px !important;
+        overflow: visible !important;
+    }
+</style>
+
+<script>
+$(function () {
+  var options = {
+    column: 12,
+    cellHeight: {{cell_height}},
+    animate: true,
+    float: false,
+    disableResize: true,
+    removable: false,
+    margin: 2
+  };
+  var grid_id = 'mod_function_actions_{{function_unique_id}}';
+  var grid_el = document.getElementById(grid_id);
+  if (!grid_el) return;
+
+  var grid = GridStack.init(options, grid_el);
+  window[grid_id] = grid;
+
+  // Initial compact to remove any gaps from stored Y values
+  grid.compact();
+
+  // Observe for new items (AJAX added)
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.addedNodes.length) {
+         mutation.addedNodes.forEach(function(node) {
+             if (node.nodeType === 1 && node.classList.contains('grid-stack-item')) {
+                 if (!node.gridstackNode) {
+                    grid.makeWidget(node);
+                    grid.compact();
+                 }
+                 // Re-init selectpicker for new items
+                 $(node).find('.selectpicker').selectpicker();
+             }
+         });
+      }
+    });
+  });
+  observer.observe(grid_el, { childList: true });
+  
+  // Force compact on dragstop to remove gaps
+  grid.on('dragstop', function(event, ui) {
+      // grid.compact(); // float: false handles gravity automatically
+  });
+
+  // Save order on change
+  var saveTimeout;
+  grid.on('change', function(event, items) {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    
+    saveTimeout = setTimeout(function() {
+        var new_order = {};
+        grid.engine.nodes.forEach(function(node) {
+          if (!node.id) return; 
+          var id = node.id.replace('mod_action_', '');
+          new_order[id] = node.y;
+        });
+        
+        $.ajax({
+            type: "POST",
+            url: "/function_save_order",
+            headers: { "X-CSRFToken": "{{form_actions.csrf_token._value()}}" },
+            data: JSON.stringify({
+                'function_id': '{{function_unique_id}}',
+                'order': new_order
+            }),
+            contentType: "application/json; charset=utf-8",
+            success: function(data) {
+                console.log("Order saved for {{function_unique_id}}");
+            }
+        });
+    }, 500); // 500ms debounce
+  });
+});
+</script>
+{% endmacro %}

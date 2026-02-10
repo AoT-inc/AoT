@@ -1,0 +1,955 @@
+{% extends "layout.html" %}
+{% set active_page = "notes" %}
+{% set help_page = ["https://aot-inc.github.io/AoT/Notes", _('Notes')] %}
+
+{% block title %} - {{_('Notes Manager')}}{% endblock %}
+
+{% block body %}
+<style>
+    /* Inline overrides for Gray Theme */
+    .btn-dark { background-color: #343a40; border-color: #343a40; }
+    .btn-dark:hover { background-color: #23272b; border-color: #1d2124; }
+    .text-theme-dark { color: #343a40 !important; }
+    .bg-theme-light { background-color: #e9ecef !important; }
+    .note-tag-chip { background-color: #e9ecef; color: #495057; }
+    .note-tag-chip:hover { background-color: #dee2e6; color: #212529; }
+    .note-fab { background-color: #343a40; }
+    .note-fab:hover { background-color: #23272b; }
+    .note-search-input-group:focus-within { border-color: #6c757d; box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.1); }
+    /* [Phase 2, 3, 4, 5] Modal Layout & Optimization */
+    #editNoteModal.aot-option-modal .modal-content {
+        height: auto;
+        max-height: calc(100vh - 100px) !important; /* Visual usability improved (50px top/bottom) */
+        overflow: hidden;
+        border-radius: 1rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: none;
+    }
+    #editNoteModal.aot-option-modal .modal-dialog,
+    #addNoteModal.aot-option-modal .modal-dialog {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100% - 3.5rem);
+        margin: auto;
+    }
+    /* Fixed width logic moved to aot.css (.aot-unified-modal) */
+
+    #editNoteModal form {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-height: inherit;
+    }
+    #editNoteModal .modal-body {
+        flex: 1 1 auto;
+        overflow-y: auto !important;
+        padding: 1.5rem;
+        background-color: #fdfdfe;
+    }
+    .note-edit-attachment-item {
+        position: relative;
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 4px;
+        background: #fff;
+    }
+    .note-edit-attachment-preview {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 2px;
+    }
+    .note-edit-attachment-file-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: #6c757d;
+    }
+    .note-edit-attachment-delete {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #dc3545;
+        color: #fff;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .note-edit-attachment-delete:hover {
+        background: #bd2130;
+    }
+
+    /* Strict Card Truncation Enforcement */
+    .note-truncate-wrapper {
+        display: block;
+        position: relative;
+    }
+    .note-truncate-wrapper.collapsed {
+        max-height: 400px;
+        overflow: hidden;
+    }
+    .note-truncate-wrapper.expanded {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .note-truncate-wrapper.expanded .note-thumbnails-wrapper {
+        display: block !important;
+    }
+
+    /* Force Scrollbar Visualization (Override Global Hidden Scrollbar) */
+    .note-truncate-wrapper::-webkit-scrollbar {
+        display: block !important;
+        width: 6px;
+        height: 6px;
+    }
+    .note-truncate-wrapper::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+    }
+    .note-truncate-wrapper::-webkit-scrollbar-track {
+        background-color: transparent;
+    }
+</style>
+
+<!-- 경로: /notes -->
+<div class="container-fluid" style="background: #f8fafc; min-height: 100vh; padding-bottom: 5rem;">
+  {% include 'flash_messages.html' %}
+
+  <!-- 1. HEADER & INTEGRATED SEARCH BAR -->
+  <div class="row justify-content-center py-4">
+    <div class="col-12 col-md-10 col-lg-8 col-xl-7">
+        <div class="note-search-bar">
+             <div class="d-flex justify-content-between align-items-center mb-3">
+                 <h4 class="mb-0 font-weight-bold text-dark">{{ _('Notes Manager') }}</h4>
+                 <div class="text-muted small">
+                    <i class="fas fa-sticky-note mr-1"></i> Total: {{number_displayed_notes[1]}}
+                 </div>
+             </div>
+
+             <!-- Smart Filter Form -->
+             <form method="post" action="/notes" id="noteFilterForm">
+                {{form_note_show.csrf_token}}
+                
+                <div class="row small-gutters align-items-center">
+                    <!-- Integrated Search Input -->
+                    <div class="col-12 col-md-6 mb-2 mb-md-0">
+                        <div class="note-search-input-group ui-pill">
+                            <span class="note-search-icon"><i class="fas fa-search"></i></span>
+                            {{form_note_show.filter_notes(class_='note-search-input', id='note_search_input', placeholder=_('Search content, subject...'))}}
+                        </div>
+                    </div>
+
+                    <!-- Filter Tags -->
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                         <!-- Hidden actual input -->
+                         {{form_note_show.filter_tags(class_='d-none', id='filter_tags_input')}}
+                         <!-- UI Select -->
+                         <select class="selectpicker ui-pill form-control" multiple title="{{_('Tags')}}" 
+                                 data-style="btn-white border" data-selected-text-format="count > 1" 
+                                 data-width="100%" id="tag_selector_ui" data-live-search="true">
+                             {% for each_tag in tags %}
+                                 <option value="{{each_tag.name}}">{{each_tag.name}}</option>
+                             {% endfor %}
+                         </select>
+                    </div>
+
+                    <!-- Search & Clear Buttons -->
+                    <div class="col-6 col-md-3 d-flex align-items-center">
+                        <div class="btn-group w-100 ui-pill overflow-hidden border">
+                            {{form_note_show.notes_show(class_='btn btn-dark border-0 flex-grow-1 font-weight-bold', value=_('Select'), style='border-radius:0;')}}
+                            <button type="button" id="clearFilterBtn" class="btn btn-white border-0 text-muted" title="{{_('Clear Filters')}}" style="border-radius:0; border-left: 1px solid #dee2e6 !important;">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Options Toggle -->
+                <div class="mt-2 text-right">
+                    <a href="#advancedOptions" data-toggle="collapse" class="small text-secondary text-decoration-none">
+                        Advanced Filters <i class="fas fa-chevron-down ml-1"></i>
+                    </a>
+                </div>
+
+                <div class="collapse mt-3" id="advancedOptions">
+                     <div class="card card-body bg-light border-0 rounded-lg p-3">
+                        <div class="row small-gutters">
+                            <div class="col-6">
+                                <label class="small text-muted mb-1">{{_('Sort By')}}</label>
+                                {{form_note_show.sort_by(class_='selectpicker form-control', id='sort_by_select', data_style='btn-white border')}}
+                            </div>
+                            <div class="col-6">
+                                <label class="small text-muted mb-1">{{_('Direction')}}</label>
+                                {{form_note_show.sort_direction(class_='selectpicker form-control', id='sort_direction_select', data_style='btn-white border')}}
+                            </div>
+                            <div class="col-12 mt-2">
+                                {{form_note_show.notes_export(class_='btn btn-outline-secondary btn-sm btn-block', value=_('Export Results'))}}
+                            </div>
+                        </div>
+                     </div>
+                </div>
+             </form>
+        </div>
+    </div>
+  </div>
+
+  <!-- 2. QUICK ADD (Collapsible) -->
+
+
+  <!-- 3. MASONRY GRID CONTENT -->
+  <!-- Metadata for JS (Avoids Lint issues with Ginger tags in Script block) -->
+  <div id="notesPaginationState" class="d-none" 
+       data-current-page="{{ page|default(1) }}" 
+       data-has-next="{{ 'true' if has_next else 'false' }}"></div>
+
+  {% if notes %}
+  <!-- Loader for infinite scroll -->
+  <div class="text-center py-3 d-none" id="scrollLoader">
+      <div class="spinner-border text-secondary" role="status">
+          <span class="sr-only">Loading...</span>
+      </div>
+  </div>
+
+  <div class="notes-masonry-grid px-3 px-md-5" id="notesGrid">
+      {% for each_note in notes %}
+        {% include 'tools/partials/note_item.html' %}
+      {% endfor %}
+  </div>
+  
+  <!-- Sentinel for Intersection Observer (Outside of Masonry Container) -->
+  <div id="scrollSentinel" style="height: 50px; width: 100%; clear: both;"></div>
+  {% else %}
+      <div class="text-center py-5">
+          <div class="mb-3 text-muted" style="font-size: 3rem; opacity: 0.3;">
+              <i class="far fa-folder-open"></i>
+          </div>
+          <h5 class="text-muted">{{_('No notes found')}}</h5>
+          <p class="text-muted small">Try adjusting your search or add a new note.</p>
+      </div>
+  {% endif %}
+
+  <!-- 4. FLOATING ACTION BUTTON (FAB) -->
+  <a href="#" data-toggle="modal" data-target="#addNoteModal" class="note-fab" title="{{_('Add Note')}}">
+      <i class="fas fa-plus"></i>
+  </a>
+
+</div>
+
+<!-- 5. ADD NOTE MODAL (New System Style) -->
+<div class="modal fade aot-option-modal aot-unified-modal" id="addNoteModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="post" action="/notes" enctype="multipart/form-data">
+                {{form_note_add.csrf_token}}
+                <!-- Force custom date time usage if needed, or rely on form default handling -->
+                <div class="d-none">
+                    {{form_note_add.enter_custom_date_time(checked=True)}}
+                </div>
+                
+                <div class="modal-header bg-light border-bottom-0">
+                    <h5 class="modal-title font-weight-bold text-dark">{{_('Create New Note')}}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="small text-muted font-weight-bold">{{_('Subject')}}</label>
+                        {{form_note_add.name(class_='form-control bg-light border-0', placeholder=_('Subject / Title'))}}
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label class="small text-muted font-weight-bold">{{_('Date & Time')}}</label>
+                            {{form_note_add.date_time(value=current_date_time, class_='form-control bg-light border-0 small', placeholder='YYYY-MM-DD HH:MM:SS')}}
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="small text-muted font-weight-bold">{{_('Tags')}}</label>
+                            <select class="selectpicker form-control form-control-sm" id="note_tags" name="note_tags" multiple title="{{_('Tags')}}" 
+                                    data-style="btn-light border-0" data-width="100%" data-live-search="true">
+                                {% for each_tag in tags %}
+                                    <option value="{{each_tag.unique_id}}">{{each_tag.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                         <label class="small text-muted font-weight-bold">{{_('Content')}}</label>
+                        {{form_note_add.note(class_='form-control bg-light border-0', rows='6', placeholder=_('Write your note here...'))}}
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="small text-muted font-weight-bold">{{_('Attachments')}}</label>
+                        <div class="custom-file custom-file-sm">
+                             <input type="file" name="files" multiple class="custom-file-input" id="add_note_files">
+                             <label class="custom-file-label" for="add_note_files">Choose files</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-dismiss="modal">{{_('Cancel')}}</button>
+                    {{form_note_add.note_add(class_='btn btn-dark rounded-pill px-4', value=_('Create Note'))}}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 5. IN-PLACE EDIT MODAL (System Style: aot-option-modal) -->
+<div class="modal fade aot-option-modal aot-unified-modal" id="editNoteModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="post" action="/notes" enctype="multipart/form-data">
+                {{form_note_mod.csrf_token}}
+                {{form_note_mod.note_unique_id(id="edit_note_unique_id")}}
+                <input type="hidden" name="deleted_files" id="edit_deleted_files" value="">
+                
+                <div class="modal-header bg-light border-bottom-0">
+                    <h5 class="modal-title font-weight-bold text-dark">{{_('Edit Note')}}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="small text-muted font-weight-bold">{{_('Subject')}}</label>
+                        {{form_note_mod.name(id="edit_note_name", class_='form-control bg-light border-0')}}
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label class="small text-muted font-weight-bold">{{_('Date & Time')}}</label>
+                            {{form_note_mod.date_time(id="edit_note_date_time", class_='form-control bg-light border-0 small', placeholder='YYYY-MM-DD HH:MM:SS')}}
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="small text-muted font-weight-bold">{{_('Tags')}}</label>
+                            <select class="selectpicker form-control form-control-sm" id="edit_note_tags" name="note_tags" multiple title="{{_('Tags')}}" 
+                                    data-style="btn-light border-0" data-width="100%" data-live-search="true">
+                                {% for each_tag in tags %}
+                                    <option value="{{each_tag.unique_id}}">{{each_tag.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Map Visibility Toggle (Conditional) -->
+                    <div class="form-group mb-3" id="edit_map_visibility_container" style="display:none;">
+                         <label class="small text-muted font-weight-bold d-block">{{_('Map Widget Visibility')}}</label>
+                         <div class="custom-control custom-switch">
+                              <input type="checkbox" class="custom-control-input" id="edit_map_visible_toggle">
+                              <label class="custom-control-label" for="edit_map_visible_toggle">{{_('Show in Widget')}}</label>
+                              <small class="form-text text-muted mt-1" style="font-size: 0.8em;">
+                                  {{_('Toggle to show or hide this note on the map.')}}
+                              </small>
+                         </div>
+                    </div>
+
+                    <div class="form-group">
+                         <label class="small text-muted font-weight-bold">{{_('Content')}}</label>
+                        {{form_note_mod.note(id="edit_note_content", class_='form-control bg-light border-0', rows='6')}}
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="small text-muted font-weight-bold">{{_('Current Attachments')}}</label>
+                        <div id="edit_attachments_container" class="d-flex flex-wrap mt-1 p-2 bg-light rounded" style="min-height: 40px;">
+                            <!-- Previews will be rendered here -->
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="small text-muted font-weight-bold">{{_('Add More Files')}}</label>
+                        <div class="custom-file custom-file-sm">
+                             <input type="file" name="files" multiple class="custom-file-input" id="edit_note_files">
+                             <label class="custom-file-label" for="edit_note_files">Choose files</label>
+                        </div>
+                    </div>
+
+                    <!-- Hidden helper for date preservation -->
+                     <div class="d-none">
+                         <!-- Removed duplicate date_time field that caused conflict -->
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-dismiss="modal">{{_('Cancel')}}</button>
+                    {{form_note_mod.note_save(class_='btn btn-dark rounded-pill px-4', value=_('Save Changes'))}}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tag Filter Function
+    function filterByTag(tagName) {
+        // Clear search input for isolated tag filtering (optional, based on preference)
+        // $('#note_search_input').val('');
+        
+        // Update the selectpicker UI
+        var $selector = $('#tag_selector_ui');
+        var currentVals = $selector.val() || [];
+        
+        if (!currentVals.includes(tagName)) {
+            currentVals.push(tagName);
+            $selector.selectpicker('val', currentVals);
+        }
+        
+        // Sync the hidden input
+        $('#filter_tags_input').val(currentVals.join(','));
+        
+        // Submit
+        $('#noteFilterForm').submit();
+    }
+
+    $(document).ready(function() {
+        // Restore Tag Selection State if available
+        var currentTags = $('#filter_tags_input').val();
+         if (currentTags) {
+             // Need to refresh selectpicker to show selected values
+             $('#tag_selector_ui').selectpicker('val', currentTags.split(','));
+        }
+
+        // Sync Visual Tag Selector with Hidden Form Input
+        $('#tag_selector_ui').on('changed.bs.select', function (e, clickedIndex, isSelected, previousValue) {
+            var selectedValues = $(this).val();
+            var strVal = (selectedValues) ? selectedValues.join(',') : '';
+            $('#filter_tags_input').val(strVal);
+        });
+
+        // Dynamic Tag Creator Functionality for Selectpickers
+        function enableDynamicTags($pickerId) {
+            var $picker = $($pickerId);
+            
+            // Listen to keydown on the search input of the bootstrap-select
+            $picker.on('shown.bs.select', function() {
+                var $container = $(this).closest('.bootstrap-select');
+                var $searchBox = $container.find('.bs-searchbox input');
+                
+                $searchBox.off('keydown.dynamicTag').on('keydown.dynamicTag', function(e) {
+                    if (e.keyCode === 13) { // Enter key
+                        var val = $(this).val().trim();
+                        if (val) {
+                            // Check if already exists (case-insensitive)
+                            var exists = false;
+                            $picker.find('option').each(function() {
+                                if ($(this).text().toLowerCase() === val.toLowerCase()) {
+                                    exists = true;
+                                    $picker.selectpicker('val', $(this).val()); // Select existing
+                                    return false;
+                                }
+                            });
+                            
+                            if (!exists) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                // Add new option
+                                var newOption = $('<option>', {
+                                    value: val,
+                                    text: val
+                                });
+                                $picker.append(newOption);
+                                $picker.selectpicker('refresh');
+                                $picker.selectpicker('val', val); // Select the new one
+                                
+                                // For filter selector, also update hidden input
+                                if ($pickerId === '#tag_selector_ui') {
+                                    $picker.trigger('changed.bs.select');
+                                }
+                                
+                                // Reset search and hide dropdown
+                                $(this).val('');
+                                $picker.selectpicker('toggle');
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        enableDynamicTags('#tag_selector_ui');
+        enableDynamicTags('#note_tags');
+        enableDynamicTags('#edit_note_tags');
+
+        // Clear Filter Button Handler
+        $('#clearFilterBtn').click(function() {
+            $('#note_search_input').val('');
+            $('#filter_tags_input').val('');
+            $('#tag_selector_ui').selectpicker('val', []);
+            $('#sort_by_select').selectpicker('val', 'date');
+            $('#sort_direction_select').selectpicker('val', 'desc');
+            $('#noteFilterForm').submit();
+        });
+
+        // Helper to Initialize Read More / Fold controls
+        function initExpansionControls($items) {
+             const MAX_HEIGHT = 400; // Must match CSS .note-truncate-wrapper
+             
+             $items.each(function() {
+                 const $card = $(this);
+                 // Find unique ID from the button inside the card, or derive it
+                 const $btn = $card.find('.expand-toggle-btn');
+                 const uid = $btn.data('id');
+                 if (!uid) return;
+                 
+                 const $wrapper = $('#wrapper-' + uid);
+                 const $ctrl = $('#ctrl-' + uid);
+                 
+                 // Check logical conditions for showing "Read More"
+                 // 1. Content overflow (Text too long or Main image + text > 400px)
+                 // 2. Multiple images (Thumbnails are hidden by default, need expansion to see them)
+                 
+                 const hasMultipleImages = $wrapper.find('.note-thumbnails-wrapper').length > 0;
+                 const isOverflowing = $wrapper[0].scrollHeight > MAX_HEIGHT;
+                 
+                 if (hasMultipleImages || isOverflowing) {
+                     $ctrl.show(); // Show the container for "Read More" button
+                 } else {
+                     $ctrl.hide();
+                 }
+             });
+        }
+
+        // Helper to reveal cards (Initial or Ajax)
+        function revealCards($items) {
+            $items.css('display', '').hide().fadeIn(400);
+            $items.removeClass('lazy-card');
+            initExpansionControls($items);
+        }
+
+        // Inline Gallery Helpers for note_item.html
+        window.swapMainImage = function(noteId, imageUrl, index, thumbElement) {
+            const $container = $('#gallery-' + noteId);
+            $container.find('.main-img-display').attr('src', imageUrl);
+            $container.attr('data-current-index', index);
+            
+            // UI Update
+            $container.find('.thumb-item').css({'border-color': 'transparent', 'opacity': '0.6'}).removeClass('active');
+            $(thumbElement).css({'border-color': '#007bff', 'opacity': '1'}).addClass('active');
+        };
+
+        window.scrollGallery = function(noteId, direction) {
+            const $container = $('#thumb-container-' + noteId);
+            const scrollAmount = 150;
+            if (direction === 'left') {
+                $container.animate({ scrollLeft: '-=' + scrollAmount }, 200);
+            } else {
+                $container.animate({ scrollLeft: '+=' + scrollAmount }, 200);
+            }
+        };
+
+        // Helper to Initialize Read More / Fold controls (Robust for images)
+        // Helper to Initialize Read More / Fold controls (Robust for images)
+        // Handled globally by aot-note-utils.js
+
+        // 1. Edit Button Handler
+        $(document).on('click', '.edit-note-btn', function() {
+            var uid = $(this).data('id');
+            var title = $(this).data('title');
+            var content = $(this).data('content');
+            var tags = $(this).data('tags'); // comma separated unique_ids
+            var dateTime = $(this).data('date'); // YYYY-MM-DD HH:MM:SS
+            var files = $(this).data('files');
+
+            $('#edit_note_unique_id').val(uid);
+            $('#edit_note_name').val(title);
+            $('#edit_note_content').val(content);
+            $('#edit_note_date_time').val(dateTime);
+            $('#edit_deleted_files').val(''); // Reset deleted files
+            
+            
+            if (tags && typeof tags === 'string') {
+                $('#edit_note_tags').selectpicker('val', tags.split(','));
+            } else {
+                $('#edit_note_tags').selectpicker('val', []);
+            }
+
+            // --- Map Visibility Logic ---
+            var targetType = $(this).data('target-type');
+            var $visContainer = $('#edit_map_visibility_container');
+            var $visToggle = $('#edit_map_visible_toggle');
+            
+            // Only show for map_location target types
+            if (targetType === 'map_location') {
+                 $visContainer.show();
+                 
+                 // Determine visibility: Visible if 'map_hidden' tag is NOT present
+                 // We need to resolve the ID of 'map_hidden' or check tags string.
+                 // Ideally, we check if ANY tag corresponds to map_hidden.
+                 // But we only have IDs here. We need to lookup the ID for 'map_hidden'.
+                 // We can do this by checking the global tags list in JS via the select options.
+                 var mapHiddenId = null;
+                 $('#edit_note_tags option').each(function() {
+                     if ($(this).text() === 'map_hidden') {
+                         mapHiddenId = $(this).val();
+                         return false;
+                     }
+                 });
+                 
+                 var isVisible = true;
+                 if (mapHiddenId && tags && tags.includes(mapHiddenId)) {
+                     isVisible = false;
+                 }
+                 
+                 // Set toggle state without triggering change event
+                 $visToggle.prop('checked', isVisible);
+                 
+                 // Store note ID for the change handler
+                 $visToggle.data('note-id', uid);
+                 
+            } else {
+                 $visContainer.hide();
+            }
+
+            // Render attachment previews
+            var $container = $('#edit_attachments_container');
+            $container.empty();
+            if (files && typeof files === 'string' && files.trim() !== '') {
+                var fileList = files.split(',');
+                fileList.forEach(function(fileName) {
+                    var isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
+                    var displayName = fileName.length > 37 ? fileName.substring(37) : fileName;
+                    
+                    var html = '<div class="note-edit-attachment-item" data-filename="' + fileName + '">';
+                    html += '<div class="note-edit-attachment-delete" title="Remove"><i class="fas fa-times"></i></div>';
+                    if (isImage) {
+                        html += '<img src="/note_attachment/' + fileName + '" class="note-edit-attachment-preview" title="' + displayName + '">';
+                    } else {
+                        html += '<div class="note-edit-attachment-file-icon" title="' + displayName + '"><i class="fas fa-file"></i></div>';
+                    }
+                    html += '</div>';
+                    $container.append(html);
+                });
+            } else {
+                $container.html('<small class="text-muted italic">No attachments</small>');
+            }
+            
+            $('#editNoteModal').modal('show');
+        });
+
+        // 1d. Expansion Toggle (Read More / Fold)
+        // 1d. Expansion Toggle (Read More / Fold)
+        // 1d. Expansion Toggle (Read More / Fold)
+        $(document).on('click', '.expand-toggle-btn', function() {
+            var $btn = $(this);
+            var uid = $btn.data('id');
+            var $wrapper = $('#wrapper-' + uid);
+            var isExpanded = $wrapper.hasClass('expanded');
+
+            if (isExpanded) {
+                // Return to truncated state (450px)
+                $wrapper.removeClass('expanded').addClass('collapsed');
+                $wrapper.find('.note-thumbnails-wrapper').addClass('d-none'); // Hide thumbnails
+                $btn.html('{{ _("Read More") }} <i class="fas fa-chevron-down ml-1"></i>');
+                
+                // [RESET GALLERY] - Restore first image when folding
+                var $gallery = $('#gallery-' + uid);
+                if ($gallery.length > 0) {
+                    var mediaFiles = $gallery.data('media'); // array of filenames
+                    if (mediaFiles && mediaFiles.length > 0) {
+                        // 1. Reset Main Image
+                        $gallery.find('.main-img-display').attr('src', '/note_attachment/' + mediaFiles[0]);
+                        $gallery.attr('data-current-index', 0);
+                        
+                        // 2. Reset Thumbnail Highlighting
+                        var $thumbs = $gallery.find('.thumb-item');
+                        $thumbs.css({'border-color': 'transparent', 'opacity': '0.6'}).removeClass('active');
+                        $thumbs.first().css({'border-color': '#007bff', 'opacity': '1'}).addClass('active');
+                        
+                        // 3. Reset Thumbnail Scroll
+                        var $thumbContainer = $('#thumb-container-' + uid);
+                        $thumbContainer.animate({ scrollLeft: 0 }, 200);
+                    }
+                }
+
+                // Scroll back to card top comfortably
+                setTimeout(function(){
+                    $('html, body').animate({
+                        scrollTop: $wrapper.closest('.note-card').offset().top - 120
+                    }, 400);
+                }, 100);
+            } else {
+                // Expand to full content height (Scrollable 600px)
+                $wrapper.removeClass('collapsed').addClass('expanded');
+                $wrapper.find('.note-thumbnails-wrapper').removeClass('d-none'); // Show thumbnails
+                $btn.html('{{ _("Fold") }} <i class="fas fa-chevron-up ml-1"></i>');
+            }
+        });
+
+        // 1b. Handle Attachment Deletion
+        $(document).on('click', '.note-edit-attachment-delete', function() {
+            var $item = $(this).closest('.note-edit-attachment-item');
+            var fileName = $item.data('filename');
+            var currentDeleted = $('#edit_deleted_files').val();
+            var deletedArr = currentDeleted ? currentDeleted.split(',') : [];
+            
+            if (!deletedArr.includes(fileName)) {
+                deletedArr.push(fileName);
+            }
+            
+            $('#edit_deleted_files').val(deletedArr.join(','));
+            $item.fadeOut(300, function() { 
+                $(this).remove(); 
+                if ($('#edit_attachments_container').children().length === 0) {
+                    $('#edit_attachments_container').html('<small class="text-muted italic">No attachments</small>');
+                }
+            });
+            });
+        
+        // 1e. Map Visibility Toggle Handler
+        $('#edit_map_visible_toggle').on('change', function() {
+             var uid = $(this).data('note-id');
+             var isVisible = $(this).is(':checked');
+             
+             // Immediate Backend Call
+             var csrfToken = $('#editNoteModal input[name="csrf_token"]').val();
+             
+             $.ajax({
+                 url: '/notes/toggle_map_visibility',
+                 method: 'POST',
+                 contentType: 'application/json',
+                 headers: { 'X-CSRFToken': csrfToken },
+                 data: JSON.stringify({ unique_id: uid, visible: isVisible }),
+                 success: function(res) {
+                     if (res.ok) {
+                         // Update local tags (for search filters and subsequent edits)
+                         // We need to add/remove 'map_hidden' ID from the local tag input
+                         var $tagSelect = $('#edit_note_tags');
+                         var currentVals = $tagSelect.val() || [];
+                         
+                         var mapHiddenId = null;
+                         $tagSelect.find('option').each(function() {
+                             if ($(this).text() === 'map_hidden') {
+                                 mapHiddenId = $(this).val();
+                                 return false;
+                             }
+                         });
+                         
+                         if (mapHiddenId) {
+                             if (isVisible) {
+                                 // Remove tag
+                                 if (currentVals.includes(mapHiddenId)) {
+                                     currentVals = currentVals.filter(v => v !== mapHiddenId);
+                                     $tagSelect.selectpicker('val', currentVals);
+                                 }
+                             } else {
+                                 // Add tag
+                                 if (!currentVals.includes(mapHiddenId)) {
+                                     currentVals.push(mapHiddenId);
+                                     $tagSelect.selectpicker('val', currentVals);
+                                 }
+                             }
+                         }
+                         
+                         // Optional: Toast or Notify?
+                     } else {
+                         alert('Error updating visibility: ' + (res.error || 'Unknown'));
+                         // Revert toggle
+                         $('#edit_map_visible_toggle').prop('checked', !isVisible);
+                     }
+                 },
+                 error: function(err) {
+                      alert('Network error updating visibility');
+                      $('#edit_map_visible_toggle').prop('checked', !isVisible);
+                 }
+             });
+        });
+
+        // 1c. File input label sync
+        $(document).on('change', '.custom-file-input', function() {
+            var files = $(this)[0].files;
+            if (files.length > 1) {
+                $(this).next('.custom-file-label').html(files.length + ' files selected');
+            } else if (files.length === 1) {
+                $(this).next('.custom-file-label').html(files[0].name);
+            }
+        });
+
+        // 2. Infinite Scroll (Server-side AJAX)
+        const $meta = $('#notesPaginationState');
+        let currentPage = parseInt($meta.attr('data-current-page')) || 1;
+        let hasNextPage = $meta.attr('data-has-next') === 'true';
+        let isLoadingNotes = false;
+        const $sentinel = $('#scrollSentinel');
+        const $loader = $('#scrollLoader');
+        const $grid = $('#notesGrid');
+
+        // [PHASE 2] Reveal initially rendered cards
+        revealCards($('.lazy-card'));
+
+        function loadMoreNotes() {
+            if (isLoadingNotes || !hasNextPage) return;
+            
+            isLoadingNotes = true;
+            $loader.removeClass('d-none');
+            
+            // Collect current filters from DOM (fallback to URL params)
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', currentPage + 1);
+
+            // [MODIFIED] Add search/tag/sort filters to AJAX request directly from UI elements
+            const searchText = $('#note_search_input').val();
+            const searchTags = $('#filter_tags_input').val();
+            const sortBy = $('#sort_by_select').val();
+            const sortDir = $('#sort_direction_select').val();
+            
+            if (searchText) params.set('filter_notes', searchText);
+            if (searchTags) params.set('filter_tags', searchTags);
+            if (sortBy) params.set('sort_by', sortBy);
+            if (sortDir) params.set('sort_direction', sortDir);
+            
+            $.ajax({
+                url: window.location.pathname,
+                data: params.toString(),
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    if (response.html && response.html.trim() !== '') {
+                        const $newItems = $(response.html);
+                        $grid.append($newItems);
+                        revealCards($newItems);
+                        
+                        // Strict sync with server's page pointer
+                        if (response.next_page) {
+                            currentPage = response.next_page;
+                            hasNextPage = response.has_next;
+                        } else {
+                            hasNextPage = false;
+                        }
+                    } else {
+                        // Empty HTML means end of results
+                        hasNextPage = false;
+                    }
+                },
+                complete: function() {
+                    isLoadingNotes = false;
+                    $loader.addClass('d-none');
+                }
+            });
+        }
+
+        // Intersection Observer
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                   loadMoreNotes();
+                }
+            }, { rootMargin: '100px' });
+            
+            if ($sentinel[0]) observer.observe($sentinel[0]);
+        } else {
+            // Fallback for old browsers
+            $(window).on('scroll', function() {
+                if($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
+                    loadMoreNotes();
+                }
+            });
+        }
+        // Global Full-Screen Gallery Logic for Notes Manager
+        let galleryOverlay, currentMedia = [], currentIdx = 0, startX = 0;
+
+        function createGalleryOverlay() {
+            if (galleryOverlay) return;
+            galleryOverlay = document.createElement('div');
+            galleryOverlay.id = 'full-screen-gallery-overlay';
+            galleryOverlay.innerHTML = `
+                <div class="gallery-header">
+                    <span id="gallery-counter"></span>
+                    <button class="gallery-close">&times;</button>
+                </div>
+                <div class="gallery-content flex-grow-1">
+                    <button class="gallery-nav prev"><i class="fas fa-chevron-left"></i></button>
+                    <div class="gallery-img-container">
+                        <img src="" id="gallery-main-img" class="animate-in zoom-in-95 duration-200">
+                    </div>
+                    <button class="gallery-nav next"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            `;
+            document.body.appendChild(galleryOverlay);
+
+            // Styles
+            const style = document.createElement('style');
+            style.textContent = `
+                #full-screen-gallery-overlay {
+                    position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999;
+                    display: none; flex-direction: column; color: white;
+                }
+                .gallery-header { padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10010; background: linear-gradient(rgba(0,0,0,0.6), transparent); }
+                .gallery-close { background: none; border: none; color: white; font-size: 42px; cursor: pointer; opacity: 0.7; transition: 0.2s; padding: 0 10px; }
+                .gallery-close:hover { opacity: 1; transform: scale(1.1); }
+                .gallery-content { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; padding-bottom: 20px; }
+                .gallery-nav { background: rgba(255,255,255,0.05); border: none; color: white; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; position: absolute; top: 50%; transform: translateY(-50%); z-index: 10020; font-size: 32px; transition: 0.2s; opacity: 0.5; }
+                .gallery-nav:hover { background: rgba(255,255,255,0.15); opacity: 1; }
+                .gallery-nav.prev { left: 40px; }
+                .gallery-nav.next { right: 40px; }
+                .gallery-img-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; }
+                #gallery-main-img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 20px 50px rgba(0,0,0,0.5); user-select: none; border-radius: 4px; }
+                #gallery-counter { font-size: 16px; font-weight: 500; background: rgba(0,0,0,0.4); padding: 5px 15px; border-radius: 20px; }
+                @media (max-width: 768px) { .gallery-nav { display: none; } }
+            `;
+            document.head.appendChild(style);
+
+            galleryOverlay.querySelector('.gallery-close').onclick = closeGallery;
+            galleryOverlay.querySelector('.gallery-nav.prev').onclick = (e) => { e.stopPropagation(); navigateGallery(-1); };
+            galleryOverlay.querySelector('.gallery-nav.next').onclick = (e) => { e.stopPropagation(); navigateGallery(1); };
+            galleryOverlay.onclick = closeGallery;
+            galleryOverlay.querySelector('.gallery-content').onclick = (e) => e.stopPropagation();
+
+            galleryOverlay.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
+            galleryOverlay.addEventListener('touchend', e => {
+                let diff = startX - e.changedTouches[0].clientX;
+                if (Math.abs(diff) > 50) navigateGallery(diff > 0 ? 1 : -1);
+            }, {passive: true});
+        }
+
+        function closeGallery() { 
+            galleryOverlay.style.display = 'none'; 
+            document.body.style.overflow = ''; 
+        }
+
+        function navigateGallery(dir) {
+            currentIdx = (currentIdx + dir + currentMedia.length) % currentMedia.length;
+            renderGalleryContent();
+        }
+
+        function renderGalleryContent() {
+            const mainImg = document.getElementById('gallery-main-img');
+            const counter = document.getElementById('gallery-counter');
+            
+            const file = currentMedia[currentIdx];
+            mainImg.src = '/note_attachment/' + file;
+            counter.textContent = (currentIdx + 1) + ' / ' + currentMedia.length;
+        }
+
+        window.openGlobalGallery = function(noteId) {
+            const gallery = document.getElementById('gallery-' + noteId);
+            currentMedia = JSON.parse(gallery.getAttribute('data-media'));
+            currentIdx = parseInt(gallery.getAttribute('data-current-index') || 0);
+            
+            createGalleryOverlay();
+            galleryOverlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            renderGalleryContent();
+        };
+    });
+</script>
+
+{% endblock %}

@@ -19,7 +19,7 @@ cd "${INSTALL_DIRECTORY}"/aot || return
 
 printf "\n#### Extracting translatable texts\n"
 
-"${INSTALL_DIRECTORY}"/env/bin/pybabel extract "${INFO_ARGS[@]}" -s -F babel.cfg -k lazy_gettext -o aot_flask/translations/messages.pot .
+"${INSTALL_DIRECTORY}"/env/bin/pybabel extract "${INFO_ARGS[@]}" -s -F babel.cfg -k _ -k gettext -k ngettext -k lazy_gettext -o aot_flask/translations/messages.pot .
 
 printf "\n#### Generating translations\n"
 

@@ -27,7 +27,7 @@
         <br>{{_('Python Version')}}: <span style="color: #141414; font-weight: bold;">{{python_version}}</span>
         <br>{{_('Database Version')}}:&nbsp;
         {%- if database_version == correct_database_version -%}<span style="color: #141414; font-weight: bold;">{{database_version}}</span>
-            {%- else -%}<span style="color: #F70D1A; font-weight: bold;">{{database_version}}</span> (Incorrect Version. Should be {{correct_database_version}}) <a href="https://aot-inc.github.io/AoT/Troubleshooting/#incorrect-database-version"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+            {%- else -%}<span style="color: #F70D1A; font-weight: bold;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="https://aot-inc.github.io/AoT/Troubleshooting/#incorrect-database-version"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
             {%- endif -%}
         <br>{{_('Database URL')}}: <span class="hide" style="font-weight: bold;">{{database_url}}</span>
         <br>{{_('Daemon Status')}}:&nbsp
@@ -37,15 +37,15 @@
         {% if daemon_up %}
           <br>{{_('Daemon RAM Usage')}}: <span style="color: #141414; font-weight: bold;">{{ram_use_daemon}} MB</span>
           <br>{{_('Daemon Virtualenv')}}:&nbsp
-            {%- if virtualenv_daemon -%}<span style="color: #141414; font-weight: bold;">{{_('예')}}</span>
-            {%- else -%}<span style="color: #F70D1A; font-weight: bold;">{{_('아니오')}}</span>
+            {%- if virtualenv_daemon -%}<span style="color: #141414; font-weight: bold;">{{_('Yes')}}</span>
+            {%- else -%}<span style="color: #F70D1A; font-weight: bold;">{{_('No')}}</span>
             {%- endif -%}
         {% endif %}
         <br>{{_('Frontend Process ID')}}: <span style="color: #141414; font-weight: bold;">{{frontend_pid}}</span>
         <br>{{_('Frontend RAM Usage')}}: <span style="color: #141414; font-weight: bold;">{{ram_use_flask}} MB</span>
         <br>{{_('Frontend Virtualenv')}}:&nbsp
-        {%- if virtualenv_flask -%}<span style="color: #141414; font-weight: bold;">{{_('예')}}</span>
-        {%- else -%}<span style="color: #F70D1A; font-weight: bold;">{{_('아니오')}}</span>
+        {%- if virtualenv_flask -%}<span style="color: #141414; font-weight: bold;">{{_('Yes')}}</span>
+        {%- else -%}<span style="color: #F70D1A; font-weight: bold;">{{_('No')}}</span>
         {%- endif -%}
       </div>
     </div>
@@ -61,7 +61,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        커널 정보: uname -a
+        {{_('Kernel Info')}}: uname -a
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{uname}}</pre>
@@ -71,7 +71,7 @@
   {%- if gpio_readall -%}
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        범용 입출력 (GPIO) Pins: gpio readall
+        {{_('GPIO Pins')}}: gpio readall
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{gpio_readall}}</pre>
@@ -94,7 +94,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        디스크 사용량: df -h
+        {{_('Disk Usage')}}: df -h
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{df}}</pre>
@@ -103,7 +103,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        메모리: free -h
+        {{_('Memory Usage')}}: free -h
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{free}}</pre>
@@ -112,7 +112,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        진단 메세지: dmesg | tail -n 20
+        {{_('Diagnostic Messages')}}: dmesg | tail -n 20
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{dmesg_output}}</pre>
@@ -121,7 +121,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        네트워크 상태: ifconfig -a
+        {{_('Network Status')}}: ifconfig -a
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{ifconfig}}</pre>
@@ -130,7 +130,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        프로세스 (프런트엔드 및 스레드): pstree -p {{frontend_pid}}
+        {{_('Processes (Frontend & Threads)')}}: pstree -p {{frontend_pid}}
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{pstree_frontend}}</pre>
@@ -139,7 +139,7 @@
 
     <div style="padding-bottom: 1.5em">
       <div style="padding-bottom: 0.5em">
-        프로세스 (프런트엔드 및 스레드): top -b -H -n 1 -p {{frontend_pid}}
+        {{_('Processes (Frontend & Threads)')}}: top -b -H -n 1 -p {{frontend_pid}}
       </div>
       <div>
         <pre style="padding: 0.5em; border: 1px solid Black;">{{top_frontend}}</pre>

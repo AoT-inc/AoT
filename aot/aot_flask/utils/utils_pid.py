@@ -58,6 +58,9 @@ def pid_mod(form_mod_pid_base,
     mod_pid.direction = form_mod_pid_base.direction.data
     mod_pid.period = form_mod_pid_base.period.data
     mod_pid.log_level_debug = form_mod_pid_base.log_level_debug.data
+    mod_pid.latitude = form_mod_pid_base.latitude.data if form_mod_pid_base.latitude.data not in [None, ''] else None
+    mod_pid.longitude = form_mod_pid_base.longitude.data if form_mod_pid_base.longitude.data not in [None, ''] else None
+    mod_pid.location_source = form_mod_pid_base.location_source.data
     mod_pid.start_offset = form_mod_pid_base.start_offset.data
     mod_pid.max_measure_age = form_mod_pid_base.max_measure_age.data
     mod_pid.setpoint = form_mod_pid_base.setpoint.data
@@ -286,7 +289,7 @@ def pid_mod(form_mod_pid_base,
             if mod_pid.is_activated:
                 control = DaemonControl()
                 return_value = control.pid_mod(form_mod_pid_base.function_id.data)
-                flash("PID Controller settings refresh response: "
+                flash(gettext("PID Controller settings refresh response: ") +
                       "{resp}".format(resp=return_value), "success")
     except Exception as except_msg:
         messages["error"].append(str(except_msg))

@@ -71,5 +71,6 @@ def init_api(app):
     import aot.aot_flask.api.output
     import aot.aot_flask.api.pid
     import aot.aot_flask.api.settings
+    import aot.aot_flask.api.geo
 
     app.register_blueprint(api_blueprint)

@@ -100,7 +100,32 @@ def parse_custom_option_values_csv(controllers, dict_controller=None, unique_id=
                 if ('id' in each_option and
                         'default_value' in each_option and
                         each_option['id'] not in custom_options_values[each_controller.unique_id]):
-                    custom_options_values[each_controller.unique_id][each_option['id']] = each_option['default_value']
+                    option_value = each_option['default_value']
+                    # If this is a time input field, parse it to seconds
+                    if (each_option.get('type') == 'text' and
+                            'class' in each_option and
+                            'aot-time-input' in each_option['class']):
+                        try:
+                            from aot.utils.time_utils import parse_flexible_time
+                            parsed_time = parse_flexible_time(option_value)
+                            if parsed_time:
+                                option_value = parsed_time['total_seconds']
+                        except Exception:
+                            pass
+                    custom_options_values[each_controller.unique_id][each_option['id']] = option_value
+                elif 'id' in each_option and each_option['id'] in custom_options_values[each_controller.unique_id]:
+                    # Also parse existing values if they are time inputs
+                    if (each_option.get('type') == 'text' and
+                            'class' in each_option and
+                            'aot-time-input' in each_option['class']):
+                        option_value = custom_options_values[each_controller.unique_id][each_option['id']]
+                        try:
+                            from aot.utils.time_utils import parse_flexible_time
+                            parsed_time = parse_flexible_time(option_value)
+                            if parsed_time:
+                                custom_options_values[each_controller.unique_id][each_option['id']] = parsed_time['total_seconds']
+                        except Exception:
+                            pass
 
     if unique_id:
         return custom_options_values[unique_id]
@@ -151,7 +176,32 @@ def parse_custom_option_values_json(
                 if ('id' in each_option and
                         'default_value' in each_option and
                         each_option['id'] not in custom_options_values[each_controller.unique_id]):
-                    custom_options_values[each_controller.unique_id][each_option['id']] = each_option['default_value']
+                    option_value = each_option['default_value']
+                    # If this is a time input field, parse it to seconds
+                    if (each_option.get('type') == 'text' and
+                            'class' in each_option and
+                            'aot-time-input' in each_option['class']):
+                        try:
+                            from aot.utils.time_utils import parse_flexible_time
+                            parsed_time = parse_flexible_time(option_value)
+                            if parsed_time:
+                                option_value = parsed_time['total_seconds']
+                        except Exception:
+                            pass
+                    custom_options_values[each_controller.unique_id][each_option['id']] = option_value
+                elif 'id' in each_option and each_option['id'] in custom_options_values[each_controller.unique_id]:
+                    # Also parse existing values if they are time inputs
+                    if (each_option.get('type') == 'text' and
+                            'class' in each_option and
+                            'aot-time-input' in each_option['class']):
+                        option_value = custom_options_values[each_controller.unique_id][each_option['id']]
+                        try:
+                            from aot.utils.time_utils import parse_flexible_time
+                            parsed_time = parse_flexible_time(option_value)
+                            if parsed_time:
+                                custom_options_values[each_controller.unique_id][each_option['id']] = parsed_time['total_seconds']
+                        except Exception:
+                            pass
 
     if unique_id:
         return custom_options_values[unique_id]
@@ -441,19 +491,35 @@ def time_between_range(start_time, end_time):
     :return: 1 is within range, 0 if not within range
     :rtype: int
     """
-    start_hour = int(start_time.split(":")[0])
-    start_min = int(start_time.split(":")[1])
-    end_hour = int(end_time.split(":")[0])
-    end_min = int(end_time.split(":")[1])
-    now_time = datetime.datetime.now().time()
-    now_time = now_time.replace(second=0, microsecond=0)
-    if ((start_hour < end_hour) or
-            (start_hour == end_hour and start_min < end_min)):
-        if datetime.time(start_hour, start_min) <= now_time <= datetime.time(end_hour, end_min):
-            return 1  # Yes now within range
-    else:
-        if now_time >= datetime.time(start_hour, start_min) or now_time <= datetime.time(end_hour, end_min):
-            return 1  # Yes now within range
+    try:
+        start_h_str = start_time.split(":")[0]
+        start_m_str = start_time.split(":")[1]
+        
+        # Handle 24:00 as 23:59 or 00:00 (End of day)
+        start_hour = int(start_h_str)
+        start_min = int(start_m_str)
+        if start_hour >= 24: start_hour = 23; start_min = 59
+            
+        end_h_str = end_time.split(":")[0]
+        end_m_str = end_time.split(":")[1]
+        
+        end_hour = int(end_h_str)
+        end_min = int(end_m_str)
+        if end_hour >= 24: end_hour = 23; end_min = 59
+
+        now_time = datetime.datetime.now().time()
+        now_time = now_time.replace(second=0, microsecond=0)
+        if ((start_hour < end_hour) or
+                (start_hour == end_hour and start_min < end_min)):
+            if datetime.time(start_hour, start_min) <= now_time <= datetime.time(end_hour, end_min):
+                return 1  # Yes now within range
+        else:
+            if now_time >= datetime.time(start_hour, start_min) or now_time <= datetime.time(end_hour, end_min):
+                return 1  # Yes now within range
+    except Exception as e:
+        # Prevent crash on invalid time
+        logger.error(f"Error in time_between_range({start_time}, {end_time}): {e}")
+        return 0
     return 0  # No now not within range
 
 
@@ -507,7 +573,14 @@ def cmd_output(command, stdout_pipe=True, shell=True, timeout=360, user='aot', c
             report_ids('finished demotion')
         return result
 
-    pw_record = pwd.getpwnam(user)
+    fallback_mode = False
+    try:
+        pw_record = pwd.getpwnam(user)
+    except KeyError:
+        fallback_mode = True
+        logger.warning("User '{}' not found. Falling back to current process user.".format(user))
+        pw_record = pwd.getpwuid(os.getuid())
+        user = pw_record.pw_name
     user_name = pw_record.pw_name
     user_home_dir = pw_record.pw_dir
     user_uid = pw_record.pw_uid
@@ -518,6 +591,11 @@ def cmd_output(command, stdout_pipe=True, shell=True, timeout=360, user='aot', c
     env['LOGNAME'] = user_name
     env['PWD'] = cwd
     env['USER'] = user_name
+    
+    
+    preexec = None
+    if os.geteuid() == 0 and not fallback_mode:
+        preexec = demote(user_uid, user_gid, user_groups)
 
     if stdout_pipe:
         cmd = subprocess.Popen(command,
@@ -525,13 +603,13 @@ def cmd_output(command, stdout_pipe=True, shell=True, timeout=360, user='aot', c
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,
                                shell=shell,
-                               preexec_fn=demote(user_uid, user_gid, user_groups),
+                               preexec_fn=preexec,
                                cwd=cwd,
                                env=env)
     else:
         cmd = subprocess.Popen(command,
                                shell=shell,
-                               preexec_fn=demote(user_uid, user_gid, user_groups),
+                               preexec_fn=preexec,
                                cwd=cwd,
                                env=env)
 
@@ -678,9 +756,16 @@ def get_directory_size(start_path='.', exclude=None):
 
 def set_user_grp(filepath, user, group):
     """Set the UID and GUID of a file."""
-    uid = pwd.getpwnam(user).pw_uid
-    gid = grp.getgrnam(group).gr_gid
-    os.chown(filepath, uid, gid)
+    try:
+        uid = pwd.getpwnam(user).pw_uid
+        gid = grp.getgrnam(group).gr_gid
+        os.chown(filepath, uid, gid)
+    except KeyError:
+        logger.warning(f"User '{user}' or group '{group}' not found. Skipping chown for {filepath}")
+    except PermissionError:
+        logger.warning(f"Permission denied while setting owner for {filepath}")
+    except Exception as err:
+        logger.error(f"Error setting owner for {filepath}: {err}")
 
 #
 # Converters

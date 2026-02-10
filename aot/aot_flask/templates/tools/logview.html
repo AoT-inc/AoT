@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% set active_page = "logview" %}
-{% block title %} - 로그 보기{% endblock %}
+{% block title %} - {{_('Log View')}}{% endblock %}
 
 {% block body %}
-  <!-- 경로: /logview -->
+  <!-- Route: /logview -->
   <div class="container">
     {% include 'flash_messages.html' %}
 
@@ -14,20 +14,20 @@
         {{form_log_view.lines(class_='form-control', type="number", value=lines)}}
       </div>
       <div class="col-auto">
-        <select class="form-control form-tooltip form-dropdown" data-placement="top" id="log" name="log" title="로그 선택">
-          <option value="log_daemon"{% if log_field == "log_daemon" %} selected{% endif %}>데몬</option>
-          <option value="log_pid_settings"{% if log_field == "log_pid_settings" %} selected{% endif %}>데몬 (PID 설정)</option>
-          <option value="log_keepup"{% if log_field == "log_keepup" %} selected{% endif %}>데몬 유지</option>
-          <option value="log_dependency"{% if log_field == "log_dependency" %} selected{% endif %}>의존성</option>
-          <option value="log_import"{% if log_field == "log_import" %} selected{% endif %}>설정 가져오기</option>
-          <option value="log_nginx"{% if log_field == "log_nginx" %} selected{% endif %}>Nginx</option>
-          <option value="log_backup"{% if log_field == "log_backup" %} selected{% endif %}>AoT 백업</option>
-          <option value="log_restore"{% if log_field == "log_restore" %} selected{% endif %}>AoT 복원</option>
-          <option value="log_upgrade"{% if log_field == "log_upgrade" %} selected{% endif %}>AoT 업그레이드</option>
-          <option value="log_flask"{% if log_field == "log_flask" %} selected{% endif %}>웹</option>
-          <option value="log_http_access"{% if log_field == "log_http_access" %} selected{% endif %}>웹 접근</option>
-          <option value="log_http_error"{% if log_field == "log_http_error" %} selected{% endif %}>웹 오류</option>
-          <option value="log_login"{% if log_field == "log_login" %} selected{% endif %}>웹 로그인</option>
+        <select class="form-control form-tooltip form-dropdown" data-placement="top" id="log" name="log" title="{{_('Select Log')}}">
+          <option value="log_daemon"{% if log_field == "log_daemon" %} selected{% endif %}>{{_('Daemon')}}</option>
+          <option value="log_pid_settings"{% if log_field == "log_pid_settings" %} selected{% endif %}>{{_('Daemon (PID settings)')}}</option>
+          <option value="log_keepup"{% if log_field == "log_keepup" %} selected{% endif %}>{{_('Daemon keepup')}}</option>
+          <option value="log_dependency"{% if log_field == "log_dependency" %} selected{% endif %}>{{_('Dependency')}}</option>
+          <option value="log_import"{% if log_field == "log_import" %} selected{% endif %}>{{_('Import settings')}}</option>
+          <option value="log_nginx"{% if log_field == "log_nginx" %} selected{% endif %}>{{_('Nginx')}}</option>
+          <option value="log_backup"{% if log_field == "log_backup" %} selected{% endif %}>{{_('AoT backup')}}</option>
+          <option value="log_restore"{% if log_field == "log_restore" %} selected{% endif %}>{{_('AoT restore')}}</option>
+          <option value="log_upgrade"{% if log_field == "log_upgrade" %} selected{% endif %}>{{_('AoT upgrade')}}</option>
+          <option value="log_flask"{% if log_field == "log_flask" %} selected{% endif %}>{{_('Web')}}</option>
+          <option value="log_http_access"{% if log_field == "log_http_access" %} selected{% endif %}>{{_('Web access')}}</option>
+          <option value="log_http_error"{% if log_field == "log_http_error" %} selected{% endif %}>{{_('Web error')}}</option>
+          <option value="log_login"{% if log_field == "log_login" %} selected{% endif %}>{{_('Web login')}}</option>
         </select>
       </div>
       <div class="col-auto">
@@ -41,11 +41,11 @@
     {%- if log_output != None -%}
     <div style="padding-top:1.5em">
       {%- if log_output == 404 -%}
-        파일을 찾을 수 없습니다: {{logfile}}
+        {{_('File not found')}}: {{logfile}}
       {%- elif log_output == '' -%}
-        파일이 비어있습니다: {{logfile}}
+        {{_('File is empty')}}: {{logfile}}
       {%- else -%}
-        파일 {{logfile}}의 마지막 {{lines}} 줄:
+        {{_('Last %(lines)s lines of file %(logfile)s', lines=lines, logfile=logfile)}}:
         <pre style="resize: vertical; padding: 0.5em; border: 1px solid Black;">{{log_output}}</pre>
       {%- endif -%}
     </div>

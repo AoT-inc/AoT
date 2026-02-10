@@ -84,29 +84,49 @@ class SettingsInputsUniqueID(Resource):
         if not utils_general.user_has_permission('view_settings'):
             abort(403)
         try:
+            # 1. Fetch Input Settings
             list_data = get_from_db(InputSchema, Input, unique_id=unique_id)
+            if not list_data:
+                abort(404, message=f"Input {unique_id} not found")
 
-            measure_schema = InputChannelSchema()
-            list_channels = return_list_of_dictionaries(
-                measure_schema.dump(
-                    InputChannel.query.filter_by(
-                        input_id=unique_id).all(), many=True))
+            # 2. Fetch Channels (Safe Mode)
+            list_channels = []
+            try:
+                measure_schema = InputChannelSchema()
+                list_channels = return_list_of_dictionaries(
+                    measure_schema.dump(
+                        InputChannel.query.filter_by(
+                            input_id=unique_id).all(), many=True))
+            except Exception as e:
+                logger.error(f"Error fetching channels for input {unique_id}: {e}")
+                list_channels = []
 
-            measure_schema = DeviceMeasurementsSchema()
-            list_measurements = return_list_of_dictionaries(
-                measure_schema.dump(
-                    DeviceMeasurements.query.filter_by(
-                        device_id=unique_id).join(DeviceMeasurements.conversion, isouter=True).all(), many=True))
+            # 3. Fetch Measurements (Safe Mode)
+            list_measurements = []
+            try:
+                measure_schema = DeviceMeasurementsSchema()
+                list_measurements = return_list_of_dictionaries(
+                    measure_schema.dump(
+                        DeviceMeasurements.query.filter_by(
+                            device_id=unique_id).all(), many=True))
+            except Exception as e:
+                logger.error(f"Error fetching measurements for input {unique_id}: {e}")
+                list_measurements = []
 
             return {
                 'input settings': list_data,
                 'input channels': list_channels,
                 'device measurements': list_measurements
             }, 200
-        except Exception:
+        except Exception as e:
+            # Check if it was a manual abort (404/403)
+            if hasattr(e, 'code') and e.code in [403, 404]:
+                raise e
+                
+            logger.error(f"Unexpected error in /api/inputs/{unique_id}: {traceback.format_exc()}")
             abort(500,
                   message='An exception occurred',
-                  error=traceback.format_exc())
+                  error=str(e))
 
 
 @ns_input.route('/<string:unique_id>/force-measurement')

@@ -1,10 +1,10 @@
 <div class="col-12">
-  <strong>[{{_('조건')}}] {{_('GPIO 상태')}}</strong>: <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong> 
-  {{_('GPIO 핀이 HIGH이면 True를 반환하고, LOW이면 False를 반환합니다. On/Off GPIO 출력 상태를 확인하는 용도로 이 기능을 사용하지 마세요. (이 기능을 사용하면 GPIO 핀이 OUTPUT에서 INPUT으로 변경되어 출력으로 작동하지 않게 됩니다.) 출력 상태를 확인하려면 "출력 상태 조건"을 사용하세요.')}}
+  <strong>[{{_('Condition')}}] {{_('GPIO State')}}</strong>: <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong> 
+  {{_('Returns True if GPIO pin is HIGH, False if LOW. Do not use this to check On/Off GPIO output state. (Using this changes GPIO pin from OUTPUT to INPUT, stopping it from working as output.) Use "Output State Condition" to check output state.')}}
 </div>
 <div class="col-auto">
-  {{form_conditional_conditions.gpio_pin.label(class_='control-label', title="GPIO 핀 선택")}}
+  {{form_conditional_conditions.gpio_pin.label(class_='control-label', title=_("Select GPIO Pin"))}}
   <div>
-    {{form_conditional_conditions.gpio_pin(class_='form-control', value=each_condition.gpio_pin, **{'title': '상태를 가져올 GPIO 핀을 설정하세요'})}}
+    {{form_conditional_conditions.gpio_pin(class_='form-control', value=each_condition.gpio_pin, **{'title': _('Set the GPIO pin to get status from')})}}
   </div>
 </div>

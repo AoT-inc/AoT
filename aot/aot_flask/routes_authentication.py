@@ -1,4 +1,5 @@
 # coding=utf-8
+# Trigger Reload
 """flask views that deal with user authentication."""
 
 import datetime
@@ -65,7 +66,7 @@ def create_admin():
         if os.path.exists(lang_path):
             with open(lang_path) as f:
                 language_read = f.read().split(":")[0]
-                if language and language in LANGUAGES:
+                if language_read and language_read in LANGUAGES:
                     language = language_read
     except:
         pass
@@ -116,7 +117,7 @@ def create_admin():
             new_user.email = form_create_admin.email.data
             new_user.set_password(form_create_admin.password.data)
             new_user.role_id = 1  # Admin
-            new_user.theme = 'spacelab'
+            new_user.theme = '/static/css/bootstrap-4-themes/aot.css'
 
             # Find user-selected language in AoT/.language
             lang_path = os.path.join(INSTALL_DIRECTORY, ".language")

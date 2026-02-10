@@ -1,0 +1,19 @@
+{% macro render_api_key_picker(dict_options=none) %}
+<select class="selectpicker aot-modern-select aot-standard-select" 
+        data-style="btn-primary aot-modern-btn" 
+        data-live-search="true" 
+        data-selected-text-format="static" 
+        title="Key" 
+        data-width="fit"
+        onchange="var val = $(this).val(); if(val === '__MANAGE_API_KEYS__'){ window.location.href = '{{ url_for('routes_settings.settings_api_key') }}'; } else if(val){ var $group = $(this).closest('.aot-api-key-group'); var $target = $group.find('input, textarea').not('.bootstrap-select input, .bootstrap-select textarea'); $target.val(val); } $(this).selectpicker('val', '');">
+  {% if api_keys %}
+    {% set manufacturer = dict_options.get('input_manufacturer', '').lower() if dict_options else '' %}
+    {% for key_obj in api_keys|sort(attribute='provider', reverse=True) %}
+      {% set is_match = manufacturer and (manufacturer in key_obj.provider.lower() or manufacturer in key_obj.name.lower()) %}
+      <option value="{{key_obj.key}}" data-subtext="{{key_obj.provider}}" {% if is_match %}data-content="<span style='font-weight:bold; color:var(--success);'>{{key_obj.name}}</span> <small class='text-muted'>{{key_obj.provider}}</small>"{% endif %}>{{key_obj.name}}</option>
+    {% endfor %}
+    <option data-divider="true"></option>
+  {% endif %}
+  <option data-icon="fas fa-key" value="__MANAGE_API_KEYS__">{{_('Manage API Keys')}}</option>
+</select>
+{% endmacro %}

@@ -171,7 +171,8 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'led_flash_period_sec',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 1.0,
             'required': True,
             'name': 'LED Flash Period (Seconds)',
@@ -190,7 +191,8 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'key_led_delay',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 1.5,
             'required': True,
             'name': 'LED Delay (Seconds)',

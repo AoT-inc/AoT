@@ -15,7 +15,12 @@ References
 """
 
 import datetime
+import importlib
+import importlib.util
 import json
+import subprocess
+import sys
+import threading
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -46,12 +51,65 @@ def constraints_pass_positive_value(mod_input, value):
     return ok, errors, mod_input
 
 
+_INSTALL_LOCK = threading.Lock()
+_INSTALL_ATTEMPTED: Dict[str, bool] = {}
+
+
+def _ensure_python_package(logger, import_name: str, pip_spec: str) -> bool:
+    """Try importing a package; if missing, install via pip once."""
+    try:
+        if importlib.util.find_spec(import_name):
+            return True
+    except Exception:
+        pass
+
+    if _INSTALL_ATTEMPTED.get(import_name):
+        return False
+
+    with _INSTALL_LOCK:
+        if _INSTALL_ATTEMPTED.get(import_name):
+            return False
+        try:
+            if importlib.util.find_spec(import_name):
+                return True
+        except Exception:
+            pass
+
+        try:
+            logger.info(f"Installing dependency '{pip_spec}' for ChirpStack REST input...")
+        except Exception:
+            pass
+        try:
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_spec])
+        except Exception as err:
+            try:
+                logger.warning(f"Automatic install failed for {pip_spec}: {err}")
+            except Exception:
+                pass
+            _INSTALL_ATTEMPTED[import_name] = True
+            return False
+
+        importlib.invalidate_caches()
+        try:
+            if importlib.util.find_spec(import_name):
+                return True
+        except Exception:
+            pass
+
+        try:
+            logger.warning(f"Dependency '{pip_spec}' still missing after install attempt.")
+        except Exception:
+            pass
+        _INSTALL_ATTEMPTED[import_name] = True
+        return False
+
+
 measurements_dict = {}
 channels_dict = {0: {}}
 
 INPUT_INFORMATION = {
-    'input_name_unique': 'CHIRPSTACK_REST_JMESPATH',
-    'input_manufacturer': 'ChirpStack',
+    'input_name_unique': 'chirpstack_rest_jmespath',
+    'input_manufacturer': 'Chirpstack',
     'input_name': 'ChirpStack: REST API (Payload JMESPath Expression)',
     'input_name_short': 'ChirpStack REST',
     'input_library': 'chirpstack-rest-api, requests, jmespath',
@@ -77,12 +135,7 @@ INPUT_INFORMATION = {
         'pre_output'
     ],
 
-    # Dependencies (install if missing). You asked to include the example with paho + jmespath.
-    'dependencies_module': [
-        ('pip-pypi', 'requests', 'requests==2.31.0'),
-        ('pip-pypi', 'paho-mqtt', 'paho-mqtt==1.5.1'),  # not required by this module, included per request/example
-        ('pip-pypi', 'jmespath', 'jmespath==0.10.0'),
-    ],
+    'dependencies_module': [],
 
     # Module options visible in the UI
     'custom_options': [
@@ -229,7 +282,9 @@ class InputModule(AbstractInput):
     # --------------- Initialization helpers ---------------
 
     def initialize(self):
-        import jmespath
+        if not _ensure_python_package(self.logger, 'jmespath', 'jmespath>=0.10.0'):
+            self.logger.warning("JMESPath library not found; attempting import anyway.")
+        import jmespath  # type: ignore
 
         self.jmespath = jmespath
 
@@ -263,6 +318,7 @@ class InputModule(AbstractInput):
         """
         Initialize chirpstack-rest-api client if available.
         """
+        _ensure_python_package(self.logger, 'chirpstack_rest_api', 'chirpstack-rest-api>=4.4.0')
         try:
             import chirpstack_rest_api as cs_api
             from chirpstack_rest_api import ApiClient, Configuration

@@ -1,8 +1,8 @@
 {% if each_input.device == 'input_spacer' %}
-  {% include 'pages/data_options/input_spacer.html' %}
+{% include 'pages/data_options/input_spacer.html' %}
 {% else %}
 
-<form method="post" action="/input">
+<form id="form_input_{{each_input.unique_id}}" method="post" action="/input">
   {{form_mod_input.csrf_token}}
   {{form_mod_input.input_id(value=each_input.unique_id)}}
 
@@ -12,46 +12,54 @@
   {% set unique_id = each_input.unique_id %}
   {% set custom_options_values = custom_options_values_inputs %}
 
-  <div id="input_status_{{each_input.unique_id}}" class="grid-stack-item-content {% if each_input.is_activated -%}active-background{% else -%}inactive-background{% endif %} row small-gutters" style="padding: 4px; border: 1px solid #ddd; border-radius: 5px">
-    <div class="col-1 text-center icon-fh my-auto panel-heading">
-      <i style="font-size: 2em" class="fa fa-grip-horizontal" title="{{_('드래그')}}"></i>
-    </div>
-    <div class="col-1 text-center icon-fh my-auto">
-      <a class="btn" style="border-color: transparent; padding: 0" data-toggle="modal" data-target="#modal_config_{{each_input.unique_id}}">
-        <i style="font-size: 1.5em" class="fas fa-cog" title="{{_('설정')}}"></i>
-      </a>
-    </div>
-    <div class="col-3">
-      <input id="input_name_{{each_input.unique_id}}" class="form-control" disabled="" value="{{each_input.name}}" type="text">
-    </div>
-    <div class="col-4">
-      <input class="form-control btn btn-primary btn-block" type="button" onclick="setClipboard('{{each_input.unique_id}}')" title="UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="
-  {%- if each_input.device in dict_inputs -%}
-    {%- if 'input_name_short' in dict_inputs[each_input.device] -%}
-      {{dict_inputs[each_input.device]['input_name_short']}}
-    {%- else -%}
-      {{dict_inputs[each_input.device]['input_name']}}
-    {%- endif -%}
-  {%- endif -%}
-    ">
-    </div>
-    <div class="col-3">
-      <input {% if each_input.is_activated -%}style="display: none"{% endif %} onclick="return $(this).processRequest(this, 'input_activate');" name="input_activate" id="input_activate_{{each_input.unique_id}}" class="form-control btn btn-primary" type="button" value="{{_('활성화')}}"/>
-      <input {% if not each_input.is_activated -%}style="display: none"{% endif %} onclick="return $(this).processRequest(this, 'input_deactivate');" name="input_deactivate" id="input_deactivate_{{each_input.unique_id}}" class="form-control btn btn-primary" type="button" value="{{_('비활성화')}}"/>
-    </div>
+  <div id="input_status_{{each_input.unique_id}}"
+    class="grid-stack-item-content {% if each_input.is_activated -%}active-background{% else -%}inactive-background{% endif %} row small-gutters"
+    style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden;">
+        <div class="col-1 text-center icon-fh my-auto panel-heading" style="padding: 0;">
+            <i style="font-size: 2em" class="fa fa-grip-horizontal" title="{{_('Drag')}}"></i>
+        </div>
+
+        <div class="col-4">
+            <input id="input_name_{{each_input.unique_id}}" class="form-control" style="border-radius: 16px !important; font-size: 0.9rem;"
+                disabled="" value="{{each_input.name}}" type="text">
+        </div>
+        <div class="col-3">
+            <input class="form-control btn btn-primary btn-block p-1" style="border-radius: 16px !important; font-size: 0.8rem;" type="button"
+                onclick="setClipboard('{{each_input.unique_id}}')" title="UUID: {{each_input.unique_id}}"
+                value="{{ dict_inputs.get(each_input.device, {}).get('input_name', each_input.device) }}">
+        </div>
+        <div class="col-3">
+            <input {% if each_input.is_activated -%}style="display: none" {% endif %}
+                onclick="return $(this).processRequest(this, 'input_activate');" name="input_activate"
+                id="input_activate_{{each_input.unique_id}}" class="form-control btn btn-primary p-1" type="button"
+                style="font-size: 0.8rem;" value="{{_('Activate')}}" />
+            <input {% if not each_input.is_activated -%}style="display: none" {% endif %}
+                onclick="return $(this).processRequest(this, 'input_deactivate');" name="input_deactivate"
+                id="input_deactivate_{{each_input.unique_id}}" class="form-control btn btn-primary p-1" type="button"
+                style="font-size: 0.8rem;" value="{{_('Deactivate')}}" />
+        </div>
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <a class="btn p-0" style="border-color: transparent;" data-toggle="modal"
+                data-target="#modal_config_{{each_input.unique_id}}">
+                <i style="font-size: 1.5em" class="fas fa-cog" title="{{_('Settings')}}"></i>
+            </a>
+        </div>
   </div> <!-- grid-stack-item-content -->
 
-</form>
-
-<div class="modal fade" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl" role="document">
-    <div class="modal-content" style="padding: 1em">
-      <div class="modal-header">
-        <h5 class="modal-title">입력 설정{% if each_input.device in dict_inputs %}: {{dict_inputs[each_input.device]['input_name']}}{% endif %}</h5>
+  <div class="modal fade aot-option-modal" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Input Settings')}}{% if each_input.device in dict_inputs %}:
+            {{dict_inputs[each_input.device]['input_name']}}{% endif %}</h5>
+        </div>
+        <div class="modal-body">
+          {% include 'pages/data_options/input_options.html' %}
+        </div>
       </div>
-      {% include 'pages/data_options/input_options.html' %}
     </div>
   </div>
-</div>
+</form>
 
 {% endif %}

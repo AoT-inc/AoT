@@ -1,0 +1,55 @@
+.btn-toggle {
+  position: relative;
+  display: inline-flex;
+  width: var(--aot-roundbox-width, 60px);
+  height: var(--aot-base-size, 28px);
+  cursor: pointer;
+}
+
+.switch-label {
+  font-weight: 600;
+}
+
+.btn-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.btn-toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  /* Match aot-roundbox pill shape */
+  background-color: #d2d7dc;
+  transition: background-color 0.2s;
+}
+
+.btn-toggle-thumb {
+  position: absolute;
+  /* (Base 28px) - (Step 4px) = 24px */
+  width: calc(var(--aot-base-size, 28px) - var(--aot-step-size, 4px));
+  height: calc(var(--aot-base-size, 28px) - var(--aot-step-size, 4px));
+
+  /* (Step 4px) / 2 = 2px offset */
+  top: calc(var(--aot-step-size, 4px) / 2);
+  left: calc(var(--aot-step-size, 4px) / 2);
+
+  border-radius: 50%;
+  /* aot-cycle */
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-toggle-input:checked+.btn-toggle-slider {
+  background-color: #32c85a;
+}
+
+.btn-toggle-input:checked+.btn-toggle-slider .btn-toggle-thumb {
+  /* Translate = ContainerWidth (60) - ThumbWidth (24) - LeftPadding (2) - RightPadding (2) = 32px */
+  transform: translateX(calc(var(--aot-roundbox-width, 60px) - (var(--aot-base-size, 28px) - var(--aot-step-size, 4px)) - var(--aot-step-size, 4px)));
+}

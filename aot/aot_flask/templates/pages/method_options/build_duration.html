@@ -6,8 +6,8 @@
     </div>
   </div>
   <div class="col-12">
-    {{_('특정 지속 시간에 따라 일정 기간 동안의 설정값을 정의합니다.')}}
-    <br>{{_('여기서 지속 시간은 이전 지속 시간 이후의 시간량으로 정의됩니다. 만약 이것이 처음 추가된 지속 시간이라면, 이는 동작의 시작을 의미합니다. 만약 처음이 아니라면, 기존 동작에 추가된 마지막 지속 시간 이후에 실행됩니다.')}}
+    {{_('Defines setpoints over a period of time according to a specific duration.')}}
+    <br>{{_('Here, duration is defined as the amount of time after the previous duration. If this is the first duration added, it signifies the start of the action. If it is not the first, it will run after the last duration added to the existing action.')}}
   </div>
 </div>
 
@@ -36,9 +36,9 @@
 </div>
 <div class="row align-items-end small-gutters" style="padding: 0.7em">
   <div style="padding: 1em">
-    {{_('동작의 끝에 도달했을 때 재시작하도록 지시하려면 다음 옵션을 사용하십시오.')}}
-    {{_('동작이 반복되기를 원하지 않는 경우, 이 옵션을 사용하지 마십시오.')}}
-    {{_('동작이 종료된 후 종료할 지속 시간(초)을 입력할 수 있으며, 그렇지 않으면 비워두어 무한 반복되도록 합니다.')}}
+    {{_('Use the following option to instruct the action to restart when it reaches the end.')}}
+    {{_('If you do not want the action to repeat, do not use this option.')}}
+    {{_('You can enter a duration in seconds to wait before restarting after the action ends, otherwise leave it blank to repeat infinitely.')}}
   </div>
   <div class="col-auto">
     {{form_add_method.duration_end.label(class_='control-label')}}
@@ -47,6 +47,6 @@
     </div>
   </div>
   <div class="col-auto">
-    {{form_add_method.restart(class_='btn btn-primary', **{'onclick':'return confirm("이 옵션을 사용하면 동작 종료된 후 재시작되도록 지시합니다. 이 옵션을 사용하면 더 이상 지속 시간을 추가할 수 없습니다. 이 동작의 끝에 재시작 옵션을 추가하시겠습니까?")'})}}
+    {{form_add_method.restart(class_='btn btn-primary', **{'onclick': 'return confirm("' ~ _('Using this option instructs to restart after the action ends. Once this option is used, you can no longer add more durations. Would you like to add the restart option to the end of this action?') ~ '")'})}}
   </div>
 </div>

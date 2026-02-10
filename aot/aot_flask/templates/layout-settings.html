@@ -8,15 +8,6 @@
         $('.row-offcanvas').toggleClass('active');
       });
     });
-
-  {% if not hide_tooltips %}
-    $(document).ready(function(){
-      $('input[title]').tooltip({placement:'top'});
-      $('textarea[title]').tooltip({placement:'top'});
-      $('.form-dropdown').dropdown();
-      $('.form-dropdown').tooltip();
-    });
-  {% endif %}
   </script>
 {% endblock %} 
 
@@ -28,19 +19,20 @@
 
     <!-- Sidebar -->
     <div id="sidebar-wrapper" style="border-right: 1px solid #343434">
-      <div class="sidebar-heading">시스템 관리</div>
+      <div class="sidebar-heading">{{_('System Administration')}}</div>
       <div class="list-group list-group-flush">
-        <a class="list-group-item collapsed{% if active_settings == 'general' %} active{% endif %}" href="{{url_for('routes_settings.settings_general')}}"><i class="fas fa-globe"></i>&nbsp;&nbsp;{{_('일반 설정')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'input' %} active{% endif %}" href="{{url_for('routes_settings.settings_input')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('사용자')}} {{_('입력')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'output' %} active{% endif %}" href="{{url_for('routes_settings.settings_output')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('사용자')}} {{_('출력')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'controller' %} active{% endif %}" href="{{url_for('routes_settings.settings_function')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('사용자')}} {{_('함수')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'action' %} active{% endif %}" href="{{url_for('routes_settings.settings_action')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('사용자')}} {{_('동작')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'widget' %} active{% endif %}" href="{{url_for('routes_settings.settings_widget')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('사용자')}} {{_('위젯')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'measurement' %} active{% endif %}" href="{{url_for('routes_settings.settings_measurement')}}"><i class="fas fa-weight"></i>&nbsp;&nbsp;{{_('측정')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'users' %} active{% endif %}" href="{{url_for('routes_settings.settings_users')}}"><i class="fas fa-users"></i>&nbsp;&nbsp;{{_('사용자')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'pi' %} active{% endif %}" href="{{url_for('routes_settings.settings_pi')}}"><i class="fab fa-linux"></i>&nbsp;&nbsp;{{_('라즈베리파이')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'alerts' %} active{% endif %}" href="{{url_for('routes_settings.settings_alerts')}}"><i class="fas fa-bell"></i>&nbsp;&nbsp;{{_('알림')}}</a>
-        <a class="list-group-item collapsed{% if active_settings == 'diagnostic' %} active{% endif %}" href="{{url_for('routes_settings.settings_diagnostic')}}"><i class="fas fa-wrench"></i>&nbsp;&nbsp;{{_('진단')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'general' %} active{% endif %}" href="{{url_for('routes_settings.settings_general')}}"><i class="fas fa-globe"></i>&nbsp;&nbsp;{{_('General Settings')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'input' %} active{% endif %}" href="{{url_for('routes_settings.settings_input')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Input')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'output' %} active{% endif %}" href="{{url_for('routes_settings.settings_output')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Output')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'controller' %} active{% endif %}" href="{{url_for('routes_settings.settings_function')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Function')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'action' %} active{% endif %}" href="{{url_for('routes_settings.settings_action')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Action')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'widget' %} active{% endif %}" href="{{url_for('routes_settings.settings_widget')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Widget')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'measurement' %} active{% endif %}" href="{{url_for('routes_settings.settings_measurement')}}"><i class="fas fa-weight"></i>&nbsp;&nbsp;{{_('Measurement')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'api_key' %} active{% endif %}" href="{{url_for('routes_settings.settings_api_key')}}"><i class="fas fa-key"></i>&nbsp;&nbsp;{{_('API Key Management')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'users' %} active{% endif %}" href="{{url_for('routes_settings.settings_users')}}"><i class="fas fa-users"></i>&nbsp;&nbsp;{{_('Users')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'pi' %} active{% endif %}" href="{{url_for('routes_settings.settings_pi')}}"><i class="fab fa-linux"></i>&nbsp;&nbsp;{{_('Raspberry Pi')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'alerts' %} active{% endif %}" href="{{url_for('routes_settings.settings_alerts')}}"><i class="fas fa-bell"></i>&nbsp;&nbsp;{{_('Alerts')}}</a>
+        <a class="list-group-item collapsed{% if active_settings == 'diagnostic' %} active{% endif %}" href="{{url_for('routes_settings.settings_diagnostic')}}"><i class="fas fa-wrench"></i>&nbsp;&nbsp;{{_('Diagnostic')}}</a>
       </div>
     </div>
     <!-- /#sidebar-wrapper -->

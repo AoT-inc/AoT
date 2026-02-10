@@ -1,0 +1,84 @@
+{% macro render_device_map(type, unique_id, lat_field, lng_field, src_field, lat_val, lng_val, src_val, form_name,
+modal_id, height, width, zoom, center, form_id, icon_value, color_value, size_value, icon_name, color_name, size_name,
+map_config_id, map_configs, map_overlays, shape_on_color, shape_off_color, shape_border_color, save_id, shapes_val=None) %}
+
+<div class="map-option-wrapper position-relative" style="height: {{ height or '450px' }}; width: 100%; border-radius: 8px; overflow: hidden;">
+    <!-- Hidden Input for Shape Persistence -->
+    <input type="hidden" id="input-drawing-shapes-{{ unique_id }}" name="drawing_shapes" value="{{ shapes_val or '' }}">
+    
+    <!-- [Fix] Hidden Inputs for Coordinates (Required for Saving) -->
+    <!-- Use unique ID to prevent DOM collisions -->
+    {% set lat_field_id = (lat_field.id ~ '_' ~ unique_id) if lat_field else '' %}
+    {% set lng_field_id = (lng_field.id ~ '_' ~ unique_id) if lng_field else '' %}
+
+    {% if lat_field %}
+        {{ lat_field(type="hidden", id=lat_field_id) }}
+    {% endif %}
+    {% if lng_field %}
+        {{ lng_field(type="hidden", id=lng_field_id) }}
+    {% endif %}
+
+    <!-- Map Container -->
+    <div id="map_{{ unique_id }}" class="map-container" 
+        data-init-lat="{{ lat_val if lat_val is not none else (geo_config['default_lat'] if geo_config is defined else 37.5665) }}"
+        data-init-lng="{{ lng_val if lng_val is not none else (geo_config['default_lng'] if geo_config is defined else 126.9780) }}"
+        data-init-source="{{ source_val if source_val is not none else 'auto' }}"
+        data-zoom="{{ zoom if zoom is not none else (geo_config['zoom'] if geo_config is defined else 13) }}"
+        data-unique-id="{{ unique_id }}"
+        data-lat-id="{{ lat_field_id }}"
+        data-lng-id="{{ lng_field_id }}"
+        data-form-id="{{ form_id }}"
+        data-type="{{ type }}"
+        data-shapes="{{ shapes_val or '' }}"
+        data-map-config-id="{{ map_config_id or '' }}"
+        style="height: 100%; width: 100%; border: 1px solid #ddd;"></div>
+
+    <!-- Floating Tools (Left) - Synced with Geo Design Structure -->
+    <!-- Positioned at 80px to avoid overlapping standard Leaflet Zoom Control (if present) -->
+    <!-- Floating Tools (Left) -->
+    <div class="map-tools-left" style="top: 20px; left: 10px; display: flex; flex-direction: column; gap: 8px; position: absolute; z-index: 1000;">
+        <div class="tool-group shadow-sm" style="display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; background: white; border: 1px solid #ddd;">
+            <button type="button" id="btn-zoom-in-{{ unique_id }}" class="btn btn-white" style="width: 36px; height: 36px; padding: 0; background: white; border: none; border-bottom: 1px solid #ddd;" title="Zoom In">
+                <i class="fas fa-plus" style="color: #666;"></i>
+            </button>
+            <button type="button" id="btn-zoom-out-{{ unique_id }}" class="btn btn-white" style="width: 36px; height: 36px; padding: 0; background: white; border: none; border-bottom: 1px solid #ddd;" title="Zoom Out">
+                <i class="fas fa-minus" style="color: #666;"></i>
+            </button>
+            <button type="button" id="btn-search-{{ unique_id }}" class="btn btn-white" style="width: 36px; height: 36px; padding: 0; background: white; border: none; border-bottom: 1px solid #ddd;" title="Address Search">
+                <i class="fas fa-search" style="color: #666;"></i>
+            </button>
+            <button type="button" id="btn-center-label-{{ unique_id }}" class="btn btn-white" style="width: 36px; height: 36px; padding: 0; background: white; border: none;" title="{{ _('Move label to current map center') }}">
+                <i class="fas fa-crosshairs" style="color: #666;"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Tools (Right) -->
+    <div class="map-tools-right" style="top: 20px; right: 10px; position: absolute; z-index: 1000;">
+        <!-- Leaflet Draw controls will be injected here or handled by Leaflet control positioning -->
+    </div>
+
+    <!-- Search Overlay -->
+    <div id="search-overlay-{{ unique_id }}" class="map-search-overlay d-none">
+        <div style="pointer-events: auto; width: 100%; max-width: 400px; background: transparent; border-radius: 20px;">
+            <aot-map-search-fixed id="search-comp-{{ unique_id }}" placeholder="{{ _('Enter address.') }}"></aot-map-search-fixed>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function ($) {
+        $(function () {
+            // Create object and initialize controller
+            new AoTMapModalController({
+                mapId: 'map_{{ unique_id }}',
+                uniqueId: '{{ unique_id }}',
+                latId: '{{ lat_field_id }}',
+                lngId: '{{ lng_field_id }}',
+                formId: '{{ form_id }}',
+                type: '{{ type }}'
+            });
+        });
+    })(jQuery);
+</script>
+{% endmacro %}

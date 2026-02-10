@@ -1,0 +1,59 @@
+{% if each_input %}
+<div class="d-flex align-items-center justify-content-between h-100">
+    <!-- Icon -->
+    <div class="px-3 text-secondary">
+        <i class="fas fa-satellite fa-2x"></i>
+    </div>
+
+    <!-- Info -->
+    <div class="flex-grow-1 px-3 border-left">
+        <h5 class="mb-0 text-dark font-weight-bold">{{ each_input.name }}</h5>
+        <small class="text-muted d-block">
+            {% if dict_inputs and each_input.device in dict_inputs %}
+                {{ dict_inputs[each_input.device]['input_name'] }}
+            {% else %}
+                {{ each_input.device }}
+            {% endif %}
+        </small>
+    </div>
+
+    <!-- Controls -->
+    <div class="px-3 text-right">
+        <!-- Edit -->
+        <button class="btn btn-light btn-sm mr-1" data-toggle="modal"
+            data-target="#modal_config_{{each_input.unique_id}}">
+            <i class="fas fa-cog"></i> {{ _('Settings') }}
+        </button>
+        <!-- Toggle Active -->
+        {% if each_input.is_activated %}
+        <span class="badge badge-success px-2 py-1">{{ _('Active') }}</span>
+        {% else %}
+        <span class="badge badge-secondary px-2 py-1">{{ _('Inactive') }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Config Modal for this specific input -->
+<div class="modal fade aot-option-modal" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ each_input.name }} {{ _('Settings') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Generic Input config form, or specific GIS options -->
+                <p>{{ _('This is the GIS detailed settings screen. (To be implemented)') }}</p>
+                <!-- Reuse input_options logic or custom -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
+                <button type="button" class="btn btn-danger">{{ _('Delete') }}</button>
+                <button type="button" class="btn btn-primary">{{ _('Save') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -18,9 +18,9 @@
   <div class="container">
     {% include 'flash_messages.html' %}
 
-    <h4>{{_('참조궤적')}} <a href="{{help_page[0]}}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+    <h4>{{_('Method')}} <a href="{{help_page[0]}}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
 
-    <p>{{_('참조궤적은 PID 컨트롤러에서 다양한 유형의 설정값 참조를 위해 사용합니다. 일반적으로 PID 컨트롤러는 고정된 설정값에 맞춰 장치를 제어 합니다. 설정값이 시간에 따라 변하도록 하고 싶다면, 참조궤적에서 시간에 따라 설정값을 변화시키고 PID 컨트롤러에서 값을 추적하여 제어에 활용할 수 있습니다.')}}</p>
+    <p>{{_('Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller.')}}</p>
     
     <div style="clear: both; padding: 0.5em 0;"></div>
 
@@ -38,7 +38,7 @@
       <div class="col-auto">
         {{form_create_method.method_type.label(class_='control-label')}}
         <div>
-          {{form_create_method.method_type(class_='selectpicker', **{'data-style': 'btn btn-primary', 'title': _('참조궤적') + ': ' + _('선택')}) }}
+          {{form_create_method.method_type(class_='selectpicker', **{'data-style': 'btn btn-primary', 'title': _('Method') + ': ' + _('Select')}) }}
         </div>
       </div>
       <div class="col-auto">
@@ -55,9 +55,9 @@
 
       <h4>
       {%- if method == [] -%}
-        {{_('저장된 참조궤적이 없습니다.')}}
+        {{_('No saved methods.')}}
       {%- else -%}
-        {{_('참조궤적 저장')}}
+        {{_('Saved Methods')}}
       {%- endif -%}
       </h4>
     </div>

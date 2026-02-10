@@ -10,7 +10,7 @@ from aot.utils.database import db_retrieve_table_daemon
 
 ACTION_INFORMATION = {
     'name_unique': 'clear_total_volume',
-    'name': "{}: {} ({})".format(lazy_gettext('Flow Meter'), lazy_gettext('Clear Total'), lazy_gettext('Volume')),
+    'name': lazy_gettext('Flow Meter: Clear Total (Volume)'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

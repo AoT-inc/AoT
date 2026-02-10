@@ -14,9 +14,13 @@ def constraints_pass_percent(mod_dev, value):
     errors = []
     all_passed = True
     # Ensure value is positive
-    if 100 < value or value < 0:
-        all_passed = False
-        errors.append("Must be between 0 and 100")
+    try:
+        if 100 < value or value < 0:
+            all_passed = False
+            errors.append("Must be between 0 and 100")
+    except TypeError:
+        # If value is None or not comparable, skip constraint
+        pass
     return all_passed, errors, mod_dev
 
 def constraints_pass_positive_value(mod_dev, value):
@@ -29,9 +33,13 @@ def constraints_pass_positive_value(mod_dev, value):
     errors = []
     all_passed = True
     # Ensure value is positive
-    if value <= 0:
-        all_passed = False
-        errors.append("Must be a positive value")
+    try:
+        if value <= 0:
+            all_passed = False
+            errors.append("Must be a positive value")
+    except TypeError:
+        # Value missing/None: do not fail
+        pass
     return all_passed, errors, mod_dev
 
 def constraints_pass_positive_or_zero_value(mod_dev, value):
@@ -44,7 +52,11 @@ def constraints_pass_positive_or_zero_value(mod_dev, value):
     errors = []
     all_passed = True
     # Ensure value is above 0
-    if value < 0:
-        all_passed = False
-        errors.append("Must be a positive value")
+    try:
+        if value < 0:
+            all_passed = False
+            errors.append("Must be a positive value")
+    except TypeError:
+        # Value missing/None: do not fail
+        pass
     return all_passed, errors, mod_dev

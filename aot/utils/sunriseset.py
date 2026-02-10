@@ -201,9 +201,6 @@ def calculate_next_sunrise_sunset_epoch(latitude, longitude, zenith, date_offset
 
 def suntime_calculate_next_sunrise_sunset_epoch(latitude, longitude, date_offset_days, time_offset_minutes, rise_or_set, return_dt=False):
     try:
-        from suntime import SunTimeException
-        from suntime import Sun as SunTime
-
         sun = SunTime(latitude, longitude)
         now = datetime.datetime.now()
         new_date = now + datetime.timedelta(days=date_offset_days)

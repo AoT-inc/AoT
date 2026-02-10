@@ -417,24 +417,24 @@ def output_started_at(device_unique_id, channel_id):
     except Exception as e:
         logger.debug(f"output_started_at error: {e}")
         return '', 204
-    
+
+# ---- Public variant ----
 def output_started_at_public(device_unique_id, channel_id):
     """
-    Public variant. Returns the most recent ON start timestamp for this output/channel
-    without requiring authentication. Uses only 'output_started_at' (new format).
+    Public version of output_started_at (no auth check).
     """
     try:
+        # Look-back window (extended to 30 days)
         duration_sec = 30 * 24 * 3600
 
+        # Resolve channel index
         ch_index = _resolve_channel_index(device_unique_id, channel_id)
         if ch_index is None:
-            logger.debug(f"output_started_at_public: channel resolve failed device={device_unique_id} channel_id={channel_id}")
             return '', 204
 
-        logger.debug(f"output_started_at_public: entering device={device_unique_id} ch={ch_index} lookback={duration_sec}s")
+        # ---------- Only new measure: output_started_at ----------
         res = _read_latest_started_at_safe(device_unique_id, ch_index, duration_sec, timeout_sec=2.0)
         if res is None:
-            logger.debug(f"output_started_at_public: no 'output_started_at' points device={device_unique_id} ch={ch_index} (with fallbacks)")
             return '', 204
 
         if isinstance(res, int):
@@ -454,8 +454,7 @@ def output_started_at_public(device_unique_id, channel_id):
             "source": source
         }
         return jsonify(payload)
-    except Exception as e:
-        logger.debug(f"output_started_at_public error: {e}")
+    except Exception:
         return '', 204
 
 WIDGET_INFORMATION = {
@@ -475,6 +474,10 @@ WIDGET_INFORMATION = {
 
     'custom_options': [
         {
+            'type': 'header',
+            'name': lazy_gettext('장치 설정')
+        },
+        {
             'id': 'output',
             'type': 'select_channel',
             'default_value': '',
@@ -486,11 +489,16 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 5.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("동기화"), lazy_gettext("초")),
             'phrase': lazy_gettext('사용할 측정값의 최대 유효 시간')
+        },
+        {
+            'type': 'header',
+            'name': lazy_gettext('표시 설정')
         },
         {
             'id': 'enable_status',
@@ -521,6 +529,10 @@ WIDGET_INFORMATION = {
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('작동시간 글자 크기'),
             'phrase': '(em) 단위'
+        },
+        {
+            'type': 'header',
+            'name': lazy_gettext('시간 설정')
         },
         {
             'id': 'enable_output_controls',
@@ -569,6 +581,7 @@ WIDGET_INFORMATION = {
     'endpoints': [
         ("/output_started_at/<device_unique_id>/<channel_id>", "output_started_at", output_started_at, ["GET"]),
         ("/output_started_at_public/<device_unique_id>/<channel_id>", "output_started_at_public", output_started_at_public, ["GET"]),
+
         ("/output_last_duration/<device_unique_id>/<channel_id>", "output_last_duration", output_last_duration, ["GET"]),
         ("/output_last_duration_public/<device_unique_id>/<channel_id>", "output_last_duration_public", output_last_duration_public, ["GET"]),
         ("/output_last_session_public/<device_unique_id>/<channel_id>", "output_last_session_public", output_last_session_public, ["GET"]),
@@ -843,7 +856,7 @@ WIDGET_INFORMATION = {
             const dOff = tm_getOffStartDate(widget_id);
             const startedStr = dOff ? tm_formatMD_HMS(dOff, widget_id) : '';
             tm_setTextStable(widget_id, elapsedStr + (startedStr ? ", " + startedStr : ''));
-            tm_offFrozenText[widget_id] = tm_lastRenderedText[widget_id];
+          tm_offFrozenText[widget_id] = tm_lastRenderedText[widget_id];
 
           } else {
             // 3) 베이스가 없고 고정값도 없으면: 서버 캐시 1회 조회 후 고정 표시
@@ -880,6 +893,9 @@ WIDGET_INFORMATION = {
               }
             })();
           }
+
+          // clear stale bases so 다음 ON 주기에서 새 시작 시각을 강제로 동기화
+          tm_clearStartBases(widget_id);
 
           tm_prevState[widget_id] = 'off';
           console.debug("AoT Timer: state=off; duration-based frozen display.");
@@ -989,7 +1005,6 @@ WIDGET_INFORMATION = {
           const prefixes = [];
           if (BASE) prefixes.push(BASE);
           prefixes.push("");
-          prefixes.push("/aot");
 
           // Try endpoints in order: public then (if auth needed) private, across prefixes
           for (const pre of prefixes) {

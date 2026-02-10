@@ -5,25 +5,25 @@
 {% block title %} - {{_('Backup Restore')}}{% endblock %}
 
 {% block body %}
-  <!-- 경로: /admin/backup -->
+  <!-- Path: /admin/backup -->
   <div class="container"> 
     {% include 'flash_messages.html' %}
 
-    <h4>{{_('백업 및 복원')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+    <h4>{{_('Backup and Restore')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
 
-    <p>{{_('백업을 생성하여 AoT 설정을 보존하거나 나중에 복원할 수 있습니다. 카메라 이미지는 백업되지 않습니다. 측정 데이터를 저장하려면 내보내기/가져오기 페이지로 이동하세요.')}}</p>
+    <p>{{_('You can create backups to preserve AoT settings or restore them later. Camera images are not backed up. To save measurement data, go to the Export/Import page.')}}</p>
 
     <form method="post" action="/admin/backup">
     <div class="row" style="padding-bottom: 1.5em">
       <div class="col-12 col-sm-3 col-md-2 small-gutters">
-        {{form_backup.backup(class_='btn btn-primary', value='백업 만들기')}}
+        {{form_backup.backup(class_='btn btn-primary', value=_('Create Backup'))}}
       </div>
     </div>
     </form>
 
     {% if not backup_dirs %}
       <div>
-        백업이 없습니다.
+        {{_('No backups found.')}}
       </div>
     {% else %}
       {%- for each_backup in backup_dirs -%}
@@ -37,13 +37,13 @@
             {{each_backup[0][14:33]}}<br><a href="https://github.com/aot-inc/AoT/releases/tag/v{{each_backup[0][34:]}}" target="_blank">v{{each_backup[0][34:]}}</a>, {{"%.1f MB"|format(each_backup[1])}}
           </div>
           <div class="col-6 col-sm-3 small-gutters">
-            {{form_backup.download(class_='btn btn-primary btn-block', value='백업 다운로드')}}
+            {{form_backup.download(class_='btn btn-primary btn-block', value=_('Download Backup'))}}
           </div>
           <div class="col-6 col-sm-3 small-gutters">
-            {{form_backup.restore(class_='btn btn-primary btn-block', value='백업 복원')}}
+            {{form_backup.restore(class_='btn btn-primary btn-block', value=_('Restore Backup'))}}
           </div>
           <div class="col-6 col-sm-3 small-gutters">
-            {{form_backup.delete(class_='btn btn-primary btn-block', value='백업 삭제', **{'onclick':'return confirm("정말 삭제하시겠습니까?")'})}}
+            {{form_backup.delete(class_='btn btn-primary btn-block', value=_('Delete Backup'), **{'onclick':"return confirm(_('Are you sure you want to delete?'))"})}}
           </div>
         </div>
 

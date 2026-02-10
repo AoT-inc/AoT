@@ -32,8 +32,20 @@ class Input(CRUDMixin, db.Model):
     ref_ohm = db.Column(db.Integer, default=None)
     calibrate_sensor_measure = db.Column(db.Text, default=None)  # sensor ID and measurement (CSV)
 
+    # Geo location for mapping (optional)
+    latitude = db.Column(db.Float, default=None)
+    longitude = db.Column(db.Float, default=None)
+    location_source = db.Column(db.Text, default='manual')  # manual/device/remote
+    location_updated_utc = db.Column(db.DateTime, default=None)
+    marker_icon = db.Column(db.Text, default=None)  # e.g., valve/motor/temp...
+    marker_color = db.Column(db.Text, default=None)  # hex or named color
+    marker_size = db.Column(db.Integer, default=3)  # 1~5 preset
+
     location = db.Column(db.Text, default='')  # GPIO pin or i2c address to communicate with sensor
     gpio_location = db.Column(db.Integer, default=0)  # Pin location for GPIO communication
+
+    map_config_id = db.Column(db.String(36), default=None)
+    map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
 
     # I2C
     i2c_location = db.Column(db.Text, default=None)  # Address location for I2C communication

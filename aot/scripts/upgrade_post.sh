@@ -100,6 +100,10 @@ TIMER_START_generate_widget_html=$SECONDS
 ${INSTALL_CMD} generate-widget-html
 TIMER_TOTAL_generate_widget_html=$((SECONDS - TIMER_START_generate_widget_html))
 
+TIMER_START_build_notes_widget=$SECONDS
+${INSTALL_CMD} build-notes-widget
+TIMER_TOTAL_build_notes_widget=$((SECONDS - TIMER_START_build_notes_widget))
+
 TIMER_START_update_permissions=$SECONDS
 ${INSTALL_CMD} update-permissions
 TIMER_TOTAL_update_permissions=$((SECONDS - TIMER_START_update_permissions))
@@ -133,6 +137,7 @@ printf "\nupdate-alembic-post:          %s s" "${TIMER_TOTAL_update_alembic_post
 printf "\nupdate-aot-startup-script: %s s" "${TIMER_TOTAL_update_aot_startup_script}"
 printf "\ncompile-translations:         %s s" "${TIMER_TOTAL_compile_translations}"
 printf "\ngenerate-widget-html:         %s s" "${TIMER_TOTAL_generate_widget_html}"
+printf "\nbuild-notes-widget:           %s s" "${TIMER_TOTAL_build_notes_widget}"
 printf "\nupdate-permissions:           %s s" "${TIMER_TOTAL_update_permissions}"
 printf "\nrestart-daemon:               %s s" "${TIMER_TOTAL_restart_daemon}"
 printf "\nweb-server_restart:           %s s" "${TIMER_TOTAL_web_server_restart}"

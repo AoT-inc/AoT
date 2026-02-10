@@ -1,10 +1,14 @@
 {% if 'calibration_measurement' in dict_options['options_enabled'] %}
-
-<div class="col-auto">
-  {{form.calibrate_sensor_measure.label(class_='control-label')}}
-  <div>
-    <select class="form-control btn-sm" id="calibrate_sensor_measure" name="calibrate_sensor_measure">
-      <option value="">{{_('Disabled')}}</option>
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.calibrate_sensor_measure.label.text}}</label>
+  <div class="aot-modal-option-control">
+    <select class="form-control aot-modern-select selectpicker" 
+            id="calibrate_sensor_measure" 
+            name="calibrate_sensor_measure" 
+            title="{{_('No Conversion')}}"
+            data-container="false"
+            data-style="btn-white">
+      <option value="">{{_('No Conversion')}}</option>
     {% if choices_input or choices_function %}
       {% for each_input_form in choices_input -%}
       <option value="{{each_input_form['value']}}"{%- if each_device.calibrate_sensor_measure and each_input_form['value'] in each_device.calibrate_sensor_measure %} selected{%- endif -%}>{{each_input_form['item']}}</option>
@@ -13,10 +17,9 @@
       <option value="{{each_function_form['value']}}"{%- if each_device.calibrate_sensor_measure and each_function_form['value'] in each_device.calibrate_sensor_measure %} selected{%- endif -%}>{{each_function_form['item']}}</option>
       {% endfor -%}
     {% else %}
-      <option value="">{{dict_translation['none_available']['title']}}</option>
+      <option value="" disabled>{{dict_translation['none_available']['title']}}</option>
     {% endif %}
     </select>
   </div>
 </div>
-
 {% endif %}

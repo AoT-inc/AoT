@@ -5,6 +5,7 @@ import os
 import socket
 import subprocess
 import traceback
+import time
 from io import BytesIO
 
 import flask_login
@@ -17,7 +18,7 @@ from aot.config import (ALEMBIC_VERSION, INSTALL_DIRECTORY, LANGUAGES,
                            AOT_VERSION, THEMES, THEMES_DARK)
 from aot.config import PATH_STATIC
 from aot.config_translations import TRANSLATIONS
-from aot.databases.models import Dashboard, Misc
+from aot.databases.models import Dashboard, Misc, GeoSetting
 from aot.aot_client import DaemonControl
 from aot.aot_flask.forms import forms_dashboard
 from aot.aot_flask.routes_authentication import admin_exists
@@ -87,7 +88,28 @@ def inject_variables():
 
     languages_sorted = sorted(LANGUAGES.items(), key=operator.itemgetter(1))
 
+    # Map Global Settings
+    map_global_providers = {}
+    map_global_keys = {}
+    try:
+        mgs = GeoSetting.query.first()
+        if mgs:
+            state = mgs.state_dict()
+            map_global_providers = state.get('providers', {})
+            map_global_keys = state.get('keys', {})
+    except Exception:
+        pass
+
+    # Global Geo Config
+    from aot.aot_flask.utils.utils_geo import get_geo_config
+    geo_config = get_geo_config()
+
+    # API Keys
+    from aot.databases.models import APIKey
+    api_keys = APIKey.query.all()
+
     return dict(current_user=flask_login.current_user,
+                geo_config=geo_config,
                 custom_css=misc.custom_css,
                 dark_themes=THEMES_DARK,
                 daemon_status=daemon_status,
@@ -105,7 +127,11 @@ def inject_variables():
                 settings=misc,
                 template_exists=template_exists,
                 themes=THEMES,
-                upgrade_available=misc.aot_upgrade_available)
+                upgrade_available=misc.aot_upgrade_available,
+                map_global_providers=map_global_providers,
+                map_global_keys=map_global_keys,
+                api_keys=api_keys,
+                now_timestamp=int(time.time()))
 
 
 @blueprint.app_errorhandler(404)

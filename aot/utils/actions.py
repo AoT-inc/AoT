@@ -32,6 +32,9 @@ from aot.utils.system_pi import return_measurement_info
 logger = logging.getLogger("aot.actions")
 
 
+from functools import lru_cache
+
+@lru_cache(maxsize=4)
 def parse_action_information(exclude_custom=False):
     """Parses the variables assigned in each Function Action and return a dictionary of IDs and values."""
     def dict_has_value(dict_inp, action, key, force_type=None):
@@ -68,6 +71,9 @@ def parse_action_information(exclude_custom=False):
 
         for each_file in os.listdir(real_path):
             if each_file in excluded_files:
+                continue
+
+            if each_file.startswith('._'):
                 continue
 
             full_path = "{}/{}".format(real_path, each_file)

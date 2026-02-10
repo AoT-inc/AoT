@@ -240,7 +240,8 @@ OUTPUT_INFORMATION = {
         },
         {
             'id': 'status_update_period',
-            'type': 'integer',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 300,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'required': True,

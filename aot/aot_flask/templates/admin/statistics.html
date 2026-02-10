@@ -6,8 +6,8 @@
 {% block title %} - {{_('Statistics')}}{% endblock %}
 
 {% block settings %}
-  <!-- 경로: /admin/statistics -->
-  <p><u>{{_('수집된 통계')}}</u></p>
+  <!-- Path: /admin/statistics -->
+  <p><u>{{_('Collected Statistics')}}</u></p>
   {% for key, value in statistics.items() if key != 'stat' %}
     <div>{{ key }}: {{ value }}</div>
   {% endfor %}

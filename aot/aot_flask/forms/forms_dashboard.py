@@ -23,13 +23,13 @@ class DashboardBase(FlaskForm):
     choices_widgets = []
     dict_widgets = parse_widget_information()
     list_widgets_sorted = generate_form_widget_list(dict_widgets)
-    choices_widgets.append(('', lazy_gettext('위젯 추가')))
+    choices_widgets.append(('', lazy_gettext('Add Widget')))
 
     for each_widget in list_widgets_sorted:
         choices_widgets.append((each_widget, dict_widgets[each_widget]['widget_name']))
 
     widget_type = SelectField(
-        '대시보드 위젯 유형',
+        lazy_gettext('Dashboard Widget Type'),
         choices=choices_widgets,
         validators=[DataRequired()]
     )
@@ -38,32 +38,32 @@ class DashboardBase(FlaskForm):
     widget_id = StringField('Widget ID', widget=widgets.HiddenInput())
 
     name = StringField(
-        '이름',
+        lazy_gettext('Name'),
         validators=[DataRequired()]
     )
-    font_em_name = DecimalField('글꼴 크기(em)')
+    font_em_name = DecimalField(lazy_gettext('Font Size (em)'))
     refresh_duration = IntegerField(
-        '새로고침 간격 (초)',
+        lazy_gettext('Refresh Duration (sec)'),
         validators=[validators.NumberRange(
             min=1,
-            message='새로고침 간격은 최소 1초 이상이어야 합니다.'
+            message=lazy_gettext('Refresh duration must be at least 1 second.')
         )],
         widget=NumberInput()
     )
-    enable_drag_handle = BooleanField('드래그 핸들 활성화')
-    widget_add = SubmitField('추가')
-    widget_mod = SubmitField('저장')
-    widget_delete = SubmitField('삭제')
-    widget_duplicate = SubmitField('복제')
+    enable_drag_handle = BooleanField(lazy_gettext('Enable Drag Handle'))
+    widget_add = SubmitField(lazy_gettext('Add'))
+    widget_mod = SubmitField(lazy_gettext('Save'))
+    widget_delete = SubmitField(lazy_gettext('Delete'))
+    widget_duplicate = SubmitField(lazy_gettext('Duplicate'))
 
 class DashboardConfig(FlaskForm):
     dashboard_id = StringField('Dashboard ID', widget=widgets.HiddenInput())
     name = StringField(
-        '이름',
+        lazy_gettext('Name'),
         validators=[DataRequired()]
     )
-    lock = SubmitField('잠금')
-    unlock = SubmitField('잠금 해제')
-    dash_modify = SubmitField('저장')
-    dash_delete = SubmitField('삭제')
-    dash_duplicate = SubmitField('복제')
+    lock = SubmitField(lazy_gettext('Lock'))
+    unlock = SubmitField(lazy_gettext('Unlock'))
+    dash_modify = SubmitField(lazy_gettext('Save'))
+    dash_delete = SubmitField(lazy_gettext('Delete'))
+    dash_duplicate = SubmitField(lazy_gettext('Duplicate'))

@@ -129,10 +129,10 @@ output_fields = api.model('Output Device Fields', {
     'interface': fields.String,
     'location': fields.String,
     'i2c_location': fields.String,
-    'i2c_bus': fields.Integer,
+    'i2c_bus': fields.Raw,
     'ftdi_location': fields.String,
     'uart_location': fields.String,
-    'baud_rate': fields.Integer,
+    'baud_rate': fields.Raw,
     'custom_options': fields.String
 })
 

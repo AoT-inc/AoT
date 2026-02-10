@@ -154,7 +154,8 @@ def capable_camera_type(cam_type, unique_id, error):
                 return True, error
 
         elif cam_type == 'stream':
-            if camera and CAMERA_INFO[camera.library]['capable_stream']:
+            if camera and (CAMERA_INFO[camera.library]['capable_stream'] or
+                           CAMERA_INFO[camera.library].get('client_side_stream')):
                 return True, error
             elif (function and function.device in dict_function and
                     'camera_stream' in dict_function[function.device] and
@@ -256,6 +257,17 @@ WIDGET_INFORMATION = {
             'phrase': 'Select how to display the image'
         },
         {
+            'id': 'stream_method',
+            'type': 'select',
+            'default_value': 'relay',
+            'options_select': [
+                ('relay', '서버 릴레이 방식 (MJPEG)'),
+                ('direct', '클라이언트 직접 연결 방식 (HLS/Direct)')
+            ],
+            'name': 'Streaming Method',
+            'phrase': 'Select the streaming method'
+        },
+        {
             'id': 'max_age',
             'type': 'integer',
             'default_value': 1200,
@@ -265,7 +277,8 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
@@ -284,7 +297,13 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_title_bar': """<span style="padding-right: 0.5em; font-size: {{each_widget.font_em_name}}em">{% if widget_options['enable_timestamp'] %}<span id="{{each_widget.id}}-timestamp"></span> {% endif %}{{each_widget.name}}</span>""",
 
-    'widget_dashboard_body': """<span id="{{each_widget.id}}-error"></span></span><a id="{{each_widget.id}}-image-href" href="" target="_blank"><img id="{{each_widget.id}}-image-src" style="height: 100%; width: 100%" src=""></a>""",
+    'widget_dashboard_body': """
+<span id="{{each_widget.id}}-error"></span>
+<a id="{{each_widget.id}}-image-href" href="" target="_blank">
+  <img id="{{each_widget.id}}-image-src" style="height: 100%; width: 100%" src="">
+</a>
+<video id="{{each_widget.id}}-video" style="height: 100%; width: 100%; display: none;" controls muted autoplay playsinline></video>
+""",
 
     'widget_dashboard_js': """
   // Capture image and update the image
@@ -348,22 +367,127 @@ WIDGET_INFORMATION = {
   }
     
   // Repeat function for get_image_cam()
-  function repeat_get_image_cam(dashboard_id, camera_unique_id, period_sec, image_type, max_age) {
+  function repeat_get_image_cam(dashboard_id, camera_unique_id, period_sec, image_type, max_age, stream_method) {
+    const imgEl = document.getElementById(dashboard_id + "-image-src");
+    const videoEl = document.getElementById(dashboard_id + "-video");
+    const hrefEl = document.getElementById(dashboard_id + "-image-href");
+
     if (image_type === 'stream') {
-      document.getElementById(dashboard_id + "-image-src").src = "/video_feed/" + camera_unique_id;
+        // Fetch camera info to get url_stream and library
+        $.ajax('/api/cameras/info/' + camera_unique_id, {
+          headers: { 'X-API-KEY': '{{ current_user.api_key }}', 'Accept': 'application/vnd.aot.v1+json' },
+          success: function(data) {
+            const stream_url = data.url_stream;
+            const library = data.library;
+            
+            if (stream_method === 'direct' || library === 'stream_direct') {
+              if (stream_url) {
+                const user = data.auth_username;
+                const pass = data.auth_password;
+                let authHeader = null;
+                if (user && pass) {
+                  authHeader = 'Basic ' + btoa(user + ':' + pass);
+                }
+
+                if (stream_url.endsWith('.m3u8')) {
+                  // HLS playback
+                  imgEl.style.display = 'none';
+                  hrefEl.style.display = 'none';
+                  videoEl.style.display = 'block';
+                  
+                  const hlsConfig = {};
+                  if (authHeader) {
+                    hlsConfig.xhrSetup = function(xhr, url) {
+                      xhr.setRequestHeader('Authorization', authHeader);
+                    };
+                  }
+
+                  if (window.Hls) {
+                    var hls = new Hls(hlsConfig);
+                    hls.loadSource(stream_url);
+                    hls.attachMedia(videoEl);
+                  } else {
+                    // Wait for Hls to load and retry
+                    var retryCount = 0;
+                    var interval = setInterval(function() {
+                      if (window.Hls) {
+                        var hls = new Hls(hlsConfig);
+                        hls.loadSource(stream_url);
+                        hls.attachMedia(videoEl);
+                        clearInterval(interval);
+                      } else if (retryCount > 10) {
+                        clearInterval(interval);
+                        if (document.getElementById(dashboard_id + "-error")) document.getElementById(dashboard_id + "-error").innerHTML = "Error: HLS library failed to load<br>";
+                      }
+                      retryCount++;
+                    }, 500);
+                  }
+                  // Direct MJPEG or other direct URL
+                  let isRtsp = stream_url.startsWith('rtsp:') || stream_url.startsWith('rtsps:');
+                  
+                  if (isRtsp) {
+                    imgEl.style.display = 'none';
+                    hrefEl.style.display = 'none';
+                    videoEl.style.display = 'none';
+                    if (document.getElementById(dashboard_id + "-error")) {
+                      document.getElementById(dashboard_id + "-error").innerHTML = "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead.<br>";
+                    }
+                    return;
+                  }
+
+                  imgEl.style.display = 'block';
+                  hrefEl.style.display = 'block';
+                  videoEl.style.display = 'none';
+                  
+                  // For direct image/mjpeg, we can try to use URL credentials if headers aren't easily supported via <img>
+                  let finalUrl = stream_url;
+                  if (user && pass && stream_url.startsWith('http')) {
+                    const urlObj = new URL(stream_url);
+                    urlObj.username = user;
+                    urlObj.password = pass;
+                    finalUrl = urlObj.toString();
+                  }
+                  imgEl.src = finalUrl;
+                  hrefEl.href = finalUrl;
+                }
+              } else {
+                 if (document.getElementById(dashboard_id + "-error")) document.getElementById(dashboard_id + "-error").innerHTML = "Error: No streaming URL configured<br>";
+              }
+            } else {
+              // Relay mode (MJPEG via flask)
+              imgEl.style.display = 'block';
+              hrefEl.style.display = 'block';
+              videoEl.style.display = 'none';
+              imgEl.src = "/video_feed/" + camera_unique_id;
+              hrefEl.href = "/video_feed/" + camera_unique_id;
+            }
+          },
+          error: function() {
+            if (document.getElementById(dashboard_id + "-error")) document.getElementById(dashboard_id + "-error").innerHTML = "Error fetching camera info<br>";
+          }
+        });
       if (document.getElementById(dashboard_id + "-timestamp")) document.getElementById(dashboard_id + "-timestamp").innerHTML = 'Live Stream';
     } else {
+      imgEl.style.display = 'block';
+      hrefEl.style.display = 'block';
+      videoEl.style.display = 'none';
       get_image_cam(dashboard_id, camera_unique_id, image_type, max_age);
       setInterval(function () {get_image_cam(dashboard_id, camera_unique_id, image_type, max_age)}, period_sec * 1000);
     }
   }
 """,
 
-    'widget_dashboard_js_ready': """<!-- No JS ready content -->""",
+    'widget_dashboard_js_ready': """
+  if (typeof Hls === 'undefined') {
+    var script = document.createElement('script');
+    script.src = "https://cdn.jsdelivr.net/npm/hls.js@latest";
+    document.head.appendChild(script);
+  }
+""",
 
     'widget_dashboard_js_ready_end': """
 $(function() {
-  repeat_get_image_cam('{{each_widget.id}}', '{{widget_options['camera_id']}}', {{widget_options['refresh_seconds']}}, '{{widget_options['camera_image_type']}}', {{widget_options['max_age']}});
+  repeat_get_image_cam('{{each_widget.id}}', '{{widget_options['camera_id']}}', {{widget_options['refresh_seconds'] or 30}}, '{{widget_options['camera_image_type']}}', {{widget_options['max_age'] or 1200}}, '{{widget_options['stream_method'] or 'relay'}}');
 });
 """
 }

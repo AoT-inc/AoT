@@ -10,7 +10,7 @@ import flask_login
 from flask import (current_app, jsonify, redirect, render_template, request,
                    url_for)
 from flask.blueprints import Blueprint
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from aot.config import INSTALL_DIRECTORY, PATH_1WIRE
 from aot.databases.models import (PID, Actions, Camera, Conditional,
@@ -18,11 +18,12 @@ from aot.databases.models import (PID, Actions, Camera, Conditional,
                                      DeviceMeasurements, DisplayOrder, Input,
                                      InputChannel, Measurement, Method, Misc,
                                      Output, OutputChannel, Trigger, Unit,
-                                     User)
+                                     User, GeoMap, GeoShape)
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import forms_action, forms_input
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import utils_action, utils_general, utils_input
+from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.utils.actions import parse_action_information
 from aot.utils.inputs import parse_input_information
@@ -38,6 +39,32 @@ blueprint = Blueprint('routes_input',
                       __name__,
                       static_folder='../static',
                       template_folder='../templates')
+
+def _load_map_overlays(map_uuid):
+    collection = {'type': 'FeatureCollection', 'features': []}
+    if not map_uuid:
+        return collection
+    try:
+        overlays = GeoShape.query.filter_by(geo_id=map_uuid).all()
+        features = []
+        for ov in overlays:
+            if not ov or not ov.feature:
+                continue
+            feat = ov.feature
+            props = feat.get('properties', {}) or {}
+            # Inject hierarchy metadata
+            if 'level_id' not in props:
+                props['level_id'] = ov.level_id
+            if 'channel_id' not in props:
+                props['channel_id'] = ov.channel_id
+            feat['properties'] = props
+            features.append(feat)
+            
+        if features:
+            collection['features'] = features
+    except Exception:
+        pass
+    return collection
 
 
 @blueprint.context_processor
@@ -283,33 +310,28 @@ def page_input():
                 )
 
     # Compile a list of 1-wire devices (using ow-shell)
+    # Cached to improve performance
+    from aot.aot_flask.utils.utils_cache_hardware import get_cached_1wire_devices
     devices_1wire_ow_shell = []
-    if not Input.query.filter(Input.device == "DS18B20_OWS").count():
-        pass
-    elif current_app.config['TESTING']:
-        logger.debug("Testing: Skipping testing for 'ow-shell'")
-    elif not dpkg_package_exists('ow-shell'):
-        logger.debug("Package 'ow-shell' not found")
-    else:
-        logger.debug("Package 'ow-shell' found")
-        try:
-            test_cmd = subprocess.check_output(['owdir']).splitlines()
-            for each_ow in test_cmd:
-                str_ow = re.sub("\ |\/|\'", "", each_ow.decode("utf-8"))  # Strip / and '
-                if '.' in str_ow and len(str_ow) == 15:
-                    devices_1wire_ow_shell.append(str_ow)
-        except Exception:
-            logger.error("Error finding 1-wire devices with 'owdir'")
+    if Input.query.filter(Input.device == "DS18B20_OWS").count():
+        devices_1wire_ow_shell = get_cached_1wire_devices()
 
     # Find FTDI devices
-    ftdi_devices = []
-    if not current_app.config['TESTING']:
-        for each_input_dev in input_dev:
-            if each_input_dev.interface == "FTDI":
-                from aot.devices.atlas_scientific_ftdi import \
-                    get_ftdi_device_list
-                ftdi_devices = get_ftdi_device_list()
-                break
+    # Cached to improve performance
+    from aot.aot_flask.utils.utils_cache_hardware import get_cached_ftdi_devices
+    ftdi_devices = get_cached_ftdi_devices()
+
+    # 지도 목록 (입력/옵션 공통)
+    map_configs = []
+    map_config_id = ''
+    try:
+        map_configs = GeoMap.query.filter(
+            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
+        ).all()
+    except Exception:
+        map_configs = []
+
+    map_overlays = {"type": "FeatureCollection", "features": []}
 
     if not input_type:
         return render_template('pages/input.html',
@@ -336,6 +358,8 @@ def page_input():
                                dict_measurements=dict_measurements,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
+                               map_configs=map_configs,
+                               map_config_id=map_config_id,
                                form_actions=form_actions,
                                form_add_input=form_add_input,
                                form_mod_input=form_mod_input,
@@ -358,8 +382,20 @@ def page_input():
                                table_trigger=Trigger,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
-                               devices_1wire=devices_1wire)
+                               devices_1wire=devices_1wire,
+                               map_overlays=map_overlays)
     elif input_type == 'entry':
+        if not each_input:
+            return "Input not found", 404
+
+        map_configs = []
+        map_config_id = ''
+        try:
+            map_configs = GeoMap.query.filter(
+                or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
+            ).all()
+        except Exception:
+            map_configs = []
         return render_template('pages/data_options/input_entry.html',
                                and_=and_,
                                action=action,
@@ -388,6 +424,8 @@ def page_input():
                                form_actions=form_actions,
                                form_add_input=form_add_input,
                                form_mod_input=form_mod_input,
+                               map_configs=map_configs,
+                               map_config_id=map_config_id,
                                ftdi_devices=ftdi_devices,
                                input_channel=input_channel,
                                input_templates=input_templates,
@@ -407,9 +445,34 @@ def page_input():
                                table_trigger=Trigger,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
-                               devices_1wire=devices_1wire)
+                               devices_1wire=devices_1wire,
+                               map_overlays=map_overlays)
     elif input_type == 'options':
+        map_configs = []
+        try:
+            map_configs = GeoMap.query.filter(
+                or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
+            ).all()
+        except Exception:
+            map_configs = []
+        map_config_id = ''
+        map_overlays = {"type": "FeatureCollection", "features": []}
+        if each_input:
+            map_cfg = ensure_map_config(
+                each_input.map_config_id,
+                each_input.name,
+                each_input.latitude,
+                each_input.longitude
+            )
+            if each_input.map_config_id != map_cfg.unique_id:
+                each_input.map_config_id = map_cfg.unique_id
+                each_input.save()
+            map_config_id = map_cfg.unique_id
+            map_overlays = _load_map_overlays(map_cfg.unique_id)
+
         return render_template('pages/data_options/input_options.html',
+                               map_configs=map_configs,
+                               map_config_id=map_config_id,
                                and_=and_,
                                action=action,
                                choices_actions=choices_actions,
@@ -456,7 +519,8 @@ def page_input():
                                table_trigger=Trigger,
                                user=user,
                                devices_1wire_ow_shell=devices_1wire_ow_shell,
-                               devices_1wire=devices_1wire)
+                               devices_1wire=devices_1wire,
+                               map_overlays=map_overlays)
     elif input_type == 'actions':
         return render_template('pages/actions.html',
                                and_=and_,

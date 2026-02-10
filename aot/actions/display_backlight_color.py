@@ -11,7 +11,7 @@ from aot.utils.database import db_retrieve_table_daemon
 
 ACTION_INFORMATION = {
     'name_unique': 'display_backlight_color',
-    'name': "{}: {}: {}".format(TRANSLATIONS['display']['title'], lazy_gettext('Backlight'), lazy_gettext('Color')),
+    'name': lazy_gettext('Display: Backlight: Color'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

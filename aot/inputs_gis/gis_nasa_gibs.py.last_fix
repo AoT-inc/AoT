@@ -1,0 +1,234 @@
+# coding=utf-8
+import datetime
+from aot.inputs_gis.base_input_gis import AbstractGisInput
+from flask_babel import lazy_gettext as lg
+
+# 채널 정의 (Zoom Level 차이를 주의해야 함)
+CHANNELS = {
+    0: {
+        'name': 'MODIS Terra TrueColor',
+        'options': {
+            'layer': 'MODIS_Terra_CorrectedReflectance_TrueColor',
+            'ext': 'jpg',
+            'tilematrixset': 'GoogleMapsCompatible_Level9',
+            'maxNativeZoom': 9
+        }
+    },
+    1: {
+        'name': 'VIIRS SNPP TrueColor',
+        'options': {
+            'layer': 'VIIRS_SNPP_CorrectedReflectance_TrueColor',
+            'ext': 'jpg',
+            'tilematrixset': 'GoogleMapsCompatible_Level9',
+            'maxNativeZoom': 9
+        }
+    },
+    2: {
+        'name': 'Blue Marble (Precip)',
+        'options': {
+            'layer': 'BlueMarble_NextGeneration',
+            'ext': 'jpg',
+            'tilematrixset': 'GoogleMapsCompatible_Level8',
+            'maxNativeZoom': 8
+        }
+    },
+    3: {
+        'name': 'Soil Moisture (SMAP)',
+        'options': {
+            'layer': 'SMAP_L4_SM_aup_RootZone_Soil_Moisture',
+            'ext': 'png',
+            'tilematrixset': 'GoogleMapsCompatible_Level6',
+            'maxNativeZoom': 6,
+            'format': 'image/png'
+        }
+    },
+    4: {
+        'name': 'Vegetation Index (NDVI)',
+        'options': {
+            'layer': 'MODIS_Terra_NDVI_8Day',
+            'ext': 'png',
+            'tilematrixset': 'GoogleMapsCompatible_Level9',
+            'maxNativeZoom': 9
+        }
+    },
+    5: {
+        'name': 'Land Surface Temp (Day)',
+        'options': {
+            'layer': 'MODIS_Terra_Land_Surface_Temp_Day',
+            'ext': 'png',
+            'tilematrixset': 'GoogleMapsCompatible_Level8',
+            'maxNativeZoom': 8
+        }
+    }
+}
+
+INPUT_INFORMATION = {
+    'input_name_unique': 'gis_nasa_gibs',
+    'input_manufacturer': 'NASA',
+    'message': lg('미국 항공우주국(NASA)의 위성 관측 시스템(GIBS)을 통해 수집된 실시간 지구 관측 지도입니다. 위성 사진(Blue Marble)뿐만 아니라 기온, 구름, 화재 등 환경 관련 데이터를 날짜별로 선택하여 시계열 분석이 가능합니다.'),
+    'input_name': 'NASA GIBS',
+    'input_library': 'gis_nasa_gibs',
+    'measurements_name': 'Status',
+    'measurements_dict': {
+        'status': {
+            'measurement': 'status',
+            'unit': 'enabled',
+            'name': 'Status'
+        }
+    },
+    'url_manufacturer': 'https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs',
+    'attribution': 'NASA EOSDIS GIBS',
+    'options_enabled': ['custom_options'],
+    'options_disabled': ['period', 'measurements_delay'],
+    'layer_role': 'base',
+    'custom_options': [
+        {
+            'id': 'active_channels',
+            'type': 'channel_selector',
+            'name': 'Satellite Layer',
+            'channel_def': CHANNELS,
+            'default': [0],
+            'multiple': False
+        },
+        {
+            'id': 'target_date',
+            'type': 'text',
+            'name': 'Target Date (YYYY-MM-DD)',
+            'default': '',
+            'description': 'Leave empty for dynamic daily update (Yesterday).'
+        }
+    ],
+    'dependencies_module': [],
+    # Template
+    'default_url': 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tilematrixset}/{z}/{y}/{x}.{ext}',
+    'layer_type': 'xyz', # Leaflet에서는 TileLayer(xyz)로 처리
+    'time_enabled': True,
+    'leaflet_options': {
+        'minZoom': 1,
+        'bounds': [[-85.05112877980659,-180], [85.05112877980659,180]],
+        'errorTileUrl': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+        'time': 'default' # Frontend에서 교체될 placeholder
+    }
+}
+
+class InputModule(AbstractGisInput):
+    def __init__(self, input_dev, testing=False):
+        super(InputModule, self).__init__(input_dev, testing=testing, name=__name__)
+        self.layer_type = 'tile'
+        self.layer_category = 'base'
+        self.default_url = INPUT_INFORMATION['default_url']
+        self.attribution = INPUT_INFORMATION['attribution']
+        self.time_enabled = True
+
+    def _get_active_channel_config(self):
+        """
+        현재 선택된 채널의 설정(옵션)을 반환하는 헬퍼 메소드
+        """
+        active_channels = self.get_custom_option('active_channels')
+        
+        layer_id = 0 # Default ID
+        
+        if active_channels:
+            if isinstance(active_channels, list):
+                if len(active_channels) > 0:
+                    layer_id = int(active_channels[0])
+            else:
+                try:
+                    layer_id = int(active_channels)
+                except:
+                    pass
+                    
+        return CHANNELS.get(layer_id, CHANNELS[0])
+
+    def get_url(self):
+        """
+        Leaflet에 전달할 URL 템플릿을 생성합니다.
+        {layer}, {ext}, {tilematrixset}은 여기서 확정되고,
+        {time}, {z}, {x}, {y}는 프론트엔드나 Leaflet이 처리하도록 남겨둡니다.
+        """
+        conf = self._get_active_channel_config()
+        opts = conf.get('options', {})
+        
+        # URL 생성
+        url = self.default_url.replace('{layer}', opts.get('layer', '')) \
+                              .replace('{ext}', opts.get('ext', '')) \
+                              .replace('{tilematrixset}', opts.get('tilematrixset', ''))
+        
+        return url
+
+    def get_legend(self):
+        """
+        Generate Dynamic Legend for Active Channel
+        """
+        conf = self._get_active_channel_config()
+        layer_name = conf.get('name', 'Satellite')
+        
+        # Determine Legend Type based on layer name or ID
+        # Here we only add specific legend for Soil Moisture as others are RGB
+        
+        legend_data = None
+        
+        if 'Soil Moisture' in layer_name:
+            # Soil Moisture Gradient (Approximation)
+            # Typically: Dry (White/Yellow) -> Wet (Blue)
+            legend_data = {
+                'type': 'html',
+                'content': '<div class="aot-legend-wrapper">' + 
+                           '  <div class="aot-legend-content">' +
+                           '    <div class="aot-legend-title">Soil Moisture (m³/m³)</div>' + 
+                           '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #ffffe5, #f7fcb9, #addd8e, #41ab5d, #238443, #005a32);"></div>' +
+                           '    <div class="aot-legend-labels"><span>Dry (0)</span><span>Wet (0.6)</span></div>' +
+                           '  </div>' +
+                           '  <div class="aot-legend-value-box" data-api-param="none" data-unit="m³/m³">' +
+                           '    <div class="aot-legend-value-text">-</div>' +
+                           '    <div class="aot-legend-value-unit">m³/m³</div>' +
+                           '  </div>' +
+                           '</div>'
+            }
+            
+        return legend_data
+
+    def _get_default_date(self):
+        """
+        NASA GIBS는 실시간 업로드가 아니므로,
+        데이터가 확실히 존재하는 '어제' 날짜를 기본값으로 사용합니다.
+        """
+        yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+        return yesterday.strftime('%Y-%m-%d')
+
+
+    def get_leaflet_options(self):
+        """
+        Leaflet 옵션을 반환합니다. 
+        선택된 채널에 따라 maxNativeZoom이 변경됩니다.
+        """
+        # 부모 클래스의 기본 옵션 가져오기
+        options = super(InputModule, self).get_leaflet_options()
+        
+        # 현재 채널 설정 가져오기
+        config = self._get_active_channel_config()
+        
+        # INPUT_INFORMATION의 기본값 + 동적 값 병합
+        base_options = INPUT_INFORMATION['leaflet_options'].copy()
+        
+        # 채널별 Zoom Level 적용
+        base_options['maxNativeZoom'] = config.get('maxNativeZoom', 9)
+        base_options['tilematrixset'] = config.get('tilematrixset', 'GoogleMapsCompatible_Level9')
+        
+        # [Backend Smart Time]
+        # 사용자 지정 시간('target_date')이 있다면 최우선 사용
+        user_date = self.get_custom_option('target_date')
+        
+        if user_date and len(str(user_date).strip()) > 0:
+            # 사용자가 설정한 값 (예: '2025-05-05')
+            base_options['time'] = str(user_date).strip()
+        else:
+            # 사용자 지정 값이 없으면 자동 계산 (Fallback)
+            if 'BlueMarble' in config['layer']:
+                 base_options['time'] = 'default'
+            else:
+                 base_options['time'] = self._get_default_date()
+        
+        options.update(base_options)
+        
+        return options

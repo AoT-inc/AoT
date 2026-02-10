@@ -27,12 +27,16 @@ if __name__ == '__main__':
     options.add_argument('-s', '--ssl', action='store_true',
                          help="Run Flask without SSL (Default: Enabled)")
 
+    options.add_argument('-p', '--port', type=int, default=None,
+                         help="Port to run on (Default: 443 for SSL, 80 for non-SSL)")
+
     args = parser.parse_args()
 
     debug = args.debug
 
     if args.ssl:
-        app.run(host='0.0.0.0', port=80, debug=debug)
+        port = args.port if args.port is not None else 80
+        app.run(host='0.0.0.0', port=port, debug=debug)
     else:
         # Locate the SSL certificates for forced-HTTPS
         file_path = os.path.abspath(__file__)
@@ -40,4 +44,5 @@ if __name__ == '__main__':
         cert = os.path.join(dir_path, "aot_flask/ssl_certs/server.crt")
         privkey = os.path.join(dir_path, "aot_flask/ssl_certs/server.key")
         context = (cert, privkey)
-        app.run(host='0.0.0.0', port=443, ssl_context=context, debug=debug)
+        port = args.port if args.port is not None else 443
+        app.run(host='0.0.0.0', port=port, ssl_context=context, debug=debug)

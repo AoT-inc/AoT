@@ -11,6 +11,13 @@ and adds it's configuration to them.
 from flask import app
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow  # must be imported after SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
+from flask_caching import Cache
 
 db = SQLAlchemy()
 ma = Marshmallow(app)
+csrf = CSRFProtect()
+cache = Cache(config={
+    'CACHE_TYPE': 'simple',  # In-memory cache
+    'CACHE_DEFAULT_TIMEOUT': 300  # 5 minutes default
+})

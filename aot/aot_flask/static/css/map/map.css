@@ -1,0 +1,1251 @@
+.aot-map {
+  min-height: 420px;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.aot-device-marker img {
+  display: block;
+}
+
+.aot-device-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0f9d58;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+}
+
+.aot-owm-layer {
+  filter: saturate(1.4) contrast(1.2) brightness(1.05);
+  mix-blend-mode: screen;
+  opacity: 0.95;
+}
+
+/* Base controls lowered to avoid overlap with custom UI, BUT Layer Control needs to be top */
+/* Base controls lowered to avoid overlap with custom UI */
+.aot-map .leaflet-top,
+.aot-map .leaflet-bottom,
+.aot-map .leaflet-control,
+.aot-map-container .leaflet-top,
+.aot-map-container .leaflet-bottom,
+.aot-map-container .leaflet-control {
+  z-index: 3000 !important;
+}
+
+/* [Fix] Layer Manager (Top Right) must float ABOVE everything (Legend/SiteList are ~3100) */
+.aot-map-container .leaflet-top.leaflet-right,
+.leaflet-top.leaflet-right {
+  z-index: 3500 !important;
+}
+
+/* [Fix] Ensure Layer Manager floats above everything (Legend/SiteList are ~3100) */
+.aot-map-container .leaflet-control-layers,
+.leaflet-control-layers {
+  z-index: 3500 !important;
+}
+
+/* pseudo fullscreen fallback */
+/* [Standardized Fullscreen Class] Matches aot-map-controls.js */
+.aot-map-pseudo-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 20000 !important; /* Above Navbar (12500) and same as Modals (20000) */
+  height: 100dvh !important;
+  width: 100vw !important;
+  background: #fff;
+}
+
+/* Fullscreen active state for body */
+body.aot-map-fullscreen-active {
+    overflow: hidden !important;
+}
+
+body.aot-map-fullscreen-active #dash-sticky,
+body.aot-map-fullscreen-active .navbar.main-navbar {
+    display: none !important;
+}
+
+/* Stacking context fix for parents (grid-stack) */
+body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
+    display: none !important;
+}
+
+.aot-fs-parent {
+    z-index: 50000 !important;
+    transform: none !important;
+    transition: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #fff !important;
+}
+
+.aot-map-pseudo-fullscreen-body {
+  overflow: hidden !important;
+}
+
+.aot-map-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.aot-map-attribution,
+.aot-map-attribution-placeholder,
+.aot-map-attribution-inline {
+  display: block;
+  margin-top: 6px;
+  width: 100%;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap !important; /* [Fix] V7: Force single line */
+  max-width: none !important; /* [Fix] V8: Prevent wrapping */
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+/* [Fix] V9: Aggressively force children (links, images) to be inline-block/inline */
+.aot-map-attribution *,
+.leaflet-control-attribution * {
+  display: inline-block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+  float: none !important;
+  vertical-align: middle !important;
+}
+
+.aot-map-attribution img,
+.leaflet-control-attribution img {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 4px !important; /* Proper spacing for copyright logo */
+}
+
+/* Explicit bottom-center override for inline attribution */
+.aot-map-attribution-inline {
+  position: absolute !important;
+  bottom: 0 !important;
+  top: auto !important;
+  right: auto !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 5px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 4px 4px 0 0;
+  z-index: 1000;
+  text-align: center;
+  pointer-events: auto;
+}
+
+.aot-map-attribution a,
+.aot-map-attribution-placeholder a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.section-stack .section-box {
+  margin-bottom: 0;
+}
+
+.aot-map-attribution .leaflet-control-attribution,
+.aot-map-attribution-placeholder .leaflet-control-attribution {
+  position: static !important;
+  display: inline;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+
+
+
+#map-tabs {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+#map-tabs .map-tab {
+  flex: 1 1 0;
+}
+
+#map-tabs .btn-map-tab {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Design Tabs Overrides */
+#designTabs .nav-link {
+  font-size: 1em;
+  color: #495057;
+  background-color: #f1f3f5;
+  /* Inactive Gray */
+  border-color: #dee2e6 #dee2e6 #ddd;
+}
+
+#designTabs .nav-link.active {
+  color: #007bff;
+  /* Active Blue */
+  background-color: #fff;
+  border-color: #dee2e6 #dee2e6 #fff;
+  font-weight: 600;
+}
+
+.btn-fixed-40 {
+  width: 40px !important;
+}
+
+.section-box {
+  padding: 0;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 25px;
+}
+
+.section-box h5 {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.map-container {
+  width: 100%;
+  height: 450px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  margin-top: 15px;
+}
+
+.color-dot {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-right: 5px;
+  border: 1px solid #ddd;
+}
+
+/* Collision Animation */
+.aot-map-text-marker {
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease-in-out;
+}
+
+
+.leaflet-bar.aot-map-action-group {
+  display: flex;
+  flex-direction: column !important;
+}
+
+.leaflet-bar.aot-map-action-group a,
+.leaflet-bar.aot-lock-toggle a {
+  width: 30px !important;
+  height: 30px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+}
+
+.leaflet-bar.aot-map-action-group a svg,
+.leaflet-bar.aot-lock-toggle a svg {
+  width: 16px;
+  height: 16px;
+  transform: translateY(-4px);
+}
+
+.leaflet-bar.aot-map-action-group .aot-action-fullscreen {
+  transform: translateY(-4px);
+}
+
+.map-marker-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-marker-glyph {
+  color: #fff;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  display: block;
+}
+
+.map-marker-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+:root {
+  --aot-surface: transparent;
+}
+
+/* --- New Utility Classes --- */
+/* aot-map-container-fluid inherits standard container-fluid padding */
+
+
+
+.aot-map-tabs-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 6px;
+  margin: 0 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.aot-gap-sm {
+  gap: 0.35em;
+}
+
+.aot-gap-md {
+  gap: 0.5em;
+}
+
+.aot-mt-lg {
+  margin-top: 1.6em;
+}
+
+.aot-entry-break {
+  width: 100%;
+}
+
+.aot-map-search-btn {
+  min-width: 60px;
+}
+
+.aot-map-search-results {
+  z-index: 1050;
+  display: none;
+  margin-top: 2px;
+  width: calc(100% - 70px);
+}
+
+.aot-color-input-sm {
+  width: 48px;
+  padding: 0;
+}
+
+.aot-color-input-custom {
+  max-width: 120px;
+}
+
+.aot-color-dot-btn {
+  padding: 0;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.aot-device-list-box {
+  max-height: 180px;
+  overflow: auto;
+  margin-top: 10px;
+}
+
+.aot-device-section-row {
+  margin-top: 10px;
+}
+
+.aot-map-option-controls-row {
+  padding: 0.5em 0;
+  margin-left: 0;
+  flex-wrap: wrap;
+  gap: 0.35em;
+}
+
+.aot-col-min-150 {
+  min-width: 150px;
+}
+
+.aot-col-min-90 {
+  min-width: 90px;
+}
+
+.aot-max-w-200 {
+  max-width: 200px;
+}
+
+/* Text Marker Styles */
+.aot-map-text-marker {
+  background: transparent;
+  border: none;
+  /* transform: translate(-50%, -50%); removed to prevent conflict with Leaflet */
+}
+
+.aot-map-text-marker .marker-pill {
+  display: inline-block;
+  padding: 6px 15px;
+  /* Width at 95% */
+  border-radius: 100px;
+  /* Capsule shape */
+  font-weight: 500;
+  /* Reduced weight */
+  font-size: 12px;
+  /* Base size reduced (~90% of 13px) */
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  /* Colors handled inline by JS */
+  transition: transform 0.2s;
+  transform: translate(-50%, -50%);
+  /* Correctly center the label */
+}
+
+.aot-map-text-marker:hover .marker-pill {
+  transform: translate(-50%, -50%) scale(1.1);
+  /* Preserve centering on hover */
+  z-index: 1000;
+}
+
+/* ==========================================================================
+   Map Controller Styles (Standardized from geo/design)
+   ========================================================================== */
+
+/* Map Tools Positioning inside Map Container */
+.map-tools-left,
+.map-tools-right {
+  position: absolute;
+  z-index: 3100; /* [Fix] Boosted above standard controls (3000) but below Layer Manager (3500) */
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Tool Group (Vertical Button Stack) */
+.tool-group {
+  display: flex;
+  flex-direction: column;
+  /* User Req: Panel Transparency shouldn't affect children. Use RGBA. */
+  background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.tool-group .btn {
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background-color: transparent;
+  /* Use parent bg */
+}
+
+.tool-group .btn:last-child {
+  border-bottom: none;
+}
+
+/* Circular Floating Button */
+.btn-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  /* [Fix] Use RGBA for background transparency to avoid fading icon content */
+  background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 1.0)) !important;
+  /* opacity: var(--panel-opacity, 1.0);  <-- REMOVED to prevent child fade */
+}
+
+/* Tool Alignment Override */
+.map-tools-left {
+  align-items: flex-start;
+}
+
+.map-tools-right {
+  align-items: flex-end;
+}
+
+/* Mobile Responsive Adjustments (Standard) */
+@media (max-width: 768px) {
+  .map-tools-left {
+    left: 10px !important;
+  }
+
+  .map-tools-right {
+    right: 10px !important;
+    /* [Fix] Adjust top position if needed, but 70px is fine relative to layer control */
+  }
+
+  /* [New] Mobile Margins for External Layer Control */
+  #external-layer-control {
+    top: 10px !important;
+    right: 10px !important;
+  }
+
+  /* [New] Mobile Margins for Legend (Leaflet Bottom Right) */
+  /* Target the specific control or container to reduce 20px -> 10px */
+  .leaflet-bottom.leaflet-right .leaflet-control {
+    margin-bottom: 20px !important;
+    margin-right: 10px !important;
+  }
+}
+
+/* [Fix] Map Search Overlay Layout - Centered with margins to clear side controls */
+.map-search-overlay {
+  position: absolute;
+  top: 10px;
+  left: 70px; /* Space for Left Tools */
+  right: 70px; /* Space for Right Tools */
+  width: calc(100% - 140px); /* Fill remaining space */
+  z-index: 13000; /* [Fix] Must be higher than Navbar (12500) */
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+}
+
+@media (max-width: 768px) {
+    .map-search-overlay {
+        left: 20px;
+        right: 20px;
+        width: calc(100% - 40px);
+    }
+}
+
+.map-search-overlay>* {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 600px;
+  /* Removed background/box-shadow overrides to allow component's native style (white pill) */
+  margin: 0 auto; /* Ensure centering works even if flex acts up */
+}
+
+/* [New] Standardized Legend Styles */
+.aot-map-container .leaflet-control.aot-legend-container,
+.aot-legend-container {
+  background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.95)) !important;
+  /* Ensure opacity matches panel */
+  padding: 10px 12px !important;
+  border: none !important; /* Removed border per user request */
+  border-radius: 12px !important; /* Match measurement panel */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  min-width: 200px;
+  max-width: 260px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* [Fix] Margin 32px for desktop to avoid attribution */
+  margin-bottom: 32px !important;
+  /* Remove default JS inline styles override */
+  height: auto !important;
+  min-height: 80px; 
+  max-height: 70vh !important;
+  z-index: 3100 !important;
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column-reverse; /* Stack upwards from bottom */
+  justify-content: flex-start;
+  gap: 15px;
+  scrollbar-width: thin;
+}
+
+.aot-legend-item-wrapper {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.aot-legend-item-wrapper:not(:first-child) {
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.aot-legend-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+  letter-spacing: -0.01em;
+}
+
+.aot-legend-bar {
+  height: 12px;
+  width: 100%;
+  border-radius: 6px;
+  /* Rounded pill shape */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  /* Subtle border */
+  margin-bottom: 4px;
+}
+
+.aot-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* [New] Legend Flex Layout (Value Display) */
+.aot-legend-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aot-legend-content {
+  flex: 1;
+  /* Takes remaining space */
+}
+
+/* Right side value box */
+.aot-legend-value-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  padding-left: 12px;
+  border-left: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.aot-legend-value-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
+}
+
+.aot-legend-value-unit {
+  font-size: 10px;
+  color: #888;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* [New] Mobile: Display values only AND stack vertically */
+@media (max-width: 768px) {
+  .aot-map-container .leaflet-control.aot-legend-container,
+  .aot-legend-container {
+    min-height: auto !important;
+    min-width: auto !important;
+    padding: 6px 10px !important;
+    max-width: 120px !important;
+    /* [Fix] Sit 4px above panel (60px panel + 32px bottom margin + 4px gap) */
+    margin-bottom: 96px !important;
+  }
+  
+  .aot-legend-title,
+  .aot-legend-bar,
+  .aot-legend-labels,
+  .aot-legend-content {
+    display: none !important;
+  }
+  
+  .aot-legend-item-wrapper:not(:first-child) {
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+  
+  .aot-legend-value-box {
+    border-left: none !important;
+    padding-left: 0 !important;
+    min-width: auto !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 4px;
+  }
+
+  .aot-legend-value-text {
+    font-size: 16px !important;
+  }
+}
+
+/* ==========================================================================
+   Widget & Label Styles (Consolidated from AoT_map.py)
+   ========================================================================== */
+
+.aot-map-widget-wrapper {
+  position: relative !important;
+  width: 100%;
+  height: 100%;
+  overflow: hidden !important;
+  background: #f8f9fa;
+}
+
+/* Hidden UI State */
+.aot-map-hidden-ui .leaflet-control-container .leaflet-control {
+  display: none !important;
+}
+
+.aot-map-hidden-ui .leaflet-control-container .leaflet-control.aot-map-hide-toggle-control {
+  display: block !important;
+}
+
+/* Device Label Styles - Reverse effect for ON state */
+.device-label {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  /* Let clicks pass to map */
+}
+
+/* --- New Overlay & Popup Styles (Migrated from JS) --- */
+/* [Fix] Targeted ID override for Site List Overlay Z-Index */
+#site-list-popover.aot-map-site-list-overlay,
+.aot-map-site-list-overlay {
+  display: none;
+  position: absolute;
+  left: 40px;
+  background: white;
+  z-index: 4100 !important; /* [Fix] Must be higher than Tooltips (4000) */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  max-height: 400px;
+  scrollbar-width: thin;
+  pointer-events: auto !important;
+}
+
+.aot-map-site-list-overlay.active {
+  display: block !important;
+}
+
+.aot-map-site-list-control-container {
+    position: relative;
+    overflow: visible !important;
+    z-index: 3100 !important; /* Ensure it's above all panels (Measurement Panel is 1400) */
+}
+
+.site-item {
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.site-item:hover {
+  background: #f0f0f0;
+}
+
+/* Memo Label Content */
+.memo-label-content {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border: 1px solid #3498db;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Common Map Button Icon */
+.aot-map-btn-icon {
+  color: #464646;
+  font-size: 14px;
+}
+
+/* Disabled State fo Controls */
+.leaflet-control button.disabled,
+.leaflet-control a.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Margins for Custom Controls */
+.aot-ml-10 {
+  margin-left: 10px !important;
+}
+
+.aot-mr-10 {
+  margin-right: 10px !important;
+}
+
+.aot-overflow-visible {
+  overflow: visible !important;
+}
+
+.device-label.device-on {
+  background-color: var(--device-label-color, #32c85a) !important;
+  border-color: var(--device-label-color, #32c85a) !important;
+  color: white !important;
+  font-weight: bold;
+}
+
+/* Site/Zone Labels - Hierarchy */
+
+/* [Fix] Boost tooltip z-index to appear above map controls (z-index 3100) */
+.tooltip {
+  z-index: 4000 !important;
+}
+.site-label {
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 0 0 3px white;
+}
+
+.zone-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: #444;
+}
+
+.length-label {
+  font-size: 10px;
+  color: #888;
+}
+
+/* Memo Label Styling */
+.memo-label div {
+  transition: transform 0.2s ease;
+}
+
+.memo-label:hover div {
+  transform: scale(1.05);
+  z-index: 1000;
+}
+
+/* Custom Leaflet Controls Enhancement */
+.leaflet-bar a.aot-map-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #555;
+}
+
+.leaflet-bar a.aot-map-control-btn.active {
+  background-color: #3498db;
+  color: white;
+  border-radius: 8px !important;
+  border: none !important;
+}
+
+/* ==========================================================================
+   Standardized Map Controls (Leaflet Native Match)
+   ========================================================================== */
+/* [Restored] Geo Design Button Standard - Minimal Override */
+/* [Restored] Geo Design Button Standard - Transparent Base */
+.leaflet-bar a.aot-custom-btn {
+    width: 32px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #464646;
+    background-color: transparent !important; /* Parent handles BG (Geo Setting) */
+    border-bottom: 1px solid rgba(0,0,0,0.1) !important; /* Subtle border */
+    text-decoration: none !important;
+    font-size: 14px;
+}
+
+/* Apply consistent size to Standard Leaflet Zoom Buttons */
+.leaflet-bar a {
+    width: 32px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    background-color: transparent !important; /* Parent handles BG */
+    border-bottom: 1px solid rgba(0,0,0,0.1) !important;
+    color: #464646 !important;
+}
+
+.leaflet-bar a:hover {
+     background-color: rgba(0,0,0,0.05) !important; /* Subtle hover */
+     color: #333 !important;
+}
+
+.leaflet-bar a:last-child {
+    border-bottom: none !important;
+}
+
+/* Active State - NO FORCED COLORS, just darker shade */
+.leaflet-bar a.aot-custom-btn.active,
+.leaflet-bar a.active {
+    background-color: rgba(0,0,0,0.1) !important; /* Subtle active state */
+    color: #000 !important;
+    box-shadow: inset 0 3px 5px rgba(0,0,0,0.1);
+}
+
+/* Override existing circular hacks if any remain */
+.leaflet-bar,
+.leaflet-bar.aot-custom-toolbar {
+    border-radius: 8px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+    border: none !important;
+    overflow: hidden; /* Ensure rounded corners clip children */
+    background-color: var(--panel-bg-rgba, #fff);
+}
+
+/* Specific fix for standard Zoom Control to ensure background */
+.leaflet-control-zoom {
+    background-color: var(--panel-bg-rgba, #fff);
+}
+
+/* Force Layer Control Toggle to match 30px standard (Leaflet default is 36px) */
+.leaflet-control-layers-toggle {
+    width: 32px !important;
+    height: 32px !important;
+    background-size: 18px 18px !important;
+    border-radius: 8px !important;
+}
+
+/* [Fix] Layer Control Styles - Enforce Geo Design Consistency */
+.leaflet-control-layers {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+    border-radius: 8px !important;
+    border: none !important;
+    background-color: var(--panel-bg-rgba, #fff) !important;
+    overflow: hidden; /* Clean corners */
+}
+
+.leaflet-control-layers-toggle {
+    width: 32px !important;
+    height: 32px !important;
+    background-size: 18px 18px !important;
+    border-radius: 8px !important;
+    background-color: transparent !important; /* Container handles BG */
+    transition: background-color 0.2s;
+}
+
+.leaflet-control-layers-toggle:hover {
+    background-color: #f8f9fa !important;
+}
+
+.leaflet-control-layers-expanded {
+    padding: 6px 10px !important;
+    color: #333;
+    min-width: 150px;
+}
+
+/* Ensure Touch devices also see 32px */
+.leaflet-touch .leaflet-control-layers-toggle {
+    width: 32px !important;
+    height: 32px !important;
+    background-size: 18px 18px !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+/* ==========================================================================
+   Measurement Panel Styles
+   ========================================================================== */
+/* Measurement Panel (Bottom Center) */
+.aot-measurement-panel {
+    position: absolute;
+    bottom: 32px !important; /* [Fix] 32px for desktop to avoid attribution */
+    left: 50% !important; /* Default: Centered */
+    right: auto !important;
+    margin: 0;
+    transform: translateX(-50%) !important; /* Default: Centered */
+    width: fit-content;
+    max-width: calc(100% - 20px); 
+    height: 80px; 
+    box-sizing: border-box;
+    user-select: none; /* [New] Prevent text selection during drag-scroll */
+    -webkit-user-select: none;
+    
+    /* Theme aware background */
+    background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    padding: 0; /* Padding moved to Pages */
+    z-index: 1400; /* Adjusted per user request */
+    
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start; /* Pages align start */
+    gap: 0; 
+    
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid var(--panel-border, rgba(0,0,0,0.05));
+    color: var(--panel-text, #333);
+
+    /* Horizontal Scroll for overflowing Pages */
+    overflow-x: auto;
+    white-space: nowrap;
+    
+    /* Animation */
+    animation: slideUp 0.3s ease-out;
+    scrollbar-width: none !important; /* [Fix] Hide scrollbar */
+    -ms-overflow-style: none !important;
+
+    /* [Fix] Removed scroll-snap for fluid scrolling */
+    scroll-snap-type: none !important;
+    scroll-behavior: smooth;
+    
+    /* [New] Consistent Height */
+    height: 80px !important; 
+    box-sizing: border-box;
+    padding: 0; /* Padding moved to Pages */
+
+    transition: left 0.3s ease, transform 0.3s ease, max-width 0.3s ease;
+}
+
+/* [New] Left-Alignment Class for Side-by-Side (Legend) */
+.aot-measurement-panel.left-aligned {
+    left: 10px !important;
+    transform: none !important;
+}
+/* Mobile Override for panel */
+@media (max-width: 768px) {
+    .aot-measurement-panel {
+        bottom: 32px !important; /* Match desktop 32px */
+        left: 50% !important; /* Mobile Default: Centered */
+        transform: translateX(-50%) !important;
+        max-width: calc(100% - 20px); /* Allow JS or default override */
+        height: 60px !important; /* [New] Reduced mobile height */
+    }
+    .aot-measurement-panel.left-aligned {
+        left: 10px !important;
+        transform: none !important;
+    }
+}
+/* [New] Page Container for Sliding */
+.aot-meas-page {
+    min-width: fit-content; /* [Fix] Allow page to be wider than container */
+    width: auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    scroll-snap-align: none !important;
+    padding: 0 5px; /* [Fix] Reduced to 5px to balance inner spacing */
+    box-sizing: border-box;
+}
+
+/* Ensure items don't shrink, triggering scroll */
+.aot-measurement-panel .aot-measurement-item,
+.aot-measurement-panel .aot-meas-separator {
+    flex-shrink: 0 !important;
+}
+
+/* Hide scrollbar for Chrome/Safari/Opera */
+.aot-measurement-panel::-webkit-scrollbar {
+    display: none;
+}
+
+.aot-measurement-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* scroll-snap-align: start;  Moved to Page */
+    flex: 1; /* Uniform width within page */
+    min-width: 0; 
+    padding: 0 2px; /* Slight padding */
+    box-sizing: border-box;
+    min-width: 90px; /* [Fix] Enforce minimum width for auto-sizing panel */
+}
+
+/* Desktop Constraint: Cap item width and center */
+@media (min-width: 769px) {
+    .aot-measurement-item {
+        max-width: 110px;
+    }
+}
+
+.aot-meas-value {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #333;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    
+    /* Truncation just in case */
+    max-width: 100%;
+    overflow: hidden;
+    /* text-overflow: ellipsis; Removed to allow font-resizing to take precedence */
+}
+
+.aot-meas-unit {
+    font-size: 0.5em;
+    font-weight: normal;
+    margin-left: 4px;
+    color: #555; /* Neutral color similar to name/legacy */
+}
+
+.aot-meas-unit-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.aot-meas-name {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.aot-meas-unit {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.aot-meas-separator {
+    height: 30px;
+    width: 1px;
+    background-color: #e0e0e0;
+    margin: 0 5px;
+    flex-shrink: 0;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .aot-measurement-panel {\n        bottom: 50px; /* Slightly lower on mobile but still above controls if stacked */
+        padding: 0 10px; /* Adjust padding for fixed height alignment */
+        justify-content: flex-start; /* Allow scroll from start */
+        /* Height remains 85px from main rule */
+    }
+    
+    /* [Mobile] Make measurement name more visible */
+    .aot-meas-name {
+        font-size: 0.85rem;  /* Increased from 0.75rem */
+        color: #555;         /* Darker from #888 */
+        font-weight: 600;    /* Bolder from 500 */
+        margin-top: 4px;     /* Add spacing from value */
+    }
+    
+}
+
+/* --- Geo Design Print Styles --- */
+@media print {
+    /* Hide Sidebars, Navbars, Floating Tools */
+    .sidebar, .navbar, .aot-footer, .map-tools-left, .map-tools-right, .mode-panel, #nav-mode-panel, .nav-v-panel, .aot-map-controls-container, .leaflet-control-zoom, .leaflet-control-layers {
+        display: none !important;
+    }
+
+    /* Expand Content to Full Width/Height */
+    body, html, .main-panel, .content, .container-fluid {
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* Specific Design Info Panel Styling */
+    #design-info-container {
+        position: static !important;
+        width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border: none !important;
+    }
+
+    /* Force Table Expansion (No Scrolling) */
+    .table-responsive {
+        overflow: visible !important;
+        display: block !important;
+        max-height: none !important;
+    }
+
+    /* Table Styling for Print */
+    table {
+        page-break-inside: auto;
+        width: 100% !important;
+    }
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    thead {
+        display: table-header-group;
+    }
+    tfoot {
+        display: table-footer-group;
+    }
+
+    /* Hide Site Selector and Helper Buttons */
+    #site-selector, .bootstrap-select, #btn-site-filter, .close-panel-btn {
+        display: none !important;
+    }
+
+    /* Hide Top Action Buttons (Edit/Delete/Save) */
+    #btn-edit-map-name, #btn-delete-map, #btn-save-global {
+        display: none !important;
+    }
+
+    /* Hide Data Processing Section (CSV/PDF Buttons) */
+    #section-data-processing {
+        display: none !important;
+    }
+
+    /* Show Print Footer */
+    .print-footer {
+        display: block !important;
+        page-break-before: avoid;
+        margin-top: 50px !important;
+        border-top: 1px solid #ddd;
+    }
+
+    /* Reset Panel Backgrounds */
+    .card, .card-body {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Adjust Font Sizes for Paper */
+    body {
+        font-size: 10pt;
+    }
+}

@@ -92,9 +92,14 @@ def add_update_csv(csv_file, key, value):
             writer.writerow(header)
             writer.writerows(temp_dict.items())
 
-        uid_gid = pwd.getpwnam('aot').pw_uid
-        os.chown(csv_file, uid_gid, uid_gid)
-        os.chmod(csv_file, 0o664)
+        try:
+            uid_gid = pwd.getpwnam('aot').pw_uid
+            os.chown(csv_file, uid_gid, uid_gid)
+            os.chmod(csv_file, 0o664)
+        except KeyError:
+            pass  # 'aot' user not found, skip chown
+        except Exception:
+            pass # Ignore permission errors in dev
         os.remove(temp_file_name)  # delete backed-up original
     except Exception as except_msg:
         logger.exception("Could not update stat csv: {}".format(except_msg))
@@ -120,9 +125,8 @@ def get_pi_revision():
                 length = len(line)
                 revision = line[11:length - 1]
         f.close()
-    except Exception as e:
-        logger.error("Exception in 'get_pi_revision' call. Error: "
-                     "{err}".format(err=e))
+    except Exception:
+        # Suppress errors on non-RPi systems (e.g. macOS)
         revision = "0000"
     return revision
 
@@ -182,19 +186,32 @@ def recreate_stat_file():
     if anonymous_id is not provided, generate one
 
     """
-    uid_gid = pwd.getpwnam('aot').pw_uid
+    try:
+        uid_gid = pwd.getpwnam('aot').pw_uid
+    except KeyError:
+        uid_gid = None
+
     if not os.path.isfile(ID_FILE):
         anonymous_id = get_anonymous_id()
         with open(ID_FILE, 'w') as write_file:
             write_file.write('{}'.format(anonymous_id))
-        os.chown(ID_FILE, uid_gid, uid_gid)
-        os.chmod(ID_FILE, 0o664)
+        if uid_gid:
+            try:
+                os.chown(ID_FILE, uid_gid, uid_gid)
+                os.chmod(ID_FILE, 0o664)
+            except Exception:
+                pass
+
+    try:
+        os_version = float(distro.linux_distribution()[1])
+    except ValueError:
+        os_version = 0.0
 
     new_stat_data = [
         ['stat', 'value'],
         ['id', get_anonymous_id()],
         ['uptime', 0.0],
-        ['os_version', float(distro.linux_distribution()[1])],
+        ['os_version', os_version],
         ['RPi_revision', get_pi_revision()],
         ['AoT_revision', AOT_VERSION],
         ['master_branch', int(os.path.exists(os.path.join(INSTALL_DIRECTORY, '.master')))],
@@ -223,8 +240,12 @@ def recreate_stat_file():
         write_csv = csv.writer(csv_stat_file)
         for row in new_stat_data:
             write_csv.writerow(row)
-    os.chown(STATS_CSV, uid_gid, uid_gid)
-    os.chmod(STATS_CSV, 0o664)
+    if uid_gid:
+        try:
+            os.chown(STATS_CSV, uid_gid, uid_gid)
+            os.chmod(STATS_CSV, 0o664)
+        except Exception:
+            pass
 
 
 def send_anonymous_stats(start_time):

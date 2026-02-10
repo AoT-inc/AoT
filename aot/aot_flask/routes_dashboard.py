@@ -14,7 +14,7 @@ from aot.databases.models import (PID, Camera, Conditional, Conversion,
                                      CustomController, Dashboard,
                                      DeviceMeasurements, Input, Measurement,
                                      Method, Misc, NoteTags, Output,
-                                     OutputChannel, Trigger, Unit, Widget)
+                                     OutputChannel, Trigger, Unit, Widget, GeoMap)
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import forms_dashboard
 from aot.aot_flask.routes_static import inject_variables
@@ -26,6 +26,20 @@ from aot.utils.system_pi import (
 from aot.utils.widgets import parse_widget_information
 
 logger = logging.getLogger('aot.aot_flask.routes_dashboard')
+
+# # [Temporary Debug] Redirect logs to a local file in the workspace
+# try:
+#     local_log_path = os.path.join(INSTALL_DIRECTORY, 'aot_map_debug.log')
+#     file_handler = logging.FileHandler(local_log_path)
+#     file_handler.setLevel(logging.INFO)
+#     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#     file_handler.setFormatter(formatter)
+#     logger.addHandler(file_handler)
+#     # Also add to the widget logger
+#     from aot.widgets import AoT_map
+#     AoT_map.logger.addHandler(file_handler)
+# except Exception as e:
+#     print(f"Failed to setup local debug log: {e}")
 
 blueprint = Blueprint('routes_dashboard',
                       __name__,
@@ -57,6 +71,66 @@ def save_dashboard_layout():
                 widget_mod.height = each_widget['h']
     db.session.commit()
     return "success"
+
+
+@blueprint.route('/save_widget_custom_options', methods=['POST'])
+@flask_login.login_required
+def save_widget_custom_options():
+    """Update custom_options for a specific widget via AJAX."""
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({"status": "forbidden"}), 403
+
+    try:
+        import json
+        data = request.get_json()
+        widget_id = data.get('widget_id')
+        new_options = data.get('options', {})
+        
+        logger.info(f"[AoT Map Debug] AJAX Save Order - Widget: {widget_id}, Options: {new_options}")
+
+        if not widget_id:
+            return jsonify({"status": "error", "message": "Missing widget_id"}), 400
+
+        widget = Widget.query.filter(Widget.unique_id == widget_id).first()
+        if not widget:
+            return jsonify({"status": "error", "message": "Widget not found"}), 404
+
+        # [Refactor] Use execute_at_modification if available to ensure logic consistency (e.g. field mapping)
+        try:
+            current_options = json.loads(widget.custom_options) if widget.custom_options else {}
+        except Exception:
+            current_options = {}
+
+        dict_widgets = parse_widget_information()
+        if widget.graph_type in dict_widgets and 'execute_at_modification' in dict_widgets[widget.graph_type]:
+             # Call widget-specific modification logic (haromizes AJAX and Form save paths)
+             logger.info(f"[AoT Map Debug] Calling execute_at_modification for {widget.unique_id}")
+             (allow_saving, 
+              page_refresh, 
+              widget, 
+              final_options) = dict_widgets[widget.graph_type]['execute_at_modification'](
+                 widget, None, current_options, new_options)
+             
+             if not allow_saving:
+                 logger.warning(f"[AoT Map Debug] Modification rejected for {widget.unique_id}")
+                 return jsonify({"status": "error", "message": "Modification rejected by widget"}), 400
+             
+             logger.info(f"[AoT Map Debug] Final Options to be saved: {final_options}")
+             widget.custom_options = json.dumps(final_options)
+        else:
+            # Fallback simple merge
+            logger.info(f"[AoT Map Debug] No execute_at_modification found, performing simple merge.")
+            current_options.update(new_options)
+            widget.custom_options = json.dumps(current_options)
+
+        logger.info(f"[AoT Map Debug] Committing to DB for {widget.unique_id}")
+        db.session.commit()
+        logger.info(f"[AoT Map Debug] Save successful for {widget.unique_id}")
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.exception("Error saving widget custom options")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 
@@ -133,13 +207,28 @@ def save_dashboard_order():
             pass
 
 
+@blueprint.route('/api/widget/aot_map/config_options', methods=['GET'])
+@flask_login.login_required
+def get_aot_map_config_options():
+    """Returns available measurements and devices for the AoT Map widget config dropdowns."""
+    try:
+        from aot.widgets import AoT_map
+        data = AoT_map._get_available_config_options()
+        return jsonify(data), 200
+    except Exception as e:
+        logger.error(f"Error fetching AoT Map config options: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @blueprint.route('/dashboard', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_dashboard_default():
-    """Load default dashboard."""
-    dashboard = Dashboard.query.first()
-    return redirect(url_for(
-        'routes_dashboard.page_dashboard', dashboard_id=dashboard.unique_id))
+    """Load default dashboard according to sort_order."""
+    dashboard = Dashboard.query.order_by(text("COALESCE(sort_order, 999999), id")).first()
+    if dashboard:
+        return redirect(url_for(
+            'routes_dashboard.page_dashboard', dashboard_id=dashboard.unique_id))
+    return redirect(url_for('routes_general.home'))
 
 
 @blueprint.route('/dashboard-add', methods=('GET', 'POST'))
@@ -156,6 +245,7 @@ def page_dashboard_add():
 @blueprint.route('/dashboard/<dashboard_id>', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_dashboard(dashboard_id):
+    logger.info(f"\n[DASHBOARD TRACE] Loading dashboard: {dashboard_id}\n")
     """Generate custom dashboard with various data."""
     # Retrieve tables from SQL database
     this_dashboard = Dashboard.query.filter(
@@ -181,6 +271,7 @@ def page_dashboard(dashboard_id):
     form_dashboard = forms_dashboard.DashboardConfig()
 
     if request.method == 'POST':
+
         unmet_dependencies = None
         if not utils_general.user_has_permission('edit_controllers'):
             return redirect(url_for('routes_general.home'))
@@ -263,12 +354,16 @@ def page_dashboard(dashboard_id):
     widgets_dash = Widget.query.filter(Widget.dashboard_id == dashboard_id).all()
     for each_dash_widget in widgets_dash:
         # Make list of widget types on this particular dashboard
+        meta = dict_widgets.get(each_dash_widget.graph_type)
+        if not meta:
+            logger.warning("Dashboard widget type not found: %s (widget id=%s)", each_dash_widget.graph_type, each_dash_widget.unique_id)
+            continue
         if each_dash_widget.graph_type not in widget_types_on_dashboard:
             widget_types_on_dashboard.append(each_dash_widget.graph_type)
 
         # Generate dictionary of returned values from widget modules on this particular dashboard
-        if 'generate_page_variables' in dict_widgets[each_dash_widget.graph_type]:
-            custom_widget_variables[each_dash_widget.unique_id] = dict_widgets[each_dash_widget.graph_type]['generate_page_variables'](
+        if 'generate_page_variables' in meta:
+            custom_widget_variables[each_dash_widget.unique_id] = meta['generate_page_variables'](
                 each_dash_widget.unique_id, custom_options_values_widgets[each_dash_widget.unique_id])
 
     # generate lists of html files to include in dashboard template
@@ -361,6 +456,7 @@ def page_dashboard(dashboard_id):
                            table_camera=Camera,
                            table_conditional=Conditional,
                            table_trigger=Trigger,
+                           table_geomap=GeoMap,
                            choices_camera=choices_camera,
                            choices_function=choices_function,
                            choices_input=choices_input,

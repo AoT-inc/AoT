@@ -31,7 +31,7 @@
 
   <div style="clear: both; padding: 1em 0;"></div>
 
-  {{_('출력 지속 시간으로 계산된 에너지 사용량. 생성됨:')}} {{timestamp}}
+  {{_('Energy usage calculated from output duration. Generated at')}}: {{timestamp}}
 
   <div style="clear: both; padding: 0.5em 0;"></div>
 
@@ -83,7 +83,7 @@
               </tr>
               <tr>
                 <td colspan="3"></td>
-                <td>{{_('비용')}} ({{misc.output_usage_currency}}, {{misc.output_usage_cost}}/kWh)</td>
+                <td>{{_('Cost')}} ({{misc.output_usage_currency}}, {{misc.output_usage_cost}}/kWh)</td>
                 <td>{{value[each_channel.unique_id]['1d']['cost']|round(2)}}</td>
                 <td>{{value[each_channel.unique_id]['1w']['cost']|round(2)}}</td>
                 <td>{{value[each_channel.unique_id]['1m']['cost']|round(2)}}</td>

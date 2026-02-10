@@ -34,13 +34,14 @@ from aot.config_devices_units import MEASUREMENTS
 from aot.config_devices_units import UNITS
 from aot.config_translations import TRANSLATIONS
 from aot.databases import set_api_key
-from aot.databases.models import Actions
+from aot.databases.models import APIKey, Actions
+from aot.databases.models import Conditional
 from aot.databases.models import Conversion
 from aot.databases.models import CustomController
 from aot.databases.models import Dashboard
 from aot.databases.models import DeviceMeasurements
 from aot.databases.models import DisplayOrder
-from aot.databases.models import Input
+from aot.databases.models import Input, InputChannel
 from aot.databases.models import Measurement
 from aot.databases.models import Misc
 from aot.databases.models import NoteTags
@@ -321,6 +322,13 @@ def user_mod(form):
                 "Cannot change currently-logged in user's role from Admin")
 
         if not messages["error"]:
+            # [Security] Prevent demoting the last Admin
+            if mod_user.role_id == 1 and form.role_id.data != 1:
+                admin_count = User.query.filter_by(role_id=1).count()
+                if admin_count <= 1:
+                     messages["error"].append(gettext("Cannot demote the last Administrator."))
+                     return messages, logout
+
             mod_user.role_id = form.role_id.data
             mod_user.theme = form.theme.data
             db.session.commit()
@@ -350,6 +358,14 @@ def user_del(form):
         try:
             user = User.query.filter(
                 User.unique_id == form.user_id.data).first()
+            
+            # [Security] Prevent deleting the last Admin
+            if user.role_id == 1:
+                admin_count = User.query.filter_by(role_id=1).count()
+                if admin_count <= 1:
+                    messages["error"].append(gettext("Cannot delete the last Administrator."))
+                    return messages
+
             user.delete()
             messages["success"].append('{action} {controller} {user}'.format(
                 action=TRANSLATIONS['delete']['title'],
@@ -359,6 +375,125 @@ def user_del(form):
             messages["error"].append(except_msg)
 
     return messages
+
+
+#
+# API Key Management
+#
+
+def api_key_add(form):
+    messages = {
+        "success": [], "info": [], "warning": [], "error": []
+    }
+    if form.validate():
+        new_key = APIKey()
+        new_key.name = form.name.data
+        new_key.provider = form.provider.data
+        new_key.key = form.key.data
+        new_key.url = form.url.data
+        new_key.tag = form.tag.data
+        new_key.description = form.description.data
+        try:
+            new_key.save()
+            messages["success"].append(_("API Key '{}' has been added.").format(new_key.name))
+        except Exception as e:
+            messages["error"].append(str(e))
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages["error"].append(f"{getattr(form, field).label.text}: {error}")
+    return messages
+
+
+def api_key_mod(form):
+    messages = {
+        "success": [], "info": [], "warning": [], "error": []
+    }
+    try:
+        mod_key = APIKey.query.filter(APIKey.unique_id == form.api_key_id.data).first()
+        if mod_key:
+            mod_key.name = form.name.data
+            mod_key.provider = form.provider.data
+            mod_key.key = form.key.data
+            mod_key.url = form.url.data
+            mod_key.tag = form.tag.data
+            mod_key.description = form.description.data
+            db.session.commit()
+            messages["success"].append(_("API Key '{}' has been modified.").format(mod_key.name))
+        else:
+            messages["error"].append(_("Could not find the API key to modify."))
+    except Exception as e:
+        messages["error"].append(str(e))
+    return messages
+
+
+def api_key_del(form):
+    messages = {
+        "success": [], "info": [], "warning": [], "error": []
+    }
+    try:
+        key_to_del = APIKey.query.filter(APIKey.unique_id == form.api_key_id.data).first()
+        if key_to_del:
+            name = key_to_del.name
+            key_to_del.delete()
+            messages["success"].append(_("API Key '{}' has been deleted.").format(name))
+        else:
+            messages["error"].append(_("Could not find the API key to delete."))
+    except Exception as e:
+        messages["error"].append(str(e))
+    return messages
+
+
+def get_api_key_usage(api_key_val):
+    """
+    Search for API key usage across various modules options.
+    Returns a list of dictionaries with usage details.
+    """
+    if not api_key_val:
+        return []
+
+    usage = []
+
+    # 1. Inputs
+    for item in Input.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            usage.append({'type': 'Input', 'name': item.name, 'id': item.unique_id})
+
+    # 2. Outputs
+    for item in Output.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            usage.append({'type': 'Output', 'name': item.name, 'id': item.unique_id})
+
+    # 3. Output Channels
+    for item in OutputChannel.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            parent = Output.query.filter(Output.unique_id == item.output_id).first()
+            p_name = parent.name if parent else "Unknown Output"
+            usage.append({'type': 'Channel', 'name': f"{p_name} - {item.name}", 'id': item.unique_id})
+
+    # 4. Custom Controllers (Functions)
+    for item in CustomController.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            usage.append({'type': 'Function', 'name': item.name, 'id': item.unique_id})
+
+    # 5. Actions
+    for item in Actions.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            usage.append({'type': 'Action', 'name': f"Action ({item.action_type})", 'id': item.unique_id})
+
+    # 6. Input Channels
+    for item in InputChannel.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            parent = Input.query.filter(Input.unique_id == item.input_id).first()
+            p_name = parent.name if parent else "Unknown Input"
+            usage.append({'type': 'Input Channel', 'name': f"{p_name} - {item.name}", 'id': item.unique_id})
+
+    # 7. Conditionals
+    for item in Conditional.query.all():
+        if item.custom_options and api_key_val in item.custom_options:
+            usage.append({'type': 'Conditional', 'name': item.name, 'id': item.unique_id})
+
+    return usage
 
 
 #
@@ -434,8 +569,10 @@ def settings_general_mod(form):
                 mod_misc.measurement_db_host = form.measurement_db_host.data
                 mod_misc.measurement_db_port = form.measurement_db_port.data
                 mod_misc.measurement_db_dbname = form.measurement_db_dbname.data
-                mod_misc.measurement_db_user = form.measurement_db_user.data
+                if form.measurement_db_user.data:
+                    mod_misc.measurement_db_user = form.measurement_db_user.data
                 if (form.measurement_db_password.data and
+                        form.measurement_db_password.data.strip() != '' and
                         form.measurement_db_password.data != mod_misc.measurement_db_password):
                     mod_misc.measurement_db_password = form.measurement_db_password.data
 
@@ -484,6 +621,124 @@ def settings_general_mod(form):
                         field=getattr(form, field).label.text,
                         err=error))
 
+    return messages
+
+
+def settings_map_mod(form):
+    """Modify common map location settings."""
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
+
+    if not form.validate():
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages["error"].append(
+                    gettext("Error in the %(field)s field - %(err)s",
+                            field=getattr(form, field).label.text,
+                            err=error))
+        return messages
+
+    lat = form.map_latitude.data
+    lng = form.map_longitude.data
+    label = form.map_location_label.data
+
+    # Require both or neither
+    if (lat is None) ^ (lng is None):
+        messages["error"].append(gettext("Enter both latitude and longitude, or leave both empty."))
+        return messages
+
+    try:
+        mod_misc = Misc.query.first()
+        if mod_misc is None:
+            messages["error"].append(gettext("Misc settings row not found"))
+            return messages
+
+        mod_misc.map_latitude = lat
+        mod_misc.map_longitude = lng
+        mod_misc.map_location_label = label or ''
+
+        db.session.commit()
+        messages["success"].append(gettext("Default map location has been saved."))
+    except Exception as except_msg:
+        messages["error"].append(str(except_msg))
+
+    return messages
+
+
+def settings_diagnostic_mod(form):
+    """
+    Placeholder for diagnostic settings handler.
+    Currently no diagnostic settings are persisted, so just validate and return.
+    """
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
+
+    if not form.validate():
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages["error"].append(
+                    gettext("Error in the %(field)s field - %(err)s",
+                            field=getattr(form, field).label.text,
+                            err=error))
+        return messages
+
+    # Regenerate widget HTML (settings/diagnostic button)
+    if getattr(form, "regenerate_widget_html", None) and form.regenerate_widget_html.data:
+        try:
+            settings_regenerate_widget_html()
+            flash(gettext("Widget HTML regeneration started."), "success")
+        except Exception as exc:
+            logger.exception("Error while regenerating widget HTML")
+            flash(gettext("Failed to regenerate widget HTML: %(err)s", err=exc), "error")
+        return messages
+
+    # Dispatch each button to its handler (one action per submit)
+    if getattr(form, "delete_dashboard_elements", None) and form.delete_dashboard_elements.data:
+        settings_diagnostic_delete_dashboard_elements()
+        return messages
+    if getattr(form, "delete_inputs", None) and form.delete_inputs.data:
+        settings_diagnostic_delete_inputs()
+        return messages
+    if getattr(form, "delete_notes_tags", None) and form.delete_notes_tags.data:
+        settings_diagnostic_delete_notes_tags()
+        return messages
+    if getattr(form, "delete_outputs", None) and form.delete_outputs.data:
+        settings_diagnostic_delete_outputs()
+        return messages
+    if getattr(form, "delete_settings_database", None) and form.delete_settings_database.data:
+        settings_diagnostic_delete_settings_database()
+        return messages
+    if getattr(form, "delete_file_dependency", None) and form.delete_file_dependency.data:
+        settings_diagnostic_delete_file('dependency')
+        return messages
+    if getattr(form, "delete_file_upgrade", None) and form.delete_file_upgrade.data:
+        settings_diagnostic_delete_file('upgrade')
+        return messages
+    if getattr(form, "recreate_influxdb_db_1", None) and form.recreate_influxdb_db_1.data:
+        settings_diagnostic_recreate_influxdb_db_1()
+        return messages
+    if getattr(form, "recreate_influxdb_db_2", None) and form.recreate_influxdb_db_2.data:
+        settings_diagnostic_recreate_influxdb_db_2()
+        return messages
+    if getattr(form, "reset_email_counter", None) and form.reset_email_counter.data:
+        settings_diagnostic_reset_email_counter()
+        return messages
+    if getattr(form, "install_dependencies", None) and form.install_dependencies.data:
+        settings_diagnostic_install_dependencies()
+        return messages
+    if getattr(form, "upgrade_master", None) and form.upgrade_master.data:
+        settings_diagnostic_upgrade_master()
+        return messages
+
+    messages["info"].append(gettext("No diagnostic settings to save."))
     return messages
 
 
@@ -1340,7 +1595,7 @@ def settings_unit_add(form):
         flash_form_errors(form)
 
 
-def settings_unit_mod(form):
+def settings_unit_mod(form, *_args, **_kwargs):
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['modify']['title'],
         controller=gettext("Unit"))
@@ -1473,7 +1728,7 @@ def settings_convert_add(form):
         flash_form_errors(form)
 
 
-def settings_convert_mod(form):
+def settings_convert_mod(form, *_args, **_kwargs):
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['modify']['title'],
         controller=gettext("Conversion"))
@@ -1504,6 +1759,38 @@ def settings_convert_mod(form):
 
     flash_success_errors(
         error, action, url_for('routes_settings.settings_measurement'))
+
+
+def settings_conversion_add(form, *_args, **_kwargs):
+    """
+    Compatibility wrapper for routes that still call the legacy name.
+    """
+    return settings_convert_add(form)
+
+
+def settings_conversion_mod(form, *_args, **_kwargs):
+    """
+    Compatibility wrapper for routes that still call the legacy name.
+    """
+    return settings_convert_mod(form)
+
+
+def choices_conversions(conversions, units):
+    """
+    Return a list of conversion choices for templates expecting this helper.
+    Format matches other choice helpers: [{'item': 'C_to_F', 'value': 'uuid'}, ...]
+    """
+    unit_lookup = {u.name_safe: u.name for u in units} if units else {}
+    choices = []
+    for conv in conversions:
+        from_label = unit_lookup.get(conv.convert_unit_from, conv.convert_unit_from)
+        to_label = unit_lookup.get(conv.convert_unit_to, conv.convert_unit_to)
+        label = f"{from_label}_to_{to_label}"
+        choices.append({
+            'item': label,
+            'value': conv.unique_id
+        })
+    return choices
 
 
 def settings_convert_del(unique_id):
@@ -1711,16 +1998,24 @@ def settings_alert_mod(form_mod_alert):
         if form_mod_alert.validate():
             mod_smtp = SMTP.query.one()
             if form_mod_alert.send_test.data:
-                send_email(
-                    mod_smtp.host, mod_smtp.protocol, mod_smtp.port,
-                    mod_smtp.user, mod_smtp.passw, mod_smtp.email_from,
-                    form_mod_alert.send_test_to_email.data,
-                    "This is a test email from AoT")
-                flash(gettext("Test email sent to %(recip)s. Check your "
-                              "inbox to see if it was successful.",
-                              recip=form_mod_alert.send_test_to_email.data),
-                      "success")
-                return redirect(url_for('routes_settings.settings_alerts'))
+                try:
+                    rc = send_email(
+                        mod_smtp.host, mod_smtp.protocol, mod_smtp.port,
+                        mod_smtp.user, mod_smtp.passw, mod_smtp.email_from,
+                        form_mod_alert.send_test_to_email.data,
+                        "This is a test email from AoT")
+                    if rc == 0:
+                        flash(gettext("Test email sent to %(recip)s. Check your "
+                                      "inbox to see if it was successful.",
+                                      recip=form_mod_alert.send_test_to_email.data),
+                              "success")
+                    else:
+                        flash(gettext("Test email failed. Please check SMTP host/port, protocol, and credentials."), "error")
+                    return redirect(url_for('routes_settings.settings_alerts'))
+                except Exception as exc:
+                    logger.exception("Test email failed")
+                    flash(gettext("Test email failed: %(err)s", err=exc), "error")
+                    return redirect(url_for('routes_settings.settings_alerts'))
             else:
                 mod_smtp.host = form_mod_alert.smtp_host.data
                 if form_mod_alert.smtp_port.data:
@@ -1733,6 +2028,16 @@ def settings_alert_mod(form_mod_alert):
                     mod_smtp.passw = form_mod_alert.smtp_password.data
                 mod_smtp.email_from = form_mod_alert.smtp_from_email.data
                 mod_smtp.hourly_max = form_mod_alert.smtp_hourly_max.data
+                # Gmail 호환을 위한 기본 포트/프로토콜 권장값 자동 설정 및 경고
+                if mod_smtp.host and 'gmail.com' in mod_smtp.host:
+                    if not mod_smtp.port:
+                        mod_smtp.port = 587  # STARTTLS
+                    if not mod_smtp.protocol:
+                        mod_smtp.protocol = 'tls'
+                    if mod_smtp.email_from and mod_smtp.user and mod_smtp.email_from != mod_smtp.user:
+                        flash(gettext("For Gmail, the From email usually needs to match the login email. If needed, set From to %(user)s.", user=mod_smtp.user), "warning")
+                if mod_smtp.protocol in ['unencrypted', 'unencrypted_no_login']:
+                    flash(gettext("Insecure SMTP protocol configured. Use TLS/SSL if possible."), "warning")
                 db.session.commit()
         else:
             flash_form_errors(form_mod_alert)
@@ -2000,19 +2305,22 @@ def settings_diagnostic_install_dependencies():
 
 def settings_regenerate_widget_html():
     try:
-        time.sleep(2)
-
-        cmd = f'/bin/bash {INSTALL_DIRECTORY}/aot/scripts/upgrade_commands.sh generate-widget-html'
-        out, err, status = cmd_output(cmd, stdout_pipe=False, user='root')
-        logger.info(
-            "Regenerate Widget HTML: "
-            f"cmd: {cmd}; out: {out}; error: {err}; status: {status}")
+        logger.info("Starting widget HTML regeneration...")
+        errors = generate_widget_html()
+        
+        if errors:
+            logger.error(f"Widget HTML regeneration completed with errors: {errors}")
+            raise Exception("; ".join(errors))
+        
+        logger.info("Widget HTML regeneration completed successfully.")
 
         logger.info("Reloading frontend in 10 seconds")
         cmd = f"sleep 10 && {INSTALL_DIRECTORY}/aot/scripts/aot_wrapper frontend_reload 2>&1"
         subprocess.Popen(cmd, shell=True)
+        
     except Exception:
         logger.exception("Regenerating widget HTML")
+        raise
 
 
 def settings_diagnostic_upgrade_master():
@@ -2056,3 +2364,48 @@ def is_valid_hostname(hostname):
         hostname = hostname[:-1] # strip exactly one dot from the right, if present
     allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
     return all(allowed.match(x) for x in hostname.split("."))
+
+
+def settings_map_mod(form):
+    """Modify common map location settings."""
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
+
+    if not form.validate():
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages["error"].append(
+                    gettext("Error in the %(field)s field - %(err)s",
+                            field=getattr(form, field).label.text,
+                            err=error))
+        return messages
+
+    lat = form.map_latitude.data
+    lng = form.map_longitude.data
+    label = form.map_location_label.data
+
+    # Require both or neither
+    if (lat is None) ^ (lng is None):
+        messages["error"].append(gettext("Please enter both latitude and longitude, or leave both empty."))
+        return messages
+
+    try:
+        mod_misc = Misc.query.first()
+        if mod_misc is None:
+            messages["error"].append(gettext("Misc settings row not found"))
+            return messages
+
+        mod_misc.map_latitude = lat
+        mod_misc.map_longitude = lng
+        mod_misc.map_location_label = label or ''
+
+        db.session.commit()
+        messages["success"].append(gettext("Map default location saved."))
+    except Exception as except_msg:
+        messages["error"].append(str(except_msg))
+
+    return messages

@@ -1,28 +1,15 @@
-AoT는 오픈소스 프로젝트 Mycodo를 기반으로 개발된 스마트 환경 자동화 시스템입니다.
+AoT is an open-source environmental monitoring and regulation system that was built to run on single-board computers, specifically the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi).
 
-# AoT 소개
+Originally developed for cultivating edible mushrooms, AoT has grown to do much more. The system consists of two parts, a backend (daemon) and a frontend (web server). The backend performs tasks such as acquiring measurements from sensors and devices and coordinating a diverse set of responses to those measurements, including the ability to modulate outputs (switch relays, generate PWM signals, operate pumps, switch wireless outlets, publish/subscribe to MQTT, among others), regulate environmental conditions with PID control, schedule timers, capture photos and stream video, trigger actions when measurements meet certain conditions, and more. The frontend hosts a web interface that enables viewing and configuration from any browser-enabled device.
 
-AoT는 환경 모니터링 및 제어 시스템입니다. 이 시스템은 라즈베리 파이(Raspberry Pi)와 같은 단일 보드 컴퓨터에서 작동하도록 설계되었으며, Mycodo의 강력한 자동화 프레임워크를 농업, IoT, 스마트팜 환경에 더욱 적합하도록 확장하였습니다.
+There are a number of different uses for AoT. Some users simply store sensor measurements to monitor conditions remotely, others regulate the environmental conditions of a physical space, while others capture motion-activated or time-lapse photography, among other uses.
 
-AoT는 백엔드(데몬)와 프론트엔드(웹 서버) 두 부분으로 구성되어 있습니다. 백엔드는 센서 데이터를 수집하고 릴레이 전환, PWM 신호 생성, MQTT 통신, 펌프 제어, PID 제어를 통한 환경 피드백 관리 등의 다양한 자동화 작업을 수행합니다. 프론트엔드는 브라우저가 지원되는 기기에서 접속 가능한 웹 인터페이스를 통해 설정 및 모니터링 기능을 제공합니다.
+Input controllers acquire measurements and store them in the InfluxDB time series database. Measurements typically come from sensors, but may also be configured to use the return value of Linux Bash or Python commands, or math equations, making this a very dynamic system for acquiring and generating data.
 
-처음에는 식용 버섯 재배를 위해 개발되었으나, 현재는 원격 환경 모니터링, 기후 및 관수 제어, 타임랩스 촬영, 온도 임계값 및 일출/일몰 기반 트리거 설정 등 다양한 용도로 활용되고 있습니다.
+Output controllers produce changes to the general input/output (GPIO) pins or may be configured to execute Linux Bash or Python commands, enabling a variety of potential uses. There are a few different types of outputs: simple switching of GPIO pins (HIGH/LOW), generating pulse-width modulated (PWM) signals, controlling peristaltic pumps, MQTT publishing, and more.
 
-AoT는 다양한 센서 및 명령 출력(Bash, Python 등)으로부터 수집한 입력값을 InfluxDB에 저장합니다. 출력 컨트롤러는 GPIO 조작 또는 스크립트 실행을 통해 환경에 영향을 미치며, 기능 컨트롤러는 입력과 출력을 연결해 폐루프 피드백 제어를 구현합니다. 이는 발효, 테라리움, 수비드 요리 등과 같은 정밀 환경 제어에 이상적입니다.
+When Inputs and Outputs are combined, Function controllers may be used to create feedback loops that uses the Output device to modulate an environmental condition the Input measures. Certain Inputs may be coupled with certain Outputs to create a variety of different control and regulation applications. Beyond simple regulation, Methods may be used to create a changing setpoint over time, enabling such things as thermal cyclers, reflow ovens, environmental simulation for terrariums, food and beverage fermentation or curing, and cooking food ([sous-vide](https://en.wikipedia.org/wiki/Sous-vide)), to name a few.
 
-AoT의 주요 기능은 다음과 같습니다:
-- 예약된 동작 실행 (날짜/시간, 지속 시간, 일출/일몰 기준)
-- 동적 설정값을 위한 열 주기 및 램프 함수 등
-- 사용자 지정 트리거 및 조건부 논리
-- 다국어 지원 (일반 설정에서 변경 가능)
+Triggers can be set to activate events based on specific dates and times, according to durations of time, or the sunrise/sunset at a specific latitude and longitude.
 
----
-
-## 라이선스 및 저작권 정보
-
-이 소프트웨어는 Kyle T. Gabriel이 개발한 오픈소스 프로젝트 [Mycodo](https://github.com/kizniche/Mycodo)를 기반으로 하며, AoT는 이를 목적에 맞게 수정 및 확장한 시스템입니다.
-
-- **저작권 © 2025 AoT (aot.inc.kr@gmail.com)**
-- **원저작권 © 2015–2022 Kyle T. Gabriel**
-
-AoT는 GPLv3 라이선스에 따라 배포되며, 전체 라이선스 내용은 [GNU 라이선스 페이지](https://www.gnu.org/licenses/) 및 [Mycodo의 LICENSE 파일](https://github.com/kizniche/Mycodo/blob/master/LICENSE)에서 확인하실 수 있습니다.
+AoT has been translated to several languages. By default, the language of the browser will determine which language is used, but may be overridden in the General Settings, on the `[Gear Icon] -> Configure -> General` page. If you find an issue and would like to correct a translation or would like to add another language, this can be done at [https://translate.kylegabriel.com](https://translate.kylegabriel.com/engage/aot/).

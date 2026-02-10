@@ -33,6 +33,7 @@ from aot.config import USER_ROLES
 from aot.config_devices_units import UNIT_CONVERSIONS
 from aot.aot_flask.extensions import db
 from .alembic_version import AlembicVersion
+from .api_key import APIKey
 from .camera import Camera
 from .controller import CustomController
 from .controller import FunctionChannel
@@ -54,15 +55,21 @@ from .method import Method
 from .method import MethodData
 from .misc import EnergyUsage
 from .misc import Misc
+from .user import User
 from .notes import NoteTags
 from .notes import Notes
+from .geo import GeoMap
+from .geo import GeoSetting
+from .geo import GeoShape
+from .geo import GeoLayer
+from .irrigation import IrrigationDesign
 from .output import Output
 from .output import OutputChannel
 from .pid import PID
 from .remote import Remote
 from .role import Role
 from .smtp import SMTP
-from .user import User
+
 
 
 def alembic_upgrade_db():
@@ -148,10 +155,25 @@ def populate_db():
         DisplayOrder(id=1).save()
     if not Misc.query.count():
         Misc(id=1).save()
+    if not Misc.query.count():
+        Misc(id=1).save()
+
+    # [Migration] Ensure GeoSetting Columns exist before query
+    try:
+        from aot.aot_flask.utils.utils_geo_migration import ensure_geo_setting_columns
+        ensure_geo_setting_columns()
+    except Exception as e:
+        current_app.logger.error(f"Migration failed in populate_db: {e}")
+
+    if not GeoSetting.query.count():
+        GeoSetting(id=1).save()
     if not SMTP.query.count():
         SMTP(id=1).save()
     if not Dashboard.query.count():
         Dashboard(id=1, name='Default').save()
+    if not APIKey.query.count():
+        # Optional: Add any default API keys if needed
+        pass
 
     # Populate conversion tables
     for (conv_from, conv_to, equation) in UNIT_CONVERSIONS:

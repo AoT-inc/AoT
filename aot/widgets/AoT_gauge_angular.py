@@ -45,12 +45,14 @@
 #  Last modified: 2025-04-21
 
 import json
+import os
 import logging
 import re
 
 from flask import flash
 from flask_babel import lazy_gettext
 
+from aot.config import PATH_JS_USER
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
 logger = logging.getLogger(__name__)
@@ -192,17 +194,17 @@ WIDGET_INFORMATION = {
     'dependencies_module': [
         ('bash-commands',
         [
-            '/opt/AoT/aot/aot_flask/static/js/user_js/highstock-9.1.2.js',
-            '/opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more-9.1.2.js'
+            os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
+            os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js')
         ],
         [
             'rm -rf Highcharts-Stock-9.1.2.zip',
             'wget https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip 2>&1',
             'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-            'cp -rf Highcharts-Stock-9.1.2/code/highstock.js /opt/AoT/aot/aot_flask/static/js/user_js/highstock-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highstock.js.map',
-            'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more.js.map',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
             'rm -rf Highcharts-Stock-9.1.2.zip',
             'rm -rf Highcharts-Stock-9.1.2'
         ])
@@ -243,7 +245,8 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),

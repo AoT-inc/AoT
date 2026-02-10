@@ -78,23 +78,9 @@ def inject_functions():
         except:
             return "EPOCH ERROR"
 
-    def get_note_tag_from_unique_id(tag_unique_id):
-        tag = NoteTags.query.filter(NoteTags.unique_id == tag_unique_id).first()
-        if tag and tag.name:
-            return tag.name
-        else:
-            return 'TAG ERROR'
-
-    def utc_to_local_time(utc_dt):
-        try:
-            utc_timestamp = calendar.timegm(utc_dt.timetuple())
-            return str(datetime.datetime.fromtimestamp(utc_timestamp))
-        except:
-            return "TIMESTAMP ERROR"
-
     return dict(epoch_to_time_string=epoch_to_time_string,
-                get_note_tag_from_unique_id=get_note_tag_from_unique_id,
-                utc_to_local_time=utc_to_local_time)
+                get_note_tag_from_unique_id=utils_notes.get_note_tag_from_unique_id,
+                utc_to_local_time=utils_general.utc_to_local_time)
 
 
 @blueprint.route('/camera_submit', methods=['POST'])
@@ -309,10 +295,31 @@ def page_notes():
 
     total_notes = Notes.query.count()
 
-    notes = Notes.query.order_by(Notes.id.desc()).limit(10)
+    notes = Notes.query.order_by(Notes.id.desc()).all()
     tags = NoteTags.query.all()
 
     current_date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # [MODIFIED] Handle Filter & Sort Logic for GET Persistence
+    if request.method == 'GET':
+        filter_notes = request.args.get('filter_notes')
+        filter_tags = request.args.get('filter_tags')
+        sort_by = request.args.get('sort_by')
+        sort_direction = request.args.get('sort_direction')
+        
+        # Populate form if params exist to maintain state across page refreshes/scrolls
+        if any([filter_notes, filter_tags, sort_by, sort_direction]):
+            if filter_notes:
+                form_note_show.filter_notes.data = filter_notes
+            if filter_tags:
+                form_note_show.filter_tags.data = filter_tags
+            if sort_by:
+                form_note_show.sort_by.data = sort_by
+            if sort_direction:
+                form_note_show.sort_direction.data = sort_direction
+            
+            # Apply filter & sort
+            notes = utils_notes.show_notes(form_note_show)
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
@@ -355,25 +362,74 @@ def page_notes():
 
             return redirect(url_for('routes_page.page_notes'))
 
+    # [PHASE 1] Determine the correct page number
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    page = request.args.get('page', 1, type=int)
+
+    # Force page 1 if searching (unless it is an AJAX scroll request)
+    if not is_ajax and (request.args.get('filter_notes') or request.args.get('filter_tags') or request.method == 'POST'):
+        page = 1
+
     if notes:
-        note_count = notes.count()
-        notes_all = notes.all()
+        # If notes is a query object (most cases)
+        if hasattr(notes, 'paginate'):
+             # Pagination settings
+            per_page = 30
+            pagination = notes.paginate(page=page, per_page=per_page, error_out=False)
+            notes_items = pagination.items
+            has_next = pagination.has_next
+            next_num = pagination.next_num
+            note_count = pagination.total
+        # If notes is a list
+        elif isinstance(notes, list):
+            per_page = 30
+            start = (page - 1) * per_page
+            end = start + per_page
+            notes_items = notes[start:end]
+            has_next = end < len(notes)
+            next_num = page + 1 if has_next else None
+            note_count = len(notes)
+        else:
+             notes_items = []
+             has_next = False
+             next_num = None
+             note_count = 0
     else:
+        notes_items = []
+        has_next = False
+        next_num = None
         note_count = 0
-        notes_all = None
+
     number_displayed_notes = (note_count, total_notes)
 
+    # Handle AJAX request for Infinite Scroll
+    if is_ajax:
+        html_list = []
+        for each_note in notes_items:
+            html_list.append(render_template('tools/partials/note_item.html', 
+                                             each_note=each_note, 
+                                             form_note_options=form_note_options))
+        
+        return jsonify({
+            'html': ''.join(html_list),
+            'has_next': has_next,
+            'next_page': next_num
+        })
+
     return render_template('tools/notes.html',
+                           notes=notes_items,
+                           tags=tags,
                            form_note_add=form_note_add,
                            form_note_options=form_note_options,
                            form_note_mod=form_note_mod,
                            form_tag_add=form_tag_add,
                            form_tag_options=form_tag_options,
                            form_note_show=form_note_show,
-                           notes=notes_all,
-                           tags=tags,
+                           number_displayed_notes=number_displayed_notes,
                            current_date_time=current_date_time,
-                           number_displayed_notes=number_displayed_notes)
+                           has_next=has_next,
+                           next_num=next_num,
+                           page=page if 'page' in locals() else 1)
 
 
 @blueprint.route('/note_edit/<unique_id>', methods=('GET', 'POST'))
@@ -805,6 +861,8 @@ def page_live():
         dict_measure_measurements[each_measurement.unique_id] = measurement
         dict_measure_units[each_measurement.unique_id] = unit
 
+    live_inputs_list = Input.query.filter(Input.is_activated, ~Input.device.startswith('gis_')).order_by(Input.position_y.asc()).all()
+
     return render_template('pages/live.html',
                            and_=and_,
                            activated_inputs=activated_inputs,
@@ -812,6 +870,7 @@ def page_live():
                            custom_options_values_controllers=custom_options_values_controllers,
                            table_device_measurements=DeviceMeasurements,
                            table_input=Input,
+                           live_inputs_list=live_inputs_list,
                            table_function=CustomController,
                            dict_inputs=dict_inputs,
                            dict_measurements=dict_measurements,

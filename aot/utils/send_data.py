@@ -8,6 +8,8 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.header import Header
+import ssl
 
 logger = logging.getLogger("aot.notification")
 
@@ -56,13 +58,13 @@ def send_email(smtp_host, smtp_protocol, smtp_port, smtp_user, smtp_pass,
         if not subject:
             subject = "AoT Notification ({})".format(
                 socket.gethostname())
-        outer['Subject'] = subject
+        outer['Subject'] = Header(subject, 'utf-8')
         outer['To'] = ', '.join(recipients)
         outer['From'] = smtp_email_from
         outer.preamble = 'You will not see this in a MIME-aware mail reader.\n'
 
         # Add message body
-        outer.attach(MIMEText(message_body, 'plain'))  # or 'html'
+        outer.attach(MIMEText(message_body, 'plain', 'utf-8'))  # or 'html'
 
         # Add the attachments to the message
         if attachment_file:
@@ -99,32 +101,58 @@ def send_email(smtp_host, smtp_protocol, smtp_port, smtp_user, smtp_pass,
 
         # select encryption protocol
         response_login = None
-        if smtp_protocol == 'ssl':
-            server = smtplib.SMTP_SSL(smtp_host, port)
-            response_login = server.login(smtp_user, smtp_pass)
-        elif smtp_protocol == 'tls':
-            server = smtplib.SMTP(smtp_host, port)
-            server.starttls()
-            response_login = server.login(smtp_user, smtp_pass)
-        elif smtp_protocol == 'unencrypted':
-            server = smtplib.SMTP(smtp_host, port)
-            response_login = server.login(smtp_user, smtp_pass)
-        elif smtp_protocol == 'unencrypted_no_login':
-            server = smtplib.SMTP(smtp_host, port)
-        else:
-            logger.error("Unrecognized protocol: {}".format(smtp_protocol))
+        context = ssl.create_default_context()
+        if smtp_protocol in ['unencrypted', 'unencrypted_no_login']:
+            logger.warning("Sending email without encryption (protocol=%s). This is not recommended.", smtp_protocol)
+        try:
+            if smtp_protocol == 'ssl':
+                server = smtplib.SMTP_SSL(smtp_host, port, timeout=15, context=context)
+                server.ehlo()
+                response_login = server.login(smtp_user, smtp_pass)
+            elif smtp_protocol == 'tls':
+                server = smtplib.SMTP(smtp_host, port, timeout=15)
+                server.ehlo()
+                server.starttls(context=context)
+                server.ehlo()
+                response_login = server.login(smtp_user, smtp_pass)
+            elif smtp_protocol == 'unencrypted':
+                server = smtplib.SMTP(smtp_host, port, timeout=15)
+                server.ehlo()
+                response_login = server.login(smtp_user, smtp_pass)
+            elif smtp_protocol == 'unencrypted_no_login':
+                server = smtplib.SMTP(smtp_host, port, timeout=15)
+                server.ehlo()
+            else:
+                logger.error("Unrecognized protocol: {}".format(smtp_protocol))
+                return 1
+        except Exception as exc:
+            logger.error("Failed to connect/login SMTP (%s:%s, protocol=%s): %s",
+                         smtp_host, port, smtp_protocol, exc)
             return 1
 
         if response_login:
             logger.debug("Email login response: {}".format(response_login))
 
         # Send the email
-        response_send = server.sendmail(smtp_user, recipients, composed)
-        server.close()
-
-        logger.debug("Email send response: {}".format(response_send))
-
-        return 0
+        try:
+            envelope_from = smtp_email_from or smtp_user
+            response_send = server.sendmail(envelope_from, recipients, composed)
+            logger.info("Email sent via %s:%s protocol=%s to=%s",
+                        smtp_host, port, smtp_protocol, recipients)
+            logger.debug("Email send response: {}".format(response_send))
+            return 0
+        except Exception as exc:
+            logger.error("Failed to send email via %s:%s to %s: %s",
+                         smtp_host, port, recipients, exc)
+            return 1
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                try:
+                    server.close()
+                except Exception:
+                    pass
 
         # Old code. It remains here to demonstrate how to encoding video for emailing
         # from aot.utils.system_pi import cmd_output

@@ -6,11 +6,11 @@
 {% block title %} - {{_('Measurement Settings')}}{% endblock %}
 
 {% block settings %}
-  <!-- 경로: /settings/measurement -->
+  <!-- Route: /settings/measurement -->
   <div class="container">
-    <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#measurement-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('측정값 설정')}}</h3>
+    <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#measurement-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('Measurement Settings')}}</h3>
 
-    <h3>{{_('측정값 추가')}}</h3>
+    <h3>{{_('Add Measurement')}}</h3>
 
     <form class="form-horizontal" method="post" action="/settings/measurement">
     {{form_add_measurement.hidden_tag()}}
@@ -47,7 +47,7 @@
 
     <div style="clear: both; padding: 1em 0;"></div>
 
-    <h3>{{_('단위 추가')}}</h3>
+    <h3>{{_('Add Unit')}}</h3>
 
     <form class="form-horizontal" method="post" action="/settings/measurement">
     {{form_add_unit.hidden_tag()}}
@@ -80,7 +80,7 @@
 
     <div style="clear: both; padding: 1em 0;"></div>
 
-    <h3>{{_('변환 추가')}}</h3>
+    <h3>{{_('Add Conversion')}}</h3>
 
     <form class="form-horizontal" method="post" action="/settings/measurement">
     {{form_add_conversion.hidden_tag()}}
@@ -162,7 +162,7 @@
               {{form_mod_measurement.save_measurement(class_='btn btn-primary btn-block')}}
             </div>
             <div class="col-12 small-gutters">
-              {{form_mod_measurement.delete_measurement(class_='btn btn-primary btn-block', **{'onclick':'return confirm("삭제하시겠습니까?")'})}}
+              {{form_mod_measurement.delete_measurement(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </div>
           </td>
         </tr>
@@ -182,7 +182,7 @@
 
     <hr>
 
-    <h3>{{_('사용자')}} {{_('단위')}}</h3>
+    <h3>{{_('Custom')}} {{_('Units')}}</h3>
 
     <div class="table-responsive">
       <table class="table">
@@ -208,7 +208,7 @@
               {{form_mod_unit.save_unit(class_='btn btn-primary btn-block')}}
             </div>
             <div class="col-12 small-gutters">
-              {{form_mod_unit.delete_unit(class_='btn btn-primary btn-block', **{'onclick':'return confirm("삭제하시겠습니까?")'})}}
+              {{form_mod_unit.delete_unit(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </div>
           </td>
         </tr>
@@ -228,7 +228,7 @@
 
     <hr>
 
-    <h3>{{_('사용자')}} {{_('변환')}}</h3>
+    <h3>{{_('Custom')}} {{_('Conversions')}}</h3>
 
       <div class="table-responsive">
         <table class="table">
@@ -286,7 +286,7 @@
           </td>
         {% if not each_conversion.protected %}
           <td>
-            {{form_mod_conversion.delete_conversion(class_='btn btn-primary btn-block', **{'onclick':'return confirm("삭제하시겠습니까?")'})}}
+            {{form_mod_conversion.delete_conversion(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
           </td>
         {% endif %}
         </tr>
@@ -302,7 +302,7 @@
 
     <hr>
 
-    <h3>{{_('전체')}} {{_('측정값')}}</h3>
+    <h3>{{_('All')}} {{_('Measurements')}}</h3>
 
     <div class="table-responsive">
       <table class="table">
@@ -329,7 +329,7 @@
 
     <hr>
 
-    <h3>{{_('전체')}} {{_('단위')}}</h3>
+    <h3>{{_('All')}} {{_('Units')}}</h3>
 
     <div class="table-responsive">
     <table class="table">

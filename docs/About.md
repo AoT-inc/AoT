@@ -1,27 +1,15 @@
-AoT is a smart environmental automation system developed based on the open-source project Mycodo.
+AoT is an open-source environmental monitoring and regulation system that was built to run on single-board computers, specifically the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi).
 
-# About AoT
+Originally developed for cultivating edible mushrooms, AoT has grown to do much more. The system consists of two parts, a backend (daemon) and a frontend (web server). The backend performs tasks such as acquiring measurements from sensors and devices and coordinating a diverse set of responses to those measurements, including the ability to modulate outputs (switch relays, generate PWM signals, operate pumps, switch wireless outlets, publish/subscribe to MQTT, among others), regulate environmental conditions with PID control, schedule timers, capture photos and stream video, trigger actions when measurements meet certain conditions, and more. The frontend hosts a web interface that enables viewing and configuration from any browser-enabled device.
 
-AoT is an environmental monitoring and control system. It is designed to operate on single-board computers like the Raspberry Pi and extends Mycodo's powerful automation framework to better suit agriculture, IoT, and smart farming environments.
+There are a number of different uses for AoT. Some users simply store sensor measurements to monitor conditions remotely, others regulate the environmental conditions of a physical space, while others capture motion-activated or time-lapse photography, among other uses.
 
-AoT consists of two main components: the backend (daemon) and the frontend (web server). The backend performs various automation tasks such as collecting sensor data, switching relays, generating PWM signals, managing MQTT communication, controlling pumps, and handling environmental feedback through PID control. The frontend provides configuration and monitoring capabilities through a web interface accessible from any browser-supported device.
+Input controllers acquire measurements and store them in the InfluxDB time series database. Measurements typically come from sensors, but may also be configured to use the return value of Linux Bash or Python commands, or math equations, making this a very dynamic system for acquiring and generating data.
 
-Initially developed for edible mushroom cultivation, AoT is now used for a variety of purposes, including remote environmental monitoring, climate and irrigation control, time-lapse photography, and setting triggers based on temperature thresholds or sunrise/sunset.
+Output controllers produce changes to the general input/output (GPIO) pins or may be configured to execute Linux Bash or Python commands, enabling a variety of potential uses. There are a few different types of outputs: simple switching of GPIO pins (HIGH/LOW), generating pulse-width modulated (PWM) signals, controlling peristaltic pumps, MQTT publishing, and more.
 
-AoT stores input values collected from various sensors and command outputs (e.g., Bash, Python) in InfluxDB. Output controllers influence the environment through GPIO manipulation or script execution, while function controllers connect inputs and outputs to implement closed-loop feedback control. This makes it ideal for precise environmental control in applications such as fermentation, terrariums, and sous vide cooking.
+When Inputs and Outputs are combined, Function controllers may be used to create feedback loops that uses the Output device to modulate an environmental condition the Input measures. Certain Inputs may be coupled with certain Outputs to create a variety of different control and regulation applications. Beyond simple regulation, Methods may be used to create a changing setpoint over time, enabling such things as thermal cyclers, reflow ovens, environmental simulation for terrariums, food and beverage fermentation or curing, and cooking food ([sous-vide](https://en.wikipedia.org/wiki/Sous-vide)), to name a few.
 
-Key features of AoT include:
-- Scheduled actions (based on date/time, duration, sunrise/sunset)
-- Dynamic setpoints with heat cycles and ramp functions
-- Custom triggers and conditional logic
+Triggers can be set to activate events based on specific dates and times, according to durations of time, or the sunrise/sunset at a specific latitude and longitude.
 
----
-
-## License and Copyright Information
-
-This software is based on the open-source project [Mycodo](https://github.com/kizniche/Mycodo) developed by Kyle T. Gabriel, and AoT modifies and extends it to suit its purpose.
-
-- **Copyright © 2025 AoT (aot.inc.kr@gmail.com)**
-- **Original Copyright © 2015–2022 Kyle T. Gabriel**
-
-AoT is distributed under the GPLv3 license. The full license details can be found on the [GNU License page](https://www.gnu.org/licenses/) and in [Mycodo's LICENSE file](https://github.com/kizniche/Mycodo/blob/master/LICENSE).
+AoT has been translated to several languages. By default, the language of the browser will determine which language is used, but may be overridden in the General Settings, on the `[Gear Icon] -> Configure -> General` page. If you find an issue and would like to correct a translation or would like to add another language, this can be done at [https://translate.kylegabriel.com](https://translate.kylegabriel.com/engage/aot/).

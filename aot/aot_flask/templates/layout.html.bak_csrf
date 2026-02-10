@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+
+  <!-- 메타/아이콘 -->
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AoT {{ aot_version }}">
+  <meta name="application-name" content="AoT {{ aot_version }}">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
+
+  <!-- 기본 스크립트/스타일 -->
+  <script src="/static/js/jquery-3.4.1.min.js"></script>
+  <script>window.jQuery || document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\\/script>')</script>
+  <script src="/static/js/popper.min.js"></script>
+  <script src="/static/js/bootstrap.min.js"></script>
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/simple-sidebar.css" rel="stylesheet">
+
+  {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
+  '/static/css/bootstrap-4-themes/aot.css' %}
+
+  {% if effective_theme in dark_themes %}
+  <link href="/static/css/custom-dark.css" rel="stylesheet">
+  {% else %}
+  <link href="/static/css/custom-light.css" rel="stylesheet">
+  {% endif %}
+
+  <link href="{{ effective_theme }}" rel="stylesheet">
+
+  <link href="/static/css/custom.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" rel="stylesheet">
+  <link href="/static/css/fa-svg-with-js.css" rel="stylesheet">
+  <script src="/static/js/fontawesome-all.min.js"></script>
+  <link href="/static/css/bootstrap-select.min.css" rel="stylesheet">
+  <script src="/static/js/bootstrap-select.min.js"></script>
+  <!-- Leaflet & Draw (Globalized Iteration 16 - Default Layout) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="/static/js/common/turf.min.js"></script>
+
+  <!-- [Iteration 16] Global Master Shield -->
+  <script>
+    (function() {
+        if (typeof L !== 'undefined' && L.DomUtil && L.DomUtil.remove) {
+            if (L.DomUtil.__AOT_MASTER_SHIELD) return;
+            L.DomUtil.__AOT_MASTER_SHIELD = true;
+            const origRem = L.DomUtil.remove;
+            L.DomUtil.remove = function(el) {
+                if (!el) return;
+                try {
+                    if (typeof el === 'object' && ('parentNode' in el) && el.parentNode) {
+                        origRem.call(L.DomUtil, el); 
+                    }
+                } catch(e) { /* Silent */ }
+            };
+            console.log("[AoT] Global Master Shield Active (Default Layout)");
+        }
+    })();
+  </script>
+
+  <link href="/static/css/map/map.css" rel="stylesheet">
+  <style>
+    .main-navbar {
+      position: relative;
+      /* Tier 1: Topmost (Navbar & Dropdowns) */
+      z-index: 35000 !important;
+      /* Align with dashboard tabs (1.2em combined padding) */
+      padding-left: 19px !important;
+      padding-right: 19px !important;
+      transition: top 0.3s ease;
+    }
+
+    .dropdown-menu {
+      z-index: 35000 !important;
+    }
+  </style>
+
+  {% if custom_css %}
+  <link href="/custom.css" rel="stylesheet">
+  {% endif %}
+
+  <!-- Toastr -->
+  <link href="/static/css/toastr.min.css" rel="stylesheet">
+  <script src="/static/js/toastr.min.js"></script>
+  <script id="aot-global-settings-json" type="application/json">
+    {{ {
+      'hide_success': settings.hide_alert_success | default(false),
+      'hide_info': settings.hide_alert_info | default(false),
+      'hide_warning': settings.hide_alert_warning | default(false)
+    } | tojson | safe }}
+  </script>
+  <script>
+    try {
+      window.AoTGlobalSettings = JSON.parse(document.getElementById('aot-global-settings-json').textContent);
+    } catch (e) {
+      console.error("Failed to parse AoTGlobalSettings", e);
+      window.AoTGlobalSettings = { hide_success: false, hide_info: false, hide_warning: false };
+    }
+    // Inject Server Data for Map Defaults
+    window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
+  </script>
+
+  {% block head %}{% endblock %}
+
+  <title>
+    {% if settings.title_display == 'hostname' %}
+    {{ host }}
+    {% elif settings.title_display == 'brand_text' %}
+    {{ settings.hostname_override }}
+    {% endif %}
+    {% block title %}{% endblock %} - AoT {{ aot_version }}
+  </title>
+
+  <!-- 데몬 상태 확인 스크립트 -->
+  <script type="text/javascript">
+    function check_daemon_status() {
+      $.ajax('/daemonactive', {
+        success: function (data, textStatus, jqXHR) {
+          if (jqXHR.status === 204) {
+            $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+          } else if (data === 'alive') {
+            $('#daemon-icon').attr('src', '/static/img/logo.svg');
+          } else {
+            $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+          }
+        },
+        error: function () {
+          $('#daemon-icon').attr('src', '/static/img/logo_gray.svg');
+        },
+        cache: false
+      });
+    }
+
+    $(document).ready(function () {
+      check_daemon_status();
+      
+      // [Fix] 드롭다운 초기화 시 멀티 셀렉트 구분 클래스 강제 주입 & 툴팁 타이틀 전이 (전역 리스너)
+      $(document).on('loaded.bs.select', '.selectpicker', function (e) {
+        var $this = $(this);
+        if ($this.attr('multiple')) {
+          $this.closest('.bootstrap-select').addClass('aot-multi-select');
+        }
+        // [Tooltip] select 태그의 title(설명)을 버튼으로 복사하여 툴팁 활성화
+        var title = $this.attr('title');
+        if (title) {
+          var $btn = $this.closest('.bootstrap-select').find('.dropdown-toggle');
+          if ($btn.length && !$btn.attr('title') && !$btn.attr('data-original-title')) {
+            $btn.attr('title', title);
+          }
+        }
+      });
+
+      // [Tooltip] 토글 버튼(Hidden Input)의 title을 부모 라벨(.btn-toggle)로 복사
+      $('.btn-toggle-input[title]').each(function() {
+        var $input = $(this);
+        var $label = $input.closest('.btn-toggle');
+        if ($label.length && !$label.attr('title') && !$label.attr('data-original-title')) {
+          $label.attr('title', $input.attr('title'));
+        }
+      });
+
+      // [Global Tooltip] 입력 요소에 대한 전역 툴팁 활성화 (Delegation)
+      $('body').tooltip({
+        selector: '[data-toggle="tooltip"], input[title], textarea[title], .btn[title], .btn-toggle[title]',
+        container: 'body',
+        trigger: 'hover',
+        delay: { "show": 500, "hide": 100 } /* 빠른 작업 방해 방지 위해 약간의 딜레이 */
+      });
+      
+      // [Global Fix] Set Bootstrap-Select Defaults
+      if ($.fn.selectpicker) {
+          $.fn.selectpicker.Constructor.DEFAULTS.container = false;
+      }
+
+      $('.aot-modern-select').each(function() {
+        var $el = $(this);
+        if (!$el.hasClass('selectpicker')) {
+          $el.addClass('selectpicker');
+        }
+        // Style if not present
+        if (!$el.data('style')) {
+          $el.attr('data-style', 'btn-white');
+        }
+      });
+
+      // Initial initialization for static elements
+      $('.selectpicker').selectpicker();
+    });
+    setInterval(check_daemon_status, 60000);
+  </script>
+  <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=fix32" rel="stylesheet">
+</head>
+
+<body class="{% if active_page in ['geo_design', 'settings'] %}body-no-gap{% endif %}">
+  {% set active_page = active_page|default('') -%}
+  {% set help_page = help_page|default(['', '']) -%}
+
+  <!-- 메인 내비게이션 바: main-navbar 클래스를 포함 -->
+  <nav class="navbar navbar-expand-md main-navbar">
+    <!-- 로고 (왼쪽) -->
+    <!-- Margin-left to align center with 40px dashboard button (30px logo vs 40px btn) -->
+    <!-- Adjusted based on browser inspection: Logo was 12px too far right. 5px - 12px = -7px. User requested 1px more left (-8px). -->
+    <a class="navbar-brand" href="{{ url_for('routes_general.index_page') }}" style="margin-left: -8px;">
+      <img id="daemon-icon" src="/static/img/logo.svg" alt="Daemon Status">
+    </a>
+
+    <!-- 모바일 전용: 대시보드 설정 버튼 + 메뉴 토글 버튼 (우측) -->
+    <div class="d-md-none ml-auto d-flex align-items-center">
+      <!-- Margin-right to align center with 40px dashboard settings button (28px burger vs 40px btn -> 6px offset) -->
+      <!-- Adjusted based on browser inspection: Burger was 2px too far left. 6px - 2px = 4px -->
+      <div class="burger" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse"
+        aria-expanded="false" aria-label="Toggle navigation" style="margin-right: 4px;">
+        <span class="line"></span>
+      </div>
+    </div>
+
+    <!-- 공통: collapse 영역 (데스크탑과 모바일 모두) -->
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav left-menu">
+        <li class="nav-item dropdown {% if active_page in ['dashboard', 'live', 'graph_async'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownDashboard" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            {{ _('대시보드') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownDashboard">
+            {% for each_dash in dashboards %}
+            <a class="dropdown-item {% if each_dash.unique_id == dashboard_id %} active{% endif %}"
+              href="/dashboard/{{ each_dash.unique_id }}">
+              {{ each_dash.name }}
+            </a>
+            <div class="dropdown-divider"></div>
+            {% endfor %}
+            <a class="dropdown-item" href="/dashboard-add">{{ _('대시보드 추가') }}</a>
+          </div>
+        </li>
+        <li
+          class="nav-item dropdown {% if active_page in ['map','geo_map','geo_place','geo_setting'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownGeo" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('지리정보') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownGeo">
+            <a class="dropdown-item {% if active_page == 'geo_design' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_design') }}">
+              {{ _('지도') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'geo_layer' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_layer') }}">
+              {{ _('GIS 입력') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'geo_setting' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_settings') }}">
+              {{ _('GIS 설정') }}
+            </a>
+          </div>
+        </li>
+        <li
+          class="nav-item dropdown {% if active_page in ['input', 'output', 'function', 'method_list'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownSettings" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('설정') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownSettings">
+            <a class="dropdown-item {% if active_page == 'input' %} active{% endif %}"
+              href="{{ url_for('routes_input.page_input') }}">
+              {{ _('입력') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'output' %} active{% endif %}"
+              href="{{ url_for('routes_output.page_output') }}">
+              {{ _('출력') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'function' %} active{% endif %}"
+              href="{{ url_for('routes_function.page_function') }}">
+              {{ _('함수') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'method_list' %} active{% endif %}"
+              href="{{ url_for('routes_method.method_list') }}">
+              {{ _('참조궤적') }}
+            </a>
+          </div>
+        </li>
+        <li
+          class="nav-item dropdown {% if active_page in ['camera', 'notes', 'export', 'energy_usage_outputs', 'energy_usage_inputs_amps'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownExtra" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('추가기능') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownExtra">
+            <a class="dropdown-item{% if active_page == 'live' %} active{% endif %}"
+              href="{{url_for('routes_page.page_live')}}">
+              {{_('실시간 측정')}}
+            </a>
+            <a class="dropdown-item{% if active_page == 'graph_async' %} active{% endif %}"
+              href="{{url_for('routes_page.page_graph_async')}}">
+              {{_('그래프')}}
+            </a>
+            <a class="dropdown-item {% if active_page == 'camera' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_camera') }}">
+              {{ _('카메라') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'notes' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_notes') }}">
+              {{ _('노트') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'export' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_export') }}">
+              {{ _('가져오기') }} {{ _('내보내기') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'energy_usage_outputs' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_energy_usage_outputs') }}">
+              {{ _('에너지-출력') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'energy_usage_inputs_amps' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_energy_usage_input_amps') }}">
+              {{ _('에너지-Amp') }}
+            </a>
+          </div>
+        </li>
+
+
+      </ul>
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownHelp" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('도움') }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownHelp">
+            <a class="dropdown-item" target="_blank" href="https://AoT-inc.github.io/AoT/Data-Viewing/#dashboard">{{
+              _('도움말: 대시보드') }}</a>
+            <a class="dropdown-item" target="_blank" href="https://AoT-inc.github.io/AoT/">{{ _('온라인 매뉴얼') }}</a>
+            <a class="dropdown-item" target="_blank" href="https://AoT-inc.github.io/AoT/API/">{{ _('API 정보') }}</a>
+            <a class="dropdown-item" target="_blank" href="/api">{{ _('API 문서') }}</a>
+            <a class="dropdown-item" target="_blank" href="https://github.com/AoT-inc/AoT">{{ _('AoT Github') }}</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownManage" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('관리') }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownManage">
+            <a class="dropdown-item" href="{{ url_for('routes_settings.settings_general') }}">{{ _('시스템 관리') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_page.page_logview') }}">{{ _('시스템 로그') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_page.page_info') }}">{{ _('시스템 정보') }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_dependencies_main') }}">{{ _('패키지 관리') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_upgrade') }}">{{ _('업그레이드') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_backup') }}">{{ _('백업 복원') }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm("백엔드 재시작하시겠습니까?")'>{{
+              _('백엔드 재시작') }}</a>
+            <a class="dropdown-item" href="/systemctl/frontend_reload" onclick='return confirm("프론트엔드를 재시작하시겠습니까?")'>{{
+              _('프론트엔드 재시작') }}</a>
+            <a class="dropdown-item" href="/systemctl/restart" onclick='return confirm("시스템 재시작하시겠습니까?")'>{{ _('시스템
+              재시작') }}</a>
+            <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm("시스템 끄시겠습니까?")'>{{ _('시스템 끄기')
+              }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#modal_config_theme">{{_('사용자 설정')}}</a>
+            <a class="dropdown-item" href="/logout">{{_('로그아웃')}} ({{current_user.name}})</a>
+          </div>
+        </li>
+        <li class="nav-item navbar-shopping-bottom">
+          <a class="nav-link" href="http://aot.kr" target="_blank">
+            <i class="fas fa-shopping-bag"></i>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <!-- /메인 내비게이션 바 -->
+
+  {% if active_page not in ['geo_design', 'settings', 'dashboard', 'geo_setting', 'geo_input'] %}
+  <!-- Top Spacer for non-map pages (replaces navbar margin) -->
+  <div style="height: 1.5em; clear: both;"></div>
+  {% endif %}
+
+
+
+  {%- block body %}{% endblock %}
+
+  <!-- 환경설정 모달 -->
+  <div class="modal fade" id="modal_config_theme" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content" style="padding: 1em">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _ ('환경설정') }}</h5>
+        </div>
+        <form method="post" action="/change_preferences">
+          <div class="form-row" style="padding-top: 0.5em">
+            <div class="col-auto">
+              <label class="form-check-label">{{ _ ('언어') }}</label>
+              <div>
+                <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language"
+                  name="language" title="{{ _(" Selecting a language will override the web browser's language") }}">
+                  <option value="">브라우저 기본값</option>
+                  {% for each_language in languages %}
+                  <option value="{{ each_language[0] }}" {% if current_user.language==each_language[0] %} selected{%
+                    endif %}>
+                    {{ each_language[1] }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-auto">
+              <label class="form-check-label">{{ _ ('테마') }}</label>
+              <div>
+                <select class="form-control" id="theme" name="theme">
+                  {% for value, name in themes %}
+                  <option value="{{ value|e }}" {% if value==current_user.theme %} selected{% endif %}>{{ name|e }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="clear: both"></div>
+          <div class="row small-gutters" style="padding: 1em 1em 0 0.8em;">
+            <div class="col-auto">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">{{ _ ('닫기') }}</button>
+            </div>
+            <div class="col-auto">
+              <input class="btn btn-primary" id="user_preferences_save" name="user_preferences_save" type="submit"
+                value="{{ _ ('Save') }}">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 대시보드 설정 모달들 -->
+  {% for each_dash in dashboards %}
+  <div class="modal fade aot-option-modal" id="modal_config_{{ each_dash.unique_id }}" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content" style="padding: 1em">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _ ('대시보드 설정') }}</h5>
+        </div>
+        <form method="post" action="/dashboard/{{ each_dash.unique_id }}">
+          {{ form_dashboard.csrf_token }}
+          {{ form_dashboard.dashboard_id(value=each_dash.unique_id) }}
+          <div class="form-row">
+            <div class="col-auto">
+              {{ form_dashboard.name.label(class_='control-label') }}
+              <div>
+                {{ form_dashboard.name(class_='form-control', value=each_dash.name, **{'title':
+                dict_translation['name']['phrase']}) }}
+              </div>
+            </div>
+          </div>
+          <div style="clear: both"></div>
+          <div class="row small-gutters" style="padding: 1em 1em 0 0.8em;">
+            <div class="col-auto">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">{{ _ ('닫기') }}</button>
+            </div>
+            <div class="col-auto">
+              {{ form_dashboard.dash_modify(class_='btn btn-primary') }}
+            </div>
+            <div class="col-auto">
+              {{ form_dashboard.dash_delete(class_='btn btn-primary', **{'onclick':'return confirm("삭제하시겠습니까?")'}) }}
+            </div>
+            <div class="col-auto">
+              {{ form_dashboard.dash_duplicate(class_='btn btn-primary', **{'onclick':'return confirm("대시보드와 모든 위젯을
+              복제하시겠습니까?")'}) }}
+            </div>
+            {% if each_dash.locked %}
+            <div class="col-auto">
+              {{ form_dashboard.unlock(class_='btn btn-primary') }}
+            </div>
+            {% else %}
+            <div class="col-auto">
+              {{ form_dashboard.lock(class_='btn btn-primary') }}
+            </div>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <script>
+    $(document).ready(function () {
+      $('[data-toggle="tooltip"]').tooltip();
+      $('.selectpicker').selectpicker();
+      /* Old JS removed - moved to head script with .burger.active logic */
+      // 창 크기 변경 시 데스크탑 모드에서 collapse 강제 닫기
+      $(window).on('resize', function () {
+        if ($(window).width() >= 768) {
+          $('#navbarCollapse').collapse('hide');
+        }
+      });
+      setInterval(check_daemon_status, 60000);
+
+      let lastScrollTop = 0;
+      const navbar = $('.navbar.main-navbar');
+
+      $(window).on('scroll', function () {
+        let currentScroll = $(this).scrollTop();
+
+        if (currentScroll > lastScrollTop && currentScroll > 50) {
+          navbar.css('top', '-60px');
+          // Navbar hidden: Tabs stick to very top
+          $('body').addClass('aot-nav-hidden');
+        } else {
+          navbar.css('top', '0');
+          // Navbar visible: Tabs stick below navbar
+          $('body').removeClass('aot-nav-hidden');
+        }
+
+        lastScrollTop = currentScroll;
+      });
+
+      // [Focus Fix] Prevent Bootstrap modal from stealing focus from Portal elements (Notes Widget)
+      if ($.fn.modal && $.fn.modal.Constructor) {
+          $.fn.modal.Constructor.prototype._enforceFocus = function() {};
+          console.log('[AoT] Bootstrap Modal Focus Trap disabled for Portal compatibility');
+      }
+    });
+  </script>
+  <script>
+    function setClipboard(value) {
+      var tempInput = document.createElement("input");
+      tempInput.style = "position: absolute; left: -1000px; top: -1000px";
+      tempInput.value = value;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand("copy");
+      document.body.removeChild(tempInput);
+      {% if not(misc is defined and misc.hide_alert_success) %}
+      if (typeof toastr !== 'undefined') {
+        toastr['success']("{{_('클립보드에 복사되었습니다')}}: " + value);
+      } else {
+        alert('Copied to Clipboard: ' + value);
+      }
+      {% endif %}
+    }
+  </script>
+
+  <!-- AoT Map Core (Globalized Iteration 16) -->
+  <script src="/static/js/geo/aot-map-loader.js"></script>
+  <script src="/static/js/components/aot-map-search-fixed.js"></script>
+  <script src="/static/js/components/aot-map-search-controller.js"></script>
+  <script src="/static/js/geo/aot-map-modal.js"></script>
+
+  <!-- AoT Notes Widget (Global Integration) -->
+  <link href="/static/js/notes/notes-widget.css?v=prod_v15" rel="stylesheet">
+  <div id="aot-notes-widget-root"></div>
+  <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v15"></script>
+</body>
+
+</html>

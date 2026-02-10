@@ -6,17 +6,17 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': ' + dict_translation['output']['title']}}{% endblock %}
 
 {% block settings %}
-  <!-- 경로: /settings/output -->
+  <!-- Route: /settings/output -->
   <div class="container">
     <h3 style="text-align: right; padding-bottom: 1.3em;">
       <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#output-settings" target="_blank">
         <span style="font-size: 16px" class="fas fa-question-circle"></span>
-      </a> {{ _('출력 설정') }}
+      </a> {{ _('Output Settings') }}
     </h3>
 
-    <h3>{{ _('출력 모듈 가져오기') }}</h3>
+    <h3>{{ _('Import Output Module') }}</h3>
 
-    <p>출력 모듈 파일을 가져올 수 있습니다.</p>
+    <p>{{_('You can import output module files.')}}</p>
 
     <form method="post" action="/settings/output" enctype="multipart/form-data">
       {{ form_output.csrf_token }}
@@ -36,13 +36,13 @@
 
     <hr>
 
-    <h3>{{ _('가져온 출력 모듈') }}</h3>
+    <h3>{{ _('Imported Output Modules') }}</h3>
 
     <div class="table-responsive">
       <table class="table">
         <tr>
           <td>{{ _('ID') }}</td>
-          <td>{{ _('이름') }}</td>
+          <td>{{ _('Name') }}</td>
           <td></td>
         </tr>
 
@@ -57,7 +57,7 @@
             <td>{{ dict_outputs[each_output]['output_name'] }}</td>
             <td>
               <div class="col-12 small-gutters">
-                {{ form_output_delete.delete_output(class_='btn btn-primary btn-block', **{'onclick':'return confirm("이 출력을 삭제하시겠습니까?")'}) }}
+                {{ form_output_delete.delete_output(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this output?') + '")'}) }}
               </div>
             </td>
           </tr>

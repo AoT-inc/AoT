@@ -204,11 +204,12 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': '위젯을 새로고침할 주기를 설정하세요'
+            'phrase': '위젠을 새로고침할 주기를 설정하세요'
         },
         {
             'id': 'decimal_places',
@@ -506,7 +507,9 @@ WIDGET_INFORMATION = {
     if (!isFinite(d)) d = 0;
     d = ((d % 360) + 360) % 360; // wrap into [0,360)
     // Our needle geometry points to North when 0°, so rotate by d directly.
-    g.setAttribute('transform', 'rotate(' + d + ' ' + cx + ' ' + cy + ')');
+    // [Fix] User requests Flow Direction (Destination) instead of Meteorological Source.
+    // So we rotate 180 degrees (0° North Wind -> Points South).
+    g.setAttribute('transform', 'rotate(' + ((d + 180) % 360) + ' ' + cx + ' ' + cy + ')');
     var lbl = document.getElementById('dirtext-' + widget_id);
     if (lbl) lbl.textContent = aotWindAngleToKorean8(d);
   }

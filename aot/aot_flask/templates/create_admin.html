@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ language if language else 'en' }}">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -48,17 +48,17 @@
       </p>
 
       <p>
-        {{_("새로운 AoT 설치를 시작합니다. 관리자 사용자를 생성해주세요. 시작하려면 약관을 읽고 동의해주세요.")}}</p>
+        {{_("Start a new AoT installation. Please create an admin user. To start, please read and agree to the terms.")}}</p>
 
       <p style="padding: 1em 0; text-align: center; font-size: 1.2em; font-weight: bold;">
-        {{_('품질 보증 알림')}}
+        {{_('Quality Assurance Notice')}}
       </p>
 
       <p>
-        {{_('AoT는 Mycodo를 기반으로한 농업용 제어시스템 입니다. 사용자는 별도 계약에 따라 AoT에서 추가한 소프트웨어에 대해서 보증 받을 수 있습니다.  AoT에 관련된 부분은 아래의 보증 안내를 따릅니다.')}}
-        {{_('AoT는 무료 소프트웨어입니다. 무료 소프트웨어 재단에서 공표한 GNU 일반 공중 사용 허가서(GNU GPL) 버전 3 또는 그 이후 버전에 따라 재배포 및 수정이 가능합니다. AoT는 유용할 것이라는 희망에서 배포되지만, 어떠한 형태의 보증도 제공하지 않습니다. 또한 상품성이나 특정 목적에의 적합성에 대한 묵시적 보증 역시 제공되지 않습니다. 자세한 내용은 GNU 일반 공중 사용 허가서를 참조하세요. AoT와 함께 GNU 일반 공중 사용 허가서 사본을 받으셨을 것입니다. 받지 못하셨다면, 링크를 참조하시기 바랍니다. <a href="http://www.gnu.org/licenses/" target="_blank">http://www.gnu.org/licenses/</a>.')}}
+        {{_('AoT is an agricultural control system based on Mycodo. Users can receive a warranty for the software added by AoT under a separate contract. The parts related to AoT follow the warranty information below.')}}
+        {{_('AoT is free software. It can be redistributed and modified under the GNU General Public License (GNU GPL) version 3 or any later version published by the Free Software Foundation. AoT is distributed in the hope that it will be useful, but DOES NOT provide any form of warranty. Also, no implied warranties of merchantability or fitness for a particular purpose are provided. For more information, please refer to the GNU General Public License. You should have received a copy of the GNU General Public License along with AoT. If not, please refer to the link. <a href="http://www.gnu.org/licenses/" target="_blank">http://www.gnu.org/licenses/</a>.')}}
         <br/>&nbsp;<br/>
-        {{_('AoT는 개발을 돕기 위해 익명 사용 통계를 수집합니다. 로그인 후 관리 페이지에서 언제든지 수집을 거부하실 수 있습니다.')}}
+        {{_('AoT collects anonymous usage statistics to help with development. You can opt out of collection at any time on the management page after logging in.')}}
       </p>
 
       <p>
@@ -107,7 +107,7 @@
         {{form_create_admin.password(class_='form-control')}}
         {{form_create_admin.password_repeat.label(class_='sr-only')}}
         {{form_create_admin.password_repeat(class_='form-control')}}
-        <button class="btn btn-lg btn-primary btn-block" type="submit">{{_('관리자 생성하기')}}</button>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">{{_('Create Admin Account')}}</button>
       </form>
 
     </div>

@@ -2,6 +2,7 @@
 #
 # forms_authentication.py - Authentication Flask Forms
 #
+from flask_babel import lazy_gettext
 from flask_wtf import FlaskForm
 from wtforms import BooleanField
 from wtforms import PasswordField
@@ -17,7 +18,7 @@ from wtforms.validators import DataRequired
 #
 
 class LanguageSelect(FlaskForm):
-    language = StringField('언어')
+    language = StringField(lazy_gettext('Language'))
 
 
 #
@@ -26,20 +27,20 @@ class LanguageSelect(FlaskForm):
 
 class CreateAdmin(FlaskForm):
     username = StringField(
-        '사용자 이름',
-        render_kw={"placeholder": "사용자 이름"},
+        lazy_gettext('Username'),
+        render_kw={"placeholder": lazy_gettext("Username")},
         validators=[DataRequired()])
     email = StringField(
-        '이메일',
-        render_kw={"placeholder": "이메일"},
+        lazy_gettext('Email'),
+        render_kw={"placeholder": lazy_gettext("Email")},
         validators=[DataRequired()])
     password = PasswordField(
-        '비밀번호',
-        render_kw={"placeholder": "비밀번호"},
+        lazy_gettext('Password'),
+        render_kw={"placeholder": lazy_gettext("Password")},
         validators=[DataRequired()])
     password_repeat = PasswordField(
-        '비밀번호 확인',
-        render_kw={"placeholder": "비밀번호 확인"},
+        lazy_gettext('Confirm Password'),
+        render_kw={"placeholder": lazy_gettext("Confirm Password")},
         validators=[DataRequired()])
 
 
@@ -49,13 +50,13 @@ class CreateAdmin(FlaskForm):
 
 class Login(FlaskForm):
     aot_username = StringField(
-        '사용자 이름',
-        render_kw={"placeholder": "사용자 이름"},
+        lazy_gettext('Username'),
+        render_kw={"placeholder": lazy_gettext("Username")},
         validators=[DataRequired()]
     )
     aot_password = PasswordField(
-        '비밀번호',
-        render_kw={"placeholder": "비밀번호"},
+        lazy_gettext('Password'),
+        render_kw={"placeholder": lazy_gettext("Password")},
         validators=[DataRequired()]
     )
     remember = BooleanField()
@@ -67,29 +68,29 @@ class Login(FlaskForm):
 
 class ForgotPassword(FlaskForm):
     reset_method = SelectField(
-        '초기화 방식',
+        lazy_gettext('Reset Method'),
         choices=[
-            ('file', '파일로 초기화 코드 저장'),
-            ('email', '이메일로 초기화 코드 전송')],
+            ('file', lazy_gettext('Save reset code to file')),
+            ('email', lazy_gettext('Send reset code via email'))],
         validators=[DataRequired()]
     )
     username = StringField(
-        '사용자 이름',
-        render_kw={"placeholder": "사용자 이름"})
-    submit = SubmitField('제출')
+        lazy_gettext('Username'),
+        render_kw={"placeholder": lazy_gettext("Username")})
+    submit = SubmitField(lazy_gettext('Submit'))
 
 
 class ResetPassword(FlaskForm):
     password_reset_code = StringField(
-        "비밀번호 초기화 코드",
-        render_kw={"placeholder": "초기화 코드"})
+        lazy_gettext("Password Reset Code"),
+        render_kw={"placeholder": lazy_gettext("Reset Code")})
     password = PasswordField(
-        '새 비밀번호',
-        render_kw={"placeholder": "새 비밀번호"})
+        lazy_gettext('New Password'),
+        render_kw={"placeholder": lazy_gettext("New Password")})
     password_repeat = PasswordField(
-        '새 비밀번호 확인',
-        render_kw={"placeholder": "새 비밀번호 확인"})
-    submit = SubmitField('비밀번호 변경')
+        lazy_gettext('Confirm New Password'),
+        render_kw={"placeholder": lazy_gettext("Confirm New Password")})
+    submit = SubmitField(lazy_gettext('Change Password'))
 
 
 #
@@ -99,20 +100,31 @@ class ResetPassword(FlaskForm):
 class RemoteSetup(FlaskForm):
     remote_id = StringField('Remote Host ID', widget=widgets.HiddenInput())
     host = StringField(
-        '도메인 또는 IP 주소',
+        lazy_gettext('Domain or IP Address'),
         validators=[DataRequired()]
     )
     username = StringField(
-        '사용자 이름',
+        lazy_gettext('Username'),
         validators=[DataRequired()]
     )
     password = PasswordField(
-        '비밀번호',
+        lazy_gettext('Password'),
         validators=[DataRequired()]
     )
-    add = SubmitField('호스트 추가')
-    delete = SubmitField('호스트 삭제')
+    add = SubmitField(lazy_gettext('Add Host'))
+    delete = SubmitField(lazy_gettext('Delete Host'))
+
+
+class Actions(FlaskForm):
+    action_type = SelectField(lazy_gettext("Action Type"))
+    device_id = StringField('Device ID', widget=widgets.HiddenInput())
+    function_type = StringField('function_type', widget=widgets.HiddenInput())
+    action_id = StringField('action_id', widget=widgets.HiddenInput())
+
+    add_action = SubmitField(lazy_gettext('Add'))
+    save_action = SubmitField(lazy_gettext('Save'))
+    delete_action = SubmitField(lazy_gettext('Delete'))
 
 
 class InstallNotice(FlaskForm):
-    acknowledge = SubmitField('확인했습니다')
+    acknowledge = SubmitField(lazy_gettext('I Acknowledge'))

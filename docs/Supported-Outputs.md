@@ -15,7 +15,7 @@ Publish "on" or "off" (or any other strings of your choosing) to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_6GggcCon</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>On Payload</td><td>Text
+- Default Value: client_jvYxSJOA</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>On Payload</td><td>Text
 - Default Value: on</td><td>The payload to send when turned on</td></tr><tr><td>Off Payload</td><td>Text
 - Default Value: off</td><td>The payload to send when turned off</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
@@ -34,8 +34,8 @@ Publish a PWM value to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_tO6tBFpx</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
-- Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Startup Value</td><td>Decimal</td><td>The value when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Shutdown Value</td><td>Decimal</td><td>The value when AoT shuts down</td></tr><tr><td>Invert Signal</td><td>Boolean</td><td>Invert the PWM signal</td></tr><tr><td>Invert Stored Signal</td><td>Boolean</td><td>Invert the value that is saved to the measurement database</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Set the Duty Cycle.</td></tr><tr><td>Duty Cycle</td><td>Decimal</td><td>The duty cycle to set</td></tr><tr><td>Set Duty Cycle</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: client_JvHoEGBe</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td>Round Integer</td><td>Select(Options: [<strong>No Rounding</strong> | Round Nearest Whole | Round Up | Round Down] (Default in <strong>bold</strong>)</td><td>Round the payload value to an integer.</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Startup Value</td><td>Decimal</td><td>The value when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Shutdown Value</td><td>Decimal</td><td>The value when AoT shuts down</td></tr><tr><td>Invert Signal</td><td>Boolean</td><td>Invert the PWM signal</td></tr><tr><td>Invert Stored Signal</td><td>Boolean</td><td>Invert the value that is saved to the measurement database</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Set the Duty Cycle.</td></tr><tr><td>Duty Cycle</td><td>Decimal</td><td>The duty cycle to set</td></tr><tr><td>Set Duty Cycle</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Value: MQTT Publish
 
@@ -51,7 +51,7 @@ Publish a value to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_4ccOuIPc</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Off Value</td><td>Integer</td><td>The value to send when an Off command is given</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_QtEZ7BbR</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Off Value</td><td>Integer</td><td>The value to send when an Off command is given</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
 
 ## Built-In Outputs (Devices)
@@ -113,6 +113,45 @@ This is a module for the ULN2003 driver.
 - Default Value: 25</td><td>The pin (BCM numbering) connected to IN4 of the ULN2003</td></tr><tr><td>Step Delay</td><td>Decimal
 - Default Value: 0.001</td><td>The Step Delay of the controller</td></tr><tr><td colspan="3">Notes about step resolution...</td></tr><tr><td>Step Resolution</td><td>Select(Options: [<strong>Full</strong> | Half | Wave] (Default in <strong>bold</strong>)</td><td>The Step Resolution of the controller</td></tr></tbody></table>
 
+### On/Off: 52pi EP-0099 4channel Relay (4-Channel board)
+
+- Manufacturer: 52Pi
+- Interfaces: I<sup>2</sup>C
+- Output Types: On/Off
+- Libraries: smbus2
+- Dependencies: [smbus2](https://pypi.org/project/smbus2)
+
+Controls the 4 channel multichannel relay board.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state of the relay when aot starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state of the relay when aot shuts down</td></tr><tr><td>On State</td><td>Select(Options: [<strong>HIGH</strong> | LOW] (Default in <strong>bold</strong>)</td><td>The state of the GPIO that corresponds to an On state</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+
+### On/Off: ChirpStack gRPC
+
+- Interfaces: API
+- Output Types: On/Off
+- Libraries: requests, grpcio (optional)
+- Dependencies: 
+
+ChirpStack REST/gRPC API를 이용해 온/오프 다운링크 명령을 전송합니다. 우선 gRPC로 시도하며, grpcio/chirpstack-api가 설치되지 않았거나 접근이 실패하면 REST(/api/devices/<devEui>/queue)로 자동 전환합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>ChirpStack gRPC 서버</td><td>Text
+- Default Value: 127.0.0.1:8080</td><td>호스트:포트 형식 (예: 127.0.0.1:8080) 또는 http(s)://호스트:포트</td></tr><tr><td>API Key</td><td>Text</td><td>JWT 토큰 값을 입력하세요 (Bearer 제외)</td></tr><tr><td>DevEUI</td><td>Text</td><td>16자리 16진수 DevEUI (구분자 허용)</td></tr><tr><td>FPort</td><td>Integer
+- Default Value: 15</td><td>명령을 수신할 LoRaWAN FPort</td></tr><tr><td>Confirmed</td><td>Boolean</td><td>확인형(Confirmed)으로 명령 전송</td></tr><tr><td>Payload Format</td><td>Select(Options: [<strong>Hex 바이트</strong> | JSON 객체(UTF-8 인코딩)] (Default in <strong>bold</strong>)</td><td>페이로드 인코딩 형식을 선택하세요</td></tr><tr><td>On Payload</td><td>Text
+- Default Value: 000000</td><td>예: 010110 (Hex) 또는 JSON 문자열</td></tr><tr><td>off Payload</td><td>Text
+- Default Value: 000000</td><td>예: 010210 (Hex) 또는 JSON 문자열</td></tr><tr><td>확인 유예(초)</td><td>Integer
+- Default Value: 90</td><td>업링크 지연 허용시간</td></tr><tr><td>확정 타임아웃(초)</td><td>Integer
+- Default Value: 600</td><td>이 시간이 지나도 미확인 시 경고/재조치</td></tr><tr><td>하드 타임아웃 시 OFF 재전송</td><td>Boolean</td><td>duration 종료 또는 타임아웃 시 OFF를 다시 보냄</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>시작 시 상태</td><td>Select</td><td>AoT가 시작될 때 적용할 상태</td></tr><tr><td>종료 시 상태</td><td>Select</td><td>AoT가 종료될 때 적용할 상태</td></tr><tr><td>Force Command</td><td>Boolean</td><td>현재 상태와 무관하게 명령을 항상 전송</td></tr><tr><td>시작 시 트리거 실행</td><td>Boolean</td><td>시작 시 출력이 전환되면 트리거 기능 실행</td></tr></tbody></table>
+
+### On/Off: Ecowitt Local HTTP
+
+- Interfaces: IP
+- Output Types: On/Off
+- Libraries: requests
+- Dependencies: [requests](https://pypi.org/project/requests)
+
+Ecowitt 허브 IP, 서브디바이스 ID, 모델(WFC01/02=1, WFC02 신펌=3, AC1100=2)을 입력하면 로컬 HTTP API로 On/Off 제어합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Ecowitt Device IP</td><td>Text</td><td>Local IP address of the Ecowitt hub (e.g., 192.168.1.100)</td></tr><tr><td>Ecowitt Sub-device ID</td><td>Text</td><td>ID of WFC01/WFC02/AC1100 (e.g., 11044)</td></tr><tr><td>Ecowitt Device Model</td><td>Select(Options: [WFC01 | <strong>WFC02</strong> | AC1100] (Default in <strong>bold</strong>)</td><td>1=WFC01/대부분 WFC02, 3=일부 WFC02(신펌), 2=AC1100</td></tr><tr><td>Valve Open %</td><td>Integer
+- Default Value: 100</td><td>When turning on, open valve to this percent (0-100)</td></tr><tr><td>State Query Period (Seconds)</td><td>Integer
+- Default Value: 60</td><td>How often to query the state of the output</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr></tbody></table>
+
 ### On/Off: Grove Multichannel Relay (4- or 8-Channel board)
 
 - Manufacturer: Grove
@@ -153,7 +192,7 @@ This output controls the 6 outlets of the Kasa HS300 Smart WiFi Power Strip. Thi
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18308</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
+- Default Value: 18681</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa KP303 3-Outlet WiFi Power Strip (old library, deprecated)
@@ -182,7 +221,7 @@ This output controls the 3 outlets of the Kasa KP303 Smart WiFi Power Strip. Thi
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18575</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
+- Default Value: 18402</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa WiFi Power Plug
@@ -197,7 +236,7 @@ This output controls Kasa WiFi Power Plugs, including the KP105, KP115, KP125, K
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18331</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+- Default Value: 18094</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa WiFi RGB Light Bulb
 
@@ -211,7 +250,7 @@ This output controls the the Kasa WiFi Light Bulbs, including the KL125, KL130, 
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18299</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
+- Default Value: 18248</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Brightness (Percent)</td><td>Integer</td><td>The brightness to set, in percent (0 - 100)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Hue (Degree)</td><td>Integer</td><td>The hue to set, in degrees (0 - 360)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Saturation (Percent)</td><td>Integer</td><td>The saturation to set, in percent (0 - 100)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
@@ -402,6 +441,17 @@ Python 3 code will be executed when this output is turned on or off. The "duty_c
 
 - Interfaces: GPIO
 - Output Types: PWM
+- Libraries: RPi.GPIO
+- Dependencies: [RPi.GPIO](https://pypi.org/project/RPi.GPIO)
+
+A software implementation of PWM using the RPi.GPIO library.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td colspan="3">Channel Options</td></tr><tr><td>Pin: GPIO (BCM)</td><td>Integer</td><td>The pin to control the state of</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Startup Value</td><td>Decimal</td><td>The value when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Shutdown Value</td><td>Decimal</td><td>The value when AoT shuts down</td></tr><tr><td>Frequency (Hertz)</td><td>Integer
+- Default Value: 1000</td><td>The Hertz to output the PWM signal</td></tr><tr><td>Invert Signal</td><td>Boolean</td><td>Invert the PWM signal</td></tr><tr><td>Invert Stored Signal</td><td>Boolean</td><td>Invert the value that is saved to the measurement database</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Set the Duty Cycle.</td></tr><tr><td>Duty Cycle</td><td>Decimal</td><td>The duty cycle to set</td></tr><tr><td>Set Duty Cycle</td><td>Button</td><td></td></tr></tbody></table>
+
+### PWM: Raspberry Pi GPIO (Pi <= 4)
+
+- Interfaces: GPIO
+- Output Types: PWM
 - Libraries: pigpio
 - Dependencies: pigpio, [pigpio](https://pypi.org/project/pigpio)
 
@@ -468,6 +518,19 @@ Controls the Grove I2C Motor Driver Board (v1.3). Both motors will turn at the s
 - Default Value: 100.0</td><td>The fastest rate that the pump can dispense (ml/min)</td></tr><tr><td>Minimum On (Seconds)</td><td>Decimal
 - Default Value: 1.0</td><td>The minimum duration the pump turns on for every 60 second period (only used for Specify Flow Rate mode).</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>New I2C Address</td><td>Text
 - Default Value: 0x14</td><td>The new I2C to set the sensor to</td></tr><tr><td>Set I2C Address</td><td>Button</td><td></td></tr></tbody></table>
+
+### Peristaltic Pump: L298N DC Motor Controller (Pi 5)
+
+- Manufacturer: STMicroelectronics
+- Interfaces: GPIO
+- Output Types: Volume, On/Off
+- Libraries: pinctrl
+- Additional URL: [Link](https://www.electronicshub.org/raspberry-pi-l298n-interface-tutorial-control-dc-motor-l298n-raspberry-pi/)
+
+The L298N can control 2 DC motors, and direction. If these motors control peristaltic pumps, set the Flow Rate and the output can can be instructed to dispense volumes accurately in addition to being turned on for durations.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Input Pin 1</td><td>Integer</td><td>The Input Pin 1 of the controller (BCM numbering)</td></tr><tr><td>Input Pin 2</td><td>Integer</td><td>The Input Pin 2 of the controller (BCM numbering)</td></tr><tr><td>Use Enable Pin</td><td>Boolean
+- Default Value: True</td><td>Enable the use of the Enable Pin</td></tr><tr><td>Enable Pin</td><td>Integer</td><td>The Enable pin of the controller (BCM numbering)</td></tr><tr><td>Direction</td><td>Select(Options: [<strong>Forward</strong> | Backward] (Default in <strong>bold</strong>)</td><td>The direction to turn the motor</td></tr><tr><td>Volume Rate (ml/min)</td><td>Decimal
+- Default Value: 150.0</td><td>If a pump, the measured flow rate (ml/min) at the set Duty Cycle</td></tr></tbody></table>
 
 ### Peristaltic Pump: L298N DC Motor Controller (Pi <= 4)
 

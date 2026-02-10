@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+from datetime import datetime
 
 import sqlalchemy
 from flask import current_app
@@ -16,8 +17,9 @@ from aot.databases import clone_model
 from aot.databases import set_uuid
 from aot.databases.models import Actions
 from aot.databases.models import DeviceMeasurements
-from aot.databases.models import Input
+from aot.databases.models import Input, GeoShape
 from aot.databases.models import InputChannel
+from aot.databases.models import Misc
 from aot.databases.models import PID
 from aot.aot_client import DaemonControl
 from aot.aot_flask.extensions import db
@@ -29,6 +31,11 @@ from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.utils.inputs import parse_input_information
 from aot.utils.system_pi import parse_custom_option_values
+from aot.aot_flask.utils.utils_map_config import (
+    ensure_map_config,
+    clone_map_config,
+    delete_map_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +60,7 @@ def input_add(form_add):
     # only one comma should be in the input_type string
     if form_add.input_type.data.count(',') > 1:
         messages["error"].append(
-            "잘못된 입력 모듈 형식입니다. 'input_name_unique' 또는 'interfaces'에 쉼표가 포함된 것으로 보입니다.")
+            _("Invalid input module format. It seems that 'input_name_unique' or 'interfaces' contains a comma."))
 
     if form_add.input_type.data.count(',') == 1:
         input_name = form_add.input_type.data.split(',')[0]
@@ -61,19 +68,19 @@ def input_add(form_add):
     else:
         input_name = ''
         input_interface = ''
-        messages["error"].append("잘못된 입력 문자열 (쉼표로 구분된 문자열이어야 합니다.")
+        messages["error"].append(_("Invalid input string (must be a comma-separated string)."))
 
     if not current_app.config['TESTING']:
         dep_unmet, _, dep_message = return_dependencies(input_name)
         if dep_unmet:
             messages["error"].append(
-                f"{input_name} has unmet dependencies. "
-                "에 충족되지 않은 종속성이 있습니다. 입력을 추가하기 전에 설치해야 합니다.")
+                f"{input_name} " + 
+                _("has unmet dependencies. They must be installed before the input can be added."))
 
             for each_dep in dep_unmet:
                 list_unmet_deps.append(each_dep[3])
                 if each_dep[2] == 'pip-pypi':
-                    dep_message += f"Python 패키지 {each_dep[3]}가 설치되지 않은 것으로 보입니다. '{each_dep[0]}'을(를) 가져올 수 없기 때문입니다."
+                    dep_message += _("Python package %(package)s was not found because '%(module)s' could not be imported.") % {'package': each_dep[3], 'module': each_dep[0]}
 
             if input_name in dict_inputs:
                 dep_name = dict_inputs[input_name]['input_name']
@@ -98,6 +105,15 @@ def input_add(form_add):
             new_input.name = dict_inputs[input_name]['input_name']
         else:
             new_input.name = 'Name'
+
+        # Default map location from Misc
+        try:
+            misc = Misc.query.first()
+            if misc:
+                new_input.latitude = misc.map_latitude
+                new_input.longitude = misc.map_longitude
+        except Exception:
+            pass
 
         #
         # Set default values for new input being added
@@ -238,6 +254,14 @@ def input_add(form_add):
             messages["error"], dict_inputs, device=input_name, use_defaults=True)
         new_input.custom_options = custom_options
 
+        map_cfg = ensure_map_config(
+            None,
+            new_input.name,
+            new_input.latitude,
+            new_input.longitude
+        )
+        new_input.map_config_id = map_cfg.unique_id
+
         #
         # Execute at Creation
         #
@@ -284,32 +308,34 @@ def input_duplicate(form_mod):
         "error": []
     }
 
-    mod_input = Input.query.filter(
+    source_input = Input.query.filter(
         Input.unique_id == form_mod.input_id.data).first()
 
-    if not mod_input:
+    if not source_input:
         return None, None
 
     # Duplicate dashboard with new unique_id and name
     new_input = clone_model(
-        mod_input, unique_id=set_uuid(), name=f"Copy of {mod_input.name}")
+        source_input, unique_id=set_uuid(), name=f"Copy of {source_input.name}")
 
-    # Deactivate Input
-    mod_input = Input.query.filter(
+    duplicated_input = Input.query.filter(
         Input.unique_id == new_input.unique_id).first()
-    if mod_input:
-        mod_input.is_activated = False
-        mod_input.save()
+    if duplicated_input:
+        new_map = clone_map_config(source_input.map_config_id, duplicated_input.name)
+        if new_map:
+            duplicated_input.map_config_id = new_map.unique_id
+        duplicated_input.is_activated = False
+        duplicated_input.save()
 
         dev_measurements = DeviceMeasurements.query.filter(
             DeviceMeasurements.device_id == form_mod.input_id.data).all()
         for each_dev in dev_measurements:
-            clone_model(each_dev, unique_id=set_uuid(), device_id=mod_input.unique_id)
+            clone_model(each_dev, unique_id=set_uuid(), device_id=duplicated_input.unique_id)
 
         dev_channels = InputChannel.query.filter(
             InputChannel.input_id == form_mod.input_id.data).all()
         for each_dev in dev_channels:
-            clone_model(each_dev, unique_id=set_uuid(), input_id=mod_input.unique_id)
+            clone_model(each_dev, unique_id=set_uuid(), input_id=duplicated_input.unique_id)
 
     messages["success"].append(
         f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['input']['title']}")
@@ -362,22 +388,60 @@ def input_mod(form_mod, request_form):
                 form_mod.gpio_location.data is None):
             messages["error"].append(gettext("Pin (GPIO) must be set"))
 
-        mod_input.name = form_mod.name.data
-        messages["name"] = form_mod.name.data
+        if form_mod.name.data not in [None, '']:
+            mod_input.name = form_mod.name.data
+            messages["name"] = form_mod.name.data
 
-        if mod_input.unique_id != form_mod.unique_id.data:
-            test_unique_id = Input.query.filter(Input.unique_id == form_mod.unique_id.data).first()
-            if test_unique_id:
-                messages["error"].append(
-                    f"Input ID must be unique. "
-                    f"ID already exists: '{form_mod.unique_id.data}'")
-            elif not form_mod.unique_id.data:
-                messages["error"].append(f"Input ID is required")
-            else:
-                mod_input.unique_id = form_mod.unique_id.data
+        # Only attempt to change the ID if a new value is provided
+        if form_mod.unique_id.data:
+            if mod_input.unique_id != form_mod.unique_id.data:
+                test_unique_id = Input.query.filter(Input.unique_id == form_mod.unique_id.data).first()
+                if test_unique_id:
+                    messages["error"].append(
+                        f"Input ID must be unique. "
+                        f"ID already exists: '{form_mod.unique_id.data}'")
+                else:
+                    mod_input.unique_id = form_mod.unique_id.data
 
         if form_mod.location.data:
             mod_input.location = form_mod.location.data
+
+        lat_val = form_mod.latitude.data
+        if lat_val in [None, '']:
+            raw_lats = request_form.getlist('latitude')
+            for val in raw_lats:
+                if val and val not in ['None', '']:
+                    lat_val = val
+                    break
+
+        lng_val = form_mod.longitude.data
+        if lng_val in [None, '']:
+            raw_lngs = request_form.getlist('longitude')
+            for val in raw_lngs:
+                if val and val not in ['None', '']:
+                    lng_val = val
+                    break
+            
+        if lat_val not in [None, ''] and lng_val not in [None, '']:
+            mod_input.latitude = float(lat_val)
+            mod_input.longitude = float(lng_val)
+            mod_input.location_updated_utc = datetime.utcnow()
+        elif (lat_val in [None, '']) and (lng_val in [None, '']):
+            # Leave existing coords untouched to avoid unintended clearing
+            pass
+        else:
+            messages["warning"].append(gettext("Latitude and longitude must be entered together."))
+        if form_mod.location_source.data:
+            mod_input.location_source = form_mod.location_source.data
+        if ('marker_icon' in request_form) and hasattr(form_mod, 'marker_icon') and form_mod.marker_icon.data not in [None, '', 'None', 'null']:
+            mod_input.marker_icon = form_mod.marker_icon.data
+        if ('marker_color' in request_form) and hasattr(form_mod, 'marker_color') and form_mod.marker_color.data not in [None, '', 'None', 'null']:
+            mod_input.marker_color = form_mod.marker_color.data
+        if ('marker_size' in request_form) and hasattr(form_mod, 'marker_size') and form_mod.marker_size.data not in [None, '', 'None', 'null']:
+            try:
+                mod_input.marker_size = int(form_mod.marker_size.data)
+            except Exception:
+                pass
         if form_mod.i2c_location.data:
             mod_input.i2c_location = form_mod.i2c_location.data
         if form_mod.ftdi_location.data:
@@ -566,17 +630,46 @@ def input_mod(form_mod, request_form):
                 custom_options_channels_dict_postsave)
             custom_options = json.dumps(custom_options_dict)  # Convert from dict to JSON string
             custom_channel_options = custom_options_channels_dict
+            if custom_options_dict_presave != custom_options_dict_postsave:
+                logger.warning(f" [Input Mod] Custom options changed for {mod_input.device}. Forcing refresh.")
+                page_refresh = True
+            
+            if mod_input.device == 'SATELLITE_ANALYSIS':
+                logger.warning(" [Input Mod] Satellite Analysis saved. Ensuring refresh.")
+                page_refresh = True
         else:
             # Don't pass custom options to module
             custom_options = json.dumps(custom_options_dict_postsave)
             custom_channel_options = custom_options_channels_dict_postsave
 
+        # [Fix] Manually persist shape color options
+        try:
+            co_dict = json.loads(custom_options) if custom_options else {}
+        except:
+            co_dict = {}
+
+        for shape_key in ['shape_on_color', 'shape_off_color', 'shape_border_color']:
+            if shape_key in request_form:
+                val = request_form.get(shape_key)
+                if val:
+                    co_dict[shape_key] = val
+        
+        custom_options = json.dumps(co_dict)
+
         # Finally, save custom options for both output and channels
         mod_input.custom_options = custom_options
+        logger.warning(f" [Input Mod] Saving Input {mod_input.unique_id} ({mod_input.device}). Custom Options: {custom_options}")
         for each_channel in channels:
-            if 'name' in custom_channel_options[each_channel.channel]:
-                each_channel.name = custom_channel_options[each_channel.channel]['name']
-            each_channel.custom_options = json.dumps(custom_channel_options[each_channel.channel])
+            # Use .get() to avoid KeyError if the channel was dynamically added and isn't in our pre-save dict
+            chan_opts = custom_channel_options.get(each_channel.channel)
+            if chan_opts:
+                if 'name' in chan_opts:
+                    each_channel.name = chan_opts['name']
+                each_channel.custom_options = json.dumps(chan_opts)
+            else:
+                # If no options found, ensure it has at least an empty JSON object if none exists
+                if not each_channel.custom_options:
+                    each_channel.custom_options = "{}"
 
         if not messages["error"]:
             db.session.commit()
@@ -601,6 +694,7 @@ def input_del(input_id):
     try:
         input_dev = Input.query.filter(
             Input.unique_id == input_id).first()
+        map_config_id = input_dev.map_config_id if input_dev else None
 
         if input_dev.is_activated:
             # messages = input_deactivate_associated_controllers(
@@ -631,6 +725,12 @@ def input_del(input_id):
                 flash_message=False)
 
         delete_entry_with_id(Input, input_id, flash_message=False)
+        if map_config_id:
+            delete_map_config(map_config_id)
+
+        # [Fix] Delete associated Map Overlays (Level 2 Shapes)
+        # Covers all channels for this device_id
+        GeoShape.query.filter(GeoShape.device_id == input_id).delete(synchronize_session=False)
 
         try:
             file_path = os.path.join(
@@ -699,8 +799,8 @@ def input_activate(form_mod):
                         value != 0 and
                         not value):
                     messages["error"].append(
-                        f"{each_option['name']} is required to be set. "
-                        f"Current value: {value}")
+                        f"Error: {each_option['name']} is required to be set. "
+                        f"Current value: '{value}'")
 
     #
     # Input-specific checks

@@ -1,0 +1,625 @@
+{% extends "layout.html" %}
+{% set active_page = "function" %}
+{% set help_page = ["https://aot-inc.github.io/AoT/Functions/", dict_translation['function']['title']] %}
+
+{% block title %} - {{dict_translation['function']['title']}}{% endblock %}
+<!-- DEBUG_MARKER_AOT_RENDER_TEST -->
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" type="text/css" href="/static/css/bootstrap-clockpicker.min.css">
+<script type="text/javascript" src="/static/js/bootstrap-clockpicker.min.js"></script>
+<script src="/static/js/common/aot-time-utils.js?v=3"></script>
+
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css" />
+<script src="/static/js/gridstack-all.js"></script>
+
+<link href="/static/css/toastr.min.css" rel="stylesheet" />
+<script src="/static/js/toastr.min.js"></script>
+
+<script type="text/javascript">
+  $(document).ready(function () {
+    toastr.options = {
+      "closeButton": true,
+      "debug": false,
+      "newestOnTop": false,
+      "progressBar": false,
+      "positionClass": "toast-top-left",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "1000",
+      "timeOut": "15000",
+      "extendedTimeOut": "10000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    };
+
+    // ---- Ensure widget/dashboard modals are attached to <body> (z-index/stacking fix) ----
+    (function () {
+      try {
+        // Move existing modals under body once
+        $('.grid-stack-item .modal').each(function () {
+          const $m = $(this);
+          if (!$m.parent().is('body')) { $m.appendTo('body'); }
+        });
+        // On show, ensure any dynamically created/modals-included are also moved
+        $(document).on('shown.bs.modal', function (ev) {
+          const $m = $(ev.target);
+          if ($m && !$m.parent().is('body')) { $m.appendTo('body'); }
+        });
+      } catch (e) { /* no-op if jQuery/Bootstrap not present */ }
+    })();
+    // ---- end modal attach fix ----
+  });
+</script>
+{% include 'pages/map/map_assets.html' %}
+{% endblock %}
+
+{% block body %}
+<!-- Route: /function -->
+<main role="main" class="container">
+  {% include 'flash_messages.html' %}
+
+  <h4>{{_('함수')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px"
+        class="fas fa-question-circle"></span></a></h4>
+  <p>{{_('함수는 복잡한 작업을 수행하며, 하나 이상의 <a href="/input">입력</a>과 <a href="/output">출력</a>을 복합적으로 활용할 수 있습니다. 예를 들어, PID 컨트롤러를
+    사용하여 온도 센서와 스프링클러나 히터를 연결해 온도를 조절하는 자동 환경제어를 만들 수 있습니다.')}}</p>
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  <form id="new_function_form" method="post" action="/function">
+    {{form_mod_pid_base.csrf_token}}
+
+    <div class="row small-gutters" style="padding-left: 0.75em">
+      <div class="col-auto">
+        <select class="selectpicker aot-standard-select" data-style="btn btn-primary aot-roundbox"
+          data-live-search="true" title="{{ _('함수') }}: {{ _('선택') }}" id="function_type" name="function_type">
+          {% for each_controller in choices_functions_add -%}
+          <option value="{{each_controller['value']}}">{{each_controller['item']}}</option>
+          {% endfor -%}
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'function_add');" name="function_add" value="{{_('추가')}}"
+          class="btn btn-primary" type="button" />
+      </div>
+    </div>
+
+  </form>
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+  <div class="grid-stack aot-entry-container">
+    {%- for each_function in all_functions_sorted -%}
+    {% if each_function._controller_type == 'Conditional' %}
+    {% set controller_type = "Conditional" %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/conditional_entry.html' %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'PID' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/pid_entry.html' %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'Trigger' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% if each_function.trigger_type == 'trigger_sequence' %}
+      {% include 'pages/function_options/trigger_sequence_entry.html' %}
+      {% else %}
+      {% include 'pages/function_options/trigger_entry.html' %}
+      {% endif %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'Function' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/function_entry.html' %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'Function_Custom' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/custom_function_entry.html' %}
+    </div> <!-- grid-stack-item -->
+    {% endif %}
+    {% endfor %}
+  </div> <!-- grid-stack -->
+
+  {% include 'admin/dependencies_install.html' %}
+
+</main>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<script type="text/javascript">
+  let gridstack_item_height = 0;
+  $(".grid-stack-item-content").each(function () {
+    let h = $(this).outerHeight(true);
+    if (h > gridstack_item_height) gridstack_item_height = h;
+  });
+  if (gridstack_item_height < 20) { gridstack_item_height = 80; }
+
+  // Grid
+  let options = {
+    animate: false,
+    cellHeight: gridstack_item_height + 5,
+    column: 24,
+    margin: 0,
+    draggable: {
+      handle: '.panel-heading'
+    },
+    float: false
+  };
+  let grid = GridStack.init(options);
+
+  grid.on('change', function (event, items) {
+    let gridstack_item_height = $(".grid-stack-item-content").eq(0).outerHeight(true);
+    if (gridstack_item_height) {
+      grid.cellHeight(gridstack_item_height + 5);
+    }
+    let serializedFull = grid.save(false);
+    $.ajax({
+      type: "POST",
+      url: "/save_function_layout",
+      headers: { "X-CSRFToken": "{{form_function_base.csrf_token._value()}}" },
+      data: JSON.stringify(serializedFull, null, '  '),
+      contentType: "application/json; charset=utf-8",
+      success: function (data) { }
+    });
+  });
+
+  function popup_response(data) {
+    if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
+      toastr['error']('오류: ' + data.data.messages.error.join(", "));
+    }
+
+    if (!{{ misc.hide_alert_warning | tojson }}) {
+    if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
+      toastr['warning']('경고: ' + data.data.messages.warning.join(", "));
+    }
+  }
+
+  if (!{{ misc.hide_alert_info | tojson }}) {
+    if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
+      toastr['info']('정보: ' + data.data.messages.info.join(", "));
+    }
+  }
+
+  if (!{{ misc.hide_alert_success | tojson }}) {
+    if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+      toastr['success']('성공: ' + data.data.messages.success.join(", "));
+    }
+  }
+  }
+
+  var status_message = {};
+
+  function function_status(function_id) {
+    const url = '/function_status_activated/' + function_id;
+    $.getJSON(url,
+      function (data, responseText, jqXHR) {
+        var statusElem = document.getElementById("function_status_activated_" + function_id);
+        if (jqXHR.status !== 204) {
+          if (data && "string_status" in data) {
+            if (statusElem) statusElem.innerHTML = data['string_status'].replace(/(?:\r\n|\r|\n)/g, "<br>");
+          } else {
+            if (statusElem) statusElem.innerHTML = '';
+          }
+          if (data && "error" in data && data['error'].length) {
+            let errors = ''
+            for (let c = 0; c < data['error'].length; c++) {
+              errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
+            }
+            if (statusElem) statusElem.innerHTML += "<p><pre>Error(s):<br>" + errors + "</pre></p>";
+          }
+        }
+        else {
+          if (statusElem) statusElem.innerHTML = "Error querying status.";
+        }
+      }
+    );
+  }
+  // Repeat function for function_status()
+  function repeat_function_status(function_id, period_sec) {
+    status_message[function_id] = setInterval(function () {
+      function_status(function_id)
+    }, period_sec * 1000);
+  }
+
+  function function_status_always(function_id) {
+    const url_2 = '/function_status_always/' + function_id;
+    $.getJSON(url_2,
+      function (data, responseText, jqXHR) {
+        var statusElem = document.getElementById("function_status_always" + function_id);
+        if (jqXHR.status !== 204) {
+          if (data && "string_status" in data) {
+            if (statusElem) statusElem.innerHTML = data['string_status'].replace(/(?:\r\n|\r|\n)/g, "<br>");
+          } else {
+            if (statusElem) statusElem.innerHTML = '';
+          }
+          if (data && "error" in data && data['error'].length) {
+            let errors = ''
+            for (let c = 0; c < data['error'].length; c++) {
+              errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
+            }
+            if (statusElem) statusElem.innerHTML += "<p><pre>Error(s):<br>" + errors + "</pre></p>";
+          }
+        }
+        else {
+          if (statusElem) statusElem.innerHTML = "Error querying status.";
+        }
+      }
+    );
+  }
+  // Repeat function for function_status_always()
+  function repeat_function_status_always(function_id, period_sec) {
+    status_message[function_id] = setInterval(function () {
+      function_status_always(function_id)
+    }, period_sec * 1000);
+  }
+
+  jQuery(document).ready(function ($) {
+    {%- for each_function in function if 'period_status' in custom_options_values_controllers[each_function.unique_id] %}
+    function_status_always('{{each_function.unique_id}}');
+    repeat_function_status_always('{{each_function.unique_id}}', {{ custom_options_values_controllers[each_function.unique_id]['period_status'] }});
+  {% - if each_function.is_activated -%}
+  function_status('{{each_function.unique_id}}');
+  repeat_function_status('{{each_function.unique_id}}', {{ custom_options_values_controllers[each_function.unique_id]['period_status'] }});
+  {% - endif -%}
+  {% endfor %}
+  {% - for each_conditional in conditional if each_conditional.is_activated %}
+  function_status('{{each_conditional.unique_id}}');
+  repeat_function_status('{{each_conditional.unique_id}}', 30);
+  {% endfor %}
+  {% - for each_pid in pid if each_pid.is_activated %}
+  function_status('{{each_pid.unique_id}}');
+  repeat_function_status('{{each_pid.unique_id}}', 30);
+  {% endfor %}
+    });
+
+  function function_status_reset(function_id) {
+    $('#function_status_' + function_id)
+      .removeClass("inactive-background")
+      .removeClass("active-background")
+      .removeClass("hold-background")
+      .removeClass("pause-background");
+  }
+  function ids_hide(pid_id, class_list) {
+    for (let c = 0; c < class_list.length; c++) {
+      let id_str = class_list[c] + "_" + pid_id;
+      if (document.getElementById(id_str) != null) {
+        document.getElementById(id_str).style.display = "none";
+      }
+    }
+  }
+  function ids_show(pid_id, class_list) {
+    for (let c = 0; c < class_list.length; c++) {
+      let id_str = class_list[c] + "_" + pid_id;
+      if (document.getElementById(id_str) != null) {
+        document.getElementById(id_str).style.display = "";
+      }
+    }
+  }
+
+  function getFormData(form) {
+    let rawJson = form.serializeArray();
+    let model = {}; $.map(rawJson, function (n, i) {
+      model[n['name']] = n['value'];
+    });
+    return model;
+  }
+
+  jQuery.fn.processRequest = function (button, action) {
+    console.log("Action: ", action)
+    // data-form-id 우선, 없으면 모달 내부 폼, 그래도 없으면 가장 가까운 폼
+    var formId = $(button).data('form-id');
+    var $form = formId ? $('#' + formId) : $(button).closest('.modal').find('form').first();
+    if (!$form.length) {
+      $form = $(button).closest('form');
+    }
+    if (!$form.length) {
+      toastr['error']('Error: form not found for action ' + action);
+      return false;
+    }
+    let form_values = getFormData($form);
+    if (action === 'function_add' ||
+      action === 'function_mod' ||
+      action === 'function_delete' ||
+      action === 'function_activate' ||
+      action === 'function_deactivate' ||
+      action === 'execute_all_actions' ||
+      action === 'add_action' ||
+      action === 'save_action' ||
+      action === 'delete_action' ||
+      action === 'add_condition' ||
+      action === 'save_condition' ||
+      action === 'delete_condition' ||
+      action === 'pid_pause' ||
+      action === 'pid_hold' ||
+      action === 'pid_resume' ||
+      action.startsWith('custom_button_')) {
+      {% if not misc.hide_alert_info %} toastr['info']('Command sent. Please wait...'); {% endif %}
+      $.ajax({
+        type: "POST",
+        url: '/function_submit',
+        headers: { "X-CSRFToken": "{{form_function_base.csrf_token._value()}}" },
+        data: $form.serialize() + '&' + action + '=1',
+        success: function (data) {
+          if (action === 'function_add' && 'function_id' in data.data) {
+            if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+              $(".dependencies_device_name").text(data.data.dep_name);
+              $(".dependencies_device").text(data.data.dep_unmet);
+              $(".dependencies_unmet").text(data.data.dep_list.join(", "));
+              if (document.getElementById("dependency_unmet")) {
+                document.getElementById("dependency_unmet").value = data.data.dep_unmet;
+              }
+              if (data.data.dep_message.length > 0) {
+                if (document.getElementById("dependencies_message")) {
+                  document.getElementById("dependencies_message").innerHTML = "<p>Message about dependencies: " + data.data.dep_message + "</p>";
+                }
+              }
+              $('#modal_config_dependency_install').modal('show');
+              popup_response(data);
+            } else {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=entry&function_id=' + data.data.function_id,
+                success: function (new_entry) {
+                  if (data.data.messages.success.length !== 0) {
+                    grid.addWidget('<div class="grid-stack-item" id="gridstack_function_' + data.data.function_id + '" gs-id="' + data.data.function_id + '">' + new_entry + '</div>', {
+                      w: 24, h: 1, y: 999
+                    });
+                    {% if not hide_tooltips %} $('input[title]').tooltip({ placement: 'top' }); {% endif %}
+                    $('#action_type_' + data.data.function_id).selectpicker('refresh');
+                    $('#condition_type_' + data.data.function_id).selectpicker('refresh');
+                    if (window.AoTMapModalController) {
+                      setTimeout(function () { AoTMapModalController.initAll(); }, 100);
+                    }
+                  }
+                  popup_response(data);
+                },
+                error: function () {
+                  toastr['error']('Error: Could not get new Function entry');
+                }
+              });
+            }
+          }
+          else if (action === 'add_action' && 'dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+            $(".dependencies_device_name").text(data.data.dep_name);
+            $(".dependencies_device").text(data.data.dep_unmet);
+            $(".dependencies_unmet").text(data.data.dep_list.join(", "));
+            if (document.getElementById("dependency_unmet")) {
+              document.getElementById("dependency_unmet").value = data.data.dep_unmet;
+            }
+            if (data.data.dep_message.length > 0) {
+              if (document.getElementById("dependencies_message")) {
+                document.getElementById("dependencies_message").innerHTML = "<p>Message about dependencies: " + data.data.dep_message + "</p>";
+              }
+            }
+            $('#modal_config_dependency_install').modal('show');
+          }
+
+          if (data.data.messages.error.length === 0) {
+            if (action === 'function_mod' && 'function_id' in data.data) {
+              if ('return_text' in data.data.messages && data.data.messages.return_text.length > 0) {
+                var returnTextElem = document.getElementById("return_text_" + data.data.function_id);
+                if (returnTextElem) {
+                  returnTextElem.innerHTML = data.data.messages.return_text.join("<br/><br/>");
+                }
+              }
+              if ('name' in data.data.messages &&
+                document.getElementById("function_name_" + data.data.function_id)) {
+                if (document.getElementById("function_name_" + data.data.function_id).tagName === "DIV") {
+                  document.getElementById("function_name_" + data.data.function_id).innerHTML = data.data.messages.name;
+                } else if (document.getElementById("function_name_" + data.data.function_id).tagName === "INPUT") {
+                  document.getElementById("function_name_" + data.data.function_id).value = data.data.messages.name;
+                }
+              }
+            }
+            else if (action === 'function_delete' && 'function_id' in data.data) {
+              $('#modal_config_' + data.data.function_id).modal('hide');
+              $('.modal-backdrop').remove();
+              $(document.body).removeClass("modal-open");
+              grid.removeWidget('#gridstack_function_' + data.data.function_id);
+            }
+            else if (action === 'function_activate' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("active-background");
+              if (document.getElementById('function_activate_' + data.data.function_id) != null) {
+                document.getElementById('function_activate_' + data.data.function_id).style.display = "none";
+              }
+              if (document.getElementById('function_deactivate_' + data.data.function_id) != null) {
+                document.getElementById('function_deactivate_' + data.data.function_id).style.display = "";
+              }
+              if (document.getElementById('form_pid_' + data.data.function_id) != null) {
+                ids_hide(data.data.function_id, ["pid_activate", "pid_resume"]);
+                ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold"]);
+                document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "PID 컨트롤러 [활성화됨]";
+              }
+              if ("function_type" in form_values && ["conditional", "function", "pid"].includes(form_values.function_type)) {
+                ids_show(data.data.function_id, ["status_activated_enable"]);
+                function_status(data.data.function_id);
+                if ("period_status" in data.data.messages && data.data.messages.period_status) {
+                  repeat_function_status(data.data.function_id, data.data.messages.period_status);
+                } else {
+                  repeat_function_status(data.data.function_id, 30);
+                }
+              }
+            }
+            else if (action === 'function_deactivate' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("inactive-background");
+              if (document.getElementById('function_activate_' + data.data.function_id) != null) {
+                document.getElementById('function_activate_' + data.data.function_id).style.display = "";
+              }
+              if (document.getElementById('function_deactivate_' + data.data.function_id) != null) {
+                document.getElementById('function_deactivate_' + data.data.function_id).style.display = "none";
+              }
+              if (document.getElementById('form_pid_' + data.data.function_id) != null) {
+                ids_hide(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold", "pid_resume"]);
+                ids_show(data.data.function_id, ["pid_activate"]);
+                document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "PID 컨트롤러 [비활성화됨]";
+                if (document.getElementById("function_status_activated_" + data.data.function_id)) {
+                  document.getElementById("function_status_activated_" + data.data.function_id).innerHTML = "";
+                }
+              }
+              if ("function_type" in form_values && ["conditional", "function", "pid"].includes(form_values.function_type)) {
+                ids_hide(data.data.function_id, ["status_activated_enable"]);
+                if (data.data.function_id in status_message) {
+                  clearInterval(status_message[data.data.function_id]);
+                  delete status_message[data.data.function_id];
+                }
+              }
+            }
+            else if (action === 'pid_pause' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("pause-background");
+              ids_hide(data.data.function_id, ["pid_activate", "pid_pause"]);
+              ids_show(data.data.function_id, ["pid_deactivate", "pid_hold", "pid_resume"]);
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "PID 컨트롤러 [일시 중지 됨]";
+            }
+            else if (action === 'pid_hold' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("hold-background");
+              ids_hide(data.data.function_id, ["pid_aactivate", "pid_hold"]);
+              ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_resume"]);
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "PID 컨트롤러 [고정]";
+            }
+            else if (action === 'pid_resume' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("active-background");
+              ids_hide(data.data.function_id, ["pid_activated", "pid_resume"]);
+              ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold"]);
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "PID 컨트롤러 [활성화됨]";
+            }
+            if (action === 'delete_action' && 'action_id' in data.data) {
+              document.getElementById("mod_action_" + data.data.action_id).remove();
+              popup_response(data);
+            }
+            if (action === 'delete_condition' && 'condition_id' in data.data) {
+              document.getElementById("mod_function_condition_" + data.data.condition_id).remove();
+              popup_response(data);
+            }
+            if (action === 'function_mod' && 'page_refresh' in data.data && data.data.page_refresh) {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=options&function_id=' + data.data.function_id,
+                success: function (new_options) {
+                  $('#mod_function_' + data.data.function_id).html(new_options);
+                  popup_response(data);
+                },
+                error: function () {
+                  toastr['error']('오류: 새로운 함수 옵션을 불러올 수 없습니다.');
+                }
+              });
+            }
+            else if (action === 'add_action' && 'page_refresh' in data.data && data.data.page_refresh) {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=actions&function_id=' + data.data.function_id + '&action_id=' + data.data.action_id,
+                success: function (new_options) {
+                  var actionContainer = document.getElementById('mod_function_actions_' + data.data.function_id);
+                  if (actionContainer) {
+                    actionContainer.insertAdjacentHTML('beforeend', (new_options));
+
+                    // [Fix] Explicitly initialize new widget
+                    var gridId = 'mod_function_actions_' + data.data.function_id;
+                    var gridEl = document.getElementById(gridId);
+                    if (gridEl && gridEl.gridstack) {
+                      var addedNode = actionContainer.lastElementChild;
+                      if (addedNode && !addedNode.gridstackNode) {
+                        gridEl.gridstack.makeWidget(addedNode);
+                      }
+                    } else if (window[gridId] && window[gridId].makeWidget) {
+                      // Fallback for older patterns
+                      var addedNode = actionContainer.lastElementChild;
+                      if (addedNode && !addedNode.gridstackNode) {
+                        window[gridId].makeWidget(addedNode);
+                      }
+                    }
+                    popup_response(data);
+                  } else {
+                    console.warn('Action container not found: mod_function_actions_' + data.data.function_id);
+                    // Fallback to full refresh
+                    $.ajax({
+                      type: "GET",
+                      url: '/function?function_type=options&function_id=' + data.data.function_id,
+                      success: function (new_options_full) {
+                        $('#mod_function_' + data.data.function_id).html(new_options_full);
+                        popup_response(data);
+                      },
+                      error: function () {
+                        toastr['error']('오류: 새로운 함수 옵션을 불러올 수 없습니다.');
+                      }
+                    });
+                  }
+                },
+                error: function () {
+                  toastr['error']('오류: 함수 동작(Action)을 불러올 수 없습니다.');
+                }
+              });
+            }
+            else if (action === 'add_condition' && 'page_refresh' in data.data && data.data.page_refresh) {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=conditions&function_id=' + data.data.function_id + '&condition_id=' + data.data.condition_id,
+                success: function (new_options) {
+                  var conditionContainer = document.getElementById('mod_function_conditions_' + data.data.function_id);
+                  if (conditionContainer) {
+                    conditionContainer.insertAdjacentHTML('beforeend', (new_options));
+                    popup_response(data);
+                  } else {
+                    console.warn('Condition container not found: mod_function_conditions_' + data.data.function_id);
+                    // Fallback to full refresh
+                    $.ajax({
+                      type: "GET",
+                      url: '/function?function_type=options&function_id=' + data.data.function_id,
+                      success: function (new_options_full) {
+                        $('#mod_function_' + data.data.function_id).html(new_options_full);
+                        popup_response(data);
+                      },
+                      error: function () {
+                        toastr['error']('오류: 새로운 함수 옵션을 불러올 수 없습니다.');
+                      }
+                    });
+                  }
+                },
+                error: function () {
+                  toastr['error']('오류: 함수 조건(Condition)을 불러올 수 없습니다.');
+                }
+              });
+            } else {
+              popup_response(data);
+            }
+          } else {
+            popup_response(data);
+          }
+        },
+        error: function () {
+          toastr['error']('오류: 서버와 통신할 수 없습니다.');
+        }
+      });
+    }
+  }
+
+  $('.clockpicker').clockpicker({
+    donetext: 'Done'
+  });
+
+  $('.collapse').on('show.bs.collapse', function () {
+    $(this).parent().find(".fa-plus-square").removeClass("fa-plus-square").addClass("fa-minus-square");
+  }).on('hide.bs.collapse', function () {
+    $(this).parent().find(".fa-minus-square").removeClass("fa-minus-square").addClass("fa-plus-square");
+  });
+</script>
+
+{% endblock %}

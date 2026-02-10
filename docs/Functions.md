@@ -900,3 +900,39 @@ PWM 출력 상태를 모니터링합니다.
 </tr>
 </tbody>
 </table>
+
+## Trigger - Sequence
+
+Trigger - Sequence 기능은 여러 액션을 정해진 순서와 시간 간격에 따라 순차적으로 실행할 수 있게 해줍니다.
+
+### 주요 개념 및 동작 방식
+
+- **순차 실행 (Sequential Execution)**: 등록된 액션들을 설정된 GridStack 위치(`position`) 순서대로 실행합니다.
+- **실행 모드 (Modes)**:
+    - **Single (기본값)**: 각 단계마다 독립적인 기간을 적용합니다. 
+        - **계산식**: `총 활성 시간 = Head Overlap + Base Duration + Tail Overlap`
+        - **동작**: 이전 단계가 끝나기 `Overlap` 초 전에 다음 단계가 시작되어 부드러운 전환을 지원합니다.
+    - **Total (Full-span)**: 전체 시퀀스가 실행되는 동안 계속 켜져 있어야 하는 액션(예: 메인 펌프)에 사용됩니다. 시퀀스의 시작부터 마지막 `Single` 액션이 종료될 때까지 유지됩니다.
+- **동적 기간 (Dynamic Duration)**:
+    - `action_duration_id` 옵션을 통해 특정 입력(Input)의 측정값을 실행 시간으로 사용할 수 있습니다.
+    - 형식: `Input_UUID` 또는 `Input_UUID,Measurement_UUID`.
+    - 유효성: `time_offset_minutes` 내의 최신 측정값만 사용하며, 없을 경우 설정된 기본 `action_duration`을 사용합니다.
+- **오버랩 (Overlaps)**:
+    - `output_duration` 설정값을 사용하여 단계 사이의 전환 시간을 결정합니다.
+    - 첫 번째 액션은 `Tail Overlap`만, 중간 액션은 `Head & Tail Overlap`을, 마지막 액션은 `Head Overlap`만 가집니다.
+- **제약 사항 (Window & Latency)**:
+    - **Execution Window**: `timer_start_time` ~ `timer_end_time` 사이에만 시퀀스가 시작되거나 실행됩니다. 범위를 벗어나면 강제 종료됩니다.
+    - **Start Latency**: 트리거(활성화) 발생 후 실제 시퀀스 시작까지의 대기 시간(`timer_start_offset`)을 초 단위로 설정합니다.
+
+### 설정 옵션 명세
+
+| 설정 키 | 설명 |
+| :--- | :--- |
+| `period` | 전체 시퀀스 사이클의 반복 주기 (초 단위). |
+| `output_duration` | 액션 간의 오버랩 시간 (초 단위). |
+| `timer_start_offset` | 활성화 후 시퀀스 시작까지의 지연 시간. |
+| `time_offset_minutes` | 동적 기간 측정값의 최대 유효 시간 (분 단위). |
+| `enabled` | 개별 액션의 활성화 여부. |
+| `sequence_mode` | 'single' 또는 'total' 선택. |
+| `action_duration` | 해당 단계의 기본 실행 시간 (초 단위). |
+| `action_duration_id` | 동적 실행 시간을 가져올 장치/측정값 ID. |

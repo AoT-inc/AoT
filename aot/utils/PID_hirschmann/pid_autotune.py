@@ -48,7 +48,8 @@ class PIDAutotune(object):
     ])
 
     def __init__(self, setpoint, out_step=10, sampletime=5, lookback=60,
-                 out_min=float('-inf'), out_max=float('inf'), noiseband=0.5, time=time):
+                 out_min=float('-inf'), out_max=float('inf'), noiseband=0.5, time=time,
+                 direction='raise'):
         if setpoint is None:
             raise ValueError('setpoint must be specified')
         if out_step < 1:
@@ -69,6 +70,7 @@ class PIDAutotune(object):
         self._noiseband = noiseband
         self._out_min = out_min
         self._out_max = out_max
+        self._direction = direction
         self._state = PIDAutotune.STATE_OFF
         self._peak_timestamps = deque(maxlen=5)
         self._peaks = deque(maxlen=5)
@@ -135,21 +137,39 @@ class PIDAutotune(object):
         self._last_run_timestamp = now
 
         # check input and change relay state if necessary
-        if (self._state == PIDAutotune.STATE_RELAY_STEP_UP
-                and input_val > self._setpoint + self._noiseband):
-            self._state = PIDAutotune.STATE_RELAY_STEP_DOWN
-            self._logger.info('')
-            self._logger.info('Cycle: {0}'.format(self._total_cycles))
-            self._logger.info('switched state: {0}'.format(self._state))
-            self._logger.info('input: {0}'.format(input_val))
+        if self._direction == 'raise':
+            if (self._state == PIDAutotune.STATE_RELAY_STEP_UP
+                    and input_val > self._setpoint + self._noiseband):
+                self._state = PIDAutotune.STATE_RELAY_STEP_DOWN
+                self._logger.info('')
+                self._logger.info('Cycle: {0}'.format(self._total_cycles))
+                self._logger.info('switched state: {0}'.format(self._state))
+                self._logger.info('input: {0}'.format(input_val))
 
-        elif (self._state == PIDAutotune.STATE_RELAY_STEP_DOWN
-                and input_val < self._setpoint - self._noiseband):
-            self._state = PIDAutotune.STATE_RELAY_STEP_UP
-            self._logger.info('')
-            self._logger.info('Cycle: {0}'.format(self._total_cycles))
-            self._logger.info('switched state: {0}'.format(self._state))
-            self._logger.info('input: {0}'.format(input_val))
+            elif (self._state == PIDAutotune.STATE_RELAY_STEP_DOWN
+                    and input_val < self._setpoint - self._noiseband):
+                self._state = PIDAutotune.STATE_RELAY_STEP_UP
+                self._logger.info('')
+                self._logger.info('Cycle: {0}'.format(self._total_cycles))
+                self._logger.info('switched state: {0}'.format(self._state))
+                self._logger.info('input: {0}'.format(input_val))
+        
+        elif self._direction == 'lower':
+            if (self._state == PIDAutotune.STATE_RELAY_STEP_UP
+                    and input_val < self._setpoint - self._noiseband):
+                self._state = PIDAutotune.STATE_RELAY_STEP_DOWN
+                self._logger.info('')
+                self._logger.info('Cycle: {0}'.format(self._total_cycles))
+                self._logger.info('switched state: {0}'.format(self._state))
+                self._logger.info('input: {0}'.format(input_val))
+
+            elif (self._state == PIDAutotune.STATE_RELAY_STEP_DOWN
+                    and input_val > self._setpoint + self._noiseband):
+                self._state = PIDAutotune.STATE_RELAY_STEP_UP
+                self._logger.info('')
+                self._logger.info('Cycle: {0}'.format(self._total_cycles))
+                self._logger.info('switched state: {0}'.format(self._state))
+                self._logger.info('input: {0}'.format(input_val))
 
         # set output
         if self._state == PIDAutotune.STATE_RELAY_STEP_UP:

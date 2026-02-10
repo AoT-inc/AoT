@@ -11,12 +11,12 @@
     <h3 style="text-align: right; padding-bottom: 1.3em;">
       <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#controller-settings" target="_blank">
         <span style="font-size: 16px" class="fas fa-question-circle"></span>
-      </a> {{_('함수 설정')}}
+      </a> {{_('Function Settings')}}
     </h3>
 
-    <h3>{{_('함수 모듈 가져오기')}}</h3>
+    <h3>{{_('Import Function Module')}}</h3>
 
-    <p>{{_('이 함수 모듈 파일을 가져올 수 있습니다.')}}</p>
+    <p>{{_('You can import function module files.')}}</p>
 
     <form method="post" action="/settings/function" enctype=multipart/form-data>
       {{form_controller.csrf_token}}
@@ -36,13 +36,13 @@
 
     <hr>
 
-    <h3>{{_('가져온 함수 모듈')}}</h3>
+    <h3>{{_('Imported Function Modules')}}</h3>
 
     <div class="table-responsive">
       <table class="table">
         <tr>
           <td>ID</td>
-          <td>{{_('이름')}}</td>
+          <td>{{_('Name')}}</td>
           <td></td>
         </tr>
 
@@ -57,7 +57,7 @@
             <td>{{dict_controllers[each_controller]['function_name']}}</td>
             <td>
               <div class="col-12 small-gutters">
-                {{form_controller_delete.delete_controller(class_='btn btn-primary btn-block', **{'onclick':'return confirm("정말 삭제하시겠습니까?")'})}}
+                {{form_controller_delete.delete_controller(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
               </div>
             </td>
           </tr>

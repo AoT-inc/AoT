@@ -22,11 +22,11 @@
   </div> <!-- grid-stack-item-content -->
 </form>
 
-<div class="modal fade" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl" role="document">
+<div class="modal fade aot-option-modal" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content" style="padding: 1em">
       <div class="modal-header">
-        <h5 class="modal-title">기능 설정</h5>
+        <h5 class="modal-title">{{_('Function Settings')}}</h5>
       </div>
       {% include 'pages/function_options/custom_function_options.html' %}
     </div>

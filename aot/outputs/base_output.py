@@ -7,7 +7,6 @@ Output.
 
 All Outputs should inherit from this class and overwrite methods that raise
 NotImplementedErrors
-2025-10-11
 """
 import datetime
 import logging
@@ -58,6 +57,11 @@ class AbstractOutput(AbstractBaseController):
 
         self.output = output
         self.running = True
+
+        # Geo location info for mapping
+        self.latitude = getattr(output, 'latitude', None)
+        self.longitude = getattr(output, 'longitude', None)
+        self.location_source = getattr(output, 'location_source', 'manual')
 
         if not testing:
             self.output_types = output_types()
@@ -144,7 +148,6 @@ class AbstractOutput(AbstractBaseController):
         self.output_on_duration = {}
         self.output_last_duration = {}
         self.output_off_until = {}
-        self._started_at_written = {}
 
         if "on_off" in output_information['output_types']:
             self.output_on_until = {}
@@ -160,13 +163,13 @@ class AbstractOutput(AbstractBaseController):
 
             if "on_off" in output_information['output_types']:
                 self.output_on_until[each_output_channel] = datetime.datetime.now()
+
     def _write_output_started_at_async(self, output_channel):
-        """Write an 'output_started_at' point to Influx asynchronously (epoch seconds in value).
-        IMPORTANT: write to the *measurement channel* whose unit == 's' (like duration_time does),
-        not necessarily the raw output_channel index. This keeps read/write channels aligned.
+        """
+        Write an 'output_started_at' point to Influx asynchronously (epoch seconds in value).
+        Write to the measurement channel whose unit == 's' to stay consistent with duration_time.
         """
         try:
-            # Resolve measurement channel (unit 's') like OFF branch does for duration_time
             measurement_channel = output_channel
             try:
                 if ('channels_dict' in self.OUTPUT_INFORMATION and
@@ -180,7 +183,7 @@ class AbstractOutput(AbstractBaseController):
                 pass
 
             started_at_utc = datetime.datetime.utcnow()
-            started_epoch = float(int(started_at_utc.timestamp()))  # normalize to float seconds
+            started_epoch = float(int(started_at_utc.timestamp()))
 
             def _writer():
                 try:
@@ -206,15 +209,13 @@ class AbstractOutput(AbstractBaseController):
                 self.logger.warning(f"Failed to write output_started_at for Output {self.unique_id} CH{output_channel}: {e}")
 
     def _ensure_started_marked(self, output_channel):
-        """Mark start-time once per ON sequence per channel. Idempotent.
-        This avoids per-output edits: any subclass that routes through output_on_off() benefits.
-        """
+        """Mark start-time once per ON sequence per channel."""
         try:
             if not self._started_at_written.get(output_channel):
                 self._write_output_started_at_async(output_channel)
                 self._started_at_written[output_channel] = True
         except Exception:
-            # Never fail the main flow due to metrics
+            # Don't interrupt main flow if metrics fail
             pass
 
     def shutdown(self, shutdown_timer):
@@ -276,9 +277,12 @@ class AbstractOutput(AbstractBaseController):
 
         # Check if output is set up
         if not self.is_setup():
-            msg = f"Cannot manipulate Output {self.unique_id}: Output not set up."
-            self.logger.error(msg)
-            return 1, msg
+            self.logger.debug(f"Output {self.unique_id} not set up. Attempting initialization...")
+            self.try_initialize()
+            if not self.is_setup():
+                msg = f"Cannot manipulate Output {self.unique_id}: Output not set up."
+                self.logger.error(msg)
+                return 1, msg
 
         #
         # Signaled to turn output on
@@ -309,7 +313,7 @@ class AbstractOutput(AbstractBaseController):
                     output_type='value',
                     amount=amount,
                     output_channel=output_channel)
-                self._ensure_started_marked(output_channel)
+
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
                       f"({self.output_name}) value: {amount:.1f} "
 
@@ -320,7 +324,7 @@ class AbstractOutput(AbstractBaseController):
                     output_type='vol',
                     amount=amount,
                     output_channel=output_channel)
-                self._ensure_started_marked(output_channel)
+
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
                       f"({self.output_name}) volume: {amount:.1f} "
 
@@ -331,7 +335,7 @@ class AbstractOutput(AbstractBaseController):
                     output_type='pwm',
                     amount=amount,
                     output_channel=output_channel)
-                self._ensure_started_marked(output_channel)
+
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
                       f"duty cycle: {amount:.2f} %. Output returned: {out_ret}"
 
@@ -412,8 +416,6 @@ class AbstractOutput(AbstractBaseController):
                     self.output_last_duration[output_channel] = amount
                     self.output_on_duration[output_channel] = True
 
-                    self._ensure_started_marked(output_channel)
-
             # No duration specific, so just turn output on
             elif ('output_types' in self.OUTPUT_INFORMATION and
                     'on_off' in self.OUTPUT_INFORMATION['output_types'] and
@@ -429,7 +431,7 @@ class AbstractOutput(AbstractBaseController):
                 if output_is_on and not force_output_channel:
                     msg = f"Output {self.unique_id} CH{output_channel} ({self.output_name}) is already on."
                     self.logger.debug(msg)
-                    return 1    , msg
+                    return 1, msg
                 else:
                     # Record the time the output was turned on in order to
                     # calculate and log the total amount was on, when
@@ -443,7 +445,6 @@ class AbstractOutput(AbstractBaseController):
                     msg = f"Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
                           f"ON at {self.output_time_turned_on[output_channel]}. Output returned: {ret_value}"
                     self.logger.debug(msg)
-
                     self._ensure_started_marked(output_channel)
 
         #

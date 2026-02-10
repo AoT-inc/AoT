@@ -48,18 +48,26 @@ Measurements
  - [Apparent Power](#apparent-power)
  - [Power Factor](#power-factor)
  - [Reactive Power](#reactive-power)
+ - [강수](#강수)
  - [Pressure](#pressure)
  - [Pulse Width](#pulse-width)
+ - [Solar Radiation](#solar-radiation)
  - [Volume Flow Rate](#volume-flow-rate)
  - [Resistance](#resistance)
  - [Revolutions](#revolutions)
  - [Salinity](#salinity)
+ - [하늘상태](#하늘상태)
+ - [신적설](#신적설)
  - [Specific Gravity](#specific-gravity)
  - [Speed](#speed)
+ - [Status](#status)
  - [Temperature](#temperature)
  - [Total Dissolved Solids](#total-dissolved-solids)
+ - [Unitless](#unitless)
+ - [Ultraviolet Index](#ultraviolet-index)
  - [Vapor Pressure Deficit](#vapor-pressure-deficit)
  - [Version](#version)
+ - [Visibility](#visibility)
  - [VOC](#voc)
  - [Volume](#volume)
 
@@ -120,6 +128,12 @@ Measurements
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
 ## Battery
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT: Ecowitt soil_sensor](/AoT/Supported-Inputs/#aot-ecowitt-soil_sensor)
+
+### [AoT: Ecowitt temp_humidity_sensor](/AoT/Supported-Inputs/#aot-ecowitt-temp_humidity_sensor)
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
@@ -205,11 +219,17 @@ Measurements
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
 
+### [AOSONG: AM2315C](/AoT/Supported-Inputs/#aosong-am2315c)
+
 ### [AOSONG: DHT11](/AoT/Supported-Inputs/#aosong-dht11)
 
 ### [AOSONG: DHT20](/AoT/Supported-Inputs/#aosong-dht20)
 
 ### [AOSONG: DHT22](/AoT/Supported-Inputs/#aosong-dht22)
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
 
 ### [Atlas Scientific: Atlas Humidity](/AoT/Supported-Inputs/#atlas-scientific-atlas-humidity)
 
@@ -224,6 +244,8 @@ Measurements
 ### [BOSCH: BME680 (bme680)](/AoT/Supported-Inputs/#bosch-bme680-bme680)
 
 ### [Cozir: Cozir CO2](/AoT/Supported-Inputs/#cozir-cozir-co2)
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
@@ -271,6 +293,14 @@ Measurements
 
 ## Direction
 
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
 ### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
@@ -315,7 +345,9 @@ Measurements
 
 ## Electrical Current
 
-### [Power Monitor: RPi Power Monitor (6 Channels)](/AoT/Supported-Inputs/#power-monitor-rpi-power-monitor-6-channels)
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
+
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
@@ -333,7 +365,9 @@ Measurements
 
 ### [Microchip: MCP342x (x=2,3,4,6,7,8)](/AoT/Supported-Inputs/#microchip-mcp342x-x=2-3-4-6-7-8)
 
-### [Power Monitor: RPi Power Monitor (6 Channels)](/AoT/Supported-Inputs/#power-monitor-rpi-power-monitor-6-channels)
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
+
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
@@ -353,6 +387,8 @@ Measurements
 
 ## Energy
 
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
+
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
@@ -369,6 +405,8 @@ Measurements
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
 
+### [AOSONG: AM2315C](/AoT/Supported-Inputs/#aosong-am2315c)
+
 ### [AOSONG: DHT11](/AoT/Supported-Inputs/#aosong-dht11)
 
 ### [AOSONG: DHT20](/AoT/Supported-Inputs/#aosong-dht20)
@@ -376,6 +414,12 @@ Measurements
 ### [AOSONG: DHT22](/AoT/Supported-Inputs/#aosong-dht22)
 
 ### [ASAIR: AHTx0](/AoT/Supported-Inputs/#asair-ahtx0)
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT: Ecowitt temp_humidity_sensor](/AoT/Supported-Inputs/#aot-ecowitt-temp_humidity_sensor)
+
+### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
 
 ### [Atlas Scientific: Atlas Humidity](/AoT/Supported-Inputs/#atlas-scientific-atlas-humidity)
 
@@ -390,6 +434,10 @@ Measurements
 ### [BOSCH: BME680 (bme680)](/AoT/Supported-Inputs/#bosch-bme680-bme680)
 
 ### [Cozir: Cozir CO2](/AoT/Supported-Inputs/#cozir-cozir-co2)
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
@@ -495,6 +543,8 @@ Measurements
 
 ### [Adafruit: I2C Capacitive Moisture Sensor](/AoT/Supported-Inputs/#adafruit-i2c-capacitive-moisture-sensor)
 
+### [AoT: Ecowitt soil_sensor](/AoT/Supported-Inputs/#aot-ecowitt-soil_sensor)
+
 ### [Catnip Electronics: Chirp](/AoT/Supported-Inputs/#catnip-electronics-chirp)
 
 ### [Xiaomi: Miflora](/AoT/Supported-Inputs/#xiaomi-miflora)
@@ -523,7 +573,9 @@ Measurements
 
 ## Power
 
-### [Power Monitor: RPi Power Monitor (6 Channels)](/AoT/Supported-Inputs/#power-monitor-rpi-power-monitor-6-channels)
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
+
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
@@ -535,7 +587,9 @@ Measurements
 
 ## Power Factor
 
-### [Power Monitor: RPi Power Monitor (6 Channels)](/AoT/Supported-Inputs/#power-monitor-rpi-power-monitor-6-channels)
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
+
+### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
@@ -543,7 +597,19 @@ Measurements
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
+## 강수
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+
 ## Pressure
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
 
 ### [Atlas Scientific: Atlas Pressure](/AoT/Supported-Inputs/#atlas-scientific-atlas-pressure)
 
@@ -565,6 +631,8 @@ Measurements
 
 ### [Infineon: DPS310](/AoT/Supported-Inputs/#infineon-dps310)
 
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
@@ -578,6 +646,10 @@ Measurements
 ## Pulse Width
 
 ### [Raspberry Pi: Signal (PWM)](/AoT/Supported-Inputs/#raspberry-pi-signal-pwm)
+
+## Solar Radiation
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
 
 ## Volume Flow Rate
 
@@ -601,21 +673,63 @@ Measurements
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
+## 하늘상태
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+
+## 신적설
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+
 ## Specific Gravity
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
 ## Speed
 
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+
 ### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
 
 ### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
+
+## Status
+
+### [Carto: Carto Maps](/AoT/Supported-Inputs/#carto-carto-maps)
+
+### [Esri: Esri World Imagery](/AoT/Supported-Inputs/#esri-esri-world-imagery)
+
+### [ISRIC: SoilGrids (Global Soil Info)](/AoT/Supported-Inputs/#isric-soilgrids-global-soil-info)
+
+### [NASA: NASA GIBS](/AoT/Supported-Inputs/#nasa-nasa-gibs)
+
+### [NASA: Soil Moisture (NASA SMAP)](/AoT/Supported-Inputs/#nasa-soil-moisture-nasa-smap)
+
+### [OpenStreetMap: OpenStreetMap](/AoT/Supported-Inputs/#openstreetmap-openstreetmap)
+
+### [OpenTopoMap: OpenTopoMap](/AoT/Supported-Inputs/#opentopomap-opentopomap)
+
+### [OpenWeatherMap: OpenWeatherMap](/AoT/Supported-Inputs/#openweathermap-openweathermap)
+
+### [RainViewer: RainViewer (Radar)](/AoT/Supported-Inputs/#rainviewer-rainviewer-radar)
+
+### [Vworld: Vworld (Korea)](/AoT/Supported-Inputs/#vworld-vworld-korea)
 
 ## Temperature
 
 ### [AMS: CCS811 (with Temperature)](/AoT/Supported-Inputs/#ams-ccs811-with-temperature)
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
+
+### [AOSONG: AM2315C](/AoT/Supported-Inputs/#aosong-am2315c)
 
 ### [AOSONG: DHT11](/AoT/Supported-Inputs/#aosong-dht11)
 
@@ -628,6 +742,12 @@ Measurements
 ### [Adafruit: I2C Capacitive Moisture Sensor](/AoT/Supported-Inputs/#adafruit-i2c-capacitive-moisture-sensor)
 
 ### [Analog Devices: ADT7410](/AoT/Supported-Inputs/#analog-devices-adt7410)
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
+### [AoT: Ecowitt temp_humidity_sensor](/AoT/Supported-Inputs/#aot-ecowitt-temp_humidity_sensor)
+
+### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
 
 ### [Atlas Scientific: Atlas Humidity](/AoT/Supported-Inputs/#atlas-scientific-atlas-humidity)
 
@@ -654,6 +774,10 @@ Measurements
 ### [Cozir: Cozir CO2](/AoT/Supported-Inputs/#cozir-cozir-co2)
 
 ### [Infineon: DPS310](/AoT/Supported-Inputs/#infineon-dps310)
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
 
 ### [MAXIM: DS1822](/AoT/Supported-Inputs/#maxim-ds1822)
 
@@ -749,9 +873,19 @@ Measurements
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
+## Unitless
+
+### [AoT: Ecowitt soil_sensor](/AoT/Supported-Inputs/#aot-ecowitt-soil_sensor)
+
+## Ultraviolet Index
+
+### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+
 ## Vapor Pressure Deficit
 
 ### [AOSONG: AM2315/AM2320](/AoT/Supported-Inputs/#aosong-am2315-am2320)
+
+### [AOSONG: AM2315C](/AoT/Supported-Inputs/#aosong-am2315c)
 
 ### [AOSONG: DHT11](/AoT/Supported-Inputs/#aosong-dht11)
 
@@ -812,6 +946,10 @@ Measurements
 ## Version
 
 ### [AoT: AoT Version](/AoT/Supported-Inputs/#aot-aot-version)
+
+## Visibility
+
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
 ## VOC
 

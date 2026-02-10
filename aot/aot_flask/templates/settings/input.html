@@ -11,12 +11,12 @@
     <h3 style="text-align: right; padding-bottom: 1.3em;">
       <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#input-settings" target="_blank">
         <span style="font-size: 16px" class="fas fa-question-circle"></span>
-      </a> {{_('입력 설정')}}
+      </a> {{_('Input Settings')}}
     </h3>
 
-    <h3>{{_('입력 모듈 가져오기')}}</h3>
+    <h3>{{_('Import Input Module')}}</h3>
 
-    <p>사용자가 만든 입력 모듈을 가져올 수 있습니다.</p>
+    <p>{{_('You can import user-created input modules.')}}</p>
 
     <form method="post" action="/settings/input" enctype=multipart/form-data>
       {{form_input.csrf_token}}
@@ -36,15 +36,15 @@
 
     <hr>
 
-    <h3>{{_('가져온 입력 모듈')}}</h3>
+    <h3>{{_('Imported Input Modules')}}</h3>
 
     <div class="table-responsive">
       <table class="table">
         <tr>
-          <td>{{_('아이디')}}</td>
-          <td>{{_('제조사')}}</td>
-          <td>{{_('이름')}}</td>
-          <td>{{_('측정값')}}</td>
+          <td>{{_('ID')}}</td>
+          <td>{{_('Manufacturer')}}</td>
+          <td>{{_('Name')}}</td>
+          <td>{{_('Measurements')}}</td>
           <td></td>
         </tr>
 
@@ -61,7 +61,7 @@
           <td>{{dict_inputs[each_input]['measurements_name']}}</td>
           <td>
             <div class="col-12 small-gutters">
-              {{form_input_delete.delete_input(class_='btn btn-primary btn-block', **{'onclick':'return confirm("삭제하시겠습니까?")'})}}
+              {{form_input_delete.delete_input(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </div>
           </td>
         </tr>

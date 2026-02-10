@@ -14,9 +14,15 @@ logger = logging.getLogger("aot.utils.widget_generate_html")
 
 def set_user_grp(filepath, user, group):
     """Set the UID and GUID of a file."""
-    uid = pwd.getpwnam(user).pw_uid
-    gid = grp.getgrnam(group).gr_gid
-    os.chown(filepath, uid, gid)
+    try:
+        uid = pwd.getpwnam(user).pw_uid
+        gid = grp.getgrnam(group).gr_gid
+        os.chown(filepath, uid, gid)
+    except KeyError:
+        # In dev environments (e.g., macOS) the 'aot' user/group may not exist.
+        logger.debug("Skipping chown: user/group '%s:%s' not found", user, group)
+    except PermissionError:
+        logger.debug("Skipping chown: insufficient permissions for %s", filepath)
 
 
 def assure_path_exists(path):
@@ -32,6 +38,8 @@ def generate_widget_html():
     """Generate all HTML files for all widgets."""
     error = []
     dict_widgets = parse_widget_information()
+    parse_widget_information.cache_clear()  # Ensure next parse is fresh if called multiple times in same process
+    dict_widgets = parse_widget_information()  # Parse again to be sure if cache was stale
     assure_path_exists(PATH_TEMPLATE_USER)
 
     for widget_name in dict_widgets:

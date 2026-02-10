@@ -17,6 +17,14 @@ class Function(CRUDMixin, db.Model):
     name = db.Column(db.Text, default='Function Name')
     position_y = db.Column(db.Integer, default=0)
     log_level_debug = db.Column(db.Boolean, default=False)
+    latitude = db.Column(db.Float, default=None)
+    longitude = db.Column(db.Float, default=None)
+    location_source = db.Column(db.String(32), default='manual')
+    marker_icon = db.Column(db.Text, default=None)
+    marker_color = db.Column(db.Text, default=None)
+    marker_size = db.Column(db.Integer, default=3)
+    map_config_id = db.Column(db.String(36), default=None)
+    map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
 
 
 class Conditional(CRUDMixin, db.Model):
@@ -30,6 +38,14 @@ class Conditional(CRUDMixin, db.Model):
 
     is_activated = db.Column(db.Boolean, default=False)
     log_level_debug = db.Column(db.Boolean, default=False)
+    
+    # Geo Location
+    latitude = db.Column(db.Float, default=None)
+    longitude = db.Column(db.Float, default=None)
+    location_source = db.Column(db.String(32), default='manual')
+    map_config_id = db.Column(db.String(36), default=None)
+    map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
+
     conditional_statement = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
     conditional_import = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
     conditional_initialize = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
@@ -76,6 +92,7 @@ class Trigger(CRUDMixin, db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
     trigger_type = db.Column(db.Text, default=None)
+    action_type = db.Column(db.Text, default='')
     name = db.Column(db.Text, default='Trigger Name')
     position_y = db.Column(db.Integer, default=0)
     is_activated = db.Column(db.Boolean, default=False)
@@ -95,6 +112,9 @@ class Trigger(CRUDMixin, db.Model):
     rise_or_set = db.Column(db.Text, default='sunrise')
     latitude = db.Column(db.Float, default=33.749249)
     longitude = db.Column(db.Float, default=-84.387314)
+    location_source = db.Column(db.String(32), default='manual')
+    map_config_id = db.Column(db.String(36), default=None)
+    map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
     date_offset_days = db.Column(db.Integer, default=0)
     time_offset_minutes = db.Column(db.Integer, default=0)
 
@@ -154,6 +174,15 @@ class Actions(CRUDMixin, db.Model):
     remote = db.Column(db.Text, default='my_remote')
     code = db.Column(db.Text, default='KEY_A')
     send_times = db.Column(db.Integer, default=1)
+
+    @property
+    def position(self):
+        try:
+            import json
+            opts = json.loads(self.custom_options) if self.custom_options else {}
+            return int(opts.get('position', 9999))
+        except:
+            return 9999
 
     def __repr__(self):
         return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)

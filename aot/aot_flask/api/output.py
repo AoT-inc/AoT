@@ -54,11 +54,10 @@ output_set_fields = ns_output.model('Output Modulation Fields', {
     'state': fields.Boolean(
         description='Set a non-PWM output state to on (True) or off (False).',
         required=False),
-    'channel': fields.Float(
-        description='The output channel to modulate.',
+    'channel': fields.Raw(
+        description='The output channel to modulate. Can be an integer or a UUID string.',
         required=True,
-        example=0,
-        min=0),
+        example=0),
     'duration': fields.Float(
         description='The duration to keep a non-PWM output on, in seconds.',
         required=False,
@@ -152,8 +151,9 @@ class Outputs(Resource):
 
             # Change integer channel keys to strings (flask-restx limitation?)
             new_state_dict = {}
-            for each_channel in states[unique_id]:
-                new_state_dict[str(each_channel)] = states[unique_id][each_channel]
+            if unique_id in states:
+                for each_channel in states[unique_id]:
+                    new_state_dict[str(each_channel)] = states[unique_id][each_channel]
 
             return {'output device': list_data,
                     'output device channels': list_channels,
@@ -191,10 +191,22 @@ class Outputs(Resource):
             if 'channel' in ns_output.payload:
                 channel = ns_output.payload["channel"]
                 if channel is not None:
+                    # Support both integer channel and UUID
                     try:
-                        channel = int(channel)
+                        # Try to cast to int if it's numeric
+                        if isinstance(channel, (int, float)) or (isinstance(channel, str) and channel.isdigit()):
+                            channel = int(channel)
+                        else:
+                            # Keep as string (likely UUID)
+                            channel_str = str(channel)
+                            # Try resolving UUID to channel index
+                            found_ch = OutputChannel.query.filter(OutputChannel.unique_id == channel_str).first()
+                            if found_ch:
+                                channel = found_ch.channel
+                            else:
+                                channel = channel_str
                     except Exception:
-                        abort(422, message='channel does not represent a number')
+                        abort(422, message='channel does not represent a valid identifier')
                 else:
                     channel = 0
 
@@ -242,6 +254,10 @@ class Outputs(Resource):
                     unique_id, state, output_channel=channel)
             else:
                 return {'message': 'Insufficient payload'}, 460
+            
+            # Additional check for None return which can happen if daemon is unreachable
+            if return_ is None:
+                return {'message': 'Fail: Daemon unreachable or no response'}, 500
 
             return return_handler(return_)
         except Exception:

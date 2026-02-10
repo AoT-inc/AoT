@@ -1,0 +1,201 @@
+<div id="mod_function_{{each_function.unique_id}}">
+    <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_trigger.csrf_token}}
+        {{form_trigger.function_id(value=each_function.unique_id)}}
+        {{form_trigger.function_type(value='trigger')}}
+ 
+    {# Location settings and map: integrated with macro #}
+    {# Moved to below return_text #}
+
+        {# Location settings and map #}
+        {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+        <div class="mt-3 mb-3">
+            {{ render_device_map(
+            'function',
+            each_function.unique_id,
+            form_trigger.latitude,
+            form_trigger.longitude,
+            form_trigger.location_source,
+            each_function.latitude,
+            each_function.longitude,
+            each_function.location_source,
+            'function_mod',
+            'modal_config_' ~ each_function.unique_id,
+            '280px',
+            None,
+            None,
+            None,
+            form_id='form_function_' ~ each_function.unique_id,
+            map_config_id=(map_config_id if map_config_id is defined else ''),
+            map_configs=(map_configs if map_configs is defined else []),
+            map_overlays=map_overlays,
+            save_id='mod_function_save_' ~ each_function.unique_id
+            ) }}
+        </div>
+
+        <div class="d-flex flex-wrap mb-3">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2"
+                data-dismiss="modal">{{_('Close')}}</button>
+            <button data-form-id="form_function_{{each_function.unique_id}}"
+                onclick="return $(this).processRequest(this, 'function_mod');"
+                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button"
+                name="function_mod">{{_('Save')}}</button>
+            <button data-form-id="form_function_{{each_function.unique_id}}"
+                onclick="return confirm({{_('Are you sure you want to delete?')|tojson}}) && $(this).processRequest(this, 'function_delete');"
+                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button"
+                name="function_delete">{{_('Delete')}}</button>
+            <button onclick="return $(this).processRequest(this, 'execute_all_actions');" name="execute_all_actions"
+                class="btn aot-pill-btn aot-pill-btn-primary mb-2 ml-auto" type="button">{{_('Execute All Actions')}}</button>
+        </div>
+
+        <div class="aot-modal-group-title">{{_('Options')}}</div>
+        <div class="aot-modal-container">
+
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_trigger.name.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                    {{form_trigger.name(class_='form-control aot-modern-input', value=each_function.name, **{'title':
+                    dict_translation['name']['phrase']})}}
+                </div>
+            </div>
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_trigger.log_level_debug.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                    <label class="btn-toggle mb-0">
+                        <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input"
+                            value="y" {% if each_function.log_level_debug %}checked{% endif %}>
+                        <div class="btn-toggle-slider">
+                            <div class="btn-toggle-thumb"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Add Node Management button -->
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
+                <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' } }))">
+                    {{_('Note')}}
+                </button>
+                </div>
+            </div>
+        </div>
+        <div class="aot-modal-group-title">{{_('Time Settings')}}</div>
+        <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Start Time')}}</label>
+                <div class="aot-modal-option-control">
+                    <div class="input-group clockpicker" data-placement="top" data-align="top" data-autoclose="true">
+                        <input type="text" class="form-control aot-modern-input" name="timer_start_time"
+                            value="{{ each_function.timer_start_time or '00:00' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('End Time')}}</label>
+                <div class="aot-modal-option-control">
+                    <div class="input-group clockpicker" data-placement="top" data-align="top" data-autoclose="true">
+                        <input type="text" class="form-control aot-modern-input" name="timer_end_time"
+                            value="{{ each_function.timer_end_time or '00:00' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Period (seconds)')}}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" class="form-control aot-modern-input aot-time-input" name="period"
+                        value="{{ each_function.period or 600 }}">
+                </div>
+            </div>
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Delay (seconds)')}}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" class="form-control aot-modern-input aot-time-input" name="timer_start_offset"
+                        value="{{ each_function.timer_start_offset or 10 }}">
+                </div>
+            </div>
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Overlap (seconds)')}}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" class="form-control aot-modern-input aot-time-input" name="output_duration"
+                        value="{{ each_function.output_duration or 0 }}">
+                </div>
+            </div>
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Input Validity (seconds)')}}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" class="form-control aot-modern-input aot-time-input" name="time_offset_minutes"
+                        value="{{ each_function.time_offset_minutes if each_function.time_offset_minutes is not none else 300 }}">
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="aot-modal-group-title">
+        {{_('Actions')}}
+        <a href="https://aot-inc.github.io/AoT/Actions" target="_blank"><span style="font-size: 16px"
+                class="fas fa-question-circle"></span></a>
+    </div>
+
+    <div class="aot-modal-container">
+        <form id="form_actions_{{each_function.unique_id}}" method="post" action="/function">
+            {{form_actions.csrf_token}}
+            {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
+            {{form_actions.function_type(class_='form-control', value='trigger')}}
+
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{_('Add Action')}}</label>
+                <div class="aot-modal-option-control">
+                    <div class="aot-action-group">
+                        <select class="form-control aot-modern-select selectpicker aot-standard-select"
+                            data-style="btn-white" data-live-search="true"
+                            title="{{_('Actions')}}: {{dict_translation['select_one']['title']}}"
+                            id="action_type_{{each_function.unique_id}}" name="action_type">
+                            {% for value, name in choices_actions %}
+                            <option value="{{value}}">{{name}}</option>
+                            {% endfor %}
+                        </select>
+                        <button data-form-id="form_actions_{{each_function.unique_id}}"
+                            onclick="return $(this).processRequest(this, 'add_action');" name="add_action"
+                            class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% from 'pages/function_options/gridstack_helper.html' import init_gridstack_actions with context %}
+
+    <div class="grid-stack" id="mod_function_actions_{{each_function.unique_id}}">
+        {% for each_action in action|sort(attribute='position') if each_action.function_id == each_function.unique_id %}
+        {% include 'pages/function_options/trigger_sequence_actions.html' %}
+        {% endfor %}
+    </div>
+
+    {{ init_gridstack_actions(each_function.unique_id, cell_height=48) }}
+
+    <script>
+        function toggleSequenceFields(id, mode) {
+            if (mode === 'total') {
+                $('.sequence-duration-field-' + id).hide();
+            } else {
+                $('.sequence-duration-field-' + id).show();
+            }
+        }
+    </script>
+
+    <script>
+        $('.selectpicker').selectpicker();
+
+    // [Fix] Gray Map Issue (Iteration 7)
+    // Simulating the side-effect of "Notes" widget or just forcing a resize
+    // to ensure Leaflet map renders correctly.
+    $(document).ready(function() {
+        // Resize script removed
+    });
+        $('.clockpicker').clockpicker();
+    </script>
+</div>

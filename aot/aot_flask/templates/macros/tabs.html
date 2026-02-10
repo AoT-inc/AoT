@@ -1,0 +1,50 @@
+{% macro render_tabs(items, current_id, link_endpoint, save_order_endpoint, container_id='dash-tabs',
+param_name='dashboard_id', use_query_string=False) %}
+
+
+
+<div id="{{ container_id }}" class="d-flex align-items-center aot-tabs-wrapper flex-grow-1">
+
+    <!-- Transparent Dummy for Fixed Button Offset -->
+    <!-- Force 40px width to match button diameter. Override responsive min-width/flex-basis with !important -->
+    <div class="aot-tab-item dummy-spacer"
+        style="flex: 0 0 40px !important; width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: 100%; visibility: hidden; padding: 0 !important; margin: 0 !important;">
+    </div>
+
+    {% for item in items %}
+    {% set is_active = (item.unique_id == current_id) %}
+
+    {# Generate URL #}
+    {% if use_query_string %}
+    {% set href = url_for(link_endpoint) ~ '?' ~ param_name ~ '=' ~ item.unique_id %}
+    {% else %}
+    {% set href = url_for(link_endpoint, **{param_name: item.unique_id}) %}
+    {% endif %}
+
+    <div class="dash-tab aot-tab-item{% if is_active %} active{% endif %}" draggable="true"
+        data-id="{{ item.unique_id }}">
+
+        <a href="{{ href }}" class="btn btn-aot-dash text-center{% if is_active %} active{% endif %}"
+            style="width: 100%;">
+            <span class="d-none d-md-inline">{{ item.name }}</span>
+            <span class="d-md-none">{{ item.name }}</span>
+        </a>
+    </div>
+    {% endfor %}
+
+</div>
+
+{# Initialize the JS component #}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.AoTTabs) {
+            new AoTTabs({
+                containerId: '{{ container_id }}',
+                saveEndpoint: '{{ save_order_endpoint }}',
+                activeClass: 'active',
+                stickyId: '{{ container_id }}-sticky'
+            });
+        }
+    });
+</script>
+{% endmacro %}

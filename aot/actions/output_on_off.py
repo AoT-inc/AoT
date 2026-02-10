@@ -113,10 +113,13 @@ class ActionModule(AbstractFunctionAction):
 
         if not output:
             msg = f" Error: Output with ID '{output_id}' not found."
+            if 'message' not in dict_vars: dict_vars['message'] = ""
             dict_vars['message'] += msg
             self.logger.error(msg)
             return dict_vars
 
+        if 'message' not in dict_vars:
+            dict_vars['message'] = ""
         dict_vars['message'] += f" Turn output {output_id} CH{channel} ({output.name}) {state}"
 
         if state == 'on' and duration:

@@ -169,6 +169,18 @@ class AbstractBaseController(object):
 
                 elif each_option_default['type'] in ['multiline_text',
                                                      'text']:
+                    # If this is a time input field, parse it to seconds
+                    if (each_option_default['type'] == 'text' and
+                            'class' in each_option_default and
+                            'aot-time-input' in each_option_default['class']):
+                        try:
+                            from aot.utils.time_utils import parse_flexible_time
+                            parsed_time = parse_flexible_time(option_value)
+                            if parsed_time:
+                                option_value = parsed_time['total_seconds']
+                        except Exception as err:
+                            self.logger.error(f"Error parsing time option '{each_option_default['id']}': {err}")
+
                     setattr(self, each_option_default['id'], str(option_value))
 
                 elif each_option_default['type'] == 'select_multi_measurement':
@@ -286,6 +298,18 @@ class AbstractBaseController(object):
                                                    'text',
                                                    'select',
                                                    'select_custom_choices']:
+                    # If this is a time input field, parse it to seconds
+                    if (each_option_default['type'] == 'text' and
+                            'class' in each_option_default and
+                            'aot-time-input' in each_option_default['class']):
+                        try:
+                            from aot.utils.time_utils import parse_flexible_time
+                            parsed_time = parse_flexible_time(option_value)
+                            if parsed_time:
+                                option_value = parsed_time['total_seconds']
+                        except Exception as err:
+                            self.logger.error(f"Error parsing time option '{each_option_default['id']}': {err}")
+
                     setattr(self, each_option_default['id'], option_value)
 
                 elif each_option_default['type'] in ['select_measurement',

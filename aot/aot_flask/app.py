@@ -20,13 +20,14 @@ from aot.databases.models import Misc, User, Widget, populate_db
 from aot.databases.utils import session_scope
 from aot.aot_flask import (routes_admin, routes_authentication,
                                  routes_dashboard, routes_function,
-                                 routes_general, routes_input, routes_method,
-                                 routes_output, routes_page,
+                                 routes_general, routes_input, routes_geo,
+                                 routes_method, routes_output, routes_page,
                                  routes_password_reset, routes_remote_admin,
-                                 routes_settings, routes_static)
+                                 routes_settings, routes_static, routes_notes_api)
 from aot.aot_flask.api import api_blueprint, init_api
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import get_ip_address
+from aot.aot_flask.utils import utils_geo
 from aot.utils.layouts import update_layout
 from aot.utils.widgets import parse_widget_information
 
@@ -48,6 +49,18 @@ def create_app(config=ProdConfig):
     register_blueprints(app)
     register_widget_endpoints(app)
 
+    @app.template_filter('from_json_safe')
+    def from_json_safe(value):
+        import json
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return {}
+
+    @app.context_processor
+    def inject_geo_config():
+        return dict(geo_config=utils_geo.get_geo_config())
+
     return app
 
 
@@ -63,29 +76,53 @@ def register_extensions(app):
     app = extension_compress(app)  # Compress app responses with gzip
     app = extension_limiter(app)  # Limit authentication blueprint requests to 200 per minute
     app = extension_login_manager(app)  # User login management
+    app = extension_login_manager(app)  # User login management
     app = extension_session(app)  # Server side session
+    app = extension_csrf(app) # CSRF Protection
+    app = extension_cache(app)  # API response caching
 
     # Create and populate database if it doesn't exist
     with app.app_context():
         db.create_all()
-        populate_db()
+        # During Alembic migrations, avoid touching the DB via populate_db(),
+        # because the schema may be mid-upgrade.
+        if os.environ.get("ALEMBIC_RUNNING") != "1":
+            populate_db()
 
         # This is disabled because there's a bug that messes up user databases
         # The upgrade script will execute alembic to upgrade the database
         # alembic_upgrade_db()
 
-    # Check user option to force all web connections to use SSL
-    # Fail if the URI is empty (pytest is running)
-    if app.config['SQLALCHEMY_DATABASE_URI'] != 'sqlite://':
-        with session_scope(app.config['SQLALCHEMY_DATABASE_URI']) as new_session:
-            misc = new_session.query(Misc).first()
-            if misc:
-                # Ensure layout.html is present, by generating it at startup
-                update_layout(misc.custom_layout)
+    # [Security] Initialize Talisman with robust defaults
+    # CSP: Using 'self' as base, keeping '*' for legacy widget compatibility
+    csp = {
+        'default-src': ["'self'", '*', "'unsafe-inline'", "'unsafe-eval'"],
+        'img-src': ["'self'", '*', 'data:', 'blob:', 'rtsp:', 'rtsps:'],
+        'style-src': ["'self'", '*', "'unsafe-inline'"],
+        'script-src': ["'self'", '*', "'unsafe-inline'", "'unsafe-eval'"],
+        'connect-src': ["'self'", '*', 'rtsp:', 'rtsps:'],
+        'media-src': ["'self'", '*', 'data:', 'blob:', 'rtsp:', 'rtsps:']
+    }
 
-                if misc.force_https:
-                    csp = {'default-src': ['*', '\'unsafe-inline\'', '\'unsafe-eval\'']}
-                    Talisman(app, content_security_policy=csp)
+    force_https = False
+    # Skip reading Misc during Alembic runs (schema may be mid-upgrade)
+    if os.environ.get("ALEMBIC_RUNNING") != "1":
+        # Check user option to force all web connections to use SSL
+        # Fail if the URI is empty (pytest is running)
+        if app.config['SQLALCHEMY_DATABASE_URI'] != 'sqlite://':
+            with session_scope(app.config['SQLALCHEMY_DATABASE_URI']) as new_session:
+                misc = new_session.query(Misc).first()
+                if misc:
+                    update_layout(misc.custom_layout)
+                    force_https = misc.force_https
+
+    Talisman(app, 
+             content_security_policy=csp, 
+             force_https=force_https,
+             strict_transport_security=force_https,
+             session_cookie_secure=force_https,
+             session_cookie_http_only=True,
+             frame_options='SAMEORIGIN')
 
 
 def register_blueprints(app):
@@ -102,7 +139,12 @@ def register_blueprints(app):
     app.register_blueprint(routes_page.blueprint)  # register page views
     app.register_blueprint(routes_remote_admin.blueprint)  # register remote admin views
     app.register_blueprint(routes_settings.blueprint)  # register settings views
+    app.register_blueprint(routes_geo.blueprint)  # register geo views
     app.register_blueprint(routes_static.blueprint)  # register static routes
+    app.register_blueprint(routes_notes_api.blueprint)  # register notes api routes
+    from aot.aot_flask import routes_ai_api, routes_locale_api
+    app.register_blueprint(routes_ai_api.blueprint)  # register ai api routes
+    app.register_blueprint(routes_locale_api.blueprint)  # register locale api routes
 
 
 def register_widget_endpoints(app):
@@ -268,4 +310,16 @@ def extension_session(app):
     app.config['SESSION_TYPE'] = 'filesystem'
     Session(app)
 
+    return app
+
+
+def extension_csrf(app):
+    from aot.aot_flask.extensions import csrf
+    csrf.init_app(app)
+    return app
+
+
+def extension_cache(app):
+    from aot.aot_flask.extensions import cache
+    cache.init_app(app)
     return app

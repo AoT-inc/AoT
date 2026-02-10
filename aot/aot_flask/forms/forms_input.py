@@ -19,6 +19,7 @@ from wtforms.validators import DataRequired
 from wtforms.widgets import NumberInput
 
 from aot.config_translations import TRANSLATIONS
+from aot.config import PATH_INPUTS_GIS
 from aot.aot_flask.utils.utils_general import generate_form_input_list
 from aot.utils.inputs import parse_input_information
 
@@ -32,6 +33,10 @@ class InputAdd(FlaskForm):
     list_inputs_sorted = generate_form_input_list(dict_inputs)
 
     for each_input in list_inputs_sorted:
+        # Exclude input_gis from the list
+        if dict_inputs[each_input].get('file_path', '').startswith(PATH_INPUTS_GIS):
+            continue
+
         is_aot = False
         value = '{inp},'.format(inp=each_input)
         if 'input_manufacturer' in dict_inputs[each_input] and dict_inputs[each_input]['input_manufacturer']:
@@ -69,22 +74,80 @@ class InputAdd(FlaskForm):
         choices=choices_builtin + choices_inputs,
         validators=[DataRequired()]
     )
-    input_add = SubmitField('추가')
+    input_add = SubmitField(lazy_gettext('Add'))
 
 
 class InputMod(FlaskForm):
-    input_id = StringField('입력 ID', widget=widgets.HiddenInput())
+    input_id = StringField(lazy_gettext('Input ID'), widget=widgets.HiddenInput())
     input_measurement_id = StringField(widget=widgets.HiddenInput())
     name = StringField(
-        '이름',
+        lazy_gettext('Name'),
         validators=[DataRequired()]
     )
     unique_id = StringField(
-        '고유 ID',
+        lazy_gettext('Unique ID'),
         validators=[DataRequired()]
     )
+    latitude = DecimalField(
+        lazy_gettext('Latitude'),
+        places=8,
+        rounding=None,
+        validators=[validators.Optional(),
+                    validators.NumberRange(min=-90, max=90)],
+        widget=NumberInput(step='any')
+    )
+    longitude = DecimalField(
+        lazy_gettext('Longitude'),
+        places=8,
+        rounding=None,
+        validators=[validators.Optional(),
+                    validators.NumberRange(min=-180, max=180)],
+        widget=NumberInput(step='any')
+    )
+    location_source = SelectField(
+        lazy_gettext('Location Source'),
+        choices=[('manual', lazy_gettext('Manual')), ('device', lazy_gettext('Device')), ('remote', lazy_gettext('Remote'))],
+        default='manual'
+    )
+    marker_icon = SelectField(
+        lazy_gettext('Icon'),
+        choices=[
+            ('', lazy_gettext('Default')),
+            ('valve', lazy_gettext('Valve')),
+            ('motor', lazy_gettext('Motor')),
+            ('switch', lazy_gettext('Switch')),
+            ('temp', lazy_gettext('Temperature')),
+            ('humidity', lazy_gettext('Humidity')),
+            ('ph', lazy_gettext('pH')),
+            ('ec', lazy_gettext('EC')),
+            ('solar', lazy_gettext('Solar')),
+            ('wind', lazy_gettext('Wind')),
+            ('arrow', lazy_gettext('Arrow')),
+            ('vpd', lazy_gettext('VPD')),
+            ('pid', lazy_gettext('PID')),
+            ('controller', lazy_gettext('Controller')),
+            ('meteo', lazy_gettext('Weather Station')),
+        ],
+        default=''
+    )
+    marker_color = SelectField(
+        lazy_gettext('Icon Color'),
+        choices=[
+            ('blue', 'Blue'),
+            ('red', 'Red'),
+            ('green', 'Green'),
+            ('orange', 'Orange'),
+            ('gray', 'Gray'),
+        ],
+        default='blue'
+    )
+    marker_size = SelectField(
+        lazy_gettext('Icon Size'),
+        choices=[(str(i), str(i)) for i in range(1, 6)],
+        default='3'
+    )
     period = DecimalField(
-        '측정주기',
+        lazy_gettext('Measurement Period'),
         validators=[DataRequired(),
                     validators.NumberRange(
                         min=5,
@@ -93,7 +156,7 @@ class InputMod(FlaskForm):
         widget=NumberInput(step='any')
     )
     start_offset = DecimalField(
-        '시작 지연',
+        lazy_gettext('Start Offset'),
         validators=[DataRequired(),
                     validators.NumberRange(
                         min=0,
@@ -101,75 +164,75 @@ class InputMod(FlaskForm):
                     )],
         widget=NumberInput(step='any')
     )
-    log_level_debug = BooleanField('디버그 로그 활성화')
-    num_channels = IntegerField('측정값 개수', widget=NumberInput())
-    location = StringField('위치')
-    ftdi_location = StringField('FTDI 위치')
-    uart_location = StringField('UART 위치')
-    gpio_location = IntegerField('GPIO 위치')
-    i2c_location = StringField('I2C 위치')
-    i2c_bus = IntegerField('I2C 버스', widget=NumberInput())
-    baud_rate = IntegerField('통신 속도 (Baud rate)', widget=NumberInput())
-    power_output_id = StringField('전원 출력 장치')
-    calibrate_sensor_measure = StringField('센서 교정 기준 측정값')
-    resolution = IntegerField('해상도', widget=NumberInput())
-    resolution_2 = IntegerField('보조 해상도', widget=NumberInput())
-    sensitivity = IntegerField('민감도', widget=NumberInput())
-    measurements_enabled = SelectMultipleField('활성화할 측정값')
+    log_level_debug = BooleanField(lazy_gettext('Enable Debug Logging'))
+    num_channels = IntegerField(lazy_gettext('Number of Channels'), widget=NumberInput())
+    location = StringField(lazy_gettext('Location'))
+    ftdi_location = StringField(lazy_gettext('FTDI Location'))
+    uart_location = StringField(lazy_gettext('UART Location'))
+    gpio_location = IntegerField(lazy_gettext('GPIO Location'))
+    i2c_location = StringField(lazy_gettext('I2C Location'))
+    i2c_bus = IntegerField(lazy_gettext('I2C Bus'), widget=NumberInput())
+    baud_rate = IntegerField(lazy_gettext('Baud rate'), widget=NumberInput())
+    power_output_id = StringField(lazy_gettext('Power Output Device'))
+    calibrate_sensor_measure = StringField(lazy_gettext('Sensor Calibration Reference Measurement'))
+    resolution = IntegerField(lazy_gettext('Resolution'), widget=NumberInput())
+    resolution_2 = IntegerField(lazy_gettext('Secondary Resolution'), widget=NumberInput())
+    sensitivity = IntegerField(lazy_gettext('Sensitivity'), widget=NumberInput())
+    measurements_enabled = SelectMultipleField(lazy_gettext('Select Measurements to Enable'))
 
 
-    # 서버 옵션
-    host = StringField('호스트 주소')
-    port = IntegerField('포트', widget=NumberInput())
-    times_check = IntegerField('체크 횟수', widget=NumberInput())
-    deadline = IntegerField('제한 시간', widget=NumberInput())
+    # Server options
+    host = StringField(lazy_gettext('Host Address'))
+    port = IntegerField(lazy_gettext('Port'), widget=NumberInput())
+    times_check = IntegerField(lazy_gettext('Check Count'), widget=NumberInput())
+    deadline = IntegerField(lazy_gettext('Deadline'), widget=NumberInput())
 
-    # Linux 명령어
-    cmd_command = StringField('실행 명령어')
+    # Linux command
+    cmd_command = StringField(lazy_gettext('Command to Execute'))
 
-    # MAX 칩 옵션
-    thermocouple_type = StringField('열전대 유형')
-    ref_ohm = IntegerField('기준 저항값 (Ω)', widget=NumberInput())
+    # MAX chip options
+    thermocouple_type = StringField(lazy_gettext('Thermocouple Type'))
+    ref_ohm = IntegerField(lazy_gettext('Reference Resistance (Ω)'), widget=NumberInput())
 
-    # SPI 통신 옵션
-    pin_clock = IntegerField('SPI 클럭 핀', widget=NumberInput())
-    pin_cs = IntegerField('SPI 칩 선택 핀 (CS)', widget=NumberInput())
-    pin_mosi = IntegerField('SPI MOSI 핀', widget=NumberInput())
-    pin_miso = IntegerField('SPI MISO 핀', widget=NumberInput())
+    # SPI communication options
+    pin_clock = IntegerField(lazy_gettext('SPI Clock Pin'), widget=NumberInput())
+    pin_cs = IntegerField(lazy_gettext('SPI Chip Select Pin (CS)'), widget=NumberInput())
+    pin_mosi = IntegerField(lazy_gettext('SPI MOSI Pin'), widget=NumberInput())
+    pin_miso = IntegerField(lazy_gettext('SPI MISO Pin'), widget=NumberInput())
 
-    # Bluetooth 옵션
-    bt_adapter = StringField('블루투스 어댑터')
+    # Bluetooth options
+    bt_adapter = StringField(lazy_gettext('Bluetooth Adapter'))
 
-    # ADC 옵션
-    adc_gain = IntegerField('ADC 게인', widget=NumberInput())
-    adc_resolution = IntegerField('ADC 해상도', widget=NumberInput())
-    adc_sample_speed = StringField('ADC 샘플 속도')
+    # ADC options
+    adc_gain = IntegerField(lazy_gettext('ADC Gain'), widget=NumberInput())
+    adc_resolution = IntegerField(lazy_gettext('ADC Resolution'), widget=NumberInput())
+    adc_sample_speed = StringField(lazy_gettext('ADC Sample Speed'))
 
-    # Switch 옵션
-    switch_edge = StringField('에지 감지')
-    switch_bouncetime = IntegerField('바운스 타임 (ms)', widget=NumberInput())
-    switch_reset_period = IntegerField('리셋 주기', widget=NumberInput())
+    # Switch options
+    switch_edge = StringField(lazy_gettext('Edge Detection'))
+    switch_bouncetime = IntegerField(lazy_gettext('Bounce Time (ms)'), widget=NumberInput())
+    switch_reset_period = IntegerField(lazy_gettext('Reset Period'), widget=NumberInput())
 
-    # 사전 출력 옵션
-    pre_output_id = StringField('사전 출력 장치 ID')
+    # Pre-output options
+    pre_output_id = StringField(lazy_gettext('Pre-output Device ID'))
     pre_output_duration = DecimalField(
-        '사전 출력 지속 시간 (초)',
+        lazy_gettext('Pre-output Duration (sec)'),
         validators=[validators.NumberRange(min=0, max=86400)],
         widget=NumberInput(step='any')
     )
-    pre_output_during_measure = BooleanField('측정 중 사전 출력 유지')
+    pre_output_during_measure = BooleanField(lazy_gettext('Keep Pre-output During Measurement'))
 
-    # RPM/신호 입력 옵션
-    weighting = DecimalField('가중치', widget=NumberInput(step='any'))
-    rpm_pulses_per_rev = DecimalField('회전당 펄스 수', widget=NumberInput(step='any'))
-    sample_time = DecimalField('샘플링 시간 (초)', widget=NumberInput(step='any'))
+    # RPM/signal input options
+    weighting = DecimalField(lazy_gettext('Weighting'), widget=NumberInput(step='any'))
+    rpm_pulses_per_rev = DecimalField(lazy_gettext('Pulses Per Revolution'), widget=NumberInput(step='any'))
+    sample_time = DecimalField(lazy_gettext('Sampling Time (sec)'), widget=NumberInput(step='any'))
 
-    # SHT 옵션
-    sht_voltage = StringField('SHT 센서 전압')
+    # SHT options
+    sht_voltage = StringField(lazy_gettext('SHT Sensor Voltage'))
 
-    input_duplicate = SubmitField('복제')
-    input_mod = SubmitField('저장')
-    input_delete = SubmitField('삭제')
-    input_acquire_measurements = SubmitField('즉시 측정')
-    input_activate = SubmitField('활성화')
-    input_deactivate = SubmitField('비활성화')
+    input_duplicate = SubmitField(lazy_gettext('Duplicate'))
+    input_mod = SubmitField(lazy_gettext('Save'))
+    input_delete = SubmitField(lazy_gettext('Delete'))
+    input_acquire_measurements = SubmitField(lazy_gettext('Measure Now'))
+    input_activate = SubmitField(lazy_gettext('Activate'))
+    input_deactivate = SubmitField(lazy_gettext('Deactivate'))

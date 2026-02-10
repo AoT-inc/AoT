@@ -26,7 +26,7 @@ WIRINGPI_URL_ARM64="https://github.com/WiringPi/WiringPi/releases/download/3.10/
 INFLUXDB1_VERSION="1.8.10"
 
 # Required apt packages
-APT_PKGS="gawk gcc g++ git jq libatlas-base-dev libffi-dev libi2c-dev logrotate moreutils netcat-openbsd nginx python3 python3-dev python3-pip python3-setuptools python3-venv rng-tools sqlite3 unzip wget"
+APT_PKGS="gawk gcc g++ git jq libatlas-base-dev libffi-dev libgeos-dev libheif-dev libi2c-dev logrotate moreutils netcat-openbsd nginx nodejs npm python3 python3-dev python3-pip python3-setuptools python3-venv rng-tools sqlite3 unzip wget"
 
 UNAME_TYPE=$(uname -m)
 MACHINE_TYPE=$(dpkg --print-architecture)
@@ -57,6 +57,7 @@ Options:
   create-user                   Create 'aot' user and add to appropriate groups
   initialize                    Issues several commands to set up directories/files/permissions
   generate-widget-html          Generate HTML templates for all widgets
+  build-notes-widget            Build the React notes widget
   restart-daemon                Restart the AoT daemon
   setup-virtualenv              Create a Python virtual environment
   setup-virtualenv-full         Create a Python virtual environment and install dependencies
@@ -100,6 +101,7 @@ Options:
   web-server-disable            Disable the web server service
   web-server-enable             Enable the web server service
   web-server-update             Update the web server configuration files
+  reset-influxdb-config         Reset InfluxDB configuration in SQLite to defaults
 
 Docker-specific Commands:
   docker-update-pip             Update pip
@@ -208,6 +210,22 @@ case "${1:-''}" in
         printf "\n#### Generating widget HTML files\n"
         "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/utils/widget_generate_html.py
     ;;
+    'build-notes-widget')
+        printf "\n#### Building React Notes Widget\n"
+        # Ensure npm and node are available
+        if ! command -v npm &> /dev/null; then
+            printf "#### npm not found. Skipping build.\n"
+        else
+            cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
+            printf "#### Installing node dependencies...\n"
+            npm install
+            printf "#### Building bundle...\n"
+            npm run build
+            # Correct permissions if needed
+            chown -R "${AOT_USER}:${AOT_GROUP}" dist/ 2>/dev/null || true
+            chown -R "${AOT_USER}:${AOT_GROUP}" ../../js/notes/ 2>/dev/null || true
+        fi
+    ;;
     'initialize')
         printf "\n#### Running initialization\n"
         /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh create-user
@@ -281,6 +299,11 @@ case "${1:-''}" in
     'update-dependencies')
         printf "\n#### Checking for updates to dependencies\n"
         "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/utils/update_dependencies.py
+    ;;
+    'reset-influxdb-config')
+        printf "\n#### Resetting InfluxDB configuration in SQLite to defaults\n"
+        # Ensure we use the virtualenv python
+        "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/scripts/reset_influxdb_config.py
     ;;
     'install-bcm2835')
         printf "\n#### Installing bcm2835\n"
@@ -528,27 +551,57 @@ case "${1:-''}" in
         done
     ;;
     'update-influxdb-2-db-user')
-        printf "\n#### Creating InfluxDB 2.x org/bucket (idempotent)\n"
-        # If influx is initialized, org list returns 0; otherwise setup is required
+        printf "\n#### Configuring InfluxDB 2.x (Idempotent)\n"
+        
+        # Check if influx command exists
+        if ! command -v influx &> /dev/null; then
+            printf "#### Error: 'influx' command not found. Cannot configure InfluxDB.\n"
+            exit 1
+        fi
+
+        # Wait for InfluxDB to start
+        printf "#### Waiting for InfluxDB to start...\n"
+        for _ in {1..10}; do
+            if curl -sL -I localhost:8086/ping >/dev/null; then
+                break
+            fi
+            sleep 5
+        done
+
+        # 1. Try initial setup (will fail if already set up, which is fine)
         if influx ping >/dev/null 2>&1 && influx org list >/dev/null 2>&1; then
-            printf "#### InfluxDB v2.x already initialized. Skipping setup.\n"
+            printf "#### InfluxDB v2.x already initialized.\n"
         else
             printf "#### Attempting to initialize InfluxDB v2.x...\n"
-            for _ in {1..10}; do
-                curl -sL -I localhost:8086/ping >/dev/null && \
-                influx setup \
-                       --org aot \
-                       --bucket aot_db \
-                       --username aot \
-                       --password mmdu77sj3nIoiajjs \
-                       --force && \
-                printf "#### InfluxDB v2.x initialized (org/bucket created).\n" && \
-                break || {
-                    printf "#### Could not connect to InfluxDB. Waiting 60 seconds then trying again...\n";
-                    sleep 60;
-                }
-            done
+            influx setup \
+                   --org aot \
+                   --bucket aot_db \
+                   --username aot \
+                   --password mmdu77sj3nIoiajjs \
+                   --token mmdu77sj3nIoiajjs \
+                   --force || printf "#### Setup skipped (likely already set up).\n"
         fi
+
+        # 2. Ensure Org 'aot' exists
+        if influx org list --json | grep -q '"name":"aot"'; then
+            printf "#### Organization 'aot' already exists.\n"
+        else
+            printf "#### Creating Organization 'aot'...\n"
+            influx org create -n aot || printf "#### Warning: Could not create Org 'aot' (check permissions/token).\n"
+        fi
+
+        # 3. Ensure Bucket 'aot_db' exists
+        if influx bucket list --org aot --json | grep -q '"name":"aot_db"'; then
+            printf "#### Bucket 'aot_db' already exists.\n"
+        else
+            printf "#### Creating Bucket 'aot_db'...\n"
+            influx bucket create -n aot_db -o aot -r 0 || printf "#### Warning: Could not create Bucket 'aot_db' (check permissions/token).\n"
+        fi
+
+        # 4. Reset SQLite config to match these defaults (Fix for reinstall scenario)
+        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh reset-influxdb-config
+
+        printf "#### InfluxDB 2.x configuration check complete.\n"
     ;;
     'fix-influx-perms')
         printf "\n#### Fixing InfluxDB directories ownership to match service account\n"

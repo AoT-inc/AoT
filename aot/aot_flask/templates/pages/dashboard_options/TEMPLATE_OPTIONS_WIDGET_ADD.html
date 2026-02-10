@@ -1,18 +1,25 @@
-<div class="col-auto">
-  {{form_base.name.label(class_='control-label')}}
-  <div>
-    {{form_base.name(class_='form-control', value="Widget Name")}}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="name">{{form_base.name.label.text}}</label>
+  <div class="aot-modal-option-control">
+    {{form_base.name(class_='form-control aot-modern-input', value="Widget Name")}}
   </div>
 </div>
-<div class="col-auto">
-  {{form_base.font_em_name.label(class_='control-label')}}
-  <div>
-    {{form_base.font_em_name(class_='form-control', value=1.0, **{'title': dict_translation['name']['phrase']})}}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="font_em_name">{{form_base.font_em_name.label.text}}</label>
+  <div class="aot-modal-option-control">
+    {{form_base.font_em_name(class_='form-control aot-modern-input', value=1.0, **{'title': dict_translation['name']['phrase']})}}
   </div>
 </div>
-<div class="col-auto">
-  {{form_base.enable_drag_handle.label(class_='control-label')}}
-  <div class="input-group-text">
-    <input id="enable_drag_handle" name="enable_drag_handle" type="checkbox" value="y" checked>
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="enable_drag_handle">{{form_base.enable_drag_handle.label.text}}</label>
+  <div class="aot-modal-option-control">
+    <label class="btn-toggle" style="margin-bottom: 0;">
+      <input id="enable_drag_handle" name="enable_drag_handle" type="checkbox" value="y" checked class="btn-toggle-input">
+      <span class="btn-toggle-slider">
+        <span class="btn-toggle-thumb"></span>
+      </span>
+    </label>
   </div>
 </div>

@@ -35,6 +35,9 @@ class AbstractInput(AbstractBaseController):
         self.avg_max = {}
         self.avg_index = {}
         self.avg_meas = {}
+        self.latitude = getattr(input_dev, 'latitude', None)
+        self.longitude = getattr(input_dev, 'longitude', None)
+        self.location_source = getattr(input_dev, 'location_source', 'manual')
         self.acquiring_measurement = False
         self.running = True
 

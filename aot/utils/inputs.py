@@ -40,6 +40,7 @@ import os
 
 from aot.config import PATH_INPUTS
 from aot.config import PATH_INPUTS_CUSTOM
+from aot.config import PATH_INPUTS_GIS
 from aot.inputs.sensorutils import convert_units
 from aot.utils.modules import load_module_from_file
 
@@ -175,6 +176,8 @@ def list_analog_to_digital_converters():
     return list_adc
 
 
+from functools import lru_cache
+
 def parse_input_information(exclude_custom=False):
     """Parses the variables assigned in each Input and return a dictionary of IDs and values."""
     def dict_has_value(dict_inp, input_cus, key, force_type=None):
@@ -198,7 +201,7 @@ def parse_input_information(exclude_custom=False):
         'examples', 'scripts', 'tmp_inputs', 'sensorutils.py'
     ]
 
-    input_paths = [PATH_INPUTS]
+    input_paths = [PATH_INPUTS, PATH_INPUTS_GIS]
 
     if not exclude_custom:
         input_paths.append(PATH_INPUTS_CUSTOM)
@@ -213,11 +216,21 @@ def parse_input_information(exclude_custom=False):
             if each_file in excluded_files:
                 continue
 
+            if each_file.startswith('._'):
+                continue
+
             full_path = "{}/{}".format(real_path, each_file)
             input_custom, status = load_module_from_file(full_path, 'inputs')
 
             if not input_custom or not hasattr(input_custom, 'INPUT_INFORMATION'):
                 continue
+
+            # Case for SATELLITE_ANALYSIS: Force module discovery to ensure UI dropdown is populated
+            if hasattr(input_custom, 'discover_analysis_modules'):
+                try:
+                    input_custom.discover_analysis_modules()
+                except Exception as e:
+                    logger.error(f"Error calling discover_analysis_modules for {each_file}: {e}")
 
             # Populate dictionary of input information
             if input_custom.INPUT_INFORMATION['input_name_unique'] in dict_inputs:
@@ -230,6 +243,16 @@ def parse_input_information(exclude_custom=False):
 
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'input_manufacturer')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'input_name')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'country', force_type='list')
+            
+            # Prepend Country Code to Input Name if available
+            if 'country' in dict_inputs[input_custom.INPUT_INFORMATION['input_name_unique']]:
+                countries = dict_inputs[input_custom.INPUT_INFORMATION['input_name_unique']]['country']
+                if countries and len(countries) > 0:
+                    country_code = countries[0]
+                    original_name = dict_inputs[input_custom.INPUT_INFORMATION['input_name_unique']].get('input_name', '')
+                    dict_inputs[input_custom.INPUT_INFORMATION['input_name_unique']]['input_name'] = f"{country_code}: {original_name}"
+
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'input_name_short')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'input_library')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'measurements_name')
@@ -318,5 +341,17 @@ def parse_input_information(exclude_custom=False):
 
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'custom_commands_message')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'custom_commands')
+
+            # GIS Options
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'default_url')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'attribution')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'layer_type')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'layer_role')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'time_enabled')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'leaflet_options')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'legend')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'key_field')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'global_key_field')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'requires_key')
 
     return dict_inputs

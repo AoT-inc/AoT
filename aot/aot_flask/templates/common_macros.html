@@ -1,0 +1,7 @@
+{#
+Common Macros for AoT Forms
+#}
+
+{% macro render_time_input(field, class_='form-control aot-time-input') %}
+{{ field(class_=class_, placeholder="HH:MM:SS", **kwargs) }}
+{% endmacro %}

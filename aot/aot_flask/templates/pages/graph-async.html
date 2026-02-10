@@ -23,9 +23,9 @@
   <div class="container">
   {% include 'flash_messages.html' %}
 
-    <h4>{{_('그래프')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+    <h4>{{_('Graphs')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
 
-    <p>그래프는 몇 주, 몇 달 또는 몇 년 동안의 데이터 세트를 시각화하는 데 유용합니다. 이러한 데이터를 동기 그래프로 표시하면 많은 데이터 처리 및 연산 부하가 발생할 수 있습니다.</p>
+    <p>{{_('Graphs are useful for visualizing datasets over weeks, months, or years. Displaying such data on synchronous graphs can cause high data processing and computation load.')}}</p>
 
   {% if selected_ids_measures %}
   </div>
@@ -38,28 +38,29 @@
     <form method="post" action="/graph-async">
     <div class="form-row" style="padding: 1em 0">
       <div class="col-auto">
-        높이:
+      <div class="col-auto">
+        {{_('Height')}}:
       </div>
       <div class="col-auto">
         <input class="form-control" id="async_height" name="async_height" type="number" value="{{async_height}}">
       </div>
       <div class="col-auto">
-        <input class="btn btn-primary" type="submit" name="submit" value="전체 데이터">
+        <input class="btn btn-primary" type="submit" name="submit" value="{{_('All Data')}}">
       </div>
       <div class="col-auto">
-        과거기간:
+        {{_('Past Period')}}:
       </div>
       <div class="col-auto">
-        <input class="btn btn-primary" type="submit" name="submit" value="1년">
+        <input class="btn btn-primary" type="submit" name="submit" value="{{_('1 Year')}}">
       </div>
       <div class="col-auto">
-        <input class="btn btn-primary" type="submit" name="submit" value="1개월">
+        <input class="btn btn-primary" type="submit" name="submit" value="{{_('1 Month')}}">
       </div>
       <div class="col-auto">
-        <input class="btn btn-primary" type="submit" name="submit" value="1주">
+        <input class="btn btn-primary" type="submit" name="submit" value="{{_('1 Week')}}">
       </div>
       <div class="col-auto">
-        <input class="btn btn-primary" type="submit" name="submit" value="1일">
+        <input class="btn btn-primary" type="submit" name="submit" value="{{_('1 Day')}}">
       </div>
     </div>
     <div class="row">
@@ -86,7 +87,7 @@
     </form>
 
   <div style="padding-bottom: 1em">
-    {{_('여러 개를 선택하려면 <kbd>Ctrl</kbd> 또는 <kbd>&#8984;</kbd> 키를 누른 상태에서 클릭하세요.')}}
+    {{_('Hold <kbd>Ctrl</kbd> or <kbd>&#8984;</kbd> to select multiple items.')}}
   </div>
 
   </div>
@@ -221,13 +222,13 @@ $(document).ready(function() {
           formatter: function(){
             const d = new Date(this.x);
             if (this.point) {
-              return '<b>'+ Highcharts.dateFormat('%Y년 %m월 %d일 %H:%M:%S.', this.x) + d.getMilliseconds()
+              return '<b>'+ Highcharts.dateFormat('%Y-%m-%d %H:%M:%S.', this.x) + d.getMilliseconds()
                    + '</b><br/>' + this.series.name
                    + '<br/>' + this.point.title
                    + '<br/>' + this.point.text;
             }
             else {
-              let s = '<b>'+ Highcharts.dateFormat('%Y년 %m월 %d일 %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+              let s = '<b>'+ Highcharts.dateFormat('%Y-%m-%d %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
               $.each(this.points, function(i, point) {
                   s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
               });
@@ -259,26 +260,26 @@ $(document).ready(function() {
             buttons: [{
                 type: 'hour',
                 count: 1,
-                text: '1시간'
+                text: '{{_('1h')}}'
             }, {
                 type: 'day',
                 count: 1,
-                text: '1일'
+                text: '{{_('1d')}}'
             }, {
                 type: 'week',
                 count: 1,
-                text: '1주'
+                text: '{{_('1w')}}'
             }, {
                 type: 'month',
                 count: 1,
-                text: '1개월'
+                text: '{{_('1m')}}'
             }, {
                 type: 'year',
                 count: 1,
-                text: '1년'
+                text: '{{_('1y')}}'
             }, {
                 type: 'all',
-                text: '전체'
+                text: '{{_('All')}}'
             }],
             inputEnabled: false, // it supports only days
             selected: 4 // all

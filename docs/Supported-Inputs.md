@@ -1,38 +1,10 @@
 ## Built-In Inputs (System)
 
-### Linux: Bash Command
+### AoT: AoT Version
 
-- Manufacturer: Linux
-- Measurements: Return Value
-- Interfaces: AoT
-
-This Input will execute a command in the shell and store the output as a float value. Perform any unit conversions within your script or command. A measurement/unit is required to be selected.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Command Timeout</td><td>Integer
-- Default Value: 60</td><td>How long to wait for the command to finish before killing the process.</td></tr><tr><td>User</td><td>Text
-- Default Value: aot</td><td>The user to execute the command</td></tr><tr><td>Current Working Directory</td><td>Text
-- Default Value: /home/pi</td><td>The current working directory of the shell environment.</td></tr></tbody></table>
-
-### Linux: Python 3 Code (v1.0)
-
-- Manufacturer: Linux
-- Measurements: Store Value(s)
-- Interfaces: AoT
-- Dependencies: [pylint](https://pypi.org/project/pylint)
-
-All channels require a Measurement Unit to be selected and saved in order to store values to the database. Your code is executed from the same Python virtual environment that AoT runs from. Therefore, you must install Python libraries to this environment if you want them to be available to your code. This virtualenv is located at /opt/AoT/env and if you wanted to install a library, for example "my_library" using pip, you would execute "sudo /opt/AoT/env/bin/pip install my_library".
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Analyze Python Code with Pylint</td><td>Boolean
-- Default Value: True</td><td>Analyze your Python code with pylint when saving</td></tr></tbody></table>
-
-### Linux: Python 3 Code (v2.0)
-
-- Manufacturer: Linux
-- Measurements: Store Value(s)
-- Interfaces: AoT
-- Dependencies: [pylint](https://pypi.org/project/pylint)
-
-This is an alternate Python 3 Code Input that uses a different method for storing values to the database. This was created because the Python 3 Code v1.0 Input does not allow the use of Input Actions. This method does allow the use of Input Actions. (11/21/2023 Update: The Python 3 Code (v1.0) Input now allows the execution of Actions). All channels require a Measurement Unit to be selected and saved in order to store values to the database. Your code is executed from the same Python virtual environment that AoT runs from. Therefore, you must install Python libraries to this environment if you want them to be available to your code. This virtualenv is located at /opt/AoT/env and if you wanted to install a library, for example "my_library" using pip, you would execute "sudo /opt/AoT/env/bin/pip install my_library".
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Python 3 Code</td></td><td>The code to execute. Must return a value.</td></tr><tr><td>Analyze Python Code with Pylint</td><td>Boolean
-- Default Value: True</td><td>Analyze your Python code with pylint when saving</td></tr></tbody></table>
+- Manufacturer: AoT
+- Measurements: Version as Major.Minor.Revision
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr></tbody></table>
 
 ### AoT: CPU Load
 
@@ -41,18 +13,56 @@ This is an alternate Python 3 Code Input that uses a different method for storin
 - Libraries: os.getloadavg()
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr></tbody></table>
 
+### AoT: Ecowitt Cloud API Weather Data
+
+- Manufacturer: AoT
+
+Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>Call Back</td><td>Text
+- Default Value: all</td><td>호출할 데이터 종류를 입력하세요 (예: all).</td></tr></tbody></table>
+
+### AoT: Ecowitt MQTT\(JSON payload)
+
+- Manufacturer: AoT
+- Measurements: Variable measurements
+- Interfaces: AoT
+- Libraries: paho-mqtt, jmespath
+- Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt), [jmespath](https://pypi.org/project/jmespath)
+
+선택된 Ecowitt 장치 유형에 따라 자동 생성된 채널을 구독하고, MQTT 토픽으로 전송되는 URL 인코딩 또는 JSON 페이로드에서 각 채널의 JMESPATH 표현식으로 값을 추출하여 데이터베이스에 저장합니다. 채널별 측정 단위와 변환 설정을 사용자 정의 옵션으로 지정할 수 있습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Ecowitt 장치</td><td>Select(Options: [<strong>기상대</strong> | 온습도 센서 | 온도 센서 | 토양 수분 센서 | 잎 센서 | 거리 측정기 | 공기질 측정기] (Default in <strong>bold</strong>)</td><tr><td>Host</td><td>Text
+- Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
+- Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
+- Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
+- Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
+- Default Value: client_wxIfwaWL</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
+
+### AoT: Ecowitt soil_sensor
+
+- Manufacturer: AoT
+
+Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>채널 선택</td><td>Text
+- Default Value: 1</td><td>측정할 채널을 선택하세요.</td></tr></tbody></table>
+
+### AoT: Ecowitt temp_humidity_sensor
+
+- Manufacturer: AoT
+
+Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>채널 선택</td><td>Text
+- Default Value: 1</td><td>측정할 채널을 선택하세요.</td></tr></tbody></table>
+
 ### AoT: Free Space
 
 - Manufacturer: AoT
 - Measurements: Unallocated Disk Space
 - Libraries: os.statvfs()
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr></tbody></table>
-
-### AoT: AoT Version
-
-- Manufacturer: AoT
-- Measurements: Version as Major.Minor.Revision
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr></tbody></table>
 
 ### AoT: Output State (On/Off)
 
@@ -111,6 +121,40 @@ This is a simple test Input that allows you to save any value as a measurement, 
 - Manufacturer: AoT
 - Measurements: Seconds Since System Startup
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr></tbody></table>
+
+### Linux: Bash Command
+
+- Manufacturer: Linux
+- Measurements: Return Value
+- Interfaces: AoT
+
+This Input will execute a command in the shell and store the output as a float value. Perform any unit conversions within your script or command. A measurement/unit is required to be selected.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Command Timeout</td><td>Integer
+- Default Value: 60</td><td>How long to wait for the command to finish before killing the process.</td></tr><tr><td>User</td><td>Text
+- Default Value: aot</td><td>The user to execute the command</td></tr><tr><td>Current Working Directory</td><td>Text
+- Default Value: /home/pi</td><td>The current working directory of the shell environment.</td></tr></tbody></table>
+
+### Linux: Python 3 Code (v1.0)
+
+- Manufacturer: Linux
+- Measurements: Store Value(s)
+- Interfaces: AoT
+- Dependencies: [pylint](https://pypi.org/project/pylint)
+
+All channels require a Measurement Unit to be selected and saved in order to store values to the database. Your code is executed from the same Python virtual environment that AoT runs from. Therefore, you must install Python libraries to this environment if you want them to be available to your code. This virtualenv is located at /opt/AoT/env and if you wanted to install a library, for example "my_library" using pip, you would execute "sudo /opt/AoT/env/bin/pip install my_library".
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Analyze Python Code with Pylint</td><td>Boolean
+- Default Value: True</td><td>Analyze your Python code with pylint when saving</td></tr></tbody></table>
+
+### Linux: Python 3 Code (v2.0)
+
+- Manufacturer: Linux
+- Measurements: Store Value(s)
+- Interfaces: AoT
+- Dependencies: [pylint](https://pypi.org/project/pylint)
+
+This is an alternate Python 3 Code Input that uses a different method for storing values to the database. This was created because the Python 3 Code v1.0 Input does not allow the use of Input Actions. This method does allow the use of Input Actions. (11/21/2023 Update: The Python 3 Code (v1.0) Input now allows the execution of Actions). All channels require a Measurement Unit to be selected and saved in order to store values to the database. Your code is executed from the same Python virtual environment that AoT runs from. Therefore, you must install Python libraries to this environment if you want them to be available to your code. This virtualenv is located at /opt/AoT/env and if you wanted to install a library, for example "my_library" using pip, you would execute "sudo /opt/AoT/env/bin/pip install my_library".
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Python 3 Code</td></td><td>The code to execute. Must return a value.</td></tr><tr><td>Analyze Python Code with Pylint</td><td>Boolean
+- Default Value: True</td><td>Analyze your Python code with pylint when saving</td></tr></tbody></table>
 
 ### Raspberry Pi: CPU/GPU Temperature
 
@@ -251,6 +295,17 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Product URL: [Link](https://www.adafruit.com/product/1293)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
+### AOSONG: AM2315C
+
+- Manufacturer: AOSONG
+- Measurements: Humidity/Temperature
+- Interfaces: I<sup>2</sup>C
+- Libraries: quick2wire-api
+- Dependencies: [quick2wire-api](https://pypi.org/project/quick2wire-api)
+- Datasheet URL: [Link](https://cdn-shop.adafruit.com/product-files/5182/5182_AM2315C.pdf)
+- Product URL: [Link](https://vctec.co.kr/product/am2315c-i2c-%EC%98%A8%EB%8F%84%EC%8A%B5%EB%8F%84-%EC%84%BC%EC%84%9C-am2315c-encased-i2c-temperaturehumidity-sensor/20000)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
+
 ### AOSONG: DHT11
 
 - Manufacturer: AOSONG
@@ -372,6 +427,15 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Default Value: 4.0</td><td>Calibration data: pH</td></tr><tr><td>Cal data: T2 (internal)</td><td>Decimal
 - Default Value: 23.0</td><td>Calibration data: Temperature</td></tr><tr><td>Cal data: V3 (internal)</td><td>Decimal</td><td>Calibration data: Voltage</td></tr><tr><td>Cal data: pH3 (internal)</td><td>Decimal</td><td>Calibration data: pH</td></tr><tr><td>Cal data: T3 (internal)</td><td>Decimal</td><td>Calibration data: Temperature</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Calibration buffer pH</td><td>Decimal
 - Default Value: 7.0</td><td>This is the nominal pH of the calibration buffer, usually labelled on the bottle.</td></tr><tr><td>Calibrate, slot 1</td><td>Button</td><td></td></tr><tr><td>Calibrate, slot 2</td><td>Button</td><td></td></tr><tr><td>Calibrate, slot 3</td><td>Button</td><td></td></tr><tr><td>Clear Calibration Slots</td><td>Button</td><td></td></tr></tbody></table>
+
+### AoT_KMA: 기상청 지점 데이터
+
+- Manufacturer: AoT_KMA
+- Measurements: Humidity/Temperature/Pressure/Wind
+- Additional URL: [Link](https://apihub.kma.go.kr)
+
+기상청 API 허브에서 무료 API 키를 발급받고 가까운 관측지점의 STN을 입력하세요.참고: 무료 API는 하루 20000회 호출이 가능하며, 1회 호출당 1개의 관측지점 데이터를 반환합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>stn</td><td>Text</td><td>The stn to acquire the weather data</td></tr></tbody></table>
 
 ### Atlas Scientific: Atlas CO2 (Carbon Dioxide Gas)
 
@@ -638,6 +702,14 @@ This is similar to the other BMP280 Input, except it uses a different library, w
 - Datasheet URL: [Link](http://co2meters.com/Documentation/Datasheets/DS_SE_0118_CM_0024_Revised9%20(1).pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>UART Device</td><td>Text</td><td>The UART device location (e.g. /dev/ttyUSB1)</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
+### Carto: Carto Maps
+
+- Manufacturer: Carto
+- Measurements: Status
+- Libraries: gis_carto
+- Manufacturer URL: [Link](https://carto.com/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Active Map Styles</td></td></tbody></table>
+
 ### Catnip Electronics: Chirp
 
 - Manufacturer: Catnip Electronics
@@ -650,6 +722,34 @@ This is similar to the other BMP280 Input, except it uses a different library, w
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The I2C address can be changed. Enter a new address in the 0xYY format (e.g. 0x22, 0x50), then press Set I2C Address. Remember to deactivate and change the I2C address option after setting the new address.</td></tr><tr><td>New I2C Address</td><td>Text
 - Default Value: 0x20</td><td>The new I2C to set the device to</td></tr><tr><td>Set I2C Address</td><td>Button</td><td></td></tr></tbody></table>
 
+### ChirpStack: ChirpStack: MQTT (Payload JMESPath Expression)
+
+- Manufacturer: ChirpStack
+- Measurements: Variable measurements
+- Libraries: paho-mqtt, jmespath
+- Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt), [jmespath](https://pypi.org/project/jmespath)
+
+ChirpStack v4 MQTT 브로커의 토픽(application/+/device/+/event/up)을 구독하여 이벤트를 수신하고, 각 이벤트 JSON에 대해 채널별 JMESPath 표현식을 적용하여 측정값을 저장합니다. 예시(https://jmespath.org): object.battery_V, object.battery_pct, max_by(rxInfo,&rssi).rssi, deviceInfo.devEui.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>MQTT Host</td><td>Text
+- Default Value: localhost</td><td>MQTT 브로커 호스트명 또는 IP 주소 (예: localhost)</td></tr><tr><td>MQTT Port</td><td>Text
+- Default Value: 1883</td><td>MQTT 브로커 포트 (기본 1883, TLS는 8883 권장)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>선택 사항: 브로커 인증 사용자 이름</td></tr><tr><td>MQTT Password</td><td>Text</td><td>선택 사항: 브로커 인증 비밀번호</td></tr><tr><td>Enable TLS</td><td>Boolean</td><td>TLS(SSL) 연결 사용 여부 (기본 꺼짐)</td></tr><tr><td>CA Certificate Path</td><td>Text</td><td>선택 사항: TLS 사용 시 CA 인증서 경로</td></tr><tr><td>Client ID</td><td>Text
+- Default Value: client_OFn3Ts4m</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
+- Default Value: 60</td><td>MQTT Keepalive 초 (기본 60초)</td></tr><tr><td>Subscribe Topics</td><td>Text
+- Default Value: application/+/device/+/event/up</td><td>콤마(,)로 구분된 구독 토픽들 (예: application/+/device/+/event/up)</td></tr><tr><td>QoS</td><td>Text</td><td>MQTT QoS 레벨 (0, 1, 2)</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>선택 사항: 특정 디바이스만 처리. EUI를 콤마(,)로 구분해 입력</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>수신 이벤트 전체(JSON)에 대해 평가합니다</td></tr></tbody></table>
+
+### ChirpStack: ChirpStack: REST API (Payload JMESPath Expression)
+
+- Manufacturer: ChirpStack
+- Measurements: Variable measurements
+- Libraries: chirpstack-rest-api, requests, jmespath
+
+ChirpStack v4 REST API를 주기적으로 호출하여 디바이스 이벤트를 가져오고, 각 이벤트 JSON에 대해 채널별 JMESPath 표현식을 적용하여 측정값을 저장합니다. 예시(https://jmespath.org): object.battery_V, object.battery_pct, max_by(rxInfo,&rssi).rssi, deviceInfo.devEui.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer</td><td>The duration to wait before the first operation</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Base URL</td><td>Text
+- Default Value: http://localhost:8090</td><td>ChirpStack REST API의 기본 주소 (예: http://localhost:8080) (일반적으로 REST 프록시는 8090 포트)</td></tr><tr><td>API Token</td><td>Text</td><td>ChirpStack REST API 접근을 위한 Bearer 토큰 (관리 콘솔에서 발급)</td></tr><tr><td>Tenant ID</td><td>Text</td><td>선택 사항: 특정 테넌트에 속한 디바이스만 조회할 때 사용</td></tr><tr><td>Application ID</td><td>Text</td><td>선택 사항: 특정 애플리케이션에 속한 디바이스만 조회할 때 사용</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>선택 사항: 조회할 디바이스 EUI를 콤마(,)로 구분해 입력. 비우면 애플리케이션의 모든 디바이스 대상</td></tr><tr><td>Page size / limit</td><td>Text
+- Default Value: 50</td><td>한 번의 REST API 호출에서 가져올 이벤트 개수(페이지 크기)</td></tr><tr><td>Event kind</td><td>Text
+- Default Value: up</td><td>가져올 이벤트의 종류 (예: up, join, status)</td></tr><tr><td>Fallback URL template</td><td>Text
+- Default Value: /api/devices/{dev_eui}/events?limit={limit}&kind={kind}&after={after}</td><td>공식 파이썬 클라이언트를 사용할 수 없을 때 REST 요청에 사용할 URL 템플릿 (API Base URL 뒤에 연결됨). {dev_eui}, {limit}, {kind}, {after}가 자동 치환됨</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>Evaluated against the full event JSON</td></tr></tbody></table>
+
 ### Cozir: Cozir CO2
 
 - Manufacturer: Cozir
@@ -661,6 +761,14 @@ This is similar to the other BMP280 Input, except it uses a different library, w
 - Datasheet URL: [Link](https://cdn.shopify.com/s/files/1/0019/5952/files/Datasheet_COZIR_A_CO2Meter_4_15.pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>UART Device</td><td>Text</td><td>The UART device location (e.g. /dev/ttyUSB1)</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
+### Esri: Esri World Imagery
+
+- Manufacturer: Esri
+- Measurements: Status
+- Libraries: gis_esri
+- Manufacturer URL: [Link](https://www.esri.com/)
+
+
 ### Generic: Hall Flow Meter
 
 - Manufacturer: Generic
@@ -670,6 +778,14 @@ This is similar to the other BMP280 Input, except it uses a different library, w
 - Dependencies: pigpio, [pigpio](https://pypi.org/project/pigpio)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Pulses per Liter</td><td>Decimal
 - Default Value: 1.0</td><td>Enter the conversion factor for this meter (pulses to Liter).</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Clear Total: Volume</td><td>Button</td><td></td></tr></tbody></table>
+
+### ISRIC: SoilGrids (Global Soil Info)
+
+- Manufacturer: ISRIC
+- Measurements: Status
+- Libraries: gis_isric
+- Manufacturer URL: [Link](https://soilgrids.org/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Soil Property</td></td></tbody></table>
 
 ### Infineon: DPS310
 
@@ -682,6 +798,32 @@ This is similar to the other BMP280 Input, except it uses a different library, w
 - Datasheet URL: [Link](https://www.infineon.com/dgdl/Infineon-DPS310-DataSheet-v01_02-EN.pdf?fileId=5546d462576f34750157750826c42242)
 - Product URLs: [Link 1](https://www.adafruit.com/product/4494), [Link 2](https://shop.pimoroni.com/products/adafruit-dps310-precision-barometric-pressure-altitude-sensor-stemma-qt-qwiic), [Link 3](https://www.berrybase.de/sensoren-module/luftdruck-wasserdruck/adafruit-dps310-pr-228-zisions-barometrischer-druck-und-h-246-hen-sensor)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
+
+### KMA: 기상청 고해상도 500m
+
+- Manufacturer: KMA
+- Additional URL: [Link](https://apihub.kma.go.kr)
+
+기상청 API 허브에서 무료 API 키를 발급받은 뒤, 입력 설정의 위치(위도/경도)에 따라 데이터를 요청합니다. 참고: 대한민국 기상청 API는 하루 20000회 호출이 가능하며, 1회 호출당 1개의 관측지점 데이터를 반환합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>기상청 API 허브에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 300</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>품질검사(QC) 사용</td><td>Boolean
+- Default Value: True</td><td>명백한 이상치(예: 습도 0%, 기압 0hPa 등)를 무시하거나 보정합니다.</td></tr><tr><td>QC 보정 유지시간(초)</td><td>Decimal
+- Default Value: 1800</td><td>이 시간 내의 마지막 정상값으로 대체합니다.</td></tr><tr><td>수동 백필 기간(분)</td><td>Decimal
+- Default Value: 1440</td><td>사용자 요청 시 과거 이 기간만큼 데이터를 불러옵니다. 기본 1440분(1일).</td></tr><tr><td>지금 백필 실행</td><td>Boolean</td><td>저장 후 활성화하면 즉시 백필을 1회 수행하고 자동으로 해제됩니다.</td></tr><tr><td>KMA 타임스탬프 오프셋(시간)</td><td>Decimal
+- Default Value: 9</td><td>KMA 응답 시각이 로컬(KST,+9) 기준일 때 UTC로 저장하기 위해 빼줄 시간 (기본 9).</td></tr><tr><td>강수 계열 시계열 분리</td><td>Boolean
+- Default Value: True</td><td>강수 지표(rn_ox)와 15분 강수(rn_15m)를 서로 다른 측정명으로 기록해 충돌을 방지합니다.</td></tr><tr><td>QC: 0°C 허용 범위(±°C)</td><td>Decimal
+- Default Value: 3.0</td><td>직전 정상값이 0°C에서 이 범위 이내일 때만 0°C를 허용합니다. 기본 ±3°C.</td></tr></tbody></table>
+
+### KMA: 단기예보
+
+- Manufacturer: KMA
+- Additional URL: [Link](https://www.data.go.kr/index.do)
+
+이 모듈은 농업용 단기예보 데이터를 제공합니다. 가장 최근 발표를 기준으로 사용자가 선택한 시간 뒤의 예보 데이터를 수집합니다. API 호출 시 공공데이터포털의 서비스키를 사용하고, JSON 응답에서 기온, 최저/최고 기온, 풍속, 풍향, 하늘상태, 습도, 강수량, 강수확률, 강수형태, 신적설 데이터를 추출합니다. (API 제공은 발표시간 + 10분 이후부터 이루어집니다.)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>공공데이터포털에서 발급받은 KMA API 서비스키를 입력하세요.</td></tr><tr><td>nx 좌표</td><td>Text</td><td>nx 값을 입력하세요 (숫자).</td></tr><tr><td>ny 좌표</td><td>Text</td><td>ny 값을 입력하세요 (숫자).</td></tr><tr><td>몇 시간 뒤 예보</td><td>Select(Options: [<strong>1</strong> | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12] (Default in <strong>bold</strong>)</td><td>몇 시간 후의 예보 데이터를 사용할지 선택하세요.</td></tr><tr><td>API 타임아웃(초)</td><td>Integer
+- Default Value: 60</td><td>API 응답 제한 시간을 설정하세요 (기본 60초).</td></tr><tr><td>API 재시도 횟수</td><td>Integer
+- Default Value: 3</td><td>HTTP 오류 발생 시 같은 발표시각을 몇 번 재시도할지 설정하세요.</td></tr><tr><td>API 재시도 간격(초)</td><td>Decimal
+- Default Value: 3.0</td><td>재시도 사이에 대기할 시간입니다 (기본 3초).</td></tr></tbody></table>
 
 ### MAXIM: DS1822
 
@@ -868,12 +1010,12 @@ Note: This module does not allow for multiple sensors to be connected at the sam
 - Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt), [jmespath](https://pypi.org/project/jmespath)
 
 A single topic is subscribed to and the returned JSON payload contains one or more key/value pairs. The given JSON Key is used as a JMESPATH expression to find the corresponding value that will be stored for that channel. Be sure you select and save the Measurement Unit for each channel. Once the unit has been saved, you can convert to other units in the Convert Measurement section. Example expressions for jmespath (https://jmespath.org) include <i>temperature</i>, <i>sensors[0].temperature</i>, and <i>bathroom.temperature</i> which refer to the temperature as a direct key within the first entry of sensors or as a subkey of bathroom, respectively. Jmespath elements and keys that contain special characters have to be enclosed in double quotes, e.g. <i>"sensor-1".temperature</i>. Warning: If using multiple MQTT Inputs or Functions, ensure the Client IDs are unique.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Host</td><td>Text
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Host</td><td>Text
 - Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
 - Default Value: mqtt/test/input</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_FGIg092m</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_lJnbbl2k</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### MQTT: MQTT Subscribe (Value payload)
@@ -889,7 +1031,7 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_mqUgXLvM</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_vSCkDLpt</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Subscription Topic</td><td>Text</td><td>The MQTT topic to subscribe to</td></tr></tbody></table>
 
 ### Melexis: MLX90393
@@ -990,6 +1132,46 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Additional URL: [Link](https://learn.adafruit.com/ultrasonic-sonar-distance-sensors/python-circuitpython)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Trigger Pin</td><td>Integer</td><td>Enter the GPIO Trigger Pin for your device (BCM numbering).</td></tr><tr><td>Echo Pin</td><td>Integer</td><td>Enter the GPIO Echo Pin for your device (BCM numbering).</td></tr></tbody></table>
 
+### NASA: NASA GIBS
+
+- Manufacturer: NASA
+- Measurements: Status
+- Libraries: gis_nasa_gibs
+- Manufacturer URL: [Link](https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Satellite Layer</td></td><tr><td>Target Date (YYYY-MM-DD)</td><td>Text</td></tbody></table>
+
+### NASA: Soil Moisture (NASA SMAP)
+
+- Manufacturer: NASA
+- Measurements: Status
+- Libraries: gis_esa
+- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
+
+
+### OpenStreetMap: OpenStreetMap
+
+- Manufacturer: OpenStreetMap
+- Measurements: Status
+- Libraries: gis_osm
+- Manufacturer URL: [Link](https://www.openstreetmap.org/)
+
+
+### OpenTopoMap: OpenTopoMap
+
+- Manufacturer: OpenTopoMap
+- Measurements: Status
+- Libraries: gis_opentopomap
+- Manufacturer URL: [Link](https://opentopomap.org)
+
+
+### OpenWeatherMap: OpenWeatherMap
+
+- Manufacturer: OpenWeatherMap
+- Measurements: Status
+- Libraries: gis_openweather
+- Manufacturer URL: [Link](https://openweathermap.org/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API Key</td><td>Text</td><tr><td>Active Layers</td></td></tbody></table>
+
 ### Panasonic: AMG8833
 
 - Manufacturer: Panasonic
@@ -999,7 +1181,7 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [colour](https://pypi.org/project/colour), [Pillow](https://pypi.org/project/Pillow), [Adafruit_AMG88xx](https://github.com/adafruit/Adafruit_AMG88xx_python)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
-### Power Monitor: RPi Power Monitor (6 Channels)
+### Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)
 
 - Manufacturer: Power Monitor
 - Measurements: AC Voltage, Power, Current, Power Factor
@@ -1026,6 +1208,35 @@ See https://github.com/David00/rpi-power-monitor/wiki/Calibrating-for-Accuracy f
 - Default Value: 1.0</td><td>The accuracy calibration value for CT6</td></tr><tr><td>AC Accuracy Calibration</td><td>Decimal
 - Default Value: 1.0</td><td>The accuracy calibration value for AC</td></tr></tbody></table>
 
+### Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)
+
+- Manufacturer: Power Monitor
+- Measurements: AC Voltage, Power, Energy, Current, Power Factor
+- Libraries: rpi-power-monitor
+- Dependencies: [rpi_power_monitor](https:/)
+- Manufacturer URL: [Link](https://github.com/David00/rpi-power-monitor)
+- Product URL: [Link](https://power-monitor.dalbrecht.tech/)
+
+See https://david00.github.io/rpi-power-monitor/docs/v0.3.0/calibration.html for calibration documentation.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Period (Seconds) for kWh Measuring</td><td>Integer
+- Default Value: 5</td><td>How often to acquire measurements to calculate kWh</td></tr><tr><td>Grid Voltage</td><td>Decimal
+- Default Value: 124.2</td><td>The AC voltage measured at the outlet</td></tr><tr><td>Transformer Voltage</td><td>Decimal
+- Default Value: 10.2</td><td>The AC voltage measured at the barrel plug of the 9 VAC transformer</td></tr><tr><td>AC Frequency (Hz)</td><td>Integer
+- Default Value: 60</td><td>The frequency of the AC voltage</td></tr><tr><td>CT1 Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for CT1</td></tr><tr><td>CT1 Rating</td><td>Decimal
+- Default Value: 100</td><td>The Amp rating for the CT1 clamp</td></tr><tr><td>CT2 Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for CT2</td></tr><tr><td>CT2 Rating</td><td>Decimal
+- Default Value: 100</td><td>The Amp rating for the CT2 clamp</td></tr><tr><td>CT3 Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for CT3</td></tr><tr><td>CT3 Rating</td><td>Decimal
+- Default Value: 100</td><td>The Amp rating for the CT3 clamp</td></tr><tr><td>CT4 Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for CT4</td></tr><tr><td>CT4 Rating</td><td>Decimal
+- Default Value: 100</td><td>The Amp rating for the CT4 clamp</td></tr><tr><td>CT5 Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for CT5</td></tr><tr><td>CT5 Rating</td><td>Decimal
+- Default Value: 100</td><td>The Amp rating for the CT5 clamp</td></tr><tr><td>CT6 Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for CT6</td></tr><tr><td>CT6 Rating</td><td>Decimal
+- Default Value: 100</td><td>The Amp rating for the CT6 clamp</td></tr><tr><td>AC Calibration</td><td>Decimal
+- Default Value: 1.0</td><td>The calibration value for AC</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Clear the running kWh totals.</td></tr><tr><td>Channel to Clear</td><td>Select(Options: [All Channels | <strong>Channel 1</strong> | Channel 2 | Channel 3 | Channel 4 | Channel 5 | Channel 6] (Default in <strong>bold</strong>)</td><td>The channel(s) to clear the kWh total and start back at 0.</td></tr><tr><td>Clear kWh Total</td><td>Button</td><td></td></tr></tbody></table>
+
 ### ROHM: BH1750
 
 - Manufacturer: ROHM
@@ -1036,6 +1247,14 @@ See https://github.com/David00/rpi-power-monitor/wiki/Calibrating-for-Accuracy f
 - Datasheet URL: [Link](http://rohmfs.rohm.com/en/products/databook/datasheet/ic/sensor/light/bh1721fvc-e.pdf)
 - Product URL: [Link](https://www.dfrobot.com/product-531.html)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
+
+### RainViewer: RainViewer (Radar)
+
+- Manufacturer: RainViewer
+- Measurements: Status
+- Libraries: gis_rainviewer
+- Manufacturer URL: [Link](https://www.rainviewer.com/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Color Scheme</td><td>Select</td><tr><td>Smoothing</td><td>Boolean</td></tbody></table>
 
 ### Raspberry Pi Foundation: Sense HAT
 
@@ -1339,7 +1558,7 @@ This Input module allows the use of any temperature/humidity sensor with the TH1
 This measures from several Kasa power devices (plugs/strips) capable of measuring energy consumption. These include, but are not limited to the KP115 and HS600.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Device Type</td><td>Select</td><td>The type of Kasa device</td></tr><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18108</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: 18185</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Tasmota: Tasmota Outlet Energy Monitor (HTTP)
 
@@ -1521,6 +1740,14 @@ This Input receives and stores measurements from the Data Storage Integration on
 
 This Input receives and stores measurements from the Data Storage Integration on The Things Network. The given Payload jmespath Expression is used as a JMESPATH expression to find the corresponding value that will be stored for that channel. Be sure you select and save the Measurement Unit for each channel. Once the unit has been saved, you can convert to other units in the Convert Measurement section. Example expressions for jmespath (https://jmespath.org) include <i>temperature</i>, <i>sensors[0].temperature</i>, and <i>bathroom.temperature</i> which refer to the temperature as a direct key within the first entry of sensors or as a subkey of bathroom, respectively. Jmespath elements and keys that contain special characters have to be enclosed in double quotes, e.g. <i>"sensor-1".temperature</i>.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer</td><td>The duration to wait before the first operation</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Application ID</td><td>Text</td><td>The Things Network Application ID</td></tr><tr><td>App API Key</td><td>Text</td><td>The Things Network Application API Key</td></tr><tr><td>Device ID</td><td>Text</td><td>The Things Network Device ID</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Payload jmespath Expression</td><td>Text</td><td>The TTN jmespath expression to return the value to store</td></tr></tbody></table>
+
+### Vworld: Vworld (Korea)
+
+- Manufacturer: Vworld
+- Measurements: Status
+- Libraries: gis_vworld
+- Manufacturer URL: [Link](https://www.vworld.kr/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Vworld API Key</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
 
 ### Weather: OpenWeatherMap (City, Current)
 

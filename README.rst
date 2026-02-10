@@ -3,10 +3,10 @@ AoT
 
 환경 제어 시스템
 
-최신 버전: 1.0.0
+최신 버전: 26.0.1
 
-AoT는 라즈베리 파이에서 동작하는 오픈소스 소프트웨어로, 다양한 입력과 출력을 결합하여 환경을 감지하고 제어할 수 있습니다.
-이 파일은 AoT가 Mycodo의 원본 버전에서 한국어 번역과 몇가지 앱을 추가한 수정 버전입니다.
+AoT는 라즈베리 파이에서 동작하는 오픈소스 소프트웨어로, 다양한 지도를 기반으로 입력과 출력을 결합하여 환경을 감지하고 제어할 수 있습니다.
+이 파일은 AoT가 Mycodo의 원본 버전에 지리정보 기능, 한국어 번역, 그리고 몇가지 앱을 추가한 수정 버전입니다.
 
 |Build Status| |Codacy Badge| |Translation Badge| |DOI|
 
@@ -103,9 +103,13 @@ AoT는 오픈소스 Mycodo 프로젝트(© Kyle T. Gabriel)를 기반으로 대�
 또한 다음의 다양한 오픈소스 라이브러리를 활용하기 때문에 사용할 수 있습니다.
 이 프로젝트를 가능하게 해주신 모든 분들께 감사드립니다.
 
+**Core Libraries**
+
 -  `Alembic <https://alembic.sqlalchemy.org>`__
 -  `Argparse <https://pypi.org/project/argparse>`__
+-  `Axios <https://axios-http.com/>`__
 -  `Bcrypt <https://pypi.org/project/bcrypt>`__
+-  `Beautiful Soup 4 <https://www.crummy.com/software/BeautifulSoup/>`__
 -  `Bootstrap <https://getbootstrap.com>`__
 -  `Daemonize <https://pypi.org/project/daemonize>`__
 -  `Date Range Picker <https://github.com/dangrossman/daterangepicker>`__
@@ -115,6 +119,7 @@ AoT는 오픈소스 Mycodo 프로젝트(© Kyle T. Gabriel)를 기반으로 대�
 -  `Flask <https://pypi.org/project/flask>`__
 -  `Flask_Accept <https://pypi.org/project/flask_accept>`__
 -  `Flask_Babel <https://pypi.org/project/flask_babel>`__
+-  `Flask-Caching <https://pypi.org/project/Flask-Caching/>`__
 -  `Flask_Compress <https://pypi.org/project/flask_compress>`__
 -  `Flask_Limiter <https://pypi.org/project/flask_limiter>`__
 -  `Flask_Login <https://pypi.org/project/flask_login>`__
@@ -134,13 +139,59 @@ AoT는 오픈소스 Mycodo 프로젝트(© Kyle T. Gabriel)를 기반으로 대�
 -  `InfluxDB <https://github.com/influxdata/influxdb>`__
 -  `influxdb <https://github.com/influxdata/influxdb-python>`__
 -  `influxdb_client <https://github.com/influxdata/influxdb-client-python>`__
+-  `Jinja2 <https://pypi.org/project/Jinja2/>`__
 -  `jQuery <https://jquery.com>`__
+-  `Lucide React <https://lucide.dev/>`__
+-  `Markdown-it-py <https://pypi.org/project/markdown-it-py/>`__
 -  `Marshmallow_SQLAlchemy <https://pypi.org/project/marshmallow_sqlalchemy>`__
 -  `Mosquitto <https://mosquitto.org/>`__
+-  `NumPy <https://numpy.org/>`__
+-  `Pillow <https://pypi.org/project/Pillow/>`__
+-  `Pygments <https://pygments.org/>`__
 -  `Pyro5 <https://github.com/irmen/Pyro5>`__
+-  `pyserial <https://pypi.org/project/pyserial/>`__
+-  `python-dateutil <https://pypi.org/project/python-dateutil/>`__
+-  `pytz <https://pypi.org/project/pytz/>`__
+-  `React <https://react.dev/>`__
+-  `React Zoom Pan Pinch <https://github.com/prc5/react-zoom-pan-pinch>`__
+-  `ReactiveX <https://reactivex.io/>`__
+-  `Requests <https://pypi.org/project/requests/>`__
+-  `Rich <https://github.com/Textualize/rich>`__
+-  `Shapely <https://pypi.org/project/Shapely/>`__
 -  `SQLAlchemy <https://www.sqlalchemy.org>`__
 -  `SQLite <https://www.sqlite.org>`__
+-  `TailwindCSS <https://tailwindcss.com/>`__
+-  `TanStack Query <https://tanstack.com/query/latest>`__
 -  `toastr <https://github.com/CodeSeven/toastr>`__
+-  `Vite <https://vitejs.dev/>`__
+-  `Waitress <https://docs.pylonsproject.org/projects/waitress/en/latest/>`__
 -  `Werkzeug <https://palletsprojects.com/p/werkzeug/>`__
 -  `WTForms <https://pypi.org/project/wtforms>`__
+
+
+**GIS & Maps**
+
+AoT는 다음의 지도 서비스와 GIS 데이터 제공처를 지원합니다:
+단, 모든 지도가 정상적으로 작동하지 않을 수 있습니다.
+
+-  `Bing Maps <https://www.bing.com/maps>`__
+-  `Carto <https://carto.com/>`__
+-  `ESA WorldCover <https://esa-worldcover.org/en>`__
+-  `Esri <https://www.esri.com/>`__
+-  `Google Maps <https://www.google.com/maps>`__
+-  `GSI Maps (Japan) <https://maps.gsi.go.jp/>`__
+-  `ISRIC SoilGrids <https://soilgrids.org/>`__
+-  `Kakao Maps <https://map.kakao.com/>`__
+-  `Leaflet <https://leafletjs.com/>`__
+-  `Mapbox <https://www.mapbox.com/>`__
+-  `NASA GIBS <https://wiki.earthdata.nasa.gov/display/GIBS>`__
+-  `Naver Maps <https://map.naver.com/>`__
+-  `OpenStreetMap <https://www.openstreetmap.org/>`__
+-  `OpenTopoMap <https://opentopomap.org/>`__
+-  `OpenWeatherMap <https://openweathermap.org/>`__
+-  `RainViewer <https://www.rainviewer.com/>`__
+-  `SGIS (Statistics Korea) <https://sgis.kostat.go.kr/>`__
+-  `Stadia Maps <https://stadiamaps.com/>`__
+-  `Thunderforest <https://www.thunderforest.com/>`__
+-  `VWorld (Spatial Information Open Platform) <https://www.vworld.kr/>`__
 

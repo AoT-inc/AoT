@@ -169,9 +169,15 @@ class OutputModule(AbstractOutput):
         self.logger.debug(f"Post-setup options snapshot: output.options={getattr(self.output, 'options', None)!r}, options_json={getattr(self.output, 'options_json', None)!r}")
 
         # Prefer attributes populated by setup_custom_options; fall back to _opt
-        ip = getattr(self, 'ecowitt_device_ip', None) or self._opt('ecowitt_device_ip')
-        dev_id = getattr(self, 'ecowitt_device_id', None) or self._opt('ecowitt_device_id')
-        model = getattr(self, 'ecowitt_model', None) or self._opt('ecowitt_model')
+        # Use explicit None check to avoid empty strings (valid default) being ignored by 'or'
+        ip = getattr(self, 'ecowitt_device_ip', None)
+        if ip is None: ip = self._opt('ecowitt_device_ip')
+
+        dev_id = getattr(self, 'ecowitt_device_id', None)
+        if dev_id is None: dev_id = self._opt('ecowitt_device_id')
+
+        model = getattr(self, 'ecowitt_model', None)
+        if model is None: model = self._opt('ecowitt_model')
 
         if isinstance(ip, str):
             ip = ip.strip()
@@ -213,10 +219,12 @@ class OutputModule(AbstractOutput):
             if self.model is None: missing.append('model')
             self.logger.error(
                 f"Ecowitt device configuration incomplete (missing: {', '.join(missing)}). "
-                f"Parsed values: ip={self.ip!r}, id={self.dev_id!r}, model={self.model!r}")
-            self.logger.debug(f"Raw options dict: {self.options!r}; output.options: {getattr(self.output, 'options', None)!r}; options_json: {getattr(self.output, 'options_json', None)!r}")
+                f"Parsed values: ip={self.ip!r} (missing/empty), id={self.dev_id!r}, model={self.model!r}")
+            self.logger.debug(f"Raw options dict: {self.options!r}; output.options: {getattr(self.output, 'options', None)!r}")
             self.output_setup = False
             return
+
+        self.logger.info(f"Ecowitt device configured: ip={self.ip}, id={self.dev_id}, model={self.model}")
 
         # Mark ready (no threads, keep it simple)
         self.output_setup = True

@@ -2,26 +2,94 @@
 import json
 import logging
 import os
+from datetime import datetime
 
 import sqlalchemy
 from flask import current_app
 from flask_babel import gettext
 
 from aot.config_translations import TRANSLATIONS
-from aot.databases import set_uuid
+from aot.databases import set_uuid, clone_model
 from aot.databases.models import DeviceMeasurements
+from aot.databases.models import Misc
 from aot.databases.models import Output
 from aot.databases.models import OutputChannel
+from aot.databases.models import GeoShape
 from aot.aot_client import DaemonControl
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import custom_channel_options_return_json
 from aot.aot_flask.utils.utils_general import custom_options_return_json
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
+from aot.aot_flask.utils.utils_general import normalize_nullish_value
+from aot.aot_flask.utils.utils_general import sanitize_nullish_sequence
 from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.utils.outputs import parse_output_information
+from aot.aot_flask.utils.utils_map_config import (
+    ensure_map_config,
+    clone_map_config,
+    delete_map_config,
+)
 from aot.utils.system_pi import is_int
 
 logger = logging.getLogger(__name__)
+_DROP = object()
+_NULLISH_STRINGS = {'', 'none', 'null', 'false'}
+
+
+def _prune_nullish(value):
+    """Recursively strip nullish placeholders from dict/list values."""
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, val in value.items():
+            pruned = _prune_nullish(val)
+            if pruned is not _DROP:
+                cleaned[key] = pruned
+        return cleaned
+    if isinstance(value, list):
+        cleaned_list = []
+        for item in value:
+            pruned = _prune_nullish(item)
+            if pruned is not _DROP:
+                cleaned_list.append(pruned)
+        return cleaned_list
+    if value is None:
+        return _DROP
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in _NULLISH_STRINGS:
+            return _DROP
+        return value.strip()
+    return value
+
+
+def _safe_json_string(val):
+    """
+    Normalize any incoming custom options value to a JSON string.
+    - Treat None/"None"/"null"/"false"/"" as {}.
+    - If already dict/list, dump to JSON after pruning nullish placeholders.
+    - If string but malformed JSON, fall back to {}.
+    """
+    if val in [None, '', 'None', 'null', 'false', 'False']:
+        return "{}"
+
+    parsed = {}
+    if isinstance(val, (dict, list)):
+        parsed = val
+    elif isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+        except Exception:
+            return "{}"
+    else:
+        return "{}"
+
+    cleaned = _prune_nullish(parsed)
+    if cleaned is _DROP:
+        cleaned = {}
+    try:
+        return json.dumps(cleaned)
+    except Exception:
+        return "{}"
 
 #
 # Output manipulation
@@ -90,6 +158,15 @@ def output_add(form_add, request_form):
             new_output.output_type = output_type
             new_output.position_y = 999
 
+            # Default map location from Misc
+            try:
+                misc = Misc.query.first()
+                if misc:
+                    new_output.latitude = misc.map_latitude
+                    new_output.longitude = misc.map_longitude
+            except Exception:
+                pass
+
             #
             # Set default values for new input being added
             #
@@ -150,7 +227,16 @@ def output_add(form_add, request_form):
             # Generate string to save from custom options
             messages["error"], custom_options = custom_options_return_json(
                 messages["error"], dict_outputs, request_form, device=output_type, use_defaults=True)
+            custom_options = _safe_json_string(custom_options)
             new_output.custom_options = custom_options
+
+            map_cfg = ensure_map_config(
+                None,
+                new_output.name,
+                new_output.latitude,
+                new_output.longitude
+            )
+            new_output.map_config_id = map_cfg.unique_id
 
             #
             # Execute at Creation
@@ -198,6 +284,7 @@ def output_add(form_add, request_form):
                         messages["error"], dict_outputs, request_form,
                         new_output.unique_id, each_channel,
                         device=output_type, use_defaults=True)
+                    custom_options = _safe_json_string(custom_options)
                     new_channel.custom_options = custom_options
 
                     new_channel.save()
@@ -217,7 +304,61 @@ def output_add(form_add, request_form):
             messages["error"].append(str(except_msg))
             logger.exception(1)
 
+    list_unmet_deps = sanitize_nullish_sequence(list_unmet_deps or [])
     return messages, dep_name, list_unmet_deps, dep_message, output_id, size_y
+
+
+def output_duplicate(form_mod):
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
+
+    source_output = Output.query.filter(
+        Output.unique_id == form_mod.output_id.data).first()
+
+    if not source_output:
+        return None, None
+
+    # Duplicate output
+    new_output = clone_model(
+        source_output, unique_id=set_uuid(), name=f"Copy of {source_output.name}")
+
+    duplicated_output = Output.query.filter(
+        Output.unique_id == new_output.unique_id).first()
+    
+    if duplicated_output:
+        new_map = clone_map_config(source_output.map_config_id, duplicated_output.name)
+        if new_map:
+            duplicated_output.map_config_id = new_map.unique_id
+        duplicated_output.save()
+
+        # Duplicate measurements
+        dev_measurements = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == form_mod.output_id.data).all()
+        for each_dev in dev_measurements:
+            clone_model(each_dev, unique_id=set_uuid(), device_id=duplicated_output.unique_id)
+
+        # Duplicate channels
+        dev_channels = OutputChannel.query.filter(
+            OutputChannel.output_id == form_mod.output_id.data).all()
+        for each_dev in dev_channels:
+            clone_model(each_dev, unique_id=set_uuid(), output_id=duplicated_output.unique_id)
+            
+        # Duplicate GeoShapes (Map Overlays)
+        shapes = GeoShape.query.filter(GeoShape.device_id == form_mod.output_id.data).all()
+        for shape in shapes:
+            clone_model(shape, unique_id=set_uuid(), device_id=duplicated_output.unique_id)
+
+    messages["success"].append(
+        f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['output']['title']}")
+        
+    if not current_app.config['TESTING']:
+         manipulate_output('Add', duplicated_output.unique_id)
+
+    return messages, new_output.unique_id
 
 
 def output_mod(form_output, request_form):
@@ -239,16 +380,52 @@ def output_mod(form_output, request_form):
         mod_output = Output.query.filter(
             Output.unique_id == form_output.output_id.data).first()
 
+        if not mod_output:
+            messages["error"].append("Invalid output ID")
+            return messages, page_refresh
+
+        if not mod_output.map_config_id:
+            map_cfg = ensure_map_config(
+                None,
+                mod_output.name,
+                mod_output.latitude,
+                mod_output.longitude
+            )
+            mod_output.map_config_id = map_cfg.unique_id
+
         if (form_output.uart_location.data and
                 not os.path.exists(form_output.uart_location.data)):
             messages["warning"].append(gettext(
                 "Invalid device or improper permissions to read device"))
 
-        mod_output.name = form_output.name.data
-        messages["name"] = form_output.name.data
+        if form_output.name.data not in [None, '']:
+            mod_output.name = form_output.name.data
+            messages["name"] = form_output.name.data
 
         if form_output.location.data:
             mod_output.location = form_output.location.data
+        lat_val = form_output.latitude.data
+        lng_val = form_output.longitude.data
+        if lat_val not in [None, ''] and lng_val not in [None, '']:
+            mod_output.latitude = float(lat_val)
+            mod_output.longitude = float(lng_val)
+            mod_output.location_updated_utc = datetime.utcnow()
+        elif (lat_val in [None, '']) and (lng_val in [None, '']):
+            # Leave existing coords untouched to avoid unintended clearing
+            pass
+        else:
+            messages["warning"].append(gettext("Latitude and longitude must be entered together."))
+        if form_output.location_source.data:
+            mod_output.location_source = form_output.location_source.data
+        if ('marker_icon' in request_form) and hasattr(form_output, 'marker_icon') and form_output.marker_icon.data not in [None, '', 'None', 'null']:
+            mod_output.marker_icon = form_output.marker_icon.data
+        if ('marker_color' in request_form) and hasattr(form_output, 'marker_color') and form_output.marker_color.data not in [None, '', 'None', 'null']:
+            mod_output.marker_color = form_output.marker_color.data
+        if ('marker_size' in request_form) and hasattr(form_output, 'marker_size') and form_output.marker_size.data not in [None, '', 'None', 'null']:
+            try:
+                mod_output.marker_size = int(form_output.marker_size.data)
+            except Exception:
+                pass
         if form_output.i2c_location.data:
             mod_output.i2c_location = form_output.i2c_location.data
         if form_output.ftdi_location.data:
@@ -270,17 +447,21 @@ def output_mod(form_output, request_form):
 
         # Parse pre-save custom options for output device and its channels
         try:
-            custom_options_dict_presave = json.loads(mod_output.custom_options)
-        except:
-            logger.error("Malformed JSON")
+            custom_options_dict_presave = json.loads(mod_output.custom_options) if mod_output.custom_options else {}
+        except Exception:
+            logger.error("Malformed JSON in custom_options for output %s; defaulting to {}", mod_output.output_type)
             custom_options_dict_presave = {}
 
         custom_options_channels_dict_presave = {}
         for each_channel in channels:
-            if each_channel.custom_options and each_channel.custom_options != "{}":
-                custom_options_channels_dict_presave[each_channel.channel] = json.loads(
-                    each_channel.custom_options)
-            else:
+            try:
+                if each_channel.custom_options and each_channel.custom_options not in [None, "{}", "null", "None"]:
+                    custom_options_channels_dict_presave[each_channel.channel] = json.loads(
+                        each_channel.custom_options)
+                else:
+                    custom_options_channels_dict_presave[each_channel.channel] = {}
+            except Exception:
+                logger.error("Malformed JSON in custom_channel_options for output %s channel %s; defaulting to {}", mod_output.output_type, each_channel.channel)
                 custom_options_channels_dict_presave[each_channel.channel] = {}
 
         # Parse post-save custom options for output device and its channels
@@ -289,7 +470,12 @@ def output_mod(form_output, request_form):
             mod_dev=mod_output,
             device=mod_output.output_type,
             custom_options=custom_options_dict_presave)
-        custom_options_dict_postsave = json.loads(custom_options_json_postsave)
+        custom_options_json_postsave = _safe_json_string(custom_options_json_postsave)
+        try:
+            custom_options_dict_postsave = json.loads(custom_options_json_postsave)
+        except Exception:
+            logger.warning("custom_options_return_json produced invalid JSON for output %s (mod), defaulting to {}", mod_output.output_type)
+            custom_options_dict_postsave = {}
 
         custom_options_channels_dict_postsave = {}
         for each_channel in channels:
@@ -297,8 +483,17 @@ def output_mod(form_output, request_form):
                 messages["error"], dict_outputs, request_form,
                 form_output.output_id.data, each_channel.channel,
                 device=mod_output.output_type, use_defaults=False)
-            custom_options_channels_dict_postsave[each_channel.channel] = json.loads(
-                custom_options_channels_json_postsave_tmp)
+            custom_options_channels_json_postsave_tmp = _safe_json_string(custom_options_channels_json_postsave_tmp)
+            try:
+                custom_options_channels_dict_postsave[each_channel.channel] = json.loads(
+                    custom_options_channels_json_postsave_tmp)
+            except Exception:
+                logger.warning("custom_channel_options_return_json produced invalid JSON for output %s channel %s (mod), defaulting to {}", mod_output.output_type, each_channel.channel)
+                custom_options_channels_dict_postsave[each_channel.channel] = {}
+            # final sanitize to ensure dict
+            if not isinstance(custom_options_channels_dict_postsave[each_channel.channel], dict):
+                logger.warning("custom_channel_options_return_json returned non-dict for output %s channel %s (mod), forcing {}", mod_output.output_type, each_channel.channel)
+                custom_options_channels_dict_postsave[each_channel.channel] = {}
 
         if 'execute_at_modification' in dict_outputs[mod_output.output_type]:
             # pass custom options to module prior to saving to database
@@ -320,12 +515,42 @@ def output_mod(form_output, request_form):
             custom_options = json.dumps(custom_options_dict_postsave)
             custom_channel_options = custom_options_channels_dict_postsave
 
+        # [Fix] Manually persist shape color options
+        # Since these are not in dict_outputs schema, custom_options_return_json ignores them.
+        try:
+            co_dict = json.loads(custom_options) if custom_options else {}
+        except:
+            co_dict = {}
+
+        for shape_key in ['shape_on_color', 'shape_off_color', 'shape_border_color']:
+            if shape_key in request_form:
+                val = request_form.get(shape_key)
+                # Only update if value is not None/Empty, OR valid color format
+                # If transparent/reset is needed, we might need to handle empty string differently
+                if val:
+                    co_dict[shape_key] = val
+        
+        custom_options = json.dumps(co_dict)
+
         # Finally, save custom options for both output and channels
+        # final sanitize: ensure strings persisted
+        custom_options = _safe_json_string(custom_options)
         mod_output.custom_options = custom_options
         for each_channel in channels:
-            if 'name' in custom_channel_options[each_channel.channel]:
-                each_channel.name = custom_channel_options[each_channel.channel]['name']
-            each_channel.custom_options = json.dumps(custom_channel_options[each_channel.channel])
+            channel_opts = custom_channel_options.get(each_channel.channel, {})
+            if isinstance(channel_opts, str):
+                try:
+                    channel_opts = json.loads(channel_opts)
+                except Exception:
+                    channel_opts = {}
+            safe_channel_opts = _safe_json_string(channel_opts)
+            try:
+                parsed_channel_opts = json.loads(safe_channel_opts) if safe_channel_opts else {}
+            except Exception:
+                parsed_channel_opts = {}
+            if isinstance(parsed_channel_opts, dict) and 'name' in parsed_channel_opts:
+                each_channel.name = parsed_channel_opts['name']
+            each_channel.custom_options = safe_channel_opts
 
         if not messages["error"]:
             db.session.commit()
@@ -338,6 +563,7 @@ def output_mod(form_output, request_form):
                     'Modify', form_output.output_id.data)
                 messages["error"].extend(new_messages["error"])
                 messages["success"].extend(new_messages["success"])
+            page_refresh = False
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 
@@ -353,8 +579,20 @@ def output_del(form_output):
     }
 
     try:
+        output_id_raw = form_output.output_id.data
+    except Exception:
+        output_id_raw = None
+    output_id = normalize_nullish_value(output_id_raw, '')
+    if output_id in ['', None]:
+        messages["error"].append("Invalid output ID")
+        return messages
+
+    try:
+        target_output = Output.query.filter(Output.unique_id == output_id).first()
+        map_config_id = target_output.map_config_id if target_output else None
+
         device_measurements = DeviceMeasurements.query.filter(
-            DeviceMeasurements.device_id == form_output.output_id.data).all()
+            DeviceMeasurements.device_id == output_id).all()
 
         for each_measurement in device_measurements:
             delete_entry_with_id(
@@ -362,13 +600,18 @@ def output_del(form_output):
                 each_measurement.unique_id,
                 flash_message=False)
 
-        delete_entry_with_id(
+        deleted_output = delete_entry_with_id(
             Output,
-            form_output.output_id.data,
+            output_id,
             flash_message=False)
+        if map_config_id:
+            delete_map_config(map_config_id)
+
+        # [Fix] Delete associated Map Overlays (Level 2 Shapes)
+        GeoShape.query.filter(GeoShape.device_id == output_id).delete(synchronize_session=False)
 
         channels = OutputChannel.query.filter(
-            OutputChannel.output_id == form_output.output_id.data).all()
+            OutputChannel.output_id == output_id).all()
         for each_channel in channels:
             delete_entry_with_id(
                 OutputChannel,
@@ -380,7 +623,7 @@ def output_del(form_output):
             action=TRANSLATIONS['delete']['title'],
             controller=TRANSLATIONS['output']['title']))
 
-        if not current_app.config['TESTING']:
+        if deleted_output and not current_app.config['TESTING']:
             new_messages = manipulate_output(
                 'Delete', form_output.output_id.data)
             messages["error"].extend(new_messages["error"])

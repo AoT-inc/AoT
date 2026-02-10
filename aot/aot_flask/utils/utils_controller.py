@@ -20,6 +20,11 @@ from aot.aot_flask.utils.utils_general import custom_options_return_json
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.utils.functions import parse_function_information
 from aot.utils.system_pi import parse_custom_option_values
+from aot.aot_flask.utils.utils_map_config import (
+    ensure_map_config,
+    clone_map_config,
+    delete_map_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +48,15 @@ def controller_mod(form_mod, request_form):
         mod_controller = CustomController.query.filter(
             CustomController.unique_id == form_mod.function_id.data).first()
 
+        if mod_controller and not getattr(mod_controller, 'map_config_id', None):
+            map_cfg = ensure_map_config(
+                None,
+                mod_controller.name,
+                mod_controller.latitude,
+                mod_controller.longitude
+            )
+            mod_controller.map_config_id = map_cfg.unique_id
+
         mod_without_deactivate = False
         if ('modify_settings_without_deactivating' in dict_controllers[mod_controller.device] and
                 dict_controllers[mod_controller.device]['modify_settings_without_deactivating']):
@@ -54,6 +68,9 @@ def controller_mod(form_mod, request_form):
         mod_controller.name = form_mod.name.data
         messages["name"] = form_mod.name.data
         mod_controller.log_level_debug = form_mod.log_level_debug.data
+        mod_controller.latitude = form_mod.latitude.data if form_mod.latitude.data not in [None, ''] else None
+        mod_controller.longitude = form_mod.longitude.data if form_mod.longitude.data not in [None, ''] else None
+        mod_controller.location_source = form_mod.location_source.data
 
         # 채널 활성화/비활성화 처리
         measurements = DeviceMeasurements.query.filter(
@@ -143,6 +160,19 @@ def controller_mod(form_mod, request_form):
             use_defaults=True,
             custom_options=custom_options_dict_presave)
         custom_options_dict_postsave = json.loads(custom_options_json_postsave)
+        # 지도 마커 값 저장(커스텀 컨트롤러는 별도 컬럼이 없으므로 custom_options에 보관)
+        marker_icon = request_form.get('marker_icon')
+        marker_color = request_form.get('marker_color')
+        marker_size = request_form.get('marker_size')
+        if marker_icon not in [None, '']:
+            custom_options_dict_postsave['marker_icon'] = marker_icon
+        if marker_color not in [None, '']:
+            custom_options_dict_postsave['marker_color'] = marker_color
+        if marker_size not in [None, '']:
+            try:
+                custom_options_dict_postsave['marker_size'] = int(marker_size)
+            except Exception:
+                pass
 
         custom_options_channels_dict_postsave = {}
         for each_channel in channels:
@@ -210,6 +240,7 @@ def controller_del(cond_id):
 
     cond = CustomController.query.filter(
         CustomController.unique_id == cond_id).first()
+    map_config_id = cond.map_config_id if cond else None
 
     # 활성화된 경우 컨트롤러 비활성화
     if cond.is_activated:
@@ -227,6 +258,8 @@ def controller_del(cond_id):
 
             delete_entry_with_id(
                 CustomController, cond_id, flash_message=False)
+            if map_config_id:
+                delete_map_config(map_config_id)
 
             channels = FunctionChannel.query.filter(
                 FunctionChannel.function_id == cond_id).all()

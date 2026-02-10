@@ -130,3 +130,39 @@ class CameraGetLastImage(Resource):
             abort(500,
                   message='An exception occurred',
                   error=traceback.format_exc())
+
+
+@ns_camera.route('/info/<string:unique_id>')
+@ns_camera.doc(
+    security='apikey',
+    responses=default_responses,
+    params={
+        'unique_id': 'The unique ID of the camera'
+    }
+)
+class CameraGetInfo(Resource):
+    """Returns information about a specific camera"""
+
+    @accept('application/vnd.aot.v1+json')
+    @flask_login.login_required
+    def get(self, unique_id):
+        """get camera information."""
+        if not utils_general.user_has_permission('view_camera'):
+            abort(403)
+
+        camera = Camera.query.filter(Camera.unique_id == unique_id).first()
+
+        if not camera:
+            abort(422, custom='No camera with ID found')
+
+        return {
+            'unique_id': camera.unique_id,
+            'name': camera.name,
+            'url_stream': camera.url_stream,
+            'url_still': camera.url_still,
+            'auth_username': camera.auth_username,
+            'auth_password': camera.auth_password,
+            'width': camera.width,
+            'height': camera.height,
+            'library': camera.library
+        }

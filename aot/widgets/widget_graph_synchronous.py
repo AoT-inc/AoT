@@ -1,4 +1,5 @@
 # coding=utf-8
+import os
 #
 #  Copyright (C) 2015-2022 Kyle T. Gabriel <mycodo@kylegabriel.com>
 #
@@ -30,7 +31,7 @@ from flask_babel import lazy_gettext
 from flask_login import current_user
 from pytz import timezone
 
-from aot.config import THEMES_DARK
+from aot.config import THEMES_DARK, PATH_JS_USER
 from aot.databases.models import Conversion
 from aot.databases.models import CustomController
 from aot.databases.models import DeviceMeasurements
@@ -203,29 +204,29 @@ WIDGET_INFORMATION = {
     'dependencies_module': [
         ('bash-commands',
         [
-            '/opt/AoT/aot/aot_flask/static/js/user_js/highstock-9.1.2.js',
-            '/opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more-9.1.2.js',
-            '/opt/AoT/aot/aot_flask/static/js/user_js/data-9.1.2.js',
-            '/opt/AoT/aot/aot_flask/static/js/user_js/exporting-9.1.2.js',
-            '/opt/AoT/aot/aot_flask/static/js/user_js/export-data-9.1.2.js',
-            '/opt/AoT/aot/aot_flask/static/js/user_js/offline-exporting-9.1.2.js'
+            os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
+            os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js'),
+            os.path.join(PATH_JS_USER, 'data-9.1.2.js'),
+            os.path.join(PATH_JS_USER, 'exporting-9.1.2.js'),
+            os.path.join(PATH_JS_USER, 'export-data-9.1.2.js'),
+            os.path.join(PATH_JS_USER, 'offline-exporting-9.1.2.js')
         ],
         [
             'rm -rf Highcharts-Stock-9.1.2.zip',
             'wget https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip 2>&1',
             'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-            'cp -rf Highcharts-Stock-9.1.2/code/highstock.js /opt/AoT/aot/aot_flask/static/js/user_js/highstock-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highstock.js.map',
-            'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more.js.map',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js /opt/AoT/aot/aot_flask/static/js/user_js/data-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js.map /opt/AoT/aot/aot_flask/static/js/user_js/data.js.map',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js /opt/AoT/aot/aot_flask/static/js/user_js/exporting-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js.map /opt/AoT/aot/aot_flask/static/js/user_js/exporting.js.map',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js /opt/AoT/aot/aot_flask/static/js/user_js/export-data-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js.map /opt/AoT/aot/aot_flask/static/js/user_js/export-data.js.map',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js /opt/AoT/aot/aot_flask/static/js/user_js/offline-exporting-9.1.2.js',
-            'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js.map /opt/AoT/aot/aot_flask/static/js/user_js/offline-exporting.js.map',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js {os.path.join(PATH_JS_USER, "data-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js.map {os.path.join(PATH_JS_USER, "data.js.map")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js {os.path.join(PATH_JS_USER, "exporting-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js.map {os.path.join(PATH_JS_USER, "exporting.js.map")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js {os.path.join(PATH_JS_USER, "export-data-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js.map {os.path.join(PATH_JS_USER, "export-data.js.map")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js {os.path.join(PATH_JS_USER, "offline-exporting-9.1.2.js")}',
+            f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js.map {os.path.join(PATH_JS_USER, "offline-exporting.js.map")}',
             'rm -rf Highcharts-Stock-9.1.2.zip',
             'rm -rf Highcharts-Stock-9.1.2'
         ])
@@ -252,7 +253,8 @@ WIDGET_INFORMATION = {
     'custom_options': [
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 90.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),

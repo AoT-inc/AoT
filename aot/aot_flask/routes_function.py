@@ -4,18 +4,51 @@ import json
 import logging
 
 import flask_login
+from aot.functions.schema_sync import (
+    read_ns, write_ns,
+    read_ns_channels, write_ns_channels,
+    get_namespace_schema, set_namespace_schema,
+    ConflictError
+)
 from flask import (current_app, jsonify, redirect, render_template, request,
-                   url_for)
+                   url_for, flash)
+from flask_babel import gettext as _
 from flask.blueprints import Blueprint
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
-from aot.config import CONDITIONAL_CONDITIONS, FUNCTION_INFO, FUNCTIONS
+from aot.config import INSTALL_DIRECTORY, CONDITIONAL_CONDITIONS, FUNCTION_INFO, FUNCTIONS
+
+def _load_map_overlays_from_db(map_uuid):
+    collection = {"type": "FeatureCollection", "features": []}
+    if not map_uuid:
+        return collection
+    try:
+        db_overlays = GeoShape.query.filter_by(geo_id=map_uuid).all()
+        feats = []
+        for ov in db_overlays:
+            if not ov or not ov.feature:
+                continue
+            feat = ov.feature
+            props = feat.get('properties', {}) or {}
+            # Inject hierarchy metadata
+            if 'level_id' not in props:
+                props['level_id'] = ov.level_id
+            if 'channel_id' not in props:
+                props['channel_id'] = ov.channel_id
+            feat['properties'] = props
+            feats.append(feat)
+
+        if feats:
+            collection['features'] = feats
+    except Exception:
+        pass
+    return collection
 from aot.config_devices_units import MEASUREMENTS
 from aot.databases.models import (PID, Actions, Camera, Conditional,
                                      ConditionalConditions, Conversion,
                                      CustomController, DeviceMeasurements,
                                      DisplayOrder, Function, FunctionChannel,
-                                     Input, Measurement, Method, Misc,
+                                     Input, GeoMap, GeoShape, Measurement, Method, Misc,
                                      NoteTags, Output, OutputChannel, Trigger,
                                      Unit, User)
 from aot.aot_client import DaemonControl
@@ -27,6 +60,7 @@ from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import (utils_action, utils_conditional,
                                        utils_controller, utils_function,
                                        utils_general, utils_pid, utils_trigger)
+from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.aot_flask.utils.utils_misc import determine_controller_type
 from aot.utils.actions import parse_action_information
@@ -51,6 +85,36 @@ blueprint = Blueprint('routes_function',
 @flask_login.login_required
 def inject_dictionary():
     return inject_variables()
+
+
+@blueprint.route('/function_save_order', methods=['POST'])
+@flask_login.login_required
+def function_save_order():
+    try:
+        data = request.get_json()
+        function_id = data.get('function_id')
+        order_map = data.get('order')  # {action_id: y_pos, ...}
+        
+        if not function_id or order_map is None:
+            return jsonify({'status': 'error', 'message': 'Missing data'}), 400
+
+        # Update each action
+        for action_unique_id, y_pos in order_map.items():
+            action = Actions.query.filter_by(unique_id=action_unique_id).first()
+            if action:
+                try:
+                    opts = json.loads(action.custom_options) if action.custom_options else {}
+                except:
+                    opts = {}
+                
+                opts['position'] = int(y_pos)
+                action.custom_options = json.dumps(opts)
+        
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Error saving function order: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @blueprint.route('/function_submit', methods=['POST'])
@@ -109,6 +173,9 @@ def page_function_submit():
                 if controller_type == "Conditional":
                     messages = utils_conditional.conditional_mod(
                         form_conditional)
+                    if not messages["error"]:
+                        utils_function.update_location_marker(function_id, request.form)
+                        page_refresh = True
                 elif controller_type == "PID":
                     messages, page_refresh = utils_pid.pid_mod(
                         form_mod_pid_base,
@@ -122,11 +189,19 @@ def page_function_submit():
                         form_mod_pid_volume_lower)
                 elif controller_type == "Trigger":
                     messages, page_refresh = utils_trigger.trigger_mod(form_trigger)
+                    if not messages["error"]:
+                        utils_function.update_location_marker(function_id, request.form)
+                        page_refresh = True
                 elif controller_type == "Function":
-                    messages = utils_function.function_mod(form_function_base)
+                    messages, page_refresh = utils_function.function_mod(form_function_base)
                 elif controller_type == "Function_Custom":
                     messages, page_refresh = utils_controller.controller_mod(
                         form_function, request.form)
+                    if not messages["error"]:
+                        utils_function.update_location_marker(function_id, request.form)
+                        page_refresh = True
+            elif form_function_base.function_duplicate.data:
+                messages, function_id = utils_function.function_duplicate(form_function_base)
             elif form_function_base.function_delete.data:
                 if controller_type == "Conditional":
                     messages = utils_conditional.conditional_del(function_id)
@@ -188,7 +263,7 @@ def page_function_submit():
                  dep_name,
                  dep_list,
                  action_id,
-                 page_refresh) = utils_action.action_add(form_actions)
+                 page_refresh) = utils_action.action_add(form_actions, request.form)
                 if dep_list:
                     dep_unmet = form_actions.action_type.data
                 function_id = form_actions.device_id.data
@@ -232,6 +307,11 @@ def page_function_submit():
                         request.form)
                 else:
                     messages["error"].append("Unknown function directive")
+
+    # Force screen refresh if location/marker fields are included
+    marker_keys = ['latitude', 'longitude', 'location_source', 'marker_icon', 'marker_color', 'marker_size']
+    if any(k in request.form for k in marker_keys):
+        page_refresh = True
 
     return jsonify(data={
         'action_id': action_id,
@@ -282,6 +362,104 @@ def save_function_layout():
     return "success"
 
 
+# ---------------------------
+# Generic namespaced config API (controller + channels)
+# ---------------------------
+
+@blueprint.route('/aot/config/<controller_id>/<ns>', methods=['GET'])
+@flask_login.login_required
+def api_get_namespace_schema(controller_id, ns):
+    """Return combined schema for a namespace: {'cfg_rev', 'global', 'channels'}."""
+    try:
+        schema = get_namespace_schema(controller_id, ns)
+        return jsonify(schema), 200
+    except Exception as e:
+        logger.exception(f"[config:get] controller_id={controller_id}, ns={ns}, err={e}")
+        return jsonify({"error": "internal_error"}), 500
+
+
+@blueprint.route('/aot/config/<controller_id>/<ns>', methods=['POST'])
+@flask_login.login_required
+def api_set_namespace_schema(controller_id, ns):
+    """Save global(+channels) atomically with optimistic lock on cfg_rev."""
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({"error": "permission_denied"}), 403
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        expect_rev = data.get("cfg_rev", None)
+        global_payload = data.get("global", {}) or {}
+        channels_payload = data.get("channels", None)  # may be None
+
+        new_rev = set_namespace_schema(
+            controller_id=controller_id,
+            ns=ns,
+            global_payload=global_payload,
+            channels_payload=channels_payload,
+            expect_rev=expect_rev
+        )
+        schema = get_namespace_schema(controller_id, ns)
+        return jsonify(schema), 200
+    except ConflictError:
+        return jsonify({"error": "cfg_rev_conflict"}), 409
+    except Exception as e:
+        logger.exception(f"[config:set] controller_id={controller_id}, ns={ns}, err={e}")
+        return jsonify({"error": "internal_error"}), 500
+
+
+@blueprint.route('/aot/config/<controller_id>/<ns>', methods=['PATCH'])
+@flask_login.login_required
+def api_patch_namespace_global(controller_id, ns):
+    """Patch only the global(controller-level) payload for a namespace."""
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({"error": "permission_denied"}), 403
+    payload = request.get_json(force=True, silent=True) or {}
+    try:
+        expect_rev = payload.pop("cfg_rev", None)
+        current = read_ns(controller_id, ns)
+        # merge incoming keys into current, excluding None that are not intended deletions
+        for k, v in list(payload.items()):
+            if k == "cfg_rev":
+                continue
+            current[k] = v
+        new_rev = write_ns(controller_id, ns, current, expect_rev=expect_rev)
+        schema = get_namespace_schema(controller_id, ns)
+        return jsonify(schema), 200
+    except ConflictError:
+        return jsonify({"error": "cfg_rev_conflict"}), 409
+    except Exception as e:
+        logger.exception(f"[config:patch-global] controller_id={controller_id}, ns={ns}, err={e}")
+        return jsonify({"error": "internal_error"}), 500
+
+
+@blueprint.route('/aot/config/<controller_id>/<ns>/channels', methods=['POST'])
+@flask_login.login_required
+def api_set_namespace_channels(controller_id, ns):
+    """Save only channel-level payloads for a namespace."""
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({"error": "permission_denied"}), 403
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        items = data.get("channels", [])
+        write_ns_channels(controller_id, ns, items)
+        chans = read_ns_channels(controller_id, ns)
+        return jsonify({"channels": chans}), 200
+    except Exception as e:
+        logger.exception(f"[config:set-channels] controller_id={controller_id}, ns={ns}, err={e}")
+        return jsonify({"error": "internal_error"}), 500
+
+
+@blueprint.route('/aot/config/<controller_id>/<ns>/rev', methods=['GET'])
+@flask_login.login_required
+def api_get_namespace_rev(controller_id, ns):
+    """Lightweight rev endpoint for widgets to poll."""
+    try:
+        glob = read_ns(controller_id, ns)
+        return jsonify({"cfg_rev": int(glob.get("cfg_rev", 0) or 0)}), 200
+    except Exception as e:
+        logger.exception(f"[config:get-rev] controller_id={controller_id}, ns={ns}, err={e}")
+        return jsonify({"error": "internal_error"}), 500
+
+
 @blueprint.route('/function', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_function():
@@ -297,9 +475,14 @@ def page_function():
     function_page_entry = None
     function_page_options = None
     controller_type = None
+    trigger_sequence_options = {}
 
     if function_type in ['entry', 'options', 'conditions', 'actions'] and function_id != '0':
         controller_type = determine_controller_type(function_id)
+        if not controller_type:
+            flash(_("Function not found or deleted."), "error")
+            return redirect(url_for('.page_function'))
+
         if controller_type == "Conditional":
             each_function = Conditional.query.filter(
                 Conditional.unique_id == function_id).first()
@@ -313,8 +496,16 @@ def page_function():
         elif controller_type == "Trigger":
             each_function = Trigger.query.filter(
                 Trigger.unique_id == function_id).first()
-            function_page_entry = 'pages/function_options/trigger_entry.html'
-            function_page_options = 'pages/function_options/trigger_options.html'
+            if each_function:
+                 current_app.logger.info(f"DEBUG: page_function Trigger found: {each_function.unique_id}, type={each_function.trigger_type}")
+
+            if each_function and each_function.trigger_type == 'trigger_sequence':
+                current_app.logger.info(f"DEBUG: page_function LOAD trigger_sequence {each_function.unique_id}: start={each_function.timer_start_time}, limit={each_function.timer_end_time}, period={each_function.period}")
+                function_page_entry = 'pages/function_options/trigger_sequence_entry.html'
+                function_page_options = 'pages/function_options/trigger_sequence_options.html'
+            else:
+                function_page_entry = 'pages/function_options/trigger_entry.html'
+                function_page_options = 'pages/function_options/trigger_options.html'
         elif controller_type == "Function":
             each_function = Function.query.filter(
                 Function.unique_id == function_id).first()
@@ -341,6 +532,19 @@ def page_function():
     conditional = Conditional.query.all()
     conditional_conditions = ConditionalConditions.query.all()
     function = CustomController.query.all()
+    map_cfg_committed = False
+    for func in function:
+        if not getattr(func, 'map_config_id', None):
+            map_cfg = ensure_map_config(
+                None,
+                func.name,
+                func.latitude,
+                func.longitude
+            )
+            func.map_config_id = map_cfg.unique_id
+            map_cfg_committed = True
+    if map_cfg_committed:
+        db.session.commit()
     function_channel = FunctionChannel.query.all()
     function_dev = Function.query.all()
     input_dev = Input.query.all()
@@ -397,6 +601,14 @@ def page_function():
         except:
             custom_options_values_actions[each_action_dev.unique_id] = {}
 
+    # Sequence Options
+    trigger_sequence_options = {}
+    if each_function and getattr(each_function, 'trigger_type', '') == 'trigger_sequence':
+        try:
+            trigger_sequence_options = json.loads(each_function.custom_options)
+        except:
+            pass
+
     # Create lists of built-in and custom functions
     choices_functions = []
     for choice_function in FUNCTIONS:
@@ -404,6 +616,8 @@ def page_function():
     choices_custom_functions = utils_general.choices_custom_functions()
     # Combine function lists
     choices_functions_add = choices_functions + choices_custom_functions
+    # Add Sequence
+    choices_functions_add.append({'value': 'trigger_sequence', 'item': _('Sequence')})
     # Sort combined list
     choices_functions_add = sorted(choices_functions_add, key=lambda i: i['item'])
 
@@ -512,7 +726,36 @@ def page_function():
                     sunrise_set_calc[each_trigger.unique_id]['offset_sunrise'] = "ERROR"
                     sunrise_set_calc[each_trigger.unique_id]['offset_sunset'] = "ERROR"
 
+    # Map list (common for function/options)
+    map_configs = []
+    try:
+        map_configs = GeoMap.query.filter(
+            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
+        ).all()
+    except Exception:
+        map_configs = []
+
+    map_config_uuid = ''
+    map_overlays = {"type": "FeatureCollection", "features": []}
+
     if not function_type:
+        # Create integrated list to guarantee GridStack order
+        # 1. Type tagging for each object
+        for item in conditional:
+            item._controller_type = 'Conditional'
+        for item in pid:
+            item._controller_type = 'PID'
+        for item in trigger:
+            item._controller_type = 'Trigger'
+        for item in function_dev:
+            item._controller_type = 'Function'
+        for item in function:
+            item._controller_type = 'Function_Custom'
+
+        # 2. List integration and sorting (position_y priority, unique_id secondary)
+        all_functions_sorted = conditional + pid + trigger + function_dev + function
+        all_functions_sorted.sort(key=lambda x: (getattr(x, 'position_y', 0) or 0, getattr(x, 'unique_id', '')))
+
         return render_template('pages/function.html',
                                and_=and_,
                                action=action,
@@ -578,6 +821,9 @@ def page_function():
                                output=output,
                                output_types=output_types(),
                                pid=pid,
+                               map_configs=map_configs,
+                               map_config_uuid=map_config_uuid,
+                               map_config_id=map_config_uuid, # Legacy
                                sunrise_set_calc=sunrise_set_calc,
                                table_conversion=Conversion,
                                table_device_measurements=DeviceMeasurements,
@@ -591,8 +837,27 @@ def page_function():
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
-                               user=user)
+                               user=user,
+                               map_overlays=map_overlays,
+                               all_functions_sorted=all_functions_sorted)
     elif function_type == 'entry':
+        map_configs = GeoMap.query.filter(
+            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
+        ).all()
+        map_config_uuid = ''
+        map_overlays = {"type": "FeatureCollection", "features": []}
+        if each_function and isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)):
+            map_cfg = ensure_map_config(
+                each_function.map_config_id,
+                each_function.name,
+                each_function.latitude,
+                each_function.longitude
+            )
+            if each_function.map_config_id != map_cfg.unique_id:
+                each_function.map_config_id = map_cfg.unique_id
+                db.session.commit()
+            map_config_uuid = map_cfg.unique_id
+            map_overlays = _load_map_overlays_from_db(map_cfg.unique_id)
         return render_template(function_page_entry,
                                and_=and_,
                                action=action,
@@ -671,8 +936,29 @@ def page_function():
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
-                               user=user)
+                               user=user,
+                               map_configs=map_configs,
+                               map_config_uuid=map_config_uuid,
+                               map_config_id=map_config_uuid,
+                               map_overlays=map_overlays)
     elif function_type == 'options':
+        map_configs = GeoMap.query.filter(
+            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
+        ).all()
+        map_config_uuid = ''
+        map_overlays = {"type": "FeatureCollection", "features": []}
+        if each_function and isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)):
+            map_cfg = ensure_map_config(
+                each_function.map_config_id,
+                each_function.name,
+                each_function.latitude,
+                each_function.longitude
+            )
+            if each_function.map_config_id != map_cfg.unique_id:
+                each_function.map_config_id = map_cfg.unique_id
+                db.session.commit()
+            map_config_uuid = map_cfg.unique_id
+            map_overlays = _load_map_overlays_from_db(map_cfg.unique_id)
         return render_template(function_page_options,
                                and_=and_,
                                action=action,
@@ -712,6 +998,8 @@ def page_function():
                                dict_outputs=dict_outputs,
                                dict_units=dict_units,
                                display_order_function=display_order_function,
+                               map_config_id=map_config_uuid,
+                               map_configs=map_configs,
                                form_conditional=form_conditional,
                                form_conditional_conditions=form_conditional_conditions,
                                form_function=form_function,
@@ -751,9 +1039,19 @@ def page_function():
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
-                               user=user)
+                               user=user,
+                               map_overlays=map_overlays,
+                               trigger_sequence_options=trigger_sequence_options)
     elif function_type == 'actions':
-        return render_template('pages/actions.html',
+        if isinstance(each_function, Trigger) and each_function.trigger_type == 'trigger_sequence':
+            template = 'pages/function_options/trigger_sequence_actions.html'
+        elif (isinstance(each_function, Trigger) or 
+              (isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)) and each_function.function_type == 'function_actions')):
+            template = 'pages/function_options/trigger_actions.html'
+        else:
+            template = 'pages/actions.html'
+            
+        return render_template(template,
                                and_=and_,
                                action=action,
                                actions_dict=actions_dict,
@@ -832,7 +1130,8 @@ def page_function():
                                tags=tags,
                                trigger=trigger,
                                units=MEASUREMENTS,
-                               user=user)
+                               user=user,
+                               map_overlays=map_overlays)
     elif function_type == 'conditions':
         return render_template('pages/function_options/conditional_condition.html',
                                and_=and_,
@@ -921,7 +1220,64 @@ def page_function():
 def function_status_activated(unique_id):
     try:
         control = DaemonControl()
-        return jsonify(control.function_status(unique_id))
+        data = control.function_status(unique_id)
+
+        # Fallback for Sequence Trigger if daemon is off or unreachable
+        if not data or 'error' in data:
+            from aot.controllers.controller_trigger_sequence import SequenceTriggerController
+            fallback_data = SequenceTriggerController.get_static_status(unique_id)
+            if fallback_data and 'error' not in fallback_data:
+                data = fallback_data
+
+        # Polyfill for missing device_detail (if daemon is stale)
+        if data and 'steps' in data:
+            try:
+                for step in data['steps']:
+                    # Re-resolve if missing, empty, or placeholder
+                    if not step.get('device_detail') or step.get('device_detail') in ['-', '']:
+                        act_id = step.get('unique_id')
+                        act = Actions.query.filter_by(unique_id=act_id).first()
+                        if act:
+                            opts = {}
+                            if act.custom_options:
+                                try:
+                                    opts = json.loads(act.custom_options)
+                                except: pass
+                            
+                            target_id = act.do_unique_id
+                            if not target_id: target_id = opts.get('output')
+                            if not target_id: target_id = opts.get('input')
+                            
+                            detail = "-"
+                            if target_id:
+                                parts = str(target_id).split(',')
+                                main_id = parts[0]
+                                raw_chan = parts[1] if len(parts) > 1 else "0"
+                                
+                                out = Output.query.filter_by(unique_id=main_id).first()
+                                if out:
+                                    chan_idx = raw_chan
+                                    # Resolve Channel UUID if needed
+                                    if len(str(raw_chan)) > 5:
+                                        chan_obj = OutputChannel.query.filter_by(unique_id=raw_chan).first()
+                                        if chan_obj: chan_idx = chan_obj.channel
+                                    detail = f"{out.name} [CH{chan_idx}]"
+                                else:
+                                    inp = Input.query.filter_by(unique_id=main_id).first()
+                                    if inp:
+                                        detail = f"{inp.name} [Input]"
+                                    else:
+                                        func = CustomController.query.filter_by(unique_id=main_id).first()
+                                        if func:
+                                            detail = f"{func.name} [Func]"
+                                        else:
+                                            detail = f"Unknown: {main_id}"
+                            
+                            step['device_detail'] = detail
+            except Exception as e:
+                logger.error(f"Error polyfilling device details: {e}")
+
+        return jsonify(data)
     except Exception as err:
         logger.error("Function Status Error: {}".format(err))
         return jsonify({'error': [str(err)]})
@@ -941,3 +1297,72 @@ def function_status_always(unique_id):
         logger.error("Function Status Error: {}".format(err))
         return jsonify({'error': [str(err)]})
     return jsonify({'error': ["Could not get status from Function."]})
+
+
+@blueprint.route('/function_sequence_update_settings', methods=['POST'])
+@flask_login.login_required
+def function_sequence_update_settings():
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    try:
+        data = request.get_json()
+        function_id = data.get('function_id')
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        period = data.get('period')
+        
+        trigger = Trigger.query.filter_by(unique_id=function_id).first()
+        if not trigger:
+            return jsonify({'error': 'Function not found'}), 404
+            
+        if start_time: trigger.timer_start_time = start_time
+        if end_time: trigger.timer_end_time = end_time
+        if period is not None: trigger.period = float(period)
+        
+        db.session.commit()
+        
+        # Refresh Controller
+        control = DaemonControl()
+        control.refresh_daemon_trigger_settings(function_id)
+        
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Sequence Update Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@blueprint.route('/function_sequence_toggle_action', methods=['POST'])
+@flask_login.login_required
+def function_sequence_toggle_action():
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    try:
+        data = request.get_json()
+        action_unique_id = data.get('action_id')
+        enabled = data.get('enabled') # boolean
+        
+        action = Actions.query.filter_by(unique_id=action_unique_id).first()
+        if not action:
+            return jsonify({'error': 'Action not found'}), 404
+            
+        try:
+            opts = json.loads(action.custom_options) if action.custom_options else {}
+        except:
+            opts = {}
+            
+        opts['enabled'] = bool(enabled)
+        action.custom_options = json.dumps(opts)
+        
+        db.session.commit()
+        
+        # Refresh Controller
+        control = DaemonControl()
+        control.refresh_daemon_trigger_settings(action.function_id)
+        
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Sequence Action Toggle Error: {e}")
+        return jsonify({'error': str(e)}), 500
+

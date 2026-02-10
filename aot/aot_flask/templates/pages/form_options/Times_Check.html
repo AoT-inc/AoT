@@ -2,16 +2,14 @@
       'times_check' in dict_options['options_enabled']
   %}
 
-<div class="col-auto">
-  {{form.times_check.label(class_='control-label')}}
-  <div>
-
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.times_check.label.text}}</label>
+  <div class="aot-modal-option-control">
   {%- if 'times_check' in dict_options['options_disabled'] -%}
-    {{form.times_check(class_='form-control', value=each_device.times_check, disabled=True, **{'title': dict_translation['times_check']['phrase']})}}
+    {{form.times_check(class_='form-control aot-modern-input', value=each_device.times_check, disabled=True, **{'title': dict_translation['times_check']['phrase']})}}
   {% else %}
-    {{form.times_check(class_='form-control', value=each_device.times_check, **{'title': dict_translation['times_check']['phrase']})}}
+    {{form.times_check(class_='form-control aot-modern-input', value=each_device.times_check, **{'title': dict_translation['times_check']['phrase']})}}
   {%- endif -%}
-
   </div>
 </div>
 

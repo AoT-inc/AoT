@@ -43,7 +43,8 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'measurement_max_age',
-            'type': 'integer',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 360,
             'required': True,
             'name': "{}: {} ({})".format(lazy_gettext("Measurement"), lazy_gettext("Max Age"),
@@ -104,7 +105,8 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'update_period',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 5,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,

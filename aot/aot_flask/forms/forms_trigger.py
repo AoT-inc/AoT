@@ -9,6 +9,8 @@ from wtforms import BooleanField
 from wtforms import DecimalField
 from wtforms import IntegerField
 from wtforms import StringField
+from wtforms import SelectField
+from wtforms import validators
 from wtforms import widgets
 from wtforms.widgets import NumberInput
 
@@ -16,40 +18,46 @@ from aot.config_translations import TRANSLATIONS
 
 
 class Trigger(FlaskForm):
-    function_id = StringField('함수 ID', widget=widgets.HiddenInput())
-    function_type = StringField('함수 유형', widget=widgets.HiddenInput())
-    name = StringField('이름')
-    log_level_debug = BooleanField('디버그 로그 활성화')
+    function_id = StringField(lazy_gettext('Function ID'), widget=widgets.HiddenInput())
+    function_type = StringField(lazy_gettext('Function Type'), widget=widgets.HiddenInput())
+    name = StringField(lazy_gettext('Name'))
+    action_type = StringField(lazy_gettext('Action'))
+    log_level_debug = BooleanField(lazy_gettext('Enable Debug Logging'))
 
-    # 엣지 감지 (Edge detection)
-    measurement = StringField('측정값')
-    edge_detected = StringField('엣지 감지 시')
+    # Edge detection
+    measurement = StringField(lazy_gettext('Measurement'))
+    edge_detected = StringField(lazy_gettext('On Edge Detected'))
 
-    # 일출/일몰
-    rise_or_set = StringField('일출 또는 일몰')
-    latitude = DecimalField('위도 (소수점)', widget=NumberInput(step='any'))
-    longitude = DecimalField('경도 (소수점)', widget=NumberInput(step='any'))
-    zenith = DecimalField('천정각', widget=NumberInput(step='any'))
-    date_offset_days = IntegerField('날짜 오프셋 (일)', widget=NumberInput())
-    time_offset_minutes = IntegerField('시간 오프셋 (분)', widget=NumberInput())
+    # Sunrise/Sunset
+    rise_or_set = StringField(lazy_gettext('Sunrise or Sunset'))
+    latitude = DecimalField(lazy_gettext('Latitude (Decimal)'), widget=NumberInput(step='any'))
+    longitude = DecimalField(lazy_gettext('Longitude (Decimal)'), widget=NumberInput(step='any'))
+    location_source = SelectField(
+        lazy_gettext('Location Source'),
+        choices=[('manual', lazy_gettext('Manual')), ('device', lazy_gettext('Device')), ('remote', lazy_gettext('Remote'))],
+        default='manual'
+    )
+    zenith = DecimalField(lazy_gettext('Zenith Angle'), widget=NumberInput(step='any'))
+    date_offset_days = IntegerField(lazy_gettext('Date Offset (days)'), widget=NumberInput())
+    time_offset_minutes = StringField(lazy_gettext('Time Offset (minutes)'))
 
-    # 리모컨 적외선 수신
-    program = StringField('프로그램')
-    word = StringField('명령어')
+    # Remote IR receive
+    program = StringField(lazy_gettext('Program'))
+    word = StringField(lazy_gettext('Command'))
 
-    # 타이머
-    period = DecimalField('주기 (초)', widget=NumberInput(step='any'))
-    timer_start_offset = IntegerField('시작 지연 (초)', widget=NumberInput())
-    timer_start_time = StringField('시작 시간 (HH:MM)')
-    timer_end_time = StringField('종료 시간 (HH:MM)')
+    # Timer
+    period = StringField(lazy_gettext('Period (sec)'))
+    timer_start_offset = StringField(lazy_gettext('Start Offset (sec)'))
+    timer_start_time = StringField(lazy_gettext('Start Time (HH:MM)'))
+    timer_end_time = StringField(lazy_gettext('End Time (HH:MM)'))
 
-    # 메서드
-    trigger_actions_at_period = BooleanField('주기마다 동작 실행')
-    trigger_actions_at_start = BooleanField('활성화 시 동작 실행')
+    # Method
+    trigger_actions_at_period = BooleanField(lazy_gettext('Execute Actions at Each Period'))
+    trigger_actions_at_start = BooleanField(lazy_gettext('Execute Actions at Activation'))
 
-    # 출력
-    unique_id_1 = StringField('조건 ID 1')
-    unique_id_2 = StringField('조건 ID 2')
-    output_state = StringField('상태 조건')
-    output_duration = DecimalField('조건 지속 시간 (초)', widget=NumberInput(step='any'))
-    output_duty_cycle = DecimalField('조건 듀티 사이클 (%)', widget=NumberInput(step='any'))
+    # Output
+    unique_id_1 = StringField(lazy_gettext('Condition ID 1'))
+    unique_id_2 = StringField(lazy_gettext('Condition ID 2'))
+    output_state = StringField(lazy_gettext('State Condition'))
+    output_duration = StringField(lazy_gettext('Condition Duration (sec)'))
+    output_duty_cycle = StringField(lazy_gettext('Condition Duty Cycle (%)'))

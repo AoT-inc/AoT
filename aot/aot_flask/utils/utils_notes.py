@@ -10,11 +10,18 @@ import time
 import uuid
 import zipfile
 from datetime import datetime
+from PIL import Image
+import pillow_heif
 
-from flask import flash
+# Register HEIF opener for Pillow
+pillow_heif.register_heif_opener()
+
+from flask import flash, request
 from flask import url_for
+from flask_login import current_user
 from flask_babel import gettext
 from werkzeug.utils import secure_filename
+from sqlalchemy import or_
 
 from aot.config import INSTALL_DIRECTORY
 from aot.config import PATH_NOTE_ATTACHMENTS
@@ -28,6 +35,77 @@ from aot.aot_flask.utils.utils_general import flash_success_errors
 from aot.utils.system_pi import assure_path_exists
 
 logger = logging.getLogger(__name__)
+
+def process_note_attachment(file_storage, note_unique_id):
+    """
+    Process uploaded note attachment:
+    1. Secure filename
+    2. Convert HEIC to JPG
+    3. Resize images > 1920px (maintain aspect ratio)
+    4. Handle animated GIFs (preserve original)
+    """
+    filename = secure_filename(file_storage.filename)
+    name, ext = os.path.splitext(filename)
+    ext_lower = ext.lower()
+    
+    # Determine save filename (HEIC -> JPG)
+    if ext_lower in ['.heic', '.heif']:
+        save_filename = "{pre}_{name}.jpg".format(pre=note_unique_id, name=name)
+        is_heic = True
+    else:
+        save_filename = "{pre}_{name}".format(pre=note_unique_id, name=filename)
+        is_heic = False
+        
+    save_path = os.path.join(PATH_NOTE_ATTACHMENTS, save_filename)
+    
+    try:
+        # Attempt to open as image
+        image = Image.open(file_storage)
+        
+        # Check for animated GIF - save original to preserve animation
+        if getattr(image, "is_animated", False):
+            file_storage.seek(0)
+            file_storage.save(save_path)
+            return save_filename
+
+        # Image Processing needed if:
+        # 1. It's HEIC (needs conversion)
+        # 2. It's too large (needs resizing)
+        
+        max_dimension = 1920
+        width, height = image.size
+        needs_resize = width > max_dimension or height > max_dimension
+        
+        if is_heic or needs_resize:
+            # Convert to RGB if needed (required for JPG)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+                
+            if needs_resize:
+                ratio = min(max_dimension / width, max_dimension / height)
+                new_size = (int(width * ratio), int(height * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+            
+            # Save processed image
+            # Force JPG for HEIC, otherwise try to keep original format or default to JPEG
+            if is_heic:
+                image.save(save_path, "JPEG", quality=85)
+            else:
+                # If original format is available, use it, else generic save
+                save_format = image.format if image.format else "JPEG"
+                image.save(save_path, format=save_format, quality=85)
+        else:
+            # No processing needed, save original stream
+            file_storage.seek(0)
+            file_storage.save(save_path)
+            
+    except Exception as e:
+        # Not an image or error during processing -> Save original file
+        # logger.debug(f"File {filename} is not an image or processing failed: {e}")
+        file_storage.seek(0)
+        file_storage.save(save_path)
+        
+    return save_filename
 
 #
 # Tags
@@ -109,47 +187,81 @@ def note_add(form):
     list_tags = []
 
     new_note = Notes()
+    # Always assign a unique_id at the start to ensure consistency
+    new_note.unique_id = set_uuid()
+    if current_user.is_authenticated:
+        new_note.user_id = current_user.id
 
-    if not form.name.data:
-        error.append("Name cannot be left blank")
-    if not form.note_tags.data:
-        error.append("At least one tag must be selected")
-    if not form.note.data:
-        error.append("Note cannot be left blank")
+    # Relaxed validation: Name and tags are optional. Only note or files are required.
+    if not form.note.data and not form.files.data:
+        error.append("Note or attachment must be present")
 
     try:
         for each_tag in form.note_tags.data:
-            check_tag = NoteTags.query.filter(
-                NoteTags.unique_id == each_tag).first()
-            if not check_tag:
-                error.append("Invalid tag: {}".format(each_tag))
-            else:
+            # Try to find by unique_id first
+            check_tag = NoteTags.query.filter(or_(
+                NoteTags.unique_id == each_tag,
+                NoteTags.name == each_tag
+            )).first()
+            
+            if check_tag:
                 list_tags.append(check_tag.unique_id)
+            elif each_tag.strip():
+                # Auto-create if it looks like a new tag name (not a UUID)
+                # and doesn't exist yet as a name
+                new_t = NoteTags(name=each_tag.strip())
+                db.session.add(new_t)
+                db.session.flush() # Get unique_id
+                list_tags.append(new_t.unique_id)
+        
         new_note.tags = ",".join(list_tags)
     except Exception as msg:
         error.append("Invalid tag format: {}".format(msg))
 
     if form.enter_custom_date_time.data:
         try:
-            new_note.date_time = datetime_time_to_utc(form.date_time.data)
+            if form.date_time.data:
+                new_note.date_time = datetime_time_to_utc(form.date_time.data)
+            else:
+                # Fallback if parsing failed but checkbox was checked
+                new_note.date_time = datetime.utcnow()
         except Exception as msg:
             error.append("Error while parsing date/time: {}".format(msg))
 
     if form.files.data:
-        new_note.unique_id = set_uuid()
         assure_path_exists(PATH_NOTE_ATTACHMENTS)
         filename_list = []
-        for each_file in form.files.raw_data:
-            file_name = "{pre}_{name}".format(
-                pre=new_note.unique_id, name=each_file.filename)
-            file_save_path = os.path.join(PATH_NOTE_ATTACHMENTS, file_name)
-            each_file.save(file_save_path)
-            filename_list.append(file_name)
-        new_note.files = ",".join(filename_list)
+        # Ensure we iterate over file objects (handled by MultipleFileField)
+        for each_file in form.files.data:
+            if not hasattr(each_file, 'filename') or not each_file.filename:
+                continue
+            
+            saved_filename = process_note_attachment(each_file, new_note.unique_id)
+            filename_list.append(saved_filename)
+        
+        if filename_list:
+            new_note.files = ",".join(filename_list)
 
     if not error:
-        new_note.name = form.name.data
-        new_note.note = form.note.data
+        # [Smart Subject] If name is generic or empty, extract from note body
+        # Now handles "Quick Note" as well (common from widget)
+        final_name = form.name.data.strip() if form.name.data else ""
+        generic_titles = [_("New Note"), "Quick Note"]
+        if not final_name or any(gt in final_name for gt in generic_titles):
+            body = form.note.data.strip() if form.note.data else ""
+            if body:
+                first_line = body.split('\n')[0].strip()
+                if len(first_line) > 50:
+                    first_line = first_line[:47] + "..."
+                if first_line:
+                    final_name = first_line
+                elif not final_name:
+                    final_name = _("New Note")
+            elif not final_name:
+                final_name = _("New Note")
+        
+        new_note.name = final_name
+        new_note.note = form.note.data.strip() if form.note.data else ""
         new_note.save()
 
     flash_success_errors(error, action, url_for('routes_page.page_notes'))
@@ -165,47 +277,119 @@ def note_mod(form):
     mod_note = Notes.query.filter(
         Notes.unique_id == form.note_unique_id.data).first()
 
-    if not form.name.data:
-        error.append("Name cannot be left blank")
-    if not form.note_tags.data:
-        error.append("At least one tag must be selected")
-    if not form.note.data:
-        error.append("Note cannot be left blank")
+    # Relaxed validation for modifications
+    if not form.note.data and not form.files.data and not mod_note.files:
+        error.append("Note content or files cannot be entirely empty")
 
     try:
         for each_tag in form.note_tags.data:
-            check_tag = NoteTags.query.filter(
-                NoteTags.unique_id == each_tag).first()
-            if not check_tag:
-                error.append("Invalid tag: {}".format(each_tag))
-            else:
+            check_tag = NoteTags.query.filter(or_(
+                NoteTags.unique_id == each_tag,
+                NoteTags.name == each_tag
+            )).first()
+            
+            if check_tag:
                 list_tags.append(check_tag.unique_id)
+            elif each_tag.strip():
+                # Auto-create new tag
+                new_t = NoteTags(name=each_tag.strip())
+                db.session.add(new_t)
+                db.session.flush()
+                list_tags.append(new_t.unique_id)
     except Exception as msg:
         error.append("Invalid tag format: {}".format(msg))
 
-    try:
-        mod_note.date_time = datetime_time_to_utc(form.date_time.data)
-    except:
-        error.append("Error while parsing date/time")
+    # [Fix] Date/Time parsing issue:
+    # WTF-Form's date_time field might return None if format doesn't match exactly.
+    # We try to parse the raw string from request.form as a fallback.
+    # [Fix] Date/Time parsing issue:
+    raw_date_time = request.form.get('date_time')
+    if raw_date_time:
+        raw_date_time = raw_date_time.strip()
+        dt_obj = None
+        formats_to_try = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']
+        
+        for fmt in formats_to_try:
+            try:
+                dt_obj = datetime.strptime(raw_date_time, fmt)
+                # If parsed successfully, adding seconds if missing for UI consistency could be handled,
+                # but backend just needs a datetime object.
+                break
+            except ValueError:
+                continue
+        
+        if dt_obj:
+            try:
+                mod_note.date_time = datetime_time_to_utc(dt_obj)
+            except Exception as e:
+                 logger.error(f"Date time conversion error: {e}")
+                 error.append(f"Error converting date/time: {e}")
+        else:
+             # All formats failed
+             logger.error(f"Date time parse error for note {mod_note.id}: {raw_date_time}")
+             error.append("Invalid date format. Use YYYY-MM-DD HH:MM:SS")
+    elif form.date_time.data:
+         # Fallback to form data if raw string was somehow missing but object exists (rare)
+         try:
+            mod_note.date_time = datetime_time_to_utc(form.date_time.data)
+         except:
+            error.append("Error while parsing date/time object")
 
     if form.files.data:
         assure_path_exists(PATH_NOTE_ATTACHMENTS)
-        if mod_note.files:
-            filename_list = mod_note.files.split(",")
-        else:
-            filename_list = []
-        for each_file in form.files.raw_data:
-            file_name = "{pre}_{name}".format(
-                pre=mod_note.unique_id, name=each_file.filename)
-            file_save_path = os.path.join(PATH_NOTE_ATTACHMENTS, file_name)
-            each_file.save(file_save_path)
-            filename_list.append(file_name)
-        mod_note.files = ",".join(filename_list)
+        filename_list = mod_note.files.split(",") if mod_note.files else []
+        
+        for each_file in form.files.data:
+            if not hasattr(each_file, 'filename') or not each_file.filename:
+                continue
+
+            saved_filename = process_note_attachment(each_file, mod_note.unique_id)
+            filename_list.append(saved_filename)
+        
+        if filename_list:
+            mod_note.files = ",".join(filename_list)
 
     if not error:
-        mod_note.name = form.name.data
+        # [Phase 3] Handle Deleted Files
+        deleted_files_str = request.form.get('deleted_files', '')
+        if deleted_files_str:
+            deleted_list = deleted_files_str.split(',')
+            current_files = mod_note.files.split(',') if mod_note.files else []
+            updated_files = []
+            
+            for f in current_files:
+                if f in deleted_list:
+                    # Physically delete the file
+                    file_path = os.path.join(PATH_NOTE_ATTACHMENTS, f)
+                    if os.path.isfile(file_path):
+                        try:
+                            os.remove(file_path)
+                        except Exception as e:
+                            logger.error(f"Failed to delete file {file_path}: {e}")
+                else:
+                    updated_files.append(f)
+            
+            mod_note.files = ",".join(updated_files) if updated_files else None
+
+        # [Smart Subject] Apply to modifications if title is empty or generic
+        final_name = form.name.data.strip() if form.name.data else ""
+        generic_titles = ["새 노트", "Quick Note"]
+        if not final_name or any(gt in final_name for gt in generic_titles):
+            body = form.note.data.strip() if form.note.data else ""
+            if body:
+                first_line = body.split('\n')[0].strip()
+                if len(first_line) > 50:
+                    first_line = first_line[:47] + "..."
+                if first_line:
+                    final_name = first_line
+                elif not final_name:
+                    final_name = "새 노트"
+            elif not final_name:
+                final_name = "새 노트"
+
+        mod_note.name = final_name
         mod_note.tags = ",".join(list_tags)
-        mod_note.note = form.note.data
+        mod_note.note = form.note.data.strip() if form.note.data else ""
         db.session.commit()
 
     flash_success_errors(error, action, url_for('routes_page.page_notes'))
@@ -313,27 +497,42 @@ def note_del(form):
 
 def notes_filter(error, form):
     notes = Notes.query
-    if form.filter_names.data:
-        if '*' in form.filter_names.data or '_' in form.filter_names.data:
-            looking_for = form.filter_names.data.replace('_', '__') \
-                .replace('*', '%') \
-                .replace('?', '_')
-        else:
-            looking_for = '%{0}%'.format(form.filter_names.data)
-        notes = notes.filter(Notes.note.like(looking_for))
 
     if form.filter_tags.data:
-        unique_ids_of_tags = []
-        for each_tag in form.filter_tags.data.split(','):
-            tag = NoteTags.query.filter(NoteTags.name == each_tag).first()
+        target_tags = []
+        for each_tag_name in form.filter_tags.data.split(','):
+            clean_name = each_tag_name.strip()
+            if not clean_name:
+                continue
+            tag = NoteTags.query.filter(NoteTags.name == clean_name).first()
             if tag:
-                unique_ids_of_tags.append(tag.unique_id)
+                target_tags.append(tag)
+            else:
+                target_tags.append({'name': clean_name, 'unique_id': None})
 
-        for each_tag_unique_id in unique_ids_of_tags:
-            notes = notes.filter(Notes.tags.like('%{0}%'.format(each_tag_unique_id)))
+        tag_conditions = []
+        for each_tag in target_tags:
+            # Handle both dictionary (fallback) and NoteTags object
+            tag_name = each_tag['name'] if isinstance(each_tag, dict) else each_tag.name
+            tag_id = each_tag['unique_id'] if isinstance(each_tag, dict) else each_tag.unique_id
+            
+            # Helper to add 4-way matching for exact CSV item (prevents partial matches like 'widget' matching 'my_widget')
+            def add_csv_match_conditions(conditions, val):
+                if not val: return
+                conditions.append(Notes.tags == val)
+                conditions.append(Notes.tags.ilike('{0},%'.format(val)))
+                conditions.append(Notes.tags.ilike('%,{0},%'.format(val)))
+                conditions.append(Notes.tags.ilike('%,{0}'.format(val)))
 
-    if form.filter_files.data:
-        notes = notes.filter(Notes.tags.in_(form.filter_files.data.split(',')))
+            # Add conditions for Name
+            add_csv_match_conditions(tag_conditions, tag_name)
+            
+            # Add conditions for ID (if exists)
+            if tag_id:
+                add_csv_match_conditions(tag_conditions, tag_id)
+        
+        if tag_conditions:
+            notes = notes.filter(or_(*tag_conditions))
 
     if form.filter_notes.data:
         if '*' in form.filter_notes.data or '_' in form.filter_notes.data:
@@ -342,7 +541,7 @@ def notes_filter(error, form):
                 .replace('?', '_')
         else:
             looking_for = '%{0}%'.format(form.filter_notes.data)
-        notes = notes.filter(Notes.note.like(looking_for))
+        notes = notes.filter(Notes.note.ilike(looking_for))
 
     if form.sort_direction.data == 'desc':
         if form.sort_by.data == 'id':
@@ -409,11 +608,14 @@ def export_notes(form):
         for each_note in notes:
             tags = {}
             list_tag_id_names = []
-            for each_tag_id in each_note.tags.split(','):
-                tag_name = NoteTags.query.filter(
-                    NoteTags.unique_id == each_tag_id).first().name
-                tags[each_tag_id] = tag_name
-                list_tag_id_names.append('{},{}'.format(each_tag_id, tag_name))
+            if each_note.tags:
+                for each_tag_id in each_note.tags.split(','):
+                    tag_obj = NoteTags.query.filter(
+                        NoteTags.unique_id == each_tag_id).first()
+                    if tag_obj:
+                         tag_name = tag_obj.name
+                         tags[each_tag_id] = tag_name
+                         list_tag_id_names.append('{},{}'.format(each_tag_id, tag_name))
 
             cw.writerow([each_note.id,
                          each_note.unique_id,
@@ -432,7 +634,14 @@ def export_notes(form):
         for each_file_set in attach_files:
             for each_file in each_file_set:
                 path_attachment = os.path.join(PATH_NOTE_ATTACHMENTS, each_file)
-                z.write(path_attachment, os.path.join('/attachments', each_file))
+                if os.path.isfile(path_attachment):
+                    z.write(path_attachment, os.path.join('/attachments', each_file))
+                else:
+                    try:
+                         # Log warning or inform user? For now just skip to prevent crash
+                         logger.warning(f"Skipping missing attachment: {path_attachment}")
+                    except:
+                         pass
     data.seek(0)
 
     os.remove(full_path_csv)
@@ -562,5 +771,30 @@ def import_notes(form):
 
 
 def datetime_time_to_utc(datetime_time):
-    timestamp = str(time.mktime(datetime_time.timetuple()))[:-2]
-    return datetime.utcfromtimestamp(int(timestamp))
+    if not datetime_time:
+        return datetime.utcnow()
+    try:
+        timestamp = str(time.mktime(datetime_time.timetuple()))[:-2]
+        return datetime.utcfromtimestamp(int(timestamp))
+    except:
+        return datetime.utcnow()
+
+
+def get_note_tag_from_unique_id(tag_unique_id):
+    if not tag_unique_id:
+        return ""
+    
+    clean_id = tag_unique_id.strip()
+    
+    # 1. Try finding by Unique ID
+    tag = NoteTags.query.filter(NoteTags.unique_id == clean_id).first()
+    if tag and tag.name:
+        return tag.name
+
+    # 2. Try finding by Name (If stored as name directly)
+    tag_by_name = NoteTags.query.filter(NoteTags.name == clean_id).first()
+    if tag_by_name:
+        return tag_by_name.name
+        
+    # 3. Fallback: Return the raw string (It might be a legacy text tag)
+    return clean_id

@@ -11,7 +11,7 @@ from aot.utils.functions import parse_function_information
 
 ACTION_INFORMATION = {
     'name_unique': 'action_led_neopixel_flash_off',
-    'name': "LED: Neopixel: {} {}".format(lazy_gettext('Flashing'), lazy_gettext('Off')),
+    'name': lazy_gettext('LED: Neopixel: Flashing Off'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

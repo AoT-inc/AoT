@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 import threading
+import json
 
 import sqlalchemy
-from flask import current_app
+from flask import current_app, request
 from flask_babel import gettext
 
 from aot.config import FUNCTION_INFO
@@ -15,7 +16,7 @@ from aot.databases.models import Conditional
 from aot.databases.models import ConditionalConditions
 from aot.databases.models import CustomController
 from aot.databases.models import DeviceMeasurements
-from aot.databases.models import Function
+from aot.databases.models import Function, CustomController
 from aot.databases.models import FunctionChannel
 from aot.databases.models import PID
 from aot.databases.models import Trigger
@@ -28,12 +29,34 @@ from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.utils.conditional import save_conditional_code
 from aot.utils.actions import parse_action_information
 from aot.utils.functions import parse_function_information
+from aot.aot_flask.utils.utils_map_config import (
+    ensure_map_config,
+    delete_map_config,
+)
+from aot.aot_flask.utils.utils_misc import determine_controller_type
+from aot.databases import clone_model
 
 logger = logging.getLogger(__name__)
 
 #
 # Function manipulation
 #
+
+def _get_next_position_y():
+    """Calculate the next available position_y across all function tables."""
+    try:
+        max_y = 0
+        tables = [Conditional, PID, Trigger, Function, CustomController]
+        for table in tables:
+            # Use getattr for safety, though models should have it
+            if hasattr(table, 'position_y'):
+                res = db.session.query(db.func.max(table.position_y)).scalar()
+                if res is not None and res > max_y:
+                    max_y = res
+        return max_y + 1
+    except Exception:
+        return 999
+
 
 def function_add(form_add_func):
     messages = {
@@ -55,13 +78,12 @@ def function_add(form_add_func):
         dep_unmet, _, dep_message = return_dependencies(function_name)
         if dep_unmet:
             messages["error"].append(
-                f"{function_name} 의 종속성이 충족되지 않았습니다. "
-                "기능을 추가하기 전에 반드시 설치되어야 합니다.")
+                f"{function_name} " + _("has unmet dependencies. They must be installed before the function can be added."))
             
             for each_dep in dep_unmet:
                 list_unmet_deps.append(each_dep[3])
                 if each_dep[2] == 'pip-pypi':
-                    dep_message += f" 파이썬 패키지 {each_dep[3]}가 '{each_dep[0]}'을(를) 가져올 수 없어 설치되어 있지 않습니다."
+                    dep_message += _("Python package %(package)s was not found because '%(module)s' could not be imported.") % {'package': each_dep[3], 'module': each_dep[0]}
 
 
             if function_name in dict_controllers:
@@ -69,7 +91,7 @@ def function_add(form_add_func):
             elif function_name in FUNCTION_INFO and 'name' in FUNCTION_INFO[function_name]:
                 dep_name = FUNCTION_INFO[function_name]['name']
             else:
-                messages["error"].append(f"기능을 찾을 수 없습니다: {function_name}")
+                messages["error"].append(_("Function not found: {}").format(function_name))
 
             return messages, dep_name, list_unmet_deps, dep_message, None
 
@@ -78,36 +100,36 @@ def function_add(form_add_func):
     try:
         if function_name == 'conditional_conditional':
             new_func = Conditional()
-            new_func.position_y = 999
+            new_func.position_y = _get_next_position_y()
             new_func.conditional_import = """
 from datetime import datetime"""
             new_func.conditional_initialize = """
 self.loop_count = 0"""
             new_func.conditional_statement = '''
-# 조건부 사용 방법을 학습하기 위한 예제 코드입니다. 자세한 내용은 매뉴얼을 참조하세요.
-self.logger.info("이 INFO 로그 항목은 데몬 로그에 표시됩니다")
+# Example code for learning how to use conditionals. Refer to the manual for details.
+self.logger.info("This INFO log entry will be displayed in the daemon log")
 
-self.loop_count += 1  # 실행 횟수를 증가시킵니다
+self.loop_count += 1  # Increment execution count
 
-measurement = self.condition("asdf1234")  # 조건부 ID를 올바른 것으로 교체하세요
-self.logger.info(f"측정값은 {measurement}입니다")
+measurement = self.condition("asdf1234")  # Replace ID with correct one
+self.logger.info(f"Measurement is {measurement}")
 
-if measurement is not None:  # 측정값이 존재하는 경우
-    self.message += "이 메시지는 이메일 알림 및 노트에 표시됩니다.\n"
+if measurement is not None:  # If measurement exists
+    self.message += "This message will be shown in email notifications and notes.\n"
 
-    if measurement < 23:  # 측정값이 23보다 작으면
-        self.message += f"측정값이 너무 낮습니다! 측정값은 {measurement}입니다.\n"
-        self.run_all_actions(message=self.message)  # 모든 동작을 순차적으로 실행합니다
+    if measurement < 23:  # If measurement is less than 23
+        self.message += f"Measurement is too low! Value: {measurement}.\n"
+        self.run_all_actions(message=self.message)  # Execute all actions in sequence
 
-    elif measurement > 27:  # 측정값이 27보다 크면
-        self.message += f"측정값이 너무 높습니다! 측정값은 {measurement}입니다.\n"
-        # "qwer5678"을 적절한 동작 ID로 교체하세요
-        self.run_action("qwer5678", message=self.message)  # 특정 동작을 실행합니다'''
+    elif measurement > 27:  # If measurement is greater than 27
+        self.message += f"Measurement is too high! Value: {measurement}.\n"
+        # Replace "qwer5678" with the appropriate action ID
+        self.run_action("qwer5678", message=self.message)  # Execute specific action'''
             
             new_func.conditional_status = '''
-# 다른 컨트롤러 및 위젯에 반환 상태를 제공하는 예제 코드입니다.
+# Example code to provide return status to other controllers and widgets.
 status_dict = {
-    'string_status': f"컨트롤러가 {self.loop_count}번 루프를 실행하였습니다. 현재 시간: {datetime.now()}",
+    'string_status': _("Controller has executed {} loops. Current time: {}").format(self.loop_count, datetime.now()),
     'loop_count': self.loop_count,
     'error': []
 }
@@ -130,7 +152,7 @@ return status_dict'''
                     
         elif function_name == 'pid_pid':
             new_func = PID()
-            new_func.position_y = 999
+            new_func.position_y = _get_next_position_y()
             new_func.save()
             new_function_id = new_func.unique_id
 
@@ -156,11 +178,12 @@ return status_dict'''
                                'trigger_timer_daily_time_span',
                                'trigger_timer_duration',
                                'trigger_run_pwm_method',
-                               'trigger_sunrise_sunset']:
+                               'trigger_sunrise_sunset',
+                               'trigger_sequence']:
             new_func = Trigger()
             new_func.name = '{}'.format(FUNCTION_INFO[function_name]['name'])
             new_func.trigger_type = function_name
-            new_func.position_y = 999
+            new_func.position_y = _get_next_position_y()
 
             if not messages["error"]:
                 new_func.save()
@@ -168,7 +191,7 @@ return status_dict'''
 
         elif function_name == 'function_actions':
             new_func = Function()
-            new_func.position_y = 999
+            new_func.position_y = _get_next_position_y()
             new_func.function_type = function_name
             if not messages["error"]:
                 new_func.save()
@@ -178,7 +201,7 @@ return status_dict'''
             # Custom Function Controller
             new_func = CustomController()
             new_func.device = function_name
-            new_func.position_y = 999
+            new_func.position_y = _get_next_position_y()
 
             if 'function_name_short' in dict_controllers[function_name]:
                 new_func.name = dict_controllers[function_name]['function_name_short']
@@ -187,12 +210,20 @@ return status_dict'''
             elif function_name in FUNCTION_INFO and 'name' in FUNCTION_INFO[function_name]:
                 new_func.name = FUNCTION_INFO[function_name]['name']
             else:
-                new_func.name = "기능 이름"
+                new_func.name = _("Function Name")
 
 
             messages["error"], custom_options = custom_options_return_json(
                 messages["error"], dict_controllers, device=function_name, use_defaults=True)
             new_func.custom_options = custom_options
+
+            map_cfg = ensure_map_config(
+                None,
+                new_func.name,
+                new_func.latitude,
+                new_func.longitude
+            )
+            new_func.map_config_id = map_cfg.unique_id
 
             new_func.unique_id = set_uuid()
 
@@ -206,9 +237,9 @@ return status_dict'''
                 new_function_id = new_func.unique_id
 
         elif function_name == '':
-            messages["error"].append("기능 유형을 선택해야 합니다.")
+            messages["error"].append(_("A function type must be selected."))
         else:
-            messages["error"].append(f"알 수 없는 기능 유형: '{function_name}'")
+            messages["error"].append(_("Unknown function type: '{}'").format(function_name))
 
         if not messages["error"]:
             if function_name in dict_controllers:
@@ -284,6 +315,69 @@ return status_dict'''
     return messages, dep_name, list_unmet_deps, dep_message, new_function_id
 
 
+def update_location_marker(function_id, request_form):
+    """Update location/marker fields for any function or custom controller if provided."""
+    func_mod = Function.query.filter(Function.unique_id == function_id).first()
+    if not func_mod:
+        func_mod = CustomController.query.filter(CustomController.unique_id == function_id).first()
+    if not func_mod:
+        return
+
+    if hasattr(func_mod, 'map_config_id'):
+        map_cfg = ensure_map_config(
+            getattr(func_mod, 'map_config_id', None),
+            getattr(func_mod, 'name', None),
+            getattr(func_mod, 'latitude', None),
+            getattr(func_mod, 'longitude', None)
+        )
+        if getattr(func_mod, 'map_config_id', None) != map_cfg.unique_id:
+            func_mod.map_config_id = map_cfg.unique_id
+
+    lat_val = request_form.get('latitude')
+    lng_val = request_form.get('longitude')
+    if lat_val not in [None, ''] and lng_val not in [None, '']:
+        try:
+            func_mod.latitude = float(lat_val)
+            func_mod.longitude = float(lng_val)
+        except Exception:
+            pass
+
+    loc_src = request_form.get('location_source')
+    if loc_src not in [None, '']:
+        func_mod.location_source = loc_src
+
+    icon_val = request_form.get('marker_icon')
+    color_val = request_form.get('marker_color')
+    size_val = request_form.get('marker_size')
+    if hasattr(func_mod, 'marker_icon') and icon_val not in [None, '']:
+        func_mod.marker_icon = icon_val
+    if hasattr(func_mod, 'marker_color') and color_val not in [None, '']:
+        func_mod.marker_color = color_val
+    if hasattr(func_mod, 'marker_size') and size_val not in [None, '']:
+        try:
+            func_mod.marker_size = int(size_val)
+        except Exception:
+            pass
+    # CustomController는 marker_* 컬럼이 없으므로 custom_options에도 넣어 둔다
+    if isinstance(func_mod, CustomController):
+        try:
+            opts = json.loads(func_mod.custom_options) if func_mod.custom_options else {}
+        except Exception:
+            opts = {}
+        if icon_val not in [None, '']:
+            opts['marker_icon'] = icon_val
+        if color_val not in [None, '']:
+            opts['marker_color'] = color_val
+        if size_val not in [None, '']:
+            try:
+                opts['marker_size'] = int(size_val)
+            except Exception:
+                pass
+        func_mod.custom_options = json.dumps(opts)
+
+    db.session.commit()
+
+
 def function_mod(form):
     """Modify a Function."""
     messages = {
@@ -294,6 +388,7 @@ def function_mod(form):
         "name": None,
         "return_text": []
     }
+    page_refresh = False
 
     try:
         func_mod = Function.query.filter(
@@ -303,9 +398,37 @@ def function_mod(form):
         messages["name"] = form.name.data
         func_mod.log_level_debug = form.log_level_debug.data
 
+        lat_val = getattr(form, 'latitude', None).data if hasattr(form, 'latitude') else request.form.get('latitude')
+        lng_val = getattr(form, 'longitude', None).data if hasattr(form, 'longitude') else request.form.get('longitude')
+        if lat_val not in [None, ''] and lng_val not in [None, '']:
+            try:
+                func_mod.latitude = float(lat_val)
+                func_mod.longitude = float(lng_val)
+            except Exception:
+                pass  # keep previous coords on parse failure
+        # if 둘 중 하나라도 비어 있으면 기존 값을 유지하여 덮어쓰지 않음
+
+        loc_src = getattr(form, 'location_source', None).data if hasattr(form, 'location_source') else request.form.get('location_source')
+        if loc_src not in [None, '']:
+            func_mod.location_source = loc_src
+
+        icon_val = getattr(form, 'marker_icon', None).data if hasattr(form, 'marker_icon') else request.form.get('marker_icon')
+        color_val = getattr(form, 'marker_color', None).data if hasattr(form, 'marker_color') else request.form.get('marker_color')
+        size_val = getattr(form, 'marker_size', None).data if hasattr(form, 'marker_size') else request.form.get('marker_size')
+        if icon_val not in [None, '']:
+            func_mod.marker_icon = icon_val or None
+        if color_val not in [None, '']:
+            func_mod.marker_color = color_val or None
+        if size_val not in [None, '']:
+            try:
+                func_mod.marker_size = int(size_val)
+            except Exception:
+                pass
+
         if not messages["error"]:
             db.session.commit()
             messages["success"].append(f"{TRANSLATIONS['modify']['title']} {TRANSLATIONS['function']['title']}")
+            page_refresh = True
 
     except sqlalchemy.exc.OperationalError as except_msg:
         messages["error"].append(str(except_msg))
@@ -314,7 +437,7 @@ def function_mod(form):
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 
-    return messages
+    return messages, page_refresh
 
 
 def function_del(function_id):
@@ -375,7 +498,7 @@ def action_execute_all(form):
         func = Function.query.filter(
             Function.unique_id == form.function_id.data).first()
     else:
-        messages["error"].append(f"알 수 없는 기능 유형: '{form.function_type.data}'")
+        messages["error"].append(_("Unknown function type: '{}'").format(form.function_type.data))
 
     if not messages["error"]:
         try:

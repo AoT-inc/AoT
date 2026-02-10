@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ note.name }} - Gallery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0c0c0c;
+            --text-color: #ffffff;
+            --accent-color: #3b82f6;
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        .gallery-wrapper {
+            position: relative; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+        }
+        /* Header */
+        .gallery-header {
+            position: absolute; top: 0; left: 0; right: 0;
+            padding: 20px; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+        .note-info { display: flex; flex-direction: column; gap: 4px; }
+        .note-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
+        .gallery-counter { font-size: 0.9rem; opacity: 0.7; }
+        .close-btn {
+            background: rgba(255,255,255,0.1); border: none; color: white;
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; font-size: 20px;
+        }
+        .close-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* Main Content */
+        .gallery-content {
+            flex: 1; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        #main-img {
+            max-width: 100%; max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* Navigation */
+        .nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,0.3); border: none; color: white;
+            width: 60px; height: 100px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; transition: 0.2s; z-index: 50;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.1); }
+        .nav-btn.prev { left: 0; border-radius: 0 10px 10px 0; }
+        .nav-btn.next { right: 0; border-radius: 10px 0 0 10px; }
+
+        /* Footer (Thumbnails) */
+        .gallery-footer {
+            height: 120px; padding: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            display: flex; justify-content: center;
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+        }
+        .gallery-footer::-webkit-scrollbar { display: none; }
+        .thumb-strip { display: flex; gap: 12px; }
+        .thumb-item {
+            width: 80px; height: 80px; border-radius: 8px;
+            overflow: hidden; cursor: pointer; opacity: 0.4;
+            border: 2px solid transparent; transition: 0.3s;
+            flex-shrink: 0;
+        }
+        .thumb-item.active { opacity: 1; border-color: var(--accent-color); transform: scale(1.05); }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        @media (max-width: 768px) {
+            .nav-btn { display: none; }
+            .gallery-header { padding: 15px; }
+            .gallery-footer { height: 100px; padding: 10px; }
+            .thumb-item { width: 60px; height: 60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="gallery-wrapper">
+        <div class="gallery-header">
+            <div class="note-info">
+                <h1 class="note-title">{{ note.name }}</h1>
+                <span class="gallery-counter" id="counter">1 / {{ image_files|length }}</span>
+            </div>
+            <button class="close-btn" onclick="window.close()" title="Close (Esc)"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="gallery-content" id="touch-area">
+            <button class="nav-btn prev" onclick="navigate(-1)"><i class="fas fa-chevron-left"></i></button>
+            <img id="main-img" src="/note_attachment/{{ image_files[0] }}" alt="Gallery Image">
+            <button class="nav-btn next" onclick="navigate(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <div class="gallery-footer">
+            <div class="thumb-strip">
+                {% for file in image_files %}
+                <div class="thumb-item {{ 'active' if loop.first else '' }}" data-index="{{ loop.index0 }}" onclick="jumpTo({{ loop.index0 }})">
+                    <img src="/note_attachment/{{ file }}" alt="Thumb">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const images = {{ image_files | tojson }};
+        let currentIdx = 0;
+        const mainImg = document.getElementById('main-img');
+        const counter = document.getElementById('counter');
+        const thumbs = document.querySelectorAll('.thumb-item');
+
+        function updateUI() {
+            mainImg.style.opacity = '0';
+            setTimeout(() => {
+                mainImg.src = '/note_attachment/' + images[currentIdx];
+                mainImg.style.opacity = '1';
+                counter.textContent = `${currentIdx + 1} / ${images.length}`;
+                
+                thumbs.forEach((t, i) => {
+                    t.classList.toggle('active', i === currentIdx);
+                    if (i === currentIdx) {
+                        t.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+                });
+            }, 50);
+        }
+
+        function navigate(dir) {
+            currentIdx = (currentIdx + dir + images.length) % images.length;
+            updateUI();
+        }
+
+        function jumpTo(idx) {
+            currentIdx = idx;
+            updateUI();
+        }
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') navigate(-1);
+            if (e.key === 'ArrowRight') navigate(1);
+            if (e.key === 'Escape') window.close();
+        });
+
+        // Swipe Support
+        let startX = 0;
+        const touchArea = document.getElementById('touch-area');
+        touchArea.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
+        touchArea.addEventListener('touchend', e => {
+            let diff = startX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) navigate(diff > 0 ? 1 : -1);
+        }, {passive: true});
+    </script>
+</body>
+</html>

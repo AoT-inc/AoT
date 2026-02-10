@@ -10,9 +10,9 @@
   <div class="container">
     <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#widget-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('Widget Settings')}}</h3>
 
-    <h3>{{_('위젯 모듈 가져오기')}}</h3>
+    <h3>{{_('Import Widget Module')}}</h3>
 
-    <p>위젯 모듈 파일을 가져올 수 있습니다.</p>
+    <p>{{_('You can import widget module files.')}}</p>
 
     <form method="post" action="/settings/widget" enctype=multipart/form-data>
     {{form_widget.csrf_token}}
@@ -30,7 +30,7 @@
 
     <hr>
 
-    <h3>{{_('위젯 모듈 목록')}}</h3>
+    <h3>{{_('Widget Module List')}}</h3>
 
     <div class="table-responsive">
       <table class="table">
@@ -51,7 +51,7 @@
           <td>{{dict_widgets[each_widget]['widget_name']}}</td>
           <td>
             <div class="col-12 small-gutters">
-              {{form_widget_delete.delete_widget(class_='btn btn-primary btn-block', **{'onclick':'return confirm("위젯을 삭제하시겠습니까?")'})}}
+              {{form_widget_delete.delete_widget(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this widget?') + '")'})}}
             </div>
           </td>
         </tr>

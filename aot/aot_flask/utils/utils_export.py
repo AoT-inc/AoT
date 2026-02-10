@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 def export_measurements(form):
     """
-    사용자가 입력한 기간에 따라 InfluxDB에서 타임스탬프와 측정값을 CSV 파일로 내보냅니다.
+    Exports timestamps and measurements from InfluxDB to a CSV file according to the period entered by the user.
     """
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['export']['title'],
@@ -52,25 +52,25 @@ def export_measurements(form):
         return url_for('routes_page.page_export')
 
     try:
-        # 입력 데이터 로그 기록 (디버깅 목적)
+        # Log input data (for debugging purposes)
         logger.info("date_range: %s, measurement: %s", form.date_range.data, form.measurement.data)
 
-        # 날짜 범위 파싱
+        # Parse date range
         start_time_str, end_time_str = form.date_range.data.split(' - ')
         start_seconds = int(time.mktime(time.strptime(start_time_str, '%m/%d/%Y %H:%M')))
         end_seconds = int(time.mktime(time.strptime(end_time_str, '%m/%d/%Y %H:%M')))
 
-        # 측정 데이터 파싱
+        # Parse measurement data
         measurement_parts = form.measurement.data.split(',')
         if len(measurement_parts) < 2:
-            raise ValueError("측정 데이터 형식이 올바르지 않습니다. (예: id,measurement_id)")
+            raise ValueError(gettext("Incorrect measurement data format. (e.g. id,measurement_id)"))
         unique_id, measurement_id = measurement_parts[0], measurement_parts[1]
 
-        # non‑ASCII 문자 문제 해결: URL 인코딩 적용
+        # Fix non-ASCII characters issue: apply URL encoding
         unique_id = urllib.parse.quote(unique_id, safe='')
         measurement_id = urllib.parse.quote(measurement_id, safe='')
 
-        # CSV Export를 위한 URL 구성
+        # Construct URL for CSV Export
         url = '/export_data/{id}/{meas}/{start}/{end}'.format(
             id=unique_id,
             meas=measurement_id,
@@ -79,14 +79,14 @@ def export_measurements(form):
         )
         return url
     except Exception as err:
-        logger.exception("export_measurements() 처리 중 예외 발생")
-        error.append(gettext("오류: %(err)s") % {'err': err})
+        logger.exception("Exception occurred in export_measurements()")
+        error.append(gettext("Error: %(err)s") % {'err': err})
         flash_success_errors(error, action, url_for('routes_page.page_export'))
         return url_for('routes_page.page_export')
 
 def export_settings():
     """
-    AoT 설정 데이터베이스(aot.db)를 ZIP 파일로 저장하여 사용자에게 제공합니다.
+    Saves the AoT settings database (aot.db) as a ZIP file and provides it to the user.
     """
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['export']['title'],
@@ -109,14 +109,14 @@ def export_settings():
         else:
             error.append(data)
     except Exception as err:
-        error.append(gettext("오류: %(err)s") % {'err': err})
+        error.append(gettext("Error: %(err)s") % {'err': err})
 
     flash_success_errors(error, action, url_for('routes_page.page_export'))
 
 
 def export_influxdb():
     """
-    AoT InfluxDB 데이터베이스를 Enterprise 호환 형식으로 백업하여 ZIP 파일로 압축한 후 사용자에게 제공합니다.
+    Backs up the AoT InfluxDB database in Enterprise compatible format, compresses it into a ZIP file, and provides it to the user.
     """
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['export']['title'],
@@ -141,9 +141,9 @@ def export_influxdb():
             else:
                 error.append(data)
         else:
-            error.append(gettext("Influxdb 호스트/버전을 확인할 수 없습니다."))
+            error.append(gettext("Cannot verify InfluxDB host/version."))
     except Exception as err:
-        error.append(gettext("오류: %(err)s") % {'err': err})
+        error.append(gettext("Error: %(err)s") % {'err': err})
 
     flash_success_errors(error, action, url_for('routes_page.page_export'))
 
@@ -153,60 +153,60 @@ def export_influxdb():
 #
 
 def thread_import_settings(tmp_folder):
-    logger.info("thread_import_settings()를 사용하여 설정 가져오기를 마무리합니다.")
+    logger.info("Finishing import settings using thread_import_settings().")
 
     try:
-        # 초기화
+        # Initialize
         cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
-        # 데이터베이스 업그레이드
-        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 데이터베이스 업그레이드\n")
+        # Upgrade database
+        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Database Upgrade\n")
         cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper upgrade_database | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
-        # 패키지 설치/업데이트 (시간이 걸릴 수 있음)
-        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 패키지 설치 중 (잠시만 기다려 주세요)...\n")
+        # Update dependencies (may take time)
+        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Updating dependencies (please wait)...\n")
         cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper update_dependencies | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
-        # 위젯 HTML 생성
+        # Generate widget HTML
         generate_widget_html()
 
-        # 초기화 재실행
+        # Re-initialize
         cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
-        # AoT 데몬(백엔드) 재시작
-        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 백엔드 재시작")
+        # Restart backend daemon
+        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Restarting backend")
         if DOCKER_CONTAINER:
             subprocess.Popen('docker start aot_daemon 2>&1', shell=True)
         else:
             cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper daemon_restart | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
             a, b, c = cmd_output(cmd, user="root")
 
-        # tmp 디렉터리가 존재하면 삭제
+        # Cleanup tmp directory
         if os.path.isdir(tmp_folder):
             shutil.rmtree(tmp_folder)
 
-        # AoT Flask(프론트엔드) 재로딩
-        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 프론트엔드 재로딩")
+        # Reload frontend
+        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Reloading frontend")
         if DOCKER_CONTAINER:
             subprocess.Popen('docker start aot_flask 2>&1', shell=True)
         else:
             cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper frontend_reload | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
             _, _, _ = cmd_output(cmd, user="root")
     except:
-        logger.exception("thread_import_settings()에서 예외 발생")
+        logger.exception("Exception occurred in thread_import_settings()")
 
-    append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 설정 가져오기 완료")
-    logger.info("설정 가져오기가 완료되었습니다.")
+    append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Import settings completed")
+    logger.info("Import settings finished.")
 
 
 def import_settings(form):
     """
-    export_settings()로 내보낸 AoT 설정 데이터베이스가 포함된 ZIP 파일을 받아,
-    현재 AoT 설정 데이터베이스를 백업한 후 ZIP 파일의 것으로 대체합니다.
+    Receives a ZIP file containing the AoT settings database exported by export_settings(),
+    backs up the current settings database, and replaces it with the one in the ZIP file.
     """
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['import']['title'],
@@ -214,99 +214,99 @@ def import_settings(form):
     error = []
 
     try:
-        logger.info("설정 가져오기를 시작합니다.")
-        append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 설정 가져오기 시작됨")
+        logger.info("Starting settings import.")
+        append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Settings import started")
         correct_format = 'AoT_AOTVERSION_Settings_DBVERSION_HOST_DATETIME.zip'
         upload_folder = os.path.join(INSTALL_DIRECTORY, 'upload')
         tmp_folder = os.path.join(upload_folder, 'aot_db_tmp')
         full_path = None
 
         if not form.settings_import_file.data:
-            error.append(gettext("파일이 업로드되지 않았습니다."))
+            error.append(gettext("No file uploaded."))
         elif form.settings_import_file.data.filename == '':
-            error.append(gettext("파일 이름이 없습니다."))
+            error.append(gettext("No filename provided."))
         else:
-            # 업로드된 파일 이름 분리
+            # Parse uploaded filename
             file_name = form.settings_import_file.data.filename
             name = file_name.rsplit('.', 1)[0]
             extension = file_name.rsplit('.', 1)[1].lower()
             name_split = name.split('_')
 
-            # 올바른 형식의 파일 이름을 분리
+            # Parse correct format
             correct_name = correct_format.rsplit('.', 1)[0]
             correct_name_1 = correct_name.split('_')[0]
             correct_name_2 = correct_name.split('_')[2]
             correct_extension = correct_format.rsplit('.', 1)[1].lower()
 
-            # 업로드된 파일 이름과 올바른 형식 비교
+            # Validate filename parts
             try:
                 if name_split[0] != correct_name_1:
-                    error.append(gettext("잘못된 파일 이름: %(filename)s: %(part)s != %(correct)s.", filename=file_name, part=name_split[0], correct=correct_name_1))
-                    error.append(gettext("올바른 형식은: %(format)s", format=correct_format))
+                    error.append(gettext("Invalid filename: %(filename)s: %(part)s != %(correct)s.", filename=file_name, part=name_split[0], correct=correct_name_1))
+                    error.append(gettext("Correct format is: %(format)s", format=correct_format))
                 elif name_split[2] != correct_name_2:
-                    error.append(gettext("잘못된 파일 이름: %(filename)s: %(part)s != %(correct)s", filename=file_name, part=name_split[2], correct=correct_name_2))
-                    error.append(gettext("올바른 형식은: %(format)s", format=correct_format))
+                    error.append(gettext("Invalid filename: %(filename)s: %(part)s != %(correct)s", filename=file_name, part=name_split[2], correct=correct_name_2))
+                    error.append(gettext("Correct format is: %(format)s", format=correct_format))
                 elif extension != correct_extension:
-                    error.append(gettext("확장자가 'zip'이 아닙니다."))
+                    error.append(gettext("Extension is not 'zip'."))
                 elif parse(name_split[1]) > parse(AOT_VERSION):
-                    error.append(gettext("잘못된 AoT 버전: %(version)s > %(current)s. %(msg)s", version=name_split[1], current=AOT_VERSION, msg=gettext("현재 버전 이하의 데이터베이스만 가져올 수 있습니다.")))
+                    error.append(gettext("Invalid AoT version: %(version)s > %(current)s. %(msg)s", version=name_split[1], current=AOT_VERSION, msg=gettext("Only databases from current or older versions can be imported.")))
             except Exception as err:
-                error.append(gettext("파일 이름 검증 중 예외 발생: %(err)s", err=err))
+                error.append(gettext("Exception during filename validation: %(err)s", err=err))
 
         if not error:
-            logger.info("가져올 파일 저장 중")
-            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 가져올 파일 저장 중")
-            # 업로드 디렉터리에 파일 저장
+            logger.info("Saving file to import")
+            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Saving file to import")
+            # Save file to upload directory
             filename = secure_filename(form.settings_import_file.data.filename)
             full_path = os.path.join(tmp_folder, filename)
             assure_path_exists(upload_folder)
             assure_path_exists(tmp_folder)
-            append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {filename}을(를) {tmp_folder}에 저장 중")
+            append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Saving {filename} to {tmp_folder}")
             form.settings_import_file.data.save(os.path.join(tmp_folder, filename))
 
-            # zip 파일 내용 확인
+            # Inspect zip content
             try:
                 file_list = zipfile.ZipFile(full_path, 'r').namelist()
                 if DATABASE_NAME not in file_list:
-                    error.append(gettext("%(db)s 파일이 zip에 포함되어 있지 않습니다: %(list)s", db=DATABASE_NAME, list=', '.join(file_list)))
+                    error.append(gettext("%(db)s file is not included in zip: %(list)s", db=DATABASE_NAME, list=', '.join(file_list)))
             except Exception as err:
-                error.append(gettext("zip 파일 검사 중 예외 발생: %(err)s", err=err))
+                error.append(gettext("Exception during zip file inspection: %(err)s", err=err))
 
         if not error:
-            logger.info("가져온 파일 압축 해제 중")
-            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 가져온 파일 압축 해제 중")
-            # zip 파일 압축 해제
+            logger.info("Extracting imported file")
+            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Extracting imported file")
+            # Extract zip
             try:
                 assure_path_exists(tmp_folder)
                 zip_ref = zipfile.ZipFile(full_path, 'r')
-                append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {full_path}을(를) {tmp_folder}로 압축 해제 중")
+                append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Extracting {full_path} to {tmp_folder}")
                 zip_ref.extractall(tmp_folder)
                 zip_ref.close()
             except Exception as err:
-                error.append(gettext("zip 파일 추출 중 예외 발생: %(err)s", err=err))
+                error.append(gettext("Exception during zip file extraction: %(err)s", err=err))
 
         if not error:
-            logger.info("데몬 중지 및 파일 복사 중")
-            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 데몬 중지 및 파일 복사 중")
+            logger.info("Stopping daemon and copying files")
+            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Stopping daemon and copying files")
             try:
                 if DOCKER_CONTAINER:
                     subprocess.Popen('docker stop aot_daemon 2>&1', shell=True)
                 else:
-                    # AoT 데몬(백엔드) 중지
+                    # Stop backend daemon
                     cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper daemon_stop"
                     _, _, _ = cmd_output(cmd, user="root")
 
-                # 현재 데이터베이스 백업 및 가져온 aot.db로 교체
+                # Rename current database and replace with imported one
                 imported_database = os.path.join(tmp_folder, DATABASE_NAME)
                 backup_name = f"{SQL_DATABASE_AOT}.backup_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
                 full_path_backup = os.path.join(DATABASE_PATH, backup_name)
 
                 append_to_log(IMPORT_LOG_FILE,
-                              f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {SQL_DATABASE_AOT}을(를) {full_path_backup}로 이름 변경 중")
-                os.rename(SQL_DATABASE_AOT, full_path_backup)  # 현재 데이터베이스 백업
+                              f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Renaming {SQL_DATABASE_AOT} to {full_path_backup}")
+                os.rename(SQL_DATABASE_AOT, full_path_backup)  # Current database backup
                 append_to_log(IMPORT_LOG_FILE,
-                              f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {imported_database}을(를) {SQL_DATABASE_AOT}로 이동 중")
-                shutil.move(imported_database, SQL_DATABASE_AOT)  # 가져온 데이터베이스로 교체
+                              f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Moving {imported_database} to {SQL_DATABASE_AOT}")
+                shutil.move(imported_database, SQL_DATABASE_AOT)  # Replace with imported database
 
                 delete_directories = [
                     PATH_FUNCTIONS_CUSTOM,
@@ -319,9 +319,9 @@ def import_settings(form):
                     PATH_PYTHON_CODE_USER
                 ]
 
-                # 사용자 지정 함수/입력/출력/위젯 및 생성된 HTML/Python 코드 삭제
+                # Delete custom items and generated code
                 for each_dir in delete_directories:
-                    append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 디렉터리 삭제 중: {each_dir}")
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Deleting directory: {each_dir}")
                     if not os.path.exists(each_dir):
                         continue
                     for folder_name, sub_folders, filenames in os.walk(each_dir):
@@ -345,9 +345,9 @@ def import_settings(form):
                     (PATH_PYTHON_CODE_USER, "user_python_code")
                 ]
 
-                # 압축된 사용자 지정 함수/입력/출력/위젯 복원
+                # Restore custom items from zip
                 for each_dir in restore_directories:
-                    append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {each_dir[1]} 디렉터리 복원 중: {each_dir[0]}")
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Restoring {each_dir[1]} directory: {each_dir[0]}")
                     extract_dir = os.path.join(tmp_folder, each_dir[1])
                     if not os.path.exists(extract_dir):
                         continue
@@ -355,14 +355,14 @@ def import_settings(form):
                         for filename in filenames:
                             file_path = os.path.join(folder_name, filename)
                             new_path = os.path.join(each_dir[0], filename)
-                            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {new_path} 복원 중")
+                            append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Restoring {new_path}")
                             try:
                                 shutil.move(file_path, new_path)
                             except:
-                                append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 오류: {filename} 복원 실패")
-                                logger.exception("파일 이동 중 예외 발생")
+                                append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error: Failed to restore {filename}")
+                                logger.exception("Exception during file move")
 
-                logger.info("가져오기 마무리 중")
+                logger.info("Finishing import")
                 import_settings_db = threading.Thread(
                     target=thread_import_settings,
                     args=(tmp_folder,))
@@ -370,16 +370,16 @@ def import_settings(form):
 
                 return True
             except Exception as err:
-                logger.exception("설정 가져오기 중 예외 발생")
-                error.append(gettext("데이터베이스 교체 중 예외 발생: %(err)s", err=err))
+                logger.exception("Exception during settings import")
+                error.append(gettext("Exception during database replacement: %(err)s", err=err))
                 return
 
     except Exception as err:
-        error.append(gettext("예외 발생: %(err)s", err=err))
+        error.append(gettext("Exception occurred: %(err)s", err=err))
 
     if error:
-        append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 설정 가져오기를 완료하지 못했습니다. 오류:")
+        append_to_log(IMPORT_LOG_FILE, f"\n\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Failed to complete settings import. Errors:")
     for each_err in error:
-        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 오류: {each_err}")
+        append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error: {each_err}")
 
     flash_success_errors(error, action, url_for('routes_page.page_export'))

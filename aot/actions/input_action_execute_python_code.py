@@ -7,7 +7,7 @@ import textwrap
 from flask import flash
 
 from aot.actions.base_action import AbstractFunctionAction
-from aot.config import PATH_PYTHON_CODE_USER
+from aot.config import PATH_PYTHON_CODE_USER, INSTALL_DIRECTORY
 from aot.databases.models import Actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import assure_path_exists
@@ -17,7 +17,7 @@ def generate_code(input_id, python_code):
     error = []
     pre_statement_run = """import os
 import sys
-sys.path.append(os.path.abspath('/opt/AoT'))
+sys.path.append(os.path.abspath('{install_dir}'))
 from aot.databases.models import Conversion
 from aot.aot_client import DaemonControl
 from aot.utils.database import db_retrieve_table_daemon
@@ -32,7 +32,7 @@ class PythonActionRun:
         self.control = control
 
     def python_code_run(self, dict_vars):
-"""
+""".format(install_dir=INSTALL_DIRECTORY)
 
     indented_code = textwrap.indent(python_code, ' ' * 8)
     action_python_code_run = pre_statement_run + indented_code

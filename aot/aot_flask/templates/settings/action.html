@@ -8,11 +8,11 @@
 {% block settings %}
   <!-- Route: /settings/action -->
   <div class="container">
-    <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#action-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('동작 설정')}}</h3>
+    <h3 style="text-align: right; padding-bottom: 1.3em;"><a href="https://aot-inc.github.io/AoT/Configuration-Settings/#action-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('Action Settings')}}</h3>
 
-    <h3>{{_('동작 모듈 가져오기')}}</h3>
+    <h3>{{_('Import Action Module')}}</h3>
 
-    <p>{{_('동작 모듈 파일을 가져올 수 있습니다.')}}</p>
+    <p>{{_('You can import action module files.')}}</p>
 
     <form method="post" action="/settings/action" enctype=multipart/form-data>
     {{form_action.csrf_token}}
@@ -30,7 +30,7 @@
 
     <hr>
 
-    <h3>{{_('동작 모듈 가져오기')}}</h3>
+    <h3>{{_('Import Action Module')}}</h3>
 
     <div class="table-responsive">
       <table class="table">
@@ -51,7 +51,7 @@
           <td>{{dict_actions[each_action]['name']}}</td>
           <td>
             <div class="col-12 small-gutters">
-              {{form_action_delete.delete_action(class_='btn btn-primary btn-block', **{'onclick':'return confirm("삭제하시겠습니까?")'})}}
+              {{form_action_delete.delete_action(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
             </div>
           </td>
         </tr>

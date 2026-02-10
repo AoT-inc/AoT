@@ -317,14 +317,11 @@ MEASUREMENTS = {
         'name': lazy_gettext('Speed'),
         'meas': 'speed',
         'units': ['m_s', 'mph', 'kn']},
-    'soil_moisture_cb': {
-        'name': lazy_gettext('Soil Moisture (cb)'),
-        'meas': 'soil_moisture_cb',
-        'units': ['cb']},
+    # Removed: Replaced by soil_moisture_cb consolidation below
     'sky_condition': {
         'name': lazy_gettext('하늘상태'),
         'meas': 'sky_condition',
-        'units': ['none']},    
+        'units': ['none', 'percent']},    
     'temperature': {
         'name': lazy_gettext('Temperature'),
         'meas': 'temperature',
@@ -365,7 +362,43 @@ MEASUREMENTS = {
         'name': lazy_gettext('Visibility'),
         'meas': 'visibility',
         'units': ['km']
-    }
+    },
+    'status': {
+        'name': lazy_gettext('Status'),
+        'meas': 'status',
+        'units': ['enabled', 'bool', 'code', 'none']},
+    'soil_moisture_cb': {
+        'name': lazy_gettext('Soil Moisture'),
+        'meas': 'soil_moisture',
+        'units': ['cb', 'm3_m3']},
+    'volumetric_water_content': {
+        'name': lazy_gettext('토양 수분'),
+        'meas': 'volumetric_water_content',
+        'units': ['m3_m3', 'percent']},
+    'clay': {
+        'name': lazy_gettext('Clay Content'),
+        'meas': 'clay',
+        'units': ['percent']},
+    'sand': {
+        'name': lazy_gettext('Sand Content'),
+        'meas': 'sand',
+        'units': ['percent']},
+    'silt': {
+        'name': lazy_gettext('Silt Content'),
+        'meas': 'silt',
+        'units': ['percent']},
+    'soc': {
+        'name': lazy_gettext('Soil Organic Carbon'),
+        'meas': 'soc',
+        'units': ['dg_kg']},
+    'bdod': {
+        'name': lazy_gettext('Bulk Density'),
+        'meas': 'bdod',
+        'units': ['cg_cm3']},
+    'ndvi': {
+        'name': lazy_gettext('Vegetation Index (NDVI)'),
+        'meas': 'ndvi',
+        'units': ['none']}
 }
 
 # Measurement units
@@ -439,6 +472,9 @@ UNITS = {
     'eight_bit_color': {
         'name': lazy_gettext('8-Bit Color'),
         'unit': '8-bit'},
+    'enabled': {
+        'name': lazy_gettext('Enabled'),
+        'unit': 'enabled'},
     'F': {
         'name': lazy_gettext('Fahrenheit'),
         'unit': '°F'},
@@ -637,7 +673,16 @@ UNITS = {
         'unit': 'J/cm²'},
     'umol_m2_s': {
         'name': lazy_gettext('Micromoles per square meter per second'),
-        'unit': 'µmol·m⁻²·s⁻¹'}
+        'unit': 'µmol·m⁻²·s⁻¹'},
+    'dg_kg': {
+        'name': lazy_gettext('Decigram per kilogram'),
+        'unit': 'dg/kg'},
+    'cg_cm3': {
+        'name': lazy_gettext('Centigram per cubic centimeter'),
+        'unit': 'cg/cm³'},
+    'm3_m3': {
+        'name': lazy_gettext('Volumetric Water Content'),
+        'unit': 'm³/m³'}
 }
 
 # Initial conversions
@@ -816,3 +861,21 @@ UNIT_CONVERSIONS = [
     ('umol_m2_s', 'J_cm2', 'x / 45700')
 
 ]
+
+
+def add_measurement_unit(meas_key, unit_key, meas_name=None, unit_name=None):
+    """Dynamically adds a measurement or unit if it doesn't exist."""
+    if meas_key not in MEASUREMENTS:
+        MEASUREMENTS[meas_key] = {
+            'name': meas_name if meas_name else meas_key.replace('_', ' ').capitalize(),
+            'meas': meas_key,
+            'units': [unit_key]
+        }
+    elif unit_key not in MEASUREMENTS[meas_key]['units']:
+        MEASUREMENTS[meas_key]['units'].append(unit_key)
+
+    if unit_key not in UNITS:
+        UNITS[unit_key] = {
+            'name': unit_name if unit_name else unit_key,
+            'unit': unit_key
+        }

@@ -124,13 +124,35 @@ if [[ ${MACHINE_TYPE} == 'armhf' ]]; then
         exit 1
     fi
 elif [[ ${MACHINE_TYPE} == 'arm64' || ${UNAME_TYPE} == 'x86_64' ]]; then
-    INFLUX_B=$(dialog --title "AoT Installer: Measurement Database" \
-                        --backtitle "AoT" \
-                        --menu "InfluxDB를 설치하시겠습니까?\n\n지금 InfluxDB를 설치하지 않으면, AoT 설치 후 설정 메뉴에서 InfluxDB 서버 정보와 인증 정보를 수동으로 입력하셔야 합니다." 20 68 4 \
-                        "0)" "Influxdb 2.x 설치(추천)" \
-                        "1)" "Influxdb 1.x 설치(32비트용 구버전)" \
-                        "2)" "Influxdb 설치하지 않음" \
-                        3>&1 1>&2 2>&3)
+    # Check if InfluxDB is already installed
+    INFLUX_INSTALLED=false
+    CURRENT_INFLUX_MSG=""
+    if dpkg -s influxdb2 >/dev/null 2>&1; then
+        INFLUX_INSTALLED=true
+        CURRENT_INFLUX_MSG="InfluxDB 2.x가 이미 설치되어 있습니다."
+    elif dpkg -s influxdb >/dev/null 2>&1; then
+        INFLUX_INSTALLED=true
+        CURRENT_INFLUX_MSG="InfluxDB 1.x가 이미 설치되어 있습니다."
+    fi
+
+    if [ "$INFLUX_INSTALLED" = true ]; then
+        INFLUX_B=$(dialog --title "AoT Installer: Measurement Database" \
+                            --backtitle "AoT" \
+                            --menu "${CURRENT_INFLUX_MSG}\n\n어떻게 하시겠습니까?" 20 68 4 \
+                            "KEEP)" "기존 설치 유지 (설정만 확인)" \
+                            "REINSTALL)" "삭제 후 InfluxDB 2.x 재설치 (데이터 초기화)" \
+                            "SKIP)" "InfluxDB 관련 작업 건너뛰기" \
+                            3>&1 1>&2 2>&3)
+    else
+        INFLUX_B=$(dialog --title "AoT Installer: Measurement Database" \
+                            --backtitle "AoT" \
+                            --menu "InfluxDB를 설치하시겠습니까?\n\n지금 InfluxDB를 설치하지 않으면, AoT 설치 후 설정 메뉴에서 InfluxDB 서버 정보와 인증 정보를 수동으로 입력하셔야 합니다." 20 68 4 \
+                            "0)" "Influxdb 2.x 설치(추천)" \
+                            "1)" "Influxdb 1.x 설치(32비트용 구버전)" \
+                            "2)" "Influxdb 설치하지 않음" \
+                            3>&1 1>&2 2>&3)
+    fi
+    
     exitstatus=$?
     if [ $exitstatus != 0 ]; then
         printf "사용자에 의해 AoT 설치가 취소되었습니다\n" 2>&1 | tee -a "${LOG_LOCATION}"
@@ -141,7 +163,7 @@ else
     exit 1
 fi
 
-if [[ ${INFLUX_A} == '1)' || ${INFLUX_B} == '2)' ]]; then
+if [[ ${INFLUX_A} == '1)' || ${INFLUX_B} == '2)' || ${INFLUX_B} == 'SKIP)' ]]; then
     clear
     INSTALL=$(dialog --title "AoT Installer: Measurement Database" \
                        --backtitle "AoT" \
@@ -241,14 +263,24 @@ if [ $MOSQ_STATUS -ne 0 ]; then
 fi
 
 ${INSTALL_CMD} install-wiringpi 2>&1 | tee -a "${LOG_LOCATION}"
-if [[ ${INFLUX_B} == '0)' ]]; then
+if [[ ${INFLUX_B} == 'REINSTALL)' ]]; then
+    printf "#### Cleaning up existing InfluxDB installation...\n" | tee -a "${LOG_LOCATION}"
+    systemctl stop influxdb 2>/dev/null || true
+    apt-get remove --purge -y influxdb influxdb2 influxdb-client 2>/dev/null || true
+    rm -rf /var/lib/influxdb /var/lib/influxdb2 /etc/influxdb /etc/influxdb2 /root/.influxdbv2
+fi
+
+if [[ ${INFLUX_B} == '0)' || ${INFLUX_B} == 'REINSTALL)' ]]; then
     ${INSTALL_CMD} update-influxdb-2 2>&1 | tee -a "${LOG_LOCATION}"
+    ${INSTALL_CMD} update-influxdb-2-db-user 2>&1 | tee -a "${LOG_LOCATION}"
+elif [[ ${INFLUX_B} == 'KEEP)' ]]; then
+    echo "#### Skipping InfluxDB installation (Keeping existing version)..." | tee -a "${LOG_LOCATION}"
     ${INSTALL_CMD} update-influxdb-2-db-user 2>&1 | tee -a "${LOG_LOCATION}"
 elif [[ ${INFLUX_A} == '0)' || ${INFLUX_B} == '1)' ]]; then
     ${INSTALL_CMD} update-influxdb-1 2>&1 | tee -a "${LOG_LOCATION}"
     ${INSTALL_CMD} update-influxdb-1-db-user 2>&1 | tee -a "${LOG_LOCATION}"
-elif [[ ${INFLUX_A} == '1)' || ${INFLUX_B} == '2)' ]]; then
-    printf "Instructed to not install InfluxDB/n"
+elif [[ ${INFLUX_A} == '1)' || ${INFLUX_B} == '2)' || ${INFLUX_B} == 'SKIP)' ]]; then
+    printf "Instructed to not install InfluxDB\n"
 fi
 ${INSTALL_CMD} initialize 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-logrotate 2>&1 | tee -a "${LOG_LOCATION}"
@@ -256,6 +288,7 @@ ${INSTALL_CMD} ssl-certs-generate 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-aot-startup-script 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} compile-translations 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} generate-widget-html 2>&1 | tee -a "${LOG_LOCATION}"
+${INSTALL_CMD} build-notes-widget 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} initialize 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} web-server-update 2>&1 | tee -a "${LOG_LOCATION}"
 printf "\n#### Starting aotflask manually to complete setup\n"

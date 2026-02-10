@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@layer components {
+    .notes-drawer-z-index {
+        z-index: 99999 !important;
+    }
+    .aot-circle-btn {
+        border-radius: 9999px !important;
+        width: 32px !important;
+        height: 32px !important;
+        aspect-ratio: 1 / 1 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+    }
+}

@@ -1,11 +1,30 @@
 # coding=utf-8
 # 2025-10-06
+# Copyright (c) 2025, AoT Project Authors. All rights reserved.
 # on_off_chirpstack.py - Output for controlling a device via ChirpStack gRPC (Enqueue)
 #
+import base64
+import importlib
 import json
+import subprocess
+import sys
+import threading
+from urllib.parse import urlparse
 
-import grpc
-from chirpstack_api import api as cs_api
+import requests
+
+try:
+    import grpc  # type: ignore[import-not-found]
+except ModuleNotFoundError:
+    grpc = None
+
+try:
+    from chirpstack_api import api as cs_api  # type: ignore[import-not-found]
+except ModuleNotFoundError:
+    cs_api = None
+
+_GRPC_INSTALL_LOCK = threading.Lock()
+_GRPC_INSTALL_ATTEMPTED = False
 
 from flask_babel import lazy_gettext
 
@@ -41,10 +60,13 @@ OUTPUT_INFORMATION = {
     'output_name': "On/Off: ChirpStack gRPC",
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
-    'output_library': 'requests',
+    'output_library': 'requests, grpcio (optional)',
     'output_types': ['on_off'],
 
-    'message': "ChirpStack gRPC Enqueue를 사용해 온/오프 다운링크 명령을 전송합니다.",
+    'message': (
+        "ChirpStack REST/gRPC API를 이용해 온/오프 다운링크 명령을 전송합니다. "
+        "우선 gRPC로 시도하며, grpcio/chirpstack-api가 설치되지 않았거나 접근이 실패하면 REST(/api/devices/<devEui>/queue)로 자동 전환합니다."
+    ),
 
     'options_enabled': [
         'button_on',
@@ -128,7 +150,8 @@ OUTPUT_INFORMATION = {
         },
         {
             'id': 'confirm_grace_s',
-            'type': 'integer',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 90,
             'required': False,
             'name': '확인 유예(초)',
@@ -136,7 +159,8 @@ OUTPUT_INFORMATION = {
         },
         {
             'id': 'confirm_hard_timeout_s',
-            'type': 'integer',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 600,
             'required': False,
             'name': '확정 타임아웃(초)',
@@ -215,9 +239,79 @@ class OutputModule(AbstractOutput):
         self.running = False
         self.pending = {}          # ch -> {'state': 'on'|'off', 'deadline': ts, 'hard': ts}
         self.last_downlinks = []   # list of dicts {ts,state,fport,confirmed,bytes}
+        self.grpc_available = False
+
+    def _ensure_grpc_client(self) -> bool:
+        global grpc, cs_api, _GRPC_INSTALL_ATTEMPTED
+        if grpc and cs_api:
+            return True
+
+        if _GRPC_INSTALL_ATTEMPTED:
+            return False
+
+        with _GRPC_INSTALL_LOCK:
+            if grpc and cs_api:
+                return True
+            if _GRPC_INSTALL_ATTEMPTED:
+                return False
+            _GRPC_INSTALL_ATTEMPTED = True
+            try:
+                self.logger.info("Installing grpcio/chirpstack-api into AoT environment (once)...")
+            except Exception:
+                pass
+            try:
+                subprocess.check_call([
+                    sys.executable, '-m', 'pip', 'install',
+                    'grpcio>=1.62.0', 'chirpstack-api>=4.4.0'
+                ])
+            except Exception as err:
+                try:
+                    self.logger.warning(f"Automatic gRPC client install failed: {err}")
+                except Exception:
+                    pass
+                _GRPC_INSTALL_ATTEMPTED = False
+                return False
+
+            try:
+                importlib.invalidate_caches()
+                import grpc as _grpc  # type: ignore
+                from chirpstack_api import api as _cs_api  # type: ignore
+                grpc = _grpc
+                cs_api = _cs_api
+                try:
+                    self.logger.info("gRPC client libraries installed successfully.")
+                except Exception:
+                    pass
+                return True
+            except Exception as err:
+                try:
+                    self.logger.warning(f"gRPC client import failed after install: {err}")
+                except Exception:
+                    pass
+                _GRPC_INSTALL_ATTEMPTED = False
+                return False
 
     def initialize(self):
         self.setup_output_variables(OUTPUT_INFORMATION)
+
+        if not (grpc and cs_api):
+            self._ensure_grpc_client()
+
+        self.grpc_available = bool(grpc and cs_api)
+        if not self.grpc_available:
+            try:
+                missing = []
+                if grpc is None:
+                    missing.append('grpcio')
+                if cs_api is None:
+                    missing.append('chirpstack-api')
+                if missing:
+                    self.logger.warning(
+                        "gRPC client dependencies missing (%s); REST fallback will be used.",
+                        ', '.join(missing)
+                    )
+            except Exception:
+                pass
 
         # Defensive: some AoT versions populate options in different attributes
         if not hasattr(self, 'options') or self.options is None:
@@ -526,22 +620,89 @@ class OutputModule(AbstractOutput):
             pass
 
     def _enqueue_raw(self, f_port, confirmed, payload_bytes):
-        server = self._normalize_server()
         token = self._normalize_token()
         dev_eui = self._normalize_deveui()
-        if not server or not token or not dev_eui or int(f_port) <= 0 or not payload_bytes:
+        f_port_int = int(f_port) if f_port is not None else 0
+        if not token or not dev_eui or f_port_int <= 0 or not payload_bytes:
             return False
-        channel = grpc.insecure_channel(server)
-        client = cs_api.DeviceServiceStub(channel)
-        md = [("authorization", f"Bearer {token}")]
-        self._record_enqueue('raw', int(f_port), bool(confirmed), payload_bytes)
-        req = cs_api.EnqueueDeviceQueueItemRequest()
-        req.queue_item.dev_eui   = dev_eui
-        req.queue_item.f_port    = int(f_port)
-        req.queue_item.confirmed = bool(confirmed)
-        req.queue_item.data      = bytes(payload_bytes)
-        client.Enqueue(req, metadata=md)
-        return True
+
+        self._record_enqueue('raw', f_port_int, bool(confirmed), payload_bytes)
+
+        if self.grpc_available:
+            try:
+                channel = grpc.insecure_channel(self._normalize_server())
+                client = cs_api.DeviceServiceStub(channel)
+                md = [("authorization", f"Bearer {token}")]
+                req = cs_api.EnqueueDeviceQueueItemRequest()
+                req.queue_item.dev_eui = dev_eui
+                req.queue_item.f_port = f_port_int
+                req.queue_item.confirmed = bool(confirmed)
+                req.queue_item.data = bytes(payload_bytes)
+                client.Enqueue(req, metadata=md)
+                return True
+            except Exception as err:
+                try:
+                    self.logger.warning(f"gRPC enqueue failed ({err}); attempting REST fallback.")
+                except Exception:
+                    pass
+
+        server_opt = (self._opt('cs_server', '') or '').strip()
+        parsed = urlparse(server_opt if '://' in server_opt else f"http://{server_opt}")
+        scheme = parsed.scheme or 'http'
+        netloc = parsed.netloc or parsed.path  # path holds host if no scheme supplied
+        base_path = parsed.path if parsed.netloc else ''
+        base_url = f"{scheme}://{netloc}".rstrip('/')
+        api_root = base_path.rstrip('/')
+        if api_root == '/api':
+            api_root = ''
+
+        queue_path = f"/api/devices/{dev_eui}/queue"
+        if api_root:
+            queue_urls = [f"{base_url}{api_root}{queue_path}", f"{base_url}{queue_path}"]
+        else:
+            queue_urls = [f"{base_url}{queue_path}"]
+
+        # Common ChirpStack installs expose REST proxy on :8090 (when gRPC is :8080).
+        if ':8080' in base_url:
+            alt_base = base_url.replace(':8080', ':8090')
+            if api_root:
+                queue_urls.append(f"{alt_base}{api_root}{queue_path}")
+            queue_urls.append(f"{alt_base}{queue_path}")
+
+        payload_b64 = base64.b64encode(bytes(payload_bytes)).decode('ascii')
+        body = {
+            "deviceQueueItem": {
+                "confirmed": bool(confirmed),
+                "data": payload_b64,
+                "devEui": dev_eui,
+                "fPort": f_port_int
+            }
+        }
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        last_err = None
+        for url in queue_urls:
+            try:
+                response = requests.post(url, json=body, timeout=15, headers=headers)
+                response.raise_for_status()
+                return True
+            except requests.HTTPError as http_err:
+                last_err = http_err
+                if http_err.response is not None and http_err.response.status_code == 404:
+                    continue  # try next candidate (likely wrong port/path)
+                break
+            except Exception as err:
+                last_err = err
+                break
+
+        try:
+            self.logger.error(f"REST enqueue failed: {last_err}")
+        except Exception:
+            pass
+        return False
 
     def _enqueue(self, desired_state):
         server = self._normalize_server()

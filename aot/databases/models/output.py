@@ -5,6 +5,7 @@ from aot.databases import CRUDMixin
 from aot.databases import set_uuid
 from aot.aot_flask.extensions import db
 from aot.aot_flask.extensions import ma
+from marshmallow import fields
 
 
 class Output(CRUDMixin, db.Model):
@@ -18,6 +19,17 @@ class Output(CRUDMixin, db.Model):
     position_y = db.Column(db.Integer, default=0)
     size_y = db.Column(db.Integer, default=2)
     log_level_debug = db.Column(db.Boolean, default=False)
+
+    # Geo location for mapping (optional)
+    latitude = db.Column(db.Float, default=None)
+    longitude = db.Column(db.Float, default=None)
+    location_source = db.Column(db.Text, default='manual')  # manual/device/remote
+    map_config_id = db.Column(db.String(36), default=None)
+    map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
+    location_updated_utc = db.Column(db.DateTime, default=None)
+    marker_icon = db.Column(db.Text, default=None)  # e.g., valve/motor/temp...
+    marker_color = db.Column(db.Text, default=None)
+    marker_size = db.Column(db.Integer, default=3)
 
     # Interface options
     interface = db.Column(db.Text, default='')
@@ -68,6 +80,8 @@ class Output(CRUDMixin, db.Model):
 
 
 class OutputSchema(ma.SQLAlchemyAutoSchema):
+    i2c_bus = fields.Raw()
+    baud_rate = fields.Raw()
     class Meta:
         model = Output
 

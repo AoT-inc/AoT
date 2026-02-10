@@ -1,0 +1,242 @@
+{% extends "layout.html" %}
+{% set active_page = "geo_input" %}
+
+{% block title %} - GIS Input Manager{% endblock %}
+
+{% block head %}
+<style>
+    /* Force 100% width on mobile immediately to prevent jagged reflow */
+    @media (max-width: 768px) {
+        .grid-stack-item {
+            width: 100% !important;
+            left: 0 !important;
+        }
+    }
+    .grid-stack-item-content {
+        transition: none !important;
+    }
+    .grid-stack-item-content input.form-control {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+</style>
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css" />
+<script src="/static/js/gridstack-all.js"></script>
+
+<link href="/static/css/toastr.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="/static/css/components/aot-toggle.css" />
+<script src="/static/js/toastr.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/geo/aot-map-loader.js') }}"></script>
+<script src="/static/js/geo/aot-geo-input-preview.js?v=7"></script>
+<!-- Standard Toastr Config (Match Dashboard) -->
+<script>
+    $(document).ready(function() {
+      if (typeof toastr !== 'undefined') {
+          toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": false,
+            "progressBar": false,
+            "positionClass": "toast-top-left",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": 15000,
+            "extendedTimeOut": 10000,
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+          };
+      }
+    });
+</script>
+<style>
+    /* Force Toastr position and Z-Index to beat Navbar and Modals */
+    #toast-container.toast-top-left {
+      top: 12px !important;
+      left: 12px !important;
+      z-index: 2147483647 !important; /* Max Z-Index */
+      position: fixed !important;
+    }
+</style>
+<script>
+    // Inject Global Geo Config
+    window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
+</script>
+{% endblock %}
+
+{%- block body %}
+<main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <h4>{{ _('GIS Input Manager') }}</h4>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    <!-- Add Input Form (Matched Style) -->
+    <form id="new_input_form" method="post" action="/input" style="padding-bottom: 0.5em">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row small-gutters" style="padding-left: 0.75em">
+            <div class="col-auto">
+                {{ form_add_gis.input_type(class_="selectpicker aot-standard-select", data_style="btn btn-primary aot-roundbox",
+                data_live_search="true", title=_('Select GIS Service')) }}
+            </div>
+            <div class="col-auto">
+                <input onclick="return $(this).processRequest(this, 'input_add');" name="input_add" value="{{_('Add')}}"
+                    class="btn btn-primary" type="button" />
+            </div>
+        </div>
+    </form>
+
+    <div style="clear: both; padding: 1em 0;"></div>
+
+    <div class="grid-stack aot-entry-container">
+        {% for each_input in gis_inputs %}
+        <div id="gridstack_input_{{each_input.unique_id}}" class="grid-stack-item" gs-id="{{each_input.unique_id}}"
+            gs-x="0" gs-y="{{each_input.position_y}}" gs-w="24" gs-h="1" gs-no-resize="true">
+            {% include 'pages/geo_input_components/geo_input_entry.html' %}
+        </div>
+        {% endfor %}
+    </div>
+
+</main>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<script>
+    function initGrid() {
+        let targetColumn = (window.innerWidth <= 768) ? 1 : 24;
+        
+        // Performance: Only update if column count has changed or grid is not initialized
+        if (window.grid) {
+            if (window.grid.getColumn() === targetColumn) return;
+            
+            window.grid.batchUpdate(true);
+            window.grid.column(targetColumn, 'list');
+            
+            if (targetColumn === 24) {
+                window.grid.engine.nodes.forEach(node => {
+                    node.w = 24;
+                    node.x = 0;
+                });
+            }
+            
+            window.grid.batchUpdate(false);
+        } else {
+            // First time: Minimal DOM check for initial cellHeight
+            let h = $(".grid-stack-item-content").eq(0).outerHeight(true);
+            if (!h || h < 30) h = 54;
+
+            window.grid = GridStack.init({
+                animate: true,
+                cellHeight: h + 4,
+                column: targetColumn,
+                margin: 0,
+                draggable: { handle: '.panel-heading' },
+                float: false,
+                disableOneColumnMode: true,
+                alwaysShowResizeHandle: false
+            });
+        }
+
+        window.grid.off('change');
+        window.grid.on('change', function (event, items) {
+            if (window.grid.getColumn() === 1) return;
+
+            let serializedFull = window.grid.save(false);
+            $.ajax({
+                type: "POST",
+                url: "/geo/input/layout",
+                headers: { "X-CSRFToken": "{{ csrf_token() }}" },
+                data: JSON.stringify(serializedFull),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) { }
+            });
+        });
+    }
+
+    $(document).ready(initGrid);
+    $(window).on('load', initGrid);
+    let resizeTimer;
+    $(window).on('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            initGrid();
+            if (window.grid && typeof window.grid.onParentResize === 'function') window.grid.onParentResize();
+        }, 50);
+    });
+
+    // Re-implement the popup_response and processRequest similar to input.html
+    // But adapted for this page context if needed, or largely identical.
+
+    function popup_response(data) {
+        if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
+            toastr['error']('Error: ' + data.data.messages.error.join(", "));
+        }
+        if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+            toastr['success']('Success: ' + data.data.messages.success.join(", "));
+        }
+    }
+
+    jQuery.fn.processRequest = function (button, action) {
+        $.ajax({
+            type: "POST",
+            url: '/geo/input/submit',
+            headers: { "X-CSRFToken": "{{ csrf_token() }}" },
+            data: $(button).parents('form').serialize() + '&' + action + '=1',
+            success: function (data) {
+                if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
+                    toastr['error']('Error: ' + data.data.messages.error.join(", "));
+                }
+
+                if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+                    toastr['success']('Success: ' + data.data.messages.success.join(", "));
+                }
+
+                // Handle DOM Updates instead of Reload
+                const input_id = data.data.input_id;
+                const action_type = data.data.action;
+
+                if (input_id && action_type) {
+                    if (action_type === 'input_activate') {
+                        $('#input_status_' + input_id).removeClass("inactive-background").addClass("active-background");
+                        $('#input_activate_' + input_id).hide();
+                        $('#input_deactivate_' + input_id).show();
+                    } else if (action_type === 'input_deactivate') {
+                        $('#input_status_' + input_id).removeClass("active-background").addClass("inactive-background");
+                        $('#input_activate_' + input_id).show();
+                        $('#input_deactivate_' + input_id).hide();
+                    } else if (action_type === 'input_delete') {
+                        $('#modal_config_' + input_id).modal('hide');
+                        $('.modal-backdrop').remove();
+                        window.grid.removeWidget('#gridstack_input_' + input_id);
+                    } else if (action_type === 'input_mod') {
+                        if ('name' in data.data.messages && $('#input_name_' + input_id).length) {
+                             $('#input_name_' + input_id).val(data.data.messages.name);
+                        }
+                        console.log("[save check] Save logic executed.");
+                        // Do not reload
+                    } else {
+                        // For mods that change name/config, reload might still be safer unless we update specific fields
+                        // But user asked about activation specifically.
+                        if (action_type !== 'input_activate' && action_type !== 'input_deactivate') {
+                            location.reload();
+                        }
+                    }
+                } else if (!('error' in data.data.messages && data.data.messages.error.length > 0)) {
+                    // Fallback if success but no specific action logic matched (e.g. Add)
+                    location.reload();
+                }
+            },
+            error: function (xhr) {
+                toastr['error']('Server Error: ' + xhr.statusText);
+            }
+        });
+    }
+</script>
+{% endblock %}

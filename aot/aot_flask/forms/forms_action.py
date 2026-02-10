@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-# forms_action.py - 액션 관리 폼
+# forms_action.py - Action Management Form
 #
 
 import logging
 
+from flask_babel import lazy_gettext
 from flask_wtf import FlaskForm
 from wtforms import SelectField
 from wtforms import StringField
@@ -15,11 +16,11 @@ logger = logging.getLogger("aot.forms_action")
 
 
 class Actions(FlaskForm):
-    action_type = SelectField("동작 유형")
+    action_type = SelectField(lazy_gettext("Action Type"))
     device_id = StringField('Device ID', widget=widgets.HiddenInput())
     function_type = StringField('function_type', widget=widgets.HiddenInput())
     action_id = StringField('action_id', widget=widgets.HiddenInput())
 
-    add_action = SubmitField('추가')
-    save_action = SubmitField('저장')
-    delete_action = SubmitField('삭제')
+    add_action = SubmitField(lazy_gettext('Add'))
+    save_action = SubmitField(lazy_gettext('Save'))
+    delete_action = SubmitField(lazy_gettext('Delete'))

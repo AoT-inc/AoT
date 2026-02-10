@@ -11,12 +11,17 @@ from flask.blueprints import Blueprint
 from aot.config import (PATH_ACTIONS_CUSTOM, PATH_FUNCTIONS_CUSTOM,
                            PATH_INPUTS_CUSTOM, PATH_OUTPUTS_CUSTOM,
                            PATH_WIDGETS_CUSTOM, THEMES, USAGE_REPORTS_PATH)
-from aot.databases.models import (SMTP, Conversion, Measurement, Misc, Role,
+from aot.databases.models import (APIKey, SMTP, Conversion, Measurement, Misc, Role,
                                      Unit, User)
 from aot.aot_flask.forms import forms_settings
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import utils_general, utils_settings
 from aot.utils.modules import load_module_from_file
+from aot.utils.functions import parse_function_information
+from aot.utils.inputs import parse_input_information
+from aot.utils.outputs import parse_output_information
+from aot.utils.widgets import parse_widget_information
+from aot.utils.actions import parse_action_information
 from aot.utils.system_pi import (add_custom_measurements, add_custom_units,
                                     base64_encode_bytes, cmd_output)
 
@@ -120,193 +125,24 @@ def settings_function():
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
 
-    form_controller = forms_settings.Controller()
-    form_controller_delete = forms_settings.ControllerDel()
-
-    # Get list of custom functions
-    excluded_files = ['__init__.py', '__pycache__']
+    form_import = forms_settings.Controller()
+    form_delete = forms_settings.ControllerDel()
+    dict_controllers = parse_function_information()
 
     if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_controllers'):
+        if not utils_general.user_has_permission('edit_settings'):
             return redirect(url_for('routes_general.home'))
 
-        if form_controller.import_controller_upload.data:
-            utils_settings.settings_function_import(form_controller)
-        elif form_controller_delete.delete_controller.data:
-            utils_settings.settings_function_delete(form_controller_delete)
-
+        if form_import.import_function_upload.data:
+            utils_settings.function_import(form_import)
+        if form_delete.delete_function.data:
+            utils_settings.function_del(form_delete)
         return redirect(url_for('routes_settings.settings_function'))
 
-    dict_controllers = {}
-
-    for each_file in os.listdir(PATH_FUNCTIONS_CUSTOM):
-        if each_file not in excluded_files:
-            try:
-                full_path_file = os.path.join(PATH_FUNCTIONS_CUSTOM, each_file)
-                controller_info, status = load_module_from_file(full_path_file, 'functions')
-
-                if controller_info:
-                    func_info = controller_info.FUNCTION_INFORMATION
-                    dict_controllers[func_info['function_name_unique']] = {}
-                    dict_controllers[func_info['function_name_unique']]['function_name'] = func_info['function_name']
-            except:
-                pass
-
     return render_template('settings/function.html',
-                           dict_controllers=dict_controllers,
-                           form_controller=form_controller,
-                           form_controller_delete=form_controller_delete)
-
-
-@blueprint.route('/settings/action', methods=('GET', 'POST'))
-@flask_login.login_required
-def settings_action():
-    """Display action settings."""
-    if not utils_general.user_has_permission('view_settings'):
-        return redirect(url_for('routes_general.home'))
-
-    form_action = forms_settings.Action()
-    form_action_delete = forms_settings.ActionDel()
-
-    # Get list of custom functions
-    excluded_files = ['__init__.py', '__pycache__']
-
-    if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_controllers'):
-            return redirect(url_for('routes_general.home'))
-
-        if form_action.import_action_upload.data:
-            utils_settings.settings_action_import(form_action)
-        elif form_action_delete.delete_action.data:
-            utils_settings.settings_action_delete(form_action_delete)
-
-        return redirect(url_for('routes_settings.settings_action'))
-
-    dict_actions = {}
-
-    for each_file in os.listdir(PATH_ACTIONS_CUSTOM):
-        if each_file not in excluded_files:
-            try:
-                full_path_file = os.path.join(PATH_ACTIONS_CUSTOM, each_file)
-                action_info, status = load_module_from_file(full_path_file, 'actions')
-
-                if action_info:
-                    func_info = action_info.ACTION_INFORMATION
-                    dict_actions[func_info['name_unique']] = {}
-                    dict_actions[func_info['name_unique']]['name'] = func_info['name']
-            except:
-                pass
-
-    return render_template('settings/action.html',
-                           dict_actions=dict_actions,
-                           form_action=form_action,
-                           form_action_delete=form_action_delete)
-
-
-@blueprint.route('/settings/input', methods=('GET', 'POST'))
-@flask_login.login_required
-def settings_input():
-    """Display measurement settings."""
-    if not utils_general.user_has_permission('view_settings'):
-        return redirect(url_for('routes_general.home'))
-
-    form_input = forms_settings.Input()
-    form_input_delete = forms_settings.InputDel()
-
-    dict_measurements = add_custom_measurements(Measurement.query.all())
-    dict_units = add_custom_units(Unit.query.all())
-
-    # Get list of custom inputs
-    excluded_files = ['__init__.py', '__pycache__']
-
-    if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_controllers'):
-            return redirect(url_for('routes_general.home'))
-
-        if form_input.import_input_upload.data:
-            utils_settings.settings_input_import(form_input)
-        elif form_input_delete.delete_input.data:
-            utils_settings.settings_input_delete(form_input_delete)
-
-        return redirect(url_for('routes_settings.settings_input'))
-
-    dict_inputs = {}
-
-    for each_file in os.listdir(PATH_INPUTS_CUSTOM):
-        if each_file not in excluded_files:
-            try:
-                full_path_file = os.path.join(PATH_INPUTS_CUSTOM, each_file)
-                input_info, status = load_module_from_file(full_path_file, 'inputs')
-
-                if input_info:
-                    dict_inputs[input_info.INPUT_INFORMATION['input_name_unique']] = {}
-                    dict_inputs[input_info.INPUT_INFORMATION['input_name_unique']]['input_name'] = \
-                        input_info.INPUT_INFORMATION['input_name']
-                    dict_inputs[input_info.INPUT_INFORMATION['input_name_unique']]['input_manufacturer'] = \
-                        input_info.INPUT_INFORMATION['input_manufacturer']
-                    dict_inputs[input_info.INPUT_INFORMATION['input_name_unique']]['measurements_name'] = \
-                        input_info.INPUT_INFORMATION['measurements_name']
-            except:
-                pass
-
-    return render_template('settings/input.html',
-                           dict_inputs=dict_inputs,
-                           dict_measurements=dict_measurements,
-                           dict_units=dict_units,
-                           form_input=form_input,
-                           form_input_delete=form_input_delete)
-
-
-@blueprint.route('/settings/output', methods=('GET', 'POST'))
-@flask_login.login_required
-def settings_output():
-    """Display output settings."""
-    if not utils_general.user_has_permission('view_settings'):
-        return redirect(url_for('routes_general.home'))
-
-    form_output = forms_settings.Output()
-    form_output_delete = forms_settings.OutputDel()
-
-    dict_measurements = add_custom_measurements(Measurement.query.all())
-    dict_units = add_custom_units(Unit.query.all())
-
-    # Get list of custom outputs
-    excluded_files = ['__init__.py', '__pycache__']
-
-    if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_controllers'):
-            return redirect(url_for('routes_general.home'))
-
-        if form_output.import_output_upload.data:
-            utils_settings.settings_output_import(form_output)
-        elif form_output_delete.delete_output.data:
-            utils_settings.settings_output_delete(form_output_delete)
-
-        return redirect(url_for('routes_settings.settings_output'))
-
-    dict_outputs = {}
-
-    for each_file in os.listdir(PATH_OUTPUTS_CUSTOM):
-        if each_file not in excluded_files:
-            try:
-                full_path_file = os.path.join(PATH_OUTPUTS_CUSTOM, each_file)
-                output_info, status = load_module_from_file(full_path_file, 'outputs')
-
-                if output_info:
-                    dict_outputs[output_info.OUTPUT_INFORMATION['output_name_unique']] = {}
-                    dict_outputs[output_info.OUTPUT_INFORMATION['output_name_unique']]['output_name'] = \
-                        output_info.OUTPUT_INFORMATION['output_name']
-                    dict_outputs[output_info.OUTPUT_INFORMATION['output_name_unique']]['measurements_name'] = \
-                        output_info.OUTPUT_INFORMATION['measurements_name']
-            except:
-                pass
-
-    return render_template('settings/output.html',
-                           dict_outputs=dict_outputs,
-                           dict_measurements=dict_measurements,
-                           dict_units=dict_units,
-                           form_output=form_output,
-                           form_output_delete=form_output_delete)
+                           form_controller=form_import,
+                           form_controller_delete=form_delete,
+                           dict_controllers=dict_controllers)
 
 
 @blueprint.route('/settings/widget', methods=('GET', 'POST'))
@@ -316,49 +152,105 @@ def settings_widget():
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
 
-    form_widget = forms_settings.Widget()
-    form_widget_delete = forms_settings.WidgetDel()
-
-    dict_measurements = add_custom_measurements(Measurement.query.all())
-    dict_units = add_custom_units(Unit.query.all())
-
-    # Get list of custom widgets
-    excluded_files = ['__init__.py', '__pycache__']
+    form_import = forms_settings.Widget()
+    form_delete = forms_settings.WidgetDel()
+    dict_widgets = parse_widget_information()
 
     if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_controllers'):
+        if not utils_general.user_has_permission('edit_settings'):
             return redirect(url_for('routes_general.home'))
 
-        if form_widget.import_widget_upload.data:
-            utils_settings.settings_widget_import(form_widget)
-        elif form_widget_delete.delete_widget.data:
-            utils_settings.settings_widget_delete(form_widget_delete)
-
+        if form_import.import_widget_upload.data:
+            utils_settings.settings_widget_import(form_import)
+        if form_delete.delete_widget.data:
+            utils_settings.settings_widget_delete(form_delete)
         return redirect(url_for('routes_settings.settings_widget'))
 
-    dict_widgets = {}
-
-    for each_file in os.listdir(PATH_WIDGETS_CUSTOM):
-        if each_file not in excluded_files:
-            try:
-                full_path_file = os.path.join(PATH_WIDGETS_CUSTOM, each_file)
-                widget_info, status = load_module_from_file(full_path_file, 'widgets')
-
-                if widget_info:
-                    dict_widgets[widget_info.WIDGET_INFORMATION['widget_name_unique']] = {}
-                    dict_widgets[widget_info.WIDGET_INFORMATION['widget_name_unique']]['widget_name'] = \
-                        widget_info.WIDGET_INFORMATION['widget_name']
-                    dict_widgets[widget_info.WIDGET_INFORMATION['widget_name_unique']]['measurements_name'] = \
-                        widget_info.WIDGET_INFORMATION['measurements_name']
-            except:
-                pass
-
     return render_template('settings/widget.html',
-                           dict_widgets=dict_widgets,
-                           dict_measurements=dict_measurements,
-                           dict_units=dict_units,
-                           form_widget=form_widget,
-                           form_widget_delete=form_widget_delete)
+                           form_widget=form_import,
+                           form_widget_delete=form_delete,
+                           dict_widgets=dict_widgets)
+
+
+@blueprint.route('/settings/input', methods=('GET', 'POST'))
+@flask_login.login_required
+def settings_input():
+    """Display input settings."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    form_import = forms_settings.Input()
+    form_delete = forms_settings.InputDel()
+    dict_inputs = parse_input_information()
+
+    if request.method == 'POST':
+        if not utils_general.user_has_permission('edit_settings'):
+            return redirect(url_for('routes_general.home'))
+
+        if form_import.import_input_upload.data:
+            utils_settings.input_import(form_import)
+        if form_delete.delete_input.data:
+            utils_settings.input_del(form_delete)
+        return redirect(url_for('routes_settings.settings_input'))
+
+    return render_template('settings/input.html',
+                           form_input=form_import,
+                           form_input_delete=form_delete,
+                           dict_inputs=dict_inputs)
+
+
+@blueprint.route('/settings/output', methods=('GET', 'POST'))
+@flask_login.login_required
+def settings_output():
+    """Display output settings."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    form_import = forms_settings.Output()
+    form_delete = forms_settings.OutputDel()
+    dict_outputs = parse_output_information()
+
+    if request.method == 'POST':
+        if not utils_general.user_has_permission('edit_settings'):
+            return redirect(url_for('routes_general.home'))
+
+        if form_import.import_output_upload.data:
+            utils_settings.output_import(form_import)
+        if form_delete.delete_output.data:
+            utils_settings.output_del(form_delete)
+        return redirect(url_for('routes_settings.settings_output'))
+
+    return render_template('settings/output.html',
+                           form_output=form_import,
+                           form_output_delete=form_delete,
+                           dict_outputs=dict_outputs)
+
+
+@blueprint.route('/settings/action', methods=('GET', 'POST'))
+@flask_login.login_required
+def settings_action():
+    """Display action settings."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    form_import = forms_settings.Action()
+    form_delete = forms_settings.ActionDel()
+    dict_actions = parse_action_information()
+
+    if request.method == 'POST':
+        if not utils_general.user_has_permission('edit_settings'):
+            return redirect(url_for('routes_general.home'))
+
+        if form_import.import_action_upload.data:
+            utils_settings.action_import(form_import)
+        if form_delete.delete_action.data:
+            utils_settings.action_del(form_delete)
+        return redirect(url_for('routes_settings.settings_action'))
+
+    return render_template('settings/action.html',
+                           form_action=form_import,
+                           form_action_delete=form_delete,
+                           dict_actions=dict_actions)
 
 
 @blueprint.route('/settings/measurement', methods=('GET', 'POST'))
@@ -371,78 +263,52 @@ def settings_measurement():
     measurement = Measurement.query.all()
     unit = Unit.query.all()
     conversion = Conversion.query.all()
-    form_add_measurement = forms_settings.MeasurementAdd()
-    form_mod_measurement = forms_settings.MeasurementMod()
+    form_add = forms_settings.MeasurementAdd()
+    form_mod = forms_settings.MeasurementMod()
     form_add_unit = forms_settings.UnitAdd()
     form_mod_unit = forms_settings.UnitMod()
     form_add_conversion = forms_settings.ConversionAdd()
     form_mod_conversion = forms_settings.ConversionMod()
 
-    choices_units = utils_general.choices_units(unit)
-
-    # Generate all measurement and units used
-    dict_measurements = add_custom_measurements(measurement)
-    dict_units = add_custom_units(unit)
-
     if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_controllers'):
+        if not utils_general.user_has_permission('edit_settings'):
             return redirect(url_for('routes_general.home'))
 
-        if form_add_measurement.add_measurement.data:
-            utils_settings.settings_measurement_add(form_add_measurement)
-        elif form_mod_measurement.save_measurement.data:
-            utils_settings.settings_measurement_mod(form_mod_measurement)
-        elif form_mod_measurement.delete_measurement.data:
-            utils_settings.settings_measurement_del(form_mod_measurement.measurement_id.data)
-
-        elif form_add_unit.add_unit.data:
+        if form_add.validate_on_submit():
+            utils_settings.settings_measurement_add(form_add)
+        if form_add_unit.add_unit.data:
             utils_settings.settings_unit_add(form_add_unit)
-        elif form_mod_unit.save_unit.data:
-            utils_settings.settings_unit_mod(form_mod_unit)
-        elif form_mod_unit.delete_unit.data:
-            utils_settings.settings_unit_del(form_mod_unit.unit_id.data)
-
-        elif form_add_conversion.add_conversion.data:
-            utils_settings.settings_convert_add(form_add_conversion)
-        elif form_mod_conversion.save_conversion.data:
-            utils_settings.settings_convert_mod(form_mod_conversion)
-        elif form_mod_conversion.delete_conversion.data:
-            utils_settings.settings_convert_del(form_mod_conversion.conversion_id.data)
-
+        if form_mod_unit.delete_unit.data or form_mod_unit.save_unit.data:
+            utils_settings.settings_unit_mod(form_mod_unit, request.form)
+        if form_add_conversion.add_conversion.data:
+            utils_settings.settings_conversion_add(form_add_conversion)
+        if form_mod_conversion.delete_conversion.data or form_mod_conversion.save_conversion.data:
+            utils_settings.settings_conversion_mod(form_mod_conversion, request.form)
         return redirect(url_for('routes_settings.settings_measurement'))
+
+    choices_units = utils_settings.choices_units(unit)
+    choices_measurements = utils_settings.choices_measurements(measurement)
+    choices_conversions = utils_settings.choices_conversions(conversion, unit)
+    dict_measurements = add_custom_measurements(measurement)
+    dict_units = add_custom_units(unit)
 
     return render_template('settings/measurement.html',
                            dict_measurements=dict_measurements,
                            dict_units=dict_units,
-                           choices_units=choices_units,
                            measurement=measurement,
                            unit=unit,
                            conversion=conversion,
-                           form_add_measurement=form_add_measurement,
-                           form_mod_measurement=form_mod_measurement,
+                           form_add_measurement=form_add,
+                           form_mod_measurement=form_mod,
                            form_add_unit=form_add_unit,
                            form_mod_unit=form_mod_unit,
                            form_add_conversion=form_add_conversion,
-                           form_mod_conversion=form_mod_conversion)
-
-
-
-@blueprint.route('/change_preferences', methods=('GET', 'POST'))
-@flask_login.login_required
-def change_theme():
-    """Change theme"""
-    if not utils_general.user_has_permission('view_settings'):
-        return redirect(url_for('routes_general.home'))
-
-    form_prefs = forms_settings.UserPreferences()
-
-    if request.method == 'POST':
-        if not utils_general.user_has_permission('edit_users'):
-            return redirect(url_for('routes_general.home'))
-
-        if form_prefs.user_preferences_save.data:
-            utils_settings.change_preferences(form_prefs)
-    return redirect(url_for('routes_general.home'))
+                           form_mod_conversion=form_mod_conversion,
+                           choices_units=choices_units,
+                           choices_measurements=choices_measurements,
+                           choices_conversions=choices_conversions,
+                           form_mod_measurement_data=[],
+                           form_del_measurement=form_mod)
 
 
 @blueprint.route('/settings/users_submit', methods=['POST'])
@@ -562,123 +428,176 @@ def settings_users():
 @blueprint.route('/settings/pi', methods=('GET', 'POST'))
 @flask_login.login_required
 def settings_pi():
-    """Display general settings."""
+    """Display Raspberry Pi settings."""
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
 
-    misc = Misc.query.first()
-    form_settings_pi = forms_settings.SettingsPi()
+    # Form class name in forms_settings is SettingsPi (not SettingsRaspPi)
+    form_settings_misc = forms_settings.SettingsPi()
 
-    pi_settings = get_raspi_config_settings()
+    cmd = "pigs"
+    _, _, status = cmd_output(cmd)
+    pi_gpio_daemon_running = (status == 0)
 
-    # Determine what state pigpiod is currently in
-    pigpiod_sample_rate = ''
-    if os.path.exists('/etc/systemd/system/pigpiod_uninstalled.service'):
-        pigpiod_sample_rate = 'uninstalled'
-    elif os.path.exists('/etc/systemd/system/pigpiod_disabled.service'):
-        pigpiod_sample_rate = 'disabled'
-    elif os.path.exists('/etc/systemd/system/pigpiod_low.service'):
-        pigpiod_sample_rate = 'low'
-    elif os.path.exists('/etc/systemd/system/pigpiod_high.service'):
-        pigpiod_sample_rate = 'high'
-    elif os.path.exists('/etc/systemd/system/pigpiod.service'):
-        pigpiod_sample_rate = 'low'
+    # Collect current Pi config/settings for the template
+    try:
+        from aot.utils.system_pi import get_raspi_config_settings
+        pi_settings = get_raspi_config_settings()
+    except Exception:
+        pi_settings = {}
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
             return redirect(url_for('routes_general.home'))
 
         form_name = request.form['form-name']
-        if form_name == 'Pi':
-            utils_settings.settings_pi_mod(form_settings_pi)
+        if form_name == "PiSettings":
+            messages = utils_settings.settings_pi_mod(form_settings_misc)
+        if form_name == "InitPigpiod":
+            cmd = "echo \" $(</proc/sys/kernel/hostname): " \
+                  "$(sudo systemctl start pigpiod && echo OK)\""
+            cmd_output(cmd)
+        if form_name == "FinalPigpiod":
+            cmd = "echo \" $(</proc/sys/kernel/hostname): " \
+                  "$(sudo systemctl stop pigpiod && echo OK)\""
+            cmd_output(cmd)
+        if form_name == "RestartPigpiod":
+            cmd = "echo \" $(</proc/sys/kernel/hostname): " \
+                  "$(sudo systemctl restart pigpiod && echo OK)\""
+            cmd_output(cmd)
+
+        for each_error in messages["error"]:
+            flash(each_error, "error")
+        for each_warn in messages["warning"]:
+            flash(each_warn, "warning")
+        for each_info in messages["info"]:
+            flash(each_info, "info")
+        for each_success in messages["success"]:
+            flash(each_success, "success")
+
         return redirect(url_for('routes_settings.settings_pi'))
 
     return render_template('settings/pi.html',
-                           misc=misc,
+                           form_settings_pi=form_settings_misc,
+                           sudo=utils_general.sudo_present(),
                            pi_settings=pi_settings,
-                           pigpiod_sample_rate=pigpiod_sample_rate,
-                           form_settings_pi=form_settings_pi)
+                           pi_gpio_daemon_running=pi_gpio_daemon_running)
 
 
 @blueprint.route('/settings/diagnostic', methods=('GET', 'POST'))
 @flask_login.login_required
 def settings_diagnostic():
-    """Display general settings."""
+    """Display diagnostic settings."""
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
 
-    form_settings_diagnostic = forms_settings.SettingsDiagnostic()
+    form_settings_general = forms_settings.SettingsDiagnostic()
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
             return redirect(url_for('routes_general.home'))
 
-        if form_settings_diagnostic.delete_dashboard_elements.data:
-            utils_settings.settings_diagnostic_delete_dashboard_elements()
-        elif form_settings_diagnostic.delete_inputs.data:
-            utils_settings.settings_diagnostic_delete_inputs()
-        elif form_settings_diagnostic.delete_notes_tags.data:
-            utils_settings.settings_diagnostic_delete_notes_tags()
-        elif form_settings_diagnostic.delete_outputs.data:
-            utils_settings.settings_diagnostic_delete_outputs()
-        elif form_settings_diagnostic.delete_settings_database.data:
-            utils_settings.settings_diagnostic_delete_settings_database()
-        elif form_settings_diagnostic.delete_file_dependency.data:
-            utils_settings.settings_diagnostic_delete_file('dependency')
-        elif form_settings_diagnostic.delete_file_upgrade.data:
-            utils_settings.settings_diagnostic_delete_file('upgrade')
-        elif form_settings_diagnostic.recreate_influxdb_db_1.data:
-            utils_settings.settings_diagnostic_recreate_influxdb_db_1()
-        elif form_settings_diagnostic.recreate_influxdb_db_2.data:
-            utils_settings.settings_diagnostic_recreate_influxdb_db_2()
-        elif form_settings_diagnostic.reset_email_counter.data:
-            utils_settings.settings_diagnostic_reset_email_counter()
-        elif form_settings_diagnostic.install_dependencies.data:
-            utils_settings.settings_diagnostic_install_dependencies()
-        elif form_settings_diagnostic.regenerate_widget_html.data:
-            regen_widget_html = threading.Thread(target=utils_settings.settings_regenerate_widget_html)
-            regen_widget_html.start()
-            flash("Widget HTML Regeneration started in the background. "
-                  "It may take a few seconds to complete. "
-                  "Any errors will appear in the Web Log.", "success")
-        elif form_settings_diagnostic.upgrade_master.data:
-            utils_settings.settings_diagnostic_upgrade_master()
-
+        if form_settings_general.validate_on_submit():
+            utils_settings.settings_diagnostic_mod(form_settings_general)
+        else:
+            utils_general.flash_form_errors(form_settings_general)
         return redirect(url_for('routes_settings.settings_diagnostic'))
 
     return render_template('settings/diagnostic.html',
-                           form_settings_diagnostic=form_settings_diagnostic)
+                           form_settings_diagnostic=form_settings_general)
 
 
-def get_raspi_config_settings():
-    settings = {
-        'i2c_enabled': None,
-        'ssh_enabled': None,
-        'pi_camera_enabled': None,
-        'one_wire_enabled': None,
-        'serial_enabled': None,
-        'spi_enabled': None,
-        'hostname': None
+@blueprint.route('/settings/api_key', methods=('GET', 'POST'))
+@flask_login.login_required
+def settings_api_key():
+    """Display API Key management settings."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    api_keys = APIKey.query.all()
+    form_add = forms_settings.APIKeyAdd()
+    form_mod = forms_settings.APIKeyMod()
+
+    # Pre-calculate usage for each key
+    usage_map = {}
+    for key in api_keys:
+        usage_map[key.unique_id] = utils_settings.get_api_key_usage(key.key)
+
+    misc = Misc.query.first()
+
+    return render_template('settings/api_key.html',
+                           api_keys=api_keys,
+                           usage_map=usage_map,
+                           form_add=form_add,
+                           form_mod=form_mod,
+                           misc=misc)
+
+
+@blueprint.route('/settings/api_key_submit', methods=['POST'])
+@flask_login.login_required
+def settings_api_key_submit():
+    """Submit form for API Key management page"""
+    messages = {
+        "success": [], "info": [], "warning": [], "error": []
     }
-    i2c_status, _, _ = cmd_output("raspi-config nonint get_i2c", user="root")
-    if i2c_status:
-        settings['i2c_enabled'] = not bool(int(i2c_status))
-    ssh_status, _, _ = cmd_output("raspi-config nonint get_ssh", user="root")
-    if ssh_status:
-        settings['ssh_enabled'] = not bool(int(ssh_status))
-    cam_status, _, _ = cmd_output("raspi-config nonint get_camera", user="root")
-    if cam_status:
-        settings['pi_camera_enabled'] = not bool(int(cam_status))
-    one_wire_status, _, _ = cmd_output("raspi-config nonint get_onewire", user="root")
-    if one_wire_status:
-        settings['one_wire_enabled'] = not bool(int(one_wire_status))
-    serial_status, _, _ = cmd_output("raspi-config nonint get_serial", user="root")
-    if serial_status:
-        settings['serial_enabled'] = not bool(int(serial_status))
-    spi_status, _, _ = cmd_output("raspi-config nonint get_spi", user="root")
-    if spi_status:
-        settings['spi_enabled'] = not bool(int(spi_status))
-    hostname_out, _, _ = cmd_output("raspi-config nonint get_hostname", user="root")
-    if hostname_out:
-        settings['hostname'] = hostname_out.decode("utf-8")
-    return settings
+    key_id = None
+
+    if not utils_general.user_has_permission('edit_settings'):
+        messages["error"].append("Your permissions do not allow this action")
+
+    form_add = forms_settings.APIKeyAdd()
+    form_mod = forms_settings.APIKeyMod()
+
+    if not messages["error"]:
+        if form_add.api_key_add_submit.data:
+            messages = utils_settings.api_key_add(form_add)
+        elif form_mod.api_key_mod_submit.data:
+            messages = utils_settings.api_key_mod(form_mod)
+            key_id = form_mod.api_key_id.data
+        elif form_mod.api_key_delete.data:
+            key_id = form_mod.api_key_id.data
+            messages = utils_settings.api_key_del(form_mod)
+
+    return jsonify(data={
+        'key_id': key_id,
+        'messages': messages
+    })
+
+
+@blueprint.route('/api/api_keys', methods=['GET'])
+@flask_login.login_required
+def api_keys_list():
+    """Return all API keys as JSON for intelligent matching."""
+    api_keys = APIKey.query.all()
+    keys_list = []
+    for key in api_keys:
+        keys_list.append({
+            'unique_id': key.unique_id,
+            'name': key.name,
+            'provider': key.provider,
+            'key': key.key,
+            'tag': key.tag,
+            'description': key.description
+        })
+    return jsonify(keys_list)
+
+
+@blueprint.route('/change_preferences', methods=('POST',))
+@flask_login.login_required
+def change_preferences():
+    """Handle user preference changes (theme/language)."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    form_prefs = forms_settings.UserPreferences()
+    if form_prefs.validate_on_submit() and form_prefs.user_preferences_save.data:
+        utils_settings.change_preferences(form_prefs)
+
+    # Redirect back to the page that opened the modal, or home
+    return redirect(request.referrer or url_for('routes_general.home'))

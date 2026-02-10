@@ -77,7 +77,8 @@ FUNCTION_INFORMATION = {
         },
         {
             'id': 'period',
-            'type': 'integer',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 30,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
@@ -120,7 +121,8 @@ FUNCTION_INFORMATION = {
             'type': 'select',
             'default_value': 'raise',
             'options_select': [
-                ('raise', 'Raise')
+                ('raise', 'Raise'),
+                ('lower', 'Lower (Cooling/Humidifying)')
             ],
             'name': lazy_gettext('Direction'),
             'phrase': 'The direction the Output will push the Measurement'
@@ -176,7 +178,8 @@ class CustomModule(AbstractFunction):
             sampletime=self.period,
             out_min=0,
             out_max=self.period,
-            noiseband=self.noiseband)
+            noiseband=self.noiseband,
+            direction=self.direction)
 
         self.running = True
         self.autotune_active = True

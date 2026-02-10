@@ -55,7 +55,7 @@ try:
         new_user.password_hash = set_password(password)
         new_user.email = email
         new_user.role_id = 1
-        new_user.theme = 'slate'
+        new_user.theme = '/static/css/bootstrap-4-themes/aot.css'
         new_user.landing_page = 'live'
         new_user.index_page = 'landing'
         new_user.language = 'en'

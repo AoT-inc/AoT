@@ -31,7 +31,7 @@
   
   <div style="clear: both; padding: 1em 0;"></div>
 
-  {{_('암페어 측정 입력에서 계산된 에너지 사용량.') }}
+  {{_('Energy usage calculated from an amp measure input.') }}
 
   <div style="clear: both; padding: 0.5em 0;"></div>
 
@@ -98,7 +98,7 @@
           {{form_energy_usage_mod.selection_device_measure_ids.label(class_='control-label')}}
           <div>
             <select class="form-control form-tooltip form-dropdown" id="selection_device_measure_ids" name="selection_device_measure_ids" style="width: 100%;" title="" data-original-title="{{_('Select a measurement with the unit') + ': ' +_('Amps')}}">
-              <option value="">{{_('선택되지 않음')}}</option>
+              <option value="">{{_('Not Selected')}}</option>
             {% for each_input_form in choices_input -%}
               <option value="{{each_input_form['value']}}"{% if each_input_form['value'] == each_energy.device_id + ',' + each_energy.measurement_id %} selected{% endif %}>{{each_input_form['item']}}</option>
             {% endfor -%}
@@ -360,22 +360,22 @@ $(document).ready(function() {
             buttons: [{
                 type: 'hour',
                 count: 1,
-                text: '1시간'
+                text: '{{_('1 Hour')}}'
             }, {
                 type: 'day',
                 count: 1,
-                text: '1일'
+                text: '{{_('1 Day')}}'
             }, {
                 type: 'week',
                 count: 1,
-                text: '1주'
+                text: '{{_('1 Week')}}'
             }, {
                 type: 'month',
                 count: 1,
-                text: '1개월'
+                text: '{{_('1 Month')}}'
             }, {
                 type: 'all',
-                text: '전체'
+                text: '{{_('All')}}'
             }],
             inputEnabled: false,
             selected: 4
@@ -395,7 +395,7 @@ $(document).ready(function() {
         yAxis: [
           {
             title: {
-              text: '전압 (A)'
+              text: '{{_('Amps')}} (A)'
             },
             labels: {
               format: '{value}'
@@ -483,22 +483,22 @@ $(document).ready(function() {
           buttons: [{
               type: 'hour',
               count: 1,
-              text: '1시간'
+              text: '{{_('1 Hour')}}'
           }, {
               type: 'day',
               count: 1,
-              text: '1일'
+              text: '{{_('1 Day')}}'
           }, {
               type: 'week',
               count: 1,
-              text: '1주'
+              text: '{{_('1 Week')}}'
           }, {
               type: 'month',
               count: 1,
-              text: '1개월'
+              text: '{{_('1 Month')}}'
           }, {
               type: 'all',
-              text: '전체'
+              text: '{{_('All')}}'
           }],
           inputEnabled: false,
           selected: 4
@@ -518,7 +518,7 @@ $(document).ready(function() {
       yAxis: [
         {
           title: {
-            text: '전압 (A)'
+            text: '{{_('Amps')}} (A)'
           },
           labels: {
             format: '{value}'

@@ -100,5 +100,3 @@ class DeviceMeasurements(CRUDMixin, db.Model):
 class DeviceMeasurementsSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = DeviceMeasurements
-
-    conversion = Nested(ConversionSchema)

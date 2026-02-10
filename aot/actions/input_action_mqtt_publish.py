@@ -10,7 +10,7 @@ from aot.utils.utils import random_alphanumeric
 
 ACTION_INFORMATION = {
     'name_unique': 'mqtt_publish_input',
-    'name': "MQTT: {}: {}".format(lazy_gettext('Publish'), lazy_gettext('Measurement')),
+    'name': lazy_gettext('MQTT: Publish: Measurement'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['inputs'],

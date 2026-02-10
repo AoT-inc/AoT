@@ -53,7 +53,8 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),

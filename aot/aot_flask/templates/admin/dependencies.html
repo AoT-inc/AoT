@@ -41,31 +41,31 @@
   <div class="container" style="padding-bottom: 1.7em">
     {% include 'flash_messages.html' %}
 
-    <h4>{{_('패키지 관리')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
-    <p>{{_('AoT에서 사용하는 여러 소프트웨어 패키지가 비활성화될 수 있습니다. 이는 초기 설치 프로세스를 빠르게 하기 위한 조치입니다. 이 페이지에서는 설치된 패키지를 확인하고, 현재 충족되지 않은 패키지를 설치할 수 있습니다.')}}</p>
+    <h4>{{_('Package Management')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+    <p>{{_('Various software packages used in AoT may be deactivated to speed up the initial installation process. On this page, you can check installed packages and install those that are currently unmet.')}}</p>
     
     {% if device != '0' %}
-    <h2>장치: {{device_name}} ({{device}})</h2>
+    <h2>{{_('Device')}}: {{device_name}} ({{device}})</h2>
     
     {% if device_unmet_dependencies %}
     
     {% if install_in_progress == 1 %}
     
-    <p>다음 패키지의 설치가 시작되었습니다:</p>
+    <p>{{_('Installation of the following packages has started')}}:</p>
     <ul>
     {% for each_dep in device_unmet_dependencies %}
       <li>{% if each_dep[2] == 'internal' %}{{each_dep[3]}}{% else %}{{each_dep[0]}}{% endif %}</li>
     {% endfor %}
     </ul>
-    <p>아래의 패키지 설치 로그는 5초마다 새로고침됩니다. 모든 패키지가 설치될 때까지 기다린 후, 관련 장치를 다시 추가하십시오. 설치 과정이 완료되면 로그의 마지막에 "#### 패키지 설치 완료" 메시지가 나타납니다.</p>
-    <p>설치 과정에 문제가 발생하여 설치 상태를 재설정해야 하는 경우, <code>/opt/AoT/.dependency</code> 파일을 삭제하면 패키지 설치 함수이 복원됩니다.</p>
+    <p>{{_('The package installation log below refreshes every 5 seconds. Please wait until all packages are installed before re-adding the associated device. When the installation process is complete, the message "#### Package installation complete" will appear at the end of the log.')}}</p>
+    <p>{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore package installation functions.')}}</p>
     
     <pre style="overflow:auto; resize: vertical; height:400px" id="dependency_status"></pre>
     
     {% else %}
     
-    <p>다음 장치를 추가하는 동안 충족되지 않은 패키지가 발견되었습니다: {{device}}</p>
-    <p>설치되지 않은 패키지:</p>
+    <p>{{_('Unmet packages were found while adding the following device')}}: {{device}}</p>
+    <p>{{_('Packages not installed')}}:</p>
     <ul>
     {% for each_dep in device_unmet_dependencies %}
       <li>
@@ -79,10 +79,10 @@
     </ul>
     
     {% if dependencies_message %}
-    <p>패키지 관련 메시지: {{dependencies_message}}</p>
+    <p>{{_('Package related message')}}: {{dependencies_message}}</p>
     {% endif %}
     
-    <p>이 패키지를 설치하려면 아래의 "설치" 버튼을 클릭하고, 설치가 완료될 때까지 기다린 후 장치를 다시 추가하십시오. 설치가 완료된 후, 새로 설치된 패키지를 감지할 수 있도록 프론트엔드와 백엔드 데몬이 자동으로 다시 시작됩니다. 데몬의 재시작을 원하지 않는 경우, 시스템이 이를 수행할 수 있는 시점까지 패키지 설치를 연기하십시오.</p>
+    <p>{{_('To install this package, click the "Install" button below and wait for the installation to complete before re-adding the device. After installation, the frontend and backend daemons will automatically restart to detect the newly installed package. If you do not want to restart the daemon, postpone the package installation until the system can perform it.')}}</p>
     
     <form method="post" action="/admin/dependencies/{{device}}">
       {{form_dependencies.csrf_token}}
@@ -97,17 +97,17 @@
     {% endif %}
     
     {% else %}
-    <p>이 장치에 필요한 모든 패키지가 설치되었습니다.</p>
+    <p>{{_('All required packages for this device are installed.')}}</p>
     {% endif %}
     
-    <h4 style="padding: 1em 0 0 0.5em"><a href="/admin/dependencies"><i class="fa fa-arrow-left"></i> 장치 목록으로 돌아가기</a></h4>
+    <h4 style="padding: 1em 0 0 0.5em"><a href="/admin/dependencies"><i class="fa fa-arrow-left"></i> {{_('Return to device list')}}</a></h4>
     
     {% else %}
     
     {% if unmet_list %}
     <div>
-      <h3 style="color: #f78900">일부 패키지가 충족되지 않았습니다</h3>
-      <p>다음 목록에는 현재 설치되지 않은 패키지와 이를 사용하는 장치가 포함되어 있습니다. 특정 함수을 사용하려면 해당 함수에 필요한 패키지를 먼저 설치해야 합니다. 장치 이름을 선택하면 해당 장치의 패키지 정보와 설치 옵션을 확인할 수 있습니다.</p>
+      <h3 style="color: #f78900">{{_('Some packages are not met')}}</h3>
+      <p>{{_('The following list includes packages not currently installed and the devices that use them. To use a specific function, you must first install the packages required for that function. Selecting a device name will allow you to check package information and installation options for that device.')}}</p>
     <table class="table">
       <thead>
         <tr>

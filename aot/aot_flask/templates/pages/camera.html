@@ -34,7 +34,7 @@
       if (submitter_btn.attr("name") === 'camera_mod' ||
           submitter_btn.attr("name") === 'camera_del' ||
           submitter_btn.attr("name") === 'timelapse_generate') {
-            {% if not misc.hide_alert_info %}toastr['info']('명령이 전송되었습니다. 잠시 기다려 주세요.');{% endif %}
+            {% if not misc.hide_alert_info %}toastr['info']('{{_("Command sent. Please wait.")}}');{% endif %}
         $.ajax({
           type: "POST",
           url: '/camera_submit',
@@ -51,25 +51,25 @@
               }
               {% if not misc.hide_alert_warning %}
               if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-                toastr['warning']('경고: ' + data.data.messages.warning.join(", "));
+                toastr['warning']('{{_("Warning")}}: ' + data.data.messages.warning.join(", "));
               }
               {% endif %}
               {% if not misc.hide_alert_info %}
               if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-                toastr['info']('정보: ' + data.data.messages.info.join(", "));
+                toastr['info']('{{_("Info")}}: ' + data.data.messages.info.join(", "));
               }
               {% endif %}
               {% if not misc.hide_alert_success %}
               if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-                toastr['success']('성공: ' + data.data.messages.success.join(", "));
+                toastr['success']('{{_("Success")}}: ' + data.data.messages.success.join(", "));
               }
               {% endif %}
             } else {
-              toastr['error']('오류: ' + data.data.messages.error.join(", "));
+              toastr['error']('{{_("Error")}}: ' + data.data.messages.error.join(", "));
             }
           },
           error: function() {
-            toastr['error']('오류: 서버와 통신 할 수 없습니다.');
+            toastr['error']('{{_("Error: Unable to communicate with server.")}}');
           }
         });
         e.preventDefault();
@@ -174,13 +174,13 @@
         <div class="col-auto">
           {{form_camera.timelapse_interval.label(class_='control-label')}}
           <div>
-            {{form_camera.timelapse_interval(class_='form-control', **{'title':_('사진이 촬영될 간격')})}}
+            {{form_camera.timelapse_interval(class_='form-control', **{'title':_('Interval between photo captures')})}}
           </div>
         </div>
         <div class="col-auto">
           {{form_camera.timelapse_runtime_sec.label(class_='control-label')}}
           <div>
-            {{form_camera.timelapse_runtime_sec(class_='form-control', **{'title':_('촬영을 중지하기 전까지 실행할 시간. 0으로 설정하면 계속 실행됩니다.')})}}
+            {{form_camera.timelapse_runtime_sec(class_='form-control', **{'title':_('Duration to run before stopping. Set to 0 to run indefinitely.')})}}
           </div>
         </div>
         <div class="col-auto">
@@ -195,7 +195,7 @@
           {{form_camera.camera_mod(class_='btn btn-primary btn-block')}}
         </div>
         <div class="col-auto">
-          {{form_camera.camera_del(class_='btn btn-primary btn-block', **{'onclick':'return confirm("이 카메라를 삭제하시겠습니까?")'})}}
+          {{form_camera.camera_del(class_='btn btn-primary btn-block', **{'onclick':'return confirm("' + _('Are you sure you want to delete this camera?') + '")'})}}
         </div>
       </div>
 
@@ -204,49 +204,49 @@
       {% if each_camera.library == 'picamera' %}
         {% if not pi_camera_enabled %}
         <div class="col-12" style="color: red">
-          {{_("Raspberry Pi 카메라 지원이 활성화되지 않은 것 같습니다. Raspberry Pi 설정에서 활성화하거나 'sudo raspi-config' 명령을 사용하여 활성화하세요.'")}}
+          {{_("Raspberry Pi camera support does not seem to be enabled. Enable it in Raspberry Pi settings or use 'sudo raspi-config'.")}}
         </div>
         {% endif %}
       {% elif each_camera.library == 'fswebcam' %}
         <div class="col-12" style="color: red">
-          {{_("사용하는 카메라에 따라 다양한 옵션이 제공됩니다.")}} Execute 'fswebcam --device /dev/video0 --list-controls' 명령을 실행하면 '사용자 정의 옵션'에서 사용할 수 있는 옵션을 확인할 수 있습니다.
+          {{_("Various options are available depending on the camera used. Run 'fswebcam --device /dev/video0 --list-controls' to see available options for 'Custom Options'.")}}
         </div>
       {% elif each_camera.library == 'libcamera' %}
         <div class="col-12" style="color: red">
-          {{_("사용하는 카메라에 따라 다양한 옵션이 제공됩니다.")}} 'libcamera-hello' 명령을 실행하면 카메라에 대한 정보를 확인할 수 있습니다.
+          {{_("Various options are available depending on the camera used. Run 'libcamera-hello' to see information about the camera.")}}
         </div>
       {% elif each_camera.library == 'raspistill' %}
         <div class="col-12" style="color: red">
-          {{_("사용하는 카메라에 따라 다양한 옵션이 제공됩니다.")}} 'raspistill --help' 명령을 실행하면 카메라에 대한 정보를 확인할 수 있습니다.
+          {{_("Various options are available depending on the camera used. Run 'raspistill --help' to see information about the camera.")}}
         </div>
       {% elif each_camera.library == 'opencv' %}
         <div class="col-12" style="color: red">
-          {{_("사용하는 카메라에 따라 다양한 옵션이 제공됩니다.")}}
+          {{_("Various options are available depending on the camera used.")}}
         </div>
       {% endif %}
 
         <div class="col-12 col-sm-3">
           {{form_camera.name.label(class_='control-label')}}
           <div>
-            {{form_camera.name(class_='form-control', value=each_camera.name, **{'title':_('카메라 이름')})}}
+            {{form_camera.name(class_='form-control', value=each_camera.name, **{'title':_('Camera Name')})}}
           </div>
         </div>
         <div class="col-auto">
           {{form_camera.cmd_pre_camera.label(class_='control-label')}}
           <div>
-            {{form_camera.cmd_pre_camera(class_='form-control', value=each_camera.cmd_pre_camera, **{'title':_('이미지 촬영 전에 실행할 Linux 셸 명령어')})}}
+            {{form_camera.cmd_pre_camera(class_='form-control', value=each_camera.cmd_pre_camera, **{'title':_('Linux shell command to execute before capturing image')})}}
            </div>
         </div>
         <div class="col-auto">
           {{form_camera.cmd_post_camera.label(class_='control-label')}}
           <div>
-            {{form_camera.cmd_post_camera(class_='form-control', value=each_camera.cmd_post_camera, **{'title':_('이미지 촬영 후에 실행할 Linux 셸 명령어')})}}
+            {{form_camera.cmd_post_camera(class_='form-control', value=each_camera.cmd_post_camera, **{'title':_('Linux shell command to execute after capturing image')})}}
            </div>
         </div>
         <div class="col-auto">
           {{form_camera.output_id.label(class_='control-label')}}
           <div>
-            <select class="form-control form-tooltip form-dropdown" id="output_id" name="output_id" title="" data-original-title="카메라가 이미지를 촬영하거나 스트리밍할 때 활성화할 출력을 선택하세요.">
+            <select class="form-control form-tooltip form-dropdown" id="output_id" name="output_id" title="" data-original-title="{{_('Select an output to activate when the camera captures or streams.')}}">
               {%  if not choices_output_channels %}
                 <option value="">No Outputs Available</option>
               {% else %}
@@ -261,26 +261,26 @@
         <div class="col-auto">
           {{form_camera.output_duration.label(class_='control-label')}}
           <div>
-            {{form_camera.output_duration(class_='form-control', value=each_camera.output_duration, **{'title':_('정지 이미지를 촬영하기 전에 출력을 유지할 시간. 예를 들어, 켜지는 데 몇 초 걸리는 형광등에 유용합니다.')})}}
+            {{form_camera.output_duration(class_='form-control', value=each_camera.output_duration, **{'title':_('Duration to hold output before capturing still image. Useful for fluorescent lights that take seconds to turn on.')})}}
            </div>
         </div>
         <div class="col-auto">
           {{form_camera.path_still.label(class_='control-label')}}
           <div>
-            {{form_camera.path_still(class_='form-control', value=each_camera.path_still, **{'title':_('이미지 파일을 저장할 경로. 기본 위치를 사용하려면 비워 두세요.')})}}
+            {{form_camera.path_still(class_='form-control', value=each_camera.path_still, **{'title':_('Path to save image files. Leave empty to use default location.')})}}
            </div>
         </div>
         <div class="col-auto">
           {{form_camera.path_timelapse.label(class_='control-label')}}
           <div>
-            {{form_camera.path_timelapse(class_='form-control', value=each_camera.path_timelapse, **{'title':_('타임랩스 이미지 파일을 저장할 경로. 기본 위치를 사용하려면 비워 두세요.')})}}
+            {{form_camera.path_timelapse(class_='form-control', value=each_camera.path_timelapse, **{'title':_('Path to save timelapse image files. Leave empty to use default location.')})}}
            </div>
         </div>
       {% if camera_info[each_camera.library]['capable_stream'] %}
         <div class="col-auto">
           {{form_camera.path_video.label(class_='control-label')}}
           <div>
-            {{form_camera.path_video(class_='form-control', value=each_camera.path_video, **{'title':_('비디오 파일을 저장할 경로. 기본 위치를 사용하려면 비워 두세요.')})}}
+            {{form_camera.path_video(class_='form-control', value=each_camera.path_video, **{'title':_('Path to save video files. Leave empty to use default location.')})}}
            </div>
         </div>
       {% endif %}
@@ -331,30 +331,30 @@
 
     {% if each_camera.timelapse_started and not each_camera.hide_timelapse %}
       <div class="col-12">
-        {{_('타임랩스 설정')}}:
-        <br>타임랩스 상태: {% if each_camera.timelapse_paused %}일시 정지됨{% else %}실행 중{% endif %}
-        <br/>시작 시간: {{epoch_to_time_string(each_camera.timelapse_start_time)}}
-        <br/>종료 시간: {{epoch_to_time_string(each_camera.timelapse_end_time)}}
-        <br/>촬영 간격: {{each_camera.timelapse_interval}} 초
-        <br/>다음 촬영 시간: {{epoch_to_time_string(each_camera.timelapse_next_capture)}}
-        <br/>다음 촬영 번호: {{each_camera.timelapse_capture_number}}
+        {{_('Timelapse Settings')}}:
+        <br>{{_('Timelapse Status')}}: {% if each_camera.timelapse_paused %}{{_('Paused')}}{% else %}{{_('Running')}}{% endif %}
+        <br/>{{_('Start Time')}}: {{epoch_to_time_string(each_camera.timelapse_start_time)}}
+        <br/>{{_('End Time')}}: {{epoch_to_time_string(each_camera.timelapse_end_time)}}
+        <br/>{{_('Interval')}}: {{each_camera.timelapse_interval}} {{_('seconds')}}
+        <br/>{{_('Next Capture Time')}}: {{epoch_to_time_string(each_camera.timelapse_next_capture)}}
+        <br/>{{_('Next Capture Number')}}: {{each_camera.timelapse_capture_number}}
       </div>
     {% endif %}
 
     {% if latest_img_tl[each_camera.unique_id] and not each_camera.hide_timelapse %}
 
       <div class="col-12 col-sm-4 col-lg-2">
-        <a data-toggle="collapse" href="#collapseContainerTimelapseVideo-{{each_camera.unique_id}}" aria-expanded="false" aria-controls="collapseContainerTimelapse-{{each_camera.unique_id}}" class="form-control btn btn-primary" role="button">{{_('생성')}}</a>
+        <a data-toggle="collapse" href="#collapseContainerTimelapseVideo-{{each_camera.unique_id}}" aria-expanded="false" aria-controls="collapseContainerTimelapse-{{each_camera.unique_id}}" class="form-control btn btn-primary" role="button">{{_('Generate')}}</a>
       </div>
       <div class="collapse" id="collapseContainerTimelapseVideo-{{each_camera.unique_id}}" style="padding: 0.5em">
         <div class="row align-items-end small-gutters">
           <div class="col-12">
-            타임랩스 영상 생성 옵션:
+            {{_('Timelapse Video Generation Options')}}:
           </div>
           <div class="col-auto">
             {{form_camera.timelapse_image_set.label(class_='control-label')}}
             <div>
-              <select class="form-control form-tooltip form-dropdown" id="timelapse_image_set" name="timelapse_image_set" title="" data-original-title="비디오로 변환할 타임랩스 이미지 세트를 선택하세요 (이름은 타임랩스 시작 시간 기준)">
+              <select class="form-control form-tooltip form-dropdown" id="timelapse_image_set" name="timelapse_image_set" title="" data-original-title="{{_('Select timelapse image set to convert to video (named by start time)')}}">
               {% for each_set in time_lapse_imgs[each_camera.unique_id] %}
                 <option value="{{each_set}}">{{each_set}}</option>
               {% endfor %}
@@ -364,7 +364,7 @@
           <div class="col-auto">
             {{form_camera.timelapse_codec.label(class_='control-label')}}
             <div>
-              <select class="form-control form-tooltip form-dropdown" id="timelapse_codec" name="timelapse_codec" title="" data-original-title="비디오를 인코딩할 코덱을 선택하세요">
+              <select class="form-control form-tooltip form-dropdown" id="timelapse_codec" name="timelapse_codec" title="" data-original-title="{{_('Select codec for video encoding')}}">
                 <option value="mpeg4">mpeg4</option>
               </select>
             </div>
@@ -382,14 +382,14 @@
       </div>
 
       <div class="container-timelapse-{{each_camera.unique_id}}">
-        {{_('최근 타임랩스')}}: {{latest_img_tl_ts[each_camera.unique_id]}} ({{latest_img_tl_size[each_camera.unique_id]}})
+        {{_('Latest Timelapse')}}: {{latest_img_tl_ts[each_camera.unique_id]}} ({{latest_img_tl_size[each_camera.unique_id]}})
         <br/><a href="/camera/{{each_camera.unique_id}}/timelapse/{{latest_img_tl[each_camera.unique_id]}}" target="_blank"><img style="max-width: 100%" src="/camera/{{each_camera.unique_id}}/timelapse/{{latest_img_tl[each_camera.unique_id]}}"></a>
       </div>
     {% endif %}
 
     {% if latest_img_still[each_camera.unique_id] and not each_camera.hide_still %}
       <div class="container-still-{{each_camera.unique_id}}">
-        {{_('최근 사진')}}: {{latest_img_still_ts[each_camera.unique_id]}} ({{latest_img_still_size[each_camera.unique_id]}})
+        {{_('Latest Photo')}}: {{latest_img_still_ts[each_camera.unique_id]}} ({{latest_img_still_size[each_camera.unique_id]}})
         <br/><a href="/camera/{{each_camera.unique_id}}/still/{{latest_img_still[each_camera.unique_id]}}" target="_blank"><img style="max-width: 100%" src="/camera/{{each_camera.unique_id}}/still/{{latest_img_still[each_camera.unique_id]}}"></a>
       </div>
     {% endif %}

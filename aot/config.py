@@ -9,20 +9,23 @@ from datetime import timedelta
 import os
 from flask_babel import lazy_gettext as lg
 
+# Determine if running in a Docker container
+DOCKER_CONTAINER = os.environ.get('DOCKER_CONTAINER', False) == 'TRUE'
+
 # Append proper path for other software reading this config file
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from config_translations import TRANSLATIONS as T
 
-AOT_VERSION = '8.16.1'
+AOT_VERSION = '26.0.1'
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = '435f35958689'
+ALEMBIC_VERSION = '718f314963be'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
 # Set False to enable upgrading to the latest Release version (default).
 # Do not use this feature unless you know what you're doing or have been
 # instructed to do so, as it can really mess up your system.
-FORCE_UPGRADE_MASTER = False
+FORCE_UPGRADE_MASTER = True
 
 # Final release for each major version number
 # Used to determine proper upgrade page to display
@@ -60,6 +63,7 @@ PATH_OUTPUTS = os.path.join(INSTALL_DIRECTORY, 'aot/outputs')
 PATH_WIDGETS = os.path.join(INSTALL_DIRECTORY, 'aot/widgets')
 PATH_FUNCTIONS_CUSTOM = os.path.join(PATH_FUNCTIONS, 'custom_functions')
 PATH_ACTIONS_CUSTOM = os.path.join(PATH_ACTIONS, 'custom_actions')
+PATH_INPUTS_GIS = os.path.join(INSTALL_DIRECTORY, 'aot/inputs_gis')
 PATH_INPUTS_CUSTOM = os.path.join(PATH_INPUTS, 'custom_inputs')
 PATH_OUTPUTS_CUSTOM = os.path.join(PATH_OUTPUTS, 'custom_outputs')
 PATH_WIDGETS_CUSTOM = os.path.join(PATH_WIDGETS, 'custom_widgets')
@@ -80,10 +84,24 @@ PATH_SETTINGS_BACKUP = os.path.join(INSTALL_DIRECTORY, 'aot/backup_settings')
 USAGE_REPORTS_PATH = os.path.join(INSTALL_DIRECTORY, 'output_usage_reports')
 DEPENDENCY_INIT_FILE = os.path.join(INSTALL_DIRECTORY, '.dependency')
 UPGRADE_INIT_FILE = os.path.join(INSTALL_DIRECTORY, '.upgrade')
-BACKUP_PATH = '/var/AoT-backups'  # Where AoT backups are stored
+BACKUP_PATH = os.path.join(INSTALL_DIRECTORY, 'aot/tests/backups')  # Where AoT backups are stored
 
 # Log files
-LOG_PATH = '/var/log/aot'  # Where generated logs are stored
+if DOCKER_CONTAINER:
+    LOG_PATH = '/var/log/aot'  # Where generated logs are stored (Docker default)
+else:
+    # Use local or host-specific path
+    LOG_PATH = os.path.join(INSTALL_DIRECTORY, 'logs')
+
+# Ensure log directory exists
+if not os.path.exists(LOG_PATH):
+    try:
+        os.makedirs(LOG_PATH, exist_ok=True)
+    except Exception:
+        # Fallback to local logs if /var/log/aot is not writable
+        LOG_PATH = os.path.join(INSTALL_DIRECTORY, 'logs')
+        os.makedirs(LOG_PATH, exist_ok=True)
+
 LOGIN_LOG_FILE = os.path.join(LOG_PATH, 'login.log')
 DAEMON_LOG_FILE = os.path.join(LOG_PATH, 'aot.log')
 KEEPUP_LOG_FILE = os.path.join(LOG_PATH, 'aotkeepup.log')
@@ -97,11 +115,11 @@ HTTP_ACCESS_LOG_FILE = '/var/log/nginx/access.log'
 HTTP_ERROR_LOG_FILE = '/var/log/nginx/error.log'
 
 # Lock files
-LOCK_PATH = '/var/lock'
+LOCK_PATH = os.path.join(INSTALL_DIRECTORY, 'aot/tests')
 LOCK_FILE_STREAM = os.path.join(LOCK_PATH, 'aot-camera-stream.pid')
 
 # Run files
-RUN_PATH = '/var/run'
+RUN_PATH = os.path.join(INSTALL_DIRECTORY, 'aot/tests')
 FRONTEND_PID_FILE = os.path.join(RUN_PATH, 'aotflask.pid')
 DAEMON_PID_FILE = os.path.join(RUN_PATH, 'aot.pid')
 
@@ -113,9 +131,9 @@ STORED_SSL_CERTIFICATE_PATH = os.path.join(
 PATH_CAMERAS = os.path.join(INSTALL_DIRECTORY, 'cameras')
 
 # Notes
-PATH_NOTE_ATTACHMENTS = os.path.join(INSTALL_DIRECTORY, 'note_attachments')
+PATH_NOTE_ATTACHMENTS = os.path.join(INSTALL_DIRECTORY, 'uploads/notes')
 
-# Determine if running in a Docker container
+# Determine if running in a Docker container (redundant but kept for script reading this file)
 DOCKER_CONTAINER = os.environ.get('DOCKER_CONTAINER', False) == 'TRUE'
 
 # Pyro5 URI/host, used by aot_client.py
@@ -159,8 +177,22 @@ LANGUAGES = {
     'sr': 'српски (Serbian)',
     'sv': 'Svenska (Swedish)',
     'tr': 'Türkçe (Turkish)',
-    'zh': '中文 (Chinese)'
+    'zh': '中文 (Chinese)',
+    'ja': '日本語 (Japanese)'
 }
+
+# AI Agent & Service Config (For future integration)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+AI_MODEL = 'gpt-4o'
+AI_AGENT_ENABLED = True # 에이전트 기반 마련 활성화
+
+# Map defaults (Leaflet first, other providers can be enabled later)
+MAP_PROVIDER = 'osm'  # available values: osm, mapbox, google (future)
+MAP_API_KEY = ''  # optional, used for providers that require a key
+MAP_STYLE_URL = ''  # optional style URL (e.g., mapbox style)
+MAP_DEFAULT_CENTER = (0.0, 0.0)  # lat, lng default center
+MAP_DEFAULT_ZOOM = 2  # wide world view by default
+MAP_GEOCODER = 'none'  # none, nominatim, mapbox, google (future)
 
 DASHBOARD_WIDGETS = [
     ('', f"{lg('Add')} {lg('Dashboard')} {lg('Widget')}"),
@@ -238,16 +270,23 @@ CAMERA_INFO = {
         'capable_image': True,
         'capable_stream': False
     },
+    'stream_direct': {
+        'name': 'Direct Stream (Client-side HLS/Direct)',
+        'dependencies_module': [],
+        'capable_image': False,
+        'capable_stream': False,
+        'client_side_stream': True
+    },
 }
 
 METHOD_DEP_BASE = [
     ('bash-commands',
-     ['/opt/AoT/aot/aot_flask/static/js/user_js/highcharts-9.1.2.js'],
+     [os.path.join(PATH_JS_USER, 'highcharts-9.1.2.js')],
      [
         'wget --no-clobber https://code.highcharts.com/zips/Highcharts-9.1.2.zip',
         'unzip Highcharts-9.1.2.zip -d Highcharts-9.1.2',
-        'cp -rf Highcharts-9.1.2/code/highcharts.js /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-9.1.2.js',
-        'cp -rf Highcharts-9.1.2/code/highcharts.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highcharts.js.map',
+        f'cp -rf Highcharts-9.1.2/code/highcharts.js {os.path.join(PATH_JS_USER, "highcharts-9.1.2.js")}',
+        f'cp -rf Highcharts-9.1.2/code/highcharts.js.map {os.path.join(PATH_JS_USER, "highcharts.js.map")}',
         'rm -rf Highcharts-9.1.2'
      ])
 ]
@@ -357,28 +396,28 @@ DEPENDENCIES_GENERAL = {
         'dependencies_module': [
             ('bash-commands',
              [
-                 '/opt/AoT/aot/aot_flask/static/js/user_js/highstock-9.1.2.js',
-                 '/opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more-9.1.2.js',
-                 '/opt/AoT/aot/aot_flask/static/js/user_js/data-9.1.2.js',
-                 '/opt/AoT/aot/aot_flask/static/js/user_js/exporting-9.1.2.js',
-                 '/opt/AoT/aot/aot_flask/static/js/user_js/export-data-9.1.2.js',
-                 '/opt/AoT/aot/aot_flask/static/js/user_js/offline-exporting-9.1.2.js'
+                 os.path.join(PATH_JS_USER, 'highstock-9.1.2.js'),
+                 os.path.join(PATH_JS_USER, 'highcharts-more-9.1.2.js'),
+                 os.path.join(PATH_JS_USER, 'data-9.1.2.js'),
+                 os.path.join(PATH_JS_USER, 'exporting-9.1.2.js'),
+                 os.path.join(PATH_JS_USER, 'export-data-9.1.2.js'),
+                 os.path.join(PATH_JS_USER, 'offline-exporting-9.1.2.js')
              ],
              [
                  'wget --no-clobber https://code.highcharts.com/zips/Highcharts-Stock-9.1.2.zip',
                  'unzip Highcharts-Stock-9.1.2.zip -d Highcharts-Stock-9.1.2',
-                 'cp -rf Highcharts-Stock-9.1.2/code/highstock.js /opt/AoT/aot/aot_flask/static/js/user_js/highstock-9.1.2.js',
-                 'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highstock.js.map',
-                 'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more-9.1.2.js',
-                 'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map /opt/AoT/aot/aot_flask/static/js/user_js/highcharts-more.js.map',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js /opt/AoT/aot/aot_flask/static/js/user_js/data-9.1.2.js',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js.map /opt/AoT/aot/aot_flask/static/js/user_js/data.js.map',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js /opt/AoT/aot/aot_flask/static/js/user_js/exporting-9.1.2.js',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js.map /opt/AoT/aot/aot_flask/static/js/user_js/exporting.js.map',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js /opt/AoT/aot/aot_flask/static/js/user_js/export-data-9.1.2.js',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js.map /opt/AoT/aot/aot_flask/static/js/user_js/export-data.js.map',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js /opt/AoT/aot/aot_flask/static/js/user_js/offline-exporting-9.1.2.js',
-                 'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js.map /opt/AoT/aot/aot_flask/static/js/user_js/offline-exporting.js.map',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js {os.path.join(PATH_JS_USER, "highstock-9.1.2.js")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/highstock.js.map {os.path.join(PATH_JS_USER, "highstock.js.map")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js {os.path.join(PATH_JS_USER, "highcharts-more-9.1.2.js")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/highcharts-more.js.map {os.path.join(PATH_JS_USER, "highcharts-more.js.map")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js {os.path.join(PATH_JS_USER, "data-9.1.2.js")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/data.js.map {os.path.join(PATH_JS_USER, "data.js.map")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js {os.path.join(PATH_JS_USER, "exporting-9.1.2.js")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/exporting.js.map {os.path.join(PATH_JS_USER, "exporting.js.map")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js {os.path.join(PATH_JS_USER, "export-data-9.1.2.js")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/export-data.js.map {os.path.join(PATH_JS_USER, "export-data.js.map")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js {os.path.join(PATH_JS_USER, "offline-exporting-9.1.2.js")}',
+                 f'cp -rf Highcharts-Stock-9.1.2/code/modules/offline-exporting.js.map {os.path.join(PATH_JS_USER, "offline-exporting.js.map")}',
                  'rm -rf Highcharts-Stock-9.1.2'
              ])
         ]
@@ -454,6 +493,10 @@ FUNCTION_INFO = {
         'dependencies_module': [
             ('pip-pypi', 'suntime', 'suntime==1.2.5')
         ]
+    },
+    'trigger_sequence': {
+        'name': f"{T['trigger']['title']}: {lg('Sequence')}",
+        'dependencies_module': []
     }
 }
 
@@ -571,6 +614,13 @@ class ProdConfig(object):
     WTF_CSRF_TIME_LIMIT = 60 * 60 * 24 * 7  # 1 week expiration
     REMEMBER_COOKIE_DURATION = timedelta(days=90)
     SESSION_TYPE = "filesystem"
+
+    # [Security] Session Cookie Settings
+    # Relaxed for Development/LAN Access
+    SESSION_COOKIE_SECURE = False 
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    WTF_CSRF_SSL_STRICT = False
 
     # Ensure file containing the Flask secret_key exists
     FLASK_SECRET_KEY_PATH = os.path.join(DATABASE_PATH, 'flask_secret_key')

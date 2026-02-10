@@ -199,12 +199,20 @@ WIDGET_INFORMATION = {
 
     'custom_options': [
         {
+            'type': 'header',
+            'name': lazy_gettext('장치 설정')
+        },
+        {
             'id': 'pid',
             'type': 'select_device',
             'default_value': '',
             'options_select': ['PID'],
             'name': lazy_gettext('PID 컨트롤러'),
             'phrase': lazy_gettext('제어할 PID 컨트롤러를 선택하세요.')
+        },
+        {
+            'type': 'header',
+            'name': lazy_gettext('실행 설정')
         },
         {
             'id': 'max_measure_age',
@@ -216,11 +224,16 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
             'phrase': lazy_gettext('위젯을 새로 고침하는 간격')
+        },
+        {
+            'type': 'header',
+            'name': lazy_gettext('표시 설정')
         },
         {
             'id': 'enable_timestamp',

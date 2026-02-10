@@ -96,7 +96,7 @@ class AoTRelease:
 
             if releases:
                 if (parse(releases[0]) > parse(AOT_VERSION) or
-                        parse(current_latest_tag[0]) > parse(AOT_VERSION)):
+                        (current_latest_tag and parse(current_latest_tag) > parse(AOT_VERSION))):
                     upgrade_exists = True
         except Exception:
             logger.exception("github_upgrade_exists()")

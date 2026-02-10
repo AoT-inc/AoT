@@ -40,6 +40,10 @@ WIDGET_INFORMATION = {
 
     'custom_options': [
         {
+            'type': 'header',
+            'name': lazy_gettext('장치 설정')
+        },
+        {
             'id': 'measurement',
             'type': 'select_measurement',
             'default_value': '',
@@ -63,11 +67,16 @@ WIDGET_INFORMATION = {
         },
         {
             'id': 'refresh_seconds',
-            'type': 'float',
+            'type': 'text',
+            'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': 'The period of time between refreshing the widget'
+        },
+        {
+            'type': 'header',
+            'name': lazy_gettext('표시 설정')
         },
         {
             'id': 'decimal_places',

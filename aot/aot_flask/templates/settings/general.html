@@ -36,7 +36,7 @@
   <!-- Route: /settings/general -->
   <div class="container">
     <h3 style="text-align: right; padding-bottom: 1.3em;">
-      <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#general-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('일반 설정')}}</h3>
+      <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#general-settings" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a> {{_('General Settings')}}</h3>
 
     <form class="form-horizontal" method="post" action="/settings/general" enctype=multipart/form-data>
       <input type="hidden" name="form-name" value="General">
@@ -44,8 +44,8 @@
       <div class="form-group">
         {{form_settings_general.language.label(class_='col-sm-12 control-label')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language" name="language" title="{{_('언어를 선택하면 웹 브라우저의 언어 설정을 무시합니다.')}}">
-            <option value="">{{_('브라우저 기본값')}}</option>
+          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language" name="language" title="{{_('Selecting a language overrides your web browser\'s language settings.')}}">
+            <option value="">{{_('Browser Default')}}</option>
             {% for each_language in languages %}
               <option value="{{each_language[0]}}"{% if current_user.language == each_language[0] %} selected{% endif %}>{{each_language[1]}}</option>
             {% endfor %}
@@ -55,92 +55,92 @@
       <div class="form-group">
         {{form_settings_general.landing_page.label(class_='col-sm-12 control-label')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="landing_page" name="landing_page" title="{{_('로그인 후 표시할 페이지')}}">
-            <option value="dashboard"{% if current_user.landing_page == 'dashboard' %} selected{% endif %}>{{_('대시보드')}}</option>
-            <option value="live"{% if current_user.landing_page == 'live' %} selected{% endif %}>{{_('실시간 측정')}}</option>
-            <option value="info"{% if current_user.landing_page == 'system_information' %} selected{% endif %}>{{_('시스템 정보')}}</option>
+          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="landing_page" name="landing_page" title="{{_('Page to display after login')}}">
+            <option value="dashboard"{% if current_user.landing_page == 'dashboard' %} selected{% endif %}>{{_('Dashboard')}}</option>
+            <option value="live"{% if current_user.landing_page == 'live' %} selected{% endif %}>{{_('Real-time Measurement')}}</option>
+            <option value="info"{% if current_user.landing_page == 'system_information' %} selected{% endif %}>{{_('System Information')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.index_page.label(class_='col-sm-12 control-label')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="index_page" name="index_page" title="{{_('브랜드 링크 클릭 후 표시할 페이지')}}">
-            <option value="landing"{% if current_user.index_page == 'landing' %} selected{% endif %}>{{_('랜딩 페이지와 동일')}}</option>
-            <option value="dashboard"{% if current_user.index_page == 'dashboard' %} selected{% endif %}>{{_('대시보드')}}</option>
-            <option value="live"{% if current_user.index_page == 'live' %} selected{% endif %}>{{_('실시간 측정')}}</option>
-            <option value="info"{% if current_user.index_page == 'info' %} selected{% endif %}>{{_('시스템 정보')}}</option>
+          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="index_page" name="index_page" title="{{_('Page to display after clicking the brand link')}}">
+            <option value="landing"{% if current_user.index_page == 'landing' %} selected{% endif %}>{{_('Same as Landing Page')}}</option>
+            <option value="dashboard"{% if current_user.index_page == 'dashboard' %} selected{% endif %}>{{_('Dashboard')}}</option>
+            <option value="live"{% if current_user.index_page == 'live' %} selected{% endif %}>{{_('Real-time Measurement')}}</option>
+            <option value="info"{% if current_user.index_page == 'info' %} selected{% endif %}>{{_('System Information')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.brand_display.label(class_='col-sm-12 control-label')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="brand_display" name="brand_display" title="{{_('UI 왼쪽 상단에 표시할 항목')}}">
-            <option value="hostname"{% if settings.brand_display == 'hostname' %} selected{% endif %}>{{_('호스트명')}}</option>
-            <option value="brand_text"{% if settings.brand_display == 'brand_text' %} selected{% endif %}>{{_('브랜드 텍스트')}}</option>
-            <option value="brand_image"{% if settings.brand_display == 'brand_image' %} selected{% endif %}>{{_('브랜드 이미지')}}</option>
+          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="brand_display" name="brand_display" title="{{_('Item to display in the top left of the UI')}}">
+            <option value="hostname"{% if settings.brand_display == 'hostname' %} selected{% endif %}>{{_('Hostname')}}</option>
+            <option value="brand_text"{% if settings.brand_display == 'brand_text' %} selected{% endif %}>{{_('Brand Text')}}</option>
+            <option value="brand_image"{% if settings.brand_display == 'brand_image' %} selected{% endif %}>{{_('Brand Image')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.title_display.label(class_='col-sm-12 control-label')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="title_display" name="title_display" title="{{_('UI 페이지 제목으로 표시할 항목')}}">
-            <option value="hostname"{% if settings.title_display == 'hostname' %} selected{% endif %}>{{_('호스트명')}}</option>
-            <option value="brand_text"{% if settings.title_display == 'brand_text' %} selected{% endif %}>{{_('브랜드 텍스트')}}</option>
+          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="title_display" name="title_display" title="{{_('Item to display as the UI page title')}}">
+            <option value="hostname"{% if settings.title_display == 'hostname' %} selected{% endif %}>{{_('Hostname')}}</option>
+            <option value="brand_text"{% if settings.title_display == 'brand_text' %} selected{% endif %}>{{_('Brand Text')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.hostname_override.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.hostname_override(class_='form-control', value=settings.hostname_override, **{'title': _("호스트명을 이 텍스트로 대체합니다. 비워두면 호스트명을 사용합니다.")})}}
+          {{form_settings_general.hostname_override(class_='form-control', value=settings.hostname_override, **{'title': _("Overrides the hostname with this text. Leave empty to use the hostname.")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.brand_image.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          <span class="btn btn-sm btn-file"><input id="brand_image" name="brand_image" type="file" /></span> 저장됨: {% if settings.brand_image %}True{% else %}False{% endif %}
+          <span class="btn btn-sm btn-file"><input id="brand_image" name="brand_image" type="file" /></span> Saved: {% if settings.brand_image %}True{% else %}False{% endif %}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.brand_image_height.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.brand_image_height(class_='form-control', value=settings.brand_image_height, **{'title': _("브랜드 이미지의 높이(픽셀 단위)")})}}
+          {{form_settings_general.brand_image_height(class_='form-control', value=settings.brand_image_height, **{'title': _("Height of the brand image in pixels")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.favicon_display.label(class_='col-sm-12 control-label')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="favicon_display" name="favicon_display" title="{{_('파비콘으로 표시할 항목')}}">
-            <option value="default"{% if settings.favicon_display == 'default' %} selected{% endif %}>{{_('기본값')}}</option>
-            <option value="brand_favicon"{% if settings.favicon_display == 'brand_favicon' %} selected{% endif %}>{{_('브랜드 아이콘')}}</option>
+          <select class="form-control form-tooltip form-dropdown" data-placement="top" id="favicon_display" name="favicon_display" title="{{_('Item to display as the favicon')}}">
+            <option value="default"{% if settings.favicon_display == 'default' %} selected{% endif %}>{{_('Default')}}</option>
+            <option value="brand_favicon"{% if settings.favicon_display == 'brand_favicon' %} selected{% endif %}>{{_('Brand Icon')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.brand_favicon.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          <span class="btn btn-sm btn-file"><input id="brand_favicon" name="brand_favicon" type="file" /></span> 저장됨: {% if settings.brand_favicon %}True{% else %}False{% endif %}
+          <span class="btn btn-sm btn-file"><input id="brand_favicon" name="brand_favicon" type="file" /></span> Saved: {% if settings.brand_favicon %}True{% else %}False{% endif %}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.rpyc_timeout.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.rpyc_timeout(class_='form-control', value=settings.rpyc_timeout, **{'title': _("Pyro 연결(클라이언트-데몬 통신)의 타임아웃(초)을 설정합니다. 데몬 재시작이 필요합니다.")})}}
+          {{form_settings_general.rpyc_timeout(class_='form-control', value=settings.rpyc_timeout, **{'title': _("Sets the timeout (in seconds) for Pyro connection (client-daemon communication). Daemon restart required.")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.custom_css.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          <textarea class="form-control" id="custom_css" name="custom_css" title="{{_('사용자 지정 CSS 설정')}}" rows="4">{{settings.custom_css}}</textarea>
+          <textarea class="form-control" id="custom_css" name="custom_css" title="{{_('Custom CSS Settings')}}" rows="4">{{settings.custom_css}}</textarea>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.custom_layout.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          <textarea class="form-control" id="custom_layout" name="custom_layout" title="{{_('사용자 지정 레이아웃 HTML 설정')}}" rows="4">{{settings.custom_layout}}</textarea>
+          <textarea class="form-control" id="custom_layout" name="custom_layout" title="{{_('Custom Layout HTML Settings')}}" rows="4">{{settings.custom_layout}}</textarea>
         </div>
       </div>
       <div class="form-group">
@@ -151,7 +151,7 @@
           {%- else -%}
             {{form_settings_general.daemon_debug_mode()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('문제 진단을 위해 데몬 디버그 로깅을 활성화합니다. 데몬 재시작이 필요합니다.')}}
+          &nbsp;&nbsp;{{_('Enable daemon debug logging for diagnostics. Daemon restart required.')}}
         </div>
       </div>
       <div class="form-group">
@@ -162,7 +162,7 @@
           {%- else -%}
             {{form_settings_general.force_https()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('보안을 위해 모든 웹 연결에 SSL(포트 443)을 사용하도록 강제하려면 체크하십시오.')}}
+          &nbsp;&nbsp;{{_('Check to force all web connections to use SSL (port 443) for security.')}}
         </div>
       </div>
       <div class="form-group">
@@ -173,7 +173,7 @@
           {%- else -%}
             {{form_settings_general.hide_success()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('페이지 상단에 성공 알림 메시지가 나타나지 않도록 하려면 체크하십시오.')}}
+          &nbsp;&nbsp;{{_('Check to prevent success alert messages from appearing at the top of the page.')}}
         </div>
       </div>
       <div class="form-group">
@@ -184,7 +184,7 @@
           {%- else -%}
             {{form_settings_general.hide_info()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('페이지 상단에 정보 알림 메시지가 나타나지 않도록 하려면 체크하십시오.')}}
+          &nbsp;&nbsp;{{_('Check to prevent info alert messages from appearing at the top of the page.')}}
         </div>
       </div>
       <div class="form-group">
@@ -195,7 +195,7 @@
           {%- else -%}
             {{form_settings_general.hide_warning()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('페이지 상단에 경고 알림 메시지가 나타나지 않도록 하려면 체크하십시오.')}}
+          &nbsp;&nbsp;{{_('Check to prevent warning alert messages from appearing at the top of the page.')}}
         </div>
       </div>
       <div class="form-group">
@@ -206,7 +206,7 @@
           {%- else -%}
             {{form_settings_general.hide_tooltips()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('폼 입력 위에 나타나는 툴팁을 숨깁니다.')}}
+          &nbsp;&nbsp;{{_('Hides tooltips that appear over form inputs.')}}
         </div>
       </div>
       <div class="form-group">
@@ -217,14 +217,14 @@
           {%- else -%}
             {{form_settings_general.stats_opt_out()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('익명 사용 통계를 보내지 않으려면 체크하십시오.')}} <a href="/admin/statistics">{{_('수집된 통계 보기')}}</a>
+          &nbsp;&nbsp;{{_('Check to opt out of sending anonymous usage statistics.')}} <a href="/admin/statistics">{{_('View Collected Statistics')}}</a>
         </div>
       </div>
 
       <div class="form-group">
         <div class="col-sm-12">
-          <h3>시계열 데이터베이스 설정</h3>
-          AoT가 정상적으로 작동하기 위해서는 적절하게 구성된 시계열 데이터베이스가 필요하며, 이는 측정값을 저장하고 조회하는 데 사용됩니다.
+          <h3>{{_('Time-series Database Settings')}}</h3>
+          {{_('AoT requires a properly configured time-series database to operate, used for storing and retrieving measurements.')}}
         </div>
       </div>
       <div class="form-group">
@@ -263,48 +263,51 @@
       <div class="form-group">
         {{form_settings_general.measurement_db_user.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.measurement_db_user(class_='form-control', value=settings.measurement_db_user)}}
+          {{form_settings_general.measurement_db_user(class_='form-control', value=settings.measurement_db_user, autocomplete="off")}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.measurement_db_password.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.measurement_db_password(class_='form-control', **{'title':"Only enter a password to change the saved password"})}}
+          <!-- Fake inputs to trick browser autofill -->
+          <input type="text" style="display:none">
+          <input type="password" style="display:none">
+          {{form_settings_general.measurement_db_password(class_='form-control', autocomplete="new-password", readonly=True, onfocus="this.removeAttribute('readonly');", **{'title':_("Only enter a password to change the saved password")})}}
         </div>
       </div>
 
       <div class="form-group">
         <div class="col-sm-12">
-          <h3>대시보드 설정</h3>
+          <h3>{{_('Dashboard Settings')}}</h3>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.grid_cell_height.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.grid_cell_height(class_='form-control', value=settings.grid_cell_height, **{'title': _("그리드 셀의 높이 (픽셀 단위)")})}}
+          {{form_settings_general.grid_cell_height(class_='form-control', value=settings.grid_cell_height, **{'title': _("Height of grid cells (in pixels)")})}}
         </div>
       </div>
       <div class="form-group">
         <div class="col-sm-12">
-          <h3>업그레이드 설정</h3>
+          <h3>{{_('Upgrade Settings')}}</h3>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.net_test_ip.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.net_test_ip(class_='form-control', value=settings.net_test_ip, **{'title': _("업그레이드를 위해 활성 인터넷 연결 여부를 테스트할 IP 주소")})}}
+          {{form_settings_general.net_test_ip(class_='form-control', value=settings.net_test_ip, **{'title': _("IP address to test for active internet connection for upgrades")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.net_test_port.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.net_test_port(class_='form-control', value=settings.net_test_port, **{'title': _("인터넷 테스트용 IP 주소의 포트")})}}
+          {{form_settings_general.net_test_port(class_='form-control', value=settings.net_test_port, **{'title': _("Port for the internet test IP address")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.net_test_timeout.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.net_test_timeout(class_='form-control', value=settings.net_test_timeout, **{'title': _("인터넷 연결 테스트의 타임아웃 기간 (초)")})}}
+          {{form_settings_general.net_test_timeout(class_='form-control', value=settings.net_test_timeout, **{'title': _("Timeout period (in seconds) for the internet connection test")})}}
         </div>
       </div>
       <div class="form-group">
@@ -315,42 +318,42 @@
           {%- else -%}
             {{form_settings_general.enable_upgrade_check()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('AoT 자동으로 업그레이드를 확인하도록 하려면 체크하십시오.')}}
+          &nbsp;&nbsp;{{_('Check to enable AoT to automatically check for upgrades.')}}
         </div>
       </div>
       <div class="form-group">
         <div class="col-sm-12">
-          <h3>에너지 사용 설정</h3>
+          <h3>{{_('Energy Usage Settings')}}</h3>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.max_amps.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.max_amps(class_='form-control', value=settings.max_amps, **{'title': _("한 번에 켜질 수 있는 최대 허용 전류(A)를 설정합니다.")})}}
+          {{form_settings_general.max_amps(class_='form-control', value=settings.max_amps, **{'title': _("Sets the maximum allowable current (A) that can be turned on at once.")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_stats_volts.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.output_stats_volts(class_='form-control', value=settings.output_usage_volts, **{'title': _("출력으로 전원을 공급받는 장치에 사용되는 전압을 설정합니다.")})}}
+          {{form_settings_general.output_stats_volts(class_='form-control', value=settings.output_usage_volts, **{'title': _("Sets the voltage used for devices powered by outputs.")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_stats_cost.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.output_stats_cost(class_='form-control', value=settings.output_usage_cost, **{'title': _("킬로와트시 당 비용을 설정합니다.")})}}
+          {{form_settings_general.output_stats_cost(class_='form-control', value=settings.output_usage_cost, **{'title': _("Sets the cost per kilowatt-hour.")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_stats_currency.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.output_stats_currency(class_='form-control', value=settings.output_usage_currency, **{'title': _("전기 요금 결제에 사용되는 통화 단위를 설정합니다.")})}}
+          {{form_settings_general.output_stats_currency(class_='form-control', value=settings.output_usage_currency, **{'title': _("Sets the currency unit used for electricity billing.")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_stats_day_month.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.output_stats_day_month(class_='form-control', value=settings.output_usage_dayofmonth, **{'title': _("월별 전력 사용량을 계산할 달의 날짜를 설정합니다.")})}}
+          {{form_settings_general.output_stats_day_month(class_='form-control', value=settings.output_usage_dayofmonth, **{'title': _("Sets the day of the month to calculate monthly power usage.")})}}
         </div>
       </div>
       <div class="form-group">
@@ -361,36 +364,36 @@
           {%- else -%}
             {{form_settings_general.output_usage_report_gen()}}
           {%- endif -%}
-          &nbsp;&nbsp;{{_('출력 사용량 보고서를 매일/매주/매월 자동으로 생성합니다.')}} 저장 위치: {{report_path}}.
+          &nbsp;&nbsp;{{_('Automatically generate output usage reports daily/weekly/monthly.')}} {{_('Save path')}}: {{report_path}}.
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_usage_report_span.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          <select class="form-control form-tooltip form-dropdown" id="output_usage_report_span" name="output_usage_report_span" title="" data-original-title="{{_('보고서 생성 빈도')}}">
-            <option value="monthly"{% if settings.output_usage_report_span == 'monthly' %} selected{% endif %}>{{_('월별')}}</option>
-            <option value="weekly"{% if settings.output_usage_report_span == 'weekly' %} selected{% endif %}>{{_('주별')}}</option>
-            <option value="daily"{% if settings.output_usage_report_span == 'daily' %} selected{% endif %}>{{_('일별')}}</option>
+          <select class="form-control form-tooltip form-dropdown" id="output_usage_report_span" name="output_usage_report_span" title="" data-original-title="{{_('Report Generation Frequency')}}">
+            <option value="monthly"{% if settings.output_usage_report_span == 'monthly' %} selected{% endif %}>{{_('Monthly')}}</option>
+            <option value="weekly"{% if settings.output_usage_report_span == 'weekly' %} selected{% endif %}>{{_('Weekly')}}</option>
+            <option value="daily"{% if settings.output_usage_report_span == 'daily' %} selected{% endif %}>{{_('Daily')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_usage_report_day.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.output_usage_report_day(class_='form-control', value=settings.output_usage_report_day, **{'title': _("날짜 옵션: 일일: 1-7 (1=월요일), 월별: 1-28")})}}
+          {{form_settings_general.output_usage_report_day(class_='form-control', value=settings.output_usage_report_day, **{'title': _("Date options: Daily: 1-7 (1=Monday), Monthly: 1-28")})}}
         </div>
       </div>
       <div class="form-group">
         {{form_settings_general.output_usage_report_hour.label(class_='col-sm-12 control-label checkbox-nopad')}}
         <div class="col-sm-12">
-          {{form_settings_general.output_usage_report_hour(class_='form-control', value=settings.output_usage_report_hour, **{'title': _("시간 옵션: 0-23")})}}
+          {{form_settings_general.output_usage_report_hour(class_='form-control', value=settings.output_usage_report_hour, **{'title': _("Hour options: 0-23")})}}
         </div>
       </div>
 
       <div class="form-group">
         <div class="col-sm-12">
-          <h3>컨트롤러 샘플링 속도 설정</h3>
-          AoT 데몬 컨트롤러의 샘플링 속도는 아래에서 변경할 수 있습니다. 새 설정을 적용하려면 저장 후 데몬을 재시작해야 합니다. 구성 메뉴 [기어 아이콘] -> 백엔드 재시작을 선택하여 데몬을 재시작하십시오.
+          <h3>{{_('Controller Sampling Rate Settings')}}</h3>
+          {{_('The sampling rate of the AoT daemon controller can be changed below. A daemon restart is required to apply new settings. Restart the daemon by selecting Config Menu [Gear Icon] -> Restart Backend.')}}
         </div>
       </div>
       <div class="form-group">

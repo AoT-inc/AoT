@@ -36,8 +36,3 @@ https://127.0.0.1
 *   [Diskussionsforum](https://forum.radicaldiy.com)
 *   [Ofta ställda frågor](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 
-### Donera
-
-Bli en sponsor: [github.com/sponsors/aot-inc](https://github.com/sponsors/aot-inc)
-
-Andra metoder: [KyleGabriel.com/donate](https://kylegabriel.com/donate)

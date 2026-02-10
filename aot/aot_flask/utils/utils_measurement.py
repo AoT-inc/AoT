@@ -32,7 +32,9 @@ def measurement_mod_form(messages, page_refresh, form):
             mod_meas = DeviceMeasurements.query.filter(
                 DeviceMeasurements.unique_id == each_meas_id).first()
             if not mod_meas:
-                messages["error"].append("Count not find measurement")
+                logger.error(f"Could not find measurement with ID: {each_meas_id}")
+                messages["error"].append(f"Could not find measurement: {each_meas_id}")
+                continue
 
             controller_type = determine_controller_type(mod_meas.device_id)
 

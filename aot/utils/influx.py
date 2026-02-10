@@ -58,8 +58,7 @@ def write_influxdb_value(unique_id, unit, value, measure=None, channel=None, tim
     elif settings.measurement_db_version == '2':
         client = InfluxDBClient(
             url=influxdb_url,
-            username=settings.measurement_db_user,
-            password=settings.measurement_db_password,
+            token=settings.measurement_db_password,
             org='aot',
             timeout=5000)
         bucket = settings.measurement_db_dbname
@@ -117,8 +116,7 @@ def add_measurements_influxdb_flux(unique_id, measurements, use_same_timestamp=T
     elif settings.measurement_db_version == '2':
         client = InfluxDBClient(
             url=influxdb_url,
-            username=settings.measurement_db_user,
-            password=settings.measurement_db_password,
+            token=settings.measurement_db_password,
             org='aot',
             timeout=5000)
         bucket = settings.measurement_db_dbname
@@ -197,8 +195,7 @@ def query_flux(unit, unique_id,
     elif settings.measurement_db_version == '2':
         client = InfluxDBClient(
             url=influxdb_url,
-            username=settings.measurement_db_user,
-            password=settings.measurement_db_password,
+            token=settings.measurement_db_password,
             org='aot',
             timeout=60000)
         bucket = settings.measurement_db_dbname

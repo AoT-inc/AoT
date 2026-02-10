@@ -11,14 +11,14 @@
     <h3 style="text-align: right; padding-bottom: 1.3em;">
       <a href="https://aot-inc.github.io/AoT/Configuration-Settings/#alert-settings" target="_blank">
         <span style="font-size: 16px" class="fas fa-question-circle"></span>
-      </a> {{_('알림 설정')}}
+      </a> {{_('Alert Settings')}}
     </h3>
 
     <form class="form-horizontal" method="post" action="/settings/alerts">
       <input type="hidden" name="form-name" value="EmailAlert">
       {{form_email_alert.hidden_tag()}}
       <div class="form-group">
-        {{_('포트가 지정되지 않으면, SSL(465), TLS(587) 또는 비암호화(25)의 기본 포트가 사용됩니다. 비표준 포트가 필요한 경우, 포트 필드에 입력하십시오.')}}
+        {{_('If no port is specified, default ports for SSL (465), TLS (587), or Unencrypted (25) will be used. Enter in Port field if non-standard port is required.')}}
       </div>
       <div class="form-group">
         {{form_email_alert.smtp_host.label(class_='control-label')}}
@@ -29,30 +29,30 @@
       <div class="form-group">
         {{form_email_alert.smtp_port.label(class_='control-label')}}
         <div>
-          {{form_email_alert.smtp_port(class_='form-control', type="number", value=smtp.port, **{'title': _('프로토콜 기본 포트를 사용하려면 공백으로 두십시오')})}}
+          {{form_email_alert.smtp_port(class_='form-control', type="number", value=smtp.port, **{'title': _('Leave blank to use protocol default port')})}}
         </div>
       </div>
       <div class="form-group">
         {{form_email_alert.smtp_protocol.label(class_='control-label')}}
         <div>
-          <select class="form-control form-tooltip form-dropdown" id="smtp_protocol" name="smtp_protocol" data-placement="top" title="{{_("이메일 전송에 사용할 프로토콜")}}">
+          <select class="form-control form-tooltip form-dropdown" id="smtp_protocol" name="smtp_protocol" data-placement="top" title="{{_("Protocol to use for sending emails")}}">
             <option value="ssl"{%- if smtp.protocol == 'ssl' %} selected{%- endif -%}>SSL</option>
             <option value="tls"{%- if smtp.protocol == 'tls' %} selected{%- endif -%}>TLS</option>
-            <option value="unencrypted"{%- if smtp.protocol == 'unencrypted' %} selected{%- endif -%}>비암호화</option>
-            <option value="unencrypted_no_login"{%- if smtp.protocol == 'unencrypted' %} selected{%- endif -%}>비암호화 (로그인 없이)</option>
+            <option value="unencrypted"{%- if smtp.protocol == 'unencrypted' %} selected{%- endif -%}>{{_('Unencrypted')}}</option>
+            <option value="unencrypted_no_login"{%- if smtp.protocol == 'unencrypted' %} selected{%- endif -%}>{{_('Unencrypted (No Login)')}}</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         {{form_email_alert.smtp_user.label(class_='control-label')}}
         <div>
-          {{form_email_alert.smtp_user(class_='form-control', value=smtp.user, **{'title': _('일반적으로 이메일 ID 또는 주소 전체입니다')})}}
+          {{form_email_alert.smtp_user(class_='form-control', value=smtp.user, **{'title': _('Typically the email ID or full address')})}}
         </div>
       </div>
       <div class="form-group">
         {{form_email_alert.smtp_password.label(class_='control-label')}}
         <div>
-          {{form_email_alert.smtp_password(class_='form-control', **{'title': _('변경을 원할 때만 비밀번호를 입력하십시오')})}}
+          {{form_email_alert.smtp_password(class_='form-control', **{'title': _('Only enter a password to change the saved password')})}}
         </div>
       </div>
       <div class="form-group">
@@ -64,7 +64,7 @@
       <div class="form-group">
         {{form_email_alert.smtp_hourly_max.label(class_='control-label')}}
         <div>
-          {{form_email_alert.smtp_hourly_max(class_='form-control', type="number", value=smtp.hourly_max, **{'title': _('한 시간 동안 전송할 수 있는 최대 알림 수')})}}
+          {{form_email_alert.smtp_hourly_max(class_='form-control', type="number", value=smtp.hourly_max, **{'title': _('Maximum number of alerts to send per hour')})}}
         </div>
       </div>
       <div class="form-group">
