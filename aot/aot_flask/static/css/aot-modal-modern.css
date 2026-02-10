@@ -403,6 +403,15 @@
         padding-left: 16px !important; /* 좌측 여백 추가 */
     }
 
+    /* Phase 6: Anti-Zoom for iOS Input Fields */
+    /* 16px prevents native zoom on focus, stabilizing fixed layout */
+    .aot-in-modal-notes-container input,
+    .aot-in-modal-notes-container textarea,
+    .aot-in-modal-notes-container .aot-modern-input,
+    .aot-in-modal-notes-container .form-control {
+        font-size: 16px !important;
+    }
+
 
     /* 초소형 기기(360px 이하)에서만 줄바꿈 허용 */
     @media (max-width: 360px) {
@@ -476,6 +485,7 @@
     pointer-events: none;
     visibility: hidden;
     opacity: 0;
+    overscroll-behavior: contain;
 }
 
 .aot-in-modal-notes-container.active {
