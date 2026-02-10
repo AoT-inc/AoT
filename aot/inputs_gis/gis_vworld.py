@@ -1,6 +1,6 @@
 # coding=utf-8
 from aot.inputs_gis.base_input_gis import AbstractGisInput
-from flask_babel import lazy_gettext as lg
+from flask_babel import lazy_gettext as lg, gettext as _
 from flask import current_app
 import requests
 import base64
@@ -10,18 +10,18 @@ import base64
 # IDs 10+: Overlays (WMS)
 CHANNELS = {
     # --- Background Maps (WMTS) ---
-    0: {'name': '기본지도', 'type': 'wmts', 'category': 'base', 'options': {'layer': 'Base'}},
-    1: {'name': '위성지도', 'type': 'wmts', 'category': 'base', 'options': {'layer': 'Satellite'}},
-    2: {'name': '하이브리드', 'type': 'wmts', 'category': 'overlay', 'options': {'layer': 'Hybrid', 'role': 'overlay'}},
-    3: {'name': '회색지도', 'type': 'wmts', 'category': 'base', 'options': {'layer': 'white', 'maxNativeZoom': 18}},
-    4: {'name': '어두운지도', 'type': 'wmts', 'category': 'base', 'options': {'layer': 'midnight', 'maxNativeZoom': 18}},
+    0: {'name': lg('기본지도'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'Base'}},
+    1: {'name': lg('위성지도'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'Satellite'}},
+    2: {'name': lg('하이브리드'), 'type': 'wmts', 'category': 'overlay', 'options': {'layer': 'Hybrid', 'role': 'overlay'}},
+    3: {'name': lg('회색지도'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'white', 'maxNativeZoom': 18}},
+    4: {'name': lg('어두운지도'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'midnight', 'maxNativeZoom': 18}},
 
     # --- Data Overlays (WMS) ---
-    10: {'name': '지적도', 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lp_pa_cbnd_bubun', 'role': 'overlay', 'type': 'wms', 'min_zoom': 16.5, 'min_native_zoom': 18}},
-    11: {'name': '농업진흥지역도', 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d036', 'role': 'overlay', 'type': 'wms', 'url': 'https://api.vworld.kr/ned/wms/FarmngSpceService', 'min_zoom': 10.5, 'min_native_zoom': 12}},
-    12: {'name': '생태자연도', 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lt_c_uq111', 'role': 'overlay', 'type': 'wms', 'min_zoom': 10.5, 'min_native_zoom': 12}},
-    13: {'name': '개발제한구역', 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'LT_C_UD801', 'role': 'overlay', 'type': 'wms', 'style': 'LT_C_UD801', 'min_zoom': 10.5, 'min_native_zoom': 12}},
-    14: {'name': '개별공시지가', 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d150', 'role': 'overlay', 'type': 'wms', 'style': 'dt_d150', 'url': 'https://api.vworld.kr/ned/wms/getIndvdLandPriceWMS', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    10: {'name': lg('지적도'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lp_pa_cbnd_bubun', 'role': 'overlay', 'type': 'wms', 'min_zoom': 16.5, 'min_native_zoom': 18}},
+    11: {'name': lg('농업진흥지역도'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d036', 'role': 'overlay', 'type': 'wms', 'url': 'https://api.vworld.kr/ned/wms/FarmngSpceService', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    12: {'name': lg('생태자연도'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lt_c_uq111', 'role': 'overlay', 'type': 'wms', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    13: {'name': lg('개발제한구역'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'LT_C_UD801', 'role': 'overlay', 'type': 'wms', 'style': 'LT_C_UD801', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    14: {'name': lg('개별공시지가'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d150', 'role': 'overlay', 'type': 'wms', 'style': 'dt_d150', 'url': 'https://api.vworld.kr/ned/wms/getIndvdLandPriceWMS', 'min_zoom': 10.5, 'min_native_zoom': 12}},
 }
 
 INPUT_INFORMATION = {
@@ -263,9 +263,9 @@ class InputModule(AbstractGisInput):
                 return {
                     'type': 'html',
                     'content': '<div style="background:white; padding:5px; border-radius:4px; border:1px solid #ccc; color: red;">'
-                               '<div style="font-size:11px;">Error: API returned {}</div>'
-                               '<div style="font-size:10px; color: #333; margin-top:3px;">{}</div>'
-                               '</div>'.format(content_type, response.text)
+                               f'<div style="font-size:11px;">{_("Error: API returned")} {{}}</div>'.format(content_type) + 
+                               f'<div style="font-size:10px; color: #333; margin-top:3px;">{{}}</div>'.format(response.text) +
+                               '</div>'
                 }
 
             img_b64 = base64.b64encode(response.content).decode('utf-8')
@@ -281,7 +281,7 @@ class InputModule(AbstractGisInput):
              return {
                 'type': 'html',
                 'content': '<div style="background:white; padding:5px; border-radius:4px; border:1px solid #ccc;">'
-                           '<div style="font-size:11px; color:red;">Legend Error</div>'
+                           f'<div style="font-size:11px; color:red;">{_("Legend Error")}</div>'
                            '</div>'
             }
 

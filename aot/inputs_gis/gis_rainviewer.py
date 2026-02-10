@@ -1,7 +1,7 @@
 # coding=utf-8
 import time
 from aot.inputs_gis.base_input_gis import AbstractGisInput
-from flask_babel import lazy_gettext as lg
+from flask_babel import lazy_gettext as lg, gettext as _
 
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_rainviewer',
@@ -134,19 +134,19 @@ class InputModule(AbstractGisInput):
         html = f"""
         <div class="aot-legend-wrapper">
             <div class="aot-legend-content">
-                <div class="aot-legend-title">Rain/Snow Intensity</div>
+                <div class="aot-legend-title">{_("Rain/Snow Intensity")}</div>
                 <div class="aot-legend-bar" style="background:{grad};"></div>
-                <div class="aot-legend-labels"><span>Light</span><span>Heavy</span></div>
+                <div class="aot-legend-labels"><span>{_("Light")}</span><span>{_("Heavy")}</span></div>
                 
                 <div style="margin-top:5px; padding-top:4px; border-top:1px solid #eee; display:flex; justify-content:space-between; font-size:9px; color:#555;">
                    <div style="display:flex; align-items:center;">
-                       <span style="width:8px; height:8px; background:#ff00ff; display:inline-block; border-radius:50%; margin-right:3px;"></span> Snow
+                       <span style="width:8px; height:8px; background:#ff00ff; display:inline-block; border-radius:50%; margin-right:3px;"></span> {_("Snow")}
                    </div>
                    <div style="display:flex; align-items:center;">
-                       <span style="width:8px; height:8px; background:#2166ac; display:inline-block; border-radius:50%; margin-right:3px;"></span> Rain
+                       <span style="width:8px; height:8px; background:#2166ac; display:inline-block; border-radius:50%; margin-right:3px;"></span> {_("Rain")}
                    </div>
                    <div style="display:flex; align-items:center;">
-                       <span style="width:8px; height:8px; background:#ff0000; display:inline-block; border-radius:50%; margin-right:3px;"></span> Storm
+                       <span style="width:8px; height:8px; background:#ff0000; display:inline-block; border-radius:50%; margin-right:3px;"></span> {_("Storm")}
                    </div>
                 </div>
             </div>

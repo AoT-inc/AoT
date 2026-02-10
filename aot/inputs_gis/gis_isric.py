@@ -1,6 +1,6 @@
 # coding=utf-8
 from aot.inputs_gis.base_input_gis import AbstractGisInput
-from flask_babel import lazy_gettext as lg
+from flask_babel import lazy_gettext as lg, gettext as _
 
 # Define Channels for Properties (maps to WMS 'map' param)
 # Option 'map' will be passed as query param: &map=/map/phh2o.map
@@ -133,7 +133,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Soil pH (0-5cm)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Soil pH (0-5cm)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff);"></div>' +
                            '    <div class="aot-legend-labels"><span>3.0</span><span>6.5</span><span>10.0</span></div>' +
                            '  </div>' +
@@ -149,7 +149,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Clay Content (%)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Clay Content (%)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #f7fcf5, #e5f5e0, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #006d2c, #00441b);"></div>' +
                            '    <div class="aot-legend-labels"><span>0</span><span>50</span><span>100</span></div>' +
                            '  </div>' +
@@ -165,7 +165,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Sand Content (%)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Sand Content (%)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #fff7bc, #fee391, #fec44f, #fe9929, #ec7014, #cc4c02, #8c2d04);"></div>' +
                            '    <div class="aot-legend-labels"><span>0</span><span>50</span><span>100</span></div>' +
                            '  </div>' +
@@ -181,7 +181,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Silt Content (%)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Silt Content (%)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #f7fbff, #deebf7, #c6dbef, #9ecae1, #6baed6, #4292c6, #2171b5, #084594);"></div>' +
                            '    <div class="aot-legend-labels"><span>0</span><span>50</span><span>100</span></div>' +
                            '  </div>' +
@@ -197,7 +197,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Organic Carbon (dg/kg)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Organic Carbon (dg/kg)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #fff5eb, #fee6ce, #fdd0a2, #fdae6b, #fd8d3c, #f16913, #d94801, #a63603, #7f2704);"></div>' +
                            '    <div class="aot-legend-labels"><span>0</span><span>500</span><span>1000+</span></div>' +
                            '  </div>' +
@@ -213,7 +213,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Bulk Density (cg/cm³)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Bulk Density (cg/cm³)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #fcfbfd, #efedf5, #dadaeb, #bcbddc, #9e9ac8, #807dba, #6a51a3, #54278f, #3f007d);"></div>' +
                            '    <div class="aot-legend-labels"><span>50</span><span>125</span><span>200+</span></div>' +
                            '  </div>' +

@@ -97,6 +97,8 @@ const StickyHeader = {
  * Wrapper around GridStack initialization and event handling.
  */
 const DashboardGrid = {
+    isSyncing: false,
+
     init() {
         // Configuration
         const cellHeight = (typeof window.AOT_GRID_CELL_HEIGHT !== 'undefined') ? window.AOT_GRID_CELL_HEIGHT : 150;
@@ -168,6 +170,8 @@ const DashboardGrid = {
     syncLayout() {
         if (!window.grid) return;
 
+        if (!window.grid) return;
+
         const isMobile = window.innerWidth <= 768;
         const targetColumn = isMobile ? 2 : 24;
         const currentColumn = window.grid.getColumn();
@@ -175,44 +179,58 @@ const DashboardGrid = {
         if (currentColumn === targetColumn) return;
 
         console.log(`Dashboard: Switching to ${targetColumn} columns using Gridstack engine...`);
-
+        this.isSyncing = true;
         window.grid.batchUpdate(true);
 
-        // [Fix] Restore Gridstack default scaling engine
-        // This handles collision and initial positioning much better for mobile 2-col.
-        window.grid.column(targetColumn);
+        if (targetColumn === 2) {
+            // [Fix v3] Transition to Mobile:
+            // Use 'moveScale' strategy to let GridStack native scaling handle 2-column stacking.
+            window.grid.column(targetColumn, 'moveScale');
 
-        window.grid.getGridItems().forEach(el => {
-            const dx = el.getAttribute('data-desktop-x');
-            const dy = el.getAttribute('data-desktop-y');
-            const dw = el.getAttribute('data-desktop-w');
-
-            if (targetColumn === 2) {
-                // [Fix] Selective Mobile Correction:
-                // Gridstack scale (24->2) usually maps 6-12 -> 1, 13-24 -> 2.
-                // We ensure everything > 12 cells (Desktop) is at least 2 columns on Mobile.
+            window.grid.getGridItems().forEach(el => {
+                const dw = el.getAttribute('data-desktop-w');
                 const desktopW = parseInt(dw || "24");
-                const currentW = parseInt(el.getAttribute('gs-w'));
-                if (desktopW > 12 && currentW < 2) {
+                if (desktopW > 12) {
                     window.grid.update(el, { w: 2 });
                 }
-            } else {
-                // [Fix] Desktop Precision Recovery:
-                // Gridstack scaling might have slight rounding offsets.
-                // We force-restore the absolute original coordinates and width.
-                if (dx && dy && dw) {
+            });
+            window.grid.compact();
+        } else {
+            // [Fix v3] Transition to Desktop:
+            // Use 'none' strategy and temporary 'float' mode to prevent collision cascades.
+            window.grid.column(targetColumn, 'none');
+            const prevFloat = window.grid.getFloat();
+            window.grid.float(true);
+
+            // Sort widgets to ensure predictable restoration order
+            const items = window.grid.getGridItems().sort((a, b) => {
+                const ay = parseInt(a.getAttribute('data-desktop-y') || "0");
+                const by = parseInt(b.getAttribute('data-desktop-y') || "0");
+                if (ay !== by) return ay - by;
+                return parseInt(a.getAttribute('data-desktop-x') || "0") - parseInt(b.getAttribute('data-desktop-x') || "0");
+            });
+
+            items.forEach(el => {
+                const dx = el.getAttribute('data-desktop-x');
+                const dy = el.getAttribute('data-desktop-y');
+                const dw = el.getAttribute('data-desktop-w');
+                const dh = el.getAttribute('data-desktop-h');
+
+                if (dx !== null && dy !== null && dw !== null) {
                     window.grid.update(el, { 
                         x: parseInt(dx),
                         y: parseInt(dy),
-                        w: parseInt(dw) 
+                        w: parseInt(dw),
+                        h: dh ? parseInt(dh) : parseInt(el.getAttribute('gs-h'))
                     });
                 }
-            }
-        });
+            });
+            window.grid.float(prevFloat);
+        }
 
-        // Ensure widgets are packed vertically
-        window.grid.compact();
         window.grid.batchUpdate(false);
+        // Clear syncing flag after a small delay to ensure any pending change events are ignored
+        setTimeout(() => { this.isSyncing = false; }, 200);
 
         // [Fix] Trigger Global Resize:
         // Instead of calling individual reflows, firing a global resize event
@@ -223,9 +241,9 @@ const DashboardGrid = {
     enableEditing() {
         // Persist layout on change
         window.grid.on('change', (event, items) => {
-            // [Fix] Strictly block saving if we are in mobile mode to protect desktop DB layout
-            if (window.grid.getColumn() !== 24) {
-                console.log("Dashboard: Save suppressed in mobile mode.");
+            // [Fix v3] Strictly block saving if we are in syncing mode or mobile mode
+            if (this.isSyncing || window.grid.getColumn() !== 24) {
+                console.log("Dashboard: Save suppressed (syncing or mobile mode).");
                 return;
             }
 

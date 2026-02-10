@@ -1,7 +1,7 @@
 # coding=utf-8
 import datetime
 from aot.inputs_gis.base_input_gis import AbstractGisInput
-from flask_babel import lazy_gettext as lg
+from flask_babel import lazy_gettext as lg, gettext as _
 
 # 채널 정의 (Zoom Level 차이를 주의해야 함)
 CHANNELS = {
@@ -192,9 +192,9 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Soil Moisture (Root Zone)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Soil Moisture (Root Zone)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #ffffe5, #f7fcb9, #addd8e, #41ab5d, #238443, #005a32);"></div>' +
-                           '    <div class="aot-legend-labels"><span>Dry (0)</span><span>Wet (0.6)</span></div>' +
+                           f'    <div class="aot-legend-labels"><span>{_("Dry")} (0)</span><span>{_("Wet")} (0.6)</span></div>' +
                            '  </div>' +
                            '  <div class="aot-legend-value-box" data-api-url="/api/geo/proxy/openmeteo?latitude={lat}&longitude={lon}&current=soil_moisture_0_to_1cm" data-api-param="current.soil_moisture_0_to_1cm" data-unit="m³/m³">' +
                            '    <div class="aot-legend-value-text">--</div>' +
@@ -208,13 +208,13 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Vegetation Index (NDVI)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Vegetation Index (NDVI)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #a50026, #d73027, #f46d43, #fdae61, #fee08b, #ffffbf, #d9ef8b, #a6d96a, #66bd63, #1a9850, #006837);"></div>' +
                            '    <div class="aot-legend-labels"><span>-0.2</span><span>0.4</span><span>1.0</span></div>' +
                            '  </div>' +
                            '  <div class="aot-legend-value-box">' +
-                           '    <div class="aot-legend-value-text">NDVI</div>' +
-                           '    <div class="aot-legend-value-unit">Scale</div>' +
+                           f'    <div class="aot-legend-value-text">{_("NDVI")}</div>' +
+                           f'    <div class="aot-legend-value-unit">{_("Scale")}</div>' +
                            '  </div>' +
                            '</div>'
             }
@@ -224,7 +224,7 @@ class InputModule(AbstractGisInput):
                 'type': 'html',
                 'content': '<div class="aot-legend-wrapper">' + 
                            '  <div class="aot-legend-content">' +
-                           '    <div class="aot-legend-title">Land Surface Temp (Day)</div>' + 
+                           f'    <div class="aot-legend-title">{_("Land Surface Temp (Day)")}</div>' + 
                            '    <div class="aot-legend-bar" style="background: linear-gradient(to right, #000080, #0000ff, #00ffff, #ffff00, #ff0000, #800000);"></div>' +
                            '    <div class="aot-legend-labels"><span>-20</span><span>20</span><span>60+</span></div>' +
                            '  </div>' +
