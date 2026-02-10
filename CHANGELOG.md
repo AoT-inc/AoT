@@ -1,3 +1,27 @@
+# v26.0.2 (2026-02-11)
+
+## 버그 수정 (Fixes)
+
+### 모바일 노트 입력 안정화 (Mobile Note Input Stabilization)
+- **화면 튕김(Overshoot) 원천 쳐단**: 키보드 활성화 시 배경 문서가 강제로 스크롤되는 현상을 방지하기 위해 **Aggressive Body Lock** (Position Fixed) 적용.
+- **입력창 자동 확대 방지 (Anti-Zoom)**: 모바일 환경에서 입력창 폰트 크기를 16px로 강제하여 iOS의 자동 줌 동작 차단.
+- **동적 여백 (Dynamic Padding)**: 키보드 높이에 맞춰 입력창 하단 여백을 동적으로 조정.
+- **Z-Index 개선**: 노트 창을 최상위 레이어(`document.body`)로 이동하여 다른 모달에 가려지는 문제 해결.
+
+---
+
+# v26.0.2 (2026-02-11) - English
+
+## Bug Fixes
+
+### Mobile Note Input Stabilization
+- **Overshoot Prevention**: Implemented **Aggressive Body Lock** (Position Fixed) to prevent background document scrolling when the keyboard activates.
+- **Anti-Zoom**: Enforced 16px font size on mobile inputs to prevent iOS automatic zoom behavior.
+- **Dynamic Padding**: Automatically adjusts bottom padding based on keyboard height.
+- **Z-Index Improvement**: Moved the notes drawer to the root layer (`document.body`) to resolve stacking context issues.
+
+---
+
 # v26.0.1 (2026-02-10)
 
 ## 기능 (Features)
