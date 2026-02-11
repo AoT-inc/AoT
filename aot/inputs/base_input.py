@@ -11,7 +11,7 @@ NotImplementedErrors
 import datetime
 import logging
 
-from aot.abstract_base_controller import AbstractBaseController
+from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.databases.models import Input
 
 

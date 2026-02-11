@@ -12,7 +12,7 @@ NotImplementedErrors
 import logging
 import timeit
 
-from aot.abstract_base_controller import AbstractBaseController
+from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.config import AOT_DB_PATH
 from aot.databases.models import Conditional
 from aot.databases.models import Function

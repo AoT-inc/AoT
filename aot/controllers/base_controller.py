@@ -14,7 +14,7 @@ import timeit
 
 import Pyro5
 
-from aot.abstract_base_controller import AbstractBaseController
+from aot.controllers.abstract_base_controller import AbstractBaseController
 
 
 class AbstractController(AbstractBaseController):

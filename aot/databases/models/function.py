@@ -110,8 +110,8 @@ class Trigger(CRUDMixin, db.Model):
 
     # Sunrise/sunset
     rise_or_set = db.Column(db.Text, default='sunrise')
-    latitude = db.Column(db.Float, default=33.749249)
-    longitude = db.Column(db.Float, default=-84.387314)
+    latitude = db.Column(db.Float, default=None)
+    longitude = db.Column(db.Float, default=None)
     location_source = db.Column(db.String(32), default='manual')
     map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping

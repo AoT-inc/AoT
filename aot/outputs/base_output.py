@@ -17,7 +17,7 @@ import timeit
 from sqlalchemy import and_
 from sqlalchemy import or_
 
-from aot.abstract_base_controller import AbstractBaseController
+from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.databases.models import Output
 from aot.databases.models import OutputChannel
 from aot.databases.models import Trigger

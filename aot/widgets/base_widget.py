@@ -30,7 +30,7 @@ NotImplementedErrors
 import logging
 import timeit
 
-from aot.abstract_base_controller import AbstractBaseController
+from aot.controllers.abstract_base_controller import AbstractBaseController
 
 
 class AbstractWidget(AbstractBaseController):

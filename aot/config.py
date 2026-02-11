@@ -18,7 +18,7 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = '718f314963c2'
-AOT_VERSION = '26.0.5'
+AOT_VERSION = '26.0.6'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -41,7 +41,7 @@ INSTALL_DIRECTORY = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) 
 # Database
 DATABASE_NAME = "aot.db"
 ALEMBIC_PATH = os.path.join(INSTALL_DIRECTORY, 'alembic_db')
-DATABASE_PATH = os.path.join(INSTALL_DIRECTORY, 'databases')
+DATABASE_PATH = os.path.join(INSTALL_DIRECTORY, 'aot/databases')
 ALEMBIC_UPGRADE_POST = os.path.join(ALEMBIC_PATH, 'alembic_post_upgrade_versions')
 SQL_DATABASE_AOT = os.path.join(DATABASE_PATH, DATABASE_NAME)
 AOT_DB_PATH = f'sqlite:///{SQL_DATABASE_AOT}'
