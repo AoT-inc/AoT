@@ -5,7 +5,7 @@ from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
-from aot.databases.models import Trigger
+from aot.databases.models import Trigger, Widget
 from aot.aot_flask.extensions import db
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,31 @@ def sequence_activate_toggle(unique_id, state):
         
     return jsonify({'status': 'success'})
 
+def sequence_toggle_details(unique_id, state):
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Auth Required'}), 401
+
+    widget = db.session.query(Widget).filter_by(unique_id=unique_id).first()
+    if not widget:
+        return jsonify({'error': 'Widget not found'}), 404
+        
+    try:
+        options = {}
+        if widget.custom_options:
+            options = json.loads(widget.custom_options) if isinstance(widget.custom_options, str) else dict(widget.custom_options)
+        
+        # Update state
+        new_val = 'Show' if str(state) == '1' else 'Hide'
+        options['show_details'] = new_val
+        
+        widget.custom_options = json.dumps(options)
+        db.session.commit()
+        
+        return jsonify({'status': 'success', 'state': new_val})
+    except Exception as e:
+        logger.error(f"Error toggling details: {e}")
+        return jsonify({'error': str(e)}), 500
+
 def execute_at_modification(mod_widget, request_form, custom_options_presave, custom_options_postsave):
     """
     Synchronize settings between Widget Options and the Sequence Function (Trigger).
@@ -50,10 +75,17 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
 
     final_options = options.copy()
     
+
     # 1. Merge submitted options
-    if custom_options_postsave:
-        for k, v in custom_options_postsave.items():
-            final_options[k] = v
+    for k, v in custom_options_postsave.items():
+        final_options[k] = v
+
+    # Normalize show_details if needed (Handling legacy S/H/1/0/True/False)
+    sd = final_options.get('show_details')
+    if sd in ['S', '1', 'True', True]:
+        final_options['show_details'] = 'Show'
+    elif sd in ['H', '0', 'False', False]:
+        final_options['show_details'] = 'Hide'
 
     # 2. Sync Logic
     func_id = final_options.get('function_id')
@@ -135,12 +167,13 @@ WIDGET_INFORMATION = {
     'widget_library': '',
     'no_class': True,
     'message': 'Control and Monitor a Sequence Function.',
-    'widget_width': 20,
-    'widget_height': 20,
+    'widget_width': 24,
+    'widget_height': 10,
     'execute_at_modification': execute_at_modification,
     
     'endpoints': [
-        ("/sequence_activate_toggle/<unique_id>/<state>", "sequence_activate_toggle", sequence_activate_toggle, ["GET"])
+        ("/sequence_activate_toggle/<unique_id>/<state>", "sequence_activate_toggle", sequence_activate_toggle, ["GET"]),
+        ("/sequence_toggle_details/<unique_id>/<state>", "sequence_toggle_details", sequence_toggle_details, ["GET"])
     ],
 
     'custom_options': [
@@ -160,6 +193,17 @@ WIDGET_INFORMATION = {
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('Refresh (Seconds)'),
             'phrase': lazy_gettext('The period of time between refreshing the widget')
+        },
+        {
+            'id': 'show_details',
+            'type': 'select',
+            'options_select': [
+                ('Show', lazy_gettext('Show')),
+                ('Hide', lazy_gettext('Hide'))
+            ],
+            'default_value': 'Show',
+            'name': lazy_gettext('Show Actions List'),
+            'phrase': lazy_gettext('Toggle the visibility of the action list by default.')
         },
         
         # --- Sequence Settings (Synced) ---
@@ -315,7 +359,7 @@ WIDGET_INFORMATION = {
 
         /* --- Section 3: Action List --- */
         .seq-details-container {
-            display: none; /* Hidden by default */
+            display: none; /* Hidden by default, controlled by inline style */
             overflow: hidden;
             transition: max-height 0.3s ease;
         }
@@ -465,6 +509,7 @@ WIDGET_INFORMATION = {
     'widget_dashboard_title_bar': """<span id="seq-title-{{each_widget.unique_id}}">{{each_widget.name}}</span>""",
 
     'widget_dashboard_body': """
+    {% set show_det = widget_options.get('show_details', 'Show') %}
     <div id="seq-container-{{each_widget.unique_id}}" class="seq-widget-container">
         
         <!-- Section 1: Header (Timer + Toggle) -->
@@ -502,12 +547,15 @@ WIDGET_INFORMATION = {
         <div class="seq-expand-btn-container">
             <button class="seq-expand-btn" onclick="toggle_seq_details('{{each_widget.unique_id}}', this)">
                 <span class="seq-btn-text">{{ _('Actions') }}</span>
-                <span class="seq-expand-icon">▼</span>
+                <span class="seq-expand-icon">
+                    {% if show_det == 'Show' %}▲{% else %}▼{% endif %}
+                </span>
             </button>
         </div>
 
-        <!-- Section 3: Action List (Hidden by default) -->
-        <div id="seq-details-{{each_widget.unique_id}}" class="seq-details-container">
+        <!-- Section 3: Action List (Default: visible, respects user preference) -->
+        <div id="seq-details-{{each_widget.unique_id}}" class="seq-details-container" 
+             style="display: {% if show_det == 'Show' %}block{% else %}none{% endif %} !important;">
             <div class="seq-list-header">
                 <div class="seq-col-enable"></div>
                 <div class="seq-col-name">{{ _('Name') }}</div>
@@ -624,9 +672,17 @@ WIDGET_INFORMATION = {
         if (isHidden) {
             details.style.display = 'block';
             $(btn).find('.seq-expand-icon').text('▲');
+            // Save state to localStorage
+            localStorage.setItem('seq_details_' + widget_id, 'show');
+            // Save to server: 1 (Show)
+            $.get('/sequence_toggle_details/' + widget_id + '/1');
         } else {
             details.style.display = 'none';
             $(btn).find('.seq-expand-icon').text('▼');
+            // Save state to localStorage
+            localStorage.setItem('seq_details_' + widget_id, 'hide');
+            // Save to server: 0 (Hide)
+            $.get('/sequence_toggle_details/' + widget_id + '/0');
         }
     }
 

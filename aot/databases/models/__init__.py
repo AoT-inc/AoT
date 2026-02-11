@@ -72,26 +72,41 @@ from .smtp import SMTP
 
 
 
-def alembic_upgrade_db():
+def alembic_upgrade_db(app):
     """Upgrade sqlite3 database with alembic."""
 
     def upgrade_alembic():
         """Run alembic database upgrade."""
+        app.logger.info("Database version mismatch or missing. Running alembic upgrade head...")
         command = '/bin/bash {path}/aot/scripts/upgrade_commands.sh update-alembic'.format(path=INSTALL_DIRECTORY)
-        upgrade = subprocess.Popen(
-            command, stdout=subprocess.PIPE, shell=True)
-        (_, _) = upgrade.communicate()
-        upgrade.wait()
+        try:
+            upgrade = subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = upgrade.communicate()
+            if upgrade.returncode == 0:
+                app.logger.info("Alembic upgrade successful.")
+            else:
+                app.logger.error(f"Alembic upgrade failed with return code {upgrade.returncode}")
+                app.logger.error(f"STDOUT: {stdout.decode()}")
+                app.logger.error(f"STDERR: {stderr.decode()}")
+        except Exception as e:
+            app.logger.error(f"Exception during alembic upgrade: {e}")
 
-    alembic = AlembicVersion.query.first()
-    if alembic:  # If alembic_version table has an entry
-        if alembic.version_num == '':
-            alembic.delete()  # Delete row with blank version_num
+    with app.app_context():
+        alembic = AlembicVersion.query.first()
+        if alembic:  # If alembic_version table has an entry
+            if alembic.version_num == '':
+                app.logger.info("Alembic version entry empty. Deleting and upgrading...")
+                alembic.delete()
+                upgrade_alembic()
+            elif alembic.version_num != ALEMBIC_VERSION:  # Not current version
+                app.logger.info(f"Database version ({alembic.version_num}) does not match expected ({ALEMBIC_VERSION}). upgrading...")
+                upgrade_alembic()
+            else:
+                app.logger.info(f"Database version ({alembic.version_num}) is up to date.")
+        else:
+            app.logger.info("No alembic version found in database. Upgrading...")
             upgrade_alembic()
-        elif alembic.version_num != ALEMBIC_VERSION:  # Not current version
-            upgrade_alembic()
-    else:
-        upgrade_alembic()
 
 
 def insert_or_ignore(an_object, a_session):
@@ -158,13 +173,6 @@ def populate_db():
     if not Misc.query.count():
         Misc(id=1).save()
 
-    # [Migration] Ensure GeoSetting Columns exist before query
-    try:
-        from aot.aot_flask.utils.utils_geo_migration import ensure_geo_setting_columns
-        ensure_geo_setting_columns()
-    except Exception as e:
-        current_app.logger.error(f"Migration failed in populate_db: {e}")
-
     if not GeoSetting.query.count():
         GeoSetting(id=1).save()
     if not SMTP.query.count():
@@ -173,6 +181,10 @@ def populate_db():
         Dashboard(id=1, name='Default').save()
     if not APIKey.query.count():
         # Optional: Add any default API keys if needed
+        pass
+    
+    if not IrrigationDesign.query.count():
+        # Optional: Add default design if needed
         pass
 
     # Populate conversion tables

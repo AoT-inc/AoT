@@ -43,9 +43,7 @@ from aot.aot_flask.extensions import db, csrf
 def api_notes_create():
     """Create a new note via API"""
     try:
-        print("[DEBUG] /notes/create called")
         if not utils_general.user_has_permission('edit_settings'):
-            print("[DEBUG] Permission denied")
             return jsonify({'error': 'Permission Denied'}), 403
         
         # [Fix] Robust Data Extraction: Check both Form and JSON
@@ -60,16 +58,14 @@ def api_notes_create():
         json_val = request.get_json(silent=True) 
         if json_val:
             data.update(json_val)
-            
-        print(f"[DEBUG] /notes/create extracted keys: {list(data.keys())}")
-        if request.files:
-            print(f"[DEBUG] Files received: {list(request.files.keys())}")
 
         target_id = data.get('target_id')
         target_type = data.get('target_type')
         note_text = data.get('note')
         gps_lat = data.get('gps_lat')
         gps_lng = data.get('gps_lng')
+        category = data.get('category', 'general')
+        priority = int(data.get('priority', 0))
         
         # Handle File Uploads
         uploaded_files_paths = []
@@ -92,7 +88,6 @@ def api_notes_create():
                     if '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS:
                         pass
                     else:
-                        print(f"[SECURITY] Blocked disallowed file extension: {filename}")
                         return jsonify({'error': f'File type not allowed: {filename}'}), 400
 
                     # Using UUID to avoid collisions
@@ -116,7 +111,6 @@ def api_notes_create():
                     uploaded_files_paths.append(db_stored_path)
 
         if not note_text and not uploaded_files_paths:
-             print("[DEBUG] Note text and files missing")
              return jsonify({'error': 'Note content or file required'}), 400
 
         # [Revised] Tag Resolution Logic
@@ -139,7 +133,6 @@ def api_notes_create():
                 db.session.flush() # To get the generated unique_id
                 resolved_tag_ids.append(new_tag.unique_id)
 
-        print(f"[DEBUG] Resolved Tag IDs: {resolved_tag_ids}")
 
         # [Smart Subject] If name is generic or empty, extract from note body
         name_input = data.get('name', '').strip()
@@ -158,9 +151,7 @@ def api_notes_create():
             elif not final_name:
                 final_name = _("New Note")
 
-        print(f"[DEBUG] Final Name: {final_name}")
 
-        print("[DEBUG] Creating Note Object")
         new_note = Notes(
             name=final_name,
             date_time=datetime.now(),
@@ -172,22 +163,20 @@ def api_notes_create():
             tags=','.join(resolved_tag_ids),
             gps_lat=gps_lat,
             gps_lng=gps_lng,
+            category=category,
+            priority=priority,
             # [Fix] Save User ID
             user_id=current_user.id if current_user.is_authenticated else None
         )
         
-        print("[DEBUG] Adding to session")
         db.session.add(new_note)
-        print("[DEBUG] Committing")
         db.session.commit()
-        print("[DEBUG] Commit successful")
         
         return jsonify({'ok': True, 'unique_id': new_note.unique_id})
         
     except Exception as e:
         import traceback
         error_msg = f"API Notes Create Error: {str(e)}\n{traceback.format_exc()}"
-        print(error_msg)  # Print to stdout/stderr for immediate capture
         try:
             current_app.logger.error(error_msg)
         except:
@@ -228,7 +217,9 @@ def api_notes_geo_get():
                 'target_id': n.target_id,
                 'target_type': n.target_type,
                 'gps_lat': n.gps_lat,
-                'gps_lng': n.gps_lng
+                'gps_lng': n.gps_lng,
+                'category': n.category,
+                'priority': n.priority
             })
             
         return jsonify(result)

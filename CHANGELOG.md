@@ -1,3 +1,31 @@
+# v26.0.4 (2026-02-11)
+
+## 성능 및 안정성 개선 (Stability & Performance)
+
+### 데이터베이스 시스템 (Database System)
+- **자동 DB 동기화 강화**: 애플리케이션 시작 시 데이터베이스 스키마를 자동으로 검사하고 최신 버전으로 마이그레이션하는 기능을 활성화했습니다. 수동 업데이트 시 발생할 수 있는 스키마 불일치 문제를 방지합니다.
+
+### UI/UX 개선 (UI/UX Enhancements)
+- **업그레이드 페이지 개선**: 업그레이드 진행 상황 페이지의 레이아웃을 확장(`container-fluid`)하고 가독성을 개선했습니다.
+- **업그레이드 안정성 강화**: 업그레이드 도중 서버 재시작으로 인한 세션 끊김(로그인 페이지 리다이렉트) 발생 시 이를 감지하여 안내 메시지를 표시하도록 개선했습니다.
+- **상태 표시 최적화**: 업그레이드 중에는 데몬 상태와 무관하게 로고를 빨간색으로 유지하여 작업 진행 상황을 명확히 알립니다.
+
+---
+
+# v26.0.4 (2026-02-11) - English
+
+## Stability & Performance
+
+### Database System
+- **Enhanced Auto DB Sync**: Enabled automatic database schema checks and migrations on application startup. Prevents schema inconsistency issues that can occur during manual updates.
+
+### UI/UX Enhancements
+- **Improved Upgrade Page**: Expanded the layout of the upgrade progress page (`container-fluid`) and improved readability.
+- **Enhanced Upgrade Stability**: Detects session disconnection (login page redirect) during upgrade due to server restart and displays a guidance message.
+- **Optimized Status Display**: Forces the logo to remain red during updates regardless of daemon status to clearly indicate progress.
+
+---
+
 # v26.0.3 (2026-02-11)
 
 ## 기능 개선 (Improvements)

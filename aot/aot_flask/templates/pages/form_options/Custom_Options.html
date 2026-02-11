@@ -390,9 +390,11 @@
       {% for name, devices in form_choices %}
         {% if name in each_option['options_select'] %}
           {%- for each_dev in devices -%}
+            {% if not each_option.get('filter') or (each_option.get('filter') and each_dev|attr(each_option['filter']['key']) == each_option['filter']['value']) %}
             <option value="{{each_dev.unique_id}}"{% if (channel_options and each_dev.unique_id == custom_options_values[unique_id][channel][each_option['id']]) or (custom_options_values and each_dev.unique_id == custom_options_values[unique_id][each_option['id']]) %} selected{% endif %}>
               {% if name == 'Map' %}{{each_dev.name}}{% else %}[{{name}} {{'%02d' % each_dev.id}}] {{each_dev.name}}{% endif %}
             </option>
+            {% endif %}
           {%- endfor -%}
         {% endif %}
       {% endfor %}

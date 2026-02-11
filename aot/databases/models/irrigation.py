@@ -21,6 +21,14 @@ class IrrigationDesign(CRUDMixin, db.Model):
     # Configuration State (Spacing, Angle, Offset, etc.)
     config_json = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='{}')
     
+    # Operational Tracking
+    status = db.Column(db.String(32), default='idle') # idle, running, completed, error
+    last_run_at = db.Column(db.DateTime, default=None)
+    total_volume_applied = db.Column(db.Float, default=0.0)
+    
+    # Association with core logic (Optional links)
+    function_id = db.Column(db.String(36), nullable=True) # Linked sequence or custom function
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = db.Column(db.String(36), default='')

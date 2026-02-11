@@ -14,24 +14,6 @@ def _generate_map_name(base_name):
     return f"{base} Map ({timestamp})"
 
 
-_STATE_COLUMN_CHECKED = False
-
-
-def ensure_map_state_column():
-    global _STATE_COLUMN_CHECKED
-    if _STATE_COLUMN_CHECKED:
-        return
-    try:
-        engine = db.engine
-        inspector = inspect(engine)
-        columns = [col['name'] for col in inspector.get_columns('geo_map')]
-        if 'state_json' not in columns:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE geo_map ADD COLUMN state_json TEXT DEFAULT '{}'"))
-                conn.execute(text("UPDATE geo_map SET state_json='{}' WHERE state_json IS NULL"))
-        _STATE_COLUMN_CHECKED = True
-    except Exception:
-        current_app.logger.exception("Failed to ensure geo_map.state_json column exists")
 
 
 def ensure_map_config(map_config_uuid, device_name=None, latitude=None, longitude=None):

@@ -232,16 +232,13 @@ def api_geo_search():
     Execute Search via GIS Provider.
     Payload: { layer_id, query, type }
     """
-    print(" [DEBUG] Entering api_geo_search")
     try:
         data = request.get_json()
-        print(f" [DEBUG] Payload: {data}")
         layer_id = data.get('layer_id')
         query = data.get('query')
         search_type = data.get('type', 'address')
         
         if not query:
-            print(" [DEBUG] Missing query")
             return jsonify({'ok': False, 'message': 'Missing query'}), 400
             
         if not layer_id:
@@ -280,17 +277,14 @@ def api_geo_search():
                 file_path = dict_inputs[layer_id].get('file_path')
                 
         if not file_path:
-            print(" [DEBUG] Provider Not Found")
             return jsonify({'ok': False, 'message': 'Provider not found'}), 404
              
         # 2. Instantiate
         from aot.utils.modules import load_module_from_file
         from aot.aot_flask.utils.utils_geo import MockInputDev, get_geo_config
         
-        print(f" [DEBUG] Loading module from {file_path}")
         mod, status = load_module_from_file(file_path, 'inputs')
         if not mod or not hasattr(mod, 'InputModule'):
-            print(" [DEBUG] Invalid Module")
             return jsonify({'ok': False, 'message': 'Invalid Provider Module'}), 500
              
         # Resolve Global API Keys
@@ -315,7 +309,6 @@ def api_geo_search():
             if not custom_opts.get(kf):
                 global_val = global_api_keys.get(gkf)
                 if global_val:
-                    print(f" [DEBUG] Using Global API Key for {gkf}")
                     custom_opts[kf] = global_val
 
         # Create Mock Instance
@@ -331,15 +324,11 @@ def api_geo_search():
 
         # 3. Check Capability & Execute
         if not hasattr(inst, 'search'):
-            print(" [DEBUG] Search Not Supported")
             return jsonify({'ok': False, 'message': 'Search not supported by this provider'}), 400
              
-        print(" [DEBUG] Executing search...")
         result = inst.search(query, search_type=search_type)
-        print(f" [DEBUG] Result: {result}")
         
         if isinstance(result, dict) and 'error' in result:
-            print(f" [DEBUG] Search Error: {result['error']}")
             # Return 200 so frontend can parse JSON and show message, preventing "500" console spam.
             return jsonify({'ok': False, 'message': result['error']}), 200
              
@@ -600,8 +589,6 @@ def api_geo_device_location_save():
                     shape_name = 'Unnamed'
                     if containing_shape.feature and isinstance(containing_shape.feature, dict):
                         shape_name = containing_shape.feature.get('properties', {}).get('name', 'Unnamed')
-                        
-                    print(f"[{dev_type}] Linked {target_device.name} to Shape: {shape_name} ({containing_shape.id})")
                 else:
                     target_device.map_overlay_id = None # Clear if outside
 
@@ -855,8 +842,8 @@ def page_layer_submit():
 @login_required
 def page_layer_save_layout():
     """Save GridStack Layout for Geo Inputs"""
-    if not utils_general.user_has_permission('edit_controllers'):
-        return jsonify(result='error', message='Permission Denied')
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'Permission Denied'}), 403
 
     try:
         layout_data = request.get_json()

@@ -22,6 +22,11 @@ class Notes(CRUDMixin, db.Model):
     target_type = db.Column(db.String(100), default=None)
     gps_lat = db.Column(db.Float, default=None)
     gps_lng = db.Column(db.Float, default=None)
+    
+    category = db.Column(db.String(64), default='general')
+    priority = db.Column(db.Integer, default=0) # 0: normal, 1: high, 2: critical
+    is_archived = db.Column(db.Boolean, default=False)
+
     note = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default=None)
     
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), default=None)

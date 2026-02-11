@@ -10,6 +10,17 @@
     const url = '/admin/upgrade_status';
     $.ajax(url, {
       success: function(new_string, responseText, jqXHR) {
+        // Redirection check: If the response is HTML and contains login page characteristics
+        if (responseText.includes('id="login"') || responseText.includes('/login')) {
+           document.getElementById("upgrade_status").innerHTML = `<div class="aot-upgrade-notice-box" style="text-align: center; padding: 20px;">
+             <strong>{{_('System is restarting or session has expired.')}}</strong><br>
+             {{_('Please wait a moment for the system to come back online.')}}
+           </div>`;
+           // Also ensure logo stays red during this transition
+           $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+           return;
+        }
+
         if (jqXHR.status !== 204) {
           if (new_string !== prev_string) {
             prev_string = new_string;
@@ -21,6 +32,14 @@
         else {
           document.getElementById("upgrade_status").innerHTML = "{{_('Reading AoT upgrade logs. Please wait...')}}";
         }
+        
+        // During upgrade progress, force logo to red
+        $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+      },
+      error: function() {
+        document.getElementById("upgrade_status").innerHTML = `<div style="color: #DF5353; padding: 20px;">
+          {{_('Lost connection to server. This is normal during restart.')}}
+        </div>`;
       },
       cache: false
     });
@@ -32,29 +51,64 @@
   );
 </script>
 {% endif %}
+<style>
+  .aot-upgrade-notice-box {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: #856404;
+    line-height: 1.6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .aot-upgrade-notice-box p {
+    margin-bottom: 10px;
+  }
+  .aot-upgrade-notice-box p:last-child {
+    margin-bottom: 0;
+  }
+  #upgrade_status {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    border: 1px solid #333;
+    overflow: auto;
+    resize: vertical;
+    height: 500px;
+  }
+</style>
 {% endblock %}
 
 {% block body %}
   <!-- Path: /admin/upgrade -->
-  <div class="container">
+  <div class="container-fluid">
     {% include 'flash_messages.html' %}
+
+    <div class="aot-modal-title" style="margin-left: 10px;">{{_('AoT Upgrade')}}</div>
 
     {% if not is_internet %}
 
-    <div style="padding: 0.5em 0">
+    <div class="aot-upgrade-notice-box" style="background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;">
       {{_('Internet connection not detected. An internet connection is required to automatically upgrade AoT. Please refresh the page after connecting.')}}
+      <br><br>
       {{_('Internet connection detection settings can be found in the Upgrade Options section of the configuration page.')}}
     </div>
 
     {% elif upgrade == 1 %}
 
-    <div style="padding: 0.5em 0">
-      <p>{{_('AoT is currently upgrading.')}}</p>
-      <p>{{_('If an upgrade is not in progress, you can delete the /opt/AoT/.upgrade file to restart the upgrade process.')}}</p>
-      <p>{{_('Upgrades typically take a few minutes, but can take longer in some cases. Please wait for enough time until the upgrade is complete. Upon successful completion, the daemon status indicator in the top-left will change from red to green. Some drivers require a backend restart to activate. If an error occurs, please restart the backend first and then create a GitHub issue.')}}</p>
-      <p>{{_('You can monitor the upgrade progress through the real-time log view below. To check the logs, go to Settings -> AoT Logs -> Upgrade Log, or open the /var/log/aot/aotupgrade.log file. If an error occurs, it is recommended to check the full log to identify the cause.')}}</p>
+    <div class="aot-upgrade-notice-box">
+      <p><strong>{{_('AoT is currently upgrading.')}}</strong></p>
+      <p>{{_('Upgrades typically take a few minutes, but can take longer in some cases. Please wait until the upgrade is complete.')}}</p>
+      <p>{{_('Once the upgrade is complete and the system restarts, the daemon status indicator (top-left logo) will return to green.')}}</p>
+      <p>{{_('If an error occurs, please restart the system manually or check the log below.')}}</p>
     </div>
-    <pre style="overflow:auto; resize: vertical; height:400px" id="upgrade_status"></pre>
+    <div style="padding: 0 10px 20px 10px;">
+      <pre id="upgrade_status"></pre>
+    </div>
 
     {% elif current_latest_major_version != current_release.split('.')[0] and
           current_release in final_releases and

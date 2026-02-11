@@ -11,7 +11,7 @@ from aot.utils.inputs import parse_input_information
 from aot.databases import set_uuid
 from flask_babel import gettext
 from aot.aot_flask.utils.utils_general import custom_options_return_json
-from aot.aot_flask.utils.utils_geo_migration import ensure_geo_setting_columns
+from aot.aot_client import DaemonControl
 from aot.utils.modules import load_module_from_file
 from sqlalchemy.orm import load_only
 from sqlalchemy import or_
@@ -53,9 +53,6 @@ def get_geo_config():
     # Return cached if valid
     if _GEO_CONFIG_CACHE and (time.time() - _GEO_CONFIG_TS) < _CACHE_TTL:
         return _GEO_CONFIG_CACHE
-
-    # [Migration] Ensure Schema
-    ensure_geo_setting_columns()
 
     settings = GeoSetting.query.first()
     if settings:

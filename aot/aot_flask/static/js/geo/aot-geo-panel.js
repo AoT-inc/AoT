@@ -253,7 +253,7 @@ class AoTGeoPanel {
                     <div class="mode-tab ${this.currentMode === 'zone' ? 'active' : ''}" data-nav-mode="zone">${_('zone')}</div>
                     <div class="mode-tab ${this.currentMode === 'facility' ? 'active' : ''}" data-nav-mode="facility">${_('facility')}</div>
                     <div class="mode-tab ${this.currentMode === 'equipment' ? 'active' : ''}" data-nav-mode="equipment">${_('equipment')}</div>
-                    <div class="mode-tab ${this.currentMode === 'aot_device' ? 'active' : ''}" data-nav-mode="aot_device">A</div>
+                    <div class="mode-tab ${this.currentMode === 'aot_device' ? 'active' : ''}" data-nav-mode="aot_device">${_('device_short')}</div>
                 `;
                 break;
 
@@ -295,9 +295,9 @@ class AoTGeoPanel {
             // --- Tier 2: Aot Device Root ---
             case 'aot_device':
                 html += `
-                    <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">Input</div>
-                    <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">Output</div>
-                    <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">Function</div>
+                    <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">${_('input')}</div>
+                    <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">${_('output')}</div>
+                    <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">${_('function')}</div>
                 `;
                 break;
 
@@ -817,7 +817,7 @@ class AoTGeoPanel {
 
     _triggerIrrigationGen() {
         if (!this.selectedFeature) {
-            if (this.geoDesign.ui) this.geoDesign.ui.showToast("구역을 먼저 선택해주세요.", 'warning');
+            if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('select_zone_first'), 'warning');
             return;
         }
 
@@ -905,11 +905,11 @@ class AoTGeoPanel {
                 <div class="modal-dialog" style="max-width: 600px; width: calc(100% - 30px); margin: 30px auto;">
                     <div class="modal-content" style="border-radius: 20px; overflow: hidden; height: auto;">
                         <div class="modal-header border-0 bg-light">
-                            <h5 class="modal-title font-weight-bold">${subMode.toUpperCase()} ${_('select')}</h5>
+                            <h5 class="modal-title font-weight-bold">${_ (subMode)} ${_('select')}</h5>
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
                         <div class="modal-body p-4">
-                            <input type="text" class="form-control mb-3" id="deviceSearch" placeholder=_("search_placeholder") style="height: 38px; border-radius: 19px;">
+                            <input type="text" class="form-control mb-3" id="deviceSearch" placeholder="${_('search_placeholder')}" style="height: 38px; border-radius: 19px;">
                             <div id="deviceList" class="list-group" style="max-height: 400px; overflow-y: auto;"></div>
                         </div>
                     </div>

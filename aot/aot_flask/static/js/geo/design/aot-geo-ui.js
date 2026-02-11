@@ -222,16 +222,16 @@ class AoTGeoUI {
         };
 
         if (this.parent.activeMode === 'site' || this.parent.activeMode === 'zone') {
-            addTool('far fa-square', 'Rectangle', 'rectangle');
-            addTool('far fa-circle', 'Circle', 'circle');
-            addTool('fas fa-draw-polygon', 'Polygon', 'polygon');
+            addTool('far fa-square', window._('Rectangle'), 'rectangle');
+            addTool('far fa-circle', window._('Circle'), 'circle');
+            addTool('fas fa-draw-polygon', window._('Polygon'), 'polygon');
         } else if (this.parent.activeMode === 'device' || ['facility', 'equipment', 'aot_device'].includes(this.parent.activeMode)) {
-            addTool('fas fa-slash', 'Line', 'polyline');
-            addTool('far fa-square', 'Rectangle', 'rectangle');
-            addTool('far fa-circle', 'Circle', 'circle');
-            addTool('fas fa-draw-polygon', 'Polygon', 'polygon');
-            addTool('fas fa-map-marker-alt', 'Marker', 'marker');
-            addTool('fas fa-font', 'Label', 'label'); 
+            addTool('fas fa-slash', window._('Line'), 'polyline');
+            addTool('far fa-square', window._('Rectangle'), 'rectangle');
+            addTool('far fa-circle', window._('Circle'), 'circle');
+            addTool('fas fa-draw-polygon', window._('Polygon'), 'polygon');
+            addTool('fas fa-map-marker-alt', window._('Marker'), 'marker');
+            addTool('fas fa-font', window._('Label'), 'label'); 
         }
 
         drawTools.forEach(t => {
@@ -272,8 +272,8 @@ class AoTGeoUI {
         editGroup.className = 'tool-group shadow-sm';
         
         const editTools = [
-            { icon: 'fas fa-edit', title: 'Edit Layers', action: 'edit' },
-            { icon: 'fas fa-trash-alt', title: 'Delete Layers', action: 'delete' }
+            { icon: 'fas fa-edit', title: window._('Edit Layers'), action: 'edit' },
+            { icon: 'fas fa-trash-alt', title: window._('Delete Layers'), action: 'delete' }
         ];
 
         editTools.forEach(t => {
@@ -397,7 +397,7 @@ class AoTGeoUI {
         const saveBtn = document.createElement('button');
         saveBtn.className = 'btn btn-sm btn-link font-weight-bold';
         saveBtn.style.cssText = btnStyle + 'color: black;'; // Black
-        saveBtn.innerHTML = '저장';
+        saveBtn.innerHTML = window._('Save');
         saveBtn.onclick = () => window.AoTMapEditor.saveActions();
         container.appendChild(saveBtn);
 
@@ -405,7 +405,7 @@ class AoTGeoUI {
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'btn btn-sm btn-link';
         cancelBtn.style.cssText = btnStyle + 'color: #555;'; // Dark Gray
-        cancelBtn.innerHTML = '취소';
+        cancelBtn.innerHTML = window._('Cancel');
         cancelBtn.onclick = () => window.AoTMapEditor.cancelActions();
         container.appendChild(cancelBtn);
 
@@ -414,7 +414,7 @@ class AoTGeoUI {
             const clearBtn = document.createElement('button');
             clearBtn.className = 'btn btn-sm btn-link border-left ml-1 pl-2';
             clearBtn.style.cssText = btnStyle + 'color: black;'; // Black
-            clearBtn.innerHTML = '전체 삭제';
+            clearBtn.innerHTML = window._('Clear All');
             clearBtn.onclick = () => {
                 if(this.parent.layerStorage['label_aux']) {
                     const auxLayers = this.parent.layerStorage['label_aux'].getLayers();
@@ -612,17 +612,17 @@ class AoTGeoUI {
         if (window.AoTMapEditor?.featureGroup) collect(window.AoTMapEditor.featureGroup);
 
         if (sites.length === 0) {
-            listUl.innerHTML = '<li class="list-group-item text-muted text-center py-2">대지가 없습니다.</li>';
+            listUl.innerHTML = `<li class="list-group-item text-muted text-center py-2">${window._('No Sites Found')}</li>`;
         } else {
             // Sort by Name
             sites.sort((a, b) => {
-                const nA = a.feature.properties.name || 'Site';
-                const nB = b.feature.properties.name || 'Site';
+                const nA = a.feature.properties.name || window._('Site');
+                const nB = b.feature.properties.name || window._('Site');
                 return nA.localeCompare(nB);
             });
 
             sites.forEach(l => {
-                const name = l.feature.properties.name || 'Unnamed Site';
+                const name = l.feature.properties.name || window._('Unnamed Site');
                 const li = document.createElement('li');
                 li.className = 'list-group-item list-group-item-action py-2 px-3 cursor-pointer';
                 li.style.cursor = 'pointer';

@@ -34,18 +34,22 @@
         </div>
 
         <div class="d-flex flex-wrap mb-3">
-            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2"
+            <button type="button" class="btn btn-primary aot-modern-btn mr-2 mb-2"
                 data-dismiss="modal">{{_('Close')}}</button>
             <button data-form-id="form_function_{{each_function.unique_id}}"
                 onclick="return $(this).processRequest(this, 'function_mod');"
-                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button"
+                class="btn btn-primary aot-modern-btn mr-2 mb-2" type="button"
                 name="function_mod">{{_('Save')}}</button>
             <button data-form-id="form_function_{{each_function.unique_id}}"
-                onclick="return confirm({{_('Are you sure you want to delete?')|tojson}}) && $(this).processRequest(this, 'function_delete');"
-                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" type="button"
+                onclick='return confirm({{_("Are you sure you want to duplicate?")|tojson}}) && $(this).processRequest(this, "function_duplicate");'
+                class="btn btn-primary aot-modern-btn mr-2 mb-2" type="button"
+                name="function_duplicate">{{_('Duplicate')}}</button>
+            <button data-form-id="form_function_{{each_function.unique_id}}"
+                onclick='return confirm({{_("Are you sure you want to delete?")|tojson}}) && $(this).processRequest(this, "function_delete");'
+                class="btn btn-primary aot-modern-btn mr-2 mb-2" type="button"
                 name="function_delete">{{_('Delete')}}</button>
             <button onclick="return $(this).processRequest(this, 'execute_all_actions');" name="execute_all_actions"
-                class="btn aot-pill-btn aot-pill-btn-primary mb-2 ml-auto" type="button">{{_('Execute All Actions')}}</button>
+                class="btn btn-primary aot-modern-btn mb-2 ml-auto" type="button">{{_('Execute All Actions')}}</button>
         </div>
 
         <div class="aot-modal-group-title">{{_('Options')}}</div>

@@ -6,7 +6,7 @@ from flask_babel import lazy_gettext as lg, gettext as _
 # 채널 정의 (Zoom Level 차이를 주의해야 함)
 CHANNELS = {
     0: {
-        'name': 'MODIS Terra TrueColor',
+        'name': _('MODIS Terra TrueColor'),
         'options': {
             'layer': 'MODIS_Terra_CorrectedReflectance_TrueColor',
             'ext': 'jpg',
@@ -15,7 +15,7 @@ CHANNELS = {
         }
     },
     1: {
-        'name': 'VIIRS SNPP TrueColor',
+        'name': _('VIIRS SNPP TrueColor'),
         'options': {
             'layer': 'VIIRS_SNPP_CorrectedReflectance_TrueColor',
             'ext': 'jpg',
@@ -24,7 +24,7 @@ CHANNELS = {
         }
     },
     2: {
-        'name': 'Blue Marble (Precip)',
+        'name': _('Blue Marble (Precip)'),
         'options': {
             'layer': 'BlueMarble_NextGeneration',
             'ext': 'jpg',
@@ -33,7 +33,7 @@ CHANNELS = {
         }
     },
     3: {
-        'name': 'Soil Moisture (SMAP)',
+        'name': _('Soil Moisture (SMAP)'),
         'options': {
             'layer': 'SMAP_L4_Analyzed_Root_Zone_Soil_Moisture',
             'ext': 'png',
@@ -44,7 +44,7 @@ CHANNELS = {
         }
     },
     4: {
-        'name': 'Vegetation Index (NDVI)',
+        'name': _('Vegetation Index (NDVI)'),
         'options': {
             'layer': 'MODIS_Terra_NDVI_8Day',
             'ext': 'png',
@@ -54,7 +54,7 @@ CHANNELS = {
         }
     },
     5: {
-        'name': 'Land Surface Temp (Day)',
+        'name': _('Land Surface Temp (Day)'),
         'options': {
             'layer': 'MODIS_Terra_Land_Surface_Temp_Day',
             'ext': 'png',
@@ -88,7 +88,7 @@ INPUT_INFORMATION = {
         {
             'id': 'active_channels',
             'type': 'channel_selector',
-            'name': 'Satellite Layer',
+            'name': _('Satellite Layer'),
             'channel_def': CHANNELS,
             'default': [0],
             'multiple': False
@@ -96,17 +96,17 @@ INPUT_INFORMATION = {
         {
             'id': 'date_mode',
             'type': 'select',
-            'name': 'Date Mode',
+            'name': _('Date Mode'),
             'default': 'default',
             'options': [
-                {'value': 'default', 'name': 'Auto (NASA Default)'},
-                {'value': 'today', 'name': 'Today (UTC)'},
-                {'value': '1_day_ago', 'name': '1 Day Ago'},
-                {'value': '2_days_ago', 'name': '2 Days Ago'},
-                {'value': '7_days_ago', 'name': '7 Days Ago'},
-                {'value': 'custom', 'name': 'Custom Date (YYYY-MM-DD)'}
+                {'value': 'default', 'name': _('Auto (NASA Default)')},
+                {'value': 'today', 'name': _('Today (UTC)')},
+                {'value': '1_day_ago', 'name': _('1 Day Ago')},
+                {'value': '2_days_ago', 'name': _('2 Days Ago')},
+                {'value': '7_days_ago', 'name': _('7 Days Ago')},
+                {'value': 'custom', 'name': _('Custom Date (YYYY-MM-DD)')}
             ],
-            'description': 'Choose date mode for this layer.'
+            'description': _('Choose date mode for this layer.')
         },
         {
             'id': 'target_date',

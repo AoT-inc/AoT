@@ -5,12 +5,12 @@ from flask_babel import lazy_gettext as lg, gettext as _
 # Define Channels for Properties (maps to WMS 'map' param)
 # Option 'map' will be passed as query param: &map=/map/phh2o.map
 CHANNELS = {
-    0: {'name': 'pH (Water)', 'options': {'map': '/map/phh2o.map', 'layers': 'phh2o_0-5cm_mean'}},
-    1: {'name': 'Clay Content', 'options': {'map': '/map/clay.map', 'layers': 'clay_0-5cm_mean'}},
-    2: {'name': 'Sand Content', 'options': {'map': '/map/sand.map', 'layers': 'sand_0-5cm_mean'}},
-    3: {'name': 'Silt Content', 'options': {'map': '/map/silt.map', 'layers': 'silt_0-5cm_mean'}},
-    4: {'name': 'Soil Organic Carbon', 'options': {'map': '/map/soc.map', 'layers': 'soc_0-5cm_mean'}},
-    5: {'name': 'Bulk Density', 'options': {'map': '/map/bdod.map', 'layers': 'bdod_0-5cm_mean'}}
+    0: {'name': _('pH (Water)'), 'options': {'map': '/map/phh2o.map', 'layers': 'phh2o_0-5cm_mean'}},
+    1: {'name': _('Clay Content'), 'options': {'map': '/map/clay.map', 'layers': 'clay_0-5cm_mean'}},
+    2: {'name': _('Sand Content'), 'options': {'map': '/map/sand.map', 'layers': 'sand_0-5cm_mean'}},
+    3: {'name': _('Silt Content'), 'options': {'map': '/map/silt.map', 'layers': 'silt_0-5cm_mean'}},
+    4: {'name': _('Soil Organic Carbon'), 'options': {'map': '/map/soc.map', 'layers': 'soc_0-5cm_mean'}},
+    5: {'name': _('Bulk Density'), 'options': {'map': '/map/bdod.map', 'layers': 'bdod_0-5cm_mean'}}
 }
 
 INPUT_INFORMATION = {
@@ -37,7 +37,7 @@ INPUT_INFORMATION = {
         {
             'id': 'active_channels',
             'type': 'channel_selector',
-            'name': 'Soil Property',
+            'name': _('Soil Property'),
             'channel_def': CHANNELS,
             'default': [0],
             'multiple': False

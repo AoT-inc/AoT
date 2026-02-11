@@ -16,9 +16,9 @@ DOCKER_CONTAINER = os.environ.get('DOCKER_CONTAINER', False) == 'TRUE'
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from config_translations import TRANSLATIONS as T
 
-AOT_VERSION = '26.0.3'
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = '718f314963be'
+ALEMBIC_VERSION = '718f314963c2'
+AOT_VERSION = '26.0.4'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -591,6 +591,7 @@ class ProdConfig(object):
     AOT_DB_PATH = f'sqlite:///{SQL_DATABASE_AOT}'
     SQLALCHEMY_DATABASE_URI = f'sqlite:///{SQL_DATABASE_AOT}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    RATELIMIT_STORAGE_URI = "memory://"
 
     FLASK_PROFILER = {
         "enabled": True,

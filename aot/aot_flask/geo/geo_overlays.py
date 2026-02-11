@@ -107,11 +107,6 @@ class GeoOverlayManager:
         parent_id = data.get('parent_id') # Required for infra_blob, optional for zone
         device_id = data.get('device_id')
         
-        # [DEBUG] Trace Save Payload
-        print(f"[GeoOverlayManager] SAVE request: Type={target_type}, Map={map_uuid}, DevID={device_id}, Count={len(new_features)}")
-        if target_type == 'device' and len(new_features) > 0:
-            print(f"[GeoOverlayManager] First Feature Props: {new_features[0].get('properties', {})}")
-
         if not map_uuid or not target_type:
             return None, "Missing map_uuid or type"
 

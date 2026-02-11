@@ -168,8 +168,13 @@ class GeoShape(CRUDMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    map = db.relationship("GeoMap", 
+                          primaryjoin="foreign(GeoShape.geo_id) == GeoMap.unique_id",
+                          backref=db.backref("shapes", cascade="all, delete-orphan"))
+
     def __repr__(self):
-        return "<GeoShape(id={0}, type='{1}')>".format(self.id, self.type)
+        return "<GeoShape(id={0}, type='{1}', geo_id='{2}')>".format(self.id, self.type, self.geo_id)
 
 
 # ------------------------------------------------------------------------------

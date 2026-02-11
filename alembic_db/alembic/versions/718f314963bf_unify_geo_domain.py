@@ -70,7 +70,7 @@ def upgrade():
         
         # We need a plain connection for execution
         connection = op.get_bind()
-        rows = connection.execute(sa.select([t_geo_shape.c.id, t_geo_shape.c.feature])).fetchall()
+        rows = connection.execute(sa.select(t_geo_shape.c.id, t_geo_shape.c.feature)).fetchall()
         for row in rows:
             try:
                 feat = row.feature

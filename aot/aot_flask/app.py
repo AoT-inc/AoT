@@ -84,14 +84,13 @@ def register_extensions(app):
     # Create and populate database if it doesn't exist
     with app.app_context():
         db.create_all()
-        # During Alembic migrations, avoid touching the DB via populate_db(),
-        # because the schema may be mid-upgrade.
-        if os.environ.get("ALEMBIC_RUNNING") != "1":
-            populate_db()
 
-        # This is disabled because there's a bug that messes up user databases
-        # The upgrade script will execute alembic to upgrade the database
-        # alembic_upgrade_db()
+        if os.environ.get("ALEMBIC_RUNNING") != "1":
+            # Database migration on startup
+            from aot.databases.models import alembic_upgrade_db
+            alembic_upgrade_db(app)
+
+            populate_db()
 
     # [Security] Initialize Talisman with robust defaults
     # CSP: Using 'self' as base, keeping '*' for legacy widget compatibility
