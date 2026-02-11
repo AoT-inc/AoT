@@ -219,7 +219,7 @@ WIDGET_INFORMATION = {
             'type': 'integer',
             'default_value': 3600,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('최대유효시간'), lazy_gettext('초')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('최대유효시간'), lazy_gettext('초')),
             'phrase': lazy_gettext('사용할 측정값의 최대 유효 시간')
         },
         {
@@ -228,7 +228,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
             'phrase': lazy_gettext('위젯을 새로 고침하는 간격')
         },
         {

@@ -54,7 +54,7 @@ WIDGET_INFORMATION = {
                 'PID'
             ],
             'name': lazy_gettext('Measurement'),
-            'phrase': 'Select a measurement to display'
+            'phrase': lazy_gettext('Select a measurement to display')
         },
         {
             'id': 'measurement_max_age',
@@ -62,7 +62,7 @@ WIDGET_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -71,8 +71,8 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'type': 'header',
@@ -83,15 +83,15 @@ WIDGET_INFORMATION = {
             'type': 'integer',
             'default_value': 2,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Decimal Places',
-            'phrase': 'The number of measurement decimal places'
+            'name': lazy_gettext('Decimal Places'),
+            'phrase': lazy_gettext('The number of measurement decimal places')
         },
         {
             'id': 'option_invert',
             'type': 'bool',
             'default_value': False,
-            'name': 'Invert Colors',
-            'phrase': 'Invert the indicator colors'
+            'name': lazy_gettext('Invert Colors'),
+            'phrase': lazy_gettext('Invert the indicator colors')
         }
     ],
 

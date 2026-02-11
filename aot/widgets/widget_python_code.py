@@ -155,8 +155,8 @@ WIDGET_INFORMATION = {
             'type': 'float',
             'default_value': 60,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Loop Period ({})'.format(lazy_gettext("Seconds")),
-            'phrase': 'The period of time between executing loop code'
+            'name': lazy_gettext('Loop Period ({})').format(lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between executing loop code')
         },
         {
             'id': 'refresh_seconds',
@@ -164,16 +164,16 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'id': 'font_em_body',
             'type': 'float',
             'default_value': 1.5,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Body Font Size (em)',
-            'phrase': 'The font size of the body text'
+            'name': lazy_gettext('Body Font Size (em)'),
+            'phrase': lazy_gettext('The font size of the body text')
         },
         {
             'id': 'python_code_loop',

@@ -300,8 +300,8 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 90.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': '위젯을 새로고침하는 주기를 초 단위로 입력하세요.'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
+            'phrase': lazy_gettext('위젯을 새로고침하는 주기를 초 단위로 입력하세요.')
         },
         {
             'id': 'x_axis_duration_unit',
@@ -312,30 +312,30 @@ WIDGET_INFORMATION = {
                 ('hour', '시간'),
                 ('minute', '분'),
             ],
-            'name': 'X축 기간 단위',
-            'phrase': 'X축 기간의 단위를 선택하세요.'
+            'name': lazy_gettext('X축 기간 단위'),
+            'phrase': lazy_gettext('X축 기간의 단위를 선택하세요.')
         },
         {
             'id': 'x_axis_duration',
             'type': 'integer',
             'default_value': 1,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'X축 표시 기간',
-            'phrase': '그래프의 X축에 표시할 기간을 입력하세요.'
+            'name': lazy_gettext('X축 표시 기간'),
+            'phrase': lazy_gettext('그래프의 X축에 표시할 기간을 입력하세요.')
         },
         {
             'id': 'enable_auto_refresh',
             'type': 'bool',
             'default_value': True,
-            'name': '자동 새로고침 활성화',
-            'phrase': '지정된 주기마다 그래프 데이터를 자동으로 새로고침합니다.'
+            'name': lazy_gettext('자동 새로고침 활성화'),
+            'phrase': lazy_gettext('지정된 주기마다 그래프 데이터를 자동으로 새로고침합니다.')
         },
         {
             'id': 'enable_xaxis_reset',
             'type': 'bool',
             'default_value': True,
-            'name': 'X축 초기화 활성화',
-            'phrase': '새로고침 시 X축을 초기화하여 그래프를 다시 그립니다.'
+            'name': lazy_gettext('X축 초기화 활성화'),
+            'phrase': lazy_gettext('새로고침 시 X축을 초기화하여 그래프를 다시 그립니다.')
         },
         {
             'type': 'header',
@@ -345,71 +345,71 @@ WIDGET_INFORMATION = {
             'id': 'enable_header_buttons',
             'type': 'bool',
             'default_value': True,
-            'name': '헤더 버튼 활성화',
-            'phrase': '위젯 헤더에 그래프 조작 버튼을 표시합니다.'
+            'name': lazy_gettext('헤더 버튼 활성화'),
+            'phrase': lazy_gettext('위젯 헤더에 그래프 조작 버튼을 표시합니다.')
         },
         {
             'id': 'enable_title',
             'type': 'bool',
             'default_value': False,
-            'name': '제목 표시 활성화',
-            'phrase': '그래프 제목을 표시합니다.'
+            'name': lazy_gettext('제목 표시 활성화'),
+            'phrase': lazy_gettext('그래프 제목을 표시합니다.')
         },
         {
             'id': 'enable_navbar',
             'type': 'bool',
             'default_value': False,
-            'name': '탐색 바 활성화',
-            'phrase': '그래프 하단에 탐색 바를 활성화합니다.'
+            'name': lazy_gettext('탐색 바 활성화'),
+            'phrase': lazy_gettext('그래프 하단에 탐색 바를 활성화합니다.')
         },
         {
             'id': 'enable_export',
             'type': 'bool',
             'default_value': False,
-            'name': '내보내기 기능 활성화',
-            'phrase': '그래프를 내보낼 수 있는 버튼을 활성화합니다.'
+            'name': lazy_gettext('내보내기 기능 활성화'),
+            'phrase': lazy_gettext('그래프를 내보낼 수 있는 버튼을 활성화합니다.')
         },
         {
             'id': 'enable_range_selector',
             'type': 'bool',
             'default_value': False,
-            'name': '기간 선택기 활성화',
-            'phrase': '그래프 기간 선택기를 활성화합니다.'
+            'name': lazy_gettext('기간 선택기 활성화'),
+            'phrase': lazy_gettext('그래프 기간 선택기를 활성화합니다.')
         },
         {
             'id': 'enable_graph_legend',
             'type': 'bool',
             'default_value': True,
-            'name': '그래프 범례 활성화',
-            'phrase': '그래프 하단에 범례를 표시합니다.'
+            'name': lazy_gettext('그래프 범례 활성화'),
+            'phrase': lazy_gettext('그래프 하단에 범례를 표시합니다.')
         },
         {
             'id': 'graph_font_size_em_axes',
             'type': 'float',
             'default_value': 1.0,
-            'name': '그래프 축 글자 크기(em)',
-            'phrase': '그래프의 축 숫자 글꼴 크기를 em 단위로 입력하세요.'
+            'name': lazy_gettext('그래프 축 글자 크기(em)'),
+            'phrase': lazy_gettext('그래프의 축 숫자 글꼴 크기를 em 단위로 입력하세요.')
         },
         {
             'id': 'graph_font_size_em_axes_title',
             'type': 'float',
             'default_value': 1.0,
-            'name': '그래프 축 제목 글자 크기(em)',
-            'phrase': '그래프 축 제목 글꼴 크기를 em 단위로 입력하세요.'
+            'name': lazy_gettext('그래프 축 제목 글자 크기(em)'),
+            'phrase': lazy_gettext('그래프 축 제목 글꼴 크기를 em 단위로 입력하세요.')
         },
         {
             'id': 'graph_font_size_em_legend',
             'type': 'float',
             'default_value': 1.0,
-            'name': '그래프 범례 글자 크기(em)',
-            'phrase': '그래프 범례 글꼴 크기를 em 단위로 입력하세요.'
+            'name': lazy_gettext('그래프 범례 글자 크기(em)'),
+            'phrase': lazy_gettext('그래프 범례 글꼴 크기를 em 단위로 입력하세요.')
         },
         {
             'id': 'graph_font_size_em_title',
             'type': 'float',
             'default_value': 1.0,
-            'name': '그래프 제목 글자 크기(em)',
-            'phrase': '그래프 제목 글꼴 크기를 em 단위로 입력하세요.'
+            'name': lazy_gettext('그래프 제목 글자 크기(em)'),
+            'phrase': lazy_gettext('그래프 제목 글꼴 크기를 em 단위로 입력하세요.')
         },
         {
             'type': 'header',

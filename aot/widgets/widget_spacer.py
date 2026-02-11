@@ -21,6 +21,7 @@
 import logging
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from flask_babel import lazy_gettext
 
 logger = logging.getLogger(__name__)
 
@@ -42,15 +43,15 @@ WIDGET_INFORMATION = {
             'type': 'float',
             'default_value': 1.5,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Body Font Size (em)',
-            'phrase': 'The font size of the body text'
+            'name': lazy_gettext('Body Font Size (em)'),
+            'phrase': lazy_gettext('The font size of the body text')
         },
         {
             'id': 'body_text',
             'type': 'text',
             'default_value': "",
-            'name': 'Body Text',
-            'phrase': 'The body text of the widget'
+            'name': lazy_gettext('Body Text'),
+            'phrase': lazy_gettext('The body text of the widget')
         },
     ],
 

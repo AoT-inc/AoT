@@ -240,7 +240,7 @@ WIDGET_INFORMATION = {
             'default_value': 1800,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('최대 유효 시간'), lazy_gettext('초')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('최대 유효 시간'), lazy_gettext('초')),
             'phrase': lazy_gettext('해당 측정값의 최대 유효 시간을 설정하세요')
         },
         {
@@ -249,36 +249,36 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': '위젯을 새로고침할 주기를 설정하세요'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
+            'phrase': lazy_gettext('위젯을 새로고침할 주기를 설정하세요')
         },
         {
             'id': 'decimal_places',
             'type': 'integer',
             'default_value': 1,
-            'name': '소수점 자릿수',
-            'phrase': '소수점 이하 표시 자릿수를 설정하세요'
+            'name': lazy_gettext('소수점 자릿수'),
+            'phrase': lazy_gettext('소수점 이하 표시 자릿수를 설정하세요')
         },
         {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
-            'name': '최소값',
-            'phrase': '게이지의 최소값을 설정하세요'
+            'name': lazy_gettext('최소값'),
+            'phrase': lazy_gettext('게이지의 최소값을 설정하세요')
         },
         {
             'id': 'max',
             'type': 'float',
             'default_value': 100,
-            'name': '최대값',
-            'phrase': '게이지의 최대값을 설정하세요'
+            'name': lazy_gettext('최대값'),
+            'phrase': lazy_gettext('게이지의 최대값을 설정하세요')
         },
         {
             'id': 'stops',
             'type': 'integer',
             'default_value': 5,  # 4 → 5로 변경
-            'name': '색상 구간 수',
-            'phrase': '게이지 색상을 구분할 구간 수를 설정하세요'
+            'name': lazy_gettext('색상 구간 수'),
+            'phrase': lazy_gettext('게이지 색상을 구분할 구간 수를 설정하세요')
         },
         {
             'id': 'preset_config',
@@ -290,39 +290,39 @@ WIDGET_INFORMATION = {
                 ('humidity', '습도'),
                 ('vpd', 'VPD')
             ],
-            'name': '사전 설정',
-            'phrase': '사전 설정값을 선택하면, 최소/최대값 등 기본 설정이 자동으로 반영됩니다.'
+            'name': lazy_gettext('사전 설정'),
+            'phrase': lazy_gettext('사전 설정값을 선택하면, 최소/최대값 등 기본 설정이 자동으로 반영됩니다.')
         },
         {
             # ★ 데이터 폰트 크기
             'id': 'text_font_size',
             'type': 'float',
             'default_value': 1.5,
-            'name': '데이터 문자 크기',
-            'phrase': '게이지 내부 데이터의 문자 크기를 설정하세요. 기본값 1.5는 중간 크기입니다.'
+            'name': lazy_gettext('데이터 문자 크기'),
+            'phrase': lazy_gettext('게이지 내부 데이터의 문자 크기를 설정하세요. 기본값 1.5는 중간 크기입니다.')
         },
         {
             # ★ 단위 폰트 크기
             'id': 'unit_font_size',
             'type': 'float',
             'default_value': 0.7,
-            'name': '단위 문자 크기',
-            'phrase': '게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.'
+            'name': lazy_gettext('단위 문자 크기'),
+            'phrase': lazy_gettext('게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.')
         },
         {
             # ★ 단위 폰트 크기
             'id': 'unit_font_tick',
             'type': 'float',
             'default_value': 500,
-            'name': '단위 문자 굵기',
-            'phrase': '게이지 내부 문자 굵기를 설정하세요. 기본값 500은 중간 굵기입니다.'
+            'name': lazy_gettext('단위 문자 굵기'),
+            'phrase': lazy_gettext('게이지 내부 문자 굵기를 설정하세요. 기본값 500은 중간 굵기입니다.')
         },
         {
             'id': 'text_y_offset',
             'type': 'float',
             'default_value': 30,
-            'name': '데이터 위치 오프셋',
-            'phrase': '게이지 내부 데이터 텍스트의 수직 위치 오프셋을 설정하세요 (숫자만 입력, 단위는 자동 처리)'
+            'name': lazy_gettext('데이터 위치 오프셋'),
+            'phrase': lazy_gettext('게이지 내부 데이터 텍스트의 수직 위치 오프셋을 설정하세요 (숫자만 입력, 단위는 자동 처리)')
         }        
     ],
 

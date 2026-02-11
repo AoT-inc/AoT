@@ -57,16 +57,16 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'id': 'font_em_value',
             'type': 'float',
             'default_value': 1.2,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Value Font Size (em)',
-            'phrase': 'The font size of the measurement'
+            'name': lazy_gettext('Value Font Size (em)'),
+            'phrase': lazy_gettext('The font size of the measurement')
         },
     ],
 

@@ -149,6 +149,7 @@ WIDGET_INFORMATION = {
             'type': 'select_device',
             'default_value': '',
             'options_select': ['Trigger'],
+            'filter': {'key': 'trigger_type', 'value': 'trigger_sequence'},
             'name': lazy_gettext('Sequence Function'),
             'phrase': lazy_gettext('Select the Sequence to control')
         },
@@ -214,112 +215,249 @@ WIDGET_INFORMATION = {
     'widget_dashboard_head': """
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
     <style>
-        .seq-step-row {
-            display: flex;
-            align-items: center;
-            padding: 8px 5px;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-            font-size: 1em; /* Requested 1em */
-            color: var(--dark, #333); /* Requested var(--dark) */
-        }
-        .seq-step-row:last-child {
-            border-bottom: none;
-        }
-        .seq-step-row.active {
-            background-color: rgba(40, 167, 69, 0.25) !important;
-            border-left: 4px solid #28a745 !important;
-            color: #155724 !important;
-        }
-        .seq-step-row.disabled {
-            opacity: 0.5;
-            background-color: #f9f9f9;
-        }
-        
-        .seq-col-type {
-            width: 60px;
-            font-size: 0.8em;
-            color: #888;
-            font-weight: normal; /* Removed bold */
-            text-transform: uppercase;
-        }
-        .seq-col-action {
-            width: 30%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 10px;
-            font-weight: normal; /* Removed 600 */
-        }
-        .seq-col-device {
-            flex-grow: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 10px;
-            color: #666;
-            font-size: 0.9em;
-            font-weight: normal;
-        }
-        .seq-col-time {
-            width: 70px;
-            text-align: right;
-            font-size: 0.9em;
-            color: #555;
-            margin-right: 15px;
-            font-family: monospace;
-            font-weight: normal;
-        }
-        .seq-col-toggle {
-            width: 70px;
-            display: flex;
-            justify-content: flex-end;
+        /* widget_sequence.css embedded */
+        /* --- Layout Containers --- */
+        .seq-widget-container {
+            padding: 10px 12px;
+            color: var(--aot-text-main, #333);
+            font-family: inherit; /* Ensure default font */
+            font-size: 1em;       /* Default base size */
         }
 
-        /* Info Grid */
-        .seq-info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1px;
-            margin-bottom: 5px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-        .seq-info-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 8px 5px;
-            background: rgba(255,255,255,0.5);
-        }
-        .seq-info-label {
-            font-size: 0.7em;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-            font-weight: normal;
-        }
-        .seq-info-val {
-            font-size: 1.1em;
-            font-weight: normal; /* Removed bold */
-            color: var(--dark, #000);
-        }
-        
-        /* Header Toggle Container */
-        .seq-header-toggle-row {
+        /* --- Section 1: Header (Timer + Toggle) --- */
+        .seq-header-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding: 0 5px;
+            margin-bottom: 12px;
         }
-        .seq-header-timer {
-            font-weight: normal; /* Removed bold */
-            color: var(--dark, #333);
+
+        .seq-main-timer {
             font-size: 1.2em;
-            font-family: monospace;
+            color: var(--aot-text-title, #222);
+        }
+
+        /* --- Section 2: Info Grid --- */
+        .seq-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px; /* Gap between cards */
+            margin-bottom: 15px;
+        }
+
+        .seq-info-card {
+            background-color: var(--aot-bg-sub, #f8f9fa);
+            border: 1px solid var(--aot-border-light, #eee);
+            border-radius: 8px;
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .seq-info-label {
+            font-size: 0.75em;
+            color: var(--gray-dark, #888);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .seq-info-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--aot-text-main, #444);
+        }
+
+        /* --- Section 2.5: Expand/Collapse Button --- */
+        .seq-expand-btn-container {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .seq-expand-btn {
+            width: 100%;
+            height: 32px;
+            border-radius: 16px; /* Pill shape */
+            background-color: transparent;
+            border: 1px solid var(--aot-border-light, #ddd);
+            color: var(--gray-dark, #666);
+            font-size: 1em; /* Reset to 1em */
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .seq-expand-btn:hover {
+            background-color: var(--aot-bg-hover, #f0f0f0);
+            border-color: var(--gray-dark, #ccc);
+            color: var(--aot-text-main, #333);
+        }
+
+        .seq-expand-btn:active {
+            transform: scale(0.99);
+        }
+
+        .seq-expand-icon {
+            font-size: 0.8em;
+            margin-left: 6px;
+            transition: transform 0.3s ease;
+        }
+
+        .seq-expand-btn.expanded .seq-expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* --- Section 3: Action List --- */
+        .seq-details-container {
+            display: none; /* Hidden by default */
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .seq-details-container.expanded {
+            display: block;
+        }
+
+        /* List Header */
+        .seq-list-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            background-color: var(--aot-bg-sub, #f9f9f9);
+            border-bottom: 1px solid var(--aot-border-light, #eee);
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            font-size: 0.75em;
+            color: var(--gray-dark, #777);
+            font-weight: 600;
+        }
+
+        /* Columns - Adjusted for new order: Enable | Name | Type | Time */
+        .seq-col-enable { 
+            width: 40px; 
+            text-align: center; 
+            flex-shrink: 0;
+        }
+        .seq-col-name { 
+            flex-grow: 1; 
+            padding-left: 10px; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        .seq-col-type { 
+            width: 80px; 
+            text-align: left; 
+            flex-shrink: 0; 
+        }
+        .seq-col-time { 
+            width: 80px; 
+            text-align: left; 
+            padding-right: 5px; 
+            flex-shrink: 0; 
+        }
+
+        /* List Body */
+        .seq-list-body {
+            border: 1px solid var(--aot-border-light, #eee);
+            border-top: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            background: #fff;
+            max-height: 330px;
+            overflow-y: auto;
+        }
+
+        .seq-list-item {
+            display: flex;
+            align-items: center;
+            padding: 0 10px; /* Vertical padding handled by height/align-items */
+            border-bottom: 1px solid var(--aot-border-light, #f0f0f0);
+            color: var(--aot-text-main, #444);
+            font-size: 1em; /* Reset to 1em */
+            height: 40px;
+            box-sizing: border-box;
+            white-space: nowrap;
+            flex-wrap: nowrap;
+        }
+
+        .seq-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .seq-list-item.active {
+            background-color: rgba(40, 167, 69, 0.1); /* Green hint */
+            border-left: 3px solid #28a745;
+            padding-left: 7px;
+        }
+
+        .seq-list-item.disabled {
+            opacity: 0.6;
+            background-color: #fafafa;
+        }
+
+        /* Square Toggle Button Style */
+        .seq-square-toggle {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #28a745; /* Green border by default */
+            border-radius: 2px; /* Slightly rounded square */
+            background-color: transparent;
+            cursor: pointer;
+            position: relative;
+            vertical-align: middle;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .seq-square-toggle:checked {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        /* Optional checkmark for better visibility */
+        .seq-square-toggle:checked::after {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 4px;
+            width: 5px;
+            height: 9px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .seq-square-toggle:hover {
+            border-color: #218838;
+        }
+
+        /* Text styles */
+        .seq-text-name {
+            font-weight: 500;
+        }
+        .seq-text-type {
+            font-size: 0.85em;
+            color: var(--gray-dark, #888);
+            text-transform: uppercase;
+        }
+        .seq-text-time {
+            font-weight: 600;
+            color: var(--aot-text-main, #555);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .seq-col-type { width: 60px; }
+            .seq-col-time { width: 60px; }
         }
     </style>
     """,
@@ -327,11 +465,11 @@ WIDGET_INFORMATION = {
     'widget_dashboard_title_bar': """<span id="seq-title-{{each_widget.unique_id}}">{{each_widget.name}}</span>""",
 
     'widget_dashboard_body': """
-    <div id="seq-container-{{each_widget.unique_id}}" style="padding: 0 12px;">
-        <!-- Header Toggle Row -->
-        <div class="seq-header-toggle-row">
-            <!-- Timer Display (Real-time) -->
-            <span id="seq-timer-{{each_widget.unique_id}}" class="seq-header-timer">00:00:00 / 00:00:00</span>
+    <div id="seq-container-{{each_widget.unique_id}}" class="seq-widget-container">
+        
+        <!-- Section 1: Header (Timer + Toggle) -->
+        <div class="seq-header-row">
+            <div id="seq-timer-{{each_widget.unique_id}}" class="seq-main-timer">00:00:00 / 00:00:00</div>
             
             <label class="btn-toggle">
                 <input type="checkbox" 
@@ -344,36 +482,44 @@ WIDGET_INFORMATION = {
             </label>
         </div>
         
-        <!-- Info Grid (Start / End / Period) -->
+        <!-- Section 2: Info Grid -->
         <div class="seq-info-grid">
-            <div class="seq-info-item">
+            <div class="seq-info-card">
                 <span class="seq-info-label">{{ _('Start') }}</span>
-                <span id="seq-disp-start-{{each_widget.unique_id}}" class="seq-info-val">--:--</span>
+                <span id="seq-disp-start-{{each_widget.unique_id}}" class="seq-info-value">--:--</span>
             </div>
-            <div class="seq-info-item">
+            <div class="seq-info-card">
                 <span class="seq-info-label">{{ _('End') }}</span>
-                <span id="seq-disp-end-{{each_widget.unique_id}}" class="seq-info-val">--:--</span>
+                <span id="seq-disp-end-{{each_widget.unique_id}}" class="seq-info-value">--:--</span>
             </div>
-            <div class="seq-info-item">
+            <div class="seq-info-card">
                 <span class="seq-info-label">{{ _('Period') }}</span>
-                <span id="seq-disp-period-{{each_widget.unique_id}}" class="seq-info-val">-- s</span>
+                <span id="seq-disp-period-{{each_widget.unique_id}}" class="seq-info-value">-- s</span>
             </div>
         </div>
 
-        <!-- Action List Header -->
-        <div style="display:flex; padding: 0 5px 5px 5px; font-size: 0.75em; color: #666; border-bottom: 2px solid #ddd;">
-             <div style="width: 60px;">{{ _('TYPE') }}</div>
-             <div style="flex-grow:1; padding-left:10px;">{{ _('NAME') }}</div>
-             <div style="width: 30%; padding-left:10px;">{{ _('ACTION') }}</div>
-             <div style="width: 70px; text-align:right; margin-right:15px;">{{ _('TIME') }}</div>
-             <div style="width: 70px; text-align:right;">{{ _('ON/OFF') }}</div>
+        <!-- Section 2.5: Expand Button -->
+        <div class="seq-expand-btn-container">
+            <button class="seq-expand-btn" onclick="toggle_seq_details('{{each_widget.unique_id}}', this)">
+                <span class="seq-btn-text">{{ _('Actions') }}</span>
+                <span class="seq-expand-icon">▼</span>
+            </button>
         </div>
 
-        <!-- Action List -->
-        <div id="seq-list-{{each_widget.unique_id}}" style="max-height: 250px; overflow-y: auto;">
-            <!-- Populated by JS -->
-            <div style="padding: 20px; text-align:center; color: #666;">{{ _('Waiting for data...') }}</div>
+        <!-- Section 3: Action List (Hidden by default) -->
+        <div id="seq-details-{{each_widget.unique_id}}" class="seq-details-container">
+            <div class="seq-list-header">
+                <div class="seq-col-enable"></div>
+                <div class="seq-col-name">{{ _('Name') }}</div>
+                <div class="seq-col-type">{{ _('Type') }}</div>
+                <div class="seq-col-time">{{ _('Time') }}</div>
+            </div>
+            <div id="seq-list-{{each_widget.unique_id}}" class="seq-list-body">
+                <!-- Populated by JS -->
+                <div style="padding: 20px; text-align:center; color: #666;">{{ _('Waiting for data...') }}</div>
+            </div>
         </div>
+
     </div>
     """,
 
@@ -413,6 +559,23 @@ WIDGET_INFORMATION = {
         display.innerText = format_seq_time(currentElapsed) + " / " + format_seq_time(state.period);
     }
 
+    function safe_toast(type, msg) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(msg, type);
+            return;
+        }
+        var settings = window.AoTGlobalSettings || {};
+        if (type === 'success' && settings.hide_success) return;
+        if (type === 'info' && settings.hide_info) return;
+        if ((type === 'warning' || type === 'error') && settings.hide_warning) return;
+        
+        if (typeof toastr !== 'undefined' && toastr[type]) {
+            toastr[type](msg);
+        } else {
+             console.log("[Toast " + type + "] " + msg);
+        }
+    }
+
     function toggle_seq_action(action_id, checkbox) {
         var enabled = checkbox.checked;
         $.ajax({
@@ -424,7 +587,7 @@ WIDGET_INFORMATION = {
                 console.log("Action toggled");
             },
             error: function(err) {
-                toastr.error(window._("Failed to toggle action"));
+                safe_toast('error', window._("Failed to toggle action"));
                 checkbox.checked = !enabled; // Revert
             }
         });
@@ -439,17 +602,32 @@ WIDGET_INFORMATION = {
             type: 'GET',
             success: function(resp) {
                 if(resp.status === 'success') {
-                    toastr.success(window._("Sequence") + " " + (checkbox.checked ? window._("Activated") : window._("Deactivated")));
+                    safe_toast('success', window._("Sequence") + " " + (checkbox.checked ? window._("Activated") : window._("Deactivated")));
                 } else {
-                    toastr.error(window._("Error") + ": " + (resp.error || window._("Unknown")));
+                    safe_toast('error', window._("Error") + ": " + (resp.error || window._("Unknown")));
                     checkbox.checked = !checkbox.checked; // Revert
                 }
             },
             error: function(err) {
-                toastr.error(window._("Failed to toggle Sequence"));
+                safe_toast('error', window._("Failed to toggle Sequence"));
                 checkbox.checked = !checkbox.checked; // Revert
             }
         });
+    }
+
+    function toggle_seq_details(widget_id, btn) {
+        var details = document.getElementById('seq-details-' + widget_id);
+        if (!details) return;
+        
+        var isHidden = (details.style.display === 'none' || getComputedStyle(details).display === 'none');
+        
+        if (isHidden) {
+            details.style.display = 'block';
+            $(btn).find('.seq-expand-icon').text('▲');
+        } else {
+            details.style.display = 'none';
+            $(btn).find('.seq-expand-icon').text('▼');
+        }
     }
 
     function update_sequence_widget(function_id, widget_id, default_period) {
@@ -512,7 +690,7 @@ WIDGET_INFORMATION = {
                 if (data.steps && data.steps.length > 0) {
                     for (var i = 0; i < data.steps.length; i++) {
                         var s = data.steps[i];
-                        var rowClass = "seq-step-row";
+                        var rowClass = "seq-list-item";
                         
                         // Debug log
                         console.log("Step[" + i + "]:", s.action_name, 
@@ -531,7 +709,7 @@ WIDGET_INFORMATION = {
                         var timeStr = "";
                         if (s.start !== null) {
                             var duration = s.original_duration ? s.original_duration : Math.round(s.end - s.start);
-                            timeStr = duration + "s";
+                            timeStr = format_seq_time(duration);
                         } else {
                             timeStr = "--";
                         }
@@ -540,32 +718,22 @@ WIDGET_INFORMATION = {
                         
                         listHtml += '<div class="' + rowClass + '" ' + rowStyle + '>';
                         
-                        // Type
-                        listHtml += '<div class="seq-col-type">' + (s.type === 'total' ? window._('TOTAL') : window._('SINGLE')) + '</div>';
-                        
-                        // Name (Device Detail)
-                        var devDetail = s.device_detail || ""; 
-                        listHtml += '<div class="seq-col-device" title="' + devDetail + '">' + devDetail + '</div>';
-
-                        // Action
-                        var actionName = s.action_name || window._("Unknown");
-                        listHtml += '<div class="seq-col-action" title="' + actionName + '">' + actionName + '</div>';
-                        
-                        // Time
-                        listHtml += '<div class="seq-col-time">' + timeStr + '</div>';
-                        
-                        // Toggle
-                        listHtml += '<div class="seq-col-toggle">';
-                        
-                        listHtml += '<label class="btn-toggle" style="margin-bottom:0;">'; 
-                        listHtml += '<input type="checkbox" ' + checked + ' class="btn-toggle-input" data-id="' + s.unique_id + '" onchange="toggle_seq_action(this.dataset.id, this)">';
-                        listHtml += '<span class="btn-toggle-slider">';
-                        listHtml += '<span class="btn-toggle-thumb"></span>';
-                        listHtml += '</span>';
-                        listHtml += '</label>';
-
+                        // --- Column 1: Enable (Checkbox) ---
+                        listHtml += '<div class="seq-col-enable">';
+                        listHtml += '<input type="checkbox" ' + checked + ' class="seq-square-toggle" data-id="' + s.unique_id + '" onchange="toggle_seq_action(this.dataset.id, this)">';
                         listHtml += '</div>';
-
+                        
+                        // --- Column 2: Name (Prioritize Channel Name > Device Name > Action Name) ---
+                        // Backend populates device_name and device_channel_name
+                        var nameToUse = s.device_channel_name || s.device_name || s.action_name || window._("Unknown");
+                        listHtml += '<div class="seq-col-name" title="' + nameToUse + '"><span class="seq-text-name">' + nameToUse + '</span></div>';
+                        
+                        // --- Column 3: Type ---
+                        listHtml += '<div class="seq-col-type"><span class="seq-text-type">' + (s.type === 'total' ? window._('TOTAL') : window._('SINGLE')) + '</span></div>';
+                        
+                        // --- Column 4: Time ---
+                        listHtml += '<div class="seq-col-time"><span class="seq-text-time">' + timeStr + '</span></div>';
+                        
                         listHtml += '</div>';
                     }
                 } else {

@@ -199,7 +199,7 @@ WIDGET_INFORMATION = {
             'default_value': 1800,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('최대 유효 시간'), lazy_gettext('초')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('최대 유효 시간'), lazy_gettext('초')),
             'phrase': lazy_gettext('해당 측정값의 최대 유효 시간을 설정하세요')
         },
         {
@@ -208,80 +208,80 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': '위젠을 새로고침할 주기를 설정하세요'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
+            'phrase': lazy_gettext('위젠을 새로고침할 주기를 설정하세요')
         },
         {
             'id': 'decimal_places',
             'type': 'integer',
             'default_value': 1,
-            'name': '소수점 자릿수',
-            'phrase': '소수점 이하 표시 자릿수를 설정하세요'
+            'name': lazy_gettext('소수점 자릿수'),
+            'phrase': lazy_gettext('소수점 이하 표시 자릿수를 설정하세요')
         },
         {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
-            'name': '최소값',
-            'phrase': '게이지의 최소값을 설정하세요'
+            'name': lazy_gettext('최소값'),
+            'phrase': lazy_gettext('게이지의 최소값을 설정하세요')
         },
         {
             'id': 'max',
             'type': 'float',
             'default_value': 360,
-            'name': '최대값',
-            'phrase': '게이지의 최대값을 설정하세요'
+            'name': lazy_gettext('최대값'),
+            'phrase': lazy_gettext('게이지의 최대값을 설정하세요')
         },
         {
             # ★ 데이터 폰트 크기
             'id': 'text_font_size',
             'type': 'float',
             'default_value': 1.5,
-            'name': '데이터 문자 크기',
-            'phrase': '게이지 내부 데이터의 문자 크기를 설정하세요. 기본값 1.5는 중간 크기입니다.'
+            'name': lazy_gettext('데이터 문자 크기'),
+            'phrase': lazy_gettext('게이지 내부 데이터의 문자 크기를 설정하세요. 기본값 1.5는 중간 크기입니다.')
         },
         {
             # ★ 단위 폰트 크기
             'id': 'unit_font_size',
             'type': 'float',
             'default_value': 0.7,
-            'name': '단위 문자 크기',
-            'phrase': '게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.'
+            'name': lazy_gettext('단위 문자 크기'),
+            'phrase': lazy_gettext('게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.')
         },
         {
             'id': 'border_color',
             'type': 'hidden',
             'default_value': '#D5D5D5',
-            'name': '테두리 색상',
-            'phrase': '팔레트에서 선택됩니다. 기본 #D5D5D5'
+            'name': lazy_gettext('테두리 색상'),
+            'phrase': lazy_gettext('팔레트에서 선택됩니다. 기본 #D5D5D5')
         },
         {
             'id': 'direction_color',
             'type': 'hidden',
             'default_value': '#F4D624',
-            'name': '바람 방향 표시 색상',
-            'phrase': '팔레트에서 선택됩니다. 기본 #F4D624'
+            'name': lazy_gettext('바람 방향 표시 색상'),
+            'phrase': lazy_gettext('팔레트에서 선택됩니다. 기본 #F4D624')
         },
         {
             'id': 'direction_dot_px',
             'type': 'float',
             'default_value': 10,
-            'name': '방향 점 크기(px)',
-            'phrase': '바람 방향 원형 점의 반지름(px)을 지정합니다. 예: 10'
+            'name': lazy_gettext('방향 점 크기(px)'),
+            'phrase': lazy_gettext('바람 방향 원형 점의 반지름(px)을 지정합니다. 예: 10')
         },
         {
             'id': 'direction_label_font_em',
             'type': 'float',
             'default_value': 1.5,
-            'name': '방위 문자 크기(em)',
-            'phrase': '풍향(남/동/북서 등) 문자 크기를 em 배율로 설정합니다. 기본 1.0'
+            'name': lazy_gettext('방위 문자 크기(em)'),
+            'phrase': lazy_gettext('풍향(남/동/북서 등) 문자 크기를 em 배율로 설정합니다. 기본 1.0')
         },
         {
             'id': 'text_y_offset',
             'type': 'float',
             'default_value': 5,
-            'name': '데이터 위치 오프셋',
-            'phrase': '게이지 내부 데이터 텍스트의 수직 위치 오프셋(%)을 설정하세요. 기본 5는 중심보다 약간 아래입니다.'
+            'name': lazy_gettext('데이터 위치 오프셋'),
+            'phrase': lazy_gettext('게이지 내부 데이터 텍스트의 수직 위치 오프셋(%)을 설정하세요. 기본 5는 중심보다 약간 아래입니다.')
         }
     ],
 

@@ -253,8 +253,8 @@ WIDGET_INFORMATION = {
                 ('stream', lazy_gettext('Display Live Video Stream')),
                 ('timelapse', lazy_gettext('Display Latest Timelapse Image'))
             ],
-            'name': 'Image Display Type',
-            'phrase': 'Select how to display the image'
+            'name': lazy_gettext('Image Display Type'),
+            'phrase': lazy_gettext('Select how to display the image')
         },
         {
             'id': 'stream_method',
@@ -264,16 +264,16 @@ WIDGET_INFORMATION = {
                 ('relay', '서버 릴레이 방식 (MJPEG)'),
                 ('direct', '클라이언트 직접 연결 방식 (HLS/Direct)')
             ],
-            'name': 'Streaming Method',
-            'phrase': 'Select the streaming method'
+            'name': lazy_gettext('Streaming Method'),
+            'phrase': lazy_gettext('Select the streaming method')
         },
         {
             'id': 'max_age',
             'type': 'integer',
             'default_value': 1200,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
-            'phrase': 'The maximum age of the camera image'
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'phrase': lazy_gettext('The maximum age of the camera image')
         },
         {
             'id': 'refresh_seconds',
@@ -281,8 +281,8 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'id': 'enable_timestamp',

@@ -58,15 +58,15 @@ WIDGET_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Max Age 1'), lazy_gettext('Seconds')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age 1'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the first measurement to use')
         },
         {
             'id': 'decimal_places_1',
             'type': 'integer',
             'default_value': 2,
-            'name': 'Decimal Places 1',
-            'phrase': 'The number of measurement decimal places for first measurement'
+            'name': lazy_gettext('Decimal Places 1'),
+            'phrase': lazy_gettext('The number of measurement decimal places for first measurement')
         },
         {
             'id': 'measurement_2',
@@ -87,15 +87,15 @@ WIDGET_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Max Age 2'), lazy_gettext('Seconds')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age 2'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the second measurement to use')
         },
         {
             'id': 'decimal_places_2',
             'type': 'integer',
             'default_value': 2,
-            'name': 'Decimal Places 2',
-            'phrase': 'The number of measurement decimal places for second measurement'
+            'name': lazy_gettext('Decimal Places 2'),
+            'phrase': lazy_gettext('The number of measurement decimal places for second measurement')
         },
         {
             'id': 'refresh_seconds',
@@ -103,32 +103,32 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'id': 'font_em_value',
             'type': 'float',
             'default_value': 1.5,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Value Font Size (em)',
-            'phrase': 'The font size of the measurement'
+            'name': lazy_gettext('Value Font Size (em)'),
+            'phrase': lazy_gettext('The font size of the measurement')
         },
         {
             'id': 'font_em_unit',
             'type': 'float',
             'default_value': 1.5,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Unit Font Size (em)',
-            'phrase': 'The font size of the unit'
+            'name': lazy_gettext('Unit Font Size (em)'),
+            'phrase': lazy_gettext('The font size of the unit')
         },
         {
             'id': 'font_em_timestamp',
             'type': 'float',
             'default_value': 1.5,
             'constraints_pass': constraints_pass_positive_value,
-            'name': 'Timestamp Font Size (em)',
-            'phrase': 'The font size of the timestamp'
+            'name': lazy_gettext('Timestamp Font Size (em)'),
+            'phrase': lazy_gettext('The font size of the timestamp')
         },
         {
             'id': 'enable_unit',

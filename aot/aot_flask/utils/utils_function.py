@@ -517,3 +517,92 @@ def action_execute_all(form):
             messages["error"].append(str(except_msg))
 
     return messages
+
+
+def function_duplicate(form):
+    """Duplicate a Function."""
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
+    new_function_id = None
+
+    try:
+        function_id = form.function_id.data
+        controller_type = determine_controller_type(function_id)
+
+        func = None
+        if controller_type == "Conditional":
+            func = Conditional.query.filter(
+                Conditional.unique_id == function_id).first()
+        elif controller_type == "PID":
+            func = PID.query.filter(PID.unique_id == function_id).first()
+        elif controller_type == "Trigger":
+            func = Trigger.query.filter(
+                Trigger.unique_id == function_id).first()
+        elif controller_type == "Function":
+            func = Function.query.filter(
+                Function.unique_id == function_id).first()
+        elif controller_type == "Function_Custom":
+            func = CustomController.query.filter(
+                CustomController.unique_id == function_id).first()
+
+        if func:
+            new_unique_id = set_uuid()
+            clone_kwargs = {
+                'unique_id': new_unique_id,
+                'position_y': _get_next_position_y()
+            }
+
+            if hasattr(func, 'name') and func.name:
+                clone_kwargs['name'] = f"{func.name} (Copy)"
+
+            if hasattr(func, 'map_config_id') and func.map_config_id:
+                try:
+                    map_cfg = ensure_map_config(
+                        None,
+                        clone_kwargs.get('name', 'Function Copy'),
+                        getattr(func, 'latitude', None),
+                        getattr(func, 'longitude', None)
+                    )
+                    clone_kwargs['map_config_id'] = map_cfg.unique_id
+                except Exception:
+                    pass
+
+            new_func = clone_model(func, **clone_kwargs)
+            if new_func:
+                new_function_id = new_func.unique_id
+
+                # Clone Children: Actions
+                actions = Actions.query.filter(
+                    Actions.function_id == function_id).all()
+                for each_action in actions:
+                    clone_model(each_action, unique_id=set_uuid(),
+                                function_id=new_unique_id)
+
+                # Clone Children: DeviceMeasurements
+                measurements = DeviceMeasurements.query.filter(
+                    DeviceMeasurements.device_id == function_id).all()
+                for each_meas in measurements:
+                    clone_model(each_meas, unique_id=set_uuid(),
+                                device_id=new_unique_id)
+
+                # Clone Children: FunctionChannel
+                channels = FunctionChannel.query.filter(
+                    FunctionChannel.function_id == function_id).all()
+                for each_chan in channels:
+                    clone_model(each_chan, unique_id=set_uuid(),
+                                function_id=new_unique_id)
+
+                messages["success"].append(
+                    f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['function']['title']}")
+        else:
+            messages["error"].append(gettext("Function not found"))
+
+    except Exception as except_msg:
+        logger.exception("Duplicate Function")
+        messages["error"].append(str(except_msg))
+
+    return messages, new_function_id

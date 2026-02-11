@@ -230,22 +230,22 @@
     }
 
     if (!{{ misc.hide_alert_warning | tojson }}) {
-    if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-      toastr['warning']('{{ _("Warning:") }} ' + data.data.messages.warning.join(", "));
+      if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
+        toastr['warning']('{{ _("Warning:") }} ' + data.data.messages.warning.join(", "));
+      }
     }
-  }
 
-  if (!{{ misc.hide_alert_info | tojson }}) {
-    if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-      toastr['info']('{{ _("Info:") }} ' + data.data.messages.info.join(", "));
+    if (!{{ misc.hide_alert_info | tojson }}) {
+      if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
+        toastr['info']('{{ _("Info:") }} ' + data.data.messages.info.join(", "));
+      }
     }
-  }
 
-  if (!{{ misc.hide_alert_success | tojson }}) {
-    if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-      toastr['success']('{{ _("Success:") }} ' + data.data.messages.success.join(", "));
+    if (!{{ misc.hide_alert_success | tojson }}) {
+      if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+        toastr['success']('{{ _("Success:") }} ' + data.data.messages.success.join(", "));
+      }
     }
-  }
   }
 
   var status_message = {};
@@ -393,6 +393,7 @@
       action === 'function_delete' ||
       action === 'function_activate' ||
       action === 'function_deactivate' ||
+      action === 'function_duplicate' ||
       action === 'execute_all_actions' ||
       action === 'add_action' ||
       action === 'save_action' ||
@@ -404,7 +405,10 @@
       action === 'pid_hold' ||
       action === 'pid_resume' ||
       action.startsWith('custom_button_')) {
-      {% if not misc.hide_alert_info %} toastr['info']('Command sent. Please wait...'); {% endif %}
+      var hideAlertInfo = {{ misc.hide_alert_info | tojson }};
+      if (!hideAlertInfo) {
+        toastr['info']('Command sent. Please wait...');
+      }
       $.ajax({
         type: "POST",
         url: '/function_submit',
@@ -463,6 +467,27 @@
               }
             }
             $('#modal_config_dependency_install').modal('show');
+          }
+          else if (action === 'function_duplicate' && 'function_id' in data.data) {
+            $.ajax({
+              type: "GET",
+              url: '/function?function_type=entry&function_id=' + data.data.function_id,
+              success: function (new_entry) {
+                if (data.data.messages.success.length !== 0) {
+                  window.grid.addWidget('<div class="grid-stack-item" id="gridstack_function_' + data.data.function_id + '" gs-id="' + data.data.function_id + '">' + new_entry + '</div>', {
+                    w: 24, h: 1, y: 999
+                  });
+                  {% if not hide_tooltips %} $('input[title]').tooltip({ placement: 'top' }); {% endif %}
+                  if (window.AoTMapModalController) {
+                    setTimeout(function () { AoTMapModalController.initAll(); }, 100);
+                  }
+                }
+                popup_response(data);
+              },
+              error: function () {
+                toastr['error']('Error: Could not get new Function entry');
+              }
+            });
           }
 
           if (data.data.messages.error.length === 0) {
@@ -584,40 +609,87 @@
                 type: "GET",
                 url: '/function?function_type=actions&function_id=' + data.data.function_id + '&action_id=' + data.data.action_id,
                 success: function (new_options) {
-                  var actionContainer = document.getElementById('mod_function_actions_' + data.data.function_id);
-                  if (actionContainer) {
-                    actionContainer.insertAdjacentHTML('beforeend', (new_options));
+                  var gridId = 'mod_function_actions_' + data.data.function_id;
+                  var gridEl = document.getElementById(gridId);
+                  var grid = gridEl ? gridEl.gridstack : null;
 
-                    // [Fix] Explicitly initialize new widget
-                    var gridId = 'mod_function_actions_' + data.data.function_id;
-                    var gridEl = document.getElementById(gridId);
-                    if (gridEl && gridEl.gridstack) {
-                      var addedNode = actionContainer.lastElementChild;
-                      if (addedNode && !addedNode.gridstackNode) {
-                        gridEl.gridstack.makeWidget(addedNode);
-                      }
-                    } else if (window[gridId] && window[gridId].makeWidget) {
-                      // Fallback for older patterns
-                      var addedNode = actionContainer.lastElementChild;
-                      if (addedNode && !addedNode.gridstackNode) {
-                        window[gridId].makeWidget(addedNode);
-                      }
+                  // [Fix] Force initialization if missing (e.g. new empty sequence)
+                  if (!grid && gridEl && gridEl.classList.contains('grid-stack')) {
+                    try {
+                      console.log('GridStack not initialized. Forcing init for ' + gridId);
+                      // Use defaults consistent with gridstack_helper.html
+                      // Sequence triggers use cellHeight=48, others use default (42/50). Auto or 48 is safe.
+                      grid = GridStack.init({
+                        column: 12,
+                        cellHeight: 48,
+                        animate: true,
+                        float: false,
+                        disableResize: true,
+                        removable: false,
+                        margin: 2
+                      }, gridEl);
+                      window[gridId] = grid;
+                    } catch (e) {
+                      console.warn('GridStack auto-init failed:', e);
                     }
+                  }
+
+                  if (grid && grid.addWidget) {
+                    grid.addWidget(new_options);
+                    grid.compact();
+
+                    // [Fix] Manually initialize plugins for the newly added widget
+                    // This is necessary because MutationObserver might not catch it, or race conditions
+                    // prevent auto-initialization.
+                    try {
+                        // Find the last added item (the new widget)
+                        var lastItem = gridEl.querySelector('.grid-stack-item:last-child');
+                        if (lastItem) {
+                            // Initialize selectpicker
+                            $(lastItem).find('.selectpicker').selectpicker();
+                            // Initialize clockpicker if present
+                            $(lastItem).find('.clockpicker').clockpicker();
+                        }
+                    } catch (e) {
+                        console.warn('Plugin initialization failed for new widget:', e);
+                    }
+
                     popup_response(data);
                   } else {
-                    console.warn('Action container not found: mod_function_actions_' + data.data.function_id);
-                    // Fallback to full refresh
-                    $.ajax({
-                      type: "GET",
-                      url: '/function?function_type=options&function_id=' + data.data.function_id,
-                      success: function (new_options_full) {
-                        $('#mod_function_' + data.data.function_id).html(new_options_full);
-                        popup_response(data);
-                      },
-                      error: function () {
-                        toastr['error']('{{ _("Error: Could not get new Function options.") }}');
+                    var actionContainer = document.getElementById(gridId);
+                    if (actionContainer) {
+                      actionContainer.insertAdjacentHTML('beforeend', (new_options));
+
+                      // [Fix] Explicitly initialize new widget
+                      var gridEl = document.getElementById(gridId);
+                      if (gridEl && gridEl.gridstack) {
+                        var addedNode = actionContainer.lastElementChild;
+                        if (addedNode && !addedNode.gridstackNode) {
+                          gridEl.gridstack.makeWidget(addedNode);
+                        }
+                      } else if (window[gridId] && window[gridId].makeWidget) {
+                        // Fallback for older patterns
+                        var addedNode = actionContainer.lastElementChild;
+                        if (addedNode && !addedNode.gridstackNode) {
+                          window[gridId].makeWidget(addedNode);
+                        }
                       }
-                    });
+                      popup_response(data);
+                    } else {
+                      console.warn('Action container not found: mod_function_actions_' + data.data.function_id);
+                      // Fallback to full refresh
+                      $.ajax({
+                        type: "GET",
+                        url: '/function?function_type=options&function_id=' + data.data.function_id,
+                        success: function (new_options_full) {
+                          $('#mod_function_' + data.data.function_id).html(new_options_full);
+                          popup_response(data);
+                        },
+                        error: function () {
+                          toastr['error']('{{ _("Error: Could not get new Function options.") }}');
+                        }
+                      });
+                    }
                   }
                 },
                 error: function () {
@@ -662,20 +734,22 @@
           }
         },
         error: function () {
-      toastr['error']('{{ _("Error: Unable to communicate with server.") }}');
+          toastr['error']('{{ _("Error: Unable to communicate with server.") }}');
         }
       });
     }
   }
 
-  $('.clockpicker').clockpicker({
-    donetext: 'Done'
-  });
+  $(document).ready(function() {
+    $('.clockpicker').clockpicker({
+      donetext: 'Done'
+    });
 
-  $('.collapse').on('show.bs.collapse', function () {
-    $(this).parent().find(".fa-plus-square").removeClass("fa-plus-square").addClass("fa-minus-square");
-  }).on('hide.bs.collapse', function () {
-    $(this).parent().find(".fa-minus-square").removeClass("fa-minus-square").addClass("fa-plus-square");
+    $('.collapse').on('show.bs.collapse', function () {
+      $(this).parent().find(".fa-plus-square").removeClass("fa-plus-square").addClass("fa-minus-square");
+    }).on('hide.bs.collapse', function () {
+      $(this).parent().find(".fa-minus-square").removeClass("fa-minus-square").addClass("fa-plus-square");
+    });
   });
 </script>
 

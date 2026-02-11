@@ -1222,58 +1222,79 @@ def function_status_activated(unique_id):
         control = DaemonControl()
         data = control.function_status(unique_id)
 
-        # Fallback for Sequence Trigger if daemon is off or unreachable
-        if not data or 'error' in data:
+        # Fallback for Sequence Trigger if daemon is off, unreachable, OR returns no steps
+        if not data or 'error' in data or not data.get('steps'):
             from aot.controllers.controller_trigger_sequence import SequenceTriggerController
             fallback_data = SequenceTriggerController.get_static_status(unique_id)
             if fallback_data and 'error' not in fallback_data:
-                data = fallback_data
+                # If we have data (e.g. from daemon but empty steps), merge to keep status info
+                if data and 'error' not in data:
+                     # Copy static steps to data
+                     data['steps'] = fallback_data.get('steps', [])
+                else:
+                     data = fallback_data
 
-        # Polyfill for missing device_detail (if daemon is stale)
+        # Polyfill/Augment device details
         if data and 'steps' in data:
             try:
                 for step in data['steps']:
-                    # Re-resolve if missing, empty, or placeholder
-                    if not step.get('device_detail') or step.get('device_detail') in ['-', '']:
-                        act_id = step.get('unique_id')
-                        act = Actions.query.filter_by(unique_id=act_id).first()
-                        if act:
-                            opts = {}
-                            if act.custom_options:
-                                try:
-                                    opts = json.loads(act.custom_options)
-                                except: pass
+                    # Always resolve names if missing or to ensure freshness
+                    act_id = step.get('unique_id')
+                    
+                    # Optimization: If the step already has what we need, maybe skip? 
+                    # But we need fresh names if user renamed them.
+                    # We'll just fast-resolve.
+                    
+                    act = Actions.query.filter_by(unique_id=act_id).first()
+                    if act:
+                        opts = {}
+                        if act.custom_options:
+                            try:
+                                opts = json.loads(act.custom_options)
+                            except: pass
+                        
+                        target_id = act.do_unique_id
+                        if not target_id: target_id = opts.get('output')
+                        if not target_id: target_id = opts.get('input')
+                        
+                        d_name = ""
+                        d_ch_name = ""
+                        detail = step.get('device_detail', '-')
+
+                        if target_id:
+                            parts = str(target_id).split(',')
+                            main_id = parts[0]
+                            raw_chan = parts[1] if len(parts) > 1 else "0"
                             
-                            target_id = act.do_unique_id
-                            if not target_id: target_id = opts.get('output')
-                            if not target_id: target_id = opts.get('input')
-                            
-                            detail = "-"
-                            if target_id:
-                                parts = str(target_id).split(',')
-                                main_id = parts[0]
-                                raw_chan = parts[1] if len(parts) > 1 else "0"
-                                
-                                out = Output.query.filter_by(unique_id=main_id).first()
-                                if out:
-                                    chan_idx = raw_chan
-                                    # Resolve Channel UUID if needed
-                                    if len(str(raw_chan)) > 5:
-                                        chan_obj = OutputChannel.query.filter_by(unique_id=raw_chan).first()
-                                        if chan_obj: chan_idx = chan_obj.channel
-                                    detail = f"{out.name} [CH{chan_idx}]"
+                            out = Output.query.filter_by(unique_id=main_id).first()
+                            if out:
+                                d_name = out.name
+                                chan_idx = raw_chan
+                                # Resolve Channel UUID if needed
+                                if len(str(raw_chan)) > 5:
+                                    chan_obj = OutputChannel.query.filter_by(unique_id=raw_chan).first()
+                                    if chan_obj: 
+                                        chan_idx = chan_obj.channel
+                                        d_ch_name = chan_obj.name
+                                detail = f"{out.name} [CH{chan_idx}]"
+                            else:
+                                inp = Input.query.filter_by(unique_id=main_id).first()
+                                if inp:
+                                    d_name = inp.name
+                                    detail = f"{inp.name} [Input]"
                                 else:
-                                    inp = Input.query.filter_by(unique_id=main_id).first()
-                                    if inp:
-                                        detail = f"{inp.name} [Input]"
-                                    else:
-                                        func = CustomController.query.filter_by(unique_id=main_id).first()
-                                        if func:
-                                            detail = f"{func.name} [Func]"
-                                        else:
-                                            detail = f"Unknown: {main_id}"
-                            
-                            step['device_detail'] = detail
+                                    func = CustomController.query.filter_by(unique_id=main_id).first()
+                                    if func:
+                                        d_name = func.name
+                                        detail = f"{func.name} [Func]"
+                        
+                        # Inject into step
+                        step['device_name'] = d_name
+                        step['device_channel_name'] = d_ch_name
+                        
+                        # Only overwrite detail if it was missing/placeholder
+                        if not step.get('device_detail') or step.get('device_detail') in ['-', '']:
+                             step['device_detail'] = detail
             except Exception as e:
                 logger.error(f"Error polyfilling device details: {e}")
 
@@ -1366,3 +1387,29 @@ def function_sequence_toggle_action():
         logger.error(f"Sequence Action Toggle Error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@blueprint.route('/sequence_activate_toggle/<function_id>/<state>', methods=['GET'])
+@flask_login.login_required
+def sequence_activate_toggle(function_id, state):
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Permission denied'}), 403
+
+    try:
+        trigger = Trigger.query.filter_by(unique_id=function_id).first()
+        if not trigger:
+            return jsonify({'error': 'Trigger not found'}), 404
+        
+        if state == 'activate':
+            trigger.is_activated = True
+        else:
+            trigger.is_activated = False
+            
+        db.session.commit()
+        
+        # Refresh Daemon
+        control = DaemonControl()
+        control.refresh_daemon_trigger_settings(function_id)
+        
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Sequence Toggle Error: {e}")
+        return jsonify({'error': str(e)}), 500

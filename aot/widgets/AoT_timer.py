@@ -485,7 +485,7 @@ WIDGET_INFORMATION = {
                 'Output_Channels',
             ],
             'name': lazy_gettext('Output'),
-            'phrase': '제어할 Output 을 선택하세요.'
+            'phrase': lazy_gettext('제어할 Output 을 선택하세요.')
         },
         {
             'id': 'refresh_seconds',
@@ -493,7 +493,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 5.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("동기화"), lazy_gettext("초")),
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("동기화"), lazy_gettext("초")),
             'phrase': lazy_gettext('사용할 측정값의 최대 유효 시간')
         },
         {
@@ -513,7 +513,7 @@ WIDGET_INFORMATION = {
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('상태 크기'),
-            'phrase': '(em) 단위'
+            'phrase': lazy_gettext('(em) 단위')
         },
         {
             'id': 'enable_timestamp',
@@ -528,7 +528,7 @@ WIDGET_INFORMATION = {
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('작동시간 글자 크기'),
-            'phrase': '(em) 단위'
+            'phrase': lazy_gettext('(em) 단위')
         },
         {
             'type': 'header',
@@ -547,7 +547,7 @@ WIDGET_INFORMATION = {
             'default_value': 1.2,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('시간입력창 크기'),
-            'phrase': '(em) 단위'
+            'phrase': lazy_gettext('(em) 단위')
         },
         {
             'id': 'tz_offset',

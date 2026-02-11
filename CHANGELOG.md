@@ -1,24 +1,53 @@
-# v26.0.2 (2026-02-11)
+# v26.0.3 (2026-02-11)
 
-## 버그 수정 (Fixes)
+## 기능 개선 (Improvements)
 
-### 모바일 노트 입력 안정화 (Mobile Note Input Stabilization)
-- **화면 튕김(Overshoot) 원천 쳐단**: 키보드 활성화 시 배경 문서가 강제로 스크롤되는 현상을 방지하기 위해 **Aggressive Body Lock** (Position Fixed) 적용.
-- **입력창 자동 확대 방지 (Anti-Zoom)**: 모바일 환경에서 입력창 폰트 크기를 16px로 강제하여 iOS의 자동 줌 동작 차단.
-- **동적 여백 (Dynamic Padding)**: 키보드 높이에 맞춰 입력창 하단 여백을 동적으로 조정.
-- **Z-Index 개선**: 노트 창을 최상위 레이어(`document.body`)로 이동하여 다른 모달에 가려지는 문제 해결.
+### 번역 시스템 (Translation System)
+- **번역 관리 강화**: `glossary.json` 기반의 영구적인 번역 사전 시스템 도입. 업데이트 시 사용자 번역 유지.
+- **번역 오류 수정**: `messages.po`의 오역 대거 수정 (Acceleration -> 가속 등).
+
+### UI 개선 (UI Enhancements)
+- **시퀀스 컨트롤러 위젯**:
+    - **레이아웃 개선**: 헤더 정보 간소화 및 가독성 향상.
+    - **접기/펼치기**: 세부 설정 영역을 접을 수 있는 UI 적용.
+    - **모바일 대응**: 좁은 화면에서의 컬럼 정렬 및 스크롤 최적화.
+
+### 버그 수정 (Fixes)
+- **시퀀스 위젯 설정 (Sequence Widget Settings)**: 'Sequence Function' 선택 시 모든 트리거가 표시되는 문제 수정. 이제 `trigger_sequence` 타입만 올바르게 필터링되어 표시됩니다.
+- **그리드스택 레이아웃 (GridStack Layout)**: 모바일/데스크탑 뷰 전환 시 위젯 배치가 깨지는 현상 수정. 이제 데스크탑 레이아웃이 정확하게 복원됩니다.
+- **함수 관리 (Function Management)**: 함수 복제 및 삭제 실패 문제 해결.
+
+### UI 모던화 (UI Modernization)
+- **공통 모달 디자인 (Common Modal Design)**: `aot-modal-modern.css` 기반의 통합 디자인 시스템 적용. 타이포그래피, 입력 필드, 버튼 스타일 개선.
+- **모바일 노트 입력 (Mobile Note Input)**: 키보드 입력 시 화면 밀림 및 줌 현상 방지를 위한 `Aggressive Body Lock` 및 `Anti-Zoom` 적용.
 
 ---
 
-# v26.0.2 (2026-02-11) - English
+# v26.0.3 (2026-02-11) - English
 
-## Bug Fixes
+## Improvements
 
-### Mobile Note Input Stabilization
-- **Overshoot Prevention**: Implemented **Aggressive Body Lock** (Position Fixed) to prevent background document scrolling when the keyboard activates.
-- **Anti-Zoom**: Enforced 16px font size on mobile inputs to prevent iOS automatic zoom behavior.
-- **Dynamic Padding**: Automatically adjusts bottom padding based on keyboard height.
-- **Z-Index Improvement**: Moved the notes drawer to the root layer (`document.body`) to resolve stacking context issues.
+### Translation System
+- **Enhanced Management**: Introduced `glossary.json` based persistent translation dictionary. Custom translations are preserved during updates.
+- **Translation Fixes**: Corrected numerous mistranslations in `messages.po`.
+
+### UI Enhancements
+- **Sequence Controller Widget**:
+    - **Layout Improvements**: Simplified header info and improved readability.
+    - **Collapsible Settings**: Added collapsible UI for detailed settings.
+    - **Mobile Optimization**: Optimized column alignment and scrolling for narrow screens.
+
+### Bug Fixes
+- **Sequence Widget Settings**: Fixed issue where all triggers were shown when selecting 'Sequence Function'. Now correctly filters only `trigger_sequence` types.
+- **GridStack Layout**: Resolved widget layout corruption issues when switching between mobile and desktop views. Desktop layout now restores accurately.
+- **Function Management**: Fixed failures in function duplication and deletion.
+
+### UI Modernization
+- **Common Modal Design**: Applied unified design system based on `aot-modal-modern.css`. Improved typography, input fields, and button styles.
+- **Mobile Note Input**: Implemented `Aggressive Body Lock` and `Anti-Zoom` to prevent screen shifting and zooming during keyboard input on mobile.
+
+---
+
 
 ---
 

@@ -47,6 +47,7 @@
 import logging
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from flask_babel import lazy_gettext
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,8 @@ WIDGET_INFORMATION = {
           'default_value': 3600,
           'required': True,
           'constraints_pass': constraints_pass_positive_value,
-          'name': '최대 유효 시간',
-          'phrase': '최대 유효 발표 시간을 설정하세요. (초)'
+          'name': lazy_gettext('최대 유효 시간'),
+          'phrase': lazy_gettext('최대 유효 발표 시간을 설정하세요. (초)')
       },
       {
           'id': 'refresh_seconds',
@@ -75,31 +76,31 @@ WIDGET_INFORMATION = {
           'class': 'aot-time-input',
           'default_value': 1800,
           'constraints_pass': constraints_pass_positive_value,
-          'name': '새로고침',
-          'phrase': '단기예보를 새로고침할 시간을 설정하세요. (초)'
+          'name': lazy_gettext('새로고침'),
+          'phrase': lazy_gettext('단기예보를 새로고침할 시간을 설정하세요. (초)')
       },
       {
           'id': 'font_em_tmp',
           'type': 'float',
           'default_value': 4.0,
           'constraints_pass': constraints_pass_positive_value,
-          'name': '온도 크기(em)',
-          'phrase': '온도표시 글자 크기를 설정하세요.'
+          'name': lazy_gettext('온도 크기(em)'),
+          'phrase': lazy_gettext('온도표시 글자 크기를 설정하세요.')
       },
       {
           'id': 'font_em_text',
           'type': 'float',
           'default_value': 1.2,
           'constraints_pass': constraints_pass_positive_value,
-          'name': '글자 크기(em)',
-          'phrase': '일반 글자 크기를 설정하세요.'
+          'name': lazy_gettext('글자 크기(em)'),
+          'phrase': lazy_gettext('일반 글자 크기를 설정하세요.')
       },
       {
           'id': 'show_row_aot_weather_2',
           'type': 'bool',
           'default_value': True,
-          'name': '상세 예보',
-          'phrase': '상세 예보문 표시 여부를 설정하세요.'
+          'name': lazy_gettext('상세 예보'),
+          'phrase': lazy_gettext('상세 예보문 표시 여부를 설정하세요.')
       }
   ],
   'widget_dashboard_head': """

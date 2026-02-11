@@ -257,99 +257,99 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 90.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'id': 'x_axis_minutes',
             'type': 'integer',
             'default_value': 1440,
-            'name': 'X-Axis Duration (minutes)',
-            'phrase': 'The x-axis duration'
+            'name': lazy_gettext('X-Axis Duration (minutes)'),
+            'phrase': lazy_gettext('The x-axis duration')
         },
         {
             'id': 'enable_auto_refresh',
             'type': 'bool',
             'default_value': True,
-            'name': 'Enable Auto Refresh',
-            'phrase': 'Enable the graph to automatically refresh with new data every Refresh period.'
+            'name': lazy_gettext('Enable Auto Refresh'),
+            'phrase': lazy_gettext('Enable the graph to automatically refresh with new data every Refresh period.')
         },
         {
             'id': 'enable_xaxis_reset',
             'type': 'bool',
             'default_value': True,
-            'name': 'Enable X-Axis Reset',
-            'phrase': 'Enable the X-Axis to reset every Refresh period.'
+            'name': lazy_gettext('Enable X-Axis Reset'),
+            'phrase': lazy_gettext('Enable the X-Axis to reset every Refresh period.')
         },
         {
             'id': 'enable_header_buttons',
             'type': 'bool',
             'default_value': True,
-            'name': 'Enable Header Buttons',
-            'phrase': 'Enable buttons to control the graph on the widget header.'
+            'name': lazy_gettext('Enable Header Buttons'),
+            'phrase': lazy_gettext('Enable buttons to control the graph on the widget header.')
         },
         {
             'id': 'enable_title',
             'type': 'bool',
             'default_value': False,
-            'name': 'Enable Title',
-            'phrase': 'Enable the graph title.'
+            'name': lazy_gettext('Enable Title'),
+            'phrase': lazy_gettext('Enable the graph title.')
         },
         {
             'id': 'enable_navbar',
             'type': 'bool',
             'default_value': False,
-            'name': 'Enable Navbar',
-            'phrase': 'Enable the graph navigation bar.'
+            'name': lazy_gettext('Enable Navbar'),
+            'phrase': lazy_gettext('Enable the graph navigation bar.')
         },
         {
             'id': 'enable_export',
             'type': 'bool',
             'default_value': False,
-            'name': 'Enable Export',
-            'phrase': 'Enable the graph export button.'
+            'name': lazy_gettext('Enable Export'),
+            'phrase': lazy_gettext('Enable the graph export button.')
         },
         {
             'id': 'enable_range_selector',
             'type': 'bool',
             'default_value': False,
-            'name': 'Enable Range Selector',
-            'phrase': 'Enagle the graph range selector.'
+            'name': lazy_gettext('Enable Range Selector'),
+            'phrase': lazy_gettext('Enagle the graph range selector.')
         },
         {
             'id': 'enable_graph_legend',
             'type': 'bool',
             'default_value': True,
-            'name': 'Enable Graph Legend',
-            'phrase': 'Enable the Graph Legend that is displayed below the graph.'
+            'name': lazy_gettext('Enable Graph Legend'),
+            'phrase': lazy_gettext('Enable the Graph Legend that is displayed below the graph.')
         },
         {
             'id': 'graph_font_size_em_axes',
             'type': 'float',
             'default_value': 1.0,
-            'name': 'Graph Axis Value Font Size (em)',
-            'phrase': 'The size of the fonts of the x/y axis values of the graph'
+            'name': lazy_gettext('Graph Axis Value Font Size (em)'),
+            'phrase': lazy_gettext('The size of the fonts of the x/y axis values of the graph')
         },
         {
             'id': 'graph_font_size_em_axes_title',
             'type': 'float',
             'default_value': 1.0,
-            'name': 'Graph Axis Title Font Size (em)',
-            'phrase': 'The size of the fonts of the x/y axis titles of the graph'
+            'name': lazy_gettext('Graph Axis Title Font Size (em)'),
+            'phrase': lazy_gettext('The size of the fonts of the x/y axis titles of the graph')
         },
         {
             'id': 'graph_font_size_em_legend',
             'type': 'float',
             'default_value': 1.0,
-            'name': 'Graph Legend Font Size (em)',
-            'phrase': 'The size of the fonts on the legend of the graph'
+            'name': lazy_gettext('Graph Legend Font Size (em)'),
+            'phrase': lazy_gettext('The size of the fonts on the legend of the graph')
         },
         {
             'id': 'graph_font_size_em_title',
             'type': 'float',
             'default_value': 1.0,
-            'name': 'Graph Title Font Size (em)',
-            'phrase': 'The size of the fonts on the title of the graph'
+            'name': lazy_gettext('Graph Title Font Size (em)'),
+            'phrase': lazy_gettext('The size of the fonts on the title of the graph')
         },
         {'type': 'new_line'},
         {

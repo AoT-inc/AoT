@@ -161,8 +161,8 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': '위젯을 주기적으로 새로 고침하는 간격 (초)'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
+            'phrase': lazy_gettext('위젯을 주기적으로 새로 고침하는 간격 (초)')
         }
     ],
 

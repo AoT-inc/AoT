@@ -16,7 +16,7 @@ DOCKER_CONTAINER = os.environ.get('DOCKER_CONTAINER', False) == 'TRUE'
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from config_translations import TRANSLATIONS as T
 
-AOT_VERSION = '26.0.2'
+AOT_VERSION = '26.0.3'
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = '718f314963be'
 

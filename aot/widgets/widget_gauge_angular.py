@@ -155,7 +155,7 @@ WIDGET_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -164,36 +164,36 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': '{} ({})'.format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
-            'phrase': 'The period of time between refreshing the widget'
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {
             'id': 'decimal_places',
             'type': 'integer',
             'default_value': 1,
-            'name': 'Decimal Places',
-            'phrase': 'The number of digits to display after the decimal'
+            'name': lazy_gettext('Decimal Places'),
+            'phrase': lazy_gettext('The number of digits to display after the decimal')
         },
         {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
-            'name': 'Minimum',
-            'phrase': 'The gauge minimum'
+            'name': lazy_gettext('Minimum'),
+            'phrase': lazy_gettext('The gauge minimum')
         },
         {
             'id': 'max',
             'type': 'float',
             'default_value': 100,
-            'name': 'Maximum',
-            'phrase': 'The gauge maximum'
+            'name': lazy_gettext('Maximum'),
+            'phrase': lazy_gettext('The gauge maximum')
         },
         {
             'id': 'stops',
             'type': 'integer',
             'default_value': 4,
-            'name': 'Stops',
-            'phrase': 'The number of color stops'
+            'name': lazy_gettext('Stops'),
+            'phrase': lazy_gettext('The number of color stops')
         }
     ],
 
