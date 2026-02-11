@@ -186,8 +186,7 @@ nav:
   - Troubleshooting.md
 
 extra:
-  version: 26.0.3
-
+  version: 26.0.4
   alternate:
     - name: 한국어
       link: ""

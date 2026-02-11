@@ -125,13 +125,19 @@ runSelfUpgrade() {
   fi
   printf "Done.\n"
 
-  if [ -d "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs ] ; then
+  # Copy SSL certificate files if they exist (not the directory to avoid nesting)
+  if [ -f "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs/server.crt ] && \
+     [ -f "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs/server.key ]; then
     printf "Copying SSL certificates..."
-    if ! cp -R "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs "${THIS_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs ; then
-      printf "Failed: Error while trying to copy SSL certificates."
-      error_found
+    mkdir -p "${THIS_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs
+    if ! cp -p "${CURRENT_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs/server.* \
+              "${THIS_AOT_DIRECTORY}"/aot/aot_flask/ssl_certs/ 2>/dev/null ; then
+      printf "Warning: Error while trying to copy SSL certificates. New certificates will be generated.\n"
+    else
+      printf "Done.\n"
     fi
-    printf "Done.\n"
+  else
+    printf "No valid SSL certificates found in current install. New certificates will be generated after upgrade.\n"
   fi
 
   # TODO: Remove in next major release

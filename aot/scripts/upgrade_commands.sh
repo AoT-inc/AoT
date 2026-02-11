@@ -738,16 +738,42 @@ case "${1:-''}" in
     ;;
     'web-server-connect')
         printf "\n#### Connecting to http://localhost (creates AoT database if it doesn't exist)\n"
+        
+        # First, check if nginx is running
+        if ! systemctl is-active --quiet nginx; then
+            printf "#### WARNING: nginx is not running. Attempting to start...\n"
+            systemctl start nginx || printf "#### ERROR: Failed to start nginx\n"
+            sleep 3
+        fi
+        
+        # Check if aotflask is running
+        if ! systemctl is-active --quiet aotflask; then
+            printf "#### WARNING: aotflask is not running. Attempting to start...\n"
+            systemctl start aotflask || printf "#### ERROR: Failed to start aotflask\n"
+            sleep 3
+        fi
+        
         # Attempt to connect to localhost 10 times, sleeping 60 seconds every fail
-        for _ in {1..10}; do
-            wget --quiet --no-check-certificate -p http://localhost/ -O /dev/null &&
-            printf "#### Successfully connected to http://localhost\n" &&
-            break ||
-            # Else wait 60 seconds if localhost is not accepting connections
-            # Everything below will begin executing if an error occurs before the break
-            printf "#### Could not connect to http://localhost. Waiting 60 seconds then trying again (up to 10 times)...\n" &&
-            sleep 60 &&
-            printf "#### Trying again...\n"
+        for i in {1..10}; do
+            # Try curl first (more reliable than wget for status checks)
+            if curl -sf --max-time 10 http://localhost/ > /dev/null 2>&1; then
+                printf "#### Successfully connected to http://localhost\n"
+                break
+            else
+                # If we're on the last attempt, provide diagnostics
+                if [ $i -eq 10 ]; then
+                    printf "#### ERROR: Could not connect after 10 attempts\n"
+                    printf "#### Nginx status: "
+                    systemctl is-active nginx || printf "NOT RUNNING\n"
+                    printf "#### AoTFlask status: "
+                    systemctl is-active aotflask || printf "NOT RUNNING\n"
+                    printf "#### Please check /var/log/nginx/error.log and systemctl status aotflask for details\n"
+                else
+                    printf "#### Could not connect to http://localhost (attempt $i/10). Waiting 60 seconds...\n"
+                    sleep 60
+                    printf "#### Trying again...\n"
+                fi
+            fi
         done
     ;;
     'web-server-restart')

@@ -112,6 +112,41 @@ TIMER_START_restart_daemon=$SECONDS
 ${INSTALL_CMD} restart-daemon
 TIMER_TOTAL_restart_daemon=$((SECONDS - TIMER_START_restart_daemon))
 
+# SSL certificate validation and generation
+printf "\n#### Checking SSL certificates...\n"
+
+# Fix nested directory issue from previous buggy upgrades
+# (cp -R bug created ssl_certs/ssl_certs/ssl_certs/... on each upgrade)
+SSL_BASE="${INSTALL_DIRECTORY}/aot/aot_flask/ssl_certs"
+NESTED_CERT_FOUND=false
+
+# Find and move certificates from any nested ssl_certs directories
+while [ -d "${SSL_BASE}/ssl_certs" ]; do
+    if [ -f "${SSL_BASE}/ssl_certs/server.crt" ] || [ -f "${SSL_BASE}/ssl_certs/server.key" ]; then
+        printf "#### Found SSL certificates in nested directory. Moving to correct location...\n"
+        mv "${SSL_BASE}"/ssl_certs/server.* "${SSL_BASE}/" 2>/dev/null || true
+        NESTED_CERT_FOUND=true
+    fi
+    # Remove the nested directory (even if empty)
+    rmdir "${SSL_BASE}/ssl_certs" 2>/dev/null || rm -rf "${SSL_BASE}/ssl_certs"
+done
+
+# Generate certificates if missing
+if [ ! -f "${SSL_BASE}/server.crt" ] || [ ! -f "${SSL_BASE}/server.key" ]; then
+    printf "#### SSL certificates not found. Generating new certificates...\n"
+    TIMER_START_ssl_certs_generate=$SECONDS
+    ${INSTALL_CMD} ssl-certs-generate 2>&1 | tee -a /var/log/aot/aotupgrade.log
+    TIMER_TOTAL_ssl_certs_generate=$((SECONDS - TIMER_START_ssl_certs_generate))
+else
+    if [ "$NESTED_CERT_FOUND" = true ]; then
+        printf "#### SSL certificates recovered from nested directory.\n"
+    else
+        printf "#### SSL certificates verified.\n"
+    fi
+    TIMER_TOTAL_ssl_certs_generate=0
+fi
+
+
 TIMER_START_web_server_restart=$SECONDS
 ${INSTALL_CMD} web-server-restart
 TIMER_TOTAL_web_server_restart=$((SECONDS - TIMER_START_web_server_restart))
@@ -140,5 +175,6 @@ printf "\ngenerate-widget-html:         %s s" "${TIMER_TOTAL_generate_widget_htm
 printf "\nbuild-notes-widget:           %s s" "${TIMER_TOTAL_build_notes_widget}"
 printf "\nupdate-permissions:           %s s" "${TIMER_TOTAL_update_permissions}"
 printf "\nrestart-daemon:               %s s" "${TIMER_TOTAL_restart_daemon}"
+printf "\nssl-certs-generate:           %s s" "${TIMER_TOTAL_ssl_certs_generate}"
 printf "\nweb-server_restart:           %s s" "${TIMER_TOTAL_web_server_restart}"
 printf "\nweb-server-connect:           %s s\n" "${TIMER_TOTAL_web_server_connect}"
