@@ -1,3 +1,27 @@
+# v26.0.5 (2026-02-11)
+
+## 버그 수정 (Bug Fixes)
+
+### 업그레이드 시스템 (Upgrade System)
+- **SSL 인증서 보존 수정**: 업그레이드 과정에서 SSL 인증서가 중첩 디렉터리(`ssl_certs/ssl_certs/ssl_certs/...`)에 잘못 배치되던 `cp -R` 버그 수정
+  - `upgrade_install.sh`: SSL 인증서를 디렉터리 단위가 아닌 개별 파일로 복사하도록 변경
+  - `upgrade_post.sh`: 중첩 디렉터리 자동 복구 로직 및 인증서 누락 시 자동 생성 기능 추가
+  - nginx 시작 실패 방지 및 업그레이드 안정성 향상
+
+---
+
+# v26.0.5 (2026-02-11) - English
+
+## Bug Fixes
+
+### Upgrade System
+- **SSL Certificate Preservation Fix**: Fixed `cp -R` bug that incorrectly placed SSL certificates in nested directories (`ssl_certs/ssl_certs/ssl_certs/...`) during upgrades
+  - `upgrade_install.sh`: Changed to copy SSL certificates as individual files instead of directory
+  - `upgrade_post.sh`: Added automatic nested directory recovery logic and certificate auto-generation if missing
+  - Prevents nginx startup failures and improves upgrade stability
+
+---
+
 # v26.0.4 (2026-02-11)
 
 ## 성능 및 안정성 개선 (Stability & Performance)
