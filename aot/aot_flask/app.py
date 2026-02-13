@@ -83,9 +83,9 @@ def register_extensions(app):
 
     # Create and populate database if it doesn't exist
     with app.app_context():
-        db.create_all()
-
         if os.environ.get("ALEMBIC_RUNNING") != "1":
+            db.create_all()
+
             # Database migration on startup
             from aot.databases.models import alembic_upgrade_db
             alembic_upgrade_db(app)

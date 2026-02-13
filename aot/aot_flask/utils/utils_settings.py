@@ -2177,12 +2177,29 @@ def settings_diagnostic_delete_settings_database():
 
     if not error:
         try:
-            os.remove('/opt/AoT/databases/aot.db')
-            cmd = "{pth}/aot/scripts/aot_wrapper frontend_reload" \
-                  " | ts '[%Y-%m-%d %H:%M:%S]'" \
-                  " >> {log} 2>&1".format(pth=INSTALL_DIRECTORY,
-                                          log=DAEMON_LOG_FILE)
-            subprocess.Popen(cmd, shell=True)
+            from aot.config import SQL_DATABASE_AOT, DAEMON_LOG_FILE, INSTALL_DIRECTORY
+            import shutil
+            import platform
+            if os.path.exists(SQL_DATABASE_AOT):
+                os.remove(SQL_DATABASE_AOT)
+
+            # Check for ts command (moreutils)
+            ts_cmd = shutil.which('ts')
+            pipe_ts = f" | {ts_cmd} '[%Y-%m-%d %H:%M:%S]'" if ts_cmd else ""
+
+            # Check platform
+            if platform.system() == 'Linux':
+                cmd = "{pth}/aot/scripts/aot_wrapper frontend_reload" \
+                      "{ts}" \
+                      " >> {log} 2>&1".format(pth=INSTALL_DIRECTORY,
+                                              ts=pipe_ts,
+                                              log=DAEMON_LOG_FILE)
+                subprocess.Popen(cmd, shell=True)
+            else:
+                # Log that manual restart is needed on non-Linux platforms
+                with open(DAEMON_LOG_FILE, 'a') as log_file:
+                    timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+                    log_file.write(f"{timestamp} Manual frontend reload/restart required on {platform.system()}.\n")
         except Exception as except_msg:
             error.append(except_msg)
 

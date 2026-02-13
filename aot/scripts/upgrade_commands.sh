@@ -5,7 +5,7 @@
 
 exec 2>&1
 
-if [[ "$EUID" -ne 0 ]]; then
+if [[ "$EUID" -ne 0 ]] && [[ "$(uname)" != "Darwin" ]]; then
     printf "Must be run as root.\n"
     exit 1
 fi

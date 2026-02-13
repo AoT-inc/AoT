@@ -477,7 +477,7 @@ msgstr "분당 횟수"
 
 #: config_devices_units.py:455 widgets/AoT_graph.py:308
 msgid "Day"
-msgstr "일일"
+msgstr "하루"
 
 #: config_devices_units.py:458
 msgid "Decibel"
@@ -1036,7 +1036,7 @@ msgstr "내보내기"
 
 #: config_translations.py:84
 msgid "Fail"
-msgstr "일일"
+msgstr "실패"
 
 #: aot_flask/forms/forms_settings.py:155
 #: aot_flask/templates/layout-settings.html:27
@@ -3163,18 +3163,18 @@ msgstr "언어"
 #: aot_flask/forms/forms_authentication.py:34
 #: aot_flask/forms/forms_authentication.py:35
 msgid "Email"
-msgstr "일일"
+msgstr "이메일"
 
 #: aot_flask/forms/forms_authentication.py:42
 #: aot_flask/forms/forms_authentication.py:43
 #: aot_flask/forms/forms_settings.py:383 aot_flask/forms/forms_settings.py:425
 #: aot_flask/forms/forms_settings.py:426
 msgid "Confirm Password"
-msgstr "비밀번호로 로그인"
+msgstr "비밀번호 확인"
 
 #: aot_flask/forms/forms_authentication.py:71
 msgid "Reset Method"
-msgstr "방법"
+msgstr "재설정 방법"
 
 #: aot_flask/forms/forms_authentication.py:73
 msgid "Save reset code to file"
@@ -3190,7 +3190,7 @@ msgstr "승인"
 
 #: aot_flask/forms/forms_authentication.py:85
 msgid "Password Reset Code"
-msgstr "비밀번호 재설정"
+msgstr "비밀번호 재설정 코드"
 
 #: aot_flask/forms/forms_authentication.py:86
 msgid "Reset Code"

@@ -157,24 +157,26 @@ def thread_import_settings(tmp_folder):
 
     try:
         # Initialize
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
+        ts_cmd = shutil.which('ts')
+        pipe_ts = f" | {ts_cmd} '[%Y-%m-%d %H:%M:%S]'" if ts_cmd else ""
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize{pipe_ts} >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Upgrade database
         append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Database Upgrade\n")
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper upgrade_database | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper upgrade_database{pipe_ts} >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Update dependencies (may take time)
         append_to_log(IMPORT_LOG_FILE, f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Updating dependencies (please wait)...\n")
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper update_dependencies | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper update_dependencies{pipe_ts} >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Generate widget HTML
         generate_widget_html()
 
         # Re-initialize
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize{pipe_ts} >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Restart backend daemon
@@ -182,7 +184,7 @@ def thread_import_settings(tmp_folder):
         if DOCKER_CONTAINER:
             subprocess.Popen('docker start aot_daemon 2>&1', shell=True)
         else:
-            cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper daemon_restart | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
+            cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper daemon_restart{pipe_ts} >> {IMPORT_LOG_FILE} 2>&1"
             a, b, c = cmd_output(cmd, user="root")
 
         # Cleanup tmp directory
@@ -194,7 +196,7 @@ def thread_import_settings(tmp_folder):
         if DOCKER_CONTAINER:
             subprocess.Popen('docker start aot_flask 2>&1', shell=True)
         else:
-            cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper frontend_reload | ts '[%Y-%m-%d %H:%M:%S]' >> {IMPORT_LOG_FILE} 2>&1"
+            cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper frontend_reload{pipe_ts} >> {IMPORT_LOG_FILE} 2>&1"
             _, _, _ = cmd_output(cmd, user="root")
     except:
         logger.exception("Exception occurred in thread_import_settings()")

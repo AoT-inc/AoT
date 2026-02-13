@@ -590,9 +590,12 @@ def admin_upgrade():
                     os.remove(UPGRADE_TMP_LOG_FILE)
                 except FileNotFoundError:
                     pass
+                from aot.aot_flask.utils.utils_settings import is_tool
+                ts_cmd = " | ts '[%Y-%m-%d %H:%M:%S]'" if is_tool("ts") else ""
                 cmd = "{pth}/aot/scripts/aot_wrapper upgrade-master" \
-                      " | ts '[%Y-%m-%d %H:%M:%S]' 2>&1 | tee -a {log} {tmp_log}".format(
+                      "{ts} 2>&1 | tee -a {log} {tmp_log}".format(
                     pth=INSTALL_DIRECTORY,
+                    ts=ts_cmd,
                     log=UPGRADE_LOG_FILE,
                     tmp_log=UPGRADE_TMP_LOG_FILE)
                 subprocess.Popen(cmd, shell=True)
@@ -604,10 +607,13 @@ def admin_upgrade():
                     os.remove(UPGRADE_TMP_LOG_FILE)
                 except FileNotFoundError:
                     pass
+                from aot.aot_flask.utils.utils_settings import is_tool
+                ts_cmd = " | ts '[%Y-%m-%d %H:%M:%S]'" if is_tool("ts") else ""
                 cmd = "{pth}/aot/scripts/aot_wrapper upgrade-release-major {current_maj_version}" \
-                      " | ts '[%Y-%m-%d %H:%M:%S]' 2>&1 | tee -a {log} {tmp_log}".format(
+                      "{ts} 2>&1 | tee -a {log} {tmp_log}".format(
                     current_maj_version=AOT_VERSION.split('.')[0],
                     pth=INSTALL_DIRECTORY,
+                    ts=ts_cmd,
                     log=UPGRADE_LOG_FILE,
                     tmp_log=UPGRADE_TMP_LOG_FILE)
                 subprocess.Popen(cmd, shell=True)

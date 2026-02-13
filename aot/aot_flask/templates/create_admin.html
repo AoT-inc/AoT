@@ -34,6 +34,7 @@
 
       <p>
         <form method="post" action="/create_admin">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           {{ form_language.csrf_token }}
           <div class="input-group mb-3">
             <div class="input-group-prepend">
@@ -64,6 +65,7 @@
 
       <p>
         <form method="post" action="/create_admin">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           {{form_notice.csrf_token}}
           {{form_notice.acknowledge(class_='form-control btn btn-primary btn-sm')}}
         </form>
@@ -82,6 +84,7 @@
       <h3 class="form-signin-heading" style="text-align: center;">{{_('Create Admin')}}</h3>
 
       <form method="post" action="/create_admin">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         {{ form_language.csrf_token }}
         <div class="input-group mb-3">
           <div class="input-group-prepend">
@@ -100,6 +103,7 @@
 
       <form id='create_admin_form' class="form-signin" name="create_admin" action="/create_admin" method="POST">
         <input type="hidden" name="form-name" value="create_admin">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         {{form_create_admin.hidden_tag()}}
         {{form_create_admin.username.label(class_='sr-only')}}
         {{form_create_admin.username(class_='form-control', autofocus=true)}}
