@@ -29,10 +29,20 @@ def get_db_path():
         from aot.config import SQL_DATABASE_AOT
         db_path = SQL_DATABASE_AOT
         if db_path.startswith('sqlite:///'):
-            db_path = db_path[10:]  # Remove 'sqlite:///' 
+            db_path = db_path[10:]  # Remove 'sqlite:///'
         return db_path
     except (ImportError, AttributeError) as e:
         print(f"Warning: Could not import SQL_DATABASE_AOT: {e}")
+
+    # Method 1.5: Try AOT_DB_PATH
+    try:
+        from aot.config import AOT_DB_PATH
+        db_path = AOT_DB_PATH
+        if db_path.startswith('sqlite:///'):
+            db_path = db_path[10:]
+        return db_path
+    except (ImportError, AttributeError):
+        pass
     
     # Method 2: Try importing DATABASE_PATH and DATABASE_NAME
     try:

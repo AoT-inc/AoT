@@ -81,6 +81,10 @@ def run_migrations_online():
         prefix='sqlalchemy.',
         poolclass=pool.NullPool)
 
+    if connectable is None:
+        print("Error: Could not create engine from config (connectable is None).")
+        return
+
     with connectable.connect() as connection:
         is_sqlite = (config.get_main_option("sqlalchemy.url") or "").startswith("sqlite")
         context.configure(

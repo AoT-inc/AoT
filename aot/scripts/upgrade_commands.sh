@@ -225,7 +225,10 @@ case "${1:-''}" in
                 if ! command -v npm &> /dev/null; then
                     printf "#### WARNING: npm not found. Skipping Notes Widget build.\n"
                 else
-                    cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
+                    if ! cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget; then
+                        printf "#### ERROR: Could not enter notes-widget directory.\n"
+                        exit 1
+                    fi
                     printf "#### Installing node dependencies...\n"
                     npm install
                     printf "#### Building bundle...\n"
@@ -297,7 +300,10 @@ case "${1:-''}" in
     'update-alembic')
         printf "\n#### Upgrading AoT database with alembic (if needed)\n"
         "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/scripts/init_database.py 2>&1 || printf "#### WARNING: Database initialization script failed, continuing with alembic migration...\n"
-        cd "${AOT_PATH}"/alembic_db || return
+        if ! cd "${AOT_PATH}"/alembic_db; then
+            printf "#### ERROR: Could not enter alembic_db directory.\n"
+            exit 1
+        fi
         "${AOT_PATH}"/env/bin/python -m alembic upgrade head 2>&1 || printf "#### WARNING: Alembic migration partially failed. Check logs for details.\n"
     ;;
     'update-alembic-post')
