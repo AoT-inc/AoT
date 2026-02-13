@@ -135,8 +135,8 @@ case "${1:-''}" in
 
         mkdir -p "${AOT_PATH}"/install
         mkdir -p "${AOT_PATH}"/aot
-        mkdir -p "${AOT_PATH}"/databases
-        mkdir -p "${AOT_PATH}"/databases/kma
+        mkdir -p "${AOT_PATH}"/aot/databases
+        mkdir -p "${AOT_PATH}"/aot/databases/kma
         mkdir -p "${AOT_PATH}"/note_attachments
         mkdir -p "${AOT_PATH}"/aot/scripts
         mkdir -p "${AOT_PATH}"/aot/aot_flask/ssl_certs
@@ -170,8 +170,8 @@ case "${1:-''}" in
         fi
 
         # Create empty aot database file if it doesn't exist
-        if [[ ! -e ${AOT_PATH}/databases/aot.db ]]; then
-            touch "${AOT_PATH}"/databases/aot.db
+        if [[ ! -e ${AOT_PATH}/aot/databases/aot.db ]]; then
+            touch "${AOT_PATH}"/aot/databases/aot.db
         fi
 
         chown -R "${AOT_USER}:${AOT_GROUP}" /var/log/aot /var/AoT-backups || true

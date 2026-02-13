@@ -22,7 +22,7 @@ runDownloadAoT() {
     echo '2' > "${INSTALL_DIRECTORY}"/AoT/.upgrade
     printf "\n\n"
     printf "#### ERROR ####\n"
-    printf "There was an error detected during the upgrade. Please review the log at /var/log/aot/aotupgrade.log"
+    printf "There was an error detected during the upgrade. Please review the log at ${INSTALL_DIRECTORY}/AoT/logs/aotupgrade.log"
     exit 1
   }
   

@@ -10,13 +10,14 @@ if [ "$EUID" -ne 0 ] ; then
   printf "Must be run as root.\n"
   exit 1
 fi
+INSTALL_DIRECTORY=$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." && pwd -P )
 
 runSelfUpgrade() {
   function error_found {
     echo '2' > "${INSTALL_DIRECTORY}"/AoT/.upgrade
     printf "\n\n"
     printf "#### ERROR ####\n"
-    printf "There was an error detected during the upgrade. Please review the log at /var/log/aot/aotupgrade.log"
+    printf "There was an error detected during the upgrade. Please review the log at ${CURRENT_AOT_INSTALL_DIRECTORY}/AoT/logs/aotupgrade.log"
     exit 1
   }
 
@@ -105,7 +106,7 @@ runSelfUpgrade() {
   fi
 
   printf "Copying databases..."
-  if ! cp "${CURRENT_AOT_DIRECTORY}"/databases/*.db "${THIS_AOT_DIRECTORY}"/databases ; then
+  if ! cp "${CURRENT_AOT_DIRECTORY}"/aot/databases/*.db "${THIS_AOT_DIRECTORY}"/aot/databases ; then
     printf "Failed: Error while trying to copy databases."
     error_found
   fi
@@ -120,7 +121,7 @@ runSelfUpgrade() {
   fi
 
   printf "Copying flask_secret_key..."
-  if ! cp "${CURRENT_AOT_DIRECTORY}"/databases/flask_secret_key "${THIS_AOT_DIRECTORY}"/databases ; then
+  if ! cp "${CURRENT_AOT_DIRECTORY}"/aot/databases/flask_secret_key "${THIS_AOT_DIRECTORY}"/aot/databases ; then
     printf "Failed: Error while trying to copy flask_secret_key."
   fi
   printf "Done.\n"
