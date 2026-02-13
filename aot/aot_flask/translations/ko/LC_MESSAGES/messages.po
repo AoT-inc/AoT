@@ -3205,7 +3205,7 @@ msgstr "새로운 비밀번호"
 #: aot_flask/forms/forms_authentication.py:91
 #: aot_flask/forms/forms_authentication.py:92
 msgid "Confirm New Password"
-msgstr "새로운 비밀번호로 승인"
+msgstr "새로운 비밀번호 승인"
 
 #: aot_flask/forms/forms_authentication.py:93
 msgid "Change Password"
