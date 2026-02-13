@@ -100,7 +100,8 @@ Options:
   web-server-restart            Restart the web server
   web-server-disable            Disable the web server service
   web-server-enable             Enable the web server service
-  web-server-update             Update the web server configuration files
+   web-server-update             Update the web server configuration files
+  update-nodejs                 Update Node.js to v20 via NodeSource
   reset-influxdb-config         Reset InfluxDB configuration in SQLite to defaults
 
 Docker-specific Commands:
@@ -682,14 +683,28 @@ case "${1:-''}" in
         printf "#### Enabling aot startup script\n"
         systemctl enable "${AOT_PATH}"/install/aot.service
     ;;
-    'update-aot-startup-script')
-        printf "\n#### Updating aot startup script\n"
-        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-aot-service-disable
-        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-aot-service-enable
+    'update-nodejs')
+        printf "\n#### Updating Node.js to v20 using NodeSource\n"
+        if command -v node &> /dev/null; then
+            NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+            if [ "$NODE_VERSION" -ge 20 ]; then
+                printf "#### Node.js version is already %s. Skipping update.\n" "$(node -v)"
+                return 0
+            fi
+        fi
+        
+        printf "#### Installing Node.js v20 repository...\n"
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+        printf "#### Node.js version after update: $(node -v)\n"
     ;;
     'update-packages')
         printf "\n#### Installing prerequisite apt packages and update pip\n"
         apt remove -y apache2 || true
+        
+        # Install Node.js v20 first if needed
+        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-nodejs
+        
         apt install -y ${APT_PKGS}
         
         # Ensure Nginx configuration is present (fix for interrupted installs)
@@ -729,7 +744,9 @@ case "${1:-''}" in
             printf "\n## Error: Virtualenv doesn't exist. Create with %s setup-virtualenv\n" "${0}"
         else
             "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements.txt
-            "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements-testing.txt
+            if [[ -f "${AOT_PATH}"/install/requirements-testing.txt ]]; then
+                "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements-testing.txt
+            fi
         fi
     ;;
     'pip-clear-cache')
