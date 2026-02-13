@@ -657,8 +657,8 @@ case "${1:-''}" in
     ;;
     'update-aot-service-disable')
         printf "\n#### Disabling aot startup script\n"
-        systemctl disable aot.service
-        rm -rf /etc/systemd/system/aot.service
+        systemctl disable aot.service || true
+        rm -rf /etc/systemd/system/aot.service || true
     ;;
     'update-aot-service-enable')
         printf "#### Enabling aot startup script\n"
@@ -671,8 +671,15 @@ case "${1:-''}" in
     ;;
     'update-packages')
         printf "\n#### Installing prerequisite apt packages and update pip\n"
-        apt remove -y apache2
+        apt remove -y apache2 || true
         apt install -y ${APT_PKGS}
+        
+        # Ensure Nginx configuration is present (fix for interrupted installs)
+        if [[ ! -f /etc/nginx/nginx.conf ]]; then
+            printf "#### WARNING: /etc/nginx/nginx.conf missing. Reinstalling nginx-common to restore defaults...\n"
+            apt-get install -o Dpkg::Options::='--force-confmiss' install --reinstall -y nginx-common
+        fi
+        
         apt clean
     ;;
     'update-permissions')
@@ -742,20 +749,27 @@ case "${1:-''}" in
         # First, check if nginx is running
         if ! systemctl is-active --quiet nginx; then
             printf "#### WARNING: nginx is not running. Attempting to start...\n"
-            systemctl start nginx || printf "#### ERROR: Failed to start nginx\n"
+            systemctl start nginx || {
+                printf "#### ERROR: Failed to start nginx. Diagnostics:\n"
+                nginx -t || true
+                systemctl status nginx --no-pager -l || true
+            }
             sleep 3
         fi
         
         # Check if aotflask is running
         if ! systemctl is-active --quiet aotflask; then
             printf "#### WARNING: aotflask is not running. Attempting to start...\n"
-            systemctl start aotflask || printf "#### ERROR: Failed to start aotflask\n"
+            systemctl start aotflask || {
+                printf "#### ERROR: Failed to start aotflask. Diagnostics:\n"
+                systemctl status aotflask --no-pager -l || true
+            }
             sleep 3
         fi
         
         # Attempt to connect to localhost 10 times, sleeping 60 seconds every fail
         for i in {1..10}; do
-            # Try curl first (more reliable than wget for status checks)
+            # Try curl first
             if curl -sf --max-time 10 http://localhost/ > /dev/null 2>&1; then
                 printf "#### Successfully connected to http://localhost\n"
                 break
@@ -767,7 +781,10 @@ case "${1:-''}" in
                     systemctl is-active nginx || printf "NOT RUNNING\n"
                     printf "#### AoTFlask status: "
                     systemctl is-active aotflask || printf "NOT RUNNING\n"
-                    printf "#### Please check /var/log/nginx/error.log and systemctl status aotflask for details\n"
+                    printf "#### Recent Nginx errors:\n"
+                    tail -n 20 /var/log/nginx/error.log 2>/dev/null || printf "Could not read /var/log/nginx/error.log\n"
+                    printf "#### Recent AoTFlask logs (journalctl):\n"
+                    journalctl -u aotflask -n 20 --no-pager || true
                 else
                     printf "#### Could not connect to http://localhost (attempt $i/10). Waiting 60 seconds...\n"
                     sleep 60
@@ -786,14 +803,17 @@ case "${1:-''}" in
     ;;
     'web-server-disable')
         printf "\n#### Disabling services for fronted\n"
-        systemctl disable aotflask.service
-        rm -rf /etc/systemd/system/aotflask.service
+        systemctl disable aotflask.service || true
+        rm -rf /etc/systemd/system/aotflask.service || true
     ;;
     'web-server-enable')
         printf "\n#### Enabling services for fronted\n"
-        ln -sf "${AOT_PATH}"/install/aotflask_nginx.conf /etc/nginx/sites-enabled/default
-        systemctl enable nginx
-        systemctl enable "${AOT_PATH}"/install/aotflask.service
+        mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+        cp -f "${AOT_PATH}"/install/aotflask_nginx.conf /etc/nginx/sites-available/aot
+        rm -f /etc/nginx/sites-enabled/default
+        ln -sf /etc/nginx/sites-available/aot /etc/nginx/sites-enabled/aot
+        systemctl enable nginx || true
+        systemctl enable "${AOT_PATH}"/install/aotflask.service || true
     ;;
     'web-server-update')
         printf "\n#### Reconfiguring fronted\n"
