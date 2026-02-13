@@ -22,8 +22,18 @@ sys.path.insert(0, project_root)
 
 def get_db_path():
     """Get the absolute path to the SQLite database."""
-    from aot.config import DB_PATH
-    return DB_PATH
+    try:
+        from aot.config import SQL_DATABASE_AOT
+        # Remove sqlite:/// prefix if present
+        db_path = SQL_DATABASE_AOT
+        if db_path.startswith('sqlite:///'):
+            db_path = db_path[10:]  # Remove 'sqlite:///' 
+        return db_path
+    except ImportError as e:
+        print(f"Warning: Could not import SQL_DATABASE_AOT: {e}")
+        # Fallback to default path
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        return os.path.join(project_root, 'aot', 'databases', 'aot.db')
 
 def backup_database(db_path):
     """Create a backup of the existing database."""
@@ -108,36 +118,42 @@ def initialize_alembic_version(db_path, version='718f314963bc'):
         return False
 
 def main():
-    db_path = get_db_path()
-    db_dir = os.path.dirname(db_path)
-    
-    # Ensure database directory exists
-    os.makedirs(db_dir, exist_ok=True)
-    
-    print(f"Database path: {db_path}")
-    
-    # Check if database exists and has tables
-    existing_tables = get_table_names(db_path)
-    alembic_version = check_alembic_version(db_path)
-    
-    if existing_tables:
-        print(f"Found {len(existing_tables)} existing tables: {', '.join(existing_tables)}")
+    try:
+        db_path = get_db_path()
+        db_dir = os.path.dirname(db_path)
         
-        if alembic_version:
-            print(f"Database already has alembic version: {alembic_version}")
-            print("Database appears to be initialized already. Skipping migration.")
-            return 0
-        else:
-            print("Database has tables but no alembic version. Registering version...")
-            if initialize_alembic_version(db_path):
-                print("Successfully registered alembic version.")
+        # Ensure database directory exists
+        os.makedirs(db_dir, exist_ok=True)
+        
+        print(f"Database path: {db_path}")
+        
+        # Check if database exists and has tables
+        existing_tables = get_table_names(db_path)
+        alembic_version = check_alembic_version(db_path)
+        
+        if existing_tables:
+            print(f"Found {len(existing_tables)} existing tables: {', '.join(existing_tables)}")
+            
+            if alembic_version:
+                print(f"Database already has alembic version: {alembic_version}")
+                print("Database appears to be initialized already. Skipping pre-migration setup.")
                 return 0
             else:
-                print("Failed to register alembic version.")
-                return 1
-    else:
-        print("No existing tables found. Creating new database with alembic migration...")
-        return 0
+                print("Database has tables but no alembic version. Registering version...")
+                if initialize_alembic_version(db_path):
+                    print("Successfully registered alembic version.")
+                    return 0
+                else:
+                    print("Failed to register alembic version.")
+                    return 1
+        else:
+            print("No existing tables found. New database will be created by alembic migration...")
+            return 0
+    except Exception as e:
+        print(f"Error during database initialization: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
 
 if __name__ == '__main__':
     sys.exit(main())
