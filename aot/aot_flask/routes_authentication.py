@@ -399,9 +399,7 @@ def newremote():
         if User().check_password(
                 pass_word, user.password_hash) == user.password_hash:
             try:
-                from aot.config import INSTALL_DIRECTORY
-                path_cert = os.path.join(INSTALL_DIRECTORY, 'aot/aot_flask/ssl_certs/cert.pem')
-                with open(path_cert, 'r') as cert:
+                with open('/opt/AoT/aot/aot_flask/ssl_certs/cert.pem', 'r') as cert:
                     certificate_data = cert.read()
             except Exception:
                 certificate_data = None

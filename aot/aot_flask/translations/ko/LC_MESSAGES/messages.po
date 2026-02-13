@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AoT 8.15.0\n"
 "Report-Msgid-Bugs-To: aot@kylegabriel.com\n"
-"POT-Creation-Date: 2026-02-13 19:28+0900\n"
+"POT-Creation-Date: 2026-02-13 22:46+0900\n"
 "PO-Revision-Date: 2024-03-28 19:00+0000\n"
 "Last-Translator: Kyle Gabriel <business@kylegabriel.com>\n"
 "Language-Team: Korean <http://translate.kylegabriel.com/projects/aot/translations/ko/>\n"
@@ -116,9 +116,8 @@ msgstr "용존 산소"
 #: actions/pause_actions.py:35
 #: aot_flask/templates/pages/energy_usage_outputs.html:68
 #: aot_flask/templates/pages/energy_usage_outputs.html:103
-#: aot_flask/utils/utils_method.py:88 config_devices_units.py:113
-#: config_translations.py:70 config_translations.py:307
-#: config_translations.py:308
+#: config_devices_units.py:113 config_translations.py:70
+#: config_translations.py:307 config_translations.py:308
 msgid "Duration"
 msgstr "지속시간"
 
@@ -187,7 +186,7 @@ msgstr "이온 농도"
 msgid "Length"
 msgstr "길이"
 
-#: config_devices_units.py:173 inputs_gis/gis_rainviewer.py:139
+#: config_devices_units.py:173
 msgid "Light"
 msgstr "빛"
 
@@ -248,7 +247,6 @@ msgid "강수"
 msgstr "강수"
 
 #: config_devices_units.py:245 functions/humidity_wet_dry_bulb.py:148
-#: inputs_gis/gis_openweather.py:201
 msgid "Pressure"
 msgstr "압력"
 
@@ -341,7 +339,7 @@ msgstr ""
 #: aot_flask/forms/forms_function.py:55 aot_flask/forms/forms_input.py:119
 #: aot_flask/forms/forms_output.py:87 config_devices_units.py:326
 #: functions/vapor_pressure_deficit.py:95 inputs/atlas_pt1000.py:76
-#: inputs_gis/gis_openweather.py:137 widgets/AoT_gauge_angular.py:286
+#: widgets/AoT_gauge_angular.py:286
 msgid "Temperature"
 msgstr "온도"
 
@@ -419,7 +417,6 @@ msgid "Bulk Density"
 msgstr "부피 밀도"
 
 #: config_devices_units.py:399 inputs_gis/gis_nasa_gibs.py:47
-#: inputs_gis/gis_nasa_gibs.py:211
 msgid "Vegetation Index (NDVI)"
 msgstr "식생 지수 (NDVI)"
 
@@ -997,7 +994,7 @@ msgstr "복제"
 
 #: config_translations.py:72 config_translations.py:399
 msgid "Edge"
-msgstr "위젯"
+msgstr "엣지"
 
 #: aot_flask/forms/forms_notes.py:38
 #: aot_flask/templates/pages/geo/geo_design.html:372 config_translations.py:74
@@ -1155,13 +1152,12 @@ msgstr "수학"
 #: functions/difference.py:102 functions/equation_multi.py:76
 #: functions/equation_multi.py:84 functions/equation_multi.py:96
 #: functions/equation_multi.py:104 functions/lorawan_mode_manager.py:141
-#: functions/pid_autotune.py:64 functions/redundancy.py:83
-#: functions/redundancy.py:102 functions/redundancy.py:121
-#: functions/verification.py:75 functions/verification.py:83
-#: functions/verification.py:94 functions/verification.py:102
-#: inputs/ads1115_analog_ph_ec.py:138 inputs/ads1256_analog_ph_ec.py:222
-#: inputs/anyleaf_ph.py:62 inputs/atlas_do.py:68 inputs/atlas_ec.py:81
-#: inputs/atlas_o2.py:69 inputs/atlas_orp.py:67 inputs/atlas_ph.py:71
+#: functions/pid_autotune.py:64 functions/verification.py:75
+#: functions/verification.py:83 functions/verification.py:94
+#: functions/verification.py:102 inputs/ads1115_analog_ph_ec.py:138
+#: inputs/ads1256_analog_ph_ec.py:222 inputs/anyleaf_ph.py:62
+#: inputs/atlas_do.py:68 inputs/atlas_ec.py:81 inputs/atlas_o2.py:69
+#: inputs/atlas_orp.py:67 inputs/atlas_ph.py:71
 #: widgets/AoT_gauge_angular.py:231 widgets/widget_gauge_angular.py:149
 #: widgets/widget_gauge_solid.py:173 widgets/widget_indicator.py:56
 #: widgets/widget_measurement.py:52
@@ -1347,7 +1343,7 @@ msgstr "저장"
 msgid "Save Order"
 msgstr "순서 저장"
 
-#: config_translations.py:164 inputs_gis/gis_nasa_gibs.py:217
+#: config_translations.py:164
 msgid "Scale"
 msgstr "스케일"
 
@@ -1597,10 +1593,9 @@ msgstr "데드라인"
 #: functions/humidity_wet_dry_bulb.py:128
 #: functions/humidity_wet_dry_bulb.py:148 functions/lorawan_mode_manager.py:61
 #: functions/lorawan_mode_manager.py:141 functions/redundancy.py:64
-#: functions/redundancy.py:83 functions/redundancy.py:102
-#: functions/redundancy.py:121 functions/regulate_ph_ec.py:185
-#: functions/regulate_ph_ec.py:193 functions/regulate_ph_ec.py:224
-#: functions/regulate_ph_ec.py:246 functions/statistics_last_multiple.py:101
+#: functions/regulate_ph_ec.py:185 functions/regulate_ph_ec.py:193
+#: functions/regulate_ph_ec.py:224 functions/regulate_ph_ec.py:246
+#: functions/statistics_last_multiple.py:101
 #: functions/statistics_last_multiple.py:109
 #: functions/statistics_past_single.py:99
 #: functions/statistics_past_single.py:107 functions/sum_last_multiple.py:68
@@ -1757,10 +1752,8 @@ msgstr "데몬 로그에 디버그 라인 표시"
 #: functions/humidity_wet_dry_bulb.py:108
 #: functions/humidity_wet_dry_bulb.py:128
 #: functions/humidity_wet_dry_bulb.py:148
-#: functions/lorawan_mode_manager.py:141 functions/redundancy.py:83
-#: functions/redundancy.py:102 functions/redundancy.py:121
-#: functions/regulate_ph_ec.py:224 functions/regulate_ph_ec.py:246
-#: functions/statistics_last_multiple.py:109
+#: functions/lorawan_mode_manager.py:141 functions/regulate_ph_ec.py:224
+#: functions/regulate_ph_ec.py:246 functions/statistics_last_multiple.py:109
 #: functions/statistics_past_single.py:107 functions/sum_last_multiple.py:84
 #: functions/sum_past_single.py:96 functions/vapor_pressure_deficit.py:95
 #: functions/vapor_pressure_deficit.py:115 functions/verification.py:83
@@ -2420,7 +2413,7 @@ msgstr "데비안 기반 운영 체제"
 msgid "An active internet connection"
 msgstr "활성 인터넷 연결"
 
-#: aot_flask/templates/admin/dependencies_install.html:21
+#: aot_flask/templates/admin/dependencies_install.html:22
 #: config_translations_docs.py:63
 msgid "Install"
 msgstr "설치"
@@ -2785,9 +2778,22 @@ msgstr ""
 msgid "Flow Meter: Clear Total (Kilowatt-hour)"
 msgstr "전력계: 전체 초기화"
 
+#: actions/clear_total_kWh.py:23
+msgid ""
+"Clear the total kWh saved for an energy meter Input. The Input must have the"
+" Clear Total kWh option. This will also clear all energy stats on the "
+"device, not just the total kWh."
+msgstr ""
+
 #: actions/clear_total_volume.py:13
 msgid "Flow Meter: Clear Total (Volume)"
 msgstr "유량계: 전체 초기화"
+
+#: actions/clear_total_volume.py:23
+msgid ""
+"Clear the total volume saved for a flow meter Input. The Input must have the"
+" Clear Total Volume option."
+msgstr ""
 
 #: actions/command_bash.py:11
 msgid "Execute"
@@ -2834,7 +2840,26 @@ msgstr "백라이트"
 msgid "Flashing"
 msgstr "깜박임"
 
-#: actions/force_input_measurements.py:13 aot_flask/utils/utils_input.py:962
+#: actions/email.py:15
+#, fuzzy
+msgid "Send Email"
+msgstr "테스트 이메일 보내기"
+
+#: actions/email.py:25
+#, fuzzy
+msgid "Send an email."
+msgstr "테스트 이메일 보내기"
+
+#: actions/email.py:36
+#, fuzzy
+msgid "E-Mail Address"
+msgstr "IP 주소"
+
+#: actions/email.py:37
+msgid "E-mail recipient(s) (separate multiple addresses with commas)"
+msgstr ""
+
+#: actions/force_input_measurements.py:13
 msgid "Force Measurements"
 msgstr "측정 강제 실행"
 
@@ -2882,6 +2907,17 @@ msgstr "연결 유지"
 #: outputs/value_mqtt.py:113
 msgid "Username"
 msgstr "사용자명"
+
+#: actions/led_kasa_bulb_change_color.py:13
+#, fuzzy
+msgid "Change Color"
+msgstr "변경사항"
+
+#: actions/led_kasa_bulb_change_color.py:23
+msgid ""
+"Change the color of the LED in a Kasa RGB Bulb. Select the Kasa RGB Bulb "
+"Output."
+msgstr ""
 
 #: actions/led_neopixel_flash_off.py:14
 msgid "LED: Neopixel: Flashing Off"
@@ -2943,6 +2979,14 @@ msgstr "사진 캡처"
 #: actions/photo.py:23
 msgid "Capture a photo with the selected Camera."
 msgstr "선택한 카메라에서 사진 촬영하기"
+
+#: actions/photo_email.py:18
+msgid "Send Email with Photo"
+msgstr ""
+
+#: actions/photo_email.py:28
+msgid "Take a photo and send an email with it attached."
+msgstr ""
 
 #: actions/pid_method.py:18
 msgid "Set Method"
@@ -3027,19 +3071,19 @@ msgid ""
 " log for details."
 msgstr "업그레이드 중 오류가 발생했습니다. 업그레이드 로그를 확인하세요."
 
-#: aot_flask/routes_admin.py:601
+#: aot_flask/routes_admin.py:604
 msgid "The upgrade (from master branch) has started"
 msgstr "업그레이드가 시작되었습니다 (master 브랜치)"
 
-#: aot_flask/routes_admin.py:619
+#: aot_flask/routes_admin.py:625
 msgid "The upgrade has started"
 msgstr "업그레이드가 시작되었습니다"
 
-#: aot_flask/routes_admin.py:640
+#: aot_flask/routes_admin.py:646
 msgid "The major version upgrade has started"
 msgstr "주요 버전 업그레이드가 시작되었습니다"
 
-#: aot_flask/routes_admin.py:643
+#: aot_flask/routes_admin.py:649
 msgid "You cannot upgrade if an upgrade is not available"
 msgstr "업그레이드가 불가능합니다"
 
@@ -3153,8 +3197,8 @@ msgstr "액션 종류"
 
 #: aot_flask/forms/forms_authentication.py:21
 #: aot_flask/forms/forms_settings.py:94 aot_flask/forms/forms_settings.py:397
-#: aot_flask/templates/create_admin.html:39
-#: aot_flask/templates/create_admin.html:86
+#: aot_flask/templates/create_admin.html:41
+#: aot_flask/templates/create_admin.html:91
 #: aot_flask/templates/layout.html:509
 #: aot_flask/templates/layout_default.html:509
 msgid "Language"
@@ -3174,7 +3218,7 @@ msgstr "비밀번호 확인"
 
 #: aot_flask/forms/forms_authentication.py:71
 msgid "Reset Method"
-msgstr "재설정 방법"
+msgstr "방법"
 
 #: aot_flask/forms/forms_authentication.py:73
 msgid "Save reset code to file"
@@ -3205,7 +3249,7 @@ msgstr "새로운 비밀번호"
 #: aot_flask/forms/forms_authentication.py:91
 #: aot_flask/forms/forms_authentication.py:92
 msgid "Confirm New Password"
-msgstr "새로운 비밀번호 승인"
+msgstr "새로운 비밀번호로 승인"
 
 #: aot_flask/forms/forms_authentication.py:93
 msgid "Change Password"
@@ -3823,7 +3867,6 @@ msgid "End Date/Time (YYYY-MM-DD HH:MM:SS)"
 msgstr "종료 날짜/시간 (YYYY-MM-DD HH:MM:SS)"
 
 #: aot_flask/forms/forms_method.py:52 aot_flask/forms/forms_method.py:124
-#: aot_flask/utils/utils_method.py:94
 msgid "Start Setpoint"
 msgstr "시작 설정값"
 
@@ -3867,7 +3910,7 @@ msgstr "메소드 추가"
 msgid "Set Repeat Options"
 msgstr "반복 설정"
 
-#: aot_flask/forms/forms_method.py:113 aot_flask/utils/utils_method.py:70
+#: aot_flask/forms/forms_method.py:113
 msgid "HH:MM:SS"
 msgstr ""
 
@@ -3955,19 +3998,19 @@ msgstr "AoT 업그레이드"
 msgid "Upgrade AoT to Next Major Version"
 msgstr "AoT를 다음 메이저 버전으로 업그레이드"
 
-#: aot_flask/forms/forms_misc.py:108 aot_flask/templates/admin/backup.html:40
+#: aot_flask/forms/forms_misc.py:108 aot_flask/templates/admin/backup.html:42
 msgid "Download Backup"
 msgstr "백업 다운로드"
 
-#: aot_flask/forms/forms_misc.py:109 aot_flask/templates/admin/backup.html:19
+#: aot_flask/forms/forms_misc.py:109 aot_flask/templates/admin/backup.html:20
 msgid "Create Backup"
 msgstr "백업 생성"
 
-#: aot_flask/forms/forms_misc.py:110 aot_flask/templates/admin/backup.html:43
+#: aot_flask/forms/forms_misc.py:110 aot_flask/templates/admin/backup.html:45
 msgid "Restore Backup"
 msgstr "백업 복원"
 
-#: aot_flask/forms/forms_misc.py:111 aot_flask/templates/admin/backup.html:46
+#: aot_flask/forms/forms_misc.py:111 aot_flask/templates/admin/backup.html:48
 msgid "Delete Backup"
 msgstr "백업 삭제"
 
@@ -3988,7 +4031,7 @@ msgid "Date/Time"
 msgstr "날짜/시간"
 
 #: aot_flask/forms/forms_notes.py:65 aot_flask/utils/utils_notes.py:401
-#: aot_flask/utils/utils_notes.py:442 aot_flask/utils/utils_settings.py:2196
+#: aot_flask/utils/utils_notes.py:442 aot_flask/utils/utils_settings.py:2213
 msgid "File"
 msgstr "파일"
 
@@ -4546,7 +4589,7 @@ msgstr "설정 편집"
 
 #: aot_flask/forms/forms_settings.py:348
 #: aot_flask/templates/reset_password.html:12
-#: aot_flask/templates/reset_password.html:26
+#: aot_flask/templates/reset_password.html:27
 msgid "Reset Password"
 msgstr "비밀번호 재설정"
 
@@ -4723,17 +4766,17 @@ msgid "Delete File"
 msgstr "파일 삭제"
 
 #: aot_flask/forms/forms_settings.py:493
-#: aot_flask/utils/utils_settings.py:2221
+#: aot_flask/utils/utils_settings.py:2238
 msgid "Recreate InfluxDB 1.x Database"
 msgstr "InfluxDB 1.x 데이터베이스 재생성"
 
 #: aot_flask/forms/forms_settings.py:494
-#: aot_flask/utils/utils_settings.py:2237
+#: aot_flask/utils/utils_settings.py:2254
 msgid "Recreate InfluxDB 2.x Database"
 msgstr "InfluxDB 2.x 데이터베이스 재생성"
 
 #: aot_flask/forms/forms_settings.py:495
-#: aot_flask/utils/utils_settings.py:2253
+#: aot_flask/utils/utils_settings.py:2270
 msgid "Reset Email Counter"
 msgstr "이메일 카운터 재설정"
 
@@ -4834,6 +4877,10 @@ msgstr "레이아웃 오류"
 #: aot_flask/static/js/dashboard.js:405
 msgid "dashboard_order_save_fail"
 msgstr "대시보드 순서 저장 실패"
+
+#: aot_flask/static/js/components/aot-map-search-fixed.js:365
+msgid "Search service unavailable"
+msgstr ""
 
 #: aot_flask/static/js/components/aot-tabs.js:219
 msgid "order_saved"
@@ -5311,7 +5358,7 @@ msgid ""
 msgstr "GitHub에 이슈를 생성할 경우, 진단 목적으로 이 로그 스니펫을 제공해주세요."
 
 #: aot_flask/templates/create_admin.html:12
-#: aot_flask/templates/create_admin.html:81
+#: aot_flask/templates/create_admin.html:84
 msgid "Create Admin"
 msgstr "관리자 생성"
 
@@ -5319,17 +5366,17 @@ msgstr "관리자 생성"
 msgid "Welcome to AoT"
 msgstr "AoT에 오신 것을 환영합니다"
 
-#: aot_flask/templates/create_admin.html:51
+#: aot_flask/templates/create_admin.html:53
 msgid ""
 "Start a new AoT installation. Please create an admin user. To start, please "
 "read and agree to the terms."
 msgstr "새로운 AoT 설치를 시작합니다. 관리자 계정을 생성해주세요. 시작하려면 먼저 이용 약관을 읽고 동의해주세요."
 
-#: aot_flask/templates/create_admin.html:54
+#: aot_flask/templates/create_admin.html:56
 msgid "Quality Assurance Notice"
 msgstr "품질 보증 공지"
 
-#: aot_flask/templates/create_admin.html:58
+#: aot_flask/templates/create_admin.html:60
 msgid ""
 "AoT is an agricultural control system based on Mycodo. Users can receive a "
 "warranty for the software added by AoT under a separate contract. The parts "
@@ -5338,7 +5385,7 @@ msgstr ""
 "AoT는 Mycodo 기반의 농업 제어 시스템입니다. 사용자는 별도의 계약을 통해 AoT가 추가한 소프트웨어에 대한 보증을 받을 수 "
 "있습니다. AoT와 관련된 부분은 아래 보증 정보를 따릅니다."
 
-#: aot_flask/templates/create_admin.html:59
+#: aot_flask/templates/create_admin.html:61
 msgid ""
 "AoT is free software. It can be redistributed and modified under the GNU "
 "General Public License (GNU GPL) version 3 or any later version published by"
@@ -5358,23 +5405,23 @@ msgstr ""
 "그렇지 않은 경우, 다음 링크를 참조하십시오. <a href=\"http://www.gnu.org/licenses/\" "
 "target=\"_blank\">http://www.gnu.org/licenses/</a>."
 
-#: aot_flask/templates/create_admin.html:61
+#: aot_flask/templates/create_admin.html:63
 msgid ""
 "AoT collects anonymous usage statistics to help with development. You can "
 "opt out of collection at any time on the management page after logging in."
 msgstr "AoT는 개발 지원을 위해 익명 사용 통계를 수집합니다. 로그인 후 관리 페이지에서 언제든지 수집을 거부할 수 있습니다."
 
-#: aot_flask/templates/create_admin.html:96
+#: aot_flask/templates/create_admin.html:101
 msgid "Login information is stored locally"
 msgstr "로그인 정보는 로컬에 저장됩니다"
 
-#: aot_flask/templates/create_admin.html:97
+#: aot_flask/templates/create_admin.html:102
 msgid ""
 "Usernames must be 3 to 64 characters, passwords >3 characters, and contain "
 "only letters and numbers"
 msgstr "사용자 이름은 3~64자, 비밀번호는 3자 이상이어야 하며 영문과 숫자만 포함할 수 있습니다."
 
-#: aot_flask/templates/create_admin.html:110
+#: aot_flask/templates/create_admin.html:116
 msgid "Create Admin Account"
 msgstr "관리자 계정 생성"
 
@@ -5390,11 +5437,11 @@ msgstr "정보"
 msgid "Warning"
 msgstr "경고"
 
-#: aot_flask/templates/forgot_password.html:26
+#: aot_flask/templates/forgot_password.html:27
 msgid "Password Reset"
 msgstr "비밀번호 재설정"
 
-#: aot_flask/templates/forgot_password.html:36
+#: aot_flask/templates/forgot_password.html:37
 msgid "Login with Password"
 msgstr "비밀번호로 로그인"
 
@@ -5642,8 +5689,8 @@ msgstr "언어를 선택하면 웹 브라우저의 언어가 재정의됩니다.
 msgid "Browser Default"
 msgstr "브라우저 기본값"
 
-#: aot_flask/templates/admin/dependencies_install.html:18
-#: aot_flask/templates/admin/dependencies_install.html:35
+#: aot_flask/templates/admin/dependencies_install.html:19
+#: aot_flask/templates/admin/dependencies_install.html:36
 #: aot_flask/templates/layout.html:538 aot_flask/templates/layout.html:574
 #: aot_flask/templates/layout_default.html:538
 #: aot_flask/templates/layout_default.html:574
@@ -5734,7 +5781,7 @@ msgstr ""
 "AoT 설정을 보존하거나 나중에 복원하기 위해 백업을 생성할 수 있습니다. 카메라 이미지는 백업되지 않습니다. 측정 데이터를 저장하려면 "
 "내보내기/가져오기 페이지로 이동하십시오."
 
-#: aot_flask/templates/admin/backup.html:26
+#: aot_flask/templates/admin/backup.html:27
 msgid "No backups found."
 msgstr "백업을 찾을 수 없습니다."
 
@@ -5839,11 +5886,11 @@ msgstr ""
 "이 구성 요소를 설치하려면 아래의 '설치' 버튼을 클릭하고 설치가 완료될 때까지 기다린 후 장치를 다시 추가하십시오. 설치 후 "
 "프론트엔드와 백엔드가 자동으로 다시 시작되어 새로 설치된 모듈을 감지합니다."
 
-#: aot_flask/templates/admin/dependencies_install.html:28
+#: aot_flask/templates/admin/dependencies_install.html:29
 msgid "Installation has started for the following components"
 msgstr "다음 구성 요소 설치가 시작되었습니다"
 
-#: aot_flask/templates/admin/dependencies_install.html:30
+#: aot_flask/templates/admin/dependencies_install.html:31
 msgid ""
 "The component installation log below refreshes every 5 seconds. Please wait "
 "until all components are installed and the frontend and backend restart "
@@ -5854,7 +5901,7 @@ msgstr ""
 "아래 구성 요소 설치 로그는 5초마다 새로고침됩니다. 관련 장치를 다시 추가하기 전에 모든 구성 요소가 설치되고 프론트엔드와 백엔드가 "
 "다시 시작될 때까지 기다리십시오. 설치 프로세스가 완료되면 로그 끝에 \"#### 구성 요소 설치 완료\" 메시지가 나타납니다."
 
-#: aot_flask/templates/admin/dependencies_install.html:31
+#: aot_flask/templates/admin/dependencies_install.html:32
 msgid ""
 "If a problem occurs during installation and you need to reset the "
 "installation status, deleting the /opt/AoT/.dependency file will restore "
@@ -8026,7 +8073,7 @@ msgstr "주간"
 
 #: aot_flask/templates/settings/general.html:353
 msgid "Daily"
-msgstr "일일"
+msgstr "하루"
 
 #: aot_flask/templates/settings/general.html:360
 msgid "Date options: Daily: 1-7 (1=Monday), Monthly: 1-28"
@@ -8714,68 +8761,68 @@ msgstr "에러: %(err)s"
 msgid "Cannot verify InfluxDB host/version."
 msgstr "InfluxDB 호스트/버전을 확인할 수 없습니다."
 
-#: aot_flask/utils/utils_export.py:225
+#: aot_flask/utils/utils_export.py:227
 msgid "No file uploaded."
 msgstr "업로드된 파일이 없습니다."
 
-#: aot_flask/utils/utils_export.py:227
+#: aot_flask/utils/utils_export.py:229
 msgid "No filename provided."
 msgstr "파일 이름이 제공되지 않았습니다."
 
-#: aot_flask/utils/utils_export.py:244
+#: aot_flask/utils/utils_export.py:246
 #, python-format
 msgid "Invalid filename: %(filename)s: %(part)s != %(correct)s."
 msgstr "잘못된 파일명: %(filename)s: %(part)s != %(correct)s."
 
-#: aot_flask/utils/utils_export.py:245 aot_flask/utils/utils_export.py:248
+#: aot_flask/utils/utils_export.py:247 aot_flask/utils/utils_export.py:250
 #, python-format
 msgid "Correct format is: %(format)s"
 msgstr "올바른 형식은: %(format)s"
 
-#: aot_flask/utils/utils_export.py:247
+#: aot_flask/utils/utils_export.py:249
 #, python-format
 msgid "Invalid filename: %(filename)s: %(part)s != %(correct)s"
 msgstr "잘못된 파일명: %(filename)s: %(part)s != %(correct)s"
 
-#: aot_flask/utils/utils_export.py:250
+#: aot_flask/utils/utils_export.py:252
 msgid "Extension is not 'zip'."
 msgstr "확장자가 'zip'이 아닙니다."
 
-#: aot_flask/utils/utils_export.py:252
+#: aot_flask/utils/utils_export.py:254
 #, python-format
 msgid "Invalid AoT version: %(version)s > %(current)s. %(msg)s"
 msgstr "올바른 AoT 버전이 아닙니다: %(version)s > %(current)s. %(msg)s"
 
-#: aot_flask/utils/utils_export.py:252
+#: aot_flask/utils/utils_export.py:254
 msgid "Only databases from current or older versions can be imported."
 msgstr "현재 버전 또는 이전 버전의 데이터베이스만 가져올 수 있습니다."
 
-#: aot_flask/utils/utils_export.py:254
+#: aot_flask/utils/utils_export.py:256
 #, python-format
 msgid "Exception during filename validation: %(err)s"
 msgstr "파일명 검증 중 예외: %(err)s"
 
-#: aot_flask/utils/utils_export.py:271
+#: aot_flask/utils/utils_export.py:273
 #, python-format
 msgid "%(db)s file is not included in zip: %(list)s"
 msgstr "%(db)s 파일이 zip에 포함되지 않았습니다: %(list)s"
 
-#: aot_flask/utils/utils_export.py:273
+#: aot_flask/utils/utils_export.py:275
 #, python-format
 msgid "Exception during zip file inspection: %(err)s"
 msgstr "zip 파일 검사 중 예외: %(err)s"
 
-#: aot_flask/utils/utils_export.py:286
+#: aot_flask/utils/utils_export.py:288
 #, python-format
 msgid "Exception during zip file extraction: %(err)s"
 msgstr "zip 파일 추출 중 예외: %(err)s"
 
-#: aot_flask/utils/utils_export.py:374
+#: aot_flask/utils/utils_export.py:376
 #, python-format
 msgid "Exception during database replacement: %(err)s"
 msgstr "데이터베이스 교체 중 예외: %(err)s"
 
-#: aot_flask/utils/utils_export.py:378
+#: aot_flask/utils/utils_export.py:380
 #, python-format
 msgid "Exception occurred: %(err)s"
 msgstr "예외 발생: %(err)s"
@@ -8810,11 +8857,6 @@ msgstr "함수 유형을 선택해야 합니다."
 #, python-brace-format
 msgid "Unknown function type: '{}'"
 msgstr "\"함수 유형을 찾을 수 없습니다: '{}'"
-
-#: aot_flask/utils/utils_function.py:515
-#, fuzzy
-msgid "Execute All"
-msgstr "실행"
 
 #: aot_flask/utils/utils_function.py:602
 #, fuzzy
@@ -8915,12 +8957,12 @@ msgstr "충족되지 않은 종속성이 있습니다. 입력을 추가하기 �
 
 #: aot_flask/utils/utils_input.py:296 aot_flask/utils/utils_settings.py:620
 #: aot_flask/utils/utils_settings.py:640 aot_flask/utils/utils_settings.py:688
-#: aot_flask/utils/utils_settings.py:2382
+#: aot_flask/utils/utils_settings.py:2399
 #, python-format
 msgid "Error in the %(field)s field - %(err)s"
 msgstr "%(field)s 필드에서 오류: %(err)s"
 
-#: aot_flask/utils/utils_input.py:365 aot_flask/utils/utils_measurement.py:56
+#: aot_flask/utils/utils_input.py:365
 msgid "Deactivate controller before modifying its settings"
 msgstr "컨트롤러를 수정하기 전에 비활성화해야 합니다."
 
@@ -8960,39 +9002,9 @@ msgstr "시간은 양수의 정수여야 합니다."
 msgid "Duration must be a valid integer"
 msgstr "시간은 유효한 정수여야 합니다."
 
-#: aot_flask/utils/utils_method.py:43 aot_flask/utils/utils_method.py:51
-#: aot_flask/utils/utils_method.py:62 aot_flask/utils/utils_method.py:70
-#: aot_flask/utils/utils_method.py:88 aot_flask/utils/utils_method.py:91
-#: aot_flask/utils/utils_method.py:94
-#, fuzzy
-msgid "Required"
-msgstr "압력"
-
-#: aot_flask/utils/utils_method.py:43
-msgid "Start date/time, end date/time, start setpoint"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:51 aot_flask/utils/utils_method.py:70
-msgid "Invalid Date/Time format"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:51
-#, fuzzy
-msgid "YYYY/MM/DD HH:MM:SS"
-msgstr "종료 날짜/시간 (YYYY-MM-DD HH:MM:SS)"
-
 #: aot_flask/utils/utils_method.py:55 aot_flask/utils/utils_method.py:73
 msgid "The end time must be after the start time."
 msgstr "종료 시간은 시작 시간보다 빠를 수 없습니다."
-
-#: aot_flask/utils/utils_method.py:62
-msgid "Start time, end time, start setpoint"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:91
-#, fuzzy
-msgid "Duration must be positive"
-msgstr "시간은 양수의 정수여야 합니다."
 
 #: aot_flask/utils/utils_method.py:205
 msgid "Error: Angle Shift is out of range. It must be <= 0 and <= 360."
@@ -9130,7 +9142,7 @@ msgid "Enter both latitude and longitude, or leave both empty."
 msgstr "위도와 경도를 모두 입력하거나 모두 비워두세요."
 
 #: aot_flask/utils/utils_settings.py:657
-#: aot_flask/utils/utils_settings.py:2399
+#: aot_flask/utils/utils_settings.py:2416
 msgid "Misc settings row not found"
 msgstr "Misc settings row을(를) 찾을 수 없습니다"
 
@@ -9210,19 +9222,19 @@ msgstr ""
 msgid "Insecure SMTP protocol configured. Use TLS/SSL if possible."
 msgstr "보안되지 않은 SMTP 프로토콜이 구성되었습니다. 가능하면 TLS/SSL을 사용하세요."
 
-#: aot_flask/utils/utils_settings.py:2270
+#: aot_flask/utils/utils_settings.py:2287
 msgid "Install Dependencies"
 msgstr "종속성 설치"
 
-#: aot_flask/utils/utils_settings.py:2327
+#: aot_flask/utils/utils_settings.py:2344
 msgid "Set to Upgrade to Master"
 msgstr "업그레이드를 마스터로 설정"
 
-#: aot_flask/utils/utils_settings.py:2393
+#: aot_flask/utils/utils_settings.py:2410
 msgid "Please enter both latitude and longitude, or leave both empty."
 msgstr "위도와 경도를 모두 입력하거나 모두 비워두세요."
 
-#: aot_flask/utils/utils_settings.py:2407
+#: aot_flask/utils/utils_settings.py:2424
 msgid "Map default location saved."
 msgstr "지도 기본 위치가 저장되었습니다."
 
@@ -9654,30 +9666,6 @@ msgstr ""
 msgid "Soil Property"
 msgstr "토양 특성"
 
-#: inputs_gis/gis_isric.py:136
-msgid "Soil pH (0-5cm)"
-msgstr "토양 산도 (0-5cm)"
-
-#: inputs_gis/gis_isric.py:152
-msgid "Clay Content (%)"
-msgstr "점토 함량 (%)"
-
-#: inputs_gis/gis_isric.py:168
-msgid "Sand Content (%)"
-msgstr "모래 함량 (%)"
-
-#: inputs_gis/gis_isric.py:184
-msgid "Silt Content (%)"
-msgstr "실트 함량 (%)"
-
-#: inputs_gis/gis_isric.py:200
-msgid "Organic Carbon (dg/kg)"
-msgstr "유기 탄소 (dg/kg)"
-
-#: inputs_gis/gis_isric.py:216
-msgid "Bulk Density (cg/cm³)"
-msgstr "용적 밀도 (cg/cm³)"
-
 #: inputs_gis/gis_nasa_gibs.py:9
 msgid "MODIS Terra TrueColor"
 msgstr "MODIS Terra 실사(TrueColor)"
@@ -9694,7 +9682,7 @@ msgstr "블루 마블 (기상 위성)"
 msgid "Soil Moisture (SMAP)"
 msgstr "토양 수분 (SMAP)"
 
-#: inputs_gis/gis_nasa_gibs.py:57 inputs_gis/gis_nasa_gibs.py:227
+#: inputs_gis/gis_nasa_gibs.py:57
 msgid "Land Surface Temp (Day)"
 msgstr "지표면 온도 (주간)"
 
@@ -9733,65 +9721,6 @@ msgstr "날짜 직접 입력 (YYYY-MM-DD)"
 #: inputs_gis/gis_nasa_gibs.py:109
 msgid "Choose date mode for this layer."
 msgstr "이 레이어의 날짜 모드를 선택하세요."
-
-#: inputs_gis/gis_nasa_gibs.py:195
-msgid "Soil Moisture (Root Zone)"
-msgstr "토양 수분 (뿌리 영역)"
-
-#: inputs_gis/gis_nasa_gibs.py:197
-msgid "Dry"
-msgstr "건조"
-
-#: inputs_gis/gis_nasa_gibs.py:197
-msgid "Wet"
-msgstr "습함"
-
-#: inputs_gis/gis_nasa_gibs.py:216
-#, fuzzy
-msgid "NDVI"
-msgstr "보조 장치"
-
-# GIS Legend Translations
-#: inputs_gis/gis_openweather.py:153
-msgid "Wind Speed"
-msgstr "풍속"
-
-#: inputs_gis/gis_openweather.py:169
-msgid "Clouds"
-msgstr "구름"
-
-#: inputs_gis/gis_openweather.py:185
-msgid "Precipitation"
-msgstr "강수량"
-
-#: inputs_gis/gis_rainviewer.py:137
-msgid "Rain/Snow Intensity"
-msgstr "강수/강설 강도"
-
-#: inputs_gis/gis_rainviewer.py:139
-msgid "Heavy"
-msgstr "강함"
-
-#: inputs_gis/gis_rainviewer.py:143
-msgid "Snow"
-msgstr "눈"
-
-#: inputs_gis/gis_rainviewer.py:146
-msgid "Rain"
-msgstr "비"
-
-#: inputs_gis/gis_rainviewer.py:149
-msgid "Storm"
-msgstr "폭풍"
-
-#: inputs_gis/gis_vworld.py:266
-msgid "Error: API returned"
-msgstr ""
-
-#: inputs_gis/gis_vworld.py:284
-#, fuzzy
-msgid "Legend Error"
-msgstr "오류"
 
 #: outputs/motor_stepper_bipolar_generic.py:35
 #: outputs/motor_stepper_uln2003.py:33
@@ -11426,6 +11355,54 @@ msgstr "입력 유효성 (초)"
 msgid "Input value validity duration"
 msgstr "입력값 유효 시간"
 
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:795
+#, fuzzy
+msgid "edit"
+msgstr "편집"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:804
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1653
+msgid "Open Notes"
+msgstr "노트 열기"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:807
+msgid "Loading"
+msgstr "로딩 중"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:817
+msgid "Remove from Map"
+msgstr "지도에서 제거"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1656
+msgid "Loading..."
+msgstr "로딩 중..."
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1878
+msgid "No Notes"
+msgstr "노트 없음"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1884
+msgid "Load Failed"
+msgstr "로드 실패"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1929
+msgid "No Measurements"
+msgstr "측정값 없음"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2027
+msgid "Current Work Time"
+msgstr "현재 작동 시간"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2032
+msgid "Last Work Time"
+msgstr "마지막 작동 시간"
+
+#: aot_flask/static/js/geo/aot-map-controls.js:169
+#: aot_flask/static/js/geo/aot-map-controls.js:171
+#, fuzzy
+msgid "Location check failed:"
+msgstr "위치 확인 실패: "
+
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:329
 #, fuzzy
 msgid "loading_map"
@@ -11831,44 +11808,94 @@ msgstr "면적"
 msgid "Pipe Details"
 msgstr "배관 상세 정보"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:795
+#: aot_flask/static/js/components/aot-color-picker.js:114
 #, fuzzy
-msgid "edit"
-msgstr "편집"
+msgid "select_color"
+msgstr "색상 선택"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:804
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1653
-msgid "Open Notes"
-msgstr "노트 열기"
+#: aot_flask/static/js/components/aot-color-picker.js:119
+#, fuzzy
+msgid "custom_color"
+msgstr "사용자 정의 색상 사용"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:807
-msgid "Loading"
-msgstr "로딩 중"
+msgid "Soil pH (0-5cm)"
+msgstr "토양 산도 (0-5cm)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:817
-msgid "Remove from Map"
-msgstr "지도에서 제거"
+msgid "Clay Content (%)"
+msgstr "점토 함량 (%)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1656
-msgid "Loading..."
-msgstr "로딩 중..."
+msgid "Sand Content (%)"
+msgstr "모래 함량 (%)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1878
-msgid "No Notes"
-msgstr "노트 없음"
+msgid "Silt Content (%)"
+msgstr "실트 함량 (%)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1884
-msgid "Load Failed"
-msgstr "로드 실패"
+msgid "Organic Carbon (dg/kg)"
+msgstr "유기 탄소 (dg/kg)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1929
-msgid "No Measurements"
-msgstr "측정값 없음"
+msgid "Bulk Density (cg/cm³)"
+msgstr "용적 밀도 (cg/cm³)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2027
-msgid "Current Work Time"
-msgstr "현재 작동 시간"
+msgid "Soil Moisture (Root Zone)"
+msgstr "토양 수분 (뿌리 영역)"
 
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2032
-msgid "Last Work Time"
-msgstr "마지막 작동 시간"
+msgid "Dry"
+msgstr "건조"
+
+msgid "Wet"
+msgstr "습함"
+
+# GIS Legend Translations
+msgid "Wind Speed"
+msgstr "풍속"
+
+msgid "Clouds"
+msgstr "구름"
+
+msgid "Precipitation"
+msgstr "강수량"
+
+msgid "Rain/Snow Intensity"
+msgstr "강수/강설 강도"
+
+msgid "Heavy"
+msgstr "강함"
+
+msgid "Snow"
+msgstr "눈"
+
+msgid "Rain"
+msgstr "비"
+
+msgid "Storm"
+msgstr "폭풍"
+
+#~ msgid "Execute All"
+#~ msgstr "실행"
+
+#~ msgid "Required"
+#~ msgstr "압력"
+
+#~ msgid "Start date/time, end date/time, start setpoint"
+#~ msgstr ""
+
+#~ msgid "Invalid Date/Time format"
+#~ msgstr ""
+
+#~ msgid "YYYY/MM/DD HH:MM:SS"
+#~ msgstr "종료 날짜/시간 (YYYY-MM-DD HH:MM:SS)"
+
+#~ msgid "Start time, end time, start setpoint"
+#~ msgstr ""
+
+#~ msgid "Duration must be positive"
+#~ msgstr "시간은 양수의 정수여야 합니다."
+
+#~ msgid "NDVI"
+#~ msgstr "보조 장치"
+
+#~ msgid "Error: API returned"
+#~ msgstr ""
+
+#~ msgid "Legend Error"
+#~ msgstr "오류"
