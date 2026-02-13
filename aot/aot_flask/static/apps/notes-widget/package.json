@@ -1,8 +1,11 @@
 {
   "name": "notes-widget",
   "private": true,
-  "version": "26.0.6",
+  "version": "26.0.7",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

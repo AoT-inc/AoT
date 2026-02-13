@@ -212,9 +212,23 @@ case "${1:-''}" in
     ;;
     'build-notes-widget')
         printf "\n#### Building React Notes Widget\n"
-        # Ensure npm and node are available
+        # Check Node.js version
+        if ! command -v node &> /dev/null; then
+            printf "#### ERROR: node not found. Please install Node.js >= 20.19.0\n"
+            return 1
+        fi
+        
+        NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+        if [ "$NODE_VERSION" -lt 20 ]; then
+            printf "#### ERROR: Node.js version is too old. Found: $(node -v), required: >= 20.19.0\n"
+            printf "#### Please upgrade Node.js and try again.\n"
+            return 1
+        fi
+        
+        # Ensure npm is available
         if ! command -v npm &> /dev/null; then
-            printf "#### npm not found. Skipping build.\n"
+            printf "#### ERROR: npm not found. Skipping build.\n"
+            return 1
         else
             cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
             printf "#### Installing node dependencies...\n"
@@ -285,6 +299,7 @@ case "${1:-''}" in
     ;;
     'update-alembic')
         printf "\n#### Upgrading AoT database with alembic (if needed)\n"
+        "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/scripts/init_database.py
         cd "${AOT_PATH}"/alembic_db || return
         "${AOT_PATH}"/env/bin/python -m alembic upgrade head
     ;;

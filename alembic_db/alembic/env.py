@@ -90,6 +90,13 @@ def run_migrations_online():
             render_as_batch=is_sqlite,
         )
 
+        # Check if we're starting from an existing database
+        inspector = context._proxy.get_context().dialect.initialize(connection)
+        if hasattr(inspector.dialect, 'get_table_names'):
+            existing_tables = inspector.dialect.get_table_names(connection)
+        else:
+            existing_tables = []
+
         with context.begin_transaction():
             context.run_migrations()
 

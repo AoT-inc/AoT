@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Camera, Send, X, Paperclip, Loader2, Plus, Image as ImageIcon, Tag, Hash } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { createNote, fetchTags } from '../lib/api'
+import { createNote, fetchTags } from '@/lib/api'
 
 export default function NotesInput({ target }) {
   const [text, setText] = useState('')
