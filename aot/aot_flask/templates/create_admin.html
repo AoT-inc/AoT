@@ -34,6 +34,7 @@
 
       <p>
         <form method="post" action="/create_admin">
+          {{ form_language.csrf_token }}
           <div class="input-group mb-3">
             <div class="input-group-prepend">
               <label class="input-group-text" for="inputGroupSelect01">{{_('Language')}}</label>
@@ -81,6 +82,7 @@
       <h3 class="form-signin-heading" style="text-align: center;">{{_('Create Admin')}}</h3>
 
       <form method="post" action="/create_admin">
+        {{ form_language.csrf_token }}
         <div class="input-group mb-3">
           <div class="input-group-prepend">
             <label class="input-group-text" for="inputGroupSelect01">{{_('Language')}}</label>

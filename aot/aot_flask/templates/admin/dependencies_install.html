@@ -12,6 +12,7 @@
           <p>{{_('To install these components, click the "Install" button below and wait until the installation is complete before re-adding the device. After installation, the frontend and backend will automatically restart to detect the newly installed modules.')}}</p>
 
           <form id="form_dependency_install" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
             <div class="row small-gutters" style="padding-left: 0.5em">
               <div class="col-auto">
