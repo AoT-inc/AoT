@@ -346,28 +346,44 @@
             // Actually API handles 'Provider not found' -> 404
             
             // [Global Interceptor handles CSRF now]
-            fetch('/api/geo/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok) {
-                    this.renderResults(data.results);
-                } else {
-                    console.warn("Search API Error:", data.message);
-                    // Show error to user using global toastr if available
-                    // Use standardized helper
-                    this.showToast(data.message || "Search Failed", 'error');
-                }
-            })
-            .catch(err => {
-                console.error('Search failed', err);
-                this.showToast("Network or parsing error occurred.", 'error');
-            });
+            if (window.AoTAPIManager) {
+                window.AoTAPIManager.request('/api/geo/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(data => {
+                    if (data.ok) {
+                        this.renderResults(data.results);
+                    } else {
+                        console.warn("Search API Error:", data.message);
+                        this.showToast(data.message || "Search Failed", 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error("[Search] Request Error:", err);
+                    this.showToast(_("Search service unavailable"), "error");
+                });
+            } else {
+                fetch('/api/geo/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        this.renderResults(data.results);
+                    } else {
+                        console.warn("Search API Error:", data.message);
+                        this.showToast(data.message || "Search Failed", 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Search failed', err);
+                    this.showToast("Network or parsing error occurred.", 'error');
+                });
+            }
         }
 
         renderResults(data) {

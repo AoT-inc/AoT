@@ -33,6 +33,19 @@ class APIRequestManager {
      * @returns {Promise} - Resolves with response data
      */
     async request(url, options = {}) {
+        // Auto-stringify body if it's an object
+        if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData) && !(options.body instanceof Blob)) {
+            options.body = JSON.stringify(options.body);
+            if (!options.headers) options.headers = {};
+            if (options.headers instanceof Headers) {
+                if (!options.headers.has('Content-Type')) {
+                    options.headers.set('Content-Type', 'application/json');
+                }
+            } else if (!options.headers['Content-Type']) {
+                options.headers['Content-Type'] = 'application/json';
+            }
+        }
+        
         const cacheKey = this.getCacheKey(url, options);
         
         // 1. Check cache first

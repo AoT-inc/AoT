@@ -436,7 +436,60 @@ TRANSLATIONS = {
         'title': "{} ({})".format(lazy_gettext('Always Min'), lazy_gettext('Lower')),
         'phrase': lazy_gettext('Never allow duty cycle to go below Min.')},
 
-    # '': {
-    #     'title': lazy_gettext(''),
-    #     'phrase': lazy_gettext('')},
+    # Widgets and Compass
+    'widget_border_color': {
+        'title': lazy_gettext('Border Color')},
+    'widget_wind_direction_color': {
+        'title': lazy_gettext('Wind Direction Indicator Color')},
+    'widget_direction_dot_px': {
+        'title': lazy_gettext('Direction Dot Size (px)')},
+    'widget_data_pos_offset': {
+        'title': lazy_gettext('Data Position Offset (%)')},
+    'compass_n': {
+        'title': lazy_gettext('N')},
+    'compass_e': {
+        'title': lazy_gettext('E')},
+    'compass_s': {
+        'title': lazy_gettext('S')},
+    'compass_w': {
+        'title': lazy_gettext('W')},
+    'compass_ne': {
+        'title': lazy_gettext('NE')},
+    'compass_se': {
+        'title': lazy_gettext('SE')},
+    'compass_sw': {
+        'title': lazy_gettext('SW')},
+    'compass_nw': {
+        'title': lazy_gettext('NW')},
+    # KMA Forecast Widget
+    'fcst_no_data': {
+        'title': lazy_gettext('Forecast data not found.')},
+    'fcst_no_time_data': {
+        'title': lazy_gettext('No forecast for the selected time.')},
+    'fcst_h_ago': {
+        'title': lazy_gettext('h ago')},
+    'fcst_current_time': {
+        'title': lazy_gettext('Current Time')},
+    'fcst_h_later': {
+        'title': lazy_gettext('h later')},
+    'fcst_forecast': {
+        'title': lazy_gettext('Forecast')},
+    'fcst_min': {
+        'title': lazy_gettext('Min:')},
+    'fcst_max': {
+        'title': lazy_gettext('Max:')},
+    'fcst_humidity': {
+        'title': lazy_gettext('Humidity:')},
+    'fcst_precip': {
+        'title': lazy_gettext('Precip:')},
+    'fcst_snowfall': {
+        'title': lazy_gettext('Snowfall:')},
+    'fcst_rainfall': {
+        'title': lazy_gettext('Rainfall:')},
+    'fcst_wind_dir': {
+        'title': lazy_gettext('Wind Dir:')},
+    'fcst_wind_speed': {
+        'title': lazy_gettext('Wind Speed:')},
+    'fcst_load_error': {
+        'title': lazy_gettext('Unable to load forecast data.')},
 }

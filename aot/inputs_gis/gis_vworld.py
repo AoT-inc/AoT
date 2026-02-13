@@ -60,10 +60,10 @@ INPUT_INFORMATION = {
         {
             'id': 'vworld_domain',
             'type': 'text',
-            'default': 'localhost',
+            'default': '', # Default to empty to avoid localhost mismatch
             'name': '등록 도메인',
-            'required': True,
-            'description': 'Domain registered with the VWorld API Key (e.g., localhost, myapp.com)'
+            'required': False,
+            'description': 'VWorld API Key에 등록된 도메인 (예: myapp.com). 비워두면 접속 주소를 자동으로 따릅니다.'
         },
         {
             'id': 'active_channels',
@@ -200,15 +200,18 @@ class InputModule(AbstractGisInput):
             # WMS Specifics
             options.update({
                 'layers': layer_name,
-                'styles': layer_style,
+                'styles': layer_style, # Back to backup setting (empty allowed)
                 'format': 'image/png',
                 'transparent': True,
-                'version': '1.3.0',
-                'uppercase': False,
-                # 'crs': L.CRS.EPSG3857, # REMOVED: L is not defined in backend
-                'key': self.api_key,
-                'domain': self.vworld_domain or 'localhost'
+                'version': '1.3.0',  # Revert to 1.3.0 as in backup
+                'uppercase': False,  # Revert to False as in backup
+                'key': self.api_key
             })
+            
+            # [Fix] Only send domain if explicitly set and not 'localhost'
+            # Sending 'localhost' while accessing via IP causes INCORRECT_KEY
+            if self.vworld_domain and self.vworld_domain != 'localhost':
+                options['domain'] = self.vworld_domain
             
             # Zoom Strategies
             if 'min_zoom' in layer_opts:
@@ -249,8 +252,9 @@ class InputModule(AbstractGisInput):
         layer_name = layer_opts.get('layer', '')
         layer_style = layer_opts.get('style', layer_name)
         
+        v_domain = self.vworld_domain if self.vworld_domain and self.vworld_domain != 'localhost' else ''
         url = 'https://api.vworld.kr/req/image?service=image&request=GetLegendGraphic&format=png&layer={}&style={}&type=ALL&key={}&domain={}'.format(
-            layer_name, layer_style, self.api_key, self.vworld_domain or 'localhost'
+            layer_name, layer_style, self.api_key, v_domain
         )
         
         try:

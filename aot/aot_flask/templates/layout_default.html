@@ -22,7 +22,7 @@
   <script src="/static/js/popper.min.js"></script>
   <script src="/static/js/bootstrap.min.js"></script>
   <!-- AoT API Request Manager - Centralized API handling with caching and retry logic -->
-  <script src="/static/js/geo/api-request-manager.js?v=1770017600"></script>
+  <script src="/static/js/geo/api-request-manager.js?v=202602131455"></script>
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <link href="/static/css/simple-sidebar.css" rel="stylesheet">
 
@@ -189,13 +189,13 @@
                 const $el = $(this);
                 const title = $el.attr('title');
                 if (title) {
-                    $el.data('aot-stored-title', title).removeAttr('title');
+                    $el.data('aot-stored-title', title).removeAttr('title').addClass('aot-title-stored');
                 }
-            }).on('mouseleave', '[title], :data(aot-stored-title)', function () {
+            }).on('mouseleave', '[title], .aot-title-stored', function () {
                 const $el = $(this);
                 const storedTitle = $el.data('aot-stored-title');
                 if (storedTitle) {
-                    $el.attr('title', storedTitle).removeData('aot-stored-title');
+                    $el.attr('title', storedTitle).removeData('aot-stored-title').removeClass('aot-title-stored');
                 }
             });
         }
@@ -657,8 +657,8 @@
   </script>
 
   <!-- AoT Map Core (Globalized Iteration 16) -->
-  <script src="/static/js/geo/aot-map-loader.js"></script>
-  <script src="/static/js/components/aot-map-search-fixed.js"></script>
+  <script src="/static/js/geo/aot-map-loader.js?v=202602131455"></script>
+  <script src="/static/js/components/aot-map-search-fixed.js?v=202602131455"></script>
   <script src="/static/js/components/aot-map-search-controller.js"></script>
   <script src="/static/js/geo/aot-map-modal.js"></script>
 

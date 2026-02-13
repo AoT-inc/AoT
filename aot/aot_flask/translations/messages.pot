@@ -1,14 +1,31 @@
-# Translations template for PROJECT.
-# Copyright (C) 2026 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
+# Translations template for AoT.
+# Copyright (C) 2026 Kyle T. Gabriel
+# This file is distributed under the same license as the AoT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-13 02:16+0900\n"
+"Project-Id-Version: AoT /Users/gwansuk/Library/CloudStorage"
+"/SynologyDrive-developments/AoT_dev/aot/utils/github_release_info.py:43: "
+"SyntaxWarning: invalid escape sequence '\\d'\n"
+"  if len(tag_full) == 3 and re.match('v(\\d+)\\.(\\d+)\\.\\d+', "
+"tag_full[2]):\n"
+"/Users/gwansuk/Library/CloudStorage/SynologyDrive-"
+"developments/AoT_dev/aot/utils/github_release_info.py:58: SyntaxWarning: "
+"invalid escape sequence '\\d'\n"
+"  if re.match(f'v{major_version}.*(\\d\\.\\d)', each_tag):\n"
+"/Users/gwansuk/Library/CloudStorage/SynologyDrive-"
+"developments/AoT_dev/aot/utils/github_release_info.py:170: SyntaxWarning:"
+" invalid escape sequence '\\d'\n"
+"  if re.match(f'v{major_version}.*(\\d\\.\\d)', each_tag):\n"
+"/Users/gwansuk/Library/CloudStorage/SynologyDrive-"
+"developments/AoT_dev/aot/utils/github_release_info.py:174: SyntaxWarning:"
+" invalid escape sequence '\\d'\n"
+"  if (re.match(f'v{major_version}.*(\\d\\.\\d)', each_tag) and\n"
+"26.0.7\n"
+"Report-Msgid-Bugs-To: aot@kylegabriel.com\n"
+"POT-Creation-Date: 2026-02-13 12:50+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -290,9 +307,9 @@ msgid "Saturation"
 msgstr ""
 
 #: actions/pid_setpoint.py:49 aot_flask/forms/forms_pid.py:58
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:61
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:67
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:73
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:81
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:87
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:93
 #: config_devices_units.py:285 config_devices_units.py:644
 #: config_translations.py:178 functions/bang_bang.py:72
 #: functions/bang_bang_on_off.py:81 functions/bang_bang_pwm.py:70
@@ -1053,7 +1070,7 @@ msgstr ""
 
 #: aot_flask/forms/forms_pid.py:128
 #: aot_flask/templates/pages/function_options/pid_entry.html:47
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:93
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:113
 #: config_translations.py:90
 msgid "Hold"
 msgstr ""
@@ -1213,7 +1230,7 @@ msgstr ""
 #: functions/bang_bang.py:64 functions/bang_bang_pwm.py:62
 #: functions/pid_autotune.py:75 widgets/AoT_graph.py:442 widgets/AoT_map.py:391
 #: widgets/AoT_map.py:425 widgets/AoT_on_off_counter.py:861
-#: widgets/AoT_timer.py:483 widgets/widget_output_pwm_slider.py:49
+#: widgets/AoT_timer.py:484 widgets/widget_output_pwm_slider.py:49
 msgid "Output"
 msgstr ""
 
@@ -1239,7 +1256,7 @@ msgstr ""
 
 #: aot_flask/forms/forms_pid.py:129
 #: aot_flask/templates/pages/function_options/pid_entry.html:43
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:87
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:107
 #: config_translations.py:140
 msgid "Pause"
 msgstr ""
@@ -1290,7 +1307,7 @@ msgstr ""
 #: aot_flask/forms/forms_settings.py:478
 #: aot_flask/static/js/geo/aot-map-controls.js:176
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:11
-#: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:63
+#: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:89
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_title_bar.html:11
 #: config_translations.py:156
 msgid "Reset"
@@ -1298,7 +1315,7 @@ msgstr ""
 
 #: aot_flask/forms/forms_pid.py:130
 #: aot_flask/templates/pages/function_options/pid_entry.html:39
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:100
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:120
 #: config_translations.py:158
 msgid "Resume"
 msgstr ""
@@ -1433,7 +1450,7 @@ msgid "Time-lapse"
 msgstr ""
 
 #: config_translations.py:200 widgets/AoT_on_off_counter.py:915
-#: widgets/AoT_timer.py:537
+#: widgets/AoT_timer.py:538
 msgid "Timer"
 msgstr ""
 
@@ -1609,7 +1626,7 @@ msgstr ""
 #: widgets/AoT_PID.py:231 widgets/AoT_controller.py:164
 #: widgets/AoT_gauge_angular.py:240 widgets/AoT_gauge_angular.py:249
 #: widgets/AoT_graph.py:300 widgets/AoT_on_off_counter.py:870
-#: widgets/AoT_timer.py:492 widgets/AoT_wind_angular.py:201
+#: widgets/AoT_timer.py:493 widgets/AoT_wind_angular.py:201
 #: widgets/AoT_wind_angular.py:210 widgets/widget_camera.py:275
 #: widgets/widget_camera.py:284
 #: widgets/widget_controller_activate_deactivate.py:150
@@ -2630,6 +2647,120 @@ msgid ""
 "execution of Javascript. Several variables were created in each module to"
 " address this, and follow the following brief structure of the dashboard "
 "page that would be generated with multiple widgets being displayed."
+msgstr ""
+
+#: config_translations_docs.py:111
+msgid "GIS & Map System"
+msgstr ""
+
+#: config_translations_docs.py:112
+msgid ""
+"The AoT system provides an integrated GIS environment to visualize and "
+"control the location of assets through Leaflet-based interactive maps. "
+"This system is configured through management pages and served as the "
+"AoT_map widget on the dashboard."
+msgstr ""
+
+#: config_translations_docs.py:114
+msgid "1. geo/setting (GIS Settings)"
+msgstr ""
+
+#: config_translations_docs.py:115
+msgid ""
+"Manages common GIS parameters used across the system, including map "
+"center, zoom levels, search providers, and theme colors (Site, Zone, "
+"Device)."
+msgstr ""
+
+#: config_translations_docs.py:117
+msgid "2. geo/layer (GIS Layer Management)"
+msgstr ""
+
+#: config_translations_docs.py:118
+msgid ""
+"Defines and manages external data sources to be overlaid on the map, such"
+" as WMS/TMS layers from providers like VWorld or OpenStreetMap."
+msgstr ""
+
+#: config_translations_docs.py:120
+msgid "3. geo/design (Map Design & Editing)"
+msgstr ""
+
+#: config_translations_docs.py:121
+msgid ""
+"An interactive editing tool for placing devices and setting up areas. "
+"Includes features like Spatial Join (auto-detecting zones for devices), "
+"Shape Editing (drawing sites/zones/pipes), and layout saving."
+msgstr ""
+
+#: config_translations_docs.py:123
+msgid "4. GIS Capabilities (Proxy & Search)"
+msgstr ""
+
+#: config_translations_docs.py:124
+msgid ""
+"AoT includes built-in proxy support for services like RainViewer (Weather"
+" Radar) and ISRIC (Soil Grids) to handle CORS issues. It also supports "
+"multiple search providers for address and coordinate lookups."
+msgstr ""
+
+#: config_translations_docs.py:126
+msgid "5. AoT_map Widget"
+msgstr ""
+
+#: config_translations_docs.py:127
+msgid ""
+"The dashboard widget integrates all settings to provide a real-time "
+"interface for monitoring and control. Features include status updates, "
+"device control via popups, and map locking for persistence."
+msgstr ""
+
+#: config_translations_docs.py:129
+msgid "Library Information"
+msgstr ""
+
+#: config_translations_docs.py:133
+msgid "Notes & Device Notes"
+msgstr ""
+
+#: config_translations_docs.py:134
+msgid ""
+"AoT provides an integrated system for managing notes related to devices, "
+"sensors, controllers, and the general system. This includes support for "
+"GPS location, smart subjects, attachments, and tags."
+msgstr ""
+
+#: config_translations_docs.py:136
+msgid "1. Key Features"
+msgstr ""
+
+#: config_translations_docs.py:137
+msgid ""
+"Features include GPS integration (location-bound notes), Smart Subject "
+"(first line auto-extraction), Multimedia Attachments (images and files), "
+"and a Tag System (classification and map visibility control)."
+msgstr ""
+
+#: config_translations_docs.py:139
+msgid "2. Usage Guide"
+msgstr ""
+
+#: config_translations_docs.py:140
+msgid ""
+"Users can create notes with custom timestamps, attach files, and assign "
+"tags. The Notes Widget allows quick access from any page on the "
+"dashboard."
+msgstr ""
+
+#: config_translations_docs.py:142
+msgid "3. Developer Guide (API)"
+msgstr ""
+
+#: config_translations_docs.py:143
+msgid ""
+"Developers can trigger the notes interface via CustomEvents or use the "
+"REST API for creating, retrieving, and toggling visibility of notes and "
+"tags."
 msgstr ""
 
 #: actions/clear_total_kWh.py:13
@@ -4663,15 +4794,15 @@ msgstr ""
 msgid "Condition Duty Cycle (%)"
 msgstr ""
 
-#: aot_flask/static/js/dashboard.js:243
+#: aot_flask/static/js/dashboard.js:281
 msgid "layout_save_fail"
 msgstr ""
 
-#: aot_flask/static/js/dashboard.js:247
+#: aot_flask/static/js/dashboard.js:285
 msgid "layout_serialize_error"
 msgstr ""
 
-#: aot_flask/static/js/dashboard.js:367
+#: aot_flask/static/js/dashboard.js:405
 msgid "dashboard_order_save_fail"
 msgstr ""
 
@@ -6435,9 +6566,9 @@ msgstr ""
 #: aot_flask/templates/pages/function_options/trigger_sequence_entry.html:25
 #: aot_flask/templates/pages/geo/entry.html:31
 #: aot_flask/templates/pages/output.html:103
-#: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_body.html:8
+#: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_body.html:15
 #: aot_flask/templates/user_templates/widget_template_AoT_controller_act_deact_js.html:59
-#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:26
+#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:43
 #: aot_flask/templates/user_templates/widget_template_widget_controller_activate_deactivate_js.html:47
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:112
 #: aot_flask/templates/user_templates/widget_template_widget_output_pwm_slider_js.html:129
@@ -6677,7 +6808,7 @@ msgid "Dynamic Duration Reference"
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/trigger_sequence_options.html:91
-#: widgets/AoT_timer.py:531
+#: widgets/AoT_timer.py:532
 msgid "Time Settings"
 msgstr ""
 
@@ -8258,47 +8389,47 @@ msgstr ""
 msgid "Enter an address."
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:47
+#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:64
 msgid "Run (s)"
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:56
+#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:73
 msgid "Rest (s)"
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:65
+#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:82
 msgid "Cycles"
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:79
+#: aot_flask/templates/user_templates/widget_template_AoT_on_off_counter_body.html:96
 msgid "Select the Output to control in the widget options."
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:10
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:30
 msgid "Last active: "
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:13
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:33
 msgid "s, "
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:53
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:73
 msgid "Actual: "
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:111
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:131
 msgid "activate"
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:116
+#: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:136
 msgid "deactivate"
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:67
+#: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:93
 msgid "5m"
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:71
+#: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:97
 msgid "10m"
 msgstr ""
 
@@ -9689,7 +9820,7 @@ msgid "Off Value"
 msgstr ""
 
 #: widgets/AoT_PID.py:203 widgets/AoT_on_off_counter.py:852
-#: widgets/AoT_timer.py:474
+#: widgets/AoT_timer.py:475
 msgid "Device Settings"
 msgstr ""
 
@@ -9708,7 +9839,7 @@ msgstr ""
 #: widgets/AoT_PID.py:222 widgets/AoT_PID.py:231 widgets/AoT_controller.py:164
 #: widgets/AoT_gauge_angular.py:240 widgets/AoT_gauge_angular.py:249
 #: widgets/AoT_graph.py:300 widgets/AoT_on_off_counter.py:870
-#: widgets/AoT_timer.py:492 widgets/AoT_wind_angular.py:201
+#: widgets/AoT_timer.py:493 widgets/AoT_wind_angular.py:201
 #: widgets/AoT_wind_angular.py:210 widgets/widget_camera.py:275
 #: widgets/widget_camera.py:284
 #: widgets/widget_controller_activate_deactivate.py:150
@@ -9727,7 +9858,7 @@ msgid "{} ({})"
 msgstr ""
 
 #: widgets/AoT_PID.py:223 widgets/AoT_on_off_counter.py:871
-#: widgets/AoT_timer.py:493
+#: widgets/AoT_timer.py:494
 msgid "Maximum validity time for measurements used"
 msgstr ""
 
@@ -9736,7 +9867,7 @@ msgid "Frequency of widget refresh"
 msgstr ""
 
 #: widgets/AoT_PID.py:236 widgets/AoT_on_off_counter.py:875
-#: widgets/AoT_timer.py:497
+#: widgets/AoT_timer.py:498
 msgid "Display Settings"
 msgstr ""
 
@@ -10294,41 +10425,41 @@ msgid ""
 "the server and can be checked after refreshing or on other browsers."
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:862 widgets/AoT_timer.py:484
+#: widgets/AoT_on_off_counter.py:862 widgets/AoT_timer.py:485
 msgid "Select the Output to control."
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:870 widgets/AoT_timer.py:492
+#: widgets/AoT_on_off_counter.py:870 widgets/AoT_timer.py:493
 msgid "Sync"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:881 widgets/AoT_timer.py:503
+#: widgets/AoT_on_off_counter.py:881 widgets/AoT_timer.py:504
 msgid "Show Status"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:882 widgets/AoT_timer.py:504
+#: widgets/AoT_on_off_counter.py:882 widgets/AoT_timer.py:505
 msgid "Display operation status on the title bar."
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:889 widgets/AoT_timer.py:511
+#: widgets/AoT_on_off_counter.py:889 widgets/AoT_timer.py:512
 msgid "Status Size"
 msgstr ""
 
 #: widgets/AoT_on_off_counter.py:890 widgets/AoT_on_off_counter.py:905
-#: widgets/AoT_on_off_counter.py:924 widgets/AoT_timer.py:512
-#: widgets/AoT_timer.py:527 widgets/AoT_timer.py:546
+#: widgets/AoT_on_off_counter.py:924 widgets/AoT_timer.py:513
+#: widgets/AoT_timer.py:528 widgets/AoT_timer.py:547
 msgid "Size in (em)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:896 widgets/AoT_timer.py:518
+#: widgets/AoT_on_off_counter.py:896 widgets/AoT_timer.py:519
 msgid "Operation Time"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:897 widgets/AoT_timer.py:519
+#: widgets/AoT_on_off_counter.py:897 widgets/AoT_timer.py:520
 msgid "Display operation time."
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:904 widgets/AoT_timer.py:526
+#: widgets/AoT_on_off_counter.py:904 widgets/AoT_timer.py:527
 msgid "Operation Time Font Size"
 msgstr ""
 
@@ -10336,79 +10467,79 @@ msgstr ""
 msgid "Counter Settings"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:916 widgets/AoT_timer.py:538
+#: widgets/AoT_on_off_counter.py:916 widgets/AoT_timer.py:539
 msgid "Enable the timer function."
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:923 widgets/AoT_timer.py:545
+#: widgets/AoT_on_off_counter.py:923 widgets/AoT_timer.py:546
 msgid "Time Input Size"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:931 widgets/AoT_timer.py:553
+#: widgets/AoT_on_off_counter.py:931 widgets/AoT_timer.py:554
 msgid "Seoul (UTC+9)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:932 widgets/AoT_timer.py:554
+#: widgets/AoT_on_off_counter.py:932 widgets/AoT_timer.py:555
 msgid "Beijing (UTC+8)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:933 widgets/AoT_timer.py:555
+#: widgets/AoT_on_off_counter.py:933 widgets/AoT_timer.py:556
 msgid "Bangkok (UTC+7)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:934 widgets/AoT_timer.py:556
+#: widgets/AoT_on_off_counter.py:934 widgets/AoT_timer.py:557
 msgid "Dhaka (UTC+6)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:935 widgets/AoT_timer.py:557
+#: widgets/AoT_on_off_counter.py:935 widgets/AoT_timer.py:558
 msgid "New Delhi (UTC+5:30)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:936 widgets/AoT_timer.py:558
+#: widgets/AoT_on_off_counter.py:936 widgets/AoT_timer.py:559
 msgid "Dubai (UTC+4)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:937 widgets/AoT_timer.py:559
+#: widgets/AoT_on_off_counter.py:937 widgets/AoT_timer.py:560
 msgid "Riyadh (UTC+3)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:938 widgets/AoT_timer.py:560
+#: widgets/AoT_on_off_counter.py:938 widgets/AoT_timer.py:561
 msgid "Berlin (UTC+1)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:939 widgets/AoT_timer.py:561
+#: widgets/AoT_on_off_counter.py:939 widgets/AoT_timer.py:562
 msgid "London (UTC±0)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:940 widgets/AoT_timer.py:562
+#: widgets/AoT_on_off_counter.py:940 widgets/AoT_timer.py:563
 msgid "Buenos Aires (UTC-3)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:941 widgets/AoT_timer.py:563
+#: widgets/AoT_on_off_counter.py:941 widgets/AoT_timer.py:564
 msgid "New York (UTC-5)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:942 widgets/AoT_timer.py:564
+#: widgets/AoT_on_off_counter.py:942 widgets/AoT_timer.py:565
 msgid "Chicago (UTC-6)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:943 widgets/AoT_timer.py:565
+#: widgets/AoT_on_off_counter.py:943 widgets/AoT_timer.py:566
 msgid "Los Angeles (UTC-8)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:944 widgets/AoT_timer.py:566
+#: widgets/AoT_on_off_counter.py:944 widgets/AoT_timer.py:567
 msgid "Anchorage (UTC-9)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:945 widgets/AoT_timer.py:567
+#: widgets/AoT_on_off_counter.py:945 widgets/AoT_timer.py:568
 msgid "Honolulu (UTC-10)"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:947 widgets/AoT_timer.py:569
+#: widgets/AoT_on_off_counter.py:947 widgets/AoT_timer.py:570
 msgid "Timezone"
 msgstr ""
 
-#: widgets/AoT_on_off_counter.py:948 widgets/AoT_timer.py:570
+#: widgets/AoT_on_off_counter.py:948 widgets/AoT_timer.py:571
 msgid "Select a city to apply its numeric offset."
 msgstr ""
 
@@ -10444,11 +10575,11 @@ msgstr ""
 msgid "허용 범위는 -12.0 ~ +14.0 입니다."
 msgstr ""
 
-#: widgets/AoT_timer.py:462
+#: widgets/AoT_timer.py:463
 msgid "AoT Timer"
 msgstr ""
 
-#: widgets/AoT_timer.py:466
+#: widgets/AoT_timer.py:467
 msgid ""
 "Entering \"h/m/s\" in the time input field will operate the device for "
 "the set time and then turn it off. If the input time is \"0\", it will "
@@ -11075,446 +11206,3 @@ msgstr ""
 msgid "Input value validity duration"
 msgstr ""
 
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:329
-msgid "loading_map"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2196
-msgid "save_btn_text"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:254
-msgid "Zone"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:255
-msgid "Facility"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:256
-msgid "Equipment"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:257
-msgid "A"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:271
-msgid "Union"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:272
-msgid "Subtract"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:273
-#: aot_flask/static/js/geo/aot-geo-panel.js:290
-msgid "Show length"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:273
-#: aot_flask/static/js/geo/aot-geo-panel.js:290
-msgid "Hide length"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:288
-msgid "Pipe"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:289
-msgid "Irrigation"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:315
-msgid "Selection list"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:333
-msgid "Water supply"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:334
-msgid "Filter"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:336
-msgid "Connection"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:344
-msgid "Reference line"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:345
-msgid "Main pipe"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:347
-msgid "90 degree"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:355
-msgid "Sprinkler"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:356
-msgid "Drip"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:367
-#: aot_flask/static/js/geo/aot-geo-panel.js:383
-msgid "Spacing"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:370
-msgid "Radius"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:373
-#: aot_flask/static/js/geo/aot-geo-panel.js:386
-msgid "Flow rate"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:402
-msgid "River"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:402
-msgid "Water tank"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:402
-msgid "Pump"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:403
-msgid "Disc"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:403
-msgid "Screen"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:403
-msgid "Sand"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:404
-msgid "Union valve"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:404
-msgid "Adapter valve"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:404
-msgid "Inline valve"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:404
-#: aot_flask/static/js/geo/aot-geo-panel.js:405
-msgid "Reducer"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:405
-msgid "Suction"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:405
-msgid "Elbow"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:405
-msgid "Tee"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:413
-#: aot_flask/static/js/geo/aot-geo-panel.js:430
-msgid "spacing"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:422
-#: aot_flask/static/js/geo/aot-geo-panel.js:434
-#: aot_flask/static/js/geo/aot-geo-panel.js:452
-msgid "Offset"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:443
-msgid "angle"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:675
-msgid "Placement mode"
-msgstr ""
-
-#: aot_flask/static/js/geo/aot-geo-panel.js:909
-msgid "Search Device..."
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-ui.js:615
-msgid "No Sites Found"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:263
-msgid "New Site"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:330
-msgid "New Zone"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:450
-msgid "Data Load Failed"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:524
-msgid "Select Site"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:533
-msgid "Apply Filter"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:540
-msgid "Design Summary"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
-msgid "Site Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
-msgid "Zone Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
-msgid "Pipe Length"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:646
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:677
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:706
-msgid "Number of Emitters"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
-msgid "AoT Device Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:558
-msgid "No Pipe Data"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
-msgid "No."
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
-msgid "Length (m)"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
-msgid "Number of Emitters (Pipe)"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
-msgid "Flow (L/h)"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
-msgid "Flow (L/min)"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:572
-msgid "[Main Pipe]"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:582
-msgid "[Branch Pipe]"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
-msgid "Main Pipe Tee"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:643
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:645
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:646
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:651
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:652
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:653
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:674
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:676
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:677
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:682
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:683
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:684
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:703
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:705
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:706
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:711
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:712
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:713
-msgid "units"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
-msgid "Main Pipe Elbow"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
-msgid "Main Pipe End"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
-msgid "Main Pipe Reducing Tee"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
-msgid "Main Pipe Reducing Elbow"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
-msgid "Branch Pipe Tee"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
-msgid "Branch Pipe Elbow"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
-msgid "Branch Pipe End"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:636
-msgid "Design Details"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:641
-msgid "Total Area"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:642
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:673
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:702
-msgid "Main Pipe Length"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:643
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:674
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:703
-msgid "Main Pipe Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:644
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:675
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:704
-msgid "Branch Pipe Length"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:645
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:676
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:705
-msgid "Branch Pipe Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:647
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:678
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:707
-msgid "Flow Rate (L/h)"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:648
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:679
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:708
-msgid "Flow Rate (L/min)"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:651
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:682
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:711
-msgid "Input Device Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:652
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:683
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:712
-msgid "Output Device Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:653
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:684
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:713
-msgid "Logic Count"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:662
-msgid "No Sites Selected"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:672
-msgid "Site Area"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:689
-msgid "Site Pipe Info"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:701
-msgid "Area"
-msgstr ""
-
-#: aot_flask/static/js/geo/design/aot-geo-stats.js:716
-msgid "Pipe Details"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:795
-msgid "edit"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:804
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1653
-msgid "Open Notes"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:807
-msgid "Loading"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:817
-msgid "Remove from Map"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1656
-msgid "Loading..."
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1878
-msgid "No Notes"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1884
-msgid "Load Failed"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1929
-msgid "No Measurements"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2027
-msgid "Current Work Time"
-msgstr ""
-
-#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2032
-msgid "Last Work Time"
-msgstr ""

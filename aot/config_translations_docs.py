@@ -105,5 +105,41 @@ TRANSLATIONS = {
         "text_5_2": lazy_gettext("If you develop a working module, please consider [creating a new GitHub issue](https://github.com/aot-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or pull request, and it may be included in the built-in set."),
         "text_5_3": lazy_gettext("Open any of the built-in Widget modules located in the directory [AoT/aot/widgets](https://github.com/aot-inc/AoT/tree/master/aot/widgets/) for examples of the proper formatting. There are also example Custom Widgets in the directory [AoT/aot/widgets/examples](https://github.com/aot-inc/AoT/tree/master/aot/widgets/examples)."),
         "text_5_4": lazy_gettext("Creating a custom widget module often requires specific placement and execution of Javascript. Several variables were created in each module to address this, and follow the following brief structure of the dashboard page that would be generated with multiple widgets being displayed.")
+    },
+
+    "GEO.md": {
+        "GIS & Map System": lazy_gettext("GIS & Map System"),
+        "text_1_1": lazy_gettext("The AoT system provides an integrated GIS environment to visualize and control the location of assets through Leaflet-based interactive maps. This system is configured through management pages and served as the AoT_map widget on the dashboard."),
+        
+        "1. geo/setting (GIS Settings)": lazy_gettext("1. geo/setting (GIS Settings)"),
+        "text_2_1": lazy_gettext("Manages common GIS parameters used across the system, including map center, zoom levels, search providers, and theme colors (Site, Zone, Device)."),
+
+        "2. geo/layer (GIS Layer Management)": lazy_gettext("2. geo/layer (GIS Layer Management)"),
+        "text_3_1": lazy_gettext("Defines and manages external data sources to be overlaid on the map, such as WMS/TMS layers from providers like VWorld or OpenStreetMap."),
+
+        "3. geo/design (Map Design & Editing)": lazy_gettext("3. geo/design (Map Design & Editing)"),
+        "text_4_1": lazy_gettext("An interactive editing tool for placing devices and setting up areas. Includes features like Spatial Join (auto-detecting zones for devices), Shape Editing (drawing sites/zones/pipes), and layout saving."),
+
+        "4. GIS Capabilities (Proxy & Search)": lazy_gettext("4. GIS Capabilities (Proxy & Search)"),
+        "text_5_1": lazy_gettext("AoT includes built-in proxy support for services like RainViewer (Weather Radar) and ISRIC (Soil Grids) to handle CORS issues. It also supports multiple search providers for address and coordinate lookups."),
+
+        "5. AoT_map Widget": lazy_gettext("5. AoT_map Widget"),
+        "text_6_1": lazy_gettext("The dashboard widget integrates all settings to provide a real-time interface for monitoring and control. Features include status updates, device control via popups, and map locking for persistence."),
+
+        "Library Information": lazy_gettext("Library Information")
+    },
+
+    "Notes.md": {
+        "Notes & Device Notes": lazy_gettext("Notes & Device Notes"),
+        "text_1_1": lazy_gettext("AoT provides an integrated system for managing notes related to devices, sensors, controllers, and the general system. This includes support for GPS location, smart subjects, attachments, and tags."),
+
+        "1. Key Features": lazy_gettext("1. Key Features"),
+        "text_2_1": lazy_gettext("Features include GPS integration (location-bound notes), Smart Subject (first line auto-extraction), Multimedia Attachments (images and files), and a Tag System (classification and map visibility control)."),
+
+        "2. Usage Guide": lazy_gettext("2. Usage Guide"),
+        "text_3_1": lazy_gettext("Users can create notes with custom timestamps, attach files, and assign tags. The Notes Widget allows quick access from any page on the dashboard."),
+
+        "3. Developer Guide (API)": lazy_gettext("3. Developer Guide (API)"),
+        "text_4_1": lazy_gettext("Developers can trigger the notes interface via CustomEvents or use the REST API for creating, retrieving, and toggling visibility of notes and tags.")
     }
 }

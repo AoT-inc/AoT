@@ -96,3 +96,32 @@ if __name__ == "__main__":
 
                 # Use shared generator for Dependencies, Options table, etc.
                 generate_controller_doc(out_file, each_data)
+
+                # Check for Search Capability
+                # Note: We need to check if the module has a 'search' method
+                if 'file_path' in each_data:
+                    from aot.utils.modules import load_module_from_file
+                    mod, status = load_module_from_file(each_data['file_path'], 'inputs')
+                    if mod and hasattr(mod, 'InputModule') and hasattr(mod.InputModule, 'search'):
+                        out_file.write("- GIS Search: Supported (Address/Place)\n")
+                        if hasattr(mod.InputModule, 'search_capabilities'):
+                            caps = ", ".join(mod.InputModule.search_capabilities)
+                            out_file.write(f"  - Capabilities: {caps}\n")
+                        out_file.write("\n")
+
+        # Add GIS Proxy & Search Overview
+        out_file.write("## GIS Proxy & Search Capabilities\n\n")
+        out_file.write("AoT provides built-in proxy and search support for common GIS services to handle CORS and provide unified search.\n\n")
+        
+        proxy_info = [
+            ("RainViewer", "Weather Radar Tiles & Metadata", "/api/geo/proxy/rainviewer/meta"),
+            ("ISRIC SoilGrids", "Soil property data lookups", "/api/geo/proxy/isric"),
+            ("OpenWeatherMap", "Current weather data", "/api/geo/proxy/openweather"),
+            ("Open-Meteo", "Weather forecast and historical data", "/api/geo/proxy/openmeteo")
+        ]
+        
+        out_file.write("| Service | Description | Proxy Endpoint |\n")
+        out_file.write("| :--- | :--- | :--- |\n")
+        for name, desc, endpoint in proxy_info:
+            out_file.write(f"| {name} | {desc} | `{endpoint}` |\n")
+        out_file.write("\n")
