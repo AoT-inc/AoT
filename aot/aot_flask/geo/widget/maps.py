@@ -25,6 +25,7 @@ from aot.databases.models import (
     Conditional,
     PID
 )
+from flask_babel import gettext
 
 from sqlalchemy.orm import load_only
 from sqlalchemy import or_
@@ -208,10 +209,10 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                             'id': m_id, 
                             'device_unique_id': dev_id, 
                             'channel': chan,
-                            'name': f"[CH{chan}] {meas.name or meas.measurement or ''}".strip(),
-                            'meas_name': (meas.name or meas.measurement or ''),
+                            'name': f"[CH{chan}] {gettext(meas.name or meas.measurement or '')}".strip(),
+                            'meas_name': gettext(meas.name or meas.measurement or ''),
                             'device_type': m_conf['device_type'],
-                            'device_name': dev_name_lookup.get(dev_id), # [New] Injected Name
+                            'device_name': gettext(dev_name_lookup.get(dev_id) or ''), 
                             'unit': (meas.rescaled_unit or meas.unit or ''), 
                             'last_value': getattr(meas, 'last_value', '')
                         })

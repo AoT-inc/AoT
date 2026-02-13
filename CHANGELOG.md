@@ -1,3 +1,37 @@
+# v26.0.7 (2026-02-13)
+
+## 버그 수정 (Bug Fixes)
+
+### 카메라 (Camera)
+- **AttributeError 수정**: `datetime.fromtimestamp` 호출 시 발생하던 속성 오류 해결.
+
+### 그래프 (Graphs)
+- **CSRF 오류 수정**: `graph-async` 페이지에서 비동기 데이터 요청 시 발생하는 CSRF 토큰 오류 해결.
+
+## 개선 사항 (Improvements)
+
+### API
+- **API 문서 업데이트**: 자동화된 스펙 추출을 통해 `aot-api.html` 문서를 최신 상태로 갱신.
+
+---
+
+# v26.0.7 (2026-02-13) - English
+
+## Bug Fixes
+
+### Camera
+- **AttributeError Fix**: Resolved the attribute error occurring during `datetime.fromtimestamp` calls.
+
+### Graphs
+- **CSRF Error Fix**: Resolved the CSRF token error during asynchronous data requests on the `graph-async` page.
+
+## Improvements
+
+### API
+- **API Documentation Update**: Updated `aot-api.html` with the latest endpoints using automated spec extraction.
+
+---
+
 # v26.0.6 (2026-02-12)
 
 ## 버그 수정 (Bug Fixes)

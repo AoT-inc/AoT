@@ -528,14 +528,15 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   }
 }
 
+
 /* [Fix] Map Search Overlay Layout - Centered with margins to clear side controls */
 .map-search-overlay {
   position: absolute;
-  top: 10px;
-  left: 70px; /* Space for Left Tools */
-  right: 70px; /* Space for Right Tools */
-  width: calc(100% - 140px); /* Fill remaining space */
-  z-index: 13000; /* [Fix] Must be higher than Navbar (12500) */
+  top: 20px; /* Increased from 15px for better top spacing */
+  left: 60px; /* Space for Left Tools */
+  right: 60px; /* Space for Right Tools */
+  width: calc(100% - 120px); /* Fill remaining space */
+  z-index: 3100; /* [Fix] Must be above tools (3000) but below Layer Manager (3500) and within modal context */
   background: transparent;
   box-shadow: none;
   pointer-events: none;
@@ -546,9 +547,10 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 
 @media (max-width: 768px) {
     .map-search-overlay {
-        left: 20px;
-        right: 20px;
-        width: calc(100% - 40px);
+        /* Controller: left 10px + width 36px + gap 8px = 54px */
+        left: 54px;
+        right: 54px;
+        width: calc(100% - 108px);
     }
 }
 
@@ -1151,7 +1153,8 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 
 /* Mobile Adjustments */
 @media (max-width: 768px) {
-    .aot-measurement-panel {\n        bottom: 50px; /* Slightly lower on mobile but still above controls if stacked */
+    .aot-measurement-panel {
+        bottom: 50px; /* Slightly lower on mobile but still above controls if stacked */
         padding: 0 10px; /* Adjust padding for fixed height alignment */
         justify-content: flex-start; /* Allow scroll from start */
         /* Height remains 85px from main rule */

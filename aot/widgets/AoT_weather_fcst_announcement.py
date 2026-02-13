@@ -54,10 +54,10 @@ logger = logging.getLogger(__name__)
 
 WIDGET_INFORMATION = {
   'widget_name_unique': 'AoT_fcst_announcement',
-  'widget_name': 'AoT 단기예보문',
+  'widget_name': lazy_gettext('AoT Weather Forecast'),
   'widget_library': '',
   'no_class': True,
-  'message': '사용자가 선택한 시간의 기상청 발표 단기예보를 출력합니다.',
+  'message': lazy_gettext('Displays the KMA (Korea Meteorological Administration) short-term forecast for the period selected by the user.'),
   'widget_width': 4,
   'widget_height': 5,
   'custom_options': [
@@ -67,8 +67,8 @@ WIDGET_INFORMATION = {
           'default_value': 3600,
           'required': True,
           'constraints_pass': constraints_pass_positive_value,
-          'name': lazy_gettext('최대 유효 시간'),
-          'phrase': lazy_gettext('최대 유효 발표 시간을 설정하세요. (초)')
+          'name': lazy_gettext('Maximum Validity Time'),
+          'phrase': lazy_gettext('Set the maximum validity for the forecast announcement. (Seconds)')
       },
       {
           'id': 'refresh_seconds',
@@ -76,31 +76,31 @@ WIDGET_INFORMATION = {
           'class': 'aot-time-input',
           'default_value': 1800,
           'constraints_pass': constraints_pass_positive_value,
-          'name': lazy_gettext('새로고침'),
-          'phrase': lazy_gettext('단기예보를 새로고침할 시간을 설정하세요. (초)')
+          'name': lazy_gettext('Refresh'),
+          'phrase': lazy_gettext('Set the interval to refresh the forecast. (Seconds)')
       },
       {
           'id': 'font_em_tmp',
           'type': 'float',
           'default_value': 4.0,
           'constraints_pass': constraints_pass_positive_value,
-          'name': lazy_gettext('온도 크기(em)'),
-          'phrase': lazy_gettext('온도표시 글자 크기를 설정하세요.')
+          'name': lazy_gettext('Temperature Font Size (em)'),
+          'phrase': lazy_gettext('Set the font size for the temperature display.')
       },
       {
           'id': 'font_em_text',
           'type': 'float',
           'default_value': 1.2,
           'constraints_pass': constraints_pass_positive_value,
-          'name': lazy_gettext('글자 크기(em)'),
-          'phrase': lazy_gettext('일반 글자 크기를 설정하세요.')
+          'name': lazy_gettext('Font Size (em)'),
+          'phrase': lazy_gettext('Set the general font size.')
       },
       {
           'id': 'show_row_aot_weather_2',
           'type': 'bool',
           'default_value': True,
-          'name': lazy_gettext('상세 예보'),
-          'phrase': lazy_gettext('상세 예보문 표시 여부를 설정하세요.')
+          'name': lazy_gettext('Detailed Forecast'),
+          'phrase': lazy_gettext('Toggle the display of the detailed forecast announcement.')
       }
   ],
   'widget_dashboard_head': """
@@ -315,21 +315,21 @@ $(document).ready(function(){
 
   function windDirection(vec) {
     vec = vec % 360;
-    if (vec < 45) return "북풍";
-    else if (vec < 90) return "북동풍";
-    else if (vec < 135) return "동풍";
-    else if (vec < 180) return "남동풍";
-    else if (vec < 225) return "남풍";
-    else if (vec < 270) return "남서풍";
-    else if (vec < 315) return "서풍";
-    else return "북서풍";
+    if (vec < 45) return window._("N");
+    else if (vec < 90) return window._("NE");
+    else if (vec < 135) return window._("E");
+    else if (vec < 180) return window._("SE");
+    else if (vec < 225) return window._("S");
+    else if (vec < 270) return window._("SW");
+    else if (vec < 315) return window._("W");
+    else return window._("NW");
   }
 
   // (3) updateForecast()
   function updateForecast(hour) {
     hour = Math.max(-24, Math.min(48, parseInt(hour)));
     if (!forecastData || !forecastData.forecasts) {
-      iconContainer.innerHTML = '<div>예보 데이터를 찾을 수 없습니다.</div>';
+      iconContainer.innerHTML = '<div>' + window._('Forecast data not found.') + '</div>';
       textContainer.innerHTML = "";
       tmpContainer.innerHTML = "";
       tmnContainer.innerHTML = "";
@@ -345,11 +345,12 @@ $(document).ready(function(){
     var forecast_now = parseDateString(forecast_now_str);
     var deltaHours = Math.round((widget_now - forecast_now) / (1000 * 3600));
 
-    var adjustedHour = parseInt(hour) - deltaHours;
+    var adjustedHour = parseInt(hour) + deltaHours;
+    console.log("updateForecast - hour:", hour, "deltaHours:", deltaHours, "adjustedHour:", adjustedHour);
     var dataForHour = forecastData.forecasts[adjustedHour.toString()];
 
     if (!dataForHour) {
-      iconContainer.innerHTML = '<div>선택한 시간의 예보가 없습니다.</div>';
+      iconContainer.innerHTML = '<div>' + window._('No forecast for the selected time.') + '</div>';
       textContainer.innerHTML = "";
       tmpContainer.innerHTML = "";
       tmnContainer.innerHTML = "";
@@ -379,13 +380,13 @@ $(document).ready(function(){
     var forecastHour = forecastTime.getHours();
     var forecastTimeString = "";
     if (offset < 0) {
-        forecastTimeString = Math.abs(offset) + "시간 전 ";
+        forecastTimeString = Math.abs(offset) + window._("h ago") + " ";
     } else if (offset === 0) {
-        forecastTimeString = "현재 시간 ";
+        forecastTimeString = window._("Current Time") + " ";
     } else {
-        forecastTimeString = offset + "시간 뒤 ";
+        forecastTimeString = offset + window._("h later") + " ";
     }
-    widgetTitleBar.innerHTML = '<span style="font-size:' + fontText + 'em; font-weight: bold;">' + forecastTimeString + forecastHour + ':00 예보</span>';
+    widgetTitleBar.innerHTML = '<span style="font-size:' + fontText + 'em; font-weight: bold;">' + forecastTimeString + forecastHour + ':00 ' + window._('Forecast') + '</span>';
 
     // 아이콘 중앙 정렬
     iconContainer.style.display = 'flex';
@@ -440,12 +441,12 @@ $(document).ready(function(){
     var tmxDisplay = tmx !== null ? tmx + '°' : '-';
     tmnContainer.innerHTML =
       '<div style="display:flex; justify-content:space-between; width:100%; font-size:' + fontText + 'em;">' +
-      '<span>최저:</span>' +
+      '<span>' + window._('Min:') + '</span>' +
       '<span>' + tmnDisplay + '</span>' +
       '</div>';
     tmxContainer.innerHTML =
       '<div style="display:flex; justify-content:space-between; width:100%; font-size:' + fontText + 'em;">' +
-      '<span>최고:</span>' +
+      '<span>' + window._('Max:') + '</span>' +
       '<span>' + tmxDisplay + '</span>' +
       '</div>';
 
@@ -457,7 +458,7 @@ $(document).ready(function(){
     // (1) 습도
     forecastText += '  <td style="width:33%; padding: 0 8px; vertical-align: bottom;">'
                   + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-                  + '      <span style="font-size:' + fontText + 'em;">습도:</span>'
+                  + '      <span style="font-size:' + fontText + 'em;">' + window._('Humidity:') + '</span>'
                   + '      <b style="font-size:' + fontText + 'em;">' + (reh !== null ? reh : '-') + '</b>'
                   + '      <span style="font-size:' + fontText + ';">%</span>'
                   + '    </div>'
@@ -466,7 +467,7 @@ $(document).ready(function(){
     // (2) 강수확률
     forecastText += '  <td style="width:33%; padding: 0 8px; vertical-align: bottom;">'
                   + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-                  + '      <span style="font-size:' + fontText + 'em;">강수:</span>'
+                  + '      <span style="font-size:' + fontText + 'em;">' + window._('Precip:') + '</span>'
                   + '      <b style="font-size:' + fontText + 'em;">' + (pop !== null ? pop : '-') + '</b>'
                   + '      <span style="font-size:' + fontText + ';">%</span>'
                   + '    </div>'
@@ -476,14 +477,14 @@ $(document).ready(function(){
     if (sno !== null && parseFloat(sno) > 0) {
       forecastText += '  <td style="width:34%; padding: 0 8px; vertical-align: bottom;">'
                     + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-                    + '      <span style="font-size:' + fontText + 'em;">적설:</span>'
+                    + '      <span style="font-size:' + fontText + 'em;">' + window._('Snowfall:') + '</span>'
                     + '      <b style="font-size:' + fontText + 'em;">' + sno + 'cm</b>'
                     + '    </div>'
                     + '  </td>';
     } else {
       forecastText += '  <td style="width:34%; padding: 0 8px; vertical-align: bottom;">'
                     + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-                    + '      <span style="font-size:' + fontText + 'em;">강수량:</span>'
+                    + '      <span style="font-size:' + fontText + 'em;">' + window._('Rainfall:') + '</span>'
                     + '      <b style="font-size:' + fontText + 'em;">' + (rn1 !== null ? rn1 + 'mm' : '-') + '</b>'
                     + '    </div>'
                     + '  </td>';
@@ -494,13 +495,13 @@ $(document).ready(function(){
     forecastText += '<tr>';
     forecastText += '  <td style="width:50%; padding: 0 8px; vertical-align: bottom;">'
                   + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-                  + '      <span style="font-size:' + fontText + 'em;">풍향:</span>'
+                  + '      <span style="font-size:' + fontText + 'em;">' + window._('Wind Dir:') + '</span>'
                   + '      <b style="font-size:' + fontText + 'em;">' + directionStr + '</b>'
                   + '    </div>'
                   + '  </td>';
     forecastText += '  <td style="width:50%; padding: 0 8px; vertical-align: bottom;">'
                   + '    <div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-                  + '      <span style="font-size:' + fontText + 'em;">풍속:</span>'
+                  + '      <span style="font-size:' + fontText + 'em;">' + window._('Wind Speed:') + '</span>'
                   + '      <b style="font-size:' + fontText + 'em;">' + windSpeed + '</b>'
                   + '      <span style="font-size:' + fontText + ';">m/s</span>'
                   + '    </div>'
@@ -520,7 +521,7 @@ $(document).ready(function(){
       })
       .fail(function() {
         forecastData = null;
-        iconContainer.innerHTML = '<div>예보 데이터를 불러올 수 없습니다.</div>';
+        iconContainer.innerHTML = '<div>' + window._('Unable to load forecast data.') + '</div>';
         textContainer.innerHTML = "";
         tmpContainer.innerHTML = "";
         tmnContainer.innerHTML = "";

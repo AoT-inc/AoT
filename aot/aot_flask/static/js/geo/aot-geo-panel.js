@@ -12,7 +12,8 @@ class AoTGeoPanel {
         this.pipeConfig = { spacing: 14.0, angle: 0, offset: 0, is90Deg: false };
         this.sprinklerConfig = { interval: 14.0, radius: 11.0, flow: 850, pressure: 2.0 };
         this.dripConfig = { interval: 0.3, flow: 1.0, pressure: 1.0 };
-        this.isLabelHidden = localStorage.getItem('aot_geo_hide_label') === 'true';
+        const theme = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
+        this.isLabelHidden = theme.hide_label === 'true' || theme.hide_label === true;
 
         // Navigation State
         this.navStack = ['main', 'site']; // Current drill-down path (Init with 'site' to show sub-menu)
@@ -249,55 +250,53 @@ class AoTGeoPanel {
             // --- Tier 1: Main Tabs ---
             case 'main':
                 html += `
-                    <div class="mode-tab ${this.currentMode === 'site' ? 'active' : ''}" data-nav-mode="site">${_('site')}</div>
-                    <div class="mode-tab ${this.currentMode === 'zone' ? 'active' : ''}" data-nav-mode="zone">${_('zone')}</div>
-                    <div class="mode-tab ${this.currentMode === 'facility' ? 'active' : ''}" data-nav-mode="facility">${_('facility')}</div>
-                    <div class="mode-tab ${this.currentMode === 'equipment' ? 'active' : ''}" data-nav-mode="equipment">${_('equipment')}</div>
-                    <div class="mode-tab ${this.currentMode === 'aot_device' ? 'active' : ''}" data-nav-mode="aot_device">${_('device_short')}</div>
+                    <div class="mode-tab ${this.currentMode === 'site' ? 'active' : ''}" data-nav-mode="site">${_('Site')}</div>
+                    <div class="mode-tab ${this.currentMode === 'zone' ? 'active' : ''}" data-nav-mode="zone">${_('Zone')}</div>
+                    <div class="mode-tab ${this.currentMode === 'facility' ? 'active' : ''}" data-nav-mode="facility">${_('Facility')}</div>
+                    <div class="mode-tab ${this.currentMode === 'equipment' ? 'active' : ''}" data-nav-mode="equipment">${_('Equipment')}</div>
+                    <div class="mode-tab ${this.currentMode === 'aot_device' ? 'active' : ''}" data-nav-mode="aot_device">${_('A')}</div>
                 `;
                 break;
 
-            // --- Tier 2: Basic Operations (Site/Zone/Facility) ---
             case 'site': case 'zone': case 'facility':
                 const currentType = tierId;
                 const config = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
-                const activeColor = config[currentType] || localStorage.getItem(`aot_config_color_${currentType}`) || 
-                                   (currentType === 'site' ? '#DF5353' : (currentType === 'zone' ? '#28a745' : '#82898f'));
+                const activeColor = config[currentType] || (currentType === 'site' ? '#DF5353' : (currentType === 'zone' ? '#28a745' : '#82898f'));
 
                 html += `
                     <!-- Theme Color Picker (26px Circle) -->
                     <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
                         <input type="color" id="theme-color-picker" data-type="${currentType}" value="${activeColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
                     </div>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-union">${_('union')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-diff">${_('subtract')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-hide-label" style="min-width: 70px;">${this.isLabelHidden ? _('show_length') : _('hide_length')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-union">${_('Union')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-diff">${_('Subtract')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-hide-label" style="min-width: 70px;">${this.isLabelHidden ? _('Show length') : _('Hide length')}</button>
                 `;
                 break;
 
             // --- Tier 2: Equipment Root ---
             case 'equipment':
                 const eqConfig = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
-                const eqColor = eqConfig['equipment'] || localStorage.getItem(`aot_config_color_equipment`) || '#007bff';
+                const eqColor = eqConfig['equipment'] || '#007bff';
 
                 html += `
                     <!-- Theme Color Picker (26px Circle) -->
                     <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
                         <input type="color" id="theme-color-picker" data-type="equipment" value="${eqColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
                     </div>
-                    <div class="mode-tab ${this._isActivePath('device') ? 'active' : ''}" data-nav-sub="device">${_('device')}</div>
-                    <div class="mode-tab ${this._isActivePath('pipe') ? 'active' : ''}" data-nav-sub="pipe">${_('pipe')}</div>
-                    <div class="mode-tab ${this._isActivePath('sprinkler') ? 'active' : ''}" data-nav-sub="sprinkler">${_('irrigation')}</div>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-hide-label" style="min-width: 70px;">${this.isLabelHidden ? _('show_length') : _('hide_length')}</button>
+                    <div class="mode-tab ${this._isActivePath('device') ? 'active' : ''}" data-nav-sub="device">${_('Device')}</div>
+                    <div class="mode-tab ${this._isActivePath('pipe') ? 'active' : ''}" data-nav-sub="pipe">${_('Pipe')}</div>
+                    <div class="mode-tab ${this._isActivePath('sprinkler') ? 'active' : ''}" data-nav-sub="sprinkler">${_('Irrigation')}</div>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-hide-label" style="min-width: 70px;">${this.isLabelHidden ? _('Show length') : _('Hide length')}</button>
                 `;
                 break;
 
             // --- Tier 2: Aot Device Root ---
             case 'aot_device':
                 html += `
-                    <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">${_('input')}</div>
-                    <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">${_('output')}</div>
-                    <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">${_('function')}</div>
+                    <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">${_('Input')}</div>
+                    <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">${_('Output')}</div>
+                    <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">${_('Function')}</div>
                 `;
                 break;
 
@@ -305,18 +304,15 @@ class AoTGeoPanel {
             case 'input': case 'output': case 'function':
                 const type = tierId;
                 
-                // [Fix] Prioritize Server Theme Configuration for Cross-Browser Persistence
-                // Keys are stored without 'theme_' prefix in theme_config (e.g. 'input', 'output')
                 const appTheme = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
                 const serverColor = appTheme[type];
                 
-                const savedColor = serverColor || localStorage.getItem(`aot_config_color_${type}`) ||
-                    (type === 'function' ? '#995aff' : getComputedStyle(document.documentElement).getPropertyValue('--theme-device').trim() || '#9013FE');
-                const savedVisValue = localStorage.getItem(`aot_config_vis_${type}`);
-                const isVisible = (savedVisValue === null) ? true : (savedVisValue === 'true');
+                const savedColor = serverColor || (type === 'function' ? '#995aff' : getComputedStyle(document.documentElement).getPropertyValue('--theme-device').trim() || '#9013FE');
+                const savedVisValue = appTheme[`vis_${type}`];
+                const isVisible = (savedVisValue === undefined || savedVisValue === null) ? true : (savedVisValue === 'true' || savedVisValue === true);
 
                 html += `
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('selection_list')} ></button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('Selection list')} ></button>
                     
                     <!-- Color Picker (26px Circle) -->
                     <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: 1px solid #ddd; margin: 0 4px;">
@@ -334,32 +330,32 @@ class AoTGeoPanel {
             // --- Tier 3: Equipment > Device Categories ---
             case 'device':
                 html += `
-                    <div class="mode-tab ${this._isActivePath('supply') ? 'active' : ''}" data-nav-cat="supply">${_('water_supply')}</div>
-                    <div class="mode-tab ${this._isActivePath('filter') ? 'active' : ''}" data-nav-cat="filter">${_('filter')}</div>
-                    <div class="mode-tab ${this._isActivePath('valve') ? 'active' : ''}" data-nav-cat="valve">${_('valve')}</div>
-                    <div class="mode-tab ${this._isActivePath('conn') ? 'active' : ''}" data-nav-cat="conn">${_('connection')}</div>
+                    <div class="mode-tab ${this._isActivePath('supply') ? 'active' : ''}" data-nav-cat="supply">${_('Water supply')}</div>
+                    <div class="mode-tab ${this._isActivePath('filter') ? 'active' : ''}" data-nav-cat="filter">${_('Filter')}</div>
+                    <div class="mode-tab ${this._isActivePath('valve') ? 'active' : ''}" data-nav-cat="valve">${_('Valve')}</div>
+                    <div class="mode-tab ${this._isActivePath('conn') ? 'active' : ''}" data-nav-cat="conn">${_('Connection')}</div>
                 `;
                 break;
 
             // --- Tier 3: Equipment > Pipe Actions ---
             case 'pipe':
                 html += `
-                    <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_settings">${_('settings')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-draw-ref">${_('reference_line')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-draw-main">${_('main_pipe')}</button>
-                    <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-gen-pipe">${_('generate')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.pipeConfig.is90Deg ? 'active' : ''}" id="btn-90deg">${_('90_degree')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-clear-equip" data-clear-mode="all">${_('reset')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_settings">${_('Settings')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-draw-ref">${_('Reference line')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-draw-main">${_('Main pipe')}</button>
+                    <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-gen-pipe">${_('Generate')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline ${this.pipeConfig.is90Deg ? 'active' : ''}" id="btn-90deg">${_('90 degree')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-clear-equip" data-clear-mode="all">${_('Reset')}</button>
                 `;
                 break;
 
             // --- Tier 3: Equipment > Irrigation (Shared Controller) ---
             case 'sprinkler':
                 html += `
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.irrigationType === 'sprinkler' ? 'active' : ''}" id="btn-set-sprinkler">${_('sprinkler')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.irrigationType === 'drip' ? 'active' : ''}" id="btn-set-drip">${_('drip')}</button>
-                    <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-gen-irrigation">${_('generate')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-clear-equip" data-clear-mode="sprinkler">${_('reset')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline ${this.irrigationType === 'sprinkler' ? 'active' : ''}" id="btn-set-sprinkler">${_('Sprinkler')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline ${this.irrigationType === 'drip' ? 'active' : ''}" id="btn-set-drip">${_('Drip')}</button>
+                    <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-gen-irrigation">${_('Generate')}</button>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-clear-equip" data-clear-mode="sprinkler">${_('Reset')}</button>
                 `;
 
                 // Separator
@@ -368,29 +364,29 @@ class AoTGeoPanel {
 
                     html += `
                         <div class="d-flex align-items-center">
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('spacing')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Spacing')}</span>
                             <input type="number" class="form-control-compact" id="sp-interval" value="${this.sprinklerConfig.interval}" style="width: 50px; margin-right: 8px;">
                             
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('radius')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Radius')}</span>
                             <input type="number" class="form-control-compact" id="sp-radius" value="${this.sprinklerConfig.radius}" style="width: 50px; margin-right: 8px;">
                             
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('flow_rate')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Flow rate')}</span>
                             <input type="number" class="form-control-compact" id="sp-flow" value="${this.sprinklerConfig.flow}" style="width: 50px; margin-right: 8px;">
                             
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('pressure')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Pressure')}</span>
                             <input type="number" class="form-control-compact" id="sp-pressure" value="${this.sprinklerConfig.pressure}" style="width: 50px; margin-right: 8px;">
                         </div>
                     `;
                 } else {
                     html += `
                          <div class="d-flex align-items-center">
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('spacing')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Spacing')}</span>
                             <input type="number" class="form-control-compact" id="dp-interval" value="${this.dripConfig.interval}" style="width: 50px; margin-right: 8px;">
                             
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('flow_rate')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Flow rate')}</span>
                             <input type="number" class="form-control-compact" id="dp-flow" value="${this.dripConfig.flow}" style="width: 50px; margin-right: 8px;">
                             
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('pressure')}</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Pressure')}</span>
                             <input type="number" class="form-control-compact" id="dp-pressure" value="${this.dripConfig.pressure}" style="width: 50px; margin-right: 8px;">
                         </div>
                     `;
@@ -403,10 +399,10 @@ class AoTGeoPanel {
 
 
             // --- Tier 4: Device Items ---
-            case 'supply': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="river">${_('river')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="tank">${_('water_tank')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="pump">${_('pump')}</button>`; break;
-            case 'filter': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="disc">${_('disc')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="screen">${_('screen')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="sand">${_('sand')}</button>`; break;
-            case 'valve': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="union">${_('union_valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="m-single">${_('male_single')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="f-single">${_('female_single')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="reducer">${_('reducer')}</button>`; break;
-            case 'conn': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="suction">${_('suction')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="elbow">${_('elbow')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="tee">${_('tee')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="reducer">${_('reducer')}</button>`; break;
+            case 'supply': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="river">${_('River')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="tank">${_('Water tank')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="pump">${_('Pump')}</button>`; break;
+            case 'filter': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="disc">${_('Disc')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="screen">${_('Screen')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="sand">${_('Sand')}</button>`; break;
+            case 'valve': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="union">${_('Union valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="m-single">${_('Adapter valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="f-single">${_('Inline valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="reducer">${_('Reducer')}</button>`; break;
+            case 'conn': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="suction">${_('Suction')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="elbow">${_('Elbow')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="tee">${_('Tee')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="reducer">${_('Reducer')}</button>`; break;
 
             // --- Tier 4: Pipe Settings ---
             case 'pipe_settings':
@@ -418,12 +414,12 @@ class AoTGeoPanel {
                             <input type="number" step="0.5" class="form-control-compact border-0 p-0" id="pipe-spacing" value="${this.pipeConfig.spacing}" style="width: 50px;">
                         </div>
                         <div class="d-flex align-items-center bg-light rounded-pill px-2 mr-2" style="height: 28px; flex: 2; min-width: 320px;">
-                            <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('angle')}</span>
+                            <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('Angle')}</span>
                             <input type="range" class="custom-range flex-fill" id="pipe-angle" min="-90" max="90" step="1" value="${this.pipeConfig.angle}">
                             <span class="small font-weight-bold ml-1 text-primary" id="val-angle" style="min-width: 32px; text-align: right;">${this.pipeConfig.angle}°</span>
                         </div>
                         <div class="d-flex align-items-center bg-light rounded-pill px-2" style="height: 28px; flex: 2; min-width: 320px;">
-                            <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('offset')}</span>
+                            <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('Offset')}</span>
                             <input type="range" class="custom-range flex-fill" id="pipe-offset" min="-15" max="15" step="0.5" value="${this.pipeConfig.offset}">
                             <span class="small font-weight-bold ml-1 text-primary" id="val-offset" style="min-width: 42px; text-align: right;">${this.pipeConfig.offset}m</span>
                         </div>
@@ -434,8 +430,8 @@ class AoTGeoPanel {
                             <span class="small text-muted mr-1">${_('spacing')}</span>
                             <input type="number" step="0.5" class="form-control-compact border-0 p-0" id="pipe-spacing" value="${this.pipeConfig.spacing}">
                         </div>
-                        <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_angle">${_('angle')} ></button>
-                        <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_offset">${_('offset')} ></button>
+                        <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_angle">${_('Angle')} ></button>
+                        <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_offset">${_('Offset')} ></button>
                     `;
                 }
                 break;
@@ -453,7 +449,7 @@ class AoTGeoPanel {
             case 'pipe_offset':
                 html += `
                     <div class="d-flex align-items-center bg-light rounded-pill px-2 mx-1" style="height: 28px; width: calc(100% - 10px); min-width: 280px;">
-                        <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('offset')}</span>
+                        <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('Offset')}</span>
                         <input type="range" class="custom-range flex-fill" id="pipe-offset" min="-15" max="15" step="0.5" value="${this.pipeConfig.offset}">
                         <span class="small font-weight-bold ml-1 text-primary" id="val-offset" style="min-width: 42px; text-align: right;">${this.pipeConfig.offset}m</span>
                     </div>
@@ -529,7 +525,7 @@ class AoTGeoPanel {
         const btnHide = rootEl.querySelector('#btn-hide-label');
         if (btnHide) btnHide.onclick = () => {
             this.isLabelHidden = !this.isLabelHidden;
-            localStorage.setItem('aot_geo_hide_label', this.isLabelHidden);
+            this._handleThemeColorChange('hide_label', this.isLabelHidden);
             this._handleGeometryOp('hide-label');
             this.render();
         };
@@ -665,6 +661,7 @@ class AoTGeoPanel {
             toggleVis.onchange = (e) => {
                 const isVisible = e.target.checked;
                 const subMode = this.navStack[this.navStack.length - 1]; // e.g., 'input'
+                this._handleThemeColorChange(`vis_${subMode}`, isVisible);
                 if (this.geoDesign && this.geoDesign.setDeviceVisibility) {
                     this.geoDesign.setDeviceVisibility(subMode, isVisible);
                 }
@@ -675,7 +672,7 @@ class AoTGeoPanel {
         rootEl.querySelectorAll('[data-device-item]').forEach(el => {
             el.onclick = () => {
                 const item = el.dataset.deviceItem;
-                if (window.showToast) window.showToast(`${item} ${_('placement_mode')}`, 'info');
+                if (window.showToast) window.showToast(`${item} ${_('Placement mode')}`, 'info');
 
                 if (this.geoDesign && this.geoDesign.startDraw) {
                     // Map item to drawing context (Default: Equipment Marker with sub_type)
@@ -801,14 +798,14 @@ class AoTGeoPanel {
 
     _triggerPipeGen() {
         if (!this.selectedFeature) {
-            if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('select_zone_first'), 'warning');
+            if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('Please select a Zone first.'), 'warning');
             return;
         }
 
         // [Fix] Ensure target is a container (Site/Zone)
         const type = this.selectedFeature.properties?.aot_type;
         if (type !== 'site' && type !== 'zone') {
-             if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('branch_pipe_requires_zone_or_site'), 'warning');
+             if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('Branch pipe requires Zone or Site.'), 'warning');
              return;
         }
 
@@ -817,7 +814,7 @@ class AoTGeoPanel {
 
     _triggerIrrigationGen() {
         if (!this.selectedFeature) {
-            if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('select_zone_first'), 'warning');
+            if (this.geoDesign.ui) this.geoDesign.ui.showToast(_('Please select a Zone first.'), 'warning');
             return;
         }
 
@@ -831,7 +828,7 @@ class AoTGeoPanel {
                 this.sprinklerConfig.isReverse = !this.sprinklerConfig.isReverse;
                 // console.log(`[GeoPanel] Sequential click detected. Toggling isReverse to: ${this.sprinklerConfig.isReverse}`);
                 if (this.geoDesign.ui) {
-                    this.geoDesign.ui.showToast(this.sprinklerConfig.isReverse ? _('reverse_layout') : _('forward_layout'), 'info');
+                     this.geoDesign.ui.showToast(this.sprinklerConfig.isReverse ? _('Reverse Layout') : _('Forward Layout'), 'info');
                 }
             } else {
                 // console.log(`[GeoPanel] New feature selected or first click. Setting isReverse to false.`);
@@ -905,11 +902,11 @@ class AoTGeoPanel {
                 <div class="modal-dialog" style="max-width: 600px; width: calc(100% - 30px); margin: 30px auto;">
                     <div class="modal-content" style="border-radius: 20px; overflow: hidden; height: auto;">
                         <div class="modal-header border-0 bg-light">
-                            <h5 class="modal-title font-weight-bold">${_ (subMode)} ${_('select')}</h5>
+                            <h5 class="modal-title font-weight-bold">${_ (subMode)} ${_('Select')}</h5>
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
                         <div class="modal-body p-4">
-                            <input type="text" class="form-control mb-3" id="deviceSearch" placeholder="${_('search_placeholder')}" style="height: 38px; border-radius: 19px;">
+                            <input type="text" class="form-control mb-3" id="deviceSearch" placeholder="${_('Search Device...')}" style="height: 38px; border-radius: 19px;">
                             <div id="deviceList" class="list-group" style="max-height: 400px; overflow-y: auto;"></div>
                         </div>
                     </div>
@@ -1030,8 +1027,6 @@ class AoTGeoPanel {
             if (!this.geoDesign.theme_config) this.geoDesign.theme_config = {};
             this.geoDesign.theme_config[type] = color;
         }
-
-        localStorage.setItem(`aot_config_color_${type}`, color);
 
         // 2. Apply to UI immediately via AoTGeoUI (updates CSS vars, RGB, etc.)
         if (this.geoDesign && this.geoDesign.ui && this.geoDesign.ui.applyThemeConfig) {

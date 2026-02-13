@@ -171,7 +171,6 @@ class NotesByTarget(Resource):
             result = []
             for n in notes:
                 result.append({
-                    'id': n.id,
                     'unique_id': n.unique_id,
                     'date_time': n.date_time.isoformat(),
                     'name': n.name,
@@ -184,6 +183,51 @@ class NotesByTarget(Resource):
                     'gps_lng': n.gps_lng
                 })
             
+            return result, 200
+        except Exception:
+            abort(500, message='An exception occurred', error=traceback.format_exc())
+
+
+@ns_note.route('/geo')
+class NotesGeo(Resource):
+    """Get notes that have GPS coordinates."""
+
+    @ns_note.doc(responses=default_responses)
+    @flask_login.login_required
+    def get(self):
+        """Get all notes with GPS coordinates for map display"""
+        try:
+            notes = Notes.query.filter(Notes.gps_lat.isnot(None), Notes.gps_lng.isnot(None)).order_by(Notes.date_time.desc()).all()
+            
+            result = []
+            for n in notes:
+                result.append({
+                    'unique_id': n.unique_id,
+                    'note': n.note,
+                    'date_time': n.date_time.isoformat(),
+                    'user': n.author.name if n.author else (n.name or '?'),
+                    'files': n.files,
+                    'tags': n.tags,
+                    'target_id': n.target_id,
+                    'target_type': n.target_type,
+                    'gps_lat': n.gps_lat,
+                    'gps_lng': n.gps_lng
+                })
+            return result, 200
+        except Exception:
+            abort(500, message='An exception occurred', error=traceback.format_exc())
+
+@ns_note.route('/tags')
+class NoteTagsList(Resource):
+    """Get all note tags."""
+
+    @ns_note.doc(responses=default_responses)
+    @flask_login.login_required
+    def get(self):
+        """Get all available note tags"""
+        try:
+            tags = NoteTags.query.all()
+            result = [{'unique_id': t.unique_id, 'name': t.name} for t in tags]
             return result, 200
         except Exception:
             abort(500, message='An exception occurred', error=traceback.format_exc())

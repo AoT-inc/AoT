@@ -239,7 +239,7 @@ WIDGET_INFORMATION = {
     'widget_library': 'Highstock',
     'no_class': True,
 
-    'message': '동기식 그래프를 표시합니다. 선택한 데이터를 설정한 시간 만큼 X축에 표시 합니다.',
+    'message': lazy_gettext('Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration.'),
 
     'dependencies_module': [
         ('bash-commands',
@@ -272,10 +272,7 @@ WIDGET_INFORMATION = {
         ])
     ],
 
-    'dependencies_message': 'Highcharts는 오픈소스 및 개인 용도로는 무료로 사용할 수 있지만, '
-                            '상업적 제품의 일부로 이 소프트웨어를 사용하는 경우, '
-                            '사용자 또는 제조사가 별도의 상업용 라이선스를 취득해야 할 수 있습니다. '
-                            '자세한 내용은 Highcharts(https://shop.highsoft.com)에 문의하십시오.',
+    'dependencies_message': lazy_gettext('Highcharts is free for open source and personal use. However, if used as part of a commercial product, a commercial license may be required. Please check https://shop.highsoft.com for the most accurate information.'),
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -292,7 +289,7 @@ WIDGET_INFORMATION = {
     'custom_options': [
         {
             'type': 'header',
-            'name': lazy_gettext('시간 축 설정')
+            'name': lazy_gettext('Time Axis Settings')
         },
         {
             'id': 'refresh_seconds',
@@ -300,120 +297,120 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 90.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': lazy_gettext('위젯을 새로고침하는 주기를 초 단위로 입력하세요.')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Set the refresh interval for the widget')
         },
         {
             'id': 'x_axis_duration_unit',
             'type': 'select',
             'default_value': 'day',
             'options_select': [
-                ('day', '일'),
-                ('hour', '시간'),
-                ('minute', '분'),
+                ('day', lazy_gettext('Day')),
+                ('hour', lazy_gettext('Hour')),
+                ('minute', lazy_gettext('Minute')),
             ],
-            'name': lazy_gettext('X축 기간 단위'),
-            'phrase': lazy_gettext('X축 기간의 단위를 선택하세요.')
+            'name': lazy_gettext('X-Axis Duration Unit'),
+            'phrase': lazy_gettext('Select the unit for the X-axis duration.')
         },
         {
             'id': 'x_axis_duration',
             'type': 'integer',
             'default_value': 1,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('X축 표시 기간'),
-            'phrase': lazy_gettext('그래프의 X축에 표시할 기간을 입력하세요.')
+            'name': lazy_gettext('X-Axis Duration'),
+            'phrase': lazy_gettext('Enter the duration to display on the X-axis.')
         },
         {
             'id': 'enable_auto_refresh',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('자동 새로고침 활성화'),
-            'phrase': lazy_gettext('지정된 주기마다 그래프 데이터를 자동으로 새로고침합니다.')
+            'name': lazy_gettext('Enable Auto Refresh'),
+            'phrase': lazy_gettext('Automatically refresh graph data at the specified interval.')
         },
         {
             'id': 'enable_xaxis_reset',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('X축 초기화 활성화'),
-            'phrase': lazy_gettext('새로고침 시 X축을 초기화하여 그래프를 다시 그립니다.')
+            'name': lazy_gettext('Enable X-Axis Reset'),
+            'phrase': lazy_gettext('Reset the X-axis when refreshing the graph.')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('그래프 스타일')
+            'name': lazy_gettext('Graph Style')
         },
         {
             'id': 'enable_header_buttons',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('헤더 버튼 활성화'),
-            'phrase': lazy_gettext('위젯 헤더에 그래프 조작 버튼을 표시합니다.')
+            'name': lazy_gettext('Enable Header Buttons'),
+            'phrase': lazy_gettext('Display graph control buttons in the widget header.')
         },
         {
             'id': 'enable_title',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('제목 표시 활성화'),
-            'phrase': lazy_gettext('그래프 제목을 표시합니다.')
+            'name': lazy_gettext('Enable Title'),
+            'phrase': lazy_gettext('Display the graph title.')
         },
         {
             'id': 'enable_navbar',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('탐색 바 활성화'),
-            'phrase': lazy_gettext('그래프 하단에 탐색 바를 활성화합니다.')
+            'name': lazy_gettext('Enable NavBar'),
+            'phrase': lazy_gettext('Disable the navigation bar at the bottom of the graph.')
         },
         {
             'id': 'enable_export',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('내보내기 기능 활성화'),
-            'phrase': lazy_gettext('그래프를 내보낼 수 있는 버튼을 활성화합니다.')
+            'name': lazy_gettext('Enable Export'),
+            'phrase': lazy_gettext('Enable the button to export the graph.')
         },
         {
             'id': 'enable_range_selector',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('기간 선택기 활성화'),
-            'phrase': lazy_gettext('그래프 기간 선택기를 활성화합니다.')
+            'name': lazy_gettext('Enable Range Selector'),
+            'phrase': lazy_gettext('Enable the graph range selector.')
         },
         {
             'id': 'enable_graph_legend',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('그래프 범례 활성화'),
-            'phrase': lazy_gettext('그래프 하단에 범례를 표시합니다.')
+            'name': lazy_gettext('Enable Legend'),
+            'phrase': lazy_gettext('Display the legend at the bottom of the graph.')
         },
         {
             'id': 'graph_font_size_em_axes',
             'type': 'float',
             'default_value': 1.0,
-            'name': lazy_gettext('그래프 축 글자 크기(em)'),
-            'phrase': lazy_gettext('그래프의 축 숫자 글꼴 크기를 em 단위로 입력하세요.')
+            'name': lazy_gettext('Axis Font Size (em)'),
+            'phrase': lazy_gettext('Set the font size for graph axes (em).')
         },
         {
             'id': 'graph_font_size_em_axes_title',
             'type': 'float',
             'default_value': 1.0,
-            'name': lazy_gettext('그래프 축 제목 글자 크기(em)'),
-            'phrase': lazy_gettext('그래프 축 제목 글꼴 크기를 em 단위로 입력하세요.')
+            'name': lazy_gettext('Axis Title Font Size (em)'),
+            'phrase': lazy_gettext('Set the font size for graph axis titles (em).')
         },
         {
             'id': 'graph_font_size_em_legend',
             'type': 'float',
             'default_value': 1.0,
-            'name': lazy_gettext('그래프 범례 글자 크기(em)'),
-            'phrase': lazy_gettext('그래프 범례 글꼴 크기를 em 단위로 입력하세요.')
+            'name': lazy_gettext('Legend Font Size (em)'),
+            'phrase': lazy_gettext('Set the font size for the legend (em).')
         },
         {
             'id': 'graph_font_size_em_title',
             'type': 'float',
             'default_value': 1.0,
-            'name': lazy_gettext('그래프 제목 글자 크기(em)'),
-            'phrase': lazy_gettext('그래프 제목 글꼴 크기를 em 단위로 입력하세요.')
+            'name': lazy_gettext('Title Font Size (em)'),
+            'phrase': lazy_gettext('Set the font size for the title (em).')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('데이터 소스')
+            'name': lazy_gettext('Data Source')
         },
         {
             'id': 'measurements_input',
@@ -422,8 +419,8 @@ WIDGET_INFORMATION = {
             'options_select': [
                 'Input'
             ],
-            'name': lazy_gettext('입력'),
-            'phrase': lazy_gettext('표시할 측정값을 선택하세요.')
+            'name': lazy_gettext('Input'),
+            'phrase': lazy_gettext('Select the measurement to display')
         },
         {
             'id': 'measurements_function',
@@ -432,8 +429,8 @@ WIDGET_INFORMATION = {
             'options_select': [
                 'Function'
             ],
-            'name': lazy_gettext('함수'),
-            'phrase': lazy_gettext('표시할 측정값을 선택하세요.')
+            'name': lazy_gettext('Function'),
+            'phrase': lazy_gettext('Select the measurement to display')
         },
         {
             'id': 'measurements_output',
@@ -442,8 +439,8 @@ WIDGET_INFORMATION = {
             'options_select': [
                 'Output'
             ],
-            'name': lazy_gettext('출력'),
-            'phrase': lazy_gettext('표시할 측정값을 선택하세요.')
+            'name': lazy_gettext('Output'),
+            'phrase': lazy_gettext('Select the measurement to display')
         },
         {
             'id': 'measurements_pid',
@@ -452,8 +449,8 @@ WIDGET_INFORMATION = {
             'options_select': [
                 'PID'
             ],
-            'name': lazy_gettext('PID 제어'),
-            'phrase': lazy_gettext('표시할 측정값을 선택하세요.')
+            'name': lazy_gettext('PID'),
+            'phrase': lazy_gettext('Select the measurement to display')
         },
         {
             'id': 'measurements_note_tag',
@@ -462,12 +459,12 @@ WIDGET_INFORMATION = {
             'options_select': [
                 'Tag'
             ],
-            'name': lazy_gettext('메모 태그'),
-            'phrase': lazy_gettext('표시할 측정값을 선택하세요.')
+            'name': lazy_gettext('Note Tag'),
+            'phrase': lazy_gettext('Select the measurement to display')
         },
         {
             'type': 'message',
-            'default_value': '<kbd>Ctrl</kbd> 또는 <kbd>&#8984;</kbd> 키를 누르면 여러 항목을 선택할 수 있습니다.',
+            'default_value': lazy_gettext('Press <kbd>Ctrl</kbd> or <kbd>&#8984;</kbd> to select multiple items.'),
         }
     ],
 
@@ -493,7 +490,7 @@ WIDGET_INFORMATION = {
         {% if widget_options['enable_header_buttons'] -%}
         <div class="widget-graph-controls" id="widget-graph-controls-{{each_widget.unique_id}}">
             <div class="widget-graph-responsive-controls" id="widget-graph-responsive-controls-{{each_widget.unique_id}}">
-                <a class="btn btn-sm btn-success" id="updateData{{each_widget.unique_id}}" title="{{_('업데이트')}}">
+                <a class="btn btn-sm btn-success" id="updateData{{each_widget.unique_id}}" title="{{_('Update')}}">
                     <i class="fa fa-download"></i>
                 </a>
                 <a class="btn btn-sm btn-success" id="resetZoom{{each_widget.unique_id}}" title="{{_('Reset')}}">
@@ -503,7 +500,7 @@ WIDGET_INFORMATION = {
                     <i class="fa fa-eye-slash"></i>
                 </a>
             </div>
-            <a href="javascript:void(0);" class="btn btn-sm menu" onclick="return graphMenuFunction('{{each_widget.unique_id}}');" title="{{_('옵션')}}">
+            <a href="javascript:void(0);" class="btn btn-sm menu" onclick="return graphMenuFunction('{{each_widget.unique_id}}');" title="{{_('Options')}}">
                 <i class="fa fa-bars"></i>
             </a>
         </div>
@@ -515,10 +512,10 @@ WIDGET_INFORMATION = {
     'widget_dashboard_configure_options': """
         <div class="row small-gutters" style="padding: 0.5em">
           <div class="col-12" style="font-weight: bold">
-            그래프 시리즈 옵션
+            {{_('Graph Series Options')}}
           </div>
           <div class="col-auto">
-            <label class="control-label">사용자 정의 색상 사용</label>
+            <label class="control-label">{{_('Use Custom Colors')}}</label>
             <div class="input-group-text">
               <input id="use_custom_colors" name="use_custom_colors" type="checkbox" value="y"{% if widget_options['use_custom_colors'] %} checked{% endif %}>
             </div>
@@ -543,27 +540,27 @@ WIDGET_INFORMATION = {
           </div>
           <div class="col-auto">
             {% set index = '{0:0>2}'.format(n) %}
-            <label class="control-label" for="color_number{{index}}">색상 선택</label>
+            <label class="control-label" for="color_number{{index}}">{{_('Select Color')}}</label>
             <div>
               <input id="color_number{{index}}" name="color_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_graph'][n]['color']}}">
             </div>
           </div>
             {% if widget_variables['colors_graph'][n]['type'] != 'Tag' %}
           <div class="col-auto">
-            <label class="control-label">데이터 그룹화 비활성화</label>
+            <label class="control-label">{{_('Disable Data Grouping')}}</label>
             <div class="input-group-text">
               <input id="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}" name="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}" type="checkbox" value="y"{% if widget_variables['colors_graph'][n]['disable_data_grouping'] %} checked{% endif %}>
             </div>
           </div>
           <div class="col-auto">
-            <label class="control-label">시리즈 유형</label>
+            <label class="control-label">{{_('Series Type')}}</label>
             <div class="input-group-text">
               <select id="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}" name="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}">
-                <option value="line" {% if widget_variables['colors_graph'][n]['series_type'] == "line" %} selected{% endif %}>선형</option>
-                <option value="step-left" {% if widget_variables['colors_graph'][n]['series_type'] == "step-left" %} selected{% endif %}>계단형 (왼쪽 기준)</option>
-                <option value="step-center" {% if widget_variables['colors_graph'][n]['series_type'] == "step-center" %} selected{% endif %}>계단형 (중심 기준)</option>
-                <option value="step-right" {% if widget_variables['colors_graph'][n]['series_type'] == "step-right" %} selected{% endif %}>계단형 (오른쪽 기준)</option>
-                <option value="column" {% if widget_variables['colors_graph'][n]['series_type'] == "column" %} selected{% endif %}>막대형</option>
+                <option value="line" {% if widget_variables['colors_graph'][n]['series_type'] == "line" %} selected{% endif %}>{{_('Line')}}</option>
+                <option value="step-left" {% if widget_variables['colors_graph'][n]['series_type'] == "step-left" %} selected{% endif %}>{{_('Step (Left)')}}</option>
+                <option value="step-center" {% if widget_variables['colors_graph'][n]['series_type'] == "step-center" %} selected{% endif %}>{{_('Step (Center)')}}</option>
+                <option value="step-right" {% if widget_variables['colors_graph'][n]['series_type'] == "step-right" %} selected{% endif %}>{{_('Step (Right)')}}</option>
+                <option value="column" {% if widget_variables['colors_graph'][n]['series_type'] == "column" %} selected{% endif %}>{{_('Column')}}</option>
               </select>
             </div>
           </div>
@@ -573,28 +570,28 @@ WIDGET_INFORMATION = {
 
         <div class="row small-gutters" style="padding: 0.5em">
           <div class="col-12" style="font-weight: bold">
-            Y축 옵션
+            {{_('Y-Axis Options')}}
           </div>
           <div class="col-auto">
-            <label class="control-label">Y축 최소/최대값 수동 설정 활성화</label>
+            <label class="control-label">{{_('Enable Manual Y-Axis Min/Max')}}</label>
             <div class="input-group-text">
               <input id="enable_manual_y_axis" name="enable_manual_y_axis" type="checkbox" value="y"{% if widget_options['enable_manual_y_axis'] %} checked{% endif %}>
             </div>
           </div>
           <div class="col-auto">
-            <label class="control-label">Y축 눈금 정렬 활성화</label>
+            <label class="control-label">{{_('Enable Align Ticks')}}</label>
             <div class="input-group-text">
               <input id="enable_align_ticks" name="enable_align_ticks" type="checkbox" value="y"{% if widget_options['enable_align_ticks'] %} checked{% endif %}>
             </div>
           </div>
           <div class="col-auto">
-            <label class="control-label">Y축 눈금 시작점 강제 활성화</label>
+            <label class="control-label">{{_('Enable Start On Tick')}}</label>
             <div class="input-group-text">
               <input id="enable_start_on_tick" name="enable_start_on_tick" type="checkbox" value="y"{% if widget_options['enable_start_on_tick'] %} checked{% endif %}>
             </div>
           </div>
           <div class="col-auto">
-            <label class="control-label">Y축 눈금 끝점 강제 활성화</label>
+            <label class="control-label">{{_('Enable End On Tick')}}</label>
             <div class="input-group-text">
               <input id="enable_end_on_tick" name="enable_end_on_tick" type="checkbox" value="y"{% if widget_options['enable_end_on_tick'] %} checked{% endif %}>
             </div>
@@ -612,13 +609,13 @@ WIDGET_INFORMATION = {
         <div class="row small-gutters" style="padding-left: 0.5em">
           <input type="hidden" name="custom_yaxis_name_{{index}}" value="{{each_yaxis}}">
           <div class="col-auto">
-            <label class="form-check-label" for="custom_yaxis_min_{{index}}">Y축 최소값/label>
+            <label class="form-check-label" for="custom_yaxis_min_{{index}}">{{_('Y-Axis Min')}}</label>
             <div>
               <input id="yaxis_min_{{index}}" class="form-control" name="custom_yaxis_min_{{index}}" type="number" value="{% if widget_variables['custom_yaxes'][each_yaxis] %}{{widget_variables['custom_yaxes'][each_yaxis]['minimum']}}{% endif %}">
             </div>
           </div>
           <div class="col-auto">
-            <label class="form-check-label" for="custom_yaxis_max_{{index}}">Y축 최대값</label>
+            <label class="form-check-label" for="custom_yaxis_max_{{index}}">{{_('Y-Axis Max')}}</label>
             <div>
               <input id="yaxis_max_{{index}}" class="form-control" name="custom_yaxis_max_{{index}}" type="number" value="{% if widget_variables['custom_yaxes'][each_yaxis] %}{{widget_variables['custom_yaxes'][each_yaxis]['maximum']}}{% endif %}">
             </div>
@@ -631,12 +628,6 @@ WIDGET_INFORMATION = {
   Highcharts.setOptions({
     global: {
       useUTC: false
-    },
-    lang: {
-      thousandsSep: ',',
-      months: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
-      weekdays: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'],
-      shortMonths: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
     }
   });
 
@@ -1012,46 +1003,46 @@ WIDGET_INFORMATION = {
       buttons: [{
         count: 1,
         type: 'minute',
-        text: '1분'
+        text: '{{_("1m")}}'
       }, {
         count: 5,
         type: 'minute',
-        text: '5분'
+        text: '{{_("5m")}}'
       }, {
         count: 15,
         type: 'minute',
-        text: '15분'
+        text: '{{_("15m")}}'
       }, {
         count: 30,
         type: 'minute',
-        text: '30분'
+        text: '{{_("30m")}}'
       }, {
         type: 'hour',
         count: 1,
-        text: '1시간'
+        text: '{{_("1h")}}'
       }, {
         type: 'hour',
         count: 6,
-        text: '6시간'
+        text: '{{_("6h")}}'
       }, {
         type: 'day',
         count: 1,
-        text: '1일'
+        text: '{{_("1d")}}'
       }, {
         type: 'week',
         count: 1,
-        text: '1주'
+        text: '{{_("1w")}}'
       }, {
         type: 'month',
         count: 1,
-        text: '1개월'
+        text: '{{_("1mo")}}'
       }, {
         type: 'month',
         count: 3,
-        text: '3개월'
+        text: '{{_("3mo")}}'
       }, {
         type: 'all',
-        text: '전체'
+        text: '{{_("All")}}'
       }],
       selected: 15
     },

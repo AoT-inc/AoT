@@ -9,7 +9,7 @@ from aot.databases.models import (
 )
 from aot.utils.inputs import parse_input_information
 from aot.databases import set_uuid
-from flask_babel import gettext
+from flask_babel import gettext, get_locale
 from aot.aot_flask.utils.utils_general import custom_options_return_json
 from aot.aot_client import DaemonControl
 from aot.utils.modules import load_module_from_file
@@ -33,13 +33,14 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 import time
 
-_GEO_CONFIG_CACHE = None
-_GEO_CONFIG_TS = 0
-_CACHE_TTL = 300 # Restore cache for performance
+# Locale-aware cache for Geo configuration
+# Format: { locale_str: (timestamp, config_dict) }
+_GEO_CONFIG_CACHE_MAP = {}
+_CACHE_TTL = 300 
 
 def invalidate_geo_config_cache():
-    global _GEO_CONFIG_CACHE
-    _GEO_CONFIG_CACHE = None
+    global _GEO_CONFIG_CACHE_MAP
+    _GEO_CONFIG_CACHE_MAP = {}
 
 def get_geo_config():
     """
@@ -48,15 +49,25 @@ def get_geo_config():
     1. Global Settings (GeoSetting)
     2. Active Layers (GeoLayer)
     """
-    global _GEO_CONFIG_CACHE, _GEO_CONFIG_TS
+    global _GEO_CONFIG_CACHE_MAP
     
-    # Return cached if valid
-    if _GEO_CONFIG_CACHE and (time.time() - _GEO_CONFIG_TS) < _CACHE_TTL:
-        return _GEO_CONFIG_CACHE
+    # [Fix] Locale-aware caching to support dynamic legends in different languages
+    try:
+        current_locale = str(get_locale())
+    except:
+        current_locale = 'en'
+
+    now = time.time()
+    
+    # Return cached if valid for current locale
+    if current_locale in _GEO_CONFIG_CACHE_MAP:
+        ts, cached_config = _GEO_CONFIG_CACHE_MAP[current_locale]
+        if (now - ts) < _CACHE_TTL:
+            return cached_config
 
     settings = GeoSetting.query.first()
     if settings:
-        logger.info(f"[Geo Config Debug] Loaded Theme Config from DB: {settings.theme_config}")
+        logger.info(f"[Geo Config Debug] Loaded Theme Config from DB (Locale: {current_locale}): {settings.theme_config}")
 
     if not settings:
         settings = GeoSetting()
@@ -65,22 +76,13 @@ def get_geo_config():
     config = settings.state_dict()
     
     # [New] Expose Search Provider
-    # `state_dict` includes `providers` as parsed dict, so config['providers']['search_provider'] is available if set.
-    # explicit set for clarity if needed, but existing logic covers it since `providers` is loaded.
-    
     config['search_provider'] = config.get('providers', {}).get('search_provider')
 
     # Add Active Layers
-    # Each layer needs: name, type, url, attribution, etc.
-    # We combine DB data (GeoLayer) with static definition (parse_input_information)
-    
-    # 1. Active Layers
-    # Separated logic for clarity
     config['layers'] = get_active_geo_layers(config.get('keys', {}))
     
-    # Update Cache
-    _GEO_CONFIG_CACHE = config
-    _GEO_CONFIG_TS = time.time()
+    # Update Cache for current locale
+    _GEO_CONFIG_CACHE_MAP[current_locale] = (now, config)
     
     return config
 

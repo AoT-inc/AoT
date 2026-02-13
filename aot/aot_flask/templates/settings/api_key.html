@@ -5,34 +5,13 @@
 {% block title %} - {{_('Settings')}}: {{_('API Key Management')}}{% endblock %}
 
 {% block head %}
-<link href="/static/css/toastr.min.css" rel="stylesheet"/>
-<script src="/static/js/toastr.min.js"></script>
 
-<script>
-  $(document).ready(function () {
-    toastr.options = {
-      "closeButton": true,
-      "debug": false,
-      "newestOnTop": false,
-      "progressBar": false,
-      "positionClass": "toast-top-left",
-      "preventDuplicates": false,
-      "onclick": null,
-      "showDuration": "300",
-      "hideDuration": "1000",
-      "timeOut": "5000",
-      "extendedTimeOut": "1000",
-      "showEasing": "swing",
-      "hideEasing": "linear",
-      "showMethod": "fadeIn",
-      "hideMethod": "fadeOut"
-    }
 
     $('form.api-key-form').submit(function (e) {
       let submitter_btn = $(e.originalEvent.submitter);
       let form = $(this);
 
-      {% if not misc.hide_alert_info %}toastr['info']('{{_("Processing command...")}}');{% endif %}
+      window.showToast('{{_("Processing command...")}}', 'info');
       
       $.ajax({
         type: "POST",
@@ -51,17 +30,15 @@
               location.reload(); // Simplest way to refresh the list and usage info
             }
             
-            {% if not misc.hide_alert_success %}
             if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-              toastr['success'](data.data.messages.success.join(", "));
+              window.showToast(data.data.messages.success.join(", "), 'success');
             }
-            {% endif %}
           } else {
-            toastr['error']('{{_("Error")}}: ' + data.data.messages.error.join(", "));
+            window.showToast('{{_("Error")}}: ' + data.data.messages.error.join(", "), 'error');
           }
         },
         error: function() {
-          toastr['error']('{{_("Error connecting to server.")}}');
+          window.showToast('{{_("Error connecting to server.")}}', 'error');
         }
       });
       e.preventDefault();

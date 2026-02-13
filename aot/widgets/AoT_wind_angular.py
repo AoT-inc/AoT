@@ -160,12 +160,11 @@ def generate_page_variables(widget_unique_id, widget_options):
 
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_wind_angular',
-    'widget_name': 'AoT 풍향/풍속 게이지',
+    'widget_name': lazy_gettext('AoT Wind Direction/Speed Gauge'),
     'widget_library': 'Native SVG',
     'no_class': True,
 
-    # 위젯 설명 (한글화)
-    'message': '풍향은 원형 링(0~360°)으로 표시하고, 중앙에는 풍속을 표시합니다. 주요 8개 방위(0/45/90/135/180/225/270/315°) 보조선을 제공합니다.',
+    'message': lazy_gettext('Displays wind direction on a circular ring (0-360°) and wind speed in the center. Includes auxiliary lines for the 8 primary compass points.'),
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -182,16 +181,16 @@ WIDGET_INFORMATION = {
             'type': 'select_measurement',
             'default_value': '',
             'options_select': ['Input', 'Function'],
-            'name': lazy_gettext('풍향 측정값'),
-            'phrase': lazy_gettext('풍향(0~360°) 측정값을 선택하세요')
+            'name': lazy_gettext('Wind Direction Measurement'),
+            'phrase': lazy_gettext('Select the wind direction (0-360°) measurement.')
         },
         {
             'id': 'measurement_speed',
             'type': 'select_measurement',
             'default_value': '',
             'options_select': ['Input', 'Function'],
-            'name': lazy_gettext('풍속 측정값'),
-            'phrase': lazy_gettext('풍속 측정값을 선택하세요')
+            'name': lazy_gettext('Wind Speed Measurement'),
+            'phrase': lazy_gettext('Select the wind speed measurement.')
         },
         {
             'id': 'max_measure_age',
@@ -199,8 +198,8 @@ WIDGET_INFORMATION = {
             'default_value': 1800,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('최대 유효 시간'), lazy_gettext('초')),
-            'phrase': lazy_gettext('해당 측정값의 최대 유효 시간을 설정하세요')
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Maximum Validity Time'), lazy_gettext('Seconds')),
+            'phrase': lazy_gettext('Set the maximum validity for the measurement.')
         },
         {
             'id': 'refresh_seconds',
@@ -208,80 +207,78 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': lazy_gettext('위젠을 새로고침할 주기를 설정하세요')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Set the refresh interval for the widget.')
         },
         {
             'id': 'decimal_places',
             'type': 'integer',
             'default_value': 1,
-            'name': lazy_gettext('소수점 자릿수'),
-            'phrase': lazy_gettext('소수점 이하 표시 자릿수를 설정하세요')
+            'name': lazy_gettext('Decimal Places'),
+            'phrase': lazy_gettext('Set the number of decimal places to display.')
         },
         {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
-            'name': lazy_gettext('최소값'),
-            'phrase': lazy_gettext('게이지의 최소값을 설정하세요')
+            'name': lazy_gettext('Minimum Value'),
+            'phrase': lazy_gettext('Set the minimum value for the gauge.')
         },
         {
             'id': 'max',
             'type': 'float',
             'default_value': 360,
-            'name': lazy_gettext('최대값'),
-            'phrase': lazy_gettext('게이지의 최대값을 설정하세요')
+            'name': lazy_gettext('Maximum Value'),
+            'phrase': lazy_gettext('Set the maximum value for the gauge.')
         },
         {
-            # ★ 데이터 폰트 크기
             'id': 'text_font_size',
             'type': 'float',
             'default_value': 1.5,
-            'name': lazy_gettext('데이터 문자 크기'),
-            'phrase': lazy_gettext('게이지 내부 데이터의 문자 크기를 설정하세요. 기본값 1.5는 중간 크기입니다.')
+            'name': lazy_gettext('Data Font Size'),
+            'phrase': lazy_gettext('Set the font size for the data inside the gauge. (Default: 1.5)')
         },
         {
-            # ★ 단위 폰트 크기
             'id': 'unit_font_size',
             'type': 'float',
             'default_value': 0.7,
-            'name': lazy_gettext('단위 문자 크기'),
-            'phrase': lazy_gettext('게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.')
+            'name': lazy_gettext('Unit Font Size'),
+            'phrase': lazy_gettext('Set the font size for the unit inside the gauge. (Default: 0.7)')
         },
         {
             'id': 'border_color',
             'type': 'hidden',
             'default_value': '#D5D5D5',
-            'name': lazy_gettext('테두리 색상'),
-            'phrase': lazy_gettext('팔레트에서 선택됩니다. 기본 #D5D5D5')
+            'name': lazy_gettext('Border Color'),
+            'phrase': lazy_gettext('Selected from the palette. (Default: #D5D5D5)')
         },
         {
             'id': 'direction_color',
             'type': 'hidden',
             'default_value': '#F4D624',
-            'name': lazy_gettext('바람 방향 표시 색상'),
-            'phrase': lazy_gettext('팔레트에서 선택됩니다. 기본 #F4D624')
+            'name': lazy_gettext('Wind Direction Indicator Color'),
+            'phrase': lazy_gettext('Selected from the palette. (Default: #F4D624)')
         },
         {
             'id': 'direction_dot_px',
             'type': 'float',
             'default_value': 10,
-            'name': lazy_gettext('방향 점 크기(px)'),
-            'phrase': lazy_gettext('바람 방향 원형 점의 반지름(px)을 지정합니다. 예: 10')
+            'name': lazy_gettext('Direction Dot Size (px)'),
+            'phrase': lazy_gettext('Set the radius (px) of the wind direction indicator dot. (Default: 10)')
         },
         {
             'id': 'direction_label_font_em',
             'type': 'float',
             'default_value': 1.5,
-            'name': lazy_gettext('방위 문자 크기(em)'),
-            'phrase': lazy_gettext('풍향(남/동/북서 등) 문자 크기를 em 배율로 설정합니다. 기본 1.0')
+            'name': lazy_gettext('Compass Font Size (em)'),
+            'phrase': lazy_gettext('Set the font size for the compass labels (N/E/S/W etc.) in em scale. (Default: 1.0)')
         },
         {
             'id': 'text_y_offset',
             'type': 'float',
             'default_value': 5,
-            'name': lazy_gettext('데이터 위치 오프셋'),
-            'phrase': lazy_gettext('게이지 내부 데이터 텍스트의 수직 위치 오프셋(%)을 설정하세요. 기본 5는 중심보다 약간 아래입니다.')
+            'name': lazy_gettext('Data Position Offset'),
+            'phrase': lazy_gettext('Set the vertical position offset (%) for the data text inside the gauge. (Default: 5)')
         }
     ],
 
@@ -301,7 +298,7 @@ WIDGET_INFORMATION = {
         .aot-color-row label { font-weight:600; margin-right:6px; }
       </style>
       <div class=\"aot-color-row\">
-        <label for=\"border_color\">테두리 색상</label>
+        <label for=\"border_color\">{{_('Border Color')}}</label>
         <input id=\"border_color\" name=\"border_color\" type=\"color\" value=\"{{ widget_options.get('border_color', '#D5D5D5') }}\" class=\"form-control\" style=\"width: 42px; height: 28px; padding: 0;\">
         {% set border_palette = ['#F4D624','#3E3F46','#8BC1C1','#2AA876','#1F78B4','#FEA60B'] %}
         {% for c in border_palette %}
@@ -309,7 +306,7 @@ WIDGET_INFORMATION = {
         {% endfor %}
       </div>
       <div class=\"aot-color-row\">
-        <label for=\"direction_color\">바람 방향 표시 색상</label>
+        <label for=\"direction_color\">{{_('Wind Direction Indicator Color')}}</label>
         <input id=\"direction_color\" name=\"direction_color\" type=\"color\" value=\"{{ widget_options.get('direction_color', '#F4D624') }}\" class=\"form-control\" style=\"width: 42px; height: 28px; padding: 0;\">
         {% set dir_palette = ['#DF5353','#1F78B4','#2AA876','#7B5EA7','#000000','#FF7F0E'] %}
         {% for c in dir_palette %}
@@ -318,11 +315,11 @@ WIDGET_INFORMATION = {
       </div>
       <div class=\"form-row\" style=\"align-items:center; gap:10px;\">
         <div class=\"col-auto\">
-          <label class=\"control-label\" for=\"direction_dot_px\">방향 점 크기(px)</label>
+          <label class=\"control-label\" for=\"direction_dot_px\">{{_('Direction Dot Size (px)')}}</label>
           <input id=\"direction_dot_px\" name=\"direction_dot_px\" class=\"form-control\" type=\"number\" min=\"2\" max=\"20\" step=\"1\" value=\"{{ widget_options.get('direction_dot_px', 10) }}\">
         </div>
         <div class=\"col-auto\">
-          <label class=\"control-label\" for=\"text_y_offset\">데이터 위치 오프셋(%)</label>
+          <label class=\"control-label\" for=\"text_y_offset\">{{_('Data Position Offset (%%)')}}</label>
           <input id=\"text_y_offset\" name=\"text_y_offset\" class=\"form-control\" type=\"number\" min=\"-30\" max=\"40\" step=\"1\" value=\"{{ widget_options.get('text_y_offset', 5) }}\">
         </div>
       </div>
@@ -399,13 +396,13 @@ WIDGET_INFORMATION = {
     var labels = [{d:0,t:'N'},{d:90,t:'E'},{d:180,t:'S'},{d:270,t:'W'}];
     labels.forEach(function(o){
       var rad = (o.d - 90) * Math.PI / 180.0;
-      var rx = cx + Math.cos(rad) * (rOuter - 19);
-      var ry = cy + Math.sin(rad) * (rOuter - 19) + 4;
+      var rx = cx + Math.cos(rad) * (rOuter - 9);
+      var ry = cy + Math.sin(rad) * (rOuter - 9) + 4;
       var text = document.createElementNS(svgNS, 'text');
       text.setAttribute('x', rx);
       text.setAttribute('y', ry);
       text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('font-size', Math.max(10, size * 0.055));
+      text.setAttribute('font-size', Math.max(12, size * 0.07));
       text.setAttribute('fill', '#9aa0a6');
       text.textContent = o.t;
       svg.appendChild(text);
@@ -475,9 +472,11 @@ WIDGET_INFORMATION = {
     window.widget[widget_id].__rOuter = rOuter;
   }
 
-  function aotWindAngleToKorean8(deg){
+  function aotWindAngleToCompass8(deg){
     var d = ((Number(deg)%360)+360)%360;
-    var card = function(x){ return ['북','동','남','서'][x]; };
+    var card = function(x){ 
+      return [window._('N'), window._('E'), window._('S'), window._('W')][x]; 
+    };
     // If within 22.5° of a cardinal, return it directly
     var near = [0,90,180,270];
     for (var i=0;i<near.length;i++){
@@ -485,15 +484,15 @@ WIDGET_INFORMATION = {
         return card(i);
       }
     }
-    // Determine quadrant and order by closeness
+    // Determine quadrant
     if (d > 0 && d < 90){ // N-E
-      return (Math.abs(d-0) < Math.abs(d-90)) ? '북동' : '동북';
+      return window._('NE');
     } else if (d > 90 && d < 180){ // E-S
-      return (Math.abs(d-90) < Math.abs(d-180)) ? '동남' : '남동';
+      return window._('SE');
     } else if (d > 180 && d < 270){ // S-W
-      return (Math.abs(d-180) < Math.abs(d-270)) ? '남서' : '서남';
+      return window._('SW');
     } else { // 270..360 or 0
-      return (Math.abs(d-270) < Math.abs(d-360)) ? '서북' : '북서';
+      return window._('NW');
     }
   }
 
@@ -507,11 +506,9 @@ WIDGET_INFORMATION = {
     if (!isFinite(d)) d = 0;
     d = ((d % 360) + 360) % 360; // wrap into [0,360)
     // Our needle geometry points to North when 0°, so rotate by d directly.
-    // [Fix] User requests Flow Direction (Destination) instead of Meteorological Source.
-    // So we rotate 180 degrees (0° North Wind -> Points South).
-    g.setAttribute('transform', 'rotate(' + ((d + 180) % 360) + ' ' + cx + ' ' + cy + ')');
+    g.setAttribute('transform', 'rotate(' + (d % 360) + ' ' + cx + ' ' + cy + ')');
     var lbl = document.getElementById('dirtext-' + widget_id);
-    if (lbl) lbl.textContent = aotWindAngleToKorean8(d);
+    if (lbl) lbl.textContent = aotWindAngleToCompass8(d);
   }
 
   function aotWindUpdateSpeed(widget_id, val, unit, decimals, dataFontSizeEm, unitFontSizeEm) {

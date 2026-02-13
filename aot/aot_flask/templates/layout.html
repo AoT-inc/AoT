@@ -99,7 +99,8 @@
     {{ {
       'hide_success': settings.hide_alert_success | default(false),
       'hide_info': settings.hide_alert_info | default(false),
-      'hide_warning': settings.hide_alert_warning | default(false)
+      'hide_warning': settings.hide_alert_warning | default(false),
+      'hide_tooltips': settings.hide_tooltips | default(false)
     } | tojson | safe }}
   </script>
   <script>
@@ -107,16 +108,17 @@
       window.AoTGlobalSettings = JSON.parse(document.getElementById('aot-global-settings-json').textContent);
     } catch (e) {
       console.error("Failed to parse AoTGlobalSettings", e);
-      window.AoTGlobalSettings = { hide_success: false, hide_info: false, hide_warning: false };
+      window.AoTGlobalSettings = { hide_success: false, hide_info: false, hide_warning: false, hide_tooltips: false };
     }
     // Inject Server Data for Map Defaults
     window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
 
-    // [Internationalization] JS Bridge for Translations
+    /**
+     * [Internationalization] JS Bridge for Translations
+     */
     </script>
     <script src="{{ url_for('routes_locale_api.get_js_translations') }}"></script>
     <script>
-
     /**
      * Translation helper for JS
      * @param {string} key - The translation key or the original string
@@ -124,6 +126,80 @@
     window._ = function(key) {
         return window.AOT_I18N[key] || key;
     };
+
+    /**
+     * [Standardized Toast Notification]
+     * Centralized toast handling that respects AoTGlobalSettings.
+     * @param {string} message - The message to display
+     * @param {string} type - Toast type: 'success', 'info', 'warning', 'error'
+     */
+    window.showToast = function (message, type = 'info') {
+        const settings = window.AoTGlobalSettings || {};
+        let shouldHide = false;
+        if (type === 'success' && settings.hide_success) shouldHide = true;
+        if (type === 'info' && settings.hide_info) shouldHide = true;
+        if ((type === 'warning' || type === 'error') && settings.hide_warning) shouldHide = true;
+
+        if (shouldHide) return;
+
+        if (typeof toastr !== 'undefined' && toastr[type]) {
+            toastr[type](message);
+        } else {
+            console.log(`[AoTToast] ${type}: ${message}`);
+        }
+    };
+
+    /**
+     * [Standardized Tooltip Initialization]
+     * Centralized tooltip handling that respects AoTGlobalSettings.
+     * @param {string|jQuery} selector - The element(s) to initialize tooltips on
+     * @param {Object} options - Tooltip options
+     */
+    window.initTooltip = function (selector, options = {}) {
+        const settings = window.AoTGlobalSettings || {};
+        if (settings.hide_tooltips) return; // Respect global setting
+
+        const $elements = $(selector);
+        if ($elements.length && typeof $elements.tooltip === 'function') {
+            $elements.tooltip(options);
+        }
+    };
+
+    /**
+     * [Global Tooltip Suppression]
+     * If hide_tooltips is enabled, suppress both Leaflet and Native tooltips.
+     */
+    (function () {
+        const settings = window.AoTGlobalSettings || {};
+        if (settings.hide_tooltips) {
+            // 1. Suppress Leaflet Tooltips globally
+            // We hook into L.Tooltip.prototype.onAdd to prevent tooltips from being added to the map.
+            if (typeof L !== 'undefined' && L.Tooltip && L.Tooltip.prototype) {
+                const originalOnAdd = L.Tooltip.prototype.onAdd;
+                L.Tooltip.prototype.onAdd = function (map) {
+                    console.log("[AoTMap] Suppressing Leaflet tooltip (globals settings)");
+                    return this; // Return without adding to map
+                };
+            }
+
+            // 2. Suppress Native Browser Tooltips
+            // Temporarily remove 'title' attribute on mouseenter to prevent native tooltip.
+            // We use delegation on 'body' to catch all elements.
+            $(document).on('mouseenter', '[title]', function () {
+                const $el = $(this);
+                const title = $el.attr('title');
+                if (title) {
+                    $el.data('aot-stored-title', title).removeAttr('title');
+                }
+            }).on('mouseleave', '[title], :data(aot-stored-title)', function () {
+                const $el = $(this);
+                const storedTitle = $el.data('aot-stored-title');
+                if (storedTitle) {
+                    $el.attr('title', storedTitle).removeData('aot-stored-title');
+                }
+            });
+        }
+    })();
   </script>
 
   {% block head %}{% endblock %}
@@ -195,13 +271,14 @@
         }
       });
 
-      // [Global Tooltip] Activate global tooltips for input elements (Delegation) Corresponds to [Iteration 16]
-      $('body').tooltip({
-        selector: '[data-toggle="tooltip"], input[title], textarea[title], .btn[title], .btn-toggle[title]',
-        container: 'body',
-        trigger: 'hover',
-        delay: { "show": 500, "hide": 100 } /* Slight delay to prevent interference with fast operations */
-      });
+      if (window.AoTGlobalSettings && !window.AoTGlobalSettings.hide_tooltips) {
+        $('body').tooltip({
+          selector: '[data-toggle="tooltip"], input[title], textarea[title], .btn[title], .btn-toggle[title], .aot-custom-btn[title], .btn-circle[title], .leaflet-container [title]',
+          container: 'body',
+          trigger: 'hover',
+          delay: { "show": 500, "hide": 100 }
+        });
+      }
       
       // [Global Fix] Set Bootstrap-Select Defaults
       if ($.fn.selectpicker) {
@@ -523,7 +600,7 @@
 
   <script>
     $(document).ready(function () {
-      $('[data-toggle="tooltip"]').tooltip();
+      /* window.initTooltip handles this or it's handled by global delegation above */
       $('.selectpicker').selectpicker();
       /* Old JS removed - moved to head script with .burger.active logic */
       // Force close collapse in desktop mode upon window resize

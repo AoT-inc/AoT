@@ -174,7 +174,7 @@
         border-radius: .25rem;
         box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
         display: none;
-        max-height: 240px;
+        max-height: 200px;
         overflow-y: auto;
       }
       .results.show {
@@ -297,17 +297,8 @@
         }
 
         showToast(message, type = 'info') {
-            const settings = window.AoTGlobalSettings || {};
-            let shouldHide = false;
-            // Respect global hide settings
-            if (type === 'success' && settings.hide_success) shouldHide = true;
-            if (type === 'info' && settings.hide_info) shouldHide = true;
-            if ((type === 'warning' || type === 'error') && settings.hide_warning) shouldHide = true;
-
-            if (shouldHide) return;
-
-            if (window.toastr && window.toastr[type]) {
-                window.toastr[type](message);
+            if (window.showToast) {
+                window.showToast(message, type);
             } else {
                 console.log(`[AoTMapSearch] ${type}: ${message}`);
             }

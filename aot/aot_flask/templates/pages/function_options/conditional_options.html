@@ -20,7 +20,8 @@
     </div>
 
     {# Location settings and map #}
-    <div class="mt-3 mb-3">
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
         {{ render_device_map(
         'function',
         each_function.unique_id,
@@ -42,6 +43,7 @@
         map_overlays=map_overlays,
         save_id='mod_function_save_' ~ each_function.unique_id
         ) }}
+      </div>
     </div>
 
     <div class="aot-modal-container mb-3">

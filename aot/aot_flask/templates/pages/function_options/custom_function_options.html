@@ -13,6 +13,8 @@
 
 
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
         {% set _icon_field = form_function.marker_icon if form_function is defined and form_function.marker_icon is defined else None %}
         {% set _color_field = form_function.marker_color if form_function is defined and form_function.marker_color is defined else None %}
         {% set _size_field = form_function.marker_size if form_function is defined and form_function.marker_size is defined else None %}
@@ -45,6 +47,8 @@
             map_configs=(map_configs if map_configs is defined else []),
             map_overlays=map_overlays
         ) }}
+      </div>
+    </div>
 
     {% if each_function.device in dict_controllers %}
     

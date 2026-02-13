@@ -363,39 +363,7 @@
 <!-- Page Specific Logic -->
 <script src="{{ url_for('static', filename='js/geo/aot-geo-settings.js') }}"></script>
 
-<!-- Standard Toastr Config (Match Dashboard) -->
-<script>
-    $(document).ready(function() {
-      if (typeof toastr !== 'undefined') {
-          toastr.options = {
-            "closeButton": true,
-            "debug": false,
-            "newestOnTop": false,
-            "progressBar": false,
-            "positionClass": "toast-top-left",
-            "preventDuplicates": false,
-            "onclick": null,
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": 15000,
-            "extendedTimeOut": 10000,
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-          };
-      }
-    });
-</script>
-<style>
-    /* Force Toastr position and Z-Index to beat Navbar and Modals */
-    #toast-container.toast-top-left {
-      top: 12px !important;
-      left: 12px !important;
-      z-index: 2147483647 !important; /* Max Z-Index */
-      position: fixed !important;
-    }
-</style>
+
 <script>
     // Inject Server Data
     window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};

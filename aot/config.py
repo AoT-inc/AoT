@@ -18,18 +18,18 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = '718f314963c2'
-AOT_VERSION = '26.0.6'
+AOT_VERSION = '26.0.7'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
 # Set False to enable upgrading to the latest Release version (default).
 # Do not use this feature unless you know what you're doing or have been
 # instructed to do so, as it can really mess up your system.
-FORCE_UPGRADE_MASTER = True
+FORCE_UPGRADE_MASTER = False
 
 # Final release for each major version number
 # Used to determine proper upgrade page to display
-FINAL_RELEASES = ['5.7.3', '6.4.7', '7.10.0']
+FINAL_RELEASES = ['8.16.14']
 
 # ENABLE FLASK PROFILER
 # Accessed at https://127.0.0.1/aot-flask-profiler

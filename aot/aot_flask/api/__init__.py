@@ -59,18 +59,20 @@ def api_v1(data, code, headers):
 
 
 def init_api(app):
+    import aot.aot_flask.api.ai
     import aot.aot_flask.api.camera
     import aot.aot_flask.api.choices
     import aot.aot_flask.api.controller
     import aot.aot_flask.api.daemon
     import aot.aot_flask.api.export_import
     import aot.aot_flask.api.function
+    import aot.aot_flask.api.geo
     import aot.aot_flask.api.input
+    import aot.aot_flask.api.locale
     import aot.aot_flask.api.measurement
     import aot.aot_flask.api.note
     import aot.aot_flask.api.output
     import aot.aot_flask.api.pid
     import aot.aot_flask.api.settings
-    import aot.aot_flask.api.geo
 
     app.register_blueprint(api_blueprint)

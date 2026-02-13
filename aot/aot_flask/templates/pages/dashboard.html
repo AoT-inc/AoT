@@ -8,56 +8,18 @@
 
 {% block head %}
   <script>
-  let widget = [];
-  </script>
-
-
-  <link href="/static/css/toastr.min.css" rel="stylesheet" />
-  <script src="/static/js/toastr.min.js"></script>
-
-  <script>
-    $(document).ready(function() {
-      toastr.options = {
-        "closeButton": true,
-        "debug": false,
-        "newestOnTop": false,
-        "progressBar": false,
-        "positionClass": "toast-top-left",
-        "preventDuplicates": false,
-        "onclick": null,
-        "showDuration": "300",
-        "hideDuration": "1000",
-        "timeOut": 15000,
-        "extendedTimeOut": 10000,
-        "showEasing": "swing",
-        "hideEasing": "linear",
-        "showMethod": "fadeIn",
-        "hideMethod": "fadeOut"
-      };
-
-      {# Convert Flashed Messages to Toasts #}
+    let widget = [];
+    $(document).ready(function () {
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
-            {% set toast_type = category %}
-            {% if category == 'message' %}{% set toast_type = 'info' %}{% endif %}
-            {% if category == 'error' %}{% set toast_type = 'error' %}{% endif %}
+            {% set toast_type = 'info' %}
             {% if category == 'warning' %}{% set toast_type = 'warning' %}{% endif %}
             {% if category == 'success' %}{% set toast_type = 'success' %}{% endif %}
-            {% if category == 'success' %}{% set toast_type = 'success' %}{% endif %}
+            {% if category == 'danger' or category == 'error' %}{% set toast_type = 'error' %}{% endif %}
             
-            // [Standardized Toast Check]
-            ;(function(){
-                var msg = '{{ message }}';
-                var type = '{{ toast_type }}';
-                var settings = window.AoTGlobalSettings || {};
-                
-                if (type === 'success' && settings.hide_success) return;
-                if (type === 'info' && settings.hide_info) return;
-                if ((type === 'warning' || type === 'error') && settings.hide_warning) return;
-                
-                toastr[type](msg);
-            })();
+            // [Standardized Toast] Use global window.showToast
+            window.showToast('{{ message }}', '{{ toast_type }}');
           {% endfor %}
         {% endif %}
       {% endwith %}

@@ -126,11 +126,11 @@ def controller_activate_deactivate(unique_id, state):
 
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_controller_act_deact',
-    'widget_name': 'AoT 컨트롤러 스위치',
+    'widget_name': lazy_gettext('AoT Controller Switch'),
     'widget_library': '',
     'no_class': True,
 
-    'message': '컨트롤러를 켜고 끌 수 있는 스위치.',
+    'message': lazy_gettext('Switch to turn controllers on and off.'),
 
     'widget_width': 24,
     'widget_height': 5,
@@ -152,8 +152,8 @@ WIDGET_INFORMATION = {
                 'Trigger'
                 # PID, CustomController 등은 필요시 확장 가능
             ],
-            'name': lazy_gettext('컨트롤러'),
-            'phrase': lazy_gettext('컨트롤러를 선택하세요.')
+            'name': lazy_gettext('Controller'),
+            'phrase': lazy_gettext('Select the controller.')
         },
         {
             'id': 'refresh_seconds',
@@ -161,8 +161,8 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': lazy_gettext('위젯을 주기적으로 새로 고침하는 간격 (초)')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Frequency of widget refresh (seconds)')
         }
     ],
 
@@ -175,19 +175,26 @@ WIDGET_INFORMATION = {
 {%- if each_widget.name %}
   <span>{{ each_widget.name }}</span>
 {%- else %}
-  <span>컨트롤러 스위치</span>
+  <span>{{_('Controller Switch')}}</span>
 {%- endif %}
 """,
 
     # -------------------- BODY --------------------
     'widget_dashboard_body': """
+    <style>
+    /* 컨트롤러 위젯 전용 UI 개선 */
+    #frame_aot_{{each_widget.unique_id}} .col-aot-2 {
+      width: 60px !important;
+    }
+    </style>
   <div class="frame-aot inactive-background"
+
       id="frame_aot_{{each_widget.unique_id}}">
     
     <div class="row-aot-1-1">
       <div class="col-aot-1">
         <span class="prt-text" id="aot_controller_txt_{{each_widget.unique_id}}">
-          대기중
+          {{_('Inactive')}}
         </span>
       </div>
 
@@ -205,6 +212,7 @@ WIDGET_INFORMATION = {
     </div>
 
   </div>
+
 """,
 
     # -------------------- JAVASCRIPT --------------------
@@ -262,11 +270,11 @@ WIDGET_INFORMATION = {
     if(isActive){
       toggler.checked = true;
       contDiv.classList.add("active-background");
-      stateSpan.innerHTML = "작동중";
+      stateSpan.innerHTML = "{{_('Active')}}";
     } else {
       toggler.checked = false;
       contDiv.classList.add("inactive-background");
-      stateSpan.innerHTML = "대기중";
+      stateSpan.innerHTML = "{{_('Inactive')}}";
     }
   }
 

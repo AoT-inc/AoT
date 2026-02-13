@@ -268,6 +268,14 @@ class InputModule(AbstractInput):
         else:
             self.logger.error("nx, ny values are not set.")
 
+        # Ensure KMA_PATH exists
+        if not os.path.exists(KMA_PATH):
+            try:
+                os.makedirs(KMA_PATH, exist_ok=True)
+                self.logger.info(f"Created KMA_PATH directory: {KMA_PATH}")
+            except Exception as e:
+                self.logger.error(f"Error creating KMA_PATH directory {KMA_PATH}: {e}")
+
         try:
             timeout_opt = self.get_custom_option("api_timeout")
             if timeout_opt is not None and timeout_opt != "":
@@ -634,9 +642,10 @@ class InputModule(AbstractInput):
         file_list = [f for f in os.listdir(KMA_PATH)
                      if f.startswith(self.input_dev.unique_id + "_") and f.endswith(".json")]
         if not file_list:
-            self.logger.error("No API response files found in KMA_PATH.")
+            self.logger.error(f"No API response files found in KMA_PATH: {KMA_PATH}")
             return {}
-        file_list_sorted = sorted(file_list, key=lambda f: os.path.getmtime(os.path.join(KMA_PATH, f)))
+        # [Improved] Sort by filename to ensure consistency across base dates/times
+        file_list_sorted = sorted(file_list)
         self.logger.info(f"Forecast API response files found: {file_list_sorted}")
         
         # 3. 각 파일의 데이터를 로드하여 사전에 저장
@@ -827,7 +836,8 @@ class InputModule(AbstractInput):
             self.logger.warning(f"Retrying with previous base time: {base_date} {base_time} (attempt {attempts})")
 
         if not all_items:
-            self.logger.error("No valid data in API response after retries.")
+            self.logger.error("No valid data in API response after retries. Attempting to refresh JSON with existing cache.")
+            self.generate_forecast_json()  # Try to update JSON even if fetch fails
             return
 
         pub_dt = self._calculate_publication_time(all_items)

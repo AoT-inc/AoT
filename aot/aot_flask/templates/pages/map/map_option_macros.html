@@ -2,7 +2,7 @@
 modal_id, height, width, zoom, center, form_id, icon_value, color_value, size_value, icon_name, color_name, size_name,
 map_config_id, map_configs, map_overlays, shape_on_color, shape_off_color, shape_border_color, save_id, shapes_val=None) %}
 
-<div class="map-option-wrapper position-relative" style="height: {{ height or '450px' }}; width: 100%; border-radius: 8px; overflow: hidden;">
+<div class="map-option-wrapper position-relative" style="height: {{ height or '450px' }}; width: 100%; border-radius: 8px; overflow: hidden; padding-bottom: 16px;">
     <!-- Hidden Input for Shape Persistence -->
     <input type="hidden" id="input-drawing-shapes-{{ unique_id }}" name="drawing_shapes" value="{{ shapes_val or '' }}">
     

@@ -13,22 +13,6 @@ window.epoch_to_timestamp = function (epoch) {
     return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-// [Standardized Toast Notification]
-window.showToast = function (message, type = 'info') {
-    const settings = window.AoTGlobalSettings || {};
-    let shouldHide = false;
-    if (type === 'success' && settings.hide_success) shouldHide = true;
-    if (type === 'info' && settings.hide_info) shouldHide = true;
-    if ((type === 'warning' || type === 'error') && settings.hide_warning) shouldHide = true;
-
-    if (shouldHide) return;
-
-    if (typeof toastr !== 'undefined' && toastr[type]) {
-        toastr[type](message);
-    } else {
-        console.log(`[AoTToast] ${type}: ${message}`);
-    }
-};
 
 /**
  * Module: Sticky Header Logic
@@ -132,7 +116,7 @@ const DashboardGrid = {
             resizeTimer = setTimeout(() => this.syncLayout(), 100);
         });
 
-        // Event: Resize Stop (Trigger Global Resize & Sync data-desktop-w)
+        // Event: Resize Stop (Trigger Global Resize & Sync data-desktop attributes)
         window.grid.on('resizestop', (event, el) => {
             const widgetId = el.getAttribute('gs-id');
             console.log(`Dashboard: Widget ${widgetId} resized. Triggering global resize...`);
@@ -140,18 +124,29 @@ const DashboardGrid = {
             // 1. Trigger global resize to tell all libraries (Highcharts, etc) to reflow
             window.dispatchEvent(new Event('resize'));
 
-            // 2. Sync data-desktop attributes if on Desktop mode to preserve user changes
+            // 2. Sync data-desktop attributes (Handling Mobile 2 -> Desktop 24 mapping)
             if (window.grid.getColumn() === 24) {
                 el.setAttribute('data-desktop-w', el.getAttribute('gs-w'));
                 el.setAttribute('data-desktop-x', el.getAttribute('gs-x'));
                 el.setAttribute('data-desktop-y', el.getAttribute('gs-y'));
+            } else {
+                // Mobile (2-column) to Desktop (24-column) mapping
+                const w = parseInt(el.getAttribute('gs-w') || "1");
+                const x = parseInt(el.getAttribute('gs-x') || "0");
+                el.setAttribute('data-desktop-w', w * 12);
+                el.setAttribute('data-desktop-x', x * 12);
+                el.setAttribute('data-desktop-y', el.getAttribute('gs-y'));
             }
         });
 
-        // Event: Drag Stop (Sync data-desktop-x/y & Trigger global resize for flow changes)
+        // Event: Drag Stop (Sync data-desktop-x/y & Trigger global resize)
         window.grid.on('dragstop', (event, el) => {
             if (window.grid.getColumn() === 24) {
                 el.setAttribute('data-desktop-x', el.getAttribute('gs-x'));
+                el.setAttribute('data-desktop-y', el.getAttribute('gs-y'));
+            } else {
+                const x = parseInt(el.getAttribute('gs-x') || "0");
+                el.setAttribute('data-desktop-x', x * 12);
                 el.setAttribute('data-desktop-y', el.getAttribute('gs-y'));
             }
             window.dispatchEvent(new Event('resize'));
@@ -241,14 +236,41 @@ const DashboardGrid = {
     enableEditing() {
         // Persist layout on change
         window.grid.on('change', (event, items) => {
-            // [Fix v3] Strictly block saving if we are in syncing mode or mobile mode
-            if (this.isSyncing || window.grid.getColumn() !== 24) {
-                console.log("Dashboard: Save suppressed (syncing or mobile mode).");
+            // Block saving only during initial sync/layout transition
+            if (this.isSyncing) {
+                console.log("Dashboard: Save suppressed (syncing).");
                 return;
             }
 
+            // [Fix] Sync data-desktop attributes for all changed items
+            if (items) {
+                items.forEach(item => {
+                    const el = item.el;
+                    if (window.grid.getColumn() === 24) {
+                        el.setAttribute('data-desktop-w', item.w);
+                        el.setAttribute('data-desktop-x', item.x);
+                        el.setAttribute('data-desktop-y', item.y);
+                    } else {
+                        const w = parseInt(item.w || "1");
+                        const x = parseInt(item.x || "0");
+                        el.setAttribute('data-desktop-w', w * 12);
+                        el.setAttribute('data-desktop-x', x * 12);
+                        el.setAttribute('data-desktop-y', item.y);
+                    }
+                });
+            }
+
             try {
-                const payload = JSON.stringify(window.grid.save(false), null, '  ');
+                // [Fix] Map current layout back to Desktop coordinates for saving
+                const savePayload = window.grid.getGridItems().map(el => ({
+                    id: el.getAttribute('gs-id'),
+                    x: parseInt(el.getAttribute('data-desktop-x') || el.getAttribute('gs-x')),
+                    y: parseInt(el.getAttribute('gs-y')),
+                    w: parseInt(el.getAttribute('data-desktop-w') || el.getAttribute('gs-w')),
+                    h: parseInt(el.getAttribute('gs-h'))
+                }));
+
+                const payload = JSON.stringify(savePayload, null, '  ');
                 $.ajax({
                     url: "/save_dashboard_layout",
                     type: "POST",

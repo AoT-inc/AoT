@@ -203,8 +203,8 @@
 
 /* Map Section Style (Outside Box) */
 .map-option-section {
-    padding: 0 4px !important;
-    margin-bottom: 1.5rem !important;
+    padding: 0 !important;
+    margin-bottom: 10px !important;
 }
 
 /* Bootstrap Select Override (Fix Double Box Look) */

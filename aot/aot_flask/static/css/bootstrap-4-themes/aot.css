@@ -1316,9 +1316,9 @@ textarea::-moz-focus-inner {
 .btn-aot-slide-time::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 30px;
+  width: 20px;
   /* 썸 너비 */
-  height: 30px;
+  height: 20px;
   /* 썸 높이 */
   background: #F4D624;
   /* 썸 배경색 */

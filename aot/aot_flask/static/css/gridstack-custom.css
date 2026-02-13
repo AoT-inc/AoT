@@ -163,10 +163,33 @@
   }
 }
 
-/* Hide resize-handle arrows globally but keep resize hit-area */
+/* Improve visibility and touch area of resize handles, especially on mobile */
+/* Removed 'yellow diamond' effect by setting background-color to transparent and removing transform */
 .grid-stack-item > .ui-resizable-handle {
   background-image: none !important;
-  background-color: transparent !important;
+  background-color: transparent !important; 
   border: none !important;
-  opacity: 0 !important;
+  opacity: 1 !important; /* Keep it interactive */
+  width: 25px !important;
+  height: 25px !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  transform: none !important; /* Remove rotation that makes it a diamond */
+  cursor: se-resize;
+}
+
+/* On mobile, we still need a visual hint, but let's use a subtle corner triangle instead of a diamond */
+@media (max-width: 768px) {
+  .grid-stack-item > .ui-resizable-handle {
+    width: 35px !important;  /* Larger touch target */
+    height: 35px !important;
+    background: linear-gradient(135deg, transparent 70%, rgba(0,0,0,0.1) 70%) !important; /* Subtle triangle hint */
+  }
+}
+
+/* Remove hover background that was causing the yellow diamond effect */
+.grid-stack-item:hover > .ui-resizable-handle,
+.grid-stack-item > .ui-resizable-handle:active {
+  background-color: transparent !important;
+  opacity: 1 !important;
 }

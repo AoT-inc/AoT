@@ -27,47 +27,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css" />
 <script src="/static/js/gridstack-all.js"></script>
 
-<link href="/static/css/toastr.min.css" rel="stylesheet" />
-<script src="/static/js/toastr.min.js"></script>
 
-<script type="text/javascript">
-  $(document).ready(function () {
-    toastr.options = {
-      "closeButton": true,
-      "debug": false,
-      "newestOnTop": false,
-      "progressBar": false,
-      "positionClass": "toast-top-left",
-      "preventDuplicates": false,
-      "onclick": null,
-      "showDuration": "300",
-      "hideDuration": "1000",
-      "timeOut": "15000",
-      "extendedTimeOut": "10000",
-      "showEasing": "swing",
-      "hideEasing": "linear",
-      "showMethod": "fadeIn",
-      "hideMethod": "fadeOut"
-    };
-
-    // ---- Ensure widget/dashboard modals are attached to <body> (z-index/stacking fix) ----
-    (function () {
-      try {
-        // Move existing modals under body once
-        $('.grid-stack-item .modal').each(function () {
-          const $m = $(this);
-          if (!$m.parent().is('body')) { $m.appendTo('body'); }
-        });
-        // On show, ensure any dynamically created/modals-included are also moved
-        $(document).on('shown.bs.modal', function (ev) {
-          const $m = $(ev.target);
-          if ($m && !$m.parent().is('body')) { $m.appendTo('body'); }
-        });
-      } catch (e) { /* no-op if jQuery/Bootstrap not present */ }
-    })();
-    // ---- end modal attach fix ----
-  });
-</script>
 {% include 'pages/map/map_assets.html' %}
 {% endblock %}
 
@@ -225,26 +185,12 @@
   });
 
   function popup_response(data) {
-    if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
-      toastr['error']('{{ _("Error:") }} ' + data.data.messages.error.join(", "));
-    }
-
-    if (!{{ misc.hide_alert_warning | tojson }}) {
-      if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-        toastr['warning']('{{ _("Warning:") }} ' + data.data.messages.warning.join(", "));
-      }
-    }
-
-    if (!{{ misc.hide_alert_info | tojson }}) {
-      if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-        toastr['info']('{{ _("Info:") }} ' + data.data.messages.info.join(", "));
-      }
-    }
-
-    if (!{{ misc.hide_alert_success | tojson }}) {
-      if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-        toastr['success']('{{ _("Success:") }} ' + data.data.messages.success.join(", "));
-      }
+    if (data && data.data && data.data.messages) {
+      const msgs = data.data.messages;
+      if (msgs.error && msgs.error.length) window.showToast('{{ _("Error:") }} ' + msgs.error.join(", "), 'error');
+      if (msgs.warning && msgs.warning.length) window.showToast('{{ _("Warning:") }} ' + msgs.warning.join(", "), 'warning');
+      if (msgs.info && msgs.info.length) window.showToast('{{ _("Info:") }} ' + msgs.info.join(", "), 'info');
+      if (msgs.success && msgs.success.length) window.showToast('{{ _("Success:") }} ' + msgs.success.join(", "), 'success');
     }
   }
 
@@ -384,7 +330,7 @@
       $form = $(button).closest('form');
     }
     if (!$form.length) {
-      toastr['error']('Error: form not found for action ' + action);
+      window.showToast('Error: form not found for action ' + action, 'error');
       return false;
     }
     let form_values = getFormData($form);
@@ -405,10 +351,7 @@
       action === 'pid_hold' ||
       action === 'pid_resume' ||
       action.startsWith('custom_button_')) {
-      var hideAlertInfo = {{ misc.hide_alert_info | tojson }};
-      if (!hideAlertInfo) {
-        toastr['info']('Command sent. Please wait...');
-      }
+      window.showToast('Command sent. Please wait...', 'info');
       $.ajax({
         type: "POST",
         url: '/function_submit',
@@ -439,7 +382,7 @@
                     window.grid.addWidget('<div class="grid-stack-item" id="gridstack_function_' + data.data.function_id + '" gs-id="' + data.data.function_id + '">' + new_entry + '</div>', {
                       w: 24, h: 1, y: 999
                     });
-                    {% if not hide_tooltips %} $('input[title]').tooltip({ placement: 'top' }); {% endif %}
+                    /* Tooltip handled by global delegation in layout.html */
                     $('#action_type_' + data.data.function_id).selectpicker('refresh');
                     $('#condition_type_' + data.data.function_id).selectpicker('refresh');
                     if (window.AoTMapModalController) {
@@ -449,7 +392,7 @@
                   popup_response(data);
                 },
                 error: function () {
-                  toastr['error']('Error: Could not get new Function entry');
+                  window.showToast('Error: Could not get new Function entry', 'error');
                 }
               });
             }
@@ -477,7 +420,7 @@
                   window.grid.addWidget('<div class="grid-stack-item" id="gridstack_function_' + data.data.function_id + '" gs-id="' + data.data.function_id + '">' + new_entry + '</div>', {
                     w: 24, h: 1, y: 999
                   });
-                  {% if not hide_tooltips %} $('input[title]').tooltip({ placement: 'top' }); {% endif %}
+                  /* Tooltip handled by global delegation in layout.html */
                   if (window.AoTMapModalController) {
                     setTimeout(function () { AoTMapModalController.initAll(); }, 100);
                   }
@@ -485,7 +428,7 @@
                 popup_response(data);
               },
               error: function () {
-                toastr['error']('Error: Could not get new Function entry');
+                window.showToast('Error: Could not get new Function entry', 'error');
               }
             });
           }
@@ -600,7 +543,7 @@
                   popup_response(data);
                 },
                 error: function () {
-                  toastr['error']('{{ _("Error: Could not get new Function options.") }}');
+                  window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
                 }
               });
             }
@@ -686,14 +629,14 @@
                           popup_response(data);
                         },
                         error: function () {
-                          toastr['error']('{{ _("Error: Could not get new Function options.") }}');
+                          window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
                         }
                       });
                     }
                   }
                 },
                 error: function () {
-                  toastr['error']('{{ _("Error: Could not get Function actions.") }}');
+                  window.showToast('{{ _("Error: Could not get Function actions.") }}', 'error');
                 }
               });
             }
@@ -717,13 +660,13 @@
                         popup_response(data);
                       },
                       error: function () {
-                        toastr['error']('{{ _("Error: Could not get new Function options.") }}');
+                        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
                       }
                     });
                   }
                 },
                 error: function () {
-                  toastr['error']('{{ _("Error: Could not get Function conditions.") }}');
+                  window.showToast('{{ _("Error: Could not get Function conditions.") }}', 'error');
                 }
               });
             } else {
@@ -734,7 +677,7 @@
           }
         },
         error: function () {
-          toastr['error']('{{ _("Error: Unable to communicate with server.") }}');
+          window.showToast('{{ _("Error: Unable to communicate with server.") }}', 'error');
         }
       });
     }

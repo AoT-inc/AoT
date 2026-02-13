@@ -10,14 +10,30 @@
     const url = '/admin/upgrade_status';
     $.ajax(url, {
       success: function(new_string, responseText, jqXHR) {
-        // Redirection check: If the response is HTML and contains login page characteristics
-        if (responseText.includes('id="login"') || responseText.includes('/login')) {
+        // Enhanced redirection check: Detect if the response is HTML (not plain text log)
+        // and contains login-related content
+        const contentType = jqXHR.getResponseHeader('Content-Type') || '';
+        const isHTML = contentType.includes('text/html');
+        const hasLoginContent = new_string && (
+          new_string.includes('id="login"') || 
+          new_string.includes('/login') ||
+          new_string.includes('csrf_token') ||
+          new_string.includes('form-signin') ||
+          new_string.includes('<html') ||
+          new_string.includes('<!DOCTYPE')
+        );
+        
+        if (isHTML && hasLoginContent) {
            document.getElementById("upgrade_status").innerHTML = `<div class="aot-upgrade-notice-box" style="text-align: center; padding: 20px;">
-             <strong>{{_('System is restarting or session has expired.')}}</strong><br>
-             {{_('Please wait a moment for the system to come back online.')}}
+             <strong>{{_('Upgrade completed! System is restarting...')}}</strong><br>
+             {{_('The page will automatically reload in a moment.')}}
            </div>`;
-           // Also ensure logo stays red during this transition
+           // Force logo to stay red during restart
            $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+           // Auto-reload after 3 seconds to show the upgraded system
+           setTimeout(function() {
+             window.location.reload();
+           }, 3000);
            return;
         }
 
@@ -33,13 +49,15 @@
           document.getElementById("upgrade_status").innerHTML = "{{_('Reading AoT upgrade logs. Please wait...')}}";
         }
         
-        // During upgrade progress, force logo to red
+        // During upgrade progress, continuously force logo to red
         $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
       },
       error: function() {
         document.getElementById("upgrade_status").innerHTML = `<div style="color: #DF5353; padding: 20px;">
           {{_('Lost connection to server. This is normal during restart.')}}
         </div>`;
+        // Keep logo red even on error
+        $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
       },
       cache: false
     });

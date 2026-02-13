@@ -983,7 +983,8 @@ def page_settings():
             theme_keys = [
                 'theme_site', 'theme_zone', 'theme_facility', 'theme_equipment', 'theme_device', 
                 'theme_input', 'theme_output', 'theme_function',
-                'theme_panel_bg', 'theme_panel_opacity'
+                'theme_panel_bg', 'theme_panel_opacity',
+                'theme_hide_label', 'theme_vis_input', 'theme_vis_output', 'theme_vis_function'
             ]
             
             for key in theme_keys:

@@ -36,6 +36,7 @@
   {% endif %}
 
     <form method="post" action="/graph-async">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="form-row" style="padding: 1em 0">
       <div class="col-auto">
       <div class="col-auto">

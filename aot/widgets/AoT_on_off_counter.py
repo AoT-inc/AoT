@@ -69,9 +69,9 @@ def constraints_pass_utc_offset(value):
     try:
         v = float(value)
     except Exception:
-        return False, lazy_gettext('숫자여야 합니다.')
+        return False, lazy_gettext('Must be a number.')
     if v < -12.0 or v > 14.0:
-        return False, lazy_gettext('허용 범위는 -12.0 ~ +14.0 입니다.')
+        return False, lazy_gettext('Allowed range is -12.0 ~ +14.0.')
     return True, None
 
 
@@ -187,7 +187,7 @@ def _counter_state_default(device_unique_id: str, channel_id: str) -> dict:
         "next_transition_ms": None,
         "started_at_ms": None,
         "stopped_at_ms": None,
-        "message": "대기중",
+        "message": "Inactive",
         "error": None,
         "updated_ms": now
     }
@@ -298,7 +298,7 @@ def _stop_existing_worker(device_unique_id: str, channel_id: str, reason: str = 
         thread = None
     if thread and thread.is_alive():
         thread.join(timeout=2.0)
-    message = '사용자 중지' if reason == 'user_stop' else '재시작 준비중'
+    message = 'User stopped' if reason == 'user_stop' else 'Initializing'
     _counter_state_update(
         device_unique_id,
         channel_id,
@@ -328,7 +328,7 @@ def _counter_cycle_worker(device_unique_id: str,
             channel_id,
             active=True,
             phase='initializing',
-            message='작동 준비중',
+            message='Initializing',
             run_sec=run_sec,
             rest_sec=rest_sec,
             target_cycles=total_cycles,
@@ -351,7 +351,7 @@ def _counter_cycle_worker(device_unique_id: str,
                     channel_id,
                     active=False,
                     phase='error',
-                    message=f'ON 실패: {err}',
+                    message=lazy_gettext('ON Failed: {}').format(err),
                     error=str(err),
                     next_transition_ms=None,
                     phase_duration_sec=0,
@@ -365,7 +365,7 @@ def _counter_cycle_worker(device_unique_id: str,
                 channel_id,
                 phase='running',
                 current_cycle=cycle,
-                message=f'{cycle}/{total_cycles}회, 작동중',
+                message=f'{cycle}/{total_cycles}, Active',
                 phase_started_ms=phase_start,
                 phase_duration_sec=max(1, run_sec),
                 next_transition_ms=phase_start + run_sec * 1000,
@@ -380,7 +380,7 @@ def _counter_cycle_worker(device_unique_id: str,
                     device_unique_id,
                     channel_id,
                     completed_cycles=cycle,
-                    message=f'{cycle}/{total_cycles}회, 휴식중',
+                    message=f'{cycle}/{total_cycles}, Resting',
                     phase='resting',
                     phase_started_ms=now_ms,
                     phase_duration_sec=rest_sec,
@@ -393,7 +393,7 @@ def _counter_cycle_worker(device_unique_id: str,
                     device_unique_id,
                     channel_id,
                     completed_cycles=cycle,
-                    message=f'{cycle}/{total_cycles}회, 완료',
+                    message=f'{cycle}/{total_cycles}, Completed',
                     phase='waiting',
                     phase_started_ms=None,
                     phase_duration_sec=0,
@@ -406,7 +406,7 @@ def _counter_cycle_worker(device_unique_id: str,
                 channel_id,
                 active=False,
                 phase='stopped',
-                message='사용자 중지',
+                message='User stopped',
                 next_transition_ms=None,
                 phase_duration_sec=0,
                 phase_started_ms=None,
@@ -418,7 +418,7 @@ def _counter_cycle_worker(device_unique_id: str,
                 channel_id,
                 active=False,
                 phase='completed',
-                message='모든 작동 완료',
+                message='All cycles completed',
                 current_cycle=total_cycles,
                 completed_cycles=total_cycles,
                 next_transition_ms=None,
@@ -834,13 +834,13 @@ def output_started_at(device_unique_id, channel_id):
 
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_on_off_counter',
-    'widget_name': 'AoT 온/오프 카운터',
+    'widget_name': lazy_gettext('AoT On/Off Counter'),
     'widget_library': 'timer',
     'no_class': True,
 
-    'message': (
-        '작동시간·휴식시간·작동횟수를 입력하면 지정된 Output이 자동으로 ON/OFF 됩니다. '
-        '현재 진행 중인 횟수는 서버에 저장되어 새로고침이나 다른 브라우저에서도 확인할 수 있습니다.'
+    'message': lazy_gettext(
+        'Automatically turns the designated output ON/OFF when a run time, rest time, and number of cycles are input. '
+        'The current progress is saved on the server and can be checked after refreshing or on other browsers.'
     ),
 
     'widget_width': 24,
@@ -849,7 +849,7 @@ WIDGET_INFORMATION = {
     'custom_options': [
         {
             'type': 'header',
-            'name': lazy_gettext('장치 설정')
+            'name': lazy_gettext('Device Settings')
         },
         {
             'id': 'output',
@@ -859,7 +859,7 @@ WIDGET_INFORMATION = {
                 'Output_Channels',
             ],
             'name': lazy_gettext('Output'),
-            'phrase': lazy_gettext('제어할 Output 을 선택하세요.')
+            'phrase': lazy_gettext('Select the Output to control.')
         },
         {
             'id': 'refresh_seconds',
@@ -867,114 +867,116 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 5.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("동기화"), lazy_gettext("초")),
-            'phrase': lazy_gettext('사용할 측정값의 최대 유효 시간')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Sync"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Maximum validity time for measurements used')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('표시 설정')
+            'name': lazy_gettext('Display Settings')
         },
         {
             'id': 'enable_status',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('상태 표시'),
-            'phrase': lazy_gettext('작동상태를 타이틀바에 표시 합니다.')
+            'name': lazy_gettext('Show Status'),
+            'phrase': lazy_gettext('Display operation status on the title bar.')
         },
         {
             'id': 'status_font_em',
             'type': 'float',
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('상태 크기'),
-            'phrase': lazy_gettext('(em) 단위')
+            'name': lazy_gettext('Status Size'),
+            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'id': 'enable_timestamp',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('작동시간'),
-            'phrase': lazy_gettext('작동시간을 표시 합니다.')
+            'name': lazy_gettext('Operation Time'),
+            'phrase': lazy_gettext('Display operation time.')
         },
         {
             'id': 'widget_name_font_em',
             'type': 'float',
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('작동시간 글자 크기'),
-            'phrase': lazy_gettext('(em) 단위')
+            'name': lazy_gettext('Operation Time Font Size'),
+            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('카운터 설정')
+            'name': lazy_gettext('Counter Settings')
         },
         {
             'id': 'enable_output_controls',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('타이머'),
-            'phrase': lazy_gettext('타이머 기능을 활성화 합니다.')
+            'name': lazy_gettext('Timer'),
+            'phrase': lazy_gettext('Enable the timer function.')
         },
         {
             'id': 'font_em_time_input',
             'type': 'float',
             'default_value': 1.2,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('시간입력창 크기'),
-            'phrase': lazy_gettext('(em) 단위')
+            'name': lazy_gettext('Time Input Size'),
+            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'id': 'tz_offset',
             'type': 'select',
             'default_value': '9.0',
             'options_select': [
-                ('9.0', '서울 (UTC+9)'),
-                ('8.0', '베이징 (UTC+8)'),
-                ('7.0', '방콕 (UTC+7)'),
-                ('6.0', '다카 (UTC+6)'),
-                ('5.5', '뉴델리 (UTC+5:30)'),
-                ('4.0', '두바이 (UTC+4)'),
-                ('3.0', '리야드 (UTC+3)'),
-                ('1.0', '베를린 (UTC+1)'),
-                ('0.0', '런던 (UTC±0)'),
-                ('-3.0', '부에노스아이레스 (UTC-3)'),
-                ('-5.0', '뉴욕 (UTC-5)'),
-                ('-6.0', '시카고 (UTC-6)'),
-                ('-8.0', '로스앤젤레스 (UTC-8)'),
-                ('-9.0', '앵커리지 (UTC-9)'),
-                ('-10.0', '하와이 (UTC-10)')
+                ('9.0', lazy_gettext('Seoul (UTC+9)')),
+                ('8.0', lazy_gettext('Beijing (UTC+8)')),
+                ('7.0', lazy_gettext('Bangkok (UTC+7)')),
+                ('6.0', lazy_gettext('Dhaka (UTC+6)')),
+                ('5.5', lazy_gettext('New Delhi (UTC+5:30)')),
+                ('4.0', lazy_gettext('Dubai (UTC+4)')),
+                ('3.0', lazy_gettext('Riyadh (UTC+3)')),
+                ('1.0', lazy_gettext('Berlin (UTC+1)')),
+                ('0.0', lazy_gettext('London (UTC±0)')),
+                ('-3.0', lazy_gettext('Buenos Aires (UTC-3)')),
+                ('-5.0', lazy_gettext('New York (UTC-5)')),
+                ('-6.0', lazy_gettext('Chicago (UTC-6)')),
+                ('-8.0', lazy_gettext('Los Angeles (UTC-8)')),
+                ('-9.0', lazy_gettext('Anchorage (UTC-9)')),
+                ('-10.0', lazy_gettext('Honolulu (UTC-10)'))
             ],
-            'name': lazy_gettext('시간대'),
-            'phrase': lazy_gettext('도시를 선택하면 숫자 오프셋으로 적용됩니다.')
+            'name': lazy_gettext('Timezone'),
+            'phrase': lazy_gettext('Select a city to apply its numeric offset.')
         },
         {
             'id': 'default_run_seconds',
             'type': 'float',
             'default_value': 10.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('기본 작동시간 (초)'),
-            'phrase': lazy_gettext('시작 시 기본으로 사용할 작동 시간')
+            'name': lazy_gettext('Default Run Time (s)'),
+            'phrase': lazy_gettext('Default run time to use at start')
         },
         {
             'id': 'default_rest_seconds',
             'type': 'float',
             'default_value': 10.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('기본 휴식시간 (초)'),
-            'phrase': lazy_gettext('반복 사이 기본 휴식 시간')
+            'name': lazy_gettext('Default Rest Time (s)'),
+            'phrase': lazy_gettext('Default rest time between cycles')
         },
         {
             'id': 'default_cycles',
             'type': 'float',
             'default_value': 5.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('기본 작동 횟수'),
-            'phrase': lazy_gettext('자동 반복 기본 횟수')
+            'name': lazy_gettext('Default Cycle Count'),
+            'phrase': lazy_gettext('Default number of automatic cycles')
         }
     ],
 
     # ------------------ HEAD (CSS) ------------------
-    'widget_dashboard_head': """<!-- No head content -->""",
+    'widget_dashboard_head': """
+    <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
+    """,
 
     'endpoints': [
         ("/output_started_at/<device_unique_id>/<channel_id>", "output_started_at", output_started_at, ["GET"]),
@@ -1002,7 +1004,24 @@ WIDGET_INFORMATION = {
 
     # ------------------ BODY ------------------
     'widget_dashboard_body': """
+    <style>
+    /* 온오프 카운터 위젯 전용 UI 개선 */
+    #aot_counter_{{each_widget.unique_id}} .col-aot-2 {
+      width: 60px !important;
+    }
+    #aot_counter_{{each_widget.unique_id}} .input-time {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #aot_counter_{{each_widget.unique_id}} .input-time-ss {
+      background-color: #ffffff !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    </style>
+
     {%- set wo = widget_options if widget_options is defined else {} -%}
+
     {%- set output = wo.get('output', '') -%}
     {%- set device_id = '' -%}
     {%- set channel_id = '' -%}
@@ -1023,10 +1042,10 @@ WIDGET_INFORMATION = {
       <div class="row-aot-1">
         <div class="col-aot-1">
           <span class="prt-text prt-text-inline" id="aot_counter_summary_{{each_widget.unique_id}}" style="font-size: {{widget_options['widget_name_font_em']}}em;">
-            0/0회
+            0/0
           </span>
           <span class="prt-text prt-text-inline" id="aot_counter_phase_{{each_widget.unique_id}}" style="font-size: {{widget_options['widget_name_font_em']}}em;">
-            대기중
+            {{_('Inactive')}}
           </span>
         </div>
         <div class="col-aot-2" style="display:flex; justify-content:flex-end;">
@@ -1047,7 +1066,7 @@ WIDGET_INFORMATION = {
       <div class="row-aot-2">
         <div class="input-time" style="margin-left:auto;">
           <label style="margin-right:0.5em;">
-            작동(초)
+            {{_('Run (s)')}}
             <input type="number"
                    min="1"
                    id="aot_counter_run_{{each_widget.unique_id}}"
@@ -1056,7 +1075,7 @@ WIDGET_INFORMATION = {
                    style="font-size: {{widget_options['font_em_time_input']}}em;">
           </label>
           <label style="margin-right:0.5em;">
-            휴식(초)
+            {{_('Rest (s)')}}
             <input type="number"
                    min="0"
                    id="aot_counter_rest_{{each_widget.unique_id}}"
@@ -1065,7 +1084,7 @@ WIDGET_INFORMATION = {
                    style="font-size: {{widget_options['font_em_time_input']}}em;">
           </label>
           <label style="margin-right:0.5em;">
-            횟수
+            {{_('Cycles')}}
             <input type="number"
                    min="1"
                    id="aot_counter_cycles_{{each_widget.unique_id}}"
@@ -1079,7 +1098,7 @@ WIDGET_INFORMATION = {
 
       {% if not (device_id and channel_id) %}
       <div class="row-aot-2">
-        <span class="prt-text">위젯 옵션에서 제어할 Output을 선택하세요.</span>
+        <span class="prt-text">{{_('Select the Output to control in the widget options.')}}</span>
       </div>
       {% endif %}
     </div>
@@ -1136,12 +1155,12 @@ WIDGET_INFORMATION = {
         const m = Math.floor((total % 3600) / 60);
         const s = total % 60;
         const parts = [];
-        if (h > 0) parts.push(h + '시간');
-        if (m > 0) parts.push(m + '분');
+        if (h > 0) parts.push(h + 'h');
+        if (m > 0) parts.push(m + 'm');
         if (h === 0 && (m === 0 || s > 0)) {
-          parts.push(s + '초');
+          parts.push(s + 's');
         } else if (s > 0) {
-          parts.push(s + '초');
+          parts.push(s + 's');
         }
         return parts.join(' ');
       }
@@ -1168,18 +1187,19 @@ WIDGET_INFORMATION = {
         const total = (typeof data.target_cycles === 'number' && data.target_cycles > 0)
           ? data.target_cycles : 0;
         const rawMessage = (typeof data.message === 'string' ? data.message : '').trim();
-        const strippedMessage = rawMessage.replace(/^\s*\d+\s*\/\s*\d+\s*회\s*/,'').trim();
-        const phaseLine = strippedMessage || rawMessage || '대기중';
-        const summaryText = `${current}/${total || 0}회`;
+        // Updated regex to handle both Korean '회' and English 'Completed/Resting/Active'
+        const strippedMessage = rawMessage.replace(/^\s*\d+\s*\/\s*\d+\s*([가-힣a-zA-Z]+)?\s*,?\s*/,'').trim();
+        const phaseLine = window._(strippedMessage || rawMessage || 'Inactive');
+        const summaryText = `${current}/${total || 0}`;
         $('#aot_counter_summary_'+wid).text(summaryText);
         $('#aot_counter_phase_'+wid).text(phaseLine);
 
         const $msg = $('#aot_counter_message_'+wid);
         if ($msg.length) {
           if (data.error) {
-            $msg.text(data.error).addClass('text-danger');
+            $msg.text(window._(data.error)).addClass('text-danger');
           } else if (data.message) {
-            $msg.text(data.message).removeClass('text-danger');
+            $msg.text(window._(data.message)).removeClass('text-danger');
           } else {
             $msg.text('').removeClass('text-danger');
           }
@@ -1212,14 +1232,14 @@ WIDGET_INFORMATION = {
       async function start(wid, opts){
         const info = parseInfo(wid);
         if (!info.device || !info.channel) {
-          alert('Output을 먼저 선택하세요.');
+          alert(window._('Please select an Output first.'));
           return;
         }
         const run = parseInt($('#aot_counter_run_'+wid).val(), 10) || 0;
         const rest = parseInt($('#aot_counter_rest_'+wid).val(), 10) || 0;
         const cycles = parseInt($('#aot_counter_cycles_'+wid).val(), 10) || 0;
         if (run <= 0 || rest < 0 || cycles <= 0) {
-          alert('작동/휴식/횟수 값을 확인하세요.');
+          alert(window._('Please check the run/rest/cycle values.'));
           return;
         }
         const payload = { run_sec: run, rest_sec: rest, cycles: cycles };
@@ -1239,16 +1259,16 @@ WIDGET_INFORMATION = {
             render(wid, data);
             fetchStatus(wid);
           } else {
-            let errText = '시작 실패';
+            let errText = window._('Failed to start');
             try {
               const js = await res.json();
-              if (js && js.error) { errText = js.error; }
+              if (js && js.error) { errText = window._(js.error); }
             } catch (_) {}
             $msg.text(errText).addClass('text-danger');
             if (toggleEl) { toggleEl.prop('checked', false); }
           }
         } catch (err) {
-          $msg.text('시작 중 오류').addClass('text-danger');
+          $msg.text(window._('Error during start')).addClass('text-danger');
           if (toggleEl) { toggleEl.prop('checked', false); }
         }
       }
@@ -1272,16 +1292,16 @@ WIDGET_INFORMATION = {
             render(wid, data);
             fetchStatus(wid);
           } else {
-            let errText = '정지 실패';
+            let errText = window._('Failed to stop');
             try {
               const js = await res.json();
-              if (js && js.error) { errText = js.error; }
+              if (js && js.error) { errText = window._(js.error); }
             } catch (_) {}
             $msg.text(errText).addClass('text-danger');
             if (toggleEl) { toggleEl.prop('checked', true); }
           }
         } catch (err) {
-          $msg.text('정지 중 오류').addClass('text-danger');
+          $msg.text(window._('Error during stop')).addClass('text-danger');
           if (toggleEl) { toggleEl.prop('checked', true); }
         }
       }

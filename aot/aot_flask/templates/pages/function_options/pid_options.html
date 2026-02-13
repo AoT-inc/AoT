@@ -13,7 +13,8 @@
     {{form_mod_pid_base.function_type(value='pid')}}
     
     {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
-    <div class="mt-3 mb-3">
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
         {{ render_device_map(
         'function',
         each_function.unique_id,
@@ -35,6 +36,7 @@
         map_overlays=map_overlays,
         save_id='mod_function_save_' ~ each_function.unique_id
         ) }}
+      </div>
     </div>
 
     <div class="d-flex flex-wrap mb-3">

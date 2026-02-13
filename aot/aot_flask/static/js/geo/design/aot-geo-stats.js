@@ -259,7 +259,8 @@ class AoTGeoStats {
                 let siteName = sitePoly.properties.name;
                 const label = findLabelName(sid);
                 if (isDefaultName(siteName) && label) siteName = label;
-                siteName = siteName || label || `${_('default_site_name')} ${data.sites.length + 1}`;
+                if (isDefaultName(siteName) && label) siteName = label;
+                siteName = siteName || label || `${_('New Site')} ${data.sites.length + 1}`;
 
                 // Determine Zones belonging to this Site
                 const zonesInSite = allZones.filter(z => zoneOwnership[z.feature.properties.node_id] === sid);
@@ -326,7 +327,7 @@ class AoTGeoStats {
 
                     siteData.zones.push({
                         id: zid,
-                        name: zName || zLabel || `${_('default_zone_name')} ${siteData.zones.length + 1}`,
+                        name: zName || zLabel || `${_('New Zone')} ${siteData.zones.length + 1}`,
                         stats: zoneStats,
                         pipes: window.AoTMapUtils.mapSprinklersToPipes(zoneStats.pipeDetails, zoneStats.objects.sprinklers)
                     });
@@ -382,7 +383,7 @@ class AoTGeoStats {
 
                     if (commonStats.pipeMainLen > 0.1 || commonStats.pipeBranchLen > 0.1 || commonStats.emitters > 0) {
                         siteData.zones.unshift({
-                            name: _('site_common_name'),
+                            name: _('Site Common Area'),
                             stats: commonStats,
                             pipes: window.AoTMapUtils.mapSprinklersToPipes(commonStats.pipeDetails, commonStats.objects.sprinklers),
                             isCommon: true
@@ -446,7 +447,7 @@ class AoTGeoStats {
             if (!container) return;
             
             if (!data || !data.sites) {
-                container.innerHTML = `<div class="text-center text-danger py-3">${_('data_load_failed')}</div>`;
+                container.innerHTML = `<div class="text-center text-danger py-3">${_('Data Load Failed')}</div>`;
                 return;
             }
 
@@ -520,7 +521,7 @@ class AoTGeoStats {
                 html += `<div style="max-width: 240px; min-width: 150px;">`;
                 html += `<select id="site-selector" class="selectpicker site-selector-dropdown" multiple data-live-search="true" 
                                  data-actions-box="true" data-style="btn-outline-secondary bg-white overflow-hidden text-truncate custom-select-btn" 
-                                 data-width="100%" data-selected-text-format="count > 2" title="${_('design_info_site_select')}">`;
+                                 data-width="100%" data-selected-text-format="count > 2" title="${_('Select Site')}">`;
                 displaySites.forEach(s => { // Bug: Dropdown should show ALL sites, not filtered ones.
                     // Fix: Use 'sites' (all) for dropdown options
                 });
@@ -529,18 +530,18 @@ class AoTGeoStats {
                      html += `<option value="${s.id}" ${isSel}>${s.name}</option>`;
                 });
                 html += `</select></div>`;
-                html += `<button id="btn-site-filter" class="btn btn-sm btn-primary ml-2 shadow-sm" style="height: 32px; line-height: 1;">${_('design_info_select_btn')}</button>`;
+                html += `<button id="btn-site-filter" class="btn btn-sm btn-primary ml-2 shadow-sm" style="height: 32px; line-height: 1;">${_('Apply Filter')}</button>`;
                 html += `</div>`;
                 html += `<style>.custom-select-btn { height: 32px !important; line-height: 1.5 !important; padding-top: 4px !important; padding-bottom: 4px !important; } .bootstrap-select .dropdown-toggle .filter-option { height: 100%; display: flex; align-items: center; }</style>`;
             }
 
             // --- 1. Summary ---
             // Removed connection stats from Summary (as per request, Site/Zone specific)
-            html += `<h6 class="font-weight-bold mb-2 pt-1 border-bottom pb-2">${_('design_info_summary')}</h6>`;
+            html += `<h6 class="font-weight-bold mb-2 pt-1 border-bottom pb-2">${_('Design Summary')}</h6>`;
             html += `
             <table class="table table-bordered table-sm mb-4 text-center bg-white">
                 <thead class="thead-light"><tr>
-                    <th>${_('design_info_site_count')}</th><th>${_('design_info_zone_count')}</th><th>${_('design_info_pipe_len')}</th><th>${_('design_info_emitter_count')}</th><th>${_('design_info_aot_device_count')}</th>
+                    <th>${_('Site Count')}</th><th>${_('Zone Count')}</th><th>${_('Pipe Length')}</th><th>${_('Number of Emitters')}</th><th>${_('AoT Device Count')}</th>
                 </tr></thead>
                 <tbody><tr>
                     <td class="font-weight-bold">${totals.siteCount}</td>
@@ -554,7 +555,7 @@ class AoTGeoStats {
             // --- Helpers (Hoisted) ---
             // Helper to render pipe tables
             const renderPipeTables = (pipes, indentClass) => {
-                if (!pipes || pipes.length === 0) return `<div class="text-center text-muted mb-3 small ${indentClass}">${_('design_info_no_pipe_data')}</div>`;
+                if (!pipes || pipes.length === 0) return `<div class="text-center text-muted mb-3 small ${indentClass}">${_('No Pipe Data')}</div>`;
                 
                 const mains = pipes.filter(p => p.type === '주배관' || (p.type && p.type.includes('Main')));
                 const branch = pipes.filter(p => !mains.includes(p));
@@ -564,11 +565,11 @@ class AoTGeoStats {
                 const tableHeader = `
                     <table class="table table-sm table-hover text-center bg-white mb-2" style="font-size:0.85rem;">
                     <thead class="thead-light"><tr>
-                        <th style="width:20%">${_('design_info_th_no')}</th><th>${_('design_info_th_len')}</th><th>${_('design_info_th_emitter')}</th><th>${_('design_info_th_flow_lh')}</th><th>${_('design_info_th_flow_lmin')}</th>
+                        <th style="width:20%">${_('No.')}</th><th>${_('Length (m)')}</th><th>${_('Number of Emitters (Pipe)')}</th><th>${_('Flow (L/h)')}</th><th>${_('Flow (L/min)')}</th>
                     </tr></thead><tbody>`;
 
                 if (mains.length > 0) {
-                     out += `<div class="font-weight-bold small text-dark mb-1 ${indentClass}">${_('design_info_pipe_type_main')}</div>`;
+                     out += `<div class="font-weight-bold small text-dark mb-1 ${indentClass}">${_('[Main Pipe]')}</div>`;
                      out += `<div class="${indentClass}"><div class="table-responsive mb-3">` + tableHeader;
                      mains.forEach((p, i) => {
                          const id = `M-${pad(i + 1)}`;
@@ -578,7 +579,7 @@ class AoTGeoStats {
                 }
                 
                 if (branch.length > 0) {
-                     out += `<div class="font-weight-bold small text-dark mb-1 ${indentClass}">${_('design_info_pipe_type_branch')}</div>`;
+                     out += `<div class="font-weight-bold small text-dark mb-1 ${indentClass}">${_('[Branch Pipe]')}</div>`;
                      out += `<div class="${indentClass}"><div class="table-responsive mb-3">` + tableHeader;
                      branch.forEach((p, i) => {
                          const id = `B-${pad(i + 1)}`;
@@ -602,15 +603,15 @@ class AoTGeoStats {
                 if (!conn) return '';
                 let rows = '';
                 if (category === 'main') {
-                    if (conn.mT > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_main_tee')}</th><td>${conn.mT} ${_('unit_count')}</td></tr>`;
-                    if (conn.mE > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_main_elbow')}</th><td>${conn.mE} ${_('unit_count')}</td></tr>`;
-                    if (conn.mC > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_main_end')}</th><td>${conn.mC} ${_('unit_count')}</td></tr>`;
-                    if (conn.mbT > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_main_reducing_tee')}</th><td>${conn.mbT} ${_('unit_count')}</td></tr>`;
-                    if (conn.mbE > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_main_reducing_elbow')}</th><td>${conn.mbE} ${_('unit_count')}</td></tr>`; // [New] mbE
+                    if (conn.mT > 0) rows += `<tr><th class="bg-light text-center">${_('Main Pipe Tee')}</th><td>${conn.mT} ${_('units')}</td></tr>`;
+                    if (conn.mE > 0) rows += `<tr><th class="bg-light text-center">${_('Main Pipe Elbow')}</th><td>${conn.mE} ${_('units')}</td></tr>`;
+                    if (conn.mC > 0) rows += `<tr><th class="bg-light text-center">${_('Main Pipe End')}</th><td>${conn.mC} ${_('units')}</td></tr>`;
+                    if (conn.mbT > 0) rows += `<tr><th class="bg-light text-center">${_('Main Pipe Reducing Tee')}</th><td>${conn.mbT} ${_('units')}</td></tr>`;
+                    if (conn.mbE > 0) rows += `<tr><th class="bg-light text-center">${_('Main Pipe Reducing Elbow')}</th><td>${conn.mbE} ${_('units')}</td></tr>`; // [New] mbE
                 } else {
-                    if (conn.bT > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_branch_tee')}</th><td>${conn.bT} ${_('unit_count')}</td></tr>`;
-                    if (conn.bE > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_branch_elbow')}</th><td>${conn.bE} ${_('unit_count')}</td></tr>`;
-                    if (conn.bC > 0) rows += `<tr><th class="bg-light text-center">${_('fitting_branch_end')}</th><td>${conn.bC} ${_('unit_count')}</td></tr>`;
+                    if (conn.bT > 0) rows += `<tr><th class="bg-light text-center">${_('Branch Pipe Tee')}</th><td>${conn.bT} ${_('units')}</td></tr>`;
+                    if (conn.bE > 0) rows += `<tr><th class="bg-light text-center">${_('Branch Pipe Elbow')}</th><td>${conn.bE} ${_('units')}</td></tr>`;
+                    if (conn.bC > 0) rows += `<tr><th class="bg-light text-center">${_('Branch Pipe End')}</th><td>${conn.bC} ${_('units')}</td></tr>`;
                 }
                 return rows;
             };
@@ -632,23 +633,24 @@ class AoTGeoStats {
                     totalConn.bC += c.bC;
                 });
 
-                html += `<h6 class="font-weight-bold mb-2 border-bottom pb-2">${_('design_info_details')}</h6>`;
+                html += `<h6 class="font-weight-bold mb-2 border-bottom pb-2">${_('Design Details')}</h6>`;
                 html += `
                 <table class="table table-bordered table-sm mb-4 text-right bg-white" style="font-size:0.9rem;">
                     <tbody>
-                        ${renderRow(_('design_info_total_area'), totals.area, "m²", true)}
-                        ${renderRow(_('design_info_main_pipe_len'), totals.pipeMainLen, "m")}
-                        ${renderRow(_('design_info_main_pipe_count'), totals.pipeMainCount, _('unit_count'))}
-                        ${renderRow(_('design_info_branch_pipe_len'), totals.pipeBranchLen, "m")}
-                        ${renderRow(_('design_info_branch_pipe_count'), totals.pipeBranchCount, _('unit_count'))}
-                        ${renderRow(_('design_info_emitter_count'), totals.emitters, _('unit_count'))}
-                        ${renderRow(_('design_info_flow_lh'), totals.waterUsage, "L/h")}
-                        ${renderRow(_('design_info_flow_lmin'), totals.waterUsage/60, "L/min")}
+                    <tbody>
+                        ${renderRow(_('Total Area'), totals.area, "m²", true)}
+                        ${renderRow(_('Main Pipe Length'), totals.pipeMainLen, "m")}
+                        ${renderRow(_('Main Pipe Count'), totals.pipeMainCount, _('units'))}
+                        ${renderRow(_('Branch Pipe Length'), totals.pipeBranchLen, "m")}
+                        ${renderRow(_('Branch Pipe Count'), totals.pipeBranchCount, _('units'))}
+                        ${renderRow(_('Number of Emitters'), totals.emitters, _('units'))}
+                        ${renderRow(_('Flow Rate (L/h)'), totals.waterUsage, "L/h")}
+                        ${renderRow(_('Flow Rate (L/min)'), totals.waterUsage/60, "L/min")}
                         ${renderConnRows(totalConn, 'main')}
                         ${renderConnRows(totalConn, 'branch')}
-                        ${renderRow(_('design_info_input_count'), totals.input, _('unit_count'))}
-                        ${renderRow(_('design_info_output_count'), totals.output, _('unit_count'))}
-                        ${renderRow(_('design_info_function_count'), totals.function, _('unit_count'))}
+                        ${renderRow(_('Input Device Count'), totals.input, _('units'))}
+                        ${renderRow(_('Output Device Count'), totals.output, _('units'))}
+                        ${renderRow(_('Logic Count'), totals.function, _('units'))}
                     </tbody>
                 </table>`;
             }
@@ -657,7 +659,7 @@ class AoTGeoStats {
 
             // --- 3. Site Details (Filtered by DisplaySites) ---
             if (displaySites.length === 0) {
-                 html += `<div class="text-center text-muted my-3">${_('design_info_no_sites')}</div>`;
+                 html += `<div class="text-center text-muted my-3">${_('No Sites Selected')}</div>`;
             } else {
                 displaySites.forEach((site, idx) => {
                     const ss = site.stats;
@@ -667,24 +669,24 @@ class AoTGeoStats {
                     html += `
                     <table class="table table-bordered table-sm mb-3 text-right bg-white" style="font-size:0.9rem;">
                         <tbody>
-                            ${renderRow(_('design_info_site_area'), ss.area, "m²", true)}
-                            ${renderRow(_('design_info_main_pipe_len'), ss.pipeMainLen, "m")}
-                            ${renderRow(_('design_info_main_pipe_count'), ss.pipeMainCount, _('unit_count'))}
-                            ${renderRow(_('design_info_branch_pipe_len'), ss.pipeBranchLen, "m")}
-                            ${renderRow(_('design_info_branch_pipe_count'), ss.pipeBranchCount, _('unit_count'))}
-                            ${renderRow(_('design_info_emitter_count'), ss.emitters, _('unit_count'))}
-                            ${renderRow(_('design_info_flow_lh'), ss.waterUsage, "L/h")}
-                            ${renderRow(_('design_info_flow_lmin'), ss.waterUsage/60, "L/min")}
+                            ${renderRow(_('Site Area'), ss.area, "m²", true)}
+                            ${renderRow(_('Main Pipe Length'), ss.pipeMainLen, "m")}
+                            ${renderRow(_('Main Pipe Count'), ss.pipeMainCount, _('units'))}
+                            ${renderRow(_('Branch Pipe Length'), ss.pipeBranchLen, "m")}
+                            ${renderRow(_('Branch Pipe Count'), ss.pipeBranchCount, _('units'))}
+                            ${renderRow(_('Number of Emitters'), ss.emitters, _('units'))}
+                            ${renderRow(_('Flow Rate (L/h)'), ss.waterUsage, "L/h")}
+                            ${renderRow(_('Flow Rate (L/min)'), ss.waterUsage/60, "L/min")}
                             ${renderConnRows(c, 'main')}
                             ${renderConnRows(c, 'branch')}
-                            ${renderRow(_('design_info_input_count'), ss.input, _('unit_count'))}
-                            ${renderRow(_('design_info_output_count'), ss.output, _('unit_count'))}
-                            ${renderRow(_('design_info_function_count'), ss.function, _('unit_count'))}
+                            ${renderRow(_('Input Device Count'), ss.input, _('units'))}
+                            ${renderRow(_('Output Device Count'), ss.output, _('units'))}
+                            ${renderRow(_('Logic Count'), ss.function, _('units'))}
                         </tbody>
                     </table>`;
 
                     if (site.zones.length === 0) {
-                        html += `<h6 class="font-weight-bold mb-2 ml-2 text-secondary" style="font-size:0.9rem;">${_('design_info_site_pipe_info')}</h6>`;
+                        html += `<h6 class="font-weight-bold mb-2 ml-2 text-secondary" style="font-size:0.9rem;">${_('Site Pipe Info')}</h6>`;
                         html += renderPipeTables(site.pipes, 'ml-2');
                     } else {
                         site.zones.forEach((zone, zIdx) => {
@@ -696,22 +698,22 @@ class AoTGeoStats {
                             html += `
                             <table class="table table-bordered table-sm mb-2 ml-2 text-right bg-white" style="font-size:0.85rem; width:98%;">
                                 <tbody>
-                                    ${renderRow(_('design_info_area'), zs.area, "m²", true)}
-                                    ${renderRow(_('design_info_main_pipe_len'), zs.pipeMainLen, "m")}
-                                    ${renderRow(_('design_info_main_pipe_count'), zs.pipeMainCount, _('unit_count'))}
-                                    ${renderRow(_('design_info_branch_pipe_len'), zs.pipeBranchLen, "m")}
-                                    ${renderRow(_('design_info_branch_pipe_count'), zs.pipeBranchCount, _('unit_count'))}
-                                    ${renderRow(_('design_info_emitter_count'), zs.emitters, _('unit_count'))}
-                                    ${renderRow(_('design_info_flow_lh'), zs.waterUsage, "L/h")}
-                                    ${renderRow(_('design_info_flow_lmin'), zs.waterUsage/60, "L/min")}
+                                    ${renderRow(_('Area'), zs.area, "m²", true)}
+                                    ${renderRow(_('Main Pipe Length'), zs.pipeMainLen, "m")}
+                                    ${renderRow(_('Main Pipe Count'), zs.pipeMainCount, _('units'))}
+                                    ${renderRow(_('Branch Pipe Length'), zs.pipeBranchLen, "m")}
+                                    ${renderRow(_('Branch Pipe Count'), zs.pipeBranchCount, _('units'))}
+                                    ${renderRow(_('Number of Emitters'), zs.emitters, _('units'))}
+                                    ${renderRow(_('Flow Rate (L/h)'), zs.waterUsage, "L/h")}
+                                    ${renderRow(_('Flow Rate (L/min)'), zs.waterUsage/60, "L/min")}
                                     ${renderConnRows(zc, 'main')}
                                     ${renderConnRows(zc, 'branch')}
-                                    ${renderRow(_('design_info_input_count'), zs.input, _('unit_count'))}
-                                    ${renderRow(_('design_info_output_count'), zs.output, _('unit_count'))}
-                                    ${renderRow(_('design_info_function_count'), zs.function, _('unit_count'))}
+                                    ${renderRow(_('Input Device Count'), zs.input, _('units'))}
+                                    ${renderRow(_('Output Device Count'), zs.output, _('units'))}
+                                    ${renderRow(_('Logic Count'), zs.function, _('units'))}
                                 </tbody>
                     </table>`;
-                            html += `<h6 class="font-weight-bold mb-1 ml-4 text-muted small">${_('design_info_pipe_details')}</h6>`;
+                            html += `<h6 class="font-weight-bold mb-1 ml-4 text-muted small">${_('Pipe Details')}</h6>`;
                             html += renderPipeTables(zone.pipes, 'ml-4');
                         });
                     }

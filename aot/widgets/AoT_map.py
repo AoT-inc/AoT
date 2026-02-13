@@ -234,7 +234,7 @@ WIDGET_BODY_HTML = """
 
     <!-- Search Overlay -->
     <div id="search-overlay-{{ each_widget.unique_id }}" class="map-search-overlay d-none">
-        <aot-map-search-fixed id="search-comp-{{ each_widget.unique_id }}" placeholder="{{ _('주소를 입력하세요.') }}"></aot-map-search-fixed>
+        <aot-map-search-fixed id="search-comp-{{ each_widget.unique_id }}" placeholder="{{ _('Enter an address.') }}"></aot-map-search-fixed>
     </div>
 </div>
 <script type="application/json" id="aot-map-vars-{{ each_widget.unique_id }}">
@@ -277,7 +277,7 @@ WIDGET_INFORMATION = {
     'message': '선택한 장치의 위치를 지도에 표시합니다. 선택한 색상으로 작동 상태를 강조합니다.',
 
     'widget_width': 26,
-    'widget_height': 15,
+    'widget_height': 17,
     'generate_page_variables': generate_page_variables,
     'execute_at_modification': execute_at_modification,
 
@@ -286,14 +286,14 @@ WIDGET_INFORMATION = {
         # --- Time ---
         {
             'type': 'header',
-            'name': lazy_gettext('시간')
+            'name': lazy_gettext('Time')
         },
         {
             'id': 'period',
             'type': 'integer',
             'default_value': '5',
-            'name': lazy_gettext('주기(초)'),
-            'phrase': lazy_gettext('N초마다 위젯을 새로고침합니다. 0이면 자동 갱신 없음.'),
+            'name': lazy_gettext('Period (Seconds)'),
+            'phrase': lazy_gettext('Refresh the widget every N seconds. 0 to disable.'),
             'constraints': {'min': 0, 'max': 86400}
         },
         {
@@ -301,8 +301,8 @@ WIDGET_INFORMATION = {
             'type': 'integer',
             'default_value': '300',
 
-            'name': lazy_gettext('최대 유효 시간(초)'),
-            'phrase': lazy_gettext('이 시간보다 오래된 데이터는 표시하지 않습니다. (기본값: 300초)'),
+            'name': lazy_gettext('Max Valid Age (s)'),
+            'phrase': lazy_gettext('Data older than this time will not be displayed. (Default: 300s)'),
             'constraints': {'min': 10, 'max': 86400}
         },
         {
@@ -310,15 +310,15 @@ WIDGET_INFORMATION = {
             'type': 'integer',
             'default_value': '300',
 
-            'name': lazy_gettext('입력 업데이트 주기(초)'),
-            'phrase': lazy_gettext('측정값을 자동으로 갱신하는 주기입니다. (기본값: 300초)'),
+            'name': lazy_gettext('Input Update Interval (s)'),
+            'phrase': lazy_gettext('Interval to automatically refresh measurements. (Default: 300s)'),
             'constraints': {'min': 5, 'max': 86400}
         },
 
         # --- Map ---
         {
             'type': 'header',
-            'name': lazy_gettext('지도')
+            'name': lazy_gettext('Map')
         },
         {
             'id': 'map_uuid',
@@ -326,52 +326,52 @@ WIDGET_INFORMATION = {
             'options_select': ['Map'],
             'default_value': '',
 
-            'name': lazy_gettext('지도 선택'),
-            'phrase': lazy_gettext('지도를 선택하세요. 비워두면 최근 수정된 지도를 사용합니다.')
+            'name': lazy_gettext('Select Map'),
+            'phrase': lazy_gettext('Select a map. Leave empty to use the most recently modified map.')
         },
         {
             'id': 'fallback_latitude',
             'type': 'text',
             'default_value': '',
 
-            'name': lazy_gettext('위도'),
-            'phrase': lazy_gettext('위도를 설정할 수 있습니다')
+            'name': lazy_gettext('Latitude'),
+            'phrase': lazy_gettext('Set the fallback latitude.')
         },
         {
             'id': 'fallback_longitude',
             'type': 'text',
             'default_value': '',
 
-            'name': lazy_gettext('경도'),
-            'phrase': lazy_gettext('경도를 설정할 수 있습니다')
+            'name': lazy_gettext('Longitude'),
+            'phrase': lazy_gettext('Set the fallback longitude.')
         },
         {
             'id': 'default_zoom',
             'type': 'text',
             'default_value': '15',
 
-            'name': lazy_gettext('축척'),
-            'phrase': lazy_gettext('지도의 확대/축소 값 (1~20)'),
+            'name': lazy_gettext('Zoom'),
+            'phrase': lazy_gettext('Map zoom level (1-20)'),
         },
         {
             'id': 'active_layers',
             'type': 'text',
             'default_value': '',
-            'name': lazy_gettext('활성 오버레이 레이어'),
-            'phrase': lazy_gettext('현재 활성화된 오버레이 지도 목록 (쉼표로 구분)')
+            'name': lazy_gettext('Active Overlay Layers'),
+            'phrase': lazy_gettext('List of currently active overlay layers (comma separated)')
         },
         {
             'id': 'selected_base_layer',
             'type': 'text',
             'default_value': '',
-            'name': lazy_gettext('선택된 베이스 레이어'),
-            'phrase': lazy_gettext('현재 선택된 베이스 지도 이름')
+            'name': lazy_gettext('Selected Base Layer'),
+            'phrase': lazy_gettext('Name of the currently selected base layer')
         },
 
         # --- Device Selection ---
         {
             'type': 'header',
-            'name': lazy_gettext('장치 선택')
+            'name': lazy_gettext('Device Selection')
         },
         {
             'id': 'device_selection_input',
@@ -379,8 +379,8 @@ WIDGET_INFORMATION = {
             'options_select': ['Input'],
             'default_value': '',
 
-            'name': lazy_gettext('입력'),
-            'phrase': lazy_gettext('출력할 입력을 선택하세요.')
+            'name': lazy_gettext('Input'),
+            'phrase': lazy_gettext('Select inputs to display.')
         },
         {
             'id': 'device_selection_output',
@@ -388,8 +388,8 @@ WIDGET_INFORMATION = {
             'options_select': ['Output'],
             'default_value': '',
 
-            'name': lazy_gettext('출력'),
-            'phrase': lazy_gettext('출력할 출력을 선택하세요.')
+            'name': lazy_gettext('Output'),
+            'phrase': lazy_gettext('Select outputs to display.')
         },
         {
             'id': 'device_selection_function',
@@ -397,15 +397,15 @@ WIDGET_INFORMATION = {
             'options_select': ['Function'],
             'default_value': '',
 
-            'name': lazy_gettext('함수'),
-            'phrase': lazy_gettext('출력할 함수를 선택하세요.')
+            'name': lazy_gettext('Function'),
+            'phrase': lazy_gettext('Select functions to display.')
         },
 
 
         # --- Measurement Panel ---
         {
             'type': 'header',
-            'name': lazy_gettext('측정값 패널')
+            'name': lazy_gettext('Measurement Panel')
         },
         {
             'id': 'measurements_input',
@@ -413,8 +413,8 @@ WIDGET_INFORMATION = {
             'options_select': ['Input'],
             'default_value': '',
 
-            'name': lazy_gettext('입력'),
-            'phrase': lazy_gettext('패널에 표시할 입력 측정값을 선택하세요.')
+            'name': lazy_gettext('Input'),
+            'phrase': lazy_gettext('Select input measurements to display in the panel.')
         },
         {
             'id': 'measurements_output',
@@ -422,8 +422,8 @@ WIDGET_INFORMATION = {
             'options_select': ['Output'],
             'default_value': '',
 
-            'name': lazy_gettext('출력'),
-            'phrase': lazy_gettext('패널에 표시할 출력 측정값을 선택하세요.')
+            'name': lazy_gettext('Output'),
+            'phrase': lazy_gettext('Select output measurements to display in the panel.')
         },
         {
             'id': 'measurements_function',
@@ -431,54 +431,54 @@ WIDGET_INFORMATION = {
             'options_select': ['Function'],
             'default_value': '',
 
-            'name': lazy_gettext('함수'),
-            'phrase': lazy_gettext('패널에 표시할 함수 측정값을 선택하세요.')
+            'name': lazy_gettext('Function'),
+            'phrase': lazy_gettext('Select function measurements to display in the panel.')
         },
 
         # --- Labels ---
         {
             'type': 'header',
-            'name': lazy_gettext('라벨')
+            'name': lazy_gettext('Labels')
         },
         {
             'id': 'show_site_label',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('대지 라벨'),
-            'phrase': lazy_gettext('지도에 대지(Site) 이름을 표시합니다.')
+            'name': lazy_gettext('Site Label'),
+            'phrase': lazy_gettext('Show Site names on the map.')
         },
         {
             'id': 'show_zone_label',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('구역 라벨'),
-            'phrase': lazy_gettext('지도에 구역(Zone) 이름을 표시합니다.')
+            'name': lazy_gettext('Zone Label'),
+            'phrase': lazy_gettext('Show Zone names on the map.')
         },
         {
             'id': 'show_device_labels',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('장치 라벨'),
-            'phrase': lazy_gettext('지도에 장치 이름을 표시합니다.')
+            'name': lazy_gettext('Device Label'),
+            'phrase': lazy_gettext('Show Device names on the map.')
         },
         {
             'id': 'enable_label_collision',
             'type': 'bool',
             'default_value': True,
 
-            'name': lazy_gettext('라벨 충돌 방지'),
-            'phrase': lazy_gettext('활성화 시 겹치는 라벨을 자동으로 숨깁니다.')
+            'name': lazy_gettext('Prevent Label Collision'),
+            'phrase': lazy_gettext('Automatically hide overlapping labels when enabled.')
         },
         {
             'id': 'label_spacing',
             'type': 'integer',
             'default_value': '10',
 
-            'name': lazy_gettext('라벨 간격 (px)'),
-            'phrase': lazy_gettext('라벨 간의 최소 간격을 설정합니다.'),
+            'name': lazy_gettext('Label Spacing (px)'),
+            'phrase': lazy_gettext('Set the minimum spacing between labels.'),
             'constraints': {'min': 0, 'max': 100}
         },
         {
@@ -486,83 +486,83 @@ WIDGET_INFORMATION = {
             'type': 'float',
             'default_value': '1.2',
 
-            'name': lazy_gettext('대지 라벨 크기'),
-            'phrase': lazy_gettext('대지 라벨의 크기를 지정합니다. (단위: em)'),
+            'name': lazy_gettext('Site Label Size'),
+            'phrase': lazy_gettext('Specify the size of Site labels (unit: em).'),
         },
         {
             'id': 'zone_label_size',
             'type': 'float',
             'default_value': '1.0',
 
-            'name': lazy_gettext('구역 라벨 크기'),
-            'phrase': lazy_gettext('구역 라벨의 크기를 지정합니다. (단위: em)'),
+            'name': lazy_gettext('Zone Label Size'),
+            'phrase': lazy_gettext('Specify the size of Zone labels (unit: em).'),
         },
 
         # --- Shapes ---
         {
             'type': 'header',
-            'name': lazy_gettext('도형')
+            'name': lazy_gettext('Shapes')
         },
         {
             'id': 'show_site_shape',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('대지 도형'),
-            'phrase': lazy_gettext('지도에 대지(Site) 폴리곤을 표시합니다.')
+            'name': lazy_gettext('Site Shape'),
+            'phrase': lazy_gettext('Show Site polygons on the map.')
         },
         {
             'id': 'show_zone_shape',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('구역 도형'),
-            'phrase': lazy_gettext('지도에 구역(Zone) 폴리곤을 표시합니다.')
+            'name': lazy_gettext('Zone Shape'),
+            'phrase': lazy_gettext('Show Zone polygons on the map.')
         },
         {
             'id': 'show_facility_shape',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('시설 도형'),
-            'phrase': lazy_gettext('시설(Facility) 폴리곤을 표시합니다.')
+            'name': lazy_gettext('Facility Shape'),
+            'phrase': lazy_gettext('Show Facility polygons on the map.')
         },
         {
             'id': 'show_equipment_shape',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('설비 도형'),
-            'phrase': lazy_gettext('설비(Equipment - 파이프 등) 도형을 표시합니다.')
+            'name': lazy_gettext('Equipment Shape'),
+            'phrase': lazy_gettext('Show Equipment (e.g., pipes) shapes on the map.')
         },
         {
             'id': 'show_device_shapes',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('장치 도형'),
-            'phrase': lazy_gettext('장치(Device)에 설정된 도형 영역을 표시합니다.')
+            'name': lazy_gettext('Device Shape'),
+            'phrase': lazy_gettext('Show Device shape areas on the map.')
         },
         {
             'id': 'show_drawn_shapes',
             'type': 'bool',
             'default_value': False,
 
-            'name': lazy_gettext('기타 그리기 도형'),
-            'phrase': lazy_gettext('그리기 도구로 생성한 자율 형태의 도형을 표시합니다.')
+            'name': lazy_gettext('Other Drawn Shapes'),
+            'phrase': lazy_gettext('Show freeform shapes created with drawing tools.')
         },
 
         # --- Shapes Style ---
         {
             'type': 'header',
-            'name': lazy_gettext('도형 스타일')
+            'name': lazy_gettext('Shape Style')
         },
         {
             'id': 'device_shape_opacity',
             'type': 'integer',
             'default_value': '50',
-            'name': lazy_gettext('장치 도형 투명도'),
-            'phrase': lazy_gettext('0 (투명) ~ 100 (불투명)'),
+            'name': lazy_gettext('Device Shape Opacity'),
+            'phrase': lazy_gettext('0 (Transparent) ~ 100 (Opaque)'),
             'constraints': {'min': 0, 'max': 100}
         },
         
@@ -571,8 +571,8 @@ WIDGET_INFORMATION = {
             'id': 'overlay_data_only',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('데이터값만 표시 (지도 숨김)'),
-            'phrase': lazy_gettext('오버레이 지도를 숨기고 데이터 패널만 표시합니다.')
+            'name': lazy_gettext('Display Data Only (Hide Map)'),
+            'phrase': lazy_gettext('Hide the overlay map and show only the data panel.')
         }
 
     ],

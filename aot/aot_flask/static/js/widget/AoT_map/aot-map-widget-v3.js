@@ -801,10 +801,10 @@
                             <div id="note-row2-view-${noteId}" style="display: flex; flex-direction: column; gap: 6px;">
                                 <button class="btn btn-primary" style="border-radius: 14px; height: 28px; width: 100%; font-size: 0.9em; display: flex; align-items: center; justify-content: center; padding: 0;"
                                     onclick="${openNoteAction}">
-                                    <i class="fas fa-clipboard mr-2"></i> ${_('open_notes')}
+                                    <i class="fas fa-clipboard mr-2"></i> ${window._('Open Notes')}
                                 </button>
                                 <div id="last-note-title-${noteId}" style="font-size: 0.85em; color: #888; padding-left: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                    ${_('loading')}
+                                    ${window._('Loading')}
                                 </div>
                             </div>
                             
@@ -812,9 +812,9 @@
                             <div id="note-row2-edit-${noteId}" style="display: none;">
                                 <div style="display: flex; gap: 6px; margin-bottom: 8px; align-items: stretch;">
                                     <input type="text" id="rename-input-${noteId}" value="${safeName}" class="form-control" style="flex:1; padding: 2px 6px; font-size: 0.95em;">
-                                    <button class="btn btn-sm btn-primary" style="padding: 2px 8px; white-space: nowrap;" onclick="${renameAction}">${_('save')}</button>
+                                    <button class="btn btn-sm btn-primary" style="padding: 2px 8px; white-space: nowrap;" onclick="${renameAction}">${window._('Save')}</button>
                                 </div>
-                                <button class="btn btn-danger btn-block btn-sm" onclick="${deleteAction}">${_('remove_from_map')}</button>
+                                <button class="btn btn-danger btn-block btn-sm" onclick="${deleteAction}">${window._('Remove from Map')}</button>
                             </div>
                         </div>
                      `;
@@ -1629,7 +1629,7 @@
                                     el.innerText = notes[0].note.substring(0, 30) + (notes[0].note.length > 30 ? '...' : '');
                                     el.style.color = '#555';
                                 } else {
-                                    el.innerText = '작성된 노트 없음';
+                                    el.innerText = window._('No notes written');
                                     el.style.color = '#ccc';
                                 }
                             }
@@ -1650,10 +1650,10 @@
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <button class="btn btn-primary" style="border-radius: 14px; height: 28px; width: 100%; font-size: 0.9em; display: flex; align-items: center; justify-content: center; padding: 0;"
                                 onclick="${openNoteAction}">
-                                <i class="fas fa-clipboard mr-2"></i> ${_('open_notes')}
+                                <i class="fas fa-clipboard mr-2"></i> ${window._('Open Notes')}
                             </button>
                             <div id="last-note-title-${tId}" style="font-size: 0.85em; color: #888; padding-left: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                Loading...
+                                ${window._('Loading...')}
                             </div>
                         </div>
                     </div>
@@ -1856,7 +1856,7 @@
                     <hr style="margin: 8px 0; border: 0; border-top: 1px solid #eee;">
                     <button class="btn btn-primary" style="border-radius: 14px; height: 28px; width: 100%; font-size: 0.9em; display: flex; align-items: center; justify-content: center; padding: 0;"
                          onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '${uniqueKey}', targetType: 'device', name: '${(dev.device_name || dev.name || '').replace(/'/g, "\\'")}' } }))">
-                        <i class="fas fa-clipboard mr-2"></i> 노트 작성하기
+                        <i class="fas fa-clipboard mr-2"></i> ${window._('Create Note')}
                     </button>
                     <div id="${notePreviewId}" style="font-size: 0.9em; color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 1.2em; line-height: 1.4; margin-top: 6px;">
                         <span style="color: #ccc; font-style: italic;">...</span>
@@ -1875,13 +1875,13 @@
                                     el.style.fontStyle = 'normal';
                                     el.style.color = '#666';
                                 } else {
-                                    el.innerHTML = `<span style="color: #ccc; font-style: italic;">${_('no_notes')}</span>`;
+                                    el.innerHTML = `<span style="color: #ccc; font-style: italic;">${window._('No Notes')}</span>`;
                                 }
                             }
                         })
                         .catch(e => {
                              const el = document.getElementById(notePreviewId);
-                             if (el) el.innerHTML = `<span style="color: #ccc;">${_('load_fail')}</span>`;
+                             if (el) el.innerHTML = `<span style="color: #ccc;">${window._('Load Failed')}</span>`;
                         });
                 };
 
@@ -1926,7 +1926,7 @@
                             `;
                         });
                     } else {
-                        bodyHtml = `<div class="text-muted">${_('no_measurements')}</div>`;
+                        bodyHtml = `<div class="text-muted">${window._('No Measurements')}</div>`;
                     }
                     
                     // [Fix] Attach popupopen listener to fetch fresh data
@@ -2024,12 +2024,12 @@
                     <div style="border-top: 1px solid #eee; padding-top: 8px;">
                         <!-- Working Time -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-weight: bold; color: #555;">${_('current_work_time')}</span>
+                            <span style="font-weight: bold; color: #555;">${window._('Current Work Time')}</span>
                             <span id="${durId}" class="aot-timer-display" style="font-family: monospace; font-size: 1.1em; font-weight: bold;">00:00:00</span>
                         </div>
                         <!-- Last Time -->
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: bold; color: #555;">${_('last_work_time')}</span>
+                            <span style="font-weight: bold; color: #555;">${window._('Last Work Time')}</span>
                             <span id="last-dur-${dev.id}" style="font-family: monospace; font-size: 1.1em; color: #777;">${lastDurStr}</span>
                         </div>
                     </div>

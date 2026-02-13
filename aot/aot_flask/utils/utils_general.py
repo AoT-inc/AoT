@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+import calendar
 import copy
 import importlib
 import json
@@ -2224,15 +2224,12 @@ def sudo_present():
     return shutil.which("sudo") is not None
 
 
-import calendar
-import datetime
-
 def utc_to_local_time(utc_dt):
     try:
         if not utc_dt:
             return ""
         utc_timestamp = calendar.timegm(utc_dt.timetuple())
-        local_dt = datetime.datetime.fromtimestamp(utc_timestamp)
+        local_dt = datetime.fromtimestamp(utc_timestamp)
         return local_dt.strftime("%Y-%m-%d %H:%M:%S")
     except:
         return "TIMESTAMP ERROR"

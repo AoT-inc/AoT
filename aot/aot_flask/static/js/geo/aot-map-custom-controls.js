@@ -36,7 +36,7 @@
 
             const btn = L.DomUtil.create('a', 'btn btn-white btn-circle bg-white shadow-sm d-flex align-items-center justify-content-center', container);
             btn.href = '#';
-            btn.title = '대지 목록';
+            btn.title = _('Site List');
             btn.role = 'button';
             this._btn = btn;
 
@@ -98,10 +98,10 @@
                 this._listOverlay.style.setProperty('max-height', Math.max(100, spaceBelow - 20) + 'px', 'important');
             }
 
-            this._listOverlay.innerHTML = '<div style="font-weight:bold; padding-bottom:5px; border-bottom:1px solid #eee; margin-bottom:5px;">대지 목록</div>';
+            this._listOverlay.innerHTML = '<div style="font-weight:bold; padding-bottom:5px; border-bottom:1px solid #eee; margin-bottom:5px;">' + _('Site List') + '</div>';
             
             if (!this.options.sites || this.options.sites.length === 0) {
-                this._listOverlay.innerHTML += '<div style="color:#999; font-size:12px;">등록된 대지가 없습니다.</div>';
+                this._listOverlay.innerHTML += '<div style="color:#999; font-size:12px;">' + _('No registered sites.') + '</div>';
                 return;
             }
 
@@ -134,7 +134,7 @@
 
             const btn = L.DomUtil.create('a', 'aot-custom-btn', container);
             btn.href = '#';
-            btn.title = '거리 측정';
+            btn.title = _('Distance measurement');
             btn.role = 'button';
             
             const icon = L.DomUtil.create('i', 'fas fa-ruler-combined aot-map-btn-icon', btn);
@@ -212,7 +212,7 @@
                     tooltip.setLatLng(points[points.length - 1]);
                 }
                 
-                tooltip.setContent('거리: ' + distStr);
+                tooltip.setContent(_('Distance') + ': ' + distStr);
             };
 
             btn.onclick = (e) => {
@@ -228,7 +228,7 @@
                     
                     // Show toast if available
                     if (window.AoTMapApp && window.AoTMapApp.showToast) {
-                        window.AoTMapApp.showToast("거리 측정 모드 활성. 지도 위를 클릭하세요.", "info");
+                        window.AoTMapApp.showToast(_("Distance measurement mode active. Click on map."), "info");
                     }
                 } else {
                     btn.classList.remove('active');
@@ -299,7 +299,7 @@
                     offset: [10, 0]
                 })
                 .setLatLng(currentPoint)
-                .setContent('총 거리: ' + distStr)
+                .setContent(_('Total distance') + ': ' + distStr)
                 .addTo(map);
             };
 
@@ -324,7 +324,7 @@
 
             const btn = L.DomUtil.create('a', 'aot-custom-btn', container);
             btn.href = '#';
-            btn.title = '노트 추가';
+            btn.title = _('Add note');
             btn.role = 'button';
 
             const icon = L.DomUtil.create('i', 'fas fa-sticky-note aot-map-btn-icon', btn);
@@ -356,7 +356,7 @@
                             targetType: 'map_location',
                             gps_lat: e.latlng.lat,
                             gps_lng: e.latlng.lng,
-                            name: '새 노트'
+                            name: _('New Note')
                         } 
                     }));
 
@@ -952,14 +952,14 @@
                     // but usually strictly inverted to visible=up)
                     // Let's stick to: Visible=UP (Expanded Up), Hidden=DOWN (Collapsed Down)
                     icon.className = 'fas fa-chevron-down aot-map-btn-icon';
-                    btn.title = '패널 보이기';
+                    btn.title = _('Show panel');
                     btn.dataset.hidden = 'true';
                 } else {
                     // State: Visible (Expanded Up)
                     // Action: Hide (Collapse Down)
                     // Icon: Up (Indicates "It is Up")
                     icon.className = 'fas fa-chevron-up aot-map-btn-icon';
-                    btn.title = '패널 숨기기';
+                    btn.title = _('Hide panel');
                     btn.dataset.hidden = 'false';
                 }
             };

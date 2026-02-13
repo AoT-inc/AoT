@@ -24,46 +24,12 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css" />
 <script src="/static/js/gridstack-all.js"></script>
 
-<link href="/static/css/toastr.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css" />
-<script src="/static/js/toastr.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{{ url_for('static', filename='js/geo/aot-map-loader.js') }}"></script>
 <script src="/static/js/geo/aot-geo-input-preview.js?v=7"></script>
-<!-- Standard Toastr Config (Match Dashboard) -->
-<script>
-    $(document).ready(function() {
-      if (typeof toastr !== 'undefined') {
-          toastr.options = {
-            "closeButton": true,
-            "debug": false,
-            "newestOnTop": false,
-            "progressBar": false,
-            "positionClass": "toast-top-left",
-            "preventDuplicates": false,
-            "onclick": null,
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": 15000,
-            "extendedTimeOut": 10000,
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-          };
-      }
-    });
-</script>
-<style>
-    /* Force Toastr position and Z-Index to beat Navbar and Modals */
-    #toast-container.toast-top-left {
-      top: 12px !important;
-      left: 12px !important;
-      z-index: 2147483647 !important; /* Max Z-Index */
-      position: fixed !important;
-    }
-</style>
+
 <script>
     // Inject Global Geo Config
     window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
@@ -175,11 +141,10 @@
     // But adapted for this page context if needed, or largely identical.
 
     function popup_response(data) {
-        if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
-            toastr['error']('Error: ' + data.data.messages.error.join(", "));
-        }
-        if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-            toastr['success']('Success: ' + data.data.messages.success.join(", "));
+        if (data && data.data && data.data.messages) {
+            const msgs = data.data.messages;
+            if (msgs.error && msgs.error.length) window.showToast('Error: ' + msgs.error.join(", "), 'error');
+            if (msgs.success && msgs.success.length) window.showToast('Success: ' + msgs.success.join(", "), 'success');
         }
     }
 
@@ -191,11 +156,11 @@
             data: $(button).parents('form').serialize() + '&' + action + '=1',
             success: function (data) {
                 if ('error' in data.data.messages && data.data.messages.error.length !== 0) {
-                    toastr['error']('Error: ' + data.data.messages.error.join(", "));
+                    window.showToast('Error: ' + data.data.messages.error.join(", "), 'error');
                 }
 
                 if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-                    toastr['success']('Success: ' + data.data.messages.success.join(", "));
+                    window.showToast('Success: ' + data.data.messages.success.join(", "), 'success');
                 }
 
                 // Handle DOM Updates instead of Reload
@@ -234,7 +199,7 @@
                 }
             },
             error: function (xhr) {
-                toastr['error']('Server Error: ' + xhr.statusText);
+                window.showToast('Server Error: ' + xhr.statusText, 'error');
             }
         });
     }

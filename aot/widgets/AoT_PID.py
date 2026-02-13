@@ -200,27 +200,27 @@ WIDGET_INFORMATION = {
     'custom_options': [
         {
             'type': 'header',
-            'name': lazy_gettext('장치 설정')
+            'name': lazy_gettext('Device Settings')
         },
         {
             'id': 'pid',
             'type': 'select_device',
             'default_value': '',
             'options_select': ['PID'],
-            'name': lazy_gettext('PID 컨트롤러'),
-            'phrase': lazy_gettext('제어할 PID 컨트롤러를 선택하세요.')
+            'name': lazy_gettext('PID Controller'),
+            'phrase': lazy_gettext('Select the PID controller to control.')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('실행 설정')
+            'name': lazy_gettext('Execution Settings')
         },
         {
             'id': 'max_measure_age',
             'type': 'integer',
             'default_value': 3600,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('최대유효시간'), lazy_gettext('초')),
-            'phrase': lazy_gettext('사용할 측정값의 최대 유효 시간')
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'phrase': lazy_gettext('Maximum validity time for measurements used')
         },
         {
             'id': 'refresh_seconds',
@@ -228,54 +228,54 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': lazy_gettext('위젯을 새로 고침하는 간격')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Frequency of widget refresh')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('표시 설정')
+            'name': lazy_gettext('Display Settings')
         },
         {
             'id': 'enable_timestamp',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('타임스탬프'),
-            'phrase': lazy_gettext('위젯에 타임스탬프를 표시 합니다.')
+            'name': lazy_gettext('Timestamp'),
+            'phrase': lazy_gettext('Display timestamp on the widget.')
         },
         {
             'id': 'font_em_timestamp',
             'type': 'float',
             'default_value': 1.0,
-            'name': lazy_gettext('타임스탬프 문자 크기'),
-            'phrase': lazy_gettext('타임스탬프 문자 크기를 설정 합니다.')
+            'name': lazy_gettext('Timestamp Font Size'),
+            'phrase': lazy_gettext('Set the font size for the timestamp.')
         },
         {
             'id': 'decimal_places',
             'type': 'integer',
             'default_value': 1,
-            'name': lazy_gettext('소수점'),
-            'phrase': lazy_gettext('숫자의 소수점 자리수를 정할 수 있습니다.')
+            'name': lazy_gettext('Decimal Places'),
+            'phrase': lazy_gettext('Number of decimal places for numeric values.')
         },
         {
             'id': 'enable_status',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('상태표시'),
-            'phrase': lazy_gettext('현재 제어장치의 상태를 표시 합니다.')
+            'name': lazy_gettext('Status Display'),
+            'phrase': lazy_gettext('Display the status of the controller.')
         },
         {
             'id': 'show_pid_info',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('PID 정보'),
-            'phrase': lazy_gettext('현재 PID 설정값 보기')
+            'name': lazy_gettext('PID Info'),
+            'phrase': lazy_gettext('Show current PID configuration.')
         },
         {
             'id': 'show_set_setpoint',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('목표'),
-            'phrase': lazy_gettext('목표 값을 설정할 수 있습니다.')
+            'name': lazy_gettext('Setpoint'),
+            'phrase': lazy_gettext('Allows setting a target value.')
         }
     ],
 
@@ -295,6 +295,26 @@ WIDGET_INFORMATION = {
 
   # ------------------ BODY ------------------
   'widget_dashboard_body': """
+<style>
+/* PID 위젯 전용 UI 개선 */
+#pid_container_{{each_widget.unique_id}} .col-aot-2 {
+  width: 60px !important;
+}
+#pid_container_{{each_widget.unique_id}} .btn-aot-pid,
+#pid_container_{{each_widget.unique_id}} .btn-aot-pid-sm,
+#pid_container_{{each_widget.unique_id}} .btn-aot-pid-resume {
+  border: none !important;
+  box-shadow: none !important;
+}
+#pid_container_{{each_widget.unique_id}} .input-aot-pid {
+  background-color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+</style>
+
+
+<link rel="stylesheet" href="/static/css/components/aot-toggle.css">
 {% set this_pid = table_pid.query.filter(table_pid.unique_id == widget_options['pid']).first() %}
 
 <div class="frame-aot" id="pid_container_{{each_widget.unique_id}}">
@@ -303,10 +323,10 @@ WIDGET_INFORMATION = {
       <div class="prt-text">
         <div class="pid-aot-timestamp">
           {% if widget_options.get('enable_timestamp',True) %}
-            지난 작동: 
+            {{_('Last active: ')}}
             <span 
               id="duration_time-{{each_widget.unique_id}}">
-            </span>초,
+            </span>{{_('s, ')}}
             {% if widget_options.get('enable_timestamp',True) %}
             <span
               id="duration_time-{{each_widget.unique_id}}-timestamp">
@@ -346,7 +366,7 @@ WIDGET_INFORMATION = {
   <!-- 2행: 컨트롤 영역 -->
   <div class="row-aot-2">
     <div class="prt-text-inline">
-      현재: <span id="actual-{{each_widget.unique_id}}"></span>
+      {{_('Actual: ')}} <span id="actual-{{each_widget.unique_id}}"></span>
     </div>
     <div class="btn-aot-pid">
     {% if widget_options.get('show_set_setpoint',True) %}
@@ -354,19 +374,19 @@ WIDGET_INFORMATION = {
         <input type="text"
                id="pid_setpoint_{{widget_options['pid']}}"
                class="input-aot-pid"
-               placeholder="목표"
+               placeholder="{{_('Setpoint')}}"
                value="{{this_pid.setpoint}}">
       {% else %}
         <input type="text"
                id="pid_setpoint_{{widget_options['pid']}}"
                class="input-aot-pid"
-               placeholder="목표">
+               placeholder="{{_('Setpoint')}}">
       {% endif %}
       <button id="btn_pid_set_{{each_widget.unique_id}}"
               name="{{widget_options['pid']}}/set_setpoint_pid|"
               class="btn-aot-pid-sm"
               onclick="setSetpointAoT('{{each_widget.unique_id}}')">
-        목표
+        {{_('Setpoint')}}
       </button>
     {% else %}
       <input type="text"
@@ -380,20 +400,20 @@ WIDGET_INFORMATION = {
               name="{{widget_options['pid']}}/pause"
               class="btn-aot-pid-sm"
               onclick="sendPIDCommandAoT(this.name)">
-        중지
+        {{_('Pause')}}
       </button>
       <button id="btn_pid_hold_{{each_widget.unique_id}}"
               name="{{widget_options['pid']}}/hold"
               class="btn-aot-pid-sm"
               onclick="sendPIDCommandAoT(this.name)">
-        고정
+        {{_('Hold')}}
       </button>
       <button id="btn_pid_resume_{{each_widget.unique_id}}"
               name="{{widget_options['pid']}}/resume"
               class="btn-aot-pid-resume"
               style="display:none;"
               onclick="sendPIDCommandAoT(this.name)">
-        복귀
+        {{_('Resume')}}
       </button>
     </div>
   </div>
@@ -404,12 +424,12 @@ WIDGET_INFORMATION = {
        id="hidden_pid_activate_{{each_widget.unique_id}}"
        style="display:none;"
        name="{{widget_options['pid']}}/activate"
-       value="activate"/>
+       value="{{_('activate')}}"/>
 <input type="button"
        id="hidden_pid_deactivate_{{each_widget.unique_id}}"
        style="display:none;"
        name="{{widget_options['pid']}}/deactivate"
-       value="deactivate"/>
+       value="{{_('deactivate')}}"/>
 """,
 
     'widget_dashboard_js': """
@@ -487,14 +507,14 @@ function printPidErrorAoT(wid) {
 function getPidDataAoT(wid, pidid, max_age, decs) {
   if(!pidid || pidid==='None'){
     printPidErrorAoT(wid);
-    toastr.error("No PID selected");
+    window.showToast("No PID selected", "error");
     return;
   }
   $.ajax("/last_pid/"+pidid+"/"+max_age, {
     success:function(data, txtStatus, jqXHR){
       if(jqXHR.status===204) {
         printPidErrorAoT(wid);
-        toastr.error("No PID found or no measurement");
+        window.showToast("No PID found or no measurement", "error");
         return;
       }
       if(data.actual){
@@ -546,27 +566,11 @@ function getPidDataAoT(wid, pidid, max_age, decs) {
     },
     error:function(err){
       printPidErrorAoT(wid);
-      toastr.error("Error: " + JSON.stringify(err));
+      window.showToast("Error: " + JSON.stringify(err), "error");
     }
   });
 }
 
-function sendPIDCommandAoT(cmd) {
-  if (!cmd || cmd.startsWith("None/")) {
-    console.error("No PID selected");
-    return;
-  }
-  $.ajax({
-    type: 'GET',
-    url: '/pid_mod_unique_id/' + cmd,
-    success: function(res) {
-      console.log("Server response:", res);
-    },
-    error: function(err) {
-      console.error("Error:", err);
-    }
-  });
-}
 
 function repeatPidDataAoT(wid, pidid, refsec, max_age, decs) {
   setInterval(function(){

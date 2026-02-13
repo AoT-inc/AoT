@@ -184,8 +184,7 @@ WIDGET_INFORMATION = {
     'no_class': True,
 
     # 위젯 설명 (한글화)
-    'message': '데이터를 원형 게이지를 표시합니다. 게이지가 올바르게 표시되도록 최대값 옵션을 마지막 구간(High)에 맞춰 설정하세요.'
-               '온도, 습도, VPD 등의 사전 설정을 선택하면, 최소/최대값 및 색상 구간이 자동으로 설정됩니다.',
+    'message': lazy_gettext('Displays data in a circular gauge. Ensure the maximum value option matches the last section (High) for correct display. Selecting presets like Temperature, Humidity, or VPD automatically sets min/max values and color sections.'),
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -210,9 +209,7 @@ WIDGET_INFORMATION = {
         ])
     ],
 
-    'dependencies_message': 'Highcharts는 오픈 소스 및 개인 사용 목적으로 무료로 사용할 수 있습니다.'
-                            '그러나 이 소프트웨어를 상업용 제품의 일부로 사용하는 경우, 사용자 또는 제조업체가 이 소프트웨어를 사용하기 위한 상업용 라이선스를 취득해야 할 수도 있습니다. '
-                            '가장 정확한 정보는 https://shop.highsoft.com 에서 Highcharts로 문의하시기 바랍니다.',
+    'dependencies_message': lazy_gettext('Highcharts is free for open source and personal use. However, if used as part of a commercial product, a commercial license may be required. Please check https://shop.highsoft.com for the most accurate information.'),
 
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
@@ -231,8 +228,8 @@ WIDGET_INFORMATION = {
                 'Function',
                 'PID'
             ],
-            'name': lazy_gettext('측정값'),
-            'phrase': lazy_gettext('표시할 측정값을 선택하세요')
+            'name': lazy_gettext('Measurement'),
+            'phrase': lazy_gettext('Select the measurement to display')
         },
         {
             'id': 'max_measure_age',
@@ -240,8 +237,8 @@ WIDGET_INFORMATION = {
             'default_value': 1800,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('최대 유효 시간'), lazy_gettext('초')),
-            'phrase': lazy_gettext('해당 측정값의 최대 유효 시간을 설정하세요')
+            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'phrase': lazy_gettext('Set the maximum valid time for the measurement')
         },
         {
             'id': 'refresh_seconds',
@@ -249,80 +246,80 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("새로고침"), lazy_gettext("초")),
-            'phrase': lazy_gettext('위젯을 새로고침할 주기를 설정하세요')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Set the refresh interval for the widget')
         },
         {
             'id': 'decimal_places',
             'type': 'integer',
             'default_value': 1,
-            'name': lazy_gettext('소수점 자릿수'),
-            'phrase': lazy_gettext('소수점 이하 표시 자릿수를 설정하세요')
+            'name': lazy_gettext('Decimal Places'),
+            'phrase': lazy_gettext('Set the number of decimal places to display')
         },
         {
             'id': 'min',
             'type': 'float',
             'default_value': 0,
-            'name': lazy_gettext('최소값'),
-            'phrase': lazy_gettext('게이지의 최소값을 설정하세요')
+            'name': lazy_gettext('Minimum Value'),
+            'phrase': lazy_gettext('Set the minimum value of the gauge')
         },
         {
             'id': 'max',
             'type': 'float',
             'default_value': 100,
-            'name': lazy_gettext('최대값'),
-            'phrase': lazy_gettext('게이지의 최대값을 설정하세요')
+            'name': lazy_gettext('Maximum Value'),
+            'phrase': lazy_gettext('Set the maximum value of the gauge')
         },
         {
             'id': 'stops',
             'type': 'integer',
             'default_value': 5,  # 4 → 5로 변경
-            'name': lazy_gettext('색상 구간 수'),
-            'phrase': lazy_gettext('게이지 색상을 구분할 구간 수를 설정하세요')
+            'name': lazy_gettext('Number of Color Sections'),
+            'phrase': lazy_gettext('Set the number of sections to distinguish gauge colors')
         },
         {
             'id': 'preset_config',
             'type': 'select',
             'default_value': 'custom',  # 기본: 사용자 정의
             'options_select': [
-                ('custom', '사용자 정의'),
-                ('temperature', '온도'),
-                ('humidity', '습도'),
-                ('vpd', 'VPD')
+                ('custom', lazy_gettext('Custom')),
+                ('temperature', lazy_gettext('Temperature')),
+                ('humidity', lazy_gettext('Humidity')),
+                ('vpd', lazy_gettext('VPD'))
             ],
-            'name': lazy_gettext('사전 설정'),
-            'phrase': lazy_gettext('사전 설정값을 선택하면, 최소/최대값 등 기본 설정이 자동으로 반영됩니다.')
+            'name': lazy_gettext('Preset Config'),
+            'phrase': lazy_gettext('Selecting a preset configuration automatically applies default settings such as min/max values.')
         },
         {
             # ★ 데이터 폰트 크기
             'id': 'text_font_size',
             'type': 'float',
             'default_value': 1.5,
-            'name': lazy_gettext('데이터 문자 크기'),
-            'phrase': lazy_gettext('게이지 내부 데이터의 문자 크기를 설정하세요. 기본값 1.5는 중간 크기입니다.')
+            'name': lazy_gettext('Data Font Size'),
+            'phrase': lazy_gettext('Set the font size of the data inside the gauge. Default is 1.5 (medium).')
         },
         {
             # ★ 단위 폰트 크기
             'id': 'unit_font_size',
             'type': 'float',
             'default_value': 0.7,
-            'name': lazy_gettext('단위 문자 크기'),
-            'phrase': lazy_gettext('게이지 내부 단위의 문자 크기를 설정하세요. 기본값 0.7은 작은 크기입니다.')
+            'name': lazy_gettext('Unit Font Size'),
+            'phrase': lazy_gettext('Set the font size of the unit inside the gauge. Default is 0.7 (small).')
         },
         {
             # ★ 단위 폰트 크기
             'id': 'unit_font_tick',
             'type': 'float',
             'default_value': 500,
-            'name': lazy_gettext('단위 문자 굵기'),
-            'phrase': lazy_gettext('게이지 내부 문자 굵기를 설정하세요. 기본값 500은 중간 굵기입니다.')
+            'name': lazy_gettext('Unit Font Weight'),
+            'phrase': lazy_gettext('Set the font weight inside the gauge. Default is 500 (medium).')
         },
         {
             'id': 'text_y_offset',
             'type': 'float',
             'default_value': 30,
-            'name': lazy_gettext('데이터 위치 오프셋'),
-            'phrase': lazy_gettext('게이지 내부 데이터 텍스트의 수직 위치 오프셋을 설정하세요 (숫자만 입력, 단위는 자동 처리)')
+            'name': lazy_gettext('Data Position Offset'),
+            'phrase': lazy_gettext('Set the vertical position offset of the data text inside the gauge (numeric only).')
         }        
     ],
 
@@ -349,13 +346,13 @@ WIDGET_INFORMATION = {
           {% set index = '{0:0>2}'.format(n) %}
         <div class="form-row">
           <div class="col-auto">
-            <label class="control-label" for="color_low_number{{index}}">[{{n}}] 구간 시작</label>
+            <label class="control-label" for="color_low_number{{index}}">[{{n}}] {{_('Section Start')}}</label>
             <div>
               <input class="form-control" id="color_low_number{{index}}" name="color_low_number{{index}}" type="text" value="{{widget_variables['colors_gauge_angular'][n]['low']}}">
             </div>
           </div>
           <div class="col-auto">
-            <label class="control-label" for="color_hex_number{{index}}">[{{n}}] 색상</label>
+            <label class="control-label" for="color_hex_number{{index}}">[{{n}}] {{_('Color')}}</label>
             <div>
               <input id="color_hex_number{{index}}" name="color_hex_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_gauge_angular'][n]['hex']}}">
             </div>

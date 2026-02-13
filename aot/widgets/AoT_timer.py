@@ -395,6 +395,7 @@ def output_started_at(device_unique_id, channel_id):
         res = _read_latest_started_at_safe(device_unique_id, ch_index, duration_sec, timeout_sec=2.0)
         if res is None:
             logger.debug(f"output_started_at: no 'output_started_at' points device={device_unique_id} ch={ch_index} (with fallbacks)")
+
             return '', 204
 
         if isinstance(res, int):
@@ -459,15 +460,11 @@ def output_started_at_public(device_unique_id, channel_id):
 
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_timer',
-    'widget_name': 'AoT 타이머',
+    'widget_name': lazy_gettext('AoT Timer'),
     'widget_library': 'timer',
     'no_class': True,
 
-    'message': (
-        '시간입력창에 "시/분/초"를 입력하면 입력한 시간만큼 장치가 작동하고 꺼집니다.'
-        '입력된 시간이 "0"이면 종료 전까지 연속 작동합니다.'
-        '토글 스위치를 "ON"으로 하면 장치가 켜지고, "OFF"로 하면 장치가 꺼집니다.'
-    ),
+    'message': lazy_gettext('Entering "h/m/s" in the time input field will operate the device for the set time and then turn it off. If the input time is "0", it will operate continuously until stopped. Setting the toggle switch to "ON" turns the device on, and setting it to "OFF" turns it off.'),
 
     'widget_width': 24,
     'widget_height': 7,
@@ -475,7 +472,7 @@ WIDGET_INFORMATION = {
     'custom_options': [
         {
             'type': 'header',
-            'name': lazy_gettext('장치 설정')
+            'name': lazy_gettext('Device Settings')
         },
         {
             'id': 'output',
@@ -485,7 +482,7 @@ WIDGET_INFORMATION = {
                 'Output_Channels',
             ],
             'name': lazy_gettext('Output'),
-            'phrase': lazy_gettext('제어할 Output 을 선택하세요.')
+            'phrase': lazy_gettext('Select the Output to control.')
         },
         {
             'id': 'refresh_seconds',
@@ -493,90 +490,92 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 5.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("동기화"), lazy_gettext("초")),
-            'phrase': lazy_gettext('사용할 측정값의 최대 유효 시간')
+            'name': lazy_gettext('{} ({})').format(lazy_gettext("Sync"), lazy_gettext("Seconds")),
+            'phrase': lazy_gettext('Maximum validity time for measurements used')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('표시 설정')
+            'name': lazy_gettext('Display Settings')
         },
         {
             'id': 'enable_status',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('상태 표시'),
-            'phrase': lazy_gettext('작동상태를 타이틀바에 표시 합니다.')
+            'name': lazy_gettext('Show Status'),
+            'phrase': lazy_gettext('Display operation status on the title bar.')
         },
         {
             'id': 'status_font_em',
             'type': 'float',
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('상태 크기'),
-            'phrase': lazy_gettext('(em) 단위')
+            'name': lazy_gettext('Status Size'),
+            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'id': 'enable_timestamp',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('작동시간'),
-            'phrase': lazy_gettext('작동시간을 표시 합니다.')
+            'name': lazy_gettext('Operation Time'),
+            'phrase': lazy_gettext('Display operation time.')
         },
         {
             'id': 'widget_name_font_em',
             'type': 'float',
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('작동시간 글자 크기'),
-            'phrase': lazy_gettext('(em) 단위')
+            'name': lazy_gettext('Operation Time Font Size'),
+            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'type': 'header',
-            'name': lazy_gettext('시간 설정')
+            'name': lazy_gettext('Time Settings')
         },
         {
             'id': 'enable_output_controls',
             'type': 'bool',
             'default_value': True,
-            'name': lazy_gettext('타이머'),
-            'phrase': lazy_gettext('타이머 기능을 활성화 합니다.')
+            'name': lazy_gettext('Timer'),
+            'phrase': lazy_gettext('Enable the timer function.')
         },
         {
             'id': 'font_em_time_input',
             'type': 'float',
             'default_value': 1.2,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('시간입력창 크기'),
-            'phrase': lazy_gettext('(em) 단위')
+            'name': lazy_gettext('Time Input Size'),
+            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'id': 'tz_offset',
             'type': 'select',
             'default_value': '9.0',
             'options_select': [
-                ('9.0', '서울 (UTC+9)'),
-                ('8.0', '베이징 (UTC+8)'),
-                ('7.0', '방콕 (UTC+7)'),
-                ('6.0', '다카 (UTC+6)'),
-                ('5.5', '뉴델리 (UTC+5:30)'),
-                ('4.0', '두바이 (UTC+4)'),
-                ('3.0', '리야드 (UTC+3)'),
-                ('1.0', '베를린 (UTC+1)'),
-                ('0.0', '런던 (UTC±0)'),
-                ('-3.0', '부에노스아이레스 (UTC-3)'),
-                ('-5.0', '뉴욕 (UTC-5)'),
-                ('-6.0', '시카고 (UTC-6)'),
-                ('-8.0', '로스앤젤레스 (UTC-8)'),
-                ('-9.0', '앵커리지 (UTC-9)'),
-                ('-10.0', '하와이 (UTC-10)')
+                ('9.0', lazy_gettext('Seoul (UTC+9)')),
+                ('8.0', lazy_gettext('Beijing (UTC+8)')),
+                ('7.0', lazy_gettext('Bangkok (UTC+7)')),
+                ('6.0', lazy_gettext('Dhaka (UTC+6)')),
+                ('5.5', lazy_gettext('New Delhi (UTC+5:30)')),
+                ('4.0', lazy_gettext('Dubai (UTC+4)')),
+                ('3.0', lazy_gettext('Riyadh (UTC+3)')),
+                ('1.0', lazy_gettext('Berlin (UTC+1)')),
+                ('0.0', lazy_gettext('London (UTC±0)')),
+                ('-3.0', lazy_gettext('Buenos Aires (UTC-3)')),
+                ('-5.0', lazy_gettext('New York (UTC-5)')),
+                ('-6.0', lazy_gettext('Chicago (UTC-6)')),
+                ('-8.0', lazy_gettext('Los Angeles (UTC-8)')),
+                ('-9.0', lazy_gettext('Anchorage (UTC-9)')),
+                ('-10.0', lazy_gettext('Honolulu (UTC-10)'))
             ],
-            'name': lazy_gettext('시간대'),
-            'phrase': lazy_gettext('도시를 선택하면 숫자 오프셋으로 적용됩니다.')
+            'name': lazy_gettext('Timezone'),
+            'phrase': lazy_gettext('Select a city to apply its numeric offset.')
         }
     ],
 
     # ------------------ HEAD (CSS) ------------------
-    'widget_dashboard_head': """<!-- No head content -->""",
+    'widget_dashboard_head': """
+    <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
+    """,
 
     'endpoints': [
         ("/output_started_at/<device_unique_id>/<channel_id>", "output_started_at", output_started_at, ["GET"]),
@@ -601,7 +600,32 @@ WIDGET_INFORMATION = {
 
     # ------------------ BODY ------------------
     'widget_dashboard_body': """
+    <style>
+    /* 타이머 위젯 전용 UI 개선 */
+    #aot_tm_{{each_widget.unique_id}} .col-aot-2 {
+      width: 60px !important;
+      border: none !important;
+    }
+    #aot_tm_{{each_widget.unique_id}} .input-time,
+    #aot_tm_{{each_widget.unique_id}} .btn-time {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #aot_tm_{{each_widget.unique_id}} .input-time-hh,
+    #aot_tm_{{each_widget.unique_id}} .input-time-mm,
+    #aot_tm_{{each_widget.unique_id}} .input-time-ss {
+      background-color: #ffffff !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #aot_tm_{{each_widget.unique_id}} .btn-time-item {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    </style>
+
     {%- set wo = widget_options if widget_options is defined else {} -%}
+
     {%- set output = wo.get('output', '') -%}
     {%- set device_id = '' -%}
     {%- set channel_id = '' -%}
@@ -627,9 +651,10 @@ WIDGET_INFORMATION = {
         <!-- 토글 스위치 (오른쪽) -->
         <div class="col-aot-2">
           <label class="btn-toggle">
-            <input type="checkbox" 
+            <input type="checkbox"
                   id="tm_tog_{{each_widget.unique_id}}"
-                  class="timer-toggle-input btn-toggle-input"
+                  class="btn-toggle-input aot-timer-toggle"
+                  data-wid="{{each_widget.unique_id}}"
                   name="{{device_id}}/{{channel_id}}">
             <span class="btn-toggle-slider">
               <span class="btn-toggle-thumb"></span>
@@ -662,15 +687,15 @@ WIDGET_INFORMATION = {
           <input id="tm_reset_{{each_widget.unique_id}}"
                 class="btn-time-item"
                 type="button"
-                value="재설정">
+                value="{{_('Reset')}}">
           <input id="tm_plus5_{{each_widget.unique_id}}"
                 class="btn-time-item"
                 type="button"
-                value="5분">
+                value="{{_('5m')}}">
           <input id="tm_plus10_{{each_widget.unique_id}}"
                 class="btn-time-item"
                 type="button"
-                value="10분">
+                value="{{_('10m')}}">
         </div>
       </div>
       {% endif %}
@@ -877,7 +902,7 @@ WIDGET_INFORMATION = {
                     tm_storeLastSession(widget_id, Math.floor(js.start_ms), Math.max(0, Math.floor(js.elapsed_sec)));
                   }
                 } else if (!hadDisplay) {
-                  // 표시가 전혀 없는 경우에만 기본값 출력 (+ 가능한 경우 시작시간 포함)
+                  // Only output default if no display at all (+ include start time if possible)
                   const dOff = tm_getOffStartDate(widget_id);
                   const startedStr = dOff ? tm_formatMD_HMS(dOff, widget_id) : '';
                   tm_setTextStable(widget_id, '00:00:00' + (startedStr? ", "+startedStr: ''));
@@ -923,7 +948,7 @@ WIDGET_INFORMATION = {
           // If we don't have a valid start base yet, wait for server start timestamp (no provisional local base)
           if (typeof tm_timestampStartSec[widget_id] === 'undefined' || typeof tm_timestampStartDate[widget_id] === 'undefined') {
             // No valid base yet; show a short syncing hint and immediately fetch server start-time once.
-            if (tm_lastRenderedText[widget_id] !== '동기화 중…') tm_setTextStable(widget_id, '동기화 중…');
+            if (tm_lastRenderedText[widget_id] !== '{{_("Syncing...")}}') tm_setTextStable(widget_id, '{{_("Syncing...")}}');
             (async function(){
               const devName = $chk.attr('name');
               const dev_id = devName ? devName.split('/')[0] : null;
@@ -964,7 +989,7 @@ WIDGET_INFORMATION = {
               const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
               tm_updateServerNowOffsetFromResponse(res);
 
-              // 401/403: 인증 이슈 → 상위에서 private로 폴백할지 판단
+              // 401/403: Auth issue -> parent decides whether to fallback to private
               if (res.status === 401 || res.status === 403) {
                 return { kind: 'auth_needed' };
               }

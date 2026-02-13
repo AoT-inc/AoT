@@ -40,8 +40,8 @@
                     return btn;
                 };
 
-                createBtn('fas fa-plus', '확대', () => map.zoomIn());
-                createBtn('fas fa-minus', '축소', () => map.zoomOut());
+                createBtn('fas fa-plus', window._('Zoom In'), () => map.zoomIn());
+                createBtn('fas fa-minus', window._('Zoom Out'), () => map.zoomOut());
 
                 return container;
             }
@@ -70,7 +70,7 @@
                 };
 
                 // Fullscreen
-                createBtn('fas fa-expand', '전체화면', () => {
+                createBtn('fas fa-expand', window._('Fullscreen'), () => {
                     const canvas = map.getContainer();
                     // [Fix] Request fullscreen for the parent container so siblings (like search-overlay) are visible
                     const elem = canvas.closest('.aot-map-container') || canvas;
@@ -124,7 +124,7 @@
                 });
 
                 // Search
-                createBtn('fas fa-search', '주소검색', () => {
+                createBtn('fas fa-search', window._('Address Search'), () => {
                     if (opts.onSearch) opts.onSearch();
                     else {
                         const targetId = opts.searchTargetId || 'map-search-overlay';
@@ -146,7 +146,7 @@
                 });
 
                 // Locate
-                createBtn('fas fa-location-arrow', '현재위치', () => {
+                createBtn('fas fa-location-arrow', window._('Current Location'), () => {
                     if (opts.onLocate) opts.onLocate();
                     else {
                         map.locate({ setView: true, maxZoom: 16 });
@@ -160,20 +160,20 @@
                     if(window.currentLocCircle) map.removeLayer(window.currentLocCircle);
 
                     window.currentLocMarker = L.marker(e.latlng).addTo(map)
-                        .bindPopup("현재 위치 (" + radius.toFixed(0) + "m within)").openPopup();
+                        .bindPopup(window._('Current Location') + " (" + radius.toFixed(0) + "m within)").openPopup();
                     window.currentLocCircle = L.circle(e.latlng, radius).addTo(map);
                 });
 
                 map.on('locationerror', (e) => {
                     if (window.AoTMapApp && window.AoTMapApp.showToast) {
-                        window.AoTMapApp.showToast("위치 확인 실패: " + e.message, "error");
+                        window.AoTMapApp.showToast(window._("Location check failed: ") + e.message, "error");
                     } else {
-                        alert("위치 확인 실패: " + e.message);
+                        alert(window._("Location check failed: ") + e.message);
                     }
                 });
 
                 // Reset
-                createBtn('fas fa-undo', '돌아가기', () => {
+                createBtn('fas fa-undo', window._('Reset'), () => {
                     if (opts.onReset) opts.onReset();
                 });
 
@@ -214,7 +214,7 @@
                 // Lock
                 let isLocked = opts.isLocked || false;
                 // Default: Unlock (open) -> Click -> Lock
-                const lockBtn = createBtn(isLocked ? 'fas fa-lock' : 'fas fa-unlock', isLocked ? '잠금 해제' : '지도 잠금', (e, btn) => {
+                const lockBtn = createBtn(isLocked ? 'fas fa-lock' : 'fas fa-unlock', isLocked ? window._('Unlock Map') : window._('Lock Map'), (e, btn) => {
                     isLocked = !isLocked;
                     this._updateLock(map, isLocked, btn);
                     if (opts.onLockChange) opts.onLockChange(isLocked);
@@ -226,7 +226,7 @@
                 // Hide
                 let isHidden = opts.isHidden || false;
                 // Default: Eye (visible) -> Click -> Eye Slash (hidden)
-                const hideBtn = createBtn(isHidden ? 'fas fa-eye-slash' : 'fas fa-eye', isHidden ? '컨트롤 보이기' : '컨트롤 숨기기', (e, btn) => {
+                const hideBtn = createBtn(isHidden ? 'fas fa-eye-slash' : 'fas fa-eye', isHidden ? window._('Show Controls') : window._('Hide Controls'), (e, btn) => {
                     isHidden = !isHidden;
                     this._updateHide(map, isHidden, btn, container);
                     if (opts.onHideChange) opts.onHideChange(isHidden);
@@ -249,7 +249,7 @@
                     
                     btn.innerHTML = '<i class="fas fa-lock aot-map-btn-icon"></i>';
                     
-                    btn.title = '잠금 해제';
+                    btn.title = window._('Unlock Map');
                     btn.classList.add('active'); 
                     
                     // [Style] Dark Gray Background for Lock Emphasis
@@ -266,7 +266,7 @@
                     
                     btn.innerHTML = '<i class="fas fa-unlock aot-map-btn-icon"></i>';
                     
-                    btn.title = '지도 잠금';
+                    btn.title = window._('Lock Map');
                     btn.classList.remove('active');
                     
                     // [Style] Restore White Background
@@ -314,7 +314,7 @@
                 const iconClass = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
                 btn.innerHTML = `<i class="${iconClass} aot-map-btn-icon"></i>`;
                 
-                btn.title = isHidden ? '컨트롤 보이기' : '컨트롤 숨기기';
+                btn.title = isHidden ? window._('Show Controls') : window._('Hide Controls');
                 if (isHidden) {
                     btn.classList.add('active');
                     btn.classList.add('text-primary'); // Visual Feedback
