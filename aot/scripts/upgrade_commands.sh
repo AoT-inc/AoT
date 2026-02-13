@@ -214,30 +214,27 @@ case "${1:-''}" in
         printf "\n#### Building React Notes Widget\n"
         # Check Node.js version
         if ! command -v node &> /dev/null; then
-            printf "#### ERROR: node not found. Please install Node.js >= 20.19.0\n"
-            return 1
-        fi
-        
-        NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -lt 20 ]; then
-            printf "#### ERROR: Node.js version is too old. Found: $(node -v), required: >= 20.19.0\n"
-            printf "#### Please upgrade Node.js and try again.\n"
-            return 1
-        fi
-        
-        # Ensure npm is available
-        if ! command -v npm &> /dev/null; then
-            printf "#### ERROR: npm not found. Skipping build.\n"
-            return 1
+            printf "#### WARNING: node not found. Skipping Notes Widget build.\n"
         else
-            cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
-            printf "#### Installing node dependencies...\n"
-            npm install
-            printf "#### Building bundle...\n"
-            npm run build
-            # Correct permissions if needed
-            chown -R "${AOT_USER}:${AOT_GROUP}" dist/ 2>/dev/null || true
-            chown -R "${AOT_USER}:${AOT_GROUP}" ../../js/notes/ 2>/dev/null || true
+            NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+            if [ "$NODE_VERSION" -lt 20 ]; then
+                printf "#### WARNING: Node.js version is too old. Found: $(node -v), required: >= 20.19.0\n"
+                printf "#### Skipping Notes Widget build. Please upgrade Node.js to >= 20.19.0\n"
+            else
+                # Ensure npm is available
+                if ! command -v npm &> /dev/null; then
+                    printf "#### WARNING: npm not found. Skipping Notes Widget build.\n"
+                else
+                    cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
+                    printf "#### Installing node dependencies...\n"
+                    npm install
+                    printf "#### Building bundle...\n"
+                    npm run build
+                    # Correct permissions if needed
+                    chown -R "${AOT_USER}:${AOT_GROUP}" dist/ 2>/dev/null || true
+                    chown -R "${AOT_USER}:${AOT_GROUP}" ../../js/notes/ 2>/dev/null || true
+                fi
+            fi
         fi
     ;;
     'initialize')
@@ -299,9 +296,9 @@ case "${1:-''}" in
     ;;
     'update-alembic')
         printf "\n#### Upgrading AoT database with alembic (if needed)\n"
-        "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/scripts/init_database.py
+        "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/scripts/init_database.py 2>&1 || printf "#### WARNING: Database initialization script failed, continuing with alembic migration...\n"
         cd "${AOT_PATH}"/alembic_db || return
-        "${AOT_PATH}"/env/bin/python -m alembic upgrade head
+        "${AOT_PATH}"/env/bin/python -m alembic upgrade head 2>&1 || printf "#### WARNING: Alembic migration partially failed. Check logs for details.\n"
     ;;
     'update-alembic-post')
         printf "\n#### Executing post-alembic script\n"

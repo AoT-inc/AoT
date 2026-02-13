@@ -22,18 +22,28 @@ sys.path.insert(0, project_root)
 
 def get_db_path():
     """Get the absolute path to the SQLite database."""
+    # Try multiple ways to get the database path
+    
+    # Method 1: Try importing from config (preferred)
     try:
         from aot.config import SQL_DATABASE_AOT
-        # Remove sqlite:/// prefix if present
         db_path = SQL_DATABASE_AOT
         if db_path.startswith('sqlite:///'):
             db_path = db_path[10:]  # Remove 'sqlite:///' 
         return db_path
-    except ImportError as e:
+    except (ImportError, AttributeError) as e:
         print(f"Warning: Could not import SQL_DATABASE_AOT: {e}")
-        # Fallback to default path
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        return os.path.join(project_root, 'aot', 'databases', 'aot.db')
+    
+    # Method 2: Try importing DATABASE_PATH and DATABASE_NAME
+    try:
+        from aot.config import DATABASE_PATH, DATABASE_NAME
+        return os.path.join(DATABASE_PATH, DATABASE_NAME)
+    except (ImportError, AttributeError) as e:
+        print(f"Warning: Could not import DATABASE_PATH/DATABASE_NAME: {e}")
+    
+    # Method 3: Fallback to default path
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(project_root, 'aot', 'databases', 'aot.db')
 
 def backup_database(db_path):
     """Create a backup of the existing database."""
