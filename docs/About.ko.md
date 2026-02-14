@@ -1,4 +1,4 @@
-AoT is an open-source environmental monitoring and regulation system that was built to run on single-board computers, specifically the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi).
+AoT는 [라즈베리 파이](https://en.wikipedia.org/wiki/Raspberry_Pi)와 같은 단일 보드 컴퓨터에서 실행되도록 설계된 오픈 소스 환경 모니터링 및 제어 시스템입니다.
 
 Originally developed for cultivating edible mushrooms, AoT has grown to do much more. The system consists of two parts, a backend (daemon) and a frontend (web server). The backend performs tasks such as acquiring measurements from sensors and devices and coordinating a diverse set of responses to those measurements, including the ability to modulate outputs (switch relays, generate PWM signals, operate pumps, switch wireless outlets, publish/subscribe to MQTT, among others), regulate environmental conditions with PID control, schedule timers, capture photos and stream video, trigger actions when measurements meet certain conditions, and more. The frontend hosts a web interface that enables viewing and configuration from any browser-enabled device.
 

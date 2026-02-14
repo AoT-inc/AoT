@@ -12,7 +12,7 @@
           <p>{{_('To install these components, click the "Install" button below and wait until the installation is complete before re-adding the device. After installation, the frontend and backend will automatically restart to detect the newly installed modules.')}}</p>
 
           <form id="form_dependency_install" method="post">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
             <div class="row small-gutters" style="padding-left: 0.5em">
               <div class="col-auto">
@@ -69,24 +69,24 @@
   function popup_response(data) {
     {% if not misc.hide_alert_warning %}
     if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
-      toastr['warning']('Warning: ' + data.data.messages.warning.join(", "));
+      window.showToast('Warning: ' + data.data.messages.warning.join(", "), 'warning');
     }
     {% endif %}
     {% if not misc.hide_alert_info %}
     if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
-      toastr['info']('Info: ' + data.data.messages.info.join(", "));
+      window.showToast('Info: ' + data.data.messages.info.join(", "), 'info');
     }
     {% endif %}
     {% if not misc.hide_alert_success %}
     if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-      toastr['success']('Success: ' + data.data.messages.success.join(", "));
+      window.showToast('Success: ' + data.data.messages.success.join(", "), 'success');
     }
     {% endif %}
   }
 
   $("#form_dependency_install").submit(function(e) {
     e.preventDefault();
-    {% if not misc.hide_alert_info %}toastr['info']('Command sent. Please wait...');{% endif %}
+    {% if not misc.hide_alert_info %}window.showToast('Command sent. Please wait...', 'info');{% endif %}
     $.ajax({
       type: "POST",
       url: '/admin/dependency_install/' + $('#dependency_unmet').val(),
@@ -101,7 +101,7 @@
         }, 5000);
       },
       error: function() {
-        toastr['error']('Error: Could not communicate with server');
+        window.showToast('Error: Could not communicate with server', 'error');
       }
     });
   });

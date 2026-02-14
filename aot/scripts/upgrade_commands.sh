@@ -5,7 +5,7 @@
 
 exec 2>&1
 
-if [[ "$EUID" -ne 0 ]] && [[ "$(uname)" != "Darwin" ]]; then
+if [[ "$EUID" -ne 0 ]]; then
     printf "Must be run as root.\n"
     exit 1
 fi
@@ -26,7 +26,7 @@ WIRINGPI_URL_ARM64="https://github.com/WiringPi/WiringPi/releases/download/3.10/
 INFLUXDB1_VERSION="1.8.10"
 
 # Required apt packages
-APT_PKGS="gawk gcc g++ git jq libatlas-base-dev libffi-dev libgeos-dev libheif-dev libi2c-dev logrotate moreutils netcat-openbsd nginx nodejs npm python3 python3-dev python3-pip python3-setuptools python3-venv rng-tools sqlite3 unzip wget"
+APT_PKGS="gcc g++ git jq libatlas-base-dev libffi-dev libgeos-dev libheif-dev libi2c-dev logrotate mawk moreutils netcat-openbsd nginx python3 python3-dev python3-pip python3-setuptools python3-venv rng-tools sqlite3 unzip wget"
 
 UNAME_TYPE=$(uname -m)
 MACHINE_TYPE=$(dpkg --print-architecture)
@@ -100,8 +100,7 @@ Options:
   web-server-restart            Restart the web server
   web-server-disable            Disable the web server service
   web-server-enable             Enable the web server service
-   web-server-update             Update the web server configuration files
-  update-nodejs                 Update Node.js to v20 via NodeSource
+  web-server-update             Update the web server configuration files
   reset-influxdb-config         Reset InfluxDB configuration in SQLite to defaults
 
 Docker-specific Commands:
@@ -213,32 +212,19 @@ case "${1:-''}" in
     ;;
     'build-notes-widget')
         printf "\n#### Building React Notes Widget\n"
-        # Check Node.js version
-        if ! command -v node &> /dev/null; then
-            printf "#### WARNING: node not found. Skipping Notes Widget build.\n"
+        # Ensure npm and node are available
+        if ! command -v npm &> /dev/null; then
+            printf "#### npm not found. Skipping build.\n"
         else
-            NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-            if [ "$NODE_VERSION" -lt 20 ]; then
-                printf "#### WARNING: Node.js version is too old. Found: $(node -v), required: >= 20.19.0\n"
-                printf "#### Skipping Notes Widget build. Please upgrade Node.js to >= 20.19.0\n"
-            else
-                # Ensure npm is available
-                if ! command -v npm &> /dev/null; then
-                    printf "#### WARNING: npm not found. Skipping Notes Widget build.\n"
-                else
-                    if ! cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget; then
-                        printf "#### ERROR: Could not enter notes-widget directory.\n"
-                        exit 1
-                    fi
-                    printf "#### Installing node dependencies...\n"
-                    npm install
-                    printf "#### Building bundle...\n"
-                    npm run build
-                    # Correct permissions if needed
-                    chown -R "${AOT_USER}:${AOT_GROUP}" dist/ 2>/dev/null || true
-                    chown -R "${AOT_USER}:${AOT_GROUP}" ../../js/notes/ 2>/dev/null || true
-                fi
-            fi
+            cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
+            printf "#### Installing node dependencies...\n"
+            rm -rf node_modules package-lock.json
+            npm install --no-audit --no-fund
+            printf "#### Building bundle...\n"
+            npm run build
+            # Correct permissions if needed
+            chown -R "${AOT_USER}:${AOT_GROUP}" dist/ 2>/dev/null || true
+            chown -R "${AOT_USER}:${AOT_GROUP}" ../../js/notes/ 2>/dev/null || true
         fi
     ;;
     'initialize')
@@ -300,12 +286,8 @@ case "${1:-''}" in
     ;;
     'update-alembic')
         printf "\n#### Upgrading AoT database with alembic (if needed)\n"
-        "${AOT_PATH}"/env/bin/python "${AOT_PATH}"/aot/scripts/init_database.py 2>&1 || printf "#### WARNING: Database initialization script failed, continuing with alembic migration...\n"
-        if ! cd "${AOT_PATH}"/alembic_db; then
-            printf "#### ERROR: Could not enter alembic_db directory.\n"
-            exit 1
-        fi
-        "${AOT_PATH}"/env/bin/python -m alembic upgrade head 2>&1 || printf "#### WARNING: Alembic migration partially failed. Check logs for details.\n"
+        cd "${AOT_PATH}"/alembic_db || return
+        "${AOT_PATH}"/env/bin/python -m alembic upgrade head
     ;;
     'update-alembic-post')
         printf "\n#### Executing post-alembic script\n"
@@ -454,7 +436,7 @@ case "${1:-''}" in
         INSTALL_ADDRESS="https://dl.influxdata.com/influxdb/releases/"
         INSTALL_FILE="influxdb_${INFLUXDB1_VERSION}_${MACHINE_TYPE}.deb"
         CORRECT_VERSION="${INFLUXDB1_VERSION}-1"
-        CURRENT_VERSION=$(apt-cache policy influxdb | grep 'Installed' | gawk '{print $2}')
+        CURRENT_VERSION=$(apt-cache policy influxdb | grep 'Installed' | awk '{print $2}')
 
         if [[ "${CURRENT_VERSION}" != "${CORRECT_VERSION}" ]]; then
             printf "#### Incorrect InfluxDB version (v${CURRENT_VERSION}) installed. Should be v${CORRECT_VERSION}\n"
@@ -507,7 +489,7 @@ case "${1:-''}" in
 
             printf "#### Influxdb server file location: ${INSTALL_ADDRESS}${INSTALL_FILE}\n"
 
-            CURRENT_VERSION=$(apt-cache policy influxdb2 | grep 'Installed' | gawk '{print $2}')
+            CURRENT_VERSION=$(apt-cache policy influxdb2 | grep 'Installed' | awk '{print $2}')
 
             if [[ "${CURRENT_VERSION}" != "${CORRECT_VERSION_INSTALL}" ]]; then
                 printf "#### Incorrect InfluxDB version (v${CURRENT_VERSION}) installed. Should be v${CORRECT_VERSION_INSTALL}\n"
@@ -531,7 +513,7 @@ case "${1:-''}" in
 
             printf "#### Influxdb client file location: ${INSTALL_ADDRESS}${CLIENT_FILE}\n"
 
-            CURRENT_VERSION=$(apt-cache policy influxdb2-cli | grep 'Installed' | gawk '{print $2}')
+            CURRENT_VERSION=$(apt-cache policy influxdb2-cli | grep 'Installed' | awk '{print $2}')
 
             if [[ "${CURRENT_VERSION}" != "${CORRECT_VERSION_CLI}" ]]; then
                 printf "#### Incorrect InfluxDB-Client version (v${CURRENT_VERSION}) installed. Should be v${CORRECT_VERSION_CLI}\n"
@@ -683,36 +665,30 @@ case "${1:-''}" in
         printf "#### Enabling aot startup script\n"
         systemctl enable "${AOT_PATH}"/install/aot.service
     ;;
-    'update-nodejs')
-        printf "\n#### Updating Node.js to v20 using NodeSource\n"
-        if command -v node &> /dev/null; then
-            NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-            if [ "$NODE_VERSION" -ge 20 ]; then
-                printf "#### Node.js version is already %s. Skipping update.\n" "$(node -v)"
-                return 0
-            fi
-        fi
-        
-        printf "#### Installing Node.js v20 repository...\n"
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-        apt-get install -y nodejs
-        printf "#### Node.js version after update: $(node -v)\n"
+    'update-aot-startup-script')
+        printf "\n#### Updating aot startup script\n"
+        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-aot-service-disable
+        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-aot-service-enable
     ;;
     'update-packages')
         printf "\n#### Installing prerequisite apt packages and update pip\n"
         apt remove -y apache2 || true
-        
-        # Install Node.js v20 first if needed
-        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-nodejs
-        
         apt install -y ${APT_PKGS}
         
-        # Ensure Nginx configuration is present (fix for interrupted installs)
         if [[ ! -f /etc/nginx/nginx.conf ]]; then
             printf "#### WARNING: /etc/nginx/nginx.conf missing. Reinstalling nginx-common to restore defaults...\n"
-            apt-get install -o Dpkg::Options::='--force-confmiss' install --reinstall -y nginx-common
+            apt-get install -o Dpkg::Options::='--force-confmiss' --reinstall -y nginx-common
         fi
         
+        # [Fix] Node.js 20 Installation (Separate from main apt packages to prevent conflicts)
+        if ! command -v node &> /dev/null || [[ $(node -v | cut -d'.' -f1) != "v20" ]]; then
+            printf "#### Installing Node.js 20 from Nodesource...\n"
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+        else
+            printf "#### Node.js 20 already installed ($(node -v))\n"
+        fi
+
         apt clean
     ;;
     'update-permissions')

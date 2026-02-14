@@ -20,25 +20,28 @@ def upgrade():
     insp = Inspector.from_engine(conn)
     
     # 1. trigger table: action_type
-    columns_trigger = [c['name'] for c in insp.get_columns('trigger')]
-    if 'action_type' not in columns_trigger:
-        with op.batch_alter_table('trigger', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('action_type', sa.Text(), nullable=True, server_default=''))
+    tables = insp.get_table_names()
+    if 'trigger' in tables:
+        columns_trigger = [c['name'] for c in insp.get_columns('trigger')]
+        if 'action_type' not in columns_trigger:
+            with op.batch_alter_table('trigger', schema=None) as batch_op:
+                batch_op.add_column(sa.Column('action_type', sa.Text(), nullable=True, server_default=''))
 
     # 2. conditional table: latitude, longitude, location_source
-    columns_conditional = [c['name'] for c in insp.get_columns('conditional')]
-    missing_geo = [
-        ('latitude', sa.Float()),
-        ('longitude', sa.Float()),
-        ('location_source', sa.String(32))
-    ]
-    with op.batch_alter_table('conditional', schema=None) as batch_op:
-        for name, typ in missing_geo:
-            if name not in columns_conditional:
-                if name == 'location_source':
-                    batch_op.add_column(sa.Column(name, typ, nullable=True, server_default='manual'))
-                else:
-                    batch_op.add_column(sa.Column(name, typ, nullable=True))
+    if 'conditional' in tables:
+        columns_conditional = [c['name'] for c in insp.get_columns('conditional')]
+        missing_geo = [
+            ('latitude', sa.Float()),
+            ('longitude', sa.Float()),
+            ('location_source', sa.String(32))
+        ]
+        with op.batch_alter_table('conditional', schema=None) as batch_op:
+            for name, typ in missing_geo:
+                if name not in columns_conditional:
+                    if name == 'location_source':
+                        batch_op.add_column(sa.Column(name, typ, nullable=True, server_default='manual'))
+                    else:
+                        batch_op.add_column(sa.Column(name, typ, nullable=True))
 
 def downgrade():
     conn = op.get_bind()

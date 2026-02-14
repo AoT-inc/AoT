@@ -4,7 +4,7 @@
 
 
 이 함수는 잎 온도와 습도를 기반으로 증기압 부족분(VPD)을 계산합니다.잎의 온도가 입력되지 않은 경우, 잎의 온도 대신 잎 온도에 오프셋을 적용합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>주기 (초)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>주기 (초)</td><td>Text
 - Default Value: 60</td><td>측정 또는 동작 사이의 기간</td></tr><tr><td>시작 지연 (초)</td><td>Integer
 - Default Value: 10</td><td>첫 번째 동작 전 대기 시간</td></tr><tr><td>대기 온도</td><td>Select Measurement (Input, Function)</td><td>대기 온도 측정</td></tr><tr><td>대기 온도: 최대 사용 연령 (초)</td><td>Integer
 - Default Value: 360</td><td>사용할 측정값의 최대 연령</td></tr><tr><td>습도</td><td>Select Measurement (Input, Function)</td><td>습도 측정</td></tr><tr><td>습도: 최대 사용 연령 (초)</td><td>Integer
@@ -16,28 +16,10 @@
 
 
 이 기능은 선택된 측정값들을 읽어와, 유효한 데이터만 평균을 구한 후, 결과를 지정한 Measurement와 단위로 저장합니다.유효하지 않거나 오래된 측정값(최대 유효 시간 초과)은 평균에서 제외합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>주기 (초)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>주기 (초)</td><td>Text
 - Default Value: 60</td><td>측정 및 계산 주기, 시간(초 단위)</td></tr><tr><td>시작 지연 (초)</td><td>Integer
 - Default Value: 10</td><td>첫 측정 전에 대기할 시간(초)</td></tr><tr><td>최대 유효 시간 (초)</td><td>Integer
 - Default Value: 360</td><td> 사용할 측정값의 최대 유효 시간</td></tr><tr><td>Measurement</td></td><td>평균을 계산할 측정 값을 선택하세요</td></tr></tbody></table>
-
-### AoT: 밸브제어
-
-
-최대 16개 밸브를 순차 제어하고, 펌프를 총합 시간만큼 동작하는 관수 제어입니다.
-사용 방법: 
-1) 입력이 있으면 센서 값(부호 무시, 절댓값 초)으로 작동 시간을 결정합니다.
-2) 입력 값이 없으면 작동시간(분)을 사용합니다.
-3) 입력도 없고 작동시간이 0이면 해당 채널은 스킵합니다.
-4) 최소 작동시간 미만은 무시 됩니다.
-5) 펌프 사용 여부를 선택할 수 있습니다.
-6) 초기화 시 장치들을 OFF 상태로 만들 수 있습니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>실행 주기</td><td>Decimal
-- Default Value: 30</td><td>제어 주기를 시/분/초 단위로 설정합니다.</td></tr><tr><td>주기 단위</td><td>Select(Options: [시 | <strong>분</strong> | 초] (Default in <strong>bold</strong>)</td><td>주기 단위를 시/분/초 중에서 선택합니다.</td></tr><tr><td>시작 지연 (초)</td><td>Integer
-- Default Value: 10</td><td>첫 실행 전에 대기할 시간(초)</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Integer
-- Default Value: 360</td><td>측정값의 최대 허용 시간입니다.</td></tr><tr><td colspan="3"><b>작동 시간 설정</b></td></tr><tr><td>시작 시간</td><td>Text</td><td>HH:MM 또는 HHMM 형식. 비워두면 제한 없음.</td></tr><tr><td>종료 시간</td><td>Text</td><td>HH:MM 또는 HHMM 형식. 비워두면 제한 없음.</td></tr><tr><td>최소 작동시간 (초)</td><td>Integer
-- Default Value: 15</td><td>이 시간(초) 미만의 밸브 동작은 무시됩니다.</td></tr><tr><td>밸브 전환 오버랩 (초)</td><td>Decimal
-- Default Value: 1.0</td><td>밸브→밸브 전환 시 겹치는 시간(초). 0이면 겹침 없이 전환합니다.</td></tr><tr><td colspan="3"><b>장치 설정</b></td></tr><tr><td>펌프 사용</td><td>Boolean</td><td>펌프를 사용할지 여부를 선택합니다.</td></tr><tr><td>펌프 출력</td><td>Select Channel (Output_Channels)</td><td>펌프 제어에 사용할 출력을 선택합니다.</td></tr><tr><td>초기화 시 OFF</td><td>Select(Options: [<strong>예</strong> | 아니오] (Default in <strong>bold</strong>)</td><td>초기화 실행 시 펌프와 등록된 밸브들에 OFF 명령을 일괄 전송합니다.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>채널 사용</td><td>Boolean</td><td>이 채널을 작동에 포함합니다.</td></tr><tr><td>측정값</td><td>Select Measurement (Input, Function, PID)</td><td>해당 채널의 밸브 동작 시간을 가져올 측정값을 선택합니다.</td></tr><tr><td>출력</td><td>Select Channel (Output_Channels)</td><td>이 채널의 밸브로 사용할 출력을 선택합니다.</td></tr><tr><td>작동시간 (분)</td><td>Decimal</td><td>이 채널의 밸브를 작동할 시간(분 단위)입니다. (측정값을 사용하거나 채널 미사용 시 비워두어도 됩니다)</td></tr></tbody></table>
 
 ### Camera: libcamera: Image/Video
 
@@ -62,7 +44,7 @@
 - Dependencies: [smbus2](https://pypi.org/project/smbus2)
 
 이 함수는 I2C를 통해 16x2 LCD 디스플레이에 출력을 제공합니다. 이 디스플레이는 한 번에 2줄을 표시할 수 있으므로, 라인 세트 수(Number of Line Sets)가 변경되면 2개 채널씩 추가됩니다. 설정된 주기(Period)마다 LCD가 새로고침되며, 다음 세트의 라인이 표시됩니다. 따라서 처음 표시되는 2줄은 채널 0과 1이며, 이후 2와 3, 그다음 4와 5가 표시되는 방식으로 진행됩니다. 모든 채널이 표시된 후에는 다시 처음부터 순환됩니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x20</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -77,7 +59,7 @@
 - Dependencies: [smbus2](https://pypi.org/project/smbus2)
 
 이 기능은 I2C를 통해 20x4 LCD 디스플레이에 출력을 제공합니다. 이 디스플레이는 한 번에 4줄을 표시할 수 있으므로, 라인 세트 수(Number of Line Sets)가 변경되면 4개 채널씩 추가됩니다. 설정된 주기(Period)마다 LCD가 새로고침되며, 다음 세트의 라인이 표시됩니다. 따라서 처음 표시되는 4줄은 채널 0, 1, 2, 3이며, 이후 4, 5, 6, 7, 그다음 8, 9, 10, 11이 표시되는 방식으로 진행됩니다. 모든 채널이 표시된 후에는 다시 처음부터 순환됩니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x20</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -92,7 +74,7 @@
 - Dependencies: [smbus2](https://pypi.org/project/smbus2)
 
 이 기능은 I2C를 통해 Grove 16x2 LCD 디스플레이에 출력을 제공합니다. 이 디스플레이는 한 번에 2줄을 표시할 수 있으므로, 라인 세트 수(Number of Line Sets)가 변경되면 2개 채널씩 추가됩니다. 설정된 주기(Period)마다 LCD가 새로고침되며, 다음 세트의 라인이 표시됩니다. 따라서 처음 표시되는 2줄은 채널 0과 1, 이후 채널 2와 3, 그다음 채널 4와 5가 표시되는 방식으로 진행됩니다. 모든 채널이 표시된 후에는 다시 처음부터 순환됩니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x3e</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Backlight I2C Address</td><td>Text
@@ -112,7 +94,7 @@
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 이 기능은 I2C를 통해 128x32 SSD1306 OLED 디스플레이에 출력을 제공합니다. 이 디스플레이 기능은 한 번에 2줄을 표시할 수 있으므로, 라인 세트 수(Number of Line Sets)가 변경되면 2개 채널씩 추가됩니다. 설정된 주기(Period)마다 LCD가 새로고침되며, 다음 세트의 라인이 표시됩니다. 따라서 처음 표시되는 라인 세트는 채널 0 - 1이며, 이후 2 - 3, 그다음 4 - 5가 표시되는 방식으로 진행됩니다. 모든 채널이 표시된 후에는 다시 처음부터 순환됩니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x3c</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -131,7 +113,7 @@
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-GPIO](https://pypi.org/project/Adafruit-GPIO), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 This Function outputs to a 128x32 SSD1306 OLED display via SPI. This display Function will show 2 lines at a time, so channels are added in sets of 2 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 1, then 2 - 3, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>Number of Line Sets</td><td>Integer
 - Default Value: 1</td><td>How many sets of lines to cycle on the LCD</td></tr><tr><td>SPI Device</td><td>Integer</td><td>The SPI device</td></tr><tr><td>SPI Bus</td><td>Integer</td><td>The SPI bus</td></tr><tr><td>DC Pin</td><td>Integer
 - Default Value: 16</td><td>The pin (BCM numbering) connected to DC of the display</td></tr><tr><td>Reset Pin</td><td>Integer
@@ -150,7 +132,7 @@ This Function outputs to a 128x32 SSD1306 OLED display via SPI. This display Fun
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 이 기능은 I2C를 통해 128x32 SSD1306 OLED 디스플레이에 출력을 제공합니다. 이 디스플레이 기능은 한 번에 4줄을 표시할 수 있으므로, 라인 세트 수(Number of Line Sets)가 변경되면 4개 채널씩 추가됩니다. 설정된 주기(Period)마다 LCD가 새로고침되며, 다음 세트의 라인이 표시됩니다. 따라서 처음 표시되는 라인 세트는 채널 0 - 3이며, 이후 4 - 7, 그다음 8 - 11이 표시되는 방식으로 진행됩니다. 모든 채널이 표시된 후에는 다시 처음부터 순환됩니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x3c</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -169,7 +151,7 @@ This Function outputs to a 128x32 SSD1306 OLED display via SPI. This display Fun
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-GPIO](https://pypi.org/project/Adafruit-GPIO), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 This Function outputs to a 128x32 SSD1306 OLED display via SPI. This display Function will show 4 lines at a time, so channels are added in sets of 4 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 3, then 4 - 7, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>Number of Line Sets</td><td>Integer
 - Default Value: 1</td><td>How many sets of lines to cycle on the LCD</td></tr><tr><td>SPI Device</td><td>Integer</td><td>The SPI device</td></tr><tr><td>SPI Bus</td><td>Integer</td><td>The SPI bus</td></tr><tr><td>DC Pin</td><td>Integer
 - Default Value: 16</td><td>The pin (BCM numbering) connected to DC of the display</td></tr><tr><td>Reset Pin</td><td>Integer
@@ -189,7 +171,7 @@ This Function outputs to a 128x32 SSD1306 OLED display via SPI. This display Fun
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 This Function outputs to a 128x64 SSD1306 OLED display via I2C. This display Function will show 4 lines at a time, so channels are added in sets of 4 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 3, then 4 - 7, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x3c</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -208,7 +190,7 @@ This Function outputs to a 128x64 SSD1306 OLED display via I2C. This display Fun
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-GPIO](https://pypi.org/project/Adafruit-GPIO), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 This Function outputs to a 128x64 SSD1306 OLED display via SPI. This display Function will show 4 lines at a time, so channels are added in sets of 4 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 3, then 4 - 7, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>Number of Line Sets</td><td>Integer
 - Default Value: 1</td><td>How many sets of lines to cycle on the LCD</td></tr><tr><td>SPI Device</td><td>Integer</td><td>The SPI device</td></tr><tr><td>SPI Bus</td><td>Integer</td><td>The SPI bus</td></tr><tr><td>DC Pin</td><td>Integer
 - Default Value: 16</td><td>The pin (BCM numbering) connected to DC of the display</td></tr><tr><td>Reset Pin</td><td>Integer
@@ -227,7 +209,7 @@ This Function outputs to a 128x64 SSD1306 OLED display via SPI. This display Fun
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 This Function outputs to a 128x64 SSD1306 OLED display via I2C. This display Function will show 8 lines at a time, so channels are added in sets of 8 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 7, then 8 - 15, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x3c</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -246,7 +228,7 @@ This Function outputs to a 128x64 SSD1306 OLED display via I2C. This display Fun
 - Dependencies: [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [Pillow](https://pypi.org/project/Pillow), [pyusb](https://pypi.org/project/pyusb), [Adafruit-GPIO](https://pypi.org/project/Adafruit-GPIO), [Adafruit-extended-bus](https://pypi.org/project/Adafruit-extended-bus), [adafruit-circuitpython-framebuf](https://pypi.org/project/adafruit-circuitpython-framebuf), [adafruit-circuitpython-ssd1306](https://pypi.org/project/adafruit-circuitpython-ssd1306)
 
 This Function outputs to a 128x64 SSD1306 OLED display via SPI. This display Function will show 8 lines at a time, so channels are added in sets of 8 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 7, then 8 - 15, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>Number of Line Sets</td><td>Integer
 - Default Value: 1</td><td>How many sets of lines to cycle on the LCD</td></tr><tr><td>SPI Device</td><td>Integer</td><td>The SPI device</td></tr><tr><td>SPI Bus</td><td>Integer</td><td>The SPI bus</td></tr><tr><td>DC Pin</td><td>Integer
 - Default Value: 16</td><td>The pin (BCM numbering) connected to DC of the display</td></tr><tr><td>Reset Pin</td><td>Integer
@@ -265,7 +247,7 @@ This Function outputs to a 128x64 SSD1306 OLED display via SPI. This display Fun
 - Dependencies: [pyusb](https://pypi.org/project/pyusb), [luma.oled](https://pypi.org/project/luma.oled), [Pillow](https://pypi.org/project/Pillow), [libjpeg-dev](https://packages.debian.org/search?keywords=libjpeg-dev), [zlib1g-dev](https://packages.debian.org/search?keywords=zlib1g-dev), [libfreetype6-dev](https://packages.debian.org/search?keywords=libfreetype6-dev), [liblcms2-dev](https://packages.debian.org/search?keywords=liblcms2-dev), [libopenjp2-7](https://packages.debian.org/search?keywords=libopenjp2-7), [libtiff5](https://packages.debian.org/search?keywords=libtiff5)
 
 This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Function will show 8 lines at a time, so channels are added in sets of 8 when Number of Line Sets is modified. Every Period, the LCD will refresh and display the next set of lines. Therefore, the first set of lines that are displayed are channels 0 - 7, then 8 - 15, and so on. After all channels have been displayed, it will cycle back to the beginning.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 10</td><td>The duration between measurements or actions</td></tr><tr><td>I2C Address</td><td>Text
 - Default Value: 0x3c</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>Number of Line Sets</td><td>Integer
@@ -280,7 +262,7 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 
 
 이 기능은 두 개의 측정값을 가져와 사용자가 설정한 수식에 적용한 후, 결과값을 선택된 측정값과 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Measurement: A</td><td>Select Measurement (Input, Output, Function)</td><td>Measurement to replace a</td></tr><tr><td>Measurement A: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement: B</td><td>Select Measurement (Input, Output, Function)</td><td>Measurement to replace b</td></tr><tr><td>Measurement B: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Equation</td><td>Text
@@ -290,7 +272,7 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 
 
 이 기능은 측정값을 가져와 사용자가 설정한 수식에 적용한 후, 결과값을 선택된 측정값과 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Measurement</td><td>Select Measurement (Input, Output, Function)</td><td>Measurement to replace "x" in the equation</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Equation</td><td>Text
 - Default Value: x*5+2</td><td>Equation using the measurement</td></tr></tbody></table>
@@ -300,7 +282,7 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 - Dependencies: [build-essential](https://packages.debian.org/search?keywords=build-essential)
 
 이 기능 모듈은 다양한 UI 옵션 유형을 보여주는 예제입니다. 새로운 맞춤형 기능 모듈을 개발하는 방법을 학습하는 용도로만 사용되며, 그 외의 실용적인 용도는 없습니다.이 메시지는 기능 옵션 위에 표시됩니다.이 기능은 마지막으로 선택된 측정값을 가져온 후, 선택된 출력을 15초 동안 켠 후 비활성화됩니다.코드를 분석하여 자신만의 기능 모듈을 개발하고, 기능 가져오기(Function Import) 페이지에서 가져올 수 있도록 구성하세요.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td colspan="3">The following fields are for text, integers, and decimal inputs. This message will automatically create a new line for the options that come after it. Alternatively, a new line can be created instead without a message, which are what separates each of the following three inputs.</td></tr><tr><td>Text Input</td><td>Text
 - Default Value: Text_1</td><td>Type in text</td></tr><tr><td>Integer Input</td><td>Integer
 - Default Value: 100</td><td>Type in an Integer</td></tr><tr><td>Devimal Input</td><td>Decimal
@@ -313,7 +295,7 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 
 
 이 기능은 습구 및 건구 온도 측정값을 기반으로 습도를 계산합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Dry Bulb Temperature</td><td>Select Measurement (Input, Function)</td><td>Dry Bulb temperature measurement</td></tr><tr><td>Dry Bulb: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Wet Bulb Temperature</td><td>Select Measurement (Input, Function)</td><td>Wet Bulb temperature measurement</td></tr><tr><td>Wet Bulb: Max Age (Seconds)</td><td>Integer
@@ -324,9 +306,9 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 
 
 배터리·시간대·밸브활동·링크품질을 기준으로 Class/하트비트 주기를 결정합니다. ChirpStack gRPC(DeviceService.Enqueue)를 통해 직접 다운링크를 큐잉합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>판정 및 적용 주기(초)</td></tr><tr><td colspan="3"><b>서버 연결</b></td></tr><tr><td>ChirpStack gRPC 서버</td><td>Text
-- Default Value: 127.0.0.1:8080</td><td>호스트:포트 형식 (예: 127.0.0.1:8080) 또는 http(s)://호스트:포트</td></tr><tr><td>API Key</td><td>Text</td><td>JWT 토큰 값을 입력하세요 (Bearer 제외)</td></tr><tr><td>DevEUI</td><td>Text</td><td>16자리 16진수 DevEUI (구분자 허용)</td></tr><tr><td colspan="3"><b>측정 입력</b></td></tr><tr><td>배터리 측정</td><td>Select Measurement (Input)</td><td>배터리 전압(V) 측정값을 선택합니다.</td></tr><tr><td>RSSI 측정</td><td>Select Measurement (Input)</td><td>RSSI(주파수세기, dBm) 측정값을 선택합니다.</td></tr><tr><td>SNR 측정</td><td>Select Measurement (Input)</td><td>SNR(노이즈비율, dB) 측정값을 선택합니다.</td></tr><tr><td>엔드노드 클래스</td><td>Select Measurement (Input)</td><td>HB에서 추출한 현재 장치 클래스(1=A,2=B,3=C) 측정값</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Integer
+- Default Value: 127.0.0.1:8080</td><td>호스트:포트 형식 (예: 127.0.0.1:8080) 또는 http(s)://호스트:포트</td></tr><tr><td>API Key</td><td>Text</td><td>JWT 토큰 값을 입력하세요 (Bearer 제외)</td></tr><tr><td>DevEUI</td><td>Text</td><td>16자리 16진수 DevEUI (구분자 허용)</td></tr><tr><td colspan="3"><b>측정 입력</b></td></tr><tr><td>배터리 측정</td><td>Select Measurement (Input)</td><td>배터리 전압(V) 측정값을 선택합니다.</td></tr><tr><td>RSSI 측정</td><td>Select Measurement (Input)</td><td>RSSI(주파수세기, dBm) 측정값을 선택합니다.</td></tr><tr><td>SNR 측정</td><td>Select Measurement (Input)</td><td>SNR(노이즈비율, dB) 측정값을 선택합니다.</td></tr><tr><td>엔드노드 클래스</td><td>Select Measurement (Input)</td><td>HB에서 추출한 현재 장치 클래스(1=A,2=B,3=C) 측정값</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Text
 - Default Value: 4000</td><td>사용할 측정치의 최대 허용 연령(초)</td></tr><tr><td>재시도 간격(분)</td><td>Decimal</td><td>ACK가 없을 때 동일 모드를 다시 적용할 간격(0이면 재시도 안 함)</td></tr><tr><td>LoRa 클래스 정책</td><td>Select(Options: [<strong>자동</strong> | CLASS-A | CLASS-B | CLASS-C] (Default in <strong>bold</strong>)</td><td>자동일 때만 모드에 따라 Class를 전환하며, 특정 클래스를 선택하면 그 클래스를 유지합니다.</td></tr><tr><td>입력값 유효 시에만 모드 전환</td><td>Boolean</td><td>입력 조건/측정값이 유효할 때만 모드 적용</td></tr><tr><td colspan="3"><b>운영 시간대</b><br/><small>성능 모드로 작동할 시간을 설정 합니다. 0~24 입력 또는 시작과 종료시간이 같으면 24시간</small></td></tr><tr><td>성능 모드 시작(시)</td><td>Integer
 - Default Value: 4</td><td>성능 모드 시작 시각 (0–23)</td></tr><tr><td>성능 모드 종료(시)</td><td>Integer
 - Default Value: 18</td><td>성능 모드 종료 시각 (0–23)</td></tr><tr><td>성능 모드 선행(분)</td><td>Integer
@@ -349,8 +331,8 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I2C Address</td><td>Text
 - Default Value: 0x30</td><td></td></tr><tr><td>I2C Bus</td><td>Integer
 - Default Value: 1</td><td></td></tr><tr><td>LED Brightness (0.0-1.0)</td><td>Decimal
-- Default Value: 0.2</td><td>The brightness of the LEDs</td></tr><tr><td>LED Flash Period (Seconds)</td><td>Decimal
-- Default Value: 1.0</td><td>Set the period if the LED begins flashing</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>LED Delay (Seconds)</td><td>Decimal
+- Default Value: 0.2</td><td>The brightness of the LEDs</td></tr><tr><td>LED Flash Period (Seconds)</td><td>Text
+- Default Value: 1.0</td><td>Set the period if the LED begins flashing</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>LED Delay (Seconds)</td><td>Text
 - Default Value: 1.5</td><td>How long to leave the LED on after the last action executes.</td></tr><tr><td>Action ID(s)</td><td>Text</td><td>Set which action(s) execute when the key is pressed. Enter one or more Action IDs, separated by commas</td></tr><tr><td>Enable Toggling Actions</td><td>Boolean</td><td>Alternate between executing two sets of Actions</td></tr><tr><td>Toggled Action ID(s)</td><td>Text</td><td>Set which action(s) execute when the key is pressed on even presses. Enter one or more Action IDs, separated by commas</td></tr><tr><td>Resting LED Color (RGB)</td><td>Text
 - Default Value: 0, 0, 0</td><td>The RGB color while no actions are running (e.g 10, 0, 0)</td></tr><tr><td>Actions Running LED Color: (RGB)</td><td>Text
 - Default Value: 0, 255, 0</td><td>The RGB color while all but the last action is running (e.g 10, 0, 0)</td></tr><tr><td>Last Action LED Color (RGB)</td><td>Text
@@ -361,11 +343,11 @@ This Function outputs to a 128x64 SSD1309 OLED display via I2C. This display Fun
 
 
 이 기능은 PID 컨트롤러 자동 튜닝을 시도합니다. 즉, 출력을 활성화하고 센서에서 응답을 여러 번 측정하여 P, I, D 게인 값을 계산합니다.작동 상태에 대한 업데이트는 데몬 로그에 기록되며, 자동 튜닝이 성공적으로 완료되면 요약 정보도 데몬 로그에 저장됩니다.현재 측정값을 증가시키는 동작만 지원하며, 측정값을 낮추는 기능은 컨트롤러 코드의 일부 수정이 필요할 수 있습니다.출력이 설정값을 초과하도록 정상적으로 측정값을 증가시키는지 모니터링하려면 대시보드에서 측정값과 출력을 그래프로 표시하는 것을 권장합니다.자동 튜닝 기능은 실험적인 기능이며, 완전히 개발된 상태가 아닙니다. PID 게인을 제대로 생성하지 못할 가능성이 높으므로, 정확한 PID 컨트롤러 튜닝을 위해 이 기능에 의존하지 않는 것이 좋습니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Output</td><td>Select Device, Measurement, and Channel (Output)</td><td>Select an output to modulate that will affect the measurement</td></tr><tr><td>Period</td><td>Integer
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Output</td><td>Select Device, Measurement, and Channel (Output)</td><td>Select an output to modulate that will affect the measurement</td></tr><tr><td>Period</td><td>Text
 - Default Value: 30</td><td>The period between powering the output</td></tr><tr><td>Setpoint</td><td>Decimal
 - Default Value: 50</td><td>A value sufficiently far from the current measured value that the output is capable of pushing the measurement toward</td></tr><tr><td>Noise Band</td><td>Decimal
 - Default Value: 0.5</td><td>The amount above the setpoint the measurement must reach</td></tr><tr><td>Outstep</td><td>Decimal
-- Default Value: 10</td><td>How many seconds the output will turn on every Period</td></tr><tr><td colspan="3">Currently, only autotuning to raise a condition (measurement) is supported.</td></tr><tr><td>Direction</td><td>Select(Options: [<strong>Raise</strong>] (Default in <strong>bold</strong>)</td><td>The direction the Output will push the Measurement</td></tr></tbody></table>
+- Default Value: 10</td><td>How many seconds the output will turn on every Period</td></tr><tr><td colspan="3">Currently, only autotuning to raise a condition (measurement) is supported.</td></tr><tr><td>Direction</td><td>Select(Options: [<strong>Raise</strong> | Lower (Cooling/Humidifying)] (Default in <strong>bold</strong>)</td><td>The direction the Output will push the Measurement</td></tr></tbody></table>
 
 ### Spacer
 
@@ -378,7 +360,7 @@ A spacer to organize Functions.
 
 
 이 기능은 pH를 조절하기 위해 두 개의 펌프(산 및 염기 용액)를 사용하며, 전기전도도(EC)를 조절하기 위해 최대 4개의 펌프(A, B, C, D 영양제 용액)를 사용할 수 있습니다. 사용하려는 영양제 용액 출력만 설정하면 됩니다. 설정되지 않은 출력은 EC 조정 시 활성화되지 않으며, 최소 1개에서 최대 4개의 펌프까지 사용할 수 있습니다. 출력은 지속 시간(초) 또는 부피(ml) 단위로 작동할 수 있으며, 각 출력 유형을 선택한 출력 채널에 맞게 설정해야 합니다(지속 시간 조절에는 온/오프 출력 채널, 부피 조절에는 부피 출력 채널 선택). 영양제 용액의 혼합 비율은 각 EC 출력의 지속 시간 또는 부피 설정에 의해 결정됩니다.이메일 알림 필드에 이메일 주소(또는 쉼표로 구분된 여러 개의 주소)를 입력하면, 다음 경우에 알림 이메일이 발송됩니다.<br>1) pH 값이 설정된 위험 범위를 벗어났을 때, 2) EC 값이 너무 높아 저장 탱크에 물을 추가해야 할 때, 3) 특정 Max Age 범위 내에서 데이터베이스에서 측정값을 찾을 수 없을 때.<br>각 이메일 알림 유형에는 자체 타이머가 설정되어 있어 동일한 알림이 반복적으로 전송되지 않으며, 설정된 이메일 타이머 지속 시간 동안 동일한 알림이 전송되지 않습니다.<br>이 지속 시간이 지나면 타이머가 자동으로 재설정되어 새로운 알림 전송이 허용됩니다. 또한, 아래의 사용자 지정 명령(Custom Commands)을 사용하여 이메일 타이머를 수동으로 재설정할 수도 있습니다.<br>기능이 활성화되면, 상태 텍스트가 화면 하단에 표시되며 조절 정보 및 각 출력의 총 지속 시간/부피가 나타납니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 300</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Status Period (seconds)</td><td>Integer
 - Default Value: 60</td><td>The duration (seconds) to update the Function status on the UI</td></tr><tr><td colspan="3">Measurement Options</td></tr><tr><td>pH Measurement</td><td>Select Measurement (Input, Function)</td><td>Measurement from the pH input</td></tr><tr><td>pH: Max Age (Seconds)</td><td>Integer
@@ -401,7 +383,7 @@ A spacer to organize Functions.
 
 
 이 기능 두 개의 측정값을 획득한 후 그 차이를 계산하며, 차이가 설정된 임계값보다 크지 않을 경우 측정값 A를 저장합니다. 이를 통해 한 센서의 측정값을 다른 센서의 측정값과 비교하여 검증할 수 있습니다. 두 센서의 측정값이 일치할 때만 측정값이 저장되므로, 저장된 측정값을 조건부 함수(Conditional Functions) 등에서 활용하여 측정값이 없는 경우 사용자에게 알림을 보내 센서에 문제가 있을 가능성을 알릴 수 있습니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Measurement A</td><td>Select Measurement (Input, Function)</td><td>Measurement A</td></tr><tr><td>Measurement A: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement B</td><td>Select Measurement (Input, Function)</td><td>Measurement B</td></tr><tr><td>Measurement B: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Maximum Difference</td><td>Decimal
@@ -411,20 +393,20 @@ A spacer to organize Functions.
 
 
 단순한 Bang-Bang 제어 방식으로, 하나의 입력값을 사용하여 하나 또는 두 개의 출력을 제어합니다.입력을 선택하고, 증가(Raise) 및/또는 감소(Lower) 출력을 설정한 후, **설정값(Setpoint)과 히스테리시스(Hysteresis: 작동 범위)를 입력하고 방향(Direction)을 선택하세요.    •	Raise 모드 (예: 난방): 입력값이 (설정값 - 히스테리시스) 이하일 때 출력이 켜짐, 입력값이 (설정값 + 히스테리시스) 이상일 때 출력이 꺼짐    •	Lower 모드 (예: 냉각): 위 동작과 반대로, 입력값을 낮추기 위해 출력을 켜려 함    •	Both: 입력값이 설정값을 유지하도록 Raise 및 Lower를 조정
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Integer
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Text
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Output (Raise)</td><td>Select Device, Measurement, and Channel (Output)</td><td>Select an output to control that will raise the measurement</td></tr><tr><td>Output (Lower)</td><td>Select Device, Measurement, and Channel (Output)</td><td>Select an output to control that will lower the measurement</td></tr><tr><td>Setpoint</td><td>Decimal
 - Default Value: 50</td><td>The desired setpoint</td></tr><tr><td>Hysteresis</td><td>Decimal
-- Default Value: 1</td><td>The amount above and below the setpoint that defines the control band</td></tr><tr><td>Direction</td><td>Select(Options: [Raise | Lower | <strong>Both</strong>] (Default in <strong>bold</strong>)</td><td>Raise means the measurement will increase when the control is on (heating). Lower means the measurement will decrease when the output is on (cooling)</td></tr><tr><td>Period (Seconds)</td><td>Decimal
+- Default Value: 1</td><td>The amount above and below the setpoint that defines the control band</td></tr><tr><td>Direction</td><td>Select(Options: [Raise | Lower | <strong>Both</strong>] (Default in <strong>bold</strong>)</td><td>Raise means the measurement will increase when the control is on (heating). Lower means the measurement will decrease when the output is on (cooling)</td></tr><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 5</td><td>The duration between measurements or actions</td></tr></tbody></table>
 
 ### 뱅-뱅 히스테릭 (PWM) (Raise/Lower/Both)
 
 
 단순한 Bang-Bang 제어 방식으로, 하나의 입력값을 사용하여 하나의 PWM 출력을 제어합니다.입력을 선택하고, PWM 출력, 설정값(Setpoint) 및 **히스테리시스(Hysteresis)**를 입력한 후, 방향(Direction)을 선택하세요.	•	Raise 모드 (예: 난방): 입력값이 (설정값 - 히스테리시스) 이하일 때 출력이 켜짐, 입력값이 (설정값 + 히스테리시스) 이상일 때 출력이 꺼짐	•	Lower 모드 (예: 냉각): 위 동작과 반대로, 입력값을 낮추기 위해 출력을 켜려 함	•	Both 모드: 입력값이 설정값을 유지하도록 Raise 및 Lower를 조정주의: 이 출력은 PWM 출력(Pulse Width Modulation Output)에서만 작동합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Integer
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Text
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Output</td><td>Select Device, Measurement, and Channel (Output)</td><td>Select an output to control that will affect the measurement</td></tr><tr><td>Setpoint</td><td>Decimal
 - Default Value: 50</td><td>The desired setpoint</td></tr><tr><td>Hysteresis</td><td>Decimal
-- Default Value: 1</td><td>The amount above and below the setpoint that defines the control band</td></tr><tr><td>Direction</td><td>Select(Options: [Raise | Lower | <strong>Both</strong>] (Default in <strong>bold</strong>)</td><td>Raise means the measurement will increase when the control is on (heating). Lower means the measurement will decrease when the output is on (cooling)</td></tr><tr><td>Period (Seconds)</td><td>Decimal
+- Default Value: 1</td><td>The amount above and below the setpoint that defines the control band</td></tr><tr><td>Direction</td><td>Select(Options: [Raise | Lower | <strong>Both</strong>] (Default in <strong>bold</strong>)</td><td>Raise means the measurement will increase when the control is on (heating). Lower means the measurement will decrease when the output is on (cooling)</td></tr><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 5</td><td>The duration between measurements or actions</td></tr><tr><td>Duty Cycle (increase)</td><td>Decimal
 - Default Value: 90</td><td>The duty cycle to increase the measurement</td></tr><tr><td>Duty Cycle (maintain)</td><td>Decimal
 - Default Value: 55</td><td>The duty cycle to maintain the measurement</td></tr><tr><td>Duty Cycle (decrease)</td><td>Decimal
@@ -434,17 +416,17 @@ A spacer to organize Functions.
 
 
 단순한 Bang-Bang 제어 방식으로, 하나의 입력값을 사용하여 하나의 출력을 제어합니다.입력을 선택하고, **출력, 설정값(Setpoint), 히스테리시스(Hysteresis)**를 입력한 후, 방향(Direction)을 선택하세요.	•	Raise 모드 (예: 난방): 입력값이 (설정값 - 히스테리시스) 이하일 때 출력이 켜지고, 입력값이 (설정값 + 히스테리시스) 이상일 때 출력이 꺼집니다.	•	Lower 모드 (예: 냉각): 위 동작과 반대로, 입력값을 낮추기 위해 출력을 켜려 합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Integer
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Select a measurement the selected output will affect</td></tr><tr><td>Measurement: Max Age (Seconds)</td><td>Text
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Output</td><td>Select Device, Measurement, and Channel (Output)</td><td>Select an output to control that will affect the measurement</td></tr><tr><td>Setpoint</td><td>Decimal
 - Default Value: 50</td><td>The desired setpoint</td></tr><tr><td>Hysteresis</td><td>Decimal
-- Default Value: 1</td><td>The amount above and below the setpoint that defines the control band</td></tr><tr><td>Direction</td><td>Select(Options: [<strong>Raise</strong> | Lower] (Default in <strong>bold</strong>)</td><td>Raise means the measurement will increase when the control is on (heating). Lower means the measurement will decrease when the output is on (cooling)</td></tr><tr><td>Period (Seconds)</td><td>Decimal
+- Default Value: 1</td><td>The amount above and below the setpoint that defines the control band</td></tr><tr><td>Direction</td><td>Select(Options: [<strong>Raise</strong> | Lower] (Default in <strong>bold</strong>)</td><td>Raise means the measurement will increase when the control is on (heating). Lower means the measurement will decrease when the output is on (cooling)</td></tr><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 5</td><td>The duration between measurements or actions</td></tr></tbody></table>
 
 ### 예비 센서 데이터
 
 
 이 기능은 가장 먼저 사용 가능한 측정값을 저장합니다. 여러 개의 센서를 백업 용도로 설정하고자 할 때 유용합니다. 센서를 중요도 순으로 설정하면, 이 기능은 첫 번째 측정값부터 확인하여 존재 여부를 검사하고, 없을 경우 다음 측정값을 확인하는 과정을 반복합니다. 측정값을 찾으면 사용자 지정 측정값과 단위로 데이터베이스에 저장됩니다. 이 기능의 출력은 AoT 전체에서 입력으로 사용할 수 있습니다. 3개 이상의 측정값을 확인해야 하는 경우, 첫 번째 기능의 출력을 두 번째 기능의 입력으로 설정하여 여러 개의 중복 기능을 연쇄적으로 구성할 수 있습니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Measurement A</td><td>Select Measurement (Input, Function)</td><td>Measurement to replace a</td></tr><tr><td>Measurement A: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement B</td><td>Select Measurement (Input, Function)</td><td>Measurement to replace b</td></tr><tr><td>Measurement B: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement C</td><td>Select Measurement (Input, Function)</td><td>Measurement to replace C</td></tr><tr><td>Measurement C: Max Age (Seconds)</td><td>Integer
@@ -455,7 +437,7 @@ A spacer to organize Functions.
 - Dependencies: [rsync](https://packages.debian.org/search?keywords=rsync)
 
 이 함수는 rsync를 사용하여 현재 시스템의 데이터를 원격 시스템에 백업합니다. 원격 시스템에는 SSH 서버가 실행 중이어야 하며, rsync가 설치되어 있어야 합니다. 또한, 이 시스템에도 rsync가 설치되어 있어야 하며, SSH 키 파일을 통해 비밀번호 없이 원격 시스템에 접근할 수 있어야 합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 1296000</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 300</td><td>The duration to wait before the first operation</td></tr><tr><td>Local User</td><td>Text
 - Default Value: pi</td><td>The user on this system that will run rsync</td></tr><tr><td>Remote User</td><td>Text
@@ -472,7 +454,7 @@ A spacer to organize Functions.
 
 
 이 함수는 두 개의 측정값을 가져와 차이를 계산한 후, 결과값을 선택된 측정값과 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Measurement: A</td><td>Select Measurement (Input, Function)</td><td></td></tr><tr><td>Measurement A: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement: B</td><td>Select Measurement (Input, Function)</td><td></td></tr><tr><td>Measurement B: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Reverse Order</td><td>Boolean</td><td>Reverse the order in the calculation</td></tr><tr><td>Absolute Difference</td><td>Boolean</td><td>Return the absolute value of the difference</td></tr></tbody></table>
@@ -481,7 +463,7 @@ A spacer to organize Functions.
 
 
 이 기능은 여러 개의 측정값을 가져와 통계를 계산한 후, 결과값을 선택된 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement</td></td><td>Measurements to perform statistics on</td></tr><tr><td>Halt on Missing Measurement</td><td>Boolean</td><td>Don't calculate statistics if >= 1 measurement is not found within Max Age</td></tr></tbody></table>
 
@@ -489,7 +471,7 @@ A spacer to organize Functions.
 
 
 이 기능은 하나의 측정값에서 여러 개의 값을 가져와 통계를 계산한 후, 결과값을 선택된 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Measurement to perform statistics on</td></tr></tbody></table>
 
@@ -497,7 +479,7 @@ A spacer to organize Functions.
 
 
 이 함수는 선택된 측정값 중 마지막 측정값을 가져와 평균을 낸 후,결과값을 선택된 측정값과 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement</td></td><td>Measurement to replace "x" in the equation</td></tr></tbody></table>
@@ -506,7 +488,7 @@ A spacer to organize Functions.
 
 
 이 함수는 선택된 측정값의 과거 측정값(Max Age 내)을 가져와 평균을 계산한 후, 결과값을 해당 측정값과 단위로 저장합니다.참고: InfluxDB 1.8.10에는 mean() 함수가 올바르게 작동하지 않는 버그가 있습니다.따라서 InfluxDB v1.x를 사용하는 경우 median() 함수가 대신 사용됩니다.InfluxDB 2.x에서는 이 문제가 발생하지 않으며, mean() 함수를 정상적으로 사용할 수 있습니다.정확한 평균값을 얻으려면 InfluxDB 2.x로 업그레이드하세요.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Measurement</td><td>Select Measurement (Input, Function)</td><td>Measurement to replace "x" in the equation</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr></tbody></table>
@@ -515,7 +497,7 @@ A spacer to organize Functions.
 
 
 이 기능은 잎의 온도 및 습도를 사용하여 포화수증기압차(AVPD)를 계산합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Temperature</td><td>Select Measurement (Input, Function)</td><td>Temperature measurement</td></tr><tr><td>Temperature: Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Humidity</td><td>Select Measurement (Input, Function)</td><td>Humidity measurement</td></tr><tr><td>Humidity: Max Age (Seconds)</td><td>Integer
@@ -525,7 +507,7 @@ A spacer to organize Functions.
 
 
 이 기능은 선택된 측정값 중 마지막 값을 가져와 합산한 후, 결과값을 선택된 측정값과 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr><tr><td>Measurement</td></td><td>Measurement to replace "x" in the equation</td></tr></tbody></table>
@@ -534,7 +516,7 @@ A spacer to organize Functions.
 
 
 이 기능은 선택된 측정값의 과거 측정값(Max Age 내)을 가져와 합산한 후, 결과값을 선택된 측정값과 단위로 저장합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Text
 - Default Value: 60</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer
 - Default Value: 10</td><td>The duration to wait before the first operation</td></tr><tr><td>Measurement</td><td>Select Measurement (Input, Function, Output)</td><td>Measurement to replace "x" in the equation</td></tr><tr><td>Max Age (Seconds)</td><td>Integer
 - Default Value: 360</td><td>The maximum age of the measurement to use</td></tr></tbody></table>

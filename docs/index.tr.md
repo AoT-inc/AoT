@@ -1,28 +1,28 @@
 description: Documentation for AoT, an open source environmental monitoring and regulation system.
 
-## AoT Çevresel İzleme ve Düzenleme Sistemi
+## AoT Environmental Monitoring and Regulation System
 
-AoT, [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) ve diğer tek kartlı bilgisayarlarda (SBC'ler) çalışmak üzere tasarlanmış açık kaynaklı bir yazılımdır. Çevreyi algılamak ve manipüle etmek için giriş ve çıkışları ilginç şekillerde birleştirir.
+AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
 
 ### Information
 
-Özellikler, AoT kullanan projeler, ekran görüntüleri ve diğer bilgiler için [README](https://github.com/aot-inc/AoT#uses) adresine bakın.
+See the [README](https://github.com/aot-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
 
-### Ön Koşullar
+### Prerequisites
 
-*   Tek kartlı bilgisayar (Önerilen: [Raspberry Pi](https://www.raspberrypi.org/), herhangi bir sürüm: Sıfır, 1, 2, 3 veya 4)
-*   Debian tabanlı işletim sistemi
-*   Aktif bir internet bağlantısı
+*   Single-board computer (Recommended: [Raspberry Pi](https://www.raspberrypi.org/), any version: Zero, 1, 2, 3, or 4)
+*   Debian-based operating system
+*   An active internet connection
 
-### Kurulum
+### Install
 
-Önyükleme yapıldıktan ve oturum açıldıktan sonra, AoT yüklemesini başlatmak için aşağıdaki komutu çalıştırın:
+Once booted and logged in, run the following command to initiate the AoT install:
 
 ```bash
 curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 
-Kurulumdan sonra, SBC'nin IP adresine bir web tarayıcısı açın ve bir Yönetici kullanıcısı oluşturup oturum açmanız istenecektir.
+After installation, open a web browser to the SBC's IP address and you will be prompted to create an Admin user and login.
 
 ```
 https://127.0.0.1
@@ -34,5 +34,5 @@ https://127.0.0.1
 *   [AoT Wiki](https://github.com/aot-inc/AoT/wiki)
 *   [AoT API](https://aot-inc.github.io/AoT/aot-api.html)
 *   [Discussion Forum](https://forum.radicaldiy.com)
-*   [Sıkça Sorulan Sorular](https://forum.radicaldiy.com/docs?category=23&tags=aot)
+*   [Frequently Asked Questions](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 

@@ -1,38 +1,38 @@
 description: Documentation for AoT, an open source environmental monitoring and regulation system.
 
-## System monitorowania i regulacji środowiska AoT
+## AoT Environmental Monitoring and Regulation System
 
-AoT to oprogramowanie open source przeznaczone do uruchamiania na [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) i innych komputerach jednopłytkowych (SBC). Łączy wejścia i wyjścia w interesujący sposób, aby wyczuć i manipulować środowiskiem.
+AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
 
-### Informacje
+### Information
 
-Zobacz [README](https://github.com/aot-inc/AoT#uses), aby poznać funkcje, projekty wykorzystujące AoT, zrzuty ekranu i inne informacje.
+See the [README](https://github.com/aot-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
 
-### Wymagania wstępne
+### Prerequisites
 
-*   Komputer jednopłytkowy (Zalecane: [Raspberry Pi](https://www.raspberrypi.org/), dowolna wersja: Zero, 1, 2, 3 lub 4)
-*   System operacyjny oparty na Debianie
-*   Aktywne połączenie internetowe
+*   Single-board computer (Recommended: [Raspberry Pi](https://www.raspberrypi.org/), any version: Zero, 1, 2, 3, or 4)
+*   Debian-based operating system
+*   An active internet connection
 
-### Zainstaluj
+### Install
 
-Po uruchomieniu i zalogowaniu się, uruchom następujące polecenie, aby zainicjować instalację AoT:
+Once booted and logged in, run the following command to initiate the AoT install:
 
 ```bash
 curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 
-Po instalacji otwórz przeglądarkę internetową na adres IP SBC, a zostaniesz poproszony o utworzenie użytkownika Admin i zalogowanie się.
+After installation, open a web browser to the SBC's IP address and you will be prompted to create an Admin user and login.
 
 ```
 https://127.0.0.1
 ```
 
-### Wsparcie
+### Support
 
 *   [AoT on GitHub](https://github.com/aot-inc/AoT)
 *   [AoT Wiki](https://github.com/aot-inc/AoT/wiki)
 *   [AoT API](https://aot-inc.github.io/AoT/aot-api.html)
-*   [Forum dyskusyjne](https://forum.radicaldiy.com)
-*   [Najczęściej zadawane pytania](https://forum.radicaldiy.com/docs?category=23&tags=aot)
+*   [Discussion Forum](https://forum.radicaldiy.com)
+*   [Frequently Asked Questions](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 

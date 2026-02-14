@@ -1,137 +1,84 @@
-# --- Python / Virtualenv ---
-.venv/
-venv/
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
+venv/
+ENV/
+env/
 .python-version
 .Python
 pip-selfcheck.json
+.cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.eggs/
+.eggs
+.installed.cfg
+*.egg-info/
+*.egg
 
 # --- Build / Packaging ---
 build/
 dist/
-*.egg-info/
-.eggs/
-
-# --- Test / Tooling caches ---
-.pytest_cache/
-.tox/
-.coverage*
-htmlcov/
-.mypy_cache/
-.ruff_cache/
-.cache
+node_modules/
+.npm/
+.yarn/
 
 # --- OS / Editors ---
 .DS_Store
-.AppleDouble
-.LSOverride
-Icon
+.DS_Store?
 ._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .vscode/
 .idea/
-*.iml
+*.swp
+*.bak
+*~
 
-# --- Project runtime / local data ---
-logs/
-*.log
-instance/
-aot/flask_session/
-
-# --- Databases (keep migrations; ignore local DB files) ---
+# --- Databases / Data ---
 *.db
 *.sqlite
 *.sqlite3
+/aot/aot_flask/databases/*.db
+/aot/aot_flask/databases/*.sqlite
 
-# --- Secrets / env / keys ---
+# --- AoT Specific Exclusions (Rules) ---
+logs/
+instance/
+flask_session/
+aot/flask_session/
+note_attachments/
+dev_tools/
+upload_files/
+aot/aot_flask/static/upload_files/
+aot/aot_flask/templates/user_templates/
+aot/tests/server_log.txt
+/test_log/
+
+# --- Secrets / Env ---
 .env
 .env.*
 *.pem
 *.crt
 *.key
-
-# --- Project-specific ---
 /databases/flask_secret_key
 /aot/config_override.py
-*.bak
-.upgrade
-statistics.csv
-statistics.id
 
-# --- Optional: if you truly want to exclude tests, keep these ---
-# test/
-# tests/
-
-# --- Native / compiled outputs (C/C++/Fortran, macOS, Xcode) ---
-*.o
-*.ko
-*.obj
-*.elf
-*.slo
-*.lo
-*.gch
-*.pch
-*.so
-*.so.*
-*.dylib
-*.dll
-*.lai
-*.la
-*.a
-*.lib
-*.mod
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-*.dSYM/
-
-# --- macOS volume trash/noise ---
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
-# --- Xcode (if needed) ---
-build/
-DerivedData/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata/
-*.xccheckout
-*.moved-aside
-*.xcuserstate
-
-# --- JetBrains (if needed) ---
-.idea/
-*.ipr
-*.iws
-/out/
-
-# --- Python packaging leftovers ---
-develop-eggs/
-downloads/
-eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-.installed.cfg
-*.egg
+# --- Agent Workspace ---
+/Agent/
+/AoT_dev/
+task.md
+implementation_plan.md
+walkthrough.md

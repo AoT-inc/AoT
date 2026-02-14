@@ -1,38 +1,38 @@
 description: Documentation for AoT, an open source environmental monitoring and regulation system.
 
-## System för miljöövervakning och miljöreglering av AoT
+## AoT Environmental Monitoring and Regulation System
 
-AoT är en programvara med öppen källkod som är utformad för att köras på [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) och andra enbordsdatorer (SBC). Den kopplar ihop in- och utgångar på intressanta sätt för att känna av och manipulera miljön.
+AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
 
 ### Information
 
-Se [README](https://github.com/aot-inc/AoT#uses) för funktioner, projekt som använder AoT, skärmdumpar och annan information.
+See the [README](https://github.com/aot-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
 
-### Förutsättningar
+### Prerequisites
 
-*   Enbordsdator (Rekommenderas: [Raspberry Pi](https://www.raspberrypi.org/), vilken version som helst: Zero, 1, 2, 3 eller 4)
-*   Debianbaserat operativsystem
-*   En aktiv internetanslutning
+*   Single-board computer (Recommended: [Raspberry Pi](https://www.raspberrypi.org/), any version: Zero, 1, 2, 3, or 4)
+*   Debian-based operating system
+*   An active internet connection
 
-### Installera
+### Install
 
-När du har startat upp och loggat in kör du följande kommando för att påbörja AoT-installationen:
+Once booted and logged in, run the following command to initiate the AoT install:
 
 ```bash
 curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 
-Efter installationen öppnar du en webbläsare till SBC:s IP-adress och du kommer att uppmanas att skapa en administratörsanvändare och logga in.
+After installation, open a web browser to the SBC's IP address and you will be prompted to create an Admin user and login.
 
 ```
 https://127.0.0.1
 ```
 
-### Stöd
+### Support
 
 *   [AoT on GitHub](https://github.com/aot-inc/AoT)
 *   [AoT Wiki](https://github.com/aot-inc/AoT/wiki)
 *   [AoT API](https://aot-inc.github.io/AoT/aot-api.html)
-*   [Diskussionsforum](https://forum.radicaldiy.com)
-*   [Ofta ställda frågor](https://forum.radicaldiy.com/docs?category=23&tags=aot)
+*   [Discussion Forum](https://forum.radicaldiy.com)
+*   [Frequently Asked Questions](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 

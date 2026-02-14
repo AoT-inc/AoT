@@ -647,7 +647,9 @@
       document.execCommand("copy");
       document.body.removeChild(tempInput);
       {% if not(misc is defined and misc.hide_alert_success) %}
-      if (typeof toastr !== 'undefined') {
+      if (typeof window.showToast !== 'undefined') {
+        window.showToast("{{_('Copied to Clipboard')}}: " + value, 'success');
+      } else if (typeof toastr !== 'undefined') {
         toastr['success']("{{_('Copied to Clipboard')}}: " + value);
       } else {
         alert('Copied to Clipboard: ' + value);
@@ -675,13 +677,12 @@
       const originalFetch = window.fetch;
       window.fetch = function(url, options = {}) {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        if (csrfToken) {
+        if (csrfToken && !/^(GET|HEAD|OPTIONS|TRACE)$/i.test(options.method || 'GET')) {
           options.headers = options.headers || {};
-          // Convert Headers object to plain object if needed (simplification)
-          if (!(options.headers instanceof Headers)) {
-             options.headers['X-CSRFToken'] = csrfToken;
+          if (options.headers instanceof Headers) {
+            options.headers.set('X-CSRFToken', csrfToken);
           } else {
-             options.headers.append('X-CSRFToken', csrfToken);
+            options.headers['X-CSRFToken'] = csrfToken;
           }
         }
         return originalFetch(url, options);

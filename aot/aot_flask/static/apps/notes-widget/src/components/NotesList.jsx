@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchNotes } from '@/lib/api.js'
+import { fetchNotes } from '../lib/api'
 import { FileText, Download, X as CloseIcon, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { createPortal } from 'react-dom'

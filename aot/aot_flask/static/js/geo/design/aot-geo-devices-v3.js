@@ -121,7 +121,14 @@ class AoTGeoDevices {
         let found = null;
         if (this.parent.layerStorage['aot_device']) {
             this.parent.layerStorage['aot_device'].eachLayer(l => {
-                if (l.feature?.properties?.unique_id === uniqueId) found = l;
+                const featId = l.feature?.properties?.unique_id;
+                if (!featId) return;
+
+                // [Fix] Robust Matching (Round 19): Handle 'uuid' vs 'uuid::0' consistency
+                const normalize = id => (id && String(id).endsWith('::0')) ? id.slice(0, -3) : id;
+                if (normalize(featId) === normalize(uniqueId)) {
+                    found = l;
+                }
             });
         }
         return found;
@@ -189,26 +196,16 @@ class AoTGeoDevices {
         const devType = dev.type;
         const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
 
-        // Color Fallback
-        let savedColor = devType ? localStorage.getItem(`aot_config_color_${devType}`) : null;
-        if (!savedColor && functionTypes.includes(devType)) {
-            savedColor = localStorage.getItem('aot_config_color_function');
+        // [Fix] Centralized Theme Lookup (DB over localStorage)
+        const theme = window.AOT_GEO_CONFIG?.theme_config || {};
+        let themeColor = theme[devType] || theme['device'] || '#995aff';
+        
+        if (functionTypes.includes(devType)) {
+            themeColor = theme['function'] || theme['device'] || themeColor;
         }
-        const themeColor = savedColor || '#995aff';
 
-        // Check Initial Visibility
-        // Default is Visible (true)
+        // Check Initial Visibility (Always visible by default in Design Mode unless filtered)
         let isVisible = true;
-        let savedVis = localStorage.getItem(`aot_config_vis_${devType}`);
-
-        // If not found, check parent 'function' visibility
-        if (savedVis === null && functionTypes.includes(devType)) {
-            savedVis = localStorage.getItem('aot_config_vis_function');
-        }
-
-        if (savedVis !== null) {
-            isVisible = (savedVis === 'true');
-        }
 
         // Pill Style Icon
         const iconHtml = `<div class="aot-map-label-marker" style="
@@ -336,15 +333,18 @@ class AoTGeoDevices {
         const devType = dev.type;
         const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
 
-        let savedColor = devType ? localStorage.getItem(`aot_config_color_${devType}`) : null;
-        if (!savedColor && functionTypes.includes(devType)) {
-            savedColor = localStorage.getItem('aot_config_color_function');
+        // [Fix] Centralized Theme Lookup
+        const theme = window.AOT_GEO_CONFIG?.theme_config || {};
+        let themeColor = theme[devType] || theme['device'] || '#995aff';
+        
+        if (functionTypes.includes(devType)) {
+            themeColor = theme['function'] || theme['device'] || themeColor;
         }
-        const themeColor = savedColor || '#995aff';
 
-        // Check visibility
+        // Check visibility (Maintain current element display state)
         let isVisible = true;
-        if (layer.options.opacity === 0) isVisible = false; // Simple check based on current state
+        const el = layer.getElement ? layer.getElement() : null;
+        if (el && el.style.display === 'none') isVisible = false;
 
         // Style Definition
         const style = isActive ? `
@@ -408,14 +408,16 @@ class AoTGeoDevices {
                 }
             },
             error: (xhr) => {
-                // console.error("[GeoDesign] API Error:", xhr.statusText);
+                // console.error("[AoTGeoDevices] API Error:", xhr.statusText);
             }
         });
     }
 
     updateDeviceColor(targetType, newColor) {
-        // console.log(`[GeoDesign] Updating Color for ${targetType} to ${newColor}`);
-        localStorage.setItem(`aot_config_color_${targetType}`, newColor);
+        // [Fix] Update Global Config for immediate use
+        if (!window.AOT_GEO_CONFIG) window.AOT_GEO_CONFIG = {};
+        if (!window.AOT_GEO_CONFIG.theme_config) window.AOT_GEO_CONFIG.theme_config = {};
+        window.AOT_GEO_CONFIG.theme_config[targetType] = newColor;
 
         // Define Function Subtypes
         const functionTypes = ['function', 'trigger', 'pid', 'conditional', 'custom', 'generic_function'];
@@ -433,24 +435,42 @@ class AoTGeoDevices {
         const update = (l) => {
             if (isMatch(l)) {
                 // Check if active layer to maintain active style
-                const isActive = (this.parent.activeLayer === l);
-                this.parent.ui._setLayerStyle(l, isActive);
+                const isActive = (this.parent.activeLayer === l || (this.activeDevice && this.activeDevice.layer === l));
+                
+                // [Fix] Update Vector Style
+                if (typeof this.parent.ui._setLayerStyle === 'function') {
+                    this.parent.ui._setLayerStyle(l, isActive);
+                }
+
+                // [Fix] Maintain current visibility
+                let isVisible = true;
+                const el = l.getElement ? l.getElement() : null;
+                if (el && el.style.display === 'none') isVisible = false;
 
                 // Update Icon Border (Since _setLayerStyle only handles vector style)
                 if (l.setIcon) {
-                    const iconHtml = `<div class="aot-map-label-marker" style="
+                    const style = isActive ? `
+                        background: ${newColor}; 
+                        color: white;
+                        border: 2px solid white;
+                    ` : `
                         background: white; 
+                        color: #333;
+                        border: 2px solid ${newColor}; 
+                    `;
+
+                    const iconHtml = `<div class="aot-map-label-marker" style="
+                        ${style}
                         padding: 4px 10px; 
                         border-radius: 20px; 
-                        border: 2px solid ${newColor}; 
+                        opacity: ${isVisible ? 1 : 0};
                         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
                         white-space: nowrap;
                         width: max-content;
                         font-weight: 600;
-                        color: #333;
                         font-size: 13px;
                         transform: translate(-50%, -50%);
-                        display: flex;
+                        display: ${isVisible ? 'flex' : 'none'};
                         align-items: center;
                         justify-content: center;
                     ">${l.feature.properties.name || 'Device'}</div>`;
@@ -474,7 +494,6 @@ class AoTGeoDevices {
         }
 
         // Update Features on Map (Vector & Markers)
-        // Assuming overlayMaps.aot_device is a L.layerGroup or similar iterable
         if (this.parent.overlayMaps && this.parent.overlayMaps.aot_device) {
             this.parent.overlayMaps.aot_device.eachLayer(update);
         }
@@ -495,18 +514,19 @@ class AoTGeoDevices {
                 method: 'POST',
                 data: payload,
                 success: (res) => {
-                    // console.log(`[GeoDesign] Global color for ${targetType} saved to backend.`);
+                    // console.log(`[GeoDevices] Global color for ${targetType} saved to backend.`);
                 },
                 error: (xhr) => {
-                    // console.error(`[GeoDesign] Failed to save global color:`, xhr.statusText);
+                    // console.error(`[GeoDevices] Failed to save global color:`, xhr.statusText);
                 }
             });
         }, 500);
     }
 
     setDeviceTypeVisibility(targetType, isVisible) {
-        localStorage.setItem(`aot_config_vis_${targetType}`, isVisible.toString());
-
+        // [Fix] Skip localStorage, rely on application state or backend if needed.
+        // For Design Mode, we typically want visibility to be session-based or linked to layers.
+        
         const functionTypes = ['function', 'trigger', 'pid', 'conditional', 'custom', 'generic_function'];
 
         const isMatch = (l) => {
@@ -538,27 +558,28 @@ class AoTGeoDevices {
                     // [Fix] Safe call for Markers
                     if (l.setOpacity) l.setOpacity(1);
 
-                    // Re-render Icon for Markers
+                    // Re-render Icon for Markers to ensure correct opacity in style string
                     if (l.setIcon) {
                         const props = l.feature.properties;
                         const type = props.device_type || targetType; // Fallback
 
-                        let savedColor = type ? localStorage.getItem(`aot_config_color_${type}`) : null;
-                        if (!savedColor && functionTypes.includes(type)) {
-                            savedColor = localStorage.getItem('aot_config_color_function');
-                        }
-                        const themeColor = savedColor || '#995aff';
+                        const theme = window.AOT_GEO_CONFIG?.theme_config || {};
+                        let themeColor = theme[type] || theme['device'] || '#995aff';
+                        if (functionTypes.includes(type)) themeColor = theme['function'] || theme['device'] || themeColor;
+
+                        // Check if active
+                        const isActive = (this.parent.activeLayer === l || (this.activeDevice && this.activeDevice.layer === l));
+                        const style = isActive ? `background: ${themeColor}; color: white; border: 2px solid white;` : `background: white; color: #333; border: 2px solid ${themeColor};`;
 
                         const iconHtml = `<div class="aot-map-label-marker" style="
-                            background: white; 
+                            ${style}
                             padding: 4px 10px; 
                             border-radius: 20px; 
-                            border: 2px solid ${themeColor}; 
+                            opacity: 1;
                             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
                             white-space: nowrap;
                             width: max-content;
                             font-weight: 600;
-                            color: #333;
                             font-size: 13px;
                             transform: translate(-50%, -50%);
                             display: flex;

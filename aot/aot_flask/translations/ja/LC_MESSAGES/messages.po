@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-13 12:50+0900\n"
+"POT-Creation-Date: 2026-02-13 22:46+0900\n"
 "PO-Revision-Date: 2026-02-08 14:10+0900\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -116,9 +116,8 @@ msgstr "溶存酸素"
 #: actions/pause_actions.py:35
 #: aot_flask/templates/pages/energy_usage_outputs.html:68
 #: aot_flask/templates/pages/energy_usage_outputs.html:103
-#: aot_flask/utils/utils_method.py:88 config_devices_units.py:113
-#: config_translations.py:70 config_translations.py:307
-#: config_translations.py:308
+#: config_devices_units.py:113 config_translations.py:70
+#: config_translations.py:307 config_translations.py:308
 msgid "Duration"
 msgstr "期間"
 
@@ -187,7 +186,7 @@ msgstr "イオン濃度"
 msgid "Length"
 msgstr "長さ"
 
-#: config_devices_units.py:173 inputs_gis/gis_rainviewer.py:139
+#: config_devices_units.py:173
 msgid "Light"
 msgstr "光"
 
@@ -248,7 +247,6 @@ msgid "강수"
 msgstr "降水"
 
 #: config_devices_units.py:245 functions/humidity_wet_dry_bulb.py:148
-#: inputs_gis/gis_openweather.py:201
 msgid "Pressure"
 msgstr "圧力"
 
@@ -340,7 +338,7 @@ msgstr ""
 #: aot_flask/forms/forms_function.py:55 aot_flask/forms/forms_input.py:119
 #: aot_flask/forms/forms_output.py:87 config_devices_units.py:326
 #: functions/vapor_pressure_deficit.py:95 inputs/atlas_pt1000.py:76
-#: inputs_gis/gis_openweather.py:137 widgets/AoT_gauge_angular.py:286
+#: widgets/AoT_gauge_angular.py:286
 msgid "Temperature"
 msgstr "温度"
 
@@ -418,7 +416,6 @@ msgid "Bulk Density"
 msgstr "容積密度"
 
 #: config_devices_units.py:399 inputs_gis/gis_nasa_gibs.py:47
-#: inputs_gis/gis_nasa_gibs.py:211
 msgid "Vegetation Index (NDVI)"
 msgstr "植生指数 NDVI"
 
@@ -1150,13 +1147,12 @@ msgstr "数学"
 #: functions/difference.py:102 functions/equation_multi.py:76
 #: functions/equation_multi.py:84 functions/equation_multi.py:96
 #: functions/equation_multi.py:104 functions/lorawan_mode_manager.py:141
-#: functions/pid_autotune.py:64 functions/redundancy.py:83
-#: functions/redundancy.py:102 functions/redundancy.py:121
-#: functions/verification.py:75 functions/verification.py:83
-#: functions/verification.py:94 functions/verification.py:102
-#: inputs/ads1115_analog_ph_ec.py:138 inputs/ads1256_analog_ph_ec.py:222
-#: inputs/anyleaf_ph.py:62 inputs/atlas_do.py:68 inputs/atlas_ec.py:81
-#: inputs/atlas_o2.py:69 inputs/atlas_orp.py:67 inputs/atlas_ph.py:71
+#: functions/pid_autotune.py:64 functions/verification.py:75
+#: functions/verification.py:83 functions/verification.py:94
+#: functions/verification.py:102 inputs/ads1115_analog_ph_ec.py:138
+#: inputs/ads1256_analog_ph_ec.py:222 inputs/anyleaf_ph.py:62
+#: inputs/atlas_do.py:68 inputs/atlas_ec.py:81 inputs/atlas_o2.py:69
+#: inputs/atlas_orp.py:67 inputs/atlas_ph.py:71
 #: widgets/AoT_gauge_angular.py:231 widgets/widget_gauge_angular.py:149
 #: widgets/widget_gauge_solid.py:173 widgets/widget_indicator.py:56
 #: widgets/widget_measurement.py:52
@@ -1340,7 +1336,7 @@ msgstr "保存"
 msgid "Save Order"
 msgstr "順序を保存"
 
-#: config_translations.py:164 inputs_gis/gis_nasa_gibs.py:217
+#: config_translations.py:164
 msgid "Scale"
 msgstr "スケール"
 
@@ -1589,10 +1585,9 @@ msgstr "締切"
 #: functions/humidity_wet_dry_bulb.py:128
 #: functions/humidity_wet_dry_bulb.py:148 functions/lorawan_mode_manager.py:61
 #: functions/lorawan_mode_manager.py:141 functions/redundancy.py:64
-#: functions/redundancy.py:83 functions/redundancy.py:102
-#: functions/redundancy.py:121 functions/regulate_ph_ec.py:185
-#: functions/regulate_ph_ec.py:193 functions/regulate_ph_ec.py:224
-#: functions/regulate_ph_ec.py:246 functions/statistics_last_multiple.py:101
+#: functions/regulate_ph_ec.py:185 functions/regulate_ph_ec.py:193
+#: functions/regulate_ph_ec.py:224 functions/regulate_ph_ec.py:246
+#: functions/statistics_last_multiple.py:101
 #: functions/statistics_last_multiple.py:109
 #: functions/statistics_past_single.py:99
 #: functions/statistics_past_single.py:107 functions/sum_last_multiple.py:68
@@ -1749,9 +1744,8 @@ msgstr "デーモンログにデバッグ行を表示します"
 #: functions/humidity_wet_dry_bulb.py:108
 #: functions/humidity_wet_dry_bulb.py:128
 #: functions/humidity_wet_dry_bulb.py:148 functions/lorawan_mode_manager.py:141
-#: functions/redundancy.py:83 functions/redundancy.py:102
-#: functions/redundancy.py:121 functions/regulate_ph_ec.py:224
-#: functions/regulate_ph_ec.py:246 functions/statistics_last_multiple.py:109
+#: functions/regulate_ph_ec.py:224 functions/regulate_ph_ec.py:246
+#: functions/statistics_last_multiple.py:109
 #: functions/statistics_past_single.py:107 functions/sum_last_multiple.py:84
 #: functions/sum_past_single.py:96 functions/vapor_pressure_deficit.py:95
 #: functions/vapor_pressure_deficit.py:115 functions/verification.py:83
@@ -2408,7 +2402,7 @@ msgstr "Debian系OS"
 msgid "An active internet connection"
 msgstr "アクティブなインターネット接続"
 
-#: aot_flask/templates/admin/dependencies_install.html:21
+#: aot_flask/templates/admin/dependencies_install.html:22
 #: config_translations_docs.py:63
 msgid "Install"
 msgstr "インストール"
@@ -2761,9 +2755,22 @@ msgstr ""
 msgid "Flow Meter: Clear Total (Kilowatt-hour)"
 msgstr "流量計：累計をクリア キロワット時 "
 
+#: actions/clear_total_kWh.py:23
+msgid ""
+"Clear the total kWh saved for an energy meter Input. The Input must have "
+"the Clear Total kWh option. This will also clear all energy stats on the "
+"device, not just the total kWh."
+msgstr ""
+
 #: actions/clear_total_volume.py:13
 msgid "Flow Meter: Clear Total (Volume)"
 msgstr "流量計：累計をクリア 流量 "
+
+#: actions/clear_total_volume.py:23
+msgid ""
+"Clear the total volume saved for a flow meter Input. The Input must have "
+"the Clear Total Volume option."
+msgstr ""
 
 #: actions/command_bash.py:11
 msgid "Execute"
@@ -2810,7 +2817,26 @@ msgstr "バックライト"
 msgid "Flashing"
 msgstr "フラッシング"
 
-#: actions/force_input_measurements.py:13 aot_flask/utils/utils_input.py:962
+#: actions/email.py:15
+#, fuzzy
+msgid "Send Email"
+msgstr "Send Test Email"
+
+#: actions/email.py:25
+#, fuzzy
+msgid "Send an email."
+msgstr "Send Test Email"
+
+#: actions/email.py:36
+#, fuzzy
+msgid "E-Mail Address"
+msgstr "IPアドレス"
+
+#: actions/email.py:37
+msgid "E-mail recipient(s) (separate multiple addresses with commas)"
+msgstr ""
+
+#: actions/force_input_measurements.py:13
 msgid "Force Measurements"
 msgstr "測定を強制"
 
@@ -2856,6 +2882,17 @@ msgstr "キープアライブ"
 #: outputs/on_off_mqtt.py:168 outputs/pwm_mqtt.py:126 outputs/value_mqtt.py:113
 msgid "Username"
 msgstr "ユーザー名"
+
+#: actions/led_kasa_bulb_change_color.py:13
+#, fuzzy
+msgid "Change Color"
+msgstr "変更履歴"
+
+#: actions/led_kasa_bulb_change_color.py:23
+msgid ""
+"Change the color of the LED in a Kasa RGB Bulb. Select the Kasa RGB Bulb "
+"Output."
+msgstr ""
 
 #: actions/led_neopixel_flash_off.py:14
 msgid "LED: Neopixel: Flashing Off"
@@ -2916,6 +2953,14 @@ msgstr "写真を撮影"
 #: actions/photo.py:23
 msgid "Capture a photo with the selected Camera."
 msgstr "選択したカメラで写真を撮影します。"
+
+#: actions/photo_email.py:18
+msgid "Send Email with Photo"
+msgstr ""
+
+#: actions/photo_email.py:28
+msgid "Take a photo and send an email with it attached."
+msgstr ""
 
 #: actions/pid_method.py:18
 msgid "Set Method"
@@ -2999,19 +3044,19 @@ msgid ""
 "upgrade log for details."
 msgstr "アップグレードプロセス中にエラーが発生しました。詳細はアップグレードログを確認してください。"
 
-#: aot_flask/routes_admin.py:601
+#: aot_flask/routes_admin.py:604
 msgid "The upgrade (from master branch) has started"
 msgstr "アップグレード (マスターブランチから) が開始されました"
 
-#: aot_flask/routes_admin.py:619
+#: aot_flask/routes_admin.py:625
 msgid "The upgrade has started"
 msgstr "アップグレードが開始されました"
 
-#: aot_flask/routes_admin.py:640
+#: aot_flask/routes_admin.py:646
 msgid "The major version upgrade has started"
 msgstr "メジャーバージョンのアップグレードが開始されました"
 
-#: aot_flask/routes_admin.py:643
+#: aot_flask/routes_admin.py:649
 msgid "You cannot upgrade if an upgrade is not available"
 msgstr "利用可能なアップグレードがない場合はアップグレードできません"
 
@@ -3124,8 +3169,8 @@ msgstr "アクションタイプ"
 
 #: aot_flask/forms/forms_authentication.py:21
 #: aot_flask/forms/forms_settings.py:94 aot_flask/forms/forms_settings.py:397
-#: aot_flask/templates/create_admin.html:39
-#: aot_flask/templates/create_admin.html:86 aot_flask/templates/layout.html:509
+#: aot_flask/templates/create_admin.html:41
+#: aot_flask/templates/create_admin.html:91 aot_flask/templates/layout.html:509
 #: aot_flask/templates/layout_default.html:509
 msgid "Language"
 msgstr "言語"
@@ -3791,7 +3836,6 @@ msgid "End Date/Time (YYYY-MM-DD HH:MM:SS)"
 msgstr "終了日時（YYYY-MM-DD HH:MM:SS）"
 
 #: aot_flask/forms/forms_method.py:52 aot_flask/forms/forms_method.py:124
-#: aot_flask/utils/utils_method.py:94
 msgid "Start Setpoint"
 msgstr "開始設定値"
 
@@ -3835,7 +3879,7 @@ msgstr "メソッドに追加"
 msgid "Set Repeat Options"
 msgstr "Set Repeat Options"
 
-#: aot_flask/forms/forms_method.py:113 aot_flask/utils/utils_method.py:70
+#: aot_flask/forms/forms_method.py:113
 msgid "HH:MM:SS"
 msgstr ""
 
@@ -3923,19 +3967,19 @@ msgstr "AoTをアップグレード"
 msgid "Upgrade AoT to Next Major Version"
 msgstr "AoTを次期メジャーバージョンにアップグレード"
 
-#: aot_flask/forms/forms_misc.py:108 aot_flask/templates/admin/backup.html:40
+#: aot_flask/forms/forms_misc.py:108 aot_flask/templates/admin/backup.html:42
 msgid "Download Backup"
 msgstr "バックアップをダウンロード"
 
-#: aot_flask/forms/forms_misc.py:109 aot_flask/templates/admin/backup.html:19
+#: aot_flask/forms/forms_misc.py:109 aot_flask/templates/admin/backup.html:20
 msgid "Create Backup"
 msgstr "バックアップを作成"
 
-#: aot_flask/forms/forms_misc.py:110 aot_flask/templates/admin/backup.html:43
+#: aot_flask/forms/forms_misc.py:110 aot_flask/templates/admin/backup.html:45
 msgid "Restore Backup"
 msgstr "バックアップを復원"
 
-#: aot_flask/forms/forms_misc.py:111 aot_flask/templates/admin/backup.html:46
+#: aot_flask/forms/forms_misc.py:111 aot_flask/templates/admin/backup.html:48
 msgid "Delete Backup"
 msgstr "バックアップを削除"
 
@@ -3956,7 +4000,7 @@ msgid "Date/Time"
 msgstr "日付/時刻"
 
 #: aot_flask/forms/forms_notes.py:65 aot_flask/utils/utils_notes.py:401
-#: aot_flask/utils/utils_notes.py:442 aot_flask/utils/utils_settings.py:2196
+#: aot_flask/utils/utils_notes.py:442 aot_flask/utils/utils_settings.py:2213
 msgid "File"
 msgstr "ファイル"
 
@@ -4514,7 +4558,7 @@ msgstr "設定を編集"
 
 #: aot_flask/forms/forms_settings.py:348
 #: aot_flask/templates/reset_password.html:12
-#: aot_flask/templates/reset_password.html:26
+#: aot_flask/templates/reset_password.html:27
 msgid "Reset Password"
 msgstr "パスワードをリセット"
 
@@ -4690,15 +4734,15 @@ msgstr "設定データベースを削除"
 msgid "Delete File"
 msgstr "ファイルを削除"
 
-#: aot_flask/forms/forms_settings.py:493 aot_flask/utils/utils_settings.py:2221
+#: aot_flask/forms/forms_settings.py:493 aot_flask/utils/utils_settings.py:2238
 msgid "Recreate InfluxDB 1.x Database"
 msgstr "InfluxDB 1.x データベースを再作成"
 
-#: aot_flask/forms/forms_settings.py:494 aot_flask/utils/utils_settings.py:2237
+#: aot_flask/forms/forms_settings.py:494 aot_flask/utils/utils_settings.py:2254
 msgid "Recreate InfluxDB 2.x Database"
 msgstr "InfluxDB 2.x データベースを再作成"
 
-#: aot_flask/forms/forms_settings.py:495 aot_flask/utils/utils_settings.py:2253
+#: aot_flask/forms/forms_settings.py:495 aot_flask/utils/utils_settings.py:2270
 msgid "Reset Email Counter"
 msgstr "メールカウンターをリセット"
 
@@ -4799,6 +4843,10 @@ msgstr "レイアウトのシリアル化エラー"
 #: aot_flask/static/js/dashboard.js:405
 msgid "dashboard_order_save_fail"
 msgstr "ダッシュボード順序の保存に失敗しました"
+
+#: aot_flask/static/js/components/aot-map-search-fixed.js:365
+msgid "Search service unavailable"
+msgstr ""
 
 #: aot_flask/static/js/components/aot-tabs.js:219
 msgid "order_saved"
@@ -5243,7 +5291,7 @@ msgid ""
 msgstr "GitHubで問題を報告する場合は、診断目的でこのログスニペットを提供してください。"
 
 #: aot_flask/templates/create_admin.html:12
-#: aot_flask/templates/create_admin.html:81
+#: aot_flask/templates/create_admin.html:84
 msgid "Create Admin"
 msgstr "管理者を作成"
 
@@ -5251,24 +5299,24 @@ msgstr "管理者を作成"
 msgid "Welcome to AoT"
 msgstr "AoTへようこそ"
 
-#: aot_flask/templates/create_admin.html:51
+#: aot_flask/templates/create_admin.html:53
 msgid ""
 "Start a new AoT installation. Please create an admin user. To start, "
 "please read and agree to the terms."
 msgstr "AoTの新規インストールを開始します。管理者ユーザーを作成してください。開始するには、利用規約を読み、同意してください。"
 
-#: aot_flask/templates/create_admin.html:54
+#: aot_flask/templates/create_admin.html:56
 msgid "Quality Assurance Notice"
 msgstr "品質保証に関する通知"
 
-#: aot_flask/templates/create_admin.html:58
+#: aot_flask/templates/create_admin.html:60
 msgid ""
 "AoT is an agricultural control system based on Mycodo. Users can receive "
 "a warranty for the software added by AoT under a separate contract. The "
 "parts related to AoT follow the warranty information below."
 msgstr "AoTはMycodoに基づく農業制御システムです。AoTで追加されたソフトウェアは別契約で保証を受けられる場合があります。AoTに関連する部分は以下の保証情報に従います。"
 
-#: aot_flask/templates/create_admin.html:59
+#: aot_flask/templates/create_admin.html:61
 msgid ""
 "AoT is free software. It can be redistributed and modified under the GNU "
 "General Public License (GNU GPL) version 3 or any later version published"
@@ -5287,24 +5335,24 @@ msgstr ""
 "href=\"http://www.gnu.org/licenses/\" "
 "target=\"_blank\">http://www.gnu.org/licenses/</a>。"
 
-#: aot_flask/templates/create_admin.html:61
+#: aot_flask/templates/create_admin.html:63
 msgid ""
 "AoT collects anonymous usage statistics to help with development. You can"
 " opt out of collection at any time on the management page after logging "
 "in."
 msgstr "AoTは開発支援のため匿名の使用統計を収集します。ログイン後の管理ページでいつでも収集をオプトアウトできます。"
 
-#: aot_flask/templates/create_admin.html:96
+#: aot_flask/templates/create_admin.html:101
 msgid "Login information is stored locally"
 msgstr "ログイン情報はローカルに保存されます"
 
-#: aot_flask/templates/create_admin.html:97
+#: aot_flask/templates/create_admin.html:102
 msgid ""
 "Usernames must be 3 to 64 characters, passwords >3 characters, and "
 "contain only letters and numbers"
 msgstr "ユーザー名は3〜64文字、パスワードは3文字以上で、英数字のみを使用する必要があります"
 
-#: aot_flask/templates/create_admin.html:110
+#: aot_flask/templates/create_admin.html:116
 msgid "Create Admin Account"
 msgstr "管理者アカウントを作成"
 
@@ -5320,11 +5368,11 @@ msgstr "情報"
 msgid "Warning"
 msgstr "警告"
 
-#: aot_flask/templates/forgot_password.html:26
+#: aot_flask/templates/forgot_password.html:27
 msgid "Password Reset"
 msgstr "パスワードリセット"
 
-#: aot_flask/templates/forgot_password.html:36
+#: aot_flask/templates/forgot_password.html:37
 msgid "Login with Password"
 msgstr "パスワードでログイン"
 
@@ -5572,8 +5620,8 @@ msgstr " 言語を選択すると、ウェブブラウザの言語設定が上�
 msgid "Browser Default"
 msgstr "ブラウザデフォルト"
 
-#: aot_flask/templates/admin/dependencies_install.html:18
-#: aot_flask/templates/admin/dependencies_install.html:35
+#: aot_flask/templates/admin/dependencies_install.html:19
+#: aot_flask/templates/admin/dependencies_install.html:36
 #: aot_flask/templates/layout.html:538 aot_flask/templates/layout.html:574
 #: aot_flask/templates/layout_default.html:538
 #: aot_flask/templates/layout_default.html:574
@@ -5662,7 +5710,7 @@ msgid ""
 "Export/Import page."
 msgstr "AoTの設定を保存するためのバックアップを作成したり、後で復元したりできます。カメラの画像はバックアップされません。測定データを保存するには、エクスポート/インポートページに移動してください。"
 
-#: aot_flask/templates/admin/backup.html:26
+#: aot_flask/templates/admin/backup.html:27
 msgid "No backups found."
 msgstr "バックアップが見つかりません"
 
@@ -5762,11 +5810,11 @@ msgstr ""
 "これらのコンポーネントをインストールするには、下の 「インストール」 "
 "ボタンをクリックし、インストールが完了するまで待ってからデバイスを再追加してください。インストール後、フロントエンドとバックエンドが自動的に再起動し、新しくインストールされたモジュールが検出されます。"
 
-#: aot_flask/templates/admin/dependencies_install.html:28
+#: aot_flask/templates/admin/dependencies_install.html:29
 msgid "Installation has started for the following components"
 msgstr "以下のコンポーネントのインストールが開始されました"
 
-#: aot_flask/templates/admin/dependencies_install.html:30
+#: aot_flask/templates/admin/dependencies_install.html:31
 msgid ""
 "The component installation log below refreshes every 5 seconds. Please "
 "wait until all components are installed and the frontend and backend "
@@ -5777,7 +5825,7 @@ msgstr ""
 "以下のコンポーネントインストールログは5秒ごとに更新されます。すべてのコンポーネントがインストールされ、フロントエンドとバックエンドが再起動するまで待ってから、関連デバイスを再追加してください。インストールが完了すると、ログの最後に"
 " \"#### Component installation complete\" というメッセージが表示されます。"
 
-#: aot_flask/templates/admin/dependencies_install.html:31
+#: aot_flask/templates/admin/dependencies_install.html:32
 msgid ""
 "If a problem occurs during installation and you need to reset the "
 "installation status, deleting the /opt/AoT/.dependency file will restore "
@@ -8595,68 +8643,68 @@ msgstr "エラー: %(err)s"
 msgid "Cannot verify InfluxDB host/version."
 msgstr "InfluxDBホスト/バージョンを確認できません。"
 
-#: aot_flask/utils/utils_export.py:225
+#: aot_flask/utils/utils_export.py:227
 msgid "No file uploaded."
 msgstr "ファイルがアップロードされていません"
 
-#: aot_flask/utils/utils_export.py:227
+#: aot_flask/utils/utils_export.py:229
 msgid "No filename provided."
 msgstr "ファイル名が指定されていません"
 
-#: aot_flask/utils/utils_export.py:244
+#: aot_flask/utils/utils_export.py:246
 #, python-format
 msgid "Invalid filename: %(filename)s: %(part)s != %(correct)s."
 msgstr "無効なファイル名: %(filename)s: %(part)s != %(correct)s。"
 
-#: aot_flask/utils/utils_export.py:245 aot_flask/utils/utils_export.py:248
+#: aot_flask/utils/utils_export.py:247 aot_flask/utils/utils_export.py:250
 #, python-format
 msgid "Correct format is: %(format)s"
 msgstr "正しい形式: %(format)s"
 
-#: aot_flask/utils/utils_export.py:247
+#: aot_flask/utils/utils_export.py:249
 #, python-format
 msgid "Invalid filename: %(filename)s: %(part)s != %(correct)s"
 msgstr "無効なファイル名: %(filename)s: %(part)s != %(correct)s"
 
-#: aot_flask/utils/utils_export.py:250
+#: aot_flask/utils/utils_export.py:252
 msgid "Extension is not 'zip'."
 msgstr "拡張子が「zip」ではありません。"
 
-#: aot_flask/utils/utils_export.py:252
+#: aot_flask/utils/utils_export.py:254
 #, python-format
 msgid "Invalid AoT version: %(version)s > %(current)s. %(msg)s"
 msgstr "無効なAoTバージョン: %(version)s > %(current)s。%(msg)s"
 
-#: aot_flask/utils/utils_export.py:252
+#: aot_flask/utils/utils_export.py:254
 msgid "Only databases from current or older versions can be imported."
 msgstr "現在のバージョンまたはそれ以前のバージョンのデータベースのみインポートできます"
 
-#: aot_flask/utils/utils_export.py:254
+#: aot_flask/utils/utils_export.py:256
 #, python-format
 msgid "Exception during filename validation: %(err)s"
 msgstr "ファイル名検証中の例外: %(err)s"
 
-#: aot_flask/utils/utils_export.py:271
+#: aot_flask/utils/utils_export.py:273
 #, python-format
 msgid "%(db)s file is not included in zip: %(list)s"
 msgstr "%(db)s ファイルがzipに含まれていません: %(list)s"
 
-#: aot_flask/utils/utils_export.py:273
+#: aot_flask/utils/utils_export.py:275
 #, python-format
 msgid "Exception during zip file inspection: %(err)s"
 msgstr "ZIPファイル検査中の例外: %(err)s"
 
-#: aot_flask/utils/utils_export.py:286
+#: aot_flask/utils/utils_export.py:288
 #, python-format
 msgid "Exception during zip file extraction: %(err)s"
 msgstr "ZIPファイル抽出中の例外: %(err)s"
 
-#: aot_flask/utils/utils_export.py:374
+#: aot_flask/utils/utils_export.py:376
 #, python-format
 msgid "Exception during database replacement: %(err)s"
 msgstr "データベース置換中の例外: %(err)s"
 
-#: aot_flask/utils/utils_export.py:378
+#: aot_flask/utils/utils_export.py:380
 #, python-format
 msgid "Exception occurred: %(err)s"
 msgstr "例外が発生しました: %(err)s"
@@ -8691,11 +8739,6 @@ msgstr "関数タイプを選択する必要があります。"
 #, python-brace-format
 msgid "Unknown function type: '{}'"
 msgstr "不明な関数タイプ: '{}'"
-
-#: aot_flask/utils/utils_function.py:515
-#, fuzzy
-msgid "Execute All"
-msgstr "実行"
 
 #: aot_flask/utils/utils_function.py:602
 msgid "Function not found"
@@ -8794,12 +8837,12 @@ msgstr "未充足の依存関係があります。入力項目を追加する前
 
 #: aot_flask/utils/utils_input.py:296 aot_flask/utils/utils_settings.py:620
 #: aot_flask/utils/utils_settings.py:640 aot_flask/utils/utils_settings.py:688
-#: aot_flask/utils/utils_settings.py:2382
+#: aot_flask/utils/utils_settings.py:2399
 #, python-format
 msgid "Error in the %(field)s field - %(err)s"
 msgstr "%(field)s フィールドのエラー - %(err)s"
 
-#: aot_flask/utils/utils_input.py:365 aot_flask/utils/utils_measurement.py:56
+#: aot_flask/utils/utils_input.py:365
 msgid "Deactivate controller before modifying its settings"
 msgstr "設定を変更する前にコントローラを無効化してください"
 
@@ -8839,39 +8882,9 @@ msgstr "期間は正の整数である必要があります"
 msgid "Duration must be a valid integer"
 msgstr "期間は有効な整数である必要があります"
 
-#: aot_flask/utils/utils_method.py:43 aot_flask/utils/utils_method.py:51
-#: aot_flask/utils/utils_method.py:62 aot_flask/utils/utils_method.py:70
-#: aot_flask/utils/utils_method.py:88 aot_flask/utils/utils_method.py:91
-#: aot_flask/utils/utils_method.py:94
-#, fuzzy
-msgid "Required"
-msgstr "圧力"
-
-#: aot_flask/utils/utils_method.py:43
-msgid "Start date/time, end date/time, start setpoint"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:51 aot_flask/utils/utils_method.py:70
-msgid "Invalid Date/Time format"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:51
-#, fuzzy
-msgid "YYYY/MM/DD HH:MM:SS"
-msgstr "終了日時（YYYY-MM-DD HH:MM:SS）"
-
 #: aot_flask/utils/utils_method.py:55 aot_flask/utils/utils_method.py:73
 msgid "The end time must be after the start time."
 msgstr "終了時刻は開始時刻より後である必要があります。"
-
-#: aot_flask/utils/utils_method.py:62
-msgid "Start time, end time, start setpoint"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:91
-#, fuzzy
-msgid "Duration must be positive"
-msgstr "期間は正の整数である必要があります"
 
 #: aot_flask/utils/utils_method.py:205
 msgid "Error: Angle Shift is out of range. It must be <= 0 and <= 360."
@@ -9008,7 +9021,7 @@ msgstr "削除するAPIキーが見つかりませんでした。"
 msgid "Enter both latitude and longitude, or leave both empty."
 msgstr "緯度と経度の両方を入力するか、両方とも空のままにしてください。"
 
-#: aot_flask/utils/utils_settings.py:657 aot_flask/utils/utils_settings.py:2399
+#: aot_flask/utils/utils_settings.py:657 aot_flask/utils/utils_settings.py:2416
 msgid "Misc settings row not found"
 msgstr "その他の設定行が見つかりません"
 
@@ -9087,19 +9100,19 @@ msgstr "Gmailの場合、差出人メールアドレスは通常ログインメ�
 msgid "Insecure SMTP protocol configured. Use TLS/SSL if possible."
 msgstr "不安全なSMTPプロトコルが設定されています。可能な限りTLS/SSLを使用してください。"
 
-#: aot_flask/utils/utils_settings.py:2270
+#: aot_flask/utils/utils_settings.py:2287
 msgid "Install Dependencies"
 msgstr "依存関係をインストール"
 
-#: aot_flask/utils/utils_settings.py:2327
+#: aot_flask/utils/utils_settings.py:2344
 msgid "Set to Upgrade to Master"
 msgstr "マスターへのアップグレードを設定"
 
-#: aot_flask/utils/utils_settings.py:2393
+#: aot_flask/utils/utils_settings.py:2410
 msgid "Please enter both latitude and longitude, or leave both empty."
 msgstr "緯度と経度の両方を入力するか 両方を空のままにしてください"
 
-#: aot_flask/utils/utils_settings.py:2407
+#: aot_flask/utils/utils_settings.py:2424
 msgid "Map default location saved."
 msgstr "地図のデフォルト位置が保存されました"
 
@@ -9527,30 +9540,6 @@ msgstr ""
 msgid "Soil Property"
 msgstr "土壌特性"
 
-#: inputs_gis/gis_isric.py:136
-msgid "Soil pH (0-5cm)"
-msgstr "土壌pH 0-5cm"
-
-#: inputs_gis/gis_isric.py:152
-msgid "Clay Content (%)"
-msgstr "粘土含有量（％）"
-
-#: inputs_gis/gis_isric.py:168
-msgid "Sand Content (%)"
-msgstr "砂含有量 %"
-
-#: inputs_gis/gis_isric.py:184
-msgid "Silt Content (%)"
-msgstr "シルト含有量 %"
-
-#: inputs_gis/gis_isric.py:200
-msgid "Organic Carbon (dg/kg)"
-msgstr "有機炭素 dg/kg"
-
-#: inputs_gis/gis_isric.py:216
-msgid "Bulk Density (cg/cm³)"
-msgstr "容積密度（cg/cm³）"
-
 #: inputs_gis/gis_nasa_gibs.py:9
 msgid "MODIS Terra TrueColor"
 msgstr "MODIS Terra トゥルーカラー"
@@ -9567,7 +9556,7 @@ msgstr "ブルーマーブル（降水）"
 msgid "Soil Moisture (SMAP)"
 msgstr "土壌水分 SMAP"
 
-#: inputs_gis/gis_nasa_gibs.py:57 inputs_gis/gis_nasa_gibs.py:227
+#: inputs_gis/gis_nasa_gibs.py:57
 msgid "Land Surface Temp (Day)"
 msgstr "地表面温度 (昼間)"
 
@@ -9606,64 +9595,6 @@ msgstr "カスタム日付（YYYY-MM-DD）"
 #: inputs_gis/gis_nasa_gibs.py:109
 msgid "Choose date mode for this layer."
 msgstr "このレイヤーの日時モードを選択してください。"
-
-#: inputs_gis/gis_nasa_gibs.py:195
-msgid "Soil Moisture (Root Zone)"
-msgstr "土壌水分 根圏"
-
-#: inputs_gis/gis_nasa_gibs.py:197
-msgid "Dry"
-msgstr "乾燥"
-
-#: inputs_gis/gis_nasa_gibs.py:197
-msgid "Wet"
-msgstr "湿潤"
-
-#: inputs_gis/gis_nasa_gibs.py:216
-#, fuzzy
-msgid "NDVI"
-msgstr "デバイス"
-
-#: inputs_gis/gis_openweather.py:153
-msgid "Wind Speed"
-msgstr "風速"
-
-#: inputs_gis/gis_openweather.py:169
-msgid "Clouds"
-msgstr "雲"
-
-#: inputs_gis/gis_openweather.py:185
-msgid "Precipitation"
-msgstr "降水"
-
-#: inputs_gis/gis_rainviewer.py:137
-msgid "Rain/Snow Intensity"
-msgstr "雨 雪強度"
-
-#: inputs_gis/gis_rainviewer.py:139
-msgid "Heavy"
-msgstr "重"
-
-#: inputs_gis/gis_rainviewer.py:143
-msgid "Snow"
-msgstr "雪"
-
-#: inputs_gis/gis_rainviewer.py:146
-msgid "Rain"
-msgstr "雨"
-
-#: inputs_gis/gis_rainviewer.py:149
-msgid "Storm"
-msgstr "嵐"
-
-#: inputs_gis/gis_vworld.py:266
-msgid "Error: API returned"
-msgstr ""
-
-#: inputs_gis/gis_vworld.py:284
-#, fuzzy
-msgid "Legend Error"
-msgstr "ウェブエラー"
 
 #: outputs/motor_stepper_bipolar_generic.py:35
 #: outputs/motor_stepper_uln2003.py:33
@@ -11272,4 +11203,548 @@ msgstr ""
 #: widgets/widget_trigger_sequence.py:255
 msgid "Input value validity duration"
 msgstr "入力値有効期間"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:795
+#, fuzzy
+msgid "edit"
+msgstr "編集"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:804
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1653
+msgid "Open Notes"
+msgstr "ノートを開く"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:807
+msgid "Loading"
+msgstr "読み込み中"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:817
+msgid "Remove from Map"
+msgstr "地図から削除"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1656
+msgid "Loading..."
+msgstr "読み込み中..."
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1878
+msgid "No Notes"
+msgstr "ノートなし"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1884
+msgid "Load Failed"
+msgstr "読み込み失敗"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1929
+msgid "No Measurements"
+msgstr "測定値なし"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2027
+msgid "Current Work Time"
+msgstr "現在の作業時間"
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2032
+msgid "Last Work Time"
+msgstr "最終作業時間"
+
+#: aot_flask/static/js/geo/aot-map-controls.js:169
+#: aot_flask/static/js/geo/aot-map-controls.js:171
+#, fuzzy
+msgid "Location check failed:"
+msgstr "位置確認失敗: "
+
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:329
+#, fuzzy
+msgid "loading_map"
+msgstr "ランディングページ"
+
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:2196
+msgid "save_btn_text"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:254
+msgid "Zone"
+msgstr "ゾーン"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:255
+msgid "Facility"
+msgstr "施設"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:256
+msgid "Equipment"
+msgstr "機器"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:257
+msgid "A"
+msgstr "A"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:271
+msgid "Union"
+msgstr "ユニオン"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:272
+msgid "Subtract"
+msgstr "減算"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:273
+#: aot_flask/static/js/geo/aot-geo-panel.js:290
+msgid "Show length"
+msgstr "長さを表示"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:273
+#: aot_flask/static/js/geo/aot-geo-panel.js:290
+msgid "Hide length"
+msgstr "長さを非表示"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:288
+msgid "Pipe"
+msgstr "配管"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:289
+msgid "Irrigation"
+msgstr "灌漑"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:315
+msgid "Selection list"
+msgstr "Selection list"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:333
+msgid "Water supply"
+msgstr "給水"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:334
+msgid "Filter"
+msgstr "フィルタ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:336
+msgid "Connection"
+msgstr "接続"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:344
+msgid "Reference line"
+msgstr "基準線"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:345
+msgid "Main pipe"
+msgstr "メインパイプ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:347
+msgid "90 degree"
+msgstr "90度"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:355
+msgid "Sprinkler"
+msgstr "スプリンクラー"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:356
+msgid "Drip"
+msgstr "滴下"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:367
+#: aot_flask/static/js/geo/aot-geo-panel.js:383
+msgid "Spacing"
+msgstr "間隔"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:370
+msgid "Radius"
+msgstr "半径"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:373
+#: aot_flask/static/js/geo/aot-geo-panel.js:386
+msgid "Flow rate"
+msgstr "流量"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+msgid "River"
+msgstr "川"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+msgid "Water tank"
+msgstr "水タンク"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+msgid "Pump"
+msgstr "ポンプ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+msgid "Disc"
+msgstr "ディスク"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+msgid "Screen"
+msgstr "画面"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+msgid "Sand"
+msgstr "砂"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+msgid "Union valve"
+msgstr "ユニオンバルブ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+msgid "Adapter valve"
+msgstr "アダプタバルブ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+msgid "Inline valve"
+msgstr "インラインバルブ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Reducer"
+msgstr "レデューサー"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Suction"
+msgstr "吸引"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Elbow"
+msgstr "エルボ"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Tee"
+msgstr "チーズ T字管"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:413
+#: aot_flask/static/js/geo/aot-geo-panel.js:430
+msgid "spacing"
+msgstr "間隔"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:422
+#: aot_flask/static/js/geo/aot-geo-panel.js:434
+#: aot_flask/static/js/geo/aot-geo-panel.js:452
+msgid "Offset"
+msgstr "オフセット"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:443
+#, fuzzy
+msgid "angle"
+msgstr "角度"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:675
+msgid "Placement mode"
+msgstr "配置モード"
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:909
+msgid "Search Device..."
+msgstr "デバイスを検索..."
+
+#: aot_flask/static/js/geo/design/aot-geo-ui.js:615
+msgid "No Sites Found"
+msgstr "サイトが見つかりません"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:263
+msgid "New Site"
+msgstr "新規サイト"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:330
+msgid "New Zone"
+msgstr "新規ゾーン"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:450
+#, fuzzy
+msgid "Data Load Failed"
+msgstr "添付ファイル"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:524
+msgid "Select Site"
+msgstr "Select Site"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:533
+msgid "Apply Filter"
+msgstr "フィルタを適用"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:540
+msgid "Design Summary"
+msgstr "デザイン概要"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "Site Count"
+msgstr "サイト数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "Zone Count"
+msgstr "ゾーン数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "Pipe Length"
+msgstr "配管の長さ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:646
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:677
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:706
+msgid "Number of Emitters"
+msgstr "エミッター数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "AoT Device Count"
+msgstr "AoTデバイス数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:558
+msgid "No Pipe Data"
+msgstr "配管データなし"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "No."
+msgstr "番号"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Length (m)"
+msgstr "長さ m"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Number of Emitters (Pipe)"
+msgstr "エミッター数 配管"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Flow (L/h)"
+msgstr "流量（L/h）"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Flow (L/min)"
+msgstr "流量（L/min）"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:572
+msgid "[Main Pipe]"
+msgstr "[本管]"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:582
+msgid "[Branch Pipe]"
+msgstr "[枝管]"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
+msgid "Main Pipe Tee"
+msgstr "メインパイプチーズ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:643
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:645
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:646
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:651
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:652
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:653
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:674
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:676
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:677
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:682
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:683
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:684
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:703
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:705
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:706
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:711
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:712
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:713
+msgid "units"
+msgstr "単位一覧"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
+msgid "Main Pipe Elbow"
+msgstr "メインパイプエルボ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
+msgid "Main Pipe End"
+msgstr "メインパイプエンド"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
+msgid "Main Pipe Reducing Tee"
+msgstr "メインパイプ径違いチーズ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
+msgid "Main Pipe Reducing Elbow"
+msgstr "メインパイプ径違いエルボ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
+msgid "Branch Pipe Tee"
+msgstr "分岐パイプT字"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
+msgid "Branch Pipe Elbow"
+msgstr "分岐パイプエルボ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
+msgid "Branch Pipe End"
+msgstr "分岐パイプエンド"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:636
+msgid "Design Details"
+msgstr "設計の詳細"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:641
+msgid "Total Area"
+msgstr "総面積"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:642
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:673
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:702
+msgid "Main Pipe Length"
+msgstr "メインパイプの長さ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:643
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:674
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:703
+msgid "Main Pipe Count"
+msgstr "メインパイプ数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:644
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:675
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:704
+msgid "Branch Pipe Length"
+msgstr "分岐パイプ長さ"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:645
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:676
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:705
+msgid "Branch Pipe Count"
+msgstr "分岐パイプ数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:647
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:678
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:707
+msgid "Flow Rate (L/h)"
+msgstr "流量（L/h）"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:648
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:679
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:708
+msgid "Flow Rate (L/min)"
+msgstr "流量（L/min）"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:651
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:682
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:711
+msgid "Input Device Count"
+msgstr "入力デバイス数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:652
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:683
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:712
+msgid "Output Device Count"
+msgstr "出力デバイス数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:653
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:684
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:713
+msgid "Logic Count"
+msgstr "ロジック数"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:662
+msgid "No Sites Selected"
+msgstr "サイトが選択されていません"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:672
+msgid "Site Area"
+msgstr "サイト面積"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:689
+msgid "Site Pipe Info"
+msgstr "サイト配管情報"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:701
+msgid "Area"
+msgstr "エリア"
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:716
+msgid "Pipe Details"
+msgstr "配管の詳細"
+
+#: aot_flask/static/js/components/aot-color-picker.js:114
+#, fuzzy
+msgid "select_color"
+msgstr "Select Color"
+
+#: aot_flask/static/js/components/aot-color-picker.js:119
+#, fuzzy
+msgid "custom_color"
+msgstr "カスタムカラーを使用"
+
+#~ msgid "Execute All"
+#~ msgstr "実行"
+
+#~ msgid "Required"
+#~ msgstr "圧力"
+
+#~ msgid "Start date/time, end date/time, start setpoint"
+#~ msgstr ""
+
+#~ msgid "Invalid Date/Time format"
+#~ msgstr ""
+
+#~ msgid "YYYY/MM/DD HH:MM:SS"
+#~ msgstr "終了日時（YYYY-MM-DD HH:MM:SS）"
+
+#~ msgid "Start time, end time, start setpoint"
+#~ msgstr ""
+
+#~ msgid "Duration must be positive"
+#~ msgstr "期間は正の整数である必要があります"
+
+#~ msgid "NDVI"
+#~ msgstr "デバイス"
+
+#~ msgid "Error: API returned"
+#~ msgstr ""
+
+#~ msgid "Legend Error"
+#~ msgstr "ウェブエラー"
+
+#~ msgid "Soil pH (0-5cm)"
+#~ msgstr "土壌pH 0-5cm"
+
+#~ msgid "Clay Content (%)"
+#~ msgstr "粘土含有量（％）"
+
+#~ msgid "Sand Content (%)"
+#~ msgstr "砂含有量 %"
+
+#~ msgid "Silt Content (%)"
+#~ msgstr "シルト含有量 %"
+
+#~ msgid "Organic Carbon (dg/kg)"
+#~ msgstr "有機炭素 dg/kg"
+
+#~ msgid "Bulk Density (cg/cm³)"
+#~ msgstr "容積密度（cg/cm³）"
+
+#~ msgid "Soil Moisture (Root Zone)"
+#~ msgstr "土壌水分 根圏"
+
+#~ msgid "Dry"
+#~ msgstr "乾燥"
+
+#~ msgid "Wet"
+#~ msgstr "湿潤"
+
+#~ msgid "Wind Speed"
+#~ msgstr "風速"
+
+#~ msgid "Clouds"
+#~ msgstr "雲"
+
+#~ msgid "Precipitation"
+#~ msgstr "降水"
+
+#~ msgid "Rain/Snow Intensity"
+#~ msgstr "雨 雪強度"
+
+#~ msgid "Heavy"
+#~ msgstr "重"
+
+#~ msgid "Snow"
+#~ msgstr "雪"
+
+#~ msgid "Rain"
+#~ msgstr "雨"
+
+#~ msgid "Storm"
+#~ msgstr "嵐"
 

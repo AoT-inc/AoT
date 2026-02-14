@@ -1,4 +1,4 @@
-## Live målinger
+## Live Measurements
 
 Page\: `Data -> Live Measurements`
 
@@ -13,9 +13,9 @@ A graphical data display that is useful for viewing data sets spanning relativel
 !!! note
     Graphs require measurements, therefore at least one Input/Output/Function/etc. needs to be added and activated in order to display data.
 
-## dashbord
+## Dashboard
 
-Page\: `Data -> dashbord`
+Page\: `Data -> Dashboard`
 
 The dashboard can be used for both viewing data and manipulating the system, thanks to the numerous dashboard widgets available. Multiple dashboards can be created as well as locked to prevent changing the arrangement.
 

@@ -13,50 +13,6 @@
 - Libraries: os.getloadavg()
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr></tbody></table>
 
-### AoT: Ecowitt Cloud API Weather Data
-
-- Manufacturer: AoT
-
-Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
-- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>Call Back</td><td>Text
-- Default Value: all</td><td>호출할 데이터 종류를 입력하세요 (예: all).</td></tr></tbody></table>
-
-### AoT: Ecowitt MQTT\(JSON payload)
-
-- Manufacturer: AoT
-- Measurements: Variable measurements
-- Interfaces: AoT
-- Libraries: paho-mqtt, jmespath
-- Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt), [jmespath](https://pypi.org/project/jmespath)
-
-선택된 Ecowitt 장치 유형에 따라 자동 생성된 채널을 구독하고, MQTT 토픽으로 전송되는 URL 인코딩 또는 JSON 페이로드에서 각 채널의 JMESPATH 표현식으로 값을 추출하여 데이터베이스에 저장합니다. 채널별 측정 단위와 변환 설정을 사용자 정의 옵션으로 지정할 수 있습니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Ecowitt 장치</td><td>Select(Options: [<strong>기상대</strong> | 온습도 센서 | 온도 센서 | 토양 수분 센서 | 잎 센서 | 거리 측정기 | 공기질 측정기] (Default in <strong>bold</strong>)</td><tr><td>Host</td><td>Text
-- Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
-- Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
-- Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
-- Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_wxIfwaWL</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
-- Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
-
-### AoT: Ecowitt soil_sensor
-
-- Manufacturer: AoT
-
-Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
-- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>채널 선택</td><td>Text
-- Default Value: 1</td><td>측정할 채널을 선택하세요.</td></tr></tbody></table>
-
-### AoT: Ecowitt temp_humidity_sensor
-
-- Manufacturer: AoT
-
-Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
-- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>채널 선택</td><td>Text
-- Default Value: 1</td><td>측정할 채널을 선택하세요.</td></tr></tbody></table>
-
 ### AoT: Free Space
 
 - Manufacturer: AoT
@@ -428,15 +384,6 @@ This is an alternate method to calculate RPM from pulses on a pin using pigpio, 
 - Default Value: 23.0</td><td>Calibration data: Temperature</td></tr><tr><td>Cal data: V3 (internal)</td><td>Decimal</td><td>Calibration data: Voltage</td></tr><tr><td>Cal data: pH3 (internal)</td><td>Decimal</td><td>Calibration data: pH</td></tr><tr><td>Cal data: T3 (internal)</td><td>Decimal</td><td>Calibration data: Temperature</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Calibration buffer pH</td><td>Decimal
 - Default Value: 7.0</td><td>This is the nominal pH of the calibration buffer, usually labelled on the bottle.</td></tr><tr><td>Calibrate, slot 1</td><td>Button</td><td></td></tr><tr><td>Calibrate, slot 2</td><td>Button</td><td></td></tr><tr><td>Calibrate, slot 3</td><td>Button</td><td></td></tr><tr><td>Clear Calibration Slots</td><td>Button</td><td></td></tr></tbody></table>
 
-### AoT_KMA: 기상청 지점 데이터
-
-- Manufacturer: AoT_KMA
-- Measurements: Humidity/Temperature/Pressure/Wind
-- Additional URL: [Link](https://apihub.kma.go.kr)
-
-기상청 API 허브에서 무료 API 키를 발급받고 가까운 관측지점의 STN을 입력하세요.참고: 무료 API는 하루 20000회 호출이 가능하며, 1회 호출당 1개의 관측지점 데이터를 반환합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>stn</td><td>Text</td><td>The stn to acquire the weather data</td></tr></tbody></table>
-
 ### Atlas Scientific: Atlas CO2 (Carbon Dioxide Gas)
 
 - Manufacturer: Atlas Scientific
@@ -692,6 +639,16 @@ Calibration Measurement is an optional setting that provides a temperature measu
 This is similar to the other BMP280 Input, except it uses a different library, whcih includes the ability to set forced mode.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Enable Forced Mode</td><td>Boolean</td><td>Enable heater to evaporate condensation. Turn on heater x seconds every y measurements.</td></tr></tbody></table>
 
+### CARTO: GL: Carto Maps
+
+- Manufacturer: CARTO
+- Measurements: Status
+- Libraries: gis_carto
+- Manufacturer URL: [Link](https://carto.com/)
+
+CARTO DB에서 제공하는 데이터 분석 전용 지도입니다. 색감이 절제된 Positron(밝음), Dark Matter(어두움), Voyager 스타일을 제공하여, 위에 표현되는 데이터 포인트나 센서 정보가 더욱 돋보이도록 설계되었습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Active Map Styles</td></td></tbody></table>
+
 ### CO2Meter: K30
 
 - Manufacturer: CO2Meter
@@ -701,14 +658,6 @@ This is similar to the other BMP280 Input, except it uses a different library, w
 - Manufacturer URL: [Link](https://www.co2meter.com/products/k-30-co2-sensor-module)
 - Datasheet URL: [Link](http://co2meters.com/Documentation/Datasheets/DS_SE_0118_CM_0024_Revised9%20(1).pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>UART Device</td><td>Text</td><td>The UART device location (e.g. /dev/ttyUSB1)</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
-
-### Carto: Carto Maps
-
-- Manufacturer: Carto
-- Measurements: Status
-- Libraries: gis_carto
-- Manufacturer URL: [Link](https://carto.com/)
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Active Map Styles</td></td></tbody></table>
 
 ### Catnip Electronics: Chirp
 
@@ -733,13 +682,13 @@ ChirpStack v4 MQTT 브로커의 토픽(application/+/device/+/event/up)을 구�
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>MQTT Host</td><td>Text
 - Default Value: localhost</td><td>MQTT 브로커 호스트명 또는 IP 주소 (예: localhost)</td></tr><tr><td>MQTT Port</td><td>Text
 - Default Value: 1883</td><td>MQTT 브로커 포트 (기본 1883, TLS는 8883 권장)</td></tr><tr><td>MQTT Username</td><td>Text</td><td>선택 사항: 브로커 인증 사용자 이름</td></tr><tr><td>MQTT Password</td><td>Text</td><td>선택 사항: 브로커 인증 비밀번호</td></tr><tr><td>Enable TLS</td><td>Boolean</td><td>TLS(SSL) 연결 사용 여부 (기본 꺼짐)</td></tr><tr><td>CA Certificate Path</td><td>Text</td><td>선택 사항: TLS 사용 시 CA 인증서 경로</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_OFn3Ts4m</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
+- Default Value: client_5S5aZ3yV</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Keepalive (sec)</td><td>Text
 - Default Value: 60</td><td>MQTT Keepalive 초 (기본 60초)</td></tr><tr><td>Subscribe Topics</td><td>Text
 - Default Value: application/+/device/+/event/up</td><td>콤마(,)로 구분된 구독 토픽들 (예: application/+/device/+/event/up)</td></tr><tr><td>QoS</td><td>Text</td><td>MQTT QoS 레벨 (0, 1, 2)</td></tr><tr><td>Device EUIs (comma-separated)</td><td>Text</td><td>선택 사항: 특정 디바이스만 처리. EUI를 콤마(,)로 구분해 입력</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPath Expression</td><td>Text</td><td>수신 이벤트 전체(JSON)에 대해 평가합니다</td></tr></tbody></table>
 
-### ChirpStack: ChirpStack: REST API (Payload JMESPath Expression)
+### Chirpstack: ChirpStack: REST API (Payload JMESPath Expression)
 
-- Manufacturer: ChirpStack
+- Manufacturer: Chirpstack
 - Measurements: Variable measurements
 - Libraries: chirpstack-rest-api, requests, jmespath
 
@@ -761,13 +710,79 @@ ChirpStack v4 REST API를 주기적으로 호출하여 디바이스 이벤트를
 - Datasheet URL: [Link](https://cdn.shopify.com/s/files/1/0019/5952/files/Datasheet_COZIR_A_CO2Meter_4_15.pdf)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>UART Device</td><td>Text</td><td>The UART device location (e.g. /dev/ttyUSB1)</td></tr><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
-### Esri: Esri World Imagery
+### ESA: GL: Soil Moisture (NASA SMAP)
+
+- Manufacturer: ESA
+- Measurements: Status
+- Libraries: gis_esa
+- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
+
+유럽우주국(ESA)의 Sentinel-2 위성 데이터를 기반으로 한 전 세계 토지 피복(Land Cover) 지도입니다. 식생, 도시, 농경지, 산림, 수역 등을 10m급 고해상도로 분석하여 색상별로 확인할 수 있어 환경 분석에 유용합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
+
+### Ecowitt: Ecowitt Cloud API Weather Data
+
+- Manufacturer: Ecowitt
+
+Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>Call Back</td><td>Text
+- Default Value: all</td><td>호출할 데이터 종류를 입력하세요 (예: all).</td></tr></tbody></table>
+
+### Ecowitt: Ecowitt MQTT\(JSON payload)
+
+- Manufacturer: Ecowitt
+- Measurements: Variable measurements
+- Interfaces: AoT
+- Libraries: paho-mqtt, jmespath
+- Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt), [jmespath](https://pypi.org/project/jmespath)
+
+선택된 Ecowitt 장치 유형에 따라 자동 생성된 채널을 구독하고, MQTT 토픽으로 전송되는 URL 인코딩 또는 JSON 페이로드에서 각 채널의 JMESPATH 표현식으로 값을 추출하여 데이터베이스에 저장합니다. 채널별 측정 단위와 변환 설정을 사용자 정의 옵션으로 지정할 수 있습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Ecowitt 장치</td><td>Select(Options: [<strong>기상대</strong> | 온습도 센서 | 온도 센서 | 토양 수분 센서 | 잎 센서 | 거리 측정기 | 공기질 측정기] (Default in <strong>bold</strong>)</td><tr><td>Host</td><td>Text
+- Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
+- Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
+- Default Value: gw</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
+- Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
+- Default Value: client_uJI4wNFd</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
+
+### Ecowitt: Ecowitt soil_sensor
+
+- Manufacturer: Ecowitt
+
+Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>채널 선택</td><td>Text
+- Default Value: 1</td><td>측정할 채널을 선택하세요.</td></tr></tbody></table>
+
+### Ecowitt: Ecowitt temp and humidity sensor
+
+- Manufacturer: Ecowitt
+
+Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MAC 주소를 입력하세요.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>측정 기간(초)</td><td>Decimal
+- Default Value: 60</td><td>측정 주기를 초 단위로 입력하세요.</td></tr><tr><td>Application Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 Application Key를 입력하세요.</td></tr><tr><td>API Key</td><td>Text</td><td>Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요.</td></tr><tr><td>Device MAC</td><td>Text</td><td>Ecowitt 장치의 MAC 주소를 입력하세요.</td></tr><tr><td>채널 선택</td><td>Text
+- Default Value: 1</td><td>측정할 채널을 선택하세요.</td></tr></tbody></table>
+
+### Esri: GL: Esri World Imagery
 
 - Manufacturer: Esri
 - Measurements: Status
 - Libraries: gis_esri
 - Manufacturer URL: [Link](https://www.esri.com/)
 
+세계적인 GIS 기업 Esri의 공신력 있는 지도 서비스입니다. 선명하고 정교한 World Imagery 항공 위성 사진을 제공하여 지형의 세부 형상과 시설물을 정확하게 조망하기에 최적화되어 있습니다.
+
+
+### GSI: JP: GSI Maps
+
+- Manufacturer: GSI
+- Measurements: Status
+- Libraries: gis_gsi
+- Manufacturer URL: [Link](https://maps.gsi.go.jp/)
+
+일본 국토지리원(GSI)에서 제공하는 고정밀 공공 지도 서비스입니다. 일본 전역의 세부적인 지형과 지명 정보를 담고 있으며, 표준 지도뿐만 아니라 담색 지도, 항공 사진 등 전문적인 레이어를 활용할 수 있습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Map Style</td></td></tbody></table>
 
 ### Generic: Hall Flow Meter
 
@@ -779,12 +794,24 @@ ChirpStack v4 REST API를 주기적으로 호출하여 디바이스 이벤트를
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Pulses per Liter</td><td>Decimal
 - Default Value: 1.0</td><td>Enter the conversion factor for this meter (pulses to Liter).</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Clear Total: Volume</td><td>Button</td><td></td></tr></tbody></table>
 
-### ISRIC: SoilGrids (Global Soil Info)
+### Google: GL: Google Maps
+
+- Manufacturer: Google
+- Measurements: Status
+- Libraries: gis_google
+- Manufacturer URL: [Link](https://www.google.com/maps)
+
+가장 널리 사용되는 구글의 웹 지도 서비스입니다. 방대한 지리 정보를 바탕으로 Road, Satellite, Hybrid, Terrain 등 4가지 모드를 지원하며, 특히 지형의 등고와 음영을 보여주는 Terrain 지도가 우수합니다. 또한, 구글의 Geocoding API를 이용하여 주소를 좌표로 변환할 수 있습니다. API 키는 구글 개발자 콘솔에서 발급 가능합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Google Maps API Key</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
+
+### ISRIC: GL: SoilGrids (Global Soil Info)
 
 - Manufacturer: ISRIC
 - Measurements: Status
 - Libraries: gis_isric
 - Manufacturer URL: [Link](https://soilgrids.org/)
+
+세계 토양 정보 서비스(ISRIC)에서 제공하는 글로벌 토양 특성 지도입니다. 지질학적 분석을 위한 토양 성분(점토, 모래 등), pH 수치, 탄소 함유량 등 전 세계의 지하 자원 및 환경 정보를 레이어 형태로 시각화해 줍니다.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Soil Property</td></td></tbody></table>
 
 ### Infineon: DPS310
@@ -798,6 +825,17 @@ ChirpStack v4 REST API를 주기적으로 호출하여 디바이스 이벤트를
 - Datasheet URL: [Link](https://www.infineon.com/dgdl/Infineon-DPS310-DataSheet-v01_02-EN.pdf?fileId=5546d462576f34750157750826c42242)
 - Product URLs: [Link 1](https://www.adafruit.com/product/4494), [Link 2](https://shop.pimoroni.com/products/adafruit-dps310-precision-barometric-pressure-altitude-sensor-stemma-qt-qwiic), [Link 3](https://www.berrybase.de/sensoren-module/luftdruck-wasserdruck/adafruit-dps310-pr-228-zisions-barometrischer-druck-und-h-246-hen-sensor)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
+
+### KMA: KMA 단기예보
+
+- Manufacturer: KMA
+- Additional URL: [Link](https://www.data.go.kr/index.do)
+
+이 모듈은 농업용 단기예보 데이터를 제공합니다. 가장 최근 발표를 기준으로 사용자가 선택한 시간 뒤의 예보 데이터를 수집합니다. API 호출 시 공공데이터포털의 서비스키를 사용하고, JSON 응답에서 기온, 최저/최고 기온, 풍속, 풍향, 하늘상태, 습도, 강수량, 강수확률, 강수형태, 신적설 데이터를 추출합니다. (API 제공은 발표시간 + 10분 이후부터 이루어집니다.)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>공공데이터포털에서 발급받은 KMA API 서비스키를 입력하세요.</td></tr><tr><td>nx 좌표</td><td>Text</td><td>nx 값을 입력하세요 (숫자).</td></tr><tr><td>ny 좌표</td><td>Text</td><td>ny 값을 입력하세요 (숫자).</td></tr><tr><td>몇 시간 뒤 예보</td><td>Select(Options: [<strong>1</strong> | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12] (Default in <strong>bold</strong>)</td><td>몇 시간 후의 예보 데이터를 사용할지 선택하세요.</td></tr><tr><td>API 타임아웃(초)</td><td>Integer
+- Default Value: 60</td><td>API 응답 제한 시간을 설정하세요 (기본 60초).</td></tr><tr><td>API 재시도 횟수</td><td>Integer
+- Default Value: 3</td><td>HTTP 오류 발생 시 같은 발표시각을 몇 번 재시도할지 설정하세요.</td></tr><tr><td>API 재시도 간격(초)</td><td>Decimal
+- Default Value: 3.0</td><td>재시도 사이에 대기할 시간입니다 (기본 3초).</td></tr></tbody></table>
 
 ### KMA: 기상청 고해상도 500m
 
@@ -814,16 +852,22 @@ ChirpStack v4 REST API를 주기적으로 호출하여 디바이스 이벤트를
 - Default Value: True</td><td>강수 지표(rn_ox)와 15분 강수(rn_15m)를 서로 다른 측정명으로 기록해 충돌을 방지합니다.</td></tr><tr><td>QC: 0°C 허용 범위(±°C)</td><td>Decimal
 - Default Value: 3.0</td><td>직전 정상값이 0°C에서 이 범위 이내일 때만 0°C를 허용합니다. 기본 ±3°C.</td></tr></tbody></table>
 
-### KMA: 단기예보
+### KMA: 기상청 지점 데이터
 
 - Manufacturer: KMA
-- Additional URL: [Link](https://www.data.go.kr/index.do)
+- Measurements: 습도/온도/기압/풍속/풍향
+- Additional URL: [Link](https://apihub.kma.go.kr)
 
-이 모듈은 농업용 단기예보 데이터를 제공합니다. 가장 최근 발표를 기준으로 사용자가 선택한 시간 뒤의 예보 데이터를 수집합니다. API 호출 시 공공데이터포털의 서비스키를 사용하고, JSON 응답에서 기온, 최저/최고 기온, 풍속, 풍향, 하늘상태, 습도, 강수량, 강수확률, 강수형태, 신적설 데이터를 추출합니다. (API 제공은 발표시간 + 10분 이후부터 이루어집니다.)
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>공공데이터포털에서 발급받은 KMA API 서비스키를 입력하세요.</td></tr><tr><td>nx 좌표</td><td>Text</td><td>nx 값을 입력하세요 (숫자).</td></tr><tr><td>ny 좌표</td><td>Text</td><td>ny 값을 입력하세요 (숫자).</td></tr><tr><td>몇 시간 뒤 예보</td><td>Select(Options: [<strong>1</strong> | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12] (Default in <strong>bold</strong>)</td><td>몇 시간 후의 예보 데이터를 사용할지 선택하세요.</td></tr><tr><td>API 타임아웃(초)</td><td>Integer
-- Default Value: 60</td><td>API 응답 제한 시간을 설정하세요 (기본 60초).</td></tr><tr><td>API 재시도 횟수</td><td>Integer
-- Default Value: 3</td><td>HTTP 오류 발생 시 같은 발표시각을 몇 번 재시도할지 설정하세요.</td></tr><tr><td>API 재시도 간격(초)</td><td>Decimal
-- Default Value: 3.0</td><td>재시도 사이에 대기할 시간입니다 (기본 3초).</td></tr></tbody></table>
+기상청 API 허브에서 무료 API 키를 발급받고 가까운 관측지점의 STN을 입력하세요.참고: 무료 API는 하루 20000회 호출이 가능하며, 1회 호출당 1개의 관측지점 데이터를 반환합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>stn</td><td>Text</td><td>The stn to acquire the weather data</td></tr></tbody></table>
+
+### Kakao: KO: Kakao Map
+
+- Manufacturer: Kakao
+- Measurements: Status
+- Libraries: gis_kakao
+- Manufacturer URL: [Link](https://map.kakao.com/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Map Type</td></td></tbody></table>
 
 ### MAXIM: DS1822
 
@@ -1015,7 +1059,7 @@ A single topic is subscribed to and the returned JSON payload contains one or mo
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Topic</td><td>Text
 - Default Value: mqtt/test/input</td><td>The topic to subscribe to</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_lJnbbl2k</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_PWP12aat</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>JMESPATH Expression</td><td>Text</td><td>JMESPATH expression to find value in JSON response</td></tr></tbody></table>
 
 ### MQTT: MQTT Subscribe (Value payload)
@@ -1031,8 +1075,18 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Default Value: localhost</td><td>Host or IP address</td></tr><tr><td>Port</td><td>Integer
 - Default Value: 1883</td><td>Host port number</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>Maximum amount of time between received signals. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_vSCkDLpt</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_kpFvU4gs</td><td>Unique client ID for connecting to the server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Use TLS</td><td>Boolean</td><td>Send login credentials using TLS</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Subscription Topic</td><td>Text</td><td>The MQTT topic to subscribe to</td></tr></tbody></table>
+
+### Mapbox: GL: Mapbox
+
+- Manufacturer: Mapbox
+- Measurements: Status
+- Libraries: gis_mapbox
+- Manufacturer URL: [Link](https://www.mapbox.com/)
+
+세련된 디자인과 커스터마이징이 강점인 맵박스의 벡터 및 타일 지도입니다. Streets, Satellite, Dark, Light 스타일을 지원하며, 렌더링 성능이 매우 우수하여 부드러운 지도 조작 환경을 제공합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Mapbox Access Token</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
 
 ### Melexis: MLX90393
 
@@ -1119,6 +1173,16 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Product URL: [Link](https://www.adafruit.com/product/1782)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
+### Microsoft: GL: Bing Maps
+
+- Manufacturer: Microsoft
+- Measurements: Status
+- Libraries: gis_bing
+- Manufacturer URL: [Link](https://www.bing.com/maps)
+
+마이크로소프트의 글로벌 지도 서비스입니다. 고해상도 항공 사진(Aerial)과 이름이 포함된 항공 사진(Hybrid)을 제공하며, MS만의 깨끗하고 정밀한 도로 지도를 활용할 수 있는 장점이 있습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Bing Maps API Key</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
+
 ### Multiple Manufacturers: HC-SR04
 
 - Manufacturer: Multiple Manufacturers
@@ -1138,38 +1202,67 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 - Measurements: Status
 - Libraries: gis_nasa_gibs
 - Manufacturer URL: [Link](https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Satellite Layer</td></td><tr><td>Target Date (YYYY-MM-DD)</td><td>Text</td></tbody></table>
 
-### NASA: Soil Moisture (NASA SMAP)
+미국 항공우주국(NASA)의 위성 관측 시스템(GIBS)을 통해 수집된 실시간 지구 관측 지도입니다. 위성 사진(Blue Marble)뿐만 아니라 기온, 구름, 화재 등 환경 관련 데이터를 날짜별로 선택하여 시계열 분석이 가능합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Satellite Layer</td></td><tr><td>Date Mode</td><td>Select</td><tr><td>Custom Date</td><td>Text</td></tbody></table>
 
-- Manufacturer: NASA
+### Naver: KO: Naver Map
+
+- Manufacturer: Naver
 - Measurements: Status
-- Libraries: gis_esa
-- Manufacturer URL: [Link](https://smap.jpl.nasa.gov/)
+- Libraries: gis_naver
+- Manufacturer URL: [Link](https://map.naver.com/)
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Map Type</td></td></tbody></table>
 
-
-### OpenStreetMap: OpenStreetMap
+### OpenStreetMap: GL: OpenStreetMap
 
 - Manufacturer: OpenStreetMap
 - Measurements: Status
 - Libraries: gis_osm
 - Manufacturer URL: [Link](https://www.openstreetmap.org/)
 
+전 세계 사용자들이 협업하여 만든 위키피디아 방식의 자유 지도 데이터입니다. 무료로 사용 가능하며, 전 세계 도로와 건물 정보가 꾸준히 업데이트되는 활발한 커뮤니티 성격의 표준 웹 지도입니다.
 
-### OpenTopoMap: OpenTopoMap
+
+### OpenTopoMap: GL: OpenTopoMap
 
 - Manufacturer: OpenTopoMap
 - Measurements: Status
 - Libraries: gis_opentopomap
 - Manufacturer URL: [Link](https://opentopomap.org)
 
+OpenStreetMap 데이터를 기반으로 등고선과 지형 음영을 강조한 지형도 서비스입니다. 산악 지형이나 경사면 분석 시 구분이 명확하며 가독성이 높아 등산이나 야외 활동 관련 시각화에 적합합니다.
 
-### OpenWeatherMap: OpenWeatherMap
+
+### OpenWeather: OpenWeatherMap (City/Coords, Current)
+
+- Manufacturer: OpenWeather
+- Measurements: Humidity/Temperature/Pressure/Wind
+- Additional URL: [Link](https://openweathermap.org)
+
+Obtain a free API key at openweathermap.org. Enter a City OR Latitude/Longitude coordinates. Note: the free API subscription is limited to 60 calls per minute
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>City</td><td>Text</td><td>City Name (Optional if using Coords)</td></tr><tr><td>Latitude</td><td>Text</td><td>Latitude (e.g. 37.5665)</td></tr><tr><td>Longitude</td><td>Text</td><td>Longitude (e.g. 126.9780)</td></tr></tbody></table>
+
+### OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)
+
+- Manufacturer: OpenWeather
+- Measurements: Humidity/Temperature/Pressure/Wind
+- Interfaces: AoT
+- Additional URL: [Link](https://openweathermap.org)
+
+Obtain a free API key at openweathermap.org. Notes: The free API subscription is limited to 60 calls per minute. If a Day (Future) time is selected, Minimum and Maximum temperatures are available as measurements.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>Latitude (decimal)</td><td>Decimal
+- Default Value: 33.441792</td><td>The latitude to acquire weather data</td></tr><tr><td>Longitude (decimal)</td><td>Decimal
+- Default Value: -94.037689</td><td>The longitude to acquire weather data</td></tr><tr><td>Time</td><td>Select(Options: [<strong>Current (Present)</strong> | 1 Day (Future) | 2 Day (Future) | 3 Day (Future) | 4 Day (Future) | 5 Day (Future) | 6 Day (Future) | 7 Day (Future) | 1 Hour (Future) | 2 Hours (Future) | 3 Hours (Future) | 4 Hours (Future) | 5 Hours (Future) | 6 Hours (Future) | 7 Hours (Future) | 8 Hours (Future) | 9 Hours (Future) | 10 Hours (Future) | 11 Hours (Future) | 12 Hours (Future) | 13 Hours (Future) | 14 Hours (Future) | 15 Hours (Future) | 16 Hours (Future) | 17 Hours (Future) | 18 Hours (Future) | 19 Hours (Future) | 20 Hours (Future) | 21 Hours (Future) | 22 Hours (Future) | 23 Hours (Future) | 24 Hours (Future) | 25 Hours (Future) | 26 Hours (Future) | 27 Hours (Future) | 28 Hours (Future) | 29 Hours (Future) | 30 Hours (Future) | 31 Hours (Future) | 32 Hours (Future) | 33 Hours (Future) | 34 Hours (Future) | 35 Hours (Future) | 36 Hours (Future) | 37 Hours (Future) | 38 Hours (Future) | 39 Hours (Future) | 40 Hours (Future) | 41 Hours (Future) | 42 Hours (Future) | 43 Hours (Future) | 44 Hours (Future) | 45 Hours (Future) | 46 Hours (Future) | 47 Hours (Future) | 48 Hours (Future)] (Default in <strong>bold</strong>)</td><td>Select the time for the current or forecast weather</td></tr></tbody></table>
+
+### OpenWeatherMap: GL: OpenWeatherMap
 
 - Manufacturer: OpenWeatherMap
 - Measurements: Status
 - Libraries: gis_openweather
 - Manufacturer URL: [Link](https://openweathermap.org/)
+
+전 세계 날씨 정보를 지도에 중첩하여 보여주는 기상 전문 서비스입니다. 구름, 강수량, 기온, 풍속, 기압 및 레이더 정보를 실시간으로 제공하여 현재 기상 상황을 직관적으로 파악할 수 있게 돕습니다.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API Key</td><td>Text</td><tr><td>Active Layers</td></td></tbody></table>
 
 ### Panasonic: AMG8833
@@ -1248,13 +1341,15 @@ See https://david00.github.io/rpi-power-monitor/docs/v0.3.0/calibration.html for
 - Product URL: [Link](https://www.dfrobot.com/product-531.html)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
 
-### RainViewer: RainViewer (Radar)
+### RainViewer: GL: RainViewer (Radar)
 
 - Manufacturer: RainViewer
 - Measurements: Status
 - Libraries: gis_rainviewer
 - Manufacturer URL: [Link](https://www.rainviewer.com/)
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Color Scheme</td><td>Select</td><tr><td>Smoothing</td><td>Boolean</td></tbody></table>
+
+실시간 강수 레이더 정보를 전문적으로 제공하는 지도 서비스입니다. 향후 몇 시간 동안의 비나 눈의 이동 경로를 예측 애니메이션으로 보여주며, 글로벌 영역의 강수 상황을 가장 빠르게 확인할 수 있습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API Key</td><td>Text</td><tr><td>Color Scheme</td><td>Select</td><tr><td>Smoothing</td><td>Boolean</td></tbody></table>
 
 ### Raspberry Pi Foundation: Sense HAT
 
@@ -1267,6 +1362,17 @@ See https://david00.github.io/rpi-power-monitor/docs/v0.3.0/calibration.html for
 
 This module acquires measurements from the Raspberry Pi Sense HAT sensors, which include the LPS25H, LSM9DS1, and HTS221.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr></tbody></table>
+
+### Remote Sensing: Satellite Analysis
+
+- Manufacturer: Remote Sensing
+- Measurements: Analysis Channels
+- Interfaces: AoT
+- Libraries: requests
+
+Collects environmental data from satellite analysis and GIS layers based on the device location. Supports auto-adjustment for data gaps (e.g. coastal areas).
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Active GIS Source</td><td>Select</td><td>Select the satellite/GIS analysis source.</td></tr><tr><td>Auto-adjust Location</td><td>Boolean
+- Default Value: True</td><td>Automatically search nearby valid coordinates if data is missing at the exact location (Spiral Search).</td></tr></tbody></table>
 
 ### Ruuvi: RuuviTag
 
@@ -1522,6 +1628,26 @@ This Input module allows the use of any temperature/humidity sensor with the TH1
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>IP Address</td><td>Text
 - Default Value: 192.168.0.100</td><td>The IP address of the device</td></tr></tbody></table>
 
+### Stadia Maps: GL: Stadia Maps
+
+- Manufacturer: Stadia Maps
+- Measurements: Status
+- Libraries: gis_stadia
+- Manufacturer URL: [Link](https://stadiamaps.com/)
+
+고품질 디자인을 강조하는 Stadia Maps의 지도 서버입니다. Alidade Smooth, Dark, OSMBright 등 눈이 편안한 색감과 고품질 폰트가 적용된 깔끔한 레이아웃을 제공하여 전문가용 대시보드 제작에 유리합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Stadia/Stamen API Key</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
+
+### Statistics Korea: KO: SGIS (Statistics Korea)
+
+- Manufacturer: Statistics Korea
+- Measurements: Status
+- Libraries: gis_sgis
+- Manufacturer URL: [Link](https://sgis.kostat.go.kr/)
+
+대한민국 통계청(SGIS)에서 제공하는 통계 지리 정보 서비스입니다. 한국의 시군구별 인구, 가구, 사업체 등 다양한 통계 데이터를 공간적으로 분석하고 시각화하기 위한 최적의 국내 전용 서비스입니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>SGIS Service ID (Consumer Key)</td><td>Text</td><tr><td>SGIS Security Key (Consumer Secret)</td><td>Text</td><tr><td>Data Configuration</td></td><tr><td>Statistic Subject</td><td>Select</td><tr><td>Year (YYYY)</td><td>Text</td><tr><td>Target Admin Code (adm_cd)</td><td>Text</td><tr><td>Visualization</td><td>Select</td></tbody></table>
+
 ### TE Connectivity: HTU21D (Adafruit_CircuitPython_HTU21D)
 
 - Manufacturer: TE Connectivity
@@ -1558,7 +1684,7 @@ This Input module allows the use of any temperature/humidity sensor with the TH1
 This measures from several Kasa power devices (plugs/strips) capable of measuring energy consumption. These include, but are not limited to the KP115 and HS600.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Device Type</td><td>Select</td><td>The type of Kasa device</td></tr><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18185</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
+- Default Value: 18081</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">The total kWh can be cleared with the following button or with the Clear Total kWh Function Action. This will also clear all energy stats on the device, not just the total kWh.</td></tr><tr><td>Clear Total: Kilowatt-hour</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Tasmota: Tasmota Outlet Energy Monitor (HTTP)
 
@@ -1741,34 +1867,25 @@ This Input receives and stores measurements from the Data Storage Integration on
 This Input receives and stores measurements from the Data Storage Integration on The Things Network. The given Payload jmespath Expression is used as a JMESPATH expression to find the corresponding value that will be stored for that channel. Be sure you select and save the Measurement Unit for each channel. Once the unit has been saved, you can convert to other units in the Convert Measurement section. Example expressions for jmespath (https://jmespath.org) include <i>temperature</i>, <i>sensors[0].temperature</i>, and <i>bathroom.temperature</i> which refer to the temperature as a direct key within the first entry of sensors or as a subkey of bathroom, respectively. Jmespath elements and keys that contain special characters have to be enclosed in double quotes, e.g. <i>"sensor-1".temperature</i>.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Start Offset (Seconds)</td><td>Integer</td><td>The duration to wait before the first operation</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>Application ID</td><td>Text</td><td>The Things Network Application ID</td></tr><tr><td>App API Key</td><td>Text</td><td>The Things Network Application API Key</td></tr><tr><td>Device ID</td><td>Text</td><td>The Things Network Device ID</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Payload jmespath Expression</td><td>Text</td><td>The TTN jmespath expression to return the value to store</td></tr></tbody></table>
 
-### Vworld: Vworld (Korea)
+### Thunderforest: GL: Thunderforest
+
+- Manufacturer: Thunderforest
+- Measurements: Status
+- Libraries: gis_thunderforest
+- Manufacturer URL: [Link](https://www.thunderforest.com/)
+
+OpenStreetMap 데이터를 활용하여 특정 목적에 맞춘 독창적인 테마 지도를 제공합니다. 자전거 도로(Cycle), 대중교통(Transport), 밤 지도, 거친 풍경 등 시각적으로 강렬한 고유 스타일을 경험할 수 있습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Thunderforest API Key</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
+
+### Vworld: KO: Vworld
 
 - Manufacturer: Vworld
 - Measurements: Status
 - Libraries: gis_vworld
 - Manufacturer URL: [Link](https://www.vworld.kr/)
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Vworld API Key</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
 
-### Weather: OpenWeatherMap (City, Current)
-
-- Manufacturer: Weather
-- Measurements: Humidity/Temperature/Pressure/Wind
-- Additional URL: [Link](https://openweathermap.org)
-
-Obtain a free API key at openweathermap.org. If the city you enter does not return measurements, try another city. Note: the free API subscription is limited to 60 calls per minute
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>City</td><td>Text</td><td>The city to acquire the weather data</td></tr></tbody></table>
-
-### Weather: OpenWeatherMap (Lat/Lon, Current/Future)
-
-- Manufacturer: Weather
-- Measurements: Humidity/Temperature/Pressure/Wind
-- Interfaces: AoT
-- Additional URL: [Link](https://openweathermap.org)
-
-Obtain a free API key at openweathermap.org. Notes: The free API subscription is limited to 60 calls per minute. If a Day (Future) time is selected, Minimum and Maximum temperatures are available as measurements.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Period (Seconds)</td><td>Decimal</td><td>The duration between measurements or actions</td></tr><tr><td>Pre Output</td><td>Select</td><td>Turn the selected output on before taking every measurement</td></tr><tr><td>Pre Out Duration (Seconds)</td><td>Decimal</td><td>If a Pre Output is selected, set the duration to turn the Pre Output on for before every measurement is acquired.</td></tr><tr><td>Pre During Measure</td><td>Boolean</td><td>Check to turn the output off after (opposed to before) the measurement is complete</td></tr><tr><td>API Key</td><td>Text</td><td>The API Key for this service's API</td></tr><tr><td>Latitude (decimal)</td><td>Decimal
-- Default Value: 33.441792</td><td>The latitude to acquire weather data</td></tr><tr><td>Longitude (decimal)</td><td>Decimal
-- Default Value: -94.037689</td><td>The longitude to acquire weather data</td></tr><tr><td>Time</td><td>Select(Options: [<strong>Current (Present)</strong> | 1 Day (Future) | 2 Day (Future) | 3 Day (Future) | 4 Day (Future) | 5 Day (Future) | 6 Day (Future) | 7 Day (Future) | 1 Hour (Future) | 2 Hours (Future) | 3 Hours (Future) | 4 Hours (Future) | 5 Hours (Future) | 6 Hours (Future) | 7 Hours (Future) | 8 Hours (Future) | 9 Hours (Future) | 10 Hours (Future) | 11 Hours (Future) | 12 Hours (Future) | 13 Hours (Future) | 14 Hours (Future) | 15 Hours (Future) | 16 Hours (Future) | 17 Hours (Future) | 18 Hours (Future) | 19 Hours (Future) | 20 Hours (Future) | 21 Hours (Future) | 22 Hours (Future) | 23 Hours (Future) | 24 Hours (Future) | 25 Hours (Future) | 26 Hours (Future) | 27 Hours (Future) | 28 Hours (Future) | 29 Hours (Future) | 30 Hours (Future) | 31 Hours (Future) | 32 Hours (Future) | 33 Hours (Future) | 34 Hours (Future) | 35 Hours (Future) | 36 Hours (Future) | 37 Hours (Future) | 38 Hours (Future) | 39 Hours (Future) | 40 Hours (Future) | 41 Hours (Future) | 42 Hours (Future) | 43 Hours (Future) | 44 Hours (Future) | 45 Hours (Future) | 46 Hours (Future) | 47 Hours (Future) | 48 Hours (Future)] (Default in <strong>bold</strong>)</td><td>Select the time for the current or forecast weather</td></tr></tbody></table>
+대한민국 국토교통부의 공간정보 오픈플랫폼 브이월드 서비스입니다. 국내에서 가장 정밀한 국가 고해상도 항공 사진과 수치 지도, 지적도, 실시간 교통량 등을 제공하며 국내 업무 지원에 가장 특화된 국가 국가표준 지도입니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>API Key</td><td>Text</td><tr><td>등록 도메인</td><td>Text</td><tr><td>Map Layer / Style</td></td><tr><td>범례 보기</td><td>Boolean</td></tbody></table>
 
 ### Winsen: MH-Z14A
 

@@ -43,20 +43,24 @@ def upgrade():
     if 'geo_shape' in tables:
         cols = [c['name'] for c in Inspector.from_engine(conn).get_columns('geo_shape')]
         
+        indexes = [i['name'] for i in Inspector.from_engine(conn).get_indexes('geo_shape')]
         with op.batch_alter_table('geo_shape', schema=None) as batch_op:
             if 'map_id' in cols and 'geo_id' not in cols:
                 batch_op.alter_column('map_id', new_column_name='geo_id', existing_type=sa.String(64))
             
             if 'device_id' not in cols:
                 batch_op.add_column(sa.Column('device_id', sa.String(length=64), nullable=True))
+            if 'ix_geo_shape_device_id' not in indexes:
                 batch_op.create_index(batch_op.f('ix_geo_shape_device_id'), ['device_id'], unique=False)
             
             if 'parent_id' not in cols:
                 batch_op.add_column(sa.Column('parent_id', sa.Integer(), nullable=True))
+            if 'ix_geo_shape_parent_id' not in indexes:
                 batch_op.create_index(batch_op.f('ix_geo_shape_parent_id'), ['parent_id'], unique=False)
             
             if 'channel_id' not in cols:
                 batch_op.add_column(sa.Column('channel_id', sa.String(length=64), nullable=True))
+            if 'ix_geo_shape_channel_id' not in indexes:
                 batch_op.create_index(batch_op.f('ix_geo_shape_channel_id'), ['channel_id'], unique=False)
 
         # Data Migration

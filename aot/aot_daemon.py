@@ -143,6 +143,17 @@ class DaemonController:
         state = 'disabled' if self.opt_out_statistics else 'enabled'
         self.logger.debug(f"Anonymous statistics {state}")
 
+        # [Fix] Ensure all tables exist (Legacy/Migration support)
+        try:
+            from sqlalchemy import create_engine
+            from aot.aot_flask.extensions import db
+            # Ensure all models are imported (already at top)
+            engine = create_engine(f"{AOT_DB_PATH}?check_same_thread=False")
+            db.metadata.create_all(bind=engine)
+            self.logger.debug("Database tables checked/created.")
+        except Exception as e:
+            self.logger.error(f"Error ensuring database tables exist: {e}")
+
     def run(self):
         self.load_actions()
 

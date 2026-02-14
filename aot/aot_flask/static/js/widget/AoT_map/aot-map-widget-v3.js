@@ -155,6 +155,10 @@
         // 서버 설정(AoTGlobalSettings)에 따라 토스트 메시지 출력 여부를 결정합니다.
         // 임의로 수정하지 마십시오. (Requested by User)
         function showToast(msg, type = 'info') {
+          if (typeof window.showToast !== 'undefined') {
+            window.showToast(msg, type);
+            return;
+          }
           // 1. 서버 전역 설정 체크
           if (window.AoTGlobalSettings) {
               if (type === 'success' && window.AoTGlobalSettings.hide_success) return;

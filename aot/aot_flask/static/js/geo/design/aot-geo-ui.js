@@ -54,6 +54,11 @@ class AoTGeoUI {
      * @param {string} title - Optional title
      */
     showToast(message, type = 'info', title = '') {
+        if (typeof window.showToast !== 'undefined') {
+            window.showToast(message, type);
+            return;
+        }
+
         // 0. Check Global Settings (injected in layout)
         const settings = window.AoTGlobalSettings || {};
         
@@ -83,7 +88,10 @@ class AoTGeoUI {
      * Generates CSS Variables for colors and tone & manner logic.
      */
     applyThemeConfig() {
-        if (!window.AOT_GEO_CONFIG || !window.AOT_GEO_CONFIG.theme_config) return;
+        // [Fix] Ensure AOT_GEO_CONFIG exists to prevent crash
+        if (!window.AOT_GEO_CONFIG) window.AOT_GEO_CONFIG = {};
+        if (!window.AOT_GEO_CONFIG.theme_config) window.AOT_GEO_CONFIG.theme_config = {};
+        
         const theme = window.AOT_GEO_CONFIG.theme_config;
         
         // console.log("[AoTGeoUI] Applying Theme Config:", theme);
@@ -93,56 +101,55 @@ class AoTGeoUI {
         // Helper: Hex to RGB
         const autoHexToRgb = (hex) => {
              // Remove #
-             hex = hex.replace('#', '');
+             hex = String(hex).replace('#', '');
              if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
-             const r = parseInt(hex.substring(0,2), 16);
-             const g = parseInt(hex.substring(2,4), 16);
-             const b = parseInt(hex.substring(4,6), 16);
+             const r = parseInt(hex.substring(0,2), 16) || 0;
+             const g = parseInt(hex.substring(2,4), 16) || 0;
+             const b = parseInt(hex.substring(4,6), 16) || 0;
              return `${r}, ${g}, ${b}`;
         };
         
         // 1. Apply Main Colors & Sub Colors
-        const applyColor = (key, cssVar) => {
-            if (theme[key]) {
-                 const hex = theme[key];
-                 const rgb = autoHexToRgb(hex);
-                 
-                 // Main Color
-                 root.style.setProperty(cssVar, hex);
-                 
-                 // RGB for Opacity usage
-                 root.style.setProperty(`${cssVar}-rgb`, rgb);
-                 
-                 // Generated Sub-Colors (Tone & Manner)
-                 root.style.setProperty(`${cssVar}-bg`, `rgba(${rgb}, 0.1)`);
-                 root.style.setProperty(`${cssVar}-hover`, `rgba(${rgb}, 0.8)`);
-                 root.style.setProperty(`${cssVar}-sub`, `rgba(${rgb}, 0.2)`);
-            }
+        const applyColor = (key, cssVar, fallback) => {
+            const hex = theme[key] || fallback;
+            const rgb = autoHexToRgb(hex);
+            
+            // Main Color
+            root.style.setProperty(cssVar, hex);
+            
+            // RGB for Opacity usage
+            root.style.setProperty(`${cssVar}-rgb`, rgb);
+            
+            // Generated Sub-Colors (Tone & Manner)
+            root.style.setProperty(`${cssVar}-bg`, `rgba(${rgb}, 0.1)`);
+            root.style.setProperty(`${cssVar}-hover`, `rgba(${rgb}, 0.8)`);
+            root.style.setProperty(`${cssVar}-sub`, `rgba(${rgb}, 0.2)`);
         };
         
-        applyColor('site', '--theme-site');
-        applyColor('zone', '--theme-zone');
-        applyColor('facility', '--theme-facility');
-        applyColor('equipment', '--theme-equipment');
-        applyColor('device', '--theme-device');
-        applyColor('input', '--theme-input');
-        applyColor('output', '--theme-output');
-        applyColor('function', '--theme-function');
+        // Standard Tiers with Fallbacks
+        applyColor('site', '--theme-site', '#DF5353');
+        applyColor('zone', '--theme-zone', '#28a745');
+        applyColor('facility', '--theme-facility', '#82898f');
+        applyColor('equipment', '--theme-equipment', '#007bff');
+        applyColor('device', '--theme-device', '#995aff');
+        
+        // Sub-types (Inputs/Outputs/Functions)
+        applyColor('input', '--theme-input', '#995aff');
+        applyColor('output', '--theme-output', '#995aff');
+        applyColor('function', '--theme-function', '#995aff');
         
         // 2. Apply Panel Styles (RGBA)
-        if (theme.panel_bg) {
-            const hex = theme.panel_bg;
-            const rgb = autoHexToRgb(hex); 
-            let opacity = 0.9; 
-            
-            if (theme.panel_opacity) {
-                opacity = parseInt(theme.panel_opacity) / 100;
-            }
-            
-            root.style.setProperty('--panel-bg-rgba', `rgba(${rgb}, ${opacity})`);
-            root.style.setProperty('--panel-bg', hex);
-            root.style.setProperty('--panel-opacity', opacity);
+        const panelHex = theme.panel_bg || '#ffffff';
+        const panelRgb = autoHexToRgb(panelHex); 
+        let opacity = 0.9; 
+        
+        if (theme.panel_opacity) {
+            opacity = parseInt(theme.panel_opacity) / 100;
         }
+        
+        root.style.setProperty('--panel-bg-rgba', `rgba(${panelRgb}, ${opacity})`);
+        root.style.setProperty('--panel-bg', panelHex);
+        root.style.setProperty('--panel-opacity', opacity);
     }
 
     /**

@@ -1,38 +1,38 @@
 description: Documentation for AoT, an open source environmental monitoring and regulation system.
 
-## Sistema de control y regulación medioambiental AoT
+## AoT Environmental Monitoring and Regulation System
 
-AoT es un software de código abierto diseñado para funcionar en la [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) y otros ordenadores de placa única (SBC). Acopla las entradas y salidas de forma interesante para percibir y manipular el entorno.
+AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
 
-### Información
+### Information
 
-Consulte el [README](https://github.com/aot-inc/AoT#uses) para conocer las características, los proyectos que utilizan AoT, las capturas de pantalla y otra información.
+See the [README](https://github.com/aot-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
 
-### Requisitos previos
+### Prerequisites
 
-*   Ordenador monoplaca (Recomendado: [Raspberry Pi](https://www.raspberrypi.org/), cualquier versión: Cero, 1, 2, 3 o 4)
-*   Sistema operativo basado en Debian
-*   Una conexión a Internet activa
+*   Single-board computer (Recommended: [Raspberry Pi](https://www.raspberrypi.org/), any version: Zero, 1, 2, 3, or 4)
+*   Debian-based operating system
+*   An active internet connection
 
-### Instalar
+### Install
 
-Una vez arrancado y conectado, ejecute el siguiente comando para iniciar la instalación de AoT:
+Once booted and logged in, run the following command to initiate the AoT install:
 
 ```bash
 curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 
-Después de la instalación, abra un navegador web a la dirección IP del SBC y se le pedirá que cree un usuario administrador e inicie sesión.
+After installation, open a web browser to the SBC's IP address and you will be prompted to create an Admin user and login.
 
 ```
 https://127.0.0.1
 ```
 
-### Soporte
+### Support
 
 *   [AoT on GitHub](https://github.com/aot-inc/AoT)
 *   [AoT Wiki](https://github.com/aot-inc/AoT/wiki)
 *   [AoT API](https://aot-inc.github.io/AoT/aot-api.html)
-*   [Foro de discusion](https://forum.radicaldiy.com)
-*   [Preguntas frecuentes](https://forum.radicaldiy.com/docs?category=23&tags=aot)
+*   [Discussion Forum](https://forum.radicaldiy.com)
+*   [Frequently Asked Questions](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 

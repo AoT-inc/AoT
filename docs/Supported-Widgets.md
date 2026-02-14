@@ -5,64 +5,59 @@
 
 Activate/Deactivate a Controller (Inputs and Functions). For manipulating a PID Controller, use the PID Controller Widget.
 
+### AoT Controller Switch
+
+
+Switch to turn controllers on and off.
+
+### AoT On/Off Counter
+
+- Libraries: timer
+
+Automatically turns the designated output ON/OFF when a run time, rest time, and number of cycles are input. The current progress is saved on the server and can be checked after refreshing or on other browsers.
+
 ### AoT PID
 
 - Libraries: controller
 
 Displays and allows control of a PID Controller.
 
+### AoT Timer
+
+- Libraries: timer
+
+Entering "h/m/s" in the time input field will operate the device for the set time and then turn it off. If the input time is "0", it will operate continuously until stopped. Setting the toggle switch to "ON" turns the device on, and setting it to "OFF" turns it off.
+
+### AoT Weather Forecast
+
+
+Displays the KMA (Korea Meteorological Administration) short-term forecast for the period selected by the user.
+
+### AoT Wind Direction/Speed Gauge
+
+- Libraries: Native SVG
+
+Displays wind direction on a circular ring (0-360°) and wind speed in the center. Includes auxiliary lines for the 8 primary compass points.
+
 ### AoT 그래프
 
 - Libraries: Highstock
 - Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
 
-동기식 그래프를 표시합니다. 선택한 데이터를 설정한 시간 만큼 X축에 표시 합니다.
-
-### AoT 단기예보문
-
-
-사용자가 선택한 시간의 기상청 발표 단기예보를 출력합니다.
-
-### AoT 밸브 컨트롤
-
-
-밸브 제어 함수의 시간창과 예정된 순서를 시각화하고, 컨트롤러 활성/비활성을 제어합니다.
-
-### AoT 온/오프 카운터
-
-- Libraries: timer
-
-작동시간·휴식시간·작동횟수를 입력하면 지정된 Output이 자동으로 ON/OFF 됩니다. 현재 진행 중인 횟수는 서버에 저장되어 새로고침이나 다른 브라우저에서도 확인할 수 있습니다.
+Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration.
 
 ### AoT 원형 게이지
 
 - Libraries: Highcharts
 - Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
 
-데이터를 원형 게이지를 표시합니다. 게이지가 올바르게 표시되도록 최대값 옵션을 마지막 구간(High)에 맞춰 설정하세요.온도, 습도, VPD 등의 사전 설정을 선택하면, 최소/최대값 및 색상 구간이 자동으로 설정됩니다.
+Displays data in a circular gauge. Ensure the maximum value option matches the last section (High) for correct display. Selecting presets like Temperature, Humidity, or VPD automatically sets min/max values and color sections.
 
 ### AoT 지도
 
 - Libraries: Leaflet
 
 선택한 장치의 위치를 지도에 표시합니다. 선택한 색상으로 작동 상태를 강조합니다.
-
-### AoT 컨트롤러 스위치
-
-
-컨트롤러를 켜고 끌 수 있는 스위치.
-
-### AoT 타이머
-
-- Libraries: timer
-
-시간입력창에 "시/분/초"를 입력하면 입력한 시간만큼 장치가 작동하고 꺼집니다.입력된 시간이 "0"이면 종료 전까지 연속 작동합니다.토글 스위치를 "ON"으로 하면 장치가 켜지고, "OFF"로 하면 장치가 꺼집니다.
-
-### AoT 풍향/풍속 게이지
-
-- Libraries: Native SVG
-
-풍향은 원형 링(0~360°)으로 표시하고, 중앙에는 풍속을 표시합니다. 주요 8개 방위(0/45/90/135/180/225/270/315°) 보조선을 제공합니다.
 
 ### Camera
 
@@ -119,6 +114,11 @@ Displays and allows control of a PWM output using a slider.
 
 
 Executes Python code and displays the output within the widget.
+
+### Sequence Controller
+
+
+Control and Monitor a Sequence Function.
 
 ### Spacer
 

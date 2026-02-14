@@ -15,7 +15,7 @@ Publish "on" or "off" (or any other strings of your choosing) to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_jvYxSJOA</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>On Payload</td><td>Text
+- Default Value: client_GbfruRbY</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>On Payload</td><td>Text
 - Default Value: on</td><td>The payload to send when turned on</td></tr><tr><td>Off Payload</td><td>Text
 - Default Value: off</td><td>The payload to send when turned off</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
@@ -34,7 +34,7 @@ Publish a PWM value to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_JvHoEGBe</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_juskl9E2</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td>Round Integer</td><td>Select(Options: [<strong>No Rounding</strong> | Round Nearest Whole | Round Up | Round Down] (Default in <strong>bold</strong>)</td><td>Round the payload value to an integer.</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Startup Value</td><td>Decimal</td><td>The value when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Shutdown Value</td><td>Decimal</td><td>The value when AoT shuts down</td></tr><tr><td>Invert Signal</td><td>Boolean</td><td>Invert the PWM signal</td></tr><tr><td>Invert Stored Signal</td><td>Boolean</td><td>Invert the value that is saved to the measurement database</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Set the Duty Cycle.</td></tr><tr><td>Duty Cycle</td><td>Decimal</td><td>The duty cycle to set</td></tr><tr><td>Set Duty Cycle</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Value: MQTT Publish
@@ -51,7 +51,7 @@ Publish a value to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_QtEZ7BbR</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Off Value</td><td>Integer</td><td>The value to send when an Off command is given</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_fA5OmzrO</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Off Value</td><td>Integer</td><td>The value to send when an Off command is given</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
 
 ## Built-In Outputs (Devices)
@@ -113,6 +113,22 @@ This is a module for the ULN2003 driver.
 - Default Value: 25</td><td>The pin (BCM numbering) connected to IN4 of the ULN2003</td></tr><tr><td>Step Delay</td><td>Decimal
 - Default Value: 0.001</td><td>The Step Delay of the controller</td></tr><tr><td colspan="3">Notes about step resolution...</td></tr><tr><td>Step Resolution</td><td>Select(Options: [<strong>Full</strong> | Half | Wave] (Default in <strong>bold</strong>)</td><td>The Step Resolution of the controller</td></tr></tbody></table>
 
+### On/Off (Virtual Multi-Channel)
+
+- Output Types: On/Off
+- Libraries: Internal
+
+A virtual output device for testing. States are stored in memory and have no effect on hardware.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the virtual device</td></tr></tbody></table>
+
+### On/Off (Virtual Single-Channel)
+
+- Output Types: On/Off
+- Libraries: Internal
+
+A single-channel virtual output device for testing. State is stored in memory and has no effect on hardware.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the virtual device</td></tr></tbody></table>
+
 ### On/Off: 52pi EP-0099 4channel Relay (4-Channel board)
 
 - Manufacturer: 52Pi
@@ -136,8 +152,8 @@ ChirpStack REST/gRPC API를 이용해 온/오프 다운링크 명령을 전송�
 - Default Value: 127.0.0.1:8080</td><td>호스트:포트 형식 (예: 127.0.0.1:8080) 또는 http(s)://호스트:포트</td></tr><tr><td>API Key</td><td>Text</td><td>JWT 토큰 값을 입력하세요 (Bearer 제외)</td></tr><tr><td>DevEUI</td><td>Text</td><td>16자리 16진수 DevEUI (구분자 허용)</td></tr><tr><td>FPort</td><td>Integer
 - Default Value: 15</td><td>명령을 수신할 LoRaWAN FPort</td></tr><tr><td>Confirmed</td><td>Boolean</td><td>확인형(Confirmed)으로 명령 전송</td></tr><tr><td>Payload Format</td><td>Select(Options: [<strong>Hex 바이트</strong> | JSON 객체(UTF-8 인코딩)] (Default in <strong>bold</strong>)</td><td>페이로드 인코딩 형식을 선택하세요</td></tr><tr><td>On Payload</td><td>Text
 - Default Value: 000000</td><td>예: 010110 (Hex) 또는 JSON 문자열</td></tr><tr><td>off Payload</td><td>Text
-- Default Value: 000000</td><td>예: 010210 (Hex) 또는 JSON 문자열</td></tr><tr><td>확인 유예(초)</td><td>Integer
-- Default Value: 90</td><td>업링크 지연 허용시간</td></tr><tr><td>확정 타임아웃(초)</td><td>Integer
+- Default Value: 000000</td><td>예: 010210 (Hex) 또는 JSON 문자열</td></tr><tr><td>확인 유예(초)</td><td>Text
+- Default Value: 90</td><td>업링크 지연 허용시간</td></tr><tr><td>확정 타임아웃(초)</td><td>Text
 - Default Value: 600</td><td>이 시간이 지나도 미확인 시 경고/재조치</td></tr><tr><td>하드 타임아웃 시 OFF 재전송</td><td>Boolean</td><td>duration 종료 또는 타임아웃 시 OFF를 다시 보냄</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>시작 시 상태</td><td>Select</td><td>AoT가 시작될 때 적용할 상태</td></tr><tr><td>종료 시 상태</td><td>Select</td><td>AoT가 종료될 때 적용할 상태</td></tr><tr><td>Force Command</td><td>Boolean</td><td>현재 상태와 무관하게 명령을 항상 전송</td></tr><tr><td>시작 시 트리거 실행</td><td>Boolean</td><td>시작 시 출력이 전환되면 트리거 기능 실행</td></tr></tbody></table>
 
 ### On/Off: Ecowitt Local HTTP
@@ -176,7 +192,7 @@ Controls the 4 or 8 channel Grove multichannel relay board.
 
 This output controls the 6 outlets of the Kasa HS300 Smart WiFi Power Strip. This module uses an outdated python library and is deprecated. Do not use it. You will break the current Kasa modules if you do not delete this deprecated Output.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
-- Default Value: 192.168.0.50</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
+- Default Value: 192.168.0.50</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 60</td><td>The period between checking if connected and output states.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
@@ -190,9 +206,9 @@ This output controls the 6 outlets of the Kasa HS300 Smart WiFi Power Strip. Thi
 
 This output controls the 6 outlets of the Kasa HS300 Smart WiFi Power Strip. This is a variant that uses the latest python-kasa library. Note: if you see errors in the daemon log about the server starting, try changing the Asyncio RPC Port to another port.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
-- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
+- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18681</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
+- Default Value: 18724</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa KP303 3-Outlet WiFi Power Strip (old library, deprecated)
@@ -205,7 +221,7 @@ This output controls the 6 outlets of the Kasa HS300 Smart WiFi Power Strip. Thi
 
 This output controls the 3 outlets of the Kasa KP303 Smart WiFi Power Strip. This module uses an outdated python library and is deprecated. Do not use it. You will break the current Kasa modules if you do not delete this deprecated Output.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
-- Default Value: 192.168.0.50</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
+- Default Value: 192.168.0.50</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 60</td><td>The period between checking if connected and output states.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
@@ -219,9 +235,9 @@ This output controls the 3 outlets of the Kasa KP303 Smart WiFi Power Strip. Thi
 
 This output controls the 3 outlets of the Kasa KP303 Smart WiFi Power Strip. This is a variant that uses the latest python-kasa library. Note: if you see errors in the daemon log about the server starting, try changing the Asyncio RPC Port to another port.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
-- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
+- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18402</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
+- Default Value: 18070</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa WiFi Power Plug
@@ -234,9 +250,9 @@ This output controls the 3 outlets of the Kasa KP303 Smart WiFi Power Strip. Thi
 
 This output controls Kasa WiFi Power Plugs, including the KP105, KP115, KP125, KP401, HS100, HS103, HS105, HS107, and HS110. Note: if you see errors in the daemon log about the server starting, try changing the Asyncio RPC Port to another port.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
-- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
+- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18094</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+- Default Value: 18020</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa WiFi RGB Light Bulb
 
@@ -248,9 +264,9 @@ This output controls Kasa WiFi Power Plugs, including the KP105, KP115, KP125, K
 
 This output controls the the Kasa WiFi Light Bulbs, including the KL125, KL130, and KL135. Note: if you see errors in the daemon log about the server starting, try changing the Asyncio RPC Port to another port.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
-- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Integer
+- Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18248</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
+- Default Value: 18769</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Brightness (Percent)</td><td>Integer</td><td>The brightness to set, in percent (0 - 100)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Hue (Degree)</td><td>Integer</td><td>The hue to set, in degrees (0 - 360)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Saturation (Percent)</td><td>Integer</td><td>The saturation to set, in percent (0 - 100)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer

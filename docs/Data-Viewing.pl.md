@@ -1,37 +1,37 @@
-## Pomiary żywo
+## Live Measurements
 
 Page\: `Data -> Live Measurements`
 
-Strona `Pomiary na żywo` jest pierwszą stroną, którą widzi użytkownik po zalogowaniu się do AoT. Wyświetla ona aktualne pomiary uzyskane z kontrolerów wejścia i funkcji. Jeśli nic nie jest wyświetlane na stronie `Live`, upewnij się, że kontroler wejścia lub funkcji jest poprawnie skonfigurowany i aktywowany. Dane będą automatycznie aktualizowane na stronie z bazy danych pomiarów.
+The `Live Measurements` page is the first page a user sees after logging in to AoT. It will display the current measurements being acquired from Input and Function controllers. If there is nothing displayed on the `Live` page, ensure an Input or Function controller is both configured correctly and activated. Data will be automatically updated on the page from the measurement database.
 
-## Wykresy asynchroniczne
+## Asynchronous Graphs
 
-Strona\: `Dane -> Wykresy asynchroniczne`
+Page\: `Data -> Asynchronous Graphs`
 
-Graficzne wyświetlanie danych przydatne do przeglądania zestawów danych obejmujących stosunkowo długie okresy czasu (tygodnie/miesiące/roki), których wyświetlanie w postaci wykresu synchronicznego mogłoby wymagać dużej ilości danych i procesora. Po wybraniu przedziału czasowego zostaną wczytane dane z tego przedziału, jeśli istnieje. Pierwszy widok będzie dotyczył całego wybranego zestawu danych. Dla każdego widoku/powiększenia zostanie załadowanych 700 punktów danych. Jeśli dla wybranego przedziału czasowego zarejestrowano więcej niż 700 punktów danych, 700 punktów zostanie utworzonych z uśrednienia punktów w tym przedziale czasowym. Umożliwia to wykorzystanie znacznie mniejszej ilości danych do nawigacji po dużym zbiorze danych. Na przykład, 4 miesiące danych mogą mieć rozmiar 10 megabajtów, jeśli wszystkie zostaną pobrane. Jednak podczas przeglądania 4-miesięcznego okresu nie jest możliwe zobaczenie każdego punktu danych z tych 10 megabajtów, a agregacja punktów jest nieunikniona. Przy asynchronicznym ładowaniu danych, pobierasz tylko to, co widzisz. Tak więc, zamiast pobierać 10 megabajtów przy każdym ładowaniu wykresu, tylko ~50kb zostanie pobrane do momentu wybrania nowego poziomu powiększenia, w którym to momencie pobierane jest tylko kolejne ~50kb.
+A graphical data display that is useful for viewing data sets spanning relatively long periods of time (weeks/months/years), which could be very data- and processor-intensive to view as a Synchronous Graph. Select a time frame and data will be loaded from that time span, if it exists. The first view will be of the entire selected data set. For every view/zoom, 700 data points will be loaded. If there are more than 700 data points recorded for the time span selected, 700 points will be created from an averaging of the points in that time span. This enables much less data to be used to navigate a large data set. For instance, 4 months of data may be 10 megabytes if all of it were downloaded. However, when viewing a 4 month span, it's not possible to see every data point of that 10 megabytes, and aggregating of points is inevitable. With asynchronous loading of data, you only download what you see. So, instead of downloading 10 megabytes every graph load, only ~50kb will be downloaded until a new zoom level is selected, at which time only another ~50kb is downloaded.
 
 !!! note
-    Wykresy wymagają pomiarów, dlatego aby wyświetlić dane należy dodać i aktywować przynajmniej jedno Wejście/Wyjście/Funkcję/etc.
+    Graphs require measurements, therefore at least one Input/Output/Function/etc. needs to be added and activated in order to display data.
 
-## Pulpit
+## Dashboard
 
-Strona\: `Dane -> Pulpit`
+Page\: `Data -> Dashboard`
 
-Dashboard może służyć zarówno do przeglądania danych, jak i do manipulowania systemem, dzięki licznym dostępnym widżetom dashboardowym. Można tworzyć wiele dashboardów, jak również zablokować je, aby uniemożliwić zmianę układu.
+The dashboard can be used for both viewing data and manipulating the system, thanks to the numerous dashboard widgets available. Multiple dashboards can be created as well as locked to prevent changing the arrangement.
 
-## widgety
+## Widgets
 
-Widżety to elementy na pulpicie nawigacyjnym, które mają wiele zastosowań, takich jak wyświetlanie danych (wykresy, wskaźniki, mierniki itp.) lub interakcja z systemem (manipulowanie wyjściami, zmiana cyklu pracy PWM, odpytywanie lub modyfikowanie bazy danych itp.) Widżety można łatwo zmieniać układ i rozmiar poprzez przeciąganie i upuszczanie. Pełna lista obsługiwanych Widżetów znajduje się w [Obsługiwane Widżety](Supported-Widgets.md).
+Widgets are elements on the Dashboard that have a number of uses, such as viewing data (charts, indicators, gauges, etc.) or interacting with the system (manipulate outputs, change PWM duty cycle, querying or modifying a database, etc.). Widgets can be easily rearranged and resized by dragging and dropping. For a full list of supported Widgets, see [Supported Widgets](Supported-Widgets.md).
 
-### Własne widżety
+### Custom Widgets
 
-W AoT istnieje system importu Custom Widget, który umożliwia wykorzystanie w systemie AoT widgetów stworzonych przez użytkownika. Custom Widgety można wgrać na stronie `[Gear Icon] -> Configure -> Custom Widgets`. Po zaimportowaniu będą one dostępne do użycia na stronie `Setup -> Widget`.
+There is a Custom Widget import system in AoT that allows user-created Widgets to be used in the AoT system. Custom Widgets can be uploaded on the `[Gear Icon] -> Configure -> Custom Widgets` page. After import, they will be available to use on the `Setup -> Widget` page.
 
-Jeśli opracujesz działający moduł, rozważ [utworzenie nowego wydania GitHub](https://github.com/aot-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) lub pull request, a może on zostać włączony do wbudowanego zestawu.
+If you develop a working module, please consider [creating a new GitHub issue](https://github.com/aot-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or pull request, and it may be included in the built-in set.
 
-Otwórz dowolny z wbudowanych modułów Widget znajdujących się w katalogu [AoT/aot/widgets](https://github.com/aot-inc/AoT/tree/master/aot/widgets/), aby uzyskać przykłady prawidłowego formatowania. Istnieją również przykładowe Widżety niestandardowe w katalogu [AoT/aot/widgets/examples](https://github.com/aot-inc/AoT/tree/master/aot/widgets/examples).
+Open any of the built-in Widget modules located in the directory [AoT/aot/widgets](https://github.com/aot-inc/AoT/tree/master/aot/widgets/) for examples of the proper formatting. There are also example Custom Widgets in the directory [AoT/aot/widgets/examples](https://github.com/aot-inc/AoT/tree/master/aot/widgets/examples).
 
-Tworzenie niestandardowego modułu widżetów często wymaga specyficznego umieszczenia i wykonania skryptów Javascript. W każdym module utworzono kilka zmiennych, aby rozwiązać ten problem, i podążać za następującą krótką strukturą strony pulpitu nawigacyjnego, która zostałaby wygenerowana przy wyświetlaniu wielu widżetów.
+Creating a custom widget module often requires specific placement and execution of Javascript. Several variables were created in each module to address this, and follow the following brief structure of the dashboard page that would be generated with multiple widgets being displayed.
 
 ```angular2html
 <html>

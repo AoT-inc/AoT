@@ -1,31 +1,14 @@
-# Translations template for AoT.
-# Copyright (C) 2026 Kyle T. Gabriel
-# This file is distributed under the same license as the AoT project.
+# Translations template for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: AoT /Users/gwansuk/Library/CloudStorage"
-"/SynologyDrive-developments/AoT_dev/aot/utils/github_release_info.py:43: "
-"SyntaxWarning: invalid escape sequence '\\d'\n"
-"  if len(tag_full) == 3 and re.match('v(\\d+)\\.(\\d+)\\.\\d+', "
-"tag_full[2]):\n"
-"/Users/gwansuk/Library/CloudStorage/SynologyDrive-"
-"developments/AoT_dev/aot/utils/github_release_info.py:58: SyntaxWarning: "
-"invalid escape sequence '\\d'\n"
-"  if re.match(f'v{major_version}.*(\\d\\.\\d)', each_tag):\n"
-"/Users/gwansuk/Library/CloudStorage/SynologyDrive-"
-"developments/AoT_dev/aot/utils/github_release_info.py:170: SyntaxWarning:"
-" invalid escape sequence '\\d'\n"
-"  if re.match(f'v{major_version}.*(\\d\\.\\d)', each_tag):\n"
-"/Users/gwansuk/Library/CloudStorage/SynologyDrive-"
-"developments/AoT_dev/aot/utils/github_release_info.py:174: SyntaxWarning:"
-" invalid escape sequence '\\d'\n"
-"  if (re.match(f'v{major_version}.*(\\d\\.\\d)', each_tag) and\n"
-"26.0.7\n"
-"Report-Msgid-Bugs-To: aot@kylegabriel.com\n"
-"POT-Creation-Date: 2026-02-13 12:50+0900\n"
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-02-13 22:46+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -132,9 +115,8 @@ msgstr ""
 #: actions/pause_actions.py:35
 #: aot_flask/templates/pages/energy_usage_outputs.html:68
 #: aot_flask/templates/pages/energy_usage_outputs.html:103
-#: aot_flask/utils/utils_method.py:88 config_devices_units.py:113
-#: config_translations.py:70 config_translations.py:307
-#: config_translations.py:308
+#: config_devices_units.py:113 config_translations.py:70
+#: config_translations.py:307 config_translations.py:308
 msgid "Duration"
 msgstr ""
 
@@ -203,7 +185,7 @@ msgstr ""
 msgid "Length"
 msgstr ""
 
-#: config_devices_units.py:173 inputs_gis/gis_rainviewer.py:139
+#: config_devices_units.py:173
 msgid "Light"
 msgstr ""
 
@@ -264,7 +246,6 @@ msgid "강수"
 msgstr ""
 
 #: config_devices_units.py:245 functions/humidity_wet_dry_bulb.py:148
-#: inputs_gis/gis_openweather.py:201
 msgid "Pressure"
 msgstr ""
 
@@ -356,7 +337,7 @@ msgstr ""
 #: aot_flask/forms/forms_function.py:55 aot_flask/forms/forms_input.py:119
 #: aot_flask/forms/forms_output.py:87 config_devices_units.py:326
 #: functions/vapor_pressure_deficit.py:95 inputs/atlas_pt1000.py:76
-#: inputs_gis/gis_openweather.py:137 widgets/AoT_gauge_angular.py:286
+#: widgets/AoT_gauge_angular.py:286
 msgid "Temperature"
 msgstr ""
 
@@ -434,7 +415,6 @@ msgid "Bulk Density"
 msgstr ""
 
 #: config_devices_units.py:399 inputs_gis/gis_nasa_gibs.py:47
-#: inputs_gis/gis_nasa_gibs.py:211
 msgid "Vegetation Index (NDVI)"
 msgstr ""
 
@@ -1166,13 +1146,12 @@ msgstr ""
 #: functions/difference.py:102 functions/equation_multi.py:76
 #: functions/equation_multi.py:84 functions/equation_multi.py:96
 #: functions/equation_multi.py:104 functions/lorawan_mode_manager.py:141
-#: functions/pid_autotune.py:64 functions/redundancy.py:83
-#: functions/redundancy.py:102 functions/redundancy.py:121
-#: functions/verification.py:75 functions/verification.py:83
-#: functions/verification.py:94 functions/verification.py:102
-#: inputs/ads1115_analog_ph_ec.py:138 inputs/ads1256_analog_ph_ec.py:222
-#: inputs/anyleaf_ph.py:62 inputs/atlas_do.py:68 inputs/atlas_ec.py:81
-#: inputs/atlas_o2.py:69 inputs/atlas_orp.py:67 inputs/atlas_ph.py:71
+#: functions/pid_autotune.py:64 functions/verification.py:75
+#: functions/verification.py:83 functions/verification.py:94
+#: functions/verification.py:102 inputs/ads1115_analog_ph_ec.py:138
+#: inputs/ads1256_analog_ph_ec.py:222 inputs/anyleaf_ph.py:62
+#: inputs/atlas_do.py:68 inputs/atlas_ec.py:81 inputs/atlas_o2.py:69
+#: inputs/atlas_orp.py:67 inputs/atlas_ph.py:71
 #: widgets/AoT_gauge_angular.py:231 widgets/widget_gauge_angular.py:149
 #: widgets/widget_gauge_solid.py:173 widgets/widget_indicator.py:56
 #: widgets/widget_measurement.py:52
@@ -1356,7 +1335,7 @@ msgstr ""
 msgid "Save Order"
 msgstr ""
 
-#: config_translations.py:164 inputs_gis/gis_nasa_gibs.py:217
+#: config_translations.py:164
 msgid "Scale"
 msgstr ""
 
@@ -1605,10 +1584,9 @@ msgstr ""
 #: functions/humidity_wet_dry_bulb.py:128
 #: functions/humidity_wet_dry_bulb.py:148 functions/lorawan_mode_manager.py:61
 #: functions/lorawan_mode_manager.py:141 functions/redundancy.py:64
-#: functions/redundancy.py:83 functions/redundancy.py:102
-#: functions/redundancy.py:121 functions/regulate_ph_ec.py:185
-#: functions/regulate_ph_ec.py:193 functions/regulate_ph_ec.py:224
-#: functions/regulate_ph_ec.py:246 functions/statistics_last_multiple.py:101
+#: functions/regulate_ph_ec.py:185 functions/regulate_ph_ec.py:193
+#: functions/regulate_ph_ec.py:224 functions/regulate_ph_ec.py:246
+#: functions/statistics_last_multiple.py:101
 #: functions/statistics_last_multiple.py:109
 #: functions/statistics_past_single.py:99
 #: functions/statistics_past_single.py:107 functions/sum_last_multiple.py:68
@@ -1765,9 +1743,8 @@ msgstr ""
 #: functions/humidity_wet_dry_bulb.py:108
 #: functions/humidity_wet_dry_bulb.py:128
 #: functions/humidity_wet_dry_bulb.py:148 functions/lorawan_mode_manager.py:141
-#: functions/redundancy.py:83 functions/redundancy.py:102
-#: functions/redundancy.py:121 functions/regulate_ph_ec.py:224
-#: functions/regulate_ph_ec.py:246 functions/statistics_last_multiple.py:109
+#: functions/regulate_ph_ec.py:224 functions/regulate_ph_ec.py:246
+#: functions/statistics_last_multiple.py:109
 #: functions/statistics_past_single.py:107 functions/sum_last_multiple.py:84
 #: functions/sum_past_single.py:96 functions/vapor_pressure_deficit.py:95
 #: functions/vapor_pressure_deficit.py:115 functions/verification.py:83
@@ -2418,7 +2395,7 @@ msgstr ""
 msgid "An active internet connection"
 msgstr ""
 
-#: aot_flask/templates/admin/dependencies_install.html:21
+#: aot_flask/templates/admin/dependencies_install.html:22
 #: config_translations_docs.py:63
 msgid "Install"
 msgstr ""
@@ -2767,8 +2744,21 @@ msgstr ""
 msgid "Flow Meter: Clear Total (Kilowatt-hour)"
 msgstr ""
 
+#: actions/clear_total_kWh.py:23
+msgid ""
+"Clear the total kWh saved for an energy meter Input. The Input must have "
+"the Clear Total kWh option. This will also clear all energy stats on the "
+"device, not just the total kWh."
+msgstr ""
+
 #: actions/clear_total_volume.py:13
 msgid "Flow Meter: Clear Total (Volume)"
+msgstr ""
+
+#: actions/clear_total_volume.py:23
+msgid ""
+"Clear the total volume saved for a flow meter Input. The Input must have "
+"the Clear Total Volume option."
 msgstr ""
 
 #: actions/command_bash.py:11
@@ -2816,7 +2806,23 @@ msgstr ""
 msgid "Flashing"
 msgstr ""
 
-#: actions/force_input_measurements.py:13 aot_flask/utils/utils_input.py:962
+#: actions/email.py:15
+msgid "Send Email"
+msgstr ""
+
+#: actions/email.py:25
+msgid "Send an email."
+msgstr ""
+
+#: actions/email.py:36
+msgid "E-Mail Address"
+msgstr ""
+
+#: actions/email.py:37
+msgid "E-mail recipient(s) (separate multiple addresses with commas)"
+msgstr ""
+
+#: actions/force_input_measurements.py:13
 msgid "Force Measurements"
 msgstr ""
 
@@ -2861,6 +2867,16 @@ msgstr ""
 #: inputs/mqtt_paho.py:110 inputs/mqtt_paho_json.py:125
 #: outputs/on_off_mqtt.py:168 outputs/pwm_mqtt.py:126 outputs/value_mqtt.py:113
 msgid "Username"
+msgstr ""
+
+#: actions/led_kasa_bulb_change_color.py:13
+msgid "Change Color"
+msgstr ""
+
+#: actions/led_kasa_bulb_change_color.py:23
+msgid ""
+"Change the color of the LED in a Kasa RGB Bulb. Select the Kasa RGB Bulb "
+"Output."
 msgstr ""
 
 #: actions/led_neopixel_flash_off.py:14
@@ -2921,6 +2937,14 @@ msgstr ""
 
 #: actions/photo.py:23
 msgid "Capture a photo with the selected Camera."
+msgstr ""
+
+#: actions/photo_email.py:18
+msgid "Send Email with Photo"
+msgstr ""
+
+#: actions/photo_email.py:28
+msgid "Take a photo and send an email with it attached."
 msgstr ""
 
 #: actions/pid_method.py:18
@@ -3005,19 +3029,19 @@ msgid ""
 "upgrade log for details."
 msgstr ""
 
-#: aot_flask/routes_admin.py:601
+#: aot_flask/routes_admin.py:604
 msgid "The upgrade (from master branch) has started"
 msgstr ""
 
-#: aot_flask/routes_admin.py:619
+#: aot_flask/routes_admin.py:625
 msgid "The upgrade has started"
 msgstr ""
 
-#: aot_flask/routes_admin.py:640
+#: aot_flask/routes_admin.py:646
 msgid "The major version upgrade has started"
 msgstr ""
 
-#: aot_flask/routes_admin.py:643
+#: aot_flask/routes_admin.py:649
 msgid "You cannot upgrade if an upgrade is not available"
 msgstr ""
 
@@ -3130,8 +3154,8 @@ msgstr ""
 
 #: aot_flask/forms/forms_authentication.py:21
 #: aot_flask/forms/forms_settings.py:94 aot_flask/forms/forms_settings.py:397
-#: aot_flask/templates/create_admin.html:39
-#: aot_flask/templates/create_admin.html:86 aot_flask/templates/layout.html:509
+#: aot_flask/templates/create_admin.html:41
+#: aot_flask/templates/create_admin.html:91 aot_flask/templates/layout.html:509
 #: aot_flask/templates/layout_default.html:509
 msgid "Language"
 msgstr ""
@@ -3797,7 +3821,6 @@ msgid "End Date/Time (YYYY-MM-DD HH:MM:SS)"
 msgstr ""
 
 #: aot_flask/forms/forms_method.py:52 aot_flask/forms/forms_method.py:124
-#: aot_flask/utils/utils_method.py:94
 msgid "Start Setpoint"
 msgstr ""
 
@@ -3841,7 +3864,7 @@ msgstr ""
 msgid "Set Repeat Options"
 msgstr ""
 
-#: aot_flask/forms/forms_method.py:113 aot_flask/utils/utils_method.py:70
+#: aot_flask/forms/forms_method.py:113
 msgid "HH:MM:SS"
 msgstr ""
 
@@ -3929,19 +3952,19 @@ msgstr ""
 msgid "Upgrade AoT to Next Major Version"
 msgstr ""
 
-#: aot_flask/forms/forms_misc.py:108 aot_flask/templates/admin/backup.html:40
+#: aot_flask/forms/forms_misc.py:108 aot_flask/templates/admin/backup.html:42
 msgid "Download Backup"
 msgstr ""
 
-#: aot_flask/forms/forms_misc.py:109 aot_flask/templates/admin/backup.html:19
+#: aot_flask/forms/forms_misc.py:109 aot_flask/templates/admin/backup.html:20
 msgid "Create Backup"
 msgstr ""
 
-#: aot_flask/forms/forms_misc.py:110 aot_flask/templates/admin/backup.html:43
+#: aot_flask/forms/forms_misc.py:110 aot_flask/templates/admin/backup.html:45
 msgid "Restore Backup"
 msgstr ""
 
-#: aot_flask/forms/forms_misc.py:111 aot_flask/templates/admin/backup.html:46
+#: aot_flask/forms/forms_misc.py:111 aot_flask/templates/admin/backup.html:48
 msgid "Delete Backup"
 msgstr ""
 
@@ -3962,7 +3985,7 @@ msgid "Date/Time"
 msgstr ""
 
 #: aot_flask/forms/forms_notes.py:65 aot_flask/utils/utils_notes.py:401
-#: aot_flask/utils/utils_notes.py:442 aot_flask/utils/utils_settings.py:2196
+#: aot_flask/utils/utils_notes.py:442 aot_flask/utils/utils_settings.py:2213
 msgid "File"
 msgstr ""
 
@@ -4520,7 +4543,7 @@ msgstr ""
 
 #: aot_flask/forms/forms_settings.py:348
 #: aot_flask/templates/reset_password.html:12
-#: aot_flask/templates/reset_password.html:26
+#: aot_flask/templates/reset_password.html:27
 msgid "Reset Password"
 msgstr ""
 
@@ -4696,15 +4719,15 @@ msgstr ""
 msgid "Delete File"
 msgstr ""
 
-#: aot_flask/forms/forms_settings.py:493 aot_flask/utils/utils_settings.py:2221
+#: aot_flask/forms/forms_settings.py:493 aot_flask/utils/utils_settings.py:2238
 msgid "Recreate InfluxDB 1.x Database"
 msgstr ""
 
-#: aot_flask/forms/forms_settings.py:494 aot_flask/utils/utils_settings.py:2237
+#: aot_flask/forms/forms_settings.py:494 aot_flask/utils/utils_settings.py:2254
 msgid "Recreate InfluxDB 2.x Database"
 msgstr ""
 
-#: aot_flask/forms/forms_settings.py:495 aot_flask/utils/utils_settings.py:2253
+#: aot_flask/forms/forms_settings.py:495 aot_flask/utils/utils_settings.py:2270
 msgid "Reset Email Counter"
 msgstr ""
 
@@ -4804,6 +4827,10 @@ msgstr ""
 
 #: aot_flask/static/js/dashboard.js:405
 msgid "dashboard_order_save_fail"
+msgstr ""
+
+#: aot_flask/static/js/components/aot-map-search-fixed.js:365
+msgid "Search service unavailable"
 msgstr ""
 
 #: aot_flask/static/js/components/aot-tabs.js:219
@@ -5249,7 +5276,7 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/create_admin.html:12
-#: aot_flask/templates/create_admin.html:81
+#: aot_flask/templates/create_admin.html:84
 msgid "Create Admin"
 msgstr ""
 
@@ -5257,24 +5284,24 @@ msgstr ""
 msgid "Welcome to AoT"
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:51
+#: aot_flask/templates/create_admin.html:53
 msgid ""
 "Start a new AoT installation. Please create an admin user. To start, "
 "please read and agree to the terms."
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:54
+#: aot_flask/templates/create_admin.html:56
 msgid "Quality Assurance Notice"
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:58
+#: aot_flask/templates/create_admin.html:60
 msgid ""
 "AoT is an agricultural control system based on Mycodo. Users can receive "
 "a warranty for the software added by AoT under a separate contract. The "
 "parts related to AoT follow the warranty information below."
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:59
+#: aot_flask/templates/create_admin.html:61
 msgid ""
 "AoT is free software. It can be redistributed and modified under the GNU "
 "General Public License (GNU GPL) version 3 or any later version published"
@@ -5288,24 +5315,24 @@ msgid ""
 "target=\"_blank\">http://www.gnu.org/licenses/</a>."
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:61
+#: aot_flask/templates/create_admin.html:63
 msgid ""
 "AoT collects anonymous usage statistics to help with development. You can"
 " opt out of collection at any time on the management page after logging "
 "in."
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:96
+#: aot_flask/templates/create_admin.html:101
 msgid "Login information is stored locally"
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:97
+#: aot_flask/templates/create_admin.html:102
 msgid ""
 "Usernames must be 3 to 64 characters, passwords >3 characters, and "
 "contain only letters and numbers"
 msgstr ""
 
-#: aot_flask/templates/create_admin.html:110
+#: aot_flask/templates/create_admin.html:116
 msgid "Create Admin Account"
 msgstr ""
 
@@ -5321,11 +5348,11 @@ msgstr ""
 msgid "Warning"
 msgstr ""
 
-#: aot_flask/templates/forgot_password.html:26
+#: aot_flask/templates/forgot_password.html:27
 msgid "Password Reset"
 msgstr ""
 
-#: aot_flask/templates/forgot_password.html:36
+#: aot_flask/templates/forgot_password.html:37
 msgid "Login with Password"
 msgstr ""
 
@@ -5573,8 +5600,8 @@ msgstr ""
 msgid "Browser Default"
 msgstr ""
 
-#: aot_flask/templates/admin/dependencies_install.html:18
-#: aot_flask/templates/admin/dependencies_install.html:35
+#: aot_flask/templates/admin/dependencies_install.html:19
+#: aot_flask/templates/admin/dependencies_install.html:36
 #: aot_flask/templates/layout.html:538 aot_flask/templates/layout.html:574
 #: aot_flask/templates/layout_default.html:538
 #: aot_flask/templates/layout_default.html:574
@@ -5663,7 +5690,7 @@ msgid ""
 "Export/Import page."
 msgstr ""
 
-#: aot_flask/templates/admin/backup.html:26
+#: aot_flask/templates/admin/backup.html:27
 msgid "No backups found."
 msgstr ""
 
@@ -5757,11 +5784,11 @@ msgid ""
 "detect the newly installed modules."
 msgstr ""
 
-#: aot_flask/templates/admin/dependencies_install.html:28
+#: aot_flask/templates/admin/dependencies_install.html:29
 msgid "Installation has started for the following components"
 msgstr ""
 
-#: aot_flask/templates/admin/dependencies_install.html:30
+#: aot_flask/templates/admin/dependencies_install.html:31
 msgid ""
 "The component installation log below refreshes every 5 seconds. Please "
 "wait until all components are installed and the frontend and backend "
@@ -5770,7 +5797,7 @@ msgid ""
 " will appear at the end of the log."
 msgstr ""
 
-#: aot_flask/templates/admin/dependencies_install.html:31
+#: aot_flask/templates/admin/dependencies_install.html:32
 msgid ""
 "If a problem occurs during installation and you need to reset the "
 "installation status, deleting the /opt/AoT/.dependency file will restore "
@@ -8540,68 +8567,68 @@ msgstr ""
 msgid "Cannot verify InfluxDB host/version."
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:225
+#: aot_flask/utils/utils_export.py:227
 msgid "No file uploaded."
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:227
+#: aot_flask/utils/utils_export.py:229
 msgid "No filename provided."
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:244
+#: aot_flask/utils/utils_export.py:246
 #, python-format
 msgid "Invalid filename: %(filename)s: %(part)s != %(correct)s."
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:245 aot_flask/utils/utils_export.py:248
+#: aot_flask/utils/utils_export.py:247 aot_flask/utils/utils_export.py:250
 #, python-format
 msgid "Correct format is: %(format)s"
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:247
+#: aot_flask/utils/utils_export.py:249
 #, python-format
 msgid "Invalid filename: %(filename)s: %(part)s != %(correct)s"
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:250
+#: aot_flask/utils/utils_export.py:252
 msgid "Extension is not 'zip'."
-msgstr ""
-
-#: aot_flask/utils/utils_export.py:252
-#, python-format
-msgid "Invalid AoT version: %(version)s > %(current)s. %(msg)s"
-msgstr ""
-
-#: aot_flask/utils/utils_export.py:252
-msgid "Only databases from current or older versions can be imported."
 msgstr ""
 
 #: aot_flask/utils/utils_export.py:254
 #, python-format
-msgid "Exception during filename validation: %(err)s"
+msgid "Invalid AoT version: %(version)s > %(current)s. %(msg)s"
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:271
+#: aot_flask/utils/utils_export.py:254
+msgid "Only databases from current or older versions can be imported."
+msgstr ""
+
+#: aot_flask/utils/utils_export.py:256
 #, python-format
-msgid "%(db)s file is not included in zip: %(list)s"
+msgid "Exception during filename validation: %(err)s"
 msgstr ""
 
 #: aot_flask/utils/utils_export.py:273
 #, python-format
+msgid "%(db)s file is not included in zip: %(list)s"
+msgstr ""
+
+#: aot_flask/utils/utils_export.py:275
+#, python-format
 msgid "Exception during zip file inspection: %(err)s"
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:286
+#: aot_flask/utils/utils_export.py:288
 #, python-format
 msgid "Exception during zip file extraction: %(err)s"
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:374
+#: aot_flask/utils/utils_export.py:376
 #, python-format
 msgid "Exception during database replacement: %(err)s"
 msgstr ""
 
-#: aot_flask/utils/utils_export.py:378
+#: aot_flask/utils/utils_export.py:380
 #, python-format
 msgid "Exception occurred: %(err)s"
 msgstr ""
@@ -8635,10 +8662,6 @@ msgstr ""
 #: aot_flask/utils/utils_function.py:242 aot_flask/utils/utils_function.py:501
 #, python-brace-format
 msgid "Unknown function type: '{}'"
-msgstr ""
-
-#: aot_flask/utils/utils_function.py:515
-msgid "Execute All"
 msgstr ""
 
 #: aot_flask/utils/utils_function.py:602
@@ -8738,12 +8761,12 @@ msgstr ""
 
 #: aot_flask/utils/utils_input.py:296 aot_flask/utils/utils_settings.py:620
 #: aot_flask/utils/utils_settings.py:640 aot_flask/utils/utils_settings.py:688
-#: aot_flask/utils/utils_settings.py:2382
+#: aot_flask/utils/utils_settings.py:2399
 #, python-format
 msgid "Error in the %(field)s field - %(err)s"
 msgstr ""
 
-#: aot_flask/utils/utils_input.py:365 aot_flask/utils/utils_measurement.py:56
+#: aot_flask/utils/utils_input.py:365
 msgid "Deactivate controller before modifying its settings"
 msgstr ""
 
@@ -8783,35 +8806,8 @@ msgstr ""
 msgid "Duration must be a valid integer"
 msgstr ""
 
-#: aot_flask/utils/utils_method.py:43 aot_flask/utils/utils_method.py:51
-#: aot_flask/utils/utils_method.py:62 aot_flask/utils/utils_method.py:70
-#: aot_flask/utils/utils_method.py:88 aot_flask/utils/utils_method.py:91
-#: aot_flask/utils/utils_method.py:94
-msgid "Required"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:43
-msgid "Start date/time, end date/time, start setpoint"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:51 aot_flask/utils/utils_method.py:70
-msgid "Invalid Date/Time format"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:51
-msgid "YYYY/MM/DD HH:MM:SS"
-msgstr ""
-
 #: aot_flask/utils/utils_method.py:55 aot_flask/utils/utils_method.py:73
 msgid "The end time must be after the start time."
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:62
-msgid "Start time, end time, start setpoint"
-msgstr ""
-
-#: aot_flask/utils/utils_method.py:91
-msgid "Duration must be positive"
 msgstr ""
 
 #: aot_flask/utils/utils_method.py:205
@@ -8947,7 +8943,7 @@ msgstr ""
 msgid "Enter both latitude and longitude, or leave both empty."
 msgstr ""
 
-#: aot_flask/utils/utils_settings.py:657 aot_flask/utils/utils_settings.py:2399
+#: aot_flask/utils/utils_settings.py:657 aot_flask/utils/utils_settings.py:2416
 msgid "Misc settings row not found"
 msgstr ""
 
@@ -9026,19 +9022,19 @@ msgstr ""
 msgid "Insecure SMTP protocol configured. Use TLS/SSL if possible."
 msgstr ""
 
-#: aot_flask/utils/utils_settings.py:2270
+#: aot_flask/utils/utils_settings.py:2287
 msgid "Install Dependencies"
 msgstr ""
 
-#: aot_flask/utils/utils_settings.py:2327
+#: aot_flask/utils/utils_settings.py:2344
 msgid "Set to Upgrade to Master"
 msgstr ""
 
-#: aot_flask/utils/utils_settings.py:2393
+#: aot_flask/utils/utils_settings.py:2410
 msgid "Please enter both latitude and longitude, or leave both empty."
 msgstr ""
 
-#: aot_flask/utils/utils_settings.py:2407
+#: aot_flask/utils/utils_settings.py:2424
 msgid "Map default location saved."
 msgstr ""
 
@@ -9466,30 +9462,6 @@ msgstr ""
 msgid "Soil Property"
 msgstr ""
 
-#: inputs_gis/gis_isric.py:136
-msgid "Soil pH (0-5cm)"
-msgstr ""
-
-#: inputs_gis/gis_isric.py:152
-msgid "Clay Content (%)"
-msgstr ""
-
-#: inputs_gis/gis_isric.py:168
-msgid "Sand Content (%)"
-msgstr ""
-
-#: inputs_gis/gis_isric.py:184
-msgid "Silt Content (%)"
-msgstr ""
-
-#: inputs_gis/gis_isric.py:200
-msgid "Organic Carbon (dg/kg)"
-msgstr ""
-
-#: inputs_gis/gis_isric.py:216
-msgid "Bulk Density (cg/cm³)"
-msgstr ""
-
 #: inputs_gis/gis_nasa_gibs.py:9
 msgid "MODIS Terra TrueColor"
 msgstr ""
@@ -9506,7 +9478,7 @@ msgstr ""
 msgid "Soil Moisture (SMAP)"
 msgstr ""
 
-#: inputs_gis/gis_nasa_gibs.py:57 inputs_gis/gis_nasa_gibs.py:227
+#: inputs_gis/gis_nasa_gibs.py:57
 msgid "Land Surface Temp (Day)"
 msgstr ""
 
@@ -9544,62 +9516,6 @@ msgstr ""
 
 #: inputs_gis/gis_nasa_gibs.py:109
 msgid "Choose date mode for this layer."
-msgstr ""
-
-#: inputs_gis/gis_nasa_gibs.py:195
-msgid "Soil Moisture (Root Zone)"
-msgstr ""
-
-#: inputs_gis/gis_nasa_gibs.py:197
-msgid "Dry"
-msgstr ""
-
-#: inputs_gis/gis_nasa_gibs.py:197
-msgid "Wet"
-msgstr ""
-
-#: inputs_gis/gis_nasa_gibs.py:216
-msgid "NDVI"
-msgstr ""
-
-#: inputs_gis/gis_openweather.py:153
-msgid "Wind Speed"
-msgstr ""
-
-#: inputs_gis/gis_openweather.py:169
-msgid "Clouds"
-msgstr ""
-
-#: inputs_gis/gis_openweather.py:185
-msgid "Precipitation"
-msgstr ""
-
-#: inputs_gis/gis_rainviewer.py:137
-msgid "Rain/Snow Intensity"
-msgstr ""
-
-#: inputs_gis/gis_rainviewer.py:139
-msgid "Heavy"
-msgstr ""
-
-#: inputs_gis/gis_rainviewer.py:143
-msgid "Snow"
-msgstr ""
-
-#: inputs_gis/gis_rainviewer.py:146
-msgid "Rain"
-msgstr ""
-
-#: inputs_gis/gis_rainviewer.py:149
-msgid "Storm"
-msgstr ""
-
-#: inputs_gis/gis_vworld.py:266
-msgid "Error: API returned"
-msgstr ""
-
-#: inputs_gis/gis_vworld.py:284
-msgid "Legend Error"
 msgstr ""
 
 #: outputs/motor_stepper_bipolar_generic.py:35
@@ -11206,3 +11122,557 @@ msgstr ""
 msgid "Input value validity duration"
 msgstr ""
 
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:795
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:795
+msgid "edit"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:804
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:804
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1653
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1653
+msgid "Open Notes"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:807
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:807
+msgid "Loading"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:817
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:817
+msgid "Remove from Map"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1656
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1656
+msgid "Loading..."
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1878
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1878
+msgid "No Notes"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1884
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1884
+msgid "Load Failed"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1929
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:1929
+msgid "No Measurements"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2027
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2027
+msgid "Current Work Time"
+msgstr ""
+
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2032
+#: aot_flask/static/js/widget/AoT_map/aot-map-widget-v3.js:2032
+msgid "Last Work Time"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-controls.js:169
+#: aot_flask/static/js/geo/aot-map-controls.js:171
+msgid "Location check failed:"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:329
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:329
+msgid "loading_map"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:2196
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:2196
+msgid "save_btn_text"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:254
+#: aot_flask/static/js/geo/aot-geo-panel.js:254
+msgid "Zone"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:255
+#: aot_flask/static/js/geo/aot-geo-panel.js:255
+msgid "Facility"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:256
+#: aot_flask/static/js/geo/aot-geo-panel.js:256
+msgid "Equipment"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:257
+#: aot_flask/static/js/geo/aot-geo-panel.js:257
+msgid "A"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:271
+#: aot_flask/static/js/geo/aot-geo-panel.js:271
+msgid "Union"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:272
+#: aot_flask/static/js/geo/aot-geo-panel.js:272
+msgid "Subtract"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:273
+#: aot_flask/static/js/geo/aot-geo-panel.js:290
+msgid "Show length"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:273
+#: aot_flask/static/js/geo/aot-geo-panel.js:290
+msgid "Hide length"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:288
+#: aot_flask/static/js/geo/aot-geo-panel.js:288
+msgid "Pipe"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:289
+#: aot_flask/static/js/geo/aot-geo-panel.js:289
+msgid "Irrigation"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:315
+#: aot_flask/static/js/geo/aot-geo-panel.js:315
+msgid "Selection list"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:333
+#: aot_flask/static/js/geo/aot-geo-panel.js:333
+msgid "Water supply"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:334
+#: aot_flask/static/js/geo/aot-geo-panel.js:334
+msgid "Filter"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:336
+#: aot_flask/static/js/geo/aot-geo-panel.js:336
+msgid "Connection"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:344
+#: aot_flask/static/js/geo/aot-geo-panel.js:344
+msgid "Reference line"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:345
+#: aot_flask/static/js/geo/aot-geo-panel.js:345
+msgid "Main pipe"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:347
+#: aot_flask/static/js/geo/aot-geo-panel.js:347
+msgid "90 degree"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:355
+#: aot_flask/static/js/geo/aot-geo-panel.js:355
+msgid "Sprinkler"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:356
+#: aot_flask/static/js/geo/aot-geo-panel.js:356
+msgid "Drip"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:367
+#: aot_flask/static/js/geo/aot-geo-panel.js:367
+#: aot_flask/static/js/geo/aot-geo-panel.js:383
+#: aot_flask/static/js/geo/aot-geo-panel.js:383
+msgid "Spacing"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:370
+#: aot_flask/static/js/geo/aot-geo-panel.js:370
+msgid "Radius"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:373
+#: aot_flask/static/js/geo/aot-geo-panel.js:373
+#: aot_flask/static/js/geo/aot-geo-panel.js:386
+#: aot_flask/static/js/geo/aot-geo-panel.js:386
+msgid "Flow rate"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+msgid "River"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+msgid "Water tank"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+#: aot_flask/static/js/geo/aot-geo-panel.js:402
+msgid "Pump"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+msgid "Disc"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+msgid "Screen"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+#: aot_flask/static/js/geo/aot-geo-panel.js:403
+msgid "Sand"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+msgid "Union valve"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+msgid "Adapter valve"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+msgid "Inline valve"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+#: aot_flask/static/js/geo/aot-geo-panel.js:404
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Reducer"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Suction"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Elbow"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+#: aot_flask/static/js/geo/aot-geo-panel.js:405
+msgid "Tee"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:413
+#: aot_flask/static/js/geo/aot-geo-panel.js:413
+#: aot_flask/static/js/geo/aot-geo-panel.js:430
+#: aot_flask/static/js/geo/aot-geo-panel.js:430
+msgid "spacing"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:422
+#: aot_flask/static/js/geo/aot-geo-panel.js:422
+#: aot_flask/static/js/geo/aot-geo-panel.js:434
+#: aot_flask/static/js/geo/aot-geo-panel.js:434
+#: aot_flask/static/js/geo/aot-geo-panel.js:452
+#: aot_flask/static/js/geo/aot-geo-panel.js:452
+msgid "Offset"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:443
+#: aot_flask/static/js/geo/aot-geo-panel.js:443
+msgid "angle"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:675
+#: aot_flask/static/js/geo/aot-geo-panel.js:675
+msgid "Placement mode"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-geo-panel.js:909
+#: aot_flask/static/js/geo/aot-geo-panel.js:909
+msgid "Search Device..."
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-ui.js:615
+#: aot_flask/static/js/geo/design/aot-geo-ui.js:615
+msgid "No Sites Found"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:263
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:263
+msgid "New Site"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:330
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:330
+msgid "New Zone"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:450
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:450
+msgid "Data Load Failed"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:524
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:524
+msgid "Select Site"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:533
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:533
+msgid "Apply Filter"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:540
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:540
+msgid "Design Summary"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "Site Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "Zone Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "Pipe Length"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:646
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:677
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:706
+msgid "Number of Emitters"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:544
+msgid "AoT Device Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:558
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:558
+msgid "No Pipe Data"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "No."
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Length (m)"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Number of Emitters (Pipe)"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Flow (L/h)"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:568
+msgid "Flow (L/min)"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:572
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:572
+msgid "[Main Pipe]"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:582
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:582
+msgid "[Branch Pipe]"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
+msgid "Main Pipe Tee"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:606
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:643
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:645
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:646
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:651
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:652
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:653
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:674
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:676
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:677
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:682
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:683
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:684
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:703
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:705
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:706
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:711
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:712
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:713
+msgid "units"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:607
+msgid "Main Pipe Elbow"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:608
+msgid "Main Pipe End"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:609
+msgid "Main Pipe Reducing Tee"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:610
+msgid "Main Pipe Reducing Elbow"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:612
+msgid "Branch Pipe Tee"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:613
+msgid "Branch Pipe Elbow"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:614
+msgid "Branch Pipe End"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:636
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:636
+msgid "Design Details"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:641
+msgid "Total Area"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:642
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:673
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:702
+msgid "Main Pipe Length"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:643
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:674
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:703
+msgid "Main Pipe Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:644
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:675
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:704
+msgid "Branch Pipe Length"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:645
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:676
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:705
+msgid "Branch Pipe Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:647
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:678
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:707
+msgid "Flow Rate (L/h)"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:648
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:679
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:708
+msgid "Flow Rate (L/min)"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:651
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:682
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:711
+msgid "Input Device Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:652
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:683
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:712
+msgid "Output Device Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:653
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:684
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:713
+msgid "Logic Count"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:662
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:662
+msgid "No Sites Selected"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:672
+msgid "Site Area"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:689
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:689
+msgid "Site Pipe Info"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:701
+msgid "Area"
+msgstr ""
+
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:716
+#: aot_flask/static/js/geo/design/aot-geo-stats.js:716
+msgid "Pipe Details"
+msgstr ""
+
+#: aot_flask/static/js/components/aot-color-picker.js:114
+msgid "select_color"
+msgstr ""
+
+#: aot_flask/static/js/components/aot-color-picker.js:119
+#: aot_flask/static/js/components/aot-color-picker.js:119
+msgid "custom_color"
+msgstr ""

@@ -1,28 +1,28 @@
 description: Documentation for AoT, an open source environmental monitoring and regulation system.
 
-## Sistem Pemantauan dan Regulasi Lingkungan AoT
+## AoT Environmental Monitoring and Regulation System
 
-AoT adalah perangkat lunak sumber terbuka yang dirancang untuk dijalankan pada [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) dan komputer papan tunggal lainnya (SBC). AoT memasangkan input dan output dengan cara yang menarik untuk merasakan dan memanipulasi lingkungan.
+AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
 
 ### Information
 
-Lihat [README](https://github.com/aot-inc/AoT#uses) untuk fitur-fitur, proyek-proyek yang menggunakan AoT, screenshot, dan informasi lainnya.
+See the [README](https://github.com/aot-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
 
-### Prasyarat
+### Prerequisites
 
-*   Komputer papan tunggal (Direkomendasikan: [Raspberry Pi](https://www.raspberrypi.org/), versi apa pun: Nol, 1, 2, 3, atau 4)
-*   Sistem operasi berbasis Debian
-*   Koneksi internet yang aktif
+*   Single-board computer (Recommended: [Raspberry Pi](https://www.raspberrypi.org/), any version: Zero, 1, 2, 3, or 4)
+*   Debian-based operating system
+*   An active internet connection
 
-### Pasang
+### Install
 
-Setelah di-boot dan masuk, jalankan perintah berikut untuk memulai instalasi AoT:
+Once booted and logged in, run the following command to initiate the AoT install:
 
 ```bash
 curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 
-Setelah instalasi, buka browser web ke alamat IP SBC dan Anda akan diminta untuk membuat pengguna Admin dan login.
+After installation, open a web browser to the SBC's IP address and you will be prompted to create an Admin user and login.
 
 ```
 https://127.0.0.1
@@ -34,5 +34,5 @@ https://127.0.0.1
 *   [AoT Wiki](https://github.com/aot-inc/AoT/wiki)
 *   [AoT API](https://aot-inc.github.io/AoT/aot-api.html)
 *   [Discussion Forum](https://forum.radicaldiy.com)
-*   [Pertanyaan yang Sering Diajukan](https://forum.radicaldiy.com/docs?category=23&tags=aot)
+*   [Frequently Asked Questions](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 

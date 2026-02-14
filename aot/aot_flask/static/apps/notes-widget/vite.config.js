@@ -27,6 +27,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'axios': path.resolve(__dirname, 'node_modules/axios/dist/esm/axios.js'),
     },
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
   },

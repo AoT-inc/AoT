@@ -1082,8 +1082,14 @@ class AoTGeoPanel {
         const rootStyle = getComputedStyle(document.documentElement);
         const color = rootStyle.getPropertyValue(themeVar).trim();
 
-        if (color && this.container) {
-            this.container.style.setProperty('--active-theme-color', color);
+        if (this.container) {
+            this.container.style.setProperty('--active-theme-color', color || 'var(' + themeVar + ')');
+            
+            // [New] Forward RGB and Alpha vars for sub-elements
+            const rgb = rootStyle.getPropertyValue(themeVar + '-rgb').trim();
+            if (rgb) {
+                this.container.style.setProperty('--active-theme-rgb', rgb);
+            }
         }
 
         // [New] Apply Panel Background & Opacity from Global Theme Config
@@ -1091,32 +1097,14 @@ class AoTGeoPanel {
     }
 
     _applyPanelTheme() {
-        if (!window.AOT_GEO_CONFIG || !window.AOT_GEO_CONFIG.theme_config) return;
-        const theme = window.AOT_GEO_CONFIG.theme_config;
-        
-        const hex = theme.panel_bg || '#ffffff';
-        const opacity = parseInt(theme.panel_opacity || '90');
-        
-        // Helper: Hex to RGBA
-        const hexToRgba = (hex, alphaPercent) => {
-            let c;
-            if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-                c = hex.substring(1).split('');
-                if (c.length === 3) {
-                    c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-                }
-                c = '0x' + c.join('');
-                return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + (alphaPercent / 100) + ')';
-            }
-            return hex; // Fallback
-        };
-
-        const bgStyle = hexToRgba(hex, opacity);
+        // [Fix] Always Use CSS Variable computed in AoTGeoUI.applyThemeConfig
+        // This makes the transition instant and reliable.
+        const bgStyle = 'var(--panel-bg-rgba, rgba(255,255,255,0.9))';
 
         // 1. Apply to Mode Panel (this.container)
         if (this.container) {
             this.container.style.backgroundColor = bgStyle;
-            this.container.style.backdropFilter = 'blur(5px)';
+            this.container.style.backdropFilter = 'blur(10px)'; // [Premium] Slightly more blur
         }
 
         // 2. Apply to Map Tools in Geo Design
@@ -1143,6 +1131,7 @@ class AoTGeoPanel {
                 
                 el.style.backgroundColor = bgStyle;
                 el.style.borderColor = 'rgba(0,0,0,0.1)';
+                el.style.backdropFilter = 'blur(10px)';
             }
         });
     }

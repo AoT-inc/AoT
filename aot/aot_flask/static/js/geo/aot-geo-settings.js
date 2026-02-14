@@ -404,6 +404,11 @@ const AoTGeoSettings = {
         }
     },
     showToast: function (message, type = 'info') {
+        if (typeof window.showToast !== 'undefined') {
+            window.showToast(message, type);
+            return;
+        }
+
         const settings = window.AoTGlobalSettings || {};
         let shouldHide = false;
         if (type === 'success' && settings.hide_success) shouldHide = true;

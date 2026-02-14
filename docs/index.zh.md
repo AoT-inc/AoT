@@ -1,28 +1,28 @@
 description: Documentation for AoT, an open source environmental monitoring and regulation system.
 
-## AoT环境监测和监管系统
+## AoT Environmental Monitoring and Regulation System
 
-AoT是开源软件，旨在运行在[树莓派](https://en.wikipedia.org/wiki/Raspberry_Pi)和其他单板计算机(SBC)上。它以有趣的方式将输入和输出耦合起来，以感知和操纵环境。
+AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
 
 ### Information
 
-有关功能、使用AoT的项目、屏幕截图和其他信息，请参见[README](https://github.com/aot-inc/AoT#uses)。
+See the [README](https://github.com/aot-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
 
-### 先决条件
+### Prerequisites
 
-*   单板计算机（推荐。[Raspberry Pi](https://www.raspberrypi.org/)，任何版本。零，1，2，3，或4)
-*   基于Debian的操作系统
-*   一个活跃的互联网连接
+*   Single-board computer (Recommended: [Raspberry Pi](https://www.raspberrypi.org/), any version: Zero, 1, 2, 3, or 4)
+*   Debian-based operating system
+*   An active internet connection
 
-### 安装
+### Install
 
-启动并登录后，运行以下命令，启动AoT安装。
+Once booted and logged in, run the following command to initiate the AoT install:
 
 ```bash
 curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 
-安装后，打开Web浏览器到SBC的IP地址，会提示你创建一个管理员用户并登录。
+After installation, open a web browser to the SBC's IP address and you will be prompted to create an Admin user and login.
 
 ```
 https://127.0.0.1
@@ -33,6 +33,6 @@ https://127.0.0.1
 *   [AoT on GitHub](https://github.com/aot-inc/AoT)
 *   [AoT Wiki](https://github.com/aot-inc/AoT/wiki)
 *   [AoT API](https://aot-inc.github.io/AoT/aot-api.html)
-*   [论坛](https://forum.radicaldiy.com)
-*   [常见问题](https://forum.radicaldiy.com/docs?category=23&tags=aot)
+*   [Discussion Forum](https://forum.radicaldiy.com)
+*   [Frequently Asked Questions](https://forum.radicaldiy.com/docs?category=23&tags=aot)
 

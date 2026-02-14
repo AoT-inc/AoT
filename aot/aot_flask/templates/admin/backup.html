@@ -14,7 +14,7 @@
     <p>{{_('You can create backups to preserve AoT settings or restore them later. Camera images are not backed up. To save measurement data, go to the Export/Import page.')}}</p>
 
     <form method="post" action="/admin/backup">
-    {{form_backup.csrf_token}}
+      {{form_backup.csrf_token}}
     <div class="row" style="padding-bottom: 1.5em">
       <div class="col-12 col-sm-3 col-md-2 small-gutters">
         {{form_backup.backup(class_='btn btn-primary', value=_('Create Backup'))}}

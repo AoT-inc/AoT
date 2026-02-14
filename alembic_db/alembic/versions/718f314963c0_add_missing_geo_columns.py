@@ -20,20 +20,23 @@ def upgrade():
     insp = Inspector.from_engine(conn)
     
     # 1. Add map_config_id (String 36)
+    tables = insp.get_table_names()
     tables_map_config = ['pid', 'function', 'conditional', 'trigger']
     for table in tables_map_config:
-        columns = [c['name'] for c in insp.get_columns(table)]
-        if 'map_config_id' not in columns:
-            with op.batch_alter_table(table, schema=None) as batch_op:
-                batch_op.add_column(sa.Column('map_config_id', sa.String(length=36), nullable=True))
+        if table in tables:
+            columns = [c['name'] for c in insp.get_columns(table)]
+            if 'map_config_id' not in columns:
+                with op.batch_alter_table(table, schema=None) as batch_op:
+                    batch_op.add_column(sa.Column('map_config_id', sa.String(length=36), nullable=True))
 
     # 2. Add map_overlay_id (Integer)
     tables_map_overlay = ['pid', 'input', 'output', 'function', 'conditional', 'trigger', 'custom_controller']
     for table in tables_map_overlay:
-        columns = [c['name'] for c in insp.get_columns(table)]
-        if 'map_overlay_id' not in columns:
-            with op.batch_alter_table(table, schema=None) as batch_op:
-                batch_op.add_column(sa.Column('map_overlay_id', sa.Integer(), nullable=True))
+        if table in tables:
+            columns = [c['name'] for c in insp.get_columns(table)]
+            if 'map_overlay_id' not in columns:
+                with op.batch_alter_table(table, schema=None) as batch_op:
+                    batch_op.add_column(sa.Column('map_overlay_id', sa.Integer(), nullable=True))
 
 def downgrade():
     conn = op.get_bind()

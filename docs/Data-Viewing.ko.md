@@ -6,7 +6,7 @@ The `Live Measurements` page is the first page a user sees after logging in to A
 
 ## Asynchronous Graphs
 
-Page\: `데이터 -> Asynchronous Graphs`
+Page\: `데이터베이스 -> Asynchronous Graphs`
 
 A graphical data display that is useful for viewing data sets spanning relatively long periods of time (weeks/months/years), which could be very data- and processor-intensive to view as a Synchronous Graph. Select a time frame and data will be loaded from that time span, if it exists. The first view will be of the entire selected data set. For every view/zoom, 700 data points will be loaded. If there are more than 700 data points recorded for the time span selected, 700 points will be created from an averaging of the points in that time span. This enables much less data to be used to navigate a large data set. For instance, 4 months of data may be 10 megabytes if all of it were downloaded. However, when viewing a 4 month span, it's not possible to see every data point of that 10 megabytes, and aggregating of points is inevitable. With asynchronous loading of data, you only download what you see. So, instead of downloading 10 megabytes every graph load, only ~50kb will be downloaded until a new zoom level is selected, at which time only another ~50kb is downloaded.
 
@@ -15,15 +15,15 @@ A graphical data display that is useful for viewing data sets spanning relativel
 
 ## 대시보드
 
-Page\: `데이터 -> 대시보드`
+Page\: `데이터베이스 -> 대시보드`
 
 The dashboard can be used for both viewing data and manipulating the system, thanks to the numerous dashboard widgets available. Multiple dashboards can be created as well as locked to prevent changing the arrangement.
 
-## Widgets
+## 위젯
 
 Widgets are elements on the Dashboard that have a number of uses, such as viewing data (charts, indicators, gauges, etc.) or interacting with the system (manipulate outputs, change PWM duty cycle, querying or modifying a database, etc.). Widgets can be easily rearranged and resized by dragging and dropping. For a full list of supported Widgets, see [Supported Widgets](Supported-Widgets.md).
 
-### Custom Widgets
+### 위젯
 
 There is a Custom Widget import system in AoT that allows user-created Widgets to be used in the AoT system. Custom Widgets can be uploaded on the `[Gear Icon] -> Configure -> Custom Widgets` page. After import, they will be available to use on the `Setup -> Widget` page.
 

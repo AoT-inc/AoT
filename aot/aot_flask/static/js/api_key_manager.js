@@ -160,7 +160,11 @@
                     $input.val(m.key.key);
                     $input.trigger('change');
                     $menu.remove();
-                    toastr['success'](`Injected: ${m.key.name}`);
+                    if (typeof window.showToast !== 'undefined') {
+                        window.showToast(`Injected: ${m.key.name}`, 'success');
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr['success'](`Injected: ${m.key.name}`);
+                    }
                 });
                 $menu.append($item);
             });

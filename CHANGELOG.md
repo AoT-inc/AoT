@@ -42,6 +42,16 @@
 
 ---
 
+# v26.0.6 (2026-02-12)
+
+## 버그 수정 (Bug Fixes)
+
+### 데이터베이스 (Database)
+- **DB 구조 재편 (Database Restructuring)**: `AoT_dev/databases` 폐기 및 `AoT_dev/aot/databases`로 통합.
+- **Trigger Map**: `Trigger: Sequence` 맵의 기본 좌표가 전역 설정을 따르지 않던 문제 해결.
+
+---
+
 # v26.0.6 (2026-02-12) - English
 
 ## Bug Fixes

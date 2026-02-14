@@ -62,6 +62,9 @@ class AoTGeoDesign {
         this._initMap();
         this._initPanelToggle();
 
+        // 1. Initialize Theme Config FIRST to ensure CSS Variables are ready
+        this.ui.applyThemeConfig();
+
         // Initialize Map Search Controller
         if (window.AoTMapSearchController) {
             // console.log("[GeoDesign] Found AoTMapSearchController, initializing...");
@@ -83,7 +86,6 @@ class AoTGeoDesign {
         this.setMode(this.activeMode);
 
         this.events.bindEvents();
-        this.ui.applyThemeConfig();
         this._autoLoadDesign();
     }
 

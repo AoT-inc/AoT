@@ -172,15 +172,16 @@ class AoTTabs {
     }
 
     showToast(message, type = 'info') {
+        if (typeof window.showToast !== 'undefined') {
+            window.showToast(message, type);
+            return;
+        }
+
         const settings = window.AoTGlobalSettings || {};
         let shouldHide = false;
         if (type === 'success' && settings.hide_success) shouldHide = true;
         if (type === 'info' && settings.hide_info) shouldHide = true;
         
-        // Error/Warning usually shouldn't be hidden unless explicitly requested, 
-        // but sticking to the pattern if specific flags exist. 
-        // Typically strict hide_warning/hide_error might not exist or be desired, 
-        // but copying the pattern from other widgets for consistency.
         if ((type === 'warning' || type === 'error') && settings.hide_warning) shouldHide = true;
         
         if (shouldHide) return;
@@ -208,8 +209,9 @@ class AoTTabs {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // CSRF token if needed - usually handled by cookie or meta
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
+                // CSRF token: Robust retrieval
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                               document.querySelector('input[name="csrf_token"]')?.value || ''
             },
             body: JSON.stringify(ids)
         })

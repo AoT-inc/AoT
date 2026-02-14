@@ -129,11 +129,11 @@ Measurements
 
 ## Battery
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [AoT: Ecowitt soil_sensor](/AoT/Supported-Inputs/#aot-ecowitt-soil_sensor)
+### [Ecowitt: Ecowitt soil_sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-soil_sensor)
 
-### [AoT: Ecowitt temp_humidity_sensor](/AoT/Supported-Inputs/#aot-ecowitt-temp_humidity_sensor)
+### [Ecowitt: Ecowitt temp and humidity sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-temp-and-humidity-sensor)
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
@@ -227,10 +227,6 @@ Measurements
 
 ### [AOSONG: DHT22](/AoT/Supported-Inputs/#aosong-dht22)
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
-
-### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
-
 ### [Atlas Scientific: Atlas Humidity](/AoT/Supported-Inputs/#atlas-scientific-atlas-humidity)
 
 ### [BOSCH: BME280 (Adafruit_BME280)](/AoT/Supported-Inputs/#bosch-bme280-adafruit_bme280)
@@ -245,7 +241,15 @@ Measurements
 
 ### [Cozir: Cozir CO2](/AoT/Supported-Inputs/#cozir-cozir-co2)
 
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
+
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+
+### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
+
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ### [Ruuvi: RuuviTag](/AoT/Supported-Inputs/#ruuvi-ruuvitag)
 
@@ -287,25 +291,21 @@ Measurements
 
 ### [Texas Instruments: HDC1000](/AoT/Supported-Inputs/#texas-instruments-hdc1000)
 
-### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
-
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
-
 ## Direction
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
 
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+
+### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
+
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
-
-### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
-
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
 
 ## Disk
 
@@ -321,7 +321,7 @@ Measurements
 
 ### [AoT: Uptime](/AoT/Supported-Inputs/#aot-uptime)
 
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ## Duty Cycle
 
@@ -415,12 +415,6 @@ Measurements
 
 ### [ASAIR: AHTx0](/AoT/Supported-Inputs/#asair-ahtx0)
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
-
-### [AoT: Ecowitt temp_humidity_sensor](/AoT/Supported-Inputs/#aot-ecowitt-temp_humidity_sensor)
-
-### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
-
 ### [Atlas Scientific: Atlas Humidity](/AoT/Supported-Inputs/#atlas-scientific-atlas-humidity)
 
 ### [BOSCH: BME280 (Adafruit_BME280)](/AoT/Supported-Inputs/#bosch-bme280-adafruit_bme280)
@@ -435,9 +429,19 @@ Measurements
 
 ### [Cozir: Cozir CO2](/AoT/Supported-Inputs/#cozir-cozir-co2)
 
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
+
+### [Ecowitt: Ecowitt temp and humidity sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-temp-and-humidity-sensor)
+
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+
+### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
+
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
@@ -480,10 +484,6 @@ Measurements
 ### [TE Connectivity: HTU21D (pigpio)](/AoT/Supported-Inputs/#te-connectivity-htu21d-pigpio)
 
 ### [Texas Instruments: HDC1000](/AoT/Supported-Inputs/#texas-instruments-hdc1000)
-
-### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
-
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
 
 ### [Xiaomi: Mijia LYWSD03MMC (ATC and non-ATC modes)](/AoT/Supported-Inputs/#xiaomi-mijia-lywsd03mmc-atc-and-non-atc-modes)
 
@@ -543,9 +543,9 @@ Measurements
 
 ### [Adafruit: I2C Capacitive Moisture Sensor](/AoT/Supported-Inputs/#adafruit-i2c-capacitive-moisture-sensor)
 
-### [AoT: Ecowitt soil_sensor](/AoT/Supported-Inputs/#aot-ecowitt-soil_sensor)
-
 ### [Catnip Electronics: Chirp](/AoT/Supported-Inputs/#catnip-electronics-chirp)
+
+### [Ecowitt: Ecowitt soil_sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-soil_sensor)
 
 ### [Xiaomi: Miflora](/AoT/Supported-Inputs/#xiaomi-miflora)
 
@@ -599,17 +599,13 @@ Measurements
 
 ## 강수
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
+
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
 
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
-
 ## Pressure
-
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
-
-### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
 
 ### [Atlas Scientific: Atlas Pressure](/AoT/Supported-Inputs/#atlas-scientific-atlas-pressure)
 
@@ -629,9 +625,17 @@ Measurements
 
 ### [BOSCH: BMP280 (bmp280-python)](/AoT/Supported-Inputs/#bosch-bmp280-bmp280-python)
 
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
+
 ### [Infineon: DPS310](/AoT/Supported-Inputs/#infineon-dps310)
 
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+
+### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+
+### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
+
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ### [Raspberry Pi Foundation: Sense HAT](/AoT/Supported-Inputs/#raspberry-pi-foundation-sense-hat)
 
@@ -639,17 +643,13 @@ Measurements
 
 ### [Senseair: K96](/AoT/Supported-Inputs/#senseair-k96)
 
-### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
-
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
-
 ## Pulse Width
 
 ### [Raspberry Pi: Signal (PWM)](/AoT/Supported-Inputs/#raspberry-pi-signal-pwm)
 
 ## Solar Radiation
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
 ## Volume Flow Rate
 
@@ -675,13 +675,13 @@ Measurements
 
 ## 하늘상태
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
 
 ## 신적설
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
 ## Specific Gravity
 
@@ -689,39 +689,57 @@ Measurements
 
 ## Speed
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
 
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
 
-### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
+### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ## Status
 
-### [Carto: Carto Maps](/AoT/Supported-Inputs/#carto-carto-maps)
+### [CARTO: GL: Carto Maps](/AoT/Supported-Inputs/#carto-gl-carto-maps)
 
-### [Esri: Esri World Imagery](/AoT/Supported-Inputs/#esri-esri-world-imagery)
+### [ESA: GL: Soil Moisture (NASA SMAP)](/AoT/Supported-Inputs/#esa-gl-soil-moisture-nasa-smap)
 
-### [ISRIC: SoilGrids (Global Soil Info)](/AoT/Supported-Inputs/#isric-soilgrids-global-soil-info)
+### [Esri: GL: Esri World Imagery](/AoT/Supported-Inputs/#esri-gl-esri-world-imagery)
+
+### [GSI: JP: GSI Maps](/AoT/Supported-Inputs/#gsi-jp-gsi-maps)
+
+### [Google: GL: Google Maps](/AoT/Supported-Inputs/#google-gl-google-maps)
+
+### [ISRIC: GL: SoilGrids (Global Soil Info)](/AoT/Supported-Inputs/#isric-gl-soilgrids-global-soil-info)
+
+### [Kakao: KO: Kakao Map](/AoT/Supported-Inputs/#kakao-ko-kakao-map)
+
+### [Mapbox: GL: Mapbox](/AoT/Supported-Inputs/#mapbox-gl-mapbox)
+
+### [Microsoft: GL: Bing Maps](/AoT/Supported-Inputs/#microsoft-gl-bing-maps)
 
 ### [NASA: NASA GIBS](/AoT/Supported-Inputs/#nasa-nasa-gibs)
 
-### [NASA: Soil Moisture (NASA SMAP)](/AoT/Supported-Inputs/#nasa-soil-moisture-nasa-smap)
+### [Naver: KO: Naver Map](/AoT/Supported-Inputs/#naver-ko-naver-map)
 
-### [OpenStreetMap: OpenStreetMap](/AoT/Supported-Inputs/#openstreetmap-openstreetmap)
+### [OpenStreetMap: GL: OpenStreetMap](/AoT/Supported-Inputs/#openstreetmap-gl-openstreetmap)
 
-### [OpenTopoMap: OpenTopoMap](/AoT/Supported-Inputs/#opentopomap-opentopomap)
+### [OpenTopoMap: GL: OpenTopoMap](/AoT/Supported-Inputs/#opentopomap-gl-opentopomap)
 
-### [OpenWeatherMap: OpenWeatherMap](/AoT/Supported-Inputs/#openweathermap-openweathermap)
+### [OpenWeatherMap: GL: OpenWeatherMap](/AoT/Supported-Inputs/#openweathermap-gl-openweathermap)
 
-### [RainViewer: RainViewer (Radar)](/AoT/Supported-Inputs/#rainviewer-rainviewer-radar)
+### [RainViewer: GL: RainViewer (Radar)](/AoT/Supported-Inputs/#rainviewer-gl-rainviewer-radar)
 
-### [Vworld: Vworld (Korea)](/AoT/Supported-Inputs/#vworld-vworld-korea)
+### [Stadia Maps: GL: Stadia Maps](/AoT/Supported-Inputs/#stadia-maps-gl-stadia-maps)
+
+### [Statistics Korea: KO: SGIS (Statistics Korea)](/AoT/Supported-Inputs/#statistics-korea-ko-sgis-statistics-korea)
+
+### [Thunderforest: GL: Thunderforest](/AoT/Supported-Inputs/#thunderforest-gl-thunderforest)
+
+### [Vworld: KO: Vworld](/AoT/Supported-Inputs/#vworld-ko-vworld)
 
 ## Temperature
 
@@ -742,12 +760,6 @@ Measurements
 ### [Adafruit: I2C Capacitive Moisture Sensor](/AoT/Supported-Inputs/#adafruit-i2c-capacitive-moisture-sensor)
 
 ### [Analog Devices: ADT7410](/AoT/Supported-Inputs/#analog-devices-adt7410)
-
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
-
-### [AoT: Ecowitt temp_humidity_sensor](/AoT/Supported-Inputs/#aot-ecowitt-temp_humidity_sensor)
-
-### [AoT_KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#aot_kma-기상청-지점-데이터)
 
 ### [Atlas Scientific: Atlas Humidity](/AoT/Supported-Inputs/#atlas-scientific-atlas-humidity)
 
@@ -773,11 +785,17 @@ Measurements
 
 ### [Cozir: Cozir CO2](/AoT/Supported-Inputs/#cozir-cozir-co2)
 
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
+
+### [Ecowitt: Ecowitt temp and humidity sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-temp-and-humidity-sensor)
+
 ### [Infineon: DPS310](/AoT/Supported-Inputs/#infineon-dps310)
+
+### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
 
 ### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
 
-### [KMA: 단기예보](/AoT/Supported-Inputs/#kma-단기예보)
+### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
 
 ### [MAXIM: DS1822](/AoT/Supported-Inputs/#maxim-ds1822)
 
@@ -810,6 +828,10 @@ Measurements
 ### [Melexis: MLX90614](/AoT/Supported-Inputs/#melexis-mlx90614)
 
 ### [Microchip: MCP9808](/AoT/Supported-Inputs/#microchip-mcp9808)
+
+### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
+
+### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ### [Panasonic: AMG8833](/AoT/Supported-Inputs/#panasonic-amg8833)
 
@@ -861,10 +883,6 @@ Measurements
 
 ### [Texas Instruments: TMP006](/AoT/Supported-Inputs/#texas-instruments-tmp006)
 
-### [Weather: OpenWeatherMap (City, Current)](/AoT/Supported-Inputs/#weather-openweathermap-city-current)
-
-### [Weather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#weather-openweathermap-lat-lon-current-future)
-
 ### [Xiaomi: Miflora](/AoT/Supported-Inputs/#xiaomi-miflora)
 
 ### [Xiaomi: Mijia LYWSD03MMC (ATC and non-ATC modes)](/AoT/Supported-Inputs/#xiaomi-mijia-lywsd03mmc-atc-and-non-atc-modes)
@@ -875,11 +893,11 @@ Measurements
 
 ## Unitless
 
-### [AoT: Ecowitt soil_sensor](/AoT/Supported-Inputs/#aot-ecowitt-soil_sensor)
+### [Ecowitt: Ecowitt soil_sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-soil_sensor)
 
 ## Ultraviolet Index
 
-### [AoT: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#aot-ecowitt-cloud-api-weather-data)
+### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
 ## Vapor Pressure Deficit
 
