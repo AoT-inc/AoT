@@ -409,24 +409,19 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   /* transform: translate(-50%, -50%); removed to prevent conflict with Leaflet */
 }
 
-.aot-map-text-marker .marker-pill {
+.site-label,
+.zone-label {
   display: inline-block;
-  padding: 6px 15px;
-  /* Width at 95% */
-  border-radius: 100px;
-  /* Capsule shape */
+  padding: 2px 8px;
+  border-radius: 4px; /* Rounded Rectangle */
   font-weight: 500;
-  /* Reduced weight */
   font-size: 12px;
-  /* Base size reduced (~90% of 13px) */
   line-height: 1.2;
   white-space: nowrap;
   text-align: center;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  /* Colors handled inline by JS */
   transition: transform 0.2s;
   transform: translate(-50%, -50%);
-  /* Correctly center the label */
 }
 
 .aot-map-text-marker:hover .marker-pill {
@@ -727,10 +722,11 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 
 /* Device Label Styles - Reverse effect for ON state */
 .device-label {
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 2px 5px;
+  background: white !important; /* Ensure background is white */
+  color: black !important;
+  border: 1px solid #ccc !important;
+  border-radius: 12px !important; /* Pill shape */
+  padding: 1px 6px !important; /* Slightly more side padding for pill look */
   font-size: 11px;
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);

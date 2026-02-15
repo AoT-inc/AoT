@@ -694,39 +694,40 @@
                                 });
                                 
                                 const marker = L.marker([lat, lng], {icon: icon});
-                // [New] Update Map Note Name API Call
-                window.AoTMapApp[uniqueId].updateMapNoteName = function(noteId, newName) {
+                // [New] Update Map Note Tags API Call
+                window.AoTMapApp[uniqueId].updateMapNoteTags = function(noteId, newTagName) {
                     fetch(`/notes/update/${noteId}`, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
                             'X-CSRFToken': window.AoTMapData ? window.AoTMapData.getCsrfToken() : ''
                         },
-                        body: JSON.stringify({ name: newName })
+                        body: JSON.stringify({ new_tag_name: newTagName })
                     })
                     .then(r => r.json())
                     .then(d => {
                         if (d.error) alert("Error: " + d.error);
                         else {
-                            // window.AoTMapApp.showToast("Note updated", 'success');
-                            // Refresh notes
-                             if (window.AoTMapApp[uniqueId].renderMapNotes) window.AoTMapApp[uniqueId].renderMapNotes();
+                            if (window.AoTMapApp[uniqueId].renderMapNotes) window.AoTMapApp[uniqueId].renderMapNotes();
                         }
                     })
                     .catch(e => alert("Update failed: " + e));
                 };
 
-                // [Modified] Use Popup for Map Notes (Consistent with Labels)
-                // Use note.unique_id for RENAMING (Specific Note)
-                // Use note.target_id for OPENING THREAD (Location)
+                // [Modified] Use Popup for Map Notes
                 const noteId = note.unique_id; 
                 const tId = note.target_id || note.unique_id;
                 
-                // Note: API returns 'user' as the name/title field (legacy mapping)
-                const currentName = note.user || 'Map Note'; 
-                const safeName = (currentName).replace(/'/g, "\\'");
+                // Identify Unique Tag (NOT widget/map_hidden)
+                const uniqueTag = (note.tag_list || []).find(t => t.name !== 'widget' && t.name !== 'map_hidden') || { name: _('New Note') };
+                const tagName = uniqueTag.name;
+                const safeTagName = (tagName).replace(/'/g, "\\'");
                 
-                const openNoteAction = `window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '${tId}', targetType: 'map_location', name: '${safeName}' } }))`;
+                // Note Content Preview
+                const noteContent = note.note || "";
+                const safeNoteContent = (noteContent).replace(/'/g, "\\'");
+                
+                const openNoteAction = `window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '${tId}', targetType: 'map_location', name: '${safeTagName}' } }))`;
                 
                 // [Modified] Remove Note from Map (Hide) API
                 window.AoTMapApp[uniqueId].deleteMapNote = function(noteId) {
@@ -756,76 +757,69 @@
                     const e = document.getElementById(`note-row2-edit-${noteId}`);
                     if (v && e) {
                         if (v.style.display === 'none') {
-                           v.style.display = 'block';
+                           v.style.display = 'flex';
                            e.style.display = 'none';
                         } else {
                            v.style.display = 'none';
-                           e.style.display = 'block';
+                           e.style.display = 'flex';
                         }
                     }
                 };
 
-                // Enable Input
-                const renameAction = `window.AoTMapApp['${uniqueId}'].updateMapNoteName('${noteId}', document.getElementById('rename-input-${noteId}').value)`;
-                
+                // Enable Input (Tag Rename)
+                const renameAction = `window.AoTMapApp['${uniqueId}'].updateMapNoteTags('${noteId}', document.getElementById('rename-input-${noteId}').value)`;
+
                 const deleteAction = `window.AoTMapApp['${uniqueId}'].deleteMapNote('${noteId}')`;
                 const toggleAction = `window.AoTMapApp['${uniqueId}'].toggleNoteEditMode('${noteId}')`;
 
                 marker.bindPopup(() => {
-                     // Fetch Last Note Title (Async) - purely for preview
-                     setTimeout(() => {
-                         fetch(`/notes/target/${tId}`)
-                            .then(r => r.json())
-                            .then(notes => {
-                                const el = document.getElementById(`last-note-title-${noteId}`); // Use noteId for unique DOM ID
-                                if (el) {
-                                    if (notes && notes.length > 0) {
-                                        el.innerText = notes[0].note.substring(0, 30) + (notes[0].note.length > 30 ? '...' : '');
-                                        el.style.color = '#555';
-                                    } else {
-                                        el.innerText = _('no_notes');
-                                        el.style.color = '#ccc';
-                                    }
-                                }
-                            })
-                            .catch(() => {});
-                     }, 100);
+                     const btnStyle = 'height: 28px; border-radius: 14px; font-size: 1em; display: flex; align-items: center; justify-content: center; padding: 0 16px; border: none; transition: all 0.2s; color: black; white-space: nowrap;';
+                     const primaryBtnStyle = `${btnStyle} background: var(--primary, #995aff);`;
+                     const grayBtnStyle = `${btnStyle} background: #adb5bd;`; // Soft gray for Remove
+                     const secondaryBtnStyle = `${btnStyle} background: #e9ecef;`; // Light gray for Edit
 
                      return `
-                        <div style="min-width: 180px; padding: 5px;">
-                            <!-- Row 1: Name + Edit Button -->
-                            <div class="aot-popup-title" style="font-size: 1.4em; font-weight: bold; margin: 0; line-height: 1.2; word-break: break-all; text-align: left; padding-top: 15px; margin-bottom: 8px; color: #333; display: flex; justify-content: space-between; align-items: start;">
-                                <span>${safeName}</span>
-                                <button class="btn btn-sm btn-link" onclick="${toggleAction}" style="padding: 0; font-size: 0.6em; color: #999; text-decoration: none;">${_('edit')}</button>
+                        <div style="min-width: 200px; padding: 10px; font-family: 'Inter', sans-serif;">
+                            <!-- Row 1: Unique Tag (Plain Text, Black) -->
+                            <div style="font-size: 1.1em; font-weight: 600; color: #000; margin-bottom: 12px; word-break: break-all;">
+                                ${safeTagName}
                             </div>
                             
-                            <hr style="margin: 8px 0; border-top: 1px solid #eee;">
-                            
-                            <!-- Row 2 View: Create Link + Status -->
-                            <div id="note-row2-view-${noteId}" style="display: flex; flex-direction: column; gap: 6px;">
-                                <button class="btn btn-primary" style="border-radius: 14px; height: 28px; width: 100%; font-size: 0.9em; display: flex; align-items: center; justify-content: center; padding: 0;"
-                                    onclick="${openNoteAction}">
-                                    <i class="fas fa-clipboard mr-2"></i> ${window._('Open Notes')}
-                                </button>
-                                <div id="last-note-title-${noteId}" style="font-size: 0.85em; color: #888; padding-left: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                    ${window._('Loading')}
+                            <!-- Row 2 View: Edit + Open Notes Buttons -->
+                            <div id="note-row2-view-${noteId}" style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button class="btn" style="${secondaryBtnStyle}" onclick="${toggleAction}">
+                                        ${_('edit')}
+                                    </button>
+                                    <button class="btn" style="${primaryBtnStyle}" onclick="${openNoteAction}">
+                                        ${_('Open Notes')}
+                                    </button>
+                                </div>
+                                <div style="font-size: 0.9em; color: #666; line-height: 1.4; word-break: break-all; max-height: 60px; overflow-y: auto; padding: 4px 0;">
+                                    ${safeNoteContent || '<span style="color:#ccc;">' + _('no_content') + '</span>'}
                                 </div>
                             </div>
                             
-                            <!-- Row 2 Edit: Rename Input + Save + Delete -->
-                            <div id="note-row2-edit-${noteId}" style="display: none;">
-                                <div style="display: flex; gap: 6px; margin-bottom: 8px; align-items: stretch;">
-                                    <input type="text" id="rename-input-${noteId}" value="${safeName}" class="form-control" style="flex:1; padding: 2px 6px; font-size: 0.95em;">
-                                    <button class="btn btn-sm btn-primary" style="padding: 2px 8px; white-space: nowrap;" onclick="${renameAction}">${window._('Save')}</button>
+                            <!-- Row 2 Edit: Input + Save + Delete Buttons -->
+                            <div id="note-row2-edit-${noteId}" style="display: none; flex-direction: column; gap: 8px;">
+                                <input type="text" id="rename-input-${noteId}" value="${safeTagName}" class="form-control" 
+                                    style="height: 30px; font-size: 0.9em; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button class="btn" style="${grayBtnStyle}" onclick="${deleteAction}">
+                                        ${_('Remove from Map')}
+                                    </button>
+                                    <button class="btn" style="${primaryBtnStyle}" onclick="${renameAction}">
+                                        ${_('Save')}
+                                    </button>
                                 </div>
-                                <button class="btn btn-danger btn-block btn-sm" onclick="${deleteAction}">${window._('Remove from Map')}</button>
                             </div>
                         </div>
                      `;
                 }, {
                     className: 'aot-map-popup',
-                    minWidth: 160,
-                    maxWidth: 200
+                    minWidth: 200,
+                    maxWidth: 240,
+                    closeOnClick: false
                 });
                 marker.addTo(labelLayers.notes);
                             }
@@ -1597,7 +1591,7 @@
 
             // HTML for Marker (Visual Label) - No onclick
             // [Fix] Added 'marker-pill' class to ensure aot-map-alignment.js treats it as centered
-            const html = `<div class="aot-label-content marker-pill p-1 rounded shadow-sm text-center" 
+            const html = `<div class="aot-label-content ${className} marker-pill shadow-sm text-center" 
                                style="width: max-content; font-size:${fontEm}em; line-height:1.2; white-space: nowrap; border: 1px solid; ${bgStyle}; margin: 0; transform: translate(-50%, -50%); pointer-events: auto; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                         <span style="font-weight:bold;">${text}</span>
                     </div>`;

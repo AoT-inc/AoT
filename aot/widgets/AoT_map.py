@@ -159,8 +159,8 @@ WIDGET_HEAD_HTML = """
   
   .marker-pill {
       display: inline-block;
-      padding: 0.6em 1.2em !important; 
-      border-radius: 2em;
+      padding: 2px 8px; 
+      border-radius: 4px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.4);
       text-align: center;
       white-space: nowrap;

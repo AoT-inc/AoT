@@ -204,8 +204,14 @@ def api_notes_geo_get():
             
         notes = query.order_by(Notes.date_time.desc()).all()
         
+        # Prepare tag lookup
+        all_tags = {t.unique_id: t.name for t in NoteTags.query.all()}
+
         result = []
         for n in notes:
+            tag_ids = [t.strip() for t in (n.tags or "").split(',') if t.strip()]
+            tag_objects = [{'unique_id': tid, 'name': all_tags.get(tid, 'Unknown')} for tid in tag_ids]
+            
             result.append({
                 'unique_id': n.unique_id,
                 'note': n.note,
@@ -214,6 +220,7 @@ def api_notes_geo_get():
                 'user': n.author.name if n.author else (n.name or '?'),
                 'files': n.files,
                 'tags': n.tags,
+                'tag_list': tag_objects, # [New] Detailed tag info
                 'target_id': n.target_id,
                 'target_type': n.target_type,
                 'gps_lat': n.gps_lat,
@@ -308,6 +315,49 @@ def api_notes_update(unique_id):
             note.name = data['name']
         if 'note' in data:
             note.note = data['note']
+            
+        # [New] Handle Unique Tag Update
+        # If 'new_tag_name' is provided, we replace the "unique" tag (non-widget, non-hidden)
+        if 'new_tag_name' in data:
+            new_name = data['new_tag_name'].strip()
+            if new_name:
+                # 1. Resolve/Create new tag
+                new_tag = NoteTags.query.filter_by(name=new_name).first()
+                if not new_tag:
+                    new_tag = NoteTags(name=new_name)
+                    db.session.add(new_tag)
+                    db.session.flush()
+                new_tag_id = new_tag.unique_id
+                
+                # 2. Identify all notes to update (Propagation)
+                # If the note belongs to a thread, update the whole thread.
+                target_id = note.target_id
+                if target_id:
+                    target_notes = Notes.query.filter_by(target_id=target_id).all()
+                else:
+                    target_notes = [note]
+
+                # 3. Update current tags for each note
+                reserved_names = ['widget', 'map_hidden']
+                reserved_ids = [t.unique_id for t in NoteTags.query.filter(NoteTags.name.in_(reserved_names)).all()]
+                
+                for n_to_upd in target_notes:
+                    current_tag_ids = [t.strip() for t in (n_to_upd.tags or "").split(',') if t.strip()]
+                    new_tag_list = []
+                    unique_tag_found = False
+                    
+                    for tid in current_tag_ids:
+                        if tid not in reserved_ids:
+                            if not unique_tag_found:
+                                new_tag_list.append(new_tag_id)
+                                unique_tag_found = True
+                        else:
+                            new_tag_list.append(tid)
+                    
+                    if not unique_tag_found:
+                        new_tag_list.append(new_tag_id)
+                    
+                    n_to_upd.tags = ','.join(new_tag_list)
             
         db.session.commit()
         return jsonify({'ok': True, 'unique_id': unique_id})
