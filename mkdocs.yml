@@ -13,43 +13,15 @@ plugins:
       languages:
         ko: "한국어"
         en: "English"
-        de: "Deutsche"
-        es: "Español"
-        fr: "Français"
-        id: "Bahasa Indonesia"
-        it: "Italiano"
-        nl: "Nederlands"
-        nn: "Norsk"
-        pl: "Polski"
-        pt: "Português"
-        ru: "русский язык"
-        sr: "српски"
-        sv: "Svenska"
-        tr: "Türkçe"
-        zh: "中文"
+        ja: "日本語"
       no_translation:
         ko: "이 페이지는 한국어로 번역되지 않았습니다."
         en: "This page isn't translated to English."
-        de: "Deze pagina is niet vertaald naar het Duits."
-        es: "Esta página no está traducida al castellano."
-        fr: "Cette page n'est pas traduite en français."
-        id: "Halaman ini tidak diterjemahkan ke bahasa Indonesia."
-        it: "Questa pagina non è tradotta in italiano."
-        nl: ""
-        nn: "Denne siden er ikke oversatt til norsk."
-        pl: "Ta strona nie jest przetłumaczona na język polski."
-        pt: "Esta página não está traduzida para o português."
-        ru: "Эта страница не переведена на русский язык."
-        sr: "Ова страница није преведена на српски."
-        sv: "Denna sida är inte översatt till svenska."
-        tr: "Bu sayfa Türkçe'ye çevrilmemiştir."
-        zh: "此页面未翻译成中文."
+        ja: "このページは日本語に翻訳されていません。"
       translate_nav:
         en:
           Usage: "Usage"
           Supported Devices: "Supported Devices"
-        es:
-          Usage: "Uso"
           Supported Devices: "Dispositivos Soportados"
 
   - minify:
@@ -186,7 +158,7 @@ nav:
   - Troubleshooting.md
 
 extra:
-  version: 26.0.7
+  version: 26.0.0
   alternate:
     - name: 한국어
       link: ""
@@ -194,45 +166,6 @@ extra:
     - name: English
       link: index.en/
       lang: en
-    - name: Deutsche
-      link: index.de/
-      lang: de
-    - name: Español
-      link: index.es/
-      lang: es
-    - name: Français
-      link: index.fr/
-      lang: fr
-    - name: Bahasa Indonesia
-      link: index.id/
-      lang: id
-    - name: Italiano
-      link: index.it/
-      lang: it
-    - name: Nederlands
-      link: index.nl/
-      lang: nl
-    - name: Norsk
-      link: index.nn/
-      lang: nn
-    - name: Polski
-      link: index.pl/
-      lang: pl
-    - name: Português
-      link: index.pt/
-      lang: pt
-    - name: русский язык
-      link: index.ru/
-      lang: ru
-    - name: српски
-      link: index.sr/
-      lang: sr
-    - name: Svenska
-      link: index.sv/
-      lang: sv
-    - name: Türkçe
-      link: index.tr/
-      lang: tr
-    - name: 中文
-      link: index.zh/
-      lang: zh
+    - name: 日本語
+      link: index.ja/
+      lang: ja

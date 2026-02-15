@@ -76,19 +76,7 @@ LANGUAGE=$(dialog --title "AoT Installer" \
                   --menu "User Interface Language" 23 68 14 \
                   "ko": "한국어 (Korean)" \
                   "en": "English" \
-                  "de": "Deutsche (German)" \
-                  "es": "Español (Spanish)" \
-                  "fr": "Français (French)" \
-                  "it": "Italiano (Italian)" \
-                  "nl": "Nederlands (Dutch)" \
-                  "nn": "Norsk (Norwegian)" \
-                  "pl": "Polski (Polish)" \
-                  "pt": "Português (Portuguese)" \
-                  "ru": "русский язык (Russian)" \
-                  "sr": "српски (Serbian)" \
-                  "sv": "Svenska (Swedish)" \
-                  "tr": "Türkçe (Turkish)" \
-                  "zh": "中文 (Chinese)" \
+                  "ja": "日本語 (Japanese)" \
                   3>&1 1>&2 2>&3)
 exitstatus=$?
 if [ $exitstatus != 0 ]; then

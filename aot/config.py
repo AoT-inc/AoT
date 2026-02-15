@@ -18,7 +18,7 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = '718f314963c2'
-AOT_VERSION = '26.0.7'
+AOT_VERSION = '26.0.0'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -164,20 +164,6 @@ TAGS_URL = 'https://api.github.com/repos/aot-inc/AoT/git/refs/tags'
 LANGUAGES = {
     'ko': '한국어 (Korean)',
     'en': 'English',
-    'de': 'Deutsche (German)',
-    'es': 'Español (Spanish)',
-    'fr': 'Français (French)',
-    'id': 'Bahasa Indonesia (Indonesian)',
-    'it': 'Italiano (Italian)',
-    'nn': 'Norsk (Norwegian)',
-    'nl': 'Nederlands (Dutch)',
-    'pl': 'Polski (Polish)',
-    'pt': 'Português (Portuguese)',
-    'ru': 'русский язык (Russian)',
-    'sr': 'српски (Serbian)',
-    'sv': 'Svenska (Swedish)',
-    'tr': 'Türkçe (Turkish)',
-    'zh': '中文 (Chinese)',
     'ja': '日本語 (Japanese)'
 }
 
