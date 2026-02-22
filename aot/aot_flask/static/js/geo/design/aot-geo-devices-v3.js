@@ -66,7 +66,9 @@ class AoTGeoDevices {
         });
 
         uniqueDevs.forEach(dev => {
-            if (dev.lat && dev.lng) {
+            // [Fix] Only render markers for devices specifically added to this map design
+            // (prevents unselected channels from appearing if the base device has global coordinates)
+            if (dev.lat && dev.lng && dev.is_on_map) {
                 this.createDeviceMarker(dev);
             }
         });

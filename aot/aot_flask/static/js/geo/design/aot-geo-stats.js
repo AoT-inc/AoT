@@ -111,8 +111,7 @@ class AoTGeoStats {
                     const pt = (l.feature.geometry.type === 'Point') ? l.feature.geometry.coordinates : window.turf.centroid(l.feature).geometry.coordinates;
                     const turfPt = window.turf.point(pt);
 
-                    let found = false;
-
+                    let foundInZone = false;
                     // A. Check containment in Zones
                     for (const z of allZones) {
                         try {
@@ -120,24 +119,30 @@ class AoTGeoStats {
                                 const zid = z.feature.properties.node_id;
                                 if (!layersByZone[zid]) layersByZone[zid] = [];
                                 layersByZone[zid].push(l);
-                                found = true; break;
+                                // [Fix] Mark for inclusion to bypass strict ID checks
+                                l.feature.properties._force_include = true;
+                                foundInZone = true;
+                                // Continue to check other zones/sites for overlap support
                             }
                         } catch(e) {}
                     }
-                    if (found) return;
 
                     // B. Check containment in Sites
+                    let foundInSite = false;
                     for (const s of allSites) {
                         try {
                            if (s.feature && s.feature.geometry && window.turf.booleanPointInPolygon(turfPt, s.feature)) {
                                const sid = s.feature.properties.node_id;
                                if (!layersBySite[sid]) layersBySite[sid] = [];
                                layersBySite[sid].push(l);
-                               found = true; break;
+                               // [Fix] Mark for inclusion
+                               l.feature.properties._force_include = true;
+                               foundInSite = true;
+                               // Continue for overlaps
                            }
                         } catch(e) {}
                     }
-                    if (found) return;
+                    if (foundInZone || foundInSite) return;
 
                     // C. Nearest Neighbor (Distance < 2km)
                     let minDist = Infinity;
@@ -396,6 +401,72 @@ class AoTGeoStats {
                 data.sites.push(siteData);
             });
 
+            // 4. [New] Calculate Global Totals Independently (Avoid double counting or miss via Site-by-Site summing)
+            const globalTotals = {
+                siteCount: allSites.length,
+                zoneCount: allZones.length,
+                deviceCount: 0,
+                area: 0,
+                pipeMainLen: 0, pipeBranchLen: 0,
+                emitters: 0, waterUsage: 0,
+                input: 0, output: 0, function: 0, totalPipeLen: 0
+            };
+
+            // Calculate Area for all sites (Union or Sum? Sum is standard for "Portfolio Area")
+            allSites.forEach(s => {
+                if (s.feature) globalTotals.area += (window.turf.area(s.feature) || 0);
+            });
+
+            // Iterate over all processed layers ONCE for device counts
+            processedIds.forEach(id => {
+                // Find the layer from current search groups
+                let layer = null;
+                const checkIn = (group) => {
+                    if (layer || !group) return;
+                    group.eachLayer(l => { if(l.feature?.properties?.node_id === id) layer = l; });
+                };
+                ['site', 'zone', 'equipment', 'aot_device', 'connection'].forEach(k => checkIn(this.parent.layerStorage[k]));
+                if (!layer || !layer.feature) return;
+
+                const props = layer.feature.properties;
+                const type = props.aot_type;
+
+                if (type === 'equipment' || type === 'aot_device' || type === 'device') {
+                    const subType = props.sub_type || props.device_type;
+                    
+                    // Pipes
+                    if (subType === 'pipe_main' || subType === 'pipe_branch') {
+                        const len = window.turf.length(layer.feature, { units: 'meters' });
+                        if (subType === 'pipe_main') globalTotals.pipeMainLen += len;
+                        else globalTotals.pipeBranchLen += len;
+                        
+                        // Drip
+                        if (props.is_drip) {
+                            const interval = parseFloat(props.drip_config?.interval) || 1.0;
+                            const flow = parseFloat(props.drip_config?.flow) || 0;
+                            const dripCount = Math.floor(len / interval);
+                            globalTotals.emitters += dripCount;
+                            globalTotals.waterUsage += (dripCount * flow);
+                        }
+                    } 
+                    // Devices
+                    else if (subType === 'sprinkler') {
+                        globalTotals.emitters++;
+                        globalTotals.waterUsage += (parseFloat(props.flow) || parseFloat(props.flow_rate) || 0);
+                    } else if (subType === 'input') {
+                        globalTotals.input++;
+                    } else if (subType === 'output') {
+                        globalTotals.output++;
+                    } else if (['function', 'trigger', 'pid', 'conditional', 'custom', 'generic_function'].includes(subType)) {
+                        globalTotals.function++;
+                    }
+                }
+            });
+            globalTotals.deviceCount = globalTotals.emitters + globalTotals.input + globalTotals.output + globalTotals.function;
+            globalTotals.totalPipeLen = globalTotals.pipeMainLen + globalTotals.pipeBranchLen;
+
+            data.globalTotals = globalTotals; // Store for UI
+
             // Final Global Aggregation & Sorting
             this._aggregateMainPipes(data);
             this._sortDesignData(data);
@@ -510,6 +581,10 @@ class AoTGeoStats {
             totals.totalPipeLen = totals.pipeMainLen + totals.pipeBranchLen;
             totals.deviceCount = totals.emitters + totals.input + totals.output + totals.function; 
 
+            // [Fix] If showing ALL sites, use the more accurate Global Totals calculated in updateDesignInfo
+            const isAllSelected = (this._selectedSiteIds.length === sites.length);
+            const finalTotals = (isAllSelected && data.globalTotals) ? data.globalTotals : totals;
+
             const fmt = (n) => (n || 0).toFixed(1);
             const fmtInt = (n) => (n || 0).toFixed(0);
 
@@ -538,17 +613,17 @@ class AoTGeoStats {
             // --- 1. Summary ---
             // Removed connection stats from Summary (as per request, Site/Zone specific)
             html += `<h6 class="font-weight-bold mb-2 pt-1 border-bottom pb-2">${_('Design Summary')}</h6>`;
-            html += `
+             html += `
             <table class="table table-bordered table-sm mb-4 text-center bg-white">
                 <thead class="thead-light"><tr>
                     <th>${_('Site Count')}</th><th>${_('Zone Count')}</th><th>${_('Pipe Length')}</th><th>${_('Number of Emitters')}</th><th>${_('AoT Device Count')}</th>
                 </tr></thead>
                 <tbody><tr>
-                    <td class="font-weight-bold">${totals.siteCount}</td>
-                    <td class="font-weight-bold">${totals.zoneCount}</td>
-                    <td class="font-weight-bold">${fmt(totals.totalPipeLen)}m</td>
-                    <td class="font-weight-bold">${totals.emitters}</td>
-                    <td class="font-weight-bold">${totals.input + totals.output + totals.function}</td>
+                    <td class="font-weight-bold">${finalTotals.siteCount}</td>
+                    <td class="font-weight-bold">${finalTotals.zoneCount}</td>
+                    <td class="font-weight-bold">${fmt(finalTotals.totalPipeLen)}m</td>
+                    <td class="font-weight-bold">${finalTotals.emitters}</td>
+                    <td class="font-weight-bold">${finalTotals.input + finalTotals.output + finalTotals.function}</td>
                 </tr></tbody>
             </table>`;
 

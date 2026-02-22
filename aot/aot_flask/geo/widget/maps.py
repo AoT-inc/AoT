@@ -249,6 +249,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     fallback_lat = widget_options.get('fallback_latitude', None) if widget_options else None
     fallback_lng = widget_options.get('fallback_longitude', None) if widget_options else None
     w_zoom = widget_options.get('default_zoom') if widget_options else None
+    if w_zoom == '': w_zoom = None # [Fix] Treat empty string as None for fallback
     raw_map_uuid = (widget_options.get('map_uuid') or widget_options.get('custom_option_map_uuid')) if widget_options else None
     selected_map_uuid = str(raw_map_uuid).strip() if raw_map_uuid else None
 

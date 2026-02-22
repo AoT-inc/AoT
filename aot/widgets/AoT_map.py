@@ -59,8 +59,9 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
              final_options['include_all_devices'] = False
 
     # 3. Handle Map Change -> Reset View if Map Changed
-    old_map_uuid = str(options.get('map_uuid', '')).strip().lower()
-    new_map_uuid = str(final_options.get('map_uuid', '')).strip().lower()
+    # [Fix] Handle None values safely to prevent false 'Map Changed' triggers
+    old_map_uuid = str(options.get('map_uuid') or '').strip().lower()
+    new_map_uuid = str(final_options.get('map_uuid') or '').strip().lower()
 
     if old_map_uuid and new_map_uuid and old_map_uuid != new_map_uuid:
         logger.info(f"[AoT Map Save] Map changed from {old_map_uuid} to {new_map_uuid}. Resetting view.")
