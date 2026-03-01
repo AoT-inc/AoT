@@ -79,6 +79,8 @@ AoT는 Raspberry Pi OS 12(Bookworm), Lite/데스크탑, 32/64비트와 Debian 12
 
 https://github.com/aot-inc/AoT
 
+[![AoT - 공식 웹사이트](https://aotinc.framer.ai)
+[![지도에서 스마트 제어 - 유튜브 영상](https://youtu.be/TEtNP3KA404)
 [![광합성 촉진 방법 - 유튜브 영상](https://www.youtube.com/watch?v=q-QhT4KU1Dc)
 
 라이선스
