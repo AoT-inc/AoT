@@ -18,7 +18,7 @@ from sqlalchemy import func
 from aot.config import (INSTALL_DIRECTORY, LANGUAGES, LOGIN_ATTEMPTS,
                            LOGIN_BAN_SECONDS, LOGIN_LOG_FILE)
 from aot.config_translations import TRANSLATIONS
-from aot.databases.models import AlembicVersion, Misc, Role, User
+from aot.databases.models import AlembicVersion, GuestLoginToken, Misc, Role, User
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import forms_authentication
 from aot.aot_flask.utils import utils_general
@@ -384,6 +384,93 @@ def logout():
 
     flash(gettext("Successfully logged out"), 'success')
     return response
+
+
+@blueprint.route('/auto-login')
+def auto_login():
+    """Auto-login using a one-time token."""
+    # Hostname Guard
+    try:
+        settings = Misc.query.first()
+        host = settings.hostname_override if settings and settings.hostname_override else socket.gethostname()
+        if host not in ['aot1.aotinc.co.kr', 'aot1']:
+            return "Auto-login disabled on this server", 404
+    except Exception:
+        logger.exception("Hostname guard check failed")
+        return "Internal Error", 500
+
+    token_str = request.args.get('token')
+    if not token_str:
+        flash(gettext("Token required"), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    token_obj = GuestLoginToken.query.filter_by(token=token_str, used=False).first()
+
+    if not token_obj or token_obj.expires_at < datetime.datetime.utcnow():
+        flash(gettext("Invalid or expired token"), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    user = User.query.get(token_obj.user_id)
+    if not user:
+        flash(gettext("Associated user not found"), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    # Log the login
+    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    role = Role.query.get(user.role_id)
+    role_name = role.name if role else 'NA'
+    login_log(user.name, role_name, user_ip, 'AUTO-LOGIN')
+
+    # Log in the user
+    login_user = User()
+    login_user.id = user.id
+    login_user.name = user.name
+    flask_login.login_user(login_user, remember=True)
+
+    # Mark token as used
+    token_obj.used = True
+    db.session.commit()
+
+    flash(gettext("Auto-login successful! Welcome, guest."), "success")
+    return redirect(url_for('routes_general.home'))
+
+
+@blueprint.route('/demo-start')
+def demo_start():
+    """Immediately login as guest and redirect to dashboard."""
+    # Hostname Guard
+    try:
+        settings = Misc.query.first()
+        host = settings.hostname_override if settings and settings.hostname_override else socket.gethostname()
+        if host not in ['aot1.aotinc.co.kr', 'aot1']:
+            return "Demo-start disabled on this server", 404
+    except Exception:
+        logger.exception("Hostname guard check failed")
+        return "Internal Error", 500
+
+    # Find aot-guest user
+    user = User.query.filter_by(name='aot-guest').first()
+    if not user:
+        # Fallback to 'guest' if 'aot-guest' doesn't exist
+        user = User.query.filter_by(name='guest').first()
+    
+    if not user:
+        return "Guest user not configured", 404
+
+    # Log the login
+    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    role = Role.query.get(user.role_id)
+    role_name = role.name if role else 'Guest'
+    login_log(user.name, role_name, user_ip, 'DEMO-START')
+
+    # Log in the user
+    login_user = User()
+    login_user.id = user.id
+    login_user.name = user.name
+    flask_login.login_user(login_user, remember=True)
+
+    # Directly redirect to dashboard
+    return redirect(url_for('routes_dashboard.page_dashboard_default'))
 
 
 @blueprint.route('/newremote/')

@@ -69,6 +69,7 @@ from .pid import PID
 from .remote import Remote
 from .role import Role
 from .smtp import SMTP
+from .guest_login_token import GuestLoginToken
 
 
 

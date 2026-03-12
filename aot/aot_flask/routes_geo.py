@@ -196,6 +196,9 @@ def api_geo_overlays_delta():
     """Efficient Delta Save for individual features"""
     from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
     
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+        
     data = request.get_json()
     result, error = GeoOverlayManager.save_delta(data)
     
@@ -211,6 +214,9 @@ def api_geo_generate_pipes():
     Generate Branch Pipes on the Backend for stability.
     Payload: { parent_feature, ref_line, config, map_uuid }
     """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+        
     from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
     
     data = request.get_json()
@@ -415,7 +421,7 @@ def page_design():
     Geo Design Tool.
     Interactive map editor for Sites, Zones, and Devices.
     """
-    if not utils_general.user_has_permission('edit_settings'):
+    if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
     
     # GeoMap configs - [Optimization] Filter for Design Maps only in SQL
@@ -453,7 +459,7 @@ def page_layer():
     Geo Layer Manager.
     Manages external GIS inputs (Layers).
     """
-    if not utils_general.user_has_permission('edit_settings'):
+    if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
     
     geo_layers = GeoLayer.query.all()

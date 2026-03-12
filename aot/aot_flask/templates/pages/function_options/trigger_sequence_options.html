@@ -184,13 +184,13 @@
     {{ init_gridstack_actions(each_function.unique_id, cell_height=48) }}
 
     <script>
-        function toggleSequenceFields(id, mode) {
+        window.toggleSequenceFields = function(id, mode) {
             if (mode === 'total') {
                 $('.sequence-duration-field-' + id).hide();
             } else {
                 $('.sequence-duration-field-' + id).show();
             }
-        }
+        };
     </script>
 
     <script>
