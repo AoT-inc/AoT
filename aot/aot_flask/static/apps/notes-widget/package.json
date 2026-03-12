@@ -1,7 +1,7 @@
 {
   "name": "notes-widget",
   "private": true,
-  "version": "26.0.7",
+  "version": "26.1.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

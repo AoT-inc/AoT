@@ -169,9 +169,22 @@ if (!window.AoTMapLoader) {
         }
 
         // 3. Add Layers (Base Maps & Overlays)
-        // 3. Add Layers (Base Maps & Overlays)
         // Allow override from customOptions (e.g. for Preview Map to be clean)
-        const layers = (customOptions.layers !== undefined) ? customOptions.layers : (config.layers || []);
+        let layers = (config.layers || []);
+        if (customOptions.layers !== undefined) {
+            const selection = Array.isArray(customOptions.layers) ? customOptions.layers : [customOptions.layers];
+            // [Fix] Handle selection of strings (names/ids) from Widget Persistence
+            if (selection.length > 0 && typeof selection[0] === 'string') {
+                layers = layers.map(l => {
+                    const isSelected = selection.includes(l.name) || selection.includes(l.id) || selection.includes(l.base_id);
+                    return { ...l, visible: isSelected };
+                });
+            } else {
+                // Already a list of objects
+                layers = selection;
+            }
+        }
+        
         const baseMaps = {};
         const overlayMaps = {};
         let activeBaseLayer = null;

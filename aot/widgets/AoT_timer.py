@@ -776,6 +776,9 @@ WIDGET_INFORMATION = {
       $.ajax({
         type: 'GET',
         url: (window.AoT_BASE_PATH || '') + '/output_mod/' + cmdStr,
+        headers: {
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+        },
         success: function(data) {
           getGPIOStateOutput_tm(widget_id);
         },

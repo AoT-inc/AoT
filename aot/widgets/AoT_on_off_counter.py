@@ -63,6 +63,38 @@ from aot.aot_client import DaemonControl
 from aot.aot_flask.utils import utils_general
 from aot.utils.constraints_pass import constraints_pass_positive_value
 
+# ------------------------------------------------------------------------------
+# Widget Definition
+# ------------------------------------------------------------------------------
+
+def execute_at_modification(mod_widget, request_form, custom_options_presave, custom_options_postsave):
+    """
+    Standardized storage logic for On/Off Counter widget.
+    Ensures that AJAX-submitted options are correctly merged.
+    """
+    options = {}
+    try:
+        if mod_widget.custom_options:
+            options = json.loads(mod_widget.custom_options) if isinstance(mod_widget.custom_options, str) else dict(mod_widget.custom_options)
+    except: pass
+
+    final_options = options.copy()
+    
+    # Merge Options (Highest Reliability)
+    if custom_options_postsave:
+        for k, v in custom_options_postsave.items():
+            final_options[k] = v
+
+    # If specific output triggers require special logic, add here
+    return True, True, mod_widget, final_options
+
+
+def generate_page_variables(widget_unique_id, widget_options):
+    """
+    Prepare variables for template rendering.
+    """
+    return widget_options
+
 # --- local validator: UTC offset must be within [-12.0, 14.0]
 # returns (True, None) if ok, else (False, 'error message')
 def constraints_pass_utc_offset(value):
@@ -844,7 +876,9 @@ WIDGET_INFORMATION = {
     ),
 
     'widget_width': 24,
-    'widget_height': 7,
+    'widget_height': 12,
+    'generate_page_variables': generate_page_variables,
+    'execute_at_modification': execute_at_modification,
 
     'custom_options': [
         {

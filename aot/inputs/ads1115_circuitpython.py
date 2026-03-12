@@ -6,6 +6,7 @@ import copy
 from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
+from aot.utils.i2c_bus import GlobalI2CBusLock
 
 
 def constraints_pass_measurement_repetitions(mod_input, value):
@@ -145,16 +146,18 @@ class InputModule(AbstractInput):
         # Conduct multiple measurements for averaging
         measurement_totals = {}
         time_start = timeit.default_timer()
-        for _ in range(measurement_range):
-            for channel in self.channels_measurement:
-                if self.is_enabled(channel):
-                    if channel not in measurement_totals:
-                        measurement_totals[channel] = 0
-                    chan = self.analog_in(self.adc, channel)
-                    self.adc.gain = self.adc_gain
-                    self.logger.debug(
-                        f"Channel {channel}: Gain {self.adc_gain}, {chan.value} raw, {chan.voltage} volts")
-                    measurement_totals[channel] += chan.voltage
+        
+        with GlobalI2CBusLock(self.input_dev.i2c_bus):
+            for _ in range(measurement_range):
+                for channel in self.channels_measurement:
+                    if self.is_enabled(channel):
+                        if channel not in measurement_totals:
+                            measurement_totals[channel] = 0
+                        chan = self.analog_in(self.adc, channel)
+                        self.adc.gain = self.adc_gain
+                        self.logger.debug(
+                            f"Channel {channel}: Gain {self.adc_gain}, {chan.value} raw, {chan.voltage} volts")
+                        measurement_totals[channel] += chan.voltage
 
         self.logger.debug(f"All measurements completed in {timeit.default_timer() - time_start:.3f} seconds")
 
