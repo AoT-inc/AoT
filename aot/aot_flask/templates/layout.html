@@ -500,13 +500,13 @@
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content" style="padding: 1em">
         <div class="modal-header">
-          <h5 class="modal-title">{{ _ ('Preferences') }}</h5>
+          <h5 class="modal-title">{{ _('Preferences') }}</h5>
         </div>
         <form method="post" action="/change_preferences">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="form-row" style="padding-top: 0.5em">
             <div class="col-auto">
-              <label class="form-check-label">{{ _ ('Language') }}</label>
+              <label class="form-check-label">{{ _('Language') }}</label>
               <div>
                 <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language"
                   name="language" title="{{ _(" Selecting a language will override the web browser's language") }}">
@@ -521,7 +521,7 @@
               </div>
             </div>
             <div class="col-auto">
-              <label class="form-check-label">{{ _ ('Theme') }}</label>
+              <label class="form-check-label">{{ _('Theme') }}</label>
               <div>
                 <select class="form-control" id="theme" name="theme">
                   {% for value, name in themes %}
@@ -539,7 +539,7 @@
             </div>
             <div class="col-auto">
               <input class="btn btn-primary" id="user_preferences_save" name="user_preferences_save" type="submit"
-                value="{{ _ ('Save') }}">
+                value="{{ _('Save') }}">
             </div>
           </div>
         </form>
@@ -554,7 +554,7 @@
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content" style="padding: 1em">
         <div class="modal-header">
-          <h5 class="modal-title">{{ _ ('Dashboard Settings') }}</h5>
+          <h5 class="modal-title">{{ _('Dashboard Settings') }}</h5>
         </div>
         <form method="post" action="/dashboard/{{ each_dash.unique_id }}">
           {{ form_dashboard.csrf_token }}

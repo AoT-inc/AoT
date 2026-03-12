@@ -198,7 +198,7 @@ WIDGET_INFORMATION = {
   function modOutputPWM(btn_val) {
     $.ajax({
       type: 'GET',
-      url: '/output_mod/' + btn_val,
+      url: (window.AoT_BASE_PATH || '') + '/output_mod/' + btn_val,
     {% if not misc.hide_alert_success %}
       success: function(data) {
         if (data.startsWith("SUCCESS")) {
@@ -239,7 +239,7 @@ WIDGET_INFORMATION = {
     if (decimal_places === null) {
       decimal_places = 1;
     }
-    const url = '/last/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + max_measure_age_sec.toString();
+    const url = (window.AoT_BASE_PATH || '') + '/last/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + max_measure_age_sec.toString();
     $.ajax(url, {
       success: function(data, responseText, jqXHR) {
         if (jqXHR.status === 204) {
@@ -294,7 +294,7 @@ WIDGET_INFORMATION = {
     if (decimal_places === null) {
       decimal_places = 1;
     }
-    const url = '/outputstate_unique_id/' + unique_id + '/' + channel_id;
+    const url = (window.AoT_BASE_PATH || '') + '/outputstate_unique_id/' + unique_id + '/' + channel_id;
     $.getJSON(url,
       function(state, responseText, jqXHR) {
         if (jqXHR.status !== 204) {

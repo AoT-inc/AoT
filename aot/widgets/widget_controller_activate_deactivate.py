@@ -182,7 +182,7 @@ WIDGET_INFORMATION = {
     const controller_state = btn_val.split('/')[2];
     $.ajax({
       type: 'GET',
-      url: '/controller_activate_deactivate/' + controller_id + '/' + controller_state,
+      url: (window.AoT_BASE_PATH || '') + '/controller_activate_deactivate/' + controller_id + '/' + controller_state,
     {% if not misc.hide_alert_success %}
       success: function(data) {
         toastr['success'](data);
@@ -204,7 +204,7 @@ WIDGET_INFORMATION = {
 
   // Retrieve the controller state
   function getControllerState(widget_id, dev_id) {
-    const url = '/controller_state/' + dev_id;
+    const url = (window.AoT_BASE_PATH || '') + '/controller_state/' + dev_id;
     $.ajax(url, {
       success: function(data, responseText, jqXHR) {
         if (jqXHR.status === 204) {

@@ -270,7 +270,7 @@ WIDGET_INFORMATION = {
       decimal_places = 1;
     }
 
-    const url = '/last/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + max_measure_age_sec.toString();
+    const url = (window.AoT_BASE_PATH || '') + '/last/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + max_measure_age_sec.toString();
     $.ajax(url, {
       success: function(data, responseText, jqXHR) {
         if (jqXHR.status === 204) {

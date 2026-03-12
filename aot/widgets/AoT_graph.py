@@ -677,7 +677,7 @@ WIDGET_INFORMATION = {
                        measurement_id,
                        past_seconds) {
     const epoch_mil = new Date().getTime();
-    const url = '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + past_seconds;
+    const url = (window.AoT_BASE_PATH || '') + '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + past_seconds;
     const update_id = widget_id + "-" + series + "-" + unique_id + "-" + measure_type + '-' + measurement_id;
 
     $.getJSON(url,
@@ -739,9 +739,9 @@ WIDGET_INFORMATION = {
     let update_id = widget_id + "-" + series + "-" + unique_id + "-" + measure_type + '-' + measurement_id;
     if (update_id in last_output_time_mil) {
       const past_seconds = Math.floor((epoch_mil - last_output_time_mil[update_id]) / 1000);  // seconds (integer)
-      url = '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + past_seconds;
+      url = (window.AoT_BASE_PATH || '') + '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + past_seconds;
     } else {
-      url = '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + refresh_seconds;
+      url = (window.AoT_BASE_PATH || '') + '/past/' + unique_id + '/' + measure_type + '/' + measurement_id + '/' + refresh_seconds;
     }
 
     $.getJSON(url,

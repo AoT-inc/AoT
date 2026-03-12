@@ -15,23 +15,6 @@ from flask_login import current_user
 from aot.aot_client import DaemonControl
 from aot.aot_flask.utils.utils_general import user_has_permission
 
-def sequence_activate_toggle(unique_id, state):
-    if not current_user.is_authenticated:
-        return jsonify({'error': 'Auth Required'}), 401
-    
-    # Check permissions if needed
-    if not user_has_permission('edit_controllers'):
-        return jsonify({'error': 'Permission Denied'}), 403
-
-    daemon = DaemonControl()
-    if state == 'activate':
-        daemon.controller_activate(unique_id)
-    elif state == 'deactivate':
-        daemon.controller_deactivate(unique_id)
-    else:
-        return jsonify({'error': 'Invalid State'}), 400
-        
-    return jsonify({'status': 'success'})
 
 def sequence_toggle_details(unique_id, state):
     if not current_user.is_authenticated:
@@ -172,7 +155,6 @@ WIDGET_INFORMATION = {
     'execute_at_modification': execute_at_modification,
     
     'endpoints': [
-        ("/sequence_activate_toggle/<unique_id>/<state>", "sequence_activate_toggle", sequence_activate_toggle, ["GET"]),
         ("/sequence_toggle_details/<unique_id>/<state>", "sequence_toggle_details", sequence_toggle_details, ["GET"])
     ],
 
@@ -627,9 +609,12 @@ WIDGET_INFORMATION = {
     function toggle_seq_action(action_id, checkbox) {
         var enabled = checkbox.checked;
         $.ajax({
-            url: '/function_sequence_toggle_action',
+            url: (window.AoT_BASE_PATH || '') + '/function_sequence_toggle_action',
             type: 'POST',
             contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
             data: JSON.stringify({ action_id: action_id, enabled: enabled }),
             success: function(resp) {
                 console.log("Action toggled");
@@ -646,7 +631,7 @@ WIDGET_INFORMATION = {
         var state = checkbox.checked ? 'activate' : 'deactivate';
         
         $.ajax({
-            url: '/sequence_activate_toggle/' + function_id + '/' + state,
+            url: (window.AoT_BASE_PATH || '') + '/sequence_activate_toggle/' + function_id + '/' + state,
             type: 'GET',
             success: function(resp) {
                 if(resp.status === 'success') {
@@ -675,21 +660,21 @@ WIDGET_INFORMATION = {
             // Save state to localStorage
             localStorage.setItem('seq_details_' + widget_id, 'show');
             // Save to server: 1 (Show)
-            $.get('/sequence_toggle_details/' + widget_id + '/1');
+            $.get((window.AoT_BASE_PATH || '') + '/sequence_toggle_details/' + widget_id + '/1');
         } else {
             details.style.display = 'none';
             $(btn).find('.seq-expand-icon').text('▼');
             // Save state to localStorage
             localStorage.setItem('seq_details_' + widget_id, 'hide');
             // Save to server: 0 (Hide)
-            $.get('/sequence_toggle_details/' + widget_id + '/0');
+            $.get((window.AoT_BASE_PATH || '') + '/sequence_toggle_details/' + widget_id + '/0');
         }
     }
 
     function update_sequence_widget(function_id, widget_id, default_period) {
         if (!function_id) return;
         
-        $.getJSON('/function_status_activated/' + function_id, function(data) {
+        $.getJSON((window.AoT_BASE_PATH || '') + '/function_status_activated/' + function_id, function(data) {
             // console.log("SeqWidget Data:", data);
             if (data.error) {
                 var display = document.getElementById('seq-timer-' + widget_id);

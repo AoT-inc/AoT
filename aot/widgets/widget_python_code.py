@@ -219,7 +219,7 @@ return self.return_string""",
 
     'widget_dashboard_js': """
   function getPythonCodeResponse(widget_id) {
-    const url = '/widget_execute/' + widget_id;
+    const url = (window.AoT_BASE_PATH || '') + '/widget_execute/' + widget_id;
     $.ajax(url, {
       success: function (response, responseText, jqXHR) {
         if (jqXHR.status !== 204) {

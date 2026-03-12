@@ -775,7 +775,7 @@ WIDGET_INFORMATION = {
     function modOutputOutput_tm(cmdStr, widget_id) {
       $.ajax({
         type: 'GET',
-        url: '/output_mod/' + cmdStr,
+        url: (window.AoT_BASE_PATH || '') + '/output_mod/' + cmdStr,
         success: function(data) {
           getGPIOStateOutput_tm(widget_id);
         },
@@ -819,7 +819,7 @@ WIDGET_INFORMATION = {
       const $txt = $('#tm_state_'+widget_id);
 
       // Ajax로 상태 읽어오기
-      $.getJSON('/outputstate_unique_id/' + dev_id + '/' + ch_id, function(state) {
+      $.getJSON((window.AoT_BASE_PATH || '') + '/outputstate_unique_id/' + dev_id + '/' + ch_id, function(state) {
 
         if (state === 'off') {
           $chk.prop('checked', false);
@@ -986,7 +986,13 @@ WIDGET_INFORMATION = {
           async function fetchStart(url) {
             console.debug("AoT Timer: trying start-time endpoint", url);
             try {
-              const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
+              const res = await fetch(url, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                }
+              });
               tm_updateServerNowOffsetFromResponse(res);
 
               // 401/403: Auth issue -> parent decides whether to fallback to private
@@ -1176,8 +1182,13 @@ WIDGET_INFORMATION = {
     // ---- Last-session server cache helpers ----
     async function tm_saveLastSessionServer(widget_id, dev_id, ch_id, startMs, stopMs, elapsedSec){
       try{
-        const res = await fetch(`/output_last_session_set/${dev_id}/${ch_id}`, {
-          method: 'POST', headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+        const res = await fetch((window.AoT_BASE_PATH || '') + `/output_last_session_set/${dev_id}/${ch_id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type':'application/json',
+            'Accept':'application/json',
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+          },
           body: JSON.stringify({ widget_id: String(widget_id||''), start_ms: Math.floor(startMs), stop_ms: Math.floor(stopMs), elapsed_sec: Math.max(0, Math.floor(elapsedSec||0)) })
         });
         return res.ok;
@@ -1185,7 +1196,12 @@ WIDGET_INFORMATION = {
     }
     async function tm_fetchLastSessionServer(dev_id, ch_id){
       try{
-        const res = await fetch(`/output_last_session_public/${dev_id}/${ch_id}`, { headers: { 'Accept':'application/json' } });
+        const res = await fetch((window.AoT_BASE_PATH || '') + `/output_last_session_public/${dev_id}/${ch_id}`, {
+          headers: {
+            'Accept':'application/json',
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+          }
+        });
         if(!res.ok) return null;
         const js = await res.json();
         return js && typeof js==='object' ? js : null;
@@ -1478,8 +1494,8 @@ WIDGET_INFORMATION = {
     // --- Event bindings: toggle ON/OFF (delegated) ---
     // 위임 바인딩으로 위젯이 동적으로 생성/교체되어도 안정 동작
     $(document)
-      .off('change.aot_timer', 'input.timer-toggle-input')
-      .on('change.aot_timer', 'input.timer-toggle-input', function(){
+      .off('change.aot_timer', 'input.aot-timer-toggle')
+      .on('change.aot_timer', 'input.aot-timer-toggle', function(){
         const wid   = this.id.replace('tm_tog_','');
         const isOn  = $(this).is(':checked');
         const devNm = $(this).attr('name');

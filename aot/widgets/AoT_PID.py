@@ -462,7 +462,7 @@ function sendPIDCommandAoT(cmd) {
   }
   $.ajax({
     type: 'GET',
-    url: '/pid_mod_unique_id/' + cmd,
+    url: (window.AoT_BASE_PATH || '') + '/pid_mod_unique_id/' + cmd,
     success: function(res) {
       console.log("Server response:", res);
       // 추가 UI 업데이트가 필요하면 여기서 처리합니다.
@@ -510,7 +510,7 @@ function getPidDataAoT(wid, pidid, max_age, decs) {
     window.showToast("No PID selected", "error");
     return;
   }
-  $.ajax("/last_pid/"+pidid+"/"+max_age, {
+  $.ajax((window.AoT_BASE_PATH || '') + "/last_pid/"+pidid+"/"+max_age, {
     success:function(data, txtStatus, jqXHR){
       if(jqXHR.status===204) {
         printPidErrorAoT(wid);

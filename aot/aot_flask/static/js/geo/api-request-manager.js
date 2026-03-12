@@ -11,6 +11,15 @@
  */
 
 class APIRequestManager {
+    /**
+     * Get CSRF token from meta tag
+     * @returns {string|null}
+     */
+    getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : null;
+    }
+
     constructor(options = {}) {
         // Memory cache for API responses
         this.cache = new Map();
@@ -43,6 +52,22 @@ class APIRequestManager {
                 }
             } else if (!options.headers['Content-Type']) {
                 options.headers['Content-Type'] = 'application/json';
+            }
+        }
+        
+        // Auto-inject CSRF token for non-GET requests
+        const method = (options.method || 'GET').toUpperCase();
+        if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+            const token = this.getCsrfToken();
+            if (token) {
+                if (!options.headers) options.headers = {};
+                if (options.headers instanceof Headers) {
+                    if (!options.headers.has('X-CSRFToken')) {
+                        options.headers.set('X-CSRFToken', token);
+                    }
+                } else if (!options.headers['X-CSRFToken']) {
+                    options.headers['X-CSRFToken'] = token;
+                }
             }
         }
         

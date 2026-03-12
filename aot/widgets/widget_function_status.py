@@ -78,7 +78,7 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_js': """
     function function_status_activated(function_id, widget_id) {
-      const url = '/function_status_activated/' + function_id;
+      const url = (window.AoT_BASE_PATH || '') + '/function_status_activated/' + function_id;
       $.getJSON(url,
         function(data, responseText, jqXHR) {
           if (jqXHR.status !== 204) {
@@ -107,7 +107,7 @@ WIDGET_INFORMATION = {
     }
     
     function function_status_always(function_id, widget_id) {
-      const url_2 = '/function_status_always/' + function_id;
+      const url_2 = (window.AoT_BASE_PATH || '') + '/function_status_always/' + function_id;
       $.getJSON(url_2,
         function(data, responseText, jqXHR) {
           if (jqXHR.status !== 204) {

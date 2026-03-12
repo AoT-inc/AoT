@@ -1137,8 +1137,11 @@ WIDGET_INFORMATION = {
         const info = parseInfo(wid);
         if (!info.device || !info.channel) { return; }
         try{
-          const res = await fetch(`/output_cycle_presets/${info.device}/${info.channel}`, {
-            headers: { 'Accept': 'application/json' }
+          const res = await fetch((window.AoT_BASE_PATH || '') + `/output_cycle_presets/${info.device}/${info.channel}`, {
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            }
           });
           if (!res.ok || res.status === 204) { return; }
           const data = await res.json();
@@ -1169,8 +1172,11 @@ WIDGET_INFORMATION = {
         const info = parseInfo(wid);
         if (!info.device || !info.channel) { return; }
         try {
-          const res = await fetch(`/output_cycle_status_public/${info.device}/${info.channel}`, {
-            headers: { 'Accept': 'application/json' }
+          const res = await fetch((window.AoT_BASE_PATH || '') + `/output_cycle_status_public/${info.device}/${info.channel}`, {
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            }
           });
           if (!res.ok || res.status === 204) { return; }
           const data = await res.json();
@@ -1246,11 +1252,12 @@ WIDGET_INFORMATION = {
         const $msg = $('#aot_counter_message_'+wid);
         const toggleEl = opts && opts.toggleEl ? opts.toggleEl : null;
         try {
-          const res = await fetch(`/output_cycle_start/${info.device}/${info.channel}`, {
+          const res = await fetch((window.AoT_BASE_PATH || '') + `/output_cycle_start/${info.device}/${info.channel}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json'
+              'Accept': 'application/json',
+              'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
             },
             body: JSON.stringify(payload)
           });
@@ -1279,11 +1286,12 @@ WIDGET_INFORMATION = {
         const $msg = $('#aot_counter_message_'+wid);
         const toggleEl = opts && opts.toggleEl ? opts.toggleEl : null;
         try {
-          const res = await fetch(`/output_cycle_stop/${info.device}/${info.channel}`, {
+          const res = await fetch((window.AoT_BASE_PATH || '') + `/output_cycle_stop/${info.device}/${info.channel}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json'
+              'Accept': 'application/json',
+              'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
             },
             body: '{}'
           });

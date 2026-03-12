@@ -77,8 +77,9 @@ rpds-py==0.30.0
 serpent==1.42
 shapely==2.1.2
 six==1.17.0
+smbus2==0.4.1
 soupsieve==2.8.1
-SQLAlchemy==2.0.25
+SQLAlchemy==2.0.48
 testfixtures==7.0.2
 tomli==2.3.0
 typing_extensions==4.15.0
@@ -91,3 +92,4 @@ Werkzeug==3.1.3
 wrapt==2.0.1
 WTForms==3.1.2
 zipp==3.23.0
+setuptools==70.0.0

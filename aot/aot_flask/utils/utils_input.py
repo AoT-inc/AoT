@@ -8,7 +8,7 @@ from datetime import datetime
 import sqlalchemy
 from flask import current_app
 from flask import flash
-from flask_babel import gettext
+from flask_babel import gettext as _
 from sqlalchemy import and_
 
 from aot.config import PATH_PYTHON_CODE_USER
@@ -71,7 +71,7 @@ def input_add(form_add):
         messages["error"].append(_("Invalid input string (must be a comma-separated string)."))
 
     if not current_app.config['TESTING']:
-        dep_unmet, _, dep_message = return_dependencies(input_name)
+        dep_unmet, unused_dep, dep_message = return_dependencies(input_name)
         if dep_unmet:
             messages["error"].append(
                 f"{input_name} " + 

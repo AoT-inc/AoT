@@ -73,8 +73,11 @@ aot/tests/server_log.txt
 *.pem
 *.crt
 *.key
-/databases/flask_secret_key
+statistics.csv
+statistics.id
+aot/databases/flask_secret_key
 /aot/config_override.py
+
 
 # --- Agent Workspace ---
 /Agent/
@@ -82,3 +85,7 @@ aot/tests/server_log.txt
 task.md
 implementation_plan.md
 walkthrough.md
+
+# --- Custom ---
+2603_symbolic_index_generator/
+anchro_index

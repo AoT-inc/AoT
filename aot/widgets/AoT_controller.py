@@ -224,7 +224,7 @@ WIDGET_INFORMATION = {
     // 선택사항: AJAX로 서버 로그 엔드포인트에 오류 정보를 전송
     $.ajax({
       type: "POST",
-      url: "/log_error",  // 서버에 로그를 수신하는 엔드포인트 (구현 필요)
+      url: (window.AoT_BASE_PATH || '') + "/log_error",  // 서버에 로그를 수신하는 엔드포인트 (구현 필요)
       data: JSON.stringify({
         widget: "AoT_controller",
         widget_id: wid,
@@ -239,7 +239,7 @@ WIDGET_INFORMATION = {
   // 컨트롤러 상태 확인 (1회)
   function getControllerStateAoT(wid, dev_id){
     $.ajax({
-      url: "/controller_state/" + dev_id,
+      url: (window.AoT_BASE_PATH || '') + "/controller_state/" + dev_id,
       type: "GET",
       success: function(data, textStatus, jqXHR){
         if(data.status === "Error"){
@@ -281,7 +281,7 @@ WIDGET_INFORMATION = {
 // 컨트롤러 On/Off
 function setControllerStateAoT(dev_id, newState, wid){
   $.ajax({
-    url: "/controller_activate_deactivate/"+dev_id+"/"+newState,
+    url: (window.AoT_BASE_PATH || '') + "/controller_activate_deactivate/"+dev_id+"/"+newState,
     type: "GET",
     success: function(res){
       // Toastr 메시지 제거됨
