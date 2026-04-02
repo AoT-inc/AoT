@@ -1,3 +1,19 @@
+# v26.1.1 (2026-04-02)
+
+## 오류 개선 (Bug Fixes)
+- **설치 스크립트**: Debian Trixie(13)에서 제거된 `libatlas-base-dev` 패키지를 `libopenblas-dev`로 교체하여 설치 오류 해결.
+- **Python 패키지**: Python 3.11 이상에서 불필요한 `backports-datetime-fromisoformat` 패키지 제거. 해당 패키지의 sdist 빌드 실패로 인해 전체 pip 설치가 중단되어 `flask_login`, `flask_babel`, `pybabel` 등 모든 의존성이 설치되지 않는 연쇄 오류를 수정.
+
+---
+
+# v26.1.1 (2026-04-02) - English
+
+## Bug Fixes
+- **Install script**: Replaced removed `libatlas-base-dev` package with `libopenblas-dev` to fix installation failure on Debian Trixie (13).
+- **Python packages**: Removed `backports-datetime-fromisoformat` which is unnecessary on Python 3.11+. Its sdist build failure caused the entire pip install to abort, resulting in cascading failures where `flask_login`, `flask_babel`, `pybabel`, and all other dependencies were not installed.
+
+---
+
 # v26.1.0 (2026-03-12)
 
 ## 오류 개선 (Bug Fixes)
