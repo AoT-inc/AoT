@@ -673,6 +673,10 @@ case "${1:-''}" in
     'update-packages')
         printf "\n#### Installing prerequisite apt packages and update pip\n"
         apt remove -y apache2 || true
+        # Remove stale AoT nginx config before install to prevent startup failure
+        # (occurs when /opt/AoT was deleted but /etc/nginx was not cleaned)
+        rm -f /etc/nginx/sites-enabled/aot* /etc/nginx/conf.d/aot* /etc/nginx/sites-available/aot*
+        systemctl stop nginx 2>/dev/null || true
         apt install -y ${APT_PKGS}
         
         if [[ ! -f /etc/nginx/nginx.conf ]]; then
@@ -719,9 +723,11 @@ case "${1:-''}" in
         if [[ ! -d ${AOT_PATH}/env ]]; then
             printf "\n## Error: Virtualenv doesn't exist. Create with %s setup-virtualenv\n" "${0}"
         else
-            "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements.txt
+            # Pre-install setuptools and wheel so sdist packages can build without isolated build failure
+            "${AOT_PATH}"/env/bin/python -m pip install --upgrade setuptools wheel
+            "${AOT_PATH}"/env/bin/python -m pip install --upgrade --no-build-isolation -r "${AOT_PATH}"/install/requirements.txt
             if [[ -f "${AOT_PATH}"/install/requirements-testing.txt ]]; then
-                "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements-testing.txt
+                "${AOT_PATH}"/env/bin/python -m pip install --upgrade --no-build-isolation -r "${AOT_PATH}"/install/requirements-testing.txt
             fi
         fi
     ;;
