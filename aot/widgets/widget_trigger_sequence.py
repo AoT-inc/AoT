@@ -633,6 +633,9 @@ WIDGET_INFORMATION = {
         $.ajax({
             url: (window.AoT_BASE_PATH || '') + '/sequence_activate_toggle/' + function_id + '/' + state,
             type: 'GET',
+            headers: {
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(resp) {
                 if(resp.status === 'success') {
                     safe_toast('success', window._("Sequence") + " " + (checkbox.checked ? window._("Activated") : window._("Deactivated")));
@@ -657,24 +660,37 @@ WIDGET_INFORMATION = {
         if (isHidden) {
             details.style.display = 'block';
             $(btn).find('.seq-expand-icon').text('▲');
-            // Save state to localStorage
-            localStorage.setItem('seq_details_' + widget_id, 'show');
             // Save to server: 1 (Show)
-            $.get((window.AoT_BASE_PATH || '') + '/sequence_toggle_details/' + widget_id + '/1');
+            $.ajax({
+                url: (window.AoT_BASE_PATH || '') + '/sequence_toggle_details/' + widget_id + '/1',
+                type: 'GET',
+                headers: { 'X-CSRFToken': $('meta[name="csrf-token"]').attr('content') }
+            });
         } else {
             details.style.display = 'none';
             $(btn).find('.seq-expand-icon').text('▼');
             // Save state to localStorage
             localStorage.setItem('seq_details_' + widget_id, 'hide');
             // Save to server: 0 (Hide)
-            $.get((window.AoT_BASE_PATH || '') + '/sequence_toggle_details/' + widget_id + '/0');
+            $.ajax({
+                url: (window.AoT_BASE_PATH || '') + '/sequence_toggle_details/' + widget_id + '/0',
+                type: 'GET',
+                headers: { 'X-CSRFToken': $('meta[name="csrf-token"]').attr('content') }
+            });
         }
     }
 
     function update_sequence_widget(function_id, widget_id, default_period) {
         if (!function_id) return;
         
-        $.getJSON((window.AoT_BASE_PATH || '') + '/function_status_activated/' + function_id, function(data) {
+        $.ajax({
+            url: (window.AoT_BASE_PATH || '') + '/function_status_activated/' + function_id,
+            type: 'GET',
+            dataType: 'json',
+            headers: {
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(data) {
             // console.log("SeqWidget Data:", data);
             if (data.error) {
                 var display = document.getElementById('seq-timer-' + widget_id);

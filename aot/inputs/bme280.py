@@ -6,6 +6,7 @@ from aot.inputs.sensorutils import calculate_altitude
 from aot.inputs.sensorutils import calculate_dewpoint
 from aot.inputs.sensorutils import calculate_vapor_pressure_deficit
 from aot.inputs.sensorutils import convert_from_x_to_y_unit
+from aot.utils.i2c_bus import GlobalI2CBusLock
 
 # Measurements
 measurements_dict = {
@@ -98,22 +99,23 @@ class InputModule(AbstractInput):
 
         self.return_dict = copy.deepcopy(measurements_dict)
 
-        if self.is_enabled(0):
-            self.value_set(0, self.sensor.read_temperature())
+        with GlobalI2CBusLock(self.input_dev.i2c_bus):
+            if self.is_enabled(0):
+                self.value_set(0, self.sensor.read_temperature())
 
-        if self.is_enabled(1):
-            self.value_set(1, self.sensor.read_humidity())
+            if self.is_enabled(1):
+                self.value_set(1, self.sensor.read_humidity())
 
-        if self.is_enabled(2):
-            self.value_set(2, convert_from_x_to_y_unit('hPa', 'Pa', self.sensor.read_pressure()))
+            if self.is_enabled(2):
+                self.value_set(2, convert_from_x_to_y_unit('hPa', 'Pa', self.sensor.read_pressure()))
 
-        if self.is_enabled(3) and self.is_enabled(0) and self.is_enabled(1):
-            self.value_set(3, calculate_dewpoint(self.value_get(0), self.value_get(1)))
+            if self.is_enabled(3) and self.is_enabled(0) and self.is_enabled(1):
+                self.value_set(3, calculate_dewpoint(self.value_get(0), self.value_get(1)))
 
-        if self.is_enabled(4) and self.is_enabled(2):
-            self.value_set(4, calculate_altitude(self.value_get(2)))
+            if self.is_enabled(4) and self.is_enabled(2):
+                self.value_set(4, calculate_altitude(self.value_get(2)))
 
-        if self.is_enabled(5) and self.is_enabled(0) and self.is_enabled(1):
-            self.value_set(5, calculate_vapor_pressure_deficit(self.value_get(0), self.value_get(1)))
+            if self.is_enabled(5) and self.is_enabled(0) and self.is_enabled(1):
+                self.value_set(5, calculate_vapor_pressure_deficit(self.value_get(0), self.value_get(1)))
 
         return self.return_dict
