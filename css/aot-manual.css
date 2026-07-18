@@ -1,0 +1,19 @@
+/* AoT 매뉴얼 브랜딩 — 앱 전역 브랜드색과 일치 */
+
+/* 브랜드 딥그린을 헤더/기본색으로 (앱 --aot-color-brand-primary #13261B) */
+[data-md-color-primary] {
+  --md-primary-fg-color:        #13261B;
+  --md-primary-fg-color--light: #2c4436;
+  --md-primary-fg-color--dark:  #0b1610;
+}
+
+/* 링크/강조 accent — 브랜드 계열 그린 */
+[data-md-color-accent] {
+  --md-accent-fg-color:         #3a5a48;
+  --md-accent-fg-color--transparent: rgba(58, 90, 72, 0.1);
+}
+
+/* 텍스트 로고(사이트명) 제거 — 이미지 로고가 이미 'AoT' 워드마크라 중복 */
+.md-header__title {
+  display: none;
+}
