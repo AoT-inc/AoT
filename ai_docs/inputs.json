@@ -1,0 +1,2487 @@
+{
+  "ADS1256_ANALOG_PH_EC": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "ADS1256: Generic Analog pH/EC",
+    "measurements_name": "Ion Concentration/Electrical Conductivity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "wiringpi",
+        "wiringpi"
+      ],
+      [
+        "pip-pypi",
+        "pipyadc_py3",
+        "git+https://github.com/aot-inc/PiPyADC-py3.git"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "BME280_CP": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BME280",
+    "measurements_name": "Pressure/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_bme280",
+        "adafruit-circuitpython-bme280==2.5.4"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MCP9808": {
+    "input_manufacturer": "Microchip",
+    "input_name": "MCP9808",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_MCP9808",
+        "git+https://github.com/adafruit/Adafruit_Python_MCP9808.git"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ANYLEAF_EC": {
+    "input_manufacturer": "AnyLeaf",
+    "input_name": "AnyLeaf EC",
+    "measurements_name": "Electrical Conductivity",
+    "dependencies_module": [
+      [
+        "apt",
+        "libjpeg-dev",
+        "libjpeg-dev"
+      ],
+      [
+        "apt",
+        "zlib1g-dev",
+        "zlib1g-dev"
+      ],
+      [
+        "pip-pypi",
+        "PIL",
+        "Pillow==8.1.2"
+      ],
+      [
+        "pip-pypi",
+        "scipy",
+        "scipy==1.8.0"
+      ],
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "anyleaf",
+        "anyleaf==0.1.9"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "DHT22": {
+    "input_manufacturer": "AOSONG",
+    "input_name": "DHT22",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "HTU21D": {
+    "input_manufacturer": "TE Connectivity",
+    "input_name": "HTU21D",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SATELLITE_ANALYSIS": {
+    "input_manufacturer": "Remote Sensing",
+    "input_name": "Satellite Analysis",
+    "measurements_name": "Analysis Channels",
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "ADS1015_CP": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "ADS1015",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_ads1x15",
+        "adafruit-circuitpython-ads1x15==2.2.25"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "TMP006": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "TMP006",
+    "measurements_name": "Temperature (Object/Die)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_TMP",
+        "Adafruit-TMP==1.6.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MAX31856": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31856",
+    "measurements_name": "Temperature (Object/Die)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "RPi.GPIO",
+        "RPi.GPIO==0.7.1"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "MH_Z19B": {
+    "input_manufacturer": "Winsen",
+    "input_name": "MH-Z19B",
+    "measurements_name": "CO2",
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "LinuxCommand": {
+    "input_manufacturer": "Linux",
+    "input_name": "Bash Command",
+    "measurements_name": "Return Value",
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "OPENWEATHERMAP_CALL_WEATHER": {
+    "input_manufacturer": "OpenWeather",
+    "input_name": "OpenWeatherMap (City/Coords, Current)",
+    "measurements_name": "Humidity/Temperature/Pressure/Wind"
+  },
+  "OPENWEATHERMAP_CALL_ONECALL": {
+    "input_manufacturer": "OpenWeather",
+    "input_name": "OpenWeatherMap (Lat/Lon, Current/Future)",
+    "measurements_name": "Humidity/Temperature/Pressure/Wind",
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "AS7341": {
+    "input_manufacturer": "ams",
+    "input_name": "AS7341",
+    "measurements_name": "Light",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_as7341",
+        "adafruit-circuitpython-as7341==1.2.13"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SERVER_PORT_OPEN": {
+    "input_manufacturer": "AoT",
+    "input_name": "Server Port Open",
+    "measurements_name": "Boolean"
+  },
+  "RPiFreeSpace": {
+    "input_manufacturer": "AoT",
+    "input_name": "Free Space",
+    "measurements_name": "Unallocated Disk Space"
+  },
+  "SCD30_CIRCUITPYTHON": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SCD30",
+    "measurements_name": "CO2/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_scd30",
+        "adafruit-circuitPython-scd30==2.2.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ecowitt_soil_sensor": {
+    "input_manufacturer": "Ecowitt",
+    "input_name": "Ecowitt soil_sensor"
+  },
+  "RPiCPULoad": {
+    "input_manufacturer": "AoT",
+    "input_name": "CPU Load",
+    "measurements_name": "CPULoad"
+  },
+  "DS28EA00": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "DS28EA00",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "w1thermsensor",
+        "w1thermsensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "AM2315": {
+    "input_manufacturer": "AOSONG",
+    "input_name": "AM2315/AM2320",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "quick2wire",
+        "quick2wire-api==0.0.0.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SCD4x_CIRCUITPYTHON": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SCD-4x (40, 41)",
+    "measurements_name": "CO2/Temperature/Humidity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_scd4x",
+        "adafruit-circuitpython-scd4x==1.3.8"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ecowitt_temp_and_humidity_sensor": {
+    "input_manufacturer": "Ecowitt",
+    "input_name": "Ecowitt temp and humidity sensor"
+  },
+  "SIGNAL_RPM_PIGPIO": {
+    "input_manufacturer": "Raspberry Pi",
+    "input_name": "Signal (Revolutions) (pigpio method #2)",
+    "measurements_name": "RPM",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "MIFLORA": {
+    "input_manufacturer": "Xiaomi",
+    "input_name": "Miflora",
+    "measurements_name": "EC/Light/Moisture/Temperature",
+    "dependencies_module": [
+      [
+        "apt",
+        "libglib2.0-dev",
+        "libglib2.0-dev"
+      ],
+      [
+        "pip-pypi",
+        "miflora",
+        "miflora==0.7.1"
+      ],
+      [
+        "pip-pypi",
+        "bluepy",
+        "bluepy==1.3.0"
+      ]
+    ],
+    "interfaces": [
+      "BT"
+    ]
+  },
+  "TH16_10": {
+    "input_manufacturer": "Sonoff",
+    "input_name": "TH16/10 (Tasmota firmware) with AM2301",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "requests",
+        "requests==2.31.0"
+      ]
+    ]
+  },
+  "MH_Z16": {
+    "input_manufacturer": "Winsen",
+    "input_name": "MH-Z16",
+    "measurements_name": "CO2",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "UART",
+      "I2C"
+    ]
+  },
+  "TSL2591": {
+    "input_manufacturer": "AMS",
+    "input_name": "TSL2591",
+    "measurements_name": "Light",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "tsl2591",
+        "git+https://github.com/maxlklaxl/python-tsl2591.git"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MQTT_PAHO_JSON": {
+    "input_manufacturer": "MQTT",
+    "input_name": "MQTT Subscribe (JSON payload)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "paho",
+        "paho-mqtt==1.5.1"
+      ],
+      [
+        "pip-pypi",
+        "jmespath",
+        "jmespath==0.10.0"
+      ]
+    ],
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "BH1750": {
+    "input_manufacturer": "ROHM",
+    "input_name": "BH1750",
+    "measurements_name": "Light",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ATLAS_DO": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas DO",
+    "measurements_name": "Dissolved Oxygen",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "input_spacer": {
+    "input_manufacturer": "AoT",
+    "input_name": "Spacer"
+  },
+  "input_kasa_energy_meter": {
+    "input_manufacturer": "TP-Link",
+    "input_name": "Kasa WiFi Power Plug/Strip Energy Statistics",
+    "measurements_name": "kilowatt hours",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "kasa",
+        "python-kasa==0.5.0"
+      ],
+      [
+        "pip-pypi",
+        "aio_msgpack_rpc",
+        "aio_msgpack_rpc==0.2.0"
+      ]
+    ],
+    "interfaces": [
+      "IP"
+    ]
+  },
+  "RUUVITAG": {
+    "input_manufacturer": "Ruuvi",
+    "input_name": "RuuviTag",
+    "measurements_name": "Acceleration/Humidity/Pressure/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "psutil",
+        "psutil==5.9.0"
+      ],
+      [
+        "apt",
+        "bluez",
+        "bluez"
+      ],
+      [
+        "apt",
+        "bluez-hcidump",
+        "bluez-hcidump"
+      ],
+      [
+        "pip-pypi",
+        "ruuvitag_sensor",
+        "ruuvitag-sensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "BT"
+    ]
+  },
+  "ecowitt_MQTT": {
+    "input_manufacturer": "Ecowitt",
+    "input_name": "Ecowitt MQTT\\(JSON payload)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "paho",
+        "paho-mqtt==1.5.1"
+      ],
+      [
+        "pip-pypi",
+        "jmespath",
+        "jmespath==0.10.0"
+      ]
+    ],
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "SERVER_PING": {
+    "input_manufacturer": "AoT",
+    "input_name": "Server Ping",
+    "measurements_name": "Boolean"
+  },
+  "AM2315C": {
+    "input_manufacturer": "AOSONG",
+    "input_name": "AM2315C",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "quick2wire",
+        "quick2wire-api==0.0.0.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SCD30": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SCD30",
+    "measurements_name": "CO2/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "scd30_i2c",
+        "scd30-i2c==0.0.6"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "DS1822": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "DS1822",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "w1thermsensor",
+        "w1thermsensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "HALL_FLOW": {
+    "input_manufacturer": "Generic",
+    "input_name": "Hall Flow Meter",
+    "measurements_name": "Flow Rate, Total Volume",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "MH_Z19": {
+    "input_manufacturer": "Winsen",
+    "input_name": "MH-Z19",
+    "measurements_name": "CO2",
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "MLX90614": {
+    "input_manufacturer": "Melexis",
+    "input_name": "MLX90614",
+    "measurements_name": "Temperature (Ambient/Object)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SIGNAL_PWM": {
+    "input_manufacturer": "Raspberry Pi",
+    "input_name": "Signal (PWM)",
+    "measurements_name": "Frequency/Pulse Width/Duty Cycle",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "ADAFRUIT_I2C_SOIL": {
+    "input_manufacturer": "Adafruit",
+    "input_name": "I2C Capacitive Moisture Sensor",
+    "measurements_name": "Moisture/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_seesaw",
+        "adafruit-circuitpython-seesaw==1.7.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "HDC1000": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "HDC1000",
+    "measurements_name": "Humidity/Temperature",
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MCP3008_circuitpython": {
+    "input_manufacturer": "Microchip",
+    "input_name": "MCP3008",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_mcp3xxx",
+        "adafruit-circuitpython-mcp3xxx==1.4.11"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "ANYLEAF_PH": {
+    "input_manufacturer": "AnyLeaf",
+    "input_name": "AnyLeaf pH",
+    "measurements_name": "Ion concentration",
+    "dependencies_module": [
+      [
+        "apt",
+        "libjpeg-dev",
+        "libjpeg-dev"
+      ],
+      [
+        "apt",
+        "zlib1g-dev",
+        "zlib1g-dev"
+      ],
+      [
+        "pip-pypi",
+        "PIL",
+        "Pillow==8.1.2"
+      ],
+      [
+        "pip-pypi",
+        "scipy",
+        "scipy==1.8.0"
+      ],
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "anyleaf",
+        "anyleaf==0.1.9"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "tasmota_outlet_energy_monitor": {
+    "input_manufacturer": "Tasmota",
+    "input_name": "Tasmota Outlet Energy Monitor (HTTP)",
+    "measurements_name": "Total Energy, Amps, Watts",
+    "interfaces": [
+      "HTTP"
+    ]
+  },
+  "BME280": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BME280",
+    "measurements_name": "Pressure/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_BME280",
+        "git+https://github.com/adafruit/Adafruit_Python_BME280.git"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "INA219_CP": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "INA219x",
+    "measurements_name": "Electrical Current (DC)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_ina219",
+        "adafruit-circuitpython-ina219==3.4.9"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SI1145": {
+    "input_manufacturer": "Silicon Labs",
+    "input_name": "SI1145",
+    "measurements_name": "Light (UV/Visible/IR), Proximity (cm)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "SI1145",
+        "SI1145==1.0.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "COZIR_CO2": {
+    "input_manufacturer": "Cozir",
+    "input_name": "Cozir CO2",
+    "measurements_name": "CO2/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "cozir",
+        "git+https://github.com/pierre-haessig/pycozir.git"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "AMG8833": {
+    "input_manufacturer": "Panasonic",
+    "input_name": "AMG8833",
+    "measurements_name": "8x8 Temperature Grid",
+    "dependencies_module": [
+      [
+        "apt",
+        "libjpeg-dev",
+        "libjpeg-dev"
+      ],
+      [
+        "apt",
+        "zlib1g-dev",
+        "zlib1g-dev"
+      ],
+      [
+        "pip-pypi",
+        "colour",
+        "colour==0.1.5"
+      ],
+      [
+        "pip-pypi",
+        "PIL",
+        "Pillow==8.1.2"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_AMG88xx",
+        "git+https://github.com/adafruit/Adafruit_AMG88xx_python.git"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "DS18B20": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "DS18B20",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "w1thermsensor",
+        "w1thermsensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "BMP180": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BMP180",
+    "measurements_name": "Pressure/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_BMP",
+        "Adafruit-BMP==1.5.4"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "chirpstack_rest_jmespath": {
+    "input_manufacturer": "Chirpstack",
+    "input_name": "ChirpStack: REST API (Payload JMESPath Expression)",
+    "measurements_name": "Variable measurements"
+  },
+  "ATLAS_RGB": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas Color",
+    "measurements_name": "RGB, CIE, LUX, Proximity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "INPUT_System_Uptime": {
+    "input_manufacturer": "AoT",
+    "input_name": "Uptime",
+    "measurements_name": "Seconds Since System Startup"
+  },
+  "WINSEN_ZH03B": {
+    "input_manufacturer": "Winsen",
+    "input_name": "ZH03B",
+    "measurements_name": "Particulates",
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "ADXL34x": {
+    "input_manufacturer": "Analog Devices",
+    "input_name": "ADXL34x (343, 344, 345, 346)",
+    "measurements_name": "Acceleration",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_adxl34x",
+        "adafruit-circuitpython-adxl34x==1.11.7"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "CCS811": {
+    "input_manufacturer": "AMS",
+    "input_name": "CCS811 (with Temperature)",
+    "measurements_name": "CO2/VOC/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_CCS811",
+        "Adafruit_CCS811==0.2.1"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "TEST_SAVE_VALUE": {
+    "input_manufacturer": "AoT",
+    "input_name": "Test Input: Save your own measurement value",
+    "measurements_name": "Variable measurements"
+  },
+  "ATLAS_FLOW": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas Flow Meter",
+    "measurements_name": "Total Volume, Flow Rate",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "SHT31": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHT3x (30, 31, 35)",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_SHT31",
+        "Adafruit-SHT31==1.0.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "BMP280": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BMP280",
+    "measurements_name": "Pressure/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "PythonCode_v_2_0": {
+    "input_manufacturer": "Linux",
+    "input_name": "Python 3 Code (v2.0)",
+    "measurements_name": "Store Value(s)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylint",
+        "pylint==3.0.1"
+      ]
+    ],
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "SI7021_CIRCUITPYTHON": {
+    "input_manufacturer": "Silicon Labs",
+    "input_name": "Si7021",
+    "measurements_name": "Temperature/Humidity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_si7021",
+        "adafruit-circuitpython-si7021==3.3.5"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "K30": {
+    "input_manufacturer": "CO2Meter",
+    "input_name": "K30",
+    "measurements_name": "CO2",
+    "interfaces": [
+      "I2C",
+      "UART"
+    ]
+  },
+  "RPi": {
+    "input_manufacturer": "Raspberry Pi",
+    "input_name": "CPU/GPU Temperature",
+    "measurements_name": "Temperature",
+    "interfaces": [
+      "RPi"
+    ]
+  },
+  "input_rpi_power_monitor_2": {
+    "input_manufacturer": "Power Monitor",
+    "input_name": "RPi 6-Channel Power Monitor (v0.4.0)",
+    "measurements_name": "AC Voltage, Power, Energy, Current, Power Factor",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "rpi_power_monitor",
+        "git+https://github.com/aot-inc/rpi-power-monitor-040-lib"
+      ]
+    ]
+  },
+  "SHT1x_7x": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHT1x/7x",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "sht_sensor",
+        "sht-sensor==18.4.2"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "input_rpi_power_monitor": {
+    "input_manufacturer": "Power Monitor",
+    "input_name": "RPi 6-Channel Power Monitor (v0.1.0)",
+    "measurements_name": "AC Voltage, Power, Current, Power Factor",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "rpi_power_monitor",
+        "git+https://github.com/aot-inc/rpi-power-monitor.git"
+      ]
+    ]
+  },
+  "SHT31D_CP": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHT31-D",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_sht31d",
+        "adafruit-circuitpython-sht31d==2.3.5"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SHT2x": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHT2x",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "AOT_RAM": {
+    "input_manufacturer": "AoT",
+    "input_name": "System and AoT RAM",
+    "measurements_name": "RAM Allocation",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "psutil",
+        "psutil==5.9.4"
+      ]
+    ]
+  },
+  "CCS811_CP": {
+    "input_manufacturer": "AMS",
+    "input_name": "CCS811 (without Temperature)",
+    "measurements_name": "CO2/VOC",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_ccs811",
+        "adafruit-circuitpython-ccs811==1.3.4"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "PythonCode": {
+    "input_manufacturer": "Linux",
+    "input_name": "Python 3 Code (v1.0)",
+    "measurements_name": "Store Value(s)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylint",
+        "pylint==3.0.1"
+      ]
+    ],
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "TTN_DATA_STORAGE": {
+    "input_manufacturer": "The Things Network",
+    "input_name": "The Things Network: Data Storage (TTN v2)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "requests",
+        "requests==2.31.0"
+      ]
+    ]
+  },
+  "K96": {
+    "input_manufacturer": "Senseair",
+    "input_name": "K96",
+    "measurements_name": "Methane/Moisture/CO2/Pressure/Humidity/Temperature",
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "DPS310_CIRCUITPYTHON": {
+    "input_manufacturer": "Infineon",
+    "input_name": "DPS310",
+    "measurements_name": "Pressure/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_dps310",
+        "adafruit-circuitpython-dps310==1.2.5"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MCP3208": {
+    "input_manufacturer": "Microchip",
+    "input_name": "MCP3208",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ]
+    ],
+    "interfaces": [
+      "SPI"
+    ]
+  },
+  "DS18B20_OWS": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "DS18B20",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "apt",
+        "ow-shell",
+        "ow-shell"
+      ],
+      [
+        "apt",
+        "owfs",
+        "owfs"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "BME680_CP": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BME680",
+    "measurements_name": "Temperature/Humidity/Pressure/Gas",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_bme680",
+        "adafruit-circuitpython-bme680==3.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "chirpstack_mqtt_jmespath": {
+    "input_manufacturer": "ChirpStack",
+    "input_name": "ChirpStack: MQTT (Payload JMESPath Expression)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "paho",
+        "paho-mqtt==1.5.1"
+      ],
+      [
+        "pip-pypi",
+        "jmespath",
+        "jmespath==0.10.0"
+      ]
+    ]
+  },
+  "EDGE": {
+    "input_manufacturer": "Raspberry Pi",
+    "input_name": "Edge Detection",
+    "measurements_name": "Rising/Falling Edge",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "RPi.GPIO",
+        "RPi.GPIO==0.7.1"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "ADS1256": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "ADS1256",
+    "measurements_name": "Voltage (Waveshare, Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "wiringpi",
+        "wiringpi"
+      ],
+      [
+        "pip-pypi",
+        "pipyadc_py3",
+        "git+https://github.com/aot-inc/PiPyADC-py3.git"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "ATLAS_ORP": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas ORP",
+    "measurements_name": "Oxidation Reduction Potential",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "ATLAS_PH": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas pH",
+    "measurements_name": "Ion Concentration",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "MQTT_PAHO": {
+    "input_manufacturer": "MQTT",
+    "input_name": "MQTT Subscribe (Value payload)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "paho",
+        "paho-mqtt==1.5.1"
+      ]
+    ],
+    "interfaces": [
+      "AoT"
+    ]
+  },
+  "DS1825": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "DS1825",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "w1thermsensor",
+        "w1thermsensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "ATLAS_EZO_HUMIDITY": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas Humidity",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "AOT_OUTPUT_STATE": {
+    "input_manufacturer": "AoT",
+    "input_name": "Output State (On/Off)",
+    "measurements_name": "Boolean"
+  },
+  "HCSR04_CIRCUITPYTHON": {
+    "input_manufacturer": "Multiple Manufacturers",
+    "input_name": "HC-SR04",
+    "measurements_name": "Ultrasonic Distance",
+    "dependencies_module": [
+      [
+        "apt",
+        "libgpiod-dev",
+        "libgpiod-dev"
+      ],
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_hcsr04",
+        "adafruit-circuitpython-hcsr04==0.4.6"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "ATLAS_EZO_PRESS": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas Pressure",
+    "measurements_name": "Pressure",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "MCP342x": {
+    "input_manufacturer": "Microchip",
+    "input_name": "MCP342x (x=2,3,4,6,7,8)",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ],
+      [
+        "pip-pypi",
+        "MCP342x",
+        "MCP342x==0.3.4"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MAX31850K": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31850K",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "w1thermsensor",
+        "w1thermsensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "VL53L0X": {
+    "input_manufacturer": "STMicroelectronics",
+    "input_name": "VL53L0X",
+    "measurements_name": "Millimeter (Time-of-Flight Distance)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "VL53L0X",
+        "git+https://github.com/grantramsay/VL53L0X_rasp_python.git"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "TH16_10_DS18B20": {
+    "input_manufacturer": "Sonoff",
+    "input_name": "TH16/10 (Tasmota firmware) with DS18B20",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "requests",
+        "requests==2.31.0"
+      ]
+    ]
+  },
+  "VL53L4CD": {
+    "input_manufacturer": "STMicroelectronics",
+    "input_name": "VL53L4CD",
+    "measurements_name": "Millimeter (Time-of-Flight Distance)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_vl53l4cd",
+        "adafruit-circuitpython-vl53l4cd==1.1.4"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SIGNAL_RPM": {
+    "input_manufacturer": "Raspberry Pi",
+    "input_name": "Signal (Revolutions) (pigpio method #1)",
+    "measurements_name": "RPM",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "MAX31865_CIRCUITPYTHON": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31865",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_max31865",
+        "adafruit-circuitpython-max31865==2.2.8"
+      ]
+    ],
+    "interfaces": [
+      "SPI"
+    ]
+  },
+  "VL53L1X": {
+    "input_manufacturer": "STMicroelectronics",
+    "input_name": "VL53L1X",
+    "measurements_name": "Millimeter (Time-of-Flight Distance)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ],
+      [
+        "pip-pypi",
+        "VL53L1X",
+        "vl53l1x==0.0.5"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MCP3008": {
+    "input_manufacturer": "Microchip",
+    "input_name": "MCP3008",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_MCP3008",
+        "Adafruit-MCP3008==1.0.2"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "ANYLEAF_ORP": {
+    "input_manufacturer": "AnyLeaf",
+    "input_name": "AnyLeaf ORP",
+    "measurements_name": "Oxidation Reduction Potential",
+    "dependencies_module": [
+      [
+        "apt",
+        "libjpeg-dev",
+        "libjpeg-dev"
+      ],
+      [
+        "apt",
+        "zlib1g-dev",
+        "zlib1g-dev"
+      ],
+      [
+        "pip-pypi",
+        "PIL",
+        "Pillow==8.1.2"
+      ],
+      [
+        "pip-pypi",
+        "scipy",
+        "scipy==1.8.0"
+      ],
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "anyleaf",
+        "anyleaf==0.1.9"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SHT2x_sht20": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHT2x",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "sht20",
+        "sht20==0.1.4"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ATLAS_PT1000": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas PT-1000",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "KMA_weather_500": {
+    "input_manufacturer": "KMA",
+    "input_name": "기상청 고해상도 500m"
+  },
+  "BME280_RPI_BME280": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BME280",
+    "measurements_name": "Pressure/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "bme280",
+        "RPi.bme280==0.2.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ecowitt_weather": {
+    "input_manufacturer": "Ecowitt",
+    "input_name": "Ecowitt Cloud API Weather Data"
+  },
+  "AOT_VERSION": {
+    "input_manufacturer": "AoT",
+    "input_name": "AoT Version",
+    "measurements_name": "Version as Major.Minor.Revision"
+  },
+  "BMP280_2": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BMP280",
+    "measurements_name": "Pressure/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ],
+      [
+        "pip-pypi",
+        "bmp280",
+        "bmp280==0.0.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "TTN_DATA_STORAGE_TTN_V3": {
+    "input_manufacturer": "The Things Network",
+    "input_name": "The Things Network: Data Storage (TTN v3, Payload Key)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "requests",
+        "requests==2.31.0"
+      ]
+    ]
+  },
+  "HTU21D_CIRCUITPYTHON": {
+    "input_manufacturer": "TE Connectivity",
+    "input_name": "HTU21D",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_htu21d",
+        "adafruit-circuitpython-HTU21D==0.11.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "TH16_10_Generic": {
+    "input_manufacturer": "Sonoff",
+    "input_name": "TH16/10 (Tasmota firmware) with AM2301/Si7021",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "requests",
+        "requests==2.31.0"
+      ]
+    ]
+  },
+  "ATLAS_EC": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas EC",
+    "measurements_name": "Electrical Conductivity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "ATLAS_CO2": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas CO2 (Carbon Dioxide Gas)",
+    "measurements_name": "CO2",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "ATLAS_O2": {
+    "input_manufacturer": "Atlas Scientific",
+    "input_name": "Atlas O2 (Oxygen Gas)",
+    "measurements_name": "O2",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "pylibftdi",
+        "pylibftdi==0.20.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C",
+      "UART",
+      "FTDI"
+    ]
+  },
+  "MH_Z14A": {
+    "input_manufacturer": "Winsen",
+    "input_name": "MH-Z14A",
+    "measurements_name": "CO2",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "RPi.GPIO",
+        "RPi.GPIO"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "input_MAX31855_dfrobot": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31855 (Gravity PT100)",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "wiringpi",
+        "wiringpi"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MAX31855_CIRCUITPYTHON": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31855",
+    "measurements_name": "Temperature (Object/Die)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_max31855",
+        "adafruit-circuitpython-max31855==3.2.21"
+      ]
+    ],
+    "interfaces": [
+      "SPI"
+    ]
+  },
+  "DHT20": {
+    "input_manufacturer": "AOSONG",
+    "input_name": "DHT20",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "input_MAX31855_dfrobot_gpio": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31855 (Gravity PT100)",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "TTN_DATA_STORAGE_TTN_V3_JMESPATH": {
+    "input_manufacturer": "The Things Network",
+    "input_name": "The Things Network: Data Storage (TTN v3, Payload jmespath Expression)",
+    "measurements_name": "Variable measurements",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "requests",
+        "requests==2.31.0"
+      ],
+      [
+        "pip-pypi",
+        "jmespath",
+        "jmespath==0.10.0"
+      ]
+    ]
+  },
+  "PI_SENSE_HAT": {
+    "input_manufacturer": "Raspberry Pi Foundation",
+    "input_name": "Sense HAT",
+    "measurements_name": "hum/temp/press/compass/magnet/accel/gyro",
+    "dependencies_module": [
+      [
+        "apt",
+        "git",
+        "git"
+      ],
+      [
+        "bash-commands",
+        [
+          "/opt/AoT/env/RTIMULib_installed"
+        ],
+        [
+          "cd /tmp",
+          "git clone https://github.com/RPi-Distro/RTIMULib",
+          "cd ./RTIMULib/Linux/python/",
+          "/opt/AoT/env/bin/python setup.py build",
+          "/opt/AoT/env/bin/python setup.py install",
+          "touch /opt/AoT/env/RTIMULib_installed"
+        ]
+      ],
+      [
+        "pip-pypi",
+        "sense_hat",
+        "sense-hat==2.2.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "KMA_weather_stn": {
+    "input_manufacturer": "KMA",
+    "input_name": "기상청 지점 데이터",
+    "measurements_name": "습도/온도/기압/풍속/풍향"
+  },
+  "MLX90393_CIRCUITPYTHON": {
+    "input_manufacturer": "Melexis",
+    "input_name": "MLX90393",
+    "measurements_name": "Magnetic Flux",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_mlx90393",
+        "adafruit-circuitpython-mlx90393==2.0.6"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MAX31865": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31865",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "RPi.GPIO",
+        "RPi.GPIO==0.7.1"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "TSL2561": {
+    "input_manufacturer": "AMS",
+    "input_name": "TSL2561",
+    "measurements_name": "Light",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_PureIO",
+        "Adafruit-PureIO==1.1.8"
+      ],
+      [
+        "pip-pypi",
+        "tsl2561",
+        "tsl2561==3.4.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "ADT7410": {
+    "input_manufacturer": "Analog Devices",
+    "input_name": "ADT7410",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_adt7410",
+        "adafruit-circuitpython-adt7410==1.2.5"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "AHTx0_CIRCUITPYTHON": {
+    "input_manufacturer": "ASAIR",
+    "input_name": "AHTx0",
+    "measurements_name": "Temperature/Humidity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_ahtx0",
+        "adafruit-circuitpython-ahtx0==1.0.21"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MIJIA_LYWSD03MMC": {
+    "input_manufacturer": "Xiaomi",
+    "input_name": "Mijia LYWSD03MMC (ATC and non-ATC modes)",
+    "measurements_name": "Battery/Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "apt",
+        "libglib2.0",
+        "libglib2.0"
+      ],
+      [
+        "apt",
+        "bluez",
+        "bluez"
+      ],
+      [
+        "apt",
+        "bluetooth",
+        "bluetooth"
+      ],
+      [
+        "apt",
+        "libbluetooth-dev",
+        "libbluetooth-dev"
+      ],
+      [
+        "pip-pypi",
+        "bluepy",
+        "bluepy==1.3.0"
+      ],
+      [
+        "pip-pypi",
+        "bluetooth",
+        "git+https://github.com/pybluez/pybluez.git"
+      ]
+    ],
+    "interfaces": [
+      "BT"
+    ]
+  },
+  "ADS1x15": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "ADS1x15",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_ADS1x15",
+        "Adafruit-ADS1x15==1.0.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "GPIO_STATE": {
+    "input_manufacturer": "Raspberry Pi",
+    "input_name": "GPIO State",
+    "measurements_name": "GPIO State",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "RPi.GPIO",
+        "RPi.GPIO==0.7.1"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "SHT31_SMART_GADGET": {
+    "input_manufacturer": "Sensorion",
+    "input_name": "SHT31 Smart Gadget",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "apt",
+        "pi-bluetooth",
+        "pi-bluetooth"
+      ],
+      [
+        "apt",
+        "libglib2.0-dev",
+        "libglib2.0-dev"
+      ],
+      [
+        "pip-pypi",
+        "bluepy",
+        "bluepy==1.3.0"
+      ]
+    ],
+    "interfaces": [
+      "BT"
+    ]
+  },
+  "KMA_forecast": {
+    "input_manufacturer": "KMA",
+    "input_name": "KMA 단기예보"
+  },
+  "CHIRP": {
+    "input_manufacturer": "Catnip Electronics",
+    "input_name": "Chirp",
+    "measurements_name": "Light/Moisture/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SHT4X_CP": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHT4X",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_sht4x",
+        "adafruit_circuitpython_sht4x==1.0.3"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "AS7262": {
+    "input_manufacturer": "AMS",
+    "input_name": "AS7262",
+    "measurements_name": "Light at 450, 500, 550, 570, 600, 650 nm",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "as7262",
+        "as7262==0.1.0"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "MAX31855": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "MAX31855",
+    "measurements_name": "Temperature (Object/Die)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "Adafruit_MAX31855",
+        "git+https://github.com/adafruit/Adafruit_Python_MAX31855.git"
+      ],
+      [
+        "pip-pypi",
+        "Adafruit_GPIO",
+        "Adafruit-GPIO==1.0.3"
+      ]
+    ],
+    "interfaces": [
+      "UART"
+    ]
+  },
+  "ANALOG_PH_EC": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "ADS1115: Generic Analog pH/EC",
+    "measurements_name": "Ion Concentration/Electrical Conductivity",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_ads1x15",
+        "adafruit-circuitpython-ads1x15==2.2.25"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "SHTC3_CP": {
+    "input_manufacturer": "Sensirion",
+    "input_name": "SHTC3",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_shtc3",
+        "adafruit_circuitpython_shtc3==1.1.2"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "BME680": {
+    "input_manufacturer": "BOSCH",
+    "input_name": "BME680",
+    "measurements_name": "Temperature/Humidity/Pressure/Gas",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "bme680",
+        "bme680==1.0.5"
+      ],
+      [
+        "pip-pypi",
+        "smbus2",
+        "smbus2==0.4.1"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "DS18S20": {
+    "input_manufacturer": "MAXIM",
+    "input_name": "DS18S20",
+    "measurements_name": "Temperature",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "w1thermsensor",
+        "w1thermsensor==2.0.0"
+      ]
+    ],
+    "interfaces": [
+      "1WIRE"
+    ]
+  },
+  "ADS1115_CP": {
+    "input_manufacturer": "Texas Instruments",
+    "input_name": "ADS1115",
+    "measurements_name": "Voltage (Analog-to-Digital Converter)",
+    "dependencies_module": [
+      [
+        "pip-pypi",
+        "usb.core",
+        "pyusb==1.1.1"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_extended_bus",
+        "Adafruit-extended-bus==1.0.2"
+      ],
+      [
+        "pip-pypi",
+        "adafruit_ads1x15",
+        "adafruit-circuitpython-ads1x15==2.2.25"
+      ]
+    ],
+    "interfaces": [
+      "I2C"
+    ]
+  },
+  "DHT11": {
+    "input_manufacturer": "AOSONG",
+    "input_name": "DHT11",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "internal",
+        "file-exists /opt/AoT/pigpio_installed",
+        "pigpio"
+      ],
+      [
+        "pip-pypi",
+        "pigpio",
+        "pigpio==1.78"
+      ]
+    ],
+    "interfaces": [
+      "GPIO"
+    ]
+  },
+  "GROVE_TEMP_AND_HUMIDITY": {
+    "input_manufacturer": "Seeedstudio",
+    "input_name": "DHT11/22",
+    "measurements_name": "Humidity/Temperature",
+    "dependencies_module": [
+      [
+        "apt",
+        "libatlas-base-dev",
+        "libatlas-base-dev"
+      ],
+      [
+        "pip-pypi",
+        "grovepi",
+        "grovepi==1.0.4"
+      ]
+    ],
+    "interfaces": [
+      "GROVE"
+    ]
+  }
+}

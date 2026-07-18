@@ -1,0 +1,132 @@
+{
+  "gis_bing": {
+    "input_manufacturer": "Microsoft",
+    "input_name": "GL: Bing Maps",
+    "measurements_name": "Status"
+  },
+  "gis_kakao": {
+    "input_manufacturer": "Kakao",
+    "input_name": "KO: Kakao Map",
+    "measurements_name": "Status"
+  },
+  "gis_maptiler_vector": {
+    "unique_id": "gis_maptiler_vector",
+    "input_manufacturer": "MapTiler",
+    "input_name": "GL: MapTiler Vector (Vector Tile)",
+    "input_library": "gis_maptiler_vector",
+    "measurements_name": "Status",
+    "layer_type": "vector",
+    "vector_tile_url": "https://api.maptiler.com/tiles/{style}/v2/{z}/{x}/{y}.pbf?key={api_key}",
+    "style_url": "https://api.maptiler.com/styles/{style}/style.json",
+    "available_styles": [
+      { "id": "streets", "name": "Streets", "description": "Standard road map with labels" },
+      { "id": "outdoor", "name": "Outdoor", "description": "Topographic map with trails" },
+      { "id": "light", "name": "Light", "description": "Minimal light style" },
+      { "id": "dark", "name": "Dark", "description": "Dark mode map" },
+      { "id": "satellite", "name": "Satellite", "description": "Satellite imagery base" },
+      { "id": "hybrid", "name": "Hybrid", "description": "Satellite with roads/labels" },
+      { "id": "ocean", "name": "Ocean", "description": "Bathymetric ocean map" },
+      { "id": "topo", "name": "Topo", "description": "Topographic terrain map" }
+    ],
+    "attribution": "&copy; <a href=\"https://www.maptiler.com/\">MapTiler</a> &copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+    "cdn_js": "https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js",
+    "cdn_css": "https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css",
+    "cdn_draw_js": "https://unpkg.com/@maplibre/maplibre-gl-draw@1.4.3/dist/maplibre-gl-draw.js",
+    "cdn_draw_css": "https://unpkg.com/@maplibre/maplibre-gl-draw@1.4.3/dist/maplibre-gl-draw.css",
+    "requires_key": true,
+    "key_field": "api_key",
+    "global_key_field": "maptiler",
+    "max_zoom": 22,
+    "max_native_zoom": 14,
+    "tile_format": "pbf",
+    "tile_size": 512,
+    "epsg": "EPSG:3857",
+    "ai_reading_module": "aot.inputs_gis.gis_maptiler_vector",
+    "ai_reading_function": "get_ai_reading"
+  },
+  "gis_esri": {
+    "input_manufacturer": "Esri",
+    "input_name": "GL: Esri World Imagery",
+    "measurements_name": "Status"
+  },
+  "gis_osm": {
+    "input_manufacturer": "OpenStreetMap",
+    "input_name": "GL: OpenStreetMap",
+    "measurements_name": "Status"
+  },
+  "gis_nasa_gibs": {
+    "input_manufacturer": "NASA",
+    "input_name": "NASA GIBS",
+    "measurements_name": "Status"
+  },
+  "gis_google": {
+    "input_manufacturer": "Google",
+    "input_name": "GL: Google Maps",
+    "measurements_name": "Status"
+  },
+  "gis_rainviewer": {
+    "input_manufacturer": "RainViewer",
+    "input_name": "GL: RainViewer (Radar)",
+    "measurements_name": "Status"
+  },
+  "gis_naver": {
+    "input_manufacturer": "Naver",
+    "input_name": "KO: Naver Map",
+    "measurements_name": "Status"
+  },
+  "gis_carto": {
+    "input_manufacturer": "CARTO",
+    "input_name": "GL: Carto Maps",
+    "measurements_name": "Status"
+  },
+  "gis_openweather": {
+    "input_manufacturer": "OpenWeatherMap",
+    "input_name": "GL: OpenWeatherMap",
+    "measurements_name": "Status"
+  },
+  "gis_mapbox": {
+    "input_manufacturer": "Mapbox",
+    "input_name": "GL: Mapbox",
+    "measurements_name": "Status"
+  },
+  "gis_sgis": {
+    "input_manufacturer": "Statistics Korea",
+    "input_name": "KO: SGIS (Statistics Korea)",
+    "measurements_name": "Status"
+  },
+  "gis_gsi": {
+    "input_manufacturer": "GSI",
+    "input_name": "JP: GSI Maps",
+    "measurements_name": "Status"
+  },
+  "gis_vworld": {
+    "input_manufacturer": "Vworld",
+    "input_name": "KO: Vworld",
+    "measurements_name": "Status"
+  },
+  "gis_opentopomap": {
+    "input_manufacturer": "OpenTopoMap",
+    "input_name": "GL: OpenTopoMap",
+    "measurements_name": "Status"
+  },
+  "gis_thunderforest": {
+    "input_manufacturer": "Thunderforest",
+    "input_name": "GL: Thunderforest",
+    "measurements_name": "Status"
+  },
+  "gis_isric": {
+    "input_manufacturer": "ISRIC",
+    "input_name": "GL: SoilGrids (Global Soil Info)",
+    "measurements_name": "Status"
+  },
+  "gis_esa": {
+    "input_manufacturer": "ESA",
+    "input_name": "GL: Soil Moisture (NASA SMAP)",
+    "measurements_name": "Status"
+  },
+  "gis_stadia": {
+    "input_manufacturer": "Stadia Maps",
+    "input_name": "GL: Stadia Maps",
+    "measurements_name": "Status"
+  }
+}

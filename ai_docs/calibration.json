@@ -1,0 +1,47 @@
+{
+  "Atlas_Scientific_EZO": {
+    "description": "Standard calibration procedure for Atlas Scientific EZO circuits (pH, EC, DO, ORP).",
+    "procedure": [
+      {
+        "step": 1,
+        "name": "Clear",
+        "command": "Cal,clear",
+        "description": "Removes any previous calibration data."
+      },
+      {
+        "step": 2,
+        "name": "Temperature Compensation",
+        "command": "T,{temp_c}",
+        "description": "Set the solution temperature for accurate calibration (optional but recommended)."
+      },
+      {
+        "step": 3,
+        "name": "Mid-Point Calibration",
+        "command": "Cal,mid,{value}",
+        "description": "Always calibrate the mid-point first (e.g., pH 7.00)."
+      },
+      {
+        "step": 4,
+        "name": "Low-Point Calibration",
+        "command": "Cal,low,{value}",
+        "description": "Calibrate the low-point (e.g., pH 4.00)."
+      },
+      {
+        "step": 5,
+        "name": "High-Point Calibration",
+        "command": "Cal,high,{value}",
+        "description": "Calibrate the high-point (e.g., pH 10.00)."
+      }
+    ],
+    "verification": {
+      "command": "Cal,?",
+      "returns": "?0 (uncalibrated), ?1 (1 point), ?2 (2 points), ?3 (3 points)"
+    },
+    "tools": {
+      "module_function": {
+        "description": "Use the DaemonControl.module_function() to trigger calibration buttons programmatically.",
+        "example_button_ids": ["clear_calibrate", "mid_calibrate", "low_calibrate", "high_calibrate"]
+      }
+    }
+  }
+}
