@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "crop": "lettuce",
+    "name_ko": "상추",
+    "description_ko": "상추 생육 단계별 VPD 일변동 곡선 (보수적 권장값)",
+    "source": "농촌진흥청 시설원예연구소 권장 범위 기준",
+    "is_seed": true,
+    "method_type": "DailyMultiPoint",
+    "unit": "kPa"
+  },
+  "stages": {
+    "seedling": {
+      "name_ko": "육묘기 (0~14일)",
+      "guide_T_min": 16, "guide_T_max": 24,
+      "guide_RH_min": 65, "guide_RH_max": 85,
+      "points_json": {
+        "version": 1,
+        "points": [
+          {"point_id": 0, "t_sec": 0,     "value": 0.4, "smooth": false, "is_endpoint": true,  "keyframes": []},
+          {"point_id": 1, "t_sec": 43200, "value": 0.6, "smooth": true,  "is_endpoint": false, "keyframes": []},
+          {"point_id": 2, "t_sec": 86400, "value": 0.4, "smooth": false, "is_endpoint": true,  "keyframes": []}
+        ]
+      }
+    },
+    "growth": {
+      "name_ko": "생장기 (15일~수확)",
+      "guide_T_min": 14, "guide_T_max": 22,
+      "guide_RH_min": 60, "guide_RH_max": 80,
+      "points_json": {
+        "version": 1,
+        "points": [
+          {"point_id": 0, "t_sec": 0,     "value": 0.5, "smooth": false, "is_endpoint": true,  "keyframes": []},
+          {"point_id": 1, "t_sec": 43200, "value": 0.8, "smooth": true,  "is_endpoint": false, "keyframes": []},
+          {"point_id": 2, "t_sec": 72000, "value": 0.6, "smooth": true,  "is_endpoint": false, "keyframes": []},
+          {"point_id": 3, "t_sec": 86400, "value": 0.5, "smooth": false, "is_endpoint": true,  "keyframes": []}
+        ]
+      }
+    }
+  }
+}

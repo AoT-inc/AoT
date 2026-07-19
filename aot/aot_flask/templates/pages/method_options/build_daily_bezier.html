@@ -1,0 +1,48 @@
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item" style="grid-column: 1 / -1">
+    {{_('Defines daily settings based on a cubic Bezier curve. If you are not familiar with Bezier curves, it is recommended to use the <a href="https://www.desmos.com/calculator/cahqdxeshd" target="_blank">Graphic Bezier Curve Generator</a> to utilize 8 variables for 4 points (x and y each). The start point (x3) and end point (x0) of the x-axis are automatically stretched or tilted to fit 24 hours, and this method repeats daily.')}}
+  </div>
+
+  <div class="aot-form-grid-item">
+    {{form_add_method.x0.label(class_='aot-form-grid-label')}}
+    {{form_add_method.x0(class_='form-control aot-modern-input', value=last_bezier_method.x0)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.y0.label(class_='aot-form-grid-label')}}
+    {{form_add_method.y0(class_='form-control aot-modern-input', value=last_bezier_method.y0)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.x1.label(class_='aot-form-grid-label')}}
+    {{form_add_method.x1(class_='form-control aot-modern-input', value=last_bezier_method.x1)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.y1.label(class_='aot-form-grid-label')}}
+    {{form_add_method.y1(class_='form-control aot-modern-input', value=last_bezier_method.y1)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.x2.label(class_='aot-form-grid-label')}}
+    {{form_add_method.x2(class_='form-control aot-modern-input', value=last_bezier_method.x2)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.y2.label(class_='aot-form-grid-label')}}
+    {{form_add_method.y2(class_='form-control aot-modern-input', value=last_bezier_method.y2)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.x3.label(class_='aot-form-grid-label')}}
+    {{form_add_method.x3(class_='form-control aot-modern-input', value=last_bezier_method.x3)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.y3.label(class_='aot-form-grid-label')}}
+    {{form_add_method.y3(class_='form-control aot-modern-input', value=last_bezier_method.y3)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.shift_angle.label(class_='aot-form-grid-label')}}
+    {{form_add_method.shift_angle(class_='form-control aot-modern-input', value=last_bezier_method.shift_angle)}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.save(class_='btn aot-pill-btn aot-pill-btn-primary', value=dict_translation['save']['title'])}}
+  </div>
+</div>

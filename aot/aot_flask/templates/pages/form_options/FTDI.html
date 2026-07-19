@@ -1,0 +1,21 @@
+{% if 'ftdi_address' in dict_options['options_enabled'] or
+      'ftdi_address' in dict_options['options_disabled']
+  %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['ftdi_address']['title']}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'ftdi_address' in dict_options['options_disabled'] -%}
+    {{form.ftdi_address(class_='form-control aot-modern-input', value=each_device.ftdi_address, disabled=True, **{'title': dict_translation['ftdi_address']['phrase']})}}
+  {% else %}
+    <div class="input-group">
+      {{form.ftdi_address(class_='form-control aot-modern-input', value=each_device.ftdi_address, **{'title': dict_translation['ftdi_address']['phrase']})}}
+      <div class="input-group-append">
+        <button onclick="return $(this).processRequest(this, 'ftdi_scan');" class="btn aot-pill-btn aot-pill-btn-primary ml-1" type="button"><i class="fas fa-search"></i></button>
+      </div>
+    </div>
+  {%- endif -%}
+  </div>
+</div>
+
+{% endif %}

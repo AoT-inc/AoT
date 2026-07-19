@@ -1,0 +1,893 @@
+/*
+ * AoT Entry UI Improvement
+ * Simplifies entry visual design by removing individual content backgrounds
+ * and adding vertical dividers between content items.
+ *
+ * Row height: 42px, grid gap: 4px, total cell: 46px
+ * Output: header(42) + channels(N*42) + gap(4)
+ */
+
+
+/* ===== Grid-Stack Flexbox Integration ===== */
+/* Allow grid-stack-item-content to use flexbox without breaking absolute positioning */
+.grid-stack-item-content.aot-entry-item,
+.grid-stack-item-content:has(.aot-entry-item-header) {
+  display: flex;
+  overflow: visible !important;
+  /* padding: 0 !important; 제거하여 GridStack 마진 허용 */
+  /* margin-left/right 제거하여 수평 간격 확보 */
+}
+
+.grid-stack-item-content:has(.aot-entry-item-header) {
+  flex-direction: column;
+}
+
+/* Ensure single-row entries use flexbox for internal layout */
+.aot-entry-item {
+  display: flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+  align-items: center;
+}
+
+/* ===== Entry Item - single row entries (Input, Function, Geo/Input, AI Agent) ===== */
+.aot-entry-item {
+  height: 48px !important; /* Force standardized 48px content height */
+  position: relative !important;
+  padding: 0 8px !important;
+  border: 1px solid var(--bd-btn-border, #B6BABA);
+  border-radius: 20px !important; /* 알약 모양 복구 */
+  background-color: var(--bd-primary);
+  color: var(--text-color-primary);
+  overflow: hidden;
+  align-items: center;
+  resize: none !important; /* Phase 9-8: Disable internal resizing handle */
+}
+
+.aot-entry-item * {
+  resize: none !important; /* Phase 9-8: Recursive disable */
+}
+
+/* GridStack resize handle removal — entry UI only, not the dashboard widget grid */
+.aot-entry-container .grid-stack-item > .ui-resizable-handle,
+.aot-entry-item .ui-resizable-handle,
+.aot-entry-item-header .ui-resizable-handle,
+.aot-entry-item-channel .ui-resizable-handle {
+  display: none !important;
+}
+
+.aot-entry-item.active-background {
+  background-color: var(--bg-active, #D1D5D5) !important; /* Phase 9-3 수정: 활성 상태 --bg-active */
+}
+
+.aot-entry-item.inactive-background {
+  background-color: var(--bg-inactive, #F3F6F5) !important; /* Phase 9-3 수정: 비활성 상태 --bg-inactive */
+  color: var(--text-color-primary) !important;
+}
+
+.aot-entry-drag-handle,
+.aot-entry-drag-handle i,
+.aot-entry-settings a,
+.aot-entry-settings a i {
+  color: var(--bd-btn-secondary, #5E6B64) !important;
+}
+
+/* ===== Reduced gutters ===== */
+.aot-entry-item.small-gutters > [class*="col-"],
+.aot-entry-item-header.small-gutters > [class*="col-"],
+.aot-entry-item-channel.small-gutters > [class*="col-"] {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* ===== Content Items ===== */
+/* Transparent background for plain text content items */
+.aot-entry-content-item input.form-control:not(.btn) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* UUID copy button (Pill design with hover effect) */
+.aot-entry-uuid-btn {
+  height: var(--aot-btn-height) !important;
+  min-height: var(--aot-btn-height) !important;
+  border-radius: var(--aot-btn-radius) !important;
+  padding-left: var(--aot-btn-padding-x) !important;
+  padding-right: var(--aot-btn-padding-x) !important;
+  display: flex;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  font-weight: 500 !important;
+  font-size: 0.8rem !important;
+  user-select: none !important; /* Phase 9-8: Prevent text cursor */
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid transparent !important; /* 기본 배경 투명 요청 반영 */
+  background-color: transparent !important;
+  color: var(--text-color-primary) !important;
+  width: 100% !important;
+}
+
+.aot-entry-uuid-btn:hover {
+  background-color: var(--brand-secondary) !important;
+  color: var(--text-color-tertiary) !important;
+  border-color: var(--brand-secondary) !important;
+}
+
+/* Device Name Input/label (Plain text style) */
+.aot-entry-name-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-align: left !important;
+  padding-left: 0 !important; /* 기본 패딩은 컨테이너(aot-col-name)에서 담당 */
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  color: var(--text-color-primary) !important;
+  width: 100% !important;
+  user-select: none !important; /* Phase 9-8: Prevent ghost cursor */
+  cursor: default !important;
+  display: flex !important; /* Ensure vertical-centering if div */
+  align-items: center !important;
+}
+
+.aot-entry-name-input:hover {
+  color: inherit !important;
+}
+
+/* Entry Container Margins */
+.aot-entry-container {
+    margin: 0; /* Phase 9-4: Changed from 0 0.75em to allow full width, matching container padding */
+}
+
+/* Ensure .row classes used as entry items do not break out of bounds via negative margins */
+.aot-entry-item.row,
+.aot-entry-item-header.row,
+.aot-entry-item-channel.row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Divider: remove right border for common styles */
+.aot-entry-content-item {
+  border-right: none;
+  display: flex;
+  align-items: center;
+  padding: 0 !important; /* Phase 9-2: 모든 여백 제거 */
+}
+
+/* 3.5:3:3.5 Flex 배분 클래스 (정밀 고정) */
+.aot-col-name { 
+  flex: 35 35 0% !important; 
+  width: 35% !important;
+  max-width: none !important; 
+  min-width: 0; /* 넘침 방지를 위해 min-width 0 설정 필수 */
+  padding-left: 0 !important; /* Phase 9-2: 텍스트 영역 활용을 위해 좌측 여백 제거 */
+}
+
+/* 라벨이 있는 경우 입력 필드 패딩 제거 */
+.aot-col-name:has(.aot-badge-inline) .aot-entry-name-input {
+  padding-left: 0 !important;
+}
+.aot-col-uuid { 
+  flex: 30 30 0% !important; 
+  width: 30% !important;
+  max-width: none !important; 
+  min-width: 0; 
+}
+.aot-col-action { 
+  flex: 35 35 0% !important; 
+  width: 35% !important;
+  max-width: none !important; 
+  min-width: 0; 
+}
+
+
+/* Fallback for browsers without :has() support */
+.aot-entry-content-item.has-button {
+  border-right: none;
+}
+
+/* ===== Uniform height for all inputs/buttons inside entries ===== */
+.aot-entry-item input.form-control,
+.aot-entry-item input.btn,
+.aot-entry-item-header input.form-control,
+.aot-entry-item-channel input.form-control,
+.aot-entry-item-channel input.btn {
+  min-height: var(--aot-base-size, 28px);
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* Font sizes for specific input types within entry */
+.aot-entry-content-item input[type="text"],
+.aot-entry-content-item input[type="text"]:disabled {
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: left !important; /* 강제 좌측 정렬 */
+  padding-left: 0 !important; /* Phase 9-2: 12px 여백 제거 */
+  padding-right: 0 !important; /* Phase 9-2: 우측 여백 제거 */
+  white-space: normal !important; /* Phase 9-2: 줄바꿈 허용 */
+  overflow: visible !important; /* Phase 9-2: 오버플로우 표시 */
+  text-overflow: clip !important; /* Phase 9-2: 말줄임표 제거 */
+}
+
+.aot-entry-content-item input[type="text"]:hover,
+.aot-entry-name-input:hover {
+  color: var(--text-color-primary) !important; /* 호버 시 색상 변경 방지 */
+}
+
+.aot-entry-content-item input.btn {
+  font-size: 0.8rem;
+  text-align: left !important; /* UUID 버튼 좌측 정렬 */
+  padding-left: 12px !important;
+}
+
+.aot-entry-actions input.btn {
+  font-size: 0.8rem;
+  text-align: center !important; /* 액션 버튼 중앙 정렬 */
+}
+
+/* ===== Action Buttons - vertical center ===== */
+.aot-entry-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Minimum width for activate/deactivate buttons */
+.aot-entry-actions input.btn {
+  height: var(--aot-btn-height) !important;
+  min-height: var(--aot-btn-height) !important;
+  border-radius: var(--aot-btn-radius) !important;
+  padding-left: var(--aot-btn-padding-x) !important;
+  padding-right: var(--aot-btn-padding-x) !important;
+  display: flex; /* !important 제거 */
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 500 !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap !important; /* Phase 9-9: Force no-wrap for consistency */
+  overflow: visible !important;   /* Phase 9-2: 오버플로우 허용 */
+  text-overflow: clip !important; /* Phase 9-2: 말줄임표 제거 */
+  transition: all 0.2s ease !important;
+  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Activate / Deactivate button generic styles using custom variables */
+/* Specific selectors to override bootstrap theme defaults and support localization */
+/* Activate button (appears on Light Gray Inactive entry) */
+.aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[name*="_activate"],
+.aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value="Activate"],
+.aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value*="활성화"] {
+  background-color: var(--bg-btn-inactive) !important;
+  color: var(--text-color-tertiary) !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+
+/* Deactivate button (appears on Gray Active entry) */
+.aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[name*="_deactivate"],
+.aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value="Deactivate"],
+.aot-entry-item .aot-entry-actions input.form-control.btn.aot-pill-btn-primary[value*="비활성화"] {
+  background-color: var(--bg-btn-active) !important;
+  color: var(--text-color-tertiary) !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+
+
+/* ===== Button Group - Multiple buttons in single action area ===== */
+.aot-entry-actions.aot-entry-button-group {
+  display: flex; /* !important 제거 */
+  gap: 4px;
+  padding: 0 !important;
+  align-items: center;
+  width: 100% !important;
+  justify-content: stretch;
+}
+
+.aot-entry-actions.aot-entry-button-group input.btn {
+  flex: 1 1 0 !important;
+  min-width: 40px !important;
+  max-width: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+/* Mobile: Ensure button group uses full width */
+@media (max-width: 768px) {
+  .aot-entry-actions.aot-entry-button-group {
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  
+  .aot-entry-actions.aot-entry-button-group input.btn {
+    flex: 1 1 0 !important;
+    min-width: 35px !important;
+  }
+}
+
+/* ===== PID 2-row Entry ===== */
+.aot-pid-entry.aot-entry-item {
+  height: 100px !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.aot-pid-row-1,
+.aot-pid-row-2 {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 0 0 48px;
+  width: 100%;
+  padding: 0 8px;
+}
+
+.aot-pid-row-2 {
+  border-top: 1px solid var(--bd-btn-border, #B6BABA);
+}
+
+/* Spacers that mirror drag-handle and settings column widths */
+.aot-pid-drag-spacer {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  flex: none;
+}
+
+.aot-pid-content-spacer {
+  flex: 65 65 0%;
+  min-width: 0;
+}
+
+.aot-pid-gear-spacer {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  flex: none;
+}
+
+/* Row 2: secondary buttons share the action column width equally */
+.aot-pid-secondary-actions {
+  display: flex;
+  gap: 4px;
+  padding: 0 !important;
+  align-items: center;
+  width: 100%;
+}
+
+.aot-pid-secondary-actions > div {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+}
+
+.aot-pid-secondary-actions > div input.btn {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  color: var(--text-color-tertiary) !important;
+  background-color: var(--bg-btn-inactive) !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+
+/* ===== Output Button State Colors ===== */
+.aot-btn-on,
+.aot-btn-off {
+  height: var(--aot-btn-height) !important;
+  min-height: var(--aot-btn-height) !important;
+  border-radius: var(--aot-btn-radius) !important;
+  padding-left: var(--aot-btn-padding-x) !important;
+  padding-right: var(--aot-btn-padding-x) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 500 !important;
+  font-size: 0.8rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.aot-btn-on {
+  /* Phase 9-5: 장치 상태(State)가 꺼져있을 땐 OFF 버튼과 같은 색상 사용 */
+  background-color: var(--bg-btn-off, #5E6B64) !important;
+  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  color: var(--text-color-tertiary, #FFFFFF) !important;
+}
+
+/* Phase 9-5: 장치 상태가 켜져있을 땐(활성 채널) ON 버튼이 어두운 색상으로 변경 */
+.aot-entry-item-channel.active-background .aot-btn-on,
+.aot-entry-item.active-background .aot-btn-on {
+  background-color: var(--bg-btn-on, #13261B) !important;
+}
+
+/* Actuator Paired: row turns active like any other output, but the non-moving
+   direction button is forced back to the off color so only the active direction
+   stands out. Higher specificity than the row-cascade rule above. */
+.aot-entry-item-channel.active-background .aot-btn-on.aot-paired-inactive,
+.aot-entry-item.active-background .aot-btn-on.aot-paired-inactive {
+  background-color: var(--bg-btn-off, #5E6B64) !important;
+}
+
+.aot-btn-off {
+  background-color: var(--bg-btn-off, #5E6B64) !important;
+  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  color: var(--text-color-tertiary, #FFFFFF) !important;
+  text-shadow: none !important;
+}
+
+/* hover 는 마우스 포인터 환경에서만 — 터치 기기의 sticky-hover(첫 탭이 hover 로
+   소비되어 두 번 탭해야 작동) 방지 */
+@media (hover: hover) and (pointer: fine) {
+  .aot-btn-on:hover,
+  .aot-btn-off:hover {
+    filter: brightness(0.9);
+  }
+}
+
+/* 터치 기기: 제어 버튼 탭 지연/모호성 제거 (300ms 지연 + 더블탭 줌 방지) */
+.aot-btn-on,
+.aot-btn-off,
+.aot-paired-btn {
+  touch-action: manipulation;
+}
+
+/* ===== Inline Badges (for LLM/MCP labels next to names) ===== */
+.aot-badge-inline {
+  font-size: 0.6rem;
+  border-radius: 10px;
+  padding: 3px 6px;
+  margin-right: 6px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.aot-badge-inline.badge-llm {
+  background-color: var(--bg-llm, #6277c7) !important;
+  color: var(--text-color-tertiary) !important;
+}
+
+.aot-badge-inline.badge-mcp {
+  background-color: var(--bg-mcp, #64c762) !important;
+  color: var(--text-color-tertiary) !important;
+}
+
+/* ===== Drag Handle ===== */
+.aot-entry-drag-handle {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  cursor: grab !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* 가로 중앙 정렬 */
+  padding: 0 !important;
+  flex: none !important;
+  height: 100% !important;
+}
+
+.aot-entry-drag-handle i {
+  font-size: 1.2rem !important;
+  color: var(--brand-secondary) !important;
+}
+
+/* ===== Settings Button ===== */
+.aot-entry-settings {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important; /* 맨 우측 배치 */
+  width: 40px !important; /* 40px 고정 */
+  min-width: 40px !important;
+  max-width: 40px !important;
+  height: 100% !important;
+  padding: 0 !important;
+  flex: none !important;
+}
+
+/* Make sure the nested anchor tags fill the space */
+.aot-entry-settings a.btn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.aot-entry-settings i {
+  font-size: 1.1rem;
+  color: var(--bd-btn-border, #B6BABA);
+}
+
+/* ===== Output Entry ===== */
+.grid-stack-item-content:has(.aot-entry-item-header) {
+  border: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  border-radius: 20px !important; /* 엔트리 배경 라운드 20px 요청 반영 */
+  background-color: transparent !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Header row (Row 1: 장치) */
+.aot-entry-item-header {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 8px !important; /* Input 스타일 동기화 (좌우 8px 패딩) */
+  margin-left: 0 !important; /* row 의 음수 마진 무력화 */
+  margin-right: 0 !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  background-color: var(--bd-secondary, #F3F6F5) !important; /* Phase 9-7 지시사항 반영 */
+  border-top-left-radius: 19px !important; /* 렌더링 뭉개짐 방지 */
+  border-top-right-radius: 19px !important;
+  display: flex !important;
+  align-items: center;
+  border-bottom: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  resize: none !important;
+}
+
+.aot-entry-item-header * {
+  resize: none !important;
+}
+
+/* Channel row (Row 2: 채널) */
+.aot-entry-item-channel {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 8px !important; /* Input 스타일 동기화 (좌우 8px 패딩) */
+  margin-left: 0 !important; /* row 의 음수 마진 무력화 */
+  margin-right: 0 !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  display: flex !important;
+  align-items: center;
+  border-bottom: 1px solid var(--bd-btn-border, #B6BABA) !important;
+  transition: background-color 0.2s ease;
+  resize: none !important;
+}
+
+.aot-entry-item-channel * {
+  resize: none !important;
+}
+
+.aot-entry-item-channel:last-of-type {
+  height: 40px !important; /* 8px 단축으로 엔트리 간 시각적 갭 8px 확보 */
+  min-height: 40px !important;
+  border-bottom-left-radius: 19px !important; /* 렌더링 뭉개짐 방지 */
+  border-bottom-right-radius: 19px !important;
+  border-bottom: none !important;
+}
+
+/* Row 2 Background states */
+.aot-entry-item-channel.active-background {
+  background-color: var(--bg-on, #B5BABA) !important;
+}
+
+.aot-entry-item-channel.inactive-background {
+  background-color: var(--bg-off, #F3F6F5) !important;
+}
+
+/* Output 가로 비율 정의 (고정 40px 제외 영역 분배) */
+.aot-output-col-4 {
+  flex: 4 1 0 !important;
+  min-width: 0;
+}
+
+.aot-output-col-6 {
+  flex: 6 1 0 !important;
+  min-width: 0;
+}
+
+/* Output UUID Button Style (Transparent background 요청 반영) */
+.aot-output-uuid-btn {
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--text-color-primary, #13261B) !important;
+  text-align: left !important;
+  padding-left: 12px !important;
+}
+
+.aot-output-uuid-btn:hover {
+  background-color: var(--bd-btn-secondary, #5E6B64) !important;
+  color: var(--text-color-tertiary, #FFFFFF) !important;
+  border-color: var(--bd-btn-secondary, #5E6B64) !important;
+}
+
+/* drag handle & settings button 정밀 고정폭 village */
+.aot-entry-drag-handle,
+.aot-entry-settings,
+.aot-output-spacer-40 {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  flex: none !important;
+}
+
+/* 채널 행 2단 좌우 여백 */
+.aot-ch-col-left {
+  padding-left: 8px !important;
+}
+
+.aot-ch-col-right {
+  padding-right: 4px !important;
+}
+
+/* form-control aot-entry-name-input 과 aot-paired-pos 사이 간격 */
+.aot-entry-name-input .aot-paired-pos {
+  margin-left: 8px;
+}
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 768px) {
+  .aot-entry-item.small-gutters > [class*="col-"],
+  .aot-entry-item-header.small-gutters > [class*="col-"],
+  .aot-entry-item-channel.small-gutters > [class*="col-"] {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  
+  /* Adjust button padding for mobile */
+  .aot-entry-actions input.btn {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  .aot-entry-button-group input.btn {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* Very small screens (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .aot-entry-actions input.btn {
+    font-size: 0.75rem;
+    padding-left: 8px;
+    padding-right: 8px;
+    min-width: 60px;
+  }
+
+  .aot-entry-button-group input.btn {
+    font-size: 0.75rem;
+    padding-left: 6px;
+    padding-right: 6px;
+    min-width: 40px;
+  }
+}
+
+/* Extra small screens (≤360px): force single-row layout */
+@media (max-width: 360px) {
+  .aot-entry-item,
+  .aot-entry-item-header,
+  .aot-entry-item-channel {
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
+  }
+
+  .aot-entry-drag-handle,
+  .aot-entry-settings,
+  .aot-output-spacer-40 {
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+  }
+
+  .aot-entry-drag-handle i {
+    font-size: 1rem !important;
+  }
+
+  .aot-entry-actions input.btn {
+    font-size: 0.7rem !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    min-width: 0 !important;
+  }
+
+  .aot-entry-uuid-btn {
+    font-size: 0.7rem !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .aot-entry-name-input {
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Custom Fix for PID Controller Action Buttons */
+.aot-col-action {
+  gap: 8px; /* Spacing for multiple buttons if shown */
+}
+
+/* Make sure the wrapping div takes full width of aot-col-action */
+.aot-col-action > div {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Make sure the input button inside takes full width of that wrapping div */
+.aot-col-action > div > input.form-control.btn {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* ============================================================
+   v7 Add Panel — Role-First UX (agent_add_ux_redesign)
+   Design tokens: aot-theme-variables.css
+   ============================================================ */
+
+.aot-add-panel {
+  margin-bottom: 1.25rem;
+}
+
+/* --- Tab selector --- */
+.aot-add-tabs {
+  display: flex;
+  gap: var(--aot-space-2);
+  margin-bottom: var(--aot-space-2);
+}
+
+.aot-add-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--aot-btn-height-sm);
+  padding: 0 var(--aot-space-3);
+  border-radius: var(--aot-btn-radius);
+  border: 1px solid var(--aot-border-neutral);
+  background: var(--aot-surface-card);
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.aot-add-tab.active,
+.aot-add-tab:focus {
+  background: var(--aot-btn-bg-primary);
+  border-color: var(--aot-btn-bg-primary);
+  color: var(--text-color-tertiary, #ffffff);
+  outline: none;
+}
+
+.aot-add-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.aot-add-tab-dot--llm { background: var(--aot-color-llm); }
+.aot-add-tab-dot--mcp { background: var(--aot-color-mcp); }
+
+/* --- Panel body --- */
+.aot-add-body {
+  padding: var(--aot-space-3) 0;
+}
+
+/* --- Role card grid --- */
+.aot-role-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aot-space-2);
+  margin-bottom: var(--aot-space-2);
+}
+
+.aot-role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 88px;
+  padding: 10px 14px;
+  background: var(--aot-surface-card);
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.aot-role-card:hover {
+  border-color: var(--aot-color-llm);
+  background: rgba(98, 119, 199, 0.05);
+}
+
+.aot-role-card.selected {
+  border-color: var(--aot-color-llm);
+  background: rgba(98, 119, 199, 0.08);
+  box-shadow: 0 0 0 2px rgba(98, 119, 199, 0.18);
+}
+
+.aot-role-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--aot-color-text-secondary);
+}
+
+.aot-role-name {
+  font-weight: 600;
+  font-size: 0.83rem;
+  color: var(--aot-color-text-primary);
+  line-height: 1.2;
+}
+
+.aot-role-hint {
+  font-size: 0.70rem;
+  color: var(--aot-color-text-secondary);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+/* --- Role preview strip --- */
+.aot-role-preview {
+  padding: 10px 14px;
+  background: var(--aot-surface-card);
+  border: 1px solid var(--aot-border-neutral);
+  border-left: 3px solid var(--aot-color-llm);
+  border-radius: 12px;
+  margin-top: 4px;
+  margin-bottom: var(--aot-space-2);
+}
+
+.aot-role-preview-row {
+  display: flex;
+  align-items: center;
+  gap: var(--aot-space-2);
+  margin-bottom: 3px;
+}
+
+.aot-role-preview-label {
+  font-size: 0.75rem;
+  color: var(--aot-color-text-secondary);
+  flex-shrink: 0;
+}
+
+.aot-role-preview-model {
+  font-size: 0.83rem;
+  color: var(--aot-color-text-primary);
+}
+
+.aot-role-preview-hint {
+  font-size: 0.75rem;
+  color: var(--aot-color-text-secondary);
+  font-family: var(--aot-font-mono);
+}
+
+.aot-role-preview-desc {
+  font-size: 0.75rem;
+  color: var(--aot-color-text-secondary);
+  margin-bottom: var(--aot-space-2);
+  line-height: 1.4;
+}
+
+/* --- Add confirm button --- */
+.aot-add-confirm-btn {
+  height: var(--aot-btn-height-sm) !important;
+  font-size: var(--aot-font-size-sm) !important;
+}
+
+/* --- MCP form width constraint --- */
+.aot-add-mcp-form {
+  max-width: 600px;
+}

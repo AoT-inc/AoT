@@ -1,0 +1,113 @@
+<div class="modal fade" id="modal_config_dependency_install" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+      <div class="modal-content" style="padding: 1em">
+        <div class="modal-header">
+          <h5 class="modal-title">Install Dependencies for <span class="dependencies_device_name"></span></h5>
+        </div>
+        <div id="container_confirm_install" >
+          <p>{{_('Unmet components were found while adding the following device')}}: <span class="dependencies_device_name"></span> (<span class="dependencies_device"></span>)</p>
+          <p>{{_('Unmet components')}}: <span class="dependencies_unmet"></span></p>
+          <div id="dependencies_message"></div>
+          
+          <p>{{_('To install these components, click the "Install" button below and wait until the installation is complete before re-adding the device. After installation, the frontend and backend will automatically restart to detect the newly installed modules.')}}</p>
+
+          <form id="form_dependency_install" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="dependency_unmet" name="dependency_unmet" value="">
+            <div class="row small-gutters" style="padding-left: 0.5em">
+              <div class="col-auto">
+                <button type="button" class="form-control btn btn-primary btn-sm btn-block" data-dismiss="modal">{{_('Close')}}</button>
+              </div>
+              <div class="col-auto">
+                <input class="form-control btn btn-primary btn-sm btn-block" type="submit" name="install" value="{{_('Install')}}">
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div id="container_install" style="display: none;">
+          <p>{{_('Installation has started for the following components')}}: <span class="dependencies_unmet"></span></p>
+
+          <p>{{_('The component installation log below refreshes every 5 seconds. Please wait until all components are installed and the frontend and backend restart before re-adding the associated device. When the installation process is complete, the message "#### Component installation complete" will appear at the end of the log.')}}</p>
+          <p>{{_('If a problem occurs during installation and you need to reset the installation status, deleting the /opt/AoT/.dependency file will restore component installation functions.')}}</p>
+
+          <div class="row small-gutters" style="padding: 0.5em">
+            <div class="col-auto">
+              <button type="button" class="form-control btn btn-primary btn-sm btn-block" data-dismiss="modal">{{_('Close')}}</button>
+            </div>
+          </div>
+
+          <pre style="overflow:auto; resize: vertical; height:400px" id="dependency_status"></pre>
+        </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let prev_string = '';
+  function check_dependency_status() {
+    const url = '/admin/dependency_status';
+    $.ajax(url, {
+      success: function(new_string, responseText, jqXHR) {
+        if (jqXHR.status !== 204) {
+          if (new_string !== prev_string) {
+            prev_string = new_string;
+            document.getElementById("dependency_status").innerHTML = new_string;
+            let objDiv = document.getElementById("dependency_status");
+            objDiv.scrollTop = objDiv.scrollHeight;
+          }
+        }
+        else {
+          document.getElementById("dependency_status").innerHTML = "Attempting to read the dependency log. Please wait...";
+        }
+      },
+      cache: false
+    });
+  }
+
+  function popup_response(data) {
+    {% if not misc.hide_alert_warning %}
+    if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
+      window.showToast('Warning: ' + data.data.messages.warning.join(", "), 'warning');
+    }
+    {% endif %}
+    {% if not misc.hide_alert_info %}
+    if ('info' in data.data.messages && data.data.messages.info.length !== 0) {
+      window.showToast('Info: ' + data.data.messages.info.join(", "), 'info');
+    }
+    {% endif %}
+    {% if not misc.hide_alert_success %}
+    if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+      window.showToast('Success: ' + data.data.messages.success.join(", "), 'success');
+    }
+    {% endif %}
+  }
+
+  $("#form_dependency_install").submit(function(e) {
+    e.preventDefault();
+    {% if not misc.hide_alert_info %}window.showToast('Command sent. Please wait...', 'info');{% endif %}
+    $.ajax({
+      type: "POST",
+      url: '/admin/dependency_install/' + $('#dependency_unmet').val(),
+      data: $(this).serialize(),
+      success: function (data) {
+        document.getElementById('container_confirm_install').style.display = "none";
+        document.getElementById('container_install').style.display = "";
+        popup_response(data);
+        check_dependency_status();
+        setInterval(function() {
+          check_dependency_status();
+        }, 5000);
+      },
+      error: function() {
+        window.showToast('Error: Could not communicate with server', 'error');
+      }
+    });
+  });
+
+  $("#modal_config_dependency_install").on("hidden.bs.modal", function () {
+    document.getElementById('container_confirm_install').style.display = "";
+    document.getElementById('container_install').style.display = "none";
+  });
+</script>

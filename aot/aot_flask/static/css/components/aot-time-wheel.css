@@ -1,0 +1,79 @@
+/*
+ * AoT Time Wheel — shared drum-wheel time picker (hh:mm:ss)
+ * Reusable across widgets. Paired with /static/js/components/aot-time-wheel.js
+ * Open via: AoTTimeWheel.open({ value, title, max, onConfirm })
+ */
+
+.aot-wheel-backdrop{
+  /* 위젯 오버레이(트리거 시퀀스 등, 모달 레벨) 위에서도 열리므로 모달 위 계층 */
+  position:fixed; inset:0; z-index:var(--aot-z-popover); display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.38);
+  overscroll-behavior:contain; touch-action:none;
+}
+.aot-wheel-backdrop.is-open{ display:flex; }
+
+/* Lock background page scroll while the picker is open */
+body.aot-wheel-lock{ overflow:hidden !important; }
+
+.aot-wheel-panel{
+  background:var(--aot-surface-card,#fff); border-radius:18px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.25);
+  padding:14px 16px 12px; width:min(320px,90vw);
+  user-select:none; -webkit-user-select:none;
+}
+.aot-wheel-title{
+  text-align:center; font-weight:700; font-size:0.95rem;
+  color:var(--aot-text-main,#333); margin-bottom:8px;
+}
+.aot-wheel-cols{
+  position:relative; display:flex; align-items:center;
+  justify-content:center; gap:2px;
+}
+.aot-wheel-col{
+  position:relative; z-index:2;          /* numbers above the highlight band */
+  height:180px; flex:1 1 0;
+  overflow-y:scroll; scroll-snap-type:y mandatory;
+  scrollbar-width:none; -ms-overflow-style:none;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain; touch-action:pan-y;
+  text-align:center;
+  perspective:640px;                     /* drum curvature */
+  perspective-origin:center center;
+}
+.aot-wheel-col::-webkit-scrollbar{ display:none; }
+.aot-wheel-pad{ height:72px; }           /* 2 rows above/below center */
+.aot-wheel-item{
+  height:36px; line-height:36px;
+  scroll-snap-align:center;
+  font-variant-numeric:tabular-nums;
+  font-size:1.25rem; font-weight:400;
+  color:var(--text-medium-gray,#b9b9b9);
+  transform-origin:center center;
+  backface-visibility:hidden;
+  visibility:hidden;                     /* only the visible window is shown by JS */
+  transition:color .12s ease, font-weight .12s ease;
+  will-change:transform,opacity;
+  cursor:pointer;
+}
+/* selected number: emphasized by color/weight only — no scale (no horizontal shift) */
+.aot-wheel-item.is-selected{
+  color:var(--aot-text-main,#1d1d1d);
+  font-weight:700;
+}
+.aot-wheel-sep{
+  font-size:1.25rem; font-weight:700;
+  color:var(--aot-text-main,#333); padding:0 2px;
+  position:relative; z-index:2;
+}
+/* highlight window sits BEHIND the numbers */
+.aot-wheel-band{
+  position:absolute; left:0; right:0; top:50%; height:36px;
+  transform:translateY(-50%); z-index:1; pointer-events:none;
+  border-top:1px solid var(--border-neutral,#e2ded0);
+  border-bottom:1px solid var(--border-neutral,#e2ded0);
+  background:var(--bg-btn-hover-lighter,rgba(46,204,113,0.08));
+  border-radius:8px;
+}
+.aot-wheel-actions{ display:flex; gap:8px; margin-top:12px; }
+.aot-wheel-actions .btn.aot-pill-btn{ flex:1; }

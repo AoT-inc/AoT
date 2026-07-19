@@ -1,0 +1,86 @@
+# Production / distribution compose — runs the pre-built GHCR image instead of
+# building from a host source checkout. Upgrade with:
+#     docker compose -f docker/docker-compose.prod.yml pull
+#     docker compose -f docker/docker-compose.prod.yml up -d
+# The app auto-migrates the volume DB on startup (aot_flask/app.py). All data
+# (SQLite DBs, secret key, kma, InfluxDB) lives in named volumes and survives
+# image swaps. Roll back by pinning AOT_IMAGE_TAG to a previous version.
+#
+# Copy .env.prod.example to .env and set AOT_IMAGE_TAG.
+name: aot
+
+services:
+  aot-app:
+    image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
+    command: gunicorn -c /app/install/gunicorn_conf.py --bind 0.0.0.0:80 aot.start_flask_ui:app
+    ports:
+      - "${AOT_PORT:-8084}:80"
+    volumes:
+      # Live data (SQLite DBs + secret key + kma) — named volume, NOT a bind mount
+      # (bind mounts break SQLite WAL/atomic-rename on macOS/Windows Docker).
+      - aot_data:/app/aot_local
+      - flask_session:/app/aot/databases/flask_session
+      - aot_logs:/var/log/aot
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      - FLASK_ENV=production
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=${HARDWARE_PROFILE:-LOW}
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - aot_daemon
+      - influxdb
+    restart: always
+
+  aot_daemon:
+    image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
+    command: python aot/aot_daemon.py
+    volumes:
+      # Same named volume as aot-app: daemon and UI must open the SAME aot.db.
+      - aot_data:/app/aot_local
+      - aot_logs:/var/log/aot
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=${HARDWARE_PROFILE:-LOW}
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - influxdb
+    restart: always
+
+  influxdb:
+    image: influxdb:2.7
+    ports:
+      # localhost-only: default credentials are public, so never expose to the LAN.
+      # The app containers reach it over the compose network (influxdb:8086).
+      - "127.0.0.1:8087:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      # First-boot self-initialization (org/bucket/token) for a fresh install.
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=aot
+      - DOCKER_INFLUXDB_INIT_PASSWORD=mmdu77sj3nIoiajjs
+      - DOCKER_INFLUXDB_INIT_ORG=aot
+      - DOCKER_INFLUXDB_INIT_BUCKET=aot_db
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=mmdu77sj3nIoiajjs
+    restart: always
+
+volumes:
+  aot_data:
+  flask_session:
+  aot_logs:
+  influxdb_data:
+  influxdb_config:

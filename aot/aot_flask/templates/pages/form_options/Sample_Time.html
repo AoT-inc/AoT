@@ -1,0 +1,16 @@
+{% if 'sample_time' in dict_options['options_disabled'] or
+      'sample_time' in dict_options['options_enabled']
+  %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.sample_time.label.text}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'sample_time' in dict_options['options_disabled'] -%}
+    {{form.sample_time(class_='form-control aot-modern-input', value=each_device.sample_time, disabled=True, **{'title': dict_translation['sample_time']['phrase']})}}
+  {% else %}
+    {{form.sample_time(class_='form-control aot-modern-input', value=each_device.sample_time, **{'title': dict_translation['sample_time']['phrase']})}}
+  {%- endif -%}
+  </div>
+</div>
+
+{% endif %}

@@ -1,0 +1,1122 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_library" %}
+{% set help_page = [manual_url("ai/overview/#knowledge-library"), _('AI Library')] %}
+
+{% block title %}- {{ _('AI Library') }}{% endblock %}
+
+{% block head %}
+<style>
+  /* Force 100% width on mobile immediately to prevent jagged reflow */
+  @media (max-width: 768px) {
+    .grid-stack-item {
+      width: 100% !important;
+      left: 0 !important;
+    }
+  }
+</style>
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.3" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<main role="main" class="container py-4">
+  {% include 'flash_messages.html' %}
+
+  <div class="aot-settings-title">
+    <h3>{{ _('AI Library') }}</h3>
+  </div>
+  <p class="aot-modal-body-text">{{ _('Connect external data sources to automatically inject knowledge into AI context records.') }}</p>
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  <!-- Selection Row: source type picker → Add -->
+  <div class="row aot-main-selection-row">
+    <div class="col-auto">
+      <select class="selectpicker aot-standard-select"
+              data-style="btn btn-primary aot-roundbox"
+              data-live-search="false"
+              title="{{ _('Select Source Type') }}"
+              id="library_source_select">
+        <optgroup label="{{ _('System Library') }}">
+          {% for key, preset in library_presets.items() if preset.is_system %}
+          <option value="{{ key }}" data-subtext="{{ preset.source_type }}">
+            {{ preset.label }}
+          </option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="{{ _('Custom Source') }}">
+          {% for key, preset in library_presets.items() if not preset.is_system %}
+          <option value="{{ key }}" data-subtext="{{ preset.source_type }}">
+            {{ preset.label }}
+          </option>
+          {% endfor %}
+        </optgroup>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary" type="button" onclick="triggerAddSource()">
+        {{ _('Add') }}
+      </button>
+    </div>
+  </div>
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+  <!-- GridStack entry list -->
+  <div class="grid-stack aot-entry-container" id="grid-sources">
+    {% for source in sources %}
+    <div id="gridstack_source_{{ source.source_id }}"
+         class="grid-stack-item"
+         gs-id="{{ source.source_id }}"
+         gs-x="0" gs-y="0" gs-w="24" gs-h="1" gs-no-resize="true">
+      <div class="grid-stack-item-content
+                  {% if source.is_enabled %}active-background{% else %}inactive-background{% endif %}
+                  row small-gutters aot-entry-item">
+
+        <div class="aot-entry-drag-handle">
+          <i class="fa fa-grip-lines"></i>
+        </div>
+
+        <div class="aot-entry-content-item aot-col-name">
+          <span class="badge aot-badge-inline
+            {% if source.source_type == 'rest_api' %}badge-info
+            {% elif source.source_type == 'document' %}badge-secondary
+            {% elif source.source_type == 'web_url' %}badge-primary
+            {% else %}badge-dark{% endif %}">
+            {{ source.source_type | upper | replace('_', ' ') }}
+          </span>
+          <div class="form-control aot-entry-name-input" title="{{ source.source_name }}">
+            {{ source.source_name }}
+          </div>
+        </div>
+
+        <div class="aot-entry-content-item aot-col-uuid">
+          <input class="form-control btn aot-entry-uuid-btn aot-pill-btn"
+                 type="button"
+                 title="{{ source.parameter_name }}"
+                 value="{{ source.parameter_name }}"
+                 onclick="setClipboard('{{ source.parameter_name }}')">
+        </div>
+
+        <div class="aot-entry-actions aot-col-action aot-entry-button-group">
+          {% if not source.is_enabled %}
+            <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
+                   type="button"
+                   value="{{ _('Activate') }}"
+                   onclick="activateSource('{{ source.source_id }}', this)">
+          {% else %}
+            <input class="form-control btn btn-secondary aot-pill-btn"
+                   type="button"
+                   value="{{ _('Deactivate') }}"
+                   onclick="deactivateSource('{{ source.source_id }}', this)">
+            <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
+                   type="button"
+                   value="{{ _('Sync') }}"
+                   onclick="syncSource('{{ source.source_id }}', this)">
+          {% endif %}
+        </div>
+
+        <div class="aot-entry-settings">
+          <a class="btn p-0" onclick="openSourceSettings('{{ source.source_id }}')">
+            <i class="fas fa-cog"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="clear: both; padding: 2em 0 0.5em;">
+    <div class="aot-settings-title">
+      <h3>{{ _('AI-Curated Knowledge Review') }}</h3>
+    </div>
+    <p class="aot-modal-body-text">{{ _('Knowledge the AI shelved on its own (always unconfirmed at first). Confirm/edit what is correct, retire what is wrong — see it cited as [AI 정리 — 미확인] until reviewed.') }}</p>
+  </div>
+
+  <div id="reviewEmptyState" class="aot-modal-body-text" style="{% if review_items %}display:none;{% endif %} padding: 1em 0;">
+    {{ _('No AI-curated knowledge yet.') }}
+  </div>
+
+  <div class="grid-stack aot-entry-container" id="grid-review" style="{% if not review_items %}display:none;{% endif %}">
+    {% for item in review_items %}
+    <div id="gridstack_review_{{ item.chunk_id }}"
+         class="grid-stack-item"
+         gs-id="{{ item.chunk_id }}"
+         gs-x="0" gs-y="0" gs-w="24" gs-h="1" gs-no-resize="true">
+      <div class="grid-stack-item-content
+                  {% if item.context_state == 'retired' %}inactive-background{% else %}active-background{% endif %}
+                  row small-gutters aot-entry-item">
+
+        <div class="aot-entry-drag-handle">
+          <i class="fa fa-grip-lines"></i>
+        </div>
+
+        <div class="aot-entry-content-item aot-col-name">
+          <span class="badge aot-badge-inline
+            {% if item.context_state == 'user_confirmed' %}badge-success
+            {% elif item.context_state == 'corroborated' %}badge-info
+            {% elif item.context_state == 'retired' %}badge-dark
+            {% else %}badge-warning{% endif %}">
+            {% if item.context_state == 'user_confirmed' %}{{ _('Confirmed') }}
+            {% elif item.context_state == 'corroborated' %}{{ _('Corroborated') }}
+            {% elif item.context_state == 'retired' %}{{ _('Retired') }}
+            {% else %}{{ _('Unconfirmed') }}{% endif %}
+          </span>
+          {% if item.flagged_reason %}
+          <span class="badge badge-danger aot-badge-inline" title="{{ item.flagged_reason }}">
+            <i class="fas fa-exclamation-triangle"></i> {{ _('Flagged') }}
+          </span>
+          {% endif %}
+          {% if item.authoritative_match %}
+          <span class="badge badge-info aot-badge-inline" title="{{ _('Same topic as an authoritative source') }}: {{ item.authoritative_match }}">
+            <i class="fas fa-link"></i> {{ _('Matches') }} {{ item.authoritative_match }}
+          </span>
+          {% endif %}
+          <div class="form-control aot-entry-name-input" title="{{ item.attribution or '' }}">
+            {{ item.heading }}
+          </div>
+        </div>
+
+        <div class="aot-entry-content-item aot-col-uuid">
+          <input class="form-control btn aot-entry-uuid-btn aot-pill-btn"
+                 type="button"
+                 title="{{ item.tags | join(', ') }}"
+                 value="{{ item.tags | join(', ') }}">
+        </div>
+
+        <div class="aot-entry-actions aot-col-action aot-entry-button-group">
+          {% if item.context_state == 'retired' %}
+            <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
+                   type="button"
+                   value="{{ _('Reactivate') }}"
+                   onclick="reactivateReviewItem('{{ item.chunk_id }}', this)">
+          {% else %}
+            {% if item.context_state == 'system_generated' %}
+              <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
+                     type="button"
+                     value="{{ _('Confirm') }}"
+                     onclick="confirmReviewItem('{{ item.chunk_id }}', this)">
+            {% endif %}
+            <input class="form-control btn btn-secondary aot-pill-btn"
+                   type="button"
+                   value="{{ _('Retire') }}"
+                   onclick="retireReviewItem('{{ item.chunk_id }}', this)">
+          {% endif %}
+        </div>
+
+        <div class="aot-entry-settings">
+          <a class="btn p-0" onclick="openReviewEdit('{{ item.chunk_id }}')">
+            <i class="fas fa-cog"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</main>
+</div>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<!-- Source Settings Modal -->
+<div class="modal fade aot-option-modal" id="sourceSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="sourceSettingsTitle">{{ _('Source Settings') }}</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body" id="sourceSettingsBody">
+        <div class="text-center p-5">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="deleteSource(currentSourceId)">{{ _('Delete') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="saveSourceSettings(currentSourceId, currentSourceType, currentIsSystem)">{{ _('Save') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Source Modal removed: entry is added immediately on "Add" click (agent pattern).
+     Configuration is done via the settings cog on each entry row. -->
+
+<!-- Review Item Edit Modal (P5) -->
+<div class="modal fade aot-option-modal" id="reviewEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ _('Edit AI-Curated Knowledge') }}</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body" id="reviewEditBody">
+        <div class="text-center p-5">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="saveReviewEdit()">{{ _('Save (Confirms)') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var CSRF_TOKEN  = "{{ csrf_token() }}";
+
+/* JS-side translation strings */
+var T = {
+  selectSourceType: "{{ _('Please select a source type.') }}",
+  adding:           "{{ _('Adding…') }}",
+  sourceAdded:      "{{ _('Source added. Configure it via the settings cog.') }}",
+  error:            "{{ _('Error') }}",
+  requestFailed:    "{{ _('Request failed') }}",
+  syncing:          "{{ _('Syncing…') }}",
+  syncComplete:     "{{ _('Sync complete') }}",
+  syncFailed:       "{{ _('Sync failed') }}",
+  connectionError:  "{{ _('Connection error') }}",
+  sourceNotFound:   "{{ _('Source not found.') }}",
+  settingsSuffix:   "{{ _('Settings') }}",
+  sourceName:       "{{ _('Source Name') }}",
+  parameterName:    "{{ _('Parameter Name (Context Key)') }}",
+  syncInterval:     "{{ _('Sync Interval (min)') }}",
+  configHeader:     "{{ _('Configuration') }}",
+  apiKey:           "{{ _('API Key') }}",
+  endpointUrl:      "{{ _('Endpoint URL') }}",
+  jsonPath:         "{{ _('JSON Path') }}",
+  filePath:         "{{ _('File Path') }}",
+  parseMode:        "{{ _('Parse Mode') }}",
+  cssSelector:      "{{ _('CSS Selector (optional)') }}",
+  queryTemplate:    "{{ _('Query Template') }}",
+  close:            "{{ _('Close') }}",
+  activate:         "{{ _('Activate') }}",
+  deactivate:       "{{ _('Deactivate') }}",
+  notEnabled:       "{{ _('Source is not enabled. Activate it before syncing.') }}",
+  delete:           "{{ _('Delete') }}",
+  save:             "{{ _('Save') }}",
+  saved:            "{{ _('Saved.') }}",
+  saveFailed:       "{{ _('Save failed') }}",
+  confirmDelete:    "{{ _('Delete this source?') }}",
+  deleted:          "{{ _('Deleted.') }}",
+  deleteFailed:     "{{ _('Delete failed') }}",
+  cropType:         "{{ _('Crop Type') }}",
+  confirming:       "{{ _('Confirming…') }}",
+  confirmed:        "{{ _('Confirmed.') }}",
+  retiring:         "{{ _('Retiring…') }}",
+  retired:          "{{ _('Retired.') }}",
+  confirmRetire:    "{{ _('Retire this item? It will stop being cited until reactivated.') }}",
+  reactivating:     "{{ _('Reactivating…') }}",
+  reactivated:      "{{ _('Reactivated.') }}",
+  itemNotFound:     "{{ _('Item not found.') }}",
+  heading:          "{{ _('Heading') }}",
+  content:          "{{ _('Content') }}",
+  tags:             "{{ _('Tags (comma-separated)') }}",
+  attribution:      "{{ _('Attribution') }}",
+  relatedDocs:      "{{ _('Related Documents') }}",
+  sourceSite:       "{{ _('Source Site') }}",
+  link:             "{{ _('Link') }}",
+  usageLabel:       "{{ _('Usage:') }}",
+  selectOperations: "{{ _('Select operations to register as knowledge') }}",
+  commonParams:     "{{ _('Parameters for the selected operations') }}",
+  selectAtLeastOne: "{{ _('Select at least one operation.') }}",
+  sfkOpsHint:       "{{ _('Enter your service key, then use the Farm and Season pickers below to choose your farm by region and season by name — the internal IDs are filled in for you, so you never have to type a code.') }}",
+  sfkOpsHintSimple: "{{ _('Each of these operations only needs a service key and a date range — no farm-specific ID required.') }}",
+  sfkCodeHint:      "{{ _('A classification code from the measurement record — the example is one real sample value, not a fixed option; actual values vary per record.') }}",
+  sfkNoOpsSelected: "{{ _('Select an operation above to see its required parameters.') }}",
+  selectAll:        "{{ _('Select All') }}",
+  deselectAll:      "{{ _('Deselect All') }}",
+  sfkFarmLabel:     "{{ _('Farm') }}",
+  sfkSeasonLabel:   "{{ _('Cropping Season') }}",
+  sfkLoadFarms:     "{{ _('Load farms') }}",
+  sfkSelectFarm:    "{{ _('Select a farm') }}",
+  sfkSelectSeason:  "{{ _('Select a season') }}",
+  sfkEnterKeyFirst: "{{ _('Enter the API key first, then load farms.') }}",
+  sfkPickFarmFirst: "{{ _('Pick a farm first to load its seasons.') }}",
+  sfkCurrent:       "{{ _('Current:') }}",
+  sfkLoading:       "{{ _('Loading…') }}",
+  sfkLoadFailed:    "{{ _('Load failed') }}",
+  sfkNoFarms:       "{{ _('No farms returned for this key.') }}",
+  sfkNoSeasons:     "{{ _('No seasons found for this farm.') }}",
+};
+
+/* Preset metadata for config form rendering.
+   description/usage/urls feed the info block at the top of the settings modal
+   (same layout contract as the input/output options modals' info header). */
+var PRESET_META = {
+  {% for key, preset in library_presets.items() %}
+  {{ key | tojson }}: {
+    label: {{ preset.label | tojson }},
+    isSystem: {{ 'true' if preset.is_system else 'false' }},
+    sourceType: {{ preset.source_type | tojson }},
+    authKeyName: {{ preset.get("auth_key_name", "") | tojson }},
+    description: {{ preset.get("description_ko", preset.get("description", "")) | tojson }},
+    usage: {{ preset.get("usage", "") | tojson }},
+    urlSource: {{ preset.get("url_source", "") | tojson }},
+    urlApiKey: {{ preset.get("url_api_key", "") | tojson }},
+    syncIntervalMin: {{ preset.get("sync_interval_min", 0) }},
+    multiOperation: {{ 'true' if preset.get("multi_operation") else 'false' }},
+  },
+  {% endfor %}
+};
+
+/* SmartFarmKorea operation checklists — one entry per selectable operation,
+   grouped by category exactly as the source page groups them (아이덴티티/
+   작기/환경/생육 for facility/outdoor; 낙농/양돈/양계/한우 for livestock).
+   Three separate datasets (시설원예 EXT-KR-04 / 노지 EXT-KR-05 / 축산
+   EXT-KR-06) keyed by preset_key, since they list DIFFERENT operations (e.g.
+   facility/outdoor growth ops differ: 딸기/국화/참외 vs 마늘/양파/블루베리;
+   livestock has its own unrelated set) even though 'identity'/'cropping'/
+   'env' keys exist in both facility and outdoor. Sourced from the client
+   module's OPERATIONS/OUTDOOR_OPERATIONS/LIVESTOCK_OPERATIONS dicts
+   (aot/ai/context/ext/smartfarmkorea_client.py) so the UI can never drift
+   from what the sync path actually dispatches. */
+/* Built via plain Jinja for-loops (not a whole-dict |tojson) so category
+   display order matches the Python dict's insertion order (아이덴티티/작기/
+   환경/생육 — the source page's own grouping). A whole-dict |tojson goes
+   through Flask's JSON provider, which sorts keys alphabetically and silently
+   scrambles this order — confirmed live (identity ended up last). */
+var SMARTFARMKOREA_OPS_BY_PRESET = {
+  smartfarmkorea: {
+    {% for key, op in smartfarmkorea_operations.items() %}
+    {{ key | tojson }}: {
+      category: {{ op.category | tojson }},
+      label: {{ op.label_ko | tojson }},
+      params: {{ (op.params | reject('equalto', 'serviceKey') | list) | tojson }},
+    },
+    {% endfor %}
+  },
+  smartfarmkorea_outdoor: {
+    {% for key, op in smartfarmkorea_outdoor_operations.items() %}
+    {{ key | tojson }}: {
+      category: {{ op.category | tojson }},
+      label: {{ op.label_ko | tojson }},
+      params: {{ (op.params | reject('equalto', 'serviceKey') | list) | tojson }},
+    },
+    {% endfor %}
+  },
+  smartfarmkorea_livestock: {
+    {% for key, op in smartfarmkorea_livestock_operations.items() %}
+    {{ key | tojson }}: {
+      category: {{ op.category | tojson }},
+      label: {{ op.label_ko | tojson }},
+      params: {{ (op.params | reject('equalto', 'serviceKey') | list) | tojson }},
+    },
+    {% endfor %}
+  },
+};
+
+/* Per-param Korean labels — shown next to each shared parameter input so the
+   operator knows why a field is there. */
+var SMARTFARMKOREA_PARAM_LABELS = {
+  userId:          "{{ _('User ID') }}",
+  facilityId:      "{{ _('Facility ID') }}",
+  croppingSerlNo:  "{{ _('Cropping Serial No.') }}",
+  measDate:        "{{ _('Measurement Date') }}",
+  startDate:       "{{ _('Start Date') }}",
+  endDate:         "{{ _('End Date') }}",
+  fldCode:         "{{ _('Field Code') }}",
+  sectCode:        "{{ _('Section Code') }}",
+  fatrCode:        "{{ _('Attribute Code') }}",
+  itemCode:        "{{ _('Item Code') }}",
+};
+
+/* Which params come from a prior discovery operation (identity/cropping) vs
+   free-form data the operator already knows (dates) vs opaque per-record
+   classification codes (fldCode etc, no clean enum available — see
+   sfkCodeHint). Drives which hint line renders under each field. */
+var SMARTFARMKOREA_PARAM_KIND = {
+  userId: 'identity', facilityId: 'identity', croppingSerlNo: 'cropping',
+  fldCode: 'code', sectCode: 'code', fatrCode: 'code', itemCode: 'code',
+};
+
+/* Phase 1 cascading pickers: how each param is ENTERED, not where its value
+   comes from semantically (that's PARAM_KIND). 'farm'/'season' params are
+   resolved by the farm/season dropdowns (never typed); 'date' and 'code'
+   params stay free-text. userId+facilityId+itemCode all fall out of one farm
+   pick; croppingSerlNo out of one season pick. See resolve_farms/
+   resolve_seasons + the /smartfarmkorea/farms|seasons endpoints. */
+var SFK_PARAM_INPUT = {
+  userId: 'farm', facilityId: 'farm', itemCode: 'farm',
+  croppingSerlNo: 'season',
+  measDate: 'date', startDate: 'date', endDate: 'date',
+  fldCode: 'code', sectCode: 'code', fatrCode: 'code',
+};
+
+/* One real sample value per field, scraped from each preset's own source
+   page (2026-07-19) — an anchor example, not an exhaustive option list (see
+   module docstring in aot/ai/context/ext/smartfarmkorea_client.py). */
+var SMARTFARMKOREA_PARAM_EXAMPLES_BY_PRESET = {
+  smartfarmkorea: {
+    userId: 'PF_0001004', facilityId: 'PF_0006032_01', croppingSerlNo: '15',
+    measDate: '2022-12-04', startDate: '2015-11-29', endDate: '2015-11-29',
+    fldCode: 'FG', sectCode: 'EI', fatrCode: 'TI', itemCode: '080400',
+  },
+  smartfarmkorea_outdoor: {
+    userId: 'PF_0020437', facilityId: 'PF_0006001_01', croppingSerlNo: '3721',
+    measDate: '2022-12-06', startDate: '2020-10-14', endDate: '2020-10-14',
+    fldCode: 'FG', sectCode: 'NT', fatrCode: 'EO', itemCode: '065900',
+  },
+  smartfarmkorea_livestock: {
+    /* NOTE: livestock's startDate/endDate use YYYYMMDD (no dashes) — a
+       different format than facility/outdoor's YYYY-MM-DD, confirmed from
+       this preset's own scraped sample, not assumed. */
+    startDate: '20200717', endDate: '20200717',
+  },
+};
+
+var librarySourcesGrid, libraryReviewGrid;
+document.addEventListener('DOMContentLoaded', function () {
+  var gridOpts = {
+    animate: false,
+    cellHeight: 52,
+    column: 24,
+    margin: 2,
+    handle: '.aot-entry-drag-handle',
+    float: false,
+    disableOneColumnMode: true,
+    alwaysShowResizeHandle: false,
+    resizable: false
+  };
+  librarySourcesGrid = GridStack.init(gridOpts, '#grid-sources');
+  libraryReviewGrid = GridStack.init(gridOpts, '#grid-review');
+  if (typeof $.fn.selectpicker === 'function') {
+    $('#library_source_select').selectpicker('refresh');
+  }
+});
+let librarySourcesResizeTimer;
+$(window).on('resize', function() {
+  clearTimeout(librarySourcesResizeTimer);
+  librarySourcesResizeTimer = setTimeout(function() {
+    if (librarySourcesGrid && typeof librarySourcesGrid.onParentResize === 'function') {
+      librarySourcesGrid.onParentResize();
+    }
+    if (libraryReviewGrid && typeof libraryReviewGrid.onParentResize === 'function') {
+      libraryReviewGrid.onParentResize();
+    }
+  }, 50);
+});
+
+/* -----------------------------------------------------------------------
+   triggerAddSource — agent pattern: immediately POST, no modal required
+   ----------------------------------------------------------------------- */
+function triggerAddSource() {
+  var presetKey = document.getElementById('library_source_select').value;
+  if (!presetKey) {
+    if (window.showToast) window.showToast(T.selectSourceType, 'warning');
+    return;
+  }
+  if (window.showToast) window.showToast(T.adding, 'info');
+  fetch('/api/v1/ai/library/sources/quick-add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ preset_key: presetKey }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) {
+      if (window.showToast) window.showToast(T.sourceAdded, 'success');
+      setTimeout(function(){ location.reload(); }, 800);
+    } else {
+      if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error');
+    }
+  })
+  .catch(function(e){ if (window.showToast) window.showToast(T.requestFailed + ': ' + e, 'error'); });
+}
+
+/* -----------------------------------------------------------------------
+   syncSource — unchanged
+   ----------------------------------------------------------------------- */
+function syncSource(sourceId, btn) {
+  var orig = btn.value; btn.value = T.syncing; btn.disabled = true;
+  fetch('/api/v1/ai/library/sources/' + encodeURIComponent(sourceId) + '/sync', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { if (window.showToast) window.showToast(T.syncComplete, 'success'); setTimeout(function(){ location.reload(); }, 600); }
+    else { if (window.showToast) window.showToast(T.syncFailed, 'error'); btn.value = orig; btn.disabled = false; }
+  })
+  .catch(function(){ if (window.showToast) window.showToast(T.connectionError, 'error'); btn.value = orig; btn.disabled = false; });
+}
+
+/* -----------------------------------------------------------------------
+   activateSource / deactivateSource — enable/disable toggle
+   ----------------------------------------------------------------------- */
+function activateSource(sourceId, btn) {
+  var orig = btn.value; btn.value = T.activate + '…'; btn.disabled = true;
+  fetch('/api/v1/ai/library/sources/' + encodeURIComponent(sourceId) + '/activate', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { setTimeout(function(){ location.reload(); }, 600); }
+    else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error'); btn.value = orig; btn.disabled = false; }
+  })
+  .catch(function(){ if (window.showToast) window.showToast(T.connectionError, 'error'); btn.value = orig; btn.disabled = false; });
+}
+
+function deactivateSource(sourceId, btn) {
+  var orig = btn.value; btn.value = T.deactivate + '…'; btn.disabled = true;
+  fetch('/api/v1/ai/library/sources/' + encodeURIComponent(sourceId) + '/deactivate', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { setTimeout(function(){ location.reload(); }, 600); }
+    else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || ''), 'error'); btn.value = orig; btn.disabled = false; }
+  })
+  .catch(function(){ if (window.showToast) window.showToast(T.connectionError, 'error'); btn.value = orig; btn.disabled = false; });
+}
+
+/* -----------------------------------------------------------------------
+   openSourceSettings — full editable config form per source type
+   Modal footer (Close/Delete/Save) is static markup shared across all
+   sources; these globals tell it which source it's currently acting on.
+   ----------------------------------------------------------------------- */
+var currentSourceId   = null;
+var currentSourceType = null;
+var currentIsSystem   = false;
+
+function openSourceSettings(sourceId) {
+  var $modal = $('#sourceSettingsModal');
+  var $body  = $('#sourceSettingsBody');
+  currentSourceId = currentSourceType = null;
+  currentIsSystem = false;
+  $body.html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div></div>');
+  $modal.modal('show');
+
+  fetch('/api/v1/ai/library/sources')
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var source = (data.sources || []).find(function(s){ return s.source_id === sourceId; });
+    if (!source) { $body.html('<div class="p-4 text-danger">' + T.sourceNotFound + '</div>'); return; }
+
+    var config = {};
+    try { config = JSON.parse(source.config_json || '{}'); } catch(e) {}
+    var presetKey = config.preset_key || '';
+    // Fallback chain: custom preset keys equal their source_type name, so a
+    // source created without a preset_key (manual POST) still gets its type's
+    // description/usage info block.
+    var meta = PRESET_META[presetKey] || PRESET_META[source.source_type]
+             || { isSystem: false, sourceType: source.source_type, authKeyName: '',
+                  description: '', usage: '', urlSource: '', urlApiKey: '' };
+
+    currentSourceId   = source.source_id;
+    currentSourceType = source.source_type;
+    currentIsSystem   = meta.isSystem;
+
+    $modal.find('.modal-title').text(source.source_name + ' — ' + T.settingsSuffix);
+
+    var html = '<input type="hidden" id="sPresetKey" value="' + esc(presetKey) + '">';
+
+    /* --- Info header (source description / links / usage) — same layout
+           contract as the input/output options modals' top info block --- */
+    var infoLinks = [];
+    if (meta.urlSource) infoLinks.push(T.sourceSite + ' <a href="' + esc(meta.urlSource) + '" target="_blank">' + T.link + '</a>');
+    if (meta.urlApiKey && meta.urlApiKey !== meta.urlSource) infoLinks.push(T.apiKey + ' <a href="' + esc(meta.urlApiKey) + '" target="_blank">' + T.link + '</a>');
+    if (infoLinks.length) {
+      html += '<div class="aot-modal-body-text" style="font-size: 0.85rem;"><strong>' + T.relatedDocs + ':</strong> ' + infoLinks.join('; ') + '.</div>';
+    }
+    if (meta.description) {
+      html += '<div class="aot-modal-body-text" style="font-style: italic; background: #f9f9f9; padding: 8px; border-radius: 8px; font-size: 0.85rem;">' + esc(meta.description) + '</div>';
+    }
+    if (meta.usage) {
+      html += '<div class="aot-modal-container"><div class="col-12 text-muted small" style="padding:0"><strong>' + T.usageLabel + '</strong> ' + esc(meta.usage) + '</div></div>';
+    }
+
+    html += '<div class="aot-modal-container">';
+    html += row(T.sourceName,    '<input type="text" id="sSourceName" class="form-control aot-modern-input" value="' + esc(source.source_name) + '">');
+    html += row(T.parameterName, '<input type="text" id="sParamName"  class="form-control aot-modern-input" value="' + esc(source.parameter_name) + '">');
+    html += row(T.syncInterval,  '<input type="number" id="sSyncInterval" class="form-control aot-modern-input" value="' + (source.sync_interval_min || 60) + '" min="1">');
+    html += '</div>';
+
+    /* Type-specific config fields */
+    html += '<div class="aot-modal-group-title">' + T.configHeader + ' (' + source.source_type.toUpperCase().replace(/_/g,' ') + ')</div>';
+    html += '<div class="aot-modal-container">';
+
+    if (meta.isSystem) {
+      /* System library: only API key entry */
+      html += row(T.apiKey + (meta.authKeyName ? ' (' + esc(meta.authKeyName) + ')' : ''),
+                  '<input type="password" id="sApiKey" class="form-control aot-modern-input" autocomplete="off" value="' + esc(config.api_key || '') + '" placeholder="sk-...">');
+      if (presetKey === 'ext_smartfarm') {
+        html += row(T.cropType,
+          '<input type="text" id="sCropType" class="form-control aot-modern-input"' +
+          ' value="' + esc(config.crop_type || 'tomato') + '"' +
+          ' placeholder="tomato, strawberry, cucumber ...">');
+      }
+      if (meta.multiOperation) {
+        html += renderSmartfarmkoreaFields(config, presetKey);
+      }
+    } else if (source.source_type === 'rest_api') {
+      html += row(T.endpointUrl, '<input type="text" id="sApiUrl" class="form-control aot-modern-input" value="' + esc(config.endpoint_url || '') + '" placeholder="https://api.example.com/data">');
+      html += row('{{ _("Method") }}',
+        '<select id="sApiMethod" class="form-control aot-modern-select">' +
+        '<option value="GET"'  + (config.method==='GET'  ? ' selected':'')+'>GET</option>' +
+        '<option value="POST"' + (config.method==='POST' ? ' selected':'')+'>POST</option>' +
+        '</select>');
+      html += row('{{ _("Auth Type") }}',
+        '<select id="sApiAuthType" class="form-control aot-modern-select" onchange="toggleSAuthValue()">' +
+        '<option value="none"'   + (config.auth_type==='none'    ? ' selected':'')+'>{{ _("None") }}</option>' +
+        '<option value="bearer"' + (config.auth_type==='bearer'  ? ' selected':'')+'>Bearer Token</option>' +
+        '<option value="api_key"'+ (config.auth_type==='api_key' ? ' selected':'')+'>API Key Header</option>' +
+        '</select>');
+      html += '<div id="sRowAuthValue"' + ((!config.auth_type || config.auth_type==='none') ? ' style="display:none;"' : '') + '>';
+      html += row('{{ _("Auth Value") }}', '<input type="password" id="sApiAuthValue" class="form-control aot-modern-input" autocomplete="off" value="' + esc(config.auth_value||'') + '">');
+      html += '</div>';
+      html += row(T.jsonPath, '<input type="text" id="sApiJsonPath" class="form-control aot-modern-input" value="' + esc(config.json_path||'') + '" placeholder="e.g. data.value">');
+    } else if (source.source_type === 'document') {
+      html += row(T.filePath, '<input type="text" id="sDocPath" class="form-control aot-modern-input" value="' + esc(config.file_path||'') + '" placeholder="/data/documents/report.txt">');
+      html += row(T.parseMode,
+        '<select id="sDocMode" class="form-control aot-modern-select">' +
+        '<option value="full_text"' + (config.parse_mode==='full_text' ? ' selected':'')+'>{{ _("Full Text") }}</option>' +
+        '<option value="summary"'   + (config.parse_mode==='summary'   ? ' selected':'')+'>{{ _("Summary") }}</option>' +
+        '<option value="key_value"' + (config.parse_mode==='key_value' ? ' selected':'')+'>{{ _("Key-Value Extraction") }}</option>' +
+        '</select>');
+    } else if (source.source_type === 'web_url') {
+      html += row('URL', '<input type="text" id="sWebUrl" class="form-control aot-modern-input" value="' + esc(config.url||'') + '" placeholder="https://example.com/data">');
+      html += row(T.cssSelector, '<input type="text" id="sWebCss" class="form-control aot-modern-input" value="' + esc(config.css_selector||'') + '" placeholder=".data-table td">');
+    } else if (source.source_type === 'internal_query') {
+      html += row(T.queryTemplate, '<textarea id="sQueryTemplate" class="form-control aot-modern-input" rows="4">' + esc(config.query_template||'') + '</textarea>');
+    }
+
+    html += '</div>';
+
+    $body.html(html);
+
+    if (meta.isSystem && meta.multiOperation) {
+      /* Accumulates typed values across the whole modal session (not just
+         the last-saved server config) — refreshSfkParams merges into this
+         on every operation toggle, so unchecking an operation and
+         rechecking it before saving still shows what was typed in between,
+         not just what was there when the modal opened. */
+      window._sfkLiveConfig = Object.assign({}, config);
+      if (typeof $.fn.selectpicker === 'function') {
+        $('#sfkOpsSelect').selectpicker();
+        $('#sfkOpsSelect').on('changed.bs.select', function () { refreshSfkParams(presetKey); });
+      }
+    }
+  });
+}
+
+/* -----------------------------------------------------------------------
+   renderSmartfarmkoreaFields — a grouped multi-select dropdown (not a flat
+   checkbox list, not independent toggles) for choosing which operations to
+   sync, plus a parameter section that only shows fields the CURRENTLY
+   selected operations actually need (re-rendered live on selection change
+   — see refreshSfkParams).
+
+   Dropdown over toggle switches: the operations are NOT independent,
+   simultaneously-fetchable streams — 'cropping'/'growth_*'/'env' each need
+   an operator-specific ID (userId/facilityId/croppingSerlNo) discovered by
+   calling 'identity'/'cropping' FIRST, and growth ops are mutually exclusive
+   per crop. Toggle switches imply "flip any subset independently, no
+   ordering"; that's not this API's shape, so a dropdown selection (via the
+   existing selectpicker component, same widget as the source-type picker
+   above) fits better and reads as far less overwhelming than 6-7 checkboxes
+   at once.
+
+   Parameter section only shows fields for SELECTED ops (previously it
+   showed every param used by ANY operation in the whole preset regardless
+   of what was checked — the actual source of the "too many options"
+   complaint). Hidden-but-previously-typed/saved values are preserved via
+   window._sfkLiveConfig (see openSourceSettings/refreshSfkParams), not
+   silently dropped when an operation is unchecked.
+   ----------------------------------------------------------------------- */
+function renderSmartfarmkoreaFields(config, presetKey) {
+  var ops = SMARTFARMKOREA_OPS_BY_PRESET[presetKey] || SMARTFARMKOREA_OPS_BY_PRESET.smartfarmkorea;
+  var selected = {};
+  (config.operations || []).forEach(function(k){ selected[k] = true; });
+
+  /* Group operations by category, preserving ops order. */
+  var order = [], byCategory = {};
+  Object.keys(ops).forEach(function(key) {
+    var op = ops[key];
+    if (!byCategory[op.category]) { byCategory[op.category] = []; order.push(op.category); }
+    byCategory[op.category].push(key);
+  });
+
+  var html = '<div class="aot-modal-group-title">' + T.selectOperations + '</div>';
+  html += '<div class="aot-modal-container">';
+  html += '<select multiple class="selectpicker aot-standard-select" id="sfkOpsSelect"' +
+    ' data-style="btn btn-outline-secondary aot-roundbox" data-selected-text-format="count > 2"' +
+    ' data-actions-box="true" data-width="100%" title="' + esc(T.selectOperations) + '"' +
+    ' data-select-all-text="' + esc(T.selectAll) + '" data-deselect-all-text="' + esc(T.deselectAll) + '">';
+  order.forEach(function(cat) {
+    html += '<optgroup label="' + esc(cat) + '">';
+    byCategory[cat].forEach(function(key) {
+      var op = ops[key];
+      html += '<option value="' + esc(key) + '"' + (selected[key] ? ' selected' : '') + '>' + esc(op.label) + '</option>';
+    });
+    html += '</optgroup>';
+  });
+  html += '</select>';
+  /* facility/outdoor have an 'identity' discovery op operators must sync
+     first; livestock doesn't (every op is independently callable with just
+     a date range) — showing the identity-discovery hint there would be
+     actively wrong, not just irrelevant. */
+  var opsHint = ops.identity ? T.sfkOpsHint : T.sfkOpsHintSimple;
+  html += '<div class="text-muted small" style="margin-top:6px;">' + esc(opsHint) + '</div>';
+  html += '</div>';
+
+  html += '<div class="aot-modal-group-title">' + T.commonParams + '</div>';
+  html += '<div id="sfkParamsContainer">' + _sfkParamsHtml(ops, Object.keys(selected), config, presetKey) + '</div>';
+  return html;
+}
+
+/* Renders the params needed by `selectedKeys`. Phase 1: farm/season-resolved
+   params (userId/facilityId/itemCode/croppingSerlNo) become cascading
+   dropdowns — the operator picks a farm by region and a season by name and
+   the codes are filled behind the scenes (never typed). Only date and
+   classification-code params stay free-text. Picker-resolved values live in
+   window._sfkLiveConfig (written by the picker onchange handlers, read on
+   save) — there are no text inputs for them, so saveSourceSettings' existing
+   `el ? el.value : sfkLive[p]` fallback picks them up automatically. */
+function _sfkParamsHtml(ops, selectedKeys, config, presetKey) {
+  if (!selectedKeys.length) {
+    return '<div class="aot-modal-body-text text-muted small">' + esc(T.sfkNoOpsSelected) + '</div>';
+  }
+  var examples = SMARTFARMKOREA_PARAM_EXAMPLES_BY_PRESET[presetKey] || SMARTFARMKOREA_PARAM_EXAMPLES_BY_PRESET.smartfarmkorea;
+  var relevant = {};   // param -> [op labels using it]
+  Object.keys(SMARTFARMKOREA_PARAM_LABELS).forEach(function(p) {
+    var usedBy = selectedKeys.filter(function(k){ return ops[k] && ops[k].params.indexOf(p) !== -1; });
+    if (usedBy.length) relevant[p] = usedBy.map(function(k){ return ops[k].label; }).join(', ');
+  });
+
+  var needsFarm = ['userId', 'facilityId', 'itemCode'].some(function(p){ return relevant[p]; });
+  var needsSeason = !!relevant['croppingSerlNo'];
+  var html = '<div class="aot-modal-container">';
+
+  /* --- Farm picker (resolves userId + facilityId + itemCode at once) --- */
+  if (needsFarm) {
+    var curFarm = (config.userId || '');
+    /* Prefer the human-readable label saved at pick time (config._farmLabel)
+       so a reopened source shows "경상남도 사천시 …", not the raw userId —
+       honoring the "never see a code" goal even on reopen. */
+    var curFarmLabel = config._farmLabel || (curFarm ? (T.sfkCurrent + ' ' + curFarm) : '');
+    var farmCtl =
+      '<select id="sfkFarmSelect" class="form-control aot-modern-select">' +
+        '<option value="">' + esc(T.sfkSelectFarm) + '</option>' +
+        (curFarm ? '<option value="' + esc(curFarm) + '" data-facilityid="' + esc(config.facilityId || '') +
+                   '" data-itemcode="' + esc(config.itemCode || '') + '" selected>' +
+                   esc(curFarmLabel) + '</option>' : '') +
+      '</select>' +
+      '<button type="button" class="btn btn-secondary aot-pill-btn" style="margin-top:6px;"' +
+      ' onclick="sfkLoadFarms(\'' + esc(presetKey) + '\')">' + esc(T.sfkLoadFarms) + '</button>' +
+      '<span id="sfkFarmStatus" class="text-muted small" style="margin-left:8px;"></span>';
+    html += row(esc(T.sfkFarmLabel), farmCtl);
+  }
+
+  /* --- Season picker (resolves croppingSerlNo) --- */
+  if (needsSeason) {
+    var curSeason = (config.croppingSerlNo || '');
+    var curSeasonLabel = config._seasonLabel || (curSeason ? (T.sfkCurrent + ' ' + curSeason) : '');
+    var seasonCtl =
+      '<select id="sfkSeasonSelect" class="form-control aot-modern-select">' +
+        '<option value="">' + esc(needsFarm ? T.sfkPickFarmFirst : T.sfkSelectSeason) + '</option>' +
+        (curSeason ? '<option value="' + esc(curSeason) + '" selected>' +
+                     esc(curSeasonLabel) + '</option>' : '') +
+      '</select>' +
+      '<span id="sfkSeasonStatus" class="text-muted small" style="margin-left:8px;"></span>';
+    html += row(esc(T.sfkSeasonLabel), seasonCtl);
+  }
+
+  /* --- Remaining free-text params: dates + classification codes --- */
+  Object.keys(relevant).forEach(function(p) {
+    var inputKind = SFK_PARAM_INPUT[p];
+    if (inputKind === 'farm' || inputKind === 'season') return;  // handled by pickers
+    var hintLine = inputKind === 'code' ? T.sfkCodeHint : '';
+    var example = examples[p] || '';
+    var field = '<input type="text" id="sSfk_' + p + '" class="form-control aot-modern-input" value="' + esc(config[p] || '') + '"' +
+      (example ? ' placeholder="' + esc(example) + '"' : '') + '>';
+    field += '<div class="text-muted small" style="margin-top:2px;">' + esc(relevant[p]) + (hintLine ? ' — ' + esc(hintLine) : '') + '</div>';
+    html += row(esc(SMARTFARMKOREA_PARAM_LABELS[p]), field);
+  });
+
+  html += '</div>';
+  return html;
+}
+
+/* Fetch the farm list for the entered key and fill #sfkFarmSelect. Reads the
+   API key from #sApiKey and the preset from the caller. On farm pick,
+   userId/facilityId/itemCode land in window._sfkLiveConfig and, if a season
+   picker is present, its seasons auto-load. */
+function sfkLoadFarms(presetKey) {
+  var key = (document.getElementById('sApiKey') || {value:''}).value.trim();
+  var status = document.getElementById('sfkFarmStatus');
+  if (!key) { if (status) status.textContent = T.sfkEnterKeyFirst; return; }
+  if (status) status.textContent = T.sfkLoading;
+  fetch('/api/v1/ai/library/smartfarmkorea/farms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ preset_key: presetKey, api_key: key }),
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if (!data.success) { if (status) status.textContent = T.sfkLoadFailed + ': ' + (data.error || ''); return; }
+    var farms = data.farms || [];
+    var sel = document.getElementById('sfkFarmSelect');
+    var cur = (window._sfkLiveConfig && window._sfkLiveConfig.userId) || '';
+    var opts = ['<option value="">' + esc(T.sfkSelectFarm) + '</option>'];
+    farms.forEach(function(f){
+      opts.push('<option value="' + esc(f.userId) + '" data-facilityid="' + esc(f.facilityId || '') +
+        '" data-itemcode="' + esc(f.itemCode || '') + '"' + (f.userId === cur ? ' selected' : '') + '>' +
+        esc(f.label) + '</option>');
+    });
+    sel.innerHTML = opts.join('');
+    sel.onchange = function(){ sfkOnFarmChange(presetKey); };
+    if (status) status.textContent = farms.length ? ('(' + farms.length + ')') : T.sfkNoFarms;
+  }).catch(function(){ if (status) status.textContent = T.sfkLoadFailed; });
+}
+
+function sfkOnFarmChange(presetKey) {
+  var sel = document.getElementById('sfkFarmSelect');
+  var opt = sel.options[sel.selectedIndex];
+  window._sfkLiveConfig = window._sfkLiveConfig || {};
+  window._sfkLiveConfig.userId = sel.value || '';
+  window._sfkLiveConfig.facilityId = (opt && opt.getAttribute('data-facilityid')) || '';
+  window._sfkLiveConfig._farmLabel = (sel.value && opt) ? opt.textContent : '';
+  var item = (opt && opt.getAttribute('data-itemcode')) || '';
+  if (item) window._sfkLiveConfig.itemCode = item;
+  if (document.getElementById('sfkSeasonSelect') && sel.value) sfkLoadSeasons(presetKey);
+}
+
+/* Fetch the season list for the currently-picked farm and fill
+   #sfkSeasonSelect. On pick, croppingSerlNo lands in window._sfkLiveConfig. */
+function sfkLoadSeasons(presetKey) {
+  var key = (document.getElementById('sApiKey') || {value:''}).value.trim();
+  var uid = (window._sfkLiveConfig && window._sfkLiveConfig.userId) || '';
+  var status = document.getElementById('sfkSeasonStatus');
+  var sel = document.getElementById('sfkSeasonSelect');
+  if (!sel) return;
+  if (!uid) { if (status) status.textContent = T.sfkPickFarmFirst; return; }
+  if (status) status.textContent = T.sfkLoading;
+  fetch('/api/v1/ai/library/smartfarmkorea/seasons', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ preset_key: presetKey, api_key: key, user_id: uid }),
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if (!data.success) { if (status) status.textContent = T.sfkLoadFailed + ': ' + (data.error || ''); return; }
+    var seasons = data.seasons || [];
+    var cur = (window._sfkLiveConfig && window._sfkLiveConfig.croppingSerlNo) || '';
+    var opts = ['<option value="">' + esc(T.sfkSelectSeason) + '</option>'];
+    seasons.forEach(function(s){
+      opts.push('<option value="' + esc(s.croppingSerlNo) + '"' + (s.croppingSerlNo === cur ? ' selected' : '') + '>' +
+        esc(s.label) + '</option>');
+    });
+    sel.innerHTML = opts.join('');
+    sel.onchange = function(){
+      window._sfkLiveConfig = window._sfkLiveConfig || {};
+      window._sfkLiveConfig.croppingSerlNo = sel.value || '';
+      var o = sel.options[sel.selectedIndex];
+      window._sfkLiveConfig._seasonLabel = (sel.value && o) ? o.textContent : '';
+    };
+    if (status) status.textContent = seasons.length ? ('(' + seasons.length + ')') : T.sfkNoSeasons;
+  }).catch(function(){ if (status) status.textContent = T.sfkLoadFailed; });
+}
+
+/* Bound to the ops select's changed.bs.select event — folds whatever is
+   currently typed into the running window._sfkLiveConfig (so a value
+   entered, then hidden by unchecking its operation, then re-shown by
+   rechecking it later in the SAME modal session, isn't lost), then
+   re-renders the params container for the newly selected operations. */
+function refreshSfkParams(presetKey) {
+  var ops = SMARTFARMKOREA_OPS_BY_PRESET[presetKey] || SMARTFARMKOREA_OPS_BY_PRESET.smartfarmkorea;
+  var container = document.getElementById('sfkParamsContainer');
+  if (!container) return;
+  window._sfkLiveConfig = window._sfkLiveConfig || {};
+  Object.keys(SMARTFARMKOREA_PARAM_LABELS).forEach(function(p) {
+    var el = document.getElementById('sSfk_' + p);
+    if (el) window._sfkLiveConfig[p] = el.value;
+  });
+  var sel = document.getElementById('sfkOpsSelect');
+  var selectedKeys = sel ? Array.from(sel.selectedOptions).map(function(o){ return o.value; }) : [];
+  container.innerHTML = _sfkParamsHtml(ops, selectedKeys, window._sfkLiveConfig, presetKey);
+}
+
+function toggleSAuthValue() {
+  var v = document.getElementById('sApiAuthType').value;
+  document.getElementById('sRowAuthValue').style.display = (v !== 'none') ? '' : 'none';
+}
+
+/* -----------------------------------------------------------------------
+   saveSourceSettings — collects all config fields and PATCHes
+   ----------------------------------------------------------------------- */
+function saveSourceSettings(sourceId, sourceType, isSystem) {
+  var config = {};
+  if (isSystem) {
+    var pk = (document.getElementById('sPresetKey') || {value:''}).value;
+    config.preset_key = pk;
+    config.api_key = (document.getElementById('sApiKey') || {value:''}).value.trim();
+    if (pk === 'ext_smartfarm') {
+      config.crop_type = (document.getElementById('sCropType') || {value:'tomato'}).value.trim() || 'tomato';
+    }
+    if (PRESET_META[pk] && PRESET_META[pk].multiOperation) {
+      var sfkSel = document.getElementById('sfkOpsSelect');
+      config.operations = sfkSel ? Array.from(sfkSel.selectedOptions).map(function(el){ return el.value; }) : [];
+      var sfkLive = window._sfkLiveConfig || {};
+      Object.keys(SMARTFARMKOREA_PARAM_LABELS).forEach(function(p) {
+        var el = document.getElementById('sSfk_' + p);
+        /* Visible field wins; a param currently hidden (its operation was
+           unchecked this session) keeps its last-typed/last-saved value
+           rather than being dropped from config_json. */
+        config[p] = el ? el.value.trim() : (sfkLive[p] || '');
+      });
+      /* Persist the human-readable picker labels so a reopened source shows
+         "경상남도 사천시 …"/"2021년 토마토" instead of the raw codes. Kept
+         out of SMARTFARMKOREA_PARAM_LABELS (they're display-only, never sent
+         to the API). */
+      if (sfkLive._farmLabel) config._farmLabel = sfkLive._farmLabel;
+      if (sfkLive._seasonLabel) config._seasonLabel = sfkLive._seasonLabel;
+    }
+  } else if (sourceType === 'rest_api') {
+    config.endpoint_url = (document.getElementById('sApiUrl')       || {value:''}).value.trim();
+    config.method       = (document.getElementById('sApiMethod')    || {value:'GET'}).value;
+    config.auth_type    = (document.getElementById('sApiAuthType')  || {value:'none'}).value;
+    config.auth_value   = (document.getElementById('sApiAuthValue') || {value:''}).value.trim();
+    config.json_path    = (document.getElementById('sApiJsonPath')  || {value:''}).value.trim();
+  } else if (sourceType === 'document') {
+    config.file_path   = (document.getElementById('sDocPath') || {value:''}).value.trim();
+    config.parse_mode  = (document.getElementById('sDocMode') || {value:'full_text'}).value;
+  } else if (sourceType === 'web_url') {
+    config.url          = (document.getElementById('sWebUrl')  || {value:''}).value.trim();
+    config.css_selector = (document.getElementById('sWebCss')  || {value:''}).value.trim();
+  } else if (sourceType === 'internal_query') {
+    config.query_template = (document.getElementById('sQueryTemplate') || {value:''}).value.trim();
+  }
+
+  var payload = {
+    source_name:       (document.getElementById('sSourceName')    || {value:''}).value.trim(),
+    parameter_name:    (document.getElementById('sParamName')     || {value:''}).value.trim(),
+    sync_interval_min: parseInt((document.getElementById('sSyncInterval') || {value:'60'}).value) || 60,
+    config_json:       config,
+  };
+
+  fetch('/api/v1/ai/library/sources/' + encodeURIComponent(sourceId), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify(payload),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { $('#sourceSettingsModal').modal('hide'); if (window.showToast) window.showToast(T.saved, 'success'); setTimeout(function(){ location.reload(); }, 600); }
+    else { if (window.showToast) window.showToast(T.saveFailed + ': ' + (data.error || ''), 'error'); }
+  });
+}
+
+function deleteSource(sourceId) {
+  if (!confirm(T.confirmDelete)) return;
+  fetch('/api/v1/ai/library/sources/' + encodeURIComponent(sourceId), {
+    method: 'DELETE', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { $('#sourceSettingsModal').modal('hide'); if (window.showToast) window.showToast(T.deleted, 'success'); setTimeout(function(){ location.reload(); }, 600); }
+    else { if (window.showToast) window.showToast(T.deleteFailed + ': ' + (data.error || ''), 'error'); }
+  });
+}
+
+/* -----------------------------------------------------------------------
+   AI-curated knowledge review (P5) — confirm / retire / reactivate / edit.
+   Same fetch+toast+reload pattern as the source actions above.
+   ----------------------------------------------------------------------- */
+function confirmReviewItem(chunkId, btn) {
+  var orig = btn.value; btn.value = T.confirming; btn.disabled = true;
+  fetch('/api/v1/ai/library/review/' + encodeURIComponent(chunkId) + '/confirm', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { if (window.showToast) window.showToast(T.confirmed, 'success'); setTimeout(function(){ location.reload(); }, 500); }
+    else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || T.itemNotFound), 'error'); btn.value = orig; btn.disabled = false; }
+  })
+  .catch(function(){ if (window.showToast) window.showToast(T.connectionError, 'error'); btn.value = orig; btn.disabled = false; });
+}
+
+function retireReviewItem(chunkId, btn) {
+  if (!confirm(T.confirmRetire)) return;
+  var orig = btn.value; btn.value = T.retiring; btn.disabled = true;
+  fetch('/api/v1/ai/library/review/' + encodeURIComponent(chunkId) + '/retire', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { if (window.showToast) window.showToast(T.retired, 'success'); setTimeout(function(){ location.reload(); }, 500); }
+    else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || T.itemNotFound), 'error'); btn.value = orig; btn.disabled = false; }
+  })
+  .catch(function(){ if (window.showToast) window.showToast(T.connectionError, 'error'); btn.value = orig; btn.disabled = false; });
+}
+
+function reactivateReviewItem(chunkId, btn) {
+  var orig = btn.value; btn.value = T.reactivating; btn.disabled = true;
+  fetch('/api/v1/ai/library/review/' + encodeURIComponent(chunkId) + '/reactivate', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { if (window.showToast) window.showToast(T.reactivated, 'success'); setTimeout(function(){ location.reload(); }, 500); }
+    else { if (window.showToast) window.showToast(T.error + ': ' + (data.error || T.itemNotFound), 'error'); btn.value = orig; btn.disabled = false; }
+  })
+  .catch(function(){ if (window.showToast) window.showToast(T.connectionError, 'error'); btn.value = orig; btn.disabled = false; });
+}
+
+var currentReviewChunkId = null;
+
+function openReviewEdit(chunkId) {
+  var $modal = $('#reviewEditModal');
+  var $body  = $('#reviewEditBody');
+  currentReviewChunkId = null;
+  $body.html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div></div>');
+  $modal.modal('show');
+
+  fetch('/api/v1/ai/library/review')
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var item = (data.items || []).find(function(i){ return i.chunk_id === chunkId; });
+    if (!item) { $body.html('<div class="p-4 text-danger">' + T.itemNotFound + '</div>'); return; }
+
+    currentReviewChunkId = item.chunk_id;
+
+    var html = '<div class="aot-modal-container">';
+    html += row(T.heading,     '<input type="text" id="rHeading" class="form-control aot-modern-input" value="' + esc(item.heading || '') + '">');
+    html += row(T.tags,        '<input type="text" id="rTags" class="form-control aot-modern-input" value="' + esc((item.tags || []).join(', ')) + '">');
+    html += row(T.attribution, '<input type="text" id="rAttribution" class="form-control aot-modern-input" value="' + esc(item.attribution || '') + '" disabled>');
+    html += row(T.content,     '<textarea id="rContent" class="form-control aot-modern-input" rows="6">' + esc(item.content || '') + '</textarea>');
+    html += '</div>';
+    $body.html(html);
+  });
+}
+
+function saveReviewEdit() {
+  if (!currentReviewChunkId) return;
+  var payload = {
+    heading: (document.getElementById('rHeading') || {value:''}).value.trim(),
+    tags:    (document.getElementById('rTags')    || {value:''}).value.trim(),
+    content: (document.getElementById('rContent') || {value:''}).value.trim(),
+  };
+  fetch('/api/v1/ai/library/review/' + encodeURIComponent(currentReviewChunkId) + '/edit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify(payload),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) { $('#reviewEditModal').modal('hide'); if (window.showToast) window.showToast(T.saved, 'success'); setTimeout(function(){ location.reload(); }, 500); }
+    else { if (window.showToast) window.showToast(T.saveFailed + ': ' + (data.error || ''), 'error'); }
+  });
+}
+
+/* helpers */
+function row(label, control) {
+  return '<div class="aot-modal-option-row"><label class="aot-modal-option-label">' + label + '</label><div class="aot-modal-option-control">' + control + '</div></div>';
+}
+function esc(str) { var d=document.createElement('div'); d.appendChild(document.createTextNode(str||'')); return d.innerHTML; }
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% set all_measurements = table_device_measurements.query.filter(
+                          and_(table_device_measurements.device_id == each_device.unique_id,
+                               table_device_measurements.is_enabled)).all() %}
+{% if all_measurements %}
+
+  <div class="row small-gutters" style="padding: 0.5em">
+    <h5>{{ _('Select Measurements (required)') }}</h5>
+  </div>
+
+  {% for each_measurement in all_measurements %}
+
+  <input id="measurement_id_select_{{each_measurement.unique_id}}" name="measurement_id_select_{{each_measurement.unique_id}}" type="hidden" value="{{each_measurement.unique_id}}">
+
+{% if each_measurement.measurement and each_measurement.measurement not in dict_measurements %}
+  <div class="row small-gutters" style="padding: 0.5em">
+    <div class="col-auto" style="color: red">
+      {{ _('Warning: Saved measurement with ID "%(measure_id)s" not found in database. Add the missing unit on the Configure -> Measurement page or change the set measurement.', measure_id=each_measurement.measurement) }}
+    </div>
+  </div>
+{% endif %}
+{% if each_measurement.unit and each_measurement.unit not in dict_units %}
+  <div class="row small-gutters" style="padding: 0.5em">
+    <div class="col-auto" style="color: red">
+      {{ _('Warning: Saved unit with ID "%(unit_id)s" not found in database. Add the missing unit on the Configure -> Measurement page or change the set unit.', unit_id=each_measurement.unit) }}
+    </div>
+  </div>
+{% endif %}
+
+<div class="aot-modal-option-row" style="border-bottom: none; padding-bottom: 0.2rem;">
+  <div class="d-flex align-items-center">
+    {% if each_measurement.unit and each_measurement.measurement %}
+    <input class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="{%- if each_measurement.channel != None -%}CH{{each_measurement.channel}}{%- endif -%}">
+    {% else %}
+    <input class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2" type="button" onclick="setClipboard('{{each_measurement.unique_id}}')" title="UUID: {{each_measurement.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="{%- if each_measurement.channel != None -%}CH{{each_measurement.channel}}{%- endif -%}">
+    {% endif %}
+  </div>
+
+  <div class="aot-modal-option-control">
+    <input class="form-control aot-modern-input" id="measurement_meas_name_{{each_measurement.unique_id}}" name="measurement_meas_name_{{each_measurement.unique_id}}" title="{{dict_translation['name']['phrase']}}" type="text" value="{{each_measurement.name}}">
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="measurement_meas_unit_{{each_measurement.unique_id}}">{{dict_translation['select_measurement_unit']['title']}}</label>
+  <div class="aot-modal-option-control">
+    <select class="form-control aot-modern-select" id="measurement_meas_unit_{{each_measurement.unique_id}}" name="measurement_meas_unit_{{each_measurement.unique_id}}" title="{{dict_translation['select_measurement_unit']['phrase']}}">
+      <option value="">{{dict_translation['select_one']['title']}}</option>
+      {% for each_measure_unit in choices_measurements_units %}
+      <option value="{{each_measure_unit['value']}}"{% if each_measure_unit['value'] == each_measurement.measurement + ',' + each_measurement.unit %} selected{% endif %}>{{each_measure_unit['item']}}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+  {% endfor %}
+{% endif %}

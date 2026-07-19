@@ -1,0 +1,76 @@
+{% from 'pages/ai/options/ai_custom_options.html' import render_ai_custom_options with context %}
+
+{# Check if this engine has any auth fields (password type in custom_options) #}
+{% set has_auth_options = engine_info.custom_options | selectattr('type', 'equalto', 'password') | list | length > 0 %}
+{% set has_config_options = engine_info.custom_options | rejectattr('type', 'equalto', 'password') | list | length > 0 %}
+
+<form action="{{ url_for('routes_ai_agent.ai_agent_mod', agent_id=agent.unique_id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <!-- Agent Engine Description -->
+    {% if engine_info.description %}
+    <div class="mb-2" style="font-size: 0.9rem; color: var(--aot-color-text-secondary, #666); line-height: 1.5;">
+        {{ engine_info.description }}
+    </div>
+    {% endif %}
+
+    <!-- Agent Auth Link (Left aligned, no box) -->
+    {% if engine_info.auth_link %}
+    <div class="mb-3 text-left">
+        <a href="{{ engine_info.auth_link }}" target="_blank" class="text-primary" style="text-decoration: underline; font-size: 0.85rem;">
+            <i class="fas fa-external-link-alt mr-1"></i> {{ _('Get API Key / Documentation') }}
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Identity & Service (includes auth credentials if any) -->
+    <div class="aot-modal-group-title">{{ _('Identity & Service') }}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('MCP Agent Name') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="text" name="name" class="form-control aot-modern-input" value="{{ agent.name }}">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Specialty') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="text" name="specialty" class="form-control aot-modern-input" value="{{ agent.specialty or '' }}">
+            </div>
+        </div>
+
+        {# Render auth fields (password type) from custom_options here, with API Key Picker #}
+        {% if has_auth_options %}
+        {{ render_ai_custom_options(engine_info.custom_options, custom_options, filter='auth') }}
+        {% endif %}
+    </div>
+
+    <!-- Server Configuration (non-auth options only) -->
+    {% if has_config_options %}
+    <div class="aot-modal-group-title">{{ _('Server Configuration') }}</div>
+    <div class="aot-modal-container">
+        {{ render_ai_custom_options(engine_info.custom_options, custom_options, filter='config') }}
+    </div>
+    {% endif %}
+
+    <!-- System Instructions -->
+    <div class="aot-modal-group-title">{{ _('System Instructions') }}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row aot-full-width-row">
+            <label class="aot-modal-option-label font-weight-bold">{{ _('Server Instruction / System Prompt') }}</label>
+            <div class="aot-modal-option-control">
+                <textarea name="system_prompt" class="form-control aot-modern-input" rows="5"
+                          style="height: auto !important; min-height: 120px; border-radius: 12px !important;"
+                          placeholder="{{ _('Define how this MCP server should be utilized...') }}">{{ agent.system_prompt }}</textarea>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // Refresh any selectpickers that might be in custom options
+    if (typeof $('.selectpicker').selectpicker === 'function') {
+        $('.selectpicker').selectpicker('refresh');
+    }
+</script>

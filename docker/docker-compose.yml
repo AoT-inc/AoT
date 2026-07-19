@@ -1,0 +1,134 @@
+name: aot_local
+
+services:
+  aot-app:
+    image: aot_ai
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: gunicorn -c /app/install/gunicorn_conf.py --bind 0.0.0.0:80 aot.start_flask_ui:app
+    ports:
+      - "8084:80"
+    volumes:
+      - ../:/app
+      - ../logs:/var/log/aot
+      # Source package (aot/databases/*.py, models/, migrations/) stays on the bind mount.
+      - ../aot/databases:/app/aot/databases
+      # Data (SQLite DBs + secret key + kma) lives on a named volume on the Linux VM
+      # filesystem, NOT the macOS/Windows bind mount above. The bind mount's virtiofs/9p
+      # layer breaks SQLite WAL shared-memory mmap (-> SIGBUS crash loop in the daemon)
+      # and atomic rename (-> corrupt session pickles -> spurious logout). AOT_LOCAL_DIR
+      # redirects DATABASE_PATH (aot.db, aot_scheduler.db, flask_secret_key, kma) here.
+      - aot_data:/app/aot_local
+      # Flask session store also off the bind mount (atomic rename works on a real Linux fs).
+      - flask_session:/app/aot/databases/flask_session
+    environment:
+      # Container-local time = KST so log timestamps and any naive datetime.now()
+      # scheduling (env_coordinator, lorawan schedulers, KMA inputs, pump timing)
+      # match the operator's wall clock. Measurement writes use datetime.utcnow()
+      # explicitly, so InfluxDB data stays UTC and is unaffected by this.
+      - TZ=Asia/Seoul
+      - FLASK_ENV=development
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=LOW
+      - AOT_LOCAL_DIR=/app/aot_local
+      # influxdb is a sibling container in this stack — reach it by service name
+      # on the compose network (8086 internal), NOT host.docker.internal:8086
+      # (the host only exposes 8087, and the host-gateway route to :8086 is
+      # unreachable -> "Network is unreachable" in the measurement DB client).
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          # 1G was too tight once the AoT MCP server actually runs: the web app
+          # (~700MB) plus its MCP subprocess (aot_mcp_server.py loads the full app,
+          # ~400MB) exceeded 1G → gunicorn worker OOM-killed (exit 137) → "시스템
+          # 오류". Rebalanced net-zero against the daemon (below) so total container
+          # budget stays 2.5G within the ~4G Docker VM (no host-pressure regression).
+          memory: 3072M
+    depends_on:
+      - aot_daemon
+      - influxdb
+    restart: always
+
+  aot_daemon:
+    image: aot_ai
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: python aot/aot_daemon.py
+    volumes:
+      - ../:/app
+      - ../logs:/var/log/aot
+      - ../aot/databases:/app/aot/databases
+      # Same named volume as aot-app: the daemon and UI must open the SAME aot.db.
+      - aot_data:/app/aot_local
+    environment:
+      # See aot-app: KST container time for readable logs + local-time scheduling.
+      - TZ=Asia/Seoul
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=LOW
+      - AOT_LOCAL_DIR=/app/aot_local
+      # Same influxdb sidecar as aot-app (see that service for rationale).
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          # Reduced 1024M -> 768M to fund the aot-app increase net-zero (daemon runs
+          # at ~490MB and does NOT start an MCP subprocess — it no longer warms MCP).
+          memory: 1536M
+    depends_on:
+      - influxdb
+    restart: always
+
+  influxdb:
+    image: influxdb:2.7
+    ports:
+      # localhost 전용 바인딩: 기본 비밀번호가 공개돼 있으므로 LAN 노출 금지.
+      # 앱 컨테이너는 docker 내부 네트워크(influxdb:8086)로 접속하므로 영향 없음.
+      - "127.0.0.1:8087:8086"
+    volumes:
+      - ../influxdb_data:/var/lib/influxdb2
+      # Named volume, NOT a bind mount to aot/influxdb_config: that dir's tracked
+      # influx-configs template already has a "default" CLI config entry, which makes
+      # the influxdb image's setup entrypoint fail with "config name already exists"
+      # on first boot and crash-loop (wipes bolt/engine, retries, fails again forever).
+      # The container recreates equivalent content itself from the INIT_* env vars below.
+      - influxdb_config:/etc/influxdb2
+    environment:
+      # Log timestamps in KST. InfluxDB stores/queries points in UTC internally
+      # regardless of TZ, so measurement data is unaffected.
+      - TZ=Asia/Seoul
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=aot
+      - DOCKER_INFLUXDB_INIT_PASSWORD=mmdu77sj3nIoiajjs
+      - DOCKER_INFLUXDB_INIT_ORG=aot
+      - DOCKER_INFLUXDB_INIT_BUCKET=aot_db
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=mmdu77sj3nIoiajjs
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+    restart: always
+
+volumes:
+  # SQLite databases + secret key + kma on the Linux VM filesystem (see service comments).
+  aot_data:
+  # Flask session store on the Linux VM filesystem — avoids bind-mount corruption
+  # (non-atomic rename) on Windows/macOS Docker (see aot-app volumes comment).
+  flask_session:
+  # InfluxDB's own CLI config store — kept off the tracked aot/influxdb_config
+  # template (see influxdb service volumes comment).
+  influxdb_config:
+

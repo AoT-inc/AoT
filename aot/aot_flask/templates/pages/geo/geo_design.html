@@ -1,0 +1,1017 @@
+{% extends 'layout.html' %}
+{% block title %}{{ _('Geo Design') }}{% endblock %}
+
+{% block head %}
+<!-- ANTIGRAVITY_v3_VERIFY_20251227_01 -->
+<!-- Leaflet & Draw CSS [Globalized in layout.html] -->
+<link rel="stylesheet" href="/static/css/map/map.css" />
+<style>
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 20px !important;
+    }
+
+    .card-header {
+        border-bottom: 1px solid #f0f0f0;
+        background: white;
+    }
+
+    /* Mode Panel */
+    .mode-panel {
+        position: absolute;
+        width: 600px;
+        /* Default desktop width */
+        max-width: 90%;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 35px; /* [Fix] Restore position (User V8) */
+        max-height: 50vh; /* [Fix] Enable scroll (User V8) */
+        z-index: var(--aot-z-fixed-panel);
+        /* 지도 위 떠있는 패널 — leaflet 컨트롤(~1000) 위 */
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+
+    /* Override Bootstrap Select */
+    .bootstrap-select .dropdown-toggle {
+        border-radius: 20px;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+
+    /* Custom Scrollbar for Detail Table */
+    .table-responsive {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    /* Fullscreen Behavior */
+    #geo-design-wrapper:fullscreen {
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    #geo-design-wrapper:fullscreen #geo-map {
+        height: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Adjust Tool Position in Fullscreen if needed */
+    /* Adjust Tool Position in Fullscreen if needed */
+    #geo-design-wrapper:fullscreen .map-tools-left,
+    #geo-design-wrapper:fullscreen .map-tools-right {
+        top: 10px;
+    }
+
+    /* Search Overlay Positioning */
+    #search-overlay {
+        position: absolute;
+        top: 10px;
+        left: 70px;
+        /* Space for Left Tools */
+        right: 70px;
+        /* Space for Right Tools */
+        z-index: var(--aot-z-fixed-panel);
+        /* 지도 위 헤더 — leaflet 컨트롤(~1000) 위 */
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+        /* Container pass-through */
+    }
+
+    #search-overlay.d-none {
+        display: none !important;
+    }
+
+
+    @media (max-width: 768px) {
+
+        /* User Req: Match Mode Panel margins (which is 90vw -> 5vw margin) */
+        .map-tools-left {
+            left: 2vw !important;
+        }
+
+        .map-tools-right {
+            right: 2vw !important;
+        }
+
+        /* Adjust Search Overlay to fit between closer/further controls */
+        #search-overlay {
+            /* User Req: More space for search bar on mobile, but keep clear of controllers (40px) */
+            left: 60px !important;
+            right: 60px !important;
+            /* [Fix] V4: Use Flexbox to properly center and size the inner component */
+            display: flex;
+            justify-content: center;
+            width: auto;
+        }
+
+        /* User Req: Mode Panel margins 2vw relative to CONTAINER (card-body) */
+        .mode-panel {
+            /* 96vw was relative to viewport, causing overflow if container < 100vw */
+            /* New: 100% of container minus 2vw on each side */
+            width: calc(100% - 4vw);
+            max-width: none;
+        }
+    }
+
+    /* Tool Alignment Override (Decouple Width) */
+    .map-tools-left {
+        align-items: flex-start;
+    }
+
+    .map-tools-right {
+        align-items: flex-end;
+    }
+
+    /* AoT Device Mode Specifics */
+    .mode-tab[data-mode="aot_device"].active {
+        background-color: white !important;
+        color: var(--aot-color-text-primary, #333) !important;
+        border: 2px solid var(--theme-device, #995aff) !important;
+    }
+
+    /* [Theme] Site Mode Specifics (Red) */
+    .mode-tab[data-mode="site"].active {
+        background-color: var(--theme-site, #DF5353) !important;
+        color: var(--text-color-tertiary, white) !important;
+        border-color: var(--theme-site, #DF5353) !important;
+    }
+
+    /* Adjust positioning of sub-tabs to appear right of the close button */
+    #device-sub-tabs .mode-sub-tab {
+        background: white;
+        border: 1px solid #e0e0e0;
+        color: var(--aot-color-text-primary, #333);
+        margin-left: 5px;
+    }
+
+    #device-sub-tabs .mode-sub-tab.active {
+        background: #995aff;
+        color: var(--text-color-tertiary, white);
+        border-color: #995aff;
+    }
+
+    /* 모드 패널 — 지도 위 툴 팔레트 (모달은 이보다 높음) */
+    .mode-panel {
+        z-index: var(--aot-z-fixed-panel) !important;
+    }
+
+    .modal {
+        z-index: var(--aot-z-modal) !important;
+    }
+
+    .modal-backdrop {
+        z-index: var(--aot-z-modal-backdrop) !important;
+    }
+
+    /* Site Selector Dropdown Style */
+    #design-info-container .site-selector-dropdown+.dropdown-toggle {
+        height: 32px;
+        border-radius: 16px;
+        min-width: 150px;
+        max-width: 210px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        font-size: 0.85rem;
+    }
+
+    #design-info-container .site-selector-dropdown+.dropdown-toggle .filter-option {
+        text-align: center;
+    }
+
+    /* [Theme] Inactive State Borders (User Req) */
+    .mode-tab[data-mode="site"] {
+        border-color: var(--theme-site, #DF5353) !important;
+        color: var(--theme-site, #DF5353);
+    }
+
+    .mode-tab[data-mode="zone"] {
+        border-color: var(--theme-zone, #28a745) !important;
+        color: var(--theme-zone, #28a745);
+    }
+
+    .mode-tab[data-mode="facility"] {
+        border-color: var(--theme-facility, #82898f) !important;
+        color: var(--theme-facility, #82898f);
+    }
+
+    .mode-tab[data-mode="equipment"] {
+        border-color: var(--theme-equipment, #007bff) !important;
+        color: var(--theme-equipment, #007bff);
+    }
+
+    .mode-tab[data-mode="aot_device"] {
+        border-color: var(--theme-device, #995aff) !important;
+        color: var(--theme-device, #995aff);
+    }
+
+    /* --- Mode Panel Premium Animations --- */
+    .nav-tier-viewport {
+        display: flex;
+        flex-direction: column;
+        transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow-y: auto; /* [Fix] Allow scroll (User Feedback V7) */
+        overflow-x: hidden;
+        touch-action: pan-y; /* [Fix] V9: Allow vertical scroll gestures on mobile */
+    }
+
+    .nav-tier {
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 1;
+        transform: translateY(0);
+        width: 100%;
+    }
+
+    /* Slide In (Downwards/Drill-in) */
+    .nav-tier.entering {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    /* Slide Out */
+    .nav-tier.leaving {
+        opacity: 0;
+        transform: translateY(-20px);
+        position: absolute;
+        pointer-events: none;
+    }
+
+    /* Button Splitting Effect */
+    .mode-tab {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative;
+    }
+
+    /* When a parent tier is "separating" to show sub-menu */
+    .nav-tier.splitting .mode-tab:not(.active) {
+        opacity: 0;
+        filter: blur(8px);
+        pointer-events: none;
+    }
+
+    .nav-tier.splitting .mode-tab.split-left {
+        transform: translateX(-100px) scale(0.8);
+    }
+
+    .nav-tier.splitting .mode-tab.split-right {
+        transform: translateX(100px) scale(0.8);
+    }
+
+    /* Active button in splitting tier stays prominent */
+    .nav-tier.splitting .mode-tab.active {
+        transform: scale(1.1);
+        z-index: 10;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Tier Navigation Transitions */
+    /* .nav-tier-inner styles deferred to aot-base-ui.css */
+
+    /* Mobile alignment override removed to allow auto-centering logic from aot-base-ui.css */
+
+    /* --- New Horizontal Slide Animations --- */
+    
+    /* 1. Drill Down (Next) */
+    /* Old Tier Exits to Left */
+    .nav-tier.slide-next-leave {
+        transform: translateX(-100%);
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+        pointer-events: none;
+    }
+    
+    /* New Tier Enters from Right */
+    .nav-tier.slide-next-enter {
+        transform: translateX(100%);
+        opacity: 0; /* Optional: keep opacity 1 if we want solid slide */
+    }
+
+    /* 2. Go Back (Back) */
+    /* Old Tier Exits to Right */
+    .nav-tier.slide-back-leave {
+        transform: translateX(100%);
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+        pointer-events: none;
+    }
+
+    /* New Tier Enters from Left */
+    .nav-tier.slide-back-enter {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    /* 3. No Animation (Instant) */
+    .nav-tier.no-anim {
+        transition: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+    
+    /* Base Overrides for Clean Slide */
+    .nav-tier-viewport {
+        position: relative; /* Needed for abs positioning of leaving elements */
+        overflow-x: hidden; /* Hide sliding elements */
+    }
+</style>
+<script src="{{ url_for('static', filename='js/geo/design/aot-geo-parcel-import.js') }}?v=20260506a"></script>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<div class="container py-4">
+    <!-- System Flash Messages (Standard) -->
+    <div style="margin-bottom: 1rem;">
+        {% include 'flash_messages.html' %}
+    </div>
+
+    <!-- Section 1: Title -->
+    <div class="mb-3" style="padding-left: 1.25rem;">
+        <h3 class="mb-2">{{ _('Spatial Design Studio') }}</h3>
+        <button class="btn aot-pill-btn aot-pill-btn-primary" onclick="openGeoSettings()">{{ _('Settings') }}</button>
+    </div>
+
+    <!-- Section 2: Map & Selector -->
+    <div class="card mb-4 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+        <div class="card-header bg-white py-3">
+            <div class="mb-2 font-weight-bold">
+                <h5>{{ _('Map Design') }}</h5>
+            </div>
+            <hr class="mt-0 mb-3">
+
+            <!-- Map Selector Row -->
+            <div class="d-flex align-items-center w-100 justify-content-between">
+                <div style="width: 160px; flex-shrink: 0;">
+                    <select id="map-selector" class="selectpicker" data-width="100%" data-style="btn-white border">
+                        <option value="" disabled selected>{{ _('Select a Map') }}</option>
+                        <option value="new" data-icon="fas fa-plus-circle" class="text-primary font-weight-bold">{{ _('Create New Map') }}</option>
+                        {% for m in map_configs %}
+                        <option value="{{ m.unique_id }}"
+                            data-subtext="{{ m.updated_at.strftime('%Y-%m-%d') if m.updated_at else '' }}">{{ m.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <!-- Edit Name Button (Hidden initially) -->
+                    <button class="btn btn-primary mr-1 ml-1" id="btn-edit-map-name" style="min-width: 60px;"
+                        title="{{ _('Rename') }}">
+                        {{ _('Edit') }}
+                    </button>
+                    <!-- Delete Button -->
+                    <button class="btn btn-primary mr-1" id="btn-delete-map" style="min-width: 60px;">
+                        {{ _('Delete') }}
+                    </button>
+                    <!-- Save Button -->
+                    <button class="btn btn-primary" id="btn-save-global" style="min-width: 60px;">
+                        {{ _('Save') }}
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="card-body p-0 position-relative aot-map-container" id="geo-design-wrapper">
+            <!-- Map Container (Fixed Height) -->
+            <div id="geo-map" style="height: 640px; width: 100%; z-index: auto !important;"></div>
+
+            <!-- Floating Map Tools (Left) -->
+            <div class="map-tools-left" style="top: 10px; left: 10px;">
+                <!-- Group: Zoom + Compass -->
+                <div class="tool-group">
+                    <button class="btn btn-white" id="tool-zoom-in" title="{{ _('Zoom In') }}"><i class="fas fa-plus"></i></button>
+                    <button class="btn btn-white" id="tool-zoom-out" title="{{ _('Zoom Out') }}"><i class="fas fa-minus"></i></button>
+                    <!-- Native MapLibre compass button injected here by JS (onMapReady) -->
+                </div>
+
+                <!-- Group: Location -->
+                <div class="tool-group mt-2">
+                    <button class="btn btn-white" id="tool-fullscreen" title="{{ _('Fullscreen') }}"><i class="fas fa-expand"></i></button>
+                    <button class="btn btn-white" id="tool-search" title="{{ _('Search Address') }}"><i class="fas fa-search"></i></button>
+                    <button class="btn btn-white" id="tool-locate" title="{{ _('My Location') }}"><i class="fas fa-crosshairs"></i></button>
+                    <button class="btn btn-white" id="tool-reset" title="{{ _('Reset View') }}"><i class="fas fa-undo"></i></button>
+                </div>
+
+                <!-- Toggle: Lock -->
+                <button class="btn btn-white btn-circle mt-2" id="tool-lock" title="{{ _('Lock Editing') }}" data-locked="false">
+                    <i class="fas fa-unlock"></i>
+                </button>
+
+                <!-- Toggle: Hide -->
+                <button class="btn btn-white btn-circle mt-2" id="tool-hide" title="{{ _('Hide Overlays') }}" data-hidden="false">
+                    <i class="fas fa-grip-horizontal"></i>
+                </button>
+
+                <!-- Tool: Site List -->
+                <button class="btn btn-white btn-circle mt-2" id="tool-site-list" title="{{ _('Site List') }}">
+                    <i class="fas fa-list"></i>
+                </button>
+
+                <div id="site-list-popover" class="bg-white shadow-lg rounded border"
+                     style="display: none; position: absolute; left: 40px; width: 200px; max-height: 300px; overflow-y: auto; z-index: var(--aot-z-fixed-panel);">
+                    <ul class="list-group list-group-flush small" id="site-list-ul"></ul>
+                </div>
+            </div>
+
+            <!-- Floating Map Tools (Right) -->
+            <div class="map-tools-right" style="top: 10px; right: 10px;">
+                <!-- Tool: Layers — top-right (above drawing tools) -->
+                <button class="btn btn-white btn-circle" id="tool-layers" title="{{ _('Layers') }}">
+                    <i class="fas fa-layer-group"></i>
+                </button>
+
+                <div id="draw-tools-container" class="d-flex flex-column gap-2 mt-2">
+                    <!-- JS Injected Tools -->
+                </div>
+
+                <!-- Toggle: Mode Panel -->
+                <button class="btn btn-white btn-circle mt-2" id="tool-toggle-panel" title="{{ _('Hide Panel') }}" data-hidden="false">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+
+            <!-- [Fix] External Container for Layer Manager to ensure Z-Index > Mode Panel -->
+            <!-- Position matches Leaflet Top-Right standard margin (20px) -> Adjusted to 10px (Mobile Standard) -->
+            <div id="external-layer-control"
+                style="position: absolute; top: 10px; right: 10px; z-index: var(--aot-z-fixed-panel); display: flex; flex-direction: column; align-items: flex-end;">
+                <!-- JS will move leaflet-control-layers here -->
+            </div>
+
+            <!-- New Tiered Navigation Mode Panel (Replaces old mode-panel) -->
+            <div class="nav-v-panel mode-panel" id="nav-mode-panel">
+                <div class="nav-tier-viewport" id="nav-tier-viewport">
+                    <!-- Tiers will be dynamically injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Hidden Search Overlay Component -->
+            <div id="search-overlay" class="d-none map-search-overlay">
+                <aot-map-search-fixed id="design-search"></aot-map-search-fixed>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Information (Dashboard) -->
+    <div class="card mb-4 shadow-sm" style="border-radius: 20px;">
+        <div class="card-header bg-white font-weight-bold mt-2 border-0">
+            <h5>{{ _('Design Information') }}</h5>
+            <hr class="mt-0 mb-3">
+        </div>
+        <div class="card-body p-3" id="design-info-container">
+            <!-- Dynamic Content Rendered by JS -->
+            <div class="text-center text-muted py-5">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                <span class="ml-2">{{ _('Analyzing Data...') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: Data Processing -->
+    <div class="card mb-5 shadow-sm" id="section-data-processing" style="border-radius: 20px;">
+        <div class="card-header bg-white font-weight-bold mt-2 border-0">
+            <h5>{{ _('Data Processing') }}</h5>
+            <hr class="mt-0 mb-3">
+        </div>
+        <div class="card-body d-flex gap-3 flex-wrap">
+            <button class="btn btn-primary px-4" id="btn-download-csv">
+                <i class="fas fa-file-csv mr-2"></i> CSV
+            </button>
+            <button class="btn btn-primary px-4" id="btn-download-pdf">
+                <i class="fas fa-file-pdf mr-2"></i> PDF
+            </button>
+            <div class="border-left mx-2"></div>
+            <button class="btn btn-outline-dark px-3" id="btn-export-json">
+                <i class="fas fa-file-download mr-2"></i> {{ _('Export Map') }}
+            </button>
+            <button class="btn btn-outline-dark px-3" id="btn-import-json">
+                <i class="fas fa-file-upload mr-2"></i> {{ _('Import Map') }}
+            </button>
+            <input type="file" id="input-import-json" accept=".json" style="display: none;">
+        </div>
+    </div>
+
+    <!-- Print Footer (Hidden on Screen) -->
+    <div class="print-footer mt-5 p-4 text-left text-muted" style="display: none;">
+        <p class="mb-1" style="font-size: 0.9rem;">{{ _('This document was created using the <strong>AoT Geographic Information System</strong>, free software available to everyone.') }}</p>
+        <p class="mb-1" style="font-size: 0.9rem;">{{ _('Maps and drawings included in this material are generated based on satellite imagery and basic data, so <strong>errors may occur compared to the actual site.</strong>') }}</p>
+        <p class="mb-0" style="font-size: 0.9rem;">{{ _('AoT provides <strong>no legal warranty</strong> regarding the accuracy or suitability of the outputs, and the user is responsible for construction and decision-making based on them.') }}</p>
+    </div>
+</div>
+</div>
+
+<!-- Scripts -->
+
+<script>
+    window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
+</script>
+
+<!-- Leaflet Compatibility Layer (for legacy components like aot-geo-panel.js) -->
+<script src="/static/js/geo/aot-leaflet-compat.js"></script>
+
+<!-- [GIS Pure MapLibre v5.0] Leaflet-Free MapLibre GL Architecture -->
+<!-- ====================================================== -->
+
+<!-- NEW: AoT MapLibre Core Modules (Pure MapLibre, Leaflet-Free) -->
+<script src="/static/js/geo/src/maplibre/AoTMapLibreCore.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreLayer.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreFeatureGroup.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreDrawTool.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibrePopup.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreTooltip.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTGeoCompatibility.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreCompatShim.js"></script>
+<script src="/static/js/geo/src/maplibre/index.js"></script>
+
+<!-- MapLibre Draw Module (AoT Native Implementation) -->
+<script src="/static/js/geo/maplibre/maplibre-draw.js?v=20260621a"></script>
+
+<!-- Vector Modules (MapLibre) -->
+<script src="/static/js/geo/src/core/maplibre-core.js"></script>
+<script src="/static/js/geo/aot-vector-layer-manager.js"></script>
+<script src="/static/js/geo/aot-maplibre-raster-bridge.js"></script>
+<script src="/static/js/geo/src/draw/maplibre-draw.js"></script>
+<script src="/static/js/geo/src/loaders/map-loader.js"></script>
+
+<!-- RenderBucket (Phase 1: category-based layer consolidation) -->
+<script src="/static/js/geo/aot-geo-render-bucket.js?v=20260614a"></script>
+
+<!-- AoT Geo Layer (MapLibre-backed, RenderBucket-integrated) -->
+<script src="/static/js/geo/aot-geo-layer.js?v=20260615a"></script>
+
+<!-- ES Module Bundle -->
+<script src="/static/js/geo/dist/aot-geo-all.bundle.js"></script>
+
+<!-- AoTMapLoader (Map initialization) -->
+<script src="/static/js/geo/aot-map-loader.js"></script>
+<script src="/static/js/geo/aot-map-controls.js"></script>
+<script src="/static/js/geo/aot-map-data.js"></script>
+<script src="/static/js/geo/aot-map-editor-v2.js?v=20260619a"></script>
+
+<!-- Turf.js (vendor) + Custom Map Controls — 외부 유지 (turf=vendor·layout 공유,
+     custom-controls=AoT_map 위젯과 공유). 번들보다 먼저 로드. -->
+<script src="/static/js/common/turf.min.js"></script>
+<script src="/static/js/geo/aot-map-custom-controls.js?v=20260612a"></script>
+
+<!-- geo_design design 모듈 → 단일 번들 (concat+minify, tools/bundle.mjs: geo-design).
+     14 소스: design/*(ui,geometry,events,modules,label,devices-v3,stats,preview,export,
+     mapview) + aot-map-utils/panel/migration/design-v3. 소스 순서 보존(preview→panel 등).
+     소스 수정 시 npm run build:bundles geo-design → asset() 핑거프린팅으로 캐시 자동 무효화.
+     coreㆍ어댑터ㆍdist 번들 레이어는 위에 그대로(번들 미포함). -->
+<script src="{{ asset('geo-design') }}"></script>
+
+<!-- Facility 3D overlay on map (Three.js custom layer) -->
+<script src="/static/js/widgets/AoT_facility/three.min.js?v=2"></script>
+<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=30"></script>
+<script src="/static/js/geo/aot-facility-map-3d.js?v=27"></script>
+
+<!-- Search Components -->
+<script src="/static/js/components/aot-map-search-fixed.js"></script>
+<script src="/static/js/components/aot-map-search-controller.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Map container validation
+        const container = document.getElementById('geo-map');
+        if (!container) {
+            console.error('[GeoDesign] Map container #geo-map not found!');
+            return;
+        }
+        
+        window.geoDesign = new AoTGeoDesign('geo-map');
+        window.geoDesign.init();
+
+        // Attach facility 3D overlay once the native map is ready
+        _initFacility3DOverlay();
+    });
+
+    function _initFacility3DOverlay() {
+        if (typeof AoTFacilityMap3D === 'undefined' || typeof AoTFacility3D === 'undefined') return;
+
+        var _lastUuid = null;
+        var _fetching = false;
+        var _styleListenerMap = null; // native map instance we attached style.load to
+
+        function _attachForMap(nativeMap, mapUuid) {
+            if (_fetching) return;
+            _fetching = true;
+            fetch('/api/geo/facility/list?geo_id=' + encodeURIComponent(mapUuid))
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+                .then(function (data) {
+                    _fetching = false;
+                    // Detach previous overlay for the old map
+                    AoTFacilityMap3D.detach();
+                    var facilities = (data.facilities || data || []).filter(function (f) {
+                        return f.geometry_3d && f.outer_feature;
+                    });
+                    if (!facilities.length) return;
+                    if (nativeMap.isStyleLoaded()) {
+                        AoTFacilityMap3D.attach(nativeMap, facilities, { scanHideExtrusions: true });
+                    } else {
+                        nativeMap.once('load', function () {
+                            AoTFacilityMap3D.attach(nativeMap, facilities, { scanHideExtrusions: true });
+                        });
+                    }
+                })
+                .catch(function (e) {
+                    _fetching = false;
+                    console.warn('[Facility3D] facility list fetch failed', e);
+                });
+        }
+
+        // Re-attach after base map style reload (setStyle wipes all custom layers).
+        // Reset _lastUuid so the next interval tick forces a fresh attach.
+        function _onStyleLoad() {
+            _lastUuid = null;
+        }
+
+        // Continuous watch: reload overlay whenever the active map UUID changes
+        setInterval(function () {
+            if (document.hidden) return;
+            var nativeMap = window._aotNativeMap;
+            var mapUuid   = window.geoDesign && window.geoDesign.currentMapUuid;
+            if (!nativeMap || !mapUuid) return;
+
+            // Register style.load listener once per native map instance.
+            if (_styleListenerMap !== nativeMap) {
+                if (_styleListenerMap) {
+                    try { _styleListenerMap.off('style.load', _onStyleLoad); } catch (e) {}
+                }
+                nativeMap.on('style.load', _onStyleLoad);
+                _styleListenerMap = nativeMap;
+            }
+
+            if (mapUuid === _lastUuid) return;
+            _lastUuid = mapUuid;
+            _attachForMap(nativeMap, mapUuid);
+        }, 500);
+    }
+</script>
+{% include 'modals/geo_settings_modal.html' %}
+
+<!-- [Parcel Import Modal] address -> parcel -> Site conversion -->
+<div class="modal fade" id="modal-parcel-import" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-map-marker-alt mr-2"></i>{{ _('Import Site by Address') }}</h5>
+        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Tabs: address list / CSV -->
+        <ul class="nav nav-tabs mb-3" id="parcel-import-tabs">
+          <li class="nav-item">
+            <a class="nav-link active" data-toggle="tab" href="#tab-single-address">{{ _('Address Input') }}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#tab-csv-upload">{{ _('CSV Batch') }}</a>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- Address list (dynamic multi-input) -->
+          <div class="tab-pane fade show active" id="tab-single-address">
+            <div class="text-muted small mb-2">
+              {{ _('Separate with commas (,) or add multiple parcels with the') }} <strong>+</strong> {{ _('button.') }}
+            </div>
+            <div id="parcel-address-list">
+              <!-- First address row (template) -->
+              <div class="parcel-addr-row input-group mb-1">
+                <input type="text" class="parcel-addr-input form-control form-control-sm"
+                  placeholder="{{ _('e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul') }}" />
+                <div class="input-group-append">
+                  <button class="btn btn-outline-danger btn-sm btn-parcel-addr-remove" type="button"
+                    title="{{ _('Delete') }}" style="display:none;">&times;</button>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center mt-1 mb-2">
+              <button class="btn btn-outline-secondary btn-sm mr-2" id="btn-parcel-addr-add" type="button">
+                <i class="fas fa-plus mr-1"></i>{{ _('Add Address') }}
+              </button>
+              <button class="btn btn-primary btn-sm" id="btn-parcel-search" type="button">
+                <i class="fas fa-search mr-1"></i>{{ _('Search') }}
+              </button>
+            </div>
+            <div id="parcel-search-status" class="text-muted small mb-2"></div>
+          </div>
+
+          <!-- CSV batch -->
+          <div class="tab-pane fade" id="tab-csv-upload">
+            <div class="mb-2 text-muted small">
+              {{ _('Enter addresses in the first column of the CSV file. Adjacent parcels are merged automatically.') }}
+            </div>
+            <div class="custom-file mb-2">
+              <input type="file" class="custom-file-input" id="parcel-csv-file" accept=".csv">
+              <label class="custom-file-label" for="parcel-csv-file">{{ _('Choose CSV File') }}</label>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-parcel-csv-upload" type="button">
+              <i class="fas fa-upload mr-1"></i>{{ _('Upload and Process') }}
+            </button>
+            <div id="parcel-csv-status" class="text-muted small mt-2"></div>
+          </div>
+        </div>
+
+        <!-- Result preview -->
+        <div id="parcel-preview-area" class="mt-3" style="display:none;">
+          <hr>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <strong id="parcel-preview-label">{{ _('Parcel Preview') }}</strong>
+            <div>
+              <label class="mr-2 mb-0">
+                <input type="checkbox" id="parcel-merge-check"> {{ _('Merge Adjacent Parcels') }}
+              </label>
+              <button class="btn btn-sm btn-outline-secondary" id="btn-parcel-clear" type="button">
+                <i class="fas fa-times mr-1"></i>{{ _('Reset') }}
+              </button>
+            </div>
+          </div>
+          <div id="parcel-result-list" class="mb-2" style="max-height:160px;overflow-y:auto;font-size:13px;"></div>
+
+          <!-- Site name (used only when saving merged; individual saves use each parcel's name) -->
+          <div class="form-group row mb-2" id="parcel-site-name-row">
+            <label class="col-sm-3 col-form-label">{{ _('Site Name') }}</label>
+            <div class="col-sm-9">
+              <input type="text" id="parcel-site-name" class="form-control form-control-sm" placeholder="{{ _('Auto-filled') }}" />
+            </div>
+          </div>
+
+          <button class="btn btn-success btn-sm" id="btn-parcel-save" type="button">
+            <i class="fas fa-save mr-1"></i>{{ _('Save as Site') }}
+          </button>
+          <span id="parcel-save-status" class="ml-2 text-muted small"></span>
+        </div>
+
+      </div><!-- /.modal-body -->
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+    // Inject CSRF token
+    window._csrf = window._csrf || '{{ csrf_token() }}';
+
+    let _pendingFeatures = [];
+
+    // ── Utils ──────────────────────────────────────────────────────────────
+    function showStatus(elId, msg, cls) {
+        const el = document.getElementById(elId);
+        if (el) { el.textContent = msg; el.className = 'small mt-1 ' + (cls || 'text-muted'); }
+    }
+
+    function renderResultList(features, errors) {
+        const el = document.getElementById('parcel-result-list');
+        if (!el) return;
+        let html = '';
+        features.forEach((f, i) => {
+            const name = (f.properties && f.properties.name) || ((window._ ? window._('Parcel') : 'Parcel') + ' ' + (i+1));
+            html += `<div class="d-flex align-items-center py-1 border-bottom">
+                <i class="fas fa-check-circle text-success mr-2"></i>
+                <span class="flex-grow-1">${name}</span>
+            </div>`;
+        });
+        (errors || []).forEach(e => {
+            html += `<div class="d-flex align-items-center py-1 border-bottom text-danger">
+                <i class="fas fa-times-circle mr-2"></i><span>${e}</span>
+            </div>`;
+        });
+        el.innerHTML = html || ('<span class="text-muted">' + (window._ ? window._('No results') : 'No results') + '</span>');
+    }
+
+    function showPreviewArea(features, errors) {
+        _pendingFeatures = features;
+        document.getElementById('parcel-preview-area').style.display = features.length ? '' : 'none';
+        document.getElementById('parcel-preview-label').textContent =
+            `${features.length} ${(window._ ? window._('parcels previewed') : 'parcels previewed')}` + (errors && errors.length ? ` (${errors.length} ${(window._ ? window._('failed') : 'failed')})` : '');
+        renderResultList(features, errors);
+        // Auto-set name
+        if (features.length > 0) {
+            const name = (features[0].properties && (features[0].properties.name || features[0].properties.addr)) || (window._ ? window._('Site') : 'Site');
+            const extra = features.length > 1 ? ` ${(window._ ? window._('and') : 'and')} ${features.length - 1} ${(window._ ? window._('more parcels') : 'more parcels')}` : '';
+            document.getElementById('parcel-site-name').value = name + extra;
+        }
+        // Map preview
+        if (window.AoTParcelImport && window.AoTParcelImport._mapInstance) {
+            window.AoTParcelImport.showPreview(features);
+        }
+    }
+
+    // ── Multi-address row management ──────────────────────────────────────────────────
+    function _getAddressRows() {
+        return document.querySelectorAll('#parcel-address-list .parcel-addr-row');
+    }
+
+    function _updateRemoveButtons() {
+        const rows = _getAddressRows();
+        rows.forEach(row => {
+            const btn = row.querySelector('.btn-parcel-addr-remove');
+            if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+        });
+    }
+
+    function _addAddressRow(value) {
+        const list = document.getElementById('parcel-address-list');
+        const row = document.createElement('div');
+        row.className = 'parcel-addr-row input-group mb-1';
+        row.innerHTML = `
+            <input type="text" class="parcel-addr-input form-control form-control-sm"
+                placeholder="${(window._ ? window._('e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul') : 'e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul')}" value="${value || ''}" />
+            <div class="input-group-append">
+                <button class="btn btn-outline-danger btn-sm btn-parcel-addr-remove" type="button"
+                    title="${(window._ ? window._('Delete') : 'Delete')}">&times;</button>
+            </div>`;
+        row.querySelector('.btn-parcel-addr-remove').addEventListener('click', function() {
+            row.remove();
+            _updateRemoveButtons();
+        });
+        // Enter key adds the next row
+        row.querySelector('.parcel-addr-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); _addAddressRow(''); _updateRemoveButtons(); }
+        });
+        list.appendChild(row);
+        _updateRemoveButtons();
+        row.querySelector('.parcel-addr-input').focus();
+    }
+
+    /** Collect all entered addresses (split by comma + drop empty lines) */
+    function _collectAddresses() {
+        const addrs = [];
+        document.querySelectorAll('#parcel-address-list .parcel-addr-input').forEach(inp => {
+            inp.value.split(',').map(s => s.trim()).filter(Boolean).forEach(a => addrs.push(a));
+        });
+        return addrs;
+    }
+
+    // ── Event binding ──────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Initialize hidden state of the first row's remove button
+        _updateRemoveButtons();
+        // First row Enter key
+        const firstInput = document.querySelector('#parcel-address-list .parcel-addr-input');
+        if (firstInput) {
+            firstInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); _addAddressRow(''); }
+            });
+        }
+
+        // + button
+        const btnAdd = document.getElementById('btn-parcel-addr-add');
+        if (btnAdd) btnAdd.addEventListener('click', () => _addAddressRow(''));
+
+        // Search button (parallel multi-address search)
+        const btnSearch = document.getElementById('btn-parcel-search');
+        if (btnSearch) {
+            btnSearch.addEventListener('click', async function() {
+                const addrs = _collectAddresses();
+                if (!addrs.length) {
+                    showStatus('parcel-search-status', (window._ ? window._('Please enter an address.') : 'Please enter an address.'), 'text-danger');
+                    return;
+                }
+                btnSearch.disabled = true;
+                showStatus('parcel-search-status',
+                    addrs.length > 1 ? `${(window._ ? window._('Searching') : 'Searching')} ${addrs.length} ${(window._ ? window._('addresses') : 'addresses')}...` : (window._ ? window._('Searching...') : 'Searching...'), 'text-muted');
+                try {
+                    // Parallel requests
+                    const results = await Promise.all(
+                        addrs.map(addr => window.AoTParcelImport.searchAddress(addr))
+                    );
+                    const features = [], errors = [];
+                    results.forEach((res, i) => {
+                        if (res.ok) {
+                            features.push(res.feature);
+                        } else {
+                            const errMsg = res.error || (window._ ? window._('Unknown') : 'Unknown');
+                            if (res.raw_preview) console.warn('[ParcelImport] raw_preview:', res.raw_preview);
+                            errors.push(`${addrs[i]}: ${errMsg}`);
+                        }
+                    });
+                    if (features.length) {
+                        showStatus('parcel-search-status',
+                            `${features.length} ${(window._ ? window._('parcels found') : 'parcels found')}` + (errors.length ? `, ${errors.length} ${(window._ ? window._('failed') : 'failed')}` : ''),
+                            errors.length ? 'text-warning' : 'text-success');
+                        showPreviewArea(features, errors);
+                    } else {
+                        showStatus('parcel-search-status', (window._ ? window._('Error') : 'Error') + ': ' + (errors[0] || (window._ ? window._('No results') : 'No results')), 'text-danger');
+                    }
+                } catch(e) {
+                    showStatus('parcel-search-status', (window._ ? window._('Request failed') : 'Request failed') + ': ' + e.message, 'text-danger');
+                } finally { btnSearch.disabled = false; }
+            });
+        }
+
+        // CSV upload
+        const btnCsv = document.getElementById('btn-parcel-csv-upload');
+        if (btnCsv) {
+            btnCsv.addEventListener('click', async function() {
+                const file = document.getElementById('parcel-csv-file').files[0];
+                if (!file) { showStatus('parcel-csv-status', (window._ ? window._('Please choose a CSV file.') : 'Please choose a CSV file.'), 'text-danger'); return; }
+                btnCsv.disabled = true;
+                showStatus('parcel-csv-status', (window._ ? window._('Processing...') : 'Processing...'), 'text-muted');
+                try {
+                    const res = await window.AoTParcelImport.uploadCsv(file);
+                    if (res.ok) {
+                        showStatus('parcel-csv-status', `${res.features.length} ${(window._ ? window._('processed') : 'processed')}`, 'text-success');
+                        showPreviewArea(res.features, res.errors || []);
+                    } else {
+                        showStatus('parcel-csv-status', (window._ ? window._('Error') : 'Error') + ': ' + (res.error || (window._ ? window._('Unknown') : 'Unknown')), 'text-danger');
+                    }
+                } catch(e) {
+                    showStatus('parcel-csv-status', (window._ ? window._('Request failed') : 'Request failed') + ': ' + e.message, 'text-danger');
+                } finally { btnCsv.disabled = false; }
+            });
+        }
+
+        // Refresh file input label
+        const csvInput = document.getElementById('parcel-csv-file');
+        if (csvInput) {
+            csvInput.addEventListener('change', function() {
+                const lbl = this.nextElementSibling;
+                if (lbl) lbl.textContent = this.files[0] ? this.files[0].name : (window._ ? window._('Choose CSV File') : 'Choose CSV File');
+            });
+        }
+
+        // Save as Site (+ reload map with labels after saving)
+        const btnSave = document.getElementById('btn-parcel-save');
+        if (btnSave) {
+            btnSave.addEventListener('click', async function() {
+                if (!_pendingFeatures.length) return;
+                const merge = document.getElementById('parcel-merge-check').checked;
+                let toSave = [..._pendingFeatures];
+                if (merge && toSave.length > 1) toSave = window.AoTParcelImport.mergeAdjacent(toSave);
+                const baseName = document.getElementById('parcel-site-name').value.trim() || (window._ ? window._('Site') : 'Site');
+                const mapUuid = (window.geoDesign && window.geoDesign.currentMapUuid)
+                    || window.currentMapUuid || null;
+                btnSave.disabled = true;
+                const statusEl = document.getElementById('parcel-save-status');
+                statusEl.textContent = (window._ ? window._('Saving...') : 'Saving...');
+                try {
+                    let saved = 0, failed = 0;
+                    for (const feat of toSave) {
+                        // Single parcel (regardless of merge): use the baseName the user entered/edited as-is.
+                        // Only for multiple (unmerged) parcels, use each parcel's name, falling back to baseName.
+                        const n = toSave.length === 1
+                            ? baseName
+                            : ((feat.properties && (feat.properties.name || feat.properties.addr)) || baseName);
+                        const res = await window.AoTParcelImport.saveAsSite(feat, n, mapUuid);
+                        if (res.ok) saved++; else failed++;
+                    }
+                    statusEl.textContent = `${saved} ${(window._ ? window._('saved') : 'saved')}` + (failed ? `, ${failed} ${(window._ ? window._('failed') : 'failed')}` : '');
+                    // Remove preview layer
+                    if (window.AoTParcelImport) window.AoTParcelImport.clearPreview();
+                    _pendingFeatures = [];
+                    // Reload map -> Site layer + labels auto-generated
+                    if (saved > 0 && window.geoDesign && mapUuid) {
+                        setTimeout(() => {
+                            $('#modal-parcel-import').modal('hide');
+                            window.geoDesign.loadMap(mapUuid);
+                        }, 600);
+                    } else {
+                        setTimeout(() => {
+                            document.getElementById('parcel-preview-area').style.display = 'none';
+                        }, 1500);
+                    }
+                } catch(e) {
+                    statusEl.textContent = (window._ ? window._('Save failed') : 'Save failed') + ': ' + e.message;
+                } finally { btnSave.disabled = false; }
+            });
+        }
+
+        // Reset
+        const btnClear = document.getElementById('btn-parcel-clear');
+        if (btnClear) {
+            btnClear.addEventListener('click', function() {
+                _pendingFeatures = [];
+                if (window.AoTParcelImport) window.AoTParcelImport.clearPreview();
+                document.getElementById('parcel-preview-area').style.display = 'none';
+                document.getElementById('parcel-result-list').innerHTML = '';
+                showStatus('parcel-search-status', '', '');
+            });
+        }
+
+        // Clean up preview when the modal closes
+        $('#modal-parcel-import').on('hidden.bs.modal', function() {
+            if (window.AoTParcelImport) window.AoTParcelImport.clearPreview();
+        });
+    });
+})();
+</script>
+{% endblock %}

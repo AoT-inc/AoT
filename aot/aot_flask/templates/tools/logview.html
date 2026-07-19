@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+{% set active_page = "logview" %}
+{% block title %} - {{_('Log View')}}{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+  <!-- Route: /logview -->
+  <main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <form class="row" method="post" action="/logview" style="padding-top: 0.5em">
+      <input type="hidden" name="form-name" value="logview">
+      {{form_log_view.hidden_tag()}}
+      <div class="col-12 col-sm-2">
+        {{form_log_view.lines(class_='form-control', type="number", value=lines)}}
+      </div>
+      <div class="col-auto">
+        <select class="form-control form-tooltip form-dropdown" data-placement="top" id="log" name="log" title="{{_('Select Log')}}">
+          <option value="log_daemon"{% if log_field == "log_daemon" %} selected{% endif %}>{{_('Daemon')}}</option>
+          <option value="log_pid_settings"{% if log_field == "log_pid_settings" %} selected{% endif %}>{{_('Daemon (PID settings)')}}</option>
+          <option value="log_keepup"{% if log_field == "log_keepup" %} selected{% endif %}>{{_('Daemon keepup')}}</option>
+          <option value="log_dependency"{% if log_field == "log_dependency" %} selected{% endif %}>{{_('Dependency')}}</option>
+          <option value="log_import"{% if log_field == "log_import" %} selected{% endif %}>{{_('Import settings')}}</option>
+          <option value="log_nginx"{% if log_field == "log_nginx" %} selected{% endif %}>{{_('Nginx')}}</option>
+          <option value="log_backup"{% if log_field == "log_backup" %} selected{% endif %}>{{_('AoT backup')}}</option>
+          <option value="log_restore"{% if log_field == "log_restore" %} selected{% endif %}>{{_('AoT restore')}}</option>
+          <option value="log_upgrade"{% if log_field == "log_upgrade" %} selected{% endif %}>{{_('AoT upgrade')}}</option>
+          <option value="log_flask"{% if log_field == "log_flask" %} selected{% endif %}>{{_('Web')}}</option>
+          <option value="log_http_access"{% if log_field == "log_http_access" %} selected{% endif %}>{{_('Web access')}}</option>
+          <option value="log_http_error"{% if log_field == "log_http_error" %} selected{% endif %}>{{_('Web error')}}</option>
+          <option value="log_login"{% if log_field == "log_login" %} selected{% endif %}>{{_('Web login')}}</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        {{form_log_view.search(class_='form-control', value=search)}}
+      </div>
+      <div class="col-auto">
+        {{form_log_view.log_view(class_='btn btn-primary btn-block')}}
+      </div>
+    </form>
+
+    {%- if log_output != None -%}
+    <div style="padding-top:1.5em">
+      {%- if log_output == 404 -%}
+        {{_('File not found')}}: {{logfile}}
+      {%- elif log_output == '' -%}
+        {{_('File is empty')}}: {{logfile}}
+      {%- else -%}
+        {{_('Last %(lines)s lines of file %(logfile)s', lines=lines, logfile=logfile)}}:
+        <pre style="resize: vertical; padding: 0.5em; border: 1px solid Black;">{{log_output}}</pre>
+      {%- endif -%}
+    </div>
+    {%- endif -%}
+
+  </main>
+</div>
+
+{% endblock %}

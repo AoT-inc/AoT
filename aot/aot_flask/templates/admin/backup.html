@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% set active_page = "backup" %}
+{% set help_page = [manual_url("Upgrade-Backup-Restore/#backup-restore"), _('Backup Restore')] %}
+
+{% block title %} - {{_('Backup Restore')}}{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+  <!-- Path: /admin/backup -->
+  <main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <h4>{{_('Backup and Restore')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+
+    <p>{{_('You can create backups to preserve AoT settings or restore them later. Camera images are not backed up. To save measurement data, go to the Export/Import page.')}}</p>
+
+    <form method="post" action="/admin/backup">
+      {{form_backup.csrf_token}}
+    <div class="row" style="padding-bottom: 1.5em">
+      <div class="col-12 col-sm-3 col-md-2 small-gutters">
+        {{form_backup.backup(class_='btn btn-primary', value=_('Create Backup'))}}
+      </div>
+    </div>
+    </form>
+
+    {% if not backup_dirs %}
+      <div>
+        {{_('No backups found.')}}
+      </div>
+    {% else %}
+      {%- for each_backup in backup_dirs -%}
+        <form method="post" action="/admin/backup">
+        {{form_backup.csrf_token}}
+        {{form_backup.selected_dir(class_='form-control', value=each_backup[0][14:])}}
+        {{form_backup.full_path(class_='form-control', value=full_paths[loop.index0])}}
+
+        <div class="row small-gutters" style="padding: 0.3em">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3" style="font-family: 'Courier New', monospace;">
+            {% set split_version = each_backup[0].split('-') %}
+            {{each_backup[0][14:33]}}<br><a href="https://github.com/AoT-inc/AoT/releases/tag/v{{each_backup[0][34:]}}" target="_blank">v{{each_backup[0][34:]}}</a>, {{"%.1f MB"|format(each_backup[1])}}
+          </div>
+          <div class="col-6 col-sm-3 small-gutters">
+            {{form_backup.download(class_='btn btn-primary btn-block', value=_('Download Backup'))}}
+          </div>
+          <div class="col-6 col-sm-3 small-gutters">
+            {{form_backup.restore(class_='btn btn-primary btn-block', value=_('Restore Backup'))}}
+          </div>
+          <div class="col-6 col-sm-3 small-gutters">
+            {{form_backup.delete(class_='btn btn-primary btn-block', value=_('Delete Backup'), **{'onclick':"return confirm(_('Are you sure you want to delete?'))"})}}
+          </div>
+        </div>
+
+        </form>
+      {%- endfor -%}
+
+    {% endif %}
+  </main>
+</div>
+
+{% endblock %}

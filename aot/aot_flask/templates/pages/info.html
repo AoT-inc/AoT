@@ -1,0 +1,224 @@
+{% extends "layout.html" %}
+{% set active_page = "info" %}
+{% set help_page = [manual_url("System-Information/"), _('System Information')] %}
+
+{% block title %} - {{_('System Information')}}{% endblock %}
+{% block head %}
+<style>
+  .hide {
+    /* 스포일러 가림 효과 — 글자색=배경색이 정확히 같아야 하므로 리터럴 유지 */
+    color: black;
+    background-color: black;
+  }
+
+  .hide:hover {
+    color: var(--aot-color-dark, #141414);
+    background-color: inherit;
+  }
+</style>
+{% endblock %}
+{% block body %}
+<div class="container-fluid px-0">
+  <!-- Route: /info -->
+  <main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em; font-size: 1.3em">
+        {{_('AoT Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{aot_version}}</span>
+        <br>{{_('Python Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{python_version}}</span>
+        <br>{{_('Platform')}}:&nbsp;
+        {%- if system_env.platform_type == 'raspberry_pi' -%}
+          <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.pi_model}}</span>
+        {%- elif system_env.platform_type == 'docker' -%}
+          <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">Docker{% if system_env.os_release %} ({{system_env.os_release}}){% endif %}</span>
+        {%- else -%}
+          <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.os_release or system_env.kernel}}</span>
+        {%- endif %}
+        <br>{{_('CPU Cores')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.cpu_cores}}</span>
+        {%- if system_env.platform_type == 'docker' %} <span style="color: var(--aot-color-text-secondary, #777);">({{_('container limit')}})</span>{% endif %}
+        {% if system_env.mem_total_gb %}
+        <br>{{_('Total Memory')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{system_env.mem_total_gb}} GB</span>
+        {%- if system_env.platform_type == 'docker' %} <span style="color: var(--aot-color-text-secondary, #777);">({{_('container limit')}})</span>{% endif %}
+        {% endif %}
+        <br>{{_('Database Version')}}:&nbsp;
+        {%- if database_version == correct_database_version -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{database_version}}</span>
+            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{database_version}}</span> ({{_('Incorrect Version. Should be')}} {{correct_database_version}}) <a href="{{ manual_url('Troubleshooting/#incorrect-database-version') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+            {%- endif -%}
+        <br>{{_('Database URL')}}: <span class="hide" style="font-weight: bold;">{{database_url}}</span>
+        <br>{{_('Daemon Status')}}:&nbsp
+        {%- if daemon_status == "alive" %}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Running')}}</span>
+        {%- else %}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('Not Running')}}</span> <a href="{{ manual_url('Troubleshooting/#daemon-not-running') }}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+        {% endif %}
+        {% if daemon_up %}
+          <br>{{_('Daemon RAM Usage')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{ram_use_daemon}} MB</span>
+          <br>{{_('Daemon Virtualenv')}}:&nbsp
+            {%- if virtualenv_daemon -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Yes')}}</span>
+            {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('No')}}</span>
+            {%- endif -%}
+        {% endif %}
+        <br>{{_('Frontend Process ID')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{frontend_pid}}</span>
+        <br>{{_('Frontend RAM Usage')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{ram_use_flask}} MB</span>
+        <br>{{_('Frontend Virtualenv')}}:&nbsp
+        {%- if virtualenv_flask -%}<span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{_('Yes')}}</span>
+        {%- else -%}<span style="color: var(--aot-color-danger, #F70D1A); font-weight: bold;">{{_('No')}}</span>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Web Server Threads')}} (gunicorn)
+      </div>
+      <div style="padding: 0.8em; border: 1px solid Black;">
+        {{_('Effective Value')}}: <span style="font-weight: bold;">{{gunicorn_info.effective}}</span>
+        ({%- if gunicorn_info.source == 'env' -%}{{_('Environment variable')}} GUNICORN_THREADS
+         {%- elif gunicorn_info.source == 'manual' -%}{{_('Manual setting')}}
+         {%- else -%}{{_('Automatic')}}{%- endif -%})
+        <br>{{_('Automatic recommendation for this system')}}: {{gunicorn_info.recommended}}
+        {% if gunicorn_info.env_override %}
+        <br><span style="color: var(--aot-color-text-secondary, #777);">{{_('GUNICORN_THREADS environment variable is set; it overrides any setting here.')}}</span>
+        {% elif gunicorn_info.can_edit %}
+        <form method="post" action="/info" style="margin-top: 0.8em;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="save_gunicorn_threads">
+          <label for="gunicorn_threads">{{_('Manual setting')}} ({{gunicorn_info.min}}~{{gunicorn_info.max}}, {{_('empty = automatic')}}):</label>
+          <input id="gunicorn_threads" name="gunicorn_threads" type="number"
+                 min="{{gunicorn_info.min}}" max="{{gunicorn_info.max}}" style="width: 6em;"
+                 value="{{gunicorn_info.manual if gunicorn_info.manual else ''}}">
+          <button type="submit" class="btn btn-sm btn-primary">{{_('Save')}}</button>
+        </form>
+        <div style="margin-top: 0.5em; display: flex; gap: 0.5em;">
+          <form method="post" action="/info"
+                onsubmit="return confirm('{{_('Reload the web server now? The connection will be briefly interrupted.')}}');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="restart_frontend">
+            <button type="submit" class="btn btn-sm btn-secondary">{{_('Reload web server to apply')}}</button>
+          </form>
+          <form method="post" action="/info"
+                onsubmit="return confirm('{{_('Restart the daemon now? Control loops will pause for a few seconds.')}}');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="restart_daemon">
+            <button type="submit" class="btn btn-sm btn-secondary">{{_('Restart daemon')}}</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  {%- if uptime %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        uptime
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{uptime}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if uname %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Kernel Info')}}: uname -a
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{uname}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if gpio_readall -%}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('GPIO Pins')}}: gpio readall
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{gpio_readall}}</pre>
+      </div>
+    </div>
+  {%- endif -%}
+
+    {% for each_i2c_dev in i2c_devices_sorted %}
+
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        I<sup>2</sup>C Bus {{each_i2c_dev}}: i2cdetect -y {{each_i2c_dev}}
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{i2c_devices_sorted[each_i2c_dev]}}</pre>
+      </div>
+    </div>
+
+  {% endfor %}
+
+  {%- if df %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Disk Usage')}}: df -h
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{df}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if free %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Memory Usage')}}: free -h
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{free}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if dmesg_output %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Diagnostic Messages')}}: dmesg | tail -n 20
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{dmesg_output}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if ifconfig %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Network Status')}}: {{network_cmd}}
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{ifconfig}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if pstree_frontend %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Processes (Frontend & Threads)')}}: pstree -p {{frontend_pid}}
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{pstree_frontend}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  {%- if top_frontend %}
+    <div style="padding-bottom: 1.5em">
+      <div style="padding-bottom: 0.5em">
+        {{_('Processes (Frontend & Threads)')}}: top -b -H -n 1 -p {{frontend_pid}}
+      </div>
+      <div>
+        <pre style="padding: 0.5em; border: 1px solid Black;">{{top_frontend}}</pre>
+      </div>
+    </div>
+  {%- endif %}
+
+  </main>
+</div>
+
+{% endblock %}

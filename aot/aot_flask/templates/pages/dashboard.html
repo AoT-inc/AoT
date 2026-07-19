@@ -1,0 +1,202 @@
+{% extends "layout.html" %}
+{% set active_page = "dashboard" %}
+{% set help_page = [manual_url("Data-Viewing/#dashboard"), dict_translation['dashboard']['title']] %}
+
+{% set dashboard_dict = dict() %}
+
+{% block title %} - {% for each_dash in dashboards if each_dash.unique_id == dashboard_id %}{{each_dash.name}}{% endfor %} {{dict_translation['dashboard']['title']}}{% endblock %}
+
+{% block head %}
+  <script>
+    let widget = [];
+    $(document).ready(function () {
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            {% set toast_type = 'info' %}
+            {% if category == 'warning' %}{% set toast_type = 'warning' %}{% endif %}
+            {% if category == 'success' %}{% set toast_type = 'success' %}{% endif %}
+            {% if category == 'danger' or category == 'error' %}{% set toast_type = 'error' %}{% endif %}
+            
+            // [Standardized Toast] Use global window.showToast
+            window.showToast('{{ message }}', '{{ toast_type }}');
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    });
+  </script>
+  <style>
+    /* Force Toastr position and Z-Index to beat Navbar (35000) and Modals */
+    #toast-container.toast-top-left {
+      top: 12px !important;
+      left: 12px !important;
+      z-index: var(--aot-z-toast) !important; /* 토스트 — 모달 위 최상위 알림 */
+      position: fixed !important;
+    }
+    
+    /* Dynamic Brand Colors for Dash Tabs */
+    .btn-aot-dash.active {
+      color: var(--text-color-tertiary, #FFFFFF) !important;
+      font-weight: bold;
+    }
+  </style>
+
+  <link rel="stylesheet" href="/static/css/gridstack.css" />
+  <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+  <link rel="stylesheet" href="/static/css/dashboard.css?v=20260603a" />
+  <script src="/static/js/vendor/gridstack-all.js"></script>
+
+  {% for widget_type, file_head in list_html_files_head.items() %}
+  <!-- Widget {{widget_type}} widget_dashboard_head template begin -->
+  {% include 'user_templates/{}'.format(file_head) %}
+  <!-- Widget {{widget_type}} widget_dashboard_head template end -->
+  {% endfor %}
+
+{% endblock %}
+
+{% block body %}
+  <!-- Route: /dashboard -->
+  <div class="container">
+  {# Flashed messages handled via Toastr in head script #}
+  </div>
+
+<div class="container-fluid px-0">
+  <!-- Sticky Container with unified aot-sticky-tabs class -->
+  <div id="dash-sticky" class="container-fluid px-0 aot-sticky-tabs">
+    <div class="d-flex align-items-center position-relative w-100">
+        <!-- + button fixed size -->
+        <a href="/dashboard-add" class="aot-nav-tab-add text-center btn-fixed-40">
+            <span class="d-none d-md-inline">+</span>
+            <span class="d-md-none">+</span>
+        </a>
+
+        <!-- Tabs Wrapper (New Layout Logic) -->
+        <!-- Added aot-tabs-wrapper for "Natural Split" -->
+        <div id="dash-tabs" class="d-flex align-items-center aot-tabs-wrapper" style="flex:1 1 auto;">
+        
+            {% for each_dash in dashboards %}
+              <!-- Added aot-tab-item for "Natural Split" behavior (Mobile 1/3, Desktop Auto) -->
+              <div class="dash-tab aot-tab-item{% if each_dash.unique_id == dashboard_id %} active{% endif %}" 
+                   data-id="{{ each_dash.unique_id }}" draggable="true">
+                <a href="/dashboard/{{ each_dash.unique_id }}" class="aot-nav-tab text-center{% if each_dash.unique_id == dashboard_id %} active{% endif %}" style="width: 100%;">
+                  <span class="d-none d-md-inline">{{ _(each_dash.name) }}</span>
+                  <span class="d-md-none">{{ _(each_dash.name) }}</span>
+                </a>
+              </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Setting Button -->
+        {% for each_dash in dashboards if each_dash.unique_id == dashboard_id %}
+        <!-- Settings button fixed size -->
+        <a href="#" data-toggle="modal" class="aot-nav-tab-add text-center btn-fixed-40" data-target="#modal_config_{{ each_dash.unique_id }}">
+            <i class="fa fa-cog"></i>
+        </a>
+        {% endfor %}
+    </div>
+  </div>
+
+    <div class="grid-stack" style="padding: 1em 1em 0em 1em; visibility: hidden;">
+    {% for each_widget in table_widget.query.filter(table_widget.tab_id == dashboard_id).all() -%}
+      {% set widget_meta = dict_widgets.get(each_widget.graph_type) %}
+      <div id="gridstack_widget_{{each_widget.unique_id}}"
+        class="grid-stack-item"
+      {% if this_dashboard.locked %}
+        gs-no-move="yes"
+        gs-no-resize="yes"
+      {% endif %}
+        gs-id="{{each_widget.unique_id}}"
+        gs-x="{{each_widget.position_x}}"
+        gs-y="{{each_widget.position_y}}"
+        gs-w="{{each_widget.width}}"
+        gs-h="{{each_widget.height}}"
+        data-desktop-x="{{each_widget.position_x}}"
+        data-desktop-y="{{each_widget.position_y}}"
+        data-desktop-w="{{each_widget.width}}"
+        data-desktop-h="{{each_widget.height}}"
+        data-mobile-full-width="{{ '1' if widget_meta and widget_meta.get('mobile_full_width') else '0' }}">
+        {% include 'pages/dashboard_entry.html' %}
+      </div> <!-- grid-stack-item -->
+    {%- endfor -%}
+    </div> <!-- grid-stack -->
+
+    <hr/>
+  </div>
+
+  <div style="clear: both"></div>
+
+  {% if not this_dashboard.locked %}
+
+  <div class="container-fluid" style="padding-bottom: 1em; padding-left: 1em; padding-right: 1em;">
+
+    <div class="form-inline" style="padding-bottom: 1em;">
+      <div class="form-group">
+        {{form_base.widget_type(class_='selectpicker', **{'data-style': 'btn btn-primary'})}}
+      </div>
+    </div>
+
+    {% for each_widget in dict_widgets %}
+
+      {% set dict_options = dict_widgets[each_widget] %}
+      {% set custom_options_values = [] %}
+      {% set force_default_value = true %}
+
+    <div class="add_dashboard_widget" style="display: none" id="{{each_widget}}">
+      <form method="post" id="add_widget_form" action="/dashboard/{{dashboard_id}}">
+      {{form_base.csrf_token}}
+      <input type="hidden" name="dashboard_id" value="{{dashboard_id}}">
+      <input type="hidden" name="widget_type" value="{{each_widget}}">
+
+      <div class="aot-modal-container">
+        {% include 'pages/dashboard_options/TEMPLATE_OPTIONS_WIDGET_ADD.html' %}
+      </div>
+
+      {% if 'custom_options' in dict_widgets[each_widget] %}
+      <div class="aot-modal-section-title">{{_('User Options')}}</div>
+      <div class="aot-modal-container">
+        {% if 'custom_options_message' in dict_options %}
+          {% include 'pages/form_options/Custom_Options_Message.html' %}
+        {% endif %}
+        {% for each_option in dict_widgets[each_widget]['custom_options'] %}
+          {% include 'pages/form_options/Custom_Options.html' %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="widget-add-bar d-flex justify-content-end">
+        {{ form_base.widget_add(class_='btn btn-primary', value=_('Add Widget')) }}
+      </div>
+
+      </form>
+    </div>
+
+    {% endfor %}
+
+  </div>
+
+  {% endif %}
+
+  <script>
+    window.AOT_GRID_CELL_HEIGHT = {{misc.grid_cell_height}};
+    window.AOT_DASHBOARD_LOCKED = {{ 'true' if this_dashboard.locked else 'false' }};
+  </script>
+  <script src="/static/js/app/dashboard.js?v=20260614a"></script>
+
+  <script>
+  {% for widget_type, file_js in list_html_files_js.items() %}
+  // Widget {{widget_type}} widget_dashboard_js template begin
+  {% include 'user_templates/{}'.format(file_js) %}
+  // Widget {{widget_type}} widget_dashboard_js template end
+  {% endfor %}
+
+  $(document).ready(function() {
+  {% for widget_type, file_js_ready in list_html_files_js_ready.items() %}
+    <!-- Widget {{widget_type}} widget_dashboard_js_ready template begin -->
+    {% include 'user_templates/{}'.format(file_js_ready) %}
+    <!-- Widget {{widget_type}} widget_dashboard_js_ready template end -->
+  {% endfor %}
+  });
+  </script>
+
+
+{% endblock %}

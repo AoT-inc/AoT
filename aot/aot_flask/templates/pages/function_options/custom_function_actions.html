@@ -1,0 +1,8 @@
+{% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+{% set unique_id = each_action.unique_id %}
+{% set action_options = custom_options_values_actions.get(unique_id, {}) %}
+
+{% call gridstack_action_item(each_action, each_function, is_sequence=True, gs_h=42, wrap_options=True) %}
+    {# Tier 2: card bottom border closer (no extra fields needed) #}
+    <div style="border: 1px solid var(--border-neutral); border-top: none; border-radius: 0 0 16px 16px; height: 4px;"></div>
+{% endcall %}

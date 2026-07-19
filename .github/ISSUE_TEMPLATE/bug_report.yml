@@ -1,0 +1,53 @@
+name: 버그 신고
+description: 동작하지 않거나 오류가 나는 문제를 신고합니다
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        문제 해결에 필요한 정보를 알려주세요. 질문이나 사용법 문의는 이슈 대신 [Discussions](https://github.com/AoT-inc/AoT/discussions)를 이용해 주세요.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 어떤 문제가 발생했나요?
+      description: 무슨 일이 일어났는지, 그리고 어떻게 되기를 기대했는지 적어주세요.
+      placeholder: 예) 지도 위젯에서 시설을 클릭하면 센서 값이 안 보입니다. 클릭하면 모달이 떠야 하는데 아무 반응이 없습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      description: 문제를 다시 나타나게 하는 순서를 단계별로 적어주세요.
+      placeholder: |
+        1. 대시보드에서 지도 위젯을 연다
+        2. 시설 폴리곤을 클릭한다
+        3. ...
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: AoT 버전
+      description: "설정 → 정보 페이지에서 확인하거나, 좌측 상단 버전 표기를 알려주세요."
+      placeholder: "예) 26.07.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-type
+    attributes:
+      label: 설치 환경
+      options:
+        - 라즈베리 파이 (직접 설치)
+        - Docker
+        - 기타 / 잘 모르겠음
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그 / 스크린샷 (선택)
+      description: 오류 메시지, 로그, 화면 캡처가 있으면 붙여주세요. 로그는 setup.log 또는 설정 → 로그에서 확인할 수 있습니다.
+      render: shell
+    validations:
+      required: false

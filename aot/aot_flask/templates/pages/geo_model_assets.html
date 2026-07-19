@@ -1,0 +1,333 @@
+{% extends 'layout.html' %}
+{% block title %}{{ _('3D Asset Library') }}{% endblock %}
+
+{% block head %}
+<script src="/static/js/widgets/AoT_facility/three.min.js?v=2"></script>
+<script src="/static/js/widgets/AoT_facility/OrbitControls.js?v=1"></script>
+<script src="/static/js/widgets/AoT_facility/GLTFLoader.js?v=1"></script>
+<style>
+  .asset-page { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+  .asset-page h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+  .asset-toolbar {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .asset-toolbar input[type="text"] {
+    flex: 1; min-width: 180px; padding: 0.4rem 0.75rem;
+    border: 1px solid #ccc; border-radius: 6px; font-size: 0.88rem;
+  }
+  .btn-primary { background: #0070f3; color: var(--text-color-tertiary, #fff); border: none; padding: 0.42rem 1rem;
+    border-radius: 6px; cursor: pointer; font-size: 0.88rem; }
+  .btn-primary:hover { background: #005dd1; }
+  .btn-danger { background: #e53935; color: var(--text-color-tertiary, #fff); border: none; padding: 0.35rem 0.75rem;
+    border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
+  .btn-secondary { background: #f0f0f0; color: var(--aot-color-text-primary, #333); border: 1px solid #ccc; padding: 0.42rem 0.9rem;
+    border-radius: 6px; cursor: pointer; font-size: 0.88rem; }
+  .btn-secondary:hover { background: #e4e4e4; }
+
+  .asset-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;
+  }
+  .asset-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: box-shadow 0.15s;
+  }
+  .asset-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+  .asset-thumb {
+    width: 100%; aspect-ratio: 1; background: #f3f4f6; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .asset-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .asset-thumb .no-thumb { color: var(--aot-color-text-secondary, #bbb); font-size: 2rem; }
+  .asset-name { font-size: 0.9rem; font-weight: 600; color: var(--aot-color-text-primary, #222); }
+  .asset-kind { font-size: 0.75rem; color: var(--aot-color-text-secondary, #888); }
+  .asset-actions { display: flex; gap: 0.5rem; margin-top: auto; }
+  .asset-empty { color: var(--aot-color-text-secondary, #aaa); text-align: center; padding: 3rem 0; font-size: 0.95rem; }
+
+  /* Upload modal */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: var(--aot-z-modal-backdrop); align-items: center; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 12px; padding: 1.5rem;
+    width: 440px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .modal-box h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+  .form-group { margin-bottom: 0.9rem; }
+  .form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--aot-color-text-secondary, #555); }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 0.4rem 0.65rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.88rem;
+  }
+  .drop-zone {
+    border: 2px dashed #0070f3; border-radius: 8px; padding: 1.5rem;
+    text-align: center; cursor: pointer; color: var(--aot-color-info, #0070f3); font-size: 0.88rem;
+    transition: background 0.15s;
+  }
+  .drop-zone.hover { background: #e8f0ff; }
+  .drop-zone input { display: none; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.1rem; }
+  #upload-status { font-size: 0.82rem; color: var(--aot-color-text-secondary, #666); margin-top: 0.5rem; min-height: 1.2em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="asset-page">
+  <h2>{{ _('3D Asset Library') }}</h2>
+
+  <div class="asset-toolbar">
+    <input type="text" id="asset-search" placeholder="{{ _('Search by name…') }}" oninput="filterAssets(this.value)">
+    <select id="unit-select" style="padding:0.4rem 0.65rem;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;"
+            onchange="saveUnit(this.value)">
+      <option value="mm">mm</option>
+      <option value="cm">cm</option>
+      <option value="m" selected>m</option>
+      <option value="in">in</option>
+      <option value="ft">ft</option>
+    </select>
+    <button class="btn-primary" onclick="openUploadModal()">+ {{ _('Upload GLTF') }}</button>
+  </div>
+
+  <div class="asset-grid" id="asset-grid">
+    <div class="asset-empty" id="asset-empty" style="grid-column:1/-1;">{{ _('Loading…') }}</div>
+  </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-backdrop" id="upload-modal">
+  <div class="modal-box">
+    <h4>{{ _('Upload GLTF Model') }}</h4>
+    <form id="upload-form" onsubmit="submitUpload(event)">
+      <div class="form-group">
+        <label>{{ _('Asset Name') }}</label>
+        <input type="text" name="name" required placeholder="{{ _('e.g. Greenhouse Type A') }}">
+      </div>
+      <div class="form-group">
+        <label>{{ _('Tags (comma separated)') }}</label>
+        <input type="text" name="tags" placeholder="{{ _('e.g. house,arch') }}">
+      </div>
+      <div class="form-group">
+        <label>{{ _('File (.glb / .gltf, max 25 MB)') }}</label>
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('hover')"
+             ondragleave="this.classList.remove('hover')"
+             ondrop="handleDrop(event)">
+          <input type="file" id="file-input" accept=".glb,.gltf" onchange="handleFileSelect(this.files[0])">
+          <span id="drop-label">{{ _('Drag and drop a file or click to select') }}</span>
+        </div>
+      </div>
+      <div id="upload-status"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeUploadModal()">{{ _('Cancel') }}</button>
+        <button type="submit" class="btn-primary" id="upload-submit">{{ _('Upload') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/static/js/widgets/AoT_facility/ui/asset_library.js?v=1"></script>
+<script>
+  window.ASSET_LIB_CONFIG = {
+    mode: 'page',
+    lengthUnit: '{{ length_unit }}',
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    AoTAssetLibrary.init(window.ASSET_LIB_CONFIG);
+    loadUnit();
+    loadAssets();
+  });
+
+  // ── Unit preference ──────────────────────────────────────────────────────────
+  function loadUnit() {
+    fetch('/api/geo/settings/length_unit')
+      .then(r => r.json())
+      .then(d => {
+        const sel = document.getElementById('unit-select');
+        if (sel && d.length_unit) sel.value = d.length_unit;
+      })
+      .catch(() => {});
+  }
+  function saveUnit(unit) {
+    fetch('/api/geo/settings/length_unit', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({length_unit: unit}),
+    }).catch(() => {});
+  }
+
+  // ── Asset list ───────────────────────────────────────────────────────────────
+  let _allAssets = [];
+  function loadAssets() {
+    fetch('/api/geo/model_assets')
+      .then(r => r.json())
+      .then(data => {
+        _allAssets = data;
+        renderGrid(data);
+      })
+      .catch(() => showEmpty(window._ ? window._('Failed to load') : 'Failed to load'));
+  }
+  function filterAssets(q) {
+    const filtered = q
+      ? _allAssets.filter(a => a.name.toLowerCase().includes(q.toLowerCase()))
+      : _allAssets;
+    renderGrid(filtered);
+  }
+  function renderGrid(assets) {
+    const grid = document.getElementById('asset-grid');
+    const empty = document.getElementById('asset-empty');
+    if (!assets.length) {
+      empty.style.display = '';
+      empty.textContent = window._ ? window._('No assets registered. Upload one using the button above.') : 'No assets registered. Upload one using the button above.';
+      grid.querySelectorAll('.asset-card').forEach(c => c.remove());
+      return;
+    }
+    empty.style.display = 'none';
+    grid.querySelectorAll('.asset-card').forEach(c => c.remove());
+    assets.forEach(a => grid.appendChild(buildCard(a)));
+  }
+  function showEmpty(msg) {
+    const e = document.getElementById('asset-empty');
+    e.style.display = '';
+    e.textContent = msg;
+  }
+  function buildCard(a) {
+    const card = document.createElement('div');
+    card.className = 'asset-card';
+    card.dataset.uuid = a.unique_id;
+
+    const thumb = document.createElement('div');
+    thumb.className = 'asset-thumb';
+    if (a.preview_png && a.preview_status === 'ok') {
+      const img = document.createElement('img');
+      img.src = '/static/' + a.preview_png;
+      img.alt = a.name;
+      thumb.appendChild(img);
+    } else {
+      thumb.innerHTML = '<span class="no-thumb">📦</span>';
+    }
+
+    const name = document.createElement('div');
+    name.className = 'asset-name';
+    name.textContent = a.name;
+
+    const kind = document.createElement('div');
+    kind.className = 'asset-kind';
+    kind.textContent = { primitive: (window._ ? window._('Primitive') : 'Primitive'), extruded_polygon: (window._ ? window._('Extruded Polygon') : 'Extruded Polygon'), imported_gltf: (window._ ? window._('GLTF Import') : 'GLTF Import') }[a.kind] || a.kind;
+
+    const actions = document.createElement('div');
+    actions.className = 'asset-actions';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-danger';
+    delBtn.textContent = window._ ? window._('Delete') : 'Delete';
+    delBtn.onclick = () => deleteAsset(a.unique_id, a.name);
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'btn-secondary';
+    prevBtn.textContent = window._ ? window._('Regenerate Thumbnail') : 'Regenerate Thumbnail';
+    prevBtn.style.fontSize = '0.75rem';
+    prevBtn.onclick = () => regeneratePreview(a.unique_id, card, thumb);
+
+    actions.appendChild(prevBtn);
+    actions.appendChild(delBtn);
+    card.append(thumb, name, kind, actions);
+    return card;
+  }
+
+  function deleteAsset(uuid, name) {
+    if (!confirm((window._ ? window._('Delete asset "%s"?') : 'Delete asset "%s"?').replace('%s', name) + '\n' + (window._ ? window._('Deletion is rejected if any facility references it.') : 'Deletion is rejected if any facility references it.'))) return;
+    fetch('/api/geo/model_assets/' + uuid, {method: 'DELETE'})
+      .then(r => r.json().then(d => ({ok: r.ok, d})))
+      .then(({ok, d}) => {
+        if (!ok) {
+          let msg = d.error || (window._ ? window._('Delete failed') : 'Delete failed');
+          if (d.referencing_facilities && d.referencing_facilities.length) {
+            msg += '\n' + (window._ ? window._('Referencing facilities: ') : 'Referencing facilities: ') + d.referencing_facilities.join(', ');
+          }
+          alert(msg);
+          return;
+        }
+        _allAssets = _allAssets.filter(a => a.unique_id !== uuid);
+        renderGrid(_allAssets);
+      })
+      .catch(() => alert(window._ ? window._('Delete request failed') : 'Delete request failed'));
+  }
+
+  function regeneratePreview(uuid, card, thumbEl) {
+    fetch('/api/geo/model_assets/' + uuid + '/regenerate_preview', {method: 'POST'})
+      .then(r => r.json())
+      .then(d => {
+        if (d.preview_png) {
+          thumbEl.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = '/static/' + d.preview_png + '?t=' + Date.now();
+          img.alt = window._ ? window._('Thumbnail') : 'Thumbnail';
+          thumbEl.appendChild(img);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // ── Upload modal ─────────────────────────────────────────────────────────────
+  let _selectedFile = null;
+  function openUploadModal() {
+    document.getElementById('upload-modal').classList.add('open');
+    _selectedFile = null;
+    document.getElementById('upload-form').reset();
+    document.getElementById('drop-label').textContent = window._ ? window._('Drag and drop a file or click to select') : 'Drag and drop a file or click to select';
+    document.getElementById('upload-status').textContent = '';
+  }
+  function closeUploadModal() {
+    document.getElementById('upload-modal').classList.remove('open');
+  }
+  function handleFileSelect(file) {
+    if (!file) return;
+    _selectedFile = file;
+    document.getElementById('drop-label').textContent = '✓ ' + file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+    document.getElementById('drop-zone').classList.remove('hover');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('hover');
+    if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
+  }
+  function submitUpload(e) {
+    e.preventDefault();
+    if (!_selectedFile) { alert(window._ ? window._('Please select a file.') : 'Please select a file.'); return; }
+    const form = e.target;
+    const fd = new FormData();
+    fd.append('kind', 'imported_gltf');
+    fd.append('name', form.name.value);
+    fd.append('tags', form.tags.value);
+    fd.append('file', _selectedFile);
+    fd.append('authored_unit', document.getElementById('unit-select').value);
+
+    document.getElementById('upload-status').textContent = window._ ? window._('Uploading…') : 'Uploading…';
+    document.getElementById('upload-submit').disabled = true;
+
+    fetch('/api/geo/model_assets', {method: 'POST', body: fd})
+      .then(r => r.json().then(d => ({ok: r.ok, d})))
+      .then(({ok, d}) => {
+        document.getElementById('upload-submit').disabled = false;
+        if (!ok) {
+          document.getElementById('upload-status').textContent = (window._ ? window._('Error: ') : 'Error: ') + (d.error || (window._ ? window._('Upload failed') : 'Upload failed'));
+          return;
+        }
+        closeUploadModal();
+        _allAssets.unshift(d);
+        renderGrid(_allAssets);
+      })
+      .catch(err => {
+        document.getElementById('upload-submit').disabled = false;
+        document.getElementById('upload-status').textContent = (window._ ? window._('Error: ') : 'Error: ') + err.message;
+      });
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('upload-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeUploadModal();
+  });
+</script>
+{% endblock %}

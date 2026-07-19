@@ -1,0 +1,192 @@
+<div id="mod_function_{{each_function.unique_id}}">
+  <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+    {{form_trigger.csrf_token}}
+    {{form_trigger.function_id(value=each_function.unique_id)}}
+    {{form_trigger.function_type(value='trigger')}}
+
+    {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
+        {{ render_device_map(
+        'function',
+        each_function.unique_id,
+        form_trigger.latitude,
+        form_trigger.longitude,
+        form_trigger.location_source,
+        each_function.latitude,
+        each_function.longitude,
+        each_function.location_source,
+        'function_mod',
+        'modal_config_' ~ each_function.unique_id,
+        '280px',
+        None,
+        None,
+        None,
+        form_id='form_function_' ~ each_function.unique_id,
+        map_config_id=(map_config_id if map_config_id is defined else ''),
+        map_configs=(map_configs if map_configs is defined else []),
+        map_overlays=map_overlays,
+        save_id='mod_function_save_' ~ each_function.unique_id
+        ) }}
+      </div>
+    </div>
+
+    {% if each_function.trigger_type in function_info and 'message' in function_info[each_function.trigger_type] %}
+    <div class="aot-modal-body-text mb-3">
+      {{function_info[each_function.trigger_type]['message']}}
+    </div>
+    {% endif %}
+
+    <div id="return_text_{{each_function.unique_id}}" class="mb-3"></div>
+
+
+
+    <div class="aot-modal-group-title">{{_('Options')}}</div>
+    <div class="aot-modal-container mb-3">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_trigger.name.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_trigger.name(class_='form-control aot-modern-input', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+            </div>
+        </div>
+        {% if tabs is defined and tabs and tabs|length > 1 %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Tab')}}</label>
+            <div class="aot-modal-option-control">
+                <select name="tab_id" class="form-control aot-modern-input">
+                    {% for tab in tabs %}
+                    <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_trigger.action_type.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_trigger.action_type(class_='form-control aot-modern-input', value=each_function.action_type)}}
+            </div>
+        </div>
+    </div>
+
+        <div class="aot-modal-channel-group">
+        {% if each_function.trigger_type == 'trigger_output' %}
+        {% include 'pages/function_options/trigger_options/output.html' %}
+        {% elif each_function.trigger_type == 'trigger_output_pwm' %}
+        {% include 'pages/function_options/trigger_options/output_pwm.html' %}
+        {% elif each_function.trigger_type == 'trigger_edge' %}
+        {% include 'pages/function_options/trigger_options/edge.html' %}
+        {% elif each_function.trigger_type == 'trigger_run_pwm_method' %}
+        {% include 'pages/function_options/trigger_options/run_pwm_method.html' %}
+        {% elif each_function.trigger_type == 'trigger_sunrise_sunset' %}
+        {% include 'pages/function_options/trigger_options/sunrise_sunset.html' %}
+        {% elif each_function.trigger_type == 'trigger_timer_daily_time_point' %}
+        {% include 'pages/function_options/trigger_options/timer_daily_time_point.html' %}
+        {% elif each_function.trigger_type == 'trigger_timer_daily_time_span' %}
+        {% include 'pages/function_options/trigger_options/timer_daily_time_span.html' %}
+        {% elif each_function.trigger_type == 'trigger_timer_duration' %}
+        {% include 'pages/function_options/trigger_options/timer_duration.html' %}
+        {% endif %}
+        </div>
+
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_trigger.log_level_debug.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.log_level_debug %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Add Node Management button -->
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
+            <div class="aot-modal-option-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' } }))">
+                {{_('Note')}}
+            </button>
+            </div>
+        </div>
+        {% if ai_settings and ai_settings.ai_enabled %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Utilization')}}</label>
+            <div class="aot-modal-option-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                onclick="AoT_AI.openChat({ targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' })">
+                {{_('Ask AI')}}
+            </button>
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Context')}}</label>
+            <div class="aot-modal-option-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                onclick="AIContextPanel.openContext('{{ each_function.unique_id }}', '{{ each_function.name }}')">
+                {{_('View Context')}}
+            </button>
+            </div>
+        </div>
+        {% endif %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Execute All Actions')}}</label>
+            <div class="aot-modal-option-control">
+            <button data-form-id="form_function_{{each_function.unique_id}}"
+                onclick="return $(this).processRequest(this, 'execute_all_actions');"
+                class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Execute All Actions')}}</button>
+            </div>
+        </div>
+
+    </div>
+
+  </form>
+
+  <div class="aot-modal-group-title">
+      {{_('Actions')}} 
+      <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+  </div>
+
+  <div class="aot-modal-container">
+    <form id="form_actions_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_actions.csrf_token}}
+        {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
+        {{form_actions.function_type(class_='form-control', value='trigger')}}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Add Action')}}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+                        data-display="static" data-container="body" data-dropdown-align-right="true"
+                        title="{{_('Actions')}}: {{dict_translation['select_one']['title']}}" id="action_type_{{each_function.unique_id}}"
+                        name="action_type">
+                        {% for value, name in choices_actions %}
+                        <option value="{{value}}">{{name}}</option>
+                        {% endfor %}
+                    </select>
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                        name="add_action" class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+  </div>
+
+  {% from 'pages/function_options/gridstack_helper.html' import init_gridstack_actions with context %}
+  {% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+
+  <div class="grid-stack" id="mod_function_actions_{{each_function.unique_id}}">
+    {% for each_action in action|sort(attribute='position') if each_action.function_id == each_function.unique_id %}
+    {% call gridstack_action_item(each_action, each_function, is_sequence=False, gs_h=2) %}{% endcall %}
+    {% endfor %}
+  </div>
+
+  {{ init_gridstack_actions(each_function.unique_id, cell_height=48) }}
+
+  <script>
+    $('.selectpicker').selectpicker();
+    // Failed resize script removed
+  </script>
+</div>

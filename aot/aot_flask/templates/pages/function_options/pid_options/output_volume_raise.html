@@ -1,0 +1,15 @@
+{{form_mod_pid_volume_raise.csrf_token}}
+
+<div class="aot-modal-option-row">
+  {{form_mod_pid_volume_raise.raise_min_amount.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_volume_raise.raise_min_amount(class_='form-control aot-modern-input', value=each_function.raise_min_duration, **{'title':_('Minimum output size required for upper output to be active. If smaller than this, upper output will not turn on.')})}}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_mod_pid_volume_raise.raise_max_amount.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_volume_raise.raise_max_amount(class_='form-control aot-modern-input', value=each_function.raise_max_duration, **{'title':_('Maximum output size for upper output to be maintained during a cycle. If larger than this, upper output is maintained only for max duration. Enter 0 to disable.')})}}
+  </div>
+</div>

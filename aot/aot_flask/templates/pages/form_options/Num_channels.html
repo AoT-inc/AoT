@@ -1,0 +1,10 @@
+{% if "measurements_variable_amount" in dict_options and dict_options['measurements_variable_amount'] %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.num_channels.label(class_='mb-0')}}</label>
+  <div class="aot-modal-option-control">
+    {{form.num_channels(class_='form-control aot-modern-input', value=table_device_measurements.query.filter(table_device_measurements.device_id == each_device.unique_id).count(), **{'title': _('Number of measurements')})}}
+  </div>
+</div>
+
+{% endif %}

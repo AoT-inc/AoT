@@ -1,0 +1,134 @@
+/* AoT Global Modal Styles */
+:root {
+  /* Bootstrap palette — mapped to AoT semantic tokens (Phase 3 migration) */
+  --primary: var(--aot-color-primary);
+  --secondary: var(--aot-color-brand-accent);
+  --success: var(--aot-color-success);
+  --info: var(--aot-color-info);
+  --warning: var(--aot-color-warning);
+  --danger: var(--aot-color-danger);
+  --light: var(--aot-color-brand-accent);
+  --dark: var(--aot-color-dark);
+  --gray: var(--aot-color-brand-secondary);
+  --gray-dark: var(--aot-modal-group-title);
+  --gray-hard: var(--aot-color-dark);
+
+  --aot-title-font-size: 1em;
+  --aot-prt-font-size: 1em;
+  --aot-btn-font-size: var(--aot-btn-font-size);
+
+  --aot-btn-width: 54px;
+  --aot-btn-height: 32px;
+  --aot-btn-gap: 4px;
+  --aot-group-gap: 8px;
+
+
+  --breakpoint-xs: 0;
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+
+  /* Typography — reference AoT token */
+  --font-family-sans-serif: var(--aot-font-family);
+  --font-family-monospace: var(--aot-font-mono);
+}
+
+/*
+ * NOTE: Modal z-index rules REMOVED from this file.
+ * They are now defined in aot-modal-modern.css with !important to ensure
+ * proper stacking. aot-theme-variables.css defines --aot-z-modal and
+ * --aot-z-modal-backdrop tokens used by aot-modal-modern.css.
+ */
+
+/* When a modal is open, block pointer events on underlying interactive layers */
+body.modal-open .grid-stack {
+  pointer-events: none;
+}
+
+body.modal-open .modal {
+  pointer-events: auto;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* Ensure modal itself is scrollable */
+.modal {
+  overflow-x: hidden;
+  overflow-y: auto !important;
+}
+
+/* Fix sticky behavior & Modal Scrolling */
+html {
+  overflow-x: hidden; /* Prevent horizontal scroll on root */
+}
+
+body {
+  overflow-x: visible; /* Default for sticky elements */
+  overflow-y: auto;
+  height: auto;
+}
+
+body.modal-open {
+  overflow: hidden !important; /* Force hidden when modal is open */
+}
+
+/* Navbar override: remove bottom margin */
+.main-navbar {
+  margin-bottom: 0 !important;
+}
+
+/* Ensure consistent width and margin for all modals on mobile/tablet (up to 768px) */
+@media (max-width: 768px) {
+  .modal-dialog, .aot-modal-dialog {
+    margin: 0.5rem !important; /* Standard small margin (8px) */
+    width: auto !important; /* Let browser calculate width based on margin */
+    max-width: none !important; /* Remove max-width constraint */
+    display: block !important;
+  }
+}
+
+/* Desktop/Standardized Modal Dialog Class */
+.aot-modal-dialog {
+    max-width: 1140px;
+    width: 100%;
+    margin: 1.75rem auto; 
+    display: block !important; /* Ensure block layout to respect width */
+}
+
+/* Ensure content fills the dialog */
+.aot-modal-dialog .modal-content {
+    width: 100% !important;
+}
+
+
+/* Geo Design Body Override - Removes extra '1em' padding from bootstrap theme */
+body.body-no-gap {
+  padding-top: 50px !important; /* Matches main-navbar height */
+}
+
+/* Bootstrap Select Customization for Dashboard Options */
+.form-dropdown.bootstrap-select .dropdown-menu li a span.check-mark {
+    position: absolute;
+    left: 10px;
+    right: auto;
+    margin-top: 5px;
+}
+
+.form-dropdown.bootstrap-select .dropdown-menu li a span.text {
+    margin-left: 25px;
+    margin-right: 0;
+}
+
+.form-dropdown.bootstrap-select .dropdown-menu li.selected a {
+    background-color: var(--gray) !important;
+    color: inherit;
+}
+
+/* Dropdown button min width as requested */
+.bootstrap-select > .dropdown-toggle {
+    min-width: 90px !important;
+}

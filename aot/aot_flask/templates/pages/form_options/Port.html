@@ -1,0 +1,16 @@
+{% if 'port' in dict_options['options_disabled'] or
+      'port' in dict_options['options_enabled']
+  %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.port.label.text}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'port' in dict_options['options_disabled'] -%}
+    {{form.port(class_='form-control aot-modern-input', value=each_device.port, disabled=True, **{'title': dict_translation['port']['phrase']})}}
+  {% else %}
+    {{form.port(class_='form-control aot-modern-input', value=each_device.port, **{'title': dict_translation['port']['phrase']})}}
+  {%- endif -%}
+  </div>
+</div>
+
+{% endif %}

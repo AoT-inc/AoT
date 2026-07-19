@@ -1,0 +1,40 @@
+{% if 'pre_output' in dict_options['options_enabled'] %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.pre_output_id.label(class_='mb-0')}}</label>
+  <div class="aot-modal-option-control">
+    <select class="form-control aot-modern-select selectpicker aot-standard-select" 
+            id="pre_output_id" 
+            name="pre_output_id" 
+            data-container="false"
+            data-style="btn-white"
+            data-live-search="true"
+            title="{{_('Select')}}">
+      <option value="">{{_('Disabled')}}</option>
+      {%- for each_output in choices_output_channels if 'on_off' in each_output['types'] -%}
+        <option value="{{each_output['value']}}"{% if each_device.pre_output_id == each_output['value'] %} selected{% endif %}>{{each_output['item']}}</option>
+      {%- endfor -%}
+    </select>
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.pre_output_duration.label(class_='mb-0')}}</label>
+  <div class="aot-modal-option-control">
+    {{form.pre_output_duration(class_='form-control aot-modern-input', value=each_device.pre_output_duration, **{'title': dict_translation['pre_output_duration']['phrase']})}}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.pre_output_during_measure.label(class_='mb-0')}}</label>
+  <div class="aot-modal-option-control">
+    <label class="btn-toggle mb-0">
+      <input id="pre_output_during_measure" name="pre_output_during_measure" type="checkbox" class="btn-toggle-input" value="y"{% if each_device.pre_output_during_measure %} checked{% endif %}>
+      <div class="btn-toggle-slider">
+          <div class="btn-toggle-thumb"></div>
+      </div>
+    </label>
+  </div>
+</div>
+
+{% endif %}

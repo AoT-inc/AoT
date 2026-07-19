@@ -1,0 +1,114 @@
+/**
+ * AoT Learning Progress Dashboard Styles
+ * Styling for facility AI learning phase dashboard component
+ */
+
+/* Phase Status Badge */
+.ld-phase-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ld-phase-learning {
+  background: #d3f9d8;
+  color: var(--aot-color-success, #2b8a3e);
+}
+
+.ld-phase-complete {
+  background: #d0ebff;
+  color: var(--aot-color-info, #1971c2);
+}
+
+/* Category Progress Rows */
+.ld-category-row {
+  margin-bottom: 8px;
+}
+
+.ld-category-label {
+  font-size: 0.85rem;
+  margin-bottom: 2px;
+  text-transform: capitalize;
+}
+
+/* Progress Bar Styling */
+.progress {
+  background-color: #e9ecef;
+  border-radius: 4px;
+}
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-color-tertiary, white);
+  transition: width 0.6s ease;
+}
+
+/* Next Feedback Recommendation */
+.ld-next-feedback {
+  background: #e7f5ff;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  border-left: 3px solid #1971c2;
+}
+
+.ld-next-feedback:hover {
+  background: #d0ebff;
+}
+
+/* Stalled Alert */
+.ld-stalled-alert {
+  background: #fff3bf;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 12px;
+  border-left: 3px solid #f59f00;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .ld-phase-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+
+  .ld-category-label {
+    font-size: 0.8rem;
+  }
+
+  .progress {
+    height: 16px !important;
+  }
+
+  .progress-bar {
+    font-size: 0.65rem;
+  }
+}
+
+/* Animation for loading state */
+@keyframes ld-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.ld-loading {
+  animation: ld-pulse 1.5s ease-in-out infinite;
+  animation-play-state: running;
+}
+
+.page-hidden .ld-loading {
+  animation-play-state: paused;
+}

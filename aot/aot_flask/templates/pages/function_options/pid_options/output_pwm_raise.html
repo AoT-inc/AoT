@@ -1,0 +1,19 @@
+{{form_mod_pid_pwm_raise.csrf_token}}
+<div class="aot-modal-option-row">
+  {{form_mod_pid_pwm_raise.raise_min_duty_cycle.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_pwm_raise.raise_min_duty_cycle(class_='form-control aot-modern-input', value=each_function.raise_min_duration, **{'title':_('PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: 0~100%')})}}
+  </div>
+</div>
+<div class="aot-modal-option-row">
+  {{form_mod_pid_pwm_raise.raise_max_duty_cycle.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_pwm_raise.raise_max_duty_cycle(class_='form-control aot-modern-input', value=each_function.raise_max_duration, **{'title':_('PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: 0~100%')})}}
+  </div>
+</div>
+<div class="aot-modal-option-row">
+  {{form_mod_pid_pwm_raise.raise_always_min_pwm.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    <input id="raise_always_min_pwm" name="raise_always_min_pwm" type="checkbox" title="{{dict_translation['raise_always_min_pwm']['phrase']}}" value="y"{% if each_function.raise_always_min_pwm %} checked{% endif %}>
+  </div>
+</div>

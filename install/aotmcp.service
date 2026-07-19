@@ -1,0 +1,17 @@
+[Unit]
+Description=AoT MCP Server
+After=aotflask.service
+Requires=aotflask.service
+
+[Service]
+User=root
+Group=aot
+WorkingDirectory=/opt/AoT
+ExecStart=/opt/AoT/env/bin/python /opt/AoT/aot/aot_mcp_server.py --http --port 5700
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

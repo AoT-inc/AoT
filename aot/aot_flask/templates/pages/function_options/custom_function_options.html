@@ -1,0 +1,369 @@
+{% set form = form_function %}
+{% set each_device = each_function %}
+{% set dict_options = dict_controllers[each_function.device] %}
+{% set unique_id = each_function.unique_id %}
+{% set controller_type = "Function" %}
+{% set custom_opts = custom_options_values_controllers.get(each_function.unique_id, {}) %}
+
+<div id="mod_function_{{each_function.unique_id}}">
+  <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+    {{form_function.csrf_token}}
+    {{form_function.function_id(value=each_function.unique_id)}}
+    {{form_function.function_type(value='function')}}
+
+
+    {% if each_function.device != 'function_spacer' %}
+    {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
+        {% set _icon_field = form_function.marker_icon if form_function is defined and form_function.marker_icon is defined else None %}
+        {% set _color_field = form_function.marker_color if form_function is defined and form_function.marker_color is defined else None %}
+        {% set _size_field = form_function.marker_size if form_function is defined and form_function.marker_size is defined else None %}
+        {% set _icon_name = _icon_field.name if _icon_field else 'marker_icon' %}
+        {% set _color_name = _color_field.name if _color_field else 'marker_color' %}
+        {% set _size_name = _size_field.name if _size_field else 'marker_size' %}
+        {{ render_device_map(
+            'function',
+            each_function.unique_id,
+            form_function.latitude,
+            form_function.longitude,
+            form_function.location_source,
+            each_function.latitude,
+            each_function.longitude,
+            each_function.location_source,
+            'function_mod',
+            'modal_config_' ~ each_function.unique_id,
+            '280px',
+            _icon_field,
+            _color_field,
+            _size_field,
+            form_id='form_function_' ~ each_function.unique_id,
+            icon_value=each_function.marker_icon or custom_opts.get('marker_icon'),
+            color_value=each_function.marker_color or custom_opts.get('marker_color'),
+            size_value=each_function.marker_size or custom_opts.get('marker_size') or 3,
+            icon_name=_icon_name,
+            color_name=_color_name,
+            size_name=_size_name,
+            map_config_id=(each_function.map_config_id if each_function.map_config_id else (map_config_id if map_config_id is defined else '')),
+            map_configs=(map_configs if map_configs is defined else []),
+            map_overlays=map_overlays
+        ) }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if each_function.device in dict_controllers %}
+    
+    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
+        {% if 'function_manufacturer' in dict_controllers[each_function.device] %}
+        <span><strong>{{_("Manufacturer")}}:</strong> {{dict_controllers[each_function.device]['function_manufacturer']}}</span>
+        {% endif %}
+
+        {% if 'function_name' in dict_controllers[each_function.device] %}
+        <span><strong>{{_("Name")}}:</strong> {{dict_controllers[each_function.device]['function_name']}}</span>
+        {% endif %}
+
+        {% if 'measurements_name' in dict_controllers[each_function.device] %}
+        <span><strong>{{_("Measurements")}}:</strong> {{dict_controllers[each_function.device]['measurements_name']}}</span>
+        {% endif %}
+
+        {% if 'dependencies_module' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['dependencies_module'] %}
+        <span><strong>{{_("Libraries")}}:</strong>
+        {% for each_lib in dict_controllers[each_function.device]['dependencies_module'] -%}
+          {% if each_lib[0] == 'pip-pypi' %}
+            {% if each_lib[2].startswith("git+") %}
+              {{each_lib[2]}}
+            {% elif "==" in each_lib[2] %}
+              <a href="https://pypi.org/project/{{each_lib[2].split('==')[0]}}/{{each_lib[2].split('==')[1]}}" target="_blank">{{each_lib[2].split('==')[0]}}</a>
+            {% else %}
+              <a href="https://pypi.org/project/{{each_lib[2]}}" target="_blank">{{each_lib[2]}}</a>
+            {% endif %}
+          {% elif each_lib[0] == 'internal' %}
+            {{each_lib[2]}}
+          {% else %}
+            {{each_lib[1]}}
+          {% endif %}
+          {%- if not loop.last %}, {% endif %}
+        {% endfor %}
+        </span>
+        {% endif %}
+    </div>
+
+    {% set manufacturer_url = 'url_manufacturer' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['url_manufacturer'] %}
+    {% set datasheet_url = 'url_datasheet' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['url_datasheet'] %}
+    {% set product_purchase_url = 'url_product_purchase' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['url_product_purchase'] %}
+    {% set additional_url = 'url_additional' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['url_additional'] %}
+
+    {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
+    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: 0.85rem;">
+        <strong>{{_("Resources")}}:</strong>
+        {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in dict_controllers[each_function.device]['url_manufacturer'] %}<a href="{{each_url}}" target="_blank">{{_("Link")}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
+        {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in dict_controllers[each_function.device]['url_datasheet'] %}<a href="{{each_url}}" target="_blank">{{_("Link")}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
+        {%- if product_purchase_url -%} {% if manufacturer_url or datasheet_url %}; {% endif %}{{_("Product")}} {% for each_url in dict_controllers[each_function.device]['url_product_purchase'] %}<a href="{{each_url}}" target="_blank">{{_("Link")}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
+        {%- if additional_url -%} {% if manufacturer_url or datasheet_url or product_purchase_url %}; {% endif %}{{_("Additional Info")}} {% for each_url in dict_controllers[each_function.device]['url_additional'] %}<a href="{{each_url}}" target="_blank">{{_("Link")}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}.
+    </div>
+    {% endif %}
+
+    {% if 'message' in dict_controllers[each_function.device] %}
+    <div class="aot-modal-body-text" style="font-style: italic; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+        {{dict_controllers[each_function.device]['message']|safe}}
+    </div>
+    {% endif %}
+
+
+
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+        
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_function.name.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_function.name(class_='form-control aot-modern-input', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+            </div>
+        </div>
+        {% if tabs is defined and tabs and tabs|length > 1 %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Tab')}}</label>
+            <div class="aot-modal-option-control">
+                <select name="tab_id" class="form-control aot-modern-input">
+                    {% for tab in tabs %}
+                    <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Add Note Management button -->
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
+            <div class="aot-modal-option-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' } }))">
+                {{_('Notes')}}
+            </button>
+            </div>
+        </div>
+        {% if ai_settings and ai_settings.ai_enabled %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Utilization')}}</label>
+            <div class="aot-modal-option-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                onclick="AoT_AI.openChat({ targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' })">
+                {{_('Ask AI')}}
+            </button>
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Context')}}</label>
+            <div class="aot-modal-option-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                onclick="AIContextPanel.openContext('{{ each_function.unique_id }}', '{{ each_function.name }}')">
+                {{_('View Context')}}
+            </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if 'options_enabled' in dict_controllers[each_function.device] and 'function_status' in dict_controllers[each_function.device]['options_enabled'] %}
+    <div id="status_activated_enable_{{unique_id}}" style="{{ 'display: none;' if not each_function.is_activated else '' }}">
+        <div class="aot-modal-group-title">{{_('Activation Status')}}</div>
+        <div class="aot-modal-container">
+            <span id="function_status_activated_{{unique_id}}"></span>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if 'function_status' in dict_controllers[each_function.device] and dict_controllers[each_function.device]['function_status'] %}
+    <div id="function_status_enable_{{unique_id}}" class="mb-3">
+        <div class="aot-modal-group-title">{{_('Status')}}</div>
+        <div class="aot-modal-container">
+             <span id="function_status_always{{unique_id}}"></span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="return_text_{{unique_id}}" class="mb-3"></div>
+
+    {% if each_function.device in custom_commands %}
+    <div class="aot-modal-group-title">{{_('Commands')}}</div>
+    <div class="aot-modal-container">
+        {% include 'pages/form_options/Custom_Actions_Message.html' %}
+        {% if each_function.device in custom_commands and custom_commands[each_function.device] %}
+          {% set force_default_value = true %}
+          {% set custom_options_values = none %}
+          {% if 'custom_commands' in dict_options %}
+            {% for each_option in dict_options['custom_commands'] %}
+              {% include 'pages/form_options/Custom_Options.html' %}
+            {% endfor %}
+          {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="aot-modal-group-title">{{_('Advanced Settings')}}</div>
+    <div class="aot-modal-container">
+        
+
+
+        {% if each_function.device != 'function_spacer' %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_function.log_level_debug.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.log_level_debug %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
+        {% include 'pages/form_options/Num_channels.html' %}
+        {% include 'pages/form_options/Measurements_Enabled.html' %}
+
+        {% set custom_options_values = custom_options_values_controllers %}
+
+        {% if 'custom_options' in dict_options and custom_options_values[unique_id] %}
+        {% set force_default_value = false %}
+        {% for each_option in dict_options['custom_options'] %}
+        {% include 'pages/form_options/Custom_Options.html' %}
+        {% endfor %}
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+    {%- set function_channel_exists = [] -%}
+    {% for each_function_channel in function_channel if each_function_channel.function_id == unique_id %}
+    {%- do function_channel_exists.append(1) -%}
+    {% endfor %}
+
+    {% if function_channel_exists %}
+    <div class="aot-modal-group-title">{{_('Channel Options')}}</div>
+    {% endif %}
+
+    {% set custom_options_values = custom_options_values_function_channels %}
+    {% set force_default_value = true %}
+    {% set channel_options = true %}
+
+    {% for each_function_channel in function_channel if each_function_channel.function_id == unique_id %}
+
+    {% set channel = each_function_channel.channel %}
+    {% set name_prefix = each_device.unique_id + "_" + channel|string + "_" %}
+
+    {% if function_channel_exists|length > 1 %}
+    <div class="aot-modal-subgroup-title">
+        <i class="fas fa-plug mr-2 text-primary"></i>
+        <span>CH: {{each_function_channel.channel}}</span>
+        <span class="font-weight-normal ml-2">
+            {%- if 'name' in custom_options_values[unique_id][each_function_channel.channel] and custom_options_values[unique_id][each_function_channel.channel]['name'] -%}
+            {{': ' + custom_options_values[unique_id][each_function_channel.channel]['name']}}
+            {%- elif 'channels_dict' in dict_controllers[each_function.device] and 'name' in dict_controllers[each_function.device]['channels_dict'][each_function_channel.channel] -%}
+            {{': ' + dict_controllers[each_function.device]['channels_dict'][each_function_channel.channel]['name']}}
+            {%- endif -%}
+        </span>
+    </div>
+    {% endif %}
+
+      {% if custom_options_values[unique_id] %}
+
+      {% if 'custom_channel_options_message' in dict_options %}
+      <div class="aot-modal-body-text mb-2">
+          {{dict_options['custom_channel_options_message']|safe}}
+      </div>
+      {% endif %}
+
+      {% if 'custom_channel_options' in dict_options %}
+      <div class="aot-modal-container">
+      <div class="row small-gutters" style="padding: 1em">
+        {% for each_option in dict_options['custom_channel_options'] %}
+        {% include 'pages/form_options/Custom_Options.html' %}
+        {% endfor %}
+      </div>
+      </div>
+      {% endif %}
+      {% endif %}
+
+    {% endfor %}
+
+    {% if function_channel_exists %}{% endif %}
+
+
+    {% if ("options_disabled" in dict_options and
+    ('measurements_select' not in dict_options['options_disabled'] and
+    'measurements_configure' not in dict_options['options_disabled']))
+    or
+    "options_disabled" not in dict_options %}
+    {% set show_measurement_settings = true %}
+    {% endif %}
+
+    {% if show_measurement_settings %}
+    <div class="aot-modal-group-title">{{_('Measurement Settings')}}</div>
+      {% if "measurements_variable_amount" in dict_options and dict_options['measurements_variable_amount'] %}
+      <div class="aot-modal-container">
+      {% include 'pages/form_options/Measurements_Select.html' %}
+      </div>
+      {% endif %}
+
+      {% include 'pages/form_options/Measurements_Configure.html' %}
+    {% endif %}
+  
+  </form>
+
+    {% if 'enable_actions' in dict_options['options_enabled']%}
+
+    <div class="aot-modal-group-title">
+        {{_('Actions')}} 
+        <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+    </div>
+
+    <div class="aot-modal-container">
+      <form id="form_actions_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_actions.csrf_token}}
+        {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
+        {{form_actions.function_type(class_='form-control', value='function')}}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Add Action')}}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+                        data-display="static" data-container="body" data-dropdown-align-right="true"
+                        title="{{_('Actions')}}: {{dict_translation['select_one']['title']}}" id="action_type_{{each_function.unique_id}}"
+                        name="action_type">
+                        {% set _restrict = dict_options.get('restrict_actions', []) %}
+                        {% for value, name in choices_actions %}
+                        {% if not _restrict or value in _restrict %}
+                        <option value="{{value}}">{{name}}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                        name="add_action" class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Add')}}</button>
+                </div>
+            </div>
+        </div>
+      </form>
+    </div>
+
+    {% from 'pages/function_options/gridstack_helper.html' import init_gridstack_actions with context %}
+    {% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+
+    <div class="grid-stack" id="mod_function_actions_{{each_function.unique_id}}">
+      {% for each_action in action|sort(attribute='position') if each_action.function_id == each_function.unique_id %}
+      {% include 'pages/function_options/custom_function_actions.html' %}
+      {% endfor %}
+    </div>
+
+    {{ init_gridstack_actions(each_function.unique_id, cell_height=48) }}
+
+    <script>
+      $('.selectpicker').selectpicker();
+      $('.clockpicker').clockpicker();
+    </script>
+    {% endif %}
+
+</div>

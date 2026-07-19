@@ -1,0 +1,21 @@
+[Unit]
+Description=AoT web user interface
+After=network.target
+
+[Service]
+User=root
+Group=aot
+WorkingDirectory=/opt/AoT/aot
+# workers/threads/timeout은 install/gunicorn_conf.py에서 환경에 맞게 산정
+# (GUNICORN_THREADS env > DB misc.gunicorn_threads > 자동 산정)
+ExecStart=/opt/AoT/env/bin/python -m gunicorn \
+-c /opt/AoT/install/gunicorn_conf.py \
+--pid /var/run/aotflask.pid \
+--umask 000 \
+--bind unix:/usr/local/aotflask.sock start_flask_ui:app
+
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target

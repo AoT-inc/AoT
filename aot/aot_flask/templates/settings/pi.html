@@ -1,0 +1,132 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "pi" %}
+{% set help_page = [manual_url("Configuration-Settings/#pi-settings"), dict_translation['settings']['title'] + ': ' + _('Raspberry Pi')] %}
+
+{% block title %} - {{dict_translation['settings']['title'] + ': ' + _('Raspberry Pi')}}{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/pi -->
+  <div class="container">
+
+    <!-- Page Title -->
+    <div class="aot-settings-title">
+      <h3>{{_('Raspberry Pi Settings')}} <a href="{{ manual_url('Configuration-Settings/#pi-settings') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <form method="post" action="/settings/pi">
+      <input type="hidden" name="form-name" value="Pi">
+      {{ form_settings_pi.csrf_token }}
+
+      <!-- Interfaces -->
+      <div class="aot-modal-group-title">{{_('Interface')}}</div>
+      <p class="aot-modal-body-text">
+        {{_('The following settings are configured via non-interactive raspi-config. Changes made here require a system reboot, which can be performed from the top menu (Settings -> Restart System).')}}
+      </p>
+
+      <div class="aot-modal-container">
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">I<sup>2</sup>C {% if pi_settings['i2c_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <div class="aot-settings-control">
+            {% if pi_settings['i2c_enabled'] %}
+              {{ form_settings_pi.disable_i2c(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% else %}
+              {{ form_settings_pi.enable_i2c(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">1-Wire {% if pi_settings['one_wire_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <div class="aot-settings-control">
+            {% if pi_settings['one_wire_enabled'] %}
+              {{ form_settings_pi.disable_one_wire(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% else %}
+              {{ form_settings_pi.enable_one_wire(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Serial')}} {% if pi_settings['serial_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <div class="aot-settings-control">
+            {% if pi_settings['serial_enabled'] %}
+              {{ form_settings_pi.disable_serial(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% else %}
+              {{ form_settings_pi.enable_serial(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">SPI {% if pi_settings['spi_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <div class="aot-settings-control">
+            {% if pi_settings['spi_enabled'] %}
+              {{ form_settings_pi.disable_spi(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% else %}
+              {{ form_settings_pi.enable_spi(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <label class="aot-settings-label">SSH {% if pi_settings['ssh_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</label>
+          <div class="aot-settings-control">
+            {% if pi_settings['ssh_enabled'] %}
+              {{ form_settings_pi.disable_ssh(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% else %}
+              {{ form_settings_pi.enable_ssh(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Hostname -->
+      <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Hostname')}}</div>
+
+      <div class="aot-modal-container">
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <div class="aot-settings-label">
+            {{ form_settings_pi.hostname(class_='form-control aot-modern-input', value=pi_settings['hostname']) }}
+          </div>
+          <div class="aot-settings-control">
+            {{ form_settings_pi.change_hostname(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Options -->
+      <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Service Options')}}</div>
+
+      <div class="aot-modal-container">
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <div class="aot-settings-label">
+            {{ form_settings_pi.pigpiod_sample_rate.label(class_='mb-0') }}
+            <div class="aot-modal-body-text">{{_('Select pigpiod sampling rate in milliseconds.')}}</div>
+          </div>
+          <div class="aot-settings-control">
+            <select class="aot-settings-select" id="pigpiod_sample_rate" name="pigpiod_sample_rate">
+              <option value=""></option>
+              <option value="uninstalled"{% if pigpiod_sample_rate == 'uninstalled' %} selected{% endif %}>{{_('Uninstall pigpiod')}}</option>
+              <option value="disabled"{% if pigpiod_sample_rate == 'disabled' %} selected{% endif %}>{{_('Disable pigpiod')}}</option>
+              <option value="low"{% if pigpiod_sample_rate == 'low' %} selected{% endif %}>{{_('1 ms (Fast)')}}</option>
+              <option value="high"{% if pigpiod_sample_rate == 'high' %} selected{% endif %}>{{_('5 ms (Slow)')}}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="aot-settings-actions">
+        {{ form_settings_pi.change_pigpiod_sample_rate(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _('Changing pigpiod sample rate requires restarting pigpiod and AoT daemon. Continue?') + '")'}) }}
+      </div>
+
+    </form>
+
+  </div>
+
+{% endblock %}

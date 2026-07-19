@@ -1,0 +1,80 @@
+/* aot-widget-typography.css
+ * 3-tier uniform text scale for all AoT widgets.
+ * Font SIZE is set here only — never via inline style on the element.
+ * Size tiers: sm (0.75rem) · md (0.875rem) · lg (1.5rem)
+ */
+
+/* ── widget title bar ── */
+.aot-w-title {
+  font-size: var(--aot-fs-md);
+  font-weight: var(--aot-fw-semibold);
+  color: var(--aot-text-title, var(--aot-color-text-primary));
+  line-height: var(--aot-lh-base);
+  font-family: var(--aot-font-family);
+}
+
+/* ── field / channel labels ── */
+.aot-w-label {
+  font-size: var(--aot-fs-md);
+  font-weight: var(--aot-fw-medium);
+  color: var(--aot-text-secondary, var(--aot-color-text-secondary));
+  line-height: var(--aot-lh-base);
+  font-family: var(--aot-font-family);
+}
+
+/* ── measurement / computed values ── */
+.aot-w-value {
+  font-size: var(--aot-fs-lg);
+  font-weight: var(--aot-fw-bold);
+  color: var(--aot-text-main, var(--aot-color-text-primary));
+  line-height: var(--aot-lh-tight);
+  letter-spacing: var(--aot-ls-tight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-family: var(--aot-font-family);
+}
+
+/* ── unit strings (°C, %, ppm …) ── */
+.aot-w-unit {
+  font-size: var(--aot-fs-md);
+  font-weight: var(--aot-fw-medium);
+  color: var(--aot-text-secondary, var(--aot-color-text-secondary));
+  line-height: var(--aot-lh-tight);
+  font-family: var(--aot-font-family);
+}
+
+/* ── captions: timestamps, notes, sub-labels ── */
+.aot-w-caption {
+  font-size: var(--aot-fs-sm);
+  font-weight: var(--aot-fw-regular);
+  color: var(--aot-text-secondary, var(--aot-color-text-secondary));
+  line-height: var(--aot-lh-base);
+  font-family: var(--aot-font-family);
+}
+
+/* ── body text inside widgets ── */
+.aot-w-body {
+  font-size: var(--aot-fs-md);
+  font-weight: var(--aot-fw-regular);
+  color: var(--aot-text-main, var(--aot-color-text-primary));
+  line-height: var(--aot-lh-base);
+  font-family: var(--aot-font-family);
+}
+
+/* ── large value variant (gauge centre) — same tier as value ── */
+.aot-w-value-lg {
+  font-size: var(--aot-fs-lg);
+  font-weight: var(--aot-fw-bold);
+  color: var(--aot-text-main, var(--aot-color-text-primary));
+  line-height: var(--aot-lh-tight);
+  letter-spacing: var(--aot-ls-tight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-family: var(--aot-font-family);
+}

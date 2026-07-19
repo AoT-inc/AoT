@@ -1,0 +1,187 @@
+<!-- AI Context Modal -->
+<div id="ai_context_modal" class="modal fade aot-option-modal" role="dialog" tabindex="-1" style="z-index: var(--aot-z-modal);">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="ai_context_modal_title">{{_('AI Context')}}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body" id="ai_context_modal_body">
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">{{_('Loading')}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * AIContextPanel - Handles AI Context Modal for devices
+     */
+    window.AIContextPanel = {
+        /**
+         * Open AI Context modal for a device
+         * @param {string} deviceId - Device unique ID
+         * @param {string} deviceName - Device name for display
+         */
+        openContext: function(deviceId, deviceName) {
+            const modal = $('#ai_context_modal');
+            const title = modal.find('#ai_context_modal_title');
+            const body = modal.find('#ai_context_modal_body');
+
+            // Set modal title
+            title.text(`AI Context - ${deviceName}`);
+
+            // Show loading state
+            body.html(`
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">{{_('Loading')}}</span>
+                    </div>
+                </div>
+            `);
+
+            // Open modal
+            modal.modal('show');
+
+            // Fetch context data
+            $.ajax({
+                url: `/api/v1/ai/device-context/${deviceId}`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success' && response.context) {
+                        AIContextPanel.renderContext(body, response.context);
+                    } else {
+                        AIContextPanel.showError(body, 'Failed to load context data');
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.status === 403
+                        ? '{{_("Permission denied")}}'
+                        : `{{_("Error loading context")}}: ${xhr.statusText}`;
+                    AIContextPanel.showError(body, errorMsg);
+                }
+            });
+        },
+
+        /**
+         * Render context data in modal body
+         * @param {jQuery} body - Modal body element
+         * @param {Object} context - Context data from API
+         */
+        renderContext: function(body, context) {
+            let html = '';
+
+            // Device Identity Section
+            if (context.device_identity) {
+                html += AIContextPanel.renderSection('Device Identity', {
+                    'ID': context.device_identity.id,
+                    'Name': context.device_identity.name,
+                    'Type': context.device_identity.type
+                });
+
+                if (context.device_identity.location) {
+                    const location = context.device_identity.location;
+                    if (location.latitude || location.longitude) {
+                        html += AIContextPanel.renderSection('Location', {
+                            'Latitude': location.latitude || 'N/A',
+                            'Longitude': location.longitude || 'N/A',
+                            'Source': location.location_source || 'N/A'
+                        });
+                    }
+                }
+            }
+
+            // Device Metadata Section
+            if (context.device_metadata) {
+                const filtered = Object.fromEntries(
+                    Object.entries(context.device_metadata).filter(([k, v]) => v !== null && v !== undefined)
+                );
+                if (Object.keys(filtered).length > 0) {
+                    html += AIContextPanel.renderSection('Device Metadata', filtered);
+                }
+            }
+
+            // AI Perception Section
+            if (context.ai_perception) {
+                html += AIContextPanel.renderSection('AI Perception', context.ai_perception);
+            }
+
+            // Device Type-Specific Sections
+            const deviceType = context.device_type || 'unknown';
+            if (context[deviceType]) {
+                html += AIContextPanel.renderSection(
+                    `${deviceType.replace(/_/g, ' ')} Context`,
+                    context[deviceType]
+                );
+            }
+
+            body.html(html);
+        },
+
+        /**
+         * Render a section with key-value pairs
+         * @param {string} title - Section title
+         * @param {Object} data - Key-value data
+         * @returns {string} HTML
+         */
+        renderSection: function(title, data) {
+            let html = `<div class="mb-4">
+                <h6 class="font-weight-bold mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">
+                    ${title}
+                </h6>
+                <div class="ml-2">`;
+
+            for (const [key, value] of Object.entries(data)) {
+                if (value !== null && value !== undefined && value !== '') {
+                    const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+                    html += `<div class="mb-2">
+                        <strong>${key}:</strong> <code>${AIContextPanel.escapeHtml(displayValue)}</code>
+                    </div>`;
+                }
+            }
+
+            html += `</div></div>`;
+            return html;
+        },
+
+        /**
+         * Show error message in modal body
+         * @param {jQuery} body - Modal body element
+         * @param {string} message - Error message
+         */
+        showError: function(body, message) {
+            body.html(`
+                <div class="alert alert-danger" role="alert">
+                    <strong>{{_('Error')}}</strong>
+                    <p>${AIContextPanel.escapeHtml(message)}</p>
+                </div>
+            `);
+        },
+
+        /**
+         * Escape HTML special characters
+         * @param {string} str - String to escape
+         * @returns {string} Escaped string
+         */
+        escapeHtml: function(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    };
+</script>

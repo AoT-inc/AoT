@@ -1,0 +1,14 @@
+<div class="aot-modal-container">
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{ form_trigger.period.label(class_='mb-0') }}</label>
+    <div class="aot-modal-option-control">
+      {{ form_trigger.period(class_='form-control aot-modern-input', value=each_function.period, **{'title': _('Execute conditional actions at regular intervals.')}) }}
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{ form_trigger.timer_start_offset.label(class_='mb-0') }}</label>
+    <div class="aot-modal-option-control">
+      {{ form_trigger.timer_start_offset(class_='form-control aot-modern-input', value=each_function.timer_start_offset, **{'title': _('Time to wait before starting timer')}) }}
+    </div>
+  </div>
+</div>

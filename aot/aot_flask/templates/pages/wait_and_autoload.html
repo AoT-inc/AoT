@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% set dashboard_dict = dict() %}
+
+{% block title %} - {{_('Please wait 10 seconds')}}{% endblock %}
+
+{% block head %}
+  <meta http-equiv="refresh" content="10;url=/dashboard/{{dashboard_id}}" />
+{% endblock %}
+
+{% block body %}
+  <!-- Route: /dashboard -->
+  <div class="container">
+  {% include 'flash_messages.html' %}
+  </div>
+
+  <div class="container-fluid" style="text-align: center">
+    {{_('To add this widget, HTML needs to be generated and the frontend refreshed. Please wait while the frontend reloads. You will be redirected automatically in 10 seconds.')}}
+    {{_('If you are not redirected after 10 seconds, please click')}} <a href="/dashboard/{{dashboard_id}}">{{_('here')}}</a> {{_('or refresh the page.')}}
+  </div>
+
+{% endblock %}

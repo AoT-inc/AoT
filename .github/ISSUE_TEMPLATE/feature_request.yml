@@ -1,0 +1,31 @@
+name: 기능 요청
+description: 새로운 기능이나 개선 아이디어를 제안합니다
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        아이디어를 제안해 주셔서 감사합니다. 방향성에 대한 자유로운 논의는 [Discussions](https://github.com/AoT-inc/AoT/discussions)에서도 환영합니다.
+  - type: textarea
+    id: problem
+    attributes:
+      label: 어떤 점이 불편하거나 필요한가요?
+      description: 해결하고 싶은 문제나 상황을 먼저 알려주세요.
+      placeholder: 예) 시설이 여러 개일 때 각 시설의 오늘 누적 일사량을 한눈에 비교하기 어렵습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 원하는 기능
+      description: 어떻게 동작하면 좋을지 적어주세요.
+      placeholder: 예) 대시보드에 시설별 DLI를 나란히 보여주는 위젯이 있으면 좋겠습니다.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: 참고 자료 (선택)
+      description: 비슷한 사례, 화면 예시, 스크린샷 등이 있으면 첨부해 주세요.
+    validations:
+      required: false

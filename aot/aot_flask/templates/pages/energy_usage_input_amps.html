@@ -1,0 +1,559 @@
+{% extends "layout.html" %}
+{% set active_page = "energy_usage_inputs_amps" %}
+{% set help_page = [manual_url("Energy-Usage/"), _('Energy Usage')] %}
+
+{% block title %} - {{_('Energy Usage')}} - ({{_('Amp Measure')}}){% endblock %}
+
+{% block head %}
+  <script type="text/javascript" src="/static/js/vendor/moment.min.js"></script>
+  <script type="text/javascript" src="/static/js/vendor/daterangepicker.js"></script>
+  <link rel="stylesheet" type="text/css" href="/static/css/daterangepicker.css" />
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+
+  <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
+
+  {% if current_user.theme in dark_themes %}
+    <script src="/static/js/vendor/user_js/dark-unica-custom.js"></script>
+  {% endif %}
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+
+<!-- Route: /energy_usage_input_amp -->
+<main role="main" class="container py-4">
+  {% include 'flash_messages.html' %}
+
+  <!-- Page Title -->
+  <div class="aot-settings-title">
+    <h3>{{_('Energy Usage')}} ({{_('Amp Measure')}}) <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+  </div>
+
+  <!-- Add -->
+  <div class="aot-modal-group-title">{{_('Add')}}</div>
+  <p class="aot-modal-body-text">
+    {{_('Energy usage calculated from an amp measure input.') }}
+  </p>
+
+  <form method="post" action="/energy_usage_input_amp">
+    {{form_energy_usage_add.csrf_token}}
+    <div class="aot-modal-container">
+      <div class="aot-settings-row" style="border-bottom: none;">
+        {{form_energy_usage_add.energy_usage_select.label(class_='aot-settings-label')}}
+        <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px;">
+          <select class="aot-settings-select form-tooltip" id="energy_usage_select" name="energy_usage_select" title="" data-original-title="{{_('Select a measurement with the unit') + ': ' +_('Amps')}}">
+            <option value="">{{dict_translation['select_one']['title']}}</option>
+            {% for each_input_form in choices_input -%}
+            <option value="{{each_input_form['value']}}">{{each_input_form['item']}}</option>
+            {% endfor -%}
+            {% for each_function_form in choices_function -%}
+            <option value="{{each_function_form['value']}}">{{each_function_form['item']}}</option>
+            {% endfor -%}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="aot-settings-actions">
+      {{form_energy_usage_add.energy_usage_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    </div>
+  </form>
+
+  {% if energy_usage %}
+  <div style="clear: both; padding: 1em 0;"></div>
+  {% endif %}
+
+  {% for each_energy in energy_usage %}
+
+  <div class="aot-modal-container">
+
+    <form method="post" action="/energy_usage_input_amp">
+    {{form_energy_usage_mod.csrf_token}}
+    {{form_energy_usage_mod.energy_usage_id(value=each_energy.unique_id)}}
+
+    <div class="row small-gutters" style="border-bottom: 1px solid var(--border-neutral); padding: 0.3em 0.2em 0.3em 0">
+      <div class="col-2 col-sm-1 text-center icon-fh">
+        <a data-toggle="collapse" href="#collapseContainer-input-{{each_energy.id}}" aria-expanded="false" aria-controls="collapseContainer{{each_energy.id}}">
+          <span style="font-size: 3.6em" class="collapse-button{{each_energy.id}} fa fa-plus-square"></span>
+        </a>
+      </div>
+      <div class="col-5 col-sm-3">
+        {{form_energy_usage_mod.name(class_='form-control', value=each_energy.name, **{'title': dict_translation['name']['phrase']})}}
+      </div>
+    </div>
+
+    <div class="collapse" id="collapseContainer-input-{{each_energy.id}}">
+      <div class="row small-gutters" style="padding: 0.5em">
+        <div class="col-auto small-gutters">
+          {{form_energy_usage_mod.energy_usage_mod(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+        </div>
+        <div class="col-auto small-gutters">
+          {{form_energy_usage_mod.energy_usage_delete(class_='btn aot-pill-btn aot-pill-btn-primary',**{'onclick':'return confirm("Are you sure you want to delete this?")'})}}
+        </div>
+      </div>
+
+      <div class="row small-gutters" style="border-bottom: 1px solid var(--border-neutral); padding: 0.5em">
+        <div class="col-auto">
+          {{form_energy_usage_mod.selection_device_measure_ids.label(class_='control-label')}}
+          <div>
+            <select class="form-control form-tooltip form-dropdown" id="selection_device_measure_ids" name="selection_device_measure_ids" style="width: 100%;" title="" data-original-title="{{_('Select a measurement with the unit') + ': ' +_('Amps')}}">
+              <option value="">{{_('Not Selected')}}</option>
+            {% for each_input_form in choices_input -%}
+              <option value="{{each_input_form['value']}}"{% if each_input_form['value'] == each_energy.device_id + ',' + each_energy.measurement_id %} selected{% endif %}>{{each_input_form['item']}}</option>
+            {% endfor -%}
+            {% for each_function_form in choices_function -%}
+              <option value="{{each_function_form['value']}}"{% if each_function_form['value'] == each_energy.device_id + ',' + each_energy.measurement_id %} selected{% endif %}>{{each_function_form['item']}}</option>
+            {% endfor -%}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="container-{{each_energy.unique_id}}" style="height: 400px; width: 100%"></div>
+
+    <div class="row small-gutters" style="border-bottom: 1px solid var(--border-neutral); padding-top: 0.1em">
+      <div class="table-responsive">
+        <table class="table">
+          <tr>
+            <td></td>
+            <td>{{_('Past Hour')}}</td>
+            <td>{{_('Past Day')}}</td>
+            <td>{{_('Past Week')}}</td>
+            <td>{{_('Past Month')}}</td>
+          </tr>
+          <tr>
+            <td>{{_('Amps (Average over period)')}}</td>
+            <td>{{energy_usage_stats[each_energy.unique_id]['hour']|round(3)}}</td>
+            <td>{{energy_usage_stats[each_energy.unique_id]['day']|round(3)}}</td>
+            <td>{{energy_usage_stats[each_energy.unique_id]['week']|round(3)}}</td>
+            <td>{{energy_usage_stats[each_energy.unique_id]['month']|round(3)}}</td>
+          </tr>
+          <tr>
+            <td>kWh (@{{misc.output_usage_volts}} V)</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['hour'] / 1000)|round(3)}}</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['day'] / 1000 * 24)|round(3)}}</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['week'] / 1000 * 168)|round(3)}}</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['month'] / 1000 * 720)|round(3)}}</td>
+          </tr>
+          <tr>
+            <td>{{_('Cost')}} ({{misc.output_usage_currency}}, at {{misc.output_usage_currency}}{{misc.output_usage_cost}}/kWh)</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['hour'] / 1000 * misc.output_usage_cost)|round(2)}}</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['day'] / 1000 * 24 * misc.output_usage_cost)|round(2)}}</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['week'] / 1000 * 168 * misc.output_usage_cost)|round(2)}}</td>
+            <td>{{(misc.output_usage_volts * energy_usage_stats[each_energy.unique_id]['month'] / 1000 * 720 * misc.output_usage_cost)|round(2)}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="row align-items-end small-gutters" style="padding: 0.5em">
+      <div class="col-12 col-sm-7 col-lg-4">
+        {{form_energy_usage_mod.energy_usage_date_range.label(class_='control-label')}}
+        <div>
+          <input class="form-control" type="text" name="energy_usage_date_range" value="{% if each_energy.unique_id in picker_start %}{{picker_start[each_energy.unique_id]}}{% else %}{{picker_start['default']}}{% endif %} - {% if each_energy.unique_id in picker_end %}{{picker_end[each_energy.unique_id]}}{% else %}{{picker_end['default']}}{% endif %}" />
+        </div>
+      </div>
+      <div class="col-auto small-gutters">
+        {{form_energy_usage_mod.energy_usage_range_calc(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+      </div>
+      {% if calculate_usage[each_energy.unique_id] %}
+
+      <div id="container-calc-{{each_energy.unique_id}}" style="height: 400px; width: 100%"></div>
+
+      <div class="col-12 small-gutters" style="padding-top: 0.5em">
+        <div class="table-responsive">
+          <table class="table">
+            <tr>
+              <td>{{picker_start[each_energy.unique_id]}} - {{picker_end[each_energy.unique_id]}}, {{calculate_usage[each_energy.unique_id]['hours']|round(2)}} hours</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>{{_('Amps (Average over period)')}}</td>
+              <td>{{calculate_usage[each_energy.unique_id]['average_amps']|round(3)}}</td>
+            </tr>
+            <tr>
+              <td>kWh (@{{misc.output_usage_volts}} V)</td>
+              <td>{{calculate_usage[each_energy.unique_id]['kwh']|round(3)}}</td>
+            </tr>
+            <tr>
+              <td>{{_('Cost')}} ({{misc.output_usage_currency}}, at {{misc.output_usage_currency}}{{misc.output_usage_cost}}/kWh)</td>
+              <td>{{(calculate_usage[each_energy.unique_id]['kwh'] * misc.output_usage_cost)|round(2)}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    </form>
+
+  </div>
+
+  <div style="clear: both; padding-bottom: 0.75em;"></div>
+
+  {% endfor %}
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+</main>
+</div>
+
+<script type="text/javascript">
+$(function() {
+  $('input[name="energy_usage_date_range"]').daterangepicker({
+    timePicker: true,
+    timePicker24Hour: true,
+    timePickerIncrement: 1,
+    locale: {
+      format: 'MM/DD/YYYY HH:mm'
+    }
+  });
+});
+
+$('.collapse').on('show.bs.collapse', function(){
+  $(this).parent().find(".fa-plus-square").removeClass("fa-plus-square").addClass("fa-minus-square");
+}).on('hide.bs.collapse', function(){
+  $(this).parent().find(".fa-minus-square").removeClass("fa-minus-square").addClass("fa-plus-square");
+});
+</script>
+
+
+{% if graph_info %}
+<script>
+Highcharts.setOptions({
+  global: {
+    useUTC: false
+  },
+  lang: {
+    thousandsSep: ','
+  }
+});
+
+$(document).ready(function() {
+    const id_measure = [
+    {% for energy_usage_id in graph_info %}
+    {
+      chart_id: '{{energy_usage_id}}',
+      device_id: '{{graph_info[energy_usage_id]['main']['device_id']}}',
+      unit: '{{graph_info[energy_usage_id]['main']['unit']}}',
+      channel: '{{graph_info[energy_usage_id]['main']['channel']}}'
+    },
+    {% endfor %}
+    ];
+    let chart = [];
+
+    function getPastData(chart_id, device_id, unit, channel, start_time, end_time) {
+      let url;
+      if (typeof(end_time)==='undefined') {
+        url = '/async_usage/' + device_id + '/' + unit + '/' + channel + '/' + start_time + '/0';
+      } else {
+        url = '/async_usage/' + device_id + '/' + unit + '/' + channel + '/' + start_time + '/' + end_time;
+      }
+      $.getJSON(url,
+        function(data, responseText, jqXHR) {
+          if (jqXHR.status !== 204) {
+            let new_data = [];
+            for (let i = 0; i < data.length; i++) {
+              const new_date = new Date(data[i][0] * 1000);
+              const new_time = new_date.getTime();
+              new_data.push([new_time, data[i][1]]);
+            }
+            if (typeof(end_time)==='undefined') new_data.push([new Date().getTime(), null]);
+            chart[chart_id].series[0].setData(new_data, false, false);
+            let nav = chart[chart_id].get('navigator');
+            nav.setData(new_data, false, false);
+          }
+          chart[chart_id].redraw();
+        }
+      );
+    }
+
+    function set_data_from_url(url, chart_id) {
+      $.getJSON(url,
+        function (data, responseText, jqXHR) {
+          if (jqXHR.status !== 204) {
+            let new_data = [];
+            for (let i = 0; i < data.length; i++) {
+              const new_date = new Date(data[i][0] * 1000);
+              const new_time = new_date.getTime();
+              new_data.push([new_time, data[i][1]]);
+            }
+          }
+          chart[chart_id].series[0].setData(new_data);
+          chart[chart_id].hideLoading();
+        }
+      );
+    }
+
+    function updateAllSeries(e, chart_id) {
+      let min;
+      let max;
+      if (e.xAxis == null) {
+        min = e.min;
+        max = e.max;
+      } else {
+        min = e.xAxis[0].min;
+        max = e.xAxis[0].max;
+      }
+      for (let each_id in id_measure) {
+        const url = '/async_usage/' + id_measure[each_id]['device_id'] + '/' + id_measure[each_id]['unit'] + '/' + id_measure[each_id]['channel'] + '/' + Math.round(min) / 1000 + '/' + Math.round(max) / 1000;
+        set_data_from_url(url, chart_id)
+      }
+    }
+
+    // create the chart
+  {% for energy_usage_id in graph_info %}
+
+    {% if calculate_usage[energy_usage_id] %}
+
+    chart['calc-{{energy_usage_id}}'] = new Highcharts.StockChart({
+        chart: {
+          renderTo: 'container-calc-{{energy_usage_id}}',
+          zoomType: 'x',
+          events: {
+            load: function () {
+              getPastData('calc-{{energy_usage_id}}', '{{graph_info[energy_usage_id]['calculate']['device_id']}}', '{{graph_info[energy_usage_id]['calculate']['unit']}}', '{{graph_info[energy_usage_id]['calculate']['channel']}}', '{{graph_info[energy_usage_id]['calculate']['start_time_epoch']}}', '{{graph_info[energy_usage_id]['calculate']['end_time_epoch']}}');
+            },
+            selection: function(e) {
+              updateAllSeries(e, 'calc-{{energy_usage_id}}')
+            }
+          }
+        },
+
+        tooltip: {
+          shared: true,
+          formatter: function(){
+            const d = new Date(this.x);
+            if (this.point) {
+              return '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds()
+                   + '</b><br/>' + this.series.name
+                   + '<br/>' + this.point.title
+                   + '<br/>' + this.point.text;
+            }
+            else {
+              let s = '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+              $.each(this.points, function(i, point) {
+                  s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
+              });
+              return s;
+            }
+          }
+        },
+
+        navigator: {
+            adaptToUpdatedData: false,
+            series: {
+                id: 'navigator'
+            }
+        },
+
+        scrollbar: {
+          liveRedraw: false
+        },
+
+        legend: {
+          enabled: false
+        },
+
+        rangeSelector: {
+            buttons: [{
+                type: 'hour',
+                count: 1,
+                text: '{{_('1 Hour')}}'
+            }, {
+                type: 'day',
+                count: 1,
+                text: '{{_('1 Day')}}'
+            }, {
+                type: 'week',
+                count: 1,
+                text: '{{_('1 Week')}}'
+            }, {
+                type: 'month',
+                count: 1,
+                text: '{{_('1 Month')}}'
+            }, {
+                type: 'all',
+                text: '{{_('All')}}'
+            }],
+            inputEnabled: false,
+            selected: 4
+        },
+
+        xAxis: {
+          events: {
+            setExtremes: function(e) {
+              if (typeof(e.rangeSelectorButton) !== 'undefined' || e.trigger === 'navigator') {
+                updateAllSeries(e, 'calc-{{energy_usage_id}}');
+              }
+            }
+          },
+          minRange: 1800 * 1000
+        },
+
+        yAxis: [
+          {
+            title: {
+              text: '{{_('Amps')}} (A)'
+            },
+            labels: {
+              format: '{value}'
+            },
+            opposite: false,
+            id: 'A'
+          }
+        ],
+
+        credits: {
+          enabled: false,
+          href: "https://github.com/AoT-inc/AoT",
+          text: "AoT"
+        },
+
+        series: [
+            {
+              name: 'Amps',
+              type: 'column',
+              dataGrouping: {
+                approximation: 'average'
+              },
+              tooltip: {
+                valueSuffix: ' A',
+                valueDecimals: 3
+              },
+              yAxis: 'A',
+              data: []
+            }
+        ]
+    });
+
+    {% endif %}
+
+    chart['{{energy_usage_id}}'] = new Highcharts.StockChart({
+      chart: {
+        renderTo: 'container-{{energy_usage_id}}',
+        zoomType: 'x',
+        events: {
+          load: function () {
+            getPastData('{{energy_usage_id}}', '{{graph_info[energy_usage_id]['main']['device_id']}}', '{{graph_info[energy_usage_id]['main']['unit']}}', '{{graph_info[energy_usage_id]['main']['channel']}}', '{{graph_info[energy_usage_id]['main']['start_time_epoch']}}');
+          },
+          selection: function(e) {
+            updateAllSeries(e, '{{energy_usage_id}}')
+          }
+        }
+      },
+
+      tooltip: {
+        shared: true,
+        formatter: function(){
+          const d = new Date(this.x);
+          if (this.point) {
+            return '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds()
+                 + '</b><br/>' + this.series.name
+                 + '<br/>' + this.point.title
+                 + '<br/>' + this.point.text;
+          }
+          else {
+            let s = '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+            $.each(this.points, function(i, point) {
+                s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
+            });
+            return s;
+          }
+        }
+      },
+
+      navigator: {
+          adaptToUpdatedData: false,
+          series: {
+              id: 'navigator'
+          }
+      },
+
+      scrollbar: {
+        liveRedraw: false
+      },
+
+      legend: {
+        enabled: false
+      },
+
+      rangeSelector: {
+          buttons: [{
+              type: 'hour',
+              count: 1,
+              text: '{{_('1 Hour')}}'
+          }, {
+              type: 'day',
+              count: 1,
+              text: '{{_('1 Day')}}'
+          }, {
+              type: 'week',
+              count: 1,
+              text: '{{_('1 Week')}}'
+          }, {
+              type: 'month',
+              count: 1,
+              text: '{{_('1 Month')}}'
+          }, {
+              type: 'all',
+              text: '{{_('All')}}'
+          }],
+          inputEnabled: false,
+          selected: 4
+      },
+
+      xAxis: {
+        events: {
+          setExtremes: function(e) {
+            if (typeof(e.rangeSelectorButton) !== 'undefined' || e.trigger === 'navigator') {
+              updateAllSeries(e, '{{energy_usage_id}}');
+            }
+          }
+        },
+        minRange: 1800 * 1000
+      },
+
+      yAxis: [
+        {
+          title: {
+            text: '{{_('Amps')}} (A)'
+          },
+          labels: {
+            format: '{value}'
+          },
+          opposite: false,
+          id: 'A'
+        }
+      ],
+
+      credits: {
+        enabled: false,
+        href: "https://github.com/AoT-inc/AoT",
+        text: "AoT"
+      },
+
+      series: [
+        {
+          name: 'Amps',
+          type: 'column',
+          dataGrouping: {
+            approximation: 'average'
+          },
+          tooltip: {
+            valueSuffix: ' A',
+            valueDecimals: 3
+          },
+          yAxis: 'A',
+          data: []
+        }
+      ]
+    });
+
+{% endfor %}
+
+});
+</script>
+{% endif %}
+
+{% endblock %}

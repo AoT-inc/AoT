@@ -1,0 +1,37 @@
+<div id="agent_status_{{agent.unique_id}}"
+  class="grid-stack-item-content {% if agent.is_activated -%}active-background{% else -%}inactive-background{% endif %} row small-gutters aot-entry-item">
+
+    <div class="aot-entry-drag-handle">
+        <i class="fa fa-grip-lines"></i>
+    </div>
+
+    <div class="aot-entry-content-item aot-col-name">
+        <span class="badge badge-mcp aot-badge-inline">MCP</span>
+        <div id="agent_name_{{agent.unique_id}}" class="form-control aot-entry-name-input"
+             title="{{ agent.name }}">{{ agent.name }}</div>
+    </div>
+
+    <div class="aot-entry-content-item aot-col-uuid">
+        <input class="form-control btn aot-entry-uuid-btn aot-pill-btn"
+               type="button"
+               onclick="setClipboard('{{agent.unique_id}}')" title="UUID: {{agent.unique_id}} | MCP / {{ agent.specialty }}"
+               value="{% if agent.entry %}{{ agent.entry.name }}{% else %}MCP{% endif %}">
+    </div>
+
+    <div class="aot-entry-actions aot-col-action">
+        <input {% if agent.is_activated -%}style="display: none"{% endif %}
+               onclick="return mcpAgentActivate('{{agent.unique_id}}');" name="agent_activate"
+               id="agent_activate_{{agent.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+               value="{{_('Activate')}}" />
+        <input {% if not agent.is_activated -%}style="display: none" {% endif %}
+            onclick="return mcpAgentDeactivate('{{agent.unique_id}}');"
+            id="agent_deactivate_{{agent.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+            value="{{_('Deactivate')}}" />
+    </div>
+
+    <div class="aot-entry-settings">
+        <a class="btn p-0" data-toggle="modal" onclick="openAgentSettings('{{agent.unique_id}}')">
+            <i class="fas fa-cog"></i>
+        </a>
+    </div>
+</div>

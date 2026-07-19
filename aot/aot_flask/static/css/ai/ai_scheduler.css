@@ -1,0 +1,363 @@
+/* =====================================================
+   AI Scheduler Page Styles
+   Gantt chart, scheduler cards, mobile card list
+   ===================================================== */
+
+/* --- Scheduler Card --- */
+.scheduler-card {
+    background: var(--bd-primary);
+    border: none;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+}
+.scheduler-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-neutral);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.scheduler-header h4 {
+    margin: 0;
+    font-weight: 700;
+    color: var(--aot-text-main);
+}
+.scheduler-body {
+    padding: 0;
+}
+
+/* --- Gantt Custom Styles --- */
+#ai-gantt-container {
+    border: none;
+    min-height: 700px;
+}
+.vis-timeline {
+    border: none !important;
+}
+.vis-item {
+    border-radius: 12px !important;
+    border: none !important;
+    padding: 4px 12px !important;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+.vis-item.task-status-completed { background-color: var(--aot-color-success, #28a745) !important; color: var(--text-color-tertiary, white) !important; }
+.vis-item.task-status-in_progress { background-color: #995aff !important; color: var(--text-color-tertiary, white) !important; }
+.vis-item.task-status-pending { background-color: #f8f9fa !important; color: var(--aot-text-main) !important; border: 1px solid #dee2e6 !important; }
+.vis-item.task-status-draft { background-color: #e9ecef !important; color: var(--aot-color-text-secondary, #6c757d) !important; border: 1px dashed #ced4da !important; }
+.vis-item.task-type-device_control { background-color: var(--color-equipment-mode) !important; color: white !important; }
+.vis-item.task-type-checkpoint { border: 2px solid #ffc107 !important; border-radius: 8px !important; }
+
+.vis-labelset .vis-label {
+    border-bottom: 1px solid var(--border-neutral) !important;
+    padding: 12px !important;
+    font-weight: 500;
+}
+.vis-label.gantt-group-goal { color: var(--color-equipment-mode); font-weight: 700; background: #f8f9ff !important; }
+.vis-label.gantt-group-aot { color: var(--aot-color-danger, #dc3545); font-weight: 700; background: #fff8f8 !important; }
+
+/* --- Action Buttons --- */
+.btn-action {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    transition: all 0.2s;
+    margin-left: 8px;
+    border: 1px solid #dee2e6;
+}
+.btn-refresh {
+    background: #f8f9fa;
+    color: var(--aot-text-main);
+}
+.btn-refresh:hover { background: #e9ecef; }
+.btn-add-task {
+    background: var(--brand-primary);
+    color: var(--text-color-tertiary, #fff);
+    border: none;
+}
+.btn-add-task:hover { background: var(--brand-primary); color: #fff; opacity: 0.9; }
+
+/* --- Global Controls --- */
+#gantt-global-controls .btn, #gantt-scale-controls .btn {
+    font-size: 11px;
+    padding: 3px 8px;
+}
+.btn-scale.active {
+    background-color: var(--aot-color-text-secondary, #6c757d);
+    color: var(--text-color-tertiary, white);
+}
+
+/* --- Selection & Hover --- */
+.vis-item.vis-selected {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5), 0 4px 12px rgba(0,0,0,0.25) !important;
+    z-index: 100;
+}
+.vis-item:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15) !important;
+    cursor: pointer;
+    transition: filter 0.15s, box-shadow 0.15s;
+}
+
+/* --- Tooltip --- */
+div.vis-tooltip {
+    background: var(--brand-primary) !important;
+    color: var(--text-color-tertiary, #fff) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    line-height: 1.5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    max-width: 250px;
+}
+
+/* --- Hierarchy --- */
+.gantt-row-parent .vis-label {
+    background: #eef2ff !important;
+    border-bottom: 2px solid #c7d2fe !important;
+}
+.gantt-row-parent .vis-label .vis-inner {
+    font-weight: 700;
+    font-size: 13px;
+}
+.gantt-row-child .vis-label {
+    background: #fafafa !important;
+    border-bottom: 1px solid #eee !important;
+}
+.gantt-row-child .vis-label .vis-inner {
+    font-size: 12px;
+    color: var(--aot-color-text-secondary, #555);
+}
+.gantt-group-parent {
+    font-weight: 700;
+    color: var(--aot-text-main);
+}
+.gantt-group-child {
+    font-weight: 400;
+    color: var(--aot-color-text-secondary, #666);
+}
+.gantt-group-parent:hover,
+.gantt-group-child:hover,
+.gantt-group-container span:hover {
+    text-decoration: underline;
+    /* 간트 그룹 hover 링크 전용 인디고 액센트 — 기존 토큰과 정확히 일치하지 않아 리터럴 유지 */
+    color: #4f46e5 !important;
+}
+.vis-panel.vis-left {
+    min-width: 220px;
+}
+
+/* --- Summary Bar --- */
+.vis-item.gantt-summary-bar {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+    border: none !important;
+    border-radius: 3px !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    margin-top: 10px;
+    color: var(--text-color-tertiary, #fff) !important;
+    font-size: 11px !important;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+}
+.vis-item.gantt-summary-bar .vis-item-content {
+    padding: 0 8px !important;
+    line-height: 14px !important;
+}
+
+/* --- Inline Editor --- */
+.gantt-inline-editor {
+    width: 100%;
+    font-size: 11px;
+    padding: 2px 5px;
+    border: 1px solid var(--color-equipment-mode);
+    border-radius: 4px;
+    outline: none;
+}
+
+/* --- Hierarchy Visualization --- */
+.gantt-group-root {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-top: 2px solid #6c757d;
+    margin-top: 15px !important;
+}
+.gantt-group-container {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border-neutral);
+    padding: 5px 0;
+}
+.gantt-group-header {
+    background-color: var(--brand-primary) !important;
+    color: var(--text-color-tertiary, white) !important;
+    text-align: center;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+/* --- Dual Viewport Layout --- */
+.gantt-viewport-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 800px;
+    gap: 10px;
+}
+#ai-gantt-macro-container {
+    flex: 0 0 25%;
+    min-height: 180px;
+    border-bottom: 2px solid var(--border-neutral);
+    background: #fafafa;
+}
+#ai-gantt-micro-container {
+    flex: 1;
+    min-height: 400px;
+    background: var(--bd-primary);
+}
+
+/* --- Proposed Tasks Table --- */
+#proposed-tasks-table {
+    font-size: 0.95rem;
+}
+#proposed-tasks-table thead th {
+    border-top: none;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: var(--aot-color-text-secondary, #6c757d);
+    padding: 15px 12px;
+}
+#proposed-tasks-table tbody td {
+    vertical-align: middle;
+    padding: 14px 12px;
+    border-color: #f8f9fa;
+}
+.whitespace-nowrap {
+    white-space: nowrap;
+}
+.badge-draft {
+    background-color: #f8f9fa;
+    color: var(--aot-color-text-secondary, #6c757d);
+    border: 1px solid #dee2e6;
+}
+.custom-checkbox .custom-control-label::before {
+    border-radius: 4px;
+    border: 2px solid #dee2e6;
+}
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* --- Proposed Items (Shadow & Ghost) --- */
+.ai-proposed-item {
+    border: 2px dashed #995aff !important;
+    background-color: rgba(153, 90, 255, 0.1) !important;
+    opacity: 0.8;
+}
+.vis-item.vis-background.macro-indicator {
+    background-color: rgba(0, 123, 255, 0.1);
+    border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+/* =====================================================
+   MOBILE: Card List View (max-width: 768px)
+   Gantt chart is HIDDEN. A simple card list replaces it.
+   ===================================================== */
+@media (max-width: 768px) {
+    .gantt-viewport-wrapper,
+    #gantt-scale-controls,
+    #gantt-global-controls,
+    #btn-toggle-macro,
+    #btn-refresh-gantt,
+    #view-mode-badge { display: none !important; }
+
+    .container-fluid { padding: 8px !important; }
+    .scheduler-card {
+        border-radius: 12px !important;
+        margin-bottom: 8px;
+    }
+    .scheduler-header {
+        flex-direction: row;
+        align-items: center;
+        padding: 14px 16px;
+        justify-content: space-between;
+    }
+    .scheduler-header h2.section-title {
+        font-size: 1rem !important;
+        margin: 0;
+    }
+    .scheduler-header .d-flex { gap: 6px; }
+    #btn-add-task {
+        font-size: 13px !important;
+        padding: 8px 16px !important;
+        border-radius: 20px !important;
+    }
+
+    .mobile-task-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 16px;
+    }
+    .mobile-task-card {
+        background: var(--bd-primary);
+        border-radius: 12px;
+        padding: 14px 16px;
+        border-left: 4px solid #dee2e6;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        cursor: pointer;
+        transition: transform 0.15s;
+    }
+    .mobile-task-card:active { transform: scale(0.98); }
+    .mobile-task-card.status-in_progress { border-left-color: #995aff; }
+    .mobile-task-card.status-completed { border-left-color: #28a745; }
+    .mobile-task-card.status-pending { border-left-color: #ffc107; }
+    .mobile-task-card.status-failed { border-left-color: #dc3545; }
+    .mobile-task-card.status-PROPOSED {
+        border-left-color: #995aff;
+        border-left-style: dashed;
+        background: #faf5ff;
+    }
+    .mobile-task-card .task-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--aot-text-main);
+        margin-bottom: 4px;
+    }
+    .mobile-task-card .task-meta {
+        font-size: 11px;
+        color: var(--aot-color-text-secondary, #888);
+    }
+    .mobile-task-card .task-status-badge {
+        display: inline-block;
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+        margin-top: 6px;
+    }
+    .mobile-task-card .badge-in_progress { background: #f0e6ff; color: #7c3aed; }
+    .mobile-task-card .badge-completed { background: #e6f9ee; color: #16a34a; }
+    .mobile-task-card .badge-pending { background: #fff8e1; color: #b45309; }
+    .mobile-task-card .badge-failed { background: #fee; color: var(--aot-color-danger, #dc3545); }
+    .mobile-empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--aot-color-text-secondary, #aaa);
+        font-size: 14px;
+    }
+
+    .modal-dialog {
+        margin: 8px;
+        max-width: calc(100vw - 16px);
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-task-list { display: none !important; }
+}

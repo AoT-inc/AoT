@@ -1,0 +1,53 @@
+<form method="post" action="/function">
+  {{form_mod_pid_base.csrf_token}}
+  {{form_mod_pid_base.function_id(value=each_function.unique_id)}}
+  {{form_mod_pid_base.function_type(class_='form-control', value='function')}}
+
+    {% set form = form_function %}
+    {% set dict_options = dict_controllers[each_function.device] %}
+    {% set each_device = each_function %}
+    {% set unique_id = each_function.unique_id %}
+    {% set custom_options_values = custom_options_values_controllers %}
+
+  <div id="function_status_{{each_function.unique_id}}" class="grid-stack-item-content row small-gutters aot-entry-item">
+    <div class="aot-entry-drag-handle">
+      <i class="fa fa-grip-lines"></i>
+    </div>
+    <div class="aot-entry-content-item aot-col-name">
+      <div id="function_name_{{each_function.unique_id}}" class="form-control aot-entry-name-input"
+        style="color: {{custom_options_values_controllers[each_function.unique_id]['color']}}; background: transparent; border-color: transparent;">{{each_function.name}}</div>
+    </div>
+    <div class="aot-entry-settings">
+      <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_function.unique_id}}">
+        <i class="fas fa-cog"></i>
+      </a>
+    </div>
+  </div> <!-- grid-stack-item-content -->
+</form>
+
+<div class="modal fade aot-option-modal" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content" style="padding: 1em">
+      <div class="modal-header">
+        <h5 class="modal-title">{{_('Function Settings')}}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        {% include 'pages/function_options/custom_function_options.html' %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="function_delete"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="function_duplicate"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'function_mod');"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
+      </div>
+    </div>
+  </div>
+</div>

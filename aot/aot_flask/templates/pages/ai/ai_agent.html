@@ -1,0 +1,931 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_agent" %}
+{% set help_page = [manual_url("ai/overview/"), _('AI Agent')] %}
+
+{% block title %} - {{ _('AI Agent') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.3" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<main role="main" class="container py-4">
+  {% include 'flash_messages.html' %}
+  
+  <!-- v6 Data Store for Presets (Global for modals and entries) -->
+  <div id="aot-preset-data" style="display:none;" 
+       data-engine-presets='{{ (engine_presets or {}) | tojson | safe }}'
+       data-available-entries='{{ (serialized_entries or []) | tojson | safe }}'
+       data-role-presets='{{ (role_presets or {}) | tojson | safe }}'>
+  </div>
+  <script>
+    // Global access for all child templates
+    const presetDataStore = $('#aot-preset-data');
+    const enginePresets = JSON.parse(presetDataStore.attr('data-engine-presets') || '{}');
+    const rolePresets = JSON.parse(presetDataStore.attr('data-role-presets') || '{}');
+    const availableEntries = JSON.parse(presetDataStore.attr('data-available-entries') || '[]');
+  </script>
+
+  <div class="aot-settings-title">
+    <h3>{{_('AI Agent')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+  </div>
+  <p class="aot-modal-body-text">{{_('AI Agents orchestration layer. Manage your AI services and agents to automate complex tasks.')}}</p>
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+<!-- v8 Add Panel: Compact Row, Role-First, AoT Design System -->
+<form id="new_agent_form" method="post" action="{{ url_for('routes_ai_agent.ai_agent_add_direct') }}" style="padding-bottom: 0.5em">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+  <div class="row aot-main-selection-row">
+    <!-- Engine / Service Type dropdown -->
+    <div class="col-auto">
+      <select class="selectpicker aot-standard-select" data-style="btn btn-primary aot-roundbox"
+              data-live-search="true"
+              title="{{ _('Engine') }}: {{ _('Select') }}"
+              id="agent_source_select">
+      </select>
+    </div>
+    <!-- Role dropdown (AI Agent only; hidden for MCP) -->
+    <div class="col-auto" id="role-dropdown-container" style="display:none;">
+      <select class="selectpicker aot-standard-select" data-style="btn btn-primary aot-roundbox"
+              title="{{ _('Role') }}: {{ _('Select') }}"
+              id="agent_role_select">
+        <option value="router">{{ _('Router') }}</option>
+        <option value="planner">{{ _('Planner') }}</option>
+        <option value="executor">{{ _('Executor') }}</option>
+        <option value="synthesizer">{{ _('Synthesizer') }}</option>
+        <option value="worker">{{ _('Worker') }}</option>
+      </select>
+    </div>
+    <!-- Add button -->
+    <div class="col-auto">
+      <input onclick="return triggerAddAgentCompact(this);" name="agent_add" value="{{ _('Add') }}"
+        class="btn btn-primary" type="button" />
+    </div>
+  </div>
+</form>
+
+<script>
+  // Populate engine dropdown with optgroups on page load
+  $(document).ready(function() {
+    var $select = $('#agent_source_select');
+    $select.empty();
+
+    // Group engines by is_mcp flag
+    var aiAgentGroup = $('<optgroup label="{{ _('AI Agent') }}">');
+    var mcpGroup = $('<optgroup label="{{ _('MCP Server') }}">');
+
+    Object.keys(enginePresets).forEach(function(engineKey) {
+      var preset = enginePresets[engineKey];
+      var label = preset.ai_name || engineKey;
+      var option = $('<option>', {
+        value: 'preset:' + engineKey,
+        text: label,
+        'data-is-mcp': preset.is_mcp ? '1' : '0'
+      });
+      if (preset.is_mcp) {
+        mcpGroup.append(option);
+      } else {
+        aiAgentGroup.append(option);
+      }
+    });
+
+    $select.append(aiAgentGroup);
+    $select.append(mcpGroup);
+    $select.selectpicker('refresh');
+
+    // Toggle role dropdown when engine selection changes
+    $select.on('changed.bs.select', function(e) {
+      var selectedOption = $select.find('option:selected');
+      var isMcp = selectedOption.data('is-mcp') === '1';
+      if (isMcp) {
+        $('#role-dropdown-container').hide();
+        $('#agent_role_select').selectpicker('val', '');
+      } else {
+        $('#role-dropdown-container').show();
+      }
+    });
+  });
+
+  // Main compact add trigger — creates agent then opens settings modal
+  function triggerAddAgentCompact(button) {
+    var rawVal = $('#agent_source_select').val();
+    if (!rawVal) {
+      window.showToast("{{ _('Please select an engine first.') }}", 'info');
+      return false;
+    }
+
+    var isMcp = $('#agent_source_select').find('option:selected').data('is-mcp') === '1';
+    var pipelineRole = isMcp ? '' : ($('#agent_role_select').val() || '');
+
+    window.showToast("{{ _('Creating agent... Please wait.') }}", 'info');
+
+    $.ajax({
+      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
+      type: 'POST',
+      data: {
+        source_select: rawVal,
+        pipeline_role: pipelineRole,
+        open_modal: 'true'
+      },
+      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
+      success: function(resp) {
+        if (resp.status === 'success') {
+          // Add widget to grid
+          if (grids['grid-agents'] && resp.html) {
+            grids['grid-agents'].addWidget(
+              '<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>',
+              { w: 24, h: 1, x: 0, y: 0, autoPosition: true }
+            );
+            $('#gridstack_agent_' + resp.agent_id).find('.selectpicker').selectpicker();
+          }
+          window.showToast(resp.message, 'success');
+          // Open settings modal with newly created agent
+          openAgentSettings(resp.agent_id);
+          // Reset form
+          $('#agent_source_select').selectpicker('val', '');
+          $('#agent_role_select').selectpicker('val', '');
+          $('#role-dropdown-container').hide();
+        } else {
+          window.showToast(resp.message || 'Error', 'error');
+        }
+      },
+      error: function() {
+        window.showToast("{{ _('Error: Could not communicate with server') }}", 'error');
+      }
+    });
+    return false;
+  }
+
+  // Legacy triggerAddAgent kept for backward compatibility with other callers
+  function triggerAddAgent() {
+    var rawVal = $('#agent_source_select').val();
+    if (!rawVal) {
+      window.showToast("{{ _('Please select a service or implementation first.') }}", 'info');
+      return;
+    }
+    window.showToast("{{ _('Creating agent... Please wait.') }}", 'info');
+    $.ajax({
+      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
+      type: 'POST',
+      data: { source_select: rawVal },
+      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
+      success: function(resp) {
+        if (resp.status === 'success') {
+          if (grids['grid-agents']) {
+            grids['grid-agents'].addWidget('<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>', {
+              w: 24, h: 1, x: 0, y: 0, autoPosition: true
+            });
+            var $newWidget = $('#gridstack_agent_' + resp.agent_id);
+            $newWidget.find('.selectpicker').selectpicker();
+          }
+          window.showToast(resp.message, 'success');
+        } else {
+          window.showToast(resp.message || 'Error creating agent', 'error');
+        }
+      },
+      error: function() {
+        window.showToast("{{ _('Error: Could not communicate with server') }}", 'error');
+      }
+    });
+  }
+
+  function triggerAddMCPServer() {
+    var name = $('#mcp_add_name').val().trim();
+    var cmd  = $('#mcp_add_command').val().trim();
+    if (!name || !cmd) { window.showToast("{{ _('Name and Command are required.') }}", 'warning'); return; }
+    $.ajax({
+      url: '/api/ai/mcp/server/add', type: 'POST', contentType: 'application/json',
+      data: JSON.stringify({ name: name, command: cmd }),
+      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
+      success: function(resp) {
+        if (resp.status === 'success') { window.showToast("{{ _('MCP Server added.') }}", 'success'); window.location.reload(); }
+        else { window.showToast(resp.error || "{{ _('Failed.') }}", 'error'); }
+      },
+      error: function() { window.showToast("{{ _('Failed to add MCP server.') }}", 'error'); }
+    });
+  }
+</script>
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+  <div class="grid-stack aot-entry-container" id="grid-agents">
+    {% for agent in agents -%}
+    <div id="gridstack_agent_{{agent.unique_id}}" class="grid-stack-item" gs-id="{{agent.unique_id}}"
+      gs-x="0" gs-y="{{ agent.position_y or 0 }}" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% if agent.entry and agent.entry.model_type.startswith('mcp_') %}
+        {% include 'pages/ai/ai_agent_entry_mcp.html' %}
+      {% else %}
+        {% include 'pages/ai/ai_agent_entry.html' %}
+      {% endif %}
+    </div>
+    {%- endfor -%}
+  </div>
+
+</main>
+</div>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+{% include 'pages/ai/ai_modals.html' %}
+
+<!-- Unified Agent Settings Modal -->
+<div class="modal fade aot-option-modal" id="unifiedAgentSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ _('Agent Settings') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="unifiedAgentSettingsBody">
+        <div id="agentSettingsDynamicContent">
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">{{ _('Loading settings...') }}</p>
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="$('#unifiedAgentDeleteBtn').trigger('click');">{{ _('Delete') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="$('#unifiedAgentSettingsBody form').submit();">{{ _('Save') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openAgentSettings(agentId) {
+    const $modal = $('#unifiedAgentSettingsModal');
+    const $dynamicContent = $('#agentSettingsDynamicContent');
+    
+    // Reset to loading state
+    $dynamicContent.html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">{{ _("Loading settings...") }}</p></div>');
+    $modal.modal('show');
+    
+    $.ajax({
+      url: '/ai/agent/options/' + agentId,
+      type: 'GET',
+      success: function(resp) {
+        if (resp.status === 'success') {
+          // Update modal title with service name (like Input Settings: device_name)
+          if (resp.service_name) {
+            $modal.find('.modal-title').text("{{ _('Agent Settings') }}: " + resp.service_name);
+          } else {
+            $modal.find('.modal-title').text("{{ _('Agent Settings') }}");
+          }
+          $dynamicContent.html(resp.html);
+          
+          // Bind Save Button
+          $('#unifiedAgentSaveBtn').off('click').on('click', function() {
+              const $form = $dynamicContent.find('form');
+              if ($form.length) {
+                  $form.submit();
+              } else {
+                  console.error("No form found in dynamic content");
+                  window.showToast("{{ _('Error: Form not found') }}", "error");
+              }
+          });
+          
+          // Bind Delete Button
+          $('#unifiedAgentDeleteBtn').off('click').on('click', function() {
+              if (confirm("{{ _('Delete this agent?') }}")) {
+                  const tempForm = $('<form>', {
+                      method: 'POST',
+                      action: '/ai/agent/delete/' + agentId
+                  }).append($('<input>', {
+                      type: 'hidden',
+                      name: 'csrf_token',
+                      value: "{{ csrf_token() }}"
+                  }));
+                  $('body').append(tempForm);
+                  tempForm.submit();
+              }
+          });
+          
+          // Initialize/Refresh selectpickers
+          if (typeof $('.selectpicker').selectpicker === 'function') {
+              $dynamicContent.find('.selectpicker').selectpicker('refresh');
+          }
+        } else {
+          $dynamicContent.html('<div class="alert alert-danger">' + (resp.message || 'Error loading settings') + '</div>');
+        }
+      },
+      error: function() {
+        $body.html('<div class="alert alert-danger">{{ _("Error: Could not communicate with server") }}</div>');
+      }
+    });
+  }
+
+  // Store grid instances by ID
+  var grids = {};
+
+  function initGrid(gridId, saveUrl) {
+    let targetColumn = (window.innerWidth <= 768) ? 1 : 24;
+    let gridSelector = '#' + gridId;
+
+    if (grids[gridId]) {
+      if (grids[gridId].getColumn() === targetColumn) return;
+
+      grids[gridId].batchUpdate(true);
+      grids[gridId].column(targetColumn, 'list');
+
+      if (targetColumn === 24) {
+        grids[gridId].engine.nodes.forEach(node => {
+          grids[gridId].update(node.el, { w: 24, x: 0 });
+        });
+      }
+      grids[gridId].batchUpdate(false);
+    } else {
+      grids[gridId] = GridStack.init({
+        animate: true,
+        cellHeight: 52,
+        column: targetColumn,
+        margin: 2,
+        draggable: { handle: '.panel-heading' },
+        float: false,
+        disableOneColumnMode: true,
+        alwaysShowResizeHandle: false
+      }, gridSelector);
+
+      grids[gridId].off('change');
+      grids[gridId].on('change', function (event, items) {
+        if (grids[gridId].getColumn() === 1) return;
+        saveLayout(grids[gridId], saveUrl);
+      });
+    }
+  }
+
+  function saveLayout(grid, url) {
+    const layoutData = grid.save(false).map(node => {
+        return {
+            id: node.id || node.el.getAttribute('gs-id'),
+            x: node.x,
+            y: node.y,
+            w: node.w,
+            h: node.h
+        };
+    });
+
+    $.ajax({
+        url: url,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(layoutData),
+        headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
+        success: function(resp) {
+            console.log('Layout saved to ' + url);
+        }
+    });
+  }
+
+  function initAllGrids() {
+    initGrid('grid-agents', "{{ url_for('routes_ai_agent.save_agent_layout') }}");
+  }
+
+
+  function triggerAddAgent() {
+    const rawVal = $('#agent_source_select').val();
+    if (!rawVal) {
+      window.showToast("{{ _('Please select a service or implementation first.') }}", 'info');
+      return;
+    }
+
+    window.showToast("{{ _('Creating agent... Please wait.') }}", 'info');
+
+    $.ajax({
+      url: "{{ url_for('routes_ai_agent.ai_agent_add_direct') }}",
+      type: 'POST',
+      data: { source_select: rawVal },
+      headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
+      success: function(resp) {
+        if (resp.status === 'success') {
+          // Add widget to GridStack immediately
+          if (grids['grid-agents']) {
+            grids['grid-agents'].addWidget('<div class="grid-stack-item" id="gridstack_agent_' + resp.agent_id + '" gs-id="' + resp.agent_id + '">' + resp.html + '</div>', {
+              w: 24, h: 1, x: 0, y: 0, autoPosition: true
+            });
+            
+            // Initialize selectpickers in the new widget
+            const $newWidget = $('#gridstack_agent_' + resp.agent_id);
+            $newWidget.find('.selectpicker').selectpicker();
+          }
+          window.showToast(resp.message, 'success');
+        } else {
+          window.showToast(resp.message || 'Error creating agent', 'error');
+        }
+      },
+      error: function() {
+        window.showToast("{{ _('Error: Could not communicate with server') }}", 'error');
+      }
+    });
+  }
+
+  function aiAgentAction(action, agentId) {
+    var url = (action === 'agent_activate')
+      ? '/ai/agent/activate/' + agentId
+      : '/ai/agent/deactivate/' + agentId;
+    window.showToast("{{ _('Command sent. Please wait...') }}", 'info');
+    $.ajax({
+      type: 'POST',
+      url: url,
+      headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+      success: function(data) {
+        if (data.status === 'success') {
+          if (action === 'agent_activate') {
+            $('#agent_status_' + agentId).removeClass('inactive-background').addClass('active-background');
+            $('#agent_activate_' + agentId).hide();
+            $('#agent_deactivate_' + agentId).show();
+          } else {
+            $('#agent_status_' + agentId).removeClass('active-background').addClass('inactive-background');
+            $('#agent_activate_' + agentId).show();
+            $('#agent_deactivate_' + agentId).hide();
+          }
+          window.showToast("{{ _('Success') }}", 'success');
+        }
+      },
+      error: function() { window.showToast("{{ _('Error: Could not communicate with server') }}", 'error'); }
+    });
+    return false;
+  }
+
+  function confirmAgentDelete(formId, message) {
+    if (confirm(message)) {
+      document.getElementById(formId).submit();
+    }
+  }
+
+
+  $(document).ready(function() {
+    initAllGrids();
+  });
+  $(window).on('load', initAllGrids);
+  let resizeTimer;
+  $(window).on('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function() {
+      initAllGrids();
+    }, 50);
+  });
+
+  // ==========================================================
+  // v29: MCP Process Lifecycle Functions
+  // ==========================================================
+
+  // v35: mcpStatusRefresh — modal MCP tab only
+  function mcpStatusRefresh() {
+    if ($('#tab-mcp').hasClass('active')) { _loadAiSettingsMcp(); }
+    else { _loadAotMcpServerStatus(); }
+  }
+
+  // Activate MCP agent: DB flag + eager process start + status refresh
+  function mcpAgentActivate(agentId) {
+    window.showToast("{{ _('Starting MCP process...') }}", 'info');
+    $.ajax({
+      type: 'POST',
+      url: '/ai/agent/activate/' + agentId,
+      headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+      success: function(data) {
+        if (data.status === 'success') {
+          $('#agent_status_' + agentId).removeClass('inactive-background').addClass('active-background');
+          $('#agent_activate_' + agentId).hide();
+          $('#agent_deactivate_' + agentId).show();
+          window.showToast("{{ _('MCP server activated') }}", 'success');
+          setTimeout(mcpStatusRefresh, 2000);
+        } else {
+          window.showToast(data.message || "{{ _('Activation failed') }}", 'error');
+        }
+      },
+      error: function() { window.showToast("{{ _('Error: Could not communicate with server') }}", 'error'); }
+    });
+    return false;
+  }
+
+  // Deactivate MCP agent: DB flag + process stop + status refresh
+  function mcpAgentDeactivate(agentId) {
+    window.showToast("{{ _('Stopping MCP process...') }}", 'info');
+    $.ajax({
+      type: 'POST',
+      url: '/ai/agent/deactivate/' + agentId,
+      headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+      success: function(data) {
+        if (data.status === 'success') {
+          $('#agent_status_' + agentId).removeClass('active-background').addClass('inactive-background');
+          $('#agent_activate_' + agentId).show();
+          $('#agent_deactivate_' + agentId).hide();
+          window.showToast("{{ _('MCP server deactivated') }}", 'success');
+          setTimeout(mcpStatusRefresh, 1000);
+        } else {
+          window.showToast(data.message || "{{ _('Deactivation failed') }}", 'error');
+        }
+      },
+      error: function() { window.showToast("{{ _('Error: Could not communicate with server') }}", 'error'); }
+    });
+    return false;
+  }
+
+  // Stop, Restart, or Start MCP process directly (without changing DB activation flag)
+  function mcpProcessAction(action, agentId) {
+    var url = '/api/v1/mcp/servers/' + agentId + '/' + action;
+    fetch(url, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
+      .then(res => res.json())
+      .then(function(data) {
+        window.showToast(data.message || action + ' sent', data.status === 'success' ? 'success' : 'error');
+        setTimeout(function() {
+          mcpStatusRefresh();
+          if ($('#tab-mcp').hasClass('active')) { _loadAiSettingsMcp(); }
+        }, 2000);
+      })
+      .catch(function() { window.showToast("{{ _('Error: Could not communicate with server') }}", 'error'); });
+  }
+
+  // TASK_32: Unified AI Settings modal — System + Devices + MCP
+  function openAiSettings() {
+    $('#aiSettingsModal').modal('show');
+    _loadAiSettingsDevices();
+    _loadAiSettingsMcp();
+  }
+
+  // Load Device Toggles (Tab 2)
+  function _loadAiSettingsDevices() {
+    var $body = $('#aiSettingsDeviceList');
+    $body.html('<p class="text-muted">{{ _("Loading devices...") }}</p>');
+    fetch('/api/v1/ai/devices')
+      .then(function(res) { return res.json(); })
+      .then(function(devices) {
+        if (!devices.length) {
+          $body.html('<p class="text-muted">{{ _("No devices found.") }}</p>');
+          return;
+        }
+        var html = '';
+        devices.forEach(function(d) {
+          var checked = d.is_ai_enabled ? 'checked' : '';
+          var badge   = d.kind === 'input'
+            ? '<span class="badge badge-info mr-1">{{ _("Sensor") }}</span>'
+            : '<span class="badge badge-warning mr-1">{{ _("Output") }}</span>';
+          html += '<div class="aot-modal-option-row">'
+                + '<label class="aot-modal-option-label">' + badge + d.name
+                + ' <span class="text-muted" style="font-size:0.75em;">(' + d.device_type + ')</span></label>'
+                + '<div class="aot-modal-option-control">'
+                + '<div class="custom-control custom-switch">'
+                + '<input type="checkbox" class="custom-control-input ai-device-toggle"'
+                + ' id="aitog_' + d.device_id + '"'
+                + ' data-device-id="' + d.device_id + '"'
+                + ' data-kind="' + d.kind + '"'
+                + (checked ? ' checked' : '') + '>'
+                + '<label class="custom-control-label" for="aitog_' + d.device_id + '"></label>'
+                + '</div>'
+                + '</div>'
+                + '</div>';
+        });
+        $body.html(html);
+        $body.find('.ai-device-toggle').on('change', function() {
+          var $cb = $(this);
+          var deviceId = $cb.data('device-id');
+          var kind     = $cb.data('kind');
+          var enabled  = $cb.prop('checked');
+          fetch('/api/v1/ai/devices/' + deviceId + '/ai_toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+            body: JSON.stringify({ kind: kind, is_ai_enabled: enabled })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.status !== 'success') {
+              window.showToast(data.message || '{{ _("Toggle failed") }}', 'error');
+              $cb.prop('checked', !enabled);
+            }
+          })
+          .catch(function() {
+            window.showToast('{{ _("Error: Could not communicate with server") }}', 'error');
+            $cb.prop('checked', !enabled);
+          });
+        });
+      })
+      .catch(function() {
+        $body.html('<p class="text-danger">{{ _("Failed to load devices.") }}</p>');
+      });
+  }
+
+  // Load AoT MCP Server status (systemd: aotmcp)
+  function _loadAotMcpServerStatus() {
+    fetch('/api/v1/mcp/aot-mcp/status')
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        var state = data.status || 'unknown';
+        var statusCls = state === 'active'   ? 'badge-success'
+                      : state === 'failed'   ? 'badge-danger'
+                      : 'badge-secondary';
+        var label = state === 'active' ? '{{ _("running") }}' : state;
+        $('#aotMcpStatusBadge').removeClass('badge-success badge-danger badge-secondary badge-warning')
+                               .addClass(statusCls).text(label);
+        // Toggle buttons
+        if (state === 'active') {
+          $('#btnAotMcpStart').hide();
+          $('#btnAotMcpStop').show();
+          $('#btnAotMcpRestart').show();
+        } else {
+          $('#btnAotMcpStart').show();
+          $('#btnAotMcpStop').hide();
+          $('#btnAotMcpRestart').hide();
+        }
+      })
+      .catch(function() {
+        $('#aotMcpStatusBadge').removeClass().addClass('badge badge-secondary').text('{{ _("unknown") }}');
+      });
+  }
+
+  // AoT MCP Server control action
+  function aotMcpAction(action) {
+    var labels = { start: '{{ _("Starting...") }}', stop: '{{ _("Stopping...") }}', restart: '{{ _("Restarting...") }}' };
+    window.showToast(labels[action] || action, 'info');
+    fetch('/api/v1/mcp/aot-mcp/' + action, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.status === 'success') {
+        window.showToast('{{ _("AoT MCP Server") }}: ' + action + ' OK', 'success');
+      } else {
+        window.showToast(data.message || '{{ _("Action failed") }}', 'error');
+      }
+      setTimeout(_loadAotMcpServerStatus, 1500);
+    })
+    .catch(function() { window.showToast('{{ _("Request failed") }}', 'error'); });
+  }
+
+  // Load MCP entry list — status only, no lifecycle controls (auto-managed)
+  function _loadAiSettingsMcp() {
+    _loadAotMcpServerStatus();
+    var $body = $('#aiSettingsMcpList');
+    $body.html('<p class="text-muted">{{ _("Loading...") }}</p>');
+    fetch('/api/v1/mcp/servers')
+      .then(function(res) { return res.json(); })
+      .then(function(servers) {
+        if (!servers.length) {
+          $body.html('<p class="text-muted">{{ _("No MCP entries configured.") }}</p>');
+          return;
+        }
+        var html = '';
+        servers.forEach(function(s) {
+          var statusCls = s.status === 'running'  ? 'badge-success'
+                        : s.status === 'cooldown' ? 'badge-warning'
+                        : 'badge-secondary';
+          html += '<div class="aot-modal-option-row">'
+                + '<span class="aot-modal-option-label">' + s.name
+                + ' <span class="badge ' + statusCls + ' ml-1">' + (s.status || 'stopped') + '</span>'
+                + '</span>'
+                + '</div>';
+        });
+        $body.html(html);
+      })
+      .catch(function() {
+        $body.html('<p class="text-danger">{{ _("Failed to load MCP entries.") }}</p>');
+      });
+  }
+
+  // Save System Settings (Tab 1)
+  $(document).on('click', '#btnSaveUnifiedSettings', function() {
+    var btn = $(this);
+    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> {{ _("Saving...") }}');
+    var data = {};
+    $('#unifiedSystemSettingsForm').serializeArray().forEach(function(f) {
+      data[f.name] = f.value === 'true' ? true : f.value === 'false' ? false : f.value;
+    });
+    // Checkbox toggles are not captured by serializeArray — add manually
+    data['context_broadcast_enabled'] = $('#toggleContextBroadcast').prop('checked');
+    fetch('/api/v1/ai/settings/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+      body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      btn.prop('disabled', false).html('<i class="fa fa-save"></i> {{ _("Save Settings") }}');
+      if (res.status === 'success') {
+        window.showToast('{{ _("Settings saved") }}', 'success');
+        if (res.restart_required) {
+          window.showToast('{{ _("Restart required for AI toggle change") }}', 'warning');
+        }
+      } else {
+        window.showToast(res.message || '{{ _("Save failed") }}', 'error');
+      }
+    })
+    .catch(function() {
+      btn.prop('disabled', false).html('<i class="fa fa-save"></i> {{ _("Save Settings") }}');
+      window.showToast('{{ _("Error: Could not communicate with server") }}', 'error');
+    });
+  });
+</script>
+
+<!-- TASK_34: Unified AI Settings Modal — AoT Modern UI Standard -->
+<div class="modal fade aot-option-modal" id="aiSettingsModal" tabindex="-1" role="dialog" aria-labelledby="aiSettingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="aiSettingsModalLabel">{{ _('AI Settings') }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Tab Nav -->
+        <ul class="nav nav-tabs px-3 pt-2" id="aiSettingsTabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="tab-system-tab" data-toggle="tab" href="#tab-system" role="tab">
+              {{ _('System') }}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="tab-devices-tab" data-toggle="tab" href="#tab-devices" role="tab">
+              {{ _('Devices') }}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="tab-mcp-tab" data-toggle="tab" href="#tab-mcp" role="tab">
+              {{ _('MCP Servers') }}
+            </a>
+          </li>
+        </ul>
+
+        <div class="tab-content px-3 pb-3" style="max-height: 65vh; overflow-y: auto;">
+
+          <!-- TAB 1: System Settings -->
+          <div class="tab-pane fade show active pt-3" id="tab-system" role="tabpanel">
+            <form id="unifiedSystemSettingsForm">
+              <div class="alert alert-info mb-3" role="alert">
+                <i class="fa fa-info-circle"></i>
+                <strong>{{ _('Experimental Feature') }}</strong>:
+                {{ _('AI functionality is currently in experimental stage.') }}
+              </div>
+
+              <div class="aot-modal-group-title">{{ _('General') }}</div>
+              <div class="aot-modal-container">
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Auto Approve Routine Tasks') }}</label>
+                  <div class="aot-modal-option-control">
+                    <select class="form-control aot-modern-input" name="auto_approve_routine">
+                      <option value="true" {% if ai_settings and ai_settings.auto_approve_routine %}selected{% endif %}>{{ _('Yes') }}</option>
+                      <option value="false" {% if not ai_settings or not ai_settings.auto_approve_routine %}selected{% endif %}>{{ _('No') }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Max Impact to Auto Approve') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="number" class="form-control aot-modern-input" name="max_impact_auto_approve" value="{{ ai_settings.max_impact_auto_approve if ai_settings else 30 }}">
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Require Feedback on Fail') }}</label>
+                  <div class="aot-modal-option-control">
+                    <select class="form-control aot-modern-input" name="require_feedback">
+                      <option value="true" {% if not ai_settings or ai_settings.require_feedback %}selected{% endif %}>{{ _('Yes') }}</option>
+                      <option value="false" {% if ai_settings and not ai_settings.require_feedback %}selected{% endif %}>{{ _('No') }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="aot-modal-group-title">{{ _('Models') }}</div>
+              <div class="aot-modal-container">
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Supervisor Model') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="text" class="form-control aot-modern-input" name="default_supervisor" value="{{ ai_settings.default_supervisor if ai_settings else 'gemini-2.5-pro' }}">
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Worker Model') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="text" class="form-control aot-modern-input" name="default_worker" value="{{ ai_settings.default_worker if ai_settings else 'gemini-2.5-flash' }}">
+                  </div>
+                </div>
+              </div>
+
+              <div class="aot-modal-group-title">{{ _('Context Layer') }}</div>
+              <div class="aot-modal-container">
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Context Broadcast') }}</label>
+                  <div class="aot-modal-option-control">
+                    <label class="btn-toggle mb-0">
+                      <input type="checkbox" id="toggleContextBroadcast" class="btn-toggle-input"
+                             {% if not ai_settings or ai_settings.context_broadcast_enabled is none or ai_settings.context_broadcast_enabled %}checked{% endif %}>
+                      <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                    </label>
+                  </div>
+                </div>
+                {% if facilities %}
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Default Site') }}</label>
+                  <div class="aot-modal-option-control">
+                    <!-- Multi-site fallback: which GeoFacility to use when a page/conversation
+                         has no explicit facility scope (AI Library, conversational AI, portal
+                         all fall back to this). See
+                         .local/plans/phase6_knowledge_digest_design.md (multi-site addendum). -->
+                    <select class="form-control aot-modern-input" name="default_facility_id">
+                      <option value="">{{ _('(none)') }}</option>
+                      {% for f in facilities %}
+                      <option value="{{ f.unique_id }}" {% if settings and settings.default_facility_id == f.unique_id %}selected{% endif %}>
+                        {{ f.name }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="aot-modal-group-title">{{ _('Context & Budget') }}</div>
+              <div class="aot-modal-container">
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Blackout Start') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="time" class="form-control aot-modern-input" name="blackout_start" value="{{ ai_settings.blackout_start if ai_settings else '23:00' }}">
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Blackout End') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="time" class="form-control aot-modern-input" name="blackout_end" value="{{ ai_settings.blackout_end if ai_settings else '06:00' }}">
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Context Scope (Hours)') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="number" class="form-control aot-modern-input" name="context_hours" value="{{ ai_settings.context_hours if ai_settings else 24 }}">
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Max History Context') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="number" class="form-control aot-modern-input" name="max_history" value="{{ ai_settings.max_history if ai_settings else 5 }}">
+                  </div>
+                </div>
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label">{{ _('Monthly Budget Limit (USD)') }}</label>
+                  <div class="aot-modal-option-control">
+                    <input type="number" step="0.1" class="form-control aot-modern-input" name="budget_limit_usd" value="{{ ai_settings.budget_limit_usd if ai_settings else 10.0 }}">
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- TAB 2: Device Toggles -->
+          <div class="tab-pane fade pt-3" id="tab-devices" role="tabpanel">
+            <p class="text-muted">
+              {{ _('Toggle which devices are included in AI judgment. Changes are saved immediately.') }}
+            </p>
+            <div class="aot-modal-container" id="aiSettingsDeviceList">
+              <p class="text-muted">{{ _('Loading...') }}</p>
+            </div>
+          </div>
+
+          <!-- TAB 3: MCP Servers -->
+          <div class="tab-pane fade pt-3" id="tab-mcp" role="tabpanel">
+
+            <!-- AoT MCP Server control -->
+            <div class="aot-modal-group-title">{{ _('AoT MCP Server') }}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row">
+                <span class="aot-modal-option-label">
+                  AoT MCP Server
+                  <span id="aotMcpStatusBadge" class="badge badge-secondary ml-1">{{ _('loading...') }}</span>
+                </span>
+                <div class="aot-modal-option-control">
+                  <button id="btnAotMcpStart" class="btn btn-xs btn-outline-success aot-pill-btn" style="display:none;" onclick="aotMcpAction('start')">{{ _('Start') }}</button>
+                  <button id="btnAotMcpRestart" class="btn btn-xs btn-outline-secondary aot-pill-btn" style="display:none;" onclick="aotMcpAction('restart')">{{ _('Restart') }}</button>
+                  <button id="btnAotMcpStop" class="btn btn-xs btn-outline-danger aot-pill-btn" style="display:none;" onclick="aotMcpAction('stop')">{{ _('Stop') }}</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- MCP entry list (auto-managed, status only) -->
+            <div class="aot-modal-group-title">{{ _('MCP Entries') }}</div>
+            <div class="aot-modal-container" id="aiSettingsMcpList">
+              <p class="text-muted">{{ _('Loading...') }}</p>
+            </div>
+          </div>
+
+        </div><!-- /tab-content -->
+      </div><!-- /modal-body -->
+
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btnSaveUnifiedSettings">{{ _('Save Settings') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

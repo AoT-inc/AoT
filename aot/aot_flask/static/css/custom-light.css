@@ -1,0 +1,65 @@
+/*
+ * Custom Light Theme overrides
+ * Token reassignment file — Theme-Switchable UI (Plan 019)
+ *
+ * FORBIDDEN: Non-token property declarations (e.g., background: red;)
+ * FORBIDDEN: Selector rules with property blocks (e.g., .btn { background: blue; })
+ * ALLOWED: Token reassignments only (--aot-*: value;)
+ *
+ * Design Rule (per Supplement 5):
+ * custom-light.css redefines ONLY surface tokens that differ from light defaults.
+ * These reassignments ARE property declarations syntactically, but they only
+ * redefine existing token values — they do not add new component styles.
+ */
+
+/* ========================================================================
+   Section 1.6: surface tokens — light mode
+   ======================================================================== */
+:root {
+  --aot-surface-card: #ffffff;
+  --aot-surface-modal: #ffffff;
+  --aot-surface-dropdown: #ffffff;
+  --aot-surface-input: #ffffff;
+  --aot-surface-body: #f8f9fa;
+}
+
+/* ========================================================================
+   Section 1.7: note tokens — light mode
+   ======================================================================== */
+:root {
+  --aot-note-card-bg: #ffffff;
+  --aot-note-card-border: #eef2f5;
+  --aot-note-card-shadow: rgba(0,0,0,0.03);
+  --aot-note-card-hover-shadow: rgba(0,0,0,0.06);
+  --aot-note-card-body-text: #4a5568;
+  --aot-note-footer-bg: #f8fafc;
+  --aot-note-footer-text: #94a3b8;
+  --aot-note-tag-bg: #e0f2fe;
+  --aot-note-tag-text: #0369a1;
+  --aot-note-tag-hover-bg: #bae6fd;
+  --aot-note-fab-bg: #3b82f6;
+  --aot-note-search-bg: #ffffff;
+  --aot-note-search-border: #cbd5e1;
+  --aot-note-search-focus: #3b82f6;
+}
+
+/* ========================================================================
+   Section 1.5: border tokens — light mode
+   ======================================================================== */
+:root {
+  --aot-border-neutral: #dddddd;
+  --aot-border-light: #f0f0f0;
+  --aot-border-form: #ced4da;
+}
+
+/* ========================================================================
+   Section 1.9: modal tokens — light mode
+   ------------------------------------------------------------------------
+   title/body/group-title 는 2026-07부터 aot-theme-variables.css 기본값이
+   --aot-color-text-primary/secondary 를 따르도록 바뀌어(settings/custom_ui
+   텍스트색 연동) 라이트모드에서 별도로 재고정할 값이 없다 — 여기서 리터럴로
+   덮어쓰면 그 연동이 끊긴다. backdrop 만 유지.
+   ======================================================================== */
+:root {
+  --aot-modal-backdrop: rgba(0,0,0,0.5);
+}

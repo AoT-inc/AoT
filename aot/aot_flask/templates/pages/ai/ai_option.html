@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_option" %}
+{% set help_page = [manual_url("ai/overview/"), _('AI Global Options')] %}
+
+{% block title %} - {{ _('AI Global Options') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+<style>
+    /* Standard AoT Option Styles are mostly in layout.html/gridstack-custom.css */
+</style>
+{% endblock %}
+
+{% block body %}
+<main role="main" class="container">
+    {% include 'flash_messages.html' %}
+
+    <div class="aot-settings-title">
+        <h3>{{ _('Global AI Settings') }} <a href="{{ manual_url('ai/overview/') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+    </div>
+    <p class="aot-modal-body-text">{{ _('Configure system-wide parameters for the AI orchestration layer.') }}</p>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    <!-- AI Context Section -->
+    <div class="alert alert-info mb-4" role="alert">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-1">{{_('View Device AI Context')}}</h6>
+                <small>{{_('Inspect AI context data for individual devices')}}</small>
+            </div>
+            <button type="button" class="btn btn-sm aot-pill-btn aot-pill-btn-primary" data-toggle="modal" data-target="#device_selector_modal">
+                {{_('Browse Devices')}}
+            </button>
+        </div>
+    </div>
+
+    <form method="post" action="{{ url_for('routes_ai_agent.page_ai_options') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="aot-modal-group-title">{{ _('Infrastructure') }}</div>
+        <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Master Proxy URL') }}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" name="master_proxy_url" class="form-control aot-modern-input" 
+                           placeholder="http://proxy-server:8080" value="{{ config.get('AI_MASTER_PROXY', '') }}">
+                    <small class="form-text text-muted ml-1">{{ _('Global proxy to be used if agent-specific endpoint is empty.') }}</small>
+                </div>
+            </div>
+
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Request Timeout (sec)') }}</label>
+                <div class="aot-modal-option-control">
+                    <input type="number" name="request_timeout" class="form-control aot-modern-input" 
+                           value="60" style="max-width: 150px;">
+                </div>
+            </div>
+        </div>
+
+        <div class="aot-modal-group-title">{{ _('User Experience (Toast)') }}</div>
+        <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Hide AI Success messages') }}</label>
+                <div class="aot-modal-option-control">
+                    <label class="btn-toggle mb-0">
+                        <input id="hide_ai_success" name="hide_ai_success" type="checkbox" class="btn-toggle-input" value="y">
+                        <div class="btn-toggle-slider">
+                            <div class="btn-toggle-thumb"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Hide AI Warning messages') }}</label>
+                <div class="aot-modal-option-control">
+                    <label class="btn-toggle mb-0">
+                        <input id="hide_ai_warning" name="hide_ai_warning" type="checkbox" class="btn-toggle-input" value="y">
+                        <div class="btn-toggle-slider">
+                            <div class="btn-toggle-thumb"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-right mt-4" style="padding-right: 15px;">
+            <button type="submit" class="btn btn-primary aot-pill-btn px-5 font-weight-bold">{{ _('Save Settings') }}</button>
+        </div>
+    </form>
+</main>
+{% endblock %}

@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* ── Brand unification ──────────────────────────────────────────────
+ * Remap Tailwind's accent (blue) and neutral (slate) scales onto the AoT
+ * brand tokens so the Notes widget matches the AI chat. Values reference
+ * --aot-* (defined by the host app's aot-theme-variables.css, which cascades
+ * into this portaled widget), so colors also follow settings/custom_ui
+ * dynamically. No yellow (--aot-color-primary) is ever used.
+ * `red` is left as-is (destructive/status). */
+@theme {
+    /* Accent: blue → brand green */
+    --color-blue-50:  var(--aot-color-brand-accent);
+    --color-blue-100: var(--aot-color-brand-accent);
+    --color-blue-300: var(--aot-color-brand-secondary);
+    --color-blue-400: var(--aot-color-brand-secondary);
+    --color-blue-500: var(--aot-color-brand-secondary);
+    --color-blue-600: var(--aot-color-brand-primary);
+    --color-blue-700: var(--aot-color-brand-primary);
+
+    /* Neutral: slate → brand-tinted greys/greens */
+    --color-slate-50:  var(--aot-color-brand-accent);
+    --color-slate-100: var(--aot-border-light);
+    --color-slate-200: var(--aot-border-light);
+    --color-slate-300: var(--aot-border-neutral);
+    --color-slate-400: var(--aot-color-text-secondary);
+    --color-slate-500: var(--aot-color-text-secondary);
+    --color-slate-600: var(--aot-color-text-secondary);
+    --color-slate-700: var(--aot-color-text-primary);
+    --color-slate-800: var(--aot-color-text-primary);
+    --color-slate-900: var(--aot-color-text-primary);
+}
+
+@layer components {
+    .notes-drawer-z-index {
+        z-index: 99999 !important;
+    }
+    .aot-circle-btn {
+        border-radius: 9999px !important;
+        width: 32px !important;
+        height: 32px !important;
+        aspect-ratio: 1 / 1 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+    }
+}

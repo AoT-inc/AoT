@@ -1,0 +1,83 @@
+{
+  "Live_Measurements": {
+    "description": "Real-time display of incoming data from active controllers.",
+    "source": "TimeSeries Database (InfluxDB)",
+    "refresh_rate": "Dynamic (based on controller sampling period)"
+  },
+  "Asynchronous_Graphs": {
+    "description": "High-performance charting for large datasets.",
+    "features": {
+      "aggregation": "Automatically averages data points if more than 700 points exist in the selected time span.",
+      "on_demand_loading": "Only downloads data for the visible zoom level to save bandwidth."
+    }
+  },
+  "Dashboard": {
+    "description": "Customizable page combining data views and system controls through widgets.",
+    "tabs": {
+      "concept": "Each tab is an independent dashboard with its own widgets and layout. Every widget belongs to exactly one tab. Used to separate screens by purpose (e.g. per greenhouse or per function).",
+      "management": {
+        "create": "'+' button at the left of the tab strip.",
+        "rename_delete_duplicate_lock": "Gear (settings) icon opens 'Dashboard Settings'. Duplicate copies the tab and all its widgets. Deleting the last tab auto-creates a new one. Lock/Unlock is per-tab and freezes the arrangement.",
+        "reorder": "Drag tabs left/right; order saves automatically.",
+        "add_widget": "When the tab is unlocked, pick a widget type and 'Add Widget'; it lands on the current tab.",
+        "move_widget_between_tabs": "Open a widget's gear icon and choose another tab in the 'Tab' dropdown."
+      }
+    }
+  },
+  "Dashboard_Widgets": {
+    "categories": {
+      "Visualization": [
+        "AoT_gauge_angular",
+        "AoT_graph",
+        "widget_indicator",
+        "widget_gauge_solid"
+      ],
+      "Control": [
+        "AoT_controller",
+        "widget_controller_activate_deactivate",
+        "widget_output_pwm_slider",
+        "widget_trigger_sequence"
+      ],
+      "Environment": [
+        "AoT_weather_fcst_announcement",
+        "AoT_wind_angular",
+        "AoT_map"
+      ],
+      "Intelligence": [
+        "widget_ai_insight"
+      ]
+    }
+  },
+  "Key_Widgets": {
+    "AoT_map": {
+      "name": "AoT Map",
+      "purpose": "Shows devices on an interactive MapLibre GL map, highlighting operating state by color; supports GIS overlay layers and 3D facility rendering.",
+      "key_options": ["saved map / fallback lat-lng-zoom", "3D terrain, pitch, bearing, facility render mode", "which Input/Output/Function devices appear", "measurement side panel", "labels (master switch, collision, size)", "sensor marker style + 24h chart popup", "site/zone/facility/equipment shape toggles"],
+      "notable": "Realtime sensor values anchored on 3D structures; shows latest AI advisories as clickable chips when global AI is configured."
+    },
+    "widget_trigger_sequence": {
+      "name": "Sequence Controller",
+      "purpose": "Activates, deactivates, and monitors a Sequence function (trigger_sequence), showing its action list and schedule.",
+      "key_options": ["Sequence Function to control", "refresh seconds", "show actions list", "synced sequence settings: start/end time, cycle period, startup delay, step crossing time"],
+      "notable": "Body shows a weekly schedule with per-weekday enable checkboxes editable from the dashboard."
+    },
+    "AoT_timer": {
+      "name": "AoT Timer",
+      "purpose": "Runs an output for an entered h/m/s duration then turns it off (0 = run until stopped); ON/OFF toggle switches the output directly.",
+      "key_options": ["output channel", "operation mode: Cycle (run/rest repeated) or Simple (single run)", "cycle run/rest/count", "scheduled start hh:mm (device timezone)", "show status + elapsed time"],
+      "notable": "Server-side worker drives ON/OFF cycles and survives app restarts (scheduled timers re-armed)."
+    },
+    "AoT_graph": {
+      "name": "AoT Graph",
+      "purpose": "Synchronous time-series graph (Highcharts Stock) plotting selected measurements over a configured window.",
+      "key_options": ["time axis: refresh, X-axis duration + unit, auto-refresh, live-window reset", "data sources: Input/Function/Output/PID/Note Tag", "style toggles: header buttons, title, navigator, export, range selector, legend", "per-series color, type (line/step/column), Y-axis min/max"],
+      "notable": "On-demand history loading via range buttons (1m..3mo/All) or zoom; Reset returns to the live sliding window."
+    },
+    "AoT_gauge_angular": {
+      "name": "AoT Circular Gauge",
+      "purpose": "Shows one measurement on a circular gauge with colored bands.",
+      "key_options": ["measurement (Input/Function/PID)", "min/max range", "number of color sections", "preset: Custom/Temperature/Humidity/VPD", "decimals, font sizes, value offset"],
+      "notable": "Presets auto-set min/max and follow the global 5-band palette (Settings > Custom UI); Maximum Value must match the top (High) section."
+    }
+  }
+}

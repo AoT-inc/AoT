@@ -1,0 +1,14 @@
+<html>
+  <head>
+    <title>{{_('Error 502: Bad Gateway Error')}}</title>
+  </head>
+  <body>
+    <h2>{{_('Error 502: Bad Gateway Error')}}</h2>
+
+    <p>{{_('Something went wrong, but it is probably not your fault. Try refreshing the page to see if it loads normally. If refreshing does not solve it, please reboot your system and try again. If the problem persists, please')}} <a href="https://github.com/AoT-inc/AoT/issues/new?template=problem-bug-report.md" target="_blank">{{_('submit a new issue on GitHub')}}</a> {{_('with useful information to help identify the cause.')}}</p>
+    
+    <p>{{_('The last 50 lines of the AoT frontend web log can be checked with the following command')}}: <pre>journalctl -u aotflask | tail -n 50</pre></p>
+    
+    <p>{{_('If you create an issue on GitHub, please provide this log snippet for diagnostic purposes.')}}</p>
+  </body>
+</html>

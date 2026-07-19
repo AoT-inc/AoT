@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+
+{% block title %} - {{ _('MCP Servers') }}{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/pages/mcp_servers.css') }}?v=v21" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mcp-container">
+    <div class="aot-settings-title">
+        <h3>{{ _('MCP Server Management') }}</h3>
+        <div class="d-flex" style="gap: 8px;">
+            <button id="btn-refresh-all" class="btn aot-pill-btn" title="{{ _('Refresh All Status') }}">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button id="btn-add-server" class="btn aot-pill-btn aot-pill-btn-primary" data-toggle="modal" data-target="#modal-add-server">
+                <i class="fas fa-plus mr-2"></i>{{ _('Add Server') }}
+            </button>
+        </div>
+    </div>
+    <p class="aot-modal-body-text">{{ _('Monitor and control Model Context Protocol bridge processes') }}</p>
+
+    <div class="row" id="mcp-server-grid">
+        <!-- Server cards will be injected here by JS -->
+        <div class="col-12 text-center py-5 loading-state">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">{{ _('Discovering MCP servers...') }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Server Modal -->
+<div class="modal fade aot-option-modal" id="modal-add-server" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title font-weight-bold">{{ _('Configure MCP Server') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <form id="form-mcp-server">
+                    <input type="hidden" id="server-unique-id" name="unique_id">
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Server Name') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" class="form-control aot-modern-input" id="server-name" name="name" placeholder="e.g., Local Python Tooling" required>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Command') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" class="form-control aot-modern-input" id="server-command" name="command" placeholder="e.g., npx -y @modelcontextprotocol/server-everything" required>
+                            </div>
+                        </div>
+                        <div class="aot-modal-body-text text-muted">{{ _('The executable command to start the MCP server process.') }}</div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Scope') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select class="form-control aot-modern-select" id="server-scope" name="scope">
+                                    <option value="general">{{ _('General (Shared)') }}</option>
+                                    <option value="specific">{{ _('Specific (Restricted)') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Activate on Save') }}</label>
+                            <div class="aot-modal-option-control">
+                                <label class="btn-toggle mb-0">
+                                    <input type="checkbox" class="btn-toggle-input" id="server-is-activated" name="is_activated">
+                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="aot-modal-group-title">{{ _('Environment Variables') }} (JSON)</div>
+                    <div class="aot-modal-container">
+                        <textarea class="form-control aot-modern-input" id="server-env" name="env_json" rows="3" placeholder='{"API_KEY": "..."}'></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" id="btn-save-server" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Save Configuration') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tools List Modal -->
+<div class="modal fade aot-option-modal" id="modal-view-tools" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title font-weight-bold" id="tools-modal-title">{{ _('Available Tools') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body overflow-auto" style="max-height: 70vh;">
+                <div id="tools-container" class="list-group list-group-flush">
+                    <!-- Tools list injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- MCP Server Management Logic -->
+<script src="{{ url_for('static', filename='js/geo/dist/mcp_servers.bundle.js') }}?v=v21"></script>
+{% endblock %}

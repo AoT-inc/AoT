@@ -1,0 +1,461 @@
+{% set dict_output_type = ({
+"on_off": "On/Off",
+"pwm": "PWM",
+"value": "Value",
+"volume": "Volume"
+})
+%}
+
+<div id="mod_function_{{each_function.unique_id}}">
+  <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+    {{form_mod_pid_base.csrf_token}}
+    {{form_mod_pid_base.function_id(value=each_function.unique_id)}}
+    {{form_mod_pid_base.function_type(value='pid')}}
+    
+    {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
+        {{ render_device_map(
+        'function',
+        each_function.unique_id,
+        form_mod_pid_base.latitude if form_mod_pid_base.latitude is defined else None,
+        form_mod_pid_base.longitude if form_mod_pid_base.longitude is defined else None,
+        form_mod_pid_base.location_source if form_mod_pid_base.location_source is defined else None,
+        each_function.latitude,
+        each_function.longitude,
+        each_function.location_source,
+        'function_mod',
+        'modal_config_' ~ each_function.unique_id,
+        '280px',
+        None,
+        None,
+        None,
+        form_id='form_function_' ~ each_function.unique_id,
+        map_config_id=(each_function.map_config_id if each_function.map_config_id else (map_config_id if map_config_id is defined else '')),
+        map_configs=(map_configs if map_configs is defined else []),
+        map_overlays=map_overlays,
+        save_id='mod_function_save_' ~ each_function.unique_id
+        ) }}
+      </div>
+    </div>
+
+    {% if 'pid_pid' in function_info and 'message' in function_info['pid_pid'] %}
+    <div class="aot-modal-body-text mb-3" style="font-style: italic; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+        {{function_info['pid_pid']['message']}}
+    </div>
+    {% endif %}
+
+    <div class="aot-modal-body-text mb-3">
+        {{_('After selecting Raise and/or Lower Output, additional options will appear for each output and must be configured. The options available depend on the output type selected. Therefore, before enabling the PID controller, confirm status after saving to ensure all configuration is complete.')}}
+    </div>
+
+    <div id="status_activated_enable_{{each_function.unique_id}}" style="{% if not each_function.is_activated %}display: none; {% endif %}">
+        <div class="aot-modal-group-title">{{_('Status')}}</div>
+        <div class="aot-modal-container">
+            <span id="function_status_activated_{{each_function.unique_id}}"></span>
+        </div>
+    </div>
+
+    <div id="return_text_{{each_function.unique_id}}" class="mb-3"></div>
+
+
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+        
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.name.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.name(class_='form-control aot-modern-input', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+            </div>
+        </div>
+        {% if tabs is defined and tabs and tabs|length > 1 %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Tab')}}</label>
+            <div class="aot-modal-option-control">
+                <select name="tab_id" class="form-control aot-modern-input">
+                    {% for tab in tabs %}
+                    <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.measurement.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" data-live-search="true"
+                    id="measurement" name="measurement" title="{{_('Select a measurement to use as input')}}">
+                    <option value="">{{_('None Selected')}}</option>
+                    {% for each_input_form in choices_input -%}
+                    <option value="{{each_input_form['value']}}" {% if each_function.measurement==each_input_form['value'] %} selected{% endif %}>{{each_input_form['item']}}</option>
+                    {% endfor -%}
+                    {% for each_function_form in choices_function -%}
+                    <option value="{{each_function_form['value']}}" {% if each_function.measurement==each_function_form['value'] %} selected{% endif %}>{{each_function_form['item']}}</option>
+                    {% endfor -%}
+                </select>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.direction.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                    id="direction" name="direction" title="{{_('Select direction to control')}}">
+                    <option value="raise" {% if each_function.direction=='raise' %} selected{% endif %}>{{_('Raise')}}</option>
+                    <option value="lower" {% if each_function.direction=='lower' %} selected{% endif %}>{{_('Lower')}}</option>
+                    <option value="both" {% if each_function.direction=='both' %} selected{% endif %}>{{_('Both')}}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.period.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.period(class_='form-control aot-modern-input', value=each_function.period, **{'title': dict_translation['period']['phrase']})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.start_offset.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.start_offset(class_='form-control aot-modern-input', value=each_function.start_offset, **{'title': dict_translation['start_offset']['phrase']})}}
+            </div>
+        </div>
+
+         <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.max_measure_age.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.max_measure_age(class_='form-control aot-modern-input', value=each_function.max_measure_age, **{'title': dict_translation['max_age']['phrase']})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
+            <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '{{ each_function.unique_id }}', targetType: 'pid', name: '{{ each_function.name }}' } }))">
+                    {{_('Note')}}
+                </button>
+            </div>
+        </div>
+        {% if ai_settings and ai_settings.ai_enabled %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Utilization')}}</label>
+            <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="AoT_AI.openChat({ targetId: '{{ each_function.unique_id }}', targetType: 'pid', name: '{{ each_function.name }}' })">
+                    {{_('Ask AI')}}
+                </button>
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Context')}}</label>
+            <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="AIContextPanel.openContext('{{ each_function.unique_id }}', '{{ each_function.name }}')">
+                    {{_('View Context')}}
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="aot-modal-group-title">{{_('PID Parameters')}}</div>
+    <div class="aot-modal-container">
+        
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.setpoint(class_='form-control aot-modern-input', value=each_function.setpoint, **{'title':_('This is the desired state of the particular environmental condition. For example, you might enter a desired temperature in degrees Celsius.')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.band.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.band(class_='form-control aot-modern-input', value=each_function.band, **{'title':_('Control hysteresis around setpoint. Applied as setpoint +/- band value. 0 to disable.')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.send_lower_as_negative.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                     <input id="send_lower_as_negative" name="send_lower_as_negative" type="checkbox" class="btn-toggle-input" title="{{_('Send Lower as Negative to Output.')}}" value="y" {% if each_function.send_lower_as_negative %} checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.store_lower_as_negative.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                     <input id="store_lower_as_negative" name="store_lower_as_negative" type="checkbox" class="btn-toggle-input" title="{{_('Store Lower measurement as Negative.')}}" value="y" {% if each_function.store_lower_as_negative %} checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.k_p.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.k_p(class_='form-control aot-modern-input', value=each_function.p, **{'title':_('Proportional Gain')})}}
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.k_i.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.k_i(class_='form-control aot-modern-input', value=each_function.i, **{'title':_('Integral Gain')})}}
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.k_d.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.k_d(class_='form-control aot-modern-input', value=each_function.d, **{'title':_('Derivative Gain')})}}
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.integrator_max.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.integrator_max(class_='form-control aot-modern-input', value=each_function.integrator_min, **{'title':_('Limits the minimum of the integrator')})}}
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.integrator_min.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.integrator_min(class_='form-control aot-modern-input', value=each_function.integrator_max, **{'title':_('Limits the maximum of the integrator')})}}
+            </div>
+        </div>
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Output Settings')}}</div>
+    <div class="aot-modal-container">
+        
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.raise_output_id.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" data-live-search="true"
+                    id="raise_output_id" name="raise_output_id" title="{{_('Select output to raise the measured value')}}">
+                    <option value="">{{_('Inactive')}}</option>
+                    {%- for each_output in choices_output_channels -%}
+                    <option value="{{each_output['value']}}" {% if each_function.raise_output_id==each_output['value'] %} selected{% endif %}>{{each_output['item']}}</option>
+                    {%- endfor -%}
+                </select>
+            </div>
+        </div>
+
+        {% for each_output in output if each_function.raise_output_id and "," in each_function.raise_output_id and each_function.raise_output_id.split(",")[0] == each_output.unique_id %}
+        
+        <div class="aot-modal-option-row">
+            {% if 'output_types' in dict_outputs[each_output.output_type] and dict_outputs[each_output.output_type]['output_types']|length > 1 %}
+            <label class="aot-modal-option-label">{{form_mod_pid_base.raise_output_type.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                    id="raise_output_type" name="raise_output_type" title="{{_('Output Action (On/Off, PWM, Value, Volume, etc.)')}}">
+                    <option value="">{{_('Select One')}}</option>
+                    {%- for each_type in dict_outputs[each_output.output_type]['output_types'] -%}
+                    <option value="{{each_type}}" {% if each_function.raise_output_type==each_type %} selected{% endif %}>{{dict_output_type[each_type]}}</option>
+                    {%- endfor -%}
+                </select>
+            </div>
+            {% else %}
+                <label class="aot-modal-option-label">{{form_mod_pid_base.raise_output_type.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                    <input class="form-control aot-modern-input" disabled="" value="{{dict_output_type[dict_outputs[each_output.output_type]['output_types'][0]]}}" type="text">
+                    <input type="hidden" id="raise_output_type" name="raise_output_type" value="{{each_function.raise_output_type}}">
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="aot-modal-container">
+            <div class="row small-gutters" style="padding: 1em">
+            {% if each_function.raise_output_type == 'pwm' %}
+            {% include 'pages/function_options/pid_options/output_pwm_raise.html' %}
+            {% elif each_function.raise_output_type == 'on_off' %}
+            {% include 'pages/function_options/pid_options/output_on_off_raise.html' %}
+            {% elif each_function.raise_output_type == 'value' %}
+            {% include 'pages/function_options/pid_options/output_value_raise.html' %}
+            {% elif each_function.raise_output_type == 'volume' %}
+            {% include 'pages/function_options/pid_options/output_volume_raise.html' %}
+            {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.lower_output_id.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" data-live-search="true"
+                    id="lower_output_id" name="lower_output_id" title="{{_('Select output to lower the measured value')}}">
+                    <option value="">{{_('Inactive')}}</option>
+                    {%- for each_output in choices_output_channels -%}
+                    <option value="{{each_output['value']}}" {% if each_function.lower_output_id==each_output['value'] %} selected{% endif %}>{{each_output['item']}}</option>
+                    {%- endfor -%}
+                </select>
+            </div>
+        </div>
+
+        {% for each_output in output if each_function.lower_output_id and "," in each_function.lower_output_id and each_function.lower_output_id.split(",")[0] == each_output.unique_id %}
+
+        <div class="aot-modal-option-row">
+            {% if 'output_types' in dict_outputs[each_output.output_type] and dict_outputs[each_output.output_type]['output_types']|length > 1 %}
+            <label class="aot-modal-option-label">{{form_mod_pid_base.lower_output_type.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                    id="lower_output_type" name="lower_output_type" title="{{_('Output Action (On/Off, PWM, Value, Volume, etc.)')}}">
+                    <option value="">{{_('Select One')}}</option>
+                    {%- for each_type in dict_outputs[each_output.output_type]['output_types'] -%}
+                    <option value="{{each_type}}" {% if each_function.lower_output_type==each_type %} selected{% endif %}>{{dict_output_type[each_type]}}</option>
+                    {%- endfor -%}
+                </select>
+            </div>
+            {% else %}
+                <label class="aot-modal-option-label">{{form_mod_pid_base.lower_output_type.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                    <input class="form-control aot-modern-input" disabled="" value="{{dict_output_type[dict_outputs[each_output.output_type]['output_types'][0]]}}" type="text">
+                    <input type="hidden" id="lower_output_type" name="lower_output_type" value="{{each_function.lower_output_type}}">
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="aot-modal-container">
+            <div class="row small-gutters" style="padding: 1em">
+            {% if each_function.lower_output_type == 'pwm' %}
+            {% include 'pages/function_options/pid_options/output_pwm_lower.html' %}
+            {% elif each_function.lower_output_type == 'on_off' %}
+            {% include 'pages/function_options/pid_options/output_on_off_lower.html' %}
+            {% elif each_function.lower_output_type == 'value' %}
+            {% include 'pages/function_options/pid_options/output_value_lower.html' %}
+            {% elif each_function.lower_output_type == 'volume' %}
+            {% include 'pages/function_options/pid_options/output_volume_lower.html' %}
+            {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+
+    <div class="aot-modal-group-title">{{_('Setpoint Tracking')}}</div>
+    <div class="aot-modal-container">
+        
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint_tracking_type.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" 
+                    id="setpoint_tracking_type_{{each_function.unique_id}}" name="setpoint_tracking_type" title="{{dict_translation['setpoint_tracking_type']['phrase']}}">
+                    <option value="">{{_('Inactive')}}</option>
+                    <option value="method" {% if each_function.setpoint_tracking_type=='method' %} selected{% endif %}>{{_('Method')}}</option>
+                    <option value="input-math" {% if each_function.setpoint_tracking_type=='input-math' %} selected{% endif %}>{{_('Input')}}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row" id="method_id_{{each_function.unique_id}}">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint_tracking_method_id.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                 <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker" data-style="btn-white" data-live-search="true"
+                        data-display="static" data-container="body" data-dropdown-align-right="true"
+                        id="setpoint_tracking_method_id" name="setpoint_tracking_method_id"
+                        title="{{_('Select one to calculate setpoint. When activated, measurement value replaces PID setpoint')}}">
+                        <option value="">{{_('Select One')}}</option>
+                        {%- set valid_saved_method = [] -%}
+                        {%- for each_method in method -%}
+                        {%- if each_method.unique_id == each_function.setpoint_tracking_id -%}
+                        {%- do valid_saved_method.append(1) -%}
+                        {%- endif -%}
+                        <option value="{{each_method.unique_id}}" {% if each_function.setpoint_tracking_id==each_method.unique_id %} selected{% endif %}>[{{'%02d' % each_method.id}}] {{each_method.name}}</option>
+                        {%- endfor -%}
+                        {%- if not valid_saved_method and each_function.setpoint_tracking_id != '' -%}
+                        <option value="" selected>{{_('Invalid saved ID. Please select another item from the list to save.')}}</option>
+                        {%- endif -%}
+                    </select>
+                    <a href="/method" class="btn btn-primary aot-pill-btn" role="button" >{{_('Method')}}</a>
+                 </div>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row" id="schedule_start_row_{{each_function.unique_id}}">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.schedule_start_time.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <input type="date" class="form-control aot-modern-input"
+                    name="schedule_start_time"
+                    value="{{each_function.schedule_start_time or ''}}"
+                    title="{{_('Planting / germination date. Used as week-0 for DailyMultiPoint keyframe progression. Interpreted in the device local timezone.')}}">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row" id="schedule_week_offset_row_{{each_function.unique_id}}">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.schedule_week_offset.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.schedule_week_offset(class_='form-control aot-modern-input', value=each_function.schedule_week_offset if each_function.schedule_week_offset is not none else 0.0, **{'title':_('Direct week adjustment on top of elapsed weeks. Positive = fast-forward, negative = compensate downtime.')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row" id="input_math_id_{{each_function.unique_id}}">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint_tracking_input_math_id.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <select class="form-control aot-modern-select selectpicker" data-style="btn-white" data-live-search="true"
+                    id="setpoint_tracking_input_math_id" name="setpoint_tracking_input_math_id"
+                    title="{{_('Select one to calculate setpoint. When activated, measurement value replaces PID setpoint')}}">
+                    <option value="">{{_('Select One')}}</option>
+                    {% for each_input_form in choices_input -%}
+                    <option value="{{each_input_form['value']}}" {% if each_function.setpoint_tracking_id==each_input_form['value'] %} selected{% endif %}>{{each_input_form['item']}}</option>
+                    {% endfor -%}
+                    {% for each_function_form in choices_function -%}
+                    <option value="{{each_function_form['value']}}" {% if each_function.setpoint_tracking_id==each_function_form['value'] %} selected{% endif %}>{{each_function_form['item']}}</option>
+                    {% endfor -%}
+                </select>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row" id="input_math_max_age_{{each_function.unique_id}}">
+            <label class="aot-modal-option-label">{{form_mod_pid_base.setpoint_tracking_max_age.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_mod_pid_base.setpoint_tracking_max_age(class_='form-control aot-modern-input', value=each_function.setpoint_tracking_max_age, **{'title':_('Max measure age')})}}
+            </div>
+        </div>
+
+    </div>
+
+  </form>
+</div>
+
+<script>
+  $(document).ready(function () {
+    $('.selectpicker').selectpicker(); // Init new dropdowns
+
+    let checkPattern = function () {
+      if ($('#setpoint_tracking_type_{{each_function.unique_id}}').val() === 'method') {
+        $("#method_id_{{each_function.unique_id}}").show();
+        // $("#method_button_{{each_function.unique_id}}").show(); // Integrated into label
+        $("#input_math_id_{{each_function.unique_id}}").hide();
+        $("#input_math_max_age_{{each_function.unique_id}}").hide();
+        $("#schedule_start_row_{{each_function.unique_id}}").show();
+        $("#schedule_week_offset_row_{{each_function.unique_id}}").show();
+      }
+      else if ($('#setpoint_tracking_type_{{each_function.unique_id}}').val() === 'input-math') {
+        $("#method_id_{{each_function.unique_id}}").hide();
+        // $("#method_button_{{each_function.unique_id}}").hide();
+        $("#input_math_id_{{each_function.unique_id}}").show();
+        $("#input_math_max_age_{{each_function.unique_id}}").show();
+        $("#schedule_start_row_{{each_function.unique_id}}").hide();
+        $("#schedule_week_offset_row_{{each_function.unique_id}}").hide();
+      }
+      else {
+        $("#method_id_{{each_function.unique_id}}").hide();
+        // $("#method_button_{{each_function.unique_id}}").hide();
+        $("#input_math_id_{{each_function.unique_id}}").hide();
+        $("#input_math_max_age_{{each_function.unique_id}}").hide();
+        $("#schedule_start_row_{{each_function.unique_id}}").hide();
+        $("#schedule_week_offset_row_{{each_function.unique_id}}").hide();
+      }
+    };
+    $('#setpoint_tracking_type_{{each_function.unique_id}}').on('change', checkPattern);
+    checkPattern();
+  });
+</script>

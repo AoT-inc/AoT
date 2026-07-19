@@ -1,0 +1,31 @@
+# ==============================================================
+# AoT_ai .dockerignore — 화이트리스트 방식
+# 이미지에는 배포 대상만 들어간다. .gitignore 의 허용 목록과 동기화할 것.
+# ==============================================================
+
+*
+
+# --- 빌드에 필요한 것만 허용 ---
+!aot/
+!alembic_db/
+!install/
+!requirements.txt
+!aot.db
+
+# --- 허용된 디렉터리 내부에서도 제외 ---
+**/__pycache__/
+**/*.pyc
+**/.DS_Store
+**/node_modules/
+**/*.bak
+**/*.bak.*
+**/flask_session_*/
+aot/databases/*.db
+**/*.db-shm
+**/*.db-wal
+**/.env
+**/*.key
+**/*.pem
+**/ssl_certs/
+aot/databases/flask_secret_key
+aot/aot_flask/templates/user_templates/widget_template_*.html

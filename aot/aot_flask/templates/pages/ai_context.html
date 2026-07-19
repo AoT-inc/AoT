@@ -1,0 +1,197 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_context" %}
+{% set help_page = [manual_url("ai/overview/#knowledge-library"), _('AI Context Manager')] %}
+
+{% block title %} - AI Context Manager{% endblock %}
+
+{% block head %}
+<style>
+    .context-state-badge {
+        display: inline-block;
+        padding: 0.25em 0.75em;
+        border-radius: 0.25em;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+    .badge-system_generated {
+        background-color: var(--aot-tint-neutral-bg, #e9ecef);
+        color: var(--aot-tint-neutral-fg, #495057);
+    }
+    .badge-pending {
+        background-color: var(--aot-tint-warning-bg, #fff3cd);
+        color: var(--aot-tint-warning-fg, #856404);
+    }
+    .badge-user_confirmed {
+        background-color: var(--aot-tint-success-bg, #d4edda);
+        color: var(--aot-tint-success-fg, #155724);
+    }
+    .context-value {
+        font-family: monospace;
+        background-color: #f8f9fa;
+        padding: 0.25em 0.5em;
+        border-radius: 0.25em;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.9em;
+    }
+    .context-source {
+        color: var(--aot-color-text-secondary, #6c757d);
+        font-size: 0.85em;
+        margin-top: 0.25em;
+    }
+    .context-record-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25em;
+        padding: 1em;
+        margin-bottom: 1em;
+        background-color: #fff;
+    }
+    .context-record-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5em;
+    }
+    .context-record-actions {
+        display: flex;
+        gap: 0.25em;
+        flex-wrap: wrap;
+    }
+    .context-record-actions button {
+        padding: 0.25em 0.75em;
+        font-size: 0.85em;
+    }
+</style>
+{% endblock %}
+
+{%- block body %}
+<main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <h4>{{ _('AI Context Manager') }}</h4>
+    <p class="text-muted">{{ _('Inject external information into the AI and manage its trust state.') }}</p>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    <!-- Add Context Record Form -->
+    <div class="card" style="margin-bottom: 1.5em;">
+        <div class="card-header">
+            <h5>{{ _('Add Context') }}</h5>
+        </div>
+        <div class="card-body">
+            <form id="context_add_form" method="post" action="/ai/context/submit">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="facility_id" value="{{ facility_id }}">
+
+                <div class="form-group">
+                    <label for="source_type">{{ form_add.source_type.label }}</label>
+                    {{ form_add.source_type(id="source_type", class_="form-control") }}
+                </div>
+
+                <div class="form-group">
+                    <label for="parameter_name">{{ form_add.parameter_name.label }}</label>
+                    {{ form_add.parameter_name(class_="form-control", placeholder="e.g. temperature_air.warning_threshold") }}
+                </div>
+
+                <div class="form-group">
+                    <label id="raw_input_label" for="raw_input">{{ form_add.raw_input.label }}</label>
+                    {{ form_add.raw_input(id="raw_input", class_="form-control", rows="3", placeholder=_("e.g. 25.5")) }}
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">{{ form_add.notes.label }}</label>
+                    {{ form_add.notes(class_="form-control", placeholder=_("Notes (optional)")) }}
+                </div>
+
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary"
+                            onclick="AoTAIContext.submitContextAction(this, 'record_add')">
+                        {{ _('Add') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Context Records List -->
+    <div id="context_records_container">
+        {% if context_records %}
+            <h5>{{ _('Context Records') }} ({{ context_records|length }})</h5>
+            {% for record in context_records %}
+                <div class="context-record-card" id="record_card_{{ record.id }}">
+                    <div class="context-record-header">
+                        <div>
+                            <strong>{{ record.parameter_name }}</strong>
+                            <span class="context-state-badge badge-{{ record.context_state }}" id="badge_{{ record.id }}">
+                                {% if record.context_state == 'system_generated' %}
+                                    {{ _('System Default') }}
+                                {% elif record.context_state == 'pending' %}
+                                    {{ _('Needs Review') }}
+                                {% elif record.context_state == 'user_confirmed' %}
+                                    {{ _('Confirmed') }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="context-value">{{ record.value[:200] }}{% if record.value|length > 200 %}...{% endif %}</div>
+                    <div class="context-source">{{ record.source }}</div>
+
+                    {% if record.confirmed_at %}
+                        <div class="text-muted" style="font-size: 0.85em; margin-top: 0.5em;">
+                            {{ _('Confirmed') }}: {{ record.confirmed_at }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Hidden form for mod/confirm/reject/delete actions -->
+                    <form id="form_record_{{ record.id }}" style="display: none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="facility_id" value="{{ facility_id }}">
+                        <input type="hidden" name="record_id" value="{{ record.id }}">
+                        <input type="hidden" name="parameter_name" value="{{ record.parameter_name }}">
+                        <textarea name="raw_input">{{ record.value }}</textarea>
+                    </form>
+
+                    <div class="context-record-actions" style="margin-top: 0.75em;">
+                        {% if record.context_state != 'user_confirmed' %}
+                            <button type="button" class="btn btn-sm btn-success"
+                                    onclick="AoTAIContext.submitContextAction(this, 'record_confirm', {{ record.id }})">
+                                {{ _('Confirm') }}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning"
+                                    onclick="AoTAIContext.submitContextAction(this, 'record_reject', {{ record.id }})">
+                                {{ _('Reject') }}
+                            </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-sm btn-danger"
+                                onclick="AoTAIContext.submitContextAction(this, 'record_delete', {{ record.id }})">
+                            {{ _('Delete') }}
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted" id="empty_state">{{ _('No context records registered.') }}</p>
+        {% endif %}
+    </div>
+
+    <!-- State Legend -->
+    <div style="clear: both; padding: 1em 0;"></div>
+    <div class="alert alert-info" style="font-size: 0.9em;">
+        <strong>Context States:</strong><br>
+        <span class="context-state-badge badge-system_generated">{{ _('System Default') }}</span>
+        {{ _('Auto-generated by the AI from domain defaults. Not yet reviewed.') }}<br>
+        <span class="context-state-badge badge-pending">{{ _('Needs Review') }}</span>
+        {{ _('User input or pending item. The AI references it but with low confidence.') }}<br>
+        <span class="context-state-badge badge-user_confirmed">{{ _('Confirmed') }}</span>
+        {{ _('Value reviewed and approved by the user. The AI uses it with high confidence.') }}
+    </div>
+
+</main>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<script src="/static/js/ai/aot-ai-context.js"></script>
+{% endblock %}

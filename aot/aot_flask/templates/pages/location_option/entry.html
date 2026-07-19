@@ -1,0 +1,53 @@
+{% extends 'layout.html' %}
+{% block title %}{{ _('Location Selection') }}{% endblock %}
+
+{% block body %}
+<!-- MapLibre GL 은 layout.html head 에서 제공됨 (GIS 설정의 로컬/CDN 옵션 적용).
+     여기서 재로드하면 window.maplibregl 을 덮어쓰므로 로드하지 않는다. -->
+
+<div class="container-fluid p-0">
+    <!-- Toolbar -->
+    <div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom shadow-sm">
+        <div class="d-flex align-items-center gap-3">
+            <h5 class="mb-0 mr-3">{{ _('Location Picker') }}</h5>
+            <div class="text-muted small">
+                {{ _('Click on the map to select a location.') }}
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary btn-sm" id="btn-confirm-location" disabled>
+                <i class="fas fa-check"></i> {{ _('Confirm Selection') }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Map Canvas -->
+    <div class="position-relative" style="height: calc(100vh - 65px);">
+        <div id="location-map" style="width: 100%; height: 100%;"></div>
+
+        <!-- Coordinates Display -->
+        <div class="position-absolute"
+            style="bottom: 20px; left: 50%; transform: translateX(-50%); z-index: var(--aot-z-fixed-panel); background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <span id="selected-coords" class="font-weight-bold font-monospace">{{ _('No location selected') }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- JS Logic -->
+<script src="{{ url_for('static', filename='js/location/aot-location.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Location Picker (Pure MapLibre)
+        // Accepts query params like ?lat=...&lng=... for initial position
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialLat = parseFloat(urlParams.get('lat'));
+        const initialLng = parseFloat(urlParams.get('lng'));
+
+        window.locationPicker = new AoTLocationPicker('location-map', {
+            lat: initialLat,
+            lng: initialLng
+        });
+        window.locationPicker.init();
+    });
+</script>
+{% endblock %}

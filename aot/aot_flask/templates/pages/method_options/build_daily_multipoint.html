@@ -1,0 +1,596 @@
+{# DailyMultiPoint editing UI — v2 multiple week columns + multi-series chart #}
+
+{% set _md = method_data[0] if method_data else None %}
+{% set _raw = _md.points_json if _md and _md.points_json else '{"version":2,"weeks":[0],"points":[{"point_id":0,"t_sec":0,"values":[0.8],"smooth":false,"is_endpoint":true},{"point_id":1,"t_sec":86400,"values":[0.8],"smooth":false,"is_endpoint":true}]}' %}
+
+<div style="margin-bottom:0.8em;">
+  <p class="text-muted" style="font-size:0.9em; margin:0;">
+    {{_('Each column = one week number. Values interpolate linearly between week columns over time.')}}
+    {{_('Linear = straight segment, Smooth = monotonic Hermite, Bezier = drag-adjustable tangent handle.')}}
+  </p>
+</div>
+
+{# ── Hidden field for saving (reuses outer form) ── #}
+<input type="hidden" name="points_json" id="mp-points-json-field">
+
+{# ── Week column controls ── #}
+<div style="margin-bottom:0.7em; display:flex; gap:0.5em; flex-wrap:wrap; align-items:center;">
+  <button type="button" class="btn btn-sm aot-pill-btn" onclick="mpAddWeekCol()">
+    + {{_('Add Week Column')}}
+  </button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mpRemoveWeekCol()">
+    − {{_('Remove Last Column')}}
+  </button>
+  <span class="text-muted" style="font-size:0.85em;" id="mp-week-label"></span>
+</div>
+
+{# ── Control point table (JS rendered) ── #}
+<div class="table-responsive" style="margin-bottom:0.8em;">
+  <table class="table table-sm table-bordered" id="mp-point-table">
+    <thead class="thead-light" id="mp-thead"></thead>
+    <tbody id="mp-tbody"></tbody>
+  </table>
+</div>
+
+{# ── Add point / save ── #}
+<div style="margin-bottom:1em; display:flex; gap:0.5em; flex-wrap:wrap; align-items:center;">
+  <button type="button" class="btn btn-sm aot-pill-btn" onclick="mpAddPoint()">
+    + {{_('Add Point')}}
+  </button>
+  <span class="text-muted" style="font-size:0.85em;" id="mp-count-label"></span>
+  <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="mpSave()" style="margin-left:auto;">
+    {{_('Save')}}
+  </button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const MAX_POINTS  = 12;
+  const MAX_WEEKS   = 10;
+  const DEFAULT_HDT = 5400; // default handle arm length: 90 min (sec)
+  const MIN_HDT     = 60;   // minimum handle arm length: 1 min (sec)
+
+  const COLORS = [
+    '#2196F3', '#4CAF50', '#FF9800', '#E91E63',
+    '#9C27B0', '#00BCD4', '#FF5722', '#795548',
+    '#607D8B', '#F44336'
+  ];
+
+  // ── Initial data load + v3 migration ─────────────────────────────
+  let raw = {{ _raw | safe }};
+  raw = migrateToV3(raw);
+  let weeks  = raw.weeks  || [0];
+  let points = raw.points || [];
+
+  function migrateToV3(d) {
+    if (!d.version || d.version < 2) {
+      const pts = (d.points || []).map(function(p, i) {
+        return {
+          point_id: i, t_sec: p.t_sec || 0,
+          values: [parseFloat(p.value || 0)],
+          smooth: !!p.smooth, is_endpoint: !!p.is_endpoint,
+          curve: p.smooth ? 'smooth' : 'linear',
+          handle_dt: null, handle_dv: null
+        };
+      });
+      return { version: 3, weeks: [0], points: pts };
+    }
+    if (d.version < 3) {
+      (d.points || []).forEach(function(p) {
+        if (!('curve' in p)) p.curve = p.smooth ? 'smooth' : 'linear';
+        if (!('handle_dt' in p)) {
+          // legacy tangent(slope) → handle_dt/handle_dv conversion
+          const oldTan = p.tangent != null ? p.tangent : null;
+          p.handle_dt = oldTan != null ? DEFAULT_HDT : null;
+          p.handle_dv = oldTan != null ? oldTan * DEFAULT_HDT : null;
+        }
+      });
+      d.version = 3;
+    }
+    return d;
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function secToHHMM(s) {
+    return String(Math.floor(s / 3600)).padStart(2,'0') + ':' +
+           String(Math.floor((s % 3600) / 60)).padStart(2,'0');
+  }
+  function hhmmToSec(t) {
+    const p = t.split(':');
+    return (parseInt(p[0])||0)*3600 + (parseInt(p[1])||0)*60;
+  }
+  function getCurveType(p) {
+    if ('curve' in p) return p.curve;
+    return p.smooth ? 'smooth' : 'linear';
+  }
+  function getBzTangent(p) {
+    // handle_dt/handle_dv → effective slope. backward compat: legacy tangent field
+    if (p.handle_dt != null && p.handle_dt !== 0)
+      return p.handle_dv / p.handle_dt;
+    if (p.tangent != null) return p.tangent;
+    return null;
+  }
+
+  // ── Table rendering ───────────────────────────────────────────────────
+  function render() {
+    renderHead();
+    renderBody();
+    document.getElementById('mp-week-label').textContent =
+      weeks.length + ' / ' + MAX_WEEKS + ' ' + (window._ ? window._('week columns') : 'week columns');
+    document.getElementById('mp-count-label').textContent =
+      points.length + ' / ' + MAX_POINTS + ' ' + (window._ ? window._('points') : 'points');
+    updateChart();
+  }
+
+  function renderHead() {
+    const thead = document.getElementById('mp-thead');
+    let html = '<tr>' +
+      '<th style="width:2.5em;">#</th>' +
+      '<th style="width:8em;">{{_("Time (HH:MM)")}}</th>';
+    weeks.forEach(function(w, wi) {
+      html += '<th style="min-width:7em;">' +
+        '<div style="display:flex;align-items:center;gap:4px;">' +
+        '<span style="color:' + COLORS[wi % COLORS.length] + ';font-weight:700;">●</span>' +
+        '{{ _("Week") }} <input type="number" min="0" max="999" value="' + w + '" ' +
+        'class="form-control form-control-sm" style="width:4.5em;display:inline-block;" ' +
+        'onchange="mpUpdateWeek(this,' + wi + ')">' +
+        '</div></th>';
+    });
+    html += '<th style="width:8em;">{{_("Mode")}}</th><th style="width:3em;"></th></tr>';
+    thead.innerHTML = html;
+  }
+
+  function renderBody() {
+    const tbody = document.getElementById('mp-tbody');
+    tbody.innerHTML = '';
+    points.forEach(function(pt, idx) {
+      const ep = !!pt.is_endpoint;
+      const ct = getCurveType(pt);
+      const tr = document.createElement('tr');
+      let html = '<td style="text-align:center;vertical-align:middle;">' + (idx+1) + '</td>';
+      // Time
+      html += '<td><input type="text" class="form-control form-control-sm" value="' +
+        secToHHMM(pt.t_sec) + '" ' +
+        (ep ? 'readonly style="background:#f5f5f5;cursor:not-allowed;"' : '') +
+        ' data-idx="' + idx + '" onchange="mpUpdateTime(this)"></td>';
+      // Value columns
+      weeks.forEach(function(_, wi) {
+        const v = (pt.values && pt.values[wi] !== undefined) ? pt.values[wi] : 0;
+        html += '<td><input type="number" class="form-control form-control-sm" ' +
+          'value="' + parseFloat(v).toFixed(3) + '" step="0.01" ' +
+          'data-idx="' + idx + '" data-wi="' + wi + '" onchange="mpUpdateVal(this)"></td>';
+      });
+      // Curve mode selector
+      html += '<td style="vertical-align:middle;">' +
+        '<select class="form-control form-control-sm" data-idx="' + idx + '" ' +
+        'onchange="mpUpdateCurve(this)">' +
+        '<option value="linear"' + (ct === 'linear' ? ' selected' : '') + '>{{ _("Linear") }}</option>' +
+        '<option value="smooth"' + (ct === 'smooth' ? ' selected' : '') + '>{{ _("Smooth") }}</option>' +
+        '<option value="bezier"' + (ct === 'bezier' ? ' selected' : '') + '>{{ _("Bezier") }}</option>' +
+        '</select></td>';
+      // Delete
+      html += '<td style="text-align:center;vertical-align:middle;">' +
+        (ep ? '' : '<button type="button" class="btn btn-sm btn-outline-danger" ' +
+          'onclick="mpDeletePoint(' + idx + ')">×</button>') + '</td>';
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── Week column manipulation ────────────────────────────────────────────────────
+  window.mpUpdateWeek = function(el, wi) {
+    weeks[wi] = parseInt(el.value) || 0;
+    weeks = weeks.slice().sort(function(a,b){ return a-b; });
+    render();
+  };
+
+  window.mpAddWeekCol = function() {
+    if (weeks.length >= MAX_WEEKS) { alert((window._ ? window._('Up to') : 'Up to') + ' ' + MAX_WEEKS + ' ' + (window._ ? window._('columns are allowed.') : 'columns are allowed.')); return; }
+    const lastW = weeks[weeks.length - 1];
+    weeks.push(lastW + 2);
+    points.forEach(function(p) {
+      if (!p.values) p.values = [];
+      const last = p.values.length > 0 ? p.values[p.values.length - 1] : 0;
+      p.values.push(last);
+    });
+    render();
+  };
+
+  window.mpRemoveWeekCol = function() {
+    if (weeks.length <= 1) { alert(window._ ? window._('At least 1 column is required.') : 'At least 1 column is required.'); return; }
+    weeks.pop();
+    points.forEach(function(p) { if (p.values) p.values.pop(); });
+    render();
+  };
+
+  // ── Point value manipulation ──────────────────────────────────────────────────
+  window.mpUpdateTime = function(el) {
+    const idx = parseInt(el.dataset.idx);
+    points[idx].t_sec = hhmmToSec(el.value);
+    const interior = points.filter(function(p){ return !p.is_endpoint; });
+    interior.sort(function(a,b){ return a.t_sec - b.t_sec; });
+    points = [points[0]].concat(interior).concat([points[points.length-1]]);
+    render();
+  };
+
+  window.mpUpdateVal = function(el) {
+    const idx = parseInt(el.dataset.idx);
+    const wi  = parseInt(el.dataset.wi);
+    const v   = parseFloat(el.value);
+    if (!isNaN(v)) {
+      points[idx].values[wi] = v;
+      if (points[idx].is_endpoint) {
+        const otherIdx = (idx === 0) ? points.length - 1 : 0;
+        if (points[otherIdx] && points[otherIdx].is_endpoint) {
+          points[otherIdx].values[wi] = v;
+          render();
+          return;
+        }
+      }
+    }
+    updateChart();
+  };
+
+  window.mpUpdateCurve = function(el) {
+    const idx = parseInt(el.dataset.idx);
+    const newCurve = el.value;
+    points[idx].curve  = newCurve;
+    points[idx].smooth = (newCurve === 'smooth');
+    if (newCurve === 'bezier') {
+      if (points[idx].handle_dt == null) {
+        const slope = _approxTangent(idx);
+        points[idx].handle_dt = DEFAULT_HDT;
+        points[idx].handle_dv = slope * DEFAULT_HDT;
+      }
+    } else {
+      points[idx].handle_dt = null;
+      points[idx].handle_dv = null;
+    }
+    // Sync endpoint pair
+    if (points[idx].is_endpoint) {
+      const otherIdx = idx === 0 ? points.length - 1 : 0;
+      if (points[otherIdx] && points[otherIdx].is_endpoint) {
+        points[otherIdx].curve     = newCurve;
+        points[otherIdx].smooth    = points[idx].smooth;
+        points[otherIdx].handle_dt = points[idx].handle_dt;
+        points[otherIdx].handle_dv = points[idx].handle_dv;
+      }
+    }
+    render();
+  };
+
+  function _approxTangent(idx) {
+    const sorted = points.slice().sort(function(a,b){ return a.t_sec - b.t_sec; });
+    const si = sorted.findIndex(function(p) {
+      return p.point_id === points[idx].point_id;
+    });
+    if (si > 0 && si < sorted.length - 1) {
+      const prev = sorted[si-1], next = sorted[si+1];
+      const dt = next.t_sec - prev.t_sec;
+      if (dt > 0) return ((next.values[0]||0) - (prev.values[0]||0)) / dt;
+    }
+    return 0;
+  }
+
+  window.mpDeletePoint = function(idx) {
+    if (points.length <= 2) { alert(window._ ? window._('At least 2 points are required.') : 'At least 2 points are required.'); return; }
+    points.splice(idx, 1);
+    points.forEach(function(p, i){ p.point_id = i; });
+    render();
+  };
+
+  window.mpAddPoint = function() {
+    if (points.length >= MAX_POINTS) { alert((window._ ? window._('Up to') : 'Up to') + ' ' + MAX_POINTS + ' ' + (window._ ? window._('can be added.') : 'can be added.')); return; }
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+    const midSec = Math.floor((prev.t_sec + last.t_sec) / 2);
+    const midVals = weeks.map(function(_, wi) {
+      const a = prev.values[wi] !== undefined ? prev.values[wi] : 0;
+      const b = last.values[wi] !== undefined ? last.values[wi] : 0;
+      return parseFloat(((a + b) / 2).toFixed(3));
+    });
+    points.splice(points.length - 1, 0, {
+      point_id: points.length - 1,
+      t_sec: midSec, values: midVals,
+      smooth: false, curve: 'linear', handle_dt: null, handle_dv: null, is_endpoint: false
+    });
+    points.forEach(function(p, i){ p.point_id = i; });
+    render();
+  };
+
+  // ── Save ────────────────────────────────────────────────────────────
+  window.mpSave = function() {
+    const payload = { version: 3, weeks: weeks, points: points };
+    const field = document.getElementById('mp-points-json-field');
+    field.value = JSON.stringify(payload);
+    const outerForm = field.closest('form');
+    outerForm.querySelector('input[name="form-name"]').value = 'saveDailyMultiPoint';
+    outerForm.submit();
+  };
+
+  // ── v3 week interpolation (JS) ────────────────────────────────────────────────
+  function resolveV2At(weekNum) {
+    return points.map(function(p) {
+      const vals = p.values || [0];
+      let value = vals[0];
+      for (let i = 0; i < weeks.length - 1; i++) {
+        if (weeks[i] <= weekNum && weekNum <= weeks[i+1]) {
+          const span = weeks[i+1] - weeks[i];
+          const frac = span > 0 ? (weekNum - weeks[i]) / span : 0;
+          const a = vals[i]   !== undefined ? vals[i]   : 0;
+          const b = vals[i+1] !== undefined ? vals[i+1] : 0;
+          value = a + frac * (b - a);
+          break;
+        }
+      }
+      if (weekNum >= weeks[weeks.length-1]) value = vals[vals.length-1] || 0;
+      return {
+        t_sec:       p.t_sec,
+        value:       value,
+        smooth:      !!p.smooth,
+        curve:       getCurveType(p),
+        handle_dt:   p.handle_dt != null ? p.handle_dt : null,
+        handle_dv:   p.handle_dv != null ? p.handle_dv : null,
+        tangent:     p.tangent   != null ? p.tangent   : null,
+        is_endpoint: !!p.is_endpoint
+      };
+    }).sort(function(a,b){ return a.t_sec - b.t_sec; });
+  }
+
+  // ── evalCurve: branch by curve type ────────────────────────────────────────
+  function evalCurve(pts, t) {
+    if (!pts.length) return 0;
+    if (t <= pts[0].t_sec) return pts[0].value;
+    if (t >= pts[pts.length-1].t_sec) return pts[pts.length-1].value;
+    for (let i = 0; i < pts.length-1; i++) {
+      if (t >= pts[i].t_sec && t < pts[i+1].t_sec) {
+        const c0 = pts[i].curve   || (pts[i].smooth   ? 'smooth' : 'linear');
+        const c1 = pts[i+1].curve || (pts[i+1].smooth ? 'smooth' : 'linear');
+        if (c0 === 'linear' && c1 === 'linear') {
+          const h = pts[i+1].t_sec - pts[i].t_sec;
+          return h ? pts[i].value + (t - pts[i].t_sec)/h*(pts[i+1].value-pts[i].value) : pts[i].value;
+        }
+        return hermite(pts, i, (t - pts[i].t_sec) / (pts[i+1].t_sec - pts[i].t_sec || 1));
+      }
+    }
+    return pts[pts.length-1].value;
+  }
+
+  // ── Hermite + Bezier tangent override ──────────────────────────────
+  function hermite(pts, seg, frac) {
+    const n = pts.length;
+    const delta = pts.slice(0,-1).map(function(_,i) {
+      const h = pts[i+1].t_sec - pts[i].t_sec;
+      return h ? (pts[i+1].value - pts[i].value) / h : 0;
+    });
+    const m = new Array(n).fill(0);
+
+    const c0 = pts[0].curve   || (pts[0].smooth   ? 'smooth' : 'linear');
+    const cn = pts[n-1].curve || (pts[n-1].smooth ? 'smooth' : 'linear');
+    const isPeriodic = Math.abs(pts[0].value - pts[n-1].value) < 1e-10
+      && (c0 !== 'linear' || cn !== 'linear');
+
+    if (isPeriodic) {
+      m[0] = m[n-1] = (delta[0] + (delta[n-2] || 0)) / 2;
+    } else {
+      m[0] = delta[0]; m[n-1] = delta[n-2] || 0;
+    }
+    for (let i = 1; i < n-1; i++) m[i] = (delta[i-1]+delta[i])/2;
+
+    // Fritsch-Carlson monotonicity
+    for (let i = 0; i < n-1; i++) {
+      if (Math.abs(delta[i]) < 1e-12) { m[i] = m[i+1] = 0; continue; }
+      const a = m[i]/delta[i], b = m[i+1]/delta[i];
+      if (a < 0 || b < 0) { m[i] = m[i+1] = 0; continue; }
+      const tau = a*a+b*b;
+      if (tau > 9) { const s = 3/Math.sqrt(tau); m[i]=s*a*delta[i]; m[i+1]=s*b*delta[i]; }
+    }
+
+    // Bezier tangent override (handle_dt/handle_dv → slope)
+    const hasBzStart = c0 === 'bezier' && getBzTangent(pts[0]) != null;
+    const hasBzEnd   = cn === 'bezier' && getBzTangent(pts[n-1]) != null;
+    pts.forEach(function(p, i) {
+      const ct = p.curve || (p.smooth ? 'smooth' : 'linear');
+      if (ct === 'bezier') {
+        const t_val = getBzTangent(p);
+        if (t_val != null) m[i] = t_val;
+      }
+    });
+
+    // Re-sync periodic endpoints
+    if (isPeriodic) {
+      if (hasBzStart)      m[n-1] = m[0];
+      else if (hasBzEnd)   m[0]   = m[n-1];
+      else                 m[0]   = m[n-1] = (m[0] + m[n-1]) / 2;
+    }
+
+    const p0 = pts[seg], p1 = pts[seg+1];
+    const h = p1.t_sec - p0.t_sec || 1;
+    const t = frac;
+    return p0.value*(2*t*t*t-3*t*t+1) + m[seg]*h*(t*t*t-2*t*t+t) +
+           p1.value*(-2*t*t*t+3*t*t)  + m[seg+1]*h*(t*t*t-t*t);
+  }
+
+  // ── Chart — multi-series ──────────────────────────────────────────────
+  function updateChart(chartObj) {
+    const chart = chartObj || window.aotMethodChart;
+    if (!chart) return;
+    while (chart.series.length > 0) chart.series[0].remove(false);
+
+    const step = 300;
+    weeks.forEach(function(w, wi) {
+      const color = COLORS[wi % COLORS.length];
+      const resolved = resolveV2At(w);
+      const data = [];
+      for (let t = 0; t <= 86400; t += step) {
+        data.push([t * 1000, parseFloat(evalCurve(resolved, t).toFixed(4))]);
+      }
+      chart.addSeries({
+        name: '{{ _("Week") }} ' + w, data: data, color: color,
+        lineWidth: 2, marker: { enabled: false }
+      }, wi === weeks.length - 1);
+    });
+
+    // First week control point scatter plot
+    const ctrlData = points.map(function(p) {
+      return { x: p.t_sec * 1000, y: p.values[0] !== undefined ? p.values[0] : 0 };
+    });
+    chart.addSeries({
+      type: 'scatter',
+      name: 'Points (Week ' + (weeks[0] || 0) + ')',
+      data: ctrlData, color: COLORS[0],
+      marker: { symbol: 'circle', radius: 5 },
+      tooltip: { pointFormat: '{point.x:%H:%M}: <b>{point.y:.3f}</b>' },
+      showInLegend: false
+    }, true);
+
+    renderHandles();
+  }
+
+  window.mpOnChartReady = function(chartObj) { updateChart(chartObj); };
+
+  // ── Bezier handle SVG overlay ──────────────────────────────────────────
+  function renderHandles() {
+    const chart = window.aotMethodChart;
+    if (!chart) return;
+
+    const existing = document.getElementById('mp-handle-overlay');
+    if (existing) existing.remove();
+
+    const hasBezier = points.some(function(p) { return getCurveType(p) === 'bezier'; });
+    if (!hasBezier) return;
+
+    const container = chart.container;
+    container.style.position = 'relative';
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.id = 'mp-handle-overlay';
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
+    svg.setAttribute('width',  container.offsetWidth);
+    svg.setAttribute('height', container.offsetHeight);
+    container.appendChild(svg);
+
+    const xAxis = chart.xAxis[0];
+    const yAxis = chart.yAxis[0];
+    const resolved = resolveV2At(weeks[0]);
+
+    points.forEach(function(pt, idx) {
+      if (getCurveType(pt) !== 'bezier') return;
+
+      const rpt = resolved.find(function(r) { return r.t_sec === pt.t_sec; });
+      if (!rpt) return;
+
+      const cx  = xAxis.toPixels(pt.t_sec * 1000, false);
+      const cy  = yAxis.toPixels(rpt.value, false);
+
+      const hdt = pt.handle_dt != null ? pt.handle_dt : DEFAULT_HDT;
+      const hdv = pt.handle_dv != null ? pt.handle_dv : 0;
+
+      const rhx = xAxis.toPixels((pt.t_sec + hdt) * 1000, false);
+      const rhy = yAxis.toPixels(rpt.value + hdv, false);
+      const lhx = xAxis.toPixels((pt.t_sec - hdt) * 1000, false);
+      const lhy = yAxis.toPixels(rpt.value - hdv, false);
+
+      // Arm line
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', lhx); line.setAttribute('y1', lhy);
+      line.setAttribute('x2', rhx); line.setAttribute('y2', rhy);
+      line.setAttribute('stroke', '#999');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '5,3');
+      svg.appendChild(line);
+
+      // Center anchor
+      const anchor = document.createElementNS(NS, 'circle');
+      anchor.setAttribute('cx', cx); anchor.setAttribute('cy', cy);
+      anchor.setAttribute('r', '4');
+      anchor.setAttribute('fill', COLORS[0]);
+      anchor.setAttribute('stroke', '#fff');
+      anchor.setAttribute('stroke-width', '1.5');
+      svg.appendChild(anchor);
+
+      // Right/left handle circles
+      _mkHandle(svg, rhx, rhy, idx, 'right', COLORS[0]);
+      _mkHandle(svg, lhx, lhy, idx, 'left',  COLORS[0]);
+    });
+  }
+
+  function _mkHandle(svg, x, y, idx, dir, color) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', x); c.setAttribute('cy', y);
+    c.setAttribute('r', '7');
+    c.setAttribute('fill', '#fff');
+    c.setAttribute('stroke', color);
+    c.setAttribute('stroke-width', '2');
+    c.style.cursor = 'move';
+    c.style.pointerEvents = 'all';
+    c.dataset.idx = idx;
+    c.dataset.dir = dir;
+    c.addEventListener('mousedown', _dragStart);
+    svg.appendChild(c);
+  }
+
+  // ── Drag handling ──────────────────────────────────────────────────────
+  let _drag = null;
+
+  function _dragStart(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    _drag = { idx: parseInt(e.target.dataset.idx), dir: e.target.dataset.dir };
+    e.target.style.cursor = 'grabbing';
+    document.addEventListener('mousemove', _dragMove);
+    document.addEventListener('mouseup',   _dragEnd);
+  }
+
+  function _dragMove(e) {
+    if (!_drag) return;
+    const chart = window.aotMethodChart;
+    if (!chart) return;
+
+    const { idx, dir } = _drag;
+    const pt  = points[idx];
+    const rect = chart.container.getBoundingClientRect();
+    const px  = e.clientX - rect.left;
+    const py  = e.clientY - rect.top;
+
+    const tMs  = chart.xAxis[0].toValue(px);
+    const vNew = chart.yAxis[0].toValue(py);
+    const tSec = tMs / 1000;
+
+    const resolved = resolveV2At(weeks[0]);
+    const rpt = resolved.find(function(r) { return r.t_sec === pt.t_sec; });
+    const ptVal = rpt ? rpt.value : (pt.values && pt.values[0] || 0);
+
+    // Handle must stay outside the point (dt >= MIN_HDT)
+    const rawDt = dir === 'right' ? (tSec - pt.t_sec) : (pt.t_sec - tSec);
+    const dt = Math.max(rawDt, MIN_HDT);
+    const dv = dir === 'right' ? (vNew - ptVal) : (ptVal - vNew);
+
+    points[idx].handle_dt = dt;
+    points[idx].handle_dv = dv;
+
+    // Sync endpoint pair
+    if (pt.is_endpoint) {
+      const other = idx === 0 ? points.length - 1 : 0;
+      if (points[other] && points[other].is_endpoint) {
+        points[other].handle_dt = dt;
+        points[other].handle_dv = dv;
+      }
+    }
+    updateChart();
+  }
+
+  function _dragEnd() {
+    _drag = null;
+    document.removeEventListener('mousemove', _dragMove);
+    document.removeEventListener('mouseup',   _dragEnd);
+  }
+
+  // ── Initialization ──────────────────────────────────────────────────────────
+  render();
+})();
+</script>

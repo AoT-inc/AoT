@@ -1,0 +1,32 @@
+{% if 'cmd_command' in dict_options['options_disabled'] or
+      'cmd_command' in dict_options['options_enabled']
+  %}
+
+  {% from 'pages/form_options/api_key_macro.html' import render_api_key_picker %}
+  {% if each_device.device == 'PythonCode' %}
+
+<div class="col-12">
+  {{form.cmd_command.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-api-key-group" style="width: 100% !important; max-width: none !important;"> <!-- Exception handling as Shell Command needs to be wide -->
+    <textarea style="font-family:monospace;" class="form-control" id="cmd_command" name="cmd_command" rows="8" type="text" title="{{_('The Python 3 code to execute')}}">{{each_device.cmd_command}}</textarea>
+    {{ render_api_key_picker(dict_options) }}
+  </div>
+</div>
+
+  {% else %}
+
+<div class="col-12">
+  {{form.cmd_command.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-api-key-group" style="width: 100% !important; max-width: none !important;">
+  {%- if 'cmd_command' in dict_options['options_disabled'] -%}
+    {{form.cmd_command(class_='form-control', value=each_device.cmd_command, disabled=True, **{'title': dict_translation['cmd_command']['phrase']})}}
+  {% else %}
+    {{form.cmd_command(class_='form-control', value=each_device.cmd_command, **{'title': dict_translation['cmd_command']['phrase']})}}
+  {%- endif -%}
+  {{ render_api_key_picker(dict_options) }}
+  </div>
+</div>
+
+  {% endif %}
+
+{% endif %}

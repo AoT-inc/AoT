@@ -1,0 +1,81 @@
+# @ANCHOR: ACTION_REGISTRY_SEED
+# YAML seed for AIActionRegistry defaults (Layer 2 — Hybrid Loading).
+# DB overrides take precedence. Only rows that differ from these defaults need to exist in DB.
+# Ref: SBS-002_V2_STRATEGY (layer_2_global_dynamic, pluggable_resolver)
+---
+actions:
+  # ── Immediate + RAG-eligible (read-only / informational) ──────────────────
+  - action_type: read_manual
+    is_rag_eligible: true
+    is_immediate: true
+    resolver_module: ""            # No resolver — handled by legacy if/elif in execute_action
+    is_active: true
+
+  - action_type: get_detailed_manifest
+    is_rag_eligible: true
+    is_immediate: true
+    resolver_module: ""            # No resolver — handled by legacy if/elif in execute_action
+    is_active: true
+
+  - action_type: mcp_tool_call
+    is_rag_eligible: true
+    is_immediate: true
+    resolver_module: "aot.services.resolvers.registry.ActionResolverRegistry"  # routes to MCPToolCallResolver or PhysicalControlResolver
+    is_active: true
+
+  - action_type: virtual_tool_call
+    is_rag_eligible: true
+    is_immediate: true
+    resolver_module: "aot.services.resolvers.virtual_tool_resolver.VirtualToolResolver"
+    is_active: true
+
+  - action_type: mcp_resource_read
+    is_rag_eligible: true
+    is_immediate: true
+    resolver_module: "aot.services.resolvers.mcp_tool_call_resolver.MCPToolCallResolver"
+    is_active: true
+
+  - action_type: mcp_prompt_get
+    is_rag_eligible: true
+    is_immediate: true
+    resolver_module: "aot.services.resolvers.mcp_tool_call_resolver.MCPToolCallResolver"
+    is_active: true
+
+  # ── Requires approval (schedule / side-effect) ────────────────────────────
+  - action_type: add_schedule
+    is_rag_eligible: false
+    is_immediate: false
+    resolver_module: "aot.services.resolvers.schedule_resolver.ScheduleResolver"
+    is_active: true
+
+  - action_type: schedule_device_control
+    is_rag_eligible: false
+    is_immediate: false
+    resolver_module: "aot.services.resolvers.schedule_resolver.ScheduleResolver"
+    is_active: true
+
+  # ── Note / planning (no physical effect) ─────────────────────────────────
+  - action_type: note
+    is_rag_eligible: false
+    is_immediate: false
+    resolver_module: "aot.services.resolvers.note_resolver.NoteResolver"
+    is_active: true
+
+  - action_type: abstract_plan
+    is_rag_eligible: false
+    is_immediate: false
+    resolver_module: "aot.services.resolvers.note_resolver.NoteResolver"
+    is_active: true
+
+  # ── Legacy / deprecated (LEGACY_GUARD blocks these) ──────────────────────
+  - action_type: output
+    is_rag_eligible: false
+    is_immediate: false
+    resolver_module: "aot.services.resolvers.legacy_guard_resolver.LegacyGuardResolver"
+    is_active: true
+
+  - action_type: valve
+    is_rag_eligible: false
+    is_immediate: false
+    resolver_module: "aot.services.resolvers.legacy_guard_resolver.LegacyGuardResolver"
+    is_active: true

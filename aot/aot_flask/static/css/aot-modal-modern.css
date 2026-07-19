@@ -1,0 +1,1353 @@
+/* aot-modal-modern.css - Iteration 33: Organized System */
+
+/* ============================================================
+   모달 열림 시 레이아웃 시프트 방지.
+   Bootstrap 4 의 body.paddingRight 보정 문제는
+   aot-modal-scroll-lock.js 의 JS 패치로 처리한다.
+   html overflow 를 건드리면 position:sticky/fixed 부작용이 생기므로 건드리지 않는다.
+   ============================================================ */
+
+/* Global Modal Z-Index Guaranteed Stacking */
+/* Using --aot-z-modal tokens defined in aot-theme-variables.css */
+.modal {
+    z-index: var(--aot-z-modal) !important;
+}
+.modal-backdrop {
+    z-index: var(--aot-z-modal-backdrop);
+}
+
+/* aotConfirmModal: always above all other modals and backdrops */
+#aotConfirmModal {
+    z-index: var(--aot-z-confirm) !important;
+}
+#aotConfirmBackdrop {
+    z-index: var(--aot-z-confirm-backdrop) !important;
+}
+
+/* SECTION 1: DESIGN TOKENS — defined in aot-theme-variables.css */
+
+/* SECTION 1b: BODY / DESCRIPTION TEXT */
+.aot-modal-body-text {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--aot-text-secondary);
+    line-height: 1.45;
+    margin-top: 0.2rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+/* SECTION 2: TOPOGRAPHY & LAYOUT HIERARCHY */
+.aot-modal-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--aot-text-title);
+    margin-top: 1rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--aot-border-light);
+}
+
+.aot-modal-group-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--gray-dark);
+    margin-top: 1.6rem; /* 2:1 비율 - 위쪽 */
+    margin-bottom: 0.2rem; /* 2:1 비율 - 아래쪽 */
+    padding-left: 16px !important; /* 박스 내부 레이블과 정렬 통일 (16px) */
+}
+
+.aot-modal-section-title {
+    background: none !important;
+    color: var(--gray-dark) !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    padding: 0 0 0 16px !important; /* 박스 내부 레이블과 정렬 통일 (16px) */
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-bottom: none !important;
+    margin: 1.6rem 0 0.2rem 0 !important; /* 2:1 비율 */
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* 좌측 정렬 */
+}
+
+/* Remove margin for the first section title to reduce top whitespace */
+.aot-modal-container + .aot-modal-section-title:first-of-type,
+.aot-modal-container:first-child + .aot-modal-section-title,
+.aot-modal-section-title:first-child {
+    margin-top: 0.2rem !important;
+}
+
+.aot-modal-subgroup-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--aot-text-main);
+    background: none !important;
+    padding: 7px 0 7px 0 !important; /* 상하 대칭 패딩 */
+    border-bottom: 1px solid var(--gray) !important;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem; /* 상하 대칭 마진 */
+    display: flex;
+    align-items: center;
+    justify-content: center; /* 중앙 정렬 */
+}
+
+.aot-modal-container {
+    background-color: var(--aot-input-bg);
+    border: 1px solid var(--gray);
+    border-radius: 16px !important;
+    padding: 0 16px !important; /* 좌우 여백을 16px로 충분히 확보하여 답답함 해소 */
+    margin-bottom: 1.2rem;
+    overflow: visible !important; /* 드롭다운 목록이 잘리지 않도록 visible 설정 */
+}
+
+/* 채널 전용 그룹 스타일 (중첩 느낌 배제) */
+.aot-modal-channel-group {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 1.2rem;
+}
+
+/* 채널 타이틀 스타일 (밑줄 없음, 중제목과 좌측 정렬) */
+.aot-modal-channel-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--aot-text-main);
+    background: none !important;
+    padding: 0 0 0 16px !important; /* 2:1 비율 패딩 */
+    border-bottom: none !important; /* 밑줄 제거 */
+    margin-top: 1.2rem; /* 2:1 비율 - 위쪽 */
+    margin-bottom: 0.2rem; /* 2:1 비율 - 아래쪽 */
+    display: flex;
+    align-items: center;
+}
+
+.aot-modal-channel-separator {
+    margin: 0 0.6rem;
+    color: var(--gray);
+    font-weight: 300;
+}
+
+.aot-modal-channel-name {
+    font-weight: 700;
+}
+
+/* Optional wrapper for a set of related options (Card-like look) */
+.aot-modal-option-group {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.aot-modal-option-row {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0 !important;
+    min-height: 2.4rem;
+    border-bottom: 1px solid var(--gray); /* 통일된 경계선 */
+    gap: 15px; /* Increased for better touch separation */
+}
+
+.aot-modal-option-row:last-child {
+    border-bottom: none;
+}
+
+.aot-modal-option-row.aot-modal-option-row-wrap {
+    flex-wrap: wrap !important;
+    height: auto !important;
+}
+
+.aot-modal-row-wrap {
+    flex-wrap: wrap !important;
+    height: auto !important;
+}
+
+.aot-modal-option-label {
+    flex: 0 1 auto !important; /* Shrink-only: label occupies content width, not full row */
+    min-width: 100px;
+    max-width: calc(100% - var(--aot-common-control-width, 160px) - 30px);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--aot-text-main);
+    line-height: 1.3;
+    word-break: break-word; /* Prevent long titles from breaking layout */
+    margin-bottom: 0 !important; /* Override Bootstrap's default label margin to enable proper vertical centering */
+}
+
+/* SECTION 3: FORM CONTROLS & LAYOUT */
+.aot-modal-option-control {
+    flex: 0 0 var(--aot-common-control-width) !important;
+    width: var(--aot-common-control-width) !important;
+    min-width: var(--aot-common-control-width) !important; /* Force stability */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0 !important; /* Critical: Prevent crushing on mobile */
+}
+
+/* SECTION 3: FORM CONTROLS (INPUTS, SELECTS) */
+.aot-modern-input,
+.aot-modern-select {
+    box-sizing: border-box !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
+    border: 1px solid var(--gray) !important;
+    padding: 0 1rem !important;
+    font-size: 0.85rem !important;
+    background-color: var(--aot-input-bg) !important;
+    color: var(--aot-text-main) !important;
+    text-align: left;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Fixed single-line height is for inputs/selects only. A <textarea> must NOT get a
+   height/line-height with !important here, otherwise it overrides the inline height
+   the browser writes while dragging the resize handle (resize becomes a no-op). */
+.aot-modern-input:not(textarea),
+.aot-modern-select {
+    height: 32px !important;
+    line-height: 30px !important;
+}
+
+/* Select: remove browser default appearance for pill shape */
+.aot-modern-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    padding-right: 2rem !important;
+}
+
+/* Color Picker Input (Custom UI) */
+.aot-modal-option-control input[type="color"] {
+    height: 32px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: 1px solid var(--gray) !important;
+    border-radius: 16px !important;
+    cursor: pointer;
+    overflow: hidden !important;
+}
+
+/* WebKit shadow DOM elements inside color input */
+.aot-modal-option-control input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0 !important;
+    border-radius: 16px !important;
+}
+
+.aot-modal-option-control input[type="color"]::-webkit-color-swatch {
+    border: none !important;
+    border-radius: 16px !important;
+}
+
+/* Internal controls follow the container's 160px width precisely */
+.aot-modal-option-control .aot-modern-input,
+.aot-modal-option-control .aot-modern-select,
+.aot-modal-option-control .bootstrap-select:not(.aot-standard-select) {
+    width: 100% !important; /* Take full 160px from parent */
+    min-width: 0;
+}
+
+/* [Fix] bootstrap-select hides the ORIGINAL <select> via position:absolute; left:50%; width:0.5px.
+   The width:100% rule above also matched that hidden select (it carries .aot-modern-select),
+   stretching it back to 160px so it protruded ~78px past its wrapper — a phantom horizontal
+   scroll that only surfaced on mobile (narrow viewport). Re-assert bootstrap-select's hidden
+   geometry for the original select so it cannot overflow. */
+.aot-modal-option-control .bootstrap-select > select {
+    width: 0.5px !important;
+    min-width: 0 !important;
+}
+
+/* Exception: Inside Composite Groups (API Keys) - split the 160px */
+.aot-api-key-group .aot-modern-input {
+    width: 0 !important; /* Reset to let flex share space */
+    flex: 1 !important;
+}
+
+.aot-modern-input:focus {
+    border-color: var(--aot-input-focus-border) !important;
+    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+}
+
+/* Textarea: multi-line code editor. No !important height here — the height comes from
+   the rows attribute / min-height, and is freely overridden by the inline height the
+   browser writes while the user drags the resize handle. */
+textarea.aot-modern-input {
+    line-height: 1.5 !important;
+    padding: 0.5rem 1rem !important;
+    resize: vertical !important;
+    overflow: auto !important;
+    white-space: pre !important;       /* code: no wrap, horizontal scroll instead */
+    overflow-wrap: normal !important;
+}
+
+/* Conditional Controller code editors: sensible default heights, user-resizable.
+   Import / Initialize / Status-check need ~5 lines; the Execute body needs ~15+. */
+#conditional_import,
+#conditional_initialize,
+#conditional_status {
+    min-height: 7.5rem !important;     /* ~5 lines */
+}
+
+#conditional_statement {
+    min-height: 22rem !important;      /* ~15 lines */
+}
+
+/* Map Section Style (Outside Box) */
+.map-option-section {
+    padding: 0 !important;
+    margin-bottom: 10px !important;
+}
+
+/* Bootstrap Select Override (Fix Double Box Look) */
+.aot-modal-option-control .bootstrap-select.aot-standard-select {
+    border: none !important; /* Remove outer border if selectpicker is used */
+    background: transparent !important;
+}
+
+/* Bootstrap Select Override */
+.aot-modal-option-control .bootstrap-select {
+    width: var(--aot-common-control-width) !important;
+    padding: 0 !important;
+}
+
+.aot-modal-option-control .bootstrap-select > .dropdown-toggle {
+    height: 32px !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
+    background: var(--aot-input-bg) !important;
+    border: 1px solid var(--gray) !important;
+    color: var(--aot-text-main) !important;
+    font-size: 0.85rem !important;
+    text-align: center !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-shadow: none !important; /* Force stability */
+    /* Force GPU acceleration to fix repaint issues */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Ensure bootstrap-select internal label is visible and centered */
+.aot-modal-option-control .bootstrap-select .filter-option {
+    color: var(--aot-text-main) !important;
+    text-align: center !important;
+}
+
+.aot-modal-option-control .bootstrap-select .filter-option-inner-inner {
+    color: var(--aot-text-main) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.aot-modal-option-control .bootstrap-select .dropdown-toggle:after {
+    display: none !important;
+}
+
+/* Ensure dropdown button doesn't shrink */
+.aot-modal-option-control .bootstrap-select .btn {
+    flex-shrink: 0 !important;
+    min-width: 0; /* Allow inner content to handle overflow if needed */
+}
+
+/* Dropdown Menu Style - Contextual Separation */
+
+/* Page-level list (Input/Output/Function settings cards outside modal):
+   gridstack items use position:absolute and stack by DOM order, which can
+   overlap a dropdown with default z-index. Fix: raise to navbar level.
+   Modal rule below overrides this via higher specificity. */
+.aot-modal-option-control .bootstrap-select .dropdown-menu,
+.aot-main-selection-row .bootstrap-select .dropdown-menu {
+    z-index: var(--aot-z-navbar) !important;
+}
+
+/* 모달 내부 [단일값 옵션 셀렉트] — Popper 렌더링 타입.
+   Popper.js가 인라인 transform/top/left 를 심으므로 이를 무력화하려면 !important 가 불가피하다.
+   action-group(조건/액션 추가) 셀렉트는 data-container="body" 로 목록을 body 로 빼므로
+   이 in-modal 규칙과는 애초에 매칭되지 않는다(아래 SECTION 12 참조).
+   목록은 모달 내부 콘텐츠보다 위에 떠야 하므로 --aot-z-modal-nested 사용. */
+.modal .aot-modal-option-control .bootstrap-select .dropdown-menu {
+    border-radius: 12px !important;
+    z-index: var(--aot-z-modal-nested) !important;
+    left: auto !important;
+    right: 0 !important;
+    transform: none !important;
+    top: 100% !important;
+    margin-top: 4px !important;
+
+    /* Auto Width Logic */
+    min-width: 100% !important;
+    width: max-content !important;
+    max-width: 85vw !important;
+}
+
+
+/* 위젯 추가 인라인 폼: 모달과 동일 — 오른쪽 정렬 + Popper 무력화 + Auto Width */
+.add_dashboard_widget .aot-modal-option-control .bootstrap-select .dropdown-menu {
+    border-radius: 12px !important;
+    z-index: var(--aot-z-navbar) !important;
+    transform: none !important;
+    top: 100% !important;
+    left: auto !important;
+    right: 0 !important;
+    margin-top: 4px !important;
+    min-width: 100% !important;
+    width: max-content !important;
+    max-width: 85vw !important;
+}
+
+/* [Fix] 열린 드롭다운을 가진 행을 형제 행/모달 콘텐츠 위로 올린다.
+   모달에서 호출한 목록이 모달 내부 콘텐츠보다 항상 위에 오도록 --aot-z-modal-nested 로
+   행 전체(그 안의 드롭다운 포함)를 모달 콘텐츠 위 계층에 둔다. */
+.aot-modal-option-row:has(.bootstrap-select.show) {
+    position: relative;
+    z-index: var(--aot-z-modal-nested);
+}
+
+/* Prevent text wrapping to ensure width expands */
+.modal .aot-modal-option-control .bootstrap-select .dropdown-menu li a span.text,
+.add_dashboard_widget .aot-modal-option-control .bootstrap-select .dropdown-menu li a span.text {
+    white-space: nowrap !important;
+    display: block;
+}
+
+.modal .aot-modal-option-control .bootstrap-select .dropdown-menu li,
+.add_dashboard_widget .aot-modal-option-control .bootstrap-select .dropdown-menu li {
+    white-space: nowrap !important;
+}
+
+/* SECTION 4: BUTTONS & PILL STYLE
+   명시도(specificity) 기반 — !important 없음
+   .btn.aot-pill-btn          (0,2,0) : Bootstrap .btn (0,1,0) 이김
+   .btn.aot-pill-btn.variant  (0,3,0) : Bootstrap .btn.btn-primary (0,2,0) 이김
+   aot-modal-modern.css은 bootstrap.min.css 이후 로드 → 동일 명시도 시 cascade로 이김
+*/
+
+/* ── Base ─────────────────────────────────────────────── */
+.btn.aot-pill-btn {
+    border-radius: 9999px;
+    height: 32px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    width: auto;
+    min-width: 54px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    touch-action: manipulation;  /* 터치 탭 지연/모호성 제거 */
+    white-space: nowrap;
+    overflow: hidden;
+    border: 1px solid var(--border-neutral, #ddd);
+    background-color: var(--aot-surface-card, #fff);
+    color: var(--aot-text-main, #444);
+    box-shadow: none;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+                color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    text-decoration: none;
+    vertical-align: middle;
+}
+
+.btn.aot-pill-btn:hover,
+.btn.aot-pill-btn:focus {
+    border-color: var(--aot-text-secondary, #888);
+    background-color: var(--aot-surface-body, #f8f9fa);
+    text-decoration: none;
+    outline: none;
+}
+
+/* 모달 내 버튼은 모달 z-index 맥락 상속 */
+.modal .btn.aot-pill-btn {
+    z-index: auto;
+}
+
+/* Grid-stack 행 내부: 콘텐츠 기반 폭, 여백 축소 */
+.grid-stack-item .btn.aot-pill-btn {
+    padding: 0 10px;
+    min-width: 48px;
+}
+
+@media (max-width: 575.98px) {
+    .grid-stack-item .btn.aot-pill-btn {
+        padding: 0 7px;
+        min-width: 44px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Tab Settings 모달 푸터 */
+#tabSettingsModal .modal-footer .btn.aot-pill-btn {
+    min-width: 120px;
+}
+
+/* 60px 고정폭 수정자 */
+.btn.aot-pill-btn.aot-w-60 {
+    width: 60px;
+    min-width: 60px;
+    padding: 0;
+}
+
+/* [Global] Tooltip z-index — 모달(--aot-z-modal)보다 위에 표시 */
+.tooltip {
+    z-index: var(--aot-z-tooltip) !important;
+}
+
+/* ── Primary (0,3,0) ──────────────────────────────────── */
+/* .aot-pill-btn-primary 명시 사용 + 기존 btn-primary 혼용 케이스 모두 커버 */
+.btn.aot-pill-btn.aot-pill-btn-primary,
+.btn.btn-primary.aot-pill-btn {
+    /* 폴백 주의: 노란색(--aot-color-primary)은 버튼에 쓰지 않는다 — 브랜드 딥그린 */
+    background-color: var(--bd-tertiary, #13261B);
+    border-color: var(--bd-border, #13261B);
+    color: var(--text-color-tertiary, #fff);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn.aot-pill-btn.aot-pill-btn-primary:hover,
+.btn.aot-pill-btn.aot-pill-btn-primary:focus,
+.btn.btn-primary.aot-pill-btn:hover,
+.btn.btn-primary.aot-pill-btn:focus {
+    background-color: var(--aot-color-dark, #141414);
+    border-color: var(--bd-border, #13261B);
+    color: var(--text-color-tertiary, #fff);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.btn.aot-pill-btn.aot-pill-btn-primary:active,
+.btn.btn-primary.aot-pill-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* ── Danger (0,3,0) ───────────────────────────────────── */
+.btn.aot-pill-btn.aot-pill-btn-danger {
+    background-color: var(--aot-color-danger, #DF5353);
+    border-color: var(--aot-color-danger, #DF5353);
+    color: var(--text-color-tertiary, #fff);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn.aot-pill-btn.aot-pill-btn-danger:hover,
+.btn.aot-pill-btn.aot-pill-btn-danger:focus {
+    background-color: #c94444;
+    border-color: #c94444;
+    color: var(--text-color-tertiary, #fff);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.btn.aot-pill-btn.aot-pill-btn-danger:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* ── Secondary (0,3,0) ────────────────────────────────── */
+.btn.aot-pill-btn.aot-pill-btn-secondary {
+    background-color: var(--aot-btn-bg-secondary, #5E6B64);
+    border-color: var(--aot-btn-bg-secondary, #5E6B64);
+    color: var(--text-color-tertiary, #fff);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn.aot-pill-btn.aot-pill-btn-secondary:hover,
+.btn.aot-pill-btn.aot-pill-btn-secondary:focus {
+    background-color: #4d5a53;
+    border-color: #4d5a53;
+    color: var(--text-color-tertiary, #fff);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.btn.aot-pill-btn.aot-pill-btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* SECTION 5: SPECIAL COMPOSITES (API KEYS, ACTIONS) */
+.aot-api-key-group,
+.aot-action-group {
+    display: flex !important;
+    align-items: center;
+    width: 100% !important;
+    gap: 4px !important;
+    min-width: 160px; /* Base container width */
+}
+
+/* Helper for 60px buttons — .btn.aot-pill-btn.aot-w-60 (0,3,0) 이미 정의됨, 비-btn 폴백 */
+.aot-w-60 {
+    width: 60px;
+    min-width: 60px;
+    padding: 0;
+}
+
+/* Smart Grouping: 160px = Content(flex) + Button(60px) IF multiple items exist */
+.aot-api-key-group > .btn:not(:only-child),
+.aot-api-key-group > .btn-group:not(:only-child),
+.aot-action-group > .btn:not(:only-child),
+.aot-action-group > .btn-group:not(:only-child) {
+    flex: 0 0 var(--aot-btn-fixed-width) !important;
+    width: var(--aot-btn-fixed-width) !important;
+    padding: 0 !important;
+    font-size: 0.75rem !important;
+}
+
+/* Standalone items in groups take full 160px */
+.aot-api-key-group > .btn:only-child,
+.aot-api-key-group > .btn-group:only-child,
+.aot-action-group > .btn:only-child,
+.aot-action-group > .btn-group:only-child {
+    flex: 0 0 var(--aot-common-control-width) !important;
+    width: var(--aot-common-control-width) !important;
+}
+
+.aot-api-key-group .aot-modern-input,
+.aot-action-group .bootstrap-select {
+    flex: 1 1 0% !important; /* Grow to fill space but allow shrinking to 0 if needed for wrap */
+    width: 0 !important;
+    min-width: 80px; /* Don't let text inputs disappear completely */
+}
+
+/* Footer Button Wrapping Fix - Targets standard button containers in modals */
+.d-flex.flex-wrap.mb-3 {
+    flex-wrap: wrap !important;
+}
+
+/* Map Container Protection */
+.map-container, .map-option-wrapper {
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* SECTION 6: RESPONSIVE ADAPTATION */
+/* SECTION 6: RESPONSIVE ADAPTATION */
+@media (max-width: 768px) {
+    .aot-modal-option-row {
+        gap: 8px;
+        flex-wrap: nowrap !important; /* 가로 레이아웃 최대한 유지 */
+        height: auto !important;
+        padding: 0.4rem 0 !important;
+    }
+
+    .aot-modal-option-label {
+        flex: 1 1 auto !important;
+        min-width: 0; /* 라벨이 공간에 맞춰 줄어들 수 있도록 허용 */
+        margin-bottom: 0 !important;
+        font-size: 0.85rem !important; /* 좁은 화면에서 가독성 확보 */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap; /* 라벨이 너무 길면 말줄임표 처리 */
+    }
+
+    .aot-modal-option-control {
+        flex: 0 0 var(--aot-common-control-width) !important; /* iOS: 160px 고정 유지 */
+        width: var(--aot-common-control-width) !important;
+        min-width: var(--aot-common-control-width) !important;
+        justify-content: flex-end !important;
+    }
+
+    /* 모바일에서는 소제목 좌측 정렬 */
+    .aot-modal-section-title,
+    .aot-modal-subgroup-title,
+    .aot-modal-channel-title {
+        justify-content: flex-start !important; /* 좌측 정렬 */
+        padding-left: 16px !important; /* 좌측 여백 추가 */
+    }
+
+    /* Phase 6: Anti-Zoom for iOS Input Fields */
+    /* 16px prevents native zoom on focus, stabilizing fixed layout */
+    .aot-in-modal-notes-container input,
+    .aot-in-modal-notes-container textarea,
+    .aot-in-modal-notes-container .aot-modern-input,
+    .aot-in-modal-notes-container .form-control {
+        font-size: 16px !important;
+    }
+
+    /* iOS Safari: prevent auto-zoom on ALL modal inputs (not just notes) */
+    .aot-option-modal input,
+    .aot-option-modal textarea,
+    .aot-option-modal select,
+    .aot-option-modal .aot-modern-input,
+    .aot-option-modal .form-control {
+        font-size: 16px !important;
+    }
+
+    /* 초소형 기기(360px 이하) — 1줄 강제, 라벨 축소 허용 */
+    @media (max-width: 360px) {
+        .aot-modal-option-row {
+            flex-wrap: nowrap !important;
+            gap: 6px;
+        }
+        .aot-modal-option-label {
+            flex: 1 1 auto !important;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0 !important;
+        }
+        .aot-modal-option-control {
+            flex: 0 0 var(--aot-common-control-width) !important;
+            min-width: var(--aot-common-control-width) !important;
+            justify-content: flex-end !important;
+        }
+    }
+}
+
+/* SECTION 7: BOOTSTRAP GRID OVERRIDE IN MODALS */
+/* Fix horizontal scroll caused by Bootstrap's negative margins */
+.modal-dialog .modal-content .row,
+.modal-dialog .modal-body .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.modal-dialog .modal-content [class*="col-"],
+.modal-dialog .modal-body [class*="col-"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Force horizontal overflow hidden on modal body */
+.modal-dialog .modal-body {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    -webkit-overflow-scrolling: touch !important; /* Fix for iOS scroll */
+}
+
+/* Fix for iOS modal scrolling entire page */
+.modal-open .modal {
+    -webkit-overflow-scrolling: touch !important;
+}
+
+/* SECTION 8: IN-MODAL NOTES INTEGRATION */
+/* Force relative on modal content to keep notes inside */
+/* overflow-y: visible 은 notes panel(absolute) 이 modal 밖으로 나오지 않도록 필요.
+   단, .aot-option-modal 은 Section 13 에서 overflow:hidden 으로 명시 재정의함. */
+.modal-content {
+    position: relative !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+}
+
+.aot-in-modal-notes-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 400px;
+    max-width: 90vw; /* Guard for very small non-mobile windows */
+
+    @media (min-width: 992px) { /* LG */
+        width: 450px;
+    }
+    @media (min-width: 1200px) { /* XL */
+        width: 500px;
+    }
+    max-width: 100% !important; /* Never exceed modal width */
+    background: var(--aot-input-bg);
+    border-left: 1px solid var(--aot-border-light);
+    /* High enough to bypass modal body focus traps and map controllers */
+    z-index: var(--aot-z-navbar) !important;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    overscroll-behavior: contain;
+}
+
+.aot-in-modal-notes-container.active {
+    pointer-events: auto;
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.aot-in-modal-notes-container.is-global {
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    z-index: var(--aot-z-popover) !important; /* 모달 위, 모달 밖에서도 최상위 */
+}
+
+@media (max-width: 575.98px) {
+    .aot-in-modal-notes-container {
+        width: 100%;
+        height: 100%;
+        border-left: none;
+        box-shadow: none;
+        top: 0 !important;
+        right: 0 !important;
+    }
+}
+
+/* SECTION 9: FULL-WIDTH CODE/TEXT BLOCK (System Prompt etc.) */
+/* Override 160px constraint for rows that need full-width content */
+.aot-modal-option-row.aot-full-width-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.aot-modal-option-row.aot-full-width-row > .aot-modal-option-label {
+    margin-bottom: 0.4rem !important;
+}
+
+.aot-modal-option-row.aot-full-width-row > .aot-modal-option-control {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* SECTION 10: GIS/GEO UNIFICATION */
+/* Compatibility for old geo styles while migrating to modern */
+.aot-modal-option-control .gis-custom-option,
+.aot-modal-option-control .aot-modern-select.gis-custom-option {
+    width: 100% !important;
+    height: 32px !important;
+    border-radius: var(--aot-btn-pill-radius) !important;
+}
+
+/* .aot-option-modal 너비 제한 → Section 13 .aot-option-modal .modal-dialog 로 통합 */
+
+/* SECTION 11: CAMERA PREVIEW IN MODAL */
+.aot-camera-preview-section {
+    margin-bottom: 1rem;
+}
+
+.aot-camera-preview-wrapper {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.aot-camera-preview-media {
+    flex: 0 0 auto;
+    width: 240px;
+    height: 170px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--camera-preview-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aot-camera-preview-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.aot-camera-preview-media .aot-camera-no-image {
+    color: var(--gray-dark);
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 8px;
+}
+
+.aot-camera-preview-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.82rem;
+    color: var(--aot-text-main);
+}
+
+.aot-camera-preview-info .preview-info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+}
+
+.aot-camera-preview-info .preview-info-label {
+    font-weight: 600;
+    color: var(--gray-dark);
+}
+
+.aot-camera-preview-toggle {
+    display: flex;
+    gap: 4px;
+    margin-top: auto;
+}
+
+.aot-camera-preview-toggle .btn {
+    flex: 1;
+    height: 28px;
+    font-size: 0.75rem;
+    border-radius: var(--aot-btn-pill-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--gray);
+    background: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    transition: all 0.2s;
+}
+
+.aot-camera-preview-toggle .btn.active {
+    background: var(--bd-tertiary, var(--aot-primary));
+    border-color: var(--bd-border, var(--aot-primary));
+    color: var(--text-color-tertiary);
+    font-weight: 600;
+}
+
+/* Capture Control Buttons */
+.aot-camera-capture-controls {
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    margin-bottom: 0.8rem;
+}
+
+.aot-camera-capture-controls .btn {
+    flex: 1;
+    height: 36px;
+    border-radius: var(--aot-btn-pill-radius);
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+@media (max-width: 768px) {
+    .aot-camera-preview-wrapper {
+        flex-direction: column;
+    }
+    .aot-camera-preview-media {
+        width: 100%;
+        height: 180px;
+    }
+}
+
+/* SECTION 12: 조건/액션 "추가" 셀렉트 (aot-action-group) — [body 컨테이너] 렌더링 타입
+   ───────────────────────────────────────────────────────────────────────
+   요구: (1) 호출 버튼은 AoT 현대 스타일(좁은 pill) 유지  (2) 목록은 버튼 폭과
+   무관하게 적절한 폭  (3) 아래 공간이 없으면 버튼 위로(dropup) 열려 더 많이 표시.
+
+   해법: 셀렉트에 data-container="body"(+data-display="static") 를 준다.
+   → 드롭다운 목록이 <body> 로 빠져나가 모달의 overflow(가로/세로 클리핑)를
+     완전히 벗어난다. 폭은 내용에 맞고(뷰포트로 cap), 세로 공간이 부족하면
+     bootstrap-select 의 dropupAuto 가 자동으로 버튼 위로 띄운다.
+   버튼은 원래 .aot-modal-option-control(160px) 안의 좁은 pill 그대로 → 요구(1) 충족.
+   따라서 여기서는 레이아웃을 건드리지 않고, body 로 나간 목록만 스타일링한다.
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* [중요] bs-container 는 bootstrap-select 가 복사한 클래스(aot-modern-select 등)의
+   transform: translateZ(0)(GPU 가속) 때문에 자체 스택 컨텍스트를 만든다.
+   → 내부 메뉴의 z-index 가 컨테이너 안에 갇혀, 컨테이너 자신의 z-index(auto≈0)
+     로 모달(--aot-z-modal) 뒤에 깔린다.
+   따라서 z-index 는 메뉴가 아니라 컨테이너 자체에 줘야 서브트리 전체가 모달 위로 온다.
+   (컨테이너 z-index 를 지정하는 규칙이 달리 없어 !important 불필요) */
+.bs-container {
+    z-index: var(--aot-z-modal-nested);
+}
+
+/* body 로 빠진 목록(.bs-container) 스타일: 모서리/줄바꿈/여백만 다듬는다. */
+.bs-container .dropdown-menu {
+    border-radius: 12px;
+    margin: 4px 0;
+}
+.bs-container .dropdown-menu li a span.text {
+    white-space: normal;      /* 긴 항목 줄바꿈 → 가로 스크롤 방지 */
+    word-break: break-word;
+}
+
+/* [모바일] bootstrap-select 는 bs-container 를 버튼 위치·버튼폭(inline left/width)으로
+   앵커한다. 좁은 화면에서 우측 버튼 기준 컨테이너(≈96px)가 목록의 shrink-to-fit 폭을
+   버튼폭으로 눌러버린다. → 컨테이너를 뷰포트 폭으로 스팬시키면 목록이 내용폭으로 펴지고
+   좌우로 넘치지 않는다. inline 스타일을 덮어야 하므로 !important 는 불가피. */
+@media (max-width: 575.98px) {
+    .bs-container {
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+    }
+}
+
+/* [일반 안전망] 페이지 레벨 등 그 외 bootstrap-select 드롭다운의 모바일 뷰포트 오버플로 방지 */
+@media (max-width: 575.98px) {
+    .bootstrap-select.open > .dropdown-menu,
+    .bootstrap-select.show > .dropdown-menu {
+        max-width: min(320px, calc(100vw - 24px)) !important;
+        overflow-x: hidden !important;
+    }
+    .bootstrap-select .dropdown-menu li a span.text {
+        white-space: normal !important;
+        word-break: break-word;
+    }
+}
+
+/* ============================================================
+   SECTION 13: OPTION MODAL — 공통 레이아웃 (단일 정의)
+   대상: input / output / function / geo-input /
+         ai-agent / dashboard 설정 모달 (.aot-option-modal)
+   규칙: 이 파일이 custom.css / aot.css 보다 나중에 로드되므로
+         specificity 동일 시 이 섹션이 이김.
+         Section 8의 !important 와 충돌 시 더 높은 specificity 로 재정의.
+   ============================================================ */
+
+/* --- body: 모달 열릴 때 페이지 스크롤 완전 차단 ---
+   Bootstrap 이 modal-open 클래스를 추가하지만 !important 로 보강 */
+body.modal-open {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+/* --- 모달 컨테이너: 화면 중앙 배치 ---
+   display 는 Bootstrap JS 가 제어하므로 override 금지.
+   Bootstrap 이 show 시 display:block 으로 설정한 후
+   align-items / justify-content 가 동작하도록 flex 는 .show 에서만 적용. */
+.modal.aot-option-modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    overflow: hidden !important; /* 모달 컨테이너 자체 스크롤 방지 */
+}
+
+/* --- modal-dialog: 너비 제한 + 화면 초과 방지 ---
+   aot.css 의 @media(max-width:768px) max-width:none!important 를 재정의.
+   ⚠️ margin 은 반드시 'auto'(가로 중앙) — 닫을 때 .show 가 제거되면 모달이
+      display:block 으로 돌아가는데, margin:0 이면 dialog 가 컨테이너 좌측 끝에
+      붙어 "왼쪽으로 순간이동" 버그가 발생함. margin:0 auto 면 flex(열림)·block(닫힘)
+      양쪽에서 항상 가로 중앙이라 좌측 튐이 없음. */
+.aot-option-modal .modal-dialog {
+    width: calc(100% - 1rem) !important; /* viewport 양쪽 0.5rem 여백 확보 */
+    max-width: 600px !important;
+    margin: 0 auto !important;           /* 가로 중앙(.show 무관) — 좌측 튐 방지 */
+    pointer-events: auto;
+}
+
+/* --- modal-content: flex 컬럼 + 높이 제한 ---
+   .aot-option-modal .modal-content (0,2,0) > .modal-content (0,1,0)
+   !important 로 Section 8 의 overflow-y:visible 재정의 */
+.aot-option-modal .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;           /* sticky header/footer 활성화 */
+    overflow-y: hidden !important;         /* Section 8 !important 재정의 */
+    height: auto !important;
+    border-radius: 1rem !important;
+    border: none !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    /* 높이: vh 폴백 → dvh(동적 뷰포트, 모바일 크롬 반영) */
+    max-height: calc(100vh - 100px);
+    max-height: calc(100dvh - 100px);
+}
+
+/* --- form 직속 자식 (dashboard 위젯 패턴) --- */
+.aot-option-modal .modal-content > form {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* --- modal-header: 고정 ---
+   h5.modal-title: Bootstrap 기본 1.25rem/500 → 1rem/600 으로 최적화
+   min-height: 50px = main-navbar 높이와 동일 */
+.aot-option-modal .modal-header {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;    /* Bootstrap 기본 flex-start 재정의 */
+    min-height: 50px !important;
+    border-bottom: 1px solid var(--border-neutral, #dee2e6);
+    background-color: var(--aot-surface-card, #fff);
+    border-top-left-radius: 1rem !important;
+    border-top-right-radius: 1rem !important;
+    padding: 0 1rem;
+}
+
+.aot-option-modal .modal-header .modal-title {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- modal-body: 스크롤 영역 --- */
+/* .aot-option-modal .modal-body (0,3,0) > .modal-dialog .modal-body (0,2,0)
+   Section 7 의 overflow-x 규칙도 덮어씀 */
+.aot-option-modal .modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;    /* iOS 관성 스크롤 */
+    overscroll-behavior: contain;         /* 모달 바디 끝에서 페이지 스크롤 전파 차단 */
+    /* 스크롤은 동작하되 스크롤바는 숨김(17px 공간 차지 X) — 좁은 모달 폭 확보 */
+    scrollbar-width: none !important;      /* Firefox */
+    -ms-overflow-style: none !important;   /* old Edge/IE */
+}
+/* WebKit(Chrome/Safari): 모달 바디 스크롤바 트랙 자체 제거 (스크롤 동작은 유지) */
+.modal-dialog .modal-body::-webkit-scrollbar,
+.aot-option-modal .modal-body::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+.modal-dialog .modal-body {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+/* --- modal-footer: 고정 ---
+   min-height: 50px = main-navbar 높이와 동일 */
+.aot-option-modal .modal-footer {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0.25rem !important;
+    min-height: 50px !important;
+    /* 상하 9px = (50px - 버튼 32px) / 2 → 버튼 수직 중앙 정렬 */
+    padding-top: 9px !important;
+    padding-right: 1rem !important;
+    padding-left: 1rem !important;
+    /* iOS 홈 인디케이터: 안전 영역만큼 추가 (없으면 9px 유지) */
+    padding-bottom: max(9px, env(safe-area-inset-bottom, 9px)) !important;
+    border-top: 1px solid var(--border-neutral, #dee2e6) !important;
+    background-color: var(--aot-surface-card, #fff) !important;
+    border-bottom-left-radius: 1rem !important;
+    border-bottom-right-radius: 1rem !important;
+    /* Bootstrap default margin 제거 */
+    margin: 0 !important;
+}
+
+/* --- modal-footer 버튼: 기본 AoT btn 과 동일 높이(32px) 유지 ---
+   베이스 .btn.aot-pill-btn { height: 32px } 그대로 사용해 다른 페이지
+   버튼들과 시각적 일관성 확보. footer min-height 50px = 9px + 32px + 9px */
+.aot-option-modal .modal-footer .btn.aot-pill-btn {
+    flex: 0 0 auto !important;
+    min-width: 56px !important;
+    font-size: 0.8rem !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 0.75rem !important;
+    line-height: 30px !important;
+}
+
+/* --- 모바일 (≤767.98px): 전체 화면 + 바텀시트 슬라이드 애니메이션 ---
+   ⚠️ 브레이크포인트는 aot.css 의 모달 풀폭 규칙(@media max-width:768px)과 반드시 일치.
+      이전 576px 이면 577~768px 구간에서 모달은 풀폭이지만 전체화면/애니메이션 규칙이
+      누락되어 Bootstrap 기본 동작(위→아래 페이드 + 닫을 때 좌측복귀)이 노출됨.
+
+   ⚠️ 예외: 탭 모달(.aot-tab-settings-modal)은 전체화면 대상이 아님 — 바로 아래
+      별도 미디어쿼리에서 중앙 카드로 재정의함. (대시보드 탭 / 탭 설정 모달 전용)
+
+   애니메이션 설계 (실제 Chrome 계측으로 결정 — 매우 중요):
+   - dialog 에 transition/animation(transform·opacity 무엇이든)을 걸면, Bootstrap 의
+     show/hide 가 display:none↔block 토글과 .show 클래스 추가를 같은 프레임에 처리하면서
+     transition 이 "running" 상태로 시작값에 영구히 갇히는 현상이 헤드리스·실제 Chrome
+     양쪽에서 100% 재현됨. 이 멈춘 transition 은 인라인 !important 조차 덮어써(=무력화)
+     모달이 화면 밖/투명 상태로 갇힘. (translateY 슬라이드, opacity 페이드 모두 동일 증상)
+   - 따라서 dialog 에는 어떤 transition/animation 도 두지 않음.
+     dialog 는 position:fixed inset:0 으로 전체화면 고정만 하고,
+     등장/퇴장 시각효과는 Bootstrap 의 백드롭 페이드(.modal-backdrop, 0.15s)가 담당.
+     → 좌측 점프/화면밖 갇힘 없이 깨끗하게 등장·퇴장 (양방향 대칭).
+   - 닫힌 모달의 오버레이 탭 차단은 pointer-events 로 원천 차단(카드 버튼 탭 안전). */
+@media (max-width: 767.98px) {
+    /* 열리지 않은(닫힘/닫는중) 모달은 탭을 가로채지 않음 — 오버레이 버그 원천 차단. */
+    .modal.aot-option-modal:not(.show) {
+        pointer-events: none !important;
+    }
+    .modal.aot-option-modal.show {
+        pointer-events: auto !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+    }
+
+    /* dialog: 전체화면 고정만. transform/transition/animation 일절 미사용(갇힘 버그 차단). */
+    .modal.aot-option-modal .modal-dialog {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;     /* top+bottom 이 높이 결정 */
+        margin: 0 !important;
+        display: block !important;   /* aot.css flex/block 충돌 차단 */
+        transform: none !important;  /* Bootstrap translate(0,-50px) 무력화 */
+        transition: none !important; /* 멈춘-transition 갇힘 버그 차단 */
+    }
+
+    /* content: absolute inset:0 으로 dialog 를 정확히 채움 — 단위 계산 없음 */
+    .modal.aot-option-modal .modal-content {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        height: auto !important;       /* top+bottom 이 높이 결정 */
+        max-height: none !important;   /* 데스크탑용 calc() 제거 */
+        border-radius: 0 !important;
+    }
+
+    .modal.aot-option-modal .modal-header {
+        border-radius: 0 !important;
+    }
+
+    /* 모바일 푸터: 안전 영역 재정의 (상위 룰 padding-bottom override) */
+    .modal.aot-option-modal .modal-footer {
+        border-radius: 0 !important;
+        padding-bottom: max(9px, env(safe-area-inset-bottom, 9px)) !important;
+    }
+}
+
+/* --- 모바일 예외: 탭 모달(.aot-tab-settings-modal)은 전체화면 대신 "중앙 카드" ---
+   대상: 대시보드 탭 설정 모달(layout) + 탭 이름변경/복제/삭제 모달(#tabSettingsModal).
+   위 공통 전체화면 규칙(.modal.aot-option-modal …, specificity 0,2,0)을
+   .aot-tab-settings-modal 한 클래스 더해(0,3,0) 확실히 덮어씀.
+   설계 원칙(transition 미사용·margin auto·pointer-events)은 공통 규칙과 동일하게 유지. */
+@media (max-width: 767.98px) {
+    .modal.aot-option-modal.aot-tab-settings-modal.show {
+        align-items: center !important;     /* 세로 중앙 */
+        justify-content: center !important; /* 가로 중앙 */
+        padding: 1rem 0 !important;          /* 상하 백드롭 여백 */
+    }
+
+    .modal.aot-option-modal.aot-tab-settings-modal .modal-dialog {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        width: calc(100% - 1.5rem) !important; /* 좌우 0.75rem 백드롭 여백 */
+        max-width: 480px !important;
+        height: auto !important;
+        margin: 0 auto !important;           /* 좌측 점프 방지 */
+        display: block !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    .modal.aot-option-modal.aot-tab-settings-modal .modal-content {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        height: auto !important;
+        max-height: calc(100vh - 2rem) !important;
+        max-height: calc(100dvh - 2rem) !important;
+        border-radius: 1rem !important;
+    }
+
+    .modal.aot-option-modal.aot-tab-settings-modal .modal-header {
+        border-top-left-radius: 1rem !important;
+        border-top-right-radius: 1rem !important;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+    }
+
+    .modal.aot-option-modal.aot-tab-settings-modal .modal-footer {
+        border-bottom-left-radius: 1rem !important;
+        border-bottom-right-radius: 1rem !important;
+        border-top-left-radius: 0 !important;
+        border-top-right-radius: 0 !important;
+        padding-bottom: max(9px, env(safe-area-inset-bottom, 9px)) !important;
+    }
+}
+
+/* SECTION: OPTION TOOLTIP ICON */
+.aot-option-tip {
+    display: inline-block;
+    color: var(--aot-color-text-secondary, #6c757d);
+    font-size: 0.7rem;
+    margin-left: 10px;
+    vertical-align: middle;
+    pointer-events: none; /* pass-through: mouse events reach the parent label, not the icon */
+    opacity: 0.5;
+    position: relative;
+    top: -1px;
+    flex-shrink: 0;
+}
+
+/* Show help cursor and highlight icon when label (제목) is hovered */
+label.aot-modal-option-label[title]:not([title=""]) {
+    cursor: help;
+}
+
+label.aot-modal-option-label[title]:not([title=""]):hover .aot-option-tip {
+    opacity: 1;
+    color: var(--aot-color-info, #007bff);
+}
+
+
+/* ── Aerial Photo overlay opacity slider ──────────────────────────────────
+   Native range inputs render inconsistently inside the themed modal (the
+   track/thumb can collapse to a hairline). Style them explicitly so the
+   slider is always visible and matches the AoT theme. */
+input[type="range"].aot-ov-opacity {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--aot-border, #d9dee3);
+    outline: none;
+    cursor: pointer;
+}
+input[type="range"].aot-ov-opacity::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+}
+input[type="range"].aot-ov-opacity::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px; /* centre the 16px thumb on the 6px track */
+    border-radius: 50%;
+    background: var(--bd-primary, #2e7d32);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+}
+input[type="range"].aot-ov-opacity::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--aot-border, #d9dee3);
+}
+input[type="range"].aot-ov-opacity::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bd-primary, #2e7d32);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+}

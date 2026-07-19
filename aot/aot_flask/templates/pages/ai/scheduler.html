@@ -1,0 +1,814 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_scheduler" %}
+{% set help_page = [manual_url("ai/env-control/"), _('Scheduler')] %}
+
+{% block title %} - {{ _('Scheduler') }}{% endblock %}
+
+{% block head %}
+<!-- FullCalendar v5 -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+<style>
+/* FullCalendar minimal overrides only */
+.fc { font-family: var(--font-family-sans-serif); }
+.fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 700; }
+.fc .fc-button { border-radius: 16px !important; font-size: 0.85rem; padding: 4px 12px; }
+.fc .fc-button-primary { background-color: var(--primary, #F2D524); border-color: var(--primary, #F2D524); color: #000; }
+.fc .fc-button-primary:hover { background-color: #EBCF21; border-color: #EBCF21; }
+.fc .fc-button-primary:not(:disabled).fc-button-active { background-color: #d4b91e; border-color: #d4b91e; }
+.fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion { font-size: 0.85rem; }
+.fc-event-draft { background: rgba(254,166,11,0.15) !important; border: 2px dashed #FEA60B !important; color: var(--aot-color-warning, #FEA60B) !important; }
+.fc-event-pending { background: rgba(2,154,207,0.2) !important; border-color: #029ACF !important; }
+.fc-event-running { background: rgba(150,192,100,0.25) !important; border-color: #96C064 !important; }
+.fc-event-completed { background: rgba(150,192,100,0.1) !important; border-color: #96C064 !important; opacity: 0.7; }
+.fc-event-failed { background: rgba(223,83,83,0.15) !important; border-color: #DF5353 !important; }
+.fc-event-archived { opacity: 0.4; }
+
+/* Device Timeline */
+#device-timeline-container { height: 400px; border-radius: 24px; overflow: hidden; }
+.vis-timeline { border: none !important; }
+.vis-item { border-radius: 8px !important; }
+</style>
+<!-- Vis-Timeline -->
+<link href="https://unpkg.com/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
+<link href="{{ url_for('static', filename='css/ai/device-timeline.css') }}" rel="stylesheet" type="text/css" />
+<link href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block body %}
+<main role="main" class="container">
+    {% include 'flash_messages.html' %}
+
+    <!-- Page Title -->
+    <div class="aot-settings-title">
+        <h3>{{ _('Scheduler') }}
+            <a href="{{ manual_url('ai/overview/') }}" target="_blank">
+                <span style="font-size: 16px" class="fas fa-question-circle"></span>
+            </a>
+        </h3>
+        <div class="d-flex" style="gap: 8px;">
+            <input class="btn aot-pill-btn aot-pill-btn-primary" type="button" value="{{ _('New Task') }}"
+                   data-toggle="modal" data-target="#addTaskModal" />
+        </div>
+    </div>
+
+    <!-- AI Proposals -->
+    <div class="aot-modal-group-title">{{ _('AI Proposals') }}
+        {% if drafts %}
+        <span class="badge badge-pill badge-primary ml-1">{{ drafts|length }}</span>
+        {% endif %}
+    </div>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    {% if drafts %}
+    {% for draft in drafts %}
+    <div class="grid-stack-item-content pause-background row small-gutters"
+         style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden; margin-bottom: 4px;">
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <i style="font-size: 2em"
+               class="{% if draft.proposed_by == 'AI' %}fas fa-robot{% else %}fas fa-user{% endif %}"
+               title="{{ draft.proposed_by }}"></i>
+        </div>
+        <div class="col-3">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.9rem;"
+                   value="{{ draft.action_type }}" type="text">
+        </div>
+        <div class="col-3">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.9rem;"
+                   value="{{ draft.target_id[:12] }}" type="text"
+                   title="{{ draft.target_id }}">
+        </div>
+        <div class="col-2">
+            <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
+                   type="button"
+                   value="{{ _('Approve') }}"
+                   onclick="approveJob('{{ draft.id }}')">
+        </div>
+        <div class="col-2">
+            <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
+                   type="button"
+                   value="{{ _('Reject') }}"
+                   onclick="rejectJob('{{ draft.id }}')">
+        </div>
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <a class="btn p-0" style="border-color: transparent;"
+               data-toggle="modal" data-target="#modal_proposal_{{ draft.id }}">
+                <i style="font-size: 1.5em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="inactive-background text-center py-4" style="border-radius: 24px;">
+        <p class="text-muted mb-0">{{ _('No pending proposals.') }}</p>
+    </div>
+    {% endif %}
+
+    <div style="clear: both; padding: 1em 0;"></div>
+
+    <!-- Active Jobs -->
+    <div class="aot-modal-group-title">{{ _('Active Jobs') }}
+        {% if active_jobs %}
+        <span class="badge badge-pill badge-primary ml-1">{{ active_jobs|length }}</span>
+        {% endif %}
+    </div>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    {% if active_jobs %}
+    {% for job in active_jobs %}
+    <div class="grid-stack-item-content active-background row small-gutters"
+         style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden; margin-bottom: 4px;">
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <i style="font-size: 2em" class="fas fa-play-circle"></i>
+        </div>
+        <div class="col-4">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.9rem;"
+                   value="{{ job.action_type }}" type="text">
+        </div>
+        <div class="col-4">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.9rem;"
+                   value="{{ job.target_id[:12] }}" type="text"
+                   title="{{ job.target_id }}">
+        </div>
+        <div class="col-2">
+            <input class="form-control btn btn-primary btn-block aot-pill-btn"
+                   type="button" disabled
+                   value="{{ job.state.upper() }}">
+        </div>
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <a class="btn p-0" style="border-color: transparent;"
+               data-toggle="modal" data-target="#modal_job_{{ job.id }}">
+                <i style="font-size: 1.5em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="inactive-background text-center py-4" style="border-radius: 24px;">
+        <p class="text-muted mb-0">{{ _('No active jobs.') }}</p>
+    </div>
+    {% endif %}
+
+    <div style="clear: both; padding: 1em 0;"></div>
+
+    <!-- Timeline -->
+    <div class="aot-modal-group-title">{{ _('Timeline') }}</div>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    <div class="aot-entry-container" style="border-radius: 24px; padding: 20px;">
+        <div id="scheduler-calendar"></div>
+    </div>
+
+    <div style="clear: both; padding: 1em 0;"></div>
+
+    <!-- Device Timeline (New) -->
+    <div class="aot-modal-group-title">{{ _('Device Timeline') }}
+        <small class="text-muted" style="font-size: 0.7em">({{ _('Beta: Device-Centric View') }})</small>
+    </div>
+    
+    <div style="clear: both; padding: 0.5em 0;"></div>
+    
+    <div class="aot-entry-container" style="border-radius: 24px; padding: 20px;">
+        <!-- Desktop View -->
+        <div id="device-timeline-container" class="d-none d-md-block"></div>
+        <!-- Mobile View -->
+        <div id="mobile-device-list" class="d-md-none"></div>
+    </div>
+
+    <div style="clear: both; padding: 1em 0;"></div>
+
+    <!-- History -->
+    <div class="aot-modal-group-title">{{ _('History') }}</div>
+
+    <div style="clear: both; padding: 0.5em 0;"></div>
+
+    {% if completed_jobs %}
+    {% for job in completed_jobs[:20] %}
+    <div class="grid-stack-item-content
+                {% if job.state|lower == 'completed' %}active-background
+                {% elif job.state|lower == 'failed' %}inactive-background
+                {% else %}inactive-background{% endif %}
+                row small-gutters"
+         style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden; margin-bottom: 4px;">
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <i style="font-size: 2em"
+               class="{% if job.state|lower == 'completed' %}fas fa-check-circle{% else %}fas fa-times-circle{% endif %}"></i>
+        </div>
+        <div class="col-3">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.9rem;"
+                   value="{{ job.action_type }}" type="text">
+        </div>
+        <div class="col-3">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.9rem;"
+                   value="{{ job.target_id[:12] }}" type="text"
+                   title="{{ job.target_id }}">
+        </div>
+        <div class="col-2">
+            <input class="form-control btn btn-primary btn-block aot-pill-btn"
+                   type="button" disabled
+                   value="{{ job.state.upper() }}">
+        </div>
+        <div class="col-2">
+            <input class="form-control" disabled
+                   style="border-radius: 16px !important; font-size: 0.8rem;"
+                   value="{{ job.created_at.strftime('%m/%d %H:%M') if job.created_at else '-' }}" type="text">
+        </div>
+        <div class="col-1 text-center icon-fh my-auto" style="padding: 0;">
+            <a class="btn p-0" style="border-color: transparent;"
+               data-toggle="modal" data-target="#modal_history_job_{{ job.id }}">
+                <i style="font-size: 1.5em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="inactive-background text-center py-4" style="border-radius: 24px;">
+        <p class="text-muted mb-0">{{ _('No history yet.') }}</p>
+    </div>
+    {% endif %}
+</main>
+
+<!-- Proposal Detail Modals -->
+{% for draft in drafts %}
+<div class="modal fade aot-option-modal" id="modal_proposal_{{ draft.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Proposal Details') }}</h5>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap mb-3">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" onclick="approveJob('{{ draft.id }}')">{{ _('Approve') }}</button>
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mb-2" onclick="rejectJob('{{ draft.id }}')">{{ _('Reject') }}</button>
+                </div>
+                <div class="aot-modal-container">
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ draft.action_type }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Target') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ draft.target_id }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Proposed By') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ draft.proposed_by }}" readonly>
+                        </div>
+                    </div>
+                    {% if draft.schedule_time %}
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Schedule Time') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ draft.schedule_time.strftime('%Y-%m-%d %H:%M') }}" readonly>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if draft.reasoning %}
+                <div class="aot-modal-group-title">{{ _('Reasoning') }}</div>
+                <div class="aot-modal-container">
+                    <div class="aot-modal-option-row aot-modal-row-wrap">
+                        <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
+                        <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                            <textarea class="form-control aot-modern-input" rows="3" readonly
+                                      style="height: auto !important; border-radius: 16px !important; text-align: left;">{{ draft.reasoning }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Active Job Detail Modals -->
+{% for job in active_jobs %}
+<div class="modal fade aot-option-modal" id="modal_job_{{ job.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Job Details') }}</h5>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap mb-3">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
+                </div>
+                <div class="aot-modal-container">
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.action_type }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Target') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.target_id }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('State') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.state.upper() }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Created') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input"
+                                   value="{{ job.created_at.strftime('%Y-%m-%d %H:%M') if job.created_at else '-' }}" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- History Job Detail Modals -->
+{% for job in completed_jobs[:20] %}
+<div class="modal fade aot-option-modal" id="modal_history_job_{{ job.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Job History Details') }}</h5>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap mb-3">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
+                </div>
+                <div class="aot-modal-container">
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.action_type }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Target') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.target_id }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('State') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.state.upper() }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('By') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.proposed_by }}" readonly>
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Time') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" class="form-control aot-modern-input"
+                                   value="{{ job.created_at.strftime('%Y-%m-%d %H:%M') if job.created_at else '-' }}" readonly>
+                        </div>
+                    </div>
+                </div>
+                {% if job.reasoning %}
+                <div class="aot-modal-group-title">{{ _('Reasoning') }}</div>
+                <div class="aot-modal-container">
+                    <div class="aot-modal-option-row aot-modal-row-wrap">
+                        <label class="aot-modal-option-label">{{ _('Reasoning') }}</label>
+                        <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                            <textarea class="form-control aot-modern-input" rows="3" readonly
+                                      style="height: auto !important; border-radius: 16px !important; text-align: left;">{{ job.reasoning }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- New Task Modal -->
+<div class="modal fade aot-option-modal" id="addTaskModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('New Task') }}</h5>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap mb-3">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-pills nav-justified mb-3" id="taskModalTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="smart-tab" data-toggle="tab" href="#tab-smart" role="tab">
+                            {{ _('Smart AI') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="manual-tab" data-toggle="tab" href="#tab-manual" role="tab">
+                            {{ _('Manual') }}
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Smart Tab -->
+                    <div class="tab-pane fade show active" id="tab-smart" role="tabpanel">
+                        <div class="aot-modal-container">
+                            <div class="aot-modal-option-row">
+                                <label class="aot-modal-option-label">{{ _('AI Agent') }}</label>
+                                <div class="aot-modal-option-control">
+                                    <select id="smartAgent" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                        <option value="auto" selected>{{ _('Auto-Dispatch (AI Multi-Agent)') }}</option>
+                                        {% for agent in active_agents %}
+                                        <option value="{{ agent.unique_id }}">{{ agent.name }} ({{ agent.role }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="aot-modal-option-row aot-modal-row-wrap">
+                                <label class="aot-modal-option-label">{{ _('Command') }}</label>
+                                <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                                    <textarea id="smartCommand" class="form-control aot-modern-input" rows="3"
+                                              style="height: auto !important; border-radius: 16px !important; text-align: left;"
+                                              placeholder="{{ _('e.g., Water Zone A at 5 PM for 10 seconds') }}"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="clear: both; padding: 0.5em 0;"></div>
+
+                        <div class="d-flex flex-wrap">
+                            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60" onclick="askAI()">
+                                {{ _('Ask AI') }}
+                            </button>
+                        </div>
+
+                        <div id="smartResult" class="d-none mt-3">
+                            <div class="aot-modal-group-title">{{ _('AI Response') }}</div>
+                            <div class="aot-modal-container">
+                                <div class="aot-modal-option-row aot-modal-row-wrap">
+                                    <label class="aot-modal-option-label">{{ _('Insight') }}</label>
+                                    <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                                        <textarea id="aiInsight" class="form-control aot-modern-input" rows="2" readonly
+                                                  style="height: auto !important; border-radius: 16px !important; text-align: left;"></textarea>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row aot-modal-row-wrap">
+                                    <label class="aot-modal-option-label">{{ _('Actions') }}</label>
+                                    <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                                        <div id="aiProposedActions" class="form-control aot-modern-input"
+                                             style="height: auto !important; border-radius: 16px !important; text-align: left;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Tab -->
+                    <div class="tab-pane fade" id="tab-manual" role="tabpanel">
+                        <form id="addTaskForm">
+                            <div class="aot-modal-container">
+                                <div class="aot-modal-option-row">
+                                    <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <select id="taskActionType" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                            <option value="output">{{ _('Output Control') }}</option>
+                                            <option value="pid">{{ _('PID Adjustment') }}</option>
+                                            <option value="function">{{ _('Trigger Function') }}</option>
+                                            <option value="abstract_plan">{{ _('Abstract Plan (State)') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row">
+                                    <label class="aot-modal-option-label" id="targetLabel">{{ _('Target Device') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <select id="taskTarget" class="form-control selectpicker aot-standard-select" data-style="btn-white border" data-live-search="true">
+                                            {% for o in outputs %}
+                                            <option value="{{ o.unique_id }}">{{ o.name }} ({{ o.type }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row" id="channelGroup">
+                                    <label class="aot-modal-option-label">{{ _('Channel') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <select id="taskChannel" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                            <option value="0">{{ _('CH0 (Default)') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row" id="stateGroup">
+                                    <label class="aot-modal-option-label">{{ _('State') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <select id="taskState" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                            <option value="on">{{ _('On') }}</option>
+                                            <option value="off">{{ _('Off') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row d-none" id="pidSettingGroup">
+                                    <label class="aot-modal-option-label">{{ _('PID Setting') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <select id="taskPidSetting" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                            <option value="setpoint">{{ _('Setpoint') }}</option>
+                                            <option value="kp">Kp</option>
+                                            <option value="ki">Ki</option>
+                                            <option value="kd">Kd</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row" id="amountGroup">
+                                    <label class="aot-modal-option-label" id="amountLabel">{{ _('Amount (sec/PWM)') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <input type="number" id="taskAmount" class="form-control aot-modern-input" value="0" step="0.1">
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row" id="durationGroup">
+                                    <label class="aot-modal-option-label">{{ _('Duration (Minutes)') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <input type="number" id="taskDuration" class="form-control aot-modern-input" value="0" min="0">
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row">
+                                    <label class="aot-modal-option-label">{{ _('Schedule Time') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <input type="datetime-local" id="taskScheduleTime" class="form-control aot-modern-input">
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row">
+                                    <label class="aot-modal-option-label">{{ _('Recurrence') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <select id="taskRecurrence" class="form-control selectpicker aot-standard-select" data-style="btn-white border" onchange="toggleRecurrenceFields()">
+                                            <option value="none" selected>{{ _('One-time') }}</option>
+                                            <option value="daily">{{ _('Daily') }}</option>
+                                            <option value="interval">{{ _('Interval (Minutes)') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row d-none" id="intervalGroup">
+                                    <label class="aot-modal-option-label">{{ _('Repeat Every (Minutes)') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <input type="number" id="taskInterval" class="form-control aot-modern-input" value="60" min="1">
+                                    </div>
+                                </div>
+                                <div class="aot-modal-option-row">
+                                    <label class="aot-modal-option-label">{{ _('Task Note') }}</label>
+                                    <div class="aot-modal-option-control">
+                                        <input type="text" id="taskReasoning" class="form-control aot-modern-input" placeholder="{{ _('Manual entry') }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="clear: both; padding: 0.5em 0;"></div>
+
+                            <div class="d-flex flex-wrap">
+                                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60" onclick="submitTask()">
+                                    {{ _('Register') }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// --- Task metadata ---
+var outputData = {{ outputs|tojson }};
+var pidData = {{ pids|tojson }};
+var functionData = {{ functions|tojson }};
+var zoneData = {{ zones|tojson }};
+
+function refreshSelect(id) {
+    if ($.fn.selectpicker) {
+        $('#' + id).selectpicker('refresh');
+    }
+}
+
+function toggleRecurrenceFields() {
+    var recurrence = $('#taskRecurrence').val();
+    $('#intervalGroup').toggleClass('d-none', recurrence !== 'interval');
+}
+
+$('#taskActionType').on('change', function() {
+    var actionType = $(this).val();
+    var targetSelect = $('#taskTarget');
+    targetSelect.empty();
+
+    $('#channelGroup').toggle(actionType === 'output');
+    $('#stateGroup').toggle(actionType === 'output');
+    $('#pidSettingGroup').toggleClass('d-none', actionType !== 'pid');
+
+    if (actionType === 'output') {
+        $('#targetLabel').text("{{ _('Target Device') }}");
+        $('#amountLabel').text("{{ _('Amount (seconds or PWM)') }}");
+        $('#amountGroup').show();
+    } else if (actionType === 'pid') {
+        $('#targetLabel').text("{{ _('Target PID Controller') }}");
+        $('#amountLabel').text("{{ _('Value') }}");
+        $('#amountGroup').show();
+    } else if (actionType === 'function') {
+        $('#targetLabel').text("{{ _('Target Function') }}");
+        $('#amountGroup').hide();
+    } else if (actionType === 'abstract_plan') {
+        $('#targetLabel').text("{{ _('Target Zone/Site') }}");
+        $('#amountGroup').hide();
+    }
+
+    var list = [];
+    if (actionType === 'output') list = outputData;
+    else if (actionType === 'pid') list = pidData;
+    else if (actionType === 'function') list = functionData;
+    else if (actionType === 'abstract_plan') list = zoneData;
+
+    list.forEach(function(item) {
+        targetSelect.append($('<option>').val(item.unique_id).text(item.name));
+    });
+    refreshSelect('taskTarget');
+    targetSelect.trigger('change');
+});
+
+$('#taskTarget').on('change', function() {
+    var actionType = $('#taskActionType').val();
+    if (actionType !== 'output') return;
+
+    var targetId = $(this).val();
+    var channelSelect = $('#taskChannel');
+    channelSelect.empty();
+
+    var output = outputData.find(function(o) { return o.unique_id === targetId; });
+    if (output && output.channels && output.channels.length > 0) {
+        output.channels.forEach(function(ch) {
+            channelSelect.append($('<option>').val(ch.index).text(ch.name + ' (CH' + ch.index + ')'));
+        });
+    } else {
+        channelSelect.append($('<option>').val(0).text('{{ _("CH0 (Default)") }}'));
+    }
+    refreshSelect('taskChannel');
+});
+
+$('#taskActionType').trigger('change');
+
+// --- CSRF Token ---
+var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+function apiCall(url, method, data, onSuccess) {
+    $.ajax({
+        url: url,
+        type: method,
+        contentType: 'application/json',
+        headers: { 'X-CSRFToken': csrfToken },
+        data: data ? JSON.stringify(data) : null,
+        success: function(resp) {
+            if (onSuccess) onSuccess(resp);
+            location.reload();
+        },
+        error: function(xhr) {
+            var msg = '{{ _("Error") }}';
+            try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+            alert(msg);
+        }
+    });
+}
+
+function approveJob(jobId) {
+    if (!confirm('{{ _("Approve this job?") }}')) return;
+    apiCall('/api/v1/scheduler/approve/' + jobId, 'POST', {});
+}
+
+function rejectJob(jobId) {
+    var feedback = prompt('{{ _("Rejection reason (optional):") }}');
+    if (feedback === null) return;
+    apiCall('/api/v1/scheduler/reject/' + jobId, 'POST', { feedback: feedback });
+}
+
+function askAI() {
+    var agentId = $('#smartAgent').val();
+    var command = $('#smartCommand').val();
+    if (!command) return alert("{{ _('Please enter a command') }}");
+
+    var btn = $('button[onclick="askAI()"]');
+    var originalHtml = btn.html();
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>');
+
+    fetch('/api/v1/scheduler/smart_propose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ agent_id: agentId, command: command })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.prop('disabled', false).html(originalHtml);
+        if (data.status === 'success') {
+            $('#smartResult').removeClass('d-none');
+            $('#aiInsight').val(data.insight);
+            var actionsHtml = '<ul class="mb-0 pl-3">';
+            data.proposed_actions.forEach(function(a) {
+                actionsHtml += '<li>' + a.description + ' (Target: ' + a.target_id + ')</li>';
+            });
+            actionsHtml += '</ul>';
+            $('#aiProposedActions').html(actionsHtml);
+        } else {
+            alert("{{ _('Error: ') }}" + data.message);
+        }
+    })
+    .catch(error => {
+        btn.prop('disabled', false).html(originalHtml);
+        console.error('Error:', error);
+    });
+}
+
+function submitTask() {
+    var actionType = $('#taskActionType').val();
+    var scheduleTime = $('#taskScheduleTime').val();
+    var durationMinutes = parseInt($('#taskDuration').val()) || 0;
+    var recurrenceType = $('#taskRecurrence').val();
+    var scheduleCron = null;
+
+    if (recurrenceType === 'daily' && scheduleTime) {
+        var st = new Date(scheduleTime);
+        scheduleCron = { trigger: 'cron', hour: st.getHours(), minute: st.getMinutes() };
+    } else if (recurrenceType === 'interval') {
+        scheduleCron = { trigger: 'interval', minutes: parseInt($('#taskInterval').val()) || 60 };
+    }
+
+    var params = {};
+    if (actionType === 'output') {
+        params = { state: $('#taskState').val(), amount: parseFloat($('#taskAmount').val()) || 0, channel: parseInt($('#taskChannel').val()) || 0 };
+    } else if (actionType === 'pid') {
+        params = { setting: $('#taskPidSetting').val(), value: parseFloat($('#taskAmount').val()) || 0 };
+    } else if (actionType === 'abstract_plan') {
+        params = { type: 'marker' };
+    }
+
+    apiCall('/api/v1/scheduler/propose', 'POST', {
+        action_type: actionType,
+        target_id: $('#taskTarget').val(),
+        params: params,
+        reasoning: $('#taskReasoning').val() || 'Manual task',
+        schedule_time: scheduleTime || null,
+        schedule_cron: scheduleCron,
+        duration_sec: durationMinutes * 60,
+        priority: 1
+    });
+}
+
+// --- FullCalendar ---
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('scheduler-calendar');
+    if (!calendarEl) return;
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridWeek',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,dayGridWeek,listWeek' },
+        height: 'auto',
+        events: '/api/v1/scheduler/timeline',
+        eventClick: function(info) {
+            var props = info.event.extendedProps;
+            alert('{{ _("State: ") }}' + props.state + '\n{{ _("Type: ") }}' + props.action_type + '\n{{ _("Target: ") }}' + props.target_id + '\n{{ _("By: ") }}' + props.proposed_by + '\n{{ _("Reasoning: ") }}' + (props.reasoning || '-'));
+        },
+        eventDidMount: function(info) {
+            if (info.event.extendedProps.reasoning) {
+                $(info.el).attr('title', info.event.extendedProps.reasoning.substring(0, 100));
+            }
+        },
+        nowIndicator: true,
+        locale: '{{ session.get("language", "en") }}'
+    });
+    calendar.render();
+
+    if (window.innerWidth < 768) {
+        calendar.changeView('listWeek');
+    }
+});
+</script>
+<!-- Device Timeline Scripts -->
+<script src="https://unpkg.com/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
+<script src="{{ url_for('routes_static.static_js', filename='ai/device-timeline.js') }}"></script>
+<script src="{{ url_for('routes_static.static_js', filename='ai/device-timeline-mobile.js') }}"></script>
+{% endblock %}

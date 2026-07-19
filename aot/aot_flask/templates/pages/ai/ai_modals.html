@@ -1,0 +1,505 @@
+{% from 'pages/form_options/api_key_macro.html' import render_api_key_picker with context %}
+
+<!-- Unified Add Agent Modal -->
+<div class="modal fade aot-option-modal" id="addAgentModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <form action="{{ url_for('routes_ai_agent.ai_agent_add') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ _('Create AI Agent') }}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Service Description Area -->
+                    <div id="service_description_container" style="display: none; margin-bottom: 1.5rem; padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 8px; font-size: 0.9rem; color: var(--aot-color-text-secondary, #555);">
+                        <span id="service_description_text"></span>
+                    </div>
+
+                    <div id="auth_link_container_top" style="display:none; margin-top: -1rem; margin-bottom: 1.5rem; padding-left: 12px; font-size: 0.85rem;">
+                        <strong>{{ _('Related Link') }}:</strong>
+                        <a id="auth_link_href_top" href="#" target="_blank" class="text-primary">
+                            {{ _('Get API Key') }}
+                        </a>
+                    </div>
+
+                    <!-- Agent Section -->
+                    <div class="aot-modal-group-title">{{ _('Agent Information') }}</div>
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Agent Name') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" name="name" class="form-control aot-modern-input" placeholder="{{ _('e.g. Energy Manager') }}" required>
+                            </div>
+                        </div>
+
+                        <!-- Hidden fields to avoid re-selection -->
+                        <input type="hidden" name="entry_id" id="modal_entry_id">
+                        <input type="hidden" name="model_type" id="modal_model_type">
+                    </div>
+
+                    <!-- New Service Section (Only shown for 'preset' mode) -->
+                    <div id="new_service_fields" style="display: none;">
+                        <div class="aot-modal-group-title">{{ _('AI Service Registration') }}</div>
+                        <div class="aot-modal-container">
+                            <div class="aot-modal-option-row">
+                                <label class="aot-modal-option-label">{{ _('Service Name') }}</label>
+                                <div class="aot-modal-option-control">
+                                    <input type="text" name="service_name" id="new_service_name" class="form-control aot-modern-input" placeholder="{{ _('e.g. My OpenAI') }}">
+                                </div>
+                            </div>
+                            
+                            <!-- Engine Type is fixed based on 1st step, so just show as Text/Label or Hide -->
+                            <div class="aot-modal-option-row">
+                                <label class="aot-modal-option-label">{{ _('Engine Type') }}</label>
+                                <div class="aot-modal-option-control">
+                                    <input type="text" id="engineTypeDisplay" class="form-control aot-modern-input" readonly style="background: #f8f9fa;">
+                                </div>
+                            </div>
+
+                            <div class="aot-modal-option-row">
+                                <label class="aot-modal-option-label">{{ _('Model Selection') }}</label>
+                                <div class="aot-modal-option-control">
+                                    <select name="model_name" id="modelNameSelect" class="form-control selectpicker aot-standard-select" data-style="btn-white border"></select>
+                                    <input type="text" id="manualModelInput" class="form-control aot-modern-input mt-2" style="display:none;" placeholder="{{ _('Enter model name manually') }}">
+                                </div>
+                            </div>
+                            <div class="aot-modal-option-row">
+                                <label class="aot-modal-option-label">{{ _('API Endpoint') }}</label>
+                                <div class="aot-modal-option-control">
+                                    <input type="text" name="api_endpoint" id="endpointInput" class="form-control aot-modern-input" placeholder="https://api.yourproxy.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="aot-modal-group-title">{{ _('Authentication') }}</div>
+                        <div class="aot-modal-container" id="dynamic_auth_container">
+                            <!-- Dynamic Auth Fields -->
+                        </div>
+                    </div>
+
+                    <div id="custom_options_section" style="display: none;">
+                        <div class="aot-modal-group-title">{{ _('Custom Options') }}</div>
+                        <div class="aot-modal-container" id="dynamic_custom_options">
+                            <!-- Dynamic Custom Options (Temperature, Top P, etc.) -->
+                        </div>
+                    </div>
+
+                    <!-- Additional Agent Details -->
+                    <!-- v6 Pipeline Configuration -->
+                    <div id="v6_pipeline_section">
+                        <div class="aot-modal-group-title">{{ _('AI Pipeline & Tool Access') }}</div>
+                        <div class="aot-modal-container">
+                            <label class="aot-modal-option-label" id="pipeline-role-label" data-toggle="tooltip" title="">{{ _('Pipeline Role') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select name="pipeline_role" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                    <option value="worker">{{ _('Worker (Legacy)') }}</option>
+                                    <option value="router">{{ _('Router') }}</option>
+                                    <option value="planner">{{ _('Planner') }}</option>
+                                    <option value="executor">{{ _('Executor') }}</option>
+                                    <option value="synthesizer">{{ _('Synthesizer') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Model Tier') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select name="model_tier" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                    <option value="lightweight">{{ _('Lightweight') }}</option>
+                                    <option value="standard" selected>{{ _('Standard') }}</option>
+                                    <option value="heavy">{{ _('Heavy') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Tool Access') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select name="tool_access" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                                    <option value="auto">{{ _('Auto') }}</option>
+                                    <option value="all">{{ _('All') }}</option>
+                                    <option value="assigned">{{ _('Assigned') }}</option>
+                                    <option value="none">{{ _('None') }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- MCP Assignment Checklist (Shown only when 'assigned' is selected) -->
+                        <div id="mcp-assignment-section" style="display:none; padding: 10px; background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; margin-top: 10px;">
+                            <label class="font-weight-bold mb-2">{{ _('Select Assigned MCP Servers') }}</label>
+                            <div id="mcp-checklist-container" style="max-height: 200px; overflow-y: auto;">
+                                {% for mcp in mcp_servers %}
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox" name="assigned_mcp_ids" value="{{ mcp.unique_id }}" id="mcp_{{ mcp.unique_id }}">
+                                    <label class="form-check-label" for="mcp_{{ mcp.unique_id }}">
+                                        {{ mcp.name }} <span class="badge badge-secondary ml-1">{{ mcp.scope }}</span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <div class="aot-modal-option-row mt-3">
+                        <label class="aot-modal-option-label" id="specialty-label">{{ _('Specialty') }}</label>
+                        <div class="aot-modal-option-control">
+                            <input type="text" name="specialty" class="form-control aot-modern-input" placeholder="{{ _('e.g. irrigation, climate') }}">
+                        </div>
+                    </div>
+
+                    <div class="aot-modal-group-title" id="rules-group-title">{{ _('Agent Rules') }}</div>
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row mt-2 flex-column align-items-start">
+                            <label class="aot-modal-option-label" id="system-prompt-label">{{ _('System Prompt') }}</label>
+                            <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                                <textarea name="system_prompt" class="form-control aot-modern-input" rows="5"
+                                          style="height: auto !important; border-radius: 16px !important; text-align: left;"
+                                          placeholder="{{ _('Define how this agent should behave...') }}"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+                    <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Create') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function renderDynamicFields(type) {
+    const preset = enginePresets[type];
+    if (!preset) return;
+
+    const $modelSelect = $('#modelNameSelect');
+    $modelSelect.empty();
+    preset.models.forEach(m => {
+        const val = (typeof m === 'object') ? m.value : m;
+        const lbl = (typeof m === 'object') ? m.label : m;
+        $modelSelect.append(`<option value="${val}">${lbl}</option>`);
+    });
+    $modelSelect.append(`<option value="custom_model">{{ _('Custom Model...') }}</option>`);
+    $modelSelect.selectpicker('refresh');
+    
+    $modelSelect.off('change.custom_model').on('change.custom_model', function() {
+        if ($(this).val() === 'custom_model') {
+            $('#manualModelInput').show().attr('name', 'model_name').attr('required', true);
+            $(this).removeAttr('name');
+        } else {
+            $('#manualModelInput').hide().removeAttr('name').removeAttr('required');
+            $(this).attr('name', 'model_name');
+        }
+    });
+
+    // 2. Authentication
+    const $authContainer = $('#dynamic_auth_container');
+    $authContainer.empty();
+    if (preset.auth_methods && preset.auth_methods.length > 0) {
+        let authHtml = `
+            <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ _('Auth Type') }}</label>
+                <div class="aot-modal-option-control">
+                    <select name="auth_type" class="form-control selectpicker aot-standard-select" data-style="btn-white border" id="authTypeSelect">
+        `;
+        preset.auth_methods.forEach(method => {
+            let label = method === 'api_key' ? "{{ _('API Key') }}" : (method === 'account' ? "{{ _('ID / Password') }}" : method);
+            authHtml += `<option value="${method}">${label}</option>`;
+        });
+        authHtml += `</select></div></div>`;
+        
+        authHtml += `
+            <div class="aot-modal-option-row auth-field-id" style="display:none;">
+                <label class="aot-modal-option-label">{{ _('Account ID') }}</label>
+                <div class="aot-modal-option-control">
+                    <input type="text" name="auth_id" class="form-control aot-modern-input">
+                </div>
+            </div>
+                    <div class="aot-modal-option-row auth-field-key">
+                        <label id="keyLabel" class="aot-modal-option-label">{{ _('API Key') }}</label>
+                        <div class="aot-modal-option-control">
+                            <div class="aot-api-key-group">
+                                <input type="hidden" name="api_key">
+                                <input type="text" class="form-control aot-modern-input" 
+                                       autocomplete="off" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false" oninput="this.previousElementSibling.value = this.value;">
+                                {{ render_api_key_picker() }}
+                            </div>
+                        </div>
+                    </div>
+        `;
+        $authContainer.append(authHtml);
+        $authContainer.find('.selectpicker').selectpicker('refresh');
+        
+        // Populate auth link if available
+        if (preset.auth_link) {
+            $('#auth_link_href_top').attr('href', preset.auth_link);
+            $('#auth_link_container_top').show();
+        } else {
+            $('#auth_link_container_top').hide();
+        }
+
+        $authContainer.on('change', '#authTypeSelect', function() {
+            const method = $(this).val();
+            const isMCP = enginePresets[type].is_mcp;
+            if (method === 'api_key') {
+                $('.auth-field-key').show(); $('.auth-field-id').hide();
+                $('#keyLabel').text(isMCP ? "{{ _('Service Key') }}" : "{{ _('API Key') }}");
+            } else if (method === 'account') {
+                $('.auth-field-key').show(); $('.auth-field-id').show();
+                $('#keyLabel').text("{{ _('Password') }}");
+            } else {
+                $('.auth-field-key').hide(); $('.auth-field-id').hide();
+            }
+        });
+        $('#authTypeSelect').trigger('change');
+        
+        // v6: MCP labeling
+        if (preset.is_mcp) {
+             $authContainer.parent().prev('.aot-modal-group-title').text("{{ _('Service API Key') }}");
+        } else {
+             $authContainer.parent().prev('.aot-modal-group-title').text("{{ _('Authentication') }}");
+        }
+    }
+
+    // 3. Custom Options
+    const $customContainer = $('#dynamic_custom_options');
+    $customContainer.empty();
+    if (preset.custom_options && preset.custom_options.length > 0) {
+        $('#custom_options_section').show();
+        const allOpts = preset.custom_options;
+
+        // Helper: render a single option control
+        function renderOptControl(opt) {
+            const val = opt.default || '';
+            let controlHtml = '';
+            if (opt.type === 'select') {
+                controlHtml = `<select name="custom_${opt.id}" class="form-control selectpicker aot-standard-select" data-style="btn-white border" data-live-search="true">`;
+                let optionsToRender = opt.options || [];
+                if (opt.id === 'reasoning_entry_id') {
+                    const filtered = availableEntries.filter(e => !e.model_type.startsWith('mcp_'));
+                    optionsToRender = filtered.map(e => ({ value: e.unique_id, label: `${e.name} (${e.model_name})` }));
+                    controlHtml += `<option value="">{{ _('Default System Engine') }}</option>`;
+                }
+                optionsToRender.forEach(o => {
+                    const optVal = (typeof o === 'object') ? o.value : o;
+                    const optLbl = (typeof o === 'object') ? o.label : o;
+                    controlHtml += `<option value="${optVal}" ${optVal === val ? 'selected' : ''}>${optLbl}</option>`;
+                });
+                controlHtml += `</select>`;
+            } else if (opt.type === 'boolean') {
+                controlHtml = `<label class="btn-toggle mb-0">
+                    <input type="checkbox" name="custom_${opt.id}" class="btn-toggle-input" ${opt.default ? 'checked' : ''}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>`;
+            } else {
+                const inputType = (opt.type === 'int' || opt.type === 'float') ? 'number'
+                                : (opt.type === 'password') ? 'password' : 'text';
+                const step = opt.type === 'float' ? '0.01' : '1';
+                const extraAttr = (opt.type === 'password') ? ' autocomplete="off"' : '';
+                controlHtml = `<input type="${inputType}" step="${step}" name="custom_${opt.id}" class="form-control aot-modern-input" value="${val}"${extraAttr}>`;
+            }
+            return `<div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">${opt.name}</label>
+                <div class="aot-modal-option-control">${controlHtml}</div>
+            </div>`;
+        }
+
+        // Helper: render a group with title
+        function renderGroup(title, opts) {
+            if (!opts.length) return '';
+            let html = `<div class="aot-modal-group-title">${title}</div><div class="aot-modal-container">`;
+            opts.forEach(opt => { html += renderOptControl(opt); });
+            html += '</div>';
+            return html;
+        }
+
+        if (preset.is_mcp) {
+            const credentialOpts = allOpts.filter(o => o.env_var);
+            const brainOpts = allOpts.filter(o => ['reasoning_entry_id', 'llm_model'].includes(o.id));
+            const otherOpts = allOpts.filter(o => !o.env_var && !['reasoning_entry_id', 'llm_model'].includes(o.id));
+
+            // Replace generic "Custom Options" title with grouped sections
+            $('#custom_options_section .aot-modal-group-title').first().hide();
+            $customContainer.append(renderGroup("{{ _('Service Credentials') }}", credentialOpts));
+            $customContainer.append(renderGroup("{{ _('Brain Configuration') }}", brainOpts));
+            $customContainer.append(renderGroup("{{ _('Options') }}", otherOpts));
+        } else {
+            allOpts.forEach(opt => { $customContainer.append(renderOptControl(opt)); });
+        }
+        $customContainer.find('.selectpicker').selectpicker('refresh');
+    } else {
+        $('#custom_options_section').hide();
+    }
+
+    // 4. Endpoint Hint
+    if(preset.api_endpoint || preset.default_endpoint) {
+       $('#endpointInput').attr('placeholder', preset.api_endpoint || preset.default_endpoint);
+    }
+
+    // 5. Description
+    const desc = preset.description || preset.message || "";
+    if (desc) {
+        $('#service_description_text').text(desc);
+        $('#service_description_container').show();
+    } else {
+        $('#service_description_container').hide();
+    }
+
+    // v6: MCP vs LLM UI optimization
+    const $modal = $('#addAgentModal');
+    if (preset.is_mcp) {
+        $modal.find('#v6_pipeline_section').hide();
+        $modal.find('#specialty-label').text("{{ _('MCP Scope') }}");
+        $modal.find('#rules-group-title').text("{{ _('MCP Instructions') }}");
+        $modal.find('#system-prompt-label').text("{{ _('Server Instruction') }}");
+        $modal.find('select[name="pipeline_role"]').val('executor').selectpicker('refresh');
+        $modal.find('select[name="tool_access"]').val('none').selectpicker('refresh');
+
+        // Hide LLM-only fields in Service Registration
+        $modal.find('#modelNameSelect').closest('.aot-modal-option-row').hide();
+        $modal.find('#manualModelInput').closest('.aot-modal-option-row').hide();
+        $modal.find('#endpointInput').closest('.aot-modal-option-row').hide();
+
+        // MCP Specific defaults from engine preset
+        const $prompt = $modal.find('textarea[name="system_prompt"]');
+        const currentPrompt = $prompt.val() || '';
+        const defaultPrompts = Object.values(rolePresets).map(p => (p.system_prompt || '').trim())
+            .concat(['You are a helpful assistant.', '']);
+        
+        if (!currentPrompt || defaultPrompts.some(p => p === currentPrompt.trim())) {
+            $prompt.val(preset.system_prompt || "You are a specialized MCP tool expert.");
+        }
+        $modal.find('input[name="specialty"]').val(preset.specialty || '');
+    } else {
+        $modal.find('#v6_pipeline_section').show();
+        $modal.find('#specialty-label').text("{{ _('Specialty') }}");
+        $modal.find('#rules-group-title').text("{{ _('Agent Rules') }}");
+        $modal.find('#system-prompt-label').text("{{ _('System Prompt') }}");
+
+        const $prompt = $modal.find('textarea[name="system_prompt"]');
+        const currentPrompt = $prompt.val() || '';
+        const defaultPrompts = Object.values(rolePresets).map(p => (p.system_prompt || '').trim())
+            .concat(['You are a helpful assistant.', '']);
+        
+        if (!currentPrompt || defaultPrompts.some(p => p === currentPrompt.trim())) {
+            $prompt.val(preset.system_prompt || "You are a helpful assistant.");
+        }
+
+        // Restore LLM fields
+        $modal.find('#modelNameSelect').closest('.aot-modal-option-row').show();
+        $modal.find('#endpointInput').closest('.aot-modal-option-row').show();
+        $modal.find('#dynamic_auth_container').show();
+    }
+}
+
+// Global initialization function for v11
+window.initAddAgentModal = function(mode, value) {
+    // Reset fields
+    $('#addAgentModal form')[0].reset();
+    $('#new_service_fields').hide();
+    $('#custom_options_section').hide();
+    
+    if (mode === 'entry') {
+        // Link to existing service
+        $('#modal_entry_id').val(value);
+        $('#modal_model_type').val(''); // Not needed for entry link
+        $('#new_service_name').removeAttr('required');
+        
+        const entry = availableEntries.find(e => e.unique_id === value);
+        if (entry && entry.model_type) {
+            renderDynamicFields(entry.model_type);
+            // v15: Set agent name to engine name by default
+            const preset = enginePresets[entry.model_type];
+            if (preset) {
+                $('input[name="name"]').val(preset.ai_name);
+            }
+        }
+    } else {
+        // Create new service from implementation
+        $('#modal_entry_id').val('new');
+        $('#modal_model_type').val(value);
+        $('#new_service_fields').show();
+        $('#new_service_name').attr('required', true);
+        
+        const preset = enginePresets[value];
+        if (preset) {
+            $('#engineTypeDisplay').val(preset.ai_name);
+            // v15: Set Agent and Service names to simplified defaults
+            $('input[name="name"]').val(preset.ai_name);
+            $('#new_service_name').val(preset.ai_manufacturer || 'AoT');
+        } else {
+            $('#engineTypeDisplay').val(value);
+        }
+        
+        renderDynamicFields(value);
+    }
+};
+
+$(document).ready(function() {
+    // v6: Handle Pipeline Role and Tool Access dynamic changes
+    $('select[name="pipeline_role"]').on('change', function() {
+        const val = $(this).val();
+        const preset = rolePresets[val];
+        
+        const guides = {
+            'router': "{{ _('Classifies intent only. Lightweight model recommended.') }}",
+            'planner': "{{ _('Creates execution plans. Standard or Heavy model recommended.') }}",
+            'executor': "{{ _('Calls tools and collects data.') }}",
+            'synthesizer': "{{ _('Synthesizes results into user response.') }}",
+            'worker': "{{ _('Legacy supervisor/worker mode.') }}"
+        };
+        
+        // Update label tooltip instead of inline text
+        const $label = $('#pipeline-role-label');
+        $label.attr('title', guides[val] || '').tooltip('_fixTitle');
+        if (guides[val]) $label.tooltip('show');
+
+        if (preset) {
+            // v6: Aggressive application - if trimmed current value is in defaults, replace it
+            const $modal = $('#addAgentModal');
+            const $specialty = $modal.find('input[name="specialty"]');
+            const $prompt = $modal.find('textarea[name="system_prompt"]');
+
+            const currentSpec = $specialty.val() || '';
+            const currentPrompt = $prompt.val() || '';
+
+            const currentSpecTrim = currentSpec.trim();
+            const currentPromptTrim = currentPrompt.trim();
+
+            const defaultSpecs = Object.values(rolePresets).map(p => (p.specialty || '').trim())
+                .concat(['general', '', 'General Task Assistance (Legacy)']);
+            const defaultPrompts = Object.values(rolePresets).map(p => (p.system_prompt || '').trim())
+                .concat(['You are a helpful assistant.', '']);
+
+            const isDefaultSpec = defaultSpecs.some(s => s === currentSpecTrim);
+            const isDefaultPrompt = defaultPrompts.some(p => p === currentPromptTrim);
+
+            if (isDefaultSpec) {
+                $specialty.val(preset.specialty);
+            }
+            if (isDefaultPrompt) {
+                $prompt.val(preset.system_prompt);
+            }
+
+            // Sync Tier and Access
+            $('select[name="model_tier"]').val(preset.model_tier).selectpicker('refresh');
+            $('select[name="tool_access"]').val(preset.tool_access).selectpicker('refresh').trigger('change');
+        }
+    });
+
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+
+    $('select[name="tool_access"]').on('change', function() {
+        if ($(this).val() === 'assigned') {
+            $('#mcp-assignment-section').fadeIn();
+        } else {
+            $('#mcp-assignment-section').fadeOut();
+        }
+    });
+});
+</script>
+

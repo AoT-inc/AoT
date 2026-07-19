@@ -1,0 +1,76 @@
+<div class="aot-modal-container mb-3">
+  <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 20px;">
+    <div>
+      <strong>{{_('Next Sunrise/Sunset at Geographic Location')}}</strong><br>
+      <div style="margin-top: 4px;">
+        {% if 'sunrise' in sunrise_set_calc[each_function.unique_id] and
+              sunrise_set_calc[each_function.unique_id]['sunrise'] and
+              'sunset' in sunrise_set_calc[each_function.unique_id] and
+              sunrise_set_calc[each_function.unique_id]['sunset'] %}
+          {{_('Sunrise')}}: {{sunrise_set_calc[each_function.unique_id]['sunrise']}}<br/>
+          {{_('Sunset')}}: {{sunrise_set_calc[each_function.unique_id]['sunset']}}
+        {% else %}
+          {{_('Unable to calculate Sunrise/Sunset times.')}}
+        {% endif %}
+      </div>
+    </div>
+    
+    <div>
+      <strong>{{_('Next Sunrise/Sunset with Offset')}}</strong><br>
+      <div style="margin-top: 4px;">
+        {% if 'offset_sunrise' in sunrise_set_calc[each_function.unique_id] and
+              sunrise_set_calc[each_function.unique_id]['offset_sunrise'] and
+              'offset_sunset' in sunrise_set_calc[each_function.unique_id] and
+              sunrise_set_calc[each_function.unique_id]['offset_sunset'] %}
+          {{_('Sunrise')}}: {{sunrise_set_calc[each_function.unique_id]['offset_sunrise']}}<br/>
+          {{_('Sunset')}}: {{sunrise_set_calc[each_function.unique_id]['offset_sunset']}}
+        {% else %}
+          {{_('Unable to calculate Sunrise/Sunset times.')}}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="aot-modal-container">
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{form_trigger.rise_or_set.label(class_='mb-0')}}</label>
+    <div class="aot-modal-option-control">
+      <select class="form-control aot-modern-select selectpicker" data-style="btn-white" id="rise_or_set" name="rise_or_set" title="{{_('Execute condition at Sunrise or Sunset?')}}">
+        <option value="sunrise"{% if each_function.rise_or_set == 'sunrise' %} selected{% endif %}>{{_('Sunrise')}}</option>
+        <option value="sunset"{% if each_function.rise_or_set == 'sunset' %} selected{% endif %}>{{_('Sunset')}}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Location is GIS-managed: coordinates are auto-assigned from this trigger's
+       position on the map above. The latitude/longitude form fields are rendered
+       as hidden inputs by the map widget, so no manual entry is needed here. -->
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{_('Location (Auto)')}}</label>
+    <div class="aot-modal-option-control">
+      <span class="form-control-plaintext aot-modal-body-text" style="padding-left:0;">
+        {% if each_function.latitude is not none and each_function.longitude is not none %}
+          {{ '%.5f'|format(each_function.latitude) }}, {{ '%.5f'|format(each_function.longitude) }}
+          <small class="text-muted d-block">{{_('Set automatically from the map above. Move the marker to change location.')}}</small>
+        {% else %}
+          <small class="text-muted">{{_('Not set — place this trigger on the map above.')}}</small>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{form_trigger.date_offset_days.label(class_='mb-0')}}</label>
+    <div class="aot-modal-option-control">
+      {{form_trigger.date_offset_days(class_='form-control aot-modern-input', value=each_function.date_offset_days, **{'title':_('Days to offset from Sunrise/Sunset date')})}}
+    </div>
+  </div>
+
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{form_trigger.time_offset_minutes.label(class_='mb-0')}}</label>
+    <div class="aot-modal-option-control">
+      {{form_trigger.time_offset_minutes(class_='form-control aot-modern-input', value=each_function.time_offset_minutes, **{'title':_('Minutes to offset from Sunrise/Sunset time')})}}
+    </div>
+  </div>
+</div>

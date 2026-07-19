@@ -1,0 +1,218 @@
+/* aot-drawer.css — shared slide-in DRAWER shell (AI chat, Notes, …)
+ *
+ * A reusable right-side drawer: header / scroll-isolated body / footer. Fully
+ * token-driven (--aot-*), brand-aligned (deep green, never the yellow
+ * --aot-color-primary), and scroll-chaining-proof. Consume via the .aot-drawer*
+ * classes. Feature-specific content (chat bubbles, note cards, composers) is
+ * layered on top by each feature's own stylesheet.
+ */
+
+/* ── Panel ─────────────────────────────────────────────── */
+.aot-drawer {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100%;
+    background: var(--aot-surface-modal, #fff);
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.12);
+    z-index: var(--aot-z-overlay); /* 내비바·콘텐츠 위로 뜨는 드로어 */
+    transition: right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--aot-border-light, #e5e7eb);
+    /* Scroll isolation: wheel/touch over the drawer never bleeds to the page. */
+    overscroll-behavior: contain;
+}
+
+.aot-drawer.active {
+    right: 0;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.aot-drawer-header {
+    padding: 12px 14px;
+    background: var(--aot-surface-card, #fff);
+    border-bottom: 1px solid var(--aot-border-light, #e5e7eb);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.aot-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.aot-drawer-title-text {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--aot-color-brand-primary, #13261B);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.aot-drawer-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* ── Icon button (close / header actions) ──────────────── */
+.aot-icon-btn {
+    background: transparent;
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--aot-color-text-secondary, #666);
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.aot-icon-btn:hover {
+    background: var(--aot-tint-neutral-bg, rgba(0, 0, 0, 0.06));
+    color: var(--aot-color-text-primary, #333);
+}
+
+/* ── Scrollable body (scroll-isolated, scrollbar hidden) ─ */
+.aot-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE/Edge */
+}
+
+.aot-drawer-body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+/* ── Footer / input area ───────────────────────────────── */
+.aot-drawer-footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--aot-surface-card, #fff);
+    border-top: 1px solid var(--aot-border-light, #e5e7eb);
+}
+
+/* ── Composer input row (rounded field: [btn] textarea [send]) ── */
+.aot-composer-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    background: var(--aot-surface-input, #f8fafc);
+    padding: 5px 6px 5px 8px;
+    border-radius: 18px;
+    border: 1px solid var(--aot-border-form, #e2e8f0);
+    transition: border-color 0.2s;
+}
+
+.aot-composer-row:focus-within {
+    /* Brand focus ring. NOT --aot-input-focus-border (that token = forbidden yellow). */
+    border-color: var(--aot-color-brand-primary, #13261B);
+}
+
+/* Composer textarea (auto-grow; 16px avoids iOS focus-zoom) */
+.aot-composer-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    padding: 8px 4px;
+    outline: none;
+    font-size: 16px;
+    resize: none;
+    max-height: 140px;
+    min-height: 24px;
+    line-height: 1.4;
+    font-family: inherit;
+    color: var(--aot-color-text-primary, #333);
+}
+
+.aot-composer-input::placeholder {
+    color: var(--aot-color-text-secondary, #888);
+}
+
+/* Composer primary action (send) — brand, round */
+.aot-composer-send {
+    background: var(--aot-btn-bg-primary, var(--aot-color-brand-primary, #13261B));
+    border: none;
+    color: var(--aot-btn-color-primary, #fff);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s, filter 0.15s;
+    margin-bottom: 2px;
+    padding: 0;
+}
+
+.aot-composer-send:hover {
+    transform: scale(1.05);
+    filter: brightness(1.12);
+}
+
+.aot-composer-send:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+    filter: none;
+}
+
+/* ── Desktop frame-split (page push) ───────────────────────
+ * When the Notes drawer is open on desktop, push the page content left by the
+ * drawer width so the drawer sits BESIDE the page (like the AI chat), rather
+ * than overlaying it and leaving dead whitespace. The drawer itself is
+ * position:fixed at right:0, so it fills the freed 400px. (The AI chat uses its
+ * own body.ai-drawer-active with the same effect.) Gated at ≥768px because the
+ * Notes drawer goes full-screen below that (see NotesDrawer viewportStyle). */
+@media (min-width: 768px) {
+    body {
+        transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+    }
+    body.notes-drawer-active {
+        padding-right: 400px;
+    }
+    /* The brand logo must never shrink/move when the page is pushed. */
+    body.notes-drawer-active #brand-link,
+    body.notes-drawer-active #brand-link > img,
+    body.notes-drawer-active #brand-link > .aot-brand-text {
+        flex-shrink: 0 !important;
+    }
+    /* Keep Bootstrap modals clear of the drawer too (fixed → own shift). */
+    body.notes-drawer-active .modal {
+        padding-right: 400px !important;
+        transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+    }
+}
+
+/* ── Mobile: full-screen sheet ─────────────────────────── */
+@media (max-width: 480px) {
+    .aot-drawer {
+        width: 100%;
+        right: -100%;
+        border-left: none;
+    }
+    .aot-drawer.active {
+        right: 0;
+    }
+}

@@ -1,0 +1,423 @@
+/*
+ * AoT Theme Variables
+ * CSS Token Architecture for Theme-Switchable UI
+ * Plan 019 + Supplement 022 — Phase 1 Deliverable
+ *
+ * ========================================================================
+ * TOKEN NAMING CONVENTION
+ * ========================================================================
+ *
+ * Pattern: --aot-{category}-{variant}
+ *
+ * Categories: color, bg, btn, border, surface, note, modal,
+ *             space, font, geometry, shadow, z
+ *
+ * Dark Mode Authority Rule:
+ *   :root[data-theme="dark"] (in THIS file)   → --aot-bg-* state tokens ONLY
+ *                                                (active, inactive, on, off, etc.)
+ *   custom-dark.css                            → surface tokens ONLY
+ *                                                (--aot-surface-*, --aot-note-*, etc.)
+ *
+ * ========================================================================
+ * TOKEN TAXONOMY (Sections)
+ * ========================================================================
+ * - Section 1.1:  color — brand
+ * - Section 1.2:  color — semantic
+ * - Section 1.3:  color — background-state
+ * - Section 1.4:  color — button
+ * - Section 1.5:  color — border
+ * - Section 1.6:  color — surface
+ * - Section 1.7:  color — note
+ * - Section 1.8:  color — upgrade / alert
+ * - Section 1.9:  color — modal
+ * - Section 1.10: spacing
+ * - Section 1.11: typography
+ * - Section 1.12: geometry
+ * - Section 1.13: z-index
+ * - Section 1.14: shadow
+ */
+
+:root {
+  /* ========================================================================
+     Section 1.1: color — brand
+     ======================================================================== */
+  --aot-color-brand-primary: #13261B;
+  --aot-color-brand-secondary: #5E6B64;
+  --aot-color-brand-accent: #F3F6F5;
+  --aot-color-text-primary: #13261B;
+  --aot-color-text-secondary: #5E6B64;
+  --aot-color-text-tertiary: #FFFFFF;
+
+  /* ========================================================================
+     Section 1.2: color — semantic
+     ======================================================================== */
+  --aot-color-primary: #F2D524;
+  --aot-color-primary-hover: #EBCF21;
+  --aot-color-success: #96C064;
+  --aot-color-warning: #FEA60B;
+  --aot-color-danger: #DF5353;
+  --aot-color-info: #029ACF;
+  --aot-color-llm: #6277c7;
+  --aot-color-mcp: #64c762;
+  --aot-color-dark: #141414; /* Dark text/bg for modal primary button hover */
+
+  /* ------------------------------------------------------------------------
+     Section 1.2a: semantic SOFT TINTS (status pills, badges, verdict chips)
+     ------------------------------------------------------------------------
+     Single source of truth for "status" surfaces so panels (IEC summary,
+     Device Check, alerts) stop using scattered Bootstrap pastels. Each is a
+     softened, brand-harmonised pair {bg, fg} of the semantic colours above.
+     Use these instead of raw #d4edda / #fff3cd / #f8d7da hexes. */
+  --aot-tint-success-bg: #eef6e6;  --aot-tint-success-fg: #557a30;
+  --aot-tint-warning-bg: #fff3e2;  --aot-tint-warning-fg: #94650a;
+  --aot-tint-danger-bg:  #fbe7e7;  --aot-tint-danger-fg:  #b23b3b;
+  --aot-tint-info-bg:    #e7f4fb;  --aot-tint-info-fg:    #06709b;
+  --aot-tint-neutral-bg: var(--aot-bg-off);  --aot-tint-neutral-fg: var(--aot-color-text-secondary);
+
+  /* ========================================================================
+     Section 1.2b: color — measurement band (5단계 측정값 구간 전역 팔레트)
+     ------------------------------------------------------------------------
+     게이지/센서 라벨 등 측정값을 5단계 구간 색으로 표현하는 모든 위젯이
+     참조하는 공통 팔레트. 차가움(낮음) → 적정 → 뜨거움(높음).
+       1 매우 낮음·차가움 / 2 조금 낮음 / 3 적정 / 4 조금 높음 / 5 매우 높음·뜨거움
+     습도 등 일부 항목은 의미가 반대이므로 역순(band-5 → band-1)으로 사용.
+     ※ Python/JS 팔레트 상수(AoT_gauge_angular.color_list, BAND_PALETTE,
+        SensorRangesUI.PALETTE)도 이 값과 동일하게 유지할 것.
+     ======================================================================== */
+  --aot-band-1: #2DB4FF; /* 매우 낮음, 차가움 */
+  --aot-band-2: #54BCC1; /* 조금 낮음, 조금 차가움 */
+  --aot-band-3: #32c85a; /* 적정 */
+  --aot-band-4: #FEAE5F; /* 조금 높음, 약간 따뜻함 */
+  --aot-band-5: #CF5C58; /* 매우 높음, 뜨거움 */
+
+  /* ------------------------------------------------------------------------
+     차트 시리즈 앞 6색 (aot.config GRAPH_SERIES_PALETTE 공통 구간과 동기)
+     settings/custom_ui 의 chart_1..6 이 /custom.css 로 덮어쓴다.
+     서버측 차트는 utils_theme.get_graph_series_palette() 로 같은 값을 읽는다.
+     ------------------------------------------------------------------------ */
+  --aot-chart-1: #FEA60B;
+  --aot-chart-2: #8BC1C1;
+  --aot-chart-3: #93B261;
+  --aot-chart-4: #F4D624;
+  --aot-chart-5: #DF5353;
+  --aot-chart-6: #008DDE;
+
+  /* ========================================================================
+     Section 1.3: color — background-state
+     ======================================================================== */
+  --aot-bg-active: #D1D5D5;
+  --aot-bg-inactive: #F3F6F5;
+  --aot-bg-pause: #D1D5D5;
+  --aot-bg-hold: #D1D5D5;
+  --aot-bg-on: #B5BABA;
+  --aot-bg-off: #F3F6F5;
+  --aot-bg-upgrade: #13261B;
+
+  /* ========================================================================
+     Section 1.4: color — button
+     ======================================================================== */
+  --aot-btn-bg-primary: #13261B;
+  --aot-btn-bg-secondary: #5E6B64;
+  --aot-btn-bg-active: #13261B;
+  --aot-btn-bg-inactive: #5E6B64;
+  --aot-btn-bg-pause: #989E9E;
+  --aot-btn-bg-hold: #D1D5D5;
+  --aot-btn-bg-flat: #D2D1D1;
+  --aot-btn-bg-upgrade: #13261B;
+  --aot-btn-color-primary: #FFFFFF;
+  --aot-btn-color-secondary: #FFFFFF;
+  /* settings/custom_ui 의 bd_btn_border 필드가 /custom.css 를 통해
+     --aot-btn-border-primary 와 --bd-btn-border 를 함께 덮어쓴다.
+     기본값은 theme_defaults.json 의 bd_btn_border 와 반드시 일치시킬 것.
+     (과거 #13261B 였으나 /custom.css 기본 발행값 #B6BABA 가 실효값이었음) */
+  --aot-btn-border-primary: #B6BABA;
+  --aot-btn-border-secondary: #5E6B64;
+
+  /* ========================================================================
+     Section 1.5: color — border
+     ======================================================================== */
+  --aot-border-neutral: #dddddd;
+  --aot-border-light: #f0f0f0;
+  --aot-border-form: #ced4da;
+  --aot-border-form-focus: #80bdff;
+
+  /* ========================================================================
+     Section 1.6: color — surface
+     ======================================================================== */
+  --aot-surface-card: #ffffff;
+  --aot-surface-modal: #ffffff;
+  --aot-surface-dropdown: #ffffff;
+  --aot-surface-input: #ffffff;
+  --aot-surface-body: #f8f9fa;
+
+  /* ========================================================================
+     Section 1.7: color — note (migrated from custom.css)
+     ======================================================================== */
+  --aot-note-card-bg: #ffffff;
+  --aot-note-card-border: #eef2f5;
+  --aot-note-card-shadow: rgba(0,0,0,0.03);
+  --aot-note-card-hover-shadow: rgba(0,0,0,0.06);
+  --aot-note-card-body-text: #4a5568;
+  --aot-note-footer-bg: #f8fafc;
+  --aot-note-footer-text: #94a3b8;
+  --aot-note-tag-bg: #e0f2fe;
+  --aot-note-tag-text: #0369a1;
+  --aot-note-tag-hover-bg: #bae6fd;
+  --aot-note-fab-bg: #3b82f6;
+  --aot-note-search-bg: #ffffff;
+  --aot-note-search-border: #cbd5e1;
+  --aot-note-search-focus: #3b82f6;
+
+  /* ========================================================================
+     Section 1.8: color — upgrade / alert
+     ======================================================================== */
+  --aot-upgrade-dropdown-text: #ededed;
+  --aot-upgrade-dropdown-bg: #f92f44;
+  --aot-expand-toggle: #3b82f6;
+  --aot-expand-toggle-hover: #2563eb;
+
+  /* ========================================================================
+     Section 1.9: color — modal
+     ======================================================================== */
+  /* 2026-07: settings/custom_ui 텍스트 기본/보조색과 연결 — 설정 페이지
+     필드 라벨·모달 본문 등 이 3개 토큰을 쓰는 광범위한 UI가 text_color_primary/
+     secondary 를 실제로 따르도록(직접 커스텀되지 않은 라이트모드 기본값).
+     다크모드는 custom-dark.css 가 별도 리터럴로 재정의해 영향 없음. */
+  --aot-modal-title-text: var(--aot-color-text-primary, #222222);
+  --aot-modal-body-text: var(--aot-color-text-primary, #444444);
+  --aot-modal-group-title: var(--aot-color-text-secondary, #888888);
+  --aot-modal-backdrop: rgba(0,0,0,0.5);
+  --panel-border-light: rgba(255, 255, 255, 0.4);
+
+  /* ========================================================================
+     Section 1.10: spacing
+     ======================================================================== */
+  --aot-space-1: 4px;
+  --aot-space-2: 8px;
+  --aot-space-3: 12px;
+  --aot-space-4: 16px;
+  --aot-space-5: 24px;
+  --aot-space-6: 32px;
+  --aot-space-btn-x: 12px;
+  --aot-step: 4px;
+
+  /* ========================================================================
+     Section 1.11: typography
+     ======================================================================== */
+  --aot-font-family: "Gothic A1", "Ubuntu", "Open Sans", "Nanum Gothic", "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --aot-font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* widget typography scale — 3-tier fixed (uniform across all widgets) */
+  --aot-fs-sm:    0.75rem;   /* 12px  captions, timestamps, badges */
+  --aot-fs-md:    0.875rem;  /* 14px  titles, labels, units, body */
+  --aot-fs-lg:    1.5rem;    /* 24px  measurement values, gauge centre */
+
+  /* aliases — all 7 old names map to the 3-tier scale */
+  --aot-fs-caption:  var(--aot-fs-sm);
+  --aot-fs-label:    var(--aot-fs-md);
+  --aot-fs-body:     var(--aot-fs-md);
+  --aot-fs-unit:     var(--aot-fs-md);
+  --aot-fs-title:    var(--aot-fs-md);
+  --aot-fs-value:    var(--aot-fs-lg);
+  --aot-fs-value-sm: 1.125rem;         /* 18px  value one step below lg */
+  --aot-fs-value-lg: var(--aot-fs-lg);
+
+  /* font-weight tokens */
+  --aot-fw-regular:  400;
+  --aot-fw-medium:   500;
+  --aot-fw-semibold: 600;
+  --aot-fw-bold:     700;
+
+  /* line-height / letter-spacing */
+  --aot-lh-tight: 1.1;
+  --aot-lh-base:  1.45;
+  --aot-ls-tight: -0.01em;
+
+  /* legacy aliases — kept for backward compat */
+  --aot-font-size-xs: 0.75rem;
+  --aot-font-size-sm: 0.85rem;
+  --aot-font-size-base: 0.95rem;
+  --aot-font-size-lg: 1.05rem;
+  --aot-font-size-xl: 1.4rem;
+  --aot-btn-font-size: 0.85rem;
+
+  /* ========================================================================
+     Section 1.12: geometry
+     ======================================================================== */
+  --aot-btn-height: 36px;
+  --aot-btn-height-sm: 32px;
+  --aot-btn-radius: 18px;
+  --aot-btn-radius-sm: 16px;
+  --aot-control-width: 160px;
+  --aot-btn-fixed-width: 60px;
+  --aot-roundbox-width: 60px;
+  --aot-base-size: 28px;
+
+  /* ========================================================================
+     Section 1.13: z-index scale — 전역 오버레이 사다리
+     ------------------------------------------------------------------------
+     단일 소스. 가이드: docs/design/z-index-system.md
+     핵심 원칙: 대부분의 UI는 자기 스택 컨텍스트 안의 로컬 소정수(1~99)면
+     충분하다. 아래 전역 토큰은 "컨테이너를 탈출해 body 최상위로 떠야 하는"
+     UI(내비바·모달·드롭다운·오버레이·토스트·툴팁)에만 쓴다.
+     지도 pane·gridstack 핸들·위젯 내부 등 "제자리" 레이어는 로컬 소정수를
+     쓰고 100 미만을 유지할 것. 하드코딩 숫자/극단값(9999·2147483647) 금지.
+     ======================================================================== */
+  --aot-z-base:              0;    /* 기본 흐름 콘텐츠 */
+  --aot-z-raised:           10;    /* 살짝 띄운 콘텐츠·배지 */
+  --aot-z-sticky:          100;    /* sticky 서브헤더, 페이지 내 고정 바 */
+  --aot-z-map-overlay:     400;    /* 지도/캔버스 위 떠있는 컨트롤·패널 */
+  --aot-z-dropdown:       1000;    /* 메뉴·selectpicker·자동완성 (부트스트랩 관례) */
+  --aot-z-drawer:         1500;    /* 슬라이드 사이드바·드로어 */
+  --aot-z-fixed-panel:    2000;    /* 고정 떠있는 툴 팔레트(geo 디자인 등) */
+  --aot-z-navbar:         3000;    /* 상단 내비게이션 바 */
+  --aot-z-overlay:        4000;    /* 전체화면 오버레이: 로딩·지도 풀스크린·갤러리 뷰어 */
+  --aot-z-modal-backdrop: 5000;    /* 모달 배경 */
+  --aot-z-modal:          5100;    /* 다이얼로그 */
+  --aot-z-modal-nested:   5200;    /* 모달 안에서 밖으로 튀어나오는 드롭다운/select */
+  --aot-z-popover:        5300;    /* 모달 콘텐츠에 앵커된 팝오버 */
+  --aot-z-confirm-backdrop: 5900;  /* 전역 confirm 다이얼로그 배경(일반 모달 위) */
+  --aot-z-confirm:        6000;    /* 전역 confirm 다이얼로그 */
+  --aot-z-toast:          6500;    /* 토스트·알림 (모달 위) */
+  --aot-z-tooltip:        7000;    /* 툴팁 — 항상 최상위 */
+
+  /* ========================================================================
+     Section 1.14: shadow
+     ======================================================================== */
+  --aot-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --aot-shadow-md: 0 4px 12px rgba(0,0,0,0.03);
+  --aot-shadow-lg: 0 10px 25px rgba(0,0,0,0.06);
+  --aot-shadow-modal: 0 5px 20px rgba(0,0,0,0.15);
+
+  /* Additional shadow tokens for component-specific shadows */
+  --aot-shadow-dropdown: 0 4px 12px rgba(0,0,0,0.1);
+  --aot-shadow-tab-active: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --aot-shadow-nav-panel: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --aot-shadow-btn-nav-back: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --aot-shadow-btn-nav-hover: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --aot-shadow-form-focus: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  --aot-shadow-mode-sub-tab: 0 2px 4px rgba(0, 123, 255, 0.3);
+
+  /* ========================================================================
+     Legacy token mappings (backward compatibility aliases)
+     ======================================================================== */
+  /* Brand Colors */
+  --brand-primary: var(--aot-color-brand-primary);
+  --brand-secondary: var(--aot-color-brand-secondary);
+  --brand-accent: var(--aot-color-brand-accent);
+
+  /* Text Colors */
+  --text-color-primary: var(--aot-color-text-primary);
+  --text-color-secondary: var(--aot-color-text-secondary);
+  --text-color-tertiary: var(--aot-color-text-tertiary);
+
+  /* UI State Colors */
+  --bg-active: var(--aot-bg-active);
+  --bg-inactive: var(--aot-bg-inactive);
+  --bg-pause: var(--aot-bg-pause);
+  --bg-hold: var(--aot-bg-hold);
+  --bg-on: var(--aot-bg-on);
+  --bg-off: var(--aot-bg-off);
+  --bg-upgrade: var(--aot-bg-upgrade);
+
+  /* Button Colors */
+  --bg-llm: var(--aot-color-llm);
+  --bg-mcp: var(--aot-color-mcp);
+  --bd-btn-primary: var(--aot-btn-bg-primary);
+  --bd-btn-secondary: var(--aot-btn-bg-secondary);
+  --bd-btn-tertiary: var(--aot-color-brand-accent);
+  --bg-btn-upgrade: var(--aot-btn-bg-upgrade);
+  --bg-btn-on: var(--aot-btn-bg-active);
+  --bg-btn-off: var(--aot-btn-bg-inactive);
+  --bg-btn-active: var(--aot-btn-bg-active);
+  --bg-btn-inactive: var(--aot-btn-bg-inactive);
+  --bg-btn-pause: var(--aot-btn-bg-pause);
+  --bg-btn-hold: var(--aot-btn-bg-hold);
+  --bd-btn-border: var(--aot-btn-border-primary);
+  /* 채워진(primary) 버튼·활성 탭의 테두리. 과거 정의 누락으로 소비처
+     (aot-modal-modern, aot-base-ui, bootstrap-4-themes/aot.css)가 폴백에
+     의존했음 — 대표 폴백 #13261B(브랜드 프라이머리)를 정식 정의로 승격. */
+  --bd-border: var(--aot-color-brand-primary);
+
+  /* Modal & Form */
+  --aot-common-control-width: var(--aot-control-width);
+  --aot-btn-pill-radius: 9999px;
+  --aot-primary: var(--aot-color-primary);
+  --aot-primary-hover: var(--aot-color-primary-hover);
+  --aot-input-focus-border: var(--aot-color-primary);
+  --aot-input-bg: var(--aot-surface-input);
+  --aot-text-main: var(--aot-modal-body-text);
+  --aot-text-title: var(--aot-modal-title-text);
+  --aot-text-secondary: var(--aot-color-text-secondary);
+  --gray: #eeebeb;
+  /* .aot-modal-group-title 등 다수 UI가 이 이름으로 텍스트색을 참조한다
+     (이름과 달리 --aot-modal-group-title 이 아닌 이 변수를 씀) — 2026-07
+     text_color_secondary 와 연결해 커스텀 색상이 실제로 반영되도록 함 */
+  --gray-dark: var(--aot-color-text-secondary, #888888);
+  --gray-hard: #616161;
+  --text-tertiary: var(--aot-color-text-tertiary);
+  --modal-focus-ring: rgba(0, 123, 255, 0.1);
+  --camera-preview-bg: #1a1a1a;
+
+  /* Geometry (legacy aliases) */
+  --aot-btn-padding-x: var(--aot-space-btn-x);
+  --aot-step-size: var(--aot-step);
+
+  /* Page background layers (settings/custom_ui: bd_primary/bd_secondary/bd_tertiary)
+     — /custom.css 가 항상 재발행하지만, /custom.css 를 로드하지 않는 페이지
+     (로그인 등)에서도 정의되도록 정적 기본값을 둔다. theme_defaults.json 과 일치. */
+  --bd-primary: #FFFFFF;
+  --bd-secondary: #F3F6F5;
+  --bd-tertiary: #13261B;
+
+  /* Neutral UI */
+  --border-neutral: var(--aot-border-neutral);
+  --border-light-disabled: #cccccc;
+  --border-divider-light: #eeeeee;
+  --border-form-control: var(--aot-border-form);
+  --border-form-focus: var(--aot-border-form-focus);
+  --bg-btn-flat: var(--aot-btn-bg-flat);
+  --btn-flat-hover: #bdbdbd;
+  --bg-btn-hover-light: #f0f0f0;
+  --bg-btn-hover-lighter: #f8f9fa;
+  --bg-btn-active-light: #e9ecef;
+  --text-dark-neutral: #363636;
+  --text-medium-gray: #666666;
+  --indicator-neutral: #555555;
+
+  /* GIS Mode */
+  --color-site-mode: #ffcc00;
+  --text-site-mode: #856404;
+  --color-zone-mode: #28a745;
+  --color-facility-mode: #82898f;
+  --text-facility-mode: #5a6268;
+  --color-equipment-mode: #007bff;
+  --color-equipment-mode-hover: #0056b3;
+  --color-device-mode: #995aff;
+  --bg-equipment-tint: #eef6ff;
+  --bg-equipment-tint-hover: #f0f7ff;
+}
+
+/* Dark Theme Overrides — :root[data-theme="dark"] */
+:root[data-theme="dark"] {
+  /* Background-state colors (device/state logic — NOT surface theming) */
+  --aot-bg-on: #F3F6F5;
+  --aot-bg-off: #D1D5D5;
+  --aot-bg-active: #F3F6F5;
+  --aot-bg-inactive: #D1D5D5;
+  --aot-bg-upgrade: #660000;
+  --aot-bg-pause: #D1D5D5;
+  --aot-bg-hold: #D1D5D5;
+
+  /*
+   * NOTE: Semantic and brand/text color overrides were moved from here
+   * to custom-dark.css per the authority rule (Section 3.1 of Plan 019):
+   * :root[data-theme="dark"] in aot-theme-variables.css holds ONLY --aot-bg-*
+   * state tokens. Surface token dark overrides belong in custom-dark.css.
+   *
+   * Moved tokens:
+   *   --aot-color-success, --aot-color-warning, --aot-color-danger, --aot-color-info
+   *   --aot-color-brand-accent, --aot-color-text-primary, --aot-color-text-secondary
+   *   --aot-color-dark
+   */
+}

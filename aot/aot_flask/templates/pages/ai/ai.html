@@ -1,0 +1,572 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_dashboard" %}
+{% set help_page = [manual_url("ai/overview/"), _('AI')] %}
+{% block title %}- {{ _('AI') }}{% endblock %}
+
+{% block head %}
+<meta name="facility-id" content="{{ facility_id | default('') }}">
+<style>
+    /* ============================================================
+       AI Page — 016 UX Redesign
+       Mode A: Getting to Know Each Other (getting_to_know.html)
+       Mode B: AI Status + User Requirements
+       ============================================================ */
+
+    /* ---- Shared section layout ---- */
+    .ai-section {
+        margin-bottom: 2.5rem;
+    }
+    .ai-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .ai-section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--aot-color-text-primary, #212529);
+    }
+    .ai-section-subtitle {
+        font-size: 0.8rem;
+        color: var(--aot-color-text-secondary, #6c757d);
+        font-weight: 400;
+        margin-left: 0.5rem;
+    }
+
+    /* ---- B1: Learning Progress ---- */
+    .status-progress-bar-wrap {
+        background: #e9ecef;
+        border-radius: 8px;
+        height: 10px;
+        overflow: hidden;
+        margin: 0.5rem 0 0.25rem;
+    }
+    .status-progress-bar {
+        height: 100%;
+        background: #198754;
+        border-radius: 8px;
+        transition: width 0.4s;
+    }
+    .status-progress-label {
+        font-size: 0.85rem;
+        color: var(--aot-color-text-secondary, #495057);
+    }
+
+    /* ---- B1: Key Keywords ---- */
+    .keyword-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .keyword-chip {
+        background: #e7f3ff;
+        border: 1px solid #b6d4fe;
+        border-radius: 20px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.85rem;
+        color: var(--aot-color-info, #084298);
+    }
+
+    /* ---- B1: Frequently Used Features ---- */
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .feature-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: var(--aot-color-text-primary, #343a40);
+    }
+    .feature-item:last-child { border-bottom: none; }
+    .feature-count {
+        font-size: 0.8rem;
+        color: var(--aot-color-text-secondary, #6c757d);
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 0.15rem 0.6rem;
+    }
+
+    /* ---- Status card wrapper ---- */
+    .status-card {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .status-card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--aot-color-text-secondary, #495057);
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    /* ---- B1: Reset button ---- */
+    .ai-reset-btn {
+        background: none;
+        border: none;
+        color: var(--aot-color-text-secondary, #adb5bd);
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+    }
+    .ai-reset-btn:hover { color: var(--aot-color-danger, #dc3545); }
+
+    /* ---- B2: User Requirements ---- */
+    .requirement-display {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.9rem;
+        color: var(--aot-color-text-primary, #343a40);
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .requirement-empty {
+        font-size: 0.9rem;
+        color: var(--aot-color-text-secondary, #adb5bd);
+        font-style: italic;
+    }
+    .requirement-textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: var(--aot-color-text-primary, #343a40);
+        resize: vertical;
+        font-family: inherit;
+    }
+    .requirement-textarea:focus {
+        outline: none;
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+    }
+    .preset-chips-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+    }
+    .preset-fill-chip {
+        background: #f0f0f0;
+        border: 1px solid #dee2e6;
+        border-radius: 15px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        color: var(--aot-color-text-secondary, #495057);
+        cursor: pointer;
+        transition: all 0.1s;
+    }
+    .preset-fill-chip:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+    }
+    .req-btn-group {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    .req-save-btn {
+        padding: 0.4rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        background: #0d6efd;
+        color: var(--text-color-tertiary, #fff);
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .req-save-btn:hover { background: #0b5ed7; }
+    .req-cancel-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.875rem;
+        background: #fff;
+        color: var(--aot-color-text-secondary, #6c757d);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .req-cancel-btn:hover { background: #f8f9fa; }
+    .req-edit-btn {
+        padding: 0.3rem 1rem;
+        font-size: 0.8rem;
+        background: #fff;
+        color: var(--aot-color-info, #0d6efd);
+        border: 1px solid #b6d4fe;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .req-edit-btn:hover { background: #e7f3ff; }
+
+    /* ---- Re-invoke button ---- */
+    .reinvoke-section {
+        text-align: center;
+        padding: 2rem 0 1rem;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 2rem;
+    }
+    .reinvoke-btn {
+        background: none;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        padding: 0.4rem 1.25rem;
+        font-size: 0.8rem;
+        color: var(--aot-color-text-secondary, #adb5bd);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .reinvoke-btn:hover {
+        border-color: #adb5bd;
+        color: var(--aot-color-text-secondary, #6c757d);
+    }
+
+    /* ---- Skeleton loader ---- */
+    .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.2s infinite;
+        border-radius: 6px;
+    }
+    @keyframes skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    {# ============================================================
+       MODE A: Getting to Know Each Other
+       Shown when: onboarding not completed, OR reinvoke=1
+       ============================================================ #}
+    {% set show_onboarding = reinvoke or not user_profile or not user_profile.onboarding_completed %}
+    {% if show_onboarding %}
+    <div id="ai-mode-a">
+        {% include 'pages/ai/components/getting_to_know.html' %}
+    </div>
+    {# Pre-fill wizard fields on re-invoke if the user already has saved values #}
+    {% if reinvoke and user_profile %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        GKT.prefill(
+            {{ user_profile.facility_preset | tojson }},
+            {{ user_profile.user_requirement | tojson }}
+        );
+    });
+    </script>
+    {% endif %}
+    {% endif %}
+
+    {# ============================================================
+       MODE B: AI Status + User Requirements
+       Shown when onboarding completed (and not re-invoke)
+       ============================================================ #}
+    {% if user_profile and user_profile.onboarding_completed and not reinvoke %}
+    <div id="ai-mode-b">
+
+        {# ---- B1: AI Status Section ---- #}
+        <section class="ai-section" id="section-ai-status">
+            <div class="ai-section-header">
+                <span class="ai-section-title">{{ _('AI Status') }}</span>
+            </div>
+
+            {# 1. Learning Progress #}
+            <div class="status-card" id="card-learning-progress">
+                <div class="status-card-title">{{ _('Learning Progress') }}</div>
+                <div id="progress-content">
+                    <div class="skeleton" style="height:10px; width:100%; margin-bottom:0.5rem;"></div>
+                    <div class="skeleton" style="height:16px; width:60%;"></div>
+                </div>
+            </div>
+
+            {# 2. Key Keywords #}
+            <div class="status-card" id="card-keywords">
+                <div class="status-card-title">{{ _('Key Keywords') }}</div>
+                <div id="keywords-content">
+                    <div class="skeleton" style="height:28px; width:80%;"></div>
+                </div>
+            </div>
+
+            {# 3. Frequently Used Features #}
+            <div class="status-card" id="card-features">
+                <div class="status-card-title">{{ _('Frequently Used Features') }}</div>
+                <div id="features-content">
+                    <div class="skeleton" style="height:120px;"></div>
+                </div>
+            </div>
+
+            {# Reset button #}
+            <div style="text-align:right;">
+                <button class="ai-reset-btn" onclick="AiPage.resetSnapshot()">
+                    {{ _('Reset AI Status') }}
+                </button>
+            </div>
+        </section>
+
+        {# ---- B2: User Requirements Section ---- #}
+        <section class="ai-section" id="section-user-req">
+            <div class="ai-section-header">
+                <span class="ai-section-title">
+                    {{ _('Your AI Instructions') }}
+                    <span class="ai-section-subtitle">{{ _('Advanced — optional') }}</span>
+                </span>
+                <button class="req-edit-btn" id="req-edit-btn" onclick="AiPage.startEditRequirement()">
+                    {{ _('Edit') }}
+                </button>
+            </div>
+
+            {# Display view #}
+            <div id="req-display-view">
+                {% if user_profile.user_requirement %}
+                <div class="requirement-display" id="req-display-text">{{ user_profile.user_requirement }}</div>
+                {% else %}
+                <div class="requirement-empty">
+                    {{ _('Add specific instructions for your AI (optional)') }}
+                </div>
+                {% endif %}
+            </div>
+
+            {# Edit view (hidden by default) #}
+            <div id="req-edit-view" style="display:none;">
+                <textarea class="requirement-textarea" id="req-textarea"
+                    placeholder="{{ _('e.g. I manage a greenhouse and need help with pest management and temperature control') }}"
+                >{% if user_profile.user_requirement %}{{ user_profile.user_requirement }}{% endif %}</textarea>
+
+                <div class="preset-chips-row" id="req-preset-chips">
+                    {# Quick-fill chips based on current preset #}
+                    {% if user_profile.facility_preset == 'outdoor_farming' %}
+                    <span class="preset-fill-chip" onclick="AiPage.fillPreset(this)">
+                        {{ _('Outdoor Farming') }}
+                    </span>
+                    {% elif user_profile.facility_preset == 'greenhouse' %}
+                    <span class="preset-fill-chip" onclick="AiPage.fillPreset(this)">
+                        {{ _('Greenhouse') }}
+                    </span>
+                    {% elif user_profile.facility_preset == 'sports_facility' %}
+                    <span class="preset-fill-chip" onclick="AiPage.fillPreset(this)">
+                        {{ _('Sports Facility') }}
+                    </span>
+                    {% elif user_profile.facility_preset == 'park' %}
+                    <span class="preset-fill-chip" onclick="AiPage.fillPreset(this)">
+                        {{ _('Park') }}
+                    </span>
+                    {% elif user_profile.facility_preset == 'transportation' %}
+                    <span class="preset-fill-chip" onclick="AiPage.fillPreset(this)">
+                        {{ _('Transportation') }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="req-btn-group">
+                    <button class="req-save-btn" onclick="AiPage.saveRequirement()">{{ _('Save') }}</button>
+                    <button class="req-cancel-btn" onclick="AiPage.cancelEditRequirement()">{{ _('Cancel') }}</button>
+                </div>
+                <div id="req-save-error" style="color:var(--aot-color-danger, #dc3545); font-size:0.85rem; margin-top:0.4rem; display:none;"></div>
+            </div>
+        </section>
+
+        {# ---- B3: Re-invoke button ---- #}
+        <div class="reinvoke-section">
+            <a href="/ai?reinvoke=1" class="reinvoke-btn">{{ _('Update AI Setup') }}</a>
+        </div>
+
+    </div>{# #ai-mode-b #}
+    {% endif %}
+
+</main>
+</div>
+
+{% if user_profile and user_profile.onboarding_completed and not reinvoke %}
+<script>
+/**
+ * AI Page 016 — Mode B controller
+ */
+const AiPage = (function() {
+    const facilityId = document.querySelector('meta[name="facility-id"]')?.content || '';
+
+    // Preset quick-fill texts (English instruction strings)
+    const PRESET_FILL_TEXT = {
+        '{{ _("Outdoor Farming") }}':   'Focus on outdoor crop management, weather impact, and soil conditions.',
+        '{{ _("Greenhouse") }}':        'Prioritize greenhouse environment: temperature, humidity, CO2, and pest control.',
+        '{{ _("Sports Facility") }}':   'Help manage facility scheduling, maintenance, and visitor experience.',
+        '{{ _("Park") }}':              'Support park operations: visitor flow, seasonal planning, and safety.',
+        '{{ _("Transportation") }}':    'Monitor traffic flow, incident response, and infrastructure maintenance.'
+    };
+
+    // ---- Status snapshot ----
+    function loadStatus() {
+        if (!facilityId) return;
+        fetch('/api/v1/ai/portal/status?facility_id=' + encodeURIComponent(facilityId))
+            .then(function(r) { return r.ok ? r.json() : Promise.reject(r); })
+            .then(function(res) {
+                if (res.success) renderStatus(res.data);
+            })
+            .catch(function(err) {
+                console.error('AI status load error:', err);
+            });
+    }
+
+    function renderStatus(data) {
+        // 1. Learning Progress
+        const lp = data.learning_progress || {};
+        const total = lp.total || 0;
+        const confirmed = lp.confirmed || 0;
+        const pending = lp.pending || 0;
+        const pct = total > 0 ? Math.round((confirmed / total) * 100) : 0;
+
+        document.getElementById('progress-content').innerHTML = `
+            <div class="status-progress-bar-wrap">
+                <div class="status-progress-bar" style="width:${pct}%"></div>
+            </div>
+            <div class="status-progress-label">
+                {{ _('Confirmed knowledge items:') }} <strong>${confirmed}</strong>
+                &nbsp;&middot;&nbsp; {{ _('Pending:') }} ${pending}
+                &nbsp;&middot;&nbsp; {{ _('Total:') }} ${total}
+            </div>
+        `;
+
+        // 2. Keywords
+        const keywords = data.keywords || [];
+        const kwEl = document.getElementById('keywords-content');
+        if (keywords.length === 0) {
+            kwEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size:0.875rem;">{{ _("AI is still learning...") }}</span>';
+        } else {
+            kwEl.innerHTML = '<div class="keyword-chips">' +
+                keywords.map(function(k) {
+                    return '<span class="keyword-chip">' + escapeHtml(k.keyword) + '</span>';
+                }).join('') +
+                '</div>';
+        }
+
+        // 3. Frequently Used Features
+        const features = data.features || [];
+        const fEl = document.getElementById('features-content');
+        if (features.length === 0) {
+            fEl.innerHTML = '<span style="color:var(--aot-color-text-secondary, #adb5bd); font-size:0.875rem;">{{ _("No activity yet") }}</span>';
+        } else {
+            fEl.innerHTML = '<ul class="feature-list">' +
+                features.map(function(f, i) {
+                    return `<li class="feature-item">
+                        <span>${i + 1}. ${escapeHtml(f.action_type || '-')}</span>
+                        <span class="feature-count">${f.count}</span>
+                    </li>`;
+                }).join('') +
+                '</ul>';
+        }
+    }
+
+    function resetSnapshot() {
+        if (!facilityId) return;
+        if (!confirm('{{ _("Reset AI Status? The snapshot will be recalculated on next load.") }}')) return;
+        fetch('/api/v1/ai/portal/status/snapshot?facility_id=' + encodeURIComponent(facilityId), {
+            method: 'DELETE'
+        })
+        .then(function(r) { return r.ok ? r.json() : Promise.reject(r); })
+        .then(function() { loadStatus(); })
+        .catch(function(err) { console.error('Reset snapshot error:', err); });
+    }
+
+    // ---- User Requirements ----
+    function startEditRequirement() {
+        document.getElementById('req-display-view').style.display = 'none';
+        document.getElementById('req-edit-view').style.display = 'block';
+        document.getElementById('req-edit-btn').style.display = 'none';
+    }
+
+    function cancelEditRequirement() {
+        document.getElementById('req-display-view').style.display = 'block';
+        document.getElementById('req-edit-view').style.display = 'none';
+        document.getElementById('req-edit-btn').style.display = '';
+        document.getElementById('req-save-error').style.display = 'none';
+    }
+
+    function fillPreset(chip) {
+        const label = chip.textContent.trim();
+        const text = PRESET_FILL_TEXT[label];
+        if (text) {
+            document.getElementById('req-textarea').value = text;
+        }
+    }
+
+    function saveRequirement() {
+        const value = document.getElementById('req-textarea').value.trim();
+        fetch('/api/v1/ai/portal/requirement', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_requirement: value || null })
+        })
+        .then(function(r) { return r.ok ? r.json() : Promise.reject(r); })
+        .then(function() {
+            // Update display
+            const displayEl = document.getElementById('req-display-text');
+            const emptyEl = document.querySelector('#req-display-view .requirement-empty');
+            if (value) {
+                if (displayEl) {
+                    displayEl.textContent = value;
+                    displayEl.style.display = '';
+                } else {
+                    const newEl = document.createElement('div');
+                    newEl.className = 'requirement-display';
+                    newEl.id = 'req-display-text';
+                    newEl.textContent = value;
+                    document.getElementById('req-display-view').innerHTML = '';
+                    document.getElementById('req-display-view').appendChild(newEl);
+                }
+                if (emptyEl) emptyEl.style.display = 'none';
+            } else {
+                document.getElementById('req-display-view').innerHTML =
+                    '<div class="requirement-empty">{{ _("Add specific instructions for your AI (optional)") }}</div>';
+            }
+            cancelEditRequirement();
+        })
+        .catch(function(err) {
+            console.error('Save requirement error:', err);
+            const errEl = document.getElementById('req-save-error');
+            if (errEl) {
+                errEl.textContent = '{{ _("Failed to save. Please try again.") }}';
+                errEl.style.display = 'block';
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', function() { loadStatus(); });
+
+    return {
+        resetSnapshot: resetSnapshot,
+        startEditRequirement: startEditRequirement,
+        cancelEditRequirement: cancelEditRequirement,
+        fillPreset: fillPreset,
+        saveRequirement: saveRequirement
+    };
+})();
+</script>
+{% endif %}
+
+{% endblock %}

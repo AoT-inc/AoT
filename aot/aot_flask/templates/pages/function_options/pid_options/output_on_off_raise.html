@@ -1,0 +1,22 @@
+{{form_mod_pid_output_raise.csrf_token}}
+
+<div class="aot-modal-option-row">
+  {{form_mod_pid_output_raise.raise_min_duration.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_output_raise.raise_min_duration(class_='form-control aot-modern-input', value=each_function.raise_min_duration, **{'title':_('Minimum duration (in seconds) required for upper output to be active. If ON duration is shorter than this, upper output will not turn on.')})}}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_mod_pid_output_raise.raise_max_duration.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_output_raise.raise_max_duration(class_='form-control aot-modern-input', value=each_function.raise_max_duration, **{'title':_('Maximum duration (in seconds) that upper output can be on during a cycle. If ON duration is larger than this, upper output turns on only for the set duration. Enter 0 to disable.')})}}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_mod_pid_output_raise.raise_min_off_duration.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_mod_pid_output_raise.raise_min_off_duration(class_='form-control aot-modern-input', value=each_function.raise_min_off_duration, **{'title':_('This output will remain off for at least this amount of time.')})}}
+  </div>
+</div>

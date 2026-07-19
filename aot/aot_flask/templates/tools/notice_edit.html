@@ -1,0 +1,246 @@
+{% extends "layout.html" %}
+{% set active_page = "notice" %}
+{% set help_page = [manual_url("Notices/"), _('Notice')] %}
+
+{% block title %} - {{ _('Edit Notice') }}{% endblock %}
+
+{% block body %}
+<script src="{{ url_for('static', filename='js/components/aot-notice-render.js') }}?v=20260708"></script>
+<style>
+    /* Body text area: plain prose, not the pill/code-editor look aot-modern-input
+       gives textareas by default (9999px radius, no-wrap + horizontal scroll).
+       Focus uses the same neutral blue ring every modal already shows
+       (--modal-focus-ring) WITHOUT swapping the border to the brand yellow
+       .aot-modern-input uses — that yellow is reserved for buttons/actions,
+       not text input borders. */
+    textarea.aot-notice-textarea {
+        border-radius: 8px !important;
+        border: 1px solid var(--gray) !important;
+        outline: none !important;
+        white-space: normal !important;
+        overflow-wrap: break-word !important;
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+        resize: none !important;
+        min-height: 160px;
+    }
+    textarea.aot-notice-textarea:focus {
+        border-color: var(--gray) !important;
+        box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+        outline: none !important;
+    }
+</style>
+<div class="container-fluid px-0" style="max-width: 820px; margin: 0 auto; padding-bottom: 3rem;">
+    {% include 'flash_messages.html' %}
+
+    <div class="mt-4 mb-2 px-3">
+        <a href="{{ url_for('routes_notice.page_notice_detail', unique_id=post.unique_id) }}" class="small text-muted text-decoration-none">{{ _('Back to Notice') }}</a>
+    </div>
+
+    <div class="px-3">
+        <h4 class="font-weight-bold mb-3">{{ _('Edit Notice') }}</h4>
+
+        <form method="post" action="{{ url_for('routes_notice.page_notice_edit', unique_id=post.unique_id) }}" enctype="multipart/form-data" id="editNoticeForm">
+            {{ form_notice_mod.csrf_token }}
+            {{ form_notice_mod.notice_unique_id() }}
+            <input type="hidden" name="deleted_files" id="editDeletedFiles" value="">
+            <datalist id="noticeCategoryList">
+                {% for cat in category_list %}
+                <option value="{{ cat }}">
+                {% endfor %}
+            </datalist>
+
+            <div class="aot-modal-container">
+                <div class="aot-modal-option-row aot-full-width-row">
+                    <label class="aot-modal-option-label">{{ _('Title') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.title(class_='aot-modern-input', style='width:100%;') }}
+                    </div>
+                </div>
+                <div class="aot-modal-option-row aot-full-width-row">
+                    <label class="aot-modal-option-label">{{ _('Content') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.body(class_='aot-modern-input aot-notice-textarea', rows='8', style='width:100%; height:auto;', placeholder=_('Markdown supported: **bold**, *italic*. Links, YouTube, and image URLs are auto-detected.')) }}
+                    </div>
+                </div>
+                <div class="aot-modal-option-row aot-full-width-row">
+                    <label class="aot-modal-option-label">{{ _('Category') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.category(class_='aot-modern-input', style='width:100%;', list='noticeCategoryList', placeholder=_('Optional')) }}
+                    </div>
+                </div>
+
+                {% if post.files %}
+                <div class="aot-modal-option-row aot-full-width-row">
+                    <label class="aot-modal-option-label">{{ _('Current Attachments') }}</label>
+                    <div class="aot-modal-option-control" style="flex-wrap:wrap; justify-content:flex-start;">
+                        {% for f in post.files.split(',') %}
+                        <span class="badge badge-light border mr-1 mb-1" data-file="{{ f }}">
+                            <a href="{{ url_for('routes_notice.send_notice_attachment', filename=f) }}" target="_blank">{{ f.split('_', 1)[-1] }}</a>
+                            <a href="#" class="text-danger ml-1 remove-attachment-btn" data-file="{{ f }}">&times;</a>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="aot-modal-option-row aot-full-width-row">
+                    <label class="aot-modal-option-label">{{ _('Add Attachments') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.files(style='width:100%;') }}
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn aot-pill-btn mb-2 {% if poll %}d-none{% endif %}" id="editPollToggleBtn">{{ _('Add Poll') }}</button>
+            <div class="aot-modal-container {% if not poll %}d-none{% endif %}" id="editPollSection">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="aot-modal-section-title" style="margin-top:0.6rem;">{{ _('Poll') }}</div>
+                    <button type="button" class="btn aot-pill-btn" id="editPollRemoveBtn" style="min-width:auto; padding:0 10px; height:26px; font-size:0.72rem;">{{ _('Remove Poll') }}</button>
+                </div>
+                <div class="aot-modal-option-row aot-full-width-row">
+                    <label class="aot-modal-option-label">{{ _('Question') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.poll_question(class_='aot-modern-input', style='width:100%;', value=poll.question if poll else '') }}
+                    </div>
+                </div>
+                <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ _('Allow Multiple Choices') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.poll_multi(checked=poll.multi if poll else False) }}
+                    </div>
+                </div>
+                <div id="editPollOptionsContainer">
+                    {% for opt in poll_options %}
+                    <div class="aot-modal-option-row aot-full-width-row">
+                        <input type="text" name="poll_option" class="aot-modern-input" value="{{ opt.label }}" style="width:100%;">
+                    </div>
+                    {% else %}
+                    <div class="aot-modal-option-row aot-full-width-row">
+                        <input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _('Option 1') }}" style="width:100%;">
+                    </div>
+                    <div class="aot-modal-option-row aot-full-width-row">
+                        <input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _('Option 2') }}" style="width:100%;">
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn aot-pill-btn mt-1 mb-2" id="editAddPollOptionBtn">{{ _('Add Option') }}</button>
+                {% if poll %}
+                <p class="small text-muted">{{ _('Changing poll options resets all existing votes.') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="aot-modal-section-title">{{ _('Schedule') }}</div>
+            <div class="aot-modal-container">
+                <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ _('Publish Immediately') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.publish_now(id='editPublishNow') }}
+                    </div>
+                </div>
+                <div class="aot-modal-option-row aot-full-width-row {% if post.publish_at is none %}d-none{% endif %}" id="editPublishAtRow">
+                    <label class="aot-modal-option-label">{{ _('Publish At') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.publish_at(class_='aot-modern-input', style='width:100%;', placeholder='YYYY-MM-DD HH:MM:SS') }}
+                    </div>
+                </div>
+                <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ _('Set Expiration') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.set_expire(id='editSetExpire') }}
+                    </div>
+                </div>
+                <div class="aot-modal-option-row aot-full-width-row {% if post.expire_at is none %}d-none{% endif %}" id="editExpireAtRow">
+                    <label class="aot-modal-option-label">{{ _('Expires At') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.expire_at(class_='aot-modern-input', style='width:100%;', placeholder='YYYY-MM-DD HH:MM:SS') }}
+                    </div>
+                </div>
+                {% if is_admin %}
+                <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ _('Pin to Top') }}</label>
+                    <div class="aot-modal-option-control">
+                        {{ form_notice_mod.pinned() }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex justify-content-between mt-4 mb-5">
+                <span>
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="editNoticeDeleteBtn" data-post="{{ post.unique_id }}">{{ _('Delete') }}</button>
+                </span>
+                <span class="d-flex" style="gap:6px;">
+                    <a href="{{ url_for('routes_notice.page_notice_detail', unique_id=post.unique_id) }}" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Cancel') }}</a>
+                    {{ form_notice_mod.notice_save(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    $('#editNoticeDeleteBtn').on('click', function () {
+        if (!confirm('{{ _("Delete this notice?") }}')) { return; }
+        var postId = $(this).data('post');
+        $.ajax({
+            url: '/notice/api/' + postId + '/delete',
+            method: 'POST',
+            success: function () {
+                showToast('{{ _("Notice deleted") }}', 'success');
+                window.location.href = '{{ url_for("routes_notice.page_notice") }}';
+            },
+            error: function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                showToast(msg, 'error');
+            }
+        });
+    });
+
+    $('#editPublishNow').on('change', function () {
+        $('#editPublishAtRow').toggleClass('d-none', $(this).is(':checked'));
+    });
+    $('#editSetExpire').on('change', function () {
+        $('#editExpireAtRow').toggleClass('d-none', !$(this).is(':checked'));
+    });
+
+    $('#editAddPollOptionBtn').on('click', function () {
+        var count = $('#editPollOptionsContainer .aot-modal-option-row').length + 1;
+        var $row = $('<div class="aot-modal-option-row aot-full-width-row">' +
+            '<input type="text" name="poll_option" class="aot-modern-input" placeholder="{{ _("Option") }} ' + count + '" style="width:100%;"></div>');
+        $('#editPollOptionsContainer').append($row);
+    });
+
+    $('#editPollToggleBtn').on('click', function () {
+        $('#editPollSection').removeClass('d-none');
+        $(this).addClass('d-none');
+    });
+    $('#editPollRemoveBtn').on('click', function () {
+        $('#editPollSection').addClass('d-none');
+        $('#editPollSection input[type="text"]').val('');
+        $('#editPollSection input[type="checkbox"]').prop('checked', false);
+        $('#editPollToggleBtn').removeClass('d-none');
+    });
+
+    // Auto-grow textareas to fit content instead of scrolling/clipping.
+    function autosizeTextarea(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+    $('textarea.aot-notice-textarea').each(function () { autosizeTextarea(this); })
+        .on('input', function () { autosizeTextarea(this); });
+    AoTNoticeRender.bindPasteFormatting('textarea.aot-notice-textarea');
+
+    $(document).on('click', '.remove-attachment-btn', function (e) {
+        e.preventDefault();
+        var file = $(this).data('file');
+        var current = $('#editDeletedFiles').val();
+        var list = current ? current.split(',') : [];
+        if (list.indexOf(file) === -1) { list.push(file); }
+        $('#editDeletedFiles').val(list.join(','));
+        $(this).closest('[data-file]').fadeOut(200, function () { $(this).remove(); });
+    });
+});
+</script>
+{% endblock %}

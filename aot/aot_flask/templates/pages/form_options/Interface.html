@@ -1,0 +1,10 @@
+{% if 'interface' in dict_options['options_disabled'] %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['interface']['title']}}</label>
+  <div class="aot-modal-option-control">
+    <input class="form-control aot-modern-input" disabled id="interface" name="interface" title="{{dict_translation['interface']['phrase']}}" type="text" value="{{each_device.interface}}">
+  </div>
+</div>
+
+{% endif %}

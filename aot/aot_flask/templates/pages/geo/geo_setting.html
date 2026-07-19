@@ -1,0 +1,363 @@
+{% extends 'layout.html' %}
+{% block title %}GIS Settings{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/components/btn-toggle.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/map/map.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<style>
+    /* Override slider thumb color to white as requested */
+    .switch .slider:before {
+        background-color: #fff !important;
+    }
+</style>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ _('GIS Settings') }}</h3>
+    </div>
+
+    <form method="post" id="geo_setting_form">
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- Default Map Center Card -->
+        <div class="card mb-4 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+            <div class="card-header bg-white font-weight-bold mt-3 mb-0">
+                <h5>{{ _('Default Start Location') }}</h5>
+            </div>
+            <div class="card-body">
+                <!-- Map Wrapper for Relative Positioning -->
+                <div class="position-relative mb-3">
+                    <!-- Search Overlay (Floating Top Center) -->
+                    <div id="setting-search-overlay" class="d-none"
+                        style="position: absolute; top: 20px; left: 70px; right: 70px; z-index: var(--aot-z-fixed-panel); display: flex; justify-content: center; pointer-events: none;">
+                        <aot-map-search-fixed id="setting-search" style="pointer-events: auto;"
+                            placeholder="{{ _('Search address to find start location') }}"></aot-map-search-fixed>
+                    </div>
+
+                    <!-- Standardized Left Tools (Design Style) -->
+                    <div class="map-tools-left" style="top: 20px; left: 20px;">
+                        <!-- Group: Zoom -->
+                        <div class="tool-group shadow-sm">
+                            <button class="btn btn-white" id="tool-zoom-in" title="Zoom In"><i
+                                    class="fas fa-plus"></i></button>
+                            <button class="btn btn-white" id="tool-zoom-out" title="Zoom Out"><i
+                                    class="fas fa-minus"></i></button>
+                        </div>
+
+                        <!-- Group: Location -->
+                        <div class="tool-group shadow-sm mt-2">
+                            <button class="btn btn-white" id="tool-fullscreen" title="{{ _('Fullscreen') }}"><i
+                                    class="fas fa-expand"></i></button>
+                            <button class="btn btn-white" id="tool-search" title="{{ _('Search Address') }}"><i
+                                    class="fas fa-search"></i></button>
+                            <button class="btn btn-white" id="tool-locate" title="{{ _('My Location') }}"><i
+                                    class="fas fa-crosshairs"></i></button>
+                            <button class="btn btn-white" id="tool-reset" title="{{ _('Reset View') }}"><i
+                                    class="fas fa-undo"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Standardized Right Tools (Container for Layer Control) -->
+                    <div class="map-tools-right" style="top: 20px; right: 20px;">
+                        <!-- Layer Control will be moved here by JS -->
+                    </div>
+
+                    <!-- Map Container -->
+                    <div id="setting-map" style="height: 400px; border-radius: 12px; border: 1px solid #e0e0e0;"></div>
+                </div>
+
+                <!-- Hidden Input for Zoom (synced with map) -->
+                <!-- Routes logic saves 'zoom' if present in form, but MapGlobalSettings has 'zoom' column. 
+                     We use a hidden input "zoom" (global zoom) to sync. -->
+
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Latitude') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Initial map center latitude. E.g. 37.5665') }}"></i>
+                    </label>
+                    <input type="number" step="any" class="form-control" name="default_lat" id="default_lat_input"
+                        value="{{ saved_state.get('default_lat', 37.5665) }}"
+                        style="min-width: 60px; max-width: 120px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Longitude') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Initial map center longitude. E.g. 126.9780') }}"></i>
+                    </label>
+                    <input type="number" step="any" class="form-control" name="default_lng" id="default_lng_input"
+                        value="{{ saved_state.get('default_lng', 126.9780) }}"
+                        style="min-width: 60px; max-width: 120px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Zoom Level') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Initial map zoom level. You can change it by entering a number.') }}"></i>
+                    </label>
+                    <input type="number" step="any" class="form-control" name="default_zoom" id="default_zoom_input"
+                        value="{{ saved_state.get('zoom', 12) }}"
+                        style="min-width: 60px; max-width: 120px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                </div>
+
+                <hr>
+
+                <!-- [New] Global Search Provider Selector -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                     <label class="font-weight-bold mb-0">
+                        {{ _('Search Provider') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip" title="{{ _('Select the default search engine for global search.') }}"></i>
+                     </label>
+                     <select class="form-control" name="search_provider" style="min-width: 200px; max-width: 200px; border-radius: 20px; text-align: right;">
+                         <option value="">{{ _('-- Follow Map Settings --') }}</option>
+                         {% for layer in geo_layers %}
+                             <!-- Iterate over Active GeoLayers passed from backend -->
+                             {% if layer.type in ['gis_osm', 'gis_google', 'gis_gsi', 'gis_vworld'] %}
+                                <option value="{{ layer.unique_id }}" {% if geo_config.search_provider == layer.unique_id %}selected{% endif %}>
+                                    {{ layer.name }}
+                                </option>
+                             {% endif %}
+                         {% endfor %}
+                     </select>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Theme Configuration Card -->
+        <div class="card mb-4 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+            <div
+                class="card-header bg-white font-weight-bold mt-3 mb-0 d-flex justify-content-between align-items-center">
+                <h5>{{ _('Design Theme Settings') }}</h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-reset-theme"
+                    style="min-width: 60px; max-width: 120px;">
+                    {{ _('Reset to Default') }}
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Site Color -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">{{ _('Site Color') }}</label>
+                    <input type="color" class="form-control form-control-color" id="color-site" name="theme_site"
+                        value="{{ saved_state.get('theme_config', {}).get('site', '#DF5353') }}"
+                        style="width: 60px; height: 32px; border-radius: 16px; border: none !important; padding: 0 !important; -webkit-appearance: none; overflow: hidden;">
+                </div>
+                <hr>
+
+                <!-- Zone Color -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">{{ _('Zone Color') }}</label>
+                    <input type="color" class="form-control form-control-color" id="color-zone" name="theme_zone"
+                        value="{{ saved_state.get('theme_config', {}).get('zone', '#28a745') }}"
+                        style="width: 60px; height: 32px; border-radius: 16px; border: none !important; padding: 0 !important; -webkit-appearance: none; overflow: hidden;">
+                </div>
+                <hr>
+
+                <!-- Facility Color -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">{{ _('Facility Color') }}</label>
+                    <input type="color" class="form-control form-control-color" id="color-facility"
+                        name="theme_facility"
+                        value="{{ saved_state.get('theme_config', {}).get('facility', '#82898f') }}"
+                        style="width: 60px; height: 32px; border-radius: 16px; border: none !important; padding: 0 !important; -webkit-appearance: none; overflow: hidden;">
+                </div>
+                <hr>
+
+                <!-- Equipment Color -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">{{ _('Equipment Color') }}</label>
+                    <input type="color" class="form-control form-control-color" id="color-equipment"
+                        name="theme_equipment"
+                        value="{{ saved_state.get('theme_config', {}).get('equipment', '#007bff') }}"
+                        style="width: 60px; height: 32px; border-radius: 16px; border: none !important; padding: 0 !important; -webkit-appearance: none; overflow: hidden;">
+                </div>
+                <hr>
+
+                <!-- Device Color -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">{{ _('AoT Device Color') }}</label>
+                    <input type="color" class="form-control form-control-color" id="color-device" name="theme_device"
+                        value="{{ saved_state.get('theme_config', {}).get('device', '#995aff') }}"
+                        style="width: 60px; height: 32px; border-radius: 16px; border: none !important; padding: 0 !important; -webkit-appearance: none; overflow: hidden;">
+                </div>
+                <hr>
+
+                <!-- Panel Background -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">{{ _('Panel Background Color') }}</label>
+                    <input type="color" class="form-control form-control-color" id="color-panel-bg"
+                        name="theme_panel_bg"
+                        value="{{ saved_state.get('theme_config', {}).get('panel_bg', '#ffffff') }}"
+                        style="width: 60px; height: 32px; border-radius: 16px; border: none !important; padding: 0 !important; -webkit-appearance: none; overflow: hidden;">
+                </div>
+                <hr>
+
+                <!-- Panel Opacity -->
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Panel Opacity') }} <span id="opacity-val" class="font-weight-normal ml-2 small text-muted">{{
+                            saved_state.get('theme_config', {}).get('panel_opacity', '90') }}%</span>
+                    </label>
+                    <input type="range" class="custom-range" id="range-panel-opacity" name="theme_panel_opacity" min="0"
+                        max="100" step="5" value="{{ saved_state.get('theme_config', {}).get('panel_opacity', '90') }}"
+                        style="max-width: 180px;">
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+            <div class="card-header bg-white font-weight-bold mt-3 mb-0">
+                <h5>{{ _('Map Behavior Settings') }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Max Zoom') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Default: 25. Max limit is 30.') }}"></i>
+                    </label>
+                    <div>
+                        <input type="number" class="form-control" name="max_zoom" id="max_zoom_input"
+                            value="{{ saved_state.get('max_zoom', 25) }}" min="1" max="30"
+                            style="min-width: 60px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Digital Zoom') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Use digital zoom for high zoom levels not provided by the map source.') }}"></i>
+                    </label>
+                    <label class="switch mb-0">
+                        <input type="checkbox" id="digital_zoom" name="digital_zoom" value="true" {% if
+                            saved_state.get('digital_zoom', True) %}checked{% endif %}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Smooth Zoom') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Enable fractional zoom for levels close to 18 and above.') }}"></i>
+                    </label>
+                    <label class="switch mb-0">
+                        <input type="checkbox" id="smooth_zoom" name="smooth_zoom" value="true" {% if
+                            saved_state.get('smooth_zoom', True) %}checked{% endif %}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance & Rendering Card -->
+        <div class="card mb-4 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+            <div class="card-header bg-white font-weight-bold mt-3 mb-0">
+                <h5>{{ _('Performance & Rendering') }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Tile Fade Animation') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Enable fade-in effect when tiles load.') }}"></i>
+                    </label>
+                    <label class="switch mb-0">
+                        <input type="checkbox" id="tile_fade_animation" name="tile_fade_animation" value="true" {% if
+                            saved_state.get('tile_fade_animation', True) %}checked{% endif %}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Prefer Canvas Rendering') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Use Canvas renderer to improve performance when many vector layers are present.') }}"></i>
+                    </label>
+                    <label class="switch mb-0">
+                        <input type="checkbox" id="prefer_canvas" name="prefer_canvas" value="true" {% if
+                            saved_state.get('prefer_canvas', False) %}checked{% endif %}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <hr>
+
+                <!-- Performance Optimization: Polygon Limits -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Max Site Polygons') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Limit max polygons for Sites. Sites exceeding this limit will be rendered as points.') }}"></i>
+                    </label>
+                    <input type="number" class="form-control" name="max_polygons_site" id="max_polygons_site_input"
+                        value="{{ saved_state.get('max_polygons_site', 1000) }}"
+                        style="min-width: 60px; max-width: 60px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Max Zone Polygons') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Limit max polygons for Zones. Zones exceeding this limit will be rendered as points.') }}"></i>
+                    </label>
+                    <input type="number" class="form-control" name="max_polygons_zone" id="max_polygons_zone_input"
+                        value="{{ saved_state.get('max_polygons_zone', 1000) }}"
+                        style="min-width: 60px; max-width: 60px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="font-weight-bold mb-0">
+                        {{ _('Max Device Polygons') }}
+                        <i class="fas fa-info-circle text-muted ml-2" data-toggle="tooltip"
+                            title="{{ _('Limit max polygons for Devices. Devices exceeding this limit will be rendered as points.') }}"></i>
+                    </label>
+                    <input type="number" class="form-control" name="max_polygons_device" id="max_polygons_device_input"
+                        value="{{ saved_state.get('max_polygons_device', 1000) }}"
+                        style="min-width: 60px; max-width: 60px; border-radius: 20px; text-align: right !important; padding-left: 0px !important; padding-right: 0px !important;">
+                </div>
+
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary px-4">
+            {{ _('Save') }}
+        </button>
+    </form>
+</div>
+</div>
+
+<!-- Leaflet Imports -->
+
+
+<script>
+    // Inject Server Data
+    window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
+</script>
+{% endblock %}

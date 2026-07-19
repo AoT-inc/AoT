@@ -1,0 +1,297 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "chirpstack" %}
+
+{% block title %} - {{_('ChirpStack Devices')}}{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block settings %}
+  <div class="container">
+    <div class="aot-settings-title">
+      <h3>{{_('ChirpStack Devices')}}</h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+        <button type="submit" form="form-chirpstack-conn" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60">{{_('Save')}}</button>
+      </div>
+    </div>
+
+    <!-- ── Connection ── -->
+    <div class="aot-modal-group-title">{{_('ChirpStack Connection')}}</div>
+    <form id="form-chirpstack-conn" method="post" action="/settings/chirpstack">
+      {{form_chirpstack.csrf_token}}
+      <div class="aot-modal-container">
+
+        {% if not grpc_ok %}
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-body-text">{{_('The gRPC client libraries (grpcio / chirpstack-api) are not installed. Device listing and downlink output will not work until they are installed.')}}</div>
+        </div>
+        {% endif %}
+
+        <div class="aot-modal-option-row">
+          {{form_chirpstack.chirpstack_grpc_server.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_chirpstack.chirpstack_grpc_server(class_='form-control aot-modern-input', placeholder='host.docker.internal:8080')}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_chirpstack.chirpstack_api_token.label(class_='aot-modal-option-label', title=_('Stored and managed under Settings > API Keys. Select which key this connection uses.'))}}
+          <div class="aot-modal-option-control aot-action-group">
+            {{form_chirpstack.chirpstack_api_token(class_='form-control aot-modern-input')}}
+            <a href="{{ url_for('routes_settings.settings_api_key') }}" class="btn aot-pill-btn">{{_('Manage API Keys')}}</a>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_chirpstack.chirpstack_mqtt_host.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_chirpstack.chirpstack_mqtt_host(class_='form-control aot-modern-input', placeholder='host.docker.internal')}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_chirpstack.chirpstack_mqtt_port.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_chirpstack.chirpstack_mqtt_port(class_='form-control aot-modern-input', placeholder='1883')}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">{{_('Devices')}}</div>
+          <div class="aot-modal-option-control">
+            {{form_chirpstack.refresh(class_='btn aot-pill-btn')}}
+          </div>
+        </div>
+
+      </div>
+    </form>
+
+    {% if devices %}
+    <!-- ── Device Onboarding ── -->
+    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Device Onboarding')}}</div>
+    <p class="aot-modal-body-text" style="padding-left: 16px;">{{_('Select devices in the list below, choose what to register, then run once. Server, DevEUI and keys are filled in automatically.')}}</p>
+
+    <form id="onboard-form" method="post" action="/settings/chirpstack">
+      {{form_chirpstack.csrf_token}}
+
+      <!-- Input (uplink) -->
+      <div class="aot-modal-group-title">{{_('Input (uplink)')}}</div>
+      <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            <label class="mb-0 aot-toggle-label" for="reg_input" title="{{_('Create an Input for each selected device')}}">{{_('Register Input')}}</label>
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="reg_input" name="reg_input" value="y" title="{{_('Create an Input for each selected device')}}">
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+        <div class="aot-modal-option-row aot-full-width-row">
+          <label class="aot-modal-option-label" title="{{_('One JMESPath per line; line count = channel count. Shared per device profile.')}}">{{_('Channels — one JMESPath per line')}}</label>
+          <div class="aot-modal-option-control">
+            <textarea name="input_channels" class="form-control aot-modern-input" rows="6" spellcheck="false"
+                      style="height: auto !important; min-height: 140px; border-radius: 12px !important;"
+                      placeholder="object.battery_V&#10;object.node_class&#10;rxInfo[0].rssi&#10;rxInfo[0].snr"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output (downlink) -->
+      <div class="aot-modal-group-title">{{_('Output (downlink)')}}</div>
+      <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            <label class="mb-0 aot-toggle-label" for="reg_output" title="{{_('Create an Output for each selected device')}}">{{_('Register Output')}}</label>
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="reg_output" name="reg_output" value="y" title="{{_('Create an Output for each selected device')}}">
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+        <div class="aot-modal-option-row">
+          <label class="aot-modal-option-label">{{_('On payload (hex)')}}</label>
+          <div class="aot-modal-option-control">
+            <input name="on_payload" class="form-control aot-modern-input" placeholder="010110">
+          </div>
+        </div>
+        <div class="aot-modal-option-row">
+          <label class="aot-modal-option-label">{{_('Off payload (hex)')}}</label>
+          <div class="aot-modal-option-control">
+            <input name="off_payload" class="form-control aot-modern-input" placeholder="010210">
+          </div>
+        </div>
+        <div class="aot-modal-option-row">
+          <label class="aot-modal-option-label">{{_('FPort')}}</label>
+          <div class="aot-modal-option-control">
+            <input name="f_port" class="form-control aot-modern-input" placeholder="15">
+          </div>
+        </div>
+      </div>
+
+      {% if schedulers %}
+      <!-- Scheduler -->
+      <div class="aot-modal-group-title">{{_('Scheduler')}}</div>
+      <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">{{_('Assign to scheduler')}}</div>
+          <div class="aot-modal-option-control">
+            <select name="scheduler_id" class="form-control aot-modern-input">
+              <option value="">{{_('None')}}</option>
+              {% for uid, sname in schedulers %}
+              <option value="{{ uid }}">{{ sname }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-end" style="margin: 0.5rem 0 1.5rem;">
+        <button type="submit" name="action" value="onboard" class="btn aot-pill-btn">{{_('Register selected devices')}}</button>
+      </div>
+
+    </form>
+    {% endif %}
+
+    <!-- ── Devices ── -->
+    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Devices')}}{% if devices %} ({{ devices|length }}){% endif %}</div>
+    {% if devices %}
+    <div class="aot-modal-container">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" for="chirpstack-filter-tenant">{{_('Tenant')}}</label>
+        <div class="aot-modal-option-control">
+          <select id="chirpstack-filter-tenant" class="form-control aot-modern-select">
+            <option value="">{{_('All')}}</option>
+            {% for t in tenant_names %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" for="chirpstack-filter-application">{{_('Application')}}</label>
+        <div class="aot-modal-option-control">
+          <select id="chirpstack-filter-application" class="form-control aot-modern-select">
+            <option value="">{{_('All')}}</option>
+            {% for a in application_names %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="aot-modal-container aot-table-scroll" style="padding: 0;">
+      {% if list_error %}
+        <p class="aot-modal-body-text" style="padding: 0 16px;">{{_('Could not load devices')}}: {{ list_error }}</p>
+      {% elif devices %}
+        <table class="aot-module-table" id="chirpstack-device-table">
+          <thead>
+            <tr>
+              <td><input type="checkbox" id="chirpstack-select-all" style="accent-color:#32c85a;" title="{{_('Select all')}}"><span style="margin-left:16px;">{{_('Name')}}</span></td>
+              <td></td>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in devices %}
+            {% set eui = d.dev_eui %}
+            <tr data-tenant="{{ d.tenant_name }}" data-application="{{ d.application_name }}">
+              <td><input type="checkbox" name="dev_euis" value="{{ eui }}" form="onboard-form" style="accent-color:#32c85a;"><span style="margin-left:16px;">{{ d.name }}</span></td>
+              <td><button type="button" class="btn aot-pill-btn" data-toggle="modal" data-target="#dev-modal-{{ loop.index }}">{{_('Details')}}</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="aot-modal-body-text" style="padding: 0 16px;">{{_('No devices found. Enter the ChirpStack connection above and save. Devices must be registered in ChirpStack first.')}}</p>
+      {% endif %}
+    </div>
+
+    <!-- Per-device details modals -->
+    {% if devices %}
+      {% for d in devices %}
+      {% set eui = d.dev_eui %}
+      <div class="modal fade aot-option-modal" id="dev-modal-{{ loop.index }}" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog aot-modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">{{ d.name }}</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{_('Registered')}}</div>
+                <div class="aot-modal-option-control aot-modal-body-text">
+                  {%- set parts = [] -%}
+                  {%- if eui in reg_input %}{% set _drop = parts.append('Input') %}{% endif -%}
+                  {%- if eui in reg_output %}{% set _drop = parts.append('Output') %}{% endif -%}
+                  {%- if managed_by.get(eui) %}{% set _drop = parts.append(sched_names.get(managed_by.get(eui), 'Scheduler')) %}{% endif -%}
+                  {{ parts|join(' · ') if parts else _('Not registered') }}
+                </div>
+              </div>
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">DevEUI</div>
+                <div class="aot-modal-option-control aot-modal-body-text">{{ eui }}</div>
+              </div>
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{_('Tenant')}}</div>
+                <div class="aot-modal-option-control aot-modal-body-text">{{ d.tenant_name }}</div>
+              </div>
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{_('Application')}}</div>
+                <div class="aot-modal-option-control aot-modal-body-text">{{ d.application_name }}</div>
+              </div>
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{_('Last Seen')}}</div>
+                <div class="aot-modal-option-control aot-modal-body-text">{{ d.last_seen }}</div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% endif %}
+
+  </div>
+
+  {% if devices %}
+  <script>
+    (function() {
+      var tenantSel = document.getElementById('chirpstack-filter-tenant');
+      var appSel = document.getElementById('chirpstack-filter-application');
+      var rows = document.querySelectorAll('#chirpstack-device-table tbody tr');
+      var selectAll = document.getElementById('chirpstack-select-all');
+
+      function applyFilter() {
+        var tenant = tenantSel.value;
+        var app = appSel.value;
+        rows.forEach(function(row) {
+          var match = (!tenant || row.dataset.tenant === tenant) &&
+                      (!app || row.dataset.application === app);
+          row.style.display = match ? '' : 'none';
+        });
+      }
+
+      tenantSel.addEventListener('change', applyFilter);
+      appSel.addEventListener('change', applyFilter);
+
+      selectAll.addEventListener('click', function() {
+        var checked = selectAll.checked;
+        rows.forEach(function(row) {
+          if (row.style.display === 'none') return;
+          var box = row.querySelector('input[name=dev_euis]');
+          if (box) box.checked = checked;
+        });
+      });
+    })();
+  </script>
+  {% endif %}
+{% endblock %}

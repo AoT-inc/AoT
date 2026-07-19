@@ -1,0 +1,133 @@
+{% extends "layout.html" %}
+{% set active_page = "export" %}
+{% set help_page = [manual_url("Export-Import/"), _("Export and Import")] %}
+
+{% block title %} - {{_('Export and Import')}}{% endblock %}
+
+{% block head %}
+<script type="text/javascript" src="/static/js/vendor/moment.min.js"></script>
+<script type="text/javascript" src="/static/js/vendor/daterangepicker.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/daterangepicker.css" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<!-- Route: /export -->
+<main role="main" class="container py-4">
+  {% include 'flash_messages.html' %}
+
+  <!-- Page Title -->
+  <div class="aot-settings-title">
+    <h3>{{_('Export and Import')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+  </div>
+
+  <!-- Export measurement data to CSV -->
+  <div class="aot-modal-group-title">{{_('Export measurement data to CSV')}}</div>
+  <p class="aot-modal-body-text">
+    {{_('This feature exports all measurement data within the specified date/time range in comma-separated values (CSV) format (timestamp, measurement value).')}}<br>
+    {{_('Note 1: Large data requests may take a long time to process.')}}<br>
+    {{_('Note 2: Date and time are stored in InfluxDB as UTC, so you must adjust the time zone to match your local time.')}}
+  </p>
+
+  <form method="post" action="/export">
+    {{form_export_measurements.csrf_token}}
+    <div class="aot-modal-container">
+      <div class="aot-settings-row">
+        {{form_export_measurements.measurement.label(class_='aot-settings-label')}}
+        <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px;">
+          <select class="selectpicker" data-style="btn" id="measurement" name="measurement">
+            {% for each_input_form in choices_input -%}
+              <option value="{{each_input_form['value']}}">{{each_input_form['item']}}</option>
+            {% endfor -%}
+            {% for each_output_form in choices_output  -%}
+              <option value="{{each_output_form['value']}}">{{each_output_form['item']}}</option>
+            {% endfor -%}
+            {% for each_function_form in choices_function -%}
+              <option value="{{each_function_form['value']}}">{{each_function_form['item']}}</option>
+            {% endfor -%}
+          </select>
+        </div>
+      </div>
+      <div class="aot-settings-row" style="border-bottom: none;">
+        {{form_export_measurements.date_range.label(class_='aot-settings-label')}}
+        <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px;">
+          <input class="form-control aot-modern-input" type="text" name="date_range" value="{{start_picker}} - {{end_picker}}" />
+        </div>
+      </div>
+    </div>
+    <div class="aot-settings-actions">
+      {{form_export_measurements.export_data_csv(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    </div>
+  </form>
+
+  <!-- Export InfluxDB database -->
+  <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Export InfluxDB database and metastore as ZIP file')}}</div>
+  <p class="aot-modal-body-text">
+    {{_('This feature creates ZIP files of InfluxDB backup files containing all measurement data. These files are created with the "influxd backup -portable" command for version 1.x and the "influx backup" command for version 2.x. Refer to InfluxDB documentation for how to restore backups.')}}
+  </p>
+
+  <form method="post" action="/export">
+    {{form_export_influxdb.csrf_token}}
+    <div class="aot-settings-actions">
+      {{form_export_influxdb.export_influxdb_zip(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    </div>
+  </form>
+
+  <!-- Export AoT settings -->
+  <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Export AoT settings data as ZIP file')}}</div>
+  <p class="aot-modal-body-text">
+    {{_('This feature creates a ZIP file of the setup database containing AoT configuration and user info. Custom functions, inputs, outputs, and widgets are also included.')}}
+  </p>
+
+  <form method="post" action="/export">
+    {{form_export_settings.csrf_token}}
+    <div class="aot-settings-actions">
+      {{form_export_settings.export_settings_zip(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    </div>
+  </form>
+
+  <!-- Import AoT settings -->
+  <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Import AoT settings data from ZIP file')}}</div>
+  <p class="aot-modal-body-text">
+    {{_('Warning: Be sure to create an')}} <a href="/admin/backup">{{_('AoT backup')}}</a> {{_('before importing settings data!')}}<br>
+    {{_('This feature allows you to replace current settings by uploading a ZIP file containing the AoT setup database and custom functions/inputs/outputs/widgets. You must only import databases that are of the same or older version as the current AoT version. There is no procedure to verify this, but problems may occur if a database version higher than the current version is imported. Problems may also occur if the custom controller is not compatible with the AoT version being imported.')}}<br>
+    {{_('Note 1: This feature overwrites all settings, user accounts, and custom functions/inputs/outputs/widgets, and logs you out of the web UI. A backup of the current database is created at /opt/AoT/databases/aot.db.backup_DATE_TIME.')}}<br>
+    {{_('Note 2: During this process, the new database is upgraded to the current AoT version, and all unmet dependencies are installed. If there are many dependencies, this process may take some time to complete, so please be patient.')}}
+  </p>
+
+  <form method="post" action="/export" enctype="multipart/form-data">
+    {{form_import_settings.csrf_token}}
+    <div class="aot-modal-container">
+      <div class="aot-settings-row" style="border-bottom: none;">
+        <div class="aot-settings-label">
+          <div class="fileinput fileinput-new" data-provides="fileinput">
+            <span class="btn btn-sm btn-file"><input id="settings_import_file" name="settings_import_file" type="file" /></span>
+          </div>
+        </div>
+        <div class="aot-settings-control">
+          {{form_import_settings.settings_import_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div style="padding-top: 2em"></div>
+
+</main>
+</div>
+
+<script type="text/javascript">
+$(function() {
+    $('input[name="date_range"]').daterangepicker({
+        timePicker: true,
+        timePicker24Hour: true,
+        timePickerIncrement: 1,
+        locale: {
+            format: 'MM/DD/YYYY HH:mm'
+        }
+    });
+});
+</script>
+
+{% endblock %}

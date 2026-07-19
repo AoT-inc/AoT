@@ -1,0 +1,507 @@
+/* aot-ai-global.css — AoT AI Assistant (brand-aligned, space-optimized) */
+
+/* ============================================================
+   Global Layout Shift for Side-by-Side (Desktop only)
+   ============================================================ */
+@media (min-width: 481px) {
+    body {
+        transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+    }
+
+    body.ai-drawer-active {
+        padding-right: 400px;
+    }
+
+    /* Do NOT add padding to the navbar here. The navbar is a normal-flow child
+       of <body>, so body's padding-right already pulls its right edge to the
+       drawer. Adding navbar padding-right on top double-shifted and squeezed the
+       bar, which dropped the brand logo. (Modals below DO need their own shift —
+       they are position:fixed and ignore body padding.) */
+
+    /* The brand logo is sacrosanct: never shrink/clip/move it when the drawer
+       opens, whatever the surrounding layout does. */
+    body.ai-drawer-active #brand-link,
+    body.ai-drawer-active #brand-link > img,
+    body.ai-drawer-active #brand-link > .aot-brand-text {
+        flex-shrink: 0 !important;
+    }
+
+    /* Shift Bootstrap Modals to avoid being covered by the AI drawer */
+    body.ai-drawer-active .modal {
+        padding-right: 400px !important;
+        transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+    }
+}
+
+/* ============================================================
+   Floating Action Button (launcher)
+   ============================================================ */
+#aot-ai-fab,
+#ai-fab {
+    position: fixed;
+    bottom: calc(25px + env(safe-area-inset-bottom, 0px));
+    right: calc(25px + env(safe-area-inset-right, 0px));
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--aot-color-brand-primary, #13261B);
+    color: var(--aot-color-text-tertiary, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--aot-shadow-lg, 0 6px 20px rgba(0, 0, 0, 0.18));
+    cursor: pointer;
+    z-index: var(--aot-z-fixed-panel); /* 떠있는 FAB — 모달 아래, 콘텐츠 위 */
+    /* easeOutQuint — natural slide that tracks scroll direction */
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.3s ease,
+                box-shadow 0.3s ease;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+}
+
+/* Hidden while the chat is open — slide straight down and out. */
+#aot-ai-fab.hidden,
+#ai-fab.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(160%);
+}
+
+/* Scroll-aware auto-hide: slide DOWN below the screen while scrolling down,
+   slide back up when scrolling up (direction-following, natural). */
+#aot-ai-fab.ai-fab--tucked,
+#ai-fab.ai-fab--tucked {
+    transform: translateY(160%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#aot-ai-fab:hover,
+#ai-fab:hover {
+    transform: translateY(-4px) scale(1.06);
+    box-shadow: var(--aot-shadow-modal, 0 10px 28px rgba(0, 0, 0, 0.25));
+}
+
+#ai-fab .ai-fab-label,
+#aot-ai-fab .fab-text,
+#ai-fab span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Chat Drawer panel, Header, Title, Actions, Icon buttons, Body scroll,
+   Footer, Composer row, and the mobile full-screen sheet now live in the
+   shared shell: static/css/components/aot-drawer.css (.aot-drawer* classes).
+   The AI markup carries those generic classes; only AI-SPECIFIC pieces remain
+   below (bubbles, mode toggles, attachments, send/action buttons, context
+   chip, FAB behavior, body layout-shift + logo guard). */
+
+/* Context chip (device/advisory focus) */
+.ai-context-indicator {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.ai-context-chip {
+    font-size: 0.72rem;
+    background: var(--aot-tint-info-bg, #eef2ff);
+    color: var(--aot-tint-info-fg, #3730a3);
+    padding: 3px 9px;
+    border-radius: 12px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Icon buttons now come from the shared .aot-icon-btn (aot-drawer.css). */
+
+/* ============================================================
+   Messages
+   ============================================================ */
+/* The scroll container (flex/overflow/overscroll/scrollbar-hide) comes from
+   .aot-drawer-body; here we only add the vertical message stacking. */
+.ai-chat-messages,
+#ai-chat-messages,
+#ai-messages-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Message Bubbles */
+.ai-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    position: relative;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.ai-msg-user {
+    align-self: flex-end;
+    /* Option A: large areas use the LIGHT brand accent, not the near-black
+       brand primary (which is reserved for small actions: FAB, send). */
+    background: var(--aot-color-brand-accent, #F3F6F5);
+    color: var(--aot-color-text-primary, #13261B);
+    border: 1px solid var(--aot-border-light, #f0f0f0);
+    border-bottom-right-radius: 4px;
+}
+
+.ai-msg-bot {
+    align-self: flex-start;
+    background: var(--aot-surface-card, #fff);
+    color: var(--aot-color-text-primary, #333);
+    border: 1px solid var(--aot-border-light, #e5e7eb);
+    border-bottom-left-radius: 4px;
+    box-shadow: var(--aot-shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.05));
+}
+
+.ai-msg-thinking {
+    color: var(--aot-color-text-secondary, #888);
+    font-style: italic;
+}
+
+/* Attached-image thumbnails inside a user bubble */
+.ai-msg-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.ai-msg-attachments img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+}
+
+.ai-msg-attach-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    background: var(--aot-tint-neutral-bg, rgba(0, 0, 0, 0.06));
+    color: var(--aot-color-text-secondary, #666);
+    padding: 3px 8px;
+    border-radius: 8px;
+}
+
+/* ============================================================
+   Composer (input area)
+   ============================================================ */
+/* Padding/background/border-top come from .aot-drawer-footer; here we only
+   add the vertical stacking of modes / attachments / input row. */
+.ai-composer,
+.ai-chat-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Judgment-level segmented controls */
+.ai-composer-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    align-items: center;
+}
+
+.ai-composer-modes.is-collapsed {
+    display: none;
+}
+
+.ai-mode-group {
+    display: inline-flex;
+    /* Light brand-accent track so the white selected pill reads against it. */
+    background: var(--aot-color-brand-accent, #F3F6F5);
+    border: 1px solid var(--aot-border-light, #e5e7eb);
+    border-radius: 999px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.ai-mode-seg {
+    border: none;
+    background: transparent;
+    color: var(--aot-color-text-secondary, #666);
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 4px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.ai-mode-seg:hover {
+    color: var(--aot-color-text-primary, #333);
+}
+
+.ai-mode-seg.is-active {
+    /* White raised pill + brand-green text (no near-black fill). */
+    background: var(--aot-surface-card, #fff);
+    color: var(--aot-color-brand-primary, #13261B);
+    box-shadow: var(--aot-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+}
+
+/* Attachment preview strip */
+.ai-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ai-attachments[hidden] {
+    display: none;
+}
+
+.ai-attach-thumb {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--aot-border-light, #e5e7eb);
+    background: var(--aot-surface-input, #f1f3f5);
+    flex-shrink: 0;
+}
+
+.ai-attach-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ai-attach-thumb.is-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: var(--aot-color-text-secondary, #888);
+}
+
+.ai-attach-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Input row layout/focus comes from the shared .aot-composer-row (aot-drawer.css). */
+
+.ai-attach-btn {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 2px;
+}
+
+#ai-global-input,
+#ai-chat-input,
+.ai-chat-input {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 8px 4px;
+    outline: none;
+    /* 16px keeps iOS Safari from auto-zooming on focus (which pushed the
+       fixed header/close button out of view). Do not drop below 16px. */
+    font-size: 16px;
+    resize: none;
+    max-height: 140px;
+    min-height: 24px;
+    line-height: 1.4;
+    font-family: inherit;
+    color: var(--aot-color-text-primary, #333);
+}
+
+/* Send button — brand primary action (yellow --aot-color-primary must NOT be used) */
+.ai-send-btn,
+#ai-send-btn,
+.ai-stop-btn,
+#ai-stop-btn {
+    background: var(--aot-btn-bg-primary, var(--aot-color-brand-primary, #13261B));
+    border: none;
+    color: var(--aot-btn-color-primary, #fff);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s, filter 0.15s;
+    margin-bottom: 2px;
+    padding: 0;
+}
+
+.ai-send-btn:hover,
+.ai-stop-btn:hover {
+    transform: scale(1.05);
+    filter: brightness(1.12);
+}
+
+.ai-send-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+    filter: none;
+}
+
+.ai-send-btn .btn-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Busy state: swap the arrow glyph for a stop square */
+.ai-send-btn.thinking .btn-icon svg {
+    display: none;
+}
+
+.ai-send-btn.thinking .btn-icon {
+    width: 12px;
+    height: 12px;
+    background: currentColor;
+    border-radius: 2px;
+}
+
+.ai-stop-btn .btn-icon-stop {
+    width: 11px;
+    height: 11px;
+    background: currentColor;
+    border-radius: 2px;
+}
+
+/* ============================================================
+   AI Action cards (proposed actions / approve & execute)
+   ============================================================ */
+.ai-actions-container {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--aot-surface-input, #f8fafc);
+    border: 1px solid var(--aot-border-light, #e5e7eb);
+    border-radius: 12px;
+}
+
+.ai-action-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ai-action-info {
+    font-size: 0.85rem;
+    color: var(--aot-color-text-secondary, #555);
+}
+
+.ai-action-desc {
+    font-weight: 600;
+    color: var(--aot-color-text-primary, #222);
+    margin-bottom: 4px;
+}
+
+.ai-action-btn {
+    align-self: flex-start;
+    padding: 6px 16px;
+    background: var(--aot-btn-bg-primary, var(--aot-color-brand-primary, #13261B));
+    color: var(--aot-btn-color-primary, #fff);
+    border: none;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+    box-shadow: var(--aot-shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.12));
+}
+
+.ai-action-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+.ai-action-btn:disabled {
+    background: var(--aot-btn-bg-inactive, #9aa0a6);
+    opacity: 0.7;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+    filter: none;
+}
+
+.ai-action-status {
+    font-size: 0.75rem;
+    color: var(--aot-color-success, #1e7e34);
+    margin-top: 4px;
+}
+
+/* ============================================================
+   Mobile Responsiveness
+   ============================================================ */
+@media (max-width: 480px) {
+    #aot-ai-fab,
+    #ai-fab {
+        width: 50px;
+        height: 50px;
+        bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+        right: calc(16px + env(safe-area-inset-right, 0px));
+    }
+
+    /* Full-screen sheet on mobile comes from .aot-drawer (aot-drawer.css). */
+
+    /* [MOBILE FIX] No body padding, no horizontal overflow */
+    body,
+    body.ai-drawer-active,
+    body.modal-open {
+        padding-right: 0 !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Full-screen chat: lock the background page so only the chat scrolls
+       (scroll position is preserved — overflow:hidden does not reset it). */
+    body.ai-drawer-active {
+        overflow: hidden !important;
+    }
+
+    .modal,
+    body.ai-drawer-active .modal {
+        padding-right: 0 !important;
+    }
+
+    /* Compact composer on small screens */
+    .ai-composer-modes {
+        gap: 6px 10px;
+    }
+
+    .ai-mode-seg {
+        padding: 4px 9px;
+        font-size: 0.72rem;
+    }
+}

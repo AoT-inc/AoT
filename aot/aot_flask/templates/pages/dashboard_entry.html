@@ -1,0 +1,93 @@
+{% set widget_meta = dict_widgets.get(each_widget.graph_type) %}
+{% if not widget_meta %}
+<div class="grid-stack-item-content widget-outer"
+  style="display: flex; flex-flow: column; padding: 0; border: 1px solid #f5c6cb; border-radius: 5px; background: var(--aot-tint-danger-bg, #f8d7da);">
+  <div style="padding: 0.75em; color: var(--aot-tint-danger-fg, #721c24);">
+    {{ _('Unknown Widget Type') }} ({{ each_widget.graph_type }})
+  </div>
+</div>
+{% else %}
+{% set widget_options = custom_options_values_widgets.get(each_widget.unique_id, {}) %}
+{% set widget_variables = custom_widget_variables.get(each_widget.unique_id, {}) %}
+
+<div class="grid-stack-item-content widget-outer"
+  style="display: flex; flex-flow: column; padding: 0; border: 1px solid #ddd; border-radius: 5px">
+
+  <div class="d-flex justify-content-between widget-heading{% if not this_dashboard.locked %} panel-heading{% endif %}">
+    {% if not this_dashboard.locked %}
+    <div class="my-auto widget-drag-handle">
+      {% if each_widget.enable_drag_handle -%}
+      <i style="font-size: 1.5em" class="fas fa-grip-lines widget-drag-icon" title="{{_('Drag')}}"></i>
+      {%- endif %}
+    </div>
+    {% endif %}
+
+    <div class="my-auto widget-title">
+      {% if each_widget.graph_type in list_html_files_title_bar %}
+      <!-- Widget {{each_widget.graph_type}} widget_dashboard_title_bar template for {{each_widget.unique_id}} begin -->
+      {% include 'user_templates/{}'.format(list_html_files_title_bar[each_widget.graph_type]) %}
+      <!-- Widget {{each_widget.graph_type}} widget_dashboard_title_bar template for {{each_widget.unique_id}} end -->
+      {% endif %}
+    </div>
+
+    {% if not this_dashboard.locked %}
+    <div class="my-auto widget-settings">
+      <a class="btn" data-toggle="modal" data-target="#modal_config_{{each_widget.unique_id}}">
+        <i style="font-size: 1.5em" class="fas fa-cog widget-cog-icon" title="{{_('Settings')}}"></i>
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="container-graph-{{each_widget.id}}" style="position: relative; flex-grow: 1">
+    {% if each_widget.graph_type in list_html_files_body %}
+    <!-- Widget {{each_widget.graph_type}} widget_dashboard_body template for {{each_widget.unique_id}} begin -->
+    {% include 'user_templates/{}'.format(list_html_files_body[each_widget.graph_type]) %}
+    <!-- Widget {{each_widget.graph_type}} widget_dashboard_body template for {{each_widget.unique_id}} end -->
+    {% endif %}
+  </div>
+
+  {% if not this_dashboard.locked %}
+  <div class="modal fade aot-option-modal" id="modal_config_{{each_widget.unique_id}}" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <form id="mod_widget_form_{{each_widget.unique_id}}" method="post" action="/dashboard/{{dashboard_id}}">
+          {{form_base.csrf_token(id='csrf_token_' ~ each_widget.unique_id)}}
+          {{form_base.dashboard_id(value=dashboard_id, id='dashboard_id_' ~ each_widget.unique_id)}}
+          {{form_base.widget_id(value=each_widget.unique_id, id='widget_id_' ~ each_widget.unique_id)}}
+          <input type="hidden" name="widget_type" value="{{each_widget.graph_type}}">
+          <input type="submit" name="widget_mod" style="display:none;">
+          <div class="modal-header">
+            <h5 class="modal-title">{{widget_meta['widget_name']}} {{_('Widget Settings')}}</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            {% include 'pages/dashboard_options.html' %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+            {{form_base.widget_delete(class_='btn aot-pill-btn aot-pill-btn-primary', id='widget_delete_' ~ each_widget.unique_id, **{'data-aot-confirm': _('Are you sure you want to delete this widget?'), 'onclick': 'return false;'})}}
+            {{form_base.widget_duplicate(class_='btn aot-pill-btn aot-pill-btn-primary', value=_('Duplicate'), id='widget_duplicate_' ~ each_widget.unique_id)}}
+            {{form_base.widget_mod(class_='btn aot-pill-btn aot-pill-btn-primary', id='widget_mod_' ~ each_widget.unique_id)}}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  $(document).ready(function () {
+    {% if each_widget.graph_type in list_html_files_js_ready_end %}
+    // Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_js_ready_end template for {{each_widget.unique_id}} begin
+    {% include 'user_templates/{}'.format(list_html_files_js_ready_end[each_widget.graph_type]) %}
+    // Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_js_ready_end template for {{each_widget.unique_id}} end
+  {% endif %}
+  });
+</script>
+{% endif %}

@@ -1,0 +1,28 @@
+/* AI Service Registry Page Styles */
+
+.ai-card {
+    background: var(--bd-primary);
+    border: none;
+    border-radius: 20px !important;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.ai-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.ai-endpoint-display {
+    background: var(--bg-btn-hover-lighter);
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.ai-endpoint-url {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--color-equipment-mode);
+    word-break: break-all;
+}

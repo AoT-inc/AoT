@@ -1,0 +1,79 @@
+/* Device Timeline base styles */
+.device-timeline-wrapper {
+  margin: 20px 0;
+  background: var(--aot-surface-card, #fff);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+#device-timeline-container {
+  height: 400px;
+}
+
+/* Device types colors */
+.device-valve { border-left: 4px solid #3498db; }
+.device-pump { border-left: 4px solid #2ecc71; }
+.device-heater { border-left: 4px solid #e74c3c; }
+.device-light { border-left: 4px solid #f1c40f; }
+.device-fan { border-left: 4px solid #9b59b6; }
+.device-motor { border-left: 4px solid #34495e; }
+.device-relay { border-left: 4px solid #e67e22; }
+
+/* Status styles */
+.status-scheduled {
+  background-color: rgba(52, 152, 219, 0.2) !important;
+  border-color: #3498db !important;
+  border-style: dashed !important;
+  color: var(--aot-color-info, #2980b9) !important;
+}
+
+.status-completed {
+  background-color: rgba(46, 204, 113, 0.8) !important;
+  border-color: #27ae60 !important;
+  color: var(--text-color-tertiary, #fff) !important;
+}
+
+/* Mobile specific cards */
+@media (max-width: 768px) {
+  .mobile-device-card {
+    background: var(--aot-surface-card, #fff);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 8px;
+  }
+  
+  .device-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--aot-modal-body-text, #333);
+  }
+  
+  .stats {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--aot-color-text-secondary, #666);
+  }
+  
+  .stat-item i {
+    margin-right: 4px;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--aot-color-text-secondary, #aaa);
+    font-size: 14px;
+  }
+}

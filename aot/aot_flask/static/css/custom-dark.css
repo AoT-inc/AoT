@@ -1,0 +1,85 @@
+/*
+ * Custom Dark Theme overrides
+ * Token reassignment file — Theme-Switchable UI (Plan 019)
+ *
+ * FORBIDDEN: Non-token property declarations (e.g., background: red;)
+ * FORBIDDEN: Selector rules with property blocks (e.g., .btn { background: blue; })
+ * ALLOWED: Token reassignments only (--aot-*: value;)
+ *
+ * Design Rule (per Supplement 5):
+ * custom-dark.css redefines ONLY surface tokens that differ from dark defaults.
+ * These reassignments ARE property declarations syntactically, but they only
+ * redefine existing token values — they do not add new component styles.
+ */
+
+/* ========================================================================
+   Section 1.2: semantic color overrides — dark mode
+   (Authority rule: surface/dark semantic tokens belong in custom-dark.css,
+    not in aot-theme-variables.css :root[data-theme="dark"])
+   ======================================================================== */
+:root {
+  --aot-color-success: #7aa852;
+  --aot-color-warning: #e09509;
+  --aot-color-danger: #c94444;
+  --aot-color-info: #0287b8;
+}
+
+/* ========================================================================
+   Section 1.1: brand/text color overrides — dark mode
+   ======================================================================== */
+:root {
+  --aot-color-brand-accent: #1a1a1a;
+  --aot-color-text-primary: #F3F6F5;
+  --aot-color-text-secondary: #D1D5D5;
+  --aot-color-dark: #e0e0e0;
+}
+
+/* ========================================================================
+   Section 1.6: surface tokens — dark mode
+   ======================================================================== */
+:root {
+  --aot-surface-card: #1e1e1e;
+  --aot-surface-modal: #1e1e1e;
+  --aot-surface-dropdown: #2a2a2a;
+  --aot-surface-input: #2a2a2a;
+  --aot-surface-body: #121212;
+}
+
+/* ========================================================================
+   Section 1.7: note tokens — dark mode
+   ======================================================================== */
+:root {
+  --aot-note-card-bg: #1e1e1e;
+  --aot-note-card-border: #2d2d2d;
+  --aot-note-card-shadow: rgba(0,0,0,0.3);
+  --aot-note-card-hover-shadow: rgba(0,0,0,0.4);
+  --aot-note-card-body-text: #d1d5db;
+  --aot-note-footer-bg: #1a1a1a;
+  --aot-note-footer-text: #888888;
+  --aot-note-tag-bg: #1e3a5f;
+  --aot-note-tag-text: #7dd3fc;
+  --aot-note-tag-hover-bg: #0c4a6e;
+  --aot-note-fab-bg: #2563eb;
+  --aot-note-search-bg: #1e1e1e;
+  --aot-note-search-border: #404040;
+  --aot-note-search-focus: #60a5fa;
+}
+
+/* ========================================================================
+   Section 1.5: border tokens — dark mode
+   ======================================================================== */
+:root {
+  --aot-border-neutral: #444444;
+  --aot-border-light: #2a2a2a;
+  --aot-border-form: #4a4a4a;
+}
+
+/* ========================================================================
+   Section 1.9: modal tokens — dark mode
+   ======================================================================== */
+:root {
+  --aot-modal-title-text: #F3F6F5;
+  --aot-modal-body-text: #D1D5D5;
+  --aot-modal-group-title: #aaaaaa;
+  --aot-modal-backdrop: rgba(0,0,0,0.7);
+}

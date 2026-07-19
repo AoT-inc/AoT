@@ -1,0 +1,889 @@
+/* aot-sensor-label.css — Sensor label overlay + detail popup
+   Shared between AoT_facility (Three.js overlay) and AoT_map (MapLibre markers) */
+
+/* ── 3D overlay container ────────────────────────────────────────────────── */
+.aot-facility-3d-wrap { position: relative; }
+
+.aot-sensor-labels-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.aot-sensor-label {
+  position: absolute;
+  left: 0; top: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+  pointer-events: auto;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.05s linear;
+  will-change: transform;
+}
+
+.aot-sensor-label-clickable { cursor: pointer; }
+.aot-sensor-label-clickable:hover { outline: 1px solid rgba(255,255,255,0.45); }
+
+.aot-sensor-label.aot-stale {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+/* ── Floating popup — scoped to widget container ──────────────────────────── */
+.aot-sensor-popup {
+  position: absolute;
+  left: 0; top: 0;
+  display: none;
+  background: var(--aot-surface-card);
+  color: var(--aot-color-text-primary);
+  border-radius: 16px;
+  border: 1px solid var(--aot-border-neutral);
+  width: min(240px, 92%);
+  max-height: 80%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 12px 14px;
+  box-shadow: var(--aot-shadow-dropdown);
+  font-size: var(--aot-font-size-xs);
+  font-family: var(--aot-font-family);
+  z-index: 50;
+}
+.aot-sensor-popup::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+.aot-sensor-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.aot-sensor-popup-title {
+  font-weight: 700;
+  font-size: 1.1em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--aot-color-text-primary);
+}
+
+.aot-sensor-popup-close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--aot-color-text-secondary);
+  padding: 4px 6px;
+}
+.aot-sensor-popup-close:hover { color: var(--aot-color-text-primary); }
+
+/* ── 측정값 레전드 (채널 색상 점 + 이름 + 값) ──────────────────────────────── */
+.aot-spop-legend {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  margin-top: .5rem;
+}
+.aot-spop-legend-row {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: 1em;
+}
+.aot-spop-legend-row.aot-stale {
+  color: var(--aot-color-text-secondary);
+  text-decoration: line-through;
+}
+.aot-spop-legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.aot-spop-legend-name {
+  flex: 1;
+  color: var(--aot-color-text-secondary);
+  font-size: 0.923em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aot-spop-legend-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--aot-color-text-primary);
+  white-space: nowrap;
+  font-size: 1em;
+}
+.aot-spop-legend-unit {
+  font-size: 0.85em;
+  font-weight: 400;
+  color: var(--aot-color-text-secondary);
+}
+.aot-spop-legend-empty {
+  color: var(--aot-color-text-secondary);
+  font-size: 0.923em;
+}
+
+/* 하위 호환: 구형 inline vals (비모달 floating popup 경로가 남아있을 경우) */
+.aot-sensor-popup-vals {
+  font-size: 1em;
+  color: var(--aot-color-text-primary);
+  margin-bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.aot-sensor-popup-ch { white-space: nowrap; }
+.aot-sensor-popup-ch em {
+  font-style: normal;
+  color: var(--aot-color-text-secondary);
+  font-size: 0.85em;
+  margin-right: 2px;
+}
+.aot-sensor-popup-ch.aot-stale {
+  color: var(--aot-color-text-secondary);
+  text-decoration: line-through;
+}
+
+.aot-sensor-popup-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 6px;
+  font-size: 1em;
+}
+
+.aot-sensor-popup-table td {
+  padding: 3px 4px;
+}
+
+.aot-sensor-popup-table td:first-child {
+  color: var(--aot-color-text-secondary);
+}
+
+.aot-sensor-popup-table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--aot-color-text-primary);
+}
+
+.aot-sensor-popup-table tr.aot-stale td {
+  color: var(--aot-color-text-secondary);
+  text-decoration: line-through;
+}
+
+.aot-sensor-popup-chart-wrap {
+  position: relative;
+}
+
+.aot-sensor-popup-chart-status {
+  position: absolute;
+  inset: 28px 0 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--aot-color-text-secondary);
+  font-size: 1em;
+  pointer-events: none;
+}
+
+/* ── 센서값 모달 (AoT_map: 제어 라벨처럼 화면 중앙 출력) ──────────────────────
+   배경 backdrop + 중앙 정렬. 제목/측정값 문자는 1.1em, 그래프 영역은 현행 유지. */
+.aot-sensor-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--aot-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--aot-modal-backdrop);
+}
+.aot-sensor-popup--modal {
+  position: relative;
+  left: auto; top: auto;
+  /* 반응형: 모바일 92vw → 데스크탑 화면폭 32% (360~520px) */
+  width: clamp(360px, 32vw, 520px);
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  padding: 14px 16px 20px; /* 하단 20px — border-radius:16px 안에 컨텐츠가 차지 않도록 */
+  overflow-y: auto;         /* 세로 부족 시 스크롤 허용 (스크롤바는 숨김) */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.aot-sensor-popup--modal::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.aot-sensor-popup--modal .aot-sensor-popup-title { font-size: 1.1em; }
+.aot-sensor-popup--modal .aot-sensor-popup-chart-wrap { flex: 0 0 auto; }
+.aot-sensor-popup--modal .aot-spop-legend { font-size: 1em; }
+
+/* ── Center modal (시설 제어/구역 팝업 공용 셸) ───────────────────────────────
+   _showFacilityCenterOverlay 가 사용. 반응형 크기:
+   모바일(≤480px) 94vw × 86vh → 그 이상 화면폭 38% (340~600px) × min(80vh,760px). */
+.aot-center-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  width: clamp(340px, 38vw, 600px);
+  max-width: 94vw;
+  height: min(80vh, 760px);
+}
+
+/* Modal text base — fixed ABSOLUTE size so mobile renders identically to
+   desktop. The popup base (.maplibregl-popup-content) is 0.85rem and every
+   inner element sizes in `em` off it, so any mobile root / text-size-adjust
+   shrink cascades through the whole modal. Pinning the base to px (and
+   text-size-adjust:100%) decouples it: the zone, facility, and site-list
+   popups all share this shell, so this one rule fixes all three. The compound
+   selector beats the plain .maplibregl-popup-content base regardless of load
+   order. 14px ≈ the desktop 0.85rem so desktop is visually unchanged. */
+.maplibregl-popup-content.aot-center-modal {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+/* Smartphone fullscreen (≤480px): the modal fills the screen, so 14px reads too
+   small. Bump the base to 16px — every inner element sizes in `em` off this base,
+   so zone/facility/site-list text all scale up proportionally. Desktop/tablet
+   stay 14px. Compound selector (0,2,0) overrides the base above. */
+@media (max-width: 480px) {
+  .maplibregl-popup-content.aot-center-modal { font-size: 16px; }
+}
+
+/* ── MapLibre marker label ────────────────────────────────────────────────── */
+.aot-sensor-map-marker {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 600;
+  font-size: 0.85em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  background: rgba(15,23,42,0.78);
+  color: var(--text-color-tertiary, #f8fafc);
+  transform: translate(-50%, -100%);
+}
+.aot-sensor-map-marker:hover { outline: 1px solid rgba(255,255,255,0.45); }
+.aot-sensor-map-marker.aot-stale { opacity: 0.55; text-decoration: line-through; }
+
+/* ── Circle mode: integer-only marker at the sensor position ─────────────────
+   Background = measurement band color, text = rounded first-channel value. */
+.aot-sensor-map-marker--circle {
+  width: 2.4em;
+  height: 2.4em;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(255,255,255,0.85);
+  line-height: 1;
+}
+.aot-sensor-map-marker--circle:hover { outline: none; border-color: #fff; }
+.aot-sensor-map-marker--circle.aot-stale { text-decoration: none; opacity: 0.45; }
+
+/* ── Facility sensor summary chip (next to the Control chip) ─────────────────
+   Shows the facility-level representative value (VPD first) + "+". */
+.aot-sensor-sum-chip { font-variant-numeric: tabular-nums; }
+
+/* ── Bay(구역) chip — placed at each zone center ─────────────────────────────
+   2-row label: row 1 = zone name, row 2 = representative value.
+   Background = measurement band color. */
+.aot-bay-chip {
+  z-index: 6;   /* 시설 모니터링 라벨 — 대지/구역 라벨(geo-label-marker 2~3) 위 */
+  font-variant-numeric: tabular-nums;
+  /* currentColor: follows the dynamic text color set by _updateBayChips
+     (dark text on bright band colors, light text on dark backgrounds) */
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1.25;
+}
+.aot-bay-chip .aot-bay-chip-name { font-weight: 700; }
+.aot-bay-chip .aot-bay-chip-val  { font-size: 0.92em; opacity: 0.95; }
+
+/* Bay modal — inline sensor chart (top, fixed) + actuator tabs (bottom, scroll).
+   Popup box is a flex column (80vh, JS inline) — the chart keeps its natural
+   height and the acts section flexes to fill, with its tab body scrolling. */
+.aot-bay-popup-section { margin-top: 6px; }
+.aot-bay-popup-section + .aot-bay-popup-section {
+  border-top: 1px solid rgba(128,128,128,0.25);
+  padding-top: 6px;
+}
+.aot-bay-popup-section[data-zone="sensors"] { flex: 0 0 auto; position: relative; }
+.aot-bay-popup-section[data-zone="sensors"] .aot-sensor-popup-chart-status {
+  text-align: center;
+  font-size: 0.85em;
+  opacity: 0.6;
+  padding: 12px 0;
+}
+/* 센서별 탭 (탭 nav 는 제어 팝업의 .aot-act-tabs-nav 스타일 재사용) */
+.aot-bay-sensor-chart { min-height: 40px; }
+.aot-bay-popup-section[data-zone="acts"] {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sensor tab popup rows reuse .aot-act-row; value column styling */
+.aot-sensor-tab-row { cursor: pointer; }
+.aot-sensor-tab-row .aot-act-val-ro {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.aot-sensor-tab-row .aot-act-val-ro.aot-stale {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+/* ── Bay popup redesign: section nav, panes, overview blocks ──────────────────
+   Modal hosting sensor chart + actuator controls. New tab nav section + multiple panes. */
+
+/* 헤더(제목) 행 — 센서 팝업 헤더와 동일한 행높이/정렬. 닫기(×) 버튼
+   (popupWrap 우상단 absolute)을 회피하는 우측 여백을 헤더가 담당한다. */
+.aot-center-modal > .aot-sensor-popup-header {
+  flex: 0 0 auto;
+  min-height: 36px;
+  align-items: center;
+  margin: 0 0 4px 0;
+  padding-right: 36px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--aot-border-light);
+}
+
+/* Section tab navigation — 헤더와 분리된 독립 행 (상위 단계 탭) */
+.aot-bay-popup-nav {
+  margin-bottom: 6px;
+  flex-shrink: 0;
+  padding-right: 0;        /* 닫기 버튼 회피는 헤더 행이 담당 */
+}
+
+/* Pane container: flex column with overflow handling
+   스크롤은 허용하되 스크롤바는 출력하지 않음 (시스템 공통 정책) */
+.aot-bay-popup-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.aot-bay-popup-pane::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 설명 입력 textarea 도 동일 정책 */
+.aot-ov-desc-input {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.aot-ov-desc-input::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* Overview block: summary of a function/input/control element */
+.aot-ov-block {
+  padding: 10px 14px;
+  border-radius: 16px;
+  margin-bottom: 8px;
+  background: var(--aot-surface-card, var(--bg-off));
+  border: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+  /* 본문 기준 크기 — AoT 모던 모달의 일반 텍스트(base)와 동일.
+     하위 요소는 상속으로 균일화 (sm 은 모바일에서 너무 작음) */
+  font-size: var(--aot-font-size-base);
+}
+
+/* 단락 제목 — AoT 모던 섹션 타이틀 (aot-modal-section-title 축소판) */
+.aot-ov-sec-title {
+  font-weight: 700;
+  font-size: var(--aot-font-size-base);
+  color: var(--aot-color-text-primary);
+  margin-bottom: 4px;
+}
+.aot-ov-sec-title--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 상태 요약 본문 라인 */
+.aot-ov-modes-line {
+  font-weight: 600;
+  color: var(--aot-color-text-primary);
+}
+
+/* Row within overview block: flex row with IEC label + function name + toggle */
+.aot-ov-iec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* IEC label (scope): small muted uppercase-like tag */
+.aot-ov-scope {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Function name: bold, flex-grow to fill, ellipsis */
+.aot-ov-fn-name {
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--aot-color-text-primary);
+}
+
+/* IEC 자동제어 토글: 공용 슬라이드 토글(components/aot-toggle.css, .btn-toggle)
+   을 그대로 사용 — 여기서는 우측 정렬과 pending 상태만 정의한다. */
+.aot-iec-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.aot-iec-toggle .btn-toggle-input:disabled + .btn-toggle-slider {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Inactive state: grayed out, italic */
+.aot-ov-inactive {
+  color: var(--aot-color-text-secondary);
+  font-style: italic;
+}
+
+/* Reasons for inactivity */
+.aot-ov-reasons {
+  color: var(--aot-color-text-secondary);
+  margin-top: 4px;
+}
+
+/* Mode display: larger, bold */
+.aot-ov-modes {
+  font-weight: 600;
+  color: var(--aot-color-text-primary);
+}
+
+/* Row: space-between, monospace numerics */
+.aot-ov-row {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 0;
+  color: var(--aot-color-text-primary);
+}
+
+/* Gate state: warning-like color */
+.aot-ov-gate {
+  color: var(--aot-color-warning, #ff9f43);
+}
+
+/* Device reference: extra left margin */
+.aot-ov-dev {
+  margin-left: 8px;
+  color: var(--aot-color-text-secondary);
+}
+
+/* Trend/feedforward: smaller, muted */
+.aot-ov-trend {
+  color: var(--aot-color-text-secondary);
+  margin-top: 2px;
+}
+.aot-ov-ff {
+  color: var(--aot-color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ── 시설 대표사진 / 치수 / 설명 (현황 pane 최상단) ─────────────────────── */
+.aot-ov-photo-wrap {
+  margin-bottom: 6px;
+}
+.aot-ov-photo img {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--aot-border-light);
+}
+.aot-ov-photo-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* 공용 소형 알약 버튼 (사진/설명 편집/저장/취소 등) — 전역 변수 준수 */
+.aot-ov-pill {
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border, #B6BABA);
+  background: var(--bg-btn-off, #5E6B64);
+  color: var(--text-color-tertiary, #FFFFFF);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.aot-ov-pill:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+@media (hover: hover) and (pointer: fine) {
+  .aot-ov-pill:hover {
+    filter: brightness(0.9);
+  }
+}
+
+/* 설명 블록 */
+.aot-ov-desc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.aot-ov-desc-view {
+  margin-top: 4px;
+  color: var(--aot-color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.aot-ov-desc-input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-size: inherit;
+  font-family: inherit;
+  color: var(--aot-color-text-primary);
+  background: var(--bg-off);
+  border: 1px solid var(--aot-border-light);
+  border-radius: 6px;
+  resize: vertical;
+}
+.aot-ov-desc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Notes head row: 제목 좌측 + 노트창 호출 버튼 우측 */
+.aot-ov-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Notes section title */
+.aot-ov-notes-title {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+/* 노트창 호출 버튼 — 전역 알약 스타일 (output 카드 버튼과 동일 변수) */
+.aot-ov-notes-open {
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border, #B6BABA);
+  background: var(--bg-btn-off, #5E6B64);
+  color: var(--text-color-tertiary, #FFFFFF);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .aot-ov-notes-open:hover {
+    filter: brightness(0.9);
+  }
+}
+
+/* Note item (행 + 첨부) — 클릭 시 노트 패널 열림 */
+.aot-ov-note {
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+/* Note row: date + text — 같은 문자 크기, baseline 정렬 통일 */
+.aot-ov-note-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+/* Note text: ellipsis on overflow */
+.aot-ov-note-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--aot-color-text-primary);
+}
+
+/* Note date: muted, no-shrink — 텍스트와 동일 크기(상속) */
+.aot-ov-note-date {
+  color: var(--aot-color-text-secondary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Note 첨부 이미지 썸네일 */
+.aot-ov-note-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+.aot-ov-note-thumbs img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--aot-border-light);
+}
+
+/* Note 비이미지 첨부 개수 */
+.aot-ov-note-files {
+  margin-top: 2px;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+}
+
+/* All notes button: full-width-ish, small (전역 버튼 변수 준수) */
+.aot-ov-notes-all {
+  width: 100%;
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  margin-top: 4px;
+  font-size: var(--aot-font-size-sm);
+  font-weight: 600;
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border);
+  background: var(--bg-btn-off);
+  color: var(--text-color-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, filter 0.15s;
+}
+.aot-ov-notes-all:hover {
+  filter: brightness(0.9);
+}
+
+/* Muted text */
+.aot-ov-muted {
+  color: var(--aot-color-text-secondary);
+}
+
+/* Loading state */
+.aot-ov-loading {
+  color: var(--aot-color-text-secondary);
+  padding: 8px 0;
+}
+
+/* Skeleton placeholder — shown while /overview is in flight so the pane
+   reads as "loading" instead of a blank/ellipsis box. */
+.aot-ov-skel {
+  padding: 6px 0;
+}
+.aot-ov-skel-bar {
+  height: 12px;
+  border-radius: 6px;
+  margin: 10px 0;
+  background: linear-gradient(90deg,
+    var(--aot-color-border, rgba(127,127,127,0.18)) 25%,
+    rgba(127,127,127,0.30) 37%,
+    var(--aot-color-border, rgba(127,127,127,0.18)) 63%);
+  background-size: 400% 100%;
+  animation: aot-ov-shimmer 1.2s ease-in-out infinite;
+}
+.aot-ov-skel-bar.w40 { width: 40%; }
+.aot-ov-skel-bar.w60 { width: 60%; }
+.aot-ov-skel-bar.w80 { width: 80%; }
+@keyframes aot-ov-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aot-ov-skel-bar { animation: none; }
+}
+
+/* ── pane 내부 하위 탭 (센서/제어 카테고리) — 상위 섹션탭과 구분되도록
+   전역 알약 모양으로 축소. 수가 많으면 가로 스크롤 (스크롤바 숨김은
+   .aot-act-tabs-nav 기본 규칙이 이미 처리). ───────────────────────────── */
+.aot-bay-popup-pane .aot-act-tabs-nav {
+  border-bottom: none;
+  padding-right: 0;
+  padding-bottom: 2px;
+  gap: 4px;
+}
+.aot-bay-popup-pane .aot-act-tab-btn {
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 500;
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border, #B6BABA);
+  background: var(--bg-btn-off, #5E6B64);
+  color: var(--text-color-tertiary, #FFFFFF);
+  display: flex;
+  align-items: center;
+}
+.aot-bay-popup-pane .aot-act-tab-btn.active {
+  background: var(--bg-btn-on, #13261B);
+  font-weight: 600;
+}
+
+/* 팝업 탭 내비: 버튼 폭 합이 화면(모달) 폭을 넘으면 줄바꿈하지 말고 가로 스크롤로
+   좌우 탐색(스크롤바는 숨김). .aot-act-tabs-nav 기본 규칙은 aot-facility-widget.css
+   에 있으나, 이 모달 셸(zone/facility/사이트목록)이 뜨는 모든 컨텍스트에서 보장되도록
+   여기서도 명시(파일 로드 유무/순서와 무관하게 동작). */
+.aot-center-modal .aot-act-tabs-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.aot-center-modal .aot-act-tabs-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.aot-center-modal .aot-act-tab-btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* 모바일 전체화면(≤480px): 본문 기준은 16px로 키웠지만 탭 버튼은 16px 기준 em으로
+   과대해지므로(1.1em→17.6px) 14px로 되돌리고 높이도 컴팩트하게 고정한다.
+   탭 외 나머지 컨텐츠(행/이름 등)는 16px 그대로 유지. */
+@media (max-width: 480px) {
+  .aot-center-modal .aot-act-tab-btn {
+    font-size: 14px;
+    padding-top: .35rem;
+    padding-bottom: .35rem;
+    line-height: 1.2;
+  }
+  .aot-center-modal .aot-bay-popup-pane .aot-act-tab-btn {
+    height: 30px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+/* Selected actuator row highlight — 전역 활성 색상 변수 사용 (하드코딩 금지) */
+.aot-act-row--selected {
+  border-left: 3px solid var(--bd-btn-primary);
+  background: var(--bg-active);
+  padding-left: calc(0.55rem - 2px);
+}
+
+/* Actuator name clickable in the acts zone */
+.aot-bay-popup-section[data-zone="acts"] .aot-act-name {
+  cursor: pointer;
+}
+
+/* ── 제어 행 현대화: 한 줄 정렬(이름 좌 · 제어 우) ──────────────────────────
+   .aot-act-row 는 column flex — 행 안의 가로 1줄은 .aot-act-line 이 담당. */
+.aot-act-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.aot-act-line .aot-act-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* on/off 공용 슬라이드 토글 — 제목 오른쪽 끝 정렬 */
+.aot-act-toggle-right {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Paired actuator 닫힘/중지/열림 — output 카드(aot-btn-on/off) 스타일,
+   전역 버튼/문자 변수 준수, 제목 오른쪽 끝 정렬 */
+.aot-act-3btn {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.aot-act-pbtn {
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border, #B6BABA);
+  background: var(--bg-btn-off, #5E6B64);
+  color: var(--text-color-tertiary, #FFFFFF);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.aot-act-pbtn.active {
+  background: var(--bg-btn-on, #13261B);
+}
+/* 터치 기기 sticky-hover 방지 — entry UI 와 동일 정책 */
+@media (hover: hover) and (pointer: fine) {
+  .aot-act-pbtn:hover,
+  .aot-ov-notes-all:hover {
+    filter: brightness(0.9);
+  }
+}
+
+/* Fullscreen modal — SMARTPHONE widths only (≤480px portrait). Tablets and
+   mid-size/desktop keep the bounded centered card (clamp width, min-height,
+   16px radius). Previously this fired at ≤768px, which made tablets/mid widths
+   (and DevTools tablet emulation) go fullscreen unintentionally. */
+@media (max-width: 480px) {
+  .aot-center-modal {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    /* safe-area-inset-top 이 0인 기기(노치 없음/브라우저)에서도
+       maplibregl-popup-content 의 기본 12px 상단 여백을 유지한다. */
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* 닫기 버튼은 popupWrap 기준 absolute — 노치 기기에서 safe area 안으로
+     밀려들어가지 않도록 top 을 콘텐츠 상단 패딩에 맞춰 조정한다. */
+  .aot-center-modal-close {
+    top: max(10px, calc(env(safe-area-inset-top) + 6px)) !important;
+  }
+  /* 헤더 행: 모바일 전체화면에서 최소 높이를 44px 로 올려 터치 영역 확보 */
+  .aot-center-modal > .aot-sensor-popup-header {
+    min-height: 44px;
+  }
+}

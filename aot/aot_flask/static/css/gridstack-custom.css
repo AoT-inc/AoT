@@ -1,0 +1,208 @@
+@media (min-width: 769px) {
+  .gs-24 > .grid-stack-item {
+    width: 4.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="1"] {
+    left: 4.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="2"] {
+    width: 8.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="2"] {
+    left: 8.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="3"] {
+    width: 12.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="3"] {
+    left: 12.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="4"] {
+    width: 16.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="4"] {
+    left: 16.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="5"] {
+    width: 20.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="5"] {
+    left: 20.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="6"] {
+    width: 25%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="6"] {
+    left: 25%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="7"] {
+    width: 29.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="7"] {
+    left: 29.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="8"] {
+    width: 33.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="8"] {
+    left: 33.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="9"] {
+    width: 37.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="9"] {
+    left: 37.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="10"] {
+    width: 41.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="10"] {
+    left: 41.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="11"] {
+    width: 45.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="11"] {
+    left: 45.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="12"] {
+    width: 50%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="12"] {
+    left: 50%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="13"] {
+    width: 54.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="13"] {
+    left: 54.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="14"] {
+    width: 58.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="14"] {
+    left: 58.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="15"] {
+    width: 62.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="15"] {
+    left: 62.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="16"] {
+    width: 66.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="16"] {
+    left: 66.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="17"] {
+    width: 70.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="17"] {
+    left: 70.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="18"] {
+    width: 75%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="18"] {
+    left: 75%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="19"] {
+    width: 79.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="19"] {
+    left: 79.167%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="20"] {
+    width: 83.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="20"] {
+    left: 83.333%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="21"] {
+    width: 87.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="21"] {
+    left: 87.5%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="22"] {
+    width: 91.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="22"] {
+    left: 91.667%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="23"] {
+    width: 95.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-x="23"] {
+    left: 95.833%;
+  }
+  .gs-24 > .grid-stack-item[gs-w="24"] {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile: 2 Column Layout */
+  .gs-2 > .grid-stack-item {
+    width: 50%;
+  }
+  .gs-2 > .grid-stack-item[gs-x="1"] {
+    left: 50%;
+  }
+  .gs-2 > .grid-stack-item[gs-w="2"] {
+    width: 100%;
+  }
+
+  /* 1 Column Mobile Layout */  
+  .gs-1 > .grid-stack-item {
+    width: 100%;
+  }
+  .gs-1 > .grid-stack-item[gs-x="1"] {
+    left: 0%;
+  }
+}
+
+/* Contain all widget content z-indices within the item-content stacking context.
+   isolation:isolate traps Leaflet controls (z-index:1000) so they cannot escape.
+   z-index:1 makes this a positively-stacked context so it ranks ABOVE the
+   resize handle's z-index:0 in the shared parent stacking order. */
+.grid-stack-item > .grid-stack-item-content {
+  isolation: isolate;
+  z-index: 1;
+}
+
+/* Resize handle: z-index:2 places the handle above .grid-stack-item-content
+   (z-index:1) so it is clickable. App modals use --aot-z-modal and
+   navbar --aot-z-navbar, so z-index:2 (지도-로컬 스케일) is well below all
+   overlay layers. Widget-internal popups stay inside the isolation:isolate
+   stacking context of .grid-stack-item-content and cannot overlap the handle. */
+.grid-stack-item > .ui-resizable-se {
+  background-image: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  opacity: 1 !important;
+  width: 30px !important;
+  height: 30px !important;
+  transform: none !important;
+  cursor: se-resize !important;
+  pointer-events: auto !important;
+  z-index: 2 !important;
+}
+
+@media (max-width: 768px) {
+  .grid-stack-item > .ui-resizable-se {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+
+/* Bootstrap Select dropdown z-index fix:
+   data-container="body" 셀렉트(액션 카드 안 output 장치/상태 등)는 메뉴를
+   <body> 의 .bs-container 로 분리한다. 이 메뉴는 반드시 모달(--aot-z-modal)
+   위에 떠야 한다 → --aot-z-modal-nested. 과거엔 하드코딩(21000/36001)이라
+   모달 값이 바뀔 때마다 메뉴가 모달 뒤에 깔리는 증상을 유발했다. */
+.bootstrap-select.bs-container .dropdown-menu {
+  z-index: var(--aot-z-modal-nested) !important;  /* must stay > --aot-z-modal */
+}

@@ -1,0 +1,153 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "diagnostic" %}
+{% set help_page = [manual_url("Configuration-Settings/#diagnostic-settings"), dict_translation['settings']['title'] + ': ' + dict_translation['diagnostic']['title']] %}
+
+{% block title %} - {{dict_translation['settings']['title'] + ': ' + dict_translation['diagnostic']['title']}}{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/diagnostic -->
+  <div class="container">
+
+    <!-- Page Title -->
+    <div class="aot-settings-title">
+      <h3>{{_('Diagnostics')}} <a href="{{ manual_url('Configuration-Settings/#diagnostic-settings') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <form method="post" action="/settings/diagnostic">
+      <input type="hidden" name="form-name" value="Pi">
+      {{form_settings_diagnostic.csrf_token}}
+
+      <!-- Group 1: Control Element Reset -->
+      <div class="aot-modal-group-title">{{_('Control Element Reset')}}</div>
+      <p class="aot-modal-body-text">
+        {{_('Permanently delete all elements of the selected type. This action cannot be undone.')}}
+      </p>
+
+      <div class="aot-modal-container">
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete All Dashboard Elements')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_dashboard_elements(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete All Inputs')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_inputs(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete All Outputs')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_outputs(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete All Functions')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_functions(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <label class="aot-settings-label">{{_('Delete All Notes and Note Tags')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_notes_tags(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Group 2: System Elements -->
+      <div class="aot-modal-group-title" style="margin-top: 1.6rem;">{{_('System Elements')}}</div>
+      <p class="aot-modal-body-text">
+        {{_('Manage system-level files and databases. Use with caution.')}}
+      </p>
+
+      <div class="aot-modal-container">
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete Settings Database')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_settings_database(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete File')}}: .dependency</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_file_dependency(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Delete File')}}: .upgrade</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.delete_file_upgrade(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to delete this?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Recreate InfluxDB 1.x Database')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.recreate_influxdb_db_1(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to perform this action?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <label class="aot-settings-label">{{_('Recreate InfluxDB 2.x Database')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.recreate_influxdb_db_2(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to perform this action?') + '")'})}}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Group 3: Others -->
+      <div class="aot-modal-group-title" style="margin-top: 1.6rem;">{{_('Others')}}</div>
+
+      <div class="aot-modal-container">
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Reset Email Counter')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.reset_email_counter(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to perform this action?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Install Required Packages')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.install_dependencies(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to perform this action?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('Regenerate Widget HTML')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.regenerate_widget_html(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to perform this action?') + '")'})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <label class="aot-settings-label">{{_('Master Upgrade Settings')}}</label>
+          <div class="aot-settings-control">
+            {{form_settings_diagnostic.upgrade_master(class_='btn aot-pill-btn aot-pill-btn-primary aot-w-60', value=_('Execute'), **{'onclick':'return confirm("' + _('Are you sure you want to perform this action?') + '")'})}}
+          </div>
+        </div>
+
+      </div>
+
+    </form>
+
+  </div>
+
+{% endblock %}

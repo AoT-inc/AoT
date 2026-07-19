@@ -1,0 +1,17 @@
+{% if ('pin_clock' in dict_options['options_disabled'] or
+      'pin_clock' in dict_options['options_enabled']) and
+      each_device.interface != 'UART'
+  %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.pin_clock.label.text}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'pin_clock' in dict_options['options_disabled'] -%}
+    {{form.pin_clock(class_='form-control aot-modern-input', value=each_device.pin_clock, disabled=True, **{'title': dict_translation['pin_clock']['phrase']})}}
+  {% else %}
+    {{form.pin_clock(class_='form-control aot-modern-input', value=each_device.pin_clock, **{'title': dict_translation['pin_clock']['phrase']})}}
+  {%- endif -%}
+  </div>
+</div>
+
+{% endif %}

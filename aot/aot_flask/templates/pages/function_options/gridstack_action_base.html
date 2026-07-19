@@ -1,0 +1,294 @@
+{% macro gridstack_action_item(each_action, each_function, is_sequence=False, gs_h=25, wrap_options=False, post_action="/function") %}
+{% set dict_options = dict_actions.get(each_action.action_type, {}) %}
+{% set each_device = each_action %}
+{% set custom_options_values = custom_options_values_actions %}
+{% set force_default_value = false %}
+{% set unique_id = each_action.unique_id %}
+{% set action_options = custom_options_values_actions.get(unique_id, {}) %}
+{% set saved_gs_y = action_options.get('gridstack_y', action_options.get('position', '') if each_action.action_type != 'output_actuator_paired' else '') %}
+
+<div class="grid-stack-item" id="mod_action_{{unique_id}}" gs-id="{{unique_id}}" gs-w="12" gs-h="{{ gs_h }}"{% if saved_gs_y != '' %} gs-y="{{ saved_gs_y }}"{% endif %}>
+  <div class="grid-stack-item-content">
+  <form id="form_action_{{unique_id}}" method="post" action="{{post_action}}">
+  {{form_actions.csrf_token}}
+  {{form_actions.device_id(class_='form-control', value=each_function.unique_id, id='device_id_' + unique_id)}}
+  {{form_actions.action_id(class_='form-control', value=unique_id, id='action_id_' + unique_id)}}
+
+    <!-- Tier 1: Action Header, Options & Controls -->
+    {% if is_sequence %}
+    <div style="border: 1px solid var(--border-neutral); border-bottom: none; border-radius: 16px 16px 0 0; background-color: var(--bd-primary); overflow: hidden;">
+        <!-- Row 1: Move, Type, Delete, Save -->
+        <div class="d-flex align-items-center flex-nowrap" style="padding: 6px 8px; border-bottom: 1px solid var(--border-neutral);">
+            <!-- Drag Handle -->
+            <div class="text-center icon-fh my-auto" style="cursor: move; padding-right: 8px; flex: 0 0 auto;">
+                <i style="font-size: 1.2em; color: var(--aot-text-secondary);" class="fa fa-grip-lines" title="{{_('Drag')}}"></i>
+            </div>
+
+            <!-- Action Type (Name) -->
+            <div style="flex: 1 1 auto; margin-right: 5px; min-width: 0;">
+                 <div class="form-control form-control-sm text-truncate d-flex align-items-center" title="{{dict_options.get('name', 'Unknown Action')}}" style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--border-neutral); border-radius: 14px; height: 28px; padding: 0 8px; max-width: 200px;">
+                     <strong style="font-size: 0.85rem; line-height: 1;">{{dict_options.get('name', 'Unknown Action')}}</strong>
+                 </div>
+            </div>
+
+            <!-- Delete Button -->
+            <div style="flex: 0 0 auto; margin-right: 5px;">
+                <button data-form-id="form_action_{{unique_id}}" onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'delete_action');" name="delete_action" class="btn aot-pill-btn d-flex align-items-center justify-content-center" type="button">
+                    {{_('Delete')}}
+                </button>
+            </div>
+
+            <!-- Save Button -->
+            <div style="flex: 0 0 auto;">
+                <button data-form-id="form_action_{{unique_id}}" onclick="return $(this).processRequest(this, 'save_action');" name="save_action" class="btn aot-pill-btn aot-pill-btn-primary d-flex align-items-center justify-content-center" type="button">
+                    {{_('Save')}}
+                </button>
+            </div>
+        </div>
+
+        <!-- Row 2: Options -->
+        <div class="d-flex align-items-center" style="padding: 6px 8px; border-bottom: 1px solid var(--border-neutral); min-height: 40px;">
+            <div style="flex: 1 1 auto; min-width: 0; {% if not wrap_options %}overflow-x: auto; -webkit-overflow-scrolling: touch;{% endif %}">
+                 {% if 'custom_options' in dict_options and unique_id in custom_options_values %}
+                    <div style="display: flex; flex-wrap: {% if wrap_options %}wrap{% else %}nowrap{% endif %}; align-items: center; {% if not wrap_options %}white-space: nowrap;{% endif %}">
+                    {% for each_option in dict_options['custom_options'] %}
+                        {% set opt_id = each_option['id'] %}
+                        {% if is_sequence and opt_id in ['duration', 'action_duration'] %}
+                             {# Skip redundant duration field in sequence layout #}
+                        {% else %}
+                            {% set opt_val = action_options.get(opt_id) %}
+                            {% if opt_val is none and 'default_value' in each_option %}
+                                {% set opt_val = each_option['default_value'] %}
+                            {% endif %}
+
+                            {% if each_option['type'] in ['select', 'select_device', 'select_channel', 'select_measurement'] %}
+                                 <div style="margin-right: 8px; margin-bottom: 6px; flex: 0 0 auto;">
+                                    {% if wrap_options %}
+                                    <div style="display: flex; align-items: center; margin-bottom: 2px; min-height: 16px;">
+                                        <label class="mb-0" style="font-size: 0.78rem; color: var(--aot-text-secondary); white-space: nowrap;">{{each_option['name']}}</label>
+                                        {% if each_option.get('phrase') %}
+                                        <span style="margin-left: 3px; cursor: pointer; color: var(--aot-text-secondary);"
+                                              data-toggle="tooltip" data-placement="top" title="{{each_option['phrase']}}">
+                                            <i class="fa fa-info-circle" style="font-size: 0.75rem;"></i>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    <select class="form-control form-control-sm selectpicker" data-container="body" data-width="fit" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 240px; height: 28px; padding: 0 5px; font-size: 0.85rem; border-radius: 14px;">
+                                        <option value="" disabled {% if not opt_val %}selected{% endif %}>{{each_option['name']}}</option>
+
+                                        {% if each_option['type'] == 'select' %}
+                                            {% for each_set in each_option['options_select'] %}
+                                                <option value="{{each_set[0]}}" {% if each_set[0]|string == opt_val|string %}selected{% endif %}>{{each_set[1]}}</option>
+                                            {% endfor %}
+                                            
+                                        {% elif each_option['type'] == 'select_device' %}
+                                              {% set form_choices_raw = [
+                                                ("Input", table_input.query.all()),
+                                                ("Output", table_output.query.all()),
+                                                ("PID", table_pid.query.all()),
+                                                ("Trigger", table_trigger.query.all()),
+                                                ("Camera", table_camera.query.all()),
+                                                ("Function", table_function.query.all())
+                                              ] %}
+                                              {% for name, devices in form_choices_raw %}
+                                                {% if name in each_option['options_select'] %}
+                                                  {% for each_dev in devices %}
+                                                    <option value="{{each_dev.unique_id}}" {% if each_dev.unique_id|string == opt_val|string %}selected{% endif %}>{{each_dev.name}}</option>
+                                                  {% endfor %}
+                                                {% endif %}
+                                              {% endfor %}
+
+                                        {% elif each_option['type'] == 'select_channel' %}
+                                             {% if 'Output_Channels' in each_option['options_select'] %}
+                                                {% for each_output_form in choices_output_channels %}
+                                                    <option value="{{each_output_form['value']}}" {% if each_output_form['value']|string == opt_val|string %}selected{% endif %}>{{each_output_form['item']}}</option>
+                                                {% endfor %}
+                                             {% endif %}
+
+                                        {% elif each_option['type'] == 'select_measurement' %}
+                                             {% set form_choices_meas = [
+                                               ("Input", choices_input),
+                                               ("Function", choices_function),
+                                               ("Output", choices_output),
+                                               ("Output_Channels_Measurements", choices_output_channels_measurements),
+                                               ("PID", choices_pid)
+                                             ] %}
+                                             {% for meas_name, meas_choices in form_choices_meas %}
+                                               {% if meas_name in each_option['options_select'] %}
+                                                 {% for each_choice in meas_choices %}
+                                                   <option value="{{each_choice['value']}}" {% if each_choice['value']|string == opt_val|string %}selected{% endif %}>{{each_choice['item']}}</option>
+                                                 {% endfor %}
+                                               {% endif %}
+                                             {% endfor %}
+                                        {% endif %}
+                                    </select>
+                                 </div>
+
+                            {% elif each_option['type'] in ['text', 'float', 'integer'] %}
+                                 {% if wrap_options %}
+                                 <div style="margin-right: 8px; margin-bottom: 6px; flex: 0 0 auto;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                                        <label class="mb-0" style="font-size: 0.78rem; color: var(--aot-text-secondary); white-space: nowrap;">{{each_option['name']}}</label>
+                                        {% if each_option.get('phrase') %}
+                                        <span style="margin-left: 3px; cursor: pointer; color: var(--aot-text-secondary);"
+                                              data-toggle="tooltip" data-placement="top" title="{{each_option['phrase']}}">
+                                            <i class="fa fa-info-circle" style="font-size: 0.75rem;"></i>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <input class="form-control form-control-sm" name="{{opt_id}}"
+                                           type="{% if each_option['type'] == 'text' %}text{% else %}number{% endif %}"
+                                           {% if each_option['type'] == 'float' %}step="any"{% endif %}
+                                           value="{{ opt_val if opt_val is not none else '' }}"
+                                           style="max-width: 100px; height: 28px; font-size: 0.85rem; border-radius: 14px;">
+                                 </div>
+                                 {% else %}
+                                 <div style="margin-right: 5px; margin-bottom: 5px; flex: 0 0 auto;">
+                                    <input class="form-control form-control-sm" name="{{opt_id}}" placeholder="{{each_option['name']}}" title="{{each_option['name']}}"
+                                           type="{% if each_option['type'] == 'text' %}text{% else %}number{% endif %}"
+                                           {% if each_option['type'] == 'float' %}step="any"{% endif %}
+                                           value="{{ opt_val if opt_val is not none else '' }}" style="max-width: 80px; height: 28px; font-size: 0.85rem; border-radius: 14px;">
+                                 </div>
+                                 {% endif %}
+
+                            {% elif each_option['type'] == 'bool' %}
+                                 <div style="margin-right: 5px; margin-bottom: 5px; flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--border-neutral); border-radius: 14px; padding: 0 5px; height: 28px;">
+                                     <label class="mb-0 mr-1" style="font-size: 0.85rem;">{{each_option['name']}}</label>
+                                     <input name="{{opt_id}}" type="checkbox" value="y" {% if opt_val %}checked{% endif %}>
+                                 </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    </div>
+                 {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div style="border: 1px solid var(--border-neutral); border-radius: 16px; padding: 6px 8px; background-color: var(--bd-primary);">
+      <!-- Row 1: Drag, Name, Delete, Save -->
+      <div class="d-flex align-items-center flex-nowrap">
+        <!-- Drag Handle -->
+        <div class="text-center icon-fh my-auto" style="cursor: move; padding-right: 8px; flex: 0 0 auto;">
+            <i style="font-size: 1.2em; color: var(--aot-text-secondary);" class="fa fa-grip-lines" title="{{_('Drag')}}"></i>
+        </div>
+
+        <!-- Action Name -->
+        <div style="flex: 1 1 auto; margin-right: 5px; min-width: 0;">
+             <div class="form-control form-control-sm text-truncate" title="{{dict_options['name']}}" style="background-color: var(--bg-btn-active-light); cursor: default; border: 1px solid var(--border-neutral); border-radius: 14px; height: 28px; padding: 2px 8px; line-height: 22px; max-width: 240px;">
+                 <strong style="font-size: 0.85rem;">{{dict_options["name"]}}</strong>
+             </div>
+        </div>
+
+        <!-- Delete Button -->
+        <div style="flex: 0 0 auto; margin-right: 5px;">
+            <button data-form-id="form_action_{{unique_id}}" onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'delete_action');" name="delete_action" class="btn aot-pill-btn" type="button">
+                {{_('Delete')}}
+            </button>
+        </div>
+
+        <!-- Save Button -->
+        <div style="flex: 0 0 auto;">
+            <button data-form-id="form_action_{{unique_id}}" onclick="return $(this).processRequest(this, 'save_action');" name="save_action" class="btn aot-pill-btn aot-pill-btn-primary" type="button">
+                {{_('Save')}}
+            </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Options (wrap) -->
+      {% if 'custom_options' in dict_options and unique_id in custom_options_values %}
+      <div style="margin-top: 6px;">
+        <div style="flex: 1 1 auto; min-width: 0;">
+             {% if true %}
+                <div style="display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px;">
+                {% for each_option in dict_options['custom_options'] %}
+                    {% set opt_id = each_option['id'] %}
+                    {% set opt_val = action_options.get(opt_id) %}
+                    {% if opt_val is none and 'default_value' in each_option %}
+                        {% set opt_val = each_option['default_value'] %}
+                    {% endif %}
+
+                    {% if each_option['type'] in ['select', 'select_device', 'select_channel', 'select_measurement'] %}
+                         <div style="margin-right: 5px; flex: 0 0 auto;">
+                            <select class="form-control form-control-sm" name="{{opt_id}}" title="{{each_option['name']}}" style="max-width: 210px; height: 28px; padding: 0 5px; font-size: 0.85rem; border-radius: 14px;">
+                                <option value="" disabled {% if not opt_val %}selected{% endif %}>{{each_option['name']}}</option>
+                                
+                                {% if each_option['type'] == 'select' %}
+                                    {% for each_set in each_option['options_select'] %}
+                                        <option value="{{each_set[0]}}" {% if each_set[0]|string == opt_val|string %}selected{% endif %}>{{each_set[1]}}</option>
+                                    {% endfor %}
+                                    
+                                {% elif each_option['type'] == 'select_device' %}
+                                      {% set form_choices_raw = [
+                                        ("Input", table_input.query.all()),
+                                        ("Output", table_output.query.all()),
+                                        ("PID", table_pid.query.all()),
+                                        ("Trigger", table_trigger.query.all()),
+                                        ("Camera", table_camera.query.all()),
+                                        ("Function", table_function.query.all())
+                                      ] %}
+                                      {% for name, devices in form_choices_raw %}
+                                        {% if name in each_option['options_select'] %}
+                                          {% for each_dev in devices %}
+                                            <option value="{{each_dev.unique_id}}" {% if each_dev.unique_id|string == opt_val|string %}selected{% endif %}>{{each_dev.name}}</option>
+                                          {% endfor %}
+                                        {% endif %}
+                                      {% endfor %}
+
+                                {% elif each_option['type'] == 'select_channel' %}
+                                     {% if 'Output_Channels' in each_option['options_select'] %}
+                                        {% for each_output_form in choices_output_channels %}
+                                            <option value="{{each_output_form['value']}}" {% if each_output_form['value']|string == opt_val|string %}selected{% endif %}>{{each_output_form['item']}}</option>
+                                        {% endfor %}
+                                     {% endif %}
+
+                                {% elif each_option['type'] == 'select_measurement' %}
+                                     {% set form_choices_meas = [
+                                       ("Input", choices_input),
+                                       ("Function", choices_function),
+                                       ("Output", choices_output),
+                                       ("Output_Channels_Measurements", choices_output_channels_measurements),
+                                       ("PID", choices_pid)
+                                     ] %}
+                                     {% for meas_name, meas_choices in form_choices_meas %}
+                                       {% if meas_name in each_option['options_select'] %}
+                                         {% for each_choice in meas_choices %}
+                                           <option value="{{each_choice['value']}}" {% if each_choice['value']|string == opt_val|string %}selected{% endif %}>{{each_choice['item']}}</option>
+                                         {% endfor %}
+                                       {% endif %}
+                                     {% endfor %}
+                                {% endif %}
+                            </select>
+                         </div>
+
+                    {% elif each_option['type'] in ['text', 'float', 'integer'] %}
+                         <div style="margin-right: 5px; flex: 0 0 auto;">
+                            <input class="form-control form-control-sm" name="{{opt_id}}" placeholder="{{each_option['name']}}" title="{{each_option['name']}}"
+                                   type="{% if each_option['type'] == 'text' %}text{% else %}number{% endif %}"
+                                   {% if each_option['type'] == 'float' %}step="any"{% endif %}
+                                   value="{{ opt_val if opt_val is not none else '' }}" style="max-width: 80px; height: 28px; font-size: 0.85rem; border-radius: 14px;">
+                         </div>
+
+                    {% elif each_option['type'] == 'bool' %}
+                         <div style="margin-right: 5px; flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--border-neutral); border-radius: 14px; padding: 0 5px; height: 28px;">
+                             <label class="mb-0 mr-1" style="font-size: 0.85rem;">{{each_option['name']}}</label>
+                             <input name="{{opt_id}}" type="checkbox" value="y" {% if opt_val %}checked{% endif %}>
+                         </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+             {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Tier 2 (Optional) -->
+    {{ caller() if caller is defined }}
+
+  </form>
+  </div>
+</div>
+{% endmacro %}

@@ -1,0 +1,28 @@
+/* AoT Confidence Badge Component */
+.cb-wrapper { margin-top: 6px; }
+.cb-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+.cb-badge:hover { opacity: 0.85; }
+.cb-high { background: #d3f9d8; color: var(--aot-color-success, #2b8a3e); }
+.cb-medium { background: #fff3bf; color: var(--aot-color-warning, #e67700); }
+.cb-low { background: #ffe3e3; color: var(--aot-color-danger, #c92a2a); }
+.cb-detail {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+.cb-reasoning { margin: 0 0 6px; }
+.cb-sources { padding-left: 16px; margin: 6px 0; }
+.cb-sources li { margin-bottom: 2px; }
+.cb-improve { color: var(--aot-color-info, #1971c2); font-style: italic; margin: 4px 0 0; }

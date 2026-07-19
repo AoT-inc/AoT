@@ -1,0 +1,12 @@
+/*
+ * FontAwesome 5.11.2 webfont 호환 보정 (SVG-JS → webfont 전환용)
+ * 구 FA4 문법 `<i class="fa fa-...">` 는 FA5 webfont 에서 font-weight 가
+ * 지정되지 않아 솔리드 글리프가 깨진다. SVG-JS 빌드에서는 bare `.fa` 가
+ * 솔리드로 렌더됐으므로 동일 동작을 위해 솔리드(900)로 강제한다.
+ * `.fas/.far/.fab` 가 함께 붙은 경우는 각자의 weight 규칙이 적용되도록 제외.
+ */
+i.fa:not(.fas):not(.far):not(.fab):not(.fal):not(.fad),
+.fa:not(.fas):not(.far):not(.fab):not(.fal):not(.fad) {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}

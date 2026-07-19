@@ -1,0 +1,101 @@
+<form method="post" action="/function" id="form_pid_{{each_function.unique_id}}">
+  {{form_mod_pid_base.csrf_token}}
+  {{form_mod_pid_base.function_id(value=each_function.unique_id)}}
+  {{form_mod_pid_base.function_type(class_='form-control', value='pid')}}
+
+  <div id="function_status_{{each_function.unique_id}}" class="grid-stack-item-content {% if each_function.is_activated and not each_function.is_paused -%}active-background
+              {% elif each_function.is_activated and each_function.is_paused -%}pause-background
+              {% elif each_function.is_held -%}hold-background
+              {% else -%}inactive-background
+              {% endif %} row small-gutters aot-entry-item aot-pid-entry">
+
+    <!-- Row 1: standard entry (name / uuid / activate-deactivate / settings) -->
+    <div class="aot-pid-row-1">
+      <div class="aot-entry-drag-handle">
+        <i class="fa fa-grip-lines"></i>
+      </div>
+      <div class="aot-entry-content-item aot-col-name">
+        {{form_mod_pid_base.name(class_='form-control aot-entry-name-input', disabled=True,
+        id='function_name_' + each_function.unique_id,
+        value=each_function.name)}}
+      </div>
+      <div class="aot-entry-content-item aot-col-uuid">
+        <input id="pid_activity_indicator_{{each_function.unique_id}}" class="form-control btn aot-entry-uuid-btn aot-pill-btn"
+          type="button" onclick="setClipboard('{{each_function.unique_id}}')"
+          title="UUID: {{each_function.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="PID Controller
+        {%- if each_function.is_activated and not each_function.is_paused %} [{{_('Active')}}]
+        {%- elif each_function.is_activated and each_function.is_paused %} [{{_('Paused')}}]
+        {%- elif each_function.is_held %} [{{_('On Hold')}}]
+        {%- else %} [{{_('Inactive')}}]
+        {%-endif -%}
+        ">
+      </div>
+      <div class="aot-entry-actions aot-col-action">
+        <div id="pid_deactivate_{{each_function.unique_id}}" style="{% if not each_function.is_activated %}display: none;{% endif %}">
+          <input onclick="return $(this).processRequest(this, 'function_deactivate');" name="function_deactivate"
+            value="{{_('Deactivate')}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+        </div>
+        <div id="pid_activate_{{each_function.unique_id}}" style="{% if each_function.is_activated %}display: none;{% endif %}">
+          <input onclick="return $(this).processRequest(this, 'function_activate');" name="function_activate"
+            value="{{_('Activate')}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+        </div>
+      </div>
+      <div class="aot-entry-settings">
+        <a class="btn p-0" data-toggle="modal"
+          data-target="#modal_config_{{each_function.unique_id}}">
+          <i class="fas fa-cog"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Row 2: PID secondary controls (Pause / Hold / Resume) -->
+    <div class="aot-pid-row-2">
+      <div class="aot-pid-drag-spacer"></div>
+      <div class="aot-pid-content-spacer"></div>
+      <div class="aot-entry-actions aot-col-action aot-pid-secondary-actions">
+        <div id="pid_resume_{{each_function.unique_id}}" style="{% if not each_function.is_paused and not each_function.is_held %}display: none;{% endif %}">
+          <input onclick="return $(this).processRequest(this, 'pid_resume');" name="pid_resume" value="{{_('Resume')}}"
+            class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+        </div>
+        <div id="pid_pause_{{each_function.unique_id}}" style="{% if not each_function.is_activated or each_function.is_paused %}display: none;{% endif %}">
+          <input onclick="return $(this).processRequest(this, 'pid_pause');" name="pid_pause" value="{{_('Pause')}}"
+            class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+        </div>
+        <div id="pid_hold_{{each_function.unique_id}}" style="{% if not each_function.is_activated or each_function.is_held %}display: none;{% endif %}">
+          <input onclick="return $(this).processRequest(this, 'pid_hold');" name="pid_hold" value="{{_('Hold')}}"
+            class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button" />
+        </div>
+      </div>
+      <div class="aot-pid-gear-spacer"></div>
+    </div>
+
+  </div> <!-- grid-stack-item-content -->
+</form>
+
+<div class="modal fade aot-option-modal" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog"
+  aria-labelledby="ModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{_('PID Settings')}}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        {% include 'pages/function_options/pid_options.html' %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="function_delete"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="function_duplicate"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'function_mod');"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
+      </div>
+    </div>
+  </div>
+</div>

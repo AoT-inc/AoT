@@ -1,0 +1,39 @@
+<div id="mod_widget_{{each_widget.unique_id}}">
+
+    <div class="row small-gutters" style="padding: 0.5em">
+      {% if 'message' in dict_widgets[each_widget.graph_type] %}
+      <div class="col-12" style="padding-top: 0.3em; padding-bottom: 1em">
+        {{dict_widgets[each_widget.graph_type]['message']|safe}}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+      {% include 'pages/dashboard_options/TEMPLATE_OPTIONS_WIDGET_MOD.html' %}
+
+      {% set dict_options = dict_widgets[each_widget.graph_type] %}
+      {% set unique_id = each_widget.unique_id %}
+      {% set custom_options_values = custom_options_values_widgets %}
+
+      {% if custom_options_values[unique_id] %}
+
+        {% if 'custom_options_message' in dict_options %}
+          {% include 'pages/form_options/Custom_Options_Message.html' %}
+        {% endif %}
+
+        {% if 'custom_options' in dict_options %}
+          {% for each_option in dict_options['custom_options'] %}
+            {% include 'pages/form_options/Custom_Options.html' %}
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+    </div>
+
+      {% if each_widget.graph_type in list_html_files_configure_options %}
+      <!-- Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_configure_options template for {{each_widget.unique_id}} begin -->
+      {% include 'user_templates/{}'.format(list_html_files_configure_options[each_widget.graph_type]) %}
+      <!-- Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_configure_options template for {{each_widget.unique_id}} end -->
+      {% endif %}
+
+</div>

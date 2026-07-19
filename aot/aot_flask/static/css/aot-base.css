@@ -1,0 +1,596 @@
+/*
+ * AoT Base CSS
+ */
+
+/* Nav-bar brand status.
+   The brand logo is branding-only (driven by settings/custom_ui brand_display)
+   and its position/size must NEVER change. Daemon/app health is therefore shown
+   ONLY by tinting the brand-link background — background-color changes never
+   affect layout, size, or the logo's position (no padding/border/box changes).
+   ok → no class (transparent), daemon down → red tint, app down → gray tint. */
+.aot-brand-text {
+  font-weight: 600;
+  color: var(--aot-color-text-primary, #13261B);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+/* Status-tint box hugs the logo symmetrically and stays centered on it.
+   The theme puts `margin-left:15px` on .navbar-brand img and the anchor had an
+   inline `margin-left:-8px`; that 15px sat INSIDE the box on the logo's left,
+   making the tint asymmetric. We neutralize the img margin and use symmetric
+   padding, so the box is centered on the logo. The logo's on-screen position is
+   preserved: it was at navbar-padding(19) + anchor(-8) + img(15) = 26px; now it
+   is navbar-padding(19) + anchor(0) + padding-left(7) + img(0) = 26px. */
+#brand-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 7px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+#brand-link > img,
+#brand-link > .aot-brand-text {
+  margin-left: 0 !important;
+}
+/* Cap the brand-image height so a large brand_image_height (default 55px) can't
+   overflow the compact navbar. Smaller configured heights are still honored;
+   width stays auto to preserve aspect ratio. */
+#brand-link > img {
+  max-height: 32px;
+  width: auto;
+}
+#brand-link.aot-brand-daemon-down { background-color: rgba(223, 83, 83, 0.22); }
+#brand-link.aot-brand-app-down { background-color: rgba(135, 134, 134, 0.28); }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.dropdown-upgrade {
+  color: var(--aot-upgrade-dropdown-text);
+  background-color: var(--aot-upgrade-dropdown-bg);
+}
+
+.dropdown-item-upgrade {
+  display: block;
+  width: 100%;
+  padding: 0.25rem 1.5rem;
+  clear: both;
+  font-weight: 400;
+  color: var(--aot-upgrade-dropdown-text);
+  text-align: inherit;
+  white-space: nowrap;
+  background-color: var(--aot-upgrade-dropdown-bg);
+  border: 0;
+}
+
+.checkbox-big {
+  width: 1.5em;
+  height: 1.5em
+}
+
+.icon-fw {
+  width: 1.28571429em;
+  text-align: center
+}
+
+.icon-fh {
+  font-size: 0.9em;
+}
+
+.row.small-gutters>[class^="col-"],
+.row.small-gutters>[class*=" col-"] {
+  padding-right: 0.1em;
+  padding-left: 0.1em;
+}
+
+.form-row.small-gutters>[class^="col-"],
+.form-row.small-gutters>[class*=" col-"] {
+  padding-right: 0.1em;
+  padding-left: 0.1em;
+}
+
+.small-gutters {
+  padding: 0 0.2em
+}
+
+.row.no-gutters>[class^="col-"],
+.row.no-gutters>[class*=" col-"] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.form-row.no-gutters>[class^="col-"],
+.formrow.no-gutters>[class*=" col-"] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.no-gutters {
+  padding: 0 0;
+}
+
+
+
+.checkbox-nopad {
+  padding-top: 0 !important;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.widget-heading {
+  flex: 0 1 auto;
+  padding: 0.5em 0;
+}
+
+.widget-drag-handle {
+  position: absolute;
+  left: 0.75em;
+  top: 0.75em;
+  opacity: 0.4;
+}
+
+.widget-title {
+  width: 100%;
+  margin: 0 1.5em;
+  text-align: center;
+}
+
+.widget-settings {
+  position: absolute;
+  right: 0.75em;
+  top: 0.75em;
+}
+
+.widget-settings a {
+  padding: 0;
+  opacity: 0.4;
+  outline: 0;
+  border: 0;
+}
+
+.widget-settings a:hover,
+.widget-settings a:active {
+  opacity: 1.0;
+}
+
+.widget-graph-controls {
+  position: absolute;
+  right: 3em;
+  top: 0.5em;
+  text-align: right;
+}
+
+.widget-map-controls {
+  position: absolute;
+  right: 3em;
+  top: 0.75em;
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+}
+
+.widget-map-controls .widget-map-ctrl-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  opacity: 0.4;
+  cursor: pointer;
+  line-height: 1;
+  outline: 0;
+}
+
+.widget-map-controls .widget-map-ctrl-btn:hover,
+.widget-map-controls .widget-map-ctrl-btn:active {
+  opacity: 1;
+}
+
+.widget-graph-controls a.menu {
+  border-color: rgba(0, 0, 0, 0.0);
+  opacity: 0.4;
+  outline: 0;
+}
+
+.widget-graph-controls a.menu:hover,
+.widget-graph-controls a.menu:active {
+  border-color: rgba(0, 0, 0, 0.0);
+  opacity: 1.0;
+  outline: 0;
+}
+
+.widget-graph-responsive-controls {
+  display: none;
+}
+
+.widget-graph-responsive-controls a {
+  background-image: -webkit-gradient(linear, left top, left bottom, from(#78cc78), color-stop(60%, #62c462), to(#53be53));
+  background-color: linear-gradient(#78cc78, #62c462 60%, #53be53);
+  background-repeat: no-repeat;
+  color: var(--aot-btn-color-primary) !important;
+}
+
+.widget-graph-responsive-controls.responsive {
+  display: inline-block;
+  padding: 0 0.5em;
+  text-align: right;
+}
+
+@media screen and (max-width: 768px) {
+  .widget-graph-title.responsive {
+    padding-left: 0.5rem;
+    text-align: left;
+  }
+}
+
+.widget-indicator-body {
+  text-align: center;
+}
+
+.widget-indicator-body img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-right: -50%;
+  transform: translate(-50%, -50%);
+  max-width: 60%;
+  max-height: 60%;
+}
+
+/* Option Modal 레이아웃(.aot-option-modal) 공통 스타일은
+   aot-modal-modern.css SECTION 13 으로 일원화됨.
+   여기 있던 `body .modal.aot-option-modal[.modal-content]` 중복 규칙은
+   specificity(0,3,1)가 높아 Section 13(0,2,0)을 이겨 모바일 전체화면
+   (position:absolute; inset:0)을 깨뜨리므로 제거함.
+   데스크탑 max-height: calc(100vh - 100px) 도 Section 13 에 동일하게 정의되어 있음. */
+
+/* =========================================================================
+   NOTE MANAGER REVAMP CSS (Task: Admin UI Overhaul)
+   ========================================================================= */
+
+/* 1. Masonry Grid Layout */
+.notes-masonry-grid {
+  column-count: 1;
+  /* Mobile default */
+  column-gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .container, .container-md, .container-sm, .container-lg, .container-xl {
+    max-width: 1200px !important;
+  }
+  .notes-masonry-grid {
+    column-count: 2;
+    /* Tablet */
+  }
+}
+
+@media (min-width: 992px) {
+  .container, .container-md, .container-sm, .container-lg, .container-xl {
+    max-width: 1200px !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container, .container-md, .container-sm, .container-lg, .container-xl {
+    max-width: 1200px !important;
+  }
+  .notes-masonry-grid {
+    column-count: 3;
+    /* Desktop */
+  }
+}
+
+@media (min-width: 1600px) {
+  .notes-masonry-grid {
+    column-count: 4;
+    /* Large Desktop */
+  }
+}
+
+/* 2. Note Card Design */
+.note-card {
+  break-inside: avoid;
+  /* Prevent card splitting across columns */
+  background: var(--aot-note-card-bg);
+  border: 1px solid var(--aot-note-card-border);
+  border-radius: 12px;
+  box-shadow: var(--aot-note-card-shadow);
+  margin-bottom: 1.5rem;
+  /* Gap between vertical items */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--aot-note-card-hover-shadow);
+  border-color: var(--aot-note-card-border);
+}
+
+.note-card-header {
+  padding: 1.25rem 1.25rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.note-card-body {
+  padding: 0.5rem 1.25rem 1.25rem;
+  color: var(--aot-note-card-body-text);
+  line-height: 1.6;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+  /* Preserve line breaks */
+  position: relative;
+}
+
+
+
+
+.expand-toggle-btn {
+  text-decoration: none !important;
+  font-size: 0.85rem;
+  color: var(--aot-expand-toggle) !important;
+  transition: color 0.2s;
+}
+
+.expand-toggle-btn:hover {
+  color: var(--aot-expand-toggle-hover) !important;
+}
+
+.note-card-body.expanded {
+  max-height: none;
+}
+
+.note-card-footer {
+  padding: 0.75rem 1.25rem;
+  background: var(--aot-note-footer-bg);
+  border-top: 1px solid var(--aot-note-card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--aot-note-footer-text);
+}
+
+/* 3. Chip UI for Tags */
+.note-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--aot-note-tag-bg);
+  color: var(--aot-note-tag-text);
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  transition: background 0.2s;
+  text-decoration: none !important;
+}
+
+.note-tag-chip:hover {
+  background: var(--aot-note-tag-hover-bg);
+  color: var(--aot-note-tag-text);
+}
+
+/* 4. Search Bar & Controls */
+.note-search-bar {
+  background: var(--aot-note-search-bg);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--aot-note-search-border);
+  margin-bottom: 2rem;
+}
+
+.note-search-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--aot-border-form);
+  border-radius: 12px;
+  /* Smooth rounded */
+  background: var(--aot-note-search-bg);
+  padding: 4px 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.note-search-input-group:focus-within {
+  border-color: var(--aot-note-search-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.note-search-icon {
+  color: var(--aot-note-footer-text);
+  margin-right: 8px;
+}
+
+.note-search-input {
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 8px 0;
+  color: var(--aot-color-text-secondary);
+  background: transparent;
+}
+
+/* 5. Quick Fab */
+.note-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--aot-note-fab-bg);
+  color: var(--text-color-tertiary, white);
+  box-shadow: 0 4px 15px rgba(19, 38, 27, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: var(--aot-z-fixed-panel);
+  transition: transform 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.note-fab:hover {
+  background: var(--aot-note-fab-bg);
+  transform: scale(1.1);
+  color: var(--text-color-tertiary, white);
+}
+
+/* 6. User Request: Pills & Avatar & Select Fix (Cleaned & Consolidated) */
+.ui-pill {
+  height: 32px !important;
+  border-radius: 16px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: normal !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1em !important;
+}
+
+/* For Selectpicker Button that gets generated */
+.bootstrap-select.ui-pill>.dropdown-toggle {
+  height: 32px !important;
+  border-radius: 16px !important;
+  padding: 0 12px !important;
+  align-items: center;
+}
+
+/* Selectpicker Text Overflow Fix */
+.bootstrap-select.ui-pill .filter-option {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.bootstrap-select.ui-pill .filter-option-inner-inner {
+  display: block !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  width: 100% !important;
+}
+
+/* Filter inputs (search box) */
+.note-search-input-group.ui-pill {
+  padding: 0 12px;
+}
+
+.note-search-input {
+  font-size: 1em !important;
+}
+
+/* Avatar Circle (32px) */
+.note-avatar-circle {
+  width: 32px !important;
+  height: 32px !important;
+  /* Prevent Oval Shape */
+  min-width: 32px !important;
+  min-height: 32px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  font-size: 1em !important;
+}
+
+/* 7. Additional UI Enhancements */
+.btn-white {
+  background-color: var(--aot-surface-card);
+  color: var(--aot-color-text-secondary);
+  border-color: var(--aot-border-form);
+}
+
+.btn-white:hover {
+  background-color: var(--aot-note-footer-bg);
+  color: var(--aot-color-text-primary);
+}
+
+#clearFilterBtn {
+  transition: all 0.2s;
+}
+
+#clearFilterBtn:hover {
+  background-color: #fee2e2 !important;
+  /* Light red background on hover */
+  color: var(--aot-color-danger) !important;
+  /* Red text/icon */
+}
+
+/* Custom Selectpicker dropdown style */
+.bootstrap-select .dropdown-menu {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--aot-border-form);
+}
+
+.bootstrap-select .dropdown-item {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.bootstrap-select .dropdown-item.active,
+.bootstrap-select .dropdown-item:active {
+  background-color: var(--aot-note-footer-bg);
+  color: var(--aot-color-text-primary);
+}
+
+/* Action Group Styling */
+.aot-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.aot-action-group .bootstrap-select {
+  flex: 1;
+  width: auto !important;
+}
+
+/* Force hide native select to prevent click interception */
+.aot-action-group select.selectpicker {
+  display: none !important;
+}
+
+.aot-action-group .btn {
+  white-space: nowrap;
+  position: relative;
+  z-index: 10;
+  /* Ensure button is clickable */
+}
+
+/* Theme State Backgrounds */
+.nav .upgrade_available {
+    background: var(--bg-upgrade);
+}
+
+.active-background {
+    background-color: var(--bg-active) !important;
+}
+
+.inactive-background {
+    background-color: var(--bg-inactive) !important;
+}
+
+.pause-background {
+    background-color: var(--bg-pause) !important;
+}
+
+.hold-background {
+    background-color: var(--bg-hold) !important;
+}

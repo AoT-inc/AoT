@@ -1,0 +1,163 @@
+{% if each_output.output_type == 'output_spacer' %}
+{% include 'pages/output_spacer.html' %}
+{% else %}
+
+<form method="post" action="/output">
+  {{form_mod_output.csrf_token}}
+  {{form_mod_output.output_id(class_='form-control', value=each_output.unique_id)}}
+  {{form_mod_output.output_pin(class_='form-control', value=each_output.pin)}}
+
+  {% set form = form_mod_output %}
+  {% set dict_options = dict_outputs[each_output.output_type] %}
+  {% set each_device = each_output %}
+  {% set unique_id = each_output.unique_id %}
+  {% set custom_options_values = custom_options_values_outputs %}
+
+  <div class="grid-stack-item-content">
+
+    <div class="row small-gutters aot-entry-item-header">
+      <div class="aot-entry-drag-handle">
+        <i class="fa fa-grip-lines"></i>
+      </div>
+
+      <div class="aot-entry-content-item aot-output-col-4">
+        <div id="output_name_{{each_output.unique_id}}" class="form-control aot-entry-name-input" title="{{each_output.name}}">{{each_output.name}}</div>
+      </div>
+      <div class="aot-entry-content-item aot-output-col-6">
+        <input class="form-control aot-entry-uuid-btn aot-pill-btn aot-output-uuid-btn" type="button"
+          onclick="setClipboard('{{each_output.unique_id}}')"
+          title="UUID: {{each_output.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}"
+          value="{% if each_output.interface %}[{{each_output.interface}}] {% endif %}{{dict_outputs[each_output.output_type]['output_name']}}{% if dict_outputs[each_output.output_type]['output_library'] %} ({{dict_outputs[each_output.output_type]['output_library']}}){% endif %}">
+      </div>
+      <div class="aot-entry-settings">
+        <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_output.unique_id}}">
+          <i class="fas fa-cog"></i>
+        </a>
+      </div>
+    </div>
+
+    {% for each_output_channel in custom_options_values_output_channels[each_output.unique_id]|sort %}
+    {%- set ch_static = dict_outputs[each_output.output_type]['channels_dict'].get(each_output_channel) or dict_outputs[each_output.output_type]['channels_dict'].get(0) or {} %}
+    {% set _is_paired = each_output.output_type == 'actuator_paired' %}
+    {% set _paired_opts = custom_options_values_output_channels[each_output.unique_id][each_output_channel] if _is_paired else {} %}
+    {%- set _ns = namespace(open_oid='', open_ch=0, close_oid='', close_ch=0) -%}
+    {%- if _is_paired -%}
+      {%- set _open_ref = _paired_opts.get('output_open_id', '') -%}
+      {%- set _close_ref = _paired_opts.get('output_close_id', '') -%}
+      {# select_channel parses into {'device_id': ..., 'channel_id': ...}.
+         Older configs may still be a plain output_id string. #}
+      {%- if _open_ref is mapping -%}
+        {%- set _ns.open_oid = _open_ref.get('device_id') or '' -%}
+        {%- set _ouid = _open_ref.get('channel_id') or '' -%}
+        {%- if _ouid and output_channels_by_uid is defined and _ouid in output_channels_by_uid -%}
+          {%- set _ns.open_ch = output_channels_by_uid[_ouid] -%}
+        {%- endif -%}
+      {%- elif _open_ref -%}
+        {%- if ',' in _open_ref -%}
+          {%- set _p = _open_ref.split(',') -%}
+          {%- set _ns.open_oid = _p[0] -%}
+          {%- if output_channels_by_uid is defined and _p[1] in output_channels_by_uid -%}
+            {%- set _ns.open_ch = output_channels_by_uid[_p[1]] -%}
+          {%- endif -%}
+        {%- else -%}
+          {%- set _ns.open_oid = _open_ref -%}
+        {%- endif -%}
+      {%- endif -%}
+      {%- if _close_ref is mapping -%}
+        {%- set _ns.close_oid = _close_ref.get('device_id') or '' -%}
+        {%- set _cuid = _close_ref.get('channel_id') or '' -%}
+        {%- if _cuid and output_channels_by_uid is defined and _cuid in output_channels_by_uid -%}
+          {%- set _ns.close_ch = output_channels_by_uid[_cuid] -%}
+        {%- endif -%}
+      {%- elif _close_ref -%}
+        {%- if ',' in _close_ref -%}
+          {%- set _p = _close_ref.split(',') -%}
+          {%- set _ns.close_oid = _p[0] -%}
+          {%- if output_channels_by_uid is defined and _p[1] in output_channels_by_uid -%}
+            {%- set _ns.close_ch = output_channels_by_uid[_p[1]] -%}
+          {%- endif -%}
+        {%- else -%}
+          {%- set _ns.close_oid = _close_ref -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endif -%}
+    <div class="item_channel row small-gutters aot-entry-item-channel {% if _is_paired %}aot-paired-row{% endif %} {% if output_states and output_states[each_output_channel|string] == 'on' %}active-background{% else %}inactive-background{% endif %}"
+      id="{{each_output.unique_id}}-{{each_output_channel}}-output-state"
+      {% if _is_paired %}data-paired="1" data-open-id="{{_ns.open_oid}}" data-open-ch="{{_ns.open_ch}}" data-close-id="{{_ns.close_oid}}" data-close-ch="{{_ns.close_ch}}"{% endif %}>
+      <div class="aot-entry-content-item aot-output-col-4 aot-ch-col-left">
+        <div class="form-control aot-entry-name-input">CH{{each_output_channel}}
+      {%- if 'name' in custom_options_values_output_channels[each_output.unique_id][each_output_channel] and
+             custom_options_values_output_channels[each_output.unique_id][each_output_channel]['name'] -%}
+        {{': ' + custom_options_values_output_channels[each_output.unique_id][each_output_channel]['name']}}
+      {%- elif 'name' in ch_static and ch_static['name'] -%}
+        {{': ' + ch_static['name']}}
+      {%- endif -%}
+      {%- if _is_paired %}
+        <span class="aot-paired-pos" id="{{each_output.unique_id}}-{{each_output_channel}}-paired-pos">
+          {{ ' ' ~ (_paired_opts.get('last_position_pct', 0)|round(0)|int) ~ '%' }}
+        </span>
+      {%- endif %}
+        </div>
+      </div>
+      <div class="aot-entry-actions aot-output-col-6 aot-entry-button-group aot-ch-col-right">
+        {% if each_output.output_type == 'actuator_paired' %}
+        <input onclick="return $(this).actuator_paired_cmd('close', '{{each_output.unique_id}}', '{{each_output_channel}}');"
+          class="form-control btn aot-btn-on aot-paired-btn"
+          id="{{each_output.unique_id}}-{{each_output_channel}}-paired-close-btn"
+          type="button" value="{{_('Close')}}">
+        <input onclick="return $(this).actuator_paired_cmd('stop', '{{each_output.unique_id}}', '{{each_output_channel}}');"
+          class="form-control btn aot-btn-off aot-paired-btn"
+          type="button" value="{{_('Stop')}}">
+        <input onclick="return $(this).actuator_paired_cmd('open', '{{each_output.unique_id}}', '{{each_output_channel}}');"
+          class="form-control btn aot-btn-on aot-paired-btn"
+          id="{{each_output.unique_id}}-{{each_output_channel}}-paired-open-btn"
+          type="button" value="{{_('Open')}}">
+        {% else %}
+        {% if 'button_on' in dict_options['options_enabled'] -%}
+        <input onclick="return $(this).turn_on(this, '{{each_output.unique_id}}', '{{each_output_channel}}');"
+          class="form-control btn aot-btn-on aot-pill-btn"
+          name="{{each_output.unique_id}}/{{each_output_channel}}/on/sec/0" type="button" value="On">
+        {%- endif %}
+        <input onclick="return $(this).turn_off(this, '{{each_output.unique_id}}', '{{each_output_channel}}');"
+          class="form-control btn aot-btn-off aot-pill-btn"
+          name="{{each_output.unique_id}}/{{each_output_channel}}/off/sec/0" type="button" value="Off">
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+  </div> <!-- grid-stack-item-content -->
+
+</form>
+
+<div class="modal fade aot-option-modal" id="modal_config_{{each_output.unique_id}}" tabindex="-1" role="dialog"
+  aria-labelledby="ModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{_('Output Settings')}}{% if each_output.output_type in dict_outputs %}:
+          {{dict_outputs[each_output.output_type]['output_name']}}{% endif %}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        {% include 'pages/output_options.html' %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button data-form-id="mod_output_form_{{each_output.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="output_delete"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+        <button data-form-id="mod_output_form_{{each_output.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="output_duplicate"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+        <button data-form-id="mod_output_form_{{each_output.unique_id}}" id="mod_output_save_{{each_output.unique_id}}"
+          onclick="return $(this).processRequest(this, 'output_mod');"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}

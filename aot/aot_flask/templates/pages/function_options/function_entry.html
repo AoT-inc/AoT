@@ -1,0 +1,80 @@
+<form method="post" action="/function">
+  {{form_trigger.csrf_token}}
+  {{form_trigger.function_id(class_='form-control', value=each_function.unique_id)}}
+  {% if each_function.function_type == 'function_actions' %}
+  {{form_trigger.function_type(class_='form-control', value='function_actions')}}
+  {% elif each_function.function_type == 'function_spacer' %}
+  {{form_trigger.function_type(class_='form-control', value='function_spacer')}}
+  {% endif %}
+
+  <div id="function_status_{{each_function.unique_id}}" class="grid-stack-item-content {% if each_function.is_activated and not each_function.is_paused -%}active-background
+    {% elif each_function.is_activated and each_function.is_paused -%}pause-background
+    {% elif each_function.is_held -%}hold-background
+    {% else -%}inactive-background
+    {% endif %} row small-gutters aot-entry-item">
+    <div class="aot-entry-drag-handle">
+      <i class="fa fa-grip-lines"></i>
+    </div>
+    {% if each_function.function_type == 'function_actions' %}
+    <div class="aot-entry-content-item aot-col-name">
+      <div id="function_name_{{each_function.unique_id}}" class="form-control aot-entry-name-input" title="{{each_function.name}}">{{each_function.name}}</div>
+    </div>
+    <div class="aot-entry-content-item aot-col-uuid">
+      <input class="form-control btn aot-entry-uuid-btn aot-pill-btn" type="button"
+        onclick="setClipboard('{{each_function.unique_id}}')"
+        title="UUID: {{each_function.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="
+        {%- for each_function_type in function_types if each_function.trigger_type == each_function_type[0] -%}{{each_function_type[1]}}{%- endfor -%}
+        {%- if each_function.is_activated %} [{{_('Active')}}]
+        {%- else %} [{{_('Inactive')}}]
+        {%-endif -%}
+      ">
+    </div>
+    <div class="aot-entry-actions aot-col-action">
+      <input {% if each_function.is_activated -%}style="display: none" {% endif %}
+        onclick="return $(this).processRequest(this, 'function_activate');" name="function_activate"
+        id="function_activate_{{each_function.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+        value="{{_('Activate')}}" />
+      <input {% if not each_function.is_activated -%}style="display: none" {% endif %}
+        onclick="return $(this).processRequest(this, 'function_deactivate');" name="function_deactivate"
+        id="function_deactivate_{{each_function.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+        value="{{_('Deactivate')}}" />
+    </div>
+    <div class="aot-entry-settings">
+      <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_function.unique_id}}">
+        <i class="fas fa-cog"></i>
+      </a>
+    </div>
+    {% endif %}
+
+  </div> <!-- grid-stack-item-content -->
+</form>
+
+<div class="modal fade aot-option-modal" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog"
+  aria-labelledby="ModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{_('Function Configuration')}}{% if each_function.function_type in dict_controllers %}:
+          {{dict_controllers[each_function.function_type]['function_name']}}{% endif %}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        {% include 'pages/function_options/function_options.html' %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="function_delete"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}"
+          data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="function_duplicate"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+        <button data-form-id="form_function_{{each_function.unique_id}}" id="mod_function_save_{{each_function.unique_id}}"
+          onclick="return $(this).processRequest(this, 'function_mod');"
+          class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
+      </div>
+    </div>
+  </div>
+</div>

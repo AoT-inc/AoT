@@ -1,0 +1,326 @@
+<form id="form_camera_options_{{each_camera.unique_id}}" method="post" action="/camera" style="overscroll-behavior: contain;">
+  {{form_mod_camera.csrf_token}}
+  <input type="hidden" name="camera_id" value="{{each_camera.unique_id}}">
+  <input type="hidden" name="camera_mod" value="1">
+
+  <!-- Camera preview -->
+  <div class="aot-camera-preview-section">
+    <div class="aot-modal-container">
+      <div class="aot-camera-preview-wrapper">
+        <div class="aot-camera-preview-media" id="preview_media_{{each_camera.unique_id}}">
+          <img id="preview_img_{{each_camera.unique_id}}"
+               style="display: none;"
+               alt="Camera Preview">
+          <div class="aot-camera-no-image" id="preview_placeholder_{{each_camera.unique_id}}">
+            {% if not each_camera.is_activated %}
+              {{_('Activate the camera to use preview')}}
+            {% else %}
+              {{_('No preview available')}}
+            {% endif %}
+          </div>
+        </div>
+        <div class="aot-camera-preview-info">
+          <div class="preview-info-item">
+            <span class="preview-info-label">{{_('Mode')}}</span>
+            <span>{{ each_camera.capture_mode or 'snapshot' }}</span>
+          </div>
+          <div class="preview-info-item">
+            <span class="preview-info-label">{{_('Resolution')}}</span>
+            <span>{{ each_camera.width or '-' }} x {{ each_camera.height or '-' }}</span>
+          </div>
+          <div class="preview-info-item">
+            <span class="preview-info-label">{{_('Last Capture')}}</span>
+            <span id="last_capture_time_{{each_camera.unique_id}}">-</span>
+          </div>
+          <div class="aot-camera-preview-toggle">
+            {% set cam_library = dict_cameras.get(each_camera.camera_type, {}).get('backend', '') %}
+            {% set stream_ok = cam_library in ('opencv', 'picamera', 'onvif') or each_camera.camera_type in ('stream_url', 'ip_camera') %}
+            <button type="button"
+                    class="btn {% if stream_ok and each_camera.is_activated %}active{% endif %}"
+                    {% if not stream_ok or not each_camera.is_activated %}disabled{% endif %}
+                    {% if not stream_ok %}title="{{_('Streaming not supported for this camera type')}}"{% endif %}
+                    {% if not each_camera.is_activated %}title="{{_('Activate the camera first')}}"{% endif %}
+                    onclick="setCameraPreviewMode('{{each_camera.unique_id}}', 'live', this)">
+              Live
+            </button>
+            <button type="button"
+                    class="btn {% if not stream_ok or not each_camera.is_activated %}active{% endif %}"
+                    {% if not each_camera.is_activated %}disabled{% endif %}
+                    onclick="setCameraPreviewMode('{{each_camera.unique_id}}', 'image', this)">
+              Image
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Capture control buttons -->
+    <div class="aot-modal-container">
+      {% set mode = each_camera.capture_mode or 'snapshot' %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Start Capture')}}</label>
+        <div class="aot-modal-option-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60"
+                  id="btn_capture_start_{{each_camera.unique_id}}"
+                  {% if not each_camera.is_activated %}disabled{% endif %}
+                  onclick="cameraCaptureStart('{{each_camera.unique_id}}', '{{mode}}')">
+            {% if mode == 'snapshot' %}{{_('Capture')}}{% elif mode == 'timelapse' %}{{_('Start')}}{% elif mode == 'video' %}{{_('Record')}}{% elif mode == 'stream' %}{{_('Stream')}}{% endif %}
+          </button>
+        </div>
+      </div>
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Stop Capture')}}</label>
+        <div class="aot-modal-option-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60"
+                  id="btn_capture_stop_{{each_camera.unique_id}}"
+                  {% if not each_camera.is_activated %}disabled{% endif %}
+                  onclick="cameraCaptureStop('{{each_camera.unique_id}}', '{{mode}}')">
+            {{_('Stop')}}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+  <div class="aot-modal-container">
+    <!-- Camera name -->
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Name')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.name(class_='form-control aot-modern-input', value=each_camera.name, **{'title': _('Name')})}}
+      </div>
+    </div>
+
+    <!-- Camera type (read-only) -->
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Camera Type')}}</label>
+      <div class="aot-modal-option-control">
+        <input class="form-control aot-modern-input" 
+          type="text" 
+          disabled 
+          value="{{dict_cameras.get(each_camera.camera_type, {}).get('camera_name', each_camera.camera_type)}}">
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-camera settings options -->
+  <div class="aot-modal-group-title">{{_('Camera Configuration')}}</div>
+  <div class="aot-modal-container">
+    <!-- USB camera settings -->
+    {% if each_camera.camera_type == 'usb' %}
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Device ID')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.device_id(class_='form-control aot-modern-input', value=each_camera.opencv_device)}}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- IP camera / streaming URL settings -->
+    {% if each_camera.camera_type in ('ip', 'ip_camera', 'stream_url') %}
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">
+        {% if each_camera.camera_type == 'stream_url' %}{{_('Stream URL')}}{% else %}{{_('Stream URL (RTSP)')}}{% endif %}
+      </label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.ip_address(class_='form-control aot-modern-input',
+          value=each_camera.url_stream,
+          **{'placeholder': 'rtsp://192.168.x.x:554/stream  or  http://...', 'title': _('RTSP or HTTP stream URL')})}}
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Username')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.username(class_='form-control aot-modern-input',
+          value=each_camera.auth_username,
+          **{'placeholder': _('Leave empty if no authentication required'), 'autocomplete': 'off'})}}
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Password')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.password(class_='form-control aot-modern-input',
+          **{'type': 'password', 'value': each_camera.auth_password,
+             'placeholder': _('Leave empty if no authentication required'), 'autocomplete': 'new-password'})}}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Common setting: resolution width -->
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Resolution Width')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.width(class_='form-control aot-modern-input', value=each_camera.width, placeholder='Width')}}
+      </div>
+    </div>
+
+    <!-- Common setting: resolution height -->
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Resolution Height')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.height(class_='form-control aot-modern-input', value=each_camera.height, placeholder='Height')}}
+      </div>
+    </div>
+
+    <!-- Common setting: FPS -->
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('FPS')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.fps(class_='form-control aot-modern-input', value=each_camera.stream_fps)}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Capture mode settings -->
+  <div class="aot-modal-group-title">{{_('Capture Mode Settings')}}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Primary Mode')}}</label>
+      <div class="aot-modal-option-control">
+        <select name="capture_mode" 
+                class="selectpicker aot-standard-select" 
+                data-style="btn btn-primary aot-roundbox"
+                onchange="toggleCaptureModeSettings('{{each_camera.unique_id}}', this.value)">
+          <option value="snapshot" {% if each_camera.capture_mode == 'snapshot' %}selected{% endif %}>{{_('Photo (Snapshot)')}}</option>
+          <option value="timelapse" {% if each_camera.capture_mode == 'timelapse' %}selected{% endif %}>{{_('Timelapse')}}</option>
+          <option value="video" {% if each_camera.capture_mode == 'video' %}selected{% endif %}>{{_('Video Recording')}}</option>
+          <option value="stream" {% if each_camera.capture_mode == 'stream' %}selected{% endif %}>{{_('Live Stream')}}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Per-mode detail settings section -->
+    <div id="settings_snapshot_{{each_camera.unique_id}}" class="mode-settings-sec" style="display: {% if each_camera.capture_mode == 'snapshot' %}block{% else %}none{% endif %};">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('JPEG Quality')}}</label>
+        <div class="aot-modal-option-control">
+          <input type="range" class="custom-range" min="1" max="100" value="95">
+        </div>
+      </div>
+    </div>
+
+    <div id="settings_timelapse_{{each_camera.unique_id}}" class="mode-settings-sec" style="display: {% if each_camera.capture_mode == 'timelapse' %}block{% else %}none{% endif %};">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Interval (sec)')}}</label>
+        <div class="aot-modal-option-control">
+          <input type="number" class="form-control aot-modern-input" value="60">
+        </div>
+      </div>
+    </div>
+
+    <div id="settings_video_{{each_camera.unique_id}}" class="mode-settings-sec" style="display: {% if each_camera.capture_mode == 'video' %}block{% else %}none{% endif %};">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Max Duration (sec)')}}</label>
+        <div class="aot-modal-option-control">
+          <input type="number" class="form-control aot-modern-input" value="10">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleCaptureModeSettings(cid, mode) {
+      const modal = $('#form_camera_options_' + cid);
+      modal.find('.mode-settings-sec').hide();
+      modal.find('#settings_' + mode + '_' + cid).fadeIn();
+    }
+  </script>
+
+  <!-- Save path -->
+  <div class="aot-modal-group-title">{{_('Save Paths')}}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Photo Save Path')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.path_still(class_='form-control aot-modern-input', value=each_camera.path_still,
+          **{'placeholder': _('Leave empty for default path'), 'title': _('Path to save image files. Leave empty to use default location.')})}}
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Timelapse Save Path')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.path_timelapse(class_='form-control aot-modern-input', value=each_camera.path_timelapse,
+          **{'placeholder': _('Leave empty for default path'), 'title': _('Path to save timelapse image files. Leave empty to use default location.')})}}
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Video Save Path')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.path_video(class_='form-control aot-modern-input', value=each_camera.path_video,
+          **{'placeholder': _('Leave empty for default path'), 'title': _('Path to save video files. Leave empty to use default location.')})}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Display options -->
+  <div class="aot-modal-group-title">{{_('Display Options')}}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Output Format')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.output_format(class_='form-control aot-modern-input', value=each_camera.output_format)}}
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Hide Recent Photos')}}</label>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" name="hide_still" class="btn-toggle-input" value="y" {% if each_camera.hide_still %}checked{% endif %}>
+          <div class="btn-toggle-slider">
+            <div class="btn-toggle-thumb"></div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Hide Recent Timelapses')}}</label>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" name="hide_timelapse" class="btn-toggle-input" value="y" {% if each_camera.hide_timelapse %}checked{% endif %}>
+          <div class="btn-toggle-slider">
+            <div class="btn-toggle-thumb"></div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Show Preview')}}</label>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" name="show_preview" class="btn-toggle-input" value="y" {% if each_camera.show_preview %}checked{% endif %}>
+          <div class="btn-toggle-slider">
+            <div class="btn-toggle-thumb"></div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pre/post capture commands -->
+  <div class="aot-modal-group-title">{{_('Commands')}}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('Before Action')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.cmd_pre_camera(class_='form-control aot-modern-input', value=each_camera.cmd_pre_camera, **{'title': _('Command to execute before taking action')})}}
+      </div>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{_('After Action')}}</label>
+      <div class="aot-modal-option-control">
+        {{form_mod_camera.cmd_post_camera(class_='form-control aot-modern-input', value=each_camera.cmd_post_camera, **{'title': _('Command to execute after taking action')})}}
+      </div>
+    </div>
+  </div>
+</form>
+
+

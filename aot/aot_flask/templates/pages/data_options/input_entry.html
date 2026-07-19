@@ -1,0 +1,77 @@
+{% if each_input.device == 'input_spacer' %}
+{% include 'pages/data_options/input_spacer.html' %}
+{% else %}
+
+<form id="form_input_{{each_input.unique_id}}" method="post" action="/input">
+  {{form_mod_input.csrf_token}}
+  <input type="hidden" name="input_id" value="{{each_input.unique_id}}">
+
+  {% set form = form_mod_input %}
+  {% set dict_options = dict_inputs[each_input.device] %}
+  {% set each_device = each_input %}
+  {% set unique_id = each_input.unique_id %}
+  {% set custom_options_values = custom_options_values_inputs %}
+
+  <div id="input_status_{{each_input.unique_id}}"
+    class="grid-stack-item-content {% if each_input.is_activated -%}active-background{% else -%}inactive-background{% endif %} row small-gutters aot-entry-item">
+      <div class="aot-entry-drag-handle">
+        <i class="fa fa-grip-lines"></i>
+      </div>
+
+    <div class="aot-entry-content-item aot-col-name">
+      <div id="input_name_{{each_input.unique_id}}" class="form-control aot-entry-name-input" title="{{each_input.name}}">{{each_input.name}}</div>
+    </div>
+    <div class="aot-entry-content-item aot-col-uuid">
+      <input class="form-control btn aot-entry-uuid-btn aot-pill-btn" type="button"
+        onclick="setClipboard('{{each_input.unique_id}}')" title="UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}"
+        value="{{ dict_inputs.get(each_input.device, {}).get('input_name', each_input.device) }}">
+    </div>
+    <div class="aot-entry-actions aot-col-action">
+      <input {% if each_input.is_activated -%}style="display: none" {% endif %}
+        onclick="return $(this).processRequest(this, 'input_activate');" name="input_activate"
+        id="input_activate_{{each_input.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+        value="{{_('Activate')}}" />
+      <input {% if not each_input.is_activated -%}style="display: none" {% endif %}
+        onclick="return $(this).processRequest(this, 'input_deactivate');" name="input_deactivate"
+        id="input_deactivate_{{each_input.unique_id}}" class="form-control btn aot-pill-btn aot-pill-btn-primary" type="button"
+        value="{{_('Deactivate')}}" />
+    </div>
+    <div class="aot-entry-settings">
+      <a class="btn p-0" data-toggle="modal" data-target="#modal_config_{{each_input.unique_id}}">
+        <i class="fas fa-cog"></i>
+      </a>
+    </div>
+  </div> <!-- grid-stack-item-content -->
+</form>
+
+  <div class="modal fade aot-option-modal" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Input Settings')}}{% if each_input.device in dict_inputs %}:
+            {{dict_inputs[each_input.device]['input_name']}}{% endif %}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          {% include 'pages/data_options/input_options.html' %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+          <button data-form-id="mod_input_form_{{each_input.unique_id}}"
+            data-aot-confirm="{{_('Are you sure you want to delete?')}}" data-aot-action="input_delete"
+            class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Delete')}}</button>
+          <button data-form-id="mod_input_form_{{each_input.unique_id}}"
+            data-aot-confirm="{{_('Are you sure you want to duplicate?')}}" data-aot-action="input_duplicate"
+            class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Duplicate')}}</button>
+          <button data-form-id="mod_input_form_{{each_input.unique_id}}" id="mod_input_save_{{each_input.unique_id}}" onclick="return $(this).processRequest(this, 'input_mod');"
+            class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Save')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+{% endif %}

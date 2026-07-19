@@ -1,0 +1,10 @@
+<div class="aot-modal-body-text mb-2">
+  <strong>[{{_('Condition')}}] {{_('GPIO State')}}</strong>: <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong>
+  {{_('Returns True if GPIO pin is HIGH, False if LOW. Do not use this to check On/Off GPIO output state. (Using this changes GPIO pin from OUTPUT to INPUT, stopping it from working as output.) Use "Output State Condition" to check output state.')}}
+</div>
+<div class="aot-modal-option-row">
+  {{form_conditional_conditions.gpio_pin.label(class_='aot-modal-option-label mb-0', title=_("Select GPIO Pin"))}}
+  <div class="aot-modal-option-control">
+    {{form_conditional_conditions.gpio_pin(class_='form-control aot-modern-input', value=each_condition.gpio_pin, **{'title': _('Set the GPIO pin to get status from')})}}
+  </div>
+</div>

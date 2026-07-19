@@ -1,0 +1,92 @@
+<div class="grid-stack-item-content aot-card {{ 'active-background' if mcp.is_activated else 'inactive-background' }}" id="mcp_status_{{ mcp.unique_id }}">
+  <div class="panel-heading">
+    <div class="row align-items-center small-gutters">
+      <div class="col">
+        <h5 class="mb-0">{{ mcp.name }}</h5>
+        <small class="text-muted">{{ mcp.scope | capitalize }} | {{ mcp.command[:50] }}{{ '...' if mcp.command|length > 50 }}</small>
+      </div>
+      <div class="col-auto">
+        <div class="btn-group">
+          <!-- Activation Toggle -->
+          <button class="btn btn-xs aot-pill-btn" id="mcp_activate_{{ mcp.unique_id }}"
+                  onclick="mcpAction('mcp_activate', '{{ mcp.unique_id }}')"
+                  style="{{ 'display:none' if mcp.is_activated }}">
+            {{ _('Activate') }}
+          </button>
+          <button class="btn btn-xs aot-pill-btn" id="mcp_deactivate_{{ mcp.unique_id }}"
+                  onclick="mcpAction('mcp_deactivate', '{{ mcp.unique_id }}')"
+                  style="{{ 'display:none' if not mcp.is_activated }}">
+            {{ _('Deactivate') }}
+          </button>
+
+          <!-- Edit Button -->
+          <button class="btn btn-xs aot-pill-btn" data-toggle="modal" data-target="#modal_mcp_mod_{{ mcp.unique_id }}">
+            {{ _('Edit') }}
+          </button>
+          
+          <!-- Delete Button (Post form) -->
+          <form action="{{ url_for('routes_ai_agent.ai_mcp_delete', mcp_id=mcp.unique_id) }}" method="post" style="display: inline;" onsubmit="return confirm('{{ _('Are you sure?') }}');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn btn-sm btn-link text-danger">{{ _('Delete') }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MCP Edit Modal -->
+<div class="modal fade aot-option-modal" id="modal_mcp_mod_{{ mcp.unique_id }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <form action="{{ url_for('routes_ai_agent.ai_mcp_mod', mcp_id=mcp.unique_id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _('Modify MCP Server') }}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label">{{ _('Server Name') }}</label>
+              <div class="aot-modal-option-control">
+                <input type="text" name="name" class="form-control aot-modern-input" value="{{ mcp.name }}" required>
+              </div>
+            </div>
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label">{{ _('Execution Command') }}</label>
+              <div class="aot-modal-option-control">
+                <input type="text" name="command" class="form-control aot-modern-input" value="{{ mcp.command }}" required>
+              </div>
+            </div>
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label">{{ _('Scope') }}</label>
+              <div class="aot-modal-option-control">
+                <select name="scope" class="form-control aot-modern-select">
+                  <option value="general" {{ 'selected' if mcp.scope == 'general' }}>{{ _('General (Always in Manifest)') }}</option>
+                  <option value="specific" {{ 'selected' if mcp.scope == 'specific' }}>{{ _('Specific (Lazy-loaded)') }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="aot-modal-option-row">
+              <label class="aot-modal-option-label">{{ _('Purpose') }}</label>
+              <div class="aot-modal-option-control">
+                <input type="text" name="custom_purpose" class="form-control aot-modern-input" value="{{ mcp.custom_options.get('purpose', '') }}">
+              </div>
+            </div>
+          </div>
+          <div class="aot-modal-group-title">{{ _('Environment Variables (JSON)') }}</div>
+          <div class="aot-modal-container">
+            <textarea name="env_json" class="form-control aot-modern-input" rows="3">{{ mcp.env_json }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
+          <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Update') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

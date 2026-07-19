@@ -1,0 +1,172 @@
+# -*- coding: utf-8 -*-
+from sqlalchemy.dialects.mysql import LONGTEXT
+
+from aot.databases import CRUDMixin
+from aot.databases import set_uuid
+from aot.aot_flask.extensions import db
+from aot.aot_flask.extensions import ma
+
+
+class Input(CRUDMixin, db.Model):
+    """
+    Represents a sensor or data input device on a Tab.
+
+    Inputs gather measurements from physical sensors (temperature, humidity, CO2, etc.)
+    or software sources. They support a wide range of communication interfaces
+    (GPIO, I2C, SPI, UART, Bluetooth, HTTP) and can be AI-enabled for
+    automated analysis.
+
+    @phase active
+    """
+    __tablename__ = "input"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, unique=True, primary_key=True)
+    unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
+    tab_id = db.Column(db.String(36), db.ForeignKey('tab.unique_id', ondelete='CASCADE'), nullable=True, index=True)
+    device = db.Column(db.Text, default='')  # Device name, such as DHT11, DHT22, DS18B20
+    is_activated = db.Column(db.Boolean, default=False)
+
+    name = db.Column(db.Text, default='Input Name')
+    position_y = db.Column(db.Integer, default=0)
+    log_level_debug = db.Column(db.Boolean, default=False)
+    auto_vpd_enabled = db.Column(db.Boolean, default=False)  # 이 입력의 온습도로 VPD 채널 자동 기록
+    is_preset = db.Column(db.Boolean, default=False)  # Is config saved as a preset?
+    preset_name = db.Column(db.Text, default=None)  # Name for preset
+    interface = db.Column(db.Text, default=None)  # Communication interface (I2C, UART, etc.)
+    period = db.Column(db.Float, default=15.0)  # Duration between readings
+    start_offset = db.Column(db.Float, default=0.0)
+    power_output_id = db.Column(db.String(36), default=None)
+    resolution = db.Column(db.Integer, default=0)
+    resolution_2 = db.Column(db.Integer, default=0)
+    sensitivity = db.Column(db.Integer, default=0)
+    thermocouple_type = db.Column(db.Text, default=None)
+    ref_ohm = db.Column(db.Integer, default=None)
+    calibrate_sensor_measure = db.Column(db.Text, default=None)  # sensor ID and measurement (CSV)
+
+    # Geo location for mapping (optional)
+    latitude = db.Column(db.Float, default=None)
+    longitude = db.Column(db.Float, default=None)
+    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
+    location_source = db.Column(db.Text, default='manual')  # manual/device/remote
+    location_updated_utc = db.Column(db.DateTime, default=None)
+    marker_icon = db.Column(db.Text, default=None)  # e.g., valve/motor/temp...
+    marker_color = db.Column(db.Text, default=None)  # hex or named color
+    marker_size = db.Column(db.Integer, default=3)  # 1~5 preset
+
+    location = db.Column(db.Text, default='')  # GPIO pin or i2c address to communicate with sensor
+    gpio_location = db.Column(db.Integer, default=0)  # Pin location for GPIO communication
+
+    map_config_id = db.Column(db.String(36), default=None)
+    map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
+
+    # I2C
+    i2c_location = db.Column(db.Text, default=None)  # Address location for I2C communication
+    i2c_bus = db.Column(db.Integer, default=1)  # I2C bus the sensor is connected to
+
+    # FTDI
+    ftdi_location = db.Column(db.Text, default=None)  # Device location for FTDI communication
+
+    # Communication (SPI)
+    uart_location = db.Column(db.Text, default=None)  # Device location for UART communication
+    baud_rate = db.Column(db.Integer, default=None)  # Baud rate for UART communication
+    pin_clock = db.Column(db.Integer, default=None)
+    pin_cs = db.Column(db.Integer, default=None)
+    pin_mosi = db.Column(db.Integer, default=None)
+    pin_miso = db.Column(db.Integer, default=None)
+
+    # Communication (Bluetooth)
+    bt_adapter = db.Column(db.Text, default='hci0')
+
+    # Switch options
+    switch_edge = db.Column(db.Text, default='rising')
+    switch_bouncetime = db.Column(db.Integer, default=50)
+    switch_reset_period = db.Column(db.Integer, default=10)
+
+    # Pre-measurement output options
+    pre_output_id = db.Column(db.String(36), default=None)  # Output to turn on before sensor read
+    pre_output_duration = db.Column(db.Float, default=10.0)  # Duration to turn output on before sensor read
+    pre_output_during_measure = db.Column(db.Boolean, default=True)
+
+    # SHT sensor options
+    sht_voltage = db.Column(db.Text, default='3.5')
+
+    # Analog to digital converter options
+    adc_gain = db.Column(db.Integer, default=1)
+    adc_resolution = db.Column(db.Integer, default=18)
+    adc_sample_speed = db.Column(db.Text, default='')
+
+    # Command options
+    cmd_command = db.Column(db.Text, default=None)
+
+    # PWM and RPM options
+    weighting = db.Column(db.Float, default=0.0)
+    rpm_pulses_per_rev = db.Column(db.Float, default=1.0)
+    sample_time = db.Column(db.Float, default=2.0)
+
+    # Server options
+    port = db.Column(db.Integer, default=80)
+    times_check = db.Column(db.Integer, default=1)
+    deadline = db.Column(db.Integer, default=2)
+
+    # The Things Network: Data Storage
+    datetime = db.Column(db.DateTime, default=None)
+
+    custom_options = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
+
+    # AI integration (TASK_36)
+    is_ai_enabled = db.Column(db.Boolean, default=False)
+
+    def is_active(self):
+        """
+        :return: Whether the sensor is currently activated
+        :rtype: bool
+        """
+        return self.is_activated
+
+    def __repr__(self):
+        return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)
+
+
+class InputSchema(ma.SQLAlchemyAutoSchema):
+    """
+    Marshmallow schema for serializing and deserializing Input instances.
+
+    @phase active
+    """
+    class Meta:
+        model = Input
+
+
+class InputChannel(CRUDMixin, db.Model):
+    """
+    Represents a named channel on a multi-channel Input device.
+
+    Multi-channel sensors expose multiple measurement streams through a single
+    physical interface. Each channel has its own name and custom options JSON.
+
+    @phase active
+    """
+    __tablename__ = "input_channel"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, unique=True, primary_key=True)
+    unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
+    input_id = db.Column(db.String(36), default=None)
+    channel = db.Column(db.Integer, default=None)
+    name = db.Column(db.Text, default='')
+
+    custom_options = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
+
+    def __repr__(self):
+        return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)
+
+
+class InputChannelSchema(ma.SQLAlchemyAutoSchema):
+    """
+    Marshmallow schema for serializing and deserializing InputChannel instances.
+
+    @phase active
+    """
+    class Meta:
+        model = InputChannel

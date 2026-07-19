@@ -1,0 +1,35 @@
+{
+  "name": "aot-geo",
+  "version": "3.1.0",
+  "description": "AoT Geo Design JavaScript Bundle (Leaflet + MapLibre)",
+  "main": "dist/aot-geo.bundle.js",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "build:prod": "NODE_ENV=production rollup -c",
+    "clean": "rm -rf dist",
+    "maplibre:core": "echo 'MapLibre core module available at src/core/maplibre-core.js'"
+  },
+  "keywords": [
+    "aot",
+    "geo",
+    "leaflet",
+    "map",
+    "maplibre",
+    "gis",
+    "vector-tiles"
+  ],
+  "author": "AoT Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.9.6"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.1",
+    "maplibre-gl": "^5.23.0",
+    "terra-draw": "^1.28.8"
+  }
+}

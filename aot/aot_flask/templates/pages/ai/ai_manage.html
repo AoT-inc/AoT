@@ -1,0 +1,470 @@
+{% extends "layout.html" %}
+{% set active_page = "ai_manage" %}
+{% set help_page = [manual_url("ai/overview/#agents"), _('AI Manager')] %}
+
+{% block title %} - {{ _('AI Manager') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+<style>
+    /* === AI Manager page styles — scoped, no bleed === */
+
+    /* Tab styling — scoped to #aiManageTabs only */
+    #aiManageTabs {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    #aiManageTabs .nav-link {
+        border: none;
+        color: var(--aot-color-text-secondary, #6c757d);
+        font-weight: 500;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0;
+        border-bottom: 2px solid transparent;
+        transition: color 0.15s;
+    }
+    #aiManageTabs .nav-link.active {
+        color: var(--aot-color-info, #0d6efd);
+        background: transparent;
+        border-bottom: 2px solid #0d6efd;
+    }
+
+    /* Section layout */
+    .ai-section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--aot-color-text-primary, #212529);
+    }
+    .ai-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .status-card {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        margin-bottom: 1rem;
+    }
+
+    /* Error dashboard cards */
+    .pattern-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        height: 100%;
+        border-left: 4px solid #fcc419;
+    }
+    .pattern-card h6 {
+        margin-top: 0;
+        color: var(--aot-color-text-secondary, #555);
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Severity / status / type badges */
+    .badge-severity-critical { background-color: #dc3545; color: var(--text-color-tertiary, white); }
+    .badge-severity-high     { background-color: #fd7e14; color: var(--text-color-tertiary, white); }
+    .badge-severity-medium   { background-color: #ffc107; color: var(--aot-color-text-primary, #333); }
+    .badge-severity-low      { background-color: #17a2b8; color: var(--text-color-tertiary, white); }
+    .badge-status-pending    { background-color: #ffc107; color: var(--aot-color-text-primary, #333); }
+    .badge-status-resolved   { background-color: #28a745; color: var(--text-color-tertiary, white); }
+    .badge-status-ignored    { background-color: #6c757d; color: var(--text-color-tertiary, white); }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+<main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <div class="aot-settings-title">
+        <h3>{{ _('AI Manager') }}</h3>
+    </div>
+
+    <!-- Interface Tabs -->
+    <ul class="nav nav-tabs" id="aiManageTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'manage' %}active{% endif %}" id="manage-tab" data-toggle="tab" href="#manage" role="tab">{{ _('Conversation Management') }}</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'errors' %}active{% endif %}" id="errors-tab" data-toggle="tab" href="#errors" role="tab">{{ _('Error Dashboard') }}</a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="aiManageTabsContent">
+        <!-- Tab 1: Conversation Management -->
+        <div class="tab-pane fade {% if active_tab == 'manage' %}show active{% endif %}" id="manage" role="tabpanel">
+
+            <!-- Reasoning History Section -->
+            <div class="ai-section-header mt-3">
+                <span class="ai-section-title">{{ _('Reasoning History') }}</span>
+            </div>
+
+            {% if history %}
+            <div class="status-card p-0 overflow-hidden">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <colgroup>
+                        <col style="width: 20%">
+                        <col style="width: 60%">
+                        <col style="width: 20%">
+                    </colgroup>
+                    <thead class="thead-light">
+                        <tr>
+                            <th>{{ _('Date') }}</th>
+                            <th>{{ _('Content') }}</th>
+                            <th class="text-right">{{ _('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in history %}
+                        <tr>
+                            <td>{{ entry.timestamp.strftime('%m/%d %H:%M') }}</td>
+                            <td>{{ entry.insight or entry.goal or '-' }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary aot-pill-btn" data-toggle="modal" data-target="#modal_history_{{ entry.unique_id }}">
+                                    {{ _('Details') }}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+              </div>
+            </div>{# /.status-card #}
+            {% else %}
+            <div class="inactive-background text-center py-5" style="border-radius: 24px;">
+                <p class="text-muted mb-0">{{ _('No reasoning history yet.') }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab 2: Error Dashboard -->
+        <div class="tab-pane fade {% if active_tab == 'errors' %}show active{% endif %}" id="errors" role="tabpanel">
+            <div class="ai-section-header mt-4">
+                <span class="ai-section-title">
+                    <i class="fa fa-exclamation-triangle text-warning mr-1"></i>
+                    {{ _('AI Error Dashboard') }}
+                </span>
+                <div>
+                    <button class="btn aot-pill-btn btn-outline-secondary btn-sm mr-2"
+                            onclick="loadPatterns()">
+                        <i class="fa fa-sync"></i> {{ _('Refresh Patterns') }}
+                    </button>
+                    <button class="btn aot-pill-btn btn-primary btn-sm"
+                            onclick="loadErrors()">
+                        <i class="fa fa-sync"></i> {{ _('Refresh List') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Patterns Section -->
+            <div class="row mb-4" id="patterns-container">
+                <div class="col-12 text-center py-3 text-muted" id="patterns-loading">
+                    <i class="fa fa-spinner fa-spin"></i> {{ _('Analyzing error patterns...') }}
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="status-card mb-4">
+                <form id="filterForm" class="row align-items-end" onsubmit="event.preventDefault(); loadErrors();">
+                    <div class="col-md-3">
+                        <label class="aot-modal-option-label mb-1">{{ _('Status') }}</label>
+                        <select class="form-control aot-modern-input form-control-sm" name="status" id="filterStatus">
+                            <option value="">{{ _('All') }}</option>
+                            <option value="pending" selected>{{ _('Pending') }}</option>
+                            <option value="resolved">{{ _('Resolved') }}</option>
+                            <option value="ignored">{{ _('Ignored') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="aot-modal-option-label mb-1">{{ _('Severity') }}</label>
+                        <select class="form-control aot-modern-input form-control-sm" name="severity" id="filterSeverity">
+                            <option value="">{{ _('All') }}</option>
+                            <option value="critical">{{ _('Critical') }}</option>
+                            <option value="high">{{ _('High') }}</option>
+                            <option value="medium">{{ _('Medium') }}</option>
+                            <option value="low">{{ _('Low') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="aot-modal-option-label mb-1">{{ _('Type') }}</label>
+                        <select class="form-control aot-modern-input form-control-sm" name="error_type" id="filterType">
+                            <option value="">{{ _('All') }}</option>
+                            <option value="misinformation">{{ _('Misinformation') }}</option>
+                            <option value="hallucination">{{ _('Hallucination') }}</option>
+                            <option value="inappropriate_action">{{ _('Inappropriate Action') }}</option>
+                            <option value="tool_misuse">{{ _('Tool Misuse') }}</option>
+                            <option value="other">{{ _('Other') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-right">
+                        <button type="submit" class="btn btn-sm btn-secondary aot-pill-btn"><i class="fa fa-filter"></i> {{ _('Filter') }}</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Error Table Section -->
+            <div class="status-card p-0 overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>{{ _('Date') }}</th>
+                                <th>{{ _('Type') }}</th>
+                                <th>{{ _('Severity') }}</th>
+                                <th class="d-none d-md-table-cell">{{ _('User Correction') }}</th>
+                                <th>{{ _('Status') }}</th>
+                                <th class="text-right">{{ _('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="errors-tbody">
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="fa fa-spinner fa-spin"></i> {{ _('Loading...') }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>{# /.status-card #}
+        </div>
+    </div>
+</main>
+</div>
+
+<!-- Modals & Scripts -->
+
+{% for entry in history %}
+<div class="modal fade aot-option-modal" id="modal_history_{{ entry.unique_id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Reasoning Details') }} — {{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</h5>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap mb-3">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
+                </div>
+                <div class="aot-modal-container">
+                    <!-- Phase 1: Request -->
+                    <div class="card mb-3 border-light shadow-sm">
+                        <div class="card-header bg-light py-2"><strong>{{ _('Phase 1: User Request') }}</strong></div>
+                        <div class="card-body py-2">
+                            <p class="mb-0 text-muted">{{ entry.goal }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2: AI Ops -->
+                    <div class="card mb-3 border-light shadow-sm">
+                        <div class="card-header bg-light py-2"><strong>{{ _('Phase 2: Intent & Planning') }}</strong></div>
+                        <div class="card-body py-2">
+                            {% set p2 = (entry.metadata_json | from_json_safe).get('phase2', 'N/A') %}
+                            {% if p2 is mapping %}
+                                <div class="mb-2">
+                                    <small class="text-primary font-weight-bold">{{ p2.get('model', p2.get('agent', _('AI Agent'))) }}</small>
+                                    <p class="mb-0">{{ p2.get('thought', p2.get('action', '...')) }}</p>
+                                </div>
+                            {% elif p2 is iterable and p2 is not string %}
+                                {% for op in p2 %}
+                                    <div class="mb-2 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+                                        <small class="text-primary font-weight-bold">
+                                            {{ op.get('agent', op.get('model', _('AI Agent'))) if op is mapping else _('AI Agent') }}
+                                        </small>
+                                        <p class="mb-0">{{ op.get('thought', op.get('action', op)) if op is mapping else op }}</p>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="mb-0">{{ p2 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Phase 3: MCP Ops -->
+                    <div class="card mb-3 border-light shadow-sm">
+                        <div class="card-header bg-light py-2"><strong>{{ _('Phase 3: Tool Execution (MCP)') }}</strong></div>
+                        <div class="card-body py-2">
+                            {% set p3 = (entry.metadata_json | from_json_safe).get('phase3', 'N/A') %}
+                            {% if p3 is iterable and p3 is not string %}
+                                {% for log in p3 %}
+                                    <div class="mb-2 pb-1 {% if not loop.last %}border-bottom{% endif %}">
+                                        <pre class="mb-0 small" style="white-space: pre-wrap;">{{ log }}</pre>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <pre class="mb-0 small" style="white-space: pre-wrap;">{{ p3 }}</pre>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Phase 4: Coordination -->
+                    <div class="card mb-3 border-light shadow-sm">
+                        <div class="card-header bg-light py-2"><strong>{{ _('Phase 4: Synthesis & Coordination') }}</strong></div>
+                        <div class="card-body py-2">
+                            {% set p4 = (entry.metadata_json | from_json_safe).get('phase4', 'N/A') %}
+                            {% if p4 is mapping %}
+                                <div class="mb-2">
+                                    <small class="text-success font-weight-bold">{{ p4.get('model', p4.get('agent', _('Coordinator'))) }}</small>
+                                    <p class="mb-0">{{ p4.get('summary', p4.get('insight', '...')) }}</p>
+                                </div>
+                            {% elif p4 is iterable and p4 is not string %}
+                                {% for op in p4 %}
+                                    <div class="mb-2 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+                                        <small class="text-success font-weight-bold">
+                                            {% if op.agent_name %}[{{ op.agent_name }}] {% endif %}
+                                            {{ op.get('model', op.get('agent', _('Coordinator'))) if op is mapping else _('Coordinator') }}
+                                        </small>
+                                        <p class="mb-0">
+                                            {% if op.specialty %}<span class="badge badge-light border">{{ op.specialty }}</span> {% endif %}
+                                            {{ op.get('summary', op.get('insight', op)) if op is mapping else op }}
+                                        </p>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="mb-0">{{ p4 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Phase 5: Response -->
+                    <div class="card mb-3 border-primary shadow-sm">
+                        <div class="card-header bg-primary text-white py-2"><strong>{{ _('Phase 5: Final Response') }}</strong></div>
+                        <div class="card-body py-2">
+                            <p class="mb-0"><strong>{{ entry.insight or 'N/A' }}</strong></p>
+                        </div>
+                    </div>
+                </div>
+                <!-- STATUS: FINISHED -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Error Detail Modal -->
+<div class="modal fade aot-option-modal" id="errorDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Error Detail & Resolution') }}</h5>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="detail_feedback_id">
+                <div class="aot-modal-container mb-3">
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><strong>{{ _('Type') }}:</strong> <span id="detail_type"></span></div>
+                        <div class="col-md-6 mb-2"><strong>{{ _('Severity') }}:</strong> <span id="detail_severity"></span></div>
+                    </div>
+                </div>
+                <div class="aot-modal-group-title">{{ _('User Correction') }}</div>
+                <textarea class="form-control border-warning" id="detail_user_correction" rows="3" readonly style="background-color: #fff9db;"></textarea>
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-secondary aot-pill-btn mr-2" data-dismiss="modal">{{ _('Close') }}</button>
+                    <button type="button" class="btn btn-primary aot-pill-btn" onclick="addToKnowledge()">{{ _('Apply to Knowledge') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentFeedbacks = [];
+
+$(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    let errorsLoaded = false;
+
+    if (tab === 'errors') {
+        $('#errors-tab').tab('show');
+        errorsLoaded = true;
+        loadPatterns();
+        loadErrors();
+    }
+
+    $('#errors-tab').on('shown.bs.tab', function() {
+        if (!errorsLoaded) {
+            errorsLoaded = true;
+            loadPatterns();
+            loadErrors();
+        }
+    });
+});
+
+// Error Tab Scripts
+async function loadPatterns() {
+    try {
+        const resp = await fetch('/api/v1/ai/feedback/patterns');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            let html = `<div class="col-md-4 mb-3"><div class="pattern-card"><h6>{{ _('Total Pending') }}</h6><h3>${data.summary.total_pending}</h3></div></div>`;
+            if (data.patterns.recommended_actions) {
+                html += `<div class="col-md-8 mb-3"><div class="pattern-card" style="border-left-color: #17a2b8;"><h6>{{ _('Recommendations') }}</h6><ul class="pl-3 mb-0">${data.patterns.recommended_actions.slice(0, 2).map(a => `<li>${a}</li>`).join('')}</ul></div></div>`;
+            }
+            $('#patterns-container').html(html);
+        }
+    } catch (err) {}
+}
+
+async function loadErrors() {
+    try {
+        const params = new URLSearchParams({
+            status: $('#filterStatus').val(),
+            severity: $('#filterSeverity').val(),
+            error_type: $('#filterType').val()
+        });
+        const resp = await fetch(`/api/v1/ai/feedback/errors?${params.toString()}`);
+        const data = await resp.json();
+        currentFeedbacks = data.feedbacks || [];
+        let rows = '';
+        currentFeedbacks.forEach(f => {
+            rows += `<tr>
+                <td>${new Date(f.reported_at).toLocaleDateString()}</td>
+                <td>${f.error_type}</td>
+                <td><span class="badge badge-severity-${f.severity}">${f.severity}</span></td>
+                <td class="d-none d-md-table-cell">${f.user_correction || '-'}</td>
+                <td><span class="badge badge-status-${f.status}">${f.status}</span></td>
+                <td class="text-right">
+                    <button class="btn btn-sm btn-outline-secondary aot-pill-btn"
+                            onclick="openDetail('${f.id}')">{{ _('Review') }}</button>
+                </td>
+            </tr>`;
+        });
+        $('#errors-tbody').html(rows || '<tr><td colspan="5" class="text-center text-muted py-3">{{ _('No errors found.') }}</td></tr>');
+    } catch (err) {}
+}
+
+function openDetail(id) {
+    const f = currentFeedbacks.find(x => x.id === id);
+    if (!f) return;
+    $('#detail_feedback_id').val(f.id);
+    $('#detail_type').text(f.error_type);
+    $('#detail_severity').text(f.severity);
+    $('#detail_user_correction').val(f.user_correction);
+    $('#errorDetailModal').modal('show');
+}
+
+async function addToKnowledge() {
+    const id = $('#detail_feedback_id').val();
+    $.ajax({
+        url: `/api/v1/ai/feedback/error/${id}/knowledge`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ auto_approve: true }),
+        headers: { 'X-CSRFToken': "{{ csrf_token() }}" },
+        success: function() {
+            $('#errorDetailModal').modal('hide');
+            loadErrors();
+        }
+    });
+}
+</script>
+{% endblock %}

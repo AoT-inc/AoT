@@ -1,0 +1,274 @@
+{# (Note: Title is handled in the modal-header of geo_input_entry.html) #}
+
+<form id="form_config_{{ each_input.unique_id }}" onsubmit="return false;"
+    data-saved-options="{{ each_input.options }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Hidden Fields -->
+    <input type="hidden" name="input_id" value="{{ each_input.unique_id }}">
+    <input type="hidden" name="input_type" value="{{ each_input.type }}">
+
+    <!-- Preview Section (Moved to Top) -->
+    <div class="map-option-section" style="margin-bottom: 1.2rem;">
+        <div class="col-12" style="padding:0">
+            <div id="preview_map_{{ each_input.unique_id }}"
+                data-url-template="{{ dict_inputs.get(each_input.type, {}).get('default_url', '') }}"
+                data-layer-type="{{ dict_inputs.get(each_input.type, {}).get('layer_type', 'xyz') }}"
+                data-layer-role="{{ dict_inputs.get(each_input.type, {}).get('layer_role', 'base') }}"
+                data-leaflet-options="{{ dict_inputs.get(each_input.type, {}).get('leaflet_options', {}) | tojson | forceescape }}"
+                data-key-field="{{ dict_inputs.get(each_input.type, {}).get('key_field', '') }}"
+                data-legend="{{ (dict_inputs.get(each_input.type, {}).get('legend') or None) | tojson | forceescape }}"
+                data-default-center="{{ dict_inputs.get(each_input.type, {}).get('default_center', '') | tojson | forceescape }}"
+                data-default-zoom="{{ dict_inputs.get(each_input.type, {}).get('default_zoom', '') }}"
+                style="height: 280px; width: 100%; border: 1px solid #eee; border-radius: 12px;"></div>
+        </div>
+    </div>
+
+    <!-- Manufacturer Info (Standard Style) -->
+    {% if dict_inputs.get(each_input.type, {}).get('input_manufacturer') %}
+    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
+        <span><strong>{{ _('Manufacturer') }}:</strong> {{ dict_inputs.get(each_input.type, {}).get('input_manufacturer') }}</span>
+    </div>
+    {% endif %}
+
+    {% set manufacturer_url = dict_inputs.get(each_input.type, {}).get('url_manufacturer') %}
+    {% if manufacturer_url %}
+    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: 0.85rem;">
+        <strong>{{ _('Related Documents') }}:</strong>
+        {{ _('Manufacturer') }}
+        {% for each_url in manufacturer_url %}
+        <a href="{{ each_url }}" target="_blank">Link {{ loop.index }}</a>{{ ", " if not loop.last }}
+        {% endfor %}.
+    </div>
+    {% endif %}
+
+
+    {% set gis_info = dict_inputs.get(each_input.type, {}) %}
+    {% if gis_info.get('message') %}
+    <div class="aot-modal-body-text" style="font-style: italic; background: #f9f9f9; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+        {{ gis_info.get('message') | safe }}
+    </div>
+    {% endif %}
+
+
+
+    <!-- Basic Settings (Name) -->
+    <div class="aot-modal-group-title">{{ _('Basic Settings') }}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Name') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="text" class="form-control aot-modern-input" name="name" value="{{ each_input.name }}"
+                    placeholder="{{ _('Name') }}">
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Options Section -->
+    {% set other_options = [] %}
+    {% for option in dict_inputs.get(each_input.type, {}).get('custom_options', []) %}
+    {% if option['type'] not in ['channel_selector', 'hidden'] %}
+    {% set _ = other_options.append(option) %}
+    {% endif %}
+    {% endfor %}
+
+    {% if other_options %}
+    <div class="aot-modal-group-title">{{ _('Options') }}</div>
+    <div class="aot-modal-container">
+        {% for option in other_options %}
+        {% set current_val = get_custom_option(each_input, option['id']) %}
+        {% if current_val is none %}{% set current_val = option['default'] %}{% endif %}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ option['name'] }}</label>
+            <div class="aot-modal-option-control {% if 'api_key' in option['id'].lower() or 'token' in option['id'].lower() %}aot-api-key-group{% endif %}">
+                {% if option['type'] == 'text' %}
+                    <input type="text" class="form-control aot-modern-input gis-custom-option" name="{{ option['id'] }}"
+                        value="{{ current_val }}" onchange="AoTGeoInputPreview.load('{{ each_input.unique_id }}')">
+
+                    {% if 'api_key' in option['id'].lower() or 'token' in option['id'].lower() %}
+                        <button class="btn dropdown-toggle aot-pill-btn btn-primary" type="button" data-toggle="dropdown">
+                            Key
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            {% if api_keys %}
+                            {% for key_obj in api_keys|sort(attribute='provider', reverse=True) %}
+                                <a class="dropdown-item d-flex justify-content-between align-items-center" href="#"
+                                onclick='$(this).closest(".aot-api-key-group").find("input").val({{key_obj.key|tojson}}).trigger("change"); return false;'>
+                                <span>{{key_obj.name}}</span>
+                                </a>
+                            {% endfor %}
+                            <div class="dropdown-divider"></div>
+                            {% endif %}
+                            <a class="dropdown-item" href="{{ url_for('routes_settings.settings_api_key') }}">
+                                <i class="fas fa-key"></i> {{_('Manage API Keys')}}
+                            </a>
+                        </div>
+                    {% endif %}
+
+                {% elif option['type'] == 'select' %}
+                <select class="form-control aot-modern-select gis-custom-option selectpicker" name="{{ option['id'] }}" {% if option.get('multiple')
+                    %}multiple{% endif %} onchange="AoTGeoInputPreview.load('{{ each_input.unique_id }}')"
+                    data-style="btn-white" data-selected-text-format="static">
+                    {% for opt in option['options'] %}
+                    <option value="{{ opt['value'] }}" {% if (current_val is iterable and (current_val is not string) and
+                        opt['value'] in current_val) or (current_val|string==opt['value']|string) %}selected{% endif %}>
+                        {{ opt['name'] }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                {% elif option['type'] == 'bool' %}
+                <label class="btn-toggle mb-0">
+                    <input type="checkbox" class="btn-toggle-input gis-custom-option"
+                        id="switch_{{ each_input.unique_id }}_{{ option['id'] }}" name="{{ option['id'] }}" value="true"
+                        onchange="AoTGeoInputPreview.load('{{ each_input.unique_id }}')" {% if current_val|string|lower == 'true' %}checked{% endif %}>
+                    <div class="btn-toggle-slider">
+                        <div class="btn-toggle-thumb"></div>
+                    </div>
+                </label>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+
+
+    <!-- Channel Settings -->
+    {% set channel_options = dict_inputs.get(each_input.type, {}).get('custom_options', []) | selectattr('type',
+    'equalto', 'channel_selector') | list %}
+    {% if channel_options %}
+    <div class="aot-modal-group-title">{{ _('Map Channel Settings') }}</div>
+    <div>
+        {% for option in channel_options %}
+        {% set current_val = get_custom_option(each_input, option['id']) %}
+        {% if current_val is none %}{% set current_val = option['default'] %}{% endif %}
+
+        <div class="channel-list">
+            {% for ch_id, ch_info in option['channel_def'].items() %}
+            {# (Main Title) Channel Information - Applying channel tag style for Input modal #}
+            <div class="aot-modal-channel-title">
+                <span class="aot-modal-channel-tag">CH: {{ ch_id }}</span>
+                <label class="aot-modal-option-label mb-0">{{ ch_info['name'] }}</label>
+            </div>
+
+            <div class="aot-modal-container">
+                {# (Sub Title) Channel Name Setting #}
+                <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ _('Name') }}</label>
+                    <div class="aot-modal-option-control">
+                        {% set ch_name_key = 'channel_name_' ~ ch_id %}
+                        {% set saved_ch_name = get_custom_option(each_input, ch_name_key) %}
+                        <input type="text" class="form-control aot-modern-input gis-custom-option" name="{{ ch_name_key }}"
+                            value="{{ saved_ch_name if saved_ch_name else ch_info['name'] }}"
+                            onchange="AoTGeoInputPreview.load('{{ each_input.unique_id }}')"
+                            placeholder="{{ _('Name') }}">
+                    </div>
+                </div>
+
+                {# (Sub Title) Channel Activation Setting #}
+                <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ _('Status') }}</label>
+                    <div class="aot-modal-option-control">
+                        <label class="btn-toggle mb-0">
+                            <input type="checkbox" class="btn-toggle-input gis-custom-option"
+                                id="ch_{{ each_input.unique_id }}_{{ option['id'] }}_{{ ch_id }}" name="{{ option['id'] }}"
+                                data-is-channel="true" onchange="AoTGeoInputPreview.load('{{ each_input.unique_id }}')"
+                                value="{{ ch_id }}" 
+                                {% for k, v in ch_info.items() %}data-replace-{{ k }}="{{ v }}" {% endfor %}
+                                {% for k, v in ch_info.get('options', {}).items() %}data-replace-{{ k }}="{{ v }}" {% endfor %}
+                                data-replace-layer="{{ ch_info.get('options', {}).get('layer') or ch_info.get('layer') or ch_info.get('name') }}"
+                                {% if (current_val is iterable and (current_val is not string) and ch_id|string in
+                                current_val|map('string')|list) %}checked{% endif %}>
+                            <div class="btn-toggle-slider">
+                                <div class="btn-toggle-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Aerial / Drone Photo Overlay (gis_image_overlay) -->
+    {% if each_input.type == 'gis_image_overlay' %}
+    {% set ov_image_url = get_custom_option(each_input, 'image_url') or '' %}
+    {% set ov_coordinates = get_custom_option(each_input, 'coordinates') or '' %}
+    {% set ov_opacity = get_custom_option(each_input, 'opacity') or '0.85' %}
+    {% set ov_meta = get_custom_option(each_input, 'meta') or '' %}
+    {% set ov_preview_url = get_custom_option(each_input, 'preview_url') or '' %}
+    {% set ov_render_mode = get_custom_option(each_input, 'render_mode') or 'image' %}
+    {% set ov_tile_status = get_custom_option(each_input, 'tile_status') or 'none' %}
+    {% set ov_lock = get_custom_option(each_input, 'lock_aspect') %}
+    {% if ov_lock is none %}{% set ov_lock = '1' %}{% endif %}
+    <div class="aot-modal-group-title">{{ _('Aerial Photo') }}</div>
+    <div class="aot-modal-container aot-image-overlay-panel"
+         data-uuid="{{ each_input.unique_id }}"
+         data-image-url="{{ ov_image_url }}"
+         data-coordinates="{{ ov_coordinates | forceescape }}"
+         data-opacity="{{ ov_opacity }}"
+         data-lock-aspect="{{ ov_lock }}"
+         data-preview-url="{{ ov_preview_url }}"
+         data-render-mode="{{ ov_render_mode }}"
+         data-tile-status="{{ ov_tile_status }}"
+         data-meta="{{ ov_meta | forceescape }}">
+
+        <!-- Persisted values (preserved on generic Save; updated by the panel JS) -->
+        <input type="hidden" name="image_url" value="{{ ov_image_url }}">
+        <input type="hidden" name="coordinates" value="{{ ov_coordinates }}">
+        <input type="hidden" name="opacity" value="{{ ov_opacity }}">
+        <input type="hidden" name="lock_aspect" value="{{ ov_lock }}">
+        <input type="hidden" name="meta" value="{{ ov_meta }}">
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label"
+                   title="{{ _('Upload a drone or aerial photo (JPG/PNG/TIFF). GPS/EXIF in the photo is used to place it automatically when available.') }}">{{ _('Image File') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="file" class="form-control aot-modern-input aot-ov-file"
+                       accept=".jpg,.jpeg,.png,.tif,.tiff,.webp">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" title="{{ _('Overlay transparency.') }}">{{ _('Opacity') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="range" class="aot-ov-opacity" min="0" max="1" step="0.05"
+                       value="{{ ov_opacity }}" style="width:100%; accent-color: var(--bd-primary, #2e7d32);">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label"
+                   title="{{ _('On: drag a corner to scale & rotate around the centre (keeps the photo proportions); drag the blue centre handle to move. Off: drag each corner freely.') }}">{{ _('Lock aspect ratio') }}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input type="checkbox" class="btn-toggle-input aot-ov-lock" {% if ov_lock != '0' %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row aot-modal-option-row-wrap">
+            <div class="aot-ov-status aot-modal-body-text"
+                 style="width:100%; font-size:0.8rem; color:var(--aot-text-muted,#6b7280); margin:0;">
+                {% if ov_image_url %}{{ _('Image loaded. Centre handle moves it; corners scale & rotate. Then Save Placement.') }}{% else %}{{ _('Upload a drone or aerial photo to begin.') }}{% endif %}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row aot-modal-option-row-wrap" style="justify-content:flex-end; gap:8px;">
+            <button type="button" class="btn aot-pill-btn aot-ov-reset">{{ _('Re-center') }}</button>
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-save">{{ _('Save Placement') }}</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons (Standard location at bottom) -->
+
+
+</form>

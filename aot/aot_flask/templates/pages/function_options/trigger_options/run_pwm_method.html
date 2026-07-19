@@ -1,0 +1,48 @@
+<div class="aot-modal-container">
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{ _('Duration Method') }}</label>
+    <div class="aot-modal-option-control">
+      <select class="form-control aot-modern-select selectpicker aot-standard-select" id="unique_id_1" name="unique_id_1" data-placement="top" title="{{_('Execute this duration method to set the PWM output duty cycle using the output value.')}}">
+        <option value="">{{dict_translation['select_one']['title']}}</option>
+        {%- for each_method in method -%}
+          <option value="{{each_method.unique_id}}"{% if each_function.unique_id_1 == each_method.unique_id %} selected{% endif %}>[{{'%02d' % each_method.id}}] {{each_method.name}}</option>
+        {%- endfor -%}
+      </select>
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{ _('PWM Output') }}</label>
+    <div class="aot-modal-option-control">
+      <select class="form-control aot-modern-select selectpicker aot-standard-select" id="unique_id_2" name="unique_id_2" data-placement="top" title="{{_('Apply duty cycle to this PWM output.')}}">
+        <option value="">{{dict_translation['select_one']['title']}}</option>
+        {%- for each_output in choices_output_channels if 'pwm' in each_output['types'] -%}
+          <option value="{{each_output['value']}}"{% if each_function.unique_id_2 == each_output['value'].split(",")[0] and each_function.unique_id_3 == each_output['value'].split(",")[1] %} selected{% endif %}>{{each_output['item']}}</option>
+        {%- endfor -%}
+      </select>
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{form_trigger.period.label(class_='mb-0')}}</label>
+    <div class="aot-modal-option-control">
+      {{form_trigger.period(class_='form-control aot-modern-input', value=each_function.period, **{'title':_('Duration between calculating and setting the PWM output duty cycle')})}}
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{form_trigger.trigger_actions_at_period.label(class_='mb-0')}}</label>
+    <div class="aot-modal-option-control">
+      <label class="btn-toggle mb-0">
+          <input id="trigger_actions_at_period" name="trigger_actions_at_period" type="checkbox" class="btn-toggle-input" value="y"{% if each_function.trigger_actions_at_period %} checked{% endif %}>
+          <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+      </label>
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{form_trigger.trigger_actions_at_start.label(class_='mb-0')}}</label>
+    <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input id="trigger_actions_at_start" name="trigger_actions_at_start" type="checkbox" class="btn-toggle-input" value="y"{% if each_function.trigger_actions_at_start %} checked{% endif %}>
+          <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+      </label>
+    </div>
+  </div>
+</div>

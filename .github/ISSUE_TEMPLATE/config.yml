@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 질문 / 사용법 문의 (Discussions)
+    url: https://github.com/AoT-inc/AoT/discussions
+    about: 버그가 아닌 질문·사용법·아이디어 논의는 여기에서 나눠주세요.
+  - name: 사용자 매뉴얼
+    url: https://aot-inc.github.io/AoT
+    about: 설치·설정·기능 사용법은 매뉴얼을 먼저 확인해 주세요.

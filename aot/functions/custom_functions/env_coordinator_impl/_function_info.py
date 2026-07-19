@@ -1,0 +1,781 @@
+# coding=utf-8
+"""
+_function_info.py — FUNCTION_INFORMATION 및 액추에이터 종류 상수.
+
+env_coordinator.py 에서 `from ._function_info import *` 로 임포트.
+"""
+
+from flask_babel import lazy_gettext
+
+from aot.utils.constraints_pass import constraints_pass_positive_value
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 액추에이터 종류 상수 (env_coordinator.py 전역 참조)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_KIND_CAPABILITIES = {
+    'opening':          ['ventilation', 'cooling_passive', 'co2_dilution'],
+    'cooler':           ['cooling'],
+    'heater':           ['heating'],
+    'fogger':           ['humidify', 'cooling_passive'],
+    'co2_injector':     ['co2_enrich'],
+    'shade':            ['shading', 'cooling_passive'],
+    'curtain':          ['insulation'],
+    'lighting':         ['light_enrich'],
+    'circulation_fan':  ['ventilation'],                            # P3-1
+    'exhaust_fan':      ['ventilation', 'cooling_passive', 'co2_dilution'],  # P3-1
+    'intake_fan':       ['ventilation', 'cooling_passive'],          # P3-1
+}
+
+# GeoFacility.actuators 슬롯 → ActuatorProfile.kind 매핑.
+_FACILITY_SLOT_KIND = {
+    'outer_side_vent_motor': 'opening',
+    'outer_roof_vent_motor': 'opening',
+    'inner_side_vent_motor': 'opening',
+    'inner_roof_vent_motor': 'opening',
+    'thermal_curtain':       'curtain',
+    'shade_curtain':         'shade',
+    'circulation_fan':       'circulation_fan',   # P3-1
+    'exhaust_fan':           'exhaust_fan',        # P3-1
+    'intake_fan':            'intake_fan',         # P3-1
+}
+
+# GeoFacility.actuators 리스트형(ActuatorUI 인스턴스) kind → ActuatorProfile.kind 매핑.
+# facility 디자이너(aot-facility-design.js)의 ActuatorUI 는 actuators 를
+# [{kind, device_uuid, specs, mount}, ...] 리스트로 저장한다. 그 kind 는
+# 모터/장비 단위(side_window_motor, exhaust_fan ...)라 env_control 의
+# ActuatorProfile.kind(opening, exhaust_fan ...)로 한 번 더 정규화해야 한다.
+# None 매핑(irrigation_valve)은 별도 관수 파이프라인이 처리하므로 env 등록에서 제외.
+_ACTUATOR_UI_KIND_TO_KIND = {
+    'side_window_motor':     'opening',
+    'roof_vent_motor':       'opening',
+    'thermal_curtain_motor': 'curtain',
+    'shade_curtain_motor':   'shade',
+    'exhaust_fan':           'exhaust_fan',
+    'circulation_fan':       'circulation_fan',
+    'intake_fan':            'intake_fan',
+    'heater':                'heater',
+    'cooler':                'cooler',
+    'heat_pump':             'cooler',
+    'irrigation_valve':      None,
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FUNCTION_INFORMATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+FUNCTION_INFORMATION = {
+    'function_name_unique': 'env_coordinator',
+    'function_name': lazy_gettext('Integrated Environment Control'),
+    'function_name_short': 'Env Coordinator',
+
+    'message': lazy_gettext(
+        'Coordinates registered Output actuators to optimise photosynthesis. '
+        'VPD is the primary control target; temperature and humidity act as '
+        'safety constraints. Add "Environment Control: Register Actuator" actions '
+        'to register devices. External environment data (outdoor temperature, '
+        'humidity, wind, rain, solar, CO₂) comes from the linked facility\'s '
+        'outdoor sensors, or optionally from the ext_context_collector function.'
+    ),
+
+    'options_enabled': ['custom_options', 'enable_actions'],
+    'options_disabled': ['measurements_select', 'measurements_configure'],
+
+    'custom_commands_message': lazy_gettext(
+        'Trigger an immediate cycle, reload actuators, or issue an emergency stop.'
+    ),
+    'custom_commands': [
+        {
+            'id': 'cmd_reload',
+            'type': 'button',
+            'wait_for_return': True,
+            'name': lazy_gettext('Reload Actuators'),
+            'phrase': lazy_gettext(
+                'Re-read the Actions table and rebuild actuator profiles.'
+            ),
+        },
+        {
+            'id': 'cmd_run_now',
+            'type': 'button',
+            'wait_for_return': False,
+            'name': lazy_gettext('Run Now'),
+            'phrase': lazy_gettext(
+                'Execute one coordination cycle immediately using current sensor readings.'
+            ),
+        },
+        {
+            'id': 'cmd_emergency_stop',
+            'type': 'button',
+            'wait_for_return': True,
+            'name': lazy_gettext('Emergency Stop'),
+            'phrase': lazy_gettext(
+                'Immediately set all actuators to safe_default and pause control for 60 s.'
+            ),
+        },
+        {
+            'id': 'cmd_apply_crop_targets',
+            'type': 'button',
+            'wait_for_return': True,
+            'name': lazy_gettext('Apply Crop Preset Targets'),
+            'phrase': lazy_gettext(
+                'Force-fill VPD / CO₂ / Temp / DLI / GDD target fields from the selected '
+                'Crop Preset (overwrites current values; variables using a Method are skipped). '
+                'Save the function first if you just changed the crop preset.'
+            ),
+        },
+    ],
+
+    'custom_options': [
+
+        # ── Basic ─────────────────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Basic'),
+        },
+        {
+            'id': 'update_period',
+            'type': 'float',
+            'default_value': 60.0,
+            'required': True,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': lazy_gettext('Period (seconds)'),
+            'phrase': lazy_gettext(
+                'Coordination cycle interval. Recommended: slowest actuator response time × 1.5.'
+            ),
+        },
+        {
+            'id': 'sensor_max_age',
+            'type': 'float',
+            'default_value': 120.0,
+            'required': False,
+            'name': lazy_gettext('Max Sensor Age (seconds)'),
+            'phrase': lazy_gettext(
+                'Reject sensor readings older than this value. 0 = no limit.'
+            ),
+        },
+
+        # ── Growth Schedule ───────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Growth Schedule'),
+        },
+        {
+            'id': 'schedule_start_time',
+            'type': 'text',
+            'html_type': 'date',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('Schedule Start (planting date)'),
+            'phrase': lazy_gettext(
+                'Planting / germination date. Pick from the calendar. '
+                'The date is interpreted in the device/facility local timezone '
+                '(the system stores it as UTC internally — no manual conversion '
+                'needed). Used to compute weeks_elapsed for all Method curves. '
+                'Leave empty to disable week-based progression (Methods use '
+                'wall-clock day only).'
+            ),
+        },
+        {
+            'id': 'schedule_end_time',
+            'type': 'text',
+            'html_type': 'date',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('Schedule End (harvest date)'),
+            'phrase': lazy_gettext(
+                'Harvest / cycle-end date. Pick from the calendar. Interpreted '
+                'in the device/facility local timezone (same rules as Schedule '
+                'Start). Methods keep following actual elapsed weeks until this '
+                'date; once it passes, control stops — every actuator returns to '
+                'its configured end-behavior and coordination cycles halt. '
+                'Leave empty for no end date.'
+            ),
+        },
+        {
+            'id': 'schedule_week_offset',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('Week Offset'),
+            'phrase': lazy_gettext(
+                'Direct week adjustment applied on top of elapsed weeks. '
+                'Use a positive value to fast-forward (e.g. system started mid-cycle), '
+                'or negative to compensate for downtime. Default 0.'
+            ),
+        },
+
+        # ── Facility (optional) ──────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Facility (optional)'),
+        },
+        {
+            'id': 'geo_facility_id',
+            'type': 'select_device',
+            'default_value': '',
+            'required': False,
+            'options_select': ['GeoFacility'],
+            'name': lazy_gettext('Linked Facility'),
+            'phrase': lazy_gettext(
+                'When set, actuators are auto-discovered from this facility (envelope, '
+                'side/roof vents, curtains, fans). GIS metadata (azimuth, area, U-value) '
+                'is attached to each actuator profile so wind direction and facility '
+                'geometry can be considered. Manual "Environment Control" actions below '
+                'still apply and are merged with the facility-derived list. '
+                'Leave empty to use manual actions only.'
+            ),
+        },
+        {
+            'id': 'bay_scope',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('Bay Scope (optional)'),
+            'phrase': lazy_gettext(
+                'Restrict this coordinator to one bay of the linked facility. '
+                'Enter the bay ID (see the facility editor bay list; e.g. "bay_1"). '
+                'Only sensors and actuators placed inside that bay are used, and '
+                'facility volume/area are scaled to the bay share. Leave empty to '
+                'control the entire facility. Create one coordinator per bay to '
+                'control multiple bays independently.'
+            ),
+        },
+
+        # ── Time Control ──────────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Time Control'),
+        },
+        {
+            'id': 'time_enable',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable Time Window'),
+            'phrase': lazy_gettext(
+                'When enabled, control only runs between Start and End times.'
+            ),
+        },
+        {
+            'id': 'time_start',
+            'type': 'text',
+            'default_value': '06:00',
+            'required': False,
+            'name': lazy_gettext('Start Time (HH:MM)'),
+            'phrase': lazy_gettext(
+                'Control period start time (24-hour format). '
+                'Only active when Enable Time Window is turned on.'
+            ),
+        },
+        {
+            'id': 'time_end',
+            'type': 'text',
+            'default_value': '20:00',
+            'required': False,
+            'name': lazy_gettext('End Time (HH:MM)'),
+            'phrase': lazy_gettext(
+                'On-end behavior per actuator is configured in each Action. '
+                'Ignored when Photoperiod Method is set.'
+            ),
+        },
+        {
+            'id': 'photo_method_id',
+            'type': 'select_device',
+            'default_value': '',
+            'required': False,
+            'options_select': ['Method'],
+            'name': lazy_gettext('Photoperiod Method'),
+            'phrase': lazy_gettext(
+                'Optional. Select an AoT Method that returns photoperiod length in hours '
+                '(e.g. 14.0 = 14 h light). The function computes time_start/end '
+                'symmetrically around the Anchor time. '
+                'When set, the static Start/End times above are overridden.'
+            ),
+        },
+        {
+            'id': 'photo_anchor',
+            'type': 'text',
+            'default_value': '12:00',
+            'required': False,
+            'name': lazy_gettext('Photoperiod Anchor (HH:MM)'),
+            'phrase': lazy_gettext(
+                'Solar-noon equivalent. The photoperiod window is centred on this time. '
+                'Default 12:00. Adjust for your latitude / season if needed.'
+            ),
+        },
+
+        # ── VPD (Primary control target) ──────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('VPD'),
+        },
+        {
+            'id': 'vpd_sp_type',
+            'type': 'select',
+            'default_value': 'static',
+            'required': False,
+            'options_select': [
+                ('static', lazy_gettext('Static Target')),
+                ('method', lazy_gettext('Method (time-varying)')),
+            ],
+            'name': lazy_gettext('Setpoint Type'),
+            'phrase': lazy_gettext(
+                'Static: use the fixed target value below. '
+                'Method: follow an AoT Method curve.'
+            ),
+        },
+        {
+            'id': 'target_vpd',
+            'type': 'float',
+            'default_value': 0.8,
+            'required': False,
+            'name': lazy_gettext('Target VPD (kPa)'),
+            'phrase': lazy_gettext('Used when Setpoint Type = Static. 0 = disable VPD control.'),
+        },
+        {
+            'id': 'vpd_method_id',
+            'type': 'select_device',
+            'default_value': '',
+            'required': False,
+            'options_select': ['Method'],
+            'name': lazy_gettext('Method'),
+            'phrase': lazy_gettext(
+                'Used when Setpoint Type = Method. '
+                'Select an AoT Method that returns a VPD setpoint (kPa).'
+            ),
+        },
+        {
+            'id': 'priority_vpd',
+            'type': 'float',
+            'default_value': 1.2,
+            'required': False,
+            'name': lazy_gettext('VPD Priority'),
+            'phrase': lazy_gettext('Higher value = processed first. Default 1.2.'),
+        },
+        {
+            'id': 'tolerance_vpd',
+            'type': 'float',
+            'default_value': 0.1,
+            'required': False,
+            'name': lazy_gettext('VPD Tolerance (kPa)'),
+            'phrase': lazy_gettext(
+                'Dead-band half-width around the VPD setpoint. '
+                'Adjustments are skipped when the deviation is within this range, '
+                'reducing unnecessary actuator cycling. Typical value: 0.05–0.15 kPa.'
+            ),
+        },
+
+        # ── Light ─────────────────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Light'),
+        },
+        {
+            'id': 'light_max',
+            'type': 'float',
+            'default_value': 800.0,
+            'required': False,
+            'name': lazy_gettext('Max Light Threshold'),
+            'phrase': lazy_gettext(
+                'Activate shade screen when light exceeds this value. 0 = disabled.'
+            ),
+        },
+        {
+            'id': 'light_min',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('Min Light Threshold (Supplemental)'),
+            'phrase': lazy_gettext(
+                'Activate supplemental lighting when light falls below this value. '
+                '0 = disabled (most facilities — natural light only).'
+            ),
+        },
+
+        # ── CO₂ ───────────────────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('CO₂'),
+        },
+        {
+            'id': 'co2_sp_type',
+            'type': 'select',
+            'default_value': 'static',
+            'required': False,
+            'options_select': [
+                ('static', lazy_gettext('Static Target')),
+                ('method', lazy_gettext('Method (time-varying)')),
+            ],
+            'name': lazy_gettext('CO₂ Setpoint Type'),
+            'phrase': lazy_gettext(
+                'Static: use the fixed target below. '
+                'Method: follow an AoT Method curve (ppm vs time-of-day / growth week).'
+            ),
+        },
+        {
+            'id': 'target_co2',
+            'type': 'float',
+            'default_value': 1000.0,
+            'required': False,
+            'name': lazy_gettext('Target CO₂ (ppm)'),
+            'phrase': lazy_gettext('Used when CO₂ Setpoint Type = Static.'),
+        },
+        {
+            'id': 'co2_method_id',
+            'type': 'select_device',
+            'default_value': '',
+            'required': False,
+            'options_select': ['Method'],
+            'name': lazy_gettext('CO₂ Method'),
+            'phrase': lazy_gettext(
+                'Used when CO₂ Setpoint Type = Method. '
+                'Select an AoT Method that returns a CO₂ setpoint (ppm).'
+            ),
+        },
+        {
+            'id': 'priority_co2',
+            'type': 'float',
+            'default_value': 0.8,
+            'required': False,
+            'name': lazy_gettext('CO₂ Priority'),
+            'phrase': lazy_gettext(
+                'Processing order weight for CO₂ relative to other control variables. '
+                'Higher value = processed earlier in each cycle. '
+                'Default 0.8 (lower than VPD 1.2, since CO₂ enrichment is secondary).'
+            ),
+        },
+        {
+            'id': 'tolerance_co2',
+            'type': 'float',
+            'default_value': 100.0,
+            'required': False,
+            'name': lazy_gettext('CO₂ Tolerance (ppm)'),
+            'phrase': lazy_gettext(
+                'Dead-band half-width around the CO₂ setpoint. '
+                'Adjustments are skipped when the deviation is within this range. '
+                'Typical value: 50–150 ppm.'
+            ),
+        },
+
+        # ── Temperature (Constraints — not a primary target) ──────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Temperature'),
+        },
+        {
+            'id': 'temp_max',
+            'type': 'float',
+            'default_value': 35.0,
+            'required': False,
+            'name': lazy_gettext('Max Temperature (°C)'),
+            'phrase': lazy_gettext(
+                'Hard upper limit. Forces cooling when exceeded, regardless of VPD target.'
+            ),
+        },
+        {
+            'id': 'temp_min',
+            'type': 'float',
+            'default_value': 5.0,
+            'required': False,
+            'name': lazy_gettext('Min Temperature (°C)'),
+            'phrase': lazy_gettext(
+                'Hard lower limit. Forces heating when below, regardless of VPD target.'
+            ),
+        },
+
+        # ── Humidity (Constraints — not a primary target) ─────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Humidity'),
+        },
+        {
+            'id': 'humid_max',
+            'type': 'float',
+            'default_value': 90.0,
+            'required': False,
+            'name': lazy_gettext('Max Humidity (%)'),
+            'phrase': lazy_gettext(
+                'Hard upper limit. Prevents VPD bypass via extreme humidity.'
+            ),
+        },
+        {
+            'id': 'humid_min',
+            'type': 'float',
+            'default_value': 30.0,
+            'required': False,
+            'name': lazy_gettext('Min Humidity (%)'),
+            'phrase': lazy_gettext(
+                'Hard lower limit. Prevents VPD bypass via extreme dryness.'
+            ),
+        },
+
+        # ── VPD Decomposition ─────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('VPD Decomposition'),
+        },
+        {
+            'id': 'vpd_weight_T',
+            'type': 'float',
+            'default_value': 0.6,
+            'required': False,
+            'name': lazy_gettext('T Weight (0-1)'),
+            'phrase': lazy_gettext(
+                'VPD decomposition: fraction of adjustment via temperature (rest via humidity). '
+                '0.6 = favour temperature adjustment. Range 0.0~1.0.'
+            ),
+        },
+
+        # ── Photosynthesis Model (optional) ──────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Photosynthesis Model'),
+        },
+        {
+            'id': 'photosynth_mode_enabled',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable Photosynthesis-Oriented Control'),
+            'phrase': lazy_gettext(
+                'When enabled, the Big-Leaf photosynthesis model identifies the current '
+                'limiting factor (Light / CO₂ / Temperature / VPD) each cycle and '
+                'dynamically raises that variable\'s priority. '
+                'Requires Light sensor. Recommended when ≥ 3 active actuator types are available.'
+            ),
+        },
+        {
+            'id': 'crop_preset',
+            'type': 'select',
+            'default_value': 'tomato',
+            'required': False,
+            'options_select': [
+                ('tomato',     lazy_gettext('Tomato')),
+                ('lettuce',    lazy_gettext('Lettuce / Leafy greens')),
+                ('cucumber',   lazy_gettext('Cucumber')),
+                ('strawberry', lazy_gettext('Strawberry')),
+                ('pepper',     lazy_gettext('Pepper / Paprika')),
+            ],
+            'name': lazy_gettext('Crop Preset'),
+            'phrase': lazy_gettext(
+                'Crop recipe. On Save, fills the target options from this preset — '
+                'VPD, CO₂, Temp min/max, DLI and GDD — unless you changed a value or use a '
+                'Method for that variable (your setting wins). Use the "Apply Crop Preset" '
+                'button to force-overwrite. Also selects Big-Leaf model params (A_max, K_L, '
+                'K_C, T_opt, VPD_half), used only when Photosynthesis-Oriented Control is on.'
+            ),
+        },
+
+        # ── Guide Ranges (T/RH) ───────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Guide Ranges (T / RH)'),
+        },
+        {
+            'id': 'guide_T_min',
+            'type': 'float',
+            'default_value': 12.0,
+            'required': False,
+            'name': lazy_gettext('Guide T Min (°C)'),
+            'phrase': lazy_gettext(
+                'Advisory lower bound for temperature. '
+                'Triggers forced heating when exceeded (replaces Min Temperature setting '
+                'when using crop-preset-derived guide ranges).'
+            ),
+        },
+        {
+            'id': 'guide_T_max',
+            'type': 'float',
+            'default_value': 32.0,
+            'required': False,
+            'name': lazy_gettext('Guide T Max (°C)'),
+            'phrase': lazy_gettext('Advisory upper bound for temperature.'),
+        },
+        {
+            'id': 'guide_RH_min',
+            'type': 'float',
+            'default_value': 40.0,
+            'required': False,
+            'name': lazy_gettext('Guide RH Min (%)'),
+            'phrase': lazy_gettext('Advisory lower bound for relative humidity.'),
+        },
+        {
+            'id': 'guide_RH_max',
+            'type': 'float',
+            'default_value': 85.0,
+            'required': False,
+            'name': lazy_gettext('Guide RH Max (%)'),
+            'phrase': lazy_gettext('Advisory upper bound for relative humidity.'),
+        },
+
+        # ── Cumulative Goal Tracker ───────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Cumulative Goal Tracker'),
+        },
+        {
+            'id': 'cumulative_tracker_enabled',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable DLI / GDD Tracker'),
+            'phrase': lazy_gettext(
+                'Tracks daily light integral (DLI) and growing degree-days (GDD), '
+                'rolling over at the facility-local midnight (device timezone). '
+                'Light is converted to PPFD by sensor unit (W/m² assumed if unknown). '
+                'Generates compensation suggestions when debt accumulates. '
+                'Requires a Light sensor for DLI tracking.'
+            ),
+        },
+        {
+            'id': 'dli_target',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('DLI Target (mol/m²/day)'),
+            'phrase': lazy_gettext(
+                'Daily light integral target. 0 = use the selected crop preset default '
+                '(leafy greens ~14, tomato/cucumber/pepper ~22, strawberry ~17). '
+                'Turn the tracker off above to disable entirely.'
+            ),
+        },
+        {
+            'id': 'gdd_target_daily',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('GDD Target (°C·day/day)'),
+            'phrase': lazy_gettext(
+                'Growing degree-day target per day. 0 = use the selected crop preset default '
+                '(≈ T_opt − T_base). Computed as max(0, T_mean − T_base) per cycle.'
+            ),
+        },
+
+        # ── Wind ──────────────────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Wind'),
+        },
+        {
+            'id': 'gate_wind_threshold',
+            'type': 'float',
+            'default_value': 12.0,
+            'required': False,
+            'name': lazy_gettext('Strong Wind Threshold (m/s)'),
+            'phrase': lazy_gettext(
+                'Openings (vents, side walls) are forced closed above this wind speed.'
+            ),
+        },
+
+        # ── Calibration (Stage 1) ─────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Effect Calibration'),
+        },
+        {
+            'id': 'effect_engine',
+            'type': 'select',
+            'default_value': 'legacy',
+            'required': False,
+            'options_select': [
+                ('legacy',   lazy_gettext('Legacy (built-in K constants)')),
+                ('shadow',   lazy_gettext('Shadow (grey-box logged, legacy controls)')),
+                ('greybox',  lazy_gettext('Grey-box (physics model controls)')),
+            ],
+            'name': lazy_gettext('Effect Engine'),
+            'phrase': lazy_gettext(
+                'Legacy: uses built-in K_* constants (default, safe). '
+                'Shadow: runs grey-box model in parallel for KPI logging only — no control change. '
+                'Grey-box: physics-model control (effect magnitudes from the grey-box model, '
+                'with MPC look-ahead when a forecast is available). '
+                'Grey-box activates ONLY after the shadow KPI passes and parameters have '
+                'converged; until then it automatically falls back to Legacy control. '
+                'Recommended flow: run Shadow first, then switch to Grey-box.'
+            ),
+        },
+        {
+            'id': 'calibration_enabled',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable RLS Calibration'),
+            'phrase': lazy_gettext(
+                'Learn per-actuator effect coefficients (K_*) from sensor response. '
+                'Requires several days of data to converge. '
+                'Falls back to built-in defaults until convergence.'
+            ),
+        },
+        {
+            'id': 'enable_active_probing',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable Active Probing'),
+            'phrase': lazy_gettext(
+                'Periodically perturb one actuator by ±10 %% to improve calibration '
+                'identifiability. Only triggers when load is low and no safety gate is active. '
+                'Requires RLS Calibration to be enabled.'
+            ),
+        },
+        {
+            'id': 'probe_interval_sec',
+            'type': 'float',
+            'default_value': 3600.0,
+            'required': False,
+            'name': lazy_gettext('Probe Interval (seconds)'),
+            'phrase': lazy_gettext(
+                'Minimum time between active probing events. Default 3600 s (1 hour).'
+            ),
+        },
+
+        # ── Forecast Feedforward (P3-4) ───────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Forecast Feedforward'),
+        },
+        {
+            'id': 'forecast_feedforward_enabled',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable Forecast Feedforward'),
+            'phrase': lazy_gettext(
+                'Use KMA short-term weather forecast (forecast.json) to proactively '
+                'shift temperature/humidity setpoints and inhibit ventilation '
+                'before adverse weather arrives.'
+            ),
+        },
+        {
+            'id': 'forecast_lookahead_h',
+            'type': 'float',
+            'default_value': 3.0,
+            'required': False,
+            'name': lazy_gettext('Forecast Lookahead (hours)'),
+            'phrase': lazy_gettext(
+                'How many hours ahead to check for incoming adverse weather (1–6 h). '
+                'Longer lookahead gives earlier warning but may over-correct.'
+            ),
+        },
+
+        # ── Diagnostics ───────────────────────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Diagnostics'),
+        },
+        {
+            'id': 'debug_logging',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Enable Debug Logging'),
+            'phrase': lazy_gettext(
+                'Write per-cycle decision data to InfluxDB (goal targets, deviations, '
+                'mode, cycle metrics, actuator mismatch count, learning hygiene). '
+                'Also emits per-cycle DEBUG log lines (constraint violations, '
+                'feedforward decisions, deadband skips). Leave OFF for production — '
+                'critical events (safety gate, dispatch failure, runtime state error) '
+                'are always recorded regardless of this flag.'
+            ),
+        },
+    ],
+}

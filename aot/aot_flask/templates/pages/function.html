@@ -1,0 +1,695 @@
+{% extends "layout.html" %}
+{% from 'macros/tabs.html' import render_tabs %}
+{% set active_page = "function" %}
+{% set help_page = [manual_url("Functions/"), dict_translation['function']['title']] %}
+
+{% block title %} - {{dict_translation['function']['title']}}{% endblock %}
+<!-- DEBUG_MARKER_AOT_RENDER_TEST -->
+
+{% block head %}
+{{ super() }}
+<style>
+  /* Force 100% width on mobile immediately to prevent jagged reflow */
+  @media (max-width: 768px) {
+    .grid-stack-item {
+      width: 100% !important;
+      left: 0 !important;
+    }
+  }
+  .grid-stack-item-content {
+    transition: none !important;
+  }
+</style>
+<link rel="stylesheet" type="text/css" href="/static/css/bootstrap-clockpicker.min.css">
+<script type="text/javascript" src="/static/js/vendor/bootstrap-clockpicker.min.js"></script>
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.4" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+
+
+{% include 'pages/map/map_assets.html' %}
+{% endblock %}
+
+{% block body %}
+<!-- Route: /function -->
+  <!-- Sticky Tab Bar -->
+  <div id="function-tabs-sticky" class="container-fluid px-0 aot-sticky-tabs">
+    <!-- Tab System -->
+    {{ render_tabs(
+        items=tabs,
+        current_id=current_tab.unique_id,
+        link_endpoint='routes_function.page_function',
+        save_order_endpoint='/tab/save_order',
+        container_id='function-tabs',
+        param_name='tab_id',
+        use_query_string=True,
+        page_type='function'
+    ) }}
+  </div>
+
+<main role="main" class="container">
+  {% include 'flash_messages.html' %}
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  <form id="new_function_form" method="post" action="/function">
+    {{form_mod_pid_base.csrf_token}}
+
+    <div class="row aot-main-selection-row">
+      <div class="col-auto">
+        <select class="selectpicker aot-standard-select" data-style="btn btn-primary aot-roundbox"
+          data-live-search="true" title="{{ _('Function') }}: {{ _('Select') }}" id="function_type" name="function_type">
+          {% for each_controller in choices_functions_add -%}
+          <option value="{{each_controller['value']}}">{{each_controller['item']}}</option>
+          {% endfor -%}
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'function_add');" name="function_add" value="{{_('Add')}}"
+          class="btn btn-primary" type="button" />
+      </div>
+    </div>
+
+  </form>
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+  <div class="grid-stack aot-entry-container">
+    {%- for each_function in all_functions_sorted -%}
+    {% if each_function._controller_type == 'Conditional' %}
+    {% set controller_type = "Conditional" %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-y="{{each_function.position_y or 0}}" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/conditional_entry.html' %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'PID' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-y="{{each_function.position_y or 0}}" gs-w="24" gs-h="2" gs-no-resize="true">
+      {% include 'pages/function_options/pid_entry.html' %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'Trigger' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-y="{{each_function.position_y or 0}}" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% if each_function.trigger_type == 'trigger_sequence' %}
+      {% include 'pages/function_options/trigger_sequence_entry.html' %}
+      {% else %}
+      {% include 'pages/function_options/trigger_entry.html' %}
+      {% endif %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'Function' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/function_entry.html' %}
+    </div> <!-- grid-stack-item -->
+
+    {% elif each_function._controller_type == 'Function_Custom' %}
+    <div id="gridstack_function_{{each_function.unique_id}}" class="grid-stack-item" gs-id="{{each_function.unique_id}}"
+      gs-x="0" gs-auto-position="true" gs-w="24" gs-h="1" gs-no-resize="true">
+      {% include 'pages/function_options/custom_function_entry.html' %}
+    </div> <!-- grid-stack-item -->
+    {% endif %}
+    {% endfor %}
+  </div> <!-- grid-stack -->
+
+  {% include 'admin/dependencies_install.html' %}
+
+</main>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<script type="text/javascript">
+  function initGrid() {
+    if (window.grid) return; // Already initialized; CSS handles mobile layout.
+
+    window.grid = GridStack.init({
+      animate: false,
+      cellHeight: 52,
+      column: 24,
+      margin: 2,
+      handle: '.aot-entry-drag-handle',
+      float: false,
+      disableOneColumnMode: true,
+      alwaysShowResizeHandle: false,
+      resizable: false
+    }, '.aot-entry-container');
+
+    window.grid.on('dragstop', function (event, el) {
+      if (window.innerWidth <= 768) return; // No save on mobile viewport.
+
+      let serializedFull = window.grid.save(false);
+      $.ajax({
+        type: "POST",
+        url: "/save_function_layout",
+        headers: { "X-CSRFToken": "{{form_function_base.csrf_token._value()}}" },
+        data: JSON.stringify(serializedFull, null, '  '),
+        contentType: "application/json; charset=utf-8",
+        success: function (data) { }
+      });
+    });
+  }
+
+  $(document).ready(initGrid);
+  $(window).on('load', initGrid);
+  let resizeTimer;
+  $(window).on('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function() {
+      if (window.grid && typeof window.grid.onParentResize === 'function') window.grid.onParentResize();
+    }, 50);
+  });
+
+  function popup_response(data) {
+    if (data && data.data && data.data.messages) {
+      const msgs = data.data.messages;
+      if (msgs.error && msgs.error.length) window.showToast('{{ _("Error:") }} ' + msgs.error.join(", "), 'error');
+      if (msgs.warning && msgs.warning.length) window.showToast('{{ _("Warning:") }} ' + msgs.warning.join(", "), 'warning');
+      if (msgs.info && msgs.info.length) window.showToast('{{ _("Info:") }} ' + msgs.info.join(", "), 'info');
+      if (msgs.success && msgs.success.length) window.showToast('{{ _("Success:") }} ' + msgs.success.join(", "), 'success');
+    }
+  }
+
+  /**
+   * Re-fetch an option-modal body fragment from the server and replace it in
+   * place so the modal reflects the freshly-saved DB state without a page
+   * reload. Keeps the Bootstrap modal open and re-initializes selectpickers
+   * and maps inside the replaced fragment. `onDone` runs after replacement.
+   */
+  function refreshModalOptions(type, id, onDone, tabId) {
+    var _url = '/' + type + '?' + type + '_type=options&' + type + '_id=' + id;
+    if (tabId) { _url += '&tab_id=' + encodeURIComponent(tabId); }
+    $.ajax({
+      type: "GET",
+      url: _url,
+      success: function (new_options) {
+        var $container = $('#mod_' + type + '_' + id);
+        $container.html(new_options);
+        $container.find('.selectpicker').selectpicker();
+        if (window.AoTMapModalController) {
+          setTimeout(function () { AoTMapModalController.initAll(); }, 100);
+        }
+        if (typeof onDone === 'function') onDone();
+      },
+      error: function () {
+        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
+      }
+    });
+  }
+
+  /**
+   * Re-run inline <script> tags inside a freshly-added grid widget.
+   * gridstack's addWidget(htmlString) inserts the markup but does NOT execute
+   * inline scripts, so each option modal's init script (selectpicker setup and
+   * conditional show/hide such as the PID setpoint-tracking rows) never runs
+   * until a full page reload. Replacing each <script> node with a fresh one
+   * forces the browser to execute it, matching what a reload does on ready.
+   */
+  function initNewWidgetScripts(widgetSelector) {
+    var el = document.querySelector(widgetSelector);
+    if (!el) return;
+    el.querySelectorAll('script').forEach(function (old) {
+      var s = document.createElement('script');
+      if (old.src) { s.src = old.src; } else { s.textContent = old.textContent; }
+      old.parentNode.replaceChild(s, old);
+    });
+  }
+
+  var status_message = {};
+
+  function function_status(function_id) {
+    const url = '/function_status_activated/' + function_id;
+    $.getJSON(url,
+      function (data, responseText, jqXHR) {
+        var statusElem = document.getElementById("function_status_activated_" + function_id);
+        if (jqXHR.status !== 204) {
+          if (data && "string_status" in data) {
+            if (statusElem) statusElem.innerHTML = data['string_status'].replace(/(?:\r\n|\r|\n)/g, "<br>");
+          } else {
+            if (statusElem) statusElem.innerHTML = '';
+          }
+          if (data && "error" in data && data['error'].length) {
+            let errors = ''
+            for (let c = 0; c < data['error'].length; c++) {
+              errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
+            }
+            if (statusElem) statusElem.innerHTML += "<p><pre>{{ _('Error(s):') }}<br>" + errors + "</pre></p>";
+          }
+        }
+        else {
+          if (statusElem) statusElem.innerHTML = "{{ _('Error querying status.') }}";
+        }
+      }
+    );
+  }
+  // Repeat function for function_status()
+  function repeat_function_status(function_id, period_sec) {
+    status_message[function_id] = setInterval(function () {
+      function_status(function_id)
+    }, period_sec * 1000);
+  }
+
+  function function_status_always(function_id) {
+    const url_2 = '/function_status_always/' + function_id;
+    $.getJSON(url_2,
+      function (data, responseText, jqXHR) {
+        var statusElem = document.getElementById("function_status_always" + function_id);
+        if (jqXHR.status !== 204) {
+          if (data && "string_status" in data) {
+            if (statusElem) statusElem.innerHTML = data['string_status'].replace(/(?:\r\n|\r|\n)/g, "<br>");
+          } else {
+            if (statusElem) statusElem.innerHTML = '';
+          }
+          if (data && "error" in data && data['error'].length) {
+            let errors = ''
+            for (let c = 0; c < data['error'].length; c++) {
+              errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
+            }
+            if (statusElem) statusElem.innerHTML += "<p><pre>{{ _('Error(s):') }}<br>" + errors + "</pre></p>";
+          }
+        }
+        else {
+          if (statusElem) statusElem.innerHTML = "{{ _('Error querying status.') }}";
+        }
+      }
+    );
+  }
+  // Repeat function for function_status_always()
+  function repeat_function_status_always(function_id, period_sec) {
+    status_message[function_id] = setInterval(function () {
+      function_status_always(function_id)
+    }, period_sec * 1000);
+  }
+
+  jQuery(document).ready(function ($) {
+    {%- for each_function in function if 'period_status' in custom_options_values_controllers[each_function.unique_id] %}
+    {%- set p_status = custom_options_values_controllers[each_function.unique_id]['period_status'] -%}
+    {%- if p_status is defined and p_status != '' and p_status != None %}
+    function_status_always('{{each_function.unique_id}}');
+    repeat_function_status_always('{{each_function.unique_id}}', {{ p_status }});
+  {%- if each_function.is_activated -%}
+  function_status('{{each_function.unique_id}}');
+  repeat_function_status('{{each_function.unique_id}}', {{ p_status }});
+  {%- endif -%}
+    {%- endif -%}
+  {% endfor %}
+  {%- for each_conditional in conditional if each_conditional.is_activated %}
+  function_status('{{each_conditional.unique_id}}');
+  repeat_function_status('{{each_conditional.unique_id}}', 3);
+  {% endfor %}
+  {%- for each_pid in pid if each_pid.is_activated %}
+  function_status('{{each_pid.unique_id}}');
+  repeat_function_status('{{each_pid.unique_id}}', 3);
+  {% endfor %}
+    });
+
+  function function_status_reset(function_id) {
+    $('#function_status_' + function_id)
+      .removeClass("inactive-background")
+      .removeClass("active-background")
+      .removeClass("hold-background")
+      .removeClass("pause-background");
+  }
+  function ids_hide(pid_id, class_list) {
+    for (let c = 0; c < class_list.length; c++) {
+      let id_str = class_list[c] + "_" + pid_id;
+      if (document.getElementById(id_str) != null) {
+        document.getElementById(id_str).style.display = "none";
+      }
+    }
+  }
+  function ids_show(pid_id, class_list) {
+    for (let c = 0; c < class_list.length; c++) {
+      let id_str = class_list[c] + "_" + pid_id;
+      if (document.getElementById(id_str) != null) {
+        document.getElementById(id_str).style.display = "";
+      }
+    }
+  }
+
+  function getFormData(form) {
+    let rawJson = form.serializeArray();
+    let model = {}; $.map(rawJson, function (n, i) {
+      model[n['name']] = n['value'];
+    });
+    return model;
+  }
+
+  jQuery.fn.processRequest = function (button, action) {
+
+    console.log("[AoT Debug] processRequest Action: ", action);
+    // Priority: data-form-id, if not found then form inside modal, and then the closest form
+    var formId = $(button).data('form-id');
+    var $form;
+    
+    if (formId) {
+      // [Fix] document.getElementById avoids jQuery CSS selector issues with dots/special chars
+      var formEl = document.getElementById(formId);
+      $form = formEl ? $(formEl) : $();
+    } else {
+      $form = $(button).closest('.modal').find('form').first();
+    }
+    
+    if (!$form.length) {
+      $form = $(button).closest('form');
+    }
+    if (!$form.length) {
+      window.showToast('{{ _("Error: form not found for action") }} ' + action, 'error');
+      return false;
+    }
+    let form_values = getFormData($form);
+    if (action === 'function_add' ||
+      action === 'function_mod' ||
+      action === 'function_delete' ||
+      action === 'function_activate' ||
+      action === 'function_deactivate' ||
+      action === 'function_duplicate' ||
+      action === 'execute_all_actions' ||
+      action === 'add_action' ||
+      action === 'save_action' ||
+      action === 'delete_action' ||
+      action === 'add_condition' ||
+      action === 'save_condition' ||
+      action === 'delete_condition' ||
+      action === 'pid_pause' ||
+      action === 'pid_hold' ||
+      action === 'pid_resume' ||
+      action.startsWith('custom_button_')) {
+      window.showToast('{{ _("Command sent. Please wait...") }}', 'info');
+      
+      // Get current tab_id from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabId = urlParams.get('tab_id');
+      const submitUrl = tabId ? `/function_submit?tab_id=${tabId}` : '/function_submit';
+      
+      $.ajax({
+        type: "POST",
+        url: submitUrl,
+        headers: { "X-CSRFToken": "{{form_function_base.csrf_token._value()}}" },
+        data: $form.serialize() + '&' + action + '=1',
+        success: function (data) {
+          if (action === 'function_add' && 'function_id' in data.data) {
+            if ('dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+              $(".dependencies_device_name").text(data.data.dep_name);
+              $(".dependencies_device").text(data.data.dep_unmet);
+              $(".dependencies_unmet").text(data.data.dep_list.join(", "));
+              if (document.getElementById("dependency_unmet")) {
+                document.getElementById("dependency_unmet").value = data.data.dep_unmet;
+              }
+              if (data.data.dep_message.length > 0) {
+                if (document.getElementById("dependencies_message")) {
+                  document.getElementById("dependencies_message").innerHTML = "<p>{{ _('Message about dependencies:') }} " + data.data.dep_message + "</p>";
+                }
+              }
+              $('#modal_config_dependency_install').modal('show');
+              popup_response(data);
+            } else {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=entry&function_id=' + data.data.function_id,
+                success: function (new_entry) {
+                  if (data.data.messages.success.length !== 0) {
+                    window.grid.addWidget('<div class="grid-stack-item" id="gridstack_function_' + data.data.function_id + '" gs-id="' + data.data.function_id + '">' + new_entry + '</div>', {
+                      w: 24, h: 1
+                    });
+                    /* Tooltip handled by global delegation in layout.html */
+                    $('#action_type_' + data.data.function_id).selectpicker();
+                    $('#condition_type_' + data.data.function_id).selectpicker();
+                    initNewWidgetScripts('#gridstack_function_' + data.data.function_id);
+                    if (window.AoTMapModalController) {
+                      setTimeout(function () { AoTMapModalController.initAll(); }, 100);
+                    }
+                  }
+                  popup_response(data);
+                },
+                error: function () {
+                  window.showToast('{{ _("Error: Could not get new Function entry") }}', 'error');
+                }
+              });
+            }
+          }
+          else if (action === 'add_action' && 'dep_unmet' in data.data && data.data.dep_unmet.length > 0) {
+            $(".dependencies_device_name").text(data.data.dep_name);
+            $(".dependencies_device").text(data.data.dep_unmet);
+            $(".dependencies_unmet").text(data.data.dep_list.join(", "));
+            if (document.getElementById("dependency_unmet")) {
+              document.getElementById("dependency_unmet").value = data.data.dep_unmet;
+            }
+            if (data.data.dep_message.length > 0) {
+              if (document.getElementById("dependencies_message")) {
+                document.getElementById("dependencies_message").innerHTML = "<p>{{ _('Message about dependencies:') }} " + data.data.dep_message + "</p>";
+              }
+            }
+            $('#modal_config_dependency_install').modal('show');
+          }
+          else if (action === 'function_duplicate' && 'function_id' in data.data) {
+            $.ajax({
+              type: "GET",
+              url: '/function?function_type=entry&function_id=' + data.data.function_id,
+              success: function (new_entry) {
+                if (data.data.messages.success.length !== 0) {
+                  window.grid.addWidget('<div class="grid-stack-item" id="gridstack_function_' + data.data.function_id + '" gs-id="' + data.data.function_id + '">' + new_entry + '</div>', {
+                    w: 24, h: 1
+                  });
+                  /* Tooltip handled by global delegation in layout.html */
+                  $('#action_type_' + data.data.function_id).selectpicker();
+                  $('#condition_type_' + data.data.function_id).selectpicker();
+                  initNewWidgetScripts('#gridstack_function_' + data.data.function_id);
+                  if (window.AoTMapModalController) {
+                    setTimeout(function () { AoTMapModalController.initAll(); }, 100);
+                  }
+                }
+                popup_response(data);
+              },
+              error: function () {
+                window.showToast('Error: Could not get new Function entry', 'error');
+              }
+            });
+          }
+
+          if (data.data.messages.error.length === 0) {
+            if (action === 'function_mod' && 'function_id' in data.data) {
+              if ('return_text' in data.data.messages && data.data.messages.return_text.length > 0) {
+                var returnTextElem = document.getElementById("return_text_" + data.data.function_id);
+                if (returnTextElem) {
+                  returnTextElem.innerHTML = data.data.messages.return_text.join("<br/><br/>");
+                }
+              }
+              if ('name' in data.data.messages &&
+                document.getElementById("function_name_" + data.data.function_id)) {
+                if (document.getElementById("function_name_" + data.data.function_id).tagName === "DIV") {
+                  document.getElementById("function_name_" + data.data.function_id).innerHTML = data.data.messages.name;
+                } else if (document.getElementById("function_name_" + data.data.function_id).tagName === "INPUT") {
+                  document.getElementById("function_name_" + data.data.function_id).value = data.data.messages.name;
+                }
+              }
+            }
+            else if (action === 'function_delete' && 'function_id' in data.data) {
+              $('#modal_config_' + data.data.function_id).modal('hide');
+              $('.modal-backdrop').remove();
+              $(document.body).removeClass("modal-open");
+              window.grid.removeWidget('#gridstack_function_' + data.data.function_id);
+            }
+            else if (action === 'function_activate' && 'function_id' in data.data) {
+              if (data.data.messages && data.data.messages.error && data.data.messages.error.length) {
+                popup_response(data);
+              } else {
+                function_status_reset(data.data.function_id);
+                $('#function_status_' + data.data.function_id).addClass("active-background");
+                if (document.getElementById('function_activate_' + data.data.function_id) != null) {
+                  document.getElementById('function_activate_' + data.data.function_id).style.display = "none";
+                }
+                if (document.getElementById('function_deactivate_' + data.data.function_id) != null) {
+                  document.getElementById('function_deactivate_' + data.data.function_id).style.display = "";
+                }
+                if (document.getElementById('form_pid_' + data.data.function_id) != null) {
+                  ids_hide(data.data.function_id, ["pid_activate", "pid_resume"]);
+                  ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold"]);
+                  document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Activated]') }}";
+                }
+                if ("function_type" in form_values && ["conditional", "function", "pid"].includes(form_values.function_type)) {
+                  ids_show(data.data.function_id, ["status_activated_enable"]);
+                  function_status(data.data.function_id);
+                  if ("period_status" in data.data.messages && data.data.messages.period_status) {
+                    repeat_function_status(data.data.function_id, data.data.messages.period_status);
+                  } else {
+                    repeat_function_status(data.data.function_id, 3);
+                  }
+                }
+              }
+            }
+            else if (action === 'function_deactivate' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("inactive-background");
+              if (document.getElementById('function_activate_' + data.data.function_id) != null) {
+                document.getElementById('function_activate_' + data.data.function_id).style.display = "";
+              }
+              if (document.getElementById('function_deactivate_' + data.data.function_id) != null) {
+                document.getElementById('function_deactivate_' + data.data.function_id).style.display = "none";
+              }
+              if (document.getElementById('form_pid_' + data.data.function_id) != null) {
+                ids_hide(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold", "pid_resume"]);
+                ids_show(data.data.function_id, ["pid_activate"]);
+                document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Deactivated]') }}";
+                if (document.getElementById("function_status_activated_" + data.data.function_id)) {
+                  document.getElementById("function_status_activated_" + data.data.function_id).innerHTML = "";
+                }
+              }
+              if ("function_type" in form_values && ["conditional", "function", "pid"].includes(form_values.function_type)) {
+                ids_hide(data.data.function_id, ["status_activated_enable"]);
+                if (data.data.function_id in status_message) {
+                  clearInterval(status_message[data.data.function_id]);
+                  delete status_message[data.data.function_id];
+                }
+              }
+            }
+            else if (action === 'pid_pause' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("pause-background");
+              ids_hide(data.data.function_id, ["pid_activate", "pid_pause", "pid_hold"]);
+              ids_show(data.data.function_id, ["pid_deactivate", "pid_resume"]);
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Paused]') }}";
+            }
+            else if (action === 'pid_hold' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("hold-background");
+              ids_hide(data.data.function_id, ["pid_activate", "pid_hold", "pid_pause"]);
+              ids_show(data.data.function_id, ["pid_deactivate", "pid_resume"]);
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Hold]') }}";
+            }
+            else if (action === 'pid_resume' && 'function_id' in data.data) {
+              function_status_reset(data.data.function_id);
+              $('#function_status_' + data.data.function_id).addClass("active-background");
+              ids_hide(data.data.function_id, ["pid_resume"]);
+              ids_show(data.data.function_id, ["pid_deactivate", "pid_pause", "pid_hold"]);
+              document.getElementById("pid_activity_indicator_" + data.data.function_id).value = "{{ _('PID Controller [Activated]') }}";
+            }
+            if (action === 'delete_action' && 'action_id' in data.data) {
+              document.getElementById("mod_action_" + data.data.action_id).remove();
+              popup_response(data);
+            }
+            if (action === 'delete_condition' && 'condition_id' in data.data) {
+              document.getElementById("mod_function_condition_" + data.data.condition_id).remove();
+              popup_response(data);
+            }
+            if (action === 'function_mod' && 'function_id' in data.data) {
+              if ('tab_id' in data.data.messages && data.data.messages.tab_id !== tabId) {
+                $('#modal_config_' + data.data.function_id).modal('hide');
+                $('.modal-backdrop').remove();
+                $(document.body).removeClass("modal-open");
+                window.grid.removeWidget('#gridstack_function_' + data.data.function_id);
+                popup_response(data);
+              } else {
+                refreshModalOptions('function', data.data.function_id, function () {
+                  popup_response(data);
+                }, tabId);
+              }
+            }
+            else if (action === 'add_action' && 'page_refresh' in data.data && data.data.page_refresh) {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=actions&function_id=' + data.data.function_id + '&action_id=' + data.data.action_id,
+                success: function (new_options) {
+                  // Append the new card HTML into the grid container. The grid's
+                  // MutationObserver (installed by init_gridstack_actions) detects
+                  // the new .grid-stack-item, calls grid.makeWidget on it,
+                  // initializes selectpicker/clockpicker, attaches ResizeObserver,
+                  // and triggers _adjustHeights — no per-call init logic needed.
+                  var gridId = 'mod_function_actions_' + data.data.function_id;
+                  var gridEl = document.getElementById(gridId);
+
+                  if (gridEl) {
+                    var tmpWrap = document.createElement('div');
+                    tmpWrap.innerHTML = (new_options || '').trim();
+                    var newItem = tmpWrap.firstElementChild;
+                    if (newItem) gridEl.appendChild(newItem);
+                    popup_response(data);
+                  } else {
+                    // Container missing — full refresh of the function options.
+                    $.ajax({
+                      type: 'GET',
+                      url: '/function?function_type=options&function_id=' + data.data.function_id,
+                      success: function (new_options_full) {
+                        $('#mod_function_' + data.data.function_id).html(new_options_full);
+                        popup_response(data);
+                      },
+                      error: function () {
+                        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
+                      }
+                      });
+                  }
+                },
+                error: function () {
+                  window.showToast('{{ _("Error: Could not get Function actions.") }}', 'error');
+                }
+              });
+            }
+
+
+            else if (action === 'add_condition' && 'page_refresh' in data.data && data.data.page_refresh) {
+              $.ajax({
+                type: "GET",
+                url: '/function?function_type=conditions&function_id=' + data.data.function_id + '&condition_id=' + data.data.condition_id,
+                success: function (new_options) {
+                  var conditionContainer = document.getElementById('mod_function_conditions_' + data.data.function_id);
+                  if (conditionContainer) {
+                    conditionContainer.insertAdjacentHTML('beforeend', (new_options));
+                    popup_response(data);
+                  } else {
+                    console.warn('Condition container not found: mod_function_conditions_' + data.data.function_id);
+                    // Fallback to full refresh
+                    $.ajax({
+                      type: "GET",
+                      url: '/function?function_type=options&function_id=' + data.data.function_id,
+                      success: function (new_options_full) {
+                        $('#mod_function_' + data.data.function_id).html(new_options_full);
+                        popup_response(data);
+                      },
+                      error: function () {
+                        window.showToast('{{ _("Error: Could not get new Function options.") }}', 'error');
+                      }
+                    });
+                  }
+                },
+                error: function () {
+                  window.showToast('{{ _("Error: Could not get Function conditions.") }}', 'error');
+                }
+              });
+            } else {
+              popup_response(data);
+            }
+          } else {
+            popup_response(data);
+          }
+        },
+        error: function () {
+          window.showToast('{{ _("Error: Unable to communicate with server.") }}', 'error');
+        }
+      });
+    }
+  }
+
+  $(document).ready(function() {
+    $('.clockpicker').clockpicker({
+      donetext: '{{ _("Done") }}'
+    });
+
+    $('.collapse').on('show.bs.collapse', function () {
+      $(this).parent().find(".fa-plus-square").removeClass("fa-plus-square").addClass("fa-minus-square");
+    }).on('hide.bs.collapse', function () {
+      $(this).parent().find(".fa-minus-square").removeClass("fa-minus-square").addClass("fa-plus-square");
+    });
+
+  });
+</script>
+
+<!-- Tab Management JavaScript -->
+<script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
+
+<!-- Tab Settings Modal -->
+{% include 'modals/tab_settings.html' %}
+
+{% endblock %}

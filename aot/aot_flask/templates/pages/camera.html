@@ -1,0 +1,366 @@
+{% extends "layout.html" %}
+{% set active_page = "camera" %}
+{% set help_page = [manual_url("Camera/"), dict_translation['camera']['title']] %}
+
+{% block title %} - {{dict_translation['camera']['title']}}{% endblock %}
+
+{% block head %}
+<style>
+  /* Force 100% width on mobile immediately to prevent jagged reflow */
+  @media (max-width: 768px) {
+    .grid-stack-item {
+      width: 100% !important;
+      left: 0 !important;
+    }
+  }
+  .grid-stack-item-content {
+    transition: none !important;
+  }
+  .grid-stack-item-content input.form-control {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+</style>
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.3" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+{% endblock %}
+
+{%- block body %}
+<div class="container-fluid px-0">
+<!-- Route: /camera -->
+<main role="main" class="container py-4">
+  {% include 'flash_messages.html' %}
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  <!-- Camera selection and add form -->
+  <form id="new_camera_form" method="post" action="/camera" style="padding-bottom: 0.5em">
+    {{form_add_camera.hidden_tag()}}
+    <div class="row aot-main-selection-row">
+      <!-- Platform auto-detection display -->
+      <div class="col-12 mb-3">
+        <div class="alert aot-entry-info" style="margin-bottom: 0.5em; border-radius: 12px; background: rgba(var(--aot-bg-rgb), 0.5); border: 1px solid var(--bd-btn-secondary);">
+          <i class="fas fa-microchip mr-2"></i>
+          <strong>{{_('Detected Platform')}}:</strong>
+          <span id="detected_platform" class="ml-1 text-primary">
+            {% if platform == 'raspberry_pi' %}
+              <i class="fab fa-raspberry-pi"></i> Raspberry Pi
+            {% elif platform == 'debian_pc' %}
+              <i class="fas fa-desktop"></i> {{_('PC/Server')}}
+            {% elif platform == 'docker' %}
+              <i class="fab fa-docker"></i> {{_('Docker Container')}}
+            {% else %}
+              <i class="fas fa-question-circle"></i> {{_('Unknown')}}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="col-auto">
+        <select name="camera_type"
+                id="camera_type_select"
+                class="selectpicker aot-standard-select"
+                data-style="btn btn-primary aot-roundbox"
+                data-live-search="true"
+                title="{{_('Camera')}}: {{_('Select')}}">
+          
+          {% set categories = [('modern', _('Modern')), ('legacy', _('Legacy'))] %}
+          {% for cat_id, cat_name in categories %}
+            <optgroup label="{{cat_name}}">
+              {% for ct, cfg in dict_cameras.items() %}
+                {% if cfg.get('category') == cat_id and (cfg.get('platform') == 'all' or cfg.get('platform') == platform) %}
+                <option value="{{ct}}" data-subtext="{{cfg.get('backend')}}">
+                  {{cfg.get('display_name')}}
+                </option>
+                {% endif %}
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <input onclick="return $(this).processRequest(this, 'camera_add');" 
+          name="camera_add" 
+          value="{{_('Add')}}"
+          class="btn btn-primary" 
+          type="button" />
+      </div>
+      <div class="col-auto">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" onclick="detectCameras()">
+          <i class="fas fa-search mr-1"></i> {{_('Auto-detect')}}
+        </button>
+      </div>
+    </div>
+
+    <!-- Detected camera list -->
+    <div id="detected_cameras_container" class="mt-3" style="display: none;">
+      <div class="aot-modal-container" style="padding: 1rem; background: rgba(var(--aot-bg-rgb), 0.3);">
+        <h6 class="mb-2"><i class="fas fa-check-circle text-success mr-2"></i>{{_('Detected Cameras')}}</h6>
+        <div id="detected_cameras_list" class="d-flex flex-wrap"></div>
+      </div>
+    </div>
+  </form>
+
+  <div style="clear: both; padding: 1em 0;"></div>
+
+  <!-- Camera gridstack -->
+  <div class="grid-stack aot-entry-container">
+    {% for each_camera in cameras -%}
+    <div id="gridstack_camera_{{each_camera.unique_id}}" 
+      class="grid-stack-item" 
+      gs-id="{{each_camera.unique_id}}" 
+      gs-x="0"
+      gs-y="{{each_camera.position_y}}" 
+      gs-w="24" 
+      gs-h="1" 
+      gs-no-resize="true">
+      {% include 'pages/data_options/camera_entry.html' %}
+    </div>
+    {%- endfor -%}
+  </div>
+
+  {% include 'admin/dependencies_install.html' %}
+
+</main>
+</div>
+
+<div style="clear: both; padding-bottom: 1.5em;"></div>
+
+<script>
+  jQuery.fn.processRequest = function (button, action) {
+    var formId = $(button).data('form-id');
+    var $form = formId ? $(document.getElementById(formId)) : $(button).closest('form');
+    if (!$form.length) {
+      $form = $(button).parents('form');
+    }
+    if (!$form.length) {
+      window.showToast ? window.showToast('Error: form not found', 'error') : alert('Error: form not found');
+      return false;
+    }
+
+    if (action === 'camera_add' ||
+      action === 'camera_activate' || action === 'camera_deactivate' ||
+      action === 'camera_mod' || action === 'camera_delete') {
+      $form.find('input[name="' + action + '"]').remove();
+      $form.append('<input type="hidden" name="' + action + '" value="1">');
+      $form.submit();
+    }
+    return false;
+  };
+
+  function initGrid() {
+    let targetColumn = (window.innerWidth <= 768) ? 1 : 24;
+    
+    if (window.grid) {
+      if (window.grid.getColumn() === targetColumn) return;
+      
+      window.grid.batchUpdate(true);
+      window.grid.column(targetColumn, 'list');
+      
+      if (targetColumn === 24) {
+        window.grid.engine.nodes.forEach(node => {
+          window.grid.update(node.el, { w: 24, x: 0 });
+        });
+      }
+      window.grid.batchUpdate(false);
+      return;
+    }
+
+    window.grid = GridStack.init({
+      column: targetColumn,
+      cellHeight: 52,
+      margin: 2,
+      float: false,
+      disableOneColumnMode: true,
+      animate: false,
+      handle: '.aot-entry-drag-handle',
+      resizable: false,
+      draggable: {
+        scroll: true,
+        appendTo: 'body',
+        containment: '.aot-entry-container'
+      }
+    });
+
+    window.grid.on('change', function(event, items) {
+      if (!items || items.length === 0) return;
+      
+      let positions = {};
+      window.grid.engine.nodes.forEach(node => {
+        positions[node.el.getAttribute('gs-id')] = node.y;
+      });
+
+      $.ajax({
+        type: 'POST',
+        url: '/camera/save_order',
+        data: JSON.stringify(positions),
+        contentType: 'application/json',
+        dataType: 'json'
+      });
+    });
+  }
+
+  function detectCameras() {
+    $.ajax({
+      type: 'GET',
+      url: '/camera/detect',
+      beforeSend: function() {
+        if (window.showToast) window.showToast('{{_("Detecting cameras...")}}', 'info');
+      },
+      success: function(response) {
+        if (response.status === 'success' && response.cameras && response.cameras.length > 0) {
+          const $container = $('#detected_cameras_container');
+          const $list = $('#detected_cameras_list');
+          $list.empty();
+          
+          response.cameras.forEach(camera => {
+            $list.append(`
+              <div class="aot-pill-btn aot-pill-btn-secondary mr-2 mb-2" style="cursor: default; padding: 0.5rem 1rem;">
+                <i class="fas fa-camera mr-2"></i>
+                <strong>${camera.name}</strong>
+                <span class="badge badge-primary ml-2">${camera.type}</span>
+                <small class="ml-2 opacity-75">${camera.device}</small>
+              </div>
+            `);
+          });
+          
+          $container.fadeIn();
+          if (window.showToast) window.showToast('{{_("Found")}} ' + response.cameras.length + ' {{_("camera(s)")}}', 'success');
+        } else {
+          if (window.showToast) window.showToast('{{_("No cameras detected")}}', 'warning');
+        }
+      },
+      error: function() {
+        if (window.showToast) window.showToast('{{_("Camera detection failed")}}', 'error');
+      }
+    });
+  }
+
+  /* === Camera Preview & Capture Functions === */
+  function setCameraPreviewMode(uid, mode, btn) {
+    var $section = $('#preview_media_' + uid);
+    var $img = $('#preview_img_' + uid);
+    var $placeholder = $('#preview_placeholder_' + uid);
+    var $toggleBtns = $(btn).closest('.aot-camera-preview-toggle').find('.btn');
+
+    $toggleBtns.removeClass('active');
+    $(btn).addClass('active');
+
+    if (mode === 'live') {
+      $img.attr('src', '/video_feed/' + uid);
+      $img.show();
+      $placeholder.hide();
+    } else {
+      // Image mode: load last captured image
+      $img.attr('src', '/camera/last_image/' + uid + '?t=' + Date.now());
+      $img.show();
+      $placeholder.hide();
+      $img.on('error', function() {
+        $(this).hide();
+        $placeholder.show();
+      });
+    }
+  }
+
+  function cameraCaptureStart(uid, mode) {
+    var urlMap = {
+      'snapshot': '/camera/capture/' + uid,
+      'timelapse': '/camera/timelapse/' + uid,
+      'video': '/camera/record/' + uid,
+      'stream': '/camera/capture/' + uid
+    };
+    var dataMap = {
+      'snapshot': null,
+      'timelapse': JSON.stringify({action: 'start'}),
+      'video': JSON.stringify({action: 'start'}),
+      'stream': null
+    };
+
+    if (window.showToast) window.showToast('{{_("Starting...")}}', 'info');
+
+    $.ajax({
+      type: 'POST',
+      url: urlMap[mode],
+      data: dataMap[mode],
+      contentType: dataMap[mode] ? 'application/json' : undefined,
+      success: function(response) {
+        if (response.status === 'success') {
+          if (window.showToast) window.showToast('{{_("Capture started")}}', 'success');
+          // Refresh preview image
+          var $img = $('#preview_img_' + uid);
+          $img.attr('src', '/camera/last_image/' + uid + '?t=' + Date.now());
+          $img.show();
+          $('#preview_placeholder_' + uid).hide();
+          if (response.timestamp) {
+            $('#last_capture_time_' + uid).text(response.timestamp);
+          }
+        } else {
+          if (window.showToast) window.showToast('{{_("Capture failed")}}', 'error');
+        }
+      },
+      error: function() {
+        if (window.showToast) window.showToast('{{_("Capture failed")}}', 'error');
+      }
+    });
+  }
+
+  function cameraCaptureStop(uid, mode) {
+    var urlMap = {
+      'snapshot': '/camera/capture/' + uid,
+      'timelapse': '/camera/timelapse/' + uid,
+      'video': '/camera/record/' + uid,
+      'stream': '/camera/capture/' + uid
+    };
+
+    if (mode === 'snapshot') {
+      if (window.showToast) window.showToast('{{_("Snapshot mode has no stop action")}}', 'info');
+      return;
+    }
+
+    if (window.showToast) window.showToast('{{_("Stopping...")}}', 'info');
+
+    $.ajax({
+      type: 'POST',
+      url: urlMap[mode],
+      data: JSON.stringify({action: 'stop'}),
+      contentType: 'application/json',
+      success: function(response) {
+        if (response.status === 'success') {
+          if (window.showToast) window.showToast('{{_("Capture stopped")}}', 'success');
+        } else {
+          if (window.showToast) window.showToast('{{_("Stop failed")}}', 'error');
+        }
+      },
+      error: function() {
+        if (window.showToast) window.showToast('{{_("Stop failed")}}', 'error');
+      }
+    });
+  }
+
+  // Auto-init preview when modal opens
+  $(document).on('shown.bs.modal', '.aot-option-modal', function() {
+    var $modal = $(this);
+    var $activeToggle = $modal.find('.aot-camera-preview-toggle .btn.active');
+    if ($activeToggle.length) {
+      $activeToggle.trigger('click');
+    }
+  });
+
+  // Stop live stream when modal closes
+  $(document).on('hidden.bs.modal', '.aot-option-modal', function() {
+    $(this).find('.aot-camera-preview-media img').attr('src', '');
+  });
+
+  $(document).ready(function() {
+    initGrid();
+
+    let resizeTimer;
+    $(window).on('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(initGrid, 250);
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+#
+#  install - AoT install script
+#
+#  Do not execute this script if the AoT archive has been downloaded and extracted.
+#  If AoT has been extracted (/opt/AoT/ already exists), then execute:
+#
+#  sudo /bin/bash /opt/AoT/install/setup.sh
+#
+#
+#  If AoT has not yet been downloaded/extracted, execute the following to install:
+#
+#  curl -L https://aot-inc.github.io/AoT/install | bash
+#
+
+INSTALL_DIRECTORY=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd -P )
+
+if [ "$EUID" -eq 0 ]; then
+    printf "Do not run as root. Run as non-root user: \"/bin/bash %s/install\"\n" "${INSTALL_DIRECTORY}"
+    exit 1
+fi
+
+if [ -d /opt/AoT ]; then
+  printf "## Error: Install aborted. Cause: The /opt/AoT directory already exists. The install cannot continue because a previous AoT install was detected. Please either move or delete the /opt/AoT directory and rerun this script to initiate the install or run /opt/AoT/install/setup.sh.\n"
+  exit 1
+fi
+
+# Install dependencies
+sudo apt update
+sudo apt install -y jq dialog python3 wget
+
+# Create install directory
+sudo mkdir -p /opt/AoT
+sudo chown -R ${USER}: /opt/AoT
+cd /opt
+
+# Download and install
+curl -s https://api.github.com/repos/aot-inc/AoT/releases/latest | \
+jq -r '.tarball_url' | sudo wget -i - -O aot-latest.tar.gz
+sudo tar xzf aot-latest.tar.gz -C AoT --strip-components=1
+sudo rm -f aot-latest.tar.gz
+cd AoT/install
+sudo /bin/bash ./setup.sh

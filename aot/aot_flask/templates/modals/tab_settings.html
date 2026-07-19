@@ -1,0 +1,240 @@
+<!-- Tab Settings Modal -->
+<div class="modal fade aot-option-modal aot-tab-settings-modal" id="tabSettingsModal" tabindex="-1" role="dialog" aria-labelledby="tabSettingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header border-0 pt-4 px-4">
+        <h5 class="modal-title font-weight-bold" id="tabSettingsModalLabel">{{_('Tab Settings')}}</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <form id="tabSettingsForm" onsubmit="event.preventDefault(); document.getElementById('btnRenameTab').click(); return false;">
+        <input type="hidden" id="tabSettingsTabId" name="tab_id">
+        <div class="modal-body">
+          <div class="aot-modal-container">
+            <div class="aot-modal-option-row">
+              <label for="tabSettingsName" class="aot-modal-option-label">{{_('Tab Name')}}</label>
+              <div class="aot-modal-option-control">
+                <input type="text" class="form-control aot-modern-input" id="tabSettingsName" name="name" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning Message -->
+        <div class="alert alert-warning mx-3 mt-0" id="lastTabWarning" style="display: none;">
+          <i class="fas fa-exclamation-triangle"></i> {{_('Cannot delete the last tab on this page.')}}
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{_('Close')}}</button>
+          <button type="button" class="btn aot-pill-btn" id="btnDeleteTab">{{_('Delete')}}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btnDuplicateTab">{{_('Duplicate')}}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btnRenameTab">{{_('Save')}}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  
+  const modal = document.getElementById('tabSettingsModal');
+  if (!modal) return;
+  
+  const $modal = $(modal);
+  const form = document.getElementById('tabSettingsForm');
+  const tabIdInput = document.getElementById('tabSettingsTabId');
+  const nameInput = document.getElementById('tabSettingsName');
+  const btnRename = document.getElementById('btnRenameTab');
+  const btnDuplicate = document.getElementById('btnDuplicateTab');
+  const btnDelete = document.getElementById('btnDeleteTab');
+  const lastTabWarning = document.getElementById('lastTabWarning');
+  
+  let currentTabId = null;
+  let currentTabName = null;
+  let totalTabs = 0;
+  
+  // Show toast notification
+  function showToast(message, type = 'info') {
+    if (typeof window.showToast !== 'undefined') {
+      window.showToast(message, type);
+      return;
+    }
+    
+    const settings = window.AoTGlobalSettings || {};
+    let shouldHide = false;
+    if (type === 'success' && settings.hide_success) shouldHide = true;
+    if (type === 'info' && settings.hide_info) shouldHide = true;
+    if ((type === 'warning' || type === 'error') && settings.hide_warning) shouldHide = true;
+    
+    if (shouldHide) return;
+    
+    if (typeof toastr !== 'undefined' && toastr[type]) {
+      toastr[type](message);
+    } else {
+      console.log(`[TabSettings] ${type}: ${message}`);
+    }
+  }
+  
+  // Open modal
+  window.openTabSettings = function(tabId, tabName, tabCount) {
+    currentTabId = tabId;
+    currentTabName = tabName;
+    totalTabs = tabCount || 1;
+    
+    tabIdInput.value = tabId;
+    nameInput.value = tabName;
+    
+    // Show/hide delete warning
+    if (totalTabs <= 1) {
+      lastTabWarning.style.display = 'block';
+      btnDelete.disabled = true;
+    } else {
+      lastTabWarning.style.display = 'none';
+      btnDelete.disabled = false;
+    }
+    
+    $modal.modal('show');
+  };
+  
+  // Rename Tab
+  btnRename.addEventListener('click', function() {
+    const newName = nameInput.value.trim();
+    if (!newName) {
+      showToast('{{_("Tab name cannot be empty")}}', 'error');
+      return;
+    }
+    
+    if (newName === currentTabName) {
+      showToast('{{_("Tab name unchanged")}}', 'info');
+      return;
+    }
+    
+    fetch('/tab/rename', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                       document.querySelector('input[name="csrf_token"]')?.value || ''
+      },
+      body: JSON.stringify({
+        tab_id: currentTabId,
+        name: newName
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast('{{_("Tab renamed successfully")}}', 'success');
+        $modal.modal('hide');
+        // Reload page to show new name
+        setTimeout(() => window.location.reload(), 500);
+      } else {
+        showToast(data.message || '{{_("Failed to rename tab")}}', 'error');
+      }
+    })
+    .catch(err => {
+      console.error('Rename failed', err);
+      showToast('{{_("Error renaming tab")}}', 'error');
+    });
+  });
+  
+  // Duplicate Tab
+  btnDuplicate.addEventListener('click', function() {
+    window.aotConfirm('{{_("Duplicate this tab and all its entries?")}}', function() {
+      btnDuplicate.disabled = true;
+      fetch('/tab/duplicate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                         document.querySelector('input[name="csrf_token"]')?.value || ''
+        },
+        body: JSON.stringify({ tab_id: currentTabId })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showToast('{{_("Tab duplicated successfully")}}', 'success');
+          $modal.modal('hide');
+          if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+          } else {
+            setTimeout(() => window.location.reload(), 500);
+          }
+        } else {
+          showToast(data.message || '{{_("Failed to duplicate tab")}}', 'error');
+          btnDuplicate.disabled = false;
+        }
+      })
+      .catch(err => {
+        console.error('Duplicate failed', err);
+        showToast('{{_("Error duplicating tab")}}', 'error');
+        btnDuplicate.disabled = false;
+      });
+    });
+  });
+  
+  // Delete Tab
+  btnDelete.addEventListener('click', function() {
+    console.log('[TabSettings] Delete button clicked');
+    console.log('[TabSettings] totalTabs:', totalTabs);
+    console.log('[TabSettings] currentTabId:', currentTabId);
+    
+    if (totalTabs <= 1) {
+      showToast('{{_("Cannot delete the last tab")}}', 'warning');
+      return;
+    }
+    
+    window.aotConfirm('{{_("Delete this tab and all its entries? This cannot be undone.")}}', function() {
+      console.log('[TabSettings] Sending DELETE request to /tab/' + currentTabId);
+      btnDelete.disabled = true;
+      fetch(`/tab/${currentTabId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                         document.querySelector('input[name="csrf_token"]')?.value || ''
+        }
+      })
+      .then(r => {
+        console.log('[TabSettings] Response status:', r.status);
+        return r.json();
+      })
+      .then(data => {
+        console.log('[TabSettings] Response data:', data);
+        if (data.success) {
+          showToast('{{_("Tab deleted successfully")}}', 'success');
+          $modal.modal('hide');
+          if (data.redirect_url) {
+            console.log('[TabSettings] Redirecting to:', data.redirect_url);
+            window.location.href = data.redirect_url;
+          } else {
+            console.log('[TabSettings] Reloading page');
+            setTimeout(() => window.location.reload(), 500);
+          }
+        } else {
+          console.error('[TabSettings] Delete failed:', data.message);
+          showToast(data.message || '{{_("Failed to delete tab")}}', 'error');
+          btnDelete.disabled = false;
+        }
+      })
+      .catch(err => {
+        console.error('[TabSettings] Delete error:', err);
+        showToast('{{_("Error deleting tab")}}', 'error');
+        btnDelete.disabled = false;
+      });
+    });
+  });
+  
+  // Reset form when modal closes
+  $modal.on('hidden.bs.modal', function() {
+    form.reset();
+    currentTabId = null;
+    currentTabName = null;
+    btnDuplicate.disabled = false;
+    btnDelete.disabled = false;
+  });
+})();
+</script>

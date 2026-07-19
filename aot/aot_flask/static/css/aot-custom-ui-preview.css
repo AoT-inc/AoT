@@ -1,0 +1,527 @@
+/*
+ * aot-custom-ui-preview.css
+ * Styles for the isolated theme preview canvas in settings/custom_ui.
+ * All selectors scoped under #aot-ui-preview to prevent leakage to the real page.
+ */
+
+/* ============================================================
+   CANVAS WRAPPER
+============================================================ */
+#aot-ui-preview {
+    background-color: var(--preview-bd-primary, #FFFFFF);
+    border: 1px solid var(--border-neutral);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    min-height: 260px;
+    user-select: none;
+}
+
+/* ============================================================
+   NAVBAR STRIP
+============================================================ */
+#aot-ui-preview .preview-navbar {
+    background-color: var(--preview-bd-tertiary, #13261B);
+    padding: 0 16px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 12px 12px 0 0;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+#aot-ui-preview .preview-navbar:hover {
+    opacity: 0.88;
+}
+
+#aot-ui-preview .preview-navbar-brand {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--preview-brand-primary, #F3F6F5);
+    letter-spacing: 0.03em;
+}
+
+#aot-ui-preview .preview-navbar-dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+#aot-ui-preview .preview-navbar-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--preview-brand-secondary, #5E6B64);
+    opacity: 0.7;
+}
+
+/* ============================================================
+   PREVIEW BODY AREA
+============================================================ */
+#aot-ui-preview .preview-body {
+    padding: 12px 16px 14px;
+    background-color: var(--preview-bd-secondary, #F3F6F5);
+}
+
+/* ============================================================
+   STATUS BUTTONS ROW
+============================================================ */
+#aot-ui-preview .preview-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+#aot-ui-preview .preview-btn {
+    font-size: 0.7rem;
+    font-weight: 600;
+    height: 26px;
+    min-width: 44px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    border: 1px solid var(--preview-bd-btn-border, #B6BABA);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s ease;
+    color: var(--preview-text-color-tertiary, #FFFFFF);
+}
+
+#aot-ui-preview .preview-btn:hover {
+    opacity: 0.82;
+}
+
+#aot-ui-preview .preview-btn-on    { background-color: var(--preview-bg-btn-on,       #13261B); }
+#aot-ui-preview .preview-btn-off   { background-color: var(--preview-bg-btn-off,      #5E6B64); }
+#aot-ui-preview .preview-btn-active   { background-color: var(--preview-bg-btn-active,  #13261B); }
+#aot-ui-preview .preview-btn-inactive { background-color: var(--preview-bg-btn-inactive,#5E6B64); }
+#aot-ui-preview .preview-btn-pause    { background-color: var(--preview-bg-btn-pause,   #989E9E); }
+#aot-ui-preview .preview-btn-hold     { background-color: var(--preview-bg-btn-hold,    #D1D5D5); color: var(--preview-text-color-primary, #13261B); }
+
+/* ============================================================
+   CARD ROW
+============================================================ */
+#aot-ui-preview .preview-card-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#aot-ui-preview .preview-card {
+    flex: 1 1 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border: 1px solid var(--border-neutral);
+    transition: opacity 0.15s ease;
+    min-width: 0;
+}
+
+#aot-ui-preview .preview-card:hover {
+    opacity: 0.88;
+}
+
+#aot-ui-preview .preview-card-primary {
+    background-color: var(--preview-bd-primary, #FFFFFF);
+}
+
+#aot-ui-preview .preview-card-secondary {
+    background-color: var(--preview-bd-secondary, #F3F6F5);
+}
+
+#aot-ui-preview .preview-card-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--preview-text-color-primary, #13261B);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#aot-ui-preview .preview-card-subtitle {
+    font-size: 0.65rem;
+    color: var(--preview-text-color-secondary, #5E6B64);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================
+   BADGE ROW
+============================================================ */
+#aot-ui-preview .preview-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+#aot-ui-preview .preview-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--preview-text-color-tertiary, #FFFFFF);
+    letter-spacing: 0.02em;
+    transition: opacity 0.15s ease;
+}
+
+#aot-ui-preview .preview-badge:hover {
+    opacity: 0.82;
+}
+
+#aot-ui-preview .preview-badge-llm     { background-color: var(--preview-bg-llm,        #6277C7); }
+#aot-ui-preview .preview-badge-mcp     { background-color: var(--preview-bg-mcp,        #64C762); }
+#aot-ui-preview .preview-badge-upgrade { background-color: var(--preview-bg-upgrade,    #13261B); }
+
+/* ============================================================
+   HIGHLIGHT PULSE — triggered when canvas element is clicked
+============================================================ */
+.preview-highlight-target {
+    box-shadow: 0 0 0 3px var(--aot-primary) !important;
+    transition: box-shadow 0.3s ease;
+}
+
+/* ============================================================
+   PRESET HEADER ROW  (sits above the canvas inside Zone 1 section)
+============================================================ */
+.aot-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 10px 0;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.aot-preview-header-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--aot-text-main);
+}
+
+.aot-preview-preset-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.aot-preview-modified-badge {
+    font-size: 0.72rem;
+    color: var(--aot-text-secondary);
+    font-style: italic;
+    display: none;
+}
+
+/* ============================================================
+   COLOR ROW — in Zone 2 color group panels
+============================================================ */
+.aot-color-row {
+    display: flex;
+    align-items: center;
+    padding: 0.45rem 0;
+    min-height: 2.6rem;
+    border-bottom: 1px solid var(--border-neutral);
+    gap: 10px;
+}
+
+.aot-color-row:last-child {
+    border-bottom: none;
+}
+
+.aot-color-swatch {
+    width: 40px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border-neutral);
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    overflow: hidden;
+}
+
+/* Normalize color picker across browsers */
+.aot-color-swatch::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.aot-color-swatch::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+.aot-color-swatch::-moz-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+.aot-color-label {
+    flex: 1 1 auto;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--aot-text-main);
+    line-height: 1.3;
+    min-width: 0;
+    word-break: break-word;
+}
+
+/* Right-hand control cluster: hex text input + color picker swatch */
+.aot-color-control {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.aot-color-hex {
+    width: 96px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-radius: var(--aot-btn-pill-radius);
+    border: 1px solid var(--border-neutral);
+    padding: 0 0.6rem;
+    height: 28px;
+    font-size: 0.8rem;
+    font-family: monospace;
+    background-color: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+}
+
+.aot-color-hex:focus {
+    border-color: var(--aot-input-focus-border);
+    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring);
+    outline: none;
+}
+
+/* Highlight the color row when scrolled to from canvas click */
+.aot-color-group-highlight {
+    animation: groupHighlightPulse 1.2s ease forwards;
+}
+
+@keyframes groupHighlightPulse {
+    0%   { background-color: rgba(242, 213, 36, 0.18); }
+    60%  { background-color: rgba(242, 213, 36, 0.12); }
+    100% { background-color: transparent; }
+}
+
+/* ============================================================
+   INLINE COLOR POPOVER
+   Dynamically created by JS; attached to body; z-index above all panels.
+============================================================ */
+.aot-color-popover {
+    position: fixed;
+    z-index: var(--aot-z-dropdown);
+    background: var(--aot-input-bg, #ffffff);
+    border: 1px solid var(--border-neutral, #dddddd);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+    padding: 14px 16px 12px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* Enter animation */
+    animation: aotPopoverIn 0.18s ease;
+}
+
+@keyframes aotPopoverIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Arrow tip pointing toward the anchor element */
+.aot-color-popover::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--aot-input-bg, #ffffff);
+    border: 1px solid var(--border-neutral, #dddddd);
+    border-right: none;
+    border-bottom: none;
+    transform: rotate(45deg);
+}
+
+/* Arrow position variants set by JS via data-placement */
+.aot-color-popover[data-placement="bottom"]::before {
+    top: -6px;
+    left: var(--aot-popover-arrow-x, 50%);
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.aot-color-popover[data-placement="top"]::before {
+    bottom: -6px;
+    left: var(--aot-popover-arrow-x, 50%);
+    border: 1px solid var(--border-neutral, #dddddd);
+    border-left: none;
+    border-top: none;
+    transform: translateX(-50%) rotate(45deg);
+}
+
+/* Header row: label + hex display */
+.aot-color-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.aot-color-popover-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--aot-text-main, #444);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.aot-color-popover-hex-display {
+    font-size: 0.75rem;
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--aot-text-secondary, #6c757d);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--border-neutral, #dddddd);
+    border-radius: 6px;
+    padding: 2px 8px;
+}
+
+/* Multi-slot color row (배경색 / 문자색 / 테두리색) */
+.aot-color-popover-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.aot-color-popover-slot-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--aot-text-secondary, #6c757d);
+    width: 52px;
+    flex-shrink: 0;
+    text-align: right;
+}
+
+/* Native color input — compact swatch in row */
+.aot-color-popover-native {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 40px;
+    height: 28px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-neutral, #dddddd);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 2px;
+    background: none;
+    overflow: hidden;
+    display: block;
+}
+
+.aot-color-popover-native::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.aot-color-popover-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+.aot-color-popover-native::-moz-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+/* Preset swatches row */
+.aot-color-popover-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.aot-color-popover-preset {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    flex-shrink: 0;
+    /* min touch target via outline area */
+    box-sizing: border-box;
+}
+
+.aot-color-popover-preset:hover {
+    transform: scale(1.18);
+    border-color: var(--aot-input-focus-border, #F2D524);
+}
+
+.aot-color-popover-preset:focus-visible {
+    outline: 2px solid var(--aot-input-focus-border, #F2D524);
+    outline-offset: 2px;
+}
+
+/* Hex text input row */
+.aot-color-popover-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.aot-color-popover-hex-input {
+    flex: 1 1 auto;
+    height: 32px;
+    border: 1px solid var(--border-neutral, #dddddd);
+    border-radius: var(--aot-btn-pill-radius, 9999px);
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+    background: var(--aot-input-bg, #ffffff);
+    color: var(--aot-text-main, #444);
+}
+
+.aot-color-popover-hex-input:focus {
+    outline: none;
+    border-color: var(--aot-input-focus-border, #F2D524);
+    box-shadow: 0 0 0 0.15rem var(--modal-focus-ring, rgba(0,123,255,0.1));
+}
+
+/* ============================================================
+   RESPONSIVE — narrow screens
+============================================================ */
+@media (max-width: 480px) {
+    #aot-ui-preview .preview-card-row {
+        flex-direction: column;
+    }
+
+    .aot-color-hex {
+        width: 80px;
+    }
+
+    .aot-preview-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

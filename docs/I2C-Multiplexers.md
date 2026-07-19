@@ -1,0 +1,9 @@
+Every device connected to the Raspberry Pi over the I2C bus must have a unique address in order to communicate. Some Input devices may share the same address (for example, the AM2315), which prevents connecting more than one at the same time. Other devices may offer the ability to change their address, but the range of available addresses can be limited, restricting the number of devices that can be used simultaneously. I2C multiplexers are extremely useful in these situations, allowing multiple sensors with the same I2C address to be connected.
+
+For example, the TCA9548A/PCA9548A: I2C Multiplexer has 8 selectable addresses, allowing 8 multiplexers to be connected to a single Raspberry Pi. Each multiplexer has 8 channels, allowing up to 8 devices/sensors with the same address to be connected to each multiplexer. 8 multiplexers x 8 channels = 64 devices/sensors with the same I2C address.
+
+- TCA9548A/PCA9548A: I2C Multiplexer [Link](https://learn.adafruit.com/adafruit-tca9548a-1-to-8-i2c-multiplexer-breakout/overview) (I2C): 8 selectable addresses, 8 channels
+  - To load the kernel driver for the TCA9548A/PCA9548A that is included with Raspbian, add `dtoverlay=i2c-mux,pca9548,addr=0x70` to `/boot/config.txt`, where `0x70` is the I2C address of the multiplexer. Once the configuration is successful, 8 new I2C buses will appear on the `[Gear Icon] -> System Information` page.
+
+- TCA9545A: I2C Bus Multiplexer [Link](http://store.switchdoc.com/i2c-4-channel-mux-extender-expander-board-grove-pin-headers-for-arduino-and-raspberry-pi/) (I2C): The linked Grove board creates 4 new I2C buses, each with a selectable voltage of 3.3V or 5.0V.
+  - To load the kernel driver for the TCA9545A, add `dtoverlay=i2c-mux,pca9545,addr=0x70` to `/boot/config.txt`, where `0x70` is the I2C address of the multiplexer. Once the configuration is successful, 4 new I2C buses will appear on the `[Gear Icon] -> System Information` page.

@@ -1,0 +1,21 @@
+{% if 'bluetooth_address' in dict_options['options_enabled'] or
+      'bluetooth_address' in dict_options['options_disabled']
+  %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['bluetooth_address']['title']}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'bluetooth_address' in dict_options['options_disabled'] -%}
+    {{form.bluetooth_address(class_='form-control aot-modern-input', value=each_device.bluetooth_address, disabled=True, **{'title': dict_translation['bluetooth_address']['phrase']})}}
+  {% else %}
+    <div class="input-group">
+      {{form.bluetooth_address(class_='form-control aot-modern-input', value=each_device.bluetooth_address, **{'title': dict_translation['bluetooth_address']['phrase']})}}
+      <div class="input-group-append">
+        <button onclick="return $(this).processRequest(this, 'bluetooth_scan');" class="btn aot-pill-btn aot-pill-btn-primary ml-1" type="button"><i class="fab fa-bluetooth"></i></button>
+      </div>
+    </div>
+  {%- endif -%}
+  </div>
+</div>
+
+{% endif %}

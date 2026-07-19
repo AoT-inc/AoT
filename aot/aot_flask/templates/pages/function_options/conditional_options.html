@@ -1,0 +1,290 @@
+<div id="mod_function_{{each_function.unique_id}}">
+    {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+    <form id="form_function_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_conditional.csrf_token}}
+        {{form_conditional.function_id(value=each_function.unique_id)}}
+        {{form_conditional.function_type(value='conditional')}}
+    
+    {# Location settings and map: integrated with macro #}
+    {# Moved to below button group #}
+
+
+    {# Location settings and map #}
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
+        {{ render_device_map(
+        'function',
+        each_function.unique_id,
+        form_conditional.latitude,
+        form_conditional.longitude,
+        form_conditional.location_source,
+        each_function.latitude,
+        each_function.longitude,
+        each_function.location_source,
+        'function_mod',
+        'modal_config_' ~ each_function.unique_id,
+        '280px',
+        None,
+        None,
+        None,
+        form_id='form_function_' ~ each_function.unique_id,
+        map_config_id=(each_function.map_config_id if each_function.map_config_id else (map_config_id if map_config_id is defined else '')),
+        map_configs=(map_configs if map_configs is defined else []),
+        map_overlays=map_overlays,
+        save_id='mod_function_save_' ~ each_function.unique_id
+        ) }}
+      </div>
+    </div>
+
+    <div class="aot-modal-container mb-3">
+      <div class="aot-modal-body-text">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>{{_('Help')}}</strong>
+            <a href="{{ manual_url('Functions/#conditional') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+        </div>
+        {{_("Conditional functions can not only execute Python 3 code, but also interact with AoT using conditions and actions within the code.")}}
+        {{_("For more information, see the <a href='{{ manual_url("Functions/#conditional") }}'>Conditional Functions documentation</a>.")}}
+      </div>
+    </div>
+
+    <div id="status_activated_enable_{{each_function.unique_id}}" style="{% if not each_function.is_activated %}display: none; {% endif %}">
+        <div class="aot-modal-group-title">{{_('Status')}}</div>
+        <div class="aot-modal-container">
+            <span id="function_status_activated_{{each_function.unique_id}}"></span>
+        </div>
+    </div>
+
+    <div id="return_text_{{each_function.unique_id}}" class="mb-3"></div>
+
+    <div class="aot-modal-group-title">{{_('Options')}}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.name.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.name(class_='form-control aot-modern-input', value=each_function.name, **{'title': dict_translation['name']['phrase']})}}
+            </div>
+        </div>
+        {% if tabs is defined and tabs and tabs|length > 1 %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Tab')}}</label>
+            <div class="aot-modal-option-control">
+                <select name="tab_id" class="form-control aot-modern-input">
+                    {% for tab in tabs %}
+                    <option value="{{tab.unique_id}}" {% if tab.unique_id == each_function.tab_id %}selected{% endif %}>{{tab.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.period.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.period(class_='form-control aot-modern-input', value=each_function.period, **{'title':_('Interval between Python code executions')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.start_offset.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.start_offset(class_='form-control aot-modern-input', value=each_function.start_offset, **{'title':_('Time to wait before the first operation')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.pyro_timeout.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.pyro_timeout(class_='form-control aot-modern-input', value=each_function.pyro_timeout, **{'title':_('Timeout for Python code execution')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.log_level_debug.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.log_level_debug %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
+            <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' } }))">
+                    {{_('Note')}}
+                </button>
+            </div>
+        </div>
+        {% if ai_settings and ai_settings.ai_enabled %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Utilization')}}</label>
+            <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="AoT_AI.openChat({ targetId: '{{ each_function.unique_id }}', targetType: 'function', name: '{{ each_function.name }}' })">
+                    {{_('Ask AI')}}
+                </button>
+            </div>
+        </div>
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('AI Context')}}</label>
+            <div class="aot-modal-option-control">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                    onclick="AIContextPanel.openContext('{{ each_function.unique_id }}', '{{ each_function.name }}')">
+                    {{_('View Context')}}
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Execute All Actions')}}</label>
+            <div class="aot-modal-option-control">
+                <button data-form-id="form_function_{{each_function.unique_id}}"
+                    onclick="return $(this).processRequest(this, 'execute_all_actions');"
+                    class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Execute All Actions')}}</button>
+            </div>
+        </div>
+        {% set form = form_conditional %}
+        {% set each_device = each_function %}
+        {% include 'pages/form_options/Coordinates.html' %}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.use_pylint.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="use_pylint" name="use_pylint" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.use_pylint %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.message_include_code.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                    <input id="message_include_code" name="message_include_code" type="checkbox" class="btn-toggle-input" value="y" {% if each_function.message_include_code %}checked{% endif %}>
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+            </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_import.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_import"
+                name="conditional_import" rows="5" type="text">{{each_function.conditional_import}}</textarea>
+        </div>
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_initialize.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_initialize"
+                name="conditional_initialize" rows="5" type="text">{{each_function.conditional_initialize}}</textarea>
+        </div>
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_statement.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_statement"
+                name="conditional_statement" rows="15" type="text">{{each_function.conditional_statement}}</textarea>
+        </div>
+        <div class="form-group mb-3">
+            <div class="aot-modal-subgroup-title mb-2">{{form_conditional.conditional_status.label.text}}</div>
+            <textarea style="font-family:monospace; border-radius: 12px !important;" class="form-control aot-modern-input" id="conditional_status"
+                name="conditional_status" rows="5" type="text">{{each_function.conditional_status}}</textarea>
+        </div>
+    </div>
+
+  </form>
+
+  <div class="aot-modal-group-title">
+    {{_('Conditions')}} 
+    <a href="{{ manual_url('Functions/#conditional-options') }}" target="_blank">
+        <span style="font-size: 16px" class="fas fa-question-circle"></span>
+    </a>
+  </div>
+
+  <div class="aot-modal-container">
+    <form id="form_add_condition_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_conditional.csrf_token}}
+        {{form_conditional.function_id(value=each_function.unique_id)}}
+        {{form_conditional.function_type(value='conditional')}}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Add Condition')}}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+                        title="{{_('Select')}}" id="condition_type_{{each_function.unique_id}}" name="condition_type"
+                        data-selected-text-format="static" data-display="static" data-container="body" data-dropdown-align-right="true">
+                        {% for value, name in conditional_conditions_list %}
+                        <option value="{{value}}">{{name}}</option>
+                        {% endfor %}
+                    </select>
+                    <button data-form-id="form_add_condition_{{each_function.unique_id}}"
+                        onclick="return $(this).processRequest(this, 'add_condition');" name="add_condition"
+                        class="btn aot-pill-btn aot-pill-btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+  </div>
+
+  <div id="mod_function_conditions_{{each_function.unique_id}}" class="mb-3">
+    {% for each_condition in conditional_conditions if each_condition.conditional_id == each_function.unique_id %}
+    {% include 'pages/function_options/conditional_condition.html' %}
+    {% endfor %}
+  </div>
+
+  <div class="aot-modal-group-title">
+      {{_('Actions')}} 
+      <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a>
+  </div>
+
+  <div class="aot-modal-container">
+    <form id="form_actions_{{each_function.unique_id}}" method="post" action="/function">
+        {{form_actions.csrf_token}}
+        {{form_actions.device_id(class_='form-control', value=each_function.unique_id)}}
+        {{form_actions.function_type(class_='form-control', value='conditional')}}
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{_('Add Action')}}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-action-group">
+                    <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+                        title="{{_('Select')}}" id="action_type_{{each_function.unique_id}}"
+                        name="action_type" data-selected-text-format="static" data-display="static" data-container="body" data-dropdown-align-right="true">
+                        {% for value, name in choices_actions %}
+                        <option value="{{value}}">{{name}}</option>
+                        {% endfor %}
+                    </select>
+                    <button data-form-id="form_actions_{{each_function.unique_id}}" onclick="return $(this).processRequest(this, 'add_action');" 
+                        name="add_action" class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+  </div>
+
+  {% set post_action = "/function" %}
+
+  {% from 'pages/function_options/gridstack_helper.html' import init_gridstack_actions with context %}
+  {% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+
+  <div class="grid-stack" id="mod_function_actions_{{each_function.unique_id}}">
+    {% for each_action in action|sort(attribute='position') if each_action.function_id == each_function.unique_id %}
+    {% call gridstack_action_item(each_action, each_function, is_sequence=False, gs_h=2) %}{% endcall %}
+    {% endfor %}
+  </div>
+
+  {{ init_gridstack_actions(each_function.unique_id, cell_height=48) }}
+
+  <script>
+    if (typeof jQuery !== 'undefined') {
+        var $ctx = $('#mod_function_{{each_function.unique_id}}');
+        $ctx.find('.selectpicker').each(function() {
+            var $el = $(this);
+            $el.data('selectpicker') ? $el.selectpicker('refresh') : $el.selectpicker();
+        });
+    }
+    $('.clockpicker').clockpicker();
+  </script>
+</div>

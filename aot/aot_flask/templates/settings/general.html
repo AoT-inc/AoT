@@ -1,0 +1,437 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "general" %}
+{% set help_page = [manual_url("Configuration-Settings/#general-settings"), dict_translation['settings']['title'] + ': ' + dict_translation['general']['title']] %}
+
+{% block title %} - {{dict_translation['settings']['title'] + ': ' + dict_translation['general']['title']}}{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/general -->
+  <div class="container">
+    <div class="aot-settings-title">
+      <h3>{{_('General Settings')}} <a href="{{ manual_url('Configuration-Settings/#general-settings') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+        <button type="submit" form="form-general" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60">{{_('Save')}}</button>
+      </div>
+    </div>
+
+    <form id="form-general" method="post" action="/settings/general" enctype=multipart/form-data autocomplete="off" onsubmit="validateDbPassword(event)">
+      <input type="hidden" name="form-name" value="General">
+      {{form_settings_general.csrf_token}}
+
+      <!-- Section: General -->
+      <div class="aot-modal-group-title">{{_('General')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.language.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            <select class="form-control aot-modern-select form-tooltip form-dropdown" data-placement="top" id="language" name="language" title="{{_('Selecting a language overrides your web browser\'s language settings.')}}">
+              <option value="">{{_('Browser Default')}}</option>
+              {% for each_language in languages %}
+                <option value="{{each_language[0]}}"{% if current_user.language == each_language[0] %} selected{% endif %}>{{each_language[1]}}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.landing_page.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            <select class="form-control aot-modern-select form-tooltip form-dropdown" data-placement="top" id="landing_page" name="landing_page" title="{{_('Page to display after login')}}">
+              <option value="dashboard"{% if current_user.landing_page == 'dashboard' %} selected{% endif %}>{{_('Dashboard')}}</option>
+              <option value="live"{% if current_user.landing_page == 'live' %} selected{% endif %}>{{_('Real-time Measurement')}}</option>
+              <option value="info"{% if current_user.landing_page == 'system_information' %} selected{% endif %}>{{_('System Information')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.index_page.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            <select class="form-control aot-modern-select form-tooltip form-dropdown" data-placement="top" id="index_page" name="index_page" title="{{_('Page to display after clicking the brand link')}}">
+              <option value="landing"{% if current_user.index_page == 'landing' %} selected{% endif %}>{{_('Same as Landing Page')}}</option>
+              <option value="dashboard"{% if current_user.index_page == 'dashboard' %} selected{% endif %}>{{_('Dashboard')}}</option>
+              <option value="live"{% if current_user.index_page == 'live' %} selected{% endif %}>{{_('Real-time Measurement')}}</option>
+              <option value="info"{% if current_user.index_page == 'info' %} selected{% endif %}>{{_('System Information')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.rpyc_timeout.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.rpyc_timeout(class_='form-control aot-modern-input', value=settings.rpyc_timeout, **{'title': _("Sets the timeout (in seconds) for Pyro connection (client-daemon communication). Daemon restart required.")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.daemon_debug_mode.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="daemon_debug_mode" name="daemon_debug_mode" title="{{_('Enable daemon debug logging for diagnostics. Daemon restart required.')}}"{% if settings.daemon_debug_mode == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.force_https.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="force_https" name="force_https" title="{{_('Check to force all web connections to use SSL (port 443) for security.')}}"{% if settings.force_https == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.hide_success.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="hide_success" name="hide_success" title="{{_('Check to prevent success alert messages from appearing at the top of the page.')}}"{% if settings.hide_alert_success == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.hide_info.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="hide_info" name="hide_info" title="{{_('Check to prevent info alert messages from appearing at the top of the page.')}}"{% if settings.hide_alert_info == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.hide_warning.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="hide_warning" name="hide_warning" title="{{_('Check to prevent warning alert messages from appearing at the top of the page.')}}"{% if settings.hide_alert_warning == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.hide_tooltips.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="hide_tooltips" name="hide_tooltips" title="{{_('Hides tooltips that appear over form inputs.')}}"{% if settings.hide_tooltips == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.stats_opt_out.label(class_='mb-0 aot-toggle-label')}}
+            <a href="/admin/statistics" class="aot-modal-body-text">{{_('View Collected Statistics')}}</a>
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="stats_opt_out" name="stats_opt_out" title="{{_('Check to opt out of sending anonymous usage statistics.')}}"{% if settings.stats_opt_out == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: AI Settings -->
+      <div class="aot-modal-group-title">{{_('AI Service')}}</div>
+      <div class="aot-modal-body-text" style="padding-left:16px; margin-bottom:0.5rem;">{{_('Enable or disable the global AI service. When disabled, the AI menu will be hidden from the navigation bar and AI features will be unavailable. All AI settings and configurations are preserved when the service is disabled.')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.ai_enabled.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="ai_enabled" name="ai_enabled" title="{{_('Enable AI features and show the AI menu in the navigation bar.')}}"{% if ai_settings and ai_settings.ai_enabled %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: Time-series Database -->
+      <div class="aot-modal-group-title">{{_('Time-series Database Settings')}}</div>
+      <div class="aot-modal-body-text" style="padding-left:16px; margin-bottom:0.5rem;">{{_('AoT requires a properly configured time-series database to operate, used for storing and retrieving measurements.')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.use_database.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            <select class="form-control aot-modern-select form-tooltip form-dropdown" id="use_database" name="use_database" title="">
+              <option value="influxdb_1"{% if settings.measurement_db_name == 'influxdb' and settings.measurement_db_version == '1' %} selected{% endif %}>Influxdb 1.x</option>
+              <option value="influxdb_2"{% if settings.measurement_db_name == 'influxdb' and settings.measurement_db_version == '2' %} selected{% endif %}>Influxdb 2.x</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.measurement_db_retention_policy.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.measurement_db_retention_policy(class_='form-control aot-modern-input', value=settings.measurement_db_retention_policy)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.measurement_db_host.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.measurement_db_host(class_='form-control aot-modern-input', value=settings.measurement_db_host)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.measurement_db_port.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.measurement_db_port(class_='form-control aot-modern-input', value=settings.measurement_db_port)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.measurement_db_dbname.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.measurement_db_dbname(class_='form-control aot-modern-input', value=settings.measurement_db_dbname)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.measurement_db_user.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.measurement_db_user(class_='form-control aot-modern-input', value=settings.measurement_db_user, autocomplete="off")}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.measurement_db_password.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            <!-- Fake inputs to trick browser autofill. autocomplete attrs match Chrome's
+                 own suggestion (username/new-password) so the decoys absorb autofill and
+                 the "Input elements should have autocomplete attributes" warning is gone. -->
+            <input type="text" style="display:none" autocomplete="username" tabindex="-1" aria-hidden="true">
+            <input type="password" style="display:none" autocomplete="new-password" tabindex="-1" aria-hidden="true">
+            {{form_settings_general.measurement_db_password(class_='form-control aot-modern-input', autocomplete="new-password", readonly=True, onfocus="this.removeAttribute('readonly');", **{'title':_("Only enter a password to change the saved password")})}}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: Dashboard -->
+      <div class="aot-modal-group-title">{{_('Dashboard Settings')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.grid_cell_height.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.grid_cell_height(class_='form-control aot-modern-input', value=settings.grid_cell_height, **{'title': _("Height of grid cells (in pixels)")})}}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: Upgrade -->
+      <div class="aot-modal-group-title">{{_('Upgrade Settings')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.net_test_ip.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.net_test_ip(class_='form-control aot-modern-input', value=settings.net_test_ip, **{'title': _("IP address to test for active internet connection for upgrades")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.net_test_port.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.net_test_port(class_='form-control aot-modern-input', value=settings.net_test_port, **{'title': _("Port for the internet test IP address")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.net_test_timeout.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.net_test_timeout(class_='form-control aot-modern-input', value=settings.net_test_timeout, **{'title': _("Timeout period (in seconds) for the internet connection test")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.enable_upgrade_check.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="enable_upgrade_check" name="enable_upgrade_check" title="{{_('Check to enable AoT to automatically check for upgrades.')}}"{% if settings.enable_upgrade_check == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: Energy Usage -->
+      <div class="aot-modal-group-title">{{_('Energy Usage Settings')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.max_amps.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.max_amps(class_='form-control aot-modern-input', value=settings.max_amps, **{'title': _("Sets the maximum allowable current (A) that can be turned on at once.")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_stats_volts.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.output_stats_volts(class_='form-control aot-modern-input', value=settings.output_usage_volts, **{'title': _("Sets the voltage used for devices powered by outputs.")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_stats_cost.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.output_stats_cost(class_='form-control aot-modern-input', value=settings.output_usage_cost, **{'title': _("Sets the cost per kilowatt-hour.")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_stats_currency.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.output_stats_currency(class_='form-control aot-modern-input', value=settings.output_usage_currency, **{'title': _("Sets the currency unit used for electricity billing.")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_stats_day_month.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.output_stats_day_month(class_='form-control aot-modern-input', value=settings.output_usage_dayofmonth, **{'title': _("Sets the day of the month to calculate monthly power usage.")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.output_usage_report_gen.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="output_usage_report_gen" name="output_usage_report_gen" title="{{_('Automatically generate output usage reports daily/weekly/monthly.') + ' ' + _('Save path') + ': ' + report_path}}"{% if settings.output_usage_report_gen == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_usage_report_span.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            <select class="form-control aot-modern-select form-tooltip form-dropdown" id="output_usage_report_span" name="output_usage_report_span" title="" data-original-title="{{_('Report Generation Frequency')}}">
+              <option value="monthly"{% if settings.output_usage_report_span == 'monthly' %} selected{% endif %}>{{_('Monthly')}}</option>
+              <option value="weekly"{% if settings.output_usage_report_span == 'weekly' %} selected{% endif %}>{{_('Weekly')}}</option>
+              <option value="daily"{% if settings.output_usage_report_span == 'daily' %} selected{% endif %}>{{_('Daily')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_usage_report_day.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.output_usage_report_day(class_='form-control aot-modern-input', value=settings.output_usage_report_day, **{'title': _("Date options: Daily: 1-7 (1=Monday), Monthly: 1-28")})}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.output_usage_report_hour.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.output_usage_report_hour(class_='form-control aot-modern-input', value=settings.output_usage_report_hour, **{'title': _("Hour options: 0-23")})}}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: Controller Sampling Rate -->
+      <div class="aot-modal-group-title">{{_('Controller Sampling Rate Settings')}}</div>
+      <div class="aot-modal-body-text" style="padding-left:16px; margin-bottom:0.5rem;">{{_('The sampling rate of the AoT daemon controller can be changed below. A daemon restart is required to apply new settings. Restart the daemon by selecting Config Menu [Gear Icon] -> Restart Backend.')}}</div>
+      <div class="aot-modal-container">
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.sample_rate_controller_conditional.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.sample_rate_controller_conditional(class_='form-control aot-modern-input', value=settings.sample_rate_controller_conditional)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.sample_rate_controller_function.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.sample_rate_controller_function(class_='form-control aot-modern-input', value=settings.sample_rate_controller_function)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.sample_rate_controller_input.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.sample_rate_controller_input(class_='form-control aot-modern-input', value=settings.sample_rate_controller_input)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.sample_rate_controller_output.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.sample_rate_controller_output(class_='form-control aot-modern-input', value=settings.sample_rate_controller_output)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.sample_rate_controller_pid.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.sample_rate_controller_pid(class_='form-control aot-modern-input', value=settings.sample_rate_controller_pid)}}
+          </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+          {{form_settings_general.sample_rate_controller_widget.label(class_='aot-modal-option-label')}}
+          <div class="aot-modal-option-control">
+            {{form_settings_general.sample_rate_controller_widget(class_='form-control aot-modern-input', value=settings.sample_rate_controller_widget)}}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="aot-settings-actions">
+        {{form_settings_general.settings_general_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+      </div>
+
+      <script>
+        function validateDbPassword(event) {
+          const passwordField = document.getElementById('measurement_db_password');
+          if (passwordField && passwordField.value.trim() === '') {
+            // 비밀번호가 비어있으면 disabled 속성을 추가하여 저장되지 않도록
+            passwordField.disabled = true;
+          }
+        }
+      </script>
+    </form>
+
+  </div>
+
+{% endblock %}

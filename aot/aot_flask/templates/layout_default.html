@@ -1,0 +1,1043 @@
+<!--
+⚠️  CRITICAL WARNING - DO NOT REMOVE THIS COMMENT ⚠️
+================================================================================
+IMPORTANT: This is the SOURCE TEMPLATE file.
+- layout.html is AUTO-GENERATED from this file during server restart.
+- DO NOT modify layout.html directly - changes will be lost!
+- ALWAYS modify layout_default.html instead.
+- After modifying this file, RESTART the server for changes to take effect.
+- Changes persist only when made in layout_default.html.
+================================================================================
+⚠️  DO NOT DELETE THIS WARNING ⚠️
+-->
+
+<!DOCTYPE html>
+<html lang="{{ current_locale | default(session.get('language', 'en')) }}">
+
+<head>
+  <!-- [Flicker Fix] Suppress transitions during page load / scroll restoration.
+       Must run before any CSS link so the class is present when styles are applied. -->
+  <script>document.documentElement.classList.add('aot-page-loading');</script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+
+  <!-- 지도 베이스맵(MapTiler) 조기 연결: 지도 위젯의 style.json→sprite→glyphs→tiles
+       의존 체인은 외부 호스트 왕복이 끝나야 첫 타일을 그린다(그 전엔 빈 캔버스).
+       DNS+TLS 핸드셰이크를 미리 끝내 첫 스타일 왕복을 단축한다. -->
+  <link rel="preconnect" href="https://api.maptiler.com" crossorigin>
+  <link rel="dns-prefetch" href="https://api.maptiler.com">
+
+  <!-- Meta/Icon -->
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AoT {{ aot_version }}">
+  <meta name="application-name" content="AoT {{ aot_version }}">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+
+  <!-- Base scripts/styles -->
+  <!-- bfcache 가드: 모바일에서 대시보드를 떠났다 뒤로가기/앱전환으로 복원할 때
+       bfcache 가 구버전 위젯 JS(이전 ?v=) 가 로드된 stale 스냅샷을 되살려
+       facility 제어 팝업이 옛 방식(지도앵커 popup)으로 뜨고 "데이터 없음" 오류가
+       발생하는 문제를 방지한다. persisted=true (bfcache 복원) 일 때만 강제
+       새로고침하여 항상 최신 head HTML(최신 ?v=) 과 위젯 JS 를 로드한다.
+       일반 로드는 persisted=false 라 새로고침되지 않으므로 무한루프 없음. -->
+  <script>
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) { location.reload(); }
+    });
+  </script>
+  <!-- 폴링 가시성 관리자 (배터리 Step 2-A): 백그라운드 시 모든 setInterval 폴링 정지. 반드시 최상단 로드. -->
+  <script src="/static/js/common/aot-poll-visibility.js?v=20260608"></script>
+  <script src="/static/js/vendor/jquery-3.4.1.min.js"></script>
+  <script>window.jQuery || document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>')</script>
+  <!-- 위젯 /last·/past 요청 코얼레서: 폴링 틱마다 다수 요청을 /data_batch 1회로 합쳐 6커넥션 직렬화 병목 제거. jQuery 직후 로드 필수. -->
+  <script src="/static/js/common/aot-data-batch.js?v=20260627"></script>
+  <script src="/static/js/vendor/popper.min.js"></script>
+  <script src="/static/js/vendor/bootstrap.min.js"></script>
+  <!-- 모달 시프트 방지: Bootstrap scrollbar 보정 no-op + iOS Safari 배경 스크롤 차단 -->
+  <script src="/static/js/common/aot-modal-scroll-lock.js?v=20260618d"></script>
+  <!-- 서버 다운 감지 워치독: 연결 끊기면 폴링 정지 → 복구 시 1회 새로고침 (재연결 폭주 방지). jQuery 이후 로드. -->
+  <script src="/static/js/common/aot-server-health.js?v=20260702b"></script>
+  <!-- AoT API Request Manager - Centralized API handling with caching and retry logic -->
+
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/simple-sidebar.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260702e" rel="stylesheet">
+
+  {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
+  '/static/css/bootstrap-4-themes/aot.css' %}
+
+  {% if effective_theme in dark_themes %}
+  <link href="/static/css/custom-dark.css?v=20260702a" rel="stylesheet">
+  {% else %}
+  <link href="/static/css/custom-light.css?v=20260702a" rel="stylesheet">
+  {% endif %}
+
+  <link href="{{ effective_theme }}?v=20260702f" rel="stylesheet">
+
+  <link href="/static/css/custom.css?v=20260603" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-base.css') }}?v=20260702f" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/widget/aot-widget-typography.css') }}?v=20260606" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}?v=20260702z" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-3way.css') }}?v=20260527d" rel="stylesheet">
+  <!-- FontAwesome 5.11.2 webfont (구 SVG-JS 빌드 대체): MutationObserver 상주 제거 + 페이지당 JS 파싱 1.1MB 감소 -->
+  <link href="/static/vendor/fontawesome-5.11.2/css/all.min.css" rel="stylesheet">
+  <link href="/static/vendor/fontawesome-5.11.2/css/v4-shims.min.css" rel="stylesheet">
+  <link href="/static/vendor/fontawesome-5.11.2/css/fa-compat.css" rel="stylesheet">
+  <link href="/static/css/bootstrap-select.min.css" rel="stylesheet">
+  <script src="/static/js/vendor/bootstrap-select.min.js"></script>
+  {# needs_map: 지도 없는 텍스트 페이지(routes_settings 등)에서는 MapLibre 전역 스택을
+     로드하지 않아 head 렌더 차단을 제거한다. 기본 True(지도 페이지·위젯 무회귀). #}
+  {% if needs_map %}
+  <!-- [GIS Vector Migration] Pure MapLibre GL (Leaflet Removed) -->
+  <!-- MapLibre-GL JS - Full 3D support with pitch, bearing, terrain -->
+  <!-- GIS 설정의 'Serve MapLibre Locally' 옵션에 따라 로컬 vendor / CDN 선택 (기본: 로컬).
+       MapLibre(~775KB)는 head에서 동기 로드되어 모든 페이지(지도 없는 설정 페이지 포함)의
+       렌더를 차단한다. 외부 unpkg CDN 으로 받으면 네트워크 지연이 그대로 LCP 에 더해지므로
+       기본을 동일 출처 로컬 서빙(nginx, immutable 캐시)으로 둔다. 명시적으로 옵션을 false 로
+       끈 경우에만 CDN 을 사용한다. -->
+  {% if map_global_providers and map_global_providers.get('maplibre_local_serving') == false %}
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+  {% else %}
+  <link rel="stylesheet" href="/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css" />
+  <script src="/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js"></script>
+  {% endif %}
+
+  <!-- MapLibre 호환 패치(멱등). maplibre 로드 직후 적용되며, 지연/온디맨드 로드에서도 재호출 가능. -->
+  <script src="/static/js/geo/aot-maplibre-patches.js?v=20260613"></script>
+
+  <!-- [GIS Vector Migration] AoT Vector Modules (Pure MapLibre) -->
+  <script src="/static/js/geo/aot-maplibre-loader.js?v=20260613"></script>
+  <script src="/static/js/geo/aot-vector-layer-manager.js?v=20260430"></script>
+
+  <!-- Turf.js for geometry operations -->
+  <script src="/static/js/common/turf.min.js"></script>
+
+  <!-- [GIS Vector Migration] MapLibre Compatibility Layer:
+       callInitHooks 패치는 aot-maplibre-patches.js 로 이전됨(멱등 apply). -->
+
+  <link href="/static/css/map/map.css?v=20260702b" rel="stylesheet">
+  {% endif %}{# needs_map #}
+
+  <!-- AoT timezone display utility (single source of truth for UTC → device/viewer TZ) -->
+  <script src="/static/js/common/aot-tz.js?v=20260506"></script>
+  <style>
+    .main-navbar {
+      position: relative;
+      /* Tier 1: Topmost (Navbar & Dropdowns) */
+      z-index: var(--aot-z-navbar) !important;
+      /* Align with dashboard tabs (1.2em combined padding) */
+      padding-left: 19px !important;
+      padding-right: 19px !important;
+      transition: top 0.3s ease;
+      max-width: 100vw !important;
+    }
+
+    .main-navbar .dropdown-menu {
+      z-index: var(--aot-z-dropdown) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+      border: none !important;
+      padding: 8px 0 !important;
+      overflow: hidden !important;
+    }
+  </style>
+
+  <link href="/custom.css" rel="stylesheet">
+
+  <!-- Toastr -->
+  <link href="/static/css/toastr.min.css" rel="stylesheet">
+  <script src="/static/js/vendor/toastr.min.js"></script>
+  <script id="aot-global-settings-json" type="application/json">
+    {{ {
+      'hide_success': settings.hide_alert_success | default(false),
+      'hide_info': settings.hide_alert_info | default(false),
+      'hide_warning': settings.hide_alert_warning | default(false),
+      'hide_tooltips': settings.hide_tooltips | default(false)
+    } | tojson | safe }}
+  </script>
+  <script>
+    try {
+      window.AoTGlobalSettings = JSON.parse(document.getElementById('aot-global-settings-json').textContent);
+    } catch (e) {
+      window.AoTGlobalSettings = { hide_success: false, hide_info: false, hide_warning: false, hide_tooltips: false };
+    }
+    // Inject Server Data for Map Defaults
+    window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
+
+    // Apply geo design theme panel background globally (map controllers/panels
+    // on every page read --panel-bg-rgba; geo/design pages re-apply the same vars)
+    (function () {
+      try {
+        var t = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) || {};
+        var hex = t.panel_bg || '#ffffff';
+        var m = /^#?([0-9a-f]{6})$/i.exec(hex);
+        var rgb = m ? [parseInt(m[1].substr(0, 2), 16), parseInt(m[1].substr(2, 2), 16), parseInt(m[1].substr(4, 2), 16)].join(', ') : '255, 255, 255';
+        var op = parseInt(t.panel_opacity, 10);
+        op = isNaN(op) ? 0.9 : Math.min(1, Math.max(0, op / 100));
+        var root = document.documentElement;
+        root.style.setProperty('--panel-bg', hex);
+        root.style.setProperty('--panel-bg-rgb', rgb);
+        root.style.setProperty('--panel-opacity', op);
+        root.style.setProperty('--panel-bg-rgba', 'rgba(' + rgb + ', ' + op + ')');
+      } catch (e) { /* keep CSS fallbacks */ }
+    })();
+
+    /**
+     * [Internationalization] JS Bridge for Translations
+     */
+    </script>
+    <script src="{{ url_for('routes_locale_api.get_js_translations') }}"></script>
+    <script>
+    /**
+     * Translation helper for JS
+     * @param {string} key - The translation key or the original string
+     */
+    window._ = function(key) {
+        return window.AOT_I18N[key] || key;
+    };
+
+    /**
+     * [Standardized Toast Notification]
+     * Centralized toast handling that respects AoTGlobalSettings.
+     * @param {string} message - The message to display
+     * @param {string} type - Toast type: 'success', 'info', 'warning', 'error'
+     */
+    window.showToast = function (message, type = 'info') {
+        const settings = window.AoTGlobalSettings || {};
+        let shouldHide = false;
+        if (type === 'success' && settings.hide_success) shouldHide = true;
+        if (type === 'info' && settings.hide_info) shouldHide = true;
+        if ((type === 'warning' || type === 'error') && settings.hide_warning) shouldHide = true;
+
+        if (shouldHide) return;
+
+        if (typeof toastr !== 'undefined' && toastr[type]) {
+            toastr[type](message);
+        } else {
+        }
+    };
+
+    /**
+     * [Standardized Tooltip Initialization]
+     * Centralized tooltip handling that respects AoTGlobalSettings.
+     * @param {string|jQuery} selector - The element(s) to initialize tooltips on
+     * @param {Object} options - Tooltip options
+     */
+    window.initTooltip = function (selector, options = {}) {
+        const settings = window.AoTGlobalSettings || {};
+        if (settings.hide_tooltips) return; // Respect global setting
+
+        const $elements = $(selector);
+        if ($elements.length && typeof $elements.tooltip === 'function') {
+            $elements.tooltip(options);
+        }
+    };
+
+    /**
+     * [Standardized Title Assignment]
+     * Sets/clears a native `title` attribute while respecting AoTGlobalSettings.
+     * Widgets that repeatedly refresh an element's title (e.g. map sensor
+     * labels on each poll tick) must use this instead of assigning
+     * `el.title` directly, otherwise a re-assignment made while the pointer
+     * is already hovering re-adds the attribute without a new `mouseenter`
+     * event, letting the browser's native tooltip slip past the
+     * hide_tooltips interceptor below.
+     * @param {Element} el - The DOM element to set/clear the title on
+     * @param {string} text - The title text (ignored when hide_tooltips is on)
+     */
+    window.AoTSetTitle = function (el, text) {
+        if (!el) return;
+        const settings = window.AoTGlobalSettings || {};
+        if (settings.hide_tooltips) {
+            el.removeAttribute('title');
+            if (el.classList) el.classList.remove('aot-title-stored');
+            if (el.dataset) delete el.dataset.aotStoredTitle;
+            return;
+        }
+        el.title = text || '';
+    };
+
+    /**
+     * [Global Tooltip Suppression]
+     * If hide_tooltips is enabled, suppress MapLibre and Native tooltips.
+     */
+    (function () {
+        const settings = window.AoTGlobalSettings || {};
+        if (settings.hide_tooltips) {
+            // Suppress Native Browser Tooltips
+            $(document).on('mouseenter', '[title]', function () {
+                const $el = $(this);
+                const title = $el.attr('title');
+                if (title) {
+                    $el.data('aot-stored-title', title).removeAttr('title').addClass('aot-title-stored');
+                }
+            }).on('mouseleave', '[title], .aot-title-stored', function () {
+                const $el = $(this);
+                const storedTitle = $el.data('aot-stored-title');
+                if (storedTitle) {
+                    $el.attr('title', storedTitle).removeData('aot-stored-title').removeClass('aot-title-stored');
+                }
+            });
+        }
+    })();
+  </script>
+
+  {% block head %}{% endblock %}
+
+  <title>
+    {% if settings.title_display == 'hostname' %}
+    {{ host }}
+    {% elif settings.title_display == 'brand_text' %}
+    {{ settings.hostname_override }}
+    {% endif %}
+    {% block title %}{% endblock %} - AoT {{ aot_version }}
+  </title>
+
+  <!-- Daemon status check script -->
+  <script type="text/javascript">
+    // Nav-bar brand status controller. The brand logo is branding-only now
+    // (see settings/custom_ui brand_display) and its position/size must NEVER
+    // change — so daemon/app health is shown ONLY by tinting the brand-link
+    // background. background-color changes never affect layout or the logo.
+    //   ok     → no tint (aot daemon + flask app both alive)
+    //   daemon → red tint  (aot backend daemon down)
+    //   app    → gray tint (flask app/server unreachable)
+    window.AoTBrandStatus = {
+      set: function (state) {
+        var el = document.getElementById('brand-link');
+        if (!el) return;
+        el.classList.remove('aot-brand-daemon-down', 'aot-brand-app-down');
+        if (state === 'daemon') { el.classList.add('aot-brand-daemon-down'); }
+        else if (state === 'app') { el.classList.add('aot-brand-app-down'); }
+      }
+    };
+
+    function check_daemon_status() {
+      $.ajax('/daemonactive', {
+        success: function (data, textStatus, jqXHR) {
+          if (jqXHR.status === 204 || data !== 'alive') {
+            window.AoTBrandStatus.set('daemon');
+          } else {
+            window.AoTBrandStatus.set('ok');
+          }
+        },
+        error: function () {
+          // App/server unreachable → gray tint. aot-server-health.js also flags
+          // this from its own probe loop; both converge on the same state.
+          window.AoTBrandStatus.set('app');
+        },
+        cache: false
+      });
+    }
+
+    $(document).ready(function () {
+      // [Flicker Fix] Remove page-loading class after 100ms so transitions are
+      // suppressed during browser scroll restoration (which fires after DOMContentLoaded)
+      // but are active for user interactions shortly after.
+      setTimeout(function() {
+        document.documentElement.classList.remove('aot-page-loading');
+      }, 100);
+
+      // [Security] Global CSRF Token Setup for AJAX (Persisted in Default Layout)
+      var csrfToken = $('meta[name="csrf-token"]').attr('content');
+      $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+          if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", csrfToken);
+          }
+        }
+      });
+
+      check_daemon_status();
+      
+      // [Fix] Inject multi-select differentiator class & transfer tooltip titles upon dropdown initialization (Global Listener)
+      $(document).on('loaded.bs.select', '.selectpicker', function (e) {
+        var $this = $(this);
+        if ($this.attr('multiple')) {
+          $this.closest('.bootstrap-select').addClass('aot-multi-select');
+        }
+        // [Tooltip] Copy select tag title (description) to button to activate tooltip
+        var title = $this.attr('title');
+        if (title) {
+          var $btn = $this.closest('.bootstrap-select').find('.dropdown-toggle');
+          if ($btn.length && !$btn.attr('title') && !$btn.attr('data-original-title')) {
+            $btn.attr('title', title);
+          }
+        }
+      });
+
+      // [Tooltip] Copy title of toggle button (Hidden Input) to parent label (.btn-toggle)
+      $('.btn-toggle-input[title]').each(function() {
+        var $input = $(this);
+        var $label = $input.closest('.btn-toggle');
+        if ($label.length && !$label.attr('title') && !$label.attr('data-original-title')) {
+          $label.attr('title', $input.attr('title'));
+        }
+      });
+
+      if (window.AoTGlobalSettings && !window.AoTGlobalSettings.hide_tooltips) {
+        $('body').tooltip({
+          selector: '[data-toggle="tooltip"], input[title], textarea[title], label.aot-modal-option-label[title], label.form-tooltip[title], .btn[title]:not(.dropdown-toggle), .btn-toggle[title], .aot-custom-btn[title], .btn-circle[title], .leaflet-container [title]',
+          container: 'body',
+          trigger: 'hover',
+          delay: { "show": 500, "hide": 100 }
+        });
+
+        // 옵션 제목(label) 클릭 시 툴팁 즉시 토글 (호버 500ms 딜레이 없이)
+        $(document).on('click', 'label.aot-modal-option-label', function () {
+          var $el = $(this);
+          if (!$el.attr('title') && !$el.attr('data-original-title')) return;
+          if (!$el.data('bs.tooltip')) {
+            $el.tooltip({ container: 'body', trigger: 'hover' });
+          }
+          $el.tooltip('toggle');
+        });
+
+        // [iOS Fix] trigger:'hover' tooltips are opened by iOS Safari's
+        // synthetic mouseenter on tap, but no mouseleave ever follows a
+        // tap-away, so the tooltip stays stuck open. Track open triggers and
+        // force-close them on any touch outside the trigger element.
+        var $openTooltipTriggers = $();
+        $('body').on('shown.bs.tooltip', function (e) {
+          $openTooltipTriggers = $openTooltipTriggers.add(e.target);
+        }).on('hidden.bs.tooltip', function (e) {
+          $openTooltipTriggers = $openTooltipTriggers.not(e.target);
+        });
+        $(document).on('touchstart', function (e) {
+          if (!$openTooltipTriggers.length) return;
+          var $target = $(e.target);
+          $openTooltipTriggers.each(function () {
+            var $trigger = $(this);
+            if (!$target.closest($trigger).length) {
+              $trigger.tooltip('hide');
+            }
+          });
+        });
+      }
+      
+      // [Global Fix] Set Bootstrap-Select Defaults
+      if ($.fn.selectpicker) {
+          $.fn.selectpicker.Constructor.DEFAULTS.container = false;
+      }
+
+      $('.aot-modern-select').each(function() {
+        var $el = $(this);
+        if (!$el.hasClass('selectpicker')) {
+          $el.addClass('selectpicker');
+        }
+        // Style if not present
+        if (!$el.data('style')) {
+          $el.attr('data-style', 'btn-white');
+        }
+      });
+
+      // Initial initialization for static elements
+      $('.selectpicker').selectpicker();
+    });
+    setInterval(check_daemon_status, 60000);
+  </script>
+  <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260702z2" rel="stylesheet">
+  
+  <!-- Shared drawer shell (AI chat, Notes) -->
+  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260718c" rel="stylesheet">
+  <!-- AI Global Styles -->
+  <link href="{{ url_for('static', filename='css/ai/aot-ai-global.css') }}?v=20260718i" rel="stylesheet">
+</head>
+
+<body class="{% if active_page in ['geo_design', 'settings'] %}body-no-gap{% endif %}" style="width: 100%; max-width: 100vw !important; overflow-x: hidden !important; overflow-y: auto;">
+  {% set active_page = active_page|default('') -%}
+  {% set help_page = help_page|default(['', '']) -%}
+
+  <!-- Main Navigation Bar: includes main-navbar class -->
+  <nav class="navbar navbar-expand-md main-navbar">
+    <!-- Logo (Left) -->
+    <!-- Positioning (margin/padding) is in aot-base.css #brand-link: the logo's
+         screen position is preserved while the status-tint box hugs it symmetrically. -->
+    <a id="brand-link" class="navbar-brand" href="{{ url_for('routes_general.index_page') }}">
+      {% if settings.brand_display == 'brand_image' and settings.brand_image %}
+      <img id="daemon-icon" src="/brand-image?v={{ settings.brand_image|length }}" alt="{{ settings.hostname_override or 'AoT' }}" style="height: {{ settings.brand_image_height or 55 }}px;">
+      {% elif settings.brand_display == 'brand_text' %}
+      <span id="daemon-icon" class="aot-brand-text">{{ settings.hostname_override or host }}</span>
+      {% elif settings.brand_display == 'hostname' %}
+      <span id="daemon-icon" class="aot-brand-text">{{ host }}</span>
+      {% else %}
+      <img id="daemon-icon" src="/static/img/logo.svg" alt="AoT">
+      {% endif %}
+    </a>
+
+    <!-- Mobile Only: Dashboard settings button + Menu toggle button (Right) -->
+    <div class="d-md-none ml-auto d-flex align-items-center">
+      <!-- Margin-right to align center with 40px dashboard settings button (28px burger vs 40px btn -> 6px offset) -->
+      <!-- Adjusted based on browser inspection: Burger was 2px too far left. 6px - 2px = 4px -->
+      <div class="burger" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse"
+        aria-expanded="false" aria-label="Toggle navigation" style="margin-right: 4px;">
+        <span class="line"></span>
+      </div>
+    </div>
+
+    <!-- Common: collapse area (Both Desktop and Mobile) -->
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav left-menu">
+        <li class="nav-item dropdown {% if active_page in ['dashboard', 'live', 'graph_async'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownDashboard" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            {{ _('Dashboard') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownDashboard" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+            {% for each_dash in dashboards %}
+            <a class="dropdown-item {% if each_dash.unique_id == dashboard_id %} active{% endif %}"
+              href="/dashboard/{{ each_dash.unique_id }}">
+              {{ each_dash.name }}
+            </a>
+            <div class="dropdown-divider"></div>
+            {% endfor %}
+            <a class="dropdown-item" href="/dashboard-add">{{ _('Add Dashboard') }}</a>
+          </div>
+        </li>
+        {# WARNING: This file (layout_default.html) is the source template that overwrites layout.html
+           on every server restart via aot/utils/layouts.py (shutil.copy). Any modifications to
+           layout.html nav-bar conditional logic MUST also be applied here, or they will be lost. #}
+        {% if ai_settings and ai_settings.ai_enabled %}
+        <li
+          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_scheduler', 'ai_manage', 'ai_agent', 'ai_library'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownAIAgent" data-toggle="dropdown" aria-haspopup="true"
+             aria-expanded="false">
+             {{ _('AI') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownAIAgent" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+            <a class="dropdown-item {% if active_page == 'ai_dashboard' %} active{% endif %}"
+               href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}">
+               {{ _('Portal') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'ai_agent' %} active{% endif %}"
+               href="{{ url_for('routes_ai_agent.page_ai_agent') }}">
+               {{ _('Agent') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'ai_manage' %} active{% endif %}"
+               href="{{ url_for('routes_ai_agent.page_ai_manage') }}">
+               {{ _('Manager') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'ai_library' %} active{% endif %}"
+               href="{{ url_for('routes_ai_library.page_ai_library') }}">
+               {{ _('Library') }}
+            </a>
+          </div>
+        </li>
+        {% endif %}
+        <li
+          class="nav-item dropdown {% if active_page in ['input', 'output', 'function', 'method_list', 'geo_design', 'geo_layer'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownSettings" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('Settings') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownSettings" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+            <a class="dropdown-item {% if active_page == 'geo_design' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_design') }}">
+              {{ _('Map') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'geo_facility' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_facility') }}">
+              {{ _('Facility') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'geo_layer' %} active{% endif %}"
+              href="{{ url_for('routes_geo.page_layer') }}">
+              {{ _('GIS Input') }}
+            </a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item {% if active_page == 'input' %} active{% endif %}"
+              href="{{ url_for('routes_input.page_input') }}">
+              {{ _('Input') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'output' %} active{% endif %}"
+              href="{{ url_for('routes_output.page_output') }}">
+              {{ _('Output') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'function' %} active{% endif %}"
+              href="{{ url_for('routes_function.page_function') }}">
+              {{ _('Function') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'method_list' %} active{% endif %}"
+              href="{{ url_for('routes_method.method_list') }}">
+              {{ _('Reference Method') }}
+            </a>
+          </div>
+        </li>
+        <li
+          class="nav-item dropdown {% if active_page in ['camera', 'notes', 'notice', 'export', 'energy_usage_outputs', 'energy_usage_inputs_amps', 'ai_scheduler'] %} active{% endif %}">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownExtra" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('Additional Features') }}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="dropdownExtra" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+            <a class="dropdown-item{% if active_page == 'live' %} active{% endif %}"
+              href="{{url_for('routes_page.page_live')}}">
+              {{_('Live Measurement')}}
+            </a>
+            <a class="dropdown-item{% if active_page == 'graph_async' %} active{% endif %}"
+              href="{{url_for('routes_page.page_graph_async')}}">
+              {{_('Graph')}}
+            </a>
+            <a class="dropdown-item {% if active_page == 'camera' %} active{% endif %}"
+              href="{{ url_for('routes_camera.page_camera') }}">
+              {{ _('Camera') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'notes' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_notes') }}">
+              {{ _('Notes') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'notice' %} active{% endif %}"
+              href="{{ url_for('routes_notice.page_notice') }}">
+              {{ _('Notice') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'ai_scheduler' %} active{% endif %}"
+              href="{{ url_for('routes_scheduler.page_scheduler') }}">
+              {{ _('Schedule') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'export' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_export') }}">
+              {{ _('Import') }} {{ _('Export') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'energy_usage_outputs' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_energy_usage_outputs') }}">
+              {{ _('Energy-Output') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'energy_usage_inputs_amps' %} active{% endif %}"
+              href="{{ url_for('routes_page.page_energy_usage_input_amps') }}">
+              {{ _('Energy-Amp') }}
+            </a>
+          </div>
+        </li>
+
+
+      </ul>
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownHelp" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('Help') }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownHelp" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+            {% if help_page and help_page[0] %}
+            <a class="dropdown-item" target="_blank" href="{{ help_page[0] }}">{{ _('Help') }}: {{ help_page[1] }}</a>
+            {% endif %}
+            <a class="dropdown-item" target="_blank" href="{{ manual_url('') }}">{{ _('Online Manual') }}</a>
+            <a class="dropdown-item" target="_blank" href="{{ manual_url('API/') }}">{{ _('API Info') }}</a>
+            <a class="dropdown-item" target="_blank" href="/api">{{ _('API Documentation') }}</a>
+            <a class="dropdown-item" target="_blank" href="https://github.com/AoT-inc/AoT">{{ _('AoT Github') }}</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="dropdownManage" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            {{ _('Manage') }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownManage" style="border-radius: 16px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 8px 0 !important; overflow: hidden !important;">
+            <a class="dropdown-item" href="{{ url_for('routes_settings.settings_general') }}">{{ _('System Management') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_page.page_logview') }}">{{ _('System Log') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_page.page_info') }}">{{ _('System Information') }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_dependencies_main') }}">{{ _('Package Management') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_upgrade') }}">{{ _('Upgrade') }}</a>
+            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_backup') }}">{{ _('Backup Restore') }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm("{{ _("Are you sure you want to restart the backend?") }}")'>{{
+              _('Restart Backend') }}</a>
+            <a class="dropdown-item" href="/systemctl/frontend_reload" onclick='return confirm("{{ _("Are you sure you want to reload the frontend?") }}")'>{{
+              _('Reload Frontend') }}</a>
+            <a class="dropdown-item" href="/systemctl/restart" onclick='return confirm("{{ _("Are you sure you want to restart the system?") }}")'>{{ _('Restart System') }}</a>
+            <a class="dropdown-item" href="/systemctl/shutdown" onclick='return confirm("{{ _("Are you sure you want to shutdown the system?") }}")'>{{ _('Shutdown System')
+              }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#modal_config_theme">{{_('User Settings')}}</a>
+            <a class="dropdown-item" href="/logout">{{_('Logout')}} ({{current_user.name}})</a>
+          </div>
+        </li>
+        <li class="nav-item navbar-shopping-bottom">
+          <a class="nav-link" href="https://aotinc.framer.ai" target="_blank">
+            <i class="fas fa-shopping-bag"></i>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <!-- /Main Navigation Bar -->
+
+  {% if active_page not in ['geo_design', 'settings', 'dashboard', 'geo_setting', 'geo_input', 'input', 'output', 'function'] %}
+  <!-- Top Spacer for non-map pages (replaces navbar margin) -->
+  <div style="height: 1.5em; clear: both;"></div>
+  {% endif %}
+
+
+
+  {%- block body %}{% endblock %}
+
+  <!-- Preferences Modal -->
+  <div class="modal fade" id="modal_config_theme" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content" style="padding: 1em">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _ ('Preferences') }}</h5>
+        </div>
+        <form method="post" action="/change_preferences">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="form-row" style="padding-top: 0.5em">
+            <div class="col-auto">
+              <label class="form-check-label">{{ _ ('Language') }}</label>
+              <div>
+                <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language"
+                  name="language" title="{{ _(" Selecting a language will override the web browser's language") }}">
+                  <option value="">{{ _('Browser Default') }}</option>
+                  {% for each_language in languages %}
+                  <option value="{{ each_language[0] }}" {% if current_user.language==each_language[0] %} selected{%
+                    endif %}>
+                    {{ each_language[1] }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-auto">
+              <label class="form-check-label">{{ _ ('Theme') }}</label>
+              <div>
+                <select class="form-control" id="theme" name="theme">
+                  {% for value, name in themes %}
+                  <option value="{{ value|e }}" {% if value==current_user.theme %} selected{% endif %}>{{ name|e }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="clear: both"></div>
+          <div class="row small-gutters" style="padding: 1em 1em 0 0.8em;">
+            <div class="col-auto">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+            </div>
+            <div class="col-auto">
+              <input class="btn btn-primary" id="user_preferences_save" name="user_preferences_save" type="submit"
+                value="{{ _ ('Save') }}">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Settings Modals -->
+  {% for each_dash in dashboards %}
+  <div class="modal fade aot-option-modal aot-tab-settings-modal" id="modal_config_{{ each_dash.unique_id }}" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _('Dashboard Settings') }}{% if each_dash.name %}: {{ each_dash.name }}{% endif %}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form method="post" action="/dashboard/{{ each_dash.unique_id }}">
+          {{ form_dashboard.csrf_token }}
+          {{ form_dashboard.dashboard_id(value=each_dash.unique_id) }}
+          <div class="modal-body">
+            <div class="aot-modal-group-title">{{ _('Basic Settings') }}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{ form_dashboard.name.label(class_='mb-0') }}</label>
+                <div class="aot-modal-option-control">
+                  {{ form_dashboard.name(class_='form-control aot-modern-input', value=each_dash.name, **{'title': dict_translation['name']['phrase']}) }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            {{ form_dashboard.dash_modify(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {{ form_dashboard.dash_delete(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _("Are you sure you want to delete?") + '")'}) }}
+            {{ form_dashboard.dash_duplicate(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick':'return confirm("' + _("Are you sure you want to duplicate the dashboard and all its widgets?") + '")'}) }}
+            {% if each_dash.locked %}
+            {{ form_dashboard.unlock(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% else %}
+            {{ form_dashboard.lock(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <script>
+    $(document).ready(function () {
+      /* window.initTooltip handles this or it's handled by global delegation above */
+      $('.selectpicker').selectpicker();
+      /* Old JS removed - moved to head script with .burger.active logic */
+      // Force close collapse in desktop mode upon window resize
+      $(window).on('resize', function () {
+        if ($(window).width() >= 768) {
+          $('#navbarCollapse').collapse('hide');
+        }
+      });
+      // (배터리 Step 2-A) 중복 데몬 상태 폴링 제거 — head 의 setInterval(check_daemon_status, 60000) 한 곳으로 일원화
+
+      let lastScrollTop = 0;
+      const navbar = $('.navbar.main-navbar');
+
+      $(window).on('scroll', function () {
+        let currentScroll = $(this).scrollTop();
+
+        if (currentScroll > lastScrollTop && currentScroll > 50) {
+          navbar.css('top', '-60px');
+          // Navbar hidden: Tabs stick to very top
+          $('body').addClass('aot-nav-hidden');
+        } else {
+          navbar.css('top', '0');
+          // Navbar visible: Tabs stick below navbar
+          $('body').removeClass('aot-nav-hidden');
+        }
+
+        lastScrollTop = currentScroll;
+      });
+
+      // [Focus Fix] Prevent Bootstrap modal from stealing focus from Portal elements (Notes Widget)
+      if ($.fn.modal && $.fn.modal.Constructor) {
+          $.fn.modal.Constructor.prototype._enforceFocus = function() {};
+          // console.log('[AoT] Bootstrap Modal Focus Trap disabled for Portal compatibility');
+      }
+
+      // [GridStack Modal Fix] 모달을 열 때만 body로 이동, 닫으면 원래 위치로 복귀
+      // 영구 이동 방식(relocateModals)은 page_refresh/drag 시 모달 ID 중복/혼동 유발
+      $(document).on('show.bs.modal', '.modal', function () {
+          var $modal = $(this);
+          if (!$modal.parent().is('body')) {
+              $modal.data('aot-modal-prev-parent', $modal.parent()[0]);
+              $modal.appendTo('body');
+          }
+      });
+
+      $(document).on('hidden.bs.modal', '.modal', function () {
+          var $modal = $(this);
+          var prevParent = $modal.data('aot-modal-prev-parent');
+          if (prevParent && document.contains(prevParent)) {
+              $(prevParent).append($modal);
+              $modal.removeData('aot-modal-prev-parent');
+          }
+      });
+    });
+  </script>
+  <script>
+    function setClipboard(value) {
+      var tempInput = document.createElement("input");
+      tempInput.style = "position: absolute; left: -1000px; top: -1000px";
+      tempInput.value = value;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand("copy");
+      document.body.removeChild(tempInput);
+      {% if not(misc is defined and misc.hide_alert_success) %}
+      if (typeof window.showToast !== 'undefined') {
+        window.showToast("{{_('Copied to Clipboard')}}: " + value, 'success');
+      } else if (typeof toastr !== 'undefined') {
+        toastr['success']("{{_('Copied to Clipboard')}}: " + value);
+      } else {
+        alert('Copied to Clipboard: ' + value);
+      }
+      {% endif %}
+    }
+  </script>
+
+  {% if needs_map %}
+  <!-- AoT Map Core Bundle (Replaces individual geo/map files) -->
+  <!-- [GIS Vector Transition] Updated v=20260429 with full vector module code -->
+  <script src="/static/js/geo/dist/aot-geo-all.bundle.js?v=20260429"></script>
+  {% endif %}
+
+  <!-- AoT Tabs Component (used by input/output/function pages) -->
+  <script src="/static/js/components/aot-tabs.js?v=20260618e"></script>
+
+  {% if needs_map %}
+  <!-- Modal map controller + search components (not in bundle) -->
+  <script src="/static/js/components/aot-map-search-fixed.js?v=20260505"></script>
+  <script src="/static/js/components/aot-map-search-controller.js?v=20260505"></script>
+  <script src="/static/js/geo/aot-map-modal.js?v=20260602a"></script>
+  {% endif %}
+
+  <!-- AoT Notes Widget (Global Integration) -->
+  <link href="/static/js/notes/notes-widget.css?v=prod_v20" rel="stylesheet">
+  <div id="aot-notes-widget-root"></div>
+  <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v20"></script>
+  
+  {% if ai_settings and ai_settings.ai_enabled %}
+  <!-- AI Global Assistant -->
+  <button id="ai-fab" class="ai-fab" type="button" title="{{ _('AI Assistant') }}" aria-label="{{ _('AI Assistant') }}">
+    <span class="ai-fab-label">AI</span>
+  </button>
+
+  <div id="ai-chat-drawer" class="ai-chat-drawer aot-drawer" role="dialog" aria-label="{{ _('AI Assistant') }}">
+    <div class="ai-chat-header aot-drawer-header">
+      <div class="ai-chat-title aot-drawer-title">
+        <span class="ai-chat-title-text aot-drawer-title-text">{{ _('AI Assistant') }}</span>
+        <span id="ai-context-indicator" class="ai-context-indicator"></span>
+      </div>
+      <div class="ai-chat-header-actions aot-drawer-actions">
+        <button id="ai-new-chat-btn" class="ai-icon-btn aot-icon-btn" type="button" title="{{ _('New conversation') }}" aria-label="{{ _('New conversation') }}">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button id="ai-close-btn" class="ai-icon-btn ai-close-btn aot-icon-btn" type="button" title="{{ _('Close') }}" aria-label="{{ _('Close') }}">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="ai-chat-messages" class="ai-chat-messages aot-drawer-body"></div>
+
+    <div class="ai-composer aot-drawer-footer">
+      <div id="ai-composer-modes" class="ai-composer-modes">
+        <div class="ai-mode-group" id="ai-depth-toggle" data-mode="depth" role="group" aria-label="{{ _('Response depth') }}">
+          <button class="ai-mode-seg is-active" type="button" data-value="fast">{{ _('Fast') }}</button>
+          <button class="ai-mode-seg" type="button" data-value="deep">{{ _('Deep') }}</button>
+        </div>
+        <div class="ai-mode-group" id="ai-autonomy-toggle" data-mode="autonomy" role="group" aria-label="{{ _('Autonomy') }}">
+          <button class="ai-mode-seg" type="button" data-value="advice">{{ _('Advice') }}</button>
+          <button class="ai-mode-seg is-active" type="button" data-value="approve">{{ _('Approve') }}</button>
+          <button class="ai-mode-seg" type="button" data-value="auto">{{ _('Auto') }}</button>
+        </div>
+      </div>
+
+      <div id="ai-attachments" class="ai-attachments" hidden></div>
+
+      <div class="ai-composer-row aot-composer-row">
+        <button id="ai-attach-btn" class="ai-icon-btn ai-attach-btn aot-icon-btn" type="button" title="{{ _('Attach image') }}" aria-label="{{ _('Attach image') }}">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </button>
+        <input id="ai-file-input" class="ai-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+        <textarea id="ai-chat-input" class="ai-chat-input" placeholder="{{ _('Ask AI anything...') }}" rows="1" name="ai-message" autocomplete="off" autocorrect="off" autocapitalize="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></textarea>
+        <button id="ai-send-btn" class="ai-send-btn" type="button" title="{{ _('Send') }}" aria-label="{{ _('Send') }}">
+          <span class="btn-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+          </span>
+        </button>
+        <button id="ai-stop-btn" class="ai-stop-btn" type="button" style="display: none;" title="{{ _('Stop') }}" aria-label="{{ _('Stop') }}">
+          <span class="btn-icon-stop"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/ai/aot-ai-global.js') }}?v=20260719b"></script>
+  {% endif %}
+  
+  <script>
+    /**
+     * [Global CSRF Protection]
+     * Automatically injects X-CSRFToken header into all fetch requests.
+     */
+    (function() {
+      const originalFetch = window.fetch;
+      window.fetch = function(url, options = {}) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken && !/^(GET|HEAD|OPTIONS|TRACE)$/i.test(options.method || 'GET')) {
+          options.headers = options.headers || {};
+          if (options.headers instanceof Headers) {
+            options.headers.set('X-CSRFToken', csrfToken);
+          } else {
+            options.headers['X-CSRFToken'] = csrfToken;
+          }
+        }
+        return originalFetch(url, options);
+      };
+    })();
+  </script>
+
+  {% include 'modals/ai_context_modal.html' %}
+
+  <!-- Global confirm modal: z-index above all other modals -->
+  <div id="aotConfirmModal" class="modal fade" tabindex="-1" role="dialog"
+       style="z-index:var(--aot-z-confirm);" data-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+      <div class="modal-content">
+        <div class="modal-body text-center pt-4 pb-2">
+          <p class="aot-confirm-message mb-0"></p>
+        </div>
+        <div class="modal-footer justify-content-center border-0 pt-0">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-confirm-ok">{{_('OK')}}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Cancel')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="aotConfirmBackdrop" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:var(--aot-z-confirm-backdrop);"></div>
+
+  <script>
+    (function () {
+      var $confirmModal = null;
+      var $confirmBackdrop = null;
+
+      function getModal() {
+        if (!$confirmModal) {
+          $confirmModal = $('#aotConfirmModal');
+          $confirmBackdrop = $('#aotConfirmBackdrop');
+          $confirmModal.on('hidden.bs.modal', function () {
+            $confirmBackdrop.hide();
+          });
+        }
+        return $confirmModal;
+      }
+
+      window.aotConfirm = function (message, onConfirm) {
+        var $m = getModal();
+        $m.find('.aot-confirm-message').text(message);
+        $m.find('.aot-confirm-ok').off('click').on('click', function () {
+          $m.modal('hide');
+          if (typeof onConfirm === 'function') onConfirm();
+        });
+        $confirmBackdrop.show();
+        $m.modal('show');
+      };
+
+      // Event delegation for data-aot-confirm buttons
+      $(document).on('click', '[data-aot-confirm]', function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var $btn = $(this);
+        var btn = this;
+        var msg = $btn.data('aot-confirm');
+        window.aotConfirm(msg, function () {
+          var action = $btn.data('aot-action');
+          if (action && $.fn.processRequest) {
+            $btn.processRequest(btn, action);
+          } else {
+            // form submit button: include the button name so the server sees the action
+            var $form = $btn.closest('form');
+            if ($form.length) {
+              if (btn.name) {
+                $('<input type="hidden">').attr({name: btn.name, value: btn.value || '1'}).appendTo($form);
+              }
+              $form.submit();
+            }
+          }
+        });
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      function _syncVisibility() {
+        document.body.classList.toggle('page-hidden', document.hidden);
+      }
+      document.addEventListener('visibilitychange', _syncVisibility);
+      _syncVisibility();
+    })();
+  </script>
+
+</body>
+
+</html>

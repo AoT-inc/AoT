@@ -1,0 +1,116 @@
+# -*- coding: utf-8 -*-
+#
+# forms_notes.py - Notes Flask Forms
+#
+
+from flask_babel import lazy_gettext
+from flask_wtf import FlaskForm
+from wtforms import BooleanField
+from wtforms import DateTimeField
+from wtforms import FileField
+from wtforms import MultipleFileField
+from wtforms import SelectField
+from wtforms import SelectMultipleField
+from wtforms import StringField
+from wtforms import SubmitField
+from wtforms import TextAreaField
+from wtforms import widgets
+
+from aot.config_translations import TRANSLATIONS
+
+
+#
+# Notes
+#
+
+class NoteAdd(FlaskForm):
+    name = StringField(lazy_gettext('Name'))
+    note_tags = SelectMultipleField(lazy_gettext('Tags'))
+    files = MultipleFileField(lazy_gettext('Attached Files'))
+    enter_custom_date_time = BooleanField(lazy_gettext('Use Custom Date/Time'))
+    date_time = DateTimeField(lazy_gettext('Custom Date/Time'), format='%Y-%m-%d %H:%M:%S')
+    note = TextAreaField(lazy_gettext('Note'))
+    note_add = SubmitField(lazy_gettext('Save'))
+
+
+class NoteOptions(FlaskForm):
+    note_unique_id = StringField(widget=widgets.HiddenInput())
+    note_mod = SubmitField(lazy_gettext('Edit'))
+    note_del = SubmitField(lazy_gettext('Delete'))
+
+
+class NoteMod(FlaskForm):
+    note_unique_id = StringField(widget=widgets.HiddenInput())
+    file_selected = StringField(widget=widgets.HiddenInput())
+    name = StringField(lazy_gettext('Name'))
+    note_tags = SelectMultipleField(lazy_gettext('Tags'))
+    files = MultipleFileField(lazy_gettext('Attached Files'))
+    enter_custom_date_time = BooleanField(lazy_gettext('Use Custom Date/Time'))
+    date_time = DateTimeField(lazy_gettext('Custom Date/Time'), format='%Y-%m-%d %H:%M:%S')
+    note = TextAreaField(lazy_gettext('Note'))
+    file_del = SubmitField(lazy_gettext('Delete'))
+    note_cancel = SubmitField(lazy_gettext('Cancel'))
+    rename_name = StringField()
+    file_rename = SubmitField(lazy_gettext('Rename'))
+    note_del = SubmitField(lazy_gettext('Delete'))
+    note_save = SubmitField(lazy_gettext('Save'))
+
+
+class NotesShow(FlaskForm):
+    sort_by_choices = [
+        ('id', 'ID'),
+        ('name', lazy_gettext('Name')),
+        ('date', lazy_gettext('Date/Time')),
+        ('tag', lazy_gettext('Tag')),
+        ('file', lazy_gettext('File')),
+        ('note', lazy_gettext('Note'))
+    ]
+    sort_direction_choices = [
+        ('desc', lazy_gettext('Descending')),
+        ('asc', lazy_gettext('Ascending'))
+    ]
+    filter_names = StringField(lazy_gettext('Name Filter'))
+    filter_tags = StringField(lazy_gettext('Tag Filter'))
+    filter_files = StringField(lazy_gettext('File Filter'))
+    filter_notes = StringField(lazy_gettext('Note Filter'))
+    sort_by = SelectField(lazy_gettext('Sort By'), choices=sort_by_choices)
+    sort_direction = SelectField(lazy_gettext('Sort Direction'), choices=sort_direction_choices)
+    notes_show = SubmitField(lazy_gettext('Show Notes'))
+    notes_export = SubmitField(lazy_gettext('Export Notes'))
+    notes_import_file = FileField(lazy_gettext('Note ZIP File'))
+    notes_import_upload = SubmitField(lazy_gettext('Import Notes'))
+
+    # PDF report export (period + tag based)
+    report_period_choices = [
+        ('this_week', lazy_gettext('This Week')),
+        ('last_week', lazy_gettext('Last Week')),
+        ('this_month', lazy_gettext('This Month')),
+        ('last_month', lazy_gettext('Last Month')),
+        ('last_7_days', lazy_gettext('Last 7 Days')),
+        ('last_30_days', lazy_gettext('Last 30 Days')),
+        ('custom', lazy_gettext('Custom Range')),
+        ('all', lazy_gettext('All Time'))
+    ]
+    report_title = StringField(lazy_gettext('Report Title'))
+    report_period = SelectField(
+        lazy_gettext('Report Period'), choices=report_period_choices, default='this_month')
+    report_date_start = StringField(lazy_gettext('Report Start Date'))
+    report_date_end = StringField(lazy_gettext('Report End Date'))
+    notes_export_pdf = SubmitField(lazy_gettext('Export PDF Report'))
+
+
+
+#
+# Tags
+#
+
+class TagAdd(FlaskForm):
+    tag_name = StringField(lazy_gettext('Tag'))
+    tag_add = SubmitField(lazy_gettext('Create'))
+
+
+class TagOptions(FlaskForm):
+    tag_unique_id = StringField(lazy_gettext('Tag'), widget=widgets.HiddenInput())
+    rename = StringField()
+    tag_rename = SubmitField(lazy_gettext('Rename'))
+    tag_del = SubmitField(lazy_gettext('Delete'))

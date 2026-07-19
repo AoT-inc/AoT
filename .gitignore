@@ -1,0 +1,104 @@
+# ==============================================================
+# AoT_ai .gitignore — 루트 화이트리스트 방식
+# 루트는 기본 전부 무시. 추적 대상만 ! 로 허용한다.
+# 새 디렉터리/파일을 추적하려면 여기에 !/이름 을 추가할 것.
+# 비배포 작업물(임시 파일, 보고서, 계획 문서)은 .local/ 아래에 둘 것.
+# ==============================================================
+
+/*
+
+# --- 추적 허용: 배포 대상 ---
+!.gitattributes
+!/aot/
+!/alembic_db/
+!/install/
+!/docker/
+
+# --- 추적 허용: 문서/운영 ---
+!/docs/
+!/docs_templates/
+!/tests/
+!/mkdocs.yml
+
+# --- 추적 허용: 루트 파일 ---
+!/.gitignore
+!/.dockerignore
+!/.gitea/
+!/.github/
+!/README.rst
+!/LICENSE.txt
+!/CHANGELOG.md
+!/CACHE_CLEAR_GUIDE_KO.md
+!/requirements.txt
+
+# ==============================================================
+# 하위 디렉터리 공통 무시 (허용된 디렉터리 내부에도 적용)
+# ==============================================================
+
+# --- macOS ---
+.DS_Store
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# --- 가상환경 ---
+venv/
+.venv/
+
+# --- 백업/임시 ---
+*.bak
+*.bak.*
+*.ready
+.fuse_hidden*
+.smb*
+
+# --- 런타임 데이터 (자동 생성, 커밋 불필요) ---
+flask_session_*/
+aot/databases/flask_session/
+aot/aot_flask/static/uploads/
+/statistics.id
+aot/databases/*.db
+*.db-shm
+*.db-wal
+*.db-*
+aot/databases/migrations/
+
+# --- Node.js ---
+node_modules/
+
+# --- Claude Code 로컬 설정 (전체 무시) ---
+.claude/
+
+# --- CI 워크플로 ---
+# .github/workflows/ 는 GitHub Actions(매뉴얼 자동 발행)용으로 추적한다.
+# Gitea 워크플로는 사용하지 않으므로 계속 제외.
+.gitea/workflows/
+
+# --- 🔐 보안: 절대 커밋 금지 ---
+*.key
+*.pem
+ssl_certs/
+.env
+.env.*
+!docker/.env.prod.example
+aot/databases/flask_secret_key
+docs/dev/
+docs/architecture/
+docs/upgrade/
+
+# --- 위젯 HTML 생성물 (aotflask 기동 시 .py 에서 자동 생성) ---
+aot/aot_flask/templates/user_templates/widget_template_*.html
+
+# --- 사용자 함수(조건/액션 등) 코드: 설치별 자동생성, __init__.py 만 추적 ---
+aot/user_python_code/conditional_*.py
+
+# --- 비배포: 루트 rak 디렉터리 (펌웨어/코덱 작업물) ---
+# (루트 화이트리스트 /* 로 이미 무시되나 의도를 명시)
+/rak/
+
+# --- 비배포: 배포대상 outputs 내 제외 파일 ---
+aot/outputs/on_off_mqtt_farmon_v1.py

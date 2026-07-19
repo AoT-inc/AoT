@@ -1,0 +1,192 @@
+{% macro init_gridstack_actions(function_unique_id, cell_height=4) %}
+<style>
+  #mod_function_actions_{{function_unique_id}}.grid-stack {
+    position: relative !important;
+    width: 100% !important;
+  }
+
+  /* Non-dragging cards: always full width */
+  #mod_function_actions_{{function_unique_id}} > .grid-stack-item:not(.ui-draggable-dragging) {
+    position: absolute !important;
+    left: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Dragging card: width set by JS; never force left here */
+  .grid-stack-item.ui-draggable-dragging {
+    box-sizing: border-box !important;
+  }
+
+  /* Content inset: uniform 4px gap on every side → consistent 4px margin between cards */
+  #mod_function_actions_{{function_unique_id}} > .grid-stack-item > .grid-stack-item-content,
+  .grid-stack-item.ui-draggable-dragging > .grid-stack-item-content {
+    position: absolute !important;
+    top: 2px !important;
+    right: 2px !important;
+    bottom: 2px !important;
+    left: 2px !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+</style>
+
+<script>
+(function () {
+  // cellHeight=4px: max rounding waste is 3px → margins appear uniform across all cards.
+  var _cellH = 4;
+
+  var grid_id = 'mod_function_actions_{{function_unique_id}}';
+  var grid_el = document.getElementById(grid_id);
+  if (!grid_el) return;
+
+  var grid = GridStack.init({
+    column: 12,
+    cellHeight: _cellH,
+    animate: false,
+    float: false,
+    disableResize: true,
+    removable: false,
+    margin: 2,
+    columnOpts: { breakpoints: [] }
+  }, grid_el);
+  window[grid_id] = grid;
+
+  grid.compact();
+
+  // ---- Dynamic height ----
+  // Measures each card's actual content height and adjusts gs-h so all visual
+  // margins are consistent (rounding waste ≤ 3px with cellHeight=4).
+  function _adjustHeights() {
+    if (!grid.engine || !grid.engine.nodes) return;
+    var updates = [];
+    grid.engine.nodes.forEach(function (node) {
+      if (!node.el) return;
+      var content = node.el.querySelector('.grid-stack-item-content');
+      if (!content) return;
+      var inner = content.firstElementChild;
+      var rawH = (inner && inner.scrollHeight) || content.scrollHeight || 0;
+      if (rawH < 8) return;
+      var needed = Math.max(4, Math.ceil((rawH + 4) / _cellH));
+      if (node.h !== needed) updates.push({ el: node.el, h: needed });
+    });
+    if (!updates.length) return;
+    grid.batchUpdate(true);
+    updates.forEach(function (u) { grid.update(u.el, { h: u.h }); });
+    grid.batchUpdate(false);
+    grid.compact();
+  }
+
+  function _updateStyles() {
+    if (typeof grid._updateStyles === 'function') {
+      grid._updateStyles(grid.getRow() + 1);
+    }
+  }
+  _updateStyles();
+
+  var modal_el = grid_el.closest ? grid_el.closest('.modal') : null;
+  if (modal_el) {
+    $(modal_el).on('shown.bs.modal', function () {
+      _updateStyles();
+      setTimeout(_adjustHeights, 50);
+      setTimeout(_adjustHeights, 300);
+    });
+    // Modal already visible (content refresh via refreshModalOptions) — run immediately.
+    if ($(modal_el).hasClass('show')) {
+      _updateStyles();
+      setTimeout(_adjustHeights, 50);
+      setTimeout(_adjustHeights, 300);
+    }
+  } else {
+    setTimeout(_adjustHeights, 100);
+  }
+
+  // ---- Drag ----
+  grid.on('dragstart', function (event, el) {
+    // Set width to container width so the dragged card stays the same width.
+    // Do NOT set left — GridStack already positioned the card at drag coordinates;
+    // setting left:0 here would flash the card to the screen edge.
+    el.style.width = grid_el.offsetWidth + 'px';
+  });
+
+  grid.on('dragstop', function (event, el) {
+    el.style.removeProperty('width');
+    el.style.removeProperty('left');
+    // Remove ghost placeholder elements GridStack sometimes leaves behind.
+    grid_el.querySelectorAll('.grid-stack-placeholder').forEach(function (p) {
+      p.parentNode && p.parentNode.removeChild(p);
+    });
+    setTimeout(function () {
+      grid.compact();
+      _adjustHeights();
+      _saveOrder();
+    }, 100);
+  });
+
+  // ---- AJAX-added cards ----
+  new MutationObserver(function (mutations) {
+    var added = false;
+    mutations.forEach(function (mutation) {
+      mutation.addedNodes.forEach(function (n) {
+        if (n.nodeType !== 1 || !n.classList.contains('grid-stack-item')) return;
+        if (!n.gridstackNode) {
+          // Pin the new card below every existing one before registering it.
+          // Without an explicit gs-y, makeWidget places the card at row 0 and
+          // overlaps the first action — the root cause of the overlap bug.
+          var maxY = 0;
+          if (grid.engine && grid.engine.nodes) {
+            grid.engine.nodes.forEach(function (e) {
+              if (e.el === n) return;
+              maxY = Math.max(maxY, (e.y || 0) + (e.h || 1));
+            });
+          }
+          n.setAttribute('gs-x', '0');
+          n.setAttribute('gs-y', String(maxY));
+          grid.makeWidget(n);
+        }
+        try { $(n).find('.selectpicker').selectpicker(); } catch (e) {}
+        try { $(n).find('.clockpicker').clockpicker(); } catch (e) {}
+        added = true;
+      });
+    });
+    if (added) {
+      // Always compact after an add. _adjustHeights skips compaction when no
+      // height changed (e.g. selectpicker not yet rendered), which left the
+      // newly-added card overlapping. Run an immediate compact plus delayed
+      // height+compact passes to catch late-rendered content heights.
+      grid.compact();
+      setTimeout(function () { _adjustHeights(); grid.compact(); }, 50);
+      setTimeout(function () { _adjustHeights(); grid.compact(); }, 300);
+    }
+  }).observe(grid_el, { childList: true });
+
+  // ---- Save order ----
+  function _saveOrder() {
+    if (!grid.engine || !grid.engine.nodes) return;
+    var new_order = {};
+    grid.engine.nodes.forEach(function (n) {
+      if (!n.id) return;
+      new_order[String(n.id).replace('mod_action_', '')] = n.y;
+    });
+    $.ajax({
+      type: 'POST',
+      url: '/function_save_order',
+      headers: { 'X-CSRFToken': '{{form_actions.csrf_token._value()}}' },
+      data: JSON.stringify({
+        'function_id': '{{function_unique_id}}',
+        'order': new_order
+      }),
+      contentType: 'application/json; charset=utf-8'
+    });
+  }
+
+  var _saveTimer;
+  grid.on('change', function () {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(_saveOrder, 500);
+  });
+})();
+</script>
+{% endmacro %}

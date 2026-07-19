@@ -1,0 +1,38 @@
+{% if 'i2c_location' in dict_options['options_enabled'] or
+      'i2c_location' in dict_options['options_disabled']
+  %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['i2c_location']['title']}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'i2c_location' in dict_options['options_disabled'] -%}
+    {{form.i2c_location(class_='form-control aot-modern-input', value=each_device.i2c_location, disabled=True)}}
+  {%- elif dict_options.get('i2c_address_editable') == False and dict_options.get('i2c_location') -%}
+    <select class="form-control aot-modern-select" id="i2c_location" name="i2c_location">
+      {% for each_addr in dict_options['i2c_location'] %}
+        <option value="{{each_addr}}"{% if each_device.i2c_location == each_addr %} selected{% endif %}>{{each_addr}}</option>
+      {% endfor %}
+    </select>
+  {%- else -%}
+    <div class="input-group">
+      {{form.i2c_location(class_='form-control aot-modern-input', value=each_device.i2c_location)}}
+      <div class="input-group-append">
+        <button onclick="return $(this).processRequest(this, 'i2c_scan');" class="btn aot-pill-btn aot-pill-btn-primary ml-1" type="button"><i class="fas fa-search"></i></button>
+      </div>
+    </div>
+  {%- endif -%}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['i2c_bus']['title']}}</label>
+  <div class="aot-modal-option-control">
+  {%- if 'i2c_location' in dict_options['options_disabled'] -%}
+    {{form.i2c_bus(class_='form-control aot-modern-input', value=each_device.i2c_bus, disabled=True)}}
+  {%- else -%}
+    {{form.i2c_bus(class_='form-control aot-modern-input', value=each_device.i2c_bus)}}
+  {%- endif -%}
+  </div>
+</div>
+
+{% endif %}

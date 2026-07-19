@@ -1,0 +1,14 @@
+{# Wrapper for map_option_macros to support legacy include style #}
+{% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+
+{% if unique_id is defined %}
+{{ render_device_map(
+type=type|default('input'),
+unique_id=unique_id,
+lat_field=form.latitude if form else None,
+lng_field=form.longitude if form else None,
+lat_val=each_input.latitude if each_input else None,
+lng_val=each_input.longitude if each_input else None,
+form_id='mod_input_form_' ~ unique_id
+) }}
+{% endif %}

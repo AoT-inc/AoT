@@ -1,0 +1,437 @@
+{# Getting to Know Each Other — 3-step onboarding wizard (016) #}
+{# Include: {% include 'pages/ai/components/getting_to_know.html' %} #}
+{# Pre-fill: pass gtk_preset and gkt_requirement from template context for re-invoke mode #}
+
+<style>
+    .gkt-container {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    /* Progress dots */
+    .gkt-progress {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+    .gkt-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #dee2e6;
+        transition: background 0.2s;
+    }
+    .gkt-dot.active {
+        background: #0d6efd;
+    }
+    .gkt-dot.done {
+        background: #198754;
+    }
+
+    /* Step card */
+    .gkt-step {
+        display: none;
+    }
+    .gkt-step.active {
+        display: block;
+    }
+    .gkt-card {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .gkt-card h4 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--aot-color-text-primary, #212529);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Key messages (Step 1) */
+    .gkt-messages {
+        list-style: none;
+        padding: 0;
+        margin-bottom: 2rem;
+    }
+    .gkt-messages li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.95rem;
+        color: var(--aot-color-text-primary, #343a40);
+        line-height: 1.5;
+    }
+    .gkt-messages li:last-child {
+        border-bottom: none;
+    }
+    .gkt-msg-num {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        background: #0d6efd;
+        color: var(--text-color-tertiary, #fff);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    /* Preset selector cards (Step 2) */
+    .gkt-preset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .gkt-preset-card {
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem 0.75rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: #ffffff;
+        font-size: 0.9rem;
+        color: var(--aot-color-text-primary, #343a40);
+        font-weight: 500;
+    }
+    .gkt-preset-card:hover {
+        border-color: #86b7fe;
+        background: #f0f7ff;
+    }
+    .gkt-preset-card.selected {
+        border-color: #0d6efd;
+        background: #e7f3ff;
+        color: var(--aot-color-info, #004085);
+    }
+    .gkt-preset-error {
+        color: var(--aot-color-danger, #dc3545);
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+
+    /* Free-text requirement field (Step 2) */
+    .gkt-requirement-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--aot-color-text-primary, #343a40);
+        margin-bottom: 0.5rem;
+    }
+    .gkt-requirement-textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: var(--aot-color-text-primary, #343a40);
+        resize: vertical;
+        font-family: inherit;
+    }
+    .gkt-requirement-textarea:focus {
+        outline: none;
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+    }
+
+    /* Completion summary (Step 3) */
+    .gkt-summary-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: var(--aot-color-text-secondary, #495057);
+    }
+    .gkt-summary-row:last-child {
+        border-bottom: none;
+    }
+    .gkt-summary-label {
+        font-weight: 600;
+        color: var(--aot-color-text-primary, #343a40);
+        min-width: 130px;
+    }
+    .gkt-preview-note {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: var(--aot-color-text-secondary, #6c757d);
+        margin: 1.25rem 0;
+        line-height: 1.5;
+    }
+
+    /* Buttons */
+    .gkt-btn-group {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.75rem;
+    }
+    .gkt-btn-primary {
+        padding: 0.6rem 1.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background: #0d6efd;
+        color: var(--text-color-tertiary, #fff);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .gkt-btn-primary:hover {
+        background: #0b5ed7;
+    }
+    .gkt-btn-primary:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+    .gkt-error-msg {
+        color: var(--aot-color-danger, #dc3545);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+</style>
+
+<div class="gkt-container" id="gkt-wizard">
+    <!-- Progress dots -->
+    <div class="gkt-progress">
+        <span class="gkt-dot active" data-step="1"></span>
+        <span class="gkt-dot" data-step="2"></span>
+        <span class="gkt-dot" data-step="3"></span>
+    </div>
+
+    <!-- Step 1: AI Introduction -->
+    <div class="gkt-step active" data-gkt-step="1">
+        <div class="gkt-card">
+            <h4>{{ _('Getting to Know Each Other') }}</h4>
+            <ul class="gkt-messages">
+                <li>
+                    <span class="gkt-msg-num">1</span>
+                    <span>{{ _('AI learns from your data over time') }}</span>
+                </li>
+                <li>
+                    <span class="gkt-msg-num">2</span>
+                    <span>{{ _('The more you interact, the more precise it becomes') }}</span>
+                </li>
+                <li>
+                    <span class="gkt-msg-num">3</span>
+                    <span>{{ _('You control what AI focuses on') }}</span>
+                </li>
+            </ul>
+            <div class="gkt-btn-group">
+                <button class="gkt-btn-primary" onclick="GKT.nextStep()">{{ _('Get Started') }} &rarr;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: User Info Collection -->
+    <div class="gkt-step" data-gkt-step="2">
+        <div class="gkt-card">
+            <h4>{{ _('Tell Us About Your Facility') }}</h4>
+
+            <!-- Preset selector -->
+            <div class="mb-3">
+                <div class="gkt-requirement-label">{{ _('What best describes your facility?') }}</div>
+                <div class="gkt-preset-grid" id="gkt-preset-grid">
+                    <div class="gkt-preset-card" data-preset="outdoor_farming" onclick="GKT.selectPreset(this)">
+                        {{ _('Outdoor Farming') }}
+                    </div>
+                    <div class="gkt-preset-card" data-preset="greenhouse" onclick="GKT.selectPreset(this)">
+                        {{ _('Greenhouse') }}
+                    </div>
+                    <div class="gkt-preset-card" data-preset="sports_facility" onclick="GKT.selectPreset(this)">
+                        {{ _('Sports Facility') }}
+                    </div>
+                    <div class="gkt-preset-card" data-preset="park" onclick="GKT.selectPreset(this)">
+                        {{ _('Park') }}
+                    </div>
+                    <div class="gkt-preset-card" data-preset="transportation" onclick="GKT.selectPreset(this)">
+                        {{ _('Transportation') }}
+                    </div>
+                </div>
+                <div class="gkt-preset-error" id="gkt-preset-error">
+                    {{ _('Please select a facility type to continue.') }}
+                </div>
+            </div>
+
+            <!-- Free-text requirement -->
+            <div class="mb-3">
+                <div class="gkt-requirement-label">
+                    {{ _('Describe specifically what you need from this AI (optional)') }}
+                </div>
+                <textarea
+                    id="gkt-requirement-input"
+                    class="gkt-requirement-textarea"
+                    placeholder="{{ _('e.g. I manage a greenhouse and need help with pest management and temperature control') }}"
+                ></textarea>
+            </div>
+
+            <div class="gkt-btn-group">
+                <button class="gkt-btn-primary" onclick="GKT.submitStep2()">{{ _('Continue') }} &rarr;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Completion -->
+    <div class="gkt-step" data-gkt-step="3">
+        <div class="gkt-card">
+            <h4>{{ _('All Set!') }}</h4>
+
+            <div id="gkt-summary-container">
+                <div class="gkt-summary-row">
+                    <span class="gkt-summary-label">{{ _('Facility Type') }}</span>
+                    <span id="gkt-summary-preset">-</span>
+                </div>
+                <div class="gkt-summary-row" id="gkt-summary-requirement-row" style="display:none;">
+                    <span class="gkt-summary-label">{{ _('Your Instructions') }}</span>
+                    <span id="gkt-summary-requirement" style="word-break:break-word;"></span>
+                </div>
+            </div>
+
+            <div class="gkt-preview-note">
+                {{ _('You will now see: AI Status, your key keywords, and how the AI is learning about your facility.') }}
+            </div>
+
+            <div class="gkt-error-msg" id="gkt-save-error"></div>
+
+            <div class="gkt-btn-group">
+                <button class="gkt-btn-primary" id="gkt-finish-btn" onclick="GKT.finish()">
+                    {{ _('Go to AI Dashboard') }} &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Getting to Know Each Other wizard controller (016)
+ */
+const GKT = (function() {
+    let _currentStep = 1;
+    let _selectedPreset = null;
+
+    const PRESET_LABELS = {
+        outdoor_farming:  '{{ _("Outdoor Farming") }}',
+        greenhouse:       '{{ _("Greenhouse") }}',
+        sports_facility:  '{{ _("Sports Facility") }}',
+        park:             '{{ _("Park") }}',
+        transportation:   '{{ _("Transportation") }}'
+    };
+
+    function _updateDots(step) {
+        document.querySelectorAll('.gkt-dot').forEach(function(dot) {
+            const n = parseInt(dot.dataset.step);
+            dot.classList.remove('active', 'done');
+            if (n === step) dot.classList.add('active');
+            else if (n < step) dot.classList.add('done');
+        });
+    }
+
+    function _showStep(n) {
+        document.querySelectorAll('.gkt-step').forEach(function(s) {
+            s.classList.remove('active');
+        });
+        const target = document.querySelector('[data-gkt-step="' + n + '"]');
+        if (target) target.classList.add('active');
+        _currentStep = n;
+        _updateDots(n);
+        window.scrollTo(0, 0);
+    }
+
+    function nextStep() {
+        _showStep(_currentStep + 1);
+    }
+
+    function selectPreset(card) {
+        document.querySelectorAll('.gkt-preset-card').forEach(function(c) {
+            c.classList.remove('selected');
+        });
+        card.classList.add('selected');
+        _selectedPreset = card.dataset.preset;
+        document.getElementById('gkt-preset-error').style.display = 'none';
+    }
+
+    function submitStep2() {
+        if (!_selectedPreset) {
+            document.getElementById('gkt-preset-error').style.display = 'block';
+            return;
+        }
+        // Populate summary on step 3
+        const labelEl = document.getElementById('gkt-summary-preset');
+        if (labelEl) labelEl.textContent = PRESET_LABELS[_selectedPreset] || _selectedPreset;
+
+        const req = document.getElementById('gkt-requirement-input').value.trim();
+        const reqRow = document.getElementById('gkt-summary-requirement-row');
+        const reqEl = document.getElementById('gkt-summary-requirement');
+        if (req && reqRow && reqEl) {
+            reqEl.textContent = req;
+            reqRow.style.display = 'flex';
+        } else if (reqRow) {
+            reqRow.style.display = 'none';
+        }
+
+        _showStep(3);
+    }
+
+    function finish() {
+        const btn = document.getElementById('gkt-finish-btn');
+        if (btn) btn.disabled = true;
+
+        const req = document.getElementById('gkt-requirement-input').value.trim();
+        const payload = {
+            preset: _selectedPreset,
+            user_requirement: req || null
+        };
+
+        fetch('/api/v1/ai/onboarding/setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Setup failed');
+            return r.json();
+        })
+        .then(function() {
+            // Navigate to clean AI dashboard URL (no query params) to prevent reinvoke loop
+            window.location.href = '/ai';
+        })
+        .catch(function(err) {
+            console.error('GKT finish error:', err);
+            const errEl = document.getElementById('gkt-save-error');
+            if (errEl) {
+                errEl.textContent = '{{ _("Failed to save. Please try again.") }}';
+                errEl.style.display = 'block';
+            }
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    function prefill(preset, requirement) {
+        // Pre-fill for re-invoke mode
+        if (preset) {
+            const card = document.querySelector('[data-preset="' + preset + '"]');
+            if (card) selectPreset(card);
+        }
+        if (requirement) {
+            const textarea = document.getElementById('gkt-requirement-input');
+            if (textarea) textarea.value = requirement;
+        }
+    }
+
+    return { nextStep: nextStep, selectPreset: selectPreset, submitStep2: submitStep2, finish: finish, prefill: prefill };
+})();
+</script>

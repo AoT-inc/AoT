@@ -1,0 +1,76 @@
+<!-- Tab Settings Modal -->
+<div class="modal fade" id="tabSettingsModal" tabindex="-1" aria-labelledby="tabSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tabSettingsModalLabel">
+                    <i class="fas fa-cog"></i> {{ _('Tab Settings') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Hidden field to store tab ID -->
+                <input type="hidden" id="tab-settings-tab-id">
+
+                <!-- Tab Name Input -->
+                <div class="mb-3">
+                    <label for="tab-settings-name" class="form-label">
+                        <i class="fas fa-tag"></i> {{ _('Tab Name') }}
+                    </label>
+                    <input type="text"
+                           class="form-control"
+                           id="tab-settings-name"
+                           placeholder="{{ _('Enter tab name') }}"
+                           maxlength="100">
+                    <div class="form-text">
+                        {{ _('Choose a descriptive name for this tab.') }}
+                    </div>
+                </div>
+
+                <!-- Page Description -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-info-circle"></i> {{ _('Page Description') }}
+                    </label>
+                    <div id="tab-settings-description" class="text-muted small">
+                        <!-- Description will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <!-- Save Button -->
+                    <button class="btn btn-primary" onclick="renameTab()">
+                        <i class="fas fa-save"></i> {{ _('Save Name') }}
+                    </button>
+
+                    <!-- Duplicate Button -->
+                    <button class="btn btn-secondary" onclick="duplicateTab()">
+                        <i class="fas fa-copy"></i> {{ _('Duplicate Tab') }}
+                    </button>
+
+                    <!-- Delete Button -->
+                    <button class="btn btn-danger"
+                            onclick="deleteTab()"
+                            id="delete-tab-btn">
+                        <i class="fas fa-trash"></i> {{ _('Delete Tab') }}
+                    </button>
+                </div>
+
+                <!-- Warning for Duplicate -->
+                <div class="alert alert-info mt-3 mb-0" role="alert">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>{{ _('Duplicate Tab:') }}</strong> {{ _('Creates a copy of this tab with all its entries.') }}
+                    {{ _('Duplicated entries will be set to') }} <strong>{{ _('inactive') }}</strong> {{ _('state.') }}
+                </div>
+
+                <!-- Warning for Delete -->
+                <div class="alert alert-warning mt-2 mb-0" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>{{ _('Delete Tab:') }}</strong> {{ _('Permanently removes this tab and all its entries.') }}
+                    {{ _('This action') }} <strong>{{ _('cannot be undone') }}</strong>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

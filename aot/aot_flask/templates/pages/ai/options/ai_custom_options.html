@@ -1,0 +1,74 @@
+{% from 'pages/form_options/api_key_macro.html' import render_api_key_picker with context %}
+
+{#
+  render_ai_custom_options(options, values, filter='all')
+
+  filter options:
+    'all'    - render all custom options (default, backward compatible)
+    'auth'   - render only password type fields (authentication credentials)
+    'config' - render everything EXCEPT password type fields (configuration)
+#}
+{% macro render_ai_custom_options(options, values, filter='all') %}
+  {% for opt in options %}
+    {% set val = values.get(opt.id, opt.default) %}
+
+    {# Apply filter: skip non-matching types #}
+    {% set show = true %}
+    {% if opt.hidden %}
+      {% set show = false %}
+    {% elif filter == 'auth' and opt.type != 'password' %}
+      {% set show = false %}
+    {% elif filter == 'config' and opt.type == 'password' %}
+      {% set show = false %}
+    {% endif %}
+
+    {% if show %}
+      {% if opt.type == 'textarea' %}
+        {# Textarea: vertical full-width layout #}
+        <div class="aot-modal-option-row aot-full-width-row">
+          <label class="aot-modal-option-label font-weight-bold">{{ opt.name or opt.id }}</label>
+          <div class="aot-modal-option-control">
+            <textarea name="custom_{{ opt.id }}" class="form-control aot-modern-input" rows="5" style="height: auto !important; min-height: 80px; border-radius: 12px !important;">{{ val }}</textarea>
+          </div>
+        </div>
+      {% elif opt.type == 'password' %}
+        {# Password/Token/API Key: horizontal row with API Key Picker #}
+        <div class="aot-modal-option-row">
+          <label class="aot-modal-option-label">{{ opt.name or opt.id }}</label>
+          <div class="aot-modal-option-control">
+            <div class="aot-api-key-group">
+              <input type="text" name="custom_{{ opt.id }}" class="form-control aot-modern-input"
+                     value="{{ val }}" autocomplete="off"
+                     placeholder="{{ _('Leave blank to keep') }}">
+              {{ render_api_key_picker() }}
+            </div>
+          </div>
+        </div>
+      {% else %}
+        {# All other types: standard horizontal row (label left, control right 160px) #}
+        <div class="aot-modal-option-row">
+          <label class="aot-modal-option-label">{{ opt.name or opt.id }}</label>
+          <div class="aot-modal-option-control">
+            {% if opt.type == 'text' %}
+              <input type="text" name="custom_{{ opt.id }}" class="form-control aot-modern-input" value="{{ val }}">
+            {% elif opt.type == 'int' or opt.type == 'float' %}
+              <input type="number" name="custom_{{ opt.id }}" class="form-control aot-modern-input" value="{{ val }}" step="{% if opt.type == 'float' %}0.01{% else %}1{% endif %}">
+            {% elif opt.type == 'select' %}
+              <select name="custom_{{ opt.id }}" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                {% for choice in opt.choices %}
+                  <option value="{{ choice.value }}" {% if val == choice.value %}selected{% endif %}>{{ choice.label }}</option>
+                {% endfor %}
+              </select>
+            {% elif opt.type == 'boolean' %}
+              {% set switch_id = 'custom_' ~ opt.id ~ '_' ~ range(1, 99999) | random %}
+              <div class="custom-control custom-switch">
+                <input type="checkbox" name="custom_{{ opt.id }}" class="custom-control-input" id="{{ switch_id }}" {% if val %}checked{% endif %}>
+                <label class="custom-control-label" for="{{ switch_id }}"></label>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}

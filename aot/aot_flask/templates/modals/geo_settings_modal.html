@@ -1,0 +1,299 @@
+<!-- modals/geo_settings_modal.html -->
+<div class="modal fade aot-option-modal" id="geoSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog aot-modal-dialog" role="document">
+        <div class="modal-content" style="border-radius: 24px;">
+            <div class="modal-header border-0">
+                <h5 class="aot-modal-title w-100">{{ _('GIS Settings') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4" id="geoSettingsModalBody">
+                <!-- Loading spinner -->
+                <div class="text-center py-5" id="geoSettingsLoading">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">{{ _('Loading settings...') }}</p>
+                </div>
+                
+                <!-- Settings form -->
+                <form id="geoSettingsForm" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <!-- Buttons placed at top (below title, right-aligned) -->
+                    <div class="row w-100 m-0 pb-1 d-flex flex-wrap justify-content-end" style="border-bottom: 2px solid var(--bd-btn-secondary); margin-bottom: 0.5rem !important;">
+                        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
+                        <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mb-2" id="btnSaveGeoSettings">{{ _('Save') }}</button>
+                    </div>
+
+                    <div class="aot-modal-section-title">{{ _('Default Start Location') }}</div>
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Latitude') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="number" step="any" class="form-control aot-modern-input" name="default_lat">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Longitude') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="number" step="any" class="form-control aot-modern-input" name="default_lng">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Zoom Level') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="number" step="any" class="form-control aot-modern-input" name="default_zoom">
+                            </div>
+                        </div>
+                        <!-- Center location set button (uses tooltip, divider removed) -->
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Current View') }}</label>
+                            <div class="aot-modal-option-control">
+                                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" 
+                                        onclick="getCurrentMapView()" 
+                                        title="{{ _('Sets the current map view as the default starting position.') }}">
+                                    {{ _('Get Location') }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Search Provider') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="hidden" name="search_provider" id="modal_search_provider_val">
+                                <div class="dropdown">
+                                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary dropdown-toggle" id="modal_search_provider_btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        {{ _('Select') }}
+                                    </button>
+                                    <div class="dropdown-menu" id="modal_search_provider_menu" aria-labelledby="modal_search_provider_btn">
+                                        <a class="dropdown-item" href="#" data-value="">{{ _('-- Follow Map Settings --') }}</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aot-modal-section-title">{{ _('Design Theme Settings') }}</div>
+                    <div class="aot-modal-container">
+                        {% for type in ['site', 'zone', 'facility', 'equipment', 'device', 'panel_bg'] %}
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _(type.replace('_', ' ').capitalize() + ' Color') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="color" class="form-control" name="theme_{{ type }}" style="width: 60px; height: 32px; border-radius: 16px; border: none; padding: 0;">
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Panel Opacity') }} <span id="modal_opacity_val" class="small text-muted ml-1">90%</span></label>
+                            <div class="aot-modal-option-control">
+                                <input type="range" class="custom-range" name="theme_panel_opacity" id="modal_panel_opacity" min="0" max="100" step="5">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aot-modal-section-title">{{ _('Map Behavior Settings') }}</div>
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Max Zoom') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="number" class="form-control aot-modern-input" name="max_zoom" min="1" max="30">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Digital Zoom') }}</label>
+                            <div class="aot-modal-option-control">
+                                <label class="btn-toggle mb-0">
+                                    <input id="modal_digital_zoom" name="digital_zoom" type="checkbox" class="btn-toggle-input" value="true">
+                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Smooth Zoom') }}</label>
+                            <div class="aot-modal-option-control">
+                                <label class="btn-toggle mb-0">
+                                    <input id="modal_smooth_zoom" name="smooth_zoom" type="checkbox" class="btn-toggle-input" value="true">
+                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aot-modal-section-title">{{ _('Performance & Rendering') }}</div>
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Tile Fade Animation') }}</label>
+                            <div class="aot-modal-option-control">
+                                <label class="btn-toggle mb-0">
+                                    <input id="modal_tile_fade" name="tile_fade_animation" type="checkbox" class="btn-toggle-input" value="true">
+                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Serve MapLibre Locally') }} <span class="small text-muted ml-1">{{ _('(use local files instead of CDN)') }}</span></label>
+                            <div class="aot-modal-option-control">
+                                <label class="btn-toggle mb-0">
+                                    <input id="modal_maplibre_local" type="checkbox" class="btn-toggle-input" value="true">
+                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Prefer Canvas Rendering') }}</label>
+                            <div class="aot-modal-option-control">
+                                <label class="btn-toggle mb-0">
+                                    <input id="modal_prefer_canvas" name="prefer_canvas" type="checkbox" class="btn-toggle-input" value="true">
+                                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                                </label>
+                            </div>
+                        </div>
+                        {% for type in ['site', 'zone', 'device'] %}
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Max ' + type.capitalize() + ' Polygons') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="number" class="form-control aot-modern-input" name="max_polygons_{{ type }}">
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Equipment Hide Zoom') }} <span class="small text-muted ml-1">{{ _('(hide below this zoom)') }}</span></label>
+                            <div class="aot-modal-option-control">
+                                <input type="number" class="form-control aot-modern-input" name="equipment_cull_zoom" min="1" max="25" step="1">
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Gets the current map state (coordinates, zoom level) and fills the form.
+ */
+function getCurrentMapView() {
+    // Get the map object from the geoDesign instance or check the global map variable
+    const mapObj = (window.geoDesign && window.geoDesign.map) ? window.geoDesign.map : (typeof map !== 'undefined' ? map : null);
+    
+    if (mapObj) {
+        const center = mapObj.getCenter();
+        const zoom = mapObj.getZoom();
+        const form = $('#geoSettingsForm');
+        
+        form.find('[name="default_lat"]').val(center.lat.toFixed(6));
+        form.find('[name="default_lng"]').val(center.lng.toFixed(6));
+        form.find('[name="default_zoom"]').val(zoom);
+        
+        window.showToast && window.showToast('{{ _("Current map view captured") }}', 'info');
+    } else {
+        window.showToast && window.showToast('{{ _("Map object not found") }}', 'error');
+    }
+}
+
+function openGeoSettings() {
+    $('#geoSettingsModal').modal('show');
+    $('#geoSettingsLoading').show();
+    $('#geoSettingsForm').hide();
+
+    $.get('/api/geo/settings', function(data) {
+        if (data.ok) {
+            const state = data.saved_state;
+            const form = $('#geoSettingsForm');
+            
+            form.find('[name="default_lat"]').val(state.default_lat);
+            form.find('[name="default_lng"]').val(state.default_lng);
+            form.find('[name="default_zoom"]').val(state.zoom);
+            form.find('[name="max_zoom"]').val(state.max_zoom);
+            form.find('[name="max_polygons_site"]').val(state.max_polygons_site);
+            form.find('[name="max_polygons_zone"]').val(state.max_polygons_zone);
+            form.find('[name="max_polygons_device"]').val(state.max_polygons_device);
+            form.find('[name="equipment_cull_zoom"]').val(state.equipment_cull_zoom != null ? state.equipment_cull_zoom : 15);
+            
+            form.find('[name="digital_zoom"]').prop('checked', !!state.digital_zoom);
+            form.find('[name="smooth_zoom"]').prop('checked', !!state.smooth_zoom);
+            form.find('[name="tile_fade_animation"]').prop('checked', !!state.tile_fade_animation);
+            form.find('[name="prefer_canvas"]').prop('checked', !!state.prefer_canvas);
+            $('#modal_maplibre_local').prop('checked', !!(state.providers && state.providers.maplibre_local_serving));
+            
+            const theme = (typeof state.theme_config === 'string') ? JSON.parse(state.theme_config) : (state.theme_config || {});
+            const opacity = theme.panel_opacity || 90;
+            form.find('[name="theme_panel_opacity"]').val(opacity);
+            $('#modal_opacity_val').text(opacity + '%');
+            
+            for (let k in theme) {
+                form.find(`[name="theme_${k}"]`).val(theme[k]);
+            }
+
+            const menu = $('#modal_search_provider_menu');
+            const btn = $('#modal_search_provider_btn');
+            const valInput = $('#modal_search_provider_val');
+            menu.find('a.dropdown-item:not(:first)').remove();
+            const _searchTypes = ['gis_osm', 'gis_google', 'gis_gsi', 'gis_vworld'];
+            const searchItems = (data.search_inputs && data.search_inputs.length)
+                ? data.search_inputs
+                : (data.geo_layers || []).filter(l => _searchTypes.includes(l.type));
+            searchItems.forEach(item => {
+                menu.append(`<a class="dropdown-item" href="#" data-value="${item.unique_id}">${item.name}</a>`);
+            });
+            const savedProvider = data.search_provider || '';
+            valInput.val(savedProvider);
+            if (savedProvider) {
+                const matched = searchItems.find(i => i.unique_id === savedProvider);
+                btn.text(matched ? matched.name : '{{ _("Select") }}');
+            } else {
+                btn.text('{{ _("Select") }}');
+            }
+
+            $('#geoSettingsLoading').hide();
+            form.fadeIn();
+        }
+    });
+}
+
+$('#modal_panel_opacity').on('input', function() {
+    $('#modal_opacity_val').text($(this).val() + '%');
+});
+
+$(document).on('click', '#modal_search_provider_menu .dropdown-item', function(e) {
+    e.preventDefault();
+    const val = $(this).data('value');
+    const label = val ? $(this).text() : '{{ _("Select") }}';
+    $('#modal_search_provider_val').val(val);
+    $('#modal_search_provider_btn').text(label);
+});
+
+$('#geoSettingsForm').on('submit', function(e) {
+    e.preventDefault();
+    const $btn = $('#btnSaveGeoSettings');
+    const originalText = $btn.text();
+    $btn.prop('disabled', true).text('{{ _("Saving...") }}');
+
+    // 체크박스는 해제 시 serialize 에 포함되지 않으므로 명시적으로 true/false 전송
+    const payload = $(this).serialize()
+        + '&maplibre_local_serving=' + ($('#modal_maplibre_local').is(':checked') ? 'true' : 'false');
+
+    $.ajax({
+        url: '/api/geo/settings',
+        type: 'POST',
+        data: payload,
+        success: function(resp) {
+            if (resp.ok) {
+                window.showToast && window.showToast('{{ _("Settings saved successfully") }}', 'success');
+                $('#geoSettingsModal').modal('hide');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                window.showToast && window.showToast(resp.message || 'Error', 'error');
+            }
+        },
+        error: function() {
+            window.showToast && window.showToast('Connection error', 'error');
+        },
+        complete: function() {
+            $btn.prop('disabled', false).text(originalText);
+        }
+    });
+});
+</script>

@@ -1,0 +1,192 @@
+{% extends "layout.html" %}
+{% block title %}- {{ _('AI Services') }}{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/ai/ai_entry.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+{% endblock %}
+
+{% block body %}
+<!-- Top Spacer -->
+<div style="height: 1.5em;"></div>
+
+<div class="container py-4">
+    <div class="aot-settings-title">
+        <h3>{{ _('AI Service Registry') }}</h3>
+        <div class="d-flex" style="gap: 8px;">
+            <a href="{{ url_for('routes_ai_agent.page_ai_dashboard') }}" class="btn aot-pill-btn">
+                {{ _('Back to Portal') }}
+            </a>
+            <button class="btn aot-pill-btn aot-pill-btn-primary" data-toggle="modal" data-target="#addServiceModal">
+                {{ _('Register AI Service') }}
+            </button>
+        </div>
+    </div>
+    <p class="aot-modal-body-text">{{ _('Register and manage AI engine connections (Gemini, OpenAI, Local Proxies).') }}</p>
+
+    <!-- Services List -->
+    <div class="row">
+        {% if entries %}
+            {% for entry in entries %}
+            <div class="col-md-4 mb-4">
+                <div class="card ai-card h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <span class="badge badge-info px-2 py-1" style="font-size: 0.65rem; border-radius: 10px;">{{ entry.model_type.upper() }}</span>
+                            <div class="dropdown">
+                                <button class="btn btn-sm text-muted p-0" data-toggle="dropdown">{{_('Edit')}}</button>
+                                <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" style="border-radius: 12px;">
+                                    <form action="{{ url_for('routes_ai_agent.ai_entry_delete', entry_id=entry.unique_id) }}" method="POST" onsubmit="return confirm('{{ _("Delete this service?") }}');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button class="dropdown-item text-danger py-2" type="submit">{{ _('Delete') }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <h5 class="font-weight-bold mb-1 text-truncate">{{ entry.name }}</h5>
+                        <p class="text-muted small mb-3">{{ entry.model_name }}</p>
+                        
+                        <div class="ai-endpoint-display mb-4">
+                            <div class="small text-muted mb-1">{{ _('Endpoint') }}</div>
+                            <div class="ai-endpoint-url text-truncate font-weight-bold">{{ entry.api_endpoint or _('Default') }}</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <span class="small text-muted">{{ entry.auth_type }}</span>
+                            <span class="badge badge-pill badge-{{ 'success' if entry.is_activated else 'secondary' }} px-3" style="font-size: 0.65rem;">{{ _('Active') if entry.is_activated else _('Inactive') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5 aot-page-section">
+                <p class="h1 text-muted opacity-25">--</p>
+                <p class="text-muted mb-4">{{ _('No AI Services registered yet.') }}</p>
+                <button class="btn aot-pill-btn" data-toggle="modal" data-target="#addServiceModal">{{ _('Connect your first LLM') }}</button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Service Modal -->
+<div class="modal fade aot-option-modal" id="addServiceModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="modal-title font-weight-bold">{{ _('Register AI Service') }}</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <form action="{{ url_for('routes_ai_agent.ai_entry_add') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body p-0">
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Service Name') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" name="name" class="form-control aot-modern-input" placeholder="{{ _('e.g. My Gemini Pro') }}" required>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Engine Type') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select name="model_type" class="form-control aot-modern-select selectpicker" data-style="btn-white border" id="engineTypeSelect">
+                                    {% for key, preset in engine_presets.items() %}
+                                    <option value="{{ key }}">{{ preset.ai_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Model Name') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select name="model_name" id="modelNameSelect" class="form-control aot-modern-select selectpicker" data-style="btn-white border">
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('API Endpoint (Optional)') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" name="api_endpoint" id="endpointInput" class="form-control aot-modern-input" placeholder="https://api.yourproxy.com">
+                            </div>
+                        </div>
+                        <div class="aot-modal-body-text" id="endpointHint"></div>
+                    </div>
+                    <div class="aot-modal-group-title">{{ _('Authentication') }}</div>
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Auth Type') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select name="auth_type" class="form-control aot-modern-select selectpicker" data-style="btn-white border" id="authTypeSelect">
+                                    <option value="api_key">{{ _('API Key') }}</option>
+                                    <option value="account">{{ _('ID / Password') }}</option>
+                                    <option value="no_auth">{{ _('No Auth') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row auth-field-id" style="display:none;">
+                            <label class="aot-modal-option-label">{{ _('Account ID') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" name="auth_id" class="form-control aot-modern-input">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row auth-field-key">
+                            <label id="keyLabel" class="aot-modal-option-label">{{ _('API Key') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="hidden" name="api_key" id="ai_entry_real_key">
+                                <input type="text" class="form-control aot-modern-input" autocomplete="off" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false" oninput="document.getElementById('ai_entry_real_key').value = this.value;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Register Service') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const enginePresets = {{ engine_presets | tojson }};
+
+    function populateModels(engineType) {
+        const select = document.getElementById('modelNameSelect');
+        const preset = enginePresets[engineType];
+
+        let html = '';
+        if (preset && preset.models && preset.models.length > 0) {
+            preset.models.forEach(function(m) {
+                html += `<option value="${m.value}">${m.label}</option>`;
+            });
+        } else {
+            html = `<option value="">-- {{ _("No preset models") }} --</option>`;
+        }
+        $(select).html(html).selectpicker('refresh');
+    }
+
+    document.getElementById('engineTypeSelect').addEventListener('change', function() {
+        const preset = enginePresets[this.value];
+        if (preset) {
+            document.getElementById('endpointInput').value = preset.default_endpoint || '';
+            document.getElementById('endpointHint').innerText = preset.endpoint_hint || '';
+            populateModels(this.value);
+        }
+    });
+
+    // Initialize on page load
+    populateModels(document.getElementById('engineTypeSelect').value);
+
+    document.getElementById('authTypeSelect').addEventListener('change', function() {
+        const val = this.value;
+        const idField = document.querySelector('.auth-field-id');
+        const keyField = document.querySelector('.auth-field-key');
+        const keyLabel = document.getElementById('keyLabel');
+
+        idField.style.display = (val === 'account') ? 'block' : 'none';
+        keyField.style.display = (val === 'no_auth') ? 'none' : 'block';
+        keyLabel.innerText = (val === 'account') ? "{{ _('Password') }}" : "{{ _('API Key') }}";
+    });
+</script>
+{% endblock %}

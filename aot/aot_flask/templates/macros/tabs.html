@@ -1,0 +1,56 @@
+{% macro render_tabs(items, current_id, link_endpoint, save_order_endpoint, container_id='dash-tabs',
+param_name='dashboard_id', use_query_string=False, page_type='') %}
+
+<div class="d-flex align-items-center position-relative w-100">
+    <!-- + button (Add Tab) -->
+    <a href="#" onclick="createNewTab('{{ page_type }}'); return false;" class="aot-nav-tab-add text-center btn-fixed-40">
+        <span class="d-none d-md-inline">+</span>
+        <span class="d-md-none">+</span>
+    </a>
+
+    <div id="{{ container_id }}" class="d-flex align-items-center aot-tabs-wrapper" style="flex:1 1 auto;">
+
+        {% for item in items %}
+        {% set is_active = (item.unique_id == current_id) %}
+
+        {# Generate URL #}
+        {% if use_query_string %}
+        {% set href = url_for(link_endpoint) ~ '?' ~ param_name ~ '=' ~ item.unique_id %}
+        {% else %}
+        {% set href = url_for(link_endpoint, **{param_name: item.unique_id}) %}
+        {% endif %}
+
+        <div class="dash-tab aot-tab-item{% if is_active %} active{% endif %}" draggable="true"
+            data-id="{{ item.unique_id }}">
+
+            <a href="{{ href }}" class="aot-nav-tab text-center{% if is_active %} active{% endif %}"
+                style="width: 100%;">
+                <span class="d-none d-md-inline">{{ _(item.name) }}</span>
+                <span class="d-md-none">{{ _(item.name) }}</span>
+            </a>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <!-- Setting Button -->
+    <a href="#" class="aot-nav-tab-add text-center btn-fixed-40"
+       onclick="openTabSettings('{{ current_id }}', '{% for item in items if item.unique_id == current_id %}{{ item.name }}{% endfor %}', {{ items|length }}); return false;">
+        <i class="fa fa-cog"></i>
+    </a>
+</div>
+
+{# Initialize the JS component #}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.AoTTabs) {
+            new AoTTabs({
+                containerId: '{{ container_id }}',
+                saveEndpoint: '{{ save_order_endpoint }}',
+                activeClass: 'active',
+                stickyId: '{{ container_id }}-sticky'
+            });
+        }
+    });
+</script>
+{% endmacro %}

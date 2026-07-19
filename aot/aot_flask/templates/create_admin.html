@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="{{ language if language else 'en' }}">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <link rel="icon" href="/favicon.png">
+
+  <title>AoT - {{_('Create Admin')}} - {{host}}</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/aot-theme-variables.css" rel="stylesheet">
+
+  {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else '/static/css/bootstrap-4-themes/aot.css' %}
+  {% if effective_theme in dark_themes %}
+  <link href="/static/css/custom-dark.css" rel="stylesheet">
+  {% else %}
+  <link href="/static/css/custom-light.css" rel="stylesheet">
+  {% endif %}
+  <link href="{{ effective_theme }}" rel="stylesheet">
+  <link href="/custom.css" rel="stylesheet">
+
+  <!-- Custom styles for this template -->
+  <link href="/static/css/signin.css" rel="stylesheet">
+
+  <script src="/static/js/vendor/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+<!-- Route: /create_admin -->
+<div class="container">
+  {% include 'flash_messages.html' %}
+
+  {% if not dismiss_notification %}
+
+  <div class="row justify-content-center">
+    <div class="col-12" style="max-width: 40em;">
+
+      <p style="padding: 1em 0 0.1em 0; text-align: center; font-size: 2em; font-weight: bold;">{{_('Welcome to AoT')}}</p>
+      <h4 class="form-signin-heading" style="text-align: center;">{{host}}</h4>
+
+      <p></p>
+
+      <p>
+        {{_("Start a new AoT installation. Please create an admin user. To start, please read and agree to the terms.")}}</p>
+
+      <p style="padding: 1em 0; text-align: center; font-size: 1.2em; font-weight: bold;">
+        {{_('Quality Assurance Notice')}}
+      </p>
+
+      <p>
+        {{_('AoT is an agricultural control system based on Mycodo. Users can receive a warranty for the software added by AoT under a separate contract. The parts related to AoT follow the warranty information below.')}}
+        {{_('AoT is free software. It can be redistributed and modified under the GNU General Public License (GNU GPL) version 3 or any later version published by the Free Software Foundation. AoT is distributed in the hope that it will be useful, but DOES NOT provide any form of warranty. Also, no implied warranties of merchantability or fitness for a particular purpose are provided. For more information, please refer to the GNU General Public License. You should have received a copy of the GNU General Public License along with AoT. If not, please refer to the link. <a href="http://www.gnu.org/licenses/" target="_blank">http://www.gnu.org/licenses/</a>.')}}
+        <br/>&nbsp;<br/>
+        {{_('AoT collects anonymous usage statistics to help with development. You can opt out of collection at any time on the management page after logging in.')}}
+      </p>
+
+      <p>
+        <form method="post" action="/create_admin">
+          {{form_notice.csrf_token}}
+          {{form_notice.acknowledge(class_='form-control btn btn-primary btn-sm')}}
+        </form>
+      </p>
+
+    </div>
+  </div>
+
+  {% else %}
+
+  <div class="row justify-content-center">
+    <div class="col-12" style="max-width: 30em;">
+
+      <h2 class="form-signin-heading" style="text-align: center;">AoT</h2>
+      <h4 class="form-signin-heading" style="text-align: center;">{{host}}</h4>
+      <h3 class="form-signin-heading" style="text-align: center;">{{_('Create Admin')}}</h3>
+
+      <p></p>
+
+      <h6 style="text-align: center;">{{_('Login information is stored locally')}}</h6>
+      <h6 style="text-align: center;">{{_('Usernames must be 3 to 64 characters, passwords >3 characters, and contain only letters and numbers')}}</h6>
+
+      <form id='create_admin_form' class="form-signin" name="create_admin" action="/create_admin" method="POST">
+        <input type="hidden" name="form-name" value="create_admin">
+        {{form_create_admin.hidden_tag()}}
+        {{form_create_admin.username.label(class_='sr-only')}}
+        {{form_create_admin.username(class_='form-control', autofocus=true)}}
+        {{form_create_admin.email.label(class_='sr-only')}}
+        {{form_create_admin.email(class_='form-control')}}
+        {{form_create_admin.password.label(class_='sr-only')}}
+        {{form_create_admin.password(class_='form-control')}}
+        {{form_create_admin.password_repeat.label(class_='sr-only')}}
+        {{form_create_admin.password_repeat(class_='form-control')}}
+        <button class="btn btn-lg btn-primary btn-block" type="submit">{{_('Create Admin Account')}}</button>
+      </form>
+
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<script src="/static/js/vendor/bootstrap.min.js"></script>
+</body>
+</html>

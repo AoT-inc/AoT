@@ -1,0 +1,274 @@
+{% extends "layout.html" %}
+{% set active_page = "notice" %}
+{% set help_page = [manual_url("Notices/"), _('Notice')] %}
+
+{% block title %} - {{ post.title }}{% endblock %}
+
+{% block body %}
+<script src="{{ url_for('static', filename='js/components/aot-notice-render.js') }}?v=20260708"></script>
+<script type="application/json" id="noticeBodyData">{{ post.body | tojson }}</script>
+<style>
+    .notice-detail-card {
+        background: var(--aot-surface-card, #fff);
+        border: 1px solid var(--border-neutral, #dee2e6);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .notice-detail-title { font-size: 1.4rem; font-weight: 700; }
+    .notice-detail-meta { font-size: 0.8rem; color: var(--aot-color-text-secondary, #6c757d); margin-top: 0.3rem; }
+    .notice-detail-body {
+        margin-top: 1rem; line-height: 1.6; font-size: 0.95rem; white-space: normal;
+        color: var(--aot-color-text-primary, #212529);
+    }
+    .notice-embed { margin-top: 0.75rem; }
+    .aot-notice-embed-video iframe { width: 100%; max-width: 560px; aspect-ratio: 16/9; border-radius: 0.5rem; }
+    .aot-notice-embed-image img { max-width: 100%; border-radius: 0.5rem; }
+
+    .aot-notice-link-preview {
+        display: flex; align-items: center; gap: 0.6rem;
+        border: 1px solid var(--border-neutral, #dee2e6);
+        border-radius: 0.6rem; padding: 0.5rem 0.75rem; margin-top: 0.5rem;
+        text-decoration: none; color: inherit; max-width: 480px;
+    }
+    .aot-notice-link-preview:hover { background: var(--aot-surface-body, #f8f9fa); }
+    .aot-notice-link-preview-image { width: 56px; height: 56px; object-fit: cover; border-radius: 0.4rem; flex-shrink: 0; }
+    .aot-notice-link-preview-text { display: flex; flex-direction: column; overflow: hidden; }
+    .aot-notice-link-preview-title { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .aot-notice-link-preview-desc { font-size: 0.8rem; color: var(--aot-color-text-secondary, #6c757d); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .aot-notice-link-preview-domain { font-size: 0.72rem; color: var(--aot-color-text-secondary, #6c757d); margin-top: 2px; }
+    .notice-poll-option-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 0.75rem; border: 1px solid var(--border-neutral, #dee2e6);
+        border-radius: 0.6rem; margin-bottom: 0.4rem; cursor: pointer;
+    }
+    .notice-poll-option-row.selected { border-color: var(--bd-tertiary, #13261B); background: var(--aot-surface-body, #f8f9fa); }
+    .notice-poll-bar-track { height: 6px; border-radius: 4px; background: var(--aot-surface-body, #e9ecef); margin-top: 4px; overflow: hidden; }
+    .notice-poll-bar-fill { height: 100%; background: var(--bd-tertiary, #13261B); }
+    .notice-reply-item { padding: 0.6rem 0; border-bottom: 1px solid var(--border-neutral, #f1f1f1); }
+    .notice-reply-meta { font-size: 0.75rem; color: var(--aot-color-text-secondary, #6c757d); }
+
+    /* Plain prose textarea, not the pill/code-editor look aot-modern-input gives
+       textareas by default (9999px radius, no-wrap + horizontal scroll).
+       Focus uses the same neutral blue ring every modal already shows
+       (--modal-focus-ring) WITHOUT swapping the border to the brand yellow
+       .aot-modern-input uses — that yellow is reserved for buttons/actions,
+       not text input borders. */
+    textarea.aot-notice-textarea {
+        border-radius: 8px !important;
+        border: 1px solid var(--gray) !important;
+        outline: none !important;
+        white-space: normal !important;
+        overflow-wrap: break-word !important;
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+        resize: none !important;
+    }
+    textarea.aot-notice-textarea:focus {
+        border-color: var(--gray) !important;
+        box-shadow: 0 0 0 0.15rem var(--modal-focus-ring) !important;
+        outline: none !important;
+    }
+</style>
+
+<div class="container-fluid px-0" style="max-width: 760px; margin: 0 auto; padding-bottom: 3rem;">
+    {% include 'flash_messages.html' %}
+
+    <div class="mt-4 mb-2 px-3">
+        <a href="{{ url_for('routes_notice.page_notice') }}" class="small text-muted text-decoration-none">{{ _('Back to Notice Board') }}</a>
+    </div>
+
+    <div class="px-3">
+        <div class="notice-detail-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    {% if post.pinned %}<span class="notice-pin-badge" style="display:inline-block;font-size:0.7rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:9999px;background:var(--aot-tint-info-bg,#e7f3fb);color:var(--aot-tint-info-fg,#0d6efd);margin-right:0.5rem;">{{ _('Pinned') }}</span>{% endif %}
+                    {% if post.category %}<span class="notice-category-badge" style="display:inline-block;font-size:0.7rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:9999px;background:var(--aot-surface-body,#f1f3f5);color:var(--aot-color-text-secondary,#6c757d);margin-right:0.5rem;">{{ post.category }}</span>{% endif %}
+                    <span class="notice-detail-title">{{ post.title }}</span>
+                    <div class="notice-detail-meta">
+                        {{ post.author.name if post.author else '?' }} &middot; {{ utc_to_local_time(post.date_time) }}
+                    </div>
+                </div>
+                {% if can_manage %}
+                <div class="d-flex" style="gap:6px;">
+                    <a class="btn aot-pill-btn" href="{{ url_for('routes_notice.page_notice_edit', unique_id=post.unique_id) }}">{{ _('Edit') }}</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="notice-detail-body" id="noticeBodyContent"></div>
+
+            <div class="d-flex align-items-center mt-3" style="gap:10px;">
+                <button type="button" class="btn aot-pill-btn {% if has_acked %}aot-pill-btn-secondary{% endif %}" id="ackBtn" data-post="{{ post.unique_id }}" {% if has_acked %}disabled{% endif %}>
+                    {% if has_acked %}{{ _('Acknowledged') }}{% else %}{{ _('Acknowledge') }}{% endif %}
+                </button>
+                <span class="small text-muted" id="ackCount">{{ _('%(n)s acknowledged', n=ack_count) }}</span>
+            </div>
+        </div>
+
+        {% if poll %}
+        <div class="notice-detail-card" id="noticePollBlock" data-post="{{ post.unique_id }}" data-multi="{{ 'true' if poll.multi else 'false' }}">
+            <div class="font-weight-bold mb-2">{{ poll.question }}</div>
+            <div id="noticePollOptions">
+                {% for r in poll_results %}
+                <div class="notice-poll-option-row {% if r.option.id in user_selected %}selected{% endif %}" data-option="{{ r.option.unique_id }}">
+                    <div style="flex:1;">
+                        <div>{{ r.option.label }}</div>
+                        <div class="notice-poll-bar-track">
+                            <div class="notice-poll-bar-fill" style="width: {{ (r.count / voter_count * 100) if voter_count else 0 }}%;"></div>
+                        </div>
+                    </div>
+                    <div class="small text-muted ml-3">{{ r.count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="small text-muted mt-2">{{ _('%(n)s participated', n=voter_count) }}</div>
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary mt-2" id="pollVoteBtn">{{ _('Vote') }}</button>
+        </div>
+        {% endif %}
+
+        <div class="notice-detail-card">
+            <div class="font-weight-bold mb-2">{{ _('Replies') }} ({{ replies|length }})</div>
+            <div id="noticeReplyList">
+                {% for reply in replies %}
+                <div class="notice-reply-item" data-reply="{{ reply.unique_id }}">
+                    <div class="notice-reply-meta">
+                        {{ reply.author.name if reply.author else '?' }} &middot; {{ utc_to_local_time(reply.date_time) }}
+                        {% if is_admin or (reply.user_id == current_user.id) %}
+                        <a href="#" class="text-danger ml-2 reply-del-btn" data-reply="{{ reply.unique_id }}">{{ _('Delete') }}</a>
+                        {% endif %}
+                    </div>
+                    <div style="white-space:pre-wrap;">{{ reply.body }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-3">
+                <textarea class="aot-modern-input aot-notice-textarea" id="replyBody" rows="3" style="width:100%; height:auto; min-height:70px;" placeholder="{{ _('Write a reply...') }}"></textarea>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary mt-2" id="replySubmitBtn" data-post="{{ post.unique_id }}">{{ _('Reply') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    var rawBody = JSON.parse(document.getElementById('noticeBodyData').textContent);
+    var $noticeBodyContent = document.getElementById('noticeBodyContent');
+    $noticeBodyContent.innerHTML = AoTNoticeRender.renderNoticeBody(rawBody);
+    AoTNoticeRender.hydrateLinkPreviews($noticeBodyContent);
+
+    $('#ackBtn').on('click', function () {
+        var $btn = $(this);
+        $.ajax({
+            url: '/notice/api/' + $btn.data('post') + '/ack',
+            method: 'POST',
+            success: function (res) {
+                $btn.prop('disabled', true).addClass('aot-pill-btn-secondary').text('{{ _("Acknowledged") }}');
+                $('#ackCount').text(res.ack_count + ' {{ _("acknowledged") }}');
+                showToast('{{ _("Acknowledged") }}', 'success');
+            },
+            error: function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                showToast(msg, 'error');
+            }
+        });
+    });
+
+    // Auto-grow textareas to fit content instead of scrolling/clipping.
+    function autosizeTextarea(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+    $('textarea.aot-notice-textarea').each(function () { autosizeTextarea(this); })
+        .on('input', function () { autosizeTextarea(this); });
+    AoTNoticeRender.bindPasteFormatting('textarea.aot-notice-textarea');
+
+    var $pollBlock = $('#noticePollBlock');
+    if ($pollBlock.length) {
+        var isMulti = $pollBlock.data('multi') === true || $pollBlock.data('multi') === 'true';
+        $('.notice-poll-option-row').on('click', function () {
+            if (isMulti) {
+                $(this).toggleClass('selected');
+            } else {
+                $('.notice-poll-option-row').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $('#pollVoteBtn').on('click', function () {
+            var optionIds = [];
+            $('.notice-poll-option-row.selected').each(function () {
+                optionIds.push($(this).data('option'));
+            });
+            if (!optionIds.length) {
+                return;
+            }
+            $.ajax({
+                url: '/notice/api/' + $pollBlock.data('post') + '/vote',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ option_ids: optionIds }),
+                success: function (res) {
+                    var total = res.voter_count || 0;
+                    res.options.forEach(function (opt) {
+                        var $row = $('.notice-poll-option-row[data-option="' + opt.unique_id + '"]');
+                        $row.toggleClass('selected', !!opt.selected);
+                        var pct = total ? (opt.count / total * 100) : 0;
+                        $row.find('.notice-poll-bar-fill').css('width', pct + '%');
+                        $row.find('.small.text-muted').text(opt.count);
+                    });
+                    showToast('{{ _("Vote submitted") }}', 'success');
+                },
+                error: function (xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                    showToast(msg, 'error');
+                }
+            });
+        });
+    }
+
+    $('#replySubmitBtn').on('click', function () {
+        var $btn = $(this);
+        var body = $('#replyBody').val().trim();
+        if (!body) { return; }
+        $.ajax({
+            url: '/notice/api/' + $btn.data('post') + '/reply',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ body: body }),
+            success: function (res) {
+                var esc = AoTNoticeRender.escapeHtml;
+                var html = '<div class="notice-reply-item" data-reply="' + res.reply.unique_id + '">' +
+                    '<div class="notice-reply-meta">' + esc(res.reply.author) + ' &middot; ' + esc(res.reply.date_time) + '</div>' +
+                    '<div style="white-space:pre-wrap;">' + esc(res.reply.body) + '</div></div>';
+                $('#noticeReplyList').append(html);
+                $('#replyBody').val('');
+                autosizeTextarea(document.getElementById('replyBody'));
+                showToast('{{ _("Reply added") }}', 'success');
+            },
+            error: function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                showToast(msg, 'error');
+            }
+        });
+    });
+
+    $(document).on('click', '.reply-del-btn', function (e) {
+        e.preventDefault();
+        var replyId = $(this).data('reply');
+        var $item = $('[data-reply="' + replyId + '"]').filter('.notice-reply-item');
+        $.ajax({
+            url: '/notice/api/reply/' + replyId + '/delete',
+            method: 'POST',
+            success: function () {
+                $item.remove();
+                showToast('{{ _("Reply deleted") }}', 'success');
+            },
+            error: function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) || '{{ _("Action failed") }}';
+                showToast(msg, 'error');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

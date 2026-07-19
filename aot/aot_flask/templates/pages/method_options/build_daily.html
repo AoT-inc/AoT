@@ -1,0 +1,32 @@
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item" style="grid-column: 1 / -1">
+    {{_('Defines setpoints over a period of time based on specific time slots. This method repeats daily. To fill the entire day, start the first entry at midnight (00:00).')}}
+    <br>{{_("The start time of a new entry can be equal to the end time of the last entry, but it cannot overlap. If there are any unassigned times, the PID's default setpoint will be used.")}}
+  </div>
+
+  <div class="aot-form-grid-item">
+    {{form_add_method.daily_time_start.label(class_='aot-form-grid-label')}}
+    {{form_add_method.daily_time_start(class_='form-control aot-modern-input', value=last_end_time)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.daily_time_end.label(class_='aot-form-grid-label')}}
+    {{form_add_method.daily_time_end(class_='form-control aot-modern-input')}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.setpoint_start.label(class_='aot-form-grid-label')}}
+    {{form_add_method.setpoint_start(class_='form-control aot-modern-input', value=last_setpoint)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.setpoint_end.label(class_='aot-form-grid-label')}}
+    {{form_add_method.setpoint_end(class_='form-control aot-modern-input')}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+  </div>
+</div>

@@ -1,0 +1,33 @@
+{% if 'sht_voltage' in dict_options['options_disabled'] or
+      'sht_voltage' in dict_options['options_enabled']
+  %}
+
+  {% if dict_options['sht_voltage']|length == 1 %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{form.sht_voltage.label.text}}</label>
+  <div class="aot-modal-option-control">
+    {{form.sht_voltage(class_='form-control aot-modern-input', value=each_device.sht_voltage, **{'title': dict_translation['sht_voltage']['phrase']})}}
+  </div>
+</div>
+
+  {% elif dict_options['sht_voltage']|length > 1 %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{dict_translation['sht_voltage']['title']}}</label>
+  <div class="aot-modal-option-control">
+    <select class="form-control aot-modern-select selectpicker" 
+            id="sht_voltage" 
+            name="sht_voltage" 
+            data-style="btn-white"
+            title="{{dict_translation['sht_voltage']['phrase']}}">
+    {% for each_value, each_name in dict_options['sht_voltage'] %}
+      <option value="{{each_value}}"{% if each_device.sht_voltage == each_value %} selected{% endif %}>{{each_name}}</option>
+    {% endfor %}
+    </select>
+  </div>
+</div>
+
+  {% endif %}
+
+{% endif %}

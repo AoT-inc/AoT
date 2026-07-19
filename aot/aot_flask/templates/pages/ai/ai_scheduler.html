@@ -1,0 +1,258 @@
+{% extends "layout.html" %}
+{% block title %}- {{ _('AI Scheduler') }}{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/ai/ai_scheduler.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" />
+<script src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0 py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="scheduler-card">
+                <div class="scheduler-header">
+        <div>
+            <h2 class="section-title mb-0">{{ _('Collaborative Goal Tracker') }} <span id="view-mode-badge" class="badge badge-info ml-2">v2.0 Beta</span></h2>
+        </div>
+        <div class="d-flex align-items-center">
+            <!-- Macro Toggle for Mobile -->
+            <button class="btn btn-outline-info btn-sm mr-2 d-md-none" id="btn-toggle-macro">{{ _('[Macro View]') }}</button>
+            
+            <!-- Scale Controls -->
+            <div id="gantt-scale-controls" class="mr-3">
+                <button class="btn btn-outline-secondary btn-sm btn-scale" data-unit="day">{{ _('[Day]') }}</button>
+                <button class="btn btn-outline-secondary btn-sm btn-scale" data-unit="week">{{ _('[Week]') }}</button>
+                <button class="btn btn-outline-secondary btn-sm btn-scale" data-unit="month">{{ _('[Month]') }}</button>
+                <button class="btn btn-outline-secondary btn-sm btn-scale" data-unit="year">{{ _('[Year]') }}</button>
+                <button class="btn btn-outline-primary btn-sm ml-2" id="btn-gantt-today">{{ _('[Today]') }}</button>
+            </div>
+
+            <div id="gantt-global-controls" class="mr-3" style="display: none;">
+                <button id="btn-global-up" class="btn btn-outline-secondary btn-sm">{{ _('[Up(↑)]') }}</button>
+                <button id="btn-global-down" class="btn btn-outline-secondary btn-sm">{{ _('[Down(↓)]') }}</button>
+                <button id="btn-global-indent" class="btn btn-outline-secondary btn-sm ml-2">{{ _('[Indent(→)]') }}</button>
+                <button id="btn-global-outdent" class="btn btn-outline-secondary btn-sm">{{ _('[Outdent(←)]') }}</button>
+            </div>
+            <button class="btn btn-outline-secondary mr-2" id="btn-refresh-gantt">{{ _('Refresh Data') }}</button>
+            <button class="btn btn-dark" id="btn-add-task">{{ _('Add Task') }}</button>
+        </div>
+    </div>
+                <div class="scheduler-body">
+                    <!-- Desktop: Gantt Chart -->
+                    <div class="gantt-viewport-wrapper">
+                        <div id="ai-gantt-macro-container" class="macro-timeline"></div>
+                        <div id="ai-gantt-micro-container" class="micro-timeline"></div>
+                    </div>
+                    <!-- Mobile: Simple Card List -->
+                    <div class="mobile-task-list" id="mobile-task-list">
+                        <div class="mobile-empty-state">{{ _('Loading tasks...') }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Proposed Tasks Management (Phase 0) -->
+    <div class="row mt-4 mb-5">
+        <div class="col-12">
+            <div class="scheduler-card">
+                <div class="scheduler-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0"><i class="fa fa-magic mr-2"></i>{{ _('AI Proposed Tasks Management') }}</h4>
+                        <small class="text-muted">{{ _('Review and manage tasks proposed by AI Agents.') }}</small>
+                    </div>
+                        <div class="input-group input-group-sm mr-3" style="width: 200px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-white border-right-0"><i class="fa fa-search text-muted"></i></span>
+                            </div>
+                            <input type="text" class="form-control border-left-0" id="task-search-input" placeholder="{{ _('Search tasks...') }}" onkeyup="window.batchProcessor.handleSearch(this.value)">
+                        </div>
+                        <div class="btn-group mr-3" id="batch-action-group" style="display: none;">
+                            <button class="btn btn-success btn-sm" onclick="window.batchProcessor.handleBatch('approve')">
+                                <i class="fa fa-check mr-1"></i> {{ _('Approve') }}
+                            </button>
+                            <button class="btn btn-warning btn-sm" onclick="window.batchProcessor.handleBatch('reject')">
+                                <i class="fa fa-times mr-1"></i> {{ _('Reject') }}
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="window.batchProcessor.handleBatch('delete')">
+                                <i class="fa fa-trash mr-1"></i> {{ _('Delete') }}
+                            </button>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="window.batchProcessor.refreshTable()">
+                            <i class="fa fa-sync-alt mr-1"></i> {{ _('Refresh') }}
+                        </button>
+                    </div>
+                </div>
+                <div class="scheduler-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0" id="proposed-tasks-table">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 40px; padding-left: 1.5rem;">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="selectAllTasks">
+                                            <label class="custom-control-label" for="selectAllTasks"></label>
+                                        </div>
+                                    </th>
+                                    <th>{{ _('Action') }}</th>
+                                    <th>{{ _('Target') }}</th>
+                                    <th>{{ _('Scheduled Time') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th class="text-right" style="padding-right: 1.5rem;">{{ _('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proposed-tasks-body">
+                                <tr><td colspan="6" class="text-center py-5 text-muted"><i class="fa fa-spinner fa-spin mr-2"></i>{{ _('Loading proposed tasks...') }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Task Create/Edit -->
+<div class="modal fade aot-option-modal" id="taskEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskModalLabel">{{ _('Edit Task') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <form id="taskEditForm">
+                    <input type="hidden" id="edit-task-id">
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Title') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" class="form-control aot-modern-input" id="edit-task-title" required>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Description') }}</label>
+                            <div class="aot-modal-option-control">
+                                <textarea class="form-control aot-modern-input" id="edit-task-desc" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Status') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select class="form-control aot-modern-select" id="edit-task-status">
+                                    <option value="pending">{{ _('Pending') }}</option>
+                                    <option value="in_progress">{{ _('In Progress') }}</option>
+                                    <option value="completed">{{ _('Completed') }}</option>
+                                    <option value="failed">{{ _('Failed') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Type') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select class="form-control aot-modern-select" id="edit-task-type">
+                                    <option value="task">{{ _('Task') }}</option>
+                                    <option value="goal">{{ _('Goal') }}</option>
+                                    <option value="milestone">{{ _('Milestone') }}</option>
+                                    <option value="checkpoint">{{ _('Checkpoint') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Parent Task') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select class="form-control aot-modern-select" id="edit-task-parent">
+                                    <option value="">{{ _('None') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Start Date') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="datetime-local" class="form-control aot-modern-input" id="edit-task-start">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('End Date') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="datetime-local" class="form-control aot-modern-input" id="edit-task-end">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-danger mr-auto" id="btn-delete-task" style="display:none;">{{ _('Delete') }}</button>
+                <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Close') }}</button>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-save-task">{{ _('Save') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job Edit Modal (Specific for SchedulerJobMeta) -->
+<div class="modal fade aot-option-modal" id="jobEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa fa-edit mr-2"></i>{{ _('Edit Proposed Job') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="jobEditForm">
+                    <input type="hidden" id="edit-job-id">
+                    <div class="aot-modal-container">
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Action Type') }}</label>
+                            <div class="aot-modal-option-control">
+                                <select id="edit-job-action" class="form-control aot-standard-select">
+                                    <option value="output">{{ _('Output Control') }}</option>
+                                    <option value="pid">{{ _('PID Adjustment') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Target ID') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="text" id="edit-job-target" class="form-control aot-modern-input">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row">
+                            <label class="aot-modal-option-label">{{ _('Schedule Time') }}</label>
+                            <div class="aot-modal-option-control">
+                                <input type="datetime-local" id="edit-job-time" class="form-control aot-modern-input">
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row aot-modal-row-wrap">
+                            <label class="aot-modal-option-label">{{ _('AI Reasoning') }}</label>
+                            <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                                <textarea id="edit-job-reasoning" class="form-control aot-modern-input" rows="3" readonly></textarea>
+                            </div>
+                        </div>
+                        <div class="aot-modal-option-row aot-modal-row-wrap" id="deletion-reason-container" style="display: none;">
+                            <label class="aot-modal-option-label text-danger">{{ _('Reason for Deletion') }}</label>
+                            <div class="aot-modal-option-control" style="flex: 1 1 100% !important; width: 100% !important;">
+                                <textarea id="edit-job-delete-reason" class="form-control aot-modern-input border-danger" rows="2" placeholder="{{ _('e.g. Unnecessary, Wrong timing...') }}"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-danger mr-auto" id="btn-delete-job-trigger">{{ _('Delete Task') }}</button>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-save-job">{{ _('Save Changes') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/ai/scheduler-batch.js') }}?v={{ range(1, 1000000) | random }}"></script>
+<script src="{{ url_for('static', filename='js/ai/aot-ai-gantt.js') }}?v={{ range(1, 1000000) | random }}"></script>
+{% endblock %}

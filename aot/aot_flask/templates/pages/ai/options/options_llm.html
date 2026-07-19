@@ -1,0 +1,214 @@
+{% from 'pages/form_options/api_key_macro.html' import render_api_key_picker with context %}
+{% from 'pages/ai/options/ai_custom_options.html' import render_ai_custom_options with context %}
+
+<form action="{{ url_for('routes_ai_agent.ai_agent_mod', agent_id=agent.unique_id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <!-- Agent Engine Description -->
+    {% if engine_info.description %}
+    <div class="mb-2" style="font-size: 0.9rem; color: var(--aot-color-text-secondary, #666); line-height: 1.5;">
+        {{ engine_info.description }}
+    </div>
+    {% endif %}
+
+    <!-- Agent Auth Link (Left aligned, no box) -->
+    {% if engine_info.auth_link %}
+    <div class="mb-3 text-left">
+        <a href="{{ engine_info.auth_link }}" target="_blank" class="text-primary" style="text-decoration: underline; font-size: 0.85rem;">
+            <i class="fas fa-external-link-alt mr-1"></i> {{ _('Get API Key / Documentation') }}
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Basic Configuration -->
+    <div class="aot-modal-group-title">{{ _('Basic Configuration') }}</div>
+    <div class="aot-modal-container mb-3">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Agent Name') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="text" name="name" class="form-control aot-modern-input" value="{{ agent.name }}">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Specialty') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="text" name="specialty" class="form-control aot-modern-input" value="{{ agent.specialty or '' }}" placeholder="{{ _('e.g. Energy Analytics, GIS Data') }}">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Plan Tier') }}</label>
+            <div class="aot-modal-option-control">
+                <select name="model_tier" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                    <option value="lightweight" {% if agent.model_tier == 'lightweight' %}selected{% endif %}>{{ _('Small') }}</option>
+                    <option value="standard" {% if agent.model_tier == 'standard' %}selected{% endif %}>{{ _('Medium') }}</option>
+                    <option value="heavy" {% if agent.model_tier == 'heavy' %}selected{% endif %}>{{ _('Large') }}</option>
+                </select>
+                <small class="form-text text-muted" style="font-size: 0.75rem;">
+                    {{ _('Budgets are automatically optimized per Tier.') }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Identity & Model (Legacy/Service details) -->
+    <div class="aot-modal-group-title">{{ _('Service & Model') }}</div>
+    <div class="aot-modal-container mb-3">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Model Selection') }}</label>
+            <div class="aot-modal-option-control">
+                <select name="model_name" class="form-control selectpicker aot-standard-select" data-style="btn-white border" id="modelSelect_{{ agent.unique_id }}">
+                    {% for m in engine_info.models %}
+                    <option value="{{ m.value }}" {% if agent.entry and agent.entry.model_name == m.value %}selected{% endif %}>{{ m.label }}</option>
+                    {% endfor %}
+                    <option value="custom">{{ _('Manual Entry') }}...</option>
+                </select>
+                <input type="text" id="manualModel_{{ agent.unique_id }}" name="manual_model_name" class="form-control aot-modern-input mt-2" style="display:none;" placeholder="{{ _('Enter model name manually') }}">
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('API Key') }}</label>
+            <div class="aot-modal-option-control">
+                <div class="aot-api-key-group">
+                    <input type="hidden" name="api_key">
+                    <input type="text" class="form-control aot-modern-input"
+                           value="{{ agent.entry.api_key or '' }}"
+                           placeholder="{{ _('Leave blank to keep existing key') }}"
+                           autocomplete="off" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false"
+                           oninput="this.previousElementSibling.value = this.value;">
+                    {{ render_api_key_picker() }}
+                </div>
+                <small id="api_key_hint" class="form-text text-muted" style="display:none"></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Configuration -->
+    <div class="aot-modal-group-title">{{ _('Pipeline Configuration') }}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Pipeline Role') }}</label>
+            <div class="aot-modal-option-control">
+                <select name="pipeline_role" class="form-control selectpicker aot-standard-select" data-style="btn-white border">
+                    <option value="worker" {% if agent.pipeline_role == 'worker' %}selected{% endif %}>{{ _('Worker (Legacy)') }}</option>
+                    <option value="router" {% if agent.pipeline_role == 'router' %}selected{% endif %}>{{ _('Router') }}</option>
+                    <option value="planner" {% if agent.pipeline_role == 'planner' %}selected{% endif %}>{{ _('Planner') }}</option>
+                    <option value="executor" {% if agent.pipeline_role == 'executor' %}selected{% endif %}>{{ _('Executor') }}</option>
+                    <option value="synthesizer" {% if agent.pipeline_role == 'synthesizer' %}selected{% endif %}>{{ _('Synthesizer') }}</option>
+                </select>
+            </div>
+        </div>
+
+        {% if engine_info.custom_options %}
+            {{ render_ai_custom_options(engine_info.custom_options, custom_options) }}
+        {% endif %}
+
+        {# v24: Only show standard Temperature if not already provided as a Custom Option (Prevent Duplication #023) #}
+        {% set custom_ids = engine_info.custom_options | map(attribute='id') | list if engine_info.custom_options else [] %}
+        {% if 'temperature' not in custom_ids %}
+        <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{ _('Temperature') }}</label>
+            <div class="aot-modal-option-control">
+                <input type="number" name="temperature" class="form-control aot-modern-input" value="{{ agent.temperature }}" step="0.1" min="0" max="2">
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- System Instructions -->
+    <div class="aot-modal-group-title">{{ _('System Instructions') }}</div>
+    <div class="aot-modal-container">
+        <div class="aot-modal-option-row aot-full-width-row">
+            <label class="aot-modal-option-label font-weight-bold">{{ _('System Prompt') }}</label>
+            <div class="aot-modal-option-control">
+                <textarea name="system_prompt" class="form-control aot-modern-input" rows="5"
+                          style="height: auto !important; min-height: 120px; border-radius: 12px !important;"
+                          placeholder="{{ _('Define how this agent should behave...') }}">{{ agent.system_prompt }}</textarea>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // Model selection logic
+    $('#modelSelect_{{ agent.unique_id }}').on('change', function() {
+        if ($(this).val() === 'custom') {
+            $('#manualModel_{{ agent.unique_id }}').show();
+        } else {
+            $('#manualModel_{{ agent.unique_id }}').hide();
+        }
+    });
+
+    // Pipeline Role change logic (v6) - enhanced with preset auto-apply
+    $('select[name="pipeline_role"]').on('change', function() {
+        const role = $(this).val();
+        if (typeof rolePresets !== 'undefined' && rolePresets[role]) {
+            const preset = rolePresets[role];
+
+            // Update Specialty
+            $('input[name="specialty"]').val(preset.specialty || '');
+
+            // Update System Prompt
+            $('textarea[name="system_prompt"]').val(preset.system_prompt || '');
+
+            // Update Model Tier
+            $('select[name="model_tier"]').val(preset.model_tier || 'standard');
+
+            // Auto-apply model from preset (if model_name select exists)
+            if (preset.model_value) {
+                const $modelSelect = $('select[name="model_name"]');
+                if ($modelSelect.length) {
+                    // Check if preset model exists in options
+                    const modelExists = $modelSelect.find('option[value="' + preset.model_value + '"]').length > 0;
+                    if (modelExists) {
+                        $modelSelect.val(preset.model_value).trigger('change');
+                    }
+                }
+            }
+
+            // Auto-apply temperature from preset
+            if (preset.temperature !== undefined) {
+                $('input[name="temperature"]').val(preset.temperature);
+            }
+
+            // Auto-apply max_tokens from preset
+            if (preset.max_tokens !== undefined) {
+                $('input[name="max_tokens"]').val(preset.max_tokens);
+            }
+
+            // Trigger API key hint lookup based on ai_name_unique from preset
+            if (preset.ai_name_unique) {
+                lookupKeyHint(preset.ai_name_unique);
+            }
+
+            // Refresh selectpickers
+            if (typeof $('.selectpicker').selectpicker === 'function') {
+                $('.selectpicker').selectpicker('refresh');
+            }
+
+            if (typeof window.showToast === 'function') {
+                window.showToast("{{ _('Default options for role applied') }}", 'info');
+            }
+        }
+    });
+
+    // API key hint auto-populate
+    function lookupKeyHint(provider) {
+        $.getJSON('/api/ai/entry/key_hint?provider=' + encodeURIComponent(provider), function(data) {
+            if (data.found) {
+                const hint = '{{ _("Existing key on file") }}: ' + data.hint;
+                $('#api_key_hint').text(hint).show();
+            } else {
+                $('#api_key_hint').hide();
+            }
+        }).fail(function() {
+            $('#api_key_hint').hide();
+        });
+    }
+
+    if (typeof $('.selectpicker').selectpicker === 'function') {
+        $('.selectpicker').selectpicker('refresh');
+    }
+</script>

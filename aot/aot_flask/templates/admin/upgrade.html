@@ -1,0 +1,262 @@
+{% extends "layout.html" %}
+{% set active_page = "upgrade" %}
+{% block title %} - Upgrade{% endblock %}
+
+{% block head %}
+{% if upgrade == 1 %}
+<script>
+  let prev_string = '';
+  function check_upgrade_status() {
+    const url = '/admin/upgrade_status';
+    $.ajax(url, {
+      success: function(new_string, responseText, jqXHR) {
+        // Enhanced redirection check: Detect if the response is HTML (not plain text log)
+        // and contains login-related content
+        const contentType = jqXHR.getResponseHeader('Content-Type') || '';
+        const isHTML = contentType.includes('text/html');
+        const hasLoginContent = new_string && (
+          new_string.includes('id="login"') || 
+          new_string.includes('/login') ||
+          new_string.includes('csrf_token') ||
+          new_string.includes('form-signin') ||
+          new_string.includes('<html') ||
+          new_string.includes('<!DOCTYPE')
+        );
+        
+        if (isHTML && hasLoginContent) {
+           document.getElementById("upgrade_status").innerHTML = `<div class="aot-upgrade-notice-box" style="text-align: center; padding: 20px;">
+             <strong>{{_('Upgrade completed! System is restarting...')}}</strong><br>
+             {{_('The page will automatically reload in a moment.')}}
+           </div>`;
+           // Force logo to stay red during restart
+           $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+           // Auto-reload after 3 seconds to show the upgraded system
+           setTimeout(function() {
+             window.location.reload();
+           }, 3000);
+           return;
+        }
+
+        if (jqXHR.status !== 204) {
+          if (new_string !== prev_string) {
+            prev_string = new_string;
+            document.getElementById("upgrade_status").innerHTML = new_string;
+            let objDiv = document.getElementById("upgrade_status");
+            objDiv.scrollTop = objDiv.scrollHeight;
+          }
+        }
+        else {
+          document.getElementById("upgrade_status").innerHTML = "{{_('Reading AoT upgrade logs. Please wait...')}}";
+        }
+        
+        // During upgrade progress, continuously force logo to red
+        $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+      },
+      error: function() {
+        document.getElementById("upgrade_status").innerHTML = `<div style="color: var(--aot-color-danger, #DF5353); padding: 20px;">
+          {{_('Lost connection to server. This is normal during restart.')}}
+        </div>`;
+        // Keep logo red even on error
+        $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
+      },
+      cache: false
+    });
+  }
+  check_upgrade_status();
+  setInterval(function() {
+      check_upgrade_status();
+    }, 5000
+  );
+</script>
+{% endif %}
+<style>
+  .aot-upgrade-notice-box {
+    background-color: var(--aot-tint-warning-bg, #fff3cd);
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: var(--aot-tint-warning-fg, #856404);
+    line-height: 1.6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .aot-upgrade-notice-box p {
+    margin-bottom: 10px;
+  }
+  .aot-upgrade-notice-box p:last-child {
+    margin-bottom: 0;
+  }
+  #upgrade_status {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    border: 1px solid #333;
+    overflow: auto;
+    resize: vertical;
+    height: 500px;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+  <!-- Path: /admin/upgrade -->
+  <main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <div class="aot-modal-title" style="margin-left: 10px;">{{_('AoT Upgrade')}}</div>
+
+    {% if is_docker %}
+
+    <div class="aot-upgrade-notice-box" style="background-color: var(--aot-tint-danger-bg, #f8d7da); border-color: #f5c6cb; color: var(--aot-tint-danger-fg, #721c24);">
+      {{_('In-app upgrade is not available in the Docker deployment. The application code is mounted from the host and the services are managed by Docker Compose, so upgrades must be performed on the host.')}}
+      <br><br>
+      {{_('To upgrade: on the host, update the code (git pull) and rebuild/restart the containers (docker compose up -d --build). The database is preserved in the Docker volume and is not affected.')}}
+    </div>
+
+    {% elif not is_internet %}
+
+    <div class="aot-upgrade-notice-box" style="background-color: var(--aot-tint-danger-bg, #f8d7da); border-color: #f5c6cb; color: var(--aot-tint-danger-fg, #721c24);">
+      {{_('Internet connection not detected. An internet connection is required to automatically upgrade AoT. Please refresh the page after connecting.')}}
+      <br><br>
+      {{_('Internet connection detection settings can be found in the Upgrade Options section of the configuration page.')}}
+    </div>
+
+    {% elif upgrade == 1 %}
+
+    <div class="aot-upgrade-notice-box">
+      <p><strong>{{_('AoT is currently upgrading.')}}</strong></p>
+      <p>{{_('Upgrades typically take a few minutes, but can take longer in some cases. Please wait until the upgrade is complete.')}}</p>
+      <p>{{_('Once the upgrade is complete and the system restarts, the daemon status indicator (top-left logo) will return to green.')}}</p>
+      <p>{{_('If an error occurs, please restart the system manually or check the log below.')}}</p>
+    </div>
+    <div style="padding: 0 10px 20px 10px;">
+      <pre id="upgrade_status"></pre>
+    </div>
+
+    {% elif current_latest_major_version != current_release.split('.')[0] and
+          current_release in final_releases and
+          current_release != current_latest_release and
+          current_latest_release != '0.0.0' and
+          upgrade != 1 %}
+
+    <p style="padding-top: 0.5em">
+      {{_('Installed Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
+      <br>{{_('Latest Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_latest_release}}" target="_blank">{{current_latest_release}}</a>
+    </p>
+    <p>
+      <a href="https://github.com/AoT-inc/AoT/blob/master/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
+      <br>{{_('Major Version Changes')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_latest_major_version}}.0.0" target="_blank">{{current_latest_major_version}}.0.0</a>
+    </p>
+    <p style="font-weight: bold; color: red">{{_('Major version change detected!')}}</p>
+    <p>{{_('A new major version has been released on GitHub: v')}}{{current_latest_major_version}}{{"."}}{{_('x.x (current latest version v')}}{{current_latest_release}}{{_('). This update may cause system changes for some users, and existing system settings may not be maintained if upgraded. Before upgrading, it is recommended to perform a settings database export or record important information (GPIO pins, PID settings, etc.).')}}</p>
+
+    <div class="form-inline" style="padding-bottom: 1em">
+      <form method="post" action="/admin/upgrade">
+        <input type="hidden" name="form-name" value="upgrade">
+        {{form_upgrade.csrf_token}}
+        <div>
+          <div class="form-group">
+            {{form_upgrade.upgrade_next_major_version(class_='btn btn-primary', **{'onclick':'return confirm("' + _("Settings database may not be maintained if you proceed with the upgrade. Do you want to continue?") + '")'})}}
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {% elif upgrade == 2 %}
+
+    <div style="padding: 0.5em 0">
+      <p>{{_('An error occurred during the upgrade.')}}</p>
+      <p>{{_('Check the upgrade log')}}: /var/log/aot/aotupgrade.log.</p>
+      <p>{{_('Deleting the /opt/AoT/.upgrade file will acknowledge this message and restore upgrade functionality.')}}</p>
+    </div>
+
+    {% elif not upgrade_available %}
+
+    <div style="padding: 0.5em 0">
+      {{_('There is no new version available for upgrade. You are currently using the latest version:')}} 
+      <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{ current_release }}</a>
+    </div>
+
+    {% elif force_upgrade_master %}
+
+    <div style="padding: 1em 0 1.5em 0">
+      <p>{{_('Manual Upgrade Mode')}}</p>
+      <p>{{_('FORCE_UPGRADE_MASTER is set to True in /opt/AoT/config.py.')}}</p>
+      <p>{{_('Clicking the upgrade button below will perform an upgrade from the AoT master branch via the master.tar.gz archive.')}}</p>
+      <p>{{_('To upgrade to the latest release version, set FORCE_UPGRADE_MASTER = False in /opt/AoT/aot/config.py, restart the web UI with the sudo service aotflask restart command, and refresh this page.')}}</p>
+    </div>
+    <div class="form-inline" style="padding-bottom: 1em">
+      <form method="post" action="/admin/upgrade">
+        <input type="hidden" name="form-name" value="upgrade">
+        {{form_upgrade.csrf_token}}
+        <div>
+          <div class="form-group">
+            {{form_upgrade.upgrade(class_='btn btn-primary')}}
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {% elif not upgrade_available %}
+
+    <div style="padding: 0.5em 0">
+      {{_('There is no new version available for upgrade. You are currently using the latest version:')}} 
+      <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{ current_release }}</a>
+    </div>
+
+    {% elif upgrade_available %}
+
+    <div style="padding: 0.5em 0">
+      {{_('Installed Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
+      <br>{{_('Latest Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_major_release}}" target="_blank">{{current_major_release}}</a>
+    </div>
+    <div style="padding: 0.5em 0">
+      {{_('You are')}} {{releases_behind}} {{_('releases behind current version.')}}
+      <br>{{_('All changes can be found in the')}} <a href="https://github.com/AoT-inc/AoT/blob/master/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a>.
+    </div>
+    <div style="padding: 1em 0 1.5em 0">
+      {{_('Click the button below to start the upgrade. Upgrades typically take a few minutes, but can rarely take up to several hours. During this period, functions such as AoT web interface and server sensor data recording, and output manipulation will be completely suspended.')}}
+    </div>
+    <div class="form-inline" style="padding-bottom: 1em">
+      <form method="post" action="/admin/upgrade">
+        <input type="hidden" name="form-name" value="upgrade">
+        {{form_upgrade.csrf_token}}
+        <div>
+          <div class="form-group">
+            {{form_upgrade.upgrade(class_='btn btn-primary')}}
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {% if releases_behind is not none and releases_behind > 1 %}
+
+    <div style="font-family: 'Courier New', monospace;">
+      <table class="table" style="width: auto">
+        <tr>
+          <th>{{_('From current version to latest version')}}</th>
+        </tr>
+        {% for each_release in current_releases %}
+          <tr>
+            <td>
+              <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{ each_release }}" target="_blank" {% if current_release == each_release %}style="color: red"{% endif %}>v{{ each_release }}</a>
+            </td>
+            <td>
+              {% if each_release == current_release %}{{_('Current Version')}}{% elif each_release == current_major_release %}{{_('Latest Version')}}{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+      {% endif %}
+
+    {% endif %}
+  </main>
+</div>
+
+{% endblock %}

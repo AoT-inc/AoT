@@ -1,0 +1,113 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "alerts" %}
+{% set help_page = [manual_url("Configuration-Settings/#alert-settings"), dict_translation['settings']['title'] + ': ' + dict_translation['alert']['title']] %}
+
+{% block title %} - {{dict_translation['settings']['title'] + ': ' + dict_translation['alert']['title']}}{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/alerts -->
+  <div class="container">
+
+    <!-- Page Title -->
+    <div class="aot-settings-title">
+      <h3>{{_('Alert Settings')}} <a href="{{ manual_url('Configuration-Settings/#alert-settings') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <form method="post" action="/settings/alerts" id="form-alerts">
+      <input type="hidden" name="form-name" value="EmailAlert">
+      {{form_email_alert.hidden_tag()}}
+
+      <!-- SMTP Configuration -->
+      <div class="aot-modal-group-title">{{_('SMTP Configuration')}}</div>
+      <p class="aot-modal-body-text">
+        {{_('If no port is specified, default ports for SSL (465), TLS (587), or Unencrypted (25) will be used. Enter in Port field if non-standard port is required.')}}
+      </p>
+
+      <div class="aot-modal-container">
+
+        <div class="aot-settings-row">
+          {{form_email_alert.smtp_host.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_email_alert.smtp_host(class_='form-control aot-modern-input', value=smtp.host)}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_email_alert.smtp_port.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_email_alert.smtp_port(class_='form-control aot-modern-input', type="number", value=smtp.port, **{'title': _('Leave blank to use protocol default port')})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_email_alert.smtp_protocol.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <select class="aot-settings-select" id="smtp_protocol" name="smtp_protocol"
+                    title="{{_('Protocol to use for sending emails')}}">
+              <option value="ssl"{%- if smtp.protocol == 'ssl' %} selected{%- endif -%}>SSL</option>
+              <option value="tls"{%- if smtp.protocol == 'tls' %} selected{%- endif -%}>TLS</option>
+              <option value="unencrypted"{%- if smtp.protocol == 'unencrypted' %} selected{%- endif -%}>{{_('Unencrypted')}}</option>
+              <option value="unencrypted_no_login"{%- if smtp.protocol == 'unencrypted_no_login' %} selected{%- endif -%}>{{_('Unencrypted (No Login)')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_email_alert.smtp_user.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_email_alert.smtp_user(class_='form-control aot-modern-input', value=smtp.user, **{'title': _('Typically the email ID or full address')})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_email_alert.smtp_password.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_email_alert.smtp_password(class_='form-control aot-modern-input', **{'title': _('Only enter a password to change the saved password')})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_email_alert.smtp_from_email.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_email_alert.smtp_from_email(class_='form-control aot-modern-input', value=smtp.email_from)}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="border-bottom: none;">
+          {{form_email_alert.smtp_hourly_max.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_email_alert.smtp_hourly_max(class_='form-control aot-modern-input', type="number", value=smtp.hourly_max, **{'title': _('Maximum number of alerts to send per hour')})}}
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem; margin-bottom: 2rem;">
+        {{form_email_alert.save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+      </div>
+
+      <!-- Send Test Email -->
+      <div class="aot-modal-group-title">{{_('Send Test Email')}}</div>
+
+      <div class="aot-modal-container">
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <label class="aot-settings-label">{{_('Test recipient')}}</label>
+          <div class="aot-settings-control">
+            {{form_email_alert.send_test_to_email(class_='form-control aot-modern-input')}}
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
+        {{form_email_alert.send_test(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+      </div>
+
+    </form>
+
+  </div>
+
+{% endblock %}

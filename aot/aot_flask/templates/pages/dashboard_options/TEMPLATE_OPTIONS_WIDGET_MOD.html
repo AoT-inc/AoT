@@ -1,0 +1,39 @@
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="name_{{each_widget.unique_id}}">{{form_base.name.label.text}}</label>
+  <div class="aot-modal-option-control">
+    {{form_base.name(class_='form-control aot-modern-input', id='name_' ~ each_widget.unique_id, value=each_widget.name, **{'title': dict_translation['name']['phrase']})}}
+  </div>
+</div>
+
+{% if dashboards is defined and dashboards and dashboards|length > 1 %}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="tab_id_{{each_widget.unique_id}}">{{form_base.tab_id.label.text}}</label>
+  <div class="aot-modal-option-control">
+    <select name="tab_id" id="tab_id_{{each_widget.unique_id}}" class="form-control aot-modern-input">
+      {% for each_dash in dashboards %}
+      <option value="{{each_dash.unique_id}}" {% if each_dash.unique_id == each_widget.tab_id %}selected{% endif %}>{{each_dash.name}}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+{% endif %}
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="font_em_name_{{each_widget.unique_id}}">{{form_base.font_em_name.label.text}}</label>
+  <div class="aot-modal-option-control">
+    {{form_base.font_em_name(class_='form-control aot-modern-input', id='font_em_name_' ~ each_widget.unique_id, value=each_widget.font_em_name, **{'title': dict_translation['font_em_name']['phrase']})}}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label" for="enable_drag_handle_{{each_widget.unique_id}}">{{form_base.enable_drag_handle.label.text}}</label>
+  <div class="aot-modal-option-control" style="display: flex; align-items: center;">
+    <label class="btn-toggle" style="margin-bottom: 0;">
+      <input id="enable_drag_handle_{{each_widget.unique_id}}" class="btn-toggle-input" name="enable_drag_handle" type="checkbox" value="y"{% if each_widget.enable_drag_handle %} checked{% endif %}>
+      <span class="btn-toggle-slider">
+        <span class="btn-toggle-thumb"></span>
+      </span>
+    </label>
+  </div>
+</div>
+

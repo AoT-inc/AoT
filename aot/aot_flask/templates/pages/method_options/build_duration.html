@@ -1,0 +1,41 @@
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.duration.label(class_='aot-form-grid-label')}}
+    {{form_add_method.duration(class_='form-control aot-modern-input')}}
+  </div>
+  <div class="aot-form-grid-item" style="grid-column: 1 / -1">
+    {{_('Defines setpoints over a period of time according to a specific duration.')}}
+    <br>{{_('Here, duration is defined as the amount of time after the previous duration. If this is the first duration added, it signifies the start of the action. If it is not the first, it will run after the last duration added to the existing action.')}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.setpoint_start.label(class_='aot-form-grid-label')}}
+    {{form_add_method.setpoint_start(class_='form-control aot-modern-input', value=last_setpoint)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.setpoint_end.label(class_='aot-form-grid-label')}}
+    {{form_add_method.setpoint_end(class_='form-control aot-modern-input')}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.save(class_='form-control btn aot-pill-btn aot-pill-btn-primary btn-sm')}}
+  </div>
+</div>
+<div class="aot-form-grid" style="padding: 0.7em">
+  <div class="aot-form-grid-item" style="grid-column: 1 / -1; padding: 1em">
+    {{_('Use the following option to instruct the action to restart when it reaches the end.')}}
+    {{_('If you do not want the action to repeat, do not use this option.')}}
+    {{_('You can enter a duration in seconds to wait before restarting after the action ends, otherwise leave it blank to repeat infinitely.')}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.duration_end.label(class_='aot-form-grid-label')}}
+    {{form_add_method.duration_end(class_='form-control aot-modern-input')}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.restart(class_='btn aot-pill-btn aot-pill-btn-primary', **{'onclick': 'return confirm("' ~ _('Using this option instructs to restart after the action ends. Once this option is used, you can no longer add more durations. Would you like to add the restart option to the end of this action?') ~ '")'})}}
+  </div>
+</div>

@@ -1,0 +1,27 @@
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item" style="grid-column: 1 / -1">
+    {{_('Defines setpoints over a day in the form of y = [A * sin(B * x + C)] + D. Here, A represents amplitude, B represents frequency, C represents phase shift, and D represents y-axis shift. This method repeats daily.')}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.amplitude.label(class_='aot-form-grid-label')}}
+    {{form_add_method.amplitude(class_='form-control aot-modern-input', value=last_sine_method.amplitude)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.frequency.label(class_='aot-form-grid-label')}}
+    {{form_add_method.frequency(class_='form-control aot-modern-input', value=last_sine_method.frequency)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.shift_angle.label(class_='aot-form-grid-label')}}
+    {{form_add_method.shift_angle(class_='form-control aot-modern-input', value=last_sine_method.shift_angle)}}
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.shiftY.label(class_='aot-form-grid-label')}}
+    {{form_add_method.shiftY(class_='form-control aot-modern-input', value=last_sine_method.shift_y)}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
+  <div class="aot-form-grid-item">
+    {{form_add_method.save(class_='btn aot-pill-btn aot-pill-btn-primary', value=dict_translation['save']['title'])}}
+  </div>
+</div>

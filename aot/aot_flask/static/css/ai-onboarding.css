@@ -1,0 +1,104 @@
+/* ==========================================================================
+   AoT Onboarding Flow Component
+   Multi-step wizard styles for AI advisor onboarding
+   ========================================================================== */
+
+/* Container */
+#ai-onboarding-flow {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Step visibility */
+.ob-step {
+    display: none;
+}
+
+.ob-step.active {
+    display: block;
+}
+
+/* Progress dots */
+.ob-progress-dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.ob-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dee2e6;
+    transition: background 0.3s;
+}
+
+.ob-dot.active {
+    background: #1971c2;
+}
+
+/* Contract box */
+.ob-contract-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px 0;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* Checkbox row */
+.ob-checkbox-row {
+    margin: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ob-checkbox-row label {
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+/* Button group */
+.ob-btn-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Parameter chip grid */
+.ob-param-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.ob-param-chip {
+    padding: 6px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.88rem;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.ob-param-chip:hover {
+    border-color: #74c0fc;
+}
+
+.ob-param-chip.selected {
+    background: #d0ebff;
+    border-color: #74c0fc;
+    color: var(--aot-color-info, #1971c2);
+    font-weight: 600;
+}

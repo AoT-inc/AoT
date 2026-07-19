@@ -1,0 +1,1195 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "custom_ui" %}
+{% set help_page = [manual_url("Configuration-Settings/#general-settings"), dict_translation['settings']['title'] + ': Custom UI'] %}
+
+{% block title %} - {{dict_translation['settings']['title'] + ': Custom UI'}}{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css">
+{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/custom_ui -->
+  <div class="container">
+    <div class="aot-settings-title">
+      <h3>{{_('Custom UI Settings')}} <a href="{{ manual_url('Configuration-Settings/#general-settings') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+        <button type="submit" form="form-custom_ui" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60">{{_('Save')}}</button>
+      </div>
+    </div>
+
+    <form id="form-custom_ui" method="post" action="/settings/custom_ui" enctype=multipart/form-data>
+      <input type="hidden" name="form-name" value="CustomUI">
+      {{form_settings_custom_ui.csrf_token}}
+
+      <!-- ============================================================
+           ZONE 1 — Interactive Preview Canvas
+      ============================================================ -->
+      <div class="aot-settings-group-title">{{_('Theme Preview')}}</div>
+      <p class="aot-modal-body-text">{{_('Live Preview — click any element to jump to its color settings')}}</p>
+      <div class="aot-settings-section" style="padding: 0 16px;">
+
+        <div class="aot-settings-row">
+          <label class="aot-settings-label" for="theme-preset-select">{{_('Theme Preset')}}
+            <span class="aot-preview-modified-badge" id="preset-modified-badge">{{_('(modified)')}}</span>
+          </label>
+          <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px; gap: 8px;">
+            <select id="theme-preset-select" class="aot-settings-select" aria-label="{{_('Theme Preset')}}">
+              <option value="">{{_('Select Preset...')}}</option>
+              <optgroup label="{{_('Built-in Presets')}}">
+                <option value="aot_default">{{_('AoT Default')}}</option>
+                <option value="ocean_blue">{{_('Ocean Blue')}}</option>
+                <option value="warm_sunset">{{_('Warm Sunset')}}</option>
+                <option value="minimal_gray">{{_('Minimal Gray')}}</option>
+                <option value="night_mode">{{_('Night Mode')}}</option>
+              </optgroup>
+              <optgroup label="{{_('My Presets')}}" id="user-preset-group"></optgroup>
+            </select>
+            <button type="button" class="btn aot-pill-btn" id="btn-preset-delete" disabled
+                    aria-label="{{_('Delete selected preset')}}">{{_('Delete')}}</button>
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="border-bottom: none;">
+          <label class="aot-settings-label" for="preset-name-input">{{_('Preset Name')}}</label>
+          <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px; gap: 8px;">
+            <input type="text"
+                   id="preset-name-input"
+                   class="form-control aot-modern-input"
+                   maxlength="40"
+                   placeholder="{{_('Preset Name')}}"
+                   aria-label="{{_('Preset Name')}}">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-preset-save"
+                    aria-label="{{_('Save current colors as a preset')}}">{{_('Save Preset')}}</button>
+          </div>
+        </div>
+
+        <!-- Preview Canvas — CSS variables injected inline; isolated from real page -->
+        <div id="aot-ui-preview" role="img" aria-label="{{_('Theme color preview')}}" style="margin: 0.75rem 0 1rem;">
+
+          <!-- Navbar strip -->
+          <div class="preview-navbar"
+               role="button" tabindex="0"
+               data-color-bg="bd_tertiary"
+               data-color-text="text_color_tertiary"
+               data-color-label="{{_('Navbar')}}"
+               aria-label="{{_('Click to edit Navbar colors')}}">
+            <span class="preview-navbar-brand">AoT</span>
+            <div class="preview-navbar-dots">
+              <div class="preview-navbar-dot"></div>
+              <div class="preview-navbar-dot"></div>
+              <div class="preview-navbar-dot"></div>
+            </div>
+          </div>
+
+          <div class="preview-body">
+
+            <!-- Status buttons -->
+            <div class="preview-btn-row">
+              <button type="button" class="preview-btn preview-btn-on"
+                      data-color-bg="bg_btn_on"
+                      data-color-text="bd_btn_primary"
+                      data-color-border="bd_btn_border"
+                      data-color-label="{{_('Button On')}}"
+                      aria-label="{{_('Click to edit Button On colors')}}">{{_('On')}}</button>
+              <button type="button" class="preview-btn preview-btn-off"
+                      data-color-bg="bg_btn_off"
+                      data-color-text="bd_btn_secondary"
+                      data-color-border="bd_btn_border"
+                      data-color-label="{{_('Button Off')}}"
+                      aria-label="{{_('Click to edit Button Off colors')}}">{{_('Off')}}</button>
+              <button type="button" class="preview-btn preview-btn-active"
+                      data-color-bg="bg_btn_active"
+                      data-color-text="bd_btn_primary"
+                      data-color-border="bd_btn_border"
+                      data-color-label="{{_('Button Active')}}"
+                      aria-label="{{_('Click to edit Button Active colors')}}">{{_('Active')}}</button>
+              <button type="button" class="preview-btn preview-btn-inactive"
+                      data-color-bg="bg_btn_inactive"
+                      data-color-text="bd_btn_secondary"
+                      data-color-border="bd_btn_border"
+                      data-color-label="{{_('Button Inactive')}}"
+                      aria-label="{{_('Click to edit Button Inactive colors')}}">{{_('Inactive')}}</button>
+              <button type="button" class="preview-btn preview-btn-pause"
+                      data-color-bg="bg_btn_pause"
+                      data-color-text="bd_btn_secondary"
+                      data-color-border="bd_btn_border"
+                      data-color-label="{{_('Button Pause')}}"
+                      aria-label="{{_('Click to edit Button Pause colors')}}">{{_('Pause')}}</button>
+              <button type="button" class="preview-btn preview-btn-hold"
+                      data-color-bg="bg_btn_hold"
+                      data-color-text="bd_btn_tertiary"
+                      data-color-border="bd_btn_border"
+                      data-color-label="{{_('Button Hold')}}"
+                      aria-label="{{_('Click to edit Button Hold colors')}}">{{_('Hold')}}</button>
+            </div>
+
+            <!-- Cards -->
+            <div class="preview-card-row">
+              <div class="preview-card preview-card-primary"
+                   role="button" tabindex="0"
+                   data-color-bg="bd_primary"
+                   data-color-text="text_color_primary"
+                   data-color-label="{{_('Card Primary')}}"
+                   aria-label="{{_('Click to edit Card Primary colors')}}">
+                <div class="preview-card-title">{{_('Primary Card')}}</div>
+                <div class="preview-card-subtitle">bd_primary background</div>
+              </div>
+              <div class="preview-card preview-card-secondary"
+                   role="button" tabindex="0"
+                   data-color-bg="bd_secondary"
+                   data-color-text="text_color_secondary"
+                   data-color-label="{{_('Card Secondary')}}"
+                   aria-label="{{_('Click to edit Card Secondary colors')}}">
+                <div class="preview-card-title">{{_('Secondary Card')}}</div>
+                <div class="preview-card-subtitle">bd_secondary background</div>
+              </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="preview-badge-row">
+              <span class="preview-badge preview-badge-llm"
+                    role="button" tabindex="0"
+                    data-color-bg="bg_llm"
+                    data-color-text="text_color_tertiary"
+                    data-color-label="{{_('LLM Badge')}}"
+                    aria-label="{{_('Click to edit LLM Badge colors')}}">LLM</span>
+              <span class="preview-badge preview-badge-mcp"
+                    role="button" tabindex="0"
+                    data-color-bg="bg_mcp"
+                    data-color-text="text_color_tertiary"
+                    data-color-label="{{_('MCP Badge')}}"
+                    aria-label="{{_('Click to edit MCP Badge colors')}}">MCP</span>
+              <span class="preview-badge preview-badge-upgrade"
+                    role="button" tabindex="0"
+                    data-color-bg="bg_upgrade"
+                    data-color-text="text_color_tertiary"
+                    data-color-label="{{_('Upgrade Badge')}}"
+                    aria-label="{{_('Click to edit Upgrade Badge colors')}}">{{_('Upgrade')}}</span>
+            </div>
+
+          </div><!-- /.preview-body -->
+        </div><!-- /#aot-ui-preview -->
+      </div><!-- /.aot-settings-section (Zone 1) -->
+
+
+      <!-- ============================================================
+           ZONE 2 — Color Group Panels
+      ============================================================ -->
+
+      <!-- Group: Brand Colors -->
+      <div class="aot-settings-group-title" id="group-brand">{{_('Brand Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set brand_fields = [
+          ('brand_primary',   _('Brand Primary'),   'brand_primary'),
+          ('brand_secondary', _('Brand Secondary'), 'brand_secondary'),
+          ('brand_accent',    _('Brand Accent'),    'brand_accent')
+        ] %}
+        {% for field_name, label, css_key in brand_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Text Colors -->
+      <div class="aot-settings-group-title" id="group-text">{{_('Text Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set text_fields = [
+          ('text_color_primary',   _('Text Primary'),   'text_color_primary'),
+          ('text_color_secondary', _('Text Secondary'), 'text_color_secondary'),
+          ('text_color_tertiary',  _('Text Tertiary'),  'text_color_tertiary')
+        ] %}
+        {% for field_name, label, css_key in text_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Background Colors -->
+      <div class="aot-settings-group-title" id="group-background">{{_('Background Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set bg_fields = [
+          ('bd_primary',   _('Background Primary'),   'bd_primary'),
+          ('bd_secondary', _('Background Secondary'), 'bd_secondary'),
+          ('bd_tertiary',  _('Background Tertiary'),  'bd_tertiary'),
+          ('bg_upgrade',   _('Upgrade Background'),   'bg_upgrade'),
+          ('bg_active',    _('Active State'),         'bg_active'),
+          ('bg_inactive',  _('Inactive State'),       'bg_inactive')
+        ] %}
+        {% for field_name, label, css_key in bg_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Badge Colors -->
+      <div class="aot-settings-group-title" id="group-badge">{{_('Badge Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set badge_fields = [
+          ('bg_llm', _('LLM Badge'), 'bg_llm'),
+          ('bg_mcp', _('MCP Badge'), 'bg_mcp')
+        ] %}
+        {% for field_name, label, css_key in badge_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Button Colors -->
+      <div class="aot-settings-group-title" id="group-buttons">{{_('Button Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set btn_fields = [
+          ('bd_btn_primary',   _('Button Primary'),          'bd_btn_primary'),
+          ('bd_btn_secondary', _('Button Secondary'),        'bd_btn_secondary'),
+          ('bd_btn_tertiary',  _('Button Tertiary'),         'bd_btn_tertiary'),
+          ('bg_btn_upgrade',   _('Button Upgrade'),          'bg_btn_upgrade'),
+          ('bg_btn_on',        _('Button On'),               'bg_btn_on'),
+          ('bg_btn_off',       _('Button Off'),              'bg_btn_off'),
+          ('bg_btn_active',    _('Button Active'),           'bg_btn_active'),
+          ('bg_btn_inactive',  _('Button Inactive'),         'bg_btn_inactive'),
+          ('bg_btn_pause',     _('Button Pause'),            'bg_btn_pause'),
+          ('bg_btn_hold',      _('Button Hold'),             'bg_btn_hold'),
+          ('bd_btn_border',    _('Button Border'),           'bd_btn_border')
+        ] %}
+        {% for field_name, label, css_key in btn_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Measurement Band Colors (--aot-band-1..5, 게이지/센서 라벨) -->
+      <div class="aot-settings-group-title" id="group-band">{{_('Measurement Band Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set band_fields = [
+          ('band_1', _('Band 1 (Very Low)'),  'band_1'),
+          ('band_2', _('Band 2 (Low)'),       'band_2'),
+          ('band_3', _('Band 3 (Optimal)'),   'band_3'),
+          ('band_4', _('Band 4 (High)'),      'band_4'),
+          ('band_5', _('Band 5 (Very High)'), 'band_5')
+        ] %}
+        {% for field_name, label, css_key in band_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Chart Series Colors (--aot-chart-1..6, 그래프/PID 시리즈) -->
+      <div class="aot-settings-group-title" id="group-chart">{{_('Chart Series Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set chart_fields = [
+          ('chart_1', _('Chart Series 1'), 'chart_1'),
+          ('chart_2', _('Chart Series 2'), 'chart_2'),
+          ('chart_3', _('Chart Series 3'), 'chart_3'),
+          ('chart_4', _('Chart Series 4'), 'chart_4'),
+          ('chart_5', _('Chart Series 5'), 'chart_5'),
+          ('chart_6', _('Chart Series 6'), 'chart_6')
+        ] %}
+        {% for field_name, label, css_key in chart_fields %}
+        <div class="aot-color-row" data-css-key="{{css_key}}">
+          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- ============================================================
+           ZONE 2 — Reset / Save actions (between color groups and branding)
+      ============================================================ -->
+      <div class="aot-settings-actions" style="padding-bottom: 0.25rem;">
+        <button type="button"
+                class="btn aot-pill-btn"
+                id="btn-reset-defaults"
+                aria-label="{{_('Reset all theme colors to defaults')}}">
+          {{_('Reset to Defaults')}}
+        </button>
+        <button type="submit"
+                form="form-custom_ui"
+                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60"
+                aria-label="{{_('Save theme settings')}}">
+          {{_('Save')}}
+        </button>
+      </div>
+
+
+      <!-- ============================================================
+           ZONE 3 — Branding (preserved from original)
+      ============================================================ -->
+      <div class="aot-settings-group-title">{{_('Branding')}}</div>
+      <div class="aot-settings-section">
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.brand_display.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <select class="form-control aot-modern-select form-dropdown" data-placement="top" id="brand_display" name="brand_display">
+              <option value="default"{% if settings.brand_display in ['', 'default'] %} selected{% endif %}>{{_('Default')}}</option>
+              <option value="hostname"{% if settings.brand_display == 'hostname' %} selected{% endif %}>{{_('Hostname')}}</option>
+              <option value="brand_text"{% if settings.brand_display == 'brand_text' %} selected{% endif %}>{{_('Brand Text')}}</option>
+              <option value="brand_image"{% if settings.brand_display == 'brand_image' %} selected{% endif %}>{{_('Brand Image')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.title_display.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <select class="form-control aot-modern-select form-dropdown" data-placement="top" id="title_display" name="title_display">
+              <option value="hostname"{% if settings.title_display != 'brand_text' %} selected{% endif %}>{{_('Hostname')}}</option>
+              <option value="brand_text"{% if settings.title_display == 'brand_text' %} selected{% endif %}>{{_('Brand Text')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.hostname_override.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_settings_custom_ui.hostname_override(class_='form-control aot-modern-input', value=settings.hostname_override or '', **{'title': _("Overrides the hostname with this text. Leave empty to use the hostname.")})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.brand_image.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <label class="btn aot-pill-btn aot-pill-btn-primary mb-0" style="cursor: pointer;"
+                   title="{{_('Saved')}}: {% if settings.brand_image %}True{% else %}False{% endif %} | {{_('Formats')}}: JPG, PNG, GIF, SVG, WebP">
+              {{_('Upload')}}
+              <input class="sr-only" id="brand_image" name="brand_image" type="file" accept="image/jpeg,image/png,image/gif,image/svg+xml,image/webp">
+            </label>
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.brand_image_height.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_settings_custom_ui.brand_image_height(class_='form-control aot-modern-input', value=settings.brand_image_height or 55, **{'title': _("Height of the brand image in pixels")})}}
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.favicon_display.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <select class="form-control aot-modern-select form-dropdown" data-placement="top" id="favicon_display" name="favicon_display">
+              <option value="default"{% if settings.favicon_display != 'brand_favicon' %} selected{% endif %}>{{_('Default')}}</option>
+              <option value="brand_favicon"{% if settings.favicon_display == 'brand_favicon' %} selected{% endif %}>{{_('Brand Icon')}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_settings_custom_ui.brand_favicon.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <label class="btn aot-pill-btn aot-pill-btn-primary mb-0" style="cursor: pointer;"
+                   title="{{_('Saved')}}: {% if settings.brand_favicon %}True{% else %}False{% endif %}">
+              {{_('Upload')}}
+              <input class="sr-only" id="brand_favicon" name="brand_favicon" type="file">
+            </label>
+          </div>
+        </div>
+
+      </div><!-- /.aot-settings-section (Branding) -->
+
+
+      <!-- Zone 3 — Custom Code (preserved from original) -->
+      <div class="aot-settings-group-title">{{_('Custom Code')}}</div>
+      <div class="aot-settings-section">
+
+        <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
+          {{form_settings_custom_ui.custom_css.label(class_='aot-settings-label')}}
+          <div style="flex: 1 1 100%; margin-top: 6px;">
+            <textarea class="form-control aot-modern-input" id="custom_css" name="custom_css" title="{{_('Custom CSS Settings')}}" rows="4" style="border-radius: 8px !important; resize: vertical;">{{settings.custom_css or ''}}</textarea>
+          </div>
+        </div>
+
+        <div class="aot-settings-row" style="flex-wrap: wrap; height: auto;">
+          {{form_settings_custom_ui.custom_layout.label(class_='aot-settings-label')}}
+          <div style="flex: 1 1 100%; margin-top: 6px;">
+            <textarea class="form-control aot-modern-input" id="custom_layout" name="custom_layout" title="{{_('Custom Layout HTML Settings')}}" rows="4" style="border-radius: 8px !important; resize: vertical;">{{settings.custom_layout or ''}}</textarea>
+          </div>
+        </div>
+
+      </div><!-- /.aot-settings-section (Custom Code) -->
+
+      <!-- Footer Save -->
+      <div class="aot-settings-actions">
+        <button type="button"
+                class="btn aot-pill-btn"
+                id="btn-reset-defaults-footer"
+                aria-label="{{_('Reset all theme colors to defaults')}}">
+          {{_('Reset to Defaults')}}
+        </button>
+        <button type="submit"
+                form="form-custom_ui"
+                class="btn aot-pill-btn aot-pill-btn-primary aot-w-60"
+                aria-label="{{_('Save theme settings')}}">
+          {{_('Save')}}
+        </button>
+      </div>
+
+    </form>
+  </div><!-- /.container -->
+
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ============================================================
+    // THEME PRESETS
+    // ============================================================
+    // 측정 밴드(band_1..5)·차트 시리즈(chart_1..6)는 브랜드 무드가 아니라
+    // 심각도/구분 표시용 기능색이라 모든 내장 프리셋에서 theme_defaults.json 값으로 통일
+    var BAND_CHART_DEFAULTS = {
+      band_1: '#2DB4FF', band_2: '#54BCC1', band_3: '#32C85A', band_4: '#FEAE5F', band_5: '#CF5C58',
+      chart_1: '#FEA60B', chart_2: '#8BC1C1', chart_3: '#93B261', chart_4: '#F4D624', chart_5: '#DF5353', chart_6: '#008DDE'
+    };
+
+    var PRESETS = {
+      aot_default: Object.assign({
+        brand_primary: '#13261B', brand_secondary: '#5E6B64', brand_accent: '#F3F6F5',
+        text_color_primary: '#13261B', text_color_secondary: '#5E6B64', text_color_tertiary: '#FFFFFF',
+        bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5', bd_tertiary: '#13261B',
+        bg_upgrade: '#13261B', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5',
+        bg_llm: '#6277C7', bg_mcp: '#64C762',
+        bd_btn_primary: '#13261B', bd_btn_secondary: '#5E6B64', bd_btn_tertiary: '#F3F6F5',
+        bg_btn_upgrade: '#13261B', bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
+        bg_btn_active: '#13261B', bg_btn_inactive: '#5E6B64',
+        bg_btn_pause: '#989E9E', bg_btn_hold: '#D1D5D5', bd_btn_border: '#B6BABA'
+      }, BAND_CHART_DEFAULTS),
+      ocean_blue: Object.assign({
+        brand_primary: '#0A2342', brand_secondary: '#2C5F8A', brand_accent: '#E8F4FD',
+        text_color_primary: '#0A2342', text_color_secondary: '#2C5F8A', text_color_tertiary: '#FFFFFF',
+        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD', bd_tertiary: '#0A2342',
+        bg_upgrade: '#0A2342', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD',
+        bg_llm: '#4A90D9', bg_mcp: '#42A85A',
+        bd_btn_primary: '#0A2342', bd_btn_secondary: '#2C5F8A', bd_btn_tertiary: '#E8F4FD',
+        bg_btn_upgrade: '#0A2342', bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
+        bg_btn_active: '#0A2342', bg_btn_inactive: '#2C5F8A',
+        bg_btn_pause: '#7BA7BC', bg_btn_hold: '#BDD7EE', bd_btn_border: '#A8C8E0'
+      }, BAND_CHART_DEFAULTS),
+      warm_sunset: Object.assign({
+        brand_primary: '#6B2737', brand_secondary: '#C0614D', brand_accent: '#FDF0EC',
+        text_color_primary: '#6B2737', text_color_secondary: '#C0614D', text_color_tertiary: '#FFFFFF',
+        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC', bd_tertiary: '#6B2737',
+        bg_upgrade: '#6B2737', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC',
+        bg_llm: '#9B59B6', bg_mcp: '#27AE60',
+        bd_btn_primary: '#6B2737', bd_btn_secondary: '#C0614D', bd_btn_tertiary: '#FDF0EC',
+        bg_btn_upgrade: '#6B2737', bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
+        bg_btn_active: '#6B2737', bg_btn_inactive: '#C0614D',
+        bg_btn_pause: '#D4A0A0', bg_btn_hold: '#F5C6BC', bd_btn_border: '#E8B4A8'
+      }, BAND_CHART_DEFAULTS),
+      minimal_gray: Object.assign({
+        brand_primary: '#2D2D2D', brand_secondary: '#6B6B6B', brand_accent: '#F5F5F5',
+        text_color_primary: '#2D2D2D', text_color_secondary: '#6B6B6B', text_color_tertiary: '#FFFFFF',
+        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5', bd_tertiary: '#2D2D2D',
+        bg_upgrade: '#2D2D2D', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5',
+        bg_llm: '#5B7FA6', bg_mcp: '#4A9E5C',
+        bd_btn_primary: '#2D2D2D', bd_btn_secondary: '#6B6B6B', bd_btn_tertiary: '#F5F5F5',
+        bg_btn_upgrade: '#2D2D2D', bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
+        bg_btn_active: '#2D2D2D', bg_btn_inactive: '#6B6B6B',
+        bg_btn_pause: '#9B9B9B', bg_btn_hold: '#D0D0D0', bd_btn_border: '#B8B8B8'
+      }, BAND_CHART_DEFAULTS),
+      night_mode: Object.assign({
+        brand_primary: '#BB86FC', brand_secondary: '#03DAC6', brand_accent: '#1E1E1E',
+        text_color_primary: '#E1E1E1', text_color_secondary: '#B0B0B0', text_color_tertiary: '#121212',
+        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C', bd_tertiary: '#BB86FC',
+        bg_upgrade: '#BB86FC', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C',
+        bg_llm: '#7C5CBF', bg_mcp: '#00A896',
+        bd_btn_primary: '#BB86FC', bd_btn_secondary: '#03DAC6', bd_btn_tertiary: '#1E1E1E',
+        bg_btn_upgrade: '#BB86FC', bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
+        bg_btn_active: '#BB86FC', bg_btn_inactive: '#03DAC6',
+        bg_btn_pause: '#6B6B6B', bg_btn_hold: '#3C3C3C', bd_btn_border: '#4C4C4C'
+      }, BAND_CHART_DEFAULTS)
+    };
+
+    // CSS variable name map: field_name -> CSS custom property suffix for preview
+    // Preview injects as --preview-<key> on #aot-ui-preview style attribute
+    var CSS_VAR_MAP = {
+      brand_primary:        'brand-primary',
+      brand_secondary:      'brand-secondary',
+      brand_accent:         'brand-accent',
+      text_color_primary:   'text-color-primary',
+      text_color_secondary: 'text-color-secondary',
+      text_color_tertiary:  'text-color-tertiary',
+      bd_primary:           'bd-primary',
+      bd_secondary:         'bd-secondary',
+      bd_tertiary:          'bd-tertiary',
+      bg_upgrade:           'bg-upgrade',
+      bg_active:            'bg-active',
+      bg_inactive:          'bg-inactive',
+      bg_llm:               'bg-llm',
+      bg_mcp:               'bg-mcp',
+      bd_btn_primary:       'bd-btn-primary',
+      bd_btn_secondary:     'bd-btn-secondary',
+      bd_btn_tertiary:      'bd-btn-tertiary',
+      bg_btn_upgrade:       'bg-btn-upgrade',
+      bg_btn_on:            'bg-btn-on',
+      bg_btn_off:           'bg-btn-off',
+      bg_btn_active:        'bg-btn-active',
+      bg_btn_inactive:      'bg-btn-inactive',
+      bg_btn_pause:         'bg-btn-pause',
+      bg_btn_hold:          'bg-btn-hold',
+      bd_btn_border:        'bd-btn-border'
+    };
+
+    var themeDefaults = {{ theme_defaults | tojson | safe }};
+    var userPresets = {{ user_presets | default({}) | tojson | safe }};
+    var USER_PRESET_PREFIX = 'user:';
+    var activePreset = null;
+    var previewEl = document.getElementById('aot-ui-preview');
+
+    // ============================================================
+    // PREVIEW CSS VARIABLE INJECTION
+    // ============================================================
+    function updatePreviewVar(fieldName, hexValue) {
+      var cssKey = CSS_VAR_MAP[fieldName];
+      if (!cssKey || !previewEl) return;
+      previewEl.style.setProperty('--preview-' + cssKey, hexValue);
+    }
+
+    function applyAllToPreview(values) {
+      Object.keys(values).forEach(function (k) {
+        updatePreviewVar(k, values[k]);
+      });
+    }
+
+    // ============================================================
+    // FIELD SYNC: color swatch <-> hex text <-> WTForms hidden
+    // ============================================================
+    function isValidHex(val) {
+      return /^#[0-9A-Fa-f]{6}$/.test(val);
+    }
+
+    function syncFromSwatch(fieldName, hexValue) {
+      var hexEl = document.getElementById('hex_' + fieldName);
+      var hiddenEl = document.getElementById(fieldName);
+      if (hexEl) hexEl.value = hexValue.toUpperCase();
+      if (hiddenEl) hiddenEl.value = hexValue;
+      updatePreviewVar(fieldName, hexValue);
+      markPresetModified();
+    }
+
+    function syncFromHex(fieldName, rawValue) {
+      var val = rawValue.trim();
+      if (!val.startsWith('#')) val = '#' + val;
+      if (!isValidHex(val)) return; // wait for valid input
+      val = val.toUpperCase();
+      var swatchEl = document.getElementById('swatch_' + fieldName);
+      var hiddenEl = document.getElementById(fieldName);
+      if (swatchEl) swatchEl.value = val;
+      if (hiddenEl) hiddenEl.value = val;
+      updatePreviewVar(fieldName, val);
+      markPresetModified();
+    }
+
+    // ============================================================
+    // PRESET MODIFIED BADGE
+    // ============================================================
+    function markPresetModified() {
+      var badge = document.getElementById('preset-modified-badge');
+      if (badge && activePreset) {
+        badge.style.display = 'inline';
+      }
+    }
+
+    function clearModifiedBadge() {
+      var badge = document.getElementById('preset-modified-badge');
+      if (badge) badge.style.display = 'none';
+    }
+
+    // ============================================================
+    // USER PRESETS (server-persisted: /settings/custom_ui/presets)
+    // ============================================================
+    function getCsrfToken() {
+      var el = document.querySelector('#form-custom_ui input[name="csrf_token"]');
+      return el ? el.value : '';
+    }
+
+    function getCurrentColors() {
+      // CSS_VAR_MAP(프리뷰 대상)이 아닌 전체 색상 필드(밴드/차트 포함)를 수집
+      var out = {};
+      document.querySelectorAll('.aot-theme-hidden-input').forEach(function (hiddenEl) {
+        if (hiddenEl.id && isValidHex(hiddenEl.value)) {
+          out[hiddenEl.id] = hiddenEl.value.toUpperCase();
+        }
+      });
+      return out;
+    }
+
+    function rebuildUserPresetOptions(selectedName) {
+      var group = document.getElementById('user-preset-group');
+      if (!group) return;
+      group.innerHTML = '';
+      Object.keys(userPresets).sort().forEach(function (name) {
+        var opt = document.createElement('option');
+        opt.value = USER_PRESET_PREFIX + name;
+        opt.textContent = name;
+        group.appendChild(opt);
+      });
+      var select = document.getElementById('theme-preset-select');
+      if (select && selectedName) {
+        select.value = USER_PRESET_PREFIX + selectedName;
+      }
+      updateDeleteButtonState();
+    }
+
+    function updateDeleteButtonState() {
+      var select = document.getElementById('theme-preset-select');
+      var btn = document.getElementById('btn-preset-delete');
+      if (!select || !btn) return;
+      btn.disabled = select.value.indexOf(USER_PRESET_PREFIX) !== 0;
+    }
+
+    function presetRequest(method, body, onSuccess) {
+      fetch('/settings/custom_ui/presets', {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(body)
+      })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok) throw new Error(data.error || '{{_('Request failed')}}');
+          return data;
+        });
+      })
+      .then(onSuccess)
+      .catch(function (err) {
+        if (window.toastr) toastr.error(err.message);
+        else alert(err.message);
+      });
+    }
+
+    function saveUserPreset() {
+      var input = document.getElementById('preset-name-input');
+      var name = (input && input.value || '').trim();
+      if (!name) {
+        // 이름이 비어 있으면 현재 선택된 내 프리셋 이름으로 덮어쓰기
+        var select = document.getElementById('theme-preset-select');
+        if (select && select.value.indexOf(USER_PRESET_PREFIX) === 0) {
+          name = select.value.slice(USER_PRESET_PREFIX.length);
+        }
+      }
+      if (!name) {
+        if (window.toastr) toastr.warning('{{_('Enter a preset name')}}');
+        if (input) input.focus();
+        return;
+      }
+      presetRequest('POST', { name: name, colors: getCurrentColors() }, function (data) {
+        userPresets = data.presets || {};
+        rebuildUserPresetOptions(name);
+        activePreset = USER_PRESET_PREFIX + name;
+        clearModifiedBadge();
+        if (input) input.value = '';
+        if (window.toastr) toastr.success('{{_('Preset saved')}}: ' + name);
+      });
+    }
+
+    function deleteUserPreset() {
+      var select = document.getElementById('theme-preset-select');
+      if (!select || select.value.indexOf(USER_PRESET_PREFIX) !== 0) return;
+      var name = select.value.slice(USER_PRESET_PREFIX.length);
+      if (!window.confirm('{{_('Delete preset')}} "' + name + '"?')) return;
+      presetRequest('DELETE', { name: name }, function (data) {
+        userPresets = data.presets || {};
+        select.value = '';
+        activePreset = null;
+        rebuildUserPresetOptions();
+        if (window.toastr) toastr.success('{{_('Preset deleted')}}: ' + name);
+      });
+    }
+
+    // ============================================================
+    // APPLY PRESET
+    // ============================================================
+    function applyPreset(presetKey) {
+      var preset;
+      if (presetKey.indexOf(USER_PRESET_PREFIX) === 0) {
+        preset = userPresets[presetKey.slice(USER_PRESET_PREFIX.length)];
+      } else {
+        preset = PRESETS[presetKey];
+      }
+      if (!preset) return;
+      activePreset = presetKey;
+      clearModifiedBadge();
+      Object.keys(preset).forEach(function (fieldName) {
+        var val = preset[fieldName];
+        var swatchEl = document.getElementById('swatch_' + fieldName);
+        var hexEl    = document.getElementById('hex_' + fieldName);
+        var hiddenEl = document.getElementById(fieldName);
+        if (swatchEl) swatchEl.value = val;
+        if (hexEl)    hexEl.value = val.toUpperCase();
+        if (hiddenEl) hiddenEl.value = val;
+      });
+      applyAllToPreview(preset);
+    }
+
+    // ============================================================
+    // RESET TO DEFAULTS
+    // ============================================================
+    function resetToDefaults() {
+      activePreset = null;
+      clearModifiedBadge();
+      var presetSelect = document.getElementById('theme-preset-select');
+      if (presetSelect) presetSelect.value = '';
+      Object.keys(themeDefaults).forEach(function (fieldName) {
+        var val = themeDefaults[fieldName];
+        var swatchEl = document.getElementById('swatch_' + fieldName);
+        var hexEl    = document.getElementById('hex_' + fieldName);
+        var hiddenEl = document.getElementById(fieldName);
+        if (swatchEl) swatchEl.value = val;
+        if (hexEl)    hexEl.value = val.toUpperCase();
+        if (hiddenEl) hiddenEl.value = val;
+        updatePreviewVar(fieldName, val);
+      });
+    }
+
+    // ============================================================
+    // INLINE COLOR POPOVER
+    // ============================================================
+
+    // Common preset swatches offered in the popover (color-blind safe palette)
+    var POPOVER_PRESETS = [
+      '#13261B', '#5E6B64', '#FFFFFF', '#F3F6F5',
+      '#6277C7', '#64C762', '#E85D04', '#F2D524',
+      '#0A2342', '#6B2737', '#2D2D2D', '#121212'
+    ];
+
+    var activePopover = null;   // currently open popover DOM node
+    var activeAnchor  = null;   // element that triggered the popover
+
+    function closePopover() {
+      if (activePopover) {
+        activePopover.remove();
+        activePopover = null;
+        activeAnchor  = null;
+      }
+    }
+
+    /**
+     * Position the popover relative to the anchor element.
+     * Prefers below; flips above if there is not enough viewport space.
+     * Returns the computed placement ('bottom' | 'top').
+     */
+    function positionPopover(popoverEl, anchorEl) {
+      var MARGIN = 8;
+      var POPOVER_H = popoverEl.offsetHeight;
+      var POPOVER_W = popoverEl.offsetWidth;
+      var rect  = anchorEl.getBoundingClientRect();
+      var vpW   = window.innerWidth;
+      var vpH   = window.innerHeight;
+
+      // Vertical: prefer below
+      var placement = 'bottom';
+      var top = rect.bottom + MARGIN;
+      if (top + POPOVER_H > vpH - MARGIN && rect.top - MARGIN - POPOVER_H >= 0) {
+        placement = 'top';
+        top = rect.top - MARGIN - POPOVER_H;
+      }
+
+      // Horizontal: center on anchor, clamp to viewport
+      var anchorCx = rect.left + rect.width / 2;
+      var left = anchorCx - POPOVER_W / 2;
+      left = Math.max(MARGIN, Math.min(left, vpW - POPOVER_W - MARGIN));
+
+      popoverEl.style.top  = top  + 'px';
+      popoverEl.style.left = left + 'px';
+      popoverEl.setAttribute('data-placement', placement);
+
+      // Arrow x position relative to popover left
+      var arrowX = (anchorCx - left);
+      arrowX = Math.max(16, Math.min(arrowX, POPOVER_W - 16));
+      popoverEl.style.setProperty('--aot-popover-arrow-x', arrowX + 'px');
+
+      return placement;
+    }
+
+    /**
+     * Open (or close if already open for the same anchor) the inline popover.
+     * Renders one row per color slot: 배경색 / 문자색 / 테두리색
+     */
+    function openPopover(anchorEl) {
+      // Toggle: close if already open for this anchor
+      if (activePopover && activeAnchor === anchorEl) {
+        closePopover();
+        return;
+      }
+      closePopover();
+
+      var label = anchorEl.getAttribute('data-color-label') || '{{_('Color')}}';
+
+      // Collect defined color slots
+      var slots = [];
+      var bgVar     = anchorEl.getAttribute('data-color-bg');
+      var textVar   = anchorEl.getAttribute('data-color-text');
+      var borderVar = anchorEl.getAttribute('data-color-border');
+      if (bgVar)     slots.push({ key: bgVar,     label: '배경색' });
+      if (textVar)   slots.push({ key: textVar,   label: '문자색' });
+      if (borderVar) slots.push({ key: borderVar, label: '테두리색' });
+      if (slots.length === 0) return;
+
+      // --- Build popover DOM ---
+      var pop = document.createElement('div');
+      pop.className = 'aot-color-popover';
+      pop.setAttribute('role', 'dialog');
+      pop.setAttribute('aria-label', label);
+      pop.setAttribute('aria-modal', 'true');
+
+      // Header
+      var header = document.createElement('div');
+      header.className = 'aot-color-popover-header';
+      var labelEl = document.createElement('span');
+      labelEl.className = 'aot-color-popover-label';
+      labelEl.textContent = label;
+      header.appendChild(labelEl);
+      pop.appendChild(header);
+
+      // One row per slot
+      var firstNativeInput = null;
+      slots.forEach(function (slot) {
+        var hiddenEl   = document.getElementById(slot.key);
+        var currentVal = (hiddenEl && hiddenEl.value) ? hiddenEl.value.toUpperCase() : '#000000';
+
+        var row = document.createElement('div');
+        row.className = 'aot-color-popover-row';
+
+        var slotLabel = document.createElement('span');
+        slotLabel.className = 'aot-color-popover-slot-label';
+        slotLabel.textContent = slot.label;
+
+        var nativeInput = document.createElement('input');
+        nativeInput.type = 'color';
+        nativeInput.className = 'aot-color-popover-native';
+        nativeInput.value = currentVal;
+        nativeInput.setAttribute('aria-label', slot.label);
+
+        var hexTextInput = document.createElement('input');
+        hexTextInput.type = 'text';
+        hexTextInput.className = 'aot-color-popover-hex-input';
+        hexTextInput.value = currentVal;
+        hexTextInput.maxLength = 7;
+        hexTextInput.setAttribute('spellcheck', 'false');
+        hexTextInput.setAttribute('aria-label', slot.label + ' hex');
+        hexTextInput.setAttribute('pattern', '#[0-9A-Fa-f]{6}');
+
+        // color swatch → live update
+        nativeInput.addEventListener('input', function () {
+          var val = this.value.toUpperCase();
+          hexTextInput.value = val;
+          applyPopoverValue(slot.key, val);
+        });
+
+        // hex text → validate and apply
+        hexTextInput.addEventListener('input', function () {
+          var val = this.value.trim();
+          if (!val.startsWith('#')) val = '#' + val;
+          if (isValidHex(val)) {
+            val = val.toUpperCase();
+            nativeInput.value = val;
+            applyPopoverValue(slot.key, val);
+          }
+        });
+
+        hexTextInput.addEventListener('blur', function () {
+          var val = this.value.trim();
+          if (!val.startsWith('#')) val = '#' + val;
+          this.value = isValidHex(val) ? val.toUpperCase() : nativeInput.value.toUpperCase();
+        });
+
+        row.appendChild(slotLabel);
+        row.appendChild(nativeInput);
+        row.appendChild(hexTextInput);
+        pop.appendChild(row);
+
+        if (!firstNativeInput) firstNativeInput = nativeInput;
+      });
+
+      // Keyboard: Escape to close
+      pop.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          closePopover();
+          anchorEl.focus();
+        }
+      });
+
+      // Prevent clicks inside popover from propagating to doc listener
+      pop.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
+      });
+
+      document.body.appendChild(pop);
+      activePopover = pop;
+      activeAnchor  = anchorEl;
+
+      // Position after DOM insertion so offsetHeight is valid
+      positionPopover(pop, anchorEl);
+
+      // Focus native input for immediate keyboard use
+      nativeInput.focus();
+    }
+
+    /**
+     * Apply a hex value from the popover to all linked field controls + preview.
+     */
+    function applyPopoverValue(fieldName, hexVal) {
+      var swatchEl = document.getElementById('swatch_' + fieldName);
+      var hexEl    = document.getElementById('hex_'    + fieldName);
+      var hiddenEl = document.getElementById(fieldName);
+      if (swatchEl) swatchEl.value = hexVal;
+      if (hexEl)    hexEl.value    = hexVal.toUpperCase();
+      if (hiddenEl) hiddenEl.value = hexVal;
+      updatePreviewVar(fieldName, hexVal);
+      markPresetModified();
+    }
+
+    // ============================================================
+    // CANVAS CLICK — open popover
+    // ============================================================
+    function handleCanvasClick(e) {
+      var target = e.target.closest('[data-color-bg],[data-color-text],[data-color-border]');
+      if (!target) return;
+      e.stopPropagation();
+      openPopover(target);
+    }
+
+    // Also support keyboard Enter/Space on canvas elements
+    function handleCanvasKeydown(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCanvasClick(e);
+      }
+    }
+
+    // ============================================================
+    // INITIALIZE ON DOM READY
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function () {
+
+      // Initialize preview from current field values
+      document.querySelectorAll('.aot-color-swatch').forEach(function (swatch) {
+        var fieldName = swatch.getAttribute('data-field');
+        if (fieldName && swatch.value) {
+          updatePreviewVar(fieldName, swatch.value);
+        }
+      });
+
+      // Swatch input listener
+      document.querySelectorAll('.aot-color-swatch').forEach(function (swatch) {
+        swatch.addEventListener('input', function () {
+          syncFromSwatch(this.getAttribute('data-field'), this.value);
+        });
+      });
+
+      // Hex text input listener
+      document.querySelectorAll('.aot-color-hex').forEach(function (hexInput) {
+        hexInput.addEventListener('input', function () {
+          syncFromHex(this.getAttribute('data-field'), this.value);
+        });
+        // On blur normalize casing and add # if missing
+        hexInput.addEventListener('blur', function () {
+          var val = this.value.trim();
+          if (!val.startsWith('#')) val = '#' + val;
+          if (isValidHex(val)) this.value = val.toUpperCase();
+        });
+      });
+
+      // Preset dropdown
+      var presetSelect = document.getElementById('theme-preset-select');
+      if (presetSelect) {
+        presetSelect.addEventListener('change', function () {
+          if (this.value) applyPreset(this.value);
+          updateDeleteButtonState();
+        });
+      }
+
+      // User presets: populate options + save/delete buttons
+      rebuildUserPresetOptions();
+      var presetSaveBtn = document.getElementById('btn-preset-save');
+      if (presetSaveBtn) presetSaveBtn.addEventListener('click', saveUserPreset);
+      var presetDeleteBtn = document.getElementById('btn-preset-delete');
+      if (presetDeleteBtn) presetDeleteBtn.addEventListener('click', deleteUserPreset);
+      var presetNameInput = document.getElementById('preset-name-input');
+      if (presetNameInput) {
+        presetNameInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveUserPreset();
+          }
+        });
+      }
+
+      // Reset buttons (both top and footer)
+      ['btn-reset-defaults', 'btn-reset-defaults-footer'].forEach(function (btnId) {
+        var btn = document.getElementById(btnId);
+        if (btn) btn.addEventListener('click', resetToDefaults);
+      });
+
+      // Canvas element click / keyboard
+      if (previewEl) {
+        previewEl.addEventListener('click', handleCanvasClick);
+        previewEl.addEventListener('keydown', handleCanvasKeydown);
+      }
+
+      // Global: close popover on outside click
+      document.addEventListener('mousedown', function (e) {
+        if (activePopover && !activePopover.contains(e.target)) {
+          closePopover();
+        }
+      });
+
+      // Global: close popover on Escape (when focus is outside popover)
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && activePopover) {
+          var anchor = activeAnchor;
+          closePopover();
+          if (anchor) anchor.focus();
+        }
+      });
+
+      // Reposition popover on scroll or resize to keep it aligned
+      function repositionActivePopover() {
+        if (activePopover && activeAnchor) {
+          positionPopover(activePopover, activeAnchor);
+        }
+      }
+      window.addEventListener('scroll', repositionActivePopover, { passive: true, capture: true });
+      window.addEventListener('resize', repositionActivePopover, { passive: true });
+    });
+
+  }());
+  </script>
+
+{% endblock %}

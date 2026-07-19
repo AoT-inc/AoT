@@ -1,0 +1,428 @@
+<div id="mod_input_{{each_input.unique_id}}">
+  <form id="mod_input_form_{{each_input.unique_id}}" method="post" action="/input">
+    {{form_mod_input.csrf_token}}
+    {{form_mod_input.input_id(value=each_input.unique_id)}}
+
+    {% set form = form_mod_input %}
+    {% set dict_options = dict_inputs[each_input.device] %}
+    {% set each_device = each_input %}
+    {% set unique_id = each_input.unique_id %}
+
+    {% if each_input.device in ['RPiCPULoad', 'RPiFreeSpace'] -%}
+    <input id="pre_output_id" name="pre_output_id" type="hidden" value="0">
+    <input id="pre_output_duration" name="pre_output_duration" type="hidden" value="0">
+    {% endif -%}
+
+    {% if each_input.device != 'input_spacer' %}
+    {% from 'pages/map/map_option_macros.html' import render_device_map with context %}
+    <div class="map-option-section">
+      <div class="col-12" style="padding:0">
+        {{ render_device_map(
+        'input',
+        each_input.unique_id,
+        form_mod_input.latitude,
+        form_mod_input.longitude,
+        form_mod_input.location_source,
+        each_input.latitude,
+        each_input.longitude,
+        each_input.location_source,
+        'input_mod',
+        'modal_config_' ~ each_input.unique_id,
+        '280px',
+        None,
+        None,
+        None,
+        form_id='mod_input_form_' ~ each_input.unique_id,
+        icon_value=each_input.marker_icon,
+        color_value=each_input.marker_color,
+        size_value=each_input.marker_size or 3,
+        icon_name=form_mod_input.marker_icon.name,
+        color_name=form_mod_input.marker_color.name,
+        size_name=form_mod_input.marker_size.name,
+        map_config_id=(map_config_id if map_config_id is defined and map_config_id else (each_input.map_config_id or
+        '')),
+        map_configs=(map_configs if map_configs is defined else []),
+        map_overlays=map_overlays,
+        shape_on_color=custom_options_values_inputs[each_input.unique_id].get('shape_on_color'),
+        shape_off_color=custom_options_values_inputs[each_input.unique_id].get('shape_off_color'),
+        shape_border_color=custom_options_values_inputs[each_input.unique_id].get('shape_border_color'),
+        save_id='mod_input_save_' ~ each_input.unique_id,
+        shapes_val=custom_options_values_inputs[each_input.unique_id].get('drawing_shapes')
+        ) }}
+      </div>
+    </div>
+    {% endif %}
+
+
+    {% if each_input.device in dict_inputs %}
+    <div class="aot-modal-body-text d-flex flex-wrap" style="gap: 15px; margin-bottom: 0.5rem;">
+      {% if 'input_manufacturer' in dict_inputs[each_input.device] %}
+      <span><strong>{{_("Manufacturer")}}:</strong> {{dict_inputs[each_input.device]['input_manufacturer']}}</span>
+      {% endif %}
+
+      {% if each_input.interface %}
+      <span><strong>{{_("Interface")}}:</strong> {{each_input.interface}}</span>
+      {% endif %}
+
+      {% if 'measurements_name' in dict_inputs[each_input.device] %}
+      <span><strong>{{_("Measurement")}}:</strong> {{dict_inputs[each_input.device]['measurements_name']}}</span>
+      {% endif %}
+
+      {% if 'dependencies_module' in dict_inputs[each_input.device] and dict_inputs[each_input.device]['dependencies_module'] %}
+      <span><strong>{{_("Library")}}:</strong>
+        {% for each_lib in dict_inputs[each_input.device]['dependencies_module'] -%}
+          {% if each_lib[0] == 'pip-pypi' %}
+            <a href="https://pypi.org/project/{{each_lib[2].split('==')[0]}}" target="_blank">{{each_lib[2].split('==')[0]}}</a>
+          {% else %}
+            {{each_lib[1] or each_lib[2]}}
+          {% endif %}{%- if not loop.last %}, {% endif %}
+        {% endfor %}
+      </span>
+      {% endif %}
+    </div>
+
+    {% set manufacturer_url = dict_inputs[each_input.device].get('url_manufacturer') %}
+    {% set datasheet_url = dict_inputs[each_input.device].get('url_datasheet') %}
+    {% set product_purchase_url = dict_inputs[each_input.device].get('url_product_purchase') %}
+    {% set additional_url = dict_inputs[each_input.device].get('url_additional') %}
+
+    {% if manufacturer_url or datasheet_url or product_purchase_url or additional_url %}
+    <div class="aot-modal-body-text" style="margin-top: -0.5rem; font-size: 0.85rem;">
+      <strong>{{_("Related Documents")}}:</strong>
+      {%- if manufacturer_url -%} {{_("Manufacturer")}} {% for each_url in manufacturer_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
+      {%- if datasheet_url -%} {% if manufacturer_url %}; {% endif %}{{_("Datasheet")}} {% for each_url in datasheet_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
+      {%- if product_purchase_url -%} {% if manufacturer_url or datasheet_url %}; {% endif %}{{_("Product Info")}} {% for each_url in product_purchase_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}
+      {%- if additional_url -%} {% if manufacturer_url or datasheet_url or product_purchase_url %}; {% endif %}{{_("Additional Info")}} {% for each_url in additional_url %}<a href="{{each_url}}" target="_blank">{{_('Link')}} {{loop.index}}</a>{{ ", " if not loop.last }}{% endfor %}{%- endif -%}.
+    </div>
+    {% endif %}
+
+    {% if 'message' in dict_inputs[each_input.device] %}
+    <div class="aot-modal-body-text" style="font-style: italic; background: #f9f9f9; padding: 8px; border-radius: 8px; font-size: 0.85rem;">
+      {{dict_inputs[each_input.device]['message']|safe}}
+    </div>
+    {% endif %}
+
+
+    
+    <!-- ... skipped ... -->
+
+    {% if 'custom_channel_options_message' in dict_options %}
+    <div class="aot-modal-container">
+      <div class="col-12" style="padding-bottom: 0.5em; padding-left:0; padding-right:0;">
+        {{dict_options['custom_channel_options_message']|safe}}
+      </div>
+    </div>
+    {% endif %}
+
+    {# REMOVED: custom_channel_options should only be rendered inside the channel loop (lines 336-340) #}
+    {# Previously this rendered the same options twice - once outside the loop and once inside. #}
+
+    <!-- ... skipped ... -->
+
+  <div class="aot-modal-container">
+    <div class="col-12 text-muted small" style="padding:0">
+      <strong>{{_('Usage:')}}</strong> {{_('Every Period of the Input, each Action is executed with the returned measurements.')}}
+    </div>
+  </div>
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod_input.name.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_input.name(class_='form-control aot-modern-input input-device-name', value=each_input.name, **{'title': dict_translation['name']['phrase']})}}
+        </div>
+      </div>
+      {% if tabs and tabs|length > 1 %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod_input.tab_id.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          <select name="tab_id" class="form-control aot-modern-input">
+            {% for tab in tabs %}
+            <option value="{{tab.unique_id}}" {% if tab.unique_id == each_input.tab_id %}selected{% endif %}>{{tab.name}}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+
+    <div class="aot-modal-container">
+
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod_input.unique_id.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_input.unique_id(class_='form-control aot-modern-input', value=each_input.unique_id, **{'title': dict_translation['unique_id']['phrase']})}}
+        </div>
+      </div>
+
+      {% if each_input.device != 'input_spacer' %}
+      <!-- Note Management button added -->
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Manage Notes')}}</label>
+        <div class="aot-modal-option-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+            onclick="window.dispatchEvent(new CustomEvent('open-notes', { detail: { targetId: '{{ each_input.unique_id }}', targetType: 'input', name: '{{ each_input.name }}' } }))">
+            {{_('Note')}}
+          </button>
+        </div>
+      </div>
+      {% if ai_settings and ai_settings.ai_enabled %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('AI Utilization')}}</label>
+        <div class="aot-modal-option-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+            onclick="AoT_AI.openChat({ targetId: '{{ each_input.unique_id }}', targetType: 'input', name: '{{ each_input.name }}' })">
+            {{_('Ask AI')}}
+          </button>
+        </div>
+      </div>
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('AI Context')}}</label>
+        <div class="aot-modal-option-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+            onclick="AIContextPanel.openContext('{{ each_input.unique_id }}', '{{ each_input.name }}')">
+            {{_('View Context')}}
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% include 'pages/form_options/Period.html' %}
+      {% include 'pages/form_options/Pre_Output.html' %}
+      {% include 'pages/form_options/Measurements_Enabled.html' %}
+
+      <!-- Other existing settings items -->
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod_input.log_level_debug.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          <label class="btn-toggle mb-0">
+            <input id="log_level_debug" name="log_level_debug" type="checkbox" class="btn-toggle-input" value="y" {% if each_input.log_level_debug %}checked{% endif %}>
+            <div class="btn-toggle-slider">
+                <div class="btn-toggle-thumb"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" title="{{_('When enabled, if this Input measures both temperature and humidity, a VPD (vapor pressure deficit) channel is automatically recorded.')}}">{{form_mod_input.auto_vpd_enabled.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          <label class="btn-toggle mb-0">
+            <input id="auto_vpd_enabled" name="auto_vpd_enabled" type="checkbox" class="btn-toggle-input" value="y" {% if each_input.auto_vpd_enabled %}checked{% endif %}>
+            <div class="btn-toggle-slider">
+                <div class="btn-toggle-thumb"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {% include 'pages/form_options/Interface.html' %}
+      {% include 'pages/form_options/GPIO.html' %}
+      {% include 'pages/form_options/Bluetooth.html' %}
+      {% include 'pages/form_options/I2C.html' %}
+      {% include 'pages/form_options/FTDI.html' %}
+      {% include 'pages/form_options/UART.html' %}
+      {% include 'pages/form_options/Baud_Rate.html' %}
+      {% include 'pages/form_options/Location.html' %}
+      {% include 'pages/form_options/Coordinates.html' %}
+      {% include 'pages/form_options/Start_Offset.html' %}
+      {% include 'pages/form_options/Num_channels.html' %}
+
+      {# TODO: move many of the below options from database columns to custom options at next major revision #}
+
+      {% include 'pages/form_options/Single_Input_Math.html' %}
+      {% include 'pages/form_options/EDGE.html' %}
+      {% include 'pages/form_options/Times_Check.html' %}
+      {% include 'pages/form_options/Deadline.html' %}
+      {% include 'pages/form_options/Port.html' %}
+      {% include 'pages/form_options/RPM_Pulses_Rev.html' %}
+      {% include 'pages/form_options/Weighting.html' %}
+      {% include 'pages/form_options/Sample_Time.html' %}
+      {% include 'pages/form_options/SHT_Voltage.html' %}
+      {% include 'pages/form_options/Pin_Clock.html' %}
+      {% include 'pages/form_options/Ref_Ohm.html' %}
+      {% include 'pages/form_options/Thermocouple_Type.html' %}
+      {% include 'pages/form_options/Resolution.html' %}
+      {% include 'pages/form_options/Resolution_2.html' %}
+      {% include 'pages/form_options/Sensitivity.html' %}
+      {% include 'pages/form_options/ADC_Gain.html' %}
+      {% include 'pages/form_options/ADC_Resolution.html' %}
+      {% include 'pages/form_options/ADC_Sample_Speed.html' %}
+      {% include 'pages/form_options/Shell_Command.html' %}
+
+      {% endif %}
+    </div>
+
+    <div id="return_text_{{each_input.unique_id}}"></div>
+
+    {% if each_input.device != 'input_spacer' %}
+    <div class="aot-modal-group-title">{{_('Commands')}}</div>
+    <div class="aot-modal-container">
+      {% include 'pages/form_options/Custom_Actions_Message.html' %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Update Immediately')}}</label>
+        <div class="aot-modal-option-control">
+          <button onclick="return $(this).processRequest(this, 'input_acquire_measurements');"
+            class="btn btn-primary aot-pill-btn aot-pill-btn-primary" type="button">{{_('Measure Now')}}</button>
+        </div>
+      </div>
+      {% if each_input.device in custom_commands and custom_commands[each_input.device] %}
+        {% set force_default_value = true %}
+        {% set custom_options_values = none %}
+        {% if 'custom_commands' in dict_options %}
+          {% for each_option in dict_options['custom_commands'] %}
+            {% include 'pages/form_options/Custom_Options.html' %}
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if each_input.device != 'input_spacer' %}
+
+
+    {% set custom_options_values = custom_options_values_inputs %}
+
+    {% if 'custom_options' in dict_options or 'custom_options_message' in dict_options %}
+    {% set force_default_value = false %}
+    <div class="aot-modal-group-title">{{_('Custom Options')}}</div>
+    <div class="aot-modal-container">
+      {% if 'custom_options_message' in dict_options %}
+      {% include 'pages/form_options/Custom_Options_Message.html' %}
+      {% endif %}
+      {% if 'custom_options' in dict_options %}
+      {% for each_option in dict_options['custom_options'] %}
+      {% include 'pages/form_options/Custom_Options.html' %}
+      {% endfor %}
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {%- set input_channel_exists = [] -%}
+    {% for each_input_channel in input_channel if each_input_channel.input_id == each_input.unique_id %}
+    {%- do input_channel_exists.append(1) -%}
+    {% endfor %}
+    {% if input_channel_exists %}
+    <div class="aot-modal-group-title">{{_('Channel Options')}}</div>
+    {% endif %}
+
+    {% set custom_options_values = custom_options_values_input_channels %}
+    {% set dict_options = dict_inputs[each_input.device] %}
+    {% set unique_id = each_input.unique_id %}
+    {% set each_device = each_input %}
+    {% set controller_type = "Input" %}
+    {% set force_default_value = true %}
+    {% set channel_options = true %}
+    {% set custom_opt_container = "aot-modal-channel-group" %}
+
+    {% for each_input_channel in input_channel if each_input_channel.input_id == each_input.unique_id %}
+
+    {% set channel = each_input_channel.channel %}
+    {% set name_prefix = each_device.unique_id + "_" + channel|string + "_" %}
+
+    <div class="aot-modal-channel-title">
+        <span class="aot-modal-channel-tag">CH: {{each_input_channel.channel}}</span>
+        <label class="aot-modal-option-label">
+          {%- if 'name' in custom_options_values[each_input.unique_id][each_input_channel.channel] and
+          custom_options_values[each_input.unique_id][each_input_channel.channel]['name'] -%}
+          {{custom_options_values[each_input.unique_id][each_input_channel.channel]['name']}}
+          {%- else -%}
+          {{_('Channel')}} {{each_input_channel.channel}}
+          {%- endif -%}
+        </label>
+    </div>
+
+    <div class="aot-modal-container">
+    {% if custom_options_values[unique_id] %}
+
+    {% if 'custom_channel_options_message' in dict_options %}
+    <div style="padding: 1em 1em 0.5em 1em;">
+        {{dict_options['custom_channel_options_message']|safe}}
+    </div>
+    {% endif %}
+
+    {% if 'custom_channel_options' in dict_options %}
+    <div style="padding: 0 1em 1em 1em;">
+      {% for each_option in dict_options['custom_channel_options'] %}
+      {% include 'pages/form_options/Custom_Options.html' %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+    </div>
+
+    {% endfor %}
+
+    {% if input_channel_exists %}{% endif %}
+    {% endif %}
+
+    {% if each_input.device != 'input_spacer' %}
+    <div class="aot-modal-group-title">{{_('Measurement Settings')}}</div>
+      {% if "measurements_variable_amount" in dict_options and dict_options['measurements_variable_amount'] %}
+        {% include 'pages/form_options/Measurements_Select.html' %}
+      {% endif %}
+      {% include 'pages/form_options/Measurements_Configure.html' %}
+    {% endif %}
+
+  </form>
+
+  <div class="aot-modal-group-title">{{_('Actions')}} <a href="{{ manual_url('Actions/') }}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></div>
+  <div class="aot-modal-container">
+    <form method="post" action="/input">
+      {{form_actions.csrf_token}}
+      {{form_actions.device_id(value=each_input.unique_id)}}
+      {{form_actions.function_type(value='input')}}
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Add Action')}}</label>
+        <div class="aot-modal-option-control">
+          <div class="aot-action-group">
+            <select class="form-control aot-modern-select selectpicker aot-standard-select" data-style="btn-white" data-live-search="true"
+              data-display="static" data-container="body" data-dropdown-align-right="true"
+              title="{{_('Select')}}" id="action_type_{{each_input.unique_id}}"
+              name="action_type" data-selected-text-format="static">
+              {% for value, name in choices_actions %}
+              <option value="{{value}}">{{name}}</option>
+              {% endfor %}
+            </select>
+            <button onclick="return $(this).processRequest(this, 'add_action');" class="btn btn-primary aot-pill-btn" type="button">{{_('Add')}}</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% set channel_options = false %}
+  {% set post_action = "/input" %}
+
+  <div class="row small-gutters" style="border-bottom: 1px solid #ddd; padding: 0.3em; margin-bottom: 10px;">
+    <div class="col-12 text-muted small">
+      <strong>{{_('Usage:')}}</strong> {{_('Every Period of the Input, each Action is executed with the returned measurements.')}}
+    </div>
+  </div>
+
+  {% from 'pages/function_options/gridstack_helper.html' import init_gridstack_actions with context %}
+  {% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+
+  <div class="grid-stack" id="mod_function_actions_{{each_input.unique_id}}">
+    {% for each_action in action|sort(attribute='position') if each_action.function_id == each_input.unique_id %}
+    {% call gridstack_action_item(each_action, each_input, is_sequence=False) %}{% endcall %}
+    {% endfor %}
+  </div>
+
+  {{ init_gridstack_actions(each_input.unique_id) }}
+
+  <script>
+    if (typeof jQuery !== 'undefined') {
+        // [Fix] Scope to current container only to prevent global selection reset
+        var $ctx = $('#mod_input_{{each_input.unique_id}}');
+        $ctx.find('.selectpicker').each(function() {
+            var $el = $(this);
+            $el.data('selectpicker') ? $el.selectpicker('refresh') : $el.selectpicker();
+        });
+    }
+  </script>
+</div>

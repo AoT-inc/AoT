@@ -1,0 +1,638 @@
+/* aot-facility-widget.css — AoT Facility widget (flat layout, no nested cards)
+ * Uses AoT design system tokens from aot-theme-variables.css
+ */
+
+/* ── Container: flat, no bg (widget frame already provides the card) ─────── */
+.aot-facility-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: .5rem .75rem;
+  font-family: var(--aot-font-family);
+  color: var(--aot-color-text-primary);
+  font-size: var(--aot-font-size-sm);
+}
+
+/* ── Section: divider + heading only, no card box ───────────────────────── */
+.aot-fac-section {
+  padding: .5rem 0 .4rem;
+  border-top: 1px solid var(--aot-border-light);
+  margin-top: .1rem;
+}
+.aot-fac-section:first-child { border-top: none; margin-top: 0; }
+.aot-fac-section h6 {
+  font-size: var(--aot-font-size-xs);
+  font-weight: 700;
+  color: var(--aot-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: .4rem;
+}
+
+/* ── 3D section header (title + badges + timestamp) ─────────────────────── */
+.aot-fac-3d-hdr {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin-bottom: .4rem;
+}
+.aot-fac-3d-hdr .aot-fac-ts {
+  margin-left: auto;
+}
+.aot-fac-ts {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Layer toggle strip ─────────────────────────────────────────────────── */
+.aot-3d-layer-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin-bottom: .4rem;
+}
+.aot-layer-btn {
+  padding: .1rem .55rem;
+  font-size: var(--aot-font-size-xs);
+  font-weight: 600;
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: 9999px;
+  background: var(--bg-off);
+  color: var(--aot-color-text-secondary);
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  line-height: 1.6;
+}
+.aot-layer-btn.aot-layer-on {
+  background: var(--bd-btn-primary);
+  color: var(--text-color-tertiary);
+  border-color: var(--bd-btn-primary);
+}
+.aot-layer-btn:not(.aot-layer-on):hover {
+  background: var(--bd-btn-primary);
+  border-color: var(--bd-btn-primary);
+  color: var(--text-color-tertiary);
+}
+
+/* ── 3D canvas ──────────────────────────────────────────────────────────── */
+.aot-facility-3d-wrap {
+  width: 100%;
+  height: 300px;
+  border-radius: .375rem .375rem 0 0;
+  overflow: hidden;
+  background: var(--bg-off);
+  border: 1px solid var(--aot-border-light);
+  border-bottom: none;
+  position: relative;
+}
+.aot-facility-3d-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+.aot-facility-3d-hint {
+  position: absolute;
+  bottom: 5px;
+  right: 7px;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  pointer-events: none;
+}
+/* Resize handle below 3D canvas */
+.aot-fac-3d-rh {
+  width: 100%;
+  height: 8px;
+  background: var(--aot-border-light);
+  border: 1px solid var(--aot-border-light);
+  border-top: none;
+  border-radius: 0 0 .375rem .375rem;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .3rem;
+}
+.aot-fac-3d-rh::after {
+  content: '';
+  width: 2rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--aot-color-text-secondary);
+  opacity: .4;
+}
+.aot-fac-3d-rh:hover { background: var(--aot-border-neutral); }
+.aot-fac-3d-rh:hover::after { opacity: .75; }
+
+/* ── Preset badge ───────────────────────────────────────────────────────── */
+.preset-badge {
+  display: inline-block;
+  padding: .05rem .4rem;
+  background: var(--bg-off);
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: 9999px;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  margin-left: .25rem;
+  font-weight: 600;
+}
+
+/* ── IEC Status strip ───────────────────────────────────────────────────── */
+.iec-status-strip {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .3rem 0;
+  font-size: var(--aot-font-size-xs);
+  border-top: 1px solid var(--aot-border-light);
+  margin-bottom: .1rem;
+}
+.iec-badge {
+  display: inline-block;
+  padding: .12rem .55rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: var(--aot-font-size-xs);
+  letter-spacing: .04em;
+}
+.iec-badge.emergency { background: var(--aot-color-danger);  color: var(--text-color-tertiary); }
+.iec-badge.warn      { background: var(--aot-color-warning); color: var(--text-color-tertiary); }
+.iec-badge.active    { background: var(--bg-active);         color: var(--aot-color-brand-primary); }
+.iec-badge.idle      { background: var(--aot-bg-inactive);   color: var(--aot-color-text-secondary); }
+.iec-status-reasons  { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); flex: 1; }
+.iec-status-ts       { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); }
+
+/* ── Environment grid ───────────────────────────────────────────────────── */
+.aot-facility-env {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: .3rem;
+}
+.env-cell {
+  padding: .35rem .5rem;
+  background: var(--bg-off);
+  border-radius: .375rem;
+  border: 1px solid var(--aot-border-light);
+  position: relative;
+  transition: border-color .15s;
+}
+.env-cell.env-clickable { cursor: pointer; }
+.env-cell.env-clickable:hover { border-color: var(--bd-btn-primary); }
+.env-cell.iec-focus { outline: 2px solid var(--bd-btn-primary); outline-offset: 1px; }
+.env-label  { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); }
+.env-value  { font-size: .95rem; font-weight: 700; color: var(--aot-color-text-primary); }
+.env-cell.env-ok   .env-value { color: var(--aot-color-success); }
+.env-cell.env-warn .env-value { color: var(--aot-color-warning); }
+.env-cell.env-err  .env-value { color: var(--aot-color-danger);  }
+.env-setpoint {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  display: block;
+  margin-top: .05rem;
+}
+.env-sp-hint {
+  font-size: 9px;
+  color: var(--aot-color-text-secondary);
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  opacity: .5;
+}
+
+/* ── Setpoint popup (appears on env-cell click) ─────────────────────────── */
+.iec-sp-popup {
+  position: fixed;
+  background: var(--bg-off);
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: .5rem;
+  box-shadow: var(--aot-shadow-lg);
+  padding: .75rem 1rem;
+  min-width: 220px;
+  z-index: var(--z-facility-panel, 70);
+}
+.iec-sp-popup-title {
+  font-size: var(--aot-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--aot-color-text-secondary);
+  margin-bottom: .5rem;
+}
+.iec-sp-popup-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .35rem;
+}
+.iec-sp-popup-label {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  width: 90px;
+  flex-shrink: 0;
+}
+.iec-sp-popup-cur {
+  font-size: var(--aot-font-size-xs);
+  font-weight: 600;
+  color: var(--aot-color-text-primary);
+  width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.iec-sp-popup-input {
+  font-size: var(--aot-font-size-sm);
+  padding: .15rem .35rem;
+  border: 1px solid var(--aot-border-form);
+  border-radius: .375rem;
+  width: 72px;
+  background: var(--bg-off);
+  color: var(--aot-color-text-primary);
+}
+.iec-sp-popup-input:focus {
+  border-color: var(--aot-border-form-focus);
+  outline: none;
+  box-shadow: var(--aot-shadow-form-focus);
+}
+.iec-sp-popup-set {
+  padding: .15rem .6rem;
+  font-size: var(--aot-font-size-xs);
+  font-weight: 600;
+  background: var(--aot-btn-bg-primary);
+  color: var(--aot-btn-color-primary);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.iec-sp-popup-set:disabled { opacity: .5; cursor: default; }
+.iec-sp-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: .5rem;
+  padding-top: .4rem;
+  border-top: 1px solid var(--aot-border-light);
+}
+.iec-sp-popup-msg {
+  font-size: var(--aot-font-size-xs);
+  min-height: 1em;
+}
+.iec-sp-popup-close {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  cursor: pointer;
+  padding: .1rem .3rem;
+}
+.iec-sp-popup-close:hover { color: var(--aot-color-text-primary); }
+.iec-sp-group-sep {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin: .4rem 0 .2rem;
+  padding-bottom: .15rem;
+  border-bottom: 1px solid var(--aot-border-light);
+}
+
+/* ── Actuator control table ─────────────────────────────────────────────── */
+.iec-ctrl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--aot-font-size-sm);
+}
+.iec-ctrl-table th {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--aot-border-neutral);
+  padding: .2rem .35rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.iec-ctrl-table td {
+  padding: .28rem .35rem;
+  border-bottom: 1px solid var(--aot-border-light);
+  vertical-align: middle;
+}
+.iec-ctrl-table tr.iec-focus td { background: var(--bg-active); }
+.iec-act-name   { font-weight: 600; color: var(--aot-color-text-primary); max-width: 130px; }
+.iec-act-slider { width: 100%; min-width: 70px; cursor: pointer; accent-color: var(--aot-color-brand-primary); }
+.iec-act-val    { color: var(--aot-color-text-secondary); min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; font-size: var(--aot-font-size-xs); }
+.iec-act-src    { font-size: var(--aot-font-size-xs); padding: .08rem .3rem; border-radius: 9999px; font-weight: 700; }
+.iec-src-manual { background: var(--aot-tint-success-bg); color: var(--aot-tint-success-fg); }
+.iec-src-ai     { background: var(--bg-off);             color: var(--bd-btn-secondary);     }
+.iec-src-auto   { background: var(--bg-off);             color: var(--aot-color-text-secondary); }
+.iec-src-ext    { background: var(--aot-tint-warning-bg); color: var(--aot-tint-warning-fg); }
+
+/* Toggle switch */
+.iec-act-toggle { position: relative; display: inline-block; width: 36px; height: 19px; cursor: pointer; }
+.iec-act-toggle input { display: none; }
+.iec-act-toggle .slider {
+  position: absolute; inset: 0;
+  border-radius: 9999px;
+  background: var(--aot-border-neutral);
+  transition: background .2s;
+}
+.iec-act-toggle .slider:before {
+  content: '';
+  position: absolute;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  left: 3px; top: 3px;
+  transition: transform .2s;
+  box-shadow: var(--aot-shadow-sm);
+}
+.iec-act-toggle input:checked + .slider               { background: var(--bd-btn-primary); }
+.iec-act-toggle input:checked + .slider:before        { transform: translateX(17px); }
+
+/* Estop footer */
+.iec-ctrl-footer { display: flex; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; }
+.iec-btn-estop {
+  padding: .2rem .9rem;
+  font-size: var(--aot-font-size-sm);
+  font-weight: 700;
+  background: var(--aot-color-danger);
+  color: var(--text-color-tertiary, #fff);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.iec-btn-estop:hover  { opacity: .85; }
+.iec-btn-restore {
+  padding: .2rem .9rem;
+  font-size: var(--aot-font-size-sm);
+  background: transparent;
+  color: var(--aot-color-text-primary);
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.iec-readonly-note { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); padding: .25rem 0; }
+
+/* ── AI Advice cards ────────────────────────────────────────────────────── */
+.advice-card {
+  padding: .5rem .7rem;
+  margin-bottom: .3rem;
+  border-radius: .375rem;
+  border: 1px solid var(--aot-border-light);
+  border-left: 3px solid var(--aot-border-neutral);
+}
+.advice-card.now  { border-left-color: var(--aot-color-danger);  background: var(--aot-tint-danger-bg);  }
+.advice-card.h1   { border-left-color: var(--aot-color-warning); background: var(--aot-tint-warning-bg); }
+.advice-card.h6   { border-left-color: var(--aot-color-success); background: var(--aot-tint-success-bg); }
+.advice-title   { font-weight: 700; font-size: var(--aot-font-size-sm); margin-bottom: .15rem; }
+.advice-conf    { color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-xs); float: right; }
+.advice-actions { font-size: var(--aot-font-size-sm); margin: .15rem 0; }
+.advice-reason  { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); font-style: italic; }
+.advice-effect  { font-size: var(--aot-font-size-xs); color: var(--bd-btn-secondary); margin-top: .15rem; }
+.advice-buttons { margin-top: .35rem; }
+.advice-buttons button {
+  font-size: var(--aot-font-size-xs);
+  padding: .15rem .6rem;
+  margin-right: .2rem;
+  border-radius: 9999px;
+  border: 1px solid var(--aot-border-neutral);
+  background: var(--bg-off);
+  cursor: pointer;
+}
+.advice-buttons button.approve {
+  background: var(--aot-btn-bg-primary);
+  color: var(--aot-btn-color-primary);
+  border-color: var(--aot-btn-bg-primary);
+}
+
+/* ── Actuator Panel (§ D2) ───────────────────────────────────────────────── */
+.aot-act-panel { display: flex; flex-direction: column; gap: .4rem; }
+
+.aot-act-group { margin-bottom: .5rem; }
+.aot-act-group-header {
+  font-size: 0.846em;          /* ~11px at 13px base */
+  font-weight: 700;
+  color: var(--aot-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: .15rem 0 .25rem;
+  border-bottom: 1px solid var(--aot-border-light);
+  margin-bottom: .3rem;
+}
+
+.aot-act-row {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  padding: .65rem .55rem;
+  border-radius: .3rem;
+  border: 1px solid var(--aot-border-light);
+  background: var(--bg-off);
+  margin-bottom: .3rem;
+}
+.aot-act-row:last-child {
+  margin-bottom: 0;
+}
+.aot-act-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.aot-act-name {
+  font-size: 1.1em;
+  color: var(--aot-color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Slider */
+.aot-act-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: .2rem;
+  flex: 1;
+}
+.aot-act-slider {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 4px;
+  accent-color: var(--aot-color-brand-primary);
+  cursor: pointer;
+}
+.aot-act-val {
+  font-size: 0.923em;   /* ~12px — 이름(1.1em)보다 작게, 값 위계 명확화 */
+  color: var(--bd-btn-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* 현재값 — muted */
+.aot-act-val-current {
+  font-size: 0.923em;   /* ~12px — 목표값(.aot-act-val)과 동일 크기, 색으로 구분 */
+  color: var(--aot-color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* 시스템 결정값 — 중간 강조 (accent 계열) */
+.aot-act-val-system {
+  font-size: 0.923em;
+  color: var(--aot-color-text-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ON/OFF buttons — 시스템 전역 ON/OFF 토큰(aot-entry-ui.css .aot-btn-on/.aot-btn-off
+   참조)을 따른다. 비활성: --bg-btn-off, 활성: --bg-btn-on, 텍스트: 흰색. */
+.aot-act-toggle-wrap { display: flex; gap: .25rem; }
+.aot-act-btn {
+  height: 26px;                /* .aot-popup-btn-* 와 동일 높이 */
+  padding: 0 12px;             /* .aot-popup-btn-* 와 동일 가로 패딩 */
+  min-width: 2.6rem;
+  font-size: 0.923em;          /* ~12px — .aot-popup-btn-* 와 동일 */
+  font-weight: 600;
+  border-radius: 13px;         /* .aot-popup-btn-* 와 동일 */
+  border: 1px solid var(--bd-btn-border);
+  background: var(--bg-btn-off);
+  color: var(--text-color-tertiary);
+  cursor: pointer;
+  transition: background .15s, filter .15s;
+}
+.aot-act-btn.active {
+  background: var(--bg-btn-on);
+  color: var(--text-color-tertiary);
+  border-color: var(--bd-btn-border);
+}
+.aot-act-btn:hover { filter: brightness(0.9); }
+
+/* Read-only value */
+.aot-act-val-ro {
+  font-size: 0.923em;
+  color: var(--aot-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.aot-act-on  { color: var(--aot-color-success); font-weight: 600; }
+.aot-act-off { color: var(--aot-color-text-secondary); }
+
+.aot-act-empty {
+  font-size: 0.923em;
+  color: var(--aot-color-text-secondary);
+  padding: .5rem 0;
+}
+
+/* ── Actuator 제어 팝업 탭 (그룹: 보온/창호/관수/시설) ────────────────────────
+   단일 '제어' 라벨 클릭 → 하나의 팝업에서 그룹을 탭으로 구분.
+   팝업 박스는 80vh 고정(JS 인라인) — 탭 nav 는 항상 상단 고정, 본문만 스크롤되어
+   탭을 바꿔도 탭 위치가 변하지 않는다. */
+.aot-act-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+.aot-act-tabs-nav {
+  display: flex;
+  gap: .25rem;
+  flex: 0 0 auto;          /* 항상 상단 고정 */
+  flex-wrap: nowrap;
+  overflow-x: auto;        /* 탭이 많으면 가로 스크롤 (스크롤바는 숨김) */
+  margin-bottom: .4rem;
+  padding-bottom: .35rem;
+  padding-right: 36px;     /* 닫기(×) 버튼(right:14px + 버튼폭≈24px) 회피 여백 */
+  border-bottom: 1px solid var(--aot-border-light);
+  scrollbar-width: none;        /* Firefox: 스크롤바 숨김 */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.aot-act-tabs-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.aot-act-tabs-body {
+  flex: 1 1 auto;          /* 남은 높이를 채우고 */
+  min-height: 0;
+  overflow-y: auto;        /* 본문만 스크롤 (스크롤바는 숨김) */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.aot-act-tabs-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+/* 대시보드 탭(.aot-nav-tab) 색상 체계를 그대로 차용. */
+.aot-act-tab-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: .45rem 1rem;
+  font-size: 1.1em;
+  font-weight: 500;
+  color: var(--bd-btn-secondary, #5E6B64);
+  background: var(--bg-off, #F3F6F5);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.aot-act-tab-btn:hover {
+  color: var(--text-color-tertiary, #fff);
+  background: var(--bd-btn-primary, #13261B);
+}
+.aot-act-tab-btn.active {
+  color: var(--text-color-tertiary, #fff);
+  background: var(--bd-btn-secondary, #5E6B64);
+  font-weight: 700;
+}
+.aot-act-tab-count {
+  font-variant-numeric: tabular-nums;
+  opacity: .85;
+}
+
+/* Actuator category 라벨/팝업은 별도 클래스를 만들지 않는다.
+   - 라벨: 시스템 .aot-sensor-map-marker (Input 라벨과 통일)
+   - 팝업 외형: maplibregl 기본 (map.css 의 .maplibregl-popup-content)
+   - 팝업 내부: 기존 .aot-act-group-header / .aot-act-row / .aot-act-btn /
+                .aot-act-slider / .aot-act-val / .aot-act-val-ro 그대로 사용 */
+
+/* AoT_map 액추에이터 팝업 폭/z-index — map.css .aot-popup--facility 로 관리. */
+
+/* ── 장치 제어 목록 드래그 정렬 (aot-actuator-order.js) ──────────────────────────
+   시스템 카드 정렬과 UI/UX 통일: 가로 2줄 그립(fa-grip-lines) 핸들에서만 드래그
+   시작. 핸들 외 영역(이름/슬라이더/버튼)은 기존 동작 유지. */
+.aot-act-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  cursor: grab;
+  color: var(--bd-btn-secondary);
+  opacity: .65;
+  padding: 0 4px;
+  margin-right: 2px;
+  font-size: 14px;
+  line-height: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.aot-act-drag-handle:hover { opacity: 1; }
+.aot-act-drag-handle:active { cursor: grabbing; }
+.aot-act-drag-handle i { pointer-events: none; }
+
+/* 팝업/패널 행(.aot-act-row)은 세로 스택(flex-column)이라 핸들을 제목(.aot-act-name)
+   줄 왼쪽 옆에 맞춘다. 핸들 박스를 제목과 동일한 글꼴/줄높이로 두고 top 을 제목
+   줄 시작(.aot-act-row padding-top)과 맞춰, align-items:center 로 아이콘을
+   제목 텍스트의 상하 중심에 정렬한다. */
+.aot-act-row { position: relative; }
+.aot-act-row > .aot-act-drag-handle {
+  position: absolute;
+  left: .3rem;
+  top: .65rem;           /* .aot-act-row padding-top(.65rem) → 제목 줄 시작에 정렬 */
+  bottom: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  font-size: 1.1em;      /* .aot-act-name 과 동일 글꼴 크기 → 같은 줄 박스 */
+  line-height: 1.4;      /* 제목과 동일 줄높이로 박스 높이 확보 */
+}
+/* 아이콘 자체 크기는 고정하고, 위 줄 박스 안에서 세로 중앙 정렬(상속 align-items:center) */
+.aot-act-row > .aot-act-drag-handle i { font-size: 13px; line-height: 1; }
+.aot-act-row:has(> .aot-act-drag-handle) { padding-left: 22px; }
+/* 제목과 핸들의 줄 박스를 동일하게 맞춰 아이콘이 제목 텍스트 상하 중심에 오게 함 */
+.aot-act-row > .aot-act-name { line-height: 1.4; }
+
+/* 그리드 이름 셀 안의 핸들은 이름 텍스트와 같은 줄(인라인)에 배치 */
+.iec-act-name .aot-act-drag-handle { vertical-align: middle; margin-right: 4px; }
+
+.aot-act-row.aot-act-dragging,
+tr.aot-act-dragging { opacity: .45; }

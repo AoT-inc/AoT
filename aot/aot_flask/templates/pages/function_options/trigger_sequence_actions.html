@@ -1,0 +1,48 @@
+{% from 'pages/function_options/gridstack_action_base.html' import gridstack_action_item with context %}
+{% set unique_id = each_action.unique_id %}
+{% set action_options = custom_options_values_actions.get(unique_id, {}) %}
+
+{% call gridstack_action_item(each_action, each_function, is_sequence=True, gs_h=32) %}
+    <!-- Tier 2: Sequence Settings (Mode, Duration, Ref) -->
+    <div class="d-flex align-items-center" style="border: 1px solid var(--border-neutral); border-top: none; border-radius: 0 0 16px 16px; padding: 4px 8px; background-color: var(--bd-primary); gap: 6px;">
+        <!-- Mode Selection -->
+        <div style="flex: 1 1 auto; max-width: 160px; margin-right: 6px; min-width: 80px;">
+             <select class="form-control selectpicker aot-no-caret-select" data-container="body" data-width="100%" name="sequence_mode" style="height: 26px; font-size: 0.8rem; background-color: var(--aot-input-bg);" onchange="toggleSequenceFields('{{unique_id}}', this.value)" title="{{_('Operation Mode')}}">
+                <option value="single" {% if action_options.get('sequence_mode') == 'single' %}selected{% endif %}>{{_('Single')}}</option>
+                <option value="total" {% if action_options.get('sequence_mode') == 'total' %}selected{% endif %}>{{_('Total')}}</option>
+            </select>
+        </div>
+
+        <!-- Duration Input -->
+        <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 160px; margin-right: 6px; min-width: 65px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
+             <input type="text" class="form-control aot-time-input" name="action_duration" value="{{ action_options.get('action_duration', 0) }}" placeholder="{{_('Sec')}}" style="height: 26px; font-size: 0.8rem; text-align: center; border-radius: 14px; padding: 0 4px;" title="{{_('Default Duration (sec)')}}">
+        </div>
+
+        <!-- Dynamic Duration -->
+        <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 160px; min-width: 100px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
+            <select class="form-control selectpicker aot-no-caret-select" data-container="body" data-width="100%" name="action_duration_id" style="height: 26px; font-size: 0.8rem; background-color: var(--bd-primary);" title="{{_('Dynamic Duration Reference')}}">
+                <option value="">-</option>
+                <optgroup label="PID">
+                    {% for pid in choices_pid %}
+                    <option value="{{pid.value}}" {% if action_options.get('action_duration_id') == pid.value %}selected{% endif %}>{{pid.item}}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Function">
+                    {% for func in choices_function %}
+                    <option value="{{func.value}}" {% if action_options.get('action_duration_id') == func.value %}selected{% endif %}>{{func.item}}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Input">
+                    {% for input in choices_input %}
+                    <option value="{{input.value}}" {% if action_options.get('action_duration_id') == input.value %}selected{% endif %}>{{input.item}}</option>
+                    {% endfor %}
+                </optgroup>
+            </select>
+        </div>
+
+        <!-- Device Group: steps sharing the same label fire simultaneously -->
+        <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
+             <input type="text" class="form-control" name="group_name" value="{{ action_options.get('group_name', '') }}" placeholder="{{_('Group')}}" style="height: 26px; font-size: 0.8rem; text-align: center; border-radius: 14px; padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Steps sharing the same group name run together at once')}}">
+        </div>
+    </div>
+{% endcall %}
