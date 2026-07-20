@@ -33,6 +33,10 @@ from aot.aot_flask.forms import forms_dependencies, forms_misc
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import utils_general
 from aot.utils.actions import parse_action_information
+from aot.utils.docker_backup import (docker_backup_create,
+                                        docker_backup_delete,
+                                        docker_backup_restore,
+                                        docker_can_perform_backup)
 from aot.utils.functions import parse_function_information
 from aot.utils.github_release_info import AoTRelease
 from aot.utils.service_control import reload_frontend, restart_daemon
@@ -69,7 +73,13 @@ def admin_backup():
     form_backup = forms_misc.Backup()
 
     backup_dirs_tmp = []
-    if not os.path.isdir('/var/AoT-backups'):
+    if DOCKER_CONTAINER:
+        # Docker backups are written straight to BACKUP_PATH (see
+        # docker_backup.py) — no /var/AoT-backups bare-metal convention here.
+        os.makedirs(BACKUP_PATH, exist_ok=True)
+        backup_dirs_tmp = sorted(next(os.walk(BACKUP_PATH))[1])
+        backup_dirs_tmp.reverse()
+    elif not os.path.isdir('/var/AoT-backups'):
         flash(gettext("Error: Backup directory doesn't exist."), "error")
     else:
         backup_dirs_tmp = sorted(next(os.walk(BACKUP_PATH))[1])
@@ -84,41 +94,68 @@ def admin_backup():
             full_paths.append(full_path)
 
     if request.method == 'POST':
-        # Backup create/restore run bare-metal scripts (aot_wrapper backup-create /
-        # backup-restore) that assume /var/aot-root, /opt/AoT and systemd, and only
-        # cover aot/databases — not the live Docker volume (aot_data). Block them in
-        # Docker; the volume must be snapshotted directly instead.
-        if DOCKER_CONTAINER and (form_backup.backup.data or form_backup.restore.data):
-            flash(gettext(
-                "Backup and restore from this page are not available in Docker. "
-                "The live database is stored in the Docker volume 'aot_data'; "
-                "snapshot that volume directly instead."), "error")
-            return redirect(url_for('routes_admin.admin_backup'))
         if form_backup.backup.data:
-            backup_size, free_before, free_after = can_perform_backup()
-            if free_after / 1000000 > 50:
-                now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
-                cmd = "{pth}/aot/scripts/aot_wrapper backup-create" \
-                      " >> {log} 2>&1".format(pth=INSTALL_DIRECTORY,
-                                              log=BACKUP_LOG_FILE)
-                with open(BACKUP_LOG_FILE, 'a+') as f:
-                    f.write(f"\n{now} Backup initiated\n")
-                subprocess.Popen(cmd, shell=True)
-                flash(gettext("Backup in progress"), "success")
+            if DOCKER_CONTAINER:
+                # docker_can_perform_backup() mirrors can_perform_backup() but
+                # sized against what docker_backup_create() actually copies
+                # (DB + uploads, not the whole install directory) and checked
+                # against BACKUP_PATH's own filesystem.
+                backup_size, free_before, free_after = docker_can_perform_backup()
+                if free_after / 1000000 > 50:
+                    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    with open(BACKUP_LOG_FILE, 'a+') as f:
+                        f.write(f"\n{now} Backup initiated (Docker)\n")
+
+                    def _run_backup():
+                        status, result = docker_backup_create()
+                        now2 = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                        with open(BACKUP_LOG_FILE, 'a+') as log_f:
+                            if status:
+                                log_f.write(f"\n{now2} Backup failed: {result}\n")
+                            else:
+                                log_f.write(f"\n{now2} Backup completed: {result}\n")
+
+                    threading.Thread(target=_run_backup).start()
+                    flash(gettext("Backup in progress"), "success")
+                else:
+                    flash(
+                        gettext(
+                            "Not enough free space to perform a backup. A backup "
+                            "requires %(size_bu).1f MB but there is only "
+                            "%(size_free).1f MB available, which would leave "
+                            "%(size_after).1f MB after the backup. If the free space "
+                            "after a backup is less than 50 MB, the backup cannot "
+                            "proceed. Free up space by deleting current "
+                            "backups.",
+                            size_bu=backup_size / 1000000,
+                            size_free=free_before / 1000000,
+                            size_after=free_after / 1000000),
+                        'error')
             else:
-                flash(
-                    gettext(
-                        "Not enough free space to perform a backup. A backup "
-                        "requires %(size_bu).1f MB but there is only "
-                        "%(size_free).1f MB available, which would leave "
-                        "%(size_after).1f MB after the backup. If the free space "
-                        "after a backup is less than 50 MB, the backup cannot "
-                        "proceed. Free up space by deleting current "
-                        "backups.",
-                        size_bu=backup_size / 1000000,
-                        size_free=free_before / 1000000,
-                        size_after=free_after / 1000000),
-                    'error')
+                backup_size, free_before, free_after = can_perform_backup()
+                if free_after / 1000000 > 50:
+                    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    cmd = "{pth}/aot/scripts/aot_wrapper backup-create" \
+                          " >> {log} 2>&1".format(pth=INSTALL_DIRECTORY,
+                                                  log=BACKUP_LOG_FILE)
+                    with open(BACKUP_LOG_FILE, 'a+') as f:
+                        f.write(f"\n{now} Backup initiated\n")
+                    subprocess.Popen(cmd, shell=True)
+                    flash(gettext("Backup in progress"), "success")
+                else:
+                    flash(
+                        gettext(
+                            "Not enough free space to perform a backup. A backup "
+                            "requires %(size_bu).1f MB but there is only "
+                            "%(size_free).1f MB available, which would leave "
+                            "%(size_after).1f MB after the backup. If the free space "
+                            "after a backup is less than 50 MB, the backup cannot "
+                            "proceed. Free up space by deleting current "
+                            "backups.",
+                            size_bu=backup_size / 1000000,
+                            size_free=free_before / 1000000,
+                            size_after=free_after / 1000000),
+                        'error')
 
         elif form_backup.download.data:
             def get_all_file_paths(directory):
@@ -169,6 +206,18 @@ def admin_backup():
             backup_date_version = form_backup.selected_dir.data
             if not re.match(r'^[\w.\-]+$', backup_date_version or ''):
                 flash(gettext("Invalid backup directory name."), "error")
+            elif DOCKER_CONTAINER:
+                dest_dir = os.path.join(BACKUP_PATH, "AoT-backup-{}".format(backup_date_version))
+                real_backup_path = os.path.realpath(BACKUP_PATH)
+                real_dest_dir = os.path.realpath(dest_dir)
+                if not real_dest_dir.startswith(real_backup_path + os.sep):
+                    flash(gettext("Invalid backup path."), "error")
+                else:
+                    status, result = docker_backup_delete(dest_dir)
+                    if status:
+                        flash(gettext("Error: %(err)s", err=result), "error")
+                    else:
+                        flash(gettext("Backup deleted"), "success")
             else:
                 cmd = ["{pth}/aot/scripts/aot_wrapper".format(pth=INSTALL_DIRECTORY),
                        "backup-delete",
@@ -186,6 +235,22 @@ def admin_backup():
                 flash(gettext("Invalid restore path."), "error")
             elif not os.path.isdir(full_path):
                 flash(gettext("Directory not found: %(dir)s", dir=full_path), "error")
+            elif DOCKER_CONTAINER:
+                now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                with open(RESTORE_LOG_FILE, 'a+') as f:
+                    f.write(f"\n{now} Restore initiated from {full_path} (Docker)\n")
+
+                def _run_restore(src_dir=full_path):
+                    status, result = docker_backup_restore(src_dir)
+                    now2 = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    with open(RESTORE_LOG_FILE, 'a+') as log_f:
+                        if status:
+                            log_f.write(f"\n{now2} Restore failed: {result}\n")
+                        else:
+                            log_f.write(f"\n{now2} Restore completed: {result}\n")
+
+                threading.Thread(target=_run_restore).start()
+                flash(gettext("Restore in progress"), "success")
             else:
                 now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                 cmd = ["{pth}/aot/scripts/aot_wrapper".format(pth=INSTALL_DIRECTORY),

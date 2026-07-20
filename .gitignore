@@ -100,5 +100,7 @@ aot/user_python_code/conditional_*.py
 # (루트 화이트리스트 /* 로 이미 무시되나 의도를 명시)
 /rak/
 
-# --- 비배포: 배포대상 outputs 내 제외 파일 ---
-aot/outputs/on_off_mqtt_farmon_v1.py
+# --- 비공개(상업용) 사용자 output 모듈 ---
+# 표준 output 경로가 아니라 custom_outputs(사용자 모듈 스캔 경로)에 둔다.
+# 이러면 공개 이미지/트리에 안 들어가고, 커밋·풀·이미지 빌드에 영향 없음.
+aot/outputs/custom_outputs/on_off_mqtt_farmon_v1.py

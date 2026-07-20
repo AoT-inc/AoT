@@ -86,7 +86,6 @@ from .ai import AIRoleConfig       # Layer 2 Hybrid Loader — SBS-002_V2
 from .ai import AIActionRegistry   # Layer 2 Hybrid Loader — SBS-002_V2
 from .ai_skeleton import AIAgentSkeleton  # [TASK_254_FIX] Restore missing registration
 from .ai_task import AITask
-from .ai_task_history import AITaskHistory
 from .scheduler import SchedulerJobMeta
 from .scheduler import SchedulerAuditLog
 from .ai_settings import AIGlobalSettings

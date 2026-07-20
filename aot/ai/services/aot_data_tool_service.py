@@ -1,5 +1,5 @@
 import logging
-from aot.utils.time_utils import utc_now
+from aot.utils.time_utils import utc_now, to_local, serialize_ts
 from aot.utils.tz_utils import now_utc, to_utc
 from datetime import datetime, timedelta
 from sqlalchemy import or_
@@ -66,11 +66,21 @@ class AoTDataToolService:
                     measure=measurement, duration_sec=86400, value='LAST', datetime_obj=True
                 )
                 if last and last[0] is not None and last[1] is not None:
+                    _t = last[0]
+                    if hasattr(_t, 'astimezone'):
+                        # tz-aware (InfluxDB client) but in UTC — show in this
+                        # device's own location time, consistent with the rest
+                        # of the location-aware time work.
+                        try:
+                            from aot.utils.device_tz import resolve_location_tz
+                            _t = _t.astimezone(resolve_location_tz(target_input.unique_id))
+                        except Exception:
+                            pass
                     results.append({
                         "device_name": target_input.name or target_input.unique_id,
                         "measurement": measurement or m.measurement,
                         "last_value": round(last[1], 2),
-                        "last_time": last[0].isoformat() if hasattr(last[0], 'isoformat') else str(last[0]),
+                        "last_time": _t.isoformat() if hasattr(_t, 'isoformat') else str(_t),
                         "unit": unit,
                         "note": "Time-series query failed - only latest value provided"
                     })
@@ -208,7 +218,15 @@ class AoTDataToolService:
                 )
 
                 if data:
-                    readings = [{"t": row[0].isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
+                    # Rows are tz-aware UTC (InfluxDB client) — display in this
+                    # device's own location time (resolved once per measurement,
+                    # not per row) for the same reason as _get_last_values_fallback above.
+                    try:
+                        from aot.utils.device_tz import resolve_location_tz
+                        _tz = resolve_location_tz(target_input.unique_id)
+                        readings = [{"t": row[0].astimezone(_tz).isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
+                    except Exception:
+                        readings = [{"t": row[0].isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
                     values = [row[1] for row in data]
                     _keep = int(limit) if limit else 20
                     results.append({
@@ -728,40 +746,76 @@ class AoTDataToolService:
             return ""
 
     @staticmethod
-    def add_schedule_tool(date, content, worker=None, time="09:00", tags=None):
+    def add_schedule_tool(date, content, worker=None, time="09:00", tags=None,
+                          target_name=None, **extra):
         """
         [분류 B - 일정/계획 전용 도구]
-        사람의 작업 일정이나 메모를 등록합니다. (SchedulerJobMeta 기반)
-        제초작업, 점검, 청소 등 수동 작업에 사용.
+        사람의 작업/이벤트 일정(제초·방제·정식·수확·점검·출하 등)을 등록합니다.
+        (SchedulerJobMeta 기반, action_type='human')
         Routing: propose_job(action_type='human') -> approve_job(decided_by='AI')
         No APScheduler trigger is created for human-type schedules.
+
+        위치 연결: target_name(구역/시설/장치 이름, 예 '온실', '3-1', '1포장 1-1')을 주면
+        _resolve_note_target로 실제 엔티티(target_id)에 붙여 지도·위치별 조회가 성립합니다.
+        모호/미해석이면 available_targets를 돌려주니 ask_user로 확인 후 재시도하세요.
+        위치를 특정하지 않는 농장 전체 일정이면 target_name 없이 등록합니다(떠 있는 일정).
         """
         try:
             from aot.ai.services.ai_scheduler_service import AISchedulerService
-            from datetime import datetime
 
-            # 1. Parse run_at datetime (AI-provided time is treated as-is; stored in UTC column)
-            dt_str = f"{date} {time}"
-            run_at = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            # LLM aliases for the location name.
+            if not target_name:
+                target_name = extra.pop('location', None) or extra.pop('zone_name', None) \
+                    or extra.pop('place', None) or extra.pop('entity_name', None)
 
-            # 2. Build job description and reasoning text
-            job_name = content
-            if worker:
-                job_name = f"{content} (worker: {worker})"
+            # 1. Parse run_at datetime — AI-provided wall-clock is USER-LOCAL time,
+            #    stored as UTC-aware (project standard). serialize_ts() converts back
+            #    for display. Shared with edit/search so CRUD stays tz-consistent.
+            run_at = AoTDataToolService._schedule_wall_to_utc(date, time)
 
-            # 3. Extract spatial tags for reasoning metadata
+            # 2. Resolve location → real entity (or ask for disambiguation). Do NOT
+            #    silently create a floating (target_id='none') schedule when the user
+            #    named a place — same orphan footgun the notes tool guards against.
+            target_id = 'none'
+            target_type = None
+            resolved_name = None
+            if target_name:
+                _tid, _tt, resolved_name, _lat, _lng = \
+                    AoTDataToolService._resolve_note_target(target_name)
+                if not _tid:
+                    return {
+                        "status": "needs_disambiguation",
+                        "error": "target_not_found",
+                        "message": (f"위치 '{target_name}'를 특정하지 못했습니다. "
+                                    f"available_targets에서 정확한 이름을 고르도록 ask_user로 "
+                                    f"확인한 뒤 다시 등록하세요."),
+                        "available_targets": AoTDataToolService._geoshape_name_candidates(),
+                    }
+                target_id = _tid
+                target_type = _tt
+
+            # 3. Build reasoning + params
+            job_name = content if not worker else f"{content} (worker: {worker})"
             spatial_tags = tags or AoTDataToolService._extract_spatial_tags(content)
-            tag_label = f"ai_scheduled, human_work"
+            tag_label = "ai_scheduled, human_work"
             if spatial_tags:
                 tag_label += f", {spatial_tags}"
+            reasoning = f"[human_schedule] {job_name}"
+            if resolved_name:
+                reasoning += f" @ {resolved_name}"
+            reasoning += f" | tags: {tag_label}"
 
-            reasoning = f"[human_schedule] {job_name} | tags: {tag_label}"
+            params = {'content': content, 'worker': worker or '', 'tags': tag_label}
+            if target_type:
+                params['target_type'] = target_type
+            if resolved_name:
+                params['target_name'] = resolved_name
 
             # 4. Propose job as DRAFT (source_type='human' marks it as a human work item)
             meta = AISchedulerService.propose_job(
                 action_type='human',
-                target_id='none',
-                params={'content': content, 'worker': worker or '', 'tags': tag_label},
+                target_id=target_id,
+                params=params,
                 reasoning=reasoning,
                 schedule_time=run_at,
                 proposed_by='AI',
@@ -772,12 +826,21 @@ class AoTDataToolService:
             # 5. Immediately approve — no APScheduler trigger for human schedules
             AISchedulerService.approve_job(meta.id, decided_by='AI')
 
-            return {
+            result = {
                 "status": "success",
                 "message": f"Schedule registered: {date} {time} - {content}",
                 "job_id": meta.unique_id,
                 "tags": tag_label,
             }
+            if target_id != 'none':
+                result["attached_to"] = resolved_name or target_id
+                result["target_id"] = target_id
+                result["target_type"] = target_type
+            else:
+                result["attached"] = False
+                result["note_hint"] = ("위치 미지정 — 특정 구역/시설에 표시되지 않는 "
+                                       "농장 전체 일정입니다.")
+            return result
         except Exception as e:
             logger.error(f"Error in add_schedule_tool: {e}")
             return {"error": f"Error while registering schedule: {str(e)}"}
@@ -849,7 +912,10 @@ class AoTDataToolService:
             for r in rows:
                 results.append({
                     "note_id": r.unique_id,
-                    "date": r.date_time.strftime("%Y-%m-%d %H:%M") if r.date_time else None,
+                    # r.date_time is stored naive-UTC (SQLite) — localize before
+                    # display, or a bare strftime shows the UTC hour as if it
+                    # were local wall-clock time (up to 9h off for KST).
+                    "date": to_local(r.date_time).strftime("%Y-%m-%d %H:%M") if r.date_time else None,
                     "name": r.name,
                     "category": r.category,
                     "tags": r.tags,
@@ -911,10 +977,16 @@ class AoTDataToolService:
                         return {"error": f"Invalid time format: {scheduled_time}. Use ISO 8601 format."}
                 else:
                     scheduled_dt = scheduled_time
-                try:
-                    scheduled_dt = to_utc(scheduled_dt)  # normalise to UTC-aware
-                except ValueError:
-                    return {"error": f"Ambiguous datetime (no timezone info): {scheduled_time}. Use ISO 8601 with timezone offset."}
+                if scheduled_dt.tzinfo is None:
+                    # No offset given (the model doesn't always include one) —
+                    # interpret it as the TARGET DEVICE'S OWN local wall-clock
+                    # time (every device resolves its tz from coordinates, see
+                    # device_tz.py) rather than rejecting it as ambiguous. This
+                    # is what a user means by "4pm" for a specific device — not
+                    # a UTC instant, and not necessarily the farm-wide default.
+                    from aot.utils.device_tz import resolve_location_tz
+                    scheduled_dt = resolve_location_tz(output.unique_id).localize(scheduled_dt)
+                scheduled_dt = to_utc(scheduled_dt)  # normalise to UTC-aware
                 if scheduled_dt <= now:
                     return {"error": f"Requested schedule time {scheduled_time} is in the past. Please provide a future time."}
             else:
@@ -930,13 +1002,21 @@ class AoTDataToolService:
 
             duration_sec = _duration_minutes * 60
 
+            # scheduled_dt is UTC-aware — display in the DEVICE'S OWN location tz
+            # (every Output resolves its tz from coordinates, see device_tz.py),
+            # not left as a bare UTC instant: a raw strftime here would report
+            # the confirmation time up to 9h off from the device's actual wall
+            # clock (KST).
+            from aot.utils.device_tz import resolve_location_tz
+            _display_dt = scheduled_dt.astimezone(resolve_location_tz(output.unique_id))
+
             # 3. SchedulerJobMeta 생성 + 자동 승인 (APScheduler 등록)
             #    proposed_by='HUMAN' + approval_required=False → propose_job() 내부에서 approve_job() 자동 호출
             meta = AISchedulerService.propose_job(
                 action_type='control_output',
                 target_id=output.unique_id,
                 params={'state': state, 'duration_minutes': _duration_minutes},
-                reasoning=f"User request: {output.name} {state} at {scheduled_dt.strftime('%H:%M')}",
+                reasoning=f"User request: {output.name} {state} at {_display_dt.strftime('%H:%M')}",
                 schedule_time=scheduled_dt,
                 duration_sec=duration_sec,
                 proposed_by='HUMAN',    # 사용자가 직접 지시 → 추가 승인 불필요
@@ -946,12 +1026,339 @@ class AoTDataToolService:
             logger.info(f"[AI Schedule] Registered APScheduler job: {output.name} {state} at {scheduled_dt} (meta_id={meta.id if hasattr(meta, 'id') else meta})")
             return {
                 "status": "success",
-                "message": f"Scheduled {output.name} to {state} at {scheduled_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {_duration_minutes} min)",
+                "message": f"Scheduled {output.name} to {state} at {_display_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {_duration_minutes} min)",
                 "scheduler_job_id": meta.id if hasattr(meta, 'id') else str(meta),
             }
         except Exception as e:
             logger.error(f"Error in schedule_device_control_tool: {e}")
             return {"error": f"Error while scheduling device control: {str(e)}"}
+
+    # ---------------------------------------------------------------------
+    # Schedule CRUD helpers (SchedulerJobMeta is the ledger of record — A안)
+    # ---------------------------------------------------------------------
+    @staticmethod
+    def _schedule_wall_to_utc(date_str, time_str="09:00"):
+        """AI가 준 벽시계 날짜/시각(YYYY-MM-DD, HH:MM)을 '사용자 로컬 시각'으로
+        해석하여 저장용 UTC-aware datetime으로 변환한다.
+
+        프로젝트 표준: 저장 datetime은 모두 UTC-aware (aot/utils/tz_utils.py).
+        표시할 때 serialize_ts()가 로컬로 되돌린다. (과거 add_schedule은 벽시계를
+        naive=UTC로 저장해 표시 시 로컬로 한 번 더 밀리는 잠재 버그가 있었음 —
+        create/edit/read를 이 헬퍼로 통일해 규약을 일치시킨다.)
+        """
+        from aot.utils.tz_utils import get_user_tz
+        from datetime import timezone as _tz
+        naive = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        local_aware = get_user_tz().localize(naive)
+        return local_aware.astimezone(_tz.utc)
+
+    @staticmethod
+    def _resolve_schedule_job(job_id):
+        """일정을 unique_id(우선) 또는 정수 PK로 조회. 없으면 None."""
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        if job_id is None:
+            return None
+        key = str(job_id).strip()
+        meta = SchedulerJobMeta.query.filter_by(unique_id=key).first()
+        if meta:
+            return meta
+        if key.isdigit():
+            return SchedulerJobMeta.query.get(int(key))
+        return None
+
+    @staticmethod
+    def _schedule_summary(meta):
+        """SchedulerJobMeta 한 행을 AI가 읽기 쉬운 요약 dict로 직렬화."""
+        import json as _json
+        from aot.utils.time_utils import serialize_ts
+        try:
+            params = _json.loads(meta.params_json) if meta.params_json else {}
+        except Exception:
+            params = {}
+        content = params.get('content') or meta.reasoning or meta.action_type
+        return {
+            'job_id': meta.unique_id,
+            'when': serialize_ts(meta.schedule_time) if meta.schedule_time else None,
+            'content': content,
+            'worker': params.get('worker') or None,
+            'location': params.get('target_name') or None,   # resolved entity name
+            'target_id': meta.target_id if meta.target_id and meta.target_id != 'none' else None,
+            'kind': meta.action_type,          # human / control_output / automated_fire ...
+            'state': meta.state,
+            'editable': bool(meta.is_editable),
+            'deletable': bool(meta.is_deletable),
+        }
+
+    @staticmethod
+    def get_local_time_tool(target_name=None, target_id=None, **extra):
+        """
+        [읽기전용] 특정 위치(구역/시설/장치)의 현재 로컬시각·시간대를 반환한다.
+        모든 지도 도형/장치는 좌표를 가지며 그로부터 IANA 시간대가 해석된다
+        (aot/utils/device_tz.py — timezonefinder 기반, 명시적 설정이 없으면
+        좌표→시간대, 그마저 없으면 농장 전체 기본 시간대로 폴백).
+
+        위치에 대해 설명·계획할 때(예: "그 구역은 지금 몇시야?", "야간작업이라
+        오늘 말고 내일로 옮기자") 이 도구로 실제 현지시각을 확인한 뒤 답하라
+        — 전역 설정을 무조건 가정하지 말 것.
+        """
+        try:
+            from aot.utils.device_tz import resolve_location_tz
+            from datetime import datetime as _dt, timezone as _tzinfo
+
+            resolved_name = None
+            if not target_id and target_name:
+                target_id, _tt, resolved_name, _lat, _lng = \
+                    AoTDataToolService._resolve_note_target(target_name)
+                if not target_id:
+                    return {
+                        "status": "success",
+                        "message": (f"위치 '{target_name}'를 찾지 못해 농장 기본 시간대로 "
+                                    f"응답합니다."),
+                        "available_targets": AoTDataToolService._geoshape_name_candidates(),
+                        "location": "farm-wide (default)",
+                        "timezone": str(resolve_location_tz(None)),
+                        "local_time": _dt.now(_tzinfo.utc).astimezone(
+                            resolve_location_tz(None)).strftime('%Y-%m-%d %H:%M:%S'),
+                    }
+
+            tz = resolve_location_tz(target_id)
+            now_local = _dt.now(_tzinfo.utc).astimezone(tz)
+            return {
+                "status": "success",
+                "location": resolved_name or target_name or "farm-wide (default)",
+                "timezone": str(tz),
+                "local_time": now_local.strftime('%Y-%m-%d %H:%M:%S'),
+                "utc_offset": now_local.strftime('%z'),
+            }
+        except Exception as e:
+            logger.error(f"Error in get_local_time_tool: {e}")
+            return {"error": f"Error while resolving local time: {str(e)}"}
+
+    @staticmethod
+    def _geoshape_name_candidates(limit=20):
+        """지도 도형(GeoShape) 이름 후보 목록 — 위치 미해석 시 ask_user 제시용."""
+        import json as _json
+        out = []
+        for s in GeoShape.query.limit(40).all():
+            try:
+                f = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+                nm = (f.get('properties') or {}).get('name')
+                if nm:
+                    out.append(nm)
+            except Exception:
+                continue
+        return out[:limit]
+
+    @staticmethod
+    def search_schedule_tool(query=None, target_name=None,
+                             include_past=False, include_archived=False,
+                             limit=20, **extra):
+        """
+        [분류 C - 일정 조회 도구]
+        농장 운영 일정(작업·이벤트·장치 예약)을 SchedulerJobMeta 원장에서 조회한다.
+        기본은 '앞으로 예정된 일정'(schedule_time >= 지금)만. edit/delete_schedule에
+        넘길 job_id를 얻으려면 먼저 이 도구로 대상을 찾는다(노트의 search→act 패턴).
+
+        Args:
+            query (str): 내용/사유(reasoning·content) 부분 검색 키워드. 없으면 전체.
+            target_name (str): 특정 위치/장치에 걸린 일정만 (이름 → unique_id 해석).
+            include_past (bool): True면 지난 일정/기록도 포함(기본 False = 예정만).
+            include_archived (bool): True면 취소/보관(ARCHIVED)된 것도 포함(기본 False).
+            limit (int): 최대 반환 건수(기본 20).
+        """
+        try:
+            from aot.databases.models.scheduler import SchedulerJobMeta
+            from sqlalchemy import or_ as _or
+
+            q = SchedulerJobMeta.query
+
+            if not include_archived:
+                q = q.filter(SchedulerJobMeta.state != 'ARCHIVED')
+
+            if not include_past:
+                now = utc_now()
+                # 예정된 것(미래) + 시간이 없는 항목은 포함, 과거는 제외
+                q = q.filter(_or(SchedulerJobMeta.schedule_time == None,   # noqa: E711
+                                 SchedulerJobMeta.schedule_time >= now))
+
+            if query and query.strip():
+                like = f"%{query.strip()}%"
+                q = q.filter(_or(SchedulerJobMeta.reasoning.like(like),
+                                 SchedulerJobMeta.params_json.like(like)))
+
+            if target_name:
+                target_id, _tt, _rn, _lat, _lng = \
+                    AoTDataToolService._resolve_note_target(target_name)
+                if target_id:
+                    q = q.filter(SchedulerJobMeta.target_id == target_id)
+
+            # 예정은 임박한 순, 과거 포함이면 최신순
+            if include_past:
+                q = q.order_by(SchedulerJobMeta.created_at.desc())
+            else:
+                q = q.order_by(SchedulerJobMeta.schedule_time.asc())
+
+            rows = q.limit(max(1, int(limit))).all()
+            results = [AoTDataToolService._schedule_summary(r) for r in rows]
+            return {
+                "status": "success",
+                "count": len(results),
+                "results": results,
+            }
+        except Exception as e:
+            logger.error(f"Error in search_schedule_tool: {e}")
+            return {"error": f"Error while querying schedules: {str(e)}"}
+
+    @staticmethod
+    def edit_schedule_tool(job_id, date=None, time=None, content=None,
+                           worker=None, target_name=None, **extra):
+        """
+        [일정 수정 — 변이(승인 필요)]
+        기존 일정의 시각/내용/담당자/위치를 수정한다. 먼저 search_schedule로 job_id를 얻는다.
+        장치 예약(control_output)이 이미 APScheduler에 등록돼 있으면 트리거도 함께 재조정.
+
+        Args:
+            job_id (str): search_schedule가 돌려준 job_id(unique_id) 또는 정수 id.
+            date (str): 새 날짜 YYYY-MM-DD (시각만 바꾸려면 생략 가능 — 기존 날짜 유지).
+            time (str): 새 시각 HH:MM (날짜만 바꾸려면 생략 가능 — 기존 시각 유지).
+            content (str): 새 내용/설명.
+            worker (str): 새 담당자.
+            target_name (str): 새 위치(구역/시설/장치 이름)로 재연결. 미해석이면
+                available_targets를 돌려주니 ask_user로 확인 후 재시도.
+        """
+        try:
+            import json as _json
+            from aot.utils.time_utils import serialize_ts
+
+            meta = AoTDataToolService._resolve_schedule_job(job_id)
+            if not meta:
+                return {"error": f"Schedule not found: {job_id}"}
+            if not meta.is_editable:
+                return {"error": f"This schedule is not editable (kind={meta.action_type})."}
+
+            try:
+                params = _json.loads(meta.params_json) if meta.params_json else {}
+            except Exception:
+                params = {}
+
+            # 0. 위치 재연결 (target_name) — 미해석이면 disambiguation 요청
+            if target_name:
+                _tid, _tt, _rn, _lat, _lng = \
+                    AoTDataToolService._resolve_note_target(target_name)
+                if not _tid:
+                    return {
+                        "status": "needs_disambiguation",
+                        "error": "target_not_found",
+                        "message": (f"위치 '{target_name}'를 특정하지 못했습니다. "
+                                    f"available_targets에서 정확한 이름을 고르도록 ask_user로 "
+                                    f"확인한 뒤 다시 수정하세요."),
+                        "available_targets": AoTDataToolService._geoshape_name_candidates(),
+                    }
+                meta.target_id = _tid
+                params['target_type'] = _tt
+                params['target_name'] = _rn
+
+            # 1. 시각 변경 — date/time 중 하나만 와도 기존 값과 병합
+            new_dt = None
+            if date or time:
+                from aot.utils.time_utils import to_local
+                base_local = to_local(meta.schedule_time) if meta.schedule_time else None
+                new_date = date or (base_local.strftime("%Y-%m-%d") if base_local else None)
+                new_time = time or (base_local.strftime("%H:%M") if base_local else "09:00")
+                if not new_date:
+                    return {"error": "date is required (no existing date to keep)."}
+                new_dt = AoTDataToolService._schedule_wall_to_utc(new_date, new_time)
+                meta.schedule_time = new_dt
+                if meta.duration_sec and meta.duration_sec > 0:
+                    meta.end_time = new_dt + timedelta(seconds=meta.duration_sec)
+
+            # 2. 내용/담당자 변경
+            if content is not None:
+                params['content'] = content
+            if worker is not None:
+                params['worker'] = worker
+            # params가 바뀐 경우(위치 재연결 포함) 저장
+            if content is not None or worker is not None or target_name:
+                meta.params_json = _json.dumps(params)
+
+            # 3. edit 추적
+            meta.edit_count = (meta.edit_count or 0) + 1
+            meta.last_edited_at = utc_now()
+            meta.last_edited_by = 'AI'
+
+            # 4. APScheduler 트리거 재조정 (등록된 장치 예약 한정)
+            rescheduled = False
+            if new_dt is not None and meta.action_type != 'human' and meta.state == 'PENDING':
+                try:
+                    from aot.ai.services.ai_scheduler_service import get_scheduler
+                    job = get_scheduler().get_job(f'scheduler_meta_{meta.id}')
+                    if job is not None:
+                        job.modify(next_run_time=new_dt)
+                        rescheduled = True
+                except Exception as _sch_err:
+                    logger.warning(f"[edit_schedule] APScheduler reschedule failed: {_sch_err}")
+
+            db.session.commit()
+            return {
+                "status": "success",
+                "message": "Schedule updated"
+                           + (" (device trigger rescheduled)" if rescheduled else ""),
+                "schedule": AoTDataToolService._schedule_summary(meta),
+            }
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error in edit_schedule_tool: {e}")
+            return {"error": f"Error while editing schedule: {str(e)}"}
+
+    @staticmethod
+    def delete_schedule_tool(job_id, reason=None, **extra):
+        """
+        [일정 삭제/취소 — 변이(승인 필요)]
+        일정을 취소한다. 소프트 삭제(state=ARCHIVED)로 되돌릴 수 있게 보관하며,
+        등록된 장치 예약(APScheduler 트리거)은 실제로 제거해 더 이상 발화하지 않게 한다.
+
+        Args:
+            job_id (str): search_schedule가 돌려준 job_id(unique_id) 또는 정수 id.
+            reason (str): 취소 사유(선택, 감사/학습용).
+        """
+        try:
+            meta = AoTDataToolService._resolve_schedule_job(job_id)
+            if not meta:
+                return {"error": f"Schedule not found: {job_id}"}
+            if not meta.is_deletable:
+                return {"error": f"This schedule cannot be deleted (kind={meta.action_type})."}
+            if meta.state == 'ARCHIVED':
+                return {"status": "success", "message": "Schedule was already cancelled.",
+                        "job_id": meta.unique_id}
+
+            # 1. 등록된 APScheduler 트리거 제거 (있으면)
+            removed_trigger = False
+            try:
+                from aot.ai.services.ai_scheduler_service import get_scheduler
+                sched = get_scheduler()
+                if sched.get_job(f'scheduler_meta_{meta.id}') is not None:
+                    sched.remove_job(f'scheduler_meta_{meta.id}')
+                    removed_trigger = True
+            except Exception as _sch_err:
+                logger.warning(f"[delete_schedule] APScheduler remove failed: {_sch_err}")
+
+            # 2. 소프트 삭제 (되돌림 가능하도록 보관)
+            meta.state = 'ARCHIVED'
+            meta.deletion_reason = reason or 'Cancelled via AI request'
+            meta.last_edited_at = utc_now()
+            meta.last_edited_by = 'AI'
+            db.session.commit()
+
+            return {
+                "status": "success",
+                "message": "Schedule cancelled"
+                           + (" (device trigger removed)" if removed_trigger else ""),
+                "job_id": meta.unique_id,
+            }
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error in delete_schedule_tool: {e}")
+            return {"error": f"Error while deleting schedule: {str(e)}"}
 
     @staticmethod
     def analyze_system_failure_tool(device_id=None, tool_name=None, lookback_minutes=60, **kwargs):
@@ -997,7 +1404,7 @@ class AoTDataToolService:
                     "target_id": t.target_id,
                     "status": t.status,
                     "execution_result": (t.execution_result or '')[:300],
-                    "created_at": t.created_at.isoformat() if t.created_at else None,
+                    "created_at": serialize_ts(t.created_at) if t.created_at else None,
                 })
 
             # 2. Query MCP server status
@@ -2497,7 +2904,7 @@ class AoTDataToolService:
                      .limit(int(limit) if limit else 10).all())
             return {"notices": [
                 {"notice_id": p.unique_id, "title": p.title, "pinned": bool(p.pinned),
-                 "date_time": p.date_time.isoformat() if p.date_time else None}
+                 "date_time": serialize_ts(p.date_time) if p.date_time else None}
                 for p in posts
             ]}
         except Exception as e:

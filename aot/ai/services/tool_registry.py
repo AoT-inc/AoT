@@ -102,12 +102,49 @@ TOOLS: List[Tool] = [
         # Corrected 2026-07-08: add_schedule_tool proposes a SchedulerJobMeta
         # job (source_type='human'), NOT a Notes row — verified against the
         # actual implementation. Use create_note for a plain memo/journal entry.
-        "usage_hint": "For a DATED work task (weeding, inspection) use this — it registers a human work item, auto-approved (no APScheduler trigger). Params: {date, content, worker, time, tags}. For an undated memo/note, use create_note instead.",
+        "usage_hint": "For a DATED work task/event (weeding, spraying, harvest, inspection) use this — it registers a human work item. Params: {date, content, worker, time, tags, target_name}. PASS target_name (a zone/facility/device name like '온실', '3-1', '1포장 1-1') whenever the user names a place, so the schedule links to that real location (map + location search). If the name is ambiguous/not found the tool returns available_targets — call ask_user to pick, then retry. Omit target_name only for a farm-wide event with no specific place. For an undated memo/note, use create_note instead.",
     }),
     Tool('schedule_device_control', handler='schedule_device_control_tool', physical=True, manifest={
         "action_type": "schedule_device_control",
-        "description": "Schedule control of a system device (valve, pump, sprinkler, etc.) at a specific time. Registered pending user approval.",
-        "usage_hint": "Use this for scheduling future device operations. Requires 'params': {device_id, scheduled_time, state, duration_minutes}.",
+        "description": "Reserve a ONE-OFF device operation (valve/pump/sprinkler) at a single specific future time — e.g. 'open valve 1 for 30 min this Saturday 15:00'. Requires approval. This is ONLY for irregular, one-time reservations; recurring or condition-based control belongs to a Function (create_function), NOT here.",
+        "usage_hint": (
+            "params: {device_id, scheduled_time (ISO8601) OR delay_seconds, state, duration_minutes}. "
+            "DECISION RULE — the scheduler holds one-off events; regular automation belongs to Functions:\n"
+            "- RECURRING ('every day 6am', '매일/매주 관수') → use create_function "
+            "(trigger_timer_daily_time_point / trigger_timer_daily_time_span / trigger_timer_duration) INSTEAD, NOT this.\n"
+            "- CONDITIONAL ('when humidity < 40%', '습도 낮으면 가동') → use create_function "
+            "(conditional_conditional) INSTEAD.\n"
+            "- IMMEDIATE ('run for 5 min now', '지금 1분간') → use operate_device, NOT this.\n"
+            "- Only a single specific future time with NO repetition and NO condition belongs here.\n"
+            "If you cannot tell whether the user wants a one-time reservation or a repeating/conditional "
+            "automation, call ask_user to confirm BEFORE choosing."
+        ),
+    }),
+
+    # --- Schedule CRUD (@ANCHOR: SCHEDULE_CRUD_TOOLS) ----------------------------
+    # Completes the scheduler as a farm-operations ledger: add_schedule (create)
+    # already existed; search/edit/delete close the CRUD loop so the AI can act on
+    # a user's "reschedule the spraying" / "cancel Saturday's inspection". All read
+    # from / write to SchedulerJobMeta (the ledger of record — A안). edit/delete are
+    # `mutating` → the SSOT routes them through the human approval gate in EVERY
+    # path (dispatch, planner, agent-loop) automatically; search is read-only.
+    Tool('search_schedule', handler='search_schedule_tool', manifest={
+        "tool_name": "search_schedule",
+        "action_type": "virtual_tool_call",
+        "description": "Lists farm schedules/events (work tasks, inspections, harvests, one-off device reservations) from the scheduler ledger. Read-only. Use this to answer 'what's coming up?' and to obtain the job_id needed before edit_schedule / delete_schedule (search→act, like search_notes).",
+        "usage_hint": "params.arguments: {query (optional keyword over content/reasoning), target_name (optional — only schedules attached to a location/device), include_past (optional bool, default false = upcoming only), include_archived (optional bool, default false), limit (optional, default 20)}. Returns each schedule's job_id, when, content, kind, state, and editable/deletable flags.",
+    }),
+    Tool('edit_schedule', handler='edit_schedule_tool', mutating=True, manifest={
+        "tool_name": "edit_schedule",
+        "action_type": "virtual_tool_call",
+        "description": "Edits an existing schedule's time, content, or worker. Requires human approval. If the schedule is an already-registered device reservation, its trigger is rescheduled too. First call search_schedule to get the job_id.",
+        "usage_hint": "params.arguments: {job_id (required — from search_schedule), date (optional YYYY-MM-DD, keeps existing date if omitted), time (optional HH:MM, keeps existing time if omitted), content (optional new text), worker (optional new assignee), target_name (optional — re-link to a different zone/facility/device by name; ambiguous name returns available_targets → ask_user then retry)}.",
+    }),
+    Tool('delete_schedule', handler='delete_schedule_tool', mutating=True, manifest={
+        "tool_name": "delete_schedule",
+        "action_type": "virtual_tool_call",
+        "description": "Cancels/deletes a schedule. Requires human approval. Soft-deletes (archived, reversible) and removes any registered device trigger so it no longer fires. First call search_schedule to get the job_id.",
+        "usage_hint": "params.arguments: {job_id (required — from search_schedule), reason (optional cancellation reason)}.",
     }),
 
     # --- virtual_tool_call tools WITH a manifest entry (original order) -----------
@@ -126,7 +163,7 @@ TOOLS: List[Tool] = [
     Tool('create_function', handler='create_function_tool', mutating=True, manifest={
         "tool_name": "create_function",
         "action_type": "virtual_tool_call",
-        "description": "Creates a new automation function/controller. Requires human approval. function_type MUST be one of: conditional_conditional, pid_pid, trigger_edge, trigger_output, trigger_output_pwm, trigger_run_pwm_method, trigger_sequence, trigger_sunrise_sunset, trigger_timer_daily_time_point, trigger_timer_daily_time_span, trigger_timer_duration, function_actions. For SEQUENTIAL control of several devices (e.g. a valve sequence), use 'trigger_sequence'.",
+        "description": "Creates a new automation function/controller. Requires human approval. This — NOT schedule_device_control — is the right home for RECURRING device control (daily/weekly watering → trigger_timer_daily_time_point / trigger_timer_daily_time_span / trigger_timer_duration) and CONDITION-BASED control (when humidity < X → conditional_conditional). function_type MUST be one of: conditional_conditional, pid_pid, trigger_edge, trigger_output, trigger_output_pwm, trigger_run_pwm_method, trigger_sequence, trigger_sunrise_sunset, trigger_timer_daily_time_point, trigger_timer_daily_time_span, trigger_timer_duration, function_actions. For SEQUENTIAL control of several devices (e.g. a valve sequence), use 'trigger_sequence'.",
         "usage_hint": "params.arguments accepts ONLY {function_type, name, params}. Do NOT pass 'devices' or any other top-level key — there is no device-list parameter. The function is created first; its device steps/order are configured afterward. params is a dict of custom_option overrides (e.g. select_measurement fields as 'device_id,meas_id').",
     }),
     Tool('modify_function_options', handler='modify_function_options', mutating=True, manifest={
@@ -414,6 +451,21 @@ TOOLS: List[Tool] = [
         "action_type": "virtual_tool_call",
         "description": "Create or update a SmartFarmKorea library source and (by default) activate + sync it so its measured farm data enters the AI knowledge layer. Requires human approval (registers a source and fetches external data). Handles all three datasets: smartfarmkorea (시설원예), smartfarmkorea_outdoor (노지), smartfarmkorea_livestock (축산).",
         "usage_hint": "params.arguments: {preset_key (required), api_key (required), operations (list of EXACT operation keys — NOT generic words like 'growth'/'환경'; a wrong key returns valid_operations to retry with. 시설 growth keys are crop-specific: growth_strawberry(딸기)/growth_mum(국화)/growth_melon(참외)/growth_other; 노지: growth_garlic(마늘)/growth_onion(양파)/growth_blueberry(블루베리); shared: identity/cropping/env), plus the params each operation needs. For 시설/노지 cropping/growth/env ops: userId, facilityId, croppingSerlNo, itemCode — RESOLVE THESE VIA smartfarmkorea_lookup, never ask the user for a code — and measDate/startDate/endDate (ask the user, YYYY-MM-DD). For 축산: only startDate/endDate (YYYYMMDD, no dashes). Optional: source_id (update instead of create), activate (default true), sync (default true), farm_label/season_label. NOTE: only register a farm whose crop (itemCode) matches what the user asked for — the lookup label shows the crop code. RECIPE: smartfarmkorea_lookup first, then this.",
+    }),
+
+    # --- Local time per location (@ANCHOR: GET_LOCAL_TIME_TOOL, 2026-07-20) ------
+    # Every map shape/device carries coordinates, and aot/utils/device_tz.py
+    # already resolves an IANA timezone from them (timezonefinder) — but that
+    # capability was previously only wired into device/controller/weather code,
+    # never exposed to the AI. This gives the AI an explicit, on-demand way to
+    # check a SPECIFIC location's actual local time before describing or
+    # planning around it, instead of assuming a single global timezone always
+    # applies. Read-only — not approval-gated.
+    Tool('get_local_time', handler='get_local_time_tool', manifest={
+        "tool_name": "get_local_time",
+        "action_type": "virtual_tool_call",
+        "description": "Returns the current local wall-clock time and IANA timezone for a specific location (zone/site/facility/device) or the farm-wide default. Every location resolves its own timezone from its coordinates. Read-only.",
+        "usage_hint": "params.arguments: {target_name (optional — a zone/site/facility/device name, e.g. '3-1', '온실'; omit for the farm-wide default timezone)}. Call this before describing or planning around a specific location/time (e.g. 'is it night there now?', 'should this run today or tomorrow given the local time?') instead of assuming the same timezone applies everywhere.",
     }),
 
     # --- virtual_tool_call tools WITHOUT a manifest entry (dispatch only) ---------

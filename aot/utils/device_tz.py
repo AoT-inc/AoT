@@ -148,6 +148,43 @@ def device_tz_name(device) -> str:
     return str(get_device_tz(device))
 
 
+def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
+    """
+    Resolve the pytz timezone for ANY location/entity identified by `target_id`
+    — a GeoShape (zone/site/facility outline), a device row (Input/Output/
+    Function/Conditional/Trigger/PID/CustomController), or None/'none'/unknown
+    (system-wide fallback: Misc.timezone → UTC, same chain as get_device_tz).
+
+    This is the single entry point AI-facing code should use whenever it needs
+    "what is LOCAL time at this location" — e.g. formatting a schedule tied to
+    a zone, or answering "지금 3-1 구역은 몇시야?". Every entity in the system
+    that carries a location (GeoShape coordinates, or a device's own lat/lng)
+    can answer this without the caller knowing which table `target_id` lives in.
+    """
+    if target_id and target_id != 'none':
+        try:
+            from aot.databases.models.geo import GeoShape
+            shape = GeoShape.query.filter_by(unique_id=target_id).first()
+            if shape is not None:
+                tz = shape.resolve_timezone()
+                if tz is not None:
+                    return tz
+        except Exception as exc:
+            logger.debug(f"resolve_location_tz: GeoShape lookup failed for {target_id}: {exc}")
+
+        try:
+            from aot.databases.models import Input, Output, Function, Conditional, Trigger, PID, CustomController
+            for model in (Input, Output, Function, Conditional, Trigger, PID, CustomController):
+                row = model.query.filter_by(unique_id=target_id).first()
+                if row is not None:
+                    return get_device_tz(row)
+        except Exception as exc:
+            logger.debug(f"resolve_location_tz: device lookup failed for {target_id}: {exc}")
+
+    # No target_id, or nothing matched — system-wide fallback chain.
+    return get_device_tz(None)
+
+
 def refresh_device_timezone(device) -> Optional[str]:
     """
     Recompute device.timezone from its current coords and write it back.
@@ -169,5 +206,6 @@ __all__ = [
     "get_device_tz",
     "to_device_tz",
     "device_tz_name",
+    "resolve_location_tz",
     "refresh_device_timezone",
 ]

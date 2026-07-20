@@ -27,7 +27,7 @@ import math
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import (
-    AIFacilityLearning, AIContextRecord, AIDomainGlossary, AITaskHistory,
+    AIFacilityLearning, AIContextRecord, AIDomainGlossary,
     AIRecommendation, AIUserProfile, AIStatusSnapshot
 )
 

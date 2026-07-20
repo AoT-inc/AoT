@@ -4,6 +4,7 @@
 
 {% block title %} - {{_('System Information')}}{% endblock %}
 {% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=15" />
 <style>
   .hide {
     /* 스포일러 가림 효과 — 글자색=배경색이 정확히 같아야 하므로 리터럴 유지 */
@@ -23,8 +24,12 @@
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
+    <div class="aot-settings-title">
+      <h3>{{_('System Information')}}</h3>
+    </div>
+
     <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em; font-size: 1.3em">
+      <div style="padding-bottom: 0.5em; font-size: 1.15em">
         {{_('AoT Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{aot_version}}</span>
         <br>{{_('Python Version')}}: <span style="color: var(--aot-color-dark, #141414); font-weight: bold;">{{python_version}}</span>
         <br>{{_('Platform')}}:&nbsp;
@@ -66,11 +71,11 @@
       </div>
     </div>
 
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Web Server Threads')}} (gunicorn)
       </div>
-      <div style="padding: 0.8em; border: 1px solid Black;">
+      <div class="aot-code-block" style="font-size: 0.9rem;">
         {{_('Effective Value')}}: <span style="font-weight: bold;">{{gunicorn_info.effective}}</span>
         ({%- if gunicorn_info.source == 'env' -%}{{_('Environment variable')}} GUNICORN_THREADS
          {%- elif gunicorn_info.source == 'manual' -%}{{_('Manual setting')}}
@@ -84,22 +89,22 @@
           <input type="hidden" name="action" value="save_gunicorn_threads">
           <label for="gunicorn_threads">{{_('Manual setting')}} ({{gunicorn_info.min}}~{{gunicorn_info.max}}, {{_('empty = automatic')}}):</label>
           <input id="gunicorn_threads" name="gunicorn_threads" type="number"
-                 min="{{gunicorn_info.min}}" max="{{gunicorn_info.max}}" style="width: 6em;"
+                 min="{{gunicorn_info.min}}" max="{{gunicorn_info.max}}" class="form-control aot-modern-input" style="width: 6em; display: inline-block;"
                  value="{{gunicorn_info.manual if gunicorn_info.manual else ''}}">
-          <button type="submit" class="btn btn-sm btn-primary">{{_('Save')}}</button>
+          <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{_('Save')}}</button>
         </form>
-        <div style="margin-top: 0.5em; display: flex; gap: 0.5em;">
+        <div class="aot-btn-group aot-btn-group-start" style="margin-top: 0.5em;">
           <form method="post" action="/info"
                 onsubmit="return confirm('{{_('Reload the web server now? The connection will be briefly interrupted.')}}');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="restart_frontend">
-            <button type="submit" class="btn btn-sm btn-secondary">{{_('Reload web server to apply')}}</button>
+            <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Reload web server to apply')}}</button>
           </form>
           <form method="post" action="/info"
                 onsubmit="return confirm('{{_('Restart the daemon now? Control loops will pause for a few seconds.')}}');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="restart_daemon">
-            <button type="submit" class="btn btn-sm btn-secondary">{{_('Restart daemon')}}</button>
+            <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Restart daemon')}}</button>
           </form>
         </div>
         {% endif %}
@@ -107,113 +112,113 @@
     </div>
 
   {%- if uptime %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         uptime
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{uptime}}</pre>
+        <pre class="aot-code-block">{{uptime}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if uname %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Kernel Info')}}: uname -a
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{uname}}</pre>
+        <pre class="aot-code-block">{{uname}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if gpio_readall -%}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('GPIO Pins')}}: gpio readall
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{gpio_readall}}</pre>
+        <pre class="aot-code-block">{{gpio_readall}}</pre>
       </div>
     </div>
   {%- endif -%}
 
     {% for each_i2c_dev in i2c_devices_sorted %}
 
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         I<sup>2</sup>C Bus {{each_i2c_dev}}: i2cdetect -y {{each_i2c_dev}}
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{i2c_devices_sorted[each_i2c_dev]}}</pre>
+        <pre class="aot-code-block">{{i2c_devices_sorted[each_i2c_dev]}}</pre>
       </div>
     </div>
 
   {% endfor %}
 
   {%- if df %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Disk Usage')}}: df -h
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{df}}</pre>
+        <pre class="aot-code-block">{{df}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if free %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Memory Usage')}}: free -h
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{free}}</pre>
+        <pre class="aot-code-block">{{free}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if dmesg_output %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Diagnostic Messages')}}: dmesg | tail -n 20
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{dmesg_output}}</pre>
+        <pre class="aot-code-block">{{dmesg_output}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if ifconfig %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Network Status')}}: {{network_cmd}}
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{ifconfig}}</pre>
+        <pre class="aot-code-block">{{ifconfig}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if pstree_frontend %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Processes (Frontend & Threads)')}}: pstree -p {{frontend_pid}}
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{pstree_frontend}}</pre>
+        <pre class="aot-code-block">{{pstree_frontend}}</pre>
       </div>
     </div>
   {%- endif %}
 
   {%- if top_frontend %}
-    <div style="padding-bottom: 1.5em">
-      <div style="padding-bottom: 0.5em">
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
         {{_('Processes (Frontend & Threads)')}}: top -b -H -n 1 -p {{frontend_pid}}
       </div>
       <div>
-        <pre style="padding: 0.5em; border: 1px solid Black;">{{top_frontend}}</pre>
+        <pre class="aot-code-block">{{top_frontend}}</pre>
       </div>
     </div>
   {%- endif %}

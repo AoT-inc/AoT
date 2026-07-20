@@ -17,7 +17,6 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from aot.config import DATABASE_PATH
 from aot.aot_flask.extensions import db
-from aot.databases.models import AITask
 from aot.utils.execution_context import set_execution_context, clear_execution_context
 
 logger = logging.getLogger(__name__)
@@ -575,7 +574,7 @@ class AISchedulerService:
 
     @phase active
     @stability stable
-    @dependency AITask
+    @dependency SchedulerJobMeta
     """
 
     @staticmethod
@@ -938,27 +937,62 @@ class AISchedulerService:
         """Get all pending AI proposals awaiting human review."""
         return AISchedulerService.get_jobs(state=JOB_STATE_DRAFT)
 
+    # @ANCHOR: SCHEDULE_CATEGORY_KEYWORDS — lightweight keyword classifier over
+    # free-text schedule content, mirroring the existing pattern in
+    # AiDocService.classify_weather_device. No schema change (no `category`
+    # column on SchedulerJobMeta) — content stays free text, category is derived
+    # on read for context-injection grouping only.
+    _CATEGORY_KEYWORDS = (
+        ('방제', ('방제', '농약', '살포', '병해충', '해충', '살균', '살충')),
+        ('정식', ('정식', '이식', '아주심기', '육묘', '파종')),
+        ('수확', ('수확', '채취', '따기')),
+        ('출하', ('출하', '납품', '배송', '포장작업')),
+        ('점검', ('점검', '진단', '확인', '체크')),
+        ('청소', ('청소', '세척', '소독')),
+        ('관수', ('관수', '급수', '물주기')),
+    )
+
     @staticmethod
-    def get_pending_human_schedules(hours_ahead: int = 48) -> list:
+    def _classify_schedule_category(content: str) -> str:
+        """Return a category label for schedule content, '기타' if no keyword matches."""
+        text = (content or '')
+        for label, keywords in AISchedulerService._CATEGORY_KEYWORDS:
+            if any(kw in text for kw in keywords):
+                return label
+        return '기타'
+
+    @staticmethod
+    def get_schedule_horizon(days_ahead: int = 30, limit: int = 100) -> dict:
         """
-        Return upcoming human-scheduled entries from SchedulerJobMeta.
+        Return upcoming human-scheduled entries from SchedulerJobMeta, bucketed
+        into a multi-layer horizon so the AI can reference near-term work in
+        detail while staying aware of the month ahead without a token blowout.
 
         Queries rows where action_type='human', state in (PENDING, APPROVED),
-        and schedule_time falls within the next `hours_ahead` hours.
+        and schedule_time falls within the next `days_ahead` days (default 30),
+        ordered by schedule_time ascending, capped at `limit` rows.
 
         Returns:
-            list[dict]: Up to 10 entries, each with keys:
-                - job_id (str): unique_id of the SchedulerJobMeta row
-                - job_name (str): target_id used as a human-readable label
-                - schedule_time (str): ISO 8601 UTC string
-                - user_id (int|None): owning user id
-            Returns [] (never None) if no rows found or on error.
+            dict: {
+                'imminent':   list[dict] — next 48h, full detail
+                'this_week':  list[dict] — 48h to 7 days, full detail
+                'this_month': list[dict] — 7 to `days_ahead` days, full detail
+                              (get_human_schedule_context summarizes this tier
+                              as per-category counts to control context size)
+                'truncated':  bool — True if `limit` rows were hit (more may exist
+                              beyond `days_ahead` or within it but past the cap)
+            }
+            Each entry dict: {job_id, job_name, location, target_id,
+            category, schedule_time (ISO 8601 UTC), user_id}.
+            Returns all-empty-lists dict (never raises) on error.
         """
-        # @ANCHOR: GET_PENDING_HUMAN_SCHEDULES [2026-03-28]
+        # @ANCHOR: GET_SCHEDULE_HORIZON [2026-07-20 — replaces get_pending_human_schedules]
+        empty = {'imminent': [], 'this_week': [], 'this_month': [], 'truncated': False}
         try:
             from aot.databases.models.scheduler import SchedulerJobMeta
             now = utc_now()
-            horizon = now + timedelta(hours=hours_ahead)
+            week_cutoff = now + timedelta(hours=48)
+            month_cutoff = now + timedelta(days=days_ahead)
 
             rows = (
                 SchedulerJobMeta.query
@@ -966,226 +1000,55 @@ class AISchedulerService:
                     SchedulerJobMeta.action_type == 'human',
                     SchedulerJobMeta.state.in_(['PENDING', 'APPROVED']),
                     SchedulerJobMeta.schedule_time >= now,
-                    SchedulerJobMeta.schedule_time <= horizon,
+                    SchedulerJobMeta.schedule_time <= month_cutoff,
                 )
                 .order_by(SchedulerJobMeta.schedule_time.asc())
-                .limit(10)
+                .limit(limit + 1)  # fetch one extra to detect truncation
                 .all()
             )
 
-            result = []
+            truncated = len(rows) > limit
+            rows = rows[:limit]
+
+            result = {'imminent': [], 'this_week': [], 'this_month': [], 'truncated': truncated}
             for row in rows:
-                result.append({
+                # job_name/location from params (content + resolved location entity),
+                # NOT target_id — target_id is the entity link (a uuid), unreadable as
+                # a label. Location makes the future-reference context place-aware.
+                try:
+                    _p = json.loads(row.params_json) if row.params_json else {}
+                except Exception:
+                    _p = {}
+                content = _p.get('content') or row.reasoning or 'work item'
+                entry = {
                     'job_id': row.unique_id,
-                    'job_name': row.target_id,
-                    'schedule_time': row.schedule_time.isoformat() if row.schedule_time else None,
+                    'job_name': content,
+                    'location': _p.get('target_name') or None,
+                    'target_id': row.target_id if row.target_id and row.target_id != 'none' else None,
+                    'category': AISchedulerService._classify_schedule_category(content),
                     'user_id': row.user_id,
-                })
+                }
+                # schedule_time is stored naive (SQLite has no tz type); the project
+                # convention is that a naive stored datetime IS UTC (see tz_utils.py).
+                # Attach tzinfo BEFORE using it anywhere — both for the aware-cutoff
+                # comparison below and for the returned isoformat string, so a bare
+                # 'YYYY-MM-DDTHH:MM:SS' (no offset) is never handed to the LLM as if
+                # it were local time (it isn't — it's UTC).
+                row_time = row.schedule_time
+                if row_time is not None and row_time.tzinfo is None:
+                    row_time = row_time.replace(tzinfo=timezone.utc)
+                entry['schedule_time'] = row_time.isoformat() if row_time else None
+
+                if row_time is not None and row_time <= week_cutoff:
+                    result['imminent'].append(entry)
+                elif row_time is not None and row_time <= (now + timedelta(days=7)):
+                    result['this_week'].append(entry)
+                else:
+                    result['this_month'].append(entry)
             return result
         except Exception:
-            logger.exception("get_pending_human_schedules: query failed")
-            return []
-
-    @staticmethod
-    def get_unified_timeline(hours=24):
-        """
-        MySQL(SchedulerJobMeta) + InfluxDB(Runtime) 데이터를 병합하여
-        통합 타임라인을 반환합니다.
-
-        Returns:
-            list[dict]: 시간순 정렬된 이벤트 목록
-                - timestamp (float): epoch seconds
-                - event_type (str): 'schedule' | 'device_runtime'
-                - source_type (str): scheduler/trigger/conditional/function/manual 등
-                - device_id (str|None): 장치 unique_id
-                - details (dict): 추가 정보
-        """
-        from datetime import timedelta
-        from aot.databases.models.scheduler import SchedulerJobMeta
-        from aot.databases.models import Output
-
-        events = []
-        cutoff = utc_now() - timedelta(hours=hours)
-
-        past_sec = int(hours * 3600)
-
-        # 1. MySQL: SchedulerJobMeta 레코드
-        metas = SchedulerJobMeta.query.filter(
-            SchedulerJobMeta.created_at >= cutoff
-        ).order_by(SchedulerJobMeta.created_at.asc()).all()
-
-        for m in metas:
-            ts = m.executed_at or m.schedule_time or m.created_at
-            events.append({
-                'timestamp': ts.timestamp() if ts else 0,
-                'event_type': 'schedule',
-                'source_type': getattr(m, 'source_type', None) or 'scheduler',
-                'device_id': m.target_id,
-                'details': {
-                    'job_meta_id': m.id,
-                    'action_type': m.action_type,
-                    'state': m.state,
-                    'duration_sec': m.duration_sec,
-                    'reasoning': (m.reasoning or '')[:200],
-                }
-            })
-
-        # 2. InfluxDB: 모든 Output의 duration_time 기록
-        try:
-            from aot.utils.database import db_retrieve_table_daemon
-            from aot.utils.influx import read_influxdb_list
-
-            outputs = db_retrieve_table_daemon(Output)
-            for output in outputs.all():
-                try:
-                    data = read_influxdb_list(
-                        unique_id=output.unique_id,
-                        unit='s',
-                        channel=0,
-                        measure='duration_time',
-                        duration_sec=past_sec
-                    )
-                    if data:
-                        for ts_epoch, duration_val in data:
-                            events.append({
-                                'timestamp': float(ts_epoch),
-                                'event_type': 'device_runtime',
-                                'source_type': 'unknown',
-                                'device_id': output.unique_id,
-                                'details': {
-                                    'duration_sec': float(duration_val) if duration_val else 0,
-                                    'device_name': output.name,
-                                }
-                            })
-                except Exception:
-                    continue
-        except Exception as e:
-            logger.warning(f"Failed to fetch InfluxDB runtime data: {e}")
-
-        # 3. 시간순 정렬
-        events.sort(key=lambda e: e['timestamp'])
-        return events
-
-    @staticmethod
-    def analyze_variance(hours=24):
-        """
-        계획된 작동 시간과 실제 InfluxDB 기록(Runtime) 간의 편차를 분석합니다.
-        
-        Returns:
-            list[dict]: 분석 결과 리스트
-        """
-        from datetime import timedelta
-        from aot.databases.models.scheduler import SchedulerJobMeta
-        from aot.utils.influx import read_influxdb_list
-        
-        analysis = []
-        cutoff = utc_now() - timedelta(hours=hours)
-
-        
-        # 완료된 작업 중 duration_sec가 있는 것들을 조회
-        jobs = SchedulerJobMeta.query.filter(
-            SchedulerJobMeta.state == JOB_STATE_COMPLETED,
-            SchedulerJobMeta.duration_sec > 0,
-            SchedulerJobMeta.executed_at >= cutoff
-        ).all()
-        
-        for job in jobs:
-            actual_duration = 0
-            # InfluxDB에서 해당 시점의 실제 작동 시간 조회
-            # executed_at 시점을 포함하는 duration_time 레코드를 찾음
-            # (단순화를 위해 executed_at 전후 1분 내의 최대값을 실제 작동 시간으로 간주)
-            try:
-                # read_influxdb_list는 특정 기간의 데이터를 가져오므로
-                # 작업 실행 시점 앞뒤로 데이터를 가져와서 합산하거나 최대값을 찾음
-                data = read_influxdb_list(
-                    unique_id=job.target_id,
-                    unit='s',
-                    channel=0,
-                    measure='duration_time',
-                    duration_sec=job.duration_sec + 60
-                )
-                if data:
-                    # 작업 실행 시점 이후의 가장 가까운 기록을 찾음
-                    # (실제 환경에서는 더 정교한 매칭 로직이 필요할 수 있음)
-                    actual_duration = max([float(v) for ts, v in data if abs(float(ts) - job.executed_at.timestamp()) < 60] or [0])
-            except Exception:
-                pass
-                
-            variance = actual_duration - job.duration_sec
-            variance_percent = (variance / job.duration_sec * 100) if job.duration_sec > 0 else 0
-            
-            # v26.9: Enrich with snapshot context at time of execution
-            snap = AISchedulerService._get_snapshot_at(job.executed_at)
-            
-            analysis.append({
-                'job_id': job.id,
-                'target_id': job.target_id,
-                'planned_duration': job.duration_sec,
-                'actual_duration': actual_duration,
-                'variance': variance,
-                'variance_percent': variance_percent,
-                'timestamp': job.executed_at.timestamp(),
-                'situation_context': snap.summary_text if snap else "No context available"
-            })
-            
-        return analysis
-
-    @staticmethod
-    def detect_schedule_conflicts(hours_ahead=48):
-        """
-        향후 일정 중 동일 장치에 대한 중복/충돌 일정을 감지합니다.
-        """
-        from datetime import timedelta
-        from aot.databases.models.scheduler import SchedulerJobMeta
-        
-        conflicts = []
-        now = utc_now()
-        future_limit = now + timedelta(hours=hours_ahead)
-        
-        # 대기 중인 작업들 조회 (PENDING)
-        upcoming_jobs = SchedulerJobMeta.query.filter(
-            SchedulerJobMeta.state == JOB_STATE_PENDING,
-            SchedulerJobMeta.schedule_time >= now,
-            SchedulerJobMeta.schedule_time <= future_limit
-        ).order_by(SchedulerJobMeta.schedule_time.asc()).all()
-        
-        # 장치별로 분류
-        by_target = {}
-        for job in upcoming_jobs:
-            if job.target_id not in by_target:
-                by_target[job.target_id] = []
-            
-            # 종료 시간 계산 (없으면 시작 시간과 동일하게 간주)
-            start = job.schedule_time
-            end = job.end_time or (start + timedelta(seconds=job.duration_sec))
-            by_target[job.target_id].append({
-                'id': job.id,
-                'start': start,
-                'end': end,
-                'job': job
-            })
-            
-        # 충돌 체크 (시간 겹침)
-        for target_id, jobs in by_target.items():
-            for i in range(len(jobs)):
-                for j in range(i + 1, len(jobs)):
-                    j1 = jobs[i]
-                    j2 = jobs[j]
-                    
-                    # Overlap condition: start1 < end2 AND start2 < end1
-                    if j1['start'] < j2['end'] and j2['start'] < j1['end']:
-                        conflicts.append({
-                            'target_id': target_id,
-                            'job_1_id': j1['id'],
-                            'job_2_id': j2['id'],
-                            'start': max(j1['start'], j2['start']).timestamp(),
-                            'end': min(j1['end'], j2['end']).timestamp(),
-                            'reasoning_1': j1['job'].reasoning,
-                            'reasoning_2': j2['job'].reasoning
-                        })
-                        
-        return conflicts
-
+            logger.exception("get_schedule_horizon: query failed")
+            return empty
 
     @staticmethod
     def _log_audit(meta, decision, feedback=None):
@@ -1226,109 +1089,6 @@ class AISchedulerService:
             # --- END EKG WIRE ---
         except Exception as e:
             logger.warning(f"Failed to store feedback as note: {e}")
-
-    @staticmethod
-    def _get_snapshot_at(timestamp):
-        """
-        v26.9: Find the closest system snapshot to a given datetime.
-        Used to explain variances in scheduling.
-        """
-        try:
-            from aot.databases.models.ai_summary import AISystemSummary
-            snap = AISystemSummary.query.filter(
-                AISystemSummary.timestamp <= timestamp,
-                AISystemSummary.scope_type == 'system',
-                AISystemSummary.is_active == True
-            ).order_by(AISystemSummary.timestamp.desc()).first()
-            return snap
-        except Exception:
-            return None
-
-    # -----------------------------------------------------------------------
-    # Phase 3: AITask Integration (Unified Model)
-    # -----------------------------------------------------------------------
-
-    @staticmethod
-    def approve_ai_task(task_id):
-        """
-        Promote AITask from PROPOSED to SCHEDULED.
-        Adds the task to APScheduler for defined run_date.
-        """
-        task = AITask.query.filter_by(unique_id=task_id).first()
-        if not task:
-            return None
-        
-        task.status = 'scheduled'
-        
-        # Determine run_date
-        run_date = task.start_date or task.proposed_start
-        if not run_date:
-            run_date = utc_now()
-            
-        # Schedule the job in APScheduler
-        if run_date.tzinfo is None:
-            # If naive, assume it's UTC (standard storage)
-            run_date = run_date.replace(tzinfo=timezone.utc)  # tz: naive→UTC-aware
-            
-        scheduler = get_scheduler()
-        scheduler.add_job(
-            _execute_ai_task_wrapper,
-            trigger='date',
-            run_date=run_date,
-            id=f'ai_task_{task.id}',
-            kwargs={'task_id': task.unique_id}
-        )
-        
-        db.session.commit()
-        logger.info(f"AITask {task.unique_id} approved and scheduled for {run_date}")
-        return task
-
-    @staticmethod
-    def execute_ai_task(task_id):
-        """
-        Execute an AITask immediately.
-        Updates status and execution_result.
-        """
-        from aot.ai.services.safety_service import SafetyService
-        from aot.ai.services.ai_action_service import AIActionService
-        
-        task = AITask.query.filter_by(unique_id=task_id).first()
-        if not task:
-            logger.error(f"Task {task_id} not found for execution")
-            return {"status": "error", "message": "Task not found"}
-            
-        logger.info(f"Executing AITask: {task.title}")
-        task.status = 'in_progress'
-        db.session.commit()
-        
-        try:
-            params = json.loads(task.action_params) if task.action_params else {}
-            
-            # Safety Check
-            SafetyService.validate(task.action_type, task.target_id, params)
-            
-            # Execute — _approved=True: 사용자가 명시적으로 승인한 AITask 경로
-            result = AIActionService.execute_action(task.action_type, task.target_id, params, _approved=True)
-            
-            # Feedback Loop
-            if result.get('status') == 'success':
-                task.status = 'completed'
-                task.execution_result = json.dumps(result)[:2000]
-                task.actual_time = 0 # measure duration if possible
-            else:
-                task.status = 'failed'
-                task.execution_result = result.get('message', 'Unknown error')
-                
-        except Exception as e:
-            logger.exception(f"Execution failed for AITask {task.unique_id}")
-            task.status = 'failed'
-            task.execution_result = str(e)
-            return {"status": "error", "message": str(e)}
-            
-        task.updated_at = utc_now()
-        db.session.commit()
-        return {"status": task.status, "result": task.execution_result}
-
 
 def _execute_scheduled_action(action_type, target_id, params, meta_id=None):
     """
@@ -1372,28 +1132,6 @@ def _execute_scheduled_action(action_type, target_id, params, meta_id=None):
                     AISchedulerService.update_job_state(meta_id, JOB_STATE_FAILED, str(e)[:500])
                 except Exception:
                     pass
-            return {"status": "error", "message": str(e)}
-
-def _execute_ai_task_wrapper(task_id):
-    """
-    Wrapper function called by APScheduler to execute an AITask.
-    """
-    from aot.ai.services.ai_scheduler_service import AISchedulerService, _flask_app
-    if not _flask_app:
-        logger.error("Scheduled AI Task called without _flask_app context")
-        return {"status": "error", "message": "Missing app context"}
-
-    with _flask_app.app_context():
-        try:
-            from aot.utils.execution_context import set_execution_context, clear_execution_context
-            set_execution_context(source_type='scheduler_task', source_id=task_id)
-            try:
-                return AISchedulerService.execute_ai_task(task_id)
-            finally:
-                clear_execution_context()
-        except Exception as e:
-
-            logger.exception(f"Error in wrapper for AITask {task_id}")
             return {"status": "error", "message": str(e)}
 
 def _on_trigger_fired(sender, **kwargs):

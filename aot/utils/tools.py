@@ -17,7 +17,9 @@ from aot.config import (INSTALL_DIRECTORY, PATH_ACTIONS_CUSTOM,
                            PATH_INPUTS_CUSTOM, PATH_OUTPUTS_CUSTOM,
                            PATH_PYTHON_CODE_USER, PATH_USER_SCRIPTS,
                            PATH_WIDGETS_CUSTOM, SQL_DATABASE_AOT,
-                           USAGE_REPORTS_PATH)
+                           USAGE_REPORTS_PATH, PATH_NOTE_ATTACHMENTS,
+                           PATH_NOTICE_ATTACHMENTS, PATH_FACILITY_PHOTOS,
+                           PATH_GEO_ZONE_PHOTOS, PATH_STATIC)
 from aot.databases.models import (Conversion, DeviceMeasurements,
                                      EnergyUsage, Misc, Output, OutputChannel)
 from aot.utils.database import db_retrieve_table_daemon
@@ -30,6 +32,43 @@ from aot.utils.system_pi import (
     set_user_grp)
 
 logger = logging.getLogger("aot.tools")
+
+# Matches ModelAssetManager.UPLOAD_SUBDIR in aot/aot_flask/geo/model_asset_io.py
+# (kept as a plain path here since this module also runs outside Flask app
+# context, e.g. from the scheduled backup_rsync.py function).
+PATH_MODEL_ASSETS = os.path.join(PATH_STATIC, 'uploads', 'model_assets')
+
+# Single source of truth for "uploaded user data" directories, shared by
+# this module's create_settings_export(), utils_export.py's import_settings(),
+# and aot/utils/docker_backup.py -- previously each had its own hand-copied
+# list, and the "does this directory have real subfolders" question was
+# answered inconsistently between them: PATH_NOTE_ATTACHMENTS actually has
+# YYYY/MM subfolders (routes_notes_api.py) and DB rows store that relative
+# path, but was wrongly treated as flat here, silently breaking note
+# attachments on every export/import round trip. Zipping/copying always
+# preserves the path relative to each source directory now, which is a
+# no-op for the directories that genuinely are flat.
+UPLOAD_DIRECTORIES = [
+    (PATH_NOTE_ATTACHMENTS, "uploads_notes"),
+    (PATH_NOTICE_ATTACHMENTS, "uploads_notice"),
+    (PATH_FACILITY_PHOTOS, "uploads_facility_photos"),
+    (PATH_GEO_ZONE_PHOTOS, "uploads_geo_zone_photos"),
+    (PATH_MODEL_ASSETS, "model_assets"),
+]
+
+
+def _zip_write_dir(z, src_dir, zip_prefix, skip_names=frozenset()):
+    """Write every file under src_dir into the open ZipFile z under
+    zip_prefix/, preserving each file's path relative to src_dir."""
+    if not os.path.exists(src_dir):
+        return
+    for folder_name, _sub_folders, filenames in os.walk(src_dir):
+        for filename in filenames:
+            if filename in skip_names or filename.endswith("pyc"):
+                continue
+            file_path = os.path.join(folder_name, filename)
+            rel_path = os.path.relpath(file_path, src_dir).replace(os.sep, '/')
+            z.write(file_path, f"{zip_prefix}/{rel_path}")
 
 
 def create_measurements_export(influxdb_version, save_path=None):
@@ -109,17 +148,10 @@ def create_settings_export(save_path=None):
                 (PATH_WIDGETS_CUSTOM, "custom_widgets"),
                 (PATH_USER_SCRIPTS, "user_scripts"),
                 (PATH_TEMPLATE_USER, "user_html"),
-                (PATH_PYTHON_CODE_USER, "user_python_code")
-            ]
-            for each_backup in export_directories:
-                if not os.path.exists(each_backup[0]):
-                    continue
-                for folder_name, sub_folders, filenames in os.walk(each_backup[0]):
-                    for filename in filenames:
-                        if filename == "__init__.py" or filename.endswith("pyc"):
-                            continue
-                        file_path = os.path.join(folder_name, filename)
-                        z.write(file_path, f"{each_backup[1]}/{os.path.basename(file_path)}")
+                (PATH_PYTHON_CODE_USER, "user_python_code"),
+            ] + UPLOAD_DIRECTORIES
+            for src_dir, zip_prefix in export_directories:
+                _zip_write_dir(z, src_dir, zip_prefix, skip_names={"__init__.py"})
         data.seek(0)
         if save_path:
             with open(save_path, "wb") as f:

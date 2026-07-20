@@ -28,10 +28,32 @@ healthy — untested here, not excluded, just not a Phase-1 target. Engine-
 level native tool-calling beyond the gemini fix above is Phase 2.
 """
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
 MAX_STEPS = 6
+
+# @ANCHOR: DEVICE_CONTROL_BOUNDARY_SIGNALS
+# Conservative, high-confidence wording that a device-control request is RECURRING
+# or CONDITION-based — in which case it belongs to a Function (create_function),
+# not a one-off scheduler reservation. Deliberately narrow so a genuine one-off
+# ('이번 토요일 3시', 'this Saturday') is NEVER intercepted. Used only to decide
+# whether to ASK the user which they meant (never to silently redirect).
+_RECUR_SIGNAL = re.compile(
+    r'매일|매주|매달|매월|날마다|아침마다|저녁마다|주기적|정기적|반복|격일|이틀에|'
+    r'every\s*day|everyday|\bdaily\b|\bweekly\b|each\s+(?:morning|day|evening|night)',
+    re.IGNORECASE)
+# Conditional = a threshold comparison. Requires BOTH a comparison word AND a
+# sensor/measurement context — so a DURATION like '20분 이상 열어' (이상 = "or more",
+# not a sensor threshold) is NOT mistaken for a condition. Both must match.
+_COND_CMP = re.compile(
+    r'이상|이하|미만|초과|넘으면|넘어가면|떨어지면|낮아지면|높아지면|낮으면|높으면',
+    re.IGNORECASE)
+_SENSOR_CTX = re.compile(
+    r'온도|기온|지온|습도|수분|토양|조도|일사|이산화탄소|co2|\bec\b|이씨|\bph\b|산도|'
+    r'풍속|풍향|수위|양액|humidity|temperature|moisture|sensor|센서',
+    re.IGNORECASE)
 
 
 class AgentLoopService:
@@ -107,6 +129,102 @@ class AgentLoopService:
             question = (args or {}).get('question') or a.get('insight') or ''
             options = (args or {}).get('options') or []
             return question, options
+        return None
+
+    @staticmethod
+    def _schedule_ambiguity_gate(actions):
+        """@ANCHOR: SCHEDULE_ASK_USER_NUDGE
+        If a schedule create/edit action names a LOCATION that does not resolve to
+        a known entity, return (question, options) so the caller raises an ask_user
+        turn INSTEAD of proposing a doomed action that would only fail post-approval.
+
+        This is the deterministic half of '모호하면 ask_user로 확인' — the step prompt
+        already ASKS the model to call ask_user when unsure, but a model that thinks
+        a bare word like '온실' is a valid place proposes add_schedule anyway and the
+        tool's own target-not-found guard then surfaces as a bare 'Failed'. Catching
+        it here, before the approval card, turns that dead end into a real question
+        with candidate places to pick from. Returns None when every schedule action's
+        location resolves (or none was given — a farm-wide schedule needs no place).
+        """
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        _SCHED_TOOLS = {'add_schedule', 'edit_schedule'}
+        for a in (actions or []):
+            if AgentLoopService._tool_name(a) not in _SCHED_TOOLS:
+                continue
+            p = a.get('params') or {}
+            args = p.get('arguments') if isinstance(p.get('arguments'), dict) else p
+            args = args or {}
+            tname = (args.get('target_name') or args.get('location')
+                     or args.get('zone_name') or args.get('place'))
+            if not tname:
+                continue  # farm-wide schedule — nothing to disambiguate
+            try:
+                tid, _tt, _rn, _lat, _lng = AoTDataToolService._resolve_note_target(tname)
+            except Exception:
+                tid = None
+            if not tid:
+                try:
+                    cands = AoTDataToolService._geoshape_name_candidates(limit=12)
+                except Exception:
+                    cands = []
+                try:
+                    from flask_babel import gettext as _
+                    q = _("'%(name)s' doesn't match a single known place in the system. "
+                          "Which location did you mean?", name=tname)
+                except Exception:
+                    q = (f"'{tname}' doesn't match a single known place in the system. "
+                         f"Which location did you mean?")
+                return q, cands
+        return None
+
+    @staticmethod
+    def _device_control_boundary_gate(command_text, actions):
+        """@ANCHOR: DEVICE_CONTROL_BOUNDARY_NUDGE
+        schedule_device_control is ONLY for one-off reservations. If the user's
+        request implies RECURRENCE ('every day', '매일') or a CONDITION ('when
+        humidity < 40%', '습도 이하') yet the model chose a one-off device schedule,
+        that regular automation belongs to a Function (create_function). We do NOT
+        silently redirect — building the right function needs details we can't
+        assume — nor do we let a wrong one-off through; instead we ask the user
+        which they meant, offering the Function vs one-off choice as options.
+        On their reply the model builds create_function or the reservation.
+
+        Returns (question, options) or None. Conservative: fires only on explicit
+        recurrence/threshold wording (see _RECUR_SIGNAL/_COND_SIGNAL) so a genuine
+        one-off request is never intercepted. Boundary is '매우 판단하기 어려운' →
+        when a clear recurrence/condition signal is present, ASK rather than guess.
+        """
+        if not command_text:
+            return None
+        for a in (actions or []):
+            if AgentLoopService._tool_name(a) != 'schedule_device_control':
+                continue
+            recur = bool(_RECUR_SIGNAL.search(command_text))
+            cond = bool(_COND_CMP.search(command_text) and _SENSOR_CTX.search(command_text))
+            if not (recur or cond):
+                continue
+
+            def _t(msgid, fallback):
+                try:
+                    from flask_babel import gettext as _g
+                    return _g(msgid)
+                except Exception:
+                    return fallback
+            if recur:
+                q = _t("This looks like a recurring operation. Should I set it up as a "
+                       "repeating automation (a Function), or reserve it just this once?",
+                       "This looks like a recurring operation. Set it up as a repeating "
+                       "automation (a Function), or reserve it just this once?")
+                opts = [_t("Repeating automation (Function)", "Repeating automation (Function)"),
+                        _t("Just this once", "Just this once")]
+            else:
+                q = _t("This looks like a condition-based operation. Should I set it up as a "
+                       "conditional automation (a Function), or reserve it at a fixed time?",
+                       "This looks like a condition-based operation. Set it up as a conditional "
+                       "automation (a Function), or reserve it at a fixed time?")
+                opts = [_t("Conditional automation (Function)", "Conditional automation (Function)"),
+                        _t("Fixed-time reservation", "Fixed-time reservation")]
+            return q, opts
         return None
 
     @staticmethod
@@ -321,6 +439,30 @@ class AgentLoopService:
 
             write_actions = [a for a in actions if AIActionService.requires_approval(AgentLoopService._tool_name(a))]
             if write_actions:
+                # Ask-user nudge: a schedule action naming an unresolvable location
+                # becomes a clarifying question (with candidate places) BEFORE the
+                # approval card, instead of a post-approval 'Failed'. See
+                # _schedule_ambiguity_gate.
+                _amb = AgentLoopService._schedule_ambiguity_gate(write_actions)
+                if _amb:
+                    _q, _opts = _amb
+                    logger.info(f"[AgentLoop] step {step}: schedule location ambiguous "
+                                f"→ ask_user: {_q[:80]!r} options={_opts}")
+                    return AgentLoopService._finish(
+                        agent.unique_id, command_text, _q, thread_id,
+                        extra_meta={'intent': 'CLARIFY', 'ask_user_options': _opts})
+
+                # Boundary nudge: a recurring/conditional request that chose a one-off
+                # schedule_device_control → ask whether it should be a Function instead.
+                _bnd = AgentLoopService._device_control_boundary_gate(command_text, write_actions)
+                if _bnd:
+                    _q, _opts = _bnd
+                    logger.info(f"[AgentLoop] step {step}: device-control boundary "
+                                f"→ ask_user: {_q[:80]!r} options={_opts}")
+                    return AgentLoopService._finish(
+                        agent.unique_id, command_text, _q, thread_id,
+                        extra_meta={'intent': 'CLARIFY', 'ask_user_options': _opts})
+
                 # Stop the loop and propose. _dispatch_actions already splits any
                 # remaining read actions in the same batch to immediate execution —
                 # reused unchanged, so this loop never re-implements that logic.

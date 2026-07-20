@@ -32,7 +32,7 @@ logger = logging.getLogger("aot.utils.widgets")
 from functools import lru_cache
 
 @lru_cache(maxsize=4)
-def parse_widget_information(exclude_custom=False):
+def parse_widget_information(exclude_custom=False, custom_only=False):
     """Parse all widget modules and return a dictionary of widget IDs and their metadata.
 
     @phase active
@@ -60,10 +60,12 @@ def parse_widget_information(exclude_custom=False):
         'examples', 'tmp_widgets'
     ]
 
-    widget_paths = [PATH_WIDGETS]
-
-    if not exclude_custom:
-        widget_paths.append(PATH_WIDGETS_CUSTOM)
+    if custom_only:
+        widget_paths = [PATH_WIDGETS_CUSTOM]
+    else:
+        widget_paths = [PATH_WIDGETS]
+        if not exclude_custom:
+            widget_paths.append(PATH_WIDGETS_CUSTOM)
 
     dict_widgets = {}
 

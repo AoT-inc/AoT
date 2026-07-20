@@ -48,7 +48,7 @@ logger = logging.getLogger("aot.utils.functions")
 from functools import lru_cache
 
 @lru_cache(maxsize=4)
-def parse_function_information(exclude_custom=False):
+def parse_function_information(exclude_custom=False, custom_only=False):
     """Parse function module information and return a dictionary of function IDs and metadata.
 
     @phase active
@@ -68,10 +68,12 @@ def parse_function_information(exclude_custom=False):
         'custom_functions', 'examples', 'scripts', 'tmp_functions'
     ]
 
-    function_paths = [PATH_FUNCTIONS]
-
-    if not exclude_custom:
-        function_paths.append(PATH_FUNCTIONS_CUSTOM)
+    if custom_only:
+        function_paths = [PATH_FUNCTIONS_CUSTOM]
+    else:
+        function_paths = [PATH_FUNCTIONS]
+        if not exclude_custom:
+            function_paths.append(PATH_FUNCTIONS_CUSTOM)
 
     dict_controllers = {}
 

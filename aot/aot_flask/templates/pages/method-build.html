@@ -105,7 +105,7 @@
           </div>
 
           <div class="col-auto">
-            {{form_mod_method.delete(class_='btn btn-primary')}}
+            {{form_mod_method.delete(class_='btn aot-pill-btn aot-pill-btn-danger')}}
           </div>
 
         </div>
@@ -116,7 +116,7 @@
 
     {%- if method_setpoint -%}
 
-      <div class="row small-gutters" style="margin: 1em 0 0 0; padding: 1em; border: 2px solid #ddd; border-radius: 5px;">
+      <div class="row small-gutters" style="margin: 1em 0 0 0; padding: 1em; border: 1px solid var(--border-neutral); border-radius: 16px;">
         <div class="col-12" style="padding-bottom: 1em">
           <h3>{{_('Setpoint Tracking')}}</h3>
         </div>
@@ -181,13 +181,13 @@
             </div>
           </div>
           <div class="col-auto">
-            <input class="form-control btn btn-primary btn-sm" disabled="" value="{{_('Method End')}}" type="text">
+            <input class="btn aot-pill-btn" disabled="" value="{{_('Method End')}}" type="text">
           </div>
           <div class="col-auto">
-            {{form_mod_method.save(class_='form-control btn btn-primary')}}
+            {{form_mod_method.save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
           </div>
           <div class="col-auto">
-            {{form_mod_method.delete(class_='btn btn-primary',**{'onclick':'return confirm("' + _('Are you sure you want to delete?') + '")'})}}
+            {{form_mod_method.delete(class_='btn aot-pill-btn aot-pill-btn-danger',**{'onclick':'return confirm("' + _('Are you sure you want to delete?') + '")'})}}
           </div>
 
           {% else %}
@@ -205,10 +205,10 @@
             </div>
           </div>
           <div class="col-auto">
-            {{form_mod_method.save(class_='form-control btn btn-primary')}}
+            {{form_mod_method.save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
           </div>
           <div class="col-auto">
-            {{form_mod_method.delete(class_='btn btn-primary',**{'onclick':'return confirm("' + _('Are you sure you want to delete?') + '")'})}}
+            {{form_mod_method.delete(class_='btn aot-pill-btn aot-pill-btn-danger',**{'onclick':'return confirm("' + _('Are you sure you want to delete?') + '")'})}}
           </div>
 
           {% endif %}

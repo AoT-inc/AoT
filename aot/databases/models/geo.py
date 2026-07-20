@@ -221,6 +221,45 @@ class GeoShape(CRUDMixin, db.Model):
                           primaryjoin="foreign(GeoShape.geo_id) == GeoMap.unique_id",
                           backref=db.backref("shapes", cascade="all, delete-orphan"))
 
+    def resolve_timezone(self):
+        """Return pytz timezone for this shape's own location.
+
+        Priority:
+          1. Linked GeoFacility's resolve_timezone() (explicit override, or the
+             facility's own centroid — same shape, so this is usually identical
+             to step 2, but a facility may carry an explicit override).
+          2. This shape's own centroid (from its GeoJSON geometry) →
+             timezonefinder lookup.
+          3. None (caller handles fallback, e.g. Misc.timezone/UTC).
+
+        Lets ANY location — not just GeoFacility rows — resolve its own local
+        time (e.g. a bare zone/site with no facility record attached).
+        """
+        import pytz
+        from aot.utils.device_tz import resolve_tz_from_coords
+
+        facility = getattr(self, 'facility', None)
+        if facility is not None:
+            tz = facility.resolve_timezone()
+            if tz is not None:
+                return tz
+
+        feat = self.feature or {}
+        geom = feat.get('geometry') or {}
+        coords = geom.get('coordinates')
+        if coords:
+            try:
+                flat = _flatten_coords(coords)
+                if flat:
+                    avg_lng = sum(c[0] for c in flat) / len(flat)
+                    avg_lat = sum(c[1] for c in flat) / len(flat)
+                    tz_name = resolve_tz_from_coords(avg_lat, avg_lng)
+                    if tz_name:
+                        return pytz.timezone(tz_name)
+            except Exception:
+                pass
+        return None
+
     def __repr__(self):
         return "<GeoShape(id={0}, type='{1}', geo_id='{2}')>".format(self.id, self.type, self.geo_id)
 

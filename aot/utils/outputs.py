@@ -48,7 +48,7 @@ logger = logging.getLogger("aot.utils.outputs")
 from functools import lru_cache
 
 @lru_cache(maxsize=4)
-def parse_output_information(exclude_custom=False):
+def parse_output_information(exclude_custom=False, custom_only=False):
     """Parse all output modules and return a dictionary of output IDs and their metadata.
 
     @phase active
@@ -75,10 +75,12 @@ def parse_output_information(exclude_custom=False):
         'examples', 'scripts', 'tmp_outputs'
     ]
 
-    output_paths = [PATH_OUTPUTS]
-
-    if not exclude_custom:
-        output_paths.append(PATH_OUTPUTS_CUSTOM)
+    if custom_only:
+        output_paths = [PATH_OUTPUTS_CUSTOM]
+    else:
+        output_paths = [PATH_OUTPUTS]
+        if not exclude_custom:
+            output_paths.append(PATH_OUTPUTS_CUSTOM)
 
     dict_outputs = {}
 

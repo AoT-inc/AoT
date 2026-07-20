@@ -875,7 +875,8 @@ class AIActionService:
 
             # [PC-089-GATE][TASK_43] Physical control gate — all execution paths
             # mcp_tool_call / virtual_tool_call 로 physical tool 호출 시
-            # execute_ai_task(_approved=True) 를 통한 승인 경로만 허용.
+            # _approved=True 토큰을 실어 오는 경로만 허용(execute_logged_action의
+            # 승인카드 실행, _execute_scheduled_action의 SchedulerJobMeta 실행 등).
             # Planner chain, RAG loop 등 미승인 경로는 모두 차단.
             from aot.ai.services.resolvers.constants import PHYSICAL_TOOLS as _PHYSICAL_TOOLS  # @ANCHOR: PHYSICAL_TOOLS_IMPORT
             if action_type in ('mcp_tool_call', 'virtual_tool_call') and not _approved:
@@ -891,7 +892,7 @@ class AIActionService:
                 if _tool_name in _PHYSICAL_TOOLS and not _approved:
                     logger.error(
                         f"[PC-089-GATE] Blocked unauthorized physical execution of '{_tool_name}'. "
-                        f"Call path lacks approval token. Must be dispatched via execute_ai_task()."
+                        f"Call path lacks an _approved=True approval token."
                     )
                     return {
                         "status": "error",
@@ -1434,73 +1435,6 @@ class AIActionService:
                 AIContextService.invalidate_spatial_cache()
                 return {"status": "success", "result": f"Device {target_id} deleted"}
 
-            elif action_type == 'create_task':
-                # Create a new task/schedule/work plan
-                # params: {title, description, task_type, start_time, end_time, priority, notes}
-                from aot.databases.models import AITask
-                from aot.utils.time_utils import utc_now
-                from datetime import datetime, timedelta
-                
-                title = params.get('title')
-                if not title:
-                    return {"status": "error", "message": "Missing required parameter: title"}
-                
-                description = params.get('description', '')
-                task_type = params.get('task_type', 'task')
-                priority = params.get('priority', 3)
-                notes = params.get('notes', '')
-                
-                # Parse times
-                start_time = params.get('start_time')
-                end_time = params.get('end_time')
-                
-                if isinstance(start_time, str):
-                    try:
-                        start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                    except:
-                        start_time = None
-                
-                if isinstance(end_time, str):
-                    try:
-                        end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-                    except:
-                        end_time = None
-                
-                # Default times if not provided
-                if not start_time:
-                    start_time = utc_now() + timedelta(hours=1)
-                if not end_time:
-                    end_time = start_time + timedelta(hours=2)
-                
-                # Create task
-                task = AITask(
-                    title=title,
-                    description=description,
-                    task_type=task_type,
-                    status='proposed',  # Requires user approval
-                    priority=priority,
-                    proposed_start=start_time,
-                    proposed_end=end_time,
-                    action_type='create_task',
-                    target_id=target_id,
-                    params_json=json.dumps(params)
-                )
-                
-                # Add notes if provided
-                if notes:
-                    task.description += f"\n\nNotes: {notes}"
-                
-                task.save()
-                
-                logger.info(f"[AI Task] Created task '{title}' (ID: {task.unique_id})")
-                return {
-                    "status": "success",
-                    "message": f"Task '{title}' created and pending approval",
-                    "task_id": task.unique_id,
-                    "start_time": start_time.isoformat(),
-                    "end_time": end_time.isoformat()
-                }
-
             elif action_type == 'control_output':
                 # @ANCHOR: CONTROL_OUTPUT_FIX — use operate_device_tool directly.
                 # Formerly delegated to 'output' action which is blocked by LegacyGuardResolver.
@@ -1525,50 +1459,6 @@ class AIActionService:
                 if isinstance(result, dict) and result.get('error'):
                     return {"status": "error", "message": result['error'], "result": result}
                 return {"status": "success", "result": result}
-
-            elif action_type == 'schedule_output':
-                # Schedule an output control for a specific time
-                from aot.databases.models import AITask
-                from datetime import datetime, timedelta
-                
-                output = Output.query.filter_by(unique_id=target_id).first()
-                if not output:
-                    return {"status": "error", "message": f"Output {target_id} not found"}
-                
-                scheduled_time = params.get('scheduled_time')
-                if isinstance(scheduled_time, str):
-                    try:
-                        scheduled_time = datetime.fromisoformat(scheduled_time.replace('Z', '+00:00'))
-                    except:
-                        return {"status": "error", "message": "Invalid scheduled_time format. Use ISO 8601 format."}
-                
-                if not scheduled_time:
-                    return {"status": "error", "message": "Missing required parameter: scheduled_time"}
-                
-                state = params.get('state', 'off')
-                duration_minutes = params.get('duration_minutes', 5)
-                
-                # Create scheduled task
-                task = AITask(
-                    title=f"{output.name} {state} scheduled",
-                    description=f"Set {output.name} to {state} at {scheduled_time.strftime('%Y-%m-%d %H:%M')}",
-                    task_type='task',
-                    status='proposed',  # Requires user approval
-                    priority=params.get('priority', 3),
-                    proposed_start=scheduled_time,
-                    proposed_end=scheduled_time + timedelta(minutes=duration_minutes),
-                    action_type='control_output',
-                    target_id=target_id,
-                    params_json=json.dumps({'state': state})
-                )
-                task.save()
-                
-                logger.info(f"[AI Schedule] Scheduled {output.name} to {state} at {scheduled_time}")
-                return {
-                    "status": "success",
-                    "message": f"Scheduled {output.name} to {state} at {scheduled_time.strftime('%Y-%m-%d %H:%M')} (pending approval)",
-                    "task_id": task.unique_id
-                }
 
             else:
                 return {"status": "error", "message": f"Unknown action type: {action_type}"}

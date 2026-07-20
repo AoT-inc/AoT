@@ -8,7 +8,7 @@
 <script type="text/javascript" src="/static/js/vendor/moment.min.js"></script>
 <script type="text/javascript" src="/static/js/vendor/daterangepicker.js"></script>
 <link rel="stylesheet" type="text/css" href="/static/css/daterangepicker.css" />
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=15" />
 {% endblock %}
 
 {% block body %}
@@ -33,9 +33,9 @@
   <form method="post" action="/export">
     {{form_export_measurements.csrf_token}}
     <div class="aot-modal-container">
-      <div class="aot-settings-row">
+      <div class="aot-settings-row aot-settings-row-stack">
         {{form_export_measurements.measurement.label(class_='aot-settings-label')}}
-        <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px;">
+        <div class="aot-settings-control">
           <select class="selectpicker" data-style="btn" id="measurement" name="measurement">
             {% for each_input_form in choices_input -%}
               <option value="{{each_input_form['value']}}">{{each_input_form['item']}}</option>
@@ -49,9 +49,9 @@
           </select>
         </div>
       </div>
-      <div class="aot-settings-row" style="border-bottom: none;">
+      <div class="aot-settings-row aot-settings-row-stack" style="border-bottom: none;">
         {{form_export_measurements.date_range.label(class_='aot-settings-label')}}
-        <div class="aot-settings-control" style="flex: 1 1 auto; width: auto; max-width: 320px;">
+        <div class="aot-settings-control">
           <input class="form-control aot-modern-input" type="text" name="date_range" value="{{start_picker}} - {{end_picker}}" />
         </div>
       </div>
@@ -77,7 +77,7 @@
   <!-- Export AoT settings -->
   <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Export AoT settings data as ZIP file')}}</div>
   <p class="aot-modal-body-text">
-    {{_('This feature creates a ZIP file of the setup database containing AoT configuration and user info. Custom functions, inputs, outputs, and widgets are also included.')}}
+    {{_('This feature creates a ZIP file of the setup database containing AoT configuration and user info. Custom functions, inputs, outputs, and widgets are also included, as well as uploaded files (note/notice attachments, facility and zone photos, and facility 3D model assets).')}}
   </p>
 
   <form method="post" action="/export">
@@ -98,17 +98,10 @@
 
   <form method="post" action="/export" enctype="multipart/form-data">
     {{form_import_settings.csrf_token}}
-    <div class="aot-modal-container">
-      <div class="aot-settings-row" style="border-bottom: none;">
-        <div class="aot-settings-label">
-          <div class="fileinput fileinput-new" data-provides="fileinput">
-            <span class="btn btn-sm btn-file"><input id="settings_import_file" name="settings_import_file" type="file" /></span>
-          </div>
-        </div>
-        <div class="aot-settings-control">
-          {{form_import_settings.settings_import_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-        </div>
-      </div>
+    <input id="settings_import_file" name="settings_import_file" type="file" style="display:none" onchange="document.getElementById('settings_import_file_label').textContent = this.files[0] ? this.files[0].name : '{{_('Choose files')}}';">
+    <div class="aot-btn-group aot-btn-group-start" style="align-items: center;">
+      <button type="button" class="btn aot-pill-btn" onclick="document.getElementById('settings_import_file').click()"><span id="settings_import_file_label">{{_('Choose files')}}</span></button>
+      {{form_import_settings.settings_import_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
     </div>
   </form>
 

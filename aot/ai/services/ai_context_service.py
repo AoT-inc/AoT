@@ -4,7 +4,7 @@ import json
 import copy
 import math
 from datetime import datetime, timedelta, timezone
-from aot.utils.time_utils import get_local_now, utc_now
+from aot.utils.time_utils import get_local_now, utc_now, to_local, serialize_ts
 from sqlalchemy import or_, func
 
 from aot.databases.models import GeoMap, GeoShape, Input, Camera, EnergyUsage, Notes, DeviceMeasurements, Conversion, IrrigationDesign, Actions, Misc, db
@@ -397,7 +397,7 @@ class AIContextService:
                     "value": design.total_volume_applied,
                     "unit": "L",
                     "status": design.status,
-                    "last_run": design.last_run_at.isoformat() if design.last_run_at else None
+                    "last_run": serialize_ts(design.last_run_at) if design.last_run_at else None
                 })
 
             # 2. Sequential Actions (Chemicals/Dosing)
@@ -540,12 +540,23 @@ class AIContextService:
                                                 status_tag = "unknown"
                                                 age_seconds = 0
                                                 
+                                            # val_time is tz-aware (InfluxDB client) so it already carries
+                                            # an unambiguous offset, but that offset is UTC — convert to
+                                            # this device's own location tz so the displayed clock matches
+                                            # what a person there would read, consistent with the rest of
+                                            # the location-aware time work (age_seconds/status carry the
+                                            # freshness signal the AI actually reasons on; this is display).
+                                            try:
+                                                from aot.utils.device_tz import resolve_location_tz
+                                                _display_time = val_time.astimezone(resolve_location_tz(input_dev.unique_id))
+                                            except Exception:
+                                                _display_time = val_time
                                             readings.append({
                                                 "measurement": row.values.get('measure') or measurement or "unknown",
                                                 "value": round(row.values['_value'], 2),
                                                 "unit": unit,
                                                 "channel": row.values.get('channel'),
-                                                "timestamp": val_time.isoformat(),
+                                                "timestamp": _display_time.isoformat(),
                                                 "age_seconds": round(age_seconds, 1),
                                                 "status": status_tag,
                                                 "source": "DB"  # [TASK_8 054_] Label as database source to distinguish from MCP
@@ -640,8 +651,15 @@ class AIContextService:
                     except:
                         pass
                     
-                if isinstance(val, (datetime, timedelta)):
-                    val = val.isoformat()
+                if isinstance(val, datetime):
+                    # naive DB column (SQLite has no tz type) — localize, or a
+                    # bare isoformat() shows the UTC hour as if it were local
+                    # wall-clock time (e.g. Output.on_until/off_until, a live
+                    # control window the AI may reason about directly).
+                    val = serialize_ts(val)
+                elif isinstance(val, timedelta):
+                    # timedelta has no .isoformat() — would raise AttributeError
+                    val = str(val)
                 
                 details[column.name] = val
             
@@ -701,35 +719,89 @@ class AIContextService:
             return []
 
     @staticmethod
-    def get_human_schedule_context(hours_ahead: int = 48) -> str:
+    def get_human_schedule_context(days_ahead: int = 30) -> str:
         """
-        Build a formatted text block of upcoming human-scheduled entries.
+        Build a formatted, multi-layer text block of upcoming human-scheduled
+        entries so the AI can both give concrete near-term advice ("3일 뒤
+        수확 예정이니 그 전 방제 간격을 앞당기세요") and stay aware of the
+        month ahead without the context ballooning.
 
-        Calls AISchedulerService.get_pending_human_schedules() and formats the
-        result for LLM consumption.  Returns a non-empty string even when the
-        list is empty ('[Human Schedules - next 48h]\n(none scheduled)').
+        Calls AISchedulerService.get_schedule_horizon() and renders 3 tiers:
+        - Imminent (next 48h) and This week (2-7 days): full detail per item
+          (content + location + time) — near enough to act on concretely.
+        - This month (7-`days_ahead` days): per-category COUNTS only (e.g.
+          "[방제] 4건, [수확] 2건") — awareness without spelling out every
+          row, so a busy month doesn't blow the token budget.
+
+        Returns a non-empty string even when everything is empty
+        ('[Farm Schedule Horizon]\n(none scheduled)').
 
         This block is appended to the master context under the key
         'human_schedules' and must NOT replace the AITask scheduled_tasks key.
         """
-        # @ANCHOR: GET_HUMAN_SCHEDULE_CONTEXT [2026-03-28]
+        # @ANCHOR: GET_HUMAN_SCHEDULE_CONTEXT [2026-07-20 — multi-layer horizon]
         try:
             from aot.ai.services.ai_scheduler_service import AISchedulerService
-            entries = AISchedulerService.get_pending_human_schedules(hours_ahead=hours_ahead)
+            horizon = AISchedulerService.get_schedule_horizon(days_ahead=days_ahead)
         except Exception:
             logger.exception("get_human_schedule_context: import/call failed")
-            entries = []
+            horizon = {'imminent': [], 'this_week': [], 'this_month': [], 'truncated': False}
 
-        lines = [f"[Human Schedules - next {hours_ahead}h]"]
-        if entries:
+        def _fmt_time(iso_str, target_id=None):
+            # get_schedule_horizon returns an unambiguous UTC ISO string (with
+            # offset) — convert to the SCHEDULE'S OWN LOCATION's local wall-clock
+            # time for display (every zone/site/device resolves its own tz from
+            # coordinates — see aot/utils/device_tz.py), falling back to the
+            # farm-wide Misc.timezone when the schedule has no linked location.
+            # That's what the user actually said ("오전 8시") and what the AI
+            # should reason about, not a bare UTC instant or an assumed single tz.
+            if not iso_str:
+                return 'N/A'
+            try:
+                dt = datetime.fromisoformat(iso_str)
+                from aot.utils.device_tz import resolve_location_tz
+                tz = resolve_location_tz(target_id)
+                return dt.astimezone(tz).strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                try:
+                    return to_local(datetime.fromisoformat(iso_str)).strftime('%Y-%m-%d %H:%M')
+                except Exception:
+                    return iso_str
+
+        def _fmt_item(e):
+            loc = e.get('location')
+            return (f"- [{e.get('category', '기타')}] {e.get('job_name', 'unknown')}"
+                    + (f" @ {loc}" if loc else "")
+                    + f"  |  {_fmt_time(e.get('schedule_time'), e.get('target_id'))}")
+
+        def _category_counts(entries):
+            counts = {}
             for e in entries:
-                lines.append(
-                    f"- {e.get('job_name', 'unknown')}  |  "
-                    f"{e.get('schedule_time', 'N/A')}  |  "
-                    f"user_id: {e.get('user_id', 'N/A')}"
-                )
-        else:
-            lines.append("(none scheduled)")
+                cat = e.get('category', '기타')
+                counts[cat] = counts.get(cat, 0) + 1
+            return ", ".join(f"[{cat}] {n}건" for cat, n in counts.items())
+
+        imminent = horizon.get('imminent') or []
+        this_week = horizon.get('this_week') or []
+        this_month = horizon.get('this_month') or []
+
+        if not (imminent or this_week or this_month):
+            return "[Farm Schedule Horizon]\n(none scheduled)"
+
+        lines = ["[Farm Schedule Horizon]"]
+
+        lines.append(f"Imminent (next 48h) — {len(imminent)} item(s):")
+        lines += [_fmt_item(e) for e in imminent] if imminent else ["  (none)"]
+
+        lines.append(f"This week (2-7 days) — {len(this_week)} item(s):")
+        lines += [_fmt_item(e) for e in this_week] if this_week else ["  (none)"]
+
+        lines.append(f"This month ({days_ahead} days) — by category:")
+        lines.append("  " + (_category_counts(this_month) if this_month else "(none)"))
+
+        if horizon.get('truncated'):
+            lines.append(f"(more schedules exist beyond this {days_ahead}-day window/cap — use search_schedule for the full list)")
+
         return "\n".join(lines)
 
     @staticmethod

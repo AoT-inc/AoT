@@ -20,13 +20,10 @@
 
     <form method="post" action="/settings/action" enctype=multipart/form-data>
     {{form_action.csrf_token}}
-    <div class="d-flex" style="gap: 8px; margin-bottom: 1.2rem; align-items: center;">
-      <div class="fileaction fileaction-new" data-provides="fileaction">
-        <span class="btn btn-sm btn-file"><input id="import_action_file" name="import_action_file" type="file" /></span>
-      </div>
-      <div>
-        {{form_action.import_action_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-      </div>
+    <input id="import_action_file" name="import_action_file" type="file" style="display:none" onchange="document.getElementById('import_action_file_label').textContent = this.files[0] ? this.files[0].name : '{{_('Choose files')}}';">
+    <div class="d-flex flex-wrap" style="gap: 8px; margin-bottom: 1.2rem; align-items: center;">
+      <button type="button" class="btn aot-pill-btn" onclick="document.getElementById('import_action_file').click()"><span id="import_action_file_label">{{_('Choose files')}}</span></button>
+      {{form_action.import_action_upload(class_='btn aot-pill-btn aot-pill-btn-primary')}}
     </div>
     </form>
 
@@ -34,7 +31,7 @@
 
     <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Imported Action Modules')}}</div>
 
-    <div class="aot-modal-container" style="padding: 0 16px;">
+    <div class="aot-modal-container aot-table-scroll" style="padding: 0 16px;">
       <table class="aot-module-table aot-module-table-3col">
         <thead>
           <tr>

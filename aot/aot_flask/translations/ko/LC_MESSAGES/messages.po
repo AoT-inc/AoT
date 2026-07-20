@@ -23758,3 +23758,19 @@ msgid ""
 "dispatch failure, runtime state error) are always recorded regardless of "
 "this flag."
 msgstr ""
+
+#: aot_flask/templates/pages/method-list.html:29
+msgid "Create Method"
+msgstr "메서드 생성"
+
+#: aot_flask/templates/admin/backup.html:30
+msgid "Saved Backups"
+msgstr "저장된 백업"
+
+#: aot_flask/templates/pages/method-list.html:57
+msgid "Saved Methods"
+msgstr "저장된 메서드"
+
+#: aot_flask/templates/pages/method-list.html:55
+msgid "No saved methods."
+msgstr "저장된 메서드가 없습니다."

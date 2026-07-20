@@ -3,7 +3,8 @@
 #     docker compose -f docker/docker-compose.prod.yml pull
 #     docker compose -f docker/docker-compose.prod.yml up -d
 # The app auto-migrates the volume DB on startup (aot_flask/app.py). All data
-# (SQLite DBs, secret key, kma, InfluxDB) lives in named volumes and survives
+# (SQLite DBs, secret key, kma, InfluxDB, uploaded files, 3D model assets,
+# admin/backup snapshots, user scripts) lives in named volumes and survives
 # image swaps. Roll back by pinning AOT_IMAGE_TAG to a previous version.
 #
 # Copy .env.prod.example to .env and set AOT_IMAGE_TAG.
@@ -21,6 +22,28 @@ services:
       - aot_data:/app/aot_local
       - flask_session:/app/aot/databases/flask_session
       - aot_logs:/var/log/aot
+      # User-uploaded files (notes/notice attachments, facility & zone photos) —
+      # without this they live only in the container's writable layer and are
+      # lost on every `docker compose pull && up -d` image swap.
+      - aot_uploads:/app/uploads
+      # Facility 3D model assets (.glb/.gltf + preview thumbnails) — same risk,
+      # separate mount because it lives under the Flask static folder, not /app/uploads.
+      - aot_model_assets:/app/aot/aot_flask/static/uploads/model_assets
+      # admin/backup snapshots (see aot/utils/docker_backup.py) — must persist
+      # independently of aot_data, since a backup exists precisely so it can
+      # outlive a bad restore or a corrupted live DB.
+      - aot_backups:/app/aot/tests/backups
+      # User-authored scripts (Export/Import + admin/backup both cover this
+      # dir, but with no volume it's still wiped on every image swap).
+      - aot_user_scripts:/app/aot/user_scripts
+      # User/commercial extension modules are NOT baked into the public image.
+      # Mount them from the host (repo custom_* dirs); empty for stock installs.
+      - ../aot/inputs/custom_inputs:/app/aot/inputs/custom_inputs
+      - ../aot/outputs/custom_outputs:/app/aot/outputs/custom_outputs
+      - ../aot/functions/custom_functions:/app/aot/functions/custom_functions
+      - ../aot/actions/custom_actions:/app/aot/actions/custom_actions
+      - ../aot/widgets/custom_widgets:/app/aot/widgets/custom_widgets
+      - ../aot/user_python_code:/app/aot/user_python_code
     environment:
       - TZ=${TZ:-Asia/Seoul}
       - FLASK_ENV=production
@@ -44,6 +67,13 @@ services:
       # Same named volume as aot-app: daemon and UI must open the SAME aot.db.
       - aot_data:/app/aot_local
       - aot_logs:/var/log/aot
+      # User/commercial extension modules (see aot-app) — the daemon runs outputs.
+      - ../aot/inputs/custom_inputs:/app/aot/inputs/custom_inputs
+      - ../aot/outputs/custom_outputs:/app/aot/outputs/custom_outputs
+      - ../aot/functions/custom_functions:/app/aot/functions/custom_functions
+      - ../aot/actions/custom_actions:/app/aot/actions/custom_actions
+      - ../aot/widgets/custom_widgets:/app/aot/widgets/custom_widgets
+      - ../aot/user_python_code:/app/aot/user_python_code
     environment:
       - TZ=${TZ:-Asia/Seoul}
       - PYTHONPATH=/app
@@ -82,5 +112,9 @@ volumes:
   aot_data:
   flask_session:
   aot_logs:
+  aot_uploads:
+  aot_model_assets:
+  aot_backups:
+  aot_user_scripts:
   influxdb_data:
   influxdb_config:

@@ -310,6 +310,11 @@
 /* Table-only scroll wrapper: overrides aot-modal-modern.css overflow:visible !important */
 .aot-table-scroll {
     overflow-x: auto !important;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.aot-table-scroll::-webkit-scrollbar {
+    display: none;
 }
 
 /* ============================================================
@@ -354,19 +359,20 @@
 }
 
 /* 3-column table (output, function, action, widget) */
-/* Total: 860px - 160px(button) = 700px / 2 columns = 350px each */
+/* Button column is a fixed 160px (see td:last-child above); remaining columns
+   split whatever width the box actually has, so the table always fits its
+   container instead of assuming a fixed 860px box width. */
 .aot-module-table-3col td:nth-child(1),
 .aot-module-table-3col td:nth-child(2) {
-    width: 350px !important;
+    width: calc((100% - 160px) / 2) !important;
 }
 
 /* 5-column table (input) */
-/* Total: 860px - 160px(button) = 700px / 4 columns = 175px each */
 .aot-module-table-5col td:nth-child(1),
 .aot-module-table-5col td:nth-child(2),
 .aot-module-table-5col td:nth-child(3),
 .aot-module-table-5col td:nth-child(4) {
-    width: 175px !important;
+    width: calc((100% - 160px) / 4) !important;
 }
 
 /* chirpstack: sticky name col + 2-button register col */
@@ -396,3 +402,103 @@
    11b. RESPONSIVE  (320px ~ : single-line maintained)
 ============================================================ */
 /* No column stacking — row layout is preserved down to 320px */
+
+/* ============================================================
+   12. WRAPPING PILL-BUTTON GROUP
+   우측 정렬(데스크톱) → 좁은 폭에서 알약 단위로 통째 줄바꿈.
+   (목록 행 액션·재시작 버튼 그룹 등 공통 — 알약이 2~3줄로
+    쪼개지거나 원형화되는 문제 방지)
+============================================================ */
+.aot-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.aot-btn-group-start {
+    justify-content: flex-start;
+}
+@media (max-width: 480px) {
+    .aot-btn-group {
+        justify-content: flex-start;
+    }
+}
+
+/* ============================================================
+   13. ENTITY LIST ROW  (info 좌측(신축) + 액션 우측, 좁으면 줄바꿈)
+   backup / method 등 목록 항목 공통.
+============================================================ */
+.aot-list-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 0.4rem 0;
+}
+.aot-list-row-main {
+    flex: 1 1 220px;
+    min-width: 0;
+    font-size: 0.875rem;
+    color: var(--aot-text-main);
+    line-height: 1.5;
+}
+/* 목록 행에서 이름을 알약 버튼으로 쓸 때: 좌측 정렬 + 말줄임 */
+.aot-list-row-main.btn.aot-pill-btn {
+    justify-content: flex-start;
+    max-width: 100%;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================
+   14. WIDE-CONTROL ROW  (긴 값 입력: 데스크톱 한 줄 / 모바일 세로 스택)
+   측정 선택·날짜 범위 등 긴 값이 좁은 화면에서 잘리지 않도록,
+   480px 이하에서 라벨 위 / 컨트롤 아래 full-width 로 쌓는다.
+============================================================ */
+.aot-settings-row-stack .aot-settings-control {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 340px;
+}
+@media (max-width: 480px) {
+    .aot-settings-row-stack {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .aot-settings-row-stack .aot-settings-label {
+        flex: none;
+    }
+    .aot-settings-row-stack .aot-settings-control {
+        width: 100%;
+        max-width: none;
+        justify-content: flex-start;
+    }
+}
+
+/* ============================================================
+   15. CODE / COMMAND OUTPUT BLOCK  (info 페이지 등)
+   토큰 기반 카드 + 가로 스크롤(스크롤바 숨김).
+============================================================ */
+.aot-code-block-group {
+    margin-bottom: 1.5rem;
+}
+.aot-code-block-label {
+    font-weight: 600;
+    color: var(--aot-text-main);
+    margin-bottom: 0.5rem;
+}
+.aot-code-block {
+    margin: 0;
+    padding: 0.8em;
+    border: 1px solid var(--border-neutral);
+    border-radius: 12px;
+    background-color: var(--aot-input-bg);
+    color: var(--aot-text-main);
+    font-size: 0.82rem;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.aot-code-block::-webkit-scrollbar {
+    display: none;
+}

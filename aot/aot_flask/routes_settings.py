@@ -441,7 +441,7 @@ def settings_function():
 
     form_import = forms_settings.Controller()
     form_delete = forms_settings.ControllerDel()
-    dict_controllers = parse_function_information()
+    dict_controllers = parse_function_information(custom_only=True)
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
@@ -468,7 +468,7 @@ def settings_widget():
 
     form_import = forms_settings.Widget()
     form_delete = forms_settings.WidgetDel()
-    dict_widgets = parse_widget_information()
+    dict_widgets = parse_widget_information(custom_only=True)
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
@@ -495,7 +495,7 @@ def settings_input():
 
     form_import = forms_settings.Input()
     form_delete = forms_settings.InputDel()
-    dict_inputs = parse_input_information()
+    dict_inputs = parse_input_information(custom_only=True)
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
@@ -522,7 +522,7 @@ def settings_output():
 
     form_import = forms_settings.Output()
     form_delete = forms_settings.OutputDel()
-    dict_outputs = parse_output_information()
+    dict_outputs = parse_output_information(custom_only=True)
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
@@ -549,7 +549,7 @@ def settings_action():
 
     form_import = forms_settings.Action()
     form_delete = forms_settings.ActionDel()
-    dict_actions = parse_action_information()
+    dict_actions = parse_action_information(custom_only=True)
 
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):

@@ -2,7 +2,7 @@
 import logging
 import json
 from datetime import datetime, timedelta
-from aot.utils.time_utils import get_local_now, utc_now
+from aot.utils.time_utils import get_local_now, utc_now, to_local, serialize_ts
 from typing import Optional, Dict, Any, List
 from sqlalchemy import desc
 
@@ -437,13 +437,16 @@ class AISummaryService:
         if not agent:
             return {"error": "No suitable agent for comparison found."}
 
+        # s1/s2.timestamp are naive-UTC (SQLite column) — localize before either
+        # the prompt or the returned dict shows them, or the AI/caller reads a
+        # bare UTC instant as if it were local wall-clock time.
         prompt = f"""
         당신은 AoT 시스템 분석 전문가입니다. 아래 두 시점의 시스템 스냅샷을 비교하여 주요 변화와 트렌드를 분석하세요.
-        
-        [스냅샷 1 ({s1.timestamp})]:
+
+        [스냅샷 1 ({to_local(s1.timestamp)})]:
         {s1.summary_text}
-        
-        [스냅샷 2 ({s2.timestamp})]:
+
+        [스냅샷 2 ({to_local(s2.timestamp)})]:
         {s2.summary_text}
         
         [지시사항]:
@@ -463,8 +466,8 @@ class AISummaryService:
             result = engine.run_reasoning({}, prompt)
             return {
                 "comparison": result.get('insight', '비교 결과 생성 실패'),
-                "s1": {"id": s1.unique_id, "timestamp": s1.timestamp.isoformat()},
-                "s2": {"id": s2.unique_id, "timestamp": s2.timestamp.isoformat()}
+                "s1": {"id": s1.unique_id, "timestamp": serialize_ts(s1.timestamp)},
+                "s2": {"id": s2.unique_id, "timestamp": serialize_ts(s2.timestamp)}
             }
         except Exception as e:
             logger.error(f"Comparison error: {e}")
@@ -493,7 +496,9 @@ class AISummaryService:
         if not agent:
             return {"error": "No suitable agent for trend analysis found."}
 
-        history_texts = [f"[{s.timestamp}]: {s.summary_text}" for s in history]
+        # s.timestamp is naive-UTC — localize so the trend prompt's dated history
+        # isn't silently 9h off from what a KST reader/analyst would expect.
+        history_texts = [f"[{to_local(s.timestamp)}]: {s.summary_text}" for s in history]
         history_combined = "\n\n".join(history_texts)
 
         prompt = f"""

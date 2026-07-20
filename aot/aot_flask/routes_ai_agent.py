@@ -1491,23 +1491,6 @@ def api_update_ai_settings():
         logger.exception("Failed to update AI settings")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@blueprint.route('/api/v1/ai/task/approve', methods=['POST'])
-@login_required
-def api_approve_ai_task():
-    """Approve a PROPOSED AITask and schedule it via AISchedulerService."""
-    if not user_has_permission('edit_controllers'):
-        return jsonify({'status': 'error', 'message': 'Permission denied'}), 403
-    data = request.get_json()
-    task_id = data.get('task_id')
-    if not task_id:
-        return jsonify({'status': 'error', 'message': 'Missing task_id'}), 400
-    
-    from aot.ai.services.ai_scheduler_service import AISchedulerService
-    task = AISchedulerService.approve_ai_task(task_id)
-    if task:
-        return jsonify({'status': 'success', 'message': 'Task approved and scheduled'})
-    return jsonify({'status': 'error', 'message': 'Task not found or failed to approve'}), 400
-
 @blueprint.route('/api/v1/ai/task/reject', methods=['POST'])
 @login_required
 def api_reject_ai_task():

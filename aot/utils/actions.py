@@ -35,7 +35,7 @@ logger = logging.getLogger("aot.actions")
 from functools import lru_cache
 
 @lru_cache(maxsize=4)
-def parse_action_information(exclude_custom=False):
+def parse_action_information(exclude_custom=False, custom_only=False):
     """Parse all action modules and return a dictionary of action IDs and their metadata.
 
     @phase active
@@ -63,10 +63,12 @@ def parse_action_information(exclude_custom=False):
         'custom_actions', 'examples', 'scripts', 'tmp_actions'
     ]
 
-    function_paths = [PATH_ACTIONS]
-
-    if not exclude_custom:
-        function_paths.append(PATH_ACTIONS_CUSTOM)
+    if custom_only:
+        function_paths = [PATH_ACTIONS_CUSTOM]
+    else:
+        function_paths = [PATH_ACTIONS]
+        if not exclude_custom:
+            function_paths.append(PATH_ACTIONS_CUSTOM)
 
     dict_actions = {}
 

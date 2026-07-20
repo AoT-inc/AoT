@@ -30,7 +30,8 @@ from aot.aot_flask.utils.utils_general import (flash_form_errors,
 from aot.scripts.measurement_db import get_influxdb_info
 from aot.utils.system_pi import assure_path_exists, cmd_output
 from aot.utils.tools import (create_measurements_export,
-                                   create_settings_export)
+                                   create_settings_export,
+                                   UPLOAD_DIRECTORIES)
 from aot.utils.utils import append_to_log
 from aot.utils.widget_generate_html import generate_widget_html
 
@@ -351,6 +352,44 @@ def import_settings(form):
                         for filename in filenames:
                             file_path = os.path.join(folder_name, filename)
                             new_path = os.path.join(each_dir[0], filename)
+                            append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {new_path}")
+                            try:
+                                shutil.move(file_path, new_path)
+                            except:
+                                append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: Failed to restore {filename}")
+                                logger.exception("Exception during file move")
+
+                # User-uploaded files (notes/notice attachments, facility &
+                # zone photos, and facility 3D model assets). Unlike the
+                # custom-code directories above, these can't be regenerated,
+                # so — unlike delete_directories — each is only touched if
+                # the imported zip actually contains that folder. An older
+                # export (made before uploads were included) has none of
+                # these folders, and importing it must not wipe out uploads
+                # already on this server.
+                for target_dir, zip_subfolder in UPLOAD_DIRECTORIES:
+                    extract_dir = os.path.join(tmp_folder, zip_subfolder)
+                    if not os.path.isdir(extract_dir):
+                        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Zip has no {zip_subfolder} folder, leaving existing {target_dir} untouched")
+                        continue
+
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Deleting directory: {target_dir}")
+                    if os.path.exists(target_dir):
+                        for folder_name, sub_folders, filenames in os.walk(target_dir):
+                            for filename in filenames:
+                                file_path = os.path.join(folder_name, filename)
+                                try:
+                                    os.remove(file_path)
+                                except:
+                                    pass
+
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {zip_subfolder} directory: {target_dir}")
+                    for folder_name, sub_folders, filenames in os.walk(extract_dir):
+                        for filename in filenames:
+                            file_path = os.path.join(folder_name, filename)
+                            rel_path = os.path.relpath(file_path, extract_dir)
+                            new_path = os.path.join(target_dir, rel_path)
+                            os.makedirs(os.path.dirname(new_path), exist_ok=True)
                             append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {new_path}")
                             try:
                                 shutil.move(file_path, new_path)

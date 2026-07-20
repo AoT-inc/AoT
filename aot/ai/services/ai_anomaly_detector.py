@@ -133,16 +133,21 @@ class AIAnomalyDetector:
             
             current_metrics = current_data.get('metrics', {})
             
-            from aot.utils.time_utils import get_local_now
+            from aot.utils.time_utils import get_local_now, to_local
             current_time = get_local_now()
-            
+            # previous_summary.timestamp is stored naive-UTC (SQLite column) — must
+            # go through the SAME local conversion as current_time, or the two
+            # "Timestamp" fields in this prompt look like the same clock while
+            # actually being ~9h apart (KST), misleading "unusual timing" analysis.
+            previous_time = to_local(previous_summary.timestamp)
+
             prompt = f"""
 Analyze the following system metrics for anomalies or concerning patterns:
 
 Previous State:
 - Total Devices: {prev_metrics.get('total_devices', 0)}
 - Active Devices: {prev_metrics.get('active_devices', 0)}
-- Timestamp: {previous_summary.timestamp}
+- Timestamp: {previous_time}
 
 Current State:
 - Total Devices: {current_metrics.get('total_devices', 0)}

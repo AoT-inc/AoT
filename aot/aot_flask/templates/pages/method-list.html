@@ -5,6 +5,7 @@
 {% block title %} - {{dict_translation['method']['title']}}{% endblock %}
 
 {% block head %}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=15" />
   {% if method %}
   <script src="/static/js/vendor/user_js/highcharts-9.1.2.js"></script>
     {% if current_user.theme in dark_themes %}
@@ -19,62 +20,52 @@
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
-    <h4>{{_('Method')}} <a href="{{help_page[0]}}"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h4>
+    <div class="aot-settings-title">
+      <h3>{{_('Method')}} <a href="{{help_page[0]}}" target="_blank"><span style="font-size: 16px" class="fas fa-question-circle"></span></a></h3>
+    </div>
 
-    <p>{{_('Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller.')}}</p>
-    
-    <div style="clear: both; padding: 0.5em 0;"></div>
+    <p class="aot-modal-body-text">{{_('Methods are used to reference various types of setpoints in a PID controller. Typically, a PID controller controls a device to a fixed setpoint. If you want the setpoint to change over time, you can change the setpoint over time in the method and use it for control by tracking the value in the PID controller.')}}</p>
+
+    <div class="aot-modal-group-title">{{_('Create Method')}}</div>
 
     <form method="post" action="/method-build/0">
     <input type="hidden" name="form-name" value="createMethod">
     {{form_create_method.csrf_token}}
-
-    <div class="row small-gutters" style="padding-left: 1em">
-      <div class="col-auto">
-        {{form_create_method.name.label(class_='control-label')}}
-        <div>
-          {{form_create_method.name(class_='form-control')}}
+    <div class="aot-modal-container">
+      <div class="aot-settings-row aot-settings-row-stack">
+        {{form_create_method.name.label(class_='aot-settings-label')}}
+        <div class="aot-settings-control">
+          {{form_create_method.name(class_='form-control aot-modern-input')}}
         </div>
       </div>
-      <div class="col-auto">
-        {{form_create_method.method_type.label(class_='control-label')}}
-        <div>
-          {{form_create_method.method_type(class_='selectpicker', **{'data-style': 'btn btn-primary', 'title': _('Method') + ': ' + _('Select')}) }}
-        </div>
-      </div>
-      <div class="col-auto">
-        <label class='control-label' style="padding-top: 1em"></label>
-        <div>
-          {{form_create_method.Submit(class_='btn btn-primary')}}
+      <div class="aot-settings-row aot-settings-row-stack" style="border-bottom: none;">
+        {{form_create_method.method_type.label(class_='aot-settings-label')}}
+        <div class="aot-settings-control">
+          {{form_create_method.method_type(class_='selectpicker', **{'data-style': 'btn', 'title': _('Method') + ': ' + _('Select')}) }}
         </div>
       </div>
     </div>
-
+    <div class="aot-settings-actions">
+      {{form_create_method.Submit(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    </div>
     </form>
 
-    <div style="clear: both; padding: 1em 0;">
-
-      <h4>
+    <div class="aot-modal-group-title" style="margin-top: 2rem;">
       {%- if method == [] -%}
         {{_('No saved methods.')}}
       {%- else -%}
         {{_('Saved Methods')}}
       {%- endif -%}
-      </h4>
     </div>
 
     {%- for each_method in method -%}
       {%- set chart_number = loop.index -%}
-      <div style="margin-bottom: 1em; border: 2px solid #ddd; border-radius: 5px;">
-        <div class="row small-gutters" style="padding: 0 1em">
-          <div class="col-12 col-sm-6">
-            <input class="form-control btn btn-primary btn-sm" type="button" onclick="setClipboard('{{each_method.unique_id}}')" title="[{{'%02d' % each_method.id}} UUID: {{each_method.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}" value="[{{method_info[each_method.method_type]['name']}}] {{each_method.name}}" type="text">
-          </div>
-          <div class="col-auto">
-            <a href="/method-delete/{{each_method.unique_id}}" class="btn btn-primary" role="button" onclick="return confirm('Are you sure you want to delete this?')">{{dict_translation['delete']['title']}}</a>
-          </div>
-          <div class="col-auto">
-            <a href="/method-build/{{each_method.unique_id}}" class="btn btn-primary" role="button">{{_('Edit')}}</a>
+      <div class="aot-settings-section" style="padding: 0.9rem 16px;">
+        <div class="aot-list-row">
+          <button type="button" class="btn aot-pill-btn aot-list-row-main" onclick="setClipboard('{{each_method.unique_id}}')" title="[{{'%02d' % each_method.id}}] UUID: {{each_method.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}">[{{method_info[each_method.method_type]['name']}}] {{each_method.name}}</button>
+          <div class="aot-btn-group">
+            <a href="/method-build/{{each_method.unique_id}}" class="btn aot-pill-btn aot-pill-btn-primary" role="button">{{_('Edit')}}</a>
+            <a href="/method-delete/{{each_method.unique_id}}" class="btn aot-pill-btn aot-pill-btn-danger" role="button" onclick="return confirm('{{_('Are you sure you want to delete this?')}}')">{{dict_translation['delete']['title']}}</a>
           </div>
         </div>
 
@@ -84,12 +75,11 @@
         {%- endfor -%}
 
         {%- if method_setpoint or each_method.method_type in ["DailySine", "DailyBezier"] -%}
-          <div id="container{{chart_number}}" style="height: 300px; width: 100%;"></div>
+          <div id="container{{chart_number}}" style="height: 300px; width: 100%; margin-top: 0.8rem;"></div>
         {%- endif -%}
 
       </div>
     {%- endfor -%}
-    <div style="clear: both; padding:1em 0;"></div>
   </main>
 </div>
 

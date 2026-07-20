@@ -23232,3 +23232,19 @@ msgid ""
 "dispatch failure, runtime state error) are always recorded regardless of "
 "this flag."
 msgstr ""
+
+#: aot_flask/templates/pages/method-list.html:29
+msgid "Create Method"
+msgstr ""
+
+#: aot_flask/templates/admin/backup.html:30
+msgid "Saved Backups"
+msgstr ""
+
+#: aot_flask/templates/pages/method-list.html:57
+msgid "Saved Methods"
+msgstr ""
+
+#: aot_flask/templates/pages/method-list.html:55
+msgid "No saved methods."
+msgstr ""

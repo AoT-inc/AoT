@@ -194,7 +194,7 @@ def list_analog_to_digital_converters():
 
 from functools import lru_cache
 
-def parse_input_information(exclude_custom=False):
+def parse_input_information(exclude_custom=False, custom_only=False):
     """Parse input module information and return a dictionary of input IDs and metadata.
 
     @phase active
@@ -222,10 +222,12 @@ def parse_input_information(exclude_custom=False):
         'examples', 'scripts', 'tmp_inputs', 'sensorutils.py'
     ]
 
-    input_paths = [PATH_INPUTS, PATH_INPUTS_GIS]
-
-    if not exclude_custom:
-        input_paths.append(PATH_INPUTS_CUSTOM)
+    if custom_only:
+        input_paths = [PATH_INPUTS_CUSTOM]
+    else:
+        input_paths = [PATH_INPUTS, PATH_INPUTS_GIS]
+        if not exclude_custom:
+            input_paths.append(PATH_INPUTS_CUSTOM)
 
     dict_inputs = {}
 

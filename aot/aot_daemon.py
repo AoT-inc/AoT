@@ -48,7 +48,7 @@ from aot.controllers.controller_pid import PIDController
 from aot.controllers.controller_trigger import TriggerController
 from aot.controllers.controller_trigger_sequence import SequenceTriggerController
 from aot.controllers.controller_widget import WidgetController
-from aot.databases.models import (AITaskHistory, PID, Camera, Conditional,
+from aot.databases.models import (PID, Camera, Conditional,
                                      CustomController, Input, Misc, Trigger)
 from aot.databases.utils import session_scope
 from aot.devices.camera import camera_record
@@ -1574,48 +1574,6 @@ class PyroServer(object):
                 'success': False,
                 'message': str(e)
             }
-
-    @expose
-    def log_history(self, task_id, action_type, result, user_id=None):
-        """
-        Log action execution to AITaskHistory SQL table.
-
-        Args:
-            task_id: Unique identifier for the task
-            action_type: Type of action (e.g., 'PROPOSED', 'COMPLETED')
-            result: Result string or dict
-            user_id: Optional user/agent unique_id
-
-        Returns:
-            dict with history_id and success status
-        """
-        try:
-            from aot.databases.utils import session_scope
-
-            history_entry = AITaskHistory(
-                task_id=task_id,
-                action=action_type,
-                user_id=user_id,
-                reason=str(result) if result else None
-            )
-
-            with session_scope() as db_session:
-                db_session.add(history_entry)
-                db_session.commit()
-                history_id = history_entry.unique_id
-
-            return {
-                'success': True,
-                'history_id': history_id
-            }
-        except Exception as e:
-            self.logger.exception(f"Error logging history: {e}")
-            return {
-                'success': False,
-                'history_id': None,
-                'error': str(e)
-            }
-
 
 class PyroDaemon(threading.Thread):
     """
