@@ -1,13 +1,15 @@
 # AoT_map Widget
 
-The `AoT_map` widget displays an interactive map on the dashboard. It supports device markers, real-time status polling, and output control switches.
+`AoT_map` is a dashboard widget that shows the sensors and devices scattered across your greenhouses on a single map, and lets you control them right there. Say you have 20 irrigation valves and 10 temperature/humidity sensors spread across 5 greenhouse bays — this one widget lets you see the whole layout at a glance, click a device to turn it on or off immediately, and check each location's latest readings and AI advice. It's built on MapLibre GL, so it supports 3D terrain, 3D facility rendering, and smooth zooming.
+
+![AoT Map widget — device markers, the measurement panel, and the map's tool buttons](../images/aot-dashboard-map.png)
 
 ---
 
 ## Adding the Widget
 
-1. On the dashboard, select **Add Widget → AoT_map**.
-2. In the settings, choose the map to display.
+1. On the dashboard, select **Add Widget → AoT Map**.
+2. In the settings, choose the map to display (leave empty to use the most recently modified map).
 3. Click **Save**.
 
 ---
@@ -16,102 +18,160 @@ The `AoT_map` widget displays an interactive map on the dashboard. It supports d
 
 ### Device Markers
 
-AoT devices placed in **Device** mode in `/geo/design` appear as markers on the map.
+Input, Output, and Function devices placed in **Device** mode in `/geo/design` appear as markers on the map.
 
-- **Marker color**: Automatically changes based on device active/inactive/error state.
-- **Marker clustering**: When zoomed out, nearby markers are grouped together.
-- **Device icons**: Icons vary by device type (temperature sensor/relay/pump, etc.).
+- **Marker color**: Changes automatically based on the device's active/inactive/error state.
+- **Overlap handling**: When markers overlap at a low zoom level, they collapse into a single badge showing the count; zooming in spreads them back out into individual markers.
+- **Device icons**: Icons vary by device type (temperature sensor, relay, pump, and so on).
 
-### Popup Controls
+### Control Right From the Popup
 
 Clicking a marker opens a popup showing:
 
-- Device name
-- Latest measurement value (for Input devices)
-- On/Off toggle switch (for Output devices)
-- Last updated timestamp
+- The device name
+- The latest measurement (for Input devices)
+- An On/Off toggle switch (for Output devices — shown only to users with **edit** permission)
+- The last-updated timestamp
 
-Toggling the switch immediately controls the device via `/api/output/<id>/state`.
+Toggling the switch turns the device on or off immediately. Clicking a Facility marker shows a 3D preview and an environment-data summary instead — see [3D Facility Popup](#3d-facility-popup) below.
 
-### Real-time Polling
+### Real-Time Refresh
 
-The widget automatically refreshes device state at a configured interval (default: 10 seconds).
+The widget automatically refreshes device state at a configured interval (default: 5 seconds). Marker colors and measurement labels update live, and values keep refreshing even while a popup is open.
 
-- Marker colors update in real time.
-- Values refresh even while a popup is open.
-- Stopwatch: Displays how long an output device has been on.
+### Map Tool Buttons
+
+The following tool buttons appear in a corner of the map:
+
+| Button | Function |
+| :--- | :--- |
+| +/− | Zoom in / out |
+| Fullscreen | Display the widget in fullscreen |
+| Search | Search an address and fly to it |
+| My Location | Move to your browser's GPS position |
+| Reset | Return to the originally saved position and zoom |
+| Site List | Pick a registered site or zone and jump straight to it |
+
+Separately, the widget's title bar has **Lock Map** (locks panning/zooming) and **Hide Controls** (hides the tool buttons) icons. These are toggled directly from the title bar, not from the settings form.
 
 ---
 
 ## Widget Settings
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| Map | Select the GeoMap to display | — |
-| Refresh Rate | Device state refresh interval (seconds) | 10 |
-| Show Legend | Show/hide legend | On |
-| Lock Map | Lock map panning and zooming | Off |
-| Hide Controls | Hide zoom/search buttons | Off |
-| Geo Mode | `vector` (MapLibre) or `raster` (Leaflet) | vector |
-| AI Advice | Show AI advice summary | Off |
+### Refresh
 
-### Choosing Geo Mode
+| Option | Description |
+| :--- | :--- |
+| Period (Seconds) | How often device state is refreshed. Set to 0 to disable auto-refresh. (Default: 5s) |
+| Max Valid Age (s) | Measurements older than this are not displayed. (Default: 300s) |
+| Input Update Interval (s) | How often measurements are re-fetched. (Default: 300s) |
 
-| Mode | Description | Recommended for |
-|------|-------------|----------------|
-| `vector` | MapLibre GL, supports 3D and smooth zoom | Default — most cases |
-| `raster` | Leaflet-based, legacy compatible | Older browsers, WMS-only setups |
+### Map
 
----
+| Option | Description |
+| :--- | :--- |
+| Select Map | The saved map to display. Leave empty to use the most recently modified map. |
+| Latitude / Longitude, Zoom | The fallback position and zoom level used when no map is selected. |
+| Active Overlay Layers / Selected Base Layer | Values the widget remembers from your last layer/base-map choice. **These aren't meant to be typed in by hand** — they're filled in automatically when you use the layer picker on the map. |
 
-## Map Control Buttons
+!!! note
+    Switching **Select Map** to a different map automatically resets the latitude/longitude and zoom values, so they can be re-fit to the new map.
 
-| Button | Function |
-|--------|----------|
-| +/- | Zoom in/out |
-| Search | Address/coordinate search (raster mode only) |
-| Location | Move to GPS position |
-| Lock | Toggle map pan lock |
-| Hide | Toggle control buttons |
-| RainViewer | Toggle rainfall radar overlay |
+### 3D Map
+
+| Option | Description |
+| :--- | :--- |
+| Default Pitch (0–60) | The 3D tilt angle when the map first opens. |
+| Default Bearing (−180 to 180) | The rotation angle when the map first opens. |
+| Vector Style URL | A custom MapLibre style JSON, if you need one. Leave empty to use the GIS input setting. |
+| Facility Render Mode | How 3D facility (building) models are drawn: Default (translucent) / Solid (opaque) / Wireframe / Performance (for mobile, minimizes load). |
+
+### Device Selection
+
+| Option | Description |
+| :--- | :--- |
+| Input / Output / Function | Choose which devices of each type appear on the map. If none are selected, no devices are shown — check here first if the map looks empty. |
+
+### Measurement Panel
+
+| Option | Description |
+| :--- | :--- |
+| Input / Output / Function | Choose which measurements of each type are shown in the side data panel. |
+
+### AI
+
+| Option | Description |
+| :--- | :--- |
+| Show AI Advice | Shows the latest AI advice summary for this map's facility/site as a clickable chip at the top of the map (requires the global AI to be configured). |
+
+### Labels
+
+| Option | Description |
+| :--- | :--- |
+| Show Labels | The master switch for all site/zone/device/sensor labels. Fine-tune which Input/Output/Function labels show up using the label controller on the right side of the map. |
+| Prevent Label Collision | When on, overlapping labels are hidden automatically. |
+| Label Spacing (px) | Extra padding added before labels count as overlapping. 0 (default) clusters only labels that visually overlap; raise it to 10–30 to cluster earlier in a dense deployment. |
+| Label Text Size (em) | The font size of all map labels. |
+| Facility-centric Labels | Off (default): outdoor-centric — site/zone labels stay visible at all zoom levels, and facility/sensor labels only appear once you zoom in. On: facility-centric — facility/sensor labels take priority, and site/zone labels merge together as you zoom out. |
+
+### Sensor Label Style
+
+Controls the appearance of the label shown where a facility has a sensor attached (whether it shows at all still follows the **Show Labels** master switch above).
+
+| Option | Description |
+| :--- | :--- |
+| Sensor Marker Style | Circle (a compact round marker showing the first measurement as an integer, colored by band) or Text (the full value). |
+| Max Channels Shown | How many measurement values to show per label. Extra channels collapse into a "+". |
+| Decimals | Decimal places for label values. |
+| Label Size (em) | The font size of sensor labels. |
+| Label Background / Text Color | A CSS color value (for example `#f8fafc` or `rgba(15,23,42,0.78)`). |
+| Vertical Offset (m) | How far above the sensor (in meters) the label is anchored. |
+| Label Opacity | A value from 0.0 to 1.0 controlling how transparent the sensor labels are. |
+| Enable Sensor Popup | When on, clicking a sensor label opens a detail popup with a 24-hour chart. |
+| Popup Default Tab | The tab shown first when the popup opens: Overview / Environment & Control / About. |
+
+### Shapes
+
+Toggles, by type, whether the polygons you drew in the design tool are shown as translucent overlays on the map.
+
+| Option | Description |
+| :--- | :--- |
+| Site Shape | Site boundaries (using the configured theme color). |
+| Zone Shape | Zone boundaries. |
+| Facility Shape | Building footprints. |
+| Equipment Shape | Shapes for equipment such as pipes. |
+| Device Shape | The area a device occupies. |
+| Other Drawn Shapes | Freeform shapes made with the drawing tools. |
+| Device Shape Opacity (0–100) | Opacity of the device shapes above — 0 is transparent, 100 is fully opaque. |
+
+### Misc
+
+| Option | Description |
+| :--- | :--- |
+| Display Data Only (Hide Map) | Hides the map background and overlays, showing only the side measurement panel. |
 
 ---
 
 ## Legend
 
-A legend is displayed in the bottom right of the map.
-
-- Shows registered GIS layer colors.
-- Explains Input/Output device icons.
-- Clicking the legend toggles visibility of that layer/device type.
-
----
-
-## Feature Overlay Display
-
-Site, Zone, and Facility polygons drawn in the design tool are displayed as semi-transparent overlays on the map.
-
-- **Site**: Site boundary (using configured theme color)
-- **Zone**: Zone color
-- **Facility**: Building footprint
-- **Connection**: Pipe/wiring routes
+A legend is displayed automatically in the bottom-right of the map — there's no setting to configure it. It explains the colors of whichever overlay layers are currently active and the Input/Output device icons; clicking a legend entry toggles that layer or device type on or off.
 
 ---
 
 ## 3D Facility Popup
 
-Clicking a Facility marker or polygon shows a brief 3D preview and environment data summary in a popup. For full facility view, use the [AoT_facility widget](facility-widget.md).
+Clicking a Facility marker or polygon shows a brief 3D preview and an environment-data summary in a popup. For the full facility view, use the [AoT_facility widget](facility-widget.md).
 
 ---
 
 ## Multiple Maps on One Dashboard
 
-You can add multiple AoT_map widgets to the same dashboard, each displaying a different map — for example, an overall site overview map alongside a zoomed-in view of a specific block.
+You can add multiple `AoT_map` widgets to the same dashboard, each showing a different map — for example, an overview map of the whole site alongside a zoomed-in view of one specific bay.
 
 ---
 
 ## Related Pages
 
-- [Design Tool](design-tool.md) — Placing device locations
-- [Facility Widget](facility-widget.md) — 3D facility widget
-- [GIS Layers](layers.md) — Layer registration
+- [Design Tool](design-tool.md) — Placing devices and shapes
+- [Facility Widget](facility-widget.md) — The dedicated 3D facility widget
+- [GIS Layers](layers.md) — Registering overlay layers

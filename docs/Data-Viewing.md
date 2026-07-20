@@ -42,19 +42,21 @@ Beyond the basic charts and controls, AoT provides several feature-rich widgets.
 
 ### AoT Map { #widget-map }
 
-Displays your devices on an interactive map and highlights their operating state with color. Built on MapLibre GL, it supports vector and raster base maps, GIS overlay layers, and 3D facility rendering.
+See the sensors and devices scattered across your greenhouses on one map, and control them right there. Click a colored marker to see its latest reading or flip an output on or off. Built on MapLibre GL, it supports GIS overlay layers, 3D terrain and facility rendering, and smooth zooming.
+
+![AoT Map widget — device markers, the measurement panel, and the map's tool buttons](images/aot-dashboard-map.png)
 
 **Key options**
 
 -   **Map** — select a saved map, or set a fallback latitude/longitude and zoom.
--   **3D map** — enable 3D terrain and set the default pitch, bearing, and facility render mode (Default / Solid / Wireframe / Performance).
+-   **3D map** — set the default pitch, bearing, and facility render mode (Default / Solid / Wireframe / Performance).
 -   **Devices** — select which Input, Output, and Function devices appear on the map.
 -   **Measurement panel** — choose the measurements shown in the side data panel.
 -   **Labels** — a master `Show Labels` switch plus collision prevention, spacing, and text size.
 -   **Sensor labels** — marker style (circle or text), decimals, and a click-to-open 24-hour chart popup.
 -   **Shapes** — toggle site / zone / facility / equipment / device polygons.
 
-*Notable:* realtime sensor values are anchored on the 3D structures, and — when the global AI is configured — the latest AI advisories appear as clickable chips at the top of the map.
+*Notable:* realtime sensor values are anchored on the 3D structures, and — when the global AI is configured — the latest AI advisories appear as clickable chips at the top of the map. For the full option list and details, see the [AoT_map widget page](geo/map-widget.md).
 
 ### Sequence Controller { #widget-sequence }
 
