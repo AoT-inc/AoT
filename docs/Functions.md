@@ -839,23 +839,58 @@ This is useful when an output must remain on during a specific time and you want
 
 ## Trigger - Sequence
 
-The Trigger - Sequence function lets you run multiple actions sequentially according to a defined order and time interval.
+A **Sequence** turns several output devices (valves, pumps, lights, and so on) on and off automatically, in a fixed order and timing. Use it to automate work that happens in stages — "open valve A for 30 minutes, then valve B, then valve C" — instead of switching each device by hand. It is especially useful for irrigation cycles and multi-stage ventilation (open a vent → wait → turn on a fan).
 
-### Key Concepts and Behavior
+### Worked Example: A Main Pump + 3 Sequential Valves
 
-- **Sequential Execution**: Runs the registered actions in the order of their configured GridStack position (`position`).
-- **Modes**:
-    - **Single (default)**: Applies an independent duration to each step.
-        - **Formula**: `Total active time = Head Overlap + Base Duration + Tail Overlap`
-        - **Behavior**: The next step starts `Overlap` seconds before the previous step ends, supporting a smooth transition.
-    - **Total (Full-span)**: Used for an action that must stay on for the entire sequence (for example, a main pump). It is held from the start of the sequence until the last `Single` action ends.
-- **Dynamic Duration**:
-    - Via the `action_duration_id` option, the measurement of a particular Input can be used as the run time.
+Here is the most common use case. Say you have one main irrigation pump and valves A, B, and C that should water three zones in order. You want:
+
+- The **pump** to stay on continuously for the whole irrigation run.
+- **Valves A → B → C** to each run for 30 minutes in turn, then switch off automatically.
+
+To set this up:
+
+1. Add a new **Sequence** function from the function list.
+2. Under **Add Action**, choose "Output: On/Off/Duration", pick the main pump's output, and add it. Set its mode to **Total** — this mode is for a device that must stay on for as long as the whole sequence is running.
+3. Add valves A, B, and C in that order. Set each one's mode to **Single**, with a duration of 1800 seconds (30 minutes).
+4. Once saved, the steps run in the order you added them (you can also drag to reorder them in the widget).
+
+Here is what that looks like over time:
+
+| Elapsed time | 0–30 min | 30–60 min | 60–90 min |
+| :--- | :---: | :---: | :---: |
+| Pump (Total) | ON | ON | ON |
+| Valve A (Single) | ON → OFF | | |
+| Valve B (Single) | | ON → OFF | |
+| Valve C (Single) | | | ON → OFF |
+
+The moment valve C turns off, the pump turns off with it. The **Total** mode pattern is meant for exactly one device (usually the main pump) that must stay on until everything else finishes; the rest of the steps run in **Single** mode, one after another.
+
+### Worked Example: Opening Several Valves at Once
+
+What if, in the example above, you wanted valves B and C to open **at the same time** instead of one after the other? Group the two steps into a **device group**. In the widget or the unified modal, enter the same group name (for example, `zone2`) in both valves' group field, and they collapse into a single slot that turns on and off together.
+
+| Elapsed time | 0–30 min | 30–60 min |
+| :--- | :---: | :---: |
+| Pump (Total) | ON | ON |
+| Valve A (Single) | ON → OFF | |
+| Valves B + C (group `zone2`) | | ON → OFF (together) |
+
+You can freely mix sequential steps (the pump and Single steps) with simultaneous steps (device groups). Grouped valves share a single duration — see [Device Groups](#device-groups) below for the full rules.
+
+### Modes: Single vs. Total
+
+- **Single (default)**: Applies an independent duration to each step.
+    - **Formula**: `Total active time = Head Overlap + Base Duration + Tail Overlap`
+    - **Behavior**: The next step starts `Overlap` seconds before the previous step ends, supporting a smooth transition (for example, opening the next valve a few seconds before closing the current one, so pipe pressure doesn't drop suddenly).
+- **Total (Full-span)**: As in the pump example above, used for a step that must stay on for the entire sequence. It is held from the start of the sequence until the last `Single` step ends.
+
+### Other Key Concepts
+
+- **Dynamic Duration**: Via the `action_duration_id` option, the measurement of a particular Input can be used as the run time.
     - Format: `Input_UUID` or `Input_UUID,Measurement_UUID`.
     - Validity: Only the latest measurement within `time_offset_minutes` is used; if none exists, the configured base `action_duration` is used.
-- **Overlaps**:
-    - The `output_duration` setting determines the transition time between steps.
-    - The first action has only a `Tail Overlap`, middle actions have both `Head & Tail Overlap`, and the last action has only a `Head Overlap`.
+- **Overlaps**: The `output_duration` setting determines the transition time between steps. The first action has only a `Tail Overlap`, middle actions have both `Head & Tail Overlap`, and the last action has only a `Head Overlap`.
 - **Constraints (Window & Latency)**:
     - **Execution Window**: The sequence starts or runs only between `timer_start_time` and `timer_end_time`. Outside this range it is forcibly terminated.
     - **Start Latency**: Sets the wait time (`timer_start_offset`) in seconds from the trigger (activation) to the actual sequence start.
@@ -875,9 +910,9 @@ The Trigger - Sequence function lets you run multiple actions sequentially accor
 | `group_name` | The device-group name. Steps sharing the same name collapse into one slot and operate simultaneously (see below). If empty, the step operates standalone. |
 | `display_name` | A custom label shown in the widget list. If empty, it falls back to the device name. |
 
-### Device Groups (Simultaneous Operation)
+### Device Groups (Simultaneous Operation) { #device-groups }
 
-When you group several steps into **one device group**, they do not run sequentially but instead **turn on and off simultaneously within the same time window.** For example, grouping irrigation valves A, B, and C into one group opens all three valves at the same time.
+As shown in the example above, grouping several steps into **one device group** makes them run not sequentially but **simultaneously, within the same time window.** Here are the detailed rules.
 
 - **How to group**: In the widget or the unified modal, click a step name → enter the same group name in the group field. Steps with the same name are collapsed into a single slot. Clearing the group field removes that step from the group and returns it to standalone operation.
 - **Common Duration (Leader Inheritance)**: A group shares a single common operating time. When a step joins an existing group, it **automatically inherits** that group's common `action_duration` (and the dynamic-duration reader `action_duration_id`). The slot's representative (the earliest-positioned member) determines the duration and dynamic reader for the whole group.

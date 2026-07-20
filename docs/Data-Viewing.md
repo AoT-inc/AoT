@@ -58,7 +58,11 @@ Displays your devices on an interactive map and highlights their operating state
 
 ### Sequence Controller { #widget-sequence }
 
-Activates, deactivates, and monitors a **Sequence** function (a `trigger_sequence`), showing its action list and schedule on the dashboard.
+Once you've built a [Sequence](Functions.md#trigger-sequence) function — say, an irrigation routine that runs a main pump plus several valves in order — this widget lets you turn it on and off, see which step is currently running, and control which days it runs, all from the dashboard. You can reorder valves or toggle a day off without leaving the dashboard.
+
+![Sequence Controller widget — per-weekday checkboxes, start/end/period, and the action list](images/aot-dashboard-sequence.png)
+
+The screenshot above is a real, running irrigation sequence. The checkboxes across the top enable or disable each day of the week, the fields below show the start time, end time, and period, and the action list at the bottom lists the valves in order (steps in the same color are a [device group](Functions.md#device-groups)). The toggle next to the title switches the whole sequence on or off immediately.
 
 **Key options**
 
