@@ -137,8 +137,8 @@ TOOLS: List[Tool] = [
     Tool('edit_schedule', handler='edit_schedule_tool', mutating=True, manifest={
         "tool_name": "edit_schedule",
         "action_type": "virtual_tool_call",
-        "description": "Edits an existing schedule's time, content, or worker. Requires human approval. If the schedule is an already-registered device reservation, its trigger is rescheduled too. First call search_schedule to get the job_id.",
-        "usage_hint": "params.arguments: {job_id (required — from search_schedule), date (optional YYYY-MM-DD, keeps existing date if omitted), time (optional HH:MM, keeps existing time if omitted), content (optional new text), worker (optional new assignee), target_name (optional — re-link to a different zone/facility/device by name; ambiguous name returns available_targets → ask_user then retry)}.",
+        "description": "Edits an existing schedule's time, duration, content, or worker. Requires human approval. If the schedule is an already-registered device reservation, its trigger is rescheduled too. First call search_schedule to get the job_id.",
+        "usage_hint": "params.arguments: {job_id (required — from search_schedule), date (optional YYYY-MM-DD, keeps existing date if omitted), time (optional HH:MM, keeps existing time if omitted), duration_minutes (optional — new duration in minutes, replaces the existing one), content (optional new text), worker (optional new assignee), target_name (optional — re-link to a different zone/facility/device by name; ambiguous name returns available_targets → ask_user then retry)}.",
     }),
     Tool('delete_schedule', handler='delete_schedule_tool', mutating=True, manifest={
         "tool_name": "delete_schedule",

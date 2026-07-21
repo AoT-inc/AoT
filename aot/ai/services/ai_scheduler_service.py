@@ -133,6 +133,71 @@ def _context_source_sync_job(source_id):
             logger.exception("[ContextSourceSync] Unhandled error for source_id=%s: %s", source_id, exc)
 
 
+# @ANCHOR: CALENDAR_SYNC_JOB_FUNC
+def _calendar_sync_job(connection_id):
+    """Background job: two-way sync one UserCalendarConnection (Google Calendar).
+    Runs inside app context; delegates to calendar_sync_service.sync_connection
+    which handles token refresh + last_synced_at/status."""
+    global _flask_app
+    if not _flask_app:
+        logger.error("[CalendarSync] Job called without _flask_app, connection_id=%s", connection_id)
+        return
+    with _flask_app.app_context():
+        try:
+            from aot.ai.services.calendar_sync_service import sync_connection
+            messages = sync_connection(connection_id)
+            if messages.get("error"):
+                if any("not found or inactive" in e for e in messages["error"]):
+                    job_id = f'calendar_sync_{connection_id}'
+                    try:
+                        get_scheduler().remove_job(job_id)
+                        logger.info("[CalendarSync] Removed stale job %s (connection inactive/deleted)", job_id)
+                    except Exception:
+                        pass
+                else:
+                    logger.warning("[CalendarSync] connection_id=%s errors: %s", connection_id, messages["error"])
+            else:
+                logger.debug("[CalendarSync] connection_id=%s synced: %s", connection_id, messages)
+        except Exception as exc:
+            logger.exception("[CalendarSync] Unhandled error for connection_id=%s: %s", connection_id, exc)
+
+
+def ensure_calendar_sync_job(connection_id, interval_min=15, run_soon=True):
+    """Register/refresh the per-connection Google Calendar sync job. Called on
+    connect so a new link starts syncing without waiting for an app restart.
+    run_soon schedules a first fire ~10s out for immediate feedback. Best-effort:
+    a failure here is logged, not raised (the startup registration is the
+    backstop)."""
+    try:
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        kwargs = dict(
+            func=_calendar_sync_job,
+            args=[connection_id],
+            trigger='interval',
+            minutes=max(1, int(interval_min or 15)),
+            id=f'calendar_sync_{connection_id}',
+            coalesce=True,
+            max_instances=1,
+            replace_existing=True,
+        )
+        if run_soon:
+            kwargs['next_run_time'] = _dt.now(_tz.utc) + _td(seconds=10)
+        get_scheduler().add_job(**kwargs)
+        return True
+    except Exception as exc:
+        logger.warning("[CalendarSync] ensure_calendar_sync_job failed for %s: %s", connection_id, exc)
+        return False
+
+
+def remove_calendar_sync_job(connection_id):
+    """Drop the per-connection sync job on disconnect. Best-effort."""
+    try:
+        get_scheduler().remove_job(f'calendar_sync_{connection_id}')
+        return True
+    except Exception:
+        return False
+
+
 # @ANCHOR: AI_SCHEDULER_WEATHER_SUMMARY  [2026-03-24 — 001_WEATHER_LOGIC_UPGRADE patch_4]
 def _weather_summary_job():
     """
@@ -686,6 +751,28 @@ class AISchedulerService:
                 )
         except Exception as _css_err:
             logger.warning("[ContextSourceSync] Could not register context source sync jobs: %s", _css_err)
+
+        # @ANCHOR: CALENDAR_SYNC_JOBS (registration site)
+        try:
+            from aot.databases.models.calendar_integration import UserCalendarConnection
+            with app.app_context():
+                active_connections = UserCalendarConnection.query.filter_by(is_active=True).all()
+            for conn in active_connections:
+                interval_min = conn.sync_interval_min or 15
+                if interval_min <= 0:
+                    continue
+                scheduler.add_job(
+                    func=_calendar_sync_job,
+                    args=[conn.id],
+                    trigger='interval',
+                    minutes=interval_min,
+                    id=f'calendar_sync_{conn.id}',
+                    coalesce=True,
+                    max_instances=1,
+                    replace_existing=True,
+                )
+        except Exception as _cal_err:
+            logger.warning("[CalendarSync] Could not register calendar sync jobs: %s", _cal_err)
 
         # @ANCHOR: TIER_RECLASSIFICATION_JOB (registration site)
         try:

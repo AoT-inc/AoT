@@ -5,6 +5,7 @@
 import datetime
 import logging
 import os
+import secrets
 import socket
 import time
 
@@ -22,7 +23,10 @@ from aot.databases.models import AlembicVersion, Misc, Role, User
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import forms_authentication
 from aot.aot_flask.utils import utils_general
+from aot.utils import google_oauth
 from aot.utils.utils import test_password, test_username
+
+_GOOGLE_LOGIN_STATE_KEY = 'google_login_oauth_state'
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +238,10 @@ def login_password():
                 if not user:
                     login_log(username, 'NA', user_ip, 'NOUSER')
                     failed_login()
+                elif not user.password_hash:
+                    # Google-signup accounts have no password set yet.
+                    login_log(username, 'NA', user_ip, 'FAIL')
+                    failed_login()
                 elif form_login.validate_on_submit():
                     matched_hash = User().check_password(
                         form_login.aot_password.data, user.password_hash)
@@ -245,6 +253,11 @@ def login_password():
 
                     if matched_hash == password_hash:
                         user = User.query.filter(User.name == username).first()
+                        if not user.is_approved:
+                            flash(gettext(
+                                "Your account is awaiting administrator "
+                                "approval."), "info")
+                            return redirect('/login')
                         role_name = Role.query.filter(Role.id == user.role_id).first().name
                         login_log(username, role_name, user_ip, 'LOGIN')
 
@@ -349,6 +362,10 @@ def login_keypad_code(code):
             failed_login()
             flash(gettext("Invalid Code"), "error")
             time.sleep(2)
+        elif not user.is_approved:
+            flash(gettext(
+                "Your account is awaiting administrator approval."), "info")
+            time.sleep(2)
         else:
             role_name = Role.query.filter(Role.id == user.role_id).first().name
             login_log(user.name, role_name, user_ip, 'LOGIN')
@@ -365,6 +382,151 @@ def login_keypad_code(code):
     return render_template('login_keypad.html',
                            dict_translation=TRANSLATIONS,
                            host=host)
+
+
+@blueprint.route('/login/google/start', methods=['GET'])
+def login_google_start():
+    """Kick off 'Sign in with Google' from the login page (no session yet)."""
+    if not admin_exists():
+        return redirect('/create_admin')
+    if flask_login.current_user.is_authenticated:
+        return redirect(url_for('routes_general.home'))
+    if not google_oauth.is_configured():
+        flash(gettext("Google sign-in is not configured yet."), "warning")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    # CSRF: random state stored in the session, verified on callback.
+    state = secrets.token_urlsafe(24)
+    session[_GOOGLE_LOGIN_STATE_KEY] = state
+    consent_url = google_oauth.build_consent_url(state)
+    if not consent_url:
+        flash(gettext("Could not build the Google authorization URL."), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+    return redirect(consent_url)
+
+
+@blueprint.route('/login/google/callback', methods=['GET'])
+def login_google_callback():
+    """Complete 'Sign in with Google'. Matches the Google account's email to
+    an existing User (logs in) or, if none matches, self-registers a new,
+    unapproved User for an admin to review in Settings > Users."""
+    if not admin_exists():
+        return redirect('/create_admin')
+    if flask_login.current_user.is_authenticated:
+        return redirect(url_for('routes_general.home'))
+
+    error = request.args.get('error')
+    if error:
+        flash(gettext(
+            "Google sign-in was denied or failed: %(err)s", err=error), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    expected = session.pop(_GOOGLE_LOGIN_STATE_KEY, None)
+    got = request.args.get('state')
+    if not expected or expected != got:
+        flash(gettext(
+            "Authorization state mismatch — please try signing in again."),
+              "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    code = request.args.get('code')
+    if not code:
+        flash(gettext("No authorization code returned by Google."), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    tokens = google_oauth.exchange_code(code)
+    if tokens.get('error'):
+        flash(gettext(
+            "Google sign-in failed: %(err)s", err=tokens['error']), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    email = google_oauth.fetch_account_email(tokens.get('access_token'))
+    if not email:
+        flash(gettext("Could not read your Google account's email address."),
+              "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+    user = User.query.filter(func.lower(User.email) == email.lower()).first()
+
+    if user is not None:
+        if not user.is_approved:
+            flash(gettext(
+                "Your account is awaiting administrator approval."), "info")
+            return redirect(url_for('routes_authentication.login_check'))
+
+        role = Role.query.filter(Role.id == user.role_id).first()
+        login_log(user.name, role.name if role else 'NA', user_ip, 'LOGIN (Google)')
+
+        login_user = User()
+        login_user.id = user.id
+        login_user.name = user.name
+        flask_login.login_user(login_user, remember=True)
+
+        _link_google_calendar_connection(user.id, tokens, email)
+        return redirect(url_for('routes_general.home'))
+
+    # No matching account by email — self-register, pending admin approval.
+    guest_role = Role.query.filter_by(name='Guest').first()
+    base_name = (email.split('@')[0] or 'google_user').lower()
+    candidate = base_name
+    suffix = 1
+    while User.query.filter(func.lower(User.name) == candidate).first() is not None:
+        suffix += 1
+        candidate = "{}{}".format(base_name, suffix)
+
+    new_user = User()
+    new_user.name = candidate
+    new_user.email = email
+    new_user.role_id = guest_role.id if guest_role else None
+    new_user.auth_provider = 'google'
+    new_user.is_approved = False
+
+    try:
+        new_user.save()
+    except Exception as except_msg:
+        flash(gettext(
+            "Failed to create your account: %(err)s", err=except_msg), "error")
+        return redirect(url_for('routes_authentication.login_check'))
+
+    login_log(candidate, 'NA', user_ip, 'SIGNUP (Google, pending approval)')
+    flash(gettext(
+        "Your Google account (%(email)s) was registered as '%(user)s' and is "
+        "awaiting administrator approval before you can log in.",
+        email=email, user=candidate), "info")
+    return redirect(url_for('routes_authentication.login_check'))
+
+
+def _link_google_calendar_connection(user_id, tokens, email):
+    """Best-effort: if Google returned a refresh token during login, also
+    establish/refresh this user's UserCalendarConnection (the same row used
+    by Settings > Integrations) so signing in with Google also connects
+    calendar sync, instead of requiring a second, separate connect step."""
+    if not tokens.get('refresh_token'):
+        return
+    try:
+        from datetime import timezone
+        from aot.databases.models import UserCalendarConnection
+
+        connection = (UserCalendarConnection.query
+                      .filter_by(user_id=user_id, provider='google')
+                      .first())
+        if connection is None:
+            connection = UserCalendarConnection(user_id=user_id, provider='google')
+            db.session.add(connection)
+
+        connection.set_refresh_token(tokens['refresh_token'])
+        connection.set_access_token(tokens.get('access_token'))
+        connection.token_expiry = datetime.datetime.fromtimestamp(
+            tokens['expires_at'], tz=timezone.utc).replace(tzinfo=None)
+        connection.scope = tokens.get('scope')
+        connection.account_email = email
+        connection.is_active = True
+        if not connection.google_calendar_id:
+            connection.google_calendar_id = 'primary'
+        db.session.commit()
+    except Exception:
+        logger.exception("Failed to link Google calendar connection for user %s", user_id)
 
 
 @blueprint.route("/logout")

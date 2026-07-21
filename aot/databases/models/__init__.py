@@ -34,6 +34,8 @@ from aot.config_devices_units import UNIT_CONVERSIONS
 from aot.aot_flask.extensions import db
 from .alembic_version import AlembicVersion
 from .api_key import APIKey
+from .calendar_integration import UserCalendarConnection
+from .calendar_integration import CalendarEventLink
 from .camera import Camera
 from .controller import CustomController
 from .controller import FunctionChannel

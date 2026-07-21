@@ -680,54 +680,118 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {%- block body %}{% endblock %}
 
   <!-- Preferences Modal -->
-  <div class="modal fade" id="modal_config_theme" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content" style="padding: 1em">
+  <div class="modal fade aot-option-modal" id="modal_config_theme" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">{{ _ ('Preferences') }}</h5>
+          <h5 class="modal-title">{{ _('Preferences') }}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
         </div>
-        <form method="post" action="/change_preferences">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <div class="form-row" style="padding-top: 0.5em">
-            <div class="col-auto">
-              <label class="form-check-label">{{ _ ('Language') }}</label>
-              <div>
-                <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language"
-                  name="language" title="{{ _(" Selecting a language will override the web browser's language") }}">
-                  <option value="">{{ _('Browser Default') }}</option>
-                  {% for each_language in languages %}
-                  <option value="{{ each_language[0] }}" {% if current_user.language==each_language[0] %} selected{%
-                    endif %}>
-                    {{ each_language[1] }}
-                  </option>
-                  {% endfor %}
-                </select>
+        <div class="modal-body">
+          <form id="user_account_form" method="post" action="{{ url_for('routes_settings.settings_account_self') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="aot-modal-group-title">{{ _('General') }}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{ _('Account Name') }}</div>
+                <div class="aot-modal-option-control">
+                  <input type="text" class="aot-modern-input form-control" id="account_name" name="name"
+                    value="{{ current_user.name }}" autocomplete="username">
+                </div>
+              </div>
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{ _('Account Email') }}</div>
+                <div class="aot-modal-option-control">
+                  <input type="email" class="aot-modern-input form-control" id="account_email" name="email"
+                    value="{{ current_user.email or '' }}" autocomplete="email">
+                </div>
+              </div>
+              <div class="aot-modal-option-row aot-modal-option-row-wrap">
+                <div class="aot-modal-option-label">
+                  {% if current_user.password_hash %}{{ _('Change Password') }}{% else %}{{ _('Set Password') }}{% endif %}
+                  {% if not current_user.password_hash %}
+                  <div class="aot-modal-body-text">
+                    {{ _('Signed in with Google — set a password to also be able to log in with your account name.') }}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="aot-modal-option-control" style="width: auto; flex: 1 1 auto; justify-content: flex-start; flex-wrap: wrap;">
+                  <input type="password" class="aot-modern-input form-control" name="password_new"
+                    placeholder="{{ _('New Password') }}" autocomplete="new-password" style="flex: 1 1 160px;">
+                  <input type="password" class="aot-modern-input form-control" name="password_repeat"
+                    placeholder="{{ _('Confirm Password') }}" autocomplete="new-password" style="flex: 1 1 160px;">
+                </div>
+              </div>
+              <div class="aot-modal-option-row" style="border-bottom: none;">
+                {% set language_tooltip = _("Selecting a language will override the web browser's language") %}
+                <div class="aot-modal-option-label">{{ _('Language') }}</div>
+                <div class="aot-modal-option-control">
+                  <select class="aot-settings-select" id="language" name="language"
+                    title="{{ language_tooltip }}">
+                    <option value="">{{ _('Browser Default') }}</option>
+                    {% for each_language in languages %}
+                    <option value="{{ each_language[0] }}" {% if current_user.language==each_language[0] %} selected{%
+                      endif %}>
+                      {{ each_language[1] }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
               </div>
             </div>
-            <div class="col-auto">
-              <label class="form-check-label">{{ _ ('Theme') }}</label>
-              <div>
-                <select class="form-control" id="theme" name="theme">
-                  {% for value, name in themes %}
-                  <option value="{{ value|e }}" {% if value==current_user.theme %} selected{% endif %}>{{ name|e }}
-                  </option>
-                  {% endfor %}
-                </select>
+          </form>
+
+          <!-- Google Account -->
+          <div class="aot-modal-group-title" style="margin-top: 1.5rem;">{{ _('Google Account') }}</div>
+          <div class="aot-modal-container">
+            {% if not google_login_configured %}
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">{{ _('Google Account') }}</div>
+              <div class="aot-modal-body-text" style="text-align: right;">
+                {{ _("Not configured on this server yet — ask an administrator to set it up under Settings > Integrations.") }}
               </div>
             </div>
-          </div>
-          <div style="clear: both"></div>
-          <div class="row small-gutters" style="padding: 1em 1em 0 0.8em;">
-            <div class="col-auto">
-              <button type="button" class="btn btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+            {% elif google_connection and google_connection.is_active %}
+            <div class="aot-modal-option-row">
+              <div class="aot-modal-option-label">
+                {{ _('Manage Google Account Connection') }}
+                <div class="aot-modal-body-text">{{ _('Connected as %(email)s', email=google_connection.account_email or '') }}</div>
+              </div>
+              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+                <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{ url_for('routes_integrations.settings_integrations') }}">{{ _('Manage Connection') }}</a>
+              </div>
             </div>
-            <div class="col-auto">
-              <input class="btn btn-primary" id="user_preferences_save" name="user_preferences_save" type="submit"
-                value="{{ _ ('Save') }}">
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">{{ _('Disconnect Google Account') }}</div>
+              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+                <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}" style="margin: 0;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                  <button type="submit" class="btn aot-pill-btn"
+                    onclick='return confirm("{{ _("Disconnect your Google account?") }}")'>{{ _('Disconnect') }}</button>
+                </form>
+              </div>
             </div>
+            {% else %}
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">
+                {{ _('Connect Google Account') }}
+                <div class="aot-modal-body-text">{{ _('Sign in with Google and sync your AoT schedule to Google Calendar.') }}</div>
+              </div>
+              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+                <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{ url_for('routes_integrations.oauth_google_start') }}">{{ _('Connect') }}</a>
+              </div>
+            </div>
+            {% endif %}
           </div>
-        </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+          <button type="submit" form="user_account_form" class="btn aot-pill-btn aot-pill-btn-primary"
+            id="user_account_save" name="user_account_save" value="save">{{ _('Save') }}</button>
+        </div>
       </div>
     </div>
   </div>

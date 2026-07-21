@@ -86,6 +86,24 @@ class Misc(CRUDMixin, db.Model):
     chirpstack_mqtt_host = db.Column(db.String(255), default='')     # broker host for registered MQTT inputs
     chirpstack_mqtt_port = db.Column(db.Integer, default=1883)       # broker port for registered MQTT inputs
 
+    # Google Calendar OAuth (instance-wide, admin-configured on settings/integrations).
+    # client_id/secret from Google Cloud Console; per-user tokens live in
+    # UserCalendarConnection, NOT here. oauth_public_base_url is this server's
+    # externally-reachable origin (e.g. https://ai.aotinc.co.kr) — used to build
+    # the OAuth redirect_uri deterministically so it matches the value registered
+    # in Google Console (rather than trusting proxy request headers).
+    google_oauth_client_id = db.Column(db.Text, default='')
+    google_oauth_client_secret = db.Column(db.Text, default='')
+    oauth_public_base_url = db.Column(db.String(255), default='')
+
+    # Google Picker API key (aot/aot_flask/routes_ai_library.py Google Drive
+    # source). NOT the OAuth client secret — the Picker JS widget needs a
+    # separate Cloud Console "API key" (Credentials > API key) with the
+    # Picker API enabled. Not a secret in the OAuth sense (it's sent to the
+    # browser as a JS `developerKey`, same as any client-side Maps/Picker key),
+    # so it's stored in plain text like the other instance-wide config here.
+    google_picker_api_key = db.Column(db.Text, default='')
+
     # Measurement database
     db_name = 'influxdb'  # Default
     db_version = ''  # Default

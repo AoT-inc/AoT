@@ -285,6 +285,68 @@ def change_preferences(form):
         error, action, url_for('routes_settings.settings_users'))
 
 
+def account_self_update(form):
+    """Self-service update of the logged-in user's own name/email/password/
+    language (nav-bar 'User Settings' modal). No role/permission fields —
+    those stay admin-only in Settings > Users (see user_mod() below). All
+    fields are validated up front; nothing is written unless every changed
+    field passes."""
+    error = []
+    logout = False
+
+    try:
+        user = User.query.filter(
+            User.id == flask_login.current_user.id).first()
+
+        new_name = (form.name.data or '').strip().lower()
+        rename = new_name and new_name != user.name
+        if rename:
+            if not test_username(new_name):
+                error.append(gettext(
+                    "Invalid username. Must be between 3 and 64 characters "
+                    "and only contain letters and numbers."))
+            elif User.query.filter(User.name == new_name, User.id != user.id).count():
+                error.append(gettext("That username is already taken."))
+
+        new_email = (form.email.data or '').strip()
+        change_email = new_email and new_email != user.email
+        if change_email and User.query.filter(
+                User.email == new_email, User.id != user.id).count():
+            error.append(gettext("Another user already has that email address."))
+
+        change_password = bool(form.password_new.data)
+        if change_password:
+            if not test_password(form.password_new.data):
+                error.append(gettext("Invalid password"))
+            elif form.password_new.data != form.password_repeat.data:
+                error.append(gettext(
+                    "Passwords do not match. Please try again."))
+
+        if not error:
+            if rename:
+                user.name = new_name
+            if change_email:
+                user.email = new_email
+            if change_password:
+                user.set_password(form.password_new.data)
+                # Force re-login so the session is confirmed against the new
+                # password rather than continuing to ride the old one.
+                logout = True
+            if form.language.data in LANGUAGES or not form.language.data:
+                user.language = form.language.data or None
+                session['language'] = user.language
+            db.session.commit()
+    except Exception as except_msg:
+        error.append(except_msg)
+
+    action = '{action} {controller}'.format(
+        action=TRANSLATIONS['modify']['title'],
+        controller=TRANSLATIONS['user']['title'])
+    flash_success_errors(error, action, url_for('routes_general.home'))
+
+    return logout
+
+
 def user_mod(form):
     messages = {
         "success": [],
@@ -352,6 +414,35 @@ def user_mod(form):
         messages["error"].append(except_msg)
 
     return messages, logout
+
+
+def user_approve(form):
+    """Approve a pending Google-signup account (see routes_authentication.py
+    login_google_callback), allowing it to log in."""
+    messages = {
+        "success": [],
+        "info": [],
+        "warning": [],
+        "error": []
+    }
+
+    try:
+        user = User.query.filter(
+            User.unique_id == form.user_id.data).first()
+        if user is None:
+            messages["error"].append(gettext("User not found"))
+        elif user.is_approved:
+            messages["info"].append(gettext(
+                "%(user)s is already approved", user=user.name))
+        else:
+            user.is_approved = True
+            db.session.commit()
+            messages["success"].append(gettext(
+                "Approved %(user)s", user=user.name))
+    except Exception as except_msg:
+        messages["error"].append(except_msg)
+
+    return messages
 
 
 def user_del(form):

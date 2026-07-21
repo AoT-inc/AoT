@@ -424,6 +424,26 @@ class UserPreferences(FlaskForm):
     user_preferences_save = SubmitField(lazy_gettext('Save'))
 
 
+class AccountSelf(FlaskForm):
+    """Self-service account editing (nav-bar 'User Settings' modal) — a
+    logged-in user editing their own name/email/password/language. Unlike
+    UserMod (admin editing any user), no role/permission fields — those stay
+    admin-only in Settings > Users."""
+    name = StringField(TRANSLATIONS['user']['title'], validators=[DataRequired()])
+    email = EmailField(
+        TRANSLATIONS['email']['title'],
+        validators=[DataRequired(), validators.Email()])
+    password_new = PasswordField(
+        lazy_gettext('New Password'),
+        validators=[
+            validators.Optional(),
+            validators.EqualTo('password_repeat', message=lazy_gettext('Passwords must match.'))
+        ])
+    password_repeat = PasswordField(lazy_gettext('Confirm Password'))
+    language = StringField(lazy_gettext('Language'))
+    user_account_save = SubmitField(lazy_gettext('Save'))
+
+
 class UserMod(FlaskForm):
     user_id = StringField(lazy_gettext('User ID'), widget=widgets.HiddenInput())
     email = EmailField(
@@ -462,6 +482,7 @@ class UserMod(FlaskForm):
     theme = StringField(lazy_gettext('Theme'))
     user_generate_api_key = SubmitField(lazy_gettext("Generate API Key"))
     user_save = SubmitField(lazy_gettext('Save'))
+    user_approve = SubmitField(lazy_gettext('Approve'))
     user_delete = SubmitField(lazy_gettext('Delete'))
 
 

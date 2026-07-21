@@ -962,6 +962,17 @@ class AIActionService:
                 res = daemon.trigger_all_actions(target_id)
                 return {"status": "success", "result": res}
 
+            elif action_type in ('activate', 'deactivate'):
+                # Scheduled activate/deactivate of an Input or controller
+                # (Conditional/Trigger/PID/CustomController). Same DB+daemon
+                # path as the settings UI; the scheduled job reached here only
+                # via approve_job (_approved=True), so it's already human-confirmed.
+                from aot.ai.services.aot_data_tool_service import AoTDataToolService
+                res = AoTDataToolService._set_entity_activation(target_id, action_type == 'activate')
+                if isinstance(res, dict) and res.get('error'):
+                    return {"status": "error", "message": res['error'], "result": res}
+                return {"status": "success", "result": res}
+
             elif action_type == 'read_manual':
                 # Phase 6: RAG Search for AI Documents (Hybrid Markdown Parse)
                 # target_id: The filename, e.g., 'API.md', 'Supported-Inputs.md'

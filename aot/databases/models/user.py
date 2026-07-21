@@ -39,6 +39,14 @@ class User(UserMixin, CRUDMixin, db.Model):
     password_reset_code_expiration = db.Column(db.DateTime, default=None)
     password_reset_last_request = db.Column(db.DateTime, default=None)
 
+    # Google sign-in (see aot/utils/google_oauth.py). auth_provider records how
+    # the account was created ('google' or None for the normal admin/password
+    # flow); is_approved gates login for accounts self-registered via Google
+    # sign-in until an admin reviews them (default True so existing/admin-
+    # created accounts are unaffected).
+    auth_provider = db.Column(db.String(32), default=None)
+    is_approved = db.Column(db.Boolean, nullable=False, default=True)
+
     def __repr__(self):
         output = "<User: <name='{name}', email='{email}' is_admin='{isadmin}'>"
         return output.format(name=self.name, email=self.email, isadmin=bool(self.role_id == 1))

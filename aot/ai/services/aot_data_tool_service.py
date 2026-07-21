@@ -1075,7 +1075,15 @@ class AoTDataToolService:
             params = _json.loads(meta.params_json) if meta.params_json else {}
         except Exception:
             params = {}
-        content = params.get('content') or meta.reasoning or meta.action_type
+        content = params.get('content')
+        if not content and meta.action_type == 'control_output' and params.get('state'):
+            # Device-control rows never had a human 'content' string (only
+            # {state, duration_minutes}) — falling back to the raw internal
+            # `reasoning` log line ("User request: Valve1 on at 16:00") read as
+            # a debug message, not a summary, once this became user-facing.
+            dur = params.get('duration_minutes')
+            content = f"{str(params['state']).capitalize()}" + (f" ({dur}min)" if dur else "")
+        content = content or meta.reasoning or meta.action_type
         return {
             'job_id': meta.unique_id,
             'when': serialize_ts(meta.schedule_time) if meta.schedule_time else None,
@@ -1211,10 +1219,10 @@ class AoTDataToolService:
 
     @staticmethod
     def edit_schedule_tool(job_id, date=None, time=None, content=None,
-                           worker=None, target_name=None, **extra):
+                           worker=None, target_name=None, duration_minutes=None, **extra):
         """
         [일정 수정 — 변이(승인 필요)]
-        기존 일정의 시각/내용/담당자/위치를 수정한다. 먼저 search_schedule로 job_id를 얻는다.
+        기존 일정의 시각/소요시간/내용/담당자/위치를 수정한다. 먼저 search_schedule로 job_id를 얻는다.
         장치 예약(control_output)이 이미 APScheduler에 등록돼 있으면 트리거도 함께 재조정.
 
         Args:
@@ -1225,6 +1233,7 @@ class AoTDataToolService:
             worker (str): 새 담당자.
             target_name (str): 새 위치(구역/시설/장치 이름)로 재연결. 미해석이면
                 available_targets를 돌려주니 ask_user로 확인 후 재시도.
+            duration_minutes (int): 새 소요시간(분). 기존 duration_sec/end_time을 대체한다.
         """
         try:
             import json as _json
@@ -1269,8 +1278,6 @@ class AoTDataToolService:
                     return {"error": "date is required (no existing date to keep)."}
                 new_dt = AoTDataToolService._schedule_wall_to_utc(new_date, new_time)
                 meta.schedule_time = new_dt
-                if meta.duration_sec and meta.duration_sec > 0:
-                    meta.end_time = new_dt + timedelta(seconds=meta.duration_sec)
 
             # 2. 내용/담당자 변경
             if content is not None:
@@ -1280,6 +1287,20 @@ class AoTDataToolService:
             # params가 바뀐 경우(위치 재연결 포함) 저장
             if content is not None or worker is not None or target_name:
                 meta.params_json = _json.dumps(params)
+
+            # 2b. 소요시간 변경 — end_time은 (변경됐을 수 있는) schedule_time 기준으로
+            # 재계산하므로 반드시 시각 변경 처리 다음에 온다. duration_minutes가 없어도
+            # 시각만 바뀌었고 기존 duration_sec이 있으면 end_time을 같이 이동시킨다.
+            if duration_minutes is not None:
+                try:
+                    duration_minutes = int(duration_minutes)
+                except (TypeError, ValueError):
+                    return {"error": "duration_minutes must be a number."}
+                if duration_minutes <= 0:
+                    return {"error": "duration_minutes must be positive."}
+                meta.duration_sec = duration_minutes * 60
+            if (new_dt is not None or duration_minutes is not None) and meta.duration_sec and meta.schedule_time:
+                meta.end_time = meta.schedule_time + timedelta(seconds=meta.duration_sec)
 
             # 3. edit 추적
             meta.edit_count = (meta.edit_count or 0) + 1
@@ -1948,6 +1969,69 @@ class AoTDataToolService:
         except Exception as e:
             logger.exception("Error in _set_function_activation")
             return {"error": f"Error while {'activating' if activate else 'deactivating'} Function: {str(e)}"}
+
+    # @ANCHOR: ENTITY_ACTIVATION — broader than _set_function_activation: also
+    # covers Input. Used by the scheduler's 'activate'/'deactivate' action_types
+    # (calendar-schedulable activate/deactivate). daemon.controller_activate is
+    # uniform across Input/Conditional/Trigger/PID/CustomController (all have
+    # is_activated) — same call the /settings UI's controller_activate_deactivate
+    # uses (aot_flask/utils/utils_general.py).
+    @staticmethod
+    def _set_entity_activation(entity_id, activate):
+        """Activate/deactivate an Input or controller (Conditional/Trigger/PID/
+        CustomController) by unique_id or name. Sets is_activated + signals the
+        daemon. Returns a result dict or {'error': ...}."""
+        try:
+            from aot.databases.models import Input
+            from aot.databases.models.function import Conditional, Trigger
+            from aot.databases.models.controller import CustomController
+            from aot.databases.models.pid import PID
+            from aot.aot_flask.extensions import db as _db
+            from aot.aot_client import DaemonControl
+
+            if not entity_id:
+                return {"error": "entity_id is required."}
+
+            resolvers = [
+                (Conditional, 'Conditional'), (Trigger, 'Trigger'), (PID, 'PID'),
+                (CustomController, 'Function'), (Input, 'Input'),
+            ]
+            mod = None
+            kind = None
+            for model, label in resolvers:
+                mod = model.query.filter(
+                    (model.unique_id == entity_id) | (model.name == entity_id)).first()
+                if mod is not None:
+                    kind = label
+                    break
+            if mod is None:
+                return {"error": f"Activatable entity not found: {entity_id}"}
+
+            mod.is_activated = bool(activate)
+            _db.session.commit()
+
+            try:
+                daemon = DaemonControl()
+                if activate:
+                    ret_err, ret_msg = daemon.controller_activate(mod.unique_id)
+                else:
+                    ret_err, ret_msg = daemon.controller_deactivate(mod.unique_id)
+                if ret_err:
+                    return {"status": "success_with_warning", "entity_id": mod.unique_id,
+                            "name": mod.name, "type": kind, "is_activated": bool(activate),
+                            "daemon_warning": ret_msg}
+            except Exception as daemon_err:
+                logger.warning("[_set_entity_activation] Daemon call failed for %s: %s", mod.unique_id, daemon_err)
+                return {"status": "success_with_warning", "entity_id": mod.unique_id,
+                        "name": mod.name, "type": kind, "is_activated": bool(activate),
+                        "daemon_warning": str(daemon_err)}
+
+            return {"status": "success", "entity_id": mod.unique_id, "name": mod.name,
+                    "type": kind, "is_activated": bool(activate),
+                    "message": f"'{mod.name}' {'activated' if activate else 'deactivated'}"}
+        except Exception as e:
+            logger.exception("Error in _set_entity_activation")
+            return {"error": f"Error while {'activating' if activate else 'deactivating'}: {str(e)}"}
 
     @staticmethod
     def get_active_functions_summary(**kwargs):

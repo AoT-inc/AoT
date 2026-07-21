@@ -122,6 +122,8 @@ def sync_source(source_id):
                 value, err = _fetch_rest_api(source, config)
             elif source.source_type == 'document':
                 value, err = _parse_document(source, config)
+            elif source.source_type == 'google_drive':
+                value, err = _fetch_google_drive(source, config)
             elif source.source_type == 'web_url':
                 value, err = _fetch_web_url(source, config)
             elif source.source_type == 'internal_query':
@@ -139,7 +141,7 @@ def sync_source(source_id):
                 # for the knowledge_search index. rest_api/internal_query results
                 # are typically short structured JSON — left as plain
                 # AIContextRecord values, unchanged.
-                if source.source_type in ('document', 'web_url') and _digest_enabled():
+                if source.source_type in ('document', 'web_url', 'google_drive') and _digest_enabled():
                     try:
                         n_chunks = _write_knowledge_chunks(source, str(value))
                         messages["info"].append(f"Knowledge digest: {n_chunks} chunk(s) processed.")
@@ -429,6 +431,105 @@ def _parse_document(source, config):
 
     except Exception as exc:
         return None, f"document parse error: {exc}"
+
+
+# @ANCHOR: FETCH_GOOGLE_DRIVE
+def _fetch_google_drive(source, config):
+    """
+    Fetch + concatenate text from one or more files the operator picked via
+    the Google Picker (aot/aot_flask/templates/pages/ai/ai_library.html).
+
+    Reuses the SAME per-user OAuth connection Calendar sync uses
+    (UserCalendarConnection, provider='google') — Drive access is just the
+    additional drive.file scope on that one connection (see
+    aot/utils/google_oauth.py SCOPES), not a separate credential store. This
+    is why a source-level api_key field doesn't exist here: the credential
+    lives with the connecting USER, not the source.
+
+    config keys:
+        connected_user_id (int): AoT user id whose Google connection to use —
+            sync can run unattended via APScheduler with no "current user",
+            so this must be persisted at pick time, not read from
+            flask_login.current_user.
+        files (list[{id, name}]): Drive fileIds picked via the Picker.
+
+    Each file is downloaded/exported (aot.utils.google_drive_api), written to
+    a temp file, and parsed via the EXISTING _parse_document (so PDF/text
+    extraction logic is not duplicated). A single failing file is skipped
+    (logged) rather than failing the whole sync — best-effort over an
+    operator-picked batch, matching the "partial success" behaviour of the
+    SmartFarmKorea multi-operation digest above.
+    """
+    import os
+    import tempfile
+
+    user_id = config.get('connected_user_id')
+    files = config.get('files') or []
+    if not user_id:
+        return None, "No Google account connected for this source — reopen the settings modal and pick files again."
+    if not files:
+        return None, "No files selected — pick at least one file from Google Drive."
+
+    from aot.databases.models.calendar_integration import UserCalendarConnection
+    connection = UserCalendarConnection.query.filter_by(user_id=user_id, provider='google').first()
+    if not connection or not connection.get_refresh_token():
+        return None, "Google account is not connected — connect it under Settings > Integrations, then reopen this source and pick files again."
+
+    # A connection made before drive.file was added to SCOPES (google_oauth.py)
+    # still refreshes access_tokens fine (Google honors the old, narrower
+    # grant) but every Drive call on that token 403s PERMISSION_DENIED —
+    # confirmed live 2026-07-21. Catch it here with a clear message instead
+    # of a raw API error, even though the settings-modal picker already
+    # blocks picking files in this state (defense in depth: the source may
+    # have been picked before the account's Drive access was later revoked
+    # from Google's own security settings, without AoT being told).
+    if 'drive.file' not in (connection.scope or ''):
+        return None, ("Google account is connected but was authorized before Drive access was added — "
+                       "reconnect it under Settings > Integrations to grant Drive access, then reopen this "
+                       "source and pick files again.")
+
+    # Reused, not duplicated: calendar_sync_service already implements
+    # refresh-if-expired against this exact connection/token-pair shape.
+    from aot.ai.services.calendar_sync_service import get_valid_access_token
+    access_token = get_valid_access_token(connection)
+    if not access_token:
+        return None, "Could not refresh the Google access token — reconnect the account under Settings > Integrations."
+
+    from aot.utils import google_drive_api
+
+    text_blocks = []
+    failures = []
+    for f in files:
+        file_id = (f or {}).get('id')
+        display_name = (f or {}).get('name') or file_id
+        if not file_id:
+            continue
+        content_bytes, filename, err = google_drive_api.fetch_file_content(access_token, file_id)
+        if err:
+            failures.append(f"{display_name}: {err}")
+            logger.warning("Google Drive fetch failed for file %s (%s): %s", file_id, display_name, err)
+            continue
+
+        suffix = pathlib.Path(filename).suffix or '.txt'
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                tmp.write(content_bytes)
+                tmp_path = tmp.name
+            text, perr = _parse_document(source, {'file_path': tmp_path, 'parse_mode': 'full_text'})
+            if perr:
+                failures.append(f"{filename}: {perr}")
+                logger.warning("Google Drive parse failed for file %s: %s", filename, perr)
+                continue
+            text_blocks.append(f"### {filename}\n{text}")
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    if not text_blocks:
+        return None, ('; '.join(failures) if failures else
+                       "No text extracted from the selected Google Drive files.")
+    return '\n\n'.join(text_blocks), None
 
 
 # @ANCHOR: FETCH_WEB_URL

@@ -298,6 +298,17 @@ var T = {
   parseMode:        "{{ _('Parse Mode') }}",
   cssSelector:      "{{ _('CSS Selector (optional)') }}",
   queryTemplate:    "{{ _('Query Template') }}",
+  gdrivePickButton: "{{ _('Pick from Google Drive') }}",
+  gdriveFilesLabel: "{{ _('Selected Files') }}",
+  gdriveNoFiles:    "{{ _('No files selected yet.') }}",
+  gdriveLoading:    "{{ _('Checking Google connection…') }}",
+  gdriveConnected:  "{{ _('Connected as') }}",
+  gdriveNotConnected: "{{ _('Google account not connected.') }}",
+  gdriveConnectLink: "{{ _('Connect it under Settings > Integrations') }}",
+  gdriveNeedsRescope: "{{ _('Your Google connection predates Drive access — reconnect to grant it.') }}",
+  gdriveReconnectLink: "{{ _('Reconnect under Settings > Integrations') }}",
+  gdriveNotConfigured: "{{ _('Google Picker is not configured yet — an admin must set the Picker API key under Settings > Integrations.') }}",
+  gdriveRemove:     "{{ _('Remove') }}",
   close:            "{{ _('Close') }}",
   activate:         "{{ _('Activate') }}",
   deactivate:       "{{ _('Deactivate') }}",
@@ -687,11 +698,23 @@ function openSourceSettings(sourceId) {
       html += row(T.cssSelector, '<input type="text" id="sWebCss" class="form-control aot-modern-input" value="' + esc(config.css_selector||'') + '" placeholder=".data-table td">');
     } else if (source.source_type === 'internal_query') {
       html += row(T.queryTemplate, '<textarea id="sQueryTemplate" class="form-control aot-modern-input" rows="4">' + esc(config.query_template||'') + '</textarea>');
+    } else if (source.source_type === 'google_drive') {
+      window._gdriveFiles = (config.files || []).slice();
+      window._gdriveConnectedUserId = config.connected_user_id || null;
+      html += '<div id="gdriveConnectStatus" class="aot-modal-body-text text-muted small">' + esc(T.gdriveLoading) + '</div>';
+      html += row(T.gdriveFilesLabel, '<div id="gdriveFileList"></div>');
+      html += '<button type="button" class="btn btn-secondary aot-pill-btn" id="gdrivePickBtn" onclick="googleDrivePick()" disabled>' +
+        esc(T.gdrivePickButton) + '</button>';
     }
 
     html += '</div>';
 
     $body.html(html);
+
+    if (source.source_type === 'google_drive') {
+      renderGdriveFileList();
+      refreshGdriveConnectStatus();
+    }
 
     if (meta.isSystem && meta.multiOperation) {
       /* Accumulates typed values across the whole modal session (not just
@@ -941,6 +964,116 @@ function refreshSfkParams(presetKey) {
   container.innerHTML = _sfkParamsHtml(ops, selectedKeys, window._sfkLiveConfig, presetKey);
 }
 
+/* -----------------------------------------------------------------------
+   Google Drive source — file picker (Google Picker JS, loaded lazily so
+   users who never touch this source type never fetch the third-party
+   script). Picked files live in window._gdriveFiles (id/name pairs only —
+   the OAuth token is fetched fresh per pick, never stored client-side
+   beyond the picker session) and are read directly by saveSourceSettings.
+   ----------------------------------------------------------------------- */
+function _gdriveLoadPickerApi(cb) {
+  if (window.google && window.google.picker) { cb(); return; }
+  if (window._gdriveApiLoading) {
+    window._gdriveApiCallbacks = window._gdriveApiCallbacks || [];
+    window._gdriveApiCallbacks.push(cb);
+    return;
+  }
+  window._gdriveApiLoading = true;
+  window._gdriveApiCallbacks = [cb];
+  var s = document.createElement('script');
+  s.src = 'https://apis.google.com/js/api.js';
+  s.onload = function() {
+    gapi.load('picker', function() {
+      window._gdriveApiLoading = false;
+      (window._gdriveApiCallbacks || []).forEach(function(f) { f(); });
+      window._gdriveApiCallbacks = [];
+    });
+  };
+  document.head.appendChild(s);
+}
+
+/* Fetches connection status once per modal-open and updates the status line
+   + enables the pick button only once we know a developer key AND a valid
+   OAuth token are both available. */
+function refreshGdriveConnectStatus() {
+  var statusEl = document.getElementById('gdriveConnectStatus');
+  var btn = document.getElementById('gdrivePickBtn');
+  fetch('/api/v1/ai/library/google-drive/picker-config')
+    .then(function(r) { return r.json(); })
+    .then(function(cfg) {
+      window._gdrivePickerCfg = cfg;
+      if (!statusEl) return;
+      if (!cfg.picker_configured) {
+        statusEl.textContent = T.gdriveNotConfigured;
+        return;
+      }
+      if (cfg.needs_rescope) {
+        statusEl.innerHTML = esc(T.gdriveNeedsRescope) + ' <a href="' + esc(cfg.connect_url) + '" target="_blank">' +
+          esc(T.gdriveReconnectLink) + '</a>';
+        return;
+      }
+      if (!cfg.connected) {
+        statusEl.innerHTML = esc(T.gdriveNotConnected) + ' <a href="' + esc(cfg.connect_url) + '" target="_blank">' +
+          esc(T.gdriveConnectLink) + '</a>';
+        return;
+      }
+      statusEl.textContent = T.gdriveConnected + ' ' + (cfg.account_email || '');
+      if (btn) btn.disabled = false;
+    })
+    .catch(function() { if (statusEl) statusEl.textContent = T.gdriveNotConnected; });
+}
+
+function googleDrivePick() {
+  var cfg = window._gdrivePickerCfg;
+  if (!cfg || !cfg.connected || !cfg.developer_key) {
+    refreshGdriveConnectStatus();
+    return;
+  }
+  _gdriveLoadPickerApi(function() {
+    var view = new google.picker.DocsView()
+      .setIncludeFolders(false)
+      .setSelectFolderEnabled(false);
+    var picker = new google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(cfg.oauth_token)
+      .setDeveloperKey(cfg.developer_key)
+      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .setCallback(function(data) {
+        if (data.action !== google.picker.Action.PICKED) return;
+        var picked = (data.docs || []).map(function(d) { return {id: d.id, name: d.name}; });
+        var existing = window._gdriveFiles || [];
+        window._gdriveFiles = existing.concat(picked).filter(function(f, i, arr) {
+          return arr.findIndex(function(x) { return x.id === f.id; }) === i;
+        });
+        window._gdriveConnectedUserId = cfg.user_id;
+        renderGdriveFileList();
+      })
+      .build();
+    picker.setVisible(true);
+  });
+}
+
+function renderGdriveFileList() {
+  var container = document.getElementById('gdriveFileList');
+  if (!container) return;
+  var files = window._gdriveFiles || [];
+  if (!files.length) {
+    container.innerHTML = '<div class="text-muted small">' + esc(T.gdriveNoFiles) + '</div>';
+    return;
+  }
+  container.innerHTML = files.map(function(f, i) {
+    return '<div style="display:flex; justify-content:space-between; align-items:center; padding:2px 0;">' +
+      '<span>' + esc(f.name) + '</span>' +
+      '<button type="button" class="btn btn-sm btn-link text-danger" style="padding:0 4px;" ' +
+      'onclick="gdriveRemoveFile(' + i + ')">' + esc(T.gdriveRemove) + '</button></div>';
+  }).join('');
+}
+
+function gdriveRemoveFile(idx) {
+  (window._gdriveFiles || []).splice(idx, 1);
+  renderGdriveFileList();
+}
+
 function toggleSAuthValue() {
   var v = document.getElementById('sApiAuthType').value;
   document.getElementById('sRowAuthValue').style.display = (v !== 'none') ? '' : 'none';
@@ -990,6 +1123,9 @@ function saveSourceSettings(sourceId, sourceType, isSystem) {
     config.css_selector = (document.getElementById('sWebCss')  || {value:''}).value.trim();
   } else if (sourceType === 'internal_query') {
     config.query_template = (document.getElementById('sQueryTemplate') || {value:''}).value.trim();
+  } else if (sourceType === 'google_drive') {
+    config.files = (window._gdriveFiles || []).map(function(f) { return {id: f.id, name: f.name}; });
+    if (window._gdriveConnectedUserId) config.connected_user_id = window._gdriveConnectedUserId;
   }
 
   var payload = {

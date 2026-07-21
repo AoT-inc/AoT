@@ -223,6 +223,21 @@ LIBRARY_PRESETS = {
         'source_type': 'internal_query',
         'is_system': False,
     },
+    'google_drive': {
+        'label': 'Google Drive',
+        'description': 'Pick one or more files from your Google Drive and convert them to AI knowledge.',
+        'description_ko': "Google Drive에서 파일을 선택해 AI 지식으로 변환합니다. PDF·텍스트·"
+                          '마크다운 파일은 그대로, Google 문서/프레젠테이션은 텍스트로, Google '
+                          '스프레드시트는 첫 시트를 CSV로 변환해 등록합니다. 사용자 문서이므로 '
+                          '[Library] 태그로 인용됩니다. 별도 API 키가 필요 없고, Settings > '
+                          'Integrations에서 연결한 본인 Google 계정 권한을 그대로 사용합니다.',
+        'usage': '먼저 Settings > Integrations에서 Google 계정을 연결하세요(연결되어 있지 '
+                 '않으면 아래 버튼이 연결 화면으로 안내합니다). 이후 Google Drive에서 파일 '
+                 '선택으로 파일을 고르고 활성화하세요. 문서 내용이 바뀌면 다음 동기화 때 '
+                 '다시 가져옵니다.',
+        'source_type': 'google_drive',
+        'is_system': False,
+    },
 }
 
 
@@ -365,7 +380,7 @@ def api_create_source():
     if not source_name or not source_type or not parameter_name:
         return jsonify({'success': False, 'error': 'source_name, source_type, parameter_name are required'}), 400
 
-    valid_types = {'rest_api', 'document', 'web_url', 'internal_query'}
+    valid_types = {'rest_api', 'document', 'web_url', 'internal_query', 'google_drive'}
     if source_type not in valid_types:
         return jsonify({'success': False, 'error': f'Invalid source_type. Must be one of: {valid_types}'}), 400
 
@@ -489,6 +504,15 @@ def _missing_config_error(source):
                 missing = [p for p in op['params'] if p != 'serviceKey' and not (config.get(p) or '').strip()]
                 if missing:
                     return f"{op['label_ko']}: {', '.join(missing)} is required before activation."
+        return None
+
+    if source.source_type == 'google_drive':
+        # Not a single string field (see _REQUIRED_CONFIG_FIELD below) — needs
+        # BOTH a connected Google account and at least one picked file.
+        if not config.get('connected_user_id'):
+            return 'Connect a Google account and pick at least one file before activation.'
+        if not (config.get('files') or []):
+            return 'Pick at least one file from Google Drive before activation.'
         return None
 
     field = _REQUIRED_CONFIG_FIELD.get(source.source_type)
@@ -628,6 +652,72 @@ def api_smartfarmkorea_seasons():
     if err:
         return jsonify({'success': False, 'error': err}), 502
     return jsonify({'success': True, 'seasons': seasons})
+
+
+# ---------------------------------------------------------------------------
+# API: Google Drive picker config — everything the settings modal's "Pick
+# from Google Drive" button needs to launch the Google Picker JS widget for
+# the CURRENT user. No separate credential to configure per-source: it reuses
+# the Google account already connected under Settings > Integrations
+# (Calendar sync's UserCalendarConnection) plus one instance-wide Picker API
+# key (Misc.google_picker_api_key — a client-side key, not the OAuth secret;
+# see aot/utils/google_drive_api.py module docstring).
+# ---------------------------------------------------------------------------
+
+@ai_library_bp.route('/api/v1/ai/library/google-drive/picker-config', methods=['GET'])
+@login_required
+def api_google_drive_picker_config():
+    """Returns what the Picker widget needs to launch for THIS user:
+    { success, developer_key, connected, needs_rescope, account_email,
+      oauth_token, connect_url }. `oauth_token`/`account_email` are only
+      present when connected=true; the frontend shows a "connect your
+      Google account" prompt (linking to connect_url) otherwise.
+
+    needs_rescope=true is the important extra case: a connection made
+    BEFORE drive.file was added to SCOPES (aot/utils/google_oauth.py) still
+    refreshes access_tokens fine — Google honors the old, narrower scope
+    forever — but every Drive API call on that token 403s
+    (PERMISSION_DENIED), confirmed live 2026-07-21. There is no way to
+    silently add a scope to an existing grant; the user must click through
+    consent again (connect_url triggers prompt=consent, which re-asks for
+    the CURRENT full SCOPES list). Reported as connected=false so the
+    frontend's single "not connected" branch also catches this — the
+    distinct flag is for a clearer message, not different UI structure.
+    """
+    from aot.utils import google_oauth
+    from flask import url_for
+
+    misc = Misc.query.first()
+    developer_key = (getattr(misc, 'google_picker_api_key', '') or '').strip() if misc else ''
+
+    result = {
+        'success': True,
+        'developer_key': developer_key,
+        'picker_configured': bool(developer_key) and google_oauth.is_configured(),
+        'connected': False,
+        'needs_rescope': False,
+        'account_email': None,
+        'oauth_token': None,
+        'connect_url': url_for('routes_integrations.oauth_google_start'),
+    }
+
+    from aot.databases.models.calendar_integration import UserCalendarConnection
+    connection = (UserCalendarConnection.query
+                  .filter_by(user_id=current_user.id, provider='google', is_active=True).first())
+    if connection and connection.get_refresh_token():
+        has_drive_scope = 'drive.file' in (connection.scope or '')
+        if not has_drive_scope:
+            result['needs_rescope'] = True
+            result['account_email'] = connection.account_email
+            return jsonify(result)
+        from aot.ai.services.calendar_sync_service import get_valid_access_token
+        token = get_valid_access_token(connection)
+        if token:
+            result['connected'] = True
+            result['account_email'] = connection.account_email
+            result['oauth_token'] = token
+            result['user_id'] = current_user.id  # stored as config.connected_user_id on save
+    return jsonify(result)
 
 
 # ---------------------------------------------------------------------------

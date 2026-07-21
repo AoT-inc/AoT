@@ -33,6 +33,7 @@ from aot.aot_flask.api import api_blueprint, init_api
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import get_ip_address
 from aot.aot_flask.utils import utils_geo
+from aot.utils import google_oauth
 from aot.utils.layouts import update_layout
 from aot.utils.widgets import parse_widget_information
 
@@ -257,6 +258,24 @@ def create_app(config=ProdConfig):
             return ('%s?v=%s' % (base, h)) if h else base
 
         return {'asset': asset}
+
+    # ── Google account status — used by the nav-bar "User Settings" modal
+    # (Google sign-in / connect) and the login page's "Sign in with Google"
+    # button. Global injection avoids threading these through every route
+    # that renders layout_default.html.
+    @app.context_processor
+    def inject_google_account_status():
+        from flask_login import current_user
+        connection = None
+        if current_user.is_authenticated:
+            from aot.databases.models import UserCalendarConnection
+            connection = (UserCalendarConnection.query
+                          .filter_by(user_id=current_user.id, provider='google')
+                          .first())
+        return {
+            'google_connection': connection,
+            'google_login_configured': google_oauth.is_configured(),
+        }
 
     @app.template_filter('from_json_safe')
     def from_json_safe(value):
@@ -518,12 +537,13 @@ def register_blueprints(app):
     app.register_blueprint(routes_orch_api.blueprint)  # register orch api routes
     app.register_blueprint(routes_mcp_api.blueprint)   # register mcp api routes
     app.register_blueprint(routes_ai_monitoring.ai_monitoring_bp)  # register ai monitoring routes
-    from aot.aot_flask import routes_ai_api, routes_locale_api, routes_scheduler, routes_ai_context, routes_ai_portal
+    from aot.aot_flask import routes_ai_api, routes_locale_api, routes_scheduler, routes_ai_context, routes_ai_portal, routes_integrations
     app.register_blueprint(routes_ai_api.blueprint)  # register ai api routes
     app.register_blueprint(routes_ai_context.blueprint)  # register ai context routes
     app.register_blueprint(routes_ai_portal.blueprint)  # register ai portal routes
     app.register_blueprint(routes_locale_api.blueprint)  # register locale api routes
     app.register_blueprint(routes_scheduler.blueprint)  # register scheduler routes
+    app.register_blueprint(routes_integrations.blueprint)  # register external integrations (Google Calendar OAuth)
     from aot.aot_flask.routes_ai_library import ai_library_bp
     app.register_blueprint(ai_library_bp)  # register ai library routes
     from aot.aot_flask import routes_notice

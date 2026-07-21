@@ -15,6 +15,7 @@
           submitter_btn.attr("name") === 'user_generate_api_key' ||
           submitter_btn.attr("name") === 'user_delete' ||
           submitter_btn.attr("name") === 'user_save' ||
+          submitter_btn.attr("name") === 'user_approve' ||
           submitter_btn.attr("name") === 'user_role_save' ||
           submitter_btn.attr("name") === 'user_role_delete') {
         window.showToast('{{_("Command sent. Please wait.")}}', 'info');
@@ -53,6 +54,10 @@
               if (submitter_btn.attr("name") === 'user_delete' && 'user_id' in data.data) {
                 $('#user_' + data.data.user_id).hide('slow');
                 $('#user_spacer_' + data.data.user_id).hide('slow');
+              }
+              if (submitter_btn.attr("name") === 'user_approve' && 'user_id' in data.data) {
+                $('#pending_badge_' + data.data.user_id).hide('slow');
+                $('#approve_btn_' + data.data.user_id).hide('slow');
               }
               if (submitter_btn.attr("name") === 'user_role_delete' && 'role_id' in data.data) {
                 $('#role_' + data.data.role_id).hide('slow');
@@ -209,6 +214,14 @@
           <span class="aot-modal-body-text" style="margin-left: 8px; display: inline;">
             · {{_('Keypad Code')}}: {% if user.code %}{{_('Set')}}{% else %}{{_('Not set')}}{% endif %}
           </span>
+          {% if user.auth_provider == 'google' %}
+          <span class="aot-modal-body-text" style="margin-left: 8px; display: inline;">· {{_('Google Account')}}</span>
+          {% endif %}
+          {% if not user.is_approved %}
+          <span id="pending_badge_{{user.unique_id}}" class="badge badge-warning" style="margin-left: 8px;">
+            {{_('Awaiting Approval')}}
+          </span>
+          {% endif %}
         </div>
 
         <div class="aot-modal-option-row">
@@ -290,7 +303,12 @@
           {{form_mod_user.user_delete(class_='btn aot-pill-btn',
             style='border: 1px solid var(--aot-danger, #dc3545); color: var(--aot-danger, #dc3545);',
             **{'onclick':'return confirm("' + _('Are you sure you want to delete this user?') + '")'})}}
-          {{form_mod_user.user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          <div style="display: flex; gap: 8px;">
+            {% if not user.is_approved %}
+            {{form_mod_user.user_approve(id='approve_btn_' ~ user.unique_id, class_='btn aot-pill-btn', style='border: 1px solid var(--aot-success, #28a745); color: var(--aot-success, #28a745);')}}
+            {% endif %}
+            {{form_mod_user.user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          </div>
         </div>
 
       </div>

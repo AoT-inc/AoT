@@ -185,6 +185,40 @@ def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
     return get_device_tz(None)
 
 
+def resolve_location_coords(target_id: Optional[str]):
+    """Resolve (lat, lng) for ANY location/entity identified by `target_id` —
+    mirrors resolve_location_tz's dispatch (GeoShape first, which also covers
+    a linked GeoFacility since GeoFacility has no polygon of its own; then
+    device rows with their own latitude/longitude columns). Returns
+    (None, None) if target_id is missing or nothing resolves — callers should
+    treat that as "no map to show", not an error.
+    """
+    if target_id and target_id != 'none':
+        try:
+            from aot.databases.models.geo import GeoShape
+            shape = GeoShape.query.filter_by(unique_id=target_id).first()
+            if shape is not None:
+                centroid = shape.get_centroid()
+                if centroid:
+                    return centroid
+        except Exception as exc:
+            logger.debug(f"resolve_location_coords: GeoShape lookup failed for {target_id}: {exc}")
+
+        try:
+            from aot.databases.models import Input, Output, Function, Conditional, Trigger, PID, CustomController
+            for model in (Input, Output, Function, Conditional, Trigger, PID, CustomController):
+                row = model.query.filter_by(unique_id=target_id).first()
+                if row is not None:
+                    lat = getattr(row, 'latitude', None)
+                    lng = getattr(row, 'longitude', None)
+                    if lat is not None and lng is not None:
+                        return (lat, lng)
+        except Exception as exc:
+            logger.debug(f"resolve_location_coords: device lookup failed for {target_id}: {exc}")
+
+    return (None, None)
+
+
 def refresh_device_timezone(device) -> Optional[str]:
     """
     Recompute device.timezone from its current coords and write it back.

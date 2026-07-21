@@ -10,8 +10,8 @@ import flask_login
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from flask_login import login_required
 
-from aot.databases.models import db, Misc, Output, OutputChannel
-from aot.utils.time_utils import serialize_ts
+from aot.databases.models import db, Misc, Output, OutputChannel, Input
+from aot.utils.time_utils import serialize_ts, to_local
 from aot.databases.models.scheduler import SchedulerJobMeta, SchedulerAuditLog
 from aot.ai.services.ai_scheduler_service import (
     AISchedulerService, JOB_STATE_DRAFT, JOB_STATE_PENDING,
@@ -27,6 +27,58 @@ blueprint = Blueprint('routes_scheduler', __name__)
 # Page routes
 # ---------------------------------------------------------------------------
 
+def _resolve_target_name(target_id):
+    """Best-effort id→name lookup for CARD/MODAL DISPLAY ONLY (not the AI-facing
+    name→id resolver — that's AoTDataToolService._resolve_note_target). Tries
+    GeoShape (zone/site/facility) first, then Output/Input. Returns None if the
+    id is empty/'none' or nothing matches — caller falls back to a neutral label,
+    never a raw UUID (that's the whole point: the card must never show one)."""
+    if not target_id or target_id == 'none':
+        return None
+    try:
+        import json as _json
+        from aot.databases.models.geo import GeoShape
+        shape = GeoShape.query.filter_by(unique_id=target_id).first()
+        if shape is not None:
+            feat = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
+            name = (feat.get('properties') or {}).get('name')
+            if name:
+                return name
+    except Exception:
+        pass
+    try:
+        for model in (Output, Input):
+            row = model.query.filter_by(unique_id=target_id).first()
+            if row is not None:
+                return row.name
+    except Exception:
+        pass
+    return None
+
+
+def _enrich_job_display(job):
+    """Attach human-facing display fields to a SchedulerJobMeta ROW (plain Python
+    attributes, not DB columns) so the template never has to touch target_id/
+    params_json directly. Reuses AoTDataToolService._schedule_summary (already
+    tested via the AI schedule tools) for content/location/editable/deletable,
+    with a live id→name fallback when the row predates location-linking (no
+    params.target_name stored) or has no summary-derivable location."""
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    summary = AoTDataToolService._schedule_summary(job)
+    job.display_content = summary['content']
+    job.display_location = summary['location'] or _resolve_target_name(job.target_id)
+    job.display_editable = summary['editable']
+    job.display_deletable = summary['deletable']
+    job.display_worker = summary['worker']
+    # created_at/schedule_time are stored naive-UTC (SQLite) — localize here so
+    # every template use (cards + modals) shows farm-local time, never a bare
+    # UTC string that reads as if it were local wall-clock time.
+    job.display_created_at = to_local(job.created_at).strftime('%m/%d %H:%M') if job.created_at else '-'
+    job.display_schedule_time = to_local(job.schedule_time).strftime('%Y-%m-%d %H:%M') if job.schedule_time else None
+    job.display_end_time = to_local(job.end_time).strftime('%Y-%m-%d %H:%M') if job.end_time else None
+    return job
+
+
 @blueprint.route('/scheduler', methods=['GET'])
 @login_required
 def page_scheduler():
@@ -37,6 +89,8 @@ def page_scheduler():
     jobs = SchedulerJobMeta.query.order_by(
         SchedulerJobMeta.created_at.desc()
     ).limit(200).all()
+    for j in jobs:
+        _enrich_job_display(j)
 
     drafts = [j for j in jobs if j.state == JOB_STATE_DRAFT]
     active_jobs = [j for j in jobs if j.state in (JOB_STATE_PENDING, 'RUNNING')]
@@ -188,6 +242,112 @@ def api_reject_job(job_id):
     except Exception as e:
         logger.exception("Error rejecting job")
         return jsonify({'error': str(e)}), 500
+
+
+@blueprint.route('/api/v1/scheduler/jobs/<int:job_id>', methods=['PUT'])
+@login_required
+def api_update_job(job_id):
+    """Edit an existing job's time/duration/content/worker/location.
+
+    Reuses AoTDataToolService.edit_schedule_tool — NOT the older, cruder
+    /api/scheduler/job/<id> PUT in routes_ai_api.py, which overwrites
+    params_json wholesale and never reschedules the underlying APScheduler
+    trigger on a time change (a real correctness gap for device-control jobs).
+    edit_schedule_tool merges params properly and calls job.modify(...) on the
+    live APScheduler job when the schedule time changes.
+    """
+    if not user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Permission denied'}), 403
+
+    data = request.get_json() or {}
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    result = AoTDataToolService.edit_schedule_tool(
+        job_id=str(job_id),
+        date=data.get('date'),
+        time=data.get('time'),
+        content=data.get('content'),
+        worker=data.get('worker'),
+        target_name=data.get('target_name'),
+        duration_minutes=data.get('duration_minutes'),
+    )
+    if result.get('error'):
+        status = 404 if 'not found' in result['error'].lower() else 400
+        return jsonify(result), status
+    return jsonify(result)
+
+
+@blueprint.route('/api/v1/scheduler/jobs/<int:job_id>', methods=['DELETE'])
+@login_required
+def api_delete_job(job_id):
+    """Cancel a job (soft-delete → ARCHIVED) and remove its APScheduler trigger
+    if one is registered. Reuses AoTDataToolService.delete_schedule_tool for
+    the same reason as api_update_job above."""
+    if not user_has_permission('edit_controllers'):
+        return jsonify({'error': 'Permission denied'}), 403
+
+    data = request.get_json() or {}
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    result = AoTDataToolService.delete_schedule_tool(
+        job_id=str(job_id),
+        reason=data.get('reason'),
+    )
+    if result.get('error'):
+        status = 404 if 'not found' in result['error'].lower() else 400
+        return jsonify(result), status
+    return jsonify(result)
+
+
+@blueprint.route('/api/v1/scheduler/jobs/<int:job_id>/location', methods=['GET'])
+@login_required
+def api_job_location(job_id):
+    """Resolve (lat, lng) for a job's target_id, for the calendar widget's
+    edit-modal map preview. Deliberately its own on-demand endpoint rather
+    than a field on calendar_events' bulk feed — resolve_location_coords does
+    up to ~8 DB lookups per call (GeoShape, then up to 7 device tables), fine
+    for one job when its modal opens, but an N+1 storm across a month of
+    events on every calendar refresh."""
+    meta = SchedulerJobMeta.query.get(job_id)
+    if meta is None:
+        return jsonify({'error': 'Schedule not found'}), 404
+    from aot.utils.device_tz import resolve_location_coords
+    lat, lng = resolve_location_coords(meta.target_id)
+    return jsonify({'lat': lat, 'lng': lng})
+
+
+@blueprint.route('/api/v1/scheduler/calendar_events', methods=['GET'])
+@login_required
+def api_calendar_events():
+    """Calendar-widget event feed — additive, NOT a replacement for
+    /api/v1/scheduler/timeline (that one is consumed as-is by this page's own
+    FullCalendar instance; changing its shape would risk breaking it).
+
+    Unlike /timeline, this supports FullCalendar's own start/end range params
+    (so a month view only pays for a month of rows) and a `sources` filter
+    (comma-separated; only 'schedule' is registered today — see
+    aot/utils/calendar_event_providers.py for the extension point). Event
+    titles are resolved content+location (never a raw target_id/UUID).
+    """
+    from aot.utils.calendar_event_providers import CALENDAR_EVENT_PROVIDERS
+
+    start = request.args.get('start')
+    end = request.args.get('end')
+    limit = request.args.get('limit', 500, type=int)
+    requested_sources = [s.strip() for s in request.args.get('sources', 'schedule').split(',') if s.strip()]
+
+    events = []
+    for source in requested_sources:
+        provider = CALENDAR_EVENT_PROVIDERS.get(source)
+        if provider is None:
+            # Unregistered source (e.g. a future 'notice'/'note' the frontend
+            # already offers before the backend ships it) — ignore, not error,
+            # so frontend/backend rollout doesn't have to be lockstep.
+            continue
+        try:
+            events.extend(provider(start=start, end=end, limit=limit))
+        except Exception:
+            logger.exception("api_calendar_events: provider '%s' failed", source)
+
+    return jsonify(events)
 
 
 @blueprint.route('/api/v1/scheduler/timeline', methods=['GET'])

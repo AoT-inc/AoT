@@ -8,6 +8,10 @@ Source types:
 - document: Parse uploaded PDF/text/markdown file
 - web_url: Scrape web page content
 - internal_query: Execute parameterized DB query
+- google_drive: Parse a file picked from the operator's Google Drive (PDF/text/
+  markdown, or a Google Doc/Sheet exported to text/CSV) — reuses the OAuth
+  connection already established for Calendar sync (UserCalendarConnection),
+  not a separate credential. See aot/utils/google_drive_api.py.
 """
 import enum
 from datetime import datetime
@@ -22,6 +26,7 @@ class SourceType(str, enum.Enum):
     DOCUMENT = "document"
     WEB_URL = "web_url"
     INTERNAL_QUERY = "internal_query"
+    GOOGLE_DRIVE = "google_drive"
 
 
 # @ANCHOR: AI_CONTEXT_SOURCE_MODEL

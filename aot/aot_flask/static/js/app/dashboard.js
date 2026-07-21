@@ -479,6 +479,7 @@ const DashboardTabs = {
 const UIFixes = {
     init() {
         this.fixModalZIndex();
+        this.fixSelectpickerInHiddenModal();
     },
 
     // Ensure widget/dashboard modals are attached to body to prevent z-index clipping
@@ -496,6 +497,22 @@ const UIFixes = {
             $(document).on('shown.bs.modal', (ev) => {
                 const $m = $(ev.target);
                 if ($m.length && !$m.parent().is('body')) { $m.appendTo('body'); }
+            });
+        } catch (e) { /* ignore */ }
+    },
+
+    // bootstrap-select builds its dropdown <li> list at init time; if the .selectpicker()
+    // call in document.ready runs while the widget-options modal is still display:none
+    // (the normal Bootstrap modal state before first show), the built list stays empty
+    // and only a manual refresh repopulates it. Refresh every selectpicker in a modal
+    // each time it's shown so Input/Output/Function (and similar) selects aren't empty.
+    fixSelectpickerInHiddenModal() {
+        try {
+            $(document).on('shown.bs.modal', (ev) => {
+                const $m = $(ev.target);
+                if ($m.length && $.fn.selectpicker) {
+                    $m.find('.selectpicker').selectpicker('refresh');
+                }
             });
         } catch (e) { /* ignore */ }
     }

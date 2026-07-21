@@ -1,0 +1,164 @@
+/* Calendar dashboard widget (aot/widgets/widget_calendar.py).
+   Scoped to .aot-calendar-widget-outer so this never leaks onto the
+   scheduler page's own independent FullCalendar instance. Colors are
+   token-only (--aot-*, plus the legacy --bd-tertiary/--text-color-tertiary
+   pair the shared primary-button component uses) so both dark mode
+   (server-side stylesheet swap) and settings/custom_ui's user-configured
+   palette (brand, chart, band colors — published live via /custom.css) need
+   no overrides here. Surface/border tokens (--aot-surface-*,
+   --aot-border-neutral) are intentionally NOT user-configurable — that's
+   consistent with the rest of the app (see docs/design/color-system.md). */
+
+.aot-calendar-widget-outer .fc {
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--aot-color-text-primary, #212529);
+}
+
+.aot-calendar-widget-outer .fc-toolbar-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.aot-calendar-widget-outer .fc-button-primary {
+  background-color: var(--aot-surface-card, #fff);
+  border-color: var(--aot-border-neutral, #ddd);
+  color: var(--aot-color-text-primary, #212529);
+  box-shadow: none;
+  text-transform: none;
+}
+
+.aot-calendar-widget-outer .fc-button-primary:hover {
+  background-color: var(--aot-surface-body, #f8f9fa);
+  border-color: var(--aot-border-neutral, #ddd);
+  color: var(--aot-color-text-primary, #212529);
+}
+
+.aot-calendar-widget-outer .fc-button-primary:not(:disabled).fc-button-active,
+.aot-calendar-widget-outer .fc-button-primary:not(:disabled):active {
+  /* Same tokens as .aot-pill-btn-primary (aot-modal-modern.css) — every other
+     "primary" button in the app is tied to bd_tertiary/text_color_tertiary via
+     settings/custom_ui, not the separate (also user-configurable, but unused
+     elsewhere) bd_btn_primary field. Matching this keeps the active view
+     button in step with the user's actual brand color instead of drifting. */
+  background-color: var(--bd-tertiary, #13261b);
+  border-color: var(--bd-tertiary, #13261b);
+  color: var(--text-color-tertiary, #fff);
+}
+
+.aot-calendar-widget-outer .fc-daygrid-day-number,
+.aot-calendar-widget-outer .fc-col-header-cell-cushion {
+  color: var(--aot-color-text-primary, #212529);
+}
+
+.aot-calendar-widget-outer .fc-day-today {
+  background-color: var(--aot-surface-body, #f8f9fa) !important;
+}
+
+.aot-calendar-widget-outer .fc-theme-standard td,
+.aot-calendar-widget-outer .fc-theme-standard th,
+.aot-calendar-widget-outer .fc-theme-standard .fc-scrollgrid {
+  border-color: var(--aot-border-neutral, #ddd);
+}
+
+.aot-calendar-widget-outer .fc-list-day-cushion {
+  background-color: var(--aot-surface-body, #f8f9fa);
+}
+
+/* ── Event chips: category -> --aot-chart-* (deterministic, see
+   calendar_event_providers.py's _CATEGORY_COLOR_HINT) ─────────────────── */
+.aot-calendar-widget-outer .aot-cal-event {
+  border: none;
+  color: #fff;
+}
+.aot-calendar-widget-outer .aot-cal-event--chart-1 { background-color: var(--aot-chart-1); }
+.aot-calendar-widget-outer .aot-cal-event--chart-2 { background-color: var(--aot-chart-2); }
+.aot-calendar-widget-outer .aot-cal-event--chart-3 { background-color: var(--aot-chart-3); }
+.aot-calendar-widget-outer .aot-cal-event--chart-4 { background-color: var(--aot-chart-4); }
+.aot-calendar-widget-outer .aot-cal-event--chart-5 { background-color: var(--aot-chart-5); }
+.aot-calendar-widget-outer .aot-cal-event--chart-6 { background-color: var(--aot-chart-6); }
+
+/* State overlay — a second, independent axis from category color. */
+.aot-calendar-widget-outer .aot-cal-event[data-state="DRAFT"] { opacity: 0.6; border: 1px dashed rgba(255, 255, 255, 0.8); }
+.aot-calendar-widget-outer .aot-cal-event[data-state="COMPLETED"] { opacity: 0.65; }
+.aot-calendar-widget-outer .aot-cal-event[data-state="FAILED"] { outline: 2px solid var(--aot-band-5, #cf5c58); outline-offset: -2px; }
+
+/* ── Edit modal location map preview — same 280px compact height as the
+   render_device_map() macro's modal usages (map_option_macros.html), shown
+   only when the job's target_id resolves to coordinates. ────────────────── */
+.aot-cal-edit-map-wrap {
+  position: relative;
+  height: 280px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--aot-border-neutral, #ddd);
+  margin-bottom: 1rem;
+}
+.aot-cal-edit-map {
+  height: 100%;
+  width: 100%;
+}
+
+/* ── Detail popover ──────────────────────────────────────────────────── */
+.aot-cal-popover {
+  position: absolute;
+  z-index: 1060;
+  min-width: 220px;
+  max-width: 300px;
+  background: var(--aot-surface-card, #fff);
+  border: 1px solid var(--aot-border-neutral, #ddd);
+  border-radius: 0.6rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 0.75rem;
+}
+.aot-cal-popover-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
+  word-break: break-word;
+}
+.aot-cal-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.65rem;
+}
+.aot-cal-popover-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+.aot-cal-popover-label {
+  color: var(--aot-color-text-secondary, #6c757d);
+  flex-shrink: 0;
+}
+.aot-cal-popover-value {
+  text-align: right;
+  word-break: break-word;
+}
+.aot-cal-popover-link {
+  width: 100%;
+}
+.aot-cal-popover-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.aot-cal-popover-actions .aot-cal-popover-action {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+@media (max-width: 767.98px) {
+  .aot-calendar-widget-outer .fc-toolbar {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .aot-calendar-widget-outer .fc-toolbar-title {
+    font-size: 0.9rem;
+  }
+}

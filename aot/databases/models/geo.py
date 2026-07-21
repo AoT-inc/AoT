@@ -221,6 +221,29 @@ class GeoShape(CRUDMixin, db.Model):
                           primaryjoin="foreign(GeoShape.geo_id) == GeoMap.unique_id",
                           backref=db.backref("shapes", cascade="all, delete-orphan"))
 
+    def get_centroid(self):
+        """Return (lat, lng) centroid of this shape's own GeoJSON geometry, or
+        None if it has no geometry/coordinates. Own outline only — does NOT
+        follow a linked GeoFacility (unlike resolve_timezone's priority chain).
+        Shared by resolve_timezone() below and by
+        aot.utils.device_tz.resolve_location_coords() (map previews etc.) —
+        the centroid math used to be duplicated inline in both
+        GeoShape.resolve_timezone and GeoFacility.resolve_timezone."""
+        feat = self.feature or {}
+        geom = feat.get('geometry') or {}
+        coords = geom.get('coordinates')
+        if not coords:
+            return None
+        try:
+            flat = _flatten_coords(coords)
+            if not flat:
+                return None
+            avg_lng = sum(c[0] for c in flat) / len(flat)
+            avg_lat = sum(c[1] for c in flat) / len(flat)
+            return (avg_lat, avg_lng)
+        except Exception:
+            return None
+
     def resolve_timezone(self):
         """Return pytz timezone for this shape's own location.
 
@@ -244,18 +267,13 @@ class GeoShape(CRUDMixin, db.Model):
             if tz is not None:
                 return tz
 
-        feat = self.feature or {}
-        geom = feat.get('geometry') or {}
-        coords = geom.get('coordinates')
-        if coords:
+        centroid = self.get_centroid()
+        if centroid:
             try:
-                flat = _flatten_coords(coords)
-                if flat:
-                    avg_lng = sum(c[0] for c in flat) / len(flat)
-                    avg_lat = sum(c[1] for c in flat) / len(flat)
-                    tz_name = resolve_tz_from_coords(avg_lat, avg_lng)
-                    if tz_name:
-                        return pytz.timezone(tz_name)
+                avg_lat, avg_lng = centroid
+                tz_name = resolve_tz_from_coords(avg_lat, avg_lng)
+                if tz_name:
+                    return pytz.timezone(tz_name)
             except Exception:
                 pass
         return None
@@ -438,16 +456,11 @@ class GeoFacility(CRUDMixin, db.Model):
 
         tz_name = self.timezone
         if not tz_name and self.shape is not None:
-            feat = self.shape.feature or {}
-            geom = feat.get('geometry') or {}
-            coords = geom.get('coordinates')
-            if coords:
+            centroid = self.shape.get_centroid()
+            if centroid:
                 try:
-                    flat = _flatten_coords(coords)
-                    if flat:
-                        avg_lng = sum(c[0] for c in flat) / len(flat)
-                        avg_lat = sum(c[1] for c in flat) / len(flat)
-                        tz_name = resolve_tz_from_coords(avg_lat, avg_lng)
+                    avg_lat, avg_lng = centroid
+                    tz_name = resolve_tz_from_coords(avg_lat, avg_lng)
                 except Exception:
                     pass
 

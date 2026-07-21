@@ -659,6 +659,9 @@ def settings_users_submit():
         elif form_mod_user.user_delete.data:
             user_id = form_mod_user.user_id.data
             messages = utils_settings.user_del(form_mod_user)
+        elif form_mod_user.user_approve.data:
+            user_id = form_mod_user.user_id.data
+            messages = utils_settings.user_approve(form_mod_user)
         elif form_mod_user.user_save.data:
             messages, logout = utils_settings.user_mod(form_mod_user)
             if logout:
@@ -914,4 +917,26 @@ def change_preferences():
         utils_settings.change_preferences(form_prefs)
 
     # Redirect back to the page that opened the modal, or home
+    return redirect(request.referrer or url_for('routes_general.home'))
+
+
+@blueprint.route('/settings/account_self', methods=('POST',))
+@flask_login.login_required
+def settings_account_self():
+    """Self-service account editing (nav-bar 'User Settings' modal) — the
+    logged-in user changing their own name/email/password/language. No
+    edit_users permission required: scope is inherently limited to the
+    caller's own row (see utils_settings.account_self_update)."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    form_account = forms_settings.AccountSelf()
+    logout = False
+    if form_account.validate_on_submit() and form_account.user_account_save.data:
+        logout = utils_settings.account_self_update(form_account)
+    else:
+        utils_general.flash_form_errors(form_account)
+
+    if logout:
+        return redirect(url_for('routes_authentication.logout'))
     return redirect(request.referrer or url_for('routes_general.home'))

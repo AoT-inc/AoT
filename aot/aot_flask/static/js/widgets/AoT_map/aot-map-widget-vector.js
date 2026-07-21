@@ -731,10 +731,10 @@
                 if (!chartFixed) return;
 
                 if (z.overlayOutputId === outputId) {
-                    // 재클릭 → 차트 제거 (토글 off)
+                    // 재클릭 → 차트 제거 (토글 off), 그래프 영역 자체는 계속 확보
                     if (chartFixed._aotChart) { try { chartFixed._aotChart.destroy(); } catch (e) {} chartFixed._aotChart = null; }
-                    chartFixed.innerHTML = '';
-                    chartFixed.style.display = 'none';
+                    chartFixed.style.display = 'flex';
+                    chartFixed.innerHTML = '<span class="aot-ov-muted">' + _tr('Select a device below to view its history') + '</span>';
                     z.overlayOutputId = null;
                     z.overlayOutputName = null;
                     _markZoneOverlayRow(devPane, null);
@@ -742,7 +742,7 @@
                     // 새 장치 선택 → 고정 차트 영역에 렌더
                     if (chartFixed._aotChart) { try { chartFixed._aotChart.destroy(); } catch (e) {} chartFixed._aotChart = null; }
                     chartFixed.innerHTML = '';
-                    chartFixed.style.display = '';
+                    chartFixed.style.display = 'block';
                     z.overlayOutputId = outputId;
                     z.overlayOutputName = outputName;
                     _markZoneOverlayRow(devPane, outputId);
@@ -822,7 +822,11 @@
                 }).join('');
                 html += '<div class="aot-zone-sensor-sec">' + sensorTabs + sensorCharts + '</div>';
             } else {
-                html += '<div class="aot-zone-dev-chart-fixed" style="display:none"></div>';
+                // 입력(센서)이 없어도 그래프 영역은 항상 확보 — 장치 선택 전에는
+                // 안내 문구를 보여주고, 선택 시 _selectZoneOutputOverlay 가 이 자리에 렌더한다.
+                html += '<div class="aot-zone-dev-chart-fixed" style="min-height:120px;display:flex;align-items:center;justify-content:center">' +
+                        '<span class="aot-ov-muted">' + _tr('Select a device below to view its history') + '</span>' +
+                        '</div>';
             }
             html += '</div>';
 

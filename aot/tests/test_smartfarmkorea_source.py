@@ -558,8 +558,10 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         # external presets beyond SmartFarmKorea are present
         self.assertTrue({'ext_smartfarm', 'ext_nongsaro', 'ext_pest'} <= sys_keys)
         self.assertTrue({'smartfarmkorea', 'smartfarmkorea_outdoor', 'smartfarmkorea_livestock'} <= sys_keys)
-        # custom (user-owned data) types are present
-        self.assertEqual(cust_keys, {'rest_api', 'document', 'web_url', 'internal_query'})
+        # custom (user-owned data) types are present — subset check (not exact
+        # equality) so this doesn't need updating every time a new custom
+        # type is added (e.g. google_drive, added 2026-07-21).
+        self.assertTrue({'rest_api', 'document', 'web_url', 'internal_query'} <= cust_keys)
         # SmartFarmKorea is not the only thing on offer
         self.assertGreater(len(sys_keys), 3)
 
