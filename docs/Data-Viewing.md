@@ -77,17 +77,18 @@ The screenshot above is a real, running irrigation sequence. The checkboxes acro
 
 ### AoT Timer { #widget-timer }
 
-Runs an output for a duration you enter in hours / minutes / seconds, then turns it off automatically. Entering `0` runs continuously until stopped. An ON/OFF toggle also switches the output directly.
+Turns an output on for a set time, then off again automatically — the simplest way to automate a pump or fan without building a full [Sequence](Functions.md#trigger-sequence). For example, set **Cycle** mode with a 20-minute run and a 1-hour-40-minute rest to water a bed for 20 minutes every 2 hours, repeated for a set number of cycles. **Simple** mode instead runs once for a set duration (`0` = run until you stop it).
 
 **Key options**
 
 -   **Output** — the output channel to control.
+-   **Sync (Seconds)** — how often the widget checks in with the server for the current status.
 -   **Operation Mode** — **Cycle** (repeat run/rest for a number of cycles) or **Simple** (a single run, `0` = run until stopped).
--   **Cycle settings** — default run time, rest time, and cycle count.
+-   **Cycle settings** — the run time, rest time, and cycle count to use the first time you start a timer on this output. After that, the widget remembers and reuses whatever values you actually ran last, so these defaults won't reappear once you've started it at least once.
 -   **Scheduled Start (hh:mm)** — a wall-clock start time in the device's timezone (`00:00` = start immediately; a past time schedules for the next day).
--   **Display** — show operation status and elapsed run time in the title bar, with adjustable font sizes.
+-   **Show Status** — display the current phase (running / resting / scheduled) in the title bar.
 
-*Notable:* a server-side worker drives the ON/OFF cycles and **survives app restarts** — scheduled timers are re-armed automatically.
+*Notable:* a background worker on the server drives the run/rest cycle, so closing the dashboard tab never stops it. If the app restarts while a timer is still waiting for its scheduled start time, that schedule re-arms itself automatically the next time the dashboard checks in — but a cycle that was already actively running or resting at the moment of the restart is **not** resumed, so check the output manually after an app restart.
 
 ### AoT Graph { #widget-graph }
 

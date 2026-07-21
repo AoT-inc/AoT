@@ -16,12 +16,6 @@ Activate/Deactivate a Controller (Inputs and Functions). For manipulating a PID 
 
 Switch to turn controllers on and off.
 
-### AoT On/Off Counter
-
-- Libraries: timer
-
-Automatically turns the designated output ON/OFF when a run time, rest time, and number of cycles are input. The current progress is saved on the server and can be checked after refreshing or on other browsers.
-
 ### AoT PID
 
 - Libraries: controller
@@ -32,7 +26,7 @@ Displays and allows control of a PID Controller.
 
 - Libraries: timer
 
-Entering "h/m/s" in the time input field will operate the device for the set time and then turn it off. If the input time is "0", it will operate continuously until stopped. Setting the toggle switch to "ON" turns the device on, and setting it to "OFF" turns it off.
+Turns an output on for a set time, then off automatically — supports a repeating run/rest cycle for a set number of cycles, a single one-shot run (`0` = run until stopped), and a scheduled start time. Progress is saved on the server, so it keeps running after a page refresh or on another browser. See [AoT Timer](Data-Viewing.md#widget-timer) for details.
 
 ### AoT Weather Forecast
 
