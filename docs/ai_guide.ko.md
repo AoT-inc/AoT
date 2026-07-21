@@ -1,117 +1,99 @@
 # AoT AI 에이전트 가이드 (한국어)
 
-AoT MCP 서버를 통해 AI 에이전트가 온실 환경제어 시스템을 관찰·진단·제어하는 방법을 설명합니다.
+AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 방법을 설명합니다. AI는 두 경로로 동작합니다: 대시보드의 **인앱 어시스턴트**(에이전트 루프)와, Claude Desktop 등 외부 클라이언트가 붙는 **외부 MCP 서버**(`aot/aot_mcp_server.py`). 두 경로 모두 같은 도구 레지스트리(`aot/ai/services/tool_registry.py`)에서 도구를 가져옵니다.
 
 ---
 
-## 1. 개요
+## 1. 도구 카탈로그
 
-AoT MCP 서버는 **FastMCP** 기반으로, Claude Desktop 등 MCP 클라이언트에서 다음 도구들을 제공합니다.
+### 1.1 MCP 도구 (외부 서버 + `mcp_aot` 엔진)
 
-| 분류 | 도구 | 설명 |
-|------|------|------|
-| 관찰 | `list_facilities` | 등록된 시설 목록 |
-| 관찰 | `get_facility_state` | 현재 T / RH / VPD / CO₂ / 광량 |
-| 관찰 | `get_sensor_history` | 센서 시계열 (1h / 24h / 7d) |
-| 관찰 | `list_functions` | 활성 Function 목록 |
-| 관찰 | `get_function_state` | env_coordinator 사이클 상태 |
-| 관찰 | `list_methods` | Method(설정 곡선) 목록 |
-| 관찰 | `list_outputs` | 액추에이터 현재 명령값 |
-| 관찰 | `get_recent_events` | 최근 MCP 감사 로그 |
-| 진단 | `analyze_control_performance` | VPD 추종 RMSE · 진동 분석 |
-| 진단 | `detect_sensor_anomaly` | 센서 이상치 · 드리프트 |
-| 진단 | `suggest_setpoint_adjustment` | VPD 목표 권장값 (제안만) |
-| 진단 | `compare_periods` | 두 기간 통계 비교 |
-| 제어 | `set_vpd_target` | VPD 목표 변경 (**승인 필요**) |
-| 제어 | `update_method_point` | 곡선 제어점 수정 (**승인 필요**) |
-| 제어 | `request_manual_lock` | AI 자동제어 일시 정지 (**승인 필요**) |
-| 제어 | `acknowledge_alert` | 경보 확인 (**승인 필요**) |
-| 흐름 | `confirm_action` | 대기 중인 쓰기 승인 |
-| 흐름 | `reject_action` | 대기 중인 쓰기 거부 |
-| 흐름 | `get_pending_actions` | 승인 대기 목록 |
-| 정보 | `get_system_manifest` | 시스템 도메인·정책 정보 |
+| 분류 | 도구 | 설명 | 승인 |
+|------|------|------|------|
+| 관찰 | `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 | 불필요 |
+| 관찰 | `get_device_list` | 등록된 전체 장치 목록 | 불필요 |
+| 관찰 | `search_devices` | 이름·유형으로 장치 검색 | 불필요 |
+| 관찰 | `get_sensor_detail` | 센서 시계열 이력(min/max/avg) | 불필요 |
+| 관찰 | `get_weather` | 포장·구역 현재 기상 | 불필요 |
+| 관찰 | `get_energy_report` | 기간·구역별 에너지 사용량 | 불필요 |
+| 관찰 | `get_cumulative_status` | EnvCoordinator DLI·GDD 누적 상태 | 불필요 |
+| 관찰 | `list_available_devices` | AI 판단 대상 장치 목록(네이티브) | 불필요 |
+| 관찰 | `get_sensor_reading` | 특정 센서 최신 측정값(네이티브) | 불필요 |
+| 노트 | `search_notes` | 구역·장치 노트/작업기록 조회 | 불필요 |
+| 노트 | `create_note` | 메모/노트를 대상에 부착해 저장 | 불필요 |
+| 공지 | `list_notices` | 공지 게시판 글 목록 | 불필요 |
+| 시스템 | `get_system_update_status` | 설치 버전 vs GitHub 최신 비교 | 불필요 |
+| 작업 | `add_schedule` | 사람 작업 일정(제초·점검·청소) 등록 | **필요** |
+| 제어 | `operate_device` | 밸브·펌프·조명 즉시 제어 | **필요** |
+| 제어 | `set_output_state` | 출력 on/off(선택 지속시간, 네이티브) | **필요** |
+| 제어 | `schedule_device_control` | 특정 시각 1회성 장치 제어 예약 | **필요** |
+
+### 1.2 인앱 어시스턴트 확장 도구
+
+인앱 어시스턴트는 위 카탈로그 외에 엔티티 조립·자동화·지식 도구를 추가로 사용합니다. 상태를 바꾸는 도구는 모두 승인이 필요합니다.
+
+- **입력/출력**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
+- **함수(자동화)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
+- **일정 원장**: `search_schedule`, `edit_schedule`, `delete_schedule`
+- **지도(GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **공지**: `create_notice`·`modify_notice`·`delete_notice`
+- **AI 에이전트**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
+- **지식 라이브러리**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
+- **진단·기타**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
+
+> 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다.
 
 ---
 
-## 2. 안전 정책
+## 2. 안전·승인 정책
 
-### 2.1 쓰기 기본 비활성화
-
-모든 제어 도구는 기본적으로 **비활성화** 상태입니다. 활성화 방법:
-
-```bash
-# 환경 변수로 활성화
-AOT_MCP_WRITE_ENABLED=1 python -m aot.mcp_server.server
-
-# CLI 플래그로 활성화
-python -m aot.mcp_server.server --write
-```
-
-### 2.2 3계층 안전 장치
-
-1. **Layer 1 — 권한**: 읽기 도구는 제한 없음. 쓰기 도구는 전역 플래그로 차단.
-2. **Layer 2 — 값 검증**: 범위·변화량·시간당 호출 횟수 제한.
-3. **Layer 3 — 사용자 승인**: 쓰기 도구는 반드시 60초 TTL 토큰으로 사용자 승인 후 실행.
-
-### 2.3 쓰기 도구 제한표
-
-| 도구 | 값 범위 | 1회 최대 변화량 | 시간당 최대 호출 |
-|------|---------|----------------|----------------|
-| `set_vpd_target` | 0.3 ~ 2.5 kPa | 0.5 kPa | 5회 |
-| `update_method_point` | 0.0 ~ 3.0 kPa | 0.3 kPa | 10회 |
-| `request_manual_lock` | 1 ~ 120분 | — | 3회 |
-| `acknowledge_alert` | — | — | 20회 |
-
-### 2.4 시드 프리셋 보호
-
-이름이 `SEED:` 로 시작하는 Method는 읽기 전용입니다.
-수정이 필요하면 반드시 복제 후 편집하세요.
+- **읽기 도구**는 즉시 실행됩니다.
+- **상태를 바꾸는 도구**(변이·물리 제어·일정)는 인앱 어시스턴트에서 호출될 때 승인 게이트를 거칩니다. 즉시 적용되지 않고 채팅에 **승인 카드**로 제시되며, 사용자가 승인해야 실행됩니다.
+- 예외적으로 `create_note`·`knowledge_shelve`는 되돌릴 수 있는 저위험 기록이라 승인 없이 즉시 저장되며, 확정 전까지 권위 없는 정보로 취급됩니다.
+- **장치별 AI 판단 포함 토글**: `설정 -> 입력/출력`의 각 장치 모달에서 끄면, 그 장치는 AI 도구의 조회·제어 대상에서 제외됩니다(`is_ai_enabled`).
+- **외부 MCP 서버**(`aot_mcp_server.py`)는 자체 승인 게이트가 없어 도구를 호출된 대로 실행합니다. 제어 도구까지 노출되므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 
 ## 3. 권장 워크플로
 
-### 이상 감지 → 조정
+### 상태 점검 → 제어
 
 ```
-1. list_facilities
-   → 시설 unique_id 확인
+1. get_spatial_tree
+   → 사이트 > 구역 > 장치 계층과 대상 장치의 unique_id 확인
 
-2. get_facility_state(facility_id)
-   → 현재 VPD / T / RH / CO₂ 확인
-   → sensors_health = 'stale' 이면 센서 점검 먼저
+2. search_devices(query='밸브')  또는  get_device_list
+   → 제어할 출력 장치의 unique_id 확보
 
-3. analyze_control_performance(function_id, window='1h')
-   → vpd_rmse, oscillation_index, assessment 확인
+3. get_sensor_detail(loc_id, sensor_type='temperature', time_range='24h')
+   → 최근 추세 확인 (이상하면 원인 먼저 진단)
 
-4. detect_sensor_anomaly(device_id, measurement_id)
-   → verdict: 'anomaly_detected' / 'drift_detected' / 'normal'
-
-5. suggest_setpoint_adjustment(facility_id)
-   → suggested_target, reason 확인
-
-6. (사용자 승인 후)
-   set_vpd_target(function_id, value=suggested_target, reason=reason)
-   → 반환: {'pending': True, 'token_id': '...', 'expires_in': 60}
-
-7. confirm_action(token_id='...', user_id='operator')
-   → 실제 적용
+4. operate_device(device_id, state='on', value=...)
+   → 승인 카드 제시 → 사용자가 승인해야 실제 동작
 ```
 
-### 제어 흐름 예시
+### 노트 조회 → 요약
 
-```python
-# 1. VPD 목표 변경 요청
-result = set_vpd_target(
-    function_id='abc-123',
-    value=1.2,
-    reason='VPD 너무 낮음, 증산 촉진 필요'
-)
-# → {'pending': True, 'token_id': 'xxx-yyy', 'expires_in': 60, ...}
+```
+1. (컨텍스트) 각 엔티티의 노트 다이제스트(초기+최근)는 시스템 상태로 미리 주입됨
+   → "각 장치의 노트 확인" 같은 넓은 질문은 도구 없이 바로 답변 가능
 
-# 2. 사용자가 UI 또는 confirm_action 으로 승인
-result = confirm_action(token_id='xxx-yyy', user_id='operator')
-# → {'ok': True, 'tool_name': 'set_vpd_target', 'result': {...}}
+2. search_notes(target_name='v111')
+   → 특정 장치/구역의 전체·과거 노트로 드릴다운
+```
+
+### 자동화 만들기 (반복/조건 제어)
+
+```
+1. list_device_types(kind='function')
+   → 유효한 함수 유형 확인 (유형을 지어내지 말 것)
+
+2. create_function(function_type='trigger_timer_daily_time_point', name=..., params={...})
+   → 승인 후 생성. 반복 관수는 schedule_device_control이 아니라 함수로.
+
+3. get_function_list  /  activate_function(function_id)
+   → 생성 확인 및 활성화(승인)
 ```
 
 ---
@@ -131,58 +113,48 @@ SVP = 0.6108 × exp(17.27T / (T + 237.3)) [kPa]
 | 1.2 ~ 1.8 kPa | 적정 (생식생장기) | 개화·착과기 |
 | > 1.8 kPa | 너무 높음 — 수분 스트레스 위험 | — |
 
-### 제어 3계층 (env_coordinator)
+### 환경 제어 3계층 (EnvCoordinator)
 
-- **L1 EnvTarget**: Method 곡선 또는 고정값에서 VPD/CO₂ 목표 읽기
+- **L1 EnvTarget**: Method 곡선 또는 고정값에서 VPD·CO₂·광량 목표를 읽음
 - **L2 SituationReport**: 편차·제한인자·추세 평가
-- **L3 Coordinator**: PI + 슬루율 + 적분 와인드업 방지 → 액추에이터 명령
+- **L3 Coordinator**: 위치형 PI + 슬루율 제한 + 적분 와인드업 방지 → 액추에이터 명령
 
-### 분석 판정 기준
-
-`analyze_control_performance` 반환값:
-
-| assessment | 의미 | 조치 |
-|-----------|------|------|
-| `excellent` | RMSE < 0.1 kPa | 유지 |
-| `good` | RMSE 0.1 ~ 0.2 kPa | 모니터링 |
-| `oscillating` | 부호 변환 > 30% | tolerance_vpd ↑ 또는 주기 연장 |
-| `poor_tracking` | RMSE ≥ 0.2 kPa | 제한인자 확인, K 캘리브레이션 검토 |
+`get_cumulative_status`로 DLI(일적산광량)·GDD(누적온도)의 일별 누적과 목표 달성/부채 현황을 확인할 수 있습니다. 자세한 내용은 [환경 제어 자동화](ai/env-control.md)를 참고하세요.
 
 ---
 
 ## 5. Claude Desktop 설정
 
-`~/.config/claude/config.json` (macOS: `~/Library/Application Support/Claude/config.json`):
+`claude_desktop_config.json`(macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "aot": {
-      "command": "python",
-      "args": ["-m", "aot.mcp_server.server"],
-      "cwd": "/path/to/AoT_ai",
-      "env": {
-        "AOT_MCP_WRITE_ENABLED": "1",
-        "AOT_MCP_AGENT_ID": "claude"
-      }
+      "command": "python3",
+      "args": ["/opt/AoT/aot/aot_mcp_server.py"]
     }
   }
 }
 ```
 
-쓰기 기능이 필요 없으면 `AOT_MCP_WRITE_ENABLED` 를 제거하거나 `0` 으로 설정하세요.
+원격 클라이언트는 HTTP 모드로 실행할 수 있습니다:
+
+```bash
+python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
+```
 
 ---
 
 ## 6. 금지 사항
 
-AI 에이전트는 다음 작업을 수행해서는 안 됩니다.
+AI 에이전트는 다음을 해서는 안 됩니다.
 
-- 안전 게이트 (강풍/폭우/온도 한계) 비활성화
-- 시드 프리셋 (`SEED:*`) 직접 수정
-- 액추에이터 하드웨어 한계 초과 명령
-- 사용자 승인 없이 쓰기 도구 실행
-- VPD를 1회에 0.5 kPa 이상 변경
+- 도구로 확보하지 않은 데이터(센서·날씨 등)를 **지어내기**. 모르면 "모른다/확인 필요"로 답하고 도구를 호출하거나 되물어야 합니다.
+- 사용자 승인 없이 제어·변이 도구 실행.
+- 유효 목록(`list_device_types` 등)을 확인하지 않고 장치/함수 유형을 **임의로 생성**.
+- AI 판단에서 제외된(`is_ai_enabled=False`) 장치를 제어.
+- 안전 관련 함수·설정을 사용자 확인 없이 비활성화.
 
 ---
 
@@ -190,8 +162,8 @@ AI 에이전트는 다음 작업을 수행해서는 안 됩니다.
 
 | 증상 | 원인 | 해결 |
 |------|------|------|
-| `WriteDisabled` 오류 | 쓰기 비활성화 상태 | `AOT_MCP_WRITE_ENABLED=1` 설정 |
-| `seed_protected` 오류 | SEED 프리셋 수정 시도 | Method 복제 후 편집 |
-| `sensors_health: stale` | ext_context 만료 | 센서 연결 및 ext_context_collector 확인 |
-| 토큰 만료 | 60초 내 미승인 | 다시 도구 호출 후 즉시 승인 |
-| `rate_limit` 오류 | 시간당 호출 초과 | 다음 시간대 재시도 |
+| 도구가 노트를 못 찾음 | `target_name`을 안 넘겨 키워드 검색만 함 | 구역/장치 이름을 `target_name`으로 전달 |
+| 장치가 AI에 안 보임 | `is_ai_enabled=False` | 장치 설정 모달에서 AI 판단 포함 켜기 |
+| 반복 제어가 스케줄로 안 됨 | 1회성 예약과 혼동 | 반복/조건 제어는 `create_function` 사용 |
+| 외부 MCP 호출이 승인 없이 실행됨 | 외부 서버엔 승인 게이트 없음 | 제어 노출 서버는 신뢰 클라이언트에만 연결 |
+| 유형 오류로 생성 실패 | 존재하지 않는 유형을 지어냄 | `list_device_types`로 유효 유형 먼저 확인 |

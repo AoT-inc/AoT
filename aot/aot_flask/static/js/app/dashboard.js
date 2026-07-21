@@ -335,6 +335,17 @@ const DashboardGrid = {
                     const target = document.getElementById(this.value);
                     if (target) {
                         target.style.display = "block";
+                        // Lazy-hydrate the option-heavy add-widget body on first reveal
+                        // (kept in a <template> so its hidden selects/options stay out of
+                        // the live DOM — see UIFixes.hydrateLazyModalBodies for rationale).
+                        const tpl = target.querySelector('template.aot-lazy-add-body');
+                        if (tpl) {
+                            tpl.parentNode.insertBefore(tpl.content.cloneNode(true), tpl);
+                            tpl.remove();
+                            if (window.jQuery && window.jQuery.fn.selectpicker) {
+                                window.jQuery(target).find('.selectpicker').selectpicker();
+                            }
+                        }
                         target.scrollIntoView({ behavior: 'smooth' });
                     }
                 }
@@ -479,7 +490,33 @@ const DashboardTabs = {
 const UIFixes = {
     init() {
         this.fixModalZIndex();
+        this.hydrateLazyModalBodies();
         this.fixSelectpickerInHiddenModal();
+    },
+
+    // Lazy-hydrate option-heavy widget-config modal bodies. Each body is shipped
+    // inside <template class="aot-lazy-modal-body"> so its hundreds of hidden
+    // <select>/<option> nodes stay OUT of the live DOM until the modal is opened.
+    // Chrome's built-in autofill re-scans every form field in the live DOM on each
+    // keystroke; with ~2600 hidden option nodes across all widget modals, typing in
+    // any field (e.g. the global AI chat box) stalled badly. Cloning on first open
+    // keeps at most one modal's worth of options live at a time. The bodies contain
+    // no inline <script> (verified across all *_configure_options templates), so a
+    // plain clone suffices; inline onchange/onclick attributes survive the clone.
+    // selectpicker is initialised on the injected content (the shown.bs.modal
+    // handler below then refreshes it).
+    hydrateLazyModalBodies() {
+        try {
+            $(document).on('show.bs.modal', (ev) => {
+                const tpl = ev.target.querySelector('template.aot-lazy-modal-body');
+                if (!tpl) return;                       // not lazy, or already hydrated
+                tpl.parentNode.appendChild(tpl.content.cloneNode(true));
+                tpl.remove();
+                if ($.fn.selectpicker) {
+                    $(ev.target).find('.selectpicker').selectpicker();
+                }
+            });
+        } catch (e) { /* ignore */ }
     },
 
     // Ensure widget/dashboard modals are attached to body to prevent z-index clipping

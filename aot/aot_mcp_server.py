@@ -122,56 +122,27 @@ def _execute_tool(app, tool_name, arguments):
 
 
 def _dispatch_virtual_tool(tool_name, arguments):
-    """Map virtual tool name to AoTDataToolService method."""
-    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    """Map a virtual tool name to its AoTDataToolService handler.
 
-    dispatch = {
-        "get_sensor_detail": lambda a: AoTDataToolService.get_sensor_detail(
-            loc_id=a.get("loc_id"),
-            sensor_type=a.get("sensor_type"),
-            time_range=a.get("time_range", "24h"),
-        ),
-        "get_spatial_tree": lambda a: AoTDataToolService.get_spatial_tree(
-            depth=a.get("depth", 2),
-            filter_type=a.get("filter_type"),
-        ),
-        "search_devices": lambda a: AoTDataToolService.search_devices(
-            query=a.get("query", ""),
-        ),
-        "get_device_list": lambda a: AoTDataToolService.get_device_list_tool(),
-        "get_energy_report": lambda a: AoTDataToolService.get_energy_report(
-            period=a.get("period", "daily"),
-            zone_id=a.get("zone_id"),
-        ),
-        "operate_device": lambda a: AoTDataToolService.operate_device_tool(
-            device_id=a.get("device_id"),
-            state=a.get("state"),
-            value=a.get("value"),
-            duration_seconds=a.get("duration_seconds"),
-        ),
-        "add_schedule": lambda a: AoTDataToolService.add_schedule_tool(
-            date=a.get("date"),
-            content=a.get("content"),
-            worker=a.get("worker"),
-            time=a.get("time", "09:00"),
-            tags=a.get("tags"),
-        ),
-        "schedule_device_control": lambda a: AoTDataToolService.schedule_device_control_tool(
-            device_id=a.get("device_id"),
-            scheduled_time=a.get("scheduled_time"),
-            state=a.get("state"),
-            duration_minutes=a.get("duration_minutes", 5),
-        ),
-        "get_weather": lambda a: AoTDataToolService.get_weather_tool(
-            zone_name=a.get("zone_name"),
-            zone_id=a.get("zone_id"),
-        ),
-    }
+    Derives the dispatch table from the SSOT tool registry (build_tool_map) so
+    EVERY declared virtual tool — search_notes, create_note, list_notices,
+    get_cumulative_status, … — is executable here, not just a hand-maintained
+    subset. The old explicit dict omitted several tools that tools/list still
+    advertised (via VIRTUAL_TOOLS), so an external MCP client calling e.g.
+    search_notes got 'Unknown tool' despite the tool being listed. Registering a
+    tool once in tool_registry.py now suffices for both list and execute.
+    """
+    from aot.ai.services.tool_registry import build_tool_map
 
-    fn = dispatch.get(tool_name)
-    if fn is None:
+    tool_map = build_tool_map()
+    handler = tool_map.get(tool_name)
+    if handler is None:
         raise ValueError(f"Unknown tool: '{tool_name}'")
-    return fn(arguments)
+
+    # Strip transport/meta keys the handler signatures don't accept.
+    _meta = {"tool_name", "server_id", "agent_unique_id", "context"}
+    kwargs = {k: v for k, v in (arguments or {}).items() if k not in _meta}
+    return handler(**kwargs)
 
 
 # =============================================================================

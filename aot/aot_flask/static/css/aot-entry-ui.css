@@ -182,13 +182,35 @@
   max-width: none !important; 
   min-width: 0; 
 }
-.aot-col-action { 
-  flex: 35 35 0% !important; 
+.aot-col-action {
+  flex: 35 35 0% !important;
   width: 35% !important;
-  max-width: none !important; 
-  min-width: 0; 
+  max-width: none !important;
+  min-width: 0;
 }
 
+/* Generic flex columns for entry cards whose column count/shape doesn't match
+   the fixed name/uuid/action triad above (e.g. scheduler job cards: icon +
+   two growing text fields + one or more fixed-width buttons + gear). Combine
+   freely; unlike Bootstrap .col-*, these never wrap the card to a second row —
+   content ellipsis-truncates instead, matching .aot-entry-item's nowrap layout. */
+.aot-col-icon {
+  flex: 0 0 40px;
+  width: 40px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aot-col-grow {
+  flex: 1 1 0%;
+  min-width: 0;
+  padding-right: 8px !important; /* visual gap — adjacent grow/btn columns have no border/chip to separate them */
+}
+.aot-col-btn {
+  flex: 0 0 120px;
+  min-width: 0;
+}
 
 /* Fallback for browsers without :has() support */
 .aot-entry-content-item.has-button {

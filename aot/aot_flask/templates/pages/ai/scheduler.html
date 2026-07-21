@@ -33,6 +33,7 @@
 <link href="https://unpkg.com/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
 <link href="{{ url_for('static', filename='css/ai/device-timeline.css') }}" rel="stylesheet" type="text/css" />
 <link href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}?v=phase9.6" />
 {% endblock %}
 
 {% macro state_label(state) -%}
@@ -80,44 +81,43 @@
     <div style="clear: both; padding: 0.5em 0;"></div>
 
     {% if drafts %}
+    <div class="aot-entry-container">
     {% for draft in drafts %}
-    <div class="grid-stack-item-content pause-background row small-gutters align-items-center"
-         style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden; margin-bottom: 4px;">
-        <div class="col-2 col-md-1 text-center icon-fh my-auto" style="padding: 0;">
-            <i style="font-size: 2em"
+    <div class="grid-stack-item-content pause-background aot-entry-item" style="margin-bottom: 4px;">
+        <div class="aot-entry-content-item aot-col-icon">
+            <i style="font-size: 1.3em"
                class="{% if draft.proposed_by == 'AI' %}fas fa-robot{% else %}fas fa-user{% endif %}"
                title="{{ draft.proposed_by }}"></i>
         </div>
-        <div class="col-10 col-md-3 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.9rem;"
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
                    value="{{ draft.display_content }}" type="text">
         </div>
-        <div class="col-12 col-md-3 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.9rem;"
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
                    value="{{ draft.display_location or _('General') }}" type="text">
         </div>
-        <div class="col-6 col-md-2 mb-1 mb-md-0">
+        <div class="aot-entry-content-item aot-col-btn">
             <input class="form-control btn aot-pill-btn aot-pill-btn-primary"
                    type="button"
                    value="{{ _('Approve') }}"
                    onclick="approveJob('{{ draft.id }}')">
         </div>
-        <div class="col-6 col-md-2 mb-1 mb-md-0">
+        <div class="aot-entry-content-item aot-col-btn">
             <input class="form-control btn aot-pill-btn aot-pill-btn-secondary"
                    type="button"
                    value="{{ _('Reject') }}"
                    onclick="rejectJob('{{ draft.id }}')">
         </div>
-        <div class="col-12 col-md-1 text-center icon-fh my-auto" style="padding: 0;">
+        <div class="aot-entry-content-item aot-col-icon">
             <a class="btn p-0" style="border-color: transparent;"
                data-toggle="modal" data-target="#modal_proposal_{{ draft.id }}">
-                <i style="font-size: 1.5em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+                <i style="font-size: 1.2em" class="fas fa-cog" title="{{ _('Details') }}"></i>
             </a>
         </div>
     </div>
     {% endfor %}
+    </div>
     {% else %}
     <div class="inactive-background text-center py-4" style="border-radius: 24px;">
         <p class="text-muted mb-0">{{ _('No pending proposals.') }}</p>
@@ -136,32 +136,31 @@
     <div style="clear: both; padding: 0.5em 0;"></div>
 
     {% if active_jobs %}
+    <div class="aot-entry-container">
     {% for job in active_jobs %}
-    <div class="grid-stack-item-content active-background row small-gutters align-items-center"
-         style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden; margin-bottom: 4px;">
-        <div class="col-12 col-md-4 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.9rem;"
+    <div class="grid-stack-item-content active-background aot-entry-item" style="margin-bottom: 4px;">
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_content }}" type="text">
         </div>
-        <div class="col-12 col-md-4 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.9rem;"
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_location or _('General') }}" type="text">
         </div>
-        <div class="col-12 col-md-3 mb-1 mb-md-0">
+        <div class="aot-entry-content-item aot-col-btn">
             <input class="form-control btn btn-primary btn-block aot-pill-btn"
                    type="button" disabled
                    value="{{ state_label(job.state) }}">
         </div>
-        <div class="col-12 col-md-1 text-center icon-fh my-auto" style="padding: 0;">
+        <div class="aot-entry-content-item aot-col-icon">
             <a class="btn p-0" style="border-color: transparent;"
                data-toggle="modal" data-target="#modal_job_{{ job.id }}">
-                <i style="font-size: 1.5em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+                <i style="font-size: 1.2em" class="fas fa-cog" title="{{ _('Details') }}"></i>
             </a>
         </div>
     </div>
     {% endfor %}
+    </div>
     {% else %}
     <div class="inactive-background text-center py-4" style="border-radius: 24px;">
         <p class="text-muted mb-0">{{ _('No active jobs.') }}</p>
@@ -203,45 +202,44 @@
     <div style="clear: both; padding: 0.5em 0;"></div>
 
     {% if completed_jobs %}
+    <div class="aot-entry-container">
     {% for job in completed_jobs[:20] %}
     <div class="grid-stack-item-content
                 {% if job.state|lower == 'completed' %}active-background
                 {% elif job.state|lower == 'failed' %}inactive-background
                 {% else %}inactive-background{% endif %}
-                row small-gutters align-items-center"
-         style="padding: 4px; border: 0px solid #ddd; border-radius: 24px; overflow: hidden; margin-bottom: 4px;">
-        <div class="col-2 col-md-1 text-center icon-fh my-auto" style="padding: 0;">
-            <i style="font-size: 2em"
+                aot-entry-item" style="margin-bottom: 4px;">
+        <div class="aot-entry-content-item aot-col-icon">
+            <i style="font-size: 1.3em"
                class="{% if job.state|lower == 'completed' %}fas fa-check-circle{% else %}fas fa-times-circle{% endif %}"></i>
         </div>
-        <div class="col-10 col-md-3 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.9rem;"
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_content }}" type="text">
         </div>
-        <div class="col-12 col-md-3 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.9rem;"
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_location or _('General') }}" type="text">
         </div>
-        <div class="col-6 col-md-2 mb-1 mb-md-0">
+        <div class="aot-entry-content-item aot-col-btn">
             <input class="form-control btn btn-primary btn-block aot-pill-btn"
                    type="button" disabled
                    value="{{ state_label(job.state) }}">
         </div>
-        <div class="col-6 col-md-2 mb-1 mb-md-0">
-            <input class="form-control" disabled
-                   style="border-radius: 16px !important; font-size: 0.8rem;"
+        <div class="aot-entry-content-item aot-col-btn">
+            <input class="form-control aot-entry-name-input" disabled
+                   style="font-size: 0.8rem;"
                    value="{{ job.display_created_at }}" type="text">
         </div>
-        <div class="col-12 col-md-1 text-center icon-fh my-auto" style="padding: 0;">
+        <div class="aot-entry-content-item aot-col-icon">
             <a class="btn p-0" style="border-color: transparent;"
                data-toggle="modal" data-target="#modal_history_job_{{ job.id }}">
-                <i style="font-size: 1.5em" class="fas fa-cog" title="{{ _('Details') }}"></i>
+                <i style="font-size: 1.2em" class="fas fa-cog" title="{{ _('Details') }}"></i>
             </a>
         </div>
     </div>
     {% endfor %}
+    </div>
     {% else %}
     <div class="inactive-background text-center py-4" style="border-radius: 24px;">
         <p class="text-muted mb-0">{{ _('No history yet.') }}</p>

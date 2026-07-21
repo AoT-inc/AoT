@@ -147,6 +147,13 @@
       <input type="hidden" name="dashboard_id" value="{{dashboard_id}}">
       <input type="hidden" name="widget_type" value="{{each_widget}}">
 
+      {# Option-heavy add-widget body shipped inert inside <template> so its hidden
+         <select>/<option> nodes stay out of the live DOM until this widget type is
+         selected. Cloned into the form on reveal by the #widget_type change handler
+         (dashboard.js). Same rationale as the widget-config modals — Chrome autofill
+         scans every live form field on each keystroke. No inline <script> in these
+         includes (verified); inline onchange/onclick attributes survive the clone. #}
+      <template class="aot-lazy-add-body">
       <div class="aot-modal-container">
         {% include 'pages/dashboard_options/TEMPLATE_OPTIONS_WIDGET_ADD.html' %}
       </div>
@@ -162,6 +169,7 @@
         {% endfor %}
       </div>
       {% endif %}
+      </template>
 
       <div class="widget-add-bar d-flex justify-content-end">
         {{ form_base.widget_add(class_='btn btn-primary', value=_('Add Widget')) }}
@@ -180,7 +188,7 @@
     window.AOT_GRID_CELL_HEIGHT = {{misc.grid_cell_height}};
     window.AOT_DASHBOARD_LOCKED = {{ 'true' if this_dashboard.locked else 'false' }};
   </script>
-  <script src="/static/js/app/dashboard.js?v=20260720a"></script>
+  <script src="/static/js/app/dashboard.js?v=20260722b"></script>
 
   <script>
   {% for widget_type, file_js in list_html_files_js.items() %}

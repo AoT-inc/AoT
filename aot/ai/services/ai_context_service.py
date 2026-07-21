@@ -348,6 +348,102 @@ class AIContextService:
         logger.info("[SpatialCache] Cache invalidated")
 
     @staticmethod
+    def get_note_digests(tier='standard', max_entities=40, recent_n=3, txt_len=140):
+        """엔티티별 노트 다이제스트(초기 기록 + 최근 기록)를 컨텍스트 주입용으로 조립.
+
+        모든 장치·토지/시설·구역/도형은 각자의 노트를 가진다(Notes.target_id ==
+        엔티티.unique_id 로 바인딩). AI는 slim 툴 매니페스트로 이를 열거할 수 없어
+        "어떤 엔티티에 어떤 노트가 있는지"를 아예 모른다. 그래서 여기서 엔티티별로
+        - 초기 노트(first, 기준/기본 정보)와
+        - 최근 노트 몇 건(recent, 진행 과정)을
+        압축해 미리 주입한다. AI는 이걸로 "각 장치의 노트"를 컨텍스트만으로 답하고,
+        전체/과거 본문이 필요하면 search_notes(target_name=...)로 드릴다운한다.
+
+        ai_semantic 노트는 제외(이미 spatial_hierarchy 노드의 semantic_note로 노출됨).
+        """
+        try:
+            from aot.databases.models import Notes, GeoShape, Input, Output, Function
+            import json as _json
+
+            rows = (Notes.query
+                    .filter(Notes.is_archived == False)  # noqa: E712
+                    .filter((Notes.category != 'ai_semantic') | (Notes.category.is_(None)))
+                    .all())
+            if not rows:
+                return []
+
+            by_target = {}
+            for n in rows:
+                if n.target_id:
+                    by_target.setdefault(n.target_id, []).append(n)
+            if not by_target:
+                return []
+
+            # 이름/타입 해석기 — 노트가 붙는 방식(엔티티.unique_id)과 동일한 키로 매핑.
+            # 주의: GeoShape.geo_id 는 맵(GeoMap) FK(도형들이 공유)이고, 도형 자체
+            # 식별자는 GeoShape.unique_id 다. 노트 target_id 는 unique_id 로 붙는다.
+            name_map = {}  # unique_id -> (name, type)
+            try:
+                for s in GeoShape.query.all():
+                    feat = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+                    props = (feat.get('properties') or {}) if isinstance(feat, dict) else {}
+                    nm = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
+                    if s.unique_id:
+                        name_map[s.unique_id] = (nm or (s.type or 'shape'), s.type or 'shape')
+            except Exception:
+                pass
+            for model, _tt in ((Input, 'input'), (Output, 'output'), (Function, 'function')):
+                try:
+                    for d in model.query.all():
+                        if d.unique_id:
+                            name_map[d.unique_id] = (str(d.name or _tt), _tt)
+                except Exception:
+                    continue
+
+            def _fmt(n):
+                try:
+                    t = n.date_time.strftime('%Y-%m-%d') if n.date_time else ''
+                except Exception:
+                    t = ''
+                txt = (n.note or n.name or '').strip().replace('\n', ' ')
+                if len(txt) > txt_len:
+                    txt = txt[:txt_len].rstrip() + '…'
+                entry = {"t": t, "txt": txt}
+                if n.category and n.category != 'general':
+                    entry["cat"] = n.category
+                return entry
+
+            def _key(n):
+                return n.date_time or datetime.min
+
+            digests = []
+            for tid, notes in by_target.items():
+                notes.sort(key=_key)  # 오래된 것 → 최신
+                nm, tp = name_map.get(tid, (None, None))
+                if not nm:
+                    # 미해석(고아/레거시 id): 그래도 노출하되 노트 메타데이터로 라벨링.
+                    nm = (notes[-1].name or notes[-1].target_type or 'unknown')
+                    tp = notes[-1].target_type or 'unknown'
+                first = notes[0]
+                recent = [_fmt(r) for r in reversed(notes[-recent_n:]) if r is not first]
+                entry = {
+                    "entity": nm,
+                    "type": tp,
+                    "id": tid,
+                    "total": len(notes),
+                    "first": _fmt(first),
+                }
+                if recent:
+                    entry["recent"] = recent
+                digests.append((notes[-1].date_time or datetime.min, entry))
+
+            digests.sort(key=lambda x: x[0], reverse=True)  # 최근 활동 엔티티 우선
+            return [e for (_dt, e) in digests[:max_entities]]
+        except Exception:
+            logger.exception("Error building note digests")
+            return []
+
+    @staticmethod
     def get_energy_context():
         """
         Aggregates INPUT energy usage data (Power consumption).
@@ -1329,6 +1425,13 @@ class AIContextService:
             if should_include('dashboards'): master["dashboards"] = dashboards
             if semantic_snapshots: master["semantic_snapshots"] = semantic_snapshots
             if focused_details: master["focused_device_details"] = focused_details
+
+            # 엔티티별 노트 다이제스트(초기+최근) — "각 장치의 노트"를 컨텍스트만으로
+            # 인지/요약하게 하고, 상세는 search_notes 로 드릴다운. lightweight 제외.
+            if tier != 'lightweight' and should_include('note_digests'):
+                note_digests = AIContextService.get_note_digests(tier=tier)
+                if note_digests:
+                    master["note_digests"] = note_digests
 
             # Phase 2: Inject Context Metadata (Philosophy Alignment: P1_Honesty, P3_Transparency)
             # ONLY for standard/heavy tiers (excluded for lightweight to preserve token budget)

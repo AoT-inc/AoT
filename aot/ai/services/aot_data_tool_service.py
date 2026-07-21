@@ -884,25 +884,47 @@ class AoTDataToolService:
             from sqlalchemy import or_
 
             resolved_name = None
-            # Resolve a location/entity NAME → target_id (per-entity read).
-            if not target_id and target_name:
-                target_id, _tt, resolved_name, _lat, _lng = \
-                    AoTDataToolService._resolve_note_target(target_name)
-                if not target_id:
+            candidate_ids = []
+            # Resolve a location/entity NAME → ALL candidate target_ids. A device
+            # exists as an Input/Output row AND as map shape(s) with different
+            # unique_ids, and a note may be attached to any of them — so query the
+            # union, not just the single most-specific match.
+            if target_id:
+                candidate_ids = [target_id]
+            elif target_name:
+                candidate_ids, resolved_name = \
+                    AoTDataToolService._resolve_note_target_ids(target_name)
+                if not candidate_ids:
                     return {
                         "status": "success", "count": 0, "results": [],
                         "message": f"Location/device '{target_name}' was not found.",
                     }
 
-            if not target_id and not (query and query.strip()):
+            # The LLM frequently passes an ENTITY NAME in `query` instead of
+            # `target_name` (observed: {'query': 'v111'}). A note's text rarely
+            # contains the entity's name, so a pure keyword search misses it and
+            # wrongly reports "no notes". If `query` resolves to an entity, treat
+            # it as a target too (and skip the keyword LIKE that would AND it back
+            # to zero). Only when nothing resolves is `query` a real keyword.
+            entity_query = False
+            if not candidate_ids and query and query.strip():
+                _q_ids, _q_name = \
+                    AoTDataToolService._resolve_note_target_ids(query.strip())
+                if _q_ids:
+                    candidate_ids = _q_ids
+                    resolved_name = resolved_name or _q_name
+                    entity_query = True
+
+            if not candidate_ids and not (query and query.strip()):
                 return {"error": "Either 'query' or 'target_name' (a location/device) is required."}
 
             db_query = Notes.query.filter(Notes.is_archived == False)  # noqa: E712
 
-            if target_id:
-                # Per-entity read — matches the web UI /notes/target/<id> (target_id only).
-                db_query = db_query.filter(Notes.target_id == target_id)
-            if query and query.strip():
+            if candidate_ids:
+                # Per-entity read — matches the web UI /notes/target/<id>, but
+                # across every identity the named device/shape resolves to.
+                db_query = db_query.filter(Notes.target_id.in_(candidate_ids))
+            if query and query.strip() and not entity_query:
                 _q = f"%{query.strip()}%"
                 db_query = db_query.filter(or_(
                     Notes.name.like(_q), Notes.tags.like(_q), Notes.note.like(_q)))
@@ -3246,6 +3268,78 @@ class AoTDataToolService:
                 return row.unique_id, _tt, row.name, None, None
 
         return None, None, None, None, None
+
+    @staticmethod
+    def _resolve_note_target_ids(target_name):
+        """Resolve a name to ALL candidate note target_ids, not just one.
+
+        A single physical device carries MULTIPLE identities that a note may be
+        bound to, and they do NOT share a unique_id:
+          - the Input/Output row's unique_id (the device panel '노트 작성하기'
+            writes the note here, e.g. Output 'v111' → 3acafd0c…),
+          - one or more map GeoShapes (a marker + a polygon) whose OWN unique_id
+            differs, but whose device_id points back to that Input/Output.
+        _resolve_note_target() returns only the single most-specific match (a
+        shape), so a note written on the Output is missed. Gathering the union of
+        {shape.unique_id, shape.device_id, device.unique_id} for the name finds
+        the note wherever it was attached.
+
+        Returns (candidate_ids: list[str], resolved_name: str|None).
+        """
+        import json as _json
+        ids, resolved_name = [], None
+        if not target_name or not str(target_name).strip():
+            return ids, None
+        _q = str(target_name).strip()
+        _ql = _q.lower()
+
+        # Primary (hierarchical/zone-aware) resolution first — keeps '1포장 1-1'
+        # scoping and substring behaviour intact.
+        tid, _tt, rname, _la, _ln = AoTDataToolService._resolve_note_target(target_name)
+        if tid:
+            ids.append(tid)
+            resolved_name = rname
+
+        # GeoShapes whose display name matches EXACTLY → add the shape's own id
+        # and the device it represents.
+        try:
+            for shape in GeoShape.query.all():
+                try:
+                    feat = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
+                    props = feat.get('properties') or {}
+                    _name = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
+                except Exception:
+                    continue
+                if _name and _name.lower() == _ql:
+                    if shape.unique_id:
+                        ids.append(shape.unique_id)
+                    if shape.device_id:
+                        ids.append(str(shape.device_id).split('::')[0])
+                    resolved_name = resolved_name or _name
+        except Exception:
+            pass
+
+        # Input/Output/Function rows matching the name → add their unique_id.
+        try:
+            from aot.databases.models import Function as _Function
+        except Exception:
+            _Function = None
+        for model in (m for m in (Input, Output, _Function) if m is not None):
+            try:
+                for d in model.query.filter(model.name.ilike(_q)).all():
+                    if d.unique_id:
+                        ids.append(d.unique_id)
+                    resolved_name = resolved_name or d.name
+            except Exception:
+                continue
+
+        # De-duplicate, preserve order.
+        seen, out = set(), []
+        for i in ids:
+            if i and i not in seen:
+                seen.add(i)
+                out.append(i)
+        return out, resolved_name
 
     @staticmethod
     def create_note(name=None, note=None, tags=None, category='general',

@@ -1,97 +1,105 @@
 # AI 기능 개요
 
-AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 모든 제어 동작은 사용자 승인 후 실행됩니다.
+AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 상태를 바꾸는 모든 동작은 사용자 승인 후 실행됩니다.
 
 ---
 
-## AI 에이전트 구조 { #agents }
+## AI 시스템 구조 { #agents }
+
+AoT의 AI는 두 가지 경로로 도구를 사용합니다.
+
+- **인앱 AI 어시스턴트** — 대시보드의 채팅 어시스턴트. 단일 에이전트 루프가 전체 도구 카탈로그를 보고 스스로 도구를 선택·실행합니다. 상태를 바꾸는 동작(장치 제어, 엔티티 생성·수정·삭제 등)은 채팅의 **승인 카드**로 사용자 확인을 받은 뒤 실행됩니다.
+- **외부 MCP 서버** — `aot/aot_mcp_server.py` (표준 MCP 프로토콜, stdio/HTTP). Claude Desktop 같은 외부 MCP 클라이언트가 AoT 도구를 직접 호출할 수 있게 노출합니다.
 
 ```
-Claude / OpenAI API
-        ↓
-   MCP Server (FastMCP)
-        ↓
-   ┌────────────────────┐
-   │  관찰 도구 (읽기)   │  → InfluxDB / SQLite 조회
-   │  진단 도구         │  → 이상 감지, 성능 분석
-   │  제어 도구 (쓰기)   │  → 사용자 승인 필요
-   └────────────────────┘
-        ↓
-   AoT 시스템 (Daemon / Output Controller)
+사용자 채팅 ─────────────┐            외부 MCP 클라이언트(Claude Desktop 등)
+                         ↓                          ↓
+              인앱 에이전트 루프          aot_mcp_server.py (stdio/HTTP)
+                         └──────────┬───────────────┘
+                                    ↓
+                    도구 레지스트리 (tool_registry.py, 단일 소스)
+                                    ↓
+                        AoT 시스템 (Daemon / InfluxDB / SQLite)
 ```
+
+두 경로 모두 같은 도구 레지스트리(`aot/ai/services/tool_registry.py`)에서 도구를 가져오므로 목록이 서로 어긋나지 않습니다.
 
 ---
 
-## 주요 도구 목록
+## MCP 도구 목록
 
-### 관찰 (읽기 — 즉시 실행)
+외부 MCP 서버와 내부 `mcp_aot` 엔진이 노출하는 도구입니다. 읽기 도구는 즉시 실행되고, 제어·일정 도구는 인앱 어시스턴트에서 호출될 때 승인 게이트를 거칩니다.
 
-| 도구 | 설명 |
-|------|------|
-| `list_facilities` | 등록된 시설 목록 |
-| `get_facility_state` | 현재 T / RH / VPD / CO₂ / 광량 |
-| `get_sensor_history` | 센서 시계열 (1h / 24h / 7d) |
-| `list_functions` | 활성 Function 목록 |
-| `get_function_state` | env_coordinator 사이클 상태 |
-| `list_methods` | Method(설정 곡선) 목록 |
-| `list_outputs` | 액추에이터 현재 명령값 |
-| `get_recent_events` | 최근 MCP 감사 로그 |
-
-### 진단 (읽기 — 즉시 실행)
+### 관찰·조회 (읽기 — 즉시 실행)
 
 | 도구 | 설명 |
 |------|------|
-| `analyze_control_performance` | VPD 추종 RMSE·진동 분석 |
-| `detect_sensor_anomaly` | 센서 이상치·드리프트 감지 |
-| `suggest_setpoint_adjustment` | VPD 목표 권장값 제안 |
-| `compare_periods` | 두 기간 통계 비교 |
+| `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 |
+| `get_device_list` | 등록된 전체 장치(입력·출력·카메라) 목록 |
+| `search_devices` | 이름·유형 키워드로 장치 검색 |
+| `get_sensor_detail` | 센서 시계열 이력 (min/max/avg 통계) |
+| `get_weather` | 포장·구역의 현재 기상 (기온·습도·풍속·강수) |
+| `get_energy_report` | 기간·구역별 에너지 사용량 리포트 |
+| `get_cumulative_status` | EnvCoordinator DLI(일적산광량)·GDD(누적온도) 상태 |
+| `search_notes` | 구역·장치에 부착된 노트/메모/작업기록 조회 |
+| `list_notices` | 공지 게시판 글 목록 |
+| `get_system_update_status` | 설치 버전 vs GitHub 최신 릴리스 비교 |
+| `list_available_devices` | AI 판단 대상 장치 목록 (네이티브 브리지) |
+| `get_sensor_reading` | 특정 센서의 최신 측정값 (네이티브 브리지) |
 
-### 제어 (쓰기 — 사용자 승인 필요)
+### 기록·작업
 
-| 도구 | 설명 | 제한 |
+| 도구 | 설명 | 승인 |
 |------|------|------|
-| `set_vpd_target` | VPD 목표값 변경 | ±0.5 kPa/회, 5회/h |
-| `update_method_point` | Method 제어점 수정 | ±0.3 kPa/회, 10회/h |
-| `request_manual_lock` | AI 자동제어 일시 정지 | 1~120분, 3회/h |
-| `acknowledge_alert` | 경보 확인 | 20회/h |
+| `create_note` | 날짜 없는 메모/노트를 대상 엔티티에 부착해 즉시 저장 | 불필요 |
+| `add_schedule` | 사람이 수행할 작업 일정(제초·점검·청소 등) 등록 | 필요 |
+
+### 제어 (사용자 승인 필요)
+
+| 도구 | 설명 |
+|------|------|
+| `operate_device` | 밸브·펌프·조명 등 즉시 물리 제어 |
+| `set_output_state` | 출력 장치 on/off (선택적 지속시간, 네이티브 브리지) |
+| `schedule_device_control` | 특정 시각 1회성 장치 제어 예약 |
+
+> 인앱 어시스턴트에서는 위 제어·`add_schedule` 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때는 자체 승인 게이트가 없으므로, 제어 도구까지 노출되는 이 서버는 신뢰할 수 있는 클라이언트에만 연결하세요.
+
+### 인앱 어시스턴트 확장 도구
+
+인앱 AI 어시스턴트는 위 MCP 카탈로그 외에 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 상태를 바꾸는 도구는 모두 승인이 필요합니다.
+
+- **입력/출력 관리**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
+- **함수(자동화)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
+- **일정 원장**: `search_schedule`, `edit_schedule`, `delete_schedule`
+- **지도(GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **공지 게시판**: `create_notice`·`modify_notice`·`delete_notice`
+- **AI 에이전트 관리**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
+- **지식 라이브러리**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
+- **진단·기타**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
+
+> 도구의 단일 정본은 `aot/ai/services/tool_registry.py`입니다. 도구가 추가·변경되면 이 문서보다 그 파일이 우선합니다.
 
 ---
 
-## 3계층 안전 장치
+## 장치별 AI 판단 포함 여부 { #device-ai-toggle }
 
-### Layer 1 — 전역 쓰기 플래그
+`설정 -> 입력` / `설정 -> 출력`의 각 장치 설정 모달에는 **AI 판단 포함**(Include in AI Judgment) 토글이 있습니다.
 
-제어 도구는 기본적으로 **비활성화**됩니다. 활성화:
+- 켜짐(기본값): 해당 입력/출력이 AI 판단·제어 도구(공간 트리, 장치 조회, 센서·제어 도구 등)에 노출됩니다.
+- 꺼짐: 해당 장치는 위 도구들의 조회·제어 대상에서 제외됩니다. 민감한 장치나 AI가 다루면 안 되는 장치를 개별적으로 숨길 때 사용하세요.
 
-```bash
-# 환경 변수
-AOT_MCP_WRITE_ENABLED=1 python -m aot.mcp_server.server
+신규 입력/출력은 기본적으로 켜진 상태(`is_ai_enabled=True`)로 생성됩니다.
 
-# CLI 플래그
-python -m aot.mcp_server.server --write
-```
+---
 
-### Layer 2 — 값 범위 검증
+## 안전·승인 모델
 
-각 제어 도구에 범위·변화량·호출 횟수 제한이 적용됩니다.
+상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. **상태를 바꾸는 도구**는 인앱 어시스턴트에서 호출될 때 승인 게이트를 거칩니다.
 
-| 도구 | 값 범위 | 1회 최대 변화량 | 시간당 최대 |
-|------|---------|----------------|------------|
-| `set_vpd_target` | 0.3~2.5 kPa | 0.5 kPa | 5회 |
-| `update_method_point` | 0.0~3.0 kPa | 0.3 kPa | 10회 |
-| `request_manual_lock` | 1~120분 | — | 3회 |
+- **승인 필요(변이·물리 제어)**: 장치 제어(`operate_device`, `set_output_state`, `schedule_device_control`), 입력/출력/함수/공지/AI 에이전트의 생성·수정·삭제, 지도 배치 변경(`set_device_location`, `delete_geo_shape`), `add_schedule`, `configure_library_source` 등.
+- **승인 불필요(저위험 기록)**: `create_note`, `knowledge_shelve` — 되돌릴 수 있는 개인 메모/미확인 지식으로 즉시 저장되며, 확정 전까지 권위 없는 정보로 취급됩니다.
 
-### Layer 3 — 사용자 승인 토큰
-
-쓰기 도구는 실행 즉시 적용되지 않고 60초 TTL 토큰을 반환합니다. 사용자가 `confirm_action`으로 승인해야 실제로 적용됩니다.
-
-```
-set_vpd_target(value=1.2)
-    → { "pending": true, "token_id": "xxx", "expires_in": 60 }
-        ↓
-confirm_action(token_id="xxx", user_id="operator")
-    → { "ok": true, ... }   ← 이 시점에 실제 적용
-```
+승인이 필요한 동작은 즉시 적용되지 않고 채팅에 **승인 카드**로 제시됩니다. 사용자가 승인해야 실제로 실행되며, 거부하면 아무 변경도 일어나지 않습니다.
 
 ---
 
@@ -122,12 +130,14 @@ confirm_action(token_id="xxx", user_id="operator")
 
 ## MCP 서버 실행
 
-```bash
-# 읽기 전용 (기본)
-python -m aot.mcp_server.server
+외부 MCP 클라이언트용 표준 MCP 서버입니다. 앱 시작 시 자동으로 warm-start되며, 수동 실행도 가능합니다.
 
-# 쓰기 활성화
-AOT_MCP_WRITE_ENABLED=1 python -m aot.mcp_server.server --write
+```bash
+# stdio 모드 (기본) — Claude Desktop 등 로컬 클라이언트
+python3 /opt/AoT/aot/aot_mcp_server.py
+
+# HTTP 모드 — 원격 클라이언트 (기본 포트 5700)
+python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
 ```
 
 Claude Desktop에서 연결하려면 `claude_desktop_config.json`에 추가합니다:
@@ -136,15 +146,14 @@ Claude Desktop에서 연결하려면 `claude_desktop_config.json`에 추가합�
 {
   "mcpServers": {
     "aot": {
-      "command": "python",
-      "args": ["-m", "aot.mcp_server.server"],
-      "env": {
-        "AOT_MCP_WRITE_ENABLED": "1"
-      }
+      "command": "python3",
+      "args": ["/opt/AoT/aot/aot_mcp_server.py"]
     }
   }
 }
 ```
+
+> 이 서버는 도구를 호출된 대로 실행합니다(자체 승인 게이트 없음). 제어 도구까지 노출되므로 신뢰할 수 있는 클라이언트에만 연결하세요. 승인 카드는 인앱 어시스턴트 경로에만 적용됩니다.
 
 ---
 

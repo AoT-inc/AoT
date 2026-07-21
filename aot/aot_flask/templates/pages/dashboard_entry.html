@@ -65,7 +65,14 @@
             </button>
           </div>
           <div class="modal-body">
+            {# Option-heavy body shipped inert inside <template> so its hundreds of
+               hidden <select>/<option> nodes stay out of the live DOM (Chrome autofill
+               scans every live form field on each keystroke — thousands of hidden
+               options made typing elsewhere, e.g. the AI chat box, laggy). Cloned into
+               place on first modal open by UIFixes.hydrateLazyModalBodies (dashboard.js). #}
+            <template class="aot-lazy-modal-body">
             {% include 'pages/dashboard_options.html' %}
+            </template>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>

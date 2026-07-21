@@ -40,188 +40,14 @@ AI_INFORMATION = {
     ]
 }
 
-# Virtual tool definitions exposed to the LLM prompt
-VIRTUAL_TOOLS = [
-    {
-        "tool_name": "get_sensor_detail",
-        "description": "Query detailed sensor history for a specific location/device. Returns time-series readings with min/max/avg statistics.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "loc_id": {"type": "string", "description": "unique_id of the Input device or GeoShape zone"},
-                "sensor_type": {"type": "string", "description": "Filter by measurement type (e.g. temperature, humidity). Optional."},
-                "time_range": {"type": "string", "description": "Duration string: '1h', '24h', '7d'. Default: '24h'"}
-            },
-            "required": ["loc_id"]
-        }
-    },
-    {
-        "tool_name": "get_spatial_tree",
-        "description": "Retrieve the spatial hierarchy (Site > Zone > Device) tree structure with optional depth and type filtering.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "depth": {"type": "integer", "description": "Maximum tree depth to return. Default: 2"},
-                "filter_type": {"type": "string", "description": "Filter nodes by type (e.g. 'zone', 'device'). Optional."}
-            }
-        }
-    },
-    {
-        "tool_name": "search_devices",
-        "description": "Search for devices (inputs, outputs, cameras) by name or type keyword.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Search keyword for device name or type"}
-            },
-            "required": ["query"]
-        }
-    },
-    {
-        "tool_name": "get_device_list",
-        "description": "List all registered devices (inputs, outputs, cameras) in the AoT system. Use this when the user asks for a full device listing without a specific keyword.",
-        "input_schema": {
-            "type": "object",
-            "properties": {}
-        }
-    },
-    {
-        "tool_name": "get_energy_report",
-        "description": "Generate an energy usage analysis report for a specific period and/or zone.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "period": {"type": "string", "description": "Analysis period: 'daily', 'weekly', 'monthly'. Default: 'daily'"},
-                "zone_id": {"type": "string", "description": "Filter by zone unique_id. Optional (omit for all zones)."}
-            }
-        }
-    },
-    {
-        "tool_name": "operate_device",
-        "description": "[INTENT A] Direct physical control of devices. Use this for immediate operations like opening valves or turning on lights.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "device_id": {"type": "string", "description": "unique_id of the output device"},
-                "state": {"type": "string", "enum": ["on", "off", "set_value"], "description": "Target state"},
-                "value": {"type": "number", "description": "Numeric value for PWM/Setpoints (optional)"}
-            },
-            "required": ["device_id", "state"]
-        }
-    },
-    {
-        "tool_name": "add_schedule",
-        "description": "[일반 작업/메모 기록용] 사람이 수행할 작업 일정이나 메모를 기록합니다. 제초작업, 점검, 청소 등 수동 작업에 사용하세요. 시스템 제어(밸브, 펌프 등)는 schedule_device_control을 사용하세요.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "date": {"type": "string", "description": "Target date (YYYY-MM-DD)"},
-                "time": {"type": "string", "description": "Target time (HH:MM). Default '09:00'"},
-                "content": {"type": "string", "description": "Description of the work or schedule"},
-                "worker": {"type": "string", "description": "Name of the person assigned (optional)"},
-                "tags": {"type": "string", "description": "Comma-separated tags (optional). If not provided, spatial tags are automatically extracted from content."}
-            },
-            "required": ["date", "content"]
-        }
-    },
-    {
-        "tool_name": "search_notes",
-        "description": "[노트 읽기] 노트·메모·작업기록을 조회합니다. 읽기 전용이라 승인 불필요(요약은 데이터 가공). 특정 구역·장치에 붙은 노트를 읽거나 요약하려면(예: '3-1 구역 노트 요약') 반드시 target_name에 그 위치/장치 이름을 넣으세요 — 노트는 target_id로 엔티티에 붙어 있고 본문에 구역명이 없을 수 있어 키워드 검색으로는 못 찾습니다. query는 자유 키워드 검색용.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "target_name": {"type": "string", "description": "노트가 붙은 위치/장치 이름(예: '3-1', '1포장 1-1', '밸브1'). 구역·장치 노트 조회/요약 시 사용."},
-                "query": {"type": "string", "description": "자유 키워드 검색(예: '콩밭', '제초'). target_name과 함께 주면 그 엔티티 내 추가 필터."},
-                "category": {"type": "string", "description": "카테고리 필터: 'schedule'(일정), 'general'(일반) 등. 생략 시 전체."},
-                "limit": {"type": "integer", "description": "최대 반환 건수 (기본 10)"}
-            }
-        }
-    },
-    {
-        "tool_name": "schedule_device_control",
-        "description": "[시스템 제어 예약 전용] 밸브, 펌프, 스프링클러 등 시스템 장치의 제어를 특정 시간에 예약합니다. 사용자 승인 후 스케줄러에 등록됩니다.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "device_id": {"type": "string", "description": "unique_id of the output device to control"},
-                "scheduled_time": {"type": "string", "description": "ISO 8601 format datetime (e.g., '2026-02-27T09:00:00+09:00')"},
-                "state": {"type": "string", "enum": ["on", "off"], "description": "Target state"},
-                "duration_minutes": {"type": "number", "description": "Duration in minutes (optional, default: 5)"}
-            },
-            "required": ["device_id", "scheduled_time", "state"]
-        }
-    },
-    {
-        "tool_name": "get_weather",
-        "description": "포장 또는 구역의 현재 기상 정보를 조회합니다. 기온, 습도, 풍속, 강수량, 날씨 상태를 반환합니다.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "zone_name": {
-                    "type": "string",
-                    "description": "조회할 포장 또는 구역 이름 (예: '1포장', '2포장'). zone_id 대신 사용 가능."
-                },
-                "zone_id": {
-                    "type": "string",
-                    "description": "GeoShape의 unique_id. zone_name 대신 사용 가능."
-                }
-            }
-        }
-    },
-    {
-        "tool_name": "get_cumulative_status",
-        "description": "EnvCoordinator 함수의 DLI(일적산광량)·GDD(누적온도) 일별 누적 상태와 부채 현황을 조회합니다. 광량·온도 목표 달성 여부와 보상 제안을 확인할 때 사용하세요.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "function_id": {
-                    "type": "string",
-                    "description": "EnvCoordinator 함수의 unique_id"
-                },
-                "days": {
-                    "type": "integer",
-                    "description": "조회할 최근 일수 (기본값: 7)"
-                }
-            },
-            "required": ["function_id"]
-        }
-    },
-    {
-        "tool_name": "get_system_update_status",
-        "description": "AoT 소프트웨어(시스템)의 업데이트 가용 여부를 확인합니다. 현재 설치 버전을 GitHub 최신 릴리스와 비교하여 반환합니다. 사용자가 '시스템 업데이트', '새 버전', '현재 버전'을 물으면 사용하세요. 읽기 전용.",
-        "input_schema": {
-            "type": "object",
-            "properties": {}
-        }
-    },
-    {
-        "tool_name": "create_note",
-        "description": "메모/노트를 즉시 생성·저장합니다(날짜 없는 메모 — 날짜 있는 작업은 add_schedule 사용). 승인 불필요. AoT에는 '노트 위젯' 같은 건 없고, 모든 장치·대지·구역 도형마다 각자의 노트가 있어 엔티티별로 조회됩니다. 노트는 대상에 부착되어야만 그 엔티티에서 보입니다. 따라서 사용자가 '1포장 1-1에', '밸브1에' 기록해달라고 하면 반드시 target_name에 그 위치/장치 이름을 넣으세요(도구가 실제 대상으로 해석해 부착). '생성하겠습니다'라고 말만 하지 말고 이 도구를 실제로 호출하세요.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "note": {"type": "string", "description": "노트 본문 내용"},
-                "name": {"type": "string", "description": "노트 제목(짧게). 선택."},
-                "target_name": {"type": "string", "description": "노트를 붙일 위치/장치 이름(예: '1포장 1-1', '밸브1'). 도구가 unique_id로 해석해 부착. 노트가 보이려면 강력 권장."},
-                "tags": {"type": "string", "description": "태그(쉼표 구분). 선택."},
-                "category": {"type": "string", "description": "분류(기본 'general'). 선택."},
-                "target_id": {"type": "string", "description": "이미 아는 경우 대상 unique_id 직접 지정(target_name 대신). 선택."},
-                "target_type": {"type": "string", "description": "연결 대상 유형(예: 'zone','input','output'). 선택."}
-            },
-            "required": ["note"]
-        }
-    },
-    {
-        "tool_name": "list_notices",
-        "description": "공지사항 게시글 목록(제목·고정·날짜)을 조회합니다. 읽기 전용.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "description": "최대 반환 건수(기본 10)"}
-            }
-        }
-    }
-]
+# Virtual tool definitions exposed to the LLM prompt.
+# SSOT: this list is now DERIVED from the tool registry (aot/ai/services/
+# tool_registry.py :: virtual_tools()) — it used to be hand-maintained here and
+# drifted from the registry (advertising tools the stdio MCP server could not
+# dispatch). Add/edit an MCP tool in tool_registry._MCP_TOOL_PAYLOADS, not here.
+from aot.ai.services.tool_registry import virtual_tools as _virtual_tools
+
+VIRTUAL_TOOLS = _virtual_tools()
 
 
 def _get_request_locale() -> str:
@@ -427,10 +253,17 @@ class AoTSystemMCP_AI(AbstractAI):
                 logger.error(f"[AoTSystemMCP] NativeToolEngine dispatch error: {exc}")
                 return {"status": "error", "message": str(exc)}
 
-        # Fallback to existing AoTDataToolService for static virtual tools
+        # Static virtual tools → dispatch via the SSOT tool registry. (The old
+        # code called AoTDataToolService.execute(), which does not exist, so this
+        # branch always errored; build_tool_map resolves each tool's real handler.)
         try:
-            from aot.ai.services.aot_data_tool_service import AoTDataToolService
-            return AoTDataToolService.execute(tool_name, arguments)
+            from aot.ai.services.tool_registry import build_tool_map
+            handler = build_tool_map().get(tool_name)
+            if handler is None:
+                return {"status": "error", "message": f"Unknown virtual tool: {tool_name}"}
+            _meta = {"tool_name", "server_id", "agent_unique_id", "context"}
+            kwargs = {k: v for k, v in (arguments or {}).items() if k not in _meta}
+            return handler(**kwargs)
         except Exception as exc:
             logger.error(f"[AoTSystemMCP] DataToolService dispatch error for '{tool_name}': {exc}")
             return {"status": "error", "message": str(exc)}

@@ -25,6 +25,7 @@ registry-only validation names that are dispatched elsewhere (native bridge / le
 execute_action chain / special action types like read_manual). Tools whose `handler` is
 None are known-but-not-VirtualToolResolver-dispatched — they stay out of `tool_map`.
 """
+import copy
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 
@@ -477,7 +478,7 @@ TOOLS: List[Tool] = [
     Tool('search_notes', handler='search_notes_tool', manifest={
         "tool_name": "search_notes",
         "action_type": "virtual_tool_call",
-        "description": "Reads notes/memos/work logs. Read-only — NO approval needed (reading and summarizing is data processing, not a mutation). To read/summarize the notes ATTACHED TO A ZONE/DEVICE (e.g. '3-1 구역 노트 요약'), pass target_name with that location/entity name — notes bind to an entity by target_id and their text may not contain the zone name, so keyword search alone misses them. Use query only for free-text keyword search.",
+        "description": "Reads FULL/older notes for one entity, or free-text searches notes. Read-only — NO approval needed. NOTE: a per-entity digest (each entity's INITIAL note + a few RECENT notes + total count) is ALREADY pre-injected in context under system_state.note_digests — use that to answer broad questions like '각 장치의 노트 확인' or 'which devices have notes' WITHOUT any tool call. Call this tool only to DRILL DOWN: read the full text or older notes of a SPECIFIC entity (pass target_name with that zone/device name — notes bind by target_id so keyword search alone misses them), or free-text keyword search (query).",
         "usage_hint": "params.arguments: {target_name (location/entity to read notes for, e.g. '3-1', '1포장 1-1', '밸브1'), query (optional keyword), category (optional), limit (optional, default 10)}. Returns note contents (up to 2000 chars each) for summarization.",
     }),
     Tool('get_energy_report', handler='get_energy_report'),
@@ -509,6 +510,207 @@ for _t in TOOLS:
     if _t.name in _BY_NAME:
         raise ValueError(f"Duplicate tool declared in tool_registry: {_t.name}")
     _BY_NAME[_t.name] = _t
+
+
+# ---------------------------------------------------------------------------
+# MCP tool payloads — the JSON-Schema catalog exposed to the mcp_aot engine and
+# the standalone stdio MCP server (aot_mcp_server.py). This USED to be a second,
+# independently hand-maintained list (`VIRTUAL_TOOLS` in aot/ai/agents/mcp_aot.py):
+# it drifted from this registry (advertised tools the stdio server couldn't
+# dispatch; a dead AoTDataToolService.execute() call). It now lives here as the
+# single declaration site; mcp_aot.VIRTUAL_TOOLS is derived from virtual_tools().
+#
+# Entries are stored VERBATIM (and in their original order) so the derived list
+# is byte-identical to the pre-refactor VIRTUAL_TOOLS. Each entry's tool_name
+# MUST match a declared Tool that has a real handler — virtual_tools() enforces
+# this, so an MCP-advertised tool can never again be non-executable.
+#
+# NOTE: this catalog is intentionally a DIFFERENT (smaller) set than the slim
+# agent-loop manifest_system_tools() — several read tools here (get_sensor_detail,
+# get_spatial_tree, …) are deliberately omitted from the slim manifest but exposed
+# to the MCP surface. That is why the two are separate fields, not one derivation.
+# ---------------------------------------------------------------------------
+_MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
+    {
+        "tool_name": "get_sensor_detail",
+        "description": "Query detailed sensor history for a specific location/device. Returns time-series readings with min/max/avg statistics.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "loc_id": {"type": "string", "description": "unique_id of the Input device or GeoShape zone"},
+                "sensor_type": {"type": "string", "description": "Filter by measurement type (e.g. temperature, humidity). Optional."},
+                "time_range": {"type": "string", "description": "Duration string: '1h', '24h', '7d'. Default: '24h'"}
+            },
+            "required": ["loc_id"]
+        }
+    },
+    {
+        "tool_name": "get_spatial_tree",
+        "description": "Retrieve the spatial hierarchy (Site > Zone > Device) tree structure with optional depth and type filtering.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "depth": {"type": "integer", "description": "Maximum tree depth to return. Default: 2"},
+                "filter_type": {"type": "string", "description": "Filter nodes by type (e.g. 'zone', 'device'). Optional."}
+            }
+        }
+    },
+    {
+        "tool_name": "search_devices",
+        "description": "Search for devices (inputs, outputs, cameras) by name or type keyword.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search keyword for device name or type"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "tool_name": "get_device_list",
+        "description": "List all registered devices (inputs, outputs, cameras) in the AoT system. Use this when the user asks for a full device listing without a specific keyword.",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "tool_name": "get_energy_report",
+        "description": "Generate an energy usage analysis report for a specific period and/or zone.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "period": {"type": "string", "description": "Analysis period: 'daily', 'weekly', 'monthly'. Default: 'daily'"},
+                "zone_id": {"type": "string", "description": "Filter by zone unique_id. Optional (omit for all zones)."}
+            }
+        }
+    },
+    {
+        "tool_name": "operate_device",
+        "description": "[INTENT A] Direct physical control of devices. Use this for immediate operations like opening valves or turning on lights.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {"type": "string", "description": "unique_id of the output device"},
+                "state": {"type": "string", "enum": ["on", "off", "set_value"], "description": "Target state"},
+                "value": {"type": "number", "description": "Numeric value for PWM/Setpoints (optional)"}
+            },
+            "required": ["device_id", "state"]
+        }
+    },
+    {
+        "tool_name": "add_schedule",
+        "description": "[일반 작업/메모 기록용] 사람이 수행할 작업 일정이나 메모를 기록합니다. 제초작업, 점검, 청소 등 수동 작업에 사용하세요. 시스템 제어(밸브, 펌프 등)는 schedule_device_control을 사용하세요.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string", "description": "Target date (YYYY-MM-DD)"},
+                "time": {"type": "string", "description": "Target time (HH:MM). Default '09:00'"},
+                "content": {"type": "string", "description": "Description of the work or schedule"},
+                "worker": {"type": "string", "description": "Name of the person assigned (optional)"},
+                "tags": {"type": "string", "description": "Comma-separated tags (optional). If not provided, spatial tags are automatically extracted from content."}
+            },
+            "required": ["date", "content"]
+        }
+    },
+    {
+        "tool_name": "search_notes",
+        "description": "[노트 읽기] 노트·메모·작업기록을 조회합니다. 읽기 전용이라 승인 불필요(요약은 데이터 가공). 특정 구역·장치에 붙은 노트를 읽거나 요약하려면(예: '3-1 구역 노트 요약') 반드시 target_name에 그 위치/장치 이름을 넣으세요 — 노트는 target_id로 엔티티에 붙어 있고 본문에 구역명이 없을 수 있어 키워드 검색으로는 못 찾습니다. query는 자유 키워드 검색용.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "target_name": {"type": "string", "description": "노트가 붙은 위치/장치 이름(예: '3-1', '1포장 1-1', '밸브1'). 구역·장치 노트 조회/요약 시 사용."},
+                "query": {"type": "string", "description": "자유 키워드 검색(예: '콩밭', '제초'). target_name과 함께 주면 그 엔티티 내 추가 필터."},
+                "category": {"type": "string", "description": "카테고리 필터: 'schedule'(일정), 'general'(일반) 등. 생략 시 전체."},
+                "limit": {"type": "integer", "description": "최대 반환 건수 (기본 10)"}
+            }
+        }
+    },
+    {
+        "tool_name": "schedule_device_control",
+        "description": "[시스템 제어 예약 전용] 밸브, 펌프, 스프링클러 등 시스템 장치의 제어를 특정 시간에 예약합니다. 사용자 승인 후 스케줄러에 등록됩니다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {"type": "string", "description": "unique_id of the output device to control"},
+                "scheduled_time": {"type": "string", "description": "ISO 8601 format datetime (e.g., '2026-02-27T09:00:00+09:00')"},
+                "state": {"type": "string", "enum": ["on", "off"], "description": "Target state"},
+                "duration_minutes": {"type": "number", "description": "Duration in minutes (optional, default: 5)"}
+            },
+            "required": ["device_id", "scheduled_time", "state"]
+        }
+    },
+    {
+        "tool_name": "get_weather",
+        "description": "포장 또는 구역의 현재 기상 정보를 조회합니다. 기온, 습도, 풍속, 강수량, 날씨 상태를 반환합니다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "zone_name": {
+                    "type": "string",
+                    "description": "조회할 포장 또는 구역 이름 (예: '1포장', '2포장'). zone_id 대신 사용 가능."
+                },
+                "zone_id": {
+                    "type": "string",
+                    "description": "GeoShape의 unique_id. zone_name 대신 사용 가능."
+                }
+            }
+        }
+    },
+    {
+        "tool_name": "get_cumulative_status",
+        "description": "EnvCoordinator 함수의 DLI(일적산광량)·GDD(누적온도) 일별 누적 상태와 부채 현황을 조회합니다. 광량·온도 목표 달성 여부와 보상 제안을 확인할 때 사용하세요.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "function_id": {
+                    "type": "string",
+                    "description": "EnvCoordinator 함수의 unique_id"
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "조회할 최근 일수 (기본값: 7)"
+                }
+            },
+            "required": ["function_id"]
+        }
+    },
+    {
+        "tool_name": "get_system_update_status",
+        "description": "AoT 소프트웨어(시스템)의 업데이트 가용 여부를 확인합니다. 현재 설치 버전을 GitHub 최신 릴리스와 비교하여 반환합니다. 사용자가 '시스템 업데이트', '새 버전', '현재 버전'을 물으면 사용하세요. 읽기 전용.",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "tool_name": "create_note",
+        "description": "메모/노트를 즉시 생성·저장합니다(날짜 없는 메모 — 날짜 있는 작업은 add_schedule 사용). 승인 불필요. AoT에는 '노트 위젯' 같은 건 없고, 모든 장치·대지·구역 도형마다 각자의 노트가 있어 엔티티별로 조회됩니다. 노트는 대상에 부착되어야만 그 엔티티에서 보입니다. 따라서 사용자가 '1포장 1-1에', '밸브1에' 기록해달라고 하면 반드시 target_name에 그 위치/장치 이름을 넣으세요(도구가 실제 대상으로 해석해 부착). '생성하겠습니다'라고 말만 하지 말고 이 도구를 실제로 호출하세요.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "note": {"type": "string", "description": "노트 본문 내용"},
+                "name": {"type": "string", "description": "노트 제목(짧게). 선택."},
+                "target_name": {"type": "string", "description": "노트를 붙일 위치/장치 이름(예: '1포장 1-1', '밸브1'). 도구가 unique_id로 해석해 부착. 노트가 보이려면 강력 권장."},
+                "tags": {"type": "string", "description": "태그(쉼표 구분). 선택."},
+                "category": {"type": "string", "description": "분류(기본 'general'). 선택."},
+                "target_id": {"type": "string", "description": "이미 아는 경우 대상 unique_id 직접 지정(target_name 대신). 선택."},
+                "target_type": {"type": "string", "description": "연결 대상 유형(예: 'zone','input','output'). 선택."}
+            },
+            "required": ["note"]
+        }
+    },
+    {
+        "tool_name": "list_notices",
+        "description": "공지사항 게시글 목록(제목·고정·날짜)을 조회합니다. 읽기 전용.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "최대 반환 건수(기본 10)"}
+            }
+        }
+    }
+]
 
 
 # ---------------------------------------------------------------------------
@@ -552,3 +754,30 @@ def manifest_system_tools() -> List[Dict[str, Any]]:
     """The system_tools list for get_action_manifest — emitted in declaration
     order, byte-identical to the original hand-written entries."""
     return [dict(t.manifest) for t in TOOLS if t.manifest]
+
+
+def virtual_tools() -> List[Dict[str, Any]]:
+    """The MCP tool catalog ({tool_name, description, input_schema}, in order)
+    consumed by the mcp_aot engine and the stdio MCP server — replaces the
+    hand-maintained VIRTUAL_TOOLS list. Every advertised tool is cross-checked
+    against TOOLS so it is guaranteed dispatchable: a payload whose tool_name is
+    unknown, or maps to a Tool without a handler, raises instead of silently
+    advertising a tool the server would reject with 'Unknown tool'."""
+    out: List[Dict[str, Any]] = []
+    for payload in _MCP_TOOL_PAYLOADS:
+        name = payload.get("tool_name")
+        tool = _BY_NAME.get(name)
+        if tool is None:
+            raise ValueError(
+                f"tool_registry: MCP payload '{name}' has no matching Tool declaration")
+        if not tool.handler:
+            raise ValueError(
+                f"tool_registry: MCP tool '{name}' is advertised but has no handler "
+                f"(would be non-dispatchable)")
+        # Deep-ish copy so callers can't mutate the SSOT (input_schema is nested).
+        out.append({
+            "tool_name": name,
+            "description": payload["description"],
+            "input_schema": copy.deepcopy(payload["input_schema"]),
+        })
+    return out

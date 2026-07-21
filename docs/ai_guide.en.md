@@ -1,116 +1,99 @@
 # AoT AI Agent Guide (English)
 
-This guide explains how AI agents can observe, diagnose, and control the AoT greenhouse environment system via the MCP server.
+How AoT's AI agent observes, diagnoses, and controls greenhouses and growing facilities. The AI works through two paths: the dashboard's **in-app assistant** (agent loop), and the **external MCP server** (`aot/aot_mcp_server.py`) that external clients such as Claude Desktop connect to. Both paths pull tools from the same tool registry (`aot/ai/services/tool_registry.py`).
 
 ---
 
-## 1. Overview
+## 1. Tool Catalog
 
-The AoT MCP server is built on **FastMCP** and exposes the following tools to MCP clients such as Claude Desktop.
+### 1.1 MCP tools (external server + `mcp_aot` engine)
 
-| Category | Tool | Description |
-|----------|------|-------------|
-| Observe | `list_facilities` | List registered facilities |
-| Observe | `get_facility_state` | Current T / RH / VPD / CO₂ / Light |
-| Observe | `get_sensor_history` | Sensor time-series (1h / 24h / 7d) |
-| Observe | `list_functions` | Active Function list |
-| Observe | `get_function_state` | env_coordinator cycle state |
-| Observe | `list_methods` | Method (setpoint curve) list |
-| Observe | `list_outputs` | Actuator current command values |
-| Observe | `get_recent_events` | Recent MCP audit log |
-| Diagnose | `analyze_control_performance` | VPD tracking RMSE · oscillation |
-| Diagnose | `detect_sensor_anomaly` | Sensor outliers · drift |
-| Diagnose | `suggest_setpoint_adjustment` | Suggested VPD target (suggestion only) |
-| Diagnose | `compare_periods` | Statistical comparison of two periods |
-| Control | `set_vpd_target` | Change VPD target (**requires approval**) |
-| Control | `update_method_point` | Edit curve control point (**requires approval**) |
-| Control | `request_manual_lock` | Pause AI auto-control (**requires approval**) |
-| Control | `acknowledge_alert` | Acknowledge alarm (**requires approval**) |
-| Flow | `confirm_action` | Approve a pending write |
-| Flow | `reject_action` | Reject a pending write |
-| Flow | `get_pending_actions` | List pending approvals |
-| Info | `get_system_manifest` | System domain + policy context |
+| Category | Tool | Description | Approval |
+|----------|------|-------------|----------|
+| Observe | `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree | No |
+| Observe | `get_device_list` | List of all registered devices | No |
+| Observe | `search_devices` | Find devices by name/type | No |
+| Observe | `get_sensor_detail` | Sensor time-series history (min/max/avg) | No |
+| Observe | `get_weather` | Current weather for a field/zone | No |
+| Observe | `get_energy_report` | Energy usage by period/zone | No |
+| Observe | `get_cumulative_status` | EnvCoordinator DLI/GDD cumulative status | No |
+| Observe | `list_available_devices` | Devices available for AI judgment (native) | No |
+| Observe | `get_sensor_reading` | Latest reading for a sensor (native) | No |
+| Notes | `search_notes` | Read zone/device notes and work logs | No |
+| Notes | `create_note` | Save a memo/note attached to an entity | No |
+| Notices | `list_notices` | Notice board post list | No |
+| System | `get_system_update_status` | Installed version vs latest GitHub release | No |
+| Task | `add_schedule` | Register a human work task (weeding, inspection, cleaning) | **Yes** |
+| Control | `operate_device` | Immediate control of valves/pumps/lights | **Yes** |
+| Control | `set_output_state` | Turn an output on/off (optional duration, native) | **Yes** |
+| Control | `schedule_device_control` | Reserve a one-off device operation at a time | **Yes** |
 
----
+### 1.2 Extended in-app assistant tools
 
-## 2. Safety Policy
+Beyond the catalog above, the in-app assistant uses additional tools for entity assembly, automation, and knowledge. Every state-changing tool requires approval.
 
-### 2.1 Write Default OFF
+- **Inputs/Outputs**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
+- **Functions (automation)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
+- **Schedule ledger**: `search_schedule`, `edit_schedule`, `delete_schedule`
+- **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **Notices**: `create_notice`·`modify_notice`·`delete_notice`
+- **AI agents**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
+- **Knowledge library**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
+- **Diagnostics / misc**: `analyze_system_failure`, `get_local_time`, `get_tool_detail`, `read_manual`, `get_detailed_manifest`, `ask_user`
 
-All control tools are **disabled by default**. To enable:
-
-```bash
-# Via environment variable
-AOT_MCP_WRITE_ENABLED=1 python -m aot.mcp_server.server
-
-# Via CLI flag
-python -m aot.mcp_server.server --write
-```
-
-### 2.2 Three-Layer Safety
-
-1. **Layer 1 — Permission**: Read tools are unrestricted. Write tools blocked by global flag.
-2. **Layer 2 — Validation**: Value range, delta per call, and per-hour rate limits.
-3. **Layer 3 — User Approval**: Every write requires a 60-second TTL confirmation token approved by the user.
-
-### 2.3 Write Tool Limits
-
-| Tool | Value Range | Max Delta/Call | Max Calls/Hour |
-|------|------------|----------------|----------------|
-| `set_vpd_target` | 0.3 ~ 2.5 kPa | 0.5 kPa | 5 |
-| `update_method_point` | 0.0 ~ 3.0 kPa | 0.3 kPa | 10 |
-| `request_manual_lock` | 1 ~ 120 min | — | 3 |
-| `acknowledge_alert` | — | — | 20 |
-
-### 2.4 Seed Preset Protection
-
-Methods whose name starts with `SEED:` are **read-only**. Duplicate before editing.
+> The single source of truth for tools is `aot/ai/services/tool_registry.py`. When a tool is added or changed, that file — not this page — is authoritative.
 
 ---
 
-## 3. Recommended Workflow
+## 2. Safety & Approval Policy
 
-### Anomaly Response
+- **Read tools** run immediately.
+- **State-changing tools** (mutation / physical control / scheduling) pass through the approval gate when called from the in-app assistant. They are not applied immediately — they appear in the chat as an **approval card** and execute only after the user approves.
+- As exceptions, `create_note` and `knowledge_shelve` are reversible low-risk writes that save without approval and are treated as non-authoritative until confirmed.
+- **Per-device AI inclusion toggle**: turning it off in a device's `Configure -> Inputs/Outputs` modal excludes that device from AI tools' queries and control (`is_ai_enabled`).
+- The **external MCP server** (`aot_mcp_server.py`) has no approval gate of its own and executes tools as invoked. Because it exposes control tools, connect it only to trusted clients.
+
+---
+
+## 3. Recommended Workflows
+
+### State check → control
 
 ```
-1. list_facilities
-   → Get facility unique_id
+1. get_spatial_tree
+   → confirm Site > Zone > Device hierarchy and the target device's unique_id
 
-2. get_facility_state(facility_id)
-   → Check current VPD / T / RH / CO₂
-   → If sensors_health = 'stale', investigate sensor connectivity first
+2. search_devices(query='valve')  or  get_device_list
+   → obtain the unique_id of the output device to control
 
-3. analyze_control_performance(function_id, window='1h')
-   → Check vpd_rmse, oscillation_index, assessment
+3. get_sensor_detail(loc_id, sensor_type='temperature', time_range='24h')
+   → check recent trend (diagnose the cause first if it looks off)
 
-4. detect_sensor_anomaly(device_id, measurement_id)
-   → verdict: 'anomaly_detected' / 'drift_detected' / 'normal'
-
-5. suggest_setpoint_adjustment(facility_id)
-   → Review suggested_target and reason
-
-6. (with user approval)
-   set_vpd_target(function_id, value=suggested_target, reason=reason)
-   → Returns: {'pending': True, 'token_id': '...', 'expires_in': 60}
-
-7. confirm_action(token_id='...', user_id='operator')
-   → Applies the change
+4. operate_device(device_id, state='on', value=...)
+   → approval card is shown → executes only after the user approves
 ```
 
-### Control Flow Example
+### Read notes → summarize
 
-```python
-# 1. Request VPD target change
-result = set_vpd_target(
-    function_id='abc-123',
-    value=1.2,
-    reason='VPD too low, need to promote transpiration'
-)
-# → {'pending': True, 'token_id': 'xxx-yyy', 'expires_in': 60, ...}
+```
+1. (context) each entity's note digest (first + recent) is pre-injected into system state
+   → broad questions like "check each device's notes" can be answered with no tool call
 
-# 2. User approves via UI or confirm_action
-result = confirm_action(token_id='xxx-yyy', user_id='operator')
-# → {'ok': True, 'tool_name': 'set_vpd_target', 'result': {...}}
+2. search_notes(target_name='v111')
+   → drill down into a specific device/zone's full/older notes
+```
+
+### Build automation (recurring/conditional control)
+
+```
+1. list_device_types(kind='function')
+   → confirm valid function types (never invent a type)
+
+2. create_function(function_type='trigger_timer_daily_time_point', name=..., params={...})
+   → created after approval. Recurring irrigation belongs to a function, not schedule_device_control.
+
+3. get_function_list  /  activate_function(function_id)
+   → verify creation and activate (approval)
 ```
 
 ---
@@ -122,75 +105,65 @@ result = confirm_action(token_id='xxx-yyy', user_id='operator')
 VPD = SVP × (1 − RH/100)  
 SVP = 0.6108 × exp(17.27T / (T + 237.3)) [kPa]
 
-| Range | Status | Typical Growth Stage |
-|-------|--------|---------------------|
-| < 0.4 kPa | Too low — inhibits transpiration, fungal risk | — |
-| 0.4 ~ 0.8 kPa | Optimal (seedling stage) | Germination / transplant |
-| 0.8 ~ 1.2 kPa | Optimal (vegetative) | Growth phase |
-| 1.2 ~ 1.8 kPa | Optimal (reproductive) | Flowering / fruiting |
-| > 1.8 kPa | Too high — plant water stress risk | — |
+| Range | State | Recommended crop stage |
+|-------|-------|------------------------|
+| < 0.4 kPa | Too low — suppressed transpiration, mold risk | — |
+| 0.4 ~ 0.8 kPa | Optimal (seedling) | germination / early transplant |
+| 0.8 ~ 1.2 kPa | Optimal (vegetative) | growth |
+| 1.2 ~ 1.8 kPa | Optimal (generative) | flowering / fruit set |
+| > 1.8 kPa | Too high — water stress risk | — |
 
-### Control Layers (env_coordinator)
+### Environmental control 3-layer (EnvCoordinator)
 
-- **L1 EnvTarget**: Read VPD/CO₂ setpoint from Method curve or static value
-- **L2 SituationReport**: Assess deviation, limiting factor, and trend
-- **L3 Coordinator**: PI + slew rate + anti-windup → actuator commands
+- **L1 EnvTarget**: reads VPD/CO₂/light targets from a Method curve or fixed value
+- **L2 SituationReport**: evaluates deviation, limiting factors, and trend
+- **L3 Coordinator**: position-form PI + slew-rate limit + integral anti-windup → actuator commands
 
-### Analysis Assessment Reference
-
-`analyze_control_performance` return values:
-
-| assessment | Meaning | Action |
-|-----------|---------|--------|
-| `excellent` | RMSE < 0.1 kPa | Maintain |
-| `good` | RMSE 0.1 ~ 0.2 kPa | Monitor |
-| `oscillating` | Sign changes > 30% | Increase tolerance_vpd or extend cycle period |
-| `poor_tracking` | RMSE ≥ 0.2 kPa | Check limiting_factor, review K calibration |
+Use `get_cumulative_status` to check daily DLI (cumulative light) / GDD (cumulative temperature) and target attainment/debt. See [Environmental Control Automation](ai/env-control.md) for details.
 
 ---
 
-## 5. Claude Desktop Configuration
+## 5. Claude Desktop Setup
 
-`~/.config/claude/config.json` (macOS: `~/Library/Application Support/Claude/config.json`):
+`claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "aot": {
-      "command": "python",
-      "args": ["-m", "aot.mcp_server.server"],
-      "cwd": "/path/to/AoT_ai",
-      "env": {
-        "AOT_MCP_WRITE_ENABLED": "1",
-        "AOT_MCP_AGENT_ID": "claude"
-      }
+      "command": "python3",
+      "args": ["/opt/AoT/aot/aot_mcp_server.py"]
     }
   }
 }
 ```
 
-Remove `AOT_MCP_WRITE_ENABLED` (or set to `0`) if write access is not required.
+Remote clients can run in HTTP mode:
+
+```bash
+python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
+```
 
 ---
 
-## 6. Prohibited Actions
+## 6. Prohibitions
 
-AI agents must NOT:
+The AI agent must not:
 
-- Disable safety gates (wind / rain / temperature limits)
-- Directly modify seed presets (`SEED:*`)
-- Command actuators beyond hardware limits
-- Execute write tools without user confirmation
-- Change VPD by more than 0.5 kPa in a single call
+- **Fabricate** data it did not obtain via a tool (sensors, weather, etc.). If unsure, answer "unknown / needs checking" and call a tool or ask the user.
+- Execute control/mutation tools without user approval.
+- **Invent** a device/function type without checking the valid list (`list_device_types`, etc.).
+- Control a device excluded from AI judgment (`is_ai_enabled=False`).
+- Disable safety-related functions/settings without user confirmation.
 
 ---
 
-## 7. Common Issues
+## 7. Common Mistakes
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `WriteDisabled` error | Write tools globally off | Set `AOT_MCP_WRITE_ENABLED=1` |
-| `seed_protected` error | Attempting to edit SEED preset | Duplicate the Method first |
-| `sensors_health: stale` | ext_context expired | Check sensor connections and ext_context_collector |
-| Token expired | Not approved within 60 s | Call the tool again and approve immediately |
-| `rate_limit` error | Per-hour call count exceeded | Retry in the next hour window |
+| Tool can't find a note | `target_name` not passed, so only keyword search ran | Pass the zone/device name as `target_name` |
+| Device invisible to AI | `is_ai_enabled=False` | Turn on Include in AI Judgment in the device modal |
+| Recurring control not schedulable | Confused with a one-off reservation | Use `create_function` for recurring/conditional control |
+| External MCP call runs without approval | The external server has no approval gate | Connect a control-exposing server only to trusted clients |
+| Creation fails with a type error | Invented a nonexistent type | Confirm valid types first with `list_device_types` |

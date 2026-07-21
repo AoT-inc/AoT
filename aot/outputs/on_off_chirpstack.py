@@ -536,7 +536,7 @@ class OutputModule(AbstractOutput):
         except Exception:
             return b''
 
-    def _schedule_checks(self, ch, state, duration_s=None):
+    def _schedule_checks(self, ch, state, duration_s=None, prev_state=None):
         """Arm application-layer retransmission for an in-flight command.
 
         ChirpStack v4 does NOT auto-retransmit unacked downlinks, and the RF link
@@ -572,7 +572,7 @@ class OutputModule(AbstractOutput):
         window = ack_timeout * (max_retries + 1)
         self.pending[ch] = {
             'seq': seq, 'state': state, 'resends': 0, 'max': max_retries,
-            'intent_until': now + window,
+            'intent_until': now + window, 'prev_state': prev_state,
         }
         self._arm_retry(ch, seq, ack_timeout)
 
@@ -595,6 +595,17 @@ class OutputModule(AbstractOutput):
                 f"[AoT] command unconfirmed after {p['resends'] + 1} sends "
                 f"ch={ch} state={p['state']} — giving up")
             self.pending.pop(ch, None)  # drop intent; is_on falls back to confirmed
+            # This device has NEVER confirmed anything (no ACK/status uplink
+            # ever seen for it, or the uplink listener never came up) — there is
+            # no confirmed_states value to fall back to, so is_on() would keep
+            # reporting the optimistic value set in output_switch() forever,
+            # i.e. "on" with zero evidence the device ever acted. Revert to the
+            # pre-command value instead of leaving a phantom "on".
+            if not self._confirm_capable and 'prev_state' in p:
+                self.output_states[ch] = bool(p['prev_state'])
+                self._log_warning(
+                    f"[AoT] no confirmation ever received from this device; "
+                    f"reverting ch={ch} to prior state={p['prev_state']}")
             return
         # No confirmation yet -> resend the same command (idempotent for valves).
         p['resends'] += 1
@@ -998,15 +1009,17 @@ class OutputModule(AbstractOutput):
             except Exception:
                 dur_s = None
 
+            prev_state = self.output_states.get(output_channel, False)
+
             ok = False
             if state == 'on':
                 ok = bool(self._enqueue('on'))
-                self.output_states[output_channel] = True if ok else self.output_states.get(output_channel, False)
-                self._schedule_checks(output_channel, 'on', duration_s=dur_s)
+                self.output_states[output_channel] = True if ok else prev_state
+                self._schedule_checks(output_channel, 'on', duration_s=dur_s, prev_state=prev_state)
             elif state == 'off':
                 ok = bool(self._enqueue('off'))
-                self.output_states[output_channel] = False if ok else self.output_states.get(output_channel, False)
-                self._schedule_checks(output_channel, 'off', duration_s=None)
+                self.output_states[output_channel] = False if ok else prev_state
+                self._schedule_checks(output_channel, 'off', duration_s=None, prev_state=prev_state)
             msg = 'success' if ok else 'enqueue_failed'
         except Exception as e:
             msg = f'State change error: {e}'
