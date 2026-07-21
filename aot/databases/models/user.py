@@ -35,6 +35,7 @@ class User(UserMixin, CRUDMixin, db.Model):
     landing_page = db.Column(db.Text, default='live')
     index_page = db.Column(db.Text, default='landing')
     language = db.Column(db.Text, default=None)  # Force the web interface to use a specific language
+    timezone = db.Column(db.String(64), default=None)  # IANA tz for personal display; None = use system default (docs/design/timezone-management.md §3·§7)
     password_reset_code = db.Column(db.Text, default=None)
     password_reset_code_expiration = db.Column(db.DateTime, default=None)
     password_reset_last_request = db.Column(db.DateTime, default=None)

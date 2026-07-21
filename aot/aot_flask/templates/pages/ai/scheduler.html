@@ -306,6 +306,7 @@
                             <input type="datetime-local" class="form-control aot-modern-input" id="edit-time-{{ draft.id }}"
                                    value="{{ draft.display_schedule_time.replace(' ', 'T') }}"
                                    {{ '' if draft.display_editable else 'readonly' }}>
+                            {% if draft.display_tz %}<small class="form-text text-muted">{{ _('Device-local time') }} · {{ draft.display_tz }}</small>{% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -401,6 +402,7 @@
                             <input type="datetime-local" class="form-control aot-modern-input" id="edit-time-{{ job.id }}"
                                    value="{{ job.display_schedule_time.replace(' ', 'T') }}"
                                    {{ '' if job.display_editable else 'readonly' }}>
+                            {% if job.display_tz %}<small class="form-text text-muted">{{ _('Device-local time') }} · {{ job.display_tz }}</small>{% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -539,25 +541,20 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{{ _('New Task') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
-                <div class="d-flex flex-wrap mb-3">
-                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mr-2 mb-2" data-dismiss="modal">{{ _('Close') }}</button>
-                </div>
-
                 <!-- Tabs -->
-                <ul class="nav nav-pills nav-justified mb-3" id="taskModalTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="smart-tab" data-toggle="tab" href="#tab-smart" role="tab">
-                            {{ _('Smart AI') }}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="manual-tab" data-toggle="tab" href="#tab-manual" role="tab">
-                            {{ _('Manual') }}
-                        </a>
-                    </li>
-                </ul>
+                <div class="nav d-flex flex-wrap mb-3" id="taskModalTabs" role="tablist">
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary flex-fill mr-2" id="smart-tab" data-toggle="tab" href="#tab-smart" role="tab">
+                        {{ _('Smart AI') }}
+                    </button>
+                    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary flex-fill" id="manual-tab" data-toggle="tab" href="#tab-manual" role="tab">
+                        {{ _('Manual') }}
+                    </button>
+                </div>
 
                 <div class="tab-content">
                     <!-- Smart Tab -->
@@ -582,14 +579,6 @@
                                               placeholder="{{ _('e.g., Water Zone A at 5 PM for 10 seconds') }}"></textarea>
                                 </div>
                             </div>
-                        </div>
-
-                        <div style="clear: both; padding: 0.5em 0;"></div>
-
-                        <div class="d-flex flex-wrap">
-                            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60" onclick="askAI()">
-                                {{ _('Ask AI') }}
-                            </button>
                         </div>
 
                         <div id="smartResult" class="d-none mt-3">
@@ -682,6 +671,7 @@
                                     <label class="aot-modal-option-label">{{ _('Schedule Time') }}</label>
                                     <div class="aot-modal-option-control">
                                         <input type="datetime-local" id="taskScheduleTime" class="form-control aot-modern-input">
+                                        <small id="taskDualClock" class="form-text text-muted d-none" style="line-height:1.5;"></small>
                                     </div>
                                 </div>
                                 <div class="aot-modal-option-row">
@@ -707,24 +697,23 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <div style="clear: both; padding: 0.5em 0;"></div>
-
-                            <div class="d-flex flex-wrap">
-                                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60" onclick="submitTask()">
-                                    {{ _('Register') }}
-                                </button>
-                            </div>
                         </form>
                     </div>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btnAskAI" onclick="askAI()">
+                    {{ _('Ask AI') }}
+                </button>
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-primary d-none" id="btnSaveTask" onclick="submitTask()">
+                    {{ _('Save') }}
+                </button>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
 // --- Task metadata ---
 var outputData = {{ outputs|tojson }};
@@ -743,29 +732,35 @@ function toggleRecurrenceFields() {
     $('#intervalGroup').toggleClass('d-none', recurrence !== 'interval');
 }
 
+$('#taskModalTabs button[data-toggle="tab"]').on('click', function() {
+    $('#taskModalTabs button').removeClass('aot-pill-btn-primary').addClass('aot-pill-btn-secondary');
+    $(this).removeClass('aot-pill-btn-secondary').addClass('aot-pill-btn-primary');
+
+    var isManual = $(this).attr('id') === 'manual-tab';
+    $('#btnAskAI').toggleClass('d-none', isManual);
+    $('#btnSaveTask').toggleClass('d-none', !isManual);
+});
+
 $('#taskActionType').on('change', function() {
     var actionType = $(this).val();
     var targetSelect = $('#taskTarget');
     targetSelect.empty();
 
-    $('#channelGroup').toggle(actionType === 'output');
-    $('#stateGroup').toggle(actionType === 'output');
+    $('#channelGroup').toggleClass('d-none', actionType !== 'output');
+    $('#stateGroup').toggleClass('d-none', actionType !== 'output');
     $('#pidSettingGroup').toggleClass('d-none', actionType !== 'pid');
+    $('#amountGroup').toggleClass('d-none', actionType === 'function' || actionType === 'abstract_plan');
 
     if (actionType === 'output') {
         $('#targetLabel').text("{{ _('Target Device') }}");
         $('#amountLabel').text("{{ _('Amount (seconds or PWM)') }}");
-        $('#amountGroup').show();
     } else if (actionType === 'pid') {
         $('#targetLabel').text("{{ _('Target PID Controller') }}");
         $('#amountLabel').text("{{ _('Value') }}");
-        $('#amountGroup').show();
     } else if (actionType === 'function') {
         $('#targetLabel').text("{{ _('Target Function') }}");
-        $('#amountGroup').hide();
     } else if (actionType === 'abstract_plan') {
         $('#targetLabel').text("{{ _('Target Zone/Site') }}");
-        $('#amountGroup').hide();
     }
 
     var list = [];
@@ -774,9 +769,13 @@ $('#taskActionType').on('change', function() {
     else if (actionType === 'function') list = functionData;
     else if (actionType === 'abstract_plan') list = zoneData;
 
-    list.forEach(function(item) {
-        targetSelect.append($('<option>').val(item.unique_id).text(item.name));
-    });
+    if (list.length === 0) {
+        targetSelect.append($('<option>').val('').text("{{ _('No items available') }}").prop('disabled', true));
+    } else {
+        list.forEach(function(item) {
+            targetSelect.append($('<option>').val(item.unique_id).text(item.name));
+        });
+    }
     refreshSelect('taskTarget');
     targetSelect.trigger('change');
 });
@@ -799,6 +798,45 @@ $('#taskTarget').on('change', function() {
     }
     refreshSelect('taskChannel');
 });
+
+// --- Dynamic dual-clock ---------------------------------------------------
+// The schedule time is entered in the TARGET DEVICE'S local clock (confirmed
+// policy). Show the same instant in the device tz, the viewer's tz, and UTC so
+// a user in a different timezone is never confused about when it fires. §6·§7
+function _selectedTargetTz() {
+    var at = $('#taskActionType').val();
+    var list = at === 'output' ? outputData
+             : at === 'pid' ? pidData
+             : at === 'function' ? functionData
+             : at === 'abstract_plan' ? zoneData : [];
+    var id = $('#taskTarget').val();
+    var item = (list || []).find(function (x) { return x.unique_id === id; });
+    return (item && item.tz) ? item.tz : null;
+}
+function updateTaskDualClock() {
+    var el = document.getElementById('taskDualClock');
+    if (!el || !window.AoTTz) return;
+    var val = $('#taskScheduleTime').val();
+    var dtz = _selectedTargetTz();
+    if (!val) { el.classList.add('d-none'); el.innerHTML = ''; return; }
+    var anchorTz = dtz || AoTTz.viewerTz();
+    var inst = AoTTz.wallToInstant(val, anchorTz);
+    if (!inst) { el.classList.add('d-none'); return; }
+    var vtz = AoTTz.viewerTz();
+    var lines = [];
+    if (dtz) {
+        lines.push('{{ _("Device-local") }}: <b>' + AoTTz.formatDevice(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
+    }
+    if (!dtz || dtz !== vtz) {
+        lines.push('{{ _("Your time") }}: ' + AoTTz.formatViewer(inst, { fmt: 'datetimeShort' }) + ' (' + vtz + ')');
+    }
+    lines.push('UTC: ' + inst.toISOString().slice(0, 16).replace('T', ' '));
+    el.innerHTML = lines.join('<br>');
+    el.classList.remove('d-none');
+}
+$('#taskTarget').on('change', updateTaskDualClock);
+$('#taskScheduleTime').on('input change', updateTaskDualClock);
+$('#taskActionType').on('change', function () { setTimeout(updateTaskDualClock, 0); });
 
 $('#taskActionType').trigger('change');
 
@@ -940,20 +978,52 @@ document.addEventListener('DOMContentLoaded', function() {
         initialView: 'dayGridWeek',
         headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,dayGridWeek,listWeek' },
         height: 'auto',
+        // Calendar axis = the viewer's local time (§12 decision: multi-tz axis =
+        // viewer tz). Events are sent as UTC+offset (api_timeline_events → iso_utc)
+        // so FullCalendar places each at the right instant on this local axis; the
+        // per-event click/tooltip still shows the DEVICE-local time + tz. (A named
+        // per-user tz axis would need a FullCalendar tz plugin — not loaded.)
+        timeZone: 'local',
         events: '/api/v1/scheduler/timeline',
         eventClick: function(info) {
             var props = info.event.extendedProps;
-            alert('{{ _("State: ") }}' + props.state + '\n{{ _("Type: ") }}' + props.action_type + '\n{{ _("Target: ") }}' + props.target_id + '\n{{ _("By: ") }}' + props.proposed_by + '\n{{ _("Reasoning: ") }}' + (props.reasoning || '-'));
+            // Device-local time (confirmed anchor policy) + explicit tz label,
+            // so a viewer in a different timezone always sees where/when the
+            // job fires at the device's own location.
+            var deviceLocal = (window.AoTTz && props.tz)
+                ? AoTTz.formatDevice(info.event.start, props.tz, { fmt: 'datetime' }) + ' (' + props.tz + ')'
+                : '';
+            alert('{{ _("State: ") }}' + props.state + '\n{{ _("Type: ") }}' + props.action_type + '\n{{ _("Target: ") }}' + props.target_id + '\n{{ _("By: ") }}' + props.proposed_by
+                + (deviceLocal ? '\n{{ _("Local time: ") }}' + deviceLocal : '')
+                + '\n{{ _("Reasoning: ") }}' + (props.reasoning || '-'));
         },
         eventDidMount: function(info) {
-            if (info.event.extendedProps.reasoning) {
-                $(info.el).attr('title', info.event.extendedProps.reasoning.substring(0, 100));
+            var props = info.event.extendedProps;
+            var tip = '';
+            if (window.AoTTz && props.tz) {
+                tip = AoTTz.formatDevice(info.event.start, props.tz, { fmt: 'datetime' }) + ' (' + props.tz + ')';
             }
+            if (props.reasoning) {
+                tip += (tip ? '\n' : '') + props.reasoning.substring(0, 100);
+            }
+            if (tip) { $(info.el).attr('title', tip); }
         },
         nowIndicator: true,
         locale: '{{ session.get("language", "en") }}'
     });
     calendar.render();
+
+    // Caption the axis tz so a cross-timezone viewer knows the grid is in THEIR
+    // local time (device-specific times appear on click/tooltip). Reflects the
+    // actual 'local' axis = browser tz.
+    try {
+        var _axisTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        var _cap = document.createElement('div');
+        _cap.className = 'text-muted small';
+        _cap.style.cssText = 'margin-top:4px;text-align:right;';
+        _cap.textContent = '{{ _("Calendar shown in your timezone") }}: ' + _axisTz;
+        calendarEl.parentNode.insertBefore(_cap, calendarEl.nextSibling);
+    } catch (e) {}
 
     if (window.innerWidth < 768) {
         calendar.changeView('listWeek');
@@ -962,6 +1032,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- Device Timeline Scripts -->
 <script src="https://unpkg.com/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
-<script src="{{ url_for('routes_static.static_js', filename='ai/device-timeline.js') }}"></script>
-<script src="{{ url_for('routes_static.static_js', filename='ai/device-timeline-mobile.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ai/device-timeline.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ai/device-timeline-mobile.js') }}"></script>
 {% endblock %}

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AoT is open-source software for monitoring sensors and remotely controlling devices in greenhouses, livestock barns, and other facilities. AoT는 온실·축사 등 농업 시설의 센서를 모니터링하고 장치를 원격 제어하는 오픈소스 스마트팜 자동화 소프트웨어입니다.">
+  <meta name="application-name" content="AoT">
+  <meta property="og:site_name" content="AoT">
+  <meta property="og:title" content="AoT - Open-Source Smart-Farm Automation">
+  <meta property="og:description" content="AoT is open-source software for monitoring sensors and remotely controlling devices in greenhouses, livestock barns, and other facilities. AoT는 온실·축사 등 농업 시설의 센서를 모니터링하고 장치를 원격 제어하는 오픈소스 스마트팜 자동화 소프트웨어입니다.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/favicon.png">
+
+  <title>AoT</title>
+
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/aot-theme-variables.css" rel="stylesheet">
+  <link href="/static/css/custom-light.css" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      background-color: var(--aot-color-brand-accent, #F3F6F5);
+      color: var(--aot-color-text-primary, #13261B);
+    }
+    .landing-hero {
+      background-color: var(--aot-color-brand-primary, #13261B);
+      color: var(--aot-color-text-tertiary, #fff);
+      padding: 2.5em 1.5em 3em;
+      text-align: center;
+    }
+    .landing-hero img.logo {
+      height: 2.4em;
+      margin-bottom: 1em;
+    }
+    .landing-hero h1 {
+      font-size: 2.4em;
+      font-weight: 700;
+      margin-bottom: 0.2em;
+    }
+    .landing-hero p.tagline {
+      font-size: 1.15em;
+      font-weight: 600;
+      color: var(--aot-color-brand-accent, #F3F6F5);
+      margin-bottom: 1em;
+    }
+    .landing-hero p.lead {
+      font-size: 1.05em;
+      color: var(--aot-color-brand-accent, #F3F6F5);
+      max-width: 42em;
+      margin: 0 auto;
+    }
+    .landing-hero .hero-img-wrap {
+      max-width: 60em;
+      max-height: 26em;
+      margin: 2em auto 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    }
+    .landing-hero .hero-img-wrap img {
+      width: 100%;
+      max-height: 26em;
+      object-fit: cover;
+      object-position: top;
+      display: block;
+    }
+    .landing-section {
+      max-width: 52em;
+      margin: 0 auto;
+      padding: 3em 1.5em;
+    }
+    .landing-section h2 {
+      font-size: 1.5em;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 1em;
+    }
+    .landing-section p {
+      font-size: 1.05em;
+      line-height: 1.7;
+      margin-bottom: 1em;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
+      gap: 1.25em;
+      margin-top: 2em;
+    }
+    .feature-card {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 1.25em;
+    }
+    .feature-card h3 {
+      font-size: 1.05em;
+      font-weight: 700;
+      margin-bottom: 0.4em;
+    }
+    .feature-card p {
+      font-size: 0.95em;
+      color: var(--aot-color-text-secondary, #5E6B64);
+      margin-bottom: 0;
+    }
+    .landing-cta {
+      background-color: #fff;
+      text-align: center;
+      padding: 3em 1.5em;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .landing-cta h2 {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin-bottom: 1.25em;
+    }
+    .landing-cta .btn {
+      min-width: 11em;
+      margin: 0.35em;
+      font-weight: 600;
+    }
+    .btn-login {
+      background-color: var(--aot-color-brand-primary, #13261B);
+      color: #fff;
+      border: 1px solid var(--aot-color-brand-primary, #13261B);
+    }
+    .btn-login:hover {
+      color: #fff;
+      opacity: 0.9;
+    }
+    .btn-signup {
+      background-color: #fff;
+      color: var(--aot-color-brand-primary, #13261B);
+      border: 1px solid var(--bd-btn-border, #B6BABA);
+    }
+    .landing-footer {
+      text-align: center;
+      padding: 2em 1.5em 3em;
+      font-size: 0.9em;
+      color: var(--aot-color-text-secondary, #5E6B64);
+    }
+    .landing-footer a {
+      color: var(--aot-color-text-secondary, #5E6B64);
+      text-decoration: none;
+    }
+    .landing-footer a:hover {
+      text-decoration: underline;
+    }
+    .landing-footer .footer-links {
+      margin-bottom: 0.75em;
+    }
+    .landing-footer .footer-links span {
+      margin: 0 0.5em;
+      color: rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  {% include 'flash_messages.html' %}
+
+  <div class="landing-hero">
+    <img class="logo" src="/static/img/aot-logo-white.svg" alt="AoT">
+    <h1>AoT</h1>
+    <p class="tagline">Open-Source Smart-Farm &amp; Facility Automation<br>오픈소스 스마트팜·시설 자동화 시스템</p>
+    <p class="lead">
+      AoT is open-source software for monitoring sensors and remotely controlling devices
+      (irrigation, ventilation, lighting) in greenhouses, livestock barns, and other facilities.
+      Anyone can install it on their own server or a device such as a Raspberry Pi and run it free of charge.
+    </p>
+    <p class="lead">
+      AoT는 온실, 축사 등 농업·산업 시설의 센서 값을 실시간으로 모니터링하고, 관수·환기·조명 같은
+      장치를 지도 기반 화면에서 원격 제어할 수 있게 해주는 오픈소스 소프트웨어입니다. 누구나 자신의
+      서버나 라즈베리 파이 같은 장치에 직접 설치해 무료로 운영할 수 있습니다.
+    </p>
+    <div class="hero-img-wrap">
+      <img src="/static/img/aot-hero-dashboard-v2.jpg" alt="AoT GIS 대시보드 화면">
+    </div>
+  </div>
+
+  <div class="landing-section">
+    <h2>AoT를 만든 이유</h2>
+    <p>
+      AoT는 라즈베리 파이 같은 소형 컴퓨터부터 Docker 환경까지, 다양한 하드웨어에서 동작하는
+      오픈소스 환경 모니터링·제어 시스템입니다. 오픈소스 프로젝트 Mycodo에서 출발해, 여러 시설을
+      한 번에 다루기 쉽도록 지도 위에 실제 위치를 갖는 <strong>GIS 기반 디지털 트윈</strong>으로
+      발전시켰습니다. 그 아래에는 Mycodo의 검증된 제어 모델을 그대로 유지하면서, GIS·AI·새로운
+      UI를 더했습니다.
+    </p>
+    <p>
+      AoT는 소프트웨어를 특정 회사나 클라우드에 종속시키지 않고, 누구나 자신의 서버에 설치해
+      직접 소유하고 운영할 수 있어야 한다는 방향을 가지고 만들어졌습니다. 소프트웨어 자체는
+      무료로 공개되어 있으며, 필요할 때 설치·설정을 돕는 실비 성격의 서비스만 별도로 존재합니다.
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>입력 · 출력 · 함수</h3>
+        <p>센서 측정값 수집(입력), 장치 제어(출력), PID·시퀀스·조건부 등 상위 자동화(함수)까지 세 가지 컨트롤러로 구성됩니다.</p>
+      </div>
+      <div class="feature-card">
+        <h3>GIS 디지털 트윈</h3>
+        <p>모든 장치·센서·구조물이 지도 위 실제 위치를 갖는 지도·시설 중심 인터페이스로, 여러 지점을 한눈에 파악할 수 있습니다.</p>
+      </div>
+      <div class="feature-card">
+        <h3>{{_('AI Assistant')}}</h3>
+        <p>자연어로 장치를 제어하거나 스케줄을 만들고, 시스템 상태를 질의할 수 있는 AI 어시스턴트를 내장하고 있습니다.</p>
+      </div>
+      <div class="feature-card">
+        <h3>오픈소스</h3>
+        <p>소스코드가 전부 공개되어 있어 누구나 직접 설치·수정·운영할 수 있으며, 특정 벤더에 종속되지 않습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-cta">
+    <h2>{{_('Get Started')}}</h2>
+    <a href="{{ url_for('routes_authentication.login_check') }}" class="btn btn-lg btn-login">{{_('Log In')}}</a>
+    {% if google_login_configured %}
+    <a href="{{ url_for('routes_authentication.login_google_start') }}" class="btn btn-lg btn-signup">{{_('Sign Up')}}</a>
+    {% endif %}
+  </div>
+
+  <div class="landing-footer">
+    <div class="footer-links">
+      <a href="{{ url_for('routes_legal.page_privacy_policy') }}" target="_blank">{{_('Privacy Policy')}}</a>
+      <span>|</span>
+      <a href="{{ url_for('routes_legal.page_terms_of_service') }}" target="_blank">{{_('Terms of Service')}}</a>
+      <span>|</span>
+      <a href="https://github.com/AoT-inc/AoT" target="_blank">{{_('AoT Github')}}</a>
+      <span>|</span>
+      <a href="mailto:aot.inc.kr@gmail.com">aot.inc.kr@gmail.com</a>
+    </div>
+    <div>&copy; 2026 AoT. {{_('All rights reserved.')}}</div>
+  </div>
+
+</body>
+</html>

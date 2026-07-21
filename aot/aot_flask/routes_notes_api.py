@@ -30,13 +30,24 @@ def api_notes_target_get(target_id):
         # [Fix] Filter by target_id.
         # Note: notes table now has target_id column
         notes = Notes.query.filter_by(target_id=target_id).order_by(Notes.date_time.desc()).all()
-        
+
+        # All notes here share one target → its location tz. Emit it so the frontend
+        # can render note times in that entity's local clock (AoTTz.formatDevice),
+        # consistent with how the entity's schedules display. §7
+        location_tz = None
+        try:
+            from aot.utils.device_tz import resolve_location_tz
+            location_tz = str(resolve_location_tz(target_id))
+        except Exception:
+            location_tz = None
+
         result = []
         for n in notes:
             result.append({
                 'unique_id': n.unique_id,
                 'note': n.note,
                 'date_time': api_iso(n.date_time) if n.date_time else "", # UTC+offset ISO so frontend parses absolute instant correctly
+                'date_tz': location_tz,  # note's location tz for device-local display
                 # [Fix] Return Author Name if available, else fallback to Note Name (Title)
                 'user': n.author.name if n.author else (n.name or '?'), 
                 'files': n.files,

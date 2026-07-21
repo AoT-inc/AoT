@@ -1,5 +1,5 @@
 # Japanese translations for AoT.
-# Copyright (C) 2026 ORGANIZATION
+# Copyright (C) 2026 Kyle T. Gabriel
 # This file is distributed under the same license as the AoT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-21 11:52+0900\n"
+"POT-Creation-Date: 2026-07-21 18:30+0900\n"
 "PO-Revision-Date: 2026-02-08 14:10+0900\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -313,7 +313,7 @@ msgid "Saturation"
 msgstr "彩度"
 
 #: actions/pid_setpoint.py:49 aot_flask/forms/forms_pid.py:58
-#: aot_flask/templates/pages/ai/scheduler.html:662
+#: aot_flask/templates/pages/ai/scheduler.html:649
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:324
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:179
 #: config_devices_units.py:285 config_devices_units.py:644
@@ -805,7 +805,7 @@ msgstr "cg/cm³"
 #: aot_flask/templates/pages/ai/ai_manage.html:124
 #: aot_flask/templates/pages/ai/ai_manage.html:226
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
-#: aot_flask/templates/pages/ai/scheduler.html:606
+#: aot_flask/templates/pages/ai/scheduler.html:593
 #: aot_flask/templates/pages/function_options/conditional_options.html:238
 #: aot_flask/templates/pages/function_options/trigger_options.html:147
 #: aot_flask/templates/pages/function_options/trigger_options.html:163
@@ -896,7 +896,7 @@ msgstr "計算"
 #: actions/camera_timelapse_pause.py:38 actions/camera_timelapse_resume.py:38
 #: actions/photo.py:36 actions/photo_email.py:40
 #: aot_flask/templates/layout.html:590
-#: aot_flask/templates/layout_default.html:590
+#: aot_flask/templates/layout_default.html:594
 #: aot_flask/templates/pages/camera.html:67 config_translations.py:32
 #: functions/camera_libcamera.py:81 functions/camera_libcamera.py:82
 #: widgets/widget_camera.py:216 widgets/widget_camera.py:243
@@ -908,8 +908,8 @@ msgstr "カメラ"
 #: aot_flask/static/js/dist/geo-design.bundle.js:2
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:209
 #: aot_flask/static/js/geo/design/aot-geo-ui.js:438
-#: aot_flask/templates/layout.html:971
-#: aot_flask/templates/layout_default.html:1035
+#: aot_flask/templates/layout.html:974
+#: aot_flask/templates/layout_default.html:1045
 #: aot_flask/templates/pages/ai/ai.html:382
 #: aot_flask/templates/pages/ai/ai_entry.html:143
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:86
@@ -1088,7 +1088,7 @@ msgstr "削除"
 #: aot_flask/forms/forms_dependencies.py:13
 #: aot_flask/forms/forms_function.py:46 aot_flask/forms/forms_input.py:110
 #: aot_flask/forms/forms_output.py:78 aot_flask/forms/forms_pid.py:83
-#: aot_flask/forms/forms_trigger.py:37 aot_flask/routes_integrations.py:234
+#: aot_flask/forms/forms_trigger.py:37 aot_flask/routes_integrations.py:237
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/dist/geo-design.bundle.js:192
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:464
@@ -1168,7 +1168,7 @@ msgstr "エネルギー使用量"
 #: aot_flask/templates/flash_messages.html:46
 #: aot_flask/templates/modals/ai_context_modal.html:170
 #: aot_flask/templates/pages/ai/ai_library.html:282
-#: aot_flask/templates/pages/ai/scheduler.html:820
+#: aot_flask/templates/pages/ai/scheduler.html:816
 #: aot_flask/templates/settings/api_key.html:36
 #: aot_flask/templates/settings/integrations.html:53
 #: aot_flask/templates/settings/users.html:76
@@ -1187,7 +1187,7 @@ msgid "Error"
 msgstr "エラー"
 
 #: aot_flask/templates/layout.html:606
-#: aot_flask/templates/layout_default.html:606
+#: aot_flask/templates/layout_default.html:610
 #: aot_flask/templates/pages/geo/geo_facility.html:1240
 #: config_translations.py:82
 msgid "Export"
@@ -1202,7 +1202,7 @@ msgstr "失敗"
 #: aot_flask/static/js/dist/geo-design.bundle.js:201
 #: aot_flask/templates/layout-settings.html:19
 #: aot_flask/templates/layout.html:565
-#: aot_flask/templates/layout_default.html:565
+#: aot_flask/templates/layout_default.html:569
 #: aot_flask/templates/pages/function.html:62
 #: aot_flask/templates/pages/live.html:156 config_translations.py:86
 #: utils/calendar_event_format.py:312 widgets/AoT_graph.py:441
@@ -1211,7 +1211,7 @@ msgstr "失敗"
 msgid "Function"
 msgstr "機能"
 
-#: actions/create_note.py:77 aot_flask/templates/layout_default.html:696
+#: actions/create_note.py:77 aot_flask/templates/layout_default.html:703
 #: aot_flask/templates/pages/ai/ai_agent.html:772
 #: aot_flask/templates/pages/ai/scheduler.html:99
 #: aot_flask/templates/pages/ai/scheduler.html:150
@@ -1249,7 +1249,7 @@ msgid "Invert"
 msgstr "反転"
 
 #: aot_flask/templates/layout.html:606
-#: aot_flask/templates/layout_default.html:606
+#: aot_flask/templates/layout_default.html:610
 #: aot_flask/templates/pages/geo/geo_facility.html:1245
 #: aot_flask/templates/pages/geo/geo_facility.html:2049
 #: aot_flask/utils/utils_notes.py:664 aot_flask/utils/utils_settings.py:877
@@ -1270,7 +1270,7 @@ msgstr "インポート"
 #: aot_flask/templates/layout-remote.html:63
 #: aot_flask/templates/layout-settings.html:17
 #: aot_flask/templates/layout.html:557
-#: aot_flask/templates/layout_default.html:557
+#: aot_flask/templates/layout_default.html:561
 #: aot_flask/templates/pages/input.html:61
 #: aot_flask/templates/pages/live.html:100 config_translations.py:102
 #: widgets/AoT_graph.py:431 widgets/AoT_map.py:737 widgets/AoT_map.py:771
@@ -1374,7 +1374,7 @@ msgid "Note"
 msgstr "ノート"
 
 #: actions/display_backlight_off.py:15 actions/display_flash_off.py:14
-#: aot_flask/templates/pages/ai/scheduler.html:654
+#: aot_flask/templates/pages/ai/scheduler.html:641
 #: aot_flask/templates/pages/camera_options/libcamera.html:79
 #: aot_flask/templates/pages/camera_options/picamera.html:93
 #: aot_flask/templates/pages/camera_options/picamera.html:123
@@ -1387,7 +1387,7 @@ msgstr "オフ"
 
 #: actions/display_backlight_on.py:14 actions/display_flash_on.py:14
 #: aot_flask/forms/forms_output.py:128
-#: aot_flask/templates/pages/ai/scheduler.html:653
+#: aot_flask/templates/pages/ai/scheduler.html:640
 #: aot_flask/templates/settings/custom_ui.html:96
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:22
 #: config_translations.py:132 outputs/on_off_kasa_rgb_bulbs.py:212
@@ -1399,7 +1399,7 @@ msgstr "オン"
 #: aot_flask/static/js/dist/geo-design.bundle.js:200
 #: aot_flask/templates/layout-settings.html:18
 #: aot_flask/templates/layout.html:561
-#: aot_flask/templates/layout_default.html:561
+#: aot_flask/templates/layout_default.html:565
 #: aot_flask/templates/pages/ai/ai_agent.html:574
 #: aot_flask/templates/pages/function_options/trigger_options/output.html:3
 #: aot_flask/templates/pages/function_options/trigger_options/output_pwm.html:3
@@ -1425,6 +1425,7 @@ msgstr "過去"
 #: aot_flask/forms/forms_authentication.py:59
 #: aot_flask/forms/forms_authentication.py:111
 #: aot_flask/forms/forms_camera.py:144
+#: aot_flask/templates/login_password.html:120
 #: aot_flask/templates/pages/ai/ai_entry.html:189
 #: aot_flask/templates/pages/ai/ai_modals.html:252
 #: aot_flask/templates/pages/data_options/camera_options.html:143
@@ -1529,8 +1530,8 @@ msgstr "再開"
 #: aot_flask/forms/forms_settings.py:602
 #: aot_flask/static/js/dist/geo-design.bundle.js:2
 #: aot_flask/static/js/geo/design/aot-geo-ui.js:430
-#: aot_flask/templates/layout.html:727
-#: aot_flask/templates/layout_default.html:793
+#: aot_flask/templates/layout.html:730
+#: aot_flask/templates/layout_default.html:803
 #: aot_flask/templates/modals/geo_settings_modal.html:25
 #: aot_flask/templates/modals/tab_settings.html:31
 #: aot_flask/templates/pages/actions.html:30
@@ -1541,6 +1542,7 @@ msgstr "再開"
 #: aot_flask/templates/pages/ai/ai_scheduler.html:191
 #: aot_flask/templates/pages/ai/scheduler.html:338
 #: aot_flask/templates/pages/ai/scheduler.html:441
+#: aot_flask/templates/pages/ai/scheduler.html:707
 #: aot_flask/templates/pages/data_options/camera_entry.html:89
 #: aot_flask/templates/pages/data_options/input_entry.html:70
 #: aot_flask/templates/pages/data_options/input_spacer.html:51
@@ -1607,7 +1609,7 @@ msgstr "Sensitivity"
 
 #: aot_flask/static/js/dist/geo-design.bundle.js:221
 #: aot_flask/templates/layout.html:539
-#: aot_flask/templates/layout_default.html:539
+#: aot_flask/templates/layout_default.html:543
 #: aot_flask/templates/pages/ai/ai_library.html:289
 #: aot_flask/templates/pages/dashboard_entry.html:36
 #: aot_flask/templates/pages/geo/entry.html:42
@@ -1659,7 +1661,7 @@ msgid "Text"
 msgstr "テキスト"
 
 #: aot_flask/forms/forms_settings.py:416 aot_flask/forms/forms_settings.py:422
-#: aot_flask/forms/forms_settings.py:482 aot_flask/templates/layout.html:709
+#: aot_flask/forms/forms_settings.py:482 aot_flask/templates/layout.html:712
 #: aot_flask/templates/settings/users.html:267 config_translations.py:196
 msgid "Theme"
 msgstr "テーマ"
@@ -1685,7 +1687,7 @@ msgstr "ロック解除"
 msgid "Up"
 msgstr "上昇"
 
-#: actions/command_bash.py:32 aot_flask/routes_integrations.py:233
+#: actions/command_bash.py:32 aot_flask/routes_integrations.py:236
 #: aot_flask/templates/layout-settings.html:17
 #: aot_flask/templates/layout-settings.html:18
 #: aot_flask/templates/layout-settings.html:19
@@ -1697,7 +1699,7 @@ msgid "User"
 msgstr "ユーザー"
 
 #: actions/output_value.py:47 aot_flask/forms/forms_ai_context.py:47
-#: aot_flask/templates/pages/ai/scheduler.html:761
+#: aot_flask/templates/pages/ai/scheduler.html:756
 #: aot_flask/templates/pages/live.html:109
 #: aot_flask/templates/pages/live.html:167
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:63
@@ -1752,7 +1754,7 @@ msgstr "UARTボーレート"
 #: actions/command_bash.py:40 actions/output_actuator_paired.py:56
 #: aot_flask/forms/forms_trigger.py:46
 #: aot_flask/templates/pages/ai/mcp_servers.html:57
-#: aot_flask/templates/pages/ai/scheduler.html:578 config_translations.py:235
+#: aot_flask/templates/pages/ai/scheduler.html:573 config_translations.py:235
 msgid "Command"
 msgstr "コマンド"
 
@@ -3481,8 +3483,8 @@ msgstr "位置を設定(%)"
 #: actions/output_actuator_paired.py:54
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:6574
-#: aot_flask/templates/layout.html:927
-#: aot_flask/templates/layout_default.html:991
+#: aot_flask/templates/layout.html:930
+#: aot_flask/templates/layout_default.html:1001
 #: aot_flask/templates/pages/ai/ai_agent.html:909
 #: aot_flask/templates/pages/data_options/camera_options.html:78
 #: aot_flask/templates/pages/output_entry.html:110
@@ -3511,7 +3513,7 @@ msgstr "オン/オフ出力をオン、オフ、または指定時間オンに�
 
 #: actions/output_on_off.py:52 aot_flask/templates/pages/ai/scheduler.html:367
 #: aot_flask/templates/pages/ai/scheduler.html:469
-#: aot_flask/templates/pages/ai/scheduler.html:650
+#: aot_flask/templates/pages/ai/scheduler.html:637
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:12
 msgid "State"
 msgstr "状態"
@@ -3828,7 +3830,7 @@ msgid ""
 "controlled only after you approve."
 msgstr "[装置制御リクエスト] 承認するには下のボタンをタップしてください。承認後に実際の装置が制御されます。"
 
-#: aot_flask/app.py:741 aot_flask/routes_integrations.py:152
+#: aot_flask/app.py:743 aot_flask/routes_integrations.py:155
 msgid "Please log in to access this page"
 msgstr "このページにアクセスするにはログインしてください"
 
@@ -4216,37 +4218,37 @@ msgstr "Sequence"
 msgid "Group"
 msgstr "グループ"
 
-#: aot_flask/routes_general.py:750
+#: aot_flask/routes_general.py:751
 msgid "No measurements to export in this time period"
 msgstr "この期間のエクスポート対象の測定値はありません"
 
-#: aot_flask/routes_general.py:1144
+#: aot_flask/routes_general.py:1145
 #, python-format
 msgid "Unrecognized command: %(action)s"
 msgstr "認識できないコマンド: %(action)s"
 
-#: aot_flask/routes_general.py:1154
+#: aot_flask/routes_general.py:1155
 #, python-format
 msgid "'%(action)s' is not supported in Docker"
 msgstr "'%(action)s' は Docker ではサポートされていません"
 
-#: aot_flask/routes_general.py:1161
+#: aot_flask/routes_general.py:1162
 msgid "System rebooting in 10 seconds"
 msgstr "10秒後にシステムを再起動します"
 
-#: aot_flask/routes_general.py:1163
+#: aot_flask/routes_general.py:1164
 msgid "System shutting down in 10 seconds"
 msgstr "10秒後にシステムをシャットダウンします"
 
-#: aot_flask/routes_general.py:1165
+#: aot_flask/routes_general.py:1166
 msgid "Command to restart the daemon sent"
 msgstr "デーモン再起動コマンドを送信しました"
 
-#: aot_flask/routes_general.py:1167
+#: aot_flask/routes_general.py:1168
 msgid "Frontend reloading in 10 seconds"
 msgstr "フロントエンドは10秒後にリロードされます"
 
-#: aot_flask/routes_general.py:1173
+#: aot_flask/routes_general.py:1174
 #, python-format
 msgid "System command '%(action)s' raised and error: %(err)s"
 msgstr "システムコマンド '%(action)s' の実行中にエラーが発生しました: %(err)s"
@@ -4273,21 +4275,21 @@ msgstr "不明な操作: %(action)s"
 msgid "No devices to inspect"
 msgstr "点検するデバイスがありません"
 
-#: aot_flask/routes_integrations.py:132
+#: aot_flask/routes_integrations.py:135
 #, python-format
 msgid "Google sign-in was denied or failed: %(err)s"
 msgstr "Google サインインが拒否されたか失敗しました: %(err)s"
 
-#: aot_flask/routes_integrations.py:137
+#: aot_flask/routes_integrations.py:140
 msgid "No authorization code returned by Google."
 msgstr "Google から認証コードが返されませんでした。"
 
-#: aot_flask/routes_integrations.py:143
+#: aot_flask/routes_integrations.py:146
 #, python-format
 msgid "Google sign-in failed: %(err)s"
 msgstr "Google サインインに失敗しました: %(err)s"
 
-#: aot_flask/routes_integrations.py:232 aot_flask/templates/layout.html:513
+#: aot_flask/routes_integrations.py:235 aot_flask/templates/layout.html:513
 #: aot_flask/templates/layout_default.html:513
 #: aot_flask/templates/pages/ai/ai.html:3
 #: aot_flask/templates/pages/ai/ai.html:4 widgets/AoT_map.py:796
@@ -4402,7 +4404,7 @@ msgstr "登録完了 — 入力 %(i)s、出力 %(o)s(デバイス %(n)s台)"
 #: aot_flask/templates/pages/ai/scheduler.html:266
 #: aot_flask/templates/pages/ai/scheduler.html:361
 #: aot_flask/templates/pages/ai/scheduler.html:463
-#: aot_flask/templates/pages/ai/scheduler.html:621
+#: aot_flask/templates/pages/ai/scheduler.html:608
 msgid "Action Type"
 msgstr "アクションタイプ"
 
@@ -4416,7 +4418,7 @@ msgid "Source Type"
 msgstr "ソースタイプ"
 
 #: aot_flask/forms/forms_ai_context.py:20
-#: aot_flask/templates/pages/ai/scheduler.html:706
+#: aot_flask/templates/pages/ai/scheduler.html:693
 msgid "Manual entry"
 msgstr "手動入力"
 
@@ -4436,7 +4438,7 @@ msgstr "値 / URL / テキスト"
 
 #: aot_flask/forms/forms_ai_context.py:31
 #: aot_flask/forms/forms_ai_context.py:51 aot_flask/templates/layout.html:594
-#: aot_flask/templates/layout_default.html:594
+#: aot_flask/templates/layout_default.html:598
 #: aot_flask/templates/tools/note_edit.html:3
 #: aot_flask/templates/tools/note_edit.html:12
 #: aot_flask/templates/tools/notes.html:3
@@ -4467,8 +4469,8 @@ msgstr "拒否"
 
 #: aot_flask/forms/forms_authentication.py:21
 #: aot_flask/forms/forms_settings.py:127 aot_flask/forms/forms_settings.py:423
-#: aot_flask/forms/forms_settings.py:443 aot_flask/templates/layout.html:694
-#: aot_flask/templates/layout_default.html:730
+#: aot_flask/forms/forms_settings.py:443 aot_flask/templates/layout.html:697
+#: aot_flask/templates/layout_default.html:737
 msgid "Language"
 msgstr "言語"
 
@@ -4482,7 +4484,7 @@ msgstr "メール"
 #: aot_flask/forms/forms_authentication.py:43
 #: aot_flask/forms/forms_settings.py:409 aot_flask/forms/forms_settings.py:442
 #: aot_flask/forms/forms_settings.py:471 aot_flask/forms/forms_settings.py:472
-#: aot_flask/templates/layout_default.html:725
+#: aot_flask/templates/layout_default.html:732
 msgid "Confirm Password"
 msgstr "パスワード確認"
 
@@ -4514,7 +4516,7 @@ msgstr "リ셋コード"
 #: aot_flask/forms/forms_authentication.py:88
 #: aot_flask/forms/forms_authentication.py:89
 #: aot_flask/forms/forms_settings.py:437 aot_flask/forms/forms_settings.py:457
-#: aot_flask/templates/layout_default.html:723
+#: aot_flask/templates/layout_default.html:730
 #: aot_flask/templates/settings/users.html:235
 msgid "New Password"
 msgstr "新規パスワード"
@@ -4525,7 +4527,7 @@ msgid "Confirm New Password"
 msgstr "新しいパスワードを確認"
 
 #: aot_flask/forms/forms_authentication.py:93
-#: aot_flask/templates/layout_default.html:714
+#: aot_flask/templates/layout_default.html:721
 msgid "Change Password"
 msgstr "パスワードを変更"
 
@@ -4955,7 +4957,7 @@ msgstr "位置ソース"
 #: aot_flask/forms/forms_function.py:46 aot_flask/forms/forms_input.py:110
 #: aot_flask/forms/forms_output.py:78 aot_flask/forms/forms_pid.py:83
 #: aot_flask/forms/forms_trigger.py:37
-#: aot_flask/templates/pages/ai/scheduler.html:557 inputs/atlas_o2.py:87
+#: aot_flask/templates/pages/ai/scheduler.html:553 inputs/atlas_o2.py:87
 msgid "Manual"
 msgstr "マニュアル"
 
@@ -6175,8 +6177,8 @@ msgstr "APIキーを生成"
 
 #: aot_flask/forms/forms_settings.py:485
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:482
-#: aot_flask/templates/layout.html:909
-#: aot_flask/templates/layout_default.html:973
+#: aot_flask/templates/layout.html:912
+#: aot_flask/templates/layout_default.html:983
 #: aot_flask/templates/pages/ai/ai_scheduler.html:74
 #: aot_flask/templates/pages/ai/scheduler.html:104
 #: aot_flask/templates/pages/ai/scheduler.html:340
@@ -6648,12 +6650,12 @@ msgstr "条件デューティ比（％）"
 #: aot_flask/static/js/dist/geo-design.bundle.js:164
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:4532
 #: aot_flask/templates/layout.html:548
-#: aot_flask/templates/layout_default.html:548 widgets/AoT_advice.py:225
+#: aot_flask/templates/layout_default.html:552 widgets/AoT_advice.py:225
 msgid "Facility"
 msgstr "施設"
 
 #: aot_flask/geo/widget/maps.py:707 aot_flask/templates/layout.html:544
-#: aot_flask/templates/layout_default.html:544
+#: aot_flask/templates/layout_default.html:548
 #: aot_flask/templates/pages/geo/geo_facility.html:1075 widgets/AoT_map.py:622
 msgid "Map"
 msgstr "地図"
@@ -7273,9 +7275,9 @@ msgstr "メモを作成"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:6573
 #: aot_flask/templates/admin/dependencies_install.html:19
 #: aot_flask/templates/admin/dependencies_install.html:36
-#: aot_flask/templates/layout.html:723 aot_flask/templates/layout.html:893
-#: aot_flask/templates/layout_default.html:791
-#: aot_flask/templates/layout_default.html:957
+#: aot_flask/templates/layout.html:726 aot_flask/templates/layout.html:896
+#: aot_flask/templates/layout_default.html:801
+#: aot_flask/templates/layout_default.html:967
 #: aot_flask/templates/modals/ai_context_modal.html:24
 #: aot_flask/templates/modals/geo_settings_modal.html:24
 #: aot_flask/templates/modals/tab_settings.html:28
@@ -7296,7 +7298,8 @@ msgstr "メモを作成"
 #: aot_flask/templates/pages/ai/scheduler.html:439
 #: aot_flask/templates/pages/ai/scheduler.html:456
 #: aot_flask/templates/pages/ai/scheduler.html:529
-#: aot_flask/templates/pages/ai/scheduler.html:545
+#: aot_flask/templates/pages/ai/scheduler.html:542
+#: aot_flask/templates/pages/ai/scheduler.html:702
 #: aot_flask/templates/pages/dashboard_entry.html:71
 #: aot_flask/templates/pages/data_options/camera_entry.html:85
 #: aot_flask/templates/pages/data_options/input_entry.html:62
@@ -8512,8 +8515,8 @@ msgid "Setup"
 msgstr "セットアップ"
 
 #: aot_flask/templates/layout-remote.html:69
-#: aot_flask/templates/layout.html:660
-#: aot_flask/templates/layout_default.html:660
+#: aot_flask/templates/layout.html:663
+#: aot_flask/templates/layout_default.html:667
 msgid "Logout"
 msgstr "ログアウト"
 
@@ -8585,32 +8588,32 @@ msgid "Manager"
 msgstr "マネージャー"
 
 #: aot_flask/templates/layout.html:552
-#: aot_flask/templates/layout_default.html:552
+#: aot_flask/templates/layout_default.html:556
 msgid "GIS Input"
 msgstr "GIS入力"
 
 #: aot_flask/templates/layout.html:569
-#: aot_flask/templates/layout_default.html:569
+#: aot_flask/templates/layout_default.html:573
 msgid "Reference Method"
 msgstr "参照メソッド"
 
 #: aot_flask/templates/layout.html:577
-#: aot_flask/templates/layout_default.html:577
+#: aot_flask/templates/layout_default.html:581
 msgid "Additional Features"
 msgstr "追加機能"
 
 #: aot_flask/templates/layout.html:582
-#: aot_flask/templates/layout_default.html:582
+#: aot_flask/templates/layout_default.html:586
 msgid "Live Measurement"
 msgstr "ライブ測定"
 
 #: aot_flask/templates/layout.html:586
-#: aot_flask/templates/layout_default.html:586 config/__init__.py:261
+#: aot_flask/templates/layout_default.html:590 config/__init__.py:261
 msgid "Graph"
 msgstr "グラフ"
 
 #: aot_flask/templates/layout.html:598
-#: aot_flask/templates/layout_default.html:598
+#: aot_flask/templates/layout_default.html:602
 #: aot_flask/templates/tools/notice.html:3
 #: aot_flask/templates/tools/notice_detail.html:3
 #: aot_flask/templates/tools/notice_edit.html:3
@@ -8618,7 +8621,7 @@ msgid "Notice"
 msgstr "お知らせ"
 
 #: aot_flask/templates/layout.html:602
-#: aot_flask/templates/layout_default.html:602
+#: aot_flask/templates/layout_default.html:606
 #: aot_flask/templates/tools/notice.html:242
 #: aot_flask/templates/tools/notice_edit.html:133
 #: utils/calendar_event_format.py:318
@@ -8626,59 +8629,78 @@ msgid "Schedule"
 msgstr "スケジュール"
 
 #: aot_flask/templates/layout.html:610
-#: aot_flask/templates/layout_default.html:610
+#: aot_flask/templates/layout_default.html:614
 msgid "Energy-Output"
 msgstr "エネルギー-出力"
 
 #: aot_flask/templates/layout.html:614
-#: aot_flask/templates/layout_default.html:614
+#: aot_flask/templates/layout_default.html:618
 msgid "Energy-Amp"
 msgstr "エネルギー-アンペア"
 
 #: aot_flask/templates/layout.html:625 aot_flask/templates/layout.html:629
-#: aot_flask/templates/layout_default.html:625
 #: aot_flask/templates/layout_default.html:629
+#: aot_flask/templates/layout_default.html:633
 #: aot_flask/templates/pages/function_options/conditional_options.html:42
 msgid "Help"
 msgstr "ヘルプ"
 
 #: aot_flask/templates/layout.html:631
-#: aot_flask/templates/layout_default.html:631
+#: aot_flask/templates/layout_default.html:635
 msgid "Online Manual"
 msgstr "オンラインマニュアル"
 
 #: aot_flask/templates/layout.html:632
-#: aot_flask/templates/layout_default.html:632
+#: aot_flask/templates/layout_default.html:636
 msgid "API Info"
 msgstr "API情報"
 
 #: aot_flask/templates/layout.html:633
-#: aot_flask/templates/layout_default.html:633
+#: aot_flask/templates/layout_default.html:637
 msgid "API Documentation"
 msgstr "APIドキュメント"
 
 #: aot_flask/templates/layout.html:634
-#: aot_flask/templates/layout_default.html:634
+#: aot_flask/templates/layout_default.html:638
+#: aot_flask/templates/pages/landing.html:232
 msgid "AoT Github"
 msgstr "AoT GitHub"
 
-#: aot_flask/templates/layout.html:640
+#: aot_flask/templates/layout.html:636
 #: aot_flask/templates/layout_default.html:640
+#: aot_flask/templates/pages/landing.html:228
+#: aot_flask/templates/pages/privacy_policy.html:4
+#: aot_flask/templates/pages/privacy_policy.html:13
+#, fuzzy
+msgid "Privacy Policy"
+msgstr "LoRaクラスポリシー"
+
+#: aot_flask/templates/layout.html:637
+#: aot_flask/templates/layout_default.html:641
+#: aot_flask/templates/pages/landing.html:230
+#: aot_flask/templates/pages/terms_of_service.html:4
+#: aot_flask/templates/pages/terms_of_service.html:13
+#, fuzzy
+msgid "Terms of Service"
+msgstr "利用規約"
+
+#: aot_flask/templates/layout.html:643
+#: aot_flask/templates/layout_default.html:647
 msgid "Manage"
 msgstr "管理"
 
-#: aot_flask/templates/layout.html:643
-#: aot_flask/templates/layout_default.html:643
+#: aot_flask/templates/layout.html:646
+#: aot_flask/templates/layout_default.html:650
 msgid "System Management"
 msgstr "システム管理"
 
-#: aot_flask/templates/layout.html:644
-#: aot_flask/templates/layout_default.html:644
+#: aot_flask/templates/layout.html:647
+#: aot_flask/templates/layout_default.html:651
 msgid "System Log"
 msgstr "システムログ"
 
-#: aot_flask/templates/layout.html:645
-#: aot_flask/templates/layout_default.html:645
+#: aot_flask/templates/layout.html:648
+#: aot_flask/templates/layout_default.html:652
 #: aot_flask/templates/pages/info.html:3 aot_flask/templates/pages/info.html:5
 #: aot_flask/templates/pages/info.html:28
 #: aot_flask/templates/settings/general.html:47
@@ -8687,92 +8709,92 @@ msgid "System Information"
 msgstr "システム情報"
 
 #: aot_flask/templates/admin/dependencies.html:45
-#: aot_flask/templates/layout.html:647
-#: aot_flask/templates/layout_default.html:647
+#: aot_flask/templates/layout.html:650
+#: aot_flask/templates/layout_default.html:654
 msgid "Package Management"
 msgstr "パッケージ管理"
 
-#: aot_flask/templates/layout.html:648
-#: aot_flask/templates/layout_default.html:648
+#: aot_flask/templates/layout.html:651
+#: aot_flask/templates/layout_default.html:655
 #: aot_flask/templates/settings/custom_ui.html:170
 msgid "Upgrade"
 msgstr "アップグレード"
 
 #: aot_flask/templates/admin/backup.html:3
-#: aot_flask/templates/admin/backup.html:5 aot_flask/templates/layout.html:649
-#: aot_flask/templates/layout_default.html:649
+#: aot_flask/templates/admin/backup.html:5 aot_flask/templates/layout.html:652
+#: aot_flask/templates/layout_default.html:656
 msgid "Backup Restore"
 msgstr "バックアップ復元"
 
-#: aot_flask/templates/layout.html:651
-#: aot_flask/templates/layout_default.html:651
+#: aot_flask/templates/layout.html:654
+#: aot_flask/templates/layout_default.html:658
 msgid "Are you sure you want to restart the backend?"
 msgstr "バックエンドを再起動してもよいですか？"
 
-#: aot_flask/templates/layout.html:652
-#: aot_flask/templates/layout_default.html:652
+#: aot_flask/templates/layout.html:655
+#: aot_flask/templates/layout_default.html:659
 msgid "Restart Backend"
 msgstr "バックエンドを再起動"
 
-#: aot_flask/templates/layout.html:653
-#: aot_flask/templates/layout_default.html:653
+#: aot_flask/templates/layout.html:656
+#: aot_flask/templates/layout_default.html:660
 msgid "Are you sure you want to reload the frontend?"
 msgstr "フロントエンドをリロードしてもよいですか？"
 
-#: aot_flask/templates/layout.html:654
-#: aot_flask/templates/layout_default.html:654
+#: aot_flask/templates/layout.html:657
+#: aot_flask/templates/layout_default.html:661
 msgid "Reload Frontend"
 msgstr "フロントエンドを再読み込み"
 
-#: aot_flask/templates/layout.html:655
-#: aot_flask/templates/layout_default.html:655
+#: aot_flask/templates/layout.html:658
+#: aot_flask/templates/layout_default.html:662
 msgid "Are you sure you want to restart the system?"
 msgstr "システムを再起動してもよいですか？"
 
-#: aot_flask/templates/layout.html:655
-#: aot_flask/templates/layout_default.html:655
+#: aot_flask/templates/layout.html:658
+#: aot_flask/templates/layout_default.html:662
 msgid "Restart System"
 msgstr "システムを再起動"
 
-#: aot_flask/templates/layout.html:656
-#: aot_flask/templates/layout_default.html:656
+#: aot_flask/templates/layout.html:659
+#: aot_flask/templates/layout_default.html:663
 msgid "Are you sure you want to shutdown the system?"
 msgstr "システムをシャットダウンしてもよいですか？"
 
-#: aot_flask/templates/layout.html:656
-#: aot_flask/templates/layout_default.html:656
+#: aot_flask/templates/layout.html:659
+#: aot_flask/templates/layout_default.html:663
 msgid "Shutdown System"
 msgstr "システムシャットダウン"
 
-#: aot_flask/templates/layout.html:659
-#: aot_flask/templates/layout_default.html:659
+#: aot_flask/templates/layout.html:662
+#: aot_flask/templates/layout_default.html:666
 #: aot_flask/templates/settings/users.html:96
 msgid "User Settings"
 msgstr "ユーザー設定"
 
-#: aot_flask/templates/layout.html:688
-#: aot_flask/templates/layout_default.html:688
+#: aot_flask/templates/layout.html:691
+#: aot_flask/templates/layout_default.html:695
 msgid "Preferences"
 msgstr "設定"
 
-#: aot_flask/templates/layout.html:697
+#: aot_flask/templates/layout.html:700
 msgid " Selecting a language will override the web browser's language"
 msgstr "言語を選択すると、ウェブブラウザの言語設定より優先されます"
 
-#: aot_flask/templates/layout.html:698
-#: aot_flask/templates/layout_default.html:734
+#: aot_flask/templates/layout.html:701
+#: aot_flask/templates/layout_default.html:741
 #: aot_flask/templates/settings/general.html:33
 msgid "Browser Default"
 msgstr "ブラウザーのデフォルト"
 
-#: aot_flask/templates/layout.html:742
-#: aot_flask/templates/layout_default.html:806
+#: aot_flask/templates/layout.html:745
+#: aot_flask/templates/layout_default.html:816
 #: aot_flask/templates/settings/general.html:242
 msgid "Dashboard Settings"
 msgstr "ダッシュボード設定"
 
-#: aot_flask/templates/layout.html:751
-#: aot_flask/templates/layout_default.html:815
+#: aot_flask/templates/layout.html:754
+#: aot_flask/templates/layout_default.html:825
 #: aot_flask/templates/pages/dashboard_options.html:11
 #: aot_flask/templates/pages/data_options/camera_options.html:85
 #: aot_flask/templates/pages/function_options/function_options.html:53
@@ -8780,8 +8802,8 @@ msgstr "ダッシュボード設定"
 msgid "Basic Settings"
 msgstr "基本設定"
 
-#: aot_flask/templates/layout.html:763
-#: aot_flask/templates/layout_default.html:827
+#: aot_flask/templates/layout.html:766
+#: aot_flask/templates/layout_default.html:837
 #: aot_flask/templates/pages/actions.html:35
 #: aot_flask/templates/pages/data_options/camera_entry.html:86
 #: aot_flask/templates/pages/data_options/input_entry.html:64
@@ -8802,63 +8824,64 @@ msgstr "基本設定"
 msgid "Are you sure you want to delete?"
 msgstr "削除してもよいですか？"
 
-#: aot_flask/templates/layout.html:764
-#: aot_flask/templates/layout_default.html:828
+#: aot_flask/templates/layout.html:767
+#: aot_flask/templates/layout_default.html:838
 msgid "Are you sure you want to duplicate the dashboard and all its widgets?"
 msgstr "ダッシュボードとすべてのウィジェットを複製してもよいですか？"
 
-#: aot_flask/templates/layout.html:846 aot_flask/templates/layout.html:848
-#: aot_flask/templates/layout_default.html:910
-#: aot_flask/templates/layout_default.html:912
+#: aot_flask/templates/layout.html:849 aot_flask/templates/layout.html:851
+#: aot_flask/templates/layout_default.html:920
+#: aot_flask/templates/layout_default.html:922
 msgid "Copied to Clipboard"
 msgstr "クリップボードにコピーされました"
 
-#: aot_flask/templates/layout.html:879 aot_flask/templates/layout.html:883
-#: aot_flask/templates/layout.html:886
-#: aot_flask/templates/layout_default.html:943
-#: aot_flask/templates/layout_default.html:947
-#: aot_flask/templates/layout_default.html:950
+#: aot_flask/templates/layout.html:882 aot_flask/templates/layout.html:886
+#: aot_flask/templates/layout.html:889
+#: aot_flask/templates/layout_default.html:953
+#: aot_flask/templates/layout_default.html:957
+#: aot_flask/templates/layout_default.html:960
+#: aot_flask/templates/pages/landing.html:208
 msgid "AI Assistant"
 msgstr "AIアシスタント"
 
-#: aot_flask/templates/layout.html:890
-#: aot_flask/templates/layout_default.html:954
+#: aot_flask/templates/layout.html:893
+#: aot_flask/templates/layout_default.html:964
 #, fuzzy
 msgid "New conversation"
 msgstr "変換なし"
 
-#: aot_flask/templates/layout.html:903
-#: aot_flask/templates/layout_default.html:967
+#: aot_flask/templates/layout.html:906
+#: aot_flask/templates/layout_default.html:977
 #, fuzzy
 msgid "Response depth"
 msgstr "応答"
 
-#: aot_flask/templates/layout.html:904
-#: aot_flask/templates/layout_default.html:968
+#: aot_flask/templates/layout.html:907
+#: aot_flask/templates/layout_default.html:978
 #, fuzzy
 msgid "Fast"
 msgstr "過去"
 
-#: aot_flask/templates/layout.html:905
-#: aot_flask/templates/layout_default.html:969
+#: aot_flask/templates/layout.html:908
+#: aot_flask/templates/layout_default.html:979
 #, fuzzy
 msgid "Deep"
 msgstr "深さ"
 
-#: aot_flask/templates/layout.html:907
-#: aot_flask/templates/layout_default.html:971
+#: aot_flask/templates/layout.html:910
+#: aot_flask/templates/layout_default.html:981
 #, fuzzy
 msgid "Autonomy"
 msgstr "自動"
 
-#: aot_flask/templates/layout.html:908
-#: aot_flask/templates/layout_default.html:972
+#: aot_flask/templates/layout.html:911
+#: aot_flask/templates/layout_default.html:982
 #, fuzzy
 msgid "Advice"
 msgstr "デバイス"
 
-#: aot_flask/templates/layout.html:910
-#: aot_flask/templates/layout_default.html:974
+#: aot_flask/templates/layout.html:913
+#: aot_flask/templates/layout_default.html:984
 #: aot_flask/templates/pages/ai/ai_modals.html:120
 #: aot_flask/templates/pages/camera_options/libcamera.html:80
 #: aot_flask/templates/pages/camera_options/picamera.html:77
@@ -8870,96 +8893,103 @@ msgstr "デバイス"
 msgid "Auto"
 msgstr "自動"
 
-#: aot_flask/templates/layout.html:917
-#: aot_flask/templates/layout_default.html:981
+#: aot_flask/templates/layout.html:920
+#: aot_flask/templates/layout_default.html:991
 #, fuzzy
 msgid "Attach image"
 msgstr "添付"
 
-#: aot_flask/templates/layout.html:921
-#: aot_flask/templates/layout_default.html:985
+#: aot_flask/templates/layout.html:924
+#: aot_flask/templates/layout_default.html:995
 msgid "Ask AI anything..."
 msgstr "AIに何でも聞いてください..."
 
-#: aot_flask/templates/layout.html:922
-#: aot_flask/templates/layout_default.html:986
+#: aot_flask/templates/layout.html:925
+#: aot_flask/templates/layout_default.html:996
 msgid "Send"
 msgstr "送信"
 
-#: aot_flask/templates/layout.html:970
-#: aot_flask/templates/layout_default.html:1034
+#: aot_flask/templates/layout.html:973
+#: aot_flask/templates/layout_default.html:1044
 msgid "OK"
 msgstr "OK"
 
-#: aot_flask/templates/layout_default.html:699
+#: aot_flask/templates/layout_default.html:534
+#: aot_flask/templates/pages/ai/ai_agent.html:756
+#: aot_flask/templates/pages/ai/mcp_servers.html:3
+msgid "MCP Servers"
+msgstr "MCPサーバー一覧"
+
+#: aot_flask/templates/layout_default.html:706
 msgid "Account Name"
 msgstr "アカウント名"
 
-#: aot_flask/templates/layout_default.html:706
+#: aot_flask/templates/layout_default.html:713
 msgid "Account Email"
 msgstr "アカウントのメールアドレス"
 
-#: aot_flask/templates/layout_default.html:714
+#: aot_flask/templates/layout_default.html:721
 msgid "Set Password"
 msgstr "パスワードを設定"
 
-#: aot_flask/templates/layout_default.html:717
+#: aot_flask/templates/layout_default.html:724
 msgid ""
 "Signed in with Google — set a password to also be able to log in with "
 "your account name."
 msgstr "Google アカウントでサインインしています — パスワードを設定すると、アカウント名でもログインできるようになります。"
 
-#: aot_flask/templates/layout_default.html:729
+#: aot_flask/templates/layout_default.html:736
 msgid "Selecting a language will override the web browser's language"
 msgstr "言語を選択すると、ブラウザの言語設定より優先されます"
 
-#: aot_flask/templates/layout_default.html:748
-#: aot_flask/templates/layout_default.html:752
+#: aot_flask/templates/layout_default.html:755
+#: aot_flask/templates/layout_default.html:759
 #: aot_flask/templates/settings/users.html:218
 msgid "Google Account"
 msgstr "Google アカウント"
 
-#: aot_flask/templates/layout_default.html:754
+#: aot_flask/templates/layout_default.html:761
 msgid ""
 "Not configured on this server yet — ask an administrator to set it up "
 "under Settings > Integrations."
 msgstr "このサーバーではまだ設定されていません — 管理者に設定 > Integrations で設定してもらってください。"
 
-#: aot_flask/templates/layout_default.html:760
-msgid "Manage Google Account Connection"
-msgstr "Google アカウント連携を管理"
+#: aot_flask/templates/layout_default.html:767
+msgid "Sync Google Calendar Now"
+msgstr "今すぐ Google カレンダーを同期"
 
-#: aot_flask/templates/layout_default.html:761
+#: aot_flask/templates/layout_default.html:768
 #, python-format
 msgid "Connected as %(email)s"
 msgstr "%(email)s として連携済み"
 
-#: aot_flask/templates/layout_default.html:764
-msgid "Manage Connection"
-msgstr "連携を管理"
+#: aot_flask/templates/layout_default.html:773
+#: aot_flask/templates/settings/integrations.html:61
+msgid "Sync Now"
+msgstr "今すぐ同期"
 
-#: aot_flask/templates/layout_default.html:768
+#: aot_flask/templates/layout_default.html:778
 msgid "Disconnect Google Account"
 msgstr "Google アカウント連携を解除"
 
-#: aot_flask/templates/layout_default.html:773
+#: aot_flask/templates/layout_default.html:783
 msgid "Disconnect your Google account?"
 msgstr "Google アカウントの連携を解除しますか?"
 
-#: aot_flask/templates/layout_default.html:773
+#: aot_flask/templates/layout_default.html:783
 #: aot_flask/templates/settings/integrations.html:66
 msgid "Disconnect"
 msgstr "連携解除"
 
-#: aot_flask/templates/layout_default.html:780
+#: aot_flask/templates/layout_default.html:790
 msgid "Connect Google Account"
 msgstr "Google アカウントを連携"
 
-#: aot_flask/templates/layout_default.html:781
+#: aot_flask/templates/layout_default.html:791
 msgid "Sign in with Google and sync your AoT schedule to Google Calendar."
 msgstr "Google でサインインしたり、AoT のスケジュールを Google カレンダーと同期したりできます。"
 
-#: aot_flask/templates/layout_default.html:784
+#: aot_flask/templates/layout_default.html:794
 msgid "Connect"
 msgstr "連携"
 
@@ -8974,6 +9004,7 @@ msgstr "ピンパッドログイン"
 
 #: aot_flask/templates/login_keypad.html:69
 #: aot_flask/templates/login_password.html:137
+#: aot_flask/templates/pages/landing.html:220
 msgid "Log In"
 msgstr "ログイン"
 
@@ -8984,6 +9015,15 @@ msgstr "パスワードでログイン"
 #: aot_flask/templates/login_password.html:71
 msgid "You're logged in already!"
 msgstr "すでにログインしています！"
+
+#: aot_flask/templates/login_password.html:113
+#: aot_flask/templates/pages/energy_usage_outputs.html:37
+#: aot_flask/templates/settings/input.html:38
+#: aot_flask/templates/settings/measurement.html:236
+#: aot_flask/templates/settings/output.html:38
+#: aot_flask/templates/settings/widget.html:38
+msgid "ID"
+msgstr "ID"
 
 #: aot_flask/templates/login_password.html:127
 msgid "Remember Me"
@@ -8996,6 +9036,10 @@ msgstr "90日"
 #: aot_flask/templates/login_password.html:146
 msgid "Sign in with Google"
 msgstr "Google でサインイン"
+
+#: aot_flask/templates/login_password.html:147
+msgid "Sign in with AoT Account"
+msgstr "AoTアカウントでログイン"
 
 #: aot_flask/templates/login_password.html:154
 msgid "Forgot Password"
@@ -9917,14 +9961,6 @@ msgstr "出力一覧"
 msgid "Energy usage calculated from output duration. Generated at"
 msgstr "出力期間から計算されたエネルギー使用量。生成時刻"
 
-#: aot_flask/templates/pages/energy_usage_outputs.html:37
-#: aot_flask/templates/settings/input.html:38
-#: aot_flask/templates/settings/measurement.html:236
-#: aot_flask/templates/settings/output.html:38
-#: aot_flask/templates/settings/widget.html:38
-msgid "ID"
-msgstr "ID"
-
 #: aot_flask/templates/pages/energy_usage_outputs.html:38
 msgid "CH"
 msgstr "CH"
@@ -10251,6 +10287,21 @@ msgstr "ネットワーク状態"
 msgid "Processes (Frontend & Threads)"
 msgstr "プロセス フロントエンドおよびスレッド"
 
+#: aot_flask/templates/pages/ai/components/getting_to_know.html:234
+#: aot_flask/templates/pages/ai/components/onboarding_flow.html:26
+#: aot_flask/templates/pages/landing.html:219
+msgid "Get Started"
+msgstr "始める"
+
+#: aot_flask/templates/pages/landing.html:222
+msgid "Sign Up"
+msgstr ""
+
+#: aot_flask/templates/pages/landing.html:236
+#, fuzzy
+msgid "All rights reserved."
+msgstr "登録されたタスクがありません。"
+
 #: aot_flask/templates/pages/live.html:16
 msgid "No Data"
 msgstr "データなし"
@@ -10378,6 +10429,12 @@ msgstr "出力設定"
 #: aot_flask/templates/pages/output_spacer.html:44
 msgid "Are you sure you want to duplicate?"
 msgstr "複製してもよいですか？"
+
+#: aot_flask/templates/pages/privacy_policy.html:16
+#: aot_flask/templates/pages/terms_of_service.html:16
+#, fuzzy
+msgid "Effective Date"
+msgstr "適用値"
 
 #: aot_flask/templates/pages/wait_and_autoload.html:5
 msgid "Please wait 10 seconds"
@@ -10517,7 +10574,7 @@ msgstr "保存に失敗しました。もう一度お試しください。"
 #: aot_flask/templates/pages/ai/ai_agent.html:80
 #: aot_flask/templates/pages/ai/ai_manage.html:273
 #: aot_flask/templates/pages/ai/ai_manage.html:280
-#: aot_flask/templates/pages/ai/scheduler.html:567
+#: aot_flask/templates/pages/ai/scheduler.html:562
 msgid "AI Agent"
 msgstr "AIエージェント"
 
@@ -10742,11 +10799,6 @@ msgstr "AI設定"
 #: aot_flask/templates/settings/chirpstack.html:162
 msgid "Devices"
 msgstr "デバイス"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:756
-#: aot_flask/templates/pages/ai/mcp_servers.html:3
-msgid "MCP Servers"
-msgstr "MCPサーバー一覧"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:768
 msgid "Experimental Feature"
@@ -11921,12 +11973,12 @@ msgid "Edit Proposed Job"
 msgstr "提案ジョブを編集"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:215
-#: aot_flask/templates/pages/ai/scheduler.html:624
+#: aot_flask/templates/pages/ai/scheduler.html:611
 msgid "Output Control"
 msgstr "出力制御"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:216
-#: aot_flask/templates/pages/ai/scheduler.html:625
+#: aot_flask/templates/pages/ai/scheduler.html:612
 msgid "PID Adjustment"
 msgstr "PID調整"
 
@@ -11938,7 +11990,7 @@ msgstr "ターゲットID"
 #: aot_flask/templates/pages/ai/scheduler.html:304
 #: aot_flask/templates/pages/ai/scheduler.html:399
 #: aot_flask/templates/pages/ai/scheduler.html:488
-#: aot_flask/templates/pages/ai/scheduler.html:682
+#: aot_flask/templates/pages/ai/scheduler.html:669
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:39
 msgid "Schedule Time"
 msgstr "実行予定時刻"
@@ -12137,19 +12189,89 @@ msgstr "ジョブ履歴詳細"
 msgid "By"
 msgstr "作成者"
 
-#: aot_flask/templates/pages/ai/scheduler.html:552
+#: aot_flask/templates/pages/ai/scheduler.html:550
 msgid "Smart AI"
 msgstr "スマートAI"
 
-#: aot_flask/templates/pages/ai/scheduler.html:570
+#: aot_flask/templates/pages/ai/scheduler.html:565
 msgid "Auto-Dispatch (AI Multi-Agent)"
 msgstr "自動ディスパッチ（AIマルチエージェント）"
 
-#: aot_flask/templates/pages/ai/scheduler.html:582
+#: aot_flask/templates/pages/ai/scheduler.html:577
 msgid "e.g., Water Zone A at 5 PM for 10 seconds"
 msgstr "例：午後5時にゾーンAに10秒間給水"
 
-#: aot_flask/templates/pages/ai/scheduler.html:591
+#: aot_flask/templates/pages/ai/scheduler.html:583
+msgid "AI Response"
+msgstr "AIの応答"
+
+#: aot_flask/templates/pages/ai/scheduler.html:586
+msgid "Insight"
+msgstr "インサイト"
+
+#: aot_flask/templates/pages/ai/scheduler.html:613
+msgid "Trigger Function"
+msgstr "トリガー関数"
+
+#: aot_flask/templates/pages/ai/scheduler.html:614
+msgid "Abstract Plan (State)"
+msgstr "抽象プラン (状態)"
+
+#: aot_flask/templates/pages/ai/scheduler.html:619
+#: aot_flask/templates/pages/ai/scheduler.html:752
+msgid "Target Device"
+msgstr "対象デバイス"
+
+#: aot_flask/templates/pages/ai/scheduler.html:629
+#: aot_flask/templates/pages/form_options/Custom_Options.html:297
+#: aot_flask/templates/pages/geo/geo_facility.html:1484
+#: inputs/aot_test_input_save_value.py:65
+msgid "Channel"
+msgstr "チャネル"
+
+#: aot_flask/templates/pages/ai/scheduler.html:632
+#: aot_flask/templates/pages/ai/scheduler.html:794
+msgid "CH0 (Default)"
+msgstr "CH0 (デフォルト)"
+
+#: aot_flask/templates/pages/ai/scheduler.html:646
+msgid "PID Setting"
+msgstr "PID設定"
+
+#: aot_flask/templates/pages/ai/scheduler.html:657
+msgid "Amount (sec/PWM)"
+msgstr "値 (秒/PWM)"
+
+#: aot_flask/templates/pages/ai/scheduler.html:663
+msgid "Duration (Minutes)"
+msgstr "継続時間 (分)"
+
+#: aot_flask/templates/pages/ai/scheduler.html:675
+msgid "Recurrence"
+msgstr "繰り返し"
+
+#: aot_flask/templates/pages/ai/scheduler.html:678
+msgid "One-time"
+msgstr "1回のみ"
+
+#: aot_flask/templates/pages/ai/scheduler.html:679
+#: aot_flask/templates/settings/general.html:350
+msgid "Daily"
+msgstr "日次"
+
+#: aot_flask/templates/pages/ai/scheduler.html:680
+msgid "Interval (Minutes)"
+msgstr "間隔 (分)"
+
+#: aot_flask/templates/pages/ai/scheduler.html:685
+msgid "Repeat Every (Minutes)"
+msgstr "繰り返し周期 (分)"
+
+#: aot_flask/templates/pages/ai/scheduler.html:691
+msgid "Task Note"
+msgstr "タスクメモ"
+
+#: aot_flask/templates/pages/ai/scheduler.html:704
 #: aot_flask/templates/pages/function_options/conditional_options.html:126
 #: aot_flask/templates/pages/function_options/function_options.html:101
 #: aot_flask/templates/pages/function_options/trigger_options.html:119
@@ -12157,138 +12279,74 @@ msgstr "例：午後5時にゾーンAに10秒間給水"
 msgid "Ask AI"
 msgstr "AIに質問"
 
-#: aot_flask/templates/pages/ai/scheduler.html:596
-msgid "AI Response"
-msgstr "AIの応答"
-
-#: aot_flask/templates/pages/ai/scheduler.html:599
-msgid "Insight"
-msgstr "インサイト"
-
-#: aot_flask/templates/pages/ai/scheduler.html:626
-msgid "Trigger Function"
-msgstr "トリガー関数"
-
-#: aot_flask/templates/pages/ai/scheduler.html:627
-msgid "Abstract Plan (State)"
-msgstr "抽象プラン (状態)"
-
-#: aot_flask/templates/pages/ai/scheduler.html:632
-#: aot_flask/templates/pages/ai/scheduler.html:756
-msgid "Target Device"
-msgstr "対象デバイス"
-
-#: aot_flask/templates/pages/ai/scheduler.html:642
-#: aot_flask/templates/pages/form_options/Custom_Options.html:297
-#: aot_flask/templates/pages/geo/geo_facility.html:1484
-#: inputs/aot_test_input_save_value.py:65
-msgid "Channel"
-msgstr "チャネル"
-
-#: aot_flask/templates/pages/ai/scheduler.html:645
-#: aot_flask/templates/pages/ai/scheduler.html:798
-msgid "CH0 (Default)"
-msgstr "CH0 (デフォルト)"
-
-#: aot_flask/templates/pages/ai/scheduler.html:659
-msgid "PID Setting"
-msgstr "PID設定"
-
-#: aot_flask/templates/pages/ai/scheduler.html:670
-msgid "Amount (sec/PWM)"
-msgstr "値 (秒/PWM)"
-
-#: aot_flask/templates/pages/ai/scheduler.html:676
-msgid "Duration (Minutes)"
-msgstr "継続時間 (分)"
-
-#: aot_flask/templates/pages/ai/scheduler.html:688
-msgid "Recurrence"
-msgstr "繰り返し"
-
-#: aot_flask/templates/pages/ai/scheduler.html:691
-msgid "One-time"
-msgstr "1回のみ"
-
-#: aot_flask/templates/pages/ai/scheduler.html:692
-#: aot_flask/templates/settings/general.html:350
-msgid "Daily"
-msgstr "日次"
-
-#: aot_flask/templates/pages/ai/scheduler.html:693
-msgid "Interval (Minutes)"
-msgstr "間隔 (分)"
-
-#: aot_flask/templates/pages/ai/scheduler.html:698
-msgid "Repeat Every (Minutes)"
-msgstr "繰り返し周期 (分)"
-
-#: aot_flask/templates/pages/ai/scheduler.html:704
-msgid "Task Note"
-msgstr "タスクメモ"
-
-#: aot_flask/templates/pages/ai/scheduler.html:715
-msgid "Register"
-msgstr "登録"
-
-#: aot_flask/templates/pages/ai/scheduler.html:757
+#: aot_flask/templates/pages/ai/scheduler.html:753
 msgid "Amount (seconds or PWM)"
 msgstr "量（秒またはPWM）"
 
-#: aot_flask/templates/pages/ai/scheduler.html:760
+#: aot_flask/templates/pages/ai/scheduler.html:755
 msgid "Target PID Controller"
 msgstr "対象PIDコントローラー"
 
-#: aot_flask/templates/pages/ai/scheduler.html:764
+#: aot_flask/templates/pages/ai/scheduler.html:758
 msgid "Target Function"
 msgstr "対象関数"
 
-#: aot_flask/templates/pages/ai/scheduler.html:767
+#: aot_flask/templates/pages/ai/scheduler.html:760
 msgid "Target Zone/Site"
 msgstr "対象ゾーン/サイト"
 
-#: aot_flask/templates/pages/ai/scheduler.html:828
+#: aot_flask/templates/pages/ai/scheduler.html:770
+#, fuzzy
+msgid "No items available"
+msgstr "利用不可"
+
+#: aot_flask/templates/pages/ai/scheduler.html:824
 msgid "Approve this job?"
 msgstr "このジョブを承認しますか?"
 
-#: aot_flask/templates/pages/ai/scheduler.html:833
+#: aot_flask/templates/pages/ai/scheduler.html:829
 msgid "Rejection reason (optional):"
 msgstr "却下理由 (任意):"
 
-#: aot_flask/templates/pages/ai/scheduler.html:858
+#: aot_flask/templates/pages/ai/scheduler.html:854
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
 #, fuzzy
 msgid "Cancellation reason (optional):"
 msgstr "却下理由 (任意):"
 
-#: aot_flask/templates/pages/ai/scheduler.html:866
+#: aot_flask/templates/pages/ai/scheduler.html:862
 msgid "Please enter a command"
 msgstr "コマンドを入力してください"
 
-#: aot_flask/templates/pages/ai/scheduler.html:890
+#: aot_flask/templates/pages/ai/scheduler.html:886
 #: aot_flask/templates/pages/geo/geo_facility.html:2059
 #: aot_flask/templates/pages/geo/geo_facility.html:3900
 #: aot_flask/templates/pages/geo/geo_facility.html:3904
 msgid "Error: "
 msgstr "エラー:"
 
-#: aot_flask/templates/pages/ai/scheduler.html:946
+#: aot_flask/templates/pages/ai/scheduler.html:948
 msgid "State: "
 msgstr "状態:"
 
-#: aot_flask/templates/pages/ai/scheduler.html:946
+#: aot_flask/templates/pages/ai/scheduler.html:948
 msgid "Type: "
 msgstr "種類:"
 
-#: aot_flask/templates/pages/ai/scheduler.html:946
+#: aot_flask/templates/pages/ai/scheduler.html:948
 msgid "Target: "
 msgstr "対象:"
 
-#: aot_flask/templates/pages/ai/scheduler.html:946
+#: aot_flask/templates/pages/ai/scheduler.html:948
 msgid "By: "
 msgstr "依頼者:"
 
-#: aot_flask/templates/pages/ai/scheduler.html:946
+#: aot_flask/templates/pages/ai/scheduler.html:949
+#, fuzzy
+msgid "Local time: "
+msgstr "全期間"
+
+#: aot_flask/templates/pages/ai/scheduler.html:950
 msgid "Reasoning: "
 msgstr "根拠:"
 
@@ -12307,11 +12365,6 @@ msgstr "インタラクションが多いほど精度が上がります"
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:230
 msgid "You control what AI focuses on"
 msgstr "AIが注目する内容をコントロールできます"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:234
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:26
-msgid "Get Started"
-msgstr "始める"
 
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:242
 msgid "Tell Us About Your Facility"
@@ -16301,11 +16354,6 @@ msgstr ""
 #, fuzzy
 msgid "Last Synced"
 msgstr "最終確認"
-
-#: aot_flask/templates/settings/integrations.html:61
-#, fuzzy
-msgid "Sync Now"
-msgstr "同期"
 
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
@@ -23541,4 +23589,629 @@ msgstr "入力有効期間（秒）"
 #: widgets/widget_trigger_sequence.py:315
 msgid "Input value validity duration"
 msgstr "入力値有効期間"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:69
+#, fuzzy
+msgid "Integrated Environment Control"
+msgstr "統合環境制御 (IEC)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:73
+msgid ""
+"Coordinates registered Output actuators to optimise photosynthesis. VPD "
+"is the primary control target; temperature and humidity act as safety "
+"constraints. Add \"Environment Control: Register Actuator\" actions to "
+"register devices. External environment data (outdoor temperature, "
+"humidity, wind, rain, solar, CO₂) comes from the linked facility's "
+"outdoor sensors, or optionally from the ext_context_collector function."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:85
+msgid "Trigger an immediate cycle, reload actuators, or issue an emergency stop."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:92
+#, fuzzy
+msgid "Reload Actuators"
+msgstr "アクチュエーターなし"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:94
+msgid "Re-read the Actions table and rebuild actuator profiles."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:101
+#, fuzzy
+msgid "Run Now"
+msgstr "不明"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:103
+msgid "Execute one coordination cycle immediately using current sensor readings."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:110
+#, fuzzy
+msgid "Emergency Stop"
+msgstr "緊急停止を表示"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:112
+msgid "Immediately set all actuators to safe_default and pause control for 60 s."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:119
+msgid "Apply Crop Preset Targets"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:121
+msgid ""
+"Force-fill VPD / CO₂ / Temp / DLI / GDD target fields from the selected "
+"Crop Preset (overwrites current values; variables using a Method are "
+"skipped). Save the function first if you just changed the crop preset."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:143
+msgid ""
+"Coordination cycle interval. Recommended: slowest actuator response time "
+"× 1.5."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:151
+#, fuzzy
+msgid "Max Sensor Age (seconds)"
+msgstr "最大経過時間 秒"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:153
+msgid "Reject sensor readings older than this value. 0 = no limit."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:160
+#, fuzzy
+msgid "Growth Schedule"
+msgstr "AIスケジューラー"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:170
+msgid ""
+"Planting / germination date. Pick from the calendar. The date is "
+"interpreted in the device/facility local timezone (the system stores it "
+"as UTC internally — no manual conversion needed). Used to compute "
+"weeks_elapsed for all Method curves. Leave empty to disable week-based "
+"progression (Methods use wall-clock day only)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:184
+#, fuzzy
+msgid "Schedule End (harvest date)"
+msgstr "スケジュールが更新されました"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:186
+msgid ""
+"Harvest / cycle-end date. Pick from the calendar. Interpreted in the "
+"device/facility local timezone (same rules as Schedule Start). Methods "
+"keep following actual elapsed weeks until this date; once it passes, "
+"control stops — every actuator returns to its configured end-behavior and"
+" coordination cycles halt. Leave empty for no end date."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:201
+msgid ""
+"Direct week adjustment applied on top of elapsed weeks. Use a positive "
+"value to fast-forward (e.g. system started mid-cycle), or negative to "
+"compensate for downtime. Default 0."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:210
+#, fuzzy
+msgid "Facility (optional)"
+msgstr "施設情報"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:218
+#, fuzzy
+msgid "Linked Facility"
+msgstr "新規施設"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:220
+msgid ""
+"When set, actuators are auto-discovered from this facility (envelope, "
+"side/roof vents, curtains, fans). GIS metadata (azimuth, area, U-value) "
+"is attached to each actuator profile so wind direction and facility "
+"geometry can be considered. Manual \"Environment Control\" actions below "
+"still apply and are merged with the facility-derived list. Leave empty to"
+" use manual actions only."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:233
+#, fuzzy
+msgid "Bay Scope (optional)"
+msgstr "メモ(任意)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:235
+msgid ""
+"Restrict this coordinator to one bay of the linked facility. Enter the "
+"bay ID (see the facility editor bay list; e.g. \"bay_1\"). Only sensors "
+"and actuators placed inside that bay are used, and facility volume/area "
+"are scaled to the bay share. Leave empty to control the entire facility. "
+"Create one coordinator per bay to control multiple bays independently."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:247
+#, fuzzy
+msgid "Time Control"
+msgstr "コントロールを非表示"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:254
+#, fuzzy
+msgid "Enable Time Window"
+msgstr "時間制御ウィンドウ終了時"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:256
+msgid "When enabled, control only runs between Start and End times."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:266
+msgid ""
+"Control period start time (24-hour format). Only active when Enable Time "
+"Window is turned on."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:277
+msgid ""
+"On-end behavior per actuator is configured in each Action. Ignored when "
+"Photoperiod Method is set."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:287
+#, fuzzy
+msgid "Photoperiod Method"
+msgstr "その他のメソッド"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:289
+msgid ""
+"Optional. Select an AoT Method that returns photoperiod length in hours "
+"(e.g. 14.0 = 14 h light). The function computes time_start/end "
+"symmetrically around the Anchor time. When set, the static Start/End "
+"times above are overridden."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:300
+msgid "Photoperiod Anchor (HH:MM)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:302
+msgid ""
+"Solar-noon equivalent. The photoperiod window is centred on this time. "
+"Default 12:00. Adjust for your latitude / season if needed."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:318
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:406
+#, fuzzy
+msgid "Static Target"
+msgstr "AIエージェント"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:319
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:407
+msgid "Method (time-varying)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:321
+#, fuzzy
+msgid "Setpoint Type"
+msgstr "設定値"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:323
+msgid ""
+"Static: use the fixed target value below. Method: follow an AoT Method "
+"curve."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:332
+#, fuzzy
+msgid "Target VPD (kPa)"
+msgstr "ターゲットID"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:333
+msgid "Used when Setpoint Type = Static. 0 = disable VPD control."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:343
+msgid ""
+"Used when Setpoint Type = Method. Select an AoT Method that returns a VPD"
+" setpoint (kPa)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:352
+#, fuzzy
+msgid "VPD Priority"
+msgstr "優先度"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:353
+msgid "Higher value = processed first. Default 1.2."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:360
+msgid "VPD Tolerance (kPa)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:362
+msgid ""
+"Dead-band half-width around the VPD setpoint. Adjustments are skipped "
+"when the deviation is within this range, reducing unnecessary actuator "
+"cycling. Typical value: 0.05–0.15 kPa."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:378
+msgid "Max Light Threshold"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:380
+msgid "Activate shade screen when light exceeds this value. 0 = disabled."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:388
+msgid "Min Light Threshold (Supplemental)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:390
+msgid ""
+"Activate supplemental lighting when light falls below this value. 0 = "
+"disabled (most facilities — natural light only)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:398
+#, fuzzy
+msgid "CO₂"
+msgstr "CO2"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:409
+#, fuzzy
+msgid "CO₂ Setpoint Type"
+msgstr "設定値トラッキングタイプ"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:411
+msgid ""
+"Static: use the fixed target below. Method: follow an AoT Method curve "
+"(ppm vs time-of-day / growth week)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:420
+#, fuzzy
+msgid "Target CO₂ (ppm)"
+msgstr "目標位置(%)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:421
+#, fuzzy
+msgid "Used when CO₂ Setpoint Type = Static."
+msgstr "Set the Setpoint of a PID."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:429
+#, fuzzy
+msgid "CO₂ Method"
+msgstr "メソッド"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:431
+msgid ""
+"Used when CO₂ Setpoint Type = Method. Select an AoT Method that returns a"
+" CO₂ setpoint (ppm)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:440
+#, fuzzy
+msgid "CO₂ Priority"
+msgstr "優先度"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:442
+msgid ""
+"Processing order weight for CO₂ relative to other control variables. "
+"Higher value = processed earlier in each cycle. Default 0.8 (lower than "
+"VPD 1.2, since CO₂ enrichment is secondary)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:452
+msgid "CO₂ Tolerance (ppm)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:454
+msgid ""
+"Dead-band half-width around the CO₂ setpoint. Adjustments are skipped "
+"when the deviation is within this range. Typical value: 50–150 ppm."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:470
+#, fuzzy
+msgid "Max Temperature (°C)"
+msgstr "最高気温"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:472
+msgid "Hard upper limit. Forces cooling when exceeded, regardless of VPD target."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:480
+#, fuzzy
+msgid "Min Temperature (°C)"
+msgstr "最低気温"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:482
+msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:496
+#, fuzzy, python-format
+msgid "Max Humidity (%)"
+msgstr "予報湿度 (%%)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:498
+msgid "Hard upper limit. Prevents VPD bypass via extreme humidity."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:506
+#, fuzzy
+msgid "Min Humidity (%)"
+msgstr "室内湿度"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:508
+msgid "Hard lower limit. Prevents VPD bypass via extreme dryness."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:515
+#, fuzzy
+msgid "VPD Decomposition"
+msgstr "位置"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:522
+#, fuzzy
+msgid "T Weight (0-1)"
+msgstr "軒高 (m)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:524
+msgid ""
+"VPD decomposition: fraction of adjustment via temperature (rest via "
+"humidity). 0.6 = favour temperature adjustment. Range 0.0~1.0."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:532
+msgid "Photosynthesis Model"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:539
+#, fuzzy
+msgid "Enable Photosynthesis-Oriented Control"
+msgstr "出力制御を有効化"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:541
+msgid ""
+"When enabled, the Big-Leaf photosynthesis model identifies the current "
+"limiting factor (Light / CO₂ / Temperature / VPD) each cycle and "
+"dynamically raises that variable's priority. Requires Light sensor. "
+"Recommended when ≥ 3 active actuator types are available."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:553
+#, fuzzy
+msgid "Tomato"
+msgstr "自動"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:554
+msgid "Lettuce / Leafy greens"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:555
+msgid "Cucumber"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:556
+#, fuzzy
+msgid "Strawberry"
+msgstr "Raspberry Pi"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:557
+msgid "Pepper / Paprika"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:559
+#, fuzzy
+msgid "Crop Preset"
+msgstr "プリセット"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:561
+msgid ""
+"Crop recipe. On Save, fills the target options from this preset — VPD, "
+"CO₂, Temp min/max, DLI and GDD — unless you changed a value or use a "
+"Method for that variable (your setting wins). Use the \"Apply Crop "
+"Preset\" button to force-overwrite. Also selects Big-Leaf model params "
+"(A_max, K_L, K_C, T_opt, VPD_half), used only when Photosynthesis-"
+"Oriented Control is on."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:572
+msgid "Guide Ranges (T / RH)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:579
+msgid "Guide T Min (°C)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:581
+msgid ""
+"Advisory lower bound for temperature. Triggers forced heating when "
+"exceeded (replaces Min Temperature setting when using crop-preset-derived"
+" guide ranges)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:591
+msgid "Guide T Max (°C)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:592
+#, fuzzy
+msgid "Advisory upper bound for temperature."
+msgstr "室内気温"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:599
+msgid "Guide RH Min (%)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:600
+msgid "Advisory lower bound for relative humidity."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:607
+msgid "Guide RH Max (%)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:608
+msgid "Advisory upper bound for relative humidity."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:614
+#, fuzzy
+msgid "Cumulative Goal Tracker"
+msgstr "共同目標トラッカー"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:621
+#, fuzzy
+msgid "Enable DLI / GDD Tracker"
+msgstr "ティックの配置を有効化"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:623
+msgid ""
+"Tracks daily light integral (DLI) and growing degree-days (GDD), rolling "
+"over at the facility-local midnight (device timezone). Light is converted"
+" to PPFD by sensor unit (W/m² assumed if unknown). Generates compensation"
+" suggestions when debt accumulates. Requires a Light sensor for DLI "
+"tracking."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:635
+msgid "DLI Target (mol/m²/day)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:637
+msgid ""
+"Daily light integral target. 0 = use the selected crop preset default "
+"(leafy greens ~14, tomato/cucumber/pepper ~22, strawberry ~17). Turn the "
+"tracker off above to disable entirely."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:647
+msgid "GDD Target (°C·day/day)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:649
+msgid ""
+"Growing degree-day target per day. 0 = use the selected crop preset "
+"default (≈ T_opt − T_base). Computed as max(0, T_mean − T_base) per "
+"cycle."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:664
+#, fuzzy
+msgid "Strong Wind Threshold (m/s)"
+msgstr "超省電力しきい値(V)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:666
+msgid "Openings (vents, side walls) are forced closed above this wind speed."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:673
+#, fuzzy
+msgid "Effect Calibration"
+msgstr "キャリブレーション"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:681
+msgid "Legacy (built-in K constants)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:682
+msgid "Shadow (grey-box logged, legacy controls)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:683
+msgid "Grey-box (physics model controls)"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:685
+#, fuzzy
+msgid "Effect Engine"
+msgstr "U値（実効）"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:687
+msgid ""
+"Legacy: uses built-in K_* constants (default, safe). Shadow: runs grey-"
+"box model in parallel for KPI logging only — no control change. Grey-box:"
+" physics-model control (effect magnitudes from the grey-box model, with "
+"MPC look-ahead when a forecast is available). Grey-box activates ONLY "
+"after the shadow KPI passes and parameters have converged; until then it "
+"automatically falls back to Legacy control. Recommended flow: run Shadow "
+"first, then switch to Grey-box."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
+#, fuzzy
+msgid "Enable RLS Calibration"
+msgstr "キャリブレーションをクリア"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:703
+msgid ""
+"Learn per-actuator effect coefficients (K_*) from sensor response. "
+"Requires several days of data to converge. Falls back to built-in "
+"defaults until convergence."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:713
+#, fuzzy
+msgid "Enable Active Probing"
+msgstr "AIサービスを有効化"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:715
+#, python-format
+msgid ""
+"Periodically perturb one actuator by ±10 %% to improve calibration "
+"identifiability. Only triggers when load is low and no safety gate is "
+"active. Requires RLS Calibration to be enabled."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:725
+#, fuzzy
+msgid "Probe Interval (seconds)"
+msgstr "キャプチャ間隔（秒）"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:727
+msgid "Minimum time between active probing events. Default 3600 s (1 hour)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:734
+#, fuzzy
+msgid "Forecast Feedforward"
+msgstr "予報時間(何時間後)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:741
+#, fuzzy
+msgid "Enable Forecast Feedforward"
+msgstr "予報データを読み込めませんでした。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:743
+msgid ""
+"Use KMA short-term weather forecast (forecast.json) to proactively shift "
+"temperature/humidity setpoints and inhibit ventilation before adverse "
+"weather arrives."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:753
+#, fuzzy
+msgid "Forecast Lookahead (hours)"
+msgstr "予報時間(何時間後)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:755
+msgid ""
+"How many hours ahead to check for incoming adverse weather (1–6 h). "
+"Longer lookahead gives earlier warning but may over-correct."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:772
+msgid ""
+"Write per-cycle decision data to InfluxDB (goal targets, deviations, "
+"mode, cycle metrics, actuator mismatch count, learning hygiene). Also "
+"emits per-cycle DEBUG log lines (constraint violations, feedforward "
+"decisions, deadband skips). Leave OFF for production — critical events "
+"(safety gate, dispatch failure, runtime state error) are always recorded "
+"regardless of this flag."
+msgstr ""
 

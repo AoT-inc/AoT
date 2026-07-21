@@ -93,45 +93,17 @@ def get_device_tz(device) -> pytz.BaseTzInfo:
     """
     Return pytz timezone for a device row.
 
-    Priority: device.timezone → coords → user setting → UTC.
+    Priority: device.timezone → coords → system (Misc.timezone) → UTC.
     Accepts any object with `timezone`, `latitude`, `longitude` attributes
     (Input/Output/Controller/Function rows all qualify).
-    """
-    tz_name = None
-    if device is not None:
-        tz_name = getattr(device, 'timezone', None)
-        if not tz_name:
-            tz_name = resolve_tz_from_coords(
-                getattr(device, 'latitude', None),
-                getattr(device, 'longitude', None),
-            )
-    if not tz_name:
-        # System-wide fallback: read Misc.timezone via the daemon-compatible
-        # SQLite helper first.  This works in BOTH Flask and daemon contexts.
-        # get_timezone_name() (Flask-SQLAlchemy) is skipped here because it
-        # silently returns 'UTC' in the daemon context instead of raising.
-        try:
-            from aot.utils.database import db_retrieve_table_daemon
-            from aot.databases.models.misc import Misc
-            misc = db_retrieve_table_daemon(Misc, entry='first')
-            if misc and getattr(misc, 'timezone', None):
-                tz_name = misc.timezone
-        except Exception:
-            tz_name = None
 
-    if not tz_name:
-        # Final fallback: Flask-SQLAlchemy path (Flask app context only).
-        try:
-            from aot.utils.time_utils import get_timezone_name
-            name = get_timezone_name()
-            if name and name != 'UTC':
-                tz_name = name
-        except Exception:
-            tz_name = None
-    try:
-        return pytz.timezone(tz_name or 'UTC')
-    except Exception:
-        return pytz.utc
+    Wrapper: the resolution chain now lives in aot.utils.timekit.resolve_tz
+    (single source of truth — see docs/design/timezone-management.md).
+    Behavior is unchanged; this thin shim is kept for existing callers.
+    """
+    from aot.utils.timekit import resolve_tz
+    tzinfo, _source = resolve_tz(device)
+    return tzinfo
 
 
 def to_device_tz(dt: Optional[datetime], device) -> Optional[datetime]:

@@ -142,6 +142,7 @@ nav:
   - System:
     - System Information: System-Information.md
     - System Configuration: Configuration-Settings.md
+    - Time & Timezones: time-handling.md
     - Upgrade/Backup/Restore: Upgrade-Backup-Restore.md
     - Export/Import: Export-Import.md
     - Error Codes: Error-Codes.md

@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 def _maybe_refresh(target):
     try:
+        # Explicit override (tz_source='explicit') is pinned — never auto-recompute.
+        # (docs/design/timezone-management.md §4)
+        if getattr(target, "tz_source", None) == 'explicit':
+            return
         from aot.utils.device_tz import resolve_tz_from_coords
         new_tz = resolve_tz_from_coords(
             getattr(target, "latitude", None),
@@ -22,6 +26,8 @@ def _maybe_refresh(target):
         )
         if new_tz and getattr(target, "timezone", None) != new_tz:
             target.timezone = new_tz
+            if hasattr(target, "tz_source"):
+                target.tz_source = 'coords'
         elif new_tz is None:
             target.timezone = None
     except Exception as exc:

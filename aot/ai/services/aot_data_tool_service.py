@@ -768,12 +768,9 @@ class AoTDataToolService:
                 target_name = extra.pop('location', None) or extra.pop('zone_name', None) \
                     or extra.pop('place', None) or extra.pop('entity_name', None)
 
-            # 1. Parse run_at datetime — AI-provided wall-clock is USER-LOCAL time,
-            #    stored as UTC-aware (project standard). serialize_ts() converts back
-            #    for display. Shared with edit/search so CRUD stays tz-consistent.
-            run_at = AoTDataToolService._schedule_wall_to_utc(date, time)
-
-            # 2. Resolve location → real entity (or ask for disambiguation). Do NOT
+            # 1. Resolve location FIRST — the target's tz is the wall-clock anchor
+            #    (device-local is the confirmed policy, timezone-management.md §6).
+            #    run_at is computed in step 2 once the anchor is known. Do NOT
             #    silently create a floating (target_id='none') schedule when the user
             #    named a place — same orphan footgun the notes tool guards against.
             target_id = 'none'
@@ -793,6 +790,11 @@ class AoTDataToolService:
                     }
                 target_id = _tid
                 target_type = _tt
+
+            # 2. Anchor the wall-clock to the target's local tz, then store as UTC.
+            _anchor_tz, _anchor_name, _anchor_src = \
+                AoTDataToolService._resolve_schedule_anchor(target_id)
+            run_at = AoTDataToolService._schedule_wall_to_utc(date, time, anchor_tz=_anchor_tz)
 
             # 3. Build reasoning + params
             job_name = content if not worker else f"{content} (worker: {worker})"
@@ -826,9 +828,18 @@ class AoTDataToolService:
             # 5. Immediately approve — no APScheduler trigger for human schedules
             AISchedulerService.approve_job(meta.id, decided_by='AI')
 
+            # Persist the tz anchor so display can re-derive device-local time.
+            try:
+                meta.anchor_tz = _anchor_name
+                meta.anchor_source = _anchor_src
+                from aot.databases.models import db as _db
+                _db.session.commit()
+            except Exception:
+                pass
+
             result = {
                 "status": "success",
-                "message": f"Schedule registered: {date} {time} - {content}",
+                "message": f"Schedule registered: {date} {time} ({_anchor_name}) - {content}",
                 "job_id": meta.unique_id,
                 "tags": tag_label,
             }
@@ -908,14 +919,40 @@ class AoTDataToolService:
                     "message": f"No notes found for {_where}.",
                 }
 
+            # Each note displays in ITS OWN location tz (the device/zone/site it is
+            # attached to) — consistent with how that entity's schedules show device
+            # tz. A located note "at 3-1 06:00" should read 06:00 there, not in the
+            # system clock. Cached per target_id (search is usually one target). §7
+            _tz_by_target = {}
+            from aot.utils.timekit import to_tz
+
+            def _note_tzname(tid):
+                if not tid:
+                    return None
+                if tid not in _tz_by_target:
+                    try:
+                        from aot.utils.device_tz import resolve_location_tz
+                        _tz_by_target[tid] = str(resolve_location_tz(tid))
+                    except Exception:
+                        _tz_by_target[tid] = None
+                return _tz_by_target[tid]
+
             results = []
             for r in rows:
+                # r.date_time is stored naive-UTC (SQLite). Display in the note's
+                # location tz when it has one, else the system tz.
+                _ntz = _note_tzname(r.target_id)
+                if r.date_time:
+                    if _ntz:
+                        _date = to_tz(r.date_time, _ntz).strftime("%Y-%m-%d %H:%M")
+                    else:
+                        _date = to_local(r.date_time).strftime("%Y-%m-%d %H:%M")
+                else:
+                    _date = None
                 results.append({
                     "note_id": r.unique_id,
-                    # r.date_time is stored naive-UTC (SQLite) — localize before
-                    # display, or a bare strftime shows the UTC hour as if it
-                    # were local wall-clock time (up to 9h off for KST).
-                    "date": to_local(r.date_time).strftime("%Y-%m-%d %H:%M") if r.date_time else None,
+                    "date": _date,
+                    "date_tz": _ntz,
                     "name": r.name,
                     "category": r.category,
                     "tags": r.tags,
@@ -1023,6 +1060,16 @@ class AoTDataToolService:
                 approval_required=False  # → propose_job이 approve_job() 자동 호출
             )
 
+            # Persist the device-local tz anchor (already used for interpretation
+            # above) so display can re-derive the device wall-clock. §6.
+            try:
+                meta.anchor_tz = str(resolve_location_tz(output.unique_id))
+                meta.anchor_source = 'device'
+                from aot.databases.models import db as _db
+                _db.session.commit()
+            except Exception:
+                pass
+
             logger.info(f"[AI Schedule] Registered APScheduler job: {output.name} {state} at {scheduled_dt} (meta_id={meta.id if hasattr(meta, 'id') else meta})")
             return {
                 "status": "success",
@@ -1037,20 +1084,37 @@ class AoTDataToolService:
     # Schedule CRUD helpers (SchedulerJobMeta is the ledger of record — A안)
     # ---------------------------------------------------------------------
     @staticmethod
-    def _schedule_wall_to_utc(date_str, time_str="09:00"):
-        """AI가 준 벽시계 날짜/시각(YYYY-MM-DD, HH:MM)을 '사용자 로컬 시각'으로
-        해석하여 저장용 UTC-aware datetime으로 변환한다.
+    def _resolve_schedule_anchor(target_id):
+        """예약 벽시계의 앵커 tz 를 해석한다 (docs/design/timezone-management.md §6).
 
-        프로젝트 표준: 저장 datetime은 모두 UTC-aware (aot/utils/tz_utils.py).
-        표시할 때 serialize_ts()가 로컬로 되돌린다. (과거 add_schedule은 벽시계를
-        naive=UTC로 저장해 표시 시 로컬로 한 번 더 밀리는 잠재 버그가 있었음 —
-        create/edit/read를 이 헬퍼로 통일해 규약을 일치시킨다.)
+        확정 정책: 장치 예약은 '장치 현지 시각' 기준. target_id 가 위치를 가진
+        엔티티(구역/시설/장치)면 그 위치의 tz 를, 없으면(떠 있는 농장 전체 일정)
+        시스템 tz 를 앵커로 쓴다. 반환: (tzinfo, tz_name, source).
         """
-        from aot.utils.tz_utils import get_user_tz
-        from datetime import timezone as _tz
-        naive = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
-        local_aware = get_user_tz().localize(naive)
-        return local_aware.astimezone(_tz.utc)
+        from aot.utils.timekit import system_tz
+        if target_id and target_id != 'none':
+            try:
+                from aot.utils.device_tz import resolve_location_tz
+                tz = resolve_location_tz(target_id)
+                if tz is not None:
+                    return tz, str(tz), 'device'
+            except Exception:
+                pass
+        tz = system_tz()
+        return tz, str(tz), 'system'
+
+    @staticmethod
+    def _schedule_wall_to_utc(date_str, time_str="09:00", anchor_tz=None):
+        """벽시계 날짜/시각(YYYY-MM-DD, HH:MM)을 앵커 tz 로 해석해 저장용
+        UTC-aware datetime 으로 변환한다.
+
+        anchor_tz(pytz tzinfo 또는 IANA 문자열)를 주면 그 시계로 해석한다 —
+        확정 정책상 장치 예약은 장치 현지 tz 가 앵커. 생략 시 시스템 tz(농장 기본)로
+        폴백해 기존 동작을 보존한다. 저장은 UTC-aware, 표시는 앵커 tz 로 되돌린다.
+        """
+        from aot.utils.timekit import wall_to_utc, system_tz
+        tz = anchor_tz if anchor_tz is not None else system_tz()
+        return wall_to_utc(f"{date_str} {time_str}", tz)
 
     @staticmethod
     def _resolve_schedule_job(job_id):
@@ -1084,9 +1148,27 @@ class AoTDataToolService:
             dur = params.get('duration_minutes')
             content = f"{str(params['state']).capitalize()}" + (f" ({dur}min)" if dur else "")
         content = content or meta.reasoning or meta.action_type
+
+        # Display the wall-clock in the schedule's anchor tz (device-local by
+        # policy) so a viewer in another tz still sees the device's own time. §7
+        anchor = getattr(meta, 'anchor_tz', None)
+        if not anchor and meta.target_id and meta.target_id != 'none':
+            try:
+                from aot.utils.device_tz import resolve_location_tz
+                anchor = str(resolve_location_tz(meta.target_id))
+            except Exception:
+                anchor = None
+        if meta.schedule_time:
+            from aot.utils.timekit import to_tz
+            when = (to_tz(meta.schedule_time, anchor).isoformat() if anchor
+                    else serialize_ts(meta.schedule_time))
+        else:
+            when = None
+
         return {
             'job_id': meta.unique_id,
-            'when': serialize_ts(meta.schedule_time) if meta.schedule_time else None,
+            'when': when,
+            'when_tz': anchor,
             'content': content,
             'worker': params.get('worker') or None,
             'location': params.get('target_name') or None,   # resolved entity name
@@ -1267,17 +1349,27 @@ class AoTDataToolService:
                 params['target_type'] = _tt
                 params['target_name'] = _rn
 
-            # 1. 시각 변경 — date/time 중 하나만 와도 기존 값과 병합
+            # 앵커 tz(장치 현지) — 위치가 바뀌었으면 새 위치 기준. §6
+            _anchor_tz, _anchor_name, _anchor_src = \
+                AoTDataToolService._resolve_schedule_anchor(meta.target_id)
+            if target_name:
+                # 위치 재연결: 발화 순간(UTC)은 유지하되 표시 앵커를 새 장치로 갱신.
+                meta.anchor_tz = _anchor_name
+                meta.anchor_source = _anchor_src
+
+            # 1. 시각 변경 — 앵커 tz 기준 해석. date/time 하나만 와도 기존값과 병합.
             new_dt = None
             if date or time:
-                from aot.utils.time_utils import to_local
-                base_local = to_local(meta.schedule_time) if meta.schedule_time else None
+                from aot.utils.timekit import to_tz
+                base_local = to_tz(meta.schedule_time, _anchor_tz) if meta.schedule_time else None
                 new_date = date or (base_local.strftime("%Y-%m-%d") if base_local else None)
                 new_time = time or (base_local.strftime("%H:%M") if base_local else "09:00")
                 if not new_date:
                     return {"error": "date is required (no existing date to keep)."}
-                new_dt = AoTDataToolService._schedule_wall_to_utc(new_date, new_time)
+                new_dt = AoTDataToolService._schedule_wall_to_utc(new_date, new_time, anchor_tz=_anchor_tz)
                 meta.schedule_time = new_dt
+                meta.anchor_tz = _anchor_name
+                meta.anchor_source = _anchor_src
 
             # 2. 내용/담당자 변경
             if content is not None:

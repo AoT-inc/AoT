@@ -126,7 +126,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endif %}{# needs_map #}
 
   <!-- AoT timezone display utility (single source of truth for UTC → device/viewer TZ) -->
-  <script src="/static/js/common/aot-tz.js?v=20260506"></script>
+  {% if current_user and current_user.is_authenticated and current_user.timezone %}<meta name="aot-user-tz" content="{{ current_user.timezone }}">{% endif %}
+  <meta name="aot-fallback-tz" content="{{ system_timezone or 'UTC' }}">
+  <script src="/static/js/common/aot-tz.js?v=20260721"></script>
   <style>
     .main-navbar {
       position: relative;
@@ -444,7 +446,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260702z2" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260721a" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
   <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260718c" rel="stylesheet">
@@ -507,7 +509,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
            layout.html nav-bar conditional logic MUST also be applied here, or they will be lost. #}
         {% if ai_settings and ai_settings.ai_enabled %}
         <li
-          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_scheduler', 'ai_manage', 'ai_agent', 'ai_library'] %} active{% endif %}">
+          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_scheduler', 'ai_manage', 'ai_agent', 'ai_library', 'mcp_servers'] %} active{% endif %}">
           <a class="nav-link dropdown-toggle" href="#" id="dropdownAIAgent" data-toggle="dropdown" aria-haspopup="true"
              aria-expanded="false">
              {{ _('AI') }}
@@ -528,6 +530,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item {% if active_page == 'ai_library' %} active{% endif %}"
                href="{{ url_for('routes_ai_library.page_ai_library') }}">
                {{ _('Library') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'mcp_servers' %} active{% endif %}"
+               href="{{ url_for('routes_mcp_api.mcp_servers_page') }}">
+               {{ _('MCP Servers') }}
             </a>
           </div>
         </li>
@@ -632,6 +638,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item" target="_blank" href="{{ manual_url('API/') }}">{{ _('API Info') }}</a>
             <a class="dropdown-item" target="_blank" href="/api">{{ _('API Documentation') }}</a>
             <a class="dropdown-item" target="_blank" href="https://github.com/AoT-inc/AoT">{{ _('AoT Github') }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" target="_blank" href="{{ url_for('routes_legal.page_privacy_policy') }}">{{ _('Privacy Policy') }}</a>
+            <a class="dropdown-item" target="_blank" href="{{ url_for('routes_legal.page_terms_of_service') }}">{{ _('Terms of Service') }}</a>
           </div>
         </li>
         <li class="nav-item dropdown">
@@ -741,6 +750,21 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                   </select>
                 </div>
               </div>
+              <div class="aot-modal-option-row" style="border-bottom: none;">
+                {% set timezone_tooltip = _("Your personal timezone for displaying times. Leave blank to use the system default. Device schedules still use each device's own local time.") %}
+                <div class="aot-modal-option-label">{{ _('Timezone') }}</div>
+                <div class="aot-modal-option-control">
+                  <input class="aot-modern-input form-control" type="text" id="timezone" name="timezone"
+                    list="aot-tz-list" placeholder="{{ _('System default') }}"
+                    value="{{ current_user.timezone or '' }}" title="{{ timezone_tooltip }}"
+                    autocomplete="off" spellcheck="false">
+                  <datalist id="aot-tz-list">
+                    {% for _tz in ['UTC','Asia/Seoul','Asia/Tokyo','Asia/Shanghai','Asia/Dhaka','Asia/Almaty','Asia/Kolkata','Asia/Bangkok','Europe/London','Europe/Paris','Europe/Moscow','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Sao_Paulo','Australia/Sydney','Pacific/Auckland'] %}
+                    <option value="{{ _tz }}"></option>
+                    {% endfor %}
+                  </datalist>
+                </div>
+              </div>
             </div>
           </form>
 
@@ -757,11 +781,14 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             {% elif google_connection and google_connection.is_active %}
             <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">
-                {{ _('Manage Google Account Connection') }}
+                {{ _('Sync Google Calendar Now') }}
                 <div class="aot-modal-body-text">{{ _('Connected as %(email)s', email=google_connection.account_email or '') }}</div>
               </div>
               <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
-                <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{ url_for('routes_integrations.settings_integrations') }}">{{ _('Manage Connection') }}</a>
+                <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}" style="margin: 0;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                  <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Sync Now') }}</button>
+                </form>
               </div>
             </div>
             <div class="aot-modal-option-row" style="border-bottom: none;">

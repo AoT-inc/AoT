@@ -59,7 +59,7 @@ class Sun:
     @staticmethod
     def get_current_uct():
         """Return day, month, and year of current UTC time."""
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()  # match the docstring: UTC, not system-local
         return [now.day, now.month, now.year]
 
     @staticmethod

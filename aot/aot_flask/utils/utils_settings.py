@@ -272,6 +272,19 @@ def change_preferences(form):
             User.id == flask_login.current_user.id).first()
         mod_user.theme = form.theme.data
         mod_user.language = form.language.data
+        # Personal display timezone (IANA). Store only a valid zone; blank or
+        # invalid → None (fall back to system default). (timezone-management.md §7)
+        if hasattr(form, 'timezone'):
+            tz_val = (form.timezone.data or '').strip()
+            if tz_val:
+                try:
+                    import pytz
+                    pytz.timezone(tz_val)
+                    mod_user.timezone = tz_val
+                except Exception:
+                    pass  # invalid zone — leave unchanged
+            else:
+                mod_user.timezone = None
         db.session.commit()
         # 세션 로케일도 동기화: <html lang> 표기·JS 번역 카탈로그 캐시(Vary: Cookie)가
         # DB 변경만으로는 갱신되지 않아, 선언 lang 과 콘텐츠 언어가 어긋나면서
@@ -335,6 +348,19 @@ def account_self_update(form):
             if form.language.data in LANGUAGES or not form.language.data:
                 user.language = form.language.data or None
                 session['language'] = user.language
+            # Personal display timezone (IANA). Valid zone stored; blank/invalid
+            # → None (system default). (timezone-management.md §7)
+            if hasattr(form, 'timezone'):
+                tz_val = (form.timezone.data or '').strip()
+                if tz_val:
+                    try:
+                        import pytz
+                        pytz.timezone(tz_val)
+                        user.timezone = tz_val
+                    except Exception:
+                        pass
+                else:
+                    user.timezone = None
             db.session.commit()
     except Exception as except_msg:
         error.append(except_msg)

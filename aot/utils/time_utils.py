@@ -129,12 +129,12 @@ def api_iso(dt):
     예: '2026-05-06T12:34:56+00:00'
     프론트엔드가 device TZ 또는 viewer TZ로 변환하는 단일 진실 공급원.
     naive datetime은 UTC로 가정하여 변환.
+
+    Wrapper over aot.utils.timekit.iso_utc (single source of truth —
+    docs/design/timezone-management.md). 동작 동일.
     """
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).isoformat()
+    from aot.utils.timekit import iso_utc
+    return iso_utc(dt)
 
 
 def _format_result(total_sec):

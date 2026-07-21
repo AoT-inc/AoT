@@ -14,12 +14,14 @@ from aot.utils.time_utils import get_timezone_name, utc_now, to_local
 
 
 def get_user_tz() -> pytz.BaseTzInfo:
-    """Return user timezone from Misc model (settings/general). Falls back to UTC."""
-    tz_str = get_timezone_name()
-    try:
-        return pytz.timezone(tz_str)
-    except Exception:
-        return pytz.utc
+    """Return user timezone from Misc model (settings/general). Falls back to UTC.
+
+    Wrapper over aot.utils.timekit.system_tz (single source of truth). Today
+    "user tz" is an alias of the system-wide Misc.timezone; a real per-user
+    User.timezone is introduced in Phase 4 (docs/design/timezone-management.md).
+    """
+    from aot.utils.timekit import system_tz
+    return system_tz()
 
 
 def to_utc(dt: datetime) -> datetime:

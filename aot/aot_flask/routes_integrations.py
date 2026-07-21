@@ -44,11 +44,14 @@ def _epoch_to_naive_utc(epoch):
 @blueprint.route('/settings/integrations', methods=['GET'])
 @login_required
 def settings_integrations():
-    # No permission gate beyond login: this page's own-connection section
-    # (status/sync/disconnect) is self-scoped by current_user.id and must
-    # stay reachable regardless of role (e.g. a Guest-role Google signup) —
-    # only the admin-only client credential form is further gated, via
-    # is_admin inside settings/integrations.html.
+    # This is a Settings page (client credentials, server-wide config) —
+    # stays behind the same view_settings gate as every other /settings/*
+    # page. A user's OWN connect/sync/disconnect actions do NOT require
+    # this page: they're exposed inline in the nav-bar 'User Settings'
+    # modal via the self-scoped routes below (no permission gate there).
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
     misc = Misc.query.first()
     is_admin = getattr(flask_login.current_user, 'role_id', None) == 1
     connection = (UserCalendarConnection.query

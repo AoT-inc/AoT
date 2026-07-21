@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+{% set active_page = "privacy_policy" %}
+
+{% block title %} - {{_('Privacy Policy')}}{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+  <!-- Route: /privacy-policy -->
+  <main role="main" class="container py-4" style="max-width: 860px;">
+    {% include 'flash_messages.html' %}
+
+    <div class="aot-settings-title">
+      <h3>{{_('Privacy Policy')}}</h3>
+    </div>
+
+    <p class="text-muted">{{_('Effective Date')}}: 2026-07-21</p>
+
+    <p>
+      AoT(이하 "서비스")는 스마트팜/시설 자동화를 위한 오픈소스 소프트웨어이며, 본 개인정보처리방침은
+      서비스를 자체 서버에 설치하여 운영하는 관리자(이하 "운영자")가 이용자의 개인정보를 어떻게
+      수집·이용·보관하는지, 그리고 Google 계정 연동 기능을 사용할 때 어떤 정보가 어떤 목적으로
+      처리되는지를 설명합니다.
+    </p>
+
+    <h4>1. 수집하는 정보</h4>
+    <p>서비스는 다음 정보를 수집·처리할 수 있습니다.</p>
+    <ul>
+      <li>계정 정보: 로그인 시 입력한 사용자 이름, 이메일 주소, 비밀번호(해시 저장)</li>
+      <li>서비스 이용 정보: 시설/장치 설정값, 센서 측정값, 스케줄·시퀀스 설정, AI 채팅 기록 등 이용자가 직접 생성한 데이터</li>
+      <li>Google 계정 연동 시(선택): 아래 2항에서 별도로 설명하는 Google API 관련 정보</li>
+    </ul>
+
+    <h4>2. Google 계정 연동(OAuth) 시 처리하는 정보</h4>
+    <p>
+      이용자가 설정 화면에서 Google 계정 연동을 직접 승인한 경우에 한해, 다음 범위(scope)의 정보에
+      접근합니다. 연동은 전적으로 선택 사항이며, 연동하지 않아도 서비스의 나머지 기능은 그대로
+      이용할 수 있습니다.
+    </p>
+    <ul>
+      <li>
+        <strong>Google Calendar</strong>(<code>https://www.googleapis.com/auth/calendar</code>) —
+        서비스의 스케줄러/이벤트를 이용자의 Google 캘린더와 양방향으로 동기화하기 위해 사용합니다.
+        AI 자동화, 사용자, 장치 카테고리별로 생성된 캘린더의 일정을 읽고 쓰며, 이용자가 연동을
+        해제하면 즉시 접근을 중단합니다.
+      </li>
+      <li>
+        <strong>Google Drive</strong>(<code>https://www.googleapis.com/auth/drive.file</code>) —
+        AI 라이브러리 기능에서 이용자가 Google Picker로 직접 선택한 파일만 읽어오기 위해 사용합니다.
+        이용자가 선택하지 않은 파일이나 드라이브 전체에는 접근하지 않습니다.
+      </li>
+      <li>
+        <strong>이메일 주소·기본 프로필</strong>(<code>userinfo.email</code>, <code>openid</code>) —
+        연동된 Google 계정을 식별하고 표시하기 위해서만 사용합니다.
+      </li>
+    </ul>
+    <p>
+      Google에서 발급받은 접근 토큰(access token)과 갱신 토큰(refresh token)은 암호화되어
+      운영자의 서버(데이터베이스)에 저장되며, 위에 명시된 동기화 목적 외에는 사용하지 않습니다.
+      AoT는 이 토큰이나 Google 계정 데이터를 제3자에게 판매하거나 광고 목적으로 이용하지 않습니다.
+    </p>
+    <p>
+      AoT의 Google API 사용은
+      <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">
+        Google API Services User Data Policy
+      </a>의 제한된 사용(Limited Use) 요건을 준수합니다.
+    </p>
+
+    <h4>3. 정보의 이용 목적</h4>
+    <ul>
+      <li>서비스 제공 및 로그인 인증</li>
+      <li>스케줄·이벤트의 Google 캘린더 양방향 동기화</li>
+      <li>AI 라이브러리 기능에서 이용자가 선택한 문서 참조</li>
+      <li>서비스 오류 진단 및 개선</li>
+    </ul>
+
+    <h4>4. 보관 기간 및 파기</h4>
+    <p>
+      개인정보는 서비스를 자체 설치한 운영 환경(서버)에 보관되며, 이용자가 계정을 삭제하거나
+      Google 계정 연동을 해제하면 관련 토큰 및 연동 정보는 지체 없이 삭제됩니다. 그 외 데이터의
+      보관 기간은 해당 서비스를 설치·운영하는 운영자의 정책을 따릅니다.
+    </p>
+
+    <h4>5. 제3자 제공</h4>
+    <p>
+      AoT는 법령에 따라 요구되는 경우를 제외하고 이용자의 개인정보를 제3자에게 제공하지 않습니다.
+      Google API 연동 과정에서의 정보 송수신은 Google과의 직접 통신이며, 그 외 별도의 제3자 서버로
+      전송되지 않습니다.
+    </p>
+
+    <h4>6. 이용자의 권리</h4>
+    <p>
+      이용자는 언제든지 설정 화면에서 Google 계정 연동을 해제할 수 있으며, 연동 해제는
+      <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">
+        Google 계정 권한 관리 페이지
+      </a>에서도 직접 철회할 수 있습니다. 자신의 계정 정보 열람, 정정, 삭제를 요청할 수 있습니다.
+    </p>
+
+    <h4>7. 문의</h4>
+    <p>
+      본 개인정보처리방침에 대한 문의는 아래 연락처로 할 수 있습니다.<br>
+      이메일: <a href="mailto:aot.inc.kr@gmail.com">aot.inc.kr@gmail.com</a>
+    </p>
+
+    <h4>8. 변경</h4>
+    <p>
+      본 방침은 서비스 및 관련 법령의 변경에 따라 개정될 수 있으며, 개정 시 본 페이지를 통해
+      공지합니다.
+    </p>
+  </main>
+</div>
+{% endblock %}

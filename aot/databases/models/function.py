@@ -30,6 +30,7 @@ class Function(CRUDMixin, db.Model):
     latitude = db.Column(db.Float, default=None)
     longitude = db.Column(db.Float, default=None)
     timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
+    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
     location_source = db.Column(db.String(32), default='manual')
     marker_icon = db.Column(db.Text, default=None)
     marker_color = db.Column(db.Text, default=None)
@@ -64,6 +65,7 @@ class Conditional(CRUDMixin, db.Model):
     latitude = db.Column(db.Float, default=None)
     longitude = db.Column(db.Float, default=None)
     timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
+    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
     location_source = db.Column(db.String(32), default='manual')
     map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
@@ -153,6 +155,7 @@ class Trigger(CRUDMixin, db.Model):
     latitude = db.Column(db.Float, default=None)
     longitude = db.Column(db.Float, default=None)
     timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
+    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
     location_source = db.Column(db.String(32), default='manual')
     map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping

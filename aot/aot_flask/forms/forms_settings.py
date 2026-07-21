@@ -421,6 +421,7 @@ class UserAdd(FlaskForm):
 class UserPreferences(FlaskForm):
     theme = StringField(lazy_gettext('Theme'))
     language = StringField(lazy_gettext('Language'))
+    timezone = StringField(lazy_gettext('Timezone'))  # IANA tz for personal display; empty = system default
     user_preferences_save = SubmitField(lazy_gettext('Save'))
 
 
@@ -441,6 +442,7 @@ class AccountSelf(FlaskForm):
         ])
     password_repeat = PasswordField(lazy_gettext('Confirm Password'))
     language = StringField(lazy_gettext('Language'))
+    timezone = StringField(lazy_gettext('Timezone'))  # IANA tz for personal display; empty = system default
     user_account_save = SubmitField(lazy_gettext('Save'))
 
 

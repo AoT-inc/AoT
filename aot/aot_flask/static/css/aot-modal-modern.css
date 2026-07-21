@@ -155,6 +155,12 @@
     gap: 15px; /* Increased for better touch separation */
 }
 
+/* .d-none 등으로 숨겨야 하는 옵션 행: 위 규칙과 동일한 !important라 클래스 2개(특이도 우위)로 강제 승리시킴.
+   그렇지 않으면 JS가 d-none/hide()를 걸어도 항상 display:flex로 다시 보임(스케줄러 새 작업 모달 실사용버그). */
+.aot-modal-option-row.d-none {
+    display: none !important;
+}
+
 .aot-modal-option-row:last-child {
     border-bottom: none;
 }

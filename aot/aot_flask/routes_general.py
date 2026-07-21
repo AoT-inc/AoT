@@ -59,6 +59,7 @@ def home():
             elif flask_login.current_user.landing_page == 'info':
                 return redirect(url_for('routes_page.page_info'))
             return redirect(url_for('routes_page.page_live'))
+        return render_template('pages/landing.html')
     except:
         logger.error("User may not be logged in. Clearing cookie auth.")
     return clear_cookie_auth()

@@ -21,7 +21,7 @@ blueprint = Blueprint('routes_mcp_api', __name__, url_prefix='/api/v1/mcp')
 def mcp_servers_page():
     """Render the standalone MCP Server Management UI page."""
     from flask import render_template
-    return render_template('pages/ai/mcp_servers.html')
+    return render_template('pages/ai/mcp_servers.html', active_page='mcp_servers')
 
 @blueprint.route('/servers', methods=['GET', 'POST'])
 @flask_login.login_required

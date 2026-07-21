@@ -213,6 +213,15 @@ class GeoShape(CRUDMixin, db.Model):
     feature = db.Column(JSON, nullable=False)
     meta_json = db.Column(JSON, nullable=True)
 
+    # Timezone (materialized) — this shape's effective IANA tz.
+    # tz_source: 'explicit' (manual override / boundary choice — pinned, never
+    # auto-overwritten) | 'inherited' (from parent site/zone) | 'coords' (own
+    # centroid). tz_boundary: bbox corners resolve to >1 tz → needs an explicit
+    # group tz choice. See docs/design/timezone-management.md §4·§8.
+    timezone = db.Column(db.String(64), nullable=True, default=None)
+    tz_source = db.Column(db.String(16), nullable=True, default=None)
+    tz_boundary = db.Column(db.Boolean, default=False)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -244,29 +253,54 @@ class GeoShape(CRUDMixin, db.Model):
         except Exception:
             return None
 
-    def resolve_timezone(self):
-        """Return pytz timezone for this shape's own location.
+    def resolve_timezone(self, _seen=None):
+        """Return pytz timezone for this shape's effective location tz.
 
-        Priority:
-          1. Linked GeoFacility's resolve_timezone() (explicit override, or the
-             facility's own centroid — same shape, so this is usually identical
-             to step 2, but a facility may carry an explicit override).
-          2. This shape's own centroid (from its GeoJSON geometry) →
-             timezonefinder lookup.
-          3. None (caller handles fallback, e.g. Misc.timezone/UTC).
+        Inheritance chain (docs/design/timezone-management.md §4):
+          1. self.timezone (materialized — explicit override or cached
+             inherited/coords value). This is the O(1) fast path.
+          2. Parent shape (parent_id chain) → its resolve_timezone().
+             A device/zone with no tz of its own inherits its site's tz, so
+             the whole operational group shares one clock (§8).
+          3. Linked GeoFacility's resolve_timezone() (explicit override / centroid).
+          4. This shape's own centroid → timezonefinder lookup.
+          5. None (caller handles fallback, e.g. Misc.timezone/UTC).
 
-        Lets ANY location — not just GeoFacility rows — resolve its own local
-        time (e.g. a bare zone/site with no facility record attached).
+        `_seen` guards against parent_id cycles.
         """
         import pytz
-        from aot.utils.device_tz import resolve_tz_from_coords
 
+        # 1. materialized value on this shape
+        if self.timezone:
+            try:
+                return pytz.timezone(self.timezone)
+            except Exception:
+                pass
+
+        # 2. inherit from parent (cycle-guarded)
+        seen = _seen or set()
+        if self.id is not None:
+            seen.add(self.id)
+        parent = getattr(self, 'parent_id', None)
+        if parent is not None and parent not in seen:
+            try:
+                parent_shape = GeoShape.query.get(parent)
+                if parent_shape is not None:
+                    tz = parent_shape.resolve_timezone(_seen=seen)
+                    if tz is not None:
+                        return tz
+            except Exception:
+                pass
+
+        # 3. linked facility
         facility = getattr(self, 'facility', None)
         if facility is not None:
             tz = facility.resolve_timezone()
             if tz is not None:
                 return tz
 
+        # 4. own centroid
+        from aot.utils.device_tz import resolve_tz_from_coords
         centroid = self.get_centroid()
         if centroid:
             try:
@@ -277,6 +311,71 @@ class GeoShape(CRUDMixin, db.Model):
             except Exception:
                 pass
         return None
+
+    def compute_effective_tz(self):
+        """Recompute this shape's tz from inheritance, IGNORING self.timezone
+        cache — used by materialization (docs/design/timezone-management.md §4).
+
+        Priority: parent (parent_id chain) → linked facility → own centroid.
+        Parent-inherit wins over own centroid so an operational group shares one
+        clock (§8). Returns (tz_name or None, source) — source ∈
+        {'inherited','coords'}.
+        """
+        # 1. inherit from parent
+        parent = getattr(self, 'parent_id', None)
+        if parent is not None:
+            try:
+                p = GeoShape.query.get(parent)
+                if p is not None and p.id != self.id:
+                    ptz = p.resolve_timezone()
+                    if ptz is not None:
+                        return str(ptz), 'inherited'
+            except Exception:
+                pass
+        # 2. linked facility
+        facility = getattr(self, 'facility', None)
+        if facility is not None:
+            try:
+                ftz = facility.resolve_timezone()
+                if ftz is not None:
+                    return str(ftz), 'inherited'
+            except Exception:
+                pass
+        # 3. own centroid
+        from aot.utils.device_tz import resolve_tz_from_coords
+        centroid = self.get_centroid()
+        if centroid:
+            tz_name = resolve_tz_from_coords(centroid[0], centroid[1])
+            if tz_name:
+                return tz_name, 'coords'
+        return None, None
+
+    def detect_tz_boundary(self):
+        """Return True if this shape's geometry spans >1 IANA timezone — its
+        bbox corners resolve to different tz (docs/design/timezone-management.md
+        §8). Used to flag groups straddling a legal-tz/date-line boundary so the
+        UI can force a single explicit group tz instead of silently splitting.
+        """
+        feat = self.feature or {}
+        coords = (feat.get('geometry') or {}).get('coordinates')
+        if not coords:
+            return False
+        flat = _flatten_coords(coords)
+        if not flat or len(flat) < 2:
+            return False
+        lats = [c[1] for c in flat]
+        lngs = [c[0] for c in flat]
+        corners = [
+            (min(lats), min(lngs)), (min(lats), max(lngs)),
+            (max(lats), min(lngs)), (max(lats), max(lngs)),
+        ]
+        from aot.utils.device_tz import resolve_tz_from_coords
+        names = set()
+        for la, ln in corners:
+            t = resolve_tz_from_coords(la, ln)
+            if t:
+                names.add(t)
+        return len(names) > 1
 
     def __repr__(self):
         return "<GeoShape(id={0}, type='{1}', geo_id='{2}')>".format(self.id, self.type, self.geo_id)
@@ -409,6 +508,7 @@ class GeoFacility(CRUDMixin, db.Model):
     # Timezone (IANA string, e.g. 'Asia/Seoul'). Auto-derived from GeoShape centroid
     # via timezonefinder when None. Set explicitly to override auto-detection.
     timezone = db.Column(db.String(64), nullable=True, default=None)
+    tz_source = db.Column(db.String(16), nullable=True, default=None)  # explicit | inherited | coords
 
     # 3D asset override (render_mode='asset' → parametric builder skipped)
     model_asset_uuid = db.Column(db.String(36), nullable=True, index=True)

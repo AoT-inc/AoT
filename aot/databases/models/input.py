@@ -48,6 +48,7 @@ class Input(CRUDMixin, db.Model):
     latitude = db.Column(db.Float, default=None)
     longitude = db.Column(db.Float, default=None)
     timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
+    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
     location_source = db.Column(db.Text, default='manual')  # manual/device/remote
     location_updated_utc = db.Column(db.DateTime, default=None)
     marker_icon = db.Column(db.Text, default=None)  # e.g., valve/motor/temp...

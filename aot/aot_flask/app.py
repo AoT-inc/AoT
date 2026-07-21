@@ -213,6 +213,17 @@ def create_app(config=ProdConfig):
         return {'current_locale': current_locale}
 
     @app.context_processor
+    def inject_system_timezone():
+        """시스템 전역 기본 tz(Misc.timezone)를 템플릿에 주입 — AoTTz 의
+        aot-fallback-tz meta 용. 개인 tz(current_user.timezone)가 우선이고
+        이건 미로그인/미설정 + 브라우저 tz 불가일 때의 최후 폴백."""
+        try:
+            from aot.utils.timekit import system_tz_name
+            return {'system_timezone': system_tz_name() or 'UTC'}
+        except Exception:
+            return {'system_timezone': 'UTC'}
+
+    @app.context_processor
     def inject_manual_url():
         """도움말 매뉴얼 URL을 현재 UI 언어에 맞춰 생성.
 
@@ -548,6 +559,8 @@ def register_blueprints(app):
     app.register_blueprint(ai_library_bp)  # register ai library routes
     from aot.aot_flask import routes_notice
     app.register_blueprint(routes_notice.blueprint)  # register notice board routes
+    from aot.aot_flask import routes_legal
+    app.register_blueprint(routes_legal.blueprint)  # register public legal pages (privacy/terms)
 
 
 def register_widget_endpoints(app):

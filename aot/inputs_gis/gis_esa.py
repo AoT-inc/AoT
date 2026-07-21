@@ -88,7 +88,7 @@ class InputModule(AbstractGisInput):
         """
         SMAP L4 has latency. Try Yesterday.
         """
-        yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+        yesterday = self._device_local_now() - datetime.timedelta(days=1)
         return yesterday.strftime('%Y-%m-%d')
 
     def get_url(self):
@@ -106,8 +106,8 @@ class InputModule(AbstractGisInput):
         # 날짜 계산 로직 (Backend Smart Time)
         date_mode = self.get_custom_option('date_mode') or 'default'
         target_time = 'default'
-        
-        now = datetime.datetime.utcnow()
+
+        now = self._device_local_now()
         if date_mode == 'today':
             target_time = now.strftime('%Y-%m-%d')
         elif date_mode == '1_day_ago':

@@ -33,6 +33,7 @@ class PID(CRUDMixin, db.Model):
     latitude = db.Column(db.Float, default=None)
     longitude = db.Column(db.Float, default=None)
     timezone = db.Column(db.String(64), default=None)
+    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
     location_source = db.Column(db.String(32), default='manual')
     map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping

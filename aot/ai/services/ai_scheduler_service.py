@@ -8,6 +8,7 @@ human approval workflow, and persistent job storage via SQLAlchemyJobStore.
 import logging
 import json
 import threading
+import pytz
 from datetime import datetime, timezone, timedelta
 from aot.utils.time_utils import utc_now, get_local_now, to_local
 
@@ -52,6 +53,13 @@ def get_scheduler():
         import logging as _logging
         _logging.getLogger('apscheduler.executors').setLevel(_logging.WARNING)
         _scheduler = BackgroundScheduler(
+            timezone=pytz.utc,  # APScheduler requires a pytz tz (has .localize/.normalize); stdlib timezone.utc is rejected
+            # Explicit UTC — without this, APScheduler defaults to the OS/system-local
+            # tz (tzlocal) for any naive datetime/cron field it's given. Storage
+            # convention here is naive-UTC everywhere; tz_utils.py's docstring assumes
+            # "Docker container timezone is always treated as UTC", but that's not
+            # guaranteed (this dev box's OS tz is Asia/Seoul) — pin it instead of
+            # hoping the OS matches, so a naive schedule_time is never misfired ~9h off.
             jobstores={
                 'default': SQLAlchemyJobStore(url=SCHEDULER_DB_PATH)
             },
@@ -931,10 +939,18 @@ class AISchedulerService:
         }
 
         if meta.schedule_time:
+            # meta.schedule_time is naive-UTC (project storage convention). APScheduler
+            # has no explicit timezone= configured, so it defaults to the SYSTEM-LOCAL tz
+            # (Asia/Seoul on this box) for naive run_date values — that silently fired
+            # jobs 9h off (or dropped them past misfire_grace_time) until this datetime
+            # was made explicitly UTC-aware so APScheduler converts it correctly.
+            run_date = meta.schedule_time
+            if run_date.tzinfo is None:
+                run_date = run_date.replace(tzinfo=timezone.utc)
             scheduler.add_job(
                 _execute_scheduled_action,
                 trigger='date',
-                run_date=meta.schedule_time,
+                run_date=run_date,
                 id=f'scheduler_meta_{meta.id}',
                 kwargs=job_kwargs,
                 misfire_grace_time=3600  # fire even if run_date was up to 1h ago
@@ -942,6 +958,34 @@ class AISchedulerService:
         elif meta.schedule_cron:
             trigger_args = json.loads(meta.schedule_cron)
             trigger_type = trigger_args.pop('trigger', 'cron')
+
+            # For recurring 'cron' schedules the hour/minute are wall-clock numbers in
+            # the DEVICE'S local time (confirmed anchor policy). Hand the anchor tz to
+            # APScheduler's CronTrigger via timezone= so it fires at that local
+            # wall-clock AND follows DST — instead of freezing it to a fixed UTC hour
+            # (drifts 1h across a DST boundary) or interpreting it in the system tz
+            # (wrong for a device in another zone). (timezone-management.md §6)
+            if trigger_type == 'cron':
+                anchor_tz = None
+                _name = getattr(meta, 'anchor_tz', None)
+                if _name:
+                    try:
+                        anchor_tz = pytz.timezone(_name)
+                    except Exception:
+                        anchor_tz = None
+                if anchor_tz is None:
+                    try:
+                        from aot.utils.device_tz import resolve_location_tz
+                        _tid = meta.target_id
+                        if meta.action_type == 'mcp_tool_call':
+                            _args = (json.loads(meta.params_json) if meta.params_json else {}).get('arguments') or {}
+                            _tid = _args.get('device_id') or _tid
+                        anchor_tz = resolve_location_tz(_tid)  # pytz; falls back to system tz
+                    except Exception:
+                        anchor_tz = None
+                if anchor_tz is not None:
+                    trigger_args['timezone'] = anchor_tz
+
             scheduler.add_job(
                 _execute_scheduled_action,
                 trigger=trigger_type,

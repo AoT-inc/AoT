@@ -258,7 +258,7 @@ class InputModule(AbstractGisInput):
         NASA GIBS는 실시간 업로드가 아니므로,
         데이터가 확실히 존재하는 '어제' 날짜를 기본값으로 사용합니다.
         """
-        yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+        yesterday = self._device_local_now() - datetime.timedelta(days=1)
         return yesterday.strftime('%Y-%m-%d')
 
 
@@ -288,7 +288,7 @@ class InputModule(AbstractGisInput):
         if 'BlueMarble' in config_opts.get('layer', ''):
              target_time = 'default'
         else:
-            now = datetime.datetime.utcnow()
+            now = self._device_local_now()
             if date_mode == 'today':
                 target_time = now.strftime('%Y-%m-%d')
             elif date_mode == '1_day_ago':

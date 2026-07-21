@@ -39,10 +39,18 @@ class SchedulerJobMeta(CRUDMixin, db.Model):
     params_json = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='{}')
 
     # Scheduling
-    schedule_time = db.Column(db.DateTime, nullable=True)   # one-time (start time)
+    schedule_time = db.Column(db.DateTime, nullable=True)   # one-time (start time), stored UTC
     duration_sec = db.Column(db.Integer, default=0)         # duration (for abstract plans or output)
     end_time = db.Column(db.DateTime, nullable=True)        # calculated or manual end time
     schedule_cron = db.Column(db.Text, nullable=True)        # recurring (cron trigger JSON)
+
+    # Timezone anchor — the wall-clock ("06:00") was authored in THIS tz, so the
+    # same UTC instant can be re-displayed in device-local / user / viewer tz
+    # without losing intent. Recurring rules re-evaluate against anchor_tz (DST).
+    # anchor_source: 'device' | 'shape' | 'user' | 'system'.
+    # (docs/design/timezone-management.md §6 — device-local is the default policy)
+    anchor_tz = db.Column(db.String(64), nullable=True)
+    anchor_source = db.Column(db.String(16), nullable=True)
 
     # Collaboration
     proposed_by = db.Column(db.String(10), default='AI')     # AI or HUMAN

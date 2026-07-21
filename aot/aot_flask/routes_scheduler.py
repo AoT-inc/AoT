@@ -4,7 +4,7 @@ Scheduler routes - Page views and API endpoints for the collaborative scheduler.
 """
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import flask_login
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
@@ -12,6 +12,7 @@ from flask_login import login_required
 
 from aot.databases.models import db, Misc, Output, OutputChannel, Input
 from aot.utils.time_utils import serialize_ts, to_local
+from aot.utils.timekit import iso_utc
 from aot.databases.models.scheduler import SchedulerJobMeta, SchedulerAuditLog
 from aot.ai.services.ai_scheduler_service import (
     AISchedulerService, JOB_STATE_DRAFT, JOB_STATE_PENDING,
@@ -70,12 +71,30 @@ def _enrich_job_display(job):
     job.display_editable = summary['editable']
     job.display_deletable = summary['deletable']
     job.display_worker = summary['worker']
-    # created_at/schedule_time are stored naive-UTC (SQLite) — localize here so
-    # every template use (cards + modals) shows farm-local time, never a bare
-    # UTC string that reads as if it were local wall-clock time.
-    job.display_created_at = to_local(job.created_at).strftime('%m/%d %H:%M') if job.created_at else '-'
-    job.display_schedule_time = to_local(job.schedule_time).strftime('%Y-%m-%d %H:%M') if job.schedule_time else None
-    job.display_end_time = to_local(job.end_time).strftime('%Y-%m-%d %H:%M') if job.end_time else None
+    # Display in the job's ANCHOR tz (device-local by policy) so the datetime-local
+    # edit seed matches how edit_schedule_tool re-interprets it on save (device
+    # anchor). Using the system clock here while the save path anchors to the
+    # device tz would reintroduce the 9h round-trip drift. (timezone-management.md §6·§7)
+    anchor = getattr(job, 'anchor_tz', None)
+    if not anchor and job.target_id and job.target_id != 'none':
+        try:
+            from aot.utils.device_tz import resolve_location_tz
+            anchor = str(resolve_location_tz(job.target_id))
+        except Exception:
+            anchor = None
+
+    def _fmt(dt, pattern):
+        if not dt:
+            return None
+        if anchor:
+            from aot.utils.timekit import to_tz
+            return to_tz(dt, anchor).strftime(pattern)
+        return to_local(dt).strftime(pattern)
+
+    job.display_created_at = _fmt(job.created_at, '%m/%d %H:%M') or '-'
+    job.display_schedule_time = _fmt(job.schedule_time, '%Y-%m-%d %H:%M')
+    job.display_end_time = _fmt(job.end_time, '%Y-%m-%d %H:%M')
+    job.display_tz = anchor  # shown as a label next to the time so device≠viewer is explicit
     return job
 
 
@@ -96,10 +115,45 @@ def page_scheduler():
     active_jobs = [j for j in jobs if j.state in (JOB_STATE_PENDING, 'RUNNING')]
     completed_jobs = [j for j in jobs if j.state in (JOB_STATE_COMPLETED, JOB_STATE_FAILED, JOB_STATE_ARCHIVED)]
 
-    # Combined manifest for manual task creation
-    from aot.ai.services.ai_action_service import AIActionService
-    from aot.databases.models import AIAgent
-    action_manifest = AIActionService.get_action_manifest()
+    # Manual task creation target lists.
+    # NOTE: intentionally NOT AIActionService.get_action_manifest() — that manifest is
+    # AI-automation scoped (Output.is_ai_enabled, PID.is_activated) and hid most real
+    # devices from a human manually creating a task (e.g. 5 of 49 outputs on this box).
+    # A human picking a target here should see every real device, regardless of
+    # whether the AI is separately permitted to touch it.
+    from aot.databases.models import AIAgent, PID, Function
+    from aot.databases.models.geo import GeoShape
+    from aot.utils.device_tz import get_device_tz
+
+    # Each target carries its anchor tz (device-local) so the new-task form can
+    # show a live dual-clock (device time / your time / UTC). tz is read from the
+    # materialized device.timezone column — O(1), no per-row finder. §6·§7
+    manual_outputs = []
+    for o in Output.query.order_by(Output.name).all():
+        channels = OutputChannel.query.filter_by(output_id=o.unique_id).order_by(OutputChannel.channel).all()
+        manual_outputs.append({
+            'unique_id': o.unique_id,
+            'name': o.name,
+            'type': o.output_type,
+            'tz': str(get_device_tz(o)),
+            'channels': [{'index': ch.channel, 'name': ch.name or f'CH{ch.channel}'} for ch in channels],
+        })
+
+    manual_pids = [{'unique_id': p.unique_id, 'name': p.name, 'tz': str(get_device_tz(p))}
+                   for p in PID.query.order_by(PID.name).all()]
+    manual_functions = [{'unique_id': f.unique_id, 'name': f.name, 'tz': str(get_device_tz(f))}
+                        for f in Function.query.order_by(Function.name).all()]
+
+    manual_zones = []
+    for z in GeoShape.query.filter_by(type='zone').all():
+        meta = z.meta_json if z.meta_json else {}
+        try:
+            _ztz = z.resolve_timezone()
+            ztz = str(_ztz) if _ztz is not None else str(get_device_tz(None))
+        except Exception:
+            ztz = str(get_device_tz(None))
+        manual_zones.append({'unique_id': z.unique_id, 'name': meta.get('name', f'Zone_{z.id}'), 'tz': ztz})
+
     active_agents = AIAgent.query.filter_by(is_activated=True).all()
 
     return render_template('pages/ai/scheduler.html',
@@ -107,10 +161,10 @@ def page_scheduler():
                            active_jobs=active_jobs,
                            completed_jobs=completed_jobs,
                            all_jobs=jobs,
-                           outputs=action_manifest.get('outputs', []),
-                           pids=action_manifest.get('pid_controllers', []),
-                           functions=action_manifest.get('predefined_functions', []),
-                           zones=action_manifest.get('spatial_zones', []),
+                           outputs=manual_outputs,
+                           pids=manual_pids,
+                           functions=manual_functions,
+                           zones=manual_zones,
                            active_agents=active_agents,
                            active_page='ai_scheduler',
                            settings=Misc.query.first())
@@ -180,13 +234,53 @@ def api_propose_job():
 
     try:
         schedule_time = None
+        _anchor_name = None
+        _anchor_src = None
         if data.get('schedule_time'):
-            schedule_time = datetime.fromisoformat(data['schedule_time'])
+            # data['schedule_time'] is the raw value of an <input type="datetime-local">:
+            # a naive wall-clock string, no offset. Confirmed policy: for a device
+            # task this is the DEVICE'S own local time, so anchor to the target's
+            # tz (device-local), not the browser/system clock. Storage is UTC;
+            # display re-derives device-local. (timezone-management.md §6)
+            from aot.ai.services.aot_data_tool_service import AoTDataToolService
+            from aot.utils.timekit import wall_to_utc
+            _atz, _anchor_name, _anchor_src = \
+                AoTDataToolService._resolve_schedule_anchor(data.get('target_id'))
+            schedule_time = wall_to_utc(data['schedule_time'], _atz)
+
+        action_type = data['action_type']
+        target_id = data['target_id']
+        params = data.get('params', {})
+
+        # 'output' is a deprecated action_type — ActionResolverRegistry hard-blocks it
+        # (LegacyGuardResolver, see resolvers/registry.py) so any job saved with it would
+        # fire on schedule and immediately fail with LEGACY_BLOCKED. All physical device
+        # control must go through action_type='mcp_tool_call' / tool_name='operate_device'
+        # (same translation AIActionService.get_action_manifest() documents via mcp_binding).
+        if action_type == 'output':
+            from aot.databases.models.mcp_server import MCPServer as _MCPSrv
+            _aot_srv = (
+                _MCPSrv.query.filter(_MCPSrv.is_activated == True, _MCPSrv.command.contains('aot_mcp_server')).first()
+                or _MCPSrv.query.filter(_MCPSrv.is_activated == True, _MCPSrv.scope == 'general').first()
+                or _MCPSrv.query.filter(_MCPSrv.is_activated == True, _MCPSrv.name.ilike('%aot%')).first()
+            )
+            if not _aot_srv:
+                return jsonify({'error': 'No active AoT MCP server found; cannot schedule device control'}), 400
+
+            arguments = {'device_id': target_id, 'state': params.get('state', 'on')}
+            if params.get('channel') is not None:
+                arguments['channel'] = params.get('channel')
+            if params.get('amount'):
+                arguments['duration_seconds'] = params.get('amount')
+
+            action_type = 'mcp_tool_call'
+            target_id = _aot_srv.unique_id
+            params = {'tool_name': 'operate_device', 'arguments': arguments}
 
         meta = AISchedulerService.propose_job(
-            action_type=data['action_type'],
-            target_id=data['target_id'],
-            params=data.get('params', {}),
+            action_type=action_type,
+            target_id=target_id,
+            params=params,
             reasoning=data.get('reasoning', 'Manual task'),
             schedule_time=schedule_time,
             duration_sec=data.get('duration_sec', 0),
@@ -195,6 +289,14 @@ def api_propose_job():
             approval_required=False,
             priority=data.get('priority', 1)
         )
+        # Persist the device-local tz anchor so display re-derives device time.
+        if _anchor_name:
+            try:
+                meta.anchor_tz = _anchor_name
+                meta.anchor_source = _anchor_src
+                db.session.commit()
+            except Exception:
+                pass
         return jsonify(_serialize_job(meta)), 201
     except Exception as e:
         logger.exception("Error proposing job")
@@ -353,6 +455,29 @@ def api_calendar_events():
     return jsonify(events)
 
 
+def _job_target_tz_name(job):
+    """Resolve the IANA tz a job should display in (device-local — the
+    confirmed anchor policy, docs/design/timezone-management.md §12).
+
+    For mcp_tool_call jobs the physical device lives in
+    params.arguments.device_id (target_id is the MCP server, which has no
+    location); otherwise target_id is the device/shape itself. Falls back to
+    the system tz (resolve_location_tz's own chain) when nothing resolves.
+    """
+    from aot.utils.device_tz import resolve_location_tz
+    tid = job.target_id
+    try:
+        if job.action_type == 'mcp_tool_call' and job.params_json:
+            args = (json.loads(job.params_json) or {}).get('arguments') or {}
+            tid = args.get('device_id') or tid
+    except Exception:
+        pass
+    try:
+        return str(resolve_location_tz(tid))
+    except Exception:
+        return 'UTC'
+
+
 @blueprint.route('/api/v1/scheduler/timeline', methods=['GET'])
 @login_required
 def api_timeline_events():
@@ -363,10 +488,15 @@ def api_timeline_events():
 
     events = []
     for j in jobs:
+        tz_name = _job_target_tz_name(j)
         event = {
             'id': j.id,
             'title': f"{j.action_type}: {j.target_id[:8]}",
-            'start': (j.schedule_time or j.created_at).isoformat(),
+            # UTC+offset ISO so FullCalendar places the event at the correct
+            # absolute instant. Previously .isoformat() on a naive-UTC column
+            # emitted no offset → FullCalendar read it as browser-local and
+            # shifted every event by the viewer's UTC offset.
+            'start': iso_utc(j.schedule_time or j.created_at),
             'className': _state_to_css_class(j.state),
             'extendedProps': {
                 'state': j.state,
@@ -374,7 +504,8 @@ def api_timeline_events():
                 'reasoning': j.reasoning or '',
                 'action_type': j.action_type,
                 'target_id': j.target_id,
-                'priority': j.priority
+                'priority': j.priority,
+                'tz': tz_name,   # device-local tz for display/labeling
             }
         }
         if j.state == JOB_STATE_DRAFT:
@@ -386,13 +517,30 @@ def api_timeline_events():
 
 def _serialize_job(meta):
     """Serialize SchedulerJobMeta to dict."""
+    # Device-local (anchor tz) view of schedule_time, alongside the legacy
+    # system-tz `schedule_time` kept for back-compat. §6·§7
+    anchor = getattr(meta, 'anchor_tz', None)
+    if not anchor and meta.target_id and meta.target_id != 'none':
+        try:
+            anchor = str(_job_target_tz_name(meta))
+        except Exception:
+            anchor = None
+    schedule_local = None
+    if meta.schedule_time and anchor:
+        try:
+            from aot.utils.timekit import to_tz
+            schedule_local = to_tz(meta.schedule_time, anchor).isoformat()
+        except Exception:
+            schedule_local = None
     return {
         'id': meta.id,
         'unique_id': meta.unique_id,
         'action_type': meta.action_type,
         'target_id': meta.target_id,
         'params': json.loads(meta.params_json) if meta.params_json else {},
-        'schedule_time': serialize_ts(meta.schedule_time),  # tz: UTC→user_tz for display
+        'schedule_time': serialize_ts(meta.schedule_time),  # tz: UTC→user_tz for display (legacy)
+        'schedule_time_local': schedule_local,  # device-local (anchor tz) ISO
+        'anchor_tz': anchor,
         'schedule_cron': json.loads(meta.schedule_cron) if meta.schedule_cron else None,
         'proposed_by': meta.proposed_by,
         'reasoning': meta.reasoning,
@@ -400,11 +548,11 @@ def _serialize_job(meta):
         'priority': meta.priority,
         'state': meta.state,
         'decided_by': meta.decided_by,
-        'decided_at': serialize_ts(meta.decided_at),   # tz: UTC→user_tz for display
+        'decided_at': iso_utc(meta.decided_at),    # UTC+offset ISO; client renders in viewer tz
         'user_feedback': meta.user_feedback,
-        'executed_at': serialize_ts(meta.executed_at),  # tz: UTC→user_tz for display
+        'executed_at': iso_utc(meta.executed_at),  # UTC+offset ISO; client renders in viewer tz
         'execution_result': meta.execution_result,
-        'created_at': serialize_ts(meta.created_at)    # tz: UTC→user_tz for display
+        'created_at': iso_utc(meta.created_at)     # UTC+offset ISO; client renders in viewer tz
     }
 
 

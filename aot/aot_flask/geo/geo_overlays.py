@@ -348,7 +348,11 @@ class GeoOverlayManager:
                 db.session.add(s)
                 
             db.session.commit()
-            
+
+            # [Phase 3b] Materialize tz down the shape tree + linked devices.
+            # Post-commit, own transaction — safe. (timezone-management.md §4)
+            GeoOverlayManager.materialize_timezones(map_uuid)
+
             # 6. Prepare Response with ID Mapping
             id_map = {}
             # Refetch or use the objects we have
@@ -381,6 +385,61 @@ class GeoOverlayManager:
             current_app.logger.error(f"Save Overlays Error: {e}")
             return None, str(e)
             
+    @staticmethod
+    def materialize_timezones(map_uuid):
+        """맵의 모든 도형 tz 를 상속 계층으로 물질화하고 연결 장치에 전파한다.
+
+        저장(save_overlays 등) 커밋 직후 호출하는 별도 트랜잭션. 부모 도형(site)
+        을 먼저 처리해 자식 zone·device 가 갱신된 부모 tz 를 상속하도록 한다.
+        tz_source='explicit'(수동 override / 경계 그룹 선택)인 행은 절대 덮어쓰지
+        않는다. (docs/design/timezone-management.md §4·§8 — Phase 3b 물질화/전파)
+        """
+        try:
+            shapes = GeoShape.query.filter_by(geo_id=map_uuid).all()
+            if not shapes:
+                return
+            # 부모 먼저: site(1) → zone(2) → device/feature(3)
+            shapes.sort(key=lambda s: s.level_id)
+            changed = False
+            for s in shapes:
+                if getattr(s, 'tz_source', None) != 'explicit':
+                    tzn, src = s.compute_effective_tz()
+                    if tzn and (s.timezone != tzn or s.tz_source != src):
+                        s.timezone = tzn
+                        s.tz_source = src
+                        changed = True
+                if s.type in ('site', 'zone'):
+                    b = s.detect_tz_boundary()
+                    if bool(s.tz_boundary) != bool(b):
+                        s.tz_boundary = b
+                        changed = True
+            if changed:
+                db.session.flush()  # 장치 전파가 갱신된 도형 tz 를 보도록
+
+            # 연결 장치(device_id)에 전파 — explicit 핀 보존
+            device_models = (Input, Output, Function, Conditional, Trigger, PID, CustomController)
+            for s in shapes:
+                did = getattr(s, 'device_id', None)
+                if not did:
+                    continue
+                tz = s.resolve_timezone()
+                if tz is None:
+                    continue
+                tz_str = str(tz)
+                for Model in device_models:
+                    row = Model.query.filter_by(unique_id=did).first()
+                    if row is not None:
+                        if getattr(row, 'tz_source', None) != 'explicit' and row.timezone != tz_str:
+                            row.timezone = tz_str
+                            row.tz_source = 'inherited'
+                            changed = True
+                        break
+            if changed:
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.warning(f"[GeoOverlay] materialize_timezones failed for {map_uuid}: {e}")
+
     @staticmethod
     def save_delta(data):
         """
@@ -565,8 +624,10 @@ class GeoOverlayManager:
                     id_map[node_id] = row.id
 
             db.session.commit()
+            # [Phase 3b] tz 물질화/전파 (timezone-management.md §4)
+            GeoOverlayManager.materialize_timezones(map_uuid)
             return {'ok': True, 'id_map': id_map}, None
-            
+
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Geo Delta Save Error: {e}")

@@ -444,7 +444,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260702z2" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260721a" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
   <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260718c" rel="stylesheet">
@@ -632,6 +632,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item" target="_blank" href="{{ manual_url('API/') }}">{{ _('API Info') }}</a>
             <a class="dropdown-item" target="_blank" href="/api">{{ _('API Documentation') }}</a>
             <a class="dropdown-item" target="_blank" href="https://github.com/AoT-inc/AoT">{{ _('AoT Github') }}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" target="_blank" href="{{ url_for('routes_legal.page_privacy_policy') }}">{{ _('Privacy Policy') }}</a>
+            <a class="dropdown-item" target="_blank" href="{{ url_for('routes_legal.page_terms_of_service') }}">{{ _('Terms of Service') }}</a>
           </div>
         </li>
         <li class="nav-item dropdown">

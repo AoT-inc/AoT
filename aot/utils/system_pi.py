@@ -549,13 +549,20 @@ def epoch_of_next_time(time_str, tz=None):
     try:
         if tz:
             import pytz
+            from aot.utils.timekit import wall_to_utc, utc_now
             local_tz = pytz.timezone(str(tz))
             now_local = datetime.datetime.now(local_tz)
             parts = time_str.split(':')
             h, m, s = int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0
-            target = now_local.replace(hour=h, minute=m, second=s, microsecond=0)
-            if target <= now_local:
-                target += datetime.timedelta(days=1)
+            # Build the target as a NAIVE wall-clock, then localize via wall_to_utc
+            # so the correct offset for that date is applied. A pytz aware
+            # .replace(hour=...) keeps "now"'s fixed offset and drifts by 1h
+            # across a DST boundary (audit P2, timezone-management.md §11).
+            naive_target = now_local.replace(tzinfo=None, hour=h, minute=m,
+                                             second=s, microsecond=0)
+            target = wall_to_utc(naive_target, local_tz)
+            if target <= utc_now():
+                target = wall_to_utc(naive_target + datetime.timedelta(days=1), local_tz)
             return target.timestamp()
         else:
             current_epoch = time.time()

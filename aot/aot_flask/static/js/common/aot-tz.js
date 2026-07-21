@@ -19,12 +19,20 @@
   'use strict';
 
   var FALLBACK_TZ = 'UTC';
-  var meta = document.querySelector && document.querySelector('meta[name="aot-fallback-tz"]');
-  if (meta && meta.content) {
-    FALLBACK_TZ = meta.content;
+  var USER_TZ = null;   // logged-in user's personal display tz (User.timezone), if set
+  if (document.querySelector) {
+    var meta = document.querySelector('meta[name="aot-fallback-tz"]');
+    if (meta && meta.content) { FALLBACK_TZ = meta.content; }
+    var umeta = document.querySelector('meta[name="aot-user-tz"]');
+    if (umeta && umeta.content) { USER_TZ = umeta.content; }
   }
 
+  // "Viewer" tz for personal displays: the user's configured personal tz wins
+  // (a deliberate preference — e.g. while travelling), else the browser's own
+  // tz, else the system fallback. Device/operational displays are unaffected —
+  // they pass an explicit tz via formatDevice(). (timezone-management.md §7)
   function viewerTz() {
+    if (USER_TZ) return USER_TZ;
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FALLBACK_TZ; }
     catch (e) { return FALLBACK_TZ; }
   }
@@ -88,6 +96,41 @@
     return format(input, Object.assign({ tz: deviceTz || FALLBACK_TZ }, opts || {}));
   }
 
+  // Offset (ms) of `tz` from UTC at the given instant.
+  function tzOffsetMs(date, tz) {
+    try {
+      var dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      var p = {};
+      dtf.formatToParts(date).forEach(function (x) { p[x.type] = x.value; });
+      var asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+      return asUTC - date.getTime();
+    } catch (e) { return 0; }
+  }
+
+  /**
+   * Interpret a NAIVE wall-clock string ("2026-07-22T06:00" / "2026-07-22 06:00")
+   * AS a wall clock in `tz`, and return the corresponding absolute instant (Date).
+   * This is the inverse of formatDevice — "06:00 at the device" → the UTC moment.
+   * Handles DST by refining the offset once. Returns null on parse failure.
+   */
+  function wallToInstant(wall, tz) {
+    if (!wall) return null;
+    var m = String(wall).trim().match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    var y = +m[1], mo = +m[2], d = +m[3], h = +m[4], mi = +m[5], s = +(m[6] || 0);
+    if (!tz) return new Date(y, mo - 1, d, h, mi, s);  // no tz → browser-local
+    var guess = Date.UTC(y, mo - 1, d, h, mi, s);
+    var off = tzOffsetMs(new Date(guess), tz);
+    var inst = guess - off;
+    var off2 = tzOffsetMs(new Date(inst), tz);   // DST edge refine
+    if (off2 !== off) inst = guess - off2;
+    return new Date(inst);
+  }
+
   function formatViewer(input, opts) {
     return format(input, Object.assign({ tz: viewerTz() }, opts || {}));
   }
@@ -145,6 +188,7 @@
     format: format,
     formatDevice: formatDevice,
     formatViewer: formatViewer,
+    wallToInstant: wallToInstant,
     relative: relative,
     viewerTz: viewerTz,
     fallbackTz: function () { return FALLBACK_TZ; },
