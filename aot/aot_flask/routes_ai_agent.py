@@ -418,17 +418,23 @@ def ai_agent_add_direct():
     )
     new_agent.save()
 
-    # v13→v6: Auto-create MCPServer with independent UUID and M:N mapping
+    # v13→v6: Auto-create MCPServer with independent UUID and M:N mapping.
+    # Reuse an existing server of the same name instead of creating a duplicate
+    # (found 2026-07-21: repeated "Add" clicks for the same MCP preset had been
+    # silently piling up duplicate MCPServer rows sharing one name).
     if preset.get('is_mcp'):
         from aot.databases.models import MCPServer
         from aot.databases.models.mcp_server import AgentMCPAccess
-        new_mcp = MCPServer(
-            name=f"{agent_name} Server",
-            command=preset.get('default_command', ''),
-            scope=preset.get('mcp_scope', 'general'),
-            is_activated=True
-        )
-        new_mcp.save()
+        mcp_server_name = f"{agent_name} Server"
+        new_mcp = MCPServer.query.filter_by(name=mcp_server_name).first()
+        if not new_mcp:
+            new_mcp = MCPServer(
+                name=mcp_server_name,
+                command=preset.get('default_command', ''),
+                scope=preset.get('mcp_scope', 'general'),
+                is_activated=True
+            )
+            new_mcp.save()
 
         access = AgentMCPAccess(
             agent_unique_id=new_agent.unique_id,

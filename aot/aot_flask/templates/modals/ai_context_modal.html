@@ -184,4 +184,29 @@
             return div.innerHTML;
         }
     };
+
+    // Per-device "Include in AI Judgment" toggle (Input/Output settings modals).
+    // Delegated because these modals are loaded dynamically via AJAX.
+    $(document).on('change', '.ai-device-toggle-single', function() {
+        var $cb = $(this);
+        var deviceId = $cb.data('device-id');
+        var kind = $cb.data('kind');
+        var enabled = $cb.prop('checked');
+        fetch('/api/v1/ai/devices/' + deviceId + '/ai_toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.csrfToken || '{{ csrf_token() }}' },
+            body: JSON.stringify({ kind: kind, is_ai_enabled: enabled })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.status !== 'success') {
+                window.showToast(data.message || '{{ _("Toggle failed") }}', 'error');
+                $cb.prop('checked', !enabled);
+            }
+        })
+        .catch(function() {
+            window.showToast('{{ _("Error: Could not communicate with server") }}', 'error');
+            $cb.prop('checked', !enabled);
+        });
+    });
 </script>

@@ -33,6 +33,9 @@
 
   <div class="aot-settings-title">
     <h3>{{_('AI Agent')}} <a href="{{help_page[0]}}" target="_blank"><span class="fas fa-question-circle" style="font-size:16px"></span></a></h3>
+    <button type="button" class="btn aot-pill-btn" onclick="openAiSettings();">
+      {{ _('AI Settings') }}
+    </button>
   </div>
   <p class="aot-modal-body-text">{{_('AI Agents orchestration layer. Manage your AI services and agents to automate complex tasks.')}}</p>
 
@@ -548,72 +551,10 @@
       .catch(function() { window.showToast("{{ _('Error: Could not communicate with server') }}", 'error'); });
   }
 
-  // TASK_32: Unified AI Settings modal — System + Devices + MCP
+  // TASK_32: Unified AI Settings modal — System + MCP
   function openAiSettings() {
     $('#aiSettingsModal').modal('show');
-    _loadAiSettingsDevices();
     _loadAiSettingsMcp();
-  }
-
-  // Load Device Toggles (Tab 2)
-  function _loadAiSettingsDevices() {
-    var $body = $('#aiSettingsDeviceList');
-    $body.html('<p class="text-muted">{{ _("Loading devices...") }}</p>');
-    fetch('/api/v1/ai/devices')
-      .then(function(res) { return res.json(); })
-      .then(function(devices) {
-        if (!devices.length) {
-          $body.html('<p class="text-muted">{{ _("No devices found.") }}</p>');
-          return;
-        }
-        var html = '';
-        devices.forEach(function(d) {
-          var checked = d.is_ai_enabled ? 'checked' : '';
-          var badge   = d.kind === 'input'
-            ? '<span class="badge badge-info mr-1">{{ _("Sensor") }}</span>'
-            : '<span class="badge badge-warning mr-1">{{ _("Output") }}</span>';
-          html += '<div class="aot-modal-option-row">'
-                + '<label class="aot-modal-option-label">' + badge + d.name
-                + ' <span class="text-muted" style="font-size:0.75em;">(' + d.device_type + ')</span></label>'
-                + '<div class="aot-modal-option-control">'
-                + '<div class="custom-control custom-switch">'
-                + '<input type="checkbox" class="custom-control-input ai-device-toggle"'
-                + ' id="aitog_' + d.device_id + '"'
-                + ' data-device-id="' + d.device_id + '"'
-                + ' data-kind="' + d.kind + '"'
-                + (checked ? ' checked' : '') + '>'
-                + '<label class="custom-control-label" for="aitog_' + d.device_id + '"></label>'
-                + '</div>'
-                + '</div>'
-                + '</div>';
-        });
-        $body.html(html);
-        $body.find('.ai-device-toggle').on('change', function() {
-          var $cb = $(this);
-          var deviceId = $cb.data('device-id');
-          var kind     = $cb.data('kind');
-          var enabled  = $cb.prop('checked');
-          fetch('/api/v1/ai/devices/' + deviceId + '/ai_toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-            body: JSON.stringify({ kind: kind, is_ai_enabled: enabled })
-          })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.status !== 'success') {
-              window.showToast(data.message || '{{ _("Toggle failed") }}', 'error');
-              $cb.prop('checked', !enabled);
-            }
-          })
-          .catch(function() {
-            window.showToast('{{ _("Error: Could not communicate with server") }}', 'error');
-            $cb.prop('checked', !enabled);
-          });
-        });
-      })
-      .catch(function() {
-        $body.html('<p class="text-danger">{{ _("Failed to load devices.") }}</p>');
-      });
   }
 
   // Load AoT MCP Server status (systemd: aotmcp)
@@ -747,11 +688,6 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" id="tab-devices-tab" data-toggle="tab" href="#tab-devices" role="tab">
-              {{ _('Devices') }}
-            </a>
-          </li>
-          <li class="nav-item">
             <a class="nav-link" id="tab-mcp-tab" data-toggle="tab" href="#tab-mcp" role="tab">
               {{ _('MCP Servers') }}
             </a>
@@ -882,17 +818,7 @@
             </form>
           </div>
 
-          <!-- TAB 2: Device Toggles -->
-          <div class="tab-pane fade pt-3" id="tab-devices" role="tabpanel">
-            <p class="text-muted">
-              {{ _('Toggle which devices are included in AI judgment. Changes are saved immediately.') }}
-            </p>
-            <div class="aot-modal-container" id="aiSettingsDeviceList">
-              <p class="text-muted">{{ _('Loading...') }}</p>
-            </div>
-          </div>
-
-          <!-- TAB 3: MCP Servers -->
+          <!-- TAB 2: MCP Servers -->
           <div class="tab-pane fade pt-3" id="tab-mcp" role="tabpanel">
 
             <!-- AoT MCP Server control -->

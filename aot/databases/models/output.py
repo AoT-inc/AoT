@@ -88,7 +88,7 @@ class Output(CRUDMixin, db.Model):
     output_mode = db.Column(db.Text, default=None)
 
     # AI integration (TASK_36)
-    is_ai_enabled = db.Column(db.Boolean, default=False)
+    is_ai_enabled = db.Column(db.Boolean, default=True)
 
     def __repr__(self):
         return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)

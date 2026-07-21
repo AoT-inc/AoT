@@ -116,7 +116,7 @@ class Input(CRUDMixin, db.Model):
     custom_options = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
 
     # AI integration (TASK_36)
-    is_ai_enabled = db.Column(db.Boolean, default=False)
+    is_ai_enabled = db.Column(db.Boolean, default=True)
 
     def is_active(self):
         """

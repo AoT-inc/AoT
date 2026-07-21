@@ -156,6 +156,17 @@
             </button>
           </div>
         </div>
+        <div class="aot-modal-option-row">
+          <label class="aot-modal-option-label" title="{{_('When enabled, this device is visible to AI judgment and control tools.')}}">{{_('Include in AI Judgment')}}</label>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input ai-device-toggle-single" value="y"
+                     data-device-id="{{ each_output.unique_id }}" data-kind="output"
+                     {% if each_output.is_ai_enabled %}checked{% endif %}>
+              <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+            </label>
+          </div>
+        </div>
         {% endif %}
 
         {% include 'pages/form_options/Interface.html' %}
