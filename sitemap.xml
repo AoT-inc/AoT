@@ -273,6 +273,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Upgrade-Backup-Restore/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/time-handling/</loc>
+        <lastmod>2026-07-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/time-handling/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/time-handling/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/time-handling/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ai/env-control/</loc>
         <lastmod>2026-07-21</lastmod>
         <changefreq>daily</changefreq>
@@ -647,6 +655,14 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/env_coordinator_user_guide/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/time-handling/</loc>
+        <lastmod>2026-07-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/time-handling/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/time-handling/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/time-handling/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/ai/env-control/</loc>
         <lastmod>2026-07-21</lastmod>
         <changefreq>daily</changefreq>
@@ -1013,6 +1029,14 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/Upgrade-Backup-Restore/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/Upgrade-Backup-Restore/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/Upgrade-Backup-Restore/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/time-handling/</loc>
+        <lastmod>2026-07-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/time-handling/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/time-handling/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/time-handling/"/>
     </url>
     <url>
         <loc>https://aot-inc.github.io/AoT/ja/ai/env-control/</loc>
