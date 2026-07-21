@@ -332,6 +332,9 @@ def api_calendar_events():
     start = request.args.get('start')
     end = request.args.get('end')
     limit = request.args.get('limit', 500, type=int)
+    # Optional bucket filter (ai|user|device) so the widget can show each AoT
+    # category as its own toggle-able source. None = all buckets.
+    category = request.args.get('category') or None
     requested_sources = [s.strip() for s in request.args.get('sources', 'schedule').split(',') if s.strip()]
 
     events = []
@@ -343,7 +346,7 @@ def api_calendar_events():
             # so frontend/backend rollout doesn't have to be lockstep.
             continue
         try:
-            events.extend(provider(start=start, end=end, limit=limit))
+            events.extend(provider(start=start, end=end, limit=limit, category=category))
         except Exception:
             logger.exception("api_calendar_events: provider '%s' failed", source)
 

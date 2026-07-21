@@ -352,28 +352,157 @@
       deleteFailed: options.i18nDeleteFailed
     };
 
+    // --- selectable calendar sources (AoT schedule + user's Google calendars) ---
+    var SEL_KEY = 'aot-cal-src-' + uniqueId;
+    var googleMeta = {};   // calId -> {name, color}
+
+    var AOT_BUCKETS = ['ai', 'user', 'device'];
+    function loadSel() {
+      try {
+        var v = JSON.parse(localStorage.getItem(SEL_KEY));
+        if (Array.isArray(v)) {
+          // migrate the old single 'aot:schedule' key → the 3 category buckets
+          if (v.indexOf('aot:schedule') !== -1) {
+            v = v.filter(function (k) { return k !== 'aot:schedule'; })
+                 .concat(AOT_BUCKETS.map(function (b) { return 'aot:' + b; }));
+          }
+          return v;
+        }
+      } catch (e) { /* ignore */ }
+      return options.includeSchedule ? AOT_BUCKETS.map(function (b) { return 'aot:' + b; }) : [];
+    }
+    function saveSel(list) {
+      try { localStorage.setItem(SEL_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+    }
+    var selected = loadSel();
+
+    function fetchAot(bucket) {
+      return function (info, ok, fail) {
+        var p = new URLSearchParams({ start: info.startStr, end: info.endStr, sources: 'schedule', category: bucket, limit: 500 });
+        fetch('/api/v1/scheduler/calendar_events?' + p.toString())
+          .then(function (r) { return r.json(); }).then(ok).catch(fail);
+      };
+    }
+    function fetchGoogle(calId) {
+      return function (info, ok, fail) {
+        var p = new URLSearchParams({ calendar_id: calId, start: info.startStr, end: info.endStr });
+        fetch('/api/v1/integrations/google/events?' + p.toString())
+          .then(function (r) { return r.json(); }).then(ok).catch(fail);
+      };
+    }
+    function primeGoogleMeta(cb) {
+      // On load, colors/names for selected Google calendars aren't known yet
+      // (googleMeta is filled when the picker opens). Fetch once so events show
+      // in their real calendar color instead of the default from the start.
+      var needs = selected.some(function (k) { return k.indexOf('google:') === 0; });
+      if (!needs) { cb(); return; }
+      fetch('/api/v1/integrations/calendars')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          (data.google || []).forEach(function (c) { googleMeta[c.id] = { name: c.name, color: c.color }; });
+          cb();
+        })
+        .catch(cb);
+    }
+    function rebuildSources() {
+      calendar.getEventSources().forEach(function (s) { s.remove(); });
+      selected.forEach(function (k) {
+        if (k.indexOf('aot:') === 0) {
+          // AoT category bucket (ai/user/device); events self-color via colorHint.
+          calendar.addEventSource({ id: k, events: fetchAot(k.slice(4)) });
+        } else if (k.indexOf('google:') === 0) {
+          var cid = k.slice(7);
+          var meta = googleMeta[cid] || {};
+          calendar.addEventSource({ id: k, color: meta.color || '#4285F4', textColor: '#fff', events: fetchGoogle(cid) });
+        }
+      });
+    }
+
+    // --- calendar picker popover (opened by the toolbar "calendars" button) ---
+    var PICKER_ID = 'aot-cal-picker-' + uniqueId;
+    function closePicker() {
+      var el = document.getElementById(PICKER_ID);
+      if (el) el.parentNode.removeChild(el);
+      document.removeEventListener('click', onPickerOutside, true);
+    }
+    function onPickerOutside(e) {
+      var el = document.getElementById(PICKER_ID);
+      var btn = containerEl.querySelector('.fc-calendars-button');
+      if (el && !el.contains(e.target) && (!btn || !btn.contains(e.target))) closePicker();
+    }
+    function row(key, name, color, checked) {
+      var lab = document.createElement('label');
+      lab.className = 'aot-cal-picker-row';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = checked; cb.value = key;
+      cb.addEventListener('change', function () {
+        var idx = selected.indexOf(key);
+        if (cb.checked && idx === -1) selected.push(key);
+        else if (!cb.checked && idx !== -1) selected.splice(idx, 1);
+        saveSel(selected);
+        rebuildSources();
+      });
+      var dot = document.createElement('span');
+      dot.className = 'aot-cal-picker-dot';
+      dot.style.backgroundColor = color;
+      var txt = document.createElement('span');
+      txt.className = 'aot-cal-picker-name';
+      txt.textContent = name;
+      lab.appendChild(cb); lab.appendChild(dot); lab.appendChild(txt);
+      return lab;
+    }
+    function openPicker() {
+      closePicker();
+      var pop = document.createElement('div');
+      pop.id = PICKER_ID;
+      pop.className = 'aot-cal-picker';
+      pop.innerHTML = '<div class="aot-cal-picker-loading text-muted small">' + (options.i18nLoading || 'Loading...') + '</div>';
+      document.body.appendChild(pop);
+      var btn = containerEl.querySelector('.fc-calendars-button');
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        pop.style.top = (window.scrollY + r.bottom + 4) + 'px';
+        pop.style.left = (window.scrollX + Math.min(r.left, window.innerWidth - 260)) + 'px';
+      }
+      setTimeout(function () { document.addEventListener('click', onPickerOutside, true); }, 0);
+
+      fetch('/api/v1/integrations/calendars')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          pop.innerHTML = '';
+          (data.aot || []).forEach(function (c) {
+            pop.appendChild(row('aot:' + c.key, c.name, c.color, selected.indexOf('aot:' + c.key) !== -1));
+          });
+          if ((data.google || []).length) {
+            var h = document.createElement('div');
+            h.className = 'aot-cal-picker-head';
+            h.textContent = options.i18nGoogle || 'Google Calendar';
+            pop.appendChild(h);
+            data.google.forEach(function (c) {
+              googleMeta[c.id] = { name: c.name, color: c.color };
+              pop.appendChild(row('google:' + c.id, c.name, c.color, selected.indexOf('google:' + c.id) !== -1));
+            });
+          }
+        })
+        .catch(function () { pop.innerHTML = '<div class="text-muted small" style="padding:8px;">—</div>'; });
+    }
+
     var calendar = new FullCalendar.Calendar(containerEl, {
       initialView: options.defaultView,
-      headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
+      customButtons: {
+        calendars: { text: options.i18nCalendars || 'Calendars', click: function () {
+          if (document.getElementById(PICKER_ID)) closePicker(); else openPicker();
+        } }
+      },
+      headerToolbar: { left: 'prev,next today calendars', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
       height: '100%',
       locale: options.locale,
       displayEventTime: false,
       views: {
         listWeek: { duration: { days: options.daysAheadList } }
       },
-      events: function (fetchInfo, successCallback, failureCallback) {
-        var params = new URLSearchParams({
-          start: fetchInfo.startStr,
-          end: fetchInfo.endStr,
-          sources: options.includeSchedule ? 'schedule' : '',
-          limit: 500
-        });
-        fetch('/api/v1/scheduler/calendar_events?' + params.toString())
-          .then(function (r) { return r.json(); })
-          .then(successCallback)
-          .catch(failureCallback);
-      },
       eventClassNames: function (arg) {
+        if (arg.event.extendedProps.sourceType === 'google') return ['aot-cal-event', 'aot-cal-event--google'];
         return ['aot-cal-event', 'aot-cal-event--' + (arg.event.extendedProps.colorHint || 'chart-2')];
       },
       eventDidMount: function (info) {
@@ -382,6 +511,11 @@
       eventClick: function (info) {
         info.jsEvent.preventDefault();
         var props = info.event.extendedProps || {};
+        // Google-calendar events are read-only here — open in Google.
+        if (props.sourceType === 'google') {
+          if (props.deepLink) window.open(props.deepLink, '_blank');
+          return;
+        }
         if (options.canEdit && props.rowEditable && editModal.canEdit) {
           editModal.openFor(info.event);
           return;
@@ -417,6 +551,7 @@
       }
     });
     calendar.render();
+    primeGoogleMeta(rebuildSources);
     attachResponsiveSwitch(calendar, options.defaultView, containerEl);
 
     var editModal = options.canEdit ? setupEditModal(uniqueId, calendar, i18n) : { canEdit: false };

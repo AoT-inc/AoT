@@ -44,8 +44,9 @@ WIDGET_INFORMATION = {
     'no_class': True,
     'mobile_full_width': True,  # a day-grid at a fractional mobile column width is unusable
 
-    'message': lazy_gettext('Shows scheduled farm events (from the Scheduler) on a calendar. '
-                'Read-only — click an event for details, or open the full Scheduler to edit.'),
+    'message': lazy_gettext('Shows scheduled events (from the Scheduler) on a calendar, '
+                'split by category (AI / User / Device), and any Google calendars you connect. '
+                'Click an event for details or to edit; open the full Scheduler for more.'),
 
     'dependencies_module': [],
 
@@ -58,7 +59,7 @@ WIDGET_INFORMATION = {
             'type': 'bool',
             'default_value': True,
             'name': lazy_gettext('Show Scheduled Events'),
-            'phrase': lazy_gettext('Include farm schedule jobs on the calendar')
+            'phrase': lazy_gettext('Include scheduled jobs on the calendar')
         },
         {
             'id': 'default_view',
@@ -94,8 +95,8 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"aot_calendar_render": 1}) %}
 <link rel="stylesheet" href="/static/vendor/fullcalendar-5.11.5/main.min.css">
 <script src="/static/vendor/fullcalendar-5.11.5/main.min.js"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=6">
-<script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=6"></script>
+<link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=9">
+<script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=9"></script>
 {% endif %}
 <style>
   .aot-calendar-widget-outer { height: 100%; display: flex; flex-flow: column; overflow: hidden; }
@@ -180,7 +181,10 @@ aotCalendarWidgetInit('{{each_widget.unique_id}}', {
   i18nDelete: {{_('Delete')|tojson}},
   i18nDeletePrompt: {{_('Cancellation reason (optional):')|tojson}},
   i18nSaveFailed: {{_('Save failed')|tojson}},
-  i18nDeleteFailed: {{_('Delete failed')|tojson}}
+  i18nDeleteFailed: {{_('Delete failed')|tojson}},
+  i18nCalendars: {{_('Calendars')|tojson}},
+  i18nGoogle: {{_('Google Calendar')|tojson}},
+  i18nLoading: {{_('Loading...')|tojson}}
 });
 """,
 }

@@ -405,42 +405,26 @@ def login_google_start():
     return redirect(consent_url)
 
 
-@blueprint.route('/login/google/callback', methods=['GET'])
-def login_google_callback():
-    """Complete 'Sign in with Google'. Matches the Google account's email to
-    an existing User (logs in) or, if none matches, self-registers a new,
-    unapproved User for an admin to review in Settings > Users."""
+def complete_google_login(tokens, email):
+    """Finish 'Sign in with Google' — called by
+    routes_integrations.oauth_google_callback (the single physical OAuth
+    callback URL registered in Google Cloud Console) once it has validated
+    the login-intent state and exchanged the code for tokens. Matches the
+    Google account's email to an existing User (logs in) or, if none
+    matches, self-registers a new, unapproved User for an admin to review in
+    Settings > Users.
+
+    A separate '/login/google/callback' route is NOT used here: Google OAuth
+    only accepts one registered redirect_uri per client
+    (google_oauth.redirect_uri() is a single fixed value), so both the
+    'connect my account' flow (already logged in) and this 'sign in with
+    Google' flow (not logged in yet) must land on the same callback path —
+    only the state-key that round-trips tells them apart."""
     if not admin_exists():
         return redirect('/create_admin')
     if flask_login.current_user.is_authenticated:
         return redirect(url_for('routes_general.home'))
 
-    error = request.args.get('error')
-    if error:
-        flash(gettext(
-            "Google sign-in was denied or failed: %(err)s", err=error), "error")
-        return redirect(url_for('routes_authentication.login_check'))
-
-    expected = session.pop(_GOOGLE_LOGIN_STATE_KEY, None)
-    got = request.args.get('state')
-    if not expected or expected != got:
-        flash(gettext(
-            "Authorization state mismatch — please try signing in again."),
-              "error")
-        return redirect(url_for('routes_authentication.login_check'))
-
-    code = request.args.get('code')
-    if not code:
-        flash(gettext("No authorization code returned by Google."), "error")
-        return redirect(url_for('routes_authentication.login_check'))
-
-    tokens = google_oauth.exchange_code(code)
-    if tokens.get('error'):
-        flash(gettext(
-            "Google sign-in failed: %(err)s", err=tokens['error']), "error")
-        return redirect(url_for('routes_authentication.login_check'))
-
-    email = google_oauth.fetch_account_email(tokens.get('access_token'))
     if not email:
         flash(gettext("Could not read your Google account's email address."),
               "error")

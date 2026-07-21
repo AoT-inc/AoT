@@ -78,6 +78,48 @@
 .aot-calendar-widget-outer .aot-cal-event--chart-5 { background-color: var(--aot-chart-5); }
 .aot-calendar-widget-outer .aot-cal-event--chart-6 { background-color: var(--aot-chart-6); }
 
+/* Google-calendar events (read-only) — source color set inline by FullCalendar. */
+.aot-calendar-widget-outer .aot-cal-event--google { border: none; color: #fff; }
+
+/* ── Calendar picker (toolbar "calendars" button popover) ──────────────── */
+.aot-cal-picker {
+  position: absolute;
+  z-index: 1060;
+  min-width: 220px;
+  max-width: 300px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--aot-surface-card, #fff);
+  border: 1px solid var(--aot-border-neutral, #ddd);
+  border-radius: 0.6rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 0.5rem;
+}
+.aot-cal-picker-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--aot-color-text-secondary, #6c757d);
+  text-transform: uppercase;
+  padding: 0.5rem 0.4rem 0.25rem;
+  border-top: 1px solid var(--aot-border-light, #f0f0f0);
+  margin-top: 0.35rem;
+}
+.aot-cal-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+.aot-cal-picker-row:hover { background: var(--aot-surface-body, #f8f9fa); }
+.aot-cal-picker-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.aot-cal-picker-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aot-cal-picker-loading { padding: 8px; }
+
 /* State overlay — a second, independent axis from category color. */
 .aot-calendar-widget-outer .aot-cal-event[data-state="DRAFT"] { opacity: 0.6; border: 1px dashed rgba(255, 255, 255, 0.8); }
 .aot-calendar-widget-outer .aot-cal-event[data-state="COMPLETED"] { opacity: 0.65; }

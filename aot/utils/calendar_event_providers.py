@@ -29,6 +29,29 @@ _CATEGORY_COLOR_HINT = {
 }
 _DEFAULT_COLOR_HINT = 'chart-2'
 
+# Canonical bucket for a schedule action_type — the ONE mapping used everywhere:
+# the calendar-widget picker's AoT sections, the Google category-calendar
+# routing (calendar_sync_service imports this), and event filtering. Deliberately
+# domain-neutral (this system runs at farms, factories, labs, buildings — never
+# assume "farm").
+#   automated_fire → 'ai'      (AI-authored / automated)
+#   control_output / pid / function / activate / deactivate → 'device'
+#   human (+ anything else)     → 'user'
+_DEVICE_ACTIONS = ('control_output', 'pid', 'function', 'activate', 'deactivate')
+
+
+def action_category(action_type):
+    if action_type == 'automated_fire':
+        return 'ai'
+    if action_type in _DEVICE_ACTIONS:
+        return 'device'
+    return 'user'
+
+
+# Representative color per bucket (default chart palette hexes; per-event colors
+# still come from the reactive --aot-chart-* tokens, this is just a picker dot).
+_BUCKET_COLOR = {'ai': '#93B261', 'user': '#FEA60B', 'device': '#008DDE'}
+
 # Job states shown on the calendar. ARCHIVED (cancelled/superseded) is
 # deliberately excluded — a cancelled event cluttering a calendar view is
 # noise, not signal (matches the scheduler page's own "History" vs "Active"
@@ -54,8 +77,11 @@ def _parse_range_bound(value):
     return dt
 
 
-def provide_schedule_events(start=None, end=None, limit=500):
-    """Registered provider for source key 'schedule'. Queries SchedulerJobMeta
+def provide_schedule_events(start=None, end=None, limit=500, category=None):
+    """Registered provider for source key 'schedule'. `category` (optional:
+    'ai'|'user'|'device') filters to one bucket via action_category(), so the
+    calendar widget can offer AI/User/Device as separate toggle-able sources
+    that mirror the Google category calendars. Queries SchedulerJobMeta
     with schedule_time in [start, end) (either bound optional — an unbounded
     query is still capped by `limit`), reuses
     AoTDataToolService._schedule_summary() for content/location resolution
@@ -96,6 +122,9 @@ def provide_schedule_events(start=None, end=None, limit=500):
 
     events = []
     for row in rows:
+        bucket = action_category(row.action_type)
+        if category and bucket != category:
+            continue
         try:
             summary = AoTDataToolService._schedule_summary(row)
         except Exception:
@@ -119,6 +148,7 @@ def provide_schedule_events(start=None, end=None, limit=500):
             'allDay': False,
             'sourceType': 'schedule',
             'category': row.action_type,
+            'bucket': bucket,
             'state': row.state,
             'colorHint': _CATEGORY_COLOR_HINT.get(row.action_type, _DEFAULT_COLOR_HINT),
             'content': summary['content'],

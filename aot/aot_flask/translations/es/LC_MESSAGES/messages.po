@@ -1,5 +1,5 @@
 # Spanish translations for AoT.
-# Copyright (C) 2026 Kyle T. Gabriel
+# Copyright (C) 2026 ORGANIZATION
 # This file is distributed under the same license as the AoT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AoT VERSION\n"
 "Report-Msgid-Bugs-To: aot@kylegabriel.com\n"
-"POT-Creation-Date: 2026-07-21 11:08+0900\n"
+"POT-Creation-Date: 2026-07-21 11:52+0900\n"
 "PO-Revision-Date: 2024-09-29 21:49+0000\n"
 "Last-Translator: Kyle Gabriel <business@kylegabriel.com>\n"
 "Language: es\n"
@@ -1075,8 +1075,8 @@ msgstr "Default"
 #: aot_flask/templates/tools/notice_detail.html:138
 #: aot_flask/templates/tools/notice_edit.html:171
 #: aot_flask/templates/tools/partials/note_item.html:34
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:44
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:47
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:14
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:20
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:117
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:75
@@ -1089,7 +1089,7 @@ msgstr "Eliminar"
 #: aot_flask/forms/forms_dependencies.py:13
 #: aot_flask/forms/forms_function.py:46 aot_flask/forms/forms_input.py:110
 #: aot_flask/forms/forms_output.py:78 aot_flask/forms/forms_pid.py:83
-#: aot_flask/forms/forms_trigger.py:37
+#: aot_flask/forms/forms_trigger.py:37 aot_flask/routes_integrations.py:234
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/dist/geo-design.bundle.js:192
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:464
@@ -1145,7 +1145,6 @@ msgstr "Edge"
 #: aot_flask/templates/pages/geo/geo_design.html:376
 #: aot_flask/templates/tools/notice_detail.html:94
 #: aot_flask/templates/tools/partials/note_item.html:28
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:14
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:19
 #: config_translations.py:74
 msgid "Edit"
@@ -1207,7 +1206,7 @@ msgstr "Fail"
 #: aot_flask/templates/layout_default.html:565
 #: aot_flask/templates/pages/function.html:62
 #: aot_flask/templates/pages/live.html:156 config_translations.py:86
-#: utils/calendar_event_format.py:299 widgets/AoT_graph.py:441
+#: utils/calendar_event_format.py:312 widgets/AoT_graph.py:441
 #: widgets/AoT_map.py:755 widgets/AoT_map.py:789
 #: widgets/widget_function_status.py:51 widgets/widget_graph_synchronous.py:372
 msgid "Function"
@@ -1448,7 +1447,7 @@ msgstr "Pause"
 
 #: aot_flask/forms/forms_function.py:64 aot_flask/forms/forms_input.py:128
 #: aot_flask/forms/forms_output.py:96 aot_flask/forms/forms_settings.py:190
-#: config_translations.py:142 utils/calendar_event_format.py:294
+#: config_translations.py:142 utils/calendar_event_format.py:307
 #: widgets/AoT_graph.py:461
 msgid "PID"
 msgstr "PID"
@@ -1569,7 +1568,7 @@ msgstr "Resume"
 #: aot_flask/templates/settings/custom_ui.html:556
 #: aot_flask/templates/settings/general.html:17
 #: aot_flask/templates/settings/integrations.html:145
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:46
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:49
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:118
 #: config_translations.py:160
 msgid "Save"
@@ -1687,7 +1686,8 @@ msgstr "Unlock"
 msgid "Up"
 msgstr "Up"
 
-#: actions/command_bash.py:32 aot_flask/templates/layout-settings.html:17
+#: actions/command_bash.py:32 aot_flask/routes_integrations.py:233
+#: aot_flask/templates/layout-settings.html:17
 #: aot_flask/templates/layout-settings.html:18
 #: aot_flask/templates/layout-settings.html:19
 #: aot_flask/templates/layout-settings.html:20
@@ -4061,7 +4061,7 @@ msgstr ""
 "[Solicitud de control de dispositivo] Toque el botón de abajo para "
 "aprobarla; el dispositivo solo se controlará después de su aprobación."
 
-#: aot_flask/app.py:741
+#: aot_flask/app.py:741 aot_flask/routes_integrations.py:152
 msgid "Please log in to access this page"
 msgstr "Please log in to access this page"
 
@@ -4403,7 +4403,7 @@ msgstr ""
 
 #: aot_flask/routes_authentication.py:258
 #: aot_flask/routes_authentication.py:367
-#: aot_flask/routes_authentication.py:455
+#: aot_flask/routes_authentication.py:439
 msgid "Your account is awaiting administrator approval."
 msgstr ""
 
@@ -4423,45 +4423,27 @@ msgstr ""
 msgid "Could not build the Google authorization URL."
 msgstr ""
 
-#: aot_flask/routes_authentication.py:421
-#, fuzzy, python-format
-msgid "Google sign-in was denied or failed: %(err)s"
-msgstr "Test email failed: %(err)s"
-
-#: aot_flask/routes_authentication.py:428
-msgid "Authorization state mismatch — please try signing in again."
-msgstr ""
-
-#: aot_flask/routes_authentication.py:434
-msgid "No authorization code returned by Google."
-msgstr ""
-
-#: aot_flask/routes_authentication.py:440
-#, fuzzy, python-format
-msgid "Google sign-in failed: %(err)s"
-msgstr "Test email failed: %(err)s"
-
-#: aot_flask/routes_authentication.py:445
+#: aot_flask/routes_authentication.py:429
 msgid "Could not read your Google account's email address."
 msgstr ""
 
-#: aot_flask/routes_authentication.py:489
+#: aot_flask/routes_authentication.py:473
 #, python-format
 msgid "Failed to create your account: %(err)s"
 msgstr ""
 
-#: aot_flask/routes_authentication.py:494
+#: aot_flask/routes_authentication.py:478
 #, python-format
 msgid ""
 "Your Google account (%(email)s) was registered as '%(user)s' and is "
 "awaiting administrator approval before you can log in."
 msgstr ""
 
-#: aot_flask/routes_authentication.py:547
+#: aot_flask/routes_authentication.py:531
 msgid "Successfully logged out"
 msgstr "Successfully logged out"
 
-#: aot_flask/routes_authentication.py:615
+#: aot_flask/routes_authentication.py:599
 #, python-format
 msgid ""
 "A check of your database indicates there is an issue with your database "
@@ -4470,7 +4452,7 @@ msgid ""
 "in its place."
 msgstr ""
 
-#: aot_flask/routes_authentication.py:648
+#: aot_flask/routes_authentication.py:632
 #, python-format
 msgid "Failed Login (%(count)s/%(max)s)"
 msgstr "Inicio de sesión fallido (%(count)s/%(max)s)"
@@ -4544,6 +4526,27 @@ msgstr "`action` desconocida: %(action)s"
 #: aot_flask/routes_geo_commissioning.py:79
 msgid "No devices to inspect"
 msgstr "No hay dispositivos que inspeccionar"
+
+#: aot_flask/routes_integrations.py:132
+#, fuzzy, python-format
+msgid "Google sign-in was denied or failed: %(err)s"
+msgstr "Test email failed: %(err)s"
+
+#: aot_flask/routes_integrations.py:137
+msgid "No authorization code returned by Google."
+msgstr ""
+
+#: aot_flask/routes_integrations.py:143
+#, fuzzy, python-format
+msgid "Google sign-in failed: %(err)s"
+msgstr "Test email failed: %(err)s"
+
+#: aot_flask/routes_integrations.py:232 aot_flask/templates/layout.html:513
+#: aot_flask/templates/layout_default.html:513
+#: aot_flask/templates/pages/ai/ai.html:3
+#: aot_flask/templates/pages/ai/ai.html:4 widgets/AoT_map.py:796
+msgid "AI"
+msgstr "IA"
 
 #: aot_flask/routes_method.py:101
 msgid "Invalid method ID"
@@ -5378,7 +5381,7 @@ msgstr "Activar cálculo automático de VPD"
 #: aot_flask/templates/pages/ai/scheduler.html:475
 #: aot_flask/templates/pages/geo/geo_facility.html:1489
 #: aot_flask/templates/pages/geo/geo_facility.html:1759
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:18
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:21
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:10
 msgid "Location"
 msgstr "Location"
@@ -5812,7 +5815,7 @@ msgstr "Título"
 #: aot_flask/templates/tools/notes.html:396
 #: aot_flask/templates/tools/notice.html:194
 #: aot_flask/templates/tools/notice_edit.html:61
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:24
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:27
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:53
 msgid "Content"
 msgstr "Content"
@@ -7132,6 +7135,7 @@ msgstr "Quitar"
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:105
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:115
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:4
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:20
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:4
 msgid "Loading..."
 msgstr "Cargando..."
@@ -7583,7 +7587,7 @@ msgstr "Create Note"
 #: aot_flask/templates/tools/notice.html:180
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:133
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:13
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:45
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:48
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:13
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:22
 #: aot_flask/templates/user_templates/widget_template_widget_notice_body.html:35
@@ -8861,13 +8865,6 @@ msgstr "Alerts"
 msgid "Add Dashboard"
 msgstr "Add Dashboard"
 
-#: aot_flask/templates/layout.html:513
-#: aot_flask/templates/layout_default.html:513
-#: aot_flask/templates/pages/ai/ai.html:3
-#: aot_flask/templates/pages/ai/ai.html:4 widgets/AoT_map.py:796
-msgid "AI"
-msgstr "IA"
-
 #: aot_flask/templates/layout.html:518
 #: aot_flask/templates/layout_default.html:518
 msgid "Portal"
@@ -8920,7 +8917,7 @@ msgstr "Aviso"
 #: aot_flask/templates/layout_default.html:602
 #: aot_flask/templates/tools/notice.html:242
 #: aot_flask/templates/tools/notice_edit.html:133
-#: utils/calendar_event_format.py:305
+#: utils/calendar_event_format.py:318
 msgid "Schedule"
 msgstr "Programación"
 
@@ -10944,7 +10941,7 @@ msgstr "Sintetizador"
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 #: aot_flask/templates/pages/ai/scheduler.html:295
 #: aot_flask/templates/pages/ai/scheduler.html:390
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:30
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:33
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:11
 msgid "Worker"
 msgstr "Trabajador"
@@ -11114,7 +11111,7 @@ msgstr "Se requiere reiniciar para aplicar el cambio del interruptor de IA"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:721
 #: aot_flask/templates/pages/ai/ai_library.html:319
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:16
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:409
 msgid "Save failed"
 msgstr "Error al guardar"
@@ -11533,7 +11530,7 @@ msgid "Deleted."
 msgstr "Eliminado."
 
 #: aot_flask/templates/pages/ai/ai_library.html:322
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:18
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Delete failed"
 msgstr "Error al eliminar"
 
@@ -12333,7 +12330,7 @@ msgstr "ID de destino"
 #: aot_flask/templates/pages/ai/scheduler.html:399
 #: aot_flask/templates/pages/ai/scheduler.html:488
 #: aot_flask/templates/pages/ai/scheduler.html:682
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:36
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:39
 msgid "Schedule Time"
 msgstr "Hora programada"
 
@@ -12493,7 +12490,7 @@ msgstr "Propuesto por"
 
 #: aot_flask/templates/pages/ai/scheduler.html:282
 #: aot_flask/templates/pages/ai/scheduler.html:377
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:20
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:23
 #, fuzzy
 msgid "e.g. 3-1, Zone A"
 msgstr "p. ej. My OpenAI"
@@ -12501,7 +12498,7 @@ msgstr "p. ej. My OpenAI"
 #: aot_flask/templates/pages/ai/scheduler.html:316
 #: aot_flask/templates/pages/ai/scheduler.html:411
 #: aot_flask/templates/pages/ai/scheduler.html:498
-#: utils/calendar_event_format.py:277
+#: utils/calendar_event_format.py:287
 #, fuzzy
 msgid "min"
 msgstr "Min:"
@@ -12650,7 +12647,7 @@ msgid "Rejection reason (optional):"
 msgstr "Motivo del rechazo (opcional):"
 
 #: aot_flask/templates/pages/ai/scheduler.html:858
-#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:16
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
 #, fuzzy
 msgid "Cancellation reason (optional):"
 msgstr "Motivo del rechazo (opcional):"
@@ -15885,7 +15882,7 @@ msgstr "Hora (HH:MM)"
 
 #: aot_flask/templates/pages/method_options/build_daily_multipoint.html:136
 #: aot_flask/templates/pages/method_options/build_daily_multipoint.html:431
-#: widgets/widget_calendar.py:69
+#: widgets/widget_calendar.py:70
 msgid "Week"
 msgstr "Semana"
 
@@ -16903,6 +16900,7 @@ msgid "Measurements"
 msgstr "Measurements"
 
 #: aot_flask/templates/settings/integrations.html:18
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:19
 #, fuzzy
 msgid "Google Calendar"
 msgstr "Clear"
@@ -18049,7 +18047,7 @@ msgstr "Real"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:155
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:163
-#: utils/calendar_event_format.py:268 utils/calendar_event_format.py:299
+#: utils/calendar_event_format.py:278 utils/calendar_event_format.py:312
 msgid "Run"
 msgstr "Marcha"
 
@@ -18085,6 +18083,11 @@ msgstr "Programador de IA"
 #, fuzzy
 msgid "Open in Scheduler"
 msgstr "Programador de IA"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:18
+#, fuzzy
+msgid "Calendars"
+msgstr "Clear"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
 msgid "Still"
@@ -22601,66 +22604,66 @@ msgstr "Digital-to-Analog Converter"
 msgid "Off Value"
 msgstr "Off Value"
 
-#: utils/calendar_event_format.py:131
+#: utils/calendar_event_format.py:138
 msgid "Keep the 'Key: Value' lines so AoT can apply your edits."
 msgstr ""
 
-#: utils/calendar_event_format.py:259
+#: utils/calendar_event_format.py:269
 #, fuzzy
 msgid "pid"
 msgstr "PID"
 
-#: utils/calendar_event_format.py:261
+#: utils/calendar_event_format.py:271
 #, fuzzy
 msgid "setting"
 msgstr "Configuración"
 
-#: utils/calendar_event_format.py:262 utils/calendar_event_format.py:273
+#: utils/calendar_event_format.py:272 utils/calendar_event_format.py:283
 #, fuzzy
 msgid "value"
 msgstr "Value"
 
-#: utils/calendar_event_format.py:264
+#: utils/calendar_event_format.py:274
 #, fuzzy
 msgid "setpoint"
 msgstr "Setpoint"
 
-#: utils/calendar_event_format.py:267
+#: utils/calendar_event_format.py:277
 #, fuzzy
 msgid "function"
 msgstr "Function"
 
-#: utils/calendar_event_format.py:268 utils/calendar_event_format.py:275
+#: utils/calendar_event_format.py:278 utils/calendar_event_format.py:285
 #, fuzzy
 msgid "state"
 msgstr "State"
 
-#: utils/calendar_event_format.py:271
+#: utils/calendar_event_format.py:281
 #, fuzzy
 msgid "device"
 msgstr "Device"
 
-#: utils/calendar_event_format.py:277
+#: utils/calendar_event_format.py:287
 #, fuzzy
 msgid "duration"
 msgstr "Duration"
 
-#: utils/calendar_event_format.py:280
+#: utils/calendar_event_format.py:290
 #, fuzzy
 msgid "location"
 msgstr "Location"
 
-#: utils/calendar_event_format.py:282
+#: utils/calendar_event_format.py:292
 #, fuzzy
 msgid "content"
 msgstr "Content"
 
-#: utils/calendar_event_format.py:284
+#: utils/calendar_event_format.py:294
 #, fuzzy
 msgid "worker"
 msgstr "Trabajador"
 
-#: utils/calendar_event_format.py:302 utils/calendar_event_format.py:304
+#: utils/calendar_event_format.py:315 utils/calendar_event_format.py:317
 #, fuzzy
 msgid "Device control"
 msgstr "Función del dispositivo"
@@ -24076,54 +24079,55 @@ msgstr "Clear"
 
 #: widgets/widget_calendar.py:47
 msgid ""
-"Shows scheduled farm events (from the Scheduler) on a calendar. Read-only"
-" — click an event for details, or open the full Scheduler to edit."
+"Shows scheduled events (from the Scheduler) on a calendar, split by "
+"category (AI / User / Device), and any Google calendars you connect. "
+"Click an event for details or to edit; open the full Scheduler for more."
 msgstr ""
 
-#: widgets/widget_calendar.py:60
+#: widgets/widget_calendar.py:61
 #, fuzzy
 msgid "Show Scheduled Events"
 msgstr "Hora programada"
 
-#: widgets/widget_calendar.py:61
-msgid "Include farm schedule jobs on the calendar"
+#: widgets/widget_calendar.py:62
+msgid "Include scheduled jobs on the calendar"
 msgstr ""
 
-#: widgets/widget_calendar.py:68
+#: widgets/widget_calendar.py:69
 #, fuzzy
 msgid "Month"
 msgstr "Monthly"
 
-#: widgets/widget_calendar.py:70
+#: widgets/widget_calendar.py:71
 #, fuzzy
 msgid "List (Week)"
 msgstr "Semana pasada"
 
-#: widgets/widget_calendar.py:72
+#: widgets/widget_calendar.py:73
 #, fuzzy
 msgid "Default View"
 msgstr "Sitio predeterminado"
 
-#: widgets/widget_calendar.py:73
+#: widgets/widget_calendar.py:74
 msgid ""
 "Calendar view shown when there is enough room; a narrow card or small "
 "screen still switches to a list automatically"
 msgstr ""
 
-#: widgets/widget_calendar.py:80 widgets/widget_notice.py:61
+#: widgets/widget_calendar.py:81 widgets/widget_notice.py:61
 msgid "Refresh (seconds)"
 msgstr "Actualización (segundos)"
 
-#: widgets/widget_calendar.py:81
+#: widgets/widget_calendar.py:82
 msgid "How often to re-fetch events for the currently visible range"
 msgstr ""
 
-#: widgets/widget_calendar.py:88
+#: widgets/widget_calendar.py:89
 #, fuzzy
 msgid "List View Look-ahead (days)"
 msgstr "Anticipación del pronóstico (horas)"
 
-#: widgets/widget_calendar.py:89
+#: widgets/widget_calendar.py:90
 msgid "How many days ahead the List view queries"
 msgstr ""
 
@@ -24806,629 +24810,4 @@ msgstr "Validez de entrada (s)"
 #: widgets/widget_trigger_sequence.py:315
 msgid "Input value validity duration"
 msgstr "Input value validity duration"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:69
-#, fuzzy
-msgid "Integrated Environment Control"
-msgstr "Control Ambiental Integrado (IEC)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:73
-msgid ""
-"Coordinates registered Output actuators to optimise photosynthesis. VPD "
-"is the primary control target; temperature and humidity act as safety "
-"constraints. Add \"Environment Control: Register Actuator\" actions to "
-"register devices. External environment data (outdoor temperature, "
-"humidity, wind, rain, solar, CO₂) comes from the linked facility's "
-"outdoor sensors, or optionally from the ext_context_collector function."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:85
-msgid "Trigger an immediate cycle, reload actuators, or issue an emergency stop."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:92
-#, fuzzy
-msgid "Reload Actuators"
-msgstr "Sin actuadores"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:94
-msgid "Re-read the Actions table and rebuild actuator profiles."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:101
-#, fuzzy
-msgid "Run Now"
-msgstr "desconocido"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:103
-msgid "Execute one coordination cycle immediately using current sensor readings."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:110
-#, fuzzy
-msgid "Emergency Stop"
-msgstr "Mostrar parada de emergencia"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:112
-msgid "Immediately set all actuators to safe_default and pause control for 60 s."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:119
-msgid "Apply Crop Preset Targets"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:121
-msgid ""
-"Force-fill VPD / CO₂ / Temp / DLI / GDD target fields from the selected "
-"Crop Preset (overwrites current values; variables using a Method are "
-"skipped). Save the function first if you just changed the crop preset."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:143
-msgid ""
-"Coordination cycle interval. Recommended: slowest actuator response time "
-"× 1.5."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:151
-#, fuzzy
-msgid "Max Sensor Age (seconds)"
-msgstr "Max Age (sec)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:153
-msgid "Reject sensor readings older than this value. 0 = no limit."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:160
-#, fuzzy
-msgid "Growth Schedule"
-msgstr "Programador de IA"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:170
-msgid ""
-"Planting / germination date. Pick from the calendar. The date is "
-"interpreted in the device/facility local timezone (the system stores it "
-"as UTC internally — no manual conversion needed). Used to compute "
-"weeks_elapsed for all Method curves. Leave empty to disable week-based "
-"progression (Methods use wall-clock day only)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:184
-#, fuzzy
-msgid "Schedule End (harvest date)"
-msgstr "Horario actualizado"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:186
-msgid ""
-"Harvest / cycle-end date. Pick from the calendar. Interpreted in the "
-"device/facility local timezone (same rules as Schedule Start). Methods "
-"keep following actual elapsed weeks until this date; once it passes, "
-"control stops — every actuator returns to its configured end-behavior and"
-" coordination cycles halt. Leave empty for no end date."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:201
-msgid ""
-"Direct week adjustment applied on top of elapsed weeks. Use a positive "
-"value to fast-forward (e.g. system started mid-cycle), or negative to "
-"compensate for downtime. Default 0."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:210
-#, fuzzy
-msgid "Facility (optional)"
-msgstr "Información de la instalación"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:218
-#, fuzzy
-msgid "Linked Facility"
-msgstr "Nueva instalación"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:220
-msgid ""
-"When set, actuators are auto-discovered from this facility (envelope, "
-"side/roof vents, curtains, fans). GIS metadata (azimuth, area, U-value) "
-"is attached to each actuator profile so wind direction and facility "
-"geometry can be considered. Manual \"Environment Control\" actions below "
-"still apply and are merged with the facility-derived list. Leave empty to"
-" use manual actions only."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:233
-#, fuzzy
-msgid "Bay Scope (optional)"
-msgstr "Nota (opcional)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:235
-msgid ""
-"Restrict this coordinator to one bay of the linked facility. Enter the "
-"bay ID (see the facility editor bay list; e.g. \"bay_1\"). Only sensors "
-"and actuators placed inside that bay are used, and facility volume/area "
-"are scaled to the bay share. Leave empty to control the entire facility. "
-"Create one coordinator per bay to control multiple bays independently."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:247
-#, fuzzy
-msgid "Time Control"
-msgstr "Hide Controls"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:254
-#, fuzzy
-msgid "Enable Time Window"
-msgstr "Al finalizar la ventana de tiempo"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:256
-msgid "When enabled, control only runs between Start and End times."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:266
-msgid ""
-"Control period start time (24-hour format). Only active when Enable Time "
-"Window is turned on."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:277
-msgid ""
-"On-end behavior per actuator is configured in each Action. Ignored when "
-"Photoperiod Method is set."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:287
-#, fuzzy
-msgid "Photoperiod Method"
-msgstr "Other Methods"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:289
-msgid ""
-"Optional. Select an AoT Method that returns photoperiod length in hours "
-"(e.g. 14.0 = 14 h light). The function computes time_start/end "
-"symmetrically around the Anchor time. When set, the static Start/End "
-"times above are overridden."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:300
-msgid "Photoperiod Anchor (HH:MM)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:302
-msgid ""
-"Solar-noon equivalent. The photoperiod window is centred on this time. "
-"Default 12:00. Adjust for your latitude / season if needed."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:318
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:406
-#, fuzzy
-msgid "Static Target"
-msgstr "Agente de IA"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:319
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:407
-msgid "Method (time-varying)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:321
-#, fuzzy
-msgid "Setpoint Type"
-msgstr "Setpoint"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:323
-msgid ""
-"Static: use the fixed target value below. Method: follow an AoT Method "
-"curve."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:332
-#, fuzzy
-msgid "Target VPD (kPa)"
-msgstr "ID de destino"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:333
-msgid "Used when Setpoint Type = Static. 0 = disable VPD control."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:343
-msgid ""
-"Used when Setpoint Type = Method. Select an AoT Method that returns a VPD"
-" setpoint (kPa)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:352
-#, fuzzy
-msgid "VPD Priority"
-msgstr "Prioridad"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:353
-msgid "Higher value = processed first. Default 1.2."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:360
-msgid "VPD Tolerance (kPa)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:362
-msgid ""
-"Dead-band half-width around the VPD setpoint. Adjustments are skipped "
-"when the deviation is within this range, reducing unnecessary actuator "
-"cycling. Typical value: 0.05–0.15 kPa."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:378
-msgid "Max Light Threshold"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:380
-msgid "Activate shade screen when light exceeds this value. 0 = disabled."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:388
-msgid "Min Light Threshold (Supplemental)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:390
-msgid ""
-"Activate supplemental lighting when light falls below this value. 0 = "
-"disabled (most facilities — natural light only)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:398
-#, fuzzy
-msgid "CO₂"
-msgstr "CO2"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:409
-#, fuzzy
-msgid "CO₂ Setpoint Type"
-msgstr "Setpoint Tracking Type"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:411
-msgid ""
-"Static: use the fixed target below. Method: follow an AoT Method curve "
-"(ppm vs time-of-day / growth week)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:420
-#, fuzzy
-msgid "Target CO₂ (ppm)"
-msgstr "Posición objetivo (%)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:421
-#, fuzzy
-msgid "Used when CO₂ Setpoint Type = Static."
-msgstr "Set the Setpoint of a PID."
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:429
-#, fuzzy
-msgid "CO₂ Method"
-msgstr "Method"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:431
-msgid ""
-"Used when CO₂ Setpoint Type = Method. Select an AoT Method that returns a"
-" CO₂ setpoint (ppm)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:440
-#, fuzzy
-msgid "CO₂ Priority"
-msgstr "Prioridad"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:442
-msgid ""
-"Processing order weight for CO₂ relative to other control variables. "
-"Higher value = processed earlier in each cycle. Default 0.8 (lower than "
-"VPD 1.2, since CO₂ enrichment is secondary)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:452
-msgid "CO₂ Tolerance (ppm)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:454
-msgid ""
-"Dead-band half-width around the CO₂ setpoint. Adjustments are skipped "
-"when the deviation is within this range. Typical value: 50–150 ppm."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:470
-#, fuzzy
-msgid "Max Temperature (°C)"
-msgstr "Temperatura máxima"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:472
-msgid "Hard upper limit. Forces cooling when exceeded, regardless of VPD target."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:480
-#, fuzzy
-msgid "Min Temperature (°C)"
-msgstr "Temperatura mínima"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:482
-msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:496
-#, fuzzy, python-format
-msgid "Max Humidity (%)"
-msgstr "Humedad pronosticada (%%)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:498
-msgid "Hard upper limit. Prevents VPD bypass via extreme humidity."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:506
-#, fuzzy
-msgid "Min Humidity (%)"
-msgstr "Humedad interior"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:508
-msgid "Hard lower limit. Prevents VPD bypass via extreme dryness."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:515
-#, fuzzy
-msgid "VPD Decomposition"
-msgstr "Posición"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:522
-#, fuzzy
-msgid "T Weight (0-1)"
-msgstr "Altura de alero (m)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:524
-msgid ""
-"VPD decomposition: fraction of adjustment via temperature (rest via "
-"humidity). 0.6 = favour temperature adjustment. Range 0.0~1.0."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:532
-msgid "Photosynthesis Model"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:539
-#, fuzzy
-msgid "Enable Photosynthesis-Oriented Control"
-msgstr "Enable Output Controls"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:541
-msgid ""
-"When enabled, the Big-Leaf photosynthesis model identifies the current "
-"limiting factor (Light / CO₂ / Temperature / VPD) each cycle and "
-"dynamically raises that variable's priority. Requires Light sensor. "
-"Recommended when ≥ 3 active actuator types are available."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:553
-#, fuzzy
-msgid "Tomato"
-msgstr "Automático"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:554
-msgid "Lettuce / Leafy greens"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:555
-msgid "Cucumber"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:556
-#, fuzzy
-msgid "Strawberry"
-msgstr "Raspberry Pi"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:557
-msgid "Pepper / Paprika"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:559
-#, fuzzy
-msgid "Crop Preset"
-msgstr "Preajuste"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:561
-msgid ""
-"Crop recipe. On Save, fills the target options from this preset — VPD, "
-"CO₂, Temp min/max, DLI and GDD — unless you changed a value or use a "
-"Method for that variable (your setting wins). Use the \"Apply Crop "
-"Preset\" button to force-overwrite. Also selects Big-Leaf model params "
-"(A_max, K_L, K_C, T_opt, VPD_half), used only when Photosynthesis-"
-"Oriented Control is on."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:572
-msgid "Guide Ranges (T / RH)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:579
-msgid "Guide T Min (°C)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:581
-msgid ""
-"Advisory lower bound for temperature. Triggers forced heating when "
-"exceeded (replaces Min Temperature setting when using crop-preset-derived"
-" guide ranges)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:591
-msgid "Guide T Max (°C)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:592
-#, fuzzy
-msgid "Advisory upper bound for temperature."
-msgstr "Temperatura interior"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:599
-msgid "Guide RH Min (%)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:600
-msgid "Advisory lower bound for relative humidity."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:607
-msgid "Guide RH Max (%)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:608
-msgid "Advisory upper bound for relative humidity."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:614
-#, fuzzy
-msgid "Cumulative Goal Tracker"
-msgstr "Seguimiento colaborativo de objetivos"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:621
-#, fuzzy
-msgid "Enable DLI / GDD Tracker"
-msgstr "Enable Align Ticks"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:623
-msgid ""
-"Tracks daily light integral (DLI) and growing degree-days (GDD), rolling "
-"over at the facility-local midnight (device timezone). Light is converted"
-" to PPFD by sensor unit (W/m² assumed if unknown). Generates compensation"
-" suggestions when debt accumulates. Requires a Light sensor for DLI "
-"tracking."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:635
-msgid "DLI Target (mol/m²/day)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:637
-msgid ""
-"Daily light integral target. 0 = use the selected crop preset default "
-"(leafy greens ~14, tomato/cucumber/pepper ~22, strawberry ~17). Turn the "
-"tracker off above to disable entirely."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:647
-msgid "GDD Target (°C·day/day)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:649
-msgid ""
-"Growing degree-day target per day. 0 = use the selected crop preset "
-"default (≈ T_opt − T_base). Computed as max(0, T_mean − T_base) per "
-"cycle."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:664
-#, fuzzy
-msgid "Strong Wind Threshold (m/s)"
-msgstr "Umbral de ahorro extremo (V)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:666
-msgid "Openings (vents, side walls) are forced closed above this wind speed."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:673
-#, fuzzy
-msgid "Effect Calibration"
-msgstr "Calibration"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:681
-msgid "Legacy (built-in K constants)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:682
-msgid "Shadow (grey-box logged, legacy controls)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:683
-msgid "Grey-box (physics model controls)"
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:685
-#, fuzzy
-msgid "Effect Engine"
-msgstr "U-efectiva"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:687
-msgid ""
-"Legacy: uses built-in K_* constants (default, safe). Shadow: runs grey-"
-"box model in parallel for KPI logging only — no control change. Grey-box:"
-" physics-model control (effect magnitudes from the grey-box model, with "
-"MPC look-ahead when a forecast is available). Grey-box activates ONLY "
-"after the shadow KPI passes and parameters have converged; until then it "
-"automatically falls back to Legacy control. Recommended flow: run Shadow "
-"first, then switch to Grey-box."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-#, fuzzy
-msgid "Enable RLS Calibration"
-msgstr "Clear Calibration"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:703
-msgid ""
-"Learn per-actuator effect coefficients (K_*) from sensor response. "
-"Requires several days of data to converge. Falls back to built-in "
-"defaults until convergence."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:713
-#, fuzzy
-msgid "Enable Active Probing"
-msgstr "Activar servicio de IA"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:715
-#, python-format
-msgid ""
-"Periodically perturb one actuator by ±10 %% to improve calibration "
-"identifiability. Only triggers when load is low and no safety gate is "
-"active. Requires RLS Calibration to be enabled."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:725
-#, fuzzy
-msgid "Probe Interval (seconds)"
-msgstr "Capture Interval (sec)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:727
-msgid "Minimum time between active probing events. Default 3600 s (1 hour)."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:734
-#, fuzzy
-msgid "Forecast Feedforward"
-msgstr "Horas de pronóstico por delante"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:741
-#, fuzzy
-msgid "Enable Forecast Feedforward"
-msgstr "Unable to load forecast data."
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:743
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:753
-#, fuzzy
-msgid "Forecast Lookahead (hours)"
-msgstr "Horas de pronóstico por delante"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:755
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:772
-msgid ""
-"Write per-cycle decision data to InfluxDB (goal targets, deviations, "
-"mode, cycle metrics, actuator mismatch count, learning hygiene). Also "
-"emits per-cycle DEBUG log lines (constraint violations, feedforward "
-"decisions, deadband skips). Leave OFF for production — critical events "
-"(safety gate, dispatch failure, runtime state error) are always recorded "
-"regardless of this flag."
-msgstr ""
 

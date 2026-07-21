@@ -9,12 +9,22 @@ extendedProperties.private.aot_job_id so the pull half can recognize and dedup
 its own pushes instead of re-importing them as new AoT rows.
 """
 import logging
+from urllib.parse import quote
 
 import requests
 
 logger = logging.getLogger("aot.google_calendar_api")
 
 _BASE = "https://www.googleapis.com/calendar/v3"
+
+
+def _enc(seg):
+    """URL-encode a path segment (calendar/event ids can contain '#', '@', '/',
+    e.g. holiday calendars 'en.south_korea#holiday@...' or an email primary id).
+    Without this the '#' is parsed as a URL fragment → 404."""
+    return quote(str(seg), safe='')
+
+
 _TIMEOUT = 15
 
 AOT_JOB_ID_KEY = "aot_job_id"
@@ -49,7 +59,7 @@ def list_events(access_token, calendar_id, sync_token=None, time_min=None,
     if page_token:
         params["pageToken"] = page_token
 
-    url = "{}/calendars/{}/events".format(_BASE, calendar_id)
+    url = "{}/calendars/{}/events".format(_BASE, _enc(calendar_id))
     try:
         resp = requests.get(url, headers=_headers(access_token), params=params, timeout=_TIMEOUT)
     except Exception as exc:
@@ -62,7 +72,7 @@ def list_events(access_token, calendar_id, sync_token=None, time_min=None,
 
 
 def insert_event(access_token, calendar_id, body):
-    url = "{}/calendars/{}/events".format(_BASE, calendar_id)
+    url = "{}/calendars/{}/events".format(_BASE, _enc(calendar_id))
     try:
         resp = requests.post(url, headers=_headers(access_token), json=body, timeout=_TIMEOUT)
     except Exception as exc:
@@ -73,7 +83,7 @@ def insert_event(access_token, calendar_id, body):
 
 
 def update_event(access_token, calendar_id, event_id, body):
-    url = "{}/calendars/{}/events/{}".format(_BASE, calendar_id, event_id)
+    url = "{}/calendars/{}/events/{}".format(_BASE, _enc(calendar_id), _enc(event_id))
     try:
         resp = requests.put(url, headers=_headers(access_token), json=body, timeout=_TIMEOUT)
     except Exception as exc:
@@ -88,7 +98,7 @@ def update_event(access_token, calendar_id, event_id, body):
 def delete_event(access_token, calendar_id, event_id):
     """Delete an event. 404/410 (already gone) is treated as success — the end
     state we wanted is reached either way."""
-    url = "{}/calendars/{}/events/{}".format(_BASE, calendar_id, event_id)
+    url = "{}/calendars/{}/events/{}".format(_BASE, _enc(calendar_id), _enc(event_id))
     try:
         resp = requests.delete(url, headers=_headers(access_token), timeout=_TIMEOUT)
     except Exception as exc:
@@ -96,6 +106,20 @@ def delete_event(access_token, calendar_id, event_id):
     if resp.status_code in (200, 204, 404, 410):
         return {}, None
     return None, "delete_event {}: {}".format(resp.status_code, resp.text[:300])
+
+
+def list_calendars(access_token):
+    """List the user's calendars (calendarList). Returns (items, error) where
+    each item has id/summary/backgroundColor/primary/accessRole."""
+    url = "{}/users/me/calendarList".format(_BASE)
+    try:
+        resp = requests.get(url, headers=_headers(access_token),
+                            params={'minAccessRole': 'reader', 'maxResults': 250}, timeout=_TIMEOUT)
+    except Exception as exc:
+        return None, "list_calendars request failed: {}".format(exc)
+    if resp.status_code != 200:
+        return None, "list_calendars {}: {}".format(resp.status_code, resp.text[:200])
+    return resp.json().get('items', []), None
 
 
 def create_calendar(access_token, summary):

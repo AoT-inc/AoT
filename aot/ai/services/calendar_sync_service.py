@@ -60,14 +60,9 @@ _CATEGORY_KEYS = [c[0] for c in _CATEGORY_DEFS]
 
 
 def _category_for_action(action_type):
-    if action_type == 'automated_fire':
-        return 'ai'
-    # All control kinds (output on/off/value, PID setpoint, function trigger,
-    # activate/deactivate) share the 'device' calendar.
-    if action_type in ('control_output', 'pid', 'function', 'activate', 'deactivate'):
-        return 'device'
-    # 'human' and any unforeseen type fall to 'user' so nothing is silently dropped.
-    return 'user'
+    # Single canonical mapping (shared with the widget picker + event feed).
+    from aot.utils.calendar_event_providers import action_category
+    return action_category(action_type)
 
 
 # --- time helpers (project convention: naive datetimes are UTC) --------------
