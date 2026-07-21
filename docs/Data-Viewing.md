@@ -92,16 +92,18 @@ Turns an output on for a set time, then off again automatically — the simplest
 
 ### AoT Graph { #widget-graph }
 
-Displays a synchronous time-series graph (built on Highcharts Stock). Selected measurements are plotted over the configured time window.
+Overlay several measurements on one time-series graph (built on Highcharts Stock) to see how they relate. For example, plot a greenhouse bay's temperature and humidity (Input measurements) together with its VPD (a Function measurement) and its irrigation valves' run time (Output measurements), so you can see at a glance whether a temperature spike lines up with a watering cycle.
+
+![AoT Graph widget — a bay's temperature/humidity/VPD lines alongside its irrigation output series](images/aot-dashboard-data-view.png)
 
 **Key options**
 
 -   **Time axis** — refresh interval, X-axis duration and unit (day / hour / minute), auto-refresh, and an X-axis reset that snaps back to the live window.
--   **Data sources** — multi-select Input, Function, Output, PID, and Note Tag measurements (hold Ctrl / ⌘ to select several).
+-   **Data sources** — multi-select Input, Function, Output, PID, and Note Tag measurements (hold Ctrl / ⌘ to select several). There's no fixed limit on how many you combine, but the color palette has about 16 colors — beyond that, extra series share a fallback color.
 -   **Graph style** — toggle the header buttons, title, navigator, export, range selector, and legend, plus per-element font sizes and a mobile axis-label hide option.
--   **Per-series** (in the settings modal) — custom color, series type (line / step / column), data-grouping toggle, and manual Y-axis min/max.
+-   **Per-series** (in the settings modal) — custom color, series type (line / step / column), data-grouping toggle, and manual Y-axis min/max (shared by every series with the same unit).
 
-*Notable:* history loads **on demand** — the widget normally holds only the configured window, but using the range buttons (1m … 3mo / All) or zooming fetches earlier, downsampled data and merges it in. The **Reset** button returns to the live sliding window.
+*Notable:* history loads **on demand** — the widget normally holds only the configured window, but using the range buttons (1m … 3mo / All) or zooming fetches earlier, downsampled data and merges it in. The **Reset** button returns to the live sliding window. For longer-range historical analysis outside a dashboard, see [Asynchronous Graphs](#asynchronous-graphs).
 
 ### AoT Circular Gauge { #widget-gauge }
 

@@ -39,25 +39,25 @@ Displays the KMA (Korea Meteorological Administration) short-term forecast for t
 
 Displays wind direction on a circular ring (0-360°) and wind speed in the center. Includes auxiliary lines for the 8 primary compass points.
 
-### AoT 그래프
+### AoT Graph
 
 - Libraries: Highstock
 - Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
 
-Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration.
+Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration. See [AoT Graph](Data-Viewing.md#widget-graph) for details.
 
-### AoT 원형 게이지
+### AoT Circular Gauge
 
 - Libraries: Highcharts
 - Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
 
 Displays data in a circular gauge. Ensure the maximum value option matches the last section (High) for correct display. Selecting presets like Temperature, Humidity, or VPD automatically sets min/max values and color sections.
 
-### AoT 지도
+### AoT Map
 
-- Libraries: Leaflet
+- Libraries: MapLibre GL
 
-선택한 장치의 위치를 지도에 표시합니다. 선택한 색상으로 작동 상태를 강조합니다.
+Displays your devices on an interactive map and highlights their operating state with color. See [AoT Map](Data-Viewing.md#widget-map) for details.
 
 ### Camera
 

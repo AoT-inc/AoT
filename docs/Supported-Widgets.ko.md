@@ -44,7 +44,7 @@ PID 컨트롤러를 표시하고 제어할 수 있습니다.
 - Libraries: Highstock
 - Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
 
-동기화 그래프를 표시합니다. 선택한 데이터가 설정한 기간 동안 X축에 표시됩니다.
+동기화 그래프를 표시합니다. 선택한 데이터가 설정한 기간 동안 X축에 표시됩니다. 자세한 내용은 [AoT 그래프](Data-Viewing.md#widget-graph)를 참고하세요.
 
 ### AoT 원형 게이지
 
@@ -55,9 +55,9 @@ PID 컨트롤러를 표시하고 제어할 수 있습니다.
 
 ### AoT 지도
 
-- Libraries: Leaflet
+- Libraries: MapLibre GL
 
-선택한 장치의 위치를 지도에 표시합니다. 선택한 색상으로 작동 상태를 강조합니다.
+장치를 인터랙티브 지도에 표시하고 작동 상태를 색상으로 강조합니다. 자세한 내용은 [AoT 지도](Data-Viewing.md#widget-map)를 참고하세요.
 
 ### Camera
 
