@@ -249,6 +249,37 @@ TOOLS: List[Tool] = [
         "description": "Lists available maps (map_id, name, center). Read-only.",
         "usage_hint": "params.arguments: {}",
     }),
+    # --- Facility performance/capacity (@ANCHOR: FACILITY_CAPACITY_TOOL, 2026-07-22)
+    # geo/design computes engineering capacity for each facility (heating/cooling
+    # kW, volume/area, ventilation) plus an irrigation BOM (pipe/emitter/flow) via
+    # facility_calc.compute_capacity, surfaced through get_facility_integration.
+    # None of it reached the AI before this — neither context nor a tool exposed
+    # it, so "is the cooling enough / 관수 유량은?" was unanswerable. Read-only;
+    # values are on-demand reference estimates (±5-10%), not persisted nameplates.
+    Tool('get_facility_capacity', handler='get_facility_capacity_tool', manifest={
+        "tool_name": "get_facility_capacity",
+        "action_type": "virtual_tool_call",
+        "description": "Returns the performance/capacity data geo/design computes for a facility (greenhouse/structure) drawn on the map: reference heating/cooling capacity (kW), floor/volume/glazing area, ventilation (ACH, vent-opening m²), an irrigation summary (pipe/emitter counts, flow L/min), and how many control devices are bound. Read-only — on-demand engineering reference estimates (±5-10%). Use for sizing / what-if questions ('is cooling enough?', '관수 유량은?', '난방 용량').",
+        "usage_hint": "params.arguments: {facility_name (optional — a facility name like '육묘장'; omit to return ALL facilities)}. Returns per-facility capacity{heating_kw,cooling_kw,volume_m3,floor_m2,glazing_m2,ach_total,vent_open_m2}, irrigation{total_length_m,emitters,flow_lpm,layers[]}, bound_actuators. If the name isn't found it returns available_facilities.",
+    }),
+    # --- Map-drawn equipment (@ANCHOR: MAP_EQUIPMENT_TOOL, 2026-07-22) -----------
+    # Equipment placed in geo/design (irrigation valves, sprinklers/drip, fans,
+    # heaters, window/curtain motors) is stored inside equipment_collection
+    # GeoShapes' feature.features[] and was invisible to the AI — build_tree only
+    # aggregates a category count and never descends into the collection. This
+    # exposes each item's sub_type + specs + which site/zone it sits in.
+    Tool('get_map_equipment', handler='get_map_equipment_tool', manifest={
+        "tool_name": "get_map_equipment",
+        "action_type": "virtual_tool_call",
+        "description": "Returns the geo/design map-drawn equipment and its irrigation design summary per site/zone. Distinct from control devices (Outputs). IMPORTANT — distinguish the two irrigation METHODS precisely, never merge them into one 'emitter' number: `sprinklers`/스프링클러 (individual sprinkler heads, each with a spray radius+flow) vs `drip_emitters`/점적 (drip emitters counted along drip pipes = length ÷ interval). `method` says sprinkler|drip|mixed. Discrete devices (irrigation valves, fans, heaters/coolers, window/curtain motors) are listed with specs (flow_lph, pressure_kpa, capacity_kw, airflow_cmh, power_w). Read-only. Use whenever asked what 설비/관수장치 is installed/drawn or for 유량/스프링클러/점적/배관. (For a greenhouse's COMPUTED heating/cooling design capacity use get_facility_capacity.)",
+        "usage_hint": "params.arguments: {area_name (optional — a site/zone name like '1-1'; omit for whole map)}. Returns equipment[{name,sub_type,location,specs{}}] and irrigation[{area, method, sprinklers, sprinkler_flow_lph, drip_emitters, drip_flow_lph, total_flow_lph, total_flow_lpm, main_pipes, main_pipe_length_m, branch_pipes, branch_pipe_length_m}]. Report 스프링클러 and 점적 SEPARATELY. Attribution uses ownership link (parent_node_id), matching the design panel. OVERVIEW tier; for positions/spacing use get_map_equipment_detail.",
+    }),
+    Tool('get_map_equipment_detail', handler='get_map_equipment_detail_tool', manifest={
+        "tool_name": "get_map_equipment_detail",
+        "action_type": "virtual_tool_call",
+        "description": "The GEOMETRY-level detail behind get_map_equipment's summary for ONE area — individual SPRINKLER head positions (lat/lng) with radius+flow, the computed sprinkler spacing (nearest-neighbour interval), DRIP detail per drip-pipe (interval + emitter count), and each pipe's length + start/end coordinates. Keeps 스프링클러 and 점적 separate. Read-only. Call this ONLY when the user asks something the summary can't answer — exact position, spacing/간격, radius, or an individual pipe. For counts/총유량/총길이 the get_map_equipment summary is enough.",
+        "usage_hint": "params.arguments: {area_name (required — a site/zone name like '1-1')}. Returns sprinkler_count, sprinkler_spacing_m, sprinklers[{lat,lng,radius_m,flow_lph}] (capped at 60), drip_pipes[{pipe,interval_m,drip_emitters,flow_lph_each}], drip_emitter_total, pipes[{name,sub_type,length_m,start,end}].",
+    }),
     Tool('get_device_location', handler='get_device_location', manifest={
         "tool_name": "get_device_location",
         "action_type": "virtual_tool_call",
@@ -417,7 +448,7 @@ TOOLS: List[Tool] = [
     Tool('knowledge_search', handler='knowledge_search_tool', manifest={
         "tool_name": "knowledge_search",
         "action_type": "virtual_tool_call",
-        "description": "Searches the AI knowledge library (manuals + domain knowledge synced from external sources + AI-curated notes) by free-text query. Read-only. Broader than read_manual — no filename/section needed, and covers non-manual domain knowledge (crops, pests, environment guides) when sources are synced.",
+        "description": "Searches the AI knowledge LIBRARY (system manuals + domain knowledge synced from external sources — crops, pests, environment guides) by free-text query. Read-only. Broader than read_manual (no filename/section needed). NOT for per-entity notes/memos a user recorded on a specific device or zone — those are the Notes model; use search_notes(target_name=...) for anything the user 'wrote down / recorded / noted' about a named device or zone.",
         "usage_hint": "params.arguments: {query (free text, required), top_k (optional, default 3), tags (optional comma-separated scope filter)}. Prefer this over read_manual for capability/how-to/domain questions; use read_manual only when you already know the exact file.",
     }),
 
@@ -708,6 +739,37 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "limit": {"type": "integer", "description": "최대 반환 건수(기본 10)"}
             }
+        }
+    },
+    {
+        "tool_name": "get_facility_capacity",
+        "description": "geo/design(지도)에서 그린 시설(온실/구조물)의 설계 산출 성능·용량을 반환한다: 냉난방 참조 용량(kW), 바닥/체적/피복 면적, 환기(ACH·개구부 m²), 관수 요약(배관·에미터 수·유량 L/min), 바인딩된 제어장치 수. 읽기 전용 — 요청 시 산출되는 공학적 참조 추정치(±5~10%). 용량 적정성/설계 질의('냉방 충분한가?', '관수 유량은?', '난방 용량')에 사용.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "facility_name": {"type": "string", "description": "시설 이름(예: '육묘장'). 생략하면 전체 시설 반환."}
+            }
+        }
+    },
+    {
+        "tool_name": "get_map_equipment",
+        "description": "geo/design 지도에 그린 설비와 구역별 관수 설계 요약을 반환한다. 제어장치(Output)와 별개. 중요 — 관수 방식 두 가지를 정확히 구분하고 절대 하나의 'emitter'로 합치지 말 것: `sprinklers`(스프링클러 — 개별 살수 헤드, 각 살수반경+유량) vs `drip_emitters`(점적 — 점적배관 길이÷간격으로 산출). `method`=sprinkler|drip|mixed. 개별 장비(관수밸브·환기팬·난방/냉방기·창호/커튼 모터)는 스펙(flow_lph·pressure_kpa·capacity_kw·airflow_cmh·power_w)과 함께. 읽기 전용. '무슨 관수장치/설비가 있나', 'X구역 유량/스프링클러/점적/배관' 질의에 사용. 스프링클러와 점적을 따로 보고. (온실의 계산된 냉난방 설계 용량은 get_facility_capacity.)",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "area_name": {"type": "string", "description": "사이트/구역 이름(예: '1-1'). 생략하면 지도 전체."}
+            }
+        }
+    },
+    {
+        "tool_name": "get_map_equipment_detail",
+        "description": "get_map_equipment 요약의 한 단계 아래 지오메트리 상세(한 구역) — 개별 스프링클러 헤드 위치(lat/lng)·반경·유량, 계산된 스프링클러 간격(인접 중앙값), 점적은 배관별 간격·점적기 수, 배관별 길이·시작/끝 좌표. 스프링클러와 점적을 분리 유지. 읽기 전용. 요약으로 답 안 되는 구체 질의(정확한 위치, 간격, 반경, 특정 배관)일 때만 호출. 개수·총유량·총길이는 요약으로 충분.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "area_name": {"type": "string", "description": "사이트/구역 이름(예: '1-1'). 필수."}
+            },
+            "required": ["area_name"]
         }
     }
 ]

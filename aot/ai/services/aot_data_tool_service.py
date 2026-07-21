@@ -997,6 +997,534 @@ class AoTDataToolService:
             return {"error": f"Error while querying notes: {str(e)}"}
 
     @staticmethod
+    def get_facility_capacity_tool(facility_name=None, **extra):
+        """[분류 C - 설비 성능/용량 읽기 도구]
+        geo/design(지도 디자인)에서 그린 시설(온실/축사 등 GeoFacility)의 설계
+        산출값을 조회한다 — 냉난방 참조 용량, 체적/바닥/피복 면적, 환기(ACH·
+        개구부 면적), 그리고 관수(배관·에미터 수·유량) 요약, 바인딩된 제어장치 수.
+
+        값은 저장된 캐시가 아니라 요청 시 compute_capacity 로 산출되는 공학적
+        참조 추정치(±5~10%)다. facility_name 을 주면 부분일치로 찾고, 생략하면
+        전체 시설을 반환한다. 읽기 전용.
+        """
+        try:
+            from aot.databases.models import GeoFacility
+            from aot.aot_flask.geo.facility_integration import get_facility_integration
+
+            if not facility_name:
+                facility_name = extra.get('name') or extra.get('target_name')
+
+            q = GeoFacility.query
+            if facility_name and str(facility_name).strip():
+                rows = q.filter(GeoFacility.name.ilike(f"%{str(facility_name).strip()}%")).all()
+                if not rows:
+                    return {
+                        "status": "success", "count": 0, "results": [],
+                        "message": f"Facility '{facility_name}' was not found.",
+                        "available_facilities": [f.name for f in q.all()],
+                    }
+            else:
+                rows = q.all()
+
+            def _r(x, n=1):
+                try:
+                    return round(float(x), n)
+                except (TypeError, ValueError):
+                    return x
+
+            results = []
+            for f in rows:
+                res, err = get_facility_integration(f.unique_id)
+                if err or not res:
+                    results.append({"name": f.name, "error": err or "no integration data"})
+                    continue
+                comp = res.get('computed') or {}
+                cm = res.get('capacity_meta') or {}
+                irr = res.get('irrigation_summary') or {}
+                irr_tot = irr.get('totals') or {}
+                results.append({
+                    "name": res.get('name') or f.name,
+                    "structure": getattr(f, 'structure', None),
+                    "bay_count": getattr(f, 'bay_count', None),
+                    "capacity": {
+                        "floor_m2": _r(comp.get('floor_m2')),
+                        "volume_m3": _r(comp.get('volume_m3')),
+                        "glazing_m2": _r(comp.get('glazing_m2')),
+                        "heating_kw": _r(comp.get('heating_kw')),
+                        "cooling_kw": _r(comp.get('cooling_kw')),
+                        "nameplate_heating_kw": _r(comp.get('nameplate_heating_kw')),
+                        "nameplate_cooling_kw": _r(comp.get('nameplate_cooling_kw')),
+                        "ach_total": _r(comp.get('ach_total')),
+                        "vent_open_m2": _r(comp.get('vent_open_m2')),
+                        "u_effective": cm.get('u_effective'),
+                    },
+                    "irrigation": {
+                        "total_length_m": _r(irr_tot.get('length_m')),
+                        "emitters": irr_tot.get('emitters'),
+                        "flow_lpm": _r(irr_tot.get('flow_lpm')),
+                        "flow_lph": _r(irr_tot.get('flow_lph')),
+                        "layers": [
+                            {"name": L.get('name'),
+                             "pipe_count": L.get('pipe_count'),
+                             "device_count": L.get('device_count')}
+                            for L in (irr.get('layers') or [])
+                        ],
+                    },
+                    "bound_actuators": len(res.get('actuators_resolved') or []),
+                    "_note": comp.get('_note')
+                             or "Engineering reference estimate (±5-10%), not a nameplate rating.",
+                })
+            return {"status": "success", "count": len(results), "results": results}
+        except Exception as e:
+            logger.error(f"Error in get_facility_capacity_tool: {e}")
+            return {"error": str(e)}
+
+    # geo/design equipment spec fields (KIND_META/SPEC_META in aot-facility-design.js).
+    _EQUIP_SPEC_FIELDS = ('flow_lph', 'pressure_kpa', 'capacity_kw', 'airflow_cmh',
+                          'power_w', 'stroke_m', 'speed_m_per_min', 'coverage_pct', 'fuel')
+    # Discrete named devices worth listing one-by-one (KIND_META allowlist). Pipes
+    # and generated emitters are HIGH-COUNT (hundreds) — aggregate, never list each.
+    _EQUIP_DISCRETE_SUBTYPES = (
+        'irrigation_valve', 'exhaust_fan', 'circulation_fan', 'heater', 'cooler',
+        'heat_pump', 'side_window_motor', 'roof_vent_motor', 'thermal_curtain_motor',
+        'shade_curtain_motor',
+    )
+    # The emitter unit geo/design counts as "점적기" IS the sprinkler_coverage
+    # feature (each carries radius + flow); the bare 'sprinkler' Points are hidden
+    # center dots. Pipes are LineStrings. This mirrors the design-panel algorithm
+    # in aot-map-utils.js calculatePolygonStats.
+    _EQUIP_MAIN_SUBTYPES = ('pipe_main', 'main')
+    _EQUIP_BRANCH_SUBTYPES = ('pipe_branch', 'branch')
+
+    @staticmethod
+    def _extract_map_equipment(shapes, area_name=None):
+        """Pure classifier — reproduces the geo/design design-info panel numbers
+        (면적/주배관/점적기/유량) for map-drawn equipment, per site/zone.
+
+        KEY: equipment is attributed to its zone/site by the ownership link
+        already in the data — feature.properties.parent_node_id / zone_id ==
+        that shape's node_id — NOT by re-counting via point-in-polygon (that is
+        exactly the 'hard way'; the design panel uses the logical link, with a
+        spatial fallback only for orphans). Emitters (점적기) are the
+        sprinkler_coverage features (each with a `flow`); pipes are summed by
+        geodesic length. Separated from DB access so it is unit-testable with
+        synthetic features.
+
+        Returns {equipment:[discrete devices], irrigation:[per-area summary]}."""
+        import json as _json
+        import math as _math
+        try:
+            from shapely.geometry import shape as _shape
+            _have_shapely = True
+        except Exception:
+            _have_shapely = False
+
+        S = AoTDataToolService
+        _aql = (area_name or '').strip().lower()
+
+        # 1) Ownership index: node_id → area name; name → node_ids; polygons (fallback).
+        node2name = {}
+        name2nodes = {}
+        containers = []  # (name, polygon)
+        for s in shapes:
+            if s.type not in ('site', 'zone'):
+                continue
+            try:
+                feat = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+            except Exception:
+                continue
+            props = feat.get('properties') or {}
+            nm = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
+            nid = props.get('node_id')
+            if nid:
+                node2name[nid] = nm
+                name2nodes.setdefault(nm.lower(), set()).add(nid)
+            if _have_shapely and feat.get('geometry'):
+                try:
+                    g = _shape(feat['geometry'])
+                    if g.is_valid and g.geom_type in ('Polygon', 'MultiPolygon'):
+                        containers.append((nm, g, g.area))
+                except Exception:
+                    pass
+        containers.sort(key=lambda c: c[2])  # smallest (most specific) first
+        area_node_ids = name2nodes.get(_aql, set()) if _aql else set()
+        area_polys = [g for (nm, g, _a) in containers if nm.lower() == _aql] if _aql else []
+
+        def _spatial_area(geom):
+            if not (_have_shapely and geom):
+                return None
+            try:
+                g = _shape(geom)
+                pt = g if g.geom_type == 'Point' else g.centroid
+                for nm, poly, _a in containers:
+                    if poly.contains(pt):
+                        return nm
+            except Exception:
+                return None
+            return None
+
+        def _locate(props, geom):
+            par = props.get('parent_node_id') or props.get('zone_id')
+            if par in node2name:
+                return node2name[par]
+            return _spatial_area(geom)
+
+        def _in_area(props, geom):
+            if not _aql:
+                return True
+            par = props.get('parent_node_id') or props.get('zone_id')
+            if par in area_node_ids:
+                return True
+            if par in node2name:  # owned by a DIFFERENT named area
+                return False
+            if area_polys and _have_shapely and geom:  # orphan → spatial fallback
+                try:
+                    g = _shape(geom)
+                    pt = g if g.geom_type == 'Point' else g.centroid
+                    return any(poly.contains(pt) for poly in area_polys)
+                except Exception:
+                    return False
+            return False
+
+        def _line_len_m(geom):
+            if not geom or geom.get('type') != 'LineString':
+                return 0.0
+            cs = geom.get('coordinates') or []
+            tot, R = 0.0, 6371000.0
+            for i in range(1, len(cs)):
+                lon1, lat1, lon2, lat2 = cs[i - 1][0], cs[i - 1][1], cs[i][0], cs[i][1]
+                p1, p2 = _math.radians(lat1), _math.radians(lat2)
+                a = (_math.sin(_math.radians(lat2 - lat1) / 2) ** 2
+                     + _math.cos(p1) * _math.cos(p2) * _math.sin(_math.radians(lon2 - lon1) / 2) ** 2)
+                tot += 2 * R * _math.asin(min(1.0, _math.sqrt(a)))
+            return tot
+
+        # 2) Gather equipment features.
+        equip_features = []
+        for s in shapes:
+            if s.type == 'equipment_collection':
+                try:
+                    coll = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+                    equip_features.extend(coll.get('features') or [])
+                except Exception:
+                    continue
+            elif s.type == 'equipment':
+                try:
+                    equip_features.append(s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}'))
+                except Exception:
+                    continue
+
+        # 3) Classify.
+        discrete = []
+        agg = {}
+
+        def _slot(loc):
+            return agg.setdefault(loc, {
+                # 스프링클러 (individual sprinkler_coverage features, each with flow)
+                "sprinklers": 0, "sprinkler_flow_lph": 0.0,
+                # 점적 (drip — derived from is_drip pipes: count = length / interval)
+                "drip_emitters": 0, "drip_flow_lph": 0.0,
+                "main_pipes": 0, "main_pipe_length_m": 0.0,
+                "branch_pipes": 0, "branch_pipe_length_m": 0.0})
+
+        for f in equip_features:
+            if not isinstance(f, dict):
+                continue
+            props = f.get('properties') or {}
+            geom = f.get('geometry')
+            sub = props.get('sub_type') or props.get('equipment_type')
+            if not sub or not _in_area(props, geom):
+                continue
+            # 스프링클러: sprinkler_coverage is the canonical saved sprinkler (the
+            # bare 'sprinkler' point dots are ephemeral/filtered). Mirrors
+            # aot-map-utils.js calculatePolygonStats isSprinkler.
+            if (sub == 'sprinkler_coverage' or props.get('device_type') == 'sprinkler'
+                    or props.get('aot_type') == 'sprinkler'):
+                slot = _slot(_locate(props, geom) or '(unassigned)')
+                slot['sprinklers'] += 1
+                try:
+                    slot['sprinkler_flow_lph'] += float(props.get('flow') or props.get('flow_rate') or 0)
+                except (TypeError, ValueError):
+                    pass
+            elif sub in S._EQUIP_MAIN_SUBTYPES or sub in S._EQUIP_BRANCH_SUBTYPES:
+                slot = _slot(_locate(props, geom) or '(unassigned)')
+                length = _line_len_m(geom)
+                if sub in S._EQUIP_MAIN_SUBTYPES:
+                    slot['main_pipes'] += 1
+                    slot['main_pipe_length_m'] += length
+                else:
+                    slot['branch_pipes'] += 1
+                    slot['branch_pipe_length_m'] += length
+                # 점적: a drip pipe carries emitters spaced along it — the design
+                # counts them as length / interval (NOT individual features).
+                if props.get('is_drip'):
+                    dc = props.get('drip_config') or {}
+                    try:
+                        interval = float(dc.get('interval') or 1.0)
+                    except (TypeError, ValueError):
+                        interval = 1.0
+                    try:
+                        dflow = float(dc.get('flow') or 0)
+                    except (TypeError, ValueError):
+                        dflow = 0.0
+                    dcount = int(length / interval) if interval > 0 else 0
+                    slot['drip_emitters'] += dcount
+                    slot['drip_flow_lph'] += dcount * dflow
+            elif sub in S._EQUIP_DISCRETE_SUBTYPES:  # valves/fans/heaters/motors
+                specs = {k: props[k] for k in S._EQUIP_SPEC_FIELDS if props.get(k) not in (None, '')}
+                discrete.append({
+                    "name": props.get('name') or props.get('label') or sub,
+                    "sub_type": sub,
+                    "location": _locate(props, geom),
+                    "specs": specs,
+                })
+            # else: bare 'sprinkler' center dots / ref_line / unknown → skip
+
+        def _r1(x):
+            return round(x, 1) if x else None
+
+        irrigation = []
+        for loc, s in agg.items():
+            total_flow = s['sprinkler_flow_lph'] + s['drip_flow_lph']
+            method = ('sprinkler' if s['sprinklers'] and not s['drip_emitters']
+                      else 'drip' if s['drip_emitters'] and not s['sprinklers']
+                      else 'mixed' if s['sprinklers'] and s['drip_emitters'] else None)
+            irrigation.append({
+                "area": loc,
+                "method": method,                       # sprinkler | drip | mixed
+                "sprinklers": s['sprinklers'],          # 스프링클러 헤드 수
+                "sprinkler_flow_lph": _r1(s['sprinkler_flow_lph']),
+                "drip_emitters": s['drip_emitters'],    # 점적기 수 (배관 길이 기반)
+                "drip_flow_lph": _r1(s['drip_flow_lph']),
+                "total_flow_lph": _r1(total_flow),
+                "total_flow_lpm": _r1(total_flow / 60.0) if total_flow else None,
+                "main_pipes": s['main_pipes'],
+                "main_pipe_length_m": _r1(s['main_pipe_length_m']),
+                "branch_pipes": s['branch_pipes'],
+                "branch_pipe_length_m": _r1(s['branch_pipe_length_m']),
+            })
+        return {"equipment": discrete, "irrigation": irrigation}
+
+    @staticmethod
+    def get_map_equipment_tool(area_name=None, **extra):
+        """[분류 C - 지도 설비(equipment) 읽기 도구]
+        geo/design(지도 디자인)에서 그린 설비/장비를 조회한다. 제어장치(Output)와
+        별개로, site·zone·시설에 배치된 관수밸브·스프링클러/점적·환기팬·난방/냉방기·
+        창호/커튼 모터 등이 GeoShape의 equipment_collection 안에 그려져 저장된다.
+        각 장비의 종류(sub_type)와 스펙(유량 flow_lph, 압력 pressure_kpa, 용량
+        capacity_kw, 풍량 airflow_cmh, 전력 power_w 등), 그리고 어느 구역/사이트에
+        있는지를 반환한다. 스프링클러/점적처럼 수백 개인 관수 에미터는 구역별로
+        개수·총유량을 집계한다. area_name 을 주면 그 사이트/구역 안의 장비만.
+
+        읽기 전용. (설비의 냉난방 '설계 용량 계산'은 get_facility_capacity 참고 —
+        이 도구는 지도에 실제로 그려 배치된 장비 목록/스펙이다.)
+        """
+        try:
+            from aot.databases.models import GeoShape
+            if not area_name:
+                area_name = extra.get('name') or extra.get('target_name') or extra.get('zone_name')
+            shapes = GeoShape.query.all()
+            res = AoTDataToolService._extract_map_equipment(shapes, area_name=area_name)
+            n = len(res['equipment']) + sum(
+                (i.get('sprinklers', 0) + i.get('drip_emitters', 0)
+                 + i.get('main_pipes', 0) + i.get('branch_pipes', 0))
+                for i in res['irrigation'])
+            out = {
+                "status": "success",
+                "equipment_count": len(res['equipment']),
+                "equipment": res['equipment'],
+                "irrigation": res['irrigation'],
+            }
+            if n == 0:
+                out["message"] = (f"No equipment drawn on the map"
+                                  + (f" in '{area_name}'" if area_name else "") + ".")
+            return out
+        except Exception as e:
+            logger.error(f"Error in get_map_equipment_tool: {e}")
+            return {"error": str(e)}
+
+    @staticmethod
+    def _area_node_ids_and_polys(shapes, area_name):
+        """(node_ids, polygons) for the site/zone(s) named area_name — the two
+        ways equipment is attributed (ownership link + spatial fallback)."""
+        import json as _json
+        try:
+            from shapely.geometry import shape as _shape
+        except Exception:
+            _shape = None
+        _aql = (area_name or '').strip().lower()
+        node_ids, polys = set(), []
+        for s in shapes:
+            if s.type not in ('site', 'zone'):
+                continue
+            try:
+                feat = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+            except Exception:
+                continue
+            props = feat.get('properties') or {}
+            nm = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
+            if nm.lower() != _aql:
+                continue
+            if props.get('node_id'):
+                node_ids.add(props['node_id'])
+            if _shape and feat.get('geometry'):
+                try:
+                    g = _shape(feat['geometry'])
+                    if g.is_valid and g.geom_type in ('Polygon', 'MultiPolygon'):
+                        polys.append(g)
+                except Exception:
+                    pass
+        return node_ids, polys
+
+    @staticmethod
+    def get_map_equipment_detail_tool(area_name=None, **extra):
+        """[분류 C - 지도 설비 상세(지오메트리) 읽기 도구]
+        get_map_equipment(개요/디자인정보 요약)보다 한 단계 깊은, 개별 관수장치의
+        **위치·간격·개별 배관 지오메트리**를 반환한다. 사용자가 "점적기가 정확히
+        어디", "간격이 얼마", "어느 배관" 처럼 구체적 위치/간격을 물을 때 사용.
+        먼저 get_map_equipment 로 요약을 본 뒤, 필요할 때만 이걸 호출하는 순서를
+        권장. area_name(사이트/구역) 필수. 읽기 전용.
+
+        반환: emitters[{lat,lng,radius_m,flow_lph}], emitter_spacing_m(인접 중심간
+        중앙값 간격), pipes[{name,sub_type,length_m,start,end}].
+        """
+        try:
+            import math as _math
+            from aot.databases.models import GeoShape
+            if not area_name:
+                area_name = extra.get('name') or extra.get('target_name') or extra.get('zone_name')
+            if not area_name:
+                return {"error": "area_name (a site/zone name) is required for equipment detail."}
+
+            shapes = GeoShape.query.all()
+            node_ids, polys = AoTDataToolService._area_node_ids_and_polys(shapes, area_name)
+            if not node_ids and not polys:
+                return {"status": "success", "count": 0,
+                        "message": f"Area '{area_name}' was not found."}
+
+            try:
+                from shapely.geometry import shape as _shape
+            except Exception:
+                _shape = None
+
+            def _owned(props, geom):
+                par = props.get('parent_node_id') or props.get('zone_id')
+                if par in node_ids:
+                    return True
+                if par:  # owned elsewhere
+                    return False
+                if polys and _shape and geom:
+                    try:
+                        g = _shape(geom); pt = g if g.geom_type == 'Point' else g.centroid
+                        return any(p.contains(pt) for p in polys)
+                    except Exception:
+                        return False
+                return False
+
+            def _hav(lat1, lon1, lat2, lon2):
+                R = 6371000.0
+                a = (_math.sin(_math.radians(lat2 - lat1) / 2) ** 2
+                     + _math.cos(_math.radians(lat1)) * _math.cos(_math.radians(lat2))
+                     * _math.sin(_math.radians(lon2 - lon1) / 2) ** 2)
+                return 2 * R * _math.asin(min(1.0, _math.sqrt(a)))
+
+            def _line_len_m(coords):
+                return sum(_hav(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0])
+                           for i in range(1, len(coords)))
+
+            import json as _json
+            sprinklers, pipes, drip_pipes = [], [], []
+            for s in shapes:
+                if s.type not in ('equipment_collection', 'equipment'):
+                    continue
+                try:
+                    coll = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+                except Exception:
+                    continue
+                feats = coll.get('features') if s.type == 'equipment_collection' else [coll]
+                for f in (feats or []):
+                    if not isinstance(f, dict):
+                        continue
+                    props = f.get('properties') or {}
+                    geom = f.get('geometry') or {}
+                    sub = props.get('sub_type')
+                    if not sub or not _owned(props, geom):
+                        continue
+                    if (sub == 'sprinkler_coverage' or props.get('device_type') == 'sprinkler'
+                            or props.get('aot_type') == 'sprinkler'):
+                        sprinklers.append({
+                            "lat": round(props['center_lat'], 7) if props.get('center_lat') is not None else None,
+                            "lng": round(props['center_lng'], 7) if props.get('center_lng') is not None else None,
+                            "radius_m": props.get('radius'),
+                            "flow_lph": props.get('flow'),
+                        })
+                    elif sub in ('pipe_main', 'main', 'pipe_branch', 'branch'):
+                        cs = geom.get('coordinates') or []
+                        if len(cs) >= 2:
+                            length = round(_line_len_m(cs), 1)
+                            pipes.append({
+                                "name": props.get('name') or ('주배관' if sub in ('pipe_main', 'main') else '가지관'),
+                                "sub_type": sub,
+                                "length_m": length,
+                                "start": [round(cs[0][1], 7), round(cs[0][0], 7)],
+                                "end": [round(cs[-1][1], 7), round(cs[-1][0], 7)],
+                            })
+                            # 점적: emitters spaced along a drip pipe (length / interval)
+                            if props.get('is_drip'):
+                                dcfg = props.get('drip_config') or {}
+                                try:
+                                    interval = float(dcfg.get('interval') or 1.0)
+                                except (TypeError, ValueError):
+                                    interval = 1.0
+                                cnt = int(length / interval) if interval > 0 else 0
+                                drip_pipes.append({
+                                    "pipe": pipes[-1]["name"], "length_m": length,
+                                    "interval_m": interval, "drip_emitters": cnt,
+                                    "flow_lph_each": dcfg.get('flow'),
+                                })
+
+            # sprinkler spacing = median nearest-neighbour distance between heads
+            spacing = None
+            pts = [(e['lat'], e['lng']) for e in sprinklers if e['lat'] is not None and e['lng'] is not None]
+            if len(pts) >= 2:
+                nn = []
+                for i, (la, lo) in enumerate(pts):
+                    best = None
+                    for j, (lb, ob) in enumerate(pts):
+                        if i == j:
+                            continue
+                        d = _hav(la, lo, lb, ob)
+                        if best is None or d < best:
+                            best = d
+                    if best is not None:
+                        nn.append(best)
+                if nn:
+                    nn.sort()
+                    spacing = round(nn[len(nn) // 2], 2)
+
+            MAXE = 60
+            out = {
+                "status": "success",
+                "area": area_name,
+                # 스프링클러 (individual heads with position/radius/flow)
+                "sprinkler_count": len(sprinklers),
+                "sprinkler_spacing_m": spacing,
+                "sprinklers": sprinklers[:MAXE],
+                # 점적 (drip — per drip-pipe, emitters spaced by interval)
+                "drip_pipes": drip_pipes,
+                "drip_emitter_total": sum(d['drip_emitters'] for d in drip_pipes),
+                "pipes": pipes,
+            }
+            if len(sprinklers) > MAXE:
+                out["sprinklers_truncated"] = f"showing first {MAXE} of {len(sprinklers)} sprinklers"
+            if not sprinklers and not pipes:
+                out["message"] = f"No irrigation equipment geometry found in '{area_name}'."
+            return out
+        except Exception as e:
+            logger.error(f"Error in get_map_equipment_detail_tool: {e}")
+            return {"error": str(e)}
+
+    @staticmethod
     def schedule_device_control_tool(device_id, scheduled_time=None, state='on', duration_minutes=None,
                                      delay_seconds=None, duration_seconds=None, **kwargs):
         """

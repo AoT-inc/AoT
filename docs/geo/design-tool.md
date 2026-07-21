@@ -1,6 +1,21 @@
 # Map Design Tool
 
-The `/geo/design` page is an interactive editing environment for placing and managing sites, zones, facilities, and devices on a map.
+The `/geo/design` page is where you lay out a farm on a map — draw the property boundary, mark out growing zones, place buildings, and pin down exactly where each sensor and valve physically sits. Whatever you draw here is what shows up on the [AoT Map](../Data-Viewing.md#widget-map) dashboard widget, so this page is worth getting right before you start wiring up widgets.
+
+---
+
+## Worked Example: Laying Out a New Greenhouse Bay
+
+A typical first pass, from the outside in:
+
+1. **Site** — switch to **Site** mode and draw a polygon around the whole property. Name it in the property panel; it saves automatically as soon as you finish drawing.
+2. **Zone** — switch to **Zone** mode and draw a polygon for the growing bay inside the site boundary. Name it (for example, "Bay 1").
+3. **Facility** — switch to **Facility** mode and draw the building footprint inside the zone. Once it's named and saved, use the **Facility Design** button (or go to `/geo/facility` directly) to do the 3D setup — see [Facility Management](facility.md) for that part; this page only covers drawing the footprint.
+4. **Equipment** — switch to **Equipment** mode to add a pump, a couple of valves, and the piping between them (see [Equipment mode](#equipment) below for the Pipe/Irrigation auto-generation tools).
+5. **Devices** — switch to the device mode (labeled **A** in the mode panel) to place your real Input/Output/Function devices — see [Device mode](#device-a) below.
+6. **Check the dashboard** — add an AoT Map widget pointed at this design; the shapes and markers you just placed appear there, and clicking a device marker shows its live value and controls.
+
+Nothing in the tool forces you to follow this order (you can place a device before its zone exists, for instance), but drawing outside-in like this means equipment and device markers land inside their zone automatically once you draw the zone around them (see [Editing Modes](#editing-modes) for how that auto-linking actually works, and what it *doesn't* do).
 
 ---
 
@@ -21,63 +36,57 @@ The `/geo/design` page is an interactive editing environment for placing and man
 
 ---
 
-## Editing Modes (7 types)
+## Editing Modes { #editing-modes }
 
-Select the editing target in the top mode panel. Each mode has different drawable shapes and properties.
+Select the editing target in the top mode panel — there are **5 modes**: Site, Zone, Facility, Equipment, and Device (labeled **A** in the panel, for "AoT device"). Each has different drawable shapes and properties.
 
 ### Site
 
-Defines the top-level boundary of a site.
+Defines the top-level boundary of a property.
 
-- **Draw**: Polygon
-- **Properties**: Name, color, opacity
-- **Special**: VWorld/CSV parcel import (see below)
+- **Draw**: Rectangle, Circle, or Polygon.
+- **Properties**: Name, theme color, opacity — color changes save automatically.
+- **Special**: VWorld/CSV parcel import (see [Parcel Import](#parcel-import) below).
 
 ### Zone
 
 Defines growing blocks, sections, or management areas within a site.
 
-- **Draw**: Polygon
-- **Properties**: Name, parent site link, color
-- **Tip**: Spatial Join automatically detects which Site contains a newly drawn Zone.
+- **Draw**: Rectangle, Circle, or Polygon.
+- **Properties**: Name, theme color.
+
+!!! note
+    Drawing a Zone does **not** automatically link it to whichever Site it's inside — that link isn't tracked. What *is* automatic is the other direction: Equipment and Device items you place **inside** a Zone or Site get auto-linked to it (see below), which is why drawing zones before placing equipment/devices in them is the easier order.
 
 ### Facility
 
 Places physical buildings (greenhouses, warehouses, equipment rooms).
 
-- **Draw**: Polygon (building footprint)
-- **Properties**: Name, structure type, parent zone link
-- **Special**: After saving, go to `/geo/facility` for 3D modeling and engineering calculations.
+- **Draw**: Line, Rectangle, Circle, Polygon, Marker, or Label — draw the building footprint as a polygon.
+- **Properties**: Name, theme color.
+- **Special**: After saving, use the **Facility Design** button (or go to `/geo/facility`) for 3D modeling, engineering calculations, and picking the parent zone — all of that happens on that page, not here. See [Facility Management](facility.md).
 
 ### Equipment
 
-Places mechanical equipment (fans, pumps, heaters) inside a facility.
+Places pumps, valves, piping, and irrigation layouts. This mode has three sub-tabs:
 
-- **Draw**: Polygon or marker
-- **Properties**: Name, equipment type, parent facility link
+- **Device** — a catalog of point markers grouped by category: Water Supply (river / water tank / pump), Filter (disc / screen / sand), Valve (union / adapter / inline / reducer), and Connection (suction / elbow / tee / reducer — pipe fittings, not a separate drawing mode). Pick an item and click on the map to place it.
+- **Pipe** — draw a **Reference Line** or **Main Pipe**, set the branch spacing/angle/offset, then click **Generate** to automatically sweep parallel branch pipes across the zone, clipped to its boundary and split where they cross the main pipe.
+- **Irrigation** — choose Sprinkler or Drip, set the interval, radius, flow, and pressure, then click **Generate** to lay out coverage points or emitters across the zone automatically, instead of placing them one by one.
 
-### Device
+Equipment placed inside a Zone or Site polygon is automatically linked to it — this re-check happens when the map loads and whenever you edit a shape, so a marker you *just* placed may not show its zone link in the stats panel until you reload or nudge it slightly.
 
-Shows the physical location of AoT Input/Output devices.
+### Device { #device-a }
 
-- **Draw**: Marker
-- **Properties**: Select linked AoT device, marker color
-- **Dashboard integration**: Clicking a marker in a widget shows real-time values and a control switch popup.
+Shows the physical location of your AoT Input, Output, and Function devices, and links them to the map. This mode also has sub-tabs (Input / Output / Function). The actual workflow:
 
-### Connection
+1. Click **Selection List** to open a list of your real devices (per-channel for outputs).
+2. Toggle a device on — it appears as a marker at the **center of the current map view**, not wherever you were looking. Drag it to its real physical position; the new position saves automatically.
+3. Toggle a device off to remove its marker.
 
-Shows pipe, wiring, or communication routes.
+**Linking a shape (not just a marker) to a device**: click an already-placed device marker to "activate" it (it changes color and shows a toast confirming it's active) — the next shape you draw, of any kind, is automatically linked to that device instead of becoming a plain unlinked shape. Use this to draw, say, a fan's coverage area or a sprinkler zone tied to a specific device, separate from that device's own location marker.
 
-- **Draw**: Polyline
-- **Properties**: Name, connection type (water/electric/communication), thickness, color
-- **Auto pipe generation**: Use `/api/geo/generate-pipes` for automatic routing between devices.
-
-### Infrastructure
-
-Shows boundary markers, roads, and other reference shapes.
-
-- **Draw**: Polygon, polyline, marker
-- **Properties**: Name, color
+*Notable:* clicking a device marker on the [AoT Map](../Data-Viewing.md#widget-map) widget's dashboard view shows its live value and, for outputs, an on/off control — this is why placing devices accurately here matters.
 
 ---
 
@@ -87,7 +96,7 @@ Shows boundary markers, roads, and other reference shapes.
 
 | Icon | Function |
 |------|----------|
-| + / - | Zoom in/out |
+| + / − | Zoom in/out |
 | Fullscreen | Toggle fullscreen |
 | Search | Address/coordinate search |
 | My location | Move to GPS position |
@@ -95,30 +104,26 @@ Shows boundary markers, roads, and other reference shapes.
 
 ### Drawing Tools
 
-| Tool | Shortcut | Description |
-|------|----------|-------------|
-| Polygon | P | Draw a polygon |
-| Polyline | L | Draw a line |
-| Circle | C | Draw a circle (specify radius) |
-| Marker | M | Place a point marker |
-| Edit | E | Edit vertices of an existing feature |
-| Delete | Del | Delete selected feature |
+Available tools depend on the mode: Site and Zone offer **Rectangle, Circle, and Polygon**; Facility, Equipment, and Device modes additionally offer **Line, Marker, and Label**. There are no keyboard shortcuts for any drawing tool — use the toolbar buttons.
+
+- **Edit** — drag an existing shape's vertices to reshape it.
+- **Delete** — click a shape to remove it. If shapes overlap, each click removes only the topmost one under your cursor, so click again to remove the shape underneath it.
 
 ---
 
 ## Saving Features
 
-### Auto-save (Delta)
+### Auto-save
 
-Whenever a feature is added, modified, or deleted, only the changes are sent to the server. Even maps with thousands of features can be saved without delay.
+Shapes save automatically as you draw, edit, or delete them — there's no separate "commit" step. If you want to double-check that a change really persisted, reloading the page is a reliable way to confirm it.
 
 ### Manual Save
 
-Use the **Save** button at the top or `Ctrl+S` to force a full state save.
+The **Save** button at the top forces a full save of the current state. There is no keyboard shortcut for it.
 
 ---
 
-## Parcel Import
+## Parcel Import { #parcel-import }
 
 Use Korean land data (VWorld) to quickly import site boundaries.
 
@@ -145,15 +150,19 @@ address,name
 3. Review the preview; rows with errors are highlighted in red.
 4. Click **Import**.
 
+See [Parcel Import Details](parcel-import.md) for more.
+
 ---
 
 ## Layer Control
 
 Use the **Layers** panel in the upper right to toggle layer visibility.
 
-- **Base layers**: Select from registered GIS layer providers
-- **Overlays**: Toggle Site, Zone, Facility, Device individually
-- **Weather layers**: RainViewer radar, OpenWeather overlay
+- **Base layers**: select from registered GIS layer providers.
+- **Overlays**: toggle Site, Zone, Facility, and Device shapes individually.
+- **Weather layers**: RainViewer radar, OpenWeather overlay, where registered.
+
+See [GIS Layers](layers.md) for registering new layer providers.
 
 ---
 
@@ -170,7 +179,7 @@ Click the **Stats** button to view map statistics.
 
 ## Map Lock
 
-Click the **Lock** button in the upper right to lock map panning and zooming. This prevents accidental map movement in the AoT_map dashboard widget.
+Click the **Lock** button in the upper right to lock map panning and zooming. This prevents accidental map movement in the AoT Map dashboard widget.
 
 ---
 
