@@ -81,6 +81,30 @@
     margin-top: 0.2rem !important;
 }
 
+/* Collapsible section header ("Advanced" disclosure groups) — same
+   typography as .aot-modal-section-title but clickable; the caret rotates
+   via aria-expanded, which Bootstrap's collapse plugin toggles automatically
+   on the trigger element (no extra JS needed). Reusable across any widget's
+   custom_options via the 'collapse_start' / 'collapse_end' option types. */
+a.aot-modal-section-title-collapsible {
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none !important;
+    gap: 0.4rem;
+}
+a.aot-modal-section-title-collapsible:hover,
+a.aot-modal-section-title-collapsible:focus {
+    color: var(--gray-dark) !important;
+    text-decoration: none !important;
+}
+.aot-collapse-caret {
+    font-size: 0.85em;
+    transition: transform 0.15s ease;
+}
+a.aot-modal-section-title-collapsible[aria-expanded="true"] .aot-collapse-caret {
+    transform: rotate(90deg);
+}
+
 .aot-modal-subgroup-title {
     font-size: 0.95rem;
     font-weight: 700;
@@ -1356,4 +1380,101 @@ input[type="range"].aot-ov-opacity::-moz-range-thumb {
     border: 2px solid #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
     cursor: pointer;
+}
+
+/* ============================================================
+   Widget settings modal → right-side DRAWER (push-aside)
+   Scoped to .aot-widget-drawer (the dashboard widget config modal in
+   dashboard_entry.html). The option form sits in a right drawer that pushes
+   the dashboard aside instead of covering it — so you can watch a widget
+   update live while changing its settings. Mirrors the AI chat drawer's
+   body-push hook (body.ai-drawer-active { padding-right }). Every other
+   .aot-option-modal (chirpstack, notes, tab settings, output, …) is untouched.
+   The modal keeps its Bootstrap 4.6 lifecycle (hydrate/selectpicker/live-save
+   bindings on show/shown), we only restyle position + push the page.
+   ============================================================ */
+:root { --aot-wdrawer-w: 600px; }
+@media (min-width: 1200px) { :root { --aot-wdrawer-w: 640px; } }
+@media (min-width: 768px) and (max-width: 1199px) { :root { --aot-wdrawer-w: 520px; } }
+
+/* smooth page push (matches chat drawer easing/timing) */
+body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
+
+@media (min-width: 768px) {
+  /* Push the whole page left while the drawer is open. body wraps the navbar and
+     .grid-stack, so one padding pushes everything — no per-container tweaks. */
+  body.aot-widget-drawer-open { padding-right: var(--aot-wdrawer-w) !important; }
+  /* Bootstrap sets body.modal-open{overflow:hidden; padding-right:<scrollbar>};
+     keep the dashboard scrollable and use only the drawer width. */
+  body.aot-widget-drawer-open.modal-open {
+    overflow: auto !important;
+    padding-right: var(--aot-wdrawer-w) !important;
+  }
+  /* No dimming backdrop — the dashboard must stay visible AND interactive. */
+  body.aot-widget-drawer-open .modal-backdrop { display: none !important; }
+
+  /* The fullscreen .modal layer must let clicks fall through to the dashboard;
+     only the dialog (the drawer) captures pointer events. */
+  .aot-widget-drawer { pointer-events: none; overflow: hidden !important; }
+
+  .aot-widget-drawer .modal-dialog {
+    position: fixed;
+    inset: 0 0 0 auto;                 /* top/right/bottom pinned, left auto */
+    margin: 0 !important;
+    width: var(--aot-wdrawer-w) !important;
+    max-width: var(--aot-wdrawer-w) !important;
+    height: 100vh; height: 100dvh;
+    pointer-events: auto;
+    transform: translateX(100%) !important;      /* start off-screen right */
+    transition: transform 0.4s cubic-bezier(0.075, 0.82, 0.165, 1) !important;
+  }
+  .aot-widget-drawer.show .modal-dialog { transform: translateX(0) !important; }
+
+  .aot-widget-drawer .modal-content {
+    height: 100vh; height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.12) !important;
+  }
+}
+
+/* Phone / small tablet: full-width drawer sliding in from the right, no page push
+   (too narrow to split; the live-observe benefit is desktop/tablet). */
+@media (max-width: 767px) {
+  .aot-widget-drawer .modal-dialog {
+    position: fixed;
+    inset: 0;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh; height: 100dvh;
+    transform: translateX(100%) !important;
+    transition: transform 0.35s cubic-bezier(0.075, 0.82, 0.165, 1) !important;
+  }
+  .aot-widget-drawer.show .modal-dialog { transform: translateX(0) !important; }
+  .aot-widget-drawer .modal-content {
+    height: 100vh; height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* ============================================================
+   Widget drawer — bootstrap-select dropdown list width
+   The default menu max-width is viewport-based (~85vw), so long option text
+   grows the list past the (now narrow) drawer and the modal's overflow:hidden
+   clips it. Bound the list to the DRAWER width instead of the screen, and wrap
+   long options. min() also keeps it inside the viewport on the full-width phone
+   drawer. Scoped to .aot-widget-drawer so other .aot-option-modal dropdowns are
+   unchanged.
+   ============================================================ */
+.aot-widget-drawer .bootstrap-select.open > .dropdown-menu,
+.aot-widget-drawer .bootstrap-select.show > .dropdown-menu {
+  max-width: min(calc(var(--aot-wdrawer-w, 600px) - 2.75rem), calc(100vw - 1.5rem)) !important;
+  overflow-x: hidden !important;
+}
+.aot-widget-drawer .bootstrap-select .dropdown-menu li a,
+.aot-widget-drawer .bootstrap-select .dropdown-menu li a span.text {
+  white-space: normal !important;
+  word-break: break-word;
 }

@@ -18,13 +18,34 @@
         <i class="fa fa-grip-lines"></i>
       </div>
 
-    <div class="aot-entry-content-item aot-col-name">
-      <div id="input_name_{{each_input.unique_id}}" class="form-control aot-entry-name-input" title="{{each_input.name}}">{{each_input.name}}</div>
+    <div class="aot-entry-content-item aot-col-name aot-col-name-copy"
+      onclick="setClipboard('{{each_input.unique_id}}')">
+      <div id="input_name_{{each_input.unique_id}}" class="form-control aot-entry-name-input"
+        data-toggle="tooltip"
+        title="{{each_input.name}} · UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}">{{each_input.name}}</div>
     </div>
     <div class="aot-entry-content-item aot-col-uuid">
+      {%- set _meas_enabled = table_device_measurements.query.filter(table_device_measurements.device_id == each_input.unique_id).all() | selectattr('is_enabled') | list -%}
+      {%- if each_input.is_activated and _meas_enabled -%}
+      <div class="aot-entry-measure-live" id="input_measure_{{each_input.unique_id}}">
+        {%- for each_meas in _meas_enabled -%}
+          {%- if dict_inputs.get(each_input.device, {}).get('listener') -%}
+            {%- set _period = 0 -%}
+          {%- else -%}
+            {%- set _period = (each_input.period * 2) | int -%}
+          {%- endif -%}
+          {%- set _unit = dict_units[dict_measure_units[each_meas.unique_id]]['unit'] if dict_measure_units.get(each_meas.unique_id) in dict_units else '' -%}
+          <span class="aot-measure-chip" data-aot-live-meas="1"
+            data-unique-id="{{each_input.unique_id}}" data-measurement-id="{{each_meas.unique_id}}"
+            data-period="{{ _period }}"
+            title="CH{{each_meas.channel}}{% if each_meas.name %} · {{each_meas.name}}{% endif %}"><span class="aot-measure-val">--</span>{%- if _unit %}<span class="aot-measure-unit">{{_unit}}</span>{% endif -%}</span>
+        {%- endfor -%}
+      </div>
+      {%- else -%}
       <input class="form-control btn aot-entry-uuid-btn aot-pill-btn" type="button"
         onclick="setClipboard('{{each_input.unique_id}}')" title="UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}"
         value="{{ dict_inputs.get(each_input.device, {}).get('input_name', each_input.device) }}">
+      {%- endif -%}
     </div>
     <div class="aot-entry-actions aot-col-action">
       <input {% if each_input.is_activated -%}style="display: none" {% endif %}

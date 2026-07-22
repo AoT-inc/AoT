@@ -319,7 +319,9 @@ function repeatControllerStateAoT(wid, dev_id, refSec){
   }
 
   console.log("[AoT Controller] Auto-refresh every", refSec, "seconds (widget:", wid, ")");
-  setInterval(function(){
+  window._aotctrl_intervals = window._aotctrl_intervals || {};
+  if (window._aotctrl_intervals[wid]) { clearInterval(window._aotctrl_intervals[wid]); }
+  window._aotctrl_intervals[wid] = setInterval(function(){
     getControllerStateAoT(wid, dev_id);
   }, refSec * 1000);
 }
@@ -328,7 +330,9 @@ function repeatControllerStateAoT(wid, dev_id, refSec){
     # -------------------- JS READY --------------------
     'widget_dashboard_js_ready': """
 $(document).ready(function() {
-  $('.controller-toggle-input').off('change.controller').on('change.controller', function(){
+  // Document-delegated so it keeps working after a live-preview body swap (which
+  // replaces the toggle input) without needing js_ready to re-run.
+  $(document).off('change.controller').on('change.controller', '.controller-toggle-input', function(){
     const btn = $(this);
     const dev_id = btn.attr('name');
     const wid = btn.attr('id').replace('aot_controller_toggle_', '');

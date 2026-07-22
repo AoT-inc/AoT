@@ -542,19 +542,30 @@ function aotNoticeWidgetOpenComposeEdit(widgetId, postId, isAdmin) {
 
 function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showReply, currentUserId, isAdmin, categories) {
   aotNoticeWidgetFetchList(widgetId, limit, categories);
-  setInterval(function () { aotNoticeWidgetFetchList(widgetId, limit, categories); }, refreshSeconds * 1000);
+  // Store the refresh interval per widget and clear the previous one so a
+  // live-preview re-init (option change without page reload) doesn't stack
+  // duplicate fetch intervals.
+  window._notice_intervals = window._notice_intervals || {};
+  if (window._notice_intervals[widgetId]) { clearInterval(window._notice_intervals[widgetId]); }
+  window._notice_intervals[widgetId] = setInterval(function () { aotNoticeWidgetFetchList(widgetId, limit, categories); }, refreshSeconds * 1000);
 
   var $list = $('#notice-widget-' + widgetId);
   var $modal = $('#notice-widget-modal-' + widgetId);
   var $modalContent = $('#notice-widget-modal-content-' + widgetId);
   var $composeForm = $('#notice-widget-compose-form-' + widgetId);
 
-  $list.on('click', '.aot-notice-widget-open', function (e) {
+  // Idempotent re-init: clear this widget's previously bound handlers (namespace
+  // .aotnw) before re-binding, so a live-preview re-init doesn't double-bind on
+  // the modals that fixModalZIndex moved to <body> (and thus survive a body swap).
+  $list.off('.aotnw'); $modal.off('.aotnw'); $modalContent.off('.aotnw');
+  $composeForm.off('.aotnw'); $('#notice-widget-new-btn-' + widgetId).off('.aotnw');
+
+  $list.on('click.aotnw', '.aot-notice-widget-open', function (e) {
     e.preventDefault();
     aotNoticeWidgetOpenModal(widgetId, $(this).data('post'), showPoll, showReply, currentUserId, isAdmin);
   });
 
-  $modalContent.on('click', '.aot-notice-widget-poll-row', function () {
+  $modalContent.on('click.aotnw', '.aot-notice-widget-poll-row', function () {
     var $poll = $(this).closest('.aot-notice-widget-poll');
     var isMulti = $poll.data('multi') === true || $poll.data('multi') === 'true';
     if (isMulti) {
@@ -565,7 +576,7 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
     }
   });
 
-  $modalContent.on('click', '.aot-notice-widget-vote-btn', function () {
+  $modalContent.on('click.aotnw', '.aot-notice-widget-vote-btn', function () {
     var postId = $(this).data('post');
     var $poll = $(this).closest('.aot-notice-widget-poll');
     var optionIds = [];
@@ -589,7 +600,7 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
     });
   });
 
-  $modalContent.on('click', '.aot-notice-widget-modal-reply-btn', function () {
+  $modalContent.on('click.aotnw', '.aot-notice-widget-modal-reply-btn', function () {
     var postId = $(this).data('post');
     var $input = $(this).closest('.aot-notice-widget-reply-input-row').find('.aot-notice-widget-modal-reply-input');
     var body = $input.val().trim();
@@ -610,7 +621,7 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
     });
   });
 
-  $modalContent.on('click', '.aot-notice-widget-reply-delete', function (e) {
+  $modalContent.on('click.aotnw', '.aot-notice-widget-reply-delete', function (e) {
     e.preventDefault();
     var replyId = $(this).data('reply');
     var postId = $modal.data('current-post');
@@ -629,12 +640,12 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
   });
 
   // View-modal footer: Edit / Delete (shown only when post.can_manage — author or admin)
-  $modal.on('click', '.notice-widget-view-edit-btn', function () {
+  $modal.on('click.aotnw', '.notice-widget-view-edit-btn', function () {
     var postId = $modal.data('current-post');
     $modal.modal('hide');
     aotNoticeWidgetOpenComposeEdit(widgetId, postId, isAdmin);
   });
-  $modal.on('click', '.notice-widget-view-delete-btn', function () {
+  $modal.on('click.aotnw', '.notice-widget-view-delete-btn', function () {
     var postId = $modal.data('current-post');
     if (!confirm('{{_('Delete this notice?')}}')) { return; }
     $.ajax({
@@ -651,7 +662,7 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
       }
     });
   });
-  $modal.on('click', '.notice-widget-view-ack-btn', function () {
+  $modal.on('click.aotnw', '.notice-widget-view-ack-btn', function () {
     var postId = $(this).data('post');
     $.ajax({
       url: '/notice/api/' + postId + '/ack',
@@ -668,32 +679,32 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
   });
 
   // "New Post" button (permission-gated in the template; harmless no-op if absent)
-  $('#notice-widget-new-btn-' + widgetId).on('click', function () {
+  $('#notice-widget-new-btn-' + widgetId).on('click.aotnw', function () {
     aotNoticeWidgetOpenComposeCreate(widgetId, isAdmin);
   });
 
   if ($composeForm.length) {
-    $composeForm.find('textarea.aot-notice-textarea').on('input', function () { aotNoticeWidgetAutosize(this); });
+    $composeForm.find('textarea.aot-notice-textarea').on('input.aotnw', function () { aotNoticeWidgetAutosize(this); });
     AoTNoticeRender.bindPasteFormatting('textarea.aot-notice-textarea', $composeForm.get(0));
 
-    $composeForm.find('.notice-widget-poll-toggle-btn').on('click', function () {
+    $composeForm.find('.notice-widget-poll-toggle-btn').on('click.aotnw', function () {
       $composeForm.find('.notice-widget-poll-section').removeClass('d-none');
       $(this).addClass('d-none');
     });
-    $composeForm.find('.notice-widget-poll-remove-btn').on('click', function () {
+    $composeForm.find('.notice-widget-poll-remove-btn').on('click.aotnw', function () {
       $composeForm.find('.notice-widget-poll-section').addClass('d-none');
       $composeForm.find('.notice-widget-poll-section input[type="text"]').val('');
       $composeForm.find('.notice-widget-poll-section input[type="checkbox"]').prop('checked', false);
       $composeForm.find('.notice-widget-poll-toggle-btn').removeClass('d-none');
     });
-    $composeForm.find('.notice-widget-poll-add-option-btn').on('click', function () {
+    $composeForm.find('.notice-widget-poll-add-option-btn').on('click.aotnw', function () {
       var count = $composeForm.find('.notice-widget-poll-options-container .aot-modal-option-row').length + 1;
       $composeForm.find('.notice-widget-poll-options-container').append(
         '<div class="aot-modal-option-row aot-full-width-row"><input type="text" name="poll_option" class="aot-modern-input" placeholder="{{_('Option')}} ' + count + '" style="width:100%;"></div>'
       );
     });
 
-    $composeForm.on('click', '.notice-widget-compose-remove-attachment', function (e) {
+    $composeForm.on('click.aotnw', '.notice-widget-compose-remove-attachment', function (e) {
       e.preventDefault();
       var file = $(this).data('file');
       var $deleted = $composeForm.find('.notice-widget-compose-deleted-files');
@@ -703,7 +714,7 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
       $(this).closest('[data-file]').fadeOut(200, function () { $(this).remove(); });
     });
 
-    $composeForm.find('.notice-widget-compose-delete-btn').on('click', function () {
+    $composeForm.find('.notice-widget-compose-delete-btn').on('click.aotnw', function () {
       var postId = $(this).data('post');
       if (!confirm('{{_('Delete this notice?')}}')) { return; }
       $.ajax({
@@ -721,7 +732,7 @@ function aotNoticeWidgetInit(widgetId, limit, refreshSeconds, showPoll, showRepl
       });
     });
 
-    $composeForm.on('submit', function (e) {
+    $composeForm.on('submit.aotnw', function (e) {
       e.preventDefault();
       var formEl = this;
       var id = $(formEl).find('.notice-widget-compose-id-input').val();

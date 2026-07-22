@@ -1,0 +1,14 @@
+{#- Renders a single widget's widget_dashboard_js_ready_end script with the given
+    (possibly unsaved) options. Returned alongside the body fragment so chart-type
+    widgets (Highcharts gauge/graph) can be re-initialised in place when options
+    change, without a full page reload. The widget's js_ready_end is expected to be
+    idempotent (destroy the prior chart / clear its intervals before re-creating).
+    Keep the widget_options / widget_variables set-up identical to dashboard.html. -#}
+{%- set widget_meta = dict_widgets.get(each_widget.graph_type) -%}
+{%- if widget_meta -%}
+{%- set widget_options = custom_options_values_widgets.get(each_widget.unique_id, {}) -%}
+{%- set widget_variables = custom_widget_variables.get(each_widget.unique_id, {}) -%}
+{%- if each_widget.graph_type in list_html_files_js_ready_end -%}
+{%- include 'user_templates/{}'.format(list_html_files_js_ready_end[each_widget.graph_type]) -%}
+{%- endif -%}
+{%- endif -%}

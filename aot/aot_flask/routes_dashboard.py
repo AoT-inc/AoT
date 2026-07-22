@@ -1,10 +1,12 @@
 # coding=utf-8
 """collection of Page endpoints."""
 import flask_login
+import json
 import logging
 import os
 import subprocess
-from flask import redirect, render_template, request, url_for, jsonify
+from flask import (redirect, render_template, request, url_for, jsonify,
+                   get_flashed_messages)
 from flask.blueprints import Blueprint
 from sqlalchemy import and_, text
 
@@ -249,24 +251,10 @@ def page_dashboard_add():
 def page_dashboard(dashboard_id):
     logger.info(f"\n[DASHBOARD TRACE] Loading dashboard: {dashboard_id}\n")
     """Generate custom dashboard with various data."""
-    # Retrieve tables from SQL database
     this_dashboard = Dashboard.query.filter(
         Dashboard.unique_id == dashboard_id).first()
     if not this_dashboard:
         return redirect(url_for('routes_dashboard.page_dashboard_default'))
-
-    camera = Camera.query.all()
-    conditional = Conditional.query.all()
-    function = CustomController.query.all()
-    widget = Widget.query.all()
-    input_dev = Input.query.all()
-    device_measurements = DeviceMeasurements.query.all()
-    method = Method.query.all()
-    misc = Misc.query.first()
-    output = Output.query.all()
-    output_channel = OutputChannel.query.all()
-    pid = PID.query.all()
-    tags = NoteTags.query.all()
 
     # Create form objects
     form_base = forms_dashboard.DashboardBase()
@@ -300,6 +288,24 @@ def page_dashboard(dashboard_id):
                     dashboard_id=this_dashboard.unique_id))
         elif form_base.widget_mod.data:
             utils_dashboard.widget_mod(form_base, request.form)
+            # Live save: return the freshly-rendered widget body instead of a full
+            # page redirect so the dashboard reflects the saved options in place.
+            if request.form.get('ajax_live') == '1':
+                # Drain flashes queued by widget_mod so they don't surface stale on
+                # the next full page load.
+                get_flashed_messages()
+                widget = Widget.query.filter(
+                    Widget.unique_id == form_base.widget_id.data).first()
+                if widget:
+                    dict_widgets = parse_widget_information()
+                    options_values = parse_custom_option_values_json(
+                        [widget], dict_controller=dict_widgets).get(widget.unique_id, {})
+                    html, js_ready_end = _render_widget_fragments(
+                        this_dashboard, this_dashboard.unique_id, widget,
+                        options_values, dict_widgets, form_base, form_dashboard)
+                    return jsonify({'html': html, 'js_ready_end': js_ready_end,
+                                    'name': widget.name})
+                return jsonify({'html': None, 'error': 'widget not found'}), 404
         elif form_base.widget_duplicate.data:
             utils_dashboard.widget_duplicate(form_base)
         elif form_base.widget_delete.data:
@@ -311,6 +317,33 @@ def page_dashboard(dashboard_id):
 
         return redirect(url_for(
             'routes_dashboard.page_dashboard', dashboard_id=this_dashboard.unique_id))
+
+    context = _build_dashboard_render_context(
+        this_dashboard, dashboard_id, form_base, form_dashboard)
+    return render_template('pages/dashboard.html', **context)
+
+
+def _build_dashboard_render_context(this_dashboard, dashboard_id, form_base, form_dashboard):
+    """Build the full render context for the dashboard page.
+
+    Shared by page_dashboard (full page) and the live-preview / AJAX-save widget
+    body fragment renders, so a widget body rendered for preview never drifts
+    from how the same body renders on a full page load. Returns a dict of
+    template kwargs.
+    """
+    # Retrieve tables from SQL database
+    camera = Camera.query.all()
+    conditional = Conditional.query.all()
+    function = CustomController.query.all()
+    widget = Widget.query.all()
+    input_dev = Input.query.all()
+    device_measurements = DeviceMeasurements.query.all()
+    method = Method.query.all()
+    misc = Misc.query.first()
+    output = Output.query.all()
+    output_channel = OutputChannel.query.all()
+    pid = PID.query.all()
+    tags = NoteTags.query.all()
 
     # Generate all measurement and units used
     dict_measurements = add_custom_measurements(Measurement.query.all())
@@ -444,7 +477,7 @@ def page_dashboard(dashboard_id):
     use_unit = utils_general.use_unit_generate(
         device_measurements, input_dev, output, function)
 
-    return render_template('pages/dashboard.html',
+    return dict(
                            and_=and_,
                            conditional=conditional,
                            custom_options_values_output_channels=custom_options_values_output_channels,
@@ -503,6 +536,95 @@ def page_dashboard(dashboard_id):
                            form_base=form_base,
                            form_dashboard=form_dashboard,
                            widget=widget)
+
+
+def _render_widget_fragments(this_dashboard, dashboard_id, widget,
+                             options_values, dict_widgets,
+                             form_base, form_dashboard):
+    """Render a single widget's body markup and its js_ready_end init script for
+    ``options_values`` (which may be unsaved), reusing the shared page context so
+    a previewed/re-initialised widget renders exactly as on a full page load.
+
+    Returns ``(body_html, js_ready_end_html)``. ``body_html`` is the content of
+    #container-graph-<id>; ``js_ready_end_html`` re-creates chart-type widgets
+    (Highcharts) — the client re-executes it for those widget types so option
+    changes take effect without a page reload. Text-only widgets (e.g.
+    widget_measurement) ignore the script and just swap the body.
+    """
+    context = _build_dashboard_render_context(
+        this_dashboard, dashboard_id, form_base, form_dashboard)
+    context['custom_options_values_widgets'][widget.unique_id] = options_values
+    meta = dict_widgets.get(widget.graph_type, {})
+    if 'generate_page_variables' in meta:
+        context['custom_widget_variables'][widget.unique_id] = \
+            meta['generate_page_variables'](widget.unique_id, options_values)
+    body_html = render_template(
+        'pages/dashboard_widget_body_fragment.html',
+        each_widget=widget, **context)
+    js_ready_end_html = render_template(
+        'pages/dashboard_widget_js_ready_end_fragment.html',
+        each_widget=widget, **context)
+    return body_html, js_ready_end_html
+
+
+@blueprint.route('/dashboard/<dashboard_id>/widget/<widget_id>/preview',
+                 methods=('POST',))
+@flask_login.login_required
+def preview_widget_options(dashboard_id, widget_id):
+    """Render a widget body from posted (unsaved) option values for live preview.
+
+    Never writes to the database — the session is rolled back before returning,
+    so toggling options in the settings modal updates the on-dashboard widget
+    without persisting anything until the user explicitly saves.
+    """
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'error': 'permission denied'}), 403
+    this_dashboard = Dashboard.query.filter(
+        Dashboard.unique_id == dashboard_id).first()
+    if not this_dashboard:
+        return jsonify({'error': 'dashboard not found'}), 404
+    widget = Widget.query.filter(Widget.unique_id == widget_id).first()
+    if not widget:
+        return jsonify({'error': 'widget not found'}), 404
+
+    dict_widgets = parse_widget_information()
+    try:
+        presave = json.loads(widget.custom_options) if widget.custom_options else {}
+    except Exception:
+        presave = {}
+
+    error = []
+    _, postsave_json = utils_general.custom_options_return_json(
+        error, dict_widgets, request.form, mod_dev=widget,
+        device=widget.graph_type, custom_options=presave)
+
+    # Mirror a real save's derived-value logic (execute_at_modification) so the
+    # preview matches what saving would produce, then merge defaults via the same
+    # path the page uses. Nothing is committed.
+    meta = dict_widgets.get(widget.graph_type, {})
+    if 'execute_at_modification' in meta:
+        try:
+            (_allow, _refresh, widget, custom_opts) = meta['execute_at_modification'](
+                widget, request.form, presave, json.loads(postsave_json))
+            postsave_json = json.dumps(custom_opts)
+        except Exception as exc:
+            logger.warning("preview execute_at_modification failed: %s", exc)
+
+    saved_options = widget.custom_options
+    try:
+        widget.custom_options = postsave_json
+        options_values = parse_custom_option_values_json(
+            [widget], dict_controller=dict_widgets).get(widget.unique_id, {})
+    finally:
+        widget.custom_options = saved_options
+        db.session.rollback()
+
+    form_base = forms_dashboard.DashboardBase()
+    form_dashboard = forms_dashboard.DashboardConfig()
+    html, js_ready_end = _render_widget_fragments(
+        this_dashboard, this_dashboard.unique_id, widget,
+        options_values, dict_widgets, form_base, form_dashboard)
+    return jsonify({'html': html, 'js_ready_end': js_ready_end})
 
 
 @blueprint.route('/reload_flask/<dashboard_id>')

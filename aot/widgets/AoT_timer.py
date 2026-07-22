@@ -695,6 +695,35 @@ def _issue_output_command_with_retry(daemon, device_unique_id, channel_index, st
     return False, last_err
 
 
+def _wait_for_confirm(daemon, device_unique_id, channel_index, stop_event, timeout=20.0):
+    """Poll output_state until the device confirms the ON (Model A: runtime counts
+    from the confirmed-on, not the dispatch).
+
+    Returns:
+      'on'        — device confirmed on (a synchronous output returns this at once)
+      'fault'     — device did not confirm (offline); caller shows an offline phase
+      'timeout'   — no resolution within the window (treated like offline)
+      'cancelled' — the timer was stopped while waiting
+    """
+    end = time.time() + max(1.0, float(timeout))
+    while time.time() < end:
+        if stop_event is not None and stop_event.is_set():
+            return 'cancelled'
+        try:
+            st = daemon.output_state(device_unique_id, output_channel=channel_index)
+        except Exception:
+            st = None
+        if st == 'on' or (isinstance(st, (int, float)) and not isinstance(st, bool) and st > 0):
+            return 'on'
+        if st == 'fault':
+            return 'fault'
+        if stop_event is not None and stop_event.wait(timeout=1.0):
+            return 'cancelled'
+        if stop_event is None:
+            time.sleep(1.0)
+    return 'timeout'
+
+
 def _force_output_off(device_unique_id, channel_id):
     try:
         ch_index = _resolve_channel_index(device_unique_id, channel_id)
@@ -773,11 +802,24 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
                     stopped_at_ms=int(time.time() * 1000))
                 return
+            # Model A: only count runtime once the device confirms the ON.
+            cst = _wait_for_confirm(daemon, device_unique_id, channel_index, stop_event)
+            if cst == 'cancelled':
+                return
             phase_start = int(time.time() * 1000)
-            _cyc_state_update(
-                device_unique_id, channel_id, phase='running', current_cycle=1,
-                message='Active', phase_started_ms=phase_start, phase_duration_sec=0,
-                next_transition_ms=None, active=True)
+            if cst == 'on':
+                _cyc_state_update(
+                    device_unique_id, channel_id, phase='running', current_cycle=1,
+                    message='Active', phase_started_ms=phase_start, phase_duration_sec=0,
+                    next_transition_ms=None, active=True)
+            else:
+                # Offline: device never confirmed. Show a distinct offline state and
+                # do NOT count runtime; a later confirmation is not awaited here
+                # (hold mode holds until stopped regardless).
+                _cyc_state_update(
+                    device_unique_id, channel_id, phase='offline', current_cycle=1,
+                    message='Offline (no response)', phase_started_ms=None,
+                    phase_duration_sec=0, next_transition_ms=None, active=True)
             stop_event.wait()  # hold indefinitely until stopped
             _issue_output_command(daemon, device_unique_id, channel_index, 'off', 0)
             _cyc_state_update(
@@ -799,12 +841,24 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
                     stopped_at_ms=int(time.time() * 1000))
                 return
+            # Model A: gate the run countdown on device confirmation so runtime
+            # reflects confirmed-on, not dispatch. Offline -> show offline, no count.
+            cst = _wait_for_confirm(daemon, device_unique_id, channel_index, stop_event)
+            if cst == 'cancelled':
+                break
             phase_start = int(time.time() * 1000)
-            _cyc_state_update(
-                device_unique_id, channel_id, phase='running', current_cycle=cycle,
-                message=f'{cycle}/{total_cycles}, Active', phase_started_ms=phase_start,
-                phase_duration_sec=max(1, run_sec), next_transition_ms=phase_start + run_sec * 1000,
-                active=True)
+            if cst == 'on':
+                _cyc_state_update(
+                    device_unique_id, channel_id, phase='running', current_cycle=cycle,
+                    message=f'{cycle}/{total_cycles}, Active', phase_started_ms=phase_start,
+                    phase_duration_sec=max(1, run_sec), next_transition_ms=phase_start + run_sec * 1000,
+                    active=True)
+            else:
+                _cyc_state_update(
+                    device_unique_id, channel_id, phase='offline', current_cycle=cycle,
+                    message=f'{cycle}/{total_cycles}, Offline (no response)', phase_started_ms=None,
+                    phase_duration_sec=0, next_transition_ms=phase_start + run_sec * 1000,
+                    active=True)
             if not _sleep_with_cancel(stop_event, run_sec):
                 break
             _issue_output_command(daemon, device_unique_id, channel_index, 'off', 0)
@@ -1104,29 +1158,6 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Display operation status on the title bar.')
         },
         {
-            'id': 'status_font_em',
-            'type': 'float',
-            'default_value': 1.0,
-            'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('Status Size'),
-            'phrase': lazy_gettext('Size in (em)')
-        },
-        {
-            'id': 'enable_timestamp',
-            'type': 'bool',
-            'default_value': True,
-            'name': lazy_gettext('Operation Time'),
-            'phrase': lazy_gettext('Display operation time.')
-        },
-        {
-            'id': 'widget_name_font_em',
-            'type': 'float',
-            'default_value': 1.0,
-            'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('Operation Time Font Size'),
-            'phrase': lazy_gettext('Size in (em)')
-        },
-        {
             'type': 'header',
             'name': lazy_gettext('Time Settings')
         },
@@ -1136,14 +1167,6 @@ WIDGET_INFORMATION = {
             'default_value': True,
             'name': lazy_gettext('Timer'),
             'phrase': lazy_gettext('Enable the timer function.')
-        },
-        {
-            'id': 'font_em_time_input',
-            'type': 'float',
-            'default_value': 1.2,
-            'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('Time Input Size'),
-            'phrase': lazy_gettext('Size in (em)')
         },
         {
             'id': 'operation_mode',
@@ -1326,6 +1349,14 @@ WIDGET_INFORMATION = {
       font-variant-numeric: tabular-nums;
       color: var(--aot-text-main, #333);
     }
+    #aot_tm_{{each_widget.unique_id}} .aot-cnt-msg {
+      font-size: 0.8em;
+      line-height: 1.3;
+      color: var(--text-medium-gray, #8a8a8a);
+    }
+    #aot_tm_{{each_widget.unique_id}} .aot-cnt-msg:empty {
+      display: none;
+    }
     </style>
 
     {%- set wo = widget_options if widget_options is defined else {} -%}
@@ -1341,7 +1372,6 @@ WIDGET_INFORMATION = {
     {%- set default_run = [wo.get('default_run_seconds', 0)|int, 86399]|min -%}
     {%- set default_rest = [wo.get('default_rest_seconds', 0)|int, 86399]|min -%}
     {%- set default_cycles = wo.get('default_cycles', 5)|int -%}
-    {%- set font_time = widget_options['font_em_time_input'] -%}
     {%- set operation_mode = wo.get('operation_mode', 'cycle') -%}
     {%- set start_at = wo.get('start_at', '00:00') -%}
     {%- set run_hms = '%02d:%02d:%02d'|format(default_run // 3600, (default_run % 3600) // 60, default_run % 60) -%}
@@ -1377,6 +1407,8 @@ WIDGET_INFORMATION = {
           </label>
         </div>
       </div>
+
+      <span class="prt-text aot-cnt-msg" id="aot_tm_message_{{each_widget.unique_id}}"></span>
 
       {% if widget_options['enable_output_controls'] %}
       <div class="aot-cnt-controls">

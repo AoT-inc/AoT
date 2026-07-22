@@ -5,11 +5,9 @@
 import logging
 import json
 from aot.aot_flask.extensions import db
-from aot.databases.models import DeviceMeasurements
 from flask_babel import lazy_gettext
 
 from aot.aot_flask.geo.widget.maps import generate_page_variables_logic
-from aot.aot_flask.utils.utils_geo import get_available_config_options as _get_available_config_options
 
 
 logger = logging.getLogger(__name__)
@@ -57,9 +55,18 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
         if selected_dev_unique_ids:
             final_options['device_ids'] = selected_dev_unique_ids
             final_options['include_all_devices'] = False
-        elif not final_options.get('include_all_devices'):
-             final_options['device_ids'] = []
-             final_options['include_all_devices'] = False
+        else:
+            # [Fix] Empty device filter must mean "show every device placed on
+            # this map", not "show none". This branch previously forced
+            # include_all_devices=False whenever the filter was left blank,
+            # which made collect_devices() return an empty list
+            # (utils_geo.py collect_devices: `if not target_ids and not
+            # include_all: return []`) — silently hiding every marker the
+            # moment a widget was saved once with the (now-Advanced, optional)
+            # Device Filter left untouched. That contradicts the widget's
+            # basic-view promise: placing a device on the map IS showing it.
+            final_options['device_ids'] = []
+            final_options['include_all_devices'] = True
 
     # 3. Handle Map Change -> Reset View if Map Changed
     # [Fix] Handle None values safely to prevent false 'Map Changed' triggers
@@ -151,8 +158,11 @@ WIDGET_HEAD_HTML_VECTOR = """
 <!-- Label layer registry & priority skeleton (rank x pin presets) -->
 <script src="/static/js/widgets/AoT_map/aot-map-label-layers.js?v=1"></script>
 
+<!-- Shared output-state classifier (pending/fault/on/off consistency) -->
+<script src="/static/js/common/aot-output-state.js?v=1"></script>
+
 <!-- Pure MapLibre Widget (no Leaflet dependency) -->
-<script src="/static/js/widgets/AoT_map/aot-map-widget-vector.js?v=20260623a"></script>
+<script src="/static/js/widgets/AoT_map/aot-map-widget-vector.js?v=20260722a"></script>
 
 <!-- Vector Map Styles -->
 <style>
@@ -195,9 +205,11 @@ WIDGET_HEAD_HTML_RASTER = """
 <script src="/static/js/widgets/AoT_map/aot-stopwatch-manager.js"></script>
 <!-- Actuator/device control-list ordering (natural sort + drag reorder, shared) -->
 <script src="/static/js/widgets/AoT_facility/aot-actuator-order.js?v=3"></script>
+<!-- Shared output-state classifier (pending/fault/on/off consistency) -->
+<script src="/static/js/common/aot-output-state.js?v=1"></script>
 <!-- Shared popup utilities (input/output/note HTML builders + dot positioning) -->
 <script src="/static/js/widgets/AoT_map/aot-map-popup.js?v=21"></script>
-<script src="/static/js/widgets/AoT_map/aot-map-widget-v3.js?v=9.3.24"></script>
+<script src="/static/js/widgets/AoT_map/aot-map-widget-v3.js?v=9.3.26"></script>
 <script src="/static/js/geo/aot-map-config.js?v=9.2.7"></script>
 
 <style>
@@ -582,40 +594,14 @@ WIDGET_INFORMATION = {
     'generate_page_variables': widget_variables,
     'execute_at_modification': execute_at_modification,
 
-    # Custom options appear in the widget settings form
+    # Custom options appear in the widget settings form.
+    # [Simplification] Basic view = Map + Display + Refresh only (~6 options).
+    # Devices placed on the map in the map editor (/geo/design) are shown
+    # automatically — there is no separate "which devices to show" step here.
+    # Everything else (device/measurement filters, 3D, label fine-tuning,
+    # shapes, runtime view-state) lives behind the collapsed 'Advanced'
+    # disclosure so it doesn't have to be learned to use the widget.
     'custom_options': [
-        # --- Time ---
-        {
-            'type': 'header',
-            'name': lazy_gettext('Time')
-        },
-        {
-            'id': 'period',
-            'type': 'integer',
-            'default_value': '5',
-            'name': lazy_gettext('Period (Seconds)'),
-            'phrase': lazy_gettext('Refresh the widget every N seconds. 0 to disable.'),
-            'constraints': {'min': 0, 'max': 86400}
-        },
-        {
-            'id': 'max_measure_age',
-            'type': 'integer',
-            'default_value': '300',
-
-            'name': lazy_gettext('Max Valid Age (s)'),
-            'phrase': lazy_gettext('Data older than this time will not be displayed. (Default: 300s)'),
-            'constraints': {'min': 10, 'max': 86400}
-        },
-        {
-            'id': 'input_update_interval',
-            'type': 'integer',
-            'default_value': '300',
-
-            'name': lazy_gettext('Input Update Interval (s)'),
-            'phrase': lazy_gettext('Interval to automatically refresh measurements. (Default: 300s)'),
-            'constraints': {'min': 5, 'max': 86400}
-        },
-
         # --- Map ---
         {
             'type': 'header',
@@ -631,102 +617,93 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Select a map. Leave empty to use the most recently modified map.')
         },
         {
-            'id': 'fallback_latitude',
-            'type': 'text',
-            'default_value': '',
-
-            'name': lazy_gettext('Latitude'),
-            'phrase': lazy_gettext('Set the fallback latitude.')
-        },
-        {
-            'id': 'fallback_longitude',
-            'type': 'text',
-            'default_value': '',
-
-            'name': lazy_gettext('Longitude'),
-            'phrase': lazy_gettext('Set the fallback longitude.')
-        },
-        {
-            'id': 'default_zoom',
-            'type': 'text',
-            'default_value': '15',
-
-            'name': lazy_gettext('Zoom'),
-            'phrase': lazy_gettext('Map zoom level (1-20)'),
-        },
-        {
-            'id': 'active_layers',
-            'type': 'text',
-            'default_value': '',
-            'name': lazy_gettext('Active Overlay Layers'),
-            'phrase': lazy_gettext('List of currently active overlay layers (comma separated)')
-        },
-        {
-            'id': 'selected_base_layer',
-            'type': 'text',
-            'default_value': '',
-            'name': lazy_gettext('Selected Base Layer'),
-            'phrase': lazy_gettext('Name of the currently selected base layer')
-        },
-
-        # --- Vector Mode 3D Options ---
-        {
-            'type': 'header',
-            'name': lazy_gettext('3D Map (Vector Mode)')
-        },
-        {
-            'id': 'enable_3d_terrain',
-            'type': 'boolean',
-            'default_value': False,
-
-            'name': lazy_gettext('Enable 3D Terrain'),
-            'phrase': lazy_gettext('Enable 3D terrain rendering (Hillshade, elevation). Requires vector mode.')
-        },
-        {
-            'id': 'default_pitch',
-            'type': 'integer',
-            'default_value': '0',
-            'name': lazy_gettext('Default Pitch (0-60)'),
-            'phrase': lazy_gettext('Initial 3D tilt angle in degrees (0-60).'),
-            'constraints': {'min': 0, 'max': 60}
-        },
-        {
-            'id': 'default_bearing',
-            'type': 'integer',
-            'default_value': '0',
-            'name': lazy_gettext('Default Bearing (-180 to 180)'),
-            'phrase': lazy_gettext('Initial rotation angle in degrees (-180 to 180).'),
-            'constraints': {'min': -180, 'max': 180}
-        },
-        {
-            'id': 'map_style_url',
-            'type': 'text',
-            'default_value': '',
-
-            'name': lazy_gettext('Vector Style URL'),
-            'phrase': lazy_gettext('Custom MapLibre style JSON URL. Leave empty to use GIS input setting.')
-        },
-        {
-            'id': 'facility_render_mode',
-            'type': 'select',
-            'default_value': 'default',
-            'options_select': [
-                ('default',     lazy_gettext('Default (transparent)')),
-                ('solid',       lazy_gettext('Solid (opaque)')),
-                ('wireframe',   lazy_gettext('Wireframe')),
-                ('performance', lazy_gettext('Performance (mobile)')),
-            ],
-            'name': lazy_gettext('Facility Render Mode'),
-            'phrase': lazy_gettext(
-                'Render style for the 3D facility overlay on the map. '
-                'Solid/Wireframe/Performance reduce GPU load.'
+            # [Simplification] Replaces the old 'Device Selection' dropdowns as the
+            # primary way users learn how devices get on the map: placement in the
+            # map editor IS the selection. Subset filtering (when you deliberately
+            # want to hide some placed devices) still exists under Advanced.
+            'type': 'message',
+            'default_value': lazy_gettext(
+                'All devices placed on this map in the map editor are shown '
+                'automatically. Add or move devices in '
+                '<a href="/geo/design" target="_blank" rel="noopener">Map Editor (geo/design)</a>.'
             )
         },
 
-        # --- Device Selection ---
+        # --- Display ---
         {
             'type': 'header',
-            'name': lazy_gettext('Device Selection')
+            'name': lazy_gettext('Display')
+        },
+        {
+            # Master label switch: turns ALL map labels (site / zone / device / sensor)
+            # on or off. Per-device-type granularity (input / output / function) is
+            # handled at runtime by the map's right-side label controller, so there is
+            # no per-category toggle here.
+            'id': 'show_labels',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Show Labels'),
+            'phrase': lazy_gettext(
+                'Master switch for all map labels (site, zone, device, sensor). '
+                'Use the map\'s label controller to fine-tune input/output/function labels.'
+            )
+        },
+        {
+            'id': 'overlay_data_only',
+            'type': 'bool',
+            'default_value': False,
+            'name': lazy_gettext('Display Data Only (Hide Map)'),
+            'phrase': lazy_gettext('Hide the overlay map and show only the data panel.')
+        },
+        {
+            # @ANCHOR: ai_advice_enabled_option [2026-07-07]
+            # Backend fetch (generate_page_variables_logic in maps.py) already reads
+            # widget_options.get('ai_advice_enabled', ...) and embeds the latest
+            # AISystemSummary via #aot-map-ai-advice-{id}; this option was the missing
+            # piece exposing that toggle in the widget settings form.
+            'id': 'ai_advice_enabled',
+            'type': 'bool',
+            'default_value': False,
+            'name': lazy_gettext('Show AI Advice'),
+            'phrase': lazy_gettext(
+                'Display the latest periodic AI advice summary for this map\'s facility/site.'
+            )
+        },
+
+        # --- Refresh ---
+        {
+            'type': 'header',
+            'name': lazy_gettext('Refresh')
+        },
+        {
+            'id': 'period',
+            'type': 'integer',
+            'default_value': '5',
+            'name': lazy_gettext('Period (Seconds)'),
+            'phrase': lazy_gettext('Refresh the widget every N seconds. 0 to disable.'),
+            'constraints': {'min': 0, 'max': 86400}
+        },
+
+        # ============================================================
+        # --- Advanced (collapsed by default) ---
+        # ============================================================
+        {
+            'type': 'collapse_start',
+            'id': 'advanced',
+            'name': lazy_gettext('Advanced')
+        },
+
+        # --- Device Filter ---
+        {
+            'type': 'header',
+            'name': lazy_gettext('Device Filter')
+        },
+        {
+            'type': 'message',
+            'default_value': lazy_gettext(
+                'Optional: leave empty to show every device placed on the map. '
+                'Select specific devices only if you want to hide some of them.'
+            )
         },
         {
             'id': 'device_selection_input',
@@ -735,7 +712,7 @@ WIDGET_INFORMATION = {
             'default_value': '',
 
             'name': lazy_gettext('Input'),
-            'phrase': lazy_gettext('Select inputs to display.')
+            'phrase': lazy_gettext('Select inputs to display. Leave empty to show all placed inputs.')
         },
         {
             'id': 'device_selection_output',
@@ -744,7 +721,7 @@ WIDGET_INFORMATION = {
             'default_value': '',
 
             'name': lazy_gettext('Output'),
-            'phrase': lazy_gettext('Select outputs to display.')
+            'phrase': lazy_gettext('Select outputs to display. Leave empty to show all placed outputs.')
         },
         {
             'id': 'device_selection_function',
@@ -753,9 +730,8 @@ WIDGET_INFORMATION = {
             'default_value': '',
 
             'name': lazy_gettext('Function'),
-            'phrase': lazy_gettext('Select functions to display.')
+            'phrase': lazy_gettext('Select functions to display. Leave empty to show all placed functions.')
         },
-
 
         # --- Measurement Panel ---
         {
@@ -790,44 +766,64 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Select function measurements to display in the panel.')
         },
 
-        # --- AI ---
+        # --- 3D Map (Vector Mode) ---
         {
             'type': 'header',
-            'name': lazy_gettext('AI')
+            'name': lazy_gettext('3D Map (Vector Mode)')
         },
         {
-            # @ANCHOR: ai_advice_enabled_option [2026-07-07]
-            # Backend fetch (generate_page_variables_logic in maps.py) already reads
-            # widget_options.get('ai_advice_enabled', ...) and embeds the latest
-            # AISystemSummary via #aot-map-ai-advice-{id}; this option was the missing
-            # piece exposing that toggle in the widget settings form.
-            'id': 'ai_advice_enabled',
+            'id': 'enable_3d_terrain',
             'type': 'bool',
             'default_value': False,
-            'name': lazy_gettext('Show AI Advice'),
+
+            'name': lazy_gettext('Enable 3D Terrain'),
+            'phrase': lazy_gettext('Enable 3D terrain rendering (Hillshade, elevation). Requires vector mode.')
+        },
+        {
+            'id': 'default_pitch',
+            'type': 'integer',
+            'default_value': '0',
+            'name': lazy_gettext('Default Pitch (0-60)'),
+            'phrase': lazy_gettext('Initial 3D tilt angle in degrees (0-60).'),
+            'constraints': {'min': 0, 'max': 60}
+        },
+        {
+            'id': 'default_bearing',
+            'type': 'integer',
+            'default_value': '0',
+            'name': lazy_gettext('Default Bearing (-180 to 180)'),
+            'phrase': lazy_gettext('Initial rotation angle in degrees (-180 to 180).'),
+            'constraints': {'min': -180, 'max': 180}
+        },
+        {
+            'id': 'facility_render_mode',
+            'type': 'select',
+            'default_value': 'default',
+            'options_select': [
+                ('default',     lazy_gettext('Default (transparent)')),
+                ('solid',       lazy_gettext('Solid (opaque)')),
+                ('wireframe',   lazy_gettext('Wireframe')),
+                ('performance', lazy_gettext('Performance (mobile)')),
+            ],
+            'name': lazy_gettext('Facility Render Mode'),
             'phrase': lazy_gettext(
-                'Display the latest periodic AI advice summary for this map\'s facility/site.'
+                'Render style for the 3D facility overlay on the map. '
+                'Solid/Wireframe/Performance reduce GPU load.'
             )
+        },
+        {
+            'id': 'map_style_url',
+            'type': 'text',
+            'default_value': '',
+
+            'name': lazy_gettext('Vector Style URL'),
+            'phrase': lazy_gettext('Custom MapLibre style JSON URL. Leave empty to use GIS input setting.')
         },
 
-        # --- Labels ---
+        # --- Label Fine-tuning ---
         {
             'type': 'header',
-            'name': lazy_gettext('Labels')
-        },
-        {
-            # Master label switch: turns ALL map labels (site / zone / device / sensor)
-            # on or off. Per-device-type granularity (input / output / function) is
-            # handled at runtime by the map's right-side label controller, so there is
-            # no per-category toggle here.
-            'id': 'show_labels',
-            'type': 'bool',
-            'default_value': True,
-            'name': lazy_gettext('Show Labels'),
-            'phrase': lazy_gettext(
-                'Master switch for all map labels (site, zone, device, sensor). '
-                'Use the map\'s label controller to fine-tune input/output/function labels.'
-            )
+            'name': lazy_gettext('Label Fine-tuning')
         },
         {
             'id': 'enable_label_collision',
@@ -836,20 +832,6 @@ WIDGET_INFORMATION = {
 
             'name': lazy_gettext('Prevent Label Collision'),
             'phrase': lazy_gettext('Automatically hide overlapping labels when enabled.')
-        },
-        {
-            'id': 'label_spacing',
-            'type': 'integer',
-            'default_value': '0',
-
-            'name': lazy_gettext('Label Spacing (px)'),
-            'phrase': lazy_gettext(
-                'Extra pixel padding around each label before overlap check. '
-                '0 (default): cluster only when labels visually overlap on screen. '
-                'Positive values add a gap buffer — labels within N px of each other will also cluster. '
-                'For dense deployments where you want earlier clustering, use 10–30.'
-            ),
-            'constraints': {'min': 0, 'max': 100}
         },
         {
             'id': 'global_label_size',
@@ -873,15 +855,11 @@ WIDGET_INFORMATION = {
                 'site/zone labels yield and merge when zoomed out.'
             )
         },
-
-        # --- Sensor Labels (style only; visibility follows the master 'Show Labels').
-        #     These are realtime measurement values placed on facility 3D structures
-        #     and only appear on maps whose facilities have sensor fittings. ---
         {
-            'type': 'header',
-            'name': lazy_gettext('Sensor Label Style')
-        },
-        {
+            # Style-only; visibility follows the master 'Show Labels'. Fine styling
+            # knobs (color/opacity/offset/decimals/max-channels) were removed and
+            # are now fixed sensible constants (see maps.py widget_vars) — they were
+            # rarely touched and mostly added clutter.
             'id': 'sensor_label_style',
             'type': 'select',
             'default_value': 'circle',
@@ -893,77 +871,11 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Circle: compact round marker showing the first measurement as an integer, colored by measurement band. Text: full value label.')
         },
         {
-            'id': 'sensor_label_max_channels',
-            'type': 'integer',
-            'default_value': 1,
-            'name': lazy_gettext('Max Channels Shown'),
-            'phrase': lazy_gettext('Number of measurement values shown per label. Extra channels collapse to "+".'),
-            'constraints': {'min': 1, 'max': 5}
-        },
-        {
-            'id': 'sensor_label_decimals',
-            'type': 'integer',
-            'default_value': 1,
-            'name': lazy_gettext('Decimals'),
-            'phrase': lazy_gettext('Decimal places for label values.'),
-            'constraints': {'min': 0, 'max': 3}
-        },
-        {
-            'id': 'sensor_label_size',
-            'type': 'float',
-            'default_value': 0.85,
-            'name': lazy_gettext('Label Size (em)'),
-            'phrase': lazy_gettext('Font size of sensor labels in em units.'),
-            'constraints': {'min': 0.5, 'max': 2.0}
-        },
-        {
-            'id': 'sensor_label_bg',
-            'type': 'text',
-            'default_value': 'rgba(15,23,42,0.78)',
-            'name': lazy_gettext('Label Background'),
-            'phrase': lazy_gettext('CSS color for label background.')
-        },
-        {
-            'id': 'sensor_label_fg',
-            'type': 'text',
-            'default_value': '#f8fafc',
-            'name': lazy_gettext('Label Text Color'),
-            'phrase': lazy_gettext('CSS color for label text.')
-        },
-        {
-            'id': 'sensor_label_offset_y',
-            'type': 'float',
-            'default_value': 0.0,
-            'name': lazy_gettext('Vertical Offset (m)'),
-            'phrase': lazy_gettext('Distance above the sensor (in meters) where the label is anchored.'),
-            'constraints': {'min': 0.0, 'max': 5.0}
-        },
-        {
-            'id': 'sensor_label_opacity',
-            'type': 'float',
-            'default_value': 0.7,
-            'name': lazy_gettext('Label Opacity'),
-            'phrase': lazy_gettext('Opacity of sensor value labels (0.0–1.0).'),
-            'constraints': {'min': 0.0, 'max': 1.0}
-        },
-        {
             'id': 'sensor_popup_enabled',
             'type': 'bool',
             'default_value': True,
             'name': lazy_gettext('Enable Sensor Popup'),
             'phrase': lazy_gettext('Click a sensor label to open a detail popup with the last 24h chart.')
-        },
-        {
-            'id': 'popup_default_tab',
-            'type': 'select',
-            'default_value': 'overview',
-            'options_select': [
-                ('overview', lazy_gettext('Overview')),
-                ('envctl', lazy_gettext('Environment & Control')),
-                ('about', lazy_gettext('About')),
-            ],
-            'name': lazy_gettext('Popup Default Tab'),
-            'phrase': lazy_gettext('Default section tab of the bay popup (overview, environment-control, or about).')
         },
 
         # --- Shapes ---
@@ -1019,12 +931,6 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Other Drawn Shapes'),
             'phrase': lazy_gettext('Show freeform shapes created with drawing tools.')
         },
-
-        # --- Shapes Style ---
-        {
-            'type': 'header',
-            'name': lazy_gettext('Shape Style')
-        },
         {
             'id': 'device_shape_opacity',
             'type': 'integer',
@@ -1033,16 +939,61 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('0 (Transparent) ~ 100 (Opaque)'),
             'constraints': {'min': 0, 'max': 100}
         },
-        
-        # --- Misc ---
-        {
-            'id': 'overlay_data_only',
-            'type': 'bool',
-            'default_value': False,
-            'name': lazy_gettext('Display Data Only (Hide Map)'),
-            'phrase': lazy_gettext('Hide the overlay map and show only the data panel.')
-        }
 
+        # --- View State (auto-managed) ---
+        {
+            'type': 'header',
+            'name': lazy_gettext('View State (auto-managed)')
+        },
+        {
+            'type': 'message',
+            'default_value': lazy_gettext(
+                'These are saved automatically as you pan/zoom/rotate the map or '
+                'switch layers. You normally do not need to edit them here.'
+            )
+        },
+        {
+            'id': 'fallback_latitude',
+            'type': 'text',
+            'default_value': '',
+
+            'name': lazy_gettext('Latitude'),
+            'phrase': lazy_gettext('Set the fallback latitude.')
+        },
+        {
+            'id': 'fallback_longitude',
+            'type': 'text',
+            'default_value': '',
+
+            'name': lazy_gettext('Longitude'),
+            'phrase': lazy_gettext('Set the fallback longitude.')
+        },
+        {
+            'id': 'default_zoom',
+            'type': 'text',
+            'default_value': '15',
+
+            'name': lazy_gettext('Zoom'),
+            'phrase': lazy_gettext('Map zoom level (1-20)'),
+        },
+        {
+            'id': 'active_layers',
+            'type': 'text',
+            'default_value': '',
+            'name': lazy_gettext('Active Overlay Layers'),
+            'phrase': lazy_gettext('List of currently active overlay layers (comma separated)')
+        },
+        {
+            'id': 'selected_base_layer',
+            'type': 'text',
+            'default_value': '',
+            'name': lazy_gettext('Selected Base Layer'),
+            'phrase': lazy_gettext('Name of the currently selected base layer')
+        },
+
+        {
+            'type': 'collapse_end'
+        },
     ],
 
     'widget_dashboard_head': WIDGET_HEAD_HTML,

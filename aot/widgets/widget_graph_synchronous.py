@@ -771,7 +771,10 @@ WIDGET_INFORMATION = {
                        xaxis_duration_min,
                        xaxis_reset,
                        refresh_seconds) {
-    setInterval(function () {
+    window._graphsync_intervals = window._graphsync_intervals || {};
+    var _k = widget_id + '_' + series;
+    if (window._graphsync_intervals[_k]) { clearInterval(window._graphsync_intervals[_k]); }
+    window._graphsync_intervals[_k] = setInterval(function () {
       retrieveLiveDataSynchronousGraph(widget_id,
                        series,
                        unique_id,
@@ -793,6 +796,22 @@ WIDGET_INFORMATION = {
 {% set graph_pid_ids = widget_options['measurements_pid'] %}
 {% set graph_note_tag_ids = widget_options['measurements_note_tag'] %}
 
+  // Idempotency guard for live-preview re-init (no page reload): destroy prior
+  // chart + clear this widget's live-data intervals before rebuilding.
+  try {
+    if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
+      widget['{{each_widget.unique_id}}'].destroy();
+      delete widget['{{each_widget.unique_id}}'];
+    }
+  } catch (e) {}
+  if (window._graphsync_intervals) {
+    Object.keys(window._graphsync_intervals).forEach(function (k) {
+      if (k.indexOf('{{each_widget.unique_id}}' + '_') === 0) {
+        clearInterval(window._graphsync_intervals[k]);
+        delete window._graphsync_intervals[k];
+      }
+    });
+  }
   widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
     chart : {
       renderTo: 'container-synchronous-graph-{{each_widget.unique_id}}',
@@ -1416,7 +1435,7 @@ WIDGET_INFORMATION = {
     ]
   });
 
-  $('#updateData{{each_widget.unique_id}}').click(function() {
+  $('#updateData{{each_widget.unique_id}}').off('click').on('click', function() {
     {% set count_series = [] -%}
 
     {% for each_output in output -%}
@@ -1459,12 +1478,12 @@ WIDGET_INFORMATION = {
     {%- endfor -%}
   });
 
-  $('#resetZoom{{each_widget.unique_id}}').click(function() {
+  $('#resetZoom{{each_widget.unique_id}}').off('click').on('click', function() {
     const chart = $('#container-synchronous-graph-{{each_widget.unique_id}}').highcharts();
     chart.zoomOut();
   });
 
-  $('#showhidebutton{{each_widget.unique_id}}').click(function() {
+  $('#showhidebutton{{each_widget.unique_id}}').off('click').on('click', function() {
     const chart = $('#container-synchronous-graph-{{each_widget.unique_id}}').highcharts();
     const series = chart.series[0];
     if (series.visible) {

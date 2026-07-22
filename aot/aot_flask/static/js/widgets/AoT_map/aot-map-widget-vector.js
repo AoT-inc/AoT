@@ -363,6 +363,12 @@
         if (vars.refreshSeconds > 0) {
             setupRefresh(uniqueId, vars.refreshSeconds);
         }
+        // Expose a live refresh-interval setter so the settings modal can apply the
+        // `period` option immediately (auto-save + live) instead of on reload.
+        try {
+            var _refInst = window.AoTWidgetInstances[uniqueId];
+            if (_refInst) { _refInst._setupRefresh = function (s) { setupRefresh(uniqueId, s); }; }
+        } catch (e) {}
 
     };
 
@@ -4609,6 +4615,12 @@
             // category never overrides the zoom culling (and vice versa).
             if (def.layers && def.layers.length) _applyShapeLOD();
         }
+        // Expose the shape-category toggle so the settings modal can live-apply the
+        // show_*_shape options (the in-map shape toggles already call this).
+        try {
+            var _shInst = window.AoTWidgetInstances[uniqueId];
+            if (_shInst) { _shInst._applyShapeVisible = _applyShapeVisible; }
+        } catch (e) {}
 
         // Seed persisted SHAPE-hidden state into the registry. _applyShapeLOD (called
         // right after) reads shapeVisible to cull hidden shapes — no per-label timers
@@ -6677,9 +6689,13 @@
                 ]).then(function(results) {
                     var state = results[0];
                     var startData = results[1];
-                    var liveON = (state !== null && state !== undefined)
-                        ? (state === 'on' || (typeof state === 'number' && state > 0))
-                        : isON;
+                    // Shared classifier: on/off/pending/fault consistent with v3.
+                    var cls = window.AoTOutputState
+                        ? window.AoTOutputState.classify(state)
+                        : { isOn: (state === 'on' || (typeof state === 'number' && state > 0)),
+                            isPending: (state === 'pending'), isFault: (state === 'fault'),
+                            countsRuntime: (state === 'on' || (typeof state === 'number' && state > 0)) };
+                    var liveON = (state !== null && state !== undefined) ? cls.isOn : isON;
 
                     // Prefer started_at_epoch; fall back to server-computed elapsed_sec
                     var startEpoch = null;
@@ -6693,10 +6709,19 @@
                     }
 
                     var cb = document.getElementById(toggleId);
-                    if (cb) cb.checked = liveON;
+                    if (cb) {
+                        cb.checked = liveON;
+                        cb.classList.toggle('aot-toggle-pending', !!cls.isPending);
+                        cb.classList.toggle('aot-toggle-fault', !!cls.isFault);
+                    }
+                    // Runtime counts only for a confirmed-on device (Model A): the
+                    // stopwatch starts from the confirmed-on epoch. Pending/fault
+                    // (offline) never start it — no fictional runtime.
                     if (durEl && window.AoTStopwatchManager) {
                         window.AoTStopwatchManager.register(
-                            baseDevId, channel, liveON, liveON ? startEpoch : null, durEl, 7000, false
+                            baseDevId, channel,
+                            cls.countsRuntime, cls.countsRuntime ? startEpoch : null,
+                            durEl, 7000, false
                         );
                     }
                 });

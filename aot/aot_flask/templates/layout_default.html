@@ -59,14 +59,14 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <script src="/static/js/vendor/popper.min.js"></script>
   <script src="/static/js/vendor/bootstrap.min.js"></script>
   <!-- 모달 시프트 방지: Bootstrap scrollbar 보정 no-op + iOS Safari 배경 스크롤 차단 -->
-  <script src="/static/js/common/aot-modal-scroll-lock.js?v=20260618d"></script>
+  <script src="/static/js/common/aot-modal-scroll-lock.js?v=20260722b"></script>
   <!-- 서버 다운 감지 워치독: 연결 끊기면 폴링 정지 → 복구 시 1회 새로고침 (재연결 폭주 방지). jQuery 이후 로드. -->
   <script src="/static/js/common/aot-server-health.js?v=20260702b"></script>
   <!-- AoT API Request Manager - Centralized API handling with caching and retry logic -->
 
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <link href="/static/css/simple-sidebar.css" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260702e" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260722a" rel="stylesheet">
 
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
   '/static/css/bootstrap-4-themes/aot.css' %}
@@ -446,10 +446,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260721a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260722f" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
-  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260718c" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260722a" rel="stylesheet">
   <!-- AI Global Styles -->
   <link href="{{ url_for('static', filename='css/ai/aot-ai-global.css') }}?v=20260718i" rel="stylesheet">
 </head>

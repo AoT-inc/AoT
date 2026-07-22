@@ -76,11 +76,17 @@ class InputModule(AbstractInput):
 
         self.logger.debug(f"Output State: {output_state}")
 
-        if output_state == "on":
+        # Latency-aware outputs report 'pending' (command in flight, optimistically
+        # on) and 'fault' (unconfirmed, reverted to off) in addition to on/off.
+        # Map them to the intended on/off value instead of erroring every cycle.
+        if output_state in ("on", "pending"):
             self.value_set(0, 1)
-        elif output_state == "off":
+        elif output_state in ("off", "fault"):
             self.value_set(0, 0)
+        elif isinstance(output_state, (int, float)) and not isinstance(output_state, bool):
+            # Numeric (e.g. PWM duty cycle): non-zero counts as on.
+            self.value_set(0, 1 if output_state else 0)
         else:
-            self.logger.error(f"Output state neither 'on' nor 'off': '{output_state}'")
+            self.logger.debug(f"Output state not on/off/pending/fault: '{output_state}'")
 
         return self.return_dict

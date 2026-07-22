@@ -944,6 +944,12 @@ function initAdviceWidget(wid) {
 
   /* ResizeObserver with 50ms debounce to avoid mid-transition flicker */
   if (typeof ResizeObserver !== 'undefined') {
+    // Disconnect the previous observer for this widget so a live-preview re-init
+    // doesn't stack observers (each would re-fire setAdviceTier).
+    window._adviceResizeObservers = window._adviceResizeObservers || {};
+    if (window._adviceResizeObservers[wid]) {
+      try { window._adviceResizeObservers[wid].disconnect(); } catch (e) {}
+    }
     var ro = new ResizeObserver(function(entries) {
       var h = entries[0].contentRect.height;
       clearTimeout(_adviceResizeTimers[wid]);
@@ -952,6 +958,7 @@ function initAdviceWidget(wid) {
       }, 50);
     });
     ro.observe(gridContent);
+    window._adviceResizeObservers[wid] = ro;
   }
 
   /* Initial data fetch */

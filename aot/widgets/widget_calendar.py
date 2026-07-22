@@ -96,7 +96,7 @@ WIDGET_INFORMATION = {
 <link rel="stylesheet" href="/static/vendor/fullcalendar-5.11.5/main.min.css">
 <script src="/static/vendor/fullcalendar-5.11.5/main.min.js"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=9">
-<script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=9"></script>
+<script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=10"></script>
 {% endif %}
 <style>
   .aot-calendar-widget-outer { height: 100%; display: flex; flex-flow: column; overflow: hidden; }

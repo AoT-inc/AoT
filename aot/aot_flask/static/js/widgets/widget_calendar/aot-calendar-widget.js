@@ -156,6 +156,7 @@
     }
     window.addEventListener('resize', apply);
     apply();
+    return apply;
   }
 
   function putSchedule(jobId, payload, i18n, onSuccess, onError) {
@@ -338,6 +339,17 @@
   window.aotCalendarWidgetInit = function (uniqueId, options) {
     var containerEl = document.getElementById('calendar-widget-' + uniqueId);
     if (!containerEl || typeof FullCalendar === 'undefined') return;
+    // Idempotent re-init (live-preview, no page reload): tear down this widget's
+    // previous FullCalendar instance, refresh interval and window resize listener
+    // before rebuilding, so re-init doesn't leak an instance / interval / handler.
+    window._aotCalWidgets = window._aotCalWidgets || {};
+    var _prevCal = window._aotCalWidgets[uniqueId];
+    if (_prevCal) {
+      try { if (_prevCal.calendar) { _prevCal.calendar.destroy(); } } catch (e) {}
+      if (_prevCal.interval) { clearInterval(_prevCal.interval); }
+      if (_prevCal.resize) { window.removeEventListener('resize', _prevCal.resize); }
+    }
+    window._aotCalWidgets[uniqueId] = {};
     containerEl.innerHTML = '';
 
     var i18n = {
@@ -552,12 +564,15 @@
     });
     calendar.render();
     primeGoogleMeta(rebuildSources);
-    attachResponsiveSwitch(calendar, options.defaultView, containerEl);
+    var _calResize = attachResponsiveSwitch(calendar, options.defaultView, containerEl);
 
     var editModal = options.canEdit ? setupEditModal(uniqueId, calendar, i18n) : { canEdit: false };
 
+    var _calInterval = null;
     if (options.refreshSeconds > 0) {
-      setInterval(function () { calendar.refetchEvents(); }, options.refreshSeconds * 1000);
+      _calInterval = setInterval(function () { calendar.refetchEvents(); }, options.refreshSeconds * 1000);
     }
+    // Register instance/interval/resize handler so the next re-init can tear it down.
+    window._aotCalWidgets[uniqueId] = { calendar: calendar, resize: _calResize, interval: _calInterval };
   };
 })();

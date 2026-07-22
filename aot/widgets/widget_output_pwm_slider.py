@@ -279,7 +279,9 @@ WIDGET_INFORMATION = {
                           max_measure_age_sec,
                           invert_status,
                           decimal_places) {
-    setInterval(function () {
+    window._pwm_intervals = window._pwm_intervals || {};
+    if (window._pwm_intervals[widget_id + '_data']) { clearInterval(window._pwm_intervals[widget_id + '_data']); }
+    window._pwm_intervals[widget_id + '_data'] = setInterval(function () {
       getLastDataPWMSlider(widget_id,
                   dev_id,
                   measure_type,
@@ -336,14 +338,17 @@ WIDGET_INFORMATION = {
   }
 
   function repeatGPIOStatePWMSlider(widget_id, unique_id, channel_id, refresh_seconds, invert_status, decimal_places) {
-    setInterval(function () {
+    window._pwm_intervals = window._pwm_intervals || {};
+    var _k = widget_id + '_gpio_' + channel_id;
+    if (window._pwm_intervals[_k]) { clearInterval(window._pwm_intervals[_k]); }
+    window._pwm_intervals[_k] = setInterval(function () {
       getGPIOStatePWMSlider(widget_id, unique_id, channel_id, invert_status, decimal_places);
     }, refresh_seconds * 1000);  // Refresh duration in milliseconds
   }
 """,
 
     'widget_dashboard_js_ready': """
-  $('.turn_off_pwm_slider').click(function() {
+  $(document).off('click.pwm_off').on('click.pwm_off', '.turn_off_pwm_slider', function() {
     const btn_val = this.name;
     const send_cmd = btn_val.substring(btn_val.indexOf('/') + 1);
     {% if not misc.hide_alert_info %}
@@ -351,7 +356,7 @@ WIDGET_INFORMATION = {
     {% endif %}
     modOutputPWM(send_cmd);
   });
-  $('.duty_cycle_on_amt_pwm_slider').click(function() {
+  $(document).off('click.pwm_duty').on('click.pwm_duty', '.duty_cycle_on_amt_pwm_slider', function() {
     const btn_val = this.name;
     const chart = btn_val.split('/')[0];
     const output_id = btn_val.split('/')[1];

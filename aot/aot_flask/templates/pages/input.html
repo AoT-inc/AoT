@@ -24,7 +24,7 @@
 </style>
 <link rel="stylesheet" href="/static/css/gridstack.css" />
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
-<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.6" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
 
 
@@ -128,10 +128,52 @@
     });
   }
 
+  // Poll the live value of each active input's enabled measurements and render
+  // them in the card's UUID column. All chips are resolved in one /data_batch
+  // POST so a page full of inputs is a single round trip per tick.
+  function updateInputMeasures() {
+    var els = document.querySelectorAll('[data-aot-live-meas]');
+    if (!els.length) return;
+    var items = [];
+    els.forEach(function (el) {
+      items.push({
+        kind: 'last',
+        unique_id: el.getAttribute('data-unique-id'),
+        measure_type: 'input',
+        measurement_id: el.getAttribute('data-measurement-id'),
+        period: el.getAttribute('data-period') || '0'
+      });
+    });
+    $.ajax({
+      type: "POST",
+      url: "/data_batch",
+      headers: { "X-CSRFToken": "{{form_mod_input.csrf_token._value()}}" },
+      data: JSON.stringify({ items: items }),
+      contentType: "application/json; charset=utf-8",
+      success: function (resp) {
+        var results = (resp && resp.results) || [];
+        els.forEach(function (el, i) {
+          var valEl = el.querySelector('.aot-measure-val');
+          if (!valEl) return;
+          var r = results[i];
+          if (r && r.length === 2 && r[1] !== null && r[1] !== undefined) {
+            valEl.textContent = parseFloat(parseFloat(r[1]).toFixed(3)).toString();
+            el.classList.remove('aot-measure-stale');
+          } else {
+            valEl.textContent = '--';
+            el.classList.add('aot-measure-stale');
+          }
+        });
+      }
+    });
+  }
+
   $(document).ready(function () {
     initGrid();
     inputState();
     setInterval(inputState, 3000);
+    updateInputMeasures();
+    setInterval(updateInputMeasures, 10000);
   });
   $(window).on('load', initGrid);
   let resizeTimer;

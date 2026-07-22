@@ -61,6 +61,7 @@ from aot.databases.models import User
 from aot.databases.models import Widget
 from aot.aot_client import DaemonControl
 from aot.aot_flask.extensions import db
+from aot.aot_flask.routes_static import invalidate_misc_cache
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.utils.utils_general import choices_measurements
 from aot.aot_flask.utils.utils_general import choices_units
@@ -750,6 +751,7 @@ def settings_general_mod(form):
                 mod_user.language = form.language.data
 
                 db.session.commit()
+                invalidate_misc_cache()
                 control = DaemonControl()
                 control.refresh_daemon_misc_settings()
                 messages["success"].append('{action} {controller}'.format(

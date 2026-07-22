@@ -24,6 +24,21 @@
 <div class="{{ custom_opt_container }}">
 
 
+    {% elif each_option['type'] == 'collapse_start' %}
+</div>
+{% set _collapse_id = (name_prefix ~ (each_option.get('id') or 'advanced')) | replace(' ', '_') %}
+<a class="aot-modal-section-title aot-modal-section-title-collapsible collapsed" data-toggle="collapse" href="#{{_collapse_id}}" role="button" aria-expanded="false" aria-controls="{{_collapse_id}}">
+  <span class="fas fa-chevron-right aot-collapse-caret" aria-hidden="true"></span>{{each_option['name']}}
+</a>
+<div class="collapse" id="{{_collapse_id}}">
+<div class="{{ custom_opt_container }}">
+
+    {% elif each_option['type'] == 'collapse_end' %}
+</div>
+</div>
+<div class="{{ custom_opt_container }}">
+
+
     {% elif each_option['type'] in ['float', 'integer', 'text', 'color'] %}
 
 <div class="aot-modal-option-row">

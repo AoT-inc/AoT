@@ -53,3 +53,23 @@
   /* Translate = ContainerWidth (60) - ThumbWidth (24) - LeftPadding (2) - RightPadding (2) = 32px */
   transform: translateX(calc(var(--aot-roundbox-width, 60px) - (var(--aot-base-size, 28px) - var(--aot-step-size, 4px)) - var(--aot-step-size, 4px)));
 }
+
+/* Pending: command sent, awaiting device confirmation (e.g. LoRaWAN ACK can
+   lag 10s+). Slider pulses amber so the switch reads as "confirming" rather
+   than a settled on/off. Thumb position still reflects the intended state. */
+.btn-toggle-input.aot-toggle-pending+.btn-toggle-slider {
+  background-color: var(--bg-hold, #f0ad4e);
+  animation: aot-toggle-pending-pulse 1s ease-in-out infinite;
+}
+
+@keyframes aot-toggle-pending-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Fault/offline: the device did not confirm the command (offline). Distinct
+   muted slider so it reads as "no response", not a settled off. */
+.btn-toggle-input.aot-toggle-fault+.btn-toggle-slider {
+  background-color: var(--bg-pause, #b0b0b0);
+  opacity: 0.55;
+}

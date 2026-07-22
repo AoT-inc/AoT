@@ -558,7 +558,12 @@ WIDGET_INFORMATION = {
                           measurement_id,
                           period_sec,
                           max_measure_age_sec) {
-    setInterval(function () {
+    // Store the interval per widget and clear the previous one so a live-preview
+    // re-init doesn't stack a second polling interval.
+    window._wind_intervals = window._wind_intervals || {};
+    var _k = widget_id + '_dir';
+    if (window._wind_intervals[_k]) { clearInterval(window._wind_intervals[_k]); }
+    window._wind_intervals[_k] = setInterval(function () {
       aotWindGetLastDir(widget_id,
                   dev_id,
                   measure_type,
@@ -607,7 +612,10 @@ WIDGET_INFORMATION = {
                                    dataFontEm,
                                    unitFontEm,
                                    unitLabel) {
-    setInterval(function () {
+    window._wind_intervals = window._wind_intervals || {};
+    var _k = widget_id + '_speed';
+    if (window._wind_intervals[_k]) { clearInterval(window._wind_intervals[_k]); }
+    window._wind_intervals[_k] = setInterval(function () {
       aotWindGetLastSpeed(widget_id,
                            dev_id,
                            measure_type,

@@ -320,6 +320,7 @@ WIDGET_INFORMATION = {
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
     <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css">
     <script src="/static/js/components/aot-time-wheel.js?v=20260715a"></script>
+    <script src="/static/js/common/aot-output-state.js?v=1"></script>
     <style>
         /* --- Layout --- */
         .seq-widget-container {
@@ -540,6 +541,11 @@ WIDGET_INFORMATION = {
         .seq-list-item:last-child { border-bottom: none; }
         .seq-list-item.active { background-color: var(--bg-active); border-left: 3px solid var(--aot-color-brand-secondary); padding-left: 7px; }
         .seq-list-item.disabled { opacity: 0.6; background-color: var(--bg-off); }
+        /* Device state (Model A): offline/unconfirmed target output */
+        .seq-list-item.seq-offline { border-left: 3px solid var(--bg-pause, #b0b0b0); padding-left: 7px; }
+        .seq-dev-badge { margin-left: 6px; font-size: var(--aot-fs-caption, 0.72em); padding: 0 5px; border-radius: 8px; white-space: nowrap; vertical-align: middle; }
+        .seq-dev-offline { background: var(--bg-pause, #b0b0b0); color: #fff; opacity: 0.85; }
+        .seq-dev-pending { background: var(--bg-hold, #f0ad4e); color: #fff; }
 
         /* Square Toggle */
         .seq-square-toggle {
@@ -1289,6 +1295,20 @@ WIDGET_INFORMATION = {
                     if (!effEnabled) rowClass += " disabled";
                     if (sameNext) rowClass += " seq-group-cont";
 
+                    // Device state (Model A): reflect the target output's actual
+                    // state so an offline/unconfirmed device is shown as such,
+                    // instead of trusting the schedule alone.
+                    var devCls = (window.AoTOutputState && s.output_state !== undefined && s.output_state !== null)
+                        ? window.AoTOutputState.classify(s.output_state) : null;
+                    var devBadge = '';
+                    if (devCls && devCls.isFault) {
+                        rowClass += " seq-offline";
+                        devBadge = '<span class="seq-dev-badge seq-dev-offline" title="' + window._('No response') + '">' + window._('Offline') + '</span>';
+                    } else if (devCls && devCls.isPending) {
+                        rowClass += " seq-pending";
+                        devBadge = '<span class="seq-dev-badge seq-dev-pending" title="' + window._('Confirming') + '">' + window._('Confirming') + '</span>';
+                    }
+
                     // Duration for the selected day (per-day override → global).
                     var baseDur = s.original_duration ? (parseInt(s.original_duration, 10) || 0)
                                  : ((s.start !== null && s.start !== undefined) ? Math.round(s.end - s.start) : 0);
@@ -1306,7 +1326,7 @@ WIDGET_INFORMATION = {
                     if (isTotal) nameCls += ' seq-name-total';
                     // Group tint + connection classes go on the name CELL; --gc set inline.
                     var nameCellStyle = inGroup ? ' style="--gc:' + groupColor + '"' : '';
-                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + displayName + '" data-uid="' + s.unique_id + '" data-name="' + displayName + '" data-device="' + deviceDetail + '" data-group="' + (effGroup || '') + '" data-type="' + s.type + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + displayName + '</span></div>';
+                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + displayName + '" data-uid="' + s.unique_id + '" data-name="' + displayName + '" data-device="' + deviceDetail + '" data-group="' + (effGroup || '') + '" data-type="' + s.type + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + displayName + '</span>' + devBadge + '</div>';
 
                     var timeShown = isTotal ? window._('Total') : timeStr;
                     listHtml += '<div class="seq-col-time seq-time-editable" data-uid="' + s.unique_id + '" data-dur="' + durationSec + '" data-type="' + s.type + '" data-group="' + (effGroup || '') + '" data-name="' + displayName + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_time_modal(this)"><span class="seq-text-time">' + timeShown + '</span></div>';
@@ -1873,14 +1893,21 @@ WIDGET_INFORMATION = {
     function repeat_update_seq_widget(function_id, widget_id, period_sec, default_period) {
         if(!period_sec) period_sec = 5;
         update_sequence_widget(function_id, widget_id, default_period);
-        
+
+        // Store intervals per widget and clear any previous ones so a live-preview
+        // re-init doesn't stack duplicate data-refresh / 1s-timer intervals.
+        window._seq_intervals = window._seq_intervals || {};
+        var _kData = widget_id + '_data', _kTick = widget_id + '_tick';
+        if (window._seq_intervals[_kData]) { clearInterval(window._seq_intervals[_kData]); }
+        if (window._seq_intervals[_kTick]) { clearInterval(window._seq_intervals[_kTick]); }
+
         // Data Refresh Interval
-        setInterval(function() {
+        window._seq_intervals[_kData] = setInterval(function() {
             update_sequence_widget(function_id, widget_id, default_period);
         }, period_sec * 1000);
-        
+
         // Local Timer Interval (1s)
-        setInterval(function() {
+        window._seq_intervals[_kTick] = setInterval(function() {
              update_local_timer(widget_id);
         }, 1000);
     }

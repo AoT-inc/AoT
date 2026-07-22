@@ -142,6 +142,59 @@
   color: inherit !important;
 }
 
+/* Name column doubles as the UUID copy affordance (click to copy). On hover it
+   gets the same pill background box as the UUID column button. Constant padding
+   plus a compensating negative left margin keep the resting text flush-left, so
+   only the colours transition on hover (no layout shift). */
+.aot-col-name-copy {
+  cursor: pointer !important;
+}
+.aot-col-name-copy .aot-entry-name-input {
+  cursor: pointer !important;
+  padding-left: var(--aot-btn-padding-x) !important;
+  padding-right: var(--aot-btn-padding-x) !important;
+  margin-left: calc(-1 * var(--aot-btn-padding-x)) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--aot-btn-radius) !important;
+  background-color: transparent !important;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+}
+.aot-col-name-copy:hover .aot-entry-name-input,
+.aot-col-name-copy .aot-entry-name-input:hover {
+  background-color: var(--brand-secondary) !important;
+  color: var(--text-color-tertiary) !important;
+  border-color: var(--brand-secondary) !important;
+}
+
+/* Live measurement chips shown in the UUID column for activated inputs.
+   Single line only — clip whatever doesn't fit the column frame. */
+.aot-entry-measure-live {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.aot-measure-chip {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-color-primary);
+  line-height: 1.3;
+}
+.aot-measure-chip .aot-measure-unit {
+  font-weight: 400;
+  opacity: 0.75;
+  margin-left: 1px;
+}
+.aot-measure-chip.aot-measure-stale {
+  opacity: 0.45;
+}
+
 /* Entry Container Margins */
 .aot-entry-container {
     margin: 0; /* Phase 9-4: Changed from 0 0.75em to allow full width, matching container padding */

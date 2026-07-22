@@ -192,9 +192,13 @@ class CustomModule(AbstractFunction):
         self.logger.debug(
             f"Input: {last_measurement[1]}, output: {output_state}, target: {self.setpoint}, hyst: {self.hysteresis}")
 
+        # Include 'pending' so an in-flight ON (latency device, not yet confirmed)
+        # is cancelled promptly when the setpoint is crossed, instead of waiting a
+        # cycle for it to confirm. output_off is opposite-direction so the base
+        # in-flight guard lets it through (it supersedes the pending ON).
         if self.direction == 'raise':
             if last_measurement[1] > (self.setpoint + self.hysteresis):
-                if output_state == 'on':
+                if output_state in ('on', 'pending'):
                     self.control.output_off(
                         self.output_device_id,
                         output_channel=self.output_channel)
@@ -205,7 +209,7 @@ class CustomModule(AbstractFunction):
                         output_channel=self.output_channel)
         elif self.direction == 'lower':
             if last_measurement[1] < (self.setpoint - self.hysteresis):
-                if output_state == 'on':
+                if output_state in ('on', 'pending'):
                     self.control.output_off(
                         self.output_device_id,
                         output_channel=self.output_channel)

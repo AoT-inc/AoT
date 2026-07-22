@@ -37,6 +37,10 @@ OUTPUT_INFORMATION = {
     'channels_dict': channels_dict,
     'output_types': ['on_off'],
 
+    # Confirmation window: wait for the status-topic echo before treating the
+    # commanded state as settled (only used when a status topic is configured).
+    'command_timeout_default_s': 5,
+
     'url_additional': 'http://www.eclipse.org/paho/',
 
     'message': (
@@ -453,6 +457,12 @@ class OutputModule(AbstractOutput):
         if rc != 0:
             self.logger.warning("Status subscriber unexpectedly disconnected (rc={})".format(rc))
 
+    def confirmation_capable(self):
+        """Confirmation-capable only when a status topic is configured — the echo
+        on that topic is the device's actual-state report. Without it there is no
+        feedback, so the base state machine treats commands as fire-and-forget."""
+        return bool(getattr(self, 'topic_status', None))
+
     def _on_status_message(self, client, userdata, msg):
         """Update channel states based on the received status payload."""
         try:
@@ -465,16 +475,13 @@ class OutputModule(AbstractOutput):
                 on_val = self.options_channels.get('payload_status_on', {}).get(ch, '')
                 off_val = self.options_channels.get('payload_status_off', {}).get(ch, '')
 
+                # The status echo is the device's authoritative state report:
+                # route it through confirm_command so it resolves any pending
+                # command, corrects optimistic state, and clears faults.
                 if on_val and payload == on_val:
-                    if self.output_states.get(ch) is not True:
-                        self.output_states[ch] = True
-                        self.logger.debug(
-                            "Channel {} marked ON via status payload '{}'".format(ch, payload))
+                    self.confirm_command(ch, True, 'mqtt-status')
                 elif off_val and payload == off_val:
-                    if self.output_states.get(ch) is not False:
-                        self.output_states[ch] = False
-                        self.logger.debug(
-                            "Channel {} marked OFF via status payload '{}'".format(ch, payload))
+                    self.confirm_command(ch, False, 'mqtt-status')
 
     def _auth_dict(self):
         if self.login:
@@ -482,40 +489,51 @@ class OutputModule(AbstractOutput):
             return {"username": self.username, "password": pwd}
         return None
 
-    def output_switch(self, state, output_type=None, amount=None, output_channel=0):
-        """Publish the on or off payload to the control topic for the given channel."""
-        try:
-            transport = 'websockets' if self.mqtt_use_websockets else 'tcp'
+    def _publish_state(self, state, output_channel):
+        """Publish the control payload for one channel. Returns True on success.
+        Raw transport only (no state bookkeeping) — used by output_switch and by
+        the base retransmission (_resend_command)."""
+        transport = 'websockets' if self.mqtt_use_websockets else 'tcp'
+        if state == 'on':
+            self.publish.single(
+                self.topic_control,
+                self.options_channels['payload_on'][output_channel],
+                hostname=self.hostname, port=self.port, client_id=self.clientid,
+                keepalive=self.keepalive, auth=self._auth_dict(), transport=transport)
+            return True
+        elif state == 'off':
+            self.publish.single(
+                self.topic_control,
+                payload=self.options_channels['payload_off'][output_channel],
+                hostname=self.hostname, port=self.port, client_id=self.clientid,
+                keepalive=self.keepalive, auth=self._auth_dict(), transport=transport)
+            return True
+        return False
 
-            if state == 'on':
-                self.publish.single(
-                    self.topic_control,
-                    self.options_channels['payload_on'][output_channel],
-                    hostname=self.hostname,
-                    port=self.port,
-                    client_id=self.clientid,
-                    keepalive=self.keepalive,
-                    auth=self._auth_dict(),
-                    transport=transport)
-                self.output_states[output_channel] = True
-            elif state == 'off':
-                self.publish.single(
-                    self.topic_control,
-                    payload=self.options_channels['payload_off'][output_channel],
-                    hostname=self.hostname,
-                    port=self.port,
-                    client_id=self.clientid,
-                    keepalive=self.keepalive,
-                    auth=self._auth_dict(),
-                    transport=transport)
-                self.output_states[output_channel] = False
+    def _resend_command(self, output_channel, intent_state):
+        try:
+            return bool(self._publish_state(intent_state, output_channel))
+        except Exception:
+            return False
+
+    def output_switch(self, state, output_type=None, amount=None, output_channel=0):
+        """Publish the on/off payload, then hand off to the base state machine.
+
+        The status-topic echo (_on_status_message -> confirm_command) confirms the
+        actual state; without a status topic the base treats it as fire-and-forget.
+        """
+        prev_state = bool(self.output_states.get(output_channel) or False)
+        ok = False
+        try:
+            ok = bool(self._publish_state(state, output_channel))
         except Exception as e:
             self.logger.error("State change error on channel {}: {}".format(output_channel, e))
+        self.begin_command(output_channel, state, prev_state, dispatched_ok=ok)
 
     def is_on(self, output_channel=0):
         if self.is_setup():
-            state = self.output_states.get(output_channel)
-            return bool(state) if state is not None else False
+            return self.resolve_is_on(
+                output_channel, bool(self.output_states.get(output_channel) or False))
         return False
 
     def is_setup(self):

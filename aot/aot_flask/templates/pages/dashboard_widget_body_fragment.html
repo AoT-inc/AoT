@@ -1,0 +1,13 @@
+{#- Renders ONLY the inner body of a single widget (the content that lives inside
+    #container-graph-<id> in dashboard_entry.html). Returned by the live-preview and
+    AJAX-save endpoints so the on-dashboard widget can be updated in place without a
+    full page reload. Keep the widget_options / widget_variables set-up identical to
+    dashboard_entry.html so a previewed body matches a full page render. -#}
+{%- set widget_meta = dict_widgets.get(each_widget.graph_type) -%}
+{%- if widget_meta -%}
+{%- set widget_options = custom_options_values_widgets.get(each_widget.unique_id, {}) -%}
+{%- set widget_variables = custom_widget_variables.get(each_widget.unique_id, {}) -%}
+{%- if each_widget.graph_type in list_html_files_body -%}
+{%- include 'user_templates/{}'.format(list_html_files_body[each_widget.graph_type]) -%}
+{%- endif -%}
+{%- endif -%}

@@ -32,7 +32,7 @@ from aot.utils.outputs import output_types, parse_output_information
 from aot.utils.system_pi import (
     add_custom_measurements, add_custom_units, csv_to_list_of_str,
     dpkg_package_exists, parse_custom_option_values,
-    parse_custom_option_values_input_channels_json)
+    parse_custom_option_values_input_channels_json, return_measurement_info)
 
 logger = logging.getLogger('aot.aot_flask.routes_input')
 
@@ -317,6 +317,16 @@ def page_input():
     dict_units = add_custom_units(unit)
     dict_measurements = add_custom_measurements(measurement)
 
+    # Map each device measurement -> its effective unit key (accounting for
+    # conversion/rescale). Lets the entry card render the live measurement's
+    # unit symbol, mirroring the live-measurements page.
+    dict_measure_units = {}
+    for each_measurement in DeviceMeasurements.query.all():
+        conversion = Conversion.query.filter(
+            Conversion.unique_id == each_measurement.conversion_id).first()
+        _, m_unit, _ = return_measurement_info(each_measurement, conversion)
+        dict_measure_units[each_measurement.unique_id] = m_unit
+
     # Generate Action dropdown for use with Inputs
     choices_actions = []
     list_actions_sorted = generate_form_action_list(dict_actions, application=["inputs"])
@@ -425,6 +435,7 @@ def page_input():
                                dict_actions=dict_actions,
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
+                               dict_measure_units=dict_measure_units,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
                                map_configs=map_configs,
@@ -492,6 +503,7 @@ def page_input():
                                dict_actions=dict_actions,
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
+                               dict_measure_units=dict_measure_units,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
                                each_input=each_input,
@@ -568,6 +580,7 @@ def page_input():
                                dict_actions=dict_actions,
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
+                               dict_measure_units=dict_measure_units,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
                                each_input=each_input,
@@ -620,6 +633,7 @@ def page_input():
                                dict_actions=dict_actions,
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
+                               dict_measure_units=dict_measure_units,
                                dict_units=dict_units,
                                display_order_input=display_order_input,
                                each_action=each_action,

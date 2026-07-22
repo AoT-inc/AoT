@@ -492,6 +492,50 @@ const UIFixes = {
         this.fixModalZIndex();
         this.hydrateLazyModalBodies();
         this.fixSelectpickerInHiddenModal();
+        this.widgetDrawerMode();
+    },
+
+    // Widget settings modals (.aot-widget-drawer) open as a right-side drawer that
+    // pushes the dashboard aside instead of covering it, so a widget can be watched
+    // updating live while its options change. The CSS does the positioning; here we
+    // just toggle body.aot-widget-drawer-open (which applies the page push) and,
+    // after the push transition, fire a resize so Highcharts widgets reflow to the
+    // narrower dashboard. Mirrors the AI chat drawer (aot-ai-global.js).
+    widgetDrawerMode() {
+        var DESKTOP_MIN = 768;   // must match the CSS @media (min-width: 768px)
+        var self = this;
+        try {
+            $(document).on('show.bs.modal', function (ev) {
+                if (!ev.target.classList || !ev.target.classList.contains('aot-widget-drawer')) { return; }
+                // One drawer at a time: the dashboard stays interactive behind the
+                // drawer (no backdrop), so a user can click another widget's gear
+                // while one is open. Close any other open widget drawer first so they
+                // don't stack and need closing one by one.
+                document.querySelectorAll('.aot-widget-drawer.show').forEach(function (other) {
+                    if (other !== ev.target) { $(other).modal('hide'); }
+                });
+                if (window.innerWidth >= DESKTOP_MIN) {
+                    document.body.classList.add('aot-widget-drawer-open');
+                    self._nudgeResize();
+                }
+            });
+            $(document).on('hidden.bs.modal', function (ev) {
+                if (!ev.target.classList || !ev.target.classList.contains('aot-widget-drawer')) { return; }
+                // Only release the push once no widget drawer remains open.
+                if (!document.querySelector('.aot-widget-drawer.show')) {
+                    document.body.classList.remove('aot-widget-drawer-open');
+                    self._nudgeResize();
+                }
+            });
+        } catch (e) { /* ignore */ }
+    },
+
+    // Let the 0.4s page-push transition finish, then trigger a window resize so
+    // Highcharts (gauge/graph) reflow to the changed dashboard width.
+    _nudgeResize() {
+        setTimeout(function () {
+            try { window.dispatchEvent(new Event('resize')); } catch (e) { /* ignore */ }
+        }, 450);
     },
 
     // Lazy-hydrate option-heavy widget-config modal bodies. Each body is shipped

@@ -34,6 +34,14 @@
 
   function pinBody() {
     if (pinned) { return; }
+    // The widget-settings drawer keeps the page scrollable & interactive (its CSS
+    // overrides body overflow), so there is no scrollbar-disappear shift to
+    // compensate for. Pinning body width to a fixed px here would instead freeze
+    // the dashboard width — it wouldn't follow window resizes while the drawer is
+    // open (widen → gap on the right; narrow → shrinks via max-width:100vw). BS4
+    // fires show.bs.modal (which adds this class) before _setScrollbar, so the
+    // class is already present when we get here. Skip pinning for the drawer.
+    if (document.body.classList.contains('aot-widget-drawer-open')) { return; }
     var w = document.body.offsetWidth;
     savedWidth = document.body.style.width;
     document.body.style.setProperty('width', w + 'px', 'important');
@@ -123,4 +131,44 @@
     // jQuery 가 아직 로드되지 않았으면 DOM ready 후 재시도
     document.addEventListener('DOMContentLoaded', bind);
   }
+})();
+
+/* ---- Generic collapsible section header (Custom_Options.html 'collapse_start'/
+ * 'collapse_end' option types — used by AoT_map's "Advanced" settings group and
+ * reusable by any future widget's custom_options) ----
+ *
+ * [발견] $(el).collapse('toggle') 를 직접 호출하면 정상 동작하지만(jQuery의 collapse
+ * 플러그인 자체는 로드됨), Bootstrap의 표준 [data-toggle="collapse"] 클릭 위임(data-api)이
+ * 이 빌드에서는 실제로 연결되어 있지 않다 — 트리거를 클릭해도 aria-expanded/표시 상태가
+ * 전혀 바뀌지 않음(실브라우저 검증으로 확인). 따라서 직접 위임 클릭 핸들러로 토글한다.
+ * jQuery 유무와 무관하게 동작하도록 폴백 포함. */
+(function () {
+  'use strict';
+
+  document.addEventListener('click', function (e) {
+    var trigger = e.target.closest && e.target.closest('a.aot-modal-section-title-collapsible[data-toggle="collapse"]');
+    if (!trigger) { return; }
+
+    var href = trigger.getAttribute('href') || '';
+    var id = href.replace(/^#/, '');
+    var target = id && document.getElementById(id);
+    if (!target) { return; }
+
+    e.preventDefault();
+
+    // Determine intent from the trigger's current 'collapsed' state BEFORE toggling —
+    // jQuery's collapse animation finishes asynchronously, so reading target's 'show'
+    // class right after calling .collapse('toggle') would read the stale mid-transition
+    // state, not the end state.
+    var willExpand = trigger.classList.contains('collapsed');
+
+    if (window.jQuery && window.jQuery.fn.collapse) {
+      window.jQuery(target).collapse('toggle');
+    } else {
+      target.classList.toggle('show');
+    }
+
+    trigger.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
+    trigger.classList.toggle('collapsed', !willExpand);
+  });
 })();

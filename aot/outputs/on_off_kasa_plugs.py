@@ -43,6 +43,10 @@ OUTPUT_INFORMATION = {
     'channels_dict': channels_dict,
     'output_types': ['on_off'],
 
+    # WiFi RPC round-trip; the plug's applied state is re-queried (status thread)
+    # and the RPC success confirms the command.
+    'command_timeout_default_s': 5,
+
     'url_manufacturer': 'https://www.kasasmart.com/us/products/smart-plugs/kasa-smart-plug-slim-energy-monitoring-kp115',
 
     'message': 'This output controls Kasa WiFi Power Plugs, including the KP105, KP115, KP125, KP401, HS100, HS103, HS105, HS107, and HS110. Note: if you see errors in the daemon log about the server starting, try changing the Asyncio RPC Port to another port.',
@@ -308,7 +312,11 @@ class OutputModule(AbstractOutput):
         loop.run_until_complete(connect(self.asyncio_rpc_port))
 
     def outlet_change(self, state):
+        """Turn the plug on/off via RPC. Returns True on RPC success (no state
+        bookkeeping — the caller confirms via the state machine)."""
         import aio_msgpack_rpc
+
+        result = {'ok': False}
 
         async def outlet_change(port, state_):
             client = aio_msgpack_rpc.Client(*await asyncio.open_connection("127.0.0.1", port))
@@ -321,13 +329,14 @@ class OutputModule(AbstractOutput):
             if status:
                 self.logger.error(f"Switching {'ON' if state_ else 'OFF'}: Error: {msg}")
             else:
-                self.output_states[0] = state
+                result['ok'] = True
                 self.logger.debug(f"Switching {'ON' if state_ else 'OFF'}: {msg}")
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         asyncio.get_event_loop()
         loop.run_until_complete(outlet_change(self.asyncio_rpc_port, state))
+        return result['ok']
 
     def status_update(self):
         import aio_msgpack_rpc
@@ -348,8 +357,9 @@ class OutputModule(AbstractOutput):
                             self.logger.error(f"Status: Error: {msg}")
                         else:
                             self.logger.debug(f"Status: {msg}")
-                            if msg:
-                                self.output_states[0] = msg
+                            # Authoritative re-query result -> confirm both on AND
+                            # off (the old `if msg:` never recorded off).
+                            self.confirm_command(0, bool(msg), 'kasa-status')
 
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
@@ -360,24 +370,35 @@ class OutputModule(AbstractOutput):
 
             time.sleep(1)
 
+    def confirmation_capable(self):
+        """The plug's actual state is re-queried (RPC get_status / status thread),
+        so commands are confirmed rather than fire-and-forget."""
+        return True
+
     def output_switch(self, state, output_type=None, amount=None, output_channel=None):
-        """Turn the Kasa smart plug on or off via RPC."""
+        """Turn the Kasa smart plug on or off via RPC, then confirm via the state
+        machine (RPC success = plug applied it; status thread corrects drift)."""
         if not self.is_setup():
             msg = "Error 101: Device not set up. See https://aot-inc.github.io/AoT/Error-Codes#error-101 for more info."
             self.logger.error(msg)
             return msg
 
+        prev_state = bool(self.output_states.get(0) or False)
+        ok = False
         try:
             if state == 'on':
-                self.outlet_change(True)
+                ok = self.outlet_change(True)
             elif state == 'off':
-                self.outlet_change(False)
+                ok = self.outlet_change(False)
         except Exception as err:
             self.logger.exception(f"State change error: {err}")
+        self.begin_command(0, state, prev_state, dispatched_ok=ok)
+        if ok:
+            self.confirm_command(0, state == 'on', 'kasa-rpc')
 
     def is_on(self, output_channel=None):
         if self.is_setup():
-            return self.output_states[0]
+            return self.resolve_is_on(0, bool(self.output_states.get(0) or False))
 
     def is_setup(self):
         return self.output_setup

@@ -235,14 +235,18 @@ WIDGET_INFORMATION = {
 
   // Repeat function for getControllerState()
   function repeatControllerState(widget_id, dev_id, period_sec) {
-    setInterval(function () {
+    window._ctrlad_intervals = window._ctrlad_intervals || {};
+    if (window._ctrlad_intervals[widget_id]) { clearInterval(window._ctrlad_intervals[widget_id]); }
+    window._ctrlad_intervals[widget_id] = setInterval(function () {
       getControllerState(widget_id, dev_id)
     }, period_sec * 1000);
   }
 """,
 
     'widget_dashboard_js_ready': """
-  $('.activate_controller').click(function() {
+  // Document-delegated + namespaced so the handlers survive a live-preview body
+  // swap (which replaces the buttons) and never double-bind.
+  $(document).off('click.ctrlad_act').on('click.ctrlad_act', '.activate_controller', function() {
     const btn_val = this.name;
     const id = btn_val.split('/')[0];
     {% if not misc.hide_alert_info %}
@@ -250,7 +254,7 @@ WIDGET_INFORMATION = {
     {% endif %}
     adctivate_deactivate_controller(btn_val);
   });
-  $('.deactivate_controller').click(function() {
+  $(document).off('click.ctrlad_deact').on('click.ctrlad_deact', '.deactivate_controller', function() {
     const btn_val = this.name;
     const id = btn_val.split('/')[0];
     {% if not misc.hide_alert_info %}

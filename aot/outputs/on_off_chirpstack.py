@@ -73,6 +73,9 @@ OUTPUT_INFORMATION = {
     'output_library': 'requests, paho-mqtt, grpcio (optional)',
     'output_types': ['on_off'],
 
+    # Expected LoRaWAN round-trip; pre-fills the common "Command Timeout" field.
+    'command_timeout_default_s': 8,
+
     'message': (
         "Sends on/off downlink commands via ChirpStack REST/gRPC API. "
         "Attempts gRPC first; falls back to REST (/api/devices/<devEui>/queue) if grpcio/chirpstack-api is not installed or unreachable."
@@ -160,23 +163,11 @@ OUTPUT_INFORMATION = {
             'name': 'Off Payload',
             'phrase': 'e.g., 010210 (Hex) or JSON string'
         },
-        {
-            'id': 'ack_timeout_s',
-            'type': 'text',
-            'class': 'aot-time-input',
-            'default_value': 8,
-            'required': False,
-            'name': 'ACK Timeout (seconds)',
-            'phrase': 'Wait this long for the device ACK (FP11/FP12) before resending the command'
-        },
-        {
-            'id': 'max_retries',
-            'type': 'integer',
-            'default_value': 3,
-            'required': False,
-            'name': 'Max Retries',
-            'phrase': 'Resend the command up to this many times until the device confirms (0 = no retry)'
-        },
+        # NOTE: ACK Timeout / Max Retries are unified into the common
+        # "Command Timeout (seconds)" field injected for all on/off outputs
+        # (see aot/utils/outputs.py). The base state machine derives the resend
+        # interval/attempts from that timeout. command_timeout_default_s (below)
+        # pre-fills it to the expected LoRaWAN latency.
         {
             'id': 'debug_logging',
             'type': 'bool',
@@ -254,19 +245,12 @@ class OutputModule(AbstractOutput):
         self.output_states = {ch: False for ch in channels_dict.keys()}
         self.output_setup = False
         self.running = False
-        self.pending = {}          # ch -> {'seq','state','resends','max','intent_until'}
-        self._cmd_seq = {}         # ch -> monotonic command sequence (stale-timer guard)
         self.last_downlinks = []   # list of dicts {ts,state,fport,confirmed,bytes}
         self.grpc_available = False
 
-        # Closed-loop confirmation: state corrected by device uplink (ACK/status)
-        # ch -> {'ts': epoch, 'state': bool, 'source': 'ctrl_ack'|'status'|...}
-        self.last_confirm = {}
-        # Device-confirmed state (authoritative once the device talks back).
-        self.confirmed_states = {ch: False for ch in channels_dict.keys()}
-        # True once any vid-matched uplink confirmation has been seen — means
-        # this device reports actual state, so is_on() trusts confirmed_states.
-        self._confirm_capable = False
+        # Pending/confirm/retry/timeout is owned by ConfirmableOutputMixin
+        # (base). This module only supplies the transport: _dispatch via
+        # _enqueue, and device reports via ingest_uplink -> confirm_command.
         # MQTT uplink listener runtime
         self.mqtt_client = None
         self._mqtt_thread = None
@@ -536,111 +520,26 @@ class OutputModule(AbstractOutput):
         except Exception:
             return b''
 
-    def _schedule_checks(self, ch, state, duration_s=None, prev_state=None):
-        """Arm application-layer retransmission for an in-flight command.
+    # --- ConfirmableOutputMixin hooks (base owns the pending/timeout machine) ---
+    def confirmation_capable(self):
+        """LoRaWAN devices report actual state via uplink (FP11/FP12), so the
+        base state machine treats them as confirmation-capable: it retransmits
+        within the window and faults+reverts if the device never confirms."""
+        return True
 
-        ChirpStack v4 does NOT auto-retransmit unacked downlinks, and the RF link
-        drops a meaningful fraction of frames, so a fire-and-forget command can
-        silently vanish. We resend the SAME command until the device confirms it
-        — confirmation arrives via ingest_uplink() (FP11 ctrl_ack / FP12 status),
-        which calls _clear_pending() and stops the retries. Resends are
-        idempotent for valves (re-open/re-close is harmless).
-
-        The initial send is done by the caller (output_switch); this only arms
-        the retry chain.
-        """
-        from time import time
+    def _resend_command(self, output_channel, intent_state):
+        """In-window retransmission. ChirpStack v4 does NOT auto-retransmit
+        unacked downlinks and the RF link drops frames, so the base timer
+        resends the SAME command (idempotent for valves) until ingest_uplink()
+        confirms. Interval/attempts are derived from the command timeout."""
         try:
-            ack_timeout = int(self._opt('ack_timeout_s', 8) or 8)
-        except Exception:
-            ack_timeout = 8
-        try:
-            max_retries = int(self._opt('max_retries', 3) or 0)
-        except Exception:
-            max_retries = 3
-        if ack_timeout < 1:
-            ack_timeout = 1
-        if max_retries < 0:
-            max_retries = 0
-
-        now = time()
-        seq = self._cmd_seq.get(ch, 0) + 1
-        self._cmd_seq[ch] = seq
-        # intent_until: is_on() reports the intended state across the whole retry
-        # window; after it elapses unconfirmed, is_on() falls back to the last
-        # confirmed state (no misleading flip).
-        window = ack_timeout * (max_retries + 1)
-        self.pending[ch] = {
-            'seq': seq, 'state': state, 'resends': 0, 'max': max_retries,
-            'intent_until': now + window, 'prev_state': prev_state,
-        }
-        self._arm_retry(ch, seq, ack_timeout)
-
-    def _arm_retry(self, ch, seq, ack_timeout):
-        from threading import Timer
-        try:
-            t = Timer(max(1, ack_timeout), self._retry_fire, args=(ch, seq, ack_timeout))
-            t.daemon = True
-            t.start()
-        except Exception:
-            pass
-
-    def _retry_fire(self, ch, seq, ack_timeout):
-        # Confirmed (pending cleared) or superseded by a newer command -> stop.
-        p = self.pending.get(ch)
-        if not p or p.get('seq') != seq:
-            return
-        if p['resends'] >= p['max']:
-            self._log_warning(
-                f"[AoT] command unconfirmed after {p['resends'] + 1} sends "
-                f"ch={ch} state={p['state']} — giving up")
-            self.pending.pop(ch, None)  # drop intent; is_on falls back to confirmed
-            # This device has NEVER confirmed anything (no ACK/status uplink
-            # ever seen for it, or the uplink listener never came up) — there is
-            # no confirmed_states value to fall back to, so is_on() would keep
-            # reporting the optimistic value set in output_switch() forever,
-            # i.e. "on" with zero evidence the device ever acted. Revert to the
-            # pre-command value instead of leaving a phantom "on".
-            if not self._confirm_capable and 'prev_state' in p:
-                self.output_states[ch] = bool(p['prev_state'])
-                self._log_warning(
-                    f"[AoT] no confirmation ever received from this device; "
-                    f"reverting ch={ch} to prior state={p['prev_state']}")
-            return
-        # No confirmation yet -> resend the same command (idempotent for valves).
-        p['resends'] += 1
-        try:
-            ok = bool(self._enqueue(p['state']))
+            ok = bool(self._enqueue(intent_state))
             self._log_info(
-                f"[AoT] resend {p['resends']}/{p['max']} ch={ch} state={p['state']} "
+                f"[AoT] resend ch={output_channel} state={intent_state} "
                 f"({'ok' if ok else 'enqueue_failed'})")
+            return ok
         except Exception:
-            pass
-        self._arm_retry(ch, seq, ack_timeout)
-
-    def _clear_pending(self, ch):
-        try:
-            if ch in self.pending:
-                self.pending.pop(ch, None)
-        except Exception:
-            pass
-
-    def _record_confirm(self, ch, state_bool, source):
-        """Record that the device confirmed an actual state via uplink.
-        This is the authoritative signal that the physical action happened
-        (vs. the optimistic state set right after enqueue). Once seen, is_on()
-        trusts confirmed_states over the optimistic value."""
-        try:
-            from time import time
-            self.confirmed_states[ch] = bool(state_bool)
-            self._confirm_capable = True
-            self.last_confirm[ch] = {
-                'ts': time(),
-                'state': bool(state_bool),
-                'source': source,
-            }
-        except Exception:
-            pass
+            return False
 
     def _mqtt_settings(self):
         """Resolve (host, port) for the ChirpStack MQTT broker.
@@ -806,14 +705,10 @@ class OutputModule(AbstractOutput):
                 st = b[2] & 0xFF
                 ch = 0
                 if st == 1:  # open_done
-                    self.output_states[ch] = True
-                    self._record_confirm(ch, True, 'status')
-                    self._clear_pending(ch)
+                    self.confirm_command(ch, True, 'status')
                     self._log_info(f"[AoT] device confirmed OPEN (status, vid={frame_vid})")
                 elif st == 2:  # close_done
-                    self.output_states[ch] = False
-                    self._record_confirm(ch, False, 'status')
-                    self._clear_pending(ch)
+                    self.confirm_command(ch, False, 'status')
                     self._log_info(f"[AoT] device confirmed CLOSE (status, vid={frame_vid})")
                 return
 
@@ -828,12 +723,9 @@ class OutputModule(AbstractOutput):
                     # Heuristic: if cmd indicates ON(OPEN) mark on, if STOP/CLOSE mark off
                     cmd = b[2] & 0xFF
                     if cmd == 1:  # OPEN
-                        self.output_states[ch] = True
-                        self._record_confirm(ch, True, 'ctrl_ack')
+                        self.confirm_command(ch, True, 'ctrl_ack')
                     elif cmd in (0, 2, 3):  # STOP/CLOSE/ALL_OFF
-                        self.output_states[ch] = False
-                        self._record_confirm(ch, False, 'ctrl_ack')
-                    self._clear_pending(ch)
+                        self.confirm_command(ch, False, 'ctrl_ack')
                     self._log_info(f"[AoT] device ACK received (ctrl_ack, vid={frame_vid})")
                 return
 
@@ -847,14 +739,10 @@ class OutputModule(AbstractOutput):
                 state_code = b[1]
                 ch = 0
                 if state_code == 1:
-                    self.output_states[ch] = True
-                    self._record_confirm(ch, True, 'ctrl_status')
-                    self._clear_pending(ch)
+                    self.confirm_command(ch, True, 'ctrl_status')
                     self._log_info("[AoT] device confirmed ON (ctrl_status, ch=0)")
                 elif state_code in (0, 2):
-                    self.output_states[ch] = False
-                    self._record_confirm(ch, False, 'ctrl_status')
-                    self._clear_pending(ch)
+                    self.confirm_command(ch, False, 'ctrl_status')
                     self._log_info("[AoT] device confirmed OFF (ctrl_status, ch=0)")
                 return
 
@@ -995,58 +883,40 @@ class OutputModule(AbstractOutput):
         return self._enqueue_raw(int(f_port), bool(confirmed), payload)
 
     def output_switch(self, state, output_type=None, amount=None, output_channel=0):
-        """Enqueue an on/off downlink command and schedule confirmation checks."""
+        """Enqueue an on/off downlink command and hand off to the base state
+        machine (pending window, retransmission, timeout fault/revert, and
+        confirmation via ingest_uplink -> confirm_command)."""
         try:
             # ensure key exists
             if output_channel not in self.output_states:
                 self.output_states[output_channel] = False
 
-            # Extract duration seconds if provided (None if not numeric)
-            dur_s = None
-            try:
-                if output_type in [None, 'sec'] and amount not in [None, '']:
-                    dur_s = float(amount)
-            except Exception:
-                dur_s = None
-
             prev_state = self.output_states.get(output_channel, False)
 
             ok = False
-            if state == 'on':
-                ok = bool(self._enqueue('on'))
-                self.output_states[output_channel] = True if ok else prev_state
-                self._schedule_checks(output_channel, 'on', duration_s=dur_s, prev_state=prev_state)
-            elif state == 'off':
-                ok = bool(self._enqueue('off'))
-                self.output_states[output_channel] = False if ok else prev_state
-                self._schedule_checks(output_channel, 'off', duration_s=None, prev_state=prev_state)
+            if state in ('on', 'off'):
+                ok = bool(self._enqueue(state))
+                # begin_command sets the optimistic state and arms the window
+                # only when the dispatch actually succeeded (no phantom 'on').
+                self.begin_command(output_channel, state, prev_state, dispatched_ok=ok)
+            if not ok:
+                self._log_warning(
+                    f"[AoT] enqueue failed ch={output_channel} state={state}; "
+                    f"not arming pending/intent (no command was actually sent)")
             msg = 'success' if ok else 'enqueue_failed'
         except Exception as e:
             msg = f'State change error: {e}'
         return msg
 
+    # is_pending() is provided by ConfirmableOutputMixin.
+
     def is_on(self, output_channel=0):
         if not self.is_setup():
             return None
-        try:
-            # While a command is in flight, report the intended state so the UI
-            # reflects the click immediately. It resolves to the device-confirmed
-            # state on ACK, or back to the last confirmed state on hard-timeout
-            # (a genuine failure) — never a silent, misleading flip.
-            p = self.pending.get(output_channel)
-            if p:
-                from time import time
-                if time() < p.get('intent_until', 0):
-                    return p.get('state') == 'on'
-                # ack-wait elapsed with no confirmation: fall through to
-                # confirmed/optimistic rather than keep showing a false intent.
-            # No command in flight: trust the device-confirmed state once the
-            # device has reported back; otherwise fall back to optimistic state.
-            if self._confirm_capable:
-                return bool(self.confirmed_states.get(output_channel, False))
-            return bool(self.output_states.get(output_channel, False))
-        except Exception:
-            return False
+        # Base resolves: intended state during the pending window, then the
+        # device-confirmed state once reported, else the optimistic value.
+        return self.resolve_is_on(
+            output_channel, self.output_states.get(output_channel, False))
 
     def is_setup(self):
         if getattr(self, 'output_setup', False):

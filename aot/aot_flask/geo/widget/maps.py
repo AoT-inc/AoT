@@ -816,6 +816,19 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'label_spacing': label_spacing,
         'max_measure_age': int(widget_options.get('max_measure_age', 300)) if widget_options else 300,
         'input_update_interval': int(widget_options.get('input_update_interval', 300)) if widget_options else 300,
+        # [Simplification] These sensor-label style knobs and the popup default tab
+        # were removed from the widget settings form (rarely touched, mostly
+        # clutter) and are now fixed sensible constants. `.get(key, constant)`
+        # still honors any value a widget saved before the form field was
+        # removed — only NEW widgets (no saved value) get the constant.
+        'sensor_label_max_channels': int(widget_options.get('sensor_label_max_channels', 1)) if widget_options else 1,
+        'sensor_label_decimals': int(widget_options.get('sensor_label_decimals', 1)) if widget_options else 1,
+        'sensor_label_size': float(widget_options.get('sensor_label_size', 0.85)) if widget_options else 0.85,
+        'sensor_label_bg': widget_options.get('sensor_label_bg', 'rgba(15,23,42,0.78)') if widget_options else 'rgba(15,23,42,0.78)',
+        'sensor_label_fg': widget_options.get('sensor_label_fg', '#f8fafc') if widget_options else '#f8fafc',
+        'sensor_label_offset_y': float(widget_options.get('sensor_label_offset_y', 0.0)) if widget_options else 0.0,
+        'sensor_label_opacity': float(widget_options.get('sensor_label_opacity', 0.7)) if widget_options else 0.7,
+        'popup_default_tab': widget_options.get('popup_default_tab', 'overview') if widget_options else 'overview',
         'hide_ui': widget_options.get('hide_ui', False) if widget_options else False,
         'label_hidden_input': widget_options.get('label_hidden_input', False) if widget_options else False,
         'label_hidden_output': widget_options.get('label_hidden_output', False) if widget_options else False,

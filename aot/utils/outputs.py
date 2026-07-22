@@ -173,7 +173,65 @@ def parse_output_information(exclude_custom=False, custom_only=False):
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'custom_commands_message')
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'custom_commands')
 
+            # Per-module default for the common command-timeout field (below).
+            dict_outputs = dict_has_value(dict_outputs, output_custom, 'command_timeout_default_s')
+
+    _inject_command_timeout_option(dict_outputs)
+
     return dict_outputs
+
+
+def _inject_command_timeout_option(dict_outputs):
+    """Inject a common 'command_timeout_s' custom option into every on/off output.
+
+    Rather than editing ~30 output modules, the latency/confirmation window is
+    surfaced once here as a shared settings field. Wired outputs default to 0
+    (immediate); wireless/remote modules declare 'command_timeout_default_s' to
+    pre-fill an expected latency. AbstractOutput reads the stored value directly
+    (get_custom_option), so the module's own custom_options list is untouched.
+    """
+    try:
+        from flask_babel import lazy_gettext
+    except Exception:
+        def lazy_gettext(s):
+            return s
+
+    for name, info in dict_outputs.items():
+        try:
+            output_types_list = info.get('output_types') or []
+            if 'on_off' not in output_types_list:
+                continue
+            # Opt-in: only modules that declare an expected latency AND actually
+            # hand off to the base state machine (begin_command) get the field,
+            # so it is never a dead knob. Wired/immediate outputs omit it and use
+            # the implicit system default (0 = immediate). Additional transports
+            # opt in as they are wired to the confirmation machine.
+            if 'command_timeout_default_s' not in info:
+                continue
+            options = info.get('custom_options')
+            if not isinstance(options, list):
+                options = []
+                info['custom_options'] = options
+            # Respect a module that already declares its own timeout field.
+            if any(isinstance(o, dict) and o.get('id') in ('command_timeout_s', 'ack_timeout_s')
+                   for o in options):
+                continue
+            default_val = info.get('command_timeout_default_s', 0)
+            options.append({
+                'id': 'command_timeout_s',
+                'type': 'text',
+                'class': 'aot-time-input',
+                'default_value': default_val,
+                'required': False,
+                'name': lazy_gettext('Command Timeout (seconds)'),
+                'phrase': lazy_gettext(
+                    'How long to optimistically hold the commanded state while '
+                    'awaiting the device (0 = immediate). For wireless/remote '
+                    'devices set the expected response delay; wired devices can '
+                    'leave this at 0.'),
+            })
+        except Exception:
+            continue
 
 
 def outputs_on_off():

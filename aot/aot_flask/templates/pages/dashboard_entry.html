@@ -48,7 +48,8 @@
   </div>
 
   {% if not this_dashboard.locked %}
-  <div class="modal fade aot-option-modal" id="modal_config_{{each_widget.unique_id}}" tabindex="-1" role="dialog"
+  <div class="modal fade aot-option-modal aot-widget-drawer" id="modal_config_{{each_widget.unique_id}}"
+    data-backdrop="false" tabindex="-1" role="dialog"
     aria-labelledby="ModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
       <div class="modal-content">

@@ -436,13 +436,20 @@ WIDGET_INFORMATION = {
   }
 
   // Repeat function for getLastDataGaugeAngular()
+  // Store the interval id per widget so a live-preview re-init can clear the
+  // previous one instead of stacking a new interval on top (avoids runaway
+  // polling when options are re-applied without a page reload).
   function repeatLastDataGaugeAngular(widget_id,
                           dev_id,
                           measure_type,
                           measurement_id,
                           period_sec,
                           max_measure_age_sec) {
-    setInterval(function () {
+    window._gauge_intervals = window._gauge_intervals || {};
+    if (window._gauge_intervals[widget_id]) {
+      clearInterval(window._gauge_intervals[widget_id]);
+    }
+    window._gauge_intervals[widget_id] = setInterval(function () {
       getLastDataGaugeAngular(widget_id,
                   dev_id,
                   measure_type,
@@ -459,6 +466,19 @@ WIDGET_INFORMATION = {
 {%- set measurement_id = widget_options['measurement'].split(",")[1] -%}
 
 {% set measure = { 'measurement_id': None } %}
+  // Idempotency guard: when this script is re-run for live option preview (no
+  // page reload), tear down the previous chart + its polling interval first so
+  // re-init doesn't leak a Highcharts instance or stack another setInterval.
+  try {
+    if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
+      widget['{{each_widget.unique_id}}'].destroy();
+      delete widget['{{each_widget.unique_id}}'];
+    }
+  } catch (e) {}
+  if (window._gauge_intervals && window._gauge_intervals['{{each_widget.unique_id}}']) {
+    clearInterval(window._gauge_intervals['{{each_widget.unique_id}}']);
+    delete window._gauge_intervals['{{each_widget.unique_id}}'];
+  }
   widget['{{each_widget.unique_id}}'] = new Highcharts.chart({
     chart: {
       renderTo: 'container-gauge-{{each_widget.unique_id}}',

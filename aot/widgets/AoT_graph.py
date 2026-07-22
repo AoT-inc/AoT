@@ -359,7 +359,7 @@ WIDGET_INFORMATION = {
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Enable NavBar'),
-            'phrase': lazy_gettext('Disable the navigation bar at the bottom of the graph.')
+            'phrase': lazy_gettext('Enable the graph navigation bar.')
         },
         {
             'id': 'enable_export',
@@ -1048,6 +1048,30 @@ WIDGET_INFORMATION = {
 {% set graph_pid_ids = widget_options['measurements_pid'] %}
 {% set graph_note_tag_ids = widget_options['measurements_note_tag'] %}
 
+  // Idempotency guard: when this script is re-run for live option preview (no
+  // page reload), tear down the previous chart, its live-data intervals and the
+  // per-widget history state so re-init starts clean (no leaked Highcharts
+  // instance, no stacked intervals, no stale series bookkeeping).
+  try {
+    if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
+      widget['{{each_widget.unique_id}}'].destroy();
+      delete widget['{{each_widget.unique_id}}'];
+    }
+  } catch (e) {}
+  if (window._graph_intervals) {
+    Object.keys(window._graph_intervals).forEach(function (k) {
+      if (k.indexOf('{{each_widget.unique_id}}' + '_') === 0) {
+        clearInterval(window._graph_intervals[k]);
+        delete window._graph_intervals[k];
+      }
+    });
+  }
+  if (window._graph_series_meta) { delete window._graph_series_meta['{{each_widget.unique_id}}']; }
+  if (window._graph_load_debounce && window._graph_load_debounce['{{each_widget.unique_id}}']) {
+    clearTimeout(window._graph_load_debounce['{{each_widget.unique_id}}']);
+    delete window._graph_load_debounce['{{each_widget.unique_id}}'];
+  }
+
   widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
     chart : {
       renderTo: 'container-synchronous-graph-{{each_widget.unique_id}}',
@@ -1611,7 +1635,7 @@ WIDGET_INFORMATION = {
     ]
   });
 
-  $('#updateData{{each_widget.unique_id}}').click(function() {
+  $('#updateData{{each_widget.unique_id}}').off('click').on('click', function() {
     {% set count_series = [] -%}
 
     {% for each_output in output -%}
@@ -1654,12 +1678,12 @@ WIDGET_INFORMATION = {
     {%- endfor -%}
   });
 
-  $('#resetZoom{{each_widget.unique_id}}').click(function() {
+  $('#resetZoom{{each_widget.unique_id}}').off('click').on('click', function() {
     // Return to the live sliding window (trims any browsed-in earlier history).
     _graphResetToLive('{{each_widget.unique_id}}', {{widget_variables['x_axis_duration_min']}});
   });
 
-  $('#showhidebutton{{each_widget.unique_id}}').click(function() {
+  $('#showhidebutton{{each_widget.unique_id}}').off('click').on('click', function() {
     const chart = $('#container-synchronous-graph-{{each_widget.unique_id}}').highcharts();
     const series = chart.series[0];
     if (series.visible) {

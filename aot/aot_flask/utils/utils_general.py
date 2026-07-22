@@ -338,8 +338,6 @@ def custom_options_return_json(
                 continue
 
             if request_form:
-                logger.warning("[SAVE_DEBUG] device=%s option=%s form_keys=%s",
-                               device, each_option['id'], list(request_form.keys()))
                 for key in request_form.keys():
                     if each_option['id'] == key:
                         constraints_pass = True
@@ -348,7 +346,6 @@ def custom_options_return_json(
 
                         # [Fix] Pick first non-empty value if multiple entries exist (naming collision handling)
                         raw_val = request_form.get(key)
-                        logger.warning("[SAVE_DEBUG] MATCH device=%s option=%s raw_val=%r", device, each_option['id'], raw_val)
                         if raw_val in [None, '', 'None', 'null']:
                             for val in request_form.getlist(key):
                                 if val not in [None, '', 'None', 'null']:

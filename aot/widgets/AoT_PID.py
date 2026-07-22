@@ -1196,7 +1196,11 @@ function getPidDataAoT(wid, pidid, max_age, decs) {
 
 
 function repeatPidDataAoT(wid, pidid, refsec, max_age, decs) {
-  setInterval(function(){
+  // Store per widget + clear prior so a live-preview re-init doesn't stack intervals.
+  window._pid_intervals = window._pid_intervals || {};
+  var _k = wid + '_data';
+  if (window._pid_intervals[_k]) { clearInterval(window._pid_intervals[_k]); }
+  window._pid_intervals[_k] = setInterval(function(){
     getPidDataAoT(wid, pidid, max_age, decs);
   }, refsec*1000);
 }
@@ -1285,17 +1289,23 @@ function retrieveLiveDataPidg(widget_id, series, unique_id, measure_type, measur
 
 function getLiveDataPidg(widget_id, series, unique_id, measure_type, measurement_id, xaxis_duration_min, xaxis_reset, refresh_seconds, sign) {
   sign = (sign === undefined) ? 1 : sign;
-  setInterval(function () {
+  window._pid_intervals = window._pid_intervals || {};
+  var _k = widget_id + '_live_' + series;
+  if (window._pid_intervals[_k]) { clearInterval(window._pid_intervals[_k]); }
+  window._pid_intervals[_k] = setInterval(function () {
     retrieveLiveDataPidg(widget_id, series, unique_id, measure_type, measurement_id, xaxis_duration_min, xaxis_reset, refresh_seconds, sign);
   }, refresh_seconds * 1000);
 }
 """,
 
     'widget_dashboard_js_ready': """
-$('[id^="hidden_pid_activate_"]').click(function(){
+// Document-delegated so the handlers survive a live-preview body swap (which
+// replaces the activate/deactivate buttons) without needing rebind, and stay
+// single (off before on) if this block ever runs again.
+$(document).off('click.pidact').on('click.pidact', '[id^="hidden_pid_activate_"]', function(){
   sendPIDCommandAoT(this.name);
 });
-$('[id^="hidden_pid_deactivate_"]').click(function(){
+$(document).off('click.piddeact').on('click.piddeact', '[id^="hidden_pid_deactivate_"]', function(){
   sendPIDCommandAoT(this.name);
 });
 """,
@@ -1359,6 +1369,24 @@ getPidDataAoT('{{each_widget.unique_id}}','{{widget_options['pid']}}',{{max_age}
   {% set x_sec = x_min * 60 %}
   {% set xreset = widget_options.get('enable_xaxis_reset', True)|int %}
   {% set auto   = widget_options.get('enable_auto_refresh', True) %}
+
+  // Idempotency guard for live-preview re-init (no page reload): destroy the
+  // previous chart + clear this widget's stored data/live intervals before
+  // rebuilding, so re-init doesn't leak a Highcharts instance or stack intervals.
+  try {
+    if (typeof widget !== 'undefined' && widget['{{each_widget.unique_id}}']) {
+      widget['{{each_widget.unique_id}}'].destroy();
+      delete widget['{{each_widget.unique_id}}'];
+    }
+  } catch (e) {}
+  if (window._pid_intervals) {
+    Object.keys(window._pid_intervals).forEach(function (k) {
+      if (k.indexOf('{{each_widget.unique_id}}') === 0) {
+        clearInterval(window._pid_intervals[k]);
+        delete window._pid_intervals[k];
+      }
+    });
+  }
 
 widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
   {# 전역 차트 시리즈 팔레트 — aot.config GRAPH_SERIES_PALETTE(_DARK), inject_variables 주입 #}

@@ -119,6 +119,41 @@ class SequenceTriggerController(AbstractController, threading.Thread):
     @owner foreman
     """
 
+    def _step_output_state(self, opts, states_snapshot=None):
+        """Actual device state of a step's target output, or None for non-output
+        steps. Reads from a states snapshot (output_states_all) fetched once per
+        status build to avoid an RPC per step. Channel-index lookups are cached."""
+        try:
+            out_ref = opts.get('output')
+            if not out_ref:
+                return None
+            if ',' not in str(out_ref):
+                oid = str(out_ref).strip()
+                ch_idx = 0
+                if not oid:
+                    return None
+            else:
+                oid, cuid = str(out_ref).split(',', 1)
+                oid = oid.strip()
+                cuid = cuid.strip()
+                if cuid in self._chan_idx_cache:
+                    ch_idx = self._chan_idx_cache[cuid]
+                else:
+                    ch_obj = db_retrieve_table_daemon(OutputChannel).filter(
+                        OutputChannel.unique_id == cuid).first()
+                    ch_idx = ch_obj.channel if ch_obj else 0
+                    self._chan_idx_cache[cuid] = ch_idx
+            if isinstance(states_snapshot, dict):
+                chans = states_snapshot.get(oid)
+                if isinstance(chans, dict):
+                    # channel keys may be int or str depending on the transport
+                    return chans.get(ch_idx, chans.get(str(ch_idx)))
+                return None
+            # Fallback: single query (used if no snapshot was provided)
+            return self.control.output_state(oid, output_channel=ch_idx)
+        except Exception:
+            return None
+
     def __init__(self, ready, unique_id):
         threading.Thread.__init__(self)
         super().__init__(ready, unique_id=unique_id, name=__name__)
@@ -132,6 +167,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.current_schedule = []
         self.active_actions = set()
         self.all_actions_cache = []
+        self._chan_idx_cache = {}  # OutputChannel.unique_id -> channel index
         self.logger = logger # Use module-level logger initially
         self.logger_instance = logging.getLogger(f"{__name__}_{unique_id.split('-')[0]}")
 
@@ -156,7 +192,14 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         if not hasattr(self, 'all_actions_cache'):
              return {'is_activated': self.is_activated, 'status_text': 'Initializing'}
-             
+
+        # One snapshot of all output states per status build (not per step) so the
+        # widget can show each step's actual device state (pending/fault/offline).
+        try:
+            _states_snapshot = self.control.output_states_all()
+        except Exception:
+            _states_snapshot = None
+
         for act in self.all_actions_cache:
              try:
                  opts = json.loads(act.custom_options) if act.custom_options else {}
@@ -194,7 +237,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                  'original_duration': display_duration,
                  'group_name': (opts.get('group_name') or '').strip() or None,
                  'display_name': (opts.get('display_name') or '').strip() or None,
-                 'is_active': act.unique_id in self.active_actions
+                 'is_active': act.unique_id in self.active_actions,
+                 # Actual device state of the target output ('on'/'off'/'pending'/
+                 # 'fault'/number/None) so the widget shows offline/pending per step
+                 # instead of trusting the schedule alone.
+                 'output_state': self._step_output_state(opts, _states_snapshot),
              })
              
         today_idx = get_today_idx(self.device_tz)

@@ -2471,9 +2471,19 @@
                 return Promise.resolve();
             }
             return fetch(apiPath).then(res => res.status === 204 ? null : res.json()).then(data => {
-                let isActive = false, val = 'N/A';
+                let isActive = false, val = 'N/A', isPending = false, isFault = false;
                 if (isOutput) {
-                    isActive = (data === 'on' || data === true || data === 1);
+                    // Shared classifier keeps pending/fault/on/off consistent with
+                    // every other widget. 'pending' = command in flight (hold the
+                    // optimistic intent). 'fault' = unconfirmed/offline (show a
+                    // distinct offline state, NOT a fake off).
+                    var _cls = (window.AoTOutputState
+                        ? window.AoTOutputState.classify(data)
+                        : { isOn: (data === 'on' || data === true || data === 1),
+                            isPending: (data === 'pending'), isFault: (data === 'fault') });
+                    isPending = _cls.isPending;
+                    isFault = _cls.isFault;
+                    isActive = _cls.isOn;
                     // [3-way Actuator] numeric response = current position % (0-100)
                     if (dev.control_kind === 'value_3way') {
                         // Normalize incoming response to a numeric position (0..100).
@@ -2542,6 +2552,35 @@
                 }
                 
                 return durationPromise.then(() => {
+                    // [Pending] Device command sent but not yet confirmed by the device.
+                    // Hold the optimistic intent (set on click) and show a "confirming"
+                    // style; do NOT run the revert-to-server logic that would flip the
+                    // toggle back to off before the (slow) ACK arrives.
+                    if (isPending) {
+                        const toggleBtnP = document.getElementById(`toggle-${sDevId}`);
+                        if (toggleBtnP) {
+                            toggleBtnP.checked = !!marker.options.is_active;
+                            toggleBtnP.classList.remove('aot-toggle-fault');
+                            toggleBtnP.classList.add('aot-toggle-pending');
+                        }
+                        return;
+                    }
+
+                    // [Fault/Offline] Command was not confirmed by the device (offline).
+                    // Show a distinct offline state — NOT a fake off, and clear any
+                    // optimistic hold so the toggle stops waiting.
+                    if (isFault) {
+                        if (marker.options._pending_toggle) delete marker.options._pending_toggle;
+                        const toggleBtnF = document.getElementById(`toggle-${sDevId}`);
+                        if (toggleBtnF) {
+                            toggleBtnF.checked = false;
+                            toggleBtnF.classList.remove('aot-toggle-pending');
+                            toggleBtnF.classList.add('aot-toggle-fault');
+                        }
+                        applyDeviceStatusStyle(devId, false, val);
+                        return;
+                    }
+
                     // [3-way Actuator] Suppress server-driven snapback while a recent command is pending.
                     // commandActuator() stamps _pending_command; honor it for up to (refresh+5)s so
                     // the optimistic UI (slider/% display) survives one poll cycle.
@@ -2587,7 +2626,11 @@
                     }
 
                     const toggleBtn = document.getElementById(`toggle-${sDevId}`);
-                    if (toggleBtn) toggleBtn.checked = isActive;
+                    if (toggleBtn) {
+                        toggleBtn.checked = isActive;
+                        toggleBtn.classList.remove('aot-toggle-pending');
+                        toggleBtn.classList.remove('aot-toggle-fault');
+                    }
                 });
             }).catch(e => {
                 console.error(`[AoT Map] updateMarkerStatus error for ${devId}:`, e);

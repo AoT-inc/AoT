@@ -66,6 +66,12 @@ def _cached_misc():
     return obj
 
 
+def invalidate_misc_cache():
+    """settings 저장 직후 stale 값이 렌더링되지 않도록 inject_variables()의 Misc 캐시를 즉시 만료시킨다."""
+    _misc_cache['obj'] = None
+    _misc_cache['ts'] = 0.0
+
+
 def _cached_dashboards():
     now = time.time()
     if now - _dashboards_cache['ts'] < _INJECT_CACHE_TTL and _dashboards_cache['objs'] is not None:

@@ -35,6 +35,10 @@ OUTPUT_INFORMATION = {
     'output_library': 'requests',
     'output_types': ['on_off'],
 
+    # The remote API POST response confirms the command was applied; the periodic
+    # status poll corrects drift. Small window covers the HTTP round-trip.
+    'command_timeout_default_s': 5,
+
     'message': 'This Output allows remote control of another AoT On/Off Output over a network using the API.',
 
     'options_enabled': [
@@ -297,10 +301,14 @@ class OutputModule(AbstractOutput):
 
                 if (output_unique_id in self.api_output['output states'] and
                         str(device_channel) in self.api_output['output states'][output_unique_id]):
-                    if self.api_output['output states'][output_unique_id][str(device_channel)] == "on":
-                        self.output_states[each_chan] = True
-                    elif self.api_output['output states'][output_unique_id][str(device_channel)] == "off":
-                        self.output_states[each_chan] = False
+                    # The remote's reported state is the authoritative report:
+                    # route through confirm_command to resolve pending, correct
+                    # optimistic state and clear faults (drift correction).
+                    remote_state = self.api_output['output states'][output_unique_id][str(device_channel)]
+                    if remote_state == "on":
+                        self.confirm_command(each_chan, True, 'remote-status')
+                    elif remote_state == "off":
+                        self.confirm_command(each_chan, False, 'remote-status')
 
     def send_remote_output(self, channel, state):
         import requests
@@ -352,11 +360,11 @@ class OutputModule(AbstractOutput):
             self.logger.error(f"Response Status was not 200: {response.status_code} — {detail}")
             raise RuntimeError(f"Remote host returned status {response.status_code}: {detail}")
 
-        if 'message' in response_dict and 'Success' in response_dict['message']:
-            self.output_states[channel] = state
-        else:
+        if not ('message' in response_dict and 'Success' in response_dict['message']):
             self.logger.error("Did not receive success message from API")
             raise RuntimeError("Remote host did not return a success message")
+        # Success: the remote applied the command. State confirmation is handled
+        # by the caller (output_switch -> confirm_command).
 
     def get_channel_entry_from_id(self, channel_id):
         if not self.api_output or 'output channels' not in self.api_output:
@@ -368,26 +376,46 @@ class OutputModule(AbstractOutput):
 
         self.logger.error("Could not determine channel table.")
 
+    def confirmation_capable(self):
+        """The remote AoT reports each output's actual state (POST response +
+        periodic status poll), so commands are confirmed, not fire-and-forget."""
+        return True
+
+    def _resend_command(self, output_channel, intent_state):
+        try:
+            self.send_remote_output(output_channel, intent_state == 'on')
+            return True
+        except Exception:
+            return False
+
     def output_switch(self, state, output_type=None, amount=None, output_channel=0):
         # Returns an opt-in (code, msg) tuple: code 0 = success, 1 = failure.
         # base_output.output_on_off() detects this tuple and propagates a
         # failure return code to the caller (e.g. the timer widget) instead of
         # always reporting success.
+        prev_state = bool(self.output_states.get(output_channel) or False)
         try:
             if state == 'on':
                 self.send_remote_output(output_channel, True)
             elif state == 'off':
                 self.send_remote_output(output_channel, False)
+            # POST succeeded -> the remote applied it. Arm the state machine and
+            # confirm synchronously (the status poll later corrects any drift).
+            self.begin_command(output_channel, state, prev_state, dispatched_ok=True)
+            self.confirm_command(output_channel, state == 'on', 'remote-post')
             return 0, "success"
         except Exception as e:
             msg = "State change error: {}".format(e)
             self.logger.exception(msg)
+            # Dispatch failed -> no phantom on; leave prior state untouched.
+            self.begin_command(output_channel, state, prev_state, dispatched_ok=False)
             return 1, msg
 
     def is_on(self, output_channel=0):
         if self.is_setup():
             try:
-                return self.output_states[output_channel]
+                return self.resolve_is_on(
+                    output_channel, bool(self.output_states.get(output_channel) or False))
             except Exception as e:
                 self.logger.error("Status check error: {}".format(e))
 

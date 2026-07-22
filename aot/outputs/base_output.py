@@ -20,6 +20,7 @@ from sqlalchemy import and_
 from sqlalchemy import or_
 
 from aot.controllers.abstract_base_controller import AbstractBaseController
+from aot.outputs.confirmable_output import ConfirmableOutputMixin
 from aot.databases.models import Output
 from aot.databases.models import OutputChannel
 from aot.databases.models import Trigger
@@ -30,18 +31,22 @@ from aot.utils.execution_context import get_extra_tags
 from aot.utils.outputs import output_types
 
 
-class AbstractOutput(AbstractBaseController):
+class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
     """Abstract base class for all output device drivers.
 
     @phase active
     @stability stable
-    @dependency AbstractBaseController, DaemonControl
+    @dependency AbstractBaseController, DaemonControl, ConfirmableOutputMixin
     """
     def __init__(self, output, testing=False, name=__name__):
         if not testing:
             super().__init__(output.unique_id, testing=testing, name=__name__)
         else:
             super().__init__(None, testing=testing, name=__name__)
+
+        # Command-confirmation / latency state machine (dormant for synchronous
+        # outputs: no timers arm unless a module calls begin_command()).
+        self._confirm_init()
 
         self.output_setup = False
         self.startup_timer = timeit.default_timer()
@@ -104,6 +109,10 @@ class AbstractOutput(AbstractBaseController):
             "subclasses of the AbstractOutput class are required to overwrite "
             "this method")
         raise NotImplementedError
+
+    # is_pending() / is_fault() / resolve_is_on() are provided by
+    # ConfirmableOutputMixin. Synchronous outputs never arm the state machine,
+    # so is_pending() stays False and is_fault() stays False for them.
 
     def is_setup(self):
         self.logger.error(
@@ -226,8 +235,16 @@ class AbstractOutput(AbstractBaseController):
                 self.logger.warning(f"Failed to write output_started_at for Output {self.unique_id} CH{output_channel}: {e}")
 
     def _ensure_started_marked(self, output_channel):
-        """Mark start-time once per ON sequence per channel."""
+        """Mark start-time once per ON sequence per channel.
+
+        For confirmation-capable outputs (e.g. LoRaWAN), defer the start marker
+        until the device actually confirms the ON — the runtime clock must count
+        from the response, not the dispatch. confirm_command() re-invokes this
+        once confirmed, at which point confirmation_deferred_start() is False.
+        """
         try:
+            if self.confirmation_deferred_start(output_channel):
+                return
             if not self._started_at_written.get(output_channel):
                 self._write_output_started_at_async(output_channel)
                 self._started_at_written[output_channel] = True
@@ -315,6 +332,23 @@ class AbstractOutput(AbstractBaseController):
                 msg = f"Cannot manipulate Output {self.unique_id}: Output not set up."
                 self.logger.error(msg)
                 return 1, msg
+
+        # Do not disturb a command already in flight to a confirmation-capable
+        # output: a re-issued *same-direction* command during the pending window
+        # (e.g. a PID or bang-bang function firing every period before the slow
+        # device has confirmed) would re-anchor timing and stack retransmissions.
+        # Ignore it so the in-flight command and its confirm-anchored duration
+        # stand. An opposite-direction command (a cancel) is allowed through.
+        try:
+            if (self.confirmation_capable() and self.is_pending(output_channel) and
+                    self.pending_intent(output_channel) == state):
+                msg = (f"Output {self.unique_id} CH{output_channel} command "
+                       f"'{state}' ignored: identical command already in flight "
+                       f"(awaiting device confirmation).")
+                self.logger.debug(msg)
+                return 0, msg
+        except Exception:
+            pass
 
         #
         # Signaled to turn output on
@@ -466,12 +500,31 @@ class AbstractOutput(AbstractBaseController):
                           f"on for {abs(amount):.1f} seconds. Output returned: {out_ret}"
                     self.logger.debug(msg)
 
-                    self.output_on_until[output_channel] = (
-                        current_time + timedelta(seconds=abs(amount)))
-                    self.output_last_duration[output_channel] = amount
-                    self.output_on_duration[output_channel] = True
-                    self.output_session_start[output_channel] = current_time
-                    self.output_session_max[output_channel] = abs(amount)
+                    # Timed-ON auto-off scheduling — three tiers by latency model:
+                    #   1) device-timed: the device runs its own N-sec timer (the
+                    #      duration was carried in the command); arm NO server off.
+                    #   2) confirmation-capable: defer the off to confirm_time + N
+                    #      so the device gets >= N sec of *confirmed* on-time (the
+                    #      dispatch->ACK latency never truncates the run).
+                    #   3) otherwise: dispatch-anchored (legacy behavior).
+                    if self.supports_device_duration():
+                        self.output_last_duration[output_channel] = amount
+                        self.output_on_duration[output_channel] = False
+                        self.output_session_start[output_channel] = current_time
+                        self.output_session_max[output_channel] = abs(amount)
+                    elif self.confirmation_capable():
+                        self.defer_duration_to_confirm(output_channel, amount)
+                        self.output_last_duration[output_channel] = amount
+                        self.output_on_duration[output_channel] = True
+                        self.output_session_start[output_channel] = current_time
+                        self.output_session_max[output_channel] = abs(amount)
+                    else:
+                        self.output_on_until[output_channel] = (
+                            current_time + timedelta(seconds=abs(amount)))
+                        self.output_last_duration[output_channel] = amount
+                        self.output_on_duration[output_channel] = True
+                        self.output_session_start[output_channel] = current_time
+                        self.output_session_max[output_channel] = abs(amount)
 
             # No duration specific, so just turn output on
             elif ('output_types' in self.OUTPUT_INFORMATION and
@@ -772,9 +825,16 @@ class AbstractOutput(AbstractBaseController):
         :param output_channel: Channel of the output
         :type output_channel: int
 
-        :return: "on", "off", or duty cycle (for PWM output)
+        :return: "on", "off", "pending", "fault", or duty cycle (for PWM output)
         :rtype: str
         """
+        try:
+            if self.is_pending(output_channel):
+                return 'pending'
+            if self.is_fault(output_channel):
+                return 'fault'
+        except Exception:
+            pass
         state = self.is_on(output_channel)
         if state is not None:
             if self.output_type in self.output_types['pwm'] + self.output_types['value']:
