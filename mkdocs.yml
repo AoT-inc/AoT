@@ -116,6 +116,7 @@ nav:
     - AI & Automation:
       - AI Overview: ai/overview.md
       - Environmental Control: ai/env-control.md
+      - Scheduler: ai/scheduler.md
     - GIS & Map:
       - Overview: geo/overview.md
       - Getting Started: geo/getting-started.md

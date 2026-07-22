@@ -160,4 +160,5 @@ Claude Desktop에서 연결하려면 `claude_desktop_config.json`에 추가합�
 ## 관련 페이지
 
 - [환경 제어 자동화](env-control.md)
+- [스케줄러](scheduler.md)
 - [AI 가이드 (전체)](../ai_guide.ko.md)

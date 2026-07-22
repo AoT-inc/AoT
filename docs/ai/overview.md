@@ -160,4 +160,5 @@ To connect from Claude Desktop, add to `claude_desktop_config.json`:
 ## Related Pages
 
 - [Environmental Control Automation](env-control.md)
+- [Scheduler](scheduler.md)
 - [Full AI Guide](../ai_guide.md)
