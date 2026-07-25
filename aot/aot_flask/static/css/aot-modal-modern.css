@@ -1420,8 +1420,12 @@ input[type="range"].aot-ov-opacity::-moz-range-thumb {
 }
 
 :root { --aot-wdrawer-w: 600px; }
-@media (min-width: 1200px) { :root { --aot-wdrawer-w: 640px; } }
-@media (min-width: 768px) and (max-width: 1199px) { :root { --aot-wdrawer-w: 520px; } }
+/* Desktop drawer width is FIXED at 520px for every width ≥768 — it must not grow with
+   the viewport. A wider drawer would only eat into the dashboard area behind it (the
+   page is pushed aside by exactly this width), so on large monitors we keep the drawer
+   narrow and give the extra space to the dashboard. (Previously ≥1200 bumped to 640,
+   which widened the drawer and shrank the dashboard on big screens.) */
+@media (min-width: 768px) { :root { --aot-wdrawer-w: 520px; } }
 
 /* smooth page push (matches chat drawer easing/timing) */
 body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
@@ -1464,25 +1468,162 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
   }
 }
 
-/* Phone / small tablet: full-width drawer sliding in from the right, no page push
-   (too narrow to split; the live-observe benefit is desktop/tablet). */
-@media (max-width: 767px) {
-  .aot-widget-drawer .modal-dialog {
-    position: fixed;
-    inset: 0;
+/* Phone / small tablet: the settings form is a BOTTOM SHEET and the top band is a
+   live preview of the widget being edited. Instead of a full-screen modal that
+   hides the dashboard, the real widget card is CSS-lifted (position:fixed, no DOM
+   move — see dashboard.js widgetDrawerMode) into a fixed-height band at the top,
+   and the option form slides up from the bottom to fill the rest. A header toggle
+   ("미리보기 보기/가리기") collapses the sheet up over the band for more form space.
+   Because the lifted node is the SAME element the live auto-save re-renders in
+   place, edits show up in the band with no extra wiring; charts/WebGL just get a
+   resize nudge. iOS-safe: the lifted card is fixed to the viewport, unaffected by
+   the scroll-lock's body{position:fixed}. */
+@media (max-width: 767.98px) {
+  :root { --aot-preview-band-h: 42vh; --aot-preview-band-h: 42dvh; }
+
+  /* The widget drawer also carries .aot-option-modal, so the generic mobile
+     full-screen rule above (.modal.aot-option-modal .modal-dialog, specificity
+     0,3,0, all !important — top/bottom/height/transform) would pin it full-screen
+     and kill the sheet. Override with one extra class (.aot-widget-drawer → 0,4,0)
+     and !important on every layout prop, mirroring how the tab-settings exception
+     overrides the same rule. No dialog transform/slide: this build has a documented
+     "stuck transition on the dialog when Bootstrap toggles display+.show in one
+     frame" bug (see the note above the full-screen block) — the dialog just appears
+     in its sheet position. Only height transitions (fired later by the collapse
+     toggle, when the modal is already open) are safe. */
+  .modal.aot-option-modal.aot-widget-drawer .modal-dialog {
+    position: fixed !important;
+    left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 100vh; height: 100dvh;
-    transform: translateX(100%) !important;
-    transition: transform 0.35s cubic-bezier(0.075, 0.82, 0.165, 1) !important;
+    height: calc(100vh - var(--aot-preview-band-h)) !important;
+    height: calc(100dvh - var(--aot-preview-band-h)) !important;
+    transform: none !important;
+    /* No dialog transition: this build has a documented "stuck transition when
+       Bootstrap toggles the dialog" bug (see the full-screen block's note). The
+       collapse toggle snaps the sheet height instantly, which is robust; a height
+       animation here reproduced the stuck state (height frozen mid-value). */
+    transition: none !important;
   }
-  .aot-widget-drawer.show .modal-dialog { transform: translateX(0) !important; }
-  .aot-widget-drawer .modal-content {
-    height: 100vh; height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
+
+  /* Preview hidden → the sheet grows up to cover the band (max form space). */
+  body.aot-preview-collapsed .modal.aot-option-modal.aot-widget-drawer .modal-dialog {
+    height: 94vh !important; height: 94dvh !important;
   }
+
+  /* The full-screen rule pins .modal-content position:absolute inset:0 (fills the
+     dialog — good) but leaves it display:block. Make it a flex column so the body
+     scrolls between a fixed header and footer, and round the sheet's top. */
+  .modal.aot-option-modal.aot-widget-drawer .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 16px 16px 0 0 !important;         /* rounded sheet top */
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28) !important;
+    overflow: hidden !important;
+  }
+  .modal.aot-option-modal.aot-widget-drawer .modal-body { flex: 1 1 auto; overflow-y: auto; }
+  .modal.aot-option-modal.aot-widget-drawer .modal-header,
+  .modal.aot-option-modal.aot-widget-drawer .modal-footer { flex: 0 0 auto; }
+
+  /* Block background scroll from the preview band. The full-screen .modal layer is
+     the touch target over the band (verified: elementFromPoint there is the .modal,
+     not the card), and on non-iOS phones the page itself stays scrollable (body is
+     static/overflow:auto), so a drag on the band would scroll the dashboard behind.
+     touch-action:none on the modal stops that; the sheet re-enables vertical panning
+     so the option form still scrolls, and overscroll-behavior:contain keeps that
+     scroll from chaining out to the page. */
+  .modal.aot-option-modal.aot-widget-drawer { touch-action: none !important; }
+  .modal.aot-option-modal.aot-widget-drawer .modal-dialog { touch-action: none !important; }
+  .modal.aot-option-modal.aot-widget-drawer .modal-body {
+    touch-action: pan-y !important;
+    overscroll-behavior: contain;
+  }
+
+  /* The real widget card, lifted into the fixed top band (added by dashboard.js on
+     mobile modal open). No DOM move: the node stays where the live-preview re-render
+     targets it — we only re-position it. On close the class is removed and gridstack
+     snaps it back to its absolute grid slot. top/left/right MUST be !important: the
+     gridstack attribute rules (.gs-N > .grid-stack-item[gs-x=..]) are 0,3,0 and would
+     otherwise keep the card in its grid slot. The open modal is z-index 5100 here
+     (fixModalReparent bumps it); the lifted card sits just BELOW it (5099) so the
+     modal/sheet renders ABOVE the widget — the sheet's top edge and shadow fall over
+     the card, not the other way round. The card still shows because the .modal layer
+     is transparent above the band. It stays above the frozen dashboard behind it
+     (z 5099 ≫ the grid's auto-stacked siblings). When the sheet is collapsed over the
+     band the card is also visibility:hidden. */
+  .grid-stack-item.aot-preview-lift {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    width: auto !important;
+    height: var(--aot-preview-band-h) !important;
+    transform: none !important;
+    z-index: 5099;
+    margin: 0 !important;
+    transition: none !important;
+  }
+  .grid-stack-item.aot-preview-lift > .grid-stack-item-content {
+    position: absolute !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  /* Widget cards are normally transparent and borrow the dashboard's background;
+     once lifted into the fixed band they'd otherwise let the frozen page bleed
+     through (header + body both compute to rgba(0,0,0,0)). Force the page-surface
+     colour onto the card while lifted so the band reads as an opaque preview that
+     looks exactly like the widget on the dashboard. Scoped to .aot-preview-lift —
+     the normal dashboard rendering is untouched. --aot-surface == the page/sticky
+     background (verified equal to body bg), so it stays theme-correct. */
+  .grid-stack-item.aot-preview-lift,
+  .grid-stack-item.aot-preview-lift > .grid-stack-item-content,
+  .grid-stack-item.aot-preview-lift .widget-heading,
+  .grid-stack-item.aot-preview-lift [id^="container-graph-"] {
+    background-color: var(--aot-surface, #fff) !important;
+  }
+  /* Kill the drop shadow while lifted. The card carries .aot-widget-config-active
+     (the "being edited" highlight = box-shadow 0 10px 32px rgba(0,0,0,.45)), which on
+     the phone would cast down onto the sheet header and read as the widget floating
+     over the modal. The sheet is the top layer here, so the preview card must be flat. */
+  .grid-stack-item.aot-preview-lift,
+  .grid-stack-item.aot-preview-lift > .grid-stack-item-content {
+    box-shadow: none !important;
+  }
+  /* When the sheet is collapsed over the band, hide the lifted preview. */
+  body.aot-preview-collapsed .grid-stack-item.aot-preview-lift { visibility: hidden; }
+}
+
+/* The preview show/hide toggle lives in every widget modal header but only makes
+   sense on the phone bottom-sheet layout; hidden everywhere else. */
+.aot-preview-toggle { display: none; }
+@media (max-width: 767.98px) {
+  /* Chevron handle straddling the sheet's top-centre edge. It is a direct child of
+     .modal-dialog (see dashboard_entry.html) — NOT inside the header — so it sits just
+     above the header without altering the title's position, size or alignment at all,
+     and is not clipped by .modal-content's overflow. z-index lifts it above the
+     content; it also renders above the band widget because the whole modal (z 5100)
+     is above the lifted card (z 5099). */
+  .aot-widget-drawer .aot-preview-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    width: 46px;
+    height: 18px;
+    padding: 0;
+    background: var(--aot-surface, #fff);
+    border: 1px solid var(--aot-color-border, #ccc);
+    border-radius: 999px;
+    color: var(--aot-color-text-secondary, #6b7280);
+    font-size: 0.7rem;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+  .aot-widget-drawer .aot-preview-toggle:active { background: var(--aot-bg-off, #f3f6f5); }
 }
 
 /* ============================================================
@@ -1498,6 +1639,20 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 .aot-widget-drawer .bootstrap-select.show > .dropdown-menu {
   max-width: min(calc(var(--aot-wdrawer-w, 600px) - 2.75rem), calc(100vw - 1.5rem)) !important;
   overflow-x: hidden !important;
+}
+/* Cap the INNER scroll container, list and items to the (capped) outer-menu width
+   too. Capping only the outer .dropdown-menu isn't enough: bootstrap-select sizes the
+   inner .inner/ul to the widest option (its own max-width is viewport-based, ~85vw),
+   so the items overflow the narrow drawer and the outer overflow-x:hidden clips their
+   right edge — where the selected item's .check-mark sits (position:absolute; right).
+   Result: on a narrow drawer you couldn't see which option was selected. Bounding the
+   inner boxes to 100% makes options wrap within the menu and keeps the tick visible. */
+.aot-widget-drawer .bootstrap-select .dropdown-menu .inner,
+.aot-widget-drawer .bootstrap-select .dropdown-menu ul,
+.aot-widget-drawer .bootstrap-select .dropdown-menu li,
+.aot-widget-drawer .bootstrap-select .dropdown-menu li a {
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 .aot-widget-drawer .bootstrap-select .dropdown-menu li a,
 .aot-widget-drawer .bootstrap-select .dropdown-menu li a span.text {

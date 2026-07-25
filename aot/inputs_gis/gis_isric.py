@@ -112,7 +112,15 @@ class InputModule(AbstractGisInput):
         options.setdefault('version', '1.3.0')
         options.setdefault('format', 'image/png')
         options.setdefault('transparent', True)
-        
+        # Cap the WMS bridge's raster source at SoilGrids' native 250m grid
+        # (docs.isric.org/globaldata/soilgrids/SoilGrids_faqs.html: "250m
+        # resolution"). Web Mercator 256px tiles cross ~250m/pixel between
+        # z9 (~306m) and z10 (~153m) at the equator, so z10 is the last level
+        # where a tile can show something beyond an upscaled blur — without a
+        # cap this had no ceiling at all and would repeat the OpenWeatherMap
+        # tile-storm bug at any zoom the user reaches.
+        options.setdefault('maxNativeZoom', 10)
+
         return options
 
     def get_legend(self):

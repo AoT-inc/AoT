@@ -141,11 +141,32 @@
             map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
         });
 
+        // The native corner credit is hidden unconditionally in CSS —
+        // addLayerPanel always builds our own styled ⓘ button + panel instead,
+        // whether or not the rest of the tool rail is showing (hideControls
+        // only hides the FUNCTIONAL controls; the credit is a licence
+        // requirement, not a control, and stays visible on its own either way).
+        // Nothing to set here anymore; see .aot-attrib-native-fallback below
+        // for the emergency escape hatch if that panel is never built.
+
         // Add attribution control
         map.addControl(new maplibregl.AttributionControl({
             compact: true,
             position: 'bottom-left'
         }), 'bottom-left');
+
+        // compact:true only means "render the ⓘ toggle" — MapLibre v4 adds
+        // maplibregl-compact AND maplibregl-compact-show together, so the credit
+        // starts EXPANDED (measured 134–295px wide) and only collapses once the
+        // user taps ⓘ. On a phone-width widget that band runs straight into the
+        // bottom-right legend. Start collapsed instead: the ⓘ stays visible and
+        // one tap still reveals the full credit.
+        // This control is kept in the DOM but hidden (see map.css): it stays the
+        // authority on which sources are actually being rendered, and the tool
+        // rail's copyright panel (addLayerPanel) mirrors its text. The credit is
+        // still shown without requiring interaction — that panel opens on its
+        // own — which is what the OSMF guidelines require. Never make hiding it
+        // the end state: something visible must always carry the credit.
 
         // NOTE: native NavigationControl removed — its top-right placement
         // overlapped the new .map-tools-right toolbar (Layers/Note/Measure)
@@ -271,11 +292,58 @@
             try { addMeasurementPanel(uniqueId, map, vars); } catch (e) {
                 console.warn('[AoT Map] addMeasurementPanel failed:', e);
             }
+
+            // Expose live-refresh hooks for the settings-drawer's auto-save
+            // (dashboard-widget-live-preview.js) — Device Filter and Measurement
+            // Panel selects used to only take effect after the full Save button
+            // (page reload); this lets them auto-save + apply immediately like
+            // every other option.
+            try {
+                var _instRefresh = window.AoTWidgetInstances[uniqueId];
+                if (_instRefresh) {
+                    _instRefresh._fetchAndRenderDevices = function () {
+                        return fetchAndRenderDevices(uniqueId, map, vars);
+                    };
+                    // measurements_map has no "update items" API on the panel handle
+                    // (items are fixed at construction — see createMeasurementPanel in
+                    // aot-map-custom-controls.js), so a selection change tears the
+                    // existing panel down (DOM node + its interval + ResizeObserver)
+                    // and rebuilds it, rather than trying to patch it in place.
+                    _instRefresh._refreshMeasurementPanel = function (newMeasurementsMap) {
+                        var iv = (vars && vars.vars) || {};
+                        iv.measurements_map = newMeasurementsMap || {};
+                        var inst = window.AoTWidgetInstances[uniqueId];
+                        if (!inst) return;
+                        if (inst.panelRefreshTimer) { clearInterval(inst.panelRefreshTimer); inst.panelRefreshTimer = null; }
+                        if (inst._dockResizeObserver) {
+                            try { inst._dockResizeObserver.disconnect(); } catch (eDisc) {}
+                            inst._dockResizeObserver = null;
+                        }
+                        if (inst.measurementPanel && inst.measurementPanel.panel && inst.measurementPanel.panel.parentNode) {
+                            inst.measurementPanel.panel.parentNode.removeChild(inst.measurementPanel.panel);
+                        }
+                        inst.measurementPanel = null;
+                        try { addMeasurementPanel(uniqueId, map, vars); } catch (eRebuild) {}
+                    };
+                }
+            } catch (e) {}
+
             // Layer panel (top-right unified toolbar: Layers + Measure + Note).
             // Must come before addLegendOverlay so legend can reference the layer panel's update hook.
             try { addLayerPanel(uniqueId, map, vars); } catch (e) {
                 console.warn('[AoT Map] addLayerPanel failed:', e);
             }
+            // Attribution safety net: the corner control is hidden on the
+            // promise that addLayerPanel built our own credit panel instead.
+            // If that never happened (addLayerPanel threw before reaching it),
+            // give the corner control back — a map must never render without
+            // its attribution.
+            try {
+                const _mc = map.getContainer();
+                if (!_mc.querySelector('.aot-map-attrib-panel')) {
+                    _mc.classList.add('aot-attrib-native-fallback');
+                }
+            } catch (e) {}
             // Legend — uses initial active_layers; also wired to layer panel changes.
             try { addLegendOverlay(uniqueId, map, vars); } catch (e) {
                 console.warn('[AoT Map] addLegendOverlay failed:', e);
@@ -399,7 +467,9 @@
         }
         if (mapUuid) {
             const mu = encodeURIComponent(mapUuid);
-            if (on('show_facility_shape')) {
+            // Matches loadGeoJSONLayers' _ensureFacilityShapeLayer gate: facility
+            // 3D data feeds Facility/Sensor Values labels too, not just the shape.
+            if (on('show_facility_shape') || on('show_labels')) {
                 urls.push('/api/geo/overlays?map_uuid=' + mu + '&type=facility');
                 if (window.AoTFacilityMap3D && window.AoTFacility3D) {
                     urls.push('/api/geo/facility/list?geo_id=' + mu);
@@ -456,6 +526,26 @@
                 priority_z:   ((o.label_priority_facility === true || o.label_priority_facility === 'true') ? 7 : 1)
             };
         }
+
+        // Expose a live re-attach for the sensor-label settings (style/size/colors/
+        // decimals/offset/opacity/popup + the collision/spacing/priority options
+        // _sensorLabelOpts also reads). AoTMapSensorLabels.attach() already calls
+        // detach() first internally, so re-attaching with fresh opts is idempotent —
+        // no separate teardown needed here. The caller (settings-modal live-apply)
+        // updates `inst.vars.vars[key]` before invoking this; `vars` here is the same
+        // object reference as `inst.vars`, so _sensorLabelOpts(vars) immediately picks
+        // up the change. No-ops safely if this map has no 3D facilities cached.
+        try {
+            var _slInst = window.AoTWidgetInstances[uniqueId];
+            if (_slInst) {
+                _slInst._reattachSensorLabels = function () {
+                    if (!window.AoTMapSensorLabels) { return; }
+                    var facilities3d = _slInst.cachedFacilities3d;
+                    if (!facilities3d || !facilities3d.length) { return; }
+                    try { AoTMapSensorLabels.attach(uniqueId, map, facilities3d, _sensorLabelOpts(vars)); } catch (e) {}
+                };
+            }
+        } catch (e) {}
 
         // ── Actuator category labels (map markers + popup controls) ────────────
         // Categories: envelope (curtain/shade), window (opening), water (irrigation), facility (everything else)
@@ -857,12 +947,19 @@
                             : out.name;
                         var label = _escZ(rawLabel);
                         var ctrl = canCtrl
-                            ? '<label class="btn-toggle aot-act-toggle-right">' +
+                            ? '<div class="aot-act-3btn">' +
+                              '<button type="button" class="aot-act-pbtn aot-zone-output-settings"' +
+                              ' data-output-id="' + _escZ(out.unique_id) + '"' +
+                              ' data-channel="' + ch.channel + '"' +
+                              ' data-output-name="' + _escZ(rawLabel) + '"' +
+                              ' title="' + _tr('Set start/end time') + '">' + _tr('Settings') + '</button>' +
+                              '<label class="btn-toggle">' +
                               '<input type="checkbox" class="btn-toggle-input aot-zone-output-toggle"' +
                               ' data-output-id="' + _escZ(out.unique_id) + '"' +
                               ' data-channel="' + ch.channel + '">' +
                               '<span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>' +
-                              '</label>'
+                              '</label>' +
+                              '</div>'
                             : '';
                         var drag = canCtrl
                             ? '<span class="aot-act-drag-handle" title="' + _tr('Reorder') + '"><i class="fa fa-grip-lines"></i></span>'
@@ -882,6 +979,11 @@
             } else {
                 html += '<div class="aot-act-empty">' + _tr('No devices') + '</div>';
             }
+
+            // 상태 폴링(_fetchAndUpdateZoneOutputStates)이 재조회 없이 바로 쓸 수 있게
+            // 이 팝업의 장치 id 목록과 렌더된 pane 을 상태 객체에 보관해 둔다.
+            z.outputIds = outputs.map(function (o) { return o.unique_id; });
+            z.devPane = pane;
 
             pane.innerHTML = html;
 
@@ -1007,6 +1109,16 @@
                     return;
                 }
 
+                // 장치 설정 — 종료 시각을 지정해 "지금부터 그 시각까지" 켜기
+                var setBtn = e.target.closest('.aot-zone-output-settings');
+                if (setBtn && popupEl.contains(setBtn)) {
+                    _openZoneOutputScheduleWheel(uid,
+                        setBtn.dataset.outputId,
+                        parseInt(setBtn.dataset.channel || '0', 10),
+                        setBtn.dataset.outputName || '');
+                    return;
+                }
+
                 // 함수 활성 토글
                 var fnTgl = e.target.closest('.aot-zone-func-toggle');
                 if (fnTgl && popupEl.contains(fnTgl)) {
@@ -1039,6 +1151,154 @@
             });
         }
 
+        // 구역 팝업 장치 목록 — 실제 상태 폴링 동기화.
+        // 서버는 원본 상태값('on'/'off'/'pending'/'fault'/숫자/불리언)을 그대로 주고,
+        // 판정은 공용 분류기 AoTOutputState(aot-output-state.js)로 한다 — 이게 없으면
+        // 'fault'(응답 없음/오프라인)를 truthy 로 오판해 오프라인 장치가 켜진 것처럼
+        // 표시되는 버그가 난다(facility 팝업/장치 마커와 동일 판정 기준으로 통일).
+        function _fetchAndUpdateZoneOutputStates(uid) {
+            var z = _zonePopupState[uid];
+            if (!z || !z.popup || !z.outputIds || !z.outputIds.length || !z.devPane) return;
+            fetch('/api/geo/output_states', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json',
+                           'X-CSRFToken': _csrfHeader() },
+                body: JSON.stringify({ ids: z.outputIds })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+                var z2 = _zonePopupState[uid];
+                if (!j || !j.ok || !z2 || !z2.popup || !z2.devPane) return;
+                z2.devPane.querySelectorAll('.aot-act-row[data-slot]').forEach(function (row) {
+                    var toggle = row.querySelector('.aot-zone-output-toggle');
+                    if (!toggle) return;
+                    var chStates = j.states[row.dataset.slot];
+                    if (!chStates) return;
+                    var raw = chStates[toggle.dataset.channel || '0'];
+                    if (raw === undefined) return;
+                    var cls = window.AoTOutputState
+                        ? window.AoTOutputState.classify(raw)
+                        : { isOn: (raw === 'on' || (typeof raw === 'number' && raw > 0)),
+                            isPending: (raw === 'pending'), isFault: (raw === 'fault'),
+                            cssClass: null };
+                    if (!toggle.disabled && document.activeElement !== toggle) {
+                        toggle.checked = !!cls.isOn;
+                    }
+                    toggle.classList.toggle('aot-toggle-pending', !!cls.isPending);
+                    toggle.classList.toggle('aot-toggle-fault', !!cls.isFault);
+                    row.classList.remove('active-background', 'inactive-background',
+                                          'pause-background', 'hold-background');
+                    if (cls.cssClass) { row.classList.add(cls.cssClass); }
+                });
+            })
+            .catch(function () {});
+        }
+
+        function _startZoneOutputPolling(uid) {
+            var z = _zonePopupState[uid];
+            if (!z) return;
+            if (z.pollTimer) { clearInterval(z.pollTimer); z.pollTimer = null; }
+            if (!z.outputIds || !z.outputIds.length) return;
+            var refreshMs = ((_actLabelState[uid] || {}).refreshMs) || 5000;
+            _fetchAndUpdateZoneOutputStates(uid);
+            z.pollTimer = setInterval(function () { _fetchAndUpdateZoneOutputStates(uid); }, refreshMs);
+        }
+
+        // 장치별 마지막으로 저장한 종료 시각 기억(프론트엔드 세션 한정, 새로고침하면
+        // 사라짐) — 설정 창을 다시 열 때 매번 00:00 으로 리셋되면 방금 정한 값이
+        // 사라진 것처럼 보인다는 피드백 반영. 시작은 항상 "지금"이 맞으므로 기억하지
+        // 않는다.
+        var _zoneOutputEndMemory = {};
+
+        // 설정 버튼 — 시작(위)·종료(아래) 시각을 한 팝업에 같이 보여준다(따로 뜨면
+        // 지금 고르는 게 시작인지 종료인지 헷갈린다는 피드백 반영). 종료를 00:00으로
+        // 두면 무한 작동(자동 꺼짐 없음). 저장 시 지금~종료까지의 duration 을 계산해
+        // 기존 output/state 엔드포인트(duration 파라미터 지원)로 전송한다.
+        function _openZoneOutputScheduleWheel(uid, outputId, channel, outputName) {
+            if (!window.AoTTimeWheel) { console.warn('[AoT Map] AoTTimeWheel module not loaded'); return; }
+            var now = new Date();
+            var nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60);
+            var lastEndSec = _zoneOutputEndMemory.hasOwnProperty(outputId) ? _zoneOutputEndMemory[outputId] : 0;
+            var label = outputName ? _escZ(outputName) : '';
+
+            var html =
+                '<div class="aot-sensor-popup-header"><b>' + label + '</b></div>' +
+                '<div class="aot-act-group-header">' + _tr('Start time') + '</div>' +
+                '<div class="aot-sched-wheel aot-sched-wheel-start"></div>' +
+                '<div class="aot-act-group-header">' + _tr('End time') + '</div>' +
+                '<div class="aot-sched-wheel aot-sched-wheel-end"></div>' +
+                '<div class="aot-ov-muted" style="text-align:center;margin:.2rem 0 .5rem">' +
+                _tr('00:00 = run indefinitely (no auto off)') + '</div>' +
+                '<div class="aot-wheel-actions">' +
+                '<button type="button" class="btn aot-pill-btn aot-sched-cancel">' + _tr('Cancel') + '</button>' +
+                '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-save">' + _tr('Save') + '</button>' +
+                '</div>';
+
+            var popup = _showFacilityCenterOverlay(html, 'zone-sched-' + uid);
+            var el = popup.getElement();
+            var startWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-start'),
+                { value: nowSec, fields: 'hm' });
+            var endWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-end'),
+                { value: lastEndSec, fields: 'hm' });
+
+            el.querySelector('.aot-sched-cancel').addEventListener('click', function () { popup.remove(); });
+            el.querySelector('.aot-sched-save').addEventListener('click', function () {
+                var startSec = startWheel.read();
+                var endSec = endWheel.read();
+                _zoneOutputEndMemory[outputId] = endSec;
+                popup.remove();
+                _scheduleZoneOutputOnUntil(uid, outputId, channel, startSec, endSec);
+            });
+        }
+
+        function _scheduleZoneOutputOnUntil(uid, outputId, channel, startSec, endSec) {
+            var nowMs = Date.now();
+            var n = new Date(nowMs);
+            var start = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
+                Math.floor(startSec / 3600), Math.floor((startSec % 3600) / 60), 0, 0);
+            // 이미 지난 시각을 골랐다면 "지금"으로 간주 — 다음 날로 밀지 않는다.
+            if (start.getTime() < nowMs) { start = new Date(nowMs); }
+
+            // 종료 00:00 = 무한 작동(자동 꺼짐 없음) — duration 을 아예 보내지 않는다.
+            var indefinite = (endSec === 0);
+            var durationSec = null;
+            if (!indefinite) {
+                var end = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
+                    Math.floor(endSec / 3600), Math.floor((endSec % 3600) / 60), 0, 0);
+                if (end.getTime() <= start.getTime()) { end.setDate(end.getDate() + 1); }
+                durationSec = Math.round((end.getTime() - start.getTime()) / 1000);
+            }
+            var delaySec = Math.max(0, Math.round((start.getTime() - nowMs) / 1000));
+
+            function fire() {
+                var body = { state: true, channel: channel };
+                if (durationSec !== null) { body.duration = durationSec; }
+                fetch('/api/geo/output/' + encodeURIComponent(outputId) + '/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json',
+                               'X-CSRFToken': _csrfHeader() },
+                    body: JSON.stringify(body)
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (j) { if (j && j.ok) { _fetchAndUpdateZoneOutputStates(uid); } })
+                .catch(function () {});
+            }
+
+            if (delaySec <= 0) {
+                fire();
+                return;
+            }
+            // 시작이 미래인 경우 — 서버에 예약을 저장하지 않는 1회성 제어이므로 이 탭이
+            // 열려 있어야만 예정대로 켜진다. 조용히 실패하지 않도록 명시적으로 알린다.
+            if (!window.confirm(_tr('This will turn on at the chosen start time. Keep this browser tab open until then, or it will not run.'))) {
+                return;
+            }
+            if (window.showToast) {
+                window.showToast(_tr('Scheduled — keep this tab open until the start time.'), 'info');
+            }
+            setTimeout(fire, delaySec * 1000);
+        }
+
         function _openZonePopup(uid, zoneUuid, zoneName) {
             var st = _zonePopupState[uid] || {};
             if (st.popup) { try { st.popup.remove(); } catch (e) {} }
@@ -1059,7 +1319,10 @@
 
             popup.on('close', function () {
                 var z = _zonePopupState[uid];
-                if (z && z.popup === popup) { _zonePopupState[uid] = {}; }
+                if (z && z.popup === popup) {
+                    if (z.pollTimer) { clearInterval(z.pollTimer); }
+                    _zonePopupState[uid] = {};
+                }
             });
 
             fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) + '/contents')
@@ -1078,7 +1341,10 @@
 
                     // [센서·장치] 탭
                     var devPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="zdevices"]');
-                    if (devPane) _renderZoneDevices(uid, devPane, data, zoneUuid);
+                    if (devPane) {
+                        _renderZoneDevices(uid, devPane, data, zoneUuid);
+                        _startZoneOutputPolling(uid);
+                    }
 
                     // [함수] 탭
                     var fnPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="zfunctions"]');
@@ -2662,24 +2928,34 @@
                 if (facRes.ok) {
                     const facGeoJSON = await facRes.json();
                     if (facGeoJSON.features && facGeoJSON.features.length > 0) {
-                        addGeoJSONLayer(uniqueId, map, 'facilities', facGeoJSON, {
-                            type: 'fill',
-                            paint: { 'fill-color': C.facility, 'fill-opacity': 0.15 }
-                        }, 'facilities-fill');
-                        addGeoJSONLayer(uniqueId, map, 'facilities', facGeoJSON, {
-                            type: 'line',
-                            paint: { 'line-color': C.facility, 'line-width': 1.5 }
-                        }, 'facilities-line');
-                        addGeoJSONLayer(uniqueId, map, 'facilities', facGeoJSON, {
-                            type: 'fill-extrusion',
-                            layout: { visibility: 'none' },
-                            paint: {
-                                'fill-extrusion-color': C.facility,
-                                'fill-extrusion-height': ['coalesce', ['get', 'height_m'], 4],
-                                'fill-extrusion-base':   ['coalesce', ['get', 'base_m'], 0],
-                                'fill-extrusion-opacity': 0.55
-                            }
-                        }, 'facilities-3d');
+                        // Flat footprint + extrusion box: ONLY when the Facility shape
+                        // category is actually on. The 3D model / sensor labels / actuator
+                        // labels below are independent of this — they used to be nested
+                        // inside the same unconditional block, which meant "Facility"/
+                        // "Sensor Values" LABEL toggles had nothing to toggle whenever the
+                        // Facility SHAPE was off (its default). Called whenever facility
+                        // shape OR labels are wanted (see call site), so this branch alone
+                        // decides whether the mesh itself renders.
+                        if (_boolOpt('show_facility_shape')) {
+                            addGeoJSONLayer(uniqueId, map, 'facilities', facGeoJSON, {
+                                type: 'fill',
+                                paint: { 'fill-color': C.facility, 'fill-opacity': 0.15 }
+                            }, 'facilities-fill');
+                            addGeoJSONLayer(uniqueId, map, 'facilities', facGeoJSON, {
+                                type: 'line',
+                                paint: { 'line-color': C.facility, 'line-width': 1.5 }
+                            }, 'facilities-line');
+                            addGeoJSONLayer(uniqueId, map, 'facilities', facGeoJSON, {
+                                type: 'fill-extrusion',
+                                layout: { visibility: 'none' },
+                                paint: {
+                                    'fill-extrusion-color': C.facility,
+                                    'fill-extrusion-height': ['coalesce', ['get', 'height_m'], 4],
+                                    'fill-extrusion-base':   ['coalesce', ['get', 'base_m'], 0],
+                                    'fill-extrusion-opacity': 0.55
+                                }
+                            }, 'facilities-3d');
+                        }
 
                         // Attach Three.js greenhouse model overlay (replaces fill-extrusion box)
                         if (window.AoTFacilityMap3D && window.AoTFacility3D) {
@@ -2819,7 +3095,11 @@
         // facility/equipment/device/drawn require mapUuid
         if (!mapUuid) return;
 
-        if (_boolOpt('show_facility_shape')) { await _ensureFacilityShapeLayer(); }
+        // Facility/sensor/actuator LABELS live inside this same fetch (see the
+        // function body) — run it whenever labels are wanted too, not just the
+        // Facility shape, so those label toggles have something to toggle by
+        // default (show_labels defaults True, show_facility_shape defaults False).
+        if (_boolOpt('show_facility_shape') || _boolOpt('show_labels')) { await _ensureFacilityShapeLayer(); }
         if (_boolOpt('show_equipment_shape')) { await _ensureEquipmentShapeLayer(); }
         if (_boolOpt('show_device_shapes')) { await _ensureDeviceShapeLayer(); }
         if (_boolOpt('show_drawn_shapes')) { await _ensureDrawnShapeLayer(); }
@@ -3349,20 +3629,23 @@
         // Skip if no label type is enabled
         if (!showSiteLabel && !showZoneLabel && !showDeviceLabels) return;
 
-        // Build allowed device ID set (mirrors addDeviceMarkers) so device labels
-        // only render for devices the widget is configured to display.
-        const allowedDeviceIds = new Set();
+        // wOpts.device_ids is the Device Filter's EXCLUDE list (see
+        // utils_geo.collect_devices docstring: placing a device on the map IS
+        // showing it, so the filter hides the few rather than whitelisting the
+        // many). Geo-design labels come from a separate fetch than the device
+        // markers, so the exclusion has to be re-applied here too.
+        const excludedDeviceIds = new Set();
         const _fetchIdsLbl = wOpts.map_device_ids || wOpts.device_ids;
-        if (_fetchIdsLbl && wOpts.include_all_devices !== true) {
+        if (_fetchIdsLbl) {
             String(_fetchIdsLbl).split(',').forEach(function(id) {
                 const t = id.trim();
                 if (t) {
-                    allowedDeviceIds.add(t);
-                    if (t.includes('::')) allowedDeviceIds.add(t.split('::')[0]);
+                    excludedDeviceIds.add(t);
+                    if (t.includes('::')) excludedDeviceIds.add(t.split('::')[0]);
                 }
             });
         }
-        const isStrictDeviceLabelFilter = (allowedDeviceIds.size > 0 && wOpts.include_all_devices !== true);
+        const isStrictDeviceLabelFilter = excludedDeviceIds.size > 0;
 
         // Theme colors from geo/design panel settings (mirrors shape fill color logic above)
         const labelTheme = wOpts.theme_config || (vars && vars.theme) || {};
@@ -3406,11 +3689,11 @@
                 if (pType === 'zone' && !showZoneLabel) return;
                 if (pType === 'aot_device' && !showDeviceLabels) return;
 
-                // Strict device-label filtering: hide labels for devices not in selection
+                // Device Filter: hide the label for a device the user explicitly excluded.
                 if (pType === 'aot_device' && isStrictDeviceLabelFilter) {
                     const _devLabelId = String(props.device_id || props.parent_id || props.db_id || '');
                     const _devLabelBase = _devLabelId.split('::')[0];
-                    if (!allowedDeviceIds.has(_devLabelId) && !allowedDeviceIds.has(_devLabelBase)) return;
+                    if (excludedDeviceIds.has(_devLabelId) || excludedDeviceIds.has(_devLabelBase)) return;
                 }
 
                 const color  = COLOR_MAP[pType] || '#666';
@@ -3464,10 +3747,47 @@
 
                 el.style.zIndex = String(zIndex);
 
+                // Without label collision (enable_label_collision off, or this label
+                // is still mid-cluster), overlapping labels just stack in ZINDEX_MAP
+                // order — a label buried under others of the same/higher category is
+                // permanently unreadable. Bring the hovered/tapped label fully to
+                // front (temporarily) so any label in the stack can be singled out.
+                // A hover-only revert (mouseleave -> restore) snaps a clicked label
+                // straight back once the pointer leaves it to interact with the
+                // popup/modal that click opened, so a click instead PINS it: it stays
+                // in front until whatever it opened closes (or a different label is
+                // clicked/pinned). instance._pinLabelToFront/_unpinLabel are shared
+                // across every label so only one is ever pinned at a time.
+                if (!instance._pinLabelToFront) {
+                    instance._pinnedLabel = null; // { el, restore }
+                    instance._pinLabelToFront = function (pinEl, restoreFn) {
+                        if (instance._pinnedLabel && instance._pinnedLabel.el !== pinEl) {
+                            instance._pinnedLabel.restore();
+                        }
+                        pinEl.style.zIndex = '9000';
+                        instance._pinnedLabel = { el: pinEl, restore: restoreFn };
+                    };
+                    instance._unpinLabel = function (pinEl) {
+                        if (instance._pinnedLabel && instance._pinnedLabel.el === pinEl) {
+                            instance._pinnedLabel.restore();
+                            instance._pinnedLabel = null;
+                        }
+                    };
+                }
+                var _baseZ = zIndex;
+                var _restoreZ = function () { el.style.zIndex = String(_baseZ); };
+                el.addEventListener('mouseenter', function () { el.style.zIndex = '9000'; });
+                el.addEventListener('mouseleave', function () {
+                    // Don't un-front a pinned (clicked, popup/modal still open) label
+                    // just because the pointer moved off it to reach that popup.
+                    if (!instance._pinnedLabel || instance._pinnedLabel.el !== el) { _restoreZ(); }
+                });
+
                 // Click → popup (v3 port: name + Open Notes button + last note preview)
                 (function(lngLat, popupName, popupArea, tId, tType, nodeId) {
                     el.addEventListener('click', function(e) {
                         e.stopPropagation();
+                        instance._pinLabelToFront(el, _restoreZ);
                         // zone label → zone modal (if callback registered)
                         if (tType === 'zone' && instance._onZoneLabelClick) {
                             instance._onZoneLabelClick(nodeId, popupName);
@@ -3490,6 +3810,7 @@
                             .setLngLat(lngLat)
                             .setHTML(html)
                             .addTo(map);
+                        instance._labelPopup.on('close', function () { instance._unpinLabel(el); });
                         // Fetch last note
                         setTimeout(function() {
                             fetch('/notes/target/' + tId)
@@ -4310,6 +4631,12 @@
             if (!h) return;
             widgetWrap.classList.toggle('aot-map-h-sm', h < 380);
             widgetWrap.classList.toggle('aot-map-h-xs', h < 260);
+            // Width classes gate the compact LEGEND. Viewport media queries were
+            // wrong here: a widget is not the window — a narrow widget on a wide
+            // desktop got the roomy legend, and a full-width widget on a phone
+            // got the cramped one. Measure the widget itself.
+            const w = widgetWrap.clientWidth;
+            widgetWrap.classList.toggle('aot-map-w-sm', w > 0 && w < 420);
             try { map.resize(); } catch (e) {}
         }
         const ro = new ResizeObserver(function() {
@@ -4573,24 +4900,51 @@
         const _catLsPrefix = 'aot_map_cat_' + _catWidgetId + '_';
         const _catHidden = {}; // cat -> true if hidden
 
+        // Same key loadGeoJSONLayers' _boolOpt('show_X_shape') gates layer
+        // CREATION on (init-time and on-demand via _ensureShapeLayer). This
+        // panel used to read/write a separate 'cat_hidden_<cat>' key — visually
+        // toggling on-demand-created layers just fine in the moment, but on the
+        // next full page load _boolOpt('show_X_shape') was still whatever the
+        // Settings modal last saved (default False for all 6 categories), so
+        // the layer was never even created and the toggle looked reverted.
+        // 'device' maps to 'show_device_shapes' (plural) — matches the actual
+        // AoT_map.py option id, not a naming mistake.
+        const _CAT_SHOW_KEY = {
+            land: 'show_site_shape', zone: 'show_zone_shape', facility: 'show_facility_shape',
+            equipment: 'show_equipment_shape', device: 'show_device_shapes', drawn: 'show_drawn_shapes'
+        };
+
         function _catReadSaved(cat) {
-            // Server-side value (innerVars) wins; fall back to localStorage.
-            var key = 'cat_hidden_' + cat;
-            var sv = innerVars[key];
-            if (sv === true || sv === 'true') return true;
-            if (sv === false || sv === 'false') return false;
+            var showKey = _CAT_SHOW_KEY[cat];
+            if (showKey) {
+                var sv = innerVars[showKey];
+                if (sv === true || sv === 'true') return false;  // shown -> not hidden
+                if (sv === false || sv === 'false') return true; // not shown -> hidden
+            }
+            // Legacy fallback for widgets saved before this key unification.
+            var legacy = innerVars['cat_hidden_' + cat];
+            if (legacy === true || legacy === 'true') return true;
+            if (legacy === false || legacy === 'false') return false;
             try {
                 var lv = localStorage.getItem(_catLsPrefix + cat);
                 return lv === 'true';
             } catch (e) { return false; }
         }
         function _catSave(cat, hidden) {
-            var patch = {}; patch['cat_hidden_' + cat] = hidden;
-            fetch('/save_widget_custom_options', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ widget_id: _catWidgetId, options: patch })
-            }).catch(function (e) { });
+            var showKey = _CAT_SHOW_KEY[cat];
+            if (showKey) {
+                // Update the in-memory options FIRST so a same-tick on-demand
+                // layer creation (_applyShapeVisible -> _ensureShapeLayer,
+                // which re-checks _boolOpt(showKey)) sees the fresh value
+                // instead of racing its own persisted change.
+                innerVars[showKey] = !hidden;
+                var patch = {}; patch[showKey] = !hidden;
+                fetch('/save_widget_custom_options', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widget_id: _catWidgetId, options: patch })
+                }).catch(function (e) { });
+            }
             try { localStorage.setItem(_catLsPrefix + cat, hidden ? 'true' : 'false'); } catch (e) { }
         }
 
@@ -4686,9 +5040,110 @@
         }
 
         // ---- Unified right toolbar ----
+        // ---- Copyright button + credit panel — ALWAYS its own standalone
+        // group, entirely independent of the functional rail below. ----
+        // The credit is a licence requirement, not a "control": hideControls
+        // (_rightHidden, from the widget's saved option) AND the in-canvas
+        // Hide-Button toggle (btnHide, live — see _wire(btnHide,...) above)
+        // both only ever touch the FUNCTIONAL rail (#map-tools-right-*), never
+        // this element. Earlier this button lived inside that rail when shown
+        // and in a separate standalone element when hidden, decided once at
+        // build time — but btnHide flips the rail's `display` live, on the
+        // SAME already-built DOM, without knowing which case had been chosen.
+        // Toggling controls back on then revealed a SECOND, empty rail sitting
+        // exactly on top of the standalone button — a visible duplicate.
+        // A single element that neither flag ever reaches cannot double up.
+        const attribHost = document.createElement('div');
+        attribHost.id = 'map-attrib-' + uniqueId;
+        attribHost.style.cssText = 'position:absolute; top:10px; right:10px; z-index:20;';
+        mapContainer.appendChild(attribHost);
+        const attribGroup = document.createElement('div');
+        attribGroup.className = 'tool-group aot-map-attrib-group';
+        attribHost.appendChild(attribGroup);
+
+        const attribWrap = document.createElement('div');
+        attribWrap.style.cssText = 'position:relative;';
+        attribGroup.appendChild(attribWrap);
+
+        const attribBtn = document.createElement('a');
+        attribBtn.href = '#';
+        attribBtn.className = 'btn btn-white';
+        attribBtn.setAttribute('role', 'button');
+        const _attribTitle = (typeof window._ === 'function') ? window._('Copyright') : 'Copyright';
+        if (window.AoTSetTitle) window.AoTSetTitle(attribBtn, _attribTitle); else attribBtn.title = _attribTitle;
+        const attribIcon = document.createElement('i');
+        attribIcon.className = 'fas fa-info-circle';
+        attribBtn.appendChild(attribIcon);
+        attribWrap.appendChild(attribBtn);
+
+        // Panel hangs off the host, not the group: .tool-group clips overflow.
+        // Its default CSS (top:0; right:40px) is written relative to a
+        // position:absolute host at the top-right corner — true of both the
+        // toolbar and the standalone host above, so no separate class needed.
+        const attribPanel = document.createElement('div');
+        attribPanel.className = 'aot-map-attrib-panel';
+        attribPanel.style.display = 'none';
+        attribHost.appendChild(attribPanel);
+
+        function _attribHtml() {
+            // MapLibre's own control stays in the DOM (hidden) and remains the
+            // source of truth — it tracks which sources are actually rendered.
+            const inner = mapContainer.querySelector('.maplibregl-ctrl-attrib-inner');
+            return inner ? inner.innerHTML.trim() : '';
+        }
+        function _showAttrib() {
+            const html = _attribHtml();
+            if (!html) return;
+            attribPanel.innerHTML = html;
+            attribPanel.style.display = 'block';
+            // While the credit itself is showing, the button loses the
+            // dimmed/boxless idle treatment (.aot-map-attrib-group CSS) — that
+            // treatment is specifically for reducing how much the button draws
+            // the eye while collapsed, not for while the credit is already open.
+            attribGroup.classList.add('is-open');
+        }
+        function _hideAttrib() {
+            attribPanel.style.display = 'none';
+            attribGroup.classList.remove('is-open');
+        }
+
+        attribBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (attribPanel.style.display === 'none') _showAttrib(); else _hideAttrib();
+        });
+        // Dismiss only when the user actually MOVES the map. Two things this is
+        // deliberately not listening to:
+        //   - `click`/`mousedown`: tapping a marker or a zone is not "done
+        //     reading the credit", and dismissing there made the notice vanish
+        //     the instant anyone touched the map.
+        //   - `movestart`/`zoomstart`: they also fire for init-time
+        //     flyTo/fitBounds and — measured — carry no `originalEvent` even for
+        //     genuine gestures, so they can't tell a user apart from the code.
+        // What is left only ever comes from a real manipulation.
+        ['wheel', 'dragstart', 'touchmove', 'boxzoomstart'].forEach(function (ev) {
+            try { map.on(ev, _hideAttrib); } catch (e) {}
+        });
+        try {
+            map.once('idle', _showAttrib);
+            const _inner = mapContainer.querySelector('.maplibregl-ctrl-attrib-inner');
+            if (_inner && typeof MutationObserver !== 'undefined') {
+                let _lastCredit = '';
+                new MutationObserver(function () {
+                    const t = _attribHtml();
+                    if (t && t !== _lastCredit) { _lastCredit = t; _showAttrib(); }
+                }).observe(_inner, { childList: true, subtree: true, characterData: true });
+            }
+        } catch (e) {}
+
+        // ---- Unified right toolbar (Layers / Measure / Note / Hide-button /
+        // ...). Independent of the copyright button above — see its comment. ----
         const toolbar = document.createElement('div');
         toolbar.id = 'map-tools-right-' + uniqueId;
-        toolbar.style.cssText = 'position:absolute; top:10px; right:10px; z-index:20; display:flex; flex-direction:column; align-items:center; gap:5px;';
+        // Starts below the always-present copyright button (29px button +
+        // 10px top gap + 8px breathing room ≈ 47px) so the two never overlap
+        // regardless of which one hideControls/btnHide is currently hiding.
+        toolbar.style.cssText = 'position:absolute; top:47px; right:10px; z-index:20; display:flex; flex-direction:column; align-items:center; gap:5px;';
         mapContainer.appendChild(toolbar);
         const _rightHidden = !!(vars && vars.hideControls);
         if (_rightHidden) toolbar.style.display = 'none';
@@ -5347,8 +5802,11 @@
                 input.type = 'checkbox';
                 input.checked = !_catHidden[d.cat];
                 input.addEventListener('change', function () {
-                    _applyShapeVisible(d.cat, input.checked);
+                    // _catSave first: it updates innerVars[show_X_shape] synchronously,
+                    // so _applyShapeVisible's on-demand layer creation (when turning a
+                    // never-created category on) reads the fresh value, not the stale one.
                     _catSave(d.cat, !input.checked);
+                    _applyShapeVisible(d.cat, input.checked);
                 });
                 row.appendChild(input);
                 const span = document.createElement('span');
@@ -5519,6 +5977,61 @@
                 _setOverlayVisible(l, true);
             }
         });
+
+        // Expose overlay/base setters so the settings modal can live-apply the
+        // active_layers / selected_base_layer options — same primitives the layer
+        // panel checkboxes above already drive (_setOverlayVisible /
+        // _activateRasterBase / _deactivateRasterBase / _rehydrateFromCache), just
+        // parameterized instead of reading a clicked checkbox. No network call here
+        // (the caller already persisted the option); this only updates the running map.
+        try {
+            var _ovInst = window.AoTWidgetInstances[uniqueId];
+            if (_ovInst) {
+                _ovInst._setActiveOverlayNames = function (names) {
+                    var want = (names || []).map(function (s) { return String(s).trim(); }).filter(Boolean);
+                    geoLayers.forEach(function (l) {
+                        if (l.role === 'base' || l.is_base) { return; }
+                        var shouldShow = want.indexOf(l.name) !== -1;
+                        var wasShown = activeOverlays.indexOf(l.name) !== -1;
+                        if (shouldShow === wasShown) { return; }
+                        if (shouldShow) {
+                            activeOverlays.push(l.name);
+                            if (!_dataOnly) { _setOverlayVisible(l, true); }
+                        } else {
+                            activeOverlays = activeOverlays.filter(function (n) { return n !== l.name; });
+                            if (!_dataOnly) { _setOverlayVisible(l, false); }
+                        }
+                    });
+                    var _lpInst = window.AoTWidgetInstances[uniqueId];
+                    if (_lpInst && typeof _lpInst.refreshLegend === 'function') { _lpInst.refreshLegend(activeOverlays); }
+                };
+                _ovInst._switchBaseLayer = function (name) {
+                    var l = geoLayers.find(function (x) { return (x.role === 'base' || x.is_base) && x.name === name; });
+                    if (!l || name === activeBase) { return; }
+                    activeBase = name;
+                    _deactivateRasterBase();
+                    if ((l.type || 'xyz') === 'vector' && l.url) {
+                        try { map.setStyle(l.url, { diff: false }); } catch (e) {}
+                        // setStyle({diff:false}) destroys all custom sources/layers — re-add after style loads
+                        // (mirrors the layer-panel base-radio handler above).
+                        map.once('style.load', function () {
+                            var inst = window.AoTWidgetInstances[uniqueId];
+                            if (inst) { inst.sources.clear(); inst.layers.clear(); }
+                            map._aotBaseStyleIds = ((map.getStyle() || {}).layers || []).map(function (ly) { return ly.id; });
+                            _rehydrateFromCache();
+                            if (!_dataOnly) {
+                                geoLayers.forEach(function (gl) {
+                                    var isBase = gl.role === 'base' || gl.is_base;
+                                    if (!isBase && activeOverlays.indexOf(gl.name) !== -1) { _setOverlayVisible(gl, true); }
+                                });
+                            }
+                        });
+                    } else {
+                        _activateRasterBase(l);
+                    }
+                };
+            }
+        } catch (e) {}
 
         // Refresh a single overlay layer on demand.
         // {ts} layers (e.g. RainViewer): clears the cached API timestamp and rebuilds the
@@ -5859,7 +6372,15 @@
         const handle = instance.measurementPanel;
         const panel = handle && handle.panel;
         const h = (panel && panel.offsetParent !== null) ? panel.offsetHeight : 0;
-        container.style.setProperty('--aot-dock-h', h + 'px');
+
+        // The dock lives inside map.getContainer() (.maplibregl-map) but the
+        // legend is appended to its PARENT (.aot-map-container). CSS custom
+        // properties only inherit downward, so setting --aot-dock-h on the inner
+        // element never reached the legend — it resolved to the 0px fallback and
+        // the legend sat ON TOP of the dock. Set it on the nearest common
+        // ancestor so dock, legend and the bottom-left corner all agree.
+        const varHost = container.closest('.aot-map-container') || container;
+        varHost.style.setProperty('--aot-dock-h', h + 'px');
 
         // The measurement dock sits bottom-CENTER, but the copyright/scale controls
         // sit bottom-LEFT. Lifting the copyright by the full dock height whenever the
@@ -5876,7 +6397,7 @@
                 if (blRect.right + GAP <= pRect.left) leftLift = 0;
             }
         }
-        container.style.setProperty('--aot-dock-h-left', leftLift + 'px');
+        varHost.style.setProperty('--aot-dock-h-left', leftLift + 'px');
 
         // Dock visibility decides legend chip-vs-expanded mode — keep in sync
         if (typeof instance._syncLegendMode === 'function') instance._syncLegendMode();
@@ -5975,6 +6496,17 @@
                 if (document.hidden) return;
                 refreshMeasurementPanelValues(uniqueId);
             }, refreshMs);
+
+            // Expose a live setter for input_update_interval (settings-modal live-apply):
+            // restart the same polling loop above with the new period, no panel rebuild.
+            instance._setPanelRefreshInterval = function (seconds) {
+                var ms = Math.max(10, parseFloat(seconds) || 60) * 1000;
+                if (instance.panelRefreshTimer) clearInterval(instance.panelRefreshTimer);
+                instance.panelRefreshTimer = setInterval(function () {
+                    if (document.hidden) return;
+                    refreshMeasurementPanelValues(uniqueId);
+                }, ms);
+            };
         }
     }
 
@@ -6308,19 +6840,11 @@
         const _rawSpacingD     = parseInt(wOpts.label_spacing);
         const labelSpacing     = (!isNaN(_rawSpacingD) && wOpts.label_spacing !== '' && wOpts.label_spacing !== null && wOpts.label_spacing !== undefined) ? _rawSpacingD : 0;
 
-        // Build allowed ID set for strict filtering (mirrors v3 renderDevices)
-        const allowedIds = new Set();
-        const fetchIds = wOpts.map_device_ids || wOpts.device_ids;
-        if (fetchIds && wOpts.include_all_devices !== true) {
-            String(fetchIds).split(',').forEach(function(id) {
-                const t = id.trim();
-                if (t) {
-                    allowedIds.add(t);
-                    if (t.includes('::')) allowedIds.add(t.split('::')[0]);
-                }
-            });
-        }
-        const isStrictFiltering = (allowedIds.size > 0 && wOpts.include_all_devices !== true);
+        // No client-side re-filtering here: `devices` was already fetched from
+        // /api/geo/devices, which applies the Device Filter's EXCLUDE list
+        // server-side (utils_geo.collect_devices). Re-checking wOpts.device_ids
+        // against it here would treat an exclude list as an include whitelist
+        // and hide almost everything.
 
         // Clear existing device markers and cluster badges before re-rendering
         instance.markers.forEach(function(m) { m.remove(); });
@@ -6364,13 +6888,6 @@
             const devLat = dev.lat || dev.latitude;
             const devLng = dev.lng || dev.longitude;
             if (!devLat || !devLng) return;
-
-            // Strict device filtering
-            if (isStrictFiltering) {
-                const devId = String(dev.id || dev.unique_id || '');
-                const baseId = devId.split('::')[0];
-                if (!allowedIds.has(devId) && !allowedIds.has(baseId)) return;
-            }
 
             // [3-way Actuator] Initial render: always off-style. Motion (detected from
             // position changes between polls or commandActuator calls) flips it to ON.
@@ -6455,10 +6972,43 @@
                     .setLngLat([parseFloat(devLng), parseFloat(devLat)])
                     .addTo(map);
 
+                // Same "bring the hovered/tapped label to front" treatment as
+                // .geo-label-marker (loadGeoDesignLabels) — without label collision
+                // on, overlapping device pills otherwise stack in arbitrary DOM
+                // order with no way to single one out. A click PINS the pill in
+                // front for as long as its popup stays open (see _pinLabelToFront
+                // there for why hover-only revert isn't enough), instead of just
+                // reverting the instant the pointer leaves for the popup.
+                if (!instance._pinLabelToFront) {
+                    instance._pinnedLabel = null; // { el, restore }
+                    instance._pinLabelToFront = function (pinEl, restoreFn) {
+                        if (instance._pinnedLabel && instance._pinnedLabel.el !== pinEl) {
+                            instance._pinnedLabel.restore();
+                        }
+                        pinEl.style.zIndex = '9000';
+                        instance._pinnedLabel = { el: pinEl, restore: restoreFn };
+                    };
+                    instance._unpinLabel = function (pinEl) {
+                        if (instance._pinnedLabel && instance._pinnedLabel.el === pinEl) {
+                            instance._pinnedLabel.restore();
+                            instance._pinnedLabel = null;
+                        }
+                    };
+                }
+                el.addEventListener('mouseenter', function () { el.style.zIndex = '9000'; });
+                el.addEventListener('mouseleave', function () {
+                    if (!instance._pinnedLabel || instance._pinnedLabel.el !== el) { el.style.zIndex = ''; }
+                });
+                popup.on('close', function () { instance._unpinLabel(el); });
+
                 el.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    if (popup.isOpen()) { popup.remove(); }
-                    else { popup.setLngLat([parseFloat(devLng), parseFloat(devLat)]).addTo(map); }
+                    if (popup.isOpen()) {
+                        popup.remove(); // fires 'close' above -> unpins
+                    } else {
+                        instance._pinLabelToFront(el, function () { el.style.zIndex = ''; });
+                        popup.setLngLat([parseFloat(devLng), parseFloat(devLat)]).addTo(map);
+                    }
                 });
 
                 instance.markers.set(dev.unique_id || dev.id, marker);

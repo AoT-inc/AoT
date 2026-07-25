@@ -107,7 +107,19 @@ class InputModule(AbstractGisInput):
     def get_leaflet_options(self):
         options = super().get_leaflet_options()
         options.update({
+            # maxZoom: how far the user may zoom the VIEW in.
+            # maxNativeZoom: the real tile ceiling — beyond this the last tile is
+            # upscaled instead of fetched again. These used to collapse into one
+            # value here (only maxZoom was set), and the vector widget's source
+            # builder falls back to maxZoom for the native cap when
+            # maxNativeZoom is absent — so this map fetched genuine z19 tiles.
+            # OpenWeather's own tile-zoom FAQ table only documents z0–9
+            # (https://openweathermap.org/faq, "What X, Y tile coordinate
+            # numbers are possible..."); z19 is 2^10 = 1024x more tile requests
+            # per screen than z9, which is what made overlay-enabled maps 5–10s
+            # slower to finish loading.
             'maxZoom': 19,
+            'maxNativeZoom': 9,
             'opacity': 1.0
         })
         return options

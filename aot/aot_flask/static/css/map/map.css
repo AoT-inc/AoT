@@ -987,73 +987,73 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   font-weight: 500;
 }
 
-/* [New] Mobile: Compact layout — title + value only, no bar/labels */
-@media (max-width: 768px) {
-  .aot-legend-container {
-    min-height: auto !important;
-    min-width: auto !important;
-    padding: 5px 8px !important;
-    max-width: 140px !important;
-    /* panel bottom(32) + mobile panel height(60) + gap(8) = 100px */
-    bottom: 100px !important;
-    margin-bottom: 0 !important;
-  }
-
-  /* Hide bar and min/max labels only — keep .aot-legend-content visible so title shows */
-  .aot-legend-bar,
-  .aot-legend-labels {
-    display: none !important;
-  }
-
-  /* Compact wrapper row: reduce min-height, tighten gap */
-  .aot-legend-wrapper {
-    min-height: 28px !important;
-    gap: 6px !important;
-  }
-
-  /* .aot-legend-content stays visible but takes minimal space */
-  .aot-legend-content {
-    flex: 1 !important;
-    min-width: 0;
-  }
-
-  /* Title: small but legible, truncate if too long */
-  .aot-legend-title {
-    display: block !important;
-    font-size: 9px !important;
-    font-weight: 600 !important;
-    margin-bottom: 0 !important;
-    letter-spacing: 0 !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 80px;
-  }
-
-  .aot-legend-item-wrapper:not(:first-child) {
-    padding-top: 5px;
-    margin-top: 5px;
-  }
-
-  /* Value box: inline (value + unit side by side), no left border */
-  .aot-legend-value-box {
-    border-left: none !important;
-    padding-left: 0 !important;
-    min-width: auto !important;
-    flex-direction: row !important;
-    align-items: baseline !important;
-    gap: 2px;
-  }
-
-  .aot-legend-value-text {
-    font-size: 13px !important;
-  }
-
-  .aot-legend-value-unit {
-    font-size: 8px !important;
-    margin-top: 0 !important;
-  }
+/* Compact legend — gated on the WIDGET's width (.aot-map-w-sm, set by
+   setupCompactMode), not the viewport. A narrow widget on a wide desktop
+   needs this just as much as a phone, and a full-width widget on a phone
+   does not. */
+.aot-map-w-sm .aot-legend-container {
+  min-height: auto !important;
+  min-width: auto !important;
+  padding: 5px 8px !important;
+  max-width: 140px !important;
+  margin-bottom: 0 !important;
 }
+
+/* Hide bar and min/max labels only — keep .aot-legend-content visible so title shows */
+.aot-map-w-sm .aot-legend-bar,
+.aot-map-w-sm .aot-legend-labels {
+  display: none !important;
+}
+
+/* Compact wrapper row: reduce min-height, tighten gap */
+.aot-map-w-sm .aot-legend-wrapper {
+  min-height: 28px !important;
+  gap: 6px !important;
+}
+
+/* .aot-legend-content stays visible but takes minimal space */
+.aot-map-w-sm .aot-legend-content {
+  flex: 1 !important;
+  min-width: 0;
+}
+
+/* Title: small but legible, truncate if too long */
+.aot-map-w-sm .aot-legend-title {
+  display: block !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  margin-bottom: 0 !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+
+.aot-map-w-sm .aot-legend-item-wrapper:not(:first-child) {
+  padding-top: 5px;
+  margin-top: 5px;
+}
+
+/* Value box: inline (value + unit side by side), no left border */
+.aot-map-w-sm .aot-legend-value-box {
+  border-left: none !important;
+  padding-left: 0 !important;
+  min-width: auto !important;
+  flex-direction: row !important;
+  align-items: baseline !important;
+  gap: 2px;
+}
+
+.aot-map-w-sm .aot-legend-value-text {
+  font-size: 13px !important;
+}
+
+.aot-map-w-sm .aot-legend-value-unit {
+  font-size: 8px !important;
+  margin-top: 0 !important;
+}
+
 
 /* ==========================================================================
    Widget & Label Styles (Consolidated from AoT_map.py)
@@ -1206,7 +1206,8 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 /* Measurement Panel (Bottom Center) */
 .aot-measurement-panel {
     position: absolute;
-    bottom: 32px !important; /* [Fix] 32px for desktop to avoid attribution */
+    /* bottom is set per-mode below (.aot-meas-dock); the vector widget always
+       adds .aot-meas-dock, so this base rule never renders standalone. */
     left: 50% !important; /* Default: Centered */
     right: auto !important;
     margin: 0; /* Reset margin - transform handles centering */
@@ -1551,10 +1552,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .aot-meas-dock.aot-dock-collapsed .aot-meas-body-row {
     display: none !important;
 }
-.aot-meas-dock.aot-dock-collapsed .aot-dock-collapse-btn {
-    top: 50%;
-    transform: translateY(-50%);
-}
 
 /* Dock height var consumers — all default to 0px so pages without the dock
    (Leaflet v3, geo design) are unaffected. --aot-dock-h is set by the vector
@@ -1566,16 +1563,112 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
        copyright stays pinned to the bottom instead of floating in empty space. */
     bottom: var(--aot-dock-h-left, var(--aot-dock-h, 0px));
     transition: bottom 0.2s ease;
+    /* Match dock/legend layer (see hierarchy comment at top of file) so
+       attribution is never hidden beneath them by an unrelated stacking context. */
+    z-index: 10;
 }
+/* The native bottom-left credit box is always replaced by our own styled ⓘ
+   button + panel (addLayerPanel) — in the tool rail normally, or standalone in
+   its own corner when hideControls hides the rest of the rail. Hiding it here
+   unconditionally is only safe BECAUSE that panel always gets built either
+   way; the native control stays in the DOM as the source of the credit text
+   (addLayerPanel reads its innerHTML), just never rendered directly. */
+.aot-map-container .maplibregl-ctrl-attrib {
+    display: none;
+}
+/* Emergency escape hatch: addLayerPanel adds this to the map container if its
+   own panel was never built (e.g. threw before reaching that point) — a map
+   must never end up with no attribution at all. */
+.aot-attrib-native-fallback .maplibregl-ctrl-attrib {
+    display: block !important;
+}
+
+/* Credit panel — opens to the left of the tool rail so it never covers it. */
+.aot-map-attrib-panel {
+    position: absolute;
+    top: 0;
+    right: 40px;
+    /* max-content, not shrink-to-fit: an absolutely positioned box whose only
+       child is an <img max-width:100%> collapses (circular width dependency),
+       which squeezed the VWorld logo to ~half its width. */
+    width: max-content;
+    max-width: min(260px, calc(100vw - 80px));
+    box-sizing: border-box;
+    background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.95));
+    border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.08));
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--aot-color-text-primary, #333);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 30;
+}
+.aot-map-attrib-panel a { color: inherit; text-decoration: underline; }
+/* Some providers credit with a logo rather than text (VWorld, OpenWeather).
+   Providers pin the logo with an INLINE height (VWorld: height:28px), which
+   beats a plain `height:auto` here — combined with max-width that scaled the
+   two axes independently and squashed the mark. Release both axes and cap with
+   max-* instead, so the logo always scales uniformly. */
+.aot-map-attrib-panel img {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100%;
+    max-height: 28px;
+    vertical-align: middle;
+}
+
+/* Copyright icon is a permanent fixture (unlike Layers/Measure/etc, it can't
+   be hidden), so it reads as more attention-grabbing than a normal tool
+   button when idle. Drop the opaque tool-group box + dim it while collapsed;
+   hovering restores the normal tool-group look before the click registers. */
+.aot-map-attrib-group {
+    background: transparent !important;
+    box-shadow: none !important;
+    opacity: 0.5;
+    transition: opacity 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.aot-map-attrib-group:hover,
+.aot-map-attrib-group.is-open {
+    background: var(--panel-bg-rgba, #fff) !important;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.1) !important;
+    opacity: 1;
+}
+
+/* Scale: horizontal rule + number only — the vendor's filled, 3-sided box read
+   as another widget competing for attention. */
+.aot-map-container .maplibregl-ctrl-scale {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--aot-color-text-primary, #333);
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--aot-color-text-primary, #333);
+    padding: 0 2px;
+    font-size: 10px;
+    line-height: 1.4;
+    /* No fill behind it any more — halo keeps it legible over dark imagery. */
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+/* Legend anchoring. On a roomy widget the dock is a centered tab, so the legend
+   owns the bottom-right corner outright and should not be shoved around by the
+   dock's height. Only when the widget is narrow (dock spans the full width)
+   does it ride above the dock. Overlapping the tool rail is acceptable. */
 .aot-legend-container.aot-vector-legend {
+    bottom: 10px !important;
+    max-height: calc(100% - 20px) !important;
+}
+.aot-map-w-sm .aot-legend-container.aot-vector-legend {
     bottom: calc(var(--aot-dock-h, 0px) + 8px) !important;
+    max-height: calc(100% - var(--aot-dock-h, 0px) - 56px) !important;
 }
 
 /* Legend chip — collapsed legend state (vector widget only) */
 .aot-legend-chip {
     position: absolute;
     right: 10px;
-    bottom: calc(var(--aot-dock-h, 0px) + 8px);
+    bottom: 10px;
     background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
     border: 1px solid var(--panel-border, rgba(0,0,0,0.05));
     border-radius: 16px;
@@ -1595,23 +1688,20 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     transition: bottom 0.2s ease;
 }
 .aot-legend-chip i { font-size: 10px; opacity: 0.6; }
+.aot-map-w-sm .aot-legend-chip {
+    bottom: calc(var(--aot-dock-h, 0px) + 8px);
+}
 
 /* [New] Left-Alignment Class for Side-by-Side (Legend) */
 .aot-measurement-panel.left-aligned {
     left: 10px !important;
     transform: none !important;
 }
-/* Mobile Override for panel */
+/* Mobile dock height is handled by the em-based rule above
+   (.aot-meas-dock:not(.has-summary):not(.aot-dock-collapsed), line ~1519);
+   the vector widget always applies .aot-meas-dock, which outranks a bare
+   .aot-measurement-panel selector, so no override is needed here. */
 @media (max-width: 768px) {
-    .aot-measurement-panel {
-        bottom: 32px !important; /* Match desktop 32px */
-        left: 50% !important; /* Mobile Default: Centered */
-        transform: translateX(-50%) !important;
-        right: auto !important;
-        width: auto;
-        max-width: calc(100% - 20px); /* Allow JS or default override */
-        height: 60px !important; /* [New] Reduced mobile height */
-    }
     .aot-measurement-panel.left-aligned {
         left: 10px !important;
         transform: none !important;
@@ -2156,7 +2246,7 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 }
 
 /* xs: slim measurement dock to preserve map area (overrides inline font sizes) */
-.aot-map-h-xs .aot-measurement-panel:not(.has-summary):not(.aot-dock-collapsed) {
+.aot-map-h-xs .aot-measurement-panel.aot-meas-dock:not(.has-summary):not(.aot-dock-collapsed) {
     height: 56px !important;
 }
 .aot-map-h-xs .aot-meas-value {

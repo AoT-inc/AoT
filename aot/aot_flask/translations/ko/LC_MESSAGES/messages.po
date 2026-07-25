@@ -7324,6 +7324,11 @@ msgstr "기본 지도"
 msgid "Overlay"
 msgstr "오버레이"
 
+#: aot_flask/static/js/dist/aot-map-widget.bundle.js:2
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5072
+msgid "Copyright"
+msgstr "저작권"
+
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5955
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:6093
@@ -24513,3 +24518,11 @@ msgstr "표시할 함수를 선택하세요. 비워두면 배치된 함수가 �
 #: widgets/AoT_map.py:834
 msgid "Label Style"
 msgstr "라벨 스타일"
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Hide preview"
+msgstr "미리보기 가리기"
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Show preview"
+msgstr "미리보기 보기"

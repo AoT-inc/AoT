@@ -122,7 +122,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- [GIS Vector Migration] MapLibre Compatibility Layer:
        callInitHooks 패치는 aot-maplibre-patches.js 로 이전됨(멱등 apply). -->
 
-  <link href="/static/css/map/map.css?v=20260702b" rel="stylesheet">
+  <link href="/static/css/map/map.css?v=20260725j" rel="stylesheet">
   {% endif %}{# needs_map #}
 
   <!-- AoT timezone display utility (single source of truth for UTC → device/viewer TZ) -->
@@ -446,7 +446,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260725f" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260725l" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
   <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260722a" rel="stylesheet">

@@ -7208,6 +7208,11 @@ msgstr ""
 msgid "Overlay"
 msgstr ""
 
+#: aot_flask/static/js/dist/aot-map-widget.bundle.js:2
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5072
+msgid "Copyright"
+msgstr ""
+
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5955
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:6093
@@ -23891,4 +23896,12 @@ msgstr ""
 
 #: widgets/AoT_map.py:834
 msgid "Label Style"
+msgstr ""
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Hide preview"
+msgstr ""
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Show preview"
 msgstr ""

@@ -284,7 +284,7 @@ WIDGET_HEAD_HTML = """
      If maplibregl is missing the widget init will log a clear error. -->
 
 <!-- Map tool styles (.map-tools-left/right, .tool-group, .btn-circle) — same as /geo/design -->
-<link rel="stylesheet" href="/static/css/map/map.css?v=20260708d" />
+<link rel="stylesheet" href="/static/css/map/map.css?v=20260725j" />
 
 <!-- 위젯 핵심 스크립트 11개 → 단일 번들 (static/js/tools/bundle.mjs: aot-map-widget).
      순서 보존: vector-layer-manager → map-loader → stopwatch → controls → custom-controls
