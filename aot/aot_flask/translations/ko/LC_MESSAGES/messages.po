@@ -24513,3 +24513,11 @@ msgstr "표시할 함수를 선택하세요. 비워두면 배치된 함수가 �
 #: widgets/AoT_map.py:834
 msgid "Label Style"
 msgstr "라벨 스타일"
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Hide preview"
+msgstr "미리보기 가리기"
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Show preview"
+msgstr "미리보기 보기"

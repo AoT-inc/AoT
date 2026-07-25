@@ -24243,3 +24243,11 @@ msgstr "表示する機能を選択してください。空欄のままにする
 #: widgets/AoT_map.py:834
 msgid "Label Style"
 msgstr "ラベルスタイル"
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Hide preview"
+msgstr "プレビューを隠す"
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Show preview"
+msgstr "プレビューを表示"

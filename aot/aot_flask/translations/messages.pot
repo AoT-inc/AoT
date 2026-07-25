@@ -23892,3 +23892,11 @@ msgstr ""
 #: widgets/AoT_map.py:834
 msgid "Label Style"
 msgstr ""
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Hide preview"
+msgstr ""
+
+#: templates/pages/dashboard_entry.html:68
+msgid "Show preview"
+msgstr ""

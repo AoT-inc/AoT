@@ -517,6 +517,15 @@ const UIFixes = {
                 if (window.innerWidth >= DESKTOP_MIN) {
                     document.body.classList.add('aot-widget-drawer-open');
                     self._nudgeResize();
+                } else {
+                    // Phone: bottom-sheet layout. Lift the real widget card into the
+                    // fixed top preview band (CSS-only, no DOM move — the live-preview
+                    // re-render still targets it in place) and start with the preview
+                    // shown. The band + sheet CSS live in aot-modal-modern.css.
+                    self._liftPreviewCard(ev.target, true);
+                    document.body.classList.remove('aot-preview-collapsed');
+                    self._syncPreviewToggle(ev.target, false);
+                    self._nudgeResize();
                 }
                 self._activateWidgetCard(ev.target);
             });
@@ -525,8 +534,12 @@ const UIFixes = {
                 // Only release the push once no widget drawer remains open.
                 if (!document.querySelector('.aot-widget-drawer.show')) {
                     document.body.classList.remove('aot-widget-drawer-open');
+                    document.body.classList.remove('aot-preview-collapsed');
                     self._nudgeResize();
                 }
+                // Drop the phone preview lift so gridstack snaps the card back into
+                // its grid slot.
+                self._liftPreviewCard(ev.target, false);
                 // Deactivate only THIS modal's own card, never all of them: switching
                 // straight from widget A to widget B fires B's show (which activates B
                 // and asks A's drawer to hide) before A's own 'hidden.bs.modal' arrives
@@ -534,7 +547,42 @@ const UIFixes = {
                 // race that late event and wipe B's just-set highlight.
                 self._deactivateWidgetCard(ev.target);
             });
+
+            // Phone preview show/hide toggle (delegated — the button ships in every
+            // widget modal header, visible only under the phone media query).
+            $(document).on('click', '[data-aot-preview-toggle]', function () {
+                var modal = this.closest('.aot-widget-drawer');
+                var collapsed = document.body.classList.toggle('aot-preview-collapsed');
+                self._syncPreviewToggle(modal, collapsed);
+                self._nudgeResize();
+            });
         } catch (e) { /* ignore */ }
+    },
+
+    // Toggle the CSS class that lifts a widget's real card into the fixed top preview
+    // band on phones (position:fixed, no DOM move). `on` true adds it, false removes.
+    _liftPreviewCard(modal, on) {
+        var m = /^modal_config_(.+)$/.exec((modal && modal.id) || '');
+        if (!m) { return; }
+        var card = document.getElementById('gridstack_widget_' + m[1]);
+        if (card) { card.classList.toggle('aot-preview-lift', !!on); }
+    },
+
+    // Reflect the collapsed state on the header toggle handle: swap the chevron
+    // direction (up = raise sheet to hide preview, down = lower to show it) and keep
+    // an accessible label/tooltip in sync. The button shows only an icon.
+    _syncPreviewToggle(modal, collapsed) {
+        if (!modal) { return; }
+        var btn = modal.querySelector('[data-aot-preview-toggle]');
+        if (!btn) { return; }
+        var label = collapsed ? btn.getAttribute('data-label-show') : btn.getAttribute('data-label-hide');
+        if (label) { btn.setAttribute('aria-label', label); btn.setAttribute('title', label); }
+        btn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        var icon = btn.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-chevron-up', 'fa-chevron-down');
+            icon.classList.add(collapsed ? 'fa-chevron-down' : 'fa-chevron-up');
+        }
     },
 
     // Highlight the dashboard card matching the open drawer's widget id, so it's
