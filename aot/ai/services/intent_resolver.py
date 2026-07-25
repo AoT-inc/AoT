@@ -303,15 +303,38 @@ def propose_map_scoped_control(raw_cmd, mapctx, thread_id):
     proposes turning them on/off — naming the location so the user confirms
     exactly what's being controlled. Returns the proposal dict, or None to fall
     through to the normal pipeline (no location resolved / no devices there)."""
-    from aot.databases.models import Output
+    from aot.databases.models import Output, GeoShape
     loc = AIContextService.resolve_point_to_location(mapctx.get('lat'), mapctx.get('lng'))
     zone, site = loc.get('zone'), loc.get('site')
     if not zone and not site:
         return None
 
     zmap = AIContextService.get_device_zone_map()  # {device_id: zone_name}
-    target_zone = zone  # scope to the most-specific zone when available
-    dids = [d for d, z in zmap.items() if z == target_zone] if target_zone else []
+    if zone:
+        # Viewport center falls inside a specific zone — scope to it.
+        dids = [d for d, z in zmap.items() if z == zone]
+    else:
+        # Viewport center is inside the SITE polygon but not any single zone
+        # (e.g. zoomed out to see the whole site) — scope to every device in
+        # every zone under that site, not nothing.
+        def _shape_name(s):
+            feat = s.feature or {}
+            if isinstance(feat, str):
+                try:
+                    feat = json.loads(feat)
+                except Exception:
+                    feat = {}
+            props = feat.get('properties', {}) if isinstance(feat, dict) else {}
+            return str(props.get('name') or props.get('label') or '').strip()
+
+        from aot.utils.geo_hierarchy import geo_descendant_shapes
+        site_shape = next(
+            (s for s in GeoShape.query.filter_by(type='site').all() if _shape_name(s) == site),
+            None)
+        zone_names = {_shape_name(c) for c in geo_descendant_shapes(site_shape)} if site_shape else set()
+        zone_names.discard('')
+        dids = [d for d, z in zmap.items() if z in zone_names] if zone_names else []
+
     if not dids:
         return None
 

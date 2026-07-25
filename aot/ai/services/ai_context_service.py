@@ -206,22 +206,35 @@ class AIContextService:
                     
                 try:
                     g = shape(feat['geometry'])
-                    if g.geom_type != 'Point': # Usually we map Points to Polygons
+                    # Device markers are Points; zone/site polygons are drawn one
+                    # inside the other on the map (a zone polygon fully inside its
+                    # site polygon) — parent_id is left unset for both in practice,
+                    # so both geometry kinds need a containment check here, not
+                    # just Point markers.
+                    if g.geom_type not in ('Point', 'Polygon', 'MultiPolygon'):
                         return None
-                        
-                    # Find all containing polygons
-                    p_x, p_y = g.x, g.y
+
+                    is_point = g.geom_type == 'Point'
+                    p_x, p_y = (g.x, g.y) if is_point else (None, None)
+                    g_bounds = None if is_point else g.bounds
                     matches = []
                     for c in containers:
+                        if c['id'] == s.id:
+                            continue  # a polygon never contains itself
                         b = c['bounds']
                         # Bounding Box 1차 사전 필터링 (최적화)
-                        if p_x < b[0] or p_x > b[2] or p_y < b[1] or p_y > b[3]:
-                            continue
-                        
+                        if is_point:
+                            if p_x < b[0] or p_x > b[2] or p_y < b[1] or p_y > b[3]:
+                                continue
+                        else:
+                            if (g_bounds[0] < b[0] or g_bounds[2] > b[2]
+                                    or g_bounds[1] < b[1] or g_bounds[3] > b[3]):
+                                continue
+
                         # 실제 다각형 포함 여부 확인
                         if c['geom'].contains(g):
                             matches.append(c)
-                            
+
                     if matches:
                         # 중첩 우선순위 (Zone이 Site보다 우선, 면적이 작은 것이 우선)
                         matches.sort(key=lambda x: (not x['is_zone'], x['area']))

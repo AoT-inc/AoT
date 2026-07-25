@@ -509,7 +509,7 @@ TOOLS: List[Tool] = [
     Tool('search_notes', handler='search_notes_tool', manifest={
         "tool_name": "search_notes",
         "action_type": "virtual_tool_call",
-        "description": "Reads FULL/older notes for one entity, or free-text searches notes. Read-only — NO approval needed. NOTE: a per-entity digest (each entity's INITIAL note + a few RECENT notes + total count) is ALREADY pre-injected in context under system_state.note_digests — use that to answer broad questions like '각 장치의 노트 확인' or 'which devices have notes' WITHOUT any tool call. Call this tool only to DRILL DOWN: read the full text or older notes of a SPECIFIC entity (pass target_name with that zone/device name — notes bind by target_id so keyword search alone misses them), or free-text keyword search (query).",
+        "description": "Reads FULL/older notes for one entity, or free-text searches notes. Read-only — NO approval needed. NOTE: a per-entity digest (each entity's INITIAL note + a few RECENT notes + total count) is ALREADY pre-injected in context under system_state.note_digests — use that to answer broad questions like '각 장치의 노트 확인' or 'which devices have notes' WITHOUT any tool call. Call this tool only to DRILL DOWN: read the full text or older notes of a SPECIFIC entity (pass target_name with that zone/device name — notes bind by target_id so keyword search alone misses them), or free-text keyword search (query). When target_name resolves to a SITE (포장), results automatically include every descendant zone's notes too (a site rarely has its own notes; per-zone notes like crop info live on the zones) — each result's target_name tells you which zone it came from, so attribute info per-zone rather than treating results as one undifferentiated pile.",
         "usage_hint": "params.arguments: {target_name (location/entity to read notes for, e.g. '3-1', '1포장 1-1', '밸브1'), query (optional keyword), category (optional), limit (optional, default 10)}. Returns note contents (up to 2000 chars each) for summarization.",
     }),
     Tool('get_energy_report', handler='get_energy_report'),
@@ -646,7 +646,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "search_notes",
-        "description": "[노트 읽기] 노트·메모·작업기록을 조회합니다. 읽기 전용이라 승인 불필요(요약은 데이터 가공). 특정 구역·장치에 붙은 노트를 읽거나 요약하려면(예: '3-1 구역 노트 요약') 반드시 target_name에 그 위치/장치 이름을 넣으세요 — 노트는 target_id로 엔티티에 붙어 있고 본문에 구역명이 없을 수 있어 키워드 검색으로는 못 찾습니다. query는 자유 키워드 검색용.",
+        "description": "[노트 읽기] 노트·메모·작업기록을 조회합니다. 읽기 전용이라 승인 불필요(요약은 데이터 가공). 특정 구역·장치에 붙은 노트를 읽거나 요약하려면(예: '3-1 구역 노트 요약') 반드시 target_name에 그 위치/장치 이름을 넣으세요 — 노트는 target_id로 엔티티에 붙어 있고 본문에 구역명이 없을 수 있어 키워드 검색으로는 못 찾습니다. target_name이 포장(site)이면 그 하위 모든 구역(zone)의 노트도 함께 반환됩니다(결과의 target_name으로 어느 구역인지 구분). query는 자유 키워드 검색용.",
         "input_schema": {
             "type": "object",
             "properties": {

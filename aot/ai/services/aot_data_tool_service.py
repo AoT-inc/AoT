@@ -127,9 +127,18 @@ class AoTDataToolService:
                 if target_zone:
                     # In Mycodo/AoT, Input is linked to GeoShape via map_overlay_id (Integer ID)
                     target_input = Input.query.filter(Input.map_overlay_id == target_zone.id).first()
+                    if not target_input and target_zone.type == 'site':
+                        # A site rarely carries its own sensor — sensors live on the
+                        # zones inside it. Fall back to the first sensor found in any
+                        # descendant zone rather than reporting "no sensors" for a
+                        # site that clearly has zone-level sensors.
+                        from aot.utils.geo_hierarchy import geo_descendant_shapes
+                        descendant_ids = [c.id for c in geo_descendant_shapes(target_zone)]
+                        if descendant_ids:
+                            target_input = Input.query.filter(Input.map_overlay_id.in_(descendant_ids)).first()
 
             if not target_input:
-                # If no sensor is directly linked to the zone, return the zone's coordinates 
+                # If no sensor is directly linked to the zone, return the zone's coordinates
                 # so the caller (AI) can use an external weather tool if needed.
                 if target_zone and target_zone.feature:
                     props = target_zone.feature.get('properties', {})
@@ -446,6 +455,32 @@ class AoTDataToolService:
                 referenced = {zn for zn in zone_index if zn and len(zn) >= 2 and zn in query}
                 allowed_zones = set(referenced)
                 if not referenced:
+                    def _shape_display_name(s):
+                        feat = s.feature or {}
+                        if isinstance(feat, str):
+                            import json as _json
+                            try:
+                                feat = _json.loads(feat)
+                            except Exception:
+                                feat = {}
+                        props = feat.get('properties', {}) if isinstance(feat, dict) else {}
+                        return str(props.get('name') or props.get('label') or '').strip()
+
+                    # (a) Geometric: the query names an actual 'site' GeoShape → every
+                    # descendant zone/feature is in scope, regardless of naming
+                    # convention (a zone need not be named "N-M" to belong to site N).
+                    from aot.utils.geo_hierarchy import geo_descendant_shapes
+                    for site_shape in GeoShape.query.filter_by(type='site').all():
+                        s_name = _shape_display_name(site_shape)
+                        if s_name and len(s_name) >= 2 and s_name in query:
+                            for child in geo_descendant_shapes(site_shape):
+                                c_name = _shape_display_name(child)
+                                if c_name and c_name in zone_index:
+                                    allowed_zones.add(c_name)
+
+                    # (b) Naming-convention fallback ("N포장"/"site N" → zone "N-*") —
+                    # kept for zones that follow this convention but whose polygon
+                    # isn't (yet) drawn spatially inside the site's polygon.
                     site_nums = set(re.findall(r'(\d+)\s*포장', query))
                     site_nums |= {m for m in re.findall(r'site\s*(\d+)', query, re.IGNORECASE)}
                     if site_nums:
@@ -959,6 +994,38 @@ class AoTDataToolService:
                         _tz_by_target[tid] = None
                 return _tz_by_target[tid]
 
+            # A site query now pulls notes from every descendant zone too (see
+            # _resolve_note_target_ids), so a bare target_id is no longer enough
+            # for the AI to tell WHICH zone a note belongs to — resolve each
+            # note's own entity display name alongside it.
+            _name_by_target = {}
+            import json as _json
+
+            def _note_target_name(tid):
+                if not tid:
+                    return None
+                if tid not in _name_by_target:
+                    _nm = None
+                    try:
+                        shape = GeoShape.query.filter_by(unique_id=tid).first()
+                        if shape:
+                            feat = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
+                            props = feat.get('properties') or {}
+                            _nm = str(props.get('name') or props.get('label') or props.get('title') or '').strip() or None
+                    except Exception:
+                        _nm = None
+                    if not _nm:
+                        try:
+                            for model in (Input, Output):
+                                row = model.query.filter_by(unique_id=tid).first()
+                                if row:
+                                    _nm = row.name
+                                    break
+                        except Exception:
+                            pass
+                    _name_by_target[tid] = _nm
+                return _name_by_target[tid]
+
             results = []
             for r in rows:
                 # r.date_time is stored naive-UTC (SQLite). Display in the note's
@@ -983,6 +1050,7 @@ class AoTDataToolService:
                     "note": (r.note or "")[:2000],
                     "target_id": r.target_id,
                     "target_type": r.target_type,
+                    "target_name": _note_target_name(r.target_id),
                 })
 
             return {
@@ -1016,7 +1084,34 @@ class AoTDataToolService:
 
             q = GeoFacility.query
             if facility_name and str(facility_name).strip():
-                rows = q.filter(GeoFacility.name.ilike(f"%{str(facility_name).strip()}%")).all()
+                fname = str(facility_name).strip()
+                rows = q.filter(GeoFacility.name.ilike(f"%{fname}%")).all()
+                if not rows:
+                    # facility_name may actually name a SITE (포장), not a facility —
+                    # a site has no GeoFacility of its own, but its descendant
+                    # zones/buildings might. Expand via the site's geometry.
+                    def _shape_display_name(s):
+                        feat = s.feature or {}
+                        if isinstance(feat, str):
+                            import json as _json
+                            try:
+                                feat = _json.loads(feat)
+                            except Exception:
+                                feat = {}
+                        props = feat.get('properties', {}) if isinstance(feat, dict) else {}
+                        return str(props.get('name') or props.get('label') or '').strip()
+
+                    site_shape = None
+                    for s in GeoShape.query.filter_by(type='site').all():
+                        s_name = _shape_display_name(s)
+                        if s_name and (fname.lower() in s_name.lower() or s_name.lower() in fname.lower()):
+                            site_shape = s
+                            break
+                    if site_shape:
+                        from aot.utils.geo_hierarchy import geo_descendant_unique_ids
+                        descendant_ids = geo_descendant_unique_ids(site_shape)
+                        if descendant_ids:
+                            rows = q.filter(GeoFacility.shape_uuid.in_(descendant_ids)).all()
                 if not rows:
                     return {
                         "status": "success", "count": 0, "results": [],
@@ -3798,6 +3893,24 @@ class AoTDataToolService:
         return None, None, None, None, None
 
     @staticmethod
+    def _geo_shape_descendant_unique_ids(root_shape):
+        """Return unique_ids of every GeoShape nested under root_shape (e.g. a
+        site's child zones). See aot/utils/geo_hierarchy.py for why this is
+        needed (GeoShape.parent_id is unset in production; the real parent
+        signal is spatial containment).
+        """
+        from aot.utils.geo_hierarchy import geo_descendant_unique_ids
+        return geo_descendant_unique_ids(root_shape)
+
+    @staticmethod
+    def _geo_shape_descendants(root_shape):
+        """Same as _geo_shape_descendant_unique_ids but returns the GeoShape
+        rows themselves (needed when callers must read the child's own name/
+        type, not just its unique_id)."""
+        from aot.utils.geo_hierarchy import geo_descendant_shapes
+        return geo_descendant_shapes(root_shape)
+
+    @staticmethod
     def _resolve_note_target_ids(target_name):
         """Resolve a name to ALL candidate note target_ids, not just one.
 
@@ -3827,6 +3940,19 @@ class AoTDataToolService:
         if tid:
             ids.append(tid)
             resolved_name = rname
+
+        # A 'site' (포장) is a container: its own notes are rare, but each child
+        # zone (구역) carries its own notes (e.g. crop info per zone). A query
+        # asked about the site must also surface every descendant zone's notes,
+        # not just the site shape's own target_id — otherwise "1포장에서 생산하는
+        # 작물" answers "no info" even though "1-1", "1-2" ... each have one.
+        if tid and _tt == 'site':
+            try:
+                site_shape = GeoShape.query.filter_by(unique_id=tid).first()
+            except Exception:
+                site_shape = None
+            if site_shape:
+                ids.extend(AoTDataToolService._geo_shape_descendant_unique_ids(site_shape))
 
         # GeoShapes whose display name matches EXACTLY → add the shape's own id
         # and the device it represents.
