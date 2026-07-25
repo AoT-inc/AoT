@@ -23864,3 +23864,31 @@ msgid ""
 "dispatch failure, runtime state error) are always recorded regardless of "
 "this flag."
 msgstr ""
+
+#: widgets/AoT_map.py:630
+msgid "All devices placed on this map in the map editor are shown automatically. Add or move devices in <a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">Map Editor (geo/design)</a>."
+msgstr ""
+
+#: widgets/AoT_map.py:711
+msgid "Device Filter"
+msgstr ""
+
+#: widgets/AoT_map.py:716
+msgid "Optional: leave empty to show every device placed on the map. Select specific devices only if you want to hide some of them."
+msgstr ""
+
+#: widgets/AoT_map.py:727
+msgid "Select inputs to display. Leave empty to show all placed inputs."
+msgstr ""
+
+#: widgets/AoT_map.py:736
+msgid "Select outputs to display. Leave empty to show all placed outputs."
+msgstr ""
+
+#: widgets/AoT_map.py:745
+msgid "Select functions to display. Leave empty to show all placed functions."
+msgstr ""
+
+#: widgets/AoT_map.py:834
+msgid "Label Style"
+msgstr ""

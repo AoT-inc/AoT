@@ -579,6 +579,37 @@ html {
     background: var(--bg-upgrade);
 }
 
+/* nav-bar 관리(Manage) 메뉴의 업그레이드 항목: 업그레이드가 없으면 다른 메뉴와
+   동일한 기본 .dropdown-item 스타일을 그대로 쓰고(클래스 미부착), 업그레이드가
+   있을 때만 settings/custom_ui 의 bg_upgrade 배경색을 적용한다. 텍스트 색은
+   해당 배경 밝기를 서버에서 미리 판정해 aot-nav-upgrade-light/dark 클래스로
+   부여한다(layout_default.html, routes_static.py inject_variables). */
+.dropdown-item.aot-nav-upgrade {
+    background-color: var(--bg-upgrade);
+}
+
+/* aot.css 의 .navbar.main-navbar .dropdown-menu .dropdown-item 가 color 를
+   !important + 클래스 4개 특정도로 강제하므로(텍스트 기본색 통일 목적), 배경
+   밝기 기반 대비색 선택이 항상 덮어써진다. !important 는 물론 해당 규칙과
+   같은 nav 조상 경로를 포함해 특정도까지 맞춰야 이긴다. */
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-light,
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-light:hover,
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-light:focus {
+    color: var(--text-color-primary) !important;
+}
+
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-dark,
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-dark:hover,
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade.aot-nav-upgrade-dark:focus {
+    color: var(--text-color-tertiary) !important;
+}
+
+.dropdown-item.aot-nav-upgrade:hover,
+.dropdown-item.aot-nav-upgrade:focus {
+    background-color: var(--bg-upgrade);
+    opacity: 0.85;
+}
+
 .active-background {
     background-color: var(--bg-active) !important;
 }

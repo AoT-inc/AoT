@@ -66,6 +66,35 @@ def sync_geo_device_name(device_id, new_name, channel_id=None):
         logger.error(f"[GeoSync] sync_geo_device_name({device_id}): {e}")
 
 
+def is_hex_color_light(hex_color, threshold=0.5):
+    """Hex 색상(#RRGGBB 또는 #RGB)의 지각 밝기를 판정한다.
+
+    settings/custom_ui 에서 사용자가 지정한 배경색(예: bg_upgrade) 위에 올릴
+    텍스트를 기본(어두운) 색 또는 3차(밝은) 색 중 무엇으로 할지 서버에서
+    미리 결정할 때 사용(클라이언트 계산 시 FOUC 방지).
+
+    Returns:
+        bool: 배경이 밝으면 True(어두운/기본 텍스트가 적합), 어두우면 False
+              (밝은/3차 텍스트가 적합). 파싱 실패 시 안전하게 True를 반환한다.
+    """
+    if not hex_color:
+        return True
+    value = hex_color.strip().lstrip('#')
+    if len(value) == 3:
+        value = ''.join(c * 2 for c in value)
+    if len(value) != 6:
+        return True
+    try:
+        r = int(value[0:2], 16)
+        g = int(value[2:4], 16)
+        b = int(value[4:6], 16)
+    except ValueError:
+        return True
+    # YIQ 근사 상대휘도(0~1). W3C 권장 공식과 유사하며 UI 텍스트 대비 판정에 충분.
+    luminance = (r * 299 + g * 587 + b * 114) / 1000 / 255
+    return luminance > threshold
+
+
 def normalize_nullish_value(value, empty_value=''):
     """Normalize placeholder/nullish values to a consistent empty representation."""
     if value is None:

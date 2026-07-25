@@ -1478,3 +1478,120 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
   white-space: normal !important;
   word-break: break-word;
 }
+
+/* ============================================================
+   SECTION 14: 세부항목 2줄 옵션 (aot-modal-detail-*)
+   1줄=제목(장치정보/단위명), 2줄=여러 컨트롤을 나란히.
+   기존 .aot-modal-option-row(라벨+단일컨트롤 1줄)로는 표현 불가한
+   "복합 세부설정"(그래프 시리즈별·Y축 단위별 min/max)에 사용.
+   색상 토큰은 전부 기존 --aot-* 재사용(신규 색상 없음).
+   ============================================================ */
+.aot-modal-detail-item {
+  padding: 0.5rem 0 !important;
+  border-bottom: 1px solid var(--gray);
+}
+.aot-modal-detail-item:last-child {
+  border-bottom: none;
+}
+
+/* 1줄: 세부항목 제목 */
+.aot-modal-detail-head {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--aot-text-main);
+  margin-bottom: 0.45rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* 2줄: 컨트롤 나열(좁아지면 줄바꿈) */
+.aot-modal-detail-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* 라벨(위) + 컨트롤(아래) 1쌍 */
+.aot-modal-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 120px;
+}
+
+.aot-modal-detail-field > label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--aot-text-secondary);
+  margin: 0 0 0 0.1rem;
+}
+
+/* 컨트롤은 필드 폭을 꽉 채움(모던 셀렉트/색상/입력 공통) */
+.aot-modal-detail-field .aot-modern-select,
+.aot-modal-detail-field .aot-modern-input,
+.aot-modal-detail-field input[type="color"] {
+  width: 100% !important;
+}
+
+/* 색상 필드는 좁게(스와치만 보이면 됨), 토글 필드는 스위치 폭에 맞춤 */
+.aot-modal-detail-field.aot-detail-field-color {
+  flex: 0 0 64px;
+  min-width: 0;
+}
+.aot-modal-detail-field.aot-detail-field-toggle {
+  flex: 0 0 auto;
+  min-width: auto;
+}
+
+/* 색상 input 은 aot-modal-option-control 바깥에서도 동일 pill 형태 유지 */
+.aot-modal-detail-field input[type="color"] {
+  height: 32px !important;
+  padding: 0 !important;
+  border: 1px solid var(--gray) !important;
+  border-radius: 16px !important;
+  cursor: pointer;
+  overflow: hidden !important;
+}
+.aot-modal-detail-field input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0 !important;
+  border-radius: 16px !important;
+}
+.aot-modal-detail-field input[type="color"]::-webkit-color-swatch {
+  border: none !important;
+  border-radius: 16px !important;
+}
+
+/* 토글 필드 안의 스위치를 라벨 아래에 좌측 정렬 */
+.aot-modal-detail-field .btn-toggle {
+  margin-top: 1px;
+}
+
+/* 모바일(스마트폰) 폭: 세부항목 컨트롤이 다음 줄로 접히지 않고 한 줄 유지.
+   → "제목(1줄) + 컨트롤(1줄)" 2줄 구조가 3줄로 늘어나지 않게 함.
+   필드를 nowrap 로 강제하고 최소폭 0 으로 눌러 좁은 폭에서도 나란히 배치. */
+@media (max-width: 480px) {
+  .aot-modal-detail-fields {
+    flex-wrap: nowrap !important;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .aot-modal-detail-field {
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+  }
+  .aot-modal-detail-field.aot-detail-field-color {
+    flex: 0 0 48px !important;
+    min-width: 0 !important;
+  }
+  .aot-modal-detail-field.aot-detail-field-toggle {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+  }
+  .aot-modal-detail-field > label {
+    font-size: 0.66rem;
+    white-space: normal;
+    line-height: 1.2;
+  }
+}

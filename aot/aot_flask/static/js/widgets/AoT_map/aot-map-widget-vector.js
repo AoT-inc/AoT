@@ -2576,9 +2576,20 @@
         const mapUuid = wOpts.selected_map_uuid || wOpts.map_uuid || (vars && vars.contentMapUuid) || '';
 
         // ============================================================
-        // Sites — rendered only when show_site_shape is ON
+        // Each category's fetch+addLayer is its own named async function
+        // (not just an inline `if`) so a LIVE toggle-on (settings drawer,
+        // no page reload) can call the same one on-demand — see
+        // `_applyShapeVisible` below. Previously these only ran here, at
+        // widget init; turning e.g. Site/Zone Shape on later via the
+        // settings drawer called `_applyShapeVisible` -> `setLayoutProperty`
+        // on a MapLibre layer id ('sites-fill' etc.) that was never created
+        // (the category was off at load, so this block's `if` never ran) —
+        // silently a no-op until the next full page refresh re-ran init.
+        // addGeoJSONLayer() is already idempotent (guards on getSource/
+        // getLayer), so calling one of these twice (init + on-demand) is safe.
         // ============================================================
-        if (_boolOpt('show_site_shape')) {
+
+        async function _ensureSiteShapeLayer() {
             try {
                 const sitesResponse = await geoFetch('/api/geo/sites?format=geojson');
                 if (sitesResponse.ok) {
@@ -2598,15 +2609,13 @@
             }
         }
 
-        // ============================================================
-        // Zones — zone GeoJSON 은 도형(show_zone_shape) 뿐 아니라 zone
-        // 라벨→모달 클릭 콜백(_onZoneLabelClick) 등록에도 필요하다. 라벨은
-        // show_zone_label 로 도형과 독립 제어되므로, 둘 중 하나라도 켜져 있으면
-        // fetch + 콜백 등록을 수행하고, 실제 fill/line 도형은 show_zone_shape
-        // 일 때만 그린다. (과거엔 콜백이 show_zone_shape 에만 묶여 있어, 도형은
-        // 끄고 라벨만 켠 경우 클릭 시 모달 대신 옛 maplibre 팝업이 떴다.)
-        // ============================================================
-        if (_boolOpt('show_zone_shape') || _boolOpt('show_zone_label')) {
+        // Zone GeoJSON 은 도형(show_zone_shape) 뿐 아니라 zone 라벨→모달 클릭
+        // 콜백(_onZoneLabelClick) 등록에도 필요하다. 라벨은 show_zone_label 로
+        // 도형과 독립 제어되므로, 둘 중 하나라도 켜져 있으면 fetch + 콜백 등록을
+        // 수행하고, 실제 fill/line 도형은 show_zone_shape 일 때만 그린다. (과거엔
+        // 콜백이 show_zone_shape 에만 묶여 있어, 도형은 끄고 라벨만 켠 경우 클릭 시
+        // 모달 대신 옛 maplibre 팝업이 떴다.)
+        async function _ensureZoneShapeLayer() {
             try {
                 const zonesResponse = await geoFetch('/api/geo/zones?format=geojson');
                 if (zonesResponse.ok) {
@@ -2646,13 +2655,8 @@
             }
         }
 
-        // facility/equipment/device/drawn require mapUuid
-        if (!mapUuid) return;
-
-        // ============================================================
-        // Facility shapes
-        // ============================================================
-        if (_boolOpt('show_facility_shape')) {
+        async function _ensureFacilityShapeLayer() {
+            if (!mapUuid) return;
             try {
                 const facRes = await geoFetch('/api/geo/overlays?map_uuid=' + encodeURIComponent(mapUuid) + '&type=facility');
                 if (facRes.ok) {
@@ -2714,10 +2718,8 @@
             }
         }
 
-        // ============================================================
-        // Equipment shapes
-        // ============================================================
-        if (_boolOpt('show_equipment_shape')) {
+        async function _ensureEquipmentShapeLayer() {
+            if (!mapUuid) return;
             try {
                 const eqRes = await geoFetch('/api/geo/overlays?map_uuid=' + encodeURIComponent(mapUuid) + '&type=equipment');
                 if (eqRes.ok) {
@@ -2740,11 +2742,10 @@
             }
         }
 
-        // ============================================================
-        // Device shapes (aot_device) — on:0.9 / off:0.2 via data-driven expr
-        // Initial state: all OFF (0.2); updated after device fetch
-        // ============================================================
-        if (_boolOpt('show_device_shapes')) {
+        // Device shapes (aot_device) — on:0.9 / off:0.2 via data-driven expr.
+        // Initial state: all OFF (0.2); updated after device fetch.
+        async function _ensureDeviceShapeLayer() {
+            if (!mapUuid) return;
             try {
                 const devRes = await geoFetch('/api/geo/overlays?map_uuid=' + encodeURIComponent(mapUuid) + '&type=aot_device');
                 if (devRes.ok) {
@@ -2764,10 +2765,9 @@
             }
         }
 
-        // ============================================================
-        // Drawn shapes (other drawn shapes — types not in known list)
-        // ============================================================
-        if (_boolOpt('show_drawn_shapes')) {
+        // Drawn shapes (other drawn shapes — types not in known list).
+        async function _ensureDrawnShapeLayer() {
+            if (!mapUuid) return;
             try {
                 const KNOWN_TYPES = new Set([
                     'site', 'zone', 'facility', 'facility_bay',
@@ -2798,6 +2798,31 @@
             } catch (e) {
             }
         }
+
+        // Expose so `_applyShapeVisible` (settings-drawer live toggle) can create a
+        // category's layer on demand the first time it's switched on live.
+        try {
+            var _instShapes = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
+            if (_instShapes) {
+                _instShapes._ensureShapeLayer = {
+                    land: _ensureSiteShapeLayer, zone: _ensureZoneShapeLayer,
+                    facility: _ensureFacilityShapeLayer, equipment: _ensureEquipmentShapeLayer,
+                    device: _ensureDeviceShapeLayer, drawn: _ensureDrawnShapeLayer
+                };
+            }
+        } catch (e) {
+        }
+
+        if (_boolOpt('show_site_shape')) { await _ensureSiteShapeLayer(); }
+        if (_boolOpt('show_zone_shape') || _boolOpt('show_zone_label')) { await _ensureZoneShapeLayer(); }
+
+        // facility/equipment/device/drawn require mapUuid
+        if (!mapUuid) return;
+
+        if (_boolOpt('show_facility_shape')) { await _ensureFacilityShapeLayer(); }
+        if (_boolOpt('show_equipment_shape')) { await _ensureEquipmentShapeLayer(); }
+        if (_boolOpt('show_device_shapes')) { await _ensureDeviceShapeLayer(); }
+        if (_boolOpt('show_drawn_shapes')) { await _ensureDrawnShapeLayer(); }
     }
 
     /**
@@ -4610,6 +4635,22 @@
             _catHidden[cat] = !visible;
             if (window.AoTMapLabelLayers) {
                 try { AoTMapLabelLayers.setShapeVisible(uniqueId, cat, visible); } catch (e) { }
+            }
+            // Turning a category ON that was OFF at widget load never had its
+            // MapLibre layer created (loadGeoJSONLayers only fetches/adds a
+            // category's layer when its show_*_shape option was already true) —
+            // setLayoutProperty below is then a silent no-op on a nonexistent
+            // layer id, so the toggle visually does nothing until the next full
+            // page refresh re-runs init. Create it on demand the first time.
+            var firstLayerId = def.layers && def.layers[0];
+            var needsCreate = visible && firstLayerId && !map.getLayer(firstLayerId);
+            if (needsCreate) {
+                var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
+                var ensureFn = inst && inst._ensureShapeLayer && inst._ensureShapeLayer[cat];
+                if (typeof ensureFn === 'function') {
+                    ensureFn().then(_applyShapeLOD).catch(function () {});
+                    return;
+                }
             }
             // MapLibre shape layers — routed through the zoom-aware LOD so toggling a
             // category never overrides the zoom culling (and vice versa).

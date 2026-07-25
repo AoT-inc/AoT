@@ -24215,3 +24215,31 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
+
+#: widgets/AoT_map.py:630
+msgid "All devices placed on this map in the map editor are shown automatically. Add or move devices in <a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">Map Editor (geo/design)</a>."
+msgstr "マップエディタに配置したすべてのデバイスが自動的に表示されます。デバイスの追加・移動は<a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">マップエディタ(geo/design)</a>で行ってください。"
+
+#: widgets/AoT_map.py:711
+msgid "Device Filter"
+msgstr "デバイスフィルター"
+
+#: widgets/AoT_map.py:716
+msgid "Optional: leave empty to show every device placed on the map. Select specific devices only if you want to hide some of them."
+msgstr "任意設定: 空欄のままにするとマップに配置したすべてのデバイスが表示されます。一部を非表示にしたい場合のみ特定のデバイスを選択してください。"
+
+#: widgets/AoT_map.py:727
+msgid "Select inputs to display. Leave empty to show all placed inputs."
+msgstr "表示する入力を選択してください。空欄のままにすると配置済みの入力がすべて表示されます。"
+
+#: widgets/AoT_map.py:736
+msgid "Select outputs to display. Leave empty to show all placed outputs."
+msgstr "表示する出力を選択してください。空欄のままにすると配置済みの出力がすべて表示されます。"
+
+#: widgets/AoT_map.py:745
+msgid "Select functions to display. Leave empty to show all placed functions."
+msgstr "表示する機能を選択してください。空欄のままにすると配置済みの機能がすべて表示されます。"
+
+#: widgets/AoT_map.py:834
+msgid "Label Style"
+msgstr "ラベルスタイル"

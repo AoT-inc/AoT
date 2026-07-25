@@ -319,7 +319,7 @@ WIDGET_INFORMATION = {
     'widget_dashboard_head': """
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
     <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css">
-    <script src="/static/js/components/aot-time-wheel.js?v=20260715a"></script>
+    <script src="/static/js/components/aot-time-wheel.js?v=20260722a"></script>
     <script src="/static/js/common/aot-output-state.js?v=1"></script>
     <style>
         /* --- Layout --- */
@@ -514,7 +514,12 @@ WIDGET_INFORMATION = {
             font-size: var(--aot-fs-caption); color: var(--gray-dark, #777); font-weight: var(--aot-fw-semibold);
         }
         .seq-col-enable { width: 36px; text-align: center; flex-shrink: 0; }
-        .seq-col-name { flex: 1 1 auto; min-width: 0; padding-left: 8px; margin-right: 12px; overflow: hidden; align-self: stretch; display: flex; align-items: center; }
+        /* justify-content:space-between pins the device-status label to this column's
+           right edge (name text left, badge right) — the column's width is fixed by the
+           flex layout (same leftover space every row), so the badge lines up vertically
+           across rows instead of trailing the variable-length name text or drifting with
+           the time column. */
+        .seq-col-name { flex: 1 1 auto; min-width: 0; padding-left: 8px; padding-right: 8px; margin-right: 12px; overflow: hidden; align-self: stretch; display: flex; align-items: center; justify-content: space-between; }
         /* min-width fits the time value (e.g. "00:00:10" ~60px) so it's never clipped
            in a narrow widget cell AND the header/value columns share a width (so the
            left-aligned "Time" header lines up with the column instead of hugging the
@@ -543,7 +548,7 @@ WIDGET_INFORMATION = {
         .seq-list-item.disabled { opacity: 0.6; background-color: var(--bg-off); }
         /* Device state (Model A): offline/unconfirmed target output */
         .seq-list-item.seq-offline { border-left: 3px solid var(--bg-pause, #b0b0b0); padding-left: 7px; }
-        .seq-dev-badge { margin-left: 6px; font-size: var(--aot-fs-caption, 0.72em); padding: 0 5px; border-radius: 8px; white-space: nowrap; vertical-align: middle; }
+        .seq-dev-badge { margin-left: 6px; flex-shrink: 0; font-size: var(--aot-fs-caption, 0.72em); padding: 0 5px; border-radius: 8px; white-space: nowrap; vertical-align: middle; }
         .seq-dev-offline { background: var(--bg-pause, #b0b0b0); color: #fff; opacity: 0.85; }
         .seq-dev-pending { background: var(--bg-hold, #f0ad4e); color: #fff; }
 
@@ -563,7 +568,7 @@ WIDGET_INFORMATION = {
         .seq-square-toggle:hover { border-color: var(--aot-color-brand-secondary); opacity: 0.8; }
 
         /* Text */
-        .seq-text-name { font-weight: var(--aot-fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .seq-text-name { font-weight: var(--aot-fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex-shrink: 1; }
         .seq-text-time { font-weight: var(--aot-fw-semibold); font-variant-numeric: tabular-nums; color: var(--aot-text-main, #555); }
         .seq-col-time.seq-time-editable { cursor: pointer; }
         .seq-col-time.seq-time-editable:hover .seq-text-time { color: var(--bd-btn-primary); text-decoration: underline; }

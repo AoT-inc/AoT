@@ -373,7 +373,15 @@
         inst._labelKeys.forEach(function (k) { inst._setLabel(k, !value); });
       }
       // Shape category toggles (show_*_shape) -> the map's own shape toggle.
+      // Update the live options object FIRST: turning a category on that had
+      // no MapLibre layer yet makes _applyShapeVisible create it on demand
+      // (aot-map-widget-vector.js _ensureShapeLayer), and that creation path
+      // re-checks _boolOpt(key) against this same object (wOpts === inst.vars.
+      // vars) — without this write it would still read the stale pre-toggle
+      // value and skip drawing (reproduced live: Zone Shape silently no-op'd
+      // because _ensureZoneShapeLayer's own show_zone_shape re-check saw false).
       else if (MAP_SHAPE_CAT[key] && typeof inst._applyShapeVisible === 'function') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
         inst._applyShapeVisible(MAP_SHAPE_CAT[key], !!value);
       }
       // Refresh interval -> restart the map's polling with the new period.

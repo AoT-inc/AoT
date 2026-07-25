@@ -818,11 +818,17 @@ input.btn.btn-secondary[id^="pid_hold_"]:hover {
   color: var(--primary, #fff) !important;
 }
 
-.btn-upgrade, a[href*="upgrade"] {
+.btn-upgrade {
   background-color: var(--bg-btn-upgrade, #13261B) !important;
   color: var(--text-color-tertiary, #FFFFFF) !important;
   border: 1px solid var(--bd-btn-border, #5E6B64) !important;
 }
+/* 과거 여기 있던 a[href*="upgrade"] 는 실제 업그레이드 유무·배경 밝기와 무관하게
+   "upgrade" 문자열이 포함된 모든 링크(nav-bar 관리 메뉴 포함)에 !important 로
+   강제 배경/글자색을 씌워, 업그레이드가 없을 때도 항상 강조되고 텍스트가
+   배경과 같은 색으로 보이지 않게 되는 버그의 원인이었다. nav-bar 관리 메뉴의
+   업그레이드 항목은 layout_default.html 이 upgrade_available 로 게이팅하고
+   배경 밝기에 따라 텍스트색을 고르는 .aot-nav-upgrade(aot-base.css)로 대체됨. */
 
 
 .bootstrap-select .dropdown-menu.inner.show .inner>li>a,

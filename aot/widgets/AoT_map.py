@@ -685,17 +685,25 @@ WIDGET_INFORMATION = {
         },
 
         # ============================================================
-        # --- Advanced (collapsed by default) ---
+        # Advanced groups — [Reorganize] Each topic gets its OWN collapsed
+        # disclosure instead of one giant "Advanced" bucket. A single mega
+        # section reads as "dumped in and done" and forces users to scan
+        # everything to find one setting; separate, clearly-named groups let
+        # someone jump straight to "3D" or "Shapes" without wading through
+        # the rest. `fallback_latitude/longitude/default_zoom/default_pitch/
+        # default_bearing/active_layers/selected_base_layer` are gone
+        # entirely (not just collapsed) — they are pure runtime view state
+        # the map already persists on its own via moveend/layer-toggle
+        # handlers (aot-map-widget-vector.js: `/save_widget_custom_options`
+        # on pan/zoom/rotate and on layer switch), so a form field for them
+        # was never anything a user would hand-type; it was clutter with no
+        # corresponding user action.
         # ============================================================
-        {
-            'type': 'collapse_start',
-            'id': 'advanced',
-            'name': lazy_gettext('Advanced')
-        },
 
         # --- Device Filter ---
         {
-            'type': 'header',
+            'type': 'collapse_start',
+            'id': 'device_filter',
             'name': lazy_gettext('Device Filter')
         },
         {
@@ -732,10 +740,14 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Function'),
             'phrase': lazy_gettext('Select functions to display. Leave empty to show all placed functions.')
         },
+        {
+            'type': 'collapse_end'
+        },
 
         # --- Measurement Panel ---
         {
-            'type': 'header',
+            'type': 'collapse_start',
+            'id': 'measurement_panel',
             'name': lazy_gettext('Measurement Panel')
         },
         {
@@ -765,10 +777,14 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Function'),
             'phrase': lazy_gettext('Select function measurements to display in the panel.')
         },
-
-        # --- 3D Map (Vector Mode) ---
         {
-            'type': 'header',
+            'type': 'collapse_end'
+        },
+
+        # --- 3D Map ---
+        {
+            'type': 'collapse_start',
+            'id': '3d_map',
             'name': lazy_gettext('3D Map (Vector Mode)')
         },
         {
@@ -778,22 +794,6 @@ WIDGET_INFORMATION = {
 
             'name': lazy_gettext('Enable 3D Terrain'),
             'phrase': lazy_gettext('Enable 3D terrain rendering (Hillshade, elevation). Requires vector mode.')
-        },
-        {
-            'id': 'default_pitch',
-            'type': 'integer',
-            'default_value': '0',
-            'name': lazy_gettext('Default Pitch (0-60)'),
-            'phrase': lazy_gettext('Initial 3D tilt angle in degrees (0-60).'),
-            'constraints': {'min': 0, 'max': 60}
-        },
-        {
-            'id': 'default_bearing',
-            'type': 'integer',
-            'default_value': '0',
-            'name': lazy_gettext('Default Bearing (-180 to 180)'),
-            'phrase': lazy_gettext('Initial rotation angle in degrees (-180 to 180).'),
-            'constraints': {'min': -180, 'max': 180}
         },
         {
             'id': 'facility_render_mode',
@@ -819,11 +819,15 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Vector Style URL'),
             'phrase': lazy_gettext('Custom MapLibre style JSON URL. Leave empty to use GIS input setting.')
         },
-
-        # --- Label Fine-tuning ---
         {
-            'type': 'header',
-            'name': lazy_gettext('Label Fine-tuning')
+            'type': 'collapse_end'
+        },
+
+        # --- Label Style ---
+        {
+            'type': 'collapse_start',
+            'id': 'label_style',
+            'name': lazy_gettext('Label Style')
         },
         {
             'id': 'enable_label_collision',
@@ -877,10 +881,14 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Enable Sensor Popup'),
             'phrase': lazy_gettext('Click a sensor label to open a detail popup with the last 24h chart.')
         },
+        {
+            'type': 'collapse_end'
+        },
 
         # --- Shapes ---
         {
-            'type': 'header',
+            'type': 'collapse_start',
+            'id': 'shapes',
             'name': lazy_gettext('Shapes')
         },
         {
@@ -939,58 +947,6 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('0 (Transparent) ~ 100 (Opaque)'),
             'constraints': {'min': 0, 'max': 100}
         },
-
-        # --- View State (auto-managed) ---
-        {
-            'type': 'header',
-            'name': lazy_gettext('View State (auto-managed)')
-        },
-        {
-            'type': 'message',
-            'default_value': lazy_gettext(
-                'These are saved automatically as you pan/zoom/rotate the map or '
-                'switch layers. You normally do not need to edit them here.'
-            )
-        },
-        {
-            'id': 'fallback_latitude',
-            'type': 'text',
-            'default_value': '',
-
-            'name': lazy_gettext('Latitude'),
-            'phrase': lazy_gettext('Set the fallback latitude.')
-        },
-        {
-            'id': 'fallback_longitude',
-            'type': 'text',
-            'default_value': '',
-
-            'name': lazy_gettext('Longitude'),
-            'phrase': lazy_gettext('Set the fallback longitude.')
-        },
-        {
-            'id': 'default_zoom',
-            'type': 'text',
-            'default_value': '15',
-
-            'name': lazy_gettext('Zoom'),
-            'phrase': lazy_gettext('Map zoom level (1-20)'),
-        },
-        {
-            'id': 'active_layers',
-            'type': 'text',
-            'default_value': '',
-            'name': lazy_gettext('Active Overlay Layers'),
-            'phrase': lazy_gettext('List of currently active overlay layers (comma separated)')
-        },
-        {
-            'id': 'selected_base_layer',
-            'type': 'text',
-            'default_value': '',
-            'name': lazy_gettext('Selected Base Layer'),
-            'phrase': lazy_gettext('Name of the currently selected base layer')
-        },
-
         {
             'type': 'collapse_end'
         },

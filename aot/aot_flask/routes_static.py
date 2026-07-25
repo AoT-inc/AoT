@@ -32,7 +32,7 @@ from aot.databases.models import Dashboard, Misc
 from aot.aot_client import DaemonControl
 from aot.aot_flask.forms import forms_dashboard
 from aot.aot_flask.routes_authentication import admin_exists
-from aot.aot_flask.utils.utils_general import user_has_permission
+from aot.aot_flask.utils.utils_general import is_hex_color_light, user_has_permission
 from aot.aot_flask.extensions import db
 
 blueprint = Blueprint('routes_static',
@@ -177,6 +177,17 @@ def inject_variables():
     except Exception:
         custom_theme = {}
 
+    # nav-bar 관리 메뉴의 "업그레이드" 항목: settings/custom_ui 의 bg_upgrade
+    # 배경색 밝기에 따라 텍스트를 기본/3차 색 중 무엇으로 할지 서버에서 미리 판정.
+    try:
+        bg_upgrade_value = custom_theme.get('bg_upgrade')
+        if not bg_upgrade_value:
+            from aot.aot_flask.forms.forms_settings import SettingsCustomUI
+            bg_upgrade_value = SettingsCustomUI().bg_upgrade.default
+        upgrade_bg_is_light = is_hex_color_light(bg_upgrade_value)
+    except Exception:
+        upgrade_bg_is_light = True
+
     from aot.aot_flask.utils.utils_geo import get_geo_config
     geo_config = get_geo_config()
     map_global_providers = geo_config.get('providers', {}) if geo_config else {}
@@ -222,6 +233,7 @@ def inject_variables():
                 template_exists=template_exists,
                 themes=THEMES,
                 upgrade_available=misc.aot_upgrade_available,
+                upgrade_bg_is_light=upgrade_bg_is_light,
                 map_global_providers=map_global_providers,
                 map_global_keys=map_global_keys,
                 api_keys=api_keys,

@@ -518,67 +518,67 @@ WIDGET_INFORMATION = {
     'widget_dashboard_body': """<div class="not-draggable" id="container-synchronous-graph-{{each_widget.unique_id}}" style="position: absolute; left: 0; top: 0; bottom: 0; right: 0; overflow: hidden;"></div>""",
 
     'widget_dashboard_configure_options': """
-        <div class="row small-gutters" style="padding: 0.5em">
-          <div class="col-12" style="font-weight: bold">
-            {{_('Graph Series Options')}}
-          </div>
-          <div class="col-auto">
-            <label class="control-label">{{_('Use Custom Colors')}}</label>
-            <div class="input-group-text">
-              <input id="use_custom_colors" name="use_custom_colors" type="checkbox" value="y"{% if widget_options['use_custom_colors'] %} checked{% endif %}>
+        <div class="aot-modal-container">
+          <div class="aot-modal-section-title">{{_('Graph Series Options')}}</div>
+
+          <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" for="use_custom_colors">{{_('Use Custom Colors')}}</label>
+            <div class="aot-modal-option-control">
+              <label class="btn-toggle">
+                <input id="use_custom_colors" name="use_custom_colors" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options['use_custom_colors'] %} checked{% endif %}>
+                <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+              </label>
             </div>
           </div>
-        </div>
+
           {% for n in range(widget_variables['colors_graph']|length) %}
-        <div class="row small-gutters" style="padding: 0.5em">
-          <div class="col-12">
-            {{widget_variables['colors_graph'][n]['type']}}
-            {%- if 'channel' in widget_variables['colors_graph'][n] and widget_variables['colors_graph'][n]['channel'] is not none -%}
-              {{', CH' + widget_variables['colors_graph'][n]['channel']|string}}
-            {%- endif -%}
-            {%- if widget_variables['colors_graph'][n]['name'] -%}
-              {{', ' + widget_variables['colors_graph'][n]['name']}}
-            {%- endif -%}
-            {%- if widget_variables['colors_graph'][n]['measure_name'] -%}
-              {{', ' + widget_variables['colors_graph'][n]['measure_name']}}
-            {%- endif -%}
-            {%- if widget_variables['colors_graph'][n]['unit'] in dict_units -%}
-              {{' (' + dict_units[widget_variables['colors_graph'][n]['unit']]['name'] + ')'}}
-            {%- endif -%}
-          </div>
-          <div class="col-auto">
-            {% set index = '{0:0>2}'.format(n) %}
-            <label class="control-label" for="color_number{{index}}">{{_('Select Color')}}</label>
-            <div>
-              <input id="color_number{{index}}" name="color_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_graph'][n]['color']}}">
+          {% set index = '{0:0>2}'.format(n) %}
+          <div class="aot-modal-detail-item">
+            <div class="aot-modal-detail-head">
+              {{widget_variables['colors_graph'][n]['type']}}
+              {%- if 'channel' in widget_variables['colors_graph'][n] and widget_variables['colors_graph'][n]['channel'] is not none -%}
+                {{', CH' + widget_variables['colors_graph'][n]['channel']|string}}
+              {%- endif -%}
+              {%- if widget_variables['colors_graph'][n]['name'] -%}
+                {{', ' + widget_variables['colors_graph'][n]['name']}}
+              {%- endif -%}
+              {%- if widget_variables['colors_graph'][n]['measure_name'] -%}
+                {{', ' + widget_variables['colors_graph'][n]['measure_name']}}
+              {%- endif -%}
+              {%- if widget_variables['colors_graph'][n]['unit'] in dict_units -%}
+                {{' (' + dict_units[widget_variables['colors_graph'][n]['unit']]['name'] + ')'}}
+              {%- endif -%}
+            </div>
+            <div class="aot-modal-detail-fields">
+              <div class="aot-modal-detail-field aot-detail-field-color">
+                <label for="color_number{{index}}">{{_('Select Color')}}</label>
+                <input id="color_number{{index}}" name="color_number{{index}}" placeholder="#000000" type="color" value="{{widget_variables['colors_graph'][n]['color']}}">
+              </div>
+              {% if widget_variables['colors_graph'][n]['type'] != 'Tag' %}
+              <div class="aot-modal-detail-field aot-detail-field-toggle">
+                <label for="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}">{{_('Disable Data Grouping')}}</label>
+                <label class="btn-toggle">
+                  <input id="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}" name="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}" type="checkbox" value="y" class="btn-toggle-input"{% if widget_variables['colors_graph'][n]['disable_data_grouping'] %} checked{% endif %}>
+                  <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+                </label>
+              </div>
+              <div class="aot-modal-detail-field">
+                <label for="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}">{{_('Series Type')}}</label>
+                <select id="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}" name="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}" class="aot-modern-select">
+                  <option value="line" {% if widget_variables['colors_graph'][n]['series_type'] == "line" %} selected{% endif %}>{{_('Line')}}</option>
+                  <option value="step-left" {% if widget_variables['colors_graph'][n]['series_type'] == "step-left" %} selected{% endif %}>{{_('Step (Left)')}}</option>
+                  <option value="step-center" {% if widget_variables['colors_graph'][n]['series_type'] == "step-center" %} selected{% endif %}>{{_('Step (Center)')}}</option>
+                  <option value="step-right" {% if widget_variables['colors_graph'][n]['series_type'] == "step-right" %} selected{% endif %}>{{_('Step (Right)')}}</option>
+                  <option value="column" {% if widget_variables['colors_graph'][n]['series_type'] == "column" %} selected{% endif %}>{{_('Column')}}</option>
+                </select>
+              </div>
+              {% endif %}
             </div>
           </div>
-            {% if widget_variables['colors_graph'][n]['type'] != 'Tag' %}
-          <div class="col-auto">
-            <label class="control-label">{{_('Disable Data Grouping')}}</label>
-            <div class="input-group-text">
-              <input id="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}" name="disable_data_grouping-{{widget_variables['colors_graph'][n]['measure_id']}}" type="checkbox" value="y"{% if widget_variables['colors_graph'][n]['disable_data_grouping'] %} checked{% endif %}>
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label">{{_('Series Type')}}</label>
-            <div class="input-group-text">
-              <select id="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}" name="series_type-{{widget_variables['colors_graph'][n]['measure_id']}}">
-                <option value="line" {% if widget_variables['colors_graph'][n]['series_type'] == "line" %} selected{% endif %}>{{_('Line')}}</option>
-                <option value="step-left" {% if widget_variables['colors_graph'][n]['series_type'] == "step-left" %} selected{% endif %}>{{_('Step (Left)')}}</option>
-                <option value="step-center" {% if widget_variables['colors_graph'][n]['series_type'] == "step-center" %} selected{% endif %}>{{_('Step (Center)')}}</option>
-                <option value="step-right" {% if widget_variables['colors_graph'][n]['series_type'] == "step-right" %} selected{% endif %}>{{_('Step (Right)')}}</option>
-                <option value="column" {% if widget_variables['colors_graph'][n]['series_type'] == "column" %} selected{% endif %}>{{_('Column')}}</option>
-              </select>
-            </div>
-          </div>
-            {% endif %}
-        </div>
           {% endfor %}
 
-        {# 역방향 저장: 이 그래프의 시리즈색(앞 6개)을 전역 차트 색(custom_ui chart_1..6)으로 #}
-        <div class="form-row" style="margin-top: 8px;">
-          <div class="col-auto">
+          {# 역방향 저장: 이 그래프의 시리즈색(앞 6개)을 전역 차트 색(custom_ui chart_1..6)으로 #}
+          <div style="margin-top: 0.8rem;">
             <button type="button" class="btn aot-pill-btn"
                     onclick="(function(btn){
                       var colors = [];
@@ -596,64 +596,68 @@ WIDGET_INFORMATION = {
                         .then(function(){ if (window.toastr) toastr.success('{{_('Saved as global chart colors')}}'); })
                         .catch(function(e){ if (window.toastr) toastr.error(e.message); else alert(e.message); });
                     })(this)">{{_('Save as Global Chart Colors')}}</button>
-            <span class="aot-modal-body-text">{{_('Applies the first 6 series colors to Settings > Custom UI chart colors.')}}</span>
+            <div class="aot-modal-body-text">{{_('Applies the first 6 series colors to Settings > Custom UI chart colors.')}}</div>
           </div>
         </div>
 
-        <div class="row small-gutters" style="padding: 0.5em">
-          <div class="col-12" style="font-weight: bold">
-            {{_('Y-Axis Options')}}
-          </div>
-          <div class="col-auto">
-            <label class="control-label">{{_('Enable Manual Y-Axis Min/Max')}}</label>
-            <div class="input-group-text">
-              <input id="enable_manual_y_axis" name="enable_manual_y_axis" type="checkbox" value="y"{% if widget_options['enable_manual_y_axis'] %} checked{% endif %}>
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label">{{_('Enable Align Ticks')}}</label>
-            <div class="input-group-text">
-              <input id="enable_align_ticks" name="enable_align_ticks" type="checkbox" value="y"{% if widget_options['enable_align_ticks'] %} checked{% endif %}>
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label">{{_('Enable Start On Tick')}}</label>
-            <div class="input-group-text">
-              <input id="enable_start_on_tick" name="enable_start_on_tick" type="checkbox" value="y"{% if widget_options['enable_start_on_tick'] %} checked{% endif %}>
-            </div>
-          </div>
-          <div class="col-auto">
-            <label class="control-label">{{_('Enable End On Tick')}}</label>
-            <div class="input-group-text">
-              <input id="enable_end_on_tick" name="enable_end_on_tick" type="checkbox" value="y"{% if widget_options['enable_end_on_tick'] %} checked{% endif %}>
-            </div>
-          </div>
-        </div>
+        <div class="aot-modal-container">
+          <div class="aot-modal-section-title">{{_('Y-Axis Options')}}</div>
 
-      {% for each_yaxis in widget_variables['y_axes'] if each_yaxis in dict_units %}
-        {% set index = '{0:0>2}'.format(loop.index) %}
-        <div class="row small-gutters" style="padding-left: 0.5em">
-          <div class="col-auto">
-            {{dict_units[each_yaxis]['name']}}{% if dict_units[each_yaxis]['unit'] != '' %} ({{dict_units[each_yaxis]['unit']}}){% endif %}
+          <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" for="enable_manual_y_axis">{{_('Enable Manual Y-Axis Min/Max')}}</label>
+            <div class="aot-modal-option-control">
+              <label class="btn-toggle">
+                <input id="enable_manual_y_axis" name="enable_manual_y_axis" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options['enable_manual_y_axis'] %} checked{% endif %}>
+                <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+              </label>
+            </div>
           </div>
-        </div>
+          <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" for="enable_align_ticks">{{_('Enable Align Ticks')}}</label>
+            <div class="aot-modal-option-control">
+              <label class="btn-toggle">
+                <input id="enable_align_ticks" name="enable_align_ticks" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options['enable_align_ticks'] %} checked{% endif %}>
+                <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+          <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" for="enable_start_on_tick">{{_('Enable Start On Tick')}}</label>
+            <div class="aot-modal-option-control">
+              <label class="btn-toggle">
+                <input id="enable_start_on_tick" name="enable_start_on_tick" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options['enable_start_on_tick'] %} checked{% endif %}>
+                <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+          <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label" for="enable_end_on_tick">{{_('Enable End On Tick')}}</label>
+            <div class="aot-modal-option-control">
+              <label class="btn-toggle">
+                <input id="enable_end_on_tick" name="enable_end_on_tick" type="checkbox" value="y" class="btn-toggle-input"{% if widget_options['enable_end_on_tick'] %} checked{% endif %}>
+                <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
 
-        <div class="row small-gutters" style="padding-left: 0.5em">
-          <input type="hidden" name="custom_yaxis_name_{{index}}" value="{{each_yaxis}}">
-          <div class="col-auto">
-            <label class="form-check-label" for="custom_yaxis_min_{{index}}">{{_('Y-Axis Min')}}</label>
-            <div>
-              <input id="yaxis_min_{{index}}" class="form-control" name="custom_yaxis_min_{{index}}" type="number" value="{% if widget_variables['custom_yaxes'][each_yaxis] %}{{widget_variables['custom_yaxes'][each_yaxis]['minimum']}}{% endif %}">
+          {% for each_yaxis in widget_variables['y_axes'] if each_yaxis in dict_units %}
+          {% set index = '{0:0>2}'.format(loop.index) %}
+          <div class="aot-modal-detail-item">
+            <input type="hidden" name="custom_yaxis_name_{{index}}" value="{{each_yaxis}}">
+            <div class="aot-modal-detail-head">{{dict_units[each_yaxis]['name']}}{% if dict_units[each_yaxis]['unit'] != '' %} ({{dict_units[each_yaxis]['unit']}}){% endif %}</div>
+            <div class="aot-modal-detail-fields">
+              <div class="aot-modal-detail-field">
+                <label for="yaxis_min_{{index}}">{{_('Y-Axis Min')}}</label>
+                <input id="yaxis_min_{{index}}" class="aot-modern-input" name="custom_yaxis_min_{{index}}" type="number" value="{% if widget_variables['custom_yaxes'][each_yaxis] %}{{widget_variables['custom_yaxes'][each_yaxis]['minimum']}}{% endif %}">
+              </div>
+              <div class="aot-modal-detail-field">
+                <label for="yaxis_max_{{index}}">{{_('Y-Axis Max')}}</label>
+                <input id="yaxis_max_{{index}}" class="aot-modern-input" name="custom_yaxis_max_{{index}}" type="number" value="{% if widget_variables['custom_yaxes'][each_yaxis] %}{{widget_variables['custom_yaxes'][each_yaxis]['maximum']}}{% endif %}">
+              </div>
             </div>
           </div>
-          <div class="col-auto">
-            <label class="form-check-label" for="custom_yaxis_max_{{index}}">{{_('Y-Axis Max')}}</label>
-            <div>
-              <input id="yaxis_max_{{index}}" class="form-control" name="custom_yaxis_max_{{index}}" type="number" value="{% if widget_variables['custom_yaxes'][each_yaxis] %}{{widget_variables['custom_yaxes'][each_yaxis]['maximum']}}{% endif %}">
-            </div>
-          </div>
+          {% endfor %}
         </div>
-      {% endfor %}
 """,
 
     'widget_dashboard_js': """
