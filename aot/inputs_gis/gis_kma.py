@@ -1,6 +1,6 @@
 # coding=utf-8
 from aot.inputs_gis.base_input_gis import AbstractGisInput
-from flask_babel import lazy_gettext as lg, gettext as _
+from flask_babel import lazy_gettext as lg
 
 # 필드명/단위는 kma_weather_500.py의 sfc_nc_var.php 응답 컬럼과 일치
 CHANNELS = {
@@ -143,7 +143,11 @@ class InputModule(AbstractGisInput):
         input_id = getattr(self, 'unique_id', '')
         proxy_url = f'/api/geo/proxy/kma?lat={{lat}}&lon={{lon}}&input_id={input_id}'
 
-        rows_html = ''
+        # Each active channel renders as its own standard legend row (same
+        # aot-legend-wrapper/content/value-box markup every other gis_input
+        # legend uses), stacked with aot-legend-item-wrapper's divider —
+        # identical to how multiple distinct-layer legends stack together.
+        items_html = ''
         for ch_id in active_channels:
             if ch_id not in CHANNELS:
                 continue
@@ -151,28 +155,26 @@ class InputModule(AbstractGisInput):
             ch_name = info['name']
             category = info['options']['category']
             unit = info['options']['unit']
-            rows_html += (
-                f'<div class="aot-kma-channel-row">'
-                f'<span class="aot-kma-channel-name">{ch_name}</span>'
-                f'<span class="aot-legend-value-box"'
+            items_html += (
+                '<div class="aot-legend-item-wrapper">'
+                '<div class="aot-legend-wrapper">'
+                '<div class="aot-legend-content">'
+                f'<div class="aot-legend-title">{ch_name}</div>'
+                '</div>'
+                '<div class="aot-legend-value-box"'
                 f' data-api-url="{proxy_url}"'
                 f' data-api-param="{category}"'
                 f' data-unit="{unit}">'
-                f'<span class="aot-legend-value-text">--</span>'
-                f'<span class="aot-legend-value-unit">{unit}</span>'
-                f'</span>'
-                f'</div>'
-            )
-
-        title = _("KMA Weather")
-        return {
-            'type': 'html',
-            'content': (
-                '<div class="aot-legend-wrapper aot-kma-wrapper">'
-                f'<div class="aot-legend-title">{title}</div>'
-                f'<div class="aot-kma-channels">{rows_html}</div>'
+                '<div class="aot-legend-value-text">--</div>'
+                f'<div class="aot-legend-value-unit">{unit}</div>'
+                '</div>'
+                '</div>'
                 '</div>'
             )
+
+        return {
+            'type': 'html',
+            'content': items_html
         }
 
     def get_available_channels(self):

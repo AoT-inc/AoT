@@ -2115,47 +2115,6 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
     background: #aaa;
 }
 
-/* KMA Weather legend — multi-channel data-only layout */
-.aot-kma-wrapper {
-    flex-direction: column;
-    align-items: stretch;
-    min-height: unset;
-    gap: 6px;
-}
-.aot-kma-channels {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-.aot-kma-channel-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-}
-.aot-kma-channel-name {
-    font-size: 11px;
-    color: var(--aot-color-text-secondary, #666);
-    flex: 1;
-    white-space: nowrap;
-}
-.aot-kma-channel-row .aot-legend-value-box {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 2px;
-    border-left: none;
-    padding-left: 0;
-    min-width: unset;
-}
-.aot-kma-channel-row .aot-legend-value-text {
-    font-size: 13px;
-    font-weight: 600;
-}
-.aot-kma-channel-row .aot-legend-value-unit {
-    font-size: 10px;
-    margin-top: 0;
-}
-
 /* ==========================================================================
    Compact height modes — set on .aot-map-container by the vector widget JS
    (setupCompactMode). aot-map-h-sm: height < 380px, aot-map-h-xs: < 260px.

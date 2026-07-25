@@ -1121,6 +1121,20 @@ body.modal-open {
     text-overflow: ellipsis;
 }
 
+/* Widget config modal title: "<user-given widget name> · <widget type> Settings" —
+   distinguishes which widget's drawer is open when several same-type widgets exist
+   on one dashboard. The name is the identifying part, so it gets emphasis; the type
+   is secondary context. */
+.aot-modal-title-widget-name {
+    color: var(--aot-color-brand-primary, #13261B);
+    font-weight: 700 !important;
+}
+.aot-modal-title-widget-type {
+    color: var(--text-secondary, #5E6B64);
+    font-weight: 500 !important;
+}
+.aot-modal-title-widget-type::before { content: '\00b7'; margin: 0 0.4em; }
+
 /* --- modal-body: 스크롤 영역 --- */
 /* .aot-option-modal .modal-body (0,3,0) > .modal-dialog .modal-body (0,2,0)
    Section 7 의 overflow-x 규칙도 덮어씀 */
@@ -1393,6 +1407,18 @@ input[type="range"].aot-ov-opacity::-moz-range-thumb {
    The modal keeps its Bootstrap 4.6 lifecycle (hydrate/selectpicker/live-save
    bindings on show/shown), we only restyle position + push the page.
    ============================================================ */
+/* Highlight the dashboard card whose drawer is currently open — the drawer no
+   longer dims/covers the dashboard (pointer-events pass through), so without this
+   there is no visual link back to which widget is being edited. Toggled by
+   dashboard.js (UIFixes.widgetDrawerMode) alongside body.aot-widget-drawer-open.
+   Deepens .widget-outer's own resting shadow (0 0 10px rgba(0,0,0,0.1)) rather than
+   adding a colored ring/border — reads as "this card lifted toward you", consistent
+   with the rest of the card's own visual language instead of a foreign accent. */
+.widget-outer { transition: box-shadow 0.2s ease; }
+.grid-stack-item.aot-widget-config-active > .widget-outer {
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
 :root { --aot-wdrawer-w: 600px; }
 @media (min-width: 1200px) { :root { --aot-wdrawer-w: 640px; } }
 @media (min-width: 768px) and (max-width: 1199px) { :root { --aot-wdrawer-w: 520px; } }

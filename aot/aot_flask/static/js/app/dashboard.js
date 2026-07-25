@@ -518,6 +518,7 @@ const UIFixes = {
                     document.body.classList.add('aot-widget-drawer-open');
                     self._nudgeResize();
                 }
+                self._activateWidgetCard(ev.target);
             });
             $(document).on('hidden.bs.modal', function (ev) {
                 if (!ev.target.classList || !ev.target.classList.contains('aot-widget-drawer')) { return; }
@@ -526,8 +527,38 @@ const UIFixes = {
                     document.body.classList.remove('aot-widget-drawer-open');
                     self._nudgeResize();
                 }
+                // Deactivate only THIS modal's own card, never all of them: switching
+                // straight from widget A to widget B fires B's show (which activates B
+                // and asks A's drawer to hide) before A's own 'hidden.bs.modal' arrives
+                // (it waits out the 0.4s slide transition) — a blanket clear here would
+                // race that late event and wipe B's just-set highlight.
+                self._deactivateWidgetCard(ev.target);
             });
         } catch (e) { /* ignore */ }
+    },
+
+    // Highlight the dashboard card matching the open drawer's widget id, so it's
+    // visually clear which widget is being edited (the drawer no longer covers or
+    // dims the dashboard). Clears any other card first — only one drawer is ever
+    // open at a time (see above) — then marks the new one.
+    _activateWidgetCard(modal) {
+        document.querySelectorAll('.grid-stack-item.aot-widget-config-active').forEach(function (el) {
+            el.classList.remove('aot-widget-config-active');
+        });
+        var m = /^modal_config_(.+)$/.exec((modal && modal.id) || '');
+        if (!m) { return; }
+        var card = document.getElementById('gridstack_widget_' + m[1]);
+        if (card) { card.classList.add('aot-widget-config-active'); }
+    },
+
+    // Remove the highlight from exactly the card matching this modal's widget id
+    // (a no-op if a different widget's card is the one currently active — see the
+    // race note above).
+    _deactivateWidgetCard(modal) {
+        var m = /^modal_config_(.+)$/.exec((modal && modal.id) || '');
+        if (!m) { return; }
+        var card = document.getElementById('gridstack_widget_' + m[1]);
+        if (card) { card.classList.remove('aot-widget-config-active'); }
     },
 
     // Let the 0.4s page-push transition finish, then trigger a window resize so
