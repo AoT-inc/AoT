@@ -238,7 +238,7 @@
 {% include 'pages/ai/ai_modals.html' %}
 
 <!-- Unified Agent Settings Modal -->
-<div class="modal fade aot-option-modal" id="unifiedAgentSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade aot-option-modal aot-widget-drawer" data-backdrop="false" id="unifiedAgentSettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -273,6 +273,12 @@
     
     // Reset to loading state
     $dynamicContent.html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">{{ _("Loading settings...") }}</p></div>');
+    // Tell the shared drawer which agent card this (single, shared) modal belongs to,
+    // so the matching row is lifted with a shadow. Set before show so the show.bs.modal
+    // hook reads it; also call activateByUid directly to cover switching agents while the
+    // drawer is already open (Bootstrap fires no show event on an already-open modal).
+    $modal.attr('data-config-uid-target', agentId);
+    if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(agentId); }
     $modal.modal('show');
     
     $.ajax({
@@ -854,4 +860,5 @@
     </div>
   </div>
 </div>
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725c"></script>
 {% endblock %}

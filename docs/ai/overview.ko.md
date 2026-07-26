@@ -28,13 +28,14 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ## MCP 도구 목록
 
-외부 MCP 서버와 내부 `mcp_aot` 엔진이 노출하는 도구입니다. 읽기 도구는 즉시 실행되고, 제어·일정 도구는 인앱 어시스턴트에서 호출될 때 승인 게이트를 거칩니다.
+외부 MCP 서버와 내부 `mcp_aot` 엔진이 노출하는 도구입니다. 읽기 도구는 즉시 실행되고, 제어·일정 도구는 승인 게이트를 거칩니다 — 인앱 어시스턴트에서는 채팅의 승인 카드로, 외부 MCP 서버에서는 대기열(`pending_approval` + `respond_to_confirmation`)로 처리됩니다(자세한 내용은 아래 "MCP 서버 실행" 참고).
 
 ### 관찰·조회 (읽기 — 즉시 실행)
 
 | 도구 | 설명 |
 |------|------|
 | `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 |
+| `resolve_target` | 장치/구역 이름을 정확한 엔티티로 해석 — 컨테이너(하위 구역 보유)인지 미리 확인 |
 | `get_device_list` | 등록된 전체 장치(입력·출력·카메라) 목록 |
 | `search_devices` | 이름·유형 키워드로 장치 검색 |
 | `get_sensor_detail` | 센서 시계열 이력 (min/max/avg 통계) |
@@ -53,6 +54,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 |------|------|------|
 | `create_note` | 날짜 없는 메모/노트를 대상 엔티티에 부착해 즉시 저장 | 불필요 |
 | `add_schedule` | 사람이 수행할 작업 일정(제초·점검·청소 등) 등록 | 필요 |
+| `add_schedule_batch` | 여러 대상(구역별 등)의 일정을 단일 승인으로 일괄 등록 | 필요 |
 
 ### 제어 (사용자 승인 필요)
 
@@ -62,7 +64,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 | `set_output_state` | 출력 장치 on/off (선택적 지속시간, 네이티브 브리지) |
 | `schedule_device_control` | 특정 시각 1회성 장치 제어 예약 |
 
-> 인앱 어시스턴트에서는 위 제어·`add_schedule` 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때는 자체 승인 게이트가 없으므로, 제어 도구까지 노출되는 이 서버는 신뢰할 수 있는 클라이언트에만 연결하세요.
+> 인앱 어시스턴트에서는 위 제어·`add_schedule` 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때도 동일하게 승인을 거칩니다 — 최초 호출은 실행되지 않고 `pending_approval`(대기 중인 confirmation_id)로 응답하며, 사용자가 그 confirmation_id를 채팅에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출(또는 웹 승인 페이지 클릭)로 처리되고, 그 뒤 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다. 자세한 흐름은 아래 "MCP 서버 실행"을 참고하세요.
 
 ### 인앱 어시스턴트 확장 도구
 
@@ -72,6 +74,8 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 - **함수(자동화)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
 - **일정 원장**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **지도(GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **GIS 입력(지도 레이어)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input`(VWorld/Google/OpenWeather 등 지도 레이어 제공자 관리)
+- **설비/시설 조회**: `get_facility_capacity`(시설 냉난방 용량·체적·환기·관수 설계 요약), `get_map_equipment`(지도에 그린 설비의 구역별 관수 설계 요약, 스프링클러/점적 구분), `get_map_equipment_detail`(개별 스프링클러 위치·간격·반경, 배관별 상세 — 요약으로 부족할 때만)
 - **공지 게시판**: `create_notice`·`modify_notice`·`delete_notice`
 - **AI 에이전트 관리**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
 - **지식 라이브러리**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
@@ -94,12 +98,12 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ## 안전·승인 모델
 
-상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. **상태를 바꾸는 도구**는 인앱 어시스턴트에서 호출될 때 승인 게이트를 거칩니다.
+상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. **상태를 바꾸는 도구**는 어느 경로로 호출되든 승인 게이트를 거칩니다.
 
-- **승인 필요(변이·물리 제어)**: 장치 제어(`operate_device`, `set_output_state`, `schedule_device_control`), 입력/출력/함수/공지/AI 에이전트의 생성·수정·삭제, 지도 배치 변경(`set_device_location`, `delete_geo_shape`), `add_schedule`, `configure_library_source` 등.
+- **승인 필요(변이·물리 제어)**: 장치 제어(`operate_device`, `set_output_state`, `schedule_device_control`), 입력/출력/함수/공지/AI 에이전트/GIS 입력의 생성·수정·삭제, 지도 배치 변경(`set_device_location`, `delete_geo_shape`), `add_schedule`·`add_schedule_batch`, `configure_library_source` 등.
 - **승인 불필요(저위험 기록)**: `create_note`, `knowledge_shelve` — 되돌릴 수 있는 개인 메모/미확인 지식으로 즉시 저장되며, 확정 전까지 권위 없는 정보로 취급됩니다.
 
-승인이 필요한 동작은 즉시 적용되지 않고 채팅에 **승인 카드**로 제시됩니다. 사용자가 승인해야 실제로 실행되며, 거부하면 아무 변경도 일어나지 않습니다.
+승인이 필요한 동작은 즉시 적용되지 않습니다. **인앱 어시스턴트**에서는 채팅에 **승인 카드**로 제시되어 사용자가 승인해야 실제로 실행됩니다. **외부 MCP 서버**에서는 `pending_approval` 응답(대기열)으로 나가고, 사용자가 그 confirmation_id를 명시적으로 승인/거부해야 처리됩니다 — 어느 경로든 거부하면 아무 변경도 일어나지 않습니다.
 
 ---
 
@@ -153,7 +157,7 @@ Claude Desktop에서 연결하려면 `claude_desktop_config.json`에 추가합�
 }
 ```
 
-> 이 서버는 도구를 호출된 대로 실행합니다(자체 승인 게이트 없음). 제어 도구까지 노출되므로 신뢰할 수 있는 클라이언트에만 연결하세요. 승인 카드는 인앱 어시스턴트 경로에만 적용됩니다.
+> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/ai/services/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화(또는 웹 승인 페이지 `/ai/mcp_review`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다. 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 

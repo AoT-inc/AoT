@@ -11,6 +11,7 @@ How AoT's AI agent observes, diagnoses, and controls greenhouses and growing fac
 | Category | Tool | Description | Approval |
 |----------|------|-------------|----------|
 | Observe | `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree | No |
+| Observe | `resolve_target` | Resolve a name to its exact entity, check whether it's a container (has children) | No |
 | Observe | `get_device_list` | List of all registered devices | No |
 | Observe | `search_devices` | Find devices by name/type | No |
 | Observe | `get_sensor_detail` | Sensor time-series history (min/max/avg) | No |
@@ -24,9 +25,11 @@ How AoT's AI agent observes, diagnoses, and controls greenhouses and growing fac
 | Notices | `list_notices` | Notice board post list | No |
 | System | `get_system_update_status` | Installed version vs latest GitHub release | No |
 | Task | `add_schedule` | Register a human work task (weeding, inspection, cleaning) | **Yes** |
+| Task | `add_schedule_batch` | Register schedules for multiple targets (e.g. per zone) behind a single approval | **Yes** |
 | Control | `operate_device` | Immediate control of valves/pumps/lights | **Yes** |
 | Control | `set_output_state` | Turn an output on/off (optional duration, native) | **Yes** |
 | Control | `schedule_device_control` | Reserve a one-off device operation at a time | **Yes** |
+| Approval | `respond_to_confirmation` | Approve/reject one or more pending confirmation_id(s) | N/A (this IS the approval) |
 
 ### 1.2 Extended in-app assistant tools
 
@@ -36,6 +39,7 @@ Beyond the catalog above, the in-app assistant uses additional tools for entity 
 - **Functions (automation)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
 - **Schedule ledger**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **GIS inputs (map layers)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input`
 - **Notices**: `create_notice`·`modify_notice`·`delete_notice`
 - **AI agents**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
 - **Knowledge library**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
@@ -48,10 +52,12 @@ Beyond the catalog above, the in-app assistant uses additional tools for entity 
 ## 2. Safety & Approval Policy
 
 - **Read tools** run immediately.
-- **State-changing tools** (mutation / physical control / scheduling) pass through the approval gate when called from the in-app assistant. They are not applied immediately — they appear in the chat as an **approval card** and execute only after the user approves.
+- **State-changing tools** (mutation / physical control / scheduling) pass through an approval gate no matter which path calls them.
+  - **In-app assistant**: not applied immediately — they appear in the chat as an **approval card** and execute only after the user approves.
+  - **External MCP server** (`aot_mcp_server.py`, `aot/ai/services/mcp_safety_gate.py`): the first call is not executed and comes back as `pending_approval` + `confirmation_id`. Once the user explicitly approves or rejects that confirmation_id in the same conversation, it's processed via `respond_to_confirmation` (or a click on the web review page `/ai/mcp_review`); after approval, the caller must retry the same tool with `_confirmation_id` added to actually execute it. The calling AI has no way to decide or fake this approval on its own. `AOT_MCP_WRITE_ENABLED=0` refuses write tools outright (advice-only mode).
 - As exceptions, `create_note` and `knowledge_shelve` are reversible low-risk writes that save without approval and are treated as non-authoritative until confirmed.
 - **Per-device AI inclusion toggle**: turning it off in a device's `Configure -> Inputs/Outputs` modal excludes that device from AI tools' queries and control (`is_ai_enabled`).
-- The **external MCP server** (`aot_mcp_server.py`) has no approval gate of its own and executes tools as invoked. Because it exposes control tools, connect it only to trusted clients.
+- The **external MCP server** goes through the same approval gate too, but it still exposes control tools — connect it only to trusted clients.
 
 ---
 
@@ -165,5 +171,6 @@ The AI agent must not:
 | Tool can't find a note | `target_name` not passed, so only keyword search ran | Pass the zone/device name as `target_name` |
 | Device invisible to AI | `is_ai_enabled=False` | Turn on Include in AI Judgment in the device modal |
 | Recurring control not schedulable | Confused with a one-off reservation | Use `create_function` for recurring/conditional control |
-| External MCP call runs without approval | The external server has no approval gate | Connect a control-exposing server only to trusted clients |
+| External MCP write call stuck at `pending_approval` | Called `respond_to_confirmation` without the user's explicit approval text (or skipped it entirely) | Only call `respond_to_confirmation` after the user explicitly approves/rejects that confirmation_id in the conversation |
+| A per-zone schedule attached to one container (site) instead | Passed the site name straight into `add_schedule`/`add_schedule_batch` | Call `resolve_target` first; if it returns `children`, call `add_schedule_batch` with those child names |
 | Creation fails with a type error | Invented a nonexistent type | Confirm valid types first with `list_device_types` |

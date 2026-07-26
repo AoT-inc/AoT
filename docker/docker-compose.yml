@@ -56,6 +56,64 @@ services:
       - influxdb
     restart: always
 
+  # 외부 MCP 서버 — 외부 AI(Claude Code/Desktop 등)가 상태 점검·제어 조언을 위해
+  # 접속한다. aot-app 안에서 `docker exec -d`로 띄우면 임시 프로세스라 재빌드/
+  # 재시작 때마다 죽으므로(2026-07-26 실제로 겪음) 별도 서비스로 올려 restart
+  # 정책을 받는다. aot-app 과 같은 aot_data 볼륨을 마운트해야 같은 aot.db 를
+  # 열고 승인 큐(mcp_confirmation)를 공유한다. 인증은 mcp_auth.py(X-API-KEY =
+  # base64(User.api_key), Settings > Users 에서 발급)가 처리하지만, 그와 별개로
+  # LAN/인터넷 노출을 막기 위해 127.0.0.1 로만 바인딩한다 — 이 호스트에서 실행
+  # 되는 클라이언트만 접속 가능. docker-compose.prod.yml 의 aot_mcp 서비스와
+  # 같은 구성, 여기서는 build-from-source 스타일로 맞춤.
+  # stdio로 붙는 클라이언트는 반드시 이 컨테이너로 exec 해야 한다 —
+  # `docker exec -i aot_local-aot_mcp-1 python aot/aot_mcp_server.py`.
+  # AOT_MCP_API_KEY(아래)가 여기에만 있고 aot-app에는 없으므로, aot-app으로
+  # exec하면 인증이 깨진다.
+  aot_mcp:
+    image: aot_ai
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: python aot/aot_mcp_server.py --http --port 5700
+    ports:
+      - "127.0.0.1:5700:5700"
+    volumes:
+      - ../:/app
+      - ../logs:/var/log/aot
+      - ../aot/databases:/app/aot/databases
+      - aot_data:/app/aot_local
+      - flask_session:/app/aot/databases/flask_session
+    environment:
+      - TZ=Asia/Seoul
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - HARDWARE_PROFILE=LOW
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      # 쓰기 허용이지만 모든 쓰기는 사람 승인을 거친다. 0이면 조언 전용.
+      - AOT_MCP_WRITE_ENABLED=${AOT_MCP_WRITE_ENABLED:-1}
+      # 인바운드 인증 필수 여부. 0으로 끄면 무인증(로컬 단독 테스트용) — 감사
+      # 로그에 'unauthenticated:' 접두사로 구분된다.
+      - AOT_MCP_REQUIRE_AUTH=${AOT_MCP_REQUIRE_AUTH:-1}
+      # stdio 클라이언트용 키(HTTP 모드에서는 미사용). 컨테이너 env 로 두면
+      # `docker exec -i` 로 뜬 stdio 프로세스가 물려받는다. 값은 gitignore 된
+      # docker/.env 에서 채운다.
+      - AOT_MCP_API_KEY=${AOT_MCP_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          # aot_mcp_server.py 도 전체 Flask 앱을 로드하므로 ~400MB 안팎 (aot-app
+          # 메모리 주석 참고). 넉넉히 768M.
+          memory: 768M
+    depends_on:
+      - aot_daemon
+      - influxdb
+    restart: always
+
   aot_daemon:
     image: aot_ai
     build:

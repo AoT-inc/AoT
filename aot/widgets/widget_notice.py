@@ -88,14 +88,19 @@ WIDGET_INFORMATION = {
     <div class="aot-modal-body-text">{{_('Only show posts in the selected categories. If none are selected, posts of every category are shown.')}}</div>
   </div>
   {% if widget_variables.get('available_categories') %}
-  <div class="aot-modal-option-row aot-full-width-row" style="flex-wrap:wrap; gap: 0.4rem 1rem;">
     {% for cat in widget_variables.get('available_categories', []) %}
-    <label style="font-weight:400; margin-bottom:0;">
-      <input type="checkbox" name="categories" value="{{cat}}"{% if cat in widget_options.get('categories', []) %} checked{% endif %}>
-      {{cat}}
-    </label>
-    {% endfor %}
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{cat}}</label>
+    <div class="aot-modal-option-control">
+      <label class="btn-toggle mb-0">
+        <input type="checkbox" name="categories" value="{{cat}}" class="btn-toggle-input"{% if cat in widget_options.get('categories', []) %} checked{% endif %}>
+        <div class="btn-toggle-slider">
+          <div class="btn-toggle-thumb"></div>
+        </div>
+      </label>
+    </div>
   </div>
+    {% endfor %}
   {% else %}
   <div class="aot-modal-option-row aot-full-width-row">
     <div class="text-muted small">{{_('No categories yet. Set one when creating a post to filter by it here.')}}</div>

@@ -17,8 +17,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_07_user_timezone_20260721'
-AOT_VERSION = '26.07.3'
+ALEMBIC_VERSION = 'p6_08_ai_advice_ledger_20260725'
+AOT_VERSION = '26.07.4'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -720,10 +720,18 @@ class ProdConfig(object):
 
     # [Security] Session Cookie Settings
     # Relaxed for Development/LAN Access
-    SESSION_COOKIE_SECURE = False 
+    SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     WTF_CSRF_SSL_STRICT = False
+
+    # [Security] "Remember Me" (90-day) cookie — mirror the session cookie's
+    # settings explicitly rather than relying on flask-login's defaults
+    # (SECURE=None, SAMESITE=None), so the 90-day login stays independent of
+    # the session cookie and isn't dropped by a stricter browser default.
+    REMEMBER_COOKIE_SECURE = False
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
 
     # Ensure file containing the Flask secret_key exists
     FLASK_SECRET_KEY_PATH = os.path.join(DATABASE_PATH, 'flask_secret_key')

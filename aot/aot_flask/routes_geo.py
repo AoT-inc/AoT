@@ -260,86 +260,97 @@ def api_geo_settings():
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
             return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
-            
+
         # Support both JSON and Form data
         if request.is_json:
             data = request.get_json()
         else:
             data = request.form
 
-        # 1. Process Providers & Keys
+        # [Fix] Serialize the whole read-modify-write against concurrent saves
+        # (see GEO_SETTINGS_SAVE_LOCK docstring — patching one key of the
+        # theme_config/providers JSON blobs is a lost-update race otherwise).
+        # Re-fetch fresh inside the lock so this request's merge is based on
+        # the latest committed row, not whatever was read before the lock.
+        utils_geo.GEO_SETTINGS_SAVE_LOCK.acquire()
         try:
-            providers_state = json.loads(global_settings.providers) if global_settings.providers else {}
-            # Merge search provider
-            search_provider = data.get('search_provider')
-            if search_provider is not None:
-                 providers_state['search_provider'] = search_provider
-            # MapLibre 라이브러리 로컬 서빙 여부 (기본: CDN)
-            maplibre_local = data.get('maplibre_local_serving')
-            if maplibre_local is not None:
-                 providers_state['maplibre_local_serving'] = (str(maplibre_local).lower() == 'true')
-            global_settings.providers = json.dumps(providers_state)
-        except Exception as e:
-            current_app.logger.error(f"Error processing geo providers: {e}")
+            global_settings = GeoSetting.query.populate_existing().first() or global_settings
 
-        # 2. Geo Params
-        numeric_fields = {
-            'max_zoom': 25,
-            'max_polygons_device': 1000,
-            'max_polygons_site': 1000,
-            'max_polygons_zone': 1000,
-            'equipment_cull_zoom': 15
-        }
-        for field, default in numeric_fields.items():
+            # 1. Process Providers & Keys
             try:
+                providers_state = json.loads(global_settings.providers) if global_settings.providers else {}
+                # Merge search provider
+                search_provider = data.get('search_provider')
+                if search_provider is not None:
+                     providers_state['search_provider'] = search_provider
+                # MapLibre 라이브러리 로컬 서빙 여부 (기본: CDN)
+                maplibre_local = data.get('maplibre_local_serving')
+                if maplibre_local is not None:
+                     providers_state['maplibre_local_serving'] = (str(maplibre_local).lower() == 'true')
+                global_settings.providers = json.dumps(providers_state)
+            except Exception as e:
+                current_app.logger.error(f"Error processing geo providers: {e}")
+
+            # 2. Geo Params
+            numeric_fields = {
+                'max_zoom': 25,
+                'max_polygons_device': 1000,
+                'max_polygons_site': 1000,
+                'max_polygons_zone': 1000,
+                'equipment_cull_zoom': 15
+            }
+            for field, default in numeric_fields.items():
+                try:
+                    val = data.get(field)
+                    if val is not None:
+                        setattr(global_settings, field, int(val))
+                except:
+                    pass
+
+            float_fields = {
+                'default_lat': 37.5665,
+                'default_lng': 126.9780,
+                'default_zoom': 12.0
+            }
+            for field, default in float_fields.items():
+                try:
+                    val = data.get(field)
+                    if val is not None:
+                        attr_name = 'zoom' if field == 'default_zoom' else field
+                        setattr(global_settings, attr_name, float(val))
+                except:
+                    pass
+
+            # Boolean: digital_zoom, smooth_zoom, tile_fade_animation, prefer_canvas
+            bool_fields = ['digital_zoom', 'smooth_zoom', 'tile_fade_animation', 'prefer_canvas']
+            for field in bool_fields:
                 val = data.get(field)
                 if val is not None:
-                    setattr(global_settings, field, int(val))
-            except:
-                pass
+                     setattr(global_settings, field, (str(val).lower() == 'true'))
 
-        float_fields = {
-            'default_lat': 37.5665,
-            'default_lng': 126.9780,
-            'default_zoom': 12.0
-        }
-        for field, default in float_fields.items():
+            # 3. Theme Configuration
             try:
-                val = data.get(field)
-                if val is not None:
-                    attr_name = 'zoom' if field == 'default_zoom' else field
-                    setattr(global_settings, attr_name, float(val))
-            except:
-                pass
+                theme_conf = global_settings.state_dict().get('theme_config', {}) or {}
+                theme_keys = [
+                    'theme_site', 'theme_zone', 'theme_facility', 'theme_equipment', 'theme_device',
+                    'theme_input', 'theme_output', 'theme_function',
+                    'theme_panel_bg', 'theme_panel_opacity',
+                    'theme_hide_label', 'theme_vis_input', 'theme_vis_output', 'theme_vis_function'
+                ]
+                for key in theme_keys:
+                    val = data.get(key)
+                    if val is not None:
+                        clean_key = key.replace('theme_', '')
+                        theme_conf[clean_key] = val
+                global_settings.theme_config = json.dumps(theme_conf)
+            except Exception as e:
+                current_app.logger.error(f"Error saving theme config in API: {e}")
 
-        # Boolean: digital_zoom, smooth_zoom, tile_fade_animation, prefer_canvas
-        bool_fields = ['digital_zoom', 'smooth_zoom', 'tile_fade_animation', 'prefer_canvas']
-        for field in bool_fields:
-            val = data.get(field)
-            if val is not None:
-                 setattr(global_settings, field, (str(val).lower() == 'true'))
+            db.session.commit()
+            utils_geo.invalidate_geo_config_cache()
+        finally:
+            utils_geo.GEO_SETTINGS_SAVE_LOCK.release()
 
-        # 3. Theme Configuration
-        try:
-            theme_conf = global_settings.state_dict().get('theme_config', {}) or {}
-            theme_keys = [
-                'theme_site', 'theme_zone', 'theme_facility', 'theme_equipment', 'theme_device', 
-                'theme_input', 'theme_output', 'theme_function',
-                'theme_panel_bg', 'theme_panel_opacity',
-                'theme_hide_label', 'theme_vis_input', 'theme_vis_output', 'theme_vis_function'
-            ]
-            for key in theme_keys:
-                val = data.get(key)
-                if val is not None:
-                    clean_key = key.replace('theme_', '')
-                    theme_conf[clean_key] = val
-            global_settings.theme_config = json.dumps(theme_conf)
-        except Exception as e:
-            current_app.logger.error(f"Error saving theme config in API: {e}")
-
-        db.session.commit()
-        utils_geo.invalidate_geo_config_cache()
-        
         return jsonify({'ok': True, 'message': 'Settings Saved'})
 
     # GET
@@ -3179,6 +3190,37 @@ def api_geo_output_state(output_uuid):
     except Exception as e:
         current_app.logger.exception("api_geo_output_state failed")
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@blueprint.route('/api/geo/output_states', methods=['POST'])
+@login_required
+def api_geo_output_states():
+    """지정한 Output들의 현재 상태 일괄 조회 (구역 팝업 폴링용, 경량).
+
+    'on'/'off'/'pending'/'fault'/숫자/불리언 원본 값을 그대로 반환한다.
+    on/off 로 뭉뚱그리지 않는 이유: 'fault'(응답 없음/오프라인)를 truthy 로
+    잘못 접어버리면 오프라인 장치가 켜진 것처럼 표시되는 버그가 난다. 최종
+    on/off/pending/fault 판정은 프론트에서 공용 분류기 AoTOutputState.classify()
+    (aot-output-state.js) 로 한다 — facility 팝업/장치 마커와 동일한 판정 기준.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    ids = data.get('ids')
+    if not isinstance(ids, list) or not ids:
+        return jsonify({'ok': True, 'states': {}})
+
+    from aot.aot_client import DaemonControl
+    try:
+        all_states = DaemonControl().output_states_all() or {}
+    except Exception:
+        all_states = {}
+
+    states = {}
+    for uid in ids:
+        ch_states = all_states.get(uid)
+        if not isinstance(ch_states, dict):
+            continue
+        states[uid] = {str(ch): raw for ch, raw in ch_states.items()}
+    return jsonify({'ok': True, 'states': states})
 
 
 @blueprint.route('/api/geo/function/<string:kind>/<string:func_uuid>/activate', methods=['POST'])

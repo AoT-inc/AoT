@@ -35,6 +35,14 @@ Clicking a marker opens a popup showing:
 
 Toggling the switch turns the device on or off immediately. Clicking a Facility marker shows a 3D preview and an environment-data summary instead — see [3D Facility Popup](#3d-facility-popup) below.
 
+### Click a Zone/Site — Control From a Device List
+
+Clicking a Zone or Site shape opens a popup listing every sensor and output device placed inside it.
+
+- **Sensors**: If there's more than one, switch between them with tabs to see a 24-hour chart.
+- **Output device list**: On/Off toggle for immediate control (requires **edit** permission), drag to reorder.
+- **Settings (schedule on)**: Each output has a **Settings** button to schedule a start and end time. Leaving the end time at `00:00` keeps it on until you turn it off manually. If you set a start time in the future, the schedule is timed by **the browser tab you have open**, not the server — closing or refreshing the tab cancels it (starting immediately has no such limitation).
+
 ### Real-Time Refresh
 
 The widget automatically refreshes device state at a configured interval (default: 5 seconds). Marker colors and measurement labels update live, and values keep refreshing even while a popup is open.
@@ -51,6 +59,7 @@ The following tool buttons appear in a corner of the map:
 | My Location | Move to your browser's GPS position |
 | Reset | Return to the originally saved position and zoom |
 | Site List | Pick a registered site or zone and jump straight to it |
+| Copyright (ⓘ) | Shows the attribution for the currently displayed base/overlay maps. Opens automatically when the map first loads or when you switch the base/overlay, and collapses when you interact with the map (drag, zoom, touch). |
 
 Separately, the widget's title bar has **Lock Map** (locks panning/zooming) and **Hide Controls** (hides the tool buttons) icons. These are toggled directly from the title bar, not from the settings form.
 
@@ -86,11 +95,11 @@ Separately, the widget's title bar has **Lock Map** (locks panning/zooming) and 
 | Vector Style URL | A custom MapLibre style JSON, if you need one. Leave empty to use the GIS input setting. |
 | Facility Render Mode | How 3D facility (building) models are drawn: Default (translucent) / Solid (opaque) / Wireframe / Performance (for mobile, minimizes load). |
 
-### Device Selection
+### Device Filter
 
 | Option | Description |
 | :--- | :--- |
-| Input / Output / Function | Choose which devices of each type appear on the map. If none are selected, no devices are shown — check here first if the map looks empty. |
+| Input / Output / Function | Choose which devices of each type to **hide** from the map (an exclude list). If none are selected, every device placed in `/geo/design` is shown — only use this to hide specific devices. |
 
 ### Measurement Panel
 

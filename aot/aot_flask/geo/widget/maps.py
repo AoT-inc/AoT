@@ -78,6 +78,10 @@ def normalize_layer_name(name):
 def extract_device_ids(widget_options: dict) -> list:
     """Robustly extract device IDs from saved option keys.
 
+    [Behavior] These are the Device Filter's EXCLUDE list — devices the user
+    picked here are hidden from the map; everything else placed on the map
+    still shows (see utils_geo.collect_devices docstring). Empty = show all.
+
     Source of truth: the three user-facing selection multi-selects
     (`device_selection_input/output/function`). The merged `device_ids` /
     `custom_option_device_ids` keys are derived caches written by
@@ -282,32 +286,19 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     # during page render (caused slow widget load). The client-side widget JS polls
     # live values after mount, so last_value starts empty and is filled shortly after.
 
-    # [Fix] Strict Device Selection Logic for Map Rendering
-    # 1. If 'Show All' is ON -> final_fetch_ids is None (fetch all)
-    # 2. If 'Show All' is OFF and Manual List exists -> final_fetch_ids is ONLY manual list
-    # 3. If 'Show All' is OFF and Manual List is EMPTY -> final_fetch_ids is measurement list (Fallback)
-    
-    # [Fix] include_all should strictly respect the saved configuration
-    # If devices are manually selected, we should prioritize showing only them.
+    # Device Filter is an EXCLUDE list (see utils_geo.collect_devices
+    # docstring): every device placed on the map is always fetched, and
+    # legacy_device_ids — the selected ones — are dropped from the result.
+    # `include_all_devices` no longer gates the fetch; it is kept only so the
+    # value round-trips through widget_vars for older client code that still
+    # reads it (harmless — collect_devices ignores it now). The measurement
+    # panel's own selection (measurement_device_ids) is unrelated to this and
+    # is no longer used as an inclusion fallback here.
     include_all = widget_options.get('include_all_devices')
-    if include_all is None:
-        # If we have manual selections but include_all is unset (legacy), default to False
-        if legacy_device_ids or measurement_device_ids:
-            include_all = False
-        else:
-            include_all = True 
-    else:
-        # Normalize to boolean
-        include_all = (include_all == "true" or include_all == "True" or include_all is True)
+    include_all = (include_all is None) or (include_all == "true" or include_all == "True" or include_all is True)
+    final_fetch_ids = legacy_device_ids if legacy_device_ids else None
 
-    if include_all:
-        final_fetch_ids = None
-    elif legacy_device_ids:
-        final_fetch_ids = legacy_device_ids
-    else:
-        final_fetch_ids = measurement_device_ids
-
-    logger.debug(f"[AoT Map Logic] widget: {widget_unique_id} include_all: {include_all} manual_ids: {len(legacy_device_ids)} meas_ids: {len(measurement_device_ids)} final_fetch_count: {len(final_fetch_ids) if final_fetch_ids else 'ALL'}")
+    logger.debug(f"[AoT Map Logic] widget: {widget_unique_id} exclude_ids: {len(legacy_device_ids)} meas_ids: {len(measurement_device_ids)}")
     
     layer_mode = widget_options.get('layer_mode', 'default') if widget_options else 'default'
     fallback_lat = widget_options.get('fallback_latitude', None) if widget_options else None

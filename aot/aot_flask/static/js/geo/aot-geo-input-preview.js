@@ -301,24 +301,45 @@ const AoTGeoInputPreview = {
             window.AoTMapUtils.addCopyrightControl(map);
         }
 
-        // [Overlay Mode] When this preview is for an overlay-role layer, render an
-        // OSM raster baseline below all overlays so users see geographic context.
-        const _OSM_BASE_ID = 'aot-preview-osm-base';
+        // [Overlay Mode] When this preview is for an overlay-role layer, render a
+        // raster baseline below all overlays so users see geographic context.
+        // Prefers geo/design's configured MapTiler(vector) base — reused here as
+        // MapTiler's raster-tile endpoint since this map's empty base style is built
+        // additively via addSource/addLayer (map.setStyle() would wipe it mid-flow).
+        // Falls back to OSM raster only when no MapTiler layer/key is configured.
+        const _BASE_LAYER_ID = 'aot-preview-base-layer';
+        const _resolveBaseTiles = () => {
+            const config = window.AOT_GEO_CONFIG || {};
+            const vectorLayers = (config.layers || []).filter(function (l) { return l.type === 'vector'; });
+            const vectorUrl = vectorLayers.length > 0 ? vectorLayers[0].url : '';
+            const m = vectorUrl && vectorUrl.match(/\/maps\/([^/]+)\/style\.json\?key=([^&]+)/);
+            if (m) {
+                return {
+                    tiles: ['https://api.maptiler.com/maps/' + m[1] + '/{z}/{x}/{y}.png?key=' + m[2]],
+                    attribution: '© MapTiler © OpenStreetMap contributors'
+                };
+            }
+            return {
+                tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                attribution: '© OpenStreetMap'
+            };
+        };
         const _ensureOsmBase = () => {
             const add = () => {
-                if (!map.getSource(_OSM_BASE_ID)) {
-                    map.addSource(_OSM_BASE_ID, {
+                if (!map.getSource(_BASE_LAYER_ID)) {
+                    const base = _resolveBaseTiles();
+                    map.addSource(_BASE_LAYER_ID, {
                         type: 'raster',
-                        tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tiles: base.tiles,
                         tileSize: 256,
-                        attribution: '© OpenStreetMap',
+                        attribution: base.attribution,
                         maxzoom: 19
                     });
                 }
-                if (!map.getLayer(_OSM_BASE_ID)) {
-                    map.addLayer({ id: _OSM_BASE_ID, type: 'raster', source: _OSM_BASE_ID });
+                if (!map.getLayer(_BASE_LAYER_ID)) {
+                    map.addLayer({ id: _BASE_LAYER_ID, type: 'raster', source: _BASE_LAYER_ID });
                 }
             };
             if (map.isStyleLoaded()) add(); else map.once('load', add);

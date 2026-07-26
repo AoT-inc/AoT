@@ -3,7 +3,7 @@
   {{form_conditional.function_id(value=each_function.unique_id)}}
   {{form_conditional.function_type(value='conditional')}}
 
-  <div id="function_status_{{each_function.unique_id}}"
+  <div id="function_status_{{each_function.unique_id}}" data-config-uid="{{each_function.unique_id}}"
     class="grid-stack-item-content {% if each_function.is_activated %}active-background{% else %}inactive-background{% endif %} row small-gutters aot-entry-item">
     <div class="aot-entry-drag-handle">
       <i class="fa fa-grip-lines"></i>
@@ -41,7 +41,7 @@
   </div> <!-- grid-stack-item-content -->
 </form>
 
-<div class="modal fade aot-option-modal" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog"
+<div class="modal fade aot-option-modal aot-widget-drawer" data-backdrop="false" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog"
   aria-labelledby="ModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content">

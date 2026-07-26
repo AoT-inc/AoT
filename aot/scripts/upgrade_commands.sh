@@ -89,6 +89,7 @@ Options:
   install-aotmcp             Install and enable the AoT MCP Server service
   update-aotmcp-service-enable  Enable and start the AoT MCP Server service
   update-aotmcp-service-disable Disable and stop the AoT MCP Server service
+  restart-aotmcp                Restart the AoT MCP Server service if enabled (run on every upgrade)
   update-packages               Ensure required apt packages are installed/up-to-date
   update-permissions            Set permissions for AoT directories/files
   update-pip3                   Update pip
@@ -311,7 +312,14 @@ case "${1:-''}" in
             printf "ERROR: alembic binary not found\n"
             exit 1
         fi
-        "${ALEMBIC_BIN}" upgrade head
+        # 목표 리비전을 인자로 받는다 (기본값 head — 기존 호출 호환).
+        # 'head' 를 쓸 수 없는 이유: 26.06.0 스키마 재베이스라인에서 p6_00 이
+        # down_revision=None 으로 새 계보를 시작했기 때문에, 폐기된 구 계보의
+        # 마지막 리비전(p5_52)이 영구적으로 두 번째 head 로 남아 있다. 그 상태에서
+        # 'upgrade head' 는 "Multiple head revisions are present" 로 실패하므로
+        # 신규 마이그레이션을 추가하는 순간 기동 시 업그레이드가 깨진다.
+        # 호출자(alembic_upgrade_db)가 ALEMBIC_VERSION 을 넘겨 목표를 특정한다.
+        "${ALEMBIC_BIN}" upgrade "${2:-head}"
     ;;
     'update-alembic-post')
         printf "\n#### Executing post-alembic script\n"
@@ -711,6 +719,17 @@ case "${1:-''}" in
         systemctl disable aotmcp.service || true
         rm -rf /etc/systemd/system/aotmcp.service || true
         systemctl daemon-reload || true
+    ;;
+    'restart-aotmcp')
+        # install-aotmcp only runs once, at initial setup (setup.sh) — a plain
+        # upgrade (git pull + restart-daemon + web-server-restart) never touched
+        # this service, so it kept running whatever code was on disk when it was
+        # first installed, potentially for months. Call this alongside
+        # restart-daemon/web-server-restart on every upgrade, same as aot/aotflask.
+        printf "\n#### Restarting AoT MCP Server\n"
+        if systemctl is-enabled --quiet aotmcp 2>/dev/null; then
+            systemctl restart aotmcp || true
+        fi
     ;;
     'update-packages')
         printf "\n#### Installing prerequisite apt packages and update pip\n"

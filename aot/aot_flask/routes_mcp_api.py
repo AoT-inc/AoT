@@ -230,6 +230,82 @@ def mcp_server_restart(server_id):
 
 
 # =============================================================================
+# 외부 MCP 승인 큐 + 감사 로그 (aot/ai/services/mcp_safety_gate.py)
+#
+# 외부 AI가 쓰기 도구를 호출하면 MCP 서버 프로세스가 mcp_confirmation 에
+# pending 행을 만들고 실행을 보류한다. 승인은 사람이 여기서 한다 — MCP 서버는
+# 별도 프로세스라 인메모리로는 승인을 주고받을 수 없어 DB를 경유한다.
+# =============================================================================
+
+@blueprint.route('/review_page', methods=['GET'])
+@flask_login.login_required
+def mcp_review_page():
+    """승인 대기 + 의견 원장 + 감사 로그를 한 화면에서 처리하는 페이지."""
+    from flask import render_template
+    return render_template('pages/ai/mcp_review.html', active_page='mcp_servers')
+
+
+@blueprint.route('/confirmations', methods=['GET'])
+@flask_login.login_required
+def mcp_confirmations_list():
+    """승인 대기 중인 외부 AI 쓰기 요청 목록."""
+    from aot.ai.services import mcp_safety_gate as gate
+    try:
+        return jsonify({"status": "success", "pending": gate.list_pending()})
+    except Exception as e:
+        logger.error(f"MCP confirmations list failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@blueprint.route('/confirmations/<confirmation_id>/approve', methods=['POST'])
+@flask_login.login_required
+def mcp_confirmation_approve(confirmation_id):
+    """대기 중인 요청을 승인. 외부 AI가 같은 인자로 재호출하면 1회 실행된다."""
+    from aot.ai.services import mcp_safety_gate as gate
+    try:
+        user_id = getattr(flask_login.current_user, 'unique_id', None)
+        result = gate.approve(confirmation_id, user_id=user_id)
+        return jsonify(result), (200 if result.get('status') == 'success' else 400)
+    except Exception as e:
+        logger.error(f"MCP confirmation approve failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@blueprint.route('/confirmations/<confirmation_id>/reject', methods=['POST'])
+@flask_login.login_required
+def mcp_confirmation_reject(confirmation_id):
+    """대기 중인 요청을 거부."""
+    from aot.ai.services import mcp_safety_gate as gate
+    try:
+        user_id = getattr(flask_login.current_user, 'unique_id', None)
+        result = gate.reject(confirmation_id, user_id=user_id)
+        return jsonify(result), (200 if result.get('status') == 'success' else 400)
+    except Exception as e:
+        logger.error(f"MCP confirmation reject failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@blueprint.route('/audit', methods=['GET'])
+@flask_login.login_required
+def mcp_audit_recent():
+    """최근 MCP 도구 호출 감사 로그 — 어느 AI가 무엇을 왜 호출했는지."""
+    from aot.mcp_server import audit
+    try:
+        limit = min(int(request.args.get('limit', 50)), 500)
+        return jsonify({
+            "status": "success",
+            "entries": audit.get_recent(
+                limit=limit,
+                agent_id=request.args.get('agent_id'),
+                tool_name=request.args.get('tool_name'),
+            ),
+        })
+    except Exception as e:
+        logger.error(f"MCP audit query failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# =============================================================================
 # AoT MCP Server lifecycle control (systemd service: aotmcp)
 # Controls the standalone AoT MCP Server process — separate from MCP 엔트리.
 # =============================================================================

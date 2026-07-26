@@ -1,0 +1,519 @@
+# coding=utf-8
+"""
+mcp_safety_gate.py — 외부 MCP 경로(aot_mcp_server.py)의 안전·감사 게이트.
+
+외부 AI가 MCP로 접속해 상태를 점검하고 제어를 조언하는 경로에서,
+"누가(agent_id) 무엇을 왜(reason) 호출했는지"를 남기고 쓰기 도구는
+사람 승인을 거치게 만드는 계층이다.
+
+`aot/mcp_server/safety.py`(FastMCP 트랙)를 대체한다. 그 구현을 그대로
+쓸 수 없는 이유가 두 가지 있고, 여기서 둘 다 바로잡는다:
+
+  1. WRITE_TOOLS 가 그 트랙 전용 4개 도구(set_vpd_target 등)로 하드코딩돼
+     있어, 활성 서버의 실제 쓰기 도구(operate_device, set_output_state,
+     설비 CRUD …)는 검사를 그냥 통과한다 — 있는 척하는 무동작이 된다.
+     → 여기서는 tool_registry(SSOT)의 approval_required_tools() 에서 파생한다.
+     레지스트리에 도구를 mutating/physical 로 선언하면 자동으로 게이트에 걸린다.
+
+  2. 승인 대기 큐가 프로세스 인메모리(dict)였다. MCP 서버는 gunicorn 웹앱과
+     별도 프로세스라, 인메모리 토큰은 웹 UI에서 승인할 수단이 없다.
+     → 여기서는 MCPConfirmation 테이블(이미 마이그레이션됨)을 사용해
+     프로세스 간 승인 핸드셰이크가 성립한다.
+
+승인 흐름 (외부 AI ↔ 사람):
+  1. 외부 AI가 쓰기 도구 호출 → 게이트가 MCPConfirmation(pending) 생성 후
+     confirmation_id 를 담은 "승인 필요" 응답 반환 (실행되지 않음)
+  2. 사람이 웹에서 승인/거부 (routes_mcp_api 의 /confirmations/* 엔드포인트)
+  3. 외부 AI가 같은 도구를 `_confirmation_id` 와 함께 재호출 → 실행
+
+재호출 시 인자가 승인 시점과 다르면 거부한다(승인 바꿔치기 방지). 승인은
+1회용이며 소비되면 status='consumed' 로 표시해 재사용(replay)을 막는다.
+"""
+
+import json
+import logging
+import os
+import time
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
+
+# 호출자가 전달하는 메타 키 — 핸들러 시그니처엔 없으므로 디스패치 전에 제거된다.
+META_KEYS = frozenset({'_reason', '_agent_id', '_confirmation_id'})
+
+# 레지스트리에 없는 네이티브 도구 중 물리 제어에 해당하는 것.
+# (AoTNativeToolEngine 은 tool_registry.TOOLS 에 선언돼 있지 않다.)
+_NATIVE_WRITE_TOOLS = frozenset({'set_output_state'})
+
+# 승인 유효시간 — 사람이 판단할 시간이 필요하므로 기본 5분.
+# (구 safety.py 의 60초는 사람 승인용으로는 너무 짧았다.)
+_CONFIRM_TTL_SEC = int(os.environ.get('AOT_MCP_CONFIRM_TTL_SEC', '300'))
+
+# 도구별 시간당 호출 상한 (best-effort, 프로세스 인메모리).
+_DEFAULT_CALLS_PER_HOUR = 10
+_RATE_LIMITS = {
+    'operate_device': 20,
+    'set_output_state': 20,
+    'schedule_device_control': 20,
+}
+
+# {agent_id: {tool_name: [timestamp, ...]}}
+_call_log = {}
+
+
+class RateLimitExceeded(Exception):
+    """시간당 호출 횟수 초과."""
+
+
+def is_write_enabled() -> bool:
+    """쓰기 도구 허용 여부.
+
+    '0' 이면 조언 전용 모드 — 쓰기 도구는 승인 대기조차 만들지 않고 거부된다.
+    기본값은 허용이지만, 허용이라도 모든 쓰기는 사람 승인을 거친다.
+    """
+    return os.environ.get('AOT_MCP_WRITE_ENABLED', '1') not in ('0', 'false', 'False')
+
+
+def approval_tools() -> frozenset:
+    """승인이 필요한 도구 이름 집합 (레지스트리 SSOT + 네이티브 물리 도구)."""
+    try:
+        from aot.ai.services.tool_registry import approval_required_tools
+        return frozenset(approval_required_tools()) | _NATIVE_WRITE_TOOLS
+    except Exception:
+        # 레지스트리를 못 읽으면 게이트가 조용히 열리는 대신 네이티브 목록만이라도 막는다.
+        logger.exception('[MCPGate] tool_registry 로드 실패 — 네이티브 쓰기 목록만 적용')
+        return _NATIVE_WRITE_TOOLS
+
+
+def classify_permission(tool_name: str) -> str:
+    """'write' (승인 필요) 또는 'read'."""
+    return 'write' if tool_name in approval_tools() else 'read'
+
+
+def strip_meta(arguments: dict) -> dict:
+    """게이트 메타 키를 제거한 인자 사본 — 핸들러에 넘길 값."""
+    return {k: v for k, v in (arguments or {}).items() if k not in META_KEYS}
+
+
+# 호출자 신원을 핸들러 인자로 받아야 하는 도구.
+# 의견 원장은 "누가 낸 의견인지"가 핵심이라, 호출자가 agent_id 를 스스로 적어
+# 보내주기를 기대하면 안 된다(대개 비워서 보낸다 → 전부 unknown 이 되어 귀속이
+# 무너진다). 전송 계층에서 확인된 신원을 서버가 주입한다.
+_AGENT_ATTRIBUTED_TOOLS = frozenset({'submit_advice'})
+
+
+def inject_agent(tool_name: str, call_args: dict, agent_id: str) -> dict:
+    """신원 귀속이 필요한 도구에 확인된 agent_id 를 채워 넣는다.
+
+    호출자가 명시적으로 다른 값을 넣었더라도 전송 계층에서 확인된 신원으로
+    덮어쓴다 — 남의 이름으로 의견을 제출하는 것을 막기 위한 것이다.
+    """
+    if tool_name in _AGENT_ATTRIBUTED_TOOLS and agent_id and agent_id != 'unknown':
+        call_args = dict(call_args)
+        call_args['agent_id'] = agent_id
+    return call_args
+
+
+def _canonical_params(arguments: dict) -> str:
+    """승인 시점과 재호출 시점의 인자 동일성 비교용 정규화 문자열."""
+    return json.dumps(strip_meta(arguments), ensure_ascii=False, sort_keys=True)
+
+
+def _check_rate_limit(agent_id: str, tool_name: str) -> None:
+    limit = _RATE_LIMITS.get(tool_name, _DEFAULT_CALLS_PER_HOUR)
+    now = time.time()
+    calls = _call_log.setdefault(agent_id, {}).setdefault(tool_name, [])
+    calls[:] = [t for t in calls if now - t < 3600.0]
+    if len(calls) >= limit:
+        raise RateLimitExceeded(
+            f"Rate limit exceeded for '{tool_name}': {limit} calls/hour (agent={agent_id}).")
+    calls.append(now)
+
+
+def _build_human_briefing(tool_name, arguments):
+    """Plain-language plan summary for the human web-approval page
+    (mcp_review.html renders `reason` above the raw params dump). Returns ''
+    when there's nothing worth adding beyond the raw params (most tools -
+    e.g. operate_device's {device_id, state} is already short and clear).
+
+    Covers the two shapes that motivated this: a single add_schedule/
+    create_note-style call with target_name (site vs. zone confusion), and
+    an add_schedule_batch call (a human should see the actual entry list,
+    not a JSON blob, before clicking Approve on N writes at once).
+    """
+    args = arguments or {}
+    lines = []
+    try:
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+
+        target_name = args.get('target_name')
+        if target_name:
+            r = AoTDataToolService.resolve_target_tool(target_name)
+            if r.get('status') == 'needs_disambiguation':
+                lines.append(f"'{target_name}' could not be matched to a known place/device.")
+            elif r.get('target_type'):
+                line = f"Target: '{target_name}' -> {r.get('target_type')} '{r.get('resolved_name')}'"
+                children = r.get('children') or []
+                if children:
+                    line += f" (contains {len(children)} sub-zone(s): {', '.join(c['name'] for c in children)} - this call attaches to ONLY the named target, not to each of these)"
+                lines.append(line)
+
+        if tool_name == 'add_schedule_batch':
+            entries = args.get('entries') or []
+            lines.append(f"Batch of {len(entries)} schedule entr(y/ies) on {args.get('date', '?')}:")
+            for e in entries:
+                c = e.get('content') or args.get('content') or ''
+                lines.append(f"  - {e.get('target_name', '?')} @ {e.get('time', '?')}: {c}")
+            if args.get('window_start') or args.get('window_end'):
+                lines.append(f"Work window: {args.get('window_start', '?')}-{args.get('window_end', '?')} "
+                             f"(duration_minutes={args.get('duration_minutes', 60)} per entry)")
+        elif tool_name == 'add_schedule':
+            lines.append(f"Schedule: {args.get('date', '?')} {args.get('time', '?')} - {args.get('content', '')}")
+    except Exception:
+        logger.exception('[MCPGate] briefing 생성 실패 (건너뜀)')
+
+    return '\n'.join(lines)
+
+
+def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_fn=None):
+    """쓰기 도구를 사람 승인 뒤로 보낸다.
+
+    Flask 앱 컨텍스트 안에서 호출해야 한다 (MCPConfirmation 조회/생성).
+
+    role 은 mcp_auth.authenticate_http/authenticate_stdio 가 돌려주는 Role 행(또는
+    None)이다. tools/list 단계에서 이미 role 기준으로 쓰기 도구를 숨기지만
+    (aot_mcp_server._get_all_tools), 그건 클라이언트를 신뢰하는 안내일 뿐이라 — 도구
+    이름을 미리 아는 클라이언트가 목록을 건너뛰고 직접 호출할 수 있다. 여기서 서버
+    쪽에서 다시 한 번 확정적으로 막는다(방어의 두 번째 층).
+
+    Returns:
+        None  — 통과(읽기 도구이거나, 승인된 confirmation 을 소비함). 호출자는 실행을 진행한다.
+        dict  — 실행하면 안 되는 경우의 응답 본문(승인 대기/거부). 호출자는 이 값을 그대로 반환한다.
+    """
+    if classify_permission(tool_name) == 'read':
+        return None
+
+    from aot.ai.services.mcp_auth import role_can_write
+    if not role_can_write(role):
+        return {
+            "status": "refused",
+            "reason_code": "insufficient_role",
+            "message": ("Your MCP key's role does not have write access — only "
+                        "Admin/Editor role keys can run mutating or physical-control "
+                        "tools. Do not retry; state what should be done and why as "
+                        "advice instead."),
+            "tool_name": tool_name,
+        }
+
+    if not is_write_enabled():
+        return {
+            "status": "refused",
+            "reason_code": "write_disabled",
+            "message": (
+                "This server is in advice-only mode (AOT_MCP_WRITE_ENABLED=0). "
+                "Control cannot be executed - state what should be done and why "
+                "as advice instead."),
+            "tool_name": tool_name,
+        }
+
+    from aot.databases.models import MCPConfirmation
+
+    confirmation_id = (arguments or {}).get('_confirmation_id')
+
+    # ── 0단계: 실시간 elicitation (stdio, 클라이언트가 지원할 때만) ────────────
+    # MCP 표준 elicitation을 지원하는 클라이언트(예: Claude Code)로 붙은 경우,
+    # 비동기 승인 큐(생성 → LLM이 사람에게 채팅으로 전달 → respond_to_confirmation
+    # 재호출)를 거치지 않고, 이 tools/call 처리 도중 클라이언트에게 직접
+    # 'elicitation/create' 요청을 보내 사람이 그 자리에서 답하게 한다. 응답은
+    # 클라이언트의 네이티브 UI를 통해서만 오므로, 호출한 LLM이 스스로 승인
+    # 여부를 판단하거나 대신 답할 수 없다 — respond_to_confirmation 자가승인
+    # 사고(2026-07-26)가 구조적으로 불가능해진다. confirmation_id 가 이미 있는
+    # 재시도 호출이면 이 단계는 건너뛰고 기존 큐 조회로 간다.
+    if not confirmation_id and elicit_fn:
+        briefing = _build_human_briefing(tool_name, arguments)
+        try:
+            decision = elicit_fn(tool_name, briefing, arguments)
+        except Exception:
+            logger.exception('[MCPGate] elicitation 호출 실패 (큐 방식으로 폴백)')
+            decision = None
+
+        if decision is True:
+            row = MCPConfirmation(
+                expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
+                tool_name=tool_name,
+                params_json=_canonical_params(arguments),
+                reason=(briefing or reason or ''),
+                agent_id=agent_id,
+                status='consumed',
+            )
+            row.save()
+            logger.info("[MCPGate] elicitation 승인 tool=%s agent=%s confirmation=%s",
+                        tool_name, agent_id, row.unique_id)
+            return None  # 통과 — 호출자가 바로 실행 진행
+        elif decision is False:
+            row = MCPConfirmation(
+                expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
+                tool_name=tool_name,
+                params_json=_canonical_params(arguments),
+                reason=(briefing or reason or ''),
+                agent_id=agent_id,
+                status='rejected',
+            )
+            row.save()
+            return {
+                "status": "refused",
+                "reason_code": "user_declined",
+                "message": (
+                    "The user declined this exact action when asked directly just now. "
+                    "Do not silently retry it. If the user then explicitly says they've "
+                    "changed their mind and to proceed anyway, you may call this tool "
+                    "again (it will ask them once more, fresh) - do not reuse this "
+                    "response or assume the earlier decline still applies without that "
+                    "new, explicit go-ahead. Otherwise, state what should be done and "
+                    "why as advice instead."),
+            }
+        # decision is None → elicitation을 못 했거나 실패 — 기존 비동기 큐로 폴백
+
+    # ── 2단계: 승인된 confirmation 을 들고 재호출한 경우 ──────────────────────
+    if confirmation_id:
+        row = MCPConfirmation.query.filter_by(unique_id=confirmation_id).first()
+        if row is None:
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_not_found",
+                "message": f"No such confirmation: {confirmation_id}",
+            }
+        if row.tool_name != tool_name:
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_tool_mismatch",
+                "message": (f"This confirmation was issued for '{row.tool_name}' and "
+                            f"cannot be used to run '{tool_name}'."),
+            }
+        if row.status == 'consumed':
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_already_used",
+                "message": "This confirmation was already used. Request a new one if needed.",
+            }
+        if row.status == 'rejected':
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_rejected",
+                "message": ("The user rejected this request. Do not execute it; "
+                            "switch to giving advice instead."),
+            }
+        if row.is_expired():
+            if row.status != 'expired':
+                row.status = 'expired'
+                row.save()
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_expired",
+                "message": "The confirmation expired. Request approval again.",
+            }
+        if row.status != 'approved':
+            return {
+                "status": "pending_approval",
+                "reason_code": "awaiting_user",
+                "confirmation_id": row.unique_id,
+                "message": "Still waiting for user approval.",
+            }
+        # 승인 바꿔치기 방지 — 승인받은 인자와 동일해야 한다.
+        if (row.params_json or '{}') != _canonical_params(arguments):
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_params_mismatch",
+                "message": ("Arguments differ from the approved ones. "
+                            "Changing arguments requires a new approval."),
+                "approved_params": json.loads(row.params_json or '{}'),
+            }
+        # 1회용 소비
+        row.status = 'consumed'
+        row.save()
+        logger.info("[MCPGate] 승인 소비 tool=%s agent=%s confirmation=%s",
+                    tool_name, agent_id, row.unique_id)
+        return None
+
+    # ── 1단계: 최초 호출 — 승인 대기 생성 후 실행 보류 ────────────────────────
+
+    # Batch-specific pure validation (no writes) — run BEFORE creating an
+    # approval and BEFORE spending a rate-limit slot, so a batch that cannot
+    # possibly work (duplicate target, time outside the stated window, or
+    # more entries than the window has room for at duration_minutes each)
+    # never reaches a human as something to approve. The handler
+    # (add_schedule_batch_tool) never runs before approval, so without this
+    # the same arithmetic mistake that motivated this whole change would just
+    # move from "wrong site vs. zone" to "wrong time allocation" and still
+    # only surface AFTER a human already clicked approve.
+    if tool_name == 'add_schedule_batch':
+        try:
+            from aot.ai.services.aot_data_tool_service import AoTDataToolService
+            _batch_err = AoTDataToolService.validate_schedule_batch(
+                entries=(arguments or {}).get('entries'),
+                content=(arguments or {}).get('content'),
+                window_start=(arguments or {}).get('window_start'),
+                window_end=(arguments or {}).get('window_end'),
+                duration_minutes=(arguments or {}).get('duration_minutes', 60),
+            )
+            if _batch_err:
+                return _batch_err
+        except Exception:
+            logger.exception('[MCPGate] add_schedule_batch 사전검증 실패 (검증 없이 진행)')
+
+    try:
+        _check_rate_limit(agent_id, tool_name)
+    except RateLimitExceeded as exc:
+        return {
+            "status": "refused",
+            "reason_code": "rate_limited",
+            "message": str(exc),
+        }
+
+    # A human reviewing this on the web approval page (mcp_review.html) only
+    # ever sees `reason` and a raw JSON dump of `params` — they do NOT see
+    # whatever the calling LLM said in chat, and until now they did not see
+    # the spatial/capacity checks below either (those were only returned in
+    # the API response handed back to the LLM). That means "approval" so far
+    # has effectively meant "trust the LLM's paraphrase" rather than an
+    # independent human review. Folding a plain-language briefing into
+    # `reason` — the one field the web page already renders prominently —
+    # makes the actual plan visible on the button-click page itself, with no
+    # dependency on the calling LLM relaying it accurately.
+    briefing = _build_human_briefing(tool_name, arguments)
+    full_reason = (reason or '').strip()
+    if briefing:
+        full_reason = (full_reason + '\n\n' + briefing).strip() if full_reason else briefing
+
+    row = MCPConfirmation(
+        expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
+        tool_name=tool_name,
+        params_json=_canonical_params(arguments),
+        reason=full_reason,
+        agent_id=agent_id,
+        status='pending',
+    )
+    row.save()
+    logger.info("[MCPGate] 승인 대기 생성 tool=%s agent=%s confirmation=%s",
+                tool_name, agent_id, row.unique_id)
+
+    response = {
+        "status": "pending_approval",
+        "reason_code": "awaiting_user",
+        "confirmation_id": row.unique_id,
+        "tool_name": tool_name,
+        "expires_in_sec": _CONFIRM_TTL_SEC,
+        "message": (
+            "This tool changes system state, so it needs user approval. It was NOT "
+            "executed. Show the user the plan (see the briefing above, if any) and wait "
+            "for them to explicitly approve or reject THIS confirmation_id in this "
+            "conversation - do not infer approval from their original task request "
+            "alone. Once they do, call respond_to_confirmation with this "
+            "confirmation_id and their decision (or they can click Approve/Reject on "
+            "the web review page themselves). After an approval, call the same tool "
+            "again with the same arguments plus '_confirmation_id' to execute it. There "
+            "is no way to bypass approval."),
+    }
+
+    # Spatial pre-check — surfaced here, not left to the caller to remember.
+    # A write tool's own handler never runs before approval (this function
+    # short-circuits on tool NAME alone), so a prose reminder inside the
+    # tool's description ("call resolve_target first") is easy to miss or
+    # ignore — confirmed 2026-07-26: a different model saw that exact
+    # instruction and still misfired on a site vs. zone target. Running the
+    # SAME read-only resolver here, before the human ever sees the approval,
+    # makes the warning unmissable instead of optional.
+    _target_name = (arguments or {}).get('target_name')
+    if _target_name:
+        try:
+            from aot.ai.services.aot_data_tool_service import AoTDataToolService
+            _resolved = AoTDataToolService.resolve_target_tool(_target_name)
+            if _resolved.get('status') == 'needs_disambiguation':
+                response['resolved_scope'] = {
+                    "status": "needs_disambiguation",
+                    "message": _resolved.get('message'),
+                    "available_targets": _resolved.get('available_targets'),
+                }
+            elif _resolved.get('children'):
+                response['resolved_scope'] = {
+                    "target_type": _resolved.get('target_type'),
+                    "children": _resolved.get('children'),
+                    "note": _resolved.get('note'),
+                }
+        except Exception:
+            logger.exception('[MCPGate] target_name 사전조회 실패 (경고 없이 진행)')
+
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 사람이 쓰는 승인 API (웹앱 프로세스에서 호출 — routes_mcp_api)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def list_pending(limit=50):
+    """승인 대기 목록 (만료된 항목은 조회 시점에 정리)."""
+    from aot.databases.models import MCPConfirmation
+
+    rows = (MCPConfirmation.query
+            .filter_by(status='pending')
+            .order_by(MCPConfirmation.created_at.desc())
+            .limit(limit).all())
+    out = []
+    for r in rows:
+        if r.is_expired():
+            r.status = 'expired'
+            r.save()
+            continue
+        out.append({
+            "confirmation_id": r.unique_id,
+            "tool_name": r.tool_name,
+            "params": json.loads(r.params_json or '{}'),
+            "reason": r.reason,
+            "agent_id": r.agent_id,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "expires_in_sec": max(0, int((r.expires_at - datetime.utcnow()).total_seconds())),
+        })
+    return out
+
+
+def _decide(confirmation_id, status, user_id=None):
+    from aot.databases.models import MCPConfirmation
+
+    row = MCPConfirmation.query.filter_by(unique_id=confirmation_id).first()
+    if row is None:
+        return {"status": "error", "message": "No such confirmation."}
+    if row.status in ('consumed', 'rejected'):
+        return {"status": "error", "message": f"Already handled (status={row.status})."}
+    if row.is_expired():
+        row.status = 'expired'
+        row.save()
+        return {"status": "error", "message": "The confirmation expired."}
+
+    row.status = status
+    if user_id:
+        row.user_id = user_id
+    row.save()
+
+    # 감사 로그의 해당 호출 상태도 갱신 (confirmation_id 로 연결돼 있다)
+    try:
+        from aot.databases.models import MCPAuditLog
+        log = (MCPAuditLog.query
+               .filter_by(confirmation_id=confirmation_id)
+               .order_by(MCPAuditLog.timestamp.desc()).first())
+        if log:
+            log.confirmation_status = status
+            if user_id:
+                log.user_id = user_id
+            log.save()
+    except Exception:
+        logger.exception('[MCPGate] 감사 로그 상태 갱신 실패')
+
+    return {"status": "success", "confirmation_id": confirmation_id, "new_status": status}
+
+
+def approve(confirmation_id, user_id=None):
+    return _decide(confirmation_id, 'approved', user_id)
+
+
+def reject(confirmation_id, user_id=None):
+    return _decide(confirmation_id, 'rejected', user_id)

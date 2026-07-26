@@ -280,11 +280,21 @@
     if (ssSep) { ssSep.style.display = hide ? 'none' : ''; }
     var total = clampSec(toSeconds(opts.value), max);
     var hh = Math.floor(total / 3600), mm = Math.floor((total % 3600) / 60), ss = total % 60;
-    requestAnimationFrame(function(){
+    // Position immediately (container is already visible/laid out when mounted
+    // inline into a live modal — unlike open()'s backdrop, there's no display:none
+    // toggle to wait out) AND again next frame as a safety net for callers that
+    // mount into a container not yet laid out. Without the immediate call, if the
+    // rAF never fires in time (backgrounded tab, heavy main-thread contention),
+    // the column is left at raw scrollTop 0 — the very edge of the repeated block
+    // range — where loopRecenter's edge-correction fights every subsequent scroll
+    // attempt back toward 0, making the wheel appear stuck at 00:00.
+    function _initPositions(){
       scrollToVal(byName('hh'), hh, false);
       scrollToVal(byName('mm'), mm, false);
       if (!hide) { scrollToVal(ssCol, ss, false); }
-    });
+    }
+    _initPositions();
+    requestAnimationFrame(_initPositions);
     return {
       read: function(){
         var h = selectedVal(byName('hh')), m = selectedVal(byName('mm')), s = hide ? 0 : selectedVal(byName('ss'));

@@ -43,6 +43,9 @@
         "AoT_wind_angular",
         "AoT_map"
       ],
+      "Scheduling": [
+        "widget_calendar"
+      ],
       "Intelligence": [
         "widget_ai_insight"
       ]
@@ -52,8 +55,8 @@
     "AoT_map": {
       "name": "AoT Map",
       "purpose": "Shows devices on an interactive MapLibre GL map, highlighting operating state by color; supports GIS overlay layers and 3D facility rendering.",
-      "key_options": ["saved map / fallback lat-lng-zoom", "3D terrain, pitch, bearing, facility render mode", "which Input/Output/Function devices appear", "measurement side panel", "labels (master switch, collision, size)", "sensor marker style + 24h chart popup", "site/zone/facility/equipment shape toggles"],
-      "notable": "Realtime sensor values anchored on 3D structures; shows latest AI advisories as clickable chips when global AI is configured."
+      "key_options": ["saved map / fallback lat-lng-zoom", "3D terrain, pitch, bearing, facility render mode", "device filter: Input/Output/Function devices to HIDE from the map (exclude-list; empty = show every placed device)", "measurement side panel", "labels (master switch, collision, size)", "sensor marker style + 24h chart popup", "site/zone/facility/equipment shape toggles"],
+      "notable": "Realtime sensor values anchored on 3D structures; shows latest AI advisories as clickable chips when global AI is configured. Clicking a Zone/Site shape opens a popup listing its sensors and output devices, each output with an On/Off toggle and a 'Settings' button to schedule a start/end time (a future start time is timed client-side by the open browser tab, not the server)."
     },
     "widget_trigger_sequence": {
       "name": "Sequence Controller",
@@ -63,9 +66,15 @@
     },
     "AoT_timer": {
       "name": "AoT Timer",
-      "purpose": "Runs an output for an entered h/m/s duration then turns it off (0 = run until stopped); ON/OFF toggle switches the output directly.",
-      "key_options": ["output channel", "operation mode: Cycle (run/rest repeated) or Simple (single run)", "cycle run/rest/count", "scheduled start hh:mm (device timezone)", "show status + elapsed time"],
+      "purpose": "Toggle switches the output on/off directly. Turning on the 'Timer' option adds timed operation: Simple mode (default) runs once for a set h/m/s duration (0 = run until stopped), Cycle mode repeats a Run/Rest sequence for a set number of cycles, and 'Scheduled Start' begins at a wall-clock time in the device timezone. With 'Timer' off, the toggle ignores all time settings and is a plain on/off switch.",
+      "key_options": ["output channel", "Timer (on/off — enables the timed controls below)", "operation mode: Simple (default, single run) or Cycle (run/rest repeated)", "cycle run/rest/count", "scheduled start hh:mm (device timezone)", "show status + elapsed time"],
       "notable": "Server-side worker drives ON/OFF cycles and survives app restarts (scheduled timers re-armed)."
+    },
+    "widget_calendar": {
+      "name": "Calendar",
+      "purpose": "Shows scheduled events (from the Scheduler) on a calendar, split into AI/User/Device categories, plus any Google calendars connected via two-way sync.",
+      "key_options": ["show scheduled events toggle", "default view: Month/Week/List (auto-switches to List on narrow widgets)", "refresh seconds", "which AoT categories + connected Google calendars are visible (per-widget calendar picker)"],
+      "notable": "Click an event to view/edit, or drag to reschedule; edit modal includes a location map preview. Scheduling a device action from a calendar event creates it pending approval, same as other AI-mutating actions."
     },
     "AoT_graph": {
       "name": "AoT Graph",

@@ -59,14 +59,14 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <script src="/static/js/vendor/popper.min.js"></script>
   <script src="/static/js/vendor/bootstrap.min.js"></script>
   <!-- 모달 시프트 방지: Bootstrap scrollbar 보정 no-op + iOS Safari 배경 스크롤 차단 -->
-  <script src="/static/js/common/aot-modal-scroll-lock.js?v=20260618d"></script>
+  <script src="/static/js/common/aot-modal-scroll-lock.js?v=20260722b"></script>
   <!-- 서버 다운 감지 워치독: 연결 끊기면 폴링 정지 → 복구 시 1회 새로고침 (재연결 폭주 방지). jQuery 이후 로드. -->
   <script src="/static/js/common/aot-server-health.js?v=20260702b"></script>
   <!-- AoT API Request Manager - Centralized API handling with caching and retry logic -->
 
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <link href="/static/css/simple-sidebar.css" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260702e" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260722a" rel="stylesheet">
 
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
   '/static/css/bootstrap-4-themes/aot.css' %}
@@ -77,10 +77,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="/static/css/custom-light.css?v=20260702a" rel="stylesheet">
   {% endif %}
 
-  <link href="{{ effective_theme }}?v=20260702f" rel="stylesheet">
+  <link href="{{ effective_theme }}?v=20260725a" rel="stylesheet">
 
   <link href="/static/css/custom.css?v=20260603" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/aot-base.css') }}?v=20260702f" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-base.css') }}?v=20260725c" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/widget/aot-widget-typography.css') }}?v=20260606" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-base-ui.css') }}?v=20260702z" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" rel="stylesheet">
@@ -110,7 +110,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endif %}
 
   <!-- MapLibre 호환 패치(멱등). maplibre 로드 직후 적용되며, 지연/온디맨드 로드에서도 재호출 가능. -->
-  <script src="/static/js/geo/aot-maplibre-patches.js?v=20260613"></script>
+  <script src="/static/js/geo/aot-maplibre-patches.js?v=20260725a"></script>
 
   <!-- [GIS Vector Migration] AoT Vector Modules (Pure MapLibre) -->
   <script src="/static/js/geo/aot-maplibre-loader.js?v=20260613"></script>
@@ -122,11 +122,13 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- [GIS Vector Migration] MapLibre Compatibility Layer:
        callInitHooks 패치는 aot-maplibre-patches.js 로 이전됨(멱등 apply). -->
 
-  <link href="/static/css/map/map.css?v=20260702b" rel="stylesheet">
+  <link href="/static/css/map/map.css?v=20260725j" rel="stylesheet">
   {% endif %}{# needs_map #}
 
   <!-- AoT timezone display utility (single source of truth for UTC → device/viewer TZ) -->
-  <script src="/static/js/common/aot-tz.js?v=20260506"></script>
+  {% if current_user and current_user.is_authenticated and current_user.timezone %}<meta name="aot-user-tz" content="{{ current_user.timezone }}">{% endif %}
+  <meta name="aot-fallback-tz" content="{{ system_timezone or 'UTC' }}">
+  <script src="/static/js/common/aot-tz.js?v=20260721"></script>
   <style>
     .main-navbar {
       position: relative;
@@ -444,10 +446,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260721a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260725m" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
-  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260718c" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260722a" rel="stylesheet">
   <!-- AI Global Styles -->
   <link href="{{ url_for('static', filename='css/ai/aot-ai-global.css') }}?v=20260718i" rel="stylesheet">
 </head>
@@ -507,7 +509,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
            layout.html nav-bar conditional logic MUST also be applied here, or they will be lost. #}
         {% if ai_settings and ai_settings.ai_enabled %}
         <li
-          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_scheduler', 'ai_manage', 'ai_agent', 'ai_library'] %} active{% endif %}">
+          class="nav-item dropdown {% if active_page in ['ai_dashboard', 'ai_scheduler', 'ai_manage', 'ai_agent', 'ai_library', 'mcp_servers'] %} active{% endif %}">
           <a class="nav-link dropdown-toggle" href="#" id="dropdownAIAgent" data-toggle="dropdown" aria-haspopup="true"
              aria-expanded="false">
              {{ _('AI') }}
@@ -528,6 +530,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item {% if active_page == 'ai_library' %} active{% endif %}"
                href="{{ url_for('routes_ai_library.page_ai_library') }}">
                {{ _('Library') }}
+            </a>
+            <a class="dropdown-item {% if active_page == 'mcp_servers' %} active{% endif %}"
+               href="{{ url_for('routes_mcp_api.mcp_servers_page') }}">
+               {{ _('MCP Servers') }}
             </a>
           </div>
         </li>
@@ -648,7 +654,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <a class="dropdown-item" href="{{ url_for('routes_page.page_info') }}">{{ _('System Information') }}</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="{{ url_for('routes_admin.admin_dependencies_main') }}">{{ _('Package Management') }}</a>
-            <a class="dropdown-item" href="{{ url_for('routes_admin.admin_upgrade') }}">{{ _('Upgrade') }}</a>
+            <a class="dropdown-item{% if upgrade_available %} aot-nav-upgrade {{ 'aot-nav-upgrade-light' if upgrade_bg_is_light else 'aot-nav-upgrade-dark' }}{% endif %}" href="{{ url_for('routes_admin.admin_upgrade') }}">{{ _('Upgrade') }}</a>
             <a class="dropdown-item" href="{{ url_for('routes_admin.admin_backup') }}">{{ _('Backup Restore') }}</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="/systemctl/daemon_restart" onclick='return confirm("{{ _("Are you sure you want to restart the backend?") }}")'>{{
@@ -683,54 +689,136 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {%- block body %}{% endblock %}
 
   <!-- Preferences Modal -->
-  <div class="modal fade" id="modal_config_theme" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content" style="padding: 1em">
+  <div class="modal fade aot-option-modal" id="modal_config_theme" tabindex="-1" role="dialog"
+    aria-labelledby="ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">{{ _ ('Preferences') }}</h5>
+          <h5 class="modal-title">{{ _('Preferences') }}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
         </div>
-        <form method="post" action="/change_preferences">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <div class="form-row" style="padding-top: 0.5em">
-            <div class="col-auto">
-              <label class="form-check-label">{{ _ ('Language') }}</label>
-              <div>
-                <select class="form-control form-tooltip form-dropdown" data-placement="top" id="language"
-                  name="language" title="{{ _(" Selecting a language will override the web browser's language") }}">
-                  <option value="">{{ _('Browser Default') }}</option>
-                  {% for each_language in languages %}
-                  <option value="{{ each_language[0] }}" {% if current_user.language==each_language[0] %} selected{%
-                    endif %}>
-                    {{ each_language[1] }}
-                  </option>
-                  {% endfor %}
-                </select>
+        <div class="modal-body">
+          <form id="user_account_form" method="post" action="{{ url_for('routes_settings.settings_account_self') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="aot-modal-group-title">{{ _('General') }}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{ _('Account Name') }}</div>
+                <div class="aot-modal-option-control">
+                  <input type="text" class="aot-modern-input form-control" id="account_name" name="name"
+                    value="{{ current_user.name }}" autocomplete="username">
+                </div>
+              </div>
+              <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label">{{ _('Account Email') }}</div>
+                <div class="aot-modal-option-control">
+                  <input type="email" class="aot-modern-input form-control" id="account_email" name="email"
+                    value="{{ current_user.email or '' }}" autocomplete="email">
+                </div>
+              </div>
+              <div class="aot-modal-option-row aot-modal-option-row-wrap">
+                <div class="aot-modal-option-label">
+                  {% if current_user.password_hash %}{{ _('Change Password') }}{% else %}{{ _('Set Password') }}{% endif %}
+                  {% if not current_user.password_hash %}
+                  <div class="aot-modal-body-text">
+                    {{ _('Signed in with Google — set a password to also be able to log in with your account name.') }}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="aot-modal-option-control" style="width: auto; flex: 1 1 auto; justify-content: flex-start; flex-wrap: wrap;">
+                  <input type="password" class="aot-modern-input form-control" name="password_new"
+                    placeholder="{{ _('New Password') }}" autocomplete="new-password" style="flex: 1 1 160px;">
+                  <input type="password" class="aot-modern-input form-control" name="password_repeat"
+                    placeholder="{{ _('Confirm Password') }}" autocomplete="new-password" style="flex: 1 1 160px;">
+                </div>
+              </div>
+              <div class="aot-modal-option-row" style="border-bottom: none;">
+                {% set language_tooltip = _("Selecting a language will override the web browser's language") %}
+                <div class="aot-modal-option-label">{{ _('Language') }}</div>
+                <div class="aot-modal-option-control">
+                  <select class="aot-settings-select" id="language" name="language"
+                    title="{{ language_tooltip }}">
+                    <option value="">{{ _('Browser Default') }}</option>
+                    {% for each_language in languages %}
+                    <option value="{{ each_language[0] }}" {% if current_user.language==each_language[0] %} selected{%
+                      endif %}>
+                      {{ each_language[1] }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="aot-modal-option-row" style="border-bottom: none;">
+                {% set timezone_tooltip = _("Your personal timezone for displaying times. Leave blank to use the system default. Device schedules still use each device's own local time.") %}
+                <div class="aot-modal-option-label">{{ _('Timezone') }}</div>
+                <div class="aot-modal-option-control">
+                  <input class="aot-modern-input form-control" type="text" id="timezone" name="timezone"
+                    list="aot-tz-list" placeholder="{{ _('System default') }}"
+                    value="{{ current_user.timezone or '' }}" title="{{ timezone_tooltip }}"
+                    autocomplete="off" spellcheck="false">
+                  <datalist id="aot-tz-list">
+                    {% for _tz in ['UTC','Asia/Seoul','Asia/Tokyo','Asia/Shanghai','Asia/Dhaka','Asia/Almaty','Asia/Kolkata','Asia/Bangkok','Europe/London','Europe/Paris','Europe/Moscow','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Sao_Paulo','Australia/Sydney','Pacific/Auckland'] %}
+                    <option value="{{ _tz }}"></option>
+                    {% endfor %}
+                  </datalist>
+                </div>
               </div>
             </div>
-            <div class="col-auto">
-              <label class="form-check-label">{{ _ ('Theme') }}</label>
-              <div>
-                <select class="form-control" id="theme" name="theme">
-                  {% for value, name in themes %}
-                  <option value="{{ value|e }}" {% if value==current_user.theme %} selected{% endif %}>{{ name|e }}
-                  </option>
-                  {% endfor %}
-                </select>
+          </form>
+
+          <!-- Google Account -->
+          <div class="aot-modal-group-title" style="margin-top: 1.5rem;">{{ _('Google Account') }}</div>
+          <div class="aot-modal-container">
+            {% if not google_login_configured %}
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">{{ _('Google Account') }}</div>
+              <div class="aot-modal-body-text" style="text-align: right;">
+                {{ _("Not configured on this server yet — ask an administrator to set it up under Settings > Integrations.") }}
               </div>
             </div>
-          </div>
-          <div style="clear: both"></div>
-          <div class="row small-gutters" style="padding: 1em 1em 0 0.8em;">
-            <div class="col-auto">
-              <button type="button" class="btn btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+            {% elif google_connection and google_connection.is_active %}
+            <div class="aot-modal-option-row">
+              <div class="aot-modal-option-label">
+                {{ _('Sync Google Calendar Now') }}
+                <div class="aot-modal-body-text">{{ _('Connected as %(email)s', email=google_connection.account_email or '') }}</div>
+              </div>
+              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+                <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}" style="margin: 0;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                  <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Sync Now') }}</button>
+                </form>
+              </div>
             </div>
-            <div class="col-auto">
-              <input class="btn btn-primary" id="user_preferences_save" name="user_preferences_save" type="submit"
-                value="{{ _ ('Save') }}">
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">{{ _('Disconnect Google Account') }}</div>
+              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+                <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}" style="margin: 0;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                  <button type="submit" class="btn aot-pill-btn"
+                    onclick='return confirm("{{ _("Disconnect your Google account?") }}")'>{{ _('Disconnect') }}</button>
+                </form>
+              </div>
             </div>
+            {% else %}
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">
+                {{ _('Connect Google Account') }}
+                <div class="aot-modal-body-text">{{ _('Sign in with Google and sync your AoT schedule to Google Calendar.') }}</div>
+              </div>
+              <div class="aot-modal-option-control" style="width: auto; flex: 0 0 auto;">
+                <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{ url_for('routes_integrations.oauth_google_start') }}">{{ _('Connect') }}</a>
+              </div>
+            </div>
+            {% endif %}
           </div>
-        </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+          <button type="submit" form="user_account_form" class="btn aot-pill-btn aot-pill-btn-primary"
+            id="user_account_save" name="user_account_save" value="save">{{ _('Save') }}</button>
+        </div>
       </div>
     </div>
   </div>
@@ -781,6 +869,15 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     $(document).ready(function () {
       /* window.initTooltip handles this or it's handled by global delegation above */
       $('.selectpicker').selectpicker();
+
+      // 드롭다운 항목 hover 시 font-weight 가 bold 로 바뀌면서 텍스트 폭이
+      // 미세하게 늘어나 메뉴 전체 가로폭이 변하는 문제 방지: 각 항목에 실제
+      // 텍스트를 data-text 로 심어, aot.css 의 ::after(bold 고스트, height:0,
+      // visibility:hidden) 가 항상 bold 기준 폭을 미리 확보하게 한다. 이 폭이
+      // hover 여부와 무관하게 항목(및 메뉴 전체) 가로폭을 고정시킨다.
+      $('.navbar.main-navbar .dropdown-menu .dropdown-item').each(function () {
+        $(this).attr('data-text', $.trim($(this).text()));
+      });
       /* Old JS removed - moved to head script with .burger.active logic */
       // Force close collapse in desktop mode upon window resize
       $(window).on('resize', function () {
@@ -869,7 +966,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- Modal map controller + search components (not in bundle) -->
   <script src="/static/js/components/aot-map-search-fixed.js?v=20260505"></script>
   <script src="/static/js/components/aot-map-search-controller.js?v=20260505"></script>
-  <script src="/static/js/geo/aot-map-modal.js?v=20260602a"></script>
+  <script src="/static/js/geo/aot-map-modal.js?v=20260725a"></script>
   {% endif %}
 
   <!-- AoT Notes Widget (Global Integration) -->

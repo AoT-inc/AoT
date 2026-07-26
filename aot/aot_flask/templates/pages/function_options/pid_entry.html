@@ -3,7 +3,7 @@
   {{form_mod_pid_base.function_id(value=each_function.unique_id)}}
   {{form_mod_pid_base.function_type(class_='form-control', value='pid')}}
 
-  <div id="function_status_{{each_function.unique_id}}" class="grid-stack-item-content {% if each_function.is_activated and not each_function.is_paused -%}active-background
+  <div id="function_status_{{each_function.unique_id}}" data-config-uid="{{each_function.unique_id}}" class="grid-stack-item-content {% if each_function.is_activated and not each_function.is_paused -%}active-background
               {% elif each_function.is_activated and each_function.is_paused -%}pause-background
               {% elif each_function.is_held -%}hold-background
               {% else -%}inactive-background
@@ -72,7 +72,7 @@
   </div> <!-- grid-stack-item-content -->
 </form>
 
-<div class="modal fade aot-option-modal" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog"
+<div class="modal fade aot-option-modal aot-widget-drawer" data-backdrop="false" id="modal_config_{{each_function.unique_id}}" tabindex="-1" role="dialog"
   aria-labelledby="ModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content">

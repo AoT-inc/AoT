@@ -112,6 +112,14 @@ TIMER_START_restart_daemon=$SECONDS
 ${INSTALL_CMD} restart-daemon
 TIMER_TOTAL_restart_daemon=$((SECONDS - TIMER_START_restart_daemon))
 
+# aotmcp is a separate systemd service (install-aotmcp only runs once, at
+# initial setup) — without this it silently keeps running whatever code was
+# on disk when it was first installed, indefinitely, across every later
+# upgrade. no-ops if the service was never installed/enabled.
+TIMER_START_restart_aotmcp=$SECONDS
+${INSTALL_CMD} restart-aotmcp
+TIMER_TOTAL_restart_aotmcp=$((SECONDS - TIMER_START_restart_aotmcp))
+
 # SSL certificate validation and generation
 printf "\n#### Checking SSL certificates...\n"
 
@@ -175,6 +183,7 @@ printf "\ngenerate-widget-html:         %s s" "${TIMER_TOTAL_generate_widget_htm
 printf "\nbuild-notes-widget:           %s s" "${TIMER_TOTAL_build_notes_widget}"
 printf "\nupdate-permissions:           %s s" "${TIMER_TOTAL_update_permissions}"
 printf "\nrestart-daemon:               %s s" "${TIMER_TOTAL_restart_daemon}"
+printf "\nrestart-aotmcp:               %s s" "${TIMER_TOTAL_restart_aotmcp}"
 printf "\nssl-certs-generate:           %s s" "${TIMER_TOTAL_ssl_certs_generate}"
 printf "\nweb-server_restart:           %s s" "${TIMER_TOTAL_web_server_restart}"
 printf "\nweb-server-connect:           %s s\n" "${TIMER_TOTAL_web_server_connect}"

@@ -107,8 +107,11 @@
      ======================================================================== */
   --aot-bg-active: #D1D5D5;
   --aot-bg-inactive: #F3F6F5;
-  --aot-bg-pause: #D1D5D5;
-  --aot-bg-hold: #D1D5D5;
+  /* pause(fault/오프라인)·hold(pending/확인중) 는 과거 active 와 동일한 D1D5D5 를
+     그대로 복사해둔 실수였음 — 켜짐/오프라인 배경이 구분되지 않는 버그의 원인.
+     --aot-btn-bg-pause·aot-toggle.css 의 pending 폴백(#f0ad4e)과 맞춰 구분되게 함. */
+  --aot-bg-pause: #989E9E;
+  --aot-bg-hold: #F0AD4E;
   --aot-bg-on: #B5BABA;
   --aot-bg-off: #F3F6F5;
   --aot-bg-upgrade: #13261B;
@@ -406,8 +409,9 @@
   --aot-bg-active: #F3F6F5;
   --aot-bg-inactive: #D1D5D5;
   --aot-bg-upgrade: #660000;
-  --aot-bg-pause: #D1D5D5;
-  --aot-bg-hold: #D1D5D5;
+  /* light 테마와 동일한 이유로 active 와 구분 — 다크에서도 대비 유지 */
+  --aot-bg-pause: #989E9E;
+  --aot-bg-hold: #F0AD4E;
 
   /*
    * NOTE: Semantic and brand/text color overrides were moved from here

@@ -11,6 +11,7 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 | 분류 | 도구 | 설명 | 승인 |
 |------|------|------|------|
 | 관찰 | `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 | 불필요 |
+| 관찰 | `resolve_target` | 이름→정확한 엔티티 해석, 컨테이너(하위 구역 보유) 여부 확인 | 불필요 |
 | 관찰 | `get_device_list` | 등록된 전체 장치 목록 | 불필요 |
 | 관찰 | `search_devices` | 이름·유형으로 장치 검색 | 불필요 |
 | 관찰 | `get_sensor_detail` | 센서 시계열 이력(min/max/avg) | 불필요 |
@@ -24,9 +25,11 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 | 공지 | `list_notices` | 공지 게시판 글 목록 | 불필요 |
 | 시스템 | `get_system_update_status` | 설치 버전 vs GitHub 최신 비교 | 불필요 |
 | 작업 | `add_schedule` | 사람 작업 일정(제초·점검·청소) 등록 | **필요** |
+| 작업 | `add_schedule_batch` | 여러 대상(구역별 등) 일정을 단일 승인으로 일괄 등록 | **필요** |
 | 제어 | `operate_device` | 밸브·펌프·조명 즉시 제어 | **필요** |
 | 제어 | `set_output_state` | 출력 on/off(선택 지속시간, 네이티브) | **필요** |
 | 제어 | `schedule_device_control` | 특정 시각 1회성 장치 제어 예약 | **필요** |
+| 승인 | `respond_to_confirmation` | 대기 중인 confirmation_id(1개 또는 여러 개)를 승인/거부 | 해당 없음(승인 자체) |
 
 ### 1.2 인앱 어시스턴트 확장 도구
 
@@ -36,6 +39,7 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 - **함수(자동화)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
 - **일정 원장**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **지도(GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **GIS 입력(지도 레이어)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input`
 - **공지**: `create_notice`·`modify_notice`·`delete_notice`
 - **AI 에이전트**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
 - **지식 라이브러리**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
@@ -48,10 +52,12 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 ## 2. 안전·승인 정책
 
 - **읽기 도구**는 즉시 실행됩니다.
-- **상태를 바꾸는 도구**(변이·물리 제어·일정)는 인앱 어시스턴트에서 호출될 때 승인 게이트를 거칩니다. 즉시 적용되지 않고 채팅에 **승인 카드**로 제시되며, 사용자가 승인해야 실행됩니다.
+- **상태를 바꾸는 도구**(변이·물리 제어·일정)는 호출 경로와 무관하게 승인 게이트를 거칩니다.
+  - **인앱 어시스턴트**: 즉시 적용되지 않고 채팅에 **승인 카드**로 제시되며, 사용자가 승인해야 실행됩니다.
+  - **외부 MCP 서버**(`aot_mcp_server.py`, `aot/ai/services/mcp_safety_gate.py`): 최초 호출은 실행되지 않고 `pending_approval` + `confirmation_id`로 응답합니다. 사용자가 그 대화에서 confirmation_id를 명시적으로 승인/거부하면 `respond_to_confirmation`(또는 웹 승인 페이지 `/ai/mcp_review`)으로 처리되고, 승인 후 같은 인자에 `_confirmation_id`를 붙여 같은 도구를 재호출해야 실제로 실행됩니다. 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다.
 - 예외적으로 `create_note`·`knowledge_shelve`는 되돌릴 수 있는 저위험 기록이라 승인 없이 즉시 저장되며, 확정 전까지 권위 없는 정보로 취급됩니다.
 - **장치별 AI 판단 포함 토글**: `설정 -> 입력/출력`의 각 장치 모달에서 끄면, 그 장치는 AI 도구의 조회·제어 대상에서 제외됩니다(`is_ai_enabled`).
-- **외부 MCP 서버**(`aot_mcp_server.py`)는 자체 승인 게이트가 없어 도구를 호출된 대로 실행합니다. 제어 도구까지 노출되므로 신뢰할 수 있는 클라이언트에만 연결하세요.
+- **외부 MCP 서버**도 승인 게이트를 거치지만, 그와 별개로 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 
@@ -165,5 +171,6 @@ AI 에이전트는 다음을 해서는 안 됩니다.
 | 도구가 노트를 못 찾음 | `target_name`을 안 넘겨 키워드 검색만 함 | 구역/장치 이름을 `target_name`으로 전달 |
 | 장치가 AI에 안 보임 | `is_ai_enabled=False` | 장치 설정 모달에서 AI 판단 포함 켜기 |
 | 반복 제어가 스케줄로 안 됨 | 1회성 예약과 혼동 | 반복/조건 제어는 `create_function` 사용 |
-| 외부 MCP 호출이 승인 없이 실행됨 | 외부 서버엔 승인 게이트 없음 | 제어 노출 서버는 신뢰 클라이언트에만 연결 |
+| 외부 MCP 쓰기 호출이 `pending_approval`에서 안 넘어감 | 사용자의 명시적 승인 텍스트 없이 `respond_to_confirmation`을 호출하려 함(또는 호출 자체를 빠뜨림) | 사용자가 그 대화에서 confirmation_id를 명시적으로 승인/거부한 뒤에만 `respond_to_confirmation` 호출 |
+| 구역별 일정이 컨테이너(사이트) 하나에 붙음 | `add_schedule`/`add_schedule_batch`에 사이트 이름을 그대로 씀 | `resolve_target`으로 먼저 확인, `children`이 있으면 그 자녀 이름들로 `add_schedule_batch` 호출 |
 | 유형 오류로 생성 실패 | 존재하지 않는 유형을 지어냄 | `list_device_types`로 유효 유형 먼저 확인 |

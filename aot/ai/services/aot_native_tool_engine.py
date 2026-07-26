@@ -205,21 +205,28 @@ class AoTNativeToolEngine:
         from flask import current_app
         with current_app.app_context():
             try:
-                from aot.databases.models.measurement import Measurement
-                row = (
-                    Measurement.query
-                    .filter_by(input_id=device_id)
-                    .order_by(Measurement.timestamp.desc())
-                    .first()
-                )
-                if not row:
+                # Delegate to the InfluxDB-backed reader used by get_sensor_detail —
+                # there is no SQLite Measurement.input_id/timestamp/value column;
+                # live readings live in InfluxDB, not in the measurement-type table.
+                from aot.ai.services.aot_data_tool_service import AoTDataToolService
+                result = AoTDataToolService.get_sensor_detail(device_id, time_range="1h", limit=1)
+
+                if isinstance(result, dict):
+                    return {"status": "error", "message": result.get("error") or result.get("message") or "No data available"}
+                if not result:
                     return {"status": "error", "message": f"No measurements found for device '{device_id}'"}
+
+                readings = result[0].get("readings") or []
+                if not readings:
+                    return {"status": "error", "message": f"No measurements found for device '{device_id}'"}
+
+                latest = readings[-1]
                 return {
                     "status": "success",
                     "device_id": device_id,
-                    "timestamp": str(row.timestamp),
-                    "value": row.value,
-                    "unit": row.unit or "",
+                    "timestamp": latest["t"],
+                    "value": latest["v"],
+                    "unit": latest["u"],
                 }
             except Exception as exc:
                 logger.error(f"[NativeToolEngine] get_sensor_reading error: {exc}")

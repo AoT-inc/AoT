@@ -3,7 +3,7 @@
   {{form_mod_output.output_id(class_='form-control', value=each_output.unique_id)}}
   {{form_mod_output.output_pin(class_='form-control', value=each_output.pin)}}
 
-  <div class="grid-stack-item-content">
+  <div class="grid-stack-item-content" data-config-uid="{{each_output.unique_id}}">
     <div class="row small-gutters aot-entry-item-header">
       <div class="aot-entry-drag-handle">
         <i class="fa fa-grip-lines"></i>
@@ -21,7 +21,7 @@
   </div> <!-- grid-stack-item-content -->
 </form>
 
-<div class="modal fade aot-option-modal" id="modal_config_{{each_output.unique_id}}" tabindex="-1" role="dialog"
+<div class="modal fade aot-option-modal aot-widget-drawer" data-backdrop="false" id="modal_config_{{each_output.unique_id}}" tabindex="-1" role="dialog"
   aria-labelledby="ModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
     <div class="modal-content" style="padding: 1em">

@@ -318,6 +318,10 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
 <link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=30">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
 
+<!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
+<link rel="stylesheet" href="/static/css/components/aot-time-wheel.css">
+<script src="/static/js/components/aot-time-wheel.js?v=20260722a"></script>
+
 <!-- Actuator group panel -->
 <script src="/static/js/widgets/AoT_facility/aot-facility-actuator-panel.js?v=15"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=27">
@@ -595,7 +599,8 @@ WIDGET_INFORMATION = {
     'execute_at_modification': execute_at_modification,
 
     # Custom options appear in the widget settings form.
-    # [Simplification] Basic view = Map + Display + Refresh only (~6 options).
+    # [Simplification] Basic view = a single 'Map' section (~6 options: map
+    # select, labels/data-only/AI-advice display toggles, refresh period).
     # Devices placed on the map in the map editor (/geo/design) are shown
     # automatically — there is no separate "which devices to show" step here.
     # Everything else (device/measurement filters, 3D, label fine-tuning,
@@ -608,6 +613,25 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Map')
         },
         {
+            # [Simplification] Replaces the old 'Device Selection' dropdowns as the
+            # primary way users learn how devices get on the map: placement in the
+            # map editor IS the selection. Subset filtering (when you deliberately
+            # want to hide some placed devices) still exists under Advanced.
+            # Positioned BEFORE 'Select Map' (not after) so it groups visually with
+            # that field: .aot-modal-option-row carries its own border-bottom, and
+            # this message div carries none, so a message placed right after a row
+            # always reads as a caption of the row that FOLLOWS it, not the one
+            # above — with 'Select Map' next, this message looked like it was
+            # describing 'Show Labels' below the field. Message-then-field with the
+            # field's own border closing the group reads correctly instead.
+            'type': 'message',
+            'default_value': lazy_gettext(
+                'All devices placed on this map in the map editor are shown '
+                'automatically. Add or move devices in '
+                '<a href="/geo/design" target="_blank" rel="noopener">Map Editor (geo/design)</a>.'
+            )
+        },
+        {
             'id': 'map_uuid',
             'type': 'select_device',
             'options_select': ['Map'],
@@ -617,24 +641,9 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Select a map. Leave empty to use the most recently modified map.')
         },
         {
-            # [Simplification] Replaces the old 'Device Selection' dropdowns as the
-            # primary way users learn how devices get on the map: placement in the
-            # map editor IS the selection. Subset filtering (when you deliberately
-            # want to hide some placed devices) still exists under Advanced.
-            'type': 'message',
-            'default_value': lazy_gettext(
-                'All devices placed on this map in the map editor are shown '
-                'automatically. Add or move devices in '
-                '<a href="/geo/design" target="_blank" rel="noopener">Map Editor (geo/design)</a>.'
-            )
-        },
-
-        # --- Display ---
-        {
-            'type': 'header',
-            'name': lazy_gettext('Display')
-        },
-        {
+            # [Simplification] Display + Refresh folded into Map — one basic
+            # section instead of three, since none of these need their own
+            # topic header to be found.
             # Master label switch: turns ALL map labels (site / zone / device / sensor)
             # on or off. Per-device-type granularity (input / output / function) is
             # handled at runtime by the map's right-side label controller, so there is
@@ -668,12 +677,6 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext(
                 'Display the latest periodic AI advice summary for this map\'s facility/site.'
             )
-        },
-
-        # --- Refresh ---
-        {
-            'type': 'header',
-            'name': lazy_gettext('Refresh')
         },
         {
             'id': 'period',
@@ -709,8 +712,8 @@ WIDGET_INFORMATION = {
         {
             'type': 'message',
             'default_value': lazy_gettext(
-                'Optional: leave empty to show every device placed on the map. '
-                'Select specific devices only if you want to hide some of them.'
+                'Nothing is selected by default, so every device placed on the '
+                'map is shown. Devices you select below are hidden from the map.'
             )
         },
         {
@@ -720,7 +723,7 @@ WIDGET_INFORMATION = {
             'default_value': '',
 
             'name': lazy_gettext('Input'),
-            'phrase': lazy_gettext('Select inputs to display. Leave empty to show all placed inputs.')
+            'phrase': lazy_gettext('Select inputs to hide. Leave empty to show all placed inputs.')
         },
         {
             'id': 'device_selection_output',
@@ -729,7 +732,7 @@ WIDGET_INFORMATION = {
             'default_value': '',
 
             'name': lazy_gettext('Output'),
-            'phrase': lazy_gettext('Select outputs to display. Leave empty to show all placed outputs.')
+            'phrase': lazy_gettext('Select outputs to hide. Leave empty to show all placed outputs.')
         },
         {
             'id': 'device_selection_function',
@@ -738,7 +741,7 @@ WIDGET_INFORMATION = {
             'default_value': '',
 
             'name': lazy_gettext('Function'),
-            'phrase': lazy_gettext('Select functions to display. Leave empty to show all placed functions.')
+            'phrase': lazy_gettext('Select functions to hide. Leave empty to show all placed functions.')
         },
         {
             'type': 'collapse_end'
@@ -776,48 +779,6 @@ WIDGET_INFORMATION = {
 
             'name': lazy_gettext('Function'),
             'phrase': lazy_gettext('Select function measurements to display in the panel.')
-        },
-        {
-            'type': 'collapse_end'
-        },
-
-        # --- 3D Map ---
-        {
-            'type': 'collapse_start',
-            'id': '3d_map',
-            'name': lazy_gettext('3D Map (Vector Mode)')
-        },
-        {
-            'id': 'enable_3d_terrain',
-            'type': 'bool',
-            'default_value': False,
-
-            'name': lazy_gettext('Enable 3D Terrain'),
-            'phrase': lazy_gettext('Enable 3D terrain rendering (Hillshade, elevation). Requires vector mode.')
-        },
-        {
-            'id': 'facility_render_mode',
-            'type': 'select',
-            'default_value': 'default',
-            'options_select': [
-                ('default',     lazy_gettext('Default (transparent)')),
-                ('solid',       lazy_gettext('Solid (opaque)')),
-                ('wireframe',   lazy_gettext('Wireframe')),
-                ('performance', lazy_gettext('Performance (mobile)')),
-            ],
-            'name': lazy_gettext('Facility Render Mode'),
-            'phrase': lazy_gettext(
-                'Render style for the 3D facility overlay on the map. '
-                'Solid/Wireframe/Performance reduce GPU load.'
-            )
-        },
-        {
-            'id': 'map_style_url',
-            'type': 'text',
-            'default_value': '',
-
-            'name': lazy_gettext('Vector Style URL'),
-            'phrase': lazy_gettext('Custom MapLibre style JSON URL. Leave empty to use GIS input setting.')
         },
         {
             'type': 'collapse_end'
@@ -946,6 +907,48 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Device Shape Opacity'),
             'phrase': lazy_gettext('0 (Transparent) ~ 100 (Opaque)'),
             'constraints': {'min': 0, 'max': 100}
+        },
+        {
+            'type': 'collapse_end'
+        },
+
+        # --- 3D Map ---
+        {
+            'type': 'collapse_start',
+            'id': '3d_map',
+            'name': lazy_gettext('3D Map (Vector Mode)')
+        },
+        {
+            'id': 'enable_3d_terrain',
+            'type': 'bool',
+            'default_value': False,
+
+            'name': lazy_gettext('Enable 3D Terrain'),
+            'phrase': lazy_gettext('Enable 3D terrain rendering (Hillshade, elevation). Requires vector mode.')
+        },
+        {
+            'id': 'facility_render_mode',
+            'type': 'select',
+            'default_value': 'default',
+            'options_select': [
+                ('default',     lazy_gettext('Default (transparent)')),
+                ('solid',       lazy_gettext('Solid (opaque)')),
+                ('wireframe',   lazy_gettext('Wireframe')),
+                ('performance', lazy_gettext('Performance (mobile)')),
+            ],
+            'name': lazy_gettext('Facility Render Mode'),
+            'phrase': lazy_gettext(
+                'Render style for the 3D facility overlay on the map. '
+                'Solid/Wireframe/Performance reduce GPU load.'
+            )
+        },
+        {
+            'id': 'map_style_url',
+            'type': 'text',
+            'default_value': '',
+
+            'name': lazy_gettext('Vector Style URL'),
+            'phrase': lazy_gettext('Custom MapLibre style JSON URL. Leave empty to use GIS input setting.')
         },
         {
             'type': 'collapse_end'

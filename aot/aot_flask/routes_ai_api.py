@@ -1621,3 +1621,72 @@ def add_mcp_server():
     )
     new_mcp.save()
     return jsonify({'status': 'success', 'unique_id': new_mcp.unique_id})
+
+
+# =============================================================================
+# @ANCHOR: ADVICE_LEDGER_REVIEW
+# 다자 AI 의견 원장의 사람 검토 창구. AI는 submit_advice/list_advice 로 의견을
+# 넣고 읽지만, 채택·기각은 사람만 한다 — AI가 자기 의견을 스스로 채택하면
+# 승인 게이트를 우회하는 셈이 되므로 이 경로에는 MCP 도구를 두지 않는다.
+# =============================================================================
+
+@blueprint.route('/api/v1/ai/advice', methods=['GET'])
+@login_required
+def ai_advice_list_endpoint():
+    """의견 원장 조회 (기본: 미검토 건)."""
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    try:
+        result = AoTDataToolService.list_advice(
+            scope_type=request.args.get('scope_type'),
+            scope_id=request.args.get('scope_id'),
+            status=request.args.get('status', 'pending'),
+            agent_id=request.args.get('agent_id'),
+            limit=request.args.get('limit', 50),
+        )
+        return jsonify(result), (200 if result.get('status') == 'success' else 400)
+    except Exception as e:
+        logger.error(f"[AdviceLedger] list failed: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+def _review_advice(advice_id, status):
+    from datetime import datetime
+    from aot.databases.models import AIAdvice
+
+    row = AIAdvice.query.filter_by(unique_id=advice_id).first()
+    if row is None:
+        return jsonify({'status': 'error', 'message': _('Advice not found.')}), 404
+    if row.status != 'pending':
+        return jsonify({'status': 'error',
+                        'message': _('This advice has already been reviewed (status: %(status)s).',
+                                     status=row.status)}), 400
+
+    row.status = status
+    row.reviewed_by = getattr(flask_login.current_user, 'unique_id', None)
+    row.reviewed_at = datetime.utcnow()
+    row.review_note = (request.json or {}).get('note', '') if request.is_json else ''
+    row.save()
+    return jsonify({'status': 'success', 'advice_id': advice_id, 'new_status': status}), 200
+
+
+@blueprint.route('/api/v1/ai/advice/<advice_id>/accept', methods=['POST'])
+@login_required
+def ai_advice_accept(advice_id):
+    """의견 채택. 채택은 '동의' 표시일 뿐 제어를 실행하지 않는다 —
+    실제 실행은 여전히 승인 게이트(mcp_confirmation)를 거쳐야 한다."""
+    try:
+        return _review_advice(advice_id, 'accepted')
+    except Exception as e:
+        logger.error(f"[AdviceLedger] accept failed: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@blueprint.route('/api/v1/ai/advice/<advice_id>/reject', methods=['POST'])
+@login_required
+def ai_advice_reject(advice_id):
+    """의견 기각."""
+    try:
+        return _review_advice(advice_id, 'rejected')
+    except Exception as e:
+        logger.error(f"[AdviceLedger] reject failed: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500

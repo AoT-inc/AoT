@@ -82,8 +82,9 @@ Turns an output on for a set time, then off again automatically — the simplest
 **Key options**
 
 -   **Output** — the output channel to control.
--   **Sync (Seconds)** — how often the widget checks in with the server for the current status.
--   **Operation Mode** — **Cycle** (repeat run/rest for a number of cycles) or **Simple** (a single run, `0` = run until stopped).
+-   **Sync (Seconds)** — how often the widget refreshes the operation status from the server.
+-   **Timer** — on (default): shows the timed controls below. Off: the toggle simply switches the output on or off, ignoring any run/rest/cycle/scheduled-start settings — use this if you only want the widget as a plain switch for this output.
+-   **Operation Mode** — **Simple** (default; a single run, `0` = run until stopped) or **Cycle** (repeat run/rest for a number of cycles).
 -   **Cycle settings** — the run time, rest time, and cycle count to use the first time you start a timer on this output. After that, the widget remembers and reuses whatever values you actually ran last, so these defaults won't reappear once you've started it at least once.
 -   **Scheduled Start (hh:mm)** — a wall-clock start time in the device's timezone (`00:00` = start immediately; a past time schedules for the next day).
 -   **Show Status** — display the current phase (running / resting / scheduled) in the title bar.

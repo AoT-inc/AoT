@@ -28,13 +28,14 @@ Both paths pull tools from the same registry (`aot/ai/services/tool_registry.py`
 
 ## MCP Tool List
 
-Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read tools run immediately; control and scheduling tools pass through the approval gate when called from the in-app assistant.
+Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read tools run immediately; control and scheduling tools pass through an approval gate either way — the in-app assistant's chat approval card, or the external MCP server's approval queue (`pending_approval` + `respond_to_confirmation`, see "Running the MCP Server" below).
 
 ### Observation (read — immediate)
 
 | Tool | Description |
 |------|-------------|
 | `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree |
+| `resolve_target` | Resolve a place/device name to its exact entity — check upfront whether it's a container (has children) |
 | `get_device_list` | List of all registered devices (inputs/outputs/cameras) |
 | `search_devices` | Find devices by name or type keyword |
 | `get_sensor_detail` | Sensor time-series history (min/max/avg stats) |
@@ -53,6 +54,7 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 |------|-------------|----------|
 | `create_note` | Create an undated memo/note attached to an entity, saved immediately | Not required |
 | `add_schedule` | Register a human work task (weeding, inspection, cleaning) | Required |
+| `add_schedule_batch` | Register schedules for multiple targets (e.g. per zone) behind a single approval | Required |
 
 ### Control (user approval required)
 
@@ -62,7 +64,7 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 | `set_output_state` | Turn an output on/off (optional duration, native bridge) |
 | `schedule_device_control` | Reserve a one-off device operation at a specific time |
 
-> In the in-app assistant, the control tools above and `add_schedule` execute only after confirmation via the approval card. When called directly through the external MCP server there is no approval gate, so — since it exposes control tools — connect that server only to trusted clients.
+> In the in-app assistant, the control tools above and `add_schedule` execute only after confirmation via the approval card. Calling directly through the external MCP server goes through the same kind of gate: the first call is not executed and comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject that confirmation_id in chat (handled via `respond_to_confirmation`) or on the web review page, then the caller retries the same arguments plus `_confirmation_id` to actually execute it. See "Running the MCP Server" below for the full flow.
 
 ### Extended In-app Assistant Tools
 
@@ -72,6 +74,8 @@ Beyond the MCP catalog above, the in-app AI assistant uses additional tools for 
 - **Functions (automation)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
 - **Schedule ledger**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **GIS inputs (map layers)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input` (manage map layer providers such as VWorld/Google/OpenWeather)
+- **Facility/equipment lookup**: `get_facility_capacity` (a facility's heating/cooling capacity, volume, ventilation, irrigation design summary), `get_map_equipment` (map-drawn equipment's irrigation design summary per site/zone, sprinkler vs. drip kept separate), `get_map_equipment_detail` (individual sprinkler positions/spacing/radius, per-pipe detail — only when the summary isn't enough)
 - **Notice board**: `create_notice`·`modify_notice`·`delete_notice`
 - **AI agent management**: `list_ai_agents`, `list_ai_entries`, `create_ai_agent`·`modify_ai_agent`·`delete_ai_agent`
 - **Knowledge library**: `knowledge_search`, `knowledge_shelve`, `list_library_source_types`, `smartfarmkorea_lookup`, `configure_library_source`
@@ -94,12 +98,12 @@ New inputs and outputs are created with this enabled by default (`is_ai_enabled=
 
 ## Safety & Approval Model
 
-Non-mutating **read tools** run immediately. **State-changing tools** pass through the approval gate when called from the in-app assistant.
+Non-mutating **read tools** run immediately. **State-changing tools** pass through an approval gate no matter which path calls them.
 
-- **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices/AI agents, map placement changes (`set_device_location`, `delete_geo_shape`), `add_schedule`, `configure_library_source`, etc.
+- **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices/AI agents/GIS inputs, map placement changes (`set_device_location`, `delete_geo_shape`), `add_schedule`·`add_schedule_batch`, `configure_library_source`, etc.
 - **No approval (low-risk writes)**: `create_note`, `knowledge_shelve` — reversible personal memos / unconfirmed knowledge that save immediately and are treated as non-authoritative until confirmed.
 
-Actions requiring approval are not applied immediately; they are presented in the chat as an **approval card**. They execute only after the user approves, and nothing changes if the user rejects.
+Actions requiring approval are not applied immediately. In the **in-app assistant** they are presented in chat as an **approval card**, executed only once the user approves. Through the **external MCP server** they come back as a `pending_approval` response (a queued confirmation_id) and only proceed once the user explicitly approves or rejects that id — either path, nothing changes if the user rejects.
 
 ---
 
@@ -153,7 +157,7 @@ To connect from Claude Desktop, add to `claude_desktop_config.json`:
 }
 ```
 
-> This server executes tools as invoked (no approval gate of its own). Because it exposes control tools, connect it only to trusted clients. The approval card applies to the in-app assistant path only.
+> State-changing tool calls do not execute immediately here either (`aot/ai/services/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the web review page (`/ai/mcp_review`), which is handled through `respond_to_confirmation`. Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). It still exposes control tools, so connect this server only to trusted clients.
 
 ---
 

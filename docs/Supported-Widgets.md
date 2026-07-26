@@ -59,6 +59,10 @@ Displays data in a circular gauge. Ensure the maximum value option matches the l
 
 Displays your devices on an interactive map and highlights their operating state with color. See [AoT Map](Data-Viewing.md#widget-map) for details.
 
+### Calendar
+
+Shows scheduled events (from the Scheduler) on a calendar, split into AI/User/Device categories, plus any Google calendars you've connected via two-way sync. Click an event to view or edit it, or drag to reschedule.
+
 ### Camera
 
 

@@ -23938,7 +23938,7 @@ msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:496
-#, fuzzy, python-format
+#, fuzzy
 msgid "Max Humidity (%)"
 msgstr "予報湿度 (%%)"
 
@@ -24220,17 +24220,23 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
-
 #: widgets/AoT_map.py:630
-msgid "All devices placed on this map in the map editor are shown automatically. Add or move devices in <a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">Map Editor (geo/design)</a>."
-msgstr "マップエディタに配置したすべてのデバイスが自動的に表示されます。デバイスの追加・移動は<a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">マップエディタ(geo/design)</a>で行ってください。"
+msgid ""
+"All devices placed on this map in the map editor are shown automatically."
+" Add or move devices in <a href=\"/geo/design\" target=\"_blank\" "
+"rel=\"noopener\">Map Editor (geo/design)</a>."
+msgstr ""
+"マップエディタに配置したすべてのデバイスが自動的に表示されます。デバイスの追加・移動は<a href=\"/geo/design\" "
+"target=\"_blank\" rel=\"noopener\">マップエディタ(geo/design)</a>で行ってください。"
 
 #: widgets/AoT_map.py:711
 msgid "Device Filter"
 msgstr "デバイスフィルター"
 
 #: widgets/AoT_map.py:716
-msgid "Optional: leave empty to show every device placed on the map. Select specific devices only if you want to hide some of them."
+msgid ""
+"Optional: leave empty to show every device placed on the map. Select "
+"specific devices only if you want to hide some of them."
 msgstr "任意設定: 空欄のままにするとマップに配置したすべてのデバイスが表示されます。一部を非表示にしたい場合のみ特定のデバイスを選択してください。"
 
 #: widgets/AoT_map.py:727
@@ -24248,6 +24254,104 @@ msgstr "表示する機能を選択してください。空欄のままにする
 #: widgets/AoT_map.py:834
 msgid "Label Style"
 msgstr "ラベルスタイル"
+
+#: widgets/AoT_map.py:716
+msgid ""
+"Nothing is selected by default, so every device placed on the map is "
+"shown. Devices you select below are hidden from the map."
+msgstr "初期状態では何も選択されていないため、マップに配置したすべてのデバイスが表示されます。以下で選択したデバイスはマップから非表示になります。"
+
+#: widgets/AoT_map.py:727
+msgid "Select inputs to hide. Leave empty to show all placed inputs."
+msgstr "非表示にする入力を選択してください。空欄のままにすると配置済みの入力がすべて表示されます。"
+
+#: widgets/AoT_map.py:736
+msgid "Select outputs to hide. Leave empty to show all placed outputs."
+msgstr "非表示にする出力を選択してください。空欄のままにすると配置済みの出力がすべて表示されます。"
+
+#: widgets/AoT_map.py:745
+msgid "Select functions to hide. Leave empty to show all placed functions."
+msgstr "非表示にする機能を選択してください。空欄のままにすると配置済みの機能がすべて表示されます。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "AI Requests & Advice"
+msgstr "AI リクエストと助言"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "AI advice ledger"
+msgstr "AI 助言台帳"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Accept"
+msgstr "採用"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Advice not found."
+msgstr "該当する助言が見つかりません。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Approve this control request? The AI will be able to execute it once."
+msgstr "この制御リクエストを承認しますか？ AI が一度だけ実行できるようになります。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Control requests awaiting approval"
+msgstr "承認待ちの制御リクエスト"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid ""
+"External AI connected over MCP cannot change anything on its own. Control"
+" requests wait here for your approval, and opinions are collected for you"
+" to compare."
+msgstr "MCP で接続した外部 AI は自ら何も変更できません。制御リクエストはここで承認を待ち、意見は比較できるよう集約されます。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "No advice has been submitted yet."
+msgstr "まだ提出された助言はありません。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "No control requests are waiting."
+msgstr "待機中の制御リクエストはありません。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "No tool calls recorded yet."
+msgstr "まだ記録されたツール呼び出しはありません。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid ""
+"Opinions submitted by the main AI, external AI, or subordinate nodes. "
+"Accepting is agreement only — it does not execute control."
+msgstr "メイン AI・外部 AI・下位ノードが提出した意見です。採用は同意の表明であり、制御を実行しません。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Proposed action"
+msgstr "提案された対応"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Rationale"
+msgstr "根拠"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Reason"
+msgstr "理由"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Recent AI tool calls"
+msgstr "最近の AI ツール呼び出し"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid ""
+"These have NOT been executed. Approving lets the requesting AI run it "
+"once with the same arguments."
+msgstr "まだ実行されていません。承認すると、要求した AI が同じ引数で一度だけ実行できます。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+#, python-format
+msgid "This advice has already been reviewed (status: %(status)s)."
+msgstr "この助言はすでに検討済みです（状態: %(status)s）。"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "expires in {sec}s"
+msgstr "{sec} 秒後に失効"
 
 #: templates/pages/dashboard_entry.html:68
 msgid "Hide preview"

@@ -44,6 +44,34 @@
             maplibregl.Evented.prototype.callInitHooks = function () {};
         }
 
+        // AttributionControl.prototype._updateAttributions 패치: MapTiler 등
+        // 외부 스타일이 소스에 심어놓는 장문 "OpenStreetMap contributors" 표기를
+        // AoT 자체 레이어가 쓰는 "OpenStreetMap" 표기로 통일한다. 그 문자열
+        // 자체는 고칠 수 없는 원격 style.json 안에 있으므로, 컨트롤이 DOM에
+        // 쓰기 직전(호출될 때마다) 소스 attribution을 정규화한다. MapLibre가
+        // 서로 부분 문자열로 겹치는 attribution은 자체적으로 중복 제거하므로
+        // 표기만 통일하면 "OpenStreetMap"이 중복 표시되는 문제도 함께 없어진다.
+        // 지도를 만드는 모든 코드(위젯/geo-design/옵션모달 등)를 일일이 고칠
+        // 필요 없이 여기 한 곳에서 전역 적용된다.
+        if (maplibregl.AttributionControl && !maplibregl.AttributionControl.prototype._aotOsmAttrPatched) {
+            const origUpdateAttributions = maplibregl.AttributionControl.prototype._updateAttributions;
+            maplibregl.AttributionControl.prototype._updateAttributions = function () {
+                const map = this._map;
+                if (map && map.style && map.style.sourceCaches) {
+                    const caches = map.style.sourceCaches;
+                    Object.keys(caches).forEach(function (id) {
+                        const source = caches[id] && caches[id]._source;
+                        if (source && typeof source.attribution === 'string' &&
+                            /openstreetmap contributors/i.test(source.attribution)) {
+                            source.attribution = source.attribution.replace(/openstreetmap contributors/gi, 'OpenStreetMap');
+                        }
+                    });
+                }
+                return origUpdateAttributions.apply(this, arguments);
+            };
+            maplibregl.AttributionControl.prototype._aotOsmAttrPatched = true;
+        }
+
         return true;
     }
 

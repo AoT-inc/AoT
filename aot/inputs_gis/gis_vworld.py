@@ -637,6 +637,66 @@ class InputModule(AbstractGisInput):
         return {'ok': True, 'feature': feature, 'name': name, 'pnu': pnu or ''}
 
     @staticmethod
+    def reverse_geocode(lat, lng, api_key, domain=''):
+        """
+        좌표 → 사람이 읽는 주소 문자열 (VWorld getAddress, 역지오코딩).
+
+        도로명(road) 주소를 우선 조회하고, 결과가 없으면 지번(parcel) 주소로
+        폴백한다. parcel_from_address의 _rev_geocode_at과 달리 PNU/필지폴리곤은
+        만들지 않고 주소 문자열만 반환하는 단순 조회다.
+
+        Args:
+            lat, lng: WGS84 좌표
+            api_key: VWorld API key
+            domain: 등록된 도메인 (옵션)
+
+        Returns:
+            {'ok': True, 'address': str, 'type': 'road'|'parcel'}
+            {'ok': False, 'error': str}
+        """
+        def _dp(d):
+            return f'&domain={d}' if d else ''
+
+        def _safe_json(resp, label):
+            try:
+                return resp.json()
+            except Exception:
+                preview = resp.text[:300].replace('\n', ' ')
+                raise ValueError(f'{label} parsing failed (HTTP {resp.status_code}): {preview}')
+
+        last_error = 'no attempt made'
+
+        def _query(addr_type):
+            nonlocal last_error
+            url = (
+                f'https://api.vworld.kr/req/address'
+                f'?service=address&request=getAddress&crs=epsg:4326'
+                f'&point={lng},{lat}&type={addr_type}&zipcode=false&simple=false'
+                f'&format=json&key={api_key}{_dp(domain)}'
+            )
+            try:
+                resp = requests.get(url, timeout=10, verify=False)
+                data = _safe_json(resp, 'RevGeocode')
+            except Exception as e:
+                last_error = f'{type(e).__name__}: {e}'
+                return None
+            results = data.get('response', {}).get('result', [])
+            if not results:
+                status = data.get('response', {}).get('status', '')
+                last_error = f'no result (status={status!r})'
+                return None
+            text = results[0].get('text', '')
+            return text or None
+
+        for addr_type in ('road', 'parcel'):
+            text = _query(addr_type)
+            if text:
+                return {'ok': True, 'address': text, 'type': addr_type}
+
+        return {'ok': False,
+                'error': f'Reverse geocoding failed for ({lat:.6f}, {lng:.6f}): {last_error}'}
+
+    @staticmethod
     def parcels_from_addresses(addresses, api_key, domain=''):
         """
         Batch parcel lookup for a list of addresses.

@@ -110,7 +110,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endif %}
 
   <!-- MapLibre 호환 패치(멱등). maplibre 로드 직후 적용되며, 지연/온디맨드 로드에서도 재호출 가능. -->
-  <script src="/static/js/geo/aot-maplibre-patches.js?v=20260613"></script>
+  <script src="/static/js/geo/aot-maplibre-patches.js?v=20260725a"></script>
 
   <!-- [GIS Vector Migration] AoT Vector Modules (Pure MapLibre) -->
   <script src="/static/js/geo/aot-maplibre-loader.js?v=20260613"></script>
@@ -446,7 +446,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260725l" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260725m" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
   <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260722a" rel="stylesheet">
@@ -966,7 +966,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- Modal map controller + search components (not in bundle) -->
   <script src="/static/js/components/aot-map-search-fixed.js?v=20260505"></script>
   <script src="/static/js/components/aot-map-search-controller.js?v=20260505"></script>
-  <script src="/static/js/geo/aot-map-modal.js?v=20260602a"></script>
+  <script src="/static/js/geo/aot-map-modal.js?v=20260725a"></script>
   {% endif %}
 
   <!-- AoT Notes Widget (Global Integration) -->

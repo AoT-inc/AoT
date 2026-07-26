@@ -1419,6 +1419,20 @@ input[type="range"].aot-ov-opacity::-moz-range-thumb {
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45) !important;
 }
 
+/* Same "which card is being configured" cue for the Input / Output / Function /
+   GIS-input entry rows: their setting modal now opens as the same right-side
+   drawer (no backdrop, page stays visible), so the row being edited is lifted
+   toward the viewer with a deeper shadow. aot-widget-drawer.js toggles
+   .aot-config-active on the row carrying data-config-uid=<the modal's widget id>.
+   Rounded to match the entry pill; the border-radius also gives the output
+   card's (otherwise square, background-less) wrapper an intentional rounded lift. */
+[data-config-uid] { transition: box-shadow 0.2s ease; }
+[data-config-uid].aot-config-active {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+    border-radius: 20px;
+    z-index: 2;
+}
+
 :root { --aot-wdrawer-w: 600px; }
 /* Desktop drawer width is FIXED at 520px for every width ≥768 — it must not grow with
    the viewport. A wider drawer would only eat into the dashboard area behind it (the

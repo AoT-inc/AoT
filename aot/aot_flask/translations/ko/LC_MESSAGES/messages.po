@@ -24207,7 +24207,7 @@ msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:496
-#, fuzzy, python-format
+#, fuzzy
 msgid "Max Humidity (%)"
 msgstr "예보 습도 (%%)"
 
@@ -24490,17 +24490,23 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
-
 #: widgets/AoT_map.py:630
-msgid "All devices placed on this map in the map editor are shown automatically. Add or move devices in <a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">Map Editor (geo/design)</a>."
-msgstr "지도 편집기에 배치된 모든 장치가 자동으로 표시됩니다. 장치 추가·이동은 <a href=\"/geo/design\" target=\"_blank\" rel=\"noopener\">지도 편집기(geo/design)</a>에서 하세요."
+msgid ""
+"All devices placed on this map in the map editor are shown automatically."
+" Add or move devices in <a href=\"/geo/design\" target=\"_blank\" "
+"rel=\"noopener\">Map Editor (geo/design)</a>."
+msgstr ""
+"지도 편집기에 배치된 모든 장치가 자동으로 표시됩니다. 장치 추가·이동은 <a href=\"/geo/design\" "
+"target=\"_blank\" rel=\"noopener\">지도 편집기(geo/design)</a>에서 하세요."
 
 #: widgets/AoT_map.py:711
 msgid "Device Filter"
 msgstr "장치 필터"
 
 #: widgets/AoT_map.py:716
-msgid "Optional: leave empty to show every device placed on the map. Select specific devices only if you want to hide some of them."
+msgid ""
+"Optional: leave empty to show every device placed on the map. Select "
+"specific devices only if you want to hide some of them."
 msgstr "선택 사항: 비워두면 지도에 배치된 모든 장치가 표시됩니다. 일부만 숨기고 싶을 때만 특정 장치를 선택하세요."
 
 #: widgets/AoT_map.py:727
@@ -24518,6 +24524,152 @@ msgstr "표시할 함수를 선택하세요. 비워두면 배치된 함수가 �
 #: widgets/AoT_map.py:834
 msgid "Label Style"
 msgstr "라벨 스타일"
+
+# --- AoT_timer widget strings (added 2026-07-25) ---
+msgid "Sync (seconds)"
+msgstr "동기화 주기 (초)"
+
+msgid ""
+"How often the widget refreshes the operation status from the server (in "
+"seconds)."
+msgstr "위젯이 서버에서 작동 상태를 새로 고치는 주기(초)입니다."
+
+msgid ""
+"Use the toggle switch to turn the device on and off. Turn on \"Timer\" to"
+" operate on a timer: in Simple mode the device runs once for the set time"
+" (0 = run until stopped), and in Cycle mode it repeats a Run / Rest "
+"sequence for the set number of cycles. \"Scheduled Start\" begins "
+"operation at a set wall-clock time in the device timezone. When \"Timer\""
+" is off, the toggle simply switches the device on or off regardless of "
+"the time settings."
+msgstr ""
+"토글 스위치로 장치를 켜고 끕니다. \"타이머\"를 켜면 타이머로 작동합니다: 단순(Simple) 모드에서는 설정한 시간 동안 한 "
+"번 작동하고(0 = 정지할 때까지 계속 작동), 반복(Cycle) 모드에서는 설정한 횟수만큼 작동/휴식 순서를 반복합니다. \"예약"
+" 시작\"은 장치 시간대 기준으로 지정한 시각에 작동을 시작합니다. \"타이머\"가 꺼져 있으면 시간 설정과 관계없이 토글이 단순히"
+" 장치를 켜거나 끕니다."
+
+msgid ""
+"When enabled, shows the timed controls (Run / Rest / Cycles / Scheduled "
+"Start). When disabled, the toggle simply turns the device on or off."
+msgstr "켜면 타이머 컨트롤(작동/휴식/반복/예약 시작)이 표시됩니다. 끄면 토글이 단순히 장치를 켜거나 끕니다."
+
+msgid "Please select an Output first."
+msgstr "먼저 출력을 선택하세요."
+
+msgid "Please check the run/rest/cycle values."
+msgstr "작동/휴식/반복 값을 확인하세요."
+
+msgid "Failed to start"
+msgstr "시작하지 못했습니다."
+
+msgid "Failed to stop"
+msgstr "정지하지 못했습니다."
+
+msgid "Error during start"
+msgstr "시작 중 오류가 발생했습니다."
+
+msgid "Error during stop"
+msgstr "정지 중 오류가 발생했습니다."
+
+#: widgets/AoT_map.py:716
+msgid ""
+"Nothing is selected by default, so every device placed on the map is "
+"shown. Devices you select below are hidden from the map."
+msgstr "기본적으로 아무것도 선택되어 있지 않아 지도에 배치된 모든 장치가 표시됩니다. 아래에서 선택한 장치는 지도에서 숨겨집니다."
+
+#: widgets/AoT_map.py:727
+msgid "Select inputs to hide. Leave empty to show all placed inputs."
+msgstr "숨길 입력을 선택하세요. 비워두면 배치된 입력이 모두 표시됩니다."
+
+#: widgets/AoT_map.py:736
+msgid "Select outputs to hide. Leave empty to show all placed outputs."
+msgstr "숨길 출력을 선택하세요. 비워두면 배치된 출력이 모두 표시됩니다."
+
+#: widgets/AoT_map.py:745
+msgid "Select functions to hide. Leave empty to show all placed functions."
+msgstr "숨길 함수를 선택하세요. 비워두면 배치된 함수가 모두 표시됩니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "AI Requests & Advice"
+msgstr "AI 요청 및 조언"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "AI advice ledger"
+msgstr "AI 조언 원장"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Accept"
+msgstr "채택"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Advice not found."
+msgstr "해당 조언을 찾을 수 없습니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Approve this control request? The AI will be able to execute it once."
+msgstr "이 제어 요청을 승인할까요? AI가 한 번 실행할 수 있게 됩니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Control requests awaiting approval"
+msgstr "승인 대기 중인 제어 요청"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid ""
+"External AI connected over MCP cannot change anything on its own. Control"
+" requests wait here for your approval, and opinions are collected for you"
+" to compare."
+msgstr ""
+"MCP로 접속한 외부 AI는 스스로 아무것도 변경할 수 없습니다. 제어 요청은 여기서 승인을 기다리며, 의견은 비교할 수 있도록 "
+"모입니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "No advice has been submitted yet."
+msgstr "아직 제출된 조언이 없습니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "No control requests are waiting."
+msgstr "대기 중인 제어 요청이 없습니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "No tool calls recorded yet."
+msgstr "아직 기록된 도구 호출이 없습니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid ""
+"Opinions submitted by the main AI, external AI, or subordinate nodes. "
+"Accepting is agreement only — it does not execute control."
+msgstr "메인 AI·외부 AI·하위 노드가 제출한 의견입니다. 채택은 동의 표시일 뿐이며 제어를 실행하지 않습니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Proposed action"
+msgstr "제안 조치"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Rationale"
+msgstr "근거"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Reason"
+msgstr "사유"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "Recent AI tool calls"
+msgstr "최근 AI 도구 호출"
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid ""
+"These have NOT been executed. Approving lets the requesting AI run it "
+"once with the same arguments."
+msgstr "아직 실행되지 않았습니다. 승인하면 요청한 AI가 같은 인자로 한 번 실행할 수 있습니다."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+#, python-format
+msgid "This advice has already been reviewed (status: %(status)s)."
+msgstr "이미 검토된 조언입니다 (상태: %(status)s)."
+
+#: aot/aot_flask/templates/pages/ai/mcp_review.html
+msgid "expires in {sec}s"
+msgstr "{sec}초 후 만료"
 
 #: templates/pages/dashboard_entry.html:68
 msgid "Hide preview"

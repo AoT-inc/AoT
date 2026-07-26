@@ -122,6 +122,7 @@ from .tier_adaptive_storage import TierDecision
 from .tier_adaptive_storage import DocumentAccessLog
 from .tier_adaptive_storage import AdaptiveStorageSettings
 from .mcp_audit import MCPAuditLog, MCPConfirmation
+from .ai_advice import AIAdvice
 from .geo_facility_setpoint import GeoFacilitySetpoint
 
 
@@ -137,8 +138,12 @@ def alembic_upgrade_db(app):
 
     def upgrade_alembic():
         """Run alembic database upgrade."""
-        app.logger.info("Database version mismatch or missing. Running alembic upgrade head...")
-        command = '/bin/bash {path}/aot/scripts/upgrade_commands.sh update-alembic'.format(path=INSTALL_DIRECTORY)
+        app.logger.info(f"Database version mismatch or missing. Running alembic upgrade to {ALEMBIC_VERSION}...")
+        # 목표를 ALEMBIC_VERSION 으로 명시한다. 'head' 를 쓰면 폐기된 구 계보의
+        # p5_52 가 두 번째 head 로 남아 있어 "Multiple head revisions" 로 실패한다
+        # (26.06.0 재베이스라인에서 p6_00.down_revision=None 으로 계보를 분리한 결과).
+        command = '/bin/bash {path}/aot/scripts/upgrade_commands.sh update-alembic {version}'.format(
+            path=INSTALL_DIRECTORY, version=ALEMBIC_VERSION)
         try:
             upgrade = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)

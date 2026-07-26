@@ -50,6 +50,18 @@ _CACHE_TTL = 300
 _GEO_CACHE_LOCK = threading.Lock()
 _GEO_CACHE_GEN = 0
 
+# Serializes the read-modify-write of GeoSetting.theme_config/providers (JSON
+# blobs patched one key at a time in api_geo_settings). Without this, two
+# saves arriving close together (e.g. dragging the site color then the zone
+# color within the panel's 400ms debounce) each read the same pre-save
+# snapshot, patch their own key, and write the whole blob back — the second
+# commit silently clobbers the first save's key with its stale copy (lost
+# update). Reproduced live: two concurrent POSTs both return ok:true but only
+# the later commit's key persists. gthread workers share this process, so a
+# plain lock around read+commit is sufficient (SQLite serializes writes
+# anyway; the race is in the Python-level read-before-either-commits window).
+GEO_SETTINGS_SAVE_LOCK = threading.Lock()
+
 # Cache for get_available_config_options (device/measurement dropdown lists)
 _CONFIG_OPTIONS_CACHE = None
 _CONFIG_OPTIONS_CACHE_TS = 0.0
@@ -705,40 +717,40 @@ def geo_layer_activate(layer_id, active=True):
 # Device Collection & Helpers (Shared between Widget and API)
 # ------------------------------------------------------------------------------
 def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None):
-    """Return a list of device dicts with coordinates and status info."""
+    """Return a list of device dicts with coordinates and status info.
+
+    [Behavior] `device_ids`, when non-empty, is an EXCLUDE list, not an include
+    list: every device placed on the map is always fetched, and entries whose
+    entry-level id (base unique_id, or 'unique_id::channel' for non-zero output
+    channels) appears in `device_ids` are dropped from the result afterward.
+    This matches the AoT_map widget's "Device Filter" — placing a device on the
+    map IS showing it; the filter exists only to hide the rare few, so with 50
+    devices placed you pick the 2 to hide instead of the other 48 to keep.
+    `include_all` is accepted for call-site compatibility but no longer gates
+    the fetch (every caller now always wants the full map-scoped set); it is
+    effectively "no exclusions" when there is no `device_ids` list.
+    """
     devices = []
-    
-    # Handle possible "dev_id::meas_id" format from channel-level selection
+
+    # Handle possible "dev_id::channel" format from per-channel exclusion.
+    # exclude_entry_ids mirrors the 'unique_id'/'entry_uuid' each device dict
+    # is keyed by below (base id for channel 0, 'base_id::N' otherwise) so
+    # exclusion is channel-precise — excluding one Output channel must not
+    # also hide that Output's other channels.
     raw_ids = device_ids or []
-    cleaned_ids = []
-    selected_channels_map = {} # { unique_id: set(channels) }
-
+    exclude_entry_ids = set()
     for rid in raw_ids:
+        if not rid:
+            continue
         if isinstance(rid, str) and '::' in rid:
-            parts = rid.split('::')
-            d_id = parts[0]
+            d_id, _, ch_p = rid.partition('::')
             try:
-                # Handle 'None' string or empty
-                ch_p = parts[1]
                 ch = int(ch_p) if (ch_p and ch_p != 'None') else 0
-            except:
+            except (TypeError, ValueError):
                 ch = 0
-            
-            cleaned_ids.append(d_id)
-            if d_id not in selected_channels_map:
-                selected_channels_map[d_id] = set()
-            selected_channels_map[d_id].add(ch)
         else:
-            cleaned_ids.append(rid)
-            if rid not in selected_channels_map:
-                selected_channels_map[rid] = set()
-            selected_channels_map[rid].add(0) # Default to 0
-            
-    target_ids = set(cleaned_ids) if cleaned_ids else set()
-
-    # If no specific IDs and not include_all, return empty
-    if not target_ids and not include_all:
-        return []
+            d_id, ch = rid, 0
+        exclude_entry_ids.add(d_id if ch == 0 else f"{d_id}::{ch}")
 
     # [Moved Up] Fetch Map-Specific Device Locations (Overlays) BEFORE Querying
     # This ensures we know which devices are ON the map even if their config is set elsewhere.
@@ -809,59 +821,30 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
     triggers = []
     conditionals = []
 
-    if target_ids:
-        inputs = Input.query.filter(Input.unique_id.in_(target_ids)).options(get_load_options(Input)).all()
-        outputs = Output.query.filter(Output.unique_id.in_(target_ids)).options(get_load_options(Output)).all()
-        ctrls = CustomController.query.filter(CustomController.unique_id.in_(target_ids)).options(get_load_options(CustomController)).all()
-        pids = PID.query.filter(PID.unique_id.in_(target_ids)).options(get_load_options(PID)).all()
-    
-    # [Fix] Logic Refinement: Prioritize target_ids if present.
-    # User Requirement: 
-    #   - If Selection List has items -> Show ONLY those items.
-    #   - If Selection List is empty -> Show ALL (if include_all is checked, which defaults to True).
-    
-    # Separate IDs into categories to prevent cross-fetching between Inputs and Outputs
-    if include_all:
-        if map_uuid: # [Restored] Filter by Map Scope (Current Map OR Unassigned OR Exists as Overlay on Map)
-             # [Fix] Filter by Map Scope (Current Map OR Unassigned OR Exists as Overlay on Map)
-             overlay_ids = list(device_loc_map.keys())
-             
-             inputs = Input.query.filter(or_(Input.map_config_id == map_uuid, Input.map_config_id == None, Input.unique_id.in_(overlay_ids))).options(get_load_options(Input)).all()
-             outputs = Output.query.filter(or_(Output.map_config_id == map_uuid, Output.map_config_id == None, Output.unique_id.in_(overlay_ids))).options(get_load_options(Output)).all()
-             
-             # Fallback to ALL for items without map assignment yet
-             ctrls = CustomController.query.options(get_load_options(CustomController)).all() 
-             pids = PID.query.options(get_load_options(PID)).all() 
-             triggers = Trigger.query.options(get_load_options(Trigger)).all()
-             conditionals = Conditional.query.options(get_load_options(Conditional)).all()
-        else:
-             inputs = Input.query.options(get_load_options(Input)).all()
-             outputs = Output.query.options(get_load_options(Output)).all()
-             ctrls = CustomController.query.options(get_load_options(CustomController)).all()
-             pids = PID.query.options(get_load_options(PID)).all()
-             triggers = Trigger.query.options(get_load_options(Trigger)).all()
-             conditionals = Conditional.query.options(get_load_options(Conditional)).all()
-             
-    elif target_ids:
-        # [Fix] Single-Channel Visibility (Round 19)
-        # Refactored: Query all relevant tables for all provided base IDs.
-        # This fixes the bug where IDs without '::' were only checked against Input.
-        base_query_ids = []
-        for rid in raw_ids:
-            if isinstance(rid, str) and '::' in rid:
-                base_query_ids.append(rid.split('::')[0])
-            else:
-                base_query_ids.append(str(rid))
-        
-        base_query_ids = list(set(base_query_ids))
+    # Always fetch the full map-scoped set — device_ids is an exclude filter
+    # applied after process_records() builds the per-channel entries below, not
+    # a query-level include filter (see docstring). `include_all`/target_ids
+    # branching used to choose between "everything" vs "only the selected
+    # ids" here; now there is only "everything", scoped to this map when one
+    # is given.
+    if map_uuid: # Filter by Map Scope (Current Map OR Unassigned OR Exists as Overlay on Map)
+         overlay_ids = list(device_loc_map.keys())
 
-        if base_query_ids:
-            inputs = Input.query.filter(Input.unique_id.in_(base_query_ids)).options(get_load_options(Input)).all()
-            outputs = Output.query.filter(Output.unique_id.in_(base_query_ids)).options(get_load_options(Output)).all()
-            ctrls = CustomController.query.filter(CustomController.unique_id.in_(base_query_ids)).options(get_load_options(CustomController)).all()
-            pids = PID.query.filter(PID.unique_id.in_(base_query_ids)).options(get_load_options(PID)).all()
-            triggers = Trigger.query.filter(Trigger.unique_id.in_(base_query_ids)).options(get_load_options(Trigger)).all()
-            conditionals = Conditional.query.filter(Conditional.unique_id.in_(base_query_ids)).options(get_load_options(Conditional)).all()
+         inputs = Input.query.filter(or_(Input.map_config_id == map_uuid, Input.map_config_id == None, Input.unique_id.in_(overlay_ids))).options(get_load_options(Input)).all()
+         outputs = Output.query.filter(or_(Output.map_config_id == map_uuid, Output.map_config_id == None, Output.unique_id.in_(overlay_ids))).options(get_load_options(Output)).all()
+
+         # Fallback to ALL for items without map assignment yet
+         ctrls = CustomController.query.options(get_load_options(CustomController)).all()
+         pids = PID.query.options(get_load_options(PID)).all()
+         triggers = Trigger.query.options(get_load_options(Trigger)).all()
+         conditionals = Conditional.query.options(get_load_options(Conditional)).all()
+    else:
+         inputs = Input.query.options(get_load_options(Input)).all()
+         outputs = Output.query.options(get_load_options(Output)).all()
+         ctrls = CustomController.query.options(get_load_options(CustomController)).all()
+         pids = PID.query.options(get_load_options(PID)).all()
+         triggers = Trigger.query.options(get_load_options(Trigger)).all()
+         conditionals = Conditional.query.options(get_load_options(Conditional)).all()
 
     # 2. [Optimization] Batch Fetch Output Channels (Eliminate N+1)
     # [New] Fetch Channel Names for Map Labels
@@ -882,14 +865,18 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
             }
 
     # [New] Batch Fetch Measurement Names for Map Labels
+    # Covers every device actually fetched above (always the full map-scoped
+    # set now — see collect_devices docstring), not just an exclude list.
     selected_measurement_names_map = {}
-    if target_ids:
+    all_fetched_ids = [r.unique_id for r in inputs] + [r.unique_id for r in outputs] \
+        + [r.unique_id for r in ctrls] + [r.unique_id for r in pids]
+    if all_fetched_ids:
         meas_records = db.session.query(
-            DeviceMeasurements.device_id, 
-            DeviceMeasurements.channel, 
+            DeviceMeasurements.device_id,
+            DeviceMeasurements.channel,
             DeviceMeasurements.name
         ).filter(
-            DeviceMeasurements.device_id.in_(target_ids)
+            DeviceMeasurements.device_id.in_(all_fetched_ids)
         ).all()
         
         for r in meas_records:
@@ -947,15 +934,14 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
             except: size = 3
             size = max(1, min(size, 5))
 
-            # [New] Explode Output Channels for include_all mode
-            channels_to_emit = selected_channels_map.get(record.unique_id)
-            if include_all and dev_type == 'output':
-                # Emit all known channels for this output device
+            # Always emit every known channel for an output device — the full
+            # map-scoped set is always fetched now (see collect_devices
+            # docstring), so there is no "only the selected channels" case
+            # left to special-case.
+            channels_to_emit = {0}
+            if dev_type == 'output':
                 dev_chans = output_channel_map.get(record.unique_id, {})
-                channels_to_emit = set(dev_chans.keys())
-            
-            if not channels_to_emit:
-                channels_to_emit = {0}
+                channels_to_emit = set(dev_chans.keys()) or {0}
             
             # [3-way Actuator] Detect output_type-based control kind once per device
             control_kind = 'on_off'
@@ -1069,6 +1055,9 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
     process_records(pids, 'function', PID)
     process_records(triggers, 'function', Trigger)
     process_records(conditionals, 'function', Conditional)
+
+    if exclude_entry_ids:
+        devices = [d for d in devices if d.get('unique_id') not in exclude_entry_ids]
 
     return devices
 

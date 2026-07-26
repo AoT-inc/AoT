@@ -16,6 +16,8 @@ services:
     command: gunicorn -c /app/install/gunicorn_conf.py --bind 0.0.0.0:80 aot.start_flask_ui:app
     ports:
       - "${AOT_PORT:-8084}:80"
+      # MCP 포트는 전용 aot_mcp 서비스가 소유한다 (아래) — 임시 exec 프로세스가
+      # 계속 죽는 문제 때문에 별도 서비스로 분리했다.
     volumes:
       # Live data (SQLite DBs + secret key + kma) — named volume, NOT a bind mount
       # (bind mounts break SQLite WAL/atomic-rename on macOS/Windows Docker).
@@ -86,6 +88,55 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - influxdb
+    restart: always
+
+  # 외부 MCP 서버 — 외부 AI(Claude Desktop/Code 등)가 상태 점검·제어 조언을 위해
+  # 접속한다. HTTP는 이 서비스가 직접 서빙(포트 5700). stdio로 붙는 클라이언트는
+  # 반드시 이 컨테이너에 `docker exec -i aot-aot_mcp-1 python aot/aot_mcp_server.py`
+  # 로 들어와야 한다 — AOT_MCP_API_KEY(아래)가 이 컨테이너에만 있고 aot-app에는
+  # 없다. `aot-app 안에서 docker exec -d`로 임시 프로세스를 띄우는 옛 방식은
+  # 재시작/재빌드 때마다 죽고 키도 없어 인증이 깨지므로 쓰지 않는다.
+  # aot-app 과 같은 aot_data 볼륨을 마운트해야 같은 aot.db 를 열고 승인 큐
+  # (mcp_confirmation)를 공유한다. 인증(mcp_auth.py, X-API-KEY)이 있지만 그와
+  # 별개로 LAN/인터넷 노출을 막기 위해 127.0.0.1 로만 바인딩한다.
+  aot_mcp:
+    image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
+    command: python aot/aot_mcp_server.py --http --port 5700 --log INFO
+    ports:
+      - "127.0.0.1:5700:5700"
+    volumes:
+      # aot-app/aot_daemon 과 동일하게 이미지 코드만 실행한다 — 예전엔 여기만
+      # `../:/app`(호스트 소스)를 바인드해서 이미지의 /app 을 통째로 덮어썼는데,
+      # 그러면 (a) 레포를 체크아웃 안 한 배포판 사용자에게는 엉뚱한 내용으로
+      # 덮이고 (b) 체크아웃이 있어도 aot-app 은 이미지 코드, aot_mcp 는 호스트
+      # 코드를 실행해 같은 DB를 서로 다른 버전이 동시에 건드리게 된다. 코드
+      # 갱신은 다른 두 서비스처럼 이미지 재발행·pull로 통일한다.
+      - aot_data:/app/aot_local
+      - aot_logs:/var/log/aot
+      - aot_uploads:/app/uploads
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      # 스케줄러를 띄우지 않는다 — aot-app/daemon 과 잡 저장소가 충돌한다.
+      - AOT_SKIP_SCHEDULER=1
+      # 쓰기 허용이지만 모든 쓰기는 사람 승인을 거친다. 0 이면 조언 전용.
+      - AOT_MCP_WRITE_ENABLED=${AOT_MCP_WRITE_ENABLED:-1}
+      # 인바운드 인증: X-API-KEY = base64(User.api_key). 키는 설정>사용자에서 발급.
+      # 0 으로 끄면 무인증이 되고 호출자 신원이 자기 신고로 돌아간다(감사 로그에
+      # 'unauthenticated:' 접두사로 구분된다).
+      - AOT_MCP_REQUIRE_AUTH=${AOT_MCP_REQUIRE_AUTH:-1}
+      # stdio 로 붙는 MCP 클라이언트용 키. 컨테이너 환경변수로 두면
+      # `docker exec -i` 로 뜬 stdio 프로세스가 이를 물려받으므로, 클라이언트
+      # 설정 파일에 비밀을 적을 필요가 없다. 값은 gitignore 된 docker/.env 에서 온다.
+      - AOT_MCP_API_KEY=${AOT_MCP_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - aot-app
     restart: always
 
   influxdb:

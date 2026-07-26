@@ -8,18 +8,8 @@
 (function () {
     if (window.AoTMapModalController) return;
 
-    var DEFAULT_STYLE = {
-        version: 8,
-        sources: {
-            'osm-base': {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256,
-                attribution: '© OpenStreetMap'
-            }
-        },
-        layers: [{ id: 'osm-base', type: 'raster', source: 'osm-base' }]
-    };
+    // Only used when geo/design has no active MapTiler(vector) base layer configured.
+    var FALLBACK_STYLE = 'https://demotiles.maplibre.org/style.json';
 
     function buildLabelEl(name) {
         var wrap = document.createElement('div');
@@ -59,6 +49,12 @@
             const defaultLat = parseFloat(config.default_lat) || 37.5665;
             const defaultLng = parseFloat(config.default_lng) || 126.9780;
             const defaultZoom = parseFloat(config.zoom) || 13;
+            const maxZoom = parseInt(config.max_zoom) || 22;
+
+            // geo/design 설정에 등록된 활성 base 벡터 레이어(MapTiler 등)를 그대로 사용.
+            // 없으면 오픈 데모타일로 폴백(과거 OSM 래스터 하드코딩 대체).
+            const vectorLayers = (config.layers || []).filter(function (l) { return l.type === 'vector'; });
+            const baseStyle = (vectorLayers.length > 0 && vectorLayers[0].url) ? vectorLayers[0].url : FALLBACK_STYLE;
 
             const $el = $('#' + this.mapId);
             if (!$el.length) return;
@@ -104,15 +100,36 @@
             try {
                 this.map = new maplibregl.Map({
                     container: this.mapId,
-                    style: DEFAULT_STYLE,
+                    style: baseStyle,
                     center: [lng, lat],
                     zoom: safeZoom,
+                    maxZoom: maxZoom,
                     doubleClickZoom: false,
                     attributionControl: false
                 });
             } catch (e) {
                 console.error('[AoTMapModal] Map create failed:', e);
                 return;
+            }
+
+            // baseStyle(MapTiler 등)이 401/403/404 등으로 로드 실패하면(예: API 키
+            // 누락/무효) 빈 화면 대신 오픈 데모타일로 폴백. 최초 스타일 로드가 끝나면
+            // 리스너를 해제해 이후의 일반 타일/글리프 404가 오탐으로 폴백을 재유발하지
+            // 않도록 한다 (aot-geo-design-v3.js 의 동일 패턴 참고).
+            if (baseStyle !== FALLBACK_STYLE) {
+                const onInitError = (e) => {
+                    const err = e && e.error;
+                    const status = (err && err.status) || 0;
+                    const url = (err && err.url) || '';
+                    const isStyleResource = url === baseStyle || url.indexOf('style.json') !== -1;
+                    if (isStyleResource && (status === 401 || status === 403 || status === 404 || status >= 500)) {
+                        console.warn('[AoTMapModal] Base style failed to load (HTTP ' + status + '), falling back to demotiles:', baseStyle);
+                        this.map.off('error', onInitError);
+                        try { this.map.setStyle(FALLBACK_STYLE); } catch (e2) { /* silent */ }
+                    }
+                };
+                this.map.on('error', onInitError);
+                this.map.once('load', () => { this.map.off('error', onInitError); });
             }
 
             try {

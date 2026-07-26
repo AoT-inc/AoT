@@ -137,6 +137,76 @@ def save_widget_custom_options():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@blueprint.route('/get_widget_custom_options/<widget_id>', methods=['GET'])
+@flask_login.login_required
+def get_widget_custom_options(widget_id):
+    """Return a widget's CURRENT saved custom_options as JSON.
+
+    Settings-modal option values are baked into the page HTML once, at page
+    load (the modal body ships inert inside a <template> and is only cloned
+    into the live DOM on first open — see dashboard_entry.html). A widget
+    like AoT_map can also be changed from its own in-map controls (shape/
+    layer/label toggles all call /save_widget_custom_options directly), so
+    a modal opened later in the same page session can show stale values.
+    This lets the modal-open handler re-sync form fields to the DB's current
+    state right before showing, instead of the page-load snapshot.
+    """
+    try:
+        widget = Widget.query.filter(Widget.unique_id == widget_id).first()
+        if not widget:
+            return jsonify({"status": "error", "message": "Widget not found"}), 404
+        try:
+            options = json.loads(widget.custom_options) if widget.custom_options else {}
+        except Exception:
+            options = {}
+        return jsonify({"status": "success", "custom_options": options})
+    except Exception as e:
+        logger.exception("Error fetching widget custom options")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@blueprint.route('/api/widget/aot_map/<widget_id>/measurements_panel', methods=['POST'])
+@flask_login.login_required
+def get_aot_map_measurements_panel(widget_id):
+    """Resolve the AoT Map 'Measurement Panel' selection (measurements_input/
+    output/function) into the same measurements_map the page render uses.
+
+    Device markers already have a live-refresh path (/api/geo/devices takes
+    device_ids straight from the client, no DB round-trip needed to interpret
+    them). The measurement panel doesn't: measurements_input/output/function
+    are raw 'device_id::measurement_id' pairs, and turning them into display-
+    ready rows (name, channel, unit, current value placeholder) requires the
+    same DeviceMeasurements/Conversion lookups generate_page_variables_logic
+    already does at page render. Reusing that function here — instead of
+    duplicating its measurement-resolution logic client-side — is what lets
+    the Measurement Panel selects auto-save and update live instead of only
+    taking effect after a full page reload.
+
+    Takes the selection straight from the request body (not read back from
+    the DB): the auto-save POST to /save_widget_custom_options and this call
+    fire back-to-back from the same debounced change handler with no
+    ordering guarantee between them, so reading widget.custom_options here
+    could race the save and resolve against the pre-change selection.
+    """
+    try:
+        widget = Widget.query.filter(Widget.unique_id == widget_id).first()
+        if not widget:
+            return jsonify({"status": "error", "message": "Widget not found"}), 404
+        try:
+            options = json.loads(widget.custom_options) if widget.custom_options else {}
+        except Exception:
+            options = {}
+        body = request.get_json(silent=True) or {}
+        for key in ('measurements_input', 'measurements_output', 'measurements_function'):
+            if key in body:
+                options[key] = body[key]
+        from aot.aot_flask.geo.widget.maps import generate_page_variables_logic
+        result = generate_page_variables_logic(widget_id, options)
+        return jsonify({"status": "success", "measurements_map": result.get('measurements_map', {})})
+    except Exception as e:
+        logger.exception("Error resolving AoT Map measurements panel")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # Route for saving dashboard tab order (after blueprint and imports)
 @blueprint.route('/save_dashboard_order', methods=['POST'])

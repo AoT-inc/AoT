@@ -1117,7 +1117,7 @@ WIDGET_INFORMATION = {
     'widget_library': 'timer',
     'no_class': True,
 
-    'message': lazy_gettext('Entering "h/m/s" in the time input field will operate the device for the set time and then turn it off. If the input time is "0", it will operate continuously until stopped. Setting the toggle switch to "ON" turns the device on, and setting it to "OFF" turns it off.'),
+    'message': lazy_gettext('Use the toggle switch to turn the device on and off. Turn on "Timer" to operate on a timer: in Simple mode the device runs once for the set time (0 = run until stopped), and in Cycle mode it repeats a Run / Rest sequence for the set number of cycles. "Scheduled Start" begins operation at a set wall-clock time in the device timezone. When "Timer" is off, the toggle simply switches the device on or off regardless of the time settings.'),
 
     'widget_width': 24,
     'widget_height': 7,
@@ -1143,8 +1143,8 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 5.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Sync"), lazy_gettext("Seconds")),
-            'phrase': lazy_gettext('Maximum validity time for measurements used')
+            'name': lazy_gettext('Sync (seconds)'),
+            'phrase': lazy_gettext('How often the widget refreshes the operation status from the server (in seconds).')
         },
         {
             'type': 'header',
@@ -1166,15 +1166,15 @@ WIDGET_INFORMATION = {
             'type': 'bool',
             'default_value': True,
             'name': lazy_gettext('Timer'),
-            'phrase': lazy_gettext('Enable the timer function.')
+            'phrase': lazy_gettext('When enabled, shows the timed controls (Run / Rest / Cycles / Scheduled Start). When disabled, the toggle simply turns the device on or off.')
         },
         {
             'id': 'operation_mode',
             'type': 'select',
-            'default_value': 'cycle',
+            'default_value': 'simple',
             'options_select': [
-                ('cycle', lazy_gettext('Cycle (run / rest repeated)')),
                 ('simple', lazy_gettext('Simple (single run / hold)')),
+                ('cycle', lazy_gettext('Cycle (run / rest repeated)')),
             ],
             'name': lazy_gettext('Operation Mode'),
             'phrase': lazy_gettext('Cycle: shows Run / Rest / Cycles inputs, repeats the run/rest for a number of cycles. Simple: single Run time only (0 = run until stopped).')
@@ -1372,7 +1372,7 @@ WIDGET_INFORMATION = {
     {%- set default_run = [wo.get('default_run_seconds', 0)|int, 86399]|min -%}
     {%- set default_rest = [wo.get('default_rest_seconds', 0)|int, 86399]|min -%}
     {%- set default_cycles = wo.get('default_cycles', 5)|int -%}
-    {%- set operation_mode = wo.get('operation_mode', 'cycle') -%}
+    {%- set operation_mode = wo.get('operation_mode', 'simple') -%}
     {%- set start_at = wo.get('start_at', '00:00') -%}
     {%- set run_hms = '%02d:%02d:%02d'|format(default_run // 3600, (default_run % 3600) // 60, default_run % 60) -%}
     {%- set rest_hms = '%02d:%02d:%02d'|format(default_rest // 3600, (default_rest % 3600) // 60, default_rest % 60) -%}
@@ -1382,6 +1382,7 @@ WIDGET_INFORMATION = {
          data-device="{{device_id}}"
          data-channel="{{channel_id}}"
          data-mode="{{operation_mode}}"
+         data-timer="{{ '1' if widget_options['enable_output_controls'] else '0' }}"
          data-refresh="{{refresh_seconds}}">
       <div class="row-aot-1">
         <div class="col-aot-1">
@@ -1483,6 +1484,16 @@ WIDGET_INFORMATION = {
       const counterIntervals = {};
 
       function frame(wid){ return $('#aot_tm_'+wid); }
+
+      // Route user-facing feedback through the global toast (respects
+      // AoTGlobalSettings hide flags); fall back to console if unavailable.
+      function notify(message, type){
+        if (typeof window.showToast === 'function') {
+          window.showToast(message, type || 'info');
+        } else {
+          console.warn('[AoT Timer]', message);
+        }
+      }
 
       function parseInfo(wid){
         const $frame = frame(wid);
@@ -1729,27 +1740,38 @@ WIDGET_INFORMATION = {
 
       async function start(wid, opts){
         const info = parseInfo(wid);
+        const toggleEl = opts && opts.toggleEl ? opts.toggleEl : null;
         if (!info.device || !info.channel) {
-          alert(window._('Please select an Output first.'));
+          notify(window._('Please select an Output first.'), 'warning');
+          if (toggleEl) { toggleEl.prop('checked', false); }
           return;
         }
-        const $msg = $('#aot_tm_message_'+wid);
-        const toggleEl = opts && opts.toggleEl ? opts.toggleEl : null;
-        const mode = ($('#aot_tm_'+wid).attr('data-mode') || 'simple').trim();
-        const run = readHMS(wid, 'run');
-        const rest = (mode === 'cycle') ? readHMS(wid, 'rest') : 0;
-        const cycles = (mode === 'cycle') ? (parseInt($('#aot_tm_cycles_'+wid).val(), 10) || 0) : 1;
-        const startAt = ($('#aot_tm_startat_'+wid).val() || '00:00').trim();
-        if (mode === 'cycle') {
-          // run == 0 is allowed: run until off (infinite hold)
-          if (run < 0 || rest < 0 || cycles <= 0) {
-            alert(window._('Please check the run/rest/cycle values.'));
+        // When the Timer function is disabled, the time controls are not rendered,
+        // so the toggle acts as a plain on/off: hold the device ON (run_sec 0 =
+        // run until stopped) regardless of any time settings. This keeps the
+        // toggle idempotent with the "Timer off" option instead of failing on
+        // the missing run/rest/cycle inputs.
+        const timerEnabled = ($('#aot_tm_'+wid).attr('data-timer') || '1') !== '0';
+        let mode, run, rest, cycles, startAt;
+        if (!timerEnabled) {
+          mode = 'simple'; run = 0; rest = 0; cycles = 1; startAt = '00:00';
+        } else {
+          mode = ($('#aot_tm_'+wid).attr('data-mode') || 'simple').trim();
+          run = readHMS(wid, 'run');
+          rest = (mode === 'cycle') ? readHMS(wid, 'rest') : 0;
+          cycles = (mode === 'cycle') ? (parseInt($('#aot_tm_cycles_'+wid).val(), 10) || 0) : 1;
+          startAt = ($('#aot_tm_startat_'+wid).val() || '00:00').trim();
+          if (mode === 'cycle') {
+            // run == 0 is allowed: run until off (infinite hold)
+            if (run < 0 || rest < 0 || cycles <= 0) {
+              notify(window._('Please check the run/rest/cycle values.'), 'warning');
+              if (toggleEl) { toggleEl.prop('checked', false); }
+              return;
+            }
+          } else if (run < 0) {
             if (toggleEl) { toggleEl.prop('checked', false); }
             return;
           }
-        } else if (run < 0) {
-          if (toggleEl) { toggleEl.prop('checked', false); }
-          return;
         }
         const payload = { mode: mode, run_sec: run, rest_sec: rest, cycles: cycles, start_at: startAt };
         try {
@@ -1773,11 +1795,11 @@ WIDGET_INFORMATION = {
               const js = await res.json();
               if (js && js.error) { errText = window._(js.error); }
             } catch (_) {}
-            $msg.text(errText).addClass('text-danger');
+            notify(errText, 'error');
             if (toggleEl) { toggleEl.prop('checked', false); }
           }
         } catch (err) {
-          $msg.text(window._('Error during start')).addClass('text-danger');
+          notify(window._('Error during start'), 'error');
           if (toggleEl) { toggleEl.prop('checked', false); }
         }
       }
@@ -1785,7 +1807,6 @@ WIDGET_INFORMATION = {
       async function stop(wid, opts){
         const info = parseInfo(wid);
         if (!info.device || !info.channel) { return; }
-        const $msg = $('#aot_tm_message_'+wid);
         const toggleEl = opts && opts.toggleEl ? opts.toggleEl : null;
         try {
           const csrfToken = $('meta[name="csrf-token"]').attr('content');
@@ -1808,11 +1829,11 @@ WIDGET_INFORMATION = {
               const js = await res.json();
               if (js && js.error) { errText = window._(js.error); }
             } catch (_) {}
-            $msg.text(errText).addClass('text-danger');
+            notify(errText, 'error');
             if (toggleEl) { toggleEl.prop('checked', true); }
           }
         } catch (err) {
-          $msg.text(window._('Error during stop')).addClass('text-danger');
+          notify(window._('Error during stop'), 'error');
           if (toggleEl) { toggleEl.prop('checked', true); }
         }
       }

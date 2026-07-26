@@ -12,7 +12,7 @@
   {% set unique_id = each_input.unique_id %}
   {% set custom_options_values = custom_options_values_inputs %}
 
-  <div id="input_status_{{each_input.unique_id}}"
+  <div id="input_status_{{each_input.unique_id}}" data-config-uid="{{each_input.unique_id}}"
     class="grid-stack-item-content {% if each_input.is_activated -%}active-background{% else -%}inactive-background{% endif %} row small-gutters aot-entry-item">
       <div class="aot-entry-drag-handle">
         <i class="fa fa-grip-lines"></i>
@@ -65,7 +65,7 @@
   </div> <!-- grid-stack-item-content -->
 </form>
 
-  <div class="modal fade aot-option-modal" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog"
+  <div class="modal fade aot-option-modal aot-widget-drawer" data-backdrop="false" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog"
     aria-labelledby="ModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
       <div class="modal-content">

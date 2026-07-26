@@ -27,6 +27,7 @@ MCP tools already surface through that manifest if a server is active/
 healthy — untested here, not excluded, just not a Phase-1 target. Engine-
 level native tool-calling beyond the gemini fix above is Phase 2.
 """
+import json
 import logging
 import re
 
@@ -411,6 +412,7 @@ class AgentLoopService:
             system_state = {}
 
         tool_log = []
+        seen_calls = {}  # (tool_name, json-args) -> tool_log record already produced this run
         last_insight = ''
         for step in range(MAX_STEPS):
             context = {
@@ -499,10 +501,24 @@ class AgentLoopService:
                 return AgentLoopService._finish(agent.unique_id, command_text, last_insight, thread_id, actions=actions)
 
             # All actions are read tools — execute now, feed results back, keep looping.
+            # Dedup by (tool_name, params) within this run: the model sometimes
+            # re-requests a read tool it already called (e.g. because a prior
+            # step's result was truncated out of the prompt) — re-running it
+            # wastes a step's worth of latency/budget for an identical answer,
+            # so reuse the cached record instead of calling it again.
             logger.info(f"[AgentLoop] step {step}: auto-executing read tools "
                         f"{[AgentLoopService._tool_name(a) for a in actions]}")
             for a in actions:
-                tool_log.append(AgentLoopService._execute_read_action(a))
+                key = (AgentLoopService._tool_name(a),
+                       json.dumps(a.get('params') or {}, sort_keys=True, default=str))
+                if key in seen_calls:
+                    logger.info(f"[AgentLoop] step {step}: skipping duplicate call "
+                                f"to {key[0]!r} — reusing this run's earlier result")
+                    tool_log.append(seen_calls[key])
+                    continue
+                record = AgentLoopService._execute_read_action(a)
+                seen_calls[key] = record
+                tool_log.append(record)
 
         # Bounded exit — never spin past MAX_STEPS. Instead of returning whatever
         # mid-progress narration `last_insight` happened to hold ("…를 확인하겠습니다"),

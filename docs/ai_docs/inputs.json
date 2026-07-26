@@ -2483,5 +2483,10 @@
     "interfaces": [
       "GROVE"
     ]
+  },
+  "sensecap_weather": {
+    "input_manufacturer": "Seeed",
+    "input_name": "SenseCAP OpenAPI Sensor",
+    "measurements_name": "Weather/Soil/CO2/pH (varies by selected Device Type, 19 types)"
   }
 }

@@ -11,6 +11,7 @@
 !install/
 !requirements.txt
 !aot.db
+!docs/
 
 # --- 허용된 디렉터리 내부에서도 제외 ---
 **/__pycache__/

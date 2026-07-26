@@ -15,6 +15,9 @@
             <button id="btn-refresh-all" class="btn aot-pill-btn" title="{{ _('Refresh All Status') }}">
                 <i class="fas fa-sync-alt"></i>
             </button>
+            <a href="{{ url_for('routes_mcp_api.mcp_review_page') }}" class="btn aot-pill-btn">
+                {{ _('AI Requests & Advice') }}
+            </a>
             <button id="btn-add-server" class="btn aot-pill-btn aot-pill-btn-primary" data-toggle="modal" data-target="#modal-add-server">
                 <i class="fas fa-plus mr-2"></i>{{ _('Add Server') }}
             </button>

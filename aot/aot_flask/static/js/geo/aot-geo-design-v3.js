@@ -295,6 +295,8 @@ class AoTGeoDesign {
         }), 'bottom-left');
 
         // Add Attribution Control (bottom-right)
+        // (OSM long-form "contributors" text is normalized globally by
+        // aot-maplibre-patches.js, applied to every AttributionControl instance.)
         this.map.addControl(new maplibregl.AttributionControl({
             compact: true
         }), 'bottom-right');

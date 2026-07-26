@@ -318,7 +318,20 @@
     show_equipment_shape: 1, show_device_shapes: 1, show_drawn_shapes: 1,
     device_shape_opacity: 1,
     // Live-capable via the map's own maplibre API (setTerrain), so auto-saved too.
-    enable_3d_terrain: 1
+    enable_3d_terrain: 1,
+    // Device Filter + Measurement Panel — previously excluded (only took effect
+    // after the full Save button / page reload). Both are live-appliable via
+    // instance hooks the map exposes (_fetchAndRenderDevices /
+    // _refreshMeasurementPanel — see mapLiveApply below), so they belong here now.
+    device_selection_input: 1, device_selection_output: 1, device_selection_function: 1,
+    measurements_input: 1, measurements_output: 1, measurements_function: 1
+  };
+
+  var DEVICE_SELECTION_KEYS = {
+    device_selection_input: 1, device_selection_output: 1, device_selection_function: 1
+  };
+  var MEASUREMENT_PANEL_KEYS = {
+    measurements_input: 1, measurements_output: 1, measurements_function: 1
   };
 
   // Modal show_*_shape option key -> the map's internal shape-category key (_CAT_DEFS).
@@ -340,12 +353,27 @@
 
   function mapFieldValue(el) {
     if (el.type === 'checkbox') { return el.checked; }
+    // Native .value on a multi-select only returns the FIRST selected option —
+    // Device Filter / Measurement Panel are all select[multiple] (bootstrap-select).
+    if (el.tagName === 'SELECT' && el.multiple) {
+      return Array.prototype.map.call(el.selectedOptions || [], function (o) { return o.value; });
+    }
     var v = el.value;
     if (el.type === 'number' || (v !== '' && /^-?\d+(\.\d+)?$/.test(v))) {
       var n = parseFloat(v);
       if (!isNaN(n)) { return n; }
     }
     return v;
+  }
+
+  // Read a select[multiple]'s currently selected values straight from the DOM
+  // by field name — used to gather sibling fields (e.g. the other two Device
+  // Filter selects) that didn't just change but are needed to compute a
+  // combined value.
+  function mapMultiSelectValues(form, name) {
+    var el = form.querySelector('[name="' + name + '"]');
+    if (!el) { return []; }
+    return Array.prototype.map.call(el.selectedOptions || [], function (o) { return o.value; }).filter(Boolean);
   }
 
   function mapSaveOption(uid, key, value, csrf) {
@@ -361,12 +389,39 @@
   // Live-apply the option to the running map instance (no rebuild). Uses the
   // public maplibre API and the setters the map exposes on its instance (the same
   // ones its in-map toggles use). Options without a live path here still auto-save
-  // and appear on the next refresh.
-  function mapLiveApply(uid, key, value) {
+  // and appear on the next refresh. `form` is only needed by Device Filter (it has
+  // to combine all three sibling selects, not just the one that changed).
+  function mapLiveApply(uid, key, value, form) {
     var inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uid];
     if (!inst) { return; }
     try {
-      if (inst.map && key === 'default_zoom') { inst.map.easeTo({ zoom: parseFloat(value) }); }
+      if (DEVICE_SELECTION_KEYS[key] && form && typeof inst._fetchAndRenderDevices === 'function') {
+        // Combine all three device_selection_* selects into one list — this is
+        // the Device Filter's EXCLUDE list (see utils_geo.collect_devices
+        // docstring: selecting a device here hides it, everything else placed
+        // on the map still shows), the same shape /api/geo/devices expects.
+        var excludeIds = mapMultiSelectValues(form, 'device_selection_input')
+          .concat(mapMultiSelectValues(form, 'device_selection_output'))
+          .concat(mapMultiSelectValues(form, 'device_selection_function'));
+        if (inst.vars && inst.vars.vars) {
+          inst.vars.vars.device_ids = excludeIds.join(',');
+          inst.vars.vars.map_device_ids = excludeIds.join(',');
+        }
+        inst._fetchAndRenderDevices();
+      }
+      else if (MEASUREMENT_PANEL_KEYS[key] && form && typeof inst._refreshMeasurementPanel === 'function') {
+        var body = {};
+        ['measurements_input', 'measurements_output', 'measurements_function'].forEach(function (k) {
+          body[k] = mapMultiSelectValues(form, k);
+        });
+        $.ajax({
+          type: 'POST', url: '/api/widget/aot_map/' + encodeURIComponent(uid) + '/measurements_panel',
+          contentType: 'application/json', data: JSON.stringify(body)
+        }).done(function (data) {
+          if (data && data.status === 'success') { inst._refreshMeasurementPanel(data.measurements_map || {}); }
+        });
+      }
+      else if (inst.map && key === 'default_zoom') { inst.map.easeTo({ zoom: parseFloat(value) }); }
       else if (inst.map && key === 'default_pitch') { inst.map.easeTo({ pitch: parseFloat(value) }); }
       else if (inst.map && key === 'default_bearing') { inst.map.easeTo({ bearing: parseFloat(value) }); }
       else if (key === 'show_labels' && typeof inst._setLabel === 'function' && inst._labelKeys) {
@@ -399,7 +454,70 @@
           inst.map.setTerrain(null);
         }
       }
+      // Overlay layer selection (comma-separated names) -> the layer panel's own
+      // add/remove-layer logic, diffed against the currently active set.
+      else if (key === 'active_layers' && typeof inst._setActiveOverlayNames === 'function') {
+        var names = Array.isArray(value) ? value : String(value || '').split(',');
+        inst._setActiveOverlayNames(names.map(function (s) { return String(s).trim(); }).filter(Boolean));
+      }
+      // Base map switch -> the layer panel's own base-radio logic (setStyle+rehydrate
+      // for vector styles, raster activation otherwise).
+      else if (key === 'selected_base_layer' && typeof inst._switchBaseLayer === 'function') {
+        inst._switchBaseLayer(String(value || ''));
+      }
+      // Sensor-label style/behavior options: update the shared options object the
+      // map reads from, then re-attach (idempotent — attach() detaches first).
+      // One mechanism covers 12 modal options at once.
+      else if (MAP_SENSOR_LABEL_KEYS[key] && typeof inst._reattachSensorLabels === 'function') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
+        inst._reattachSensorLabels();
+      }
+      // Measurement-panel refresh period -> restart its own polling loop in place.
+      else if (key === 'input_update_interval' && typeof inst._setPanelRefreshInterval === 'function') {
+        inst._setPanelRefreshInterval(value);
+      }
     } catch (e) { /* ignore */ }
+  }
+
+  // Re-sync the settings-modal form to the DB's CURRENT custom_options every
+  // time it opens. The form body is a page-load snapshot (cloned once from
+  // an inert <template> — see dashboard_entry.html), but AoT_map can also be
+  // changed from its own in-map controls (shape/layer/label toggles all call
+  // /save_widget_custom_options directly, bypassing this form entirely), so
+  // a modal left un-opened since page load can show stale values. Runs on
+  // EVERY open, not gated behind the change-listener's one-time bind below.
+  function syncMapFormToServer(uid, form) {
+    fetch('/get_widget_custom_options/' + encodeURIComponent(uid))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || data.status !== 'success') { return; }
+        var options = data.custom_options || {};
+        Object.keys(options).forEach(function (name) {
+          var els = form.querySelectorAll('[name="' + name + '"]');
+          if (!els.length) { return; }
+          var value = options[name];
+          els.forEach(function (el) {
+            if (el.type === 'checkbox') {
+              el.checked = (value === true || value === 'true');
+              return;
+            }
+            if (el.tagName === 'SELECT' && el.multiple) {
+              var wanted = Array.isArray(value) ? value.map(String)
+                : String(value == null ? '' : value).split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+              Array.prototype.forEach.call(el.options, function (opt) {
+                opt.selected = wanted.indexOf(opt.value) !== -1;
+              });
+              if (window.jQuery) { window.jQuery(el).selectpicker('refresh'); }
+              return;
+            }
+            el.value = (value == null) ? '' : value;
+            if (el.tagName === 'SELECT' && window.jQuery && window.jQuery(el).hasClass('selectpicker')) {
+              window.jQuery(el).selectpicker('refresh');
+            }
+          });
+        });
+      })
+      .catch(function (e) { });
   }
 
   $(document).on('shown.bs.modal', function (ev) {
@@ -408,9 +526,12 @@
     if (!m) { return; }
     var uid = m[1];
     if (widgetTypeOf(uid) !== 'AoT_map') { return; }
-    if (modal.dataset.mapAutosaveBound === '1') { return; }
     var form = formOf(uid);
     if (!form) { return; }
+
+    syncMapFormToServer(uid, form);
+
+    if (modal.dataset.mapAutosaveBound === '1') { return; }
     var csrf = fieldValue(form, 'csrf_token');
     var mapTimers = {};
 
@@ -421,7 +542,7 @@
       clearTimeout(mapTimers[name]);
       mapTimers[name] = setTimeout(function () {
         mapSaveOption(uid, name, value, csrf);
-        mapLiveApply(uid, name, value);
+        mapLiveApply(uid, name, value, form);
         if (window.showToast) { window.showToast('저장됨', 'success'); }
       }, 400);
     });

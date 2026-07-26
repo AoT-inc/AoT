@@ -538,11 +538,26 @@ class AoTDataToolService:
         에너지 사용량 분석 리포트를 생성합니다.
         """
         try:
-            device_measurements_all = DeviceMeasurements.query.all()
-            conversion_all = Conversion.query.all()
-            
+            # return_energy_usage() calls .filter() on these, so they must stay
+            # live Query objects rather than materialized lists.
+            device_measurements_all = DeviceMeasurements.query
+            conversion_all = Conversion.query
+
             if zone_id:
-                energy_usage = EnergyUsage.query.join(Input, EnergyUsage.device_id == Input.unique_id).filter(Input.parent_id == zone_id).all()
+                # Input has no parent_id column — location is via GeoShape
+                # (map_overlay_id), same pattern as get_sensor_detail().
+                target_zone = GeoShape.query.filter(
+                    or_(GeoShape.unique_id == zone_id, GeoShape.geo_id == zone_id)
+                ).first()
+                if not target_zone:
+                    return {"message": f"Zone '{zone_id}' not found."}
+
+                from aot.utils.geo_hierarchy import geo_descendant_shapes
+                zone_shape_ids = [target_zone.id] + [c.id for c in geo_descendant_shapes(target_zone)]
+                input_ids = [i.unique_id for i in Input.query.filter(Input.map_overlay_id.in_(zone_shape_ids)).all()]
+                if not input_ids:
+                    return {"message": "No energy sensors found for this zone/period"}
+                energy_usage = EnergyUsage.query.filter(EnergyUsage.device_id.in_(input_ids)).all()
             else:
                 energy_usage = EnergyUsage.query.all()
 
@@ -890,6 +905,176 @@ class AoTDataToolService:
         except Exception as e:
             logger.error(f"Error in add_schedule_tool: {e}")
             return {"error": f"Error while registering schedule: {str(e)}"}
+
+    @staticmethod
+    def _hhmm_to_minutes(hhmm):
+        try:
+            h, m = str(hhmm).split(':')
+            return int(h) * 60 + int(m)
+        except Exception:
+            return None
+
+    @staticmethod
+    def validate_schedule_batch(entries, content=None, window_start=None,
+                                window_end=None, duration_minutes=60):
+        """
+        Pure validation, no writes - shared by the MCP approval gate (so a bad
+        batch is caught BEFORE a human ever sees an approval prompt for it,
+        not after) and by add_schedule_batch_tool itself (defense in depth for
+        any caller that reaches the handler through a path other than the
+        gate). Returns None when the batch is fine, or an error dict when not.
+
+        Checks, in order:
+          1. entries is a non-empty list.
+          2. content is available (shared or per-entry) for every entry.
+          3. No target_name repeated within the batch.
+          4. LEAF-ONLY: no entry's target_name may resolve to a container
+             (a site with child zones). Confirmed 2026-07-26: an advisory
+             warning here was not enough - a different model called
+             resolve_target, saw the child zones, and used the site name
+             anyway. A batch's whole purpose is one entry per leaf unit, so
+             this is a hard rejection (nothing created), not a note attached
+             to something that still gets approved.
+          5. Every entry's time <= window_end, if window_end is given.
+          6. CAPACITY: len(entries) * duration_minutes must fit inside
+             window_end - window_start, if BOTH are given. This is the check
+             that catches "9 zones x 1h each into a 4h window" BEFORE any
+             time is assigned per entry - pure arithmetic, not something the
+             caller needs to reason through correctly on its own.
+        """
+        if not entries or not isinstance(entries, list):
+            return {"status": "error", "message": "entries must be a non-empty list"}
+        if not content and not all(e.get('content') for e in entries):
+            return {"status": "error",
+                    "message": "content is required (either shared, or set per-entry on every entry)"}
+
+        names = [e.get('target_name') for e in entries]
+        dupes = sorted({n for n in names if n and names.count(n) > 1})
+        if dupes:
+            return {
+                "status": "error",
+                "error": "duplicate_target",
+                "message": f"target_name repeated within the same batch: {dupes}",
+            }
+
+        containers = []
+        for n in sorted({n for n in names if n}):
+            try:
+                r = AoTDataToolService.resolve_target_tool(n)
+            except Exception:
+                continue
+            if r.get('children'):
+                containers.append({
+                    "target_name": n,
+                    "target_type": r.get('target_type'),
+                    "children": r.get('children'),
+                })
+        if containers:
+            return {
+                "status": "error",
+                "error": "container_target_in_batch",
+                "message": (
+                    f"{len(containers)} entr(y/ies) target a container (site), not a "
+                    f"single leaf zone: {[c['target_name'] for c in containers]}. Nothing "
+                    f"was created. A batch entry must target one leaf unit - expand each "
+                    f"container to its 'children' below and add one entry per child "
+                    f"instead of one entry for the whole container."),
+                "container_entries": containers,
+            }
+
+        if window_end:
+            bad = [e for e in entries if not e.get('time') or e['time'] > window_end]
+            if bad:
+                return {
+                    "status": "error",
+                    "error": "outside_window",
+                    "message": f"{len(bad)} entr(y/ies) fall after window_end={window_end}. "
+                               f"Nothing was created - fix the times and retry.",
+                    "offending_entries": bad,
+                }
+
+        if window_start and window_end:
+            _start_min = AoTDataToolService._hhmm_to_minutes(window_start)
+            _end_min = AoTDataToolService._hhmm_to_minutes(window_end)
+            if _start_min is not None and _end_min is not None and _end_min > _start_min:
+                _available = _end_min - _start_min
+                _required = len(entries) * duration_minutes
+                if _required > _available:
+                    return {
+                        "status": "error",
+                        "error": "insufficient_window",
+                        "message": (
+                            f"{len(entries)} entries x {duration_minutes}min = {_required}min "
+                            f"needed, but window {window_start}-{window_end} only has "
+                            f"{_available}min. Nothing was created. This does not fit in one "
+                            f"day as given - either (a) call this tool once per date, splitting "
+                            f"entries across multiple dates so each date's entries fit the "
+                            f"window, or (b) ask the user how the work should be compressed or "
+                            f"parallelized, then retry with entries/duration_minutes that fit."),
+                        "required_minutes": _required,
+                        "available_minutes": _available,
+                        "entries_count": len(entries),
+                        "duration_minutes": duration_minutes,
+                    }
+        return None
+
+    @staticmethod
+    def add_schedule_batch_tool(date, entries, content=None, worker=None,
+                                tags=None, window_start=None, window_end=None,
+                                duration_minutes=60, **extra):
+        """
+        [Human task / memo, BATCH] Register MULTIPLE per-entity work schedules
+        in ONE call, gated by a SINGLE approval instead of one approval (and
+        one rate-limited request slot) per entry.
+
+        Use this instead of N separate add_schedule calls whenever a request
+        applies per sub-unit ('각 구역별로', 'each zone') — call resolve_target
+        on the container name first to get the exact child names to put in
+        `entries`.
+
+        Args:
+            date (str): Shared date (YYYY-MM-DD) for every entry.
+            entries (list[dict]): [{target_name (required), time (required,
+                HH:MM), content (optional, overrides the shared `content`),
+                worker (optional, overrides the shared `worker`)}, ...].
+                Duplicate target_name within the same batch is rejected.
+            content/worker/tags: Shared defaults used by any entry that omits
+                its own content/worker. `content` is required unless every
+                entry supplies its own.
+            window_start/window_end (str, optional): 'HH:MM'. window_end alone
+                rejects any entry whose time falls after it. BOTH together
+                additionally validate that len(entries) * duration_minutes
+                actually fits the window - if not, the whole batch is
+                rejected up front (nothing created) instead of silently
+                accepting a schedule that cannot physically happen in one day.
+            duration_minutes (int, default 60): assumed minutes per entry,
+                used only for the capacity check above.
+        """
+        _err = AoTDataToolService.validate_schedule_batch(
+            entries, content=content, window_start=window_start,
+            window_end=window_end, duration_minutes=duration_minutes)
+        if _err:
+            return _err
+
+        results = []
+        for e in entries:
+            r = AoTDataToolService.add_schedule_tool(
+                date=date,
+                content=e.get('content') or content,
+                worker=e.get('worker') or worker,
+                time=e.get('time', '09:00'),
+                tags=tags,
+                target_name=e.get('target_name'),
+            )
+            results.append({"target_name": e.get('target_name'), "time": e.get('time'), "result": r})
+
+        failed = [r for r in results if not r['result'].get('job_id')]
+        return {
+            "status": "success" if not failed else "partial_failure",
+            "count": len(results),
+            "failed_count": len(failed),
+            "results": results,
+        }
 
     @staticmethod
     def search_notes_tool(query=None, category=None, limit=10,
@@ -3503,6 +3688,18 @@ class AoTDataToolService:
     # ─────────────────────────────────────────────────────────────────────
 
     @staticmethod
+    def list_pending_confirmations(**extra):
+        """[읽기전용] 지금 사람 승인을 기다리는 쓰기/제어 요청 목록. 이전 도구 호출이
+        'pending_approval'을 반환했을 때, confirmation_id를 다시 찾거나 사용자에게
+        무엇이 대기 중인지 보여줄 때 쓴다. 승인/거부 자체는 respond_to_confirmation을
+        쓴다."""
+        try:
+            from aot.ai.services import mcp_safety_gate as gate
+            return {"pending": gate.list_pending()}
+        except Exception as e:
+            return {"error": str(e)}
+
+    @staticmethod
     def list_geo_maps(**extra):
         """List available maps (geo_id + name + center). Read-only."""
         try:
@@ -3512,6 +3709,133 @@ class AoTDataToolService:
                              for m in GeoMap.query.all()]}
         except Exception as e:
             return {"error": str(e)}
+
+    # --- GIS Input CRUD (@ANCHOR: GIS_INPUT_CRUD_TOOLS, 2026-07-26) ---------------
+    # GIS layers (VWorld/Google/OpenWeather/OSM/... tile & data providers overlaid
+    # on the map) are registered as GeoLayer rows. They are NOT a separate type
+    # registry — parse_input_information() (the same one create_input/
+    # list_device_types(kind='input') already use) already includes every
+    # 'gis_*' key alongside regular sensor Input types, so no new
+    # list/get-type-options tools are needed: call list_device_types(kind='input')
+    # and filter for names starting with 'gis_', then get_device_type_options(
+    # kind='input', device_type='gis_vworld') for that type's option schema.
+    @staticmethod
+    def list_gis_inputs(**extra):
+        """[읽기전용] 등록된 GIS 입력(레이어) 목록 - VWorld/Google/OpenWeather 등
+        지도에 얹는 외부 데이터 제공자. 각 항목의 type이 list_device_types(kind='input')
+        결과의 'gis_'로 시작하는 타입과 대응한다."""
+        try:
+            from aot.databases.models import GeoLayer
+            return {"gis_inputs": [
+                {"layer_id": l.unique_id, "name": l.name, "type": l.type,
+                 "is_activated": bool(l.is_activated)}
+                for l in GeoLayer.query.all()]}
+        except Exception as e:
+            return {"error": str(e)}
+
+    @staticmethod
+    def create_gis_input(layer_type=None, name=None, params=None, **extra):
+        """Creates a new GIS Input (map layer/provider — e.g. gis_vworld,
+        gis_openweather). layer_type must come from list_device_types(kind='input'),
+        filtered to 'gis_*' entries. Always created DEACTIVATED (matches the web UI's
+        own default) — call activate_gis_input afterward once configured. Then use
+        modify_gis_input to fill options (e.g. api_key)."""
+        from aot.aot_flask.utils.utils_geo import geo_layer_add
+        try:
+            types = AoTDataToolService._input_types()
+        except Exception as e:
+            return {"error": f"could not load input types: {e}"}
+        if not layer_type:
+            gis_types = sorted(t for t in types if t.startswith('gis_'))
+            return {"error": "layer_type is required", "valid_gis_types": gis_types}
+        if layer_type not in types:
+            gis_types = sorted(t for t in types if t.startswith('gis_'))
+            return {"error": f"Unknown layer_type '{layer_type}'", "valid_gis_types": gis_types}
+        form = AoTDataToolService._FakeForm(input_type=layer_type)
+        try:
+            messages = geo_layer_add(form)
+        except Exception as e:
+            logger.error(f"[create_gis_input] geo_layer_add raised: {e}")
+            return {"error": str(e)}
+        if messages.get("error"):
+            return {"error": "; ".join(messages["error"])}
+        from aot.databases.models import GeoLayer
+        layer = GeoLayer.query.filter_by(type=layer_type).order_by(GeoLayer.id.desc()).first()
+        if not layer:
+            return {"error": "GIS Input created but could not be looked back up"}
+        result = {"layer_id": layer.unique_id, "layer_type": layer_type,
+                  "status": "created", "is_activated": False}
+        if name or params:
+            AoTDataToolService.modify_gis_input(layer.unique_id, name=name, params=params)
+            result["configured"] = True
+        if extra:
+            result["ignored_args"] = list(extra.keys())
+        return result
+
+    @staticmethod
+    def modify_gis_input(layer_id=None, name=None, params=None, **extra):
+        """Updates a GIS Input's name and/or options (e.g. api_key), direct write —
+        same lightweight pattern as modify_input (no full form replay). params:
+        dict of option_id -> value (e.g. {'api_key': '...'})."""
+        import json as _json
+        from aot.databases.models import GeoLayer
+        if not layer_id:
+            return {"error": "layer_id is required"}
+        layer = GeoLayer.query.filter_by(unique_id=layer_id).first()
+        if not layer:
+            return {"error": f"GIS Input not found: {layer_id}"}
+        changed = []
+        if name:
+            layer.name = name; changed.append("name")
+        if params and isinstance(params, dict):
+            existing = {}
+            try:
+                existing = _json.loads(layer.options or '{}')
+            except Exception:
+                existing = {}
+            existing.update(params)
+            layer.options = _json.dumps(existing); changed.append("options")
+        db.session.commit()
+        try:
+            from aot.aot_flask.utils.utils_geo import invalidate_geo_config_cache
+            invalidate_geo_config_cache()
+        except Exception as e:
+            logger.warning(f"[modify_gis_input] cache invalidation failed (non-fatal): {e}")
+        r = {"layer_id": layer_id, "status": "modified", "changed": changed}
+        if extra:
+            r["ignored_args"] = list(extra.keys())
+        return r
+
+    @staticmethod
+    def activate_gis_input(layer_id=None, active=True, **extra):
+        """Activates or deactivates a GIS Input. New GIS Inputs are created
+        deactivated (create_gis_input) — call this once options are configured."""
+        from aot.aot_flask.utils.utils_geo import geo_layer_activate
+        if not layer_id:
+            return {"error": "layer_id is required"}
+        try:
+            messages = geo_layer_activate(layer_id, active=bool(active))
+        except Exception as e:
+            logger.error(f"[activate_gis_input] geo_layer_activate raised: {e}")
+            return {"error": str(e)}
+        if messages.get("error"):
+            return {"error": "; ".join(messages["error"])}
+        return {"layer_id": layer_id, "status": "activated" if active else "deactivated"}
+
+    @staticmethod
+    def delete_gis_input(layer_id=None, **extra):
+        """Deletes a GIS Input by unique_id."""
+        from aot.aot_flask.utils.utils_geo import geo_layer_del
+        if not layer_id:
+            return {"error": "layer_id is required"}
+        try:
+            messages = geo_layer_del(layer_id)
+        except Exception as e:
+            logger.error(f"[delete_gis_input] geo_layer_del raised: {e}")
+            return {"error": str(e)}
+        if isinstance(messages, dict) and messages.get("error"):
+            return {"error": "; ".join(messages["error"])}
+        return {"layer_id": layer_id, "status": "deleted"}
 
     @staticmethod
     def _find_placeable_device(device_id):
@@ -3568,6 +3892,75 @@ class AoTDataToolService:
         if extra:
             r["ignored_args"] = list(extra.keys())
         return r
+
+    @staticmethod
+    def _get_vworld_credentials():
+        """VWorld GIS Input(GeoLayer type='gis_vworld')에 등록된 api_key/domain을
+        읽는다. 없으면 (None, None). routes_geo.py의 동명 헬퍼와 같은 저장 방식
+        (GeoLayer.options JSON)을 따르는 서비스 계층 전용 사본 — 서비스가 라우트
+        모듈에 의존하지 않도록 분리."""
+        import json as _json
+        layer = (GeoLayer.query.filter_by(type='gis_vworld', is_activated=True).first()
+                 or GeoLayer.query.filter_by(type='gis_vworld').first())
+        if not layer:
+            return None, None
+        try:
+            opts = _json.loads(layer.options) if layer.options else {}
+        except Exception:
+            opts = {}
+        return opts.get('api_key') or None, opts.get('vworld_domain', '')
+
+    @staticmethod
+    def get_address(target_name=None, target_id=None, lat=None, lng=None, **extra):
+        """
+        [읽기전용] 좌표 또는 위치 이름(구역/시설/장치)을 사람이 읽는 주소로
+        변환한다 (역지오코딩). 등록·활성화된 VWorld GIS Input에 API Key가 설정된
+        경우에만 동작하며, 없으면 좌표만 돌려주는 대신 그 사실을 명확히 알린다.
+
+        위치 이름 해석은 get_local_time_tool과 동일한 경로를 쓴다:
+        _resolve_note_target으로 target_id를 얻고, resolve_location_coords로
+        중심좌표(GeoShape는 centroid, 장치는 자신의 lat/lng)를 구한다.
+        """
+        try:
+            from aot.utils.device_tz import resolve_location_coords
+
+            resolved_name = target_name
+
+            if lat in (None, '') or lng in (None, ''):
+                if not target_id and target_name:
+                    target_id, _tt, resolved_name, _lat, _lng = \
+                        AoTDataToolService._resolve_note_target(target_name)
+                    if not target_id:
+                        return {
+                            "status": "error",
+                            "message": f"위치 '{target_name}'를 찾지 못했습니다.",
+                            "available_targets": AoTDataToolService._geoshape_name_candidates(),
+                        }
+                if not target_id:
+                    return {"status": "error",
+                            "message": "target_name, target_id, 또는 lat/lng 중 하나는 필요합니다."}
+                lat, lng = resolve_location_coords(target_id)
+                if lat is None or lng is None:
+                    return {"status": "error",
+                            "message": f"'{resolved_name or target_id}'의 좌표를 확인할 수 없습니다."}
+
+            api_key, domain = AoTDataToolService._get_vworld_credentials()
+            if not api_key:
+                return {
+                    "status": "error",
+                    "message": ("VWorld GIS Input이 등록되어 있지 않거나 API Key가 설정되지 "
+                                 "않았습니다. 지도 > GIS 입력에서 VWorld를 먼저 등록해 주세요."),
+                }
+
+            from aot.inputs_gis.gis_vworld import InputModule as VWorldInput
+            result = VWorldInput.reverse_geocode(float(lat), float(lng), api_key, domain)
+            result["lat"], result["lng"] = float(lat), float(lng)
+            if resolved_name:
+                result["location"] = resolved_name
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_address: {e}")
+            return {"status": "error", "message": f"주소 변환 중 오류: {str(e)}"}
 
     @staticmethod
     def delete_geo_shape(shape_id=None, **extra):
@@ -3909,6 +4302,90 @@ class AoTDataToolService:
         type, not just its unique_id)."""
         from aot.utils.geo_hierarchy import geo_descendant_shapes
         return geo_descendant_shapes(root_shape)
+
+    @staticmethod
+    def resolve_target_tool(target_name):
+        """
+        [Read-only, no approval required] Resolve a place/device name to its
+        exact entity BEFORE calling a write tool that takes target_name (e.g.
+        add_schedule, create_note, create_notice). Uses the same resolver
+        those write tools use internally, so the result is guaranteed
+        consistent with what a write call would attach to.
+
+        Write tools sit behind a human-approval gate that only inspects the
+        tool NAME, not its arguments — the target-name resolution itself only
+        runs after approval is granted, which is too late to catch a wrong
+        hierarchy level (e.g. a site name given when the request actually
+        means each of its zones). Calling this tool first, before any write,
+        surfaces that information while it still costs nothing to correct.
+
+        Returns target_type and, if the entity contains finer-grained
+        children (e.g. a site containing zones), their exact names in
+        `children`. A write tool call attaches to ONLY the resolved entity —
+        it never expands to `children` automatically. When the request
+        implies handling each child separately, call the write tool once per
+        entry in `children`, using that child's exact name.
+        """
+        import json as _json
+        if not target_name or not str(target_name).strip():
+            return {"status": "error", "message": "target_name is empty"}
+
+        target_id, target_type, resolved_name, _lat, _lng = \
+            AoTDataToolService._resolve_note_target(target_name)
+
+        if not target_id:
+            return {
+                "status": "needs_disambiguation",
+                "error": "target_not_found",
+                "message": f"'{target_name}' could not be resolved to a known entity.",
+                "available_targets": AoTDataToolService._geoshape_name_candidates(),
+            }
+
+        children = []
+        if target_type == 'site':
+            try:
+                site_shape = GeoShape.query.filter_by(unique_id=target_id).first()
+                if site_shape:
+                    seen_names = set()
+                    for c in AoTDataToolService._geo_shape_descendants(site_shape):
+                        # geo_descendant_shapes() returns the FULL nested subtree
+                        # (zones, device markers, labels, ...) - only the immediate
+                        # 'zone' level answers "does this container have sub-zones
+                        # to loop over"; devices/labels would just be noise here.
+                        if c.type != 'zone':
+                            continue
+                        try:
+                            feat = c.feature if isinstance(c.feature, dict) else _json.loads(c.feature or '{}')
+                            props = feat.get('properties') or {}
+                            c_name = props.get('name') or props.get('label') or props.get('title')
+                        except Exception:
+                            c_name = None
+                        if c_name and c_name not in seen_names:
+                            seen_names.add(c_name)
+                            children.append({"name": c_name, "type": c.type})
+            except Exception:
+                children = []
+
+        note = (
+            "This name resolves to exactly one entity. A write tool called with "
+            "this target_name attaches ONLY to it."
+        ) if not children else (
+            "This name resolves to a container whose sub-entities are listed in "
+            "'children'. A write tool called with this target_name attaches ONLY "
+            "to the container itself - it does NOT automatically apply to each "
+            "child. If the request applies to each child separately (e.g. 'each "
+            "zone', 'per section'), call the write tool once per entry in "
+            "'children', using that child's exact name as target_name."
+        )
+
+        return {
+            "status": "success",
+            "target_id": target_id,
+            "target_type": target_type,
+            "resolved_name": resolved_name,
+            "children": children,
+            "note": note,
+        }
 
     @staticmethod
     def _resolve_note_target_ids(target_name):
@@ -4422,3 +4899,514 @@ class AoTDataToolService:
             result["sync_info"] = msgs.get('info')
             result["sync_warning"] = msgs.get('warning')
         return result
+
+    # =========================================================================
+    # @ANCHOR: ADVISORY_READ_TOOLS
+    # 외부 AI가 "상태를 점검하고 제어를 조언"하려면 읽어야 하는데 도구가 없던
+    # 네 가지를 노출한다. 전부 읽기 전용이며, 기존 구현을 감싸는 것이지 새 로직이
+    # 아니다. 조언의 근거가 되는 값이므로 신선도/출처/미설정 사유를 함께 반환한다.
+    # =========================================================================
+
+    @staticmethod
+    def get_control_state(facility_name=None, facility_id=None,
+                          include_inactive=False, **extra):
+        """[읽기전용] 환경제어 코디네이터의 현재 목표값과 최근 판단 결과.
+
+        무엇이 목표이고(setpoint), 무엇이 제약을 걸었고(limiting factor),
+        안전게이트가 열렸는지, 어떤 액추에이터에 왜 명령이 갔는지를 반환한다.
+        예보/센서만으로는 알 수 없는 "지금 시스템이 무슨 의도로 움직이는가"에
+        해당하므로, 제어 조언 전에 반드시 읽어야 하는 값이다.
+
+        AISummaryService._gather_env_control_context() 와 같은 소스를 읽지만
+        의도적으로 다르게 만든 점이 두 가지 있다:
+          - function_id 를 포함한다. 코디네이터는 이름이 겹칠 수 있어
+            (실환경에 'Env Coordinator' 동명 2개 존재) 이름으로는 키가 안 된다.
+          - target_temperature/humidity, tolerance, priority, 스케줄 창을
+            추가로 노출한다. 조언에 필요한데 그쪽에는 빠져 있다.
+        """
+        import json as _json
+        try:
+            from aot.databases.models import CustomController, FunctionRuntimeState, GeoFacility
+
+            q = CustomController.query.filter_by(device='env_coordinator')
+            if not include_inactive:
+                q = q.filter_by(is_activated=True)
+            controllers = q.all()
+            if not controllers:
+                return {"status": "success", "count": 0, "coordinators": [],
+                        "message": "No environment-control coordinator (env_coordinator) is registered."}
+
+            # 시설 이름 해석용 (geo_facility_id → GeoFacility.unique_id)
+            fac_names = {f.unique_id: f.name for f in GeoFacility.query.all()}
+
+            wanted_name = (facility_name or '').strip().lower() or None
+            out = []
+            for c in controllers:
+                try:
+                    o = _json.loads(c.custom_options) if c.custom_options else {}
+                except (ValueError, TypeError):
+                    o = {}
+
+                fid = o.get('geo_facility_id')
+                fname = fac_names.get(fid)
+                if facility_id and fid != facility_id:
+                    continue
+                if wanted_name and wanted_name not in (fname or '').lower():
+                    continue
+
+                entry = {
+                    "function_id": c.unique_id,
+                    "function_name": c.name,
+                    "is_activated": bool(c.is_activated),
+                    "facility_id": fid,
+                    "facility_name": fname,
+                    "bay_scope": o.get('bay_scope') or None,
+                    "effect_engine": o.get('effect_engine', 'legacy'),
+                    "crop_preset": o.get('crop_preset'),
+                    "targets": {
+                        "vpd_kpa": o.get('target_vpd'),
+                        "vpd_source": o.get('vpd_sp_type'),
+                        "temperature_c": o.get('target_temperature'),
+                        "humidity_pct": o.get('target_humidity'),
+                        "co2_ppm": o.get('target_co2'),
+                    },
+                    "tolerance": {
+                        "vpd": o.get('tolerance_vpd'),
+                        "temperature_c": o.get('tolerance_temperature'),
+                        "humidity_pct": o.get('tolerance_humidity'),
+                        "co2_ppm": o.get('tolerance_co2'),
+                    },
+                    "priority": {
+                        "vpd": o.get('priority_vpd'),
+                        "temperature": o.get('priority_temperature'),
+                        "humidity": o.get('priority_humidity'),
+                        "co2": o.get('priority_co2'),
+                    },
+                    "safety_range": {
+                        "temp_c": [o.get('temp_min'), o.get('temp_max')],
+                        "humid_pct": [o.get('humid_min'), o.get('humid_max')],
+                        "guide_temp_c": [o.get('guide_T_min'), o.get('guide_T_max')],
+                        "guide_humid_pct": [o.get('guide_RH_min'), o.get('guide_RH_max')],
+                    },
+                    "window": {
+                        "season": [o.get('schedule_start_time'), o.get('schedule_end_time')],
+                        "daily_enabled": o.get('time_enable'),
+                        "daily": [o.get('time_start'), o.get('time_end')],
+                    },
+                }
+
+                state = FunctionRuntimeState.query.filter_by(function_id=c.unique_id).first()
+                if state and state.summary_json:
+                    try:
+                        entry["latest_cycle_summary"] = _json.loads(state.summary_json)
+                    except (ValueError, TypeError):
+                        entry["latest_cycle_summary_error"] = "Failed to parse summary_json"
+                else:
+                    entry["latest_cycle_summary"] = None
+                    entry["latest_cycle_note"] = (
+                        "No decision-cycle record yet - the coordinator has never run, "
+                        "or summary recording is disabled.")
+                out.append(entry)
+
+            return {"status": "success", "count": len(out), "coordinators": out}
+        except Exception as e:
+            logger.exception("Error in get_control_state")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_weather_forecast(hours=24, **extra):
+        """[읽기전용] 기상청 단기예보 — 선제 제어 조언의 근거.
+
+        get_weather 는 '현재' 센서값만 다루므로, 예보 없이는 "곧 기온이
+        떨어지니 미리 보온하라" 같은 조언이 불가능하다. env_coordinator 의
+        feedforward 가 쓰는 것과 같은 forecast.json 을 읽는다.
+
+        예보 파일이 갱신되지 않은 환경이 실제로 존재하므로(발행시각이 수개월
+        지난 경우를 확인함), 발행시각과 경과시간·stale 여부를 반드시 함께
+        반환한다. 낡은 예보로 조언하는 것을 막기 위한 것이다.
+        """
+        from datetime import datetime as _dt
+        try:
+            from aot.functions.utils.env_control.forecast_feedforward import _load_forecast
+
+            data = _load_forecast() or {}
+            forecasts = data.get('forecasts') or {}
+            if not forecasts:
+                return {"status": "unavailable",
+                        "message": ("No forecast data. KMA forecast collection may not "
+                                    "be configured."),
+                        "checked_source": "forecast.json"}
+
+            pub_raw = data.get('pub_dt')
+            published_at, age_hours = None, None
+            if pub_raw:
+                try:
+                    pub = _dt.strptime(str(pub_raw), '%Y%m%d%H%M')
+                    published_at = pub.isoformat()
+                    age_hours = round((_dt.now() - pub).total_seconds() / 3600.0, 1)
+                except ValueError:
+                    published_at = str(pub_raw)
+
+            # 키는 현재시각 기준 시간 오프셋(문자열). 음수는 과거이므로 버린다.
+            try:
+                limit = max(1, int(hours))
+            except (TypeError, ValueError):
+                limit = 24
+
+            future = []
+            for k, v in forecasts.items():
+                try:
+                    off = int(k)
+                except (TypeError, ValueError):
+                    continue
+                if 0 <= off <= limit:
+                    future.append({"hour_offset": off, **(v if isinstance(v, dict) else {})})
+            future.sort(key=lambda x: x["hour_offset"])
+
+            stale = age_hours is not None and age_hours > 6
+            result = {
+                "status": "success",
+                "published_at": published_at,
+                "age_hours": age_hours,
+                "stale": stale,
+                "requested_hours": limit,
+                "count": len(future),
+                "units": data.get('units'),
+                "forecasts": future,
+            }
+            if stale:
+                result["warning"] = (
+                    f"This forecast was issued {age_hours} hours ago. It is stale: do not "
+                    f"recommend pre-emptive control based on it; report that forecast "
+                    f"collection needs checking first.")
+            if not future:
+                result["warning"] = (
+                    "No future entries in the requested window (the file holds past hours "
+                    "only). " + result.get("warning", ""))
+            return result
+        except Exception as e:
+            logger.exception("Error in get_weather_forecast")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_anomalies(scope_type="system", scope_id=None, **extra):
+        """[읽기전용] 지금 이상 상태가 있는지 — 임계 위반·오프라인 비율 등.
+
+        기존에는 이상탐지가 백그라운드 감시 파이프라인으로만 존재해서 AI가
+        "지금 이상 있나?"를 물어볼 수단이 없었다. 감시 로직을 그대로 재사용해
+        온디맨드 조회로 노출한다. 판정만 하고 알림 발송은 하지 않는다.
+        """
+        try:
+            from aot.ai.services.ai_summary_service import AISummaryService
+            from aot.ai.services.ai_anomaly_detector import AIAnomalyDetector
+
+            current = AISummaryService.gather_scope_data(scope_type, scope_id)
+            previous = AISummaryService.get_latest_summary(scope_type, scope_id)
+            verdict = AIAnomalyDetector.detect_anomalies(current, previous) or {}
+
+            return {
+                "status": "success",
+                "scope": {"type": scope_type, "id": scope_id},
+                "anomaly_detected": verdict.get('anomaly_detected', False),
+                "alert_level": verdict.get('alert_level', 'none'),
+                "anomalies": verdict.get('anomalies', []),
+                "metrics": current.get('metrics', {}),
+                "compared_with": ("이전 요약 v%s" % previous.version) if previous else None,
+                "evaluated_at": current.get('timestamp'),
+            }
+        except Exception as e:
+            logger.exception("Error in get_anomalies")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_crop_status(facility_id=None, facility_name=None, **extra):
+        """[읽기전용] 시설별 작물과 생육단계 — 재배 조언의 전제.
+
+        작물을 모르면 최적 재배 조언 자체가 성립하지 않는다. 인앱 AI는 도메인
+        컨텍스트로 자동 주입받지만 MCP 경로는 그 파이프라인을 타지 않아 알 방법이
+        없었다.
+
+        두 소스를 겹쳐 읽는다:
+          1) env_coordinator 의 crop_preset — 항상 사용 가능한 1차 소스
+          2) 도메인 레지스트리(facility_registry.yaml)의 crop_type+planting_date
+             → GrowthStageResolver 로 생육단계·재배일수·단계별 최적범위
+        레지스트리가 없는 설치도 실제로 존재하므로(이 저장소의 개발 환경이 그렇다),
+        2)가 없으면 1)만 반환하고 무엇이 왜 빠졌는지 명시한다 — 조용히 빈 값을
+        주면 AI가 작물이 없는 것으로 오해한다.
+        """
+        import json as _json
+        try:
+            from aot.databases.models import CustomController, GeoFacility
+
+            fac_names = {f.unique_id: f.name for f in GeoFacility.query.all()}
+            wanted_name = (facility_name or '').strip().lower() or None
+
+            rows = []
+            for c in CustomController.query.filter_by(device='env_coordinator',
+                                                      is_activated=True).all():
+                try:
+                    o = _json.loads(c.custom_options) if c.custom_options else {}
+                except (ValueError, TypeError):
+                    o = {}
+                fid = o.get('geo_facility_id')
+                fname = fac_names.get(fid)
+                if facility_id and fid != facility_id:
+                    continue
+                if wanted_name and wanted_name not in (fname or '').lower():
+                    continue
+                rows.append({
+                    "facility_id": fid,
+                    "facility_name": fname,
+                    "crop_preset": o.get('crop_preset'),
+                    "controlled_by": c.unique_id,
+                    "season_window": [o.get('schedule_start_time'),
+                                      o.get('schedule_end_time')],
+                })
+
+            # 도메인 레지스트리로 생육단계 보강 (있을 때만)
+            registry_note = None
+            for r in rows:
+                if not r["facility_id"]:
+                    continue
+                try:
+                    from aot.ai.services.domain_context_loader import DomainContextLoader
+                    module = DomainContextLoader.load_active_module(r["facility_id"])
+                    state = (module or {}).get('operational_state') or {}
+                    if state.get('growth_stage'):
+                        r["growth_stage"] = state.get('growth_stage')
+                        r["days_after_planting"] = state.get('days_after_planting')
+                        r["optimal_ranges"] = state.get('optimal_ranges')
+                        r["growth_stage_source"] = state.get('growth_stage_source')
+                except Exception as exc:
+                    registry_note = (
+                        "Growth stage unavailable: could not read the domain registry "
+                        f"(facility_registry.yaml) ({type(exc).__name__}). The crop type is "
+                        "still available via crop_preset, but days-after-planting and "
+                        "stage-specific optimal ranges require planting_date/crop_type to be "
+                        "registered there.")
+
+            result = {"status": "success", "count": len(rows), "facilities": rows}
+            if not rows:
+                result["message"] = (
+                    "No active env_coordinator carries crop information. Check whether an "
+                    "environment-control coordinator is configured for the facility.")
+            if registry_note:
+                result["growth_stage_unavailable"] = registry_note
+            return result
+        except Exception as e:
+            logger.exception("Error in get_crop_status")
+            return {"status": "error", "message": str(e)}
+
+    # =========================================================================
+    # @ANCHOR: ADVICE_LEDGER_TOOLS
+    # 다자 AI 의견 원장. 메인 AI·외부 AI·하위 노드 AI가 같은 원장에 의견을 넣고
+    # 서로의 의견을 읽는다. 제어를 실행하지 않는다 — 실행은 mcp_safety_gate 의
+    # 승인 큐를 타야 하며, 이쪽은 "무엇을 왜 해야 한다고 보는가"만 남긴다.
+    # =========================================================================
+
+    @staticmethod
+    def submit_advice(title=None, advice=None, rationale=None, proposed_action=None,
+                      scope_type='system', scope_id=None, severity='info',
+                      confidence=None, agent_id=None, agent_kind='external', **extra):
+        """[의견 제출] 관측에 근거한 조언을 원장에 남긴다. 제어는 실행되지 않는다.
+
+        상충하는 의견도 덮어쓰지 않고 나란히 쌓인다 — 사람이 출처와 근거를 보고
+        판단하는 것이 목적이다. 제어가 필요하다고 보면 proposed_action 에 무엇을
+        왜 해야 하는지 적을 것. 실제 실행은 사람 승인을 거친다.
+        """
+        from datetime import datetime as _dt
+        try:
+            from aot.databases.models import AIAdvice
+
+            title = (title or '').strip()
+            advice = (advice or '').strip()
+            if not advice:
+                return {"status": "error",
+                        "message": "'advice' is required - state what you are advising."}
+            if not title:
+                # 제목을 생략하면 본문 첫 문장으로 대신한다 (칩·목록 표시용).
+                title = advice.split('.')[0].strip()[:200]
+
+            valid_scopes = ('system', 'farm', 'zone', 'facility', 'device')
+            if scope_type not in valid_scopes:
+                return {"status": "error",
+                        "message": f"scope_type must be one of: {', '.join(valid_scopes)}."}
+            valid_sev = ('info', 'advice', 'warning', 'urgent')
+            if severity not in valid_sev:
+                severity = 'info'
+
+            # 스코프 이름 해석 — 목록에서 사람이 알아볼 수 있게.
+            scope_name = None
+            if scope_id:
+                try:
+                    shape = GeoShape.query.filter(
+                        or_(GeoShape.unique_id == scope_id, GeoShape.geo_id == scope_id)).first()
+                    if shape and shape.feature:
+                        scope_name = (shape.feature.get('properties') or {}).get('name')
+                    if not scope_name:
+                        from aot.databases.models import GeoFacility
+                        fac = GeoFacility.query.filter_by(unique_id=scope_id).first()
+                        scope_name = fac.name if fac else None
+                except Exception:
+                    scope_name = None
+
+            try:
+                conf = float(confidence) if confidence is not None else None
+                if conf is not None:
+                    conf = min(max(conf, 0.0), 1.0)
+            except (TypeError, ValueError):
+                conf = None
+
+            row = AIAdvice(
+                agent_id=(agent_id or 'unknown')[:100],
+                agent_kind=agent_kind if agent_kind in ('main', 'external', 'subordinate') else 'external',
+                scope_type=scope_type,
+                scope_id=scope_id,
+                scope_name=scope_name,
+                title=title[:200],
+                advice=advice,
+                rationale=(rationale or '').strip(),
+                proposed_action=(proposed_action or '').strip(),
+                severity=severity,
+                confidence=conf,
+                status='pending',
+                created_at=_dt.utcnow(),
+            )
+            row.save()
+
+            return {
+                "status": "success",
+                "advice_id": row.unique_id,
+                "submitted_by": row.agent_id,
+                "scope": {"type": scope_type, "id": scope_id, "name": scope_name},
+                "review_status": "pending",
+                "message": ("Advice recorded in the ledger. Nothing was executed; a human "
+                            "will review it. Use list_advice to compare with other AI "
+                            "opinions on the same target."),
+            }
+        except Exception as e:
+            logger.exception("Error in submit_advice")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_system_brief(**extra):
+        """[읽기전용] 이 시스템이 무엇이고 지금 어떤 상태인지 — 단일 진입점.
+
+        도구를 수십 개 열어줘도 외부 AI는 "무엇을 언제 써야 하는가"를 모른다.
+        인앱 AI는 시스템 프롬프트와 컨텍스트 자동주입으로 그 문제를 피하지만
+        MCP 경로에는 그 파이프라인이 없다. 이 도구가 그 공백을 메운다:
+        접속 직후 한 번 호출하면 공간 계층·작물·활성 제어·이상 여부·의견 원장
+        현황과 다음에 쓸 도구를 함께 얻는다.
+
+        개별 조회 도구를 대체하지 않는다 — 어디를 파야 할지 알려주는 지도다.
+        """
+        brief = {"status": "success"}
+        S = AoTDataToolService
+
+        def _safe(label, fn):
+            """한 구획이 실패해도 브리핑 전체를 잃지 않는다."""
+            try:
+                return fn()
+            except Exception as exc:
+                logger.warning("get_system_brief: %s 실패: %s", label, exc)
+                return {"error": f"Failed to read {label}: {exc}"}
+
+        brief["spatial"] = _safe("공간 계층", lambda: S.get_spatial_tree(depth=2))
+        brief["crops"] = _safe("작물", lambda: S.get_crop_status())
+        brief["control"] = _safe("제어 상태", lambda: S.get_control_state())
+        brief["anomalies"] = _safe("이상 상태", lambda: S.get_anomalies())
+        # 핸들러 이름은 get_device_list_tool 이다(도구명과 다름). _safe 가 예외를
+        # 처리하므로 hasattr 류의 방어 가드는 두지 않는다 — 가드를 두면 이름이
+        # 틀렸을 때 조용히 빈 값이 되어 오히려 사실을 감춘다.
+        brief["devices"] = _safe("장치 요약", lambda: {
+            "device_count": (S.get_device_list_tool() or {}).get("count"),
+            "note": "Use get_device_list / search_devices for the full list",
+        })
+        pending = _safe("의견 원장", lambda: S.list_advice(status='pending', limit=5))
+        brief["advice_ledger"] = {
+            "pending_count": pending.get("count") if isinstance(pending, dict) else None,
+            "recent": (pending.get("results") if isinstance(pending, dict) else None),
+            "contested": (pending.get("multiple_agents_on_same_scope")
+                          if isinstance(pending, dict) else None),
+        }
+
+        brief["how_to_proceed"] = [
+            "1. Use this brief to identify the target (facility/zone) and its crop.",
+            "2. To judge control, read get_control_state for current targets, the limiting "
+            "factor and safety-gate status.",
+            "3. Sensor history: get_sensor_detail. Forecast: get_weather_forecast (always "
+            "check the 'stale' flag).",
+            "4. Look up growing guidance and manual references with knowledge_search.",
+            "5. Check search_schedule for already-planned work to avoid duplicate or "
+            "conflicting instructions.",
+            "6. Submit findings with submit_advice; check list_advice first to see other "
+            "AI opinions.",
+            "7. Executing control (operate_device etc.) requires human approval. Do not "
+            "retry direct execution - state what should be done and why, as advice.",
+        ]
+        return brief
+
+    @staticmethod
+    def list_advice(scope_type=None, scope_id=None, status=None, agent_id=None,
+                    severity=None, limit=20, **extra):
+        """[읽기전용] 원장에 쌓인 AI 의견 조회 — 자신·타 AI·메인 AI의 의견 전부.
+
+        조언을 내기 전에 이 도구로 같은 대상에 이미 어떤 의견이 있는지 확인할 것.
+        중복 제출을 막고, 다른 AI와 판단이 갈리면 그 차이를 근거와 함께 짚을 수 있다.
+        """
+        try:
+            from aot.databases.models import AIAdvice
+
+            q = AIAdvice.query
+            if scope_type:
+                q = q.filter(AIAdvice.scope_type == scope_type)
+            if scope_id:
+                q = q.filter(AIAdvice.scope_id == scope_id)
+            if status:
+                q = q.filter(AIAdvice.status == status)
+            if agent_id:
+                q = q.filter(AIAdvice.agent_id == agent_id)
+            if severity:
+                q = q.filter(AIAdvice.severity == severity)
+            try:
+                lim = min(max(int(limit), 1), 100)
+            except (TypeError, ValueError):
+                lim = 20
+
+            rows = q.order_by(AIAdvice.created_at.desc()).limit(lim).all()
+            results = [{
+                "advice_id": r.unique_id,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "agent_id": r.agent_id,
+                "agent_kind": r.agent_kind,
+                "scope": {"type": r.scope_type, "id": r.scope_id, "name": r.scope_name},
+                "title": r.title,
+                "advice": r.advice,
+                "rationale": r.rationale,
+                "proposed_action": r.proposed_action,
+                "severity": r.severity,
+                "confidence": r.confidence,
+                "status": r.status,
+                "review_note": r.review_note,
+                "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+            } for r in rows]
+
+            # 같은 대상에 여러 주체가 의견을 냈으면 알려준다 — 상충 가능 신호.
+            contested = {}
+            for r in results:
+                if r["status"] != 'pending':
+                    continue
+                key = f"{r['scope']['type']}:{r['scope']['id']}"
+                contested.setdefault(key, set()).add(r["agent_id"])
+            multi = [k for k, v in contested.items() if len(v) > 1]
+
+            out = {"status": "success", "count": len(results), "results": results}
+            if multi:
+                out["multiple_agents_on_same_scope"] = multi
+                out["note"] = ("More than one AI has advised on the same target. Where "
+                               "judgements differ, explain the difference using each "
+                               "rationale as evidence.")
+            return out
+        except Exception as e:
+            logger.exception("Error in list_advice")
+            return {"status": "error", "message": str(e)}
