@@ -552,6 +552,24 @@ WIDGET_INFORMATION = {
         .seq-dev-offline { background: var(--bg-pause, #b0b0b0); color: #fff; opacity: 0.85; }
         .seq-dev-pending { background: var(--bg-hold, #f0ad4e); color: #fff; }
 
+        /* --- Drag to reorder --- */
+        /* Rows are picked up by pressing and dragging (touch: press and hold).
+           The grab cursor is the desktop affordance; there is no handle column
+           because the row is only ~160px wide on a phone. */
+        .seq-list-item { cursor: grab; }
+        /* While a drag is running, no text selection anywhere in the list. */
+        .seq-list-body.seq-dnd-on { user-select: none; -webkit-user-select: none; }
+        .seq-list-body.seq-dnd-on .seq-list-item { cursor: grabbing; }
+        /* The lifted block floats above its neighbours. pointer-events:none is
+           what lets elementFromPoint see the row UNDERNEATH the dragged rows,
+           which is how the drop position is resolved. */
+        .seq-list-item.seq-row-drag {
+            position: relative; z-index: 3;
+            background: var(--aot-surface-modal, #fff);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+            pointer-events: none;
+        }
+
         /* Square Toggle */
         .seq-square-toggle {
             appearance: none; -webkit-appearance: none;
@@ -1245,6 +1263,9 @@ WIDGET_INFORMATION = {
     // selected day) instead of waiting for the next poll.
     function seq_render_action_list(widget_id, function_id) {
         var ss = seq_get_sched_state(widget_id);
+        // A reorder drag owns the rows right now — re-rendering would wipe them
+        // mid-gesture (the poll keeps running while the user drags).
+        if (ss.dndActive) return;
         var steps = ss.steps || [];
         var listHtml = "";
         try {
@@ -1322,7 +1343,11 @@ WIDGET_INFORMATION = {
 
                     var isTotal = (s.type === 'total');
                     var checked = effEnabled ? "checked" : "";
-                    listHtml += '<div class="' + rowClass + '">';
+                    // Reorder unit: a group is ONE block (all members move together),
+                    // a standalone step is a block of its own. encodeURIComponent keeps
+                    // quotes/spaces in a group name from breaking the attribute.
+                    var blockKey = inGroup ? ('g:' + encodeURIComponent(effGroup)) : ('u:' + s.unique_id);
+                    listHtml += '<div class="' + rowClass + '" data-uid="' + s.unique_id + '" data-block="' + blockKey + '" title="' + window._('Press and hold to reorder') + '">';
                     listHtml += '<div class="seq-col-enable"><input type="checkbox" ' + checked + ' class="seq-square-toggle" data-id="' + s.unique_id + '" onchange="toggle_seq_action(this.dataset.id, this, \\'' + widget_id + '\\', \\'' + function_id + '\\')"></div>';
 
                     var deviceDetail = s.device_detail || s.action_name || window._("Unknown");
@@ -1345,7 +1370,245 @@ WIDGET_INFORMATION = {
             listHtml = "<div>" + window._("JS Error in List") + "</div>";
         }
         var listContainer = document.getElementById('seq-list-' + widget_id);
-        if (listContainer) listContainer.innerHTML = listHtml;
+        if (listContainer) {
+            listContainer.innerHTML = listHtml;
+            // The drag handler reads these at gesture time (it is bound once).
+            listContainer.setAttribute('data-wid', widget_id);
+            listContainer.setAttribute('data-fid', function_id || '');
+            seq_attach_dnd(listContainer);
+        }
+    }
+
+    // --- Drag to reorder ---------------------------------------------------
+    // A step is moved by pressing its row and dragging it. A device group is
+    // ONE block: grabbing any member moves every member, and a block is always
+    // dropped before or after another WHOLE block, so a reorder can never split
+    // a group or drop a standalone step inside one.
+    //
+    // The new order is persisted through /function_save_order (custom_options
+    // .gridstack_y) — the same key the function options page writes, which is
+    // what Actions.position, and therefore the controller's run order, reads.
+    var SEQ_DND_HOLD_MS = 180;    // touch: hold this long before the row lifts
+    var SEQ_DND_START_PX = 5;     // mouse: travel that turns a press into a drag
+    var SEQ_DND_CANCEL_PX = 10;   // touch: travel before the hold fires = scrolling, not reordering
+
+    function seq_dnd_state() {
+        if (!window.__seqDnd) window.__seqDnd = { pending: null };
+        return window.__seqDnd;
+    }
+
+    function seq_dnd_rows(list) {
+        return Array.prototype.slice.call(list.children).filter(function(el) {
+            return el.classList && el.classList.contains('seq-list-item');
+        });
+    }
+
+    function seq_dnd_block_rows(list, key) {
+        return seq_dnd_rows(list).filter(function(r) { return r.getAttribute('data-block') === key; });
+    }
+
+    // Bound once per list element; every render just refreshes the rows inside it.
+    function seq_attach_dnd(list) {
+        if (list.__seqDndBound) return;
+        list.__seqDndBound = true;
+        list.addEventListener('pointerdown', function(e) { seq_dnd_down(e, list); });
+    }
+
+    function seq_dnd_down(e, list) {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (!e.target || !e.target.closest) return;
+        var row = e.target.closest('.seq-list-item');
+        if (!row || !list.contains(row)) return;
+        // The enable checkbox keeps its own gesture.
+        if (e.target.closest('input, button, select, textarea')) return;
+        if (seq_dnd_rows(list).length < 2) return;
+
+        var st = seq_dnd_state();
+        seq_dnd_cleanup(st);  // never keep two gestures alive at once
+
+        var p = {
+            list: list,
+            row: row,
+            wid: list.getAttribute('data-wid'),
+            fid: list.getAttribute('data-fid'),
+            key: row.getAttribute('data-block'),
+            x0: e.clientX, y0: e.clientY, lastY: e.clientY,
+            touch: (e.pointerType === 'touch'),
+            holdTimer: null, active: false, dy: 0
+        };
+        st.pending = p;
+
+        p.onMove = function(ev) { seq_dnd_pointermove(ev); };
+        p.onUp = function(ev) { seq_dnd_pointerup(ev); };
+        document.addEventListener('pointermove', p.onMove, true);
+        document.addEventListener('pointerup', p.onUp, true);
+        document.addEventListener('pointercancel', p.onUp, true);
+
+        if (p.touch) {
+            p.holdTimer = setTimeout(function() { seq_dnd_activate(p); }, SEQ_DND_HOLD_MS);
+        }
+    }
+
+    function seq_dnd_activate(p) {
+        if (p.active) return;
+        p.active = true;
+        p.startY = p.lastY;
+        p.rows = seq_dnd_block_rows(p.list, p.key);
+        if (!p.rows.length) p.rows = [p.row];
+        p.order0 = seq_dnd_rows(p.list).map(function(r) { return r.getAttribute('data-uid'); });
+        p.list.classList.add('seq-dnd-on');
+        for (var i = 0; i < p.rows.length; i++) p.rows[i].classList.add('seq-row-drag');
+        // Freeze the list: a poll landing mid-drag must not re-render the rows.
+        seq_get_sched_state(p.wid).dndActive = true;
+        // Non-passive so the list/page does not scroll for the rest of the gesture.
+        // The hold delay means the browser has not started a scroll yet.
+        p.onTouchMove = function(ev) { ev.preventDefault(); };
+        document.addEventListener('touchmove', p.onTouchMove, { passive: false });
+    }
+
+    function seq_dnd_pointermove(ev) {
+        var p = seq_dnd_state().pending;
+        if (!p) return;
+        p.lastY = ev.clientY;
+        if (!p.active) {
+            var dist = Math.abs(ev.clientY - p.y0) + Math.abs(ev.clientX - p.x0);
+            if (p.touch) {
+                // Moved before the hold fired → the user is scrolling the list.
+                if (dist > SEQ_DND_CANCEL_PX) seq_dnd_cleanup(seq_dnd_state());
+            } else if (dist > SEQ_DND_START_PX) {
+                seq_dnd_activate(p);
+            }
+            return;
+        }
+        if (ev.cancelable) ev.preventDefault();
+        seq_dnd_apply_offset(p, ev.clientY - p.startY);
+        seq_dnd_autoscroll(p, ev.clientY);
+        seq_dnd_maybe_move(p, ev.clientX, ev.clientY);
+    }
+
+    function seq_dnd_apply_offset(p, dy) {
+        p.dy = dy;
+        for (var i = 0; i < p.rows.length; i++) p.rows[i].style.transform = 'translateY(' + dy + 'px)';
+    }
+
+    function seq_dnd_autoscroll(p, y) {
+        var r = p.list.getBoundingClientRect();
+        if (y < r.top + 28) p.list.scrollTop -= 10;
+        else if (y > r.bottom - 28) p.list.scrollTop += 10;
+    }
+
+    function seq_dnd_maybe_move(p, x, y) {
+        // The dragged rows are pointer-events:none, so this is the row beneath them.
+        var el = document.elementFromPoint(x, y);
+        var over = el && el.closest ? el.closest('.seq-list-item') : null;
+        if (!over || !p.list.contains(over)) return;
+        if (over.getAttribute('data-block') === p.key) return;
+        var rect = over.getBoundingClientRect();
+        seq_dnd_place(p, over, y > rect.top + rect.height / 2);
+    }
+
+    function seq_dnd_place(p, targetRow, after) {
+        var tRows = seq_dnd_block_rows(p.list, targetRow.getAttribute('data-block'));
+        if (!tRows.length) return;
+        // Always land before or after the WHOLE target block, never inside it.
+        var anchor = after ? tRows[tRows.length - 1].nextSibling : tRows[0];
+        if (anchor === p.rows[0]) return;  // already in that slot
+        var top0 = p.rows[0].getBoundingClientRect().top;
+        for (var i = 0; i < p.rows.length; i++) p.list.insertBefore(p.rows[i], anchor);
+        var shift = p.rows[0].getBoundingClientRect().top - top0;
+        // Keep the block visually still across the swap: the layout shift it just
+        // took is subtracted from the drag offset, so it does not jump under the finger.
+        p.startY += shift;
+        seq_dnd_apply_offset(p, p.dy - shift);
+    }
+
+    function seq_dnd_cleanup(st) {
+        var p = st.pending;
+        if (!p) return;
+        if (p.holdTimer) clearTimeout(p.holdTimer);
+        document.removeEventListener('pointermove', p.onMove, true);
+        document.removeEventListener('pointerup', p.onUp, true);
+        document.removeEventListener('pointercancel', p.onUp, true);
+        if (p.onTouchMove) document.removeEventListener('touchmove', p.onTouchMove, { passive: false });
+        if (p.rows) {
+            for (var i = 0; i < p.rows.length; i++) {
+                p.rows[i].classList.remove('seq-row-drag');
+                p.rows[i].style.transform = '';
+            }
+        }
+        p.list.classList.remove('seq-dnd-on');
+        seq_get_sched_state(p.wid).dndActive = false;
+        st.pending = null;
+    }
+
+    function seq_dnd_pointerup() {
+        var st = seq_dnd_state();
+        var p = st.pending;
+        if (!p) return;
+        var wasActive = p.active;
+        var wid = p.wid, fid = p.fid, order0 = p.order0 || [];
+        var order = wasActive ? seq_dnd_rows(p.list).map(function(r) { return r.getAttribute('data-uid'); }) : null;
+        seq_dnd_cleanup(st);
+        if (!wasActive) return;
+        // A drag must not also open the name/time modal of the cell it ended on.
+        seq_dnd_swallow_click();
+        if (order.join(',') === order0.join(',')) {
+            seq_render_action_list(wid, fid);  // unchanged: just redraw clean rows
+            return;
+        }
+        seq_dnd_save_order(wid, fid, order);
+    }
+
+    function seq_dnd_swallow_click() {
+        var kill = function(ev) { ev.stopPropagation(); ev.preventDefault(); };
+        document.addEventListener('click', kill, true);
+        setTimeout(function() { document.removeEventListener('click', kill, true); }, 0);
+    }
+
+    function seq_dnd_save_order(widget_id, function_id, order) {
+        var ss = seq_get_sched_state(widget_id);
+        var map = {};
+        for (var i = 0; i < order.length; i++) map[order[i]] = i;
+        // Hold the new order locally for a few seconds: a poll answered before the
+        // daemon has picked up the change would otherwise snap the list back.
+        ss.localOrder = order.slice();
+        ss.localOrderUntil = Date.now() + 15000;
+        seq_apply_local_order(ss);
+        $.ajax({
+            url: '/function_save_order', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify({ function_id: function_id, order: map }),
+            success: function(resp) {
+                if (resp && resp.status === 'success') {
+                    safe_toast('success', window._('Updated'));
+                } else {
+                    ss.localOrder = null;
+                    safe_toast('error', window._('Update failed'));
+                }
+                update_sequence_widget(function_id, widget_id, null);
+            },
+            error: function() {
+                ss.localOrder = null;
+                safe_toast('error', window._('Update failed'));
+                update_sequence_widget(function_id, widget_id, null);
+            }
+        });
+    }
+
+    // Apply the order just saved from a drag to freshly polled steps, until the
+    // server's own order catches up (or the step set changes, which means the
+    // sequence was edited elsewhere and the server is the authority again).
+    function seq_apply_local_order(ss) {
+        var lo = ss.localOrder;
+        if (!lo || !lo.length) return;
+        if (Date.now() > (ss.localOrderUntil || 0)) { ss.localOrder = null; return; }
+        var steps = ss.steps || [];
+        if (steps.length !== lo.length) { ss.localOrder = null; return; }
+        var idx = {};
+        for (var i = 0; i < lo.length; i++) idx[lo[i]] = i;
+        for (var j = 0; j < steps.length; j++) {
+            if (!Object.prototype.hasOwnProperty.call(idx, steps[j].unique_id)) { ss.localOrder = null; return; }
+        }
+        steps.sort(function(a, b) { return idx[a.unique_id] - idx[b.unique_id]; });
     }
 
     function update_sequence_widget(function_id, widget_id, default_period) {
@@ -1402,6 +1665,7 @@ WIDGET_INFORMATION = {
             // Cache steps + fid, then render the list for the selected day.
             ss.steps = data.steps || [];
             ss.fid = function_id;
+            seq_apply_local_order(ss);  // keep a just-dragged order until the server agrees
             seq_render_action_list(widget_id, function_id);
         });
     }

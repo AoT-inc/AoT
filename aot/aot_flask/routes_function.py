@@ -95,6 +95,10 @@ def inject_dictionary():
 @blueprint.route('/function_save_order', methods=['POST'])
 @flask_login.login_required
 def function_save_order():
+    # Reachable from the dashboard sequence widget (drag to reorder), not just
+    # the options page — gate it like every other sequence-editing endpoint.
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'status': 'error', 'message': 'Permission denied'}), 403
     try:
         data = request.get_json()
         function_id = data.get('function_id')
