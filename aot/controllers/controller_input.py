@@ -294,6 +294,12 @@ class InputController(AbstractController, threading.Thread):
                 self.logger.exception("Could not set up pre-output")
 
         self.last_measurement = 0
+        # Reference point for the startup grace period in comm_is_fault() below.
+        # last_measurement is 0/falsy until the first successful measurement, so
+        # without this a freshly (re)started controller would read as "fault"
+        # for every polling Input until it succeeds once — see
+        # io_link_health_infra_plan.md 부록3 for the bug this fixes.
+        self._comm_ref_ts = time.time()
         self.next_measurement = time.time() + self.start_offset
         self.get_new_measurement = False
         self.trigger_cond = False
@@ -391,6 +397,61 @@ class InputController(AbstractController, threading.Thread):
             self.measurement_success = False
 
         self.lastUpdate = time.time()
+
+    # ------------------------------------------------------------------ #
+    # AbstractBaseController.comm_* interface (protocol-agnostic status)
+    # ------------------------------------------------------------------ #
+    STALE_FACTOR = 3
+
+    def comm_capable(self):
+        if self.has_loop:
+            return True
+        if self.has_listener and hasattr(self.measure_input, 'comm_capable'):
+            try:
+                return bool(self.measure_input.comm_capable())
+            except Exception:
+                return False
+        # Listener-type driver not yet retrofitted (io_link_health_infra_plan.md
+        # 2.4) — report honestly that we don't know, rather than defaulting to
+        # a value that would make every un-retrofitted listener Input look
+        # permanently offline.
+        return False
+
+    def comm_last_success(self):
+        if self.has_loop:
+            return self.last_measurement or None
+        if self.has_listener and hasattr(self.measure_input, 'comm_last_success'):
+            try:
+                return self.measure_input.comm_last_success()
+            except Exception:
+                return None
+        return None
+
+    def comm_is_fault(self, channel=None):
+        if not self.comm_capable():
+            return False
+        if not self.has_loop:
+            try:
+                return bool(self.measure_input.comm_is_fault(channel))
+            except Exception:
+                return False
+        deadline = self.period * self.STALE_FACTOR
+        last = self.comm_last_success()
+        if last is None:
+            # Never succeeded yet — measure the grace period from controller
+            # startup, not from a last-success timestamp that doesn't exist.
+            return (time.time() - self._comm_ref_ts) > deadline
+        return (time.time() - last) > deadline
+
+    def comm_is_pending(self, channel=None):
+        # Polling Inputs are synchronous (no in-flight/unconfirmed concept).
+        # A retrofitted listener driver may define its own notion of pending.
+        if self.has_listener and hasattr(self.measure_input, 'comm_is_pending'):
+            try:
+                return bool(self.measure_input.comm_is_pending(channel))
+            except Exception:
+                return False
+        return False
 
     def create_measurements_dict(self):
         """Build a measurements dict with conversions applied for InfluxDB storage."""

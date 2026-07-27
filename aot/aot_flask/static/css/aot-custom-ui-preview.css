@@ -21,7 +21,7 @@
    NAVBAR STRIP
 ============================================================ */
 #aot-ui-preview .preview-navbar {
-    background-color: var(--preview-bd-tertiary, #13261B);
+    background-color: var(--preview-btn-primary-bg, #13261B);
     padding: 0 16px;
     height: 40px;
     display: flex;
@@ -36,10 +36,13 @@
     opacity: 0.88;
 }
 
+/* 어두운 강조 바(btn_primary_bg) 위에 얹히는 텍스트 — brand_accent(밝은 색)를
+   쓴다. brand_primary 를 쓰면 btn_primary_bg 기본값과 같은 색이라 글자가
+   배경에 묻힌다. */
 #aot-ui-preview .preview-navbar-brand {
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--preview-brand-primary, #F3F6F5);
+    color: var(--preview-brand-accent, #F3F6F5);
     letter-spacing: 0.03em;
 }
 
@@ -97,8 +100,8 @@
 
 #aot-ui-preview .preview-btn-on    { background-color: var(--preview-bg-btn-on,       #13261B); }
 #aot-ui-preview .preview-btn-off   { background-color: var(--preview-bg-btn-off,      #5E6B64); }
-#aot-ui-preview .preview-btn-active   { background-color: var(--preview-bg-btn-active,  #13261B); }
-#aot-ui-preview .preview-btn-inactive { background-color: var(--preview-bg-btn-inactive,#5E6B64); }
+#aot-ui-preview .preview-btn-active   { background-color: var(--preview-btn-primary-bg,  #13261B); }
+#aot-ui-preview .preview-btn-inactive { background-color: var(--preview-btn-secondary-bg,#5E6B64); }
 #aot-ui-preview .preview-btn-pause    { background-color: var(--preview-bg-btn-pause,   #989E9E); }
 #aot-ui-preview .preview-btn-hold     { background-color: var(--preview-bg-btn-hold,    #D1D5D5); color: var(--preview-text-color-primary, #13261B); }
 
@@ -181,7 +184,7 @@
 
 #aot-ui-preview .preview-badge-llm     { background-color: var(--preview-bg-llm,        #6277C7); }
 #aot-ui-preview .preview-badge-mcp     { background-color: var(--preview-bg-mcp,        #64C762); }
-#aot-ui-preview .preview-badge-upgrade { background-color: var(--preview-bg-upgrade,    #13261B); }
+#aot-ui-preview .preview-badge-upgrade { background-color: var(--preview-badge-upgrade, #13261B); }
 
 /* ============================================================
    HIGHLIGHT PULSE — triggered when canvas element is clicked
@@ -228,7 +231,7 @@
 .aot-color-row {
     display: flex;
     align-items: center;
-    padding: 0.45rem 0;
+    padding: 0.5rem 0;
     min-height: 2.6rem;
     border-bottom: 1px solid var(--border-neutral);
     gap: 10px;
@@ -236,6 +239,22 @@
 
 .aot-color-row:last-child {
     border-bottom: none;
+}
+
+/* 라벨 + "어디에 쓰이는지" 설명을 세로로 쌓는 래퍼 */
+.aot-color-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.aot-color-desc {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--aot-text-secondary);
+    line-height: 1.3;
 }
 
 .aot-color-swatch {
@@ -412,12 +431,15 @@
     gap: 8px;
 }
 
+/* 슬롯 라벨은 언어마다 길이가 달라(예: ko "테두리 색상") 고정폭이면 줄바꿈된다.
+   min-width 로 정렬만 맞추고 실제 폭은 내용에 맞춘다. */
 .aot-color-popover-slot-label {
     font-size: 0.72rem;
     font-weight: 600;
     color: var(--aot-text-secondary, #6c757d);
-    width: 52px;
+    min-width: 52px;
     flex-shrink: 0;
+    white-space: nowrap;
     text-align: right;
 }
 

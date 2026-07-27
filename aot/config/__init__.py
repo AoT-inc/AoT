@@ -243,6 +243,15 @@ AI_MODEL = 'gpt-5.4'
 AI_AGENT_ENABLED = True # 에이전트 기반 마련 활성화
 AI_SUMMARY_INTERVAL = 3600 # 1시간마다 요약 생성 (최적화 가능)
 
+# Device communication watch (aot_daemon.check_device_comm_status).
+# How often every Input/Output is asked whether it can still see its device,
+# and how long after boot the first sweep waits. The grace period matters:
+# controllers start staggered and several drivers only learn a device is
+# reachable on their first poll or heartbeat, so sweeping too early would
+# report healthy devices as offline.
+COMM_WATCH_INTERVAL = 60
+COMM_WATCH_STARTUP_GRACE = 180
+
 # MCP Bridge Settings
 # v23 (MCP_T06): Configurable failure cooldown. Override via env var MCP_FAILURE_COOLDOWN.
 MCP_FAILURE_COOLDOWN_SECONDS = int(os.environ.get('MCP_FAILURE_COOLDOWN', '300'))

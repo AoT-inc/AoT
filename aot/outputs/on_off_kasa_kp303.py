@@ -220,7 +220,10 @@ class OutputModule(AbstractOutput):
         if not self.is_setup():
             msg = "Error 101: Device not set up. See https://aot-inc.github.io/AoT/Error-Codes#error-101 for more info."
             self.logger.error(msg)
-            return msg
+            # (code, msg) tuple, not a bare string: base_output._switch_failed()
+            # only recognises a non-zero tuple code as failure, so a plain string
+            # was being reported to the UI as a successful switch.
+            return 1, msg
 
         while self.outlet_status_checking and self.running:
             time.sleep(0.1)
@@ -238,6 +241,7 @@ class OutputModule(AbstractOutput):
             msg = "State change error: {}".format(e)
             self.logger.error(msg)
             self.output_setup = False
+            return 1, msg
         finally:
             self.outlet_switching = False
         return msg
@@ -251,6 +255,25 @@ class OutputModule(AbstractOutput):
 
     def is_setup(self):
         return self.output_setup
+
+    # ------------------------------------------------------------------ #
+    # Shared communication-status contract (AbstractBaseController.comm_*)
+    #
+    # This driver already tracked reachability: status_update() re-queries the
+    # strip on a timer and clears output_setup when the query fails, then
+    # try_connect() restores it. That signal simply never reached the UI. These
+    # two methods expose it, so an unreachable strip now reads as offline
+    # instead of silently showing its last known on/off.
+    # ------------------------------------------------------------------ #
+    def comm_capable(self):
+        """True: the strip is re-queried over the network (status_update)."""
+        return True
+
+    def comm_is_fault(self, output_channel=0):
+        # output_setup is False both before the first successful connect and
+        # after a failed re-query — in either case we genuinely cannot see the
+        # device, so both are honestly reported as offline.
+        return not self.output_setup
 
     def stop_output(self):
         """Called when Output is stopped."""

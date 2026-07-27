@@ -419,6 +419,51 @@ class ConfirmableOutputMixin:
         except Exception:
             return False
 
+    # ------------------------------------------------------------------ #
+    # AbstractBaseController.comm_* interface (protocol-agnostic status)
+    # ------------------------------------------------------------------ #
+    def comm_capable(self):
+        """Delegates to confirmation_capable(); also True if a shared link
+        object (see comm_is_fault) is attached, even without command-level
+        confirmation wired up."""
+        if self.confirmation_capable():
+            return True
+        return getattr(self, '_shared_link', None) is not None
+
+    def comm_is_pending(self, output_channel=0):
+        return self.is_pending(output_channel)
+
+    def comm_is_fault(self, output_channel=0):
+        """OR-composition of three independent axes:
+          - offline axis: the channel is known offline and has NOT reported back
+            since. Deliberately outranks a command in flight: issuing a command
+            to a device already known to be dead must not make it look healthy
+            again for the length of the confirmation window. _offline is only
+            cleared by confirm_command(), i.e. by the device actually answering,
+            so this reads as "offline until online is confirmed".
+          - command axis: the last dispatched command was never confirmed (is_fault)
+          - link axis: a persistent shared connection (e.g. one PLC/gateway backing
+            several channels) is currently known down, even with no command in
+            flight — see aot/outputs/base_output.py for why this must be
+            reachable from output_state() and io_link_health_infra_plan.md 2.2
+            for why it is a separate axis from is_fault().
+
+        A driver opts into the link axis by setting self._shared_link to an
+        object exposing is_healthy() -> bool (e.g. a shared Modbus/TCP client
+        keyed by host:port, so all channels on that link report the same fault).
+        """
+        if self.is_offline(output_channel):
+            return True
+        if self.is_fault(output_channel):
+            return True
+        link = getattr(self, '_shared_link', None)
+        if link is not None:
+            try:
+                return not link.is_healthy()
+            except Exception:
+                return False
+        return False
+
     def resolve_is_on(self, output_channel, optimistic):
         """Resolve the boolean on-state for a confirmation-aware output.
 

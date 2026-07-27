@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
+<script src="/static/js/common/aot-output-state.js?v=6"></script>
 
 
 {% include 'pages/map/map_assets.html' %}
@@ -116,13 +117,31 @@
   }
 
   function inputState() {
+    // /inputstate now returns {active, comm_fault?} per input (was a bare bool)
+    // — io_link_health_infra_plan.md Phase D. comm_fault is only present when
+    // the daemon actually tracked a status for this input; absent means
+    // "unknown" (e.g. an un-retrofitted listener driver), which is rendered
+    // the same as normal, not as a fault.
     $.getJSON('/inputstate', function (states) {
-      $.each(states, function (id, active) {
+      $.each(states, function (id, s) {
         var $el = $('#input_status_' + id);
-        if (active) {
-          $el.removeClass('inactive-background').addClass('active-background');
+        $el.removeClass('inactive-background active-background pause-background');
+        if (!s.active) {
+          $el.addClass('inactive-background');
+        } else if (s.comm_fault) {
+          $el.addClass('pause-background');
         } else {
-          $el.removeClass('active-background').addClass('inactive-background');
+          $el.addClass('active-background');
+        }
+        // Activated, but nothing can confirm the device is actually reachable
+        // (an un-retrofitted listener driver: it reports data when it feels
+        // like it and its silence proves nothing). `=== false` so this only
+        // fires on a positive "cannot verify", never on a missing key.
+        // The card background above already carries the offline state, so the
+        // name label is deliberately left alone — two tints on one card for the
+        // same fact read as two different problems.
+        if (window.AoTOutputState) {
+          window.AoTOutputState.paintUnverifiedRunning($el[0], s.active && s.comm_capable === false);
         }
       });
     });
@@ -416,7 +435,7 @@
 
 <!-- Tab Management JavaScript -->
 <script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725c"></script>
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
 
 <!-- Tab Settings Modal -->
 {% include 'modals/tab_settings.html' %}

@@ -6,7 +6,7 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': Custom UI'}}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css">
+  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260727b">
 {% endblock %}
 
 {% block settings %}
@@ -69,13 +69,15 @@
         <!-- Preview Canvas — CSS variables injected inline; isolated from real page -->
         <div id="aot-ui-preview" role="img" aria-label="{{_('Theme color preview')}}" style="margin: 0.75rem 0 1rem;">
 
-          <!-- Navbar strip -->
+          <!-- 어두운 강조 바 — 실제 앱 navbar 는 흰 배경이라 이 요소는 navbar 를
+               흉내내는 게 아니라 '주 버튼 배경'(btn_primary_bg: 저장/설정 메뉴
+               필 버튼, 대시보드 탭, AI 전송 버튼 등)을 미리 보여주는 용도다. -->
           <div class="preview-navbar"
                role="button" tabindex="0"
-               data-color-bg="bd_tertiary"
-               data-color-text="text_color_tertiary"
-               data-color-label="{{_('Navbar')}}"
-               aria-label="{{_('Click to edit Navbar colors')}}">
+               data-color-bg="btn_primary_bg"
+               data-color-text="brand_accent"
+               data-color-label="{{_('Primary Button Background')}}"
+               aria-label="{{_('Click to edit Primary Button Background colors')}}">
             <span class="preview-navbar-brand">AoT</span>
             <div class="preview-navbar-dots">
               <div class="preview-navbar-dot"></div>
@@ -86,41 +88,47 @@
 
           <div class="preview-body">
 
-            <!-- Status buttons -->
+            <!-- Status buttons
+                 data-color-text 는 이 요소가 실제로 렌더에 쓰는 토큰이어야 한다.
+                 상태 버튼 글자색은 앱과 동일하게 text_color_tertiary(밝은 버튼인
+                 Hold 만 text_color_primary)다. 예전에는 bd_btn_* 를 문자색으로
+                 걸어놨는데 bd_btn_primary/secondary 는 실제로는 기본/보조 버튼의
+                 '배경색'(--aot-btn-bg-primary/secondary)이라 팝오버 편집이
+                 미리보기에 반영되지 않고 저장 시 엉뚱한 곳 색이 바뀌었다. -->
             <div class="preview-btn-row">
               <button type="button" class="preview-btn preview-btn-on"
                       data-color-bg="bg_btn_on"
-                      data-color-text="bd_btn_primary"
+                      data-color-text="text_color_tertiary"
                       data-color-border="bd_btn_border"
                       data-color-label="{{_('Button On')}}"
                       aria-label="{{_('Click to edit Button On colors')}}">{{_('On')}}</button>
               <button type="button" class="preview-btn preview-btn-off"
                       data-color-bg="bg_btn_off"
-                      data-color-text="bd_btn_secondary"
+                      data-color-text="text_color_tertiary"
                       data-color-border="bd_btn_border"
                       data-color-label="{{_('Button Off')}}"
                       aria-label="{{_('Click to edit Button Off colors')}}">{{_('Off')}}</button>
               <button type="button" class="preview-btn preview-btn-active"
-                      data-color-bg="bg_btn_active"
-                      data-color-text="bd_btn_primary"
+                      data-color-bg="btn_primary_bg"
+                      data-color-text="text_color_tertiary"
                       data-color-border="bd_btn_border"
-                      data-color-label="{{_('Button Active')}}"
-                      aria-label="{{_('Click to edit Button Active colors')}}">{{_('Active')}}</button>
+                      data-color-label="{{_('Primary Button Background')}}"
+                      aria-label="{{_('Click to edit Primary Button Background colors')}}">{{_('Active')}}</button>
               <button type="button" class="preview-btn preview-btn-inactive"
-                      data-color-bg="bg_btn_inactive"
-                      data-color-text="bd_btn_secondary"
+                      data-color-bg="btn_secondary_bg"
+                      data-color-text="text_color_tertiary"
                       data-color-border="bd_btn_border"
-                      data-color-label="{{_('Button Inactive')}}"
-                      aria-label="{{_('Click to edit Button Inactive colors')}}">{{_('Inactive')}}</button>
+                      data-color-label="{{_('Secondary Button Background')}}"
+                      aria-label="{{_('Click to edit Secondary Button Background colors')}}">{{_('Inactive')}}</button>
               <button type="button" class="preview-btn preview-btn-pause"
                       data-color-bg="bg_btn_pause"
-                      data-color-text="bd_btn_secondary"
+                      data-color-text="text_color_tertiary"
                       data-color-border="bd_btn_border"
                       data-color-label="{{_('Button Pause')}}"
                       aria-label="{{_('Click to edit Button Pause colors')}}">{{_('Pause')}}</button>
               <button type="button" class="preview-btn preview-btn-hold"
                       data-color-bg="bg_btn_hold"
-                      data-color-text="bd_btn_tertiary"
+                      data-color-text="text_color_primary"
                       data-color-border="bd_btn_border"
                       data-color-label="{{_('Button Hold')}}"
                       aria-label="{{_('Click to edit Button Hold colors')}}">{{_('Hold')}}</button>
@@ -132,6 +140,7 @@
                    role="button" tabindex="0"
                    data-color-bg="bd_primary"
                    data-color-text="text_color_primary"
+                   data-color-text-2="text_color_secondary"
                    data-color-label="{{_('Card Primary')}}"
                    aria-label="{{_('Click to edit Card Primary colors')}}">
                 <div class="preview-card-title">{{_('Primary Card')}}</div>
@@ -140,7 +149,8 @@
               <div class="preview-card preview-card-secondary"
                    role="button" tabindex="0"
                    data-color-bg="bd_secondary"
-                   data-color-text="text_color_secondary"
+                   data-color-text="text_color_primary"
+                   data-color-text-2="text_color_secondary"
                    data-color-label="{{_('Card Secondary')}}"
                    aria-label="{{_('Click to edit Card Secondary colors')}}">
                 <div class="preview-card-title">{{_('Secondary Card')}}</div>
@@ -164,7 +174,7 @@
                     aria-label="{{_('Click to edit MCP Badge colors')}}">MCP</span>
               <span class="preview-badge preview-badge-upgrade"
                     role="button" tabindex="0"
-                    data-color-bg="bg_upgrade"
+                    data-color-bg="badge_upgrade"
                     data-color-text="text_color_tertiary"
                     data-color-label="{{_('Upgrade Badge')}}"
                     aria-label="{{_('Click to edit Upgrade Badge colors')}}">{{_('Upgrade')}}</span>
@@ -183,13 +193,16 @@
       <div class="aot-settings-group-title" id="group-brand">{{_('Brand Colors')}}</div>
       <div class="aot-settings-section">
         {% set brand_fields = [
-          ('brand_primary',   _('Brand Primary'),   'brand_primary'),
-          ('brand_secondary', _('Brand Secondary'), 'brand_secondary'),
-          ('brand_accent',    _('Brand Accent'),    'brand_accent')
+          ('brand_primary',   _('Brand Primary'),   _('AI action buttons, accent icons, Gantt chart headers')),
+          ('brand_secondary', _('Brand Secondary'), _('Drag handles, hint icons — secondary brand tone')),
+          ('brand_accent',    _('Brand Accent'),    _('Light brand background (AI chat bubbles) and the tertiary button background'))
         ] %}
-        {% for field_name, label, css_key in brand_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+        {% for field_name, label, desc in brand_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
           <div class="aot-color-control">
             <input type="text"
                    class="aot-color-hex"
@@ -216,13 +229,16 @@
       <div class="aot-settings-group-title" id="group-text">{{_('Text Colors')}}</div>
       <div class="aot-settings-section">
         {% set text_fields = [
-          ('text_color_primary',   _('Text Primary'),   'text_color_primary'),
-          ('text_color_secondary', _('Text Secondary'), 'text_color_secondary'),
-          ('text_color_tertiary',  _('Text Tertiary'),  'text_color_tertiary')
+          ('text_color_primary',   _('Text Primary'),   _('Titles and body text')),
+          ('text_color_secondary', _('Text Secondary'), _('Descriptions, units, subdued labels')),
+          ('text_color_tertiary',  _('Text Tertiary'),  _('Light text inside filled buttons and badges'))
         ] %}
-        {% for field_name, label, css_key in text_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+        {% for field_name, label, desc in text_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
           <div class="aot-color-control">
             <input type="text"
                    class="aot-color-hex"
@@ -245,20 +261,19 @@
         {% endfor %}
       </div>
 
-      <!-- Group: Background Colors -->
+      <!-- Group: Background Colors (page surfaces — cards, list rows) -->
       <div class="aot-settings-group-title" id="group-background">{{_('Background Colors')}}</div>
       <div class="aot-settings-section">
         {% set bg_fields = [
-          ('bd_primary',   _('Background Primary'),   'bd_primary'),
-          ('bd_secondary', _('Background Secondary'), 'bd_secondary'),
-          ('bd_tertiary',  _('Background Tertiary'),  'bd_tertiary'),
-          ('bg_upgrade',   _('Upgrade Background'),   'bg_upgrade'),
-          ('bg_active',    _('Active State'),         'bg_active'),
-          ('bg_inactive',  _('Inactive State'),       'bg_inactive')
+          ('bd_primary',   _('Background Primary'),   _('Input/output/function list rows, cards')),
+          ('bd_secondary', _('Background Secondary'), _('List header row background'))
         ] %}
-        {% for field_name, label, css_key in bg_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+        {% for field_name, label, desc in bg_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
           <div class="aot-color-control">
             <input type="text"
                    class="aot-color-hex"
@@ -281,16 +296,20 @@
         {% endfor %}
       </div>
 
-      <!-- Group: Badge Colors -->
-      <div class="aot-settings-group-title" id="group-badge">{{_('Badge Colors')}}</div>
+      <!-- Group: State Colors (row background by device/task state — distinct from
+           the Button group below, which colors the button itself, not the row) -->
+      <div class="aot-settings-group-title" id="group-state">{{_('State Colors')}}</div>
       <div class="aot-settings-section">
-        {% set badge_fields = [
-          ('bg_llm', _('LLM Badge'), 'bg_llm'),
-          ('bg_mcp', _('MCP Badge'), 'bg_mcp')
+        {% set state_fields = [
+          ('bg_active',   _('Active State'),   _('Row background when a device/output is on')),
+          ('bg_inactive', _('Inactive State'), _('Row background when off, PID container background'))
         ] %}
-        {% for field_name, label, css_key in badge_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+        {% for field_name, label, desc in state_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
           <div class="aot-color-control">
             <input type="text"
                    class="aot-color-hex"
@@ -313,25 +332,66 @@
         {% endfor %}
       </div>
 
-      <!-- Group: Button Colors -->
+      <!-- Group: Button Colors
+           2026-07 통합: btn_primary_bg 는 bd_tertiary+bd_btn_primary+bg_btn_active,
+           btn_secondary_bg 는 bd_btn_secondary+bg_btn_inactive 를 흡수했다
+           (color-system.md §3-2). ON/OFF 는 장치 상태 표시라 값이 갈릴 수 있어
+           별도 필드로 남겼다. -->
       <div class="aot-settings-group-title" id="group-buttons">{{_('Button Colors')}}</div>
       <div class="aot-settings-section">
         {% set btn_fields = [
-          ('bd_btn_primary',   _('Button Primary'),          'bd_btn_primary'),
-          ('bd_btn_secondary', _('Button Secondary'),        'bd_btn_secondary'),
-          ('bd_btn_tertiary',  _('Button Tertiary'),         'bd_btn_tertiary'),
-          ('bg_btn_upgrade',   _('Button Upgrade'),          'bg_btn_upgrade'),
-          ('bg_btn_on',        _('Button On'),               'bg_btn_on'),
-          ('bg_btn_off',       _('Button Off'),              'bg_btn_off'),
-          ('bg_btn_active',    _('Button Active'),           'bg_btn_active'),
-          ('bg_btn_inactive',  _('Button Inactive'),         'bg_btn_inactive'),
-          ('bg_btn_pause',     _('Button Pause'),            'bg_btn_pause'),
-          ('bg_btn_hold',      _('Button Hold'),             'bg_btn_hold'),
-          ('bd_btn_border',    _('Button Border'),           'bd_btn_border')
+          ('btn_primary_bg',   _('Primary Button Background'),   _('Save, activate, tab — filled primary buttons app-wide')),
+          ('btn_secondary_bg', _('Secondary Button Background'), _('Cancel, deactivate — secondary buttons')),
+          ('bg_btn_on',        _('Button On'),                   _('Output row ON button')),
+          ('bg_btn_off',       _('Button Off'),                  _('Output row OFF button')),
+          ('bg_btn_pause',     _('Button Pause'),                _('PID controller pause button')),
+          ('bg_btn_hold',      _('Button Hold'),                 _('PID controller hold button')),
+          ('bd_btn_border',    _('Button Border'),               _('Border for all buttons and list rows'))
         ] %}
-        {% for field_name, label, css_key in btn_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
-          <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+        {% for field_name, label, desc in btn_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
+          <div class="aot-color-control">
+            <input type="text"
+                   class="aot-color-hex"
+                   id="hex_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{(form_settings_custom_ui[field_name].data or '#000000') | upper}}"
+                   maxlength="7"
+                   pattern="#[0-9A-Fa-f]{6}"
+                   aria-label="{{label}} {{_('hex value')}}"
+                   spellcheck="false">
+            <input type="color"
+                   class="aot-color-swatch"
+                   id="swatch_{{field_name}}"
+                   data-field="{{field_name}}"
+                   value="{{form_settings_custom_ui[field_name].data or '#000000'}}"
+                   aria-label="{{label}} {{_('color picker')}}">
+          </div>
+          {{form_settings_custom_ui[field_name](type='hidden', id=field_name, class='aot-theme-hidden-input')}}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Group: Badge Colors
+           2026-07 통합: badge_upgrade 는 bg_upgrade(nav 배지)+bg_btn_upgrade(버튼)
+           를 흡수했다 (color-system.md §3-2). -->
+      <div class="aot-settings-group-title" id="group-badge">{{_('Badge Colors')}}</div>
+      <div class="aot-settings-section">
+        {% set badge_fields = [
+          ('badge_upgrade', _('Upgrade Badge'), _('Nav upgrade badge and upgrade button background')),
+          ('bg_llm',        _('LLM Badge'),     _('AI model (LLM) badge background')),
+          ('bg_mcp',        _('MCP Badge'),     _('MCP tool badge background'))
+        ] %}
+        {% for field_name, label, desc in badge_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
+          <div class="aot-color-row-text">
+            <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
+            <div class="aot-color-desc">{{desc}}</div>
+          </div>
           <div class="aot-color-control">
             <input type="text"
                    class="aot-color-hex"
@@ -356,16 +416,17 @@
 
       <!-- Group: Measurement Band Colors (--aot-band-1..5, 게이지/센서 라벨) -->
       <div class="aot-settings-group-title" id="group-band">{{_('Measurement Band Colors')}}</div>
+      <p class="aot-modal-body-text">{{_('Gauge widget bands and sensor label thresholds')}}</p>
       <div class="aot-settings-section">
         {% set band_fields = [
-          ('band_1', _('Band 1 (Very Low)'),  'band_1'),
-          ('band_2', _('Band 2 (Low)'),       'band_2'),
-          ('band_3', _('Band 3 (Optimal)'),   'band_3'),
-          ('band_4', _('Band 4 (High)'),      'band_4'),
-          ('band_5', _('Band 5 (Very High)'), 'band_5')
+          ('band_1', _('Band 1 (Very Low)')),
+          ('band_2', _('Band 2 (Low)')),
+          ('band_3', _('Band 3 (Optimal)')),
+          ('band_4', _('Band 4 (High)')),
+          ('band_5', _('Band 5 (Very High)'))
         ] %}
-        {% for field_name, label, css_key in band_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
+        {% for field_name, label in band_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
           <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
           <div class="aot-color-control">
             <input type="text"
@@ -391,17 +452,18 @@
 
       <!-- Group: Chart Series Colors (--aot-chart-1..6, 그래프/PID 시리즈) -->
       <div class="aot-settings-group-title" id="group-chart">{{_('Chart Series Colors')}}</div>
+      <p class="aot-modal-body-text">{{_('Default series colors for graph, PID, and calendar widgets')}}</p>
       <div class="aot-settings-section">
         {% set chart_fields = [
-          ('chart_1', _('Chart Series 1'), 'chart_1'),
-          ('chart_2', _('Chart Series 2'), 'chart_2'),
-          ('chart_3', _('Chart Series 3'), 'chart_3'),
-          ('chart_4', _('Chart Series 4'), 'chart_4'),
-          ('chart_5', _('Chart Series 5'), 'chart_5'),
-          ('chart_6', _('Chart Series 6'), 'chart_6')
+          ('chart_1', _('Chart Series 1')),
+          ('chart_2', _('Chart Series 2')),
+          ('chart_3', _('Chart Series 3')),
+          ('chart_4', _('Chart Series 4')),
+          ('chart_5', _('Chart Series 5')),
+          ('chart_6', _('Chart Series 6'))
         ] %}
-        {% for field_name, label, css_key in chart_fields %}
-        <div class="aot-color-row" data-css-key="{{css_key}}">
+        {% for field_name, label in chart_fields %}
+        <div class="aot-color-row" data-css-key="{{field_name}}">
           <label class="aot-color-label" for="swatch_{{field_name}}">{{label}}</label>
           <div class="aot-color-control">
             <input type="text"
@@ -579,56 +641,51 @@
       aot_default: Object.assign({
         brand_primary: '#13261B', brand_secondary: '#5E6B64', brand_accent: '#F3F6F5',
         text_color_primary: '#13261B', text_color_secondary: '#5E6B64', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5', bd_tertiary: '#13261B',
-        bg_upgrade: '#13261B', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5',
+        bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5',
+        badge_upgrade: '#13261B', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5',
         bg_llm: '#6277C7', bg_mcp: '#64C762',
-        bd_btn_primary: '#13261B', bd_btn_secondary: '#5E6B64', bd_btn_tertiary: '#F3F6F5',
-        bg_btn_upgrade: '#13261B', bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
-        bg_btn_active: '#13261B', bg_btn_inactive: '#5E6B64',
+        btn_primary_bg: '#13261B', btn_secondary_bg: '#5E6B64',
+        bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
         bg_btn_pause: '#989E9E', bg_btn_hold: '#D1D5D5', bd_btn_border: '#B6BABA'
       }, BAND_CHART_DEFAULTS),
       ocean_blue: Object.assign({
         brand_primary: '#0A2342', brand_secondary: '#2C5F8A', brand_accent: '#E8F4FD',
         text_color_primary: '#0A2342', text_color_secondary: '#2C5F8A', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD', bd_tertiary: '#0A2342',
-        bg_upgrade: '#0A2342', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD',
+        bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD',
+        badge_upgrade: '#0A2342', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD',
         bg_llm: '#4A90D9', bg_mcp: '#42A85A',
-        bd_btn_primary: '#0A2342', bd_btn_secondary: '#2C5F8A', bd_btn_tertiary: '#E8F4FD',
-        bg_btn_upgrade: '#0A2342', bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
-        bg_btn_active: '#0A2342', bg_btn_inactive: '#2C5F8A',
+        btn_primary_bg: '#0A2342', btn_secondary_bg: '#2C5F8A',
+        bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
         bg_btn_pause: '#7BA7BC', bg_btn_hold: '#BDD7EE', bd_btn_border: '#A8C8E0'
       }, BAND_CHART_DEFAULTS),
       warm_sunset: Object.assign({
         brand_primary: '#6B2737', brand_secondary: '#C0614D', brand_accent: '#FDF0EC',
         text_color_primary: '#6B2737', text_color_secondary: '#C0614D', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC', bd_tertiary: '#6B2737',
-        bg_upgrade: '#6B2737', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC',
+        bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC',
+        badge_upgrade: '#6B2737', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC',
         bg_llm: '#9B59B6', bg_mcp: '#27AE60',
-        bd_btn_primary: '#6B2737', bd_btn_secondary: '#C0614D', bd_btn_tertiary: '#FDF0EC',
-        bg_btn_upgrade: '#6B2737', bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
-        bg_btn_active: '#6B2737', bg_btn_inactive: '#C0614D',
+        btn_primary_bg: '#6B2737', btn_secondary_bg: '#C0614D',
+        bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
         bg_btn_pause: '#D4A0A0', bg_btn_hold: '#F5C6BC', bd_btn_border: '#E8B4A8'
       }, BAND_CHART_DEFAULTS),
       minimal_gray: Object.assign({
         brand_primary: '#2D2D2D', brand_secondary: '#6B6B6B', brand_accent: '#F5F5F5',
         text_color_primary: '#2D2D2D', text_color_secondary: '#6B6B6B', text_color_tertiary: '#FFFFFF',
-        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5', bd_tertiary: '#2D2D2D',
-        bg_upgrade: '#2D2D2D', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5',
+        bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5',
+        badge_upgrade: '#2D2D2D', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5',
         bg_llm: '#5B7FA6', bg_mcp: '#4A9E5C',
-        bd_btn_primary: '#2D2D2D', bd_btn_secondary: '#6B6B6B', bd_btn_tertiary: '#F5F5F5',
-        bg_btn_upgrade: '#2D2D2D', bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
-        bg_btn_active: '#2D2D2D', bg_btn_inactive: '#6B6B6B',
+        btn_primary_bg: '#2D2D2D', btn_secondary_bg: '#6B6B6B',
+        bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
         bg_btn_pause: '#9B9B9B', bg_btn_hold: '#D0D0D0', bd_btn_border: '#B8B8B8'
       }, BAND_CHART_DEFAULTS),
       night_mode: Object.assign({
         brand_primary: '#BB86FC', brand_secondary: '#03DAC6', brand_accent: '#1E1E1E',
         text_color_primary: '#E1E1E1', text_color_secondary: '#B0B0B0', text_color_tertiary: '#121212',
-        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C', bd_tertiary: '#BB86FC',
-        bg_upgrade: '#BB86FC', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C',
+        bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C',
+        badge_upgrade: '#BB86FC', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C',
         bg_llm: '#7C5CBF', bg_mcp: '#00A896',
-        bd_btn_primary: '#BB86FC', bd_btn_secondary: '#03DAC6', bd_btn_tertiary: '#1E1E1E',
-        bg_btn_upgrade: '#BB86FC', bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
-        bg_btn_active: '#BB86FC', bg_btn_inactive: '#03DAC6',
+        btn_primary_bg: '#BB86FC', btn_secondary_bg: '#03DAC6',
+        bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
         bg_btn_pause: '#6B6B6B', bg_btn_hold: '#3C3C3C', bd_btn_border: '#4C4C4C'
       }, BAND_CHART_DEFAULTS)
     };
@@ -644,20 +701,15 @@
       text_color_tertiary:  'text-color-tertiary',
       bd_primary:           'bd-primary',
       bd_secondary:         'bd-secondary',
-      bd_tertiary:          'bd-tertiary',
-      bg_upgrade:           'bg-upgrade',
+      badge_upgrade:        'badge-upgrade',
       bg_active:            'bg-active',
       bg_inactive:          'bg-inactive',
       bg_llm:               'bg-llm',
       bg_mcp:               'bg-mcp',
-      bd_btn_primary:       'bd-btn-primary',
-      bd_btn_secondary:     'bd-btn-secondary',
-      bd_btn_tertiary:      'bd-btn-tertiary',
-      bg_btn_upgrade:       'bg-btn-upgrade',
+      btn_primary_bg:       'btn-primary-bg',
+      btn_secondary_bg:     'btn-secondary-bg',
       bg_btn_on:            'bg-btn-on',
       bg_btn_off:           'bg-btn-off',
-      bg_btn_active:        'bg-btn-active',
-      bg_btn_inactive:      'bg-btn-inactive',
       bg_btn_pause:         'bg-btn-pause',
       bg_btn_hold:          'bg-btn-hold',
       bd_btn_border:        'bd-btn-border'
@@ -881,13 +933,6 @@
     // INLINE COLOR POPOVER
     // ============================================================
 
-    // Common preset swatches offered in the popover (color-blind safe palette)
-    var POPOVER_PRESETS = [
-      '#13261B', '#5E6B64', '#FFFFFF', '#F3F6F5',
-      '#6277C7', '#64C762', '#E85D04', '#F2D524',
-      '#0A2342', '#6B2737', '#2D2D2D', '#121212'
-    ];
-
     var activePopover = null;   // currently open popover DOM node
     var activeAnchor  = null;   // element that triggered the popover
 
@@ -951,14 +996,21 @@
 
       var label = anchorEl.getAttribute('data-color-label') || '{{_('Color')}}';
 
-      // Collect defined color slots
+      // Collect defined color slots (중복 필드는 한 번만 — 같은 토큰을 두 줄로
+      // 보여주면 한쪽만 바뀐 것처럼 보인다)
       var slots = [];
-      var bgVar     = anchorEl.getAttribute('data-color-bg');
-      var textVar   = anchorEl.getAttribute('data-color-text');
-      var borderVar = anchorEl.getAttribute('data-color-border');
-      if (bgVar)     slots.push({ key: bgVar,     label: '배경색' });
-      if (textVar)   slots.push({ key: textVar,   label: '문자색' });
-      if (borderVar) slots.push({ key: borderVar, label: '테두리색' });
+      var seenKeys = {};
+      [
+        ['data-color-bg',     '{{_('Background Color')}}'],
+        ['data-color-text',   '{{_('Text Color')}}'],
+        ['data-color-text-2', '{{_('Subtext Color')}}'],
+        ['data-color-border', '{{_('Border Color')}}']
+      ].forEach(function (pair) {
+        var key = anchorEl.getAttribute(pair[0]);
+        if (!key || seenKeys[key]) return;
+        seenKeys[key] = true;
+        slots.push({ key: key, label: pair[1] });
+      });
       if (slots.length === 0) return;
 
       // --- Build popover DOM ---
@@ -1058,7 +1110,7 @@
       positionPopover(pop, anchorEl);
 
       // Focus native input for immediate keyboard use
-      nativeInput.focus();
+      if (firstNativeInput) firstNativeInput.focus();
     }
 
     /**
@@ -1079,7 +1131,7 @@
     // CANVAS CLICK — open popover
     // ============================================================
     function handleCanvasClick(e) {
-      var target = e.target.closest('[data-color-bg],[data-color-text],[data-color-border]');
+      var target = e.target.closest('[data-color-bg],[data-color-text],[data-color-text-2],[data-color-border]');
       if (!target) return;
       e.stopPropagation();
       openPopover(target);

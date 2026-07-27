@@ -136,7 +136,34 @@ class AISummaryService:
 
         devices = query.all()
         data['metrics']['total_devices'] = len(devices)
+        # NOTE: is_activated is the USER'S on/off intent, not reachability. A
+        # device the operator switched off during maintenance is "not activated"
+        # but perfectly healthy. This metric was previously consumed as if it
+        # meant "offline" (ai_anomaly_detector), which raised connectivity
+        # alarms whenever someone simply disabled a few devices.
         data['metrics']['active_devices'] = len([d for d in devices if d.is_activated])
+
+        # Real communication state, from the daemon's comm_* contract
+        # (io_link_health_infra_plan.md). Only devices that can actually observe
+        # their own link are counted: a fire-and-forget output is not "online"
+        # or "offline", it is unverifiable, and including it either way would
+        # distort the ratio the anomaly detector thresholds on.
+        comm_capable_count = 0
+        comm_offline_count = 0
+        try:
+            from aot.aot_client import DaemonControl
+            live = DaemonControl().input_status_all()  # {} if the daemon is down
+            for d in devices:
+                status = live.get(d.unique_id)
+                if not status or not status.get('comm_capable'):
+                    continue
+                comm_capable_count += 1
+                if status.get('comm_is_fault'):
+                    comm_offline_count += 1
+        except Exception as e:
+            logger.warning(f"[SummaryService] Could not read device comm status: {e}")
+        data['metrics']['comm_capable_devices'] = comm_capable_count
+        data['metrics']['comm_offline_devices'] = comm_offline_count
 
         # 2. Gather measurements for these devices
         device_ids_list = [d.unique_id for d in devices]

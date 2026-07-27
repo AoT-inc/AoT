@@ -267,9 +267,22 @@
 
     // Layout order: title → chart → measurement legend (chart + legend shared
     // with the map input-device popup via _detailBodyHtml).
+    // comm_fault (set by the caller from /inputstate — see
+    // io_link_health_infra_plan.md) highlights the name label itself with the
+    // shared global warning tint — same treatment as the Input/Output/Function
+    // list-page cards (window.AoTOutputState.paintNameWarning). Inline style
+    // with !important, not a CSS class: a class-based version of this exact
+    // highlight silently lost a specificity/!important tie against this
+    // page's own name-label rules on some pages — see paintNameWarning()'s
+    // comment in aot-output-state.js for the full story.
+    var titleStyle = sensor.comm_fault
+      ? ' style="background-color:var(--aot-tint-warning-bg) !important;color:var(--aot-tint-warning-fg) !important;"'
+      : '';
+    var titleAttr = sensor.comm_fault ? ' title="' + _escape(_t('No Response')) + '"' : '';
+
     _popupEl.innerHTML =
       '<div class="aot-sensor-popup-header">' +
-        '<span class="aot-sensor-popup-title">' + _escape(sensor.name || sensor.fitting_id) + '</span>' +
+        '<span class="aot-sensor-popup-title"' + titleStyle + titleAttr + '>' + _escape(sensor.name || sensor.fitting_id) + '</span>' +
         '<button class="aot-sensor-popup-close" type="button" aria-label="close">&#x2715;</button>' +
       '</div>' + _detailBodyHtml(sensor, opts) + _noteSectionHtml(opts.note);
 

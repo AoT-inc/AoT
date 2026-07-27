@@ -7128,10 +7128,23 @@
                 setLngLat: function() { return this; },
                 addTo: function() {
                     if (window.AoTSensorLabel && window.AoTSensorLabel.openPopup) {
-                        window.AoTSensorLabel.openPopup(sensorObj, {
-                            modal: true,
-                            note: { targetId: uniqueKey, targetType: 'device', name: displayName }
-                        });
+                        // Communication status (io_link_health_infra_plan.md) — /inputstate
+                        // returns every Input in one bulk call (same 3s-cached endpoint the
+                        // Input list page polls), so a single marker click just reads its
+                        // own key out rather than adding a per-device RPC. Mirrors the
+                        // Output popup's fetch('/outputstate_unique_id/...') pattern above,
+                        // just against the bulk Input endpoint since there is no per-device one.
+                        fetch('/inputstate')
+                            .then(function(r) { return r.ok ? r.json() : {}; })
+                            .catch(function() { return {}; })
+                            .then(function(states) {
+                                var st = (states && states[uniqueKey]) || {};
+                                sensorObj.comm_fault = !!st.comm_fault;
+                                window.AoTSensorLabel.openPopup(sensorObj, {
+                                    modal: true,
+                                    note: { targetId: uniqueKey, targetType: 'device', name: displayName }
+                                });
+                            });
                     }
                     return this;
                 },

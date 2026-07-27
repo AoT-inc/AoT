@@ -159,10 +159,10 @@ WIDGET_HEAD_HTML_VECTOR = """
 <script src="/static/js/widgets/AoT_map/aot-map-label-layers.js?v=1"></script>
 
 <!-- Shared output-state classifier (pending/fault/on/off consistency) -->
-<script src="/static/js/common/aot-output-state.js?v=1"></script>
+<script src="/static/js/common/aot-output-state.js?v=6"></script>
 
 <!-- Pure MapLibre Widget (no Leaflet dependency) -->
-<script src="/static/js/widgets/AoT_map/aot-map-widget-vector.js?v=20260722a"></script>
+<script src="/static/js/widgets/AoT_map/aot-map-widget-vector.js?v=20260726a"></script>
 
 <!-- Vector Map Styles -->
 <style>
@@ -206,10 +206,10 @@ WIDGET_HEAD_HTML_RASTER = """
 <!-- Actuator/device control-list ordering (natural sort + drag reorder, shared) -->
 <script src="/static/js/widgets/AoT_facility/aot-actuator-order.js?v=3"></script>
 <!-- Shared output-state classifier (pending/fault/on/off consistency) -->
-<script src="/static/js/common/aot-output-state.js?v=1"></script>
+<script src="/static/js/common/aot-output-state.js?v=6"></script>
 <!-- Shared popup utilities (input/output/note HTML builders + dot positioning) -->
 <script src="/static/js/widgets/AoT_map/aot-map-popup.js?v=21"></script>
-<script src="/static/js/widgets/AoT_map/aot-map-widget-v3.js?v=9.3.26"></script>
+<script src="/static/js/widgets/AoT_map/aot-map-widget-v3.js?v=9.3.29"></script>
 <script src="/static/js/geo/aot-map-config.js?v=9.2.7"></script>
 
 <style>
@@ -313,7 +313,7 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
 <!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
 <script src="/static/js/common/aot-chart-core.js"></script>
-<script src="/static/js/common/sensor-label.js?v=24"></script>
+<script src="/static/js/common/sensor-label.js?v=27"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=15"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=30">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css">

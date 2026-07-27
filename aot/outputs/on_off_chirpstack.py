@@ -425,6 +425,23 @@ class OutputModule(AbstractOutput):
             pass
         return None
 
+    def _my_board_ch(self):
+        """The (board, ch) this output controls on a RAK3172-C-E relay
+        controller, parsed from the ON payload's 4-byte format
+        [board, ch, cmd, dur_sec]. One DevEUI can drive up to 64 relay
+        channels across 4 boards; each channel is a separate output. Used to
+        filter inbound 0xC0 relay-status uplinks so one channel's frame never
+        flips a sibling channel's state. Returns (None, None) if the payload
+        isn't in this 4-byte board/channel format.
+        """
+        try:
+            b = self._payload_bytes('on') or self._payload_bytes('off')
+            if b and len(b) >= 4:
+                return b[0] & 0xFF, b[1] & 0xFF
+        except Exception:
+            pass
+        return None, None
+
     def _opt(self, key, default=None):
         """Resolve option from multiple known containers, preferring non-empty values.
         Order: direct attribute -> self.options -> options_custom -> custom_options -> output.custom_options_json -> output.custom_options
@@ -710,6 +727,29 @@ class OutputModule(AbstractOutput):
                 elif st == 2:  # close_done
                     self.confirm_command(ch, False, 'status')
                     self._log_info(f"[AoT] device confirmed CLOSE (status, vid={frame_vid})")
+                return
+
+            # 1.55) Relay status on FPORT_STATUS (RAK3172-C-E board/relay
+            # controller, e.g. a pump output): [0xC0, board, state_hi, state_lo,
+            # ack_hi, ack_lo] (6 bytes). `state` is the full 16-bit ON/OFF
+            # bitmask of every channel on that board; `ack` is a bitmask of the
+            # channel(s) this particular update pertains to (just touched by a
+            # command or an expired pulse timer) -- distinct from the 3-byte
+            # [0xB0, vid, state] valve-controller status frame handled above.
+            if f_port == FPORT_STATUS and len(b) >= 6 and b[0] == 0xC0:
+                frame_board = b[1] & 0xFF
+                my_board, my_ch = self._my_board_ch()
+                if my_board is None or my_ch is None or frame_board != my_board:
+                    return  # belongs to a different board/output
+                ack = ((b[4] & 0xFF) << 8) | (b[5] & 0xFF)
+                if not (ack & (1 << my_ch)):
+                    return  # this update doesn't concern my channel
+                state = ((b[2] & 0xFF) << 8) | (b[3] & 0xFF)
+                is_on = bool(state & (1 << my_ch))
+                self.confirm_command(0, is_on, 'relay_status')
+                self._log_info(
+                    f"[AoT] device confirmed {'ON' if is_on else 'OFF'} "
+                    f"(relay_status, board={frame_board} ch={my_ch})")
                 return
 
             # 1.6) Control ACK on FPORT_CTRL_ACK: [0xA0, vid, cmd, sec, ok]

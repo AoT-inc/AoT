@@ -42,21 +42,57 @@ except Exception as e:
 # settings/custom_ui 색상 필드 단일 목록 (Single Source of Truth)
 # 폼 정의(SettingsCustomUI)·저장(utils_settings.settings_custom_ui_mod)·
 # 프리셋 API(routes_settings.settings_custom_ui_presets)가 공유한다.
+#
+# 2026-07 필드 통합 (color-system.md §3-2): 이름은 다르지만 실제로는 같은
+# 요소(주/보조 버튼 배경)를 가리키던 필드들을 통합했다. bg_btn_on/off 는
+# 장치 ON/OFF 상태 표시라 값이 다른 게 자연스러워 통합하지 않고 남겼다.
 THEME_COLOR_FIELDS = [
     'brand_primary', 'brand_secondary', 'brand_accent',
     'text_color_primary', 'text_color_secondary', 'text_color_tertiary',
-    'bd_primary', 'bd_secondary', 'bd_tertiary',
-    'bg_upgrade', 'bg_active', 'bg_inactive',
-    'bg_llm', 'bg_mcp',
-    'bd_btn_primary', 'bd_btn_secondary', 'bd_btn_tertiary',
-    'bg_btn_upgrade', 'bg_btn_on', 'bg_btn_off',
-    'bg_btn_active', 'bg_btn_inactive', 'bg_btn_pause',
-    'bg_btn_hold', 'bd_btn_border',
+    'bd_primary', 'bd_secondary',
+    'bg_active', 'bg_inactive',
+    'bg_llm', 'bg_mcp', 'badge_upgrade',
+    'btn_primary_bg', 'btn_secondary_bg',
+    'bg_btn_on', 'bg_btn_off',
+    'bg_btn_pause', 'bg_btn_hold', 'bd_btn_border',
     # 측정 밴드 5색 (--aot-band-1..5) — 게이지/센서 라벨 등
     'band_1', 'band_2', 'band_3', 'band_4', 'band_5',
     # 차트 시리즈 앞 6색 (GRAPH_SERIES_PALETTE 라이트/다크 공통 구간)
     'chart_1', 'chart_2', 'chart_3', 'chart_4', 'chart_5', 'chart_6'
 ]
+
+# 구 필드명 -> 신규 통합 필드명 (우선순위 순, 먼저 존재하는 값을 채택).
+# 구 필드는 전부 새 필드로 흡수되거나(bd_btn_tertiary -> brand_accent 는 값이
+# 이미 같아 흡수만 하고 대응 신규 필드 없음) 폐기된다.
+LEGACY_THEME_FIELD_MAP = {
+    'btn_primary_bg': ['bd_btn_primary', 'bd_tertiary', 'bg_btn_active'],
+    'btn_secondary_bg': ['bd_btn_secondary', 'bg_btn_inactive'],
+    'badge_upgrade': ['bg_upgrade', 'bg_btn_upgrade'],
+}
+LEGACY_THEME_FIELDS_DROP = {
+    'bd_tertiary', 'bd_btn_primary', 'bg_btn_active',
+    'bd_btn_secondary', 'bg_btn_inactive',
+    'bd_btn_tertiary', 'bg_upgrade', 'bg_btn_upgrade',
+}
+
+
+def migrate_theme_dict(theme_dict):
+    """구 필드명(bd_tertiary 등, 2026-07 통합 이전)을 신규 필드로 이관하고
+    구 키를 제거한다. 저장된 custom_theme_json·프리셋을 읽는 모든 지점
+    (routes_settings GET, routes_general.custom_css, settings_custom_ui_mod)
+    에서 사용에 앞서 호출할 것 — 매번 계산되는 순수 함수라 DB 기록 없이도
+    호출 시점마다 최신 필드셋으로 보여줄 수 있다."""
+    if not isinstance(theme_dict, dict):
+        return theme_dict
+    for new_field, old_fields in LEGACY_THEME_FIELD_MAP.items():
+        if new_field not in theme_dict:
+            for old in old_fields:
+                if old in theme_dict:
+                    theme_dict[new_field] = theme_dict[old]
+                    break
+    for old in LEGACY_THEME_FIELDS_DROP:
+        theme_dict.pop(old, None)
+    return theme_dict
 
 
 #
@@ -570,20 +606,22 @@ class SettingsCustomUI(FlaskForm):
     text_color_tertiary = StringField(lazy_gettext('Text Color Tertiary'), default=THEME_DEFAULTS.get('text_color_tertiary', '#FFFFFF'), render_kw={"type": "color"})
     bd_primary = StringField(lazy_gettext('BG Primary'), default=THEME_DEFAULTS.get('bd_primary', '#FFFFFF'), render_kw={"type": "color"})
     bd_secondary = StringField(lazy_gettext('BG Secondary'), default=THEME_DEFAULTS.get('bd_secondary', '#F3F6F5'), render_kw={"type": "color"})
-    bd_tertiary = StringField(lazy_gettext('BG Tertiary'), default=THEME_DEFAULTS.get('bd_tertiary', '#13261B'), render_kw={"type": "color"})
-    bg_upgrade = StringField(lazy_gettext('BG Upgrade'), default=THEME_DEFAULTS.get('bg_upgrade', '#13261B'), render_kw={"type": "color"})
     bg_active = StringField(lazy_gettext('BG Active'), default=THEME_DEFAULTS.get('bg_active', '#D1D5D5'), render_kw={"type": "color"})
     bg_inactive = StringField(lazy_gettext('BG Inactive'), default=THEME_DEFAULTS.get('bg_inactive', '#F3F6F5'), render_kw={"type": "color"})
     bg_llm = StringField(lazy_gettext('BG LLM Badge'), default=THEME_DEFAULTS.get('bg_llm', '#6277C7'), render_kw={"type": "color"})
     bg_mcp = StringField(lazy_gettext('BG MCP Badge'), default=THEME_DEFAULTS.get('bg_mcp', '#64C762'), render_kw={"type": "color"})
-    bd_btn_primary = StringField(lazy_gettext('Btn Border Primary'), default=THEME_DEFAULTS.get('bd_btn_primary', '#13261B'), render_kw={"type": "color"})
-    bd_btn_secondary = StringField(lazy_gettext('Btn Border Secondary'), default=THEME_DEFAULTS.get('bd_btn_secondary', '#5E6B64'), render_kw={"type": "color"})
-    bd_btn_tertiary = StringField(lazy_gettext('Btn Border Tertiary'), default=THEME_DEFAULTS.get('bd_btn_tertiary', '#F3F6F5'), render_kw={"type": "color"})
-    bg_btn_upgrade = StringField(lazy_gettext('Btn BG Upgrade'), default=THEME_DEFAULTS.get('bg_btn_upgrade', '#13261B'), render_kw={"type": "color"})
+    # 2026-07 통합: bg_upgrade(nav 배지) + bg_btn_upgrade(버튼) — 둘 다 같은
+    # '업그레이드 알림' 개념이라 하나로. color-system.md §3-2 참조.
+    badge_upgrade = StringField(lazy_gettext('Upgrade Badge'), default=THEME_DEFAULTS.get('badge_upgrade', '#13261B'), render_kw={"type": "color"})
+    # 2026-07 통합: bd_tertiary + bd_btn_primary + bg_btn_active — 전부
+    # '채워진 주 버튼 배경'을 가리키던 별개 필드였다(color-system.md §3-2).
+    btn_primary_bg = StringField(lazy_gettext('Primary Button Background'), default=THEME_DEFAULTS.get('btn_primary_bg', '#13261B'), render_kw={"type": "color"})
+    # 2026-07 통합: bd_btn_secondary + bg_btn_inactive.
+    btn_secondary_bg = StringField(lazy_gettext('Secondary Button Background'), default=THEME_DEFAULTS.get('btn_secondary_bg', '#5E6B64'), render_kw={"type": "color"})
+    # ON/OFF 는 장치 상태 표시라 주/보조 버튼과 값이 달라지는 게 자연스러워
+    # 통합하지 않고 별도 필드로 남겼다.
     bg_btn_on = StringField(lazy_gettext('Btn BG On'), default=THEME_DEFAULTS.get('bg_btn_on', '#13261B'), render_kw={"type": "color"})
     bg_btn_off = StringField(lazy_gettext('Btn BG Off'), default=THEME_DEFAULTS.get('bg_btn_off', '#5E6B64'), render_kw={"type": "color"})
-    bg_btn_active = StringField(lazy_gettext('Btn BG Active'), default=THEME_DEFAULTS.get('bg_btn_active', '#13261B'), render_kw={"type": "color"})
-    bg_btn_inactive = StringField(lazy_gettext('Btn BG Inactive'), default=THEME_DEFAULTS.get('bg_btn_inactive', '#5E6B64'), render_kw={"type": "color"})
     bg_btn_pause = StringField(lazy_gettext('Btn BG Pause'), default=THEME_DEFAULTS.get('bg_btn_pause', '#989E9E'), render_kw={"type": "color"})
     bg_btn_hold = StringField(lazy_gettext('Btn BG Hold'), default=THEME_DEFAULTS.get('bg_btn_hold', '#D1D5D5'), render_kw={"type": "color"})
     bd_btn_border = StringField(lazy_gettext('Btn Border Base'), default=THEME_DEFAULTS.get('bd_btn_border', '#B6BABA'), render_kw={"type": "color"})

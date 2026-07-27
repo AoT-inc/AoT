@@ -114,6 +114,23 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
     # ConfirmableOutputMixin. Synchronous outputs never arm the state machine,
     # so is_pending() stays False and is_fault() stays False for them.
 
+    # comm_capable()/comm_is_pending()/comm_is_fault() are also implemented by
+    # ConfirmableOutputMixin, but AbstractBaseController (listed BEFORE
+    # ConfirmableOutputMixin in this class's bases, see the class line above)
+    # already defines those same names with a safe-default stub. Left alone,
+    # Python's MRO would resolve self.comm_is_fault() to that stub and never
+    # reach the mixin's real implementation — silently defeating the whole
+    # link-health feature. These three explicit shims bypass MRO ambiguity by
+    # calling the mixin's method directly, unconditionally.
+    def comm_capable(self):
+        return ConfirmableOutputMixin.comm_capable(self)
+
+    def comm_is_pending(self, output_channel=0):
+        return ConfirmableOutputMixin.comm_is_pending(self, output_channel)
+
+    def comm_is_fault(self, output_channel=0):
+        return ConfirmableOutputMixin.comm_is_fault(self, output_channel)
+
     def is_setup(self):
         self.logger.error(
             f"{type(self).__name__} did not overwrite the is_setup() method. All "
@@ -829,10 +846,21 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         :rtype: str
         """
         try:
-            if self.is_pending(output_channel):
-                return 'pending'
-            if self.is_fault(output_channel):
+            # comm_is_pending/comm_is_fault (not the bare is_pending/is_fault)
+            # so a shared-link fault (io_link_health_infra_plan.md 2.2 — the
+            # device is unreachable even with no command currently in flight)
+            # reaches this UI-facing state, not just per-command confirmation
+            # timeouts. See aot/outputs/confirmable_output.py comm_is_fault().
+            #
+            # Fault is checked BEFORE pending: a device already known offline
+            # stays reported as offline while a new command is in flight to it,
+            # instead of briefly looking like a healthy device awaiting its ACK.
+            # For a device that is NOT offline, comm_is_fault() is False here, so
+            # an ordinary command still shows the usual 'pending'.
+            if self.comm_is_fault(output_channel):
                 return 'fault'
+            if self.comm_is_pending(output_channel):
+                return 'pending'
         except Exception:
             pass
         state = self.is_on(output_channel)

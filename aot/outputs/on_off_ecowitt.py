@@ -155,6 +155,11 @@ class OutputModule(AbstractOutput):
         self.last_state = None  # cached bool
         self.query_timer = 0
         self.state_query_period = None
+        # Reachability, recorded by _read_status() (the only place that actually
+        # talks to the device on a regular basis). None = never attempted yet,
+        # so a freshly started output is not reported as failed before its first
+        # read. See comm_is_fault() below.
+        self._comm_ok = None
 
         # Populate internal/output option stores; do not assign return (None)
         self.setup_custom_options(OUTPUT_INFORMATION['custom_options'], output)
@@ -330,7 +335,10 @@ class OutputModule(AbstractOutput):
                 self.logger.exception(f"initialize() raised during lazy init: {e}")
         if not self.is_setup():
             self.logger.error(f"Cannot manipulate Output {self.unique_id}: Output not set up.")
-            return 'failure'
+            # (code, msg) tuple, not a bare string: base_output._switch_failed()
+            # only recognises a non-zero tuple code as failure, so 'failure' was
+            # being reported to the UI as a successful switch.
+            return 1, f"Cannot manipulate Output {self.unique_id}: Output not set up."
         try:
             if state == 'on':
                 try:
@@ -358,11 +366,11 @@ class OutputModule(AbstractOutput):
             if ok:
                 return 'success'
             self.logger.warning(f'Failed to set state {state} on channel {output_channel}')
-            return 'failure'
+            return 1, f"Failed to set state {state} on channel {output_channel}"
         except Exception as e:
             msg = f"State change error: {e}"
             self.logger.exception(msg)
-            return 'failure'
+            return 1, msg
 
     def is_on(self, output_channel=0):
         if not self.is_setup():
@@ -387,6 +395,25 @@ class OutputModule(AbstractOutput):
 
     def is_setup(self):
         return self.output_setup
+
+    # ------------------------------------------------------------------ #
+    # Shared communication-status contract (AbstractBaseController.comm_*)
+    #
+    # This driver already re-queried the device (_read_status, called from
+    # is_on) and even retried failed commands, but none of that reached the UI:
+    # a device that had stopped answering kept showing its last cached state.
+    # ------------------------------------------------------------------ #
+    def comm_capable(self):
+        """True: the device is re-queried over HTTP (_read_status)."""
+        return True
+
+    def comm_is_fault(self, output_channel=0):
+        # None = no read attempted yet (this driver initialises lazily), so fall
+        # back to whether setup succeeded rather than claiming a failure we have
+        # not actually observed.
+        if self._comm_ok is None:
+            return not self.output_setup
+        return not self._comm_ok
 
     def stop_output(self):
         """Called when Output is stopped."""
@@ -623,9 +650,12 @@ class OutputModule(AbstractOutput):
         try:
             r = requests.post(url, json=payload, headers=headers, timeout=5)
             if r.status_code != 200:
+                self._comm_ok = False
                 return {}
             j = r.json()
+            self._comm_ok = True
             return (j or {}).get('command', [{}])[0]
         except Exception as e:
             self.logger.error(f'Read status error: {e}')
+            self._comm_ok = False
             return {}

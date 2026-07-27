@@ -29,18 +29,28 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 
 | custom_ui 필드 | 레거시 별칭 | --aot-* 실토큰 |
 |---|---|---|
-| brand_primary/secondary/accent | --brand-* | --aot-color-brand-* |
+| brand_primary/secondary | --brand-* | --aot-color-brand-* |
+| brand_accent | --brand-accent | --aot-color-brand-accent, --bd-btn-tertiary |
 | text_color_primary/secondary/tertiary | --text-color-* | --aot-color-text-* |
-| bd_primary/secondary/tertiary | --bd-* | (없음 — 페이지 배경층 전용) |
-| bg_upgrade / bg_active / bg_inactive | --bg-* | --aot-bg-* |
+| bd_primary/secondary | --bd-* | (없음 — 페이지 배경층 전용) |
+| badge_upgrade | --bg-upgrade, --bg-btn-upgrade | --aot-bg-upgrade, --aot-btn-bg-upgrade |
+| bg_active / bg_inactive | --bg-* | --aot-bg-* |
 | bg_llm / bg_mcp | --bg-llm/mcp | --aot-color-llm/mcp |
-| bd_btn_primary/secondary | --bd-btn-* | --aot-btn-bg-primary/secondary |
-| bd_btn_tertiary | --bd-btn-tertiary | (없음) |
-| bg_btn_upgrade/active/inactive/pause/hold | --bg-btn-* | --aot-btn-bg-* |
+| btn_primary_bg | --bd-tertiary, --bd-btn-primary, --bg-btn-active | --aot-btn-bg-primary, --aot-btn-bg-active |
+| btn_secondary_bg | --bd-btn-secondary, --bg-btn-inactive | --aot-btn-bg-secondary, --aot-btn-bg-inactive |
+| bg_btn_pause/hold | --bg-btn-* | --aot-btn-bg-* |
 | bg_btn_on / bg_btn_off | --bg-btn-on/off | (없음 — active/inactive 토큰과 충돌) |
 | bd_btn_border | --bd-btn-border | --aot-btn-border-primary |
 | band_1..5 (측정 밴드) | (없음) | --aot-band-1..5 |
 | chart_1..6 (차트 시리즈) | (없음) | --aot-chart-1..6 |
+
+**2026-07-27 필드 통합** (아래 §3-2): `bd_tertiary`·`bd_btn_primary`·`bg_btn_active` →
+`btn_primary_bg`, `bd_btn_secondary`·`bg_btn_inactive` → `btn_secondary_bg`,
+`bg_upgrade`·`bg_btn_upgrade` → `badge_upgrade`, `bd_btn_tertiary` → `brand_accent`
+에 흡수(값이 이미 같았음). `/custom.css` 는 통합 후에도 구 레거시 별칭을
+전부 그대로 발행하므로(위 표) **소비하는 CSS 파일은 단 한 곳도 수정하지
+않았다** — 변경은 오직 관리자 페이지가 몇 개의 DB 필드로 값을 받아
+그 별칭들을 채우느냐일 뿐이다.
 
 예외 규칙:
 - **다크 사용자**에게는 `--aot-color-brand-accent`, `--aot-color-text-primary`,
@@ -64,6 +74,77 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 항상 #B6BABA(theme_defaults)를 발행해 실효값과 어긋났다 → 정적 정의를
 #B6BABA 로 정정(2026-07). `--bd-primary/secondary/tertiary`, `--bd-border` 는
 정적 정의가 아예 없었다 → theme-variables 에 추가.
+
+## 3-1. 미리보기 캔버스 매핑 계약 (settings/custom_ui)
+
+미리보기 요소를 클릭하면 뜨는 팝오버는 `data-color-bg` / `data-color-text` /
+`data-color-text-2` / `data-color-border` 에 적힌 필드를 편집한다.
+**이 속성은 반드시 그 요소가 실제로 렌더에 쓰는 `--preview-*` 변수와 같은
+필드여야 한다.** 어긋나면 세 가지 증상이 동시에 난다:
+편집해도 미리보기가 안 변함 / 팝오버가 배경색·문자색을 같은 값으로 보여줌 /
+저장하면 엉뚱한 곳 색이 바뀜.
+
+이력(2026-07-27 수정): 상태 버튼의 `data-color-text` 가 `bd_btn_primary`·
+`bd_btn_secondary`·`bd_btn_tertiary` 로 걸려 있었다. 이 셋은 이름과 달리
+문자색이 아니라 **기본/보조 버튼의 배경색**(`--aot-btn-bg-primary/secondary`,
+2절 매핑표 참조)이라 위 증상이 전부 발생했다. 실제 앱의 `.aot-btn-on/off` 는
+글자색으로 `--text-color-tertiary` 를 쓰므로 `text_color_tertiary`
+(밝은 배경인 Hold 만 `text_color_primary`)로 정정했다.
+같은 이유로 `.preview-navbar-brand` 도 `--preview-brand-primary`
+(= `bd_tertiary` 와 같은 값 → 글자가 배경에 묻힘)에서 `--preview-brand-accent`
+로 정정했다.
+
+미리보기 요소를 추가·수정할 때는 `aot-custom-ui-preview.css` 의 해당 규칙과
+`custom_ui.html` 의 `data-color-*` 를 한 쌍으로 함께 고칠 것.
+
+## 3-2. 필드 통합 (2026-07-27) — 배경 진단·마이그레이션·결정 근거
+
+**배경**: settings/custom_ui 에 "중복되거나 어디에 적용되는지 알기 어려운
+옵션이 많다"는 지적으로 실 소비처를 전수 조사(`var(--토큰)` grep)한 결과,
+이름은 다른데 실제로는 같은 요소(주로 "채워진 버튼 배경")를 가리키는 필드가
+여럿 있었다. 상세 조사 결과는 `.local/reports/custom_ui_color_field_reorg.md`
+참조.
+
+**통합 내용** (UI 색상 필드 25 → 20):
+- `btn_primary_bg` ← `bd_tertiary` + `bd_btn_primary` + `bg_btn_active`
+  (전부 "채워진 주 버튼 배경". `bd_tertiary`/`bd_btn_primary` 는 이름과 달리
+  배경이 아니라 실제로 버튼 배경이었다)
+- `btn_secondary_bg` ← `bd_btn_secondary` + `bg_btn_inactive`
+- `badge_upgrade` ← `bg_upgrade`(nav 배지) + `bg_btn_upgrade`(버튼)
+- `brand_accent` 가 `bd_btn_tertiary` 흡수(값이 이미 동일해 필드 자체를 제거)
+- **통합하지 않은 것**: `bg_btn_on`/`bg_btn_off` — 장치 ON/OFF 상태 표시라
+  주/보조 버튼과 값이 갈리는 게 자연스러워 별도 필드로 남김(사용자 결정).
+
+**실 데이터 발산 — 결정이 필요했던 이유**: 로컬 운영 DB(`custom_theme_json`)를
+읽어보니 통합 대상 필드들의 저장값이 이미 갈라져 있었다.
+`bd_tertiary`/`bd_btn_primary`=`#13261B` 인데 `bg_btn_active`=`#64C762`,
+`bg_upgrade`=`#FFC800`(노랑) 인데 `bg_btn_upgrade`=`#13261B`. 즉 "다르게 쓰는
+실사용 사례가 없다"는 가정이 이 인스턴스 자체에서 깨졌다 — 무작정 통합하면
+마이그레이션 우선순위에 따라 조용히 색이 하나로 수렴해버린다. 그래서 통합
+전에 사용자에게 확인했고, 다음 우선순위로 확정했다(`forms_settings.
+LEGACY_THEME_FIELD_MAP`):
+- `btn_primary_bg`: `bd_btn_primary` → `bd_tertiary` → `bg_btn_active`
+  (다수결로 `#13261B` 채택, `bg_btn_active` 의 `#64C762` 는 버려짐 — 영향
+  범위가 더 작은 쪽을 택함: activate 버튼 2곳만 되돌아가는 게, 저장/전송
+  등 다수 버튼이 밝은 초록으로 바뀌는 것보다 낫다고 판단)
+- `btn_secondary_bg`: `bd_btn_secondary` → `bg_btn_inactive` (이 인스턴스는
+  두 값이 이미 같아 무충돌)
+- `badge_upgrade`: `bg_upgrade` → `bg_btn_upgrade` (사용자가 명시적으로
+  선택 — 업그레이드 버튼이 기존 어두운 초록 대신 노란 배지색을 따르게 됨)
+
+**마이그레이션 메커니즘**: `forms_settings.migrate_theme_dict()` 가 구
+필드명 → 신규 필드로 이관 + 구 키 삭제를 수행하는 순수 함수다. DB 를 직접
+고치는 배치 스크립트가 아니라, **읽는 시점마다 계산**하는 방식을 택했다
+(3곳에서 호출: `routes_settings.settings_custom_ui()` GET, `routes_general.
+custom_css()`, `utils_settings.settings_custom_ui_mod()` 저장 직전). 이렇게
+한 이유:
+- `custom.css` 는 모든 페이지 로드마다 히트하는 핫 경로라, 설정 페이지를
+  한 번도 안 연 인스턴스가 업그레이드 직후 "색이 초기화됐다"고 보이는
+  일이 없어야 한다 — 트랜지언트 마이그레이션이면 첫 요청부터 바로 적용됨.
+- 실제 DB 갱신(구 키 영구 삭제)은 다음 "저장" 클릭 때 자연히 일어난다
+  (self-healing) — 별도 마이그레이션 배치·알렘빅 리비전이 필요 없다.
+- 사용자 프리셋(`custom_theme_presets`)에도 동일 함수를 적용한다(표시용
+  트랜지언트 변환 — 프리셋을 다시 저장해야 DB 값 자체가 갱신됨).
 
 ## 4. 사용자 프리셋
 

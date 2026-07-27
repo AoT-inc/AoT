@@ -2059,7 +2059,15 @@
                 if (dev.type === 'input') {
                     // [Fix] Use dev.device_name (raw name) if available
                     const displayName = dev.device_name || dev.name;
-                    const devNameHtml = `<div class="aot-popup-title">${displayName}</div>`;
+                    // comm_fault highlight (io_link_health_infra_plan.md) — id placeholder
+                    // here, filled in by the popupopen listener below once /inputstate
+                    // resolves via window.AoTOutputState.paintNameWarning(), the same
+                    // treatment as the Input/Output/Function list-page cards, so this
+                    // reads the same way everywhere. This raster/Leaflet path builds its
+                    // own popup HTML instead of going through AoTSensorLabel, so it needs
+                    // its own copy of the fetch + paint.
+                    const nameTitleId = `input-name-title-${dev.id}`;
+                    const devNameHtml = `<div id="${nameTitleId}" class="aot-popup-title">${displayName}</div>`;
                     let bodyHtml = '';
                     
                     // [Fix] Use device_id for lookup (provided by API), fallback to unique_id matching
@@ -2100,6 +2108,20 @@
                     marker.on('popupopen', () => {
                         // [New] Fetch Note
                         fetchLastNote();
+
+                        fetch('/inputstate')
+                            .then(res => res.ok ? res.json() : {})
+                            .catch(() => ({}))
+                            .then(states => {
+                                const st = (states && states[devIdKey]) || {};
+                                const titleEl = document.getElementById(nameTitleId);
+                                if (titleEl) {
+                                    if (window.AoTOutputState) {
+                                        window.AoTOutputState.paintNameWarning(titleEl, !!st.comm_fault);
+                                    }
+                                    titleEl.title = st.comm_fault ? window._('No Response') : '';
+                                }
+                            });
 
                         if (devMeas.length > 0) {
                             devMeas.forEach(m => {

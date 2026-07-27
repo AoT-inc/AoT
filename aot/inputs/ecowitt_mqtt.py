@@ -1,6 +1,7 @@
 # coding=utf-8
 import datetime
 import json
+import time
 
 from flask_babel import lazy_gettext
 from aot.utils.actions import run_input_actions
@@ -257,6 +258,10 @@ class InputModule(AbstractInput):
         self.mqtt_password = None
         self.mqtt_use_websockets = None
 
+        # Communication status (comm_* contract) — see comm_is_fault() below.
+        self._comm_connected = False
+        self._comm_last_ts = None
+
         if not testing:
             # Load custom options (including ecowitt_device)
             self.setup_custom_options(
@@ -349,11 +354,32 @@ class InputModule(AbstractInput):
                 self.mqtt_channel))
 
     def on_connect(self, client, obj, flags, rc):
+        self._comm_connected = (rc == 0)
         self.logger.debug(f"Connected: {rc}")
         self.subscribe()
 
     def on_disconnect(self, client, userdata, rc):
+        self._comm_connected = False
         self.logger.debug(f"Disconnected: {rc}")
+
+    # ------------------------------------------------------------------ #
+    # Communication status (AbstractBaseController.comm_*, consumed through
+    # InputController.comm_*). Broker-connection state, not "a message arrived
+    # recently": these topics carry whatever the publisher decides to send, so
+    # a quiet publisher is not a broken link. comm_last_success() still exposes
+    # the last message for callers that want their own freshness policy.
+    # ------------------------------------------------------------------ #
+    def comm_capable(self):
+        return True
+
+    def comm_last_success(self):
+        return self._comm_last_ts
+
+    def comm_is_fault(self, channel=None):
+        return not self._comm_connected
+
+    def comm_is_pending(self, channel=None):
+        return False
 
     def on_subscribe(self, client, obj, mid, granted_qos):
         self.logger.debug("Subscribed to mqtt topic: {}, {}, {}".format(
@@ -363,6 +389,9 @@ class InputModule(AbstractInput):
         self.logger.info("Log: {}".format(string))
 
     def on_message(self, client, userdata, msg):
+        # Any delivered message proves the broker link is alive, recorded before
+        # decoding so an undecodable payload still counts as proof of life.
+        self._comm_last_ts = time.time()
         try:
             payload = msg.payload.decode()
             # self.logger.debug(
@@ -463,6 +492,7 @@ class InputModule(AbstractInput):
     def stop_input(self):
         """Called when Input is deactivated."""
         self.running = False
+        self._comm_connected = False
         self.client.loop_stop()
         self.client.disconnect()
 

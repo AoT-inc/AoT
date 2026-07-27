@@ -2576,7 +2576,11 @@ def settings_custom_ui_mod(form):
         except Exception:
             theme_dict = {}
 
-        from aot.aot_flask.forms.forms_settings import THEME_COLOR_FIELDS
+        from aot.aot_flask.forms.forms_settings import THEME_COLOR_FIELDS, migrate_theme_dict
+        # 저장 전에 구 필드명(2026-07 통합 이전)을 정리 — 이후 for 루프가 신규
+        # 필드셋만으로 채우므로, 여기서 마이그레이션해두면 이번 저장으로
+        # theme_dict 에서 구 키가 영구히 사라진다(자연 치유).
+        theme_dict = migrate_theme_dict(theme_dict)
         color_fields = THEME_COLOR_FIELDS
         color_re = re.compile(r'^#[0-9a-fA-F]{6}$')
 

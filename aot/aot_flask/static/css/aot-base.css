@@ -625,3 +625,10 @@ html {
 .hold-background {
     background-color: var(--bg-hold) !important;
 }
+
+/* Communication-status tints on the Input/Output/Function cards are applied via
+   inline style + JS (window.AoTOutputState.*, aot-output-state.js), not as CSS
+   classes here — the elements involved carry their own
+   `background: transparent !important` rules (aot-entry-ui.css) that a
+   class-based override ties with on specificity and then loses to by load
+   order, differently per page. See paintUnverifiedRunning()'s comment. */

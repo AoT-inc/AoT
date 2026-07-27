@@ -66,28 +66,52 @@ class AIAnomalyDetector:
         MAX_OFFLINE_RATIO = 0.2 # 20%
         MAX_ERROR_RATE = 0.5 # 50%
 
-        total = metrics.get('total_devices', 0)
         active = metrics.get('active_devices', 0)
-        
-        if total > 0:
-            offline_ratio = (total - active) / total
+
+        # Devices genuinely not answering, out of those able to report at all.
+        # Previously this was computed as (total - active)/total, i.e. from
+        # is_activated — the operator's on/off intent — so switching a few
+        # devices off for maintenance raised a "device-offline" alarm while a
+        # truly dead device raised none. comm_* (io_link_health_infra_plan.md)
+        # provides the real signal; devices that cannot observe their own link
+        # are excluded rather than counted as healthy.
+        comm_capable = metrics.get('comm_capable_devices', 0)
+        comm_offline = metrics.get('comm_offline_devices', 0)
+        if comm_capable > 0:
+            offline_ratio = comm_offline / comm_capable
             if offline_ratio > MAX_OFFLINE_RATIO:
                 violations.append({
                     'type': 'offline_devices',
                     'level': 'warning' if offline_ratio < 0.5 else 'critical',
-                    'message': f"High device-offline ratio detected: {offline_ratio:.1%}"
+                    'message': (f"{comm_offline} of {comm_capable} reachable-checkable "
+                                f"devices are not responding ({offline_ratio:.1%})")
                 })
 
         # Compare with previous if available
         if previous_summary:
             try:
                 prev_metrics = json.loads(previous_summary.metadata_json).get('metrics', {})
+                # A sudden rise in genuinely-unreachable devices. Was keyed off
+                # active_devices, which only ever meant "someone deactivated
+                # things", not a connectivity event.
+                prev_offline = prev_metrics.get('comm_offline_devices', 0)
+                if comm_capable > 0 and comm_offline > prev_offline:
+                    jump = comm_offline - prev_offline
+                    if jump >= max(2, comm_capable * 0.2):
+                        violations.append({
+                            'type': 'connectivity_drop',
+                            'level': 'critical',
+                            'message': (f"Sharp rise in unreachable devices: "
+                                        f"{prev_offline} -> {comm_offline}")
+                        })
+                # Kept separately and named for what it is, so a maintenance
+                # shutdown is still visible but never reported as connectivity.
                 prev_active = prev_metrics.get('active_devices', 0)
                 if prev_active > 0 and active < prev_active * 0.8: # 20% drop
                     violations.append({
-                        'type': 'connectivity_drop',
-                        'level': 'critical',
-                        'message': f"Sharp drop in connected devices detected: {prev_active} -> {active}"
+                        'type': 'devices_deactivated',
+                        'level': 'info',
+                        'message': f"Devices deactivated: {prev_active} -> {active} enabled"
                     })
             except:
                 pass

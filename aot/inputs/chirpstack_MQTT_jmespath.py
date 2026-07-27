@@ -18,6 +18,7 @@ import datetime
 import json
 import ssl
 import threading
+import time
 
 from flask_babel import lazy_gettext
 
@@ -225,6 +226,17 @@ class InputModule(AbstractInput):
         self.latest_datetime: Optional[datetime.datetime] = None
         self.options_channels: Dict[str, Dict[int, Any]] = {}
 
+        # Communication status (AbstractBaseController.comm_*, read through
+        # InputController.comm_*). Unlike the RAK3172 heartbeat input, uplinks
+        # here are generic application traffic with no declared period, so only
+        # the broker link is a dependable signal: an uplink proves the device is
+        # alive, but its silence does not prove the opposite (a sensor may simply
+        # have nothing to report). comm_is_fault() therefore tracks the transport
+        # only, and comm_last_success() exposes the last uplink for callers that
+        # want to apply their own freshness policy.
+        self._comm_connected = False
+        self._comm_last_ts: Optional[float] = None
+
         if not testing:
             self.setup_custom_options(INPUT_INFORMATION['custom_options'], input_dev)
             self.try_initialize()
@@ -348,6 +360,7 @@ class InputModule(AbstractInput):
         self.logger.debug("MQTT networking thread exiting")
 
     def _on_connect(self, client, userdata, flags, rc):
+        self._comm_connected = (rc == 0)
         if rc == 0:
             try:
                 topics = [t.strip() for t in (self.mqtt_topics or '').split(',') if t.strip()]
@@ -360,10 +373,27 @@ class InputModule(AbstractInput):
             self.logger.error(f"MQTT connect failed: rc={rc}")
 
     def _on_disconnect(self, client, userdata, rc):
+        self._comm_connected = False
         if self._stop_event and self._stop_event.is_set():
             self.logger.debug(f"MQTT disconnected (shutdown): rc={rc}")
         else:
             self.logger.warning(f"MQTT disconnected: rc={rc}")
+
+    # --------------- Communication status (comm_* contract) ---------------
+
+    def comm_capable(self) -> bool:
+        """True: the broker connection state is observable (see __init__ for why
+        that, rather than uplink freshness, is what comm_is_fault() reports)."""
+        return True
+
+    def comm_last_success(self) -> Optional[float]:
+        return self._comm_last_ts
+
+    def comm_is_fault(self, channel=None) -> bool:
+        return not self._comm_connected
+
+    def comm_is_pending(self, channel=None) -> bool:
+        return False
 
     def _parse_time(self, iso: Optional[str]) -> datetime.datetime:
         if not iso:
@@ -405,6 +435,9 @@ class InputModule(AbstractInput):
             pass
         if self.device_euis and dev_eui and (dev_eui not in self.device_euis):
             return
+
+        # An uplink that passed the device filter is proof this device is alive.
+        self._comm_last_ts = time.time()
 
         # Timestamp
         dt_utc = self._parse_time(data.get('time'))
@@ -483,6 +516,7 @@ class InputModule(AbstractInput):
 
     def stop_input(self):
         super().stop_input()
+        self._comm_connected = False
 
         if self._stop_event:
             self._stop_event.set()

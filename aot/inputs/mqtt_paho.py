@@ -1,5 +1,6 @@
 # coding=utf-8
 import datetime
+import time
 
 from flask_babel import lazy_gettext
 
@@ -174,6 +175,14 @@ class InputModule(AbstractInput):
         self.mqtt_password = None
         self.mqtt_use_websockets = None
 
+        # Reference implementation of the listener-driver retrofit described in
+        # io_link_health_infra_plan.md 2.4 — comm_capable()/comm_last_success()/
+        # comm_is_fault() give InputController.comm_* (aot/controllers/
+        # controller_input.py) something to delegate to instead of the honest
+        # "False/unknown" default every other listener-type Input still returns.
+        self._comm_connected = False
+        self._comm_last_ts = None
+
         if not testing:
             self.setup_custom_options(
                 INPUT_INFORMATION['custom_options'], input_dev)
@@ -243,10 +252,32 @@ class InputModule(AbstractInput):
 
     def on_connect(self, client, obj, flags, rc):
         self.logger.debug(f"Connected: {rc}")
+        self._comm_connected = (rc == 0)
         self.subscribe()
 
     def on_disconnect(self, client, userdata, rc):
         self.logger.debug(f"Disconnected: {rc}")
+        self._comm_connected = False
+
+    # ------------------------------------------------------------------ #
+    # AbstractBaseController.comm_* interface, consumed via
+    # InputController.comm_*() (aot/controllers/controller_input.py) since
+    # this driver runs on its own listener thread, not the polling loop.
+    # ------------------------------------------------------------------ #
+    def comm_capable(self):
+        return True
+
+    def comm_last_success(self):
+        return self._comm_last_ts
+
+    def comm_is_fault(self, channel=None):
+        # Broker-connection state (on_connect/on_disconnect), not "a message
+        # arrived recently" — a quiet publisher is not a broken link. Mirrors
+        # the Output side's _shared_link.is_healthy() concept.
+        return not self._comm_connected
+
+    def comm_is_pending(self, channel=None):
+        return False
 
     def on_subscribe(self, client, obj, mid, granted_qos):
         self.logger.debug(f"Subscribed to mqtt topic: {self.mqtt_channel}, {mid}, {granted_qos}")
@@ -261,6 +292,10 @@ class InputModule(AbstractInput):
         except Exception as exc:
             self.logger.error(f"Payload could not be decoded: {exc}")
             return
+
+        # Any decodable message proves the broker link is alive, independent of
+        # whether it maps to a configured channel below.
+        self._comm_last_ts = time.time()
 
         datetime_utc = datetime.datetime.utcnow()
         measurement = {}
@@ -322,5 +357,6 @@ class InputModule(AbstractInput):
     def stop_input(self):
         """Called when Input is deactivated."""
         self.running = False
+        self._comm_connected = False
         self.client.loop_stop()
         self.client.disconnect()

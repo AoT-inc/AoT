@@ -102,39 +102,43 @@ def custom_css():
         theme_dict = {}
         if settings and settings.custom_theme_json and settings.custom_theme_json != '{}':
             theme_dict = json.loads(settings.custom_theme_json)
-        
+
+        # 2026-07 필드 통합 이전 저장값(bd_tertiary 등 구 필드명) 호환.
+        from aot.aot_flask.forms.forms_settings import migrate_theme_dict
+        theme_dict = migrate_theme_dict(theme_dict)
+
         # Fallback to hardcoded defaults if DB is empty or lacks specific keys
         from aot.aot_flask.forms.forms_settings import SettingsCustomUI
         form = SettingsCustomUI()
-        
+
         # 각 custom_ui 필드 → [레거시 별칭, --aot-* 실토큰] 목록.
         # 레거시 별칭만 덮어쓰면 --aot-* 토큰을 직접 소비하는 컴포넌트(위젯 등)에
         # 사용자 지정 색이 반영되지 않으므로 두 이름을 함께 발행한다.
         # bg_btn_on/off 는 --aot-btn-bg-active/inactive 와 충돌하므로(별도 aot 토큰
         # 없음) 레거시 이름만 발행한다. 매핑 근거: docs/design/color-system.md
+        #
+        # 2026-07 필드 통합: btn_primary_bg/btn_secondary_bg/badge_upgrade 는
+        # 여러 필드가 합쳐진 것이라 이전보다 토큰 목록이 길다(color-system.md §3-2).
         var_map = {
             'brand_primary': ['--brand-primary', '--aot-color-brand-primary'],
             'brand_secondary': ['--brand-secondary', '--aot-color-brand-secondary'],
-            'brand_accent': ['--brand-accent', '--aot-color-brand-accent'],
+            # --bd-btn-tertiary 는 정의상 --aot-color-brand-accent 와 같은 값이라
+            # (aot-theme-variables.css) 별도 필드 없이 여기서 함께 발행한다.
+            'brand_accent': ['--brand-accent', '--aot-color-brand-accent', '--bd-btn-tertiary'],
             'text_color_primary': ['--text-color-primary', '--aot-color-text-primary'],
             'text_color_secondary': ['--text-color-secondary', '--aot-color-text-secondary'],
             'text_color_tertiary': ['--text-color-tertiary', '--aot-color-text-tertiary'],
             'bd_primary': ['--bd-primary'],
             'bd_secondary': ['--bd-secondary'],
-            'bd_tertiary': ['--bd-tertiary'],
-            'bg_upgrade': ['--bg-upgrade', '--aot-bg-upgrade'],
+            'badge_upgrade': ['--bg-upgrade', '--aot-bg-upgrade', '--bg-btn-upgrade', '--aot-btn-bg-upgrade'],
             'bg_active': ['--bg-active', '--aot-bg-active'],
             'bg_inactive': ['--bg-inactive', '--aot-bg-inactive'],
             'bg_llm': ['--bg-llm', '--aot-color-llm'],
             'bg_mcp': ['--bg-mcp', '--aot-color-mcp'],
-            'bd_btn_primary': ['--bd-btn-primary', '--aot-btn-bg-primary'],
-            'bd_btn_secondary': ['--bd-btn-secondary', '--aot-btn-bg-secondary'],
-            'bd_btn_tertiary': ['--bd-btn-tertiary'],
-            'bg_btn_upgrade': ['--bg-btn-upgrade', '--aot-btn-bg-upgrade'],
+            'btn_primary_bg': ['--bd-tertiary', '--bd-btn-primary', '--aot-btn-bg-primary', '--bg-btn-active', '--aot-btn-bg-active'],
+            'btn_secondary_bg': ['--bd-btn-secondary', '--aot-btn-bg-secondary', '--bg-btn-inactive', '--aot-btn-bg-inactive'],
             'bg_btn_on': ['--bg-btn-on'],
             'bg_btn_off': ['--bg-btn-off'],
-            'bg_btn_active': ['--bg-btn-active', '--aot-btn-bg-active'],
-            'bg_btn_inactive': ['--bg-btn-inactive', '--aot-btn-bg-inactive'],
             'bg_btn_pause': ['--bg-btn-pause', '--aot-btn-bg-pause'],
             'bg_btn_hold': ['--bg-btn-hold', '--aot-btn-bg-hold'],
             'bd_btn_border': ['--bd-btn-border', '--aot-btn-border-primary'],
@@ -428,12 +432,43 @@ def gpio_state_unique_id(unique_id, channel_id):
 @blueprint.route('/inputstate')
 @flask_login.login_required
 def input_state_all():
-    """Return activation states of all inputs."""
+    """Return activation + communication-fault state of all inputs.
+
+    io_link_health_infra_plan.md Phase D: previously this bypassed the daemon
+    entirely and returned only the DB is_activated flag (a bare bool per
+    input). Now it also asks the daemon for comm_is_fault via
+    input_status_all() and merges it in — 'comm_fault' is only present for
+    inputs the daemon currently has a running controller for (inactive inputs,
+    or an unreachable daemon, simply omit it; the frontend must not assume the
+    key exists). Response shape changed bool -> dict; input.html (the only
+    consumer in this repo) is updated to match in the same change.
+    """
     states = {}
     inputs = Input.query.all()
+    live = DaemonControl().input_status_all()  # {} on any RPC failure
     for inp in inputs:
-        states[inp.unique_id] = bool(getattr(inp, 'is_activated', False))
+        entry = {'active': bool(getattr(inp, 'is_activated', False))}
+        status = live.get(inp.unique_id)
+        if status is not None:
+            entry['comm_fault'] = bool(status.get('comm_is_fault'))
+            # Distinguishes "confirmed reachable" from "we have no way to tell"
+            # — without it the frontend cannot avoid presenting an unverifiable
+            # device as if its state were known good.
+            entry['comm_capable'] = bool(status.get('comm_capable'))
+        states[inp.unique_id] = entry
     return jsonify(states)
+
+
+@blueprint.route('/outputcommcapable')
+@flask_login.login_required
+def output_comm_capable_all():
+    """Return {output_id: bool} — can each Output observe its device's state.
+
+    Separate from /outputstate because capability is static per output while
+    state is polled every second, and because /outputstate's response shape is
+    a fixed contract shared with the map/sequence widgets.
+    """
+    return jsonify(DaemonControl().output_comm_capable_all())
 
 
 @blueprint.route('/widget_execute/<unique_id>')

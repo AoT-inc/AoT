@@ -10,8 +10,10 @@ from aot.utils.time_utils import utc_now
 
 
 from aot.aot_client import DaemonControl
+from aot.config import AOT_DB_PATH
 from aot.controllers.base_controller import AbstractController
-from aot.databases.models import Trigger, Actions, Input, CustomController, InputChannel, DeviceMeasurements, Output, OutputChannel, Misc, SMTP, PID
+from aot.databases.models import Trigger, Actions, Input, CustomController, InputChannel, DeviceMeasurements, Output, OutputChannel, Misc, SMTP, PID, FunctionRuntimeState
+from aot.databases.utils import session_scope
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.actions import parse_action_information, trigger_controller_actions, trigger_action
 from aot.utils.system_pi import time_between_range
@@ -432,9 +434,88 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.active_weekday = None
         
         self.dict_actions = parse_action_information()
-        
+
+        # Resume an in-progress cycle across a daemon restart (see
+        # _load_runtime_state) instead of always starting fresh at elapsed=0.
+        self._load_runtime_state()
+
         self.ready.set()
         self.running = True
+
+    # ------------------------------------------------------------------ #
+    # Runtime-state persistence (resume across daemon restart)
+    # ------------------------------------------------------------------ #
+    def _load_runtime_state(self):
+        """Restore cycle_start_time / active_weekday / active_actions from
+        FunctionRuntimeState so a daemon restart resumes the in-progress
+        cycle instead of restarting it from elapsed=0 (which would otherwise
+        re-issue ON downlinks for outputs that are already running and
+        extend their total on-time). Only takes effect if run_finally()
+        actually persisted state on the previous shutdown (see below) --
+        an ungraceful kill (SIGKILL/crash) leaves no persisted state and
+        this simply falls through to the normal fresh-cycle start.
+        """
+        try:
+            with session_scope(AOT_DB_PATH) as sess:
+                row = sess.query(FunctionRuntimeState).filter(
+                    FunctionRuntimeState.function_id == self.unique_id).first()
+                if row is None or not row.last_cycle_ts:
+                    return
+                ts = float(row.last_cycle_ts)
+                active_vars = json.loads(row.active_vars_json or '{}')
+                sess.expunge_all()
+
+            # Don't resume a cycle whose scheduled window has already fully
+            # elapsed while the daemon was down (e.g. down for days) --
+            # starting fresh is the correct/expected behavior there.
+            if (time.time() - ts) >= self.sequence_cycle_duration:
+                self.logger.debug(
+                    f"Sequence {self.unique_id}: persisted cycle from "
+                    f"{ts} is stale (older than the cycle period) — starting fresh.")
+                return
+
+            self.cycle_start_time = ts
+            self.active_weekday = active_vars.get('active_weekday')
+            restored_actions = active_vars.get('active_actions') or []
+            self.active_actions = set(restored_actions)
+
+            # Rebuild the schedule for the resumed cycle directly (bypassing
+            # start_new_cycle(), which would call stop_all_active() and undo
+            # the very continuity we're restoring).
+            self.build_cycle_schedule()
+
+            self.logger.info(
+                f"Sequence {self.unique_id}: resumed cycle from persisted state "
+                f"(elapsed={time.time() - ts:.0f}s, {len(restored_actions)} "
+                f"action(s) already active) — no re-dispatch on restart.")
+        except Exception:
+            self.logger.exception(
+                f"Sequence {self.unique_id}: runtime state load failed — "
+                "starting with a clean cycle.")
+
+    def _save_runtime_state(self):
+        """Persist cycle_start_time / active_weekday / active_actions so a
+        later restart can resume via _load_runtime_state(). Called on every
+        active_actions transition (see turn_on_action/turn_off_action) and
+        as a final flush from run_finally() on a process-level stop."""
+        try:
+            with session_scope(AOT_DB_PATH) as sess:
+                row = sess.query(FunctionRuntimeState).filter(
+                    FunctionRuntimeState.function_id == self.unique_id).first()
+                if row is None:
+                    row = FunctionRuntimeState(function_id=self.unique_id)
+                    sess.add(row)
+                row.last_cycle_ts = float(self.cycle_start_time or 0.0)
+                row.active_vars_json = json.dumps({
+                    'active_weekday': self.active_weekday,
+                    'active_actions': list(self.active_actions),
+                })
+                row.updated_at = time.time()
+                sess.commit()
+        except Exception:
+            self.logger.exception(
+                f"Sequence {self.unique_id}: runtime state save failed — "
+                "a restart before the next successful save will start fresh.")
 
     def get_dynamic_duration(self, source_id):
         if not source_id:
@@ -838,6 +919,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             'duration': duration
         })
         self.active_actions.add(action.unique_id)
+        self._save_runtime_state()
 
     def turn_off_action(self, action, item):
         self.logger.debug(f"Action OFF: {action.unique_id}")
@@ -876,8 +958,9 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 self.control.output_off(out_id, output_channel=channel_index)
             else:
                  self.logger.warning(f"Action {action.unique_id} marked as output but no target ID found for OFF.")
-                 
+
         self.active_actions.remove(action.unique_id)
+        self._save_runtime_state()
 
     def stop_all_active(self):
         # Force stop all
@@ -904,7 +987,28 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                      self.active_actions.remove(act_id)
 
     def run_finally(self):
-        self.stop_all_active()
+        # Distinguish a process-level stop (daemon restart, e.g. `systemctl
+        # restart aot`) from a genuine deactivation of this trigger. Both
+        # reach here via stop_controller(), but controller_deactivate() sets
+        # Trigger.is_activated=False in the DB *before* calling
+        # stop_controller() -- a daemon-wide restart never touches that flag.
+        # On a genuine deactivation we still force everything off (unchanged
+        # behavior); on a bare restart we persist the in-progress cycle and
+        # deliberately leave outputs as-is so resuming doesn't interrupt
+        # already-running irrigation with a needless OFF-then-ON.
+        try:
+            db_trigger = db_retrieve_table_daemon(Trigger, unique_id=self.unique_id)
+            still_activated = bool(db_trigger and db_trigger.is_activated)
+        except Exception:
+            still_activated = False  # uncertain -> safe default: force off
+
+        if still_activated and self.cycle_start_time is not None:
+            self._save_runtime_state()
+            self.logger.info(
+                f"Sequence {self.unique_id}: process stopping while still "
+                "activated -- state persisted for resume, outputs left running.")
+        else:
+            self.stop_all_active()
 
 
     def refresh_settings(self):

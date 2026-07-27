@@ -48,6 +48,27 @@ class AbstractBaseController(object):
     def initialize(self):
         pass
 
+    def comm_capable(self):
+        """Does this controller have a communication-status concept at all.
+
+        False means "no feedback path exists" (e.g. a local GPIO relay with no
+        readback), not "unknown/broken". Subclasses that can actually detect
+        reachability (network/bus devices, polling loops) override this.
+        """
+        return False
+
+    def comm_last_success(self):
+        """Epoch timestamp of the last successful communication, or None."""
+        return None
+
+    def comm_is_fault(self, channel=None):
+        """Is communication currently down. Meaningless (always False) unless comm_capable()."""
+        return False
+
+    def comm_is_pending(self, channel=None):
+        """Is there an unconfirmed communication in flight (optional concept, default False)."""
+        return False
+
     def try_initialize(self, tries=3, wait_sec=5):
         """Retry initialize() up to a given number of attempts with delay between tries."""
         for i in range(tries):

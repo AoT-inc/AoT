@@ -25,6 +25,7 @@ import datetime
 import json
 import ssl
 import threading
+import time
 from typing import Any, Dict, List, Optional
 
 from flask_babel import lazy_gettext
@@ -303,6 +304,20 @@ class InputModule(AbstractInput):
         self._allowed_euis: List[str] = []
         self.latest_datetime: Optional[datetime.datetime] = None
 
+        # Communication status (AbstractBaseController.comm_*, consumed through
+        # InputController.comm_*). Two independent levels are tracked, because
+        # they answer different questions:
+        #   _comm_connected  — is the MQTT broker link up (transport level)
+        #   _comm_last_ts    — when did THIS LoRaWAN node last send a heartbeat
+        # The second is the meaningful one for a field device: the broker can be
+        # perfectly reachable while the node itself is dead. FPort 225 heartbeats
+        # arrive on a known period (decoded as node_hb_min), so their absence is
+        # a positive offline signal rather than mere silence.
+        self._comm_connected = False
+        self._comm_last_ts: Optional[float] = None
+        self._comm_hb_period_min: Optional[float] = None
+        self._comm_ref_ts = time.time()
+
         if not testing:
             self.setup_custom_options(INPUT_INFORMATION['custom_options'], input_dev)
             self.try_initialize()
@@ -381,6 +396,7 @@ class InputModule(AbstractInput):
                     break
 
     def _on_connect(self, client, userdata, flags, rc):
+        self._comm_connected = (rc == 0)
         if rc == 0:
             client.subscribe(self._subscribe_topic, qos=0)
             self.logger.info(f"MQTT connected, subscribed: {self._subscribe_topic}")
@@ -388,10 +404,45 @@ class InputModule(AbstractInput):
             self.logger.error(f"MQTT connection failed: rc={rc}")
 
     def _on_disconnect(self, client, userdata, rc):
+        self._comm_connected = False
         if self._stop_event and self._stop_event.is_set():
             self.logger.debug(f"MQTT shutdown: rc={rc}")
         else:
             self.logger.warning(f"MQTT disconnected (awaiting reconnect): rc={rc}")
+
+    # --------------- Communication status (comm_* contract) ---------------
+
+    # How many missed heartbeats before the node is declared offline. 3 gives
+    # the node a couple of chances to be heard (a single lost uplink is normal
+    # on LoRaWAN) without dragging the detection out for too long.
+    COMM_MISSED_HB_LIMIT = 3
+    # Used only until a heartbeat has actually told us the node's period.
+    COMM_FALLBACK_HB_MIN = 15.0
+
+    def comm_capable(self) -> bool:
+        """True: this node announces itself on a fixed heartbeat (FPort 225), so
+        both its presence and its absence are observable."""
+        return True
+
+    def comm_last_success(self) -> Optional[float]:
+        return self._comm_last_ts
+
+    def comm_is_fault(self, channel=None) -> bool:
+        # Transport level first — with the broker link down we are not receiving
+        # anything at all, so no heartbeat-age reasoning would be meaningful.
+        if not self._comm_connected:
+            return True
+        period_min = self._comm_hb_period_min or self.COMM_FALLBACK_HB_MIN
+        deadline = period_min * 60.0 * self.COMM_MISSED_HB_LIMIT
+        if self._comm_last_ts is None:
+            # Connected but nothing heard yet. Measure the grace window from
+            # controller start, not from a last-success time that doesn't exist
+            # — otherwise every node reads as offline right after a restart.
+            return (time.time() - self._comm_ref_ts) > deadline
+        return (time.time() - self._comm_last_ts) > deadline
+
+    def comm_is_pending(self, channel=None) -> bool:
+        return False
 
     # --------------- Message handling ---------------
 
@@ -479,6 +530,20 @@ class InputModule(AbstractInput):
                 'timestamp_utc': dt_utc,
             }
 
+        # A decoded heartbeat from an allowed DevEUI is proof this node is alive.
+        # Recorded after all the filters above so another node's traffic (or an
+        # undecodable frame) never counts as this input's liveness.
+        self._comm_last_ts = time.time()
+        try:
+            hb_min = decoded.get('node_hb_min')
+            if hb_min:
+                # The node reports its own heartbeat period, so the staleness
+                # deadline adapts to however this node is configured instead of
+                # relying on a guessed constant.
+                self._comm_hb_period_min = float(hb_min)
+        except (TypeError, ValueError):
+            pass
+
         _add(0, decoded.get('battery_V'))
         _add(1, decoded.get('node_class'))
         _add(2, decoded.get('node_class_actual'))
@@ -557,6 +622,7 @@ class InputModule(AbstractInput):
 
     def stop_input(self):
         super().stop_input()
+        self._comm_connected = False
         if self._stop_event:
             self._stop_event.set()
         if self.mqtt_client:

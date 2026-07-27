@@ -56,6 +56,12 @@ class DaemonControl:
     _states_all_lock = threading.Lock()
     _STATES_CACHE_TTL = 3.0  # seconds
 
+    # input_status_all TTL cache: (result, expires_at) — separate slot from the
+    # output cache above (io_link_health_infra_plan.md Phase D), same 3s TTL
+    # rationale (the polling UI period on the Input page, aot-flask input.html).
+    _input_status_all_cache = (None, 0.0)
+    _input_status_all_lock = threading.Lock()
+
     _MAX_RPC_TIMEOUT = 10        # hard cap for most callers
     _MAX_RPC_TIMEOUT_EXTENDED = 120  # cap for callers that explicitly need longer (e.g. remote output with long-running commands)
 
@@ -310,6 +316,52 @@ class DaemonControl:
             return {}
         except Exception as err:
             logger.error(f"output_states_all error: {err}")
+            return {}
+
+    def input_status_all(self):
+        """Comm status (comm_capable/comm_is_fault/comm_last_success) for all Inputs.
+
+        Same failure convention as output_states_all(): any RPC problem (daemon
+        down, timeout) returns {} rather than raising, so callers (the
+        /inputstate route) degrade gracefully instead of 500ing.
+        """
+        now = time.monotonic()
+        with DaemonControl._input_status_all_lock:
+            cached, expires = DaemonControl._input_status_all_cache
+            if cached is not None and now < expires:
+                return cached
+        try:
+            result = self.proxy().input_status_all()
+            with DaemonControl._input_status_all_lock:
+                DaemonControl._input_status_all_cache = (result or {}, now + DaemonControl._STATES_CACHE_TTL)
+            return result
+        except Pyro5.errors.TimeoutError as err:
+            logger.error(f"input_status_all timed out: {err}")
+            return {}
+        except Pyro5.errors.CommunicationError as err:
+            logger.error(f"input_status_all communication error: {err}")
+            return {}
+        except Exception as err:
+            logger.error(f"input_status_all error: {err}")
+            return {}
+
+    def output_comm_capable_all(self):
+        """{output_id: bool} — can this Output observe its device's state at all.
+
+        Static per output (driver + configured status path), so callers fetch it
+        once per page rather than on every state poll; no TTL cache needed here.
+        Same degrade-to-empty convention as output_states_all().
+        """
+        try:
+            return self.proxy().output_comm_capable_all()
+        except Pyro5.errors.TimeoutError as err:
+            logger.error(f"output_comm_capable_all timed out: {err}")
+            return {}
+        except Pyro5.errors.CommunicationError as err:
+            logger.error(f"output_comm_capable_all communication error: {err}")
+            return {}
+        except Exception as err:
+            logger.error(f"output_comm_capable_all error: {err}")
             return {}
 
     def output_target_pct(self, output_id, output_channel=0):

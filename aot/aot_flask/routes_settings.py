@@ -292,6 +292,9 @@ def settings_custom_ui():
             theme_dict = json.loads(misc.custom_theme_json or '{}')
         except Exception:
             theme_dict = {}
+        # 2026-07 필드 통합 이전 저장값(bd_tertiary 등 구 필드명) 호환 — DB에
+        # 쓰지 않는 조회 시점 변환이라, 다음 저장 전까지는 매 요청마다 계산된다.
+        theme_dict = forms_settings.migrate_theme_dict(theme_dict)
         form_settings_custom_ui = forms_settings.SettingsCustomUI(formdata=None, **theme_dict)
     else:
         form_settings_custom_ui = forms_settings.SettingsCustomUI()
@@ -317,6 +320,12 @@ def settings_custom_ui():
         user_presets = _json.loads(misc.custom_theme_presets or '{}')
     except Exception:
         user_presets = {}
+    # 프리셋도 구 필드명으로 저장돼 있을 수 있어 표시 전 동일하게 변환한다
+    # (실제 DB 갱신은 사용자가 "프리셋 저장"을 다시 누를 때 자연히 이뤄진다).
+    user_presets = {
+        name: forms_settings.migrate_theme_dict(dict(colors))
+        for name, colors in user_presets.items()
+    }
 
     return render_template('settings/custom_ui.html',
                            form_settings_custom_ui=form_settings_custom_ui,
@@ -344,6 +353,10 @@ def settings_custom_ui_presets():
         presets = {}
 
     if request.method == 'GET':
+        presets = {
+            name: forms_settings.migrate_theme_dict(dict(colors))
+            for name, colors in presets.items()
+        }
         return jsonify(presets=presets)
 
     if not utils_general.user_has_permission('edit_settings'):

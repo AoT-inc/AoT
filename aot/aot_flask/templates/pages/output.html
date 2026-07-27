@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
+<script src="/static/js/common/aot-output-state.js?v=6"></script>
 
 
 <script>
@@ -82,6 +83,18 @@
     else if (out_type === 'pwm' && 'on_duty_cycle_' + output_id + '_' + channel_id in result) {
       getAjax(output_id + '/' + channel_id + '/on/pwm/' + result['on_duty_cycle_' + output_id + '_' + channel_id]);
     }
+  }
+
+  // {output_id: bool} — whether each output can observe its device's state.
+  // Static per output, so it is fetched once instead of on every 1s state poll.
+  // Empty until that fetch lands: `=== false` below means an output is only
+  // flagged once we positively know it is unverifiable, never merely because
+  // the answer has not arrived yet.
+  var commCapable = {};
+  function loadCommCapable() {
+    $.getJSON('/outputcommcapable', function (data) {
+      commCapable = data || {};
+    });
   }
 
   function gpioState() {
@@ -160,7 +173,32 @@
                     }
                     if (document.getElementById(toggleId)) document.getElementById(toggleId).checked = false;
                   }
+
+                  // Running, but nothing can confirm it actually is. Applied on
+                  // the channel row itself rather than the card, because the
+                  // card is fully covered by its own child rows and a tint there
+                  // would never be visible. Kept outside the branches above and
+                  // run every poll so it also CLEARS on the way back to
+                  // off/fault — an inline style survives the className rewrites
+                  // those branches do.
+                  window.AoTOutputState.paintUnverifiedRunning(
+                    document.getElementById(rowId),
+                    commCapable[output_id] === false &&
+                      window.AoTOutputState.classify(states[i]).isOn);
                 }
+              }
+
+              // Card-level (whole-device) summary, independent of the
+              // per-channel row styling above — lets a multi-channel output
+              // show "something here needs attention" at a glance without
+              // opening every row. Uses the shared aggregator (fault beats
+              // pending beats on beats off) so this stays consistent with
+              // the Trigger Sequence widget's own device rollups.
+              var cardEl = document.getElementById('output_status_' + output_id);
+              var agg = window.AoTOutputState.aggregate(Object.values(states));
+              if (cardEl) {
+                cardEl.classList.remove('active-background', 'inactive-background', 'pause-background', 'hold-background');
+                cardEl.classList.add(agg.cssClass);
               }
             });
 
@@ -184,6 +222,16 @@
             var parts = row.id.split('-');
             var ch = parts[parts.length - 3];
             var oid = parts.slice(0, parts.length - 3).join('-');
+
+            // Same unverified-while-running treatment as the standard rows
+            // above. Judged on the paired output's OWN capability plus that of
+            // the two outputs it drives: a paired actuator is only as
+            // observable as its least observable part, and an unconfigured one
+            // (no open/close output selected yet) has no feedback path at all.
+            var pairedUnverified = commCapable[oid] === false ||
+                                   (openId && commCapable[openId] === false) ||
+                                   (closeId && commCapable[closeId] === false);
+            window.AoTOutputState.paintUnverifiedRunning(row, anyActive && !!pairedUnverified);
 
             var openBtn = document.getElementById(oid + '-' + ch + '-paired-open-btn');
             var closeBtn = document.getElementById(oid + '-' + ch + '-paired-close-btn');
@@ -214,10 +262,16 @@
             document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-toggle").checked = false;
           }
           {% endfor %}
+          if (document.getElementById('output_status_{{each_output.unique_id}}')) {
+            document.getElementById('output_status_{{each_output.unique_id}}').classList.remove(
+              'active-background', 'inactive-background', 'hold-background');
+            document.getElementById('output_status_{{each_output.unique_id}}').classList.add('pause-background');
+          }
           {% endfor %}
         }
       });
   } $(function () {
+    loadCommCapable(); // static per output — fetched once, not per state poll
     gpioState(); // Update when page first loads // Refresh every 1 second
     setInterval(function () { gpioState(); }, 1000);
   }); }); </script>
@@ -548,7 +602,7 @@
 
 <!-- Tab Management JavaScript -->
 <script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725c"></script>
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
 
 <!-- Tab Settings Modal -->
 {% include 'modals/tab_settings.html' %}

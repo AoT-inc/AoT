@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
+<script src="/static/js/common/aot-output-state.js?v=6"></script>
 
 
 {% include 'pages/map/map_assets.html' %}
@@ -237,6 +238,31 @@
               errors += data['error'][c].replace(/(?:\r\n|\r|\n)/g, "<br>") + '<br>';
             }
             if (statusElem) statusElem.innerHTML += "<p><pre>{{ _('Error(s):') }}<br>" + errors + "</pre></p>";
+          }
+
+          // Trigger Sequence only: data.steps carries each step's resolved
+          // Output comm state (aot/controllers/controller_trigger_sequence.py
+          // function_status() -> _step_output_state()). Roll it up onto the
+          // card so a sequence with an offline/unconfirmed device is visible
+          // without opening the widget. Only the fault/pending overlay is
+          // touched — the active/inactive base color is left to whatever the
+          // Activate/Deactivate buttons already set, read here from their
+          // current visibility rather than duplicating that state.
+          if (data && Array.isArray(data.steps) && window.AoTOutputState) {
+            var seqCard = document.getElementById('function_status_' + function_id);
+            if (seqCard) {
+              var seqAgg = window.AoTOutputState.aggregate(data.steps.map(function (s) { return s.output_state; }));
+              var deactivateBtn = document.getElementById('function_deactivate_' + function_id);
+              var seqIsActivated = !!(deactivateBtn && deactivateBtn.style.display !== 'none');
+              seqCard.classList.remove('active-background', 'inactive-background', 'pause-background', 'hold-background');
+              if (seqAgg.isFault) {
+                seqCard.classList.add('pause-background');
+              } else if (seqAgg.isPending) {
+                seqCard.classList.add('hold-background');
+              } else {
+                seqCard.classList.add(seqIsActivated ? 'active-background' : 'inactive-background');
+              }
+            }
           }
         }
         else {
@@ -688,7 +714,7 @@
 
 <!-- Tab Management JavaScript -->
 <script src="{{ url_for('static', filename='js/app/tab_management.js') }}"></script>
-<script src="/static/js/common/aot-widget-drawer.js?v=20260725c"></script>
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
 
 <!-- Tab Settings Modal -->
 {% include 'modals/tab_settings.html' %}

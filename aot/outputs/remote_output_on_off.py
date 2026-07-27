@@ -156,6 +156,22 @@ class OutputModule(AbstractOutput):
         self.api_output = None
         self.query_timer = 0
 
+        # Communication status. Two independent levels, because "I can reach the
+        # remote AoT" and "the remote AoT can reach its device" are different
+        # questions and either one failing means we do not know our own state:
+        #
+        #   _remote_reachable    — did the last /api/outputs poll succeed
+        #                          (None = not polled yet, so a fresh start is
+        #                          not reported as a failure)
+        #   _remote_device_fault — channels the REMOTE AoT itself reports as
+        #                          'fault'. It runs the same status stack we do,
+        #                          so its verdict about its own device is more
+        #                          authoritative than anything we could infer,
+        #                          and is passed straight through rather than
+        #                          being flattened into on/off.
+        self._remote_reachable = None
+        self._remote_device_fault = set()
+
         self.setup_custom_options(
             OUTPUT_INFORMATION['custom_options'], output)
 
@@ -236,6 +252,9 @@ class OutputModule(AbstractOutput):
                 url, headers=headers, verify=False, timeout=5)
         except requests.exceptions.RequestException as err:
             self.logger.error(f"Remote output information request failed: {err}")
+            # Cannot reach the remote AoT at all — our view of every channel on
+            # it is stale from this moment, regardless of what was last seen.
+            self._remote_reachable = False
             if allow_clear:
                 self.api_output = None
             return
@@ -251,10 +270,14 @@ class OutputModule(AbstractOutput):
 
         if response.status_code != 200:
             self.logger.error("Response Status was not 200")
+            # Reachable but refusing to answer (auth, error): still no usable
+            # state, so treat it the same as unreachable.
+            self._remote_reachable = False
             if allow_clear:
                 self.api_output = None
             return
 
+        self._remote_reachable = True
         self.api_output = response_dict
 
     def parse_remote_output_info(self):
@@ -306,9 +329,22 @@ class OutputModule(AbstractOutput):
                     # optimistic state and clear faults (drift correction).
                     remote_state = self.api_output['output states'][output_unique_id][str(device_channel)]
                     if remote_state == "on":
+                        self._remote_device_fault.discard(each_chan)
                         self.confirm_command(each_chan, True, 'remote-status')
                     elif remote_state == "off":
+                        self._remote_device_fault.discard(each_chan)
                         self.confirm_command(each_chan, False, 'remote-status')
+                    elif remote_state == "fault":
+                        # The remote AoT reaches us fine but cannot confirm its
+                        # OWN device. Passed through as our fault instead of
+                        # being dropped: without this the channel would keep
+                        # showing its last known on/off, i.e. we would report a
+                        # state that the machine actually holding the device has
+                        # already declared unknown.
+                        self._remote_device_fault.add(each_chan)
+                    # 'pending' is transient (a command in flight on the remote)
+                    # and resolves to on/off/fault on a later poll — left alone
+                    # so a normal command round-trip does not flap the display.
 
     def send_remote_output(self, channel, state):
         import requests
@@ -380,6 +416,24 @@ class OutputModule(AbstractOutput):
         """The remote AoT reports each output's actual state (POST response +
         periodic status poll), so commands are confirmed, not fire-and-forget."""
         return True
+
+    def comm_is_fault(self, output_channel=0):
+        """Fault if we cannot reach the remote AoT, or if the remote AoT says it
+        cannot reach the device — plus the usual per-command timeout.
+
+        Reaching the remote host successfully is what makes this output "online"
+        at the transport level; but a healthy API connection to a machine whose
+        own device is offline is still not a working output, so the remote's
+        verdict is honoured rather than masked by our successful connection.
+        """
+        # None = no poll has completed yet. Not a fault: at startup the state
+        # thread has simply not run, and reporting every remote output as failed
+        # for the first poll interval would be a false alarm.
+        if self._remote_reachable is False:
+            return True
+        if output_channel in self._remote_device_fault:
+            return True
+        return super().comm_is_fault(output_channel)
 
     def _resend_command(self, output_channel, intent_state):
         try:
