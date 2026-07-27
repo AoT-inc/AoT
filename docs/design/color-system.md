@@ -35,6 +35,7 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 | bd_primary/secondary | --bd-* | (없음 — 페이지 배경층 전용) |
 | badge_upgrade | --bg-upgrade, --bg-btn-upgrade | --aot-bg-upgrade, --aot-btn-bg-upgrade |
 | bg_active / bg_inactive | --bg-* | --aot-bg-* |
+| bg_warning | --bg-pause | --aot-bg-pause |
 | bg_llm / bg_mcp | --bg-llm/mcp | --aot-color-llm/mcp |
 | btn_primary_bg | --bd-tertiary, --bd-btn-primary, --bg-btn-active | --aot-btn-bg-primary, --aot-btn-bg-active |
 | btn_secondary_bg | --bd-btn-secondary, --bg-btn-inactive | --aot-btn-bg-secondary, --aot-btn-bg-inactive |
@@ -145,6 +146,25 @@ custom_css()`, `utils_settings.settings_custom_ui_mod()` 저장 직전). 이렇�
   (self-healing) — 별도 마이그레이션 배치·알렘빅 리비전이 필요 없다.
 - 사용자 프리셋(`custom_theme_presets`)에도 동일 함수를 적용한다(표시용
   트랜지언트 변환 — 프리셋을 다시 저장해야 DB 값 자체가 갱신됨).
+
+## 3-3. `bg_warning` — 장치 offline/응답없음 상태색 노출 (2026-07-27)
+
+"상태 색상(State Colors)" 그룹에 세 번째 필드로 추가. 새 토큰을 만든 게
+아니라 **이미 앱 전역에서 쓰이던 기존 토큰을 custom_ui에 노출**한 것이다:
+
+- 토큰: `--bg-pause` / `--aot-bg-pause` (기본값 `#989E9E`, 변경 전과 동일 —
+  노출만 했을 뿐 기본 렌더는 그대로).
+- 실제 소비처: `aot-base.css` `.pause-background`(입력/출력/함수 카드),
+  `aot-toggle.css`, `widget_trigger_sequence.py`의 `.seq-offline`/
+  `.seq-dev-offline`(시퀀스 위젯 오프라인 표시), PID·AI 스케줄러·지도 위젯 등.
+- 트리거: `aot-output-state.js` 의 `fault`/`comm_fault` 상태
+  (`classify()`/`classifyComm()`) → CSS 클래스 `pause-background` 적용.
+  "unconfirmed/offline — 응답 없음" 이 정확한 의미(js 파일 11~17행 주석).
+- **의도적으로 통합하지 않은 인접 토큰**: `--aot-tint-warning-bg/fg`
+  (`#fff3e2`/`#94650a`) — 지도 팝업 이름 라벨 강조(`paintNameWarning`)와
+  "실행 중이지만 확인 불가"(`paintUnverifiedRunning`) 인라인 틴트에 쓰인다.
+  bg+fg 쌍으로 가독성이 맞춰져 있고, 후자는 "오프라인"과 다른 개념(확인 불가
+  상태로 켜져 있음)이라 이번 범위에 넣지 않았다. 필요해지면 별도 필드로.
 
 ## 4. 사용자 프리셋
 

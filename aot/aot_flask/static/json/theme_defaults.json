@@ -1,6 +1,7 @@
 {
   "bg_active": "#D1D5D5",
   "bg_inactive": "#F3F6F5",
+  "bg_warning": "#989E9E",
   "bd_btn_border": "#B6BABA",
   "bg_btn_pause": "#989E9E",
   "bg_btn_hold": "#D1D5D5",

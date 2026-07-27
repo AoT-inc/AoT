@@ -26,9 +26,25 @@ Usage (sleep OUTSIDE any lock the caller may hold):
 import threading
 from time import time
 
-# Minimum gap between ANY two downlinks site-wide. ~1.5 s leaves the half-duplex
-# gateway idle windows to receive device ACK uplinks between transmissions.
-MIN_GLOBAL_DOWNLINK_INTERVAL_S = 1.5
+# Minimum gap between ANY two downlinks site-wide, sized so the half-duplex
+# gateway is actually IDLE when the device's ACK comes back.
+#
+# The original 1.5 s assumed a short downlink. It is not: a Class C downlink goes
+# out in RX2, and with the KR920 default rx2_dr=0 (SF12) a ~16 B frame occupies
+# ~1.32 s of gateway TX time — during which the concentrator cannot receive on
+# ANY of its channels. Measured on site (2026-07-27), the device's FP11 ctrl_ack
+# lands ~1.7 s after dispatch, i.e. squarely inside the NEXT transmission when
+# the gap is 1.5 s: the ACK was being lost structurally, not by chance. Busy
+# minutes showed 23-26 downlinks/min => 50-57 % of the minute deaf, and each lost
+# ACK triggered a retry, which produced yet another 1.32 s of deafness.
+#
+# 4.0 s => ~1.32 s TX + ~2.7 s listening per slot (33 % TX duty), so both the
+# ctrl_ack (~1.7 s) and a valve's completion status land in a quiet window.
+#
+# This constant is tied to the RX2 data rate. If rx2_dr is raised (SF12 -> SF9 is
+# ~165 ms, SF7 ~51 ms), the airtime collapses and this can come back down toward
+# the original 1.5 s.
+MIN_GLOBAL_DOWNLINK_INTERVAL_S = 4.0
 # Cap how long a single send may block waiting for its slot, so an extreme burst
 # degrades to "sent a bit early" rather than blocking a caller unboundedly.
 MAX_PACE_WAIT_S = 30.0

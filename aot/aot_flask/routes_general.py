@@ -133,6 +133,10 @@ def custom_css():
             'badge_upgrade': ['--bg-upgrade', '--aot-bg-upgrade', '--bg-btn-upgrade', '--aot-btn-bg-upgrade'],
             'bg_active': ['--bg-active', '--aot-bg-active'],
             'bg_inactive': ['--bg-inactive', '--aot-bg-inactive'],
+            # 장치 offline/응답없음(comm_fault) 카드 배경. 소비처: aot-base.css
+            # .pause-background, aot-toggle.css, widget_trigger_sequence.py의
+            # seq-offline/seq-dev-offline 등(전부 --bg-pause 폴백 경유).
+            'bg_warning': ['--bg-pause', '--aot-bg-pause'],
             'bg_llm': ['--bg-llm', '--aot-color-llm'],
             'bg_mcp': ['--bg-mcp', '--aot-color-mcp'],
             'btn_primary_bg': ['--bd-tertiary', '--bd-btn-primary', '--aot-btn-bg-primary', '--bg-btn-active', '--aot-btn-bg-active'],

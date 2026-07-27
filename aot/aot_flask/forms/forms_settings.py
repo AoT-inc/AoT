@@ -50,7 +50,7 @@ THEME_COLOR_FIELDS = [
     'brand_primary', 'brand_secondary', 'brand_accent',
     'text_color_primary', 'text_color_secondary', 'text_color_tertiary',
     'bd_primary', 'bd_secondary',
-    'bg_active', 'bg_inactive',
+    'bg_active', 'bg_inactive', 'bg_warning',
     'bg_llm', 'bg_mcp', 'badge_upgrade',
     'btn_primary_bg', 'btn_secondary_bg',
     'bg_btn_on', 'bg_btn_off',
@@ -608,6 +608,10 @@ class SettingsCustomUI(FlaskForm):
     bd_secondary = StringField(lazy_gettext('BG Secondary'), default=THEME_DEFAULTS.get('bd_secondary', '#F3F6F5'), render_kw={"type": "color"})
     bg_active = StringField(lazy_gettext('BG Active'), default=THEME_DEFAULTS.get('bg_active', '#D1D5D5'), render_kw={"type": "color"})
     bg_inactive = StringField(lazy_gettext('BG Inactive'), default=THEME_DEFAULTS.get('bg_inactive', '#F3F6F5'), render_kw={"type": "color"})
+    # 장치 offline/응답없음(comm_fault) 카드 배경 — 기존 --bg-pause/--aot-bg-pause
+    # 토큰을 노출한 것(입력/출력/함수 카드, PID, 시퀀스 위젯 "오프라인" 표시 등
+    # 이미 전역에서 소비 중이었으나 custom_ui 미노출 상태였다).
+    bg_warning = StringField(lazy_gettext('Warning State'), default=THEME_DEFAULTS.get('bg_warning', '#989E9E'), render_kw={"type": "color"})
     bg_llm = StringField(lazy_gettext('BG LLM Badge'), default=THEME_DEFAULTS.get('bg_llm', '#6277C7'), render_kw={"type": "color"})
     bg_mcp = StringField(lazy_gettext('BG MCP Badge'), default=THEME_DEFAULTS.get('bg_mcp', '#64C762'), render_kw={"type": "color"})
     # 2026-07 통합: bg_upgrade(nav 배지) + bg_btn_upgrade(버튼) — 둘 다 같은
