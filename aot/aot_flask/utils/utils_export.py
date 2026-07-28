@@ -160,24 +160,24 @@ def thread_import_settings(tmp_folder):
 
     try:
         # Initialize
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Upgrade database
         append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Database Upgrade\n")
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper upgrade_database | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper upgrade_database | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Update dependencies (may take time)
         append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Updating dependencies (please wait)...\n")
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper update_dependencies | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper update_dependencies | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Generate widget HTML
         generate_widget_html()
 
         # Re-initialize
-        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) >> {IMPORT_LOG_FILE} 2>&1"
+        cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper initialize | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Restart backend daemon

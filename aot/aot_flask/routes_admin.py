@@ -732,7 +732,7 @@ def admin_upgrade():
                 except FileNotFoundError:
                     pass
                 cmd = "{pth}/aot/scripts/aot_wrapper upgrade-master" \
-                      " | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1 | tee -a {log} {tmp_log}".format(
+                      " | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1 | tee -a {log} {tmp_log}".format(
                     pth=INSTALL_DIRECTORY,
                     log=UPGRADE_LOG_FILE,
                     tmp_log=UPGRADE_TMP_LOG_FILE)
@@ -746,7 +746,7 @@ def admin_upgrade():
                 except FileNotFoundError:
                     pass
                 cmd = "{pth}/aot/scripts/aot_wrapper upgrade-release-major {current_maj_version}" \
-                      " | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1 | tee -a {log} {tmp_log}".format(
+                      " | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1 | tee -a {log} {tmp_log}".format(
                     current_maj_version=AOT_VERSION.split('.')[0],
                     pth=INSTALL_DIRECTORY,
                     log=UPGRADE_LOG_FILE,
@@ -766,7 +766,7 @@ def admin_upgrade():
                 except FileNotFoundError:
                     pass
                 cmd = "{pth}/aot/scripts/aot_wrapper upgrade-release-wipe {ver}" \
-                      " | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1 | tee -a {log} {tmp_log}".format(
+                      " | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1 | tee -a {log} {tmp_log}".format(
                     pth=INSTALL_DIRECTORY,
                     ver=current_latest_major_version,
                     log=UPGRADE_LOG_FILE,

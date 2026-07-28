@@ -2114,7 +2114,7 @@ def settings_pi_mod(form):
         else:
             # Stop the AoT daemon
             cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper daemon_stop" \
-                  f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                  f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
             stop_daemon = subprocess.Popen(cmd, shell=True)
             stop_daemon.wait()
 
@@ -2122,44 +2122,44 @@ def settings_pi_mod(form):
                     form.pigpiod_state.data == 'uninstalled'):
                 # Install pigpiod (sample rate of 1 ms)
                 cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper install_pigpiod" \
-                      f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                      f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
                 install_pigpiod = subprocess.Popen(cmd, shell=True)
                 install_pigpiod.wait()
 
             # Disable pigpiod
             cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper disable_pigpiod" \
-                  f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                  f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
             disable_pigpiod = subprocess.Popen(cmd, shell=True)
             disable_pigpiod.wait()
 
             if form.pigpiod_sample_rate.data == 'low':
                 # Install pigpiod (sample rate of 1 ms)
                 cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper enable_pigpiod_low" \
-                      f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                      f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
                 enable_pigpiod_1ms = subprocess.Popen(cmd, shell=True)
                 enable_pigpiod_1ms.wait()
             elif form.pigpiod_sample_rate.data == 'high':
                 # Install pigpiod (sample rate of 5 ms)
                 cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper enable_pigpiod_high" \
-                      f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                      f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
                 enable_pigpiod_5ms = subprocess.Popen(cmd, shell=True)
                 enable_pigpiod_5ms.wait()
             elif form.pigpiod_sample_rate.data == 'disabled':
                 # Disable pigpiod (user selected disable)
                 cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper enable_pigpiod_disabled" \
-                      f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                      f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
                 disable_pigpiod = subprocess.Popen(cmd, shell=True)
                 disable_pigpiod.wait()
             elif form.pigpiod_sample_rate.data == 'uninstalled':
                 # Uninstall pigpiod (user selected disable)
                 cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper uninstall_pigpiod" \
-                      f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                      f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
                 uninstall_pigpiod = subprocess.Popen(cmd, shell=True)
                 uninstall_pigpiod.wait()
 
             # Start the AoT daemon
             cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper daemon_start" \
-                  f" | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) 2>&1"
+                  f" | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) 2>&1"
             start_daemon = subprocess.Popen(cmd, shell=True)
             start_daemon.wait()
 
@@ -2483,7 +2483,7 @@ def settings_diagnostic_install_dependencies():
         try:
             def install_dependencies():
                 cmd = "{pth}/aot/scripts/aot_wrapper update_dependencies" \
-                      " | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) >> {log} 2>&1".format(
+                      " | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {log} 2>&1".format(
                     pth=INSTALL_DIRECTORY,
                     log=DEPENDENCY_LOG_FILE)
                 _, _, _ = cmd_output(cmd, user="root")

@@ -128,7 +128,7 @@ if __name__ == "__main__":
             logger.info(f"Installing: {each_dep[0]}")
             if each_dep[2] == 'bash-commands':
                 for each_command in each_dep[1]:
-                    command = f"{each_command} | ( command -v ts >/dev/null 2>&1 && ts '[%Y-%m-%d %H:%M:%S]' || cat ) >> {DEPENDENCY_LOG_FILE} 2>&1"
+                    command = f"{each_command} | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {DEPENDENCY_LOG_FILE} 2>&1"
                     logger.info(f"Executing command: {command}")
                     cmd_out, cmd_err, cmd_status = cmd_output(
                         command, timeout=600, cwd="/tmp")
