@@ -17,7 +17,7 @@ REST는 표현 상태 전송(Representational State Transfer)의 약자입니다
 
 ### 인증
 
-API 키는 사용자 설정 페이지(`[기어 아이콘] -> 구성 -> 사용자`)에서 생성할 수 있습니다. 이는 데이터베이스에 128비트 바이트 객체로 저장되지만, 사용자에게는 base64로 인코딩된 문자열로 표시됩니다. 이는 HTTPS 엔드포인트에 접근하는 데 사용될 수 있습니다.
+API 키는 **관리 → 시스템 관리 → 사용자**에서 사용자를 편집한 뒤 **API 키 생성**을 눌러 발급할 수 있습니다. 키는 128바이트 난수값이며, **생성되는 그 순간 딱 한 번만** base64로 인코딩된 문자열로 표시됩니다 — AoT는 키 자체가 아니라 단방향 해시만 저장하므로 이후에는 다시 표시할 수 없습니다. 분실했다면 새로 발급하십시오. 자세한 내용은 [보안](Security.ko.md#api-keys)을 참조하십시오.
 
 AoT는 여러 인증 방법을 지원합니다. 모든 API 요청은 HTTPS를 통해 이루어져야 합니다. 일반 HTTP를 통해 이루어진 호출은 실패합니다. 인증 없이 이루어진 API 요청은 실패합니다.
 
@@ -33,9 +33,18 @@ curl -k -v -X GET "https://127.0.0.1/api/settings/users" -H "authorization: Basi
 curl -k -v -X GET "https://127.0.0.1/api/settings/users" -H "X-API-KEY: YOUR_API_KEY" -H "accept: application/vnd.aot.v1+json"
 ```
 
+API 키를 `?api_key=` 쿼리 파라미터로 전달할 수도 있으나, 이 방식은
+**폐기 예정이며 향후 릴리스에서 제거됩니다**:
+
 ```bash
+# 폐기 예정 — 위의 헤더 방식을 사용하세요
 curl -k -v -X GET "https://127.0.0.1/api/settings/users?api_key=YOUR_API_KEY" -H "accept: application/vnd.aot.v1+json"
 ```
+
+쿼리스트링에 담긴 키는 웹서버 액세스 로그·리버스 프록시 로그·`Referer` 헤더에
+그대로 기록되므로, 그 로그를 볼 수 있는 사람에게 사실상 노출됩니다. 이 방식으로
+들어온 요청은 폐기 경고와 함께 감사 로그(`apikey.url_auth`)에 기록되어, 제거
+전에 남은 사용처를 파악할 수 있습니다.
 
 ### Python 예제 (GET)
 

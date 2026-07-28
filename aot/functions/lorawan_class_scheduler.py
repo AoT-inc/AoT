@@ -70,6 +70,13 @@ MAX_DEVICES = 64
 # REST lock that even override cannot break.
 OVERRIDE_BEATS_WINTER = True
 
+# [SC-2] Valve-state bits inside the ext-HB 'valves' byte. The firmware packs three
+# 2-bit valve states into bits 0-5 and then reuses bit6/bit7 for GPS present/power
+# (see rak3172-C-S valves encoding), and the codec forwards the byte RAW. Comparing
+# the whole byte against 0 would read "GPS fitted" as "valve open" and pin the site
+# to Class C forever -- the exact battery trap this scheduler exists to avoid.
+VALVE_STATE_MASK = 0x3F
+
 # [SC-6] Battery voltage thresholds per battery type.
 # 'low': ACTIVE is blocked (REST forced) unless override is active.
 # 'critical': REST is forced unconditionally (override cannot bypass).
@@ -575,18 +582,42 @@ class CustomModule(AbstractFunction):
 
     def _any_valve_open(self, devices):
         """[SC-2] True if any managed device reports a non-idle valve (ext-HB valve
-        bitfield != 0). Short-circuits on the first open valve."""
+        bitfield != 0). Short-circuits on the first open valve.
+
+        A device with no valve reading cannot be judged, so it is skipped rather
+        than counted as open: treating a telemetry gap as "valve open" would pin the
+        site to Class C indefinitely and drain the battery. That fail-open choice is
+        only defensible while the gap is visible, so a pass where NO managed device
+        yielded a reading is logged as a warning -- it means the interlock is
+        inoperative, not that every valve is idle. (This is exactly how SC-2 sat
+        silently dead: fetch_device_state() did not return 'valves' at all.)
+        """
         client = self._client()
         max_age = self._int('measurement_max_age', 4000)
+        saw_reading = False
         for eui, _slot, _pid in devices:
             try:
                 st = self._dev_state(client, eui, max_age)
             except Exception:
                 continue
-            if (st.get('valves') or 0) != 0:
-                self.logger.debug("valve-open hold: {} valves={}".format(
-                    eui, st.get('valves')))
+            valves = st.get('valves')
+            if valves is None:
+                continue
+            saw_reading = True
+            open_bits = int(valves) & VALVE_STATE_MASK
+            if open_bits != 0:
+                self.logger.debug("valve-open hold: {} valves=0x{:02X}".format(
+                    eui, int(valves)))
                 return True
+        if saw_reading:
+            self._sc2_blind_warned = False
+        elif devices and not getattr(self, '_sc2_blind_warned', False):
+            self.logger.warning(
+                "[SC-2] valve interlock inoperative: no managed device reported a "
+                "'valves' measurement. Verify the ext-HB codec field is declared as "
+                "a device-profile measurement in ChirpStack. REST transitions are "
+                "NOT protected against a held-open valve until this is resolved.")
+            self._sc2_blind_warned = True
         return False
 
     def _battery_status(self, devices):

@@ -6,10 +6,15 @@ from aot.aot_flask.extensions import db
 
 class Remote(CRUDMixin, db.Model):
     """
-    Stores SSH/RDP credentials for connecting to remote headless hosts.
+    Stores connection info for another AoT instance managed via the
+    Remote Admin Dashboard (host, username, and an issued access token).
 
-    Each Remote record holds host, username, and password hash for a remote machine
-    that can receive commands from AoT via secure shell or remote desktop.
+    access_token is NOT the remote user's password hash — it is a
+    dedicated, revocable bearer token issued by the remote instance
+    specifically for this purpose (see RemoteAccessToken). Losing this
+    value only exposes remote-admin dashboard access to that one host,
+    and can be revoked/rotated on the remote side without touching the
+    user's real login credentials.
 
     @phase active
     """
@@ -21,7 +26,7 @@ class Remote(CRUDMixin, db.Model):
     is_activated = db.Column(db.Boolean, default=False)
     host = db.Column(db.Text, default='')
     username = db.Column(db.Text, default='')
-    password_hash = db.Column(db.Text, default='')
+    access_token = db.Column(db.Text, default='')
 
     def __repr__(self):
         return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)

@@ -23,6 +23,13 @@ class CustomController(CRUDMixin, db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
     tab_id = db.Column(db.String(36), db.ForeignKey('tab.unique_id', ondelete='CASCADE'), nullable=True, index=True)
+    # 복합장치(Device) 티어 소속. 이 항목을 자동 생성·소유하는 상위 장치의
+    # CustomController.unique_id. NULL이면 사용자가 직접 만든 독립 항목이다.
+    # FK 제약을 걸지 않는 이유: 부모가 CustomController이고 자식도 같은 테이블일
+    # 수 있어(장치 안의 하위 Function) 자기참조가 생기며, 5개 컨트롤러 테이블에
+    # 걸친 다형 참조라 단일 FK로 표현되지 않는다. 부모 삭제 시 정리는
+    # utils_function 의 삭제 경로가 담당한다.
+    parent_device_id = db.Column(db.String(36), nullable=True, index=True)
     name = db.Column(db.Text, default='Custom Function')
     position_y = db.Column(db.Integer, default=0)
     device = db.Column(db.Text, default='')

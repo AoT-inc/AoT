@@ -1641,6 +1641,49 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 }
 
 /* ============================================================
+   Setting drawers WITHOUT a live preview (Input / Output / Function / GIS input /
+   AI agent) → .aot-drawer-fullcover. Unlike the dashboard widget drawer these have
+   no widget to preview, so the 42vh preview-band sheet above would just show the
+   frozen page behind ("doesn't cover the screen"). On the phone they instead COVER
+   the whole screen on open, and a raise/lower handle (the same .aot-preview-toggle
+   affordance as the widget) drops the sheet to a peek and back. Desktop is unchanged
+   (right-side drawer) — these rules are phone-only.
+   Specificity: base sheet rule is .modal.aot-option-modal.aot-widget-drawer
+   .modal-dialog (0,4,0); adding .aot-drawer-fullcover (0,5,0) / the body state
+   (0,6,1) wins. Height snaps (no transition) per the documented dialog-transition bug.
+   ============================================================ */
+@media (max-width: 767.98px) {
+  /* Open state: full-screen cover. */
+  .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-dialog {
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+  /* Square the top corners while covering so nothing peeks through the rounded cut. */
+  body:not(.aot-drawer-lowered) .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-content {
+    border-radius: 0 !important;
+  }
+  /* Lowered ("내리기"): drop to a bottom sheet so the page peeks above it. */
+  body.aot-drawer-lowered .modal.aot-option-modal.aot-widget-drawer.aot-drawer-fullcover .modal-dialog {
+    top: auto !important;
+    bottom: 0 !important;
+    height: 58vh !important;
+    height: 58dvh !important;
+  }
+  /* Handle position. Covering: the sheet top IS the viewport top, so the base
+     top:-9px (straddling the sheet edge) would sit off-screen — pull it just inside,
+     centred over the header's empty middle (title left, close ✕ right). Lowered: the
+     sheet edge is mid-screen again, so restore the straddling handle. */
+  .aot-drawer-fullcover .aot-preview-toggle { top: 6px; }
+  body.aot-drawer-lowered .aot-drawer-fullcover .aot-preview-toggle { top: -9px; }
+  /* Point the handle chevron down while covering (tap = lower); flip it up when
+     lowered (tap = raise). Rotating the existing chevron keeps one icon. */
+  .aot-drawer-fullcover .aot-preview-toggle .fa-chevron-up { transform: rotate(180deg); }
+  body.aot-drawer-lowered .aot-drawer-fullcover .aot-preview-toggle .fa-chevron-up { transform: none; }
+}
+
+/* ============================================================
    Widget drawer — bootstrap-select dropdown list width
    The default menu max-width is viewport-based (~85vw), so long option text
    grows the list past the (now narrow) drawer and the modal's overflow:hidden

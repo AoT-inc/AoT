@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
-from aot.databases.models import GeoMap, GeoSetting
+from aot.databases.models import GeoMap, GeoSetting, GeoShape, GeoFacility, GeoFacilitySetpoint
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_geo
 from aot.aot_flask.geo.widget.maps import invalidate_geomap_cache
@@ -116,15 +116,36 @@ class GeoDesignManager:
 
     @staticmethod
     def delete_design_map(map_uuid):
-        """Delete GeoMap"""
+        """Delete GeoMap and everything under it (facilities, setpoints, shapes).
+
+        Deletes children explicitly, in dependency order, via bulk queries
+        instead of relying on GeoMap.shapes' ORM cascade("all, delete-orphan").
+        That cascade only reaches GeoShape — it does not know about GeoFacility
+        (linked to GeoShape by shape_uuid, no cascade declared), so deleting a
+        GeoShape that has a linked GeoFacility makes SQLAlchemy try to null out
+        GeoFacility.shape_uuid before the delete, which fails (shape_uuid is
+        NOT NULL). That failure used to surface *after* the map/shape deletes
+        had already been sent to the DB, leaving a half-deleted map (facility
+        rows orphaned, map+shapes gone) instead of rolling back cleanly.
+        """
         try:
-            geo_map = GeoMap.query.filter_by(unique_id=map_uuid).first()
-            if not geo_map:
+            facility_uuids = [
+                row[0] for row in db.session.query(GeoFacility.unique_id)
+                .filter_by(geo_id=map_uuid).all()
+            ]
+            if facility_uuids:
+                db.session.query(GeoFacilitySetpoint).filter(
+                    GeoFacilitySetpoint.facility_uuid.in_(facility_uuids)
+                ).delete(synchronize_session=False)
+                db.session.query(GeoFacility).filter_by(geo_id=map_uuid).delete(synchronize_session=False)
+
+            db.session.query(GeoShape).filter_by(geo_id=map_uuid).delete(synchronize_session=False)
+
+            deleted = db.session.query(GeoMap).filter_by(unique_id=map_uuid).delete(synchronize_session=False)
+            if not deleted:
+                db.session.rollback()
                 return None, "Map not found"
-            
-            # Assuming cascade delete or manual overlay deletion needed?
-            # For now, relying on DB cascade or simple map deletion.
-            db.session.delete(geo_map)
+
             db.session.commit()
             invalidate_geomap_cache(map_uuid)
 

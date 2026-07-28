@@ -12,8 +12,9 @@ import sys
 import time
 from collections import OrderedDict
 import flask_login
-from flask import (current_app, flash, jsonify, redirect, render_template,
-                   request, send_file, url_for)
+from flask import (Response, current_app, flash, jsonify, redirect,
+                   render_template, request, send_file, stream_with_context,
+                   url_for)
 from flask.blueprints import Blueprint
 from flask_babel import gettext
 _ = gettext
@@ -708,25 +709,55 @@ def page_info():
 
 
 @blueprint.route('/ram')
+@flask_login.login_required
 def ram():
-    """Return how much ram the frontend has used."""
+    """Return how much ram the frontend has used.
+
+    Was reachable anonymously, disclosing the web process's memory footprint to
+    anyone who could reach the host. Nothing in the frontend calls it, so
+    gating it costs nothing.
+    """
     return f"{resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / float(1000)}"
 
 
 def output_pstree_top(pid):
-    pstree = subprocess.Popen(
-        "pstree -p {pid}".format(pid=pid), stdout=subprocess.PIPE, shell=True)
-    (pstree_output, _) = pstree.communicate()
-    pstree.wait()
-    if pstree_output:
-        pstree_output = pstree_output.decode("latin1")
+    """pid comes from FRONTEND_PID_FILE (the app's own pidfile, int-cast by
+    the caller), not request input — but shell=True + string interpolation
+    is still a needless foot-gun (and a guaranteed static-scanner flag), so
+    this uses list args + no shell. int(pid) is a hard belt on top of the
+    caller's cast: subprocess with a list never passes through a shell
+    regardless, but a non-numeric pid would still fail the command cleanly
+    instead of doing anything unexpected.
 
-    top = subprocess.Popen(
-        "top -bH -n 1 -p {pid}".format(pid=pid), stdout=subprocess.PIPE, shell=True)
-    (top_output, _) = top.communicate()
-    top.wait()
-    if top_output:
-        top_output = top_output.decode("latin1")
+    pstree/top aren't installed in every environment (e.g. this repo's own
+    Docker image has neither) — shell=True silently produced empty output
+    in that case (the shell's own "command not found" swallowed by
+    communicate()); a direct exec instead raises FileNotFoundError, so that
+    has to be caught explicitly to keep the same graceful-empty behavior
+    run_cmd() above already gives every other command on this page."""
+    pid = str(int(pid))
+
+    pstree_output = None
+    try:
+        pstree = subprocess.Popen(
+            ["pstree", "-p", pid], stdout=subprocess.PIPE)
+        (pstree_output, _) = pstree.communicate()
+        pstree.wait()
+        if pstree_output:
+            pstree_output = pstree_output.decode("latin1")
+    except OSError:
+        pstree_output = None
+
+    top_output = None
+    try:
+        top = subprocess.Popen(
+            ["top", "-bH", "-n", "1", "-p", pid], stdout=subprocess.PIPE)
+        (top_output, _) = top.communicate()
+        top.wait()
+        if top_output:
+            top_output = top_output.decode("latin1")
+    except OSError:
+        top_output = None
 
     return pstree_output, top_output
 
@@ -898,6 +929,130 @@ def page_logview():
                            logfile=logfile,
                            log_output=log_output,
                            search=search)
+
+
+# Audit log actions offered in the filter dropdown. Kept in sync with the
+# constants in aot/utils/audit.py.
+AUDIT_ACTION_CHOICES = [
+    'login.success', 'login.failure', 'login.locked', 'logout',
+    'password.reset', 'user.create', 'user.modify', 'user.delete',
+    'settings.change', 'output.control', 'data.export', 'data.import',
+    'apikey.issue', 'remote.token_issue',
+]
+
+
+def _audit_log_query():
+    """Build the AuditLog query from the request's filter arguments."""
+    from aot.databases.models import AuditLog
+
+    query = AuditLog.query
+
+    action = request.args.get('action') or ''
+    username = request.args.get('username') or ''
+    result = request.args.get('result') or ''
+
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if username:
+        query = query.filter(AuditLog.username.ilike('%{}%'.format(username)))
+    if result:
+        query = query.filter(AuditLog.result == result)
+
+    return query.order_by(AuditLog.timestamp.desc()), action, username, result
+
+
+@blueprint.route('/audit_log', methods=('GET',))
+@flask_login.login_required
+def page_audit_log():
+    """Audit trail of user actions (logins, settings changes, device control).
+
+    Gated on view_logs, the same permission the log viewer uses.
+    """
+    if not utils_general.user_has_permission('view_logs'):
+        return redirect(url_for('routes_general.home'))
+
+    query, action, username, result = _audit_log_query()
+
+    try:
+        limit = min(int(request.args.get('limit', 200)), 1000)
+    except (TypeError, ValueError):
+        limit = 200
+
+    entries = query.limit(limit).all()
+
+    # Stored UTC, displayed in the viewer's local zone — the project's single
+    # source of truth for this is aot.utils.time_utils (docs/design/timezone-management.md).
+    from aot.utils.time_utils import to_local
+    for entry in entries:
+        try:
+            entry.local_timestamp = to_local(entry.timestamp).strftime(
+                '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            entry.local_timestamp = entry.timestamp
+
+    return render_template('tools/audit_log.html',
+                           entries=entries,
+                           action_choices=AUDIT_ACTION_CHOICES,
+                           filter_action=action,
+                           filter_username=username,
+                           filter_result=result,
+                           limit=limit)
+
+
+@blueprint.route('/audit_log/export', methods=('GET',))
+@flask_login.login_required
+def page_audit_log_export():
+    """Export the filtered audit trail as CSV (for procurement/audit review).
+
+    Streams rather than building one string: an audit trail kept for a year can
+    be large, and materialising it would spike memory on the single worker.
+    """
+    if not utils_general.user_has_permission('view_logs'):
+        return redirect(url_for('routes_general.home'))
+
+    query, _, _, _ = _audit_log_query()
+
+    def generate():
+        import csv
+        import io
+
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+
+        def flush():
+            buffer.seek(0)
+            chunk = buffer.read()
+            buffer.seek(0)
+            buffer.truncate(0)
+            return chunk
+
+        writer.writerow(['timestamp_utc', 'action', 'result', 'username',
+                         'user_id', 'ip_address', 'target_type', 'target_id',
+                         'target_name', 'detail', 'before', 'after'])
+        yield flush()
+
+        for row in query.yield_per(500):
+            writer.writerow([
+                row.timestamp.isoformat() if row.timestamp else '',
+                row.action, row.result, row.username or '',
+                row.user_id if row.user_id is not None else '',
+                row.ip_address or '', row.target_type or '',
+                row.target_id or '', row.target_name or '',
+                row.detail or '', row.before_json or '', row.after_json or '',
+            ])
+            yield flush()
+
+    from aot.utils.audit import DATA_EXPORT, audit_log
+    audit_log(DATA_EXPORT, target_type='AuditLog', detail='CSV export')
+
+    # stream_with_context is required, not cosmetic: a bare generator is
+    # consumed *after* the view returns, by which point the request/app
+    # context is gone and every DB access inside generate() raises
+    # "Working outside of application context".
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=aot_audit_log.csv'})
 
 
 @blueprint.route('/energy_usage_input_amp', methods=('GET', 'POST'))

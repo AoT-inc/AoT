@@ -3,6 +3,7 @@
 """flask views that deal with user authentication."""
 
 import datetime
+import hmac
 import logging
 import os
 import secrets
@@ -19,14 +20,22 @@ from sqlalchemy import func
 from aot.config import (INSTALL_DIRECTORY, LANGUAGES, LOGIN_ATTEMPTS,
                            LOGIN_BAN_SECONDS, LOGIN_LOG_FILE, SQL_DATABASE_AOT)
 from aot.config_translations import TRANSLATIONS
-from aot.databases.models import AlembicVersion, Misc, Role, User
-from aot.aot_flask.extensions import db
+from aot.databases.models import AlembicVersion, Misc, RemoteAccessToken, Role, User
+from aot.aot_flask.extensions import csrf, db
 from aot.aot_flask.forms import forms_authentication
 from aot.aot_flask.utils import utils_general
-from aot.utils import google_oauth
+from aot.utils import audit, google_oauth
+from aot.utils.audit import audit_log
+from aot.utils.time_utils import utc_now
+from aot.utils.totp import verify_totp
 from aot.utils.utils import test_password, test_username
 
 _GOOGLE_LOGIN_STATE_KEY = 'google_login_oauth_state'
+# Password verified, second factor still pending. Holding the user id (not a
+# logged-in session) means an attacker who only has the password cannot reach
+# any authenticated route by stopping here.
+_TOTP_PENDING_USER_KEY = 'totp_pending_user_id'
+_TOTP_PENDING_REMEMBER_KEY = 'totp_pending_remember'
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +201,11 @@ def login_password():
               "error")
         return redirect(url_for('routes_general.home'))
 
+    # Reaching the password page abandons any half-finished second-factor
+    # attempt (e.g. the user hit Cancel on /login_totp).
+    session.pop(_TOTP_PENDING_USER_KEY, None)
+    session.pop(_TOTP_PENDING_REMEMBER_KEY, None)
+
     form_login = forms_authentication.Login()
     form_language = forms_authentication.LanguageSelect()
 
@@ -218,67 +232,85 @@ def login_password():
     if session.get('language'):
         language = session['language']
 
-    # Check if the user is banned from logging in (too many incorrect attempts)
-    if banned_from_login():
-        flash(gettext(
-            "Too many failed login attempts. Please wait %(min)s "
-            "minutes before attempting to log in again",
-            min=int((LOGIN_BAN_SECONDS - session['ban_time_left']) / 60) + 1),
-                "info")
-    else:
-        if request.method == 'POST':
-            if form_language.language.data:
-                session['language'] = form_language.language.data
-            else:
-                username = form_login.aot_username.data.lower()
-                user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
-                user = User.query.filter(
-                    func.lower(User.name) == username).first()
+    if request.method == 'POST':
+        if form_language.language.data:
+            session['language'] = form_language.language.data
+        else:
+            username = form_login.aot_username.data.lower()
+            user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
 
-                if not user:
-                    login_log(username, 'NA', user_ip, 'NOUSER')
-                    failed_login()
-                elif not user.password_hash:
-                    # Google-signup accounts have no password set yet.
-                    login_log(username, 'NA', user_ip, 'FAIL')
-                    failed_login()
-                elif form_login.validate_on_submit():
-                    matched_hash = User().check_password(
-                        form_login.aot_password.data, user.password_hash)
+            # Lockout is now checked per-account, so it has to happen after we
+            # know which account is being attempted (the old session-based
+            # check ran before the POST was even read).
+            locked_seconds = account_locked_seconds(username)
+            if locked_seconds:
+                flash(gettext(
+                    "Too many failed login attempts. Please wait %(min)s "
+                    "minutes before attempting to log in again",
+                    min=int(locked_seconds / 60) + 1), "info")
+                return redirect('/login')
 
-                    # Encode stored password hash if it's a str
-                    password_hash = user.password_hash
-                    if isinstance(user.password_hash, str):
-                        password_hash = user.password_hash.encode('utf-8')
+            user = User.query.filter(
+                func.lower(User.name) == username).first()
 
-                    if matched_hash == password_hash:
-                        user = User.query.filter(User.name == username).first()
-                        if not user.is_approved:
-                            flash(gettext(
-                                "Your account is awaiting administrator "
-                                "approval."), "info")
-                            return redirect('/login')
-                        role_name = Role.query.filter(Role.id == user.role_id).first().name
-                        login_log(username, role_name, user_ip, 'LOGIN')
+            if not user:
+                login_log(username, 'NA', user_ip, 'NOUSER')
+                failed_login(username, user_ip)
+            elif not user.password_hash:
+                # Google-signup accounts have no password set yet.
+                login_log(username, 'NA', user_ip, 'FAIL')
+                failed_login(username, user_ip)
+            elif form_login.validate_on_submit():
+                matched_hash = User().check_password(
+                    form_login.aot_password.data, user.password_hash)
 
-                        # flask-login user
-                        login_user = User()
-                        login_user.id = user.id
-                        login_user.name = user.name
-                        remember_me = True if form_login.remember.data else False
-                        flask_login.login_user(login_user, remember=remember_me)
+                # Encode stored password hash if it's a str
+                password_hash = user.password_hash
+                if isinstance(user.password_hash, str):
+                    password_hash = user.password_hash.encode('utf-8')
 
-                        return redirect(url_for('routes_general.home'))
-                    else:
-                        user = User.query.filter(User.name == username).first()
-                        role_name = Role.query.filter(Role.id == user.role_id).first().name
-                        login_log(username, role_name, user_ip, 'FAIL')
-                        failed_login()
+                if hmac.compare_digest(matched_hash, password_hash):
+                    user = User.query.filter(User.name == username).first()
+                    if not user.is_approved:
+                        flash(gettext(
+                            "Your account is awaiting administrator "
+                            "approval."), "info")
+                        return redirect('/login')
+
+                    if user.totp_enabled:
+                        # Password verified but the second factor is still
+                        # outstanding — stash the pending user and hand off.
+                        # Nothing is logged in yet.
+                        session[_TOTP_PENDING_USER_KEY] = user.id
+                        session[_TOTP_PENDING_REMEMBER_KEY] = bool(
+                            form_login.remember.data)
+                        return redirect(url_for(
+                            'routes_authentication.login_totp'))
+
+                    clear_failed_logins(user)
+                    role_name = Role.query.filter(Role.id == user.role_id).first().name
+                    login_log(username, role_name, user_ip, 'LOGIN')
+                    audit_log(audit.LOGIN_SUCCESS, user_id=user.id,
+                              username=user.name, ip_address=user_ip)
+
+                    # flask-login user
+                    login_user = User()
+                    login_user.id = user.id
+                    login_user.name = user.name
+                    remember_me = True if form_login.remember.data else False
+                    flask_login.login_user(login_user, remember=remember_me)
+
+                    return redirect(url_for('routes_general.home'))
                 else:
-                    login_log(username, 'NA', user_ip, 'FAIL')
-                    failed_login()
+                    user = User.query.filter(User.name == username).first()
+                    role_name = Role.query.filter(Role.id == user.role_id).first().name
+                    login_log(username, role_name, user_ip, 'FAIL')
+                    failed_login(username, user_ip)
+            else:
+                login_log(username, 'NA', user_ip, 'FAIL')
+                failed_login(username, user_ip)
 
-            return redirect('/login')
+        return redirect('/login')
 
     return render_template('login_password.html',
                            dict_translation=TRANSLATIONS,
@@ -287,6 +319,65 @@ def login_password():
                            host=host,
                            language=language,
                            languages=LANGUAGES)
+
+
+@blueprint.route('/login_totp', methods=('GET', 'POST'))
+def login_totp():
+    """Second factor prompt — reached only after the password was verified.
+
+    The session holds just the pending user id; flask_login.login_user() is not
+    called until a valid code arrives, so nothing authenticated is reachable in
+    between. A wrong code counts toward the same account lockout as a wrong
+    password, otherwise the second factor would be freely brute-forceable.
+    """
+    pending_user_id = session.get(_TOTP_PENDING_USER_KEY)
+    if not pending_user_id:
+        return redirect('/login')
+
+    user = User.query.filter(User.id == pending_user_id).first()
+    if not user or not user.totp_enabled:
+        session.pop(_TOTP_PENDING_USER_KEY, None)
+        session.pop(_TOTP_PENDING_REMEMBER_KEY, None)
+        return redirect('/login')
+
+    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+
+    locked_seconds = account_locked_seconds(user.name)
+    if locked_seconds:
+        session.pop(_TOTP_PENDING_USER_KEY, None)
+        session.pop(_TOTP_PENDING_REMEMBER_KEY, None)
+        flash(gettext(
+            "Too many failed login attempts. Please wait %(min)s "
+            "minutes before attempting to log in again",
+            min=int(locked_seconds / 60) + 1), "info")
+        return redirect('/login')
+
+    if request.method == 'POST':
+        code = request.form.get('totp_code', '')
+        if verify_totp(user.totp_secret, code):
+            remember_me = bool(session.get(_TOTP_PENDING_REMEMBER_KEY))
+            session.pop(_TOTP_PENDING_USER_KEY, None)
+            session.pop(_TOTP_PENDING_REMEMBER_KEY, None)
+
+            clear_failed_logins(user)
+            role = Role.query.filter(Role.id == user.role_id).first()
+            login_log(user.name, role.name if role else 'NA', user_ip, 'LOGIN')
+            audit_log(audit.LOGIN_SUCCESS, user_id=user.id, username=user.name,
+                      ip_address=user_ip, detail='two-factor')
+
+            login_user = User()
+            login_user.id = user.id
+            login_user.name = user.name
+            flask_login.login_user(login_user, remember=remember_me)
+            return redirect(url_for('routes_general.home'))
+
+        login_log(user.name, 'NA', user_ip, 'FAIL')
+        failed_login(user.name, user_ip)
+        # failed_login() may have just locked the account; the redirect below
+        # re-enters this view, which re-checks the lock above.
+        return redirect(url_for('routes_authentication.login_totp'))
+
+    return render_template('login_totp.html', dict_translation=TRANSLATIONS)
 
 
 @blueprint.route('/login_keypad', methods=('GET', 'POST'))
@@ -307,14 +398,9 @@ def login_keypad():
     if not host:
         host = socket.gethostname()
 
-    # Check if the user is banned from logging in (too many incorrect attempts)
-    if banned_from_login():
-        flash(gettext(
-            "Too many failed login attempts. Please wait %(min)s "
-            "minutes before attempting to log in again",
-            min=int((LOGIN_BAN_SECONDS - session['ban_time_left']) / 60) + 1),
-                "info")
-
+    # Lockout is per-account now, and the keypad login page doesn't yet know
+    # which account is being attempted — the check happens in
+    # login_keypad_code() once the code identifies a user.
     return render_template('login_keypad.html',
                            dict_translation=TRANSLATIONS,
                            host=host)
@@ -346,38 +432,42 @@ def login_keypad_code(code):
     if not host:
         host = socket.gethostname()
 
-    # Check if the user is banned from logging in (too many incorrect attempts)
-    if banned_from_login():
+    user = User.query.filter(User.code == code).first()
+    user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+
+    if not user:
+        # The keypad code itself identifies the account, so an unknown code has
+        # no account to lock — per-IP rate limiting is the defence here.
+        login_log(code, 'NA', user_ip, 'FAIL')
+        audit_log(audit.LOGIN_FAILURE, result='failure', ip_address=user_ip,
+                  detail='unknown keypad code')
+        flash(gettext("Invalid Code"), "error")
+        time.sleep(2)
+    elif account_locked_seconds(user.name):
         flash(gettext(
             "Too many failed login attempts. Please wait %(min)s "
             "minutes before attempting to log in again",
-            min=int((LOGIN_BAN_SECONDS - session['ban_time_left']) / 60) + 1),
-                "info")
+            min=int(account_locked_seconds(user.name) / 60) + 1), "info")
+        time.sleep(2)
+    elif not user.is_approved:
+        flash(gettext(
+            "Your account is awaiting administrator approval."), "info")
+        time.sleep(2)
     else:
-        user = User.query.filter(User.code == code).first()
-        user_ip = request.environ.get('HTTP_X_FORWARDED_FOR', 'unknown address')
+        clear_failed_logins(user)
+        role_name = Role.query.filter(Role.id == user.role_id).first().name
+        login_log(user.name, role_name, user_ip, 'LOGIN')
+        audit_log(audit.LOGIN_SUCCESS, user_id=user.id, username=user.name,
+                  ip_address=user_ip, detail='keypad')
 
-        if not user:
-            login_log(code, 'NA', user_ip, 'FAIL')
-            failed_login()
-            flash(gettext("Invalid Code"), "error")
-            time.sleep(2)
-        elif not user.is_approved:
-            flash(gettext(
-                "Your account is awaiting administrator approval."), "info")
-            time.sleep(2)
-        else:
-            role_name = Role.query.filter(Role.id == user.role_id).first().name
-            login_log(user.name, role_name, user_ip, 'LOGIN')
+        # flask-login user
+        login_user = User()
+        login_user.id = user.id
+        login_user.name = user.name
+        remember_me = True
+        flask_login.login_user(login_user, remember=remember_me)
 
-            # flask-login user
-            login_user = User()
-            login_user.id = user.id
-            login_user.name = user.name
-            remember_me = True
-            flask_login.login_user(login_user, remember=remember_me)
-
-            return redirect(url_for('routes_general.home'))
+        return redirect(url_for('routes_general.home'))
 
     return render_template('login_keypad.html',
                            dict_translation=TRANSLATIONS,
@@ -523,6 +613,7 @@ def logout():
               role_name,
               request.environ.get('REMOTE_ADDR', 'unknown address'),
               'LOGOUT')
+    audit_log(audit.LOGOUT, user_id=user.id, username=user.name)
     # flask-login logout
     flask_login.logout_user()
 
@@ -532,46 +623,79 @@ def logout():
     return response
 
 
-@blueprint.route('/newremote/')
+@blueprint.route('/newremote/', methods=('POST',))
+@csrf.exempt  # server-to-server enrollment call (urllib3/requests), no browser CSRF token
 def newremote():
-    """Verify authentication as a client computer to the remote admin."""
-    username = request.args.get('user')
-    pass_word = request.args.get('passw')
+    """One-time enrollment: a hub AoT proves knowledge of a real admin
+    password and receives a dedicated, revocable remote-access token in
+    return. The token is NOT the account's password hash — losing it
+    only exposes remote-admin access to this one hub, and it can be
+    revoked/rotated (RemoteAccessToken.revoked) without touching the
+    user's real login credentials.
 
-    user = User.query.filter(
-        User.name == username).first()
+    POST-only (was GET with credentials in the query string — those end
+    up in access logs, proxy logs, and referrers).
+    """
+    username = request.form.get('user')
+    pass_word = request.form.get('passw')
 
-    if user:
-        if User().check_password(
-                pass_word, user.password_hash) == user.password_hash:
+    user = User.query.filter(User.name == username).first()
+
+    if user and pass_word and user.password_hash:
+        candidate = User().check_password(pass_word, user.password_hash)
+        stored = user.password_hash
+        if isinstance(stored, str):
+            stored = stored.encode('utf-8')
+        if hmac.compare_digest(candidate, stored):
             try:
                 with open('/opt/AoT/aot/aot_flask/ssl_certs/cert.pem', 'r') as cert:
                     certificate_data = cert.read()
             except Exception:
                 certificate_data = None
+
+            raw_token = RemoteAccessToken.generate_raw_token()
+            token_row = RemoteAccessToken()
+            token_row.user_id = user.id
+            token_row.token_hash = RemoteAccessToken.hash_token(raw_token)
+            token_row.label = request.remote_addr or ''
+            token_row.created_at = utc_now()
+            db.session.add(token_row)
+            db.session.commit()
+
+            audit_log(audit.REMOTE_TOKEN_ISSUE, user_id=user.id,
+                      username=user.name, target_type='RemoteAccessToken',
+                      target_id=token_row.unique_id,
+                      detail='remote admin enrollment')
+
             return jsonify(status=0,
                            error_msg=None,
-                           hash=str(user.password_hash),
+                           token=raw_token,
                            certificate=certificate_data)
     return jsonify(status=1,
                    error_msg="Unable to authenticate with user and password.",
-                   hash=None,
+                   token=None,
                    certificate=None)
 
 
-@blueprint.route('/remote_login', methods=('GET', 'POST'))
+@blueprint.route('/remote_login', methods=('POST',))
+@csrf.exempt  # server-to-server call using the token issued by newremote()
 def remote_admin_login():
-    """Authenticate Remote Admin login."""
-    password_hash = request.form.get('password_hash', None)
+    """Authenticate a Remote Admin session using a previously issued
+    RemoteAccessToken (never the account's password hash — see newremote())."""
+    token = request.form.get('token', None)
     username = request.form.get('username', None)
 
-    if username and password_hash:
-        user = User.query.filter(
-            func.lower(User.name) == username).first()
+    if username and token:
+        user = User.query.filter(func.lower(User.name) == username).first()
     else:
         user = None
 
-    if user and str(user.password_hash) == str(password_hash):
+    token_row = RemoteAccessToken.find_valid(user.id, token) if user else None
+
+    if token_row:
+        token_row.last_used_at = utc_now()
+        db.session.commit()
+
         login_user = User()
         login_user.id = user.id
         login_user.name = user.name
@@ -603,35 +727,96 @@ def check_database_version_issue():
             "generated in its place.", path=SQL_DATABASE_AOT), "error")
 
 
-def banned_from_login():
-    """Check if the person at the login prompt is banned form logging in."""
-    if not session.get('failed_login_count'):
-        session['failed_login_count'] = 0
-    if not session.get('failed_login_ban_time'):
-        session['failed_login_ban_time'] = 0
-    elif session['failed_login_ban_time']:
-        session['ban_time_left'] = time.time() - session['failed_login_ban_time']
-        if session['ban_time_left'] < LOGIN_BAN_SECONDS:
-            return 1
-        else:
-            session['failed_login_ban_time'] = 0
-    return 0
+def account_locked_seconds(username):
+    """Return remaining lockout seconds for username, or 0 if not locked.
 
-
-def failed_login():
-    """Count the number of failed login attempts."""
+    Server-side and per-account. The old implementation kept the counter in the
+    Flask session, so an attacker only had to drop the cookie to reset it —
+    which made LOGIN_ATTEMPTS decorative. Rate limiting (app.py, per-IP) stays
+    as the second layer.
+    """
+    if not username:
+        return 0
     try:
-        session['failed_login_count'] += 1
-    except KeyError:
-        session['failed_login_count'] = 1
+        user = User.query.filter(func.lower(User.name) == username.lower()).first()
+        if not user or not user.locked_until:
+            return 0
+        locked_until = user.locked_until
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=datetime.timezone.utc)
+        remaining = (locked_until - utc_now()).total_seconds()
+        if remaining <= 0:
+            # Lockout expired — clear it so the next failure starts a fresh count.
+            user.locked_until = None
+            user.failed_login_count = 0
+            db.session.commit()
+            return 0
+        return int(remaining)
+    except Exception:
+        logger.exception("Failed to check account lockout for %s", username)
+        return 0
 
-    if session['failed_login_count'] > LOGIN_ATTEMPTS - 1:
-        session['failed_login_ban_time'] = time.time()
-        session['failed_login_count'] = 0
-    else:
-        flash(gettext('Failed Login (%(count)s/%(max)s)',
-                      count=session['failed_login_count'],
-                      max=LOGIN_ATTEMPTS), "error")
+
+def failed_login(username=None, user_ip=None):
+    """Record a failed attempt server-side and lock the account past the limit.
+
+    Locking is per-account, which is a known denial-of-service trade-off (a
+    third party can lock someone out by guessing wrong). LOGIN_BAN_SECONDS is
+    short (10 min by default) to bound that, and the lockout is recorded in the
+    audit log so an admin can see it happening.
+    """
+    if not username:
+        flash(gettext('Failed Login'), "error")
+        return
+
+    try:
+        user = User.query.filter(func.lower(User.name) == username.lower()).first()
+        if not user:
+            # Unknown username: nothing to lock (and we must not create a row —
+            # that would leak which names exist). Per-IP rate limiting covers it.
+            audit_log(audit.LOGIN_FAILURE, result='failure', username=username,
+                      ip_address=user_ip, detail='unknown username')
+            flash(gettext('Failed Login'), "error")
+            return
+
+        user.failed_login_count = (user.failed_login_count or 0) + 1
+
+        if user.failed_login_count >= LOGIN_ATTEMPTS:
+            user.locked_until = utc_now() + datetime.timedelta(
+                seconds=LOGIN_BAN_SECONDS)
+            user.failed_login_count = 0
+            db.session.commit()
+            audit_log(audit.LOGIN_LOCKED, result='failure', username=username,
+                      ip_address=user_ip, user_id=user.id,
+                      detail='locked for {}s after {} failed attempts'.format(
+                          LOGIN_BAN_SECONDS, LOGIN_ATTEMPTS))
+            flash(gettext(
+                "Too many failed login attempts. Please wait %(min)s "
+                "minutes before attempting to log in again",
+                min=int(LOGIN_BAN_SECONDS / 60) + 1), "error")
+        else:
+            db.session.commit()
+            audit_log(audit.LOGIN_FAILURE, result='failure', username=username,
+                      ip_address=user_ip, user_id=user.id)
+            flash(gettext('Failed Login (%(count)s/%(max)s)',
+                          count=user.failed_login_count,
+                          max=LOGIN_ATTEMPTS), "error")
+    except Exception:
+        db.session.rollback()
+        logger.exception("Failed to record failed login for %s", username)
+        flash(gettext('Failed Login'), "error")
+
+
+def clear_failed_logins(user):
+    """Reset the failure counter after a successful authentication."""
+    try:
+        if user.failed_login_count or user.locked_until:
+            user.failed_login_count = 0
+            user.locked_until = None
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("Failed to clear login failures for %s", user.name)
 
 
 def login_log(user, group, ip, status):

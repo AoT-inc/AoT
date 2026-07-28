@@ -86,6 +86,40 @@ class CycleMixin:
                 interval_sec=probe_interval, enabled=probe_enabled)
         return self._probe_scheduler_inst
 
+    def _classify_emergency(self, gate_result, situation) -> tuple:
+        """이번 사이클이 '긴급'인지 판정 — 개구부 정상 구동주기를 우회할지 결정한다.
+
+        긴급 판정 시 _dispatch() 는 actuation_profile 주기 대신 emergency_period_sec
+        만 적용한다(완전 무시가 아니라 연타 방지 하한만 유지). 긴급 사유:
+          1. 안전게이트 발동/부분발동 — 돌풍·강우·폭염·한파·센서만료(이미 SafetyPreGate 가 판정)
+          2. 급격한 편차 — |deviation| >= tolerance × emergency_deviation_mult
+          3. 급격한 변화율 — 내부온도 변화율 >= emergency_rate_c_per_10min (situation.context['T_trend'], °C/min)
+          4. setpoint 변경 직후 1회 — cmd_reload/cmd_run_now 가 남긴 _force_immediate 플래그(1회성 소비)
+
+        Returns: (is_emergency: bool, reason: str)
+        """
+        if getattr(self, '_force_immediate', False):
+            self._force_immediate = False
+            return True, 'setpoint_change'
+
+        if gate_result.triggered or gate_result.partial:
+            return True, 'safety_gate'
+
+        mult = float(getattr(self, 'emergency_deviation_mult', 3.0) or 3.0)
+        for var, dev in situation.deviation_native.items():
+            tgt = situation.target.get(var)
+            if tgt is None or tgt.tolerance <= 0:
+                continue
+            if abs(dev) >= tgt.tolerance * mult:
+                return True, f'deviation:{var}'
+
+        rate_thr = float(getattr(self, 'emergency_rate_c_per_10min', 2.0) or 2.0)
+        t_trend_per_min = abs(situation.context.get('T_trend', 0.0) or 0.0)
+        if (t_trend_per_min * 10.0) >= rate_thr:
+            return True, 'T_rate'
+
+        return False, ''
+
     def _run_cycle(self, cycle_sec: float):
         uid     = self.unique_id
         max_age = self.sensor_max_age or 120.0
@@ -215,7 +249,9 @@ class CycleMixin:
         gate_result = self._pre_gate.evaluate(gate_env, self._profiles, uid)
 
         if gate_result.triggered:
-            self._dispatch(gate_result.forced_commands, cycle_sec)
+            # 안전게이트 강제명령은 항상 즉시 반영 — 구동주기 설정(actuation_profile)의
+            # 정상-사이클 최소 이동 간격에 지연되면 안 된다(강우·돌풍·폭염·한파 대응).
+            self._dispatch(gate_result.forced_commands, cycle_sec, emergency=True)
             write_decision_log(uid, 'safety_gate_active',
                                CH_SAFETY_GATE, float(gate_result.gate_mask))
             # ── 심각 이벤트 이메일 알림 (1일 1회) ─────────────────────────────
@@ -479,6 +515,12 @@ class CycleMixin:
 
         # 편차/모드/제한인자는 write_cycle_metrics(env_control, CH30~32·71·72)로 일원화 기록.
 
+        # ── 구동주기: 이번 사이클이 긴급인지 판정 ─────────────────────────────
+        # 긴급이면 개구부 정상-사이클 최소 이동 간격(actuation_profile)을 건너뛰고
+        # emergency_period_sec 만 적용해 즉시 반영한다.
+        self._emergency_now, self._emergency_reason = self._classify_emergency(
+            gate_result, situation)
+
         # ── P5-3: Passive/Natural 알림 ────────────────────────────────────────
         self._emit_authority_alerts(situation)
 
@@ -608,7 +650,7 @@ class CycleMixin:
         # 선택하지 못함. T 공간 불균일 감지 시 독립 룰로 ON/OFF 결정.
         self._apply_mixing_actuators(final_cmds, internal)
 
-        failed = self._dispatch(final_cmds, cycle_sec)
+        failed = self._dispatch(final_cmds, cycle_sec, emergency=self._emergency_now)
 
         # ── 0.1: 피드백 레지스트리 업데이트 ──────────────────────────────────
         now_ts = time.time()
@@ -913,6 +955,35 @@ class CycleMixin:
             'schedule':    sched,
             'photo':       photo,
             'commands':    cmd_list,
+            'actuation':   self._build_actuation_summary(now_ts),
+        }
+
+    def _build_actuation_summary(self, now_ts: float) -> dict:
+        """개구부 구동주기 설정과 이번 사이클 긴급 여부를 요약한다(관측성).
+
+        actuation_profile 설정 효과(정상 180/600s 등)를 사용자가 [현황] 화면에서
+        직접 확인할 수 있게 한다 — 값을 바꿔도 실제로 뭐가 달라졌는지 보이지 않으면
+        튜닝이 불가능하다.
+        """
+        normal_sec, emergency_sec = self._actuation_params()
+        moved = getattr(self, '_dispatch_moved', {}) or {}
+        vents = []
+        for p in self._profiles:
+            if p.kind != 'opening':
+                continue
+            moved_ts = moved.get(p.actuator_id)
+            vents.append({
+                'slot_key':       p.slot_key or p.actuator_id[:8],
+                'since_move_sec': (round(now_ts - moved_ts, 0)
+                                   if moved_ts is not None else None),
+            })
+        return {
+            'profile':          getattr(self, 'actuation_profile', 'standard') or 'standard',
+            'normal_period_sec':    normal_sec,
+            'emergency_period_sec': emergency_sec,
+            'emergency':        bool(getattr(self, '_emergency_now', False)),
+            'reason':           getattr(self, '_emergency_reason', '') or None,
+            'vents':            vents,
         }
 
     # ── Greybox KPI auto-transition ───────────────────────────────────────────

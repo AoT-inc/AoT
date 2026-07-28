@@ -435,6 +435,10 @@ body,
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
   border-radius: 0.7em !important;
   border: 1px solid #c9c9c9;
+  /* 위젯 카드는 원래 배경이 없어 대시보드 페이지 배경이 그대로 비쳤다
+     (custom_ui 의 bd_primary/bd_secondary 가 위젯 카드에는 전혀 영향을
+     못 주던 지점 — color-system.md 참조). bd_primary 로 테마화. */
+  background-color: var(--bd-primary, #FFFFFF);
 }
 
 /* 사이드바 메뉴 스타일 */

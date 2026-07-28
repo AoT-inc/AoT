@@ -20,6 +20,7 @@ from aot.aot_flask.utils.utils_general import custom_channel_options_return_json
 from aot.aot_flask.utils.utils_general import custom_options_return_json
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.aot_flask.utils.utils_general import sync_geo_device_name
+from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
 from aot.utils.system_pi import parse_custom_option_values
 from aot.aot_flask.utils.utils_map_config import (
@@ -338,6 +339,14 @@ def controller_activate(controller_id):
     messages = controller_activate_deactivate(
         messages, 'activate', 'Function', controller_id, flash_message=False)
 
+    # 복합장치(Device) 활성화 연동(design plan Phase 4) — 장치 자신이 활성화된
+    # 뒤에만 하위 Input 을 cascade 활성화한다. Output 은 대상이 아니다(위
+    # cascade_activate_inputs docstring 참조). 일반 Custom Function 은
+    # device_module_names() 에 없으므로 이 분기가 전혀 영향을 주지 않는다.
+    if not messages["error"] and function and function.device in device_module_names():
+        from aot.utils.device_blueprint import cascade_activate_inputs
+        messages = cascade_activate_inputs(function, messages)
+
     if not messages["error"]:
         messages["success"].append('{action} {controller}'.format(
             action=TRANSLATIONS['activate']['title'],
@@ -357,6 +366,13 @@ def controller_deactivate(controller_id):
 
     messages = controller_activate_deactivate(
         messages, 'deactivate', 'Function', controller_id, flash_message=False)
+
+    if not messages["error"]:
+        function = CustomController.query.filter(
+            CustomController.unique_id == controller_id).first()
+        if function and function.device in device_module_names():
+            from aot.utils.device_blueprint import cascade_deactivate_inputs
+            messages = cascade_deactivate_inputs(function, messages)
 
     if not messages["error"]:
         messages["success"].append('{action} {controller}'.format(

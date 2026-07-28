@@ -28,6 +28,8 @@ from aot.aot_flask.routes_authentication import clear_cookie_auth
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.utils.utils_general import get_ip_address
 from aot.aot_flask.utils.utils_output import get_all_output_states
+from aot.utils import audit
+from aot.utils.audit import audit_log
 from aot.utils.database import db_retrieve_table
 from aot.utils.influx import (influx_to_list, influxdb_get_count_points,
                                  influxdb_get_first_point, query_string)
@@ -137,6 +139,18 @@ def custom_css():
             # .pause-background, aot-toggle.css, widget_trigger_sequence.py의
             # seq-offline/seq-dev-offline 등(전부 --bg-pause 폴백 경유).
             'bg_warning': ['--bg-pause', '--aot-bg-pause'],
+            # 출력/입력 채널 행(개별 채널, 카드 전체 아님)의 켜짐/꺼짐 배경.
+            # 소비처: aot-entry-ui.css .aot-entry-item-channel.active/inactive-
+            # background(output/input 채널), 시설 위젯·센서 라벨 표면색 등.
+            'bg_on': ['--bg-on', '--aot-bg-on'],
+            'bg_off': ['--bg-off', '--aot-bg-off'],
+            # 명령 전송 후 확인 대기 중 배경. 소비처: aot-base.css .hold-background.
+            'bg_pending': ['--bg-hold', '--aot-bg-hold'],
+            # "실행 중, 확인 불가" 인라인 틴트(aot-output-state.js
+            # paintUnverifiedRunning/paintNameWarning). 채널 행에서 bg_on/off
+            # 를 인라인 !important 로 덮어쓰는 원인이 이 토큰이었다.
+            'tint_warning_bg': ['--aot-tint-warning-bg'],
+            'tint_warning_fg': ['--aot-tint-warning-fg'],
             'bg_llm': ['--bg-llm', '--aot-color-llm'],
             'bg_mcp': ['--bg-mcp', '--aot-color-mcp'],
             'btn_primary_bg': ['--bd-tertiary', '--bd-btn-primary', '--aot-btn-bg-primary', '--bg-btn-active', '--aot-btn-bg-active'],
@@ -237,6 +251,23 @@ def output_mod(output_id, channel, state, output_type, amount):
             output_type=output_type,
             amount=float(amount),
             output_channel=output_channel)
+
+        # Manual device control is an audited action. Only the on/off
+        # transition is recorded — PWM/PID channels change continuously and
+        # logging every value would swamp the audit table (see the audit-log
+        # design note in .local/plans/security_hardening_plan.md).
+        try:
+            output_dev = db_retrieve_table(Output).filter(
+                Output.unique_id == output_id).first()
+            output_name = output_dev.name if output_dev else None
+        except Exception:
+            output_name = None
+        audit_log(audit.OUTPUT_CONTROL, target_type='Output',
+                  target_id=output_id, target_name=output_name,
+                  result='failure' if out_status[0] else 'success',
+                  detail='channel={} state={} type={} amount={}'.format(
+                      output_channel, state, output_type, amount))
+
         if out_status[0]:
             return f'ERROR: {out_status[1]}'
         else:

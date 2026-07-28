@@ -18,6 +18,10 @@
 #    PUT  /api/device-profiles/{id}
 #    POST /api/devices/{eui}/queue
 #
+#  26.07: fetch_device_state() also returns node_class_actual + valves (from the
+#  firmware ext-HB) for the scheduler's reconcile pass (SC-1) and valve-open safety
+#  interlock (SC-2). enqueue_cfg() already supports confirmed downlinks (SC-4).
+#
 # Copyright (c) 2026, AoT Project Authors. All rights reserved.
 
 import base64
@@ -368,9 +372,17 @@ class ChirpStackClient:
         return None
 
     def fetch_device_state(self, dev_eui: str, max_age: int = 4000) -> dict:
-        """Return {battery_V, rssi, snr, node_class, node_hb_min, last_seen_at}."""
+        """Return {battery_V, rssi, snr, node_class, node_class_actual, node_hb_min,
+        valves, last_seen_at}.
+
+        node_class_actual + valves (added 26.07) come from the firmware ext-HB and
+        are consumed by the scheduler's reconcile pass (SC-1) and valve-open safety
+        interlock (SC-2). They require the matching codec field names to be declared
+        as device-profile measurements in ChirpStack.
+        """
         result = {'battery_V': None, 'rssi': None, 'snr': None,
-                  'node_class': None, 'node_hb_min': None, 'last_seen_at': None}
+                  'node_class': None, 'node_class_actual': None,
+                  'node_hb_min': None, 'valves': None, 'last_seen_at': None}
         eui = normalize_deveui(dev_eui)
         if not self.ok() or not eui:
             return result
@@ -390,9 +402,16 @@ class ChirpStackClient:
                 if 'node_class' in m:
                     v = self._latest_metric_val(m['node_class'])
                     result['node_class'] = int(v) if v is not None else None
+                if 'node_class_actual' in m:
+                    v = self._latest_metric_val(m['node_class_actual'])
+                    result['node_class_actual'] = int(v) if v is not None else None
                 if 'node_hb_min' in m:
                     v = self._latest_metric_val(m['node_hb_min'])
                     result['node_hb_min'] = int(v) if v is not None else None
+                if 'valves' in m:
+                    # 0 = all idle is a meaningful value -> do NOT skip zero
+                    v = self._latest_metric_val(m['valves'], skip_zero=False)
+                    result['valves'] = int(v) if v is not None else None
         except Exception as e:
             self.logger.debug(f"metrics fetch failed {eui}: {e}")
 

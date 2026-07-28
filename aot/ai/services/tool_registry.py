@@ -157,7 +157,7 @@ TOOLS: List[Tool] = [
     Tool('search_devices', handler='search_devices', manifest={
         "tool_name": "search_devices",
         "action_type": "virtual_tool_call",
-        "description": "Search for Input/Output/Camera/Zone devices by name or type keyword.",
+        "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — results of type 'device' list its member_ids, and any input/output result belonging to one carries parent_device_id + parent_device_name. When a result has a parent device, prefer answering/acting at that device level rather than treating the input/output as standalone.",
         "usage_hint": "Call with params.arguments.query='<keyword>'. Returns list of matching devices with their unique_ids.",
     }),
     Tool('get_device_measurements', handler='get_device_measurements', manifest={
@@ -701,7 +701,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "search_devices",
-        "description": "Search for devices (inputs, outputs, cameras) by name or type keyword.",
+        "description": "Search for devices (inputs, outputs, cameras, complex devices) by name or type keyword. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — its 'device' result lists member_ids, and any input/output belonging to one carries parent_device_id + parent_device_name.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -712,7 +712,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_device_list",
-        "description": "List all registered devices (inputs, outputs, cameras) in the AoT system. Use this when the user asks for a full device listing without a specific keyword.",
+        "description": "List all registered devices (inputs, outputs, cameras, complex devices) in the AoT system. Use this when the user asks for a full device listing without a specific keyword. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — its 'device' entry lists member_ids, and any input/output belonging to one carries parent_device_id + parent_device_name.",
         "input_schema": {
             "type": "object",
             "properties": {}

@@ -62,9 +62,12 @@ services:
   # 정책을 받는다. aot-app 과 같은 aot_data 볼륨을 마운트해야 같은 aot.db 를
   # 열고 승인 큐(mcp_confirmation)를 공유한다. 인증은 mcp_auth.py(X-API-KEY =
   # base64(User.api_key), Settings > Users 에서 발급)가 처리하지만, 그와 별개로
-  # LAN/인터넷 노출을 막기 위해 127.0.0.1 로만 바인딩한다 — 이 호스트에서 실행
-  # 되는 클라이언트만 접속 가능. docker-compose.prod.yml 의 aot_mcp 서비스와
-  # 같은 구성, 여기서는 build-from-source 스타일로 맞춤.
+  # 2026-07-28: 외부 리버스프록시(NPM, aot-proxy-1) 경유 접속을 위해 이 Mac의
+  # Tailscale IP(100.111.33.43)에만 바인딩 — 같은 tailnet의 NPM에서는 도달
+  # 가능하지만 가정용 LAN/그 외 인터넷 인터페이스로는 여전히 안 열린다.
+  # Tailscale IP가 바뀌면(재등록 등) 이 값도 같이 갱신해야 한다.
+  # docker-compose.prod.yml 의 aot_mcp 서비스와 같은 구성, 여기서는
+  # build-from-source 스타일로 맞춤.
   # stdio로 붙는 클라이언트는 반드시 이 컨테이너로 exec 해야 한다 —
   # `docker exec -i aot_local-aot_mcp-1 python aot/aot_mcp_server.py`.
   # AOT_MCP_API_KEY(아래)가 여기에만 있고 aot-app에는 없으므로, aot-app으로
@@ -76,7 +79,7 @@ services:
       dockerfile: docker/Dockerfile
     command: python aot/aot_mcp_server.py --http --port 5700
     ports:
-      - "127.0.0.1:5700:5700"
+      - "100.111.33.43:5700:5700"
     volumes:
       - ../:/app
       - ../logs:/var/log/aot

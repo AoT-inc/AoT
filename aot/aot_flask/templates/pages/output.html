@@ -55,12 +55,23 @@
   // Sends to the paired output itself so its position-aware logic decides
   // whether to actually move (delta check) or skip. This avoids re-firing
   // a full travel_time cycle when the actuator is already at the target.
+  //
+  // Self-driven actuators (no output_open_id/output_close_id — own
+  // travel_time/position tracking, see the anyActive fallback below) have no
+  // separate open/close output whose state tells the poll which direction is
+  // currently moving. Remember the last-clicked direction here so the poll
+  // can highlight the matching Open/Close button while it's active.
+  var pairedLastDirection = {};
   jQuery.fn.actuator_paired_cmd = function (cmd, paired_id, paired_ch) {
+    var key = paired_id + '-' + paired_ch;
     if (cmd === 'open') {
+      pairedLastDirection[key] = 'open';
       getAjax(paired_id + '/' + paired_ch + '/on/value/100');
     } else if (cmd === 'close') {
+      pairedLastDirection[key] = 'close';
       getAjax(paired_id + '/' + paired_ch + '/on/value/0');
     } else { // stop
+      pairedLastDirection[key] = null;
       getAjax(paired_id + '/' + paired_ch + '/off/sec/0');
     }
   }
@@ -92,7 +103,7 @@
   // the answer has not arrived yet.
   var commCapable = {};
   function loadCommCapable() {
-    $.getJSON('/outputcommcapable', function (data) {
+    return $.getJSON('/outputcommcapable', function (data) {
       commCapable = data || {};
     });
   }
@@ -214,14 +225,35 @@
             var closeSt = closeId && data[closeId] ? data[closeId][closeCh] : null;
             var openActive = openSt !== null && openSt !== undefined && openSt !== 'off';
             var closeActive = closeSt !== null && closeSt !== undefined && closeSt !== 'off';
-            var anyActive = openActive || closeActive;
-
-            row.className = "item_channel row small-gutters aot-entry-item-channel aot-paired-row " +
-              (anyActive ? "active-background" : "inactive-background");
 
             var parts = row.id.split('-');
             var ch = parts[parts.length - 3];
             var oid = parts.slice(0, parts.length - 3).join('-');
+
+            // Self-driven actuators (own travel_time/position tracking,
+            // actuator_paired.py output_states[channel] = position%) have no
+            // separate open_id/close_id configured — for those, openSt/closeSt
+            // above are always null, so anyActive must also fall back to the
+            // paired output's OWN state (already used below for the position-%
+            // label) or the row background would never reflect real movement.
+            var ownSt = data[oid] ? data[oid][ch] : null;
+            var ownActive = ownSt !== null && ownSt !== undefined && ownSt !== 'off' && ownSt !== false;
+            var anyActive = openActive || closeActive || ownActive;
+
+            // Self-driven actuators have no open/close output to read a real
+            // direction from (openSt/closeSt above are always null), so
+            // openActive/closeActive would otherwise stay false forever —
+            // meaning the Open/Close button never picks up the "is on" color
+            // even while the row itself is correctly active. Fall back to the
+            // last direction the user actually clicked (see actuator_paired_cmd).
+            if (!openId && !closeId) {
+              var lastDir = pairedLastDirection[oid + '-' + ch];
+              if (lastDir === 'open')  { openActive = ownActive; }
+              if (lastDir === 'close') { closeActive = ownActive; }
+            }
+
+            row.className = "item_channel row small-gutters aot-entry-item-channel aot-paired-row " +
+              (anyActive ? "active-background" : "inactive-background");
 
             // Same unverified-while-running treatment as the standard rows
             // above. Judged on the paired output's OWN capability plus that of
@@ -271,9 +303,21 @@
         }
       });
   } $(function () {
-    loadCommCapable(); // static per output — fetched once, not per state poll
-    gpioState(); // Update when page first loads // Refresh every 1 second
-    setInterval(function () { gpioState(); }, 1000);
+    // loadCommCapable() and gpioState() both hit the network — without this
+    // sequencing, the FIRST gpioState() tick can land before commCapable is
+    // populated (still {}), so `commCapable[output_id] === false` reads as
+    // false for every output on that one tick (never merely because the
+    // answer hasn't arrived yet — see the comment above). An output that IS
+    // unconfirmable then briefly renders without the warning tint on load,
+    // then flips to it a moment later once the second tick sees the real
+    // (now-loaded) commCapable value — a visible color flash for no reason
+    // other than request-ordering luck. Waiting for the one-time
+    // capability fetch before the first paint removes that race entirely;
+    // steady-state polling (every 1s after) is unaffected.
+    loadCommCapable().always(function () {
+      gpioState(); // Update when page first loads // Refresh every 1 second
+      setInterval(function () { gpioState(); }, 1000);
+    });
   }); }); </script>
 {% include 'pages/map/map_assets.html' %}
 {% endblock %}

@@ -10,7 +10,7 @@ try:
 except ImportError:
     SHAPELY_AVAILABLE = False
 
-from aot.databases.models import GeoShape, Input, Output, OutputChannel, PID, Trigger, Conditional, CustomController, Function, GeoFacility
+from aot.databases.models import GeoShape, Input, Output, OutputChannel, PID, Trigger, Conditional, CustomController, Function, GeoFacility, GeoFacilitySetpoint
 from aot.aot_flask.extensions import db
 
 class GeoOverlayManager:
@@ -18,6 +18,41 @@ class GeoOverlayManager:
     Manages Map Overlays (Features).
     Handles CRUD and Geometric Validation.
     """
+
+    @staticmethod
+    def _cascade_delete_facilities_for_shapes(shape_ids):
+        """Delete any GeoFacility (+ GeoFacilitySetpoint, facility_bay children)
+        linked to the given GeoShape ids, via GeoFacility.shape_uuid.
+
+        The bulk `Query.delete()` calls this module uses for GeoShape rows
+        bypass SQLAlchemy's ORM relationship handling entirely (no cascade,
+        no error) — so deleting a 'facility'-type shape through the generic
+        overlay save/delta paths used to silently orphan its GeoFacility row
+        (dangling shape_uuid) instead of cleaning it up like the dedicated
+        /api/geo/facility/<uuid> DELETE endpoint does. Call this BEFORE
+        deleting `shape_ids` (facility_bay cleanup here matches on
+        parent_id, which needs the parent shape id to still be well-defined).
+        """
+        if not shape_ids:
+            return
+        shape_ids = list(shape_ids)
+        uuids = [row[0] for row in db.session.query(GeoShape.unique_id)
+                 .filter(GeoShape.id.in_(shape_ids)).all()]
+        if not uuids:
+            return
+        facility_uuids = [row[0] for row in db.session.query(GeoFacility.unique_id)
+                           .filter(GeoFacility.shape_uuid.in_(uuids)).all()]
+        if not facility_uuids:
+            return
+        GeoFacilitySetpoint.query.filter(
+            GeoFacilitySetpoint.facility_uuid.in_(facility_uuids)
+        ).delete(synchronize_session=False)
+        GeoShape.query.filter(
+            GeoShape.type == 'facility_bay', GeoShape.parent_id.in_(shape_ids)
+        ).delete(synchronize_session=False)
+        GeoFacility.query.filter(
+            GeoFacility.unique_id.in_(facility_uuids)
+        ).delete(synchronize_session=False)
 
     @staticmethod
     def get_overlays(map_uuid, target_type=None, parent_id=None, device_id=None):
@@ -298,6 +333,9 @@ class GeoOverlayManager:
 
             # A. DELETE
             if to_delete_ids:
+                 # Deleted shapes may be facility outlines — clean up their
+                 # GeoFacility before the bulk shape delete (see docstring).
+                 GeoOverlayManager._cascade_delete_facilities_for_shapes(to_delete_ids)
                  # Bulk Delete
                  query.filter(GeoShape.id.in_(to_delete_ids)).delete(synchronize_session=False)
                  
@@ -460,6 +498,7 @@ class GeoOverlayManager:
                 node_ids = [d for d in deletes if isinstance(d, str)]
                 
                 if db_ids:
+                    GeoOverlayManager._cascade_delete_facilities_for_shapes(db_ids)
                     GeoShape.query.filter(GeoShape.geo_id == map_uuid, GeoShape.id.in_(db_ids)).delete(synchronize_session=False)
                 
                 if node_ids:
@@ -498,6 +537,7 @@ class GeoOverlayManager:
                                 to_del.append(s.id)
 
                     if to_del:
+                        GeoOverlayManager._cascade_delete_facilities_for_shapes(to_del)
                         GeoShape.query.filter(GeoShape.id.in_(to_del)).delete(synchronize_session=False)
 
             # 2. Handle Upserts

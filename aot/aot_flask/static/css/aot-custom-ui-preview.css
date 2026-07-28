@@ -187,6 +187,107 @@
 #aot-ui-preview .preview-badge-upgrade { background-color: var(--preview-badge-upgrade, #13261B); }
 
 /* ============================================================
+   OUTPUT/INPUT CHANNEL PREVIEW — mirrors the real per-channel row
+   states from settings/output & settings/input (bg_on/bg_off/bg_pending/
+   bg_warning — distinct from bg_active/bg_inactive, which color the
+   whole-device card, not the channel row).
+============================================================ */
+#aot-ui-preview .preview-channel-label-row {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--preview-text-color-secondary, #5E6B64);
+    margin-top: 14px;
+    margin-bottom: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-neutral);
+}
+
+#aot-ui-preview .preview-channel-group {
+    border: 1px solid var(--border-neutral);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+#aot-ui-preview .preview-channel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 30px;
+    padding: 0 10px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+    border-bottom: 1px solid var(--border-neutral);
+}
+
+#aot-ui-preview .preview-channel-row:last-child {
+    border-bottom: none;
+}
+
+#aot-ui-preview .preview-channel-row:hover {
+    opacity: 0.88;
+}
+
+#aot-ui-preview .preview-channel-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--preview-text-color-primary, #13261B);
+}
+
+/* 상태를 버튼 색만으로 구분하기 어렵다는 피드백 반영 — 채널명 옆에
+   상태를 텍스트로 명시(재사용: State Colors 필드 라벨과 동일 문구). */
+#aot-ui-preview .preview-channel-state-badge {
+    font-size: 0.62rem;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--preview-text-color-secondary, #5E6B64);
+    margin-left: 4px;
+}
+
+#aot-ui-preview .preview-channel-status-text {
+    font-size: 0.65rem;
+    color: var(--preview-text-color-primary, #13261B);
+    font-style: italic;
+}
+
+#aot-ui-preview .preview-channel-btns {
+    display: flex;
+    gap: 4px;
+}
+
+#aot-ui-preview .preview-channel-btn.preview-btn {
+    height: 18px;
+    min-width: 32px;
+    font-size: 0.6rem;
+    padding: 0 6px;
+}
+
+/* On/Off 버튼 배경 — 실제 앱(aot-entry-ui.css)의 캐스케이드를 그대로
+   재현한다: On 버튼은 기본적으로 '꺼짐' 색이고, 행이 켜짐(active-background)
+   일 때만 켜짐 색으로 바뀐다. Off 버튼은 항상 꺼짐 색 그대로다. 즉 꺼짐
+   행에서는 두 버튼이 똑같이 흐리게 보이는 게 정상 — 행 배경색만이 켜짐/
+   꺼짐을 구분하는 신호라는 걸 미리보기로도 그대로 보여주기 위함
+   (이전에는 두 버튼이 항상 각자 고정색이라 모든 행에서 On이 초록으로
+   보여 상태 구분이 안 된다는 피드백이 있었음). 상단의 독립된 상태 버튼
+   미리보기(.preview-btn-on 등)와는 별개 클래스라 서로 영향 없다. */
+#aot-ui-preview .preview-channel-btn-on {
+    background-color: var(--preview-bg-btn-off, #5E6B64);
+}
+#aot-ui-preview .preview-channel-on .preview-channel-btn-on {
+    background-color: var(--preview-bg-btn-on, #13261B) !important;
+}
+#aot-ui-preview .preview-channel-btn-off {
+    background-color: var(--preview-bg-btn-off, #5E6B64);
+}
+
+#aot-ui-preview .preview-channel-on         { background-color: var(--preview-bg-on,           #B5BABA); }
+#aot-ui-preview .preview-channel-off        { background-color: var(--preview-bg-off,          #F3F6F5); }
+#aot-ui-preview .preview-channel-pending    { background-color: var(--preview-bg-pending,      #F0AD4E); }
+#aot-ui-preview .preview-channel-fault      { background-color: var(--preview-bg-warning,      #989E9E); }
+#aot-ui-preview .preview-channel-unverified { background-color: var(--preview-tint-warning-bg, #FFF3E2); }
+#aot-ui-preview .preview-channel-unverified .preview-channel-status-text { color: var(--preview-tint-warning-fg, #94650A); font-style: normal; font-weight: 600; }
+
+/* ============================================================
    HIGHLIGHT PULSE — triggered when canvas element is clicked
 ============================================================ */
 .preview-highlight-target {

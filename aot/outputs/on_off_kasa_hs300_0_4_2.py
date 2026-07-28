@@ -420,7 +420,13 @@ class OutputModule(AbstractOutput):
         # output_setup is False both before the first successful connect and
         # after a failed re-query — in either case we genuinely cannot see the
         # device, so both are honestly reported as offline.
-        return not self.output_setup
+        if not self.output_setup:
+            return True
+        # Compose with the shared axes rather than replacing them: super()
+        # carries is_offline() ("offline until the device answers again", which
+        # must survive a new command being issued) and the per-command
+        # confirmation fault. Returning only the line above would drop both.
+        return super().comm_is_fault(output_channel)
 
     def stop_output(self):
         """Called when Output is stopped."""

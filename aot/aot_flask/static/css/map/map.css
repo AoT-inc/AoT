@@ -1159,9 +1159,13 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   overflow: visible !important;
 }
 
+/* --device-label-color 는 어디서도 정의되지 않는 가짜 var() 참조였다
+   (color-system.md §5-3 "가짜 var()" 유형) — 항상 폴백 #32c85a 로만
+   렌더되어 custom_ui 와 완전히 무관했다. 실제 켜짐 표시 토큰인 --bg-on
+   으로 교체(출력 채널 켜짐과 동일 개념). */
 .device-label.device-on {
-  background-color: var(--device-label-color, #32c85a) !important;
-  border-color: var(--device-label-color, #32c85a) !important;
+  background-color: var(--bg-on, #B5BABA) !important;
+  border-color: var(--bg-on, #B5BABA) !important;
   color: var(--text-color-tertiary, white) !important;
   font-weight: bold;
 }

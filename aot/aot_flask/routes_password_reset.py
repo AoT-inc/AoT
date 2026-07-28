@@ -3,7 +3,7 @@
 import datetime
 import logging
 import os
-import random
+import secrets
 import socket
 import string
 
@@ -128,8 +128,9 @@ def reset_password():
             error.append("Passwords do not match")
         if not test_password(form_reset_password.password.data):
             error.append(gettext(
-                "Invalid password. Must be between 6 and 64 characters "
-                "and only contain letters, numbers, and symbols."))
+                "Invalid password. Must be at least 8 characters, contain "
+                "only letters, numbers, and symbols, and not be a commonly "
+                "used password."))
 
         if not error:
             wrong_code_msg = gettext("Code expired or invalid")
@@ -167,5 +168,7 @@ def reset_password():
 
 
 def generate_reset_code(length):
+    """Cryptographically secure — random.choice (Mersenne Twister) is not
+    safe for anything used as a bearer credential, even a long one."""
     characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
+    return ''.join(secrets.choice(characters) for _ in range(length))

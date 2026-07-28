@@ -395,7 +395,7 @@ You can create new measurements, units, and conversions to extend functionality 
 
 ## User Settings { #users }
 
-Page\: `[Admin] -> System Configuration -> Users`
+Page\: `Manage -> System Management -> Users`
 
 At least one Admin user is required for AoT's login system to be enabled. If no Admin user exists, the web server redirects to the Admin creation form. This is the first page shown when AoT is started for the first time. After the Admin user has been created, additional users can be created on the User Settings page.
 
@@ -417,7 +417,7 @@ At least one Admin user is required for AoT's login system to be enabled. If no 
 </tr>
 <tr>
 <td>Password/Repeat</td>
-<td>Choose a password between 6 and 64 characters, containing only letters, numbers, and symbols.</td>
+<td>Choose a password of at least 8 characters, containing only letters, numbers, and symbols. Commonly used passwords are rejected even if they meet this length. See [Security](Security.md#password-requirements).</td>
 </tr>
 <tr>
 <td>Keypad Code</td>

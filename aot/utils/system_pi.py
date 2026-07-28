@@ -11,7 +11,6 @@ import signal
 import socket
 import subprocess
 import time
-import traceback
 from collections import OrderedDict
 from threading import Timer
 from uuid import UUID
@@ -375,15 +374,6 @@ def add_custom_units(units):
         sorted_dict_units[each_key] = return_units[each_key]
 
     return sorted_dict_units
-
-
-def test_python_execute(code_string):
-    try:
-        exec(code_string, globals())
-    except Exception:
-        return 1, traceback.format_exc()
-    else:
-        return 0, None
 
 
 def dpkg_package_exists(package_name):

@@ -70,6 +70,28 @@ def pass_length_min(pw, min_len=8):
         return True
 
 
+# Passwords that any credential-stuffing list tries first. Deliberately not a
+# complexity rule (forced symbols/digits push people toward "Passw0rd!" and are
+# no longer recommended by NIST SP 800-63B); blocking known-weak choices is the
+# part that actually helps.
+_COMMON_PASSWORDS = frozenset([
+    'password', 'password1', 'password123', 'passw0rd', '12345678',
+    '123456789', '1234567890', 'qwerty', 'qwerty123', 'qwertyuiop',
+    'abc12345', 'iloveyou', 'admin123', 'administrator', 'letmein',
+    'welcome1', 'welcome123', 'monkey123', 'dragon123', 'sunshine',
+    'princess', 'football', 'baseball', 'trustno1', 'superman',
+    'aot12345', 'aotadmin', 'mycodo123', 'raspberry', 'raspberrypi',
+])
+
+
+def pass_not_common(pw):
+    """Reject passwords that appear on common credential-stuffing lists."""
+    if pw and pw.strip().lower() in _COMMON_PASSWORDS:
+        print("The password provided is too common.")
+        return False
+    return True
+
+
 def characters(un):
     """Validate that a username or password contains only alphanumeric characters.
 
@@ -137,7 +159,7 @@ def test_password(pw, addl_tests=None, test_defaults=True):
     tests = []
 
     if test_defaults:
-        tests += [pass_length_min]
+        tests += [pass_length_min, pass_not_common]
 
     if addl_tests:
         tests += addl_tests

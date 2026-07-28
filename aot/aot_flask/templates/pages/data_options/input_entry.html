@@ -20,6 +20,10 @@
 
     <div class="aot-entry-content-item aot-col-name aot-col-name-copy"
       onclick="setClipboard('{{each_input.unique_id}}')">
+      {% for did in dict_member_devices.get(each_input.unique_id, []) if dict_device_names and did in dict_device_names %}
+      <a class="badge badge-secondary aot-badge-inline" href="/device#device_card_{{did}}"
+        onclick="event.stopPropagation();" title="{{ _('Part of device') }}: {{ dict_device_names[did] }}">{{ dict_device_names[did] }}</a>
+      {% endfor %}
       <div id="input_name_{{each_input.unique_id}}" class="form-control aot-entry-name-input"
         data-toggle="tooltip"
         title="{{each_input.name}} · UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}">{{each_input.name}}</div>
@@ -65,7 +69,7 @@
   </div> <!-- grid-stack-item-content -->
 </form>
 
-  <div class="modal fade aot-option-modal aot-widget-drawer" data-backdrop="false" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog"
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false" id="modal_config_{{each_input.unique_id}}" tabindex="-1" role="dialog"
     aria-labelledby="ModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
       <div class="modal-content">

@@ -857,13 +857,41 @@ class HelpersMixin:
     # opening kinds reduce move frequency with the following triple gate:
     #   1) Quantize (step grid): snap the command to the move_step_pct grid -> absorb micro-fluctuations.
     #   2) Hysteresis: must diverge at least one step (move_step_pct) from the last sent value to move.
-    #   3) Minimum move interval: suppress moves within min_dwell_sec (or _MOTOR_MIN_MOVE_SEC if unset)
-    #      of the last move. However, an abrupt change of _MOTOR_FORCE_PCT or more (e.g. rain/gust response) is allowed immediately.
+    #   3) Minimum move interval: suppress moves within the effective actuation period (see
+    #      _actuation_params()) of the last ACTUAL move. During an emergency cycle
+    #      (see CycleMixin._classify_emergency), this gate is bypassed down to
+    #      emergency_period_sec so sudden weather changes / safety gates still move vents promptly.
     # step (=cmd_constraints.move_step_pct) is a per-actuator user option.
     # Default 5%, 0 = gate disabled -> micro-vibration is passed straight to the motor (legacy behavior).
     _MOTOR_KINDS = frozenset({'opening'})
-    _MOTOR_MIN_MOVE_SEC = 180.0     # minimum move interval when min_dwell_sec is unset (s)
-    _MOTOR_FORCE_PCT = 20.0         # an abrupt change of this or more ignores the minimum interval and moves immediately (%)
+    _MOTOR_MIN_MOVE_SEC = 180.0     # fallback when no profile/actuation_profile is resolvable (s)
+
+    # ── Actuation-rate profiles (normal-cycle minimum move interval, seconds) ────────────────────
+    # 'standard' matches the legacy _MOTOR_MIN_MOVE_SEC so existing installs are unaffected until
+    # the user explicitly picks a different profile.
+    _ACTUATION_PROFILE_SEC = {
+        'responsive': 60.0,
+        'standard':   180.0,
+        'gentle':     600.0,
+    }
+
+    def _actuation_params(self) -> tuple:
+        """Resolve (normal_min_dwell_sec, emergency_min_dwell_sec) from custom_options.
+
+        normal_min_dwell_sec: minimum interval between vent moves in a normal (non-emergency)
+                              cycle. Profile default, or actuation_period_sec when profile='custom'.
+        emergency_min_dwell_sec: minimum interval enforced even during an emergency cycle
+                              (prevents rapid back-to-back moves; does not delay the FIRST
+                              emergency move once the interval has elapsed).
+        """
+        profile = getattr(self, 'actuation_profile', 'standard') or 'standard'
+        if profile == 'custom':
+            custom_sec = float(getattr(self, 'actuation_period_sec', 0.0) or 0.0)
+            normal_sec = custom_sec if custom_sec > 0.0 else self._ACTUATION_PROFILE_SEC['standard']
+        else:
+            normal_sec = self._ACTUATION_PROFILE_SEC.get(profile, self._MOTOR_MIN_MOVE_SEC)
+        emergency_sec = float(getattr(self, 'emergency_period_sec', 60.0) or 60.0)
+        return normal_sec, emergency_sec
 
     def _motor_motion_gate(self, target, last_sent, age, min_dwell, step):
         """Decide whether a motor-driven actuator should move and what value to send.
@@ -874,6 +902,12 @@ class HelpersMixin:
 
         last_sent is always a value on the grid, so comparing against the quantized target gives hysteresis.
         If step <= 0, the caller skips the gate, so this is never reached.
+
+        min_dwell is supplied by the caller — a normal cycle passes the actuation_profile
+        period, an emergency cycle passes the (much shorter) emergency_period_sec. There is
+        no magnitude-based bypass here: an urgent, large command is expressed by the caller
+        choosing a small min_dwell (emergency=True), not by this function inferring urgency
+        from the size of the move.
         """
         q = round(target / step) * step
         q = max(0.0, min(100.0, q))
@@ -882,8 +916,8 @@ class HelpersMixin:
         move = abs(q - last_sent)
         if move < step - 1e-6:
             return last_sent, False          # quantized result is the same step -> no move needed
-        if age < min_dwell and move < self._MOTOR_FORCE_PCT:
-            return last_sent, False          # minimum move interval not met (not an abrupt change)
+        if age < min_dwell:
+            return last_sent, False          # minimum move interval not met
         return q, True
 
     def _resolve_adapter(self, actuator_id: str):
@@ -971,13 +1005,20 @@ class HelpersMixin:
                     p.actuator_id[:8],
                     f'{prev:.1f}' if prev is not None else 'none', aperture, motor)
 
-    def _dispatch(self, commands: dict, cycle_sec: float = 60.0) -> set:
+    def _dispatch(self, commands: dict, cycle_sec: float = 60.0, emergency: bool = False) -> set:
         """Dispatch commands. Returns set of actuator_ids that FAILED.
 
         Lifetime protection (2026-05-18):
         - Deadband: if |new - prev_sent| < _DISPATCH_DEADBAND_PCT, skip sending.
         - No-change skip: if the value is the same and within _DISPATCH_WATCHDOG_SEC, skip.
         - Watchdog re-confirm: force a send once every _DISPATCH_WATCHDOG_SEC (state sync).
+
+        Actuation rate (opening kinds only): the minimum interval between actual
+        vent MOVES (not sends) is the actuation_profile period in a normal cycle,
+        or emergency_period_sec when emergency=True (safety gate / large deviation /
+        fast rate-of-change / just-changed setpoint — see CycleMixin._classify_emergency).
+        The interval is measured from the last ACTUAL move (_dispatch_moved), not from
+        the last send, so a same-value watchdog re-confirm never resets the dwell clock.
 
         P0 (2026-05-16): return the failure set, WARNING log, record CH_DISPATCH_FAIL.
         P0 (adapter): auto-convert to the appropriate output_type based on the device output_types.
@@ -988,8 +1029,11 @@ class HelpersMixin:
           - default (value) -> ValueAdapter (0-100% direct)
         """
         if not hasattr(self, '_dispatch_sent'):
-            # {actuator_id: (sent_value, sent_ts)}
+            # {actuator_id: (sent_value, sent_ts)} — every actual transmission (moved or not)
             self._dispatch_sent: dict = {}
+        if not hasattr(self, '_dispatch_moved'):
+            # {actuator_id: moved_ts} — only transmissions where the value actually changed
+            self._dispatch_moved: dict = {}
 
         # Adapter map — built in _reload_profiles(); empty dict if absent (uses default ValueAdapter)
         _adapters = getattr(self, '_adapter_by_id', {})
@@ -1014,6 +1058,7 @@ class HelpersMixin:
                 else self._DISPATCH_WATCHDOG_SEC
             )
             prev_sent = self._dispatch_sent.get(actuator_id)
+            will_move = True   # whether THIS send represents an actual position change
 
             # ── Motor-driven actuator (side/roof vent): motion gate ──────────────────
             # Suppress per-cycle micro-moves via quantize, hysteresis, and minimum move interval.
@@ -1024,25 +1069,35 @@ class HelpersMixin:
                     if (profile and profile.kind in self._MOTOR_KINDS) else 0.0)
             gate_active = step > 0.0
             if gate_active:
+                normal_sec, emergency_sec = self._actuation_params()
+                period_eff = emergency_sec if emergency else normal_sec
+                min_dwell = max(period_eff, profile.cmd_constraints.min_dwell_sec)
+                # Watchdog cadence must not be shorter than the actuation period, or a
+                # 'gentle' (600s) setting would be silently overridden by a faster
+                # default re-confirm cycle.
+                gate_watchdog_sec = max(self._DISPATCH_WATCHDOG_SEC, min_dwell)
+
                 if prev_sent is None:
                     # First send: snap to the grid to ensure consistency of later comparisons.
                     val = max(0.0, min(100.0, round(val / step) * step))
                 else:
                     prev_val, prev_ts = prev_sent
-                    age = now - prev_ts
-                    if age < watchdog_sec:
-                        min_dwell = max(
-                            self._MOTOR_MIN_MOVE_SEC,
-                            profile.cmd_constraints.min_dwell_sec)
+                    send_age = now - prev_ts
+                    moved_ts = self._dispatch_moved.get(actuator_id, prev_ts)
+                    move_age = now - moved_ts
+                    if send_age < gate_watchdog_sec:
                         send_q, should_move = self._motor_motion_gate(
-                            val, prev_val, age, min_dwell, step)
+                            val, prev_val, move_age, min_dwell, step)
                         if not should_move:
                             skipped += 1
                             continue
                         val = send_q
+                        will_move = True   # should_move True => val diverges >= step from prev_val
                     else:
                         # Watchdog period reached -> force a re-confirm with the grid value for state sync.
+                        # This may or may not be an actual move — check against prev_val below.
                         val = max(0.0, min(100.0, round(val / step) * step))
+                        will_move = abs(val - prev_val) >= (step - 1e-6)
 
             if (not gate_active) and prev_sent is not None:
                 prev_val, prev_ts = prev_sent
@@ -1090,6 +1145,8 @@ class HelpersMixin:
                         output_channel=ch,
                     )
                 self._dispatch_sent[actuator_id] = (val, now)
+                if gate_active and will_move:
+                    self._dispatch_moved[actuator_id] = now
                 sent += 1
             except Exception as exc:
                 failed.add(actuator_id)

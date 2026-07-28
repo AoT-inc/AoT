@@ -1,0 +1,56 @@
+name: Security Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # 새 CVE 는 코드 변경 없이도 생기므로 주기적으로도 돈다
+  schedule:
+    - cron: '0 18 * * 1'   # 매주 월요일 03:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 아래 두 검사는 표준 라이브러리만 쓰므로 의존성 설치가 필요 없다.
+      - name: 라우트 인증 게이트 점검
+        run: python3 aot/scripts/check_route_auth.py
+
+      - name: 정적 자산 참조 무결성
+        run: python3 aot/scripts/check_static_refs.py
+
+  sbom-and-vulns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # SBOM 은 "설치된 것"을 읽으므로 실제 의존성이 있어야 의미가 있다.
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: SBOM 생성 + 알려진 취약점 조회
+        # --fail-on-vuln 은 아직 켜지 않는다: 현재 알려진 취약점이 남아 있어
+        # 무조건 실패하면 신호가 되지 못한다. 단계적 상향이 끝난 뒤 켤 것.
+        run: python3 aot/scripts/generate_sbom.py -o sbom.json --osv
+
+      - name: SBOM 아티팩트 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.json
+          retention-days: 90

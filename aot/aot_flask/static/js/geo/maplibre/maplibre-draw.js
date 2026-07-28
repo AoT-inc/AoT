@@ -766,6 +766,7 @@
           self._editState.vertexDragging = true;
           self._editState.vertexIdx = p.vtxIdx;
           self._editState.ringIdx = p.ringIdx || 0;
+          self._editState.polyIdx = p.polyIdx || 0;
           self.map.dragPan.disable();
           self.map.dragRotate.disable();
           e.preventDefault();
@@ -781,10 +782,13 @@
         var geom = layer.feature.geometry;
         var segStart = mp.segStart;
         var ridx = mp.ringIdx || 0;
+        var pidx = mp.polyIdx || 0;
         var insertIdx = segStart + 1;
         var midCoord = [mp.midLng, mp.midLat];
         if (geom.type === 'Polygon') {
           geom.coordinates[ridx].splice(insertIdx, 0, midCoord.slice());
+        } else if (geom.type === 'MultiPolygon') {
+          geom.coordinates[pidx][ridx].splice(insertIdx, 0, midCoord.slice());
         } else if (geom.type === 'LineString') {
           geom.coordinates.splice(insertIdx, 0, midCoord.slice());
         } else {
@@ -793,6 +797,7 @@
         self._editState.vertexDragging = true;
         self._editState.vertexIdx = insertIdx;
         self._editState.ringIdx = ridx;
+        self._editState.polyIdx = pidx;
         self.map.dragPan.disable();
         self.map.dragRotate.disable();
         e.preventDefault();
@@ -805,9 +810,10 @@
         var geom = layer.feature.geometry;
         var idx = self._editState.vertexIdx;
         var ridx = self._editState.ringIdx;
+        var pidx = self._editState.polyIdx || 0;
         var nc = [e.lngLat.lng, e.lngLat.lat];
-        if (geom.type === 'Polygon') {
-          var ring = geom.coordinates[ridx];
+        if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+          var ring = geom.type === 'MultiPolygon' ? geom.coordinates[pidx][ridx] : geom.coordinates[ridx];
           ring[idx] = nc;
           // Keep ring closed
           if (idx === 0) ring[ring.length - 1] = nc;
@@ -956,21 +962,30 @@
       if (!geom) return;
       var vertices = [];
       var midpoints = [];
-      var addVtx = function(coord, vtxIdx, ringIdx) {
+      var addVtx = function(coord, vtxIdx, ringIdx, polyIdx) {
         vertices.push({ type: 'Feature', geometry: { type: 'Point', coordinates: coord },
-          properties: { vtxIdx: vtxIdx, ringIdx: ringIdx } });
+          properties: { vtxIdx: vtxIdx, ringIdx: ringIdx, polyIdx: polyIdx || 0 } });
       };
-      var addMid = function(c1, c2, segStart, ringIdx) {
+      var addMid = function(c1, c2, segStart, ringIdx, polyIdx) {
         var mid = [(c1[0] + c2[0]) / 2, (c1[1] + c2[1]) / 2];
         midpoints.push({ type: 'Feature', geometry: { type: 'Point', coordinates: mid },
-          properties: { isMidpoint: true, segStart: segStart, ringIdx: ringIdx, midLng: mid[0], midLat: mid[1] } });
+          properties: { isMidpoint: true, segStart: segStart, ringIdx: ringIdx, polyIdx: polyIdx || 0, midLng: mid[0], midLat: mid[1] } });
       };
       if (geom.type === 'Polygon') {
         geom.coordinates.forEach(function(ring, ri) {
           for (var i = 0; i < ring.length - 1; i++) {
-            addVtx(ring[i], i, ri);
-            addMid(ring[i], ring[i + 1], i, ri);
+            addVtx(ring[i], i, ri, 0);
+            addMid(ring[i], ring[i + 1], i, ri, 0);
           }
+        });
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach(function(poly, pi) {
+          poly.forEach(function(ring, ri) {
+            for (var i = 0; i < ring.length - 1; i++) {
+              addVtx(ring[i], i, ri, pi);
+              addMid(ring[i], ring[i + 1], i, ri, pi);
+            }
+          });
         });
       } else if (geom.type === 'LineString') {
         geom.coordinates.forEach(function(c, i) {

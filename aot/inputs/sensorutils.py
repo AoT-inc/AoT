@@ -10,6 +10,7 @@ import os
 
 from aot.databases.models import Conversion
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.safe_eval import UnsafeExpressionError, safe_eval
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,15 @@ def convert_units(conversion_id, measure_value):
     """
     conversion = db_retrieve_table_daemon(Conversion, unique_id=conversion_id)
     if conversion:
-        replaced_str = conversion.equation.replace('x', str(measure_value))
-        return float('{0:.5f}'.format(eval(replaced_str)))
+        try:
+            converted = safe_eval(conversion.equation, {'x': measure_value})
+        except UnsafeExpressionError as err:
+            logger.error(
+                "Conversion equation rejected ({err}). Equation: {eq!r}. "
+                "Returning the unconverted value.".format(
+                    err=err, eq=conversion.equation))
+            return measure_value
+        return float('{0:.5f}'.format(converted))
     else:
         logger.error("Conversion not found, not converting.")
         return measure_value
@@ -61,8 +69,15 @@ def convert_from_x_to_y_unit(unit_from, unit_to, in_value):
     conversion = conversion.filter(Conversion.convert_unit_from == unit_from)
     conversion = conversion.filter(Conversion.convert_unit_to == unit_to).first()
     if conversion:
-        replaced_str = conversion.equation.replace('x', str(in_value))
-        return float('{0:.5f}'.format(eval(replaced_str)))
+        try:
+            converted = safe_eval(conversion.equation, {'x': in_value})
+        except UnsafeExpressionError as err:
+            logger.error(
+                "Conversion equation rejected ({err}). Equation: {eq!r}. "
+                "Returning the unconverted value.".format(
+                    err=err, eq=conversion.equation))
+            return in_value
+        return float('{0:.5f}'.format(converted))
     else:
         logger.error("Conversion not found for '{uf}' to '{ut}'.".format(
             uf=unit_to, ut=unit_from))

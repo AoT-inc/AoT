@@ -22,7 +22,10 @@ RUN groupadd -r aot && useradd -r -g aot aot
 
 # Copy requirements and install
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# 베이스 이미지에 딸려오는 pip/setuptools 자체에도 알려진 취약점이 있어 먼저 올린다
+# (requirements.txt 에 없는 빌드 도구라 그쪽으로는 통제되지 않는다).
+RUN pip install --no-cache-dir --upgrade pip setuptools \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY . .

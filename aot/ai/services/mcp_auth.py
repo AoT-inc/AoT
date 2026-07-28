@@ -94,10 +94,10 @@ def resolve_key(raw_key: str):
 
     Flask 앱 컨텍스트 안에서 호출해야 한다.
 
-    사용자 수만큼 순회하며 hmac.compare_digest 로 비교한다. DB에 원본 키를
-    조건으로 거는 대신 상수시간 비교를 쓰는 이유는 타이밍으로 키를 한 바이트씩
-    좁혀 들어가는 공격을 막기 위한 것이다(키가 128바이트라 비교 비용은 무시할
-    수준이고, 사용자 수도 수십 명 규모다).
+    DB 에는 키의 SHA-256 만 저장되므로(p6_13) 제시된 키를 해시해 인덱스로
+    조회한다. 이전 구현은 전 사용자를 순회하며 평문을 상수시간 비교했는데,
+    해시 조회는 그 순회 자체가 없어 타이밍 노출면이 더 작다. 최종 확인의
+    상수시간 비교는 User.find_by_api_key 안에 있다.
     """
     key_bytes = _decode(raw_key)
     if not key_bytes:
@@ -105,15 +105,7 @@ def resolve_key(raw_key: str):
 
     from aot.databases.models import User
 
-    for user in User.query.filter(User.api_key.isnot(None)).all():
-        stored = user.api_key
-        if not stored:
-            continue
-        if isinstance(stored, str):
-            stored = stored.encode('utf-8')
-        if hmac.compare_digest(bytes(stored), key_bytes):
-            return user
-    return None
+    return User.find_by_api_key(key_bytes)
 
 
 def _role_for(user):

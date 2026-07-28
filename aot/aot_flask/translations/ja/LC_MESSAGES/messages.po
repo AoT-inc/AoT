@@ -10476,9 +10476,8 @@ msgid "Function (%(type)s)"
 msgstr "機能（%(type)s）"
 
 #: aot_flask/templates/pages/output.html:130
-#, fuzzy
 msgid "Confirming"
-msgstr "確認"
+msgstr "確認中"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:56
 #: aot_flask/templates/pages/function_options/conditional_entry.html:20
@@ -24732,3 +24731,448 @@ msgstr "デバイスがオフラインまたは応答しない場合の行・カ
 #: widgets/widget_trigger_sequence.py:1350
 msgid "Press and hold to reorder"
 msgstr "長押しして並び替え"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Whole-card highlight when active (IEC focus row, badges) — not the per-"
+"channel row below"
+msgstr "アクティブ時のカード全体ハイライト(IECフォーカス行・バッジなど)。以下のチャンネル別行ではない"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Whole-card highlight when inactive, PID container background — not the per-"
+"channel row below"
+msgstr "非アクティブ時のカード全体ハイライト、PIDコンテナ背景。以下のチャンネル別行ではない"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Channel On"
+msgstr "チャンネルON"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Channel Off"
+msgstr "チャンネルOFF"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Output/input channel row background when on; also a general surface color in"
+" facility widgets"
+msgstr "出力・入力チャンネル行のオン背景色。施設ウィジェットの一般的な表面色としても使用"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Output/input channel row background when off; also a general surface color "
+"in facility widgets"
+msgstr "出力・入力チャンネル行のオフ背景色。施設ウィジェットの一般的な表面色としても使用"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Row background while a command awaits device confirmation"
+msgstr "コマンド送信後、デバイスの確認を待っている間の行背景色"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Output/Input Channel Preview"
+msgstr "出力・入力チャンネルプレビュー"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Channel On colors"
+msgstr "クリックしてチャンネルON色を編集"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Channel Off colors"
+msgstr "クリックしてチャンネルOFF色を編集"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Pending colors"
+msgstr "クリックして保留中の色を編集"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Warning State colors"
+msgstr "クリックして警告状態の色を編集"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Unverified Running Tint"
+msgstr "確認不可な実行中の色"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Unverified Running Tint Text"
+msgstr "確認不可な実行中の文字色"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Overrides Channel On when a device with no confirmation path is running — "
+"forces this color even over bg_on"
+msgstr "確認手段のないデバイスが実行中のとき、チャンネルON色を上書きする — bg_onより優先して適用"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Text color used with the tint above, and on map-popup device name warnings"
+msgstr "上の色と併用する文字色。地図ポップアップのデバイス名警告にも使用"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Unverified Running Tint colors"
+msgstr "クリックして確認不可な実行中の色を編集"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Running (unconfirmed)"
+msgstr "実行中（未確認）"
+
+#: inputs/modbus_tcp.py:49
+msgid ""
+"Reads coils and registers from a Modbus TCP device (PLC, gateway, meter). "
+"Define one channel per register to read. Several Inputs and Outputs pointing"
+" at the same host and port share a single connection automatically. Note "
+"that Modbus has no authentication or encryption — keep the device on an "
+"isolated network and never expose it to the internet."
+msgstr ""
+"Modbus TCP 装置（PLC、ゲートウェイ、計量器）からコイルとレジスタを読み取ります。読み取るレジスタごとにチャンネルを 1 "
+"つ定義してください。同じホストとポートを指す入力・出力は自動的に 1 本の接続を共有します。Modbus "
+"には認証も暗号化もないため、装置は隔離されたネットワークに置き、インターネットに公開しないでください。"
+
+#: inputs/modbus_tcp.py:83 outputs/on_off_modbus.py:107
+msgid "IP address or hostname of the Modbus TCP device"
+msgstr "Modbus TCP 装置の IP アドレスまたはホスト名"
+
+#: inputs/modbus_tcp.py:91 outputs/on_off_modbus.py:116
+msgid "TCP port of the Modbus TCP device (standard: 502)"
+msgstr "Modbus TCP 装置の TCP ポート（標準: 502）"
+
+#: inputs/modbus_tcp.py:100 outputs/on_off_modbus.py:125
+msgid ""
+"Modbus unit/slave ID of the device. Usually 1 for a device addressed "
+"directly, or the slave address behind a serial gateway"
+msgstr "装置の Modbus ユニット/スレーブ ID。装置を直接指定する場合は通常 1、シリアルゲートウェイ経由ならそのスレーブアドレスです"
+
+#: inputs/modbus_tcp.py:108 outputs/on_off_modbus.py:133
+msgid "Timeout (seconds)"
+msgstr "タイムアウト（秒）"
+
+#: inputs/modbus_tcp.py:110
+msgid ""
+"How long to wait for a response. One request takes at most timeout x "
+"(retries + 1)"
+msgstr "応答を待つ時間。1 回の要求は最大でタイムアウト x (リトライ + 1) かかります"
+
+#: inputs/modbus_tcp.py:118 outputs/on_off_modbus.py:143
+msgid "Retries"
+msgstr "リトライ"
+
+#: inputs/modbus_tcp.py:120 outputs/on_off_modbus.py:145
+msgid ""
+"Retries per request before it is treated as failed. Keep this low: a high "
+"value multiplies how long an unreachable device blocks a command"
+msgstr "失敗と扱うまでの要求ごとのリトライ回数。低く保ってください — 値が大きいと応答のない装置がコマンドを占有する時間もその分だけ倍になります"
+
+#: inputs/modbus_tcp.py:139
+msgid "Coil (read/write bit)"
+msgstr "Coil（読み書きビット）"
+
+#: inputs/modbus_tcp.py:140
+msgid "Discrete Input (read-only bit)"
+msgstr "Discrete Input（読み取り専用ビット）"
+
+#: inputs/modbus_tcp.py:141
+msgid "Holding Register (read/write word)"
+msgstr "Holding Register（読み書きワード）"
+
+#: inputs/modbus_tcp.py:142
+msgid "Input Register (read-only word)"
+msgstr "Input Register（読み取り専用ワード）"
+
+#: inputs/modbus_tcp.py:145
+msgid "Register Type"
+msgstr "レジスタ種別"
+
+#: inputs/modbus_tcp.py:146
+msgid "Which Modbus table this channel reads from"
+msgstr "このチャンネルがどの Modbus テーブルから読むか"
+
+#: inputs/modbus_tcp.py:153
+msgid "Register Address"
+msgstr "レジスタアドレス"
+
+#: inputs/modbus_tcp.py:155
+msgid ""
+"Zero-based address within the selected table. Vendor documentation often "
+"lists one-based addresses (e.g. 40001 for holding register 0), so verify "
+"against the register map"
+msgstr ""
+"選択したテーブル内で 0 から数えるアドレス。ベンダー文書は 1 から数えるアドレスを使うことが多いため（例: holding register 0 を"
+" 40001 と表記）、レジスタマップと照合してください"
+
+#: inputs/modbus_tcp.py:164
+msgid "Bit (coil / discrete input)"
+msgstr "ビット（coil / discrete input）"
+
+#: inputs/modbus_tcp.py:172
+msgid "Data Type"
+msgstr "データ型"
+
+#: inputs/modbus_tcp.py:174
+msgid ""
+"How to interpret the value. Bit types apply to coils and discrete inputs; "
+"the rest apply to registers"
+msgstr "値の解釈方法。ビット型はコイルと接点に、それ以外はレジスタに適用されます"
+
+#: inputs/modbus_tcp.py:182
+msgid "Big endian (high word first)"
+msgstr "ビッグエンディアン（上位ワードが先）"
+
+#: inputs/modbus_tcp.py:183
+msgid "Little endian (low word first)"
+msgstr "リトルエンディアン（下位ワードが先）"
+
+#: inputs/modbus_tcp.py:186
+msgid "Word Order"
+msgstr "ワード順"
+
+#: inputs/modbus_tcp.py:188
+msgid ""
+"Register order for 32-bit types. Vendors differ, so if a value reads as "
+"nonsense while the register address is correct, try the other order"
+msgstr "32 ビット型のレジスタ順。ベンダーによって異なるため、レジスタアドレスは正しいのに値がおかしい場合は逆の順序を試してください"
+
+#: inputs/modbus_tcp.py:196
+msgid "Scale Factor"
+msgstr "倍率"
+
+#: inputs/modbus_tcp.py:198
+msgid ""
+"The raw value is multiplied by this. Use it when a device reports e.g. "
+"tenths of a degree (0.1)"
+msgstr "生の値にこの値を掛けます。例えば 0.1 度単位で報告する装置なら 0.1 を指定します"
+
+#: outputs/on_off_modbus.py:68
+msgid ""
+"Switch coils on a Modbus TCP device (PLC, relay board, gateway). Each "
+"channel is one coil address. After every command the coil is read back to "
+"confirm it actually changed, and a mismatch is reported as a failure. Inputs"
+" and Outputs pointing at the same host and port share one connection "
+"automatically. Note that a readback confirms the PLC register, not that the "
+"relay or wiring moved. Modbus has no authentication or encryption — keep the"
+" device on an isolated network."
+msgstr ""
+"Modbus TCP 装置（PLC、リレーボード、ゲートウェイ）のコイルを制御します。1 チャンネルが1 "
+"つのコイルアドレスです。コマンドのたびにコイルを読み戻して実際に変わったかを確認し、値が異なれば失敗として報告します。同じホストとポートを指す入力・出力は自動的に"
+" 1 本の接続を共有します。読み戻しは PLC のレジスタを確認するだけで、リレーや配線が動いたかは確認できません。Modbus "
+"には認証も暗号化もないため、装置は隔離されたネットワークに置いてください。"
+
+#: outputs/on_off_modbus.py:98
+msgid "Number of coils to control. Save to add or remove channel rows."
+msgstr "制御するコイルの数。保存するとチャンネル行が追加・削除されます。"
+
+#: outputs/on_off_modbus.py:135
+msgid ""
+"How long to wait for a response. One request takes at most timeout x "
+"(retries + 1), and a command sends two requests"
+msgstr "応答を待つ時間。1 回の要求は最大でタイムアウト x (リトライ + 1) かかり、コマンド 1 つは要求を 2 回送ります"
+
+#: outputs/on_off_modbus.py:158
+msgid "A friendly name shown in the UI for this channel."
+msgstr "このチャンネルを画面に表示する名前です。"
+
+#: outputs/on_off_modbus.py:165
+msgid "Coil Address"
+msgstr "コイルアドレス"
+
+#: outputs/on_off_modbus.py:167
+msgid ""
+"Zero-based coil address to switch. Vendor documentation often lists one-"
+"based addresses (e.g. 00001 for coil 0), so verify against the register map"
+msgstr ""
+"制御するコイルの 0 から数えるアドレス。ベンダー文書は 1 から数えるアドレスを使うことが多いため（例: coil 0 を 00001 "
+"と表記）、レジスタマップと照合してください"
+
+#: outputs/on_off_modbus.py:182
+msgid ""
+"Set the channel state when AoT starts. \"Do Nothing\" leaves the coil as the"
+" PLC has it and simply reads it back"
+msgstr "AoT の起動時にチャンネルの状態を設定します。「何もしない」は PLC が持つコイルの状態をそのままにして読み取るだけです"
+
+#: outputs/on_off_modbus.py:196
+msgid "Set the channel state when AoT shuts down"
+msgstr "AoT の終了時にチャンネルの状態を設定します"
+
+#: outputs/on_off_modbus.py:204
+msgid "Whether to trigger functions when the channel switches at startup"
+msgstr "起動時にチャンネルが切り替わったときに関数を実行するかどうか"
+
+#: aot/aot_flask/templates/login_totp.html:38
+msgid "Two-Factor Authentication"
+msgstr "2要素認証"
+
+#: aot/aot_flask/templates/login_totp.html:41
+msgid "Enter the 6-digit code from your authenticator app."
+msgstr "認証アプリに表示された6桁のコードを入力してください。"
+
+#: aot/aot_flask/templates/login_totp.html:47
+msgid "Verification Code"
+msgstr "確認コード"
+
+#: aot/aot_flask/templates/login_totp.html:63
+msgid "Verify"
+msgstr "確認"
+
+#: aot/aot_flask/templates/tools/audit_log.html:3
+#: aot/aot_flask/templates/layout_default.html:657
+msgid "Audit Log"
+msgstr "監査ログ"
+
+#: aot/aot_flask/templates/tools/audit_log.html:26
+msgid "Result"
+msgstr "結果"
+
+#: aot/aot_flask/templates/tools/audit_log.html:34
+msgid "Rows"
+msgstr "行数"
+
+#: aot/aot_flask/templates/tools/audit_log.html:43
+msgid "Export CSV"
+msgstr "CSVエクスポート"
+
+#: aot/aot_flask/templates/tools/audit_log.html:30
+msgid "Failure"
+msgstr "失敗"
+
+#: aot/aot_flask/templates/tools/audit_log.html:50
+msgid "No audit log entries found."
+msgstr "監査ログの項目がありません。"
+
+#: aot/aot_flask/templates/tools/audit_log.html:65
+msgid "Detail"
+msgstr "詳細"
+
+#: aot/aot_flask/templates/tools/audit_log.html:64
+msgid "Target Object"
+msgstr "対象"
+
+#: aot/aot_flask/routes_password_reset.py:131
+#: aot/aot_flask/utils/utils_settings.py:211
+msgid ""
+"Invalid password. Must be at least 8 characters, contain only letters, "
+"numbers, and symbols, and not be a commonly used password."
+msgstr "パスワードが正しくありません。8文字以上で、英字・数字・記号のみ使用でき、よく使われるパスワードは使用できません。"
+
+#: aot/aot_flask/templates/settings/users.html:290
+msgid "Issued — shown only once at generation"
+msgstr "発行済み — 生成時に一度だけ表示されます"
+
+#: aot/aot_flask/templates/settings/users.html:290
+msgid "Not issued"
+msgstr "未発行"
+
+#: aot/aot_flask/utils/utils_settings.py:274
+msgid ""
+"API key generated. Copy it now — it is shown only once and cannot be "
+"retrieved later."
+msgstr "APIキーを生成しました。今すぐコピーしてください — 一度だけ表示され、後から確認できません。"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Available to link"
+msgstr "接続可能"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Currently linked"
+msgstr "接続済み"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Device OK"
+msgstr "正常"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Failed to load settings"
+msgstr "設定の読み込みに失敗しました"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Fault"
+msgstr "異常"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Form not found"
+msgstr "フォームが見つかりません"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Input inactive"
+msgstr "Input 非アクティブ"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked"
+msgstr "接続済み"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked Inputs/Outputs"
+msgstr "接続されたInput/Output"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "No notes"
+msgstr "ノートなし"
+
+#: aot_flask/templates/pages/device.html:1
+msgid ""
+"No device modules are installed. A device module declares is_device=True and"
+" a device_blueprint — see .local/plans/device_group_console_plan.md."
+msgstr ""
+"デバイスモジュールがインストールされていません。デバイスモジュールは is_device=True と device_blueprint を宣言します "
+"— .local/plans/device_group_console_plan.md を参照してください。"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Select a device type first"
+msgstr "先にデバイスの種類を選択してください"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "This device has no measurements or controls yet."
+msgstr "このデバイスにはまだ測定や制御がありません。"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unlink"
+msgstr "接続解除"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unlinked"
+msgstr "接続解除しました"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unverifiable"
+msgstr "確認不可"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "notes"
+msgstr "件"
+
+#: aot_flask/templates/pages/data_options/input_entry.html:1
+msgid "Part of device"
+msgstr "所属デバイス"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Sub-devices"
+msgstr "下位デバイス"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked sub-devices"
+msgstr "接続された下位デバイス"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Available devices to link"
+msgstr "接続可能なデバイス"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Reference"
+msgstr "参照"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Deleted"
+msgstr "削除しました"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Duplicated"
+msgstr "複製しました"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Measurement Channels"
+msgstr "測定チャンネル"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Control Channels"
+msgstr "制御チャンネル"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Input / Output"
+msgstr "入力 / 出力"

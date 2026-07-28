@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% set active_page = "audit_log" %}
+{% block title %} - {{_('Audit Log')}}{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-0">
+  <!-- Route: /audit_log -->
+  <main role="main" class="container py-4">
+    {% include 'flash_messages.html' %}
+
+    <form class="row align-items-end" method="get" action="/audit_log" style="padding-top: 0.5em">
+      <div class="col-auto">
+        <label for="action">{{_('Action')}}</label>
+        <select class="form-control" id="action" name="action">
+          <option value="">{{_('All')}}</option>
+          {% for choice in action_choices %}
+          <option value="{{choice}}"{% if filter_action == choice %} selected{% endif %}>{{choice}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label for="username">{{_('User')}}</label>
+        <input class="form-control" type="text" id="username" name="username" value="{{filter_username}}">
+      </div>
+      <div class="col-auto">
+        <label for="result">{{_('Result')}}</label>
+        <select class="form-control" id="result" name="result">
+          <option value="">{{_('All')}}</option>
+          <option value="success"{% if filter_result == 'success' %} selected{% endif %}>{{_('Success')}}</option>
+          <option value="failure"{% if filter_result == 'failure' %} selected{% endif %}>{{_('Failure')}}</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label for="limit">{{_('Rows')}}</label>
+        <input class="form-control" type="number" id="limit" name="limit" value="{{limit}}" min="1" max="1000">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">{{_('Filter')}}</button>
+      </div>
+      <div class="col-auto">
+        <a class="btn btn-secondary"
+           href="/audit_log/export?action={{filter_action}}&amp;username={{filter_username}}&amp;result={{filter_result}}">
+          {{_('Export CSV')}}
+        </a>
+      </div>
+    </form>
+
+    <div style="padding-top: 1em">
+      {% if not entries %}
+        <p>{{_('No audit log entries found.')}}</p>
+      {% else %}
+      <div style="overflow-x: auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>{{_('Timestamp')}}</th>
+              <th>{{_('Action')}}</th>
+              <th>{{_('Result')}}</th>
+              <th>{{_('User')}}</th>
+              <th>{{_('IP Address')}}</th>
+              <!-- 'Target' 은 기존 카탈로그에서 '목표'(goal)로 번역돼 있어
+                   감사로그의 "행위 대상"과 뜻이 충돌한다. msgctxt 미도입
+                   상태이므로 문구를 더 구체적으로 바꿔 msgid를 분리한다. -->
+              <th>{{_('Target Object')}}</th>
+              <th>{{_('Detail')}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+            <tr>
+              <td style="white-space: nowrap">{{ entry.local_timestamp }}</td>
+              <td>{{entry.action}}</td>
+              <td>
+                {% if entry.result == 'failure' %}
+                <span class="text-danger">{{entry.result}}</span>
+                {% else %}
+                {{entry.result}}
+                {% endif %}
+              </td>
+              <td>{{entry.username or '-'}}</td>
+              <td>{{entry.ip_address or '-'}}</td>
+              <td>
+                {%- if entry.target_type -%}
+                  {{entry.target_type}}{% if entry.target_name %} ({{entry.target_name}}){% endif %}
+                {%- else -%}-{%- endif -%}
+              </td>
+              <td>{{entry.detail or '-'}}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+{% endblock %}

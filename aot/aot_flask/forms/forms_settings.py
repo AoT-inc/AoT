@@ -51,6 +51,7 @@ THEME_COLOR_FIELDS = [
     'text_color_primary', 'text_color_secondary', 'text_color_tertiary',
     'bd_primary', 'bd_secondary',
     'bg_active', 'bg_inactive', 'bg_warning',
+    'bg_on', 'bg_off', 'bg_pending', 'tint_warning_bg', 'tint_warning_fg',
     'bg_llm', 'bg_mcp', 'badge_upgrade',
     'btn_primary_bg', 'btn_secondary_bg',
     'bg_btn_on', 'bg_btn_off',
@@ -612,6 +613,21 @@ class SettingsCustomUI(FlaskForm):
     # 토큰을 노출한 것(입력/출력/함수 카드, PID, 시퀀스 위젯 "오프라인" 표시 등
     # 이미 전역에서 소비 중이었으나 custom_ui 미노출 상태였다).
     bg_warning = StringField(lazy_gettext('Warning State'), default=THEME_DEFAULTS.get('bg_warning', '#989E9E'), render_kw={"type": "color"})
+    # 출력/입력 "채널 행"(카드 안의 개별 채널)의 켜짐/꺼짐 배경 — --bg-active/
+    # --bg-inactive(카드 전체 하이라이트)와는 다른 토큰(--bg-on/--bg-off)이라
+    # 별도 필드다. 시설 위젯·센서 라벨의 표면색으로도 재사용된다.
+    bg_on = StringField(lazy_gettext('Channel On'), default=THEME_DEFAULTS.get('bg_on', '#B5BABA'), render_kw={"type": "color"})
+    bg_off = StringField(lazy_gettext('Channel Off'), default=THEME_DEFAULTS.get('bg_off', '#F3F6F5'), render_kw={"type": "color"})
+    # 명령 전송 후 장치 확인 대기 중 배경(--bg-hold). PID 유지 버튼(bg_btn_hold,
+    # --aot-btn-bg-hold)과는 다른 토큰이니 혼동 금지.
+    bg_pending = StringField(lazy_gettext('Pending'), default=THEME_DEFAULTS.get('bg_pending', '#F0AD4E'), render_kw={"type": "color"})
+    # "실행 중이지만 확인 불가"(comm_capable=false 이면서 on) 장치를 표시하는 틴트.
+    # aot-output-state.js paintUnverifiedRunning()이 채널 행에 인라인
+    # !important 로 강제 적용해 bg_on/bg_off 를 덮어쓴다 — 지금까지 하드코딩
+    # 이라 사용자가 "다른 색이 강제 적용된다"고 느꼈던 원인. 지도 팝업 이름
+    # 강조(paintNameWarning)에도 같은 토큰이 쓰인다(bg+fg 쌍).
+    tint_warning_bg = StringField(lazy_gettext('Unverified Running Tint'), default=THEME_DEFAULTS.get('tint_warning_bg', '#FFF3E2'), render_kw={"type": "color"})
+    tint_warning_fg = StringField(lazy_gettext('Unverified Running Tint Text'), default=THEME_DEFAULTS.get('tint_warning_fg', '#94650A'), render_kw={"type": "color"})
     bg_llm = StringField(lazy_gettext('BG LLM Badge'), default=THEME_DEFAULTS.get('bg_llm', '#6277C7'), render_kw={"type": "color"})
     bg_mcp = StringField(lazy_gettext('BG MCP Badge'), default=THEME_DEFAULTS.get('bg_mcp', '#64C762'), render_kw={"type": "color"})
     # 2026-07 통합: bg_upgrade(nav 배지) + bg_btn_upgrade(버튼) — 둘 다 같은

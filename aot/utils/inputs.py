@@ -43,6 +43,7 @@ from aot.config import PATH_INPUTS_CUSTOM
 from aot.config import PATH_INPUTS_GIS
 from aot.inputs.sensorutils import convert_units
 from aot.utils.modules import load_module_from_file
+from aot.utils.safe_eval import safe_eval
 
 logger = logging.getLogger("aot.utils.inputs")
 
@@ -140,8 +141,11 @@ def rescale_measurements(measurement, measurement_value):
                 rescaled_measurement = converted_units
 
         elif measurement.rescale_method == "equation":
-            replaced_str = measurement.rescale_equation.replace('x', str(measurement_value))
-            rescaled_measurement = eval(replaced_str)
+            # UnsafeExpressionError propagates to this function's existing
+            # `except Exception` below, which logs and returns None — same
+            # behaviour a malformed equation already had under eval().
+            rescaled_measurement = safe_eval(
+                measurement.rescale_equation, {'x': measurement_value})
 
         if rescaled_measurement:
             return rescaled_measurement

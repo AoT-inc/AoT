@@ -179,6 +179,11 @@ class CustomModule(
         self._coord_state  = CoordinatorState()
         self._trend_state  = TrendState()
         self._profiles     = []
+        # 구동주기: setpoint 변경 직후 1회 개구부 정상 구동주기를 우회(즉시 반영)하는
+        # 플래그. cmd_reload/cmd_run_now 가 설정, CycleMixin._classify_emergency 가 소비.
+        self._force_immediate = False
+        self._emergency_now    = False
+        self._emergency_reason = ''
         self._unattainable_state: dict = {}   # P5-3: {var: 연속 초과 사이클 수}
         self._groups: list = []
         self._channel_map  = {}
@@ -269,10 +274,14 @@ class CustomModule(
         self._sync_crop_targets()
         self._reload_profiles()
         self._cached_tz = self._CACHED_TZ_SENTINEL  # 위치 변경 시 tz 재결정
+        # setpoint(목표값) 등이 바뀌었을 수 있으므로 다음 사이클은 개구부 정상
+        # 구동주기를 우회해 즉시 반영한다 (예: AI set_vpd_target).
+        self._force_immediate = True
         return f'Reloaded — {len(self._profiles)} actuator(s)'
 
     def cmd_run_now(self, args_dict):
         self.timer_loop = 0.0
+        self._force_immediate = True
 
     def _option_defaults(self):
         """custom_options 의 기본값 사전 — '미수정' 판정에 사용."""

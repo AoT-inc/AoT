@@ -48,6 +48,7 @@ from aot.aot_flask.forms import forms_output
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import utils_general, utils_output
 from aot.aot_flask.utils.utils_map_config import ensure_map_config
+from aot.utils.device_blueprint import member_device_map, parent_device_names
 from aot.utils.outputs import output_types, parse_output_information
 from aot.utils import runtime
 from aot.utils.system_pi import (
@@ -228,6 +229,11 @@ def page_output():
 
     dict_outputs = parse_output_information()
 
+    # 소속 장치 배지(설계 6.3/8/9) — input.html 과 동일한 이유로 전체를 한 번에
+    # 읽는다. primary + secondary 를 합쳐 카드마다 배지가 0개 이상 나올 수 있다.
+    dict_device_names = parent_device_names()
+    dict_member_devices = member_device_map('output')
+
     form_add_output = forms_output.OutputAdd()
     form_mod_output = forms_output.OutputMod()
 
@@ -347,6 +353,8 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               dict_device_names=dict_device_names,
+                               dict_member_devices=dict_member_devices,
                                dict_outputs=dict_outputs,
                                display_order_output=display_order_output,
                                map_configs=map_configs,
@@ -408,6 +416,8 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               dict_device_names=dict_device_names,
+                               dict_member_devices=dict_member_devices,
                                dict_outputs=dict_outputs,
                                display_order_output=display_order_output,
                                each_output=each_output,
@@ -474,6 +484,8 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               dict_device_names=dict_device_names,
+                               dict_member_devices=dict_member_devices,
                                dict_outputs=dict_outputs,
                                display_order_output=display_order_output,
                                each_output=each_output,

@@ -154,6 +154,81 @@ FUNCTION_INFORMATION = {
             ),
         },
 
+        # ── Actuation Rate (opening vents only) ──────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Actuation Rate'),
+        },
+        {
+            'id': 'actuation_profile',
+            'type': 'select',
+            'default_value': 'standard',
+            'required': False,
+            'options_select': [
+                ('responsive', lazy_gettext('Responsive (60s)')),
+                ('standard',   lazy_gettext('Standard (180s)')),
+                ('gentle',     lazy_gettext('Gentle — extend vent motor life (600s)')),
+                ('custom',     lazy_gettext('Custom (set seconds below)')),
+            ],
+            'name': lazy_gettext('Vent Actuation Profile'),
+            'phrase': lazy_gettext(
+                'How often side/roof vents are allowed to move under normal '
+                'conditions. Does not affect sensing/computation (still runs '
+                'every Period above) or emergency response — sudden weather '
+                'changes and safety gates (wind/rain/heat/cold) always move '
+                'vents immediately regardless of this setting. Curtains/shades '
+                'are unaffected (they open/close in one fully-open-or-closed step).'
+            ),
+        },
+        {
+            'id': 'actuation_period_sec',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('Custom Actuation Period (seconds)'),
+            'phrase': lazy_gettext(
+                'Used only when Vent Actuation Profile = Custom. 0 = fall back '
+                'to the selected profile default.'
+            ),
+        },
+        {
+            'id': 'emergency_period_sec',
+            'type': 'float',
+            'default_value': 60.0,
+            'required': False,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': lazy_gettext('Emergency Minimum Interval (seconds)'),
+            'phrase': lazy_gettext(
+                'Even during an emergency, vents will not be re-commanded more '
+                'often than this — prevents rapid back-to-back moves.'
+            ),
+        },
+        {
+            'id': 'emergency_deviation_mult',
+            'type': 'float',
+            'default_value': 3.0,
+            'required': False,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': lazy_gettext('Emergency Deviation Threshold (× tolerance)'),
+            'phrase': lazy_gettext(
+                'If a variable deviates from its target by more than this many '
+                'times its tolerance, treat the cycle as an emergency and move '
+                'vents immediately (ignore the actuation period above).'
+            ),
+        },
+        {
+            'id': 'emergency_rate_c_per_10min',
+            'type': 'float',
+            'default_value': 2.0,
+            'required': False,
+            'constraints_pass': constraints_pass_positive_value,
+            'name': lazy_gettext('Emergency Rate Threshold (°C / 10min)'),
+            'phrase': lazy_gettext(
+                'If indoor temperature is changing faster than this rate, '
+                'treat the cycle as an emergency and move vents immediately.'
+            ),
+        },
+
         # ── Growth Schedule ───────────────────────────────────────────────────
         {
             'type': 'header',
@@ -368,7 +443,7 @@ FUNCTION_INFORMATION = {
         # ── Light ─────────────────────────────────────────────────────────────
         {
             'type': 'header',
-            'name': lazy_gettext('Light'),
+            'name': lazy_gettext('Light Intensity'),
         },
         {
             'id': 'light_max',

@@ -1,5 +1,28 @@
 ## Built-In Outputs (System)
 
+### On/Off: MQTT Publish Multi
+
+- Manufacturer: AoT
+- Interfaces: IP
+- Output Types: On/Off
+- Libraries: paho-mqtt
+- Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt)
+- Additional URL: [Link](http://www.eclipse.org/paho/)
+
+Publish "on"/"off" payloads to a control topic for multiple channels, and subscribe to a status topic to reflect each channel's actual operating state. All channels share the same broker connection and the two topics. Each channel sends its own control payload and matches its own status payload values. Increase the channel count and save to add channels.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Number of Channels</td><td>Integer
+- Default Value: 1</td><td>Number of channels. Save to add or remove channel rows.</td></tr><tr><td>Hostname</td><td>Text
+- Default Value: localhost</td><td>The hostname of the MQTT server</td></tr><tr><td>Port</td><td>Integer
+- Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Control Topic</td><td>Text
+- Default Value: paho/test/control</td><td>The MQTT topic used to publish on/off commands (control direction).</td></tr><tr><td>Status Topic</td><td>Text
+- Default Value: paho/test/status</td><td>The MQTT topic to subscribe to for confirming each channel's operating state. Leave blank to disable status feedback.</td></tr><tr><td>Keep Alive</td><td>Integer
+- Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
+- Default Value: client_cgcQKzDc</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td>Command Timeout (seconds)</td><td>Text
+- Default Value: 5</td><td>How long to optimistically hold the commanded state while awaiting the device (0 = immediate). For wireless/remote devices set the expected response delay; wired devices can leave this at 0.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Channel Name</td><td>Text</td><td>A friendly name shown in the UI for this channel.</td></tr><tr><td>On Payload (Control)</td><td>Text
+- Default Value: on</td><td>The payload published to the Control Topic to turn this channel ON.</td></tr><tr><td>Off Payload (Control)</td><td>Text
+- Default Value: off</td><td>The payload published to the Control Topic to turn this channel OFF.</td></tr><tr><td>On Payload (Status)</td><td>Text</td><td>When this exact value is received on the Status Topic, the channel is marked ON. Leave blank to disable ON detection for this channel.</td></tr><tr><td>Off Payload (Status)</td><td>Text</td><td>When this exact value is received on the Status Topic, the channel is marked OFF. Leave blank to disable OFF detection for this channel.</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the channel state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the channel state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the channel switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+
 ### On/Off: MQTT Publish
 
 - Manufacturer: AoT
@@ -15,7 +38,7 @@ Publish "on" or "off" (or any other strings of your choosing) to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_T64MQp5F</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>On Payload</td><td>Text
+- Default Value: client_zM3DJtz6</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>On Payload</td><td>Text
 - Default Value: on</td><td>The payload to send when turned on</td></tr><tr><td>Off Payload</td><td>Text
 - Default Value: off</td><td>The payload to send when turned off</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server. Leave blank to disable.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
@@ -34,8 +57,21 @@ Publish a PWM value to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_62CDeFuQ</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_94vBC7p6</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr><tr><td>Round Integer</td><td>Select(Options: [<strong>No Rounding</strong> | Round Nearest Whole | Round Up | Round Down] (Default in <strong>bold</strong>)</td><td>Round the payload value to an integer.</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Startup Value</td><td>Decimal</td><td>The value when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Shutdown Value</td><td>Decimal</td><td>The value when AoT shuts down</td></tr><tr><td>Invert Signal</td><td>Boolean</td><td>Invert the PWM signal</td></tr><tr><td>Invert Stored Signal</td><td>Boolean</td><td>Invert the value that is saved to the measurement database</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Set the Duty Cycle.</td></tr><tr><td>Duty Cycle</td><td>Decimal</td><td>The duty cycle to set</td></tr><tr><td>Set Duty Cycle</td><td>Button</td><td></td></tr></tbody></table>
+
+### Value: Actuator Paired
+
+- Manufacturer: AoT
+- Output Types: Value
+
+Time-based opening control (0–100%) for vents, curtains, and ball valves. Connects an Open relay and a Close relay to a single percentage command.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td colspan="3">Channel Options</td></tr><tr><td>Actuator Kind</td><td>Select(Options: [<strong>Side Vent</strong> | Roof Vent | Thermal Curtain | Shade Curtain | Ball Valve] (Default in <strong>bold</strong>)</td><td>Type of actuator being controlled.</td></tr><tr><td>Output: Open</td><td>Select Channel (Output_Channels)</td><td>on/off Output channel connected to the OPEN relay.</td></tr><tr><td>Output: Close</td><td>Select Channel (Output_Channels)</td><td>on/off Output channel connected to the CLOSE relay.</td></tr><tr><td>Travel Time Open (s)</td><td>Decimal</td><td>Seconds to travel from fully closed (0%) to fully open (100%). If unset, the close travel time is used as a fallback. Use the Calibration buttons below to measure automatically.</td></tr><tr><td>Travel Time Close (s)</td><td>Decimal</td><td>Seconds to travel from fully open (100%) to fully closed (0%). If unset, the open travel time is used as a fallback.</td></tr><tr><td>Open Start Position (%)</td><td>Decimal</td><td>Reference only (informational). Motor position (%) at which the mechanism visually begins to open. The command value is used as the motor position directly and is NOT rescaled by this field — a command of 22% maps directly to motor position 22.</td></tr><tr><td>Full Open Position (%)</td><td>Decimal
+- Default Value: 100.0</td><td>Reference only (informational). Motor position (%) regarded as fully open. The command value is used as the motor position directly and is NOT capped by this field. A command of 0% always moves to the physical end-stop (emergency fully-closed).</td></tr><tr><td>Min Move Step (%)</td><td>Decimal
+- Default Value: 5.0</td><td>Motor lifespan protection for automatic environment control. The motor moves only when the target differs from the last sent position by at least this much, and commands snap to this grid (e.g. 5% → 0, 5, 10 …). This absorbs the small per-cycle fluctuations of the PI controller so the motor is not driven every cycle. Set to 0 to disable — every minor fluctuation then drives the motor (legacy behavior).</td></tr><tr><td>Last Position (%)</td><td>Decimal</td><td>Last known position. Updated automatically on each move so the value survives daemon restarts. Edit manually only if you know the actual position.</td></tr><tr><td>Last Target (%)</td><td>Decimal
+- Default Value: -1.0</td><td>Last manually commanded target position. -1 means not set. Saved on each manual set command so the target survives daemon restarts.</td></tr><tr><td>Min Command Interval (s)</td><td>Decimal
+- Default Value: 1.0</td><td>Reject any new Open/Close command that arrives within this many seconds of the previous one. Prevents queued-up motor whiplash from rapid button presses. Stop is always accepted regardless of this interval.</td></tr><tr><td>Reverse Pause (s)</td><td>Decimal
+- Default Value: 5.0</td><td>Dwell time inserted when reversing direction (open↔close) to protect the motor. Both relays stay OFF for this many seconds before the new direction starts.</td></tr><tr><td>Invert Direction</td><td>Boolean</td><td>Swap Open and Close relays in software. Enable when 0% physically deploys the actuator and 100% pulls it back (e.g. thermal curtain wired with Close = deploy).</td></tr><tr><td>Calibration Direction</td><td>Select(Options: [<strong>Open</strong> | Close] (Default in <strong>bold</strong>)</td><td>Click Start → actuator moves → click Stop when fully open or closed → elapsed time is saved to Travel Time Open or Travel Time Close.</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>▶ Start Calibration</td><td>Button</td><td></td></tr><tr><td>■ Stop & Save</td><td>Button</td><td></td></tr></tbody></table>
 
 ### Value: MQTT Publish
 
@@ -51,7 +87,7 @@ Publish a value to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_W6Pb8H1q</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Off Value</td><td>Integer</td><td>The value to send when an Off command is given</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_Y03W5KD3</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Off Value</td><td>Integer</td><td>The value to send when an Off command is given</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
 
 ## Built-In Outputs (Devices)
@@ -144,17 +180,16 @@ Controls the 4 channel multichannel relay board.
 
 - Interfaces: API
 - Output Types: On/Off
-- Libraries: requests, grpcio (optional)
-- Dependencies: 
+- Libraries: requests, paho-mqtt, grpcio (optional)
+- Dependencies: [paho-mqtt](https://pypi.org/project/paho-mqtt)
 
-ChirpStack REST/gRPC API를 이용해 온/오프 다운링크 명령을 전송합니다. 우선 gRPC로 시도하며, grpcio/chirpstack-api가 설치되지 않았거나 접근이 실패하면 REST(/api/devices/<devEui>/queue)로 자동 전환합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>ChirpStack gRPC 서버</td><td>Text
-- Default Value: 127.0.0.1:8080</td><td>호스트:포트 형식 (예: 127.0.0.1:8080) 또는 http(s)://호스트:포트</td></tr><tr><td>API Key</td><td>Text</td><td>JWT 토큰 값을 입력하세요 (Bearer 제외)</td></tr><tr><td>DevEUI</td><td>Text</td><td>16자리 16진수 DevEUI (구분자 허용)</td></tr><tr><td>FPort</td><td>Integer
-- Default Value: 15</td><td>명령을 수신할 LoRaWAN FPort</td></tr><tr><td>Confirmed</td><td>Boolean</td><td>확인형(Confirmed)으로 명령 전송</td></tr><tr><td>Payload Format</td><td>Select(Options: [<strong>Hex 바이트</strong> | JSON 객체(UTF-8 인코딩)] (Default in <strong>bold</strong>)</td><td>페이로드 인코딩 형식을 선택하세요</td></tr><tr><td>On Payload</td><td>Text
-- Default Value: 000000</td><td>예: 010110 (Hex) 또는 JSON 문자열</td></tr><tr><td>off Payload</td><td>Text
-- Default Value: 000000</td><td>예: 010210 (Hex) 또는 JSON 문자열</td></tr><tr><td>확인 유예(초)</td><td>Text
-- Default Value: 90</td><td>업링크 지연 허용시간</td></tr><tr><td>확정 타임아웃(초)</td><td>Text
-- Default Value: 600</td><td>이 시간이 지나도 미확인 시 경고/재조치</td></tr><tr><td>하드 타임아웃 시 OFF 재전송</td><td>Boolean</td><td>duration 종료 또는 타임아웃 시 OFF를 다시 보냄</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>시작 시 상태</td><td>Select</td><td>AoT가 시작될 때 적용할 상태</td></tr><tr><td>종료 시 상태</td><td>Select</td><td>AoT가 종료될 때 적용할 상태</td></tr><tr><td>Force Command</td><td>Boolean</td><td>현재 상태와 무관하게 명령을 항상 전송</td></tr><tr><td>시작 시 트리거 실행</td><td>Boolean</td><td>시작 시 출력이 전환되면 트리거 기능 실행</td></tr></tbody></table>
+Sends on/off downlink commands via ChirpStack REST/gRPC API. Attempts gRPC first; falls back to REST (/api/devices/<devEui>/queue) if grpcio/chirpstack-api is not installed or unreachable.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>ChirpStack gRPC Server</td><td>Text
+- Default Value: 127.0.0.1:8080</td><td>Host:port format (e.g., 127.0.0.1:8080) or http(s)://host:port</td></tr><tr><td>API Key</td><td>Text</td><td>Enter the JWT token value (without Bearer prefix)</td></tr><tr><td>DevEUI</td><td>Text</td><td>16-digit hexadecimal DevEUI (separators allowed)</td></tr><tr><td>FPort</td><td>Integer
+- Default Value: 15</td><td>LoRaWAN FPort on which the command is received</td></tr><tr><td>Confirmed</td><td>Boolean</td><td>Send command as confirmed (await acknowledgment)</td></tr><tr><td>Payload Format</td><td>Select(Options: [<strong>Hex Bytes</strong> | JSON Object (UTF-8 encoded)] (Default in <strong>bold</strong>)</td><td>Select the payload encoding format</td></tr><tr><td>On Payload</td><td>Text
+- Default Value: 000000</td><td>e.g., 010110 (Hex) or JSON string</td></tr><tr><td>Off Payload</td><td>Text
+- Default Value: 000000</td><td>e.g., 010210 (Hex) or JSON string</td></tr><tr><td>Enable Debug Logging</td><td>Boolean</td><td>Log connection/enqueue/confirmation notices (INFO/WARNING) for this device. Errors are always logged. Leave off in production.</td></tr><tr><td>Command Timeout (seconds)</td><td>Text
+- Default Value: 8</td><td>How long to optimistically hold the commanded state while awaiting the device (0 = immediate). For wireless/remote devices set the expected response delay; wired devices can leave this at 0.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>State to apply when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>State to apply when AoT shuts down</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send command regardless of current state</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Execute trigger function when output switches at startup</td></tr></tbody></table>
 
 ### On/Off: Ecowitt Local HTTP
 
@@ -163,8 +198,8 @@ ChirpStack REST/gRPC API를 이용해 온/오프 다운링크 명령을 전송�
 - Libraries: requests
 - Dependencies: [requests](https://pypi.org/project/requests)
 
-Ecowitt 허브 IP, 서브디바이스 ID, 모델(WFC01/02=1, WFC02 신펌=3, AC1100=2)을 입력하면 로컬 HTTP API로 On/Off 제어합니다.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Ecowitt Device IP</td><td>Text</td><td>Local IP address of the Ecowitt hub (e.g., 192.168.1.100)</td></tr><tr><td>Ecowitt Sub-device ID</td><td>Text</td><td>ID of WFC01/WFC02/AC1100 (e.g., 11044)</td></tr><tr><td>Ecowitt Device Model</td><td>Select(Options: [WFC01 | <strong>WFC02</strong> | AC1100] (Default in <strong>bold</strong>)</td><td>1=WFC01/대부분 WFC02, 3=일부 WFC02(신펌), 2=AC1100</td></tr><tr><td>Valve Open %</td><td>Integer
+Enter the Ecowitt hub IP, sub-device ID, and model (WFC01/02=1, WFC02 new firmware=3, AC1100=2) to control On/Off via the local HTTP API.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Ecowitt Device IP</td><td>Text</td><td>Local IP address of the Ecowitt hub (e.g., 192.168.1.100)</td></tr><tr><td>Ecowitt Sub-device ID</td><td>Text</td><td>ID of WFC01/WFC02/AC1100 (e.g., 11044)</td></tr><tr><td>Ecowitt Device Model</td><td>Select(Options: [WFC01 | <strong>WFC02</strong> | AC1100] (Default in <strong>bold</strong>)</td><td>1=WFC01/most WFC02, 3=some WFC02 (new firmware), 2=AC1100</td></tr><tr><td>Valve Open %</td><td>Integer
 - Default Value: 100</td><td>When turning on, open valve to this percent (0-100)</td></tr><tr><td>State Query Period (Seconds)</td><td>Integer
 - Default Value: 60</td><td>How often to query the state of the output</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr></tbody></table>
 
@@ -208,7 +243,7 @@ This output controls the 6 outlets of the Kasa HS300 Smart WiFi Power Strip. Thi
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18718</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
+- Default Value: 18839</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa KP303 3-Outlet WiFi Power Strip (old library, deprecated)
@@ -237,7 +272,7 @@ This output controls the 3 outlets of the Kasa KP303 Smart WiFi Power Strip. Thi
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18221</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
+- Default Value: 18376</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text
 - Default Value: Outlet Name</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa WiFi Power Plug
@@ -252,7 +287,8 @@ This output controls Kasa WiFi Power Plugs, including the KP105, KP115, KP125, K
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18095</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+- Default Value: 18430</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td>Command Timeout (seconds)</td><td>Text
+- Default Value: 5</td><td>How long to optimistically hold the commanded state while awaiting the device (0 = immediate). For wireless/remote devices set the expected response delay; wired devices can leave this at 0.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Kasa WiFi RGB Light Bulb
 
@@ -266,7 +302,7 @@ This output controls the the Kasa WiFi Light Bulbs, including the KL125, KL130, 
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Host</td><td>Text
 - Default Value: 0.0.0.0</td><td>Host or IP address</td></tr><tr><td>Status Update (Seconds)</td><td>Text
 - Default Value: 300</td><td>The period between checking if connected and output states. 0 disables.</td></tr><tr><td>Asyncio RPC Port</td><td>Integer
-- Default Value: 18603</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
+- Default Value: 18482</td><td>The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr><tr><td colspan="3">Commands</td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Brightness (Percent)</td><td>Integer</td><td>The brightness to set, in percent (0 - 100)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Hue (Degree)</td><td>Integer</td><td>The hue to set, in degrees (0 - 360)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
 - Default Value: 0</td><td>The hsv transition period</td></tr><tr><td>Saturation (Percent)</td><td>Integer</td><td>The saturation to set, in percent (0 - 100)</td></tr><tr><td>Set</td><td>Button</td><td></td></tr><tr><td>Transition (Milliseconds)</td><td>Integer
@@ -288,6 +324,23 @@ This output controls the the Kasa WiFi Light Bulbs, including the KL125, KL130, 
 
 Controls the 16 channels of the MCP23017.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state of the GPIO when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state of the GPIO when AoT shuts down</td></tr><tr><td>On State</td><td>Select(Options: [<strong>HIGH</strong> | LOW] (Default in <strong>bold</strong>)</td><td>The state of the GPIO that corresponds to an On state</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+
+### On/Off: Modbus TCP Coil (PLC)
+
+- Manufacturer: Modbus
+- Interfaces: IP
+- Output Types: On/Off
+- Libraries: pymodbus
+- Dependencies: [pymodbus](https://pypi.org/project/pymodbus)
+
+Switch coils on a Modbus TCP device (PLC, relay board, gateway). Each channel is one coil address. After every command the coil is read back to confirm it actually changed, and a mismatch is reported as a failure. Inputs and Outputs pointing at the same host and port share one connection automatically. Note that a readback confirms the PLC register, not that the relay or wiring moved. Modbus has no authentication or encryption — keep the device on an isolated network.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Number of Channels</td><td>Integer
+- Default Value: 1</td><td>Number of coils to control. Save to add or remove channel rows.</td></tr><tr><td>Host</td><td>Text</td><td>IP address or hostname of the Modbus TCP device</td></tr><tr><td>Port</td><td>Integer
+- Default Value: 502</td><td>TCP port of the Modbus TCP device (standard: 502)</td></tr><tr><td>Unit ID</td><td>Integer
+- Default Value: 1</td><td>Modbus unit/slave ID of the device. Usually 1 for a device addressed directly, or the slave address behind a serial gateway</td></tr><tr><td>Timeout (seconds)</td><td>Decimal
+- Default Value: 1.0</td><td>How long to wait for a response. One request takes at most timeout x (retries + 1), and a command sends two requests</td></tr><tr><td>Retries</td><td>Integer
+- Default Value: 1</td><td>Retries per request before it is treated as failed. Keep this low: a high value multiplies how long an unreachable device blocks a command</td></tr><tr><td>Command Timeout (seconds)</td><td>Text
+- Default Value: 5</td><td>How long to optimistically hold the commanded state while awaiting the device (0 = immediate). For wireless/remote devices set the expected response delay; wired devices can leave this at 0.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Channel Name</td><td>Text</td><td>A friendly name shown in the UI for this channel.</td></tr><tr><td>Coil Address</td><td>Integer</td><td>Zero-based coil address to switch. Vendor documentation often lists one-based addresses (e.g. 00001 for coil 0), so verify against the register map</td></tr><tr><td>Startup State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the channel state when AoT starts. "Do Nothing" leaves the coil as the PLC has it and simply reads it back</td></tr><tr><td>Shutdown State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the channel state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the channel switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Neopixel (WS2812) RGB Strip with Raspberry Pi
 
@@ -618,7 +671,9 @@ This output turns a GPIO pin HIGH and LOW to control power to a generic peristal
 
 This Output allows remote control of another AoT On/Off Output over a network using the API.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Remote AoT Host</td><td>Text</td><td>The host or IP address of the remote AoT</td></tr><tr><td>Remote AoT API Key</td><td>Text</td><td>The API key of the remote AoT</td></tr><tr><td>State Query Period (Seconds)</td><td>Integer
-- Default Value: 120</td><td>How often to query the state of the output</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Remote AoT Output</td></td><td>The Remote AoT Output to control</td></tr><tr><td>Startup State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the state when AoT shuts down</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr></tbody></table>
+- Default Value: 120</td><td>How often to query the state of the output</td></tr><tr><td>Request Timeout (Seconds)</td><td>Integer
+- Default Value: 60</td><td>HTTP read timeout for ON/OFF commands. Must be longer than the slowest command on the remote host (e.g. if the remote command has time.sleep(15), set this to at least 20).</td></tr><tr><td>Command Timeout (seconds)</td><td>Text
+- Default Value: 5</td><td>How long to optimistically hold the commanded state while awaiting the device (0 = immediate). For wireless/remote devices set the expected response delay; wired devices can leave this at 0.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Remote AoT Output</td></td><td>The Remote AoT Output to control</td></tr><tr><td>Startup State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the state when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the state when AoT shuts down</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr></tbody></table>
 
 ### Remote AoT Output: PWM
 

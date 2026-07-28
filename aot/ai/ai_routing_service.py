@@ -6,6 +6,7 @@ AIRoutingService — Extracted routing methods from AIAgentService.
 """
 import logging
 from aot.databases.models.ai import AIAgent
+from aot.utils.safe_eval import safe_eval
 
 logger = logging.getLogger(__name__)
 
@@ -109,10 +110,14 @@ class Tier0Classifier:
             return None
 
         # --- Pure math ---
+        # The regex below is a fast pre-filter, not the security boundary:
+        # safe_eval parses and whitelists the AST, so this stays safe even if
+        # the character class is ever widened (it previously guarded a bare
+        # eval() on raw chat input — one relaxed character from being RCE).
         if re.match(r'^[\d\s\+\-\*\/\(\)\.]+$', user_query.strip()):
             if any(c in user_query for c in '+-*/'):
                 try:
-                    math_result = eval(user_query, {"__builtins__": {}})
+                    math_result = safe_eval(user_query)
                     from flask_babel import gettext as _
                     return cls._make_response(_("The result is %(result)s.", result=math_result))
                 except Exception:

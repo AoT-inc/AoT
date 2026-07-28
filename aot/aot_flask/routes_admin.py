@@ -16,7 +16,11 @@ import flask_login
 from flask import (Blueprint, flash, jsonify, make_response, redirect,
                    render_template, request, send_file, url_for)
 from flask_babel import gettext
-from pkg_resources import parse_version
+# packaging.version.parse — pkg_resources 는 setuptools 81 에서 제거되었고,
+# 그 때문에 requirements.txt 가 setuptools<81 에 묶여 알려진 취약점을 고칠 수
+# 없었다. 이 파일이 유일한 사용처였고 쓰임은 버전 비교뿐이라 그대로 대체된다
+# (AoT 버전 형식 7종으로 두 구현의 비교 결과가 동일함을 확인).
+from packaging.version import parse as parse_version
 
 from aot.utils.time_utils import utc_now, to_local
 from aot.config import (BACKUP_LOG_FILE, BACKUP_PATH, CAMERA_INFO,

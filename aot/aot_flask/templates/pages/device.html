@@ -1,0 +1,723 @@
+{% extends "layout.html" %}
+{% set active_page = "device" %}
+
+{% block title %} - {{ _('Device') }}{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+  @media (max-width: 768px) {
+    .grid-stack-item {
+      width: 100% !important;
+      left: 0 !important;
+    }
+  }
+  .grid-stack-item-content {
+    transition: none !important;
+  }
+  /* 측정/제어 채널 행의 값·상태 표시 — aot-output-state.js가 붙이는
+     active/inactive/pause/hold-background는 원래 카드 배경 전체를 칠하는
+     용도라(aot-base.css), 좁은 span에 그대로 쓰면 배경색만 있고 글자색·
+     여백이 없어 안 읽힌다. 여기서만 작은 배지 모양으로 보정한다. */
+  #device_settings_modal_tree .ch-value,
+  #device_settings_modal_tree .ch-state {
+    display: inline-block;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+</style>
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+<script src="/static/js/common/aot-output-state.js?v=6"></script>
+{% endblock %}
+
+{%- block body %}
+<main role="main" class="container">
+  {% include 'flash_messages.html' %}
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  <div class="row aot-main-selection-row">
+    <div class="col-auto">
+      {# layout_default.html이 .aot-modern-select 를 전부 자동으로
+         bootstrap-select 로 승격시킨다(전역 스크립트, 코드로 확인) — 순수
+         <select> 로 만들 수는 없다. "드롭다운 목록으로 처리"라는 지시는
+         검색창 없는 단순 목록을 뜻하는 것으로 보고, data-live-search 만
+         제거해 검색 콤보를 없앴다(장치 종류가 몇 개뿐이라 검색이 불필요). #}
+      <select id="device_type_select" class="selectpicker aot-standard-select"
+        data-style="btn btn-primary aot-roundbox"
+        title="{{ _('Device') }}: {{ _('Select') }}">
+        {% for choice in choices_devices %}
+        <option value="{{ choice.value }}">{{ choice.item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <button id="device_add_btn" class="btn btn-primary" type="button">{{ _('Add') }}</button>
+    </div>
+  </div>
+
+  <div style="clear: both; padding: 0.5em 0;"></div>
+
+  {% if not choices_devices %}
+  <p class="text-muted">
+    {{ _('No device modules are installed. A device module declares is_device=True and a device_blueprint — see .local/plans/device_group_console_plan.md.') }}
+  </p>
+  {% endif %}
+
+  <div class="grid-stack aot-entry-container" id="device_list">
+    {% for dev in devices %}
+    <div id="gridstack_device_{{ dev.unique_id }}" class="grid-stack-item" gs-id="{{ dev.unique_id }}" gs-x="0"
+      gs-y="{{ dev.position_y }}" gs-w="24" gs-h="1" gs-no-resize="true">
+      <div id="device_status_{{ dev.unique_id }}" data-device-id="{{ dev.unique_id }}"
+        class="grid-stack-item-content {{ 'active-background' if dev.is_activated else 'inactive-background' }} row small-gutters aot-entry-item">
+        <div class="aot-entry-drag-handle">
+          <i class="fa fa-grip-lines"></i>
+        </div>
+
+        <div class="aot-entry-content-item aot-col-name aot-col-name-copy" onclick="setClipboard('{{ dev.unique_id }}')">
+          {% for parent_id in dict_device_parent_map.get(dev.unique_id, []) if parent_id in dict_device_names %}
+          <a class="badge badge-secondary aot-badge-inline" href="/device#device_card_{{ parent_id }}"
+            onclick="event.stopPropagation();" title="{{ _('Part of device') }}: {{ dict_device_names[parent_id] }}">{{ dict_device_names[parent_id] }}</a>
+          {% endfor %}
+          <div class="form-control aot-entry-name-input" data-toggle="tooltip"
+            title="{{ dev.name }} · UUID: {{ dev.unique_id }}, {{ dict_translation['copy_to_clipboard']['phrase'] }}">{{ dev.name }}</div>
+        </div>
+
+        <div class="aot-entry-content-item aot-col-uuid">
+          <span id="device_status_badge_{{ dev.unique_id }}" class="badge">{{ _('Unverifiable') }}</span>
+          <span id="device_count_{{ dev.unique_id }}" class="text-muted" style="font-size: 0.8em; margin-left: 0.4em;"></span>
+        </div>
+
+        <div class="aot-entry-actions aot-col-action">
+          <input {% if dev.is_activated -%}style="display: none" {% endif %}
+            class="form-control btn aot-pill-btn aot-pill-btn-primary device-activate-btn" type="button"
+            data-device-id="{{ dev.unique_id }}" data-active="false"
+            value="{{ _('Activate') }}" />
+          <input {% if not dev.is_activated -%}style="display: none" {% endif %}
+            class="form-control btn aot-pill-btn aot-pill-btn-primary device-activate-btn" type="button"
+            data-device-id="{{ dev.unique_id }}" data-active="true"
+            value="{{ _('Deactivate') }}" />
+        </div>
+
+        <div class="aot-entry-settings">
+          <a class="btn p-0 device-settings-btn" data-device-id="{{ dev.unique_id }}" href="javascript:void(0);">
+            <i class="fas fa-cog"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- 설정 모달 — 카드는 6.1의 4역할(접속정보 입력점/생명주기/합성상태/탐색허브)만
+       남기고, 세부(구성 트리·연결 관리·노트)는 전부 이 모달로 옮긴다(설계 6.2).
+       접속정보 폼은 /function?function_type=options 로 가져온 fragment 를 그대로
+       삽입한다(저장/삭제/복제 버튼은 그 fragment에 없음 — 별도 확인됨). 저장은
+       device.html 자체 버튼으로 처리한다. 삭제·복제는 이번 범위에서도 뺐다
+       (Phase 3 결정 유지 — 안전한 재사용 경로가 아직 없음). -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="device_settings_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _('Device Settings') }}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="device_settings_modal_options">
+            <span class="text-muted">{{ _('Loading...') }}</span>
+          </div>
+
+          <!-- 아래 3개 블록은 전부 JS(buildTree/renderLinkSection/
+               renderSubdevicesSection)가 그린다 — 위 옵션 fragment와 동일한
+               aot-modal-group-title/aot-modal-container 골격을 그대로 써서
+               "여기서부터 스타일이 안 먹는다"는 경계가 없게 한다. -->
+          <div id="device_settings_modal_tree">
+            <span class="text-muted">{{ _('Loading...') }}</span>
+          </div>
+
+          <div id="device_settings_modal_link">
+            <span class="text-muted">{{ _('Loading...') }}</span>
+          </div>
+
+          <div id="device_settings_modal_subdevices">
+            <span class="text-muted">{{ _('Loading...') }}</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{ _('Close') }}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="device_settings_delete_btn">{{ _('Delete') }}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="device_settings_duplicate_btn">{{ _('Duplicate') }}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="device_settings_save_btn">{{ _('Save') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // 이 탭 id 없이 /function_submit 에 function_add=1 을 보내면, 서버가
+  // TabService.get_default_tab('function') 으로 Function 페이지의 기본 탭에
+  // 장치를 배정해 버린다(request.args 에 tab_id 가 없을 때의 폴백 — 실제로
+  // 이 버그로 장치가 엉뚱한 Function 탭에 들어가는 것을 확인했다). 반드시
+  // 쿼리스트링으로 명시해야 격리가 성립한다.
+  var DEVICE_TAB_ID = "{{ device_tab_id or '' }}";
+
+  function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  }
+
+  // 여러 채널의 raw output_state() 값을 aggregate() 한 결과와, Input 의
+  // {active, comm_fault} 판정을 다시 하나로 합친다 — 3단계(정상/오류/확인
+  // 불가) 표시는 여기서만 계산하고 새 판정 로직은 만들지 않는다(design plan
+  // 3.3 — 기존 comm_* 계층을 그대로 소비).
+  function deviceBadge(hasAnyCapable, hasFault) {
+    if (hasFault) return { text: "{{ _('Fault') }}", cls: 'pause-background' };
+    if (hasAnyCapable) return { text: "{{ _('Device OK') }}", cls: 'active-background' };
+    return { text: "{{ _('Unverifiable') }}", cls: 'inactive-background' };
+  }
+
+  function submitFunctionAction(fields, onDone, queryString) {
+    var body = new URLSearchParams(fields);
+    var url = '/function_submit' + (queryString ? ('?' + queryString) : '');
+    fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      var errs = (data && data.data && data.data.messages && data.data.messages.error) || [];
+      if (errs.length) {
+        window.showToast(errs.join(', '), 'error');
+      } else {
+        if (onDone) onDone(data);
+      }
+    }).catch(function (err) {
+      window.showToast('Request failed: ' + err, 'error');
+    });
+  }
+
+  // ---- gridstack: 카드 순서 저장 (input.html/output.html 과 동일 패턴) ----
+  function initGrid() {
+    if (window.grid) return;
+
+    window.grid = GridStack.init({
+      animate: false,
+      cellHeight: 52,
+      column: 24,
+      margin: 2,
+      handle: '.aot-entry-drag-handle',
+      float: false,
+      disableOneColumnMode: true,
+      alwaysShowResizeHandle: false,
+      resizable: false
+    });
+
+    window.grid.on('dragstop', function () {
+      if (window.innerWidth <= 768) return;
+      var serializedFull = window.grid.save(false);
+      fetch('/save_device_layout', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(serializedFull, null, '  ')
+      });
+    });
+  }
+
+  // ---- 장치 추가 ----
+  document.getElementById('device_add_btn').addEventListener('click', function () {
+    var sel = document.getElementById('device_type_select');
+    var deviceType = sel.value;
+    if (!deviceType) {
+      window.showToast("{{ _('Select a device type first') }}", 'error');
+      return;
+    }
+    submitFunctionAction({
+      function_add: '1',
+      function_type: deviceType,
+      csrf_token: csrfToken()
+    }, function () {
+      window.location.reload();
+    }, DEVICE_TAB_ID ? ('tab_id=' + encodeURIComponent(DEVICE_TAB_ID)) : '');
+  });
+
+  // ---- 활성화 / 비활성화 (장치 자신 토글 — 하위 cascade 는 서버측 Phase 4 구현) ----
+  document.querySelectorAll('.device-activate-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-device-id');
+      var isActive = btn.getAttribute('data-active') === 'true';
+      submitFunctionAction({
+        function_id: id,
+        csrf_token: csrfToken(),
+        function_activate: isActive ? '' : '1',
+        function_deactivate: isActive ? '1' : ''
+      }, function () {
+        window.location.reload();
+      });
+    });
+  });
+
+  // ---- 설정 모달 ----
+  var $settingsModal = window.jQuery && jQuery('#device_settings_modal');
+  var currentSettingsDeviceId = null;
+
+  // ---- 구성 트리: 이미 로드된 deviceSummaries 캐시를 모달 컨테이너에 그린다
+  // (카드 로드시 이미 한 번 받아 온 것을 재사용 — 모달을 열 때마다 다시
+  // 조회하지 않는다) ----
+  // "측정값"(Measurements) 이라는 이름이 이 모달 안에서 이미 다른 뜻으로
+  // 쓰이고 있어(옵션 fragment 하단의 "측정값 설정" 그룹 — 채널별 measurement/
+  // unit 편집, custom_function_options.html 공용) 바로 옆에 같은 이름이 또
+  // 나오면 헷갈린다 — 여기서는 "측정 채널"/"제어 채널"로 구분해 무엇의
+  // 목록인지(Input 채널이 보여주는 값 vs Output 채널이 받는 명령) 명확히 한다.
+  // 순수 읽기 전용 상태 표시로 바꿨다(사용자 지적, 2026-07-28) — 링크로
+  // 연결하는 기존 Input/Output은 온갖 채널 타입(온오프/paired 개폐/PWM 등,
+  // output_entry.html의 실제 분기 참조)일 수 있는데, 여기서 On/Off 버튼을
+  // 무조건 박아 두면 paired 밸브 같은 타입엔 아예 안 맞는 조작을 붙이는
+  // 꼴이었다. 값/상태 하나만 그대로 보여주면 채널 타입과 무관하게 항상
+  // 맞는 표시가 되므로, 실제 조작·설정 진입은 "연결된 Input/Output" 목록의
+  // 이름 링크(정본 페이지로 이동, renderLinkSection 참조) 하나로 모은다 —
+  // 채널마다 "설정 →"를 박아 두던 것도 같은 이유로 없앴다.
+  function buildTree(summary) {
+    var el = document.getElementById('device_settings_modal_tree');
+    var html = '';
+
+    if (summary.inputs.length) {
+      html += '<div class="aot-modal-group-title">{{ _("Measurement Channels") }}</div><div class="aot-modal-container">';
+      summary.inputs.forEach(function (inp) {
+        var inactiveTag = inp.is_activated ? '' :
+          ' <span class="text-muted" style="font-size: 0.75em;">({{ _("Input inactive") }})</span>';
+        inp.channels.forEach(function (ch) {
+          if (!ch.measurement_id) return;
+          html += '<div class="aot-modal-option-row" data-measurement-id="' + ch.measurement_id + '">' +
+            '<label class="aot-modal-option-label">' + ch.name + '</label>' +
+            '<div class="aot-modal-option-control">' +
+            '<span class="ch-value" id="mval_' + ch.measurement_id + '">—</span>' + inactiveTag +
+            '</div></div>';
+        });
+      });
+      html += '</div>';
+    }
+
+    if (summary.outputs.length) {
+      html += '<div class="aot-modal-group-title">{{ _("Control Channels") }}</div><div class="aot-modal-container">';
+      summary.outputs.forEach(function (out) {
+        out.channels.forEach(function (ch) {
+          html += '<div class="aot-modal-option-row" data-output-id="' + out.unique_id + '" data-channel="' + ch.channel + '">' +
+            '<label class="aot-modal-option-label">' + ch.name + '</label>' +
+            '<div class="aot-modal-option-control">' +
+            '<span class="ch-state" id="ostate_' + out.unique_id + '_' + ch.channel + '">—</span>' +
+            '</div></div>';
+        });
+      });
+      html += '</div>';
+    }
+
+    if (!summary.inputs.length && !summary.outputs.length) {
+      html = '<span class="text-muted">{{ _("This device has no measurements or controls yet.") }}</span>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // ---- 연결 관리: 이미 연결된 항목(해제) + 미소속 후보(연결) (설계 6.4) ----
+  // 연결됨 목록에는 primary(소유·activate cascade 대상)와 secondary(다른 곳
+  // 소유물을 참조만 하는 것) 가 섞인다 — secondary에는 "(참조)" 표시를 붙여
+  // 둘을 구분한다(설계 Phase 8/9, cascade는 여전히 primary만 본다).
+  function buildLinkAndSubdeviceSections(deviceId, summary) {
+    fetch('/device/' + deviceId + '/candidates').then(function (r) { return r.json(); }).then(function (cand) {
+      renderLinkSection(deviceId, summary, cand);
+      renderSubdevicesSection(deviceId, summary, cand);
+    });
+  }
+
+  // 후보가 수십~수백 개(Output 54종 x 다수 인스턴스 등)까지 늘어날 수 있어
+  // 행마다 버튼을 박아 두면 드로어 폭에서 스크롤이 끝없이 길어진다 — Function
+  // 쪽 큰 목록(측정값/장치 선택 등)이 전부 검색 가능한 드롭다운 하나 + 버튼
+  // 하나로 처리하는 것과 같은 패턴으로 통일한다(사용자 지시, "function 에서
+  // 참고"). 드롭다운은 bootstrap-select(.selectpicker)로 초기화해 텍스트
+  // 검색이 되게 한다 — 페이지 전역에도 같은 컴포넌트를 쓰므로 별도 CSS 불필요.
+  // 드롭다운+버튼 자체는 option-row 하나를 통째로 차지한다(레이블/컨트롤
+  // 2분할이 필요 없는 유일한 행이라 label 없이 통짜로 둔다) — 그래야 옵션
+  // fragment와 같은 aot-modal-container 박스 안에서 자연스럽게 보인다.
+  function _buildCandidateDropdown(selectId, btnId, linkLabel, items) {
+    if (!items.length) {
+      return '<div class="aot-modal-option-row"><span class="text-muted">{{ _("None") }}</span></div>';
+    }
+    var html = '<div class="aot-modal-option-row">' +
+      '<div class="d-flex" style="gap: 0.5em; align-items: center; width: 100%;">' +
+      '<select id="' + selectId + '" class="selectpicker" data-live-search="true" ' +
+      'data-style="btn-white" style="flex: 1 1 auto; min-width: 0;">';
+    items.forEach(function (m) {
+      html += '<option value="' + m.type + '|' + m.id + '">' + m.name + '</option>';
+    });
+    html += '</select>' +
+      '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary btn-sm" id="' + btnId + '" ' +
+      'style="flex: 0 0 auto;">' + linkLabel + '</button></div></div>';
+    return html;
+  }
+
+  function _wireCandidateDropdown(selectId, btnId, onPick) {
+    var select = document.getElementById(selectId);
+    var btn = document.getElementById(btnId);
+    if (!select || !btn) return;
+    if (window.jQuery && jQuery.fn.selectpicker) { jQuery(select).selectpicker(); }
+    btn.addEventListener('click', function () {
+      var val = select.value;
+      if (!val) return;
+      var parts = val.split('|');
+      onPick(parts[0], parts[1]);
+    });
+  }
+
+  // "연결됨"/"연결 가능"을 별도 그룹으로 나눠 두면 관계를 한눈에 읽기
+  // 어렵다는 지적(사용자, 2026-07-28: "뒤죽박죽 연상하기도 어렵고") — 하나의
+  // 그룹 안에서 연결 조작(드롭다운+버튼)을 먼저 두고, 그 바로 아래 서브
+  // 헤딩(aot-modal-subgroup-title)으로 나눠 "지금 연결된 것" 목록을 이어
+  // 붙인다. 조작 → 결과가 같은 박스 안에서 위→아래로 이어지므로 순서 자체가
+  // 관계를 보여준다(사용자 지시: "순서도 연결하고, 아래에 연결된 장치가
+  // 보이고, 관계가 보이던가").
+  function renderLinkSection(deviceId, summary, cand) {
+    var el = document.getElementById('device_settings_modal_link');
+    var html = '<div class="aot-modal-group-title">{{ _("Input / Output") }}</div><div class="aot-modal-container">';
+
+    var available = cand.inputs.map(function (i) { return { type: 'input', id: i.unique_id, name: i.name }; })
+      .concat(cand.outputs.map(function (o) { return { type: 'output', id: o.unique_id, name: o.name }; }));
+    html += _buildCandidateDropdown('link_avail_io_' + deviceId, 'link_avail_io_btn_' + deviceId, '{{ _("Link") }}', available);
+
+    // 각 항목 이름을 그 Input/Output 정본 페이지로 가는 링크로 만든다 —
+    // 채널 행마다 박혀 있던 "설정 →"를 없앤 대신(사용자 지적, 2026-07-28),
+    // 실제 설정/조작으로 들어가는 통로를 여기 한 곳으로 모은 것이다.
+    html += '<div class="aot-modal-subgroup-title">{{ _("Currently linked") }}</div>';
+    var linked = summary.inputs.map(function (i) { return { type: 'input', id: i.unique_id, name: i.name, tab_id: i.tab_id, secondary: false }; })
+      .concat(summary.outputs.map(function (o) { return { type: 'output', id: o.unique_id, name: o.name, tab_id: o.tab_id, secondary: false }; }))
+      .concat((summary.secondary_inputs || []).map(function (i) { return { type: 'input', id: i.unique_id, name: i.name, tab_id: i.tab_id, secondary: true }; }))
+      .concat((summary.secondary_outputs || []).map(function (o) { return { type: 'output', id: o.unique_id, name: o.name, tab_id: o.tab_id, secondary: true }; }));
+    if (!linked.length) {
+      html += '<div class="aot-modal-option-row"><span class="text-muted">{{ _("None") }}</span></div>';
+    } else {
+      linked.forEach(function (m) {
+        var href = (m.type === 'input' ? '/input' : '/output') + (m.tab_id ? ('?tab_id=' + m.tab_id) : '');
+        html += '<div class="aot-modal-option-row">' +
+          '<label class="aot-modal-option-label"><a href="' + href + '">' + m.name + '</a>' +
+          (m.secondary ? ' <span class="text-muted">({{ _("Reference") }})</span>' : '') + '</label>' +
+          '<div class="aot-modal-option-control">' +
+          '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary btn-sm" ' +
+          'onclick="AoTDeviceUnlink(\'' + deviceId + '\',\'' + m.type + '\',\'' + m.id + '\')">{{ _("Unlink") }}</button>' +
+          '</div></div>';
+      });
+    }
+    html += '</div>';
+
+    el.innerHTML = html;
+    _wireCandidateDropdown('link_avail_io_' + deviceId, 'link_avail_io_btn_' + deviceId,
+      function (type, id) { AoTDeviceLink(deviceId, type, id); });
+  }
+
+  // 하위 장치 — member_type='device' 인 secondary 연결뿐이다(설계 Phase 8:
+  // 장치 간 계층은 항상 참조 관계로만 표현, 청사진 자동 중첩은 범위 밖).
+  // renderLinkSection과 동일하게 조작 먼저 → 서브헤딩 → 목록 순서로 통일한다.
+  function renderSubdevicesSection(deviceId, summary, cand) {
+    var el = document.getElementById('device_settings_modal_subdevices');
+    var html = '<div class="aot-modal-group-title">{{ _("Sub-devices") }}</div><div class="aot-modal-container">';
+
+    var devs = (cand.devices || []).map(function (d) { return { type: 'device', id: d.unique_id, name: d.name }; });
+    html += _buildCandidateDropdown('link_avail_dev_' + deviceId, 'link_avail_dev_btn_' + deviceId, '{{ _("Link") }}', devs);
+
+    html += '<div class="aot-modal-subgroup-title">{{ _("Currently linked") }}</div>';
+    var subs = summary.sub_devices || [];
+    if (!subs.length) {
+      html += '<div class="aot-modal-option-row"><span class="text-muted">{{ _("None") }}</span></div>';
+    } else {
+      subs.forEach(function (d) {
+        html += '<div class="aot-modal-option-row">' +
+          '<label class="aot-modal-option-label"><a href="/device#device_card_' + d.unique_id + '">' + d.name + '</a></label>' +
+          '<div class="aot-modal-option-control">' +
+          '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary btn-sm" ' +
+          'onclick="AoTDeviceUnlink(\'' + deviceId + '\',\'device\',\'' + d.unique_id + '\')">{{ _("Unlink") }}</button>' +
+          '</div></div>';
+      });
+    }
+    html += '</div>';
+
+    el.innerHTML = html;
+    _wireCandidateDropdown('link_avail_dev_' + deviceId, 'link_avail_dev_btn_' + deviceId,
+      function (type, id) { AoTDeviceLink(deviceId, type, id); });
+  }
+
+  function refreshDeviceSettingsModal(deviceId) {
+    fetch('/device/' + deviceId + '/summary').then(function (r) { return r.json(); }).then(function (summary) {
+      deviceSummaries[deviceId] = summary;
+      buildTree(summary);
+      buildLinkAndSubdeviceSections(deviceId, summary);
+      renderCount(deviceId, summary);
+    });
+  }
+
+  window.AoTDeviceLink = function (deviceId, type, id) {
+    fetch('/device/' + deviceId + '/link', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type, id: id })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { window.showToast(data.error, 'error'); return; }
+      window.showToast("{{ _('Linked') }}", 'success');
+      refreshDeviceSettingsModal(deviceId);
+    });
+  };
+
+  window.AoTDeviceUnlink = function (deviceId, type, id) {
+    fetch('/device/' + deviceId + '/unlink', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type, id: id })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) { window.showToast(data.error, 'error'); return; }
+      window.showToast("{{ _('Unlinked') }}", 'success');
+      refreshDeviceSettingsModal(deviceId);
+    });
+  };
+
+  document.querySelectorAll('.device-settings-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-device-id');
+      currentSettingsDeviceId = id;
+      var optionsBody = document.getElementById('device_settings_modal_options');
+      optionsBody.innerHTML = "<span class='text-muted'>{{ _('Loading...') }}</span>";
+      fetch('/function?function_type=options&function_id=' + encodeURIComponent(id))
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          optionsBody.innerHTML = html;
+          if (window.jQuery && jQuery.fn.selectpicker) {
+            jQuery(optionsBody).find('select').selectpicker();
+          }
+          if ($settingsModal) $settingsModal.modal('show');
+        })
+        .catch(function () {
+          optionsBody.innerHTML = "<span class='text-danger'>{{ _('Failed to load settings') }}</span>";
+        });
+
+      // 카드 로드시 캐시된 요약이 있으면 재사용, 없으면(폴링이 아직 안 끝났으면) 새로 조회
+      if (deviceSummaries[id]) {
+        buildTree(deviceSummaries[id]);
+        buildLinkAndSubdeviceSections(id, deviceSummaries[id]);
+      } else {
+        refreshDeviceSettingsModal(id);
+      }
+    });
+  });
+
+  document.getElementById('device_settings_save_btn').addEventListener('click', function () {
+    if (!currentSettingsDeviceId) return;
+    var form = document.getElementById('form_function_' + currentSettingsDeviceId);
+    if (!form) {
+      window.showToast("{{ _('Form not found') }}", 'error');
+      return;
+    }
+    var params = new URLSearchParams(new FormData(form));
+    params.set('function_mod', '1');
+    // 이 모달(custom_function_options.html)의 탭 셀렉트는 page_type='function'
+    // 탭만 옵션으로 갖고 있어 Device 전용 탭이 목록에 없다 — 그러면 브라우저가
+    // 아무 <option selected> 없이 첫 옵션(Function 페이지의 임의 탭)을 자동
+    // 선택해 버리고, 그대로 제출하면 저장할 때마다 장치가 그 탭으로 다시
+    // 옮겨간다(실제 재현 확인). 이 필드가 존재하면 장치 전용 탭 값으로
+    // 강제한다 — 존재하지 않으면 아무 효과 없다.
+    if (DEVICE_TAB_ID && params.has('tab_id')) {
+      params.set('tab_id', DEVICE_TAB_ID);
+    }
+    fetch('/function_submit', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      var errs = (data && data.data && data.data.messages && data.data.messages.error) || [];
+      if (errs.length) {
+        window.showToast(errs.join(', '), 'error');
+      } else {
+        window.showToast("{{ _('Saved') }}", 'success');
+        if ($settingsModal) $settingsModal.modal('hide');
+        window.location.reload();
+      }
+    }).catch(function (err) {
+      window.showToast('Save failed: ' + err, 'error');
+    });
+  });
+
+  // ---- 삭제/복제 — input/output/function 페이지와 동일하게 장치 자신의
+  // 행만 지우거나 복제한다(하위 Input/Output은 건드리지 않음 — 삭제 시 그
+  // parent_device_id만 참조 대상을 잃을 뿐, 항목 자체와 소속 배지 표시
+  // 로직은 이미 "존재하는 장치만" 배지를 그리므로 안전하다). 둘 다
+  // /function_submit의 기존 경로(determine_controller_type이 CustomController
+  // 를 Function_Custom으로 인식 → controller_del/function_duplicate)를
+  // 그대로 재사용한다 — 새 삭제/복제 메커니즘을 만들지 않는다. ----
+  document.getElementById('device_settings_delete_btn').addEventListener('click', function () {
+    if (!currentSettingsDeviceId) return;
+    if (!window.confirm("{{ _('Are you sure you want to delete?') }}")) return;
+    submitFunctionAction({
+      function_id: currentSettingsDeviceId,
+      csrf_token: csrfToken(),
+      function_delete: '1'
+    }, function () {
+      window.showToast("{{ _('Deleted') }}", 'success');
+      if ($settingsModal) $settingsModal.modal('hide');
+      window.location.reload();
+    });
+  });
+
+  document.getElementById('device_settings_duplicate_btn').addEventListener('click', function () {
+    if (!currentSettingsDeviceId) return;
+    if (!window.confirm("{{ _('Are you sure you want to duplicate?') }}")) return;
+    submitFunctionAction({
+      function_id: currentSettingsDeviceId,
+      csrf_token: csrfToken(),
+      function_duplicate: '1'
+    }, function () {
+      window.showToast("{{ _('Duplicated') }}", 'success');
+      if ($settingsModal) $settingsModal.modal('hide');
+      window.location.reload();
+    });
+  });
+
+  // ---- 카드 카운트 텍스트 ("측정 N · 제어 N") ----
+  function renderCount(deviceId, summary) {
+    var el = document.getElementById('device_count_' + deviceId);
+    if (!el) return;
+    el.textContent = "{{ _('Measurements') }} " + summary.inputs.length +
+      " · {{ _('Control') }} " + summary.outputs.length;
+  }
+
+  // ---- 폴링: /data_batch, /inputstate, /outputstate — 카드 배지 + (열려 있으면)
+  // 모달 트리 값을 함께 갱신한다. 카드 자체는 값을 표시하지 않는다(설계 6.1 —
+  // 실시간 값 표시는 Input/Output 페이지의 역할). ----
+  var deviceSummaries = {};
+
+  function pollValues() {
+    var batchItems = [];
+    Object.keys(deviceSummaries).forEach(function (deviceId) {
+      deviceSummaries[deviceId].inputs.forEach(function (inp) {
+        inp.channels.forEach(function (ch) {
+          if (ch.measurement_id) {
+            batchItems.push({
+              kind: 'last', unique_id: inp.unique_id, measure_type: 'input',
+              measurement_id: ch.measurement_id, period: 0
+            });
+          }
+        });
+      });
+    });
+
+    if (batchItems.length) {
+      fetch('/data_batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: batchItems })
+      }).then(function (r) { return r.json(); }).then(function (resp) {
+        (resp.results || []).forEach(function (payload, i) {
+          var el = document.getElementById('mval_' + batchItems[i].measurement_id);
+          if (!el) return;
+          if (payload && payload.length === 2) {
+            el.textContent = (typeof payload[1] === 'number') ? payload[1].toFixed(2) : payload[1];
+          } else {
+            el.textContent = '—';
+          }
+        });
+      });
+    }
+
+    fetch('/inputstate').then(function (r) { return r.json(); }).then(function (inputStates) {
+      Object.keys(deviceSummaries).forEach(function (deviceId) {
+        var s = deviceSummaries[deviceId];
+        var hasCapable = false, hasFault = false;
+        s.inputs.forEach(function (inp) {
+          var st = inputStates[inp.unique_id];
+          if (st && st.comm_capable) {
+            hasCapable = true;
+            if (st.comm_fault) hasFault = true;
+          }
+        });
+        s._inputComm = { hasCapable: hasCapable, hasFault: hasFault };
+        renderBadge(deviceId);
+      });
+    });
+
+    fetch('/outputstate').then(function (r) { return r.json(); }).then(function (outputStates) {
+      Object.keys(deviceSummaries).forEach(function (deviceId) {
+        var s = deviceSummaries[deviceId];
+        var rawStates = [];
+        s.outputs.forEach(function (out) {
+          var chStates = outputStates[out.unique_id] || {};
+          out.channels.forEach(function (ch) {
+            var raw = chStates[ch.channel];
+            rawStates.push(raw);
+            var el = document.getElementById('ostate_' + out.unique_id + '_' + ch.channel);
+            if (el && window.AoTOutputState) {
+              var c = window.AoTOutputState.classify(raw);
+              el.textContent = window.AoTOutputState.label(raw);
+              el.className = 'ch-state ' + c.cssClass;
+            }
+          });
+        });
+        if (window.AoTOutputState && rawStates.length) {
+          var agg = window.AoTOutputState.aggregate(rawStates);
+          s._outputComm = { hasCapable: true, hasFault: agg.isFault };
+        }
+        renderBadge(deviceId);
+      });
+    });
+  }
+
+  function renderBadge(deviceId) {
+    var s = deviceSummaries[deviceId];
+    var badgeEl = document.getElementById('device_status_badge_' + deviceId);
+    if (!badgeEl) return;
+    var inputComm = s._inputComm || { hasCapable: false, hasFault: false };
+    var outputComm = s._outputComm || { hasCapable: false, hasFault: false };
+    var hasAnyCapable = inputComm.hasCapable || outputComm.hasCapable;
+    var hasFault = inputComm.hasFault || outputComm.hasFault;
+    var b = deviceBadge(hasAnyCapable, hasFault);
+    badgeEl.textContent = b.text;
+    badgeEl.className = 'badge ' + b.cls;
+  }
+
+  function loadDevice(deviceId) {
+    fetch('/device/' + deviceId + '/summary').then(function (r) { return r.json(); }).then(function (summary) {
+      deviceSummaries[deviceId] = summary;
+      renderCount(deviceId, summary);
+      pollValues();
+    });
+  }
+
+  document.querySelectorAll('#device_list [data-device-id]').forEach(function (card) {
+    loadDevice(card.getAttribute('data-device-id'));
+  });
+
+  setInterval(pollValues, 3000);
+
+  $(document).ready(initGrid);
+  $(window).on('load', initGrid);
+  let resizeTimer;
+  $(window).on('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (window.grid && typeof window.grid.onParentResize === 'function') window.grid.onParentResize();
+    }, 50);
+  });
+})();
+</script>
+
+<!-- 데스크톱 우측 드로어(카드 영역이 줄어들며 온전히 보이는 동작)의 핵심
+     스위치 — body.aot-widget-drawer-open 토글을 여기서 담당한다. 이 스크립트가
+     빠져 있으면 모달 자체는 뜨지만(aot-widget-drawer.js가 없어도 부트스트랩
+     모달 자체는 동작) 데스크톱에서 페이지가 옆으로 밀리지 않아 카드 목록이
+     드로어에 그대로 가려 보인다 — input.html/output.html/function.html은 전부
+     이 스크립트를 로드하는데 device.html만 빠져 있던 게 실제 원인이었다
+     (2026-07-28 재현·확인). -->
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
+{% endblock %}

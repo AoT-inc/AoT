@@ -19,6 +19,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import CycleMixin
+from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin import HelpersMixin
 
 
 def _make_profile(actuator_id, kind, area_m2, slot_key):
@@ -51,6 +52,18 @@ def _make_dummy_self(profiles, last_ff_signal):
     # Inherit class-level caps from CycleMixin
     obj._SUMMARY_MAX_COMMANDS = CycleMixin._SUMMARY_MAX_COMMANDS
     obj._SUMMARY_MAX_TEXT = CycleMixin._SUMMARY_MAX_TEXT
+    # 구동주기 요약(actuation) 계산에 필요한 최소 상태 — HelpersMixin 에서 실제
+    # 구현을 빌려온다(중복 로직 방지).
+    obj._dispatch_moved = {}
+    obj.actuation_profile = 'standard'
+    obj.actuation_period_sec = 0.0
+    obj.emergency_period_sec = 60.0
+    obj._emergency_now = False
+    obj._emergency_reason = ''
+    obj._ACTUATION_PROFILE_SEC = HelpersMixin._ACTUATION_PROFILE_SEC
+    obj._MOTOR_MIN_MOVE_SEC = HelpersMixin._MOTOR_MIN_MOVE_SEC
+    obj._actuation_params = HelpersMixin._actuation_params.__get__(obj)
+    obj._build_actuation_summary = CycleMixin._build_actuation_summary.__get__(obj)
     return obj
 
 

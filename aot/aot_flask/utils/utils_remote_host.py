@@ -27,13 +27,14 @@ logger = logging.getLogger(__name__)
 # Remote host commands executed on AoT with Remote Admin Dashboard
 #
 
-def remote_log_in(address, user, password_hash):
+def remote_log_in(address, user, token):
     """
     Log in to AoT and return the cookie header for subsequent requests
 
     :param address: host name or IP address of remote AoT
     :param user: User name of an admin on the remote AoT
-    :param password_hash: Hash of admin user's password
+    :param token: Remote-access token previously issued by that AoT's
+       /newremote/ endpoint (see RemoteAccessToken) — not a password hash
     :return: header with session cookie (used by remote_host_page())
     """
     try:
@@ -45,11 +46,11 @@ def remote_log_in(address, user, password_hash):
                                    ca_certs=ssl_cert_file,
                                    assert_hostname=False)
 
-        # Perform the login with the csrf token, user name, and stored password hash
+        # Perform the login with the user name and issued remote-access token
         login_url = 'https://{add}/remote_login'.format(add=address)
         login_page = http.request('POST', login_url,
                                   fields={"username": user,
-                                          "password_hash": password_hash})
+                                          "token": token})
 
         # Use cookie set by the login page to verify our session and keep us logged in
         headers = {'cookie': login_page.getheader('set-cookie')}
@@ -98,25 +99,28 @@ def remote_host_add(form_setup, display_order):
 
     Authenticate a remote AoT install that will be used on this system's
     Remote Admin dashboard.
-    The user name and password is sent, and if verified, the password hash
-    and SSL certificate is sent back.
-    The hash is used to authenticate and the certificate is used to perform
-    a verified SSL, in all subsequent connections.
+    The user name and password is sent once (POST, not the query string)
+    and, if verified, the remote issues a dedicated remote-access token
+    (see RemoteAccessToken on the remote side) plus its SSL certificate.
+    The token — never the account's password or its hash — is what
+    authenticates all subsequent connections, and the certificate is
+    pinned for a verified SSL.
     """
     if not utils_general.user_has_permission('edit_settings'):
         return redirect(url_for('routes_general.home'))
 
     if form_setup.validate():
         try:
-            # Send user and password to remote AoT to authenticate
+            # Send user and password to remote AoT to authenticate (once,
+            # to obtain a token — POST so credentials never appear in a URL)
             credentials = {
                 'user': form_setup.username.data,
                 'passw': form_setup.password.data
             }
             url = 'https://{}/newremote/'.format(form_setup.host.data)
             try:
-                pw_check = requests.get(
-                    url, params=credentials, verify=False).json()
+                pw_check = requests.post(
+                    url, data=credentials, verify=False).json()
             except Exception:
                 return 1
 
@@ -139,7 +143,7 @@ def remote_host_add(form_setup, display_order):
             new_remote_host = Remote()
             new_remote_host.host = form_setup.host.data
             new_remote_host.username = form_setup.username.data
-            new_remote_host.password_hash = pw_check['hash']
+            new_remote_host.access_token = pw_check['token']
             try:
                 db.session.add(new_remote_host)
                 db.session.commit()

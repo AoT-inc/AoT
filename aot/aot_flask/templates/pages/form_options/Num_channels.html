@@ -1,9 +1,20 @@
 {% if "measurements_variable_amount" in dict_options and dict_options['measurements_variable_amount'] %}
 
+{#
+  이 값은 사용자가 설정하는 "실제 채널 수"이며, input_mod 의 채널 재조정 기준과
+  같은 의미여야 한다. 자동 VPD 서비스가 만든 채널(measurement_type='auto_vpd')은
+  재조정 대상에서 제외되므로 여기서도 세지 않는다. 포함하면 저장할 때마다 실제
+  채널이 1개 부족한 것으로 판단돼 빈 채널이 계속 추가된다.
+  (measurement_type 이 NULL 인 레거시 행은 실채널로 세도록 전체-자동 뺄셈 사용)
+#}
+{% set _dm_device_id = each_device.unique_id %}
+{% set _dm_total = table_device_measurements.query.filter(table_device_measurements.device_id == _dm_device_id).count() %}
+{% set _dm_auto = table_device_measurements.query.filter(table_device_measurements.device_id == _dm_device_id).filter(table_device_measurements.measurement_type == 'auto_vpd').count() %}
+
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label">{{form.num_channels.label(class_='mb-0')}}</label>
   <div class="aot-modal-option-control">
-    {{form.num_channels(class_='form-control aot-modern-input', value=table_device_measurements.query.filter(table_device_measurements.device_id == each_device.unique_id).count(), **{'title': _('Number of measurements')})}}
+    {{form.num_channels(class_='form-control aot-modern-input', value=_dm_total - _dm_auto, **{'title': _('Number of measurements')})}}
   </div>
 </div>
 

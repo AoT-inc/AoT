@@ -266,6 +266,22 @@ def static_from_root():
     return send_from_directory(current_app.static_folder, request.path[1:])
 
 
+@blueprint.route('/csrf-token')
+def csrf_token():
+    """Re-sign a fresh CSRF token for the current session.
+
+    WTF_CSRF_TIME_LIMIT is bounded (not None) so a token embedded in a page
+    left open for a long time eventually expires. generate_csrf() re-signs
+    the *same* session-bound secret with a current timestamp — it doesn't
+    rotate the secret or require login — so calling this periodically from
+    aot-csrf-refresh.js keeps long-open pages valid without weakening
+    anything. No permission check needed: refreshing a token grants nothing
+    beyond what the session already had.
+    """
+    from flask_wtf.csrf import generate_csrf
+    return {'csrf_token': generate_csrf()}
+
+
 # @blueprint.route("/aot-manual_{}.pdf".format(AOT_VERSION))
 # def download_pdf_manual():
 #     """Return PDF Manual."""

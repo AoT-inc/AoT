@@ -74,6 +74,37 @@
         activateByUid: function (uid) { clearRows(); var r = rowByUid(uid); if (r) { r.classList.add('aot-config-active'); } }
     };
 
+    // --- Phone: full-cover drawers (.aot-drawer-fullcover) with a raise/lower handle ---
+    // These pages have no live-preview widget, so on the phone the drawer covers the
+    // whole screen on open (CSS). A tap handle drops it to a bottom-sheet peek and back,
+    // mirroring the dashboard widget's preview toggle. CSS does the geometry; here we
+    // only inject the handle, toggle body.aot-drawer-lowered, and keep the label synced.
+    function t(key) { return (typeof window._ === 'function') ? window._(key) : key; }
+    // Inject the handle once per full-cover drawer (reuses the widget's .aot-preview-toggle
+    // look; that class is display:none except on phones, so it never shows on desktop).
+    function ensureLowerHandle(modal) {
+        if (!modal || !modal.classList || !modal.classList.contains('aot-drawer-fullcover')) { return; }
+        var dialog = modal.querySelector('.modal-dialog');
+        if (!dialog || dialog.querySelector('[data-aot-drawer-lower]')) { return; }
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'aot-preview-toggle';
+        btn.setAttribute('data-aot-drawer-lower', '');
+        btn.setAttribute('aria-pressed', 'false');
+        btn.setAttribute('aria-label', t('Lower panel'));
+        btn.setAttribute('title', t('Lower panel'));
+        btn.innerHTML = '<i class="fas fa-chevron-up" aria-hidden="true"></i>';
+        dialog.insertBefore(btn, dialog.firstChild);
+    }
+    function syncLowerHandle(modal, lowered) {
+        var btn = modal && modal.querySelector('[data-aot-drawer-lower]');
+        if (!btn) { return; }
+        var label = t(lowered ? 'Raise panel' : 'Lower panel');
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+        btn.setAttribute('aria-pressed', lowered ? 'true' : 'false');
+    }
+
     try {
         $(document).on('show.bs.modal', function (ev) {
             if (!ev.target.classList || !ev.target.classList.contains('aot-widget-drawer')) { return; }
@@ -85,6 +116,12 @@
             if (window.innerWidth >= DESKTOP_MIN) {
                 document.body.classList.add('aot-widget-drawer-open');
                 nudgeResize();
+            } else {
+                // Phone: always open fully covering (start raised), and make sure the
+                // raise/lower handle exists.
+                document.body.classList.remove('aot-drawer-lowered');
+                ensureLowerHandle(ev.target);
+                syncLowerHandle(ev.target, false);
             }
             activateRow(ev.target);
         });
@@ -95,7 +132,14 @@
                 document.body.classList.remove('aot-widget-drawer-open');
                 nudgeResize();
             }
+            document.body.classList.remove('aot-drawer-lowered');
             deactivateRow(ev.target);
+        });
+        // Raise/lower handle (phone full-cover drawers): toggle the peek state.
+        $(document).on('click', '[data-aot-drawer-lower]', function () {
+            var modal = this.closest('.aot-widget-drawer');
+            var lowered = document.body.classList.toggle('aot-drawer-lowered');
+            syncLowerHandle(modal, lowered);
         });
     } catch (e) { /* ignore */ }
 })();

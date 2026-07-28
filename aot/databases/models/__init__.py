@@ -41,6 +41,7 @@ from .controller import CustomController
 from .controller import FunctionChannel
 from .dashboard import Dashboard
 from .dashboard import Widget
+from .device_member import DeviceMember
 from .display_order import DisplayOrder
 from .function import Actions
 from .function import Conditional
@@ -79,6 +80,7 @@ from .output import Output
 from .output import OutputChannel
 from .pid import PID
 from .remote import Remote
+from .remote_access_token import RemoteAccessToken
 from .role import Role
 from .smtp import SMTP
 from .ai import AIAgent
@@ -122,6 +124,7 @@ from .tier_adaptive_storage import TierDecision
 from .tier_adaptive_storage import DocumentAccessLog
 from .tier_adaptive_storage import AdaptiveStorageSettings
 from .mcp_audit import MCPAuditLog, MCPConfirmation
+from .audit import AuditLog
 from .ai_advice import AIAdvice
 from .geo_facility_setpoint import GeoFacilitySetpoint
 

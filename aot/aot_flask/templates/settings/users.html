@@ -280,20 +280,14 @@
             <div class="aot-modal-body-text">Base64</div>
           </div>
           <div class="aot-modal-option-control aot-api-key-group" style="gap: 8px; flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important; justify-content: flex-start;">
-            {% if user.api_key %}
-              {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id, value=base64_encode_bytes(user.api_key))}}
-              <input type="text" class="aot-modern-input form-control visible_mod_key_{{user.unique_id}}" autocomplete="off"
-                oninput="this.previousElementSibling.value = this.value;"
-                title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true"
-                spellcheck="false" value="{{ base64_encode_bytes(user.api_key) }}"
-                style="flex: 1;">
-            {% else %}
-              {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id)}}
-              <input type="text" class="aot-modern-input form-control visible_mod_key_{{user.unique_id}}" autocomplete="off"
-                oninput="this.previousElementSibling.value = this.value;"
-                title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true"
-                spellcheck="false" style="flex: 1;">
-            {% endif %}
+            {# API 키는 해시로만 저장되므로(p6_13) 기존 키를 다시 표시할 수 없다.
+               발급 직후에는 위쪽 JS 가 이 입력란에 새 키를 채워 넣는다. #}
+            {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id)}}
+            <input type="text" class="aot-modern-input form-control visible_mod_key_{{user.unique_id}}" autocomplete="off"
+              readonly
+              title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true"
+              spellcheck="false" style="flex: 1;"
+              placeholder="{% if user.api_key_hash %}{{_('Issued — shown only once at generation')}}{% else %}{{_('Not issued')}}{% endif %}">
             {{form_mod_user.user_generate_api_key(class_='btn aot-pill-btn aot-pill-btn-primary', style='white-space: nowrap;')}}
           </div>
         </div>

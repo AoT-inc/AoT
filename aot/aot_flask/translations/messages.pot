@@ -24258,3 +24258,435 @@ msgstr ""
 #: widgets/widget_trigger_sequence.py:1350
 msgid "Press and hold to reorder"
 msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Whole-card highlight when active (IEC focus row, badges) — not the per-"
+"channel row below"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Whole-card highlight when inactive, PID container background — not the per-"
+"channel row below"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Channel On"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Channel Off"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Output/input channel row background when on; also a general surface color in"
+" facility widgets"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Output/input channel row background when off; also a general surface color "
+"in facility widgets"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Row background while a command awaits device confirmation"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Output/Input Channel Preview"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Channel On colors"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Channel Off colors"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Pending colors"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Warning State colors"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Unverified Running Tint"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Unverified Running Tint Text"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Overrides Channel On when a device with no confirmation path is running — "
+"forces this color even over bg_on"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Text color used with the tint above, and on map-popup device name warnings"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Unverified Running Tint colors"
+msgstr ""
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Running (unconfirmed)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:49
+msgid ""
+"Reads coils and registers from a Modbus TCP device (PLC, gateway, meter). "
+"Define one channel per register to read. Several Inputs and Outputs pointing"
+" at the same host and port share a single connection automatically. Note "
+"that Modbus has no authentication or encryption — keep the device on an "
+"isolated network and never expose it to the internet."
+msgstr ""
+
+#: inputs/modbus_tcp.py:83 outputs/on_off_modbus.py:107
+msgid "IP address or hostname of the Modbus TCP device"
+msgstr ""
+
+#: inputs/modbus_tcp.py:91 outputs/on_off_modbus.py:116
+msgid "TCP port of the Modbus TCP device (standard: 502)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:100 outputs/on_off_modbus.py:125
+msgid ""
+"Modbus unit/slave ID of the device. Usually 1 for a device addressed "
+"directly, or the slave address behind a serial gateway"
+msgstr ""
+
+#: inputs/modbus_tcp.py:108 outputs/on_off_modbus.py:133
+msgid "Timeout (seconds)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:110
+msgid ""
+"How long to wait for a response. One request takes at most timeout x "
+"(retries + 1)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:118 outputs/on_off_modbus.py:143
+msgid "Retries"
+msgstr ""
+
+#: inputs/modbus_tcp.py:120 outputs/on_off_modbus.py:145
+msgid ""
+"Retries per request before it is treated as failed. Keep this low: a high "
+"value multiplies how long an unreachable device blocks a command"
+msgstr ""
+
+#: inputs/modbus_tcp.py:139
+msgid "Coil (read/write bit)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:140
+msgid "Discrete Input (read-only bit)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:141
+msgid "Holding Register (read/write word)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:142
+msgid "Input Register (read-only word)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:145
+msgid "Register Type"
+msgstr ""
+
+#: inputs/modbus_tcp.py:146
+msgid "Which Modbus table this channel reads from"
+msgstr ""
+
+#: inputs/modbus_tcp.py:153
+msgid "Register Address"
+msgstr ""
+
+#: inputs/modbus_tcp.py:155
+msgid ""
+"Zero-based address within the selected table. Vendor documentation often "
+"lists one-based addresses (e.g. 40001 for holding register 0), so verify "
+"against the register map"
+msgstr ""
+
+#: inputs/modbus_tcp.py:164
+msgid "Bit (coil / discrete input)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:172
+msgid "Data Type"
+msgstr ""
+
+#: inputs/modbus_tcp.py:174
+msgid ""
+"How to interpret the value. Bit types apply to coils and discrete inputs; "
+"the rest apply to registers"
+msgstr ""
+
+#: inputs/modbus_tcp.py:182
+msgid "Big endian (high word first)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:183
+msgid "Little endian (low word first)"
+msgstr ""
+
+#: inputs/modbus_tcp.py:186
+msgid "Word Order"
+msgstr ""
+
+#: inputs/modbus_tcp.py:188
+msgid ""
+"Register order for 32-bit types. Vendors differ, so if a value reads as "
+"nonsense while the register address is correct, try the other order"
+msgstr ""
+
+#: inputs/modbus_tcp.py:196
+msgid "Scale Factor"
+msgstr ""
+
+#: inputs/modbus_tcp.py:198
+msgid ""
+"The raw value is multiplied by this. Use it when a device reports e.g. "
+"tenths of a degree (0.1)"
+msgstr ""
+
+#: outputs/on_off_modbus.py:68
+msgid ""
+"Switch coils on a Modbus TCP device (PLC, relay board, gateway). Each "
+"channel is one coil address. After every command the coil is read back to "
+"confirm it actually changed, and a mismatch is reported as a failure. Inputs"
+" and Outputs pointing at the same host and port share one connection "
+"automatically. Note that a readback confirms the PLC register, not that the "
+"relay or wiring moved. Modbus has no authentication or encryption — keep the"
+" device on an isolated network."
+msgstr ""
+
+#: outputs/on_off_modbus.py:98
+msgid "Number of coils to control. Save to add or remove channel rows."
+msgstr ""
+
+#: outputs/on_off_modbus.py:135
+msgid ""
+"How long to wait for a response. One request takes at most timeout x "
+"(retries + 1), and a command sends two requests"
+msgstr ""
+
+#: outputs/on_off_modbus.py:158
+msgid "A friendly name shown in the UI for this channel."
+msgstr ""
+
+#: outputs/on_off_modbus.py:165
+msgid "Coil Address"
+msgstr ""
+
+#: outputs/on_off_modbus.py:167
+msgid ""
+"Zero-based coil address to switch. Vendor documentation often lists one-"
+"based addresses (e.g. 00001 for coil 0), so verify against the register map"
+msgstr ""
+
+#: outputs/on_off_modbus.py:182
+msgid ""
+"Set the channel state when AoT starts. \"Do Nothing\" leaves the coil as the"
+" PLC has it and simply reads it back"
+msgstr ""
+
+#: outputs/on_off_modbus.py:196
+msgid "Set the channel state when AoT shuts down"
+msgstr ""
+
+#: outputs/on_off_modbus.py:204
+msgid "Whether to trigger functions when the channel switches at startup"
+msgstr ""
+
+#: aot/aot_flask/templates/login_totp.html:38
+msgid "Two-Factor Authentication"
+msgstr ""
+
+#: aot/aot_flask/templates/login_totp.html:41
+msgid "Enter the 6-digit code from your authenticator app."
+msgstr ""
+
+#: aot/aot_flask/templates/login_totp.html:47
+msgid "Verification Code"
+msgstr ""
+
+#: aot/aot_flask/templates/login_totp.html:63
+msgid "Verify"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:3
+#: aot/aot_flask/templates/layout_default.html:657
+msgid "Audit Log"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:26
+msgid "Result"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:34
+msgid "Rows"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:43
+msgid "Export CSV"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:30
+msgid "Failure"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:50
+msgid "No audit log entries found."
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:65
+msgid "Detail"
+msgstr ""
+
+#: aot/aot_flask/templates/tools/audit_log.html:64
+msgid "Target Object"
+msgstr ""
+
+#: aot/aot_flask/routes_password_reset.py:131
+#: aot/aot_flask/utils/utils_settings.py:211
+msgid ""
+"Invalid password. Must be at least 8 characters, contain only letters, "
+"numbers, and symbols, and not be a commonly used password."
+msgstr ""
+
+#: aot/aot_flask/templates/settings/users.html:290
+msgid "Issued — shown only once at generation"
+msgstr ""
+
+#: aot/aot_flask/templates/settings/users.html:290
+msgid "Not issued"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_settings.py:274
+msgid ""
+"API key generated. Copy it now — it is shown only once and cannot be "
+"retrieved later."
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Available to link"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Currently linked"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Device OK"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Failed to load settings"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Fault"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Form not found"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Input inactive"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked Inputs/Outputs"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "No notes"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid ""
+"No device modules are installed. A device module declares is_device=True and"
+" a device_blueprint — see .local/plans/device_group_console_plan.md."
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Select a device type first"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "This device has no measurements or controls yet."
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unlink"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unlinked"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unverifiable"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "notes"
+msgstr ""
+
+#: aot_flask/templates/pages/data_options/input_entry.html:1
+msgid "Part of device"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Sub-devices"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked sub-devices"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Available devices to link"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Reference"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Deleted"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Duplicated"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Measurement Channels"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Control Channels"
+msgstr ""
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Input / Output"
+msgstr ""

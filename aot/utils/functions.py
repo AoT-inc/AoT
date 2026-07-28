@@ -107,6 +107,13 @@ def parse_function_information(exclude_custom=False, custom_only=False):
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'function_name')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'function_name_short')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'function_manufacturer')
+            # 복합장치(Device) 티어 선언. is_device=True 인 모듈은 저장 구조상
+            # Custom Function 과 동일하지만(같은 custom_controller 테이블), UI 에서는
+            # Device 티어로만 노출되고 Function 목록에서는 제외된다 —
+            # .local/plans/device_group_console_plan.md 참조.
+            dict_controllers = dict_has_value(dict_controllers, function_custom, 'is_device')
+            dict_controllers = dict_has_value(dict_controllers, function_custom, 'device_category')
+            dict_controllers = dict_has_value(dict_controllers, function_custom, 'device_blueprint')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'measurements_dict')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'channels_dict')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'measurements_variable_amount')
@@ -131,3 +138,28 @@ def parse_function_information(exclude_custom=False, custom_only=False):
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'custom_commands')
 
     return dict_controllers
+
+
+def device_module_names(dict_controllers=None):
+    """복합장치(Device) 티어로 선언된 모듈 이름 집합을 반환.
+
+    Device 는 저장 구조상 Custom Function 과 같은 custom_controller 테이블을 쓴다
+    (설계 근거: .local/plans/device_group_console_plan.md). 그래서 "이 행이 장치인가"는
+    행 자체가 아니라 그 행의 device 컬럼이 가리키는 모듈이 is_device 를 선언했는지로
+    판정한다. UI 에서 두 티어를 가르는 유일한 기준이므로, 목록·드롭다운을 만드는 곳은
+    전부 이 함수를 거쳐야 한다.
+
+    @phase active
+    @stability experimental
+    @dependency parse_function_information
+    """
+    if dict_controllers is None:
+        dict_controllers = parse_function_information()
+    names = set()
+    for name, info in dict_controllers.items():
+        try:
+            if info.get('is_device'):
+                names.add(name)
+        except AttributeError:
+            continue
+    return names

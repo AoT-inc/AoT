@@ -18,6 +18,7 @@ from flask_babel import lazy_gettext
 from aot.inputs.base_input import AbstractInput
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.config_devices_units import MEASUREMENTS, UNITS, UNIT_CONVERSIONS
+from aot.utils.safe_eval import safe_eval
 
 measurements_dict = {
     1:  {'measurement': 'temperature',   'unit': 'C',      'name': lazy_gettext('Outdoor Temperature')},   # data['outdoor']['temperature'] (default unit Celsius)
@@ -138,9 +139,8 @@ class InputModule(AbstractInput):
             return value
         for src, dst, expr in UNIT_CONVERSIONS:
             if src == from_unit and dst == to_unit:
-                x = value
                 try:
-                    return eval(expr)
+                    return safe_eval(expr, {'x': value})
                 except Exception:
                     break
         return value

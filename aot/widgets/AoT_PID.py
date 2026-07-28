@@ -549,13 +549,22 @@ WIDGET_INFORMATION = {
 
 /* Widget background — gray when deactivated, current inactive color (light) when activated
    (light theme reference: --bg-active=#D1D5D5 gray, --bg-inactive=#F3F6F5 light) */
+/* 상태 클래스 ↔ 토큰: active(작동 중)→bg_active, inactive(꺼짐)→bg_inactive,
+   pause/hold(일시정지·유지)→bg_pause(=bg_warning)/bg_hold(=bg_pending).
+   과거 active/inactive 가 서로 뒤바뀌어 있었다(관리자가 설정한 색과 정반대로
+   보이는 버그, custom_ui.html 의 bg_inactive 도움말 "PID container
+   background" 문구와도 모순됨) — color-system.md 참조. */
 #pid_container_{{each_widget.unique_id}}.active-background {
+  background-color: var(--bg-active) !important;
+}
+#pid_container_{{each_widget.unique_id}}.inactive-background {
   background-color: var(--bg-inactive) !important;
 }
-#pid_container_{{each_widget.unique_id}}.inactive-background,
-#pid_container_{{each_widget.unique_id}}.pause-background,
+#pid_container_{{each_widget.unique_id}}.pause-background {
+  background-color: var(--bg-pause) !important;
+}
 #pid_container_{{each_widget.unique_id}}.hold-background {
-  background-color: var(--bg-active) !important;
+  background-color: var(--bg-hold) !important;
 }
 
 /* Row 1: last-active text — hidden; spans kept for JS reference */

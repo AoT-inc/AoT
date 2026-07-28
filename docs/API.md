@@ -17,7 +17,12 @@ REST stands for Representational State Transfer. It is an architectural pattern 
 
 ### Authentication
 
-An API key can be generated on the user settings page (`[gear icon] -> Configure -> Users`). It is stored in the database as a 128-bit byte object, but is displayed to the user as a base64-encoded string. This can be used to access HTTPS endpoints.
+An API key can be generated under **Manage → System Management → Users**, editing
+the user, then **Generate API Key**. The key is a 128-byte random value, shown to
+you as a base64-encoded string **only once, at the moment it is generated** — AoT
+stores only a one-way hash of it, not the key itself, so it cannot be displayed
+again later. If it is lost, generate a new one. See [Security](Security.md#api-keys)
+for more.
 
 AoT supports several authentication methods. All API requests must be made over HTTPS. Calls made over plain HTTP will fail. API requests made without authentication will fail.
 
@@ -33,9 +38,19 @@ curl -k -v -X GET "https://127.0.0.1/api/settings/users" -H "authorization: Basi
 curl -k -v -X GET "https://127.0.0.1/api/settings/users" -H "X-API-KEY: YOUR_API_KEY" -H "accept: application/vnd.aot.v1+json"
 ```
 
+The API key may also be passed as a `?api_key=` query parameter, but this form
+is **deprecated and will be removed in a future release**:
+
 ```bash
+# DEPRECATED — use one of the header forms above instead
 curl -k -v -X GET "https://127.0.0.1/api/settings/users?api_key=YOUR_API_KEY" -H "accept: application/vnd.aot.v1+json"
 ```
+
+A key in the query string is written to web-server access logs, reverse-proxy
+logs and `Referer` headers, so it is effectively disclosed to anyone who can
+read those. Requests using this form are logged with a deprecation warning and
+recorded in the audit log (`apikey.url_auth`) so remaining callers can be found
+before the form is withdrawn.
 
 ### Python Example (GET)
 

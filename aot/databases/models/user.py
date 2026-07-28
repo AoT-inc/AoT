@@ -1,4 +1,7 @@
 # coding=utf-8
+import hashlib
+import hmac
+
 import bcrypt
 from flask_login import UserMixin
 
@@ -28,7 +31,15 @@ class User(UserMixin, CRUDMixin, db.Model):
     name = db.Column(db.VARCHAR(64), unique=True, index=True)
     password_hash = db.Column(db.VARCHAR(255))
     code = db.Column(db.Integer, default=None)
+    # DEPRECATED: 평문 API 키. p6_13 마이그레이션이 기존 값을 api_key_hash 로
+    # 옮기고 이 컬럼을 비웠다. 새로 쓰지 말 것 — 남겨둔 이유는 SQLite 에서
+    # 컬럼 삭제가 테이블 재생성을 요구해 위험 대비 이득이 없기 때문이다.
     api_key = db.Column(db.BLOB, unique=True)
+    # API 키의 SHA-256(hex). 키 자체는 발급 시 1회만 노출되고 DB 에는 남지 않는다.
+    # bcrypt 가 아니라 SHA-256 인 이유: 키가 128바이트 난수라 무차별 대입이
+    # 불가능하고, bcrypt 의 의도적 지연은 저엔트로피 비밀번호용이다. API 인증은
+    # 매 요청마다 일어나므로 그 지연이 그대로 응답 지연이 된다.
+    api_key_hash = db.Column(db.String(64), unique=True, index=True, default=None)
     email = db.Column(db.VARCHAR(64), unique=True, index=True)
     role_id = db.Column(db.Integer, default=None)
     theme = db.Column(db.VARCHAR(64))
@@ -48,6 +59,18 @@ class User(UserMixin, CRUDMixin, db.Model):
     auth_provider = db.Column(db.String(32), default=None)
     is_approved = db.Column(db.Boolean, nullable=False, default=True)
 
+    # Brute-force protection. The failed-attempt counter used to live in the
+    # Flask session, so clearing a cookie reset it — no protection at all
+    # against a scripted attacker. Server-side and per-account instead.
+    failed_login_count = db.Column(db.Integer, nullable=False, default=0)
+    locked_until = db.Column(db.DateTime, default=None)
+
+    # TOTP two-factor auth (opt-in, per user). totp_secret is only meaningful
+    # once totp_enabled is set — enrollment stores the secret first, then flips
+    # the flag after the user proves they can generate a valid code.
+    totp_secret = db.Column(db.String(64), default=None)
+    totp_enabled = db.Column(db.Boolean, nullable=False, default=False)
+
     def __repr__(self):
         output = "<User: <name='{name}', email='{email}' is_admin='{isadmin}'>"
         return output.format(name=self.name, email=self.email, isadmin=bool(self.role_id == 1))
@@ -57,6 +80,29 @@ class User(UserMixin, CRUDMixin, db.Model):
         if isinstance(new_password, str):
             new_password = new_password.encode('utf-8')
         self.password_hash = bcrypt.hashpw(new_password, bcrypt.gensalt())
+
+    @staticmethod
+    def hash_api_key(raw_key):
+        """API 키(bytes 또는 str) → SHA-256 hex."""
+        if isinstance(raw_key, str):
+            raw_key = raw_key.encode('utf-8')
+        return hashlib.sha256(raw_key).hexdigest()
+
+    @classmethod
+    def find_by_api_key(cls, raw_key):
+        """제시된 API 키로 사용자를 찾는다. 없으면 None.
+
+        해시 컬럼으로 인덱스 조회한 뒤 상수시간 비교로 한 번 더 확인한다
+        (인덱스 조회만으로도 값 비교는 일어나지만, 비교 자체를 상수시간으로
+        고정해 두면 이후 구현이 바뀌어도 타이밍 측면이 유지된다).
+        """
+        if not raw_key:
+            return None
+        candidate = cls.hash_api_key(raw_key)
+        user = cls.query.filter_by(api_key_hash=candidate).first()
+        if user and hmac.compare_digest(user.api_key_hash or '', candidate):
+            return user
+        return None
 
     @staticmethod
     def check_password(password, hashed_password):
@@ -76,10 +122,12 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
     """
     Marshmallow schema for serializing and deserializing User instances.
 
-    Excludes sensitive fields api_key and password_hash from all outputs.
+    Excludes sensitive fields (api_key, password_hash, totp_secret) from all
+    outputs — totp_secret is a shared secret, so leaking it would let anyone
+    generate valid second-factor codes.
 
     @phase active
     """
     class Meta:
         model = User
-        exclude = ('api_key', 'password_hash',)
+        exclude = ('api_key', 'password_hash', 'totp_secret',)

@@ -22,7 +22,7 @@ from aot.config import INSTALL_DIRECTORY, LANGUAGES, ProdConfig
 from aot.databases.models import Misc, User, Widget, populate_db
 from aot.databases.utils import session_scope
 from aot.aot_flask import (routes_admin, routes_authentication,
-                                 routes_dashboard, routes_function,
+                                 routes_dashboard, routes_device, routes_function,
                                  routes_general, routes_input, routes_geo,
                                  routes_method, routes_output, routes_page,
                                  routes_password_reset, routes_remote_admin,
@@ -505,8 +505,11 @@ def register_extensions(app):
                     update_layout(misc.custom_layout)
                     force_https = misc.force_https
 
-    # CSRF 토큰 만료 없음 (기본값 3600s → 1시간 후 저장 시 오류 발생 방지)
-    app.config['WTF_CSRF_TIME_LIMIT'] = None
+    # CSRF 토큰 만료를 없애는 대신 넉넉히 늘리고(12시간), aot-csrf-refresh.js가
+    # 20분마다 재서명된 토큰으로 갱신해 실제로 이 한계에 닿지 않게 한다.
+    # (과거엔 기본값 3600s → 1시간 후 저장 시 오류가 나서 아예 None으로 없앴으나,
+    # 무기한 토큰은 유출 시 영구히 유효하다는 문제가 있다.)
+    app.config['WTF_CSRF_TIME_LIMIT'] = 12 * 60 * 60
 
     # Disable force_https and adjust cookies for Docker environment
     from aot.config import DOCKER_CONTAINER
@@ -516,11 +519,15 @@ def register_extensions(app):
         app.config['WTF_CSRF_SSL_STRICT'] = False
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-    Talisman(app, 
-             content_security_policy=csp, 
-             force_https=False, # Hybrid Optimization: Disable forced SSL for local/SMB accessibility
-             strict_transport_security=False,
-             session_cookie_secure=False,
+    # force_https above already accounts for the user's Misc.force_https
+    # setting (General Settings → "Force HTTPS") and the Docker override —
+    # previously this was computed and then discarded here, so the setting
+    # had no effect regardless of what the admin chose in the UI.
+    Talisman(app,
+             content_security_policy=csp,
+             force_https=force_https,
+             strict_transport_security=force_https,
+             session_cookie_secure=force_https,
              session_cookie_http_only=True,
              frame_options='SAMEORIGIN')
 
@@ -533,6 +540,7 @@ def register_blueprints(app):
     app.register_blueprint(routes_dashboard.blueprint)  # register dashboard views
     app.register_blueprint(routes_function.blueprint)  # register function views
     app.register_blueprint(routes_general.blueprint)  # register general routes
+    app.register_blueprint(routes_device.blueprint)  # register device routes
     app.register_blueprint(routes_input.blueprint)  # register input routes
     app.register_blueprint(routes_method.blueprint)  # register method views
     app.register_blueprint(routes_output.blueprint)  # register output views
@@ -673,10 +681,18 @@ def extension_limiter(app):
         headers_enabled=True,
     )
     limiter.limit("300/hour")(routes_authentication.blueprint)
-    limiter.exempt(routes_authentication.remote_admin_login)
-    limiter.exempt(routes_authentication.remote_auth)
-    limiter.limit("3000/hour")(routes_authentication.remote_admin_login)
-    limiter.limit("3000/hour")(routes_authentication.remote_auth)
+    # newremote() issues a new RemoteAccessToken per call (rare, sensitive —
+    # an admin adding a remote host) — matches the password-reset endpoint's
+    # own "rare and sensitive" limit below rather than the blueprint default.
+    limiter.limit("20/hour")(routes_authentication.newremote)
+    # remote_admin_login/remote_auth are called once per configured remote
+    # host on every load of /remote/setup or /remote/input, so the blueprint
+    # default is too tight for real multi-host use. The credential itself is
+    # now a 256-bit issued token (see RemoteAccessToken), so this limit is
+    # defense-in-depth against abuse/DoS, not brute-force protection — no
+    # need for the old exempt()-then-3000/hour override.
+    limiter.limit("1000/hour")(routes_authentication.remote_admin_login)
+    limiter.limit("1000/hour")(routes_authentication.remote_auth)
     limiter.limit("20/hour")(routes_password_reset.blueprint)
     limiter.limit("200/minute")(api_blueprint)
 
@@ -701,6 +717,51 @@ def extension_limiter(app):
     return app
 
 
+# Passing the API key in the query string (?api_key=…) is deprecated: it leaks
+# the credential into web-server access logs, reverse-proxy logs and Referer
+# headers — the same class of problem the Remote Admin rewrite removed. The
+# header forms (X-API-KEY / Authorization: Basic) are unaffected.
+#
+# It stays supported for now because docs/API.md has advertised it, so removing
+# it outright could break integrations we can't see. This records who is still
+# using it so the removal can be made on evidence rather than a guess.
+_API_KEY_URL_AUDIT_INTERVAL = 3600  # seconds, per (user, ip)
+_api_key_url_last_audit = {}
+
+
+def _warn_api_key_in_url(req, user):
+    """Log (and periodically audit) a successful auth via ?api_key=…"""
+    try:
+        ip = (req.environ.get('HTTP_X_FORWARDED_FOR')
+              or req.remote_addr or 'unknown')
+        if ',' in ip:
+            ip = ip.split(',')[0].strip()
+
+        logger.warning(
+            "DEPRECATED: API key supplied in the URL query string "
+            "(user=%s ip=%s path=%s agent=%s). Use the X-API-KEY header "
+            "instead — query strings end up in access logs and Referer headers.",
+            user.name, ip, req.path, req.headers.get('User-Agent', '')[:120])
+
+        # The logger line is per-request; the audit entry is throttled so a
+        # polling integration can't fill the audit table with one row per poll.
+        import time as _time
+        key = (user.id, ip)
+        now = _time.monotonic()
+        last = _api_key_url_last_audit.get(key, 0)
+        if now - last >= _API_KEY_URL_AUDIT_INTERVAL:
+            _api_key_url_last_audit[key] = now
+            from aot.utils import audit
+            from aot.utils.audit import audit_log
+            audit_log(audit.API_KEY_URL_AUTH, user_id=user.id,
+                      username=user.name, ip_address=ip,
+                      detail='deprecated URL query-string auth; path={} agent={}'.format(
+                          req.path, req.headers.get('User-Agent', '')[:120]))
+    except Exception:
+        # Never let deprecation bookkeeping break authentication.
+        logger.exception("Failed to record deprecated URL api_key usage")
+
+
 def extension_login_manager(app):
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
@@ -714,32 +775,37 @@ def extension_login_manager(app):
 
     @login_manager.request_loader
     def load_user_from_request(req):
-        try:  # first, try to login using the api_key url arg
+        try:  # first, try to login using the api_key url arg (DEPRECATED)
             api_key = req.args.get('api_key').replace(' ', '+')
             api_key = base64.b64decode(api_key)
-            user = User.query.filter_by(api_key=api_key).first()
+            user = User.find_by_api_key(api_key)
             if user:
+                _warn_api_key_in_url(req, user)
                 return user
-        except:
+        except Exception:
+            # Overwhelmingly "no api_key on this request at all" (AttributeError
+            # on the .replace() above) — expected on almost every request, not
+            # worth logging. A narrower except would also work for this reason,
+            # but bare `except:` additionally swallows SystemExit/KeyboardInterrupt.
             pass
 
         try:  # next, try to login using Basic Auth
             api_key = req.headers.get('Authorization')
             api_key = api_key.replace('Basic ', '', 1)
             api_key = base64.b64decode(api_key)
-            user = User.query.filter_by(api_key=api_key).first()
+            user = User.find_by_api_key(api_key)
             if user:
                 return user
-        except:
+        except Exception:
             pass
 
         try:  # next, try to login using X-API-KEY
             api_key = req.headers.get('X-API-KEY')
             api_key = base64.b64decode(api_key)
-            user = User.query.filter_by(api_key=api_key).first()
+            user = User.find_by_api_key(api_key)
             if user:
                 return user
-        except:
+        except Exception:
             pass
 
         # User unable to be logged in

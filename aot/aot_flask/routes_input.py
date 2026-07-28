@@ -27,6 +27,7 @@ from aot.aot_flask.utils import utils_action, utils_general, utils_input
 from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.utils.actions import parse_action_information
+from aot.utils.device_blueprint import member_device_map, parent_device_names
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import output_types, parse_output_information
 from aot.utils.system_pi import (
@@ -284,6 +285,12 @@ def page_input():
     dict_inputs = parse_input_information()
     dict_actions = parse_action_information()
 
+    # 소속 장치 배지(설계 6.3/8/9) — primary(parent_device_id) + secondary
+    # (DeviceMember) 를 합쳐 카드마다 배지가 0개 이상 나올 수 있다. 장치
+    # 개수가 적어 전체를 한 번에 읽어 두는 편이 N+1보다 싸다.
+    dict_device_names = parent_device_names()
+    dict_member_devices = member_device_map('input')
+
     # Generate custom options for ALL inputs (not just filtered by tab)
     # This is needed because templates may reference inputs from other tabs
     all_inputs = Input.query.all()
@@ -433,6 +440,8 @@ def page_input():
                                custom_options_values_inputs=custom_options_values_inputs,
                                custom_options_values_input_channels=custom_options_values_input_channels,
                                dict_actions=dict_actions,
+                               dict_device_names=dict_device_names,
+                               dict_member_devices=dict_member_devices,
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
                                dict_measure_units=dict_measure_units,
@@ -501,6 +510,8 @@ def page_input():
                                custom_options_values_inputs=custom_options_values_inputs,
                                custom_options_values_input_channels=custom_options_values_input_channels,
                                dict_actions=dict_actions,
+                               dict_device_names=dict_device_names,
+                               dict_member_devices=dict_member_devices,
                                dict_inputs=dict_inputs,
                                dict_measurements=dict_measurements,
                                dict_measure_units=dict_measure_units,

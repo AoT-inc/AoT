@@ -37,6 +37,8 @@ from aot.config_devices_units import MEASUREMENTS
 from aot.config_devices_units import UNITS
 from aot.config_translations import TRANSLATIONS
 from aot.databases import set_api_key
+from aot.utils import audit
+from aot.utils.audit import audit_log
 from aot.databases.models import AIGlobalSettings
 from aot.databases.models import APIKey, Actions
 from aot.databases.models import AIEntry
@@ -206,8 +208,9 @@ def user_add(form):
 
         if not test_password(form.password_new.data):
             error.append(gettext(
-                "Invalid password. Must be between 6 and 64 characters "
-                "and only contain letters, numbers, and symbols."))
+                "Invalid password. Must be at least 8 characters, contain "
+                "only letters, numbers, and symbols, and not be a commonly "
+                "used password."))
 
         if form.password_new.data != form.password_repeat.data:
             error.append(gettext("Passwords do not match. Please try again."))
@@ -229,6 +232,12 @@ def user_add(form):
             new_user.theme = form.theme.data
             try:
                 new_user.save()
+                audit_log(audit.USER_CREATE, target_type='User',
+                          target_id=new_user.unique_id,
+                          target_name=new_user.name,
+                          after={'name': new_user.name,
+                                 'email': new_user.email,
+                                 'role_id': new_user.role_id})
             except sqlalchemy.exc.OperationalError as except_msg:
                 error.append(except_msg)
             except sqlalchemy.exc.IntegrityError as except_msg:
@@ -253,9 +262,19 @@ def generate_api_key(form):
         mod_user = User.query.filter(
             User.unique_id == form.user_id.data).first()
         api_key = set_api_key(128)
-        mod_user.api_key = api_key
+        # 해시만 저장한다 — 평문은 이 응답으로 한 번 전달되고 서버에 남지 않는다.
+        # api_key 컬럼은 p6_13 이후 사용하지 않으며, 재발급 시 과거 값이 남아
+        # 있지 않도록 명시적으로 비운다.
+        mod_user.api_key = None
+        mod_user.api_key_hash = User.hash_api_key(api_key)
         db.session.commit()
-        messages["success"].append("Generated API Key")
+        # The key itself is never written to the audit trail — only the fact
+        # that one was issued, and for whom.
+        audit_log(audit.API_KEY_ISSUE, target_type='User',
+                  target_id=mod_user.unique_id, target_name=mod_user.name)
+        messages["success"].append(gettext(
+            "API key generated. Copy it now — it is shown only once and "
+            "cannot be retrieved later."))
     except Exception as except_msg:
         messages["error"].append(except_msg)
 
@@ -386,6 +405,10 @@ def user_mod(form):
     try:
         mod_user = User.query.filter(
             User.unique_id == form.user_id.data).first()
+        # Captured before any mutation so the audit entry can show the change.
+        previous_role_id = mod_user.role_id
+        previous_email = mod_user.email
+        password_changed = bool(form.password_new.data)
         mod_user.email = form.email.data
 
         if form.code.data == "0":
@@ -433,6 +456,16 @@ def user_mod(form):
             mod_user.role_id = form.role_id.data
             mod_user.theme = form.theme.data
             db.session.commit()
+            # Role changes are the security-relevant part here — record the
+            # role transition explicitly rather than dumping the whole row
+            # (which would put the password hash in the audit trail).
+            audit_log(audit.USER_MODIFY, target_type='User',
+                      target_id=mod_user.unique_id, target_name=mod_user.name,
+                      before={'role_id': previous_role_id,
+                              'email': previous_email},
+                      after={'role_id': mod_user.role_id,
+                             'email': mod_user.email},
+                      detail='password changed' if password_changed else None)
             messages["success"].append('{action} {controller} {user}'.format(
                 action=TRANSLATIONS['modify']['title'],
                 controller=TRANSLATIONS['user']['title'],
@@ -496,11 +529,17 @@ def user_del(form):
                     messages["error"].append(gettext("Cannot delete the last Administrator."))
                     return messages
 
+            deleted_name = user.name
+            deleted_uid = user.unique_id
+            deleted_role = user.role_id
             user.delete()
+            audit_log(audit.USER_DELETE, target_type='User',
+                      target_id=deleted_uid, target_name=deleted_name,
+                      before={'name': deleted_name, 'role_id': deleted_role})
             messages["success"].append('{action} {controller} {user}'.format(
                 action=TRANSLATIONS['delete']['title'],
                 controller=TRANSLATIONS['user']['title'],
-                user=user.name))
+                user=deleted_name))
         except Exception as except_msg:
             messages["error"].append(except_msg)
 
@@ -686,6 +725,13 @@ def settings_general_mod(form):
                 reload_frontend = False
                 mod_misc = Misc.query.first()
 
+                # Security-relevant settings are recorded individually rather
+                # than dumping the whole Misc row (which holds credentials).
+                _audit_before = {
+                    'force_https': mod_misc.force_https,
+                    'hostname_override': mod_misc.hostname_override,
+                }
+
                 if mod_misc.force_https != form.force_https.data:
                     mod_misc.force_https = form.force_https.data
                     reload_frontend = True
@@ -751,6 +797,11 @@ def settings_general_mod(form):
                 mod_user.language = form.language.data
 
                 db.session.commit()
+                audit_log(audit.SETTINGS_CHANGE, target_type='Misc',
+                          target_name='General Settings',
+                          before=_audit_before,
+                          after={'force_https': mod_misc.force_https,
+                                 'hostname_override': mod_misc.hostname_override})
                 invalidate_misc_cache()
                 control = DaemonControl()
                 control.refresh_daemon_misc_settings()

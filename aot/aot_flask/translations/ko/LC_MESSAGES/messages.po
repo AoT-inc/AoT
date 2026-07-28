@@ -10543,7 +10543,6 @@ msgid "Function (%(type)s)"
 msgstr "함수 (%(type)s)"
 
 #: aot_flask/templates/pages/output.html:130
-#, fuzzy
 msgid "Confirming"
 msgstr "확인 중…"
 
@@ -24912,3 +24911,460 @@ msgstr ""
 #: widgets/widget_trigger_sequence.py:1350
 msgid "Press and hold to reorder"
 msgstr "길게 눌러 순서 변경"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Whole-card highlight when active (IEC focus row, badges) — not the per-"
+"channel row below"
+msgstr "카드 전체 하이라이트(활성일 때, IEC 포커스 행·배지 등) — 아래 채널별 행이 아님"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Whole-card highlight when inactive, PID container background — not the per-"
+"channel row below"
+msgstr "카드 전체 하이라이트(비활성일 때), PID 컨테이너 배경 — 아래 채널별 행이 아님"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Channel On"
+msgstr "채널 켜짐"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Channel Off"
+msgstr "채널 꺼짐"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Output/input channel row background when on; also a general surface color in"
+" facility widgets"
+msgstr "출력/입력 채널 행의 켜짐 배경색, 시설 위젯의 일반 표면색으로도 쓰임"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Output/input channel row background when off; also a general surface color "
+"in facility widgets"
+msgstr "출력/입력 채널 행의 꺼짐 배경색, 시설 위젯의 일반 표면색으로도 쓰임"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Row background while a command awaits device confirmation"
+msgstr "명령 전송 후 장치 확인을 기다리는 동안의 행 배경색"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Output/Input Channel Preview"
+msgstr "출력/입력 채널 미리보기"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Channel On colors"
+msgstr "클릭하여 채널 켜짐 색상 편집"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Channel Off colors"
+msgstr "클릭하여 채널 꺼짐 색상 편집"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Pending colors"
+msgstr "클릭하여 대기 중 색상 편집"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Warning State colors"
+msgstr "클릭하여 경고 상태 색상 편집"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Warning State"
+msgstr "경고 상태"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Row/card background for offline or unresponsive devices"
+msgstr "장치가 오프라인이거나 응답 없을 때의 행/카드 배경색"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Unverified Running Tint"
+msgstr "확인 불가 실행 틴트"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Unverified Running Tint Text"
+msgstr "확인 불가 실행 틴트 글자"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Overrides Channel On when a device with no confirmation path is running — "
+"forces this color even over bg_on"
+msgstr "확인 경로가 없는 장치가 실행 중일 때 채널 켜짐 색을 덮어씀 — bg_on보다 우선 적용됨"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid ""
+"Text color used with the tint above, and on map-popup device name warnings"
+msgstr "위 틴트와 함께 쓰이는 글자색, 지도 팝업 장치 이름 경고에도 사용"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Click to edit Unverified Running Tint colors"
+msgstr "클릭하여 확인 불가 실행 틴트 색상 편집"
+
+#: aot_flask/templates/settings/custom_ui.html:1
+msgid "Running (unconfirmed)"
+msgstr "실행 중 (확인 불가)"
+
+#: inputs/modbus_tcp.py:49
+msgid ""
+"Reads coils and registers from a Modbus TCP device (PLC, gateway, meter). "
+"Define one channel per register to read. Several Inputs and Outputs pointing"
+" at the same host and port share a single connection automatically. Note "
+"that Modbus has no authentication or encryption — keep the device on an "
+"isolated network and never expose it to the internet."
+msgstr ""
+"Modbus TCP 장치(PLC, 게이트웨이, 계량기)에서 코일과 레지스터를 읽습니다. 읽을 레지스터마다 채널을 하나씩 정의하십시오. "
+"같은 호스트와 포트를 가리키는 입력·출력은 자동으로 하나의 연결을 공유합니다. Modbus에는 인증도 암호화도 없으므로 장치는 격리된 "
+"네트워크에 두고 인터넷에 노출하지 마십시오."
+
+#: inputs/modbus_tcp.py:83 outputs/on_off_modbus.py:107
+msgid "IP address or hostname of the Modbus TCP device"
+msgstr "Modbus TCP 장치의 IP 주소 또는 호스트 이름"
+
+#: inputs/modbus_tcp.py:91 outputs/on_off_modbus.py:116
+msgid "TCP port of the Modbus TCP device (standard: 502)"
+msgstr "Modbus TCP 장치의 TCP 포트 (표준: 502)"
+
+#: inputs/modbus_tcp.py:100 outputs/on_off_modbus.py:125
+msgid ""
+"Modbus unit/slave ID of the device. Usually 1 for a device addressed "
+"directly, or the slave address behind a serial gateway"
+msgstr ""
+"장치의 Modbus 유닛/슬레이브 ID. 장치를 직접 지정할 때는 보통 1이며, 시리얼 게이트웨이 뒤에 있으면 그 슬레이브 주소입니다"
+
+#: inputs/modbus_tcp.py:108 outputs/on_off_modbus.py:133
+msgid "Timeout (seconds)"
+msgstr "타임아웃 (초)"
+
+#: inputs/modbus_tcp.py:110
+msgid ""
+"How long to wait for a response. One request takes at most timeout x "
+"(retries + 1)"
+msgstr "응답을 기다리는 시간. 요청 1회는 최대 타임아웃 x (재시도 + 1) 만큼 걸립니다"
+
+#: inputs/modbus_tcp.py:118 outputs/on_off_modbus.py:143
+msgid "Retries"
+msgstr "재시도"
+
+#: inputs/modbus_tcp.py:120 outputs/on_off_modbus.py:145
+msgid ""
+"Retries per request before it is treated as failed. Keep this low: a high "
+"value multiplies how long an unreachable device blocks a command"
+msgstr ""
+"실패로 처리하기 전까지 요청당 재시도 횟수. 낮게 유지하십시오 — 값이 크면 응답 없는 장치가 명령을 붙잡는 시간이 그만큼 배로 "
+"늘어납니다"
+
+#: inputs/modbus_tcp.py:139
+msgid "Coil (read/write bit)"
+msgstr "Coil (읽기/쓰기 비트)"
+
+#: inputs/modbus_tcp.py:140
+msgid "Discrete Input (read-only bit)"
+msgstr "Discrete Input (읽기 전용 비트)"
+
+#: inputs/modbus_tcp.py:141
+msgid "Holding Register (read/write word)"
+msgstr "Holding Register (읽기/쓰기 워드)"
+
+#: inputs/modbus_tcp.py:142
+msgid "Input Register (read-only word)"
+msgstr "Input Register (읽기 전용 워드)"
+
+#: inputs/modbus_tcp.py:145
+msgid "Register Type"
+msgstr "레지스터 종류"
+
+#: inputs/modbus_tcp.py:146
+msgid "Which Modbus table this channel reads from"
+msgstr "이 채널이 어느 Modbus 테이블에서 읽을지"
+
+#: inputs/modbus_tcp.py:153
+msgid "Register Address"
+msgstr "레지스터 주소"
+
+#: inputs/modbus_tcp.py:155
+msgid ""
+"Zero-based address within the selected table. Vendor documentation often "
+"lists one-based addresses (e.g. 40001 for holding register 0), so verify "
+"against the register map"
+msgstr ""
+"선택한 테이블 안에서 0부터 세는 주소. 벤더 문서는 1부터 세는 주소를 쓰는 경우가 많으므로(예: holding register 0을 "
+"40001로 표기) 레지스터 맵과 대조하십시오"
+
+#: inputs/modbus_tcp.py:164
+msgid "Bit (coil / discrete input)"
+msgstr "비트 (coil / discrete input)"
+
+#: inputs/modbus_tcp.py:172
+msgid "Data Type"
+msgstr "데이터 타입"
+
+#: inputs/modbus_tcp.py:174
+msgid ""
+"How to interpret the value. Bit types apply to coils and discrete inputs; "
+"the rest apply to registers"
+msgstr "값을 해석하는 방식. 비트 타입은 코일과 접점에, 나머지는 레지스터에 적용됩니다"
+
+#: inputs/modbus_tcp.py:182
+msgid "Big endian (high word first)"
+msgstr "빅 엔디언 (상위 워드 먼저)"
+
+#: inputs/modbus_tcp.py:183
+msgid "Little endian (low word first)"
+msgstr "리틀 엔디언 (하위 워드 먼저)"
+
+#: inputs/modbus_tcp.py:186
+msgid "Word Order"
+msgstr "워드 순서"
+
+#: inputs/modbus_tcp.py:188
+msgid ""
+"Register order for 32-bit types. Vendors differ, so if a value reads as "
+"nonsense while the register address is correct, try the other order"
+msgstr "32비트 타입의 레지스터 순서. 벤더마다 다르므로, 레지스터 주소는 맞는데 값이 이상하면 반대 순서로 바꿔 보십시오"
+
+#: inputs/modbus_tcp.py:196
+msgid "Scale Factor"
+msgstr "배율"
+
+#: inputs/modbus_tcp.py:198
+msgid ""
+"The raw value is multiplied by this. Use it when a device reports e.g. "
+"tenths of a degree (0.1)"
+msgstr "원본 값에 이 값을 곱합니다. 예를 들어 0.1도 단위로 보고하는 장치라면 0.1을 쓰십시오"
+
+#: outputs/on_off_modbus.py:68
+msgid ""
+"Switch coils on a Modbus TCP device (PLC, relay board, gateway). Each "
+"channel is one coil address. After every command the coil is read back to "
+"confirm it actually changed, and a mismatch is reported as a failure. Inputs"
+" and Outputs pointing at the same host and port share one connection "
+"automatically. Note that a readback confirms the PLC register, not that the "
+"relay or wiring moved. Modbus has no authentication or encryption — keep the"
+" device on an isolated network."
+msgstr ""
+"Modbus TCP 장치(PLC, 릴레이 보드, 게이트웨이)의 코일을 제어합니다. 채널 하나가 코일 주소 하나입니다. 명령을 보낼 때마다"
+" 코일을 다시 읽어 실제로 바뀌었는지 확인하며, 값이 다르면 실패로 알립니다. 같은 호스트와 포트를 가리키는 입력·출력은 자동으로 하나의"
+" 연결을 공유합니다. 재조회는 PLC 레지스터를 확인할 뿐, 릴레이나 배선이 움직였는지는 확인하지 못합니다. Modbus에는 인증도 "
+"암호화도 없으므로 장치는 격리된 네트워크에 두십시오."
+
+#: outputs/on_off_modbus.py:98
+msgid "Number of coils to control. Save to add or remove channel rows."
+msgstr "제어할 코일 개수. 저장하면 채널 행이 추가되거나 제거됩니다."
+
+#: outputs/on_off_modbus.py:135
+msgid ""
+"How long to wait for a response. One request takes at most timeout x "
+"(retries + 1), and a command sends two requests"
+msgstr "응답을 기다리는 시간. 요청 1회는 최대 타임아웃 x (재시도 + 1) 만큼 걸리며, 명령 하나는 요청을 두 번 보냅니다"
+
+#: outputs/on_off_modbus.py:158
+msgid "A friendly name shown in the UI for this channel."
+msgstr "이 채널을 화면에 표시할 이름입니다."
+
+#: outputs/on_off_modbus.py:165
+msgid "Coil Address"
+msgstr "코일 주소"
+
+#: outputs/on_off_modbus.py:167
+msgid ""
+"Zero-based coil address to switch. Vendor documentation often lists one-"
+"based addresses (e.g. 00001 for coil 0), so verify against the register map"
+msgstr ""
+"제어할 코일의 0부터 세는 주소. 벤더 문서는 1부터 세는 주소를 쓰는 경우가 많으므로(예: coil 0을 00001로 표기) 레지스터 "
+"맵과 대조하십시오"
+
+#: outputs/on_off_modbus.py:182
+msgid ""
+"Set the channel state when AoT starts. \"Do Nothing\" leaves the coil as the"
+" PLC has it and simply reads it back"
+msgstr "AoT가 시작될 때 채널 상태를 설정합니다. \"아무것도 안 함\"은 PLC가 가진 코일 상태를 그대로 두고 읽어오기만 합니다"
+
+#: outputs/on_off_modbus.py:196
+msgid "Set the channel state when AoT shuts down"
+msgstr "AoT가 종료될 때 채널 상태를 설정합니다"
+
+#: outputs/on_off_modbus.py:204
+msgid "Whether to trigger functions when the channel switches at startup"
+msgstr "시작 시 채널이 전환될 때 함수를 실행할지 여부"
+
+#: aot/aot_flask/templates/login_totp.html:38
+msgid "Two-Factor Authentication"
+msgstr "2단계 인증"
+
+#: aot/aot_flask/templates/login_totp.html:41
+msgid "Enter the 6-digit code from your authenticator app."
+msgstr "인증 앱에 표시된 6자리 코드를 입력하세요."
+
+#: aot/aot_flask/templates/login_totp.html:47
+msgid "Verification Code"
+msgstr "인증 코드"
+
+#: aot/aot_flask/templates/login_totp.html:63
+msgid "Verify"
+msgstr "확인"
+
+#: aot/aot_flask/templates/tools/audit_log.html:3
+#: aot/aot_flask/templates/layout_default.html:657
+msgid "Audit Log"
+msgstr "감사 로그"
+
+#: aot/aot_flask/templates/tools/audit_log.html:26
+msgid "Result"
+msgstr "결과"
+
+#: aot/aot_flask/templates/tools/audit_log.html:34
+msgid "Rows"
+msgstr "행 수"
+
+#: aot/aot_flask/templates/tools/audit_log.html:43
+msgid "Export CSV"
+msgstr "CSV 내보내기"
+
+#: aot/aot_flask/templates/tools/audit_log.html:30
+msgid "Failure"
+msgstr "실패"
+
+#: aot/aot_flask/templates/tools/audit_log.html:50
+msgid "No audit log entries found."
+msgstr "감사 로그 항목이 없습니다."
+
+#: aot/aot_flask/templates/tools/audit_log.html:65
+msgid "Detail"
+msgstr "상세"
+
+#: aot/aot_flask/templates/tools/audit_log.html:64
+msgid "Target Object"
+msgstr "대상"
+
+#: aot/aot_flask/routes_password_reset.py:131
+#: aot/aot_flask/utils/utils_settings.py:211
+msgid ""
+"Invalid password. Must be at least 8 characters, contain only letters, "
+"numbers, and symbols, and not be a commonly used password."
+msgstr ""
+"비밀번호가 올바르지 않습니다. 8자 이상이어야 하며, 문자·숫자·기호만 사용할 수 있고, 흔히 쓰이는 비밀번호는 사용할 수 없습니다."
+
+#: aot/aot_flask/templates/settings/users.html:290
+msgid "Issued — shown only once at generation"
+msgstr "발급됨 — 생성 시 1회만 표시됩니다"
+
+#: aot/aot_flask/templates/settings/users.html:290
+msgid "Not issued"
+msgstr "미발급"
+
+#: aot/aot_flask/utils/utils_settings.py:274
+msgid ""
+"API key generated. Copy it now — it is shown only once and cannot be "
+"retrieved later."
+msgstr "API 키를 생성했습니다. 지금 복사하세요 — 1회만 표시되며 이후에는 다시 확인할 수 없습니다."
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Available to link"
+msgstr "연결 가능"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Currently linked"
+msgstr "연결됨"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Device OK"
+msgstr "정상"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Failed to load settings"
+msgstr "설정을 불러오지 못했습니다"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Fault"
+msgstr "오류"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Form not found"
+msgstr "폼을 찾을 수 없습니다"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Input inactive"
+msgstr "Input 비활성"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked"
+msgstr "연결됨"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked Inputs/Outputs"
+msgstr "연결된 Input/Output"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "No notes"
+msgstr "노트 없음"
+
+#: aot_flask/templates/pages/device.html:1
+msgid ""
+"No device modules are installed. A device module declares is_device=True and"
+" a device_blueprint — see .local/plans/device_group_console_plan.md."
+msgstr ""
+"설치된 장치 모듈이 없습니다. 장치 모듈은 is_device=True 와 device_blueprint 를 선언합니다 — "
+".local/plans/device_group_console_plan.md 참고."
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Select a device type first"
+msgstr "먼저 장치 종류를 선택하세요"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "This device has no measurements or controls yet."
+msgstr "이 장치에는 아직 측정이나 제어가 없습니다."
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unlink"
+msgstr "연결 해제"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unlinked"
+msgstr "연결 해제됨"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Unverifiable"
+msgstr "확인 불가"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "notes"
+msgstr "건"
+
+#: aot_flask/templates/pages/data_options/input_entry.html:1
+msgid "Part of device"
+msgstr "소속 장치"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Sub-devices"
+msgstr "하위 장치"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Linked sub-devices"
+msgstr "연결된 하위 장치"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Available devices to link"
+msgstr "연결 가능한 장치"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Reference"
+msgstr "참조"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Deleted"
+msgstr "삭제됨"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Duplicated"
+msgstr "복제됨"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Measurement Channels"
+msgstr "측정 채널"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Control Channels"
+msgstr "제어 채널"
+
+#: aot_flask/templates/pages/device.html:1
+msgid "Input / Output"
+msgstr "입력 / 출력"

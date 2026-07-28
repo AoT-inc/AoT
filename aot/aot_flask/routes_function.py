@@ -65,6 +65,7 @@ from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.aot_flask.utils.utils_misc import determine_controller_type
 from aot.utils.actions import parse_action_information
+from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
 from aot.utils.weekly_schedule import (
     from_legacy, parse_schedule, to_legacy, validate as validate_schedule,
@@ -582,6 +583,12 @@ def page_function():
 
     action = Actions.query.all()
     camera = Camera.query.all()
+
+    # 복합장치(Device)는 custom_controller 행이지만 Device 티어에서만 보여야 한다.
+    # 같은 행이 Function 목록에도 뜨면 한 장치가 두 곳에서 편집·삭제 가능해진다.
+    # 판정 기준은 행이 아니라 그 행의 device 모듈이 is_device 를 선언했는지다.
+    _device_modules = device_module_names()
+
     if not current_tab:
         # Fallback: Tab 테이블이 비어있는 경우
         logger.warning("No default tab found for function page")
@@ -602,6 +609,11 @@ def page_function():
         trigger = Trigger.query.filter(
             Trigger.tab_id == current_tab.unique_id
         ).all()
+
+    if _device_modules:
+        function = [f for f in function
+                    if getattr(f, 'device', '') not in _device_modules]
+
     conditional_conditions = ConditionalConditions.query.all()
     map_cfg_committed = False
     for func in function:

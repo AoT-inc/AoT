@@ -31,6 +31,7 @@ from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import write_influxdb_value
+from aot.utils.safe_eval import UnsafeExpressionError, safe_eval
 
 measurements_dict = {
     0: {
@@ -212,15 +213,19 @@ class CustomModule(AbstractFunction):
 
         # Perform equation and save to DB here
         if last_measurement_a and last_measurement_b:
-            equation_str = self.equation
-            equation_str = equation_str.replace("a", str(last_measurement_a[1]))
-            equation_str = equation_str.replace("b", str(last_measurement_b[1]))
+            try:
+                equation_output = safe_eval(self.equation, {
+                    'a': last_measurement_a[1],
+                    'b': last_measurement_b[1]})
+            except UnsafeExpressionError as err:
+                self.logger.error(
+                    "Equation rejected ({err}). Equation: {eq!r}. "
+                    "Skipping this measurement.".format(err=err, eq=self.equation))
+                return
 
-            self.logger.debug("Equation: {} = {}".format(self.equation, equation_str))
-
-            equation_output = eval(equation_str)
-
-            self.logger.debug("Output: {}".format(equation_output))
+            self.logger.debug("Equation: {} with a={}, b={} -> {}".format(
+                self.equation, last_measurement_a[1], last_measurement_b[1],
+                equation_output))
 
             write_influxdb_value(
                 self.unique_id,

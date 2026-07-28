@@ -27,6 +27,7 @@ from aot.databases.models import (PID, APIKey, Camera, Conditional, Conversion,
 from aot.aot_client import DaemonControl
 from aot.aot_flask.extensions import db
 from aot.utils.actions import parse_action_information
+from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import parse_output_information
@@ -926,12 +927,23 @@ def choices_controller_ids():
     return choices
 
 
-def choices_custom_functions():
-    """populate form multi-select choices from Function entries."""
+def choices_custom_functions(devices_only=False):
+    """populate form multi-select choices from Function entries.
+
+    복합장치(Device) 모듈은 Custom Function 과 같은 저장 구조를 쓰지만 UI 상으로는
+    별개 티어다. 기본값이 '장치 제외'인 이유: 이 함수는 Function 추가 드롭다운을
+    만드는 자리이고, 거기에 장치가 섞이면 같은 것을 두 티어에서 추가할 수 있게 되어
+    어느 쪽으로 만들었는지에 따라 소속이 갈리는 데이터가 생긴다.
+
+    :param devices_only: True 면 반대로 장치 모듈만 반환(Device 페이지용)
+    """
     choices = []
     dict_controllers = parse_function_information()
+    device_names = device_module_names(dict_controllers)
     list_controllers_sorted = generate_form_controller_list(dict_controllers)
     for each_custom in list_controllers_sorted:
+        if (each_custom in device_names) != devices_only:
+            continue
         choices.append({
             'value': each_custom,
             'item': dict_controllers[each_custom]['function_name']

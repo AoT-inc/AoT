@@ -39,8 +39,7 @@ from Pyro5.api import Proxy, expose, serve
 
 from aot.config import (DAEMON_LOG_FILE, DOCKER_CONTAINER, AOT_DB_PATH,
                            AOT_VERSION, STATS_CSV, STATS_INTERVAL,
-                           UPGRADE_CHECK_INTERVAL, AI_SUMMARY_INTERVAL,
-                           COMM_WATCH_INTERVAL, COMM_WATCH_STARTUP_GRACE)
+                           UPGRADE_CHECK_INTERVAL, AI_SUMMARY_INTERVAL)
 from aot.controllers.controller_conditional import ConditionalController
 from aot.controllers.controller_function import FunctionController
 from aot.controllers.controller_input import InputController
@@ -49,9 +48,9 @@ from aot.controllers.controller_pid import PIDController
 from aot.controllers.controller_trigger import TriggerController
 from aot.controllers.controller_trigger_sequence import SequenceTriggerController
 from aot.controllers.controller_widget import WidgetController
-from aot.databases.models import (PID, SMTP, Camera, Conditional,
+from aot.databases.models import (PID, Camera, Conditional,
                                      CustomController, Input, Misc, Output,
-                                     Trigger, User)
+                                     Trigger)
 from aot.databases.utils import session_scope
 from aot.devices.camera import camera_record
 from aot.aot_flask.app import create_app
@@ -61,7 +60,6 @@ from aot.utils.actions import (get_condition_value,
                                   trigger_controller_actions)
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.github_release_info import AoTRelease
-from aot.utils.send_data import send_email as send_email_notification
 from aot.utils.stats import (add_update_csv, recreate_stat_file,
                                 return_stat_file_dict, send_anonymous_stats)
 from aot.utils.system_environment import detect as detect_system_environment
@@ -187,14 +185,6 @@ class DaemonController:
         self.timer_upgrade_message = time.time()
         self.timer_ai_summary = time.time() + 60 # Start soon after boot
         self.timer_ai_archive = time.time() + 300 # Initial archiving soon after boot
-        # Device communication watch. Deliberately does NOT start immediately:
-        # controllers are still coming up right after boot and several drivers
-        # only learn their device is reachable on their first poll/heartbeat, so
-        # an immediate sweep would report healthy devices as offline.
-        self.timer_comm_watch = time.time() + COMM_WATCH_STARTUP_GRACE
-        # unique_id -> bool, the last comm_is_fault seen. Edge-triggered: a
-        # notification is sent only when this flips, never on every sweep.
-        self._comm_fault_seen = {}
 
         # Update Misc settings
         self.output_usage_report_gen = None
@@ -278,12 +268,6 @@ class DaemonController:
                     while now > self.timer_ai_archive:
                         self.timer_ai_archive += 86400 * 7 # 1 week
                     self.archive_all_ai_summaries()
-
-                # Device communication watch: notify on offline/recovery
-                if now > self.timer_comm_watch:
-                    while now > self.timer_comm_watch:
-                        self.timer_comm_watch += COMM_WATCH_INTERVAL
-                    self.check_device_comm_status()
 
             except Exception:
                 self.logger.exception("Daemon Error")
@@ -980,97 +964,6 @@ class DaemonController:
             return self.controller['Output'].output_states_all()
         except Exception:
             self.logger.exception(f"Could not query all output state")
-
-    def check_device_comm_status(self):
-        """Watch every Input/Output for communication loss and notify on change.
-
-        Edge-triggered: an email goes out when a device flips online->offline or
-        back, never on every sweep, so a device that stays down does not repeat.
-
-        Central rather than per-driver: the drivers already know their own state
-        (comm_is_fault), and previously that knowledge only reached the UI — a
-        user had to be looking at the page to learn a valve had gone silent. The
-        one pre-existing automatic path was a Conditional Function the user had
-        to hand-write in Python, per device.
-
-        Devices that cannot observe their own state (comm_capable() False) are
-        skipped entirely: they never "go offline", they are simply unverifiable,
-        and alerting on them would be alerting on nothing.
-        """
-        current = {}
-        try:
-            for input_id, ctrl in self.controller['Input'].items():
-                try:
-                    if ctrl.comm_capable():
-                        current[input_id] = ('Input', bool(ctrl.comm_is_fault()))
-                except Exception:
-                    self.logger.exception(f"comm status check failed for Input {input_id}")
-
-            out_ctrl = self.controller.get('Output')
-            if out_ctrl:
-                for output_id, out in out_ctrl.output.items():
-                    try:
-                        if out.comm_capable():
-                            current[output_id] = ('Output', bool(out.comm_is_fault()))
-                    except Exception:
-                        self.logger.exception(f"comm status check failed for Output {output_id}")
-        except Exception:
-            self.logger.exception("Device communication watch failed")
-            return
-
-        # Drop devices that disappeared (deactivated/deleted) so re-activating
-        # one later is treated as a fresh baseline rather than a state change.
-        for gone in set(self._comm_fault_seen) - set(current):
-            self._comm_fault_seen.pop(gone, None)
-
-        for dev_id, (kind, is_fault) in current.items():
-            previous = self._comm_fault_seen.get(dev_id)
-            self._comm_fault_seen[dev_id] = is_fault
-            if previous is None or previous == is_fault:
-                # First sighting establishes a baseline without notifying:
-                # a device already offline when the daemon started has not just
-                # "gone" offline, and reporting it as a new event on every
-                # restart would be noise.
-                continue
-            self._notify_comm_change(dev_id, kind, is_fault)
-
-    def _notify_comm_change(self, dev_id, kind, is_fault):
-        """Log and email a single online<->offline transition."""
-        name = dev_id
-        try:
-            table = Input if kind == 'Input' else Output
-            dev = db_retrieve_table_daemon(table, unique_id=dev_id)
-            if dev and getattr(dev, 'name', None):
-                name = dev.name
-        except Exception:
-            pass
-
-        # Notification text is Korean to match the existing daemon-side
-        # convention (see on_off_mqtt_farmon_v1._notify_offline). The daemon has
-        # no request context, so babel/gettext is not available here.
-        if is_fault:
-            subject = f"[AoT] 장치 오프라인: {name}"
-            message = (f"{kind} '{name}' ({dev_id}) 응답이 없습니다.\n"
-                       f"장치 전원과 네트워크/게이트웨이를 점검해 주세요.")
-            self.logger.warning(f"[comm] {kind} '{name}' ({dev_id}) went OFFLINE")
-        else:
-            subject = f"[AoT] 장치 복구: {name}"
-            message = f"{kind} '{name}' ({dev_id}) 통신이 복구되었습니다."
-            self.logger.info(f"[comm] {kind} '{name}' ({dev_id}) is back ONLINE")
-
-        try:
-            smtp = db_retrieve_table_daemon(SMTP, entry='first')
-            if not smtp:
-                return  # no mail configured; the log line above is the record
-            recipients = [u.email for u in db_retrieve_table_daemon(User, entry='all')
-                          if getattr(u, 'role_id', None) == 1 and getattr(u, 'email', None)]
-            if not recipients:
-                return
-            send_email_notification(
-                smtp.host, smtp.protocol, smtp.port, smtp.user, smtp.passw,
-                smtp.email_from, recipients, message, subject=subject)
-        except Exception:
-            self.logger.exception("Could not send device communication notification")
 
     def output_comm_capable_all(self):
         """

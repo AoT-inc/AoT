@@ -618,6 +618,32 @@ def _tier_reclassification_job() -> None:
             logger.error("[TierReclassification] Job failed: %s", exc, exc_info=True)
 
 
+# @ANCHOR: AUDIT_LOG_PURGE_JOB
+def _audit_log_purge_job() -> None:
+    """Background job: drop audit_log rows past the retention period.
+
+    Without this the audit table grows without bound. Retention defaults to
+    config.AUDIT_LOG_RETENTION_DAYS (1 year — the minimum the personal-data
+    safeguards standard requires for access records).
+
+    Module-level (not a closure) because APScheduler has to be able to
+    reference the function by qualified name.
+    """
+    global _flask_app
+    if not _flask_app:
+        logger.warning("[AuditLogPurge] _flask_app not set — skipping job")
+        return
+
+    with _flask_app.app_context():
+        try:
+            from aot.utils.audit import purge_old_audit_logs
+            deleted = purge_old_audit_logs()
+            if deleted:
+                logger.info("[AuditLogPurge] Removed %d expired audit entries", deleted)
+        except Exception as exc:
+            logger.error("[AuditLogPurge] Job failed: %s", exc, exc_info=True)
+
+
 def _job_event_listener(event):
     """Handle job execution results and update metadata."""
     from aot.ai.services.ai_scheduler_service import AISchedulerService, _flask_app
@@ -795,6 +821,22 @@ class AISchedulerService:
             )
         except Exception as _tr_err:
             logger.warning("[TierReclassification] Could not register tier reclassification job: %s", _tr_err)
+
+        # @ANCHOR: AUDIT_LOG_PURGE_JOB (registration site)
+        # Daily is plenty — retention is measured in days, so a finer interval
+        # would just re-scan the table for nothing.
+        try:
+            scheduler.add_job(
+                func=_audit_log_purge_job,
+                trigger='interval',
+                hours=24,
+                id='audit_log_purge',
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+            )
+        except Exception as _ap_err:
+            logger.warning("[AuditLogPurge] Could not register audit log purge job: %s", _ap_err)
 
 
     @staticmethod

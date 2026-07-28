@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="{{ current_locale | default(session.get('language', 'en')) }}">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <link rel="icon" href="/favicon.png">
+
+  <title>{{dict_translation['login']['title']}}</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/aot-theme-variables.css" rel="stylesheet">
+
+  {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else '/static/css/bootstrap-4-themes/aot.css' %}
+  {% if effective_theme in dark_themes %}
+  <link href="/static/css/custom-dark.css" rel="stylesheet">
+  {% else %}
+  <link href="/static/css/custom-light.css" rel="stylesheet">
+  {% endif %}
+  <link href="{{ effective_theme }}" rel="stylesheet">
+  <link href="/custom.css" rel="stylesheet">
+
+  <link href="/static/css/signin.css" rel="stylesheet">
+
+  <script src="/static/js/vendor/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+
+  <!-- Route: /login_totp -->
+  <div class="container">
+  {% include 'flash_messages.html' %}
+
+    <div class="text-center">
+      <h2 class="form-signin-heading" style="margin-top:1em; margin-bottom:0.5em;">
+        {{_('Two-Factor Authentication')}}
+      </h2>
+      <p style="margin-bottom:1.5em;">
+        {{_('Enter the 6-digit code from your authenticator app.')}}
+      </p>
+
+      <form class="form-signin" name="login_totp" action="/login_totp" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <label for="totp_code" class="sr-only">{{_('Verification Code')}}</label>
+        <input
+          type="text"
+          id="totp_code"
+          name="totp_code"
+          class="form-control"
+          placeholder="{{_('Verification Code')}}"
+          autocomplete="one-time-code"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="7"
+          autofocus
+          required
+        >
+
+        <button class="btn btn-lg btn-block login-btn" type="submit" style="margin-top: 1em;">
+          {{_('Verify')}}
+        </button>
+      </form>
+
+      <!-- /logout is login_required and nothing is logged in yet at this
+           point, so cancelling goes back to the login page, which clears the
+           pending second-factor state. -->
+      <div style="text-align: center; padding-top: 1em">
+        <a href="/login">{{_('Cancel')}}</a>
+      </div>
+    </div>
+
+  </div>
+
+<script src="/static/js/vendor/bootstrap.min.js"></script>
+</body>
+</html>

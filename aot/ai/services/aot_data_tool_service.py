@@ -296,6 +296,58 @@ class AoTDataToolService:
     })
 
     @staticmethod
+    def _device_parent_map():
+        """{Input/Output.unique_id: (parent_device_id, parent_device_name)}.
+
+        복합장치(Device) 티어는 새 테이블이 아니라 is_device=True 를 선언한
+        CustomController 행이고, 하위 Input/Output 은 parent_device_id 로
+        그 행을 가리킨다(.local/plans/device_group_console_plan.md). AI 쪽
+        검색·목록 도구는 지금까지 이 관계를 전혀 몰라서, PLC 하나가 Input과
+        Output 으로 흩어져 보이면 이름이 비슷한 것들을 각각 추측해서 찾아야
+        했다 — 이 맵을 결과에 섞어 넣으면 "이 Input 은 이 장치 소속"이라는
+        사실이 데이터에 명시된다. 새 MCP 도구를 만들지 않고 기존 도구의
+        결과에 필드만 얹는다(Phase 5).
+        """
+        try:
+            from aot.databases.models.controller import CustomController
+            from aot.utils.functions import device_module_names
+
+            device_names = device_module_names()
+            if not device_names:
+                return {}
+
+            id_to_name = {
+                d.unique_id: d.name
+                for d in CustomController.query.filter(
+                    CustomController.device.in_(device_names)).all()
+            }
+            if not id_to_name:
+                return {}
+
+            mapping = {}
+            for inp in Input.query.filter(Input.parent_device_id.in_(id_to_name)).all():
+                mapping[inp.unique_id] = (inp.parent_device_id, id_to_name[inp.parent_device_id])
+            for out in Output.query.filter(Output.parent_device_id.in_(id_to_name)).all():
+                mapping[out.unique_id] = (out.parent_device_id, id_to_name[out.parent_device_id])
+            return mapping
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _annotate_device_membership(results):
+        """search_devices()/get_device_list_tool() 결과 리스트에
+        parent_device_id/parent_device_name 을 제자리에서 채운다(있는 것만)."""
+        parent_map = AoTDataToolService._device_parent_map()
+        if not parent_map:
+            return results
+        for r in results:
+            if r.get('type') in ('input', 'output'):
+                parent = parent_map.get(r.get('id'))
+                if parent:
+                    r['parent_device_id'], r['parent_device_name'] = parent
+        return results
+
+    @staticmethod
     def search_devices(query):
         """
         이름 또는 타입으로 장치를 검색합니다.
@@ -384,6 +436,34 @@ class AoTDataToolService:
                     if item.unique_id not in seen_ids:
                         seen_ids.add(item.unique_id)
                         results.append({"id": item.unique_id, "name": item.name, "type": "output", "device": item.output_type})
+
+                # 복합장치(Device) — is_device=True 모듈이 만드는 CustomController
+                # 행. PLC 처럼 "장치 하나"로 물어보면 그 자체가 검색되고,
+                # member_ids 로 하위 Input/Output 을 바로 가리킬 수 있다.
+                try:
+                    from aot.databases.models.controller import CustomController
+                    from aot.utils.functions import device_module_names
+                    _dev_names = device_module_names()
+                    if _dev_names:
+                        for item in CustomController.query.filter(
+                            CustomController.device.in_(_dev_names),
+                            CustomController.name.like(q)
+                        ).all():
+                            if item.unique_id not in seen_ids:
+                                seen_ids.add(item.unique_id)
+                                member_ids = (
+                                    [i.unique_id for i in Input.query.filter_by(
+                                        parent_device_id=item.unique_id).all()] +
+                                    [o.unique_id for o in Output.query.filter_by(
+                                        parent_device_id=item.unique_id).all()]
+                                )
+                                results.append({
+                                    "id": item.unique_id, "name": item.name,
+                                    "type": "device", "device": item.device,
+                                    "member_ids": member_ids,
+                                })
+                except Exception:
+                    pass
 
                 for item in Camera.query.filter(
                     or_(Camera.name.like(q), Camera.camera_type.like(q))
@@ -501,6 +581,7 @@ class AoTDataToolService:
                                if r.get('type') not in ('input', 'output')
                                or r.get('zone') in allowed_zones]
 
+            results = AoTDataToolService._annotate_device_membership(results)
             return {"results": results, "count": len(results)}
         except Exception as e:
             return {"error": str(e)}
@@ -508,7 +589,8 @@ class AoTDataToolService:
     @staticmethod
     def get_device_list_tool(**kwargs):
         """
-        Returns all registered devices (inputs, outputs, cameras) with id/name/type.
+        Returns all registered devices (inputs, outputs, cameras, complex
+        devices) with id/name/type.
         Used for full device listing queries (no keyword filter).
 
         @ANCHOR: GET_DEVICE_LIST_TOOL
@@ -528,6 +610,33 @@ class AoTDataToolService:
                 if item.unique_id not in seen_ids:
                     seen_ids.add(item.unique_id)
                     results.append({"id": item.unique_id, "name": item.name, "type": "camera", "device": item.camera_type})
+
+            # 복합장치(Device) — search_devices() 와 동일한 이유로 목록에도
+            # 포함한다. 여기서는 필터가 없으므로 전수 조회.
+            try:
+                from aot.databases.models.controller import CustomController
+                from aot.utils.functions import device_module_names
+                _dev_names = device_module_names()
+                if _dev_names:
+                    for item in CustomController.query.filter(
+                            CustomController.device.in_(_dev_names)).all():
+                        if item.unique_id not in seen_ids:
+                            seen_ids.add(item.unique_id)
+                            member_ids = (
+                                [i.unique_id for i in Input.query.filter_by(
+                                    parent_device_id=item.unique_id).all()] +
+                                [o.unique_id for o in Output.query.filter_by(
+                                    parent_device_id=item.unique_id).all()]
+                            )
+                            results.append({
+                                "id": item.unique_id, "name": item.name,
+                                "type": "device", "device": item.device,
+                                "member_ids": member_ids,
+                            })
+            except Exception:
+                pass
+
+            results = AoTDataToolService._annotate_device_membership(results)
             return {"results": results, "count": len(results)}
         except Exception as e:
             return {"error": str(e)}

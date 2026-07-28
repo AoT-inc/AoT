@@ -137,12 +137,14 @@ nav:
     - Supported Widgets: Supported-Widgets.md
     - I2C Multiplexers: I2C-Multiplexers.md
     - Analog-To-Digital Converters: Analog-To-Digital-Converters.md
+    - PLC (Modbus TCP): PLC-Modbus.md
     - Interfaces.md
     - Dependencies.md
     - Device Notes: Device-Notes.md
   - System:
     - System Information: System-Information.md
     - System Configuration: Configuration-Settings.md
+    - Security.md
     - Time & Timezones: time-handling.md
     - Upgrade/Backup/Restore: Upgrade-Backup-Restore.md
     - Export/Import: Export-Import.md

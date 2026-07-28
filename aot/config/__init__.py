@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_08_ai_advice_ledger_20260725'
+ALEMBIC_VERSION = 'p6_14_device_membership_20260728'
 AOT_VERSION = '26.07.4'
 
 # FORCE UPGRADE MASTER
@@ -212,6 +212,11 @@ ID_FILE = os.path.join(INSTALL_DIRECTORY, 'statistics.id')
 LOGIN_ATTEMPTS = 5
 LOGIN_BAN_SECONDS = 600  # 10 minutes
 
+# 감사로그(audit_log) 보존기간. 개인정보 안전성 확보조치 기준의 접속기록 최소
+# 보존기간(1년)을 기본값으로 둔다. 발주기관이 더 긴 기간을 요구하면 이 값만
+# 올리면 되고, 0 이하로 두면 자동 정리를 끈다(무한 증가하므로 권장하지 않음).
+AUDIT_LOG_RETENTION_DAYS = 365
+
 # Check for upgrade every 2 days (if enabled)
 UPGRADE_CHECK_INTERVAL = 172800
 
@@ -242,15 +247,6 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 AI_MODEL = 'gpt-5.4'
 AI_AGENT_ENABLED = True # 에이전트 기반 마련 활성화
 AI_SUMMARY_INTERVAL = 3600 # 1시간마다 요약 생성 (최적화 가능)
-
-# Device communication watch (aot_daemon.check_device_comm_status).
-# How often every Input/Output is asked whether it can still see its device,
-# and how long after boot the first sweep waits. The grace period matters:
-# controllers start staggered and several drivers only learn a device is
-# reachable on their first poll or heartbeat, so sweeping too early would
-# report healthy devices as offline.
-COMM_WATCH_INTERVAL = 60
-COMM_WATCH_STARTUP_GRACE = 180
 
 # MCP Bridge Settings
 # v23 (MCP_T06): Configurable failure cooldown. Override via env var MCP_FAILURE_COOLDOWN.

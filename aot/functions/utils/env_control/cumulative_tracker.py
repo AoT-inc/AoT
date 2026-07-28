@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Dict, List, Optional
 
+from aot.utils.safe_eval import safe_eval
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 상수
@@ -56,7 +58,7 @@ def _normalize_light_unit(unit: Optional[str]) -> str:
 
 def _apply_eq(eqn: str, x: float) -> float:
     """config 의 변환식('x * 4.57' 등)을 적용. 신뢰된 상수식만 평가."""
-    return float(eval(eqn, {'__builtins__': {}}, {'x': float(x)}))
+    return float(safe_eval(eqn, {'x': float(x)}))
 
 
 def _convert_via_system(value: float, from_key: str, to_key: str) -> Optional[float]:

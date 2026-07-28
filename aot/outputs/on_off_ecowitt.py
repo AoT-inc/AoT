@@ -412,8 +412,15 @@ class OutputModule(AbstractOutput):
         # back to whether setup succeeded rather than claiming a failure we have
         # not actually observed.
         if self._comm_ok is None:
-            return not self.output_setup
-        return not self._comm_ok
+            if not self.output_setup:
+                return True
+        elif not self._comm_ok:
+            return True
+        # Compose with the shared axes rather than replacing them: super()
+        # carries is_offline() ("offline until the device answers again", which
+        # must survive a new command being issued) and the per-command
+        # confirmation fault.
+        return super().comm_is_fault(output_channel)
 
     def stop_output(self):
         """Called when Output is stopped."""

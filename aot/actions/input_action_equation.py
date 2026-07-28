@@ -4,6 +4,7 @@ from flask_babel import lazy_gettext
 from aot.actions.base_action import AbstractFunctionAction
 from aot.databases.models import Actions
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.safe_eval import UnsafeExpressionError, safe_eval
 from aot.utils.system_pi import get_measurement
 
 ACTION_INFORMATION = {
@@ -91,12 +92,16 @@ class ActionModule(AbstractFunctionAction):
             dict_vars['message'] += msg
             return dict_vars
 
-        equation_str = self.equation
-        equation_str = equation_str.replace("x", str(original_value))
+        try:
+            new_value = safe_eval(self.equation, {'x': original_value})
+        except UnsafeExpressionError as err:
+            msg = " Error: Equation rejected ({err}): {eq!r}".format(
+                err=err, eq=self.equation)
+            self.logger.error(msg)
+            dict_vars['message'] += msg
+            return dict_vars
 
-        self.logger.debug("Equation: {} = {}".format(self.equation, equation_str))
-
-        dict_vars['measurements_dict'][channel]['value'] = eval(equation_str)
+        dict_vars['measurements_dict'][channel]['value'] = new_value
 
         self.logger.debug(
             f"Input channel: {channel}, "

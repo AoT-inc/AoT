@@ -56,7 +56,7 @@ def remote_input():
     for each_host in remote_hosts:
         # Return input information about each host
         headers = remote_log_in(
-            each_host.host, each_host.username, each_host.password_hash)
+            each_host.host, each_host.username, each_host.access_token)
 
         _, host_inputs[each_host.host] = remote_host_page(
             each_host.host, headers, 'remote_get_inputs')
@@ -97,7 +97,7 @@ def remote_setup():
     host_auth = {}
     for each_host in remote_hosts:
         headers = remote_log_in(
-            each_host.host, each_host.username, each_host.password_hash)
+            each_host.host, each_host.username, each_host.access_token)
 
         _, host_auth[each_host.host] = remote_host_page(
             each_host.host, headers, 'auth')

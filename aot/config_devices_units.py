@@ -707,7 +707,9 @@ UNIT_CONVERSIONS = [
     ('F', 'C', '(x-32)*5/9'),
     ('F', 'K', '(x+459.67)*5/9'),
     ('K', 'C', 'x-273.15'),
-    ('K', 'F', '(x*9/5)−459.67'),
+    # U+2212 MINUS SIGN here made this the only broken temperature conversion
+    # (Python only accepts ASCII '-'), so K->F silently failed on every install.
+    ('K', 'F', '(x*9/5)-459.67'),
 
     # Frequency
     ('Hz', 'kHz', 'x/1000'),
@@ -743,7 +745,9 @@ UNIT_CONVERSIONS = [
     ('MB', 'kB', 'x*1000'),
     ('MB', 'GB', 'x/1000'),
     ('GB', 'kB', 'x*1000000'),
-    ('GB', 'MB', 'X*1000'),
+    # Uppercase 'X' never matched the substituted variable, so GB->MB silently
+    # failed on every install (all other conversions here use lowercase 'x').
+    ('GB', 'MB', 'x*1000'),
 
     # Concentration
     ('ppt', 'ppm', 'x*1000'),

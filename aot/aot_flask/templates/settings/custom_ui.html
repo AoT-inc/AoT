@@ -6,7 +6,7 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': Custom UI'}}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260727b">
+  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260727e">
 {% endblock %}
 
 {% block settings %}
@@ -180,6 +180,98 @@
                     aria-label="{{_('Click to edit Upgrade Badge colors')}}">{{_('Upgrade')}}</span>
             </div>
 
+            <!-- Output/Input Channel Preview — mirrors the 5 real channel-row
+                 states from settings/output & settings/input: on/off/pending/
+                 fault (aot-output-state.js classify()) + "running, unverified"
+                 (paintUnverifiedRunning — an inline !important tint that
+                 overrides bg_on for devices with no confirmation path; this
+                 is what most often looks like "a different color is being
+                 forced" since it silently wins over bg_on). Row bg uses
+                 bg_on/bg_off/bg_pending/bg_warning/tint_warning_bg (NOT
+                 bg_active/bg_inactive — those color the whole-device card,
+                 not the per-channel row; see State Colors group below).
+
+                 On/Off button coloring intentionally mirrors the REAL cascade
+                 (aot-entry-ui.css): the On button is only bright on an ON
+                 row (.preview-channel-on override below); everywhere else,
+                 including the Off row, both buttons render muted — exactly
+                 like the real app, so the row background (not button color)
+                 is what tells the two states apart. -->
+            <div class="preview-channel-label-row">{{_('Output/Input Channel Preview')}}</div>
+            <div class="preview-channel-group">
+              <div class="preview-channel-row preview-channel-on"
+                   role="button" tabindex="0"
+                   data-color-bg="bg_on"
+                   data-color-text="text_color_primary"
+                   data-color-label="{{_('Channel On')}}"
+                   aria-label="{{_('Click to edit Channel On colors')}}">
+                <span class="preview-channel-name">CH1 <span class="preview-channel-state-badge">{{_('Channel On')}}</span></span>
+                <span class="preview-channel-btns">
+                  <button type="button" class="preview-btn preview-channel-btn preview-channel-btn-on"
+                          data-color-bg="bg_btn_on"
+                          data-color-text="text_color_tertiary"
+                          data-color-border="bd_btn_border"
+                          data-color-label="{{_('Button On')}}"
+                          aria-label="{{_('Click to edit Button On colors')}}">{{_('On')}}</button>
+                  <button type="button" class="preview-btn preview-channel-btn preview-channel-btn-off"
+                          data-color-bg="bg_btn_off"
+                          data-color-text="text_color_tertiary"
+                          data-color-border="bd_btn_border"
+                          data-color-label="{{_('Button Off')}}"
+                          aria-label="{{_('Click to edit Button Off colors')}}">{{_('Off')}}</button>
+                </span>
+              </div>
+              <div class="preview-channel-row preview-channel-off"
+                   role="button" tabindex="0"
+                   data-color-bg="bg_off"
+                   data-color-text="text_color_primary"
+                   data-color-label="{{_('Channel Off')}}"
+                   aria-label="{{_('Click to edit Channel Off colors')}}">
+                <span class="preview-channel-name">CH2 <span class="preview-channel-state-badge">{{_('Channel Off')}}</span></span>
+                <span class="preview-channel-btns">
+                  <button type="button" class="preview-btn preview-channel-btn preview-channel-btn-on"
+                          data-color-bg="bg_btn_on"
+                          data-color-text="text_color_tertiary"
+                          data-color-border="bd_btn_border"
+                          data-color-label="{{_('Button On')}}"
+                          aria-label="{{_('Click to edit Button On colors')}}">{{_('On')}}</button>
+                  <button type="button" class="preview-btn preview-channel-btn preview-channel-btn-off"
+                          data-color-bg="bg_btn_off"
+                          data-color-text="text_color_tertiary"
+                          data-color-border="bd_btn_border"
+                          data-color-label="{{_('Button Off')}}"
+                          aria-label="{{_('Click to edit Button Off colors')}}">{{_('Off')}}</button>
+                </span>
+              </div>
+              <div class="preview-channel-row preview-channel-pending"
+                   role="button" tabindex="0"
+                   data-color-bg="bg_pending"
+                   data-color-text="text_color_primary"
+                   data-color-label="{{_('Pending')}}"
+                   aria-label="{{_('Click to edit Pending colors')}}">
+                <span class="preview-channel-name">CH3</span>
+                <span class="preview-channel-status-text">{{_('Confirming')}}</span>
+              </div>
+              <div class="preview-channel-row preview-channel-fault"
+                   role="button" tabindex="0"
+                   data-color-bg="bg_warning"
+                   data-color-text="text_color_primary"
+                   data-color-label="{{_('Warning State')}}"
+                   aria-label="{{_('Click to edit Warning State colors')}}">
+                <span class="preview-channel-name">CH4</span>
+                <span class="preview-channel-status-text">{{_('No response')}}</span>
+              </div>
+              <div class="preview-channel-row preview-channel-unverified"
+                   role="button" tabindex="0"
+                   data-color-bg="tint_warning_bg"
+                   data-color-text="tint_warning_fg"
+                   data-color-label="{{_('Unverified Running Tint')}}"
+                   aria-label="{{_('Click to edit Unverified Running Tint colors')}}">
+                <span class="preview-channel-name">CH5</span>
+                <span class="preview-channel-status-text">{{_('Running (unconfirmed)')}}</span>
+              </div>
+            </div>
+
           </div><!-- /.preview-body -->
         </div><!-- /#aot-ui-preview -->
       </div><!-- /.aot-settings-section (Zone 1) -->
@@ -301,9 +393,14 @@
       <div class="aot-settings-group-title" id="group-state">{{_('State Colors')}}</div>
       <div class="aot-settings-section">
         {% set state_fields = [
-          ('bg_active',   _('Active State'),   _('Row background when a device/output is on')),
-          ('bg_inactive', _('Inactive State'), _('Row background when off, PID container background')),
-          ('bg_warning',  _('Warning State'),  _('Row/card background for offline or unresponsive devices'))
+          ('bg_active',   _('Active State'),   _('Whole-card highlight when active (IEC focus row, badges) — not the per-channel row below')),
+          ('bg_inactive', _('Inactive State'), _('Whole-card highlight when inactive, PID container background — not the per-channel row below')),
+          ('bg_warning',  _('Warning State'),  _('Row/card background for offline or unresponsive devices')),
+          ('bg_on',       _('Channel On'),     _('Output/input channel row background when on; also a general surface color in facility widgets')),
+          ('bg_off',      _('Channel Off'),    _('Output/input channel row background when off; also a general surface color in facility widgets')),
+          ('bg_pending',  _('Pending'),        _('Row background while a command awaits device confirmation')),
+          ('tint_warning_bg', _('Unverified Running Tint'), _('Overrides Channel On when a device with no confirmation path is running — forces this color even over bg_on')),
+          ('tint_warning_fg', _('Unverified Running Tint Text'), _('Text color used with the tint above, and on map-popup device name warnings'))
         ] %}
         {% for field_name, label, desc in state_fields %}
         <div class="aot-color-row" data-css-key="{{field_name}}">
@@ -643,7 +740,7 @@
         brand_primary: '#13261B', brand_secondary: '#5E6B64', brand_accent: '#F3F6F5',
         text_color_primary: '#13261B', text_color_secondary: '#5E6B64', text_color_tertiary: '#FFFFFF',
         bd_primary: '#FFFFFF', bd_secondary: '#F3F6F5',
-        badge_upgrade: '#13261B', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5', bg_warning: '#989E9E',
+        badge_upgrade: '#13261B', bg_active: '#D1D5D5', bg_inactive: '#F3F6F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#6277C7', bg_mcp: '#64C762',
         btn_primary_bg: '#13261B', btn_secondary_bg: '#5E6B64',
         bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
@@ -653,7 +750,7 @@
         brand_primary: '#0A2342', brand_secondary: '#2C5F8A', brand_accent: '#E8F4FD',
         text_color_primary: '#0A2342', text_color_secondary: '#2C5F8A', text_color_tertiary: '#FFFFFF',
         bd_primary: '#FFFFFF', bd_secondary: '#E8F4FD',
-        badge_upgrade: '#0A2342', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD', bg_warning: '#989E9E',
+        badge_upgrade: '#0A2342', bg_active: '#BDD7EE', bg_inactive: '#E8F4FD', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#4A90D9', bg_mcp: '#42A85A',
         btn_primary_bg: '#0A2342', btn_secondary_bg: '#2C5F8A',
         bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
@@ -663,7 +760,7 @@
         brand_primary: '#6B2737', brand_secondary: '#C0614D', brand_accent: '#FDF0EC',
         text_color_primary: '#6B2737', text_color_secondary: '#C0614D', text_color_tertiary: '#FFFFFF',
         bd_primary: '#FFFFFF', bd_secondary: '#FDF0EC',
-        badge_upgrade: '#6B2737', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC', bg_warning: '#989E9E',
+        badge_upgrade: '#6B2737', bg_active: '#F5C6BC', bg_inactive: '#FDF0EC', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#9B59B6', bg_mcp: '#27AE60',
         btn_primary_bg: '#6B2737', btn_secondary_bg: '#C0614D',
         bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
@@ -673,7 +770,7 @@
         brand_primary: '#2D2D2D', brand_secondary: '#6B6B6B', brand_accent: '#F5F5F5',
         text_color_primary: '#2D2D2D', text_color_secondary: '#6B6B6B', text_color_tertiary: '#FFFFFF',
         bd_primary: '#FFFFFF', bd_secondary: '#F5F5F5',
-        badge_upgrade: '#2D2D2D', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5', bg_warning: '#989E9E',
+        badge_upgrade: '#2D2D2D', bg_active: '#D0D0D0', bg_inactive: '#F5F5F5', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#5B7FA6', bg_mcp: '#4A9E5C',
         btn_primary_bg: '#2D2D2D', btn_secondary_bg: '#6B6B6B',
         bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
@@ -683,7 +780,7 @@
         brand_primary: '#BB86FC', brand_secondary: '#03DAC6', brand_accent: '#1E1E1E',
         text_color_primary: '#E1E1E1', text_color_secondary: '#B0B0B0', text_color_tertiary: '#121212',
         bd_primary: '#1E1E1E', bd_secondary: '#2C2C2C',
-        badge_upgrade: '#BB86FC', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C', bg_warning: '#989E9E',
+        badge_upgrade: '#BB86FC', bg_active: '#3C3C3C', bg_inactive: '#2C2C2C', bg_warning: '#989E9E', bg_on: '#B5BABA', bg_off: '#F3F6F5', bg_pending: '#F0AD4E', tint_warning_bg: '#FFF3E2', tint_warning_fg: '#94650A',
         bg_llm: '#7C5CBF', bg_mcp: '#00A896',
         btn_primary_bg: '#BB86FC', btn_secondary_bg: '#03DAC6',
         bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
@@ -706,6 +803,11 @@
       bg_active:            'bg-active',
       bg_inactive:          'bg-inactive',
       bg_warning:           'bg-warning',
+      bg_on:                'bg-on',
+      bg_off:               'bg-off',
+      bg_pending:           'bg-pending',
+      tint_warning_bg:      'tint-warning-bg',
+      tint_warning_fg:      'tint-warning-fg',
       bg_llm:               'bg-llm',
       bg_mcp:               'bg-mcp',
       btn_primary_bg:       'btn-primary-bg',

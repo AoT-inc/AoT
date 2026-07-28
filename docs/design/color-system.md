@@ -36,6 +36,9 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 | badge_upgrade | --bg-upgrade, --bg-btn-upgrade | --aot-bg-upgrade, --aot-btn-bg-upgrade |
 | bg_active / bg_inactive | --bg-* | --aot-bg-* |
 | bg_warning | --bg-pause | --aot-bg-pause |
+| bg_on / bg_off | --bg-on/off | --aot-bg-on/off |
+| bg_pending | --bg-hold | --aot-bg-hold |
+| tint_warning_bg / fg | (없음) | --aot-tint-warning-bg/fg |
 | bg_llm / bg_mcp | --bg-llm/mcp | --aot-color-llm/mcp |
 | btn_primary_bg | --bd-tertiary, --bd-btn-primary, --bg-btn-active | --aot-btn-bg-primary, --aot-btn-bg-active |
 | btn_secondary_bg | --bd-btn-secondary, --bg-btn-inactive | --aot-btn-bg-secondary, --aot-btn-bg-inactive |
@@ -165,6 +168,213 @@ custom_css()`, `utils_settings.settings_custom_ui_mod()` 저장 직전). 이렇�
   "실행 중이지만 확인 불가"(`paintUnverifiedRunning`) 인라인 틴트에 쓰인다.
   bg+fg 쌍으로 가독성이 맞춰져 있고, 후자는 "오프라인"과 다른 개념(확인 불가
   상태로 켜져 있음)이라 이번 범위에 넣지 않았다. 필요해지면 별도 필드로.
+
+## 3-4. `bg_on`/`bg_off`/`bg_pending` — 출력/입력 채널 행 배경 노출 (2026-07-27)
+
+**배경**: "output 카드의 각 채널 배경색은 상태에 따라 바뀌는데 custom_ui에서
+설정할 수 없다"는 지적. 조사해보니 §3-3에서 추가한 `bg_active`/`bg_inactive`
+가 이 채널 배경을 **전혀 통제하지 못하는** 사실이 드러났다 — 원인은 CSS
+특이도다: `aot/aot_flask/templates/pages/output_entry.html` 의 채널 행에는
+`.aot-entry-item-channel.active-background`/`.inactive-background` 규칙
+(`aot-entry-ui.css:655-661`)이 더 높은 특이도로 붙어 `--bg-on`/`--bg-off` 를
+읽는다 — `bg_active`/`bg_inactive` 가 발행하는 `--bg-active`/`--bg-inactive`
+(범용 `.active-background`, `aot-base.css:613-618`)와는 **다른 토큰**이다.
+`bg_active`/`bg_inactive` 는 여전히 유효하다 — 카드 전체(예: `output_status_*`
+의 device-level rollup, IEC 포커스 행) 하이라이트에는 실제로 쓰인다. 다만
+사용자가 보는 "채널 한 줄의 배경"은 이 필드가 아니었다.
+
+- `bg_on` ← `--bg-on`/`--aot-bg-on` (기본 `#B5BABA`). 출력/입력 **채널 행**
+  켜짐 배경. 또한 시설 위젯(`aot-facility-widget.css`)·센서 라벨
+  (`aot-sensor-label.css`)의 범용 "표면색"으로도 널리 재사용된다.
+- `bg_off` ← `--bg-off`/`--aot-bg-off` (기본 `#F3F6F5`). 채널 행 꺼짐 배경 +
+  동일한 범용 표면색 재사용.
+- `bg_pending` ← `--bg-hold`/`--aot-bg-hold` (기본 `#F0AD4E`). 명령 전송 후
+  장치 확인 대기 중(`aot-output-state.js` 의 `pending`) 배경 —
+  `aot-base.css` `.hold-background`. **`bg_btn_hold`(`--aot-btn-bg-hold`,
+  PID 유지 버튼)와는 다른 토큰**이니 혼동 금지 — 같은 함정이 §3-2 의
+  `btn_primary_bg` 통합 배경과 동일 유형(이름은 비슷한데 실제 소비처가 다름).
+- `fault`(오프라인) 상태는 이미 `bg_warning`(§3-3)이 커버한다 — 채널 행도
+  `.aot-entry-item-channel` 이 pause-background 를 오버라이드하지 않아
+  범용 `--bg-pause` 로 자연히 폴백되므로 별도 필드 불필요.
+
+**미리보기 캔버스**: "State Colors" 그룹 필드 6개 전부(active/inactive/
+warning/on/off/pending)가 실제로 무엇을 바꾸는지 시각적으로 검증할 수 있게
+Zone 1 미리보기에 4행짜리 "Output/Input Channel Preview" 블록을 신설했다
+(on/off/pending/fault 각 상태 + On/Off 버튼 재사용). `bg_active`/
+`bg_inactive` 는 여전히 미리보기 캔버스에 대응 요소가 없다(카드 레벨이라
+축소 미리보기로 표현하기 애매함 — 남은 과제).
+
+## 3-5. `tint_warning_bg`/`tint_warning_fg` — "실행 중, 확인 불가" 인라인 틴트 노출 (2026-07-27)
+
+**배경**: §3-4에서 `bg_on`/`bg_off`를 노출한 뒤, "output 카드에 다른 색이
+강제 적용된다"는 재확인 요청이 있었다. 조사 결과 `aot-output-state.js`
+`paintUnverifiedRunning()`(파일 139~157행)이 원인이었다 —
+`comm_capable(output_id) === false`(응답/ACK 확인 경로가 없는 fire-and-
+forget 출력) 이면서 채널이 켜져 있을 때, **채널 행 엘리먼트에 인라인
+`style.setProperty('background-color', ..., 'important')`** 를 매 폴링(1초)
+마다 강제 적용한다(`output.html:184, 234`). 인라인 `!important` 는 시트의
+`!important`(`.aot-entry-item-channel.active-background`, §3-4)보다
+**항상** 우선하므로, 이 조건에 해당하는 장치는 `bg_on` 값과 무관하게 항상
+이 틴트로 보인다 — "다른 색이 강제 적용된다"는 관찰이 정확했다.
+
+- `tint_warning_bg` ← `--aot-tint-warning-bg` (기본 `#FFF3E2`, 연한 주황).
+- `tint_warning_fg` ← `--aot-tint-warning-fg` (기본 `#94650A`) — 같은 함수가
+  지도 팝업 이름 강조(`paintNameWarning`)에서 배경+글자 둘 다 바꿀 때 쓰는
+  글자색. bg/fg 쌍으로 가독성이 맞춰져 있으니 **둘을 함께 바꿀 것**.
+- §3-3에서는 이 토큰을 "다른 개념이라 통합하지 않는다"며 노출을 미뤘으나,
+  실사용에서 "강제 적용"으로 체감되는 사례가 나와 이번에 노출했다 —
+  **일부러 숨겨둔 게 아니라 아직 노출 안 한 하드코딩이었을 뿐**이라는
+  원칙(§1 레거시 별칭 확장과 동일 맥락)에 따른 결정.
+- 이 틴트는 **끄는 옵션이 아니다** — "확인할 수 없는데 켜져 있다"는 사실을
+  안전상 항상 표시해야 하므로, 노출 목적은 "이 색을 안 보이게" 가 아니라
+  "이 색을 사용자가 원하는 색으로" 다.
+
+**미리보기**: 채널 미리보기에 5번째 행(CH5, "실행 중 (확인 불가)")을 추가.
+
+## 3-6. 채널 미리보기 On/Off 버튼 — 실제 캐스케이드 재현 (2026-07-27)
+
+첫 구현에서는 CH1(켜짐)·CH2(꺼짐) 두 행 모두 On 버튼을 무조건 `bg_btn_on`
+(밝은색)으로 그려, "On 버튼이 모든 행에서 초록색이라 켜짐/꺼짐 구분이
+안 된다"는 피드백을 받았다. 실제 앱(`aot-entry-ui.css`)을 보면 애초에
+그렇게 동작하지 않는다:
+
+```css
+.aot-btn-on { background-color: var(--bg-btn-off, ...); }   /* 기본값: 흐림 */
+.aot-entry-item-channel.active-background .aot-btn-on {
+  background-color: var(--bg-btn-on, ...);                  /* 켜짐 행일 때만 밝음 */
+}
+.aot-btn-off { background-color: var(--bg-btn-off, ...); }  /* 항상 흐림 */
+```
+
+즉 실제 앱도 On 버튼 자체가 "밝음"인 건 **행이 켜짐 상태일 때뿐**이고,
+꺼짐 행에서는 On/Off 버튼이 똑같이 흐리게 보인다 — 상태를 구분하는 신호는
+행 배경색이지 버튼색이 아니다. 미리보기를 이 캐스케이드 그대로 재현하도록
+전용 클래스(`.preview-channel-btn-on/off`, 상단 독립 버튼 미리보기와는
+별개)로 수정했고, 채널명 옆에 상태 텍스트("채널 켜짐"/"채널 꺼짐")도
+추가해 이중으로 명확하게 했다.
+
+## 3-7. Actuator Paired 자가구동 행 배경색 미반영 버그 (2026-07-27, output.html)
+
+색상 노출과는 별개로, 색상을 검증하는 과정에서 발견한 **진짜 상태-반영 버그**.
+Actuator Paired 출력이 작동 중인데도 행 배경(`active-background`/`bg_on`)이
+전혀 바뀌지 않는다는 신고 — 재현해보니 색상 설정 문제가 아니라
+`output.html`의 폴링 로직(`gpioState()`) 버그였다.
+
+- 페어링 행의 `anyActive`(→ active/inactive-background 결정)는 오직
+  `data[openId][openCh]`/`data[closeId][closeCh]`(설정된 open/close 대상
+  출력의 상태)만 본다.
+- 그런데 `output_channel.custom_options`에 `travel_time_open_sec` 등
+  자체 이동시간을 갖는 **자가구동형** 설정(`output_open_id`/
+  `output_close_id` 미설정, 이 인스턴스의 "천창1"이 이 케이스)은 별도
+  open/close 대상 출력이 없다 — `openId`/`closeId` 가 항상 빈 문자열이라
+  `anyActive` 가 **영원히 false** 로 고정된다.
+- 반면 위치(%) 라벨(`posEl`)은 같은 파일 바로 아래에서 `data[oid][ch]`
+  (페어링 출력 자신의 상태, `actuator_paired.py` 의
+  `output_states[channel] = position%`)를 이미 읽고 있었다 — 즉 위치
+  텍스트는 정확히 갱신되는데 배경색만 이 신호를 안 쓰고 있었다.
+- 수정: `anyActive` 계산에 자기 자신의 상태(`ownSt`/`ownActive`)를
+  fallback으로 추가(`output.html` 208행 부근). open/close 대상이 설정된
+  기존 방식에는 영향 없음(OR 조건 추가일 뿐).
+- 로컬에서 `$.getJSON` 몽키패치로 `/outputstate` 응답에 위치값을 주입해
+  수정 전/후 행동을 모두 확인(활성→배경 변경, 해제→원복).
+
+## 3-8. Actuator Paired 자가구동 Open/Close 버튼 강조 미반영 (2026-07-27, 후속)
+
+§3-7 수정으로 행 배경은 정상화됐지만, Open/Close **버튼** 강조는 별개
+문제로 남아있었다 — 신고: "열기/닫기 상태가 되면 버튼도 On 과 같은 색이
+적용돼야 함".
+
+- 버튼 강조는 `openActive`/`closeActive`(§3-7과 같은 변수)로 결정되는데,
+  자가구동 액추에이터는 `openId`/`closeId` 가 항상 빈 문자열이라 이 둘이
+  **항상 false** — 행은 `active-background` 로 정상 전환돼도 Open/Close
+  버튼 둘 다 `aot-paired-inactive`(흐림)에 갇혀 있었다.
+- 근본 이유: 폴링 데이터(`data[oid][ch]`)는 현재 **위치**(%) 만 담고 있고
+  **방향**(여는 중/닫는 중)은 없다 — 서버가 방향을 별도로 노출하지 않는다.
+- 수정: 사용자가 마지막으로 누른 버튼(Open/Close/Stop)을 클라이언트 측
+  `pairedLastDirection` 맵에 기억해두고(`actuator_paired_cmd()`), 자가구동
+  케이스(`!openId && !closeId`)에서만 이를 `openActive`/`closeActive` 의
+  대체 신호로 사용. open/close 대상이 설정된 기존(위임형) 방식은 그대로
+  실제 상태를 쓰므로 영향 없음.
+- **알려진 한계**: 이 기억은 브라우저 세션에 한정된다 — 페이지를 새로
+  불러온 시점에 이미 다른 세션/사용자가 눌러 작동 중이던 액추에이터는
+  행 배경(active-background)은 정확히 뜨지만 어느 버튼인지는(방향 정보
+  자체가 폴링 데이터에 없어) 알 수 없어 강조되지 않는다. 서버가 방향을
+  노출하기 전까지는 구조적 한계.
+- 로컬에서 실제 Open/Close 버튼을 클릭 + `/outputstate` 위치값 주입으로
+  양방향(Open 강조/Close 흐림, 그 반대) 모두 확인.
+
+## 3-9. 로딩 시 ON 상태 색 순간 반짝임 — commCapable 레이스 (2026-07-27)
+
+신고: "on 상태 배경색 — 실행중 확인불가 색이 로딩할 때는 맞다가 바로
+다른 색이 됨". 실 데이터가 실시간으로 계속 바뀌던 중이라 직접 재현은
+못 했지만, 코드에서 정확히 이 증상을 만드는 레이스를 확인했다.
+
+`$(function () { loadCommCapable(); gpioState(); setInterval(...); })` —
+`loadCommCapable()`(comm_capable 여부, 1회성)과 `gpioState()`(1초 주기
+상태 폴링)가 순서 보장 없이 동시에 발사된다. `commCapable` 는 fetch
+완료 전까지 `{}`이고, 가드 주석이 명시하듯 "정말 확인 불가로 확정됐을
+때만 true, 아직 응답이 안 왔다고 true가 되면 안 됨" — 그런데 이 가드는
+**반대 방향**(틴트가 잘못 켜지는 것)만 막고, `gpioState()`의 첫 틱이
+`loadCommCapable()`보다 먼저 도착하는 경우 그 한 틱 동안은
+`commCapable[output_id] === false` 가 `false`(아직 모름 = 확인 가능
+취급)로 읽혀 **원래 켜져야 할 틴트 없이** `bg_on` 으로 그려지고, 다음
+틱(1초 후)에 `commCapable` 가 채워지며 틴트로 바뀐다 — "로딩 때 색 →
+곧 다른 색" 그 자체.
+
+수정: `loadCommCapable()` 이 `$.getJSON`(jqXHR/Deferred)을 반환하도록
+하고, `gpioState()`·`setInterval` 시작을 `.always(...)` 콜백 안으로
+옮겨 **1회성 capability 조회가 끝날 때까지 첫 상태 폴링을 미룸**.
+이후 1초 주기 폴링(steady state)은 그대로 — 최초 페인트 시점만
+지역 네트워크 왕복 1회만큼(로컬 기준 수십 ms) 늦춰진다.
+
+## 3-10. 위젯 색상 토큰 전수 조사 및 수정 (2026-07-27)
+
+"이번 세션에서 바뀐/노출한 색상 토큰이 위젯에도 제대로 적용되는가"를
+27개 위젯 전수 조사했다. 결과: `AoT_controller`/`AoT_timer`/
+`widget_output_pwm_slider`/`widget_trigger_sequence`/`widget_notice`
+등 대부분의 상태색 위젯은 이미 공유 클래스(`.active-background` 등)를
+통해 정상 연동돼 있었다 — 특히 `widget_trigger_sequence.py` 는 이번
+세션에 노출한 `bg_pending`(`--bg-hold`)까지 이미 정상 소비 중이었다.
+아래 3건은 실제로 문제였다.
+
+**① `AoT_PID.py` — 토큰 뒤바뀜(진짜 버그)**: `.active-background`(PID
+작동 중)가 `--bg-inactive` 를, `.inactive-background`/`.pause-
+background`/`.hold-background`(꺼짐·일시정지·유지)가 전부 `--bg-active`
+를 쓰고 있었다 — custom_ui.html 의 `bg_inactive` 도움말 문구
+("PID container background")와도 모순되는, 관리자가 설정한 색과
+정반대로 보이는 버그. `active→bg_active`, `inactive→bg_inactive`,
+`pause→bg_pause`(=bg_warning), `hold→bg_hold`(=bg_pending, 현재 JS는
+paused/held 를 모두 pause-background 로만 보내 hold 분기는 아직
+미사용이지만 관례에 맞춰 정정)로 수정. 실제 PID 위젯(유일하게 1개
+존재)으로 inactive 상태가 `#F3F6F5`(bg_inactive)로 정확히 렌더되는지
+확인.
+
+**② `map.css` `.device-label.device-on` — 가짜 var() (§5-3 유형)**:
+`var(--device-label-color, #32c85a)` 를 쓰는데 `--device-label-color`
+는 CSS·JS 어디에도 정의된 적이 없는 죽은 참조라 **항상 폴백
+`#32c85a` 로만 렌더** — custom_ui 와 완전히 무관했다. 실제 켜짐 표시
+개념과 일치하는 `--bg-on` 으로 교체. (조사 중 `AoT_map.py` 의
+`WIDGET_HEAD_HTML_RASTER`/`_VECTOR` 상수 안에도 같은 유형의 하드코딩
+`.marker-pill.device-on{background:#28a745}` 이 있었으나, 두 상수 모두
+`WIDGET_INFORMATION` 어디에서도 참조되지 않는 **완전한 죽은 코드**임을
+확인 — 실수로 먼저 고쳤다가 되돌리고 실제 라이브 경로인 map.css 만
+수정했다. 위젯 .py 안의 문자열이라고 무조건 라이브 코드가 아니다 —
+`WIDGET_INFORMATION` 딕셔너리에서 실제로 참조되는지 항상 확인할 것.)
+
+**③ 위젯 카드(`​.widget-outer`) 배경 — 지금까지 완전히 투명**:
+`aot-modal-modern.css` 자체 주석이 "위젯 카드는 원래 투명해서 대시보드
+배경을 그대로 비침"이라고 명시할 만큼 의도된 설계였다 — `bd_primary`/
+`bd_secondary` 를 아무리 바꿔도 위젯 카드에는 영향이 없었다. 사용자
+확인 후 `bootstrap-4-themes/aot.css` `.widget-outer` 에
+`background-color: var(--bd-primary, #FFFFFF)` 추가로 테마화.
+**중요 발견**: `bd_primary` 는 이미 `--primary: var(--bd-primary, #fff)`
+로 Bootstrap 코어 변수와 연결돼 있어 **네비게이션 바 배경
+(`.navbar.main-navbar { background-color: var(--primary); }`) 을
+포함해 이미 광범위하게 쓰이고 있었다** — 위젯 카드 배경 부재는
+그 넓은 반경 안의 "안 뚫린 구멍" 하나였을 뿐, `bd_primary` 자체가
+고립된 토큰은 아니었다. `bd_primary` 를 바꾸면 네비게이션 바와
+위젯 카드가 동시에 바뀐다는 점을 UI 문구에도 반영할 필요가 있다
+(후속 과제).
 
 ## 4. 사용자 프리셋
 
