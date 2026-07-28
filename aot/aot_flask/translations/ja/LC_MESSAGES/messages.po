@@ -8175,6 +8175,10 @@ msgstr "新規マップ設計"
 msgid "map_not_found"
 msgstr "マップが見つかりません"
 
+#: aot_flask/static/js/geo/aot-geo-design-v3.js:1936
+msgid "map_load_failed"
+msgstr "マップの読み込みに失敗しました。もう一度お試しください。"
+
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1941
 msgid "new_map_autosaved"
 msgstr "新しい地図が自動保存されました"

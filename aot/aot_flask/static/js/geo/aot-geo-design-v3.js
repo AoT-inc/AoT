@@ -1928,18 +1928,16 @@ class AoTGeoDesign {
                     return;
                 }
 
-                // First access (design entry not yet created) — auto-init and save
-                if (!this.currentMapName || this.currentMapName === "Design Map" || this.currentMapName === _('design_map_new')) {
-                    this.currentMapName = _('design_map_new');
-                }
-                this.lastLoadedName = this.currentMapName;
-                this._updateUIHeader();
-
-                applyFullState({});
-
-                this.saveDesign().then(() => {
-                    this.ui.showToast(_('new_map_autosaved'), 'success');
-                });
+                // Any other failure (timeout, 5xx, a transient network blip — e.g.
+                // during a backend restart) is NOT proof this design was never
+                // saved. Treating every non-404 error as "first access" and
+                // auto-saving a blank state here used to wipe a live farm's
+                // design map: a few seconds of backend downtime made the fetch
+                // fail, and this handler silently persisted an empty design over
+                // real content. Never auto-save on a load failure — leave
+                // whatever is already on screen untouched and let the user retry.
+                console.error('[GeoDesign] Failed to load design for', uuid, err);
+                this.ui.showToast(_('map_load_failed') || 'Failed to load the map. Please retry.', 'error');
             });
         }
     }
