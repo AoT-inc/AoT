@@ -172,6 +172,19 @@
           </div>
         </div>
 
+        <div class="aot-modal-option-row">
+          <div class="aot-modal-option-label">
+            {{form_settings_general.mcp_http_enabled.label(class_='mb-0 aot-toggle-label')}}
+          </div>
+          <div class="aot-modal-option-control">
+            <label class="btn-toggle mb-0">
+              <input type="checkbox" class="btn-toggle-input" id="mcp_http_enabled" name="mcp_http_enabled" title="{{_('Allow external MCP clients (e.g. Claude Desktop) to reach this AoT instance over HTTP. Toggling this takes effect immediately, without restarting anything.')}}"{% if ai_settings and ai_settings.mcp_http_enabled %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+        <div class="aot-modal-body-text" style="padding-top:0.5rem; padding-bottom:0.5rem;">{{_('This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service\'s "ports:" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service.')}}</div>
+
       </div>
 
       <!-- Section: Time-series Database -->

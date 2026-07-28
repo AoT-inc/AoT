@@ -210,6 +210,7 @@ class SettingsGeneral(FlaskForm):
         lazy_gettext('Internet Test Timeout'), widget=NumberInput())
 
     ai_enabled = BooleanField(lazy_gettext('Enable AI Service'))
+    mcp_http_enabled = BooleanField(lazy_gettext('Enable External MCP Server'))
 
     sample_rate_controller_conditional = DecimalField(
         "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Conditional')),

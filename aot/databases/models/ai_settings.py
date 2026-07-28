@@ -39,6 +39,15 @@ class AIGlobalSettings(CRUDMixin, db.Model):
     # Feature Toggle
     ai_enabled = db.Column(db.Boolean, default=False, nullable=False)
 
+    # External MCP HTTP server master switch. Checked per-request by
+    # aot_mcp_server.py's _run_http_server() routes — when False, the server
+    # refuses every request with 503 regardless of API key validity. This
+    # only gates whether the already-listening process answers; it cannot
+    # change the bind address/port (those are fixed by docker-compose.yml's
+    # `ports:` mapping or the aotmcp.service systemd unit, set at container/
+    # process start and outside the running process's control).
+    mcp_http_enabled = db.Column(db.Boolean, default=True, nullable=True)
+
     # Context Layer Toggle
     context_broadcast_enabled = db.Column(db.Boolean, default=True, nullable=True)
 

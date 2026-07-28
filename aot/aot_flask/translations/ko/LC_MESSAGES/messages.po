@@ -6028,6 +6028,18 @@ msgstr "인터넷 테스트 타임아웃"
 msgid "Enable AI Service"
 msgstr "AI 서비스 사용"
 
+#: aot_flask/forms/forms_settings.py:213
+msgid "Enable External MCP Server"
+msgstr "외부 MCP 서버 활성화"
+
+#: aot_flask/templates/settings/general.html:181
+msgid "Allow external MCP clients (e.g. Claude Desktop) to reach this AoT instance over HTTP. Toggling this takes effect immediately, without restarting anything."
+msgstr "외부 MCP 클라이언트(예: Claude Desktop)가 HTTP로 이 AoT 인스턴스에 접속하도록 허용합니다. 이 토글은 재시작 없이 즉시 반영됩니다."
+
+#: aot_flask/templates/settings/general.html:186
+msgid "This only allows or refuses requests to the external MCP server that is already running. The address and port it listens on are not configured here: for Docker, edit the aot_mcp service's \"ports:\" entry in docker-compose.yml and re-run docker compose up -d; for a native install, edit and restart the aotmcp systemd service."
+msgstr "이 설정은 이미 실행 중인 외부 MCP 서버가 요청에 응답할지 여부만 제어합니다. 서버가 대기하는 주소와 포트는 여기서 설정할 수 없습니다 — Docker 환경은 docker-compose.yml의 aot_mcp 서비스 \"ports:\" 항목을 수정한 뒤 docker compose up -d로 재기동해야 하고, 네이티브 설치는 aotmcp systemd 서비스를 수정하고 재시작해야 합니다."
+
 #: aot_flask/forms/forms_settings.py:214 aot_flask/forms/forms_settings.py:217
 #: aot_flask/forms/forms_settings.py:220 aot_flask/forms/forms_settings.py:223
 #: aot_flask/forms/forms_settings.py:226 aot_flask/forms/forms_settings.py:229

@@ -614,8 +614,24 @@ def _run_http_server(app, port=5700):
     """
     from flask import Flask, request, jsonify
     from aot.ai.services import mcp_auth
+    from aot.databases.models import AIGlobalSettings
 
     http_app = Flask("aot_mcp_http")
+
+    def _http_server_enabled():
+        # Checked fresh every request (not cached) so the Settings > General >
+        # AI Service toggle takes effect immediately — no restart of this
+        # process/container needed. Defaults to enabled if the row doesn't
+        # exist yet, matching the column's own default.
+        with app.app_context():
+            settings = AIGlobalSettings.query.first()
+        return settings is None or settings.mcp_http_enabled is not False
+
+    @http_app.before_request
+    def _gate_disabled():
+        if not _http_server_enabled():
+            return jsonify({"error": "External MCP server is disabled in "
+                                      "Settings > General > AI Service."}), 503
 
     @http_app.route("/mcp/info", methods=["GET"])
     def info():

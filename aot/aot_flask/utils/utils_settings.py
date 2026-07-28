@@ -789,6 +789,7 @@ def settings_general_mod(form):
                     mod_ai_settings = AIGlobalSettings()
                     db.session.add(mod_ai_settings)
                 mod_ai_settings.ai_enabled = form.ai_enabled.data
+                mod_ai_settings.mcp_http_enabled = form.mcp_http_enabled.data
 
                 mod_user = User.query.filter(
                     User.id == flask_login.current_user.id).first()
