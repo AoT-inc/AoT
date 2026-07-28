@@ -609,6 +609,7 @@ TOOLS: List[Tool] = [
     Tool('get_weather_forecast', handler='get_weather_forecast'),
     Tool('get_anomalies', handler='get_anomalies'),
     Tool('get_crop_status', handler='get_crop_status'),
+    Tool('get_output_state', handler='get_output_state'),
 
     # --- @ANCHOR: ADVICE_LEDGER_TOOLS -------------------------------------------
     # 다자 AI 의견 원장. submit_advice 는 DB에 행을 쓰지만 의도적으로 mutating 이
@@ -1531,6 +1532,18 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "facility_id": {"type": "string", "description": "Filter by facility unique_id."},
                 "facility_name": {"type": "string", "description": "Filter by facility name. Omit for all."}
             }
+        }
+    },
+    {
+        "tool_name": "get_output_state",
+        "description": "Current ON/OFF state of an output device (valve, pump, relay, etc.) - the read counterpart to set_output_state, which has no way to check what it just toggled. For each channel, returns the live state, how many seconds it has been on, and (when available) the timestamp it actually turned on - taken from the same start-of-session marker the timer widget uses, so confirmation-based outputs (e.g. LoRaWAN) reflect the confirmed time, not the dispatch time. get_control_state only covers actuators registered to an environment-control coordinator; use this for any other output. Does not cover on/off history - only the current session. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {"type": "string", "description": "Output unique_id. Required."},
+                "channel": {"type": "integer", "description": "Restrict to one channel index. Omit for all channels on this device."}
+            },
+            "required": ["device_id"]
         }
     },
 

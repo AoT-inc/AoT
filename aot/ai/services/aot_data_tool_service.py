@@ -5123,6 +5123,86 @@ class AoTDataToolService:
             return {"status": "error", "message": str(e)}
 
     @staticmethod
+    def get_output_state(device_id, channel=None, **extra):
+        """[읽기전용] 출력장치(밸브/펌프/릴레이 등)의 현재 ON/OFF 상태.
+
+        set_output_state(쓰기)의 짝이 되는 읽기 도구 — 이게 없으면 AI가 장치를
+        끄고 켤 수는 있어도 "지금 켜져 있는지"는 확인할 방법이 없었다.
+        get_control_state는 env_coordinator에 등록된 액추에이터만 커버해서
+        일반 밸브/펌프에는 못 쓴다 (그건 그 나름대로 목적이 다르다).
+
+        세 가지를 합친다:
+          - 실시간 on/off 상태: DaemonControl.output_states_all() (데몬 다운 시
+            안전하게 빈 dict를 반환하도록 이미 처리되어 있음)
+          - 켜진 지속시간(초): DaemonControl.output_sec_currently_on()
+          - 정확히 언제 켜졌는지: InfluxDB의 output_started_at (base_output.py가
+            켜질 때마다 기록 — LoRaWAN처럼 컨펌이 필요한 장치는 실제 컨펌된
+            시점 기준이라 커맨드 전송 시각보다 정확하다). AoT_timer 위젯이 쓰는
+            것과 같은 조회 로직(_read_latest_started_at)을 그대로 재사용한다 —
+            KST/UTC 오인식 같은 이미 검증된 예외 처리를 중복 구현하지 않기 위해.
+
+        과거 on/off 반복 이력(언제 껐다 켰다 했는지)은 다루지 않는다 — 그건
+        InfluxDB를 직접 시계열로 조회해야 하는 별개 질문이다.
+        """
+        try:
+            if isinstance(device_id, dict):
+                results = device_id.get('results') or device_id.get('result', {}).get('results', [])
+                if results and isinstance(results, list):
+                    device_id = results[0].get('id') or results[0].get('unique_id') or results[0].get('device_id')
+            if not device_id or not isinstance(device_id, str):
+                return {"error": "device_id is required (string UUID)"}
+
+            output = Output.query.filter_by(unique_id=device_id).first()
+            if not output:
+                return {"error": f"No Output found with unique_id {device_id}"}
+
+            from aot.aot_client import DaemonControl
+            from aot.widgets.AoT_timer import _read_latest_started_at
+
+            daemon = DaemonControl()
+            all_states = daemon.output_states_all() or {}
+            channel_states = all_states.get(device_id, {})
+
+            if not channel_states:
+                return {
+                    "status": "success",
+                    "device_id": device_id,
+                    "name": output.name,
+                    "channels": {},
+                    "message": "No live state available (daemon may be down, or this "
+                               "output hasn't been read since it started)."
+                }
+
+            wanted_channels = [channel] if channel is not None else sorted(channel_states.keys())
+            channels_out = {}
+            for ch in wanted_channels:
+                if ch not in channel_states:
+                    continue
+                entry = {"state": channel_states[ch]}
+                try:
+                    entry["seconds_on"] = daemon.output_sec_currently_on(device_id, ch)
+                except Exception:
+                    entry["seconds_on"] = None
+                try:
+                    started = _read_latest_started_at(device_id, ch, lookback_sec=7 * 86400)
+                    if started:
+                        entry["started_at"] = serialize_ts(
+                            datetime.utcfromtimestamp(started["selected_epoch"]))
+                except Exception:
+                    pass
+                channels_out[str(ch)] = entry
+
+            return {
+                "status": "success",
+                "device_id": device_id,
+                "name": output.name,
+                "channels": channels_out
+            }
+        except Exception as e:
+            logger.exception("Error in get_output_state")
+            return {"error": str(e)}
+
+    @staticmethod
     def get_weather_forecast(hours=24, **extra):
         """[읽기전용] 기상청 단기예보 — 선제 제어 조언의 근거.
 
