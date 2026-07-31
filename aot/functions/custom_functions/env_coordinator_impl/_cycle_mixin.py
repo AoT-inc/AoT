@@ -4,6 +4,7 @@ _cycle_mixin.py — CycleMixin: _run_cycle() (L1→L2→L3 pipeline).
 """
 
 import time
+from datetime import timedelta
 
 from aot.functions.utils.env_control.active_probe import ActiveProbeScheduler
 from aot.functions.utils.env_control.actuator_feedback import ActuatorFeedbackRegistry
@@ -26,6 +27,7 @@ from aot.functions.utils.env_control.forecast_feedforward import (
     build_feedforward_signal_from_forecast,
     FeedforwardSignal, apply_feedforward, build_feedforward_signal,
 )
+from aot.functions.utils.env_control.safety_gates import is_wetting_fogger
 from aot.functions.utils.env_control.situation import assess, decompose_vpd_to_T_RH
 
 
@@ -171,6 +173,53 @@ def apply_temp_humid_threshold_overrides(internal: dict, profiles, final_cmds: d
                 final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'humid_min'}
 
 
+def apply_nursery_fog_derate(internal: dict, profiles, final_cmds: dict) -> None:
+    """육묘장 모드: 일사가 올라가는 구간에서 습윤형 분무 명령을 선형 감쇠한다.
+
+    하드 잠금(광량 >= lockout)은 안전 프리게이트가 GATE_BIT_FOG_SUNBURN 으로
+    처리한다. 여기서는 그 아래 구간을 다룬다 — release 미만은 그대로 두고,
+    release~lockout 사이에서 1 → 0 으로 줄인다. 해가 뜨는 동안 분무가
+    100%에서 0으로 절벽처럼 끊기지 않고 서서히 잦아들게 하기 위함이다.
+
+    펄스 도징이 켜져 있으면 이 감쇠는 곧 "펄스 길이 축소"로 나타난다.
+
+    `humid_min` 하드 임계가 분무를 100%로 강제한 뒤에 호출되어야 한다 —
+    사용자가 설정한 최저 습도 때문에 일소 위험을 무릅쓰게 두면 안 된다.
+    습도 하한 자체는 잠금 해제 시각(아침·저녁)에 회복된다.
+    """
+    if not internal.get('_nursery_mode'):
+        return
+    if internal.get('evening_block'):
+        # 저녁 차단은 안전 게이트가 0 으로 강제한다 — 여기서 감쇠할 대상이 아니다.
+        return
+    light = internal.get('light_est')
+    if light is None:
+        # 게이트와 같은 폴백을 쓴다 — 잠금은 걸리는데 그 아래 구간의 감쇠만
+        # 빠지면, 센서 없는 시설에서 분무가 절벽처럼 끊긴다.
+        light = internal.get('_nursery_light_fallback')
+    if light is None:
+        return
+    lockout = float(internal.get('_nursery_solar_lockout') or 0.0)
+    release = float(internal.get('_nursery_solar_release') or 0.0)
+    if lockout <= 0.0 or lockout <= release or light <= release:
+        return
+
+    scale = max(0.0, min(1.0, (lockout - light) / (lockout - release)))
+    for p in profiles:
+        if not is_wetting_fogger(p):
+            continue
+        cmd = final_cmds.get(p.actuator_id)
+        if not cmd:
+            continue
+        value = cmd.get('value', 0.0) if isinstance(cmd, dict) else getattr(cmd, 'value', 0.0)
+        if value <= 0.0:
+            continue
+        final_cmds[p.actuator_id] = {
+            'value': value * scale,
+            'reason': 'nursery_fog_derate',
+        }
+
+
 def apply_threshold_and_gate_overrides(
         internal: dict, profiles, final_cmds: dict, partial_overrides: dict) -> None:
     """임계 오버라이드(광량·온습도) + 안전 프리게이트를 **정해진 순서로** 적용.
@@ -184,10 +233,15 @@ def apply_threshold_and_gate_overrides(
     게이트는 자신이 명령한 액추에이터만 덮으므로, 풍하측 개구부는 냉방을 위해
     계속 열릴 수 있다.
 
+    육묘 분무 감쇠는 온습도 임계 뒤에 온다 — `humid_min` 이 분무를 100%로
+    강제한 뒤에 깎아야 습도 하한 설정이 일소 위험을 무효화하지 못한다.
+    안전 프리게이트(하드 잠금 포함)는 그보다 뒤, 여전히 최우선이다.
+
     이 순서 보장이 리팩터링으로 조용히 깨지는 것을 막으려고 한 함수로 묶었다.
     """
     apply_light_threshold_overrides(internal, profiles, final_cmds)
     apply_temp_humid_threshold_overrides(internal, profiles, final_cmds)
+    apply_nursery_fog_derate(internal, profiles, final_cmds)
     if partial_overrides:
         for aid, override in partial_overrides.items():
             final_cmds[aid] = override
@@ -249,6 +303,102 @@ class CycleMixin:
             self._probe_scheduler_inst = ActiveProbeScheduler(
                 interval_sec=probe_interval, enabled=probe_enabled)
         return self._probe_scheduler_inst
+
+    def _compute_light_est(self, internal: dict) -> None:
+        """실내 추정 광량을 internal['light_est'] 에 채우고 육묘 설정을 함께 싣는다.
+
+        실내 광센서가 없어 실외 일사가 그대로 들어온 경우에만(_light_is_outdoor)
+        차광막 개도를 반영한 추정치로 바꾼다. 실내 센서가 있으면 이미 차광이
+        반영된 값이므로 손대지 않는다.
+
+        육묘 옵션(_nursery_*)도 여기서 internal 에 넣는다. 오버라이드 함수들이
+        모듈 레벨 함수라 코디네이터 인스턴스에 접근할 수 없으므로, 기존
+        `_force_*` 플래그와 같은 경로로 전달한다.
+        """
+        light_val = internal.get('light')
+        if light_val is not None and internal.get('_light_is_outdoor'):
+            est = estimate_indoor_light(
+                light_val, self._profiles, self._coord_state.prev_commands,
+                default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
+            if est != light_val and getattr(self, 'debug_logging', False):
+                self.logger.debug(
+                    '실내광 추정: 실외 %.0f → %.0f W/m² (차광막 개도 반영)',
+                    light_val, est)
+            light_val = est
+        if light_val is not None:
+            internal['light_est'] = light_val
+
+        if getattr(self, 'nursery_mode', False):
+            internal['_nursery_mode'] = True
+            internal['_nursery_solar_lockout'] = float(
+                getattr(self, 'nursery_solar_lockout', 250.0) or 250.0)
+            internal['_nursery_solar_release'] = float(
+                getattr(self, 'nursery_solar_release', 150.0) or 150.0)
+            if light_val is None:
+                internal['_nursery_light_fallback'] = self._clear_sky_light_fallback()
+            if self._evening_fog_blocked():
+                internal['evening_block'] = True
+
+    def _clear_sky_light_fallback(self):
+        """일사 센서가 전혀 없을 때 쓸 광량 어림값(W/m²). 못 구하면 None.
+
+        일소 게이트는 광량을 모르면 잠그지 않는다 — 야간에 계속 잠겨 정상 가습까지
+        막는 것이 더 해롭기 때문이다. 그런데 그 결과, **일사 센서가 없는 시설은
+        일소 보호가 아예 꺼진 채로 돌아간다.** 육묘장에서 정오에 분무가 그대로
+        나가는 상황이 조용히 성립한다.
+
+        좌표만 있으면 태양고도로 맑은 날 기준 일사를 어림할 수 있다(§13.9).
+        측정값이 아니므로 **측정값이 하나라도 있으면 절대 쓰지 않고**, 없을 때만
+        차광막 개도를 반영해 실내 추정으로 환산한다. 맑은 하늘 가정이라 과대평가
+        쪽이며, 이는 일소 보호에서 안전한 방향이다.
+        """
+        try:
+            from aot.utils.solar import clear_sky_irradiance
+            outdoor = clear_sky_irradiance(target_id=self.unique_id)
+            if outdoor is None:
+                return None
+            return estimate_indoor_light(
+                outdoor, self._profiles, self._coord_state.prev_commands,
+                default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
+        except Exception as exc:
+            if getattr(self, 'debug_logging', False):
+                self.logger.debug('맑은날 광량 어림 실패(폴백 없음): %s', exc)
+            return None
+
+    def _evening_fog_blocked(self) -> bool:
+        """지금이 '일몰 전 분무 중단' 구간인가.
+
+        관수는 보통 일출·일몰 두 시간대에 하는데, 저녁 분무는 잎이 젖은 채로
+        밤을 넘기게 만든다. 엽면 습윤 지속 시간이 길수록 잿빛곰팡이·노균병
+        위험이 커지고, 육묘장은 밀식이라 확산이 빠르다. 작물에 따라 저녁
+        관수가 필요한 경우도 있으므로 사용자가 켜고 끌 수 있게 둔다.
+
+        차단 구간: (일몰 − cutoff) ~ 다음 일출.
+        태양시를 구하지 못하면(좌표 미설정 등) 차단하지 않는다 — 위치를
+        모른다고 정상 가습까지 막으면 오히려 해롭다.
+        """
+        if getattr(self, 'nursery_evening_fog', True):
+            return False   # 저녁 분무 허용 — 차단 안 함
+
+        try:
+            from aot.utils.solar import sun_times
+            from aot.utils.timekit import utc_now
+            st = sun_times(target_id=self.unique_id)
+            if st is None or st.sunset is None:
+                return False
+            cutoff_min = float(getattr(self, 'nursery_evening_cutoff_min', 120.0) or 0.0)
+            now = utc_now()
+            block_from = st.sunset - timedelta(minutes=cutoff_min)
+            if now >= block_from:
+                return True
+            # 자정을 넘긴 이른 새벽 — 아직 일출 전이면 계속 차단.
+            if st.sunrise is not None and now < st.sunrise:
+                return True
+            return False
+        except Exception as exc:
+            if getattr(self, 'debug_logging', False):
+                self.logger.debug('저녁 분무 차단 판정 실패 (차단 안 함): %s', exc)
+            return False
 
     def _classify_emergency(self, gate_result, situation) -> tuple:
         """이번 사이클이 '긴급'인지 판정 — 개구부 정상 구동주기를 우회할지 결정한다.
@@ -408,6 +558,12 @@ class CycleMixin:
         else:
             external_for_control = external
 
+        # ── 실내 추정 광량 ────────────────────────────────────────────────────
+        # 육묘 일소 게이트와 광량 하드 임계가 같은 값을 봐야 하므로 여기서 한 번만
+        # 계산해 internal['light_est'] 에 실어 둔다. Pre-Gate 가 이 값을 쓰기
+        # 때문에 게이트 평가보다 앞서야 한다.
+        self._compute_light_est(internal)
+
         # ── Pre-Gate ──────────────────────────────────────────────────────────
         gate_env    = self._build_gate_env(internal, external)
         gate_result = self._pre_gate.evaluate(gate_env, self._profiles, uid)
@@ -516,19 +672,8 @@ class CycleMixin:
                 cbs['RH_min'] = breached
 
         # ── Light threshold constraint check ──────────────────────────────────
-        light_val = internal.get('light')
-        # 실내 광센서가 없어 실외 일사로 대체된 경우에만, 차광막 개도를 반영한
-        # 실내 광량 추정치로 바꿔서 임계를 판정한다(실내 센서가 있으면 이미
-        # 차광이 반영돼 있으므로 건드리지 않는다).
-        if light_val is not None and internal.get('_light_is_outdoor'):
-            est = estimate_indoor_light(
-                light_val, self._profiles, self._coord_state.prev_commands,
-                default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
-            if est != light_val and getattr(self, 'debug_logging', False):
-                self.logger.debug(
-                    '실내광 추정: 실외 %.0f → %.0f W/m² (차광막 개도 반영)',
-                    light_val, est)
-            light_val = est
+        # 실내 추정 광량은 사이클 앞에서 _compute_light_est() 가 이미 계산했다.
+        light_val = internal.get('light_est', internal.get('light'))
         if not hasattr(self, '_light_breach_state'):
             self._light_breach_state: dict = {'max': False, 'min': False}
         lbs = self._light_breach_state

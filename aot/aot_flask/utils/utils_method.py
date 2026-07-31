@@ -173,6 +173,22 @@ def method_create(form_create_method):
         return 1
 
 
+
+def _save_phase_anchor(method_data, form):
+    """공식 곡선(sine/bezier)의 위상 고정 앵커를 저장한다.
+
+    빈 값이면 기존 동작(벽시계 24시간 고정) 그대로. 값은 커널의 이벤트 이름만
+    허용한다 — 오타가 조용히 "고정 시각"으로 떨어지지 않게.
+    """
+    from aot.utils.solar import SUN_EVENTS
+    event = (getattr(form, 'time_start_event', None).data
+             if hasattr(form, 'time_start_event') else '') or ''
+    event = event.strip()
+    method_data.time_start_event = event if event in SUN_EVENTS else None
+    if hasattr(form, 'time_start_offset_min'):
+        method_data.time_start_offset_min = form.time_start_offset_min.data or 0
+
+
 def method_add(form_add_method):
     """Add line to method_data table"""
     action = '{action} {controller}'.format(
@@ -198,6 +214,7 @@ def method_add(form_add_method):
             add_method_data.frequency = form_add_method.frequency.data
             add_method_data.shift_angle = form_add_method.shift_angle.data
             add_method_data.shift_y = form_add_method.shiftY.data
+            _save_phase_anchor(add_method_data, form_add_method)
             db.session.commit()
             return 0
 
@@ -220,6 +237,7 @@ def method_add(form_add_method):
             add_method_data.y2 = form_add_method.y2.data
             add_method_data.x3 = form_add_method.x3.data
             add_method_data.y3 = form_add_method.y3.data
+            _save_phase_anchor(add_method_data, form_add_method)
             db.session.commit()
             return 0
 
@@ -413,6 +431,16 @@ def method_mod(form_mod_method):
         elif method.method_type == 'Daily':
             method_data.time_start = form_mod_method.daily_time_start.data
             method_data.time_end = form_mod_method.daily_time_end.data
+            # 태양 앵커 — 빈 값이면 위 벽시계를 그대로 쓴다(기존 동작).
+            from aot.utils.solar import SUN_EVENTS as _SUN_EVENTS
+            for _which in ('start', 'end'):
+                _event = (getattr(form_mod_method, f'time_{_which}_event').data or '').strip()
+                if _event and _event not in _SUN_EVENTS:
+                    error.append("Unknown sun event: {}".format(_event))
+                    _event = ''
+                setattr(method_data, f'time_{_which}_event', _event or None)
+                setattr(method_data, f'time_{_which}_offset_min',
+                        getattr(form_mod_method, f'time_{_which}_offset_min').data or 0)
 
         method_data.setpoint_start = form_mod_method.setpoint_start.data
         method_data.setpoint_end = form_mod_method.setpoint_end.data

@@ -72,6 +72,8 @@ GATE_BIT_EXT_EXP = 1 << 2
 GATE_BIT_INT_EXP = 1 << 3
 GATE_BIT_HEAT    = 1 << 4
 GATE_BIT_COLD    = 1 << 5
+# 육묘 일소 방지 — 고일사 중 습윤형 분무 잠금 (2026-07-31 aot-005 사건)
+GATE_BIT_FOG_SUNBURN = 1 << 6
 
 # 운전 모드 → 정수 코드 (CH_SITUATION_MODE)
 MODE_CODES = {

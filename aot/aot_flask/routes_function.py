@@ -16,7 +16,7 @@ from flask_babel import gettext as _
 from flask.blueprints import Blueprint
 from sqlalchemy import and_, or_
 
-from aot.config import INSTALL_DIRECTORY, CONDITIONAL_CONDITIONS, FUNCTION_INFO, FUNCTIONS
+from aot.config import INSTALL_DIRECTORY, CONDITIONAL_CONDITIONS, FUNCTION_INFO, FUNCTIONS, SUN_EVENTS
 
 def _load_map_overlays_from_db(map_uuid):
     collection = {"type": "FeatureCollection", "features": []}
@@ -73,7 +73,8 @@ from aot.utils.weekly_schedule import (
 )
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import output_types, parse_output_information
-from aot.utils.sunriseset import suntime_calculate_next_sunrise_sunset_epoch
+from aot.utils.device_tz import resolve_location_tz
+from aot.utils.solar import is_daytime, next_sun_event, sun_times
 from aot.utils.system_pi import (
     add_custom_measurements, add_custom_units, csv_to_list_of_str,
     parse_custom_option_values,
@@ -91,6 +92,51 @@ blueprint = Blueprint('routes_function',
 @flask_login.login_required
 def inject_dictionary():
     return inject_variables()
+
+
+@blueprint.context_processor
+def inject_sun_helpers():
+    """태양 조건(sun_state·sun_event_countdown) UI 보조.
+
+    조건 편집 화면에서 "지금 이 위치가 주간인가, 다음 이벤트는 언제인가"를 바로
+    보여준다. 위치는 조건이 속한 Conditional 을 그대로 상속하므로 별도 설정이 없다.
+    """
+    def sun_condition_preview(condition):
+        try:
+            target_id = getattr(condition, 'conditional_id', None)
+            times = sun_times(target_id=target_id)
+            if times is None:
+                return None
+            location_tz = resolve_location_tz(target_id)
+
+            def _fmt(dt):
+                return dt.astimezone(location_tz).strftime("%Y-%m-%d %H:%M") if dt else '—'
+
+            daytime = is_daytime(
+                target_id=target_id,
+                start_offset_minutes=getattr(condition, 'sun_offset_start_minutes', 0) or 0,
+                end_offset_minutes=getattr(condition, 'sun_offset_end_minutes', 0) or 0)
+
+            event = next_sun_event(
+                getattr(condition, 'sun_event', None) or 'sunset',
+                target_id=target_id,
+                time_offset_minutes=getattr(condition, 'sun_offset_start_minutes', 0) or 0)
+
+            return {
+                'sunrise': _fmt(times.sunrise),
+                'sunset': _fmt(times.sunset),
+                'state': _('Daytime') if daytime else _('Nighttime'),
+                'next_event': _fmt(event),
+                'tz': str(location_tz),
+            }
+        except Exception:
+            logger.exception("태양 조건 미리보기 계산 실패")
+            return None
+
+    return {
+        'sun_events': SUN_EVENTS,
+        'sun_condition_preview': sun_condition_preview,
+    }
 
 
 @blueprint.route('/function_save_order', methods=['POST'])
@@ -809,33 +855,34 @@ def page_function():
             sunrise_set_calc[each_trigger.unique_id] = {}
             if not current_app.config['TESTING']:
                 try:
-                    sunrise = suntime_calculate_next_sunrise_sunset_epoch(
-                        each_trigger.latitude, each_trigger.longitude, 0, 0, "sunrise", return_dt=True)
-                    sunset = suntime_calculate_next_sunrise_sunset_epoch(
-                        each_trigger.latitude, each_trigger.longitude, 0, 0, "sunset", return_dt=True)
+                    # 태양시 커널이 UTC 로 돌려주므로, 표시는 그 위치의 현지 tz 로 변환한다.
+                    location_tz = resolve_location_tz(each_trigger.unique_id)
 
-                    # Adjust for date offset
-                    offset_rise = suntime_calculate_next_sunrise_sunset_epoch(
-                        each_trigger.latitude, each_trigger.longitude, each_trigger.date_offset_days,
-                        each_trigger.time_offset_minutes, "sunrise", return_dt=True)
-                    offset_set = suntime_calculate_next_sunrise_sunset_epoch(
-                        each_trigger.latitude, each_trigger.longitude, each_trigger.date_offset_days,
-                        each_trigger.time_offset_minutes, "sunset", return_dt=True)
+                    def _next(kind, date_offset=0, time_offset=0):
+                        event = next_sun_event(
+                            kind,
+                            target_id=each_trigger.unique_id,
+                            latitude=each_trigger.latitude,
+                            longitude=each_trigger.longitude,
+                            date_offset_days=date_offset,
+                            time_offset_minutes=time_offset)
+                        if event is None:
+                            return None
+                        return event.astimezone(location_tz).strftime("%Y-%m-%d %H:%M")
 
-                    sunrise_set_calc[each_trigger.unique_id]['sunrise'] = (
-                        sunrise.strftime("%Y-%m-%d %H:%M"))
-                    sunrise_set_calc[each_trigger.unique_id]['sunset'] = (
-                        sunset.strftime("%Y-%m-%d %H:%M"))
-                    sunrise_set_calc[each_trigger.unique_id]['offset_sunrise'] = (
-                        offset_rise.strftime("%Y-%m-%d %H:%M"))
-                    sunrise_set_calc[each_trigger.unique_id]['offset_sunset'] = (
-                        offset_set.strftime("%Y-%m-%d %H:%M"))
-                except:
-                    logger.exception(1)
+                    sunrise_set_calc[each_trigger.unique_id]['sunrise'] = _next("sunrise")
+                    sunrise_set_calc[each_trigger.unique_id]['sunset'] = _next("sunset")
+                    # 실제로 언제 발화하는지 — 선택한 이벤트에 오프셋까지 적용한 시각.
+                    # 예전에는 일출·일몰 양쪽의 오프셋 시각을 나란히 보여줘, 둘 중
+                    # 어느 쪽이 이 트리거의 실행 시각인지 사용자가 직접 골라야 했다.
+                    sunrise_set_calc[each_trigger.unique_id]['next_fire'] = _next(
+                        each_trigger.rise_or_set or 'sunrise',
+                        each_trigger.date_offset_days, each_trigger.time_offset_minutes)
+                except Exception:
+                    logger.exception("일출/일몰 시각 계산 실패")
                     sunrise_set_calc[each_trigger.unique_id]['sunrise'] = "ERROR"
-                    sunrise_set_calc[each_trigger.unique_id]['sunrise'] = "ERROR"
-                    sunrise_set_calc[each_trigger.unique_id]['offset_sunrise'] = "ERROR"
-                    sunrise_set_calc[each_trigger.unique_id]['offset_sunset'] = "ERROR"
+                    sunrise_set_calc[each_trigger.unique_id]['sunset'] = "ERROR"
+                    sunrise_set_calc[each_trigger.unique_id]['next_fire'] = "ERROR"
 
     # Map list (common for function/options)
     map_configs = []

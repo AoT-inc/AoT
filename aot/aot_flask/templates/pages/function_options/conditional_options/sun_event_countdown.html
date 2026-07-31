@@ -1,0 +1,32 @@
+{% set sun_preview = sun_condition_preview(each_condition) %}
+<div class="aot-modal-body-text mb-2">
+  <strong>[{{_('Condition')}}] {{_('Sun: Time Until Event')}}</strong>:
+  <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong>
+  {{_('Returns the number of seconds until the next selected sun event. The location is inherited from this Conditional Function.')}}
+  {% if sun_preview %}
+    <div class="text-muted" style="margin-top: 4px;">
+      {{_('Next event')}}: {{sun_preview['next_event']}}
+    </div>
+  {% endif %}
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_conditional_conditions.sun_event.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    <select class="form-control aot-modern-select" id="sun_event" name="sun_event" style="width: 100%;"
+            title="{{_('Which sun event to count down to')}}">
+      {% for value, label in sun_events -%}
+        <option value="{{value}}"{% if (each_condition.sun_event or 'sunset') == value %} selected{% endif %}>{{label}}</option>
+      {% endfor -%}
+    </select>
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_conditional_conditions.sun_event_offset_minutes.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_conditional_conditions.sun_event_offset_minutes(class_='form-control aot-modern-input',
+      value=each_condition.sun_offset_start_minutes or 0,
+      **{'title': _('Minutes to shift the event. A negative value counts down to before the event (-60 means one hour before).')})}}
+  </div>
+</div>

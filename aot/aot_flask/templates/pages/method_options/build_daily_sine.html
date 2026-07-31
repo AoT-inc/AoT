@@ -21,6 +21,22 @@
 </div>
 
 <div class="aot-form-grid">
+  <!-- 위상 고정: 켜면 곡선의 하루가 남중(태양 정오)에 맞춰 통째로 이동한다.
+       마루가 시계가 아니라 해를 따라간다. -->
+  <div class="aot-form-grid-item">
+    {{form_add_method.time_start_event.label(class_='aot-form-grid-label')}}
+    <select class="form-control aot-modern-input" id="time_start_event" name="time_start_event">
+      <option value="">{{_('Fixed time')}}</option>
+      <option value="solar_noon"{% if last_sine_method and last_sine_method.time_start_event == 'solar_noon' %} selected{% endif %}>{{_('Solar Noon')}}</option>
+    </select>
+  </div>
+  <div class="aot-form-grid-item">
+    {{form_add_method.time_start_offset_min.label(class_='aot-form-grid-label')}}
+    {{form_add_method.time_start_offset_min(class_='form-control aot-modern-input', value=(last_sine_method.time_start_offset_min if last_sine_method else 0) or 0)}}
+  </div>
+</div>
+
+<div class="aot-form-grid">
   <div class="aot-form-grid-item">
     {{form_add_method.save(class_='btn aot-pill-btn aot-pill-btn-primary', value=dict_translation['save']['title'])}}
   </div>

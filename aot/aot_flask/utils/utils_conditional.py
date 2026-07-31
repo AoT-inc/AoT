@@ -233,6 +233,15 @@ def conditional_condition_mod(form):
         elif cond_mod.condition_type == 'controller_status':
             cond_mod.controller_id = form.controller_id.data
 
+        elif cond_mod.condition_type == 'sun_state':
+            cond_mod.sun_offset_start_minutes = form.sun_offset_start_minutes.data or 0
+            cond_mod.sun_offset_end_minutes = form.sun_offset_end_minutes.data or 0
+
+        elif cond_mod.condition_type == 'sun_event_countdown':
+            cond_mod.sun_event = form.sun_event.data
+            # 이벤트 오프셋은 start 컬럼을 재사용한다(태양 조건마다 컬럼을 늘리지 않기 위해).
+            cond_mod.sun_offset_start_minutes = form.sun_event_offset_minutes.data or 0
+
         if not messages["error"]:
             db.session.commit()
             messages["success"].append("조건부 조건 수정 완료")

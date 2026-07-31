@@ -1022,6 +1022,27 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
     var isEnvItem = (f.source === 'envelope');
 
+    // Actuator dropdown filler — shared by the irrigation-layer branch below and
+    // the normal-fitting path, which return at different points.
+    function _fillActuatorSelect(fit) {
+      var actSel = document.getElementById('fi-actuator');
+      if (!actSel) return;
+      var outList = OutputCache.list || [];
+      var aOpts;
+      if (outList.length === 0) {
+        aOpts = ['<option value="">'+_T('no_outputs','— No outputs (add at Setup → Output) —')+'</option>'];
+      } else {
+        aOpts = ['<option value="">'+_T('— None —','— None —')+'</option>'];
+        outList.forEach(function (out) {
+          var sel = (fit.actuator_id === out.unique_id) ? ' selected' : '';
+          var label = (out.name || 'Output') + (out.output_type ? ' (' + out.output_type + ')' : '');
+          aOpts.push('<option value="' + out.unique_id + '"' + sel + '>' + label + '</option>');
+        });
+      }
+      actSel.innerHTML = aOpts.join('');
+      actSel.value = fit.actuator_id || '';
+    }
+
     // ── Irrigation-layer-only inspector ────────────────────────────────────────────
     var irrLayerGroup = document.getElementById('fi-group-irr-layer');
     var irrPipeGroup  = document.getElementById('fi-group-irr-pipe');
@@ -1040,9 +1061,15 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       });
       var kindRow = (document.getElementById('fi-kind') || {}).closest && document.getElementById('fi-kind').closest('.fi-group');
       if (kindRow) kindRow.style.display = 'none';
+      // Irrigation layers DO bind an actuator — the valve or pump that opens the
+      // whole circuit. The backend has always read layer.actuator_id (it derives
+      // per-actuator flow and nozzle wetting from it), but this inspector used to
+      // hide the dropdown, so there was no way to set it and the binding stayed
+      // empty forever. Pipes have no actuator semantics, so they stay hidden.
       var actG = document.getElementById('fi-group-actuator');
       var inpG = document.getElementById('fi-group-input');
-      if (actG) actG.style.display = 'none';
+      if (actG) actG.style.display = isIrrLayer ? '' : 'none';
+      if (isIrrLayer) _fillActuatorSelect(f);
       if (inpG) inpG.style.display = 'none';
       var chsG = document.getElementById('fi-group-channels');
       if (chsG) chsG.style.display = 'none';
@@ -1152,24 +1179,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     }
 
     if (!isSensor) {
-      // Populate actuator dropdown from the global Output device list.
-      var actSel = document.getElementById('fi-actuator');
-      if (actSel) {
-        var outList = OutputCache.list || [];
-        var aOpts;
-        if (outList.length === 0) {
-          aOpts = ['<option value="">'+_T('no_outputs','— No outputs (add at Setup → Output) —')+'</option>'];
-        } else {
-          aOpts = ['<option value="">'+_T('— None —','— None —')+'</option>'];
-          outList.forEach(function (out) {
-            var sel = (f.actuator_id === out.unique_id) ? ' selected' : '';
-            var label = (out.name || 'Output') + (out.output_type ? ' (' + out.output_type + ')' : '');
-            aOpts.push('<option value="' + out.unique_id + '"' + sel + '>' + label + '</option>');
-          });
-        }
-        actSel.innerHTML = aOpts.join('');
-        actSel.value = f.actuator_id || '';
-      }
+      _fillActuatorSelect(f);
     } else {
       // Step 1: Populate device dropdown (Input + Function groups).
       var devSel = document.getElementById('fi-device');

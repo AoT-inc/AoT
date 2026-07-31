@@ -1,6 +1,9 @@
 {% set cond_label = dict(conditional_conditions_list).get(each_condition.condition_type, each_condition.condition_type or _('Condition')) %}
 <div id="mod_function_condition_{{each_condition.unique_id}}" class="mb-2">
-  <form method="post" action="/function">
+  <!-- processRequest 는 data-form-id 가 없으면 "모달 안의 첫 번째 form"을 집는다.
+       조건 편집 폼은 함수 설정 모달 안에 있으므로 id 를 명시하지 않으면 저장/삭제가
+       엉뚱한 폼(함수 본체)으로 전송돼 조용히 실패한다. -->
+  <form id="form_condition_{{each_condition.unique_id}}" method="post" action="/function">
     {{form_conditional_conditions.csrf_token}}
     {{form_conditional_conditions.conditional_id(class_='form-control', value=each_function.unique_id)}}
     {{form_conditional_conditions.conditional_condition_id(class_='form-control', value=each_condition.unique_id)}}
@@ -18,12 +21,14 @@
         </div>
         <div style="flex: 0 0 auto; margin-right: 5px;">
           <button class="btn aot-pill-btn" type="button" name="delete_condition"
+                  data-form-id="form_condition_{{each_condition.unique_id}}"
                   onclick="return confirm('{{_('Are you sure you want to delete?')}}') && $(this).processRequest(this, 'delete_condition');">
             {{_('Delete')}}
           </button>
         </div>
         <div style="flex: 0 0 auto;">
           <button class="btn aot-pill-btn aot-pill-btn-primary" type="button" name="save_condition"
+                  data-form-id="form_condition_{{each_condition.unique_id}}"
                   onclick="return $(this).processRequest(this, 'save_condition');">
             {{_('Save')}}
           </button>
@@ -51,6 +56,10 @@
           {% include 'pages/function_options/conditional_options/output_duration_on.html' %}
         {% elif each_condition.condition_type == 'controller_status' %}
           {% include 'pages/function_options/conditional_options/controller_status.html' %}
+        {% elif each_condition.condition_type == 'sun_state' %}
+          {% include 'pages/function_options/conditional_options/sun_state.html' %}
+        {% elif each_condition.condition_type == 'sun_event_countdown' %}
+          {% include 'pages/function_options/conditional_options/sun_event_countdown.html' %}
         {% endif %}
       </div>
       {% endif %}

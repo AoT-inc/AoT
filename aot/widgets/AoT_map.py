@@ -312,7 +312,7 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
 
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
 <!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
-<script src="/static/js/common/aot-chart-core.js"></script>
+<script src="/static/js/common/aot-chart-core.js?v=2"></script>
 <script src="/static/js/common/sensor-label.js?v=27"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=15"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=30">

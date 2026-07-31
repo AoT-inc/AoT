@@ -222,4 +222,79 @@
       p.title.attr({ x: p.x, y: p.y });
     });
   };
+
+  // ── 야간 음영 ────────────────────────────────────────────────────────────
+  // 그래프는 하루를 균일한 축으로 그리지만 작물이 겪는 하루는 그렇지 않다.
+  // 온도가 떨어진 구간이 밤이라 그런 것인지 차광 때문인지, 습도가 오른 시각이
+  // 일몰 직후인지 한밤중인지는 축만 봐서는 알 수 없다. 보이는 구간의 밤을
+  // 서버(/sun_bands, 태양시 커널)에서 받아 plotBand 로 깐다.
+  const NIGHT_BAND_ID_PREFIX = 'aot-night-';
+  const _nightCache = {};   // chartKey -> {key, bands}
+  const _nightPending = {}; // chartKey -> true (요청 중복 방지)
+
+  function _nightBandColor() {
+    const probe = getComputedStyle(document.documentElement)
+      .getPropertyValue('--aot-color-night-band');
+    return (probe && probe.trim()) || 'rgba(120, 130, 150, 0.10)';
+  }
+
+  AoTChart.applyNightShading = function (chart, opts) {
+    if (!chart || !chart.xAxis || !chart.xAxis[0]) return;
+    opts = opts || {};
+    const axis = chart.xAxis[0];
+    const extremes = axis.getExtremes();
+    let min = extremes.min, max = extremes.max;
+    if (min == null || max == null || !(max > min)) return;
+
+    // 축 범위를 분 단위로 반올림해 캐시 키를 만든다 — 마우스 드래그 중
+    // 매 프레임 요청하지 않도록.
+    const bucket = 60 * 1000;
+    const key = Math.round(min / bucket) + ':' + Math.round(max / bucket) +
+                ':' + (opts.targetId || '');
+    const chartKey = chart.renderTo && chart.renderTo.id || 'chart';
+
+    const cached = _nightCache[chartKey];
+    if (cached && cached.key === key) {
+      _drawNightBands(chart, cached.bands);
+      return;
+    }
+    if (_nightPending[chartKey]) return;
+    _nightPending[chartKey] = true;
+
+    const params = new URLSearchParams({
+      start: String(Math.round(min)),
+      end: String(Math.round(max))
+    });
+    if (opts.targetId) params.set('target_id', opts.targetId);
+
+    fetch('/sun_bands?' + params.toString(), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { bands: [] }; })
+      .then(function (data) {
+        const bands = (data && data.bands) || [];
+        _nightCache[chartKey] = { key: key, bands: bands };
+        _drawNightBands(chart, bands);
+      })
+      .catch(function () { /* 음영은 보조 정보 — 실패해도 그래프는 그대로 */ })
+      .then(function () { _nightPending[chartKey] = false; });
+  };
+
+  function _drawNightBands(chart, bands) {
+    const axis = chart.xAxis[0];
+    if (!axis) return;
+    (axis.plotLinesAndBands || []).slice().forEach(function (band) {
+      if (band.id && String(band.id).indexOf(NIGHT_BAND_ID_PREFIX) === 0) {
+        axis.removePlotBand(band.id);
+      }
+    });
+    const color = _nightBandColor();
+    bands.forEach(function (pair, i) {
+      axis.addPlotBand({
+        id: NIGHT_BAND_ID_PREFIX + i,
+        from: pair[0],
+        to: pair[1],
+        color: color,
+        zIndex: 0
+      });
+    });
+  }
 })(window);

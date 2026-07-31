@@ -27,15 +27,19 @@ class AbstractMethod(object):
     The config frontend also displays plots of the method. This class also calculates the necessary values.
     """
 
-    def __init__(self, method, method_data, logger=None):
+    def __init__(self, method, method_data, logger=None, target_id=None):
         """
         Initializes the method class
         :param method: method entry from method table
         :param method_data: data queried from method_data table
         :param logger: The logger to use
+        :param target_id: 이 메서드를 돌리는 주체(PID·트리거 등)의 unique_id.
+                          하루 단위 메서드의 "몇 시"와 태양 앵커를 그 위치의
+                          시계로 해석하는 데 쓴다. None 이면 농장 전역 기준.
         :return: 0 (success) or 1 (error) and a setpoint value
         """
         self.logger = logger
+        self.target_id = target_id
 
         self.unique_id = method.unique_id
         self.method_type = method.method_type
@@ -46,6 +50,50 @@ class AbstractMethod(object):
         self.method_data_all = self.method_data.filter(MethodData.output_id.is_(None)).all()
         self.method_data_first = self.method_data.filter(MethodData.output_id.is_(None)).first()
         self.method_data_repeat = self.method_data.filter(MethodData.duration_sec == 0).first()
+
+    def local_tz(self):
+        """이 메서드를 돌리는 주체가 있는 곳의 tz. 해석 실패 시 농장 전역."""
+        try:
+            from aot.utils.device_tz import resolve_location_tz
+            return resolve_location_tz(self.target_id)
+        except Exception:
+            import pytz
+            return pytz.utc
+
+    def to_local_wallclock(self, now):
+        """`now` 를 **그 위치의 벽시계** naive datetime 으로 정규화.
+
+        하루 단위 메서드는 "06:00~18:00" 같은 벽시계 구간으로 저장되는데, 지금까지
+        판정에 쓰던 `now` 는 컨트롤러가 넘긴 UTC(utc_now())였다. 도커 컨테이너
+        tz=UTC 규약과 맞물려 한국에서는 곡선이 9시간 밀려 적용됐다
+        (DailyMultiPoint 만 facility_tz 로 이 문제를 따로 고쳐 놓은 상태였다).
+
+        aware datetime·epoch float 는 위치 tz 로 변환한다. naive 는 이미 벽시계로
+        본다 — 플롯이 1900-01-01 기준 합성 시각을 넘기는 경로를 건드리지 않기 위해서다.
+        """
+        if isinstance(now, (int, float)):
+            now = datetime.datetime.fromtimestamp(now, tz=datetime.timezone.utc)
+        if getattr(now, 'tzinfo', None) is not None:
+            return now.astimezone(self.local_tz()).replace(tzinfo=None)
+        return now
+
+    def _solar_clock(self, event, offset_min):
+        """태양 이벤트를 오늘 그 위치의 벽시계(1900-01-01 기준)로. 실패 시 None."""
+        try:
+            from aot.utils.solar import SUN_EVENTS, sun_times
+            if event not in SUN_EVENTS:
+                return None
+            tz = self.local_tz()
+            times = sun_times(target_id=self.target_id)
+            if times is None:
+                return None
+            moment = times.event(event)
+            if moment is None:
+                return None
+            local = (moment + datetime.timedelta(minutes=int(offset_min))).astimezone(tz)
+            return datetime.datetime.strptime(local.strftime('%H:%M:%S'), '%H:%M:%S')
+        except Exception:
+            return None
 
     def determine_end_time(self, method_start_time):
         """
@@ -84,16 +132,50 @@ class DateMethod(AbstractMethod):
         """
         return False
 
+    def resolve_daily_bound(self, method_row, which):
+        """하루 단위 구간의 한쪽 끝을 1900-01-01 기준 naive datetime 으로 해석.
+
+        태양 앵커(`time_start_event`/`time_end_event`)가 지정돼 있으면 **오늘 그
+        위치의** 해당 태양 이벤트 시각(±오프셋)을 쓰고, 없으면 저장된 벽시계
+        문자열을 그대로 쓴다.
+
+        고정 시각의 문제는 계절이다. "06:00~18:00 온도 곡선"은 한여름엔 일출 뒤
+        한참 지나 시작하고 한겨울엔 캄캄할 때 시작한다. 작물이 겪는 하루는 시계가
+        아니라 해에 묶여 있으므로, 곡선의 양 끝을 해에 걸 수 있어야 한다.
+        해석에 실패하면 None — 호출부는 그 구간을 건너뛴다.
+        """
+        clock = getattr(method_row, f'time_{which}', None)
+        event = getattr(method_row, f'time_{which}_event', None)
+        offset = getattr(method_row, f'time_{which}_offset_min', 0) or 0
+
+        if event:
+            resolved = self._solar_clock(event, offset)
+            if resolved is not None:
+                return resolved
+            if self.logger:
+                self.logger.debug(
+                    "[Method] 태양 앵커 '%s' 해석 실패 — 저장된 시각으로 대체", event)
+        if not clock:
+            return None
+        try:
+            return datetime.datetime.strptime(clock, '%H:%M:%S')
+        except (TypeError, ValueError):
+            return None
+
     def calculate_setpoint(self, now, method_start_time=None):
         # Calculate where the current time/date is within the time/date method
 
         if self.ignore_date():
-            now = datetime.datetime.strptime(str(now.strftime('%H:%M:%S')), '%H:%M:%S')
+            local_now = self.to_local_wallclock(now)
+            now = datetime.datetime.strptime(
+                str(local_now.strftime('%H:%M:%S')), '%H:%M:%S')
 
         for each_method in self.method_data_all:
             if self.ignore_date():
-                start_time = datetime.datetime.strptime(each_method.time_start, '%H:%M:%S')
-                end_time = datetime.datetime.strptime(each_method.time_end, '%H:%M:%S')
+                start_time = self.resolve_daily_bound(each_method, 'start')
+                end_time = self.resolve_daily_bound(each_method, 'end')
+                if start_time is None or end_time is None:
+                    continue
             else:
                 start_time = datetime.datetime.strptime(each_method.time_start, '%Y-%m-%d %H:%M:%S')
                 end_time = datetime.datetime.strptime(each_method.time_end, '%Y-%m-%d %H:%M:%S')
@@ -178,21 +260,21 @@ class DailyMethod(DateMethod):
     def get_plot(self, max_points_x=None):
         result = []
         for each_method in self.method_data_all:
-            if each_method.time_start is None or each_method.time_end is None:
+            # 태양 앵커가 걸린 구간은 오늘의 실제 태양시로 그린다 — 저장된 벽시계로
+            # 그리면 그래프와 실제 동작이 어긋나 보인다.
+            start = self.resolve_daily_bound(each_method, 'start')
+            end = self.resolve_daily_bound(each_method, 'end')
+            if start is None or end is None:
                 continue
             if each_method.setpoint_end is None:
                 setpoint_end = each_method.setpoint_start
             else:
                 setpoint_end = each_method.setpoint_end
-            result.append(
-                [get_sec(each_method.time_start) * 1000,
-                 each_method.setpoint_start])
-            result.append(
-                [get_sec(each_method.time_end) * 1000,
-                 setpoint_end])
-            result.append(
-                [get_sec(each_method.time_start) * 1000,
-                 None])
+            start_sec = start.hour * 3600 + start.minute * 60 + start.second
+            end_sec = end.hour * 3600 + end.minute * 60 + end.second
+            result.append([start_sec * 1000, each_method.setpoint_start])
+            result.append([end_sec * 1000, setpoint_end])
+            result.append([start_sec * 1000, None])
         return result
 
 
@@ -201,6 +283,32 @@ class AbstractDailyFormulaMethod(AbstractMethod):
     Abstract base for mathematical function based methods. It offers shared functionality to generate the frontend
     plot by iterating through the x axis and calling the calculate_setpoint function to get the corresponding y values.
     """
+
+    def day_seconds(self, now):
+        """곡선의 x축으로 쓸 "하루 중 초". 위상 고정이 켜져 있으면 태양시로 보정.
+
+        sine/bezier 는 자정~자정을 한 주기로 잡는다. 그 결과 곡선의 마루가 늘 같은
+        **시계 시각**에 오는데, 정작 해가 가장 높은 시각(남중)은 계절과 경도에 따라
+        움직인다(같은 표준시대 안에서도 30분 넘게 차이 난다). 곡선을 온도·광량에
+        맞춰 그렸다면 그 마루는 시계가 아니라 해를 따라가야 한다.
+
+        `time_start_event` 가 지정되면 그 이벤트가 12:00 위치에 오도록 하루를
+        통째로 민다(오프셋은 추가 미세조정). 해석 실패 시 보정 없이 벽시계 그대로.
+        """
+        local = self.to_local_wallclock(now)
+        secs = local.hour * 3600 + local.minute * 60 + local.second
+
+        row = self.method_data_first
+        event = getattr(row, 'time_start_event', None) if row is not None else None
+        if not event:
+            return secs
+
+        anchor = self._solar_clock(
+            event, getattr(row, 'time_start_offset_min', 0) or 0)
+        if anchor is None:
+            return secs
+        anchor_secs = anchor.hour * 3600 + anchor.minute * 60 + anchor.second
+        return (secs - (anchor_secs - 12 * 3600)) % (24 * 3600)
 
     def get_plot(self, max_points_x=700):
         result = []
@@ -226,11 +334,9 @@ class DailySineMethod(AbstractDailyFormulaMethod):
 
     def calculate_setpoint(self, now, method_start_time=None):
         # Calculate sine y-axis value from the x-axis (seconds of the day)
-        dt = datetime.timedelta(hours=now.hour,
-                                minutes=now.minute,
-                                seconds=now.second)
+        total_seconds = self.day_seconds(now)
         secs_per_day = 24 * 60 * 60
-        angle = dt.total_seconds() / secs_per_day * 360
+        angle = total_seconds / secs_per_day * 360
         new_setpoint = sine_wave_y_out(self.method_data_first.amplitude,
                                        self.method_data_first.frequency,
                                        self.method_data_first.shift_angle,
@@ -243,9 +349,7 @@ class DailyBezierMethod(AbstractDailyFormulaMethod):
     def calculate_setpoint(self, now, method_start_time=None):
         # Calculate Bezier curve y-axis value from the x-axis (seconds of the day)
 
-        dt = datetime.timedelta(hours=now.hour,
-                                minutes=now.minute,
-                                seconds=now.second)
+        total_seconds = self.day_seconds(now)
 
         new_setpoint = bezier_curve_y_out(
             self.method_data_first.shift_angle,
@@ -253,7 +357,7 @@ class DailyBezierMethod(AbstractDailyFormulaMethod):
             (self.method_data_first.x1, self.method_data_first.y1),
             (self.method_data_first.x2, self.method_data_first.y2),
             (self.method_data_first.x3, self.method_data_first.y3),
-            dt.total_seconds())
+            total_seconds)
 
         return new_setpoint, False
 
@@ -399,7 +503,8 @@ class CascadeMethod(AbstractMethod):
                     self.logger.warning("Method data does not contain linked_method_id")
                 continue
 
-            linked_method = load_method_handler(each_method.linked_method_id, self.logger)
+            linked_method = load_method_handler(each_method.linked_method_id, self.logger,
+                                               target_id=self.target_id)
 
             if not linked_method:
                 if self.logger:
@@ -821,7 +926,7 @@ def _hermite_interp(pts, seg_idx, frac):
             + m1 * (t**3 - t**2))
 
 
-def create_method_handler(method, method_data, logger=None):
+def create_method_handler(method, method_data, logger=None, target_id=None):
     """Factory function to create a method handler instance from database method_type.
 
     @phase active
@@ -834,10 +939,10 @@ def create_method_handler(method, method_data, logger=None):
         logger.error("Method {} is unknown.".format(method.method_type))
         method_class = AbstractMethod
 
-    return method_class(method, method_data, logger)
+    return method_class(method, method_data, logger, target_id=target_id)
 
 
-def load_method_handler(method_id, logger=None):
+def load_method_handler(method_id, logger=None, target_id=None):
     """Load a method handler from the database by method_id.
 
     @phase active
@@ -851,7 +956,7 @@ def load_method_handler(method_id, logger=None):
 
     method_data = db_retrieve_table_daemon(MethodData).filter(MethodData.method_id == method_id)
 
-    return create_method_handler(method, method_data, logger)
+    return create_method_handler(method, method_data, logger, target_id=target_id)
 
 
 def sine_wave_y_out(amplitude, frequency, shift_angle,

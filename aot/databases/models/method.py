@@ -45,6 +45,12 @@ class MethodData(CRUDMixin, db.Model):
     method_id = db.Column(db.String(36), default=None)
     time_start = db.Column(db.Text, default=None)
     time_end = db.Column(db.Text, default=None)
+    # 태양 앵커 — 지정되면 위 벽시계 대신 그 위치의 태양 이벤트(±오프셋)를 쓴다.
+    # NULL = 고정 시각. (docs/design/timezone-management.md §13.10)
+    time_start_event = db.Column(db.String(32), default=None)
+    time_start_offset_min = db.Column(db.Integer, default=0)
+    time_end_event = db.Column(db.String(32), default=None)
+    time_end_offset_min = db.Column(db.Integer, default=0)
     duration_sec = db.Column(db.Float, default=None)
     duration_end = db.Column(db.Float, default=None)
     output_id = db.Column(db.String(36), default=None)

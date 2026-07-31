@@ -32,6 +32,13 @@ def inject_dictionary():
     return inject_variables()
 
 
+@blueprint.context_processor
+def inject_sun_events():
+    """설정점 곡선의 태양 앵커 선택지 — 커널의 이벤트 목록과 한 곳에서 온다."""
+    from aot.config import SUN_EVENTS
+    return {'sun_events': SUN_EVENTS}
+
+
 @blueprint.route('/method-data/<method_id>')
 @flask_login.login_required
 def method_data(method_id):

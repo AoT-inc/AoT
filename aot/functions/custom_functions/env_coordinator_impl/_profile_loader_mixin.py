@@ -59,6 +59,43 @@ _KIND_SAFE_DEFAULT = {
 }
 
 
+# 습윤형 분무기 기본 펄스 도징 (육묘장 모드가 꺼져 있을 때).
+# 잎을 적시는 분무기를 개도(%)로 연속 변조하면 사이클의 절반을 계속 뿌리게 되어
+# 잎이 마를 틈이 없다. 이는 육묘가 아닌 시설에서도 병해 유발 조건이므로 기본값
+# 자체를 펄스로 둔다. 육묘장 모드는 여기서 더 조인다(짧게, 더 긴 건조).
+_FOG_DEFAULT_MAX_ON_SEC  = 30.0
+_FOG_DEFAULT_MIN_OFF_SEC = 180.0
+
+
+def _fog_pulse_constraints(coordinator, kind: str, capacity_meta: dict) -> dict:
+    """습윤형 분무기에 적용할 관수식 펄스 도징 파라미터.
+
+    가습량을 펄스 폭이 아니라 펄스 빈도로 조절한다 — 관수가 일정 간격으로
+    정량을 주는 방식과 같다. 드립·고압 미세포그(비습윤)에는 적용하지 않는다.
+
+    Returns:
+        CmdConstraints 키워드 dict (미적용이면 빈 dict)
+    """
+    if kind != 'fogger':
+        return {}
+    nozzle = (capacity_meta or {}).get('nozzle')
+    # 노즐 정보가 없으면(수동 등록) 보수적으로 습윤형으로 본다 — safety_gates
+    # is_wetting_fogger() 와 같은 판정 기준을 유지한다.
+    if nozzle is not None and not nozzle.get('wetting'):
+        return {}
+    if getattr(coordinator, 'nursery_mode', False):
+        return {
+            'max_on_sec':  float(
+                getattr(coordinator, 'nursery_max_on_sec', 20.0) or 20.0),
+            'min_off_sec': float(
+                getattr(coordinator, 'nursery_min_off_sec', 600.0) or 600.0),
+        }
+    return {
+        'max_on_sec':  _FOG_DEFAULT_MAX_ON_SEC,
+        'min_off_sec': _FOG_DEFAULT_MIN_OFF_SEC,
+    }
+
+
 def _build_cost_fn(kind: str, base_cost: float, capacity_meta: dict):
     """env·pct 를 실제로 사용하는 cost_fn 생성.
 
@@ -314,6 +351,12 @@ class ProfileLoaderMixin:
                     # else: falls back to facility-total irrigation_flow_lpm already in
                     # act_capacity_meta (copied from capacity_meta at dict() above)
 
+                    # 노즐 배치에서 산출된 엽면 습윤 특성 (facility_integration 4c).
+                    # 육묘 일소 게이트가 이 값으로 습윤형 분무 여부를 판정한다.
+                    nozzle_meta = ar.get('nozzle')
+                    if nozzle_meta:
+                        act_capacity_meta['nozzle'] = nozzle_meta
+
                     effect_model = build_effect_model(kind, {})
                     profile = ActuatorProfile(
                         actuator_id=output_uuid,
@@ -324,7 +367,9 @@ class ProfileLoaderMixin:
                         safe_default=_KIND_SAFE_DEFAULT.get(kind, 0.0),
                         manual_lock=ManualLockState(),
                         effect_model=effect_model,
-                        cmd_constraints=CmdConstraints(),
+                        cmd_constraints=CmdConstraints(
+                            **_fog_pulse_constraints(
+                                self, kind, act_capacity_meta)),
                         geo_facility_id=facility_uuid,
                         slot_key=slot_key or None,
                         azimuth_deg=azimuth_deg,
@@ -555,12 +600,16 @@ class ProfileLoaderMixin:
             if move_step is None:
                 move_step = 5.0
 
+            # 육묘 펄스 도징: 시설 도면에서 이미 노즐 정보를 받은 프로필이면
+            # 그 습윤 판정을 그대로 쓰고, 수동 등록만 있으면 보수적으로 적용한다.
+            _pulse_meta = (existing.capacity_meta if existing else None) or manual_cap_meta
             cmd_constraints = CmdConstraints(
                 full_stroke_sec=full_stroke_sec,
                 min_dwell_sec=min_repeat_sec if min_repeat_sec > 0 else 30.0,
                 effective_start_pct=eff_start,
                 effective_end_pct=eff_end,
                 move_step_pct=move_step,
+                **_fog_pulse_constraints(self, kind, _pulse_meta),
             )
 
             if existing:

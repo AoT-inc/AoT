@@ -24,6 +24,8 @@ from aot.databases.models import CustomController
 from aot.functions.base_function import AbstractFunction
 from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.device_tz import resolve_location_tz
+from aot.utils.timekit import utc_now
 
 from aot.utils.database import db_retrieve_table_daemon
 
@@ -167,6 +169,37 @@ FUNCTION_INFORMATION = {
         {
             'type': 'message',
             'default_value': '<b>{}</b><br/><small>{}</small>'.format(lazy_gettext('Operating Hours'), lazy_gettext('Sets the hours during which performance mode operates. Enter 0–24, or if the start and end times are equal it means 24 hours.'))
+        },
+        {
+            'id': 'day_window_mode',
+            'type': 'select',
+            'default_value': 'fixed',
+            'options_select': [
+                ('fixed', lazy_gettext('Fixed hours — the start and end hours below')),
+                ('solar', lazy_gettext('Sunrise to sunset — follows the season at this location')),
+            ],
+            'name': lazy_gettext('Operating Hours Basis'),
+            'phrase': lazy_gettext(
+                'Fixed hours keep the same clock times all year. Sunrise to sunset follows the '
+                'daylight at this device\'s location, so performance mode tracks the season '
+                'without being re-entered each month. The location is inherited from the map; '
+                'if it cannot be resolved, the fixed hours below are used instead.')
+        },
+        {
+            'id': 'sun_offset_start_min',
+            'type': 'integer',
+            'default_value': 0,
+            'required': True,
+            'name': lazy_gettext('Sunrise Offset (min)'),
+            'phrase': lazy_gettext('Shifts the start of the operating window relative to sunrise. Negative starts earlier (-30 begins 30 minutes before sunrise). Only used when the basis is sunrise to sunset.')
+        },
+        {
+            'id': 'sun_offset_end_min',
+            'type': 'integer',
+            'default_value': 0,
+            'required': True,
+            'name': lazy_gettext('Sunset Offset (min)'),
+            'phrase': lazy_gettext('Shifts the end of the operating window relative to sunset. Positive ends later (30 keeps performance mode for 30 minutes after sunset). Only used when the basis is sunrise to sunset.')
         },
         {
             'id': 'day_start_hour',
@@ -394,6 +427,10 @@ class UplinkPredictor:
 class ModeOpts:
     day_start_hour: int = 4
     day_end_hour: int = 18
+    # 'fixed' = 위 시각 그대로, 'solar' = 이 장치 위치의 일출~일몰(±오프셋)
+    day_window_mode: str = 'fixed'
+    sun_offset_start_min: int = 0
+    sun_offset_end_min: int = 0
     perf_lead_min: int = 10
     # MODE_A: ultra-saving profile heartbeat (min)
     a_period_min: int = 60
@@ -427,6 +464,53 @@ def _minutes_until_start(now_minute: int, s_hour: int) -> int:
     return (start - now_minute) % (24 * 60)
 
 
+def resolve_day_window(
+    o: 'ModeOpts',
+    now_minute: int,
+    *,
+    target_id: Optional[str] = None,
+    now=None,
+    logger=None
+) -> Tuple[bool, int]:
+    """운영시간(주간) 여부와 다음 시작까지 남은 분을 함께 돌려준다.
+
+    'fixed'  — day_start_hour ~ day_end_hour (장치 현지 벽시계 기준).
+    'solar'  — 이 장치 위치의 일출~일몰 ± 오프셋. 위도가 높을수록, 계절이 바뀔수록
+               고정 시각과 벌어진다. 여름 새벽 4시는 이미 밝고 겨울 4시는 한밤중인데,
+               고정 시각은 그 차이를 사용자가 매달 다시 입력해야 따라간다.
+
+    좌표를 해석하지 못하면(위치 미설정 등) 조용히 죽지 않고 고정 시각으로 물러난다 —
+    운영시간을 잃는 것보다 계절 추종을 잃는 편이 낫다.
+    """
+    if (o.day_window_mode or 'fixed') != 'solar':
+        return (_is_daytime_minutes(now_minute, o.day_start_hour, o.day_end_hour),
+                _minutes_until_start(now_minute, o.day_start_hour))
+
+    try:
+        from aot.utils.solar import is_daytime, next_sun_event
+        from aot.utils.timekit import utc_now
+
+        at = now or utc_now()
+        day = is_daytime(target_id=target_id, at=at,
+                         start_offset_minutes=o.sun_offset_start_min,
+                         end_offset_minutes=o.sun_offset_end_min)
+        if day is None:
+            raise ValueError("좌표를 해석할 수 없습니다")
+
+        minutes_until = 24 * 60
+        next_start = next_sun_event('sunrise', target_id=target_id, now=at,
+                                    time_offset_minutes=o.sun_offset_start_min)
+        if next_start is not None:
+            minutes_until = max(0, int((next_start - at).total_seconds() // 60))
+        return day, minutes_until
+    except Exception as exc:
+        if logger is not None:
+            logger.warning(
+                f"태양시 기준 운영시간을 계산하지 못해 고정 시각으로 대체합니다: {exc}")
+        return (_is_daytime_minutes(now_minute, o.day_start_hour, o.day_end_hour),
+                _minutes_until_start(now_minute, o.day_start_hour))
+
+
 def compute_target_mode_period(
     *,
     vbat_V: Optional[float],
@@ -435,7 +519,10 @@ def compute_target_mode_period(
     valve_active: bool,
     link_rssi: Optional[float],
     link_snr: Optional[float],
-    o: ModeOpts
+    o: ModeOpts,
+    target_id: Optional[str] = None,
+    now=None,
+    logger=None
 ) -> Tuple[int, int, str]:
     """
     New policy (no automatic entry into Class A):
@@ -474,10 +561,13 @@ def compute_target_mode_period(
         return MODE_B, hb_ultra, "critical_battery_b_mode"
 
     # Day/night decision + lead application
-    day = _is_daytime_minutes(now_minute, o.day_start_hour, o.day_end_hour)
+    day, minutes_until = resolve_day_window(
+        o, now_minute, target_id=target_id, now=now, logger=logger)
     prefetch_active = False
-    if not day and o.perf_lead_min > 0 and o.day_start_hour != o.day_end_hour:
-        minutes_until = _minutes_until_start(now_minute, o.day_start_hour)
+    solar_mode = (o.day_window_mode or 'fixed') == 'solar'
+    # 고정 시각에서 시작==종료는 "24시간 운영"이라 선행 전환할 대상이 없다.
+    lead_applies = solar_mode or o.day_start_hour != o.day_end_hour
+    if not day and o.perf_lead_min > 0 and lead_applies:
         if 0 < minutes_until <= o.perf_lead_min:
             day = True
             prefetch_active = True
@@ -1070,6 +1160,9 @@ class CustomModule(AbstractFunction):
         return ModeOpts(
             day_start_hour=int(getattr(self, 'day_start_hour', 4) or 4),
             day_end_hour=int(getattr(self, 'day_end_hour', 18) or 18),
+            day_window_mode=str(getattr(self, 'day_window_mode', 'fixed') or 'fixed'),
+            sun_offset_start_min=int(getattr(self, 'sun_offset_start_min', 0) or 0),
+            sun_offset_end_min=int(getattr(self, 'sun_offset_end_min', 0) or 0),
             perf_lead_min=int(getattr(self, 'perf_lead_min', 10) or 10),
             a_period_min=int(getattr(self, 'a_period_min', 60) or 60),
             b_period_min=int(getattr(self, 'b_period_min', 30) or 30),
@@ -1503,8 +1596,16 @@ class CustomModule(AbstractFunction):
         except Exception as e:
             self.logger.debug(f"reconcile skipped due to error: {e}")
 
-        # Current time (server local time; the operating-hours option is interpreted in this local time zone)
-        now_dt = datetime.now()
+        # 운영시간은 **이 장치가 있는 곳의 벽시계**로 해석한다.
+        # 예전에는 naive datetime.now() 를 썼는데, 도커 컨테이너는 tz=UTC 라
+        # "4시~18시"가 한국 기준 13시~다음날 3시로 해석되고 있었다(네이티브 설치는
+        # 시스템 tz 라 또 달랐다). timekit 체인으로 위치 tz 를 명시 해석한다.
+        now_utc = utc_now()
+        try:
+            now_dt = now_utc.astimezone(resolve_location_tz(self.unique_id))
+        except Exception as e:
+            self.logger.debug(f"위치 tz 해석 실패, 시스템 시각 사용: {e}")
+            now_dt = datetime.now()
         now_hour = now_dt.hour
         now_minute = now_dt.hour * 60 + now_dt.minute
 
@@ -1529,7 +1630,8 @@ class CustomModule(AbstractFunction):
 
         if (not battery_policy_enabled) and class_policy == 'auto':
             role = self._role()
-            is_day = _is_daytime_minutes(now_minute, opts.day_start_hour, opts.day_end_hour)
+            is_day, _minutes_until = resolve_day_window(
+                opts, now_minute, target_id=self.unique_id, now=now_utc, logger=self.logger)
             hb_ultra = max(opts.a_period_min, opts.b_period_min, 60)
 
             if role == 'sensor':
@@ -1586,6 +1688,9 @@ class CustomModule(AbstractFunction):
                         link_rssi=rssi,
                         link_snr=snr,
                         o=opts,
+                        target_id=self.unique_id,
+                        now=now_utc,
+                        logger=self.logger,
                     )
                 except Exception as e:
                     self.logger.warning(f"compute_target_mode_period failed: {e}")

@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 from .log_channels import (
     GATE_BIT_RAIN, GATE_BIT_WIND, GATE_BIT_EXT_EXP,
     GATE_BIT_INT_EXP, GATE_BIT_HEAT, GATE_BIT_COLD,
+    GATE_BIT_FOG_SUNBURN,
     REASON_SAFETY_PRE_GATE, REASON_SAFETY_POST_GATE,
     write_decision_log, CH_SAFETY_GATE,
 )
@@ -63,6 +64,27 @@ class PreGateConfig:
     cold_int_threshold:   float = 5.0    # 한파: 내부 온도 임계 (°C)
     gate_ttl:             float = 300.0  # 게이트 발동 후 최소 유지 시간 (초)
     windward_arc_deg:     float = 60.0   # 풍향 ±이 각도 이내 = windward (강제 폐쇄 대상)
+    # ── 육묘 일소 방지 (2026-07-31 aot-005) ───────────────────────────────
+    nursery_mode:         bool  = False  # 육묘장 모드 — 습윤형 분무 일사 잠금
+    nursery_solar_lockout: float = 250.0  # 실내 추정 광량 이 값 이상이면 분무 금지 (W/m²)
+    nursery_solar_release: float = 150.0  # 이 값 미만으로 내려가야 잠금 해제 (히스테리시스)
+    nursery_evening_fog:  bool  = True   # 일몰 전 분무 허용 여부 (끄면 야간 습윤 차단)
+
+
+def is_wetting_fogger(profile: ActuatorProfile) -> bool:
+    """이 액추에이터가 잎을 적시는 분무기인가.
+
+    시설 도면의 노즐 배치에서 산출된 capacity_meta['nozzle']['wetting'] 을
+    따른다. 노즐 정보가 없으면 (수동 등록 등) 보수적으로 습윤형으로 본다 —
+    육묘장 모드를 켠 사용자의 의도는 "확실치 않으면 뿌리지 말 것"이다.
+    """
+    if getattr(profile, 'kind', None) != 'fogger':
+        return False
+    cap = getattr(profile, 'capacity_meta', None) or {}
+    nozzle = cap.get('nozzle')
+    if not nozzle:
+        return True
+    return bool(nozzle.get('wetting'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +105,53 @@ class SafetyPreGate:
         self.config = config or PreGateConfig()
         self._last_triggered = False
         self._triggered_until: float = 0.0  # gate_ttl 보장용
+        self._nursery_locked = False        # 육묘 일소 잠금 래치 (히스테리시스)
+
+    def _eval_nursery_lock(self, env: EnvContext) -> bool:
+        """육묘 일소 잠금 상태를 갱신하고 반환한다.
+
+        판정 광량은 실내 추정 광량(internal['light_est'])을 우선한다 — 차광막을
+        닫아 이미 그늘이 진 상태까지 잠글 이유가 없기 때문이다. 추정값이 없으면
+        실외 일사로 폴백한다.
+
+        lockout 에서 걸리고 release 아래로 내려가야 풀리는 래치라, 구름이
+        지나갈 때마다 분무가 켜졌다 꺼졌다 하지 않는다.
+
+        저녁 차단(internal['evening_block'])은 광량과 무관하게 우선한다 —
+        해가 진 뒤에는 광량이 낮아 일소 게이트가 풀리지만, 밤새 잎이 젖어
+        있으면 병해(잿빛곰팡이·노균병) 위험이 커진다. 육묘장은 밀식이라
+        확산이 빠르다.
+        """
+        cfg = self.config
+        if not cfg.nursery_mode:
+            self._nursery_locked = False
+            return False
+
+        if env.get('internal', {}).get('evening_block'):
+            # 래치는 건드리지 않는다 — 저녁 차단은 시간 기반이라 자체 해제된다.
+            return True
+
+        light = env.get('internal', {}).get('light_est')
+        if light is None:
+            light = env.get('external', {}).get('solar')
+        if light is None:
+            # 측정값이 하나도 없으면 태양고도로 어림한 맑은날 일사로 판정한다.
+            # 이 폴백이 없으면 일사 센서가 없는 시설은 일소 보호가 통째로 꺼진 채
+            # 돌아간다(정오에 분무가 그대로 나간다). 어림값은 밤에 0 이므로
+            # "야간에 계속 잠기는" 예전 우려도 생기지 않는다.
+            light = env.get('internal', {}).get('_nursery_light_fallback')
+        if light is None:
+            # 좌표조차 없어 어림도 못 하면 잠그지 않는다 — 야간에도 계속 잠기면
+            # 정상 가습까지 막혀 오히려 작물이 상한다.
+            self._nursery_locked = False
+            return False
+
+        if self._nursery_locked:
+            if light < cfg.nursery_solar_release:
+                self._nursery_locked = False
+        elif light >= cfg.nursery_solar_lockout:
+            self._nursery_locked = True
+        return self._nursery_locked
 
     def evaluate(
         self,
@@ -138,12 +207,25 @@ class SafetyPreGate:
             mask |= GATE_BIT_COLD
             reasons.append('cold_emergency')
 
+        # ── 육묘 일소: 고일사 중 습윤형 분무 잠금 ──────────────────────────────
+        # 다른 게이트와 성격이 다르다 — 시설 전체를 비상 운전으로 돌리는 게
+        # 아니라 분무기 하나만 끄는 국소 잠금이다. 따라서 gate_ttl 을 잡지 않고
+        # (다른 제어를 얼려버리면 안 된다) 자체 히스테리시스 래치만 쓴다.
+        nursery_lock = self._eval_nursery_lock(env)
+        if nursery_lock and any(is_wetting_fogger(p) for p in profiles):
+            mask |= GATE_BIT_FOG_SUNBURN
+            reasons.append('nursery_fog_sunburn')
+
+        # 아래 판정들은 "시설 비상 게이트"만 대상으로 한다. 육묘 분무 잠금이
+        # 함께 켜졌다고 해서 풍향 차등 폐쇄 같은 기존 동작이 바뀌면 안 된다.
+        mask_core = mask & ~GATE_BIT_FOG_SUNBURN
+
         # ── EXT_EXP 단독 발동 → partial gate (개구부만 강제 폐쇄, 내부 제어 지속) ──
         # 다른 게이트(강우·강풍·폭염·한파·내부 만료)가 함께 발동된 경우는 일반 경로.
-        ext_exp_only = (mask == GATE_BIT_EXT_EXP)
+        ext_exp_only = (mask_core == GATE_BIT_EXT_EXP)
 
         triggered = bool(mask) or (now < self._triggered_until)
-        if triggered and mask:
+        if triggered and mask_core:
             self._triggered_until = now + cfg.gate_ttl
 
         if not triggered:
@@ -159,7 +241,7 @@ class SafetyPreGate:
         # ── 풍향 차등 가능 여부 판정 ────────────────────────────────────────────
         # 조건: 강풍 단독 발동 + wind_dir 존재 + 모든 opening profile 에 azimuth_deg 존재.
         #       다른 게이트(강우·폭염·한파·만료) 동시 발동 시는 보수적 일괄 폐쇄.
-        wind_only = (mask == GATE_BIT_WIND)
+        wind_only = (mask_core == GATE_BIT_WIND)
         wind_dir = ext.get('wind_dir')
         opening_profiles = [p for p in profiles if p.kind == 'opening']
         all_have_azimuth = (opening_profiles and
@@ -167,7 +249,11 @@ class SafetyPreGate:
         per_opening_mode = (wind_only and wind_dir is not None and all_have_azimuth)
 
         # EXT_EXP 단독: partial=True, triggered=False → L1-L3 계속, 개구부만 강제 폐쇄
+        # 육묘 분무 잠금 단독(mask_core == 0)도 마찬가지 — 분무기만 끄고 나머지
+        # 제어는 그대로 돈다. mask == 0 인 TTL 유지 구간은 기존대로 전체 홀드.
         is_partial = per_opening_mode or ext_exp_only
+        if mask and mask_core == 0:
+            is_partial = True
 
         forced = self._build_forced_commands(mask, profiles, ext, per_opening_mode)
 
@@ -253,6 +339,13 @@ class SafetyPreGate:
                 # L1-L3 제어 지속 → forced 명령 생성 안 함.
                 if p.kind in ('opening', 'shade'):
                     value = 0.0
+
+            # 육묘 일소 잠금은 마지막에 적용해 다른 게이트를 이긴다.
+            # 특히 폭염 게이트와 겹치는 경우가 중요하다 — 한여름 정오는
+            # 폭염 발동 조건이자 일소 위험이 최대인 시각이라, 여기서
+            # 덮어쓰지 않으면 비상 냉방 중에 분무가 그대로 살아난다.
+            if (mask & GATE_BIT_FOG_SUNBURN) and is_wetting_fogger(p):
+                value = 0.0
 
             if value is not None:
                 cmds[p.actuator_id] = {

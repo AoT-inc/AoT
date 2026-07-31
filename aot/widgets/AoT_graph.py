@@ -362,6 +362,13 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Enable the graph navigation bar.')
         },
         {
+            'id': 'enable_night_shading',
+            'type': 'bool',
+            'default_value': False,
+            'name': lazy_gettext('Shade Night'),
+            'phrase': lazy_gettext('Shades the periods between sunset and sunrise so readings can be read against the solar day rather than the clock. Sun times come from this farm\'s location.')
+        },
+        {
             'id': 'enable_export',
             'type': 'bool',
             'default_value': False,
@@ -482,7 +489,7 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
 {% endif %}
 {% if "aot_chart_core" not in dashboard_dict %}
-  <script type="text/javascript" src="/static/js/common/aot-chart-core.js"></script>
+  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=2"></script>
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
 
@@ -1088,6 +1095,11 @@ WIDGET_INFORMATION = {
       events: {
         render: function () {
           AoTChart.axisAdjust(this, { hideOnMobile: {% if widget_options.get('hide_axis_labels_on_mobile', True) %}true{% else %}false{% endif %} });
+          {% if widget_options['enable_night_shading'] %}
+          // 보이는 구간의 밤을 깐다. 축 범위가 바뀔 때마다 render 가 다시 도므로
+          // 별도 훅 없이 따라오고, 같은 범위는 클라이언트 캐시에서 끝난다.
+          AoTChart.applyNightShading(this, {});
+          {% endif %}
           // Wire range-selector buttons once to load earlier data on demand.
           if (!this._graphBtnsWired && this.rangeSelector && this.rangeSelector.buttons && this.rangeSelector.buttons.length) {
             this._graphBtnsWired = true;

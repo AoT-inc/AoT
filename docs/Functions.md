@@ -448,6 +448,14 @@ Conditions are functions available within `Run Python Code` that return particul
 <td>Returns True if the controller is active, False if it is inactive.</td>
 </tr>
 <tr>
+<td>Sun: Day or Night</td>
+<td>Returns True when it is currently daytime at the location, False at night. The location is inherited from this Conditional Function's position on the map (falling back to its zone or site), so no coordinates are configured here. The sunrise and sunset offsets (minutes) shift each end of the daytime window — a sunset offset of -30 treats the last 30 minutes before sunset as night. Under the midnight sun it is always True; during polar night, always False.</td>
+</tr>
+<tr>
+<td>Sun: Time Until Event</td>
+<td>Returns the number of seconds until the next selected sun event (sunrise, sunset, solar noon, civil dawn, civil dusk). A negative event offset (minutes) counts down to a point before the event — -60 returns the seconds remaining until one hour before the event. The location is inherited from the Conditional Function. If the event does not occur on that date (polar regions), "None" is returned.</td>
+</tr>
+<tr>
 <td>Max Age (seconds)</td>
 <td>The maximum age (in seconds) a measurement can have. If the last measurement is older than this, "None" is returned instead of the measurement.</td>
 </tr>

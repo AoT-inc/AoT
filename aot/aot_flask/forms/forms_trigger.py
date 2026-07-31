@@ -29,7 +29,7 @@ class Trigger(FlaskForm):
     edge_detected = StringField(lazy_gettext('On Edge Detected'))
 
     # Sunrise/Sunset
-    rise_or_set = StringField(lazy_gettext('Sunrise or Sunset'))
+    rise_or_set = StringField(lazy_gettext('Sun Event'))
     latitude = DecimalField(lazy_gettext('Latitude (Decimal)'), widget=NumberInput(step='any'))
     longitude = DecimalField(lazy_gettext('Longitude (Decimal)'), widget=NumberInput(step='any'))
     location_source = SelectField(

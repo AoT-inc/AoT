@@ -138,6 +138,16 @@ class CustomModule(
         self.humid_max     = None
         self.humid_min     = None
 
+        # Nursery (seedling protection) — 2026-07-31 aot-005 일소 사건 대응
+        self.nursery_mode           = None
+        self.nursery_solar_lockout  = None
+        self.nursery_solar_release  = None
+        self.nursery_max_on_sec     = None
+        self.nursery_min_off_sec    = None
+        self.nursery_water_source   = None
+        self.nursery_evening_fog        = None
+        self.nursery_evening_cutoff_min = None
+
         # Photosynthesis Model
         self.photosynth_mode_enabled = None
         self.crop_preset             = None
@@ -203,13 +213,30 @@ class CustomModule(
 
     # ─────────────────────────────────────────────────────────────────────────
     def initialize(self):
+        # 육묘장 모드: 지하수처럼 경도·철분이 높고 수온이 낮은 원수를 쓰면
+        # 물방울 렌즈 집광 외에 염류 잔류·저온 충격까지 겹쳐 피해가 커진다.
+        # 그래서 원수가 지하수면 잠금 임계를 자동으로 더 보수적으로 내린다.
+        _lockout = float(self.nursery_solar_lockout or 250.0)
+        _release = float(self.nursery_solar_release or 150.0)
+        if (self.nursery_water_source or 'groundwater') == 'groundwater':
+            _lockout = min(_lockout, 150.0)
+            _release = min(_release, 100.0)
         cfg = PreGateConfig(
             wind_threshold=self.gate_wind_threshold or 12.0,
             rain_threshold=0.5,
             heat_ext_threshold=45.0,
             cold_ext_threshold=-5.0,
+            nursery_mode=bool(self.nursery_mode),
+            nursery_solar_lockout=_lockout,
+            nursery_solar_release=_release,
+            nursery_evening_fog=(True if self.nursery_evening_fog is None
+                                 else bool(self.nursery_evening_fog)),
         )
         self._pre_gate = SafetyPreGate(cfg)
+        # 감쇠 구간(_cycle_mixin.apply_nursery_fog_derate)도 같은 값을 봐야
+        # 하드 잠금과 감쇠가 어긋나지 않는다.
+        self.nursery_solar_lockout = _lockout
+        self.nursery_solar_release = _release
         # select_device 옵션 타입은 {id}_id 속성을 생성한다.
         # 내부 코드는 geo_facility_id_device_id 를 참조하므로 여기서 정규화한다.
         if not self.geo_facility_id_device_id:

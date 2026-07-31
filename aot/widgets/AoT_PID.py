@@ -514,7 +514,7 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
 {% endif %}
 {% if "aot_chart_core" not in dashboard_dict %}
-  <script type="text/javascript" src="/static/js/common/aot-chart-core.js"></script>
+  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=2"></script>
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
 {% if current_user.theme in dark_themes %}

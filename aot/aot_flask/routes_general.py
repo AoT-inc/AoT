@@ -1527,3 +1527,53 @@ def api_geo_length_unit():
     from aot.aot_flask.utils.utils_geo import invalidate_geo_config_cache
     invalidate_geo_config_cache()
     return jsonify({'length_unit': setting.length_unit})
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Sun bands — 그래프 야간 음영
+#
+# 측정 그래프는 하루를 균일한 시간 축으로 그리지만, 작물이 겪는 하루는 그렇지
+# 않다. 온도가 떨어진 구간이 밤이라 그런 것인지 차광 때문인지, 습도가 오른
+# 시각이 일몰 직후인지 한밤중인지는 축만 봐서는 알 수 없다. 이 엔드포인트는
+# 보이는 구간의 밤(일몰~다음 일출) 목록을 돌려주고, 차트는 그걸 plotBand 로
+# 깐다. 위치는 태양시 커널의 상속 체인을 그대로 따른다.
+# ──────────────────────────────────────────────────────────────────────────
+_SUN_BANDS_MAX_DAYS = 400
+
+
+@blueprint.route('/sun_bands', methods=['GET'])
+@flask_login.login_required
+def sun_bands():
+    """[from, to] epoch-ms 쌍으로 밤 구간을 반환.
+
+    쿼리: start, end (epoch ms, 필수), target_id (선택 — 없으면 농장 전역).
+    응답: {"bands": [[from_ms, to_ms], ...], "tz": "Asia/Seoul"}
+          좌표를 해석할 수 없으면 bands 는 빈 배열(그래프는 음영 없이 그린다).
+    """
+    from datetime import datetime as _dt
+    from datetime import timezone as _tzinfo
+
+    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.solar import night_bands
+
+    try:
+        start_ms = float(request.args.get('start'))
+        end_ms = float(request.args.get('end'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'start and end (epoch ms) are required'}), 400
+    if end_ms <= start_ms:
+        return jsonify({'bands': [], 'tz': None})
+    if (end_ms - start_ms) > _SUN_BANDS_MAX_DAYS * 86400000:
+        return jsonify({'error': 'range too long'}), 400
+
+    target_id = request.args.get('target_id') or None
+    bands = night_bands(
+        _dt.fromtimestamp(start_ms / 1000.0, tz=_tzinfo.utc),
+        _dt.fromtimestamp(end_ms / 1000.0, tz=_tzinfo.utc),
+        target_id=target_id)
+
+    return jsonify({
+        'bands': [[int(lo.timestamp() * 1000), int(hi.timestamp() * 1000)]
+                  for lo, hi in bands],
+        'tz': str(resolve_location_tz(target_id)),
+    })

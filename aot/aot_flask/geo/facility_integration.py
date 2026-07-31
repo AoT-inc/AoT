@@ -21,6 +21,7 @@ from aot.databases.models import Output, Input, DeviceMeasurements
 from .facility_io import FacilityManager
 from .facility_calc import compute_capacity
 from .facility_bays import compute_bay_slices, build_fitting_bay_map
+from .irrigation_nozzles import nozzles_by_actuator, summarize_nozzles
 
 # ── TTL cache ─────────────────────────────────────────────────────────────────
 _INTEG_CACHE_TTL  = 30          # seconds
@@ -71,31 +72,66 @@ def _infer_mtype_from_dm(dm_row):
 # Fitting.kind → ActuatorProfile.kind 추론 (slot_key 미설정 시 fallback).
 # 모호한 케이스(fan: circulation/exhaust/intake)는 None 으로 두어
 # 로더가 slot 또는 명시 actuator_kind 를 사용하도록 한다.
+# 관수 계열(irrigation_layer/irrigation_valve)은 노즐 구성에 따라 fogger 가
+# 되기도 하고 env 대상이 아니기도 하므로 표에 두지 않고 동적으로 해석한다
+# (_irrigation_actuator_kind 참조).
 _FITTING_KIND_TO_ACTUATOR_KIND = {
     'window':            'opening',
     'side_window':       'opening',
     'door':              'opening',
     'curtain':           'curtain',
     'shade_curtain':     'shade',
-    'irrigation_layer':  'irrigation',
-    'irrigation_valve':  'irrigation',
+    # 설비(Fixtures) 팔레트로 배치하는 실내 장치. 디자이너는 이 종류들을
+    # 배치하고 Output 까지 물릴 수 있는데(geo_facility.html 배치 버튼 + 인스펙터
+    # 종류 드롭다운) 이 표에 없으면 _fitting_actuator_kind 가 None 을 돌려줘
+    # 통합환경제어가 조용히 버린다 — 사용자는 가습기를 붙여 놨는데 등록이 안 된다
+    # (2026-07-31 aot-005 육묘장: '관수: 미니스프링클러'가 fogger 피팅으로
+    #  바인딩돼 있었으나 등록되지 않아, VPD 를 낮출 액추에이터가 하나도 없었다).
+    'fogger':            'fogger',
+    'heater':            'heater',
+    'cooler':            'cooler',
+    'co2_injector':      'co2_injector',
+    'lighting':          'lighting',
 }
+
+# 관수 계열 피팅/ActuatorUI kind — 노즐 구성으로 env 등록 여부를 판정한다.
+_IRRIGATION_KINDS = frozenset({'irrigation_layer', 'irrigation_valve'})
 
 # 제너릭 'fan' 피팅의 세부 역할(순환/배기/흡기) 후보.
 _FAN_ROLE_KINDS = frozenset({'circulation_fan', 'exhaust_fan', 'intake_fan'})
 
 
-def _fitting_actuator_kind(fitting):
+def _irrigation_actuator_kind(nozzle_summary):
+    """관수 액추에이터의 노즐 요약 → env_control ActuatorProfile.kind.
+
+    분무 노즐(sprinkler)이 하나라도 달려 있으면 그 밸브·펌프는 실내 습도를
+    직접 올릴 수 있으므로 'fogger' 로 등록한다. 드립 전용이면 잎·공기에 물이
+    닿지 않아 환경 액추에이터가 아니므로 None(등록 제외).
+
+    2026-07-31 이전에는 관수 밸브가 무조건 등록 제외였다. 그래서 통합환경제어
+    쪽에 VPD 를 낮출 수 있는 액추에이터가 하나도 잡히지 않았고, VPD 관리를
+    별도 PID Function 으로 분리해 운영할 수밖에 없었다.
+    """
+    if not nozzle_summary:
+        return None
+    return 'fogger' if nozzle_summary.get('sprinkler_count') else None
+
+
+def _fitting_actuator_kind(fitting, nozzle_map=None):
     """피팅(fitting) → env_control ActuatorProfile.kind 추론.
 
     제너릭 'fan' 피팅은 자체로 순환/배기/흡기를 구분하지 못하므로 인스펙터에서
     지정한 fitting.fan_role 을 사용한다 (미지정 시 circulation_fan 으로 안전 기본).
+    관수 계열은 nozzle_map(액추에이터별 노즐 요약)으로 판정한다.
     그 외 종류는 _FITTING_KIND_TO_ACTUATOR_KIND 표를 따른다.
     """
     fk = fitting.get('kind')
     if fk == 'fan':
         role = fitting.get('fan_role') or 'circulation_fan'
         return role if role in _FAN_ROLE_KINDS else 'circulation_fan'
+    if fk in _IRRIGATION_KINDS:
+        return _irrigation_actuator_kind(
+            (nozzle_map or {}).get(fitting.get('actuator_id')))
     return _FITTING_KIND_TO_ACTUATOR_KIND.get(fk)
 
 
@@ -140,6 +176,10 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
 
     fittings_raw = facility.get('fittings') or []
     fittings = fittings_raw if isinstance(fittings_raw, list) else []
+
+    # 관수 노즐 배치 → 액추에이터별 엽면 습윤 특성. 액추에이터 해석(3단계)보다
+    # 먼저 계산해야 관수 밸브의 kind(fogger 여부)를 판정할 수 있다.
+    nozzle_map = nozzles_by_actuator(fittings)
 
     # facility['actuators'] 는 두 가지 형태로 저장된다:
     #   - 레거시 dict {slot_key: output_uuid}            → slot_map 경로
@@ -219,9 +259,13 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
         if not output_uuid:
             continue
         ui_kind = act.get('kind')
-        kind = _ACTUATOR_UI_KIND_TO_KIND.get(ui_kind, ui_kind)
+        if ui_kind in _IRRIGATION_KINDS:
+            # 관수 밸브·펌프: 노즐 구성이 분무면 fogger, 드립 전용이면 제외.
+            kind = _irrigation_actuator_kind(nozzle_map.get(output_uuid))
+        else:
+            kind = _ACTUATOR_UI_KIND_TO_KIND.get(ui_kind, ui_kind)
         if not kind:
-            continue   # irrigation_valve 등 — env 액추에이터 아님
+            continue   # 드립 전용 관수 밸브 등 — env 액추에이터 아님
         row = out_lookup.get(output_uuid)
         specs = act.get('specs') or {}
         entry = {
@@ -260,7 +304,7 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
             continue
         if aid not in actuators_resolved:
             row = out_lookup.get(aid)
-            inferred_kind = _fitting_actuator_kind(f)
+            inferred_kind = _fitting_actuator_kind(f, nozzle_map)
             actuators_resolved[aid] = {
                 'output_uuid':           aid,
                 'output_name':           (row.name if row else None) or 'Output',
@@ -278,7 +322,7 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
             # kind 가 None 이면 fitting kind 로 보강.
             entry = actuators_resolved[aid]
             if not entry.get('kind'):
-                inferred = _fitting_actuator_kind(f)
+                inferred = _fitting_actuator_kind(f, nozzle_map)
                 if inferred:
                     entry['kind'] = inferred
                     entry['capabilities'] = _KIND_CAPABILITIES.get(inferred, [])
@@ -417,6 +461,8 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
             'pipe_count': len(pipes_out),
             'device_count': len(layer_devs),
             'pipes': pipes_out,
+            # 엽면 습윤 위험 — 노즐 유량·반경·분사방향·좌표에서 산출.
+            'nozzle': summarize_nozzles(layer_devs, layer_height=L.get('height_m')),
             'totals': {
                 'length_m': round(layer_total_len, 2),
                 'emitters': layer_total_emt,
@@ -431,24 +477,21 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
     irrigation_summary['totals']['flow_lph'] = round(irrigation_summary['totals']['flow_lph'], 1)
     irrigation_summary['totals']['flow_lpm'] = round(irrigation_summary['totals']['flow_lph'] / 60.0, 2)
 
-    # --- 4c. Per-actuator irrigation flow (P3) ---
-    # irrigation_layer fitting 의 actuator_id(밸브/펌프 Output UUID) 별로
-    # 연결된 emitter 유량 합계를 actuators_resolved 에 붙인다.
-    # VolumetricAdapter 가 이 값을 사용해 on_sec → ml 환산을 수행한다.
-    irr_flow_by_actuator: dict = {}
-    for L in irr_layers:
-        aid = L.get('actuator_id')
-        lid = L.get('id')
-        if not aid or not lid:
+    # --- 4c. Per-actuator irrigation flow + 엽면 습윤 특성 (P3) ---
+    # 관수 액추에이터(레이어 펌프·밸브 Output UUID) 별로 연결된 emitter 유량
+    # 합계와 노즐 습윤 지표를 actuators_resolved 에 붙인다.
+    # VolumetricAdapter 는 flow_lpm 으로 on_sec → mL 를 환산하고,
+    # env_coordinator 육묘장 게이트는 nozzle 로 분무 잠금 여부를 판정한다.
+    irrigation_summary['by_actuator'] = {}
+    for aid, nozzle in nozzle_map.items():
+        irrigation_summary['by_actuator'][aid] = nozzle
+        entry = actuators_resolved.get(aid)
+        if entry is None:
             continue
-        layer_devs_for_act = [d for d in irr_devs if d.get('layer_id') == lid]
-        layer_lph = sum(float(d.get('flow_lph') or 0.0) for d in layer_devs_for_act)
-        if layer_lph > 0.0:
-            irr_flow_by_actuator[aid] = irr_flow_by_actuator.get(aid, 0.0) + layer_lph / 60.0
-
-    for aid, flow_lpm in irr_flow_by_actuator.items():
-        if aid in actuators_resolved:
-            actuators_resolved[aid]['flow_lpm'] = round(flow_lpm, 3)
+        flow_lph = float(nozzle.get('total_flow_lph') or 0.0)
+        if flow_lph > 0.0:
+            entry['flow_lpm'] = round(flow_lph / 60.0, 3)
+        entry['nozzle'] = nozzle
 
     # --- 4d. Bay(구역) 귀속 ---
     # bay 2개 이상 시설에서 fitting position(로컬 x) → bay 슬라이스 매핑.

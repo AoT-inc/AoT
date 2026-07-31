@@ -837,6 +837,11 @@ class HelpersMixin:
                 'RH':     internal.get('RH', 60.0),
                 'RH_max': internal.get('RH_max', internal.get('RH', 60.0)),
                 'RH_min': internal.get('RH_min', internal.get('RH', 60.0)),
+                # 육묘 일소 게이트 판정용 — 차광막 개도를 반영한 실내 추정 광량.
+                # 없으면 게이트가 external['solar'] 로 폴백한다.
+                'light_est': internal.get('light_est'),
+                # 일몰 전 분무 중단 구간 여부 (광량과 무관하게 우선 차단).
+                'evening_block': internal.get('evening_block', False),
             },
             'external': {
                 'T':        external.get('T_ext', 20.0),
@@ -844,6 +849,7 @@ class HelpersMixin:
                 'wind':     wind_val,
                 'wind_dir': wind_dir_val,
                 'rain':     external.get('rain', 0.0),
+                'solar':    external.get('solar', 0.0),
             },
             'now_ts':      time.time(),
             'last_ext_ts': external.get('last_ext_ts', time.time()),
@@ -1104,7 +1110,14 @@ class HelpersMixin:
                         val = max(0.0, min(100.0, round(val / step) * step))
                         will_move = abs(val - prev_val) >= (step - 1e-6)
 
-            if (not gate_active) and prev_sent is not None:
+            # Pulse-dosing actuators (fogger under nursery mode) must reach the
+            # adapter EVERY cycle: the adapter itself decides pulse vs. drying
+            # interval from its own clock. The deadband skip would suppress the
+            # repeat sends and collapse the pulse train into a single spray.
+            pulse_dosing = bool(
+                profile and getattr(profile.cmd_constraints, 'pulse_dosing', False))
+
+            if (not gate_active) and (not pulse_dosing) and prev_sent is not None:
                 prev_val, prev_ts = prev_sent
                 age = now - prev_ts
                 delta = abs(val - prev_val)

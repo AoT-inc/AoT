@@ -16,14 +16,11 @@
     </div>
     
     <div>
-      <strong>{{_('Next Sunrise/Sunset with Offset')}}</strong><br>
+      <strong>{{_('Next Execution')}}</strong><br>
       <div style="margin-top: 4px;">
-        {% if 'offset_sunrise' in sunrise_set_calc[each_function.unique_id] and
-              sunrise_set_calc[each_function.unique_id]['offset_sunrise'] and
-              'offset_sunset' in sunrise_set_calc[each_function.unique_id] and
-              sunrise_set_calc[each_function.unique_id]['offset_sunset'] %}
-          {{_('Sunrise')}}: {{sunrise_set_calc[each_function.unique_id]['offset_sunrise']}}<br/>
-          {{_('Sunset')}}: {{sunrise_set_calc[each_function.unique_id]['offset_sunset']}}
+        {% if sunrise_set_calc[each_function.unique_id].get('next_fire') %}
+          {{dict(sun_events).get(each_function.rise_or_set or 'sunrise', each_function.rise_or_set)}}:
+          {{sunrise_set_calc[each_function.unique_id]['next_fire']}}
         {% else %}
           {{_('Unable to calculate Sunrise/Sunset times.')}}
         {% endif %}
@@ -36,9 +33,10 @@
   <div class="aot-modal-option-row">
     <label class="aot-modal-option-label">{{form_trigger.rise_or_set.label(class_='mb-0')}}</label>
     <div class="aot-modal-option-control">
-      <select class="form-control aot-modern-select selectpicker" data-style="btn-white" id="rise_or_set" name="rise_or_set" title="{{_('Execute condition at Sunrise or Sunset?')}}">
-        <option value="sunrise"{% if each_function.rise_or_set == 'sunrise' %} selected{% endif %}>{{_('Sunrise')}}</option>
-        <option value="sunset"{% if each_function.rise_or_set == 'sunset' %} selected{% endif %}>{{_('Sunset')}}</option>
+      <select class="form-control aot-modern-select selectpicker" data-style="btn-white" id="rise_or_set" name="rise_or_set" title="{{_('Which sun event should this Trigger fire on?')}}">
+      {% for value, label in sun_events -%}
+        <option value="{{value}}"{% if (each_function.rise_or_set or 'sunrise') == value %} selected{% endif %}>{{label}}</option>
+      {% endfor -%}
       </select>
     </div>
   </div>

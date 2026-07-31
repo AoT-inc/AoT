@@ -7,6 +7,7 @@ from flask_babel import lazy_gettext
 from flask_wtf import FlaskForm
 from wtforms import DecimalField
 from wtforms import HiddenField
+from wtforms import IntegerField
 from wtforms import SelectField
 from wtforms import StringField
 from wtforms import SubmitField
@@ -15,6 +16,7 @@ from wtforms.validators import DataRequired
 from wtforms.widgets import NumberInput
 
 from aot.config import METHODS
+from aot.config import SUN_EVENTS
 from aot.config_translations import TRANSLATIONS
 
 
@@ -40,6 +42,12 @@ class MethodAdd(FlaskForm):
         lazy_gettext('End Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"}
     )
+    time_start_event = SelectField(
+        lazy_gettext('Phase Anchor'),
+        choices=[('', lazy_gettext('Fixed time')),
+                 ('solar_noon', lazy_gettext('Solar Noon'))])
+    time_start_offset_min = IntegerField(
+        lazy_gettext('Phase Offset (min)'), widget=NumberInput())
     time_start = StringField(
         lazy_gettext('Start Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"}
@@ -102,6 +110,16 @@ class MethodMod(FlaskForm):
     daily_time_end = StringField(
         lazy_gettext('End Time (HH:MM:SS)'),
         render_kw={"placeholder": "HH:MM:SS"})
+    time_start_event = SelectField(
+        lazy_gettext('Start Anchor'),
+        choices=[('', lazy_gettext('Fixed time'))] + SUN_EVENTS)
+    time_start_offset_min = IntegerField(
+        lazy_gettext('Start Offset (min)'), widget=NumberInput())
+    time_end_event = SelectField(
+        lazy_gettext('End Anchor'),
+        choices=[('', lazy_gettext('Fixed time'))] + SUN_EVENTS)
+    time_end_offset_min = IntegerField(
+        lazy_gettext('End Offset (min)'), widget=NumberInput())
     time_start = StringField(
         lazy_gettext('Start Date/Time (YYYY-MM-DD HH:MM:SS)'),
         render_kw={"placeholder": "YYYY-MM-DD HH:MM:SS"})

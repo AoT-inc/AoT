@@ -278,6 +278,26 @@ def get_condition_value(condition_id):
         control = DaemonControl()
         return control.controller_is_active(sql_condition.controller_id)
 
+    # Return True if it is currently daytime at this Conditional's location
+    elif sql_condition.condition_type == 'sun_state':
+        from aot.utils.solar import is_daytime
+        return is_daytime(
+            target_id=sql_condition.conditional_id,
+            start_offset_minutes=sql_condition.sun_offset_start_minutes or 0,
+            end_offset_minutes=sql_condition.sun_offset_end_minutes or 0)
+
+    # Return seconds remaining until the next sun event at this location
+    elif sql_condition.condition_type == 'sun_event_countdown':
+        from aot.utils.solar import next_sun_event
+        from aot.utils.timekit import utc_now
+        event = next_sun_event(
+            sql_condition.sun_event or 'sunset',
+            target_id=sql_condition.conditional_id,
+            time_offset_minutes=sql_condition.sun_offset_start_minutes or 0)
+        if event is None:
+            return None
+        return (event - utc_now()).total_seconds()
+
 
 def get_condition_value_dict(condition_id):
     """

@@ -271,7 +271,8 @@ class PIDController(AbstractController, threading.Thread):
                     now = utc_now()
 
 
-                    method = load_method_handler(self.setpoint_tracking_id, self.logger)
+                    method = load_method_handler(self.setpoint_tracking_id, self.logger,
+                                                 target_id=self.unique_id)
                     if method.method_type == 'DailyMultiPoint':
                         weeks_elapsed = self._get_weeks_elapsed(this_pid.method_start_time)
                         new_setpoint, ended = method.calculate_setpoint(
@@ -362,7 +363,7 @@ class PIDController(AbstractController, threading.Thread):
         """Initialize method variables to start running a method."""
         self.setpoint_tracking_id = ''
 
-        method = load_method_handler(method_id, self.logger)
+        method = load_method_handler(method_id, self.logger, target_id=self.unique_id)
 
         this_controller = db_retrieve_table_daemon(PID, unique_id=self.unique_id)
         self.method_type = method.method_type

@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_15_mcp_http_enabled_20260728'
+ALEMBIC_VERSION = 'p6_17_method_solar_anchor_20260731'
 AOT_VERSION = '26.07.5'
 
 # FORCE UPGRADE MASTER
@@ -511,6 +511,17 @@ CONDITIONAL_CONDITIONS = [
     ('output_state', lg('Output State')),
     ('output_duration_on', lg('Output Duration On')),
     ('controller_status', lg("Controller Running")),
+    ('sun_state', lg('Sun: Day or Night')),
+    ('sun_event_countdown', lg('Sun: Time Until Event')),
+]
+
+# 태양 이벤트 — 조건/예약에서 고르는 앵커. aot.utils.solar.SUN_EVENTS 와 동일.
+SUN_EVENTS = [
+    ('sunrise', lg('Sunrise')),
+    ('sunset', lg('Sunset')),
+    ('solar_noon', lg('Solar Noon')),
+    ('civil_dawn', lg('Civil Dawn')),
+    ('civil_dusk', lg('Civil Dusk')),
 ]
 
 FUNCTION_INFO = {
@@ -568,9 +579,9 @@ FUNCTION_INFO = {
     },
     'trigger_sunrise_sunset': {
         'name': f"{T['trigger']['title']}: {lg('Sunrise/Sunset')}",
-        'dependencies_module': [
-            ('pip-pypi', 'suntime', 'suntime==1.2.5')
-        ]
+        # 태양시는 시스템 전반의 기본값(aot.utils.solar)이라 선택 설치가 아니라
+        # 정식 의존성(astral, requirements.txt)이다.
+        'dependencies_module': []
     },
     'trigger_sequence': {
         'name': f"{T['trigger']['title']}: {lg('Sequence')}",

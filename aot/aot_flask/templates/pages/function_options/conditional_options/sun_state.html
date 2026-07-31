@@ -1,0 +1,30 @@
+{% set sun_preview = sun_condition_preview(each_condition) %}
+<div class="aot-modal-body-text mb-2">
+  <strong>[{{_('Condition')}}] {{_('Sun: Day or Night')}}</strong>:
+  <strong>self.condition("{{each_condition.unique_id.split('-')[0]}}")</strong>
+  {{_('Returns True during the day and False at night. The location is inherited from this Conditional Function.')}}
+  {% if sun_preview %}
+    <div class="text-muted" style="margin-top: 4px;">
+      {{_('Sunrise')}}: {{sun_preview['sunrise']}} · {{_('Sunset')}}: {{sun_preview['sunset']}} ·
+      {{_('Right now')}}: <strong>{{sun_preview['state']}}</strong>
+    </div>
+  {% endif %}
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_conditional_conditions.sun_offset_start_minutes.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_conditional_conditions.sun_offset_start_minutes(class_='form-control aot-modern-input',
+      value=each_condition.sun_offset_start_minutes or 0,
+      **{'title': _('Minutes to shift the start of daytime. A positive value delays it (30 means daytime starts 30 minutes after sunrise).')})}}
+  </div>
+</div>
+
+<div class="aot-modal-option-row">
+  {{form_conditional_conditions.sun_offset_end_minutes.label(class_='aot-modal-option-label mb-0')}}
+  <div class="aot-modal-option-control">
+    {{form_conditional_conditions.sun_offset_end_minutes(class_='form-control aot-modern-input',
+      value=each_condition.sun_offset_end_minutes or 0,
+      **{'title': _('Minutes to shift the end of daytime. A negative value brings it forward (-30 means night starts 30 minutes before sunset).')})}}
+  </div>
+</div>

@@ -91,6 +91,19 @@ class CmdConstraints:
     move_step_pct: float = 5.0      # 모터 최소 작동 조건 / 양자화 격자 (%). 직전 송신값과 이 값
                                     # 이상 벌어져야 이동(히스테리시스), 명령은 이 격자에 스냅.
                                     # 0 = 비활성 → 미세한 진동도 그대로 모터에 전달(기존 동작).
+    # ── 관수식 펄스 도징 (분무 액추에이터) ──────────────────────────────────
+    # 분무기를 개도(%)로 연속 변조하면 사이클의 절반을 계속 뿌리는 것과 같아
+    # 잎이 마를 틈이 없다. max_on_sec 로 1회 분무를 짧게 끊고 min_off_sec 로
+    # 건조 시간을 강제하면, 가습량은 "펄스 폭"이 아니라 "펄스 빈도"로 조절된다
+    # — 관수 제어가 회당 정량 + 간격으로 물을 주는 방식과 같다.
+    # 둘 다 0 = 비활성 (기존 연속 변조 동작).
+    max_on_sec: float = 0.0         # 1회 가동 최대 지속 (s)
+    min_off_sec: float = 0.0        # 가동 종료 후 강제 건조 시간 (s)
+
+    @property
+    def pulse_dosing(self) -> bool:
+        """관수식 펄스 도징 활성 여부."""
+        return self.max_on_sec > 0.0 and self.min_off_sec > 0.0
 
     def effective_slew(self, cycle_sec: float) -> float:
         """실제 적용할 slew_per_cycle 값.

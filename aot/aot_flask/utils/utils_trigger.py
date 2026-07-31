@@ -100,23 +100,21 @@ def trigger_mod(form):
 
         elif trigger.trigger_type == 'trigger_sunrise_sunset':
             page_refresh = True
-            if form.rise_or_set.data not in ['sunrise', 'sunset']:
-                messages["error"].append("{id} must be set to 'sunrise' or 'sunset'".format(
-                    id=form.rise_or_set.label.text))
+            from aot.utils.solar import SUN_EVENTS as _SUN_EVENTS
+            if form.rise_or_set.data not in _SUN_EVENTS:
+                messages["error"].append("{id} must be one of: {events}".format(
+                    id=form.rise_or_set.label.text, events=', '.join(_SUN_EVENTS)))
             # Location is GIS-managed: trigger.latitude/longitude were already set
             # above from the map widget's hidden fields (auto-assigned from the
-            # device's map position). No manual entry — just verify they exist and
-            # fall within valid ranges.
-            if trigger.latitude is None or trigger.longitude is None:
-                messages["error"].append(gettext(
-                    "Location is not set. Place this trigger on the map to assign coordinates."))
-            else:
-                if not (-90 <= trigger.latitude <= 90):
-                    messages["error"].append("{id} must be >= -90 and <= 90".format(
-                        id=form.latitude.label.text))
-                if not (-180 <= trigger.longitude <= 180):
-                    messages["error"].append("{id} must be >= -180 and <= 180".format(
-                        id=form.longitude.label.text))
+            # device's map position). 좌표가 비어 있어도 막지 않는다 — 태양시 커널이
+            # 소속 도형 → 농장 전역으로 상속해 계산한다(§13.3). 지도 중심이 설정되지
+            # 않은 농장에서 신규 트리거를 아예 저장할 수 없던 문제.
+            if trigger.latitude is not None and not (-90 <= trigger.latitude <= 90):
+                messages["error"].append("{id} must be >= -90 and <= 90".format(
+                    id=form.latitude.label.text))
+            if trigger.longitude is not None and not (-180 <= trigger.longitude <= 180):
+                messages["error"].append("{id} must be >= -180 and <= 180".format(
+                    id=form.longitude.label.text))
             if form.date_offset_days.data is None:
                 messages["error"].append("{id} must be set".format(
                     id=form.date_offset_days.label.text))

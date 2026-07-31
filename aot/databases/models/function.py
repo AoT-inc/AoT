@@ -120,6 +120,12 @@ class ConditionalConditions(CRUDMixin, db.Model):
     # Controller
     controller_id = db.Column(db.String(36), default='')
 
+    # Sun (주간/야간·태양 이벤트) — 위치는 부모 Conditional 이 있는 곳을 상속하므로
+    # 좌표 컬럼은 두지 않는다(docs/design/timezone-management.md §13.3).
+    sun_event = db.Column(db.String(32), default='sunset')
+    sun_offset_start_minutes = db.Column(db.Integer, default=0)  # 일출(또는 이벤트) 오프셋
+    sun_offset_end_minutes = db.Column(db.Integer, default=0)    # 일몰 오프셋
+
     def __repr__(self):
         return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)
 

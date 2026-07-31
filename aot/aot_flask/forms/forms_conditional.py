@@ -16,6 +16,7 @@ from wtforms import widgets
 from wtforms.widgets import NumberInput
 
 from aot.config import CONDITIONAL_CONDITIONS
+from aot.config import SUN_EVENTS
 
 
 #
@@ -85,6 +86,20 @@ class ConditionalConditions(FlaskForm):
 
     output_id = StringField(lazy_gettext('Output Device'))
     controller_id = StringField(lazy_gettext('Controller'))
+
+    # Sun (주간/야간·태양 이벤트)
+    sun_event = SelectField(
+        lazy_gettext('Sun Event'),
+        choices=SUN_EVENTS)
+    sun_offset_start_minutes = IntegerField(
+        lazy_gettext('Sunrise Offset (min)'),
+        widget=NumberInput())
+    sun_offset_end_minutes = IntegerField(
+        lazy_gettext('Sunset Offset (min)'),
+        widget=NumberInput())
+    sun_event_offset_minutes = IntegerField(
+        lazy_gettext('Event Offset (min)'),
+        widget=NumberInput())
 
     save_condition = SubmitField(lazy_gettext('Save'))
     delete_condition = SubmitField(lazy_gettext('Delete'))

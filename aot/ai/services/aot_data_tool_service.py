@@ -1915,7 +1915,9 @@ class AoTDataToolService:
 
     @staticmethod
     def schedule_device_control_tool(device_id, scheduled_time=None, state='on', duration_minutes=None,
-                                     delay_seconds=None, duration_seconds=None, **kwargs):
+                                     delay_seconds=None, duration_seconds=None,
+                                     solar_event=None, solar_offset_minutes=0,
+                                     solar_date_offset_days=0, **kwargs):
         """
         [시스템 제어 예약 전용]
         밸브, 펌프, 스프링클러 등 시스템 장치의 제어를 특정 시간에 예약합니다.
@@ -1924,8 +1926,15 @@ class AoTDataToolService:
         Accepts:
           scheduled_time: ISO 8601 string (absolute time) — preferred
           delay_seconds:  relative delay in seconds from now (alternative to scheduled_time)
+          solar_event:    'sunrise'|'sunset'|'solar_noon'|'civil_dawn'|'civil_dusk'
+                          — 그 장치 위치의 태양 이벤트 기준으로 시각을 잡는다.
+                          solar_offset_minutes(±분)·solar_date_offset_days(N일 뒤)와 함께.
           duration_minutes: run duration in minutes
           duration_seconds: run duration in seconds (alternative to duration_minutes)
+
+        "내일 일몰 30분 전에 밸브 열어줘" 같은 요청에서, 일몰 시각을 사람이나 모델이
+        직접 계산해 ISO 로 넘길 필요가 없다 — 계절마다 달라지는 값이라 그렇게 하면
+        틀린다. solar_event 를 쓰면 장치 위치의 실제 태양시로 해석한다.
         """
         try:
             from aot.utils.tz_utils import now_utc, to_utc
@@ -1943,7 +1952,22 @@ class AoTDataToolService:
 
             # 2. 시간 파싱 — scheduled_time 또는 delay_seconds 지원
             now = now_utc()
-            if delay_seconds is not None:
+            if solar_event is not None:
+                from aot.utils.solar import SUN_EVENTS, next_sun_event
+                if solar_event not in SUN_EVENTS:
+                    return {"error": (f"Unknown solar_event: {solar_event}. "
+                                      f"Use one of: {', '.join(SUN_EVENTS)}")}
+                scheduled_dt = next_sun_event(
+                    solar_event,
+                    target_id=output.unique_id,
+                    time_offset_minutes=int(solar_offset_minutes or 0),
+                    date_offset_days=int(solar_date_offset_days or 0),
+                    now=now)
+                if scheduled_dt is None:
+                    return {"error": (f"'{solar_event}' does not occur at this device's "
+                                      f"location in the coming days (polar day/night), "
+                                      f"or the location has no coordinates.")}
+            elif delay_seconds is not None:
                 scheduled_dt = now + timedelta(seconds=int(delay_seconds))
             elif scheduled_time is not None:
                 if isinstance(scheduled_time, str):
@@ -1966,7 +1990,7 @@ class AoTDataToolService:
                 if scheduled_dt <= now:
                     return {"error": f"Requested schedule time {scheduled_time} is in the past. Please provide a future time."}
             else:
-                return {"error": "You must provide either scheduled_time or delay_seconds."}
+                return {"error": "You must provide one of: scheduled_time, delay_seconds, solar_event."}
 
             # 3. 시간 변환 — duration_seconds 지원
             if duration_seconds is not None:
@@ -2148,6 +2172,7 @@ class AoTDataToolService:
                         "timezone": str(resolve_location_tz(None)),
                         "local_time": _dt.now(_tzinfo.utc).astimezone(
                             resolve_location_tz(None)).strftime('%Y-%m-%d %H:%M:%S'),
+                        "sun": AoTDataToolService._sun_block(None, resolve_location_tz(None)),
                     }
 
             tz = resolve_location_tz(target_id)
@@ -2158,10 +2183,63 @@ class AoTDataToolService:
                 "timezone": str(tz),
                 "local_time": now_local.strftime('%Y-%m-%d %H:%M:%S'),
                 "utc_offset": now_local.strftime('%z'),
+                "sun": AoTDataToolService._sun_block(target_id, tz),
             }
         except Exception as e:
             logger.error(f"Error in get_local_time_tool: {e}")
             return {"error": f"Error while resolving local time: {str(e)}"}
+
+    @staticmethod
+    def _sun_block(target_id, tz):
+        """그 위치의 오늘 태양시 요약 — get_local_time 응답에 실린다.
+
+        "지금 주간인가", "일몰까지 얼마 남았나"는 농작업 판단의 기본값인데
+        (관수·분무·차광·환기는 전부 태양일에 묶인다), 지금까지 AI 는 시각만 알고
+        해가 언제 뜨고 지는지는 몰라서 계절을 무시한 조언을 했다.
+        좌표를 해석할 수 없으면 None — 호출부는 그대로 실어 보낸다.
+        """
+        try:
+            from aot.utils.solar import STATUS_NORMAL, sun_times, is_daytime, next_sun_event
+            from aot.utils.timekit import utc_now
+
+            times = sun_times(target_id=target_id)
+            if times is None:
+                return None
+
+            now = utc_now()
+
+            def _local(dt):
+                return dt.astimezone(tz).strftime('%Y-%m-%d %H:%M') if dt else None
+
+            day = is_daytime(target_id=target_id, at=now)
+            # 다음 경계 — 주간이면 일몰, 야간이면 일출.
+            next_kind = 'sunset' if day else 'sunrise'
+            next_dt = next_sun_event(next_kind, target_id=target_id, now=now)
+
+            block = {
+                "sunrise": _local(times.sunrise),
+                "sunset": _local(times.sunset),
+                "solar_noon": _local(times.solar_noon),
+                "civil_dawn": _local(times.civil_dawn),
+                "civil_dusk": _local(times.civil_dusk),
+                "is_daytime": day,
+                "status": times.status,
+            }
+            if times.day_length_seconds is not None:
+                block["day_length_hours"] = round(times.day_length_seconds / 3600.0, 2)
+            if next_dt is not None:
+                block["next_event"] = {
+                    "kind": next_kind,
+                    "local_time": _local(next_dt),
+                    "in_minutes": max(0, int((next_dt - now).total_seconds() // 60)),
+                }
+            if times.status != STATUS_NORMAL:
+                block["note"] = ("이 위치·날짜에는 일출/일몰이 없습니다 "
+                                 "(백야 또는 극야).")
+            return block
+        except Exception as e:
+            logger.debug(f"_sun_block failed for {target_id}: {e}")
+            return None
 
     @staticmethod
     def _geoshape_name_candidates(limit=20):

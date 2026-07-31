@@ -237,6 +237,150 @@ def resolve_tz(entity=None, *, user=None) -> Tuple[pytz.BaseTzInfo, str]:
 
 
 # ---------------------------------------------------------------------------
+# 좌표 해석 체인 — resolve_coords (resolve_tz 와 같은 상속 규칙, 값만 좌표)
+# ---------------------------------------------------------------------------
+def _db_row(table, **kwargs):
+    """daemon·Flask 양쪽에서 동작하는 단일 row 조회(지연 임포트 — 순환 방지)."""
+    try:
+        from aot.utils.database import db_retrieve_table_daemon
+        return db_retrieve_table_daemon(table, **kwargs)
+    except Exception:
+        return None
+
+
+def _shape_centroid(shape) -> Optional[Tuple[float, float]]:
+    """GeoShape 의 중심 좌표. 자기 도형에 없으면 부모 체인을 따라 올라간다."""
+    seen = set()
+    cur = shape
+    while cur is not None and getattr(cur, 'id', None) not in seen:
+        seen.add(getattr(cur, 'id', None))
+        try:
+            centroid = cur.get_centroid()
+            if centroid and centroid[0] is not None and centroid[1] is not None:
+                return (float(centroid[0]), float(centroid[1]))
+        except Exception:
+            pass
+        parent_id = getattr(cur, 'parent_id', None)
+        if not parent_id:
+            return None
+        from aot.databases.models.geo import GeoShape
+        cur = _db_row(GeoShape, custom_name='id', custom_value=parent_id, entry='first')
+    return None
+
+
+def resolve_coords(entity=None, *, target_id=None) -> Tuple[Optional[float], Optional[float], str]:
+    """엔티티/위치의 (위도, 경도, source) 를 resolve_tz 와 같은 우선순위로 해석.
+
+    체인:
+      1. 도형(GeoShape) 자신 또는 target_id 가 가리키는 도형의 중심 → shape
+      2. 장치 row 가 소속된 도형(device_id→GeoShape→부모 체인)      → inherited
+      3. 장치 row 자신의 latitude/longitude 컬럼                     → coords
+      4. 농장 전역 폴백(Misc.map_* → 사이트 도형 중심 → 지도 기본값) → system
+      5. 해석 불가                                                   → utc(=없음)
+
+    daemon·Flask 양 컨텍스트에서 동작한다(db_retrieve_table_daemon 사용).
+    좌표가 없으면 (None, None, SOURCE_UTC) — 호출자가 "위치 없음"으로 처리한다.
+    """
+    row = entity
+    shape_is_inherited = False  # 도형을 '장치의 소속 도형'으로 찾아온 경우 표시
+    if row is None and target_id and target_id != 'none':
+        from aot.databases.models.geo import GeoShape
+        row = _db_row(GeoShape, unique_id=target_id, entry='first')
+        if row is None:
+            try:
+                from aot.databases.models import (
+                    Input, Output, Function, Conditional, Trigger, PID, CustomController)
+                for model in (Input, Output, Function, Conditional,
+                              Trigger, PID, CustomController):
+                    found = _db_row(model, unique_id=target_id, entry='first')
+                    if found is not None:
+                        row = found
+                        break
+            except Exception:
+                row = None
+        if row is None:
+            # 장치 테이블에 없는 id 라도 지도에 도형이 걸려 있으면 그 위치를 쓴다.
+            row = _db_row(GeoShape, custom_name='device_id', custom_value=target_id, entry='first')
+            shape_is_inherited = row is not None
+
+    if row is not None:
+        # 1. 도형이면 자신(→부모) 중심
+        if hasattr(row, 'get_centroid'):
+            centroid = _shape_centroid(row)
+            if centroid:
+                return (centroid[0], centroid[1],
+                        SOURCE_INHERITED if shape_is_inherited else SOURCE_EXPLICIT)
+
+        # 2. 장치 row → 소속 도형 상속
+        uid = getattr(row, 'unique_id', None)
+        if uid:
+            from aot.databases.models.geo import GeoShape
+            shape = _db_row(GeoShape, custom_name='device_id', custom_value=uid, entry='first')
+            if shape is not None:
+                centroid = _shape_centroid(shape)
+                if centroid:
+                    return centroid[0], centroid[1], SOURCE_INHERITED
+
+        # 3. 장치 자신의 좌표
+        lat = getattr(row, 'latitude', None)
+        lon = getattr(row, 'longitude', None)
+        if lat is not None and lon is not None:
+            try:
+                return float(lat), float(lon), SOURCE_COORDS
+            except (TypeError, ValueError):
+                pass
+
+    # 4. 농장 전역 폴백
+    lat, lon = _system_coords()
+    if lat is not None and lon is not None:
+        return lat, lon, SOURCE_SYSTEM
+
+    return None, None, SOURCE_UTC
+
+
+def _system_coords() -> Tuple[Optional[float], Optional[float]]:
+    """농장 전역 기준 좌표.
+
+    Misc.map_* (명시 설정) → 사이트 도형 중심(실제 농장 위치) → GeoSetting
+    기본 지도 중심 순. 실서버에서 Misc.map_* 가 비어 있는 경우가 흔해서
+    도형 단계가 사실상의 기준이 된다.
+    """
+    try:
+        from aot.databases.models.misc import Misc
+        misc = _db_row(Misc, entry='first')
+        if misc is not None:
+            lat = getattr(misc, 'map_latitude', None)
+            lon = getattr(misc, 'map_longitude', None)
+            if lat is not None and lon is not None:
+                return float(lat), float(lon)
+    except Exception:
+        pass
+
+    try:
+        from aot.databases.models.geo import GeoShape
+        site = _db_row(GeoShape, custom_name='type', custom_value='site', entry='first')
+        if site is not None:
+            centroid = _shape_centroid(site)
+            if centroid:
+                return centroid
+    except Exception:
+        pass
+
+    try:
+        from aot.databases.models.geo import GeoSetting
+        setting = _db_row(GeoSetting, entry='first')
+        if setting is not None:
+            lat = getattr(setting, 'default_lat', None)
+            lon = getattr(setting, 'default_lng', None)
+            if lat is not None and lon is not None:
+                return float(lat), float(lon)
+    except Exception:
+        pass
+
+    return None, None
+
+
+# ---------------------------------------------------------------------------
 # 벽시계 의도 ↔ UTC (예약 저장/표시)
 # ---------------------------------------------------------------------------
 def _parse_wall(wall: Union[str, datetime]) -> datetime:
@@ -281,7 +425,7 @@ __all__ = [
     "utc_now", "now_utc", "ensure_utc",
     "as_tz", "to_tz", "iso_utc",
     "system_tz", "system_tz_name", "current_user_tz",
-    "resolve_tz",
+    "resolve_tz", "resolve_coords",
     "wall_to_utc", "utc_to_wall",
     "SOURCE_EXPLICIT", "SOURCE_INHERITED", "SOURCE_COORDS",
     "SOURCE_USER", "SOURCE_SYSTEM", "SOURCE_UTC",

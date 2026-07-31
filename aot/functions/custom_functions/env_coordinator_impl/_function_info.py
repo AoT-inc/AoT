@@ -600,6 +600,132 @@ FUNCTION_INFORMATION = {
             ),
         },
 
+        # ── Nursery (Seedling Protection) ─────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Nursery Mode'),
+        },
+        {
+            'id': 'nursery_mode',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Nursery (Seedling) Mode'),
+            'phrase': lazy_gettext(
+                'Protects newly emerged seedlings from leaf scorch. Droplets '
+                'left on a cotyledon under strong sun focus light onto the leaf '
+                'and concentrate dissolved minerals as they evaporate, and the '
+                'seedling has no cuticle yet to resist either. When enabled, '
+                'wetting-type misting is locked out above the irradiance '
+                'threshold, tapered below it, and always broken into short '
+                'pulses with an enforced drying interval. '
+                'Whether a nozzle counts as wetting type is decided by the '
+                'nozzle layout in the facility design (flow rate, spray radius, '
+                'spray direction) — drip lines and true high-pressure fog are '
+                'left alone.'
+            ),
+        },
+        {
+            'id': 'nursery_solar_lockout',
+            'type': 'float',
+            'default_value': 250.0,
+            'required': False,
+            'name': lazy_gettext('Misting Lockout Irradiance (W/m²)'),
+            'phrase': lazy_gettext(
+                'Wetting-type misting is blocked outright at or above this '
+                'indoor light level. The estimated indoor level is used, so '
+                'closing the shade screen relaxes the lockout.'
+            ),
+        },
+        {
+            'id': 'nursery_solar_release',
+            'type': 'float',
+            'default_value': 150.0,
+            'required': False,
+            'name': lazy_gettext('Misting Release Irradiance (W/m²)'),
+            'phrase': lazy_gettext(
+                'Misting is released again once the light falls below this '
+                'level, and is tapered linearly between here and the lockout '
+                'threshold. The gap between the two prevents the mist from '
+                'switching on and off as clouds pass.'
+            ),
+        },
+        {
+            'id': 'nursery_max_on_sec',
+            'type': 'float',
+            'default_value': 20.0,
+            'required': False,
+            'name': lazy_gettext('Max Spray Duration (s)'),
+            'phrase': lazy_gettext(
+                'Longest single spray. Humidification is regulated by how often '
+                'it sprays, not by how long — the same way irrigation doses a '
+                'fixed amount at intervals.'
+            ),
+        },
+        {
+            'id': 'nursery_min_off_sec',
+            'type': 'float',
+            'default_value': 600.0,
+            'required': False,
+            'name': lazy_gettext('Enforced Drying Interval (s)'),
+            'phrase': lazy_gettext(
+                'No spraying at all for this long after one finishes, so the '
+                'leaves get a chance to dry.'
+            ),
+        },
+        {
+            'id': 'nursery_evening_fog',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Allow Misting Before Sunset'),
+            'phrase': lazy_gettext(
+                'Watering usually happens around sunrise and sunset, but an '
+                'evening misting leaves the foliage wet through the night. The '
+                'longer the leaves stay wet, the higher the risk of grey mould '
+                'and downy mildew, and a nursery is planted densely enough for '
+                'it to spread fast. Turn this off to stop misting before sunset '
+                'and leave the leaves dry overnight; some crops still need the '
+                'evening watering, so the choice is yours. '
+                'This only governs misting for humidity control — a separate '
+                'irrigation schedule on the same valve is unaffected.'
+            ),
+        },
+        {
+            'id': 'nursery_evening_cutoff_min',
+            'type': 'float',
+            'default_value': 120.0,
+            'required': False,
+            'name': lazy_gettext('Stop Misting Before Sunset (min)'),
+            'phrase': lazy_gettext(
+                'How long before sunset misting stops, when the option above is '
+                'off. Misting stays blocked until the next sunrise. Two hours is '
+                'usually enough for the leaves to dry before dark. Ignored when '
+                'evening misting is allowed, or when the facility has no '
+                'coordinates to compute sunset from.'
+            ),
+        },
+        {
+            'id': 'nursery_water_source',
+            'type': 'select',
+            'default_value': 'groundwater',
+            'required': False,
+            'options_select': [
+                ('groundwater', lazy_gettext('Groundwater (untreated)')),
+                ('treated',     lazy_gettext('Treated (RO, softened, filtered)')),
+                ('rainwater',   lazy_gettext('Rainwater')),
+            ],
+            'name': lazy_gettext('Misting Water Source'),
+            'phrase': lazy_gettext(
+                'Untreated groundwater is usually hard and cold, so droplets '
+                'leave concentrated mineral deposits as they dry and can cold-'
+                'shock a sunlit leaf. Selecting it lowers the lockout threshold '
+                'automatically. Have the water tested for EC, hardness, iron '
+                'and manganese — iron staining looks almost identical to sun '
+                'scorch, and no control setting can fix bad water.'
+            ),
+        },
+
         # ── VPD Decomposition ─────────────────────────────────────────────────
         {
             'type': 'header',

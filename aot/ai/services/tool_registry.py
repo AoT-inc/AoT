@@ -114,7 +114,12 @@ TOOLS: List[Tool] = [
         "action_type": "schedule_device_control",
         "description": "Reserve a ONE-OFF device operation (valve/pump/sprinkler) at a single specific future time — e.g. 'open valve 1 for 30 min this Saturday 15:00'. Requires approval. This is ONLY for irregular, one-time reservations; recurring or condition-based control belongs to a Function (create_function), NOT here.",
         "usage_hint": (
-            "params: {device_id, scheduled_time (ISO8601) OR delay_seconds, state, duration_minutes}. "
+            "params: {device_id, scheduled_time (ISO8601) OR delay_seconds OR solar_event, state, duration_minutes}. "
+            "For a time expressed relative to the sun ('내일 일몰 30분 전', 'at sunrise'), pass "
+            "solar_event ('sunrise'|'sunset'|'solar_noon'|'civil_dawn'|'civil_dusk') with "
+            "solar_offset_minutes (negative = before) and solar_date_offset_days — do NOT compute "
+            "the sunset clock time yourself and pass it as scheduled_time: it changes with the "
+            "season and the device's location, so a hand-computed value will be wrong.\n"
             "DECISION RULE — the scheduler holds one-off events; regular automation belongs to Functions:\n"
             "- RECURRING ('every day 6am', '매일/매주 관수') → use create_function "
             "(trigger_timer_daily_time_point / trigger_timer_daily_time_span / trigger_timer_duration) INSTEAD, NOT this.\n"
@@ -572,8 +577,8 @@ TOOLS: List[Tool] = [
     Tool('get_local_time', handler='get_local_time_tool', manifest={
         "tool_name": "get_local_time",
         "action_type": "virtual_tool_call",
-        "description": "Returns the current local wall-clock time and IANA timezone for a specific location (zone/site/facility/device) or the farm-wide default. Every location resolves its own timezone from its coordinates. Read-only.",
-        "usage_hint": "params.arguments: {target_name (optional — a zone/site/facility/device name, e.g. '3-1', '온실'; omit for the farm-wide default timezone)}. Call this before describing or planning around a specific location/time (e.g. 'is it night there now?', 'should this run today or tomorrow given the local time?') instead of assuming the same timezone applies everywhere.",
+        "description": "Returns the current local wall-clock time and IANA timezone for a specific location (zone/site/facility/device) or the farm-wide default, together with that location's sun times for today (sunrise, sunset, solar noon, civil twilight, day length, whether it is currently daytime, and how many minutes remain until the next sunrise/sunset). Every location resolves its own timezone and sun times from its coordinates. Read-only.",
+        "usage_hint": "params.arguments: {target_name (optional — a zone/site/facility/device name, e.g. '3-1', '온실'; omit for the farm-wide default timezone)}. Call this before describing or planning around a specific location/time (e.g. 'is it night there now?', 'should this run today or tomorrow given the local time?') instead of assuming the same timezone applies everywhere. Because farm work follows the solar day rather than the clock — irrigation, misting, shading and venting all do — use the returned 'sun' block instead of assuming fixed hours: check sun.is_daytime and sun.next_event before advising on anything time-sensitive, and prefer phrasing tied to sunrise/sunset over fixed clock hours. sun is null when the location has no resolvable coordinates.",
     }),
 
     # --- virtual_tool_call tools WITHOUT a manifest entry (dispatch only) ---------

@@ -43,7 +43,7 @@ from aot.utils.actions import parse_action_information
 from aot.utils.actions import trigger_controller_actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.method import load_method_handler, parse_db_time
-from aot.utils.sunriseset import suntime_calculate_next_sunrise_sunset_epoch
+from aot.utils.solar import next_sun_event_epoch
 from aot.utils.system_pi import epoch_of_next_time
 from aot.utils.system_pi import time_between_range
 from aot.utils.signals import trigger_fired
@@ -114,9 +114,18 @@ class TriggerController(AbstractController, threading.Thread):
             # Check if the trigger period has elapsed
             if self.trigger_type == 'trigger_sunrise_sunset':
                 while self.running and self.timer_period < time.time():
-                    self.timer_period = suntime_calculate_next_sunrise_sunset_epoch(
-                        self.trigger.latitude, self.trigger.longitude, self.trigger.date_offset_days,
-                        self.trigger.time_offset_minutes, self.trigger.rise_or_set)
+                    next_epoch = self.next_sunrise_sunset_epoch()
+                    if next_epoch is None:
+                        # 좌표 미해석/극지 등으로 다음 시각을 못 구한 경우.
+                        # None 을 그대로 두면 다음 loop 에서 비교가 터지므로
+                        # 한 시간 뒤 재시도로 물러선다.
+                        self.logger.error(
+                            "Could not calculate the next sunrise/sunset time. "
+                            "Check this Trigger's location (latitude/longitude). "
+                            "Retrying in 1 hour.")
+                        self.timer_period = time.time() + 3600
+                        return
+                    self.timer_period = next_epoch
                 check_approved = True
 
             elif self.trigger_type == 'trigger_run_pwm_method':
@@ -262,12 +271,25 @@ class TriggerController(AbstractController, threading.Thread):
         elif self.trigger_type == 'trigger_sunrise_sunset':
             self.period = 60
             # Set the next trigger at the specified sunrise/sunset time (+-offsets)
-            self.timer_period = suntime_calculate_next_sunrise_sunset_epoch(
-                self.trigger.latitude, self.trigger.longitude, self.trigger.date_offset_days,
-                self.trigger.time_offset_minutes, self.trigger.rise_or_set)
+            self.timer_period = self.next_sunrise_sunset_epoch()
 
         self.ready.set()
         self.running = True
+
+    def next_sunrise_sunset_epoch(self, trigger=None):
+        """이 트리거의 다음 일출/일몰 시각(epoch). 계산 불가 시 None.
+
+        위치는 트리거 자신의 좌표가 있으면 그것을, 없으면 태양시 커널의 상속
+        체인(소속 도형 → 농장 지도 중심)을 따른다.
+        """
+        trigger = trigger if trigger is not None else self.trigger
+        return next_sun_event_epoch(
+            trigger.rise_or_set,
+            target_id=trigger.unique_id,
+            latitude=trigger.latitude,
+            longitude=trigger.longitude,
+            date_offset_days=trigger.date_offset_days,
+            time_offset_minutes=trigger.time_offset_minutes)
 
     def set_next_daily_time_span_run(self, now):
         if not time_between_range(self.timer_start_time, self.timer_end_time, tz=self.device_tz):
@@ -286,7 +308,7 @@ class TriggerController(AbstractController, threading.Thread):
             this_controller = db_retrieve_table_daemon(
                 Trigger, unique_id=self.unique_id)
 
-            method = load_method_handler(method_id, self.logger)
+            method = load_method_handler(method_id, self.logger, target_id=self.unique_id)
 
             if parse_db_time(this_controller.method_start_time) is None:
                 self.method_start_time = utc_now()
@@ -349,7 +371,7 @@ class TriggerController(AbstractController, threading.Thread):
 
         now = utc_now()
 
-        method = load_method_handler(method_id, self.logger)
+        method = load_method_handler(method_id, self.logger, target_id=self.unique_id)
         if method.method_type == 'DailyMultiPoint':
             weeks_elapsed = self._get_weeks_elapsed(this_controller.method_start_time)
             setpoint, ended = method.calculate_setpoint(
@@ -427,9 +449,7 @@ class TriggerController(AbstractController, threading.Thread):
         # Calculate the sunrise/sunset times and find the next time this trigger should trigger
         elif trigger.trigger_type == 'trigger_sunrise_sunset':
             # Since the check time is the trigger time, we will only calculate and set the next trigger time
-            self.timer_period = suntime_calculate_next_sunrise_sunset_epoch(
-                trigger.latitude, trigger.longitude, trigger.date_offset_days,
-                trigger.time_offset_minutes, trigger.rise_or_set)
+            self.timer_period = self.next_sunrise_sunset_epoch(trigger)
 
         # If the code hasn't returned by now, action should be executed
         actions = parse_action_information()

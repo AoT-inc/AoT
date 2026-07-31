@@ -14342,7 +14342,7 @@ msgstr "カタログ"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1389
 msgid "Fittings"
-msgstr "フィッティング"
+msgstr "構成要素"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1391
 msgid "Control"
@@ -25335,3 +25335,360 @@ msgstr ""
 msgid ""
 "Stops the bus, releases the selector and saves the elapsed time to Travel Time Open or Travel Time Close."
 msgstr "バスを停止し、セレクターを解放してから、経過時間を開走行時間または閉走行時間に保存します。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:612
+msgid "Nursery Mode"
+msgstr "育苗場モード"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:615
+msgid "Nursery (Seedling) Mode"
+msgstr "育苗場（苗）モード"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:618
+msgid ""
+"Protects newly emerged seedlings from leaf scorch. Droplets left on a cotyledon under strong sun focus light onto the leaf and concentrate dissolved minerals as they evaporate, and the seedling has no cuticle yet to resist either. When enabled, wetting-type misting is locked out above the irradiance threshold, tapered below it, and always broken into short pulses with an enforced drying interval. Whether a nozzle counts as wetting type is decided by the nozzle layout in the facility design (flow rate, spray radius, spray direction) — drip lines and true high-pressure fog are left alone."
+msgstr ""
+"出芽したばかりの苗を日焼けから守ります。強い日差しの下で子葉に残った水滴は光を葉面に集め、乾く際に溶けていた塩類を濃縮させます。幼い苗にはまだクチクラ層がなく、どちらにも耐えられません。有効にすると、濡らすタイプの噴霧は日射のしきい値以上で遮断され、それ未満では段階的に弱められ、常に短いパルスに分割されて乾燥時間が強制されます。どのノズルが濡らすタイプかは施設図面のノズル配置（流量・散水半径・噴射方向）から判定するため、点滴配管と本物の高圧ミストには影響しません。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:632
+msgid "Misting Lockout Irradiance (W/m²)"
+msgstr "噴霧遮断日射量 (W/m²)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:635
+msgid ""
+"Wetting-type misting is blocked outright at or above this indoor light level. The estimated indoor level is used, so closing the shade screen relaxes the lockout."
+msgstr "室内光量がこの値以上になると、濡らすタイプの噴霧を完全に遮断します。室内推定光量を基準とするため、遮光カーテンを閉じると遮断が緩和されます。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:644
+msgid "Misting Release Irradiance (W/m²)"
+msgstr "噴霧解除日射量 (W/m²)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:647
+msgid ""
+"Misting is released again once the light falls below this level, and is tapered linearly between here and the lockout threshold. The gap between the two prevents the mist from switching on and off as clouds pass."
+msgstr ""
+"光量がこの値を下回ると噴霧を再び許可し、この値と遮断しきい値の間では直線的に弱めます。2つの値の間隔が、雲が通過するたびに噴霧が入切を繰り返すのを防ぎます。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:657
+msgid "Max Spray Duration (s)"
+msgstr "1回の噴霧最大時間 (秒)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:660
+msgid ""
+"Longest single spray. Humidification is regulated by how often it sprays, not by how long — the same way irrigation doses a fixed amount at intervals."
+msgstr "一度に噴霧できる最大時間です。加湿量は噴霧の長さではなく頻度で調節されます — かん水が一定間隔で定量を与えるのと同じ方式です。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:669
+msgid "Enforced Drying Interval (s)"
+msgstr "強制乾燥間隔 (秒)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:672
+msgid ""
+"No spraying at all for this long after one finishes, so the leaves get a chance to dry."
+msgstr "噴霧が終わってからこの時間は一切噴霧せず、葉が乾く時間を与えます。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:680
+msgid "Groundwater (untreated)"
+msgstr "地下水（未処理）"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:681
+msgid "Treated (RO, softened, filtered)"
+msgstr "処理水（RO・軟水・ろ過）"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:682
+msgid "Rainwater"
+msgstr "雨水"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:684
+msgid "Misting Water Source"
+msgstr "噴霧原水"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:686
+msgid ""
+"Untreated groundwater is usually hard and cold, so droplets leave concentrated mineral deposits as they dry and can cold-shock a sunlit leaf. Selecting it lowers the lockout threshold automatically. Have the water tested for EC, hardness, iron and manganese — iron staining looks almost identical to sun scorch, and no control setting can fix bad water."
+msgstr ""
+"未処理の地下水は硬度が高く水温が低いことが多く、水滴が乾く際に塩類が濃縮して残り、日射を受けた葉に低温ショックを与えることがあります。地下水を選ぶと遮断しきい値が自動的に下がります。EC・硬度・鉄・マンガンを必ず分析してください — 鉄の酸化斑点は日焼けとほとんど区別がつかず、水そのものが悪ければどんな制御設定でも解決できません。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:681
+msgid "Allow Misting Before Sunset"
+msgstr "日没前の噴霧を許可"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:683
+msgid ""
+"Watering usually happens around sunrise and sunset, but an evening misting leaves the foliage wet through the night. The longer the leaves stay wet, the higher the risk of grey mould and downy mildew, and a nursery is planted densely enough for it to spread fast. Turn this off to stop misting before sunset and leave the leaves dry overnight; some crops still need the evening watering, so the choice is yours. This only governs misting for humidity control — a separate irrigation schedule on the same valve is unaffected."
+msgstr ""
+"かん水は通常、日の出と日没の頃に行いますが、夕方の噴霧は葉が濡れたまま夜を越させます。葉が濡れている時間が長いほど灰色かび病やべと病の危険が高まり、育苗場は密植のため広がりが速くなります。オフにすると日没前に噴霧を止め、夜の間に葉を乾かします。夕方のかん水が必要な作物もあるため、選択は利用者に委ねられます。この設定は湿度管理用の噴霧のみを制御し、同じバルブに設定された別のかん水スケジュールには影響しません。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:699
+msgid "Stop Misting Before Sunset (min)"
+msgstr "日没前の噴霧停止時間 (分)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
+msgid ""
+"How long before sunset misting stops, when the option above is off. Misting stays blocked until the next sunrise. Two hours is usually enough for the leaves to dry before dark. Ignored when evening misting is allowed, or when the facility has no coordinates to compute sunset from."
+msgstr ""
+"上のオプションをオフにしたとき、日没の何分前から噴霧を停止するかを決めます。停止は次の日の出まで続きます。通常2時間あれば暗くなる前に葉が乾きます。夕方の噴霧を許可している場合、または施設に座標がなく日没を計算できない場合は無視されます。"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Sun: Day or Night"
+msgstr ""
+"太陽: 昼/夜"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Sun: Time Until Event"
+msgstr ""
+"太陽: イベントまでの時間"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Solar Noon"
+msgstr ""
+"南中(太陽正午)"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Civil Dawn"
+msgstr ""
+"市民薄明の始まり"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Civil Dusk"
+msgstr ""
+"市民薄明の終わり"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Sun Event"
+msgstr ""
+"太陽イベント"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Sunrise Offset (min)"
+msgstr ""
+"日の出オフセット (分)"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Sunset Offset (min)"
+msgstr ""
+"日の入りオフセット (分)"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Event Offset (min)"
+msgstr ""
+"イベントオフセット (分)"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Daytime"
+msgstr ""
+"昼間"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Nighttime"
+msgstr ""
+"夜間"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Right now"
+msgstr ""
+"現在"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Next event"
+msgstr ""
+"次のイベント"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Which sun event to count down to"
+msgstr ""
+"残り時間を計算する太陽イベント"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Returns True during the day and False at night. The location is inherited from this Conditional Function."
+msgstr ""
+"昼間は True、夜間は False を返します。位置はこの条件部機能の位置をそのまま継承します。"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Returns the number of seconds until the next selected sun event. The location is inherited from this Conditional Function."
+msgstr ""
+"選択した次の太陽イベントまでの残り秒数を返します。位置はこの条件部機能の位置をそのまま継承します。"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Minutes to shift the start of daytime. A positive value delays it (30 means daytime starts 30 minutes after sunrise)."
+msgstr ""
+"昼間の開始を何分ずらすかを指定します。正の値で遅くなります(30 なら日の出の30分後から昼間)。"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Minutes to shift the end of daytime. A negative value brings it forward (-30 means night starts 30 minutes before sunset)."
+msgstr ""
+"昼間の終了を何分ずらすかを指定します。負の値で早まります(-30 なら日の入りの30分前から夜間)。"
+
+#: aot_flask/templates/pages/function_options/conditional_condition.html
+msgid ""
+"Minutes to shift the event. A negative value counts down to before the event (-60 means one hour before)."
+msgstr ""
+"イベントを何分ずらすかを指定します。負の値ではイベント前の時点までを数えます(-60 なら1時間前)。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Windows, doors and curtains"
+msgstr "窓・扉・カーテン"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Fans, heaters and other fixtures"
+msgstr "ファン・暖房機などの設備"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Irrigation layers, pipes and devices"
+msgstr "灌漑レイヤー・配管・機器"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Show/hide the fitting list"
+msgstr "構成要素リストの表示/非表示"
+
+#: functions/lorawan_mode_manager.py
+msgid ""
+"Operating Hours Basis"
+msgstr ""
+"運用時間の基準"
+
+#: functions/lorawan_mode_manager.py
+msgid ""
+"Fixed hours — the start and end hours below"
+msgstr ""
+"固定時刻 — 下の開始・終了時刻"
+
+#: functions/lorawan_mode_manager.py
+msgid ""
+"Sunrise to sunset — follows the season at this location"
+msgstr ""
+"日の出〜日の入り — この位置の季節に追従"
+
+#: functions/lorawan_mode_manager.py
+msgid ""
+"Fixed hours keep the same clock times all year. Sunrise to sunset follows the daylight at this device's location, so performance mode tracks the season without being re-entered each month. The location is inherited from the map; if it cannot be resolved, the fixed hours below are used instead."
+msgstr ""
+"固定時刻は一年中同じ時刻を使います。日の出〜日の入り基準はこの装置がある場所の昼の長さに追従するため、毎月時刻を入力し直さなくても性能モードが季節に追従します。位置は地図から継承し、位置を解決できない場合は下の固定時刻を代わりに使用します。"
+
+#: functions/lorawan_mode_manager.py
+msgid ""
+"Shifts the start of the operating window relative to sunrise. Negative starts earlier (-30 begins 30 minutes before sunrise). Only used when the basis is sunrise to sunset."
+msgstr ""
+"運用区間の開始を日の出を基準にずらします。負の値でより早く始まります(-30 なら日の出の30分前から)。基準が日の出〜日の入りのときのみ使用されます。"
+
+#: functions/lorawan_mode_manager.py
+msgid ""
+"Shifts the end of the operating window relative to sunset. Positive ends later (30 keeps performance mode for 30 minutes after sunset). Only used when the basis is sunrise to sunset."
+msgstr ""
+"運用区間の終了を日の入りを基準にずらします。正の値でより遅く終わります(30 なら日の入り後30分まで性能モードを維持)。基準が日の出〜日の入りのときのみ使用されます。"
+
+#: widgets/AoT_graph.py
+msgid ""
+"Shade Night"
+msgstr ""
+"夜間の網掛け"
+
+#: widgets/AoT_graph.py
+msgid ""
+"Shades the periods between sunset and sunrise so readings can be read against the solar day rather than the clock. Sun times come from this farm's location."
+msgstr ""
+"日の入りから次の日の出までを網掛けで表示し、測定値を時計ではなく太陽日を基準に読めるようにします。日の出・日の入りの時刻はこの農場の位置から計算します。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Setup steps"
+msgstr "設定ステップ"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Basics"
+msgstr "基本情報"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Position & Structure"
+msgstr "位置・構造"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Equipment Layout"
+msgstr "設備配置"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Connections"
+msgstr "連携"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Specification"
+msgstr "仕様"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Save the facility first to see the integration summary and run a device check."
+msgstr "連携サマリーの確認と機器チェックは、施設を保存してから利用できます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Use "Place on Map" above the map to set the facility center."
+msgstr "施設の中心は、地図上部の「地図に配置」ボタンで指定します。"
+
+#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
+msgid ""
+"Next Execution"
+msgstr ""
+"次の実行"
+
+#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
+msgid ""
+"Which sun event should this Trigger fire on?"
+msgstr ""
+"このトリガーをどの太陽イベントで発火させるかを選びます"
+
+#: aot_flask/templates/pages/method-build.html
+msgid ""
+"Fixed time"
+msgstr ""
+"固定時刻"
+
+#: aot_flask/templates/pages/method-build.html
+msgid ""
+"Start Anchor"
+msgstr ""
+"開始の基準"
+
+#: aot_flask/templates/pages/method-build.html
+msgid ""
+"End Anchor"
+msgstr ""
+"終了の基準"
+
+#: aot_flask/templates/pages/method-build.html
+msgid ""
+"Start Offset (min)"
+msgstr ""
+"開始オフセット (分)"
+
+#: aot_flask/templates/pages/method-build.html
+msgid ""
+"End Offset (min)"
+msgstr ""
+"終了オフセット (分)"
+
+#: aot_flask/templates/pages/method_options/build_daily_sine.html
+msgid ""
+"Phase Anchor"
+msgstr ""
+"位相の基準"
+
+#: aot_flask/templates/pages/method_options/build_daily_sine.html
+msgid ""
+"Phase Offset (min)"
+msgstr ""
+"位相オフセット (分)"

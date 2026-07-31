@@ -161,6 +161,43 @@
             </div>
           </div>
 
+          <!-- 태양 앵커: 고르면 위 벽시계 대신 그 날의 태양 이벤트(±오프셋)를 쓴다.
+               계절에 따라 낮 길이가 변해도 곡선이 해를 따라간다. -->
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.time_start_event.label(class_='control-label')}}
+            <div>
+              <select class="form-control" id="time_start_event" name="time_start_event">
+                <option value="">{{_('Fixed time')}}</option>
+              {% for value, label in sun_events -%}
+                <option value="{{value}}"{% if each_method.time_start_event == value %} selected{% endif %}>{{label}}</option>
+              {% endfor -%}
+              </select>
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.time_start_offset_min.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.time_start_offset_min(class_='form-control', value=each_method.time_start_offset_min or 0)}}
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.time_end_event.label(class_='control-label')}}
+            <div>
+              <select class="form-control" id="time_end_event" name="time_end_event">
+                <option value="">{{_('Fixed time')}}</option>
+              {% for value, label in sun_events -%}
+                <option value="{{value}}"{% if each_method.time_end_event == value %} selected{% endif %}>{{label}}</option>
+              {% endfor -%}
+              </select>
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            {{form_mod_method.time_end_offset_min.label(class_='control-label')}}
+            <div>
+              {{form_mod_method.time_end_offset_min(class_='form-control', value=each_method.time_end_offset_min or 0)}}
+            </div>
+          </div>
+
           {% elif method.method_type == "Duration" and each_method.duration_sec -%}
 
           <div class="col-auto">
