@@ -127,6 +127,18 @@ class ConfirmableOutputMixin:
             return DEFAULT_COMMAND_TIMEOUT_S if self.confirmation_capable() else 0.0
         return max(0.0, val)
 
+    def resend_interval_floor_s(self):
+        """Shortest useful gap between two retransmissions of one command.
+
+        Retransmitting faster than the link can actually carry a command and
+        return its answer does not improve delivery — it just spends airtime and
+        pushes the answer further out. Modules whose sends are rate-limited must
+        override this with that limit (see on_off_chirpstack, which is bound by
+        the site-wide LoRaWAN downlink pacing); otherwise every resend is issued
+        before the previous one has even left the queue.
+        """
+        return _MIN_RESEND_INTERVAL_S
+
     def _resend_command(self, output_channel, intent_state):
         """Optional in-window retransmission of the same command (idempotent).
 
@@ -200,7 +212,7 @@ class ConfirmableOutputMixin:
         # retransmits on the tick interval; a probe (offline) or a fire-and-forget
         # output ticks once at the deadline (no resend).
         if self.confirmation_capable() and not probe:
-            interval = max(_MIN_RESEND_INTERVAL_S, timeout / 3.0)
+            interval = max(self.resend_interval_floor_s(), timeout / 3.0)
         else:
             interval = timeout
         self._arm_confirm_timer(output_channel, seq, interval)

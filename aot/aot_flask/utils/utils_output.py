@@ -18,6 +18,7 @@ from aot.databases.models import OutputChannel
 from aot.databases.models import GeoShape
 from aot.databases.models import Tab
 from aot.aot_client import DaemonControl
+from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import custom_channel_options_return_json
 from aot.aot_flask.utils.utils_general import custom_options_return_json
@@ -359,19 +360,20 @@ def output_duplicate(form_mod):
         # Duplicate channels
         dev_channels = OutputChannel.query.filter(
             OutputChannel.output_id == form_mod.output_id.data).all()
-        is_paired = source_output.output_type == 'actuator_paired'
+        is_paired = source_output.output_type in PAIRED_ACTUATOR_OUTPUT_TYPES
         for each_dev in dev_channels:
             new_ch = clone_model(
                 each_dev, unique_id=set_uuid(),
                 output_id=duplicated_output.unique_id)
-            # For actuator_paired, blank out the underlying open/close refs and
-            # any position state on the duplicate so it doesn't share physical
-            # channels with the source. User must reconfigure on the copy.
+            # For paired actuators, blank out the underlying open/close/selector
+            # refs and any position state on the duplicate so it doesn't share
+            # physical channels with the source. User must reconfigure on the copy.
             if is_paired and new_ch and new_ch.custom_options:
                 try:
                     import json as _json
                     co = _json.loads(new_ch.custom_options)
-                    for k in ('output_open_id', 'output_close_id', 'last_position_pct'):
+                    for k in ('output_open_id', 'output_close_id',
+                              'selector_output_id', 'last_position_pct'):
                         if k in co:
                             co[k] = '' if k != 'last_position_pct' else 0.0
                     new_ch.custom_options = _json.dumps(co)
@@ -516,7 +518,7 @@ def output_mod(form_output, request_form):
 
         custom_options_channels_dict_postsave = {}
         # DEBUG: log form keys related to paired channel options when modifying actuator_paired
-        if mod_output.output_type == 'actuator_paired':
+        if mod_output.output_type in PAIRED_ACTUATOR_OUTPUT_TYPES:
             _paired_keys = [k for k in request_form.keys()
                             if k.startswith(form_output.output_id.data)]
             logger.info("[paired-save] output_id=%s form-keys for this output: %s",

@@ -466,6 +466,22 @@ FUNCTION_INFORMATION = {
                 '0 = disabled (most facilities — natural light only).'
             ),
         },
+        {
+            'id': 'shade_transmittance',
+            'type': 'float',
+            'default_value': 0.0,
+            'required': False,
+            'name': lazy_gettext('Shade Cloth Transmittance (0-1)'),
+            'phrase': lazy_gettext(
+                'Fraction of light that passes through the shade cloth when fully '
+                'closed. 0.30 = 70% shading. Used only when there is NO indoor light '
+                'sensor: the indoor light level is then estimated from outdoor '
+                'irradiance and the shade position, so the light thresholds can see '
+                'the shading the screen itself creates. Applies to every shade '
+                'actuator; a per-actuator value set on an Env Actuator action wins. '
+                '0 = disabled (indoor light is assumed equal to outdoor irradiance).'
+            ),
+        },
 
         # ── CO₂ ───────────────────────────────────────────────────────────────
         {

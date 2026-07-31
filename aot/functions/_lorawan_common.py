@@ -329,11 +329,11 @@ class ChirpStackClient:
         # one global limiter (with the on/off output) so CFG + control downlinks
         # are spaced together and device ACK uplinks keep airtime.
         try:
-            from aot.utils.lorawan_pacing import claim_send_slot
-            from time import sleep
-            w = claim_send_slot()
-            if w > 0:
-                sleep(w)
+            from aot.utils.lorawan_pacing import pace_send
+            if not pace_send():
+                self.logger.warning(
+                    f"CFG downlink to {dev_eui} dropped: pacing backlog too deep")
+                return False
         except Exception:
             pass
         try:

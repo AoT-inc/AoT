@@ -29,6 +29,170 @@ from aot.functions.utils.env_control.forecast_feedforward import (
 from aot.functions.utils.env_control.situation import assess, decompose_vpd_to_T_RH
 
 
+# ── 하드 임계 히스테리시스 폭 ────────────────────────────────────────────────
+# 임계를 한 번 넘으면 이만큼 되돌아와야 해제된다. 없으면 값이 임계 근처에서
+# 흔들릴 때 강제 오버라이드가 매 사이클 on/off 를 반복해 액추에이터가 왕복한다
+# (2026-07-30 aot-005: 차광막이 17:50 개방 → 18:04 폐쇄. 차광막은 편도 285초
+# full-stroke 주행이라 왕복 피해가 특히 크다).
+TEMP_HYST_C     = 0.5    # °C
+RH_HYST_PCT     = 2.0    # %
+LIGHT_HYST_FRAC = 0.10   # 임계의 10% (광량은 절대폭이 0~1000 으로 넓어 비율 사용)
+
+
+def latch_threshold(value: float, threshold: float, hysteresis: float,
+                    was_breached: bool, mode: str) -> bool:
+    """하드 임계 위반 여부를 히스테리시스 래치로 판정.
+
+    mode='max': value > threshold 이면 위반. 위반 중에는 value 가
+                threshold-hysteresis 아래로 내려가야 해제된다.
+    mode='min': value < threshold 이면 위반. 위반 중에는 value 가
+                threshold+hysteresis 위로 올라가야 해제된다.
+
+    즉 진입 문턱과 해제 문턱을 비대칭으로 둔다. coordinator.py 의
+    active_vars 히스테리시스(활성 시 문턱을 좁힘)와 같은 계열의 기법이다.
+    """
+    if mode == 'max':
+        limit = threshold - hysteresis if was_breached else threshold
+        return value > limit
+    limit = threshold + hysteresis if was_breached else threshold
+    return value < limit
+
+
+def estimate_indoor_light(outdoor_light: float, profiles, apertures: dict,
+                          default_tau: float = 0.0) -> float:
+    """실외 일사 + 차광막 개도로 차광막 '아래' 광량을 추정한다.
+
+    실내 광센서가 없으면 internal['light'] 에 실외 일사가 그대로 들어가는데,
+    그 값은 차광막을 닫아도 변하지 않는다. 즉 차광막이 스스로 만든 광부족을
+    light_min 이 원리적으로 감지할 수 없다(2026-07-29 aot-005 사건). 이 함수가
+    개도를 반영해 그 맹점을 메운다.
+
+    투과율 τ = 완전히 닫았을 때 통과하는 광 비율(0.30 = 차광률 70%).
+    폐쇄율 c = (100 - 개도)/100 이라 할 때 통과율은
+
+        1 - c × (1 - τ)
+
+    개도 100%(걷힘) → 통과율 1.0, 개도 0%(완전폐쇄) → 통과율 τ 로 수렴한다.
+
+    투과율은 액추에이터별 값(env_actuator 액션)이 우선하고, 없으면 함수 레벨
+    기본값(default_tau)을 쓴다. 시설 도면에서 자동 발견된 액추에이터는 액션 행
+    자체가 없는 경우가 많아(aot-005 가 그렇다) 함수 레벨 값이 유일한 입력구다.
+
+    둘 다 없으면 원본을 그대로 돌려준다(미설정 시 기존 동작 유지 — opt-in).
+
+    주의: 온실 피복재 투과율은 곱하지 않는다. 그 값은 차광막 개도와 무관한
+    상수라 사용자가 잡아둔 light_min/light_max 기준선에 이미 녹아 있고, 여기서
+    다시 곱하면 임계가 갑자기 훨씬 자주 걸린다.
+    """
+    factors = []
+    for p in profiles:
+        if getattr(p, 'kind', '') != 'shade':
+            continue
+        tau = (getattr(p, 'capacity_meta', None) or {}).get('shade_transmittance')
+        if not tau:
+            tau = default_tau          # 액추에이터별 미설정 → 함수 레벨 기본값
+        if not tau or not (0.0 < tau <= 1.0):
+            continue
+        aperture = apertures.get(p.actuator_id)
+        if aperture is None:
+            continue
+        closed = max(0.0, min(1.0, (100.0 - float(aperture)) / 100.0))
+        factors.append(1.0 - closed * (1.0 - float(tau)))
+    if not factors:
+        return outdoor_light
+    # 차광막이 여러 장이면 가장 어두운 쪽(최소 통과율)을 대표값으로 쓴다.
+    # 작물이 실제로 받는 최악 조건을 봐야 광부족을 놓치지 않는다.
+    return outdoor_light * min(factors)
+
+
+def apply_light_threshold_overrides(internal: dict, profiles, final_cmds: dict) -> None:
+    """광량 하드 임계(light_max/light_min) 위반 시 shade/lighting 강제 오버라이드.
+
+    규약: 차광막 0%=닫힘=차광, 100%=열림=빛 유입.
+      - 광량 과다(light_max) → 차광막을 닫아(0%) 빛 차단.
+      - 광량 부족(light_min) → 보광등(lighting)이 있으면 100%로 켜고,
+        **차광막도 함께 강제 개방(100%)** 한다. 과거엔 light_min 쪽에 보광등
+        대응만 있고 차광막을 열어주는 대칭 로직이 없어서, 보광등이 없는(가장
+        흔한) 시설은 광부족 상황에 아무 대응도 못 했다(2026-07-29 aot-005
+        사건: 광량 부족한데도 온도 목적만으로 닫혀있던 차광막이 안 열림).
+    """
+    if internal.get('_force_shade'):
+        for p in profiles:
+            if p.kind == 'shade':
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'light_max'}
+    if internal.get('_force_suplight'):
+        for p in profiles:
+            if p.kind == 'lighting':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'light_min'}
+            elif p.kind == 'shade':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'light_min'}
+
+
+def apply_temp_humid_threshold_overrides(internal: dict, profiles, final_cmds: dict) -> None:
+    """온습도 하드 임계(temp_max/min, humid_max/min) 위반 시 강제 오버라이드.
+
+    이 함수가 추가되기 전에는 `_force_cool`/`_force_heat`/`_force_dehumid`/
+    `_force_humid` 플래그가 세팅만 되고 어디서도 소비되지 않는 죽은 코드였다
+    (2026-07-29 발견) — 사용자가 설정한 temp_max/min, humid_max/min 은
+    debug_logging 이 꺼져 있으면 완전히 무효였다.
+
+    temp_max/min 은 safety_gates.py 의 GATE_BIT_HEAT/COLD(폭염/한파 비상
+    임계)와 **동일한 액추에이터 조합**을 그대로 강제한다 — 이 로컬 임계는
+    사용자가 더 타이트하게 설정한 문턱이라, 비상 게이트가 발동하기 훨씬
+    전에 먼저 개입하는 역할이다.
+
+    humid_max/min 은 opening/shade/cooler/curtain/heater 와 겹치지 않는
+    exhaust_fan/fogger 만 건드린다 — 온도 강제(위)와 액추에이터 집합이
+    아예 겹치지 않으므로 두 강제가 서로 충돌해 덮어쓸 일이 없다.
+    """
+    if internal.get('_force_cool'):
+        for p in profiles:
+            if p.kind == 'opening':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'temp_max'}
+            elif p.kind == 'shade':
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_max'}
+            elif p.kind == 'cooler':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'temp_max'}
+    if internal.get('_force_heat'):
+        for p in profiles:
+            if p.kind == 'opening':
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_min'}
+            elif p.kind == 'curtain':
+                final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'temp_min'}
+            elif p.kind == 'heater':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'temp_min'}
+    if internal.get('_force_dehumid'):
+        for p in profiles:
+            if p.kind == 'exhaust_fan':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'humid_max'}
+    if internal.get('_force_humid'):
+        for p in profiles:
+            if p.kind == 'fogger':
+                final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'humid_min'}
+
+
+def apply_threshold_and_gate_overrides(
+        internal: dict, profiles, final_cmds: dict, partial_overrides: dict) -> None:
+    """임계 오버라이드(광량·온습도) + 안전 프리게이트를 **정해진 순서로** 적용.
+
+    순서가 곧 우선순위이며, 안전 프리게이트가 반드시 마지막(=최우선)이다.
+    partial 게이트는 강풍 단독(풍향 차등 폐쇄) 또는 외부센서 만료 시 발동하는데,
+    임계 오버라이드가 그 뒤에 오면 _force_cool 이 풍상측 개구부 폐쇄(opening=0)를
+    100 으로 덮어써 강풍 속에 창을 활짝 열어버린다(한여름엔 실내 고온 + 강풍이
+    동시에 오므로 실제로 발생 가능한 조합).
+
+    게이트는 자신이 명령한 액추에이터만 덮으므로, 풍하측 개구부는 냉방을 위해
+    계속 열릴 수 있다.
+
+    이 순서 보장이 리팩터링으로 조용히 깨지는 것을 막으려고 한 함수로 묶었다.
+    """
+    apply_light_threshold_overrides(internal, profiles, final_cmds)
+    apply_temp_humid_threshold_overrides(internal, profiles, final_cmds)
+    if partial_overrides:
+        for aid, override in partial_overrides.items():
+            final_cmds[aid] = override
+
+
 class CycleMixin:
     """Mixin: one coordination cycle (L1 target → L2 situation → L3 coordinate → dispatch)."""
 
@@ -311,51 +475,95 @@ class CycleMixin:
         cbs = self._constraint_breach_state
 
         if t_val is not None:
-            if self.temp_max and t_val > self.temp_max:
-                if not cbs['T_max']:
-                    self.logger.warning(
-                        'T=%.1f > max=%.1f — forcing cooling', t_val, self.temp_max)
-                    cbs['T_max'] = True
-                internal['_force_cool'] = True
-            else:
-                cbs['T_max'] = False
-            if self.temp_min and t_val < self.temp_min:
-                if not cbs['T_min']:
-                    self.logger.warning(
-                        'T=%.1f < min=%.1f — forcing heating', t_val, self.temp_min)
-                    cbs['T_min'] = True
-                internal['_force_heat'] = True
-            else:
-                cbs['T_min'] = False
+            if self.temp_max:
+                breached = latch_threshold(t_val, self.temp_max, TEMP_HYST_C,
+                                           cbs['T_max'], 'max')
+                if breached:
+                    if not cbs['T_max']:
+                        self.logger.warning(
+                            'T=%.1f > max=%.1f — forcing cooling', t_val, self.temp_max)
+                    internal['_force_cool'] = True
+                elif cbs['T_max'] and getattr(self, 'debug_logging', False):
+                    self.logger.debug(
+                        'T=%.1f — max=%.1f 강제 해제(히스테리시스 %.1f)',
+                        t_val, self.temp_max, TEMP_HYST_C)
+                cbs['T_max'] = breached
+            if self.temp_min:
+                breached = latch_threshold(t_val, self.temp_min, TEMP_HYST_C,
+                                           cbs['T_min'], 'min')
+                if breached:
+                    if not cbs['T_min']:
+                        self.logger.warning(
+                            'T=%.1f < min=%.1f — forcing heating', t_val, self.temp_min)
+                    internal['_force_heat'] = True
+                elif cbs['T_min'] and getattr(self, 'debug_logging', False):
+                    self.logger.debug(
+                        'T=%.1f — min=%.1f 강제 해제(히스테리시스 %.1f)',
+                        t_val, self.temp_min, TEMP_HYST_C)
+                cbs['T_min'] = breached
         if rh_val is not None:
-            if self.humid_max and rh_val > self.humid_max:
-                internal['_force_dehumid'] = True
-            if self.humid_min and rh_val < self.humid_min:
-                internal['_force_humid'] = True
+            if self.humid_max:
+                breached = latch_threshold(rh_val, self.humid_max, RH_HYST_PCT,
+                                           cbs['RH_max'], 'max')
+                if breached:
+                    internal['_force_dehumid'] = True
+                cbs['RH_max'] = breached
+            if self.humid_min:
+                breached = latch_threshold(rh_val, self.humid_min, RH_HYST_PCT,
+                                           cbs['RH_min'], 'min')
+                if breached:
+                    internal['_force_humid'] = True
+                cbs['RH_min'] = breached
 
         # ── Light threshold constraint check ──────────────────────────────────
         light_val = internal.get('light')
+        # 실내 광센서가 없어 실외 일사로 대체된 경우에만, 차광막 개도를 반영한
+        # 실내 광량 추정치로 바꿔서 임계를 판정한다(실내 센서가 있으면 이미
+        # 차광이 반영돼 있으므로 건드리지 않는다).
+        if light_val is not None and internal.get('_light_is_outdoor'):
+            est = estimate_indoor_light(
+                light_val, self._profiles, self._coord_state.prev_commands,
+                default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
+            if est != light_val and getattr(self, 'debug_logging', False):
+                self.logger.debug(
+                    '실내광 추정: 실외 %.0f → %.0f W/m² (차광막 개도 반영)',
+                    light_val, est)
+            light_val = est
         if not hasattr(self, '_light_breach_state'):
             self._light_breach_state: dict = {'max': False, 'min': False}
         lbs = self._light_breach_state
         if light_val is not None:
-            if self.light_max and self.light_max > 0 and light_val > self.light_max:
-                if not lbs['max'] and getattr(self, 'debug_logging', False):
+            dbg = getattr(self, 'debug_logging', False)
+            if self.light_max and self.light_max > 0:
+                breached = latch_threshold(
+                    light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC,
+                    lbs['max'], 'max')
+                if breached:
+                    if not lbs['max'] and dbg:
+                        self.logger.debug(
+                            'light=%.0f > max=%.0f — forcing shade',
+                            light_val, self.light_max)
+                    internal['_force_shade'] = True
+                elif lbs['max'] and dbg:
                     self.logger.debug(
-                        'light=%.0f > max=%.0f — forcing shade', light_val, self.light_max)
-                lbs['max'] = True
-                internal['_force_shade'] = True
-            else:
-                lbs['max'] = False
-            if self.light_min and self.light_min > 0 and light_val < self.light_min:
-                if not lbs['min'] and getattr(self, 'debug_logging', False):
+                        'light=%.0f — max=%.0f 차광강제 해제(히스테리시스 %.0f)',
+                        light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC)
+                lbs['max'] = breached
+            if self.light_min and self.light_min > 0:
+                breached = latch_threshold(
+                    light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC,
+                    lbs['min'], 'min')
+                if breached:
+                    if not lbs['min'] and dbg:
+                        self.logger.debug(
+                            'light=%.0f < min=%.0f — forcing supplemental light',
+                            light_val, self.light_min)
+                    internal['_force_suplight'] = True
+                elif lbs['min'] and dbg:
                     self.logger.debug(
-                        'light=%.0f < min=%.0f — forcing supplemental light',
-                        light_val, self.light_min)
-                lbs['min'] = True
-                internal['_force_suplight'] = True
-            else:
-                lbs['min'] = False
+                        'light=%.0f — min=%.0f 보광강제 해제(히스테리시스 %.0f)',
+                        light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC)
+                lbs['min'] = breached
 
         # ── L1: EnvTarget (VPD-primary) ───────────────────────────────────────
         vpd_t = self._get_vpd_setpoint()
@@ -585,22 +793,9 @@ class CycleMixin:
             uid,
         )
 
-        # ── Pre-Gate partial overrides ────────────────────────────────────────
-        if partial_overrides:
-            for aid, override in partial_overrides.items():
-                final_cmds[aid] = override
-
-        # ── Light threshold overrides (light_max / light_min) ─────────────────
-        # 규약: 차광막 0%=닫힘=차광. 광량 과다(light_max) → 차광막을 닫아(0%) 빛 차단.
-        # (100=열림=빛 유입이므로 과거 100 은 반대로 빛을 늘리는 버그였다)
-        if internal.get('_force_shade'):
-            for p in self._profiles:
-                if p.kind == 'shade':
-                    final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'light_max'}
-        if internal.get('_force_suplight'):
-            for p in self._profiles:
-                if p.kind == 'lighting':
-                    final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'light_min'}
+        # ── 임계 오버라이드 + 안전 프리게이트 (순서 보장은 헬퍼 안에) ───────────
+        apply_threshold_and_gate_overrides(
+            internal, self._profiles, final_cmds, partial_overrides)
 
         # ── P1-3: 사이클 메트릭 일괄 기록 (debug_logging 활성 시에만) ─────────────
         if getattr(self, 'debug_logging', False):

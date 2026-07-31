@@ -342,12 +342,15 @@ class ProfileLoaderMixin:
                     n_facility, facility_name, gis_resolved, n_facility,
                     capacity_meta.get('vent_open_source', 'n/a'))
 
-        # ── 2. actuator_paired Outputs (자동 발견) ────────────────────────────
+        # ── 2. paired 액추에이터 Outputs (자동 발견) ──────────────────────────
+        # actuator_paired(전용 릴레이) + actuator_paired_bus(공유 버스) 양쪽 모두.
         n_paired = 0
         try:
             from aot.aot_flask.geo.facility_geo_helpers import shape_azimuth_area
-            from aot.outputs.actuator_paired import KIND_TO_PROFILE_KIND
-            paired_outputs = Output.query.filter_by(output_type='actuator_paired').all()
+            from aot.outputs.paired_actuator_common import (
+                KIND_TO_PROFILE_KIND, PAIRED_ACTUATOR_OUTPUT_TYPES)
+            paired_outputs = Output.query.filter(
+                Output.output_type.in_(PAIRED_ACTUATOR_OUTPUT_TYPES)).all()
         except Exception:
             paired_outputs = []
             KIND_TO_PROFILE_KIND = {}
@@ -494,6 +497,11 @@ class ProfileLoaderMixin:
             rated_m3h_m = _KIND_DEFAULT_RATED_M3H.get(kind, 0.0)
             if rated_m3h_m > 0:
                 manual_cap_meta['rated_m3h'] = rated_m3h_m
+            # 차광포 투과율(0~1). 실내 광센서가 없을 때 실외 일사 + 차광막 개도로
+            # 실내 광량을 추정하는 데 쓴다. 0 = 미설정(추정 안 함).
+            shade_tr = float(opts.get('shade_transmittance', 0.0) or 0.0)
+            if kind == 'shade' and 0.0 < shade_tr <= 1.0:
+                manual_cap_meta['shade_transmittance'] = shade_tr
 
             # ── actuator_paired ch_opts 에서 effective range / travel time 읽기 ──
             # action 폼에는 이 값들이 없으므로 출력 채널 옵션에서 직접 조회한다.
@@ -521,8 +529,10 @@ class ProfileLoaderMixin:
                 # 신규 프로필: actuator_paired 이면 ch_opts 에서 직접 읽음
                 try:
                     from aot.databases.models import Output as _Output, OutputChannel as _OC
+                    from aot.outputs.paired_actuator_common import (
+                        PAIRED_ACTUATOR_OUTPUT_TYPES as _PAIRED_TYPES)
                     _out = _Output.query.filter_by(unique_id=device_id).first()
-                    if _out and _out.output_type == 'actuator_paired':
+                    if _out and _out.output_type in _PAIRED_TYPES:
                         _ch = _OC.query.filter_by(output_id=device_id, channel=0).first()
                         if _ch:
                             _co = json.loads(_ch.custom_options or '{}')
@@ -559,6 +569,14 @@ class ProfileLoaderMixin:
                 existing.effect_model = effect_model
                 existing.cmd_constraints = cmd_constraints
                 existing.safe_default = safe_default_pct   # P2-3: 덮어쓰기
+                # 시설 도면에서 자동 발견된 프로필은 capacity_meta 가 이미 채워져
+                # 있어 통째로 교체하지 않는다. 다만 action 폼에서만 들어오는 값
+                # (차광포 투과율)은 병합해야 유실되지 않는다.
+                if 'shade_transmittance' in manual_cap_meta:
+                    if existing.capacity_meta is None:
+                        existing.capacity_meta = {}
+                    existing.capacity_meta['shade_transmittance'] = \
+                        manual_cap_meta['shade_transmittance']
                 channel_map[device_id] = ch_obj
                 n_manual_merged += 1
             else:

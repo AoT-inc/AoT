@@ -25192,3 +25192,146 @@ msgstr "制御チャンネル"
 #: aot_flask/templates/pages/device.html:1
 msgid "Input / Output"
 msgstr "入力 / 出力"
+
+#: outputs/actuator_paired_bus.py:79
+msgid ""
+"Time-based opening control (0–100%) for a vent, curtain or valve whose Open and Close relays are SHARED with other actuators, each picked by its own selector relay — so a 6-channel relay board drives four windows. Add one of these outputs per actuator, give them the same Open/Close channels, and they schedule against each other automatically. Selector contacts are only ever switched while the shared bus is de-energized. Use \"Actuator Paired\" instead when the actuator has its own dedicated Open/Close relays."
+msgstr ""
+"開/閉リレーを他のアクチュエーターと共有し、各アクチュエーターが自分のセレクターリレーでバスに接続される換気窓・カーテン・バルブの時間ベース開度制御（0–100%）です。6チャンネルリレーボードで4つの窓を制御できます。アクチュエーターごとにこの出力を追加し、同じ開/閉チャンネルを指定すると互いに自動でスケジュール調整されます。セレクター接点は共有バスが無通電のときのみ開閉されます。専用の開/閉リレーを持つ場合は「Actuator Paired」を使用してください。"
+
+#: outputs/actuator_paired_bus.py:106
+msgid "Output: Selector"
+msgstr "出力: セレクター"
+
+#: outputs/actuator_paired_bus.py:107
+msgid ""
+"on/off Output channel that connects the shared bus to THIS actuator. It is switched on before the bus starts and off after the bus stops, never under load. Leave empty only if this actuator has the bus to itself."
+msgstr ""
+"共有バスをこのアクチュエーターに接続する on/off 出力チャンネルです。バスが通電する前にオンになり、バスが停止した後にオフになるため、負荷がかかった状態で開閉されません。このアクチュエーターがバスを専有する場合のみ空欄にしてください。"
+
+#: outputs/actuator_paired_bus.py:118
+msgid "Output: Open (shared bus)"
+msgstr "出力: 開（共有バス）"
+
+#: outputs/actuator_paired_bus.py:119
+msgid ""
+"on/off Output channel connected to the OPEN relay. Every actuator naming the same Open and Close channels shares one bus and is scheduled against the others."
+msgstr ""
+"開（OPEN）リレーに接続された on/off 出力チャンネルです。同じ開/閉チャンネルを指定したアクチュエーターは1つのバスを共有し、互いにスケジュール調整されます。"
+
+#: outputs/actuator_paired_bus.py:130
+msgid "Output: Close (shared bus)"
+msgstr "出力: 閉（共有バス）"
+
+#: outputs/actuator_paired_bus.py:131
+msgid ""
+"on/off Output channel connected to the CLOSE relay. Every actuator naming the same Open and Close channels shares one bus and is scheduled against the others."
+msgstr ""
+"閉（CLOSE）リレーに接続された on/off 出力チャンネルです。同じ開/閉チャンネルを指定したアクチュエーターは1つのバスを共有し、互いにスケジュール調整されます。"
+
+#: outputs/actuator_paired_bus.py:162
+msgid "Limit Switch Fitted"
+msgstr "リミットスイッチあり"
+
+#: outputs/actuator_paired_bus.py:163
+msgid ""
+"Enable when this actuator has limit switches at both ends. An end-stop target (0%, 100%) may then be driven longer than its calculated travel time, letting several actuators reach their end stop in a single bus run — an emergency close of every window finishes in one run instead of one per window. Disable when there is no limit switch, or the motor would stall."
+msgstr ""
+"このアクチュエーターの両端にリミットスイッチがある場合に有効にします。終端目標（0%、100%）を計算上の走行時間より長く駆動できるようになり、複数のアクチュエーターが1回のバス運転で終端に到達します — 全窓の緊急閉鎖が窓ごとではなく1回で完了します。リミットスイッチがない場合はモーターが拘束されるため無効にしてください。"
+
+#: outputs/actuator_paired_bus.py:180
+msgid "Allow Parallel Driving"
+msgstr "並列駆動を許可"
+
+#: outputs/actuator_paired_bus.py:181
+msgid ""
+"Let this actuator move at the same time as others on the same bus, when they are driving the same relay. Enable only if the bus and its supply can carry all of those motors at once. Opposite directions are never run together regardless of this setting. If any actuator on a bus disables this, the whole bus moves one actuator at a time."
+msgstr ""
+"同じバスで同じリレーを駆動する他のアクチュエーターと同時に動作させます。バスと電源がそれらのモーターを同時に賄える場合のみ有効にしてください。逆方向はこの設定に関係なく同時駆動されません。同じバス上のアクチュエーターが1つでもこれを無効にすると、バス全体が1台ずつ動作します。"
+
+#: outputs/actuator_paired_bus.py:193
+msgid "Batch Window (s)"
+msgstr "バッチ収集時間 (秒)"
+
+#: outputs/actuator_paired_bus.py:194
+msgid ""
+"Commands arriving within this window are planned together, so a control cycle that targets every actuator on the bus becomes one batch instead of a queue of separate moves."
+msgstr ""
+"この時間内に届いたコマンドをまとめて計画します。バス上の全アクチュエーターを対象とする制御サイクルが、個別移動の待ち行列ではなく1つのバッチになります。"
+
+#: outputs/actuator_paired_bus.py:204
+msgid "Selector Settle Time (s)"
+msgstr "セレクター整定時間 (秒)"
+
+#: outputs/actuator_paired_bus.py:205
+msgid ""
+"Dwell between a selector relay changing and the shared bus being energized (and again after the bus stops, before the selector is released), so the contacts never switch under load."
+msgstr ""
+"セレクターリレーが切り替わってから共有バスに通電するまでの待ち時間です（バス停止後、セレクターを解放する前にも同様に適用）。接点が負荷のかかった状態で開閉されないようにします。"
+
+#: outputs/actuator_paired_bus.py:215
+msgid "Relay Confirm Timeout (s)"
+msgstr "リレー確認タイムアウト (秒)"
+
+#: outputs/actuator_paired_bus.py:216
+msgid ""
+"How long to wait for a selector or bus relay to report its new state before giving up on this actuator. Wired relays confirm immediately; radio-linked relays confirm when the device acknowledges. The bus is never energized against an unconfirmed selector."
+msgstr ""
+"セレクターまたはバスリレーが新しい状態を報告するまで待つ時間で、超過するとこのアクチュエーターを諦めます。有線リレーは即時に確認され、無線リレーはデバイスが応答した時点で確認されます。未確認のセレクター状態でバスに通電することはありません。"
+
+#: outputs/actuator_paired_bus.py:228
+msgid ""
+"Dwell inserted when the shared bus changes direction (open↔close) to protect the motors. Both bus relays stay off for this long before the new direction starts."
+msgstr ""
+"共有バスが方向を変える際（開↔閉）にモーター保護のため挿入される待ち時間です。新しい方向が始まるまで、両方のバスリレーがこの時間オフのままになります。"
+
+#: outputs/actuator_paired_bus.py:238
+msgid "Force Relays Off At Startup"
+msgstr "起動時にリレーを強制オフ"
+
+#: outputs/actuator_paired_bus.py:239
+msgid ""
+"After the daemon starts, switch off any selector or bus relay still reporting on — a restart during travel would otherwise leave a motor running. Only relays actually reporting on are commanded, so toggle-protocol outputs are not phantom-activated."
+msgstr ""
+"デーモン起動後、オンと報告しているセレクター・バスリレーをオフにします。走行中に再起動するとモーターが回り続ける可能性があるためです。実際にオンと報告しているリレーにのみコマンドを送るため、トグル方式の出力が誤って作動することはありません。"
+
+#: outputs/actuator_paired_bus.py:251
+msgid ""
+"Reference only (informational). Motor position (%) at which the mechanism visually begins to open. The command value is used as the motor position directly and is NOT rescaled by this field."
+msgstr ""
+"参考用（情報表示）です。機構が目視で開き始めるモーター位置（%）です。コマンド値はモーター位置としてそのまま使用され、この項目で再スケールされません。"
+
+#: outputs/actuator_paired_bus.py:262
+msgid ""
+"Reference only (informational). Motor position (%) regarded as fully open. The command value is NOT capped by this field. A command of 0% moves to the physical end stop regardless (emergency fully-closed)."
+msgstr ""
+"参考用（情報表示）です。全開とみなすモーター位置（%）です。コマンド値はこの項目で制限されません。0% のコマンドはこれに関係なく物理的な終端まで移動します（緊急全閉）。"
+
+#: outputs/actuator_paired_bus.py:275
+msgid ""
+"Motor lifespan protection for automatic environment control. The motor moves only when the target differs from the last sent position by at least this much, and commands snap to this grid (e.g. 5% → 0, 5, 10 …). Set to 0 to disable — every minor fluctuation then drives the motor."
+msgstr ""
+"自動環境制御でモーターの寿命を保護します。目標が最後に送信した位置と最低この分だけ異なる場合にのみモーターが動き、コマンドはこのグリッドに丸められます（例: 5% → 0, 5, 10 …）。0 にすると無効になり、わずかな変動でもモーターが動きます。"
+
+#: outputs/actuator_paired_bus.py:307
+msgid ""
+"Reject any new target arriving within this many seconds of the previous one. Prevents queued-up motor whiplash from rapid button presses. Stop is always accepted regardless of this interval."
+msgstr ""
+"直前のコマンドからこの秒数以内に届いた新しい目標を拒否します。ボタンの連打でコマンドが溜まり、モーターが激しく往復するのを防ぎます。停止はこの間隔に関係なく常に受け付けられます。"
+
+#: outputs/actuator_paired_bus.py:318
+msgid ""
+"Swap the Open and Close relays in software. Enable when 0% physically deploys the actuator and 100% pulls it back. An inverted actuator is never driven in parallel with a non-inverted one, because they energize opposite relays."
+msgstr ""
+"ソフトウェア上で開リレーと閉リレーを入れ替えます。0% で物理的にアクチュエーターが展開し、100% で戻る配線の場合に有効にしてください。反転したアクチュエーターは互いに逆のリレーに通電するため、反転していないものと並列駆動されません。"
+
+#: outputs/actuator_paired_bus.py:341
+msgid ""
+"Engages this actuator's selector and drives it in the selected direction. Refused while the shared bus is busy. Click Stop when done."
+msgstr ""
+"このアクチュエーターのセレクターを接続し、選択した方向に駆動します。共有バスが使用中の場合は拒否されます。終わったら停止をクリックしてください。"
+
+#: outputs/actuator_paired_bus.py:349
+msgid ""
+"Stops the bus, releases the selector and saves the elapsed time to Travel Time Open or Travel Time Close."
+msgstr "バスを停止し、セレクターを解放してから、経過時間を開走行時間または閉走行時間に保存します。"

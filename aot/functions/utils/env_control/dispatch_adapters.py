@@ -201,8 +201,9 @@ def select_adapter(
     if isinstance(types, str):
         types = [types]
 
-    # 우선순위 1: actuator_paired → 내부 변환 위임
-    if output_name_unique == 'actuator_paired':
+    # 우선순위 1: paired 액추에이터(actuator_paired / actuator_paired_bus) → 내부 변환 위임
+    from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
+    if output_name_unique in PAIRED_ACTUATOR_OUTPUT_TYPES:
         return PairedAdapter()
 
     # 우선순위 2: 용량형 펌프 (vol / volume)

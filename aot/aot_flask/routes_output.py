@@ -67,7 +67,13 @@ blueprint = Blueprint('routes_output',
 @blueprint.context_processor
 @flask_login.login_required
 def inject_dictionary():
-    return inject_variables()
+    context = dict(inject_variables())
+    # Output module types that render the 3-way (Open/Stop/Close + position)
+    # card instead of an on/off toggle. Injected rather than hardcoded in the
+    # template so a new paired-actuator module only registers in one place.
+    from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
+    context['three_way_output_types'] = PAIRED_ACTUATOR_OUTPUT_TYPES
+    return context
 
 
 @blueprint.route('/output_submit', methods=['POST'])

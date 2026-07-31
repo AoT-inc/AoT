@@ -34,7 +34,9 @@ _GRPC_INSTALL_ATTEMPTED = False
 # Site-wide downlink pacing is shared with the LoRaWAN class scheduler via
 # aot.utils.lorawan_pacing so that valve-control downlinks AND scheduler CFG
 # downlinks are paced together on the one half-duplex gateway. See that module.
-from aot.utils.lorawan_pacing import claim_send_slot
+from aot.utils.lorawan_pacing import MAX_PACE_WAIT_S
+from aot.utils.lorawan_pacing import MIN_GLOBAL_DOWNLINK_INTERVAL_S
+from aot.utils.lorawan_pacing import pace_send
 
 from flask_babel import lazy_gettext
 
@@ -74,6 +76,13 @@ OUTPUT_INFORMATION = {
     'output_types': ['on_off'],
 
     # Expected LoRaWAN round-trip; pre-fills the common "Command Timeout" field.
+    #
+    # 8 s holds exactly two dispatches once retransmission is floored at the
+    # pacing interval (send at t=0, one resend at t=4, each answered by the
+    # device's status uplink ~1.7 s later). Widening it would only buy a third
+    # attempt, and on a site that is already downlink-saturated more attempts
+    # per command is the wrong direction — raising rx2_dr (SF12 -> SF9) is what
+    # buys the airtime back. See resend_interval_floor_s() below.
     'command_timeout_default_s': 8,
 
     'message': (
@@ -544,6 +553,16 @@ class OutputModule(AbstractOutput):
         within the window and faults+reverts if the device never confirms."""
         return True
 
+    def resend_interval_floor_s(self):
+        """A resend cannot go out faster than the site-wide pacing lets it.
+
+        Every downlink from this module claims a slot from the one global
+        limiter, so scheduling retransmissions closer together than that
+        interval only queues them up: the timer fires, the send blocks on the
+        pacing, and the command's own deadline passes while it waits.
+        """
+        return MIN_GLOBAL_DOWNLINK_INTERVAL_S
+
     def _resend_command(self, output_channel, intent_state):
         """In-window retransmission. ChirpStack v4 does NOT auto-retransmit
         unacked downlinks and the RF link drops frames, so the base timer
@@ -801,15 +820,17 @@ class OutputModule(AbstractOutput):
 
         self._record_enqueue('raw', f_port_int, bool(confirmed), payload_bytes)
 
-        # Site-wide pacing: claim the next global send slot and sleep until it so
-        # the single half-duplex gateway is never flooded and device ACK uplinks
-        # have airtime. Shared by ALL chirpstack_downlink outputs (control +
-        # retries). The sleep is OUTSIDE any lock so a slow send never stalls the
-        # site.
-        from time import sleep
-        wait = claim_send_slot()
-        if wait > 0:
-            sleep(wait)
+        # Site-wide pacing: wait for the next global send slot so the half-duplex
+        # gateway is never flooded and device ACK uplinks have airtime. Shared by
+        # ALL chirpstack_downlink outputs (control + retries). The wait happens
+        # OUTSIDE any lock so a slow send never stalls the site. A False here
+        # means the backlog is deeper than MAX_PACE_WAIT_S: fail the command
+        # rather than add to the flood.
+        if not pace_send():
+            self._log_error(
+                "Downlink dropped: site-wide pacing backlog exceeded "
+                f"{MAX_PACE_WAIT_S:.0f}s")
+            return False
         return self._send_downlink(f_port_int, confirmed, payload_bytes, token, dev_eui)
 
     def _send_downlink(self, f_port_int, confirmed, payload_bytes, token, dev_eui):

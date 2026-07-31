@@ -1,12 +1,46 @@
 # coding=utf-8
+from types import SimpleNamespace
+
 import pytest
 
 from aot.outputs.actuator_paired import (
     OUTPUT_INFORMATION,
+    OutputModule,
     ACTUATOR_KIND_OPTIONS,
     KIND_TO_PROFILE_KIND,
 )
 from aot.functions.utils.env_control.types import ACTUATOR_KINDS
+
+
+class _EmptyQuery:
+    """Stands in for the OutputChannel query so construction stays off the DB."""
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def all(self):
+        return []
+
+
+@pytest.fixture
+def module(monkeypatch):
+    monkeypatch.setattr(
+        'aot.outputs.actuator_paired.db_retrieve_table_daemon',
+        lambda *args, **kwargs: _EmptyQuery())
+
+    def _plain_logger(self, testing=False, name=None, output_dev=None):
+        import logging
+        self.logger = logging.getLogger('test.actuator_paired')
+
+    # The real one reads the log level out of the AoT database.
+    monkeypatch.setattr(
+        'aot.outputs.base_output.AbstractOutput.setup_logger', _plain_logger)
+
+    output = SimpleNamespace(
+        unique_id='paired-1', name='paired-1', output_type='actuator_paired',
+        latitude=None, longitude=None, location_source='manual',
+        log_level_debug=False)
+    return OutputModule(output, testing=True)
 
 
 def test_output_name_unique():
@@ -31,7 +65,7 @@ def test_required_options_present():
     must = {
         'actuator_kind',
         'output_open_id', 'output_close_id',
-        'travel_time_sec',
+        'travel_time_open_sec', 'travel_time_close_sec',
         'calib_direction',
     }
     assert must.issubset(ids), f"missing: {must - ids}"
@@ -65,3 +99,35 @@ def test_calibration_commands_present():
     ids = {c['id'] for c in OUTPUT_INFORMATION.get('custom_commands', [])}
     assert 'calib_run' in ids
     assert 'calib_stop' in ids
+
+
+def test_calibrated_travel_time_takes_effect_without_a_reload(module):
+    """A freshly calibrated travel time must be visible to the running module.
+
+    set_custom_channel_option() only writes the database, while options_channels
+    is built once in __init__. Before _save_option() existed, calibrating stored a
+    travel time the module could not see: _get_travel_time() fell back to its 60 s
+    default and the next move drove the motor for that duration instead of the
+    measured one, into the end stop. Saving the output form happened to reload the
+    module and hide it — which is what the calibration message's "Reload page to
+    confirm" hint was really working around.
+    """
+    saved = {}
+    module.set_custom_channel_option = lambda ch, key, value: saved.__setitem__(key, value)
+
+    assert module._get_travel_time('open') == 60.0  # uncalibrated fallback
+
+    module._save_option('travel_time_open_sec', 12.0)  # what calib_stop does
+
+    assert saved['travel_time_open_sec'] == 12.0  # persisted
+    assert module._get_travel_time('open') == 12.0  # and visible in-memory
+
+
+def test_saved_position_is_visible_in_memory(module):
+    saved = {}
+    module.set_custom_channel_option = lambda ch, key, value: saved.__setitem__(key, value)
+
+    module._save_position(42.0)
+
+    assert saved['last_position_pct'] == 42.0
+    assert module._opt('last_position_pct') == 42.0

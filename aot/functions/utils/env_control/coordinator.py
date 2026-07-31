@@ -247,8 +247,18 @@ def coordinate(
             # 효과 없는 액추에이터를 편차 비례로 켜 두면 성과 없이 작동시간만 늘고
             # 적분이 와인드업한다. safe_default 기준으로 감쇠하므로 개구부(sd=0)는
             # 닫힘, 스크린(보온커튼·차광막 sd=100)은 걷힘으로 수렴한다.
+            #
+            # 주의: 여기서 반드시 prev_val(직전 실제 dispatch 위치)에서 감쇠해야
+            # 한다. I(적분)에서 감쇠하면 안 된다 — I 는 포화(saturation) 중
+            # anti-windup back-calculation(아래 else 분기, L266~267)에 의해
+            # dispatch 값과 무관하게 낮아질 수 있다. 예: 스크린이 며칠째 100%로
+            # 열려 있어도(강한 냉방 수요로 P+I 가 100을 크게 초과) I 는 그 이면에서
+            # 조용히 0 근처까지 깎일 수 있고, 그 상태에서 갑자기 무구배로 전환되면
+            # "표시상 100%였는데 다음 사이클에 40%로 뚝 떨어지는" 것처럼 보이는
+            # 명령 급변이 발생한다(2026-07-29 aot-005 폭염 중 보온커튼 오폐쇄 사건의
+            # 원인). prev_val 은 dispatch 좌표 그대로이므로 이 괴리가 없다.
             sd = p.safe_default
-            I = sd + (I - sd) * RELAX_FACTOR
+            I = sd + (prev_val - sd) * RELAX_FACTOR
             cmd_raw = _clamp(I, 0.0, 100.0)
             reason = REASON_NO_GRADIENT
         else:

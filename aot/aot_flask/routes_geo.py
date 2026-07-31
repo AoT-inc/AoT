@@ -1849,7 +1849,7 @@ def api_facility_runtime(facility_uuid):
                                 'heater', 'cooler', 'fogger',
                                 'co2_injector', 'circulation_fan'):
                     try:
-                        from aot.outputs.actuator_paired import KIND_TO_PROFILE_KIND as _PKM
+                        from aot.outputs.paired_actuator_common import KIND_TO_PROFILE_KIND as _PKM
                         kind = _PKM.get(kind, kind)
                     except ImportError:
                         pass

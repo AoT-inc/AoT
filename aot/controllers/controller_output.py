@@ -66,6 +66,13 @@ class OutputController(AbstractController, threading.Thread):
         self.output_type = {}
         self.output_types = {}
 
+        # One lock per output ID, serializing the background reloads started by
+        # output_setup(). Two saves of the same output in quick succession would
+        # otherwise race on self.output[output_id] and leave a half-torn-down
+        # driver behind.
+        self._setup_locks = {}
+        self._setup_locks_guard = threading.Lock()
+
     def initialize_variables(self):
         """Begin initializing output parameters."""
         self.sample_rate = db_retrieve_table_daemon(Misc, entry='first').sample_rate_controller_output
@@ -162,6 +169,33 @@ class OutputController(AbstractController, threading.Thread):
             except:
                 self.logger.exception(f"Could not initialize output {each_output.unique_id}")
 
+    def suppress_state_transition(self, output_instance, option_id):
+        """Neutralize a startup/shutdown state option before a settings reload.
+
+        Saving an Output's settings tears the driver down and builds it back up,
+        which makes every module run its Shutdown State and then its Startup
+        State transmission. Those are *daemon lifecycle* actions: replaying them
+        on a settings save physically actuates the device, so renaming a valve
+        drives that valve. On LoRaWAN sites it also costs two downlinks per save
+        against a single site-wide 4 s pacing slot (aot/utils/lorawan_pacing.py),
+        which is what pushed output_setup past the web UI's RPC deadline.
+
+        Every module reads these as options_channels[option_id][channel] and
+        treats any value other than 0/1 as "do nothing", so blanking them here
+        covers all drivers without touching a single module. options_channels is
+        built in each module's __init__, so this works on a freshly constructed
+        instance too — before try_initialize() applies the Startup State.
+        """
+        try:
+            channel_options = output_instance.options_channels[option_id]
+        except Exception:
+            return  # Module has no such option; nothing to suppress.
+        try:
+            for channel in channel_options:
+                channel_options[channel] = None
+        except Exception:
+            self.logger.exception(f"Suppressing {option_id}")
+
     def add_mod_output(self, output_id):
         """
         Add or modify local dictionary of output settings form SQL database
@@ -205,6 +239,8 @@ class OutputController(AbstractController, threading.Thread):
                     # Try to stop the output
                     if output_id in self.output:
                         try:
+                            self.suppress_state_transition(
+                                self.output[output_id], 'state_shutdown')
                             self.output[output_id].stop_output()
                         except Exception:
                             self.logger.exception("Stopping output")
@@ -214,6 +250,8 @@ class OutputController(AbstractController, threading.Thread):
                         'outputs')
                     if output_loaded:
                         self.output[output_id] = output_loaded.OutputModule(output)
+                        self.suppress_state_transition(
+                            self.output[output_id], 'state_startup')
                         self.output[output_id].try_initialize()
                         self.output[output_id].init_post()
 
@@ -327,13 +365,47 @@ class OutputController(AbstractController, threading.Thread):
             additional_options=additional_options)
 
     def output_setup(self, action, output_id):
-        """Add, delete, or modify a specific output."""
-        if action in ['Add', 'Modify']:
-            return self.add_mod_output(output_id)
-        elif action == 'Delete':
-            return self.del_output(output_id)
-        else:
-            return [1, 'Invalid output_setup action']
+        """Add, delete, or modify a specific output.
+
+        Hands the reload to a worker thread and returns immediately. Rebuilding
+        a driver can block for tens of seconds — a LoRaWAN send waits up to
+        MAX_PACE_WAIT_S (30 s) for a site-wide downlink slot, and an MQTT
+        listener teardown joins for up to 5 s — while the caller in aot_client.py
+        gives the RPC 10 s (_MAX_RPC_TIMEOUT). Answering synchronously made the
+        web UI report "Could not connect to Daemon: receiving: timeout" on saves
+        that were in fact succeeding in the background.
+
+        The trade-off is that per-output failures no longer reach the flash
+        message; they are logged instead, which is why the worker logs errors at
+        ERROR rather than swallowing them.
+        """
+        if action not in ['Add', 'Modify', 'Delete']:
+            return 1, 'Invalid output_setup action'
+
+        with self._setup_locks_guard:
+            lock = self._setup_locks.setdefault(output_id, threading.Lock())
+
+        def _reload():
+            with lock:
+                try:
+                    if action == 'Delete':
+                        error, msg = self.del_output(output_id)
+                    else:
+                        error, msg = self.add_mod_output(output_id)
+                except Exception:
+                    self.logger.exception(f"output_setup({action}, {output_id})")
+                    return
+                if error:
+                    self.logger.error(f"output_setup({action}, {output_id}): {msg}")
+                else:
+                    self.logger.debug(f"output_setup({action}, {output_id}): {msg}")
+
+        threading.Thread(
+            target=_reload,
+            name=f"output_setup_{output_id[:8]}",
+            daemon=True).start()
+
+        return 0, f"{action} accepted; the output is reloading in the background"
 
     def current_amp_load(self):  # TODO: Unimplemented until speed of current_amp_load() execution can be tested
         """

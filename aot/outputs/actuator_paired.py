@@ -10,24 +10,16 @@ from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 
+# Canonical definitions live in paired_actuator_common so actuator_paired_bus
+# shares them. Re-exported here because existing importers reference them via
+# this module.
+from aot.outputs.paired_actuator_common import (  # noqa: F401
+    ACTUATOR_KIND_OPTIONS,
+    KIND_TO_PROFILE_KIND,
+)
+
 measurements_dict = {0: {'measurement': 'duty_cycle', 'unit': 'percent'}}
 channels_dict = {0: {'types': ['value'], 'measurements': [0]}}
-
-ACTUATOR_KIND_OPTIONS = [
-    ('side_vent',       lazy_gettext('Side Vent')),
-    ('roof_vent',       lazy_gettext('Roof Vent')),
-    ('thermal_curtain', lazy_gettext('Thermal Curtain')),
-    ('shade_curtain',   lazy_gettext('Shade Curtain')),
-    ('ball_valve',      lazy_gettext('Ball Valve')),
-]
-
-KIND_TO_PROFILE_KIND = {
-    'side_vent':       'opening',
-    'roof_vent':       'opening',
-    'thermal_curtain': 'curtain',
-    'shade_curtain':   'shade',
-    'ball_valve':      'opening',
-}
 
 OUTPUT_INFORMATION = {
     'output_name_unique': 'actuator_paired',
@@ -329,7 +321,7 @@ class OutputModule(AbstractOutput):
         self._last_target_pct = target
         self._last_target_source = source
         try:
-            self.set_custom_channel_option(0, 'last_target_pct', round(target, 1))
+            self._save_option('last_target_pct', round(target, 1))
         except Exception as e:
             self.logger.warning("save last_target_pct failed: %s", e)
 
@@ -684,7 +676,7 @@ class OutputModule(AbstractOutput):
         # been calibrated.
         dir_field = 'travel_time_open_sec' if direction == 'open' else 'travel_time_close_sec'
         try:
-            self.set_custom_channel_option(0, dir_field, elapsed)
+            self._save_option(dir_field, elapsed)
         except Exception as e:
             self.logger.warning("calib_stop save failed: %s", e)
             return "Stopped after {:.1f}s but failed to save: {}".format(elapsed, e)
@@ -701,10 +693,32 @@ class OutputModule(AbstractOutput):
         vals = self.options_channels.get(key, [None])
         return vals[0] if vals else None
 
+    def _save_option(self, key, value):
+        """Persist a channel option AND refresh the in-memory copy.
+
+        set_custom_channel_option() only writes the database, while
+        options_channels was built once in __init__. Without this refresh a
+        freshly calibrated travel time stayed invisible to the running module:
+        _get_travel_time() kept reading 0, fell back to its 60 s default, and the
+        next move drove the motor for that duration instead of the measured one —
+        into the end stop. It only looked correct because saving the output form
+        reloads the module, which is what the calibration message's "Reload page"
+        hint was really working around.
+        """
+        self.set_custom_channel_option(0, key, value)
+        try:
+            slot = self.options_channels.get(key)
+            if slot is None:
+                self.options_channels[key] = {0: value}
+            else:
+                slot[0] = value
+        except Exception as e:
+            self.logger.warning("in-memory refresh of '%s' failed: %s", key, e)
+
     def _save_position(self, position_pct: float):
         # Persist last known position to channel custom_options so it survives daemon restarts.
         try:
             value = round(float(position_pct), 1)
-            self.set_custom_channel_option(0, 'last_position_pct', value)
+            self._save_option('last_position_pct', value)
         except Exception as e:
             self.logger.warning("save_position failed: %s", e)

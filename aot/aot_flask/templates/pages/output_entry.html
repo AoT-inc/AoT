@@ -42,7 +42,7 @@
 
     {% for each_output_channel in custom_options_values_output_channels[each_output.unique_id]|sort %}
     {%- set ch_static = dict_outputs[each_output.output_type]['channels_dict'].get(each_output_channel) or dict_outputs[each_output.output_type]['channels_dict'].get(0) or {} %}
-    {% set _is_paired = each_output.output_type == 'actuator_paired' %}
+    {% set _is_paired = each_output.output_type in (three_way_output_types or []) %}
     {% set _paired_opts = custom_options_values_output_channels[each_output.unique_id][each_output_channel] if _is_paired else {} %}
     {%- set _ns = namespace(open_oid='', open_ch=0, close_oid='', close_ch=0) -%}
     {%- if _is_paired -%}
@@ -104,7 +104,7 @@
         </div>
       </div>
       <div class="aot-entry-actions aot-output-col-6 aot-entry-button-group aot-ch-col-right">
-        {% if each_output.output_type == 'actuator_paired' %}
+        {% if _is_paired %}
         <input onclick="return $(this).actuator_paired_cmd('close', '{{each_output.unique_id}}', '{{each_output_channel}}');"
           class="form-control btn aot-btn-on aot-paired-btn"
           id="{{each_output.unique_id}}-{{each_output_channel}}-paired-close-btn"

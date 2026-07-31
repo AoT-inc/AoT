@@ -76,7 +76,9 @@ _MISC_CACHE_GEN = 0
 
 # [3-way Actuator] Output module types that expose Open/Stop/Close + position control.
 # Frontend renders a 3-button + slider popup instead of an on/off toggle.
-THREE_WAY_OUTPUT_TYPES = {'actuator_paired'}
+from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
+
+THREE_WAY_OUTPUT_TYPES = set(PAIRED_ACTUATOR_OUTPUT_TYPES)
 
 
 def invalidate_geo_config_cache():

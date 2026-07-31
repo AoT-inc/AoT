@@ -1426,11 +1426,11 @@ class CustomModule(AbstractFunction):
         # half-duplex gateway. (This per-device manager is deprecated, but keep
         # it paced in case it is re-enabled.)
         try:
-            from aot.utils.lorawan_pacing import claim_send_slot
-            from time import sleep
-            w = claim_send_slot()
-            if w > 0:
-                sleep(w)
+            from aot.utils.lorawan_pacing import pace_send
+            if not pace_send():
+                self.logger.warning(
+                    f"Mode downlink dropped ({reason}): pacing backlog too deep")
+                return False
         except Exception:
             pass
         try:

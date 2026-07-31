@@ -814,6 +814,11 @@ class HelpersMixin:
                 # When there is no indoor light sensor, supplement with outdoor solar irradiance
                 if od.get('solar_wm2') is not None and 'light' not in result:
                     result['light'] = od['solar_wm2']
+                    # 이 값은 차광막 '바깥' 값이라 차광막 개도를 반영하지 못한다.
+                    # 실내 광량 추정(estimate_indoor_light)을 적용해도 되는지
+                    # 판별하는 플래그 — 실제 실내 센서가 있으면 이미 차광이
+                    # 반영돼 있으므로 추정을 덧씌우면 이중 계산이 된다.
+                    result['_light_is_outdoor'] = True
 
         return result
 

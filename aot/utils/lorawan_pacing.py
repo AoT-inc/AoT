@@ -13,18 +13,17 @@ Every downlink path shares the ONE limiter in this module so the whole site is
 paced together (not just per module). Outputs and functions run in the same AoT
 daemon process, so these module-level globals are genuinely shared.
 
-Usage (sleep OUTSIDE any lock the caller may hold):
+Usage — call pace_send() and drop the downlink if it returns False (never call
+it while holding a lock: it sleeps):
 
-    from aot.utils.lorawan_pacing import claim_send_slot
-    from time import sleep
-    wait = claim_send_slot()
-    if wait > 0:
-        sleep(wait)
+    from aot.utils.lorawan_pacing import pace_send
+    if not pace_send():
+        return False  # backlog too deep; sending now would defeat the pacing
     # ... perform the actual enqueue ...
 """
 
 import threading
-from time import time
+from time import sleep, time
 
 # Minimum gap between ANY two downlinks site-wide, sized so the half-duplex
 # gateway is actually IDLE when the device's ACK comes back.
@@ -45,8 +44,15 @@ from time import time
 # ~165 ms, SF7 ~51 ms), the airtime collapses and this can come back down toward
 # the original 1.5 s.
 MIN_GLOBAL_DOWNLINK_INTERVAL_S = 4.0
-# Cap how long a single send may block waiting for its slot, so an extreme burst
-# degrades to "sent a bit early" rather than blocking a caller unboundedly.
+# Cap how long a single send may block waiting for its slot. Past this the
+# downlink is DROPPED, not sent late.
+#
+# It used to be sent late: the cap clamped the returned sleep but the slot had
+# already been reserved, so once the backlog passed ~7 deep every caller slept
+# 30 s and then transmitted at once — the pacing silently inverted into a
+# thundering herd at exactly the congestion it exists to prevent. A valve
+# command that has been queued 30 s is stale anyway, so failing it visibly beats
+# flooding the air with it.
 MAX_PACE_WAIT_S = 30.0
 
 _PACE_LOCK = threading.Lock()
@@ -56,6 +62,10 @@ _NEXT_SLOT = [0.0]  # mutable holder: earliest epoch the next downlink may go ou
 def claim_send_slot(min_interval=MIN_GLOBAL_DOWNLINK_INTERVAL_S,
                     max_wait=MAX_PACE_WAIT_S):
     """Reserve the next global send slot and return seconds to sleep before sending.
+
+    Returns None if the backlog is already deeper than max_wait, in which case
+    NO slot is reserved and the caller must drop the downlink — reserving one
+    anyway would push the queue out further for everybody behind it.
 
     The lock is held only to claim a monotonically increasing slot (fast); the
     caller does the sleeping outside the lock, so a slow or failing send never
@@ -70,5 +80,23 @@ def claim_send_slot(min_interval=MIN_GLOBAL_DOWNLINK_INTERVAL_S,
     with _PACE_LOCK:
         now = time()
         slot = now if now >= _NEXT_SLOT[0] else _NEXT_SLOT[0]
+        if slot - now > max_wait:
+            return None
         _NEXT_SLOT[0] = slot + mi
-    return max(0.0, min(slot - now, max_wait))
+    return max(0.0, slot - now)
+
+
+def pace_send(min_interval=MIN_GLOBAL_DOWNLINK_INTERVAL_S,
+              max_wait=MAX_PACE_WAIT_S):
+    """Wait for this downlink's slot. False means drop it instead of sending.
+
+    Every downlink path goes through here so the drop decision lives in one
+    place: callers that merely swallowed an exception and transmitted anyway
+    were how the pacing got bypassed before.
+    """
+    wait = claim_send_slot(min_interval=min_interval, max_wait=max_wait)
+    if wait is None:
+        return False
+    if wait > 0:
+        sleep(wait)
+    return True
