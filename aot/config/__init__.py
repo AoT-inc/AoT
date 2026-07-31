@@ -18,7 +18,7 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = 'p6_15_mcp_http_enabled_20260728'
-AOT_VERSION = '26.07.4'
+AOT_VERSION = '26.07.5'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
