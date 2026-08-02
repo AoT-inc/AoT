@@ -5,32 +5,296 @@
 {% block title %} - {{_('Settings')}}: {{_('API Key Management')}}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+<style>
+  /* Force 100% width on mobile immediately to prevent jagged reflow */
+  @media (max-width: 768px) {
+    .grid-stack-item {
+      width: 100% !important;
+      left: 0 !important;
+    }
+  }
+  .grid-stack-item-content {
+    transition: none !important;
+  }
+  /* The whole card opens the drawer — the gear is an affordance, not the only
+     target. The grip handle is excluded in JS so dragging never opens it. */
+  .aot-entry-item[data-open-detail] { cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/api_key -->
+  <div class="container">
+
+    <div class="aot-settings-title">
+      <h3>{{_('API Key Management')}}</h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+        data-toggle="modal" data-target="#modal_add_api_key">{{_('Add New API Key')}}</button>
+    </div>
+
+    {% if not api_keys %}
+    <p class="aot-modal-body-text" style="padding-left: 4px;">{{_('No API keys stored yet.')}}</p>
+    {% endif %}
+
+    {# 목록에는 키 본문을 싣지 않는다 — 이전 구조는 저장된 모든 키의 평문을
+       value 속성으로 내려보내, 페이지를 열 수 있는 사람이면 소스만 봐도 전부
+       읽을 수 있었다. 본문은 카드를 열 때 상세 라우트가 그 키 하나만 보낸다. #}
+    <div class="grid-stack aot-entry-container" id="api-keys-grid">
+    {% for key in api_keys %}
+    <div id="gridstack_api_key_{{key.unique_id}}" class="grid-stack-item" gs-id="{{key.unique_id}}"
+      gs-x="0" gs-y="{{loop.index0}}" gs-w="24" gs-h="1" gs-no-resize="true">
+    {# 배경은 Input 카드 규칙 그대로: 쓰이는 중이면 active, 아니면 inactive. #}
+    <div class="grid-stack-item-content {% if usage_map[key.unique_id] -%}active-background{% else -%}inactive-background{% endif %} row small-gutters aot-entry-item"
+      data-config-uid="{{key.unique_id}}"
+      data-open-detail="api_key" data-uid="{{key.unique_id}}"
+      data-drawer-title="{{_('Edit API Key')}}: {{ key.name or _('Unnamed Key') }}">
+      <div class="aot-entry-drag-handle"><i class="fa fa-grip-lines"></i></div>
+      {# 한 열에는 한 가지 사실만 — 이름 앞에 태그 배지를 붙이면 배지 길이만큼
+         이름 시작 위치가 행마다 어긋나 목록을 세로로 훑을 수 없다. 사용 여부는
+         카드 배경(active/inactive-background)이 이미 말하므로 적지 않는다. #}
+      <div class="aot-entry-content-item aot-col-grow">
+        <div class="form-control aot-entry-name-input">{{ key.name or _('Unnamed Key') }}</div>
+      </div>
+      <div class="aot-entry-content-item aot-col-grow">
+        <div class="form-control aot-entry-name-input">{{ key.provider }}</div>
+      </div>
+      <div class="aot-entry-settings">
+        <a class="btn p-0"><i class="fas fa-cog"></i></a>
+      </div>
+    </div> <!-- grid-stack-item-content -->
+    </div> <!-- grid-stack-item -->
+    {% endfor %}
+    </div> <!-- grid-stack -->
+
+  </div>
+
+  <!-- ===== Shared detail drawer (body loaded on demand) ===== -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="modal_api_key_detail" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        {# body+footer 는 상세 템플릿이 form 과 함께 통째로 내려준다. #}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Add API Key drawer ===== -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="modal_add_api_key" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Add New API Key')}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form class="api-key-form" method="post" action="/settings/api_key_submit">
+          {{form_add.hidden_tag()}}
+          <div class="modal-body">
+
+            <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+            <div class="aot-modal-container">
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add.name.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add.name(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add.provider.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add.provider(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add.tag.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add.tag(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add.url.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add.url(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add.description.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add.description(class_='form-control aot-modern-input', rows=1)}}
+                </div>
+              </div>
+
+            </div>
+
+            <div class="aot-modal-group-title">{{form_add.key.label.text}}</div>
+            <div class="aot-modal-container">
+              <div style="padding: 0.5rem 0;">
+                {{form_add.key(style='display:none;', id='real_add_key')}}
+                <input type="text" class="form-control aot-modern-input" style="width: 100%;"
+                  autocomplete="off" spellcheck="false"
+                  data-lpignore="true" data-dashlane-ignore="true" data-1p-ignore
+                  placeholder="{{ _('API Key Body') }}"
+                  oninput="document.getElementById('real_add_key').value = this.value;">
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+            {{form_add.api_key_add_submit(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
 <script>
   $(document).ready(function () {
-    $('form.api-key-form').submit(function (e) {
+    var $drawer = $('#modal_api_key_detail');
+
+    $.ajaxSetup({
+      beforeSend: function (xhr, settings) {
+        if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+          xhr.setRequestHeader("X-CSRFToken", "{{form_add.csrf_token._value()}}")
+        }
+      }
+    });
+
+    // --- Card drag ordering (same shape as the Input page) ---
+    var gridEl = document.querySelector('#api-keys-grid');
+    if (gridEl) {
+      var grid = GridStack.init({
+        animate: false,
+        cellHeight: 52,
+        column: 24,
+        margin: 2,
+        handle: '.aot-entry-drag-handle',
+        float: false,
+        disableOneColumnMode: true,
+        alwaysShowResizeHandle: false,
+        resizable: false
+      }, gridEl);
+
+      grid.on('dragstop', function () {
+        if (window.innerWidth <= 768) return; // No save on mobile viewport.
+        // Read the order off the rendered DOM on the next tick, not from
+        // grid.save() inside the handler: dropping a card pushes the others
+        // down afterwards, so saving immediately persists the pre-shuffle
+        // layout and the list comes back in a different order than the one
+        // just seen on screen.
+        setTimeout(function () {
+          var items = [];
+          gridEl.querySelectorAll('.grid-stack-item').forEach(function (node) {
+            var id = (node.gridstackNode && node.gridstackNode.id) || node.getAttribute('gs-id');
+            if (id) { items.push({ id: id, y: node.getBoundingClientRect().top }); }
+          });
+          $.ajax({
+            type: "POST",
+            url: '/settings/api_key/save_order',
+            data: JSON.stringify(items, null, '  '),
+            contentType: "application/json; charset=utf-8",
+            error: function () {
+              window.showToast('{{_("Error connecting to server.")}}', 'error');
+            }
+          });
+        }, 0);
+      });
+    }
+
+    // 키 표시/숨김. 드로어 본문은 나중에 주입되므로 document 위임으로 잡는다.
+    $(document).on('click', '[data-api-key-reveal]', function () {
+      var input = $(this).closest('div').find('[data-api-key-value]')[0];
+      if (!input) { return; }
+      var shown = input.type === 'text';
+      input.type = shown ? 'password' : 'text';
+      $(this).text(shown ? '{{_("Show")}}' : '{{_("Hide")}}');
+    });
+
+    // The detail form is injected after page load, so the submit handler below
+    // is delegated from document rather than bound to the form itself.
+    $(document).on('click', '[data-open-detail]', function (e) {
+      // The grip is for reordering; a drag that ends on it must not also open
+      // the drawer for whichever card happened to be under the cursor.
+      if ($(e.target).closest('.aot-entry-drag-handle').length) return;
+      e.preventDefault();
+      var uid = $(this).data('uid');
+
+      // The detail template ships its own <form> wrapping .modal-body +
+      // .modal-footer, so everything under .modal-content except the header
+      // gets swapped wholesale.
+      var $content = $drawer.find('.modal-content');
+      var swap = function (html) {
+        $content.children().not('.modal-header').remove();
+        $content.append(html);
+      };
+
+      $drawer.attr('data-config-uid-target', uid);
+      $drawer.find('.modal-title').text($(this).data('drawer-title') || '');
+      swap('<div class="modal-body"><div class="aot-modal-container">{{_("Loading")}}...</div></div>');
+      $drawer.modal('show');
+      // One shared drawer for every row: switching from card A to card B does
+      // not re-fire show.bs.modal, so the row highlight has to be moved by hand
+      // or A stays lit while B is the one being edited.
+      if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(uid); }
+
+      $.get('/settings/api_key/detail/' + encodeURIComponent(uid)).done(swap).fail(function () {
+        swap('<div class="modal-body"><div class="aot-modal-container">{{_("Error connecting to server.")}}</div></div>');
+      });
+    });
+
+    $(document).on('submit', 'form.api-key-form', function (e) {
       let submitter_btn = $(e.originalEvent.submitter);
-      let form = $(this);
 
       window.showToast('{{_("Processing command...")}}', 'info');
 
       $.ajax({
         type: "POST",
         url: '/settings/api_key_submit',
-        data: form.serialize()
+        data: $(this).serialize()
             + '&'
             + submitter_btn.attr("name")
             + '='
             + submitter_btn.attr("value"),
         success: function (data) {
           if (data.data.messages.error.length === 0) {
-            if (submitter_btn.hasClass('btn-delete') || submitter_btn.attr("name") === 'api_key_delete') {
-              $('#key_row_' + data.data.key_id).hide('slow');
-              $('#key_spacer_' + data.data.key_id).hide('slow');
+            if (submitter_btn.attr("name") === 'api_key_delete') {
+              $('[data-config-uid="' + data.data.key_id + '"]').hide('slow');
+              $drawer.modal('hide');
+              if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+                window.showToast(data.data.messages.success.join(", "), 'success');
+              }
             } else {
-              location.reload();
-            }
-            if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
-              window.showToast(data.data.messages.success.join(", "), 'success');
+              // A save changes the name, provider, tag and in-use tint the card
+              // shows at once — reload rather than patching each in place, but
+              // show the outcome first or the toast dies with the page.
+              if ('success' in data.data.messages && data.data.messages.success.length !== 0) {
+                window.showToast(data.data.messages.success.join(", "), 'success');
+              }
+              setTimeout(function () { window.location.reload(); }, 800);
             }
           } else {
             window.showToast('{{_("Error")}}: ' + data.data.messages.error.join(", "), 'error');
@@ -42,198 +306,7 @@
       });
       e.preventDefault();
     });
-
-    $.ajaxSetup({
-      beforeSend: function (xhr, settings) {
-        if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-          xhr.setRequestHeader("X-CSRFToken", "{{form_add.csrf_token._value()}}")
-        }
-      }
-    });
   });
 </script>
-{% endblock %}
 
-{% block settings %}
-  <div class="container">
-
-    <!-- Page Title -->
-    <div class="aot-settings-title">
-      <h3>{{_('API Key Management')}}</h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
-      </div>
-    </div>
-
-    <!-- Add New API Key -->
-    <div class="aot-modal-group-title">{{_('Add New API Key')}}</div>
-
-    <form class="api-key-form" method="post" action="/settings/api_key_submit">
-      {{form_add.hidden_tag()}}
-      <div class="aot-modal-container">
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add.name.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add.name(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add.provider.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add.provider(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add.key.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add.key(style='display:none;', id='real_add_key')}}
-            <input type="text" class="aot-modern-input form-control" autocomplete="off"
-              oninput="document.getElementById('real_add_key').value = this.value;"
-              data-lpignore="true" data-dashlane-ignore="true" spellcheck="false"
-              placeholder="{{ _('API Key Body') }}">
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add.tag.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add.tag(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add.url.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add.url(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add.description.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add.description(class_='aot-modern-input form-control', rows=1)}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row" style="justify-content: flex-end; border-bottom: none;">
-          {{form_add.api_key_add_submit(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-        </div>
-
-      </div>
-    </form>
-
-    <!-- Stored API Keys -->
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Stored API Keys')}}</div>
-
-    {% if not api_keys %}
-    <p class="aot-modal-body-text" style="padding-left: 4px;">{{_('No API keys stored yet.')}}</p>
-    {% endif %}
-
-    {% for key in api_keys %}
-    <form class="api-key-form" method="post" id="key_row_{{key.unique_id}}" action="/settings/api_key_submit"
-          style="margin-bottom: 1rem;">
-      {{form_mod.csrf_token}}
-      {{form_mod.api_key_id(value=key.unique_id, type="hidden")}}
-
-      <div class="aot-modal-container">
-
-        <!-- Key name header -->
-        <div style="padding: 0.75rem 0 0.5rem; border-bottom: 1px solid var(--border-neutral); margin-bottom: 0.25rem;">
-          <span style="font-weight: 700; font-size: 0.95rem; color: var(--aot-text-title);">
-            {{ key.name or _('Unnamed Key') }}
-          </span>
-          {% if key.provider %}
-          <span class="aot-modal-body-text" style="margin-left: 8px; display: inline;">· {{ key.provider }}</span>
-          {% endif %}
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Name')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod.name(class_='aot-modern-input form-control', value=key.name, title=_('Name'))}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Provider')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod.provider(class_='aot-modern-input form-control', value=key.provider, title=_('Provider'))}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Key')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod.key(style='display:none;', value=key.key)}}
-            <input type="text" class="aot-modern-input form-control" value="{{ key.key }}"
-              title="{{ _('Key') }}" autocomplete="off"
-              oninput="this.previousElementSibling.value = this.value;"
-              data-lpignore="true" data-dashlane-ignore="true" spellcheck="false">
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Tag')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod.tag(class_='aot-modern-input form-control', value=key.tag, title=_('Tag'))}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('URL')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod.url(class_='aot-modern-input form-control', value=key.url, title=_('URL'))}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Description')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod.description(class_='aot-modern-input form-control', rows=1, value=key.description or '')}}
-          </div>
-        </div>
-
-        <!-- Usage -->
-        <div class="aot-modal-option-row" style="border-bottom: none; flex-wrap: wrap; gap: 6px;">
-          <div class="aot-modal-option-label" style="flex: 0 0 auto; min-width: 80px;">{{_('Usage')}}</div>
-          <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-            {% if usage_map[key.unique_id] %}
-              {% for use in usage_map[key.unique_id] %}
-                <span style="font-size: 0.78rem; padding: 2px 10px; border-radius: 9999px;
-                             background-color: var(--aot-input-bg); border: 1px solid var(--border-neutral);
-                             color: var(--aot-text-secondary);"
-                      title="{{_('Type')}}: {{use.type}}">
-                  <i class="fas
-                    {%- if use.type == 'Input' %} fa-sign-in-alt
-                    {%- elif use.type == 'Output' %} fa-sign-out-alt
-                    {%- elif use.type == 'Function' %} fa-code
-                    {%- elif use.type == 'AI' %} fa-robot
-                    {%- else %} fa-cog
-                    {%- endif %}"></i>
-                  {{ use.name }}
-                </span>
-              {% endfor %}
-            {% else %}
-              <span style="font-size: 0.8rem; color: var(--aot-text-secondary);">{{_('Not in use')}}</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div style="display: flex; justify-content: space-between; padding: 0.75rem 0 0.5rem; gap: 8px;">
-          {{form_mod.api_key_delete(class_='btn aot-pill-btn btn-delete',
-            style='border: 1px solid var(--aot-danger, #dc3545); color: var(--aot-danger, #dc3545);',
-            onclick='return confirm("' + _('Are you sure you want to delete this API key?') + '")')}}
-          {{form_mod.api_key_mod_submit(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-        </div>
-
-      </div>
-    </form>
-    <div id="key_spacer_{{key.unique_id}}"></div>
-    {% endfor %}
-
-  </div>
 {% endblock %}

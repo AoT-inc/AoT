@@ -52,6 +52,12 @@ THEME_COLOR_FIELDS = [
     'bd_primary', 'bd_secondary',
     'bg_active', 'bg_inactive', 'bg_warning',
     'bg_on', 'bg_off', 'bg_pending', 'tint_warning_bg', 'tint_warning_fg',
+    # 의미 색상 — 성공/경고/위험/정보. 상태 표시(장치 ON/OFF·활성)와는 다른
+    # 축이다. 종전에는 aot-theme-variables.css 에 고정돼 있어 운영자가 바꿀 수
+    # 없었고, 그 탓에 페이지들이 장치 상태색을 빌려 쓰는 일이 생겼다.
+    'color_success', 'color_warning', 'color_danger', 'color_info',
+    'tint_success_bg', 'tint_success_fg', 'tint_danger_bg', 'tint_danger_fg',
+    'tint_info_bg', 'tint_info_fg',
     'bg_llm', 'bg_mcp', 'badge_upgrade',
     'btn_primary_bg', 'btn_secondary_bg',
     'bg_btn_on', 'bg_btn_off',
@@ -422,8 +428,11 @@ class User(FlaskForm):
 
 
 class UserAdd(FlaskForm):
+    # 라벨이 그냥 '사용자'였을 때는 바로 아래 '이름' 칸과 구분이 되지 않았다.
+    # 이 칸은 로그인에 쓰는 계정이고 만든 뒤에는 바꿀 수 없으므로 그렇게 부른다.
     user_name = StringField(
-        TRANSLATIONS['user']['title'], validators=[DataRequired()])
+        lazy_gettext('Login account'), validators=[DataRequired()])
+    full_name = StringField(lazy_gettext('Display Name'))
     email = EmailField(
         TRANSLATIONS['email']['title'],
         validators=[
@@ -486,6 +495,8 @@ class AccountSelf(FlaskForm):
 
 class UserMod(FlaskForm):
     user_id = StringField(lazy_gettext('User ID'), widget=widgets.HiddenInput())
+    full_name = StringField(lazy_gettext('Display Name'))
+    is_enabled = BooleanField(lazy_gettext('Account Enabled'))
     email = EmailField(
         TRANSLATIONS['email']['title'],
         render_kw={"placeholder": TRANSLATIONS['email']['title']},
@@ -629,6 +640,16 @@ class SettingsCustomUI(FlaskForm):
     # 강조(paintNameWarning)에도 같은 토큰이 쓰인다(bg+fg 쌍).
     tint_warning_bg = StringField(lazy_gettext('Unverified Running Tint'), default=THEME_DEFAULTS.get('tint_warning_bg', '#FFF3E2'), render_kw={"type": "color"})
     tint_warning_fg = StringField(lazy_gettext('Unverified Running Tint Text'), default=THEME_DEFAULTS.get('tint_warning_fg', '#94650A'), render_kw={"type": "color"})
+    color_success = StringField(lazy_gettext('Success'), default=THEME_DEFAULTS.get('color_success', '#96C064'), render_kw={"type": "color"})
+    color_warning = StringField(lazy_gettext('Warning'), default=THEME_DEFAULTS.get('color_warning', '#FEA60B'), render_kw={"type": "color"})
+    color_danger = StringField(lazy_gettext('Danger'), default=THEME_DEFAULTS.get('color_danger', '#DF5353'), render_kw={"type": "color"})
+    color_info = StringField(lazy_gettext('Info'), default=THEME_DEFAULTS.get('color_info', '#029ACF'), render_kw={"type": "color"})
+    tint_success_bg = StringField(lazy_gettext('Success Tint'), default=THEME_DEFAULTS.get('tint_success_bg', '#EEF6E6'), render_kw={"type": "color"})
+    tint_success_fg = StringField(lazy_gettext('Success Tint Text'), default=THEME_DEFAULTS.get('tint_success_fg', '#557A30'), render_kw={"type": "color"})
+    tint_danger_bg = StringField(lazy_gettext('Danger Tint'), default=THEME_DEFAULTS.get('tint_danger_bg', '#FBE7E7'), render_kw={"type": "color"})
+    tint_danger_fg = StringField(lazy_gettext('Danger Tint Text'), default=THEME_DEFAULTS.get('tint_danger_fg', '#B23B3B'), render_kw={"type": "color"})
+    tint_info_bg = StringField(lazy_gettext('Info Tint'), default=THEME_DEFAULTS.get('tint_info_bg', '#E7F4FB'), render_kw={"type": "color"})
+    tint_info_fg = StringField(lazy_gettext('Info Tint Text'), default=THEME_DEFAULTS.get('tint_info_fg', '#06709B'), render_kw={"type": "color"})
     bg_llm = StringField(lazy_gettext('BG LLM Badge'), default=THEME_DEFAULTS.get('bg_llm', '#6277C7'), render_kw={"type": "color"})
     bg_mcp = StringField(lazy_gettext('BG MCP Badge'), default=THEME_DEFAULTS.get('bg_mcp', '#64C762'), render_kw={"type": "color"})
     # 2026-07 통합: bg_upgrade(nav 배지) + bg_btn_upgrade(버튼) — 둘 다 같은

@@ -150,7 +150,16 @@ def get_widget_custom_options(widget_id):
     a modal opened later in the same page session can show stale values.
     This lets the modal-open handler re-sync form fields to the DB's current
     state right before showing, instead of the page-load snapshot.
+
+    Gated to match its write-side twin /save_widget_custom_options: a widget's
+    custom_options can hold credentials (API-key fields fill in here via the
+    key picker), so a read-only role must not be able to read them back out.
+    Only ever called when a settings modal opens, which is already an edit
+    action, so the gate costs nothing in normal use.
     """
+    if not utils_general.user_has_permission('edit_controllers', silent=True):
+        return jsonify({"status": "error", "message": "Permission denied"}), 403
+
     try:
         widget = Widget.query.filter(Widget.unique_id == widget_id).first()
         if not widget:
@@ -279,19 +288,6 @@ def save_dashboard_order():
             db.session.remove()
         except Exception:
             pass
-
-
-@blueprint.route('/api/widget/aot_map/config_options', methods=['GET'])
-@flask_login.login_required
-def get_aot_map_config_options():
-    """Returns available measurements and devices for the AoT Map widget config dropdowns."""
-    try:
-        from aot.widgets import AoT_map
-        data = AoT_map._get_available_config_options()
-        return jsonify(data), 200
-    except Exception as e:
-        logger.error(f"Error fetching AoT Map config options: {str(e)}")
-        return jsonify({"error": str(e)}), 500
 
 
 @blueprint.route('/dashboard', methods=('GET', 'POST'))

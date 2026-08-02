@@ -189,7 +189,7 @@
   function _showMsg(el, text, type) {
     if (!el) return;
     el.textContent = text;
-    el.style.color = type === 'err' ? '#e53935' : '#43a047';
+    el.style.color = type === 'err' ? 'var(--aot-color-danger)' : 'var(--aot-color-success)';
     clearTimeout(el._timer);
     el._timer = setTimeout(function () { el.textContent = ''; }, 3000);
   }

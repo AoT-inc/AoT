@@ -29,6 +29,10 @@ class User(UserMixin, CRUDMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
     name = db.Column(db.VARCHAR(64), unique=True, index=True)
+    # 사람이 알아보는 이름. name 은 로그인 계정(영숫자·유일)이라 "koat", "5739"
+    # 처럼 누구인지 알 수 없는 값이 흔해, 표시용으로 따로 둔다. 비어 있으면
+    # 화면은 name 으로 되돌아간다 — 유일성을 요구하지 않으므로 동명이인 가능.
+    full_name = db.Column(db.VARCHAR(64), default=None)
     password_hash = db.Column(db.VARCHAR(255))
     code = db.Column(db.Integer, default=None)
     # DEPRECATED: 평문 API 키. p6_13 마이그레이션이 기존 값을 api_key_hash 로
@@ -42,6 +46,9 @@ class User(UserMixin, CRUDMixin, db.Model):
     api_key_hash = db.Column(db.String(64), unique=True, index=True, default=None)
     email = db.Column(db.VARCHAR(64), unique=True, index=True)
     role_id = db.Column(db.Integer, default=None)
+    # Settings > Users 카드의 표시 순서. Input/Output 카드와 같은 GridStack 드래그로
+    # 정렬하며, /settings/users/save_order 가 0..N-1 로 다시 매겨 동률을 없앤다.
+    position_y = db.Column(db.Integer, default=0)
     theme = db.Column(db.VARCHAR(64))
     landing_page = db.Column(db.Text, default='live')
     index_page = db.Column(db.Text, default='landing')
@@ -58,6 +65,17 @@ class User(UserMixin, CRUDMixin, db.Model):
     # created accounts are unaffected).
     auth_provider = db.Column(db.String(32), default=None)
     is_approved = db.Column(db.Boolean, nullable=False, default=True)
+
+    # 관리자가 계정을 지우지 않고 잠시 막아두는 스위치.
+    #
+    # 이름을 is_active 로 하지 않은 이유: UserMixin 이 같은 이름의 프로퍼티를
+    # 제공하고 flask_login.login_user() 가 그것을 본다. 로그인 경로들은 DB 행이
+    # 아니라 id/name 만 채운 빈 User() 를 login_user() 에 넘기는데, 컬럼으로
+    # 덮어쓰면 그 임시 객체의 값이 None(=falsy)이 되어 모든 로그인이 거부된다.
+    #
+    # 로그인 시도는 routes_authentication.py 의 명시적 검사가, 이미 열려 있는
+    # 세션은 app.py 의 user_loader 가 막는다.
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
 
     # Brute-force protection. The failed-attempt counter used to live in the
     # Flask session, so clearing a cookie reset it — no protection at all
@@ -101,6 +119,10 @@ class User(UserMixin, CRUDMixin, db.Model):
         candidate = cls.hash_api_key(raw_key)
         user = cls.query.filter_by(api_key_hash=candidate).first()
         if user and hmac.compare_digest(user.api_key_hash or '', candidate):
+            # 꺼진 계정의 키는 통하지 않는다. 세 API 경로(url arg / Basic /
+            # X-API-KEY)가 모두 여기를 거치므로 검사는 이 한 곳이면 된다.
+            if not user.is_enabled:
+                return None
             return user
         return None
 

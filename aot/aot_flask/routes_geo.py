@@ -354,6 +354,13 @@ def api_geo_settings():
         return jsonify({'ok': True, 'message': 'Settings Saved'})
 
     # GET
+    # saved_state carries the map providers' API keys in the clear. Its only
+    # caller is the geo settings modal (templates/modals/geo_settings_modal.html,
+    # reached from the map design page), which is an editing surface — so gate
+    # reads at the same level the POST above already requires.
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
     saved_state = global_settings.state_dict()
     geo_layers = GeoLayer.query.filter_by(is_activated=True).all()
     layers_data = [{'unique_id': l.unique_id, 'name': l.name, 'type': l.type} for l in geo_layers]

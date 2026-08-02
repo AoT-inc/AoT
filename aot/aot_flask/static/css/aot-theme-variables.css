@@ -399,6 +399,11 @@
   --color-device-mode: #995aff;
   --bg-equipment-tint: #eef6ff;
   --bg-equipment-tint-hover: #f0f7ff;
+
+  /* Native form controls (range, checkbox, radio) paint themselves with the
+     browser's own accent — a blue that is in no palette anyone configured.
+     One inherited declaration puts every one of them on the brand colour. */
+  accent-color: var(--aot-color-brand-primary);
 }
 
 /* Dark Theme Overrides — :root[data-theme="dark"] */

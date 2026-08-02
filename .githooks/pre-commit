@@ -1,0 +1,25 @@
+#!/bin/sh
+# AoT pre-commit 훅 — JS 번들 재빌드 누락 차단.
+#
+# 정적 JS 일부는 빌드 산출물이고 git 에 추적된다. 소스만 커밋하면 배포된 앱은
+# 계속 옛 코드를 실행한다(2026-07-27 f8090ce 사건). 스테이지에 번들 입력이
+# 있는데 산출물이 없으면 커밋을 막는다.
+#
+# 활성화: git config core.hooksPath .githooks   (클론마다 1회)
+# 우회  : AOT_SKIP_BUNDLE_CHECK=1 git commit ...
+set -e
+
+if [ -n "$AOT_SKIP_BUNDLE_CHECK" ]; then
+    exit 0
+fi
+
+ROOT=$(git rev-parse --show-toplevel)
+CHECK="$ROOT/aot/scripts/check_js_bundles.py"
+[ -f "$CHECK" ] || exit 0
+
+if ! python3 "$CHECK" --staged; then
+    echo
+    echo "커밋 중단: 위 번들을 재빌드하고 산출물까지 함께 스테이지하세요."
+    echo "  (의도한 커밋이라면 AOT_SKIP_BUNDLE_CHECK=1 git commit ...)"
+    exit 1
+fi

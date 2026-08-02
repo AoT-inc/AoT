@@ -6,62 +6,500 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': ' + dict_translation['user']['title']}}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="/static/css/gridstack.css" />
+<link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
+<link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
+<script src="/static/js/vendor/gridstack-all.js"></script>
+<style>
+  #userSettingsTabs {
+    border-bottom: 2px solid var(--border-neutral, #dee2e6);
+    margin-bottom: 1.25rem;
+  }
+  #userSettingsTabs .nav-link {
+    border: none;
+    color: var(--aot-text-secondary, #6c757d);
+    font-weight: 500;
+    padding: 0.6rem 1.1rem;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+  #userSettingsTabs .nav-link.active {
+    color: var(--brand-secondary);
+    background: transparent;
+    border-bottom: 2px solid var(--brand-secondary);
+  }
+  /* Force 100% width on mobile immediately to prevent jagged reflow */
+  @media (max-width: 768px) {
+    .grid-stack-item {
+      width: 100% !important;
+      left: 0 !important;
+    }
+  }
+  .grid-stack-item-content {
+    transition: none !important;
+  }
+  /* The whole card opens the drawer — the gear is an affordance, not the only
+     target. The grip handle is excluded in JS so dragging never opens it. */
+  .aot-entry-item[data-open-detail] { cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/users -->
+  <div class="container">
+
+    <div class="aot-settings-title">
+      <h3>{{_('User Settings')}} <a href="{{ manual_url('Configuration-Settings/#users') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:14px; margin-left:4px;"></span></a></h3>
+      <div class="d-flex" style="gap: 8px;">
+        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs" id="userSettingsTabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="tab-users" data-toggle="tab" href="#pane-users" role="tab">{{_('Users')}}</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tab-roles" data-toggle="tab" href="#pane-roles" role="tab">{{_('Roles')}}</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tab-general" data-toggle="tab" href="#pane-general" role="tab">{{_('General')}}</a>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- ===== Users ===== -->
+      <div class="tab-pane fade show active" id="pane-users" role="tabpanel">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+            data-toggle="modal" data-target="#modal_add_user">{{_('Add User')}}</button>
+        </div>
+
+        <div class="grid-stack aot-entry-container" id="users-grid">
+        {% for user in users %}
+        {# gs-y 는 position_y 가 아니라 루프 순번을 쓴다. 라우트가 이미
+           (position_y, id) 로 정렬해 넘겨주고, 마이그레이션 직후처럼 값이 전부
+           0 인 상태에서 그대로 넘기면 GridStack 이 충돌을 풀며 순서를 뒤집는다. #}
+        <div id="gridstack_user_{{user.unique_id}}" class="grid-stack-item" gs-id="{{user.unique_id}}"
+          gs-x="0" gs-y="{{loop.index0}}" gs-w="24" gs-h="1" gs-no-resize="true">
+        {# 표시 이름이 있으면 그것을, 없으면 지금까지처럼 로그인 계정을 쓴다. #}
+        {% set display_name = user.full_name or user.name %}
+        {# 배경은 Input 카드 규칙 그대로 — 상태가 있는 카드는 둘 중 하나를 항상
+           달고 다닌다(활성=active-background, 비활성=inactive-background).
+           상태 개념이 없는 역할 카드는 input_spacer 처럼 아무것도 달지 않는다. #}
+        <div class="grid-stack-item-content {% if user.is_enabled -%}active-background{% else -%}inactive-background{% endif %} row small-gutters aot-entry-item"
+          data-config-uid="{{user.unique_id}}"
+          data-open-detail="user" data-uid="{{user.unique_id}}"
+          data-drawer-title="{{_('Edit User')}}: {{display_name}}">
+          {# 순서를 저장할 컬럼이 users 테이블에 없어 아직 실제 재정렬은 하지 않는다.
+             Input/Output 카드와 같은 형태를 맞추기 위한 핸들. #}
+          {# name/uuid/action 3열 배분은 Input 처럼 3열이 모두 채워지는 카드용이다.
+             여기는 이름·역할 두 열뿐이라 그 배분을 쓰면 빈 3열이 톱니를 멀리
+             밀어낸다 — 스케줄러 카드와 같은 aot-col-grow 조합을 쓴다. #}
+          <div class="aot-entry-drag-handle"><i class="fa fa-grip-lines"></i></div>
+          {# 한 열 = 한 사실. 이름 앞에 배지를 붙이면 배지 길이만큼 이름 시작
+             위치가 행마다 어긋나 목록을 세로로 훑을 수 없다. 사용 여부는 카드
+             배경이, 나머지(Google 계정·승인 대기)는 드로어가 말한다. #}
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input"
+              title="{{_('Login account')}}: {{user.name}}">{{display_name}}</div>
+          </div>
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input">
+              {%- for each_role in user_roles if each_role.id == user.role_id -%}{{each_role.name}}{%- endfor -%}
+            </div>
+          </div>
+          <div class="aot-entry-settings">
+            <a class="btn p-0"><i class="fas fa-cog"></i></a>
+          </div>
+        </div> <!-- grid-stack-item-content -->
+        </div> <!-- grid-stack-item -->
+        {% endfor %}
+        </div> <!-- grid-stack -->
+      </div>
+
+      <!-- ===== Roles ===== -->
+      <div class="tab-pane fade" id="pane-roles" role="tabpanel">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+            data-toggle="modal" data-target="#modal_add_role">{{_('Add Role')}}</button>
+        </div>
+
+        <div class="grid-stack aot-entry-container" id="roles-grid">
+        {% for each_role in user_roles %}
+        {% set role_editable = user_roles|length > 4 and each_role.id > 1 %}
+        <div id="gridstack_role_{{each_role.unique_id}}" class="grid-stack-item" gs-id="{{each_role.unique_id}}"
+          gs-x="0" gs-y="{{loop.index0}}" gs-w="24" gs-h="1" gs-no-resize="true">
+        <div class="grid-stack-item-content row small-gutters aot-entry-item"
+          data-config-uid="{{each_role.unique_id}}"
+          {% if role_editable %}data-open-detail="role" data-uid="{{each_role.unique_id}}"
+          data-drawer-title="{{_('Edit Role')}}: {{each_role.name}}"{% endif %}>
+          <div class="aot-entry-drag-handle"><i class="fa fa-grip-lines"></i></div>
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input">{{each_role.name}}</div>
+          </div>
+          <div class="aot-entry-content-item aot-col-grow">
+            <div class="form-control aot-entry-name-input">
+              {{_('Users')}}: {{ users | selectattr('role_id', 'equalto', each_role.id) | list | length }}
+            </div>
+          </div>
+          <div class="aot-entry-settings">
+            {% if role_editable %}<a class="btn p-0"><i class="fas fa-cog"></i></a>{% endif %}
+          </div>
+        </div> <!-- grid-stack-item-content -->
+        </div> <!-- grid-stack-item -->
+        {% endfor %}
+        </div> <!-- grid-stack -->
+      </div>
+
+      <!-- ===== General ===== -->
+      <div class="tab-pane fade" id="pane-general" role="tabpanel">
+        <form method="post" action="/settings/users">
+          {{form_user.csrf_token}}
+          <div class="aot-modal-container">
+            <div class="aot-modal-option-row" style="border-bottom: none;">
+              <div class="aot-modal-option-label">
+                {{form_user.default_login_page.label.text}}
+                <div class="aot-modal-body-text">{{_('Which page to land on before logging in')}}</div>
+              </div>
+              <div class="aot-modal-option-control">
+                <select class="aot-settings-select" id="default_login_page" name="default_login_page">
+                  <option value="password"{% if misc.default_login_page == 'password' %} selected{% endif %}>{{_('Password')}}</option>
+                  <option value="keypad"{% if misc.default_login_page == 'keypad' %} selected{% endif %}>{{_('Keypad')}}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
+            {{form_user.settings_user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Shared detail drawer (body loaded on demand) ===== -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="modal_user_detail" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        {# body+footer 는 상세 템플릿이 form 과 함께 통째로 내려준다
+           (.aot-option-modal .modal-content > form 패턴). #}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Add User drawer ===== -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="modal_add_user" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Add User')}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form method="post" action="/settings/users">
+          {{form_add_user.hidden_tag()}}
+          <div class="modal-body">
+            <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+            <div class="aot-modal-container">
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label"
+                  title="{{_('Used to log in. Letters and numbers only, and cannot be changed later.')}}">{{form_add_user.user_name.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add_user.user_name(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label"
+                  title="{{_('Shown in lists. Leave blank to show the login account instead.')}}">{{form_add_user.full_name.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add_user.full_name(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add_user.email.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add_user.email(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add_user.password_new.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add_user.password_new(class_='form-control aot-modern-input', autocomplete='new-password')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add_user.password_repeat.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add_user.password_repeat(class_='form-control aot-modern-input', autocomplete='new-password')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label" title="{{_('Note: Keypad codes must be at least 4 digits.')}}">{{form_add_user.code.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_add_user.code(class_='form-control aot-modern-input', autocomplete='new-password')}}
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add_user.addRole.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  <select name="addRole" class="form-control aot-modern-input">
+                    <option value="Admin">{{_('Admin')}}</option>
+                    {% for each_role in user_roles if each_role.name != 'Admin' %}
+                    <option value="{{each_role.name}}">{{each_role.name}}</option>
+                    {% endfor -%}
+                  </select>
+                </div>
+              </div>
+
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_add_user.theme.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  <select name="theme" class="form-control aot-modern-input">
+                    {% for value, name in themes %}
+                    <option value="{{value|e}}" {% if value == 'spacelab' %}selected{% endif %}>{{name|e}}</option>
+                    {% endfor -%}
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+            {{form_add_user.user_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Add Role drawer ===== -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
+    id="modal_add_role" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Add Role')}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form method="post" action="/settings/users">
+          {{form_user_roles.csrf_token}}
+          <div class="modal-body">
+
+            <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+            <div class="aot-modal-container">
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{form_user_roles.name.label(class_='mb-0')}}</label>
+                <div class="aot-modal-option-control">
+                  {{form_user_roles.name(class_='form-control aot-modern-input')}}
+                </div>
+              </div>
+            </div>
+
+            <div class="aot-modal-group-title">{{_('Permissions')}}</div>
+            <div class="aot-modal-container">
+              {% for field in [form_user_roles.view_logs, form_user_roles.view_stats, form_user_roles.view_camera,
+                               form_user_roles.view_settings, form_user_roles.edit_users, form_user_roles.edit_controllers,
+                               form_user_roles.edit_settings, form_user_roles.reset_password] %}
+              <div class="aot-modal-option-row">
+                <label class="aot-modal-option-label">{{field.label.text}}</label>
+                <div class="aot-modal-option-control">
+                  <label class="btn-toggle mb-0">
+                    {{field(class_='btn-toggle-input')}}
+                    <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                  </label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+            {{form_user_roles.user_role_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script src="/static/js/common/aot-widget-drawer.js?v=20260725d"></script>
 <script>
   $(document).ready(function () {
-    $('form').submit(function (e) {
-      let submitter_btn = $(e.originalEvent.submitter);
+    var $drawer = $('#modal_user_detail');
 
-      if (submitter_btn.attr("name") === 'settings_user_save' ||
-          submitter_btn.attr("name") === 'user_generate_api_key' ||
-          submitter_btn.attr("name") === 'user_delete' ||
-          submitter_btn.attr("name") === 'user_save' ||
-          submitter_btn.attr("name") === 'user_approve' ||
-          submitter_btn.attr("name") === 'user_role_save' ||
-          submitter_btn.attr("name") === 'user_role_delete') {
+    // --- Card drag ordering (same shape as the Input page) ---
+    // Two grids on one page, and the Roles one starts inside a hidden tab-pane
+    // where GridStack would measure a zero-height container — so each grid is
+    // initialised the first time its tab is actually shown.
+    var grids = {};
+    function initGrid(selector, saveUrl) {
+      if (grids[selector]) return;
+      var el = document.querySelector(selector);
+      if (!el) return;
+
+      var grid = GridStack.init({
+        animate: false,
+        cellHeight: 52,
+        column: 24,
+        margin: 2,
+        handle: '.aot-entry-drag-handle',
+        float: false,
+        disableOneColumnMode: true,
+        alwaysShowResizeHandle: false,
+        resizable: false
+      }, el);
+      grids[selector] = grid;
+
+      grid.on('dragstop', function () {
+        if (window.innerWidth <= 768) return; // No save on mobile viewport.
+        // Read the order off the rendered DOM on the next tick, not from
+        // grid.save() inside the handler: dropping a card pushes the others
+        // down afterwards, so saving immediately persists the pre-shuffle
+        // layout and the list comes back in a different order than the one
+        // just seen on screen.
+        setTimeout(function () {
+          var items = [];
+          el.querySelectorAll('.grid-stack-item').forEach(function (node) {
+            var id = (node.gridstackNode && node.gridstackNode.id) || node.getAttribute('gs-id');
+            if (id) { items.push({ id: id, y: node.getBoundingClientRect().top }); }
+          });
+          $.ajax({
+            type: "POST",
+            url: saveUrl,
+            headers: { "X-CSRFToken": "{{form_user.csrf_token._value()}}" },
+            data: JSON.stringify(items, null, '  '),
+            contentType: "application/json; charset=utf-8",
+            error: function () {
+              window.showToast('{{_("Error: Unable to communicate with server.")}}', 'error');
+            }
+          });
+        }, 0);
+      });
+    }
+
+    initGrid('#users-grid', '/settings/users/save_order');
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function () {
+      if ($(this).attr('href') === '#pane-roles') {
+        initGrid('#roles-grid', '/settings/users/save_role_order');
+      }
+    });
+
+    // The detail form is injected after page load, so every handler here is
+    // delegated from document rather than bound to the form itself.
+    $(document).on('click', '[data-open-detail]', function (e) {
+      // The grip is for reordering; a drag that ends on it must not also open
+      // the drawer for whichever card happened to be under the cursor.
+      if ($(e.target).closest('.aot-entry-drag-handle').length) return;
+      e.preventDefault();
+      var kind = $(this).data('open-detail');
+      var uid = $(this).data('uid');
+      var url = (kind === 'user')
+        ? '/settings/users/detail/' + encodeURIComponent(uid)
+        : '/settings/users/role_detail/' + encodeURIComponent(uid);
+
+      // The detail template ships its own <form> wrapping .modal-body + .modal-footer,
+      // so everything under .modal-content except the header gets swapped wholesale.
+      var $content = $drawer.find('.modal-content');
+      var swap = function (html) {
+        $content.children().not('.modal-header').remove();
+        $content.append(html);
+      };
+
+      $drawer.attr('data-config-uid-target', uid);
+      $drawer.find('.modal-title').text($(this).data('drawer-title') || '');
+      swap('<div class="modal-body"><div class="aot-modal-container">{{_("Loading")}}...</div></div>');
+      $drawer.modal('show');
+      // One shared drawer for every row: switching from card A to card B does not
+      // re-fire show.bs.modal, so the row highlight has to be moved by hand or A
+      // stays lit while B is the one being edited.
+      if (window.AoTWidgetDrawer) { window.AoTWidgetDrawer.activateByUid(uid); }
+
+      $.get(url).done(swap).fail(function () {
+        swap('<div class="modal-body"><div class="aot-modal-container">{{_("Error: Unable to communicate with server.")}}</div></div>');
+      });
+    });
+
+    $(document).on('submit', 'form', function (e) {
+      let submitter_btn = $(e.originalEvent.submitter);
+      let action = submitter_btn.attr("name");
+
+      if (action === 'settings_user_save' ||
+          action === 'user_generate_api_key' ||
+          action === 'user_delete' ||
+          action === 'user_save' ||
+          action === 'user_approve' ||
+          action === 'user_role_save' ||
+          action === 'user_role_delete') {
+        // Saving a user changes several things the card shows at once — name,
+        // role, the disabled badge and tint — and a role rename changes every
+        // user row. Reload instead of patching each of those in place.
+        let needs_reload = (action === 'user_save' || action === 'user_role_save');
+
         window.showToast('{{_("Command sent. Please wait.")}}', 'info');
         $.ajax({
           type: "POST",
           url: '/settings/users_submit',
           data: $(this).serialize()
               + '&'
-              + submitter_btn.attr("name")
+              + action
               + '='
               + submitter_btn.attr("value"),
           success: function (data) {
             if (data.data.messages.error.length === 0) {
               if ('logout' in data.data && data.data.logout) {
                 window.location.href = "/logout";
+                return;
               }
-              if (submitter_btn.attr("name") === 'user_generate_api_key' && 'generated_api_key' in data.data) {
+              if (needs_reload) {
+                // Show the outcome before the page goes away — reloading
+                // immediately swallows the toast the user just earned.
+                if (data.data.messages.success.length !== 0) {
+                  window.showToast('{{_("Success")}}: ' + data.data.messages.success.join(", "), 'success');
+                }
+                setTimeout(function () { window.location.reload(); }, 800);
+                return;
+              }
+              if (action === 'user_generate_api_key' && 'generated_api_key' in data.data) {
                 var uid = data.data.user_id;
                 var new_val = data.data.generated_api_key;
-                var hidden_els = document.querySelectorAll('.real_mod_key_' + uid);
-                var visible_els = document.querySelectorAll('.visible_mod_key_' + uid);
-                console.log('[api_key]', {uid: uid, hidden_found: hidden_els.length, visible_found: visible_els.length});
-                hidden_els.forEach(function(el) { el.value = new_val; });
-                visible_els.forEach(function(el) { el.value = new_val; });
-                if (visible_els.length === 0) {
-                  // Fallback: find input within submitted form
-                  var form = submitter_btn.closest('form')[0];
-                  if (form) {
-                    console.log('[api_key] fallback form inputs:', form.querySelectorAll('input').length);
-                    form.querySelectorAll('input[type="text"]').forEach(function(el) {
-                      if (el.title === 'API Key (Base64)') { el.value = new_val; }
-                    });
-                  }
-                }
+                document.querySelectorAll('.real_mod_key_' + uid).forEach(function (el) { el.value = new_val; });
+                document.querySelectorAll('.visible_mod_key_' + uid).forEach(function (el) { el.value = new_val; });
               }
-              if (submitter_btn.attr("name") === 'user_delete' && 'user_id' in data.data) {
-                $('#user_' + data.data.user_id).hide('slow');
-                $('#user_spacer_' + data.data.user_id).hide('slow');
+              if (action === 'user_delete' && 'user_id' in data.data) {
+                $('[data-config-uid="' + data.data.user_id + '"]').hide('slow');
+                $drawer.modal('hide');
               }
-              if (submitter_btn.attr("name") === 'user_approve' && 'user_id' in data.data) {
-                $('#pending_badge_' + data.data.user_id).hide('slow');
-                $('#approve_btn_' + data.data.user_id).hide('slow');
+              if (action === 'user_approve') {
+                // 승인 버튼은 드로어 안에만 있고 목록에는 대기 표시가 없으므로,
+                // 숨길 배지도 없다 — 드로어만 닫는다.
+                $drawer.modal('hide');
               }
-              if (submitter_btn.attr("name") === 'user_role_delete' && 'role_id' in data.data) {
-                $('#role_' + data.data.role_id).hide('slow');
-                $('#role_spacer_' + data.data.role_id).hide('slow');
+              if (action === 'user_role_delete' && 'role_id' in data.data) {
+                $('[data-config-uid="' + data.data.role_id + '"]').hide('slow');
+                $drawer.modal('hide');
               }
               if ('warning' in data.data.messages && data.data.messages.warning.length !== 0) {
                 window.showToast('{{_("Warning")}}: ' + data.data.messages.warning.join(", "), 'warning');
@@ -85,332 +523,5 @@
     });
   });
 </script>
-{% endblock %}
-
-{% block settings %}
-  <!-- Route: /settings/users -->
-  <div class="container">
-
-    <!-- Page Title -->
-    <div class="aot-settings-title">
-      <h3>{{_('User Settings')}} <a href="{{ manual_url('Configuration-Settings/#users') }}" target="_blank"><span class="fas fa-question-circle" style="font-size:14px; margin-left:4px;"></span></a></h3>
-      <div class="d-flex" style="gap: 8px;">
-        <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
-      </div>
-    </div>
-
-    <!-- General Settings -->
-    <div class="aot-modal-group-title">{{_('General')}}</div>
-
-    <form method="post" action="/settings/users">
-      {{form_user.csrf_token}}
-      <div class="aot-modal-container">
-        <div class="aot-modal-option-row" style="border-bottom: none;">
-          <div class="aot-modal-option-label">
-            {{form_user.default_login_page.label.text}}
-            <div class="aot-modal-body-text">{{_('Which page to land on before logging in')}}</div>
-          </div>
-          <div class="aot-modal-option-control">
-            <select class="aot-settings-select" id="default_login_page" name="default_login_page">
-              <option value="password"{% if misc.default_login_page == 'password' %} selected{% endif %}>{{_('Password')}}</option>
-              <option value="keypad"{% if misc.default_login_page == 'keypad' %} selected{% endif %}>{{_('Keypad')}}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
-        {{form_user.settings_user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-      </div>
-    </form>
-
-    <!-- Add User -->
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Add User')}}</div>
-    <p class="aot-modal-body-text">{{_('Note: Keypad codes must be at least 4 digits.')}}</p>
-
-    <form method="post" action="/settings/users">
-      {{form_add_user.hidden_tag()}}
-      <div class="aot-modal-container">
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add_user.user_name.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add_user.user_name(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add_user.email.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add_user.email(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add_user.password_new.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add_user.password_new(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add_user.password_repeat.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add_user.password_repeat(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add_user.code.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_add_user.code(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_add_user.addRole.label.text}}</div>
-          <div class="aot-modal-option-control">
-            <select class="aot-settings-select" id="addRole" name="addRole">
-              <option value="Admin">{{_('Admin')}}</option>
-              {% for each_role in user_roles if each_role.name != 'Admin' %}
-                <option value="{{each_role.name}}">{{each_role.name}}</option>
-              {% endfor -%}
-            </select>
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row" style="border-bottom: none;">
-          <div class="aot-modal-option-label">{{form_add_user.theme.label.text}}</div>
-          <div class="aot-modal-option-control">
-            <select class="aot-settings-select" id="theme" name="theme">
-              {% for value, name in themes %}
-                <option value="{{value|e}}"{% if value == 'spacelab' %} selected{% endif %}>{{name|e}}</option>
-              {% endfor -%}
-            </select>
-          </div>
-        </div>
-
-      </div>
-      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
-        {{form_add_user.user_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-      </div>
-    </form>
-
-    <!-- Users List -->
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">{{_('Users')}}</div>
-    <p class="aot-modal-body-text">
-      {{_('Note: Password and keypad code fields are empty. Enter values and save to change. Leave empty to keep current settings. To disable keypad code, enter 0 and save.')}}
-    </p>
-
-    {% for user in users %}
-    <form method="post" id="user_{{user.unique_id}}" action="/settings/users" style="margin-bottom: 1rem;">
-      {{form_mod_user.csrf_token}}
-      {{form_mod_user.user_id(value=user.unique_id)}}
-
-      <div class="aot-modal-container">
-
-        <!-- User header -->
-        <div style="padding: 0.75rem 0 0.5rem; border-bottom: 1px solid var(--border-neutral); margin-bottom: 0.25rem;">
-          <span style="font-weight: 700; font-size: 0.95rem; color: var(--aot-text-title);">{{ user.name }}</span>
-          <span class="aot-modal-body-text" style="margin-left: 8px; display: inline;">
-            · {{_('Keypad Code')}}: {% if user.code %}{{_('Set')}}{% else %}{{_('Not set')}}{% endif %}
-          </span>
-          {% if user.auth_provider == 'google' %}
-          <span class="aot-modal-body-text" style="margin-left: 8px; display: inline;">· {{_('Google Account')}}</span>
-          {% endif %}
-          {% if not user.is_approved %}
-          <span id="pending_badge_{{user.unique_id}}" class="badge badge-warning" style="margin-left: 8px;">
-            {{_('Awaiting Approval')}}
-          </span>
-          {% endif %}
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Email')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod_user.email(class_='aot-modern-input form-control', value=user.email)}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('New Password')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod_user.password_new(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Repeat Password')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod_user.password_repeat(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Keypad Code')}}</div>
-          <div class="aot-modal-option-control">
-            {{form_mod_user.code(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Role')}}</div>
-          <div class="aot-modal-option-control">
-            <select class="aot-settings-select" id="role_id" name="role_id">
-              {% for each_role in user_roles %}
-                <option value="{{each_role.id}}"{% if user.role_id == each_role.id %} selected{% endif %}>{{each_role.name}}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{_('Theme')}}</div>
-          <div class="aot-modal-option-control">
-            <select class="aot-settings-select" id="theme" name="theme">
-              {% for value, name in themes %}
-                <option value="{{value|e}}"{% if value == user.theme %} selected{% endif %}>{{name|e}}</option>
-              {% endfor -%}
-            </select>
-          </div>
-        </div>
-
-        <div class="aot-modal-option-row aot-modal-option-row-wrap" style="border-bottom: none;">
-          <div class="aot-modal-option-label" style="flex: 0 0 auto;">
-            {{_('API Key')}}
-            <div class="aot-modal-body-text">Base64</div>
-          </div>
-          <div class="aot-modal-option-control aot-api-key-group" style="gap: 8px; flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important; justify-content: flex-start;">
-            {# API 키는 해시로만 저장되므로(p6_13) 기존 키를 다시 표시할 수 없다.
-               발급 직후에는 위쪽 JS 가 이 입력란에 새 키를 채워 넣는다. #}
-            {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id)}}
-            <input type="text" class="aot-modern-input form-control visible_mod_key_{{user.unique_id}}" autocomplete="off"
-              readonly
-              title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true"
-              spellcheck="false" style="flex: 1;"
-              placeholder="{% if user.api_key_hash %}{{_('Issued — shown only once at generation')}}{% else %}{{_('Not issued')}}{% endif %}">
-            {{form_mod_user.user_generate_api_key(class_='btn aot-pill-btn aot-pill-btn-primary', style='white-space: nowrap;')}}
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div style="display: flex; justify-content: space-between; padding: 0.75rem 0 0.5rem; gap: 8px;">
-          {{form_mod_user.user_delete(class_='btn aot-pill-btn',
-            style='border: 1px solid var(--aot-danger, #dc3545); color: var(--aot-danger, #dc3545);',
-            **{'onclick':'return confirm("' + _('Are you sure you want to delete this user?') + '")'})}}
-          <div style="display: flex; gap: 8px;">
-            {% if not user.is_approved %}
-            {{form_mod_user.user_approve(id='approve_btn_' ~ user.unique_id, class_='btn aot-pill-btn', style='border: 1px solid var(--aot-success, #28a745); color: var(--aot-success, #28a745);')}}
-            {% endif %}
-            {{form_mod_user.user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-          </div>
-        </div>
-
-      </div>
-    </form>
-    <div id="user_spacer_{{user.unique_id}}"></div>
-    {% endfor %}
-
-    <!-- Roles -->
-    <div class="aot-modal-group-title" style="margin-top: 2rem;">
-      {{_('Roles')}}
-      <a href="{{ manual_url('Configuration-Settings/#roles') }}" target="_blank">
-        <span class="fas fa-question-circle" style="font-size:14px; margin-left:4px;"></span>
-      </a>
-    </div>
-
-    <!-- Add Role -->
-    <form method="post" action="/settings/users">
-      {{form_user_roles.csrf_token}}
-      <div class="aot-modal-container">
-
-        <div class="aot-modal-option-row">
-          <div class="aot-modal-option-label">{{form_user_roles.name.label.text}}</div>
-          <div class="aot-modal-option-control">
-            {{form_user_roles.name(class_='aot-modern-input form-control')}}
-          </div>
-        </div>
-
-        <!-- Permissions grid -->
-        <div style="padding: 0.5rem 0 0.75rem;">
-          <div style="font-size: 0.8rem; font-weight: 600; color: var(--aot-text-secondary); margin-bottom: 0.5rem;">
-            {{_('Permissions')}}
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px;">
-            {% for field in [form_user_roles.view_logs, form_user_roles.view_stats, form_user_roles.view_camera,
-                             form_user_roles.view_settings, form_user_roles.edit_users, form_user_roles.edit_controllers,
-                             form_user_roles.edit_settings, form_user_roles.reset_password] %}
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer; margin: 0;">
-              {{field(class_='form-check-input', style='margin: 0;')}}
-              <span>{{field.label.text}}</span>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
-
-      </div>
-      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
-        {{form_user_roles.user_role_add(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-      </div>
-    </form>
-
-    <!-- Existing Roles -->
-    {% if user_roles|length > 4 %}
-    <div style="margin-top: 1.5rem;">
-      {% for each_role in user_roles if each_role.id > 1 %}
-      <form method="post" id="role_{{each_role.unique_id}}" action="/settings/users" style="margin-bottom: 1rem;">
-        {{form_user_roles.csrf_token}}
-        {{form_user_roles.role_id(value=each_role.unique_id)}}
-
-        <div class="aot-modal-container">
-
-          <!-- Role header -->
-          <div style="padding: 0.75rem 0 0.5rem; border-bottom: 1px solid var(--border-neutral); margin-bottom: 0.25rem;">
-            <span style="font-weight: 700; font-size: 0.95rem; color: var(--aot-text-title);">{{each_role.name}}</span>
-          </div>
-
-          <!-- Permissions grid -->
-          <div style="padding: 0.5rem 0 0.75rem;">
-            <div style="font-size: 0.8rem; font-weight: 600; color: var(--aot-text-secondary); margin-bottom: 0.5rem;">
-              {{_('Permissions')}}
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px;">
-              {% for field, attr in [
-                (form_user_roles.view_logs, each_role.view_logs),
-                (form_user_roles.view_stats, each_role.view_stats),
-                (form_user_roles.view_camera, each_role.view_camera),
-                (form_user_roles.view_settings, each_role.view_settings),
-                (form_user_roles.edit_users, each_role.edit_users),
-                (form_user_roles.edit_controllers, each_role.edit_controllers),
-                (form_user_roles.edit_settings, each_role.edit_settings),
-                (form_user_roles.reset_password, each_role.reset_password)
-              ] %}
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer; margin: 0;">
-                {%- if attr == true -%}
-                  {{field(class_='form-check-input', style='margin: 0;', checked=True)}}
-                {%- else -%}
-                  {{field(class_='form-check-input', style='margin: 0;')}}
-                {%- endif %}
-                <span>{{field.label.text}}</span>
-              </label>
-              {% endfor %}
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div style="display: flex; justify-content: space-between; padding: 0.5rem 0 0.25rem; gap: 8px;">
-            {{form_user_roles.user_role_delete(class_='btn aot-pill-btn',
-              style='border: 1px solid var(--aot-danger, #dc3545); color: var(--aot-danger, #dc3545);',
-              **{'onclick':'return confirm("' + _('Are you sure you want to delete this role?') + '")'})}}
-            {{form_user_roles.user_role_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
-          </div>
-
-        </div>
-      </form>
-      <div id="role_spacer_{{each_role.unique_id}}"></div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-  </div>
 
 {% endblock %}

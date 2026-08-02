@@ -1,0 +1,53 @@
+name: JS Bundle Drift
+
+# 정적 JS 일부는 빌드 산출물(번들)이고 git 에 추적된다. 소스만 고치고 재빌드
+# 없이 커밋하면 배포된 앱은 계속 옛 코드를 실행한다 — 테스트도 참조 체커도
+# 못 잡는 조용한 실패(2026-07-27 f8090ce 통신상태 레이어 사건).
+#
+# pre-commit 훅(.githooks/pre-commit)은 "같은 커밋에서 재빌드했는가"만 보는
+# 로컬 1차 방어다. 여기서는 실제로 재빌드해서 커밋된 산출물과 바이트 비교한다.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aot/aot_flask/static/js/**'
+      - 'aot/scripts/check_js_bundles.py'
+  pull_request:
+    paths:
+      - 'aot/aot_flask/static/js/**'
+      - 'aot/scripts/check_js_bundles.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild-and-compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            aot/aot_flask/static/js/package-lock.json
+            aot/aot_flask/static/js/geo/package-lock.json
+
+      # 산출물 재현성은 락파일에 고정된 빌더 버전에 달렸다 → ci(락 준수)로 설치.
+      # notes-widget(vite)은 --rebuild 대상이 아니라 설치하지 않는다.
+      - name: 빌드 도구 설치
+        working-directory: aot/aot_flask/static/js
+        run: |
+          npm ci
+          npm --prefix geo ci
+
+      - name: 번들 재빌드 후 커밋본과 바이트 비교
+        run: python3 aot/scripts/check_js_bundles.py --rebuild

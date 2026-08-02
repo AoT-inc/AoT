@@ -1,4 +1,5 @@
 # coding=utf-8
+import hashlib
 import logging
 import operator
 import os
@@ -177,6 +178,18 @@ def inject_variables():
     except Exception:
         custom_theme = {}
 
+    # /custom.css 링크에 붙일 캐시 버스팅 토큰. 앱은 이 응답에 no-store 를
+    # 붙이지만, 앞단 프록시가 그것을 자기 규칙으로 갈아끼우면(ai.aotinc.co.kr
+    # 엣지 openresty 가 max-age=38960 으로 덮어쓴다) 브라우저는 몇 시간 동안
+    # 옛 CSS 를 재사용한다. 테마를 바꿔도 화면이 그대로인 이유가 이것이었다.
+    # 내용이 바뀌면 URL 자체가 바뀌므로 어떤 캐시도 옛것을 내줄 수 없다.
+    try:
+        _css_src = (misc.custom_theme_json or '') + (misc.custom_css or '')
+        custom_css_version = hashlib.md5(
+            _css_src.encode('utf-8')).hexdigest()[:8]
+    except Exception:
+        custom_css_version = '0'
+
     # nav-bar 관리 메뉴의 "업그레이드" 항목: settings/custom_ui 의 bg_upgrade
     # 배경색 밝기에 따라 텍스트를 기본/3차 색 중 무엇으로 할지 서버에서 미리 판정.
     try:
@@ -193,7 +206,21 @@ def inject_variables():
     map_global_providers = geo_config.get('providers', {}) if geo_config else {}
     map_global_keys = geo_config.get('keys', {}) if geo_config else {}
 
-    api_keys = _cached_api_keys()
+    # Each user_has_permission() call costs a User+Role query and this runs on
+    # every page render, so resolve each permission once and reuse it below.
+    perm_view_settings = user_has_permission('view_settings', silent=True)
+    perm_edit_settings = user_has_permission('edit_settings', silent=True)
+
+    # Raw API key values must never reach a page unless the viewer is allowed to
+    # manage credentials — this context is injected into every template app-wide,
+    # so any custom-option field named like "api_key"/"token" would otherwise leak
+    # every stored key's plaintext to any logged-in user, regardless of that page's
+    # own permission gate. Gated on edit rather than view permission: the picker
+    # only exists to fill in a field being edited, so a read-only role (Monitor
+    # has view_settings but no edit rights) has no reason to receive credentials.
+    api_keys = _cached_api_keys() if (
+        perm_edit_settings or user_has_permission('edit_controllers', silent=True)
+    ) else []
     ai_settings = _cached_ai_settings()
 
     # MapLibre(~775KB) 전역 스택은 head 에서 동기 로드되어 렌더를 차단한다. 지도가
@@ -213,6 +240,7 @@ def inject_variables():
                 geo_config=geo_config,
                 custom_css=(bool(misc.custom_css) or (misc.custom_theme_json and misc.custom_theme_json != '{}')),
                 custom_theme=custom_theme,
+                custom_css_version=custom_css_version,
                 dark_themes=THEMES_DARK,
                 graph_series_palette=_graph_palette(dark=False),
                 graph_series_palette_dark=_graph_palette(dark=True),
@@ -226,8 +254,8 @@ def inject_variables():
                 host=socket.gethostname(),
                 languages=languages_sorted,
                 aot_version=AOT_VERSION,
-                permission_view_settings=user_has_permission('view_settings', silent=True),
-                permission_edit_settings=user_has_permission('edit_settings', silent=True),
+                permission_view_settings=perm_view_settings,
+                permission_edit_settings=perm_edit_settings,
                 dict_translation=TRANSLATIONS,
                 settings=misc,
                 template_exists=template_exists,

@@ -35,5 +35,15 @@
   "chart_3": "#93B261",
   "chart_4": "#F4D624",
   "chart_5": "#DF5353",
-  "chart_6": "#008DDE"
+  "chart_6": "#008DDE",
+  "color_success": "#96C064",
+  "color_warning": "#FEA60B",
+  "color_danger": "#DF5353",
+  "color_info": "#029ACF",
+  "tint_success_bg": "#EEF6E6",
+  "tint_success_fg": "#557A30",
+  "tint_danger_bg": "#FBE7E7",
+  "tint_danger_fg": "#B23B3B",
+  "tint_info_bg": "#E7F4FB",
+  "tint_info_fg": "#06709B"
 }

@@ -210,7 +210,6 @@ WIDGET_HEAD_HTML_RASTER = """
 <!-- Shared popup utilities (input/output/note HTML builders + dot positioning) -->
 <script src="/static/js/widgets/AoT_map/aot-map-popup.js?v=21"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-widget-v3.js?v=9.3.29"></script>
-<script src="/static/js/geo/aot-map-config.js?v=9.2.7"></script>
 
 <style>
   .aot-map-container {

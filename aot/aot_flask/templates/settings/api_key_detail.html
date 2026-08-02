@@ -1,0 +1,103 @@
+{# Drawer body+footer for one stored API key — served on demand by
+   /settings/api_key/detail/<uid>. The key value only ever reaches the browser
+   when an operator explicitly opens that card; the list page carries none.
+
+   Same shell as the Input/Output drawers:
+   .aot-option-modal .modal-content > form > .modal-body + .modal-footer #}
+<form class="api-key-form" method="post" id="api_key_form_{{key.unique_id}}" action="/settings/api_key_submit">
+  {{form_mod.csrf_token}}
+  {{form_mod.api_key_id(value=key.unique_id, type="hidden")}}
+
+  <div class="modal-body">
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod.name.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod.name(class_='form-control aot-modern-input', value=key.name)}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod.provider.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod.provider(class_='form-control aot-modern-input', value=key.provider)}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod.tag.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod.tag(class_='form-control aot-modern-input', value=key.tag)}}
+        </div>
+      </div>
+
+      {# 주소는 편집도 해야 하고 눌러서 열 수도 있어야 한다 — 입력란은 그대로
+         두고 옆에 여는 버튼을 붙인다. 값이 없으면 버튼도 없다.
+         rel=noopener: 새 창이 window.opener 로 이 페이지를 조작하지 못하게. #}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod.url.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod.url(class_='form-control aot-modern-input', value=key.url)}}
+          {% if key.url %}
+          <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{key.url}}" target="_blank"
+            rel="noopener noreferrer" title="{{key.url}}">{{_('Open')}}</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_mod.description.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod.description(class_='form-control aot-modern-input', rows=1, value=key.description or '')}}
+        </div>
+      </div>
+
+    </div>
+
+    {# 키 본문은 값이 길어 라벨과 한 줄에 넣으면 읽을 수 없다 — 라벨 아래 전체
+       폭으로 둔다. 기본은 가려둔다: 드로어를 여는 이유가 대개 이름·URL 확인이라
+       키까지 화면에 띄워 둘 이유가 없다(어깨너머 노출). 편집은 가린 채로도
+       되고, 값을 눈으로 확인해야 할 때만 표시로 바꾼다.
+       비밀번호 관리자 확장이 잡아가지 않도록 ignore 속성을 붙인다. #}
+    <div class="aot-modal-group-title">{{form_mod.key.label.text}}</div>
+    <div class="aot-modal-container">
+      <div style="padding: 0.5rem 0; display: flex; gap: 8px; align-items: center;">
+        {# value 를 반드시 채울 것 — 실제로 제출되는 것은 이 hidden 필드다.
+           비워 두면 키를 건드리지 않고 저장한 사용자가 키를 지워버린다. #}
+        {{form_mod.key(style='display:none;', id='real_key_' ~ key.unique_id, value=key.key)}}
+        <input type="password" class="form-control aot-modern-input" style="flex: 1; min-width: 0;"
+          value="{{ key.key }}" autocomplete="new-password" spellcheck="false"
+          data-api-key-value data-lpignore="true" data-dashlane-ignore="true" data-1p-ignore
+          oninput="document.getElementById('real_key_{{key.unique_id}}').value = this.value;">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+          data-api-key-reveal style="white-space: nowrap;">{{_('Show')}}</button>
+      </div>
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Usage')}}</div>
+    <div class="aot-modal-container">
+      <div style="padding: 0.5rem 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+        {% if usage %}
+          {% for use in usage %}
+          <span class="badge badge-secondary aot-badge-inline" title="{{_('Type')}}: {{use.type}}">
+            {{ use.name }}
+          </span>
+          {% endfor %}
+        {% else %}
+          <span class="aot-modal-body-text">{{_('Not in use')}}</span>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_mod.api_key_delete(class_='btn aot-pill-btn aot-pill-btn-primary btn-delete',
+      **{'onclick':'return confirm("' + _('Are you sure you want to delete this API key?') + '")'})}}
+    {{form_mod.api_key_mod_submit(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+  </div>
+</form>

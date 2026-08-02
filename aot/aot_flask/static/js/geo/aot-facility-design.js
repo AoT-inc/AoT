@@ -50,7 +50,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var card = document.createElement('div');
       card.className = 'env-layer-card';
       card.setAttribute('data-layer-id', layer.id);
-      card.style.cssText = 'border:1px solid var(--aot-border-light);border-radius:10px;padding:0.55rem 0.75rem;margin-bottom:0.4rem;';
+      card.style.cssText = 'border:1px solid var(--aot-border-light);border-radius:10px;padding:0.55rem 0.75rem;margin-bottom:8px;';
 
       if (layer.type === 'full') {
         var covers = layer.role === 'outer' ? COVERS_OUTER : COVERS_INNER;
@@ -58,7 +58,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         var icon   = layer.role === 'outer' ? '🏠' : '🪟';
         var airgapHtml = (layer.role === 'inner')
           ? '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;margin-left:4px;">'+_T('insp_airgap','Airgap')+'&nbsp;' +
-            '<input type="number" class="env-layer-airgap fac-input" data-layer-id="' + layer.id + '" ' +
+            '<input type="number" class="env-layer-airgap form-control aot-modern-input" data-layer-id="' + layer.id + '" ' +
             'value="' + (layer.air_gap_m != null ? layer.air_gap_m : 0.5) + '" step="0.1" min="0.1" ' +
             'style="width:58px;height:28px;display:inline-block;">&nbsp;m</span>'
           : '';
@@ -69,7 +69,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         card.innerHTML =
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<span style="font-weight:700;font-size:var(--aot-font-size-sm);flex:0 0 auto;">' + icon + ' ' + label + '</span>' +
-          '<select class="fac-select env-layer-cover" data-layer-id="' + layer.id + '" ' +
+          '<select class="form-control aot-modern-select env-layer-cover" data-layer-id="' + layer.id + '" ' +
           'style="flex:1;max-width:180px;height:30px;font-size:var(--aot-font-size-sm);">' +
           _sel(covers, layer.cover) + '</select>' +
           airgapHtml + removeBtn + '</div>';
@@ -87,18 +87,18 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         var _layerSides = (layer.sides || []).map(_toAxis);
         var sidesHtml = ['x_neg', 'x_pos', 'y_pos', 'y_neg'].map(function (s) {
           var checked = _layerSides.indexOf(s) >= 0 ? ' checked' : '';
-          return '<label style="font-size:var(--aot-font-size-sm);cursor:pointer;display:flex;align-items:center;gap:3px;">' +
+          return '<label style="font-size:var(--aot-font-size-sm);cursor:pointer;display:flex;align-items:center;gap:4px;">' +
             '<input type="checkbox" class="env-layer-side" data-layer-id="' + layer.id + '" value="' + s + '"' + checked + '>' +
             sideLabels[s] + '</label>';
         }).join('');
         card.innerHTML =
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<span style="font-weight:700;font-size:var(--aot-font-size-sm);flex:0 0 auto;">'+_T('env_side_reinf','Side reinforcement')+'</span>' +
-          '<select class="fac-select env-layer-cover" data-layer-id="' + layer.id + '" ' +
+          '<select class="form-control aot-modern-select env-layer-cover" data-layer-id="' + layer.id + '" ' +
           'style="width:140px;height:30px;font-size:var(--aot-font-size-sm);">' + _sel(COVERS_OUTER, layer.cover) + '</select>' +
-          '<div style="display:flex;gap:6px;align-items:center;">' + sidesHtml + '</div>' +
+          '<div style="display:flex;gap:8px;align-items:center;">' + sidesHtml + '</div>' +
           '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;">'+_T('insp_width','Width')+'&nbsp;' +
-          '<input type="number" class="env-layer-thickness fac-input" data-layer-id="' + layer.id + '" ' +
+          '<input type="number" class="env-layer-thickness form-control aot-modern-input" data-layer-id="' + layer.id + '" ' +
           'value="' + (layer.thickness_m || 1.0) + '" step="0.1" min="0.1" style="width:52px;height:28px;display:inline-block;">&nbsp;m</span>' +
           '<button class="btn btn-sm btn-outline-danger" style="margin-left:auto;padding:0 8px;height:28px;font-size:var(--aot-font-size-sm);" ' +
           'onclick="EnvelopeUI.removeLayer(\'' + layer.id + '\')">✕</button></div>';
@@ -112,16 +112,16 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         var _layerFrontSides = (layer.sides || []).map(_toAxisF);
         var frontSidesHtml = ['y_pos', 'y_neg'].map(function (s) {
           var checked = _layerFrontSides.indexOf(s) >= 0 ? ' checked' : '';
-          return '<label style="font-size:var(--aot-font-size-sm);cursor:pointer;display:flex;align-items:center;gap:3px;">' +
+          return '<label style="font-size:var(--aot-font-size-sm);cursor:pointer;display:flex;align-items:center;gap:4px;">' +
             '<input type="checkbox" class="env-layer-front-side" data-layer-id="' + layer.id + '" value="' + s + '"' + checked + '>' +
             frontLabels[s] + '</label>';
         }).join('');
         card.innerHTML =
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<span style="font-weight:700;font-size:var(--aot-font-size-sm);flex:0 0 auto;">'+_T('env_front_reinf','Front reinforcement')+'</span>' +
-          '<div style="display:flex;gap:6px;align-items:center;">' + frontSidesHtml + '</div>' +
+          '<div style="display:flex;gap:8px;align-items:center;">' + frontSidesHtml + '</div>' +
           '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;">'+_T('insp_depth','Depth')+'&nbsp;' +
-          '<input type="number" class="env-layer-depth fac-input" data-layer-id="' + layer.id + '" ' +
+          '<input type="number" class="env-layer-depth form-control aot-modern-input" data-layer-id="' + layer.id + '" ' +
           'value="' + (layer.depth_m || 3.0) + '" step="0.5" min="0.5" style="width:52px;height:28px;display:inline-block;">&nbsp;m</span>' +
           '<button class="btn btn-sm btn-outline-danger" style="margin-left:auto;padding:0 8px;height:28px;font-size:var(--aot-font-size-sm);" ' +
           'onclick="EnvelopeUI.removeLayer(\'' + layer.id + '\')">✕</button></div>';
@@ -159,14 +159,14 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     for (var i = 0; i < stageCount; i++) {
       var v = src[i] || defaults[i];
       var row = document.createElement('div');
-      row.className = 'fac-row vent-stage-row';
+      row.className = 'aot-modal-option-row vent-stage-row';
       row.style.cssText = 'padding-left:0.5rem;border-bottom:none;';
       row.innerHTML =
-        '<div class="fac-label" style="font-size:var(--aot-font-size-sm);font-weight:500;color:#555;">' + names[i] + '</div>' +
-        '<div style="display:flex;gap:6px;align-items:center;font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);">' +
-        ''+_T('height','height')+'&nbsp;<input type="number" class="fac-input vent-stage-height" value="' + v.height_m +
+        '<div class="aot-modal-option-label" style="font-size:var(--aot-font-size-sm);font-weight:500;color:var(--aot-color-text-secondary);">' + names[i] + '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);">' +
+        ''+_T('height','height')+'&nbsp;<input type="number" class="form-control aot-modern-input vent-stage-height" value="' + v.height_m +
         '" step="0.1" min="0.1" style="width:58px;height:28px;display:inline-block;">&nbsp;m' +
-        '&nbsp;&nbsp;'+_T('vent_start','Start')+'&nbsp;<input type="number" class="fac-input vent-stage-floor" value="' + v.from_floor_m +
+        '&nbsp;&nbsp;'+_T('vent_start','Start')+'&nbsp;<input type="number" class="form-control aot-modern-input vent-stage-floor" value="' + v.from_floor_m +
         '" step="0.1" min="0" style="width:58px;height:28px;display:inline-block;">&nbsp;m</div>';
       container.appendChild(row);
     }
@@ -525,25 +525,25 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
     // Device row
     var html = '<div class="act-card" data-act-id="' + id + '" ' +
-      'style="border:1px solid var(--aot-border-light);border-radius:10px;padding:0.55rem 0.75rem;margin-bottom:0.4rem;">';
+      'style="border:1px solid var(--aot-border-light);border-radius:10px;padding:0.55rem 0.75rem;margin-bottom:8px;">';
 
     // Header: icon + label + remove
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:0.35rem;">' +
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
       '<span style="font-size:var(--aot-font-size-base);">' + meta.icon + '</span>' +
       '<span style="font-weight:700;font-size:var(--aot-font-size-sm);flex:1;">' + meta.label + '</span>' +
       '<button class="btn btn-sm btn-outline-danger" style="padding:0 7px;height:26px;font-size:var(--aot-font-size-sm);" ' +
       'onclick="ActuatorUI.remove(\'' + id + '\')">✕</button></div>';
 
     // Row 1: device selector
-    html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:0.3rem;">' +
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">' +
       '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;">'+_T('insp_device','Device:')+'</span>' +
-      '<select class="fac-select act-device" data-act-id="' + id + '" ' +
+      '<select class="form-control aot-modern-select act-device" data-act-id="' + id + '" ' +
       'style="flex:1;min-width:160px;height:28px;font-size:var(--aot-font-size-sm);">' +
       _deviceOptions(act.device_uuid) + '</select></div>';
 
     // Row 2: mount (wall) + elevation
     if (meta.mount && meta.mount.length > 0) {
-      var mountSel = '<select class="fac-select act-mount-wall" data-act-id="' + id + '" ' +
+      var mountSel = '<select class="form-control aot-modern-select act-mount-wall" data-act-id="' + id + '" ' +
         'style="width:90px;height:28px;font-size:var(--aot-font-size-sm);">';
       meta.mount.forEach(function (w) {
         mountSel += '<option value="' + w + '"' + (w === (act.mount && act.mount.wall) ? ' selected' : '') + '>' +
@@ -555,13 +555,13 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if (meta.useElevation) {
         var elev = (act.mount && act.mount.elevation_m != null) ? act.mount.elevation_m : '';
         elevHtml = '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;margin-left:4px;">'+_T('height','height')+'&nbsp;' +
-          '<input type="number" class="fac-input act-mount-elev" data-act-id="' + id + '" ' +
+          '<input type="number" class="form-control aot-modern-input act-mount-elev" data-act-id="' + id + '" ' +
           'value="' + elev + '" step="0.1" min="0" style="width:55px;height:28px;display:inline-block;">&nbsp;m</span>';
       }
 
       var stageHtml = '';
       if (meta.useStage) {
-        var stageSel = '<select class="fac-select act-stage-ref" data-act-id="' + id + '" ' +
+        var stageSel = '<select class="form-control aot-modern-select act-stage-ref" data-act-id="' + id + '" ' +
           'style="width:80px;height:28px;font-size:var(--aot-font-size-sm);">' +
           '<option value="">—</option>';
         STAGE_OPTIONS.forEach(function (s) {
@@ -571,7 +571,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         stageHtml = '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);margin-left:4px;">'+_T('insp_stage','Stage:')+'&nbsp;</span>' + stageSel;
       }
 
-      html += '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:0.3rem;">' +
+      html += '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' +
         '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);">'+_T('insp_location','Location:')+'</span>' + mountSel + elevHtml + stageHtml + '</div>';
     }
 
@@ -588,11 +588,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
             return '<option value="' + o + '"' + (o === val ? ' selected' : '') + '>' + o + '</option>';
           }).join('');
           html += '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;">' + sm.label + ':&nbsp;' +
-            '<select class="fac-select act-spec" data-act-id="' + id + '" data-spec-key="' + sk + '" ' +
+            '<select class="form-control aot-modern-select act-spec" data-act-id="' + id + '" data-spec-key="' + sk + '" ' +
             'style="width:90px;height:26px;font-size:var(--aot-font-size-sm);">' + optHtml + '</select></span>';
         } else {
           html += '<span style="font-size:var(--aot-font-size-sm);color:var(--aot-color-text-secondary);white-space:nowrap;">' + sm.label + ':&nbsp;' +
-            '<input type="number" class="fac-input act-spec" data-act-id="' + id + '" data-spec-key="' + sk + '" ' +
+            '<input type="number" class="form-control aot-modern-input act-spec" data-act-id="' + id + '" data-spec-key="' + sk + '" ' +
             'value="' + val + '" step="' + sm.step + '" min="' + (sm.min || 0) + '" ' +
             (sm.max != null ? 'max="' + sm.max + '" ' : '') +
             'style="width:68px;height:26px;display:inline-block;">&nbsp;' + sm.unit + '</span>';
@@ -739,10 +739,10 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     side_window:      { label: _T('m_side_window','Side Window'),       icon: '[S]', color: '#54BCC1', defaults: { w: 3.0,  h: 0.8,  d: 0.05 } },
     curtain:          { label: _T('m_curtain','Curtain'),       icon: '[C]', color: '#FEAE5F', defaults: { w: 3.0,  h: 2.5,  d: 0.02 } },
     shade_curtain:    { label: _T('m_shade','Shade'),       icon: '[X]', color: '#13261B', defaults: { w: 3.0,  h: 2.5,  d: 0.02 } },
-    fan:              { label: _T('m_fan','Fan'),         icon: '[F]', color: '#029ACF', defaults: { w: 0.8,  h: 0.8,  d: 0.3  } },
+    fan:              { label: _T('m_fan','Fan'),         icon: '[F]', color: '#54BCC1', defaults: { w: 0.8,  h: 0.8,  d: 0.3  } },
     heater:           { label: _T('m_heater','Heater'),       icon: '[H]', color: '#CF5C58', defaults: { w: 0.6,  h: 0.6,  d: 0.4  } },
     sensor:           { label: _T('m_sensor','Sensor'),       icon: '[T]', color: '#6277C7', defaults: { w: 0.15, h: 0.15, d: 0.1  } },
-    fixture:          { label: _T('m_fixture','Fixture'),       icon: '[G]', color: '#64C567', defaults: { w: 1.0,  h: 1.0,  d: 1.0  } },
+    fixture:          { label: _T('m_fixture','Fixture'),       icon: '[G]', color: '#64C762', defaults: { w: 1.0,  h: 1.0,  d: 1.0  } },
     // ── Irrigation devices ─────────────────────────────────────────────────────────────
     // Colors all follow the theme_config.equipment keys in geo/design (resolved by the renderer).
     irrigation_layer:      { label: _T('m_irr_layer','Irrigation Layer'),   icon: '[L]', color: null, defaults: { w: 0, h: 0, d: 0 } },
@@ -810,72 +810,24 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   }
 
   // ── List rendering — right-side panel inside 3D viewport ───────────────────
+  // ── 3D display filter ─────────────────────────────────────────────────────
+  // This panel used to be a second component list: every fitting listed with
+  // select and delete, duplicating the components table in the step drawer and
+  // giving selection two places to drift out of sync. The one job it does that
+  // the table cannot is deciding what the 3D view shows, so that is all it does
+  // now — one row per category with a count and an on/off eye.
   function _renderList() {
     var container = document.getElementById('fit-list-items');
     var counter   = document.getElementById('fit-list-count');
-    var userFittings = _fittings.filter(function (f) { return f.source !== 'envelope'; });
-    var envFittings  = _fittings.filter(function (f) { return f.source === 'envelope'; });
-    if (counter) counter.textContent = '(' + userFittings.length + ')';
     if (!container) return;
 
-    var outMap = {};
-    (OutputCache.list || []).forEach(function (o) { outMap[o.unique_id] = o; });
-    // Build measurement_id lookup from server-injected choices for sensor badge display.
-    var inpMeasMap = {};
-    _inputChoices.forEach(function (ch) {
-      var parts = (ch.value || '').split(',');
-      if (parts[1]) inpMeasMap[parts[1]] = ch.item;
-    });
-
-    function _delBtn(id) {
-      return '<button class="fit-del-btn" title="'+_T('Delete','Delete')+'" ' +
-        'onclick="event.stopPropagation();FittingsUI.remove(\'' + id + '\')" ' +
-        'style="flex:0 0 auto;background:none;border:1px solid transparent;border-radius:4px;' +
-        'color:var(--aot-color-danger);font-size:var(--aot-font-size-xs);padding:0 5px;line-height:1.6;cursor:pointer;opacity:0;' +
-        'transition:opacity 0.15s;">x</button>';
-    }
-
-    function _itemHtml(f, isEnv) {
-      var meta  = KIND_META[f.kind] || KIND_META.fixture;
-      var isSel = (f.id === _selectedId);
-      var label = f.name || (isEnv ? meta.label : (meta.label + ' #' + (userFittings.indexOf(f) + 1)));
-      var badge = '';
-      if (f.kind === 'sensor') {
-        var chs = Array.isArray(f.channel_measurements) ? f.channel_measurements : (f.measurement_id ? [f] : []);
-        var devEntry = f.input_id && _findDevice(f.input_id);
-        var devName = devEntry ? devEntry.name : '';
-        if (devName) badge = '<span title="' + devName + ' (' + chs.length + ''+_T('ch_word','ch')+')" style="font-size:var(--aot-font-size-xs);color:var(--aot-tint-info-fg);background:var(--aot-tint-info-bg);padding:0 5px;border-radius:8px;white-space:nowrap;">[S]' + (chs.length > 1 ? ' x' + chs.length : '') + '</span>';
-      } else {
-        var out = f.actuator_id && outMap[f.actuator_id];
-        if (out) badge = '<span title="' + (out.name || 'Output') + '" style="font-size:var(--aot-font-size-xs);color:var(--aot-color-info);background:#eaf6fb;padding:0 5px;border-radius:8px;white-space:nowrap;">[A]</span>';
-      }
-      var delBtn = isEnv ? '' : _delBtn(f.id);
-      return '<div class="fit-list-item' + (isSel ? ' selected' : '') + '" ' +
-        'data-fit-id="' + f.id + '" onclick="FittingsUI.select(\'' + f.id + '\')">' +
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">' + label + '</span>' +
-        badge + delBtn + '</div>';
-    }
-
-    // ── Preserve accordion open/closed state (captured before re-render) ─────────────────────
-    var prevOpen = {};
-    (container.querySelectorAll('.fit-cat') || []).forEach(function (d) {
-      var key = d.getAttribute('data-cat'); if (key) prevOpen[key] = d.open;
-    });
-
-    // ── Category definitions ────────────────────────────────────────────────────────
-    // - envelope: source==='envelope'
-    // - opening : window / door / side_window
-    // - climate : fan / heater / curtain
-    // - sensor  : sensor
-    // - fixture : fixture
-    // - irrig   : irrigation_layer + (children: pipes)
     var CAT_DEFS = [
-      { key: 'envelope', label: _T('envelope','Envelope'),     kinds: null,   isMatch: function (f) { return f.source === 'envelope'; }, items: [] },
-      { key: 'opening',  label: _T('sec_openings','Openings'),   kinds: ['window','door','side_window'], items: [] },
-      { key: 'climate',  label: _T('env_vent_curtain','Vent/Curtain'), kinds: ['fan','heater','curtain'], items: [] },
-      { key: 'sensor',   label: _T('m_sensor','Sensor'),     kinds: ['sensor'], items: [] },
-      { key: 'fixture',  label: _T('m_fixture','Fixture'),     kinds: ['fixture'], items: [] },
-      { key: 'irrig',    label: _T('m_irr_device','Irrigation Device'), kinds: null,   isMatch: function (f) { return f.kind === 'irrigation_layer'; }, items: [] }
+      { key: 'envelope', label: _T('envelope','Envelope'),     kinds: null,   isMatch: function (f) { return f.source === 'envelope'; }, n: 0 },
+      { key: 'opening',  label: _T('sec_openings','Openings'),   kinds: ['window','door','side_window'], n: 0 },
+      { key: 'climate',  label: _T('env_vent_curtain','Vent/Curtain'), kinds: ['fan','heater','fogger','curtain','shade_curtain'], n: 0 },
+      { key: 'sensor',   label: _T('m_sensor','Sensor'),     kinds: ['sensor'], n: 0 },
+      { key: 'fixture',  label: _T('m_fixture','Fixture'),     kinds: ['fixture'], n: 0 },
+      { key: 'irrig',    label: _T('m_irr_device','Irrigation Device'), kinds: null,   isMatch: function (f) { return f.kind === 'irrigation_layer'; }, n: 0 }
     ];
 
     function _catFor(f) {
@@ -888,121 +840,50 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       return null;
     }
 
-    // Classify
+    // Irrigation pieces are counted under their layer's category rather than
+    // dropped, so the row's number matches what the eye actually hides.
+    var IRR_CHILD = ['irrigation_pipe', 'irrigation_valve',
+                     'irrigation_connection', 'irrigation_device'];
     _fittings.forEach(function (f) {
-      // Auto-generated parts (connection / device) and children pipe / valve are handled separately
-      if (f.kind === 'irrigation_connection' || f.kind === 'irrigation_device') return;
-      if (f.kind === 'irrigation_pipe') return; // goes under the irrigation layer
-      if (f.kind === 'irrigation_valve') return; // goes under the irrigation layer
-      var cat = _catFor(f); if (!cat) return;
-      cat.items.push(f);
+      if (IRR_CHILD.indexOf(f.kind) !== -1) { CAT_DEFS[5].n++; return; }
+      var cat = _catFor(f);
+      if (cat) cat.n++;
     });
 
-    // ── Build HTML ──────────────────────────────────────────────────────────
-    function _catHtml(cat, bodyHtml, totalCount) {
-      // Default open: envelope/irrig open, others closed. But keep previous state if present.
-      var defaultOpen = (cat.key === 'envelope' || cat.key === 'irrig');
-      var open = prevOpen.hasOwnProperty(cat.key) ? prevOpen[cat.key] : defaultOpen;
+    var shown = CAT_DEFS.filter(function (c) { return c.n > 0; });
+    if (counter) {
+      var hidden = shown.filter(function (c) { return !_getCategoryVisible(c.key); }).length;
+      var hidTxt = (window._ ? window._('%(n)s hidden') : '%(n)s hidden').replace('%(n)s', hidden);
+      counter.textContent = hidden ? '(' + hidTxt + ')' : '';
+    }
+
+    if (!shown.length) {
+      container.innerHTML = '<div class="fit-list-empty">' + _T('no_fittings','No fittings added yet.') + '</div>';
+      return;
+    }
+
+    container.innerHTML = shown.map(function (cat) {
       var visible = _getCategoryVisible(cat.key);
-      var eye = visible ? '◉' : '○';   // ◉ = on, ○ = off
-      var eyeTitle = visible ? _T('cat_hide','Hide category') : _T('cat_show','Show category');
-      return '<details class="fit-cat" data-cat="' + cat.key + '"' + (open ? ' open' : '') + '>' +
-        '<summary>' + cat.label +
-        '<span class="fit-cat-count">' + totalCount + '</span>' +
-        '<span class="fit-cat-vis" data-cat="' + cat.key + '" title="' + eyeTitle + '" ' +
-          'onclick="event.preventDefault();event.stopPropagation();FittingsUI.toggleCategoryVisibility(\'' + cat.key + '\');" ' +
-          'style="cursor:pointer;margin-left:6px;font-size:var(--aot-font-size-base);opacity:' + (visible ? '1' : '0.4') + ';">' +
-          eye + '</span>' +
-        '</summary>' +
-        '<div class="fit-cat-body">' + bodyHtml + '</div>' +
-      '</details>';
-    }
-
-    var html = '';
-    var any = false;
-
-    CAT_DEFS.forEach(function (cat) {
-      if (cat.key === 'irrig') {
-        // Irrigation layers: each layer + indented children pipes (do not exclude vertical — show all)
-        var layers = cat.items;
-        if (layers.length === 0) return;
-        var allChildren = _fittings.filter(function (f) { return f.kind === 'irrigation_pipe'; });
-        var allValves   = _fittings.filter(function (f) { return f.kind === 'irrigation_valve'; });
-        var bodyHtml = '';
-        var totalCount = layers.length;
-        layers.forEach(function (layer) {
-          var isSel = (layer.id === _selectedId);
-          var hLabel = layer.height_m != null ? ' (' + parseFloat(layer.height_m).toFixed(1) + 'm)' : '';
-          bodyHtml += '<div class="fit-list-item' + (isSel ? ' selected' : '') + '" ' +
-            'data-fit-id="' + layer.id + '" onclick="FittingsUI.select(\'' + layer.id + '\')" ' +
-            'style="font-weight:600;border-left:3px solid var(--aot-color-info);">' +
-            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">' +
-            (layer.name || _T('m_irr_layer','Irrigation Layer')) + hLabel + '</span>' +
-            '<span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-info);padding:0 4px;">'+_T('irr_layer_abbr','Layer')+'</span>' +
-            _delBtn(layer.id) + '</div>';
-          var children = allChildren.filter(function (p) { return p.layer_id === layer.id; });
-          totalCount += children.length;
-          children.forEach(function (pipe) {
-            var pSel = (pipe.id === _selectedId);
-            var nSegs = Array.isArray(pipe.segments) ? pipe.segments.length : 0;
-            var vLabel = pipe.is_vertical ? ' ['+_T('irr_vpipe_abbr','V')+']' : (pipe.sub_type === 'main' ? ' ['+_T('irr_main_abbr','M')+']' : '');
-            bodyHtml += '<div class="fit-list-item' + (pSel ? ' selected' : '') + '" ' +
-              'data-fit-id="' + pipe.id + '" onclick="FittingsUI.select(\'' + pipe.id + '\')" ' +
-              'style="padding-left:22px;font-size:var(--aot-font-size-sm);">' +
-              '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">' +
-              (pipe.name || _T('m_irr_pipe','Pipe')) + vLabel + '</span>' +
-              '<span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-text-secondary);padding:0 4px;">' + nSegs + 'seg</span>' +
-              _delBtn(pipe.id) + '</div>';
-          });
-          var valves = allValves.filter(function (v) { return v.layer_id === layer.id; });
-          totalCount += valves.length;
-          valves.forEach(function (v) {
-            var vSel = (v.id === _selectedId);
-            var vt = (v.valve_type === 'proportional') ? _T('irr_prop','Proportional') : 'ON/OFF';
-            bodyHtml += '<div class="fit-list-item' + (vSel ? ' selected' : '') + '" ' +
-              'data-fit-id="' + v.id + '" onclick="FittingsUI.select(\'' + v.id + '\')" ' +
-              'style="padding-left:22px;font-size:var(--aot-font-size-sm);border-left:3px solid var(--aot-color-llm);">' +
-              '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">' +
-              (v.name || _T('irr_valve_word','Valve')) + '</span>' +
-              '<span style="font-size:var(--aot-font-size-xs);color:var(--aot-color-llm);padding:0 4px;">' + vt + '</span>' +
-              _delBtn(v.id) + '</div>';
-          });
-        });
-        html += _catHtml(cat, bodyHtml, totalCount);
-        any = true;
-      } else {
-        if (cat.items.length === 0) return;
-        var isEnv = (cat.key === 'envelope');
-        var bodyHtml = cat.items.map(function (f) { return _itemHtml(f, isEnv); }).join('');
-        html += _catHtml(cat, bodyHtml, cat.items.length);
-        any = true;
-      }
-    });
-
-    if (!any) html = '<div class="fit-list-empty">'+_T('no_fittings','No fittings added yet.')+'</div>';
-    // Resetting innerHTML resets the container scrollTop to 0 — even inspector-only
-    // updates like actuator/input changes make the list jump to the top, pushing the
-    // selected item out of view. Preserve scroll position, and if the selected item
-    // is not visible, bring only that one into the visible area.
-    var listPanel = document.getElementById('facility-3d-fittings-list');
-    var prevScroll = listPanel ? listPanel.scrollTop : 0;
-    container.innerHTML = html;
-    if (listPanel) {
-      listPanel.scrollTop = prevScroll;
-      if (_selectedId) {
-        var selEl = container.querySelector('.fit-list-item[data-fit-id="' + _selectedId + '"]');
-        if (selEl) {
-          var pr = listPanel.getBoundingClientRect();
-          var ir = selEl.getBoundingClientRect();
-          if (ir.bottom > pr.bottom - 4 || ir.top < pr.top + 4) {
-            listPanel.scrollTop += (ir.top - pr.top) - 20;
-          }
-        }
-      }
-    }
+      return '<div class="fit-cat-row' + (visible ? '' : ' is-off') + '" data-cat="' + cat.key + '" ' +
+        'title="' + (visible ? _T('cat_hide','Hide category') : _T('cat_show','Show category')) + '" ' +
+        'onclick="FittingsUI.toggleCategoryVisibility(\'' + cat.key + '\');">' +
+        '<span class="fit-cat-eye">' + (visible ? '\u25c9' : '\u25cb') + '</span>' +
+        '<span class="fit-cat-name">' + cat.label + '</span>' +
+        '<span class="fit-cat-count">' + cat.n + '</span>' +
+      '</div>';
+    }).join('');
   }
 
   // ── Inspector rendering — bottom strip showing selected fitting's props ────
+  // Shared option rows carry display:flex !important, so an inline display:none
+  // never hides them — aot-modal-modern.css ships .aot-modal-option-row.d-none
+  // for exactly this. Route every conditional row through it.
+  function _rowShow(el, on) {
+    if (!el) return;
+    el.classList.toggle('d-none', !on);
+    el.style.removeProperty('display');
+  }
+
   function _renderInspector() {
     var empty   = document.getElementById('fi-empty');
     var content = document.getElementById('fi-content');
@@ -1048,19 +929,19 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     var irrPipeGroup  = document.getElementById('fi-group-irr-pipe');
     var isIrrLayer = (f.kind === 'irrigation_layer');
     var isIrrPipe  = (f.kind === 'irrigation_pipe');
-    if (irrLayerGroup) irrLayerGroup.style.display = isIrrLayer ? '' : 'none';
-    if (irrPipeGroup)  irrPipeGroup.style.display  = isIrrPipe  ? '' : 'none';
+    _rowShow(irrLayerGroup, isIrrLayer);
+    _rowShow(irrPipeGroup, isIrrPipe);
     if (isIrrLayer || isIrrPipe) {
       var nmEl = document.getElementById('fi-name');
       if (nmEl && nmEl.value !== (f.name || '')) nmEl.value = f.name || '';
       ['fi-x','fi-y','fi-z','fi-w','fi-h','fi-d','fi-rot'].forEach(function (id) {
         var el = document.getElementById(id);
         if (!el) return;
-        var row = el.closest && el.closest('.fi-group');
+        var row = el.closest && el.closest('.aot-modal-option-row');
         if (row) row.style.display = 'none';
       });
-      var kindRow = (document.getElementById('fi-kind') || {}).closest && document.getElementById('fi-kind').closest('.fi-group');
-      if (kindRow) kindRow.style.display = 'none';
+      var kindRow = (document.getElementById('fi-kind') || {}).closest && document.getElementById('fi-kind').closest('.aot-modal-option-row');
+      _rowShow(kindRow, false);
       // Irrigation layers DO bind an actuator — the valve or pump that opens the
       // whole circuit. The backend has always read layer.actuator_id (it derives
       // per-actuator flow and nozzle wetting from it), but this inspector used to
@@ -1074,7 +955,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var chsG = document.getElementById('fi-group-channels');
       if (chsG) chsG.style.display = 'none';
       var inheritRow = document.getElementById('fi-group-inherit');
-      if (inheritRow) inheritRow.style.display = 'none';
+      _rowShow(inheritRow, false);
       if (isIrrLayer) {
         var hEl = document.getElementById('fi-irr-height');
         if (hEl && hEl.value !== String(f.height_m != null ? f.height_m : 2.0)) {
@@ -1094,8 +975,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     }
 
     // Hide irrigation-only group when a normal fitting is selected (avoids leftovers after switching from irrigation)
-    if (irrLayerGroup) irrLayerGroup.style.display = 'none';
-    if (irrPipeGroup)  irrPipeGroup.style.display  = 'none';
+    _rowShow(irrLayerGroup, false);
+    _rowShow(irrPipeGroup, false);
 
     // Populate inputs (programmatic — must not retrigger 'input' loop)
     var setVal = function (id, v) {
@@ -1115,7 +996,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     ['fi-x','fi-y','fi-z','fi-w','fi-h','fi-d','fi-rot'].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
-      var row = el.closest && el.closest('.fi-group');
+      var row = el.closest && el.closest('.aot-modal-option-row');
       if (row) row.style.display = '';
     });
     setVal('fi-d', f.size.d != null ? f.size.d : 0.1);
@@ -1134,24 +1015,34 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         });
       }
       if (groupSize > 1) {
-        inheritRow.style.display = '';
+        _rowShow(inheritRow, true);
         inheritEl.checked = (f.inherit_size !== false);
+        var actEl2 = document.getElementById('fi-inherit-act');
+        if (actEl2) actEl2.checked = (f.inherit_actuator !== false);
+        var cntEl = document.getElementById('fi-group-count');
+        if (cntEl) {
+          cntEl.textContent = (window._ ? window._('%(n)s created together').replace('%(n)s', groupSize)
+                                        : groupSize + ' created together');
+        }
       } else {
-        inheritRow.style.display = 'none';
+        _rowShow(inheritRow, false);
       }
     }
 
     // For envelope-derived items, hide kind-change and delete (those are controlled by envelope settings)
-    var kindRow = (document.getElementById('fi-kind') || {}).closest && document.getElementById('fi-kind').closest('.fi-group');
-    if (kindRow) kindRow.style.display = isEnvItem ? 'none' : '';
+    var kindRow = (document.getElementById('fi-kind') || {}).closest && document.getElementById('fi-kind').closest('.aot-modal-option-row');
+    _rowShow(kindRow, !isEnvItem);
+    // Only an envelope item can be detached from automatic geometry.
+    var autoRow = document.getElementById('fi-group-auto-geom');
+    _rowShow(autoRow, isEnvItem && f._auto_geom === false);
     var delBtn = document.getElementById('fi-delete');
-    if (delBtn && delBtn.closest('.fi-group')) delBtn.closest('.fi-group').style.display = isEnvItem ? 'none' : '';
+    if (delBtn && delBtn.closest('.aot-modal-option-row')) delBtn.closest('.aot-modal-option-row').style.display = isEnvItem ? 'none' : '';
 
     // Restore geometry rows (always visible)
     ['fi-x', 'fi-y', 'fi-z', 'fi-w', 'fi-h', 'fi-d', 'fi-rot'].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
-      var row = el.closest && el.closest('.fi-group');
+      var row = el.closest && el.closest('.aot-modal-option-row');
       if (row) row.style.display = '';
     });
 
@@ -1165,14 +1056,14 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     var fanRoleGroup     = document.getElementById('fi-group-fan-role');
     var isSensor = (f.kind === 'sensor');
     var isFan    = (f.kind === 'fan');
-    if (actGroup)        actGroup.style.display        = isSensor ? 'none' : '';
-    if (inpGroup)        inpGroup.style.display        = isSensor ? '' : 'none';
-    if (channelsGroup)   channelsGroup.style.display   = (isSensor && f.input_id) ? '' : 'none';
-    if (sensorRoleGroup) sensorRoleGroup.style.display = isSensor ? '' : 'none';
+    _rowShow(actGroup, !isSensor);
+    _rowShow(inpGroup, isSensor);
+    _rowShow(channelsGroup, isSensor && !!f.input_id);
+    _rowShow(sensorRoleGroup, isSensor);
     if (measTypeGroup)   measTypeGroup.style.display   = isSensor ? '' : 'none';
     // Fan role (circulation/exhaust/intake) — maps a generic 'fan' fitting to a
     // concrete env-control actuator kind when bound directly via actuator_id.
-    if (fanRoleGroup)    fanRoleGroup.style.display    = isFan ? '' : 'none';
+    _rowShow(fanRoleGroup, isFan);
     if (isFan) {
       var fanRoleSel = document.getElementById('fi-fan-role');
       if (fanRoleSel) fanRoleSel.value = f.fan_role || 'circulation_fan';
@@ -1531,6 +1422,24 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     return changed;
   }
 
+  // Wiring follows the same instance rule as geometry: components generated
+  // together share one actuator unless a member is explicitly detached. Doing it
+  // per fitting meant re-picking the same output 16 times for one roof vent row.
+  function _syncActuatorGroup(sourceId) {
+    var src = _fittings.find(function (f) { return f.id === sourceId; });
+    if (!src || !src.link_group) return [];
+    if (src.inherit_actuator === false) return [];
+    var changed = [];
+    _fittings.forEach(function (f) {
+      if (f.id === sourceId || f.link_group !== src.link_group) return;
+      if (f.inherit_actuator === false) return;   // detached member
+      if (f.actuator_id === src.actuator_id) return;
+      f.actuator_id = src.actuator_id;
+      changed.push(f.id);
+    });
+    return changed;
+  }
+
   function remove(id) {
     var target = _fittings.find(function (f) { return f.id === id; });
     var toRemove = [id];
@@ -1552,18 +1461,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   function select(id) {
     _selectedId = (_selectedId === id) ? null : id;
     _render();
-    // Scroll the right-side list (not the page) so the selected item is visible.
-    if (_selectedId) {
-      var item = document.querySelector('.fit-list-item[data-fit-id="' + _selectedId + '"]');
-      var listPanel = document.getElementById('facility-3d-fittings-list');
-      if (item && listPanel) {
-        var itemRect = item.getBoundingClientRect();
-        var panelRect = listPanel.getBoundingClientRect();
-        if (itemRect.top < panelRect.top || itemRect.bottom > panelRect.bottom) {
-          listPanel.scrollTop += (itemRect.top - panelRect.top) - 20;
-        }
-      }
-    }
     document.dispatchEvent(new CustomEvent('fitting-selection-changed', { detail: { id: _selectedId } }));
   }
 
@@ -1585,11 +1482,19 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if (rot && rot.value !== '') f.rotation_deg = parseFloat(rot.value) || 0;
       return f;
     });
-    // Exclude envelope-derived virtual fittings UNLESS the user has assigned an
-    // actuator_id or input_id — those bindings must persist across saves.
+    // Envelope-derived items are regenerated from the envelope settings on load,
+    // so they are not persisted — EXCEPT the ones carrying a user decision that
+    // regeneration cannot reproduce:
+    //   • actuator_id / input_id — the wiring
+    //   • _auto_geom === false   — size/position edited by hand (the envelope no
+    //     longer drives it, so dropping the row would silently undo the edit)
+    //   • inherit_* === false    — detached from its instance group
     return JSON.parse(JSON.stringify(_fittings.filter(function (f) {
       if (f.source !== 'envelope') return true;
-      return !!(f.actuator_id || f.input_id);
+      return !!(f.actuator_id || f.input_id) ||
+             f._auto_geom === false ||
+             f.inherit_size === false ||
+             f.inherit_actuator === false;
     })));
   }
 
@@ -1770,10 +1675,17 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
   // ── Inspector input wiring — bidirectional binding with selected fitting ───
   function _bindInspectorInputs() {
+    // Detaching happens mid-edit, so the "back to automatic" row has to appear
+    // then — _renderInspector only runs on selection.
+    function _detachEnvelope(f) {
+      if (!f || f.source !== 'envelope') return;
+      f._auto_geom = false;
+      _rowShow(document.getElementById('fi-group-auto-geom'), true);
+    }
     function _onTransform() {
       var f = _getSel(); if (!f) return;
       // User explicitly editing — detach from auto-dim tracking
-      if (f.source === 'envelope') f._auto_geom = false;
+      _detachEnvelope(f);
       f.position.x = parseFloat((document.getElementById('fi-x') || {}).value) || 0;
       f.position.z = parseFloat((document.getElementById('fi-y') || {}).value) || 0; // user Y -> Three.js Z
       f.position.y = parseFloat((document.getElementById('fi-z') || {}).value) || 0; // user Z -> Three.js Y
@@ -1851,7 +1763,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     function _onSize() {
       var f = _getSel(); if (!f) return;
       // User explicitly editing — detach from auto-dim tracking
-      if (f.source === 'envelope') f._auto_geom = false;
+      _detachEnvelope(f);
       f.size.w = Math.max(parseFloat((document.getElementById('fi-w') || {}).value) || 0.1, 0.02);
       f.size.h = Math.max(parseFloat((document.getElementById('fi-h') || {}).value) || 0.1, 0.02);
       f.size.d = Math.max(parseFloat((document.getElementById('fi-d') || {}).value) || 0.1, 0.02);
@@ -1923,6 +1835,22 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     });
     var inheritEl = document.getElementById('fi-inherit');
     if (inheritEl) inheritEl.addEventListener('change', _onInherit);
+    var inheritActEl = document.getElementById('fi-inherit-act');
+    if (inheritActEl) inheritActEl.addEventListener('change', function () {
+      var f = _getSel(); if (!f) return;
+      f.inherit_actuator = !!inheritActEl.checked;
+      // Re-linking adopts the group's current actuator immediately, otherwise
+      // the checkbox would look linked while the wiring still differed.
+      if (f.inherit_actuator && f.link_group) {
+        var peer = _fittings.find(function (g) {
+          return g.link_group === f.link_group && g.id !== f.id && g.inherit_actuator !== false;
+        });
+        if (peer) f.actuator_id = peer.actuator_id;
+        var sel = document.getElementById('fi-actuator');
+        if (sel) sel.value = f.actuator_id || '';
+      }
+      document.dispatchEvent(new CustomEvent('fittings-data-changed'));
+    });
     var nm = document.getElementById('fi-name');
     if (nm) nm.addEventListener('input', _onMeta);
     var kd = document.getElementById('fi-kind');
@@ -1951,12 +1879,13 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       document.dispatchEvent(new CustomEvent('fittings-data-changed'));
     });
 
-    // Actuator dropdown — per-fitting, NOT propagated to link_group
-    // (replicas can be driven by different actuators).
+    // Actuator dropdown — propagated across the link_group by default; a member
+    // opts out with the "제어장치 연동" checkbox.
     var actSel = document.getElementById('fi-actuator');
     if (actSel) actSel.addEventListener('change', function () {
       var f = _getSel(); if (!f) return;
       f.actuator_id = actSel.value || null;
+      _syncActuatorGroup(f.id);
       _renderList();
       document.dispatchEvent(new CustomEvent('fittings-data-changed'));
     });
@@ -2133,22 +2062,27 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
     var overlay = document.createElement('div');
     overlay.id = 'fittings-catalog-modal';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:var(--aot-z-modal);display:flex;align-items:center;justify-content:center;';
-
-    var modal = document.createElement('div');
-    modal.style.cssText = 'background:#fff;border-radius:12px;padding:1rem;max-width:540px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.25);';
-    modal.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">' +
-      '<h5 style="margin:0;">📦 '+_T('catalog_title','Equipment Catalog')+'</h5>' +
-      '<button class="btn btn-sm btn-outline-secondary" id="cat-close">✕</button></div>' +
-      '<div class="fac-hint" style="margin-bottom:0.5rem;">'+_T('catalog_hint','Select equipment from the current map to add as a fitting.')+'</div>' +
-      '<div id="cat-list"></div>';
-
-    var list = modal.querySelector ? null : null;
-    overlay.appendChild(modal);
+    // Shared modal shell (.aot-option-modal), same as every other dialog.
+    overlay.className = 'modal fade aot-option-modal';
+    overlay.tabIndex = -1;
+    overlay.setAttribute('role', 'dialog');
+    overlay.innerHTML =
+      '<div class="modal-dialog modal-dialog-centered" role="document">' +
+        '<div class="modal-content">' +
+          '<div class="modal-header">' +
+            '<h5 class="modal-title">' + _T('catalog_title','Equipment Catalog') + '</h5>' +
+            '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+              '<span aria-hidden="true">&times;</span></button>' +
+          '</div>' +
+          '<div class="modal-body">' +
+            '<div class="aot-modal-body-text mb-2">' + _T('catalog_hint','Select equipment from the current map to add as a fitting.') + '</div>' +
+            '<div id="cat-list" class="fac-catalog-list"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
     document.body.appendChild(overlay);
 
-    var listEl = modal.querySelector('#cat-list');
+    var listEl = overlay.querySelector('#cat-list');
     features.forEach(function (feat) {
       var p = feat.properties || {};
       var name = p.name || p.label || ('Feature #' + (p.db_id || ''));
@@ -2159,12 +2093,12 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var el = parseFloat(p.elevation_m) || 0;
 
       var item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:0.5rem 0.75rem;border:1px solid var(--aot-border-light);border-radius:8px;margin-bottom:0.4rem;cursor:pointer;';
+      item.className = 'fac-catalog-item';
       item.innerHTML =
-        '<span style="flex:1;font-size:var(--aot-font-size-base);"><b>' + name + '</b>' +
-        '<br><small style="color:var(--aot-color-text-secondary);">' + inferredKind + ' · ' + sizeStr +
+        '<span class="fac-catalog-item-text"><b>' + name + '</b>' +
+        '<br><small>' + inferredKind + ' · ' + sizeStr +
         (h ? ' · '+_T('height','height')+' ' + h + 'm' : '') + '</small></span>' +
-        '<button class="btn btn-sm btn-primary">'+_T('import_btn','Import')+'</button>';
+        '<button class="btn aot-pill-btn aot-pill-btn-primary">'+_T('import_btn','Import')+'</button>';
       item.addEventListener('click', function () {
         var pos = _featureToFittingPos(feat, facCenter, facOrientDeg);
         var sz = size || { w: 1, h: 1, d: 1 };
@@ -2180,13 +2114,24 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         });
         _render();
         _notify();
-        overlay.remove();
+        _closeCatalog(overlay);
       });
       listEl.appendChild(item);
     });
 
-    modal.querySelector('#cat-close').addEventListener('click', function () { overlay.remove(); });
-    overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+    // Drop the node once hidden so a re-open always renders fresh contents.
+    if (window.jQuery && jQuery.fn && jQuery.fn.modal) {
+      jQuery(overlay).on('hidden.bs.modal', function () { overlay.remove(); }).modal('show');
+    } else {
+      overlay.classList.add('show');
+      overlay.style.display = 'block';
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+    }
+  }
+
+  function _closeCatalog(overlay) {
+    if (window.jQuery && jQuery.fn && jQuery.fn.modal) jQuery(overlay).modal('hide');
+    else overlay.remove();
   }
 
   // Aggregate count + size summary by kind ──────────────────
@@ -2832,14 +2777,55 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     updateFittingPosition: function (id, pos) {
       var f = _fittings.find(function (x) { return x.id === id; });
       if (!f || !pos) return;
+      // Same rule the inspector fields follow: a hand-moved envelope item stops
+      // tracking the envelope, otherwise the next regeneration silently undoes
+      // the drag.
+      if (f.source === 'envelope') f._auto_geom = false;
       f.position.x = pos.x != null ? pos.x : f.position.x;
       f.position.y = pos.y != null ? pos.y : f.position.y;
       f.position.z = pos.z != null ? pos.z : f.position.z;
     },
+    // Change a fitting's kind with the same side effects the inspector applies:
+    // group sync, list refresh and an in-place mesh recreation (colour and
+    // geometry depend on kind). Without this, changing kind anywhere else
+    // leaves a stale 3D mesh behind.
+    // Put an envelope item back under automatic geometry. Editing size or
+    // position detaches it; without a way back the only remedy would be to
+    // toggle the whole envelope feature off and on.
+    setAutoGeom: function (id, on) {
+      var f = _fittings.find(function (x) { return x.id === id; });
+      if (!f || f.source !== 'envelope') return false;
+      f._auto_geom = (on !== false);
+      return true;
+    },
+    setKind: function (id, kind) {
+      var f = _fittings.find(function (x) { return x.id === id; });
+      if (!f || !kind || f.kind === kind) return false;
+      f.kind = kind;
+      if (f.link_group) _syncGroup(f.id);
+      _renderList();
+      document.dispatchEvent(new CustomEvent('fitting-removed', { detail: { id: f.id } }));
+      document.dispatchEvent(new CustomEvent('fitting-added',
+        { detail: { fitting: JSON.parse(JSON.stringify(f)) } }));
+      if (f.link_group) {
+        _fittings.forEach(function (g) {
+          if (g.link_group === f.link_group && g.id !== f.id) {
+            document.dispatchEvent(new CustomEvent('fitting-removed', { detail: { id: g.id } }));
+            document.dispatchEvent(new CustomEvent('fitting-added',
+              { detail: { fitting: JSON.parse(JSON.stringify(g)) } }));
+          }
+        });
+      }
+      document.dispatchEvent(new CustomEvent('fittings-data-changed'));
+      return true;
+    },
+    // Actuator options for the component table (same source the inspector uses)
+    getOutputList: function () { return (OutputCache.list || []).slice(); },
     patchFitting: function (id, props) {
       var f = _fittings.find(function (x) { return x.id === id; });
       if (!f) return false;
       Object.keys(props).forEach(function (k) { f[k] = props[k]; });
+      if ('actuator_id' in props) _syncActuatorGroup(id);
       // Keep channel_measurements[0] in sync with top-level sensor channel fields
       // so facility_integration.py (which prefers channel_measurements) sees the change.
       if (f.kind === 'sensor' && ('measurement_id' in props || 'measurement_type' in props)) {
@@ -2868,6 +2854,27 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     sites: [],              // site features for the active map
     selectedSiteUuid: null, // GeoShape unique_id of the selected site
     _baseStyleLayerIds: []  // snapshot of base style layer IDs for layer panel
+  };
+
+  // State lives inside this IIFE, so the page's inline scripts cannot reach the
+  // map. The facility page hides the map while other steps are shown, and a
+  // MapLibre map created (or left) in a hidden container keeps a stale canvas
+  // size until it is told to re-measure — expose just that.
+  // Switching facilities used to be a page navigation, which closed the step
+  // drawer and lost the current step. These do it in place.
+  window.FacilityIO = {
+    select: selectFacility,
+    create: newFacility
+  };
+
+  window.FacilityMapAPI = {
+    resize: function () {
+      if (State.map && typeof State.map.resize === 'function') State.map.resize();
+    },
+    isReady: function () { return !!State.map; },
+    // Has the facility been placed on the map yet? The step bar uses this to
+    // flag the position step as incomplete.
+    hasCenter: function () { return !!State.center; }
   };
 
   const SITE_SRC = 'map-sites';
@@ -3054,13 +3061,13 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       });
       State.map.addLayer({
         id: 'facility-preview-line', type: 'line', source: 'facility-preview',
-        paint: { 'line-color': '#1565c0', 'line-width': 2.5 }
+        paint: { 'line-color': '#13261B', 'line-width': 2.5 }
       });
       State.map.addLayer({
         id: 'facility-preview-3d', type: 'fill-extrusion', source: 'facility-preview',
         layout: { visibility: 'none' },   // hidden: Three.js overlay replaces this
         paint: {
-          'fill-extrusion-color': '#029ACF',
+          'fill-extrusion-color': '#13261B',
           'fill-extrusion-height': ['coalesce', ['get', 'height_m'], 4],
           'fill-extrusion-base':   ['coalesce', ['get', 'base_m'], 0],
           'fill-extrusion-opacity': 0.7
@@ -3184,7 +3191,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       ? ' · connected ×' + p.bay_count
       : ' · single';
     const html =
-      '<div style="font-size:13px"><strong>' + (p.name || '(unnamed)') + '</strong>' +
+      '<div style="font-size:var(--aot-font-size-sm)"><strong>' + (p.name || '(unnamed)') + '</strong>' +
       '<br><small>' + (p.preset || '') + structureLabel + '</small>' +
       '<br><a href="?facility_uuid=' + p.facility_uuid + '">Edit</a></div>';
     new maplibregl.Popup({ closeOnClick: true })
@@ -3196,6 +3203,18 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   // =========================================================
   // Sites for the active map (Phase B — site selector)
   // =========================================================
+  // layout_default.html upgrades every .aot-modern-select into a bootstrap-select
+  // at load, and that widget renders its own copy of the option list. Rewriting
+  // the <select> from JS leaves the visible list stale: the site picker offered
+  // only "Select a Map first" while the select underneath already held every
+  // site of the chosen map. Anything that repopulates such a select has to say so.
+  function _syncPicker(el) {
+    if (!el || !window.jQuery) return;
+    try {
+      if (jQuery(el).data('selectpicker')) jQuery(el).selectpicker('refresh');
+    } catch (e) { /* not enhanced — the native select is already correct */ }
+  }
+
   async function loadSites(geoId) {
     const sel = document.getElementById('site-selector');
     if (!sel) return;
@@ -3206,7 +3225,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
     if (!geoId) {
       sel.disabled = true;
-      sel.innerHTML = '<option value="" disabled selected>Select a Map first</option>';
+      sel.innerHTML = '<option value="" disabled selected>' + _tr('Select a Map first') + '</option>';
+      _syncPicker(sel);
       return;
     }
     try {
@@ -3219,13 +3239,14 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
       if (features.length === 0) {
         sel.disabled = true;
-        sel.innerHTML = '<option value="" disabled selected>No sites in this map</option>';
+        sel.innerHTML = '<option value="" disabled selected>' + _tr('No sites in this map') + '</option>';
+        _syncPicker(sel);
         return;
       }
       sel.disabled = false;
       const placeholder = document.createElement('option');
       placeholder.value = '';
-      placeholder.textContent = '— Select a Site —';
+      placeholder.textContent = _tr('— Select a Site —');
       placeholder.selected = true;
       sel.appendChild(placeholder);
       features.forEach((f) => {
@@ -3235,10 +3256,12 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         opt.textContent = props.name || ('Site #' + (props.db_id || ''));
         sel.appendChild(opt);
       });
+      _syncPicker(sel);
     } catch (e) {
       console.warn('[facility] loadSites failed:', e);
       sel.disabled = true;
-      sel.innerHTML = '<option value="" disabled selected>Failed to load sites</option>';
+      sel.innerHTML = '<option value="" disabled selected>' + _tr('Failed to load sites') + '</option>';
+      _syncPicker(sel);
     }
   }
 
@@ -3553,8 +3576,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var bar = document.getElementById('zone-segment-bar');
       var list = document.getElementById('zone-name-list');
       if (!box || !bar || !list) return;
-      if (_bayCount < 2) { box.style.display = 'none'; return; }
-      box.style.display = '';
+      if (_bayCount < 2) { box.classList.add('d-none'); return; }
+      box.classList.remove('d-none');
 
       var zs = zones();
       var zi = 0, html = '';
@@ -3573,7 +3596,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         var range = (z.bay_start === z.bay_end) ? String(z.bay_start) : z.bay_start + '–' + z.bay_end;
         return '<div class="zone-name-row">' +
           '<span class="zone-chip zone-c' + (i % 6) + '" title="ID: ' + _esc(z.id) + '">' + range + '</span>' +
-          '<input type="text" class="fac-input zone-name-input" data-start="' + z.bay_start + '"' +
+          '<input type="text" class="form-control aot-modern-input zone-name-input" data-start="' + z.bay_start + '"' +
           ' placeholder="' + _esc(z.default_name) + '"' +
           ' value="' + _esc(_names[z.bay_start] || '') + '">' +
           '</div>';
@@ -3659,6 +3682,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 
     document.getElementById('facility-name').value = f.name || '';
     document.getElementById('facility-preset').value = f.preset || 'standard_arch';
+    _syncPicker(document.getElementById('facility-preset'));
     document.querySelectorAll('input[name="structure"]').forEach((r) => {
       r.checked = (r.value === f.structure);
     });
@@ -3666,6 +3690,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     if (window.ZoneUI) ZoneUI.load(f.bays || [], f.bay_count || 1);
     if (f.geo_id) {
       document.getElementById('map-selector').value = f.geo_id;
+      _syncPicker(document.getElementById('map-selector'));
       // Reload sites for this map so the site-selector can be restored below
       loadSites(f.geo_id).then(() => {
         if (f.parent_site_uuid) {
@@ -3673,6 +3698,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
           if (sel) {
             sel.value = f.parent_site_uuid;
             State.selectedSiteUuid = f.parent_site_uuid;
+            _syncPicker(sel);
           }
         }
       });
@@ -3686,7 +3712,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       document.getElementById('ridge-height').value = f.geometry_3d.ridge_height_m || 4;
       document.getElementById('length-m').value = f.geometry_3d.length_m || 30;
       const roofSel = document.getElementById('roof-type');
-      if (roofSel) roofSel.value = f.geometry_3d.roof_type || 'arch';
+      if (roofSel) { roofSel.value = f.geometry_3d.roof_type || 'arch'; _syncPicker(roofSel); }
       const spacingEl = document.getElementById('spacing-m');
       if (spacingEl) spacingEl.value = (f.geometry_3d.spacing_m != null ? f.geometry_3d.spacing_m : 1.0);
       State.orientationDeg = f.geometry_3d.orientation_deg || 0;
@@ -3766,7 +3792,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     }
 
     // Notify 3D preview to rebuild with the newly loaded facility data.
-    document.dispatchEvent(new CustomEvent('facility-loaded'));
+    // The uuid tells listeners whether this is a saved facility or the blank
+    // form started by "New Facility" — the step ring rules differ.
+    document.dispatchEvent(new CustomEvent('facility-loaded', {
+      detail: { facility_uuid: f.unique_id || null }
+    }));
   }
 
   // =========================================================
@@ -3882,15 +3912,123 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if (json.ok) {
         State.facilityUuid = json.facility_uuid;
         showToast('Saved.');
-        setTimeout(() => {
-          window.location.search = '?facility_uuid=' + json.facility_uuid;
-        }, 600);
+        // Saving used to reload the page, which closed the step drawer and threw
+        // away the step the user was on. Everything the reload was for is done
+        // here instead: the URL, the page vars the delete path reads, the saved
+        // list, and the integration panel.
+        _syncFacilityRef(json.facility_uuid);
+        _upsertFacilityListItem(json.facility_uuid, data);
+        loadIntegration(json.facility_uuid);
+        document.dispatchEvent(new CustomEvent('facility-saved', {
+          detail: { facility_uuid: json.facility_uuid }
+        }));
+        if (window.FacilityStep && FacilityStep.refreshCheckLock) FacilityStep.refreshCheckLock();
       } else {
         alert('Save failed: ' + (json.message || 'unknown error'));
       }
     } catch (e) {
       alert('Save error: ' + e.message);
     }
+  }
+
+  // Keep every place that remembers "which facility is open" in step, without
+  // navigating: the address bar (so reload/bookmark still work), the page-vars
+  // blob the 3D bridge reads, and the highlight in the saved list.
+  // The page's own catalog function; the modules extracted from this file all
+  // reach for window._ the same way.
+  function _tr(s) { return window._ ? window._(s) : s; }
+
+  function _syncFacilityRef(uuid) {
+    try {
+      const url = new URL(window.location.href);
+      if (uuid) url.searchParams.set('facility_uuid', uuid);
+      else url.searchParams.delete('facility_uuid');
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) { /* history unavailable — the rest still applies */ }
+
+    const varsEl = document.getElementById('facility-page-vars');
+    if (varsEl) {
+      try {
+        const pv = JSON.parse(varsEl.textContent || '{}');
+        pv.facility_uuid = uuid || null;
+        varsEl.textContent = JSON.stringify(pv);
+      } catch (e) { /* leave it alone rather than write garbage */ }
+    }
+
+    document.querySelectorAll('.facility-list-item').forEach((el) => {
+      el.classList.toggle('active', !!uuid && el.dataset.uuid === uuid);
+    });
+  }
+
+  // After a save, the list must show the new name — and a brand-new facility
+  // must appear in it at all, since there is no reload to rebuild it.
+  function _upsertFacilityListItem(uuid, data) {
+    const list = document.getElementById('facility-list');
+    if (!list) return;
+    const sub = (data.preset || '') + ' · ' + (data.structure || '') +
+                (data.structure === 'connected' ? ' (N=' + (data.bay_count || 1) + ')' : '');
+    let item = list.querySelector('.facility-list-item[data-uuid="' + uuid + '"]');
+    if (!item) {
+      const empty = list.querySelector('.text-muted');
+      if (empty && !list.querySelector('.facility-list-item')) empty.remove();
+      item = document.createElement('div');
+      item.className = 'facility-list-item';
+      item.dataset.uuid = uuid;
+      item.innerHTML =
+        '<div class="fac-item-info"><div class="fac-item-name"></div>' +
+        '<small class="text-muted fac-item-sub"></small></div>' +
+        '<button class="btn aot-pill-btn aot-pill-btn-primary fac-item-del" data-uuid="' + uuid + '"></button>';
+      // Same behaviour the template gives its own rows.
+      item.setAttribute('onclick', 'FacilityIO.select(this.dataset.uuid)');
+      const del = item.querySelector('.fac-item-del');
+      del.textContent = _tr('Delete');
+      del.title = _tr('Delete facility');
+      del.setAttribute('onclick',
+        'event.stopPropagation(); facilityDelete(this.dataset.uuid, this.dataset.name)');
+      list.appendChild(item);
+    }
+    item.querySelector('.fac-item-name').textContent = data.name || '';
+    item.querySelector('.fac-item-sub').textContent = sub;
+    const del = item.querySelector('.fac-item-del');
+    if (del) del.dataset.name = data.name || '';
+    // The highlight is applied by uuid, so it has to run once the row exists.
+    _syncFacilityRef(uuid);
+  }
+
+  // Open a saved facility without leaving the page. fillForm() is the same
+  // routine the initial ?facility_uuid= load uses, so switching in place goes
+  // through exactly one code path.
+  async function selectFacility(uuid) {
+    if (!uuid || uuid === State.facilityUuid) return;
+    await loadFacility(uuid);
+    loadIntegration(uuid);
+    _syncFacilityRef(uuid);
+  }
+
+  // Start a blank facility in place. Every section is passed an explicit empty
+  // value — envelope and actuators are only filled when present, so omitting
+  // them would silently carry the previous facility's settings into the new one.
+  function newFacility() {
+    fillForm({
+      unique_id: null,
+      name: '',
+      preset: 'standard_arch',
+      structure: 'single',
+      bay_count: 1,
+      bays: [],
+      outer_feature: null,
+      geometry_3d: {},
+      envelope: {},
+      actuators: {},
+      fittings: [],
+      weather_bindings: [],
+      groups: {}
+    });
+    State.facilityUuid = null;
+    _syncFacilityRef(null);
+    const panel = document.getElementById('integ-panel');
+    if (panel) panel.style.display = 'none';
+    if (window.FacilityStep) FacilityStep.set('basic');
   }
 
   async function loadFacility(uuid) {
@@ -4012,10 +4150,10 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     const v = sel ? sel.value : 'single';
     // Bays count is meaningful for both single (detached row) and connected
     const bayBox = document.getElementById('bay-count-container');
-    if (bayBox) bayBox.style.display = '';
+    if (bayBox) bayBox.classList.remove('d-none');
     // Spacing only applies to detached single-bay rows (connected bays share walls)
     const spacingBox = document.getElementById('spacing-container');
-    if (spacingBox) spacingBox.style.display = (v === 'single') ? '' : 'none';
+    if (spacingBox) spacingBox.classList.toggle('d-none', v !== 'single');
   }
 
   // =========================================================
@@ -4078,7 +4216,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   function _renderIntegration(d) {
     const cm = d.capacity_meta || {};
     var _src = String(cm.vent_open_source || '');
-    const srcCls = _src.indexOf('fitting') >= 0 ? 'integ-badge-fittings' : (_src.indexOf('envelope') >= 0 ? 'integ-badge-envelope' : 'integ-badge-none');
+    const srcCls = _src.indexOf('fitting') >= 0 ? ' aot-tag-ok' : (_src.indexOf('envelope') >= 0 ? ' aot-tag-warn' : '');
     const srcLbl = _src ? _src : _T('none','None');
 
     // ── capacity meta strip ──
@@ -4087,14 +4225,14 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     html += '<span>'+_T('envelope','Envelope')+' <b>' + _integFmt(cm.envelope_m2, 1) + ' m²</b></span>';
     html += '<span>'+_T('u_eff','U-effective')+' <b>' + _integFmt(cm.u_effective, 3) + '</b></span>';
     html += '<span>'+_T('vent_area','Vent area')+' <b>' + _integFmt(cm.vent_open_m2, 2) + ' m²</b>'
-          + ' <span class="integ-badge ' + srcCls + '">' + _integEsc(srcLbl) + '</span></span>';
+          + ' <span class="aot-tag' + srcCls + '">' + _integEsc(srcLbl) + '</span></span>';
     html += '</div>';
 
     // ── actuators_resolved ──
     const acts = d.actuators_resolved || [];
     if (acts.length) {
       html += '<div class="integ-section-label">'+_T('sec_actuators','Actuator links')+' (' + acts.length + ')</div>';
-      html += '<table class="integ-table"><thead><tr>'
+      html += '<table class="aot-module-table integ-table"><thead><tr>'
             + '<th>Output</th><th>Kind</th><th>Slot</th><th>Vent m²</th><th>Fitting</th>'
             + '</tr></thead><tbody>';
       acts.forEach(a => {
@@ -4116,10 +4254,10 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     const vos = d.vent_openings || [];
     if (vos.length) {
       html += '<div class="integ-section-label">'+_T('sec_openings','Openings')+' (' + vos.length + ')</div>';
-      html += '<div class="integ-pills">';
+      html += '<div class="aot-tag-list">';
       vos.forEach(v => {
         const face = _INTEG_FACE_LABELS[v.face] || (v.face || '?');
-        html += '<span class="integ-pill">' + _integEsc(face) + ' ' + (v.area_m2 || 0).toFixed(2) + ' m²</span>';
+        html += '<span class="aot-tag">' + _integEsc(face) + ' ' + (v.area_m2 || 0).toFixed(2) + ' m²</span>';
       });
       html += '</div>';
     }
@@ -4128,7 +4266,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     const sensors = d.sensors_resolved || [];
     if (sensors.length) {
       html += '<div class="integ-section-label">'+_T('sec_sensors','Sensor links')+' (' + sensors.length + ')</div>';
-      html += '<table class="integ-table"><thead><tr><th>'+_T('th_sensor','Sensor')+'</th><th>Input</th></tr></thead><tbody>';
+      html += '<table class="aot-module-table integ-table"><thead><tr><th>'+_T('th_sensor','Sensor')+'</th><th>Input</th></tr></thead><tbody>';
       sensors.forEach(s => {
         const inputLbl = s.input_name || (s.input_uuid ? s.input_uuid.slice(0, 8) + '…' : '—');
         html += '<tr><td>' + _integEsc(s.name || s.fitting_id) + '</td><td>' + _integEsc(inputLbl) + '</td></tr>';
@@ -4144,12 +4282,12 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       irrLayers.forEach(function (L) {
         const t = L.totals || {};
         const hStr = L.height_m != null ? (' · '+_T('height','height')+' ' + Number(L.height_m).toFixed(1) + 'm') : '';
-        html += '<div style="font-size:var(--aot-font-size-sm);font-weight:600;margin:4px 0 2px;color:var(--aot-color-info);">'
+        html += '<div style="font-size:var(--aot-font-size-sm);font-weight:600;margin:4px 0 2px;color:var(--aot-color-brand-primary);">'
               + _integEsc(L.name || _T('irr_layer','Irrigation layer')) + hStr
               + ' <span style="color:var(--aot-color-text-secondary);font-weight:400;">('+_T('pipe_word','pipes')+' ' + (L.pipe_count||0)
               + ' · '+_T('nozzle_word','nozzles')+' ' + (L.device_count||0) + ')</span></div>';
         if ((L.pipes || []).length) {
-          html += '<table class="integ-table"><thead><tr>'
+          html += '<table class="aot-module-table integ-table"><thead><tr>'
                 + '<th>No.</th><th>'+_T('th_pipe','Pipe')+'</th><th>'+_T('th_length_m','Length (m)')+'</th><th>'+_T('th_nozzle','Nozzles')+'</th><th>'+_T('th_flow_lph','Flow (L/h)')+'</th><th>'+_T('th_flow_lpm','Flow (L/min)')+'</th>'
                 + '</tr></thead><tbody>';
           L.pipes.forEach(function (p) {
@@ -4162,7 +4300,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
                   + '<td>' + _integFmt(p.flow_lpm, 2) + '</td>'
                   + '</tr>';
           });
-          html += '<tr style="background:var(--aot-tint-info-bg);font-weight:600;">'
+          html += '<tr style="background:var(--aot-color-brand-accent);font-weight:600;">'
                 + '<td colspan="2">'+_T('subtotal','Subtotal')+'</td>'
                 + '<td>' + _integFmt(t.length_m, 2) + '</td>'
                 + '<td>' + (t.emitters || 0) + '</td>'
@@ -4173,7 +4311,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         }
       });
       const gt = irr.totals || {};
-      html += '<div class="integ-meta-strip" style="margin-top:6px;">'
+      html += '<div class="integ-meta-strip" style="margin-top:8px;">'
             + '<span>'+_T('tot_length','Total pipe length')+' <b>' + _integFmt(gt.length_m, 1) + ' m</b></span>'
             + '<span>'+_T('tot_nozzle','Total nozzles')+' <b>' + (gt.emitters || 0) + '</b></span>'
             + '<span>'+_T('tot_flow','Total flow')+' <b>' + _integFmt(gt.flow_lph, 0) + ' L/h</b></span>'
@@ -4209,9 +4347,9 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     const t = document.createElement('div');
     t.textContent = msg;
     t.style.cssText =
-      'position:fixed;bottom:30px;right:30px;background:#333;color:#fff;' +
+      'position:fixed;bottom:30px;right:30px;background:var(--aot-color-brand-primary);color:var(--aot-color-text-tertiary);' +
       'padding:.6rem 1.2rem;border-radius:6px;z-index:var(--aot-z-toast);' +
-      'font-size:var(--aot-font-size-base);box-shadow:0 2px 6px rgba(0,0,0,0.3);';
+      'font-size:var(--aot-font-size-base);box-shadow:var(--aot-shadow-md);';
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 2500);
   }

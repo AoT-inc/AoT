@@ -14368,7 +14368,7 @@ msgstr "高品質"
 msgid ""
 "No fitting selected — add one with the tools on the left, or select from the"
 " list/3D on the right."
-msgstr "fittingが選択されていません — 左側のツールで追加するか、右側のリスト/3Dから選択してください。"
+msgstr "構成要素が選択されていません — 左側のツールで追加するか、右側のリスト/3Dから選択してください。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1439
 #: aot_flask/templates/pages/geo/geo_facility.html:1672
@@ -14383,7 +14383,7 @@ msgstr "サイズ"
 msgid ""
 "Edits the size/type of cloned sibling fittings together. Uncheck to edit "
 "this fitting independently."
-msgstr "複製された兄弟fittingのサイズ/種類を一括変更します。解除するとこのfittingのみ個別に編集できます。"
+msgstr "複製された兄弟構成要素のサイズ/種類を一括変更します。解除するとこの構成要素のみ個別に編集できます。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1452
 msgid "Group inheritance"
@@ -14413,7 +14413,7 @@ msgstr "アクチュエーター"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1474
 msgid "Actuator that operates this fitting (one can drive multiple fittings)"
-msgstr "このfittingを作動させるアクチュエーター(1台で複数のfittingを駆動可能)"
+msgstr "この構成要素を作動させるアクチュエーター(1台で複数の構成要素を駆動可能)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1480
 msgid "Select sensor device (Input / Function)"
@@ -14898,7 +14898,7 @@ msgstr "1分あたり"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2005
 msgid "No linked actuators/sensors. Place fittings and save to reflect them."
-msgstr "連動しているアクチュエータ/センサーがありません。フィッティングを配置して保存すると反映されます。"
+msgstr "連動しているアクチュエータ/センサーがありません。構成要素を配置して保存すると反映されます。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2006
 msgid "IEC integration data is reflected after saving."
@@ -15081,7 +15081,7 @@ msgstr "カテゴリーを非表示"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2055
 msgid "Select equipment from the current map to add as a fitting."
-msgstr "現在のマップから設備を選択してfittingとして追加します。"
+msgstr "現在のマップから設備を選択して構成要素として追加します。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2056
 msgid "Please select a map first."
@@ -15089,7 +15089,7 @@ msgstr "先にマップを選択してください。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2057
 msgid "No fittings added yet."
-msgstr "まだfittingが追加されていません。"
+msgstr "まだ構成要素が追加されていません。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2058
 msgid "No actuators. Add one below."
@@ -25651,6 +25651,46 @@ msgid ""
 msgstr ""
 "このトリガーをどの太陽イベントで発火させるかを選びます"
 
+#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
+msgid ""
+"Next Execution"
+msgstr ""
+"次の実行"
+
+#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
+msgid ""
+"Which sun event should this Trigger fire on?"
+msgstr ""
+"このトリガーをどの太陽イベントで発火させるかを選びます"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Hide model"
+msgstr "モデルを隠す"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Show model"
+msgstr "モデルを表示"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Unsaved changes"
+msgstr "未保存の変更"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Enter a name and select a map"
+msgstr "名称を入力し、地図を選択してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Not placed on the map yet"
+msgstr "まだ地図に配置されていません"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing placed yet"
+msgstr "まだ構成要素が配置されていません"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Not saved yet"
+msgstr "まだ保存されていません"
+
 #: aot_flask/templates/pages/method-build.html
 msgid ""
 "Fixed time"
@@ -25692,3 +25732,198 @@ msgid ""
 "Phase Offset (min)"
 msgstr ""
 "位相オフセット (分)"
+
+#: aot/aot_flask/static/js/geo/facility/facility-3d-bridge.js
+msgid "Delete facility \"%(name)s\"?"
+msgstr "施設「%(name)s」を削除しますか?"
+
+#: aot/aot_flask/static/js/geo/facility/facility-3d-bridge.js
+msgid "Deleting removes all facility data and linked geometry information, and cannot be undone."
+msgstr "削除すると施設データと関連する図形情報がすべて失われ、元に戻せません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "No sensors registered — use [+ Add Sensor] below"
+msgstr "登録されたセンサーなし — 下の[+ センサー追加]をご利用ください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "No weather services connected — use [+ Add Connection] below"
+msgstr "接続された気象サービスなし — 下の[+ 連携追加]をご利用ください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Covering & Ventilation"
+msgstr "被覆・換気"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Selected Component"
+msgstr "選択中の構成要素"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Components"
+msgstr "構成要素"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Everything placed in this facility. The row adapts to the type: sensors take a measurement channel, powered components take an actuator. The Integrated Environment Control function reads environmental data from the sensors here."
+msgstr "この施設に配置したすべての構成要素です。行は種類に応じて変わります — センサーは測定チャンネル、動力設備はアクチュエーターを指定します。統合環境制御機能はここのセンサーから環境データを読み取ります。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing placed yet — pick a type below, or use the 3D tools"
+msgstr "まだ構成要素が配置されていません — 下で種類を選ぶか、3Dツールをご利用ください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Multiple channels — edit in the inspector"
+msgstr "複数チャンネル — 選択中の構成要素で編集"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "3D Placement"
+msgstr "3D 配置"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Position, size and rotation of the component selected in the list below or in the 3D view. Name, type and wiring are edited in the list."
+msgstr "下の一覧または3Dビューで選択した構成要素の位置・サイズ・回転です。名称と種類、接続は一覧で編集します。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Unnamed"
+msgstr "名称未設定"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Everything placed in this facility, grouped by type. Select a row to open its 3D placement right below it."
+msgstr "この施設に配置したすべての構成要素を種類別にまとめています。行を選択すると、すぐ下に3D配置が開きます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Add Component"
+msgstr "構成要素の追加"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing placed yet — add one above, or use the 3D tools"
+msgstr "まだ構成要素が配置されていません — 上で追加するか、3Dツールをご利用ください"
+
+msgid "Drag the component in the 3D view to move it, or type exact coordinates below."
+msgstr "3D画面で構成要素をドラッグして移動できます。正確な座標は下に直接入力してください。"
+
+msgid "Could not load the API key."
+msgstr "APIキーを読み込めませんでした。"
+
+msgid "— Select a Site —"
+msgstr "— 敷地を選択 —"
+
+msgid "No sites in this map"
+msgstr "この地図に敷地がありません"
+
+msgid "Failed to load sites"
+msgstr "敷地の読み込みに失敗しました"
+
+msgid "Enter a name"
+msgstr "名前を入力してください"
+
+msgid "Select a map and place the facility on it"
+msgstr "地図を選択して施設を配置してください"
+
+msgid "From envelope"
+msgstr "外皮生成"
+
+msgid "manual size"
+msgstr "手動サイズ"
+
+msgid "Size and position are set by hand — the envelope no longer updates them."
+msgstr "サイズ・位置を手動で指定しました。外皮設定はこの項目を更新しません。"
+
+msgid "Back to automatic"
+msgstr "自動に戻す"
+
+msgid "Size & shape"
+msgstr "サイズ・形状"
+
+msgid "Size, shape and name follow the group. Uncheck to size this one on its own."
+msgstr "サイズ・形状・名前がグループに従います。解除するとこの項目のみ個別に指定します。"
+
+msgid "One actuator drives the whole group. Uncheck to wire this one separately."
+msgstr "1つの制御装置がグループ全体を駆動します。解除するとこの項目のみ個別に接続します。"
+
+msgid "%(n)s created together"
+msgstr "%(n)s個を同時生成"
+
+msgid "%(n)s linked"
+msgstr "%(n)s個連動"
+
+msgid "detached"
+msgstr "個別"
+
+#: aot_flask/templates/settings/users.html
+msgid "Edit User"
+msgstr "ユーザー編集"
+
+#: aot_flask/templates/settings/users.html
+msgid "Edit Role"
+msgstr "ロール編集"
+
+msgid "Show in 3D"
+msgstr "3Dに表示"
+
+msgid "Show/hide the display filter"
+msgstr "表示フィルターの開閉"
+
+msgid "%(n)s hidden"
+msgstr "%(n)s件非表示"
+
+msgid "Roof vent"
+msgstr "天窓"
+
+msgid "Side window"
+msgstr "側窓"
+
+msgid "reinforcement face"
+msgstr "補強面"
+
+msgid "Left side"
+msgstr "左"
+
+msgid "Right side"
+msgstr "右"
+
+msgid "Lower stage"
+msgstr "下段"
+
+msgid "Upper stage"
+msgstr "上段"
+
+msgid "Stage"
+msgstr "段"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Display Name"
+msgstr "名前"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Account Enabled"
+msgstr "アカウント有効"
+
+#: aot_flask/templates/settings/users.html
+msgid "Login account"
+msgstr "ログインアカウント"
+
+#: aot_flask/utils/utils_settings.py
+msgid "Cannot disable the currently logged-in account."
+msgstr "現在ログイン中のアカウントは無効にできません。"
+
+#: aot_flask/utils/utils_settings.py
+msgid "Cannot disable the last Administrator."
+msgstr "最後の管理者アカウントは無効にできません。"
+
+#: aot_flask/routes_authentication.py
+msgid "This account has been disabled. Contact an administrator."
+msgstr "無効化されたアカウントです。管理者にお問い合わせください。"
+
+#: aot_flask/templates/settings/users.html
+msgid "Used to log in. Letters and numbers only, and cannot be changed later."
+msgstr "ログインに使用します。英数字のみで、作成後は変更できません。"
+
+#: aot_flask/templates/settings/users.html
+msgid "Shown in lists. Leave blank to show the login account instead."
+msgstr "一覧に表示されます。空欄の場合はログインアカウントが表示されます。"
+
+msgid "Geometry"
+msgstr "形状"
+
+#: aot_flask/templates/settings/api_key.html
+msgid "Edit API Key"
+msgstr "APIキー編集"

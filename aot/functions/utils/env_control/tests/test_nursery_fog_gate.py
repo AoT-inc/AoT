@@ -288,6 +288,43 @@ class TestNurseryFogGate:
         res = gate.evaluate(ctx, [make_fogger()])
         assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
 
+    def test_uses_clear_sky_fallback_when_no_light_measured(self):
+        """광 측정이 하나도 없으면 태양고도 어림값으로 잠근다.
+
+        일사 센서가 없는 시설이 흔한데, 폴백이 없으면 그런 시설은 일소 보호가
+        통째로 꺼진 채 정오를 맞는다.
+        """
+        gate = SafetyPreGate(_nursery_cfg())
+        ctx = make_ctx()
+        ctx['external'].pop('solar')
+        ctx['internal']['_nursery_light_fallback'] = 700.0
+        res = gate.evaluate(ctx, [make_fogger()])
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
+
+    def test_measured_light_wins_over_fallback(self):
+        """실측이 있으면 어림값을 쓰지 않는다 — 차광 상태를 무시하면 안 된다."""
+        gate = SafetyPreGate(_nursery_cfg())
+        ctx = gate_ctx(light_est=50.0)
+        ctx['internal']['_nursery_light_fallback'] = 900.0
+        res = gate.evaluate(ctx, [make_fogger()])
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+    def test_gate_env_carries_the_fallback(self):
+        """_build_gate_env 가 폴백 키를 게이트로 전달하는지.
+
+        게이트용 internal 은 새 dict 로 재구성되므로, 키를 빠뜨리면 폴백이
+        조용히 죽는다(감쇠만 되고 하드 잠금은 안 걸림).
+        """
+        from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin \
+            import HelpersMixin
+
+        class C(HelpersMixin):
+            pass
+        env = C()._build_gate_env(
+            {'T': 25.0, 'RH': 60.0, '_nursery_light_fallback': 640.0},
+            {'T_ext': 25.0, 'RH_ext': 60.0})
+        assert env['internal']['_nursery_light_fallback'] == 640.0
+
     def test_evening_block_locks_regardless_of_light(self):
         """일몰 차단 구간에서는 광량이 낮아도 분무를 막는다.
 

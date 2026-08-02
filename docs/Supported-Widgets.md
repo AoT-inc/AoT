@@ -1,5 +1,11 @@
 ## Built-In Widgets
 
+### AI Periodic Advice
+
+- Libraries: ai
+
+Displays pre-generated periodic AI analysis. Content depth adapts to widget size automatically.
+
 ### AI Reasoning Insight
 
 - Libraries: ai
@@ -11,10 +17,36 @@ AI-driven analysis and intelligent action recommendations.
 
 Activate/Deactivate a Controller (Inputs and Functions). For manipulating a PID Controller, use the PID Controller Widget.
 
+### AoT Circular Gauge
+
+- Libraries: Highcharts
+- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
+
+Displays data in a circular gauge. Ensure the maximum value option matches the last section (High) for correct display. Selecting presets like Temperature, Humidity, or VPD automatically sets min/max values and color sections.
+
 ### AoT Controller Switch
 
 
 Switch to turn controllers on and off.
+
+### AoT Facility
+
+- Libraries: Three.js 3D + IEC control
+
+Facility 3D view, environment summary, setpoint editor, actuator control grid, and AI advice.
+
+### AoT Graph
+
+- Libraries: Highstock
+- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
+
+Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration.
+
+### AoT Map
+
+- Libraries: MapLibre GL JS (Leaflet-free)
+
+Displays the location of the selected device on a map. Highlights the operating state with the selected color. Supports 3D terrain, pitch, and bearing.
 
 ### AoT PID
 
@@ -26,7 +58,7 @@ Displays and allows control of a PID Controller.
 
 - Libraries: timer
 
-Turns an output on for a set time, then off automatically — supports a repeating run/rest cycle for a set number of cycles, a single one-shot run (`0` = run until stopped), and a scheduled start time. Progress is saved on the server, so it keeps running after a page refresh or on another browser. See [AoT Timer](Data-Viewing.md#widget-timer) for details.
+Use the toggle switch to turn the device on and off. Turn on "Timer" to operate on a timer: in Simple mode the device runs once for the set time (0 = run until stopped), and in Cycle mode it repeats a Run / Rest sequence for the set number of cycles. "Scheduled Start" begins operation at a set wall-clock time in the device timezone. When "Timer" is off, the toggle simply switches the device on or off regardless of the time settings.
 
 ### AoT Weather Forecast
 
@@ -39,29 +71,10 @@ Displays the KMA (Korea Meteorological Administration) short-term forecast for t
 
 Displays wind direction on a circular ring (0-360°) and wind speed in the center. Includes auxiliary lines for the 8 primary compass points.
 
-### AoT Graph
-
-- Libraries: Highstock
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js, data-9.1.2.js, exporting-9.1.2.js, export-data-9.1.2.js, offline-exporting-9.1.2.js
-
-Displays a synchronous graph. Data selected will be displayed on the X-axis for the configured duration. See [AoT Graph](Data-Viewing.md#widget-graph) for details.
-
-### AoT Circular Gauge
-
-- Libraries: Highcharts
-- Dependencies: highstock-9.1.2.js, highcharts-more-9.1.2.js
-
-Displays data in a circular gauge. Ensure the maximum value option matches the last section (High) for correct display. Selecting presets like Temperature, Humidity, or VPD automatically sets min/max values and color sections.
-
-### AoT Map
-
-- Libraries: MapLibre GL
-
-Displays your devices on an interactive map and highlights their operating state with color. See [AoT Map](Data-Viewing.md#widget-map) for details.
-
 ### Calendar
 
-Shows scheduled events (from the Scheduler) on a calendar, split into AI/User/Device categories, plus any Google calendars you've connected via two-way sync. Click an event to view or edit it, or drag to reschedule.
+
+Shows scheduled events (from the Scheduler) on a calendar, split by category (AI / User / Device), and any Google calendars you connect. Click an event for details or to edit; open the full Scheduler for more.
 
 ### Camera
 
@@ -108,6 +121,18 @@ Displays a measurement value and timestamp.
 
 
 Displays two measurement values and timestamps.
+
+### Modern Camera
+
+- Libraries: aot.camera
+- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [python-onvif-zeep>=0.2.12](https://pypi.org/project/python-onvif-zeep>=0.2.12)
+
+Advanced camera widget with auto-dependency installation and profile support.
+
+### Notice Board
+
+
+Displays the latest notice board post titles. Clicking a title opens the full post (content, poll, replies, acknowledge) in a popup; all actions taken there are reflected on the actual post. Users with write permission can also create, edit, and delete posts directly from the widget.
 
 ### Output (PWM Slider)
 

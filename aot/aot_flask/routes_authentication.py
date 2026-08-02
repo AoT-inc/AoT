@@ -277,6 +277,12 @@ def login_password():
                             "approval."), "info")
                         return redirect('/login')
 
+                    if not user.is_enabled:
+                        flash(gettext(
+                            "This account has been disabled. Contact an "
+                            "administrator."), "info")
+                        return redirect('/login')
+
                     if user.totp_enabled:
                         # Password verified but the second factor is still
                         # outstanding — stash the pending user and hand off.
@@ -453,6 +459,11 @@ def login_keypad_code(code):
         flash(gettext(
             "Your account is awaiting administrator approval."), "info")
         time.sleep(2)
+    elif not user.is_enabled:
+        flash(gettext(
+            "This account has been disabled. Contact an administrator."),
+            "info")
+        time.sleep(2)
     else:
         clear_failed_logins(user)
         role_name = Role.query.filter(Role.id == user.role_id).first().name
@@ -527,6 +538,12 @@ def complete_google_login(tokens, email):
         if not user.is_approved:
             flash(gettext(
                 "Your account is awaiting administrator approval."), "info")
+            return redirect(url_for('routes_authentication.login_check'))
+
+        if not user.is_enabled:
+            flash(gettext(
+                "This account has been disabled. Contact an administrator."),
+                "info")
             return redirect(url_for('routes_authentication.login_check'))
 
         role = Role.query.filter(Role.id == user.role_id).first()

@@ -338,7 +338,7 @@
   position: absolute;
   width: 13px; height: 13px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--aot-color-text-tertiary);
   left: 3px; top: 3px;
   transition: transform .2s;
   box-shadow: var(--aot-shadow-sm);

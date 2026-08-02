@@ -9,7 +9,13 @@
       "widgets/AoT_facility/aot-facility-3d.js",
       "geo/aot-facility-map-3d.js",
       "geo/aot-facility-layer-panel.js",
-      "geo/aot-facility-design.js"
+      "geo/aot-facility-design.js",
+      "geo/facility/facility-3d-bridge.js",
+      "geo/facility/commissioning.js",
+      "geo/facility/sensor-ui.js",
+      "geo/facility/weather-ui.js",
+      "geo/facility/sensor-ranges-ui.js",
+      "geo/facility/group-ui.js"
     ]
   },
   "aot-facility-widget": {

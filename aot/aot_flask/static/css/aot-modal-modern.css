@@ -444,6 +444,18 @@ textarea.aot-modern-input {
     z-index: var(--aot-z-modal-nested);
 }
 
+/* bootstrap-select's inner list is itself a .dropdown-menu (ul.dropdown-menu.inner),
+   so the auto-width rule above lands on it too and sizes it to its content. The
+   outer popup meanwhile is held at min-width:100% of the control, so a list of
+   short entries ("센서", "팬") drew a 63px column of items inside a 190px box —
+   the hover highlight stopped a third of the way across. The outer box owns the
+   width; the list fills it. */
+.modal .aot-modal-option-control .bootstrap-select .dropdown-menu.inner,
+.add_dashboard_widget .aot-modal-option-control .bootstrap-select .dropdown-menu.inner {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
 /* Prevent text wrapping to ensure width expands */
 .modal .aot-modal-option-control .bootstrap-select .dropdown-menu li a span.text,
 .add_dashboard_widget .aot-modal-option-control .bootstrap-select .dropdown-menu li a span.text {
@@ -1833,3 +1845,94 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
     line-height: 1.2;
   }
 }
+
+/* ============================================================
+   SECTION 14: STATUS / TAG / PROGRESS / ASSET GRID
+   시설 설계 페이지가 자체 정의하고 있던 것들 중, 페이지에 고유하지 않은
+   패턴을 공용으로 올린 것(2026-08). 상태 배지·태그·진행바·자산 카드 그리드는
+   어느 화면에서나 같은 모양이어야 한다.
+   색은 전부 settings/custom_ui 로 지정 가능한 변수만 쓴다.
+   ============================================================ */
+
+/* ── Status badge — 결과/상태 한 단어 표시 ─────────────────── */
+.aot-status-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--aot-color-brand-accent);
+    color: var(--aot-color-text-secondary);
+}
+.aot-status-badge.aot-status-ok      { background: var(--aot-tint-success-bg); color: var(--aot-tint-success-fg); }
+.aot-status-badge.aot-status-warn    { background: var(--aot-tint-warning-bg); color: var(--aot-tint-warning-fg); }
+.aot-status-badge.aot-status-fail    { background: var(--aot-tint-danger-bg);  color: var(--aot-tint-danger-fg); }
+.aot-status-badge.aot-status-running { background: var(--aot-tint-info-bg);    color: var(--aot-tint-info-fg); }
+
+/* ── Tag — 읽기 전용 꼬리표(개수, 분류, 값 나열) ──────────── */
+.aot-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    background: var(--aot-color-brand-accent);
+    color: var(--aot-color-text-primary);
+    white-space: nowrap;
+}
+.aot-tag.aot-tag-ok   { background: var(--aot-tint-success-bg); color: var(--aot-tint-success-fg); }
+.aot-tag.aot-tag-warn { background: var(--aot-tint-warning-bg); color: var(--aot-tint-warning-fg); }
+.aot-tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ── Progress — 진행률 막대 ────────────────────────────────── */
+.aot-progress {
+    height: 4px;
+    background: var(--aot-border-neutral);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.aot-progress > .aot-progress-fill {
+    height: 100%;
+    background: var(--aot-btn-bg-primary);
+    transition: width 0.4s;
+}
+
+/* ── Asset card grid — 썸네일 카드 목록(모델 라이브러리 등) ── */
+.aot-lib-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.aot-lib-card {
+    border: 1px solid var(--aot-border-light);
+    border-radius: 8px;
+    padding: 0.6rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+.aot-lib-card:hover {
+    box-shadow: var(--aot-shadow-md);
+    border-color: var(--aot-color-brand-primary);
+}
+.aot-lib-thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--aot-surface-body);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
+}
+.aot-lib-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.aot-lib-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--aot-color-text-primary);
+    word-break: break-all;
+}
+.aot-lib-kind { font-size: 0.72rem; color: var(--aot-color-text-secondary); }

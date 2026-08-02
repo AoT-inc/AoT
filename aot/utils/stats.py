@@ -261,7 +261,9 @@ def send_anonymous_stats(start_time):
         # Set AOT_NAS_SECRET to enable uploads; skip silently when unset.
         return 0
     try:
-        client = InfluxDBClient(STATS_HOST, STATS_PORT, STATS_USER, STATS_PASSWORD, STATS_DATABASE)
+        client = InfluxDBClient(
+            STATS_HOST, STATS_PORT, STATS_USER, STATS_PASSWORD, STATS_DATABASE,
+            ssl=True, verify_ssl=True)
         # Prepare stats before sending
         uptime = (time.time() - start_time) / 86400.0  # Days
         add_update_csv(STATS_CSV, 'uptime', uptime)

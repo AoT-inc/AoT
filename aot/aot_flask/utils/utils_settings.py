@@ -201,6 +201,7 @@ def user_add(form):
                 "Invalid user name. Must be between 2 and 64 characters "
                 "and only contain letters and numbers."))
 
+        new_user.full_name = (form.full_name.data or '').strip() or None
         new_user.email = form.email.data
         if User.query.filter_by(email=new_user.email).count():
             error.append(gettext(
@@ -410,6 +411,7 @@ def user_mod(form):
         previous_email = mod_user.email
         password_changed = bool(form.password_new.data)
         mod_user.email = form.email.data
+        mod_user.full_name = (form.full_name.data or '').strip() or None
 
         if form.code.data == "0":
             mod_user.code = None
@@ -445,6 +447,21 @@ def user_mod(form):
             messages["error"].append(
                 "Cannot change currently-logged in user's role from Admin")
 
+        # 계정 사용 여부. 자기 자신을 끄면 다음 요청에서 로그아웃되고, 마지막
+        # 관리자를 끄면 아무도 설정에 들어올 수 없게 되므로 둘 다 막는다.
+        # (권한 강등에 이미 같은 성격의 가드가 있다 — 아래 last Admin 검사)
+        previous_enabled = mod_user.is_enabled
+        if not form.is_enabled.data:
+            if flask_login.current_user.unique_id == form.user_id.data:
+                messages["error"].append(gettext(
+                    "Cannot disable the currently logged-in account."))
+            elif mod_user.role_id == 1:
+                active_admins = User.query.filter(
+                    User.role_id == 1, User.is_enabled.is_(True)).count()
+                if active_admins <= 1:
+                    messages["error"].append(gettext(
+                        "Cannot disable the last Administrator."))
+
         if not messages["error"]:
             # [Security] Prevent demoting the last Admin
             if mod_user.role_id == 1 and form.role_id.data != 1:
@@ -454,6 +471,7 @@ def user_mod(form):
                      return messages, logout
 
             mod_user.role_id = form.role_id.data
+            mod_user.is_enabled = bool(form.is_enabled.data)
             mod_user.theme = form.theme.data
             db.session.commit()
             # Role changes are the security-relevant part here — record the
@@ -462,9 +480,11 @@ def user_mod(form):
             audit_log(audit.USER_MODIFY, target_type='User',
                       target_id=mod_user.unique_id, target_name=mod_user.name,
                       before={'role_id': previous_role_id,
-                              'email': previous_email},
+                              'email': previous_email,
+                              'is_enabled': previous_enabled},
                       after={'role_id': mod_user.role_id,
-                             'email': mod_user.email},
+                             'email': mod_user.email,
+                             'is_enabled': mod_user.is_enabled},
                       detail='password changed' if password_changed else None)
             messages["success"].append('{action} {controller} {user}'.format(
                 action=TRANSLATIONS['modify']['title'],
@@ -2677,6 +2697,11 @@ def settings_custom_ui_mod(form):
                 mod_misc.brand_favicon = form.brand_favicon.data.read()
 
             db.session.commit()
+            # inject_variables()의 Misc 캐시(TTL 10초)를 즉시 만료시킨다. 이걸
+            # 빼면 저장 직후 렌더되는 페이지가 최대 10초 동안 옛 테마를 들고
+            # 있고, /custom.css 의 캐시 버전 토큰도 옛 값으로 나가 링크가
+            # 그대로라 브라우저가 새 CSS 를 받지 않는다.
+            invalidate_misc_cache()
             messages["success"].append("Custom UI and theme colors saved successfully.")
     except Exception as except_msg:
         messages["error"].append(str(except_msg))

@@ -21,6 +21,8 @@ class Role(CRUDMixin, db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
     name = db.Column(db.String(36), nullable=False, unique=True)
+    # Settings > Users 의 역할 탭 카드 순서 (users.position_y 와 같은 방식).
+    position_y = db.Column(db.Integer, default=0)
     edit_settings = db.Column(db.Boolean, nullable=False, default=False)
     edit_controllers = db.Column(db.Boolean, nullable=False, default=False)
     edit_users = db.Column(db.Boolean, nullable=False, default=False)

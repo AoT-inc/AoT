@@ -1,0 +1,55 @@
+{# Drawer body+footer for one role — served on demand by
+   /settings/users/role_detail/<uid>. Same shell as the Input/Output drawers. #}
+<form method="post" id="role_form_{{each_role.unique_id}}" data-role-detail-form action="/settings/users">
+  {{form_user_roles.csrf_token}}
+  {{form_user_roles.role_id(value=each_role.unique_id)}}
+
+  <div class="modal-body">
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{form_user_roles.name.label(class_='mb-0')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_user_roles.name(class_='form-control aot-modern-input', value=each_role.name)}}
+        </div>
+      </div>
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Permissions')}}</div>
+    <div class="aot-modal-container">
+      {% for field, attr in [
+        (form_user_roles.view_logs, each_role.view_logs),
+        (form_user_roles.view_stats, each_role.view_stats),
+        (form_user_roles.view_camera, each_role.view_camera),
+        (form_user_roles.view_settings, each_role.view_settings),
+        (form_user_roles.edit_users, each_role.edit_users),
+        (form_user_roles.edit_controllers, each_role.edit_controllers),
+        (form_user_roles.edit_settings, each_role.edit_settings),
+        (form_user_roles.reset_password, each_role.reset_password)
+      ] %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{field.label.text}}</label>
+        <div class="aot-modal-option-control">
+          <label class="btn-toggle mb-0">
+            {%- if attr == true -%}
+              {{field(class_='btn-toggle-input', checked=True)}}
+            {%- else -%}
+              {{field(class_='btn-toggle-input')}}
+            {%- endif %}
+            <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+          </label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_user_roles.user_role_delete(class_='btn aot-pill-btn aot-pill-btn-primary',
+      **{'onclick':'return confirm("' + _('Are you sure you want to delete this role?') + '")'})}}
+    {{form_user_roles.user_role_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+  </div>
+</form>

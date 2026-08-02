@@ -151,6 +151,19 @@ def custom_css():
             # 를 인라인 !important 로 덮어쓰는 원인이 이 토큰이었다.
             'tint_warning_bg': ['--aot-tint-warning-bg'],
             'tint_warning_fg': ['--aot-tint-warning-fg'],
+            # 의미 색상. 종전에는 aot-theme-variables.css 고정값이라 운영자가
+            # 바꿀 수 없었고, 페이지들이 대신 장치 상태색(bg_on/bg_active 등)을
+            # 빌려 쓰는 왜곡이 생겼다. 상태색과 의미색은 다른 축이다.
+            'color_success': ['--aot-color-success'],
+            'color_warning': ['--aot-color-warning'],
+            'color_danger':  ['--aot-color-danger'],
+            'color_info':    ['--aot-color-info'],
+            'tint_success_bg': ['--aot-tint-success-bg'],
+            'tint_success_fg': ['--aot-tint-success-fg'],
+            'tint_danger_bg':  ['--aot-tint-danger-bg'],
+            'tint_danger_fg':  ['--aot-tint-danger-fg'],
+            'tint_info_bg':    ['--aot-tint-info-bg'],
+            'tint_info_fg':    ['--aot-tint-info-fg'],
             'bg_llm': ['--bg-llm', '--aot-color-llm'],
             'bg_mcp': ['--bg-mcp', '--aot-color-mcp'],
             'btn_primary_bg': ['--bd-tertiary', '--bd-btn-primary', '--aot-btn-bg-primary', '--bg-btn-active', '--aot-btn-bg-active'],
@@ -181,6 +194,13 @@ def custom_css():
             '--aot-color-brand-accent',
             '--aot-color-text-primary',
             '--aot-color-text-secondary',
+            # 2026-08 의미색 추가분. custom-dark.css :root 가 네 색을 어둡게
+            # 재정의한다(#7aa852/#e09509/#c94444/#0287b8). 틴트 쌍은 다크에
+            # 재정의가 없어 그대로 발행한다.
+            '--aot-color-success',
+            '--aot-color-warning',
+            '--aot-color-danger',
+            '--aot-color-info',
         }
         is_dark = False
         try:

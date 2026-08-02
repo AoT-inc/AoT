@@ -955,3 +955,72 @@ Time, group, name, and weekday schedule are edited from a **single unified modal
 - Clicking a step name opens a modal that edits the display name (`display_name`), mode (`single`/`total`), and device group together.
 - Start and end times are entered with the **time wheel** component, so you can pick hours:minutes accurately even on mobile.
 - The legacy start/end/weekday columns are automatically synchronized when the schedule is saved (backward compatibility), so representative values are preserved even in older views that do not use the schedule.
+
+## Integrated Environment Control - Nursery Mode { #nursery-mode }
+
+The Integrated Environment Control function coordinates every registered actuator against a VPD target. This section covers the Nursery Mode options only; the remaining options are described in the function's own settings page.
+
+### Why nursery seedlings need different handling
+
+Misting is the fastest way to bring VPD down, because it lowers temperature and raises humidity at the same time. The coordinator therefore reaches for it first whenever VPD climbs.
+
+The difficulty is that VPD peaks at the same time the sun does. On a mature crop that is fine — the leaves tolerate being wet and the evaporative cooling is welcome. A seedling that has just pushed through the substrate has no cuticle yet, so a droplet left on a cotyledon in full sun focuses light onto the leaf and concentrates dissolved minerals as it dries. The leaf scorches.
+
+Nursery Mode does not change the VPD target. It changes which actuators are allowed to reach it, pushing misting down the list while the sun is high so that shading and ventilation are used first.
+
+### Nursery Mode Options
+
+<table>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nursery (Seedling) Mode</td>
+<td>Enables the protections below. Whether a nozzle counts as the wetting type is decided from the nozzle layout in the facility design (flow rate, spray radius, spray direction), so no nozzle specification is entered here. Drip lines and true high-pressure fog are left alone.</td>
+</tr>
+<tr>
+<td>Misting Lockout Irradiance (W/m²)</td>
+<td>Wetting-type misting is blocked outright at or above this indoor light level. The estimated indoor level is used, so closing the shade screen relaxes the lockout.</td>
+</tr>
+<tr>
+<td>Misting Release Irradiance (W/m²)</td>
+<td>Misting is released again once the light falls below this level, and is tapered linearly between here and the lockout threshold. The gap between the two prevents the mist from switching on and off as clouds pass.</td>
+</tr>
+<tr>
+<td>Max Spray Duration (s)</td>
+<td>Longest single spray. Humidification is regulated by how often it sprays, not by how long — the same way irrigation doses a fixed amount at intervals.</td>
+</tr>
+<tr>
+<td>Enforced Drying Interval (s)</td>
+<td>No spraying at all for this long after one finishes, so the leaves get a chance to dry.</td>
+</tr>
+<tr>
+<td>Allow Misting Before Sunset</td>
+<td>Watering usually happens around sunrise and sunset, but an evening misting leaves the foliage wet through the night, and the longer the leaves stay wet the higher the risk of grey mould and downy mildew. Turn this off to stop misting before sunset. Some crops still need the evening watering, so the choice is left to the grower. This governs misting for humidity control only — a separate irrigation schedule on the same valve is unaffected.</td>
+</tr>
+<tr>
+<td>Stop Misting Before Sunset (min)</td>
+<td>How long before sunset misting stops, when the option above is off. Misting stays blocked until the next sunrise. Two hours is usually enough for the leaves to dry before dark. Sunset is derived from the facility's position on the map; if no coordinates can be resolved, misting is not blocked.</td>
+</tr>
+<tr>
+<td>Misting Water Source</td>
+<td>Untreated groundwater is usually hard and cold, so droplets leave concentrated mineral deposits as they dry and can cold-shock a sunlit leaf. Selecting it lowers the lockout threshold automatically.</td>
+</tr>
+</tbody>
+</table>
+
+### Pulsed dosing
+
+Driving a mister by percentage means it sprays for that fraction of every cycle, which never lets the leaves dry. A wetting-type mister is therefore always broken into short pulses with an enforced gap, whether or not Nursery Mode is on — continuous misting invites disease on a mature crop too. Nursery Mode simply tightens the numbers. High-pressure fog that evaporates before reaching the leaf, and drip lines, keep the ordinary continuous modulation.
+
+### Notes
+
+The misting lockout takes precedence over both the heat emergency response and the minimum humidity limit. Midsummer noon is when the heat emergency fires and when the scorch risk peaks, and filling a humidity target is not worth losing the seedlings. Only misting stops — vents, screens and fans keep running normally.
+
+Relax the protection gradually as the seedlings harden off rather than switching it off in one step. Going from no midday misting to full midday misting overnight reproduces the very conditions the mode exists to prevent, on plants that are only slightly better prepared.
+
+Some of the damage attributed to sun scorch comes from the water rather than the light. Hard water leaves mineral deposits, cold water shocks a sunlit leaf, and iron staining looks almost identical to scorch. Wiping a spot with dilute acid tells them apart: if it lifts, it was iron. No control setting fixes bad water.

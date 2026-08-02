@@ -165,7 +165,7 @@ def widget_variables(widget_unique_id, widget_options):
 
 
 WIDGET_HEAD_HTML = """\
-<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=24">
+<link rel="stylesheet" href="/static/css/widget/aot-facility-widget.css?v=25">
 <script>
 if (!window._aotThreeLoaded) {
   window._aotThreeLoaded = true;
@@ -179,7 +179,7 @@ if (!window._aotThreeLoaded) {
 <script>
 if (!window._aotFacility3DLoaded) {
   window._aotFacility3DLoaded = true;
-  document.write('<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=31"><\\/script>');
+  document.write('<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=32"><\\/script>');
 }
 </script>
 <!-- 위젯 비가드 스크립트 9개 → 단일 번들(concat+minify, static/js/tools/bundle.mjs: aot-facility-widget).

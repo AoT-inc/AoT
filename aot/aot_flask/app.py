@@ -771,6 +771,11 @@ def extension_login_manager(app):
         user = User.query.filter(User.id == user_id).first()
         if not user:
             return
+        # 계정이 꺼지면 이미 열려 있던 세션도 다음 요청에서 끊긴다. 로그인
+        # 시점의 검사(routes_authentication.py)만으로는 이미 로그인해 둔
+        # 사람이 그대로 남아, 끄는 행위가 즉시 효력을 갖지 못한다.
+        if not user.is_enabled:
+            return
         return user
 
     @login_manager.request_loader

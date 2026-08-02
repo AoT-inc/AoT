@@ -478,6 +478,9 @@ def ai_agent_options(unique_id):
     Renders the specialized option form for an agent based on its category.
     Matches the 'Function' system's dynamic option loading pattern.
     """
+    if not user_has_permission('edit_controllers', silent=True):
+        return jsonify({"status": "error", "message": "Permission denied"}), 403
+
     agent = AIAgent.query.filter_by(unique_id=unique_id).first_or_404()
     
     # Get model type to determine category

@@ -9,7 +9,7 @@ into the AI context pipeline (AIContextRecord).
 import json
 import logging
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 
 from aot.aot_flask.extensions import db
@@ -258,7 +258,15 @@ def page_ai_library():
     with an "Activate"/"Sync" control that does nothing meaningful would just
     confuse the operator. AI-curated knowledge has its own review section
     below instead.
+
+    Editor+ only, matching every source-mutating route in this file (and the
+    AI Agent page's own gate): the whole page is a source-management console,
+    so a role that cannot add, edit, sync or delete a source has nothing to do
+    here — and its settings modal reads back stored credentials.
     """
+    if not utils_general.user_has_permission('edit_settings'):
+        return redirect(url_for('routes_ai_agent.page_ai_dashboard'))
+
     sources = AIContextSource.query.filter(
         AIContextSource.is_active.is_(True),
         AIContextSource.source_type != 'ai_curated',
@@ -289,7 +297,16 @@ def page_ai_library():
 def api_list_sources():
     """List all active AIContextSource entries (farm-wide, unscoped).
 
-    Excludes the reserved 'ai_curated' source — see page_ai_library()."""
+    Excludes the reserved 'ai_curated' source — see page_ai_library().
+
+    Gated like every other source route in this file: each source's
+    config_json carries its credentials (api_key for the preset sources,
+    auth_value for custom REST ones), so this must not be readable by
+    someone who cannot manage sources in the first place.
+    """
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+
     sources = AIContextSource.query.filter(
         AIContextSource.is_active.is_(True),
         AIContextSource.source_type != 'ai_curated',

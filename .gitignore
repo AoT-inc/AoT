@@ -25,6 +25,7 @@
 !/.dockerignore
 !/.gitea/
 !/.github/
+!/.githooks/
 !/README.rst
 !/LICENSE.txt
 !/CHANGELOG.md

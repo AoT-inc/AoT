@@ -48,16 +48,18 @@ Measurements
  - [Apparent Power](#apparent-power)
  - [Power Factor](#power-factor)
  - [Reactive Power](#reactive-power)
- - [강수](#강수)
+ - [Precipitation](#precipitation)
  - [Pressure](#pressure)
  - [Pulse Width](#pulse-width)
  - [Solar Radiation](#solar-radiation)
  - [Volume Flow Rate](#volume-flow-rate)
  - [Resistance](#resistance)
  - [Revolutions](#revolutions)
+ - [RSSI](#rssi)
  - [Salinity](#salinity)
- - [하늘상태](#하늘상태)
- - [신적설](#신적설)
+ - [Sky Condition](#sky-condition)
+ - [Fresh Snowfall](#fresh-snowfall)
+ - [SNR](#snr)
  - [Specific Gravity](#specific-gravity)
  - [Speed](#speed)
  - [Status](#status)
@@ -243,9 +245,9 @@ Measurements
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
@@ -295,11 +297,11 @@ Measurements
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
@@ -322,6 +324,8 @@ Measurements
 ### [AoT: Uptime](/AoT/Supported-Inputs/#aot-uptime)
 
 ### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
+
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
 ## Duty Cycle
 
@@ -349,6 +353,8 @@ Measurements
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
+
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
@@ -368,6 +374,8 @@ Measurements
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.1.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v010)
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
+
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
@@ -433,11 +441,11 @@ Measurements
 
 ### [Ecowitt: Ecowitt temp and humidity sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-temp-and-humidity-sensor)
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
@@ -577,6 +585,8 @@ Measurements
 
 ### [Power Monitor: RPi 6-Channel Power Monitor (v0.4.0)](/AoT/Supported-Inputs/#power-monitor-rpi-6-channel-power-monitor-v040)
 
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
+
 ### [TP-Link: Kasa WiFi Power Plug/Strip Energy Statistics](/AoT/Supported-Inputs/#tp-link-kasa-wifi-power-plug-strip-energy-statistics)
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
@@ -597,13 +607,13 @@ Measurements
 
 ### [Tasmota: Tasmota Outlet Energy Monitor (HTTP)](/AoT/Supported-Inputs/#tasmota-tasmota-outlet-energy-monitor-http)
 
-## 강수
+## Precipitation
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
 ## Pressure
 
@@ -629,9 +639,9 @@ Measurements
 
 ### [Infineon: DPS310](/AoT/Supported-Inputs/#infineon-dps310)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
@@ -669,19 +679,27 @@ Measurements
 
 ### [Raspberry Pi: Signal (Revolutions) (pigpio method #2)](/AoT/Supported-Inputs/#raspberry-pi-signal-revolutions--pigpio-method-#2)
 
+## RSSI
+
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
+
 ## Salinity
 
 ### [Atlas Scientific: Atlas EC](/AoT/Supported-Inputs/#atlas-scientific-atlas-ec)
 
-## 하늘상태
+## Sky Condition
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-## 신적설
+## Fresh Snowfall
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
+
+## SNR
+
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
 
 ## Specific Gravity
 
@@ -691,17 +709,19 @@ Measurements
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
 ### [OpenWeather: OpenWeatherMap (City/Coords, Current)](/AoT/Supported-Inputs/#openweather-openweathermap-city-coords-current)
 
 ### [OpenWeather: OpenWeatherMap (Lat/Lon, Current/Future)](/AoT/Supported-Inputs/#openweather-openweathermap-lat-lon-current-future)
 
 ## Status
+
+### [AoT: GL: Aerial Photo Overlay](/AoT/Supported-Inputs/#aot-gl-aerial-photo-overlay)
 
 ### [CARTO: GL: Carto Maps](/AoT/Supported-Inputs/#carto-gl-carto-maps)
 
@@ -717,6 +737,10 @@ Measurements
 
 ### [Kakao: KO: Kakao Map](/AoT/Supported-Inputs/#kakao-ko-kakao-map)
 
+### [Korea Meteorological Administration: KR: KMA Weather](/AoT/Supported-Inputs/#korea-meteorological-administration-kr-kma-weather)
+
+### [MapTiler: GL: MapTiler Vector](/AoT/Supported-Inputs/#maptiler-gl-maptiler-vector)
+
 ### [Mapbox: GL: Mapbox](/AoT/Supported-Inputs/#mapbox-gl-mapbox)
 
 ### [Microsoft: GL: Bing Maps](/AoT/Supported-Inputs/#microsoft-gl-bing-maps)
@@ -731,7 +755,7 @@ Measurements
 
 ### [OpenWeatherMap: GL: OpenWeatherMap](/AoT/Supported-Inputs/#openweathermap-gl-openweathermap)
 
-### [RainViewer: GL: RainViewer (Radar) [Discontinued]](/AoT/Supported-Inputs/#rainviewer-gl-rainviewer-radar-[discontinued])
+### [RainViewer: GL: RainViewer (Radar)](/AoT/Supported-Inputs/#rainviewer-gl-rainviewer-radar)
 
 ### [Stadia Maps: GL: Stadia Maps](/AoT/Supported-Inputs/#stadia-maps-gl-stadia-maps)
 
@@ -791,11 +815,11 @@ Measurements
 
 ### [Infineon: DPS310](/AoT/Supported-Inputs/#infineon-dps310)
 
-### [KMA: KMA 단기예보](/AoT/Supported-Inputs/#kma-kma-단기예보)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA Short-term Forecast](/AoT/Supported-Inputs/#kma-kma-short-term-forecast)
 
-### [KMA: 기상청 지점 데이터](/AoT/Supported-Inputs/#kma-기상청-지점-데이터)
+### [KMA: KMA Station Data](/AoT/Supported-Inputs/#kma-kma-station-data)
 
 ### [MAXIM: DS1822](/AoT/Supported-Inputs/#maxim-ds1822)
 
@@ -895,6 +919,8 @@ Measurements
 
 ### [Ecowitt: Ecowitt soil_sensor](/AoT/Supported-Inputs/#ecowitt-ecowitt-soil_sensor)
 
+### [RAKwireless: RAK3172 Valve Controller: Heartbeat (ChirpStack MQTT)](/AoT/Supported-Inputs/#rakwireless-rak3172-valve-controller-heartbeat-chirpstack-mqtt)
+
 ## Ultraviolet Index
 
 ### [Ecowitt: Ecowitt Cloud API Weather Data](/AoT/Supported-Inputs/#ecowitt-ecowitt-cloud-api-weather-data)
@@ -967,7 +993,7 @@ Measurements
 
 ## Visibility
 
-### [KMA: 기상청 고해상도 500m](/AoT/Supported-Inputs/#kma-기상청-고해상도-500m)
+### [KMA: KMA High-Resolution 500m](/AoT/Supported-Inputs/#kma-kma-high-resolution-500m)
 
 ## VOC
 

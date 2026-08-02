@@ -400,7 +400,17 @@
           ('bg_off',      _('Channel Off'),    _('Output/input channel row background when off; also a general surface color in facility widgets')),
           ('bg_pending',  _('Pending'),        _('Row background while a command awaits device confirmation')),
           ('tint_warning_bg', _('Unverified Running Tint'), _('Overrides Channel On when a device with no confirmation path is running — forces this color even over bg_on')),
-          ('tint_warning_fg', _('Unverified Running Tint Text'), _('Text color used with the tint above, and on map-popup device name warnings'))
+          ('tint_warning_fg', _('Unverified Running Tint Text'), _('Text color used with the tint above, and on map-popup device name warnings')),
+          ('color_success', _('Success'), _('Semantic color for success/normal results — a different axis from the device-state colors above')),
+          ('color_warning', _('Warning'), _('Semantic color for warnings and attention marks')),
+          ('color_danger',  _('Danger'),  _('Semantic color for destructive actions and errors (delete buttons, failures)')),
+          ('color_info',    _('Info'),    _('Semantic color for informational marks and in-progress states')),
+          ('tint_success_bg', _('Success Tint'), _('Soft badge background for success — pairs with the text color below')),
+          ('tint_success_fg', _('Success Tint Text'), _('Text color used on the success tint')),
+          ('tint_danger_bg',  _('Danger Tint'),  _('Soft badge background for failures')),
+          ('tint_danger_fg',  _('Danger Tint Text'), _('Text color used on the danger tint')),
+          ('tint_info_bg',    _('Info Tint'),    _('Soft badge background for in-progress/informational states')),
+          ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint'))
         ] %}
         {% for field_name, label, desc in state_fields %}
         <div class="aot-color-row" data-css-key="{{field_name}}">
@@ -730,6 +740,16 @@
     // ============================================================
     // 측정 밴드(band_1..5)·차트 시리즈(chart_1..6)는 브랜드 무드가 아니라
     // 심각도/구분 표시용 기능색이라 모든 내장 프리셋에서 theme_defaults.json 값으로 통일
+    // 의미 색상도 브랜드 무드가 아니라 성공/경고/위험/정보를 나타내는 기능색이라
+    // 모든 내장 프리셋에서 theme_defaults.json 값으로 통일한다.
+    var SEMANTIC_DEFAULTS = {
+      color_success: '#96C064', color_warning: '#FEA60B',
+      color_danger:  '#DF5353', color_info:    '#029ACF',
+      tint_success_bg: '#EEF6E6', tint_success_fg: '#557A30',
+      tint_danger_bg:  '#FBE7E7', tint_danger_fg:  '#B23B3B',
+      tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B'
+    };
+
     var BAND_CHART_DEFAULTS = {
       band_1: '#2DB4FF', band_2: '#54BCC1', band_3: '#32C85A', band_4: '#FEAE5F', band_5: '#CF5C58',
       chart_1: '#FEA60B', chart_2: '#8BC1C1', chart_3: '#93B261', chart_4: '#F4D624', chart_5: '#DF5353', chart_6: '#008DDE'
@@ -745,7 +765,7 @@
         btn_primary_bg: '#13261B', btn_secondary_bg: '#5E6B64',
         bg_btn_on: '#13261B', bg_btn_off: '#5E6B64',
         bg_btn_pause: '#989E9E', bg_btn_hold: '#D1D5D5', bd_btn_border: '#B6BABA'
-      }, BAND_CHART_DEFAULTS),
+      }, BAND_CHART_DEFAULTS, SEMANTIC_DEFAULTS),
       ocean_blue: Object.assign({
         brand_primary: '#0A2342', brand_secondary: '#2C5F8A', brand_accent: '#E8F4FD',
         text_color_primary: '#0A2342', text_color_secondary: '#2C5F8A', text_color_tertiary: '#FFFFFF',
@@ -755,7 +775,7 @@
         btn_primary_bg: '#0A2342', btn_secondary_bg: '#2C5F8A',
         bg_btn_on: '#0A2342', bg_btn_off: '#2C5F8A',
         bg_btn_pause: '#7BA7BC', bg_btn_hold: '#BDD7EE', bd_btn_border: '#A8C8E0'
-      }, BAND_CHART_DEFAULTS),
+      }, BAND_CHART_DEFAULTS, SEMANTIC_DEFAULTS),
       warm_sunset: Object.assign({
         brand_primary: '#6B2737', brand_secondary: '#C0614D', brand_accent: '#FDF0EC',
         text_color_primary: '#6B2737', text_color_secondary: '#C0614D', text_color_tertiary: '#FFFFFF',
@@ -765,7 +785,7 @@
         btn_primary_bg: '#6B2737', btn_secondary_bg: '#C0614D',
         bg_btn_on: '#6B2737', bg_btn_off: '#C0614D',
         bg_btn_pause: '#D4A0A0', bg_btn_hold: '#F5C6BC', bd_btn_border: '#E8B4A8'
-      }, BAND_CHART_DEFAULTS),
+      }, BAND_CHART_DEFAULTS, SEMANTIC_DEFAULTS),
       minimal_gray: Object.assign({
         brand_primary: '#2D2D2D', brand_secondary: '#6B6B6B', brand_accent: '#F5F5F5',
         text_color_primary: '#2D2D2D', text_color_secondary: '#6B6B6B', text_color_tertiary: '#FFFFFF',
@@ -775,7 +795,7 @@
         btn_primary_bg: '#2D2D2D', btn_secondary_bg: '#6B6B6B',
         bg_btn_on: '#2D2D2D', bg_btn_off: '#6B6B6B',
         bg_btn_pause: '#9B9B9B', bg_btn_hold: '#D0D0D0', bd_btn_border: '#B8B8B8'
-      }, BAND_CHART_DEFAULTS),
+      }, BAND_CHART_DEFAULTS, SEMANTIC_DEFAULTS),
       night_mode: Object.assign({
         brand_primary: '#BB86FC', brand_secondary: '#03DAC6', brand_accent: '#1E1E1E',
         text_color_primary: '#E1E1E1', text_color_secondary: '#B0B0B0', text_color_tertiary: '#121212',
@@ -785,7 +805,7 @@
         btn_primary_bg: '#BB86FC', btn_secondary_bg: '#03DAC6',
         bg_btn_on: '#BB86FC', bg_btn_off: '#03DAC6',
         bg_btn_pause: '#6B6B6B', bg_btn_hold: '#3C3C3C', bd_btn_border: '#4C4C4C'
-      }, BAND_CHART_DEFAULTS)
+      }, BAND_CHART_DEFAULTS, SEMANTIC_DEFAULTS)
     };
 
     // CSS variable name map: field_name -> CSS custom property suffix for preview
@@ -808,6 +828,16 @@
       bg_pending:           'bg-pending',
       tint_warning_bg:      'tint-warning-bg',
       tint_warning_fg:      'tint-warning-fg',
+      color_success:        'color-success',
+      color_warning:        'color-warning',
+      color_danger:         'color-danger',
+      color_info:           'color-info',
+      tint_success_bg:      'tint-success-bg',
+      tint_success_fg:      'tint-success-fg',
+      tint_danger_bg:       'tint-danger-bg',
+      tint_danger_fg:       'tint-danger-fg',
+      tint_info_bg:         'tint-info-bg',
+      tint_info_fg:         'tint-info-fg',
       bg_llm:               'bg-llm',
       bg_mcp:               'bg-mcp',
       btn_primary_bg:       'btn-primary-bg',

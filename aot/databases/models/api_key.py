@@ -23,6 +23,9 @@ class APIKey(CRUDMixin, db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
     name = db.Column(db.String(128), default='')
+    # settings/api_key 카드의 표시 순서 (users/roles.position_y 와 같은 방식).
+    # /settings/api_key/save_order 가 0..N-1 로 다시 매겨 동률을 없앤다.
+    position_y = db.Column(db.Integer, default=0)
     provider = db.Column(db.String(128), default='')
     key = db.Column(db.Text, default='')
     url = db.Column(db.Text, default='')

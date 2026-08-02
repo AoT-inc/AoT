@@ -10,6 +10,17 @@
 (function (global) {
   'use strict';
 
+  // Three.js materials cannot read CSS variables, so the themeable value is
+  // resolved once from the document. Keeps 3D colours on the same palette the
+  // operator sets in settings/custom_ui instead of literals baked into JS.
+  var _cssColorCache = {};
+  function _cssColor(name, fallback) {
+    if (_cssColorCache[name]) return _cssColorCache[name];
+    var v = '';
+    try { v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); } catch (e) {}
+    return (_cssColorCache[name] = v || fallback);
+  }
+
   // ── Force-WebGL1 helper ────────────────────────────────────────────────────────
   // On renderer init, three.js r160 uploads an empty placeholder 3D texture via
   // the WebGL2 texImage3D path, but with FLIP_Y/PREMULTIPLY_ALPHA set the WebGL2
@@ -255,10 +266,10 @@
       sp.scale.set(1.2, 1.2, 1);
       return sp;
     }
-    const nLabel = _labelSprite('N', '#029ACF');
+    const nLabel = _labelSprite('N', _cssColor('--aot-color-brand-primary', '#13261B'));
     nLabel.position.set(cx, 0.3, cz + arrowLen + 0.8);
     g.add(nLabel);
-    const eLabel = _labelSprite('E', '#e65100');
+    const eLabel = _labelSprite('E', _cssColor('--aot-color-brand-secondary', '#5E6B64'));
     eLabel.position.set(cx + arrowLen + 0.8, 0.3, cz);
     g.add(eLabel);
     return g;
@@ -1889,10 +1900,27 @@
     if (outdoor.wind_ms!=null || outdoor.wind_deg!=null) scene.add(buildWindArrow(outdoor.wind_deg||0, length));
     scene.add(buildCompass(orientDeg, length));
 
-    // Ground & grid
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.90}));
-    ground.rotation.x = -Math.PI/2; ground.position.y = -0.08; scene.add(ground);
-    const grid = new THREE.GridHelper(100,50,0xbbbbbb,0xdddddd); grid.position.y = -0.04; scene.add(grid);
+    // Ground & grid — sized to the facility and centred under it.
+    // The facility is modelled from the origin outward (x: 0..totalWidth,
+    // z: 0..length), so a ground plane and grid centred on the world origin put
+    // the building in one corner of them. At 7 m that reads as a slight offset;
+    // at 112 m the facility runs clean off the grid. Both now follow the
+    // footprint, with a margin so there is visible ground on every side.
+    const groundCx = totalWidth / 2, groundCz = length / 2;
+    const groundSpan = Math.max(totalWidth, length) * 2;
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(groundSpan, groundSpan),
+                                  new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.90}));
+    ground.rotation.x = -Math.PI/2;
+    ground.position.set(groundCx, -0.08, groundCz);
+    scene.add(ground);
+    // Grid lines stay near 1 m while the facility is small and coarsen as it
+    // grows, so a large facility does not draw thousands of lines.
+    const gridSpan = Math.max(totalWidth, length) * 1.4;
+    const gridStep = Math.max(1, Math.round(gridSpan / 60));
+    const grid = new THREE.GridHelper(gridSpan, Math.max(2, Math.round(gridSpan / gridStep)),
+                                      0xbbbbbb, 0xdddddd);
+    grid.position.set(groundCx, -0.04, groundCz);
+    scene.add(grid);
 
     // Floor compass — shows N (north) / E (east) directions regardless of camera angle
     scene.add(buildFloorCompass(totalWidth, length));
@@ -1918,18 +1946,29 @@
       'front-right':_ctr.clone().addScaledVector(new THREE.Vector3(1,1,-1).normalize(),_dC),
     };
     const _t = (window._ ? window._ : function (s) { return s; });
-    const _vcL={'back-left':_t('Rear-L'),'top':_t('Top'),'back-right':_t('Rear-R'),'left':_t('W'),'iso':'●','right':_t('E'),'front-left':_t('SW'),'front':_t('S'),'front-right':_t('SE')};
+    // Compass abbreviations stay untranslated: the single-letter ids collide
+    // with the wind-direction catalog ('W' → "서풍"/west wind), and N/S/E/W is
+    // standard notation on a view cube anyway. Tooltips carry the wording.
+    const _vcL={'back-left':_t('Rear-L'),'top':_t('Top'),'back-right':_t('Rear-R'),'left':'W','iso':'●','right':'E','front-left':'SW','front':'S','front-right':'SE'};
     const _vcT={'back-left':_t('Northwest isometric (N-W)'),'top':_t('Top (plan)'),'back-right':_t('Northeast isometric (N-E)'),'left':_t('West side (West)'),'iso':_t('Default isometric (N-E direction)'),'right':_t('East side (East)'),'front-left':_t('Southwest isometric (S-W) — note: east is on the left'),'front':_t('South front (South) — note: east is on the left'),'front-right':_t('Southeast isometric (S-E) — note: east is on the left')};
 
     const vcEl = document.createElement('div');
-    vcEl.style.cssText='position:absolute;top:18px;right:8px;z-index:15;display:grid;grid-template-columns:repeat(3,28px);grid-auto-rows:28px;gap:2px';
+    // Class so pages can hide it where the viewport is small (phone band).
+    vcEl.className = 'fac-viewcube';
+    // Top-aligned with the rest of the viewport overlays (the fast-mode pill
+    // that used to sit above it now lives in the toolbar).
+    vcEl.style.cssText='position:absolute;top:8px;right:8px;z-index:15;display:grid;grid-template-columns:repeat(3,28px);grid-auto-rows:28px;gap:2px';
     ['back-left','top','back-right','left','iso','right','front-left','front','front-right'].forEach(key => {
       const btn = document.createElement('button');
       btn.textContent = _vcL[key]; btn.title = _vcT[key];
       const isCtr = key==='iso';
-      const _bg0=isCtr?'rgba(2,154,207,0.14)':'rgba(255,255,255,0.88)', _c0=isCtr?'#029ACF':'#444', _b0=isCtr?'#029ACF':'rgba(0,0,0,0.14)';
+      // Colours come from the themeable set (settings/custom_ui) — the old
+      // literals were a fixed blue the operator could not change.
+      const _bg0=isCtr?'var(--aot-color-brand-accent)':'var(--aot-surface-card)',
+            _c0 =isCtr?'var(--aot-color-brand-primary)':'var(--aot-color-text-secondary)',
+            _b0 =isCtr?'var(--aot-color-brand-primary)':'var(--aot-border-neutral)';
       btn.style.cssText=`width:28px;height:28px;padding:0;cursor:pointer;line-height:1;font-size:${isCtr?'var(--aot-fs-label)':'var(--aot-fs-caption)'};border-radius:4px;border:1px solid ${_b0};background:${_bg0};backdrop-filter:blur(4px);color:${_c0}`;
-      btn.addEventListener('mouseenter',()=>{btn.style.background='rgba(2,154,207,0.22)';btn.style.borderColor='#029ACF';btn.style.color='#13261B';});
+      btn.addEventListener('mouseenter',()=>{btn.style.background='var(--aot-color-brand-accent)';btn.style.borderColor='var(--aot-color-brand-primary)';btn.style.color='var(--aot-color-brand-primary)';});
       btn.addEventListener('mouseleave',()=>{btn.style.background=_bg0;btn.style.borderColor=_b0;btn.style.color=_c0;});
       btn.addEventListener('click',e=>{
         e.stopPropagation(); const base=_vcp[key]; if(!base) return;
@@ -1942,11 +1981,11 @@
 
     let _isoProj = false;
     const projBtn = document.createElement('button');
-    projBtn.style.cssText='grid-column:1/4;margin-top:3px;height:20px;padding:0;font-size:var(--aot-fs-caption);border-radius:4px;border:1px solid rgba(0,0,0,0.14);background:rgba(255,255,255,0.88);backdrop-filter:blur(4px);color:#444;cursor:pointer;width:86px';
+    projBtn.style.cssText='grid-column:1/4;margin-top:3px;height:20px;padding:0;font-size:var(--aot-fs-caption);border-radius:4px;border:1px solid var(--aot-border-neutral);background:var(--aot-surface-card);backdrop-filter:blur(4px);color:var(--aot-color-text-secondary);cursor:pointer;width:86px';
     function _syncProjBtn() {
       projBtn.textContent=_isoProj?(window._ ? window._('▦ Iso → Persp') : '▦ Iso → Persp'):(window._ ? window._('▧ Persp → Iso') : '▧ Persp → Iso');
-      projBtn.style.background=_isoProj?'rgba(2,154,207,0.14)':'rgba(255,255,255,0.88)';
-      projBtn.style.color=_isoProj?'#029ACF':'#444';
+      projBtn.style.background=_isoProj?'var(--aot-color-brand-accent)':'var(--aot-surface-card)';
+      projBtn.style.color=_isoProj?'var(--aot-color-brand-primary)':'var(--aot-color-text-secondary)';
     }
     _syncProjBtn();
     projBtn.addEventListener('click',e=>{
@@ -2103,9 +2142,9 @@
     const _toolChip = document.createElement('div');
     _toolChip.style.cssText =
       'position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:25;' +
-      'background:#029ACF;color:#fff;padding:0.3rem 0.75rem;border-radius:14px;' +
+      'background:var(--aot-btn-bg-primary);color:var(--aot-btn-color-primary);padding:0.3rem 0.75rem;border-radius:14px;' +
       'font-size:var(--aot-fs-label);font-weight:var(--aot-fw-semibold);pointer-events:none;display:none;' +
-      'box-shadow:0 2px 6px rgba(0,0,0,0.2);';
+      'box-shadow:var(--aot-shadow-md);';
     if (canvas.parentElement) canvas.parentElement.appendChild(_toolChip);
 
     function _updateChip(faceLabel) {
@@ -2257,11 +2296,115 @@
       requestRender();
     });
 
+    // One end-of-drag signal for both handles. Position updates during a drag
+    // are applied directly to the data, the mesh and the inspector, so the
+    // broadcast that redraws dependent UI only has to fire once, at the end.
+    function _emitDragEnd(id) {
+      document.dispatchEvent(new CustomEvent('aot-fitting-drag-end', { detail: { id: id } }));
+    }
+
     document.addEventListener('mouseup', function (event) {
       if (!_gizmoDragAxis) return;
       _gizmoDragAxis = null;
       controls.enabled = true;
+      _emitDragEnd(_gizmoFitId);
     });
+
+    // ── Body drag ───────────────────────────────────────────────────────────
+    // Grab the component itself and slide it. The axis arrows above stay for
+    // precise moves and for height; this is the gesture people try first.
+    // Movement is confined to the horizontal plane the component already sits
+    // on, so a careless drag can never change a device's mounting height.
+    //
+    // Which components may be dragged is not decided here — the host injects a
+    // probe via setFittingProbe(). The 3D module has no idea which fittings the
+    // user manages by hand and which the envelope generates.
+    let _bodyDragId    = null;
+    let _bodyDragPlane = new THREE.Plane();
+    let _bodyDragGrab  = new THREE.Vector3();   // pointer→component offset at grab time
+    let _bodyDragBaseY = 0;
+    let _bodyDragMoved = false;
+    let _bodyDragSel   = false;                 // was it already selected when grabbed?
+    let _bodyDragCursor = '';                   // canvas cursor to restore afterwards
+    let _bodyDragProbe = null;
+    const _bodyRay = new THREE.Raycaster();
+
+    function _pickFittingId(event) {
+      const meshes = clickTargets.map(t => t.mesh).filter(Boolean);
+      if (!meshes.length) return null;
+      const ndc = _gizmoNdcFromEvent(event);
+      _bodyRay.setFromCamera(ndc, camera);
+      const hits = _bodyRay.intersectObjects(meshes, true);
+      if (!hits.length) return null;
+      const hit = hits[0].object;
+      const t = clickTargets.find(x => x.mesh === hit || (x.group && x.group.children.includes(hit)));
+      return t && t.fittingId ? t.fittingId : null;
+    }
+
+    canvas.addEventListener('mousedown', function (event) {
+      if (event.button !== 0 || _toolMode || _gizmoDragAxis || !_bodyDragProbe) return;
+      const id = _pickFittingId(event);
+      if (!id) return;
+      const info = _bodyDragProbe(id);
+      if (!info || !info.movable || !info.position) return;
+      const p = info.position;
+      _bodyDragBaseY = p.y || 0;
+      _bodyDragPlane.setFromNormalAndCoplanarPoint(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(p.x || 0, _bodyDragBaseY, p.z || 0));
+      const grab = new THREE.Vector3();
+      // Fails only when the camera looks exactly along the plane — nothing to drag on.
+      if (!_bodyRay.ray.intersectPlane(_bodyDragPlane, grab)) return;
+      _bodyDragGrab.set((p.x || 0) - grab.x, 0, (p.z || 0) - grab.z);
+      _bodyDragId    = id;
+      _bodyDragMoved = false;
+      _bodyDragSel   = !!info.selected;
+      _bodyDragCursor = canvas.style.cursor;
+      controls.enabled = false;
+    });
+
+    canvas.addEventListener('mousemove', function (event) {
+      if (!_bodyDragId) return;
+      const ndc = _gizmoNdcFromEvent(event);
+      _bodyRay.setFromCamera(ndc, camera);
+      const cur = new THREE.Vector3();
+      if (!_bodyRay.ray.intersectPlane(_bodyDragPlane, cur)) return;
+      if (!_bodyDragMoved) {
+        _bodyDragMoved = true;
+        canvas.style.cursor = 'grabbing';
+        // Selecting on the first move rather than on mousedown keeps a plain
+        // click on the same mesh flowing through the normal selection path,
+        // which toggles — selecting here too would immediately undo it.
+        if (!_bodyDragSel) {
+          document.dispatchEvent(new CustomEvent('aot-fitting-clicked', { detail: { id: _bodyDragId } }));
+        }
+      }
+      const pos = { x: +(cur.x + _bodyDragGrab.x).toFixed(3),
+                    y: +_bodyDragBaseY.toFixed(3),
+                    z: +(cur.z + _bodyDragGrab.z).toFixed(3) };
+      if (_gizmoGroup && _gizmoFitId === _bodyDragId) {
+        _gizmoPos.set(pos.x, pos.y, pos.z);
+        _gizmoGroup.position.copy(_gizmoPos);
+      }
+      // Same event the axis arrows emit — one path updates data, inspector and mesh.
+      document.dispatchEvent(new CustomEvent('aot-gizmo-moved', { detail: { id: _bodyDragId, position: pos } }));
+      requestRender();
+    });
+
+    document.addEventListener('mouseup', function () {
+      if (!_bodyDragId) return;
+      // The click that follows mouseup would toggle the selection back off, but
+      // onCanvasClick already drops clicks that came after a drag (_dragged).
+      const wasMoved = _bodyDragMoved;
+      const id = _bodyDragId;
+      _bodyDragId = null;
+      _bodyDragMoved = false;
+      canvas.style.cursor = _bodyDragCursor;
+      controls.enabled = true;
+      if (wasMoved) _emitDragEnd(id);
+    });
+
+    function setFittingProbe(fn) { _bodyDragProbe = typeof fn === 'function' ? fn : null; }
 
     // For device drag-place tools: raycast outer cover + floor, pick first hit.
     let _floorRef = null;
@@ -2539,9 +2682,9 @@
       const state = actStates[target.slot]||{};
       if (tooltip) tooltip.remove();
       tooltip = document.createElement('div');
-      tooltip.style.cssText='position:fixed;z-index:var(--aot-z-tooltip);background:#1e2a35;color:#fff;padding:0.5rem 0.75rem;border-radius:8px;font-size:var(--aot-fs-label);pointer-events:none;max-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.4)';
+      tooltip.style.cssText='position:fixed;z-index:var(--aot-z-tooltip);background:var(--aot-color-brand-primary);color:var(--aot-color-text-tertiary);padding:0.5rem 0.75rem;border-radius:8px;font-size:var(--aot-fs-label);pointer-events:none;max-width:220px;box-shadow:var(--aot-shadow-dropdown)';
       var _tt = (window._ ? window._ : function (s) { return s; });
-      tooltip.innerHTML='<b>'+_slotLabel(target.slot)+'</b><br>'+(state.name?_tt('Device')+': '+state.name+'<br>':'')+_tt('Status')+': '+(state.on?'<span style="color:#4fc3f7">ON</span>':'<span style="color:#9e9e9e">OFF</span>')+(state.percent!=null?' / '+state.percent+'%':'')+'<br><small style="color:#888">'+target.slot+'</small>';
+      tooltip.innerHTML='<b>'+_slotLabel(target.slot)+'</b><br>'+(state.name?_tt('Device')+': '+state.name+'<br>':'')+_tt('Status')+': '+(state.on?'<span style="color:var(--aot-bg-on)">ON</span>':'<span style="color:var(--aot-bg-off)">OFF</span>')+(state.percent!=null?' / '+state.percent+'%':'')+'<br><small style="color:var(--aot-color-text-secondary)">'+target.slot+'</small>';
       tooltip.style.left=(event.clientX+12)+'px'; tooltip.style.top=(event.clientY-8)+'px';
       document.body.appendChild(tooltip);
       setTimeout(()=>{ if(tooltip){tooltip.remove();tooltip=null;} },3500);
@@ -2825,6 +2968,7 @@
       removeFittingMesh: removeFittingMeshAndRender,
       showGizmo: showGizmo,
       hideGizmo: hideGizmo,
+      setFittingProbe: setFittingProbe,
       getCategoryVisibility: function () { return Object.assign({}, _catVisibility); },
       setCategoryVisibility: setCategoryVisibility,
       setFastMode: setFastMode,

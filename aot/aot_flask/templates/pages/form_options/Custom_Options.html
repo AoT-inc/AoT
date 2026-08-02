@@ -64,8 +64,8 @@
           {% if api_keys %}
             {% set manufacturer = dict_options.get('input_manufacturer', '').lower() %}
             {% for key_obj in api_keys|sort(attribute='provider', reverse=True) %}
-              <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" 
-                 onclick='$(this).closest(".aot-api-key-group").find("input").val({{key_obj.key|tojson}}).trigger("change"); return false;'>
+              <a class="dropdown-item d-flex justify-content-between align-items-center" href="#"
+                 data-api-key-ref="{{key_obj.unique_id}}">
                  <span>{{key_obj.name}}</span>
               </a>
             {% endfor %}

@@ -51,7 +51,7 @@ measurements_dict = {
     6: {'measurement': 'rssi',                 'unit': 'dBm', 'name': 'RSSI'},
     7: {'measurement': 'snr',                  'unit': 'dB',  'name': 'SNR'},
     8: {'measurement': 'unitless',             'unit': 'none','name': lazy_gettext('Class Mismatch Flag')},
-    9: {'measurement': 'current',              'unit': 'mA',  'name': lazy_gettext('Battery Current (mA)')},
+    9: {'measurement': 'electrical_current',    'unit': 'mA',  'name': lazy_gettext('Battery Current (mA)')},
     10: {'measurement': 'power',               'unit': 'mW',  'name': lazy_gettext('Power (mW)')},
 }
 channels_dict = {i: {} for i in measurements_dict}

@@ -109,8 +109,8 @@
   }
 
   function _applyStyle(el, opts) {
-    el.style.background = opts.bg || 'rgba(15,23,42,0.78)';
-    el.style.color      = opts.fg || '#f8fafc';
+    el.style.background = opts.bg || 'var(--aot-color-brand-primary)';
+    el.style.color      = opts.fg || 'var(--aot-color-text-tertiary)';
     el.style.fontSize   = (opts.size_em || 0.85) + 'em';
     el.style.opacity    = opts.opacity != null ? opts.opacity : 0.7;
   }

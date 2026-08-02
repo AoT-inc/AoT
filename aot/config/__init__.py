@@ -17,8 +17,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_17_method_solar_anchor_20260731'
-AOT_VERSION = '26.07.5'
+ALEMBIC_VERSION = 'p6_20_api_key_position_20260802'
+AOT_VERSION = '26.08.0'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -198,8 +198,8 @@ def resolve_measurement_db_host(host):
 
 # Anonymous statistics
 STATS_INTERVAL = 86400
-STATS_HOST = 'fungi.aot-inc.com'
-STATS_PORT = 8086
+STATS_HOST = 'stats.aotinc.co.kr'
+STATS_PORT = 443
 STATS_USER = 'aot_stats'
 # Anonymous-stats credential is NOT baked into the (public) source. Set
 # AOT_NAS_SECRET in the environment to enable uploads; unset = stats disabled.

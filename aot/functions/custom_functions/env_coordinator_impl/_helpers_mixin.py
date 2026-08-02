@@ -842,6 +842,11 @@ class HelpersMixin:
                 'light_est': internal.get('light_est'),
                 # 일몰 전 분무 중단 구간 여부 (광량과 무관하게 우선 차단).
                 'evening_block': internal.get('evening_block', False),
+                # 광 측정이 하나도 없을 때 쓰는 태양고도 기반 어림 일사.
+                # 이 키를 빠뜨리면 게이트가 항상 None 을 보게 되어, 일사 센서가
+                # 없는 시설은 감쇠만 받고 하드 잠금은 받지 못한다 — 폴백을 둔
+                # 목적이 바로 그 경우라 여기서 끊기면 보호가 반쪽이 된다.
+                '_nursery_light_fallback': internal.get('_nursery_light_fallback'),
             },
             'external': {
                 'T':        external.get('T_ext', 20.0),

@@ -703,6 +703,83 @@ def settings_users_submit():
     })
 
 
+def _save_card_order(table, payload):
+    """Re-rank dragged cards to sequential ints and persist.
+
+    Same shape as save_input_layout(routes_input.py): the browser reports the
+    y each card landed on, which can tie (two cards nudged into one slot, or
+    freshly created rows all sitting at 0). Sorting then re-ranking to 0..N-1
+    is what makes ORDER BY position_y stable across reloads.
+    """
+    from aot.aot_flask.extensions import db
+
+    items = [d for d in payload if 'id' in d and 'y' in d]
+    items.sort(key=lambda d: (d['y'], d['id']))
+    for rank, each_item in enumerate(items):
+        row = table.query.filter(table.unique_id == each_item['id']).first()
+        if row:
+            row.position_y = rank
+    db.session.commit()
+
+
+@blueprint.route('/settings/users/save_order', methods=['POST'])
+@flask_login.login_required
+def settings_users_save_order():
+    """Save the drag order of the user cards."""
+    if not utils_general.user_has_permission('edit_users'):
+        return '', 403
+    _save_card_order(User, request.get_json())
+    return "success"
+
+
+@blueprint.route('/settings/users/save_role_order', methods=['POST'])
+@flask_login.login_required
+def settings_roles_save_order():
+    """Save the drag order of the role cards."""
+    if not utils_general.user_has_permission('edit_users'):
+        return '', 403
+    _save_card_order(Role, request.get_json())
+    return "success"
+
+
+@blueprint.route('/settings/users/detail/<string:unique_id>', methods=['GET'])
+@flask_login.login_required
+def settings_user_detail(unique_id):
+    """Render one user's edit form for the Users-page drawer.
+
+    Served on demand so the list page never carries every user's email,
+    role and keys in its HTML.
+    """
+    if not utils_general.user_has_permission('view_settings'):
+        return '', 403
+
+    user = User.query.filter(User.unique_id == unique_id).first()
+    if not user:
+        return '', 404
+
+    return render_template('settings/user_detail.html',
+                           user=user,
+                           themes=THEMES,
+                           user_roles=Role.query.all(),
+                           form_mod_user=forms_settings.UserMod())
+
+
+@blueprint.route('/settings/users/role_detail/<string:unique_id>', methods=['GET'])
+@flask_login.login_required
+def settings_role_detail(unique_id):
+    """Render one role's edit form for the Users-page drawer."""
+    if not utils_general.user_has_permission('view_settings'):
+        return '', 403
+
+    each_role = Role.query.filter(Role.unique_id == unique_id).first()
+    if not each_role:
+        return '', 404
+
+    return render_template('settings/role_detail.html',
+                           each_role=each_role,
+                           form_user_roles=forms_settings.UserRoles())
+
+
 @blueprint.route('/settings/users', methods=('GET', 'POST'))
 @flask_login.login_required
 def settings_users():
@@ -741,8 +818,10 @@ def settings_users():
     for each_success in messages["success"]:
         flash(each_success, "success")
 
-    users = User.query.all()
-    user_roles = Role.query.all()
+    # id 를 2차 키로 두는 이유: p6_18 직후에는 모든 행의 position_y 가 0 이라
+    # 그것만으로는 순서가 매 조회마다 달라질 수 있다.
+    users = User.query.order_by(User.position_y, User.id).all()
+    user_roles = Role.query.order_by(Role.position_y, Role.id).all()
 
     return render_template('settings/users.html',
                            misc=misc,
@@ -850,14 +929,17 @@ def settings_api_key():
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
 
-    api_keys = APIKey.query.all()
+    # id 를 2차 키로: p6_20 직후에는 모든 행의 position_y 가 0 이라 그것만으로는
+    # 순서가 매 조회마다 달라질 수 있다.
+    api_keys = APIKey.query.order_by(APIKey.position_y, APIKey.id).all()
     form_add = forms_settings.APIKeyAdd()
-    form_mod = forms_settings.APIKeyMod()
 
-    # Pre-calculate usage for each key
-    usage_map = {}
-    for key in api_keys:
-        usage_map[key.unique_id] = utils_settings.get_api_key_usage(key.key)
+    # 목록에는 "쓰이는 곳이 있는가"만 필요하다. 어디에 쓰이는지는 드로어를 열 때
+    # 상세 라우트가 계산한다 — 키 하나당 Input/Output/Function/AI 를 전부 훑는
+    # 조회라, 목록에서 전 키를 돌면 그만큼 비싸진다.
+    usage_map = {
+        key.unique_id: bool(utils_settings.get_api_key_usage(key.key))
+        for key in api_keys}
 
     misc = Misc.query.first()
 
@@ -865,8 +947,39 @@ def settings_api_key():
                            api_keys=api_keys,
                            usage_map=usage_map,
                            form_add=form_add,
-                           form_mod=form_mod,
                            misc=misc)
+
+
+@blueprint.route('/settings/api_key/detail/<string:unique_id>', methods=['GET'])
+@flask_login.login_required
+def settings_api_key_detail(unique_id):
+    """Render one key's edit form for the API-key page drawer.
+
+    Served on demand so the list page never carries every stored credential in
+    its HTML — the previous layout rendered `value="{{ key.key }}"` for every
+    key, handing all of them to anyone who could open the page or view source.
+    """
+    if not utils_general.user_has_permission('view_settings'):
+        return '', 403
+
+    api_key = APIKey.query.filter(APIKey.unique_id == unique_id).first()
+    if not api_key:
+        return '', 404
+
+    return render_template('settings/api_key_detail.html',
+                           key=api_key,
+                           usage=utils_settings.get_api_key_usage(api_key.key),
+                           form_mod=forms_settings.APIKeyMod())
+
+
+@blueprint.route('/settings/api_key/save_order', methods=['POST'])
+@flask_login.login_required
+def settings_api_key_save_order():
+    """Save the drag order of the API-key cards."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return '', 403
+    _save_card_order(APIKey, request.get_json())
+    return "success"
 
 
 @blueprint.route('/settings/api_key_submit', methods=['POST'])
@@ -904,6 +1017,9 @@ def settings_api_key_submit():
 @flask_login.login_required
 def api_keys_list():
     """Return all API keys as JSON for intelligent matching."""
+    if not utils_general.user_has_permission('view_settings', silent=True):
+        return jsonify([]), 403
+
     api_keys = APIKey.query.all()
     keys_list = []
     for key in api_keys:
@@ -916,6 +1032,29 @@ def api_keys_list():
             'description': key.description
         })
     return jsonify(keys_list)
+
+
+@blueprint.route('/api/api_key/<unique_id>', methods=['GET'])
+@flask_login.login_required
+def api_key_resolve(unique_id):
+    """Resolve a single stored API key's value on demand for picker UIs.
+
+    Fetched one key at a time (only the key the user actually selects),
+    instead of the page embedding every stored key's plaintext up front.
+
+    Gated on edit permission to match the picker's own gate in
+    routes_static.inject_variables — a read-only role never needs a
+    credential's plaintext.
+    """
+    if not (utils_general.user_has_permission('edit_settings', silent=True)
+            or utils_general.user_has_permission('edit_controllers', silent=True)):
+        return jsonify({"status": "error", "message": "Permission denied"}), 403
+
+    key_obj = APIKey.query.filter_by(unique_id=unique_id).first()
+    if not key_obj:
+        return jsonify({"status": "error", "message": "Not found"}), 404
+
+    return jsonify({"status": "success", "key": key_obj.key})
 
 
 @blueprint.route('/change_preferences', methods=('POST',))

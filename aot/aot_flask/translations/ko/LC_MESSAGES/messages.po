@@ -14448,7 +14448,7 @@ msgstr "고품질"
 msgid ""
 "No fitting selected — add one with the tools on the left, or select from the"
 " list/3D on the right."
-msgstr "선택된 fitting 없음 — 좌측 도구로 추가하거나 우측 목록/3D에서 선택하세요."
+msgstr "선택된 구성요소 없음 — 좌측 도구로 추가하거나 우측 목록/3D에서 선택하세요."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1439
 #: aot_flask/templates/pages/geo/geo_facility.html:1672
@@ -14463,7 +14463,7 @@ msgstr "크기"
 msgid ""
 "Edits the size/type of cloned sibling fittings together. Uncheck to edit "
 "this fitting independently."
-msgstr "복제된 형제 fitting의 크기/종류를 함께 변경합니다. 해제하면 이 fitting만 독립 편집됩니다."
+msgstr "복제된 형제 구성요소의 크기/종류를 함께 변경합니다. 해제하면 이 구성요소만 독립 편집됩니다."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1452
 msgid "Group inheritance"
@@ -14493,7 +14493,7 @@ msgstr "액추에이터"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1474
 msgid "Actuator that operates this fitting (one can drive multiple fittings)"
-msgstr "이 fitting을 작동시킬 액추에이터 (1개가 여러 fitting 가능)"
+msgstr "이 구성요소를 작동시킬 액추에이터 (1개로 여러 구성요소 구동 가능)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1480
 msgid "Select sensor device (Input / Function)"
@@ -15167,7 +15167,7 @@ msgstr "카테고리 숨기기 (3D 뷰포트 가시성)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2055
 msgid "Select equipment from the current map to add as a fitting."
-msgstr "현재 지도의 설비를 선택해 fitting으로 추가합니다."
+msgstr "현재 지도의 설비를 선택해 구성요소로 추가합니다."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2056
 msgid "Please select a map first."
@@ -15175,7 +15175,7 @@ msgstr "지도를 먼저 선택하세요."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2057
 msgid "No fittings added yet."
-msgstr "아직 추가된 fitting이 없습니다."
+msgstr "아직 추가된 구성요소가 없습니다."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2058
 msgid "No actuators. Add one below."
@@ -25845,6 +25845,46 @@ msgid ""
 msgstr ""
 "이 트리거를 어떤 태양 이벤트에 발화시킬지 선택합니다"
 
+#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
+msgid ""
+"Next Execution"
+msgstr ""
+"다음 실행"
+
+#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
+msgid ""
+"Which sun event should this Trigger fire on?"
+msgstr ""
+"이 트리거를 어떤 태양 이벤트에 발화시킬지 선택합니다"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Hide model"
+msgstr "모델 숨기기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Show model"
+msgstr "모델 보기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Unsaved changes"
+msgstr "저장 안 된 변경"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Enter a name and select a map"
+msgstr "이름을 입력하고 지도를 선택하세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Not placed on the map yet"
+msgstr "아직 지도에 배치되지 않았습니다"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing placed yet"
+msgstr "아직 배치된 구성요소가 없습니다"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Not saved yet"
+msgstr "아직 저장되지 않았습니다"
+
 #: aot_flask/templates/pages/method-build.html
 msgid ""
 "Fixed time"
@@ -25886,3 +25926,198 @@ msgid ""
 "Phase Offset (min)"
 msgstr ""
 "위상 오프셋 (분)"
+
+#: aot/aot_flask/static/js/geo/facility/facility-3d-bridge.js
+msgid "Delete facility \"%(name)s\"?"
+msgstr "시설 "%(name)s"을(를) 삭제할까요?"
+
+#: aot/aot_flask/static/js/geo/facility/facility-3d-bridge.js
+msgid "Deleting removes all facility data and linked geometry information, and cannot be undone."
+msgstr "삭제하면 시설 데이터와 연결된 도형 정보가 모두 사라지며 되돌릴 수 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "No sensors registered — use [+ Add Sensor] below"
+msgstr "등록된 센서 없음 — 아래 [+ 센서 추가]를 사용하세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "No weather services connected — use [+ Add Connection] below"
+msgstr "연결된 기상 서비스 없음 — 아래 [+ 연결 추가]를 사용하세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Covering & Ventilation"
+msgstr "피복 및 환기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Selected Component"
+msgstr "선택된 구성요소"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Components"
+msgstr "구성요소"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Everything placed in this facility. The row adapts to the type: sensors take a measurement channel, powered components take an actuator. The Integrated Environment Control function reads environmental data from the sensors here."
+msgstr "이 시설에 배치한 모든 구성요소입니다. 행은 종류에 따라 바뀝니다 — 센서는 측정 채널을, 동력 설비는 액추에이터를 지정합니다. 통합 환경제어 기능은 여기 등록된 센서에서 환경 데이터를 읽습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing placed yet — pick a type below, or use the 3D tools"
+msgstr "아직 배치된 구성요소가 없습니다 — 아래에서 종류를 고르거나 3D 도구를 사용하세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Multiple channels — edit in the inspector"
+msgstr "다중 채널 — 선택된 구성요소에서 편집"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "3D Placement"
+msgstr "3D 배치"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Position, size and rotation of the component selected in the list below or in the 3D view. Name, type and wiring are edited in the list."
+msgstr "아래 목록이나 3D 화면에서 선택한 구성요소의 위치·크기·회전입니다. 이름과 종류, 연결은 목록에서 편집합니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Unnamed"
+msgstr "이름 없음"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Everything placed in this facility, grouped by type. Select a row to open its 3D placement right below it."
+msgstr "이 시설에 배치한 모든 구성요소를 종류별로 묶었습니다. 행을 선택하면 바로 아래에 3D 배치가 열립니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Add Component"
+msgstr "구성요소 추가"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Nothing placed yet — add one above, or use the 3D tools"
+msgstr "아직 배치된 구성요소가 없습니다 — 위에서 추가하거나 3D 도구를 사용하세요"
+
+msgid "Drag the component in the 3D view to move it, or type exact coordinates below."
+msgstr "3D 화면에서 구성요소를 끌어 옮길 수 있습니다. 정확한 좌표는 아래에 직접 입력하세요."
+
+msgid "Could not load the API key."
+msgstr "API 키를 불러오지 못했습니다."
+
+msgid "— Select a Site —"
+msgstr "— 대지 선택 —"
+
+msgid "No sites in this map"
+msgstr "이 지도에 대지가 없습니다"
+
+msgid "Failed to load sites"
+msgstr "대지를 불러오지 못했습니다"
+
+msgid "Enter a name"
+msgstr "이름을 입력하세요"
+
+msgid "Select a map and place the facility on it"
+msgstr "지도를 선택하고 시설을 배치하세요"
+
+msgid "From envelope"
+msgstr "외피 생성"
+
+msgid "manual size"
+msgstr "수동 크기"
+
+msgid "Size and position are set by hand — the envelope no longer updates them."
+msgstr "크기·위치를 직접 지정했습니다. 외피 설정이 더 이상 이 항목을 갱신하지 않습니다."
+
+msgid "Back to automatic"
+msgstr "자동으로 되돌리기"
+
+msgid "Size & shape"
+msgstr "크기·형상"
+
+msgid "Size, shape and name follow the group. Uncheck to size this one on its own."
+msgstr "크기·형상·이름이 그룹을 따릅니다. 해제하면 이 항목만 따로 지정합니다."
+
+msgid "One actuator drives the whole group. Uncheck to wire this one separately."
+msgstr "하나의 제어장치가 그룹 전체를 구동합니다. 해제하면 이 항목만 따로 연결합니다."
+
+msgid "%(n)s created together"
+msgstr "%(n)s개 함께 생성"
+
+msgid "%(n)s linked"
+msgstr "%(n)s개 연동"
+
+msgid "detached"
+msgstr "개별"
+
+#: aot_flask/templates/settings/users.html
+msgid "Edit User"
+msgstr "사용자 편집"
+
+#: aot_flask/templates/settings/users.html
+msgid "Edit Role"
+msgstr "역할 편집"
+
+msgid "Show in 3D"
+msgstr "3D에 표시"
+
+msgid "Show/hide the display filter"
+msgstr "표시 필터 열기/닫기"
+
+msgid "%(n)s hidden"
+msgstr "%(n)s개 숨김"
+
+msgid "Roof vent"
+msgstr "천창"
+
+msgid "Side window"
+msgstr "측창"
+
+msgid "reinforcement face"
+msgstr "보강면"
+
+msgid "Left side"
+msgstr "좌"
+
+msgid "Right side"
+msgstr "우"
+
+msgid "Lower stage"
+msgstr "하단"
+
+msgid "Upper stage"
+msgstr "상단"
+
+msgid "Stage"
+msgstr "단"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Display Name"
+msgstr "이름"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Account Enabled"
+msgstr "계정 사용"
+
+#: aot_flask/templates/settings/users.html
+msgid "Login account"
+msgstr "로그인 계정"
+
+#: aot_flask/utils/utils_settings.py
+msgid "Cannot disable the currently logged-in account."
+msgstr "현재 로그인한 계정은 사용 해제할 수 없습니다."
+
+#: aot_flask/utils/utils_settings.py
+msgid "Cannot disable the last Administrator."
+msgstr "마지막 관리자 계정은 사용 해제할 수 없습니다."
+
+#: aot_flask/routes_authentication.py
+msgid "This account has been disabled. Contact an administrator."
+msgstr "사용이 해제된 계정입니다. 관리자에게 문의하십시오."
+
+#: aot_flask/templates/settings/users.html
+msgid "Used to log in. Letters and numbers only, and cannot be changed later."
+msgstr "로그인에 사용합니다. 영문자와 숫자만 가능하며 생성 후에는 변경할 수 없습니다."
+
+#: aot_flask/templates/settings/users.html
+msgid "Shown in lists. Leave blank to show the login account instead."
+msgstr "목록에 표시됩니다. 비워 두면 로그인 계정이 대신 표시됩니다."
+
+msgid "Geometry"
+msgstr "형상"
+
+#: aot_flask/templates/settings/api_key.html
+msgid "Edit API Key"
+msgstr "API 키 편집"

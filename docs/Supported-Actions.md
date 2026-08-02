@@ -76,12 +76,11 @@ Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will add a line t
 - Manufacturer: AoT
 - Works with: Functions
 
-Create a note with the selected Tag.
+Create a note with the selected options.
 
-Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will create a note with the selected tag and note. Executing <strong>self.run_action("ACTION_ID", value={"tags": ["tag1", "tag2"], "name": "My Note", "note": "this is a message"})</strong> will execute the action with the specified list of tag(s) and note. If using only one tag, make it the only element of the list (e.g. ["tag1"]). If note is not specified, then the action message will be used as the note.
-<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Tags</td></td><td>Select one or more tags</td></tr><tr><td>Name</td><td>Text
-- Default Value: Name</td><td>The name of the note</td></tr><tr><td>Note</td><td>Text
-- Default Value: Note</td><td>The body of the note</td></tr><tr><td>Include Message in Note</td><td>Boolean</td><td>Include the message passed to the action in the note that's created</td></tr></tbody></table>
+Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will create a note with the configured options. Executing <strong>self.run_action("ACTION_ID", value={"tags": ["tag1"], "name": "Title", "note": "body", "category": "alarm", "priority": 1})</strong> will override the stored settings. Set <strong>auto_target</strong> to link the note automatically to the parent Function.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Tags</td></td><td>Select one or more tags</td></tr><tr><td>Name</td><td>Text</td><td>Title (if blank, auto-extracted from the first line of the body)</td></tr><tr><td>Note</td></td><td>Note body</td></tr><tr><td>Include action message in body</td><td>Boolean</td><td>Append the message passed by the condition/trigger to the end of the note body</td></tr><tr><td>Auto-link to parent Function</td><td>Boolean
+- Default Value: True</td><td>Automatically link the note to this action's parent Function (target_id/target_type)</td></tr><tr><td>Category</td><td>Select(Options: [<strong>General</strong> | Observation | Alarm | Maintenance] (Default in <strong>bold</strong>)</td><td>Note category</td></tr><tr><td>Priority</td><td>Select(Options: [<strong>Normal</strong> | High | Urgent] (Default in <strong>bold</strong>)</td><td>Note priority</td></tr></tbody></table>
 
 ### Display: Backlight: Color
 
@@ -133,6 +132,15 @@ Turn display flashing on
 
 Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will start the backlight flashing on the selected display. Executing <strong>self.run_action("ACTION_ID", value={"display_id": "959019d1-c1fa-41fe-a554-7be3366a9c5b"})</strong> will start the backlight flashing on the controller with the specified ID. Don't forget to change the display_id value to an actual Function ID that exists in your system.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Display</td><td>Select Device</td><td>Select the display to start flashing the backlight</td></tr></tbody></table>
+
+### Environment Control
+
+- Manufacturer: AoT
+- Works with: Functions
+
+Register an actuator with the Integrated Environment Control (env_coordinator) Function. Add this action multiple times to register more than one device.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Output Channel</td><td>Select Channel (Output_Channels)</td><td>Select the Output channel to control.</td></tr><tr><td>Actuator Type</td><td>Select</td><td>Select the role this Output performs.</td></tr><tr><td>Cost Index</td><td>Decimal
+- Default Value: 5.0</td><td>Lower value = higher priority (1 = free natural ventilation, 10 = high-cost device).</td></tr><tr><td>On Time Window End</td><td>Select(Options: [<strong>Do Nothing</strong> | Turn Off | Turn On | Set Open % (Vent only)] (Default in <strong>bold</strong>)</td><td>Action to take on this actuator when the time control window ends.</td></tr><tr><td>End Open %</td><td>Decimal</td><td>Target opening percentage when the time window ends (Vent / Opening only).</td></tr><tr><td>Shade Cloth Transmittance (0-1, Shade only)</td><td>Decimal</td><td>Fraction of light that passes through the shade cloth when fully closed. 0.30 = 70% shading. Used only when there is NO indoor light sensor: the indoor light level is then estimated from outdoor irradiance and the shade position, so the light thresholds can see the shading the screen itself creates. 0 = disabled (indoor light is assumed equal to outdoor irradiance).</td></tr><tr><td>Effect Coefficient Override (K_*)</td><td>Decimal</td><td>0 = use default. Enter only when calibrating from measured data. e.g. cooler → K_COOLER_T, fogger → K_FOG_RH.</td></tr><tr><td>Full Stroke Time (s)</td><td>Decimal</td><td>Time (seconds) for this actuator to travel 0→100%. Used to limit the maximum command change per cycle so that impossible commands (faster than physical speed) are never sent. 0 = disabled (uses slew_per_cycle as-is). Example: a vent motor that takes 10 min → enter 600.</td></tr><tr><td>Min Repeat Interval (s)</td><td>Decimal</td><td>Minimum seconds between repeated commands to this actuator even if the target value has not changed. 0 = use system default (600 s watchdog). Increase for slow motorized actuators to extend relay lifetime.</td></tr></tbody></table>
 
 ### Equation (Single-Measurement)
 
@@ -251,7 +259,7 @@ Usage: Executing <strong>self.run_action("ACTION_ID")</strong> will publish the 
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Payload</td><td>Text</td><td>The payload to publish</td></tr><tr><td>Payload Type</td><td>Select(Options: [<strong>Text</strong> | Integer | Float/Decimal] (Default in <strong>bold</strong>)</td><td>The type to cast the payload</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_gHAszYVa</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_CMHCwc9E</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
 
 ### MQTT: Publish: Measurement
@@ -266,8 +274,45 @@ Publish an Input measurement to an MQTT server.
 - Default Value: 1883</td><td>The port of the MQTT server</td></tr><tr><td>Topic</td><td>Text
 - Default Value: paho/test/single</td><td>The topic to publish with</td></tr><tr><td>Keep Alive</td><td>Integer
 - Default Value: 60</td><td>The keepalive timeout value for the client. Set to 0 to disable.</td></tr><tr><td>Client ID</td><td>Text
-- Default Value: client_yohHlpuN</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
+- Default Value: client_EIz65jg1</td><td>Unique client ID for connecting to the MQTT server</td></tr><tr><td>Use Login</td><td>Boolean</td><td>Send login credentials</td></tr><tr><td>Username</td><td>Text
 - Default Value: user</td><td>Username for connecting to the server</td></tr><tr><td>Password</td><td>Text</td><td>Password for connecting to the server.</td></tr><tr><td>Use Websockets</td><td>Boolean</td><td>Use websockets to connect to the server.</td></tr></tbody></table>
+
+### Measurement: Function
+
+- Manufacturer: AoT
+- Works with: Functions
+
+Register a Function measurement to include in the AoT Average function. Select computed output values from other functions. This action is not executed; it only stores the measurement selection.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement: Function</td><td>Select Measurement (Function)</td><td>Function computed measurement to include in the average calculation</td></tr><tr><td>Max Age (seconds)</td><td>Integer
+- Default Value: 360</td><td>Measurements older than this value (seconds) will be excluded from the average</td></tr></tbody></table>
+
+### Measurement: Input
+
+- Manufacturer: AoT
+- Works with: Functions
+
+Register an Input measurement to include in the AoT Average function. This action is not executed; it only stores the measurement selection.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement: Input</td><td>Select Measurement (Input)</td><td>Input sensor measurement to include in the average calculation</td></tr><tr><td>Max Age (seconds)</td><td>Integer
+- Default Value: 360</td><td>Measurements older than this value (seconds) will be excluded from the average</td></tr></tbody></table>
+
+### Measurement: Output
+
+- Manufacturer: AoT
+- Works with: Functions
+
+Register an Output measurement to include in the AoT Average function. Select Output channel measurements such as duration. This action is not executed; it only stores the measurement selection.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurement: Output</td><td>Select Measurement (Output_Channels_Measurements)</td><td>Output channel measurement to include in the average calculation (e.g. duration)</td></tr><tr><td>Max Age (seconds)</td><td>Integer
+- Default Value: 360</td><td>Measurements older than this value (seconds) will be excluded from the average</td></tr></tbody></table>
+
+### Output: Actuator Paired (Position / Stop)
+
+- Manufacturer: AoT
+- Works with: Functions
+
+Drive an Actuator Paired output to a target position (0–100 %) or send a Stop command.
+
+Usage: Executing <strong>self.run_action("ACTION_ID")</strong> drives the actuator to the configured position. Executing <strong>self.run_action("ACTION_ID", value={"output_id": "UUID", "channel": 0, "command": "set_position", "position": 75})</strong> drives the Actuator Paired output with the given ID to 75 %. Use <strong>"command": "stop"</strong> to halt motion immediately.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Actuator Paired Output</td><td>Select Channel (Output_Channels)</td><td>Select the Actuator Paired output channel to control.</td></tr><tr><td>Command</td><td>Select(Options: [<strong>Set Position (%)</strong> | Stop] (Default in <strong>bold</strong>)</td><td>"Set Position" drives the actuator to the target %. "Stop" halts motion immediately.</td></tr><tr><td>Target Position (%)</td><td>Decimal</td><td>0 = fully closed, 100 = fully open. Used only when Command is "Set Position".</td></tr></tbody></table>
 
 ### Output: Duty Cycle
 

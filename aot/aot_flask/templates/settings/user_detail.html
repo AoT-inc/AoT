@@ -1,0 +1,139 @@
+{# Drawer body+footer for one user — served on demand by /settings/users/detail/<uid>.
+   Kept out of the users list page so no other user's email or settings ever reach
+   the browser until an admin explicitly opens that user.
+
+   Markup mirrors pages/data_options/input_options.html + input_entry.html's footer
+   so this drawer is the same shell as the Input/Output ones (.aot-option-modal
+   .modal-content > form > .modal-body + .modal-footer). #}
+<form method="post" id="user_form_{{user.unique_id}}" data-user-detail-form action="/settings/users">
+  {{form_mod_user.csrf_token}}
+  {{form_mod_user.user_id(value=user.unique_id)}}
+
+  <div class="modal-body">
+
+    <div class="aot-modal-container">
+      <div class="col-12 text-muted small" style="padding:0">
+        {{_('Note: Password and keypad code fields are empty. Enter values and save to change. Leave empty to keep current settings. To disable keypad code, enter 0 and save.')}}
+      </div>
+    </div>
+
+    <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
+    <div class="aot-modal-container">
+
+      {# 로그인 계정은 인증 키라 만든 뒤 바꿀 수 없다. 그래도 목록의 이름만
+         보고서는 어느 계정인지 알 수 없으므로 읽기 전용으로 함께 보여준다. #}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label"
+          title="{{_('Used to log in. Letters and numbers only, and cannot be changed later.')}}">{{_('Login account')}}</label>
+        <div class="aot-modal-option-control">
+          <input type="text" class="form-control aot-modern-input" value="{{user.name}}" disabled>
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label"
+          title="{{_('Shown in lists. Leave blank to show the login account instead.')}}">{{_('Display Name')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.full_name(class_='form-control aot-modern-input', value=user.full_name or '',
+            placeholder=user.name)}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Account Enabled')}}</label>
+        <div class="aot-modal-option-control">
+          <label class="btn-toggle mb-0">
+            {%- if user.is_enabled -%}
+              {{form_mod_user.is_enabled(class_='btn-toggle-input', checked=True)}}
+            {%- else -%}
+              {{form_mod_user.is_enabled(class_='btn-toggle-input')}}
+            {%- endif %}
+            <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Email')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.email(class_='form-control aot-modern-input', value=user.email)}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('New Password')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.password_new(class_='form-control aot-modern-input', autocomplete='new-password')}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Repeat Password')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.password_repeat(class_='form-control aot-modern-input', autocomplete='new-password')}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" title="{% if user.code %}{{_('Set')}}{% else %}{{_('Not set')}}{% endif %}">{{_('Keypad Code')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.code(class_='form-control aot-modern-input', autocomplete='new-password')}}
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Role')}}</label>
+        <div class="aot-modal-option-control">
+          <select name="role_id" class="form-control aot-modern-input">
+            {% for each_role in user_roles %}
+            <option value="{{each_role.id}}" {% if user.role_id == each_role.id %}selected{% endif %}>{{each_role.name}}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Theme')}}</label>
+        <div class="aot-modal-option-control">
+          <select name="theme" class="form-control aot-modern-input">
+            {% for value, name in themes %}
+            <option value="{{value|e}}" {% if value == user.theme %}selected{% endif %}>{{name|e}}</option>
+            {% endfor -%}
+          </select>
+        </div>
+      </div>
+
+      {# 키 표시와 발급 버튼을 두 행으로 나눈다 — aot-api-key-group 은 60px 아이콘
+         버튼(render_api_key_picker)을 전제로 한 폭이라 글자 버튼이 들어가면 겹친다. #}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('API Key')}}</label>
+        <div class="aot-modal-option-control">
+          {# 키는 해시로만 저장되므로 기존 값을 다시 표시할 수 없다. 발급 직후에만
+             users.html 의 JS 가 이 두 입력란을 채운다. #}
+          {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id)}}
+          <input type="text" class="form-control aot-modern-input visible_mod_key_{{user.unique_id}}" autocomplete="off"
+            readonly title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false"
+            placeholder="{% if user.api_key_hash %}{{_('Issued — shown only once at generation')}}{% else %}{{_('Not issued')}}{% endif %}">
+        </div>
+      </div>
+
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{_('Generate API Key')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.user_generate_api_key(class_='btn aot-pill-btn aot-pill-btn-primary', value=_('Generate'))}}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-dismiss="modal">{{_('Close')}}</button>
+    {{form_mod_user.user_delete(class_='btn aot-pill-btn aot-pill-btn-primary',
+      **{'onclick':'return confirm("' + _('Are you sure you want to delete this user?') + '")'})}}
+    {% if not user.is_approved %}
+    {{form_mod_user.user_approve(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+    {% endif %}
+    {{form_mod_user.user_save(class_='btn aot-pill-btn aot-pill-btn-primary')}}
+  </div>
+</form>

@@ -65,11 +65,13 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- CSRF 토큰 주기적 갱신: WTF_CSRF_TIME_LIMIT(12h)보다 오래 열린 탭에서 폼 제출이 만료 오류로
        실패하지 않도록 20분마다 재서명된 토큰을 meta 태그·hidden 필드에 반영. -->
   <script src="/static/js/common/aot-csrf-refresh.js?v=20260727"></script>
+  <!-- API 키 피커: 선택한 키 하나만 요청 시점에 서버에서 조회(평문 일괄 노출 방지) -->
+  <script src="/static/js/common/aot-api-key-picker.js?v=20260801b"></script>
   <!-- AoT API Request Manager - Centralized API handling with caching and retry logic -->
 
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <link href="/static/css/simple-sidebar.css" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260722a" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}?v=20260803a" rel="stylesheet">
 
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else
   '/static/css/bootstrap-4-themes/aot.css' %}
@@ -154,7 +156,10 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     }
   </style>
 
-  <link href="/custom.css" rel="stylesheet">
+  {# ?v= 는 테마/커스텀 CSS 내용의 해시다. 앞단 프록시가 이 응답의 no-store 를
+     자기 캐시 규칙으로 덮어써도(엣지 openresty), 내용이 바뀌면 URL 이 바뀌므로
+     브라우저가 반드시 새로 받는다. 토큰 계산은 routes_static.inject_variables. #}
+  <link href="/custom.css?v={{ custom_css_version|default('0') }}" rel="stylesheet">
 
   <!-- Toastr -->
   <link href="/static/css/toastr.min.css" rel="stylesheet">
@@ -449,7 +454,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     setInterval(check_daemon_status, 60000);
   </script>
   <!-- AoT Modern Design System (Override Bootstrap) - Load Check: Ensure this is last in head -->
-  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260725n" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-modal-modern.css') }}?v=20260803b" rel="stylesheet">
   
   <!-- Shared drawer shell (AI chat, Notes) -->
   <link href="{{ url_for('static', filename='css/components/aot-drawer.css') }}?v=20260722a" rel="stylesheet">
