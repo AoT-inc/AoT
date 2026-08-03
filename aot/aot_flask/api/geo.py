@@ -377,45 +377,13 @@ class GeoDeviceLocation(Resource):
                 # (aot/aot_flask/geo/device_membership.py — 유일한 정본).
                 # 저장하지 않으면 복제·zone 재생성·도형 삭제가 오염시킬 수 없다.
 
-                from aot.databases.models import GeoShape
-                geo_shape = GeoShape.query.filter_by(
-                    geo_id=map_uuid, 
-                    device_id=unique_id, 
-                    channel_id=str(channel_id)
-                ).first()
-
-                new_feature = {
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [float(lng), float(lat)]
-                    } if (lat is not None and lng is not None) else None,
-                    "properties": {
-                        "unique_id": f"{unique_id}::{channel_id}" if str(channel_id) != '0' and channel_id is not None else unique_id,
-                        "device_id": unique_id,
-                        "channel_id": str(channel_id),
-                        "device_type": dev_type,
-                        "name": getattr(target_device, 'name', str(unique_id))
-                    }
-                }
-
-                if lat is not None and lng is not None:
-                    if not geo_shape:
-                        geo_shape = GeoShape(
-                            geo_id=map_uuid,
-                            device_id=unique_id,
-                            channel_id=str(channel_id),
-                            type='aot_device',
-                            feature=new_feature  # [Fix] Set feature at construction to satisfy NOT NULL
-                        )
-                        db.session.add(geo_shape)
-                    else:
-                        geo_shape.feature = new_feature
-                    geo_shape.updated_at = datetime.utcnow()
-                    current_app.logger.info(f'[GeoAPI] GeoShape saved: device={unique_id} ch={channel_id} map={map_uuid} lat={lat} lng={lng}')
-                elif geo_shape:
-                    db.session.delete(geo_shape)
-                    current_app.logger.info(f'[GeoAPI] GeoShape removed: device={unique_id} ch={channel_id} map={map_uuid}')
+                # [S5] 마커 쓰기는 단일 게이트웨이를 통해서만 — 채널 정규화·
+                # aot_type 미저장·중복 방지 계약이 그 안에 있다.
+                from aot.aot_flask.geo.device_placement import place_device
+                place_device(
+                    unique_id, map_uuid, lat, lng,
+                    channel_id=channel_id, device_type=dev_type,
+                    name=getattr(target_device, 'name', str(unique_id)))
 
             db.session.commit()
 

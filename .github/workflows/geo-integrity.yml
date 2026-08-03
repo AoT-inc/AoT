@@ -1,0 +1,59 @@
+name: Geo Data Integrity
+
+# 지도 데이터의 구조 불변식을 CI 에서 지킨다.
+#
+# DB 트리거(p6_22/p6_23)가 '잘못된 데이터'를 런타임에 막는다면, 여기서는
+# '규칙을 모르는 코드'를 병합 전에 막는다 — 실패를 왼쪽으로 옮긴다.
+# 2026-08-03 오염 사고(도형 이중화 → 시설·zone 연결 단절)의 재발 방지책이며,
+# 배경과 불변식 카탈로그는 docs/design/geo-data-integrity.md 가 정본이다.
+#
+# 두 가지를 본다:
+#   1. 소유권 — geo 패키지 밖에서 GeoShape 를 직접 쓰는 코드 (정적 AST 검사)
+#   2. 차단력 — 원시 SQL 우회 공격이 실제로 막히는지 (인메모리 DB 공격 테스트)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aot/**/*.py'
+      - 'alembic_db/**/*.py'
+      - '.github/workflows/geo-integrity.yml'
+  pull_request:
+    paths:
+      - 'aot/**/*.py'
+      - 'alembic_db/**/*.py'
+      - '.github/workflows/geo-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  geo-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 공격 테스트는 Flask/SQLAlchemy 만 있으면 돈다 — 전체 requirements 를
+      # 설치하지 않는다(설치 실패가 무결성 검사를 가리는 것을 피한다).
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install flask flask-sqlalchemy flask-babel sqlalchemy alembic shapely pytest
+
+      # 정적 검사 — 앱 import 가 필요 없다.
+      - name: 소유권 검사 (geo 패키지 밖 지도 쓰기 금지)
+        run: python3 aot/scripts/check_geo_writes.py
+
+      # 우회 공격이 DB 계층에서 막히는지 — 불변식의 실제 차단력.
+      - name: 불변식 공격 테스트
+        run: python3 -m pytest aot/tests/geo/test_geo_invariants_attack.py -q
+
+      # 게이트웨이 계약 + 소유권 회귀.
+      - name: 게이트웨이 계약 테스트
+        run: python3 -m pytest aot/tests/geo/test_geo_s5_gateway.py -q

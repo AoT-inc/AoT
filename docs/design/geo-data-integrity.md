@@ -33,6 +33,8 @@
 | I8 | `geo_shape.geo_id` 는 실존하는 `geo_map` 을 가리킴 (유령 지도 금지) | 트리거 | Tier-2 |
 | I9 | 삭제는 명시 목록으로만 — "페이로드 누락 = 삭제" 프로토콜 폐지 | 앱 계층 (저장 프로토콜 교정) + CI | S3 |
 | I10 | `clone_model` 은 교차참조 컬럼(map_overlay_id·map_config_id·geo_id)을 암묵 복사하지 않음 | 앱 계층 + 단위 테스트 | S3 |
+| I11 | 소속(장치↔zone)은 저장하지 않고 마커 좌표에서 파생 | 컬럼 미사용 + `device_membership` 단일 리졸버 | S3 |
+| I12 | 지도 데이터 쓰기는 geo 패키지 안에서만 — 밖은 게이트웨이 경유 | `check_geo_writes.py` (AST) + pre-commit + CI | S5 |
 
 **Tier-1** 은 현재 데이터·현재 앱 코드와 즉시 호환된다. 단 I2 인덱스 생성 전
 S2 마이그레이션에서 두 가지 사전 정리가 필수다: ① `aot_device` 마커의
@@ -66,13 +68,34 @@ bay 는 시설·하위를 갖지 않으므로 안전하다.
 ## 단계별 로드맵
 
 ```
-S1  본 문서 + DDL 모듈 + 공격 테스트                          ← 완료 기준: Tier-1/2 공격 전부 차단
-S2  마커 중복 사전 정리 마이그레이션 → Tier-1 을 3서버에 적용
-S3  map_overlay_id 파생 전환 + 저장 프로토콜 교정(I9) + clone 거부목록(I10)
-S4  저장 시 aot_type 제거 + 라벨 되먹임 절단 → Tier-2 적용
-S5  단일 배치 게이트웨이 + CI 우회 검사(게이트웨이 밖 GeoShape 쓰기 grep 거부)
-S6  공격 테스트 + 24개 시나리오 재현 테스트 전체 통과 → 3서버 사본 리허설 → 배포
+S1 ✅ 본 문서 + DDL 모듈 + 공격 테스트 16종                   (ffb3930)
+S2 ✅ 마커 중복·dangling·채널 사전 정리 → Tier-1 3서버 적용    (p6_22, fa47507)
+S3 ✅ map_overlay_id 파생 전환(I11) + upsert 전용(I9) + clone 거부목록(I10)  (dc9032f)
+S4 ✅ 저장 시 aot_type 제거 + 되먹임 고리 절단 → Tier-2 적용    (p6_23, d2c4390)
+S5 ✅ 단일 배치 게이트웨이 + 소유권 검사(I12) + pre-commit/CI
 ```
+
+## 남은 일 (구조 아님 — 운영·정리)
+
+- `map_overlay_id` 컬럼 드롭 마이그레이션 — 파생 전환이 운영에서 안정화된 뒤.
+  지금은 아무도 읽지 않고 아무도 쓰지 않는 사망 컬럼이다.
+- `check_geo_writes.py` 의 `GRANDFATHERED` 3건(장치 삭제 시 자기 마커 정리)을
+  `unplace_device` 로 이관 — 예외 목록을 0 으로.
+- 유령 지도 도형 처분(phantom-map 보고 대상) — 위젯 참조 확인 후 사람이 판단.
+- 미사용 `Copy of` 지도 정리, 잔여 duplicate/orphan-label — 참조 확인 후 수동.
+
+## 새 코드를 쓸 때
+
+지도 데이터를 건드려야 한다면 geo 패키지의 문을 쓴다:
+
+| 하려는 일 | 쓸 것 |
+|---|---|
+| 장치를 지도에 배치/이동/해제 | `geo.device_placement.place_device` / `unplace_device` |
+| 도형 하나 삭제 | `geo.device_placement.delete_shape` (연쇄는 트리거가 처리) |
+| 장치가 어느 zone 인지 | `geo.device_membership` (저장 컬럼 조회 금지) |
+| 도형 저장 | `geo.geo_overlays.GeoOverlayManager` |
+
+`GeoShape(...)` 를 geo 패키지 밖에서 직접 부르면 pre-commit 과 CI 가 거부한다.
 
 관련: `aot/scripts/check_geo_integrity.py`(탐지), `p6_21`(기존 오염 데이터 복구),
 CLAUDE.md "지도 데이터 무결성 검사" 절.

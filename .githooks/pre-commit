@@ -23,3 +23,21 @@ if ! python3 "$CHECK" --staged; then
     echo "  (의도한 커밋이라면 AOT_SKIP_BUNDLE_CHECK=1 git commit ...)"
     exit 1
 fi
+
+# ── 지도 데이터 쓰기 소유권 (S5) ──────────────────────────────────────────
+# geo 패키지 밖에서 GeoShape 를 직접 쓰면 지도 불변식(타입 어휘·채널 정규화·
+# aot_type 미저장·마커 유일성·시설 연쇄)을 그 코드가 다 알아야 하고, 결국
+# 아무도 다 알지 못한다 — 2026-08-03 오염 사고의 구조적 원인이다.
+# 우회: AOT_SKIP_GEO_WRITE_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_GEO_WRITE_CHECK" ]; then
+    GEO_CHECK="$ROOT/aot/scripts/check_geo_writes.py"
+    if [ -f "$GEO_CHECK" ] && git diff --cached --name-only | grep -q '\.py$'; then
+        if ! python3 "$GEO_CHECK"; then
+            echo
+            echo "커밋 중단: 지도 데이터는 geo 패키지가 소유합니다."
+            echo "  배경: docs/design/geo-data-integrity.md"
+            echo "  (의도한 커밋이라면 AOT_SKIP_GEO_WRITE_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi

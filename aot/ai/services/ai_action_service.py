@@ -1302,24 +1302,17 @@ class AIActionService:
                                     final_lat = p_lat if p_lat is not None else c_lat
                                     final_lng = p_lng if p_lng is not None else c_lng
                                     
-                                    # Create new marker (GeoShape)
-                                    new_shape = GeoShape(
-                                        geo_id=map_uuid,
-                                        device_id=new_id,
-                                        type='aot_device',
-                                        parent_id=parent_node.id,
-                                        feature={
-                                            "type": "Feature",
-                                            "geometry": {"type": "Point", "coordinates": [final_lng, final_lat] if final_lng else [0,0]},
-                                            "properties": {
-                                                "device_id": new_id,
-                                                "device_type": device_category,
-                                                "name": name
-                                            }
-                                        }
-                                    )
-                                    db.session.add(new_shape)
-                                    
+                                    # [S5] 마커 생성은 geo 게이트웨이로만.
+                                    # AI 대량생성이 직접 INSERT 하던 경로였고,
+                                    # channel_id 누락으로 첫 위치 저장에서
+                                    # 중복 마커가 생기던 지점이다.
+                                    from aot.aot_flask.geo.device_placement import place_device
+                                    place_device(
+                                        new_id, map_uuid,
+                                        final_lat, final_lng if final_lng else 0,
+                                        device_type=device_category, name=name)
+
+
                                     # Update main record coordinates
                                     if hasattr(record, 'latitude'): record.latitude = final_lat
                                     if hasattr(record, 'longitude'): record.longitude = final_lng

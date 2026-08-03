@@ -4154,16 +4154,15 @@ class AoTDataToolService:
     def delete_geo_shape(shape_id=None, **extra):
         """Delete a SINGLE geo shape (zone / area / marker) by its unique_id. Guarded:
         one shape by id — never a bulk/layer delete."""
-        from aot.databases.models import GeoShape
+        # [S5] 도형 삭제는 geo 게이트웨이로만 — 시설·bay·설정점 연쇄와
+        # 장치 소속 해제는 DB 트리거가 처리하므로 여기서 알 필요가 없다.
+        from aot.aot_flask.geo.device_placement import delete_shape
         if not shape_id:
             return {"error": "shape_id is required"}
-        shape = GeoShape.query.filter_by(unique_id=shape_id).first()
-        if not shape:
-            return {"error": f"Geo shape not found: {shape_id}"}
-        stype = shape.type
         try:
-            db.session.delete(shape)
-            db.session.commit()
+            stype = delete_shape(shape_id, commit=True)
+            if stype is None:
+                return {"error": f"Geo shape not found: {shape_id}"}
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}
