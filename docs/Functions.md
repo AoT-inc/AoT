@@ -1024,3 +1024,13 @@ The misting lockout takes precedence over both the heat emergency response and t
 Relax the protection gradually as the seedlings harden off rather than switching it off in one step. Going from no midday misting to full midday misting overnight reproduces the very conditions the mode exists to prevent, on plants that are only slightly better prepared.
 
 Some of the damage attributed to sun scorch comes from the water rather than the light. Hard water leaves mineral deposits, cold water shocks a sunlit leaf, and iron staining looks almost identical to scorch. Wiping a spot with dilute acid tells them apart: if it lifts, it was iron. No control setting fixes bad water.
+
+### When one device handles both irrigation and humidity
+
+Nurseries often water and humidify through the same set of overhead sprinklers. Handing those nozzles to the integrated environment control puts it at odds with irrigation. The coordinator sends a "stay off" command every cycle even to actuators it is not currently using, so a separate irrigation controller can open the valve only to have it closed again on the next cycle. The command goes out most reliably at dawn, precisely when no humidification is wanted.
+
+The water also behaves differently. Sprinklers sized for watering deliver far more than humidity control needs, so using them in short humidity bursts leaves only a thin film on the leaf. That film cannot run off; it dries where it sits and leaves behind whatever the water carried. A heavy morning watering does the opposite — most of it runs off, rinsing away what earlier applications left. Same water, same nozzles, opposite outcome.
+
+Turning off **Use Wetting Misting to Raise Humidity** stops the integrated environment control from commanding those nozzles at all. They belong entirely to your irrigation schedule or soil moisture controller, and humidity is managed with the screens, vents and fans. True high-pressure fog evaporates before reaching the leaf and keeps working as a humidity actuator regardless of this setting, as do humidifiers, drip lines and every other actuator.
+
+You lose misting as a midday humidity tool, which is usually no loss: drawing one more shade screen gives comparable cooling without spending water or leaving salts behind.

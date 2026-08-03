@@ -67,6 +67,46 @@ _FOG_DEFAULT_MAX_ON_SEC  = 30.0
 _FOG_DEFAULT_MIN_OFF_SEC = 180.0
 
 
+def _is_wetting_fog(kind: str, capacity_meta: dict) -> bool:
+    """잎을 적시는 분무기인가 — safety_gates.is_wetting_fogger 와 같은 기준.
+
+    프로필을 만들기 *전에* 판정해야 하므로 ActuatorProfile 대신 kind 와
+    capacity_meta 로 본다. 노즐 정보가 없으면(수동 등록 등) 보수적으로 습윤형.
+    """
+    if kind != 'fogger':
+        return False
+    nozzle = (capacity_meta or {}).get('nozzle')
+    if nozzle is not None and not nozzle.get('wetting'):
+        return False
+    return True
+
+
+def _fog_excluded_from_env(coordinator, kind: str, capacity_meta: dict) -> bool:
+    """이 분무기를 환경 제어 대상에서 통째로 뺄지.
+
+    관수와 가습을 한 장치로 처리하는 시설이 있다. 그런 노즐은 관수용으로
+    설계돼 있어 1회 살수가 가습에 필요한 양보다 훨씬 많은데, 코디네이터가
+    가습용으로 쓰면 짧은 펄스를 하루에도 수십 번 반복하게 된다. 그 얕은
+    수막은 흘러내리지 못하고 잎에서 그대로 말라 물에 녹아 있던 성분을
+    잎 위에 남긴다(아침에 흠뻑 주면 흘러내리며 오히려 씻긴다).
+
+    이 옵션을 끄면 코디네이터가 해당 액추에이터의 **프로필 자체를 만들지
+    않는다.** 명령을 0 으로 보내는 게 아니라 아예 만들지 않는 것이 핵심이다 —
+    조율기는 명령을 못 받은 프로필에 safe_default(분무기는 0.0) 를 채워 넣고,
+    습윤형 분무기는 펄스 도징 대상이라 디스패치 데드밴드도 면제되므로,
+    프로필이 남아 있으면 매 사이클 output_off 가 나가 별도 관수 제어를
+    10 분 안에 꺼버린다.
+
+    고압 미세포그(비습윤)와 그 외 액추에이터는 영향받지 않는다.
+    """
+    if not _is_wetting_fog(kind, capacity_meta):
+        return False
+    val = getattr(coordinator, 'use_wetting_fog_for_humidity', True)
+    if val is None:
+        return False        # 미설정 = 기본값(사용) — 종전 동작 유지
+    return not bool(val)
+
+
 def _fog_pulse_constraints(coordinator, kind: str, capacity_meta: dict) -> dict:
     """습윤형 분무기에 적용할 관수식 펄스 도징 파라미터.
 
@@ -76,12 +116,7 @@ def _fog_pulse_constraints(coordinator, kind: str, capacity_meta: dict) -> dict:
     Returns:
         CmdConstraints 키워드 dict (미적용이면 빈 dict)
     """
-    if kind != 'fogger':
-        return {}
-    nozzle = (capacity_meta or {}).get('nozzle')
-    # 노즐 정보가 없으면(수동 등록) 보수적으로 습윤형으로 본다 — safety_gates
-    # is_wetting_fogger() 와 같은 판정 기준을 유지한다.
-    if nozzle is not None and not nozzle.get('wetting'):
+    if not _is_wetting_fog(kind, capacity_meta):
         return {}
     if getattr(coordinator, 'nursery_mode', False):
         return {
@@ -299,6 +334,15 @@ class ProfileLoaderMixin:
                     output_uuid = ar.get('output_uuid')
                     kind        = ar.get('kind')
                     if not output_uuid or not kind:
+                        continue
+
+                    # 관수 겸용 분무기 제외 — 프로필을 만들지 않아야 조율기의
+                    # safe_default(0.0) 채움조차 일어나지 않는다. 조용히 빠지면
+                    # "왜 가습이 안 되나" 를 추적할 수 없으므로 반드시 남긴다.
+                    if _fog_excluded_from_env(self, kind, {'nozzle': ar.get('nozzle')}):
+                        self.logger.info(
+                            '환경 제어 제외: %s (습윤형 분무 — 관수 전용으로 둠). '
+                            '가습은 스크린·개구부·팬으로 처리한다.', output_uuid)
                         continue
 
                     # G1 area: use per-actuator vent_openings_area_m2 when > 0,
@@ -521,6 +565,17 @@ class ProfileLoaderMixin:
             safe_default_pct = float(opts.get('safe_default_pct', 0.0) or 0.0)
 
             if not device_id or not kind:
+                continue
+
+            # 시설 경로와 같은 규칙을 수동 등록에도 적용한다. 여기서 빠뜨리면
+            # 도면에서 제외한 분무기를 env_actuator 액션으로 되살릴 수 있어
+            # 제외가 반쪽이 된다. 노즐 정보가 없으면 보수적으로 습윤형 취급.
+            _prev = by_id.get(device_id)
+            if _fog_excluded_from_env(
+                    self, kind, (_prev.capacity_meta if _prev else None) or {}):
+                self.logger.info(
+                    '환경 제어 제외(수동 등록): %s (습윤형 분무 — 관수 전용으로 둠)',
+                    device_id)
                 continue
 
             ch_obj = 0

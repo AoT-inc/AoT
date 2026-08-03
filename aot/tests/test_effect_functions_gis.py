@@ -64,10 +64,21 @@ def test_opening_co2_area_only_no_u_factor():
 # ─── shade_temp_effect — area only ──────────────────────────────────────────
 
 def test_shade_area_factor_applied():
-    env = {}
+    # shade_temp_effect models solar gain through the opening, so it needs
+    # incoming radiation to have any magnitude at all — with the empty env this
+    # used to run with, both sides came out 0.0 and the comparison was vacuous.
+    env = {'solar': 600.0}
     r_small = shade_temp_effect(env, 100.0, profile=_profile(area_m2=5.0))
     r_large = shade_temp_effect(env, 100.0, profile=_profile(area_m2=20.0))
     assert r_large.magnitude_native > r_small.magnitude_native
+
+
+def test_shade_no_solar_has_no_effect():
+    """No sun, no gain — at night or with no radiation source the shade screen
+    position cannot change the temperature, whatever its area."""
+    env = {}
+    r = shade_temp_effect(env, 100.0, profile=_profile(area_m2=20.0))
+    assert r.magnitude_native == 0.0
 
 
 # ─── cooler — no GIS effect ────────────────────────────────────────────────

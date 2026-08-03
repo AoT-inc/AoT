@@ -600,6 +600,26 @@ FUNCTION_INFORMATION = {
             ),
         },
 
+        {
+            'id': 'use_wetting_fog_for_humidity',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Use Wetting Misting to Raise Humidity'),
+            'phrase': lazy_gettext(
+                'Turn this off when the same nozzles are also your irrigation '
+                'system. Sprinklers sized for watering put out far more water '
+                'than humidity control needs, so each short burst leaves a film '
+                'on the leaf that dries in place and concentrates whatever the '
+                'water carries — a heavy morning watering runs off and rinses '
+                'instead. With this off the coordinator never commands those '
+                'nozzles at all, leaving them entirely to your irrigation '
+                'schedule, and manages humidity with the screens, vents and '
+                'fans instead. True high-pressure fog is unaffected either way; '
+                'so are humidifiers, drip lines and every other actuator.'
+            ),
+        },
+
         # ── Nursery (Seedling Protection) ─────────────────────────────────────
         {
             'type': 'header',

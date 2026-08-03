@@ -137,6 +137,8 @@ class CustomModule(
         self.sensor_RH_int = None
         self.humid_max     = None
         self.humid_min     = None
+        # 관수 겸용 분무기를 환경 제어에서 빼는 스위치 (기본 True = 종전 동작).
+        self.use_wetting_fog_for_humidity = None
 
         # Nursery (seedling protection) — 2026-07-31 aot-005 일소 사건 대응
         self.nursery_mode           = None

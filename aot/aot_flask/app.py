@@ -149,12 +149,23 @@ def create_app(config=ProdConfig):
     # 1년 캐시 (버전 쿼리스트링으로 캐시 무효화)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
 
-    from sqlalchemy.pool import NullPool, QueuePool
+    from sqlalchemy.pool import NullPool, QueuePool, StaticPool
     # gunicorn multi-worker: NullPool (fork 후 커넥션 공유 방지)
     # 단일 프로세스(dev/Docker): QueuePool (커넥션 재사용으로 SQLite 락 경합 해소)
+    # 인메모리 SQLite: StaticPool — 커넥션마다 빈 DB 가 새로 생기므로 하나를
+    #   공유해야 하고, 풀 크기 인자는 StaticPool 이 받지 않는다(pool_size 등을
+    #   넘기면 create_engine 이 TypeError 로 죽는다).
+    _db_uri = str(app.config.get('SQLALCHEMY_DATABASE_URI') or '')
+    _is_memory_sqlite = _db_uri.startswith('sqlite') and (
+        ':memory:' in _db_uri or _db_uri.rstrip('/') == 'sqlite:')
     _is_gunicorn = "gunicorn" in os.environ.get("SERVER_SOFTWARE", "") or \
                    any("gunicorn" in arg for arg in __import__("sys").argv)
-    if _is_gunicorn:
+    if _is_memory_sqlite:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'connect_args': {'check_same_thread': False},
+            'poolclass': StaticPool,
+        }
+    elif _is_gunicorn:
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             'connect_args': {'timeout': 30, 'check_same_thread': False},
             'pool_pre_ping': True,

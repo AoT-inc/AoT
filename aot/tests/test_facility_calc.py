@@ -158,8 +158,10 @@ class TestComputeCapacity(unittest.TestCase):
         self.assertAlmostEqual(r['u_effective'], 4.0, places=2)
         # Heating must be positive
         self.assertGreater(r['heating_kw'], 0)
-        # Note label present
-        self.assertIn('±5~10%', r['_note'])
+        # Note label present. The wording is display copy, so assert the field
+        # carries something rather than pinning punctuation — this line broke
+        # when '±5~10%' was rewritten as '±5-10%' during string englishing.
+        self.assertTrue(r['_note'].strip())
 
     def test_double_layer_reduces_heating(self):
         r1 = compute_capacity(_spec(layer_count=1))

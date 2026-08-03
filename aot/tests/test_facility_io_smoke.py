@@ -67,9 +67,12 @@ class TestWidgetModule(unittest.TestCase):
         self.assertIn('custom_options', WIDGET_INFORMATION)
         self.assertIn('generate_page_variables', WIDGET_INFORMATION)
         self.assertIn('execute_at_modification', WIDGET_INFORMATION)
-        # Required option keys
+        # Required option keys. The facility is no longer picked directly —
+        # the widget takes an env_coordinator Function ('function_uuid') and
+        # resolves the facility from its geo_facility_id, so the old
+        # 'facility_uuid' option is gone.
         opt_ids = [o.get('id') for o in WIDGET_INFORMATION['custom_options'] if 'id' in o]
-        for required in ['period', 'facility_uuid', 'show_ai_advice']:
+        for required in ['period', 'function_uuid', 'show_ai_advice']:
             self.assertIn(required, opt_ids)
 
 

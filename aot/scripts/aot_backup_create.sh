@@ -25,8 +25,17 @@ printf "\n#### Create backup initiated %s ####\n" "${NOW}"
 
 mkdir -p /var/AoT-backups
 
+# node_modules/__pycache__ are build byproducts, not part of the state this
+# backup exists to restore: node_modules only feeds the notes-widget vite build
+# (whose output is already committed under static/js/notes/) and __pycache__ is
+# regenerated from the .py files beside it. Together they were ~58% of every
+# backup (192 MB of 333 MB on aot-005). Excluded here AND in can_perform_backup()
+# (aot/utils/system_pi.py) — the two must agree or the pre-upgrade free-space
+# check overestimates and can refuse an upgrade that would in fact fit.
 printf "Backing up current AoT from %s/AoT to %s..." "${INSTALL_DIRECTORY}" "${TMP_DIR}"
-if ! rsync -avq --exclude=cameras --exclude=env --exclude=.upgrade "${INSTALL_DIRECTORY}"/AoT "${TMP_DIR}" ; then
+if ! rsync -avq --exclude=cameras --exclude=env --exclude=.upgrade \
+        --exclude=node_modules --exclude=__pycache__ \
+        "${INSTALL_DIRECTORY}"/AoT "${TMP_DIR}" ; then
     printf "Failed: Error while trying to back up current AoT install from %s/AoT to %s.\n" "${INSTALL_DIRECTORY}" "${BACKUP_DIR}"
     error_found
 fi

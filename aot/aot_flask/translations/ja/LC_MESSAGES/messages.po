@@ -25828,3 +25828,11 @@ msgstr "形状"
 #: aot_flask/templates/settings/api_key.html
 msgid "Edit API Key"
 msgstr "APIキー編集"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Use Wetting Misting to Raise Humidity"
+msgstr "加湿に湿潤型ミストを使用"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Turn this off when the same nozzles are also your irrigation system. Sprinklers sized for watering put out far more water than humidity control needs, so each short burst leaves a film on the leaf that dries in place and concentrates whatever the water carries — a heavy morning watering runs off and rinses instead. With this off the coordinator never commands those nozzles at all, leaving them entirely to your irrigation schedule, and manages humidity with the screens, vents and fans instead. True high-pressure fog is unaffected either way; so are humidifiers, drip lines and every other actuator."
+msgstr "同じノズルで灌水も行っている場合はオフにしてください。灌水用に選んだスプリンクラーは加湿に必要な量よりはるかに多くの水を出すため、短く区切って噴霧するたびに葉に薄い水膜が残り、その場で乾いて水に溶けていた成分が葉に蓄積します。朝にたっぷり与える灌水は流れ落ちて逆に洗い流します。この設定をオフにすると、コーディネーターはそのノズルに一切指令を出さず灌水スケジュールに委ね、加湿はスクリーン・開口部・ファンで行います。高圧微細ミストはどちらでも影響を受けず、加湿器や点滴配管など他のアクチュエーターも同様です。"

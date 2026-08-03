@@ -3,11 +3,11 @@
 
 Covers:
   1. CycleMixin._build_cycle_summary  (_cycle_mixin.py)
-  2. Alembic migration p5_19_add_runtime_summary revision metadata
+  2. Alembic revision chain integrity
   3. FunctionRuntimeState.summary_json column presence
 """
-import importlib.util
 import json
+import re
 import types
 import unittest.mock
 from pathlib import Path
@@ -387,34 +387,86 @@ def test_gate_description_truncated_at_200():
 
 
 # ---------------------------------------------------------------------------
-# 2. Alembic migration p5_19 revision metadata
+# 2. Alembic revision chain integrity
 # ---------------------------------------------------------------------------
+#
+# This section used to pin one file (p5_19_add_runtime_summary.py) and assert
+# its revision/down_revision. That file was folded into the single baseline
+# p6_00_rebaseline_20260720 when the 115-revision chain was collapsed, so the
+# assertions decayed into "a deleted file still exists". What is worth guarding
+# is the property that made them useful: the chain still forms one unbroken
+# line. The column those migrations added is covered by section 3, which reads
+# the model — the source of truth for new installs, since they run
+# db.create_all() and stamp the head rather than walking the chain.
 
-_MIGRATION_PATH = (
-    Path(__file__).parent.parent.parent
-    / "alembic_db" / "alembic" / "versions"
-    / "p5_19_add_runtime_summary.py"
+_VERSIONS_DIR = (
+    Path(__file__).parent.parent.parent / "alembic_db" / "alembic" / "versions"
 )
+_BASELINE_REVISION = "p6_00_rebaseline_20260720"
+
+_REVISION_RE = re.compile(r"^revision\s*=\s*['\"]([^'\"]+)['\"]", re.M)
+_DOWN_REVISION_RE = re.compile(
+    r"^down_revision\s*=\s*(?:['\"]([^'\"]+)['\"]|None)", re.M)
 
 
-def test_migration_file_exists():
-    assert _MIGRATION_PATH.exists(), f"Migration file not found: {_MIGRATION_PATH}"
+def _revision_chain():
+    """Map revision -> down_revision for every migration file on disk."""
+    chain = {}
+    for path in sorted(_VERSIONS_DIR.glob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        rev = _REVISION_RE.search(text)
+        down = _DOWN_REVISION_RE.search(text)
+        assert rev, f"{path.name}: no revision identifier found"
+        assert down, f"{path.name}: no down_revision identifier found"
+        chain[rev.group(1)] = down.group(1)  # None literal -> group(1) is None
+    return chain
 
 
-def test_migration_revision():
-    spec = importlib.util.spec_from_file_location(
-        "p5_19_add_runtime_summary", _MIGRATION_PATH)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    assert mod.revision == "p5_19_add_runtime_summary"
+def test_revision_chain_is_not_empty():
+    assert _revision_chain(), f"no migration files under {_VERSIONS_DIR}"
 
 
-def test_migration_down_revision():
-    spec = importlib.util.spec_from_file_location(
-        "p5_19_add_runtime_summary", _MIGRATION_PATH)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    assert mod.down_revision == "p5_18_add_trigger_schedule"
+def test_revision_chain_has_single_root():
+    roots = [rev for rev, down in _revision_chain().items() if down is None]
+    assert roots == [_BASELINE_REVISION], (
+        f"expected {_BASELINE_REVISION} as the only root, got {roots}"
+    )
+
+
+def test_revision_chain_has_no_dangling_parent():
+    chain = _revision_chain()
+    dangling = {
+        rev: down for rev, down in chain.items()
+        if down is not None and down not in chain
+    }
+    assert not dangling, f"down_revision points at a missing revision: {dangling}"
+
+
+def _chain_head():
+    chain = _revision_chain()
+    parents = {down for down in chain.values() if down is not None}
+    return sorted(rev for rev in chain if rev not in parents)
+
+
+def test_revision_chain_has_single_head():
+    heads = _chain_head()
+    assert len(heads) == 1, f"alembic chain must have exactly one head, got {heads}"
+
+
+def test_alembic_version_constant_matches_chain_head():
+    """config.ALEMBIC_VERSION is the upgrade target, not 'head'.
+
+    alembic_upgrade_db() passes this constant to `update-alembic` explicitly
+    (plain 'head' fails while the retired p5 lineage is still around as a
+    second head). So a new migration whose author forgets to bump the constant
+    is never applied on upgrade, and the mismatch is silent.
+    """
+    from aot.config import ALEMBIC_VERSION
+    heads = _chain_head()
+    assert ALEMBIC_VERSION in heads, (
+        f"ALEMBIC_VERSION={ALEMBIC_VERSION!r} is not the chain head {heads} — "
+        "a new migration was added without bumping the constant"
+    )
 
 
 # ---------------------------------------------------------------------------

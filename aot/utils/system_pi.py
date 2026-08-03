@@ -746,7 +746,12 @@ def can_perform_backup():
     Returns value sin bytes
     """
     free_before = get_directory_free_space('/var/AoT-backups')
-    backup_size = get_directory_size(INSTALL_DIRECTORY, exclude=['env', 'cameras'])
+    # Must mirror aot/scripts/aot_backup_create.sh's rsync --exclude list, or
+    # this estimate overstates the backup and can refuse an upgrade that fits.
+    backup_size = get_directory_size(
+        INSTALL_DIRECTORY,
+        exclude=['env', 'cameras'],
+        exclude_names=['node_modules', '__pycache__'])
     free_after = free_before - backup_size
     return backup_size, free_before, free_after
 
@@ -761,13 +766,22 @@ def get_directory_free_space(path):
     return statvfs.f_frsize * statvfs.f_bavail
 
 
-def get_directory_size(start_path='.', exclude=None):
+def get_directory_size(start_path='.', exclude=None, exclude_names=None):
     """
     Returns the size of a directory
     A list of directories may be excluded
+
+    exclude       -- paths relative to start_path (e.g. 'env' means only
+                     start_path/env), matching this function's original behavior.
+    exclude_names -- directory names pruned wherever they occur, at any depth
+                     (e.g. 'node_modules'), which `exclude` cannot express.
     """
     total_size = 0
-    for dirpath, _, filenames in os.walk(start_path):
+    exclude_names = set(exclude_names or ())
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        if exclude_names:
+            # Pruned in place so os.walk never descends into them at all.
+            dirnames[:] = [d for d in dirnames if d not in exclude_names]
         skip_dir = False
         if exclude:
             for each_exclusion in exclude:
