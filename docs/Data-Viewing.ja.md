@@ -29,7 +29,7 @@ There is a Custom Widget import system in AoT that allows user-created Widgets t
 
 If you develop a working module, please consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or pull request, and it may be included in the built-in set.
 
-Open any of the built-in Widget modules located in the directory [AoT/aot/widgets](https://github.com/AoT-inc/AoT/tree/master/aot/widgets/) for examples of the proper formatting. There are also example Custom Widgets in the directory [AoT/aot/widgets/examples](https://github.com/AoT-inc/AoT/tree/master/aot/widgets/examples).
+Open any of the built-in Widget modules located in the directory [AoT/aot/widgets](https://github.com/AoT-inc/AoT/tree/main/aot/widgets/) for examples of the proper formatting. There are also example Custom Widgets in the directory [AoT/aot/widgets/examples](https://github.com/AoT-inc/AoT/tree/main/aot/widgets/examples).
 
 Creating a custom widget module often requires specific placement and execution of Javascript. Several variables were created in each module to address this, and follow the following brief structure of the dashboard page that would be generated with multiple widgets being displayed.
 

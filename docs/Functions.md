@@ -13,9 +13,9 @@ AoT has a custom function import system that lets user-created functions be used
 
 If you have developed a working function module, consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. The module may be included in the built-in set.
 
-To see properly formatted examples, open the built-in modules in the directory [AoT/aot/functions](https://github.com/AoT-inc/AoT/tree/master/aot/functions/).
+To see properly formatted examples, open the built-in modules in the directory [AoT/aot/functions](https://github.com/AoT-inc/AoT/tree/main/aot/functions/).
 
-Additionally, the directory [AoT/aot/functions/examples](https://github.com/AoT-inc/AoT/tree/master/aot/functions/examples) contains custom function examples.
+Additionally, the directory [AoT/aot/functions/examples](https://github.com/AoT-inc/AoT/tree/main/aot/functions/examples) contains custom function examples.
 
 Another GitHub repository dedicated to custom modules not included in the built-in set can be found at [aot-inc/AoT-custom](https://github.com/AoT-inc/AoT-custom).
 

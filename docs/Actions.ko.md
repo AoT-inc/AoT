@@ -8,8 +8,8 @@ AoT에는 사용자가 직접 만든 Action을 AoT 시스템에서 사용할 수
 
 동작하는 Action 모듈을 개발하셨다면 [새 GitHub 이슈 생성](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module)이나 풀 리퀘스트를 고려해 주세요. 내장 세트에 포함될 수 있습니다.
 
-올바른 형식의 예시는 [AoT/aot/actions](https://github.com/AoT-inc/AoT/tree/master/aot/actions/) 디렉터리에 있는 내장 모듈 중 아무것이나 열어 확인하세요.
+올바른 형식의 예시는 [AoT/aot/actions](https://github.com/AoT-inc/AoT/tree/main/aot/actions/) 디렉터리에 있는 내장 모듈 중 아무것이나 열어 확인하세요.
 
-또한 [AoT/aot/actions/examples](https://github.com/AoT-inc/AoT/tree/master/aot/actions/examples) 디렉터리에도 예시 Custom Action이 있습니다.
+또한 [AoT/aot/actions/examples](https://github.com/AoT-inc/AoT/tree/main/aot/actions/examples) 디렉터리에도 예시 Custom Action이 있습니다.
 
 추가로, 내장 세트에 포함되지 않은 Custom Module을 위한 별도의 github 저장소를 [aot-inc/AoT-custom](https://github.com/AoT-inc/AoT-custom)에 두고 있습니다.

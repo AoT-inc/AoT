@@ -98,7 +98,7 @@ Options:
   upgrade-aot                Upgrade AoT to latest compatible release and preserve database and virtualenv
   upgrade-release-major {ver}   Upgrade AoT to a major version release {ver} and preserve database and virtualenv
   upgrade-release-wipe {ver}    Upgrade AoT to a major version release {ver} and wipe database and virtualenv
-  upgrade-master                Upgrade AoT to the master branch at https://github.com/AoT-inc/AoT
+  upgrade-master                Upgrade AoT to the main branch at https://github.com/AoT-inc/AoT
   upgrade-post                  Execute post-upgrade script
   web-server-connect            Attempt to connect to the web server
   web-server-restart            Restart the web server

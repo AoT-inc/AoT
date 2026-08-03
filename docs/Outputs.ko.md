@@ -10,7 +10,7 @@ AoT에는 사용자 정의 출력을 AoT 시스템에서 생성하고 사용할 
 
 작동하는 모듈을 개발한 경우 [새 GitHub 이슈 생성](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) 또는 풀 리퀘스트를 고려해 보세요. 해당 모듈이 기본 제공 세트에 포함될 수 있습니다.
 
-적절한 형식의 예는 [AoT/aot/outputs](https://github.com/AoT-inc/AoT/tree/master/aot/outputs/) 디렉토리에 있는 기본 제공 모듈을 열어 확인할 수 있습니다. 또한 [AoT/aot/outputs/examples](https://github.com/AoT-inc/AoT/tree/master/aot/outputs/examples) 디렉토리에는 사용자 정의 출력 예제가 포함되어 있습니다.
+적절한 형식의 예는 [AoT/aot/outputs](https://github.com/AoT-inc/AoT/tree/main/aot/outputs/) 디렉토리에 있는 기본 제공 모듈을 열어 확인할 수 있습니다. 또한 [AoT/aot/outputs/examples](https://github.com/AoT-inc/AoT/tree/main/aot/outputs/examples) 디렉토리에는 사용자 정의 출력 예제가 포함되어 있습니다.
 
 새로운 측정값/단위가 필요한 출력의 경우 `[기어 아이콘] -> 구성 -> 측정값` 페이지에서 추가할 수 있습니다.
 

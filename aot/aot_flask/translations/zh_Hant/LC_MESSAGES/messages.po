@@ -2953,15 +2953,15 @@ msgstr ""
 msgid ""
 "Open any of the built-in Widget modules located in the directory "
 "[AoT/aot/widgets](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/) for examples of the proper formatting. "
+"inc/AoT/tree/main/aot/widgets/) for examples of the proper formatting. "
 "There are also example Custom Widgets in the directory "
 "[AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples)."
+"inc/AoT/tree/main/aot/widgets/examples)."
 msgstr ""
 "如需正確格式的範例，可開啟位於 [AoT/aot/widgets](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/) "
+"inc/AoT/tree/main/aot/widgets/) "
 "目錄下的任一內建小工具模組。[AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples) 目錄中也有自訂小工具的範例。"
+"inc/AoT/tree/main/aot/widgets/examples) 目錄中也有自訂小工具的範例。"
 
 #: config_translations_docs.py:107
 msgid ""
@@ -3937,9 +3937,8 @@ msgid "Error: %(err)s"
 msgstr "Error: %(err)s"
 
 #: aot_flask/routes_admin.py:220
-#, fuzzy
 msgid "Backup deleted"
-msgstr "Backup Restore"
+msgstr "已刪除備份"
 
 #: aot_flask/routes_admin.py:227
 msgid "Deletion of backup in progress"
@@ -4159,9 +4158,8 @@ msgid "Alias not found"
 msgstr "找不到別名"
 
 #: aot_flask/routes_ai_api.py:1658
-#, fuzzy
 msgid "Advice not found."
-msgstr "找不到公告"
+msgstr "找不到該建議。"
 
 #: aot_flask/routes_ai_api.py:1661
 #, python-format
@@ -4348,18 +4346,18 @@ msgid "No devices to inspect"
 msgstr "沒有可檢查的裝置"
 
 #: aot_flask/routes_integrations.py:135
-#, fuzzy, python-format
+#, python-format
 msgid "Google sign-in was denied or failed: %(err)s"
-msgstr "Test email failed: %(err)s"
+msgstr "Google 登入遭拒或失敗：%(err)s"
 
 #: aot_flask/routes_integrations.py:140
 msgid "No authorization code returned by Google."
 msgstr ""
 
 #: aot_flask/routes_integrations.py:146
-#, fuzzy, python-format
+#, python-format
 msgid "Google sign-in failed: %(err)s"
-msgstr "Test email failed: %(err)s"
+msgstr "Google 登入失敗：%(err)s"
 
 #: aot_flask/routes_integrations.py:235 aot_flask/templates/layout.html:515
 #: aot_flask/templates/layout_default.html:515
@@ -6227,9 +6225,8 @@ msgstr "Add User"
 #: aot_flask/forms/forms_settings.py:460 aot_flask/forms/forms_settings.py:481
 #: aot_flask/templates/layout.html:755
 #: aot_flask/templates/layout_default.html:755
-#, fuzzy
 msgid "Timezone"
-msgstr "時間軸"
+msgstr "時區"
 
 #: aot_flask/forms/forms_settings.py:486
 #: aot_flask/templates/pages/ai/ai_library.html:432
@@ -6536,16 +6533,14 @@ msgstr "升級徽章"
 #: aot_flask/templates/settings/custom_ui.html:79
 #: aot_flask/templates/settings/custom_ui.html:115
 #: aot_flask/templates/settings/custom_ui.html:343
-#, fuzzy
 msgid "Primary Button Background"
-msgstr "標籤背景"
+msgstr "主要按鈕背景"
 
 #: aot_flask/forms/forms_settings.py:620
 #: aot_flask/templates/settings/custom_ui.html:121
 #: aot_flask/templates/settings/custom_ui.html:344
-#, fuzzy
 msgid "Secondary Button Background"
-msgstr "次要卡片"
+msgstr "次要按鈕背景"
 
 #: aot_flask/forms/forms_settings.py:623
 msgid "Btn BG On"
@@ -7309,9 +7304,8 @@ msgstr "切換功能標籤"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5415
-#, fuzzy
 msgid "Toggle Facility labels"
-msgstr "切換輸入標籤"
+msgstr "切換設施標籤"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5438
@@ -8665,9 +8659,8 @@ msgstr "API Key Management"
 #: aot_flask/templates/layout-settings.html:25
 #: aot_flask/templates/settings/integrations.html:5
 #: aot_flask/templates/settings/integrations.html:11
-#, fuzzy
 msgid "Integrations"
-msgstr "Integrator Min"
+msgstr "整合"
 
 #: aot_flask/templates/layout-settings.html:26
 #: aot_flask/templates/settings/users.html:199
@@ -8796,16 +8789,14 @@ msgstr "AoT Github"
 #: aot_flask/templates/pages/landing.html:228
 #: aot_flask/templates/pages/privacy_policy.html:4
 #: aot_flask/templates/pages/privacy_policy.html:13
-#, fuzzy
 msgid "Privacy Policy"
-msgstr "LoRa Class 政策"
+msgstr "隱私權政策"
 
 #: aot_flask/templates/layout.html:643
 #: aot_flask/templates/layout_default.html:643
 #: aot_flask/templates/pages/landing.html:230
 #: aot_flask/templates/pages/terms_of_service.html:4
 #: aot_flask/templates/pages/terms_of_service.html:13
-#, fuzzy
 msgid "Terms of Service"
 msgstr "使用條款"
 
@@ -8904,21 +8895,18 @@ msgstr "Preferences"
 
 #: aot_flask/templates/layout.html:708
 #: aot_flask/templates/layout_default.html:708
-#, fuzzy
 msgid "Account Name"
-msgstr "Unit Name"
+msgstr "帳戶名稱"
 
 #: aot_flask/templates/layout.html:715
 #: aot_flask/templates/layout_default.html:715
-#, fuzzy
 msgid "Account Email"
-msgstr "帳戶 ID"
+msgstr "帳戶電子郵件"
 
 #: aot_flask/templates/layout.html:723
 #: aot_flask/templates/layout_default.html:723
-#, fuzzy
 msgid "Set Password"
-msgstr "Reset Password"
+msgstr "設定密碼"
 
 #: aot_flask/templates/layout.html:726
 #: aot_flask/templates/layout_default.html:726
@@ -8929,7 +8917,6 @@ msgstr ""
 
 #: aot_flask/templates/layout.html:738
 #: aot_flask/templates/layout_default.html:738
-#, fuzzy
 msgid "Selecting a language will override the web browser's language"
 msgstr "選擇語言後將覆蓋網頁瀏覽器的語言設定"
 
@@ -8950,9 +8937,8 @@ msgstr ""
 #: aot_flask/templates/layout_default.html:772
 #: aot_flask/templates/layout_default.html:776
 #: aot_flask/templates/settings/users.html:218
-#, fuzzy
 msgid "Google Account"
-msgstr "區域數量"
+msgstr "Google 帳戶"
 
 #: aot_flask/templates/layout.html:778
 #: aot_flask/templates/layout_default.html:778
@@ -8963,9 +8949,8 @@ msgstr ""
 
 #: aot_flask/templates/layout.html:784
 #: aot_flask/templates/layout_default.html:784
-#, fuzzy
 msgid "Sync Google Calendar Now"
-msgstr "Clear"
+msgstr "立即同步 Google 行事曆"
 
 #: aot_flask/templates/layout.html:785
 #: aot_flask/templates/layout_default.html:785
@@ -8976,15 +8961,13 @@ msgstr ""
 #: aot_flask/templates/layout.html:790
 #: aot_flask/templates/layout_default.html:790
 #: aot_flask/templates/settings/integrations.html:61
-#, fuzzy
 msgid "Sync Now"
-msgstr "Sync"
+msgstr "立即同步"
 
 #: aot_flask/templates/layout.html:795
 #: aot_flask/templates/layout_default.html:795
-#, fuzzy
 msgid "Disconnect Google Account"
-msgstr "區域數量"
+msgstr "中斷連結 Google 帳戶"
 
 #: aot_flask/templates/layout.html:800
 #: aot_flask/templates/layout_default.html:800
@@ -8994,9 +8977,8 @@ msgstr ""
 #: aot_flask/templates/layout.html:800
 #: aot_flask/templates/layout_default.html:800
 #: aot_flask/templates/settings/integrations.html:66
-#, fuzzy
 msgid "Disconnect"
-msgstr "已連動"
+msgstr "中斷連結"
 
 #: aot_flask/templates/layout.html:807
 #: aot_flask/templates/layout_default.html:807
@@ -9010,9 +8992,8 @@ msgstr ""
 
 #: aot_flask/templates/layout.html:811
 #: aot_flask/templates/layout_default.html:811
-#, fuzzy
 msgid "Connect"
-msgstr "已連動"
+msgstr "連結"
 
 #: aot_flask/templates/layout.html:833
 #: aot_flask/templates/layout_default.html:833
@@ -9073,39 +9054,33 @@ msgstr "AI 助理"
 
 #: aot_flask/templates/layout.html:990
 #: aot_flask/templates/layout_default.html:990
-#, fuzzy
 msgid "New conversation"
-msgstr "No Conversion"
+msgstr "新增對話"
 
 #: aot_flask/templates/layout.html:1003
 #: aot_flask/templates/layout_default.html:1003
-#, fuzzy
 msgid "Response depth"
-msgstr "回應"
+msgstr "回應深度"
 
 #: aot_flask/templates/layout.html:1004
 #: aot_flask/templates/layout_default.html:1004
-#, fuzzy
 msgid "Fast"
-msgstr "Past"
+msgstr "快速"
 
 #: aot_flask/templates/layout.html:1005
 #: aot_flask/templates/layout_default.html:1005
-#, fuzzy
 msgid "Deep"
-msgstr "深度"
+msgstr "深入"
 
 #: aot_flask/templates/layout.html:1007
 #: aot_flask/templates/layout_default.html:1007
-#, fuzzy
 msgid "Autonomy"
-msgstr "自動"
+msgstr "自主層級"
 
 #: aot_flask/templates/layout.html:1008
 #: aot_flask/templates/layout_default.html:1008
-#, fuzzy
 msgid "Advice"
-msgstr "Device"
+msgstr "建議"
 
 #: aot_flask/templates/layout.html:1010
 #: aot_flask/templates/layout_default.html:1010
@@ -9122,9 +9097,8 @@ msgstr "自動"
 
 #: aot_flask/templates/layout.html:1017
 #: aot_flask/templates/layout_default.html:1017
-#, fuzzy
 msgid "Attach image"
-msgstr "Attachments"
+msgstr "附加圖片"
 
 #: aot_flask/templates/layout.html:1021
 #: aot_flask/templates/layout_default.html:1021
@@ -9181,9 +9155,8 @@ msgid "90 Days"
 msgstr "90 Days"
 
 #: aot_flask/templates/login_password.html:147
-#, fuzzy
 msgid "Sign in with AoT Account"
-msgstr "Original widget not found."
+msgstr "使用 AoT 帳戶登入"
 
 #: aot_flask/templates/login_password.html:162
 msgid "Sign in with Google"
@@ -9208,9 +9181,8 @@ msgstr ""
 "Export/Import page."
 
 #: aot_flask/templates/admin/backup.html:30
-#, fuzzy
 msgid "Saved Backups"
-msgstr "AoT backup"
+msgstr "已儲存的備份"
 
 #: aot_flask/templates/admin/backup.html:33
 msgid "No backups found."
@@ -9562,10 +9534,10 @@ msgstr "FORCE_UPGRADE_MASTER is set to True in /opt/AoT/config.py."
 #: aot_flask/templates/admin/upgrade.html:189
 msgid ""
 "Clicking the upgrade button below will perform an upgrade from the AoT "
-"master branch via the master.tar.gz archive."
+"main branch via the main.tar.gz archive."
 msgstr ""
 "Clicking the upgrade button below will perform an upgrade from the AoT "
-"master branch via the master.tar.gz archive."
+"main branch via the main.tar.gz archive."
 
 #: aot_flask/templates/admin/upgrade.html:190
 msgid ""
@@ -10052,14 +10024,12 @@ msgstr "Drag"
 
 #: aot_flask/templates/pages/dashboard_entry.html:62
 #: aot_flask/templates/pages/dashboard_entry.html:63
-#, fuzzy
 msgid "Hide preview"
-msgstr "3D 預覽"
+msgstr "隱藏預覽"
 
 #: aot_flask/templates/pages/dashboard_entry.html:62
-#, fuzzy
 msgid "Show preview"
-msgstr "Show Preview"
+msgstr "顯示預覽"
 
 #: aot_flask/templates/pages/dashboard_entry.html:74
 #: aot_flask/templates/pages/dashboard_entry.html:76
@@ -10527,9 +10497,8 @@ msgid "Sign Up"
 msgstr ""
 
 #: aot_flask/templates/pages/landing.html:236
-#, fuzzy
 msgid "All rights reserved."
-msgstr "尚無已註冊的工作。"
+msgstr "保留所有權利。"
 
 #: aot_flask/templates/pages/live.html:16
 msgid "No Data"
@@ -10599,9 +10568,8 @@ msgid "Function (%(type)s)"
 msgstr "Function (%(type)s)"
 
 #: aot_flask/templates/pages/output.html:130
-#, fuzzy
 msgid "Confirming"
-msgstr "確認"
+msgstr "確認中"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:56
 #: aot_flask/templates/pages/function_options/conditional_entry.html:20
@@ -10666,9 +10634,8 @@ msgstr "Are you sure you want to duplicate?"
 
 #: aot_flask/templates/pages/privacy_policy.html:16
 #: aot_flask/templates/pages/terms_of_service.html:16
-#, fuzzy
 msgid "Effective Date"
-msgstr "生效值"
+msgstr "生效日期"
 
 #: aot_flask/templates/pages/wait_and_autoload.html:5
 msgid "Please wait 10 seconds"
@@ -12217,9 +12184,8 @@ msgstr "Save Changes"
 #: aot_flask/templates/pages/ai/mcp_review.html:3
 #: aot_flask/templates/pages/ai/mcp_review.html:12
 #: aot_flask/templates/pages/ai/mcp_servers.html:19
-#, fuzzy
 msgid "AI Requests & Advice"
-msgstr "請求失敗"
+msgstr "AI 請求與建議"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:19
 msgid ""
@@ -12239,9 +12205,8 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:30
-#, fuzzy
 msgid "AI advice ledger"
-msgstr "AI 建議"
+msgstr "AI 建議紀錄"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:32
 msgid ""
@@ -12250,23 +12215,20 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:37
-#, fuzzy
 msgid "Recent AI tool calls"
-msgstr "Recipient Email Address"
+msgstr "近期 AI 工具呼叫"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:44
 msgid "No control requests are waiting."
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
-#, fuzzy
 msgid "No advice has been submitted yet."
-msgstr "尚未註冊任何 AI 服務。"
+msgstr "尚未提交任何建議。"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:46
-#, fuzzy
 msgid "No tool calls recorded yet."
-msgstr "No API keys stored yet."
+msgstr "尚未記錄任何工具呼叫。"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:49
 msgid "Accept"
@@ -12278,19 +12240,16 @@ msgid "expires in {sec}s"
 msgstr ""
 
 #: aot_flask/templates/pages/ai/mcp_review.html:58
-#, fuzzy
 msgid "Reason"
-msgstr "推理依據"
+msgstr "原因"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:59
-#, fuzzy
 msgid "Rationale"
-msgstr "Rotation Angle"
+msgstr "推理依據"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:60
-#, fuzzy
 msgid "Proposed action"
-msgstr "提案者"
+msgstr "建議動作"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:62
 msgid "Approve this control request? The AI will be able to execute it once."
@@ -12356,29 +12315,24 @@ msgid "Scheduler"
 msgstr "排程器"
 
 #: aot_flask/templates/pages/ai/scheduler.html:40
-#, fuzzy
 msgid "Draft"
-msgstr "Drag"
+msgstr "草稿"
 
 #: aot_flask/templates/pages/ai/scheduler.html:45
-#, fuzzy
 msgid "Archived"
-msgstr "Active"
+msgstr "已封存"
 
 #: aot_flask/templates/pages/ai/scheduler.html:50
-#, fuzzy
 msgid "Work Task"
-msgstr "新工作"
+msgstr "作業工作"
 
 #: aot_flask/templates/pages/ai/scheduler.html:51
-#, fuzzy
 msgid "Device Control"
-msgstr "裝置角色"
+msgstr "裝置控制"
 
 #: aot_flask/templates/pages/ai/scheduler.html:52
-#, fuzzy
 msgid "Automated Trigger"
-msgstr "自動"
+msgstr "自動觸發"
 
 #: aot_flask/templates/pages/ai/scheduler.html:69
 #: aot_flask/templates/pages/ai/scheduler.html:541
@@ -12432,23 +12386,20 @@ msgstr "提案者"
 #: aot_flask/templates/pages/ai/scheduler.html:280
 #: aot_flask/templates/pages/ai/scheduler.html:376
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:23
-#, fuzzy
 msgid "e.g. 3-1, Zone A"
-msgstr "例：My OpenAI"
+msgstr "例：3-1、A 區"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
-#, fuzzy
 msgid "Device-local time"
-msgstr "裝置時間軸"
+msgstr "裝置本地時間"
 
 #: aot_flask/templates/pages/ai/scheduler.html:315
 #: aot_flask/templates/pages/ai/scheduler.html:411
 #: aot_flask/templates/pages/ai/scheduler.html:498
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "min"
-msgstr "Min:"
+msgstr "分鐘"
 
 #: aot_flask/templates/pages/ai/scheduler.html:321
 #: aot_flask/templates/pages/ai/scheduler.html:324
@@ -12582,19 +12533,16 @@ msgid "Target Zone/Site"
 msgstr "目標區域/站點"
 
 #: aot_flask/templates/pages/ai/scheduler.html:771
-#, fuzzy
 msgid "No items available"
-msgstr "None Available"
+msgstr "無可用項目"
 
 #: aot_flask/templates/pages/ai/scheduler.html:826
-#, fuzzy
 msgid "Device-local"
-msgstr "裝置角色"
+msgstr "裝置本地"
 
 #: aot_flask/templates/pages/ai/scheduler.html:829
-#, fuzzy
 msgid "Your time"
-msgstr "Bounce Time"
+msgstr "你的時間"
 
 #: aot_flask/templates/pages/ai/scheduler.html:864
 msgid "Approve this job?"
@@ -12606,9 +12554,8 @@ msgstr "拒絕原因（選填）："
 
 #: aot_flask/templates/pages/ai/scheduler.html:894
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Cancellation reason (optional):"
-msgstr "拒絕原因（選填）："
+msgstr "取消原因（選填）："
 
 #: aot_flask/templates/pages/ai/scheduler.html:902
 msgid "Please enter a command"
@@ -12638,9 +12585,8 @@ msgid "By: "
 msgstr "請求者："
 
 #: aot_flask/templates/pages/ai/scheduler.html:995
-#, fuzzy
 msgid "Local time: "
-msgstr "全部時間"
+msgstr "本地時間："
 
 #: aot_flask/templates/pages/ai/scheduler.html:996
 msgid "Reasoning: "
@@ -13356,29 +13302,24 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "For more information, see the"
-msgstr "以取得更多資訊。"
+msgstr "更多資訊請參見"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "Conditional Functions documentation"
-msgstr "Ion Concentration"
+msgstr "條件功能文件"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:83
-#, fuzzy
 msgid "Interval between Python code executions"
-msgstr "Time interval between actions."
+msgstr "Python 程式碼執行的間隔時間"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:90
-#, fuzzy
 msgid "Time to wait before the first operation"
-msgstr "The duration to wait before the first operation"
+msgstr "首次執行前的等待時間"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:97
-#, fuzzy
 msgid "Timeout for Python code execution"
-msgstr "The Python 3 code to execute"
+msgstr "Python 程式碼執行逾時時間"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:112
 #: aot_flask/templates/pages/function_options/function_options.html:87
@@ -13402,14 +13343,12 @@ msgid "View Context"
 msgstr "檢視內容"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:199
-#, fuzzy
 msgid "Conditions"
-msgstr "Condition"
+msgstr "條件"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:212
-#, fuzzy
 msgid "Add Condition"
-msgstr "Condition"
+msgstr "新增條件"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:249
 #: aot_flask/templates/pages/function_options/function_options.html:140
@@ -13952,9 +13891,8 @@ msgid "This is the GIS detailed settings screen. (To be implemented)"
 msgstr "This is the GIS detailed settings screen. (To be implemented)"
 
 #: aot_flask/templates/pages/geo/geo_design.html:2
-#, fuzzy
 msgid "Design Tool"
-msgstr "設計詳情"
+msgstr "設計工具"
 
 #: aot_flask/templates/pages/geo/geo_design.html:3
 msgid "Geo Design"
@@ -14123,9 +14061,8 @@ msgid "Save as Site"
 msgstr "另存為地點"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2
-#, fuzzy
 msgid "Facility Management"
-msgstr "電池管理"
+msgstr "設施管理"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1067
 #: aot_flask/templates/pages/geo/geo_facility.html:1965
@@ -16204,9 +16141,8 @@ msgstr "主題顏色預覽"
 
 #: aot_flask/templates/settings/custom_ui.html:80
 #: aot_flask/templates/settings/custom_ui.html:116
-#, fuzzy
 msgid "Click to edit Primary Button Background colors"
-msgstr "點擊以編輯按鈕開啟顏色"
+msgstr "點擊以編輯主要按鈕背景顏色"
 
 #: aot_flask/templates/settings/custom_ui.html:103
 #: aot_flask/templates/settings/custom_ui.html:345
@@ -16227,9 +16163,8 @@ msgid "Click to edit Button Off colors"
 msgstr "點擊以編輯按鈕關閉顏色"
 
 #: aot_flask/templates/settings/custom_ui.html:122
-#, fuzzy
 msgid "Click to edit Secondary Button Background colors"
-msgstr "點擊以編輯按鈕開啟顏色"
+msgstr "點擊以編輯次要按鈕背景顏色"
 
 #: aot_flask/templates/settings/custom_ui.html:127
 #: aot_flask/templates/settings/custom_ui.html:347
@@ -16344,9 +16279,8 @@ msgid "Text Primary"
 msgstr "文字主要"
 
 #: aot_flask/templates/settings/custom_ui.html:232
-#, fuzzy
 msgid "Titles and body text"
-msgstr "內文文字"
+msgstr "標題與內文"
 
 #: aot_flask/templates/settings/custom_ui.html:233
 msgid "Text Secondary"
@@ -16381,14 +16315,12 @@ msgid "Background Secondary"
 msgstr "背景次要"
 
 #: aot_flask/templates/settings/custom_ui.html:269
-#, fuzzy
 msgid "List header row background"
-msgstr "標籤背景"
+msgstr "清單標題列背景"
 
 #: aot_flask/templates/settings/custom_ui.html:301
-#, fuzzy
 msgid "State Colors"
-msgstr "Site Color"
+msgstr "狀態顏色"
 
 #: aot_flask/templates/settings/custom_ui.html:304
 msgid "Active State"
@@ -16419,24 +16351,20 @@ msgid "Cancel, deactivate — secondary buttons"
 msgstr ""
 
 #: aot_flask/templates/settings/custom_ui.html:345
-#, fuzzy
 msgid "Output row ON button"
-msgstr "輸出持續開啟時間"
+msgstr "輸出列 ON 按鈕"
 
 #: aot_flask/templates/settings/custom_ui.html:346
-#, fuzzy
 msgid "Output row OFF button"
-msgstr "Output Duration"
+msgstr "輸出列 OFF 按鈕"
 
 #: aot_flask/templates/settings/custom_ui.html:347
-#, fuzzy
 msgid "PID controller pause button"
-msgstr "PID Controller [Paused]"
+msgstr "PID 控制器暫停按鈕"
 
 #: aot_flask/templates/settings/custom_ui.html:348
-#, fuzzy
 msgid "PID controller hold button"
-msgstr "PID Controller [Hold]"
+msgstr "PID 控制器保持按鈕"
 
 #: aot_flask/templates/settings/custom_ui.html:349
 msgid "Button Border"
@@ -16459,9 +16387,8 @@ msgid "AI model (LLM) badge background"
 msgstr ""
 
 #: aot_flask/templates/settings/custom_ui.html:387
-#, fuzzy
 msgid "MCP tool badge background"
-msgstr "升級背景"
+msgstr "MCP 工具標記背景"
 
 #: aot_flask/templates/settings/custom_ui.html:418
 msgid "Measurement Band Colors"
@@ -16543,19 +16470,16 @@ msgid "Preset deleted"
 msgstr "預設集已刪除"
 
 #: aot_flask/templates/settings/custom_ui.html:1004
-#, fuzzy
 msgid "Background Color"
 msgstr "背景顏色"
 
 #: aot_flask/templates/settings/custom_ui.html:1005
-#, fuzzy
 msgid "Text Color"
 msgstr "文字顏色"
 
 #: aot_flask/templates/settings/custom_ui.html:1006
-#, fuzzy
 msgid "Subtext Color"
-msgstr "文字顏色"
+msgstr "輔助文字顏色"
 
 #: aot_flask/templates/settings/diagnostic.html:14
 msgid "Diagnostics"
@@ -16811,9 +16735,8 @@ msgstr "Measurements"
 
 #: aot_flask/templates/settings/integrations.html:18
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:19
-#, fuzzy
 msgid "Google Calendar"
-msgstr "Clear"
+msgstr "Google 行事曆"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
@@ -16828,9 +16751,8 @@ msgid "Ask an administrator to configure it."
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:41
-#, fuzzy
 msgid "Sync Direction"
-msgstr "風向"
+msgstr "同步方向"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
@@ -16841,9 +16763,8 @@ msgid "Google → AoT"
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:49
-#, fuzzy
 msgid "Last Synced"
-msgstr "最後上線時間"
+msgstr "最後同步時間"
 
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
@@ -16862,9 +16783,8 @@ msgid "Connect Google Calendar"
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:84
-#, fuzzy
 msgid "Google OAuth Configuration"
-msgstr "SMTP 設定"
+msgstr "Google OAuth 設定"
 
 #: aot_flask/templates/settings/integrations.html:89
 msgid ""
@@ -16888,14 +16808,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:106
-#, fuzzy
 msgid "Public Base URL"
-msgstr "API 基礎 URL"
+msgstr "公開 Base URL"
 
 #: aot_flask/templates/settings/integrations.html:115
-#, fuzzy
 msgid "OAuth Client ID"
-msgstr "客戶端 ID"
+msgstr "OAuth 客戶端 ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
@@ -17113,16 +17031,12 @@ msgid "Export AoT settings data as ZIP file"
 msgstr "Export AoT settings data as ZIP file"
 
 #: aot_flask/templates/tools/export.html:80
-#, fuzzy
 msgid ""
 "This feature creates a ZIP file of the setup database containing AoT "
 "configuration and user info. Custom functions, inputs, outputs, and "
 "widgets are also included, as well as uploaded files (note/notice "
 "attachments, facility and zone photos, and facility 3D model assets)."
-msgstr ""
-"This feature creates a ZIP file of the setup database containing AoT "
-"configuration and user info. Custom functions, inputs, outputs, and "
-"widgets are also included."
+msgstr "此功能會建立包含 AoT 設定與使用者資訊的設定資料庫 ZIP 檔。其中也包含自訂功能、輸入、輸出與小工具，以及已上傳的檔案（筆記/公告附件、設施與區域照片、設施 3D 模型資源）。"
 
 #: aot_flask/templates/tools/export.html:91
 msgid "Import AoT settings data from ZIP file"
@@ -17970,19 +17884,16 @@ msgid "Data Position Offset (%%)"
 msgstr "資料位置偏移 (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "AI 排程器"
+msgstr "編輯排程"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:13
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "AI 排程器"
+msgstr "在排程器中開啟"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:18
-#, fuzzy
 msgid "Calendars"
-msgstr "Clear"
+msgstr "行事曆清單"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
 msgid "Still"
@@ -18803,9 +18714,8 @@ msgid "Another user already has that email address."
 msgstr "Another user already has that email address."
 
 #: aot_flask/utils/utils_settings.py:323
-#, fuzzy
 msgid "That username is already taken."
-msgstr "Dashboard name is already in use."
+msgstr "該使用者名稱已被使用。"
 
 #: aot_flask/utils/utils_settings.py:334 aot_flask/utils/utils_settings.py:407
 msgid "Invalid password"
@@ -18816,9 +18726,8 @@ msgid "Cannot demote the last Administrator."
 msgstr "Cannot demote the last Administrator."
 
 #: aot_flask/utils/utils_settings.py:460
-#, fuzzy
 msgid "User not found"
-msgstr "找不到檔案"
+msgstr "找不到使用者"
 
 #: aot_flask/utils/utils_settings.py:463
 #, python-format
@@ -21269,79 +21178,64 @@ msgid "BCM"
 msgstr "BCM"
 
 #: inputs/sensecap_weather.py:30
-#, fuzzy
 msgid "Air Humidity"
-msgstr "室內濕度"
+msgstr "空氣濕度"
 
 #: inputs/sensecap_weather.py:31
-#, fuzzy
 msgid "Light Intensity"
-msgstr "雨/雪強度"
+msgstr "光照強度"
 
 #: inputs/sensecap_weather.py:33
-#, fuzzy
 msgid "Barometric Pressure"
-msgstr "相對氣壓"
+msgstr "氣壓"
 
 #: inputs/sensecap_weather.py:34
-#, fuzzy
 msgid "Soil Temperature"
-msgstr "Color Temperature"
+msgstr "土壤溫度"
 
 #: inputs/sensecap_weather.py:39
-#, fuzzy
 msgid "Soil Electrical Conductivity"
-msgstr "Electrical Conductivity"
+msgstr "土壤電導率"
 
 #: inputs/sensecap_weather.py:40
-#, fuzzy
 msgid "Soil Volumetric Water Content"
-msgstr "Volumetric Water Content"
+msgstr "土壤體積含水率"
 
 #: inputs/sensecap_weather.py:41
-#, fuzzy
 msgid "Rainfall Hourly"
-msgstr "Rainfall:"
+msgstr "每小時降雨量"
 
 #: inputs/sensecap_weather.py:42
-#, fuzzy
 msgid "Soil Moisture 10cm"
-msgstr "Soil Moisture"
+msgstr "土壤水分 10cm"
 
 #: inputs/sensecap_weather.py:43
-#, fuzzy
 msgid "Soil Moisture 20cm"
-msgstr "Soil Moisture"
+msgstr "土壤水分 20cm"
 
 #: inputs/sensecap_weather.py:44
-#, fuzzy
 msgid "Soil Moisture 30cm"
-msgstr "Soil Moisture"
+msgstr "土壤水分 30cm"
 
 #: inputs/sensecap_weather.py:45
-#, fuzzy
 msgid "Soil Moisture 40cm"
-msgstr "Soil Moisture"
+msgstr "土壤水分 40cm"
 
 #: inputs/sensecap_weather.py:46
-#, fuzzy
 msgid "Soil Temperature 10cm"
-msgstr "Color Temperature"
+msgstr "土壤溫度 10cm"
 
 #: inputs/sensecap_weather.py:47
-#, fuzzy
 msgid "Soil Temperature 20cm"
-msgstr "Color Temperature"
+msgstr "土壤溫度 20cm"
 
 #: inputs/sensecap_weather.py:48
-#, fuzzy
 msgid "Soil Temperature 30cm"
-msgstr "Color Temperature"
+msgstr "土壤溫度 30cm"
 
 #: inputs/sensecap_weather.py:49
-#, fuzzy
 msgid "Soil Temperature 40cm"
-msgstr "Color Temperature"
+msgstr "土壤溫度 40cm"
 
 #: inputs/sensecap_weather.py:50
 msgid "PM2.5"
@@ -21356,49 +21250,40 @@ msgid "Peak Wind Gust"
 msgstr ""
 
 #: inputs/sensecap_weather.py:54
-#, fuzzy
 msgid "Dew Point Temperature"
-msgstr "最低氣溫"
+msgstr "露點溫度"
 
 #: inputs/sensecap_weather.py:56
-#, fuzzy
 msgid "Rain Accumulation"
-msgstr "累積降雨量 (mm)"
+msgstr "累積降雨量"
 
 #: inputs/sensecap_weather.py:71
-#, fuzzy
 msgid "Air Temperature and Humidity Sensor"
 msgstr "溫濕度感測器"
 
 #: inputs/sensecap_weather.py:72
-#, fuzzy
 msgid "Light Intensity Sensor"
-msgstr "空氣品質感測器"
+msgstr "光照強度感測器"
 
 #: inputs/sensecap_weather.py:73
-#, fuzzy
 msgid "CO2 Sensor"
-msgstr "感測器"
+msgstr "CO2 感測器"
 
 #: inputs/sensecap_weather.py:74
-#, fuzzy
 msgid "Barometric Pressure Sensor"
-msgstr "相對氣壓"
+msgstr "氣壓感測器"
 
 #: inputs/sensecap_weather.py:75
-#, fuzzy
 msgid "Soil Moisture and Temperature Sensor"
-msgstr "土壤水分感測器"
+msgstr "土壤水分與溫度感測器"
 
 #: inputs/sensecap_weather.py:76
-#, fuzzy
 msgid "Wind Direction Sensor"
-msgstr "風向"
+msgstr "風向感測器"
 
 #: inputs/sensecap_weather.py:78
-#, fuzzy
 msgid "Rain Gauge"
-msgstr "Rotation Angle"
+msgstr "雨量計"
 
 #: inputs/sensecap_weather.py:79
 msgid "Compact Weather Station 5-in-1 (S500)"
@@ -21413,19 +21298,16 @@ msgid "Compact Weather Station 4-in-1 (S400)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:82
-#, fuzzy
 msgid "Soil Temperature and VWC Sensor"
-msgstr "溫度感測器"
+msgstr "土壤溫度與體積含水率感測器"
 
 #: inputs/sensecap_weather.py:83
-#, fuzzy
 msgid "Multilayer Soil Moisture and Temperature Sensor"
-msgstr "外部溫度感測器"
+msgstr "多層土壤水分與溫度感測器"
 
 #: inputs/sensecap_weather.py:84
-#, fuzzy
 msgid "Soil Moisture, Temperature and EC Sensor"
-msgstr "土壤水分感測器"
+msgstr "土壤水分、溫度與電導率感測器"
 
 #: inputs/sensecap_weather.py:85
 msgid "LoRaWAN 8-in-1 Compact Weather Station (S2120)"
@@ -21440,9 +21322,8 @@ msgid "pH Sensor (S2106)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:88
-#, fuzzy
 msgid "Air Temperature, Humidity and Dew Point Sensor"
-msgstr "溫濕度感測器"
+msgstr "溫濕度與露點感測器"
 
 #: inputs/sensecap_weather.py:105
 msgid ""
@@ -21454,9 +21335,8 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:123
-#, fuzzy
 msgid "Device Type"
-msgstr "Device Shape"
+msgstr "裝置類型"
 
 #: inputs/sensecap_weather.py:124
 msgid ""
@@ -21473,9 +21353,8 @@ msgid "Enter the SenseCAP device Node EUI."
 msgstr ""
 
 #: inputs/sensecap_weather.py:139
-#, fuzzy
 msgid "API ID"
-msgstr "API Key ID"
+msgstr "API ID"
 
 #: inputs/sensecap_weather.py:140
 msgid ""
@@ -21484,14 +21363,12 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:147
-#, fuzzy
 msgid "Access API Key"
-msgstr "Map API Key"
+msgstr "Access API Key"
 
 #: inputs/sensecap_weather.py:148
-#, fuzzy
 msgid "Enter the Access API Key issued by the SenseCAP portal."
-msgstr "請輸入 Ecowitt 平台核發的 API Key。"
+msgstr "請輸入 SenseCAP 入口網站核發的 Access API Key。"
 
 #: inputs/sensecap_weather.py:157
 msgid "Fetch Historical Data"
@@ -22319,69 +22196,56 @@ msgid "Keep the 'Key: Value' lines so AoT can apply your edits."
 msgstr ""
 
 #: utils/calendar_event_format.py:269
-#, fuzzy
 msgid "pid"
 msgstr "PID"
 
 #: utils/calendar_event_format.py:271
-#, fuzzy
 msgid "setting"
 msgstr "設定"
 
 #: utils/calendar_event_format.py:272 utils/calendar_event_format.py:283
-#, fuzzy
 msgid "value"
-msgstr "Value"
+msgstr "值"
 
 #: utils/calendar_event_format.py:274
-#, fuzzy
 msgid "setpoint"
-msgstr "Setpoint"
+msgstr "設定值"
 
 #: utils/calendar_event_format.py:277
-#, fuzzy
 msgid "function"
-msgstr "Function"
+msgstr "功能"
 
 #: utils/calendar_event_format.py:278 utils/calendar_event_format.py:285
-#, fuzzy
 msgid "state"
-msgstr "State"
+msgstr "狀態"
 
 #: utils/calendar_event_format.py:281
-#, fuzzy
 msgid "device"
-msgstr "Device"
+msgstr "裝置"
 
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "duration"
-msgstr "Duration"
+msgstr "持續時間"
 
 #: utils/calendar_event_format.py:290
-#, fuzzy
 msgid "location"
-msgstr "Location"
+msgstr "地點"
 
 #: utils/calendar_event_format.py:292
-#, fuzzy
 msgid "content"
-msgstr "Content"
+msgstr "內容"
 
 #: utils/calendar_event_format.py:294
-#, fuzzy
 msgid "worker"
 msgstr "工作程序"
 
 #: utils/calendar_event_format.py:315 utils/calendar_event_format.py:317
-#, fuzzy
 msgid "Device control"
-msgstr "裝置角色"
+msgstr "裝置控制"
 
 #: utils/outputs.py:226
-#, fuzzy
 msgid "Command Timeout (seconds)"
-msgstr "指令逾時"
+msgstr "指令逾時（秒）"
 
 #: utils/outputs.py:228
 msgid ""
@@ -23163,9 +23027,8 @@ msgid "Refresh the widget every N seconds. 0 to disable."
 msgstr "Refresh the widget every N seconds. 0 to disable."
 
 #: widgets/AoT_map.py:710
-#, fuzzy
 msgid "Device Filter"
-msgstr "裝置 EUI 篩選器"
+msgstr "裝置過濾器"
 
 #: widgets/AoT_map.py:715
 msgid ""
@@ -23202,9 +23065,8 @@ msgid "Select function measurements to display in the panel."
 msgstr "Select function measurements to display in the panel."
 
 #: widgets/AoT_map.py:791
-#, fuzzy
 msgid "Label Style"
-msgstr "感測器標籤樣式"
+msgstr "標籤樣式"
 
 #: widgets/AoT_map.py:798
 msgid "Prevent Label Collision"
@@ -23371,9 +23233,8 @@ msgid "Select the Output to control."
 msgstr "Select the Output to control."
 
 #: widgets/AoT_timer.py:1146
-#, fuzzy
 msgid "Sync (seconds)"
-msgstr "Delay (seconds)"
+msgstr "同步（秒）"
 
 #: widgets/AoT_timer.py:1147
 msgid ""
@@ -23612,9 +23473,8 @@ msgid "Interval to automatically re-run AI reasoning. Set 0 to disable."
 msgstr "自動重新執行 AI 推理的間隔。設為 0 可停用。"
 
 #: widgets/widget_calendar.py:42
-#, fuzzy
 msgid "Calendar"
-msgstr "Clear"
+msgstr "行事曆"
 
 #: widgets/widget_calendar.py:47
 msgid ""
@@ -23624,28 +23484,24 @@ msgid ""
 msgstr ""
 
 #: widgets/widget_calendar.py:61
-#, fuzzy
 msgid "Show Scheduled Events"
-msgstr "預定時間"
+msgstr "顯示已排定事件"
 
 #: widgets/widget_calendar.py:62
 msgid "Include scheduled jobs on the calendar"
 msgstr ""
 
 #: widgets/widget_calendar.py:69
-#, fuzzy
 msgid "Month"
-msgstr "Monthly"
+msgstr "月"
 
 #: widgets/widget_calendar.py:71
-#, fuzzy
 msgid "List (Week)"
-msgstr "上週"
+msgstr "清單（週）"
 
 #: widgets/widget_calendar.py:73
-#, fuzzy
 msgid "Default View"
-msgstr "預設場域"
+msgstr "預設檢視"
 
 #: widgets/widget_calendar.py:74
 msgid ""
@@ -23662,9 +23518,8 @@ msgid "How often to re-fetch events for the currently visible range"
 msgstr ""
 
 #: widgets/widget_calendar.py:89
-#, fuzzy
 msgid "List View Look-ahead (days)"
-msgstr "預報前瞻時間 (小時)"
+msgstr "清單檢視前瞻天數"
 
 #: widgets/widget_calendar.py:90
 msgid "How many days ahead the List view queries"
@@ -24320,7 +24175,6 @@ msgid "Input value validity duration"
 msgstr "Input value validity duration"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
-#, fuzzy
 msgid "Integrated Environment Control"
 msgstr "整合式環境控制 (IEC)"
 
@@ -24339,27 +24193,24 @@ msgid "Trigger an immediate cycle, reload actuators, or issue an emergency stop.
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:92
-#, fuzzy
 msgid "Reload Actuators"
-msgstr "無致動器"
+msgstr "重新載入致動器"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:94
 msgid "Re-read the Actions table and rebuild actuator profiles."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:101
-#, fuzzy
 msgid "Run Now"
-msgstr "未知"
+msgstr "立即執行"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:103
 msgid "Execute one coordination cycle immediately using current sensor readings."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:110
-#, fuzzy
 msgid "Emergency Stop"
-msgstr "顯示緊急停止"
+msgstr "緊急停止"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:112
 msgid "Immediately set all actuators to safe_default and pause control for 60 s."
@@ -24383,28 +24234,24 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:151
-#, fuzzy
 msgid "Max Sensor Age (seconds)"
-msgstr "Max Age (sec)"
+msgstr "感測器資料最長有效時間（秒）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:153
 msgid "Reject sensor readings older than this value. 0 = no limit."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:160
-#, fuzzy
 msgid "Actuation Rate"
-msgstr "致動器類型"
+msgstr "致動頻率"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:168
-#, fuzzy
 msgid "Responsive (60s)"
-msgstr "回應"
+msgstr "靈敏 (60秒)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:169
-#, fuzzy
 msgid "Standard (180s)"
-msgstr "標準"
+msgstr "標準 (180秒)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:170
 msgid "Gentle — extend vent motor life (600s)"
@@ -24415,9 +24262,8 @@ msgid "Custom (set seconds below)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:173
-#, fuzzy
 msgid "Vent Actuation Profile"
-msgstr "停用失敗"
+msgstr "通風窗致動設定檔"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:175
 #, python-format
@@ -24431,9 +24277,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:188
-#, fuzzy
 msgid "Custom Actuation Period (seconds)"
-msgstr "判定與套用週期（秒）"
+msgstr "自訂致動週期（秒）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:190
 msgid ""
@@ -24442,9 +24287,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:200
-#, fuzzy
 msgid "Emergency Minimum Interval (seconds)"
-msgstr "最小命令間隔 (秒)"
+msgstr "緊急最小間隔（秒）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:202
 msgid ""
@@ -24474,9 +24318,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
-#, fuzzy
 msgid "Growth Schedule"
-msgstr "AI 排程器"
+msgstr "生長排程"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:245
 msgid ""
@@ -24488,9 +24331,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:259
-#, fuzzy
 msgid "Schedule End (harvest date)"
-msgstr "排程已更新"
+msgstr "排程結束（採收日期）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:261
 msgid ""
@@ -24509,14 +24351,12 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:285
-#, fuzzy
 msgid "Facility (optional)"
-msgstr "設施資訊"
+msgstr "設施（選填）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:293
-#, fuzzy
 msgid "Linked Facility"
-msgstr "新增設施"
+msgstr "連結的設施"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:295
 msgid ""
@@ -24529,9 +24369,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:308
-#, fuzzy
 msgid "Bay Scope (optional)"
-msgstr "備註(選填)"
+msgstr "棟範圍（選填）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:310
 msgid ""
@@ -24543,14 +24382,12 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:322
-#, fuzzy
 msgid "Time Control"
-msgstr "Hide Controls"
+msgstr "時間控制"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:329
-#, fuzzy
 msgid "Enable Time Window"
-msgstr "時間控制結束時"
+msgstr "啟用時間區間"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:331
 msgid "When enabled, control only runs between Start and End times."
@@ -24569,9 +24406,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:362
-#, fuzzy
 msgid "Photoperiod Method"
-msgstr "Other Methods"
+msgstr "光週期方法"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:364
 msgid ""
@@ -24593,9 +24429,8 @@ msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:393
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:481
-#, fuzzy
 msgid "Static Target"
-msgstr "AI 代理"
+msgstr "固定目標"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:394
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:482
@@ -24603,9 +24438,8 @@ msgid "Method (time-varying)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:396
-#, fuzzy
 msgid "Setpoint Type"
-msgstr "Setpoint"
+msgstr "設定值類型"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:398
 msgid ""
@@ -24614,9 +24448,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:407
-#, fuzzy
 msgid "Target VPD (kPa)"
-msgstr "目標 ID"
+msgstr "目標 VPD (kPa)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:408
 msgid "Used when Setpoint Type = Static. 0 = disable VPD control."
@@ -24629,9 +24462,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:427
-#, fuzzy
 msgid "VPD Priority"
-msgstr "優先順序"
+msgstr "VPD 優先順序"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:428
 msgid "Higher value = processed first. Default 1.2."
@@ -24667,14 +24499,12 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:473
-#, fuzzy
 msgid "CO₂"
-msgstr "CO2"
+msgstr "CO₂"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:484
-#, fuzzy
 msgid "CO₂ Setpoint Type"
-msgstr "Setpoint Tracking Type"
+msgstr "CO₂ 設定值類型"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:486
 msgid ""
@@ -24683,19 +24513,16 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:495
-#, fuzzy
 msgid "Target CO₂ (ppm)"
-msgstr "目標位置 (%)"
+msgstr "目標 CO₂ (ppm)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:496
-#, fuzzy
 msgid "Used when CO₂ Setpoint Type = Static."
-msgstr "Set the Setpoint of a PID."
+msgstr "當 CO₂ 設定值類型為「固定」時使用。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:504
-#, fuzzy
 msgid "CO₂ Method"
-msgstr "Method"
+msgstr "CO₂ 方法"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:506
 msgid ""
@@ -24704,9 +24531,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:515
-#, fuzzy
 msgid "CO₂ Priority"
-msgstr "優先順序"
+msgstr "CO₂ 優先順序"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:517
 msgid ""
@@ -24726,50 +24552,45 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:545
-#, fuzzy
 msgid "Max Temperature (°C)"
-msgstr "最高氣溫"
+msgstr "最高溫度 (°C)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:547
 msgid "Hard upper limit. Forces cooling when exceeded, regardless of VPD target."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:555
-#, fuzzy
 msgid "Min Temperature (°C)"
-msgstr "最低氣溫"
+msgstr "最低溫度 (°C)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:557
 msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:571
-#, fuzzy, python-format
+#, python-format
 msgid "Max Humidity (%)"
-msgstr "預報濕度 (%%)"
+msgstr "最高濕度 (%)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:573
 msgid "Hard upper limit. Prevents VPD bypass via extreme humidity."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:581
-#, fuzzy
 msgid "Min Humidity (%)"
-msgstr "室內濕度"
+msgstr "最低濕度 (%)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:583
 msgid "Hard lower limit. Prevents VPD bypass via extreme dryness."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:590
-#, fuzzy
 msgid "VPD Decomposition"
-msgstr "位置"
+msgstr "VPD 分解"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:597
-#, fuzzy
 msgid "T Weight (0-1)"
-msgstr "簷高 (m)"
+msgstr "溫度權重 (0-1)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:599
 msgid ""
@@ -24782,9 +24603,8 @@ msgid "Photosynthesis Model"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:614
-#, fuzzy
 msgid "Enable Photosynthesis-Oriented Control"
-msgstr "Enable Output Controls"
+msgstr "啟用光合導向控制"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:616
 msgid ""
@@ -24795,9 +24615,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:628
-#, fuzzy
 msgid "Tomato"
-msgstr "自動"
+msgstr "番茄"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:629
 msgid "Lettuce / Leafy greens"
@@ -24808,18 +24627,16 @@ msgid "Cucumber"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:631
-#, fuzzy
 msgid "Strawberry"
-msgstr "Raspberry Pi"
+msgstr "草莓"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:632
 msgid "Pepper / Paprika"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:634
-#, fuzzy
 msgid "Crop Preset"
-msgstr "預設集"
+msgstr "作物預設集"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:636
 msgid ""
@@ -24851,9 +24668,8 @@ msgid "Guide T Max (°C)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
-#, fuzzy
 msgid "Advisory upper bound for temperature."
-msgstr "室內氣溫"
+msgstr "溫度的建議上限。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:674
 msgid "Guide RH Min (%)"
@@ -24872,14 +24688,12 @@ msgid "Advisory upper bound for relative humidity."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:689
-#, fuzzy
 msgid "Cumulative Goal Tracker"
-msgstr "協作目標追蹤器"
+msgstr "累積目標追蹤器"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:696
-#, fuzzy
 msgid "Enable DLI / GDD Tracker"
-msgstr "Enable Align Ticks"
+msgstr "啟用 DLI / GDD 追蹤器"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:698
 msgid ""
@@ -24913,18 +24727,16 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:739
-#, fuzzy
 msgid "Strong Wind Threshold (m/s)"
-msgstr "超省電臨界值（V）"
+msgstr "強風臨界值 (m/s)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:741
 msgid "Openings (vents, side walls) are forced closed above this wind speed."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:748
-#, fuzzy
 msgid "Effect Calibration"
-msgstr "Calibration"
+msgstr "效果校正"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:756
 msgid "Legacy (built-in K constants)"
@@ -24939,9 +24751,8 @@ msgid "Grey-box (physics model controls)"
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:760
-#, fuzzy
 msgid "Effect Engine"
-msgstr "U 值"
+msgstr "效果引擎"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:762
 msgid ""
@@ -24955,9 +24766,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:776
-#, fuzzy
 msgid "Enable RLS Calibration"
-msgstr "Clear Calibration"
+msgstr "啟用 RLS 校正"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:778
 msgid ""
@@ -24967,9 +24777,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:788
-#, fuzzy
 msgid "Enable Active Probing"
-msgstr "啟用 AI 服務"
+msgstr "啟用主動探測"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:790
 #, python-format
@@ -24980,23 +24789,20 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:800
-#, fuzzy
 msgid "Probe Interval (seconds)"
-msgstr "Capture Interval (sec)"
+msgstr "探測間隔（秒）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:802
 msgid "Minimum time between active probing events. Default 3600 s (1 hour)."
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:809
-#, fuzzy
 msgid "Forecast Feedforward"
-msgstr "提前預報時數"
+msgstr "預報前饋"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:816
-#, fuzzy
 msgid "Enable Forecast Feedforward"
-msgstr "Unable to load forecast data."
+msgstr "啟用預報前饋"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:818
 msgid ""
@@ -25006,9 +24812,8 @@ msgid ""
 msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:828
-#, fuzzy
 msgid "Forecast Lookahead (hours)"
-msgstr "提前預報時數"
+msgstr "預報前瞻時數（小時）"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:830
 msgid ""

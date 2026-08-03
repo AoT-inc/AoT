@@ -12,9 +12,9 @@ AoT에는 사용자 정의 입력을 생성하여 AoT 시스템에서 사용할 
 
 작동하는 입력 모듈을 개발한 경우, [새 GitHub 이슈 생성](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) 또는 풀 리퀘스트를 고려해 주세요. 해당 모듈이 기본 제공 세트에 포함될 수 있습니다.
 
-적절한 형식의 예를 보려면 디렉토리 [AoT/aot/inputs](https://github.com/AoT-inc/AoT/tree/master/aot/inputs/)에 있는 기본 제공 모듈을 열어보세요.
+적절한 형식의 예를 보려면 디렉토리 [AoT/aot/inputs](https://github.com/AoT-inc/AoT/tree/main/aot/inputs/)에 있는 기본 제공 모듈을 열어보세요.
 
-또한, 디렉토리 [AoT/aot/inputs/examples](https://github.com/AoT-inc/AoT/tree/master/aot/inputs/examples)에는 사용자 정의 입력 예제가 있습니다.
+또한, 디렉토리 [AoT/aot/inputs/examples](https://github.com/AoT-inc/AoT/tree/main/aot/inputs/examples)에는 사용자 정의 입력 예제가 있습니다.
 
 기본 제공 세트에 포함되지 않은 사용자 정의 모듈에 전념하는 또 다른 GitHub 저장소는 [aot-inc/AoT-custom](https://github.com/AoT-inc/AoT-custom)에서 확인할 수 있습니다.
 

@@ -705,7 +705,7 @@ Page\: `[관리] -> 시스템 관리 -> 진단`
 </tr>
 <tr>
 <td>마스터로 업그레이드 설정</td>
-<td>config.py에서 FORCE_UPGRADE_MASTER를 True로 변경합니다. GitHub의 마스터 브랜치로 업그레이드하도록 업그레이드 시스템에 지시하는 방법으로, 로그인하여 config.py 파일을 수동으로 편집하지 않아도 됩니다.</td>
+<td>config.py에서 FORCE_UPGRADE_MASTER를 True로 변경합니다. GitHub의 main 브랜치로 업그레이드하도록 업그레이드 시스템에 지시하는 방법으로, 로그인하여 config.py 파일을 수동으로 편집하지 않아도 됩니다.</td>
 </tr>
 </tbody>
 </table>

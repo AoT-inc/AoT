@@ -2956,15 +2956,15 @@ msgstr ""
 #: config_translations_docs.py:106
 msgid ""
 "Open any of the built-in Widget modules located in the directory "
-"[AoT/aot/widgets](https://github.com/AoT-inc/AoT/tree/master/aot/widgets/) "
+"[AoT/aot/widgets](https://github.com/AoT-inc/AoT/tree/main/aot/widgets/) "
 "for examples of the proper formatting. There are also example Custom Widgets"
 " in the directory [AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples)."
+"inc/AoT/tree/main/aot/widgets/examples)."
 msgstr ""
 "올바른 형식의 예시를 보려면 [AoT/aot/widgets](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/) 디렉터리에 있는 기본 제공 위젯 모듈을 열어 보세요. "
+"inc/AoT/tree/main/aot/widgets/) 디렉터리에 있는 기본 제공 위젯 모듈을 열어 보세요. "
 "[AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples) 디렉터리에는 사용자 정의 위젯 예시도 있습니다."
+"inc/AoT/tree/main/aot/widgets/examples) 디렉터리에는 사용자 정의 위젯 예시도 있습니다."
 
 #: config_translations_docs.py:107
 msgid ""
@@ -3945,9 +3945,8 @@ msgid "Error: %(err)s"
 msgstr "에러: %(err)s"
 
 #: aot_flask/routes_admin.py:220
-#, fuzzy
 msgid "Backup deleted"
-msgstr "백업 복원"
+msgstr "백업이 삭제되었습니다"
 
 #: aot_flask/routes_admin.py:227
 msgid "Deletion of backup in progress"
@@ -6240,9 +6239,8 @@ msgstr "사용자 추가"
 #: aot_flask/forms/forms_settings.py:460 aot_flask/forms/forms_settings.py:481
 #: aot_flask/templates/layout.html:755
 #: aot_flask/templates/layout_default.html:755
-#, fuzzy
 msgid "Timezone"
-msgstr "타임라인"
+msgstr "시간대"
 
 #: aot_flask/forms/forms_settings.py:486
 #: aot_flask/templates/pages/ai/ai_library.html:432
@@ -8667,9 +8665,8 @@ msgstr "API 키 관리"
 #: aot_flask/templates/layout-settings.html:25
 #: aot_flask/templates/settings/integrations.html:5
 #: aot_flask/templates/settings/integrations.html:11
-#, fuzzy
 msgid "Integrations"
-msgstr "적분기 최소값"
+msgstr "연동"
 
 #: aot_flask/templates/layout-settings.html:26
 #: aot_flask/templates/settings/users.html:199
@@ -8798,16 +8795,14 @@ msgstr "AoT 깃허브"
 #: aot_flask/templates/pages/landing.html:228
 #: aot_flask/templates/pages/privacy_policy.html:4
 #: aot_flask/templates/pages/privacy_policy.html:13
-#, fuzzy
 msgid "Privacy Policy"
-msgstr "LoRa 클래스 정책"
+msgstr "개인정보 처리방침"
 
 #: aot_flask/templates/layout.html:643
 #: aot_flask/templates/layout_default.html:643
 #: aot_flask/templates/pages/landing.html:230
 #: aot_flask/templates/pages/terms_of_service.html:4
 #: aot_flask/templates/pages/terms_of_service.html:13
-#, fuzzy
 msgid "Terms of Service"
 msgstr "이용 약관"
 
@@ -9065,39 +9060,33 @@ msgstr "AI 어시스턴트"
 
 #: aot_flask/templates/layout.html:990
 #: aot_flask/templates/layout_default.html:990
-#, fuzzy
 msgid "New conversation"
-msgstr "변환 없음"
+msgstr "새 대화"
 
 #: aot_flask/templates/layout.html:1003
 #: aot_flask/templates/layout_default.html:1003
-#, fuzzy
 msgid "Response depth"
-msgstr "응답"
+msgstr "응답 깊이"
 
 #: aot_flask/templates/layout.html:1004
 #: aot_flask/templates/layout_default.html:1004
-#, fuzzy
 msgid "Fast"
-msgstr "과거"
+msgstr "빠름"
 
 #: aot_flask/templates/layout.html:1005
 #: aot_flask/templates/layout_default.html:1005
-#, fuzzy
 msgid "Deep"
-msgstr "깊이"
+msgstr "심층"
 
 #: aot_flask/templates/layout.html:1007
 #: aot_flask/templates/layout_default.html:1007
-#, fuzzy
 msgid "Autonomy"
-msgstr "자동"
+msgstr "자율 수준"
 
 #: aot_flask/templates/layout.html:1008
 #: aot_flask/templates/layout_default.html:1008
-#, fuzzy
 msgid "Advice"
-msgstr "보조 장치"
+msgstr "조언"
 
 #: aot_flask/templates/layout.html:1010
 #: aot_flask/templates/layout_default.html:1010
@@ -9114,9 +9103,8 @@ msgstr "자동"
 
 #: aot_flask/templates/layout.html:1017
 #: aot_flask/templates/layout_default.html:1017
-#, fuzzy
 msgid "Attach image"
-msgstr "첨부 파일"
+msgstr "이미지 첨부"
 
 #: aot_flask/templates/layout.html:1021
 #: aot_flask/templates/layout_default.html:1021
@@ -9517,8 +9505,8 @@ msgstr "/opt/AoT/config.py에서 FORCE_UPGRADE_MASTER가 True로 설정되었습
 #: aot_flask/templates/admin/upgrade.html:189
 msgid ""
 "Clicking the upgrade button below will perform an upgrade from the AoT "
-"master branch via the master.tar.gz archive."
-msgstr "아래 업그레이드 버튼을 클릭하면 master.tar.gz 아카이브를 통해 AoT 마스터 브랜치에서 업그레이드를 수행합니다."
+"main branch via the main.tar.gz archive."
+msgstr "아래 업그레이드 버튼을 클릭하면 main.tar.gz 아카이브를 통해 AoT main 브랜치에서 업그레이드를 수행합니다."
 
 #: aot_flask/templates/admin/upgrade.html:190
 msgid ""
@@ -10487,9 +10475,8 @@ msgid "Sign Up"
 msgstr ""
 
 #: aot_flask/templates/pages/landing.html:236
-#, fuzzy
 msgid "All rights reserved."
-msgstr "등록된 작업이 없습니다."
+msgstr "모든 권리 보유."
 
 #: aot_flask/templates/pages/live.html:16
 msgid "No Data"
@@ -10625,9 +10612,8 @@ msgstr "복제하시겠습니까?"
 
 #: aot_flask/templates/pages/privacy_policy.html:16
 #: aot_flask/templates/pages/terms_of_service.html:16
-#, fuzzy
 msgid "Effective Date"
-msgstr "적용 값"
+msgstr "시행일"
 
 #: aot_flask/templates/pages/wait_and_autoload.html:5
 msgid "Please wait 10 seconds"
@@ -12389,9 +12375,8 @@ msgstr "예: 3-1, A구역"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
-#, fuzzy
 msgid "Device-local time"
-msgstr "전체 기간"
+msgstr "장치 현지 시간"
 
 #: aot_flask/templates/pages/ai/scheduler.html:315
 #: aot_flask/templates/pages/ai/scheduler.html:411
@@ -12532,19 +12517,16 @@ msgid "Target Zone/Site"
 msgstr "대상 구역/사이트"
 
 #: aot_flask/templates/pages/ai/scheduler.html:771
-#, fuzzy
 msgid "No items available"
-msgstr "사용 가능한 것이 없음"
+msgstr "사용 가능한 항목 없음"
 
 #: aot_flask/templates/pages/ai/scheduler.html:826
-#, fuzzy
 msgid "Device-local"
-msgstr "장치 역할"
+msgstr "장치 현지"
 
 #: aot_flask/templates/pages/ai/scheduler.html:829
-#, fuzzy
 msgid "Your time"
-msgstr "바운스 시간"
+msgstr "내 시간"
 
 #: aot_flask/templates/pages/ai/scheduler.html:864
 msgid "Approve this job?"
@@ -12587,9 +12569,8 @@ msgid "By: "
 msgstr "요청자: "
 
 #: aot_flask/templates/pages/ai/scheduler.html:995
-#, fuzzy
 msgid "Local time: "
-msgstr "전체 기간"
+msgstr "현지 시간: "
 
 #: aot_flask/templates/pages/ai/scheduler.html:996
 msgid "Reasoning: "
@@ -13313,29 +13294,24 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "For more information, see the"
-msgstr "를 참조하세요."
+msgstr "자세한 내용은 다음을 참조하세요:"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "Conditional Functions documentation"
-msgstr "이온 농도"
+msgstr "조건부 함수 문서"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:83
-#, fuzzy
 msgid "Interval between Python code executions"
-msgstr "액션 사이의 시간 간격."
+msgstr "Python 코드 실행 간격"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:90
-#, fuzzy
 msgid "Time to wait before the first operation"
 msgstr "첫 번째 작업을 시작하기 전에 기다릴 시간"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:97
-#, fuzzy
 msgid "Timeout for Python code execution"
-msgstr "실행할 Python 3 코드"
+msgstr "Python 코드 실행 제한 시간"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:112
 #: aot_flask/templates/pages/function_options/function_options.html:87
@@ -13359,14 +13335,12 @@ msgid "View Context"
 msgstr "컨텍스트 보기"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:199
-#, fuzzy
 msgid "Conditions"
 msgstr "조건"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:212
-#, fuzzy
 msgid "Add Condition"
-msgstr "조건"
+msgstr "조건 추가"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:249
 #: aot_flask/templates/pages/function_options/function_options.html:140
@@ -13865,9 +13839,8 @@ msgid "This is the GIS detailed settings screen. (To be implemented)"
 msgstr "이것은 GIS 상세 설정 화면입니다. (구현 예정)"
 
 #: aot_flask/templates/pages/geo/geo_design.html:2
-#, fuzzy
 msgid "Design Tool"
-msgstr "설계 상세"
+msgstr "설계 도구"
 
 #: aot_flask/templates/pages/geo/geo_design.html:3
 msgid "Geo Design"
@@ -14033,9 +14006,8 @@ msgid "Save as Site"
 msgstr "Site로 저장"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2
-#, fuzzy
 msgid "Facility Management"
-msgstr "배터리 관리"
+msgstr "시설 관리"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1067
 #: aot_flask/templates/pages/geo/geo_facility.html:1965
@@ -16701,9 +16673,8 @@ msgid "Ask an administrator to configure it."
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:41
-#, fuzzy
 msgid "Sync Direction"
-msgstr "풍향"
+msgstr "동기화 방향"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
@@ -16714,9 +16685,8 @@ msgid "Google → AoT"
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:49
-#, fuzzy
 msgid "Last Synced"
-msgstr "마지막 확인"
+msgstr "마지막 동기화"
 
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
@@ -16734,9 +16704,8 @@ msgid "Connect Google Calendar"
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:84
-#, fuzzy
 msgid "Google OAuth Configuration"
-msgstr "SMTP 설정"
+msgstr "Google OAuth 설정"
 
 #: aot_flask/templates/settings/integrations.html:89
 msgid ""
@@ -16760,14 +16729,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:106
-#, fuzzy
 msgid "Public Base URL"
-msgstr "API Base URL"
+msgstr "공개 Base URL"
 
 #: aot_flask/templates/settings/integrations.html:115
-#, fuzzy
 msgid "OAuth Client ID"
-msgstr "Client ID"
+msgstr "OAuth Client ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
@@ -16977,15 +16944,14 @@ msgid "Export AoT settings data as ZIP file"
 msgstr "AoT 설정 데이터를 ZIP 파일로 내보내기"
 
 #: aot_flask/templates/tools/export.html:80
-#, fuzzy
 msgid ""
 "This feature creates a ZIP file of the setup database containing AoT "
 "configuration and user info. Custom functions, inputs, outputs, and widgets "
 "are also included, as well as uploaded files (note/notice attachments, "
 "facility and zone photos, and facility 3D model assets)."
 msgstr ""
-"이 기능은 AoT 설정 및 사용자 정보를 포함하는 설정 데이터베이스의 ZIP 파일을 생성합니다. 사용자 정의 함수, 입력, 출력 및 "
-"위젯도 포함됩니다."
+"이 기능은 AoT 설정 및 사용자 정보를 포함하는 설정 데이터베이스의 ZIP 파일을 생성합니다. 사용자 정의 함수, 입력, 출력, "
+"위젯과 업로드된 파일(노트/공지 첨부 파일, 시설 및 구역 사진, 시설 3D 모델 자산)도 함께 포함됩니다."
 
 #: aot_flask/templates/tools/export.html:91
 msgid "Import AoT settings data from ZIP file"
@@ -18646,9 +18612,8 @@ msgid "Cannot demote the last Administrator."
 msgstr "마지막 관리자에게 하락할 수 없습니다."
 
 #: aot_flask/utils/utils_settings.py:460
-#, fuzzy
 msgid "User not found"
-msgstr "파일을 찾을 수 없음"
+msgstr "사용자를 찾을 수 없습니다"
 
 #: aot_flask/utils/utils_settings.py:463
 #, python-format
@@ -21134,78 +21099,64 @@ msgid "BCM"
 msgstr "BCM"
 
 #: inputs/sensecap_weather.py:30
-#, fuzzy
 msgid "Air Humidity"
-msgstr "실내습도"
+msgstr "대기 습도"
 
 #: inputs/sensecap_weather.py:31
 msgid "Light Intensity"
 msgstr "광량"
 
 #: inputs/sensecap_weather.py:33
-#, fuzzy
 msgid "Barometric Pressure"
-msgstr "상대 기압"
+msgstr "기압"
 
 #: inputs/sensecap_weather.py:34
-#, fuzzy
 msgid "Soil Temperature"
-msgstr "색온도"
+msgstr "토양 온도"
 
 #: inputs/sensecap_weather.py:39
-#, fuzzy
 msgid "Soil Electrical Conductivity"
-msgstr "전기 전도도"
+msgstr "토양 전기 전도도"
 
 #: inputs/sensecap_weather.py:40
-#, fuzzy
 msgid "Soil Volumetric Water Content"
-msgstr "체적 수분 함량"
+msgstr "토양 체적 수분 함량"
 
 #: inputs/sensecap_weather.py:41
-#, fuzzy
 msgid "Rainfall Hourly"
-msgstr "강수량:"
+msgstr "시간당 강수량"
 
 #: inputs/sensecap_weather.py:42
-#, fuzzy
 msgid "Soil Moisture 10cm"
-msgstr "토양 수분"
+msgstr "토양 수분 10cm"
 
 #: inputs/sensecap_weather.py:43
-#, fuzzy
 msgid "Soil Moisture 20cm"
-msgstr "토양 수분"
+msgstr "토양 수분 20cm"
 
 #: inputs/sensecap_weather.py:44
-#, fuzzy
 msgid "Soil Moisture 30cm"
-msgstr "토양 수분"
+msgstr "토양 수분 30cm"
 
 #: inputs/sensecap_weather.py:45
-#, fuzzy
 msgid "Soil Moisture 40cm"
-msgstr "토양 수분"
+msgstr "토양 수분 40cm"
 
 #: inputs/sensecap_weather.py:46
-#, fuzzy
 msgid "Soil Temperature 10cm"
-msgstr "색온도"
+msgstr "토양 온도 10cm"
 
 #: inputs/sensecap_weather.py:47
-#, fuzzy
 msgid "Soil Temperature 20cm"
-msgstr "색온도"
+msgstr "토양 온도 20cm"
 
 #: inputs/sensecap_weather.py:48
-#, fuzzy
 msgid "Soil Temperature 30cm"
-msgstr "색온도"
+msgstr "토양 온도 30cm"
 
 #: inputs/sensecap_weather.py:49
-#, fuzzy
 msgid "Soil Temperature 40cm"
-msgstr "색온도"
+msgstr "토양 온도 40cm"
 
 #: inputs/sensecap_weather.py:50
 msgid "PM2.5"
@@ -21220,49 +21171,40 @@ msgid "Peak Wind Gust"
 msgstr ""
 
 #: inputs/sensecap_weather.py:54
-#, fuzzy
 msgid "Dew Point Temperature"
-msgstr "최저기온"
+msgstr "이슬점 온도"
 
 #: inputs/sensecap_weather.py:56
-#, fuzzy
 msgid "Rain Accumulation"
-msgstr "누적 강우량 (mm)"
+msgstr "누적 강우량"
 
 #: inputs/sensecap_weather.py:71
-#, fuzzy
 msgid "Air Temperature and Humidity Sensor"
 msgstr "온습도 센서"
 
 #: inputs/sensecap_weather.py:72
-#, fuzzy
 msgid "Light Intensity Sensor"
-msgstr "광량"
+msgstr "광량 센서"
 
 #: inputs/sensecap_weather.py:73
-#, fuzzy
 msgid "CO2 Sensor"
-msgstr "센서"
+msgstr "CO2 센서"
 
 #: inputs/sensecap_weather.py:74
-#, fuzzy
 msgid "Barometric Pressure Sensor"
-msgstr "상대 기압"
+msgstr "기압 센서"
 
 #: inputs/sensecap_weather.py:75
-#, fuzzy
 msgid "Soil Moisture and Temperature Sensor"
-msgstr "토양 수분 센서"
+msgstr "토양 수분·온도 센서"
 
 #: inputs/sensecap_weather.py:76
-#, fuzzy
 msgid "Wind Direction Sensor"
-msgstr "풍향"
+msgstr "풍향 센서"
 
 #: inputs/sensecap_weather.py:78
-#, fuzzy
 msgid "Rain Gauge"
-msgstr "회전 각도"
+msgstr "우량계"
 
 #: inputs/sensecap_weather.py:79
 msgid "Compact Weather Station 5-in-1 (S500)"
@@ -21277,19 +21219,16 @@ msgid "Compact Weather Station 4-in-1 (S400)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:82
-#, fuzzy
 msgid "Soil Temperature and VWC Sensor"
-msgstr "온도 센서"
+msgstr "토양 온도·체적수분 센서"
 
 #: inputs/sensecap_weather.py:83
-#, fuzzy
 msgid "Multilayer Soil Moisture and Temperature Sensor"
-msgstr "외부 온도 센서"
+msgstr "다층 토양 수분·온도 센서"
 
 #: inputs/sensecap_weather.py:84
-#, fuzzy
 msgid "Soil Moisture, Temperature and EC Sensor"
-msgstr "토양 수분 센서"
+msgstr "토양 수분·온도·EC 센서"
 
 #: inputs/sensecap_weather.py:85
 msgid "LoRaWAN 8-in-1 Compact Weather Station (S2120)"
@@ -21304,9 +21243,8 @@ msgid "pH Sensor (S2106)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:88
-#, fuzzy
 msgid "Air Temperature, Humidity and Dew Point Sensor"
-msgstr "온습도 센서"
+msgstr "온습도·이슬점 센서"
 
 #: inputs/sensecap_weather.py:105
 msgid ""
@@ -21317,9 +21255,8 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:123
-#, fuzzy
 msgid "Device Type"
-msgstr "장치 도형"
+msgstr "장치 유형"
 
 #: inputs/sensecap_weather.py:124
 msgid ""
@@ -21336,9 +21273,8 @@ msgid "Enter the SenseCAP device Node EUI."
 msgstr ""
 
 #: inputs/sensecap_weather.py:139
-#, fuzzy
 msgid "API ID"
-msgstr "API 키 ID"
+msgstr "API ID"
 
 #: inputs/sensecap_weather.py:140
 msgid ""
@@ -21347,14 +21283,12 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:147
-#, fuzzy
 msgid "Access API Key"
-msgstr "지도 API 키"
+msgstr "Access API Key"
 
 #: inputs/sensecap_weather.py:148
-#, fuzzy
 msgid "Enter the Access API Key issued by the SenseCAP portal."
-msgstr "Ecowitt 플랫폼에서 발급받은 API Key를 입력하세요."
+msgstr "SenseCAP 포털에서 발급받은 Access API Key를 입력하세요."
 
 #: inputs/sensecap_weather.py:157
 msgid "Fetch Historical Data"
@@ -22211,57 +22145,46 @@ msgid "Keep the 'Key: Value' lines so AoT can apply your edits."
 msgstr "'키: 값' 형식을 유지하면 편집 내용이 AoT에 반영됩니다."
 
 #: utils/calendar_event_format.py:269
-#, fuzzy
 msgid "pid"
 msgstr "PID"
 
 #: utils/calendar_event_format.py:271
-#, fuzzy
 msgid "setting"
 msgstr "설정"
 
 #: utils/calendar_event_format.py:272 utils/calendar_event_format.py:283
-#, fuzzy
 msgid "value"
 msgstr "값"
 
 #: utils/calendar_event_format.py:274
-#, fuzzy
 msgid "setpoint"
 msgstr "목표값"
 
 #: utils/calendar_event_format.py:277
-#, fuzzy
 msgid "function"
 msgstr "함수"
 
 #: utils/calendar_event_format.py:278 utils/calendar_event_format.py:285
-#, fuzzy
 msgid "state"
 msgstr "상태"
 
 #: utils/calendar_event_format.py:281
-#, fuzzy
 msgid "device"
-msgstr "보조 장치"
+msgstr "장치"
 
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "duration"
 msgstr "지속시간"
 
 #: utils/calendar_event_format.py:290
-#, fuzzy
 msgid "location"
 msgstr "위치"
 
 #: utils/calendar_event_format.py:292
-#, fuzzy
 msgid "content"
 msgstr "내용"
 
 #: utils/calendar_event_format.py:294
-#, fuzzy
 msgid "worker"
 msgstr "워커"
 
@@ -22270,9 +22193,8 @@ msgid "Device control"
 msgstr "장치 제어"
 
 #: utils/outputs.py:226
-#, fuzzy
 msgid "Command Timeout (seconds)"
-msgstr "명령 제한 시간"
+msgstr "명령 제한 시간 (초)"
 
 #: utils/outputs.py:228
 msgid ""
@@ -25830,8 +25752,8 @@ msgid "Save the facility first to see the integration summary and run a device c
 msgstr "연동 요약 확인과 장치 점검은 시설을 저장한 뒤 사용할 수 있습니다."
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "Use "Place on Map" above the map to set the facility center."
-msgstr "시설 중심은 지도 위의 "지도에 배치" 버튼으로 지정합니다."
+msgid "Use \"Place on Map\" above the map to set the facility center."
+msgstr "시설 중심은 지도 위의 \"지도에 배치\" 버튼으로 지정합니다."
 
 #: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
 msgid ""
@@ -25929,7 +25851,7 @@ msgstr ""
 
 #: aot/aot_flask/static/js/geo/facility/facility-3d-bridge.js
 msgid "Delete facility \"%(name)s\"?"
-msgstr "시설 "%(name)s"을(를) 삭제할까요?"
+msgstr "시설 \"%(name)s\"을(를) 삭제할까요?"
 
 #: aot/aot_flask/static/js/geo/facility/facility-3d-bridge.js
 msgid "Deleting removes all facility data and linked geometry information, and cannot be undone."

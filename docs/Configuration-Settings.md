@@ -705,7 +705,7 @@ Problems can occur in the system due to incompatible configurations. These can r
 </tr>
 <tr>
 <td>Set Upgrade to Master</td>
-<td>Changes FORCE_UPGRADE_MASTER to True in config.py. This is a way to instruct the upgrade system to upgrade to the master branch on GitHub, without having to log in and manually edit the config.py file.</td>
+<td>Changes FORCE_UPGRADE_MASTER to True in config.py. This is a way to instruct the upgrade system to upgrade to the main branch on GitHub, without having to log in and manually edit the config.py file.</td>
 </tr>
 </tbody>
 </table>

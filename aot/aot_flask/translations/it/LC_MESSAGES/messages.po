@@ -2925,10 +2925,10 @@ msgstr ""
 msgid ""
 "Open any of the built-in Widget modules located in the directory "
 "[AoT/aot/widgets](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/) for examples of the proper formatting. "
+"inc/AoT/tree/main/aot/widgets/) for examples of the proper formatting. "
 "There are also example Custom Widgets in the directory "
 "[AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples)."
+"inc/AoT/tree/main/aot/widgets/examples)."
 msgstr ""
 
 #: config_translations_docs.py:107
@@ -9706,10 +9706,10 @@ msgstr "FORCE_UPGRADE_MASTER is set to True in /opt/AoT/config.py."
 #: aot_flask/templates/admin/upgrade.html:189
 msgid ""
 "Clicking the upgrade button below will perform an upgrade from the AoT "
-"master branch via the master.tar.gz archive."
+"main branch via the main.tar.gz archive."
 msgstr ""
 "Clicking the upgrade button below will perform an upgrade from the AoT "
-"master branch via the master.tar.gz archive."
+"main branch via the main.tar.gz archive."
 
 #: aot_flask/templates/admin/upgrade.html:190
 msgid ""

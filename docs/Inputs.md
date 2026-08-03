@@ -12,9 +12,9 @@ AoT has a custom input import system that lets you create custom inputs and make
 
 If you have developed a working input module, please consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. Your module may be included in the built-in set.
 
-To see examples of the correct format, open the built-in modules in the directory [AoT/aot/inputs](https://github.com/AoT-inc/AoT/tree/master/aot/inputs/).
+To see examples of the correct format, open the built-in modules in the directory [AoT/aot/inputs](https://github.com/AoT-inc/AoT/tree/main/aot/inputs/).
 
-Additionally, custom input examples can be found in the directory [AoT/aot/inputs/examples](https://github.com/AoT-inc/AoT/tree/master/aot/inputs/examples).
+Additionally, custom input examples can be found in the directory [AoT/aot/inputs/examples](https://github.com/AoT-inc/AoT/tree/main/aot/inputs/examples).
 
 Another GitHub repository dedicated to custom modules that are not included in the built-in set can be found at [aot-inc/AoT-custom](https://github.com/AoT-inc/AoT-custom).
 

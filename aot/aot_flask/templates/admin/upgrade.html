@@ -148,7 +148,7 @@
       <br>{{_('Latest Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_latest_release}}" target="_blank">{{current_latest_release}}</a>
     </p>
     <p>
-      <a href="https://github.com/AoT-inc/AoT/blob/master/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
+      <a href="https://github.com/AoT-inc/AoT/blob/main/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
       <br>{{_('Major Version Changes')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_latest_major_version}}.0.0" target="_blank">{{current_latest_major_version}}.0.0</a>
     </p>
     <p style="font-weight: bold; color: red">{{_('Major version change detected!')}}</p>
@@ -186,7 +186,7 @@
     <div style="padding: 1em 0 1.5em 0">
       <p>{{_('Manual Upgrade Mode')}}</p>
       <p>{{_('FORCE_UPGRADE_MASTER is set to True in /opt/AoT/config.py.')}}</p>
-      <p>{{_('Clicking the upgrade button below will perform an upgrade from the AoT master branch via the master.tar.gz archive.')}}</p>
+      <p>{{_('Clicking the upgrade button below will perform an upgrade from the AoT main branch via the main.tar.gz archive.')}}</p>
       <p>{{_('To upgrade to the latest release version, set FORCE_UPGRADE_MASTER = False in /opt/AoT/aot/config.py, restart the web UI with the sudo service aotflask restart command, and refresh this page.')}}</p>
     </div>
     <div class="form-inline" style="padding-bottom: 1em">
@@ -216,7 +216,7 @@
     </div>
     <div style="padding: 0.5em 0">
       {{_('You are')}} {{releases_behind}} {{_('releases behind current version.')}}
-      <br>{{_('All changes can be found in the')}} <a href="https://github.com/AoT-inc/AoT/blob/master/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a>.
+      <br>{{_('All changes can be found in the')}} <a href="https://github.com/AoT-inc/AoT/blob/main/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a>.
     </div>
     <div style="padding: 1em 0 1.5em 0">
       {{_('Click the button below to start the upgrade. Upgrades typically take a few minutes, but can rarely take up to several hours. During this period, functions such as AoT web interface and server sensor data recording, and output manipulation will be completely suspended.')}}

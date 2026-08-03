@@ -2931,14 +2931,14 @@ msgstr ""
 #: config_translations_docs.py:106
 msgid ""
 "Open any of the built-in Widget modules located in the directory "
-"[AoT/aot/widgets](https://github.com/AoT-inc/AoT/tree/master/aot/widgets/) "
+"[AoT/aot/widgets](https://github.com/AoT-inc/AoT/tree/main/aot/widgets/) "
 "for examples of the proper formatting. There are also example Custom Widgets"
 " in the directory [AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples)."
+"inc/AoT/tree/main/aot/widgets/examples)."
 msgstr ""
 "正しい記述形式の例を確認するには、[AoT/aot/widgets](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/)ディレクトリにある標準搭載のウィジェットモジュールを開いてください。[AoT/aot/widgets/examples](https://github.com/AoT-"
-"inc/AoT/tree/master/aot/widgets/examples)ディレクトリにはカスタムウィジェットのサンプルもあります。"
+"inc/AoT/tree/main/aot/widgets/)ディレクトリにある標準搭載のウィジェットモジュールを開いてください。[AoT/aot/widgets/examples](https://github.com/AoT-"
+"inc/AoT/tree/main/aot/widgets/examples)ディレクトリにはカスタムウィジェットのサンプルもあります。"
 
 #: config_translations_docs.py:107
 msgid ""
@@ -3908,9 +3908,8 @@ msgid "Error: %(err)s"
 msgstr "エラー: %(err)s"
 
 #: aot_flask/routes_admin.py:220
-#, fuzzy
 msgid "Backup deleted"
-msgstr "バックアップ復元"
+msgstr "バックアップを削除しました"
 
 #: aot_flask/routes_admin.py:227
 msgid "Deletion of backup in progress"
@@ -6202,9 +6201,8 @@ msgstr "ユーザーを追加"
 #: aot_flask/forms/forms_settings.py:460 aot_flask/forms/forms_settings.py:481
 #: aot_flask/templates/layout.html:755
 #: aot_flask/templates/layout_default.html:755
-#, fuzzy
 msgid "Timezone"
-msgstr "タイムライン"
+msgstr "タイムゾーン"
 
 #: aot_flask/forms/forms_settings.py:486
 #: aot_flask/templates/pages/ai/ai_library.html:432
@@ -7282,9 +7280,8 @@ msgstr "ファンクションラベルの表示切替"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5415
-#, fuzzy
 msgid "Toggle Facility labels"
-msgstr "入力ラベルの表示切替"
+msgstr "施設ラベルの表示切替"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:5438
@@ -8617,9 +8614,8 @@ msgstr "APIキー管理"
 #: aot_flask/templates/layout-settings.html:25
 #: aot_flask/templates/settings/integrations.html:5
 #: aot_flask/templates/settings/integrations.html:11
-#, fuzzy
 msgid "Integrations"
-msgstr "積分最小"
+msgstr "連携"
 
 #: aot_flask/templates/layout-settings.html:26
 #: aot_flask/templates/settings/users.html:199
@@ -8748,16 +8744,14 @@ msgstr "AoT GitHub"
 #: aot_flask/templates/pages/landing.html:228
 #: aot_flask/templates/pages/privacy_policy.html:4
 #: aot_flask/templates/pages/privacy_policy.html:13
-#, fuzzy
 msgid "Privacy Policy"
-msgstr "LoRaクラスポリシー"
+msgstr "プライバシーポリシー"
 
 #: aot_flask/templates/layout.html:643
 #: aot_flask/templates/layout_default.html:643
 #: aot_flask/templates/pages/landing.html:230
 #: aot_flask/templates/pages/terms_of_service.html:4
 #: aot_flask/templates/pages/terms_of_service.html:13
-#, fuzzy
 msgid "Terms of Service"
 msgstr "利用規約"
 
@@ -9015,39 +9009,33 @@ msgstr "AIアシスタント"
 
 #: aot_flask/templates/layout.html:990
 #: aot_flask/templates/layout_default.html:990
-#, fuzzy
 msgid "New conversation"
-msgstr "変換なし"
+msgstr "新しい会話"
 
 #: aot_flask/templates/layout.html:1003
 #: aot_flask/templates/layout_default.html:1003
-#, fuzzy
 msgid "Response depth"
-msgstr "応答"
+msgstr "応答の深さ"
 
 #: aot_flask/templates/layout.html:1004
 #: aot_flask/templates/layout_default.html:1004
-#, fuzzy
 msgid "Fast"
-msgstr "過去"
+msgstr "高速"
 
 #: aot_flask/templates/layout.html:1005
 #: aot_flask/templates/layout_default.html:1005
-#, fuzzy
 msgid "Deep"
-msgstr "深さ"
+msgstr "詳細"
 
 #: aot_flask/templates/layout.html:1007
 #: aot_flask/templates/layout_default.html:1007
-#, fuzzy
 msgid "Autonomy"
-msgstr "自動"
+msgstr "自律レベル"
 
 #: aot_flask/templates/layout.html:1008
 #: aot_flask/templates/layout_default.html:1008
-#, fuzzy
 msgid "Advice"
-msgstr "デバイス"
+msgstr "助言"
 
 #: aot_flask/templates/layout.html:1010
 #: aot_flask/templates/layout_default.html:1010
@@ -9064,9 +9052,8 @@ msgstr "自動"
 
 #: aot_flask/templates/layout.html:1017
 #: aot_flask/templates/layout_default.html:1017
-#, fuzzy
 msgid "Attach image"
-msgstr "添付"
+msgstr "画像を添付"
 
 #: aot_flask/templates/layout.html:1021
 #: aot_flask/templates/layout_default.html:1021
@@ -9147,9 +9134,8 @@ msgstr ""
 "AoTの設定を保存するためのバックアップを作成したり、後で復元したりできます。カメラの画像はバックアップされません。測定データを保存するには、エクスポート/インポートページに移動してください。"
 
 #: aot_flask/templates/admin/backup.html:30
-#, fuzzy
 msgid "Saved Backups"
-msgstr "AoTバックアップ"
+msgstr "保存済みバックアップ"
 
 #: aot_flask/templates/admin/backup.html:33
 msgid "No backups found."
@@ -9461,9 +9447,9 @@ msgstr "FORCE_UPGRADE_MASTERが/opt/AoT/config.pyでTrueに設定されていま
 #: aot_flask/templates/admin/upgrade.html:189
 msgid ""
 "Clicking the upgrade button below will perform an upgrade from the AoT "
-"master branch via the master.tar.gz archive."
+"main branch via the main.tar.gz archive."
 msgstr ""
-"以下のアップグレードボタンをクリックすると、master.tar.gzアーカイブ経由でAoTのmasterブランチからアップグレードが行われます。"
+"以下のアップグレードボタンをクリックすると、main.tar.gzアーカイブ経由でAoTのmainブランチからアップグレードが行われます。"
 
 #: aot_flask/templates/admin/upgrade.html:190
 msgid ""
@@ -10420,9 +10406,8 @@ msgid "Sign Up"
 msgstr ""
 
 #: aot_flask/templates/pages/landing.html:236
-#, fuzzy
 msgid "All rights reserved."
-msgstr "登録されたタスクがありません。"
+msgstr "無断複写・転載を禁じます。"
 
 #: aot_flask/templates/pages/live.html:16
 msgid "No Data"
@@ -10558,9 +10543,8 @@ msgstr "複製してもよいですか？"
 
 #: aot_flask/templates/pages/privacy_policy.html:16
 #: aot_flask/templates/pages/terms_of_service.html:16
-#, fuzzy
 msgid "Effective Date"
-msgstr "適用値"
+msgstr "施行日"
 
 #: aot_flask/templates/pages/wait_and_autoload.html:5
 msgid "Please wait 10 seconds"
@@ -12239,29 +12223,24 @@ msgid "Scheduler"
 msgstr "スケジューラー"
 
 #: aot_flask/templates/pages/ai/scheduler.html:40
-#, fuzzy
 msgid "Draft"
-msgstr "ドラッグ"
+msgstr "下書き"
 
 #: aot_flask/templates/pages/ai/scheduler.html:45
-#, fuzzy
 msgid "Archived"
-msgstr "アクティブ"
+msgstr "アーカイブ済み"
 
 #: aot_flask/templates/pages/ai/scheduler.html:50
-#, fuzzy
 msgid "Work Task"
-msgstr "新規タスク"
+msgstr "作業タスク"
 
 #: aot_flask/templates/pages/ai/scheduler.html:51
-#, fuzzy
 msgid "Device Control"
-msgstr "デバイスの役割"
+msgstr "デバイス制御"
 
 #: aot_flask/templates/pages/ai/scheduler.html:52
-#, fuzzy
 msgid "Automated Trigger"
-msgstr "自動"
+msgstr "自動トリガー"
 
 #: aot_flask/templates/pages/ai/scheduler.html:69
 #: aot_flask/templates/pages/ai/scheduler.html:541
@@ -12315,23 +12294,20 @@ msgstr "提案者"
 #: aot_flask/templates/pages/ai/scheduler.html:280
 #: aot_flask/templates/pages/ai/scheduler.html:376
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:23
-#, fuzzy
 msgid "e.g. 3-1, Zone A"
-msgstr "例：My OpenAI"
+msgstr "例: 3-1, ゾーンA"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
-#, fuzzy
 msgid "Device-local time"
-msgstr "全期間"
+msgstr "デバイス現地時刻"
 
 #: aot_flask/templates/pages/ai/scheduler.html:315
 #: aot_flask/templates/pages/ai/scheduler.html:411
 #: aot_flask/templates/pages/ai/scheduler.html:498
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "min"
-msgstr "最小:"
+msgstr "分"
 
 #: aot_flask/templates/pages/ai/scheduler.html:321
 #: aot_flask/templates/pages/ai/scheduler.html:324
@@ -12465,19 +12441,16 @@ msgid "Target Zone/Site"
 msgstr "対象ゾーン/サイト"
 
 #: aot_flask/templates/pages/ai/scheduler.html:771
-#, fuzzy
 msgid "No items available"
-msgstr "利用不可"
+msgstr "利用可能な項目がありません"
 
 #: aot_flask/templates/pages/ai/scheduler.html:826
-#, fuzzy
 msgid "Device-local"
-msgstr "デバイスの役割"
+msgstr "デバイス現地"
 
 #: aot_flask/templates/pages/ai/scheduler.html:829
-#, fuzzy
 msgid "Your time"
-msgstr "バウンスタイム"
+msgstr "あなたの時刻"
 
 #: aot_flask/templates/pages/ai/scheduler.html:864
 msgid "Approve this job?"
@@ -12489,9 +12462,8 @@ msgstr "却下理由 (任意):"
 
 #: aot_flask/templates/pages/ai/scheduler.html:894
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:15
-#, fuzzy
 msgid "Cancellation reason (optional):"
-msgstr "却下理由 (任意):"
+msgstr "キャンセル理由 (任意):"
 
 #: aot_flask/templates/pages/ai/scheduler.html:902
 msgid "Please enter a command"
@@ -12521,9 +12493,8 @@ msgid "By: "
 msgstr "依頼者:"
 
 #: aot_flask/templates/pages/ai/scheduler.html:995
-#, fuzzy
 msgid "Local time: "
-msgstr "全期間"
+msgstr "現地時刻: "
 
 #: aot_flask/templates/pages/ai/scheduler.html:996
 msgid "Reasoning: "
@@ -13243,29 +13214,24 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "For more information, see the"
-msgstr "を参照してください。"
+msgstr "詳細は次を参照してください:"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:46
-#, fuzzy
 msgid "Conditional Functions documentation"
-msgstr "イオン濃度"
+msgstr "条件付き機能のドキュメント"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:83
-#, fuzzy
 msgid "Interval between Python code executions"
-msgstr "アクション間の時間間隔"
+msgstr "Pythonコードの実行間隔"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:90
-#, fuzzy
 msgid "Time to wait before the first operation"
 msgstr "初回動作までの待機時間"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:97
-#, fuzzy
 msgid "Timeout for Python code execution"
-msgstr "実行するPython 3コード"
+msgstr "Pythonコード実行のタイムアウト"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:112
 #: aot_flask/templates/pages/function_options/function_options.html:87
@@ -13289,14 +13255,12 @@ msgid "View Context"
 msgstr "コンテキストを表示"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:199
-#, fuzzy
 msgid "Conditions"
 msgstr "条件"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:212
-#, fuzzy
 msgid "Add Condition"
-msgstr "条件"
+msgstr "条件を追加"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:249
 #: aot_flask/templates/pages/function_options/function_options.html:140
@@ -13788,9 +13752,8 @@ msgid "This is the GIS detailed settings screen. (To be implemented)"
 msgstr "これは GIS 詳細設定画面です。(実装予定)"
 
 #: aot_flask/templates/pages/geo/geo_design.html:2
-#, fuzzy
 msgid "Design Tool"
-msgstr "設計詳細"
+msgstr "設計ツール"
 
 #: aot_flask/templates/pages/geo/geo_design.html:3
 msgid "Geo Design"
@@ -13954,9 +13917,8 @@ msgid "Save as Site"
 msgstr "Siteとして保存"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:2
-#, fuzzy
 msgid "Facility Management"
-msgstr "バッテリー管理"
+msgstr "施設管理"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1067
 #: aot_flask/templates/pages/geo/geo_facility.html:1965
@@ -16591,9 +16553,8 @@ msgstr "測定値一覧"
 
 #: aot_flask/templates/settings/integrations.html:18
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:19
-#, fuzzy
 msgid "Google Calendar"
-msgstr "クリア"
+msgstr "Google カレンダー"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
@@ -16608,9 +16569,8 @@ msgid "Ask an administrator to configure it."
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:41
-#, fuzzy
 msgid "Sync Direction"
-msgstr "風向"
+msgstr "同期方向"
 
 #: aot_flask/templates/settings/integrations.html:43
 msgid "AoT → Google"
@@ -16621,9 +16581,8 @@ msgid "Google → AoT"
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:49
-#, fuzzy
 msgid "Last Synced"
-msgstr "最終確認"
+msgstr "最終同期"
 
 #: aot_flask/templates/settings/integrations.html:64
 msgid ""
@@ -16641,9 +16600,8 @@ msgid "Connect Google Calendar"
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:84
-#, fuzzy
 msgid "Google OAuth Configuration"
-msgstr "SMTP設定"
+msgstr "Google OAuth 設定"
 
 #: aot_flask/templates/settings/integrations.html:89
 msgid ""
@@ -16667,14 +16625,12 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/settings/integrations.html:106
-#, fuzzy
 msgid "Public Base URL"
-msgstr "API Base URL"
+msgstr "公開 Base URL"
 
 #: aot_flask/templates/settings/integrations.html:115
-#, fuzzy
 msgid "OAuth Client ID"
-msgstr "Client ID"
+msgstr "OAuth Client ID"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
@@ -16883,7 +16839,6 @@ msgid "Export AoT settings data as ZIP file"
 msgstr "AoT設定データをZIPファイルとしてエクスポート"
 
 #: aot_flask/templates/tools/export.html:80
-#, fuzzy
 msgid ""
 "This feature creates a ZIP file of the setup database containing AoT "
 "configuration and user info. Custom functions, inputs, outputs, and widgets "
@@ -16891,7 +16846,8 @@ msgid ""
 "facility and zone photos, and facility 3D model assets)."
 msgstr ""
 "この機能は、AoT の構成とユーザー情報を含むセットアップデータベースの ZIP "
-"ファイルを作成します。カスタム関数、入力、出力、ウィジェットも含まれます。"
+"ファイルを作成します。カスタム関数、入力、出力、ウィジェットに加え、アップロードされた"
+"ファイル（ノート/お知らせの添付ファイル、施設およびゾーンの写真、施設3Dモデルアセット）も含まれます。"
 
 #: aot_flask/templates/tools/export.html:91
 msgid "Import AoT settings data from ZIP file"
@@ -17727,19 +17683,16 @@ msgid "Data Position Offset (%%)"
 msgstr "データ位置オフセット(%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
-#, fuzzy
 msgid "Edit Schedule"
-msgstr "AIスケジューラー"
+msgstr "スケジュールを編集"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:13
-#, fuzzy
 msgid "Open in Scheduler"
-msgstr "AIスケジューラー"
+msgstr "スケジューラーで開く"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:18
-#, fuzzy
 msgid "Calendars"
-msgstr "クリア"
+msgstr "カレンダー一覧"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:25
 msgid "Still"
@@ -18548,9 +18501,8 @@ msgid "Cannot demote the last Administrator."
 msgstr "最後の管理者を降格できません。"
 
 #: aot_flask/utils/utils_settings.py:460
-#, fuzzy
 msgid "User not found"
-msgstr "ファイルが見つかりません"
+msgstr "ユーザーが見つかりません"
 
 #: aot_flask/utils/utils_settings.py:463
 #, python-format
@@ -20990,78 +20942,64 @@ msgid "BCM"
 msgstr "BCM"
 
 #: inputs/sensecap_weather.py:30
-#, fuzzy
 msgid "Air Humidity"
-msgstr "室内湿度"
+msgstr "湿度"
 
 #: inputs/sensecap_weather.py:31
 msgid "Light Intensity"
 msgstr "光量"
 
 #: inputs/sensecap_weather.py:33
-#, fuzzy
 msgid "Barometric Pressure"
-msgstr "相対気圧"
+msgstr "気圧"
 
 #: inputs/sensecap_weather.py:34
-#, fuzzy
 msgid "Soil Temperature"
-msgstr "色温度"
+msgstr "土壌温度"
 
 #: inputs/sensecap_weather.py:39
-#, fuzzy
 msgid "Soil Electrical Conductivity"
-msgstr "電気伝導率"
+msgstr "土壌電気伝導率"
 
 #: inputs/sensecap_weather.py:40
-#, fuzzy
 msgid "Soil Volumetric Water Content"
-msgstr "体積含水率"
+msgstr "土壌体積含水率"
 
 #: inputs/sensecap_weather.py:41
-#, fuzzy
 msgid "Rainfall Hourly"
-msgstr "降雨量:"
+msgstr "時間降水量"
 
 #: inputs/sensecap_weather.py:42
-#, fuzzy
 msgid "Soil Moisture 10cm"
-msgstr "土壌水分"
+msgstr "土壌水分 10cm"
 
 #: inputs/sensecap_weather.py:43
-#, fuzzy
 msgid "Soil Moisture 20cm"
-msgstr "土壌水分"
+msgstr "土壌水分 20cm"
 
 #: inputs/sensecap_weather.py:44
-#, fuzzy
 msgid "Soil Moisture 30cm"
-msgstr "土壌水分"
+msgstr "土壌水分 30cm"
 
 #: inputs/sensecap_weather.py:45
-#, fuzzy
 msgid "Soil Moisture 40cm"
-msgstr "土壌水分"
+msgstr "土壌水分 40cm"
 
 #: inputs/sensecap_weather.py:46
-#, fuzzy
 msgid "Soil Temperature 10cm"
-msgstr "色温度"
+msgstr "土壌温度 10cm"
 
 #: inputs/sensecap_weather.py:47
-#, fuzzy
 msgid "Soil Temperature 20cm"
-msgstr "色温度"
+msgstr "土壌温度 20cm"
 
 #: inputs/sensecap_weather.py:48
-#, fuzzy
 msgid "Soil Temperature 30cm"
-msgstr "色温度"
+msgstr "土壌温度 30cm"
 
 #: inputs/sensecap_weather.py:49
-#, fuzzy
 msgid "Soil Temperature 40cm"
-msgstr "色温度"
+msgstr "土壌温度 40cm"
 
 #: inputs/sensecap_weather.py:50
 msgid "PM2.5"
@@ -21076,49 +21014,40 @@ msgid "Peak Wind Gust"
 msgstr ""
 
 #: inputs/sensecap_weather.py:54
-#, fuzzy
 msgid "Dew Point Temperature"
-msgstr "最低気温"
+msgstr "露点温度"
 
 #: inputs/sensecap_weather.py:56
-#, fuzzy
 msgid "Rain Accumulation"
-msgstr "累積降雨量 (mm)"
+msgstr "累積降雨量"
 
 #: inputs/sensecap_weather.py:71
-#, fuzzy
 msgid "Air Temperature and Humidity Sensor"
 msgstr "温湿度センサー"
 
 #: inputs/sensecap_weather.py:72
-#, fuzzy
 msgid "Light Intensity Sensor"
-msgstr "光量"
+msgstr "光量センサー"
 
 #: inputs/sensecap_weather.py:73
-#, fuzzy
 msgid "CO2 Sensor"
-msgstr "センサー"
+msgstr "CO2センサー"
 
 #: inputs/sensecap_weather.py:74
-#, fuzzy
 msgid "Barometric Pressure Sensor"
-msgstr "相対気圧"
+msgstr "気圧センサー"
 
 #: inputs/sensecap_weather.py:75
-#, fuzzy
 msgid "Soil Moisture and Temperature Sensor"
-msgstr "土壌水分センサー"
+msgstr "土壌水分・温度センサー"
 
 #: inputs/sensecap_weather.py:76
-#, fuzzy
 msgid "Wind Direction Sensor"
-msgstr "風向"
+msgstr "風向センサー"
 
 #: inputs/sensecap_weather.py:78
-#, fuzzy
 msgid "Rain Gauge"
-msgstr "回転角度"
+msgstr "雨量計"
 
 #: inputs/sensecap_weather.py:79
 msgid "Compact Weather Station 5-in-1 (S500)"
@@ -21133,19 +21062,16 @@ msgid "Compact Weather Station 4-in-1 (S400)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:82
-#, fuzzy
 msgid "Soil Temperature and VWC Sensor"
-msgstr "温度センサー"
+msgstr "土壌温度・体積含水率センサー"
 
 #: inputs/sensecap_weather.py:83
-#, fuzzy
 msgid "Multilayer Soil Moisture and Temperature Sensor"
-msgstr "外部温度センサー"
+msgstr "多層土壌水分・温度センサー"
 
 #: inputs/sensecap_weather.py:84
-#, fuzzy
 msgid "Soil Moisture, Temperature and EC Sensor"
-msgstr "土壌水分センサー"
+msgstr "土壌水分・温度・ECセンサー"
 
 #: inputs/sensecap_weather.py:85
 msgid "LoRaWAN 8-in-1 Compact Weather Station (S2120)"
@@ -21160,9 +21086,8 @@ msgid "pH Sensor (S2106)"
 msgstr ""
 
 #: inputs/sensecap_weather.py:88
-#, fuzzy
 msgid "Air Temperature, Humidity and Dew Point Sensor"
-msgstr "温湿度センサー"
+msgstr "温湿度・露点センサー"
 
 #: inputs/sensecap_weather.py:105
 msgid ""
@@ -21173,9 +21098,8 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:123
-#, fuzzy
 msgid "Device Type"
-msgstr "デバイス形状"
+msgstr "デバイス種別"
 
 #: inputs/sensecap_weather.py:124
 msgid ""
@@ -21192,9 +21116,8 @@ msgid "Enter the SenseCAP device Node EUI."
 msgstr ""
 
 #: inputs/sensecap_weather.py:139
-#, fuzzy
 msgid "API ID"
-msgstr "APIキーID"
+msgstr "API ID"
 
 #: inputs/sensecap_weather.py:140
 msgid ""
@@ -21203,14 +21126,12 @@ msgid ""
 msgstr ""
 
 #: inputs/sensecap_weather.py:147
-#, fuzzy
 msgid "Access API Key"
-msgstr "地図APIキー"
+msgstr "Access API Key"
 
 #: inputs/sensecap_weather.py:148
-#, fuzzy
 msgid "Enter the Access API Key issued by the SenseCAP portal."
-msgstr "Ecowittプラットフォームで発行されたAPI Keyを入力してください。"
+msgstr "SenseCAPポータルで発行されたAccess API Keyを入力してください。"
 
 #: inputs/sensecap_weather.py:157
 msgid "Fetch Historical Data"
@@ -22044,69 +21965,56 @@ msgid "Keep the 'Key: Value' lines so AoT can apply your edits."
 msgstr ""
 
 #: utils/calendar_event_format.py:269
-#, fuzzy
 msgid "pid"
 msgstr "PID"
 
 #: utils/calendar_event_format.py:271
-#, fuzzy
 msgid "setting"
 msgstr "設定"
 
 #: utils/calendar_event_format.py:272 utils/calendar_event_format.py:283
-#, fuzzy
 msgid "value"
 msgstr "値"
 
 #: utils/calendar_event_format.py:274
-#, fuzzy
 msgid "setpoint"
 msgstr "設定値"
 
 #: utils/calendar_event_format.py:277
-#, fuzzy
 msgid "function"
 msgstr "機能"
 
 #: utils/calendar_event_format.py:278 utils/calendar_event_format.py:285
-#, fuzzy
 msgid "state"
 msgstr "状態"
 
 #: utils/calendar_event_format.py:281
-#, fuzzy
 msgid "device"
 msgstr "デバイス"
 
 #: utils/calendar_event_format.py:287
-#, fuzzy
 msgid "duration"
-msgstr "期間"
+msgstr "継続時間"
 
 #: utils/calendar_event_format.py:290
-#, fuzzy
 msgid "location"
-msgstr "位置"
+msgstr "場所"
 
 #: utils/calendar_event_format.py:292
-#, fuzzy
 msgid "content"
 msgstr "内容"
 
 #: utils/calendar_event_format.py:294
-#, fuzzy
 msgid "worker"
 msgstr "ワーカー"
 
 #: utils/calendar_event_format.py:315 utils/calendar_event_format.py:317
-#, fuzzy
 msgid "Device control"
-msgstr "デバイスの役割"
+msgstr "デバイス制御"
 
 #: utils/outputs.py:226
-#, fuzzy
 msgid "Command Timeout (seconds)"
-msgstr "コマンドタイムアウト"
+msgstr "コマンドタイムアウト（秒）"
 
 #: utils/outputs.py:228
 msgid ""
@@ -23100,9 +23008,8 @@ msgid "Select the Output to control."
 msgstr "Select the Output to control."
 
 #: widgets/AoT_timer.py:1146
-#, fuzzy
 msgid "Sync (seconds)"
-msgstr "遅延（秒）"
+msgstr "同期（秒）"
 
 #: widgets/AoT_timer.py:1147
 msgid ""
@@ -23337,9 +23244,8 @@ msgid "Interval to automatically re-run AI reasoning. Set 0 to disable."
 msgstr "AI推論の自動再実行間隔。0で無効化。"
 
 #: widgets/widget_calendar.py:42
-#, fuzzy
 msgid "Calendar"
-msgstr "クリア"
+msgstr "カレンダー"
 
 #: widgets/widget_calendar.py:47
 msgid ""
@@ -23349,28 +23255,24 @@ msgid ""
 msgstr ""
 
 #: widgets/widget_calendar.py:61
-#, fuzzy
 msgid "Show Scheduled Events"
-msgstr "スケジュール時刻"
+msgstr "スケジュール済みイベントを表示"
 
 #: widgets/widget_calendar.py:62
 msgid "Include scheduled jobs on the calendar"
 msgstr ""
 
 #: widgets/widget_calendar.py:69
-#, fuzzy
 msgid "Month"
-msgstr "毎月"
+msgstr "月"
 
 #: widgets/widget_calendar.py:71
-#, fuzzy
 msgid "List (Week)"
-msgstr "先週"
+msgstr "リスト（週）"
 
 #: widgets/widget_calendar.py:73
-#, fuzzy
 msgid "Default View"
-msgstr "デフォルトサイト"
+msgstr "デフォルト表示"
 
 #: widgets/widget_calendar.py:74
 msgid ""
@@ -23387,9 +23289,8 @@ msgid "How often to re-fetch events for the currently visible range"
 msgstr ""
 
 #: widgets/widget_calendar.py:89
-#, fuzzy
 msgid "List View Look-ahead (days)"
-msgstr "予報先読み時間(時間)"
+msgstr "リスト表示の先読み日数"
 
 #: widgets/widget_calendar.py:90
 msgid "How many days ahead the List view queries"
@@ -25636,7 +25537,7 @@ msgid "Save the facility first to see the integration summary and run a device c
 msgstr "連携サマリーの確認と機器チェックは、施設を保存してから利用できます。"
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "Use "Place on Map" above the map to set the facility center."
+msgid "Use \"Place on Map\" above the map to set the facility center."
 msgstr "施設の中心は、地図上部の「地図に配置」ボタンで指定します。"
 
 #: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html

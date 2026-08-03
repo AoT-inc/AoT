@@ -8,8 +8,8 @@ There is a Custom Action import system in AoT that allows user-created Actions t
 
 If you develop a working Action module, please consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or pull request, and it may be included in the built-in set.
 
-Open any of the built-in modules located in the directory [AoT/aot/actions](https://github.com/AoT-inc/AoT/tree/master/aot/actions/) for examples of the proper formatting.
+Open any of the built-in modules located in the directory [AoT/aot/actions](https://github.com/AoT-inc/AoT/tree/main/aot/actions/) for examples of the proper formatting.
 
-There are also example Custom Actions in the directory [AoT/aot/actions/examples](https://github.com/AoT-inc/AoT/tree/master/aot/actions/examples)
+There are also example Custom Actions in the directory [AoT/aot/actions/examples](https://github.com/AoT-inc/AoT/tree/main/aot/actions/examples)
 
 Additionally, I have another github repository devoted to Custom Modules that are not included in the built-in set, at [aot-inc/AoT-custom](https://github.com/AoT-inc/AoT-custom).

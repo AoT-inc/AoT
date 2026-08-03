@@ -10,7 +10,7 @@ AoT has a custom output import system that lets you create and use custom output
 
 If you have developed a working module, consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. The module may be included in the built-in set.
 
-For examples of the proper format, you can open the built-in modules in the [AoT/aot/outputs](https://github.com/AoT-inc/AoT/tree/master/aot/outputs/) directory. Additionally, the [AoT/aot/outputs/examples](https://github.com/AoT-inc/AoT/tree/master/aot/outputs/examples) directory contains custom output examples.
+For examples of the proper format, you can open the built-in modules in the [AoT/aot/outputs](https://github.com/AoT-inc/AoT/tree/main/aot/outputs/) directory. Additionally, the [AoT/aot/outputs/examples](https://github.com/AoT-inc/AoT/tree/main/aot/outputs/examples) directory contains custom output examples.
 
 For outputs that require a new measurement/unit, you can add them on the `[gear icon] -> Configure -> Measurements` page.
 

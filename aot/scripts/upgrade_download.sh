@@ -55,12 +55,12 @@ runDownloadAoT() {
 
     # If this script is executed with the 'force-upgrade-master' argument,
     # an upgrade will be performed with the latest git commit from the repo
-    # master instead of the release version
+    # default branch (main) instead of the release version
 
-    UPDATE_VERSION="master"
-    printf "\n\nUpgrade script executed with the 'force-upgrade-master' argument. Upgrading from github repo master.\n"
-    UPDATE_URL="https://github.com/AoT-inc/AoT/archive/master.tar.gz"
-    TARBALL_FILE="AoT-master"
+    UPDATE_VERSION="main"
+    printf "\n\nUpgrade script executed with the 'force-upgrade-master' argument. Upgrading from github repo main branch.\n"
+    UPDATE_URL="https://github.com/AoT-inc/AoT/archive/main.tar.gz"
+    TARBALL_FILE="AoT-main"
 
   fi
 
