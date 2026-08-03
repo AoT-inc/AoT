@@ -55,7 +55,10 @@ def set_uuid():
 # 가리키는 링크라서 그대로 복사하면 복제본이 원본의 지도·zone 을 가리킨다
 # (2026-08-03 사고: 복제된 장치의 map_overlay_id 가 남의 지도 도형을 가리킴).
 # 필요하면 호출자가 kwargs 로 명시적으로 넘겨야 한다.
-CLONE_CROSS_REF_DENYLIST = ('map_overlay_id', 'map_config_id')
+# geo_id 포함: GeoShape/GeoFacility 를 clone_model 로 복제하면 소속 지도가
+# 그대로 따라와 복제본이 원본 지도를 오염시킨다(2026-08-04 확인). 이제
+# 명시하지 않으면 NOT NULL 로 즉시 죽는다 — 조용한 오염보다 낫다.
+CLONE_CROSS_REF_DENYLIST = ('map_overlay_id', 'map_config_id', 'geo_id')
 
 
 def clone_model(model, **kwargs):

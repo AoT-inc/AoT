@@ -2464,6 +2464,12 @@ class AoTGeoDesign {
                     // saveOverlays(mapUuid, 'aot_device', []) — an empty list causes ALL
                     // device GeoShape records to be deleted (delta-sync treats missing = deleted).
                     const typesToSync = targetTypes || ['site', 'zone', 'infra_blob', 'facility', 'equipment', 'label_aux', 'device', 'reference'];
+                    // [I9] Deletions must be sent EXPLICITLY. The server no longer
+                    // treats "absent from payload" as a deletion — a client that
+                    // loses a db_id used to wipe and re-create whole zones, severing
+                    // every device membership (2026-08-03). The same list goes to
+                    // every type; the server only matches within each type's scope.
+                    const explicitDeletes = Array.from(this.deletedNodeIds);
                     typesToSync.forEach(type => {
                         // This full-sync path is authoritative: saveDesign() bails early while
                         // this.isLoading is true, so by here overlays have finished loading and an
@@ -2472,7 +2478,8 @@ class AoTGeoDesign {
                         // without it, deleting the last shape of a type would be blocked and
                         // reappear on refresh.
                         savePromises.push(window.AoTMapData.saveOverlays(
-                            this.currentMapUuid, type, categorized[type] || [], { allowEmpty: true }));
+                            this.currentMapUuid, type, categorized[type] || [],
+                            { allowEmpty: true, deletes: explicitDeletes }));
                     });
 
                     // [Fix] Orphan aot_device shapes (drawn in device mode without a linked

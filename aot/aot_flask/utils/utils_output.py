@@ -380,10 +380,12 @@ def output_duplicate(form_mod):
                 except Exception:
                     pass
             
-        # Duplicate GeoShapes (Map Overlays)
-        shapes = GeoShape.query.filter(GeoShape.device_id == form_mod.output_id.data).all()
-        for shape in shapes:
-            clone_model(shape, unique_id=set_uuid(), device_id=duplicated_output.unique_id)
+        # [I10/I12] 복제본은 '미배치'로 시작한다 — 지도 도형을 복사하지 않는다.
+        # 과거에는 clone_model 이 geo_id 를 그대로 물려줘, 복제된 밸브의 마커가
+        # **원본 지도**에 생겼다(유니크 위반이 아니라 조용한 오염). 게다가
+        # 같은 좌표에 있는 서로 다른 물리 장치는 성립하지 않는다 — 복제된
+        # 장치는 사용자가 지도에서 새로 배치해야 한다.
+        # 배치가 필요하면 geo.device_placement.place_device 를 쓸 것.
 
     messages["success"].append(
         f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['output']['title']}")

@@ -205,10 +205,13 @@ class GeoOverlayManager:
         """
         Save Overlays with Validation.
 
-        Strategy [I9]: UPSERT-ONLY. 기존 행 매칭은 db_id → node_id 순서의
-        안정 키로 하고, 페이로드에서 빠진 행은 절대 지우지 않는다.
-        삭제는 명시 경로 둘뿐이다 — /overlays/delta 의 deletes[] (개별),
-        features=[] + allow_empty=True (전체 비우기).
+        Strategy [I9]: 기존 행 매칭은 db_id → node_id 순서의 안정 키로 하고,
+        페이로드에서 빠진 행은 절대 지우지 않는다. 삭제는 반드시 '명시'다:
+          - data['deletes'] — node_id 또는 db_id 목록 (부분 삭제)
+          - features=[] + allow_empty=True (전체 비우기)
+          - /overlays/delta 의 deletes[]
+        '누락'과 '삭제'를 구분하는 것이 핵심이다. 지워야 할 것은 지워지고,
+        빠뜨린 것은 살아남는다.
 
         과거의 "페이로드에 없음 = 삭제" 프로토콜은 클라이언트가 db_id 를
         빠뜨리는 순간 zone 전체를 삭제 후 새 id 로 재생성해 장치 소속을
@@ -364,7 +367,25 @@ class GeoOverlayManager:
                     continue
                 to_insert.append(feat)
 
-            # 4. [I9] 암묵 삭제 폐지 — "페이로드에 없음 = 삭제" 프로토콜은
+            # 4a. [I9] 명시 삭제 — 클라이언트가 지운 도형을 목록으로 받는다.
+            # 전체 저장에서도 삭제가 가능해야 하지만, 그 표현은 '누락'이
+            # 아니라 '명시'여야 한다. node_id 또는 db_id 를 받아 현재 스코프
+            # 안에서만 매칭한다(스코프 밖 id 를 넘겨도 남의 도형은 못 지운다).
+            explicit_ids = set()
+            for token in (data.get('deletes') or []):
+                if isinstance(token, int) or (isinstance(token, str)
+                                              and token.isdigit()):
+                    tid = int(token)
+                    if tid in existing_ids:
+                        explicit_ids.add(tid)
+                    continue
+                row = node_map.get(token)
+                if row is not None:
+                    explicit_ids.add(row.id)
+            # 방금 upsert 된 행은 지우지 않는다(삭제 후 재생성 순서 방어).
+            explicit_ids -= matched_ids
+
+            # 4b. [I9] 암묵 삭제 폐지 — "페이로드에 없음 = 삭제" 프로토콜은
             # 2026-08-03 사고의 최다 발생원이었다(클라이언트가 db_id 를 하나
             # 빠뜨리면 zone 전체가 삭제 후 새 id 로 재생성 → 장치 소속 전원
             # 단절). 전체 저장은 upsert 전용이며, 삭제는 명시 경로로만 간다:
@@ -391,12 +412,21 @@ class GeoOverlayManager:
                     GeoShape.id.in_(existing_ids)).delete(
                         synchronize_session=False)
             else:
-                omitted = existing_ids - matched_ids
+                if explicit_ids:
+                    GeoOverlayManager._cascade_delete_facilities_for_shapes(
+                        explicit_ids)
+                    deleted_count = query.filter(
+                        GeoShape.id.in_(explicit_ids)).delete(
+                            synchronize_session=False)
+                    current_app.logger.info(
+                        f"[GeoOverlay][I9] explicit delete {deleted_count} "
+                        f"row(s) (map={map_uuid}, type={target_type}).")
+                omitted = existing_ids - matched_ids - explicit_ids
                 if omitted:
                     current_app.logger.info(
                         f"[GeoOverlay][I9] {len(omitted)} row(s) omitted from "
                         f"full-sync (map={map_uuid}, type={target_type}) — "
-                        "kept. Deletions must use /overlays/delta deletes[].")
+                        "kept. Deletions must be listed in deletes[].")
 
             # 5. Execute Operations
 

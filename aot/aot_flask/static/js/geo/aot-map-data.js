@@ -102,10 +102,15 @@ const AoTMapData = {
      * @param {string} mapUuid
      * @param {string} type
      * @param {Array} features - List of GeoJSON Features
-     * @param {Object} [options] - { allowEmpty: bool } — opt-in to let an empty
-     *        feature list clear the whole type. The server blocks empty wipes by
-     *        default (race/desync guard); only an authoritative full-sync that ran
-     *        after overlays finished loading should set this.
+     * @param {Object} [options] - { allowEmpty: bool, deletes: Array } —
+     *        allowEmpty: opt-in to let an empty feature list clear the whole
+     *        type. The server blocks empty wipes by default (race/desync guard);
+     *        only an authoritative full-sync that ran after overlays finished
+     *        loading should set this.
+     *        deletes: node_id/db_id list of shapes the user actually deleted.
+     *        The server never treats "missing from payload" as a deletion
+     *        (I9) — a client that drops a feature must not silently wipe it —
+     *        so real deletions have to be listed here explicitly.
      * @returns {Promise<Object>} Response
      */
     saveOverlays: async function (mapUuid, type, features, options) {
@@ -146,6 +151,9 @@ const AoTMapData = {
             };
             if (options && options.allowEmpty) {
                 payload.allow_empty = true;
+            }
+            if (options && options.deletes && options.deletes.length) {
+                payload.deletes = options.deletes;
             }
 
             const response = await fetch('/api/geo/overlays', {

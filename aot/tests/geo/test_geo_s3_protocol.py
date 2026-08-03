@@ -24,6 +24,11 @@ def _make_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
+    try:                                    # 삭제 연쇄 경로가 gettext 사용
+        from flask_babel import Babel
+        Babel(app)
+    except Exception:
+        pass
     return app
 
 
@@ -199,3 +204,77 @@ class TestCloneDenylist(_Base):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestExplicitDeletes(_Base):
+    """I9 — 지워야 할 것은 지워진다. 단, '누락'이 아니라 '명시'로만.
+
+    2026-08-04 회귀: upsert 전용 전환 후 full-sync 경로의 삭제가 무효화돼
+    사용자가 도형을 지우고 저장해도 새로고침하면 되살아났다. 프런트가
+    deletedNodeIds 를 보내지 않고 '누락'으로만 표현했기 때문이다.
+    """
+
+    def _two_zones(self):
+        a = GeoShape(unique_id='za', geo_id='m1', type='zone',
+                     feature=_poly(ZONE_RING))
+        a.save()
+        af = dict(a.feature); af['properties'] = {'node_id': 'node-a'}
+        a.feature = af
+        b = GeoShape(unique_id='zb', geo_id='m1', type='zone',
+                     feature=_poly([[20, 20], [20, 30], [30, 30],
+                                    [30, 20], [20, 20]]))
+        b.save()
+        bf = dict(b.feature); bf['properties'] = {'node_id': 'node-b'}
+        b.feature = bf
+        db.session.commit()
+        return a, b
+
+    def test_explicit_delete_by_node_id_removes_row(self):
+        from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
+        a, b = self._two_zones()
+        feat = dict(a.feature)
+        feat['properties'] = {'node_id': 'node-a', 'db_id': a.id}
+        result, err = GeoOverlayManager.save_overlays({
+            'map_uuid': 'm1', 'type': 'zone', 'features': [feat],
+            'deletes': ['node-b']})
+        self.assertIsNone(err)
+        self.assertEqual(result['stats']['deleted'], 1)
+        self.assertEqual(GeoShape.query.filter_by(unique_id='zb').count(), 0)
+        self.assertEqual(GeoShape.query.filter_by(unique_id='za').count(), 1)
+
+    def test_explicit_delete_by_db_id_removes_row(self):
+        from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
+        a, b = self._two_zones()
+        result, err = GeoOverlayManager.save_overlays({
+            'map_uuid': 'm1', 'type': 'zone', 'features': [],
+            'allow_empty': True, 'deletes': [b.id]})
+        self.assertIsNone(err)
+        # allow_empty 전체 비우기가 우선 — 둘 다 사라진다(명시 의사)
+        self.assertEqual(GeoShape.query.filter_by(
+            geo_id='m1', type='zone').count(), 0)
+
+    def test_delete_list_cannot_reach_other_types(self):
+        # 스코프 밖 id 를 넘겨도 남의 도형은 못 지운다.
+        from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
+        a, b = self._two_zones()
+        site = GeoShape(unique_id='s1', geo_id='m1', type='site',
+                        feature=_poly(ZONE_RING))
+        site.save()
+        result, err = GeoOverlayManager.save_overlays({
+            'map_uuid': 'm1', 'type': 'zone', 'features': [],
+            'deletes': [site.id]})
+        self.assertIsNone(err)
+        self.assertEqual(GeoShape.query.filter_by(unique_id='s1').count(), 1)
+
+    def test_upserted_row_is_never_deleted_by_the_same_call(self):
+        # 같은 요청에 upsert 와 delete 가 함께 오면 upsert 가 이긴다.
+        from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
+        a, b = self._two_zones()
+        feat = dict(a.feature)
+        feat['properties'] = {'node_id': 'node-a', 'db_id': a.id}
+        result, err = GeoOverlayManager.save_overlays({
+            'map_uuid': 'm1', 'type': 'zone', 'features': [feat],
+            'deletes': ['node-a']})
+        self.assertIsNone(err)
+        self.assertEqual(result['stats']['deleted'], 0)
+        self.assertEqual(GeoShape.query.filter_by(unique_id='za').count(), 1)
