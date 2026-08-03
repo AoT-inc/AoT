@@ -560,6 +560,7 @@ class TestInvalidateCache(unittest.TestCase):
 
 import aot.ai.services.ai_scheduler_service as _sched_mod
 from aot.ai.services.ai_scheduler_service import _context_broadcast_job
+from aot.tests.ai_scheduler_test_utils import ai_enabled, ai_scheduler_job_env
 
 
 class TestContextBroadcastJobIsModuleLevel(unittest.TestCase):
@@ -650,7 +651,8 @@ class TestContextBroadcastJobStepOrder(unittest.TestCase):
                    side_effect=step4_side_effect, create=True), \
              patch('aot.ai.services.ai_summary_service.AISummaryService'
                    '.generate_system_summary',
-                   side_effect=step6_side_effect, create=True):
+                   side_effect=step6_side_effect, create=True), \
+             ai_scheduler_job_env():
             _context_broadcast_job()
 
         return call_order
@@ -732,6 +734,13 @@ class TestContextBroadcastJobStepOrder(unittest.TestCase):
 
 class TestContextBroadcastJobEdgeCases(unittest.TestCase):
     """_context_broadcast_job() — resilience and edge case behavior."""
+
+    def setUp(self):
+        # Without the gates open the job returns before its body runs, and
+        # every "must not raise" assertion below would pass vacuously.
+        env = ai_scheduler_job_env()
+        env.__enter__()
+        self.addCleanup(env.__exit__, None, None, None)
 
     def test_empty_facility_list_does_not_crash(self):
         """When no active facilities exist, the job must complete without error."""
@@ -845,6 +854,11 @@ class TestContextBroadcastJobRegistration(unittest.TestCase):
     with interval trigger and the configured CONTEXT_BROADCAST_INTERVAL_HOURS.
     """
 
+    def tearDown(self):
+        # init_app() assigns the module-level _flask_app; leaving the mock in
+        # place leaks into other test modules.
+        _sched_mod._flask_app = None
+
     def _run_init_app_with_mock_scheduler(self):
         mock_scheduler = MagicMock()
         mock_scheduler.running = False
@@ -857,7 +871,8 @@ class TestContextBroadcastJobRegistration(unittest.TestCase):
              patch('aot.ai.services.ai_scheduler_service._on_trigger_fired',
                    MagicMock(), create=True), \
              patch('aot.ai.services.ai_scheduler_service._on_conditional_fired',
-                   MagicMock(), create=True):
+                   MagicMock(), create=True), \
+             ai_enabled():
             from aot.ai.services.ai_scheduler_service import AISchedulerService
             AISchedulerService.init_app(mock_app)
 

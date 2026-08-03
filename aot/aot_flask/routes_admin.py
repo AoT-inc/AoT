@@ -76,24 +76,28 @@ def admin_backup():
 
     form_backup = forms_misc.Backup()
 
+    # Docker backups live under BACKUP_PATH (a bind-mounted volume, see
+    # docker_backup.py). Bare-metal installs use the fixed /var/AoT-backups
+    # convention (aot_backup_create.sh) instead — BACKUP_PATH there points at
+    # aot/tests/backups, which is never populated.
+    backup_root = BACKUP_PATH if DOCKER_CONTAINER else '/var/AoT-backups'
+
     backup_dirs_tmp = []
     if DOCKER_CONTAINER:
-        # Docker backups are written straight to BACKUP_PATH (see
-        # docker_backup.py) — no /var/AoT-backups bare-metal convention here.
-        os.makedirs(BACKUP_PATH, exist_ok=True)
-        backup_dirs_tmp = sorted(next(os.walk(BACKUP_PATH))[1])
+        os.makedirs(backup_root, exist_ok=True)
+        backup_dirs_tmp = sorted(next(os.walk(backup_root))[1])
         backup_dirs_tmp.reverse()
-    elif not os.path.isdir('/var/AoT-backups'):
+    elif not os.path.isdir(backup_root):
         flash(gettext("Error: Backup directory doesn't exist."), "error")
     else:
-        backup_dirs_tmp = sorted(next(os.walk(BACKUP_PATH))[1])
+        backup_dirs_tmp = sorted(next(os.walk(backup_root))[1])
         backup_dirs_tmp.reverse()
 
     backup_dirs = []
     full_paths = []
     for each_dir in backup_dirs_tmp:
         if each_dir.startswith("AoT-backup-"):
-            full_path = os.path.join(BACKUP_PATH, each_dir)
+            full_path = os.path.join(backup_root, each_dir)
             backup_dirs.append((each_dir, get_directory_size(full_path) / 1000000.0))
             full_paths.append(full_path)
 
@@ -176,9 +180,9 @@ def admin_backup():
                 if not re.match(r'^[\w.\-]+$', backup_date_version or ''):
                     flash(gettext("Invalid backup directory name."), "error")
                 else:
-                    download_dir = os.path.join(BACKUP_PATH, 'AoT-backup-{}'.format(backup_date_version))
-                    # Resolve symlinks and verify the path stays within BACKUP_PATH
-                    real_backup_path = os.path.realpath(BACKUP_PATH)
+                    download_dir = os.path.join(backup_root, 'AoT-backup-{}'.format(backup_date_version))
+                    # Resolve symlinks and verify the path stays within backup_root
+                    real_backup_path = os.path.realpath(backup_root)
                     real_download_dir = os.path.realpath(download_dir)
                     if not real_download_dir.startswith(real_backup_path + os.sep):
                         flash(gettext("Invalid backup path."), "error")
@@ -188,7 +192,7 @@ def admin_backup():
                         save_file = "AoT_Backup_{dv}_{host}_.zip".format(
                             dv=backup_date_version, host=socket.gethostname().replace(' ', ''))
                         file_paths = get_all_file_paths(download_dir)
-                        string_remove = "{}".format(os.path.join(BACKUP_PATH, download_dir))
+                        string_remove = "{}".format(os.path.join(backup_root, download_dir))
 
                         # Zip all files in the backup directory
                         data = io.BytesIO()
@@ -211,8 +215,8 @@ def admin_backup():
             if not re.match(r'^[\w.\-]+$', backup_date_version or ''):
                 flash(gettext("Invalid backup directory name."), "error")
             elif DOCKER_CONTAINER:
-                dest_dir = os.path.join(BACKUP_PATH, "AoT-backup-{}".format(backup_date_version))
-                real_backup_path = os.path.realpath(BACKUP_PATH)
+                dest_dir = os.path.join(backup_root, "AoT-backup-{}".format(backup_date_version))
+                real_backup_path = os.path.realpath(backup_root)
                 real_dest_dir = os.path.realpath(dest_dir)
                 if not real_dest_dir.startswith(real_backup_path + os.sep):
                     flash(gettext("Invalid backup path."), "error")
@@ -232,8 +236,8 @@ def admin_backup():
 
         elif form_backup.restore.data:
             full_path = form_backup.full_path.data
-            # Resolve symlinks and ensure path is within BACKUP_PATH
-            real_backup_path = os.path.realpath(BACKUP_PATH)
+            # Resolve symlinks and ensure path is within backup_root
+            real_backup_path = os.path.realpath(backup_root)
             real_full_path = os.path.realpath(full_path) if full_path else ''
             if not real_full_path.startswith(real_backup_path + os.sep):
                 flash(gettext("Invalid restore path."), "error")

@@ -23,6 +23,8 @@ from unittest.mock import MagicMock, patch, call
 
 import yaml
 
+from aot.tests.ai_scheduler_test_utils import ai_enabled, ai_scheduler_job_env
+
 # ---------------------------------------------------------------------------
 # Path bootstrap
 # ---------------------------------------------------------------------------
@@ -366,7 +368,7 @@ class TestContextBroadcastJobPipeline(FixtureMixin, unittest.TestCase):
             ), patch(
                 'aot.ai.services.ai_summary_service.AISummaryService',
                 mock_sum_svc,
-            ):
+            ), ai_scheduler_job_env():
                 yield mock_ctx_svc, mock_sum_svc
 
         return _ctx()
@@ -453,7 +455,7 @@ class TestInitAppJobRegistration(unittest.TestCase):
             'aot.utils.signals.trigger_fired'
         ), patch(
             'aot.utils.signals.conditional_fired'
-        ):
+        ), ai_enabled():
             AISchedulerService.init_app(mock_app)
 
         # Find the call that registered ai_scheduler_context_broadcast
@@ -487,7 +489,7 @@ class TestInitAppJobRegistration(unittest.TestCase):
             'aot.utils.signals.trigger_fired'
         ), patch(
             'aot.utils.signals.conditional_fired'
-        ):
+        ), ai_enabled():
             AISchedulerService.init_app(mock_app)
 
         broadcast_kwargs = None

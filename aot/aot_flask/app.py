@@ -415,6 +415,58 @@ def register_extensions(app):
             except Exception as e:
                 logger.warning(f"[Startup] AoT MCP server auto-setup failed: {e}")
 
+            # Auto-provision AOT_MCP_API_KEY for the AoT System Expert Server.
+            # This is a stdio MCP subprocess the app spawns and talks to itself
+            # (see mcp_bridge_service.py / mcp_auth.authenticate_stdio) — without
+            # a key in its env, every initialize handshake fails auth and the AI
+            # gets 0 tools. Only runs when no valid key is configured yet, and
+            # never overwrites a key a human may already rely on for external API
+            # access (skips users that already have one).
+            try:
+                if _aot_mcp:
+                    from aot.databases.models import User, Role
+                    from aot.databases import set_api_key
+                    from aot.utils.system_pi import base64_encode_bytes
+                    import base64 as _b64
+
+                    env_vars = _aot_mcp.env_vars or {}
+                    existing = env_vars.get('AOT_MCP_API_KEY')
+                    valid = False
+                    if existing:
+                        try:
+                            raw = _b64.b64decode(existing, validate=False)
+                        except Exception:
+                            raw = b''
+                        valid = bool(raw) and User.find_by_api_key(raw) is not None
+
+                    if not valid:
+                        candidate = (
+                            User.query.join(Role, User.role_id == Role.id)
+                            .filter(Role.edit_controllers.is_(True))
+                            .filter(User.api_key_hash.is_(None))
+                            .filter(User.is_enabled.is_(True))
+                            .order_by(User.id)
+                            .first()
+                        )
+                        if candidate:
+                            raw_key = set_api_key(128)
+                            candidate.api_key = None
+                            candidate.api_key_hash = User.hash_api_key(raw_key)
+                            env_vars['AOT_MCP_API_KEY'] = base64_encode_bytes(raw_key)
+                            _aot_mcp.env_vars = env_vars
+                            db.session.commit()
+                            logger.info(
+                                f"[Startup] Auto-provisioned AOT_MCP_API_KEY for AoT System "
+                                f"Expert Server (user: '{candidate.name}')")
+                        else:
+                            logger.warning(
+                                "[Startup] Could not auto-provision AOT_MCP_API_KEY — no "
+                                "Admin/Editor user without an existing API key was found. "
+                                "Generate one under Settings > Users and set it as this "
+                                "server's AOT_MCP_API_KEY env var under External MCP Servers.")
+            except Exception as e:
+                logger.warning(f"[Startup] AOT_MCP_API_KEY auto-provision failed: {e}")
+
             # Auto-activate InfluxDB MCP Server if measurement_db_password is set.
             # This removes the need for users to manually visit InfluxDB web UI to configure.
             try:

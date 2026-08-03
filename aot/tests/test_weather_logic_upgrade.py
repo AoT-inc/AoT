@@ -522,6 +522,7 @@ class TestWeatherQueryRuleGeneration(unittest.TestCase):
 
 import aot.ai.services.ai_scheduler_service as _sched_mod
 from aot.ai.services.ai_scheduler_service import AISchedulerService
+from aot.tests.ai_scheduler_test_utils import ai_enabled
 
 
 class TestWeatherSummaryJobModuleLevel(unittest.TestCase):
@@ -551,6 +552,11 @@ class TestInitAppRegistersWeatherSummaryJob(unittest.TestCase):
       id='ai_scheduler_weather_summary' and trigger interval hours=6.
     """
 
+    def tearDown(self):
+        # init_app() assigns the module-level _flask_app; leaving the mock in
+        # place leaks into other test modules.
+        _sched_mod._flask_app = None
+
     def _run_init_app_with_mock_scheduler(self):
         """
         Returns the list of add_job() calls captured on the mock scheduler.
@@ -572,7 +578,8 @@ class TestInitAppRegistersWeatherSummaryJob(unittest.TestCase):
              patch("aot.ai.services.ai_scheduler_service._on_trigger_fired",
                    MagicMock(), create=True), \
              patch("aot.ai.services.ai_scheduler_service._on_conditional_fired",
-                   MagicMock(), create=True):
+                   MagicMock(), create=True), \
+             ai_enabled():
             AISchedulerService.init_app(mock_app)
 
         return mock_scheduler.add_job.call_args_list
