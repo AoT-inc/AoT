@@ -838,7 +838,7 @@ class HelpersMixin:
                 'RH_max': internal.get('RH_max', internal.get('RH', 60.0)),
                 'RH_min': internal.get('RH_min', internal.get('RH', 60.0)),
                 # 육묘 일소 게이트 판정용 — 차광막 개도를 반영한 실내 추정 광량.
-                # 없으면 게이트가 external['solar'] 로 폴백한다.
+                # 없으면 게이트가 external['solar'] → 태양고도 어림값 순으로 폴백한다.
                 'light_est': internal.get('light_est'),
                 # 일몰 전 분무 중단 구간 여부 (광량과 무관하게 우선 차단).
                 'evening_block': internal.get('evening_block', False),
@@ -854,7 +854,11 @@ class HelpersMixin:
                 'wind':     wind_val,
                 'wind_dir': wind_dir_val,
                 'rain':     external.get('rain', 0.0),
-                'solar':    external.get('solar', 0.0),
+                # 기본값 0.0 을 넣지 않는다 — 육묘 일소 게이트가 "측정 없음"과
+                # "측정 0"을 구분해야 태양고도 어림값 폴백으로 넘어갈 수 있다.
+                # 여기서 0.0 을 채우면 일사 센서가 없는 시설은 게이트가 늘
+                # 한밤중이라고 판단해 하드 잠금이 걸리지 않는다.
+                'solar':    external.get('solar'),
             },
             'now_ts':      time.time(),
             'last_ext_ts': external.get('last_ext_ts', time.time()),

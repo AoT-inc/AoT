@@ -720,6 +720,19 @@ class TestClearSkyFallbackGate:
         res = gate.evaluate(self._ctx(None), [make_fogger()])
         assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
 
+    def test_zero_outdoor_solar_is_not_a_measurement(self):
+        """실외 일사 0.0 은 측정값으로 인정하지 않고 어림값으로 넘어간다.
+
+        일사 센서를 지정하지 않은 ext_context_collector 가 solar 를 0.0 으로
+        채워 공유하기 때문이다. 이 0.0 을 측정값으로 받으면 "센서 없음"이
+        "한밤중"으로 둔갑해, 폴백을 둔 목적인 바로 그 시설에서 하드 잠금이 죽는다.
+        """
+        gate = SafetyPreGate(_nursery_cfg())
+        ctx = self._ctx(600.0)
+        ctx['external']['solar'] = 0.0
+        res = gate.evaluate(ctx, [make_fogger()])
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
+
 
 class TestClearSkyFallbackDerate:
     """감쇠 구간도 같은 폴백을 써야 분무가 절벽처럼 끊기지 않는다."""
@@ -749,3 +762,260 @@ class TestClearSkyFallbackDerate:
         cmds = {fog.actuator_id: {'value': 80.0}}
         self._derate(_internal(None), [fog], cmds)
         assert cmds[fog.actuator_id]['value'] == 80.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 실운영 경로 회귀 — _build_gate_env() 산출물을 그대로 게이트에 먹인다
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestGateEnvEndToEnd:
+    """코디네이터가 실제로 만드는 env 로 게이트를 돌리는 회귀 묶음.
+
+    위쪽 게이트 테스트들은 ctx 를 손으로 조립해 `solar` 키를 직접 빼거나 넣었고,
+    `_build_gate_env` 를 쓰는 테스트는 폴백 키가 전달되는지만 보고 게이트 평가까지
+    가지 않았다. 그 틈으로 다음 버그가 살아남았다 — `_build_gate_env` 가 solar
+    기본값 0.0 을 채워 넣는 바람에, 게이트의 3단 폴백(light_est → 실외 일사 →
+    태양고도 어림값)에서 중간 단이 늘 0.0 으로 채워져 어림값에 영원히 도달하지
+    못했다. 결과적으로 **일사 센서가 없는 육묘장은 감쇠만 받고 하드 잠금은 통째로
+    죽은 채** 정오를 맞았다. 폴백을 넣은 목적이 바로 그 시설이었다.
+
+    ext_context_collector 도 같은 팬텀을 만든다 — 일사 센서를 지정하지 않아도
+    공유 컨텍스트에 `solar: 0.0` 을 넣는다. 그래서 게이트는 실외 일사를 **양수일
+    때만** 측정값으로 인정한다.
+    """
+
+    @staticmethod
+    def _gate_env(internal, external):
+        from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin \
+            import HelpersMixin
+
+        class C(HelpersMixin):
+            pass
+        return C()._build_gate_env(internal, external)
+
+    def _evaluate(self, internal, external, cfg=None):
+        gate = SafetyPreGate(cfg or _nursery_cfg())
+        fog = make_fogger()
+        res = gate.evaluate(self._gate_env(internal, external), [fog])
+        return res, fog
+
+    @staticmethod
+    def _internal(**kw):
+        d = {'T': 25.0, 'RH': 60.0}
+        d.update(kw)
+        return d
+
+    @staticmethod
+    def _external(**kw):
+        """ext_context_collector 공유 컨텍스트 형태."""
+        d = {'T_ext': 25.0, 'RH_ext': 60.0, 'wind': 2.0, 'rain': 0.0}
+        d.update(kw)
+        return d
+
+    def test_locks_on_fallback_when_no_solar_key_at_all(self):
+        """실외 컨텍스트 자체가 없는 시설 — 어림값으로 잠겨야 한다."""
+        res, fog = self._evaluate(
+            self._internal(_nursery_light_fallback=640.0), self._external())
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
+        assert res.forced_commands[fog.actuator_id]['value'] == 0.0
+
+    def test_locks_despite_phantom_zero_from_ext_collector(self):
+        """일사 센서 미지정 collector 가 넣는 0.0 이 어림값을 가로막지 않는다."""
+        res, fog = self._evaluate(
+            self._internal(_nursery_light_fallback=640.0),
+            self._external(solar=0.0))
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
+        assert res.forced_commands[fog.actuator_id]['value'] == 0.0
+
+    def test_real_outdoor_measurement_is_used(self):
+        """실제 일사 센서값(양수)은 그대로 판정에 쓰인다."""
+        res, _ = self._evaluate(self._internal(), self._external(solar=700.0))
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
+
+    def test_indoor_estimate_beats_outdoor_solar(self):
+        """차광막을 닫아 그늘이 지면 실외가 강해도 잠그지 않는다."""
+        res, _ = self._evaluate(
+            self._internal(light_est=50.0, _nursery_light_fallback=900.0),
+            self._external(solar=900.0))
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+    def test_night_does_not_lock(self):
+        """야간 — 실측 0.0 이든 어림값 0.0 이든 잠기지 않는다."""
+        res, _ = self._evaluate(
+            self._internal(_nursery_light_fallback=0.0),
+            self._external(solar=0.0))
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+    def test_no_coordinates_and_no_sensor_does_not_lock(self):
+        """좌표도 센서도 없으면 예전 동작 그대로 — 잠그지 않는다."""
+        res, _ = self._evaluate(
+            self._internal(_nursery_light_fallback=None), self._external())
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+    def test_lock_stays_partial_on_the_real_path(self):
+        """실운영 env 에서도 분무만 끄고 시설 제어는 계속 돈다."""
+        gate = SafetyPreGate(_nursery_cfg())
+        env = self._gate_env(
+            self._internal(_nursery_light_fallback=640.0), self._external())
+        res = gate.evaluate(env, [make_fogger(), make_opening_profile()])
+        assert res.partial is True
+        assert res.triggered is False
+        assert 'vent_01' not in res.forced_commands
+
+    def test_nursery_mode_off_ignores_fallback(self):
+        """육묘장 모드가 꺼져 있으면 어림값이 있어도 아무 일도 없다."""
+        res, _ = self._evaluate(
+            self._internal(_nursery_light_fallback=900.0),
+            self._external(), cfg=PreGateConfig())
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 차광막 투과율 — 실외 일사 유입구 두 곳이 같은 결과를 내야 한다
+# ─────────────────────────────────────────────────────────────────────────────
+
+def make_shade(actuator_id='shade_01', tau=None):
+    cap = {} if tau is None else {'shade_transmittance': tau}
+    return ActuatorProfile(
+        actuator_id=actuator_id,
+        kind='shade',
+        capabilities=['shade'],
+        manual_lock=ManualLockState(),
+        cmd_constraints=CmdConstraints(),
+        capacity_meta=cap,
+    )
+
+
+class TestOutdoorSolarShadeConsistency:
+    """실외 일사는 유입구가 둘인데, 차광막 개도는 한쪽에만 반영되고 있었다.
+
+    - 시설 도면의 실외 센서 → `_collect_internal` 이 internal['light'] +
+      `_light_is_outdoor` 로 넣는다 → 차광 반영 ✓
+    - ext_context_collector → external['solar'] 로만 온다 → `_compute_light_est`
+      가 보지 못해 게이트가 **원본 그대로** 판정했다 ✗
+
+    그래서 실외 700 W/m² · 차광막 완전폐쇄(τ=0.3) · 잠금임계 250 인 같은 상황에서
+    센서를 어느 수집기에 물렸느냐로 판정이 갈렸다 — 전자는 실내 210 으로 보고
+    잠그지 않고, 후자는 700 으로 보고 잠갔다. 차광포 투과율을 도입한 목적
+    (차광막이 만든 광부족을 광량 판정이 못 보는 맹점 제거)이 그 경로에서만
+    무효가 되는 셈이다.
+    """
+
+    OUTDOOR = 700.0
+    TAU     = 0.3
+    SHADED  = 210.0     # 700 × (1 - 1.0 × (1 - 0.3))
+
+    def _coord(self, aperture=0.0):
+        from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin \
+            import CycleMixin
+
+        profiles = [make_fogger(), make_shade()]
+
+        class _State:
+            prev_commands = {'shade_01': aperture}
+
+        class C(CycleMixin):
+            unique_id           = 'x'
+            debug_logging       = False
+            nursery_mode        = True
+            nursery_solar_lockout = 250.0
+            nursery_solar_release = 150.0
+            shade_transmittance = TestOutdoorSolarShadeConsistency.TAU
+            _profiles           = profiles
+            _coord_state        = _State()
+
+            def _evening_fog_blocked(self):
+                return False
+
+            def _clear_sky_light_fallback(self):
+                # 테스트에서 DB·좌표 조회를 타지 않게 고정한다.
+                return None
+
+        return C(), profiles
+
+    def test_facility_outdoor_sensor_applies_shade(self):
+        """기존 경로 — 회귀 감시용."""
+        c, _ = self._coord()
+        internal = {'T': 25.0, 'light': self.OUTDOOR, '_light_is_outdoor': True}
+        c._compute_light_est(internal, {})
+        assert internal['light_est'] == pytest.approx(self.SHADED)
+
+    def test_ext_collector_solar_applies_shade(self):
+        """새로 배선한 경로 — 같은 값이 나와야 한다."""
+        c, _ = self._coord()
+        internal = {'T': 25.0}
+        c._compute_light_est(internal, {'solar': self.OUTDOOR})
+        assert internal['light_est'] == pytest.approx(self.SHADED)
+
+    def test_both_inlets_agree(self):
+        """어느 수집기에 물렸든 판정 광량이 같아야 한다."""
+        c1, _ = self._coord()
+        a = {'T': 25.0, 'light': self.OUTDOOR, '_light_is_outdoor': True}
+        c1._compute_light_est(a, {})
+
+        c2, _ = self._coord()
+        b = {'T': 25.0}
+        c2._compute_light_est(b, {'solar': self.OUTDOOR})
+
+        assert a['light_est'] == pytest.approx(b['light_est'])
+
+    def test_facility_sensor_takes_priority(self):
+        """더 가까운 실측인 시설 실외 센서가 collector 값을 이긴다."""
+        c, _ = self._coord()
+        internal = {'T': 25.0, 'light': 400.0, '_light_is_outdoor': True}
+        c._compute_light_est(internal, {'solar': 900.0})
+        assert internal['light_est'] == pytest.approx(400.0 * self.TAU)
+
+    def test_indoor_sensor_is_never_shade_adjusted(self):
+        """실내 광센서 값에는 차광이 이미 반영돼 있으므로 손대지 않는다."""
+        c, _ = self._coord()
+        internal = {'T': 25.0, 'light': 180.0}      # _light_is_outdoor 없음
+        c._compute_light_est(internal, {'solar': 900.0})
+        assert internal['light_est'] == pytest.approx(180.0)
+
+    def test_phantom_zero_is_not_taken_as_measurement(self):
+        """collector 의 팬텀 0.0 을 측정값으로 굳히면 어림값 폴백까지 막힌다."""
+        c, _ = self._coord()
+        internal = {'T': 25.0}
+        c._compute_light_est(internal, {'solar': 0.0})
+        assert 'light_est' not in internal
+        assert internal['_nursery_light_fallback'] is None
+
+    def test_open_shade_leaves_value_intact(self):
+        """차광막이 걷혀 있으면(개도 100%) 감쇠 없이 원본 그대로."""
+        c, _ = self._coord(aperture=100.0)
+        internal = {'T': 25.0}
+        c._compute_light_est(internal, {'solar': self.OUTDOOR})
+        assert internal['light_est'] == pytest.approx(self.OUTDOOR)
+
+    def test_gate_does_not_lock_under_closed_shade(self):
+        """끝단 확인 — 차광막을 닫아 그늘이 지면 collector 경로도 잠그지 않는다."""
+        from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin \
+            import HelpersMixin
+
+        c, profiles = self._coord()
+        internal = {'T': 25.0, 'RH': 60.0}
+        external = {'T_ext': 25.0, 'RH_ext': 60.0, 'solar': self.OUTDOOR}
+        c._compute_light_est(internal, external)
+
+        class H(HelpersMixin):
+            pass
+        res = SafetyPreGate(_nursery_cfg()).evaluate(
+            H()._build_gate_env(internal, external), profiles)
+        assert not (res.gate_mask & GATE_BIT_FOG_SUNBURN)
+
+    def test_gate_still_locks_when_shade_is_open(self):
+        """차광막이 걷혀 있으면 그대로 잠긴다 — 보호가 약해지지 않았다."""
+        from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin \
+            import HelpersMixin
+
+        c, profiles = self._coord(aperture=100.0)
+        internal = {'T': 25.0, 'RH': 60.0}
+        external = {'T_ext': 25.0, 'RH_ext': 60.0, 'solar': self.OUTDOOR}
+        c._compute_light_est(internal, external)
+
+        class H(HelpersMixin):
+            pass
+        res = SafetyPreGate(_nursery_cfg()).evaluate(
+            H()._build_gate_env(internal, external), profiles)
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN

@@ -304,19 +304,38 @@ class CycleMixin:
                 interval_sec=probe_interval, enabled=probe_enabled)
         return self._probe_scheduler_inst
 
-    def _compute_light_est(self, internal: dict) -> None:
+    def _compute_light_est(self, internal: dict, external: dict = None) -> None:
         """실내 추정 광량을 internal['light_est'] 에 채우고 육묘 설정을 함께 싣는다.
 
         실내 광센서가 없어 실외 일사가 그대로 들어온 경우에만(_light_is_outdoor)
         차광막 개도를 반영한 추정치로 바꾼다. 실내 센서가 있으면 이미 차광이
         반영된 값이므로 손대지 않는다.
 
+        실외 일사는 유입구가 둘이다 — 시설 도면의 실외 센서(_collect_internal 이
+        internal['light'] 로 넣는다)와 ext_context_collector 공유 컨텍스트
+        (external['solar']). **둘 다 차광막 개도를 반영해야 한다.** 후자를
+        빠뜨리면 같은 물리 상황에서 센서를 어느 수집기에 물렸느냐로 판정이
+        갈린다 — 차광막을 완전히 닫아 실내가 210 W/m² 인데도 실외 원본
+        700 W/m² 으로 일소 잠금이 걸리는 식이다. 차광막 투과율을 도입한
+        목적(광량 맹점 제거) 자체가 그 경로에서만 무효가 된다.
+
+        시설 실외 센서가 우선한다 — 더 가까운 실측이다.
+
         육묘 옵션(_nursery_*)도 여기서 internal 에 넣는다. 오버라이드 함수들이
         모듈 레벨 함수라 코디네이터 인스턴스에 접근할 수 없으므로, 기존
         `_force_*` 플래그와 같은 경로로 전달한다.
         """
-        light_val = internal.get('light')
-        if light_val is not None and internal.get('_light_is_outdoor'):
+        light_val  = internal.get('light')
+        is_outdoor = bool(internal.get('_light_is_outdoor'))
+        if light_val is None and external:
+            # 일사 센서를 지정하지 않은 ext_context_collector 도 solar 를 0.0 으로
+            # 채워 공유한다. 그 0.0 을 측정값으로 받으면 light_est 가 0 으로 굳어
+            # 태양고도 어림값 폴백까지 막히므로, 양수만 측정값으로 인정한다.
+            solar = external.get('solar')
+            if solar is not None and solar > 0.0:
+                light_val  = float(solar)
+                is_outdoor = True
+        if light_val is not None and is_outdoor:
             est = estimate_indoor_light(
                 light_val, self._profiles, self._coord_state.prev_commands,
                 default_tau=float(getattr(self, 'shade_transmittance', 0.0) or 0.0))
@@ -562,7 +581,10 @@ class CycleMixin:
         # 육묘 일소 게이트와 광량 하드 임계가 같은 값을 봐야 하므로 여기서 한 번만
         # 계산해 internal['light_est'] 에 실어 둔다. Pre-Gate 가 이 값을 쓰기
         # 때문에 게이트 평가보다 앞서야 한다.
-        self._compute_light_est(internal)
+        # external 은 게이트와 같은 dict 를 넘긴다(아래 _build_gate_env 와 동일).
+        # 실외 일사가 ext_context_collector 로만 들어오는 시설에서도 차광막
+        # 투과율이 반영되게 하려면 이 인자가 필요하다.
+        self._compute_light_est(internal, external)
 
         # ── Pre-Gate ──────────────────────────────────────────────────────────
         gate_env    = self._build_gate_env(internal, external)

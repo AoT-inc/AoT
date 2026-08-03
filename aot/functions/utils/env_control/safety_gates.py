@@ -112,7 +112,7 @@ class SafetyPreGate:
 
         판정 광량은 실내 추정 광량(internal['light_est'])을 우선한다 — 차광막을
         닫아 이미 그늘이 진 상태까지 잠글 이유가 없기 때문이다. 추정값이 없으면
-        실외 일사로 폴백한다.
+        실외 일사(양수인 것만), 그것도 없으면 태양고도 어림값 순으로 폴백한다.
 
         lockout 에서 걸리고 release 아래로 내려가야 풀리는 래치라, 구름이
         지나갈 때마다 분무가 켜졌다 꺼졌다 하지 않는다.
@@ -133,7 +133,17 @@ class SafetyPreGate:
 
         light = env.get('internal', {}).get('light_est')
         if light is None:
-            light = env.get('external', {}).get('solar')
+            # 실외 일사는 **양수일 때만** 측정값으로 인정한다. 일사 센서를 지정하지
+            # 않은 ext_context_collector 는 solar 를 0.0 으로 채워 공유하므로,
+            # 0.0 을 측정값으로 받아들이면 "센서 없음"이 "한밤중"으로 둔갑해
+            # 아래 어림값 폴백에 영원히 도달하지 못한다(일사 센서 없는 육묘장의
+            # 하드 잠금이 통째로 죽는다).
+            # 진짜 야간 0.0 을 흘려보내도 결과는 같다 — 어림값도 해가 지면 0.0 이라
+            # 어느 쪽이든 잠기지 않는다. 대낮에 0.0 이 나오는 경우는 센서 고장이며,
+            # 그때 어림값으로 잠그는 것은 일소 보호에서 안전한 방향이다.
+            solar = env.get('external', {}).get('solar')
+            if solar is not None and solar > 0.0:
+                light = solar
         if light is None:
             # 측정값이 하나도 없으면 태양고도로 어림한 맑은날 일사로 판정한다.
             # 이 폴백이 없으면 일사 센서가 없는 시설은 일소 보호가 통째로 꺼진 채
