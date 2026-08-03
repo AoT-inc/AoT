@@ -564,31 +564,22 @@ class InputModule(AbstractInput):
         if lat is None or lng is None:
             self.logger.warning(f" [Satellite Sync] Device location missing. Searching fallback for Input {self.input_dev.unique_id}")
             
-            # Try Zone (GeoShape) - map_overlay_id
-            if self.input_dev.map_overlay_id:
-                try:
-                    from aot.databases.models import GeoShape
-                    zone = GeoShape.query.get(self.input_dev.map_overlay_id)
-                    if zone and zone.feature:
-                        feat = zone.feature
-                        geom = feat.get('geometry', feat)
-                        coords = geom.get('coordinates')
-                        g_type = geom.get('type')
-                        
-                        if g_type == 'Point':
-                            lat, lng = coords[1], coords[0]
-                        elif g_type in ['Polygon', 'MultiPolygon']:
-                            # Centroid of outer ring
-                            ring = coords[0] if g_type == 'Polygon' else coords[0][0]
-                            lats = [c[1] for c in ring if isinstance(c, list)]
-                            lngs = [c[0] for c in ring if isinstance(c, list)]
-                            if lats and lngs:
-                                lat, lng = sum(lats)/len(lats), sum(lngs)/len(lngs)
-                    
-                    if lat is not None:
-                        self.logger.warning(f" [Satellite Sync] Found Zone location: {lat}, {lng}")
-                except Exception as e:
-                    self.logger.error(f" [Satellite Sync] Failed to get Zone location: {e}")
+            # [S3] 자기 위치 마커(GeoShape aot_device) 좌표 사용 — 과거의
+            # map_overlay_id(zone) 경유보다 직접적이고, 그 컬럼은 사망 상태다.
+            try:
+                from aot.databases.models import GeoShape
+                marker = GeoShape.query.filter(
+                    GeoShape.device_id == self.input_dev.unique_id,
+                    GeoShape.type.in_(('aot_device', 'device'))).first()
+                if marker and marker.feature:
+                    geom = (marker.feature or {}).get('geometry') or {}
+                    coords = geom.get('coordinates')
+                    if geom.get('type') == 'Point' and coords and len(coords) >= 2:
+                        lat, lng = coords[1], coords[0]
+                        self.logger.warning(
+                            f" [Satellite Sync] Found marker location: {lat}, {lng}")
+            except Exception as e:
+                self.logger.error(f" [Satellite Sync] Failed to get marker location: {e}")
 
             # Try Site (GeoMap) - map_config_id
             if (lat is None or lng is None) and self.input_dev.map_config_id:

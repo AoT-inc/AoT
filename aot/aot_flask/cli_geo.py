@@ -99,6 +99,14 @@ def migrate_maps_command(dry_run, map_uuid):
             continue
 
         new_feat = result.data['features'][0]
+        # [I6] 저장 JSON 에 aot_type 을 남기지 않는다 — type 컬럼이 정본이며
+        # Tier-2 트리거(GEO-I6)가 있으면 안 지우면 UPDATE 자체가 거부된다.
+        # (v1 백업을 복원한 뒤 migrate-maps 를 돌리는 시나리오 대비)
+        _p = new_feat.get('properties')
+        if isinstance(_p, dict) and 'aot_type' in _p:
+            new_feat = dict(new_feat)
+            new_feat['properties'] = {k: v for k, v in _p.items()
+                                      if k != 'aot_type'}
         click.echo(f'  {prefix}Migrate row id={shape.id} type={shape.type}: {", ".join(result.report)}')
 
         if not dry_run:

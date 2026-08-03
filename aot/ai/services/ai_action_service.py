@@ -1312,7 +1312,6 @@ class AIActionService:
                                             "type": "Feature",
                                             "geometry": {"type": "Point", "coordinates": [final_lng, final_lat] if final_lng else [0,0]},
                                             "properties": {
-                                                "aot_type": "aot_device",
                                                 "device_id": new_id,
                                                 "device_type": device_category,
                                                 "name": name
@@ -1325,7 +1324,8 @@ class AIActionService:
                                     if hasattr(record, 'latitude'): record.latitude = final_lat
                                     if hasattr(record, 'longitude'): record.longitude = final_lng
                                     if hasattr(record, 'map_config_id'): record.map_config_id = map_uuid
-                                    if hasattr(record, 'map_overlay_id'): record.map_overlay_id = parent_node.id
+                                    # [S3] map_overlay_id 저장 폐지 — 소속은 위
+                                    # 마커 좌표에서 파생된다 (device_membership.py)
                                     
                                     logger.info(f"[AI Integration] Automatically mapped device {new_id} to zone {parent_node.id}")
                             

@@ -542,14 +542,22 @@ def api_geo_parcel_save_as_site():
         feature['properties'] = {}
     feature['properties']['name'] = name
     feature['properties']['category'] = 'site'
-    feature['properties']['aot_type'] = 'site'
     # [Fix] Assign node_id — cleanupOrphanLabels finds the parent via
     # label.parent_node_id ↔ site.node_id, so without a node_id the label is
     # deleted as an orphan on every load.
     site_node_id = feature['properties'].get('node_id') or str(_uuid.uuid4())
     feature['properties']['node_id'] = site_node_id
 
-    geo_id = map_uuid or '__parcel_import__'
+    # [I8] 실존 지도 필수. 과거 '__parcel_import__' 센티널은 어떤 GeoMap 에도
+    # 속하지 않는 도형을 만들었고, 모든 삭제 경로가 실존 지도의 geo_id 를
+    # 키로 잡으므로 영구 누수였다. Tier-2 트리거(GEO-I8)가 이를 봉인한다.
+    if not map_uuid:
+        return jsonify({'ok': False,
+                        'message': 'map_uuid is required for parcel import'}), 400
+    if not GeoMap.query.filter_by(unique_id=map_uuid).first():
+        return jsonify({'ok': False,
+                        'message': f'map not found: {map_uuid}'}), 404
+    geo_id = map_uuid
 
     shape = GeoShape()
     shape.type = 'site'
@@ -583,7 +591,6 @@ def api_geo_parcel_save_as_site():
             'type': 'Feature',
             'geometry': {'type': 'Point', 'coordinates': centroid},
             'properties': {
-                'aot_type': 'label_aux',
                 'label_name': name,
                 'label_area': '',
                 'is_label': True,
@@ -3032,54 +3039,18 @@ def api_geo_zone_contents(zone_uuid):
             pf = _shape_feature_dict(parent)
             site_name = (pf.get('properties') or {}).get('name')
 
-    # ── 기하학적 포함 판정 (map_overlay_id 폴백) ─────────────────────────────
-    # 장치가 zone 생성 이전에 배치된 경우 map_overlay_id 가 site/다른 shape 의
-    # id 로 저장돼 있을 수 있다. zone 폴리곤 내부에 있는 aot_device GeoShape 를
-    # 기하학적으로 찾아 보완한다.
-    zone_polygon = None
-    try:
-        from shapely.geometry import shape as _shapely_shape, Point as _Point
-        _geom = feat.get('geometry') or {}
-        if _geom.get('type') in ('Polygon', 'MultiPolygon'):
-            zone_polygon = _shapely_shape(_geom)
-    except Exception:
-        pass
+    # ── 소속 판정: 순수 파생 (S3) ────────────────────────────────────────────
+    # 과거에는 map_overlay_id 직접 매칭 + 기하 폴백의 합집합이었다. 저장된
+    # 컬럼은 복제·zone 재생성·도형 삭제로 끊기거나 남의 지도를 가리켰고
+    # (2026-08-03 사고), 합집합은 그 낡은 값으로 엉뚱한 장치까지 끌어왔다.
+    # 이제 마커 좌표에서 실시간 파생하는 단일 리졸버만 쓴다 —
+    # aot/aot_flask/geo/device_membership.py 가 유일한 정본이다.
+    from aot.aot_flask.geo.device_membership import device_ids_in_shape
+    geo_device_ids = device_ids_in_shape(zone)
 
-    def _device_ids_in_zone():
-        """zone 폴리곤 안에 좌표가 있는 aot_device GeoShape 의 device_id 집합."""
-        if not zone_polygon:
-            return set()
-        try:
-            device_shapes = GeoShape.query.filter_by(
-                geo_id=zone.geo_id, type='aot_device').all()
-            result = set()
-            for ds in device_shapes:
-                coords = ((ds.feature or {}).get('geometry') or {}).get('coordinates')
-                if not coords or len(coords) < 2:
-                    continue
-                try:
-                    p = _Point(float(coords[0]), float(coords[1]))
-                    if zone_polygon.contains(p):
-                        result.add(ds.device_id)
-                except Exception:
-                    pass
-            return result
-        except Exception:
-            return set()
-
-    geo_device_ids = _device_ids_in_zone()
-
-    # 센서 목록 (Input) — map_overlay_id 직접 매칭 + 기하 포함 폴백
-    direct_inputs = Input.query.filter_by(map_overlay_id=zone_id).all()
-    geo_input_ids = {inp.unique_id for inp in direct_inputs}
-    extra_inputs = []
-    for dev_id in geo_device_ids:
-        if dev_id and dev_id not in geo_input_ids:
-            inp = Input.query.filter_by(unique_id=dev_id).first()
-            if inp:
-                extra_inputs.append(inp)
-                geo_input_ids.add(dev_id)
-    inputs = direct_inputs + extra_inputs
+    # 센서 목록 (Input)
+    inputs = (Input.query.filter(Input.unique_id.in_(geo_device_ids)).all()
+              if geo_device_ids else [])
 
     from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
     sensors_out = []
@@ -3095,17 +3066,10 @@ def api_geo_zone_contents(zone_uuid):
             'channels': channels,
         })
 
-    # 장치 목록 (Output) — map_overlay_id 직접 매칭 + 기하 포함 폴백
-    direct_outputs = Output.query.filter_by(map_overlay_id=zone_id).all()
-    geo_out_ids = {out.unique_id for out in direct_outputs}
-    extra_outputs = []
-    for dev_id in geo_device_ids:
-        if dev_id and dev_id not in geo_out_ids:
-            out = Output.query.filter_by(unique_id=dev_id).first()
-            if out:
-                extra_outputs.append(out)
-                geo_out_ids.add(dev_id)
-    outputs_rows = direct_outputs + extra_outputs
+    # 장치 목록 (Output) — 동일하게 파생만 사용
+    outputs_rows = (Output.query.filter(
+        Output.unique_id.in_(geo_device_ids)).all()
+        if geo_device_ids else [])
 
     outputs_out = []
     for out in outputs_rows:
@@ -3121,6 +3085,7 @@ def api_geo_zone_contents(zone_uuid):
         })
 
     # 함수 목록 (CustomController + Function + Conditional + Trigger + PID)
+    # 함수도 지도에 배치되면 마커(device_id=함수 uuid)를 갖는다 — 같은 파생.
     func_rows = []
     for model, kind in [
         (CustomController, 'custom'),
@@ -3129,7 +3094,10 @@ def api_geo_zone_contents(zone_uuid):
         (Trigger,          'trigger'),
         (PID,              'pid'),
     ]:
-        for row in model.query.filter_by(map_overlay_id=zone_id).all():
+        if not geo_device_ids:
+            break
+        for row in model.query.filter(
+                model.unique_id.in_(geo_device_ids)).all():
             func_rows.append({
                 'unique_id': row.unique_id,
                 'name': row.name,

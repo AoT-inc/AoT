@@ -190,6 +190,20 @@ def collect(map_uuid=None, tolerance=1e-6):
             findings['orphan-label'].append(
                 dict(_where(s), type=s.type, parent_node_id=parent))
 
+    # ── 유령 지도 (GeoMap 행 없는 geo_id) ───────────────────────────────
+    # 자동 삭제 금지: get_overlays 는 GeoMap 존재를 확인하지 않으므로
+    # 위젯에 저장된 낡은 map_uuid 로 여전히 렌더링될 수 있다. 위젯
+    # custom_options 참조 여부를 확인한 뒤 사람이 처분을 정한다.
+    # (I8 트리거는 신규 유령 생성만 막는다 — 기존 행은 여기 보고가 전부다.)
+    phantom = defaultdict(list)
+    for s in shapes:
+        if s.geo_id not in map_names:
+            phantom[s.geo_id].append(s.id)
+    for geo_id, ids in phantom.items():
+        findings['phantom-map'].append({
+            'geo_id': geo_id, 'shape_count': len(ids),
+            'shape_ids': ids[:20]})
+
     return dict(findings), len(shapes)
 
 
@@ -199,6 +213,7 @@ HEADINGS = {
     'dangling-link':   '끊어진 map_overlay_id',
     'orphan-facility': '고아 GeoFacility (도형 없음)',
     'orphan-label':    '부모를 잃은 라벨',
+    'phantom-map':     '유령 지도 (GeoMap 행 없는 geo_id) — 자동삭제 금지',
 }
 
 # 데이터가 실제로 안 보이거나 잘못 붙는 항목. 이게 있으면 화면이 이미 틀어져 있다.
@@ -212,7 +227,7 @@ def report(findings, shape_count, quiet=False):
         return 0
 
     for key in ('type-mismatch', 'duplicate', 'dangling-link',
-                'orphan-facility', 'orphan-label'):
+                'orphan-facility', 'orphan-label', 'phantom-map'):
         items = findings.get(key)
         if not items:
             continue

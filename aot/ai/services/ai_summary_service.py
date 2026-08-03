@@ -105,7 +105,12 @@ class AISummaryService:
         if scope_type == 'farm' and scope_id:
             query = query.filter(Input.map_config_id == scope_id)
         elif scope_type == 'device_group' and scope_id:
-            query = query.filter(Input.map_overlay_id == int(scope_id))
+            # [S3] 소속은 저장 컬럼이 아니라 마커 좌표에서 파생한다.
+            from aot.databases.models import GeoShape
+            from aot.aot_flask.geo.device_membership import device_ids_in_shape
+            _zone = GeoShape.query.filter_by(id=int(scope_id)).first()
+            _member_ids = device_ids_in_shape(_zone) if _zone else set()
+            query = query.filter(Input.unique_id.in_(_member_ids))
         elif scope_type == 'device' and scope_id:
             query = query.filter(Input.unique_id == scope_id)
         elif scope_type == 'facility' and scope_id:

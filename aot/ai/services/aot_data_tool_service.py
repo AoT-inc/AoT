@@ -125,17 +125,14 @@ class AoTDataToolService:
                         except Exception:
                             continue
                 if target_zone:
-                    # In Mycodo/AoT, Input is linked to GeoShape via map_overlay_id (Integer ID)
-                    target_input = Input.query.filter(Input.map_overlay_id == target_zone.id).first()
-                    if not target_input and target_zone.type == 'site':
-                        # A site rarely carries its own sensor — sensors live on the
-                        # zones inside it. Fall back to the first sensor found in any
-                        # descendant zone rather than reporting "no sensors" for a
-                        # site that clearly has zone-level sensors.
-                        from aot.utils.geo_hierarchy import geo_descendant_shapes
-                        descendant_ids = [c.id for c in geo_descendant_shapes(target_zone)]
-                        if descendant_ids:
-                            target_input = Input.query.filter(Input.map_overlay_id.in_(descendant_ids)).first()
+                    # [S3] 소속은 마커 좌표에서 파생한다. site 폴리곤은 내부
+                    # zone 들을 기하학적으로 포함하므로 별도 계층 순회가 필요
+                    # 없다 — site 에 대해 호출하면 하위 zone 센서까지 잡힌다.
+                    from aot.aot_flask.geo.device_membership import device_ids_in_shape
+                    _member_ids = device_ids_in_shape(target_zone)
+                    target_input = (Input.query.filter(
+                        Input.unique_id.in_(_member_ids)).first()
+                        if _member_ids else None)
 
             if not target_input:
                 # If no sensor is directly linked to the zone, return the zone's coordinates
@@ -661,9 +658,13 @@ class AoTDataToolService:
                 if not target_zone:
                     return {"message": f"Zone '{zone_id}' not found."}
 
-                from aot.utils.geo_hierarchy import geo_descendant_shapes
-                zone_shape_ids = [target_zone.id] + [c.id for c in geo_descendant_shapes(target_zone)]
-                input_ids = [i.unique_id for i in Input.query.filter(Input.map_overlay_id.in_(zone_shape_ids)).all()]
+                # [S3] 소속은 마커 좌표에서 파생 — site/zone 폴리곤이 하위를
+                # 기하학적으로 포함하므로 descendant 순회가 필요 없다.
+                from aot.aot_flask.geo.device_membership import device_ids_in_shape
+                _member_ids = device_ids_in_shape(target_zone)
+                input_ids = ([i.unique_id for i in Input.query.filter(
+                    Input.unique_id.in_(_member_ids)).all()]
+                    if _member_ids else [])
                 if not input_ids:
                     return {"message": "No energy sensors found for this zone/period"}
                 energy_usage = EnergyUsage.query.filter(EnergyUsage.device_id.in_(input_ids)).all()

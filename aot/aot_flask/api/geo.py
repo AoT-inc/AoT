@@ -125,6 +125,14 @@ class GeoMapRestoreOriginal(Resource):
             for row in rows:
                 try:
                     original = json.loads(row.original_data)
+                    # [I6] 복원 시에도 aot_type 은 되살리지 않는다 — 종류의
+                    # 정본은 type 컬럼이고, 구 blob 의 aot_type 을 다시 심으면
+                    # 정확히 p6_21 이 고친 드리프트를 재생산한다.
+                    _p = original.get('properties') if isinstance(original, dict) else None
+                    if isinstance(_p, dict) and 'aot_type' in _p:
+                        original = dict(original)
+                        original['properties'] = {
+                            k: v for k, v in _p.items() if k != 'aot_type'}
                     db.session.execute(
                         db.text(
                             "UPDATE geo_shape SET feature=:feat, schema_version=:sv, "
@@ -363,15 +371,11 @@ class GeoDeviceLocation(Resource):
             if map_uuid:
                 if hasattr(target_device, 'map_config_id'):
                     target_device.map_config_id = map_uuid
-                
-                from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
-                containing_shape = GeoOverlayManager.find_containing_shape(lat, lng, map_uuid)
-                
-                if hasattr(target_device, 'map_overlay_id'):
-                    if containing_shape:
-                        target_device.map_overlay_id = containing_shape.id
-                    else:
-                        target_device.map_overlay_id = None
+
+                # [S3] map_overlay_id 는 더 이상 쓰지 않는다. 소속은 아래에서
+                # 만드는 위치 마커의 좌표로부터 실시간 파생된다
+                # (aot/aot_flask/geo/device_membership.py — 유일한 정본).
+                # 저장하지 않으면 복제·zone 재생성·도형 삭제가 오염시킬 수 없다.
 
                 from aot.databases.models import GeoShape
                 geo_shape = GeoShape.query.filter_by(
@@ -387,7 +391,6 @@ class GeoDeviceLocation(Resource):
                         "coordinates": [float(lng), float(lat)]
                     } if (lat is not None and lng is not None) else None,
                     "properties": {
-                        "aot_type": "aot_device",
                         "unique_id": f"{unique_id}::{channel_id}" if str(channel_id) != '0' and channel_id is not None else unique_id,
                         "device_id": unique_id,
                         "channel_id": str(channel_id),
@@ -448,10 +451,19 @@ class GeoDeviceLocation(Resource):
                 except Exception as exc:
                     current_app.logger.debug(f"[GeoAPI] Daemon refresh skipped: {exc}")
 
+            # [S3] overlay_id 는 파생값으로 응답한다 (저장 컬럼은 사망 상태).
+            derived_overlay_id = None
+            if map_uuid:
+                try:
+                    from aot.aot_flask.geo.device_membership import zone_for_device
+                    _z = zone_for_device(unique_id, map_uuid)
+                    derived_overlay_id = _z.id if _z is not None else None
+                except Exception:
+                    pass
             return {
                 'ok': True,
                 'message': 'Location saved',
-                'overlay_id': getattr(target_device, 'map_overlay_id', None)
+                'overlay_id': derived_overlay_id
             }
 
         except Exception as e:

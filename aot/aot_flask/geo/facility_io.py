@@ -104,12 +104,12 @@ class FacilityManager:
                 parent_site_id = site_shape.id
 
         # Outer polygon feature builder (geo_shape.feature is NOT NULL)
+        # [I6] aot_type 은 저장하지 않는다 — type 컬럼이 정본, 읽기 시 주입.
         def _build_feature(geometry, name):
             return {
                 'type': 'Feature',
                 'geometry': geometry,
                 'properties': {
-                    'aot_type': 'facility',
                     'name': name or 'New Facility',
                 }
             }
@@ -267,7 +267,6 @@ class FacilityManager:
                             'type': 'Feature',
                             'geometry': bay_geom,
                             'properties': {
-                                'aot_type': 'facility_bay',
                                 'crop': bay.get('crop'),
                                 'name': bay.get('name'),
                             }

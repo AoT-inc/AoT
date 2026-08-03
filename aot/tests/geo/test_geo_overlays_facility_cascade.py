@@ -85,7 +85,10 @@ class TestGeoOverlaysFacilityCascade(unittest.TestCase):
         self.assertEqual(result['stats']['deleted'], 1)
         self._assert_fully_cleaned('m1', 'f1')
 
-    def test_save_overlays_partial_delete_only_cleans_removed_facility(self):
+    def test_save_overlays_partial_payload_keeps_omitted_facility(self):
+        # [I9] upsert-only: 페이로드에서 빠진 시설 도형은 삭제되지 않는다.
+        # (과거에는 누락 = 삭제라서 f1 시설이 통째로 사라졌다. 삭제는
+        # save_delta 의 명시 deletes[] 로만 간다 — 아래 db_id/node_id 테스트.)
         self._build_facility(map_uuid='m1', shape_uuid='s1', facility_uuid='f1')
         kept_shape = self._build_facility(map_uuid='m1', shape_uuid='s2', facility_uuid='f2', with_bay=False)
 
@@ -95,8 +98,10 @@ class TestGeoOverlaysFacilityCascade(unittest.TestCase):
             'map_uuid': 'm1', 'type': 'facility', 'features': [kept_feat],
         })
         self.assertIsNone(error)
-        self._assert_fully_cleaned('m1', 'f1')
-        # f2 (still referenced in the payload) must survive untouched.
+        # f1 (payload 에서 누락) — 도형·시설 모두 생존해야 한다.
+        self.assertEqual(GeoShape.query.filter_by(unique_id='s1').count(), 1)
+        self.assertEqual(GeoFacility.query.filter_by(unique_id='f1').count(), 1)
+        # f2 (payload 에 포함) 도 그대로.
         self.assertEqual(GeoFacility.query.filter_by(unique_id='f2').count(), 1)
         self.assertEqual(GeoShape.query.filter_by(unique_id='s2').count(), 1)
 

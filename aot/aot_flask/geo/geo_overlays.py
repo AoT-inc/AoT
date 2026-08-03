@@ -178,11 +178,42 @@ class GeoOverlayManager:
             current_app.logger.error(f"Overlay GET Error: {e}")
             return None, str(e)
 
+    # [I6] 저장 JSON 에서 제거하는 구조 필드. 도형의 종류는 type 컬럼이
+    # 유일한 정본이며, aot_type 은 get_overlays() 가 읽기 시 주입하는
+    # 파생값이다. 두 번째 사본을 저장하지 않으면 드리프트는 표현 자체가
+    # 불가능하다 — Tier-2 트리거(GEO-I6, p6_23)가 DB 계층에서 이를 봉인한다.
+    # 주의: equipment_collection 번들의 '자식' 피처는 DB 행이 없어 JSON 이
+    # 유일한 정체성이므로 이 규칙의 대상이 아니다(트리거도 최상위만 검사).
+    _STORED_STRUCT_PROPS = ('aot_type',)
+
+    @staticmethod
+    def _strip_structural_props(feat):
+        """저장 직전 구조 필드를 제거한 사본을 반환한다. 원본 불변."""
+        if not isinstance(feat, dict):
+            return feat
+        props = feat.get('properties')
+        if not isinstance(props, dict) or not any(
+                k in props for k in GeoOverlayManager._STORED_STRUCT_PROPS):
+            return feat
+        out = dict(feat)
+        out['properties'] = {k: v for k, v in props.items()
+                             if k not in GeoOverlayManager._STORED_STRUCT_PROPS}
+        return out
+
     @staticmethod
     def save_overlays(data):
         """
         Save Overlays with Validation.
-        Strategy: Delta Sync (Diff-based Update/Delete/Insert) to prevent DB bloat.
+
+        Strategy [I9]: UPSERT-ONLY. 기존 행 매칭은 db_id → node_id 순서의
+        안정 키로 하고, 페이로드에서 빠진 행은 절대 지우지 않는다.
+        삭제는 명시 경로 둘뿐이다 — /overlays/delta 의 deletes[] (개별),
+        features=[] + allow_empty=True (전체 비우기).
+
+        과거의 "페이로드에 없음 = 삭제" 프로토콜은 클라이언트가 db_id 를
+        빠뜨리는 순간 zone 전체를 삭제 후 새 id 로 재생성해 장치 소속을
+        전원 끊었다(2026-08-03 사고 최다 발생원). docs/design/
+        geo-data-integrity.md I9 참조.
         """
         map_uuid = data.get('map_uuid')
         target_type = data.get('type') # 'site', 'zone', 'infra_blob'
@@ -295,56 +326,87 @@ class GeoOverlayManager:
             existing_map = {row.id: row for row in existing_rows}
             existing_ids = set(existing_map.keys())
 
+            # [I9] 안정 키(node_id) 매칭 준비 — 클라이언트가 db_id 를 잃어버린
+            # 피처(레이어 재구성, 라이브러리 왕복 등)를 신규 INSERT 로 취급하면
+            # 같은 도형이 두 벌이 된다. 저장된 feature 의 node_id(레거시 행은
+            # unique_id 백필 — get_overlays 와 동일 규칙)로 기존 행을 되찾는다.
+            node_map = {}
+            for row in existing_rows:
+                rf = row.feature
+                if isinstance(rf, str):
+                    try:
+                        rf = json.loads(rf)
+                    except Exception:
+                        rf = {}
+                nid = ((rf or {}).get('properties') or {}).get('node_id') \
+                    or row.unique_id
+                node_map.setdefault(nid, row)
+
             # 3. Analyze Incoming Payload
-            incoming_ids = set()
             to_insert = []
             to_update = []
+            matched_ids = set()
 
             for feat in new_features:
                 props = feat.get('properties', {})
                 db_id = props.get('db_id')
-                
+
                 # Check if this ID really exists in our scope (security check)
                 if db_id and db_id in existing_ids:
-                    incoming_ids.add(db_id)
+                    matched_ids.add(db_id)
                     to_update.append((db_id, feat))
-                else:
-                    to_insert.append(feat)
-            
-            # 4. Determine Deletions (Existing - Incoming)
-            to_delete_ids = existing_ids - incoming_ids
+                    continue
+                nid = props.get('node_id')
+                row = node_map.get(nid) if nid else None
+                if row is not None and row.id not in matched_ids:
+                    matched_ids.add(row.id)
+                    to_update.append((row.id, feat))
+                    continue
+                to_insert.append(feat)
 
-            # [Safety] Block accidental full-wipe. An empty payload that would delete
-            # existing rows is almost always a desync — a full-sync that fired before
-            # overlays finished loading, or one pointed at a stale/wrong map — not an
-            # intentional clear. (Individual deletes flow through /overlays/delta.)
-            # Device-scoped clears (device_id set) and explicit allow_empty are exempt.
-            if not new_features and to_delete_ids and not allow_empty and not device_id:
-                current_app.logger.warning(
-                    f"[GeoOverlay] Blocked empty-payload wipe "
-                    f"(map={map_uuid}, type={target_type}, would_delete={len(to_delete_ids)}). "
-                    "Pass allow_empty=true to confirm a full clear."
-                )
-                return {'ok': True, 'count': 0,
-                        'stats': {'skipped': 'empty_wipe_blocked',
-                                  'would_delete': len(to_delete_ids)}}, None
+            # 4. [I9] 암묵 삭제 폐지 — "페이로드에 없음 = 삭제" 프로토콜은
+            # 2026-08-03 사고의 최다 발생원이었다(클라이언트가 db_id 를 하나
+            # 빠뜨리면 zone 전체가 삭제 후 새 id 로 재생성 → 장치 소속 전원
+            # 단절). 전체 저장은 upsert 전용이며, 삭제는 명시 경로로만 간다:
+            #   - 개별 삭제: /overlays/delta 의 deletes[] (명시 목록)
+            #   - 전체 비우기: features=[] + allow_empty=True (명시 의사)
+            deleted_count = 0
+            if not new_features and existing_ids:
+                if not allow_empty:
+                    # 장치 스코프(device_id)든 아니든 동일하게 명시 요구 —
+                    # I9 는 예외를 두지 않는다.
+                    current_app.logger.warning(
+                        f"[GeoOverlay] Blocked empty-payload wipe "
+                        f"(map={map_uuid}, type={target_type}, "
+                        f"device={device_id}, "
+                        f"would_delete={len(existing_ids)}). "
+                        "Pass allow_empty=true to confirm a clear.")
+                    return {'ok': True, 'count': 0,
+                            'stats': {'skipped': 'empty_wipe_blocked',
+                                      'would_delete': len(existing_ids)}}, None
+                # 명시적 전체 비우기 — I9 가 허용하는 유일한 일괄 삭제.
+                GeoOverlayManager._cascade_delete_facilities_for_shapes(
+                    existing_ids)
+                deleted_count = query.filter(
+                    GeoShape.id.in_(existing_ids)).delete(
+                        synchronize_session=False)
+            else:
+                omitted = existing_ids - matched_ids
+                if omitted:
+                    current_app.logger.info(
+                        f"[GeoOverlay][I9] {len(omitted)} row(s) omitted from "
+                        f"full-sync (map={map_uuid}, type={target_type}) — "
+                        "kept. Deletions must use /overlays/delta deletes[].")
 
             # 5. Execute Operations
 
-            # A. DELETE
-            if to_delete_ids:
-                 # Deleted shapes may be facility outlines — clean up their
-                 # GeoFacility before the bulk shape delete (see docstring).
-                 GeoOverlayManager._cascade_delete_facilities_for_shapes(to_delete_ids)
-                 # Bulk Delete
-                 query.filter(GeoShape.id.in_(to_delete_ids)).delete(synchronize_session=False)
-                 
             # B. UPDATE
             for db_id, feat in to_update:
                 row = existing_map[db_id]
-                row.feature = feat # Update JSON
+                # [I6] 구조 필드 제거 후 저장. 이름 동기화는 원본 페이로드로.
+                row.feature = GeoOverlayManager._strip_structural_props(feat)
                 row.updated_at = datetime.utcnow()
-                
+
                 # [New] Sync Properties (Name, etc.) back to Source Models
                 GeoOverlayManager._sync_device_properties(feat)
 
@@ -380,9 +442,9 @@ class GeoOverlayManager:
                     s.channel_id = str(feat_props.get('channel_id'))
                 
                 if hasattr(s, 'parent_id') and parent_id:
-                    s.parent_id = parent_id 
-                    
-                s.feature = feat
+                    s.parent_id = parent_id
+
+                s.feature = GeoOverlayManager._strip_structural_props(feat)  # [I6]
                 db.session.add(s)
                 
             db.session.commit()
@@ -413,7 +475,7 @@ class GeoOverlayManager:
                 'count': len(new_features),
                 'id_map': id_map,
                 'stats': {
-                    'deleted': len(to_delete_ids),
+                    'deleted': deleted_count,
                     'updated': len(to_update),
                     'inserted': len(to_insert)
                 }
@@ -637,19 +699,33 @@ class GeoOverlayManager:
                             break
 
                 if row:
-                    row.feature = feat
-                    row.type = target_type
+                    # [I7] 기존 행의 type 은 절대 재분류하지 않는다.
+                    # 과거 `row.type = target_type` 은 되먹임 고리의 마지막
+                    # 단계였다: GET 이 표시용으로 정규화한 aot_type 을
+                    # 클라이언트가 그대로 되돌려보내면(위젯 라벨 이름 변경)
+                    # 저장된 종류가 바뀌고, 다음 전체 저장의 type 스코프에서
+                    # 벗어나 도형이 이중화됐다. 종류 변경은 삭제 후 생성뿐
+                    # 이며, Tier-2 트리거(GEO-I7)가 DB 계층에서 봉인한다.
+                    if target_type != row.type and props.get('aot_type'):
+                        current_app.logger.info(
+                            f"[GeoOverlay][I7] delta upsert ignored client "
+                            f"aot_type={target_type!r} for shape id={row.id} "
+                            f"(type={row.type!r} kept).")
+                    row.feature = GeoOverlayManager._strip_structural_props(feat)  # [I6]
                     # Update columns if needed
                     if hasattr(row, 'device_id') and device_id: row.device_id = device_id
                     if hasattr(row, 'channel_id') and props.get('channel_id'): row.channel_id = str(props.get('channel_id'))
                     if hasattr(row, 'parent_id') and parent_id: row.parent_id = parent_id
                     row.updated_at = datetime.utcnow()
-                    
+
                     # [New] Sync Properties (Name, etc.) back to Source Models
                     GeoOverlayManager._sync_device_properties(feat)
                 else:
-                    # Insert
-                    row = GeoShape(geo_id=map_uuid, type=target_type, feature=feat)
+                    # Insert — 신규 생성에 한해 클라이언트 aot_type 이 종류를
+                    # 결정한다(생성 계약). 어휘는 I1 화이트리스트가 지킨다.
+                    row = GeoShape(
+                        geo_id=map_uuid, type=target_type,
+                        feature=GeoOverlayManager._strip_structural_props(feat))  # [I6]
                     if hasattr(row, 'device_id') and device_id: row.device_id = device_id
                     if hasattr(row, 'channel_id') and props.get('channel_id'): row.channel_id = str(props.get('channel_id'))
                     if hasattr(row, 'parent_id') and parent_id: row.parent_id = parent_id

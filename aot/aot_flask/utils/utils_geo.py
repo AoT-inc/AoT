@@ -757,6 +757,18 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
     # [Moved Up] Fetch Map-Specific Device Locations (Overlays) BEFORE Querying
     # This ensures we know which devices are ON the map even if their config is set elsewhere.
     # [Fix] Support per-channel coordinates using 'device_id::channel_id' key
+    # [S3] 소속(group_id)은 저장 컬럼(map_overlay_id) 대신 마커 좌표에서
+    # 일괄 파생한다 — device_membership.py 가 유일한 정본. 컬럼은 사망 상태.
+    membership = {}
+    if map_uuid:
+        try:
+            from aot.aot_flask.geo.device_membership import membership_for_map
+            membership = {dev_id: shp.id for dev_id, shp
+                          in membership_for_map(map_uuid).items()}
+        except Exception as exc:
+            logger.warning('collect_devices: 소속 파생 실패(map=%s): %s',
+                           map_uuid, exc)
+
     device_loc_map = {}
     if map_uuid:
         device_shapes = db.session.query(
@@ -1026,7 +1038,7 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
                   'marker_icon': getattr(record, 'marker_icon', None),
                   'marker_size': size,
                   'marker_color': color,
-                  'group_id': getattr(record, 'map_overlay_id', None),
+                  'group_id': membership.get(record.unique_id),  # [S3] 파생값
                   'map_config_id': getattr(record, 'map_config_id', None), # [Fix] Required for frontend filtering
                   'is_on_map': (entry_uuid in device_loc_map), # [Fix] Use Unified ID (loc_key_ch/entry_uuid)
                   # [Runtime Service] Use centralized backend logic for accurate started_at

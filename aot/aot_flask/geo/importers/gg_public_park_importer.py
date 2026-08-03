@@ -188,7 +188,6 @@ class GgPublicParkImporter:
             'properties': {
                 'name': park.get('PARK_NM', ''),
                 'category': 'site',
-                'aot_type': 'site',
                 'node_id': node_id,
                 # 데이터 출처
                 'source': 'gg_citypark',
@@ -355,7 +354,6 @@ class GgPublicParkImporter:
                         'type': 'Feature',
                         'geometry': {'type': 'Point', 'coordinates': centroid},
                         'properties': {
-                            'aot_type': 'label_aux',
                             'label_name': resolved['park_nm'],
                             'label_area': '',
                             'is_label': True,

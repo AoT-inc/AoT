@@ -121,16 +121,30 @@ def test_partial_payload_is_not_blocked(patched, monkeypatch):
         {'map_uuid': 'm1', 'type': 'zone', 'features': [keep_feat]})
     assert err is None
     assert result['stats'].get('skipped') is None
-    # Row 2 (absent from payload) is deleted; this is a legitimate partial edit.
-    assert result['stats']['deleted'] == 1
-    assert patched['query'].delete_called is True
+    # [I9] Row 2 (absent from payload) SURVIVES — save_overlays is
+    # upsert-only now. Omission-as-deletion was the top producer of the
+    # 2026-08-03 corruption (a client that lost db_id wiped and re-created
+    # whole zones, severing every device membership). Deletions must go
+    # through /overlays/delta deletes[] or features=[]+allow_empty.
+    assert result['stats']['deleted'] == 0
+    assert patched['query'].delete_called is False
 
 
-def test_empty_but_device_scoped_is_allowed(patched):
-    # Device-scoped clears are targeted (one device's shapes) and remain permitted.
+def test_empty_device_scoped_requires_allow_empty(patched):
+    # [I9] 장치 스코프라도 빈 페이로드 삭제는 allow_empty 명시가 필수.
     _set_rows(patched, [_row(1)])
     result, err = GeoOverlayManager.save_overlays(
         {'map_uuid': 'm1', 'type': 'zone', 'features': [], 'device_id': 'dev-1'})
+    assert err is None
+    assert result['stats'].get('skipped') == 'empty_wipe_blocked'
+    assert patched['query'].delete_called is False
+
+
+def test_empty_device_scoped_with_allow_empty_clears(patched):
+    _set_rows(patched, [_row(1)])
+    result, err = GeoOverlayManager.save_overlays(
+        {'map_uuid': 'm1', 'type': 'zone', 'features': [],
+         'device_id': 'dev-1', 'allow_empty': True})
     assert err is None
     assert result['stats'].get('skipped') is None
     assert patched['query'].delete_called is True
