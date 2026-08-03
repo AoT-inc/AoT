@@ -134,16 +134,21 @@ def test_missing_and_empty_uuid_are_noops(env, monkeypatch):
 
 def test_clone_carries_shape_type(monkeypatch):
     """Cloned shapes kept the column default 'feature', so get_overlays --
-    which filters on type -- returned nothing for the copied map."""
+    which filters on type -- returned nothing for the copied map.
+
+    Also pins that device-bound shapes are NOT copied: a cloned map belongs to
+    a different device, so carrying the source device's marker over would put
+    that device on two maps at once (2026-08-04)."""
     source_map = types.SimpleNamespace(
         unique_id='src', name='src', latitude=1, longitude=2, zoom=18,
         provider=None, style_url=None, api_key=None, use_satellite=False,
         providers=None, map_locked=False)
     overlays = [
-        types.SimpleNamespace(type='zone', device_id=None, channel_id=None,
-                              layer_group='g', sort_order=3, meta_json={'a': 1},
-                              feature={'properties': {}}),
-        types.SimpleNamespace(type='facility', device_id='dev', channel_id='ch',
+        types.SimpleNamespace(id=1, parent_id=None, type='zone', device_id=None,
+                              channel_id=None, layer_group='g', sort_order=3,
+                              meta_json={'a': 1}, feature={'properties': {}}),
+        types.SimpleNamespace(id=2, parent_id=None, type='facility',
+                              device_id='dev', channel_id='ch',
                               layer_group=None, sort_order=0, meta_json=None,
                               feature={'properties': {}}),
     ]
@@ -166,7 +171,9 @@ def test_clone_carries_shape_type(monkeypatch):
     mod.clone_map_config('src', 'new device')
 
     shape_rows = [a for a in added if isinstance(a, dict)]
-    assert [r['type'] for r in shape_rows] == ['zone', 'facility']
+    # device_id 를 가진 'facility' 는 복제 대상이 아니다 — 장치 배치는 안 따라간다.
+    assert [r['type'] for r in shape_rows] == ['zone']
     assert shape_rows[0]['layer_group'] == 'g'
     assert shape_rows[0]['sort_order'] == 3
     assert shape_rows[0]['meta_json'] == {'a': 1}
+    assert 'device_id' not in shape_rows[0]

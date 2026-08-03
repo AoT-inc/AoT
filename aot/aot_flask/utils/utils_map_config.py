@@ -5,6 +5,7 @@ from flask import current_app
 from sqlalchemy import inspect, text
 
 from aot.aot_flask.extensions import db
+from aot.databases import set_uuid
 from aot.databases.models import GeoMap, GeoShape
 
 
@@ -62,31 +63,66 @@ def clone_map_config(source_map_uuid, new_device_name=None):
     )
     db.session.add(cloned)
     db.session.flush()
-    # Duplicate overlays
-    source_overlays = GeoShape.query.filter_by(geo_id=source_map_uuid).all()
+
+    # ── 지도 구조만 복제한다 (장치 배치는 복제하지 않는다) ──────────────────
+    # device_id 를 가진 도형(장치 위치 마커, 그려진 장치 구역)은 제외한다.
+    # 복제된 지도는 '다른' 장치를 위한 것인데 원본 장치의 마커를 그대로
+    # 가져오면 그 장치가 두 지도에 존재하게 된다(2026-08-04 확인). 복제본은
+    # 미배치로 시작하고 사용자가 새로 배치한다 — S5 게이트웨이 원칙과 동일.
+    source_overlays = [
+        s for s in GeoShape.query.filter_by(geo_id=source_map_uuid).all()
+        if not s.device_id]
+
+    # node_id 는 지도마다 새로 발급한다. 그대로 복사하면 지도 간 중복이 생겨
+    # save_delta 의 node_id 폴백 조회(첫 일치 채택)가 엉뚱한 지도의 도형을
+    # 편집할 수 있다. 라벨의 parent_node_id 도 새 값으로 함께 재매핑한다.
+    node_remap = {}
+    for overlay in source_overlays:
+        old_nid = ((overlay.feature or {}).get('properties') or {}).get('node_id')
+        if old_nid:
+            node_remap[old_nid] = set_uuid()
+
+    # 1패스: 도형을 만들고 원본 id → 새 행 매핑을 남긴다.
+    id_remap = {}
     for overlay in source_overlays:
         duplicated_feature = overlay.feature.copy() if overlay.feature else {}
-        props = duplicated_feature.get('properties') or {}
+        props = dict(duplicated_feature.get('properties') or {})
         props['map_id'] = cloned.unique_id
-        
-        # Sync hierarchy info
-        # level_id is now a property based on type, not stored.
-        
+        if props.get('node_id') in node_remap:
+            props['node_id'] = node_remap[props['node_id']]
+        if props.get('parent_node_id') in node_remap:
+            props['parent_node_id'] = node_remap[props['parent_node_id']]
         duplicated_feature['properties'] = props
+
         # `type` must be carried over: it is what get_overlays() filters on
         # (site/zone/facility/aot_device/...). Omitting it fell back to the
         # column default 'feature', so every shape in a cloned map became
         # invisible to the map widget and the design editor alike.
-        db.session.add(GeoShape(geo_id=cloned.unique_id,
-                                  device_id=overlay.device_id,
-                                  type=overlay.type,
-                                  # level_id removed as it is now a property
-                                  channel_id=overlay.channel_id,
-                                  layer_group=overlay.layer_group,
-                                  sort_order=overlay.sort_order,
-                                  meta_json=overlay.meta_json,
-                                  feature=duplicated_feature))
-    current_app.logger.debug("Cloned map %s -> %s", source_map_uuid, cloned.unique_id)
+        new_shape = GeoShape(geo_id=cloned.unique_id,
+                             type=overlay.type,
+                             channel_id=overlay.channel_id,
+                             layer_group=overlay.layer_group,
+                             sort_order=overlay.sort_order,
+                             meta_json=overlay.meta_json,
+                             feature=duplicated_feature)
+        db.session.add(new_shape)
+        id_remap[overlay.id] = new_shape
+
+    # 2패스: parent_id 를 새 지도의 id 로 다시 건다. 그대로 복사하면 원본
+    # 지도의 행을 가리키고, 빠뜨리면 계층이 평탄화돼 facility_bay 가 부모를
+    # 잃고 영구히 도달 불가능해진다(facility_io 는 parent_id 로 bay 를 찾는다).
+    if id_remap:
+        db.session.flush()          # 새 행의 id 확보
+        for overlay in source_overlays:
+            if not overlay.parent_id:
+                continue
+            new_parent = id_remap.get(overlay.parent_id)
+            if new_parent is not None:
+                id_remap[overlay.id].parent_id = new_parent.id
+
+    current_app.logger.debug(
+        "Cloned map %s -> %s (도형 %d, 장치 배치 제외)",
+        source_map_uuid, cloned.unique_id, len(source_overlays))
     return cloned
 
 
