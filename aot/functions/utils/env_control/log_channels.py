@@ -19,9 +19,47 @@ write_decision_log() 헬퍼를 제공한다.
 참조: docs/dev/integrated_env_control_design.md §10
 """
 
+import logging
 from typing import Dict, Optional
 
 from aot.utils.influx import write_influxdb_value
+
+logger = logging.getLogger(__name__)
+
+# 기록 실패가 연속될 때 매 채널마다 경고를 찍으면 로그가 폭주한다(한 사이클에
+# 수십 채널). 상태가 바뀌는 순간에만 남긴다 — 실패 시작과 복구.
+_write_failing = False
+
+
+def _safe_write(unique_id: str, measurement: str, value: float,
+                channel: Optional[int] = None, extra_tags: Optional[Dict] = None):
+    """의사결정/메트릭 기록. **실패해도 절대 호출자에게 예외를 던지지 않는다.**
+
+    이 로그들은 사후 진단용 부가 정보이지 제어의 일부가 아니다. 그런데 기록
+    경로가 예외를 올리면 호출자가 통째로 중단된다 — 특히 SafetyPreGate.evaluate()
+    는 게이트 판정을 다 끝낸 **뒤** 마지막 줄에서 기록하므로, 여기서 터지면
+    이미 계산된 강제 폐쇄 명령을 반환도 못 하고 사이클이 죽는다(강풍·강우
+    대응 미실행). 로그 한 줄이 안전 동작을 막아선 안 된다.
+
+    실패 경로가 InfluxDB 장애만이 아니라는 점이 특히 함정이다 —
+    db_retrieve_table_daemon() 은 AoT DB 조회 실패 시 조용히 `[]` 를 돌려주고,
+    write_influxdb_value() 가 그 리스트에 `.measurement_db_host` 로 접근해
+    AttributeError 를 낸다. 즉 **DB 락 하나로 안전 게이트가 멎는다.**
+    """
+    global _write_failing
+    try:
+        write_influxdb_value(unique_id, measurement, value=value,
+                             channel=channel, extra_tags=extra_tags)
+    except Exception as exc:
+        if not _write_failing:
+            _write_failing = True
+            logger.warning(
+                '의사결정 로그 기록 실패 — 제어는 계속한다 (%s ch=%s): %s',
+                measurement, channel, exc)
+        return
+    if _write_failing:
+        _write_failing = False
+        logger.info('의사결정 로그 기록 복구됨 (%s)', measurement)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 변수 인덱스 — 채널 계산 기준
@@ -134,8 +172,10 @@ def write_decision_log(unique_id: str, measurement: str, channel: int, value: fl
         measurement: 측정값 이름 (예: 'goal_target_temperature')
         channel:     채널 번호 (위 상수 사용)
         value:       기록할 값
+
+    기록 실패는 삼킨다 — 이유는 _safe_write() 참조.
     """
-    write_influxdb_value(unique_id, measurement, value=value, channel=channel)
+    _safe_write(unique_id, measurement, value, channel)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -190,11 +230,7 @@ def write_cycle_metrics(
     extra = {'facility_id': facility_id} if facility_id else None
 
     def _w(channel: int, value: float):
-        write_influxdb_value(
-            unique_id, _MEASUREMENT_ENV,
-            value=value, channel=channel,
-            extra_tags=extra,
-        )
+        _safe_write(unique_id, _MEASUREMENT_ENV, value, channel, extra)
 
     # ── 목표값 (연산 결과: VPD 분해 후 working_target) ─────────────────────
     vpd_diag = target.get('_vpd_diag') or target.get('vpd')

@@ -556,8 +556,14 @@ class DailyMultiPointMethod(AbstractMethod):
 
     MAX_POINTS = 12
 
-    def __init__(self, method, method_data, logger=None):
-        super().__init__(method, method_data, logger)
+    def __init__(self, method, method_data, logger=None, target_id=None):
+        # target_id 는 이 클래스가 직접 쓰지는 않는다 — 하루 구간을 facility_tz
+        # 인자로 직접 받아 해석하므로 AbstractMethod.local_tz() 경로가 필요 없다.
+        # 그래도 받아서 상위로 넘긴다: create_method_handler() 가 **모든** 핸들러에
+        # target_id 를 넘기므로, 안 받으면 이 타입만 TypeError 로 로드 자체가 실패한다
+        # (2026-07-31 d48b2b7 에서 실제로 그렇게 깨져 VPD 목표가 정적 기본값으로
+        # 떨어졌다 — aot-005 '고추육묘 VPD').
+        super().__init__(method, method_data, logger, target_id)
         first = self.method_data_first
         if first and getattr(first, 'points_json', None):
             try:
