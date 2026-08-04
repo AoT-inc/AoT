@@ -187,18 +187,32 @@ def maps_for_device(device_unique_id):
     return out
 
 
-def map_for_device(device_unique_id):
+def map_for_device(device_unique_id, prefer=None):
     """장치가 배치된 대표 지도 uuid (없으면 None).
 
     `map_config_id` 컬럼을 읽던 자리를 대체하는 파생값이다. 컬럼이 단일
-    값이었으므로 여기서도 하나를 고른다 — 가장 먼저 배치된 지도(id 오름차순
-    첫 번째)로, 호출마다 흔들리지 않게 결정적으로 정한다.
+    값이었으므로 여기서도 하나를 고른다.
+
+    `prefer` 는 전환기의 안전장치다. 같은 장치가 여러 지도에 마커를 갖는
+    경우(미사용 복사본 지도에 옛 마커가 남아 있는 등) 단순히 "첫 배치"를
+    고르면 사용자가 실제로 쓰는 지도가 아니라 오래된 사본을 고를 수 있다 —
+    koat 실측에서 28건이 그랬다(`Copy of KMA ...` 가 김제보다 먼저 생성).
+    그래서 호출자가 기존 `map_config_id` 를 힌트로 넘기면, **그것이 실제
+    배치 목록에 있을 때만** 채택한다. 정본은 여전히 배치다: 배치에 없는
+    힌트는 무시하고, 힌트가 없으면 첫 배치로 간다.
+
+    P4 에서 미사용 사본 지도를 정리하면 다중 배치가 사라지고, P5 에서
+    컬럼을 드롭할 때 이 인자도 함께 제거한다.
 
     미배치 장치는 None 이다. "어느 지도에도 없다"가 정답이며, 과거처럼
     모든 지도에 나타나게 하지 않는다(원칙 3).
     """
     maps = maps_for_device(device_unique_id)
-    return maps[0] if maps else None
+    if not maps:
+        return None
+    if prefer and prefer in maps:
+        return prefer
+    return maps[0]
 
 
 def devices_on_map(map_uuid):

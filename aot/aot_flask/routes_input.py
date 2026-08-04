@@ -561,7 +561,8 @@ def page_input():
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
             # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
             # 사망 컬럼이다(device_membership 이 정본).
-            map_config_id = map_for_device(each_input.unique_id) or ''
+            map_config_id = map_for_device(each_input.unique_id,
+                                            prefer=each_input.map_config_id) or ''
             if map_config_id:
                 map_overlays = _load_map_overlays(map_config_id)
 

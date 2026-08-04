@@ -248,6 +248,26 @@ class TestMapMembershipIsDerived(unittest.TestCase):
         # 단일 값이 필요한 자리에서는 결정적으로 첫 배치를 고른다.
         self.assertEqual(map_for_device(dev.unique_id), 'mA')
         self.assertEqual(map_for_device(dev.unique_id), 'mA')
+    def test_prefer_hint_avoids_stale_copy_map(self):
+        """전환기 힌트: 여러 지도에 배치된 경우 기존 컬럼값을 존중한다.
+
+        koat 실측에서 28건이 미사용 복사본 지도(먼저 생성됨)로 잡혔다.
+        단순 "첫 배치" 규칙은 사용자가 실제로 쓰는 지도를 놓친다.
+        """
+        from aot.aot_flask.geo.device_membership import map_for_device
+        dev = Input(name='다중배치'); dev.save()
+        self._place(dev.unique_id, 'mA', 'mk-old')   # 먼저 생성된 사본
+        self._place(dev.unique_id, 'mB', 'mk-real')  # 실제 쓰는 지도
+        self.assertEqual(map_for_device(dev.unique_id), 'mA')          # 힌트 없음
+        self.assertEqual(map_for_device(dev.unique_id, prefer='mB'), 'mB')
+
+    def test_prefer_hint_is_ignored_when_not_placed(self):
+        """정본은 배치다 — 배치에 없는 힌트는 무시한다."""
+        from aot.aot_flask.geo.device_membership import map_for_device
+        dev = Input(name='한곳배치'); dev.save()
+        self._place(dev.unique_id, 'mA', 'mk-1')
+        self.assertEqual(map_for_device(dev.unique_id, prefer='mB'), 'mA')
+
 
 if __name__ == '__main__':
     unittest.main()

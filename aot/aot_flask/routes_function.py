@@ -1009,7 +1009,8 @@ def page_function():
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
             # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
             # 사망 컬럼이다(device_membership 이 정본).
-            map_config_uuid = map_for_device(each_function.unique_id) or ''
+            map_config_uuid = map_for_device(each_function.unique_id,
+                                  prefer=each_function.map_config_id) or ''
             if map_config_uuid:
                 map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_entry,
@@ -1111,7 +1112,8 @@ def page_function():
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
             # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
             # 사망 컬럼이다(device_membership 이 정본).
-            map_config_uuid = map_for_device(each_function.unique_id) or ''
+            map_config_uuid = map_for_device(each_function.unique_id,
+                                  prefer=each_function.map_config_id) or ''
             if map_config_uuid:
                 map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_options,

@@ -28,11 +28,11 @@ def _devices_on_map_p2(map_uuid):
         return set()
 
 
-def _map_for_device_p2(device_uuid):
+def _map_for_device_p2(device_uuid, prefer=None):
     """[P2] 장치가 배치된 대표 지도 uuid. map_config_id 읽기의 대체."""
     try:
         from aot.aot_flask.geo.device_membership import map_for_device
-        return map_for_device(device_uuid)
+        return map_for_device(device_uuid, prefer=prefer)
     except Exception:
         return None
 
@@ -4073,7 +4073,8 @@ class AoTDataToolService:
         return {"device_id": device_id, "kind": kind, "name": getattr(obj, 'name', None),
                 "lat": getattr(obj, 'latitude', None), "lng": getattr(obj, 'longitude', None),
                 # [P2] 배치된 지도는 마커에서 파생한다.
-                "map_id": _map_for_device_p2(device_id)}
+                "map_id": _map_for_device_p2(
+                    device_id, prefer=getattr(obj, 'map_config_id', None))}
 
     @staticmethod
     def set_device_location(device_id=None, lat=None, lng=None, map_id=None, **extra):
