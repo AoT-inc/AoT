@@ -237,13 +237,7 @@ def output_add(form_add, request_form, tab_id=None):
             custom_options = _safe_json_string(custom_options)
             new_output.custom_options = custom_options
 
-            map_cfg = ensure_map_config(
-                None,
-                new_output.name,
-                new_output.latitude,
-                new_output.longitude
-            )
-            new_output.map_config_id = map_cfg.unique_id
+            # [P1] 전용 지도 자동 생성 폐지 — 배치 시 지도에 속한다(원칙 2·4).
 
             #
             # Execute at Creation
@@ -346,9 +340,9 @@ def output_duplicate(form_mod):
         Output.unique_id == new_output.unique_id).first()
     
     if duplicated_output:
-        new_map = clone_map_config(source_output.map_config_id, duplicated_output.name)
-        if new_map:
-            duplicated_output.map_config_id = new_map.unique_id
+        # [P1] 복제본은 미배치로 시작한다 — 지도를 복제해 붙이지 않는다.
+        # 원본이 공유 디자인 지도에 배치돼 있으면 그 도형 전체가 숨은
+        # 사설 지도로 복사되던 경로이기도 했다(원칙 1·2).
         duplicated_output.save()
 
         # Duplicate measurements
@@ -419,14 +413,7 @@ def output_mod(form_output, request_form):
             messages["error"].append("Invalid output ID")
             return messages, page_refresh
 
-        if not mod_output.map_config_id:
-            map_cfg = ensure_map_config(
-                None,
-                mod_output.name,
-                mod_output.latitude,
-                mod_output.longitude
-            )
-            mod_output.map_config_id = map_cfg.unique_id
+        # [P1] 수정 시 지도 자동 생성 폐지(원칙 4).
 
         if (form_output.uart_location.data and
                 not os.path.exists(form_output.uart_location.data)):

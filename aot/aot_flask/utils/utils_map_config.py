@@ -18,8 +18,17 @@ def _generate_map_name(base_name):
 
 
 def ensure_map_config(map_config_uuid, device_name=None, latitude=None, longitude=None):
-    """
-    Return existing GeoMap if map_config_uuid is valid, otherwise create a new map.
+    """[P1 이후 사망] 호출자 없음 — 새로 부르지 말 것.
+
+    "장치가 지도를 소유한다"는 초기 모델의 함수다. site/facility 도입으로
+    위치의 정본이 지리요소로 옮겨간 뒤에도 남아, 장치 생성·수정은 물론
+    **GET 페이지 렌더에서도** 지도를 만들어 커밋했다. 그렇게 생긴 지도의
+    91%가 도형 0 이었다(2026-08-04 운영 3서버 실측).
+
+    지도는 사용자가 명시적으로 만들고, 장치는 배치될 때 지도에 속한다.
+    소속 조회는 aot/aot_flask/geo/device_membership.py 가 정본이다.
+    docs/design/geo-data-integrity.md "지도 소유권 모델" 참조.
+    P5 에서 map_config_id 컬럼과 함께 제거한다.
     """
     if map_config_uuid:
         existing = GeoMap.query.filter_by(unique_id=map_config_uuid).first()
@@ -29,6 +38,11 @@ def ensure_map_config(map_config_uuid, device_name=None, latitude=None, longitud
 
 
 def create_map_config(device_name=None, latitude=None, longitude=None):
+    """[P1 이후 사망] 장치 전용 지도 팩토리 — 호출자 없음.
+
+    ensure_map_config / clone_map_config 의 종착지였다. 지도는 이제
+    사용자가 명시적으로 만든다(원칙 4). P5 에서 제거.
+    """
     map_name = _generate_map_name(device_name)
     map_cfg = GeoMap(
         name=map_name,
@@ -44,6 +58,12 @@ def create_map_config(device_name=None, latitude=None, longitude=None):
 
 
 def clone_map_config(source_map_uuid, new_device_name=None):
+    """[P1 이후 사망] 장치 복제 시 지도까지 복제하던 함수 — 호출자 없음.
+
+    복제본은 미배치로 시작한다(원칙 2). 원본이 공유 디자인 지도에
+    배치돼 있으면 그 도형 전체를 숨은 사설 지도로 복사하던 경로이기도
+    했다. P5 에서 제거.
+    """
     source = GeoMap.query.filter_by(unique_id=source_map_uuid).first()
     if not source:
         return create_map_config(new_device_name)
@@ -132,10 +152,14 @@ def _map_still_referenced(map_config_uuid):
     Every controller type carries its own `map_config_id`, so a map is only
     disposable once no device references it any more.
     """
+    # [P1] Function 이 빠져 있었다 — geo_integrity_ddl.DEVICE_LINK_TABLES 는
+    # 7개인데 여기만 6개라, Function 이 참조 중인 지도를 다른 장치 삭제가
+    # 지울 수 있었다. 목록 누락은 이 도메인의 반복 실패 유형이다.
     from aot.databases.models import (
-        Input, Output, PID, Trigger, Conditional, CustomController)
+        Input, Output, PID, Trigger, Conditional, CustomController, Function)
 
-    for model in (Input, Output, PID, Trigger, Conditional, CustomController):
+    for model in (Input, Output, PID, Trigger, Conditional, CustomController,
+                  Function):
         if not hasattr(model, 'map_config_id'):
             continue
         row = model.query.filter_by(map_config_id=map_config_uuid).first()

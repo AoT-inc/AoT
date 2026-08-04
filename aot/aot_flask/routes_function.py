@@ -661,19 +661,11 @@ def page_function():
                     if getattr(f, 'device', '') not in _device_modules]
 
     conditional_conditions = ConditionalConditions.query.all()
-    map_cfg_committed = False
-    for func in function:
-        if not getattr(func, 'map_config_id', None):
-            map_cfg = ensure_map_config(
-                None,
-                func.name,
-                func.latitude,
-                func.longitude
-            )
-            func.map_config_id = map_cfg.unique_id
-            map_cfg_committed = True
-    if map_cfg_committed:
-        db.session.commit()
+    # [P1] 과거 이 자리에서 map_config_id 가 없는 Function 마다 지도를 만들고
+    # 커밋했다 — /function 페이지를 한 번 여는 것만으로 Function 개수만큼
+    # 빈 지도가 생겼다. GET 요청이 DB 를 바꾸는 것 자체가 결함이고, 그렇게
+    # 만들어진 지도는 도형이 하나도 없었다(실측 91%). 원칙 4 에 따라 제거.
+    # 지도는 사용자가 명시적으로 만들고, 장치는 배치될 때 지도에 속한다.
     function_channel = FunctionChannel.query.all()
     input_dev = Input.query.all()
     measurement = Measurement.query.all()
@@ -1011,17 +1003,12 @@ def page_function():
         map_config_uuid = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_function and isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)):
-            map_cfg = ensure_map_config(
-                each_function.map_config_id,
-                each_function.name,
-                each_function.latitude,
-                each_function.longitude
-            )
-            if each_function.map_config_id != map_cfg.unique_id:
-                each_function.map_config_id = map_cfg.unique_id
-                db.session.commit()
-            map_config_uuid = map_cfg.unique_id
-            map_overlays = _load_map_overlays_from_db(map_cfg.unique_id)
+            # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
+            # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
+            # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
+            map_config_uuid = each_function.map_config_id or ''
+            if map_config_uuid:
+                map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_entry,
                                and_=and_,
                                action=action,
@@ -1116,17 +1103,12 @@ def page_function():
         map_config_uuid = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_function and isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)):
-            map_cfg = ensure_map_config(
-                each_function.map_config_id,
-                each_function.name,
-                each_function.latitude,
-                each_function.longitude
-            )
-            if each_function.map_config_id != map_cfg.unique_id:
-                each_function.map_config_id = map_cfg.unique_id
-                db.session.commit()
-            map_config_uuid = map_cfg.unique_id
-            map_overlays = _load_map_overlays_from_db(map_cfg.unique_id)
+            # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
+            # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
+            # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
+            map_config_uuid = each_function.map_config_id or ''
+            if map_config_uuid:
+                map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_options,
                                and_=and_,
                                action=action,

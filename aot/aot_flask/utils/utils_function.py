@@ -326,13 +326,7 @@ return status_dict'''
             except Exception:
                 pass
 
-            map_cfg = ensure_map_config(
-                None,
-                new_func.name,
-                new_func.latitude,
-                new_func.longitude
-            )
-            new_func.map_config_id = map_cfg.unique_id
+            # [P1] 전용 지도 자동 생성 폐지 — 배치 시 지도에 속한다(원칙 2·4).
 
             new_func.unique_id = set_uuid()
             
@@ -444,16 +438,9 @@ def update_location_marker(function_id, request_form):
     if not func_mod:
         return
 
-    if hasattr(func_mod, 'map_config_id'):
-        map_cfg = ensure_map_config(
-            getattr(func_mod, 'map_config_id', None),
-            getattr(func_mod, 'name', None),
-            getattr(func_mod, 'latitude', None),
-            getattr(func_mod, 'longitude', None)
-        )
-        if getattr(func_mod, 'map_config_id', None) != map_cfg.unique_id:
-            func_mod.map_config_id = map_cfg.unique_id
-
+    # [P1] 좌표 저장은 '지도 배치'가 아니다 — 지도에 놓는 것은
+    # /api/geo/device/location(place_device)이고, 여기서 지도를 만들 이유가
+    # 없다. 자동 생성 폐지(원칙 4).
     lat_val = request_form.get('latitude')
     lng_val = request_form.get('longitude')
     if lat_val not in [None, ''] and lng_val not in [None, '']:
@@ -689,17 +676,8 @@ def function_duplicate(form):
             if hasattr(func, 'name') and func.name:
                 clone_kwargs['name'] = f"{func.name} (Copy)"
 
-            if hasattr(func, 'map_config_id') and func.map_config_id:
-                try:
-                    map_cfg = ensure_map_config(
-                        None,
-                        clone_kwargs.get('name', 'Function Copy'),
-                        getattr(func, 'latitude', None),
-                        getattr(func, 'longitude', None)
-                    )
-                    clone_kwargs['map_config_id'] = map_cfg.unique_id
-                except Exception:
-                    pass
+            # [P1] 복제본은 미배치로 시작한다 — 빈 지도를 만들어 붙이지
+            # 않는다. clone_model 의 교차참조 거부목록(I10)과 같은 원칙.
 
             new_func = clone_model(func, **clone_kwargs)
             if new_func:

@@ -273,13 +273,7 @@ def input_add(form_add, tab_id=None):
                 messages["error"], new_input, dict_inputs[new_input.device])
 
         try:
-            map_cfg = ensure_map_config(
-                None,
-                new_input.name,
-                new_input.latitude,
-                new_input.longitude
-            )
-            new_input.map_config_id = map_cfg.unique_id
+            # [P1] 전용 지도 자동 생성 폐지 — 배치 시 지도에 속한다(원칙 2·4).
 
             if not messages["error"]:
                 new_input.save()
@@ -333,9 +327,9 @@ def input_duplicate(form_mod):
     duplicated_input = Input.query.filter(
         Input.unique_id == new_input.unique_id).first()
     if duplicated_input:
-        new_map = clone_map_config(source_input.map_config_id, duplicated_input.name)
-        if new_map:
-            duplicated_input.map_config_id = new_map.unique_id
+        # [P1] 복제본은 미배치로 시작한다 — 지도를 복제해 붙이지 않는다.
+        # 원본이 공유 디자인 지도에 배치돼 있으면 그 도형 전체가 숨은
+        # 사설 지도로 복사되던 경로이기도 했다(원칙 1·2).
         duplicated_input.is_activated = False
         duplicated_input.save()
 

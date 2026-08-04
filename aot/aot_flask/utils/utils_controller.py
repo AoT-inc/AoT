@@ -51,14 +51,7 @@ def controller_mod(form_mod, request_form):
         mod_controller = CustomController.query.filter(
             CustomController.unique_id == form_mod.function_id.data).first()
 
-        if mod_controller and not getattr(mod_controller, 'map_config_id', None):
-            map_cfg = ensure_map_config(
-                None,
-                mod_controller.name,
-                mod_controller.latitude,
-                mod_controller.longitude
-            )
-            mod_controller.map_config_id = map_cfg.unique_id
+        # [P1] 수정 시 지도 자동 생성 폐지(원칙 4).
 
         mod_without_deactivate = False
         if ('modify_settings_without_deactivating' in dict_controllers[mod_controller.device] and

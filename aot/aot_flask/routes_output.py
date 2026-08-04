@@ -397,17 +397,12 @@ def page_output():
         map_config_id = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_output:
-            map_cfg = ensure_map_config(
-                each_output.map_config_id,
-                each_output.name,
-                each_output.latitude,
-                each_output.longitude
-            )
-            if each_output.map_config_id != map_cfg.unique_id:
-                each_output.map_config_id = map_cfg.unique_id
-                each_output.save()
-            map_config_id = map_cfg.unique_id
-            map_overlays = _load_map_overlays(map_cfg.unique_id)
+            # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
+            # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
+            # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
+            map_config_id = each_output.map_config_id or ''
+            if map_config_id:
+                map_overlays = _load_map_overlays(map_config_id)
         return render_template('pages/output_entry.html',
                                camera=camera,
                                choices_function=choices_function,
@@ -463,17 +458,12 @@ def page_output():
         map_config_id = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_output:
-            map_cfg = ensure_map_config(
-                each_output.map_config_id,
-                each_output.name,
-                each_output.latitude,
-                each_output.longitude
-            )
-            if each_output.map_config_id != map_cfg.unique_id:
-                each_output.map_config_id = map_cfg.unique_id
-                each_output.save()
-            map_config_id = map_cfg.unique_id
-            map_overlays = _load_map_overlays(map_cfg.unique_id)
+            # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
+            # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
+            # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
+            map_config_id = each_output.map_config_id or ''
+            if map_config_id:
+                map_overlays = _load_map_overlays(map_config_id)
             
         return render_template('pages/output_options.html',
                                map_configs=map_configs,

@@ -555,17 +555,12 @@ def page_input():
         map_config_id = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_input:
-            map_cfg = ensure_map_config(
-                each_input.map_config_id,
-                each_input.name,
-                each_input.latitude,
-                each_input.longitude
-            )
-            if each_input.map_config_id != map_cfg.unique_id:
-                each_input.map_config_id = map_cfg.unique_id
-                each_input.save()
-            map_config_id = map_cfg.unique_id
-            map_overlays = _load_map_overlays(map_cfg.unique_id)
+            # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
+            # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
+            # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
+            map_config_id = each_input.map_config_id or ''
+            if map_config_id:
+                map_overlays = _load_map_overlays(map_config_id)
 
         return render_template('pages/data_options/input_options.html',
                                map_configs=map_configs,
