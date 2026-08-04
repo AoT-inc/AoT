@@ -809,6 +809,9 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
         # Common columns
         col_names = ['id', 'unique_id', 'name', 'latitude', 'longitude',
                 'marker_color', 'marker_size', 'marker_icon',
+                # map_overlay_id/map_config_id 는 사망 컬럼이지만,
+                # 컬럼 목록에서 빼면 지연로딩이 걸려 N+1 이 된다.
+                # P5 컬럼 드롭 때 함께 제거한다.
                 'map_overlay_id', 'map_config_id', 'custom_options']
 
         # Specific Status Columns
@@ -844,14 +847,26 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
     if map_uuid: # Filter by Map Scope (Current Map OR Unassigned OR Exists as Overlay on Map)
          overlay_ids = list(device_loc_map.keys())
 
-         inputs = Input.query.filter(or_(Input.map_config_id == map_uuid, Input.map_config_id == None, Input.unique_id.in_(overlay_ids))).options(get_load_options(Input)).all()
-         outputs = Output.query.filter(or_(Output.map_config_id == map_uuid, Output.map_config_id == None, Output.unique_id.in_(overlay_ids))).options(get_load_options(Output)).all()
+         # [원칙 3] 배치하지 않은 장치는 어느 지도에도 없다.
+         #
+         # 과거에는 `map_config_id == None` 을 "아직 배정 안 됨 → 모든 지도에
+         # 표시"로 해석했다. 당시엔 모든 장치가 자동으로 지도를 배정받아
+         # NULL 이 사실상 없었기에 드러나지 않았지만, P1 이 자동 생성을
+         # 없애면서 NULL 이 정상값이 됐고 **새 장치가 모든 지도에 나타나는**
+         # 상태가 됐다(2026-08-04 실측 재현). 미배치는 미배치다.
+         #
+         # 스코프의 정본은 배치(overlay_ids = 이 지도에 마커가 있는 장치)다.
+         # map_config_id 는 P2~P5 에서 제거될 사망 컬럼이라 조건에서 뺀다.
+         inputs = Input.query.filter(Input.unique_id.in_(overlay_ids)).options(get_load_options(Input)).all()
+         outputs = Output.query.filter(Output.unique_id.in_(overlay_ids)).options(get_load_options(Output)).all()
 
-         # Fallback to ALL for items without map assignment yet
-         ctrls = CustomController.query.options(get_load_options(CustomController)).all()
-         pids = PID.query.options(get_load_options(PID)).all()
-         triggers = Trigger.query.options(get_load_options(Trigger)).all()
-         conditionals = Conditional.query.options(get_load_options(Conditional)).all()
+         # 함수류도 동일 규칙. 과거에는 "아직 배정 안 됨"을 이유로 전량
+         # 반환해서, 배치한 적 없는 Function/PID/Trigger/Conditional 이
+         # 모든 지도에 나타났다.
+         ctrls = CustomController.query.filter(CustomController.unique_id.in_(overlay_ids)).options(get_load_options(CustomController)).all()
+         pids = PID.query.filter(PID.unique_id.in_(overlay_ids)).options(get_load_options(PID)).all()
+         triggers = Trigger.query.filter(Trigger.unique_id.in_(overlay_ids)).options(get_load_options(Trigger)).all()
+         conditionals = Conditional.query.filter(Conditional.unique_id.in_(overlay_ids)).options(get_load_options(Conditional)).all()
     else:
          inputs = Input.query.options(get_load_options(Input)).all()
          outputs = Output.query.options(get_load_options(Output)).all()

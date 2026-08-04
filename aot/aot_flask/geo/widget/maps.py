@@ -393,15 +393,12 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         selected_map_uuid = config_map.unique_id
 
     sites_in_map = []
-    overlay_map_ids = set()
     map_provider_val = MAP_PROVIDER
     map_style_url_val = MAP_STYLE_URL
     map_api_key_val = MAP_API_KEY
     map_use_satellite = False
     
     if config_map:
-        if config_map.unique_id:
-            overlay_map_ids.add(config_map.unique_id)
         if config_map.provider:
             map_provider_val = config_map.provider
         if config_map.style_url:
@@ -793,7 +790,6 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'measurements_output': widget_options.get('measurements_output', ''),
         'measurements_function': widget_options.get('measurements_function', ''),
         'measurements_map': measurements_map,
-        'map_overlay_ids': list(overlay_map_ids),
         'map_list': map_list,
         'sites_in_map': sites_in_map,
         # 'selected_map_uuid': selected_map_uuid, # Duplicate, removed

@@ -19,6 +19,11 @@ import ast
 import os
 import unittest
 
+from flask import Flask
+
+from aot.aot_flask.extensions import db
+from aot.databases.models import GeoMap, GeoShape, Input
+
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
@@ -108,6 +113,69 @@ class TestNoAutomaticMapCreation(unittest.TestCase):
             self.assertIn('사망', doc,
                           '%s 의 사망 표시가 없습니다 — 되살아날 위험.' % name)
 
+
+
+class TestUnplacedDevicesAreNowhere(unittest.TestCase):
+    """원칙 3 — 배치하지 않은 장치는 어느 지도에도 없다.
+
+    P1 이 자동 생성을 없애면서 map_config_id=NULL 이 예외에서 정상값이 됐다.
+    그런데 collect_devices 는 NULL 을 "아직 배정 안 됨 → 모든 지도에 표시"로
+    해석하고 있어서, **새로 만든 장치가 모든 지도에 나타나는** 회귀가 생겼다
+    (2026-08-04 운영 DB 사본에서 재현). 원칙 3·4 는 함께 가야 한다.
+    """
+
+    def setUp(self):
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        try:
+            from flask_babel import Babel
+            Babel(app)
+        except Exception:
+            pass
+        self.app = app
+        self.ctx = app.app_context()
+        self.ctx.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.ctx.pop()
+
+    def test_device_without_placement_is_on_no_map(self):
+        from aot.aot_flask.utils import utils_geo
+        GeoMap(unique_id='m1', name='지도1', category='design').save()
+        GeoMap(unique_id='m2', name='지도2', category='design').save()
+        Input(name='미배치센서').save()          # map_config_id 기본 None
+
+        for uuid in ('m1', 'm2'):
+            devs = utils_geo.collect_devices(None, include_all=True,
+                                             map_uuid=uuid)
+            self.assertNotIn(
+                '미배치센서', [d.get('name') for d in devs],
+                '배치하지 않은 장치가 지도 %s 에 나타났습니다 (원칙 3).' % uuid)
+
+    def test_placed_device_appears_only_on_its_map(self):
+        from aot.aot_flask.utils import utils_geo
+        GeoMap(unique_id='m1', name='지도1', category='design').save()
+        GeoMap(unique_id='m2', name='지도2', category='design').save()
+        dev = Input(name='배치센서')
+        dev.save()
+        GeoShape(unique_id='mk', geo_id='m1', type='aot_device',
+                 device_id=dev.unique_id, channel_id='0',
+                 feature={'type': 'Feature',
+                          'geometry': {'type': 'Point',
+                                       'coordinates': [1.0, 1.0]},
+                          'properties': {}}).save()
+
+        names_m1 = [d.get('name') for d in utils_geo.collect_devices(
+            None, include_all=True, map_uuid='m1')]
+        names_m2 = [d.get('name') for d in utils_geo.collect_devices(
+            None, include_all=True, map_uuid='m2')]
+        self.assertIn('배치센서', names_m1)
+        self.assertNotIn('배치센서', names_m2)
 
 if __name__ == '__main__':
     unittest.main()
