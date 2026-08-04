@@ -1054,7 +1054,9 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
                   'marker_size': size,
                   'marker_color': color,
                   'group_id': membership.get(record.unique_id),  # [S3] 파생값
-                  'map_config_id': getattr(record, 'map_config_id', None), # [Fix] Required for frontend filtering
+                  # [P2] 배치된 지도는 마커에서 파생. 이 스코프는 이미
+                  # map_uuid 로 한정돼 있으므로 그 값이 곧 정답이다.
+                  'map_config_id': map_uuid,
                   'is_on_map': (entry_uuid in device_loc_map), # [Fix] Use Unified ID (loc_key_ch/entry_uuid)
                   # [Runtime Service] Use centralized backend logic for accurate started_at
                   # [Optimization] Disabled for performance (N+1 InfluxDB Queries causing 1.5s delay)

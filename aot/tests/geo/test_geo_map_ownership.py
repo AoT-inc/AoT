@@ -177,5 +177,77 @@ class TestUnplacedDevicesAreNowhere(unittest.TestCase):
         self.assertIn('배치센서', names_m1)
         self.assertNotIn('배치센서', names_m2)
 
+
+class TestMapMembershipIsDerived(unittest.TestCase):
+    """P2 — "장치가 어느 지도에 있는가"는 배치(마커)에서 파생한다.
+
+    저장 컬럼 `map_config_id` 는 초기 모델("장치가 지도를 소유한다")의
+    화석이다. 원칙 2 에 따라 읽기를 전부 파생으로 옮겼으므로, 컬럼 값이
+    무엇이든(비어 있든, 엉뚱한 값이든) 결과가 배치를 따라야 한다.
+    """
+
+    def setUp(self):
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        try:
+            from flask_babel import Babel
+            Babel(app)
+        except Exception:
+            pass
+        self.ctx = app.app_context()
+        self.ctx.push()
+        db.create_all()
+        GeoMap(unique_id='mA', name='지도A', category='design').save()
+        GeoMap(unique_id='mB', name='지도B', category='design').save()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.ctx.pop()
+
+    def _place(self, dev_uuid, map_uuid, shape_uid):
+        GeoShape(unique_id=shape_uid, geo_id=map_uuid, type='aot_device',
+                 device_id=dev_uuid, channel_id='0',
+                 feature={'type': 'Feature',
+                          'geometry': {'type': 'Point',
+                                       'coordinates': [1.0, 1.0]},
+                          'properties': {}}).save()
+
+    def test_derived_map_ignores_stale_column(self):
+        from aot.aot_flask.geo.device_membership import map_for_device
+        dev = Input(name='센서', map_config_id='mB')   # 컬럼은 B 를 가리킴
+        dev.save()
+        self._place(dev.unique_id, 'mA', 'mk1')        # 실제 배치는 A
+        self.assertEqual(map_for_device(dev.unique_id), 'mA',
+                         '파생이 낡은 컬럼값을 따라갔습니다.')
+
+    def test_unplaced_device_has_no_map(self):
+        from aot.aot_flask.geo.device_membership import map_for_device
+        dev = Input(name='미배치', map_config_id='mA')  # 컬럼만 있고 배치 없음
+        dev.save()
+        self.assertIsNone(map_for_device(dev.unique_id))
+
+    def test_devices_on_map_matches_placement(self):
+        from aot.aot_flask.geo.device_membership import devices_on_map
+        a = Input(name='A장치'); a.save()
+        b = Input(name='B장치'); b.save()
+        self._place(a.unique_id, 'mA', 'mk-a')
+        self._place(b.unique_id, 'mB', 'mk-b')
+        self.assertEqual(devices_on_map('mA'), {a.unique_id})
+        self.assertEqual(devices_on_map('mB'), {b.unique_id})
+
+    def test_multi_map_placement_is_deterministic(self):
+        from aot.aot_flask.geo.device_membership import (
+            map_for_device, maps_for_device)
+        dev = Input(name='양쪽배치'); dev.save()
+        self._place(dev.unique_id, 'mA', 'mk-1')
+        self._place(dev.unique_id, 'mB', 'mk-2')
+        self.assertEqual(maps_for_device(dev.unique_id), ['mA', 'mB'])
+        # 단일 값이 필요한 자리에서는 결정적으로 첫 배치를 고른다.
+        self.assertEqual(map_for_device(dev.unique_id), 'mA')
+        self.assertEqual(map_for_device(dev.unique_id), 'mA')
+
 if __name__ == '__main__':
     unittest.main()

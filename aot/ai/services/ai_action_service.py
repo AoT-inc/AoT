@@ -1316,7 +1316,7 @@ class AIActionService:
                                     # Update main record coordinates
                                     if hasattr(record, 'latitude'): record.latitude = final_lat
                                     if hasattr(record, 'longitude'): record.longitude = final_lng
-                                    if hasattr(record, 'map_config_id'): record.map_config_id = map_uuid
+                                    # [P2] map_config_id 저장 폐지 — 마커가 정본
                                     # [S3] map_overlay_id 저장 폐지 — 소속은 위
                                     # 마커 좌표에서 파생된다 (device_membership.py)
                                     

@@ -14,6 +14,29 @@ from aot.utils.system_pi import return_measurement_info
 
 logger = logging.getLogger(__name__)
 
+
+def _devices_on_map_p2(map_uuid):
+    """[P2] 지도에 배치된 장치 uuid 집합. map_config_id 조회의 대체.
+
+    지도 소속의 정본은 배치(마커)다 — device_membership 이 정본이며,
+    map_config_id 는 사망 컬럼이다.
+    """
+    try:
+        from aot.aot_flask.geo.device_membership import devices_on_map
+        return devices_on_map(map_uuid)
+    except Exception:
+        return set()
+
+
+def _map_for_device_p2(device_uuid):
+    """[P2] 장치가 배치된 대표 지도 uuid. map_config_id 읽기의 대체."""
+    try:
+        from aot.aot_flask.geo.device_membership import map_for_device
+        return map_for_device(device_uuid)
+    except Exception:
+        return None
+
+
 class AoTDataToolService:
     """
     AoT 내부 데이터를 AI 도구 규격에 맞게 제공하는 서비스 레이어.
@@ -100,7 +123,9 @@ class AoTDataToolService:
         try:
             # 1. 대상 식별 (Input 우선: unique_id 또는 map_config_id/geo_id 지원)
             target_input = Input.query.filter(
-                or_(Input.unique_id == loc_id, Input.map_config_id == loc_id)
+                # [P2] 지도 uuid 로 들어오면 그 지도에 배치된 장치를 찾는다.
+                or_(Input.unique_id == loc_id,
+                    Input.unique_id.in_(_devices_on_map_p2(loc_id)))
             ).first()
 
             if not target_input:
@@ -4047,7 +4072,8 @@ class AoTDataToolService:
             return {"error": f"Device not found: {device_id}"}
         return {"device_id": device_id, "kind": kind, "name": getattr(obj, 'name', None),
                 "lat": getattr(obj, 'latitude', None), "lng": getattr(obj, 'longitude', None),
-                "map_id": getattr(obj, 'map_config_id', None)}
+                # [P2] 배치된 지도는 마커에서 파생한다.
+                "map_id": _map_for_device_p2(device_id)}
 
     @staticmethod
     def set_device_location(device_id=None, lat=None, lng=None, map_id=None, **extra):
@@ -4066,8 +4092,8 @@ class AoTDataToolService:
                 obj.latitude = float(lat)
             if hasattr(obj, 'longitude'):
                 obj.longitude = float(lng)
-            if map_id and hasattr(obj, 'map_config_id'):
-                obj.map_config_id = map_id
+            # [P2] map_config_id 는 사망 컬럼이다 — 배치(마커)가 정본이며
+            # 지도 소속은 거기서 파생된다. 저장하지 않는다.
             if hasattr(obj, 'location_updated_utc'):
                 from datetime import datetime as _dt
                 obj.location_updated_utc = _dt.utcnow()

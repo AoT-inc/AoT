@@ -61,6 +61,7 @@ from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import (utils_action, utils_conditional,
                                        utils_controller, utils_function,
                                        utils_general, utils_pid, utils_trigger)
+from aot.aot_flask.geo.device_membership import map_for_device
 from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.aot_flask.utils.utils_misc import determine_controller_type
@@ -1006,7 +1007,9 @@ def page_function():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            map_config_uuid = each_function.map_config_id or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
+            # 사망 컬럼이다(device_membership 이 정본).
+            map_config_uuid = map_for_device(each_function.unique_id) or ''
             if map_config_uuid:
                 map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_entry,
@@ -1106,7 +1109,9 @@ def page_function():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            map_config_uuid = each_function.map_config_id or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
+            # 사망 컬럼이다(device_membership 이 정본).
+            map_config_uuid = map_for_device(each_function.unique_id) or ''
             if map_config_uuid:
                 map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_options,

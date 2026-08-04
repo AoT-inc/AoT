@@ -168,3 +168,43 @@ def device_ids_in_shape(shape):
         except Exception:
             continue
     return result
+
+
+def maps_for_device(device_unique_id):
+    """장치가 배치된 지도 uuid 목록 (배치 순서: geo_shape.id 오름차순).
+
+    한 장치가 여러 지도에 마커를 가질 수 있다 — 같은 밸브를 전체 지도와
+    구역 지도 양쪽에 놓는 식이다. 그래서 목록을 돌려준다.
+    """
+    rows = GeoShape.query.filter(
+        GeoShape.device_id == device_unique_id,
+        GeoShape.type.in_(_MARKER_TYPES)).order_by(GeoShape.id).all()
+    seen, out = set(), []
+    for r in rows:
+        if r.geo_id and r.geo_id not in seen:
+            seen.add(r.geo_id)
+            out.append(r.geo_id)
+    return out
+
+
+def map_for_device(device_unique_id):
+    """장치가 배치된 대표 지도 uuid (없으면 None).
+
+    `map_config_id` 컬럼을 읽던 자리를 대체하는 파생값이다. 컬럼이 단일
+    값이었으므로 여기서도 하나를 고른다 — 가장 먼저 배치된 지도(id 오름차순
+    첫 번째)로, 호출마다 흔들리지 않게 결정적으로 정한다.
+
+    미배치 장치는 None 이다. "어느 지도에도 없다"가 정답이며, 과거처럼
+    모든 지도에 나타나게 하지 않는다(원칙 3).
+    """
+    maps = maps_for_device(device_unique_id)
+    return maps[0] if maps else None
+
+
+def devices_on_map(map_uuid):
+    """지도에 배치된 장치 uuid 집합. `map_config_id == uuid` 조회의 대체."""
+    rows = GeoShape.query.filter(
+        GeoShape.geo_id == map_uuid,
+        GeoShape.device_id.isnot(None),
+        GeoShape.type.in_(_MARKER_TYPES)).all()
+    return {r.device_id for r in rows if r.device_id}

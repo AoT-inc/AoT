@@ -582,10 +582,18 @@ class InputModule(AbstractInput):
                 self.logger.error(f" [Satellite Sync] Failed to get marker location: {e}")
 
             # Try Site (GeoMap) - map_config_id
-            if (lat is None or lng is None) and self.input_dev.map_config_id:
+            # [P2] 배치된 지도는 마커에서 파생한다 (map_config_id 는 사망 컬럼).
+            _dev_map = None
+            if lat is None or lng is None:
+                try:
+                    from aot.aot_flask.geo.device_membership import map_for_device
+                    _dev_map = map_for_device(self.input_dev.unique_id)
+                except Exception:
+                    _dev_map = None
+            if (lat is None or lng is None) and _dev_map:
                 try:
                     from aot.databases.models import GeoMap
-                    site = GeoMap.query.filter_by(unique_id=self.input_dev.map_config_id).first()
+                    site = GeoMap.query.filter_by(unique_id=_dev_map).first()
                     if site and site.latitude is not None:
                         lat = site.latitude
                         lng = site.longitude

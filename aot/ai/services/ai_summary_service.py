@@ -103,7 +103,9 @@ class AISummaryService:
         query = Input.query
         facility = None
         if scope_type == 'farm' and scope_id:
-            query = query.filter(Input.map_config_id == scope_id)
+            # [P2] 지도 소속은 배치에서 파생한다.
+            from aot.aot_flask.geo.device_membership import devices_on_map
+            query = query.filter(Input.unique_id.in_(devices_on_map(scope_id)))
         elif scope_type == 'device_group' and scope_id:
             # [S3] 소속은 저장 컬럼이 아니라 마커 좌표에서 파생한다.
             from aot.databases.models import GeoShape

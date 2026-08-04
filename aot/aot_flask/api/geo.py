@@ -369,8 +369,8 @@ class GeoDeviceLocation(Resource):
                 target_device.location_updated_utc = datetime.utcnow()
                 
             if map_uuid:
-                if hasattr(target_device, 'map_config_id'):
-                    target_device.map_config_id = map_uuid
+                # [P2] map_config_id 저장 폐지 — 아래에서 만드는 마커의
+                # geo_id 가 곧 '이 장치가 속한 지도'다(device_membership).
 
                 # [S3] map_overlay_id 는 더 이상 쓰지 않는다. 소속은 아래에서
                 # 만드는 위치 마커의 좌표로부터 실시간 파생된다
