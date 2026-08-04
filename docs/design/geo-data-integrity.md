@@ -141,7 +141,9 @@ site ⊃ zone ⊃ 장치. `device_membership` 이 정본(S3 구현 완료).
 P1 ✅ 자동 생성 중단 + 원칙 3    GET 쓰기 제거(5곳) · 장치 생성/수정/복제 시
                                 생성 중단 · collect_devices 스코프를 배치
                                 기반으로 (955403e, 후속 수정 포함)
-P2    읽기를 파생으로            map_config_id 독자 → 마커 geo_id 기반
+P2 ✅ 읽기를 파생으로            map_config_id 독자 전부 전환(라우트 5·
+                                collect_devices·AI 3·위성) + 쓰기 잔여 3곳
+                                제거 → 컬럼을 쓰는 코드 0 (33329ca/bca6323)
 P3    개념 폐기                 category/is_device_owned 제거, 판정 일원화
 P4    데이터 정리               빈 지도 (koat 20 · aot-005 50) — 참조 확인 후
 P5    컬럼 드롭                 map_config_id + (사망 처리된) map_overlay_id
@@ -150,6 +152,16 @@ P5    컬럼 드롭                 map_config_id + (사망 처리된) map_overl
 **P1 이후 상태**: 지도 팩토리 3종(`ensure_map_config`·`create_map_config`·
 `clone_map_config`)은 호출자 0 이며 독스트링에 사망 표시가 있다. 되살리면
 `test_geo_map_ownership.py` 가 실패한다.
+
+**P2 이후 상태**: `map_config_id` 를 읽거나 쓰는 코드가 없다. 소속 조회는
+`device_membership` 의 `map_for_device` / `maps_for_device` /
+`devices_on_map` 이 정본이다.
+
+`map_for_device(uuid, prefer=...)` 의 `prefer` 는 **전환기 전용 안전장치**다.
+같은 장치가 여러 지도에 마커를 가지면(미사용 사본 지도에 옛 마커가 남은
+경우) 단순 "첫 배치"가 실사용 지도를 놓친다 — koat 실측 28건. 힌트는
+**실제 배치 목록에 있을 때만** 채택되므로 정본은 여전히 배치다. P4 에서
+사본 지도를 정리하면 다중 배치가 사라지고, P5 컬럼 드롭 때 인자도 제거한다.
 
 ## 잔여 위험 (구조로 소멸 불가 — 탐지 계층 담당)
 
