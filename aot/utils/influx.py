@@ -463,6 +463,9 @@ def output_sec_on(output_id, past_seconds, output_channel=0):
         return None
 
     output = db_retrieve_table_daemon(Output, unique_id=output_id)
+    if output is None:
+        logger.error("output_sec_on: 출력 %s 조회 실패", output_id)
+        return None
 
     # Get the number of seconds not stored in the database (if currently on)
     output_time_on = 0

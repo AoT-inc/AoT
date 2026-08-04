@@ -969,6 +969,9 @@ class CustomModule(AbstractFunction):
 
     def email(self, message):
         smtp = db_retrieve_table_daemon(SMTP, entry='first')
+        if smtp is None:
+            self.logger.error("SMTP 설정을 읽지 못해 알림 메일을 보내지 못했다")
+            return
         send_email(smtp.host, smtp.protocol, smtp.port,
                    smtp.user, smtp.passw, smtp.email_from,
                    self.email_notification, message)

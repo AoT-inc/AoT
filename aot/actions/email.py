@@ -89,6 +89,9 @@ class ActionModule(AbstractFunctionAction):
             if not message_send:
                 message_send = dict_vars['message']
             smtp = db_retrieve_table_daemon(SMTP, entry='first')
+            if smtp is None:
+                self.logger.error("SMTP 설정을 읽지 못해 이메일을 보내지 못했다")
+                return message_send
             send_email(smtp.host, smtp.protocol, smtp.port,
                        smtp.user, smtp.passw, smtp.email_from,
                        email_recipients, message_send)

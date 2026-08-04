@@ -37,7 +37,12 @@ class ColdDocuments(CRUDMixin, db.Model):
     archive_path = db.Column(db.Text, nullable=False)
 
     # Metadata stored as JSON
-    metadata = db.Column(db.Text, default=None)  # JSON string
+    # 컬럼명이 `metadata` 가 아닌 이유: SQLAlchemy Declarative 가 `metadata` 를
+    # 예약해 두어(모든 모델의 MetaData 핸들), 그 이름으로 컬럼을 선언하면
+    # 클래스 정의 시점에 InvalidRequestError 로 **import 자체가 실패**한다.
+    # 이 파일이 models/__init__.py 에 등록돼 있지 않은 덕에 앱은 멀쩡히 떴고,
+    # 그래서 한 번도 드러나지 않았다(2026-08-04 발견).
+    meta_json = db.Column(db.Text, default=None)  # JSON string
 
     # Timestamps
     archived_at = db.Column(db.DateTime, default=utc_now, nullable=False)
@@ -141,8 +146,8 @@ class ArchiveAuditLog(CRUDMixin, db.Model):
     status = db.Column(db.String(16), default='success')  # success, failed, partial
     error_message = db.Column(db.Text, nullable=True)
 
-    # Additional context
-    metadata = db.Column(db.Text, nullable=True)  # JSON string for extra info
+    # Additional context (컬럼명 사유는 ColdDocuments.meta_json 주석 참조)
+    meta_json = db.Column(db.Text, nullable=True)  # JSON string for extra info
 
     def __repr__(self):
         return "<{cls}(id={s.id}, operation={s.operation}, document_id={s.document_id})>".format(

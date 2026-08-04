@@ -111,6 +111,12 @@ class ConditionalController(AbstractController, threading.Thread):
         """Define all settings."""
         cond = db_retrieve_table_daemon(
             Conditional, unique_id=self.unique_id)
+        if cond is None:
+            # 조회 실패(락·디스크 I/O)든 행 삭제든, 자기 설정 없이 뜨면 잘못된
+            # 상태로 동작한다. 원인을 남기고 기동을 중단한다.
+            raise RuntimeError(
+                f"Conditional {self.unique_id}: 설정을 읽지 못해 컨트롤러를 "
+                f"시작할 수 없다 (DB 조회 실패 또는 행 삭제)")
         self.is_activated = cond.is_activated
         self.conditional_statement = cond.conditional_statement
         self.conditional_import = cond.conditional_import
@@ -182,6 +188,12 @@ class ConditionalController(AbstractController, threading.Thread):
         """Check if conditional is activated and execute its user-defined code."""
         cond = db_retrieve_table_daemon(
             Conditional, unique_id=self.unique_id, entry='first')
+        if cond is None:
+            # 사용자 코드를 실행하는 자리다. 설정을 못 읽은 채 진행하면 무엇을
+            # 실행하는지 모르는 상태가 되므로 이번 판정을 건너뛴다.
+            self.logger.error(
+                "Conditional 설정을 읽지 못해 이번 판정을 건너뛴다")
+            return
 
         timestamp = datetime.datetime.fromtimestamp(
             self.time_conditional).strftime('%Y-%m-%d %H:%M:%S')

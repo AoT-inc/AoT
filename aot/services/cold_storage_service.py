@@ -91,11 +91,18 @@ class ColdStorageService:
             ValueError: If document already archived.
         """
         content = document.content if hasattr(document, 'content') else str(document)
+
+        # `hasattr(document, 'metadata')` 를 먼저 보면 안 된다 — 아카이브 대상이
+        # SQLAlchemy 모델(Notes 등)이면 그 속성은 **항상** 존재하고 테이블의
+        # MetaData 핸들을 돌려준다. 그대로 넘기면 뒤에서 json.dumps 가 터진다.
+        # dict 로 직렬화되는 값만 메타데이터로 인정하고, to_dict() 를 우선한다.
         metadata = None
-        if hasattr(document, 'metadata'):
-            metadata = document.metadata
-        elif hasattr(document, 'to_dict'):
+        if hasattr(document, 'to_dict'):
             metadata = document.to_dict()
+        else:
+            candidate = getattr(document, 'metadata', None)
+            if isinstance(candidate, dict):
+                metadata = candidate
 
         self.archive_document(
             document_id=doc_id,
@@ -211,7 +218,10 @@ class ColdStorageService:
             document_id=document_id,
             content_hash=content_hash,
             archive_path=archive_path,
-            metadata=json.dumps(metadata) if metadata else None,
+            # ensure_ascii=False 필수 — True(기본)면 한글이 \uXXXX 로 저장돼
+            # meta_json.contains('딸기') 류 검색이 한 건도 안 맞는다.
+            meta_json=json.dumps(metadata, ensure_ascii=False,
+                                 separators=(',', ':')) if metadata else None,
             archived_at=now,
             last_accessed=now,
             compression_type=compression,
@@ -297,7 +307,7 @@ class ColdStorageService:
             logger.debug("[ColdStorage] Metadata retrieval for %s: %.1fms", document_id, elapsed)
             return {
                 'document_id': document_id,
-                'metadata': json.loads(cold_doc.metadata) if cold_doc.metadata else {},
+                'metadata': json.loads(cold_doc.meta_json) if cold_doc.meta_json else {},
                 'archived_at': cold_doc.archived_at.isoformat(),
                 'compression_type': cold_doc.compression_type,
                 'compression_ratio': cold_doc.compression_ratio,
@@ -337,7 +347,7 @@ class ColdStorageService:
             'document_id': document_id,
             'content': content,
             'content_hash': cold_doc.content_hash,
-            'metadata': json.loads(cold_doc.metadata) if cold_doc.metadata else {},
+            'metadata': json.loads(cold_doc.meta_json) if cold_doc.meta_json else {},
             'archived_at': cold_doc.archived_at.isoformat(),
             'compression_type': cold_doc.compression_type,
             'compression_ratio': cold_doc.compression_ratio,
@@ -414,8 +424,17 @@ class ColdStorageService:
         """
         start_time = time.time()
 
-        # Base query
-        cold_query = ColdDocuments.query.join(ArchiveIndex)
+        # Base query.
+        # 조인 조건을 명시해야 한다 — 두 테이블 사이에 FK/relationship 이 없어서
+        # 조건 없는 join() 은 InvalidRequestError("Don't know how to join") 를 낸다.
+        cold_query = ColdDocuments.query.join(
+            ArchiveIndex, ArchiveIndex.document_id == ColdDocuments.document_id)
+
+        # Free-text query over the stored metadata JSON.
+        # (이 인자는 원래 선언만 되어 있고 어디서도 쓰이지 않아, 키워드를 넘겨도
+        #  전체 아카이브가 그대로 반환됐다.)
+        if query:
+            cold_query = cold_query.filter(ColdDocuments.meta_json.contains(query))
 
         # Date range filter
         if from_date:
@@ -430,7 +449,10 @@ class ColdStorageService:
         if metadata_filters:
             for key, value in metadata_filters.items():
                 cold_query = cold_query.filter(
-                    ColdDocuments.metadata.contains(f'"{key}":{json.dumps(value)}')
+                    # 저장과 **같은** 직렬화 형태여야 부분문자열 매칭이 성립한다
+                    # (기본 separator 는 '"zone": "1-1"' 처럼 공백을 넣어 어긋난다).
+                    ColdDocuments.meta_json.contains(
+                        f'"{key}":{json.dumps(value, ensure_ascii=False, separators=(",", ":"))}')
                 )
 
         # Get total count
@@ -448,7 +470,7 @@ class ColdStorageService:
             archives.append({
                 'document_id': doc.document_id,
                 'unique_id': doc.unique_id,
-                'metadata': json.loads(doc.metadata) if doc.metadata else {},
+                'metadata': json.loads(doc.meta_json) if doc.meta_json else {},
                 'archived_at': doc.archived_at.isoformat(),
                 'last_accessed': doc.last_accessed.isoformat(),
                 'compression_type': doc.compression_type,
@@ -757,7 +779,7 @@ class ColdStorageService:
                 compressed_size=compressed_size,
                 status=status,
                 error_message=error_message,
-                metadata=metadata,
+                meta_json=metadata,
             )
             audit_log.save()
         except Exception as e:

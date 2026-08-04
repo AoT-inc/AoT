@@ -171,6 +171,55 @@ TOOLS: List[Tool] = [
         "description": "Returns all measurement channels (measurement_id, channel, measurement, unit) for a given device_id.",
         "usage_hint": "Call with params.arguments.device_id='<id>'. Use to resolve measurement IDs for create_function params.",
     }),
+    # --- 적응형 문서 스토리지 (읽기 전용) ---------------------------------------
+    # 티어 값은 "옮기겠다는 의도"이고 cold_documents 행이 "실제로 옮겨진 실물"이다.
+    # 둘이 아직 연결돼 있지 않아서(이동이 placeholder), 도구 설명에 그 구분을 박아
+    # 둔다 — AI 가 tier=3 을 보고 "아카이브됨" 이라고 사용자에게 말하면 안 된다.
+    Tool('get_storage_tier_status', handler='get_storage_tier_status', manifest={
+        "tool_name": "get_storage_tier_status",
+        "action_type": "virtual_tool_call",
+        "description": "Reports the adaptive document storage state: whether tiering is enabled, how many documents sit in each tier (1=hot, 2=warm, 3=cold), and how many are ACTUALLY archived. A tier value records an intent to move; only a row in the archive means the content was really moved. When both are present in the reply, trust the archive count.",
+        "usage_hint": "Takes no arguments. Call this before answering anything about storage tiers, archiving, or where a document's content lives. Relay any 'warning' or 'note' field to the user rather than dropping it.",
+    }),
+    Tool('search_archives', handler='search_archives', manifest={
+        "tool_name": "search_archives",
+        "action_type": "virtual_tool_call",
+        "description": "Searches ARCHIVED documents by their stored metadata. Only returns documents whose content was really moved to the archive — a document marked tier 3 that was never moved will NOT appear here.",
+        "usage_hint": "Call with params.arguments.query='<keyword>' (optional), limit, offset. An empty result is a normal state, not an error.",
+    }),
+    Tool('get_archived_document', handler='get_archived_document', manifest={
+        "tool_name": "get_archived_document",
+        "action_type": "virtual_tool_call",
+        "description": "Retrieves one archived document. Returns metadata only by default; pass include_content=true to decompress and return the full text. Reading an archive updates its last-accessed time, which feeds future tier decisions.",
+        "usage_hint": "Call with params.arguments.document_id='<id>' and optional include_content=true. Use search_archives first if you only have a keyword.",
+    }),
+
+    # --- 적응형 문서 스토리지 (쓰기 — 전부 승인 게이트) ------------------------
+    Tool('archive_note', handler='archive_note', mutating=True, manifest={
+        "tool_name": "archive_note",
+        "action_type": "virtual_tool_call",
+        "description": "Archives a note: writes a compressed COPY into cold storage and marks the note tier 3. Requires human approval. The original note text is NOT deleted — archiving never removes content; only the retention policy does.",
+        "usage_hint": "Call with params.arguments.note_id='<id>' and optional retention_policy ('default'|'1year'|'3year'|'7year'|'permanent'). Fails if the note is already archived.",
+    }),
+    Tool('restore_note_from_archive', handler='restore_note_from_archive', mutating=True, manifest={
+        "tool_name": "restore_note_from_archive",
+        "action_type": "virtual_tool_call",
+        "description": "Reads a note back out of cold storage and moves it to a warmer tier. Requires human approval. If the archive exists but the original note is gone, the archived text is returned with status 'orphan_archive' instead of being silently recreated.",
+        "usage_hint": "Call with params.arguments.note_id='<id>' and optional target_tier (1=hot, 2=warm; default 2).",
+    }),
+    Tool('set_document_tier', handler='set_document_tier', mutating=True, manifest={
+        "tool_name": "set_document_tier",
+        "action_type": "virtual_tool_call",
+        "description": "Changes only a note's tier value (1=hot, 2=warm, 3=cold). Requires human approval. This moves NO data — it records an intent. To actually place content in the archive use archive_note.",
+        "usage_hint": "Call with params.arguments.note_id='<id>' and tier=1|2|3.",
+    }),
+    Tool('delete_archive', handler='delete_archive', mutating=True, manifest={
+        "tool_name": "delete_archive",
+        "action_type": "virtual_tool_call",
+        "description": "Deletes the archived COPY of a document (file + index rows). Requires human approval. The original note is untouched, so its tier may still read 3 afterwards. This is irreversible — the compressed copy is removed from disk.",
+        "usage_hint": "Call with params.arguments.document_id='<id>' and an optional reason. Confirm with the user that they mean the archived copy, not the note itself.",
+    }),
+
     Tool('create_function', handler='create_function_tool', mutating=True, manifest={
         "tool_name": "create_function",
         "action_type": "virtual_tool_call",
@@ -670,6 +719,86 @@ for _t in TOOLS:
 # to the MCP surface. That is why the two are separate fields, not one derivation.
 # ---------------------------------------------------------------------------
 _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
+    {
+        "tool_name": "get_storage_tier_status",
+        "description": "Reports the adaptive document storage state: whether tiering is enabled, how many documents sit in each tier (1=hot, 2=warm, 3=cold), and how many are ACTUALLY archived. A tier value records an intent to move; only a row in the archive means the content was really moved. Relay any 'warning' or 'note' field to the user instead of dropping it.",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "tool_name": "search_archives",
+        "description": "Searches ARCHIVED documents by their stored metadata. Only returns documents whose content was really moved to the archive — a document marked tier 3 that was never moved will NOT appear here. An empty result is a normal state, not an error.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Keyword matched against stored metadata values. Optional — omit to list all archives."},
+                "limit": {"type": "integer", "description": "Max results (1-200). Default: 50"},
+                "offset": {"type": "integer", "description": "Pagination offset. Default: 0"}
+            }
+        }
+    },
+    {
+        "tool_name": "get_archived_document",
+        "description": "Retrieves one archived document. Returns metadata only by default; pass include_content=true to decompress and return the full text. Reading an archive updates its last-accessed time, which feeds future tier decisions.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "document_id": {"type": "string", "description": "unique_id of the archived document."},
+                "include_content": {"type": "boolean", "description": "Decompress and return full text. Default: false (metadata only)."}
+            },
+            "required": ["document_id"]
+        }
+    },
+    {
+        "tool_name": "archive_note",
+        "description": "Archives a note: writes a compressed COPY into cold storage and marks the note tier 3. Requires human approval. The original note text is NOT deleted — archiving never removes content; only the retention policy does.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "note_id": {"type": "string", "description": "unique_id of the note to archive."},
+                "retention_policy": {"type": "string", "description": "One of: default, 1year, 3year, 7year, permanent. Default: 'default' (3 years)."}
+            },
+            "required": ["note_id"]
+        }
+    },
+    {
+        "tool_name": "restore_note_from_archive",
+        "description": "Reads a note back out of cold storage and moves it to a warmer tier. Requires human approval. If the archive exists but the original note is gone, returns status 'orphan_archive' with the archived text rather than silently recreating it.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "note_id": {"type": "string", "description": "unique_id of the archived note."},
+                "target_tier": {"type": "integer", "description": "Tier to restore into: 1 (hot) or 2 (warm). Default: 2"}
+            },
+            "required": ["note_id"]
+        }
+    },
+    {
+        "tool_name": "set_document_tier",
+        "description": "Changes only a note's tier value (1=hot, 2=warm, 3=cold). Requires human approval. This moves NO data — it records an intent. Use archive_note to actually place content in the archive.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "note_id": {"type": "string", "description": "unique_id of the note."},
+                "tier": {"type": "integer", "description": "1 (hot), 2 (warm) or 3 (cold)."}
+            },
+            "required": ["note_id", "tier"]
+        }
+    },
+    {
+        "tool_name": "delete_archive",
+        "description": "Deletes the archived COPY of a document (file + index rows). Requires human approval. Irreversible. The original note is untouched, so its tier may still read 3 afterwards.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "document_id": {"type": "string", "description": "unique_id of the archived document."},
+                "reason": {"type": "string", "description": "Why it is being deleted (recorded in the audit log)."}
+            },
+            "required": ["document_id"]
+        }
+    },
     {
         "tool_name": "get_sensor_detail",
         "description": "Query detailed sensor history for a specific location/device. Returns time-series readings with min/max/avg statistics.",

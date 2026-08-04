@@ -62,8 +62,19 @@ def db_retrieve_table_daemon(
     If entry='all', all table entries are returned.
     If device_id is set, the first entry with that device ID is returned.
     Otherwise, the table object is returned.
+
+    **조회 실패 시(락 5회 재시도 초과, 디스크 I/O 에러) 예외 대신 "빈 결과"를
+    돌려준다.** 그 빈 결과는 성공 시의 반환 타입과 맞춘다 — 단일 행을 기대한
+    호출에는 None, 목록을 기대한 호출에는 []. 예전에는 어느 경우든 [] 였는데,
+    단일 행을 기대한 호출부가 그 리스트에 속성 접근을 해서
+    `'list' object has no attribute 'measurement_db_host'` 같은 엉뚱한
+    AttributeError 로 터졌다(2026-08-04 안전 게이트 사건). 호출부는 여전히
+    None 검사를 해야 하지만, 최소한 실패가 실패처럼 보인다.
     """
     tries = 5
+    # 성공 시 .first() 를 타는 형태 = 단일 행 기대.
+    _wants_single = bool(entry == 'first' or device_id or unique_id)
+    _empty = None if _wants_single else []
     while tries > 0:
         try:
             with session_scope(AOT_DB_PATH) as new_session:
@@ -92,7 +103,7 @@ def db_retrieve_table_daemon(
                 logger.error(
                     "The AoT database returned a disk I/O error — "
                     "skipping retry: %s", exc)
-                return []
+                return _empty
             # lock/busy: retry with backoff
         except Exception:
             break
@@ -110,4 +121,4 @@ def db_retrieve_table_daemon(
         time.sleep(1)
         tries -= 1
 
-    return []
+    return _empty

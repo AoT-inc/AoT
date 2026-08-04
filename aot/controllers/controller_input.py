@@ -245,6 +245,10 @@ class InputController(AbstractController, threading.Thread):
         """Load input module, configure pre-output, and start listener if available."""
         input_dev = db_retrieve_table_daemon(
             Input, unique_id=self.unique_id)
+        if input_dev is None:
+            raise RuntimeError(
+                f"Input {self.unique_id}: 설정을 읽지 못해 컨트롤러를 "
+                f"시작할 수 없다 (DB 조회 실패 또는 행 삭제)")
 
         self.log_level_debug = input_dev.log_level_debug
         self.set_log_level_debug(self.log_level_debug)
@@ -305,8 +309,10 @@ class InputController(AbstractController, threading.Thread):
         self.trigger_cond = False
         self.measurement_acquired = False
 
+        # SMTP 설정이 없어도 입력 자체는 돌아야 한다 — 시간당 알림 상한만
+        # 기본값으로 두고 계속한다.
         smtp = db_retrieve_table_daemon(SMTP, entry='first')
-        self.smtp_max_count = smtp.hourly_max
+        self.smtp_max_count = smtp.hourly_max if smtp else 0
         self.email_count = 0
         self.allowed_to_send_notice = True
 

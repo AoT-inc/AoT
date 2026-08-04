@@ -5704,3 +5704,269 @@ class AoTDataToolService:
         except Exception as e:
             logger.exception("Error in list_advice")
             return {"status": "error", "message": str(e)}
+
+    # -------------------------------------------------------------------------
+    # 적응형 문서 스토리지 (Tier 1 Hot / 2 Warm / 3 Cold) — 읽기 전용 조회
+    #
+    # 이 계층은 오래 "판정만 하고 실행은 안 하는" 상태였다. 아래 도구들은 그
+    # 실상을 감추지 않고 그대로 보고한다 — AI 가 티어 숫자를 보고 "문서가 실제로
+    # 아카이브에 있다" 고 단정하면 안 되기 때문이다. 실제 이동이 배선되기 전까지
+    # tier 값은 **의도**이고, cold_documents 에 행이 있어야 **실물**이다.
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _cold_storage_service():
+        from aot.services.cold_storage_service import ColdStorageService
+        return ColdStorageService()
+
+    @staticmethod
+    def get_storage_tier_status():
+        """문서 스토리지 티어 현황 — 설정 활성 여부, 티어 분포, 아카이브 실물 통계."""
+        try:
+            from aot.databases.models.tier_adaptive_storage import (
+                AdaptiveStorageSettings, TierDecision)
+            from aot.databases.models.cold_storage import ColdDocuments
+
+            settings = AdaptiveStorageSettings.query.first()
+            enabled = bool(settings and settings.enabled)
+
+            tier_counts = {}
+            for tier, count in (db.session.query(Notes.tier, db.func.count(Notes.id))
+                                .group_by(Notes.tier).all()):
+                tier_counts[str(tier if tier is not None else 2)] = count
+
+            archived_rows = ColdDocuments.query.count()
+            decisions = TierDecision.query.count()
+
+            out = {
+                "status": "success",
+                "adaptive_storage_enabled": enabled,
+                "document_tier_counts": tier_counts,
+                "archived_document_rows": archived_rows,
+                "tier_decision_rows": decisions,
+            }
+
+            if not enabled:
+                out["note"] = (
+                    "Adaptive storage is DISABLED (no AdaptiveStorageSettings row, or "
+                    "enabled=false). The hourly reclassification job exits immediately, "
+                    "so tier values are not being updated at all.")
+
+            # 가장 중요한 경고. tier 값과 실물 아카이브는 아직 연결돼 있지 않다.
+            if archived_rows == 0 and any(t == '3' for t in tier_counts):
+                out["warning"] = (
+                    "Some documents are marked tier 3 (cold) but cold_documents is empty. "
+                    "Tier migration is still a placeholder — the tier value records an "
+                    "INTENT, not a completed move. Document content is still in its "
+                    "original table. Do not tell the user a document was archived unless "
+                    "it appears in search_archives.")
+            return out
+        except Exception as e:
+            logger.exception("Error in get_storage_tier_status")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def search_archives(query=None, limit=50, offset=0):
+        """아카이브된 문서를 메타데이터로 검색한다. 실제 아카이브 실물만 조회된다."""
+        try:
+            try:
+                limit = max(1, min(int(limit), 200))
+                offset = max(0, int(offset))
+            except (TypeError, ValueError):
+                limit, offset = 50, 0
+
+            svc = AoTDataToolService._cold_storage_service()
+            result = svc.search_archives(query=query or None, limit=limit, offset=offset)
+            # 서비스 반환 키는 'results' 다 — 'archives' 로 읽으면 아카이브가
+            # 있어도 항상 빈 목록이 되어 "보관된 문서 없음" 으로 보고된다.
+            archives = result.get('results', [])
+            out = {
+                "status": "success",
+                "count": len(archives),
+                "total": result.get('total', len(archives)),
+                "results": archives,
+            }
+            if not archives:
+                out["note"] = ("No archived documents. This is the expected state until "
+                               "tier migration is wired — it does not mean a search failed.")
+            return out
+        except Exception as e:
+            logger.exception("Error in search_archives")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def get_archived_document(document_id=None, include_content=False):
+        """아카이브 문서 하나를 조회한다. include_content=True 면 본문까지 해제한다."""
+        try:
+            if not document_id or not isinstance(document_id, str):
+                return {"status": "error", "message": "document_id is required"}
+
+            svc = AoTDataToolService._cold_storage_service()
+            result = svc.restore_document(document_id,
+                                          decompress=bool(include_content))
+            if result is None:
+                return {
+                    "status": "not_found",
+                    "document_id": document_id,
+                    "message": ("Not in the archive. If the document is marked tier 3, that "
+                                "is an intent flag only — its content is still in the "
+                                "original table."),
+                }
+            return {"status": "success", "document": result}
+        except FileNotFoundError as e:
+            # DB 행은 있는데 파일이 없다 — 조용히 넘기면 안 되는 불일치다.
+            logger.error("Archive file missing for %s: %s", document_id, e)
+            return {
+                "status": "error",
+                "document_id": document_id,
+                "message": f"Archive record exists but its file is missing: {e}",
+            }
+        except Exception as e:
+            logger.exception("Error in get_archived_document")
+            return {"status": "error", "message": str(e)}
+
+    # -------------------------------------------------------------------------
+    # 적응형 문서 스토리지 — 쓰기 (전부 승인 게이트 대상)
+    #
+    # 아카이브는 **사본을 만들 뿐 원본을 지우지 않는다.** 원본 삭제는 보존정책의
+    # 몫이고, 여기서 하면 되돌릴 수 없는 작업이 승인 한 번에 묻어 들어간다.
+    # 그래서 archive 는 "복사 + tier 표시", restore 는 "tier 되돌리기"까지만 한다.
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def archive_note(note_id=None, retention_policy='default'):
+        """노트 본문을 아카이브에 복사하고 tier 를 3(cold)으로 표시한다."""
+        try:
+            if not note_id or not isinstance(note_id, str):
+                return {"status": "error", "message": "note_id is required"}
+
+            note = Notes.query.filter_by(unique_id=note_id).first()
+            if note is None:
+                return {"status": "not_found", "message": f"Note {note_id} not found"}
+
+            content = note.note or ''
+            if not content.strip():
+                return {"status": "error",
+                        "message": "Note has no content to archive"}
+
+            meta = {"name": note.name, "note_tags": note.note_tags}
+            svc = AoTDataToolService._cold_storage_service()
+            result = svc.archive_document(
+                document_id=note_id, content=content, metadata=meta,
+                retention_policy=retention_policy, archived_by='ai')
+
+            note.tier = 3
+            db.session.commit()
+
+            return {
+                "status": "success",
+                "document_id": note_id,
+                "archive_path": result['archive_path'],
+                "compression_ratio": result['compression_ratio'],
+                "note": ("A copy was archived and the note was marked tier 3. "
+                         "The original note text was NOT deleted — deletion is "
+                         "handled by the retention policy, not by archiving."),
+            }
+        except ValueError as e:      # 이미 아카이브됨
+            return {"status": "error", "message": str(e)}
+        except Exception as e:
+            db.session.rollback()
+            logger.exception("Error in archive_note")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def restore_note_from_archive(note_id=None, target_tier=2):
+        """아카이브 본문을 확인하고 노트를 지정 티어로 되돌린다."""
+        try:
+            if not note_id or not isinstance(note_id, str):
+                return {"status": "error", "message": "note_id is required"}
+            try:
+                target_tier = int(target_tier)
+            except (TypeError, ValueError):
+                target_tier = 2
+            if target_tier not in (1, 2, 3):
+                return {"status": "error", "message": "target_tier must be 1, 2 or 3"}
+
+            svc = AoTDataToolService._cold_storage_service()
+            archived = svc.restore_document(note_id, decompress=True)
+            if archived is None:
+                return {"status": "not_found",
+                        "message": f"{note_id} is not in the archive"}
+
+            note = Notes.query.filter_by(unique_id=note_id).first()
+            if note is None:
+                # 아카이브만 남고 원본이 사라진 경우 — 본문을 돌려주되 상태를 밝힌다.
+                return {
+                    "status": "orphan_archive",
+                    "document_id": note_id,
+                    "content": archived.get('content'),
+                    "message": ("The archive exists but the original note is gone. "
+                                "Returning the archived text; recreating the note is "
+                                "a separate action."),
+                }
+
+            note.tier = target_tier
+            db.session.commit()
+            return {
+                "status": "success",
+                "document_id": note_id,
+                "tier": target_tier,
+                "content_matches_original": (note.note or '') == archived.get('content'),
+            }
+        except Exception as e:
+            db.session.rollback()
+            logger.exception("Error in restore_note_from_archive")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def set_document_tier(note_id=None, tier=None):
+        """노트의 티어 값만 바꾼다 — 내용은 옮기지 않는다."""
+        try:
+            if not note_id or not isinstance(note_id, str):
+                return {"status": "error", "message": "note_id is required"}
+            try:
+                tier = int(tier)
+            except (TypeError, ValueError):
+                return {"status": "error", "message": "tier must be 1, 2 or 3"}
+            if tier not in (1, 2, 3):
+                return {"status": "error", "message": "tier must be 1, 2 or 3"}
+
+            note = Notes.query.filter_by(unique_id=note_id).first()
+            if note is None:
+                return {"status": "not_found", "message": f"Note {note_id} not found"}
+
+            previous, note.tier = note.tier, tier
+            db.session.commit()
+
+            out = {"status": "success", "document_id": note_id,
+                   "previous_tier": previous, "tier": tier}
+            if tier == 3:
+                out["note"] = ("Marked cold, but nothing was moved. Use archive_note "
+                               "to actually place a copy in the archive.")
+            return out
+        except Exception as e:
+            db.session.rollback()
+            logger.exception("Error in set_document_tier")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def delete_archive(document_id=None, reason=''):
+        """아카이브 사본을 삭제한다. 원본 노트는 건드리지 않는다."""
+        try:
+            if not document_id or not isinstance(document_id, str):
+                return {"status": "error", "message": "document_id is required"}
+
+            svc = AoTDataToolService._cold_storage_service()
+            deleted = svc.delete_archive(document_id, deletion_reason=reason or 'ai request')
+            if not deleted:
+                return {"status": "not_found",
+                        "message": f"{document_id} is not in the archive"}
+            return {
+                "status": "success",
+                "document_id": document_id,
+                "note": ("The archived copy was deleted. The original note was not "
+                         "touched; its tier value is unchanged and may still read 3."),
+            }
+        except Exception as e:
+            logger.exception("Error in delete_archive")
+            return {"status": "error", "message": str(e)}

@@ -94,6 +94,10 @@ class FunctionController(AbstractController, threading.Thread):
         """Load function module and start listener thread if available."""
         function = db_retrieve_table_daemon(
             CustomController, unique_id=self.unique_id)
+        if function is None:
+            raise RuntimeError(
+                f"Function {self.unique_id}: 설정을 읽지 못해 컨트롤러를 "
+                f"시작할 수 없다 (DB 조회 실패 또는 행 삭제)")
 
         self.log_level_debug = function.log_level_debug
         self.set_log_level_debug(self.log_level_debug)

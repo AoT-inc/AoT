@@ -267,6 +267,12 @@ class PIDController(AbstractController, threading.Thread):
                 if self.setpoint_tracking_type == 'method' and self.setpoint_tracking_id != '':
                     # Update setpoint using a method
                     this_pid = db_retrieve_table_daemon(PID, unique_id=self.unique_id)
+                    if this_pid is None:
+                        # 설정을 못 읽은 사이클은 건너뛴다 — 옛 설정으로 계속
+                        # 제어하는 편이 엉뚱한 값으로 움직이는 것보다 낫다.
+                        self.logger.error(
+                            "PID 설정을 읽지 못해 이번 설정점 추종을 건너뛴다")
+                        return
 
                     now = utc_now()
 

@@ -139,6 +139,19 @@ class TestGenerateArchivePath(unittest.TestCase):
         self.assertIn('/01/', path)
 
 
+
+def _comparable(mock_index_class):
+    """`ArchiveIndex.deletion_date <= now` 가 성립하도록 비교 매직메서드를 심는다.
+
+    MagicMock 은 __le__/__lt__ 의 기본 반환이 NotImplemented 라 datetime 과
+    비교하면 TypeError 가 난다. 필터식의 결과값은 mock query 가 어차피 무시하므로
+    True 만 돌려주면 충분하다.
+    """
+    mock_index_class.deletion_date.__le__ = MagicMock(return_value=True)
+    mock_index_class.deletion_date.__lt__ = MagicMock(return_value=True)
+    return mock_index_class
+
+
 # ===========================================================================
 # ColdStorageService - Archive document
 # ===========================================================================
@@ -157,7 +170,7 @@ class TestArchiveDocument(unittest.TestCase):
     @patch('aot.services.cold_storage_service.ArchiveIndex')
     @patch('aot.services.cold_storage_service.ArchiveAuditLog')
     @patch('aot.services.cold_storage_service.os.makedirs')
-    @patch('builtins.open', mock_open())
+    @patch('builtins.open', new_callable=mock_open)
     def test_archive_document_creates_records(self, mock_open, mock_makedirs, mock_audit, mock_index, mock_cold):
         """archive_document() creates ColdDocuments and ArchiveIndex records."""
         mock_cold_instance = MagicMock()
@@ -170,6 +183,10 @@ class TestArchiveDocument(unittest.TestCase):
         mock_index_instance = MagicMock()
         mock_index.return_value = mock_index_instance
         mock_index_instance.save.return_value = mock_index_instance
+
+        # 중복 검사는 first() 가 None 이어야 통과한다. MagicMock 기본 반환은
+        # truthy 라서, 설정하지 않으면 "이미 아카이브됨" 으로 판정된다.
+        mock_cold.query.filter_by.return_value.first.return_value = None
 
         result = self.service.archive_document(
             document_id=SAMPLE_DOCUMENT_ID,
@@ -204,7 +221,7 @@ class TestArchiveDocument(unittest.TestCase):
     @patch('aot.services.cold_storage_service.ArchiveIndex')
     @patch('aot.services.cold_storage_service.ArchiveAuditLog')
     @patch('aot.services.cold_storage_service.os.makedirs')
-    @patch('builtins.open', mock_open())
+    @patch('builtins.open', new_callable=mock_open)
     def test_archive_document_stores_metadata(self, mock_open, mock_makedirs, mock_audit, mock_index, mock_cold):
         """Metadata is stored as JSON in ColdDocuments."""
         mock_cold_instance = MagicMock()
@@ -218,6 +235,10 @@ class TestArchiveDocument(unittest.TestCase):
         mock_index.return_value = mock_index_instance
         mock_index_instance.save.return_value = mock_index_instance
 
+        # 중복 검사는 first() 가 None 이어야 통과한다. MagicMock 기본 반환은
+        # truthy 라서, 설정하지 않으면 "이미 아카이브됨" 으로 판정된다.
+        mock_cold.query.filter_by.return_value.first.return_value = None
+
         self.service.archive_document(
             document_id=SAMPLE_DOCUMENT_ID,
             content=SAMPLE_CONTENT,
@@ -226,7 +247,7 @@ class TestArchiveDocument(unittest.TestCase):
 
         # Verify metadata was passed to ColdDocuments
         call_kwargs = mock_cold.call_args[1]
-        self.assertEqual(json.loads(call_kwargs['metadata']), SAMPLE_METADATA)
+        self.assertEqual(json.loads(call_kwargs['meta_json']), SAMPLE_METADATA)
 
 
 # ===========================================================================
@@ -255,12 +276,19 @@ class TestRestoreDocument(unittest.TestCase):
         mock_cold_doc.archive_path = os.path.join(self.archive_dir, '2026', '03', f'{SAMPLE_DOCUMENT_ID}.archive')
         mock_cold_doc.restore_count = 0
         mock_cold_doc.last_accessed = datetime.utcnow() - timedelta(days=30)
+        # 결과 dict 를 만들 때 실제로 역직렬화된다 — MagicMock 이면 json.loads 가 터진다.
+        mock_cold_doc.meta_json = json.dumps(SAMPLE_METADATA)
+        mock_cold_doc.archived_at = datetime.utcnow()
 
-        # Create a valid compressed content
-        compressed = gzip.compress(SAMPLE_CONTENT.encode('utf-8'))
+        # 서비스가 os.path.exists() 로 실물을 먼저 확인하므로 open() 만 mock 해서는
+        # FileNotFoundError 를 넘지 못한다. tmpdir 에 실제 아카이브를 써서
+        # 존재 확인·읽기·해제까지 실제 경로를 그대로 태운다.
+        mock_cold_doc.compression_type = 'gzip'
+        os.makedirs(os.path.dirname(mock_cold_doc.archive_path), exist_ok=True)
+        with open(mock_cold_doc.archive_path, 'wb') as fh:
+            fh.write(gzip.compress(SAMPLE_CONTENT.encode('utf-8')))
 
-        with patch('aot.services.cold_storage_service.ColdDocuments') as mock_cold_class, \
-             patch('builtins.open', mock_open(read_data=compressed)):
+        with patch('aot.services.cold_storage_service.ColdDocuments') as mock_cold_class:
             mock_cold_class.query.filter_by.return_value.first.return_value = mock_cold_doc
 
             result = self.service.restore_document(SAMPLE_DOCUMENT_ID)
@@ -273,7 +301,7 @@ class TestRestoreDocument(unittest.TestCase):
         """restore_document(decompress=False) returns only metadata."""
         mock_cold_doc = MagicMock()
         mock_cold_doc.document_id = SAMPLE_DOCUMENT_ID
-        mock_cold_doc.metadata = json.dumps(SAMPLE_METADATA)
+        mock_cold_doc.meta_json = json.dumps(SAMPLE_METADATA)
         mock_cold_doc.archived_at = datetime.utcnow()
         mock_cold_doc.compression_type = 'gzip'
         mock_cold_doc.compression_ratio = 75.0
@@ -316,7 +344,7 @@ class TestSearchArchives(unittest.TestCase):
             for i, mock_doc in enumerate(mock_results):
                 mock_doc.document_id = f'doc-{i}'
                 mock_doc.unique_id = f'uuid-{i}'
-                mock_doc.metadata = json.dumps({'title': f'Doc {i}'})
+                mock_doc.meta_json = json.dumps({'title': f'Doc {i}'})
                 mock_doc.archived_at = datetime.utcnow()
                 mock_doc.last_accessed = datetime.utcnow()
                 mock_doc.compression_type = 'gzip'
@@ -370,11 +398,15 @@ class TestEnforceRetentionPolicies(unittest.TestCase):
         mock_archive.document_id = SAMPLE_DOCUMENT_ID
         mock_archive.status = 'active'
         mock_archive.deletion_date = datetime.utcnow() - timedelta(days=1)  # expired
+        # 만료 처리 시 감사 로그가 이 둘을 json.dumps 한다.
+        mock_archive.retention_policy = 'default'
+        mock_archive.retention_days = 1095
 
         with patch('aot.services.cold_storage_service.ArchiveIndex') as mock_index_class:
             mock_query = MagicMock()
             mock_index_class.query.filter.return_value = mock_query
             mock_query.all.return_value = [mock_archive]
+            _comparable(mock_index_class)
 
             result = self.service.enforce_retention_policies()
 
@@ -387,6 +419,7 @@ class TestEnforceRetentionPolicies(unittest.TestCase):
             mock_query = MagicMock()
             mock_index_class.query.filter.return_value = mock_query
             mock_query.all.return_value = []
+            _comparable(mock_index_class)
 
             mock_index_class.query.filter_by.return_value.count.return_value = 5
 
@@ -410,7 +443,12 @@ class TestGetArchiveStats(unittest.TestCase):
     def test_get_archive_stats_returns_required_fields(self):
         """Returns all required statistical fields."""
         with patch('aot.services.cold_storage_service.ColdDocuments') as mock_cold_class, \
-             patch('aot.services.cold_storage_service.ArchiveIndex') as mock_index_class:
+             patch('aot.services.cold_storage_service.ArchiveIndex') as mock_index_class, \
+             patch('aot.services.cold_storage_service.ArchiveAuditLog') as mock_audit_class, \
+             patch('aot.services.cold_storage_service.db') as mock_db:
+            mock_audit_class.query.filter.return_value.count.return_value = 3
+            # `ArchiveAuditLog.timestamp >= day_ago` — 같은 이유로 비교를 심는다.
+            mock_audit_class.timestamp.__ge__ = MagicMock(return_value=True)
             mock_cold_class.query.count.return_value = 10
             mock_cold_class.query.all.return_value = [
                 MagicMock(original_size=1000, compressed_size=250),
@@ -421,6 +459,11 @@ class TestGetArchiveStats(unittest.TestCase):
                 ('default', 5), ('1year', 3)
             ]
             mock_index_class.query.filter.return_value.count.return_value = 2
+            _comparable(mock_index_class)
+            # 보존정책 분포는 ArchiveIndex.query 가 아니라 db.session.query 로
+            # 조회한다 — 이걸 mock 하지 않으면 app context 밖이라 터진다.
+            mock_db.session.query.return_value.filter_by.return_value \
+                .group_by.return_value.all.return_value = [('default', 5), ('1year', 3)]
 
             result = self.service.get_archive_stats()
 
@@ -548,7 +591,7 @@ class TestConvenienceMethods(unittest.TestCase):
         """archive() accepts a document object with content attribute."""
         mock_doc = MagicMock()
         mock_doc.content = SAMPLE_CONTENT
-        mock_doc.metadata = SAMPLE_METADATA
+        mock_doc.meta_json = json.dumps(SAMPLE_METADATA)
 
         with patch.object(self.service, 'archive_document') as mock_archive:
             mock_archive.return_value = {'document_id': SAMPLE_DOCUMENT_ID}
@@ -609,6 +652,7 @@ class TestCheckRetentionPolicy(unittest.TestCase):
             mock_query = MagicMock()
             mock_index.query.filter.return_value = mock_query
             mock_query.all.return_value = [mock_expired1, mock_expired2]
+            _comparable(mock_index)
 
             result = self.service.check_retention_policy()
 

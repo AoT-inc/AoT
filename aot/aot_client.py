@@ -407,6 +407,9 @@ class DaemonControl:
     @staticmethod
     def send_email(recipients, message, subject=''):
         smtp = db_retrieve_table_daemon(SMTP, entry='first')
+        if smtp is None:
+            logger.error("SMTP 설정을 읽지 못해 이메일 발송을 건너뛴다")
+            return
         send_email_notification(
             smtp.host, smtp.protocol, smtp.port,
             smtp.user, smtp.passw, smtp.email_from,

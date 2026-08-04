@@ -118,6 +118,12 @@ def parse_action_information(exclude_custom=False, custom_only=False):
 
 def check_allowed_to_email():
     smtp_table = db_retrieve_table_daemon(SMTP, entry='first')
+    if smtp_table is None:
+        # 설정을 못 읽으면 어차피 발송할 수 없다. "허용" 으로 답하면 호출부가
+        # 곧바로 send_email(smtp.host, ...) 로 넘어가 AttributeError 를 낸다.
+        logger.error("SMTP 설정을 읽지 못해 이메일 발송을 건너뛴다 "
+                     "(DB 조회 실패 또는 미설정)")
+        return 0, False
     smtp_max_count = smtp_table.hourly_max
     smtp_wait_timer = smtp_table.smtp_wait_timer
     email_count = smtp_table.email_count
@@ -347,12 +353,21 @@ def get_condition_value_dict(condition_id):
 def action_video(cond_action, message):
     this_camera = db_retrieve_table_daemon(
         Camera, unique_id=cond_action.do_unique_id, entry='first')
+    if this_camera is None:
+        logger.error("action_video: 카메라 %s 조회 실패 — 녹화를 건너뛴다",
+                     cond_action.do_unique_id)
+        message += f"  Camera {cond_action.do_unique_id} not found; skipped recording."
+        return message
     message += "  Capturing video with camera {unique_id} ({id}, {name}).".format(
         unique_id=cond_action.do_unique_id,
         id=this_camera.id,
         name=this_camera.name)
     camera_stream = db_retrieve_table_daemon(
         Camera, unique_id=cond_action.do_unique_id)
+    if camera_stream is None:
+        logger.error("action_video: 카메라 %s 재조회 실패 — 녹화를 건너뛴다",
+                     cond_action.do_unique_id)
+        return message
     path, filename = camera_record(
         'video', camera_stream.unique_id,
         duration_sec=cond_action.do_camera_duration)

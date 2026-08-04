@@ -123,6 +123,9 @@ from .tier_adaptive_storage import TierThreshold           # Adaptive Document S
 from .tier_adaptive_storage import TierDecision
 from .tier_adaptive_storage import DocumentAccessLog
 from .tier_adaptive_storage import AdaptiveStorageSettings
+from .cold_storage import ColdDocuments                     # Tier 3 (Cold/Archive)
+from .cold_storage import ArchiveIndex
+from .cold_storage import ArchiveAuditLog
 from .mcp_audit import MCPAuditLog, MCPConfirmation
 from .audit import AuditLog
 from .ai_advice import AIAdvice
