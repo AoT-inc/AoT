@@ -33,8 +33,9 @@ class GeoDesignManager:
         """
         Auto-load or Create the latest Design Map.
         """
-        # 1. Find existing design maps [Optimization] Filter by category='design' in SQL
-        target_map = GeoMap.query.filter_by(category='design').order_by(GeoMap.updated_at.desc()).first()
+        # 1. 기존 지도 중 가장 최근 것
+        # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+        target_map = GeoMap.query.order_by(GeoMap.updated_at.desc()).first()
                 
         # 2. If not found, create new
         if not target_map:

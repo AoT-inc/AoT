@@ -141,8 +141,9 @@ def api_geo_design_get(map_uuid):
 def api_geo_designs_list():
     """Get List of all Design Maps for selectors"""
     try:
-        # [Optimization] Filter by category='design' in SQL to avoid heavy JSON parsing
-        all_maps = GeoMap.query.filter_by(category='design').order_by(GeoMap.updated_at.desc()).all()
+        # [P3] 지도 종류 구분 없음 — 전체 목록.
+        # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+        all_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
         result = []
         for m in all_maps:
             state = m.state_dict()
@@ -1261,7 +1262,8 @@ def page_design():
         return redirect(url_for('routes_general.home'))
     
     # GeoMap configs - [Optimization] Filter for Design Maps only in SQL
-    design_maps = GeoMap.query.filter_by(category='design').order_by(GeoMap.updated_at.desc()).all()
+    # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+    design_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
 
     # [Auto-Create] Default Map if none exist
     if not design_maps:
@@ -1314,8 +1316,8 @@ def page_facility():
     from aot.databases.models import GeoFacility, Measurement, Unit
     from aot.aot_flask.utils.utils_general import add_custom_measurements, add_custom_units
 
-    design_maps = GeoMap.query.filter_by(category='design')\
-        .order_by(GeoMap.updated_at.desc()).all()
+    # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+    design_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
     facilities = GeoFacility.query.order_by(GeoFacility.updated_at.desc()).all()
 
     # Input channel choices — system-standard pattern (same as PID/Function/Conditional pages).

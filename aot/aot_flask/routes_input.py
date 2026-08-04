@@ -408,9 +408,8 @@ def page_input():
     map_configs = []
     map_config_id = ''
     try:
-        map_configs = GeoMap.query.filter(
-            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
-        ).all()
+        # [P3] 모든 지도가 동등하다 — is_device_owned 분기 폐기.
+        map_configs = GeoMap.query.all()
     except Exception:
         map_configs = []
 
@@ -482,9 +481,8 @@ def page_input():
         map_configs = []
         map_config_id = ''
         try:
-            map_configs = GeoMap.query.filter(
-                or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
-            ).all()
+            # [P3] 모든 지도가 동등하다 — is_device_owned 분기 폐기.
+            map_configs = GeoMap.query.all()
         except Exception:
             map_configs = []
         return render_template('pages/data_options/input_entry.html',
@@ -548,9 +546,8 @@ def page_input():
     elif input_type == 'options':
         map_configs = []
         try:
-            map_configs = GeoMap.query.filter(
-                or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
-            ).all()
+            # [P3] 모든 지도가 동등하다 — is_device_owned 분기 폐기.
+            map_configs = GeoMap.query.all()
         except Exception:
             map_configs = []
         map_config_id = ''

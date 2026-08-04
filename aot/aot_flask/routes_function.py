@@ -880,9 +880,8 @@ def page_function():
     # Map list (common for function/options)
     map_configs = []
     try:
-        map_configs = GeoMap.query.filter(
-            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
-        ).all()
+        # [P3] 모든 지도가 동등하다 — is_device_owned 분기 폐기.
+        map_configs = GeoMap.query.all()
     except Exception:
         map_configs = []
 
@@ -998,9 +997,8 @@ def page_function():
                                map_overlays=map_overlays,
                                all_functions_sorted=all_functions_sorted)
     elif function_type == 'entry':
-        map_configs = GeoMap.query.filter(
-            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
-        ).all()
+        # [P3] 모든 지도가 동등하다 — is_device_owned 분기 폐기.
+        map_configs = GeoMap.query.all()
         map_config_uuid = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_function and isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)):
@@ -1101,9 +1099,8 @@ def page_function():
                                map_config_id=map_config_uuid,
                                map_overlays=map_overlays)
     elif function_type == 'options':
-        map_configs = GeoMap.query.filter(
-            or_(GeoMap.is_device_owned.is_(False), GeoMap.is_device_owned.is_(None))
-        ).all()
+        # [P3] 모든 지도가 동등하다 — is_device_owned 분기 폐기.
+        map_configs = GeoMap.query.all()
         map_config_uuid = ''
         map_overlays = {"type": "FeatureCollection", "features": []}
         if each_function and isinstance(each_function, (CustomController, Trigger, Conditional, PID, Function)):

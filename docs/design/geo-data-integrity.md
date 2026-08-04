@@ -144,8 +144,12 @@ P1 ✅ 자동 생성 중단 + 원칙 3    GET 쓰기 제거(5곳) · 장치 생�
 P2 ✅ 읽기를 파생으로            map_config_id 독자 전부 전환(라우트 5·
                                 collect_devices·AI 3·위성) + 쓰기 잔여 3곳
                                 제거 → 컬럼을 쓰는 코드 0 (33329ca/bca6323)
-P3    개념 폐기                 category/is_device_owned 제거, 판정 일원화
-P4    데이터 정리               빈 지도 (koat 20 · aot-005 50) — 참조 확인 후
+P4 ✅ 데이터 정리               빈 지도(도형0·시설0·JSON 미참조) 삭제 —
+                                koat 39 · aot-005 79 · aot-004 42.
+                                **P3 보다 먼저** 해야 한다: 판정을 없애면
+                                목록에 전부 노출되기 때문(2→43, 3→84)
+P3 ✅ 개념 폐기                 category/is_device_owned 분기 전부 제거(16곳),
+                                장치 삭제가 지도를 지우지 않게(원칙 1)
 P5    컬럼 드롭                 map_config_id + (사망 처리된) map_overlay_id
 ```
 

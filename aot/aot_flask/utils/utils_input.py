@@ -38,7 +38,6 @@ from aot.utils.system_pi import parse_custom_option_values
 from aot.aot_flask.utils.utils_map_config import (
     ensure_map_config,
     clone_map_config,
-    delete_map_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -793,8 +792,9 @@ def input_del(input_id):
                 flash_message=False)
 
         delete_entry_with_id(Input, input_id, flash_message=False)
-        if map_config_id:
-            delete_map_config(map_config_id)
+        # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도 지도는
+        # 남는다. 과거 이 호출이 장치 삭제로 공유 디자인 지도를 통째로
+        # 지웠다(임실군 62도형). 지도 삭제는 geo/design 에서 명시적으로만.
 
         # [Fix] Delete associated Map Overlays (Level 2 Shapes)
         # Covers all channels for this device_id

@@ -169,7 +169,16 @@ def _map_still_referenced(map_config_uuid):
 
 
 def delete_map_config(map_config_uuid):
-    """Delete a device-owned map and its overlays.
+    """[P3 이후 사망] 호출자 없음 — 새로 부르지 말 것.
+
+    원칙 1: 지도는 장치의 소유물이 아니다. 장치를 지워도 지도는 남으며,
+    지도 삭제는 geo/design 에서 명시적으로만 한다. 이 함수의 2중 가드는
+    "장치 삭제가 공유 디자인 지도를 통째로 지운" 사고(임실군 62도형,
+    2026-08-03)에 대한 증상 대응이었고, P3 가 원인을 없앴다.
+    P5 에서 map_config_id 컬럼과 함께 제거한다.
+
+    --- 이하 과거 설명 ---
+    Delete a device-owned map and its overlays.
 
     Refuses to touch shared maps. A device's `map_config_id` does NOT imply
     ownership: the device settings page offers every non-device-owned map

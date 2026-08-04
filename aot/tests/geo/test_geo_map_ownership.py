@@ -269,5 +269,66 @@ class TestMapMembershipIsDerived(unittest.TestCase):
         self.assertEqual(map_for_device(dev.unique_id, prefer='mB'), 'mA')
 
 
+class TestAllMapsAreEqual(unittest.TestCase):
+    """P3 원칙 1 — 지도는 공간이지 장치의 소유물이 아니다.
+
+    `category`/`is_device_owned` 로 "사용자 지도"를 가리던 판정이 4갈래로
+    갈려 있었다(엄격 design / design-or-NULL / is_device_owned / 둘 다).
+    같은 지도가 어떤 화면에는 뜨고 어떤 화면에는 안 뜨는 원인이었다.
+    이제 구분할 종류가 없으므로 판정도 없다.
+    """
+
+    def test_no_code_branches_on_map_category_or_ownership(self):
+        import re
+        offenders = []
+        # GeoMap 에 한정한다 — 다른 모델의 category(AIDomainGlossary,
+        # Notes 등)는 이 원칙과 무관하다.
+        pat = re.compile(
+            r"GeoMap\.category|GeoMap\.query\.filter_by\(category=|"
+            r"is_device_owned")
+        for path in _iter_py():
+            rel = _rel(path)
+            if rel == FACTORY_MODULE:      # 사망 함수 내부는 P5 에서 제거
+                continue
+            try:
+                src = open(path, encoding='utf-8').read()
+            except Exception:
+                continue
+            for i, line in enumerate(src.splitlines(), 1):
+                st = line.strip()
+                if st.startswith('#') or st.startswith('"'):
+                    continue
+                if 'db.Column' in line:      # 컬럼 정의는 P5 까지 남는다
+                    continue
+                if pat.search(line):
+                    offenders.append('%s:%d %s' % (rel, i, st[:70]))
+        self.assertEqual(
+            offenders, [],
+            '지도 종류로 분기하는 코드가 남아 있습니다 (원칙 1):\n  ' +
+            '\n  '.join(offenders))
+
+    def test_device_deletion_does_not_delete_maps(self):
+        """장치를 지워도 지도는 남는다 — delete_map_config 호출자 0."""
+        import ast as _ast
+        offenders = []
+        for path in _iter_py():
+            rel = _rel(path)
+            if rel == FACTORY_MODULE:
+                continue
+            try:
+                tree = _ast.parse(open(path, encoding='utf-8').read())
+            except Exception:
+                continue
+            for node in _ast.walk(tree):
+                if isinstance(node, _ast.Call) and \
+                        isinstance(node.func, _ast.Name) and \
+                        node.func.id == 'delete_map_config':
+                    offenders.append('%s:%d' % (rel, node.lineno))
+        self.assertEqual(
+            offenders, [],
+            '장치 삭제 경로가 지도를 지웁니다 (원칙 1). 임실군 62도형이 '
+            '이렇게 사라졌습니다:\n  ' + '\n  '.join(offenders))
+
+
 if __name__ == '__main__':
     unittest.main()

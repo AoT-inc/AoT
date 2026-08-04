@@ -1266,7 +1266,8 @@ def get_available_config_options():
     available_maps = []
     try:
         from sqlalchemy import or_
-        maps = GeoMap.query.filter(or_(GeoMap.category == 'design', GeoMap.category == None)).order_by(GeoMap.updated_at.desc()).all()
+        # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+        maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
         available_maps = [{
             'id': m.unique_id,
             'name': m.name,

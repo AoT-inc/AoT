@@ -40,7 +40,8 @@ class GeoDesigns(Resource):
     def get(self):
         """Get List of all Design Maps"""
         try:
-            all_maps = GeoMap.query.filter_by(category='design').order_by(GeoMap.updated_at.desc()).all()
+            # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+            all_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
             result = []
             for m in all_maps:
                 state = m.state_dict()

@@ -393,7 +393,8 @@
         ("Camera", table_camera.query.all()),
         ("Function", table_function.query.all()),
         ("Conditional", table_conditional.query.all()),
-        ("Map", table_geomap.query.filter_by(category='design').all()),
+        {# [P3] 모든 지도가 동등하다 — category 분기 폐기. #}
+        ("Map", table_geomap.query.all()),
         ("GeoFacility", table_geofacility.query.all() if table_geofacility else [])
       ] %}
 
