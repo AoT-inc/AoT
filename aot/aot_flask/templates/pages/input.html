@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
-<script src="/static/js/common/aot-output-state.js?v=6"></script>
+<script src="/static/js/common/aot-output-state.js?v=8"></script>
 
 
 {% include 'pages/map/map_assets.html' %}
@@ -125,11 +125,11 @@
     $.getJSON('/inputstate', function (states) {
       $.each(states, function (id, s) {
         var $el = $('#input_status_' + id);
-        $el.removeClass('inactive-background active-background pause-background');
+        $el.removeClass('inactive-background active-background fault-background');
         if (!s.active) {
           $el.addClass('inactive-background');
         } else if (s.comm_fault) {
-          $el.addClass('pause-background');
+          $el.addClass('fault-background');
         } else {
           $el.addClass('active-background');
         }

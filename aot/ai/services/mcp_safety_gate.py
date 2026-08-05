@@ -45,11 +45,21 @@ META_KEYS = frozenset({'_reason', '_agent_id', '_confirmation_id'})
 # (AoTNativeToolEngine 은 tool_registry.TOOLS 에 선언돼 있지 않다.)
 _NATIVE_WRITE_TOOLS = frozenset({'set_output_state'})
 
-# 승인 유효시간 — 사람이 판단할 시간이 필요하므로 기본 5분.
-# (구 safety.py 의 60초는 사람 승인용으로는 너무 짧았다.)
-_CONFIRM_TTL_SEC = int(os.environ.get('AOT_MCP_CONFIRM_TTL_SEC', '300'))
+# 유효시간은 두 구간으로 나뉜다. 전에는 하나(5분)로 둘 다 덮었는데, 그러면
+# 두 요구가 충돌한다: 사람이 판단할 시간은 길어야 하고, 승인이 살아있는 시간은
+# 짧아야 한다(승인해 둔 물리 제어가 한참 뒤에 실행되면 안 된다).
+#
+# 한 값으로 묶여 있을 때 실제로 생기던 문제: 4분 50초 만에 승인을 누르면 실행
+# 가능 시간이 10초밖에 안 남아, 사람은 분명히 승인했는데 AI 가 재호출하는 사이
+# confirmation_expired 가 났다. 만료까지 남은 시간이 승인 시점에 따라 달라지는
+# 셈이라 예측이 불가능했다.
+#
+#   1) 생성 → 승인   : 사람이 판단할 시간. 넉넉해야 한다.
+_CONFIRM_TTL_SEC = int(os.environ.get('AOT_MCP_CONFIRM_TTL_SEC', '900'))
+#   2) 승인 → 실행   : 승인이 살아있는 시간. 승인 시점부터 새로 시작한다.
+_APPROVED_TTL_SEC = int(os.environ.get('AOT_MCP_APPROVED_TTL_SEC', '300'))
 
-# 도구별 시간당 호출 상한 (best-effort, 프로세스 인메모리).
+# 도구별 시간당 호출 상한.
 _DEFAULT_CALLS_PER_HOUR = 10
 _RATE_LIMITS = {
     'operate_device': 20,
@@ -57,6 +67,9 @@ _RATE_LIMITS = {
     'schedule_device_control': 20,
 }
 
+_RATE_WINDOW_SEC = 3600.0
+
+# DB 를 못 읽을 때만 쓰는 프로세스 로컬 폴백 카운터.
 # {agent_id: {tool_name: [timestamp, ...]}}
 _call_log = {}
 
@@ -119,15 +132,57 @@ def _canonical_params(arguments: dict) -> str:
     return json.dumps(strip_meta(arguments), ensure_ascii=False, sort_keys=True)
 
 
-def _check_rate_limit(agent_id: str, tool_name: str) -> None:
-    limit = _RATE_LIMITS.get(tool_name, _DEFAULT_CALLS_PER_HOUR)
+def _check_rate_limit_in_process(agent_id: str, tool_name: str, limit: int) -> None:
+    """DB 를 못 읽을 때의 폴백 — 이 프로세스에서 센 횟수만 본다."""
     now = time.time()
     calls = _call_log.setdefault(agent_id, {}).setdefault(tool_name, [])
-    calls[:] = [t for t in calls if now - t < 3600.0]
+    calls[:] = [t for t in calls if now - t < _RATE_WINDOW_SEC]
     if len(calls) >= limit:
         raise RateLimitExceeded(
             f"Rate limit exceeded for '{tool_name}': {limit} calls/hour (agent={agent_id}).")
     calls.append(now)
+
+
+def _check_rate_limit(agent_id: str, tool_name: str) -> None:
+    """시간당 호출 상한. 카운트 기준은 MCPConfirmation 행(= 프로세스 공유).
+
+    인메모리 dict 로 세면 안 되는 이유: 이 게이트를 import 하는 프로세스가
+    최소 둘이다 — 웹앱(gunicorn)이 직접 띄우는 stdio 브릿지 경로와, 별도
+    컨테이너/유닛으로 도는 HTTP 서버(`aot_mcp_server.py --http`). 각자 제
+    dict 를 들고 있어서, 같은 키가 양쪽을 번갈아 치면 상한이 프로세스 수만큼
+    곱해졌다(operate_device 20회/시간 → 실질 40회). 재시작하면 그마저 0으로
+    돌아갔다.
+
+    쓰기 시도는 예외 없이 MCPConfirmation 행을 하나 남긴다 — 승인 대기(pending)
+    든, elicitation 즉답(consumed/rejected)이든. 그래서 그 행을 세면 새 테이블
+    없이 프로세스 간 공유되고 재시작에도 살아남는 카운터가 된다. 부수효과로
+    elicitation 경로도 이제 상한에 포함된다(전에는 `_check_rate_limit` 를 아예
+    거치지 않아 무제한이었다).
+
+    원자적 카운터는 아니다 — 두 프로세스가 동시에 세면 둘 다 통과할 수 있다.
+    상한은 폭주 방지용 best-effort 이고, 모든 쓰기는 그 뒤에 사람 승인을 한 번
+    더 거친다.
+    """
+    limit = _RATE_LIMITS.get(tool_name, _DEFAULT_CALLS_PER_HOUR)
+
+    try:
+        from aot.databases.models import MCPConfirmation
+        since = datetime.utcnow() - timedelta(seconds=_RATE_WINDOW_SEC)
+        used = (MCPConfirmation.query
+                .filter(MCPConfirmation.agent_id == agent_id)
+                .filter(MCPConfirmation.tool_name == tool_name)
+                .filter(MCPConfirmation.created_at >= since)
+                .count())
+    except Exception:
+        # 앱 컨텍스트 밖이거나 DB 가 죽은 경우 — 상한을 통째로 열어주는 대신
+        # 프로세스 로컬 카운터로라도 막는다.
+        logger.exception('[MCPGate] 레이트 리밋 DB 조회 실패 — 프로세스 로컬 폴백')
+        _check_rate_limit_in_process(agent_id, tool_name, limit)
+        return
+
+    if used >= limit:
+        raise RateLimitExceeded(
+            f"Rate limit exceeded for '{tool_name}': {limit} calls/hour (agent={agent_id}).")
 
 
 def _build_human_briefing(tool_name, arguments):
@@ -403,6 +458,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
         "confirmation_id": row.unique_id,
         "tool_name": tool_name,
         "expires_in_sec": _CONFIRM_TTL_SEC,
+        "execute_within_sec": _APPROVED_TTL_SEC,
         "message": (
             "This tool changes system state, so it needs user approval. It was NOT "
             "executed. Show the user the plan (see the briefing above, if any) and wait "
@@ -411,8 +467,10 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
             "alone. Once they do, call respond_to_confirmation with this "
             "confirmation_id and their decision (or they can click Approve/Reject on "
             "the web review page themselves). After an approval, call the same tool "
-            "again with the same arguments plus '_confirmation_id' to execute it. There "
-            "is no way to bypass approval."),
+            "again with the same arguments plus '_confirmation_id' to execute it - "
+            "promptly, within 'execute_within_sec' of the approval, after which the "
+            "approval lapses and must be requested again. There is no way to bypass "
+            "approval."),
     }
 
     # Spatial pre-check — surfaced here, not left to the caller to remember.
@@ -492,6 +550,11 @@ def _decide(confirmation_id, status, user_id=None):
     row.status = status
     if user_id:
         row.user_id = user_id
+    if status == 'approved':
+        # 승인 시점부터 실행 유효시간을 새로 센다 — 남은 판단 시간이 얼마였든
+        # 승인 후 실행 창은 항상 같은 길이다. 같은 컬럼을 재사용해 승인 이후
+        # 만료 판정(gate() 2단계의 row.is_expired())이 그대로 동작한다.
+        row.expires_at = datetime.utcnow() + timedelta(seconds=_APPROVED_TTL_SEC)
     row.save()
 
     # 감사 로그의 해당 호출 상태도 갱신 (confirmation_id 로 연결돼 있다)

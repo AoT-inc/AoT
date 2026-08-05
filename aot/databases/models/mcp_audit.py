@@ -40,7 +40,12 @@ class MCPAuditLog(CRUDMixin, db.Model):
 
 
 class MCPConfirmation(CRUDMixin, db.Model):
-    """사용자 승인 대기 큐 — 쓰기 도구 실행 전 60초 내 승인 필요."""
+    """사용자 승인 대기 큐 — 쓰기 도구는 실행 전 사람 승인이 필요하다.
+
+    `expires_at` 은 상태에 따라 뜻이 다르다: pending 이면 "언제까지 승인할 수
+    있는가", approved 면 "언제까지 실행할 수 있는가"(승인 시점부터 다시 셈).
+    유효시간은 mcp_safety_gate 의 `_CONFIRM_TTL_SEC` / `_APPROVED_TTL_SEC`.
+    """
 
     __tablename__ = 'mcp_confirmation'
     __table_args__ = {'extend_existing': True}

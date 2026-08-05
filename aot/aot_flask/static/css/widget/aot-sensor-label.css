@@ -87,55 +87,6 @@
 }
 .aot-sensor-popup-close:hover { color: var(--aot-color-text-primary); }
 
-/* ── 측정값 레전드 (채널 색상 점 + 이름 + 값) ──────────────────────────────── */
-.aot-spop-legend {
-  display: flex;
-  flex-direction: column;
-  gap: .3rem;
-  margin-top: .5rem;
-}
-.aot-spop-legend-row {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  font-size: 1em;
-}
-.aot-spop-legend-row.aot-stale {
-  color: var(--aot-color-text-secondary);
-  text-decoration: line-through;
-}
-.aot-spop-legend-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-.aot-spop-legend-name {
-  flex: 1;
-  color: var(--aot-color-text-secondary);
-  font-size: 0.923em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.aot-spop-legend-val {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--aot-color-text-primary);
-  white-space: nowrap;
-  font-size: 1em;
-}
-.aot-spop-legend-unit {
-  font-size: 0.85em;
-  font-weight: 400;
-  color: var(--aot-color-text-secondary);
-}
-.aot-spop-legend-empty {
-  color: var(--aot-color-text-secondary);
-  font-size: 0.923em;
-}
-
 /* 하위 호환: 구형 inline vals (비모달 floating popup 경로가 남아있을 경우) */
 .aot-sensor-popup-vals {
   font-size: 1em;
@@ -214,10 +165,14 @@
 .aot-sensor-popup--modal {
   position: relative;
   left: auto; top: auto;
-  /* 반응형: 모바일 92vw → 데스크탑 화면폭 32% (360~520px) */
-  width: clamp(360px, 32vw, 520px);
+  /* 반응형: 모바일 92vw → 데스크탑 화면폭 34% (380~560px).
+     센서 데이터 전용 모달이라 그래프가 주인공이다 — 폭이 넓을수록 차트 기본
+     높이(width*0.62)도 함께 커지고, 레전드가 한 줄에 더 많이 들어가 플롯을
+     덜 잡아먹는다. 높이도 88vh 로 올려 1.5배로 키운 그래프가 스크롤 없이
+     들어가게 한다(openPopup 의 heightScale 참고). */
+  width: clamp(380px, 34vw, 560px);
   max-width: 92vw;
-  max-height: 80vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   font-size: 1rem;
@@ -229,7 +184,6 @@
 .aot-sensor-popup--modal::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .aot-sensor-popup--modal .aot-sensor-popup-title { font-size: 1.1em; }
 .aot-sensor-popup--modal .aot-sensor-popup-chart-wrap { flex: 0 0 auto; }
-.aot-sensor-popup--modal .aot-spop-legend { font-size: 1em; }
 
 /* ── Center modal (시설 제어/구역 팝업 공용 셸) ───────────────────────────────
    _showFacilityCenterOverlay 가 사용. 반응형 크기:
@@ -308,7 +262,8 @@
    2-row label: row 1 = zone name, row 2 = representative value.
    Background = measurement band color. */
 .aot-bay-chip {
-  z-index: 6;   /* 시설 모니터링 라벨 — 대지/구역 라벨(geo-label-marker 2~3) 위 */
+  /* z-index 는 JS 공용 표(LABEL_Z, aot-map-widget-vector.js)가 정한다 —
+     여기서 고정하면 site/zone/facility/output/input/function 순서를 깬다. */
   font-variant-numeric: tabular-nums;
   /* currentColor: follows the dynamic text color set by _updateBayChips
      (dark text on bright band colors, light text on dark backgrounds) */
@@ -886,4 +841,55 @@
   .aot-center-modal > .aot-sensor-popup-header {
     min-height: 44px;
   }
+}
+
+/* ─── 배터리 / 통신품질 배지 ─────────────────────────────────────────────────
+   지도 위젯의 세 모달(입력 센서 · 출력/함수 팝업 · 장치 라벨 팝업)이 공유한다.
+   생성은 sensor-label.js 의 linkBadgesHtml() 한 곳뿐 — 마크업이 여기 없는 이유다.
+
+   색은 전부 currentColor 로 그린다. SVG 채움·테두리·숫자가 한 색을 따르므로,
+   상태에 따라 span 의 color 만 바꾸면 아이콘 전체가 함께 물든다(개별 fill 을
+   지정하면 다크/라이트에서 각각 따로 어긋난다). */
+.aot-link-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.aot-link-badges-slot {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+/* 배지가 들어가는 헤더의 제목은 남는 폭을 먹고 줄임표 처리되어야 한다
+   (min-width:0 이 없으면 flex 항목이 줄지 않아 배지가 밖으로 밀린다). */
+.aot-sensor-popup-header > .aot-sensor-popup-title,
+.aot-popup-header > .aot-popup-title,
+.aot-3way-header > .aot-popup-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.aot-link-badge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--aot-color-text-secondary);
+  line-height: 0;
+}
+.aot-link-badge svg { display: block; }
+/* 배터리 20% 이하, 통신 무응답.
+   warning 이 아니라 danger 토큰을 쓴다: warning 계열은 settings/custom_ui 로
+   사용자가 바꿀 수 있는데(실측: 어떤 설치본은 --aot-tint-warning-fg 가 회색,
+   --aot-tint-warning-bg 가 초록이다) 그러면 "위험" 배지가 평상시와 구분되지
+   않거나 되레 정상처럼 보인다. danger 는 두 팔레트 모두 붉은 계열이다. */
+.aot-link-badge.is-low,
+.aot-link-badge.is-fault { color: var(--aot-tint-danger-fg); }
+/* 값이 오래된 경우: 색은 그대로 두고 흐리게만 — "나쁨"과 "모름"은 다른 사실이다. */
+.aot-link-badge.is-stale { opacity: 0.45; }
+
+.aot-link-badge-num {
+  fill: currentColor;
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }

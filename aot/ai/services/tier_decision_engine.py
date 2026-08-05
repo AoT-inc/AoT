@@ -899,17 +899,11 @@ class TierMigrationService:
                     'error': 'transition_rate_limited'
                 }
 
-            # Execute migration
-            success = cls._execute_tier_migration(document, previous_tier, target_tier)
-
-            if not success:
-                return {
-                    'success': False,
-                    'document_id': doc_id,
-                    'previous_tier': previous_tier,
-                    'new_tier': target_tier,
-                    'error': 'migration_execution_failed'
-                }
+            # tier 값 갱신과 "내용이 실제로 옮겨졌는가" 는 별개다.
+            # content_moved=False 는 실패가 아니라 이동 미구현을 뜻하므로
+            # 여기서 중단하지 않는다 — 대신 결과에 담아 호출자가 알게 한다.
+            content_moved = cls._execute_tier_migration(
+                document, previous_tier, target_tier)
 
             # Update document tier
             document.tier = target_tier
@@ -924,7 +918,8 @@ class TierMigrationService:
             )
 
             logger.info(
-                f"[TierMigration] Success: doc={doc_id[:8]} {previous_tier}->{target_tier}"
+                "[TierMigration] doc=%s %s->%s (tier flag updated; content_moved=%s)",
+                doc_id[:8], previous_tier, target_tier, content_moved
             )
 
             return {
@@ -932,6 +927,7 @@ class TierMigrationService:
                 'document_id': doc_id,
                 'previous_tier': previous_tier,
                 'new_tier': target_tier,
+                'content_moved': content_moved,
                 'error': None
             }
 
@@ -981,38 +977,54 @@ class TierMigrationService:
             # In production, these would be actual storage operations
 
             if to_tier == 1:
-                # Hot tier: Generate and store summary
-                cls._migrate_to_hot(document, content)
+                moved = cls._migrate_to_hot(document, content)
             elif to_tier == 2:
-                # Warm tier: Store full content
-                cls._migrate_to_warm(document, content)
+                moved = cls._migrate_to_warm(document, content)
             elif to_tier == 3:
-                # Cold tier: Archive metadata only
-                cls._migrate_to_cold(document)
+                moved = cls._migrate_to_cold(document)
+            else:
+                moved = False
 
-            return True
+            # 이동 실패가 아니라 "이동이 구현되지 않았다" 는 뜻이다. tier 값
+            # 갱신 자체는 유효하므로 흐름은 계속하되, 사실만 위로 전달한다.
+            return moved
 
         except Exception as exc:
             logger.error(f"[_execute_tier_migration] failed: {exc}")
             return False
 
-    @classmethod
-    def _migrate_to_hot(cls, document: Any, content: str) -> None:
-        """Migrate document to hot tier (summary cache)."""
-        # In production: Generate summary and store in HotStorageService
-        logger.debug(f"[TierMigration] Migrating to hot: {getattr(document, 'unique_id', 'unknown')[:8]}")
+    # -- 실제 내용 이동은 아직 배선되지 않았다 ---------------------------------
+    #
+    # 아래 세 함수는 tier 값을 바꾸는 흐름에 끼어 있을 뿐 **문서 본문을 옮기지
+    # 않는다.** 그런데 예전에는 로그 한 줄만 찍고 조용히 돌아와서, 호출자가
+    # 이동이 끝난 것으로 보고 success 를 반환하고 TierDecision 에 전환을
+    # 기록했다 — 실제로는 아무것도 옮겨지지 않았는데 감사 기록만 남는 셈이다.
+    # 이제 "옮겼는지" 를 bool 로 돌려주고, 호출자가 그 사실을 결과에 실어
+    # 보낸다(content_moved). 거짓 성공을 남기지 않는 것이 목적이다.
+    #
+    # 실제 아카이브는 AI 가 MCP 도구(archive_note)로 명시적으로 수행한다 —
+    # 자동 이동을 켜기 전에 복원 경로를 실증하기 위한 의도적인 선택이다.
 
     @classmethod
-    def _migrate_to_warm(cls, document: Any, content: str) -> None:
-        """Migrate document to warm tier (standard storage)."""
-        # Standard storage - no special handling needed
-        logger.debug(f"[TierMigration] Migrating to warm: {getattr(document, 'unique_id', 'unknown')[:8]}")
+    def _migrate_to_hot(cls, document: Any, content: str) -> bool:
+        """Hot tier 이동(요약 캐시) — 미구현. tier 값만 바뀐다."""
+        logger.debug("[TierMigration] to hot (tier flag only): %s",
+                     getattr(document, 'unique_id', 'unknown')[:8])
+        return False
 
     @classmethod
-    def _migrate_to_cold(cls, document: Any) -> None:
-        """Migrate document to cold tier (archive)."""
-        # In production: Store metadata only, archive full content
-        logger.debug(f"[TierMigration] Migrating to cold: {getattr(document, 'unique_id', 'unknown')[:8]}")
+    def _migrate_to_warm(cls, document: Any, content: str) -> bool:
+        """Warm tier 는 원래 자리(표준 저장소)다 — 옮길 내용이 없다."""
+        logger.debug("[TierMigration] to warm (no move needed): %s",
+                     getattr(document, 'unique_id', 'unknown')[:8])
+        return True
+
+    @classmethod
+    def _migrate_to_cold(cls, document: Any) -> bool:
+        """Cold tier 이동(아카이브) — 미구현. tier 값만 바뀐다."""
+        logger.debug("[TierMigration] to cold (tier flag only, NOT archived): %s",
+                     getattr(document, 'unique_id', 'unknown')[:8])
+        return False
 
     @classmethod
     def _is_transition_rate_limited(cls, doc_id: str) -> bool:

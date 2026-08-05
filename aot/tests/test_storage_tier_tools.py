@@ -300,3 +300,41 @@ def test_delete_archive_not_found():
     with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
         result = AoTDataToolService.delete_archive(document_id='missing')
     assert result['status'] == 'not_found'
+
+
+# ---------------------------------------------------------------------------
+# 자동 티어 이동 — "옮겼다" 고 거짓 보고하지 않는가
+# ---------------------------------------------------------------------------
+
+def test_tier_migration_reports_content_not_moved():
+    """tier 값만 바뀌고 본문은 그대로인 상태를 결과가 정직하게 담아야 한다.
+
+    예전에는 _migrate_to_cold() 가 로그만 찍고 조용히 돌아와서, 호출자가
+    success=True 를 반환하고 TierDecision 에 전환까지 기록했다 — 아무것도
+    옮기지 않았는데 감사 기록만 남는 셈이었다.
+    """
+    from aot.ai.services.tier_decision_engine import TierMigrationService as TMS
+
+    doc = MagicMock(unique_id='note-1', tier=2, note='본문')
+    with patch('aot.aot_flask.extensions.db'), \
+         patch.object(TMS, '_is_transition_rate_limited', return_value=False), \
+         patch.object(TMS, '_log_transition'):
+        result = TMS.migrate_document(doc, target_tier=3)
+
+    assert result['success'] is True          # tier 갱신 자체는 유효하다
+    assert result['content_moved'] is False   # 그러나 본문은 옮겨지지 않았다
+    assert doc.note == '본문'
+
+
+def test_tier_migration_to_warm_needs_no_move():
+    """warm 은 원래 자리다 — 옮길 것이 없으므로 moved=True 가 맞다."""
+    from aot.ai.services.tier_decision_engine import TierMigrationService as TMS
+
+    doc = MagicMock(unique_id='note-1', tier=3, note='본문')
+    with patch('aot.aot_flask.extensions.db'), \
+         patch.object(TMS, '_is_transition_rate_limited', return_value=False), \
+         patch.object(TMS, '_log_transition'):
+        result = TMS.migrate_document(doc, target_tier=2)
+
+    assert result['success'] is True
+    assert result['content_moved'] is True

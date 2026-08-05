@@ -142,6 +142,11 @@ class DeviceMeasurements(CRUDMixin, db.Model):
 
     conversion_id = db.Column(db.String(36), default='')
 
+    # 배터리 채널 전용 — 화학 종류. 전압만으로는 판별이 불가능해(납산 12.7V 만충 vs
+    # 인산철 4S 13.4V 만충, 곡선 모양이 사실상 반대) 사람이 알려줘야 한다.
+    # 값은 device_link_status.BATTERY_TYPES 의 키. ''(빈 값) = 자동 추정.
+    battery_type = db.Column(db.Text, default='')
+
 
 class DeviceMeasurementsSchema(ma.SQLAlchemyAutoSchema):
     """

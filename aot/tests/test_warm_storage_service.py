@@ -11,19 +11,15 @@ Tests:
   - Concurrent access
   - Statistics
 
-Run: python -m pytest aot/services/test_warm_storage_service.py -v
+Run: python -m pytest aot/tests/test_warm_storage_service.py -v
 """
 import os
-import sys
 import tempfile
 import time
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 from threading import Thread
-
-# Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, os.path.pardir)))
 
 from aot.services.warm_storage_service import (
     WarmStorageService,

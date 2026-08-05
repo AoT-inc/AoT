@@ -231,15 +231,36 @@
            '</label>';
   }
 
+  // 시작/종료 예약 버튼. 실제 제어 대상 UUID/채널은 slot_key(`<uuid>::<ch>`)가
+  // 아니라 상태에 실린 output_uuid 를 우선한다 — 시설 슬롯 키는 UUID 와 다를 수
+  // 있다(actuators_resolved.slot_key).
+  function _scheduleBtn(sk, s) {
+    var oid = (s && s.output_uuid) || String(sk).split('::')[0];
+    var ch  = (s && s.channel != null) ? s.channel : (String(sk).indexOf('::') > -1
+      ? String(sk).split('::')[1] : 0);
+    var _tr = function (x) { return (window._ ? window._(x) : x); };
+    return '<button type="button" class="aot-act-pbtn aot-output-settings"' +
+           ' data-output-id="' + _esc(oid) + '"' +
+           ' data-channel="' + _esc(String(ch || 0)) + '"' +
+           ' data-output-name="' + _esc((s && s.name) || sk) + '"' +
+           ' title="' + _esc(_tr('Set start/end time')) + '">' +
+           _esc(_tr('Settings')) + '</button>';
+  }
+
   function _buildActRow(sk, s, ct, canCtrl, lastCmd) {
     var name     = _esc(s.name || sk);
     var _tr      = function (x) { return (window._ ? window._(x) : x); };
     var curPct   = s.percent != null ? parseFloat(s.percent) : (s.on ? 100 : 0);
 
-    // ── ON/OFF binary: 공용 슬라이드 토글, 제목 오른쪽 끝 정렬 ───────────────
+    // ── ON/OFF binary: [설정] + 공용 슬라이드 토글, 제목 오른쪽 끝 정렬 ──────
+    // [설정] = 시작/종료 예약. on/off 장치에만 붙인다 — 개폐율(value)·PWM 은
+    // "언제부터 언제까지 켬"이라는 duration 의미가 성립하지 않는다.
     if (ct === 'binary') {
       var ctrl = canCtrl
-        ? _slideToggle('aot-act-toggle-right', 'aot-act-toggle-input', sk, !!s.on)
+        ? '<div class="aot-act-3btn">' +
+          _scheduleBtn(sk, s) +
+          _slideToggle('', 'aot-act-toggle-input', sk, !!s.on) +
+          '</div>'
         : '<span class="aot-act-val-ro aot-act-toggle-right ' +
           (s.on ? 'aot-act-on' : 'aot-act-off') + '">' +
           (s.on ? 'ON' : 'OFF') + '</span>';
@@ -884,8 +905,179 @@
     return html;
   }
 
+  // ── 장치(Output) 시작/종료 예약 ─────────────────────────────────────────────
+  // 구역 모달에만 있던 "설정" 창을 공용화한 것. 구역·시설·장치 마커 팝업이
+  // 모두 이 하나를 호출한다.
+  //
+  // 저장 경로는 두 갈래다.
+  //  - 시작이 사실상 "지금"(≤60초 뒤): 데몬에 바로 duration 제어를 보낸다.
+  //  - 시작이 미래: **서버 스케줄러**(/api/v1/scheduler/propose)에 등록한다.
+  //    예전 구현은 setTimeout 이라 탭을 닫으면 그대로 사라졌다 — 등록해두고
+  //    브라우저를 닫아도 실행되는 것이 사용자가 "예약"으로 기대하는 동작이다.
+  //    등록이 실패한 경우에만 예전의 탭 바인딩 방식으로 폴백하고, 그때는
+  //    "탭을 열어두어야 한다"고 분명히 알린다.
+  //
+  //   opts = { shell(html) → popup, outputId, channel, name, onApplied }
+  //     shell : 중앙 모달 셸 팩토리(위젯의 _showFacilityCenterOverlay)
+  var _endMemory = {};   // outputId → 마지막 종료 시각(초). 새로고침하면 사라짐.
+
+  function _csrf() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return (meta && meta.getAttribute('content')) || '';
+  }
+
+  function _pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  // Date → 'YYYY-MM-DDTHH:MM' (naive wall clock, 오프셋 없음).
+  // 스케줄러는 이 문자열을 **장치 로컬 시각**으로 해석한다
+  // (routes_scheduler.api_propose_job → wall_to_utc, timezone-management.md §6).
+  function _wallClockString(d) {
+    return d.getFullYear() + '-' + _pad2(d.getMonth() + 1) + '-' + _pad2(d.getDate()) +
+           'T' + _pad2(d.getHours()) + ':' + _pad2(d.getMinutes());
+  }
+
+  function openOutputSchedule(opts) {
+    opts = opts || {};
+    var shell = opts.shell;
+    var outputId = opts.outputId;
+    if (!shell || !outputId) return;
+    if (!window.AoTTimeWheel) {
+      console.warn('[AoT Map] AoTTimeWheel module not loaded');
+      return;
+    }
+    var channel = parseInt(opts.channel || 0, 10) || 0;
+    var now = new Date();
+    var nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60);
+    var lastEndSec = Object.prototype.hasOwnProperty.call(_endMemory, outputId)
+      ? _endMemory[outputId] : 0;
+
+    var html =
+      '<div class="aot-sensor-popup-header"><b>' + _esc(opts.name || '') + '</b></div>' +
+      '<div class="aot-act-group-header">' + _esc(_t('Start time')) + '</div>' +
+      '<div class="aot-sched-wheel aot-sched-wheel-start"></div>' +
+      '<div class="aot-act-group-header">' + _esc(_t('End time')) + '</div>' +
+      '<div class="aot-sched-wheel aot-sched-wheel-end"></div>' +
+      '<div class="aot-ov-muted" style="text-align:center;margin:.2rem 0 .5rem">' +
+      _esc(_t('00:00 = run indefinitely (no auto off)')) + '</div>' +
+      '<div class="aot-sched-status aot-ov-muted" style="text-align:center;margin:0 0 .4rem"></div>' +
+      '<div class="aot-wheel-actions">' +
+      '<button type="button" class="btn aot-pill-btn aot-sched-cancel">' + _esc(_t('Cancel')) + '</button>' +
+      '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-save">' + _esc(_t('Save')) + '</button>' +
+      '</div>';
+
+    var popup = shell(html, 'output-sched-' + outputId);
+    var el = popup.getElement();
+    var startWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-start'),
+      { value: nowSec, fields: 'hm' });
+    var endWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-end'),
+      { value: lastEndSec, fields: 'hm' });
+    var statusEl = el.querySelector('.aot-sched-status');
+    var saveBtn = el.querySelector('.aot-sched-save');
+
+    el.querySelector('.aot-sched-cancel').addEventListener('click', function () { popup.remove(); });
+    saveBtn.addEventListener('click', function () {
+      var startSec = startWheel.read();
+      var endSec = endWheel.read();
+      _endMemory[outputId] = endSec;
+      saveBtn.disabled = true;
+      statusEl.textContent = _t('Saving...');
+      _applySchedule(outputId, channel, opts.name || '', startSec, endSec)
+        .then(function (res) {
+          popup.remove();
+          if (res.warn && window.showToast) window.showToast(res.warn, 'warning');
+          else if (res.info && window.showToast) window.showToast(res.info, 'info');
+          if (typeof opts.onApplied === 'function') opts.onApplied(res);
+        })
+        .catch(function (e) {
+          saveBtn.disabled = false;
+          statusEl.textContent = (e && e.message) || _t('Failed');
+        });
+    });
+  }
+
+  // 시작/종료(하루 안의 시:분) → 실제 제어 또는 예약 등록.
+  // 종료 00:00 = 무한 작동(자동 꺼짐 없음) → duration 을 아예 보내지 않는다.
+  function _applySchedule(outputId, channel, name, startSec, endSec) {
+    var nowMs = Date.now();
+    var n = new Date(nowMs);
+    var start = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
+      Math.floor(startSec / 3600), Math.floor((startSec % 3600) / 60), 0, 0);
+    // 이미 지난 시각을 골랐다면 "지금"으로 간주 — 다음 날로 밀지 않는다.
+    if (start.getTime() < nowMs) start = new Date(nowMs);
+
+    var durationSec = null;
+    if (endSec !== 0) {
+      var end = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
+        Math.floor(endSec / 3600), Math.floor((endSec % 3600) / 60), 0, 0);
+      if (end.getTime() <= start.getTime()) end.setDate(end.getDate() + 1);
+      durationSec = Math.round((end.getTime() - start.getTime()) / 1000);
+    }
+    var delaySec = Math.max(0, Math.round((start.getTime() - nowMs) / 1000));
+
+    if (delaySec <= 60) return _fireNow(outputId, channel, durationSec);
+    return _proposeJob(outputId, channel, name, start, durationSec)
+      .catch(function () {
+        // 스케줄러 등록 실패(MCP 서버 미설정/권한 등) → 탭 바인딩 폴백.
+        return _fallbackTimer(outputId, channel, durationSec, delaySec);
+      });
+  }
+
+  function _fireNow(outputId, channel, durationSec) {
+    var body = { state: true, channel: channel };
+    if (durationSec !== null) body.duration = durationSec;
+    return fetch('/api/geo/output/' + encodeURIComponent(outputId) + '/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) throw new Error((j && j.error) || _t('Failed'));
+        return { mode: 'now' };
+      });
+  }
+
+  function _proposeJob(outputId, channel, name, start, durationSec) {
+    var params = { state: 'on', channel: channel };
+    if (durationSec !== null) params.amount = durationSec;
+    return fetch('/api/v1/scheduler/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+      body: JSON.stringify({
+        action_type: 'output',
+        target_id: outputId,
+        params: params,
+        schedule_time: _wallClockString(start),
+        duration_sec: durationSec || 0,
+        // reasoning 은 DB 에 그대로 저장돼 Scheduler 페이지에 뜬다 —
+        // 로케일에 따라 값이 달라지지 않도록 영어 고정.
+        reasoning: 'Scheduled from the map widget' + (name ? ' — ' + name : '')
+      })
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('scheduler HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (j) {
+        if (j && j.error) throw new Error(j.error);
+        return { mode: 'scheduled', job: j,
+                 info: _t('Scheduled. It runs even if this tab is closed.') };
+      });
+  }
+
+  function _fallbackTimer(outputId, channel, durationSec, delaySec) {
+    if (!window.confirm(_t('Could not save a server schedule. Turn on at the chosen time using this browser tab instead? The tab must stay open until then.'))) {
+      throw new Error(_t('Cancelled'));
+    }
+    setTimeout(function () { _fireNow(outputId, channel, durationSec).catch(function () {}); },
+               delaySec * 1000);
+    return { mode: 'tab-timer',
+             warn: _t('Scheduled — keep this tab open until the start time.') };
+  }
+
   window.AoTMapPopup = {
     positionDots:      positionDots,
+    openOutputSchedule: openOutputSchedule,
     buildActuatorCat:  buildActuatorCat,
     buildActuatorTabs: buildActuatorTabs,
     buildSensorTabs:   buildSensorTabs,

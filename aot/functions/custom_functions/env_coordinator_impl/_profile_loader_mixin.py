@@ -4,6 +4,7 @@ _profile_loader_mixin.py — ProfileLoaderMixin: _reload_profiles().
 """
 
 import json
+from typing import Any, Callable
 
 from aot.databases.models import Actions, GeoShape, Output
 from aot.utils.database import db_retrieve_table_daemon
@@ -81,7 +82,7 @@ def _is_wetting_fog(kind: str, capacity_meta: dict) -> bool:
     return True
 
 
-def _fog_excluded_from_env(coordinator, kind: str, capacity_meta: dict) -> bool:
+def _fog_excluded_from_env(coordinator: Any, kind: str, capacity_meta: dict) -> bool:
     """이 분무기를 환경 제어 대상에서 통째로 뺄지.
 
     관수와 가습을 한 장치로 처리하는 시설이 있다. 그런 노즐은 관수용으로
@@ -107,7 +108,7 @@ def _fog_excluded_from_env(coordinator, kind: str, capacity_meta: dict) -> bool:
     return not bool(val)
 
 
-def _fog_pulse_constraints(coordinator, kind: str, capacity_meta: dict) -> dict:
+def _fog_pulse_constraints(coordinator: Any, kind: str, capacity_meta: dict) -> dict:
     """습윤형 분무기에 적용할 관수식 펄스 도징 파라미터.
 
     가습량을 펄스 폭이 아니라 펄스 빈도로 조절한다 — 관수가 일정 간격으로
@@ -131,7 +132,9 @@ def _fog_pulse_constraints(coordinator, kind: str, capacity_meta: dict) -> dict:
     }
 
 
-def _build_cost_fn(kind: str, base_cost: float, capacity_meta: dict):
+def _build_cost_fn(
+        kind: str, base_cost: float,
+        capacity_meta: dict) -> Callable[[dict, float], float]:
     """env·pct 를 실제로 사용하는 cost_fn 생성.
 
     에너지 비용 = rated_kW × (pct/100) × elec_price_per_kWh (kWh/cycle 근사).
@@ -154,7 +157,7 @@ def _build_cost_fn(kind: str, base_cost: float, capacity_meta: dict):
 class ProfileLoaderMixin:
     """Mixin: actuator profile loading from facility, paired outputs, and manual actions."""
 
-    def _reload_profiles(self):
+    def _reload_profiles(self) -> None:
         """Hybrid loader: facility-derived profiles + manual env_actuator action profiles.
 
         Order:
@@ -781,7 +784,7 @@ class ProfileLoaderMixin:
         if facility_uuid:
             self._apply_pending_commissioning_anchors(facility_uuid)
 
-    def _apply_pending_commissioning_anchors(self, facility_uuid: str):
+    def _apply_pending_commissioning_anchors(self, facility_uuid: str) -> None:
         """Read unconsumed commissioning_state anchors and inject into calibration.
 
         Anchors written by the device check wizard (verdict='ok') seed each
@@ -852,7 +855,7 @@ class ProfileLoaderMixin:
         except Exception as exc:
             self.logger.debug('commissioning anchor apply failed: %s', exc)
 
-    def _apply_sensor_suspect_flags(self, flags: dict):
+    def _apply_sensor_suspect_flags(self, flags: dict) -> None:
         """Drop trust_score to floor for actuators flagged as sensor_suspect."""
         for aid, flag_val in (flags or {}).items():
             if flag_val == 'sensor_suspect':

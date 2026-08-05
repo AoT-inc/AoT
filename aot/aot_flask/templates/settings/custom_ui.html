@@ -6,7 +6,7 @@
 {% block title %} - {{dict_translation['settings']['title'] + ': Custom UI'}}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260727e">
+  <link rel="stylesheet" href="/static/css/aot-custom-ui-preview.css?v=20260804a">
 {% endblock %}
 
 {% block settings %}
@@ -254,10 +254,10 @@
               </div>
               <div class="preview-channel-row preview-channel-fault"
                    role="button" tabindex="0"
-                   data-color-bg="bg_warning"
-                   data-color-text="text_color_primary"
-                   data-color-label="{{_('Warning State')}}"
-                   aria-label="{{_('Click to edit Warning State colors')}}">
+                   data-color-bg="tint_danger_bg"
+                   data-color-text="tint_danger_fg"
+                   data-color-label="{{_('Danger Tint')}}"
+                   aria-label="{{_('Click to edit Danger Tint colors')}}">
                 <span class="preview-channel-name">CH4</span>
                 <span class="preview-channel-status-text">{{_('No response')}}</span>
               </div>
@@ -395,7 +395,7 @@
         {% set state_fields = [
           ('bg_active',   _('Active State'),   _('Whole-card highlight when active (IEC focus row, badges) — not the per-channel row below')),
           ('bg_inactive', _('Inactive State'), _('Whole-card highlight when inactive, PID container background — not the per-channel row below')),
-          ('bg_warning',  _('Warning State'),  _('Row/card background for offline or unresponsive devices')),
+          ('bg_warning',  _('Warning State'),  _('Row/card background for paused or held controllers (PID pause/hold, pending AI drafts). Offline devices use Danger Tint below.')),
           ('bg_on',       _('Channel On'),     _('Output/input channel row background when on; also a general surface color in facility widgets')),
           ('bg_off',      _('Channel Off'),    _('Output/input channel row background when off; also a general surface color in facility widgets')),
           ('bg_pending',  _('Pending'),        _('Row background while a command awaits device confirmation')),
@@ -407,7 +407,7 @@
           ('color_info',    _('Info'),    _('Semantic color for informational marks and in-progress states')),
           ('tint_success_bg', _('Success Tint'), _('Soft badge background for success — pairs with the text color below')),
           ('tint_success_fg', _('Success Tint Text'), _('Text color used on the success tint')),
-          ('tint_danger_bg',  _('Danger Tint'),  _('Soft badge background for failures')),
+          ('tint_danger_bg',  _('Danger Tint'),  _('Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices')),
           ('tint_danger_fg',  _('Danger Tint Text'), _('Text color used on the danger tint')),
           ('tint_info_bg',    _('Info Tint'),    _('Soft badge background for in-progress/informational states')),
           ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint'))

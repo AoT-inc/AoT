@@ -285,6 +285,107 @@ def query_flux(unit, unique_id,
         return None
 
 
+def _influx_connection_params():
+    """(url, token, bucket, version) for the configured measurement DB.
+
+    query_flux() builds these inline; the bulk helper below needs the same
+    values, so the resolution lives here rather than being copied a third time.
+    Returns None when the version is unknown (same failure mode as query_flux).
+    """
+    settings = db_retrieve_table_daemon(Misc, entry='first')
+    host = resolve_measurement_db_host(settings.measurement_db_host)
+    port = INFLUXDB_PORT or settings.measurement_db_port
+    url = f'http://{host}:{port}'
+
+    if settings.measurement_db_version == '1':
+        token = f'{settings.measurement_db_user}:{settings.measurement_db_password}'
+        bucket = f'{settings.measurement_db_dbname}/{settings.measurement_db_retention_policy}'
+    elif settings.measurement_db_version == '2':
+        token = settings.measurement_db_password
+        bucket = settings.measurement_db_dbname
+    else:
+        logger.error(f"Unknown Influxdb version: {settings.measurement_db_version}")
+        return None
+    return url, token, bucket, settings.measurement_db_version
+
+
+def query_last_values_bulk(specs, past_sec=600):
+    """Last value for MANY series in a single Flux query.
+
+    query_flux(value='LAST') issues one HTTP query per measurement. A map widget
+    with 15 inputs asked for 107 of them per refresh — measured at ~840-970ms
+    even with an 8-thread pool, and the cost scaled linearly with the item count
+    (each query ~60-70ms of round trip). One query filtered by the union of
+    device_ids collapses that into a single round trip.
+
+    Args
+    ----
+    specs : iterable of (unit, device_id, channel, measure)
+        `unit` is the Influx `_measurement`; `channel`/`measure` are tags and may
+        be None (they are optional at write time — see write_influxdb_value).
+    past_sec : lookback window, matching the per-item `period` of /last.
+
+    Returns
+    -------
+    dict keyed by (unit, device_id, channel_str, measure) → [epoch_seconds, value].
+    `channel_str` is str(channel) or '' — Influx tags are strings, so callers
+    must look up with the same normalisation (see _bulk_key).
+    Returns {} on any failure so callers can fall back to the per-item path.
+    """
+    specs = [s for s in specs if s and s[0] and s[1]]
+    if not specs:
+        return {}
+
+    conn = _influx_connection_params()
+    if not conn:
+        return {}
+    url, token, bucket, _version = conn
+
+    units = sorted({str(s[0]) for s in specs})
+    devices = sorted({str(s[1]) for s in specs})
+    _set = lambda vals: '[' + ', '.join(f'"{_flux_str(v)}"' for v in vals) + ']'
+
+    query = (
+        f'from(bucket: "{bucket}")'
+        f' |> range(start: -{int(past_sec)}s)'
+        f' |> filter(fn: (r) => contains(value: r["_measurement"], set: {_set(units)}))'
+        f' |> filter(fn: (r) => contains(value: r["device_id"], set: {_set(devices)}))'
+        ' |> last()'
+    )
+    logger.debug(f"query_last_values_bulk() {len(specs)} specs, query: '{query}'")
+
+    try:
+        with InfluxDBClient(url=url, token=token, org='aot', timeout=60000) as client:
+            tables = client.query_api().query(query)
+    except Exception as err:
+        logger.error(f"query_last_values_bulk() InfluxDB query failed: {err}")
+        return {}
+
+    out = {}
+    try:
+        for table in tables:
+            for row in table.records:
+                v = row.values
+                if '_value' not in v or '_time' not in v:
+                    continue
+                key = (v.get('_measurement'), v.get('device_id'),
+                       '' if v.get('channel') is None else str(v.get('channel')),
+                       v.get('measure'))
+                out[key] = [v['_time'].timestamp(), v['_value']]
+    except Exception as err:
+        logger.error(f"query_last_values_bulk() result parse failed: {err}")
+        return {}
+    return out
+
+
+def bulk_key(unit, device_id, channel, measure):
+    """Key normalisation shared by producer and consumer of query_last_values_bulk."""
+    return (str(unit) if unit is not None else None,
+            str(device_id) if device_id is not None else None,
+            '' if channel is None else str(channel),
+            measure if measure else None)
+
+
 def query_string(unit, unique_id,
                  value=None, measure=None, channel=None, ts_str=None,
                  start_str=None, end_str=None, min_value=None, max_value=None,

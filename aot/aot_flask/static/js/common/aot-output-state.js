@@ -21,7 +21,12 @@
     on:      'active-background',
     off:     'inactive-background',
     pending: 'hold-background',
-    fault:   'pause-background'
+    // 2026-08-04: 'pause-background' 에서 분리. 그 클래스는 "사용자가 멈춤"
+    // (PID 일시정지 등)에도 쓰여, 고장과 정상 운영이 같은 색으로 보였다.
+    // 이 상수만 바꾸면 cssClass 를 쓰는 소비처는 전부 따라온다 — 다만
+    // classList.remove(...) 목록에 'fault-background' 를 넣어 주지 않은 곳은
+    // 빨강이 그대로 눌어붙으므로 소비처마다 확인이 필요하다.
+    fault:   'fault-background'
   };
 
   function classify(raw) {
@@ -110,8 +115,18 @@
              isOffline: false, countsRuntime: sawOn, cssClass: sawOn ? CLASS.on : CLASS.off };
   }
 
-  // paintNameWarning(el, on) — highlight a device-name label with the shared
-  // global warning tint when its device is comm-fault.
+  // paintNameWarning(el, on) — highlight a device-name label when its device is
+  // comm-fault (no response).
+  //
+  // Uses the DANGER tint, not the warning tint, even though the function is
+  // named ...Warning (kept for its callers). The warning pair is exposed in
+  // settings/custom_ui as "Unverified Running Tint" — it belongs to
+  // paintUnverifiedRunning() below, and users set it with that meaning in mind.
+  // Borrowing it here made one knob carry two unrelated states, and on a real
+  // install (김제, 2026-08-04) that read as: --aot-tint-warning-fg #4F4F4F grey,
+  // --aot-tint-warning-bg #B8DBC7 GREEN — an unreachable device highlighted in
+  // green, i.e. the opposite of the intent. "No response" is a failure, so it
+  // takes the danger pair, whose settings label matches how it is used.
   //
   // MAP POPUPS ONLY. The Input/Output/Function list cards deliberately do NOT
   // use this: there the card background already carries the offline state, and
@@ -128,8 +143,8 @@
   function paintNameWarning(el, on) {
     if (!el) return;
     if (on) {
-      el.style.setProperty('background-color', 'var(--aot-tint-warning-bg)', 'important');
-      el.style.setProperty('color', 'var(--aot-tint-warning-fg)', 'important');
+      el.style.setProperty('background-color', 'var(--aot-tint-danger-bg)', 'important');
+      el.style.setProperty('color', 'var(--aot-tint-danger-fg)', 'important');
     } else {
       el.style.removeProperty('background-color');
       el.style.removeProperty('color');
@@ -145,6 +160,10 @@
   // An unverifiable device sitting idle is unremarkable; an unverifiable device
   // reported as ON is the case actually worth flagging, because "supposedly
   // open" and "actually open" are indistinguishable there.
+  //
+  // This one KEEPS the warning tint: settings/custom_ui labels that pair
+  // "Unverified Running Tint", so this is the state the user actually had in
+  // mind when picking it. comm-fault moved to danger (paintNameWarning above).
   //
   // Inline !important for the same cascade reason as paintNameWarning() above.
   function paintUnverifiedRunning(el, unverified) {

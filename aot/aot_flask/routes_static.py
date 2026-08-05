@@ -148,6 +148,31 @@ def template_exists(path):
         return True
 
 
+def _is_battery_channel(dm) -> bool:
+    """DeviceMeasurements 행이 배터리 채널인가 — 서버 판정과 **같은 함수**를 쓴다.
+
+    측정 설정 화면이 "배터리 종류" 선택기를 배터리 채널에만 띄우기 위해 필요하다.
+    Jinja 에서 measurement/name 을 다시 비교하면 device_link_status 쪽 규칙과
+    조용히 어긋난다(전압 채널 중 무엇이 배터리인지는 이름을 봐야 안다).
+    """
+    try:
+        from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
+        return channel_meta_for_dm(dm).get('key') == 'battery'
+    except Exception:
+        return False
+
+
+def _battery_type_choices():
+    """[(값, 표시명)] — 빈 값(자동)이 첫 항목."""
+    from flask_babel import gettext
+    return [
+        ('',            gettext('Auto (by voltage)')),
+        ('liion_1s',    gettext('Lithium-ion 1S (3.0–3.9 V)')),
+        ('lifepo4_4s',  gettext('LiFePO4 4S (12.0–13.4 V)')),
+        ('lead_12v',    gettext('Lead-acid 12 V (11.4–12.7 V)')),
+    ]
+
+
 @blueprint.app_context_processor
 def inject_variables():
     """Variables to send with every page request."""
@@ -236,6 +261,12 @@ def inject_variables():
         needs_map = True
 
     return dict(current_user=flask_login.current_user,
+                # 배터리 채널 판별/종류 목록 — 측정 설정 화면이 "배터리 종류"
+                # 선택기를 **배터리 채널에만** 띄우기 위해 쓴다. 판별 규칙을
+                # Jinja 에서 다시 쓰면 서버(device_link_status)와 어긋나므로
+                # 같은 함수를 그대로 노출한다.
+                is_battery_channel=_is_battery_channel,
+                battery_type_choices=_battery_type_choices,
                 needs_map=needs_map,
                 geo_config=geo_config,
                 custom_css=(bool(misc.custom_css) or (misc.custom_theme_json and misc.custom_theme_json != '{}')),

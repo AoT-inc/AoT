@@ -26,7 +26,7 @@ class RuntimeStateMixin:
     _SAVE_RETRY_COUNT = 3
     _SAVE_RETRY_BACKOFF_SEC = 0.3
 
-    def _load_runtime_state(self):
+    def _load_runtime_state(self) -> None:
         """DB에서 PI 상태를 읽어 CoordinatorState 를 복원한다."""
         try:
             with session_scope(AOT_DB_PATH) as sess:
@@ -66,7 +66,7 @@ class RuntimeStateMixin:
             self.logger.exception(
                 'EnvCoordinator: runtime state load failed — starting with clean state')
 
-    def _save_runtime_state(self):
+    def _save_runtime_state(self) -> None:
         """CoordinatorState 를 DB에 upsert 한다.
 
         Transient 실패(SQLite busy 등)에 짧은 재시도. 최종 실패 시

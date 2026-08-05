@@ -54,7 +54,7 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 - **읽기 도구**는 즉시 실행됩니다.
 - **상태를 바꾸는 도구**(변이·물리 제어·일정)는 호출 경로와 무관하게 승인 게이트를 거칩니다.
   - **인앱 어시스턴트**: 즉시 적용되지 않고 채팅에 **승인 카드**로 제시되며, 사용자가 승인해야 실행됩니다.
-  - **외부 MCP 서버**(`aot_mcp_server.py`, `aot/ai/services/mcp_safety_gate.py`): 최초 호출은 실행되지 않고 `pending_approval` + `confirmation_id`로 응답합니다. 사용자가 그 대화에서 confirmation_id를 명시적으로 승인/거부하면 `respond_to_confirmation`(또는 웹 승인 페이지 `/ai/mcp_review`)으로 처리되고, 승인 후 같은 인자에 `_confirmation_id`를 붙여 같은 도구를 재호출해야 실제로 실행됩니다. 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다.
+  - **외부 MCP 서버**(`aot_mcp_server.py`, `aot/ai/services/mcp_safety_gate.py`): 최초 호출은 실행되지 않고 `pending_approval` + `confirmation_id`로 응답합니다. 사용자가 그 대화에서 confirmation_id를 명시적으로 승인/거부하면 `respond_to_confirmation`(또는 웹 승인 페이지 `/ai/mcp_review`)으로 처리되고, 승인 후 같은 인자에 `_confirmation_id`를 붙여 같은 도구를 재호출해야 실제로 실행됩니다. 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 승인 대기는 기본 15분, 승인 후 실행 유효시간은 승인 시점부터 다시 5분입니다.
 - 예외적으로 `create_note`·`knowledge_shelve`는 되돌릴 수 있는 저위험 기록이라 승인 없이 즉시 저장되며, 확정 전까지 권위 없는 정보로 취급됩니다.
 - **장치별 AI 판단 포함 토글**: `설정 -> 입력/출력`의 각 장치 모달에서 끄면, 그 장치는 AI 도구의 조회·제어 대상에서 제외됩니다(`is_ai_enabled`).
 - **외부 MCP 서버**도 승인 게이트를 거치지만, 그와 별개로 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.

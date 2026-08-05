@@ -675,8 +675,30 @@ def _run_http_server(app, port=5700):
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400
 
-    logger.info(f"[AoTMCP] HTTP mode started on port {port}")
-    http_app.run(host="0.0.0.0", port=port, debug=False)
+    # 바인드 주소. 도커에서는 컨테이너 안에서 0.0.0.0 이어야 compose 의
+    # 포트 매핑(`100.111.33.43:5700:5700`)이 노출면을 좁힐 수 있다. 네이티브
+    # 설치(install/aotmcp.service)에는 그런 매핑이 없어 0.0.0.0 이 곧 전체
+    # 인터페이스 노출이므로, 그쪽은 유닛 파일에서 이 값을 좁혀 쓴다.
+    host = os.environ.get('AOT_MCP_HTTP_HOST', '0.0.0.0')
+
+    # Flask 내장 서버(`http_app.run`)는 개발용이라 프로덕션에 쓰지 않는다 —
+    # 단일 스레드로 요청을 직렬 처리해서, 도구 하나가 느리면 그 뒤 요청이 전부
+    # 밀린다(여기 도구는 DB·InfluxDB 조회라 드문 일이 아니다). waitress 는 이미
+    # requirements 에 있고 순수 파이썬이라 추가 설치가 필요 없다. 웹앱 쪽
+    # gunicorn 을 쓰지 않는 이유는 이 Flask 앱이 모듈 전역이 아니라 이 함수의
+    # 클로저 안에서 만들어지기 때문 — WSGI 엔트리포인트로 노출돼 있지 않다.
+    try:
+        from waitress import serve
+    except ImportError:
+        logger.warning(
+            "[AoTMCP] waitress 를 찾을 수 없어 Flask 내장 서버로 시작한다 "
+            "(개발용 — `pip install waitress` 권장)")
+        logger.info(f"[AoTMCP] HTTP mode started on {host}:{port}")
+        http_app.run(host=host, port=port, debug=False)
+        return
+
+    logger.info(f"[AoTMCP] HTTP mode started on {host}:{port} (waitress)")
+    serve(http_app, host=host, port=port, threads=4, ident='AoT-MCP')
 
 
 # =============================================================================

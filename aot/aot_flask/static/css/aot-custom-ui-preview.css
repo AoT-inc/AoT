@@ -189,7 +189,7 @@
 /* ============================================================
    OUTPUT/INPUT CHANNEL PREVIEW — mirrors the real per-channel row
    states from settings/output & settings/input (bg_on/bg_off/bg_pending/
-   bg_warning — distinct from bg_active/bg_inactive, which color the
+   tint_danger_bg — distinct from bg_active/bg_inactive, which color the
    whole-device card, not the channel row).
 ============================================================ */
 #aot-ui-preview .preview-channel-label-row {
@@ -283,7 +283,10 @@
 #aot-ui-preview .preview-channel-on         { background-color: var(--preview-bg-on,           #B5BABA); }
 #aot-ui-preview .preview-channel-off        { background-color: var(--preview-bg-off,          #F3F6F5); }
 #aot-ui-preview .preview-channel-pending    { background-color: var(--preview-bg-pending,      #F0AD4E); }
-#aot-ui-preview .preview-channel-fault      { background-color: var(--preview-bg-warning,      #989E9E); }
+/* 무응답 행은 danger 틴트 — 실제 .fault-background(aot-base.css)와 같은 토큰.
+   2026-08-04 bg_warning 에서 이관(그 필드는 이제 일시정지 전용). */
+#aot-ui-preview .preview-channel-fault      { background-color: var(--preview-tint-danger-bg,  #FBE7E7); }
+#aot-ui-preview .preview-channel-fault .preview-channel-status-text { color: var(--preview-tint-danger-fg, #B23B3B); font-style: normal; font-weight: 600; }
 #aot-ui-preview .preview-channel-unverified { background-color: var(--preview-tint-warning-bg, #FFF3E2); }
 #aot-ui-preview .preview-channel-unverified .preview-channel-status-text { color: var(--preview-tint-warning-fg, #94650A); font-style: normal; font-weight: 600; }
 

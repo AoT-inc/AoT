@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
-<script src="/static/js/common/aot-output-state.js?v=6"></script>
+<script src="/static/js/common/aot-output-state.js?v=8"></script>
 
 
 {% include 'pages/map/map_assets.html' %}
@@ -254,9 +254,9 @@
               var seqAgg = window.AoTOutputState.aggregate(data.steps.map(function (s) { return s.output_state; }));
               var deactivateBtn = document.getElementById('function_deactivate_' + function_id);
               var seqIsActivated = !!(deactivateBtn && deactivateBtn.style.display !== 'none');
-              seqCard.classList.remove('active-background', 'inactive-background', 'pause-background', 'hold-background');
+              seqCard.classList.remove('active-background', 'inactive-background', 'fault-background', 'hold-background');
               if (seqAgg.isFault) {
-                seqCard.classList.add('pause-background');
+                seqCard.classList.add('fault-background');
               } else if (seqAgg.isPending) {
                 seqCard.classList.add('hold-background');
               } else {
@@ -337,7 +337,8 @@
       .removeClass("inactive-background")
       .removeClass("active-background")
       .removeClass("hold-background")
-      .removeClass("pause-background");
+      .removeClass("pause-background")
+      .removeClass("fault-background");
   }
   function ids_hide(pid_id, class_list) {
     for (let c = 0; c < class_list.length; c++) {

@@ -225,7 +225,27 @@ _MTYPE_KEY = {
     'wind_speed':     'wind_ms',
     'wind_direction': 'wind_deg',
     'rain':           'rain_mm',
+    'pressure':       'P',
+    # ── 메타 채널(장치 자신의 상태) ──────────────────────────────────────────
+    # 환경값이 아니라 "장치가 살아 있는가"를 말하는 채널이다. key 를 주는 이유는
+    # 표시가 아니라 **식별**이다: key 가 없으면 display_key 가 번역된 표시명
+    # ('RSSI'/'배터리 전압'/'バッテリ電圧')이 되어, 클라이언트가 언어에 상관없이
+    # 이 채널을 골라낼 방법이 사라진다. 배지로 그리고 그래프에서 빼려면
+    # 언어 독립적인 이름이 반드시 필요하다.
+    'rssi':           'rssi',
+    'snr':            'snr',
+    'battery':        'battery',
 }
+
+# 메타 채널 key 집합 — 값 라벨·이력 그래프에서 제외하고 배지로만 그린다.
+# 클라이언트(sensor-label.js isMetaChannel)와 같은 목록이어야 한다.
+META_CHANNEL_KEYS = frozenset({'rssi', 'snr', 'battery'})
+
+# 배터리 전압 판별용. measurement 는 'electrical_potential' 하나로 뭉뚱그려져 있어
+# (RAK3172 HB 는 V, lorawan_mode_manager 는 mV 로 같은 measurement 에 쓴다) 전압
+# 채널 전부를 배터리로 볼 수는 없다 — 이름에 배터리가 드러난 것만 승격한다.
+_BATTERY_VOLTAGE_MEASUREMENTS = frozenset({'electrical_potential'})
+_BATTERY_NAME_TOKENS = ('batt', 'vbat', '배터리', 'バッテリ')
 
 # result key → 표시 단위 (라벨/팝업 출력용)
 _UNIT_BY_KEY: Dict[str, str] = {
@@ -236,6 +256,10 @@ _UNIT_BY_KEY: Dict[str, str] = {
     'light':    'W/m²',
     'wind_ms':  'm/s',
     'wind_deg': '°',
+    'P':        'hPa',   # 표준 단위. 저장 단위(Pa/hPa/kPa)가 있으면 그쪽이 우선한다.
+    'rssi':     'dBm',
+    'snr':      'dB',
+    'battery':  '%',     # 저장 단위가 V/mV/bool 이면 그쪽이 우선한다(아래 참조).
 }
 
 # DB raw unit 문자열 → 표시 단위 (device_measurements.unit 이 그대로 노출되는 것 방지)
@@ -267,6 +291,20 @@ _RAW_UNIT_DISPLAY: Dict[str, str] = {
     'ma':       'mA',
     'ohm':      'Ω',
 }
+
+def _looks_like_battery(raw_measurement: Optional[str], raw_name: Optional[str]) -> bool:
+    """전압 채널이 '배터리 전압'인지 이름으로 판별한다.
+
+    measurement 이 'electrical_potential' 인 채널은 배터리일 수도, 그냥 아무 전압
+    측정일 수도 있다. 전부 배터리로 보면 태양광 전압·EC 프로브 전압까지 배터리
+    배지로 그려진다. 반대로 안 보면 실제 배포된 LoRaWAN 노드 전부(RAK3172 HB 는
+    V, lorawan_mode_manager 는 mV)가 배터리로 안 잡힌다 — 그래서 이름을 본다.
+    """
+    if (raw_measurement or '').lower().strip() not in _BATTERY_VOLTAGE_MEASUREMENTS:
+        return False
+    name = (raw_name or '').lower()
+    return any(tok in name for tok in _BATTERY_NAME_TOKENS)
+
 
 def _effective_raw_unit(dm) -> str:
     """device_measurements 의 표시용 raw 단위 문자열을 반환한다.
@@ -301,7 +339,55 @@ _DEFAULT_DECIMALS_BY_KEY: Dict[str, int] = {
     'light':    0,
     'wind_ms':  1,
     'wind_deg': 0,
+    'P':        0,
 }
+
+
+def channel_label_meta(measurement_type, raw_name: str, raw_unit: str,
+                       raw_measurement: str = None) -> Tuple[str, str]:
+    """(measurement_type, 표시명, 실효 raw 단위) → (밴드 key, 표시 단위).
+
+    channel_meta_for_dm 의 순수 함수 버전 — ORM 행도 DB 조회도 필요 없다.
+    시설 밖(구역/지도)에 배치된 Input 의 측정 채널에도 시설 라벨과 **동일한**
+    key(T/RH/VPD/...)·표시 단위를 붙이기 위한 공용 진입점이다. 지도 장치 경로가
+    이 규칙을 안 거치면 라벨에 key 가 없어 밴드 색상 판정 자체가 불가능해진다
+    (표시명은 번역돼 들어오므로 key 대용으로 쓸 수 없다).
+
+    raw_unit 은 conversion 이 걸린 경우 **변환 단위**를 넘겨야 한다
+    (_effective_raw_unit 과 동일 계약). 호출부가 이미 conversion 을 일괄
+    조회해 두었다면 그 값을 그대로 넘기면 되고, 그래야 N+1 조회가 안 생긴다.
+
+    raw_measurement 는 DeviceMeasurements.measurement 원본값. 실제 DB 에서
+    measurement_type 은 거의 항상 비어 있어서(사용자가 채우는 필드가 아니다)
+    이것 없이는 key 가 하나도 안 잡힌다 — 시설 경로가 오래 전부터
+    _infer_mtype_from_dm 으로 measurement 이름에서 추론해 온 이유다. 같은 표를
+    쓴다: 여기서 다른 표를 쓰면 같은 센서가 시설 안/밖에서 다른 색을 받는다.
+    """
+    # 이름 추론은 measurement_type 이 **비었을 때뿐 아니라 매핑에 없을 때도** 돈다.
+    # 예: auto_vpd 채널은 measurement_type='auto_vpd'(표에 없음) + measurement=
+    # 'vapor_pressure_deficit' 이라, "비었을 때만" 추론하면 영영 안 잡힌다.
+    if raw_measurement and measurement_type not in _MTYPE_KEY:
+        try:
+            from aot.aot_flask.geo.facility_integration import _DM_NAME_TO_MTYPE
+            inferred = _DM_NAME_TO_MTYPE.get((raw_measurement or '').lower().strip())
+            if inferred:
+                measurement_type = inferred
+        except Exception:
+            pass
+    if measurement_type not in _MTYPE_KEY and _looks_like_battery(raw_measurement, raw_name):
+        measurement_type = 'battery'
+    key = _MTYPE_KEY.get(measurement_type) if measurement_type else None
+
+    # 표시 단위는 **실제 저장 단위**를 우선한다. _UNIT_BY_KEY(키별 표준 단위)를
+    # 무조건 씌우면 같은 key 라도 장치마다 저장 단위가 다른 채널에서 거짓말이 된다
+    # — VPD 를 Pa 로 저장한 입력에 'kPa' 라벨이 붙던 것이 그 사례다. 저장 단위가
+    # 비어 있을 때만 표준 단위로 메운다.
+    ru = (raw_unit or '').strip()
+    unit = _RAW_UNIT_DISPLAY.get(ru.lower(), ru) if ru else ''
+    if not unit and key:
+        unit = _UNIT_BY_KEY.get(key, '')
+    display_key = key or (raw_name or '').strip() or (measurement_type or '')
+    return display_key, unit
 
 
 def channel_meta_for_dm(dm) -> dict:
@@ -312,15 +398,11 @@ def channel_meta_for_dm(dm) -> dict:
     raw unit 표시 변환(_RAW_UNIT_DISPLAY)으로 라벨링해 UUID·raw 단위 노출을 막는다.
     """
     mtype = (getattr(dm, 'measurement_type', None) or None)
-    key = _MTYPE_KEY.get(mtype) if mtype else None
-    unit = _UNIT_BY_KEY.get(key, '') if key else ''
-
     m_name = ((getattr(dm, 'name', '') or '').strip()
               or (getattr(dm, 'measurement', '') or '').strip())
     m_unit = _effective_raw_unit(dm)   # conversion_id 있으면 변환 단위 사용
-    display_key = key or m_name or (mtype or '')
-    if not unit:
-        unit = _RAW_UNIT_DISPLAY.get(m_unit.lower(), m_unit)
+    display_key, unit = channel_label_meta(
+        mtype, m_name, m_unit, getattr(dm, 'measurement', '') or '')
 
     return {
         'measurement_id':   dm.unique_id,

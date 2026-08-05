@@ -26,14 +26,23 @@ Input, Output, and Function devices placed in **Device** mode in `/geo/design` a
 
 ### Control Right From the Popup
 
-Clicking a marker opens a popup showing:
+Clicking a marker opens the window that fits the device type.
 
-- The device name
-- The latest measurement (for Input devices)
-- An On/Off toggle switch (for Output devices — shown only to users with **edit** permission)
-- The last-updated timestamp
+**Input (sensor)** — clicking a value key opens a detail window with a 24-hour
+chart, the current reading of every measurement, and a shortcut to write a note.
+It is the **same window** you get when opening a sensor from a facility or zone
+modal.
 
-Toggling the switch turns the device on or off immediately. Clicking a Facility marker shows a 3D preview and an environment-data summary instead — see [3D Facility Popup](#3d-facility-popup) below.
+**Output / function** — you get:
+
+- The device name and an On/Off toggle (shown only to users with **edit** permission)
+- Current run time / last run time
+- A **Set start/end time** button (on/off devices) — see [Scheduled On](#scheduled-on)
+- A shortcut to write a note
+
+Position actuators (windows, curtains, …) get Open/Stop/Close buttons and an opening-percentage slider instead.
+
+Clicking a Facility marker shows a 3D preview and an environment-data summary — see [3D Facility Popup](#3d-facility-popup) below.
 
 ### Click a Zone/Site — Control From a Device List
 
@@ -41,7 +50,24 @@ Clicking a Zone or Site shape opens a popup listing every sensor and output devi
 
 - **Sensors**: If there's more than one, switch between them with tabs to see a 24-hour chart.
 - **Output device list**: On/Off toggle for immediate control (requires **edit** permission), drag to reorder.
-- **Settings (schedule on)**: Each output has a **Settings** button to schedule a start and end time. Leaving the end time at `00:00` keeps it on until you turn it off manually. If you set a start time in the future, the schedule is timed by **the browser tab you have open**, not the server — closing or refreshing the tab cancels it (starting immediately has no such limitation).
+- **Settings (schedule on)**: Each output has a **Settings** button — see [Scheduled On](#scheduled-on).
+
+### Scheduled On { #scheduled-on }
+
+The **Settings** button on an on/off output opens a window for picking a start
+and end time. It is the same window whether you open it from a zone modal, a
+facility modal, or a device marker popup.
+
+- Leaving the end time at `00:00` keeps the device on until you turn it off manually.
+- If the start time is effectively "now", it turns on immediately and switches off at the end time.
+- If the start time is in the future, it is **registered with the server scheduler**.
+  It runs as planned even if you close the browser, and you can review, edit, or
+  cancel it on the [Scheduler](../ai/scheduler.md) page.
+- If registering fails (for example, no MCP server configured), you are asked
+  whether to fall back to having the current tab wait and fire instead. Only in
+  that case does closing the tab prevent it from running.
+
+Position actuators (windows, curtains, …) do not get this button — "on from X until Y" has no meaning for them.
 
 ### Real-Time Refresh
 
@@ -67,33 +93,21 @@ Separately, the widget's title bar has **Lock Map** (locks panning/zooming) and 
 
 ## Widget Settings
 
-### Refresh
+These follow the order of the settings panel. The collapsible groups (Device
+Filter, Measurement Panel, Label Style, Shapes, 3D Map) expand when clicked.
 
-| Option | Description |
-| :--- | :--- |
-| Period (Seconds) | How often device state is refreshed. Set to 0 to disable auto-refresh. (Default: 5s) |
-| Max Valid Age (s) | Measurements older than this are not displayed. (Default: 300s) |
-| Input Update Interval (s) | How often measurements are re-fetched. (Default: 300s) |
-
-### Map
+### Basic
 
 | Option | Description |
 | :--- | :--- |
 | Select Map | The saved map to display. Leave empty to use the most recently modified map. |
-| Latitude / Longitude, Zoom | The fallback position and zoom level used when no map is selected. |
-| Active Overlay Layers / Selected Base Layer | Values the widget remembers from your last layer/base-map choice. **These aren't meant to be typed in by hand** — they're filled in automatically when you use the layer picker on the map. |
+| Show Labels | The master switch for all site/zone/facility/device/sensor labels. Fine-tune which types show up under **Layers → Labels** in the map's right-hand tools. |
+| Display Data Only (Hide Map) | Hides the map background and overlays, showing only the side measurement panel. |
+| Show AI Advice | Shows the latest AI advice summary for this map's facility/site as a clickable chip at the top of the map (requires the global AI to be configured). |
+| Period (Seconds) | How often device state is refreshed. **Set to 0 to disable auto-refresh.** (Default: 5s) |
 
 !!! note
-    Switching **Select Map** to a different map automatically resets the latitude/longitude and zoom values, so they can be re-fit to the new map.
-
-### 3D Map
-
-| Option | Description |
-| :--- | :--- |
-| Default Pitch (0–60) | The 3D tilt angle when the map first opens. |
-| Default Bearing (−180 to 180) | The rotation angle when the map first opens. |
-| Vector Style URL | A custom MapLibre style JSON, if you need one. Leave empty to use the GIS input setting. |
-| Facility Render Mode | How 3D facility (building) models are drawn: Default (translucent) / Solid (opaque) / Wireframe / Performance (for mobile, minimizes load). |
+    Switching **Select Map** to a different map automatically resets the stored position and zoom, so they can be re-fit to the new map.
 
 ### Device Filter
 
@@ -107,37 +121,24 @@ Separately, the widget's title bar has **Lock Map** (locks panning/zooming) and 
 | :--- | :--- |
 | Input / Output / Function | Choose which measurements of each type are shown in the side data panel. |
 
-### AI
+### Label Style
 
-| Option | Description |
-| :--- | :--- |
-| Show AI Advice | Shows the latest AI advice summary for this map's facility/site as a clickable chip at the top of the map (requires the global AI to be configured). |
+Applies to **both** name labels (site/zone/facility) and value keys (input sensor
+readings). Whether they show at all still follows the **Show Labels** master
+switch above.
 
-### Labels
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| Prevent Label Collision | On | Clusters overlapping labels automatically. **The more specific label survives** — function > input > output > equipment > facility > zone > site claim space in that order, and whatever yields is surfaced as a `name +N` badge rather than disappearing silently. |
+| Label Text Size | 1.0 | Font size (em) of every map label and value key. 1.0–3.0. |
+| Hide Labels When Zoomed Out | 16 | Below this zoom level, facility / output / input / function labels and value keys are hidden. Site and zone labels always stay visible so the map keeps its bearings. **Set 0 to never hide.** |
+| Facility-centric Labels | Off | Switches the per-zoom exposure rules between outdoor-centric (off, default) and facility-centric (on). Stacking order — which label draws on top — is unaffected and is always site > zone > facility > equipment > output > input > function. |
+| Sensor Marker Style | Circle | Circle (a compact round marker showing the representative value as an integer, colored by measurement band) or Text (value with unit). |
+| Enable Sensor Popup | On | Clicking a value key opens a detail window with a 24-hour chart. |
 
-| Option | Description |
-| :--- | :--- |
-| Show Labels | The master switch for all site/zone/device/sensor labels. Fine-tune which Input/Output/Function labels show up using the label controller on the right side of the map. |
-| Prevent Label Collision | When on, overlapping labels are hidden automatically. |
-| Label Spacing (px) | Extra padding added before labels count as overlapping. 0 (default) clusters only labels that visually overlap; raise it to 10–30 to cluster earlier in a dense deployment. |
-| Label Text Size (em) | The font size of all map labels. |
-| Facility-centric Labels | Off (default): outdoor-centric — site/zone labels stay visible at all zoom levels, and facility/sensor labels only appear once you zoom in. On: facility-centric — facility/sensor labels take priority, and site/zone labels merge together as you zoom out. |
-
-### Sensor Label Style
-
-Controls the appearance of the label shown where a facility has a sensor attached (whether it shows at all still follows the **Show Labels** master switch above).
-
-| Option | Description |
-| :--- | :--- |
-| Sensor Marker Style | Circle (a compact round marker showing the first measurement as an integer, colored by band) or Text (the full value). |
-| Max Channels Shown | How many measurement values to show per label. Extra channels collapse into a "+". |
-| Decimals | Decimal places for label values. |
-| Label Size (em) | The font size of sensor labels. |
-| Label Background / Text Color | A CSS color value (for example `#f8fafc` or `rgba(15,23,42,0.78)`). |
-| Vertical Offset (m) | How far above the sensor (in meters) the label is anchored. |
-| Label Opacity | A value from 0.0 to 1.0 controlling how transparent the sensor labels are. |
-| Enable Sensor Popup | When on, clicking a sensor label opens a detail popup with a 24-hour chart. |
-| Popup Default Tab | The tab shown first when the popup opens: Overview / Environment & Control / About. |
+!!! note
+    Hovering or clicking any label brings it to the very front, whatever its type.
+    A label you clicked stays in front until the window it opened is closed.
 
 ### Shapes
 
@@ -151,13 +152,27 @@ Toggles, by type, whether the polygons you drew in the design tool are shown as 
 | Equipment Shape | Shapes for equipment such as pipes. |
 | Device Shape | The area a device occupies. |
 | Other Drawn Shapes | Freeform shapes made with the drawing tools. |
-| Device Shape Opacity (0–100) | Opacity of the device shapes above — 0 is transparent, 100 is fully opaque. |
+| Device Shape Opacity | Opacity of the device shapes above (0–100) — 0 is transparent, 100 is fully opaque. |
 
-### Misc
+### 3D Map (Vector Mode)
 
 | Option | Description |
 | :--- | :--- |
-| Display Data Only (Hide Map) | Hides the map background and overlays, showing only the side measurement panel. |
+| Enable 3D Terrain | Turns on elevation-based 3D terrain (hillshade) rendering. |
+| Facility Render Mode | How 3D facility (building) models are drawn: Default (translucent) / Solid (opaque) / Wireframe / Performance (for mobile, minimizes load). |
+| Vector Style URL | A custom MapLibre style JSON, if you need one. Leave empty to use the GIS input setting. |
+
+### Values Saved Automatically
+
+These are **not** in the settings panel — the widget remembers them as you use
+the map. You never type them in.
+
+| Value | Saved when |
+| :--- | :--- |
+| Position, zoom, pitch, bearing | You pan, zoom, or tilt the map |
+| Active overlay layers / selected base map | You use the map's layer picker |
+| Per-type label visibility | You use the toolbar label buttons or the **Layers → Labels** checkboxes |
+| Map lock / hidden controls | You press those tool buttons |
 
 ---
 
@@ -167,7 +182,7 @@ A legend is displayed automatically in the bottom-right of the map — there's n
 
 ---
 
-## 3D Facility Popup
+## 3D Facility Popup { #3d-facility-popup }
 
 Clicking a Facility marker or polygon shows a brief 3D preview and an environment-data summary in a popup. For the full facility view, use the [AoT_facility widget](facility-widget.md).
 

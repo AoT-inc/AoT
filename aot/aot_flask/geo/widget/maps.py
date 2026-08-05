@@ -2,6 +2,7 @@
 import json
 import logging
 from aot.aot_flask.extensions import db
+from aot.aot_flask.geo.facility_sensors import channel_label_meta
 from aot.aot_flask.utils import utils_geo
 from aot.config import (
     MAP_API_KEY,
@@ -216,6 +217,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                 DeviceMeasurements.unique_id,
                 DeviceMeasurements.name,
                 DeviceMeasurements.measurement,
+                DeviceMeasurements.measurement_type,
                 DeviceMeasurements.channel,
                 DeviceMeasurements.unit,
                 DeviceMeasurements.rescaled_unit,
@@ -268,16 +270,29 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                     if m_id in meas_lookup:
                         meas = meas_lookup[m_id]
                         chan = meas.channel if meas.channel is not None else 0
-                        
+                        raw_name = (meas.name or meas.measurement or '')
+                        eff_unit = (conv_unit_lookup.get(meas.conversion_id)
+                                    if meas.conversion_id else None) \
+                            or meas.rescaled_unit or meas.unit or ''
+                        # 시설 fitting 센서와 동일한 밴드 key / 표시 단위 규칙
+                        # (facility_sensors.channel_label_meta 가 정본).
+                        # 표시명은 번역되므로 key 대용으로 쓸 수 없다.
+                        band_key, disp_unit = channel_label_meta(
+                            meas.measurement_type, raw_name, eff_unit,
+                            meas.measurement or '')
+
                         measurements_map[dev_id].append({
-                            'id': m_id, 
-                            'device_unique_id': dev_id, 
+                            'id': m_id,
+                            'device_unique_id': dev_id,
                             'channel': chan,
-                            'name': f"[CH{chan}] {gettext(meas.name or meas.measurement or '')}".strip(),
-                            'meas_name': gettext(meas.name or meas.measurement or ''),
+                            'name': f"[CH{chan}] {gettext(raw_name)}".strip(),
+                            'meas_name': gettext(raw_name),
+                            'measurement_type': meas.measurement_type,
+                            'key': band_key,
                             'device_type': m_conf['device_type'],
-                            'device_name': gettext(dev_name_lookup.get(dev_id) or ''), 
-                            'unit': (conv_unit_lookup.get(meas.conversion_id) if meas.conversion_id else None) or meas.rescaled_unit or meas.unit or '',
+                            'device_name': gettext(dev_name_lookup.get(dev_id) or ''),
+                            'unit': eff_unit,
+                            'display_unit': disp_unit,
                             'last_value': getattr(meas, 'last_value', '')
                         })
                         measurement_device_ids.append(f"{dev_id}::{chan}")
@@ -375,6 +390,12 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     show_equipment_shape = to_bool(widget_options.get('show_equipment_shape'), False) if widget_options else False
     global_label_size = widget_options.get('global_label_size', '1.0') if widget_options else '1.0'
     label_priority_facility = to_bool(widget_options.get('label_priority_facility'), False) if widget_options else False
+    # 라벨 숨김 기준 줌. 0 = 숨기지 않음. 빈 문자열/None/비수치는 기본 16 으로.
+    try:
+        label_min_zoom = int(float(widget_options.get('label_min_zoom', 16))) if widget_options else 16
+    except (TypeError, ValueError):
+        label_min_zoom = 16
+    label_min_zoom = max(0, min(22, label_min_zoom))
     overlay_data_only = to_bool(widget_options.get('overlay_data_only'), False) if widget_options else False
 
     try:
@@ -515,7 +536,6 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     global_keys = {}
     if geo_setting:
         try:
-            import json
             global_providers = json.loads(geo_setting.providers) if geo_setting.providers else {}
             global_keys = json.loads(geo_setting.keys) if geo_setting.keys else {}
         except Exception:
@@ -525,7 +545,6 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     theme_config = geo_config.get('theme_config', {})
     if isinstance(theme_config, str):
         try:
-            import json
             theme_config = json.loads(theme_config)
         except:
             theme_config = {}
@@ -534,7 +553,6 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     if config_map:
         if config_map.providers:
             try:
-                import json
                 map_specific_providers = json.loads(config_map.providers)
                 if map_specific_providers:
                     global_providers = map_specific_providers
@@ -756,6 +774,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'show_device_shapes': show_device_shapes,
         'global_label_size': global_label_size,
         'label_priority_facility': label_priority_facility,
+        'label_min_zoom': label_min_zoom,
         'overlay_data_only': overlay_data_only,
         'include_all_devices': include_all,
         'device_ids': ",".join(legacy_device_ids) if isinstance(legacy_device_ids, list) else legacy_device_ids,
@@ -776,7 +795,10 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'map_state_key': selected_map_uuid,
         'selected_map_uuid': selected_map_uuid, 
         'map_uuid': selected_map_uuid, # [Alias] for config template
-        'period': max(5, period_seconds),
+        # 0 = 자동 새로고침 끔(위젯 옵션 phrase/constraints min=0 과 동일한 계약).
+        # 예전엔 무조건 max(5, ...) 라 0 을 저장해도 5초 폴링이 계속 돌았다.
+        # JS 는 이미 `if (vars.refreshSeconds > 0)` 로 0 을 존중한다.
+        'period': 0 if period_seconds <= 0 else max(5, period_seconds),
         'map_locked': map_locked,
         'hide_controls': hide_controls,
         'show_drawn_shapes': show_drawn_shapes,

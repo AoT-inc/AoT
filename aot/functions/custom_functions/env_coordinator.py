@@ -69,7 +69,7 @@ class CustomModule(
 ):
     """Integrated facility environment control — L1+L2+L3 single Function."""
 
-    def __init__(self, function, testing=False):
+    def __init__(self, function: CustomController, testing: bool = False) -> None:
         super().__init__(function, testing=testing, name=__name__)
 
         self.control = DaemonControl()
@@ -194,9 +194,22 @@ class CustomModule(
         # 구동주기: setpoint 변경 직후 1회 개구부 정상 구동주기를 우회(즉시 반영)하는
         # 플래그. cmd_reload/cmd_run_now 가 설정, CycleMixin._classify_emergency 가 소비.
         self._force_immediate = False
+        # 긴급정지 후 조율기가 다시 명령을 내지 않는 보류 종료 시각(epoch).
+        # timer_loop 만으로 지연을 표현하면 cmd_run_now 가 그것을 0 으로 되돌려
+        # 보류가 통째로 우회된다 — 긴급정지가 액추에이터를 안전값으로 보낸 직후
+        # 조율기가 즉시 재개해 다시 움직이는 셈이다. 보류를 별도 상태로 두고
+        # loop() 와 cmd_run_now 양쪽에서 지킨다.
+        self._emergency_hold_until = 0.0
         self._emergency_now    = False
         self._emergency_reason = ''
         self._unattainable_state: dict = {}   # P5-3: {var: 연속 초과 사이클 수}
+        # 하드 임계 위반 래치(히스테리시스). 사이클마다 WARN 이 도배되지 않도록
+        # 상태 전이 때만 로그를 남기는 데 쓴다. _run_cycle 안에서 lazy 하게
+        # 만들면 그 상태를 먼저 읽는 경로가 생겼을 때 AttributeError 가 난다.
+        self._constraint_breach_state: dict = {
+            'T_max': False, 'T_min': False, 'RH_max': False, 'RH_min': False,
+        }
+        self._light_breach_state: dict = {'max': False, 'min': False}
         self._groups: list = []
         self._channel_map  = {}
         self._actuator_idx = {}
@@ -214,7 +227,7 @@ class CustomModule(
             self.try_initialize()
 
     # ─────────────────────────────────────────────────────────────────────────
-    def initialize(self):
+    def initialize(self) -> None:
         # 육묘장 모드: 지하수처럼 경도·철분이 높고 수온이 낮은 원수를 쓰면
         # 물방울 렌즈 집광 외에 염류 잔류·저온 충격까지 겹쳐 피해가 커진다.
         # 그래서 원수가 지하수면 잠금 임계를 자동으로 더 보수적으로 내린다.
@@ -239,22 +252,7 @@ class CustomModule(
         # 하드 잠금과 감쇠가 어긋나지 않는다.
         self.nursery_solar_lockout = _lockout
         self.nursery_solar_release = _release
-        # select_device 옵션 타입은 {id}_id 속성을 생성한다.
-        # 내부 코드는 geo_facility_id_device_id 를 참조하므로 여기서 정규화한다.
-        if not self.geo_facility_id_device_id:
-            self.geo_facility_id_device_id = (
-                getattr(self, 'geo_facility_id_id', None) or
-                getattr(self, 'geo_facility_id', None) or ''
-            ) or None
-        # Method select_device 옵션들도 동일하게 정규화한다.
-        # (누락 시 vpd/co2/photo 메서드 ID 가 항상 빈값 → setpoint 가 조용히
-        #  None 으로 떨어져 Method 곡선이 한 번도 평가되지 않는다)
-        for _opt in ('vpd_method_id', 'co2_method_id', 'photo_method_id'):
-            _attr = _opt + '_device_id'
-            if not getattr(self, _attr, None):
-                _val = (getattr(self, _opt + '_id', None) or
-                        getattr(self, _opt, None) or '')
-                setattr(self, _attr, _val or None)
+        self._normalize_select_device_options()
         # Load persisted state FIRST so CalibrationRegistry is restored from DB.
         # _reload_profiles() then merges pending commissioning anchors on top of
         # the restored registry — rather than overwriting it.
@@ -279,7 +277,7 @@ class CustomModule(
             len(self._profiles), self.update_period or 60)
 
     # ─────────────────────────────────────────────────────────────────────────
-    def stop_function(self):
+    def stop_function(self) -> None:
         """비활성화 시 각 액추에이터를 end_behavior 설정에 따라 복귀시킨다.
 
         FunctionController.run_finally() → stop_function() 순서로 호출된다.
@@ -289,7 +287,7 @@ class CustomModule(
         super().stop_function()
 
     # ─────────────────────────────────────────────────────────────────────────
-    def cmd_reload(self, args_dict):
+    def cmd_reload(self, args_dict: dict) -> str:
         """실행 중 custom_options 변경(예: AI set_vpd_target)을 다음 사이클에 반영.
 
         setup_custom_options() 를 재호출해 target_vpd 등 정적 옵션 속성을 DB 에서
@@ -308,11 +306,51 @@ class CustomModule(
         self._force_immediate = True
         return f'Reloaded — {len(self._profiles)} actuator(s)'
 
-    def cmd_run_now(self, args_dict):
+    def cmd_run_now(self, args_dict: dict) -> str:
+        """다음 사이클을 즉시 실행. 단, 긴급정지 보류 중에는 거부한다."""
+        now = time.time()
+        if now < self._emergency_hold_until:
+            remain = self._emergency_hold_until - now
+            msg = (f'긴급정지 보류 중 — 즉시 실행 요청을 무시한다 '
+                   f'(남은 {remain:.0f}초)')
+            self.logger.warning(msg)
+            return msg
         self.timer_loop = 0.0
         self._force_immediate = True
+        return 'Next cycle will run immediately'
 
-    def _option_defaults(self):
+    def _normalize_select_device_options(self) -> None:
+        """select_device 옵션의 값을 내부 규약인 `<id>_device_id` 한 곳으로 모은다.
+
+        프레임워크는 select_device 를 만나면 `<id>_id` 에 값을 넣는다
+        (abstract_base_controller.setup_custom_options_csv). 저장 형식이나 과거
+        데이터에 따라 `<id>` 자체에 들어 있는 경우도 있다. 반면 내부 코드는
+        `<id>_device_id` 하나만 참조하므로, 세 이름을 여기서 하나로 정규화한다.
+
+        옵션 id 가 이미 `_id` 로 끝나면(`geo_facility_id`) 프레임워크 규칙과
+        겹쳐 `geo_facility_id_id` 라는 이상해 보이는 이름이 나온다 — 오타가
+        아니라 규칙의 산물이다.
+
+        **대상을 하드코딩하지 않고 FUNCTION_INFORMATION 에서 뽑는다.** 예전에는
+        geo_facility_id 와 method 3종을 손으로 나열했는데, 그러면 새 select_device
+        옵션을 추가할 때 이 목록에 넣는 것을 잊기 쉽다. 빠뜨리면 그 옵션은 항상
+        빈값이 되고 아무 에러도 나지 않는다 — 실제로 method 3종이 누락됐을 때
+        setpoint 가 조용히 None 으로 떨어져 Method 곡선이 한 번도 평가되지 않았다.
+        """
+        for opt in FUNCTION_INFORMATION.get('custom_options', []):
+            if not isinstance(opt, dict) or opt.get('type') != 'select_device':
+                continue
+            oid = opt.get('id')
+            if not oid:
+                continue
+            target = f'{oid}_device_id'
+            if getattr(self, target, None):
+                continue
+            value = (getattr(self, f'{oid}_id', None) or
+                     getattr(self, oid, None) or '')
+            setattr(self, target, value or None)
+
+    def _option_defaults(self) -> dict:
         """custom_options 의 기본값 사전 — '미수정' 판정에 사용."""
         out = {}
         for o in FUNCTION_INFORMATION.get('custom_options', []):
@@ -320,7 +358,7 @@ class CustomModule(
                 out[o['id']] = o['default_value']
         return out
 
-    def _sync_crop_targets(self):
+    def _sync_crop_targets(self) -> None:
         """작물 프리셋 변경 시 목표 옵션(DLI/GDD/VPD/CO2/온도)을 자동 갱신.
 
         규칙:
@@ -360,9 +398,13 @@ class CustomModule(
                     self.set_custom_option(opt_id, new_val)
             self.set_custom_option('crop_preset_applied', cur_key or '')
         except Exception:
-            self.logger.debug('crop target sync failed', exc_info=True)
+            # get_crop_params() 는 dict 조회+기본값이라 던지지 않는다 — 여기서
+            # 나는 예외는 사실상 전부 get/set_custom_option 의 DB 오류다. 즉
+            # "예상된 실패" 가 아니라 전부 "예상 밖 실패" 이므로 debug 로 묻으면
+            # 작물 프리셋 자동 동기화가 조용히 멈춘 채 아무도 모르게 된다.
+            self.logger.warning('crop target sync failed', exc_info=True)
 
-    def cmd_apply_crop_targets(self, args_dict):
+    def cmd_apply_crop_targets(self, args_dict: dict) -> str:
         """선택된 작물 프리셋의 권장값을 목표 옵션에 강제로 채워 영속화한다.
 
         자동 동기화는 수동 입력을 보존하지만, 이 버튼은 현재 값을 무시하고 프리셋
@@ -384,7 +426,7 @@ class CustomModule(
         return (f"Applied {self.crop_preset} preset — " + ', '.join(applied)
                 if applied else f"No targets applied (methods in use?) for {self.crop_preset}")
 
-    def cmd_emergency_stop(self, args_dict):
+    def cmd_emergency_stop(self, args_dict: dict) -> str:
         """긴급정지: 모든 액추에이터를 safe_default 또는 OFF로 즉시 이동 + 60s 지연.
 
         safe_default > 0 인 액추에이터(예: 보온커튼 파킹 위치)는 해당 값으로,
@@ -410,13 +452,14 @@ class CustomModule(
                     'EnvCoordinator emergency_stop: %s failed — %s',
                     p.actuator_id, exc)
 
-        self.timer_loop = time.time() + 60.0
+        self._emergency_hold_until = time.time() + 60.0
+        self.timer_loop = self._emergency_hold_until
         msg = (f'Emergency stop: safe_default/off sent for {len(self._profiles)} '
                f'actuator(s) ({failed} failed), next cycle delayed 60s')
         self.logger.warning(msg)
         return msg
 
-    def force_safe_state(self):
+    def force_safe_state(self) -> None:
         """외부 트리거(Conditional, Trigger) 에서 직접 호출하는 E-stop 진입점.
 
         cmd_emergency_stop 과 동일하지만 반환값 없이 조용히 실행한다.
@@ -424,8 +467,12 @@ class CustomModule(
         self.cmd_emergency_stop({})
 
     # ─────────────────────────────────────────────────────────────────────────
-    def loop(self):
+    def loop(self) -> None:
         now = time.time()
+        # 긴급정지 보류는 timer_loop 와 별개로 지킨다 — timer_loop 를 0 으로
+        # 되돌리는 경로가 생겨도 보류가 뚫리지 않게 하기 위함이다.
+        if now < self._emergency_hold_until:
+            return
         if now < self.timer_loop:
             return
         period = self.update_period or 60.0

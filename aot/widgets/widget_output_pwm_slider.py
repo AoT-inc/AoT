@@ -330,7 +330,7 @@ WIDGET_INFORMATION = {
           }
         }
         else {
-          document.getElementById("container-output-" + widget_id).className = "pause-background";
+          document.getElementById("container-output-" + widget_id).className = "fault-background";
           document.getElementById("text-output-state-" + widget_id).innerHTML = '({{_('No Connection')}})';
         }
       }

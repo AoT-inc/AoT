@@ -7,6 +7,12 @@ Requires=aotflask.service
 User=root
 Group=aot
 WorkingDirectory=/opt/AoT
+# 바인드 주소(기본 0.0.0.0). 도커와 달리 네이티브 설치에는 노출면을 좁혀 주는
+# 포트 매핑이 없어서, 기본값이면 이 호스트의 모든 인터페이스에 5700 이 열린다.
+# 이미 붙어 있는 원격 클라이언트를 끊지 않으려고 기본값은 그대로 두었다 —
+# 로컬에서만 쓰는 서버라면 아래 줄의 주석을 풀어 좁힐 것. 원격을 받아야 하면
+# 전체 대신 해당 인터페이스 주소(예: Tailscale IP)를 적는다.
+#Environment=AOT_MCP_HTTP_HOST=127.0.0.1
 ExecStart=/opt/AoT/env/bin/python /opt/AoT/aot/aot_mcp_server.py --http --port 5700
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID

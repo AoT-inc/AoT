@@ -199,7 +199,7 @@ WIDGET_INFORMATION = {
   }
 
   function print_controller_error(widget_id) {
-    document.getElementById('container-controller-' + widget_id).className = "pause-background";
+    document.getElementById('container-controller-' + widget_id).className = "fault-background";
   }
 
   // Retrieve the controller state

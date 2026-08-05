@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
-<script src="/static/js/common/aot-output-state.js?v=6"></script>
+<script src="/static/js/common/aot-output-state.js?v=8"></script>
 
 
 <script>
@@ -149,11 +149,11 @@
                     // the timeout (likely lost). Distinct look; toggle reflects the
                     // reverted (off) state. A late ACK will resolve it to on/off.
                     if (document.getElementById(inputId)) {
-                      document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block pause-background';
+                      document.getElementById(inputId).className = 'form-control btn btn-primary btn-sm btn-block fault-background';
                       document.getElementById(inputId).value = '{{_('No Response')}}';
                     }
                     if (document.getElementById(rowId)) {
-                        document.getElementById(rowId).className = "item_channel row small-gutters pause-background aot-entry-item-channel";
+                        document.getElementById(rowId).className = "item_channel row small-gutters fault-background aot-entry-item-channel";
                     }
                     if (document.getElementById(toggleId)) document.getElementById(toggleId).checked = false;
                   } else if (states[i] !== 'off') {
@@ -208,7 +208,7 @@
               var cardEl = document.getElementById('output_status_' + output_id);
               var agg = window.AoTOutputState.aggregate(Object.values(states));
               if (cardEl) {
-                cardEl.classList.remove('active-background', 'inactive-background', 'pause-background', 'hold-background');
+                cardEl.classList.remove('active-background', 'inactive-background', 'fault-background', 'hold-background');
                 cardEl.classList.add(agg.cssClass);
               }
             });
@@ -284,10 +284,10 @@
         } else {
           {% for each_output in output %}
           {% for each_output_channel in dict_outputs[each_output.output_type]['channels_dict'] %}
-          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block pause-background';
+          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block fault-background';
           document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = '{{_('No Connection')}}';
           // Force Row to stay clean and apply pause background
-          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state").className = "item_channel row small-gutters pause-background aot-entry-item-channel";
+          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state").className = "item_channel row small-gutters fault-background aot-entry-item-channel";
 
           // Default toggle to false or unchecked if unknown
           if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-toggle")) {
@@ -297,7 +297,7 @@
           if (document.getElementById('output_status_{{each_output.unique_id}}')) {
             document.getElementById('output_status_{{each_output.unique_id}}').classList.remove(
               'active-background', 'inactive-background', 'hold-background');
-            document.getElementById('output_status_{{each_output.unique_id}}').classList.add('pause-background');
+            document.getElementById('output_status_{{each_output.unique_id}}').classList.add('fault-background');
           }
           {% endfor %}
         }

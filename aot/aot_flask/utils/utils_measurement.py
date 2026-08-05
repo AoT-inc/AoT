@@ -116,6 +116,14 @@ def measurement_mod_form(messages, page_refresh, form):
                     mod_meas.rescaled_measurement = ''
                     mod_meas.rescaled_unit = ''
 
+            # 배터리 화학 종류(배터리 채널에만 폼에 존재). 알 수 없는 값이 오면
+            # 저장하지 않고 '자동'으로 둔다 — 지도 배지가 없는 곡선을 찾다가
+            # 조용히 None 을 반환하느니 추정하는 편이 낫다.
+            if "measurement_battery_type_{}".format(each_meas_id) in form:
+                from aot.aot_flask.geo.device_link_status import BATTERY_TYPES
+                bt = (form["measurement_battery_type_{}".format(each_meas_id)] or '').strip()
+                mod_meas.battery_type = bt if bt in BATTERY_TYPES else ''
+
             if "measurement_rescale_method_{}".format(each_meas_id) in form:
                 mod_meas.rescale_method = form["measurement_rescale_method_{}".format(each_meas_id)]
             if "measurement_rescale_equation_{}".format(each_meas_id) in form:

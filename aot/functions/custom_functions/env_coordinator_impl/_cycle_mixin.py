@@ -4,13 +4,17 @@ _cycle_mixin.py — CycleMixin: _run_cycle() (L1→L2→L3 pipeline).
 """
 
 import time
+from dataclasses import dataclass
 from datetime import timedelta
+from typing import Any
 
 from aot.functions.utils.env_control.active_probe import ActiveProbeScheduler
 from aot.functions.utils.env_control.actuator_feedback import ActuatorFeedbackRegistry
 from aot.functions.utils.env_control.authority import authority_summary, derive_authority
 from aot.functions.utils.env_control.calibration import CalibrationRegistry
-from aot.functions.utils.env_control.coordinator import coordinate
+from aot.functions.utils.env_control.coordinator import (
+    coordinate, ActuatorCommand, CoordinatorState,
+)
 from aot.functions.utils.env_control.data_hygiene import DataHygieneChecker
 from aot.functions.utils.env_control.greybox.params import GreyboxParams
 from aot.functions.utils.env_control.greybox.shadow import GreyboxShadow
@@ -27,8 +31,11 @@ from aot.functions.utils.env_control.forecast_feedforward import (
     build_feedforward_signal_from_forecast,
     FeedforwardSignal, apply_feedforward, build_feedforward_signal,
 )
-from aot.functions.utils.env_control.safety_gates import is_wetting_fogger
+from aot.functions.utils.env_control.safety_gates import (
+    is_wetting_fogger, GateResult,
+)
 from aot.functions.utils.env_control.situation import assess, decompose_vpd_to_T_RH
+from aot.functions.utils.env_control.types import ActuatorProfile, SituationReport
 
 
 # ── 하드 임계 히스테리시스 폭 ────────────────────────────────────────────────
@@ -36,6 +43,30 @@ from aot.functions.utils.env_control.situation import assess, decompose_vpd_to_T
 # 흔들릴 때 강제 오버라이드가 매 사이클 on/off 를 반복해 액추에이터가 왕복한다
 # (2026-07-30 aot-005: 차광막이 17:50 개방 → 18:04 폐쇄. 차광막은 편도 285초
 # full-stroke 주행이라 왕복 피해가 특히 크다).
+@dataclass
+class _CycleContext:
+    """한 사이클이 만들어낸 값들의 묶음 — 단계 사이로 넘긴다.
+
+    _run_cycle 이 727줄까지 자라면서 단계를 떼어내려 해도 지역변수 열몇 개가
+    함께 흘러 시그니처가 감당이 안 됐다. 묶어서 넘기면 새 단계를 추출할 때
+    필드만 늘리면 되고 호출부 시그니처는 그대로다.
+
+    주의: 이건 사이클 **지역 상태**다. Function 의 설정 속성(self.target_vpd 등)은
+    옵션 프레임워크가 setattr 로 평평하게 주입하므로 이런 식으로 묶을 수 없다.
+    """
+    uid: str = ''
+    internal: dict = None
+    external: dict = None
+    external_for_control: dict = None
+    env_target: Any = None
+    situation: Any = None
+    authority: Any = None
+    gate_result: Any = None
+    commands: dict = None
+    final_cmds: dict = None
+    is_probe: bool = False
+
+
 TEMP_HYST_C     = 0.5    # °C
 RH_HYST_PCT     = 2.0    # %
 LIGHT_HYST_FRAC = 0.10   # 임계의 10% (광량은 절대폭이 0~1000 으로 넓어 비율 사용)
@@ -60,8 +91,8 @@ def latch_threshold(value: float, threshold: float, hysteresis: float,
     return value < limit
 
 
-def estimate_indoor_light(outdoor_light: float, profiles, apertures: dict,
-                          default_tau: float = 0.0) -> float:
+def estimate_indoor_light(outdoor_light: float, profiles: list[ActuatorProfile],
+                          apertures: dict, default_tau: float = 0.0) -> float:
     """실외 일사 + 차광막 개도로 차광막 '아래' 광량을 추정한다.
 
     실내 광센서가 없으면 internal['light'] 에 실외 일사가 그대로 들어가는데,
@@ -107,7 +138,8 @@ def estimate_indoor_light(outdoor_light: float, profiles, apertures: dict,
     return outdoor_light * min(factors)
 
 
-def apply_light_threshold_overrides(internal: dict, profiles, final_cmds: dict) -> None:
+def apply_light_threshold_overrides(
+        internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """광량 하드 임계(light_max/light_min) 위반 시 shade/lighting 강제 오버라이드.
 
     규약: 차광막 0%=닫힘=차광, 100%=열림=빛 유입.
@@ -130,7 +162,8 @@ def apply_light_threshold_overrides(internal: dict, profiles, final_cmds: dict) 
                 final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'light_min'}
 
 
-def apply_temp_humid_threshold_overrides(internal: dict, profiles, final_cmds: dict) -> None:
+def apply_temp_humid_threshold_overrides(
+        internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """온습도 하드 임계(temp_max/min, humid_max/min) 위반 시 강제 오버라이드.
 
     이 함수가 추가되기 전에는 `_force_cool`/`_force_heat`/`_force_dehumid`/
@@ -173,7 +206,8 @@ def apply_temp_humid_threshold_overrides(internal: dict, profiles, final_cmds: d
                 final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'humid_min'}
 
 
-def apply_nursery_fog_derate(internal: dict, profiles, final_cmds: dict) -> None:
+def apply_nursery_fog_derate(
+        internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """육묘장 모드: 일사가 올라가는 구간에서 습윤형 분무 명령을 선형 감쇠한다.
 
     하드 잠금(광량 >= lockout)은 안전 프리게이트가 GATE_BIT_FOG_SUNBURN 으로
@@ -221,7 +255,8 @@ def apply_nursery_fog_derate(internal: dict, profiles, final_cmds: dict) -> None
 
 
 def apply_threshold_and_gate_overrides(
-        internal: dict, profiles, final_cmds: dict, partial_overrides: dict) -> None:
+        internal: dict, profiles: list[ActuatorProfile], final_cmds: dict,
+        partial_overrides: dict) -> None:
     """임계 오버라이드(광량·온습도) + 안전 프리게이트를 **정해진 순서로** 적용.
 
     순서가 곧 우선순위이며, 안전 프리게이트가 반드시 마지막(=최우선)이다.
@@ -358,7 +393,7 @@ class CycleMixin:
             if self._evening_fog_blocked():
                 internal['evening_block'] = True
 
-    def _clear_sky_light_fallback(self):
+    def _clear_sky_light_fallback(self) -> float:
         """일사 센서가 전혀 없을 때 쓸 광량 어림값(W/m²). 못 구하면 None.
 
         일소 게이트는 광량을 모르면 잠그지 않는다 — 야간에 계속 잠겨 정상 가습까지
@@ -419,7 +454,9 @@ class CycleMixin:
                 self.logger.debug('저녁 분무 차단 판정 실패 (차단 안 함): %s', exc)
             return False
 
-    def _classify_emergency(self, gate_result, situation) -> tuple:
+    def _classify_emergency(
+            self, gate_result: GateResult,
+            situation: SituationReport) -> tuple[bool, str]:
         """이번 사이클이 '긴급'인지 판정 — 개구부 정상 구동주기를 우회할지 결정한다.
 
         긴급 판정 시 _dispatch() 는 actuation_profile 주기 대신 emergency_period_sec
@@ -453,7 +490,7 @@ class CycleMixin:
 
         return False, ''
 
-    def _run_cycle(self, cycle_sec: float):
+    def _run_cycle(self, cycle_sec: float) -> None:
         uid     = self.unique_id
         max_age = self.sensor_max_age or 120.0
 
@@ -552,7 +589,12 @@ class CycleMixin:
         # P2-2: 외부 컨텍스트 신선도 확인 — 유효하면 캐시 갱신, 만료면 fallback 준비
         now_ts      = time.time()
         ext_max_age = self._pre_gate.config.ext_context_max_age if self._pre_gate else 300.0
-        last_ext_ts = external.get('last_ext_ts', now_ts)
+        # 기본값은 0.0 이어야 한다. external 에 타임스탬프가 없다는 것은 "외부
+        # 정보를 한 번도 받지 못했다" 는 뜻이지 "방금 받았다" 가 아니다. 예전처럼
+        # now 를 기본값으로 쓰면 ext_context_collector 도 없고 시설 실외 센서도
+        # 없는 설치에서 (now - now) = 0 이라 **영원히 fresh** 로 판정돼 fallback
+        # 컨텍스트가 한 번도 작동하지 않는다.
+        last_ext_ts = external.get('last_ext_ts', 0.0)
         ext_stale   = (now_ts - last_ext_ts) > ext_max_age
 
         if not ext_stale:
@@ -570,8 +612,15 @@ class CycleMixin:
         # P2-2: 외부 센서 만료 시 fallback 컨텍스트로 교체
         if ext_stale:
             stale_age = self._ext_cache.age(now_ts)
-            self.logger.warning(
-                'EnvCoordinator: 외부 센서 만료 %.0fs — fallback 컨텍스트 사용', stale_age)
+            if last_ext_ts <= 0.0:
+                # 외부 소스 자체가 없는 설치 — "만료" 가 아니라 "미연결" 이다.
+                self.logger.warning(
+                    'EnvCoordinator: 외부 컨텍스트 없음(수집기·실외센서 모두 미연결) '
+                    '— fallback 컨텍스트 사용')
+            else:
+                self.logger.warning(
+                    'EnvCoordinator: 외부 센서 만료 %.0fs — fallback 컨텍스트 사용',
+                    stale_age)
             external_for_control = build_fallback_context(
                 self._ext_cache, internal, now_ts)
         else:
@@ -641,96 +690,7 @@ class CycleMixin:
         partial_overrides = (gate_result.forced_commands
                              if gate_result.partial else {})
 
-        # ── T/RH constraint check (before L1) ────────────────────────────────
-        t_val  = internal.get('T')
-        rh_val = internal.get('RH')
-        # Per-cycle WARN spam → state-transition only. Re-arm when value returns
-        # to within bounds, so the next breach is logged again.
-        if not hasattr(self, '_constraint_breach_state'):
-            self._constraint_breach_state: dict = {
-                'T_max': False, 'T_min': False, 'RH_max': False, 'RH_min': False,
-            }
-        cbs = self._constraint_breach_state
-
-        if t_val is not None:
-            if self.temp_max:
-                breached = latch_threshold(t_val, self.temp_max, TEMP_HYST_C,
-                                           cbs['T_max'], 'max')
-                if breached:
-                    if not cbs['T_max']:
-                        self.logger.warning(
-                            'T=%.1f > max=%.1f — forcing cooling', t_val, self.temp_max)
-                    internal['_force_cool'] = True
-                elif cbs['T_max'] and getattr(self, 'debug_logging', False):
-                    self.logger.debug(
-                        'T=%.1f — max=%.1f 강제 해제(히스테리시스 %.1f)',
-                        t_val, self.temp_max, TEMP_HYST_C)
-                cbs['T_max'] = breached
-            if self.temp_min:
-                breached = latch_threshold(t_val, self.temp_min, TEMP_HYST_C,
-                                           cbs['T_min'], 'min')
-                if breached:
-                    if not cbs['T_min']:
-                        self.logger.warning(
-                            'T=%.1f < min=%.1f — forcing heating', t_val, self.temp_min)
-                    internal['_force_heat'] = True
-                elif cbs['T_min'] and getattr(self, 'debug_logging', False):
-                    self.logger.debug(
-                        'T=%.1f — min=%.1f 강제 해제(히스테리시스 %.1f)',
-                        t_val, self.temp_min, TEMP_HYST_C)
-                cbs['T_min'] = breached
-        if rh_val is not None:
-            if self.humid_max:
-                breached = latch_threshold(rh_val, self.humid_max, RH_HYST_PCT,
-                                           cbs['RH_max'], 'max')
-                if breached:
-                    internal['_force_dehumid'] = True
-                cbs['RH_max'] = breached
-            if self.humid_min:
-                breached = latch_threshold(rh_val, self.humid_min, RH_HYST_PCT,
-                                           cbs['RH_min'], 'min')
-                if breached:
-                    internal['_force_humid'] = True
-                cbs['RH_min'] = breached
-
-        # ── Light threshold constraint check ──────────────────────────────────
-        # 실내 추정 광량은 사이클 앞에서 _compute_light_est() 가 이미 계산했다.
-        light_val = internal.get('light_est', internal.get('light'))
-        if not hasattr(self, '_light_breach_state'):
-            self._light_breach_state: dict = {'max': False, 'min': False}
-        lbs = self._light_breach_state
-        if light_val is not None:
-            dbg = getattr(self, 'debug_logging', False)
-            if self.light_max and self.light_max > 0:
-                breached = latch_threshold(
-                    light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC,
-                    lbs['max'], 'max')
-                if breached:
-                    if not lbs['max'] and dbg:
-                        self.logger.debug(
-                            'light=%.0f > max=%.0f — forcing shade',
-                            light_val, self.light_max)
-                    internal['_force_shade'] = True
-                elif lbs['max'] and dbg:
-                    self.logger.debug(
-                        'light=%.0f — max=%.0f 차광강제 해제(히스테리시스 %.0f)',
-                        light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC)
-                lbs['max'] = breached
-            if self.light_min and self.light_min > 0:
-                breached = latch_threshold(
-                    light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC,
-                    lbs['min'], 'min')
-                if breached:
-                    if not lbs['min'] and dbg:
-                        self.logger.debug(
-                            'light=%.0f < min=%.0f — forcing supplemental light',
-                            light_val, self.light_min)
-                    internal['_force_suplight'] = True
-                elif lbs['min'] and dbg:
-                    self.logger.debug(
-                        'light=%.0f — min=%.0f 보광강제 해제(히스테리시스 %.0f)',
-                        light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC)
-                lbs['min'] = breached
+        self._check_hard_constraints(internal)
 
         # ── L1: EnvTarget (VPD-primary) ───────────────────────────────────────
         vpd_t = self._get_vpd_setpoint()
@@ -778,45 +738,7 @@ class CycleMixin:
         if co2_t is None:
             env_target.pop('co2', None)
 
-        # ── P3-4: Forecast Feedforward ────────────────────────────────────────
-        if getattr(self, 'forecast_feedforward_enabled', False):
-            _forecast_bindings = getattr(self, '_sensors_forecast', [])
-            if _forecast_bindings:
-                # facility weather_bindings 경로 — 서비스 무관 범용 경로
-                try:
-                    from aot.aot_flask.geo.facility_sensors import read_forecast_sensors
-                    _fc_data = read_forecast_sensors(_forecast_bindings)
-                except Exception:
-                    _fc_data = {}
-                ff_sig = build_feedforward_signal_from_forecast(
-                    forecast       = _fc_data,
-                    T_int          = T_int,
-                    RH_int         = RH_int,
-                    wind_threshold = self.gate_wind_threshold or 12.0,
-                )
-            else:
-                # fallback: KMA forecast.json 파일 경로 (하위 호환)
-                ff_sig = build_feedforward_signal(
-                    T_int          = T_int,
-                    RH_int         = RH_int,
-                    lookahead_h    = getattr(self, 'forecast_lookahead_h', 3.0) or 3.0,
-                    wind_threshold = self.gate_wind_threshold or 12.0,
-                )
-            if ff_sig.valid and ff_sig.reason != '정상 범위':
-                if getattr(self, 'debug_logging', False):
-                    self.logger.debug('Feedforward: %s', ff_sig.reason)
-                apply_feedforward(
-                    env_target,
-                    ff_sig,
-                    T_g_min=T_g_min, T_g_max=T_g_max,
-                    RH_g_min=RH_g_min, RH_g_max=RH_g_max,
-                )
-                # 환기 억제 신호를 internal에 전달 → safety_gates에서 참조 가능
-                if ff_sig.wind_inhibit:
-                    internal['_ff_wind_inhibit'] = True
-            self._last_ff_signal = ff_sig
-        else:
-            self._last_ff_signal = FeedforwardSignal()
+        self._apply_forecast_feedforward(env_target, internal, T_int, RH_int)
 
         # 목표값/우선순위는 write_cycle_metrics(env_control, CH20~27)로 일원화 기록.
 
@@ -832,47 +754,7 @@ class CycleMixin:
                 'EnvCoordinator authority changed: %s', authority_summary(authority))
         self._last_authority = authority
 
-        # ── P5-4: Photosynthesis-oriented priority 격상 ───────────────────────
-        if self.photosynth_mode_enabled and internal.get('light') is not None:
-            from aot.functions.utils.env_control.photosynthesis import (
-                boost_limiting_priority, decay_priorities,
-                find_limiting_factor, get_crop_params,
-            )
-            crop = get_crop_params(self.crop_preset)
-            vpd_now = internal.get('VPD') or 0.0
-            limiting = find_limiting_factor(
-                L=internal.get('light', 0.0),
-                CO2=internal.get('CO2', 400.0),
-                T=internal.get('T', 22.0),
-                VPD=vpd_now,
-                crop_params=crop,
-            )
-            base_priorities = {
-                'temperature': self.priority_vpd  or 0.5,   # T 추적 우선순위 = vpd 기반
-                'humidity':    0.5,
-                'co2':         self.priority_co2  or 0.8,
-                'vpd':         self.priority_vpd  or 1.2,
-                'light':       0.9,
-            }
-            boost_limiting_priority(
-                env_target=env_target,
-                limiting_factor=limiting,
-                authority=authority,
-                priority_ewa_state=self._priority_ewa_state,
-                base_priorities=base_priorities,
-            )
-            if getattr(self, 'debug_logging', False):
-                self.logger.debug(
-                    'Photosynthesis limiting factor: %s', limiting)
-        elif self.photosynth_mode_enabled:
-            # 광 센서 없음 — 우선순위 기본값으로 복귀
-            from aot.functions.utils.env_control.photosynthesis import decay_priorities
-            base_priorities = {
-                'temperature': 0.5, 'humidity': 0.5,
-                'co2': self.priority_co2 or 0.8,
-                'vpd': self.priority_vpd or 1.2,
-            }
-            decay_priorities(env_target, self._priority_ewa_state, base_priorities)
+        self._apply_photosynthesis_priority(env_target, internal, authority)
 
         # ── L2: SituationReport ───────────────────────────────────────────────
         situation, self._trend_state = assess(
@@ -952,6 +834,37 @@ class CycleMixin:
                         var_source=_cmd.var_source,
                     )
 
+        # ── Stage 1: 능동 탐색 적용 ──────────────────────────────────────────
+        # Post-Gate **앞**이어야 한다. 예전에는 뒤에 있었는데, final_cmds 는
+        # Post-Gate 가 만든 별개 dict 라 여기서 commands 를 고쳐 봐야 전송 대상에
+        # 닿지 않았다 — 능동 탐색이 로그에는 찍히고 장치에는 나가지 않았다.
+        # 앞에 두면 탐색 값도 Post-Gate 의 NaN/범위 검증을 함께 받는다.
+        probe_cmd_pcts = {
+            aid: (c.value if hasattr(c, 'value') else c.get('value', 0.0))
+            for aid, c in commands.items()
+        }
+        probe_cmd_pcts, is_probe = self._probe_scheduler.step(
+            commands=probe_cmd_pcts,
+            profiles=self._profiles,
+            situation=situation,
+            gate_triggered=gate_result.triggered,
+        )
+        if is_probe:
+            from aot.functions.utils.env_control.coordinator import ActuatorCommand
+            from aot.functions.utils.env_control.log_channels import REASON_PRIMARY
+            for aid, pct in probe_cmd_pcts.items():
+                if aid in commands and abs(pct - commands[aid].value) > 0.5:
+                    commands[aid] = ActuatorCommand(value=pct, reason=REASON_PRIMARY,
+                                                    var_source='probe')
+
+        # ── 0.4: circulation_fan 독립 제어 ────────────────────────────────────
+        # circulation_fan 은 coordinator effect 방향 '~' 로 인해 coordinator 가
+        # 선택하지 못함. T 공간 불균일 감지 시 독립 룰로 ON/OFF 결정.
+        # 이것도 Post-Gate 앞이다. 뒤에서 final_cmds 를 고치면 전송은 되지만
+        # write_cycle_metrics(commands) 에 잡히지 않아 결정 근거를 추적할 수 없고,
+        # dict 규약인 final_cmds 에 ActuatorCommand 를 섞어 타입도 흐트러뜨렸다.
+        self._apply_mixing_actuators(commands, internal)
+
         # ── Post-Gate ─────────────────────────────────────────────────────────
         final_cmds, _ = self._post_gate.check(
             {aid: {'value': c.value, 'reason': c.reason}
@@ -988,30 +901,6 @@ class CycleMixin:
                 facility_id=self.geo_facility_id_device_id or None,
             )
 
-        # ── Stage 1: 능동 탐색 적용 ──────────────────────────────────────────
-        probe_cmd_pcts = {
-            aid: (c.value if hasattr(c, 'value') else c.get('value', 0.0))
-            for aid, c in commands.items()
-        }
-        probe_cmd_pcts, is_probe = self._probe_scheduler.step(
-            commands=probe_cmd_pcts,
-            profiles=self._profiles,
-            situation=situation,
-            gate_triggered=gate_result.triggered,
-        )
-        if is_probe:
-            from aot.functions.utils.env_control.coordinator import ActuatorCommand
-            from aot.functions.utils.env_control.log_channels import REASON_PRIMARY
-            for aid, pct in probe_cmd_pcts.items():
-                if aid in commands and abs(pct - commands[aid].value) > 0.5:
-                    commands[aid] = ActuatorCommand(value=pct, reason=REASON_PRIMARY,
-                                                    var_source='probe')
-
-        # ── 0.4: circulation_fan 독립 제어 ────────────────────────────────────
-        # circulation_fan 은 coordinator effect 방향 '~' 로 인해 coordinator 가
-        # 선택하지 못함. T 공간 불균일 감지 시 독립 룰로 ON/OFF 결정.
-        self._apply_mixing_actuators(final_cmds, internal)
-
         failed = self._dispatch(final_cmds, cycle_sec, emergency=self._emergency_now)
 
         # ── 0.1: 피드백 레지스트리 업데이트 ──────────────────────────────────
@@ -1031,6 +920,242 @@ class CycleMixin:
         if getattr(self, 'debug_logging', False):
             write_decision_log(self.unique_id, 'actuator_mismatch_count',
                                CH_ACTUATOR_MISMATCH, float(len(suspicious)))
+
+        self._finalize_cycle(_CycleContext(
+            uid=uid,
+            internal=internal,
+            external=external,
+            external_for_control=external_for_control,
+            env_target=env_target,
+            situation=situation,
+            authority=authority,
+            gate_result=gate_result,
+            commands=commands,
+            final_cmds=final_cmds,
+            is_probe=is_probe,
+        ))
+
+    def _apply_forecast_feedforward(
+            self, env_target: dict, internal: dict,
+            T_int: float, RH_int: float) -> None:
+        """기상 예보로 목표를 선제 보정한다(피드포워드).
+
+        env_target 을 제자리에서 고치고 self._last_ff_signal 에 신호를 남긴다.
+        가이드 범위(guide_T_min 등)는 사이클 중 바뀌지 않으므로 여기서 다시
+        읽어도 값이 달라지지 않는다.
+        """
+        T_g_min  = self.guide_T_min  if self.guide_T_min  is not None else 12.0
+        T_g_max  = self.guide_T_max  if self.guide_T_max  is not None else 32.0
+        RH_g_min = self.guide_RH_min if self.guide_RH_min is not None else 40.0
+        RH_g_max = self.guide_RH_max if self.guide_RH_max is not None else 85.0
+        # ── P3-4: Forecast Feedforward ────────────────────────────────────────
+        if getattr(self, 'forecast_feedforward_enabled', False):
+            _forecast_bindings = getattr(self, '_sensors_forecast', [])
+            if _forecast_bindings:
+                # facility weather_bindings 경로 — 서비스 무관 범용 경로
+                try:
+                    from aot.aot_flask.geo.facility_sensors import read_forecast_sensors
+                    _fc_data = read_forecast_sensors(_forecast_bindings)
+                except Exception:
+                    _fc_data = {}
+                ff_sig = build_feedforward_signal_from_forecast(
+                    forecast       = _fc_data,
+                    T_int          = T_int,
+                    RH_int         = RH_int,
+                    wind_threshold = self.gate_wind_threshold or 12.0,
+                )
+            else:
+                # fallback: KMA forecast.json 파일 경로 (하위 호환)
+                ff_sig = build_feedforward_signal(
+                    T_int          = T_int,
+                    RH_int         = RH_int,
+                    lookahead_h    = getattr(self, 'forecast_lookahead_h', 3.0) or 3.0,
+                    wind_threshold = self.gate_wind_threshold or 12.0,
+                )
+            if ff_sig.valid and ff_sig.reason != '정상 범위':
+                if getattr(self, 'debug_logging', False):
+                    self.logger.debug('Feedforward: %s', ff_sig.reason)
+                apply_feedforward(
+                    env_target,
+                    ff_sig,
+                    T_g_min=T_g_min, T_g_max=T_g_max,
+                    RH_g_min=RH_g_min, RH_g_max=RH_g_max,
+                )
+                # 환기 억제 신호를 internal에 전달 → safety_gates에서 참조 가능
+                if ff_sig.wind_inhibit:
+                    internal['_ff_wind_inhibit'] = True
+            self._last_ff_signal = ff_sig
+        else:
+            self._last_ff_signal = FeedforwardSignal()
+
+    def _apply_photosynthesis_priority(
+            self, env_target: dict, internal: dict, authority: dict) -> None:
+        """광합성 모드에서 제한 인자를 찾아 해당 변수의 우선순위를 격상한다.
+
+        env_target 을 제자리에서 고친다(반환 없음). 제어권이 없는 변수는
+        격상해도 소용없으므로 authority 를 함께 본다.
+        """
+        # ── P5-4: Photosynthesis-oriented priority 격상 ───────────────────────
+        if self.photosynth_mode_enabled and internal.get('light') is not None:
+            from aot.functions.utils.env_control.photosynthesis import (
+                boost_limiting_priority, decay_priorities,
+                find_limiting_factor, get_crop_params,
+            )
+            crop = get_crop_params(self.crop_preset)
+            vpd_now = internal.get('VPD') or 0.0
+            limiting = find_limiting_factor(
+                L=internal.get('light', 0.0),
+                CO2=internal.get('CO2', 400.0),
+                T=internal.get('T', 22.0),
+                VPD=vpd_now,
+                crop_params=crop,
+            )
+            base_priorities = {
+                'temperature': self.priority_vpd  or 0.5,   # T 추적 우선순위 = vpd 기반
+                'humidity':    0.5,
+                'co2':         self.priority_co2  or 0.8,
+                'vpd':         self.priority_vpd  or 1.2,
+                'light':       0.9,
+            }
+            boost_limiting_priority(
+                env_target=env_target,
+                limiting_factor=limiting,
+                authority=authority,
+                priority_ewa_state=self._priority_ewa_state,
+                base_priorities=base_priorities,
+            )
+            if getattr(self, 'debug_logging', False):
+                self.logger.debug(
+                    'Photosynthesis limiting factor: %s', limiting)
+        elif self.photosynth_mode_enabled:
+            # 광 센서 없음 — 우선순위 기본값으로 복귀
+            from aot.functions.utils.env_control.photosynthesis import decay_priorities
+            base_priorities = {
+                'temperature': 0.5, 'humidity': 0.5,
+                'co2': self.priority_co2 or 0.8,
+                'vpd': self.priority_vpd or 1.2,
+            }
+            decay_priorities(env_target, self._priority_ewa_state, base_priorities)
+
+    def _check_hard_constraints(self, internal: dict) -> None:
+        """온습도·광량 하드 임계를 히스테리시스 래치로 판정한다.
+
+        위반 시 internal 에 _force_cool/_force_heat/_force_dehumid/_force_humid,
+        _force_shade/_force_suplight 플래그를 심는다. 이 플래그는 L3 뒤의
+        임계 오버라이드(apply_*_threshold_overrides)가 소비한다.
+
+        래치 상태(self._constraint_breach_state/_light_breach_state)는 사이클
+        간에 유지된다 — 진입 문턱과 해제 문턱을 비대칭으로 두어 경계에서
+        액추에이터가 왕복하는 것을 막는다.
+        """
+        # ── T/RH constraint check (before L1) ────────────────────────────────
+        t_val  = internal.get('T')
+        rh_val = internal.get('RH')
+        # Per-cycle WARN spam → state-transition only. Re-arm when value returns
+        # to within bounds, so the next breach is logged again.
+        cbs = self._constraint_breach_state
+
+        if t_val is not None:
+            if self.temp_max:
+                breached = latch_threshold(t_val, self.temp_max, TEMP_HYST_C,
+                                           cbs['T_max'], 'max')
+                if breached:
+                    if not cbs['T_max']:
+                        self.logger.warning(
+                            'T=%.1f > max=%.1f — forcing cooling', t_val, self.temp_max)
+                    internal['_force_cool'] = True
+                elif cbs['T_max'] and getattr(self, 'debug_logging', False):
+                    self.logger.debug(
+                        'T=%.1f — max=%.1f 강제 해제(히스테리시스 %.1f)',
+                        t_val, self.temp_max, TEMP_HYST_C)
+                cbs['T_max'] = breached
+            if self.temp_min:
+                breached = latch_threshold(t_val, self.temp_min, TEMP_HYST_C,
+                                           cbs['T_min'], 'min')
+                if breached:
+                    if not cbs['T_min']:
+                        self.logger.warning(
+                            'T=%.1f < min=%.1f — forcing heating', t_val, self.temp_min)
+                    internal['_force_heat'] = True
+                elif cbs['T_min'] and getattr(self, 'debug_logging', False):
+                    self.logger.debug(
+                        'T=%.1f — min=%.1f 강제 해제(히스테리시스 %.1f)',
+                        t_val, self.temp_min, TEMP_HYST_C)
+                cbs['T_min'] = breached
+        if rh_val is not None:
+            if self.humid_max:
+                breached = latch_threshold(rh_val, self.humid_max, RH_HYST_PCT,
+                                           cbs['RH_max'], 'max')
+                if breached:
+                    internal['_force_dehumid'] = True
+                cbs['RH_max'] = breached
+            if self.humid_min:
+                breached = latch_threshold(rh_val, self.humid_min, RH_HYST_PCT,
+                                           cbs['RH_min'], 'min')
+                if breached:
+                    internal['_force_humid'] = True
+                cbs['RH_min'] = breached
+
+        # ── Light threshold constraint check ──────────────────────────────────
+        # 실내 추정 광량은 사이클 앞에서 _compute_light_est() 가 이미 계산했다.
+        light_val = internal.get('light_est', internal.get('light'))
+        lbs = self._light_breach_state
+        if light_val is not None:
+            dbg = getattr(self, 'debug_logging', False)
+            if self.light_max and self.light_max > 0:
+                breached = latch_threshold(
+                    light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC,
+                    lbs['max'], 'max')
+                if breached:
+                    if not lbs['max'] and dbg:
+                        self.logger.debug(
+                            'light=%.0f > max=%.0f — forcing shade',
+                            light_val, self.light_max)
+                    internal['_force_shade'] = True
+                elif lbs['max'] and dbg:
+                    self.logger.debug(
+                        'light=%.0f — max=%.0f 차광강제 해제(히스테리시스 %.0f)',
+                        light_val, self.light_max, self.light_max * LIGHT_HYST_FRAC)
+                lbs['max'] = breached
+            if self.light_min and self.light_min > 0:
+                breached = latch_threshold(
+                    light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC,
+                    lbs['min'], 'min')
+                if breached:
+                    if not lbs['min'] and dbg:
+                        self.logger.debug(
+                            'light=%.0f < min=%.0f — forcing supplemental light',
+                            light_val, self.light_min)
+                    internal['_force_suplight'] = True
+                elif lbs['min'] and dbg:
+                    self.logger.debug(
+                        'light=%.0f — min=%.0f 보광강제 해제(히스테리시스 %.0f)',
+                        light_val, self.light_min, self.light_min * LIGHT_HYST_FRAC)
+                lbs['min'] = breached
+
+    def _finalize_cycle(self, ctx: '_CycleContext') -> None:
+        """사이클 꼬리 — 학습·누적·상태 저장. 제어 명령은 이미 나간 뒤다.
+
+        데이터 위생 판정, 캘리브레이션 push, 누적 목표 추적, greybox shadow,
+        커미셔닝 앵커 폴링, 런타임 스냅샷, PI 상태 DB 저장을 순서대로 한다.
+        모두 이번 사이클의 **결과를 소비**할 뿐 명령을 바꾸지 않는다 — 그래서
+        _run_cycle 에서 통째로 떼어낼 수 있었다.
+
+        지역변수 이름을 그대로 되살려 본문을 한 글자도 바꾸지 않았다. 727줄
+        짜리 제어 사이클을 쪼개는 중이라, 각 단계에서 '옮기기만 했다' 를
+        보장하는 편이 검토와 되돌리기 모두 쉽다.
+        """
+        uid = ctx.uid
+        internal = ctx.internal
+        external = ctx.external
+        external_for_control = ctx.external_for_control
+        env_target = ctx.env_target
+        situation = ctx.situation
+        authority = ctx.authority
+        gate_result = ctx.gate_result
+        commands = ctx.commands
+        final_cmds = ctx.final_cmds
+        is_probe = ctx.is_probe
 
         # ── 0.5: 데이터 위생 체크 + 로깅 ─────────────────────────────────────
         current_cmd_pcts = {
@@ -1173,8 +1298,10 @@ class CycleMixin:
     _SUMMARY_MAX_COMMANDS = 32
     _SUMMARY_MAX_TEXT     = 200
 
-    def _build_cycle_summary(self, now_ts, situation, env_target,
-                             final_cmds, commands, gate_result, internal=None):
+    def _build_cycle_summary(self, now_ts: float, situation: SituationReport,
+                             env_target: dict, final_cmds: dict,
+                             commands: dict, gate_result: GateResult,
+                             internal: dict = None) -> dict:
         """사이클 중 이미 산출된 값을 UI 요약 dict 로 직렬화한다.
 
         추가 계산 없음 — situation/명령/예보 신호의 스냅샷.
@@ -1183,13 +1310,13 @@ class CycleMixin:
         """
         ctx = situation.context
 
-        def _r(v, nd=2):
+        def _r(v: Any, nd: int = 2) -> 'float | None':
             try:
                 return round(float(v), nd)
             except (TypeError, ValueError):
                 return None
 
-        def _pct(cmd):
+        def _pct(cmd: 'ActuatorCommand | dict') -> float:
             return float(cmd.get('value', 0.0) if isinstance(cmd, dict)
                          else getattr(cmd, 'value', 0.0))
 
@@ -1354,7 +1481,7 @@ class CycleMixin:
     _ANCHOR_POLL_INTERVAL_S   = 300.0     # check pending commissioning anchors every 5 min
     _PROFILE_RELOAD_INTERVAL_S = 600.0    # re-sync facility fittings every 10 min
 
-    def _handle_greybox_kpi_passed(self, mae_t: float, mae_rh: float):
+    def _handle_greybox_kpi_passed(self, mae_t: float, mae_rh: float) -> None:
         """Called when shadow mode KPI passes. Logs a prominent notification.
 
         Does NOT auto-switch effect_engine — that requires user confirmation
@@ -1409,7 +1536,7 @@ class CycleMixin:
             self.logger.debug('greybox: read calibration_state failed', exc_info=True)
         return {}
 
-    def _merge_calibration_state(self, updates: dict):
+    def _merge_calibration_state(self, updates: dict) -> None:
         """calibration_state_json 에 키를 병합 저장(재시작 후에도 유지)."""
         try:
             from aot.config import AOT_DB_PATH
@@ -1430,7 +1557,7 @@ class CycleMixin:
         except Exception:
             self.logger.debug('greybox: merge calibration_state failed', exc_info=True)
 
-    def _maybe_run_greybox_identification(self, cycle_sec: float):
+    def _maybe_run_greybox_identification(self, cycle_sec: float) -> None:
         """주기적으로 그레이박스 파라미터를 배치 학습·영속화.
 
         shadow 입력 버퍼(state/ext/cmds 이력)로 identification.fit 를 실행하고,
@@ -1486,7 +1613,7 @@ class CycleMixin:
             return False
         return True
 
-    def _apply_effect_engine(self, situation) -> bool:
+    def _apply_effect_engine(self, situation: SituationReport) -> bool:
         """coordinate() 직전에 effect_model 출처를 결정.
 
         greybox 모드 + 게이트 통과 시 각 프로필 effect_model 을 greybox 물리 어댑터로
@@ -1529,7 +1656,7 @@ class CycleMixin:
                 p.effect_model = p._legacy_effect_model
             return False
 
-    def _warn_greybox_fallback(self):
+    def _warn_greybox_fallback(self) -> None:
         now = time.time()
         last = getattr(self, '_greybox_fallback_warn_ts', 0.0)
         if (now - last) < 3600.0:
@@ -1540,7 +1667,9 @@ class CycleMixin:
             '— 레거시 제어로 폴백. shadow 로 충분히 검증되면 자동 활성됩니다.')
 
     # ── Control dispatch: MPC → greybox-PI → legacy ───────────────────────────
-    def _run_control(self, situation, uid):
+    def _run_control(
+            self, situation: SituationReport,
+            uid: str) -> tuple[dict, CoordinatorState]:
         """제어 엔진 디스패치.
 
         greybox 물리 제어 활성 시 우선 MPC(수신지평 최적화)를 시도하고, 실패/미수렴/
@@ -1564,7 +1693,7 @@ class CycleMixin:
             actuator_index=self._actuator_idx,
         )
 
-    def _build_mpc_ext_seq(self, situation, horizon: int):
+    def _build_mpc_ext_seq(self, situation: SituationReport, horizon: int) -> list[dict]:
         """MPC 예측용 외기(ext) 시퀀스. v1: 현재 외기를 지평 동안 유지(persistence).
 
         예보 기반 곡선 enrichment 는 후속(여기만 교체하면 됨). 짧은 지평(≈수분)에서는
@@ -1580,7 +1709,9 @@ class CycleMixin:
         }
         return [dict(base) for _ in range(max(1, horizon))]
 
-    def _run_mpc(self, situation, uid):
+    def _run_mpc(
+            self, situation: SituationReport,
+            uid: str) -> 'tuple[dict, CoordinatorState] | None':
         """greybox MPC 로 modeled 채널을 최적화하고, 미모델 actuator 는 레거시
         coordinate() 로 처리해 병합한다. 적용 불가 시 None(상위에서 PI 폴백)."""
         from aot.functions.utils.env_control.greybox import mpc as gbmpc
@@ -1664,7 +1795,7 @@ class CycleMixin:
     _MIXING_HOTSPOT_THRESHOLD_C = 0.5   # °C: 공간 온도 구배 임계 (핫스팟 감지 플래그)
     _MIXING_MIN_CYCLE_SEC       = 300.0 # s: 너무 빠른 ON/OFF 방지
 
-    def _apply_mixing_actuators(self, commands: dict, internal: dict):
+    def _apply_mixing_actuators(self, commands: dict, internal: dict) -> None:
         """circulation_fan 을 공간 온도 불균일 기준으로 독립 제어.
 
         coordinator 는 circulation_fan 을 선택하지 않으므로 (effect 방향 '~')

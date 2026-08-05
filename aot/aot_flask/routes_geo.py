@@ -3200,6 +3200,33 @@ def api_geo_output_states():
     return jsonify({'ok': True, 'states': states})
 
 
+@blueprint.route('/api/geo/link_status', methods=['POST'])
+@login_required
+def api_geo_link_status():
+    """지정한 장치들의 배터리·통신품질 상태 일괄 조회 (장치 모달 배지용).
+
+    Input 은 보통 자기 채널에서 나오지만, LoRaWAN Output 은 배터리도 RSSI 도
+    자기 것이 없다 — 같은 DevEUI 를 가진 하트비트 Input/Function 이 값을 들고
+    있다. 그 짝짓기를 서버에서 하는 이유는 클라이언트가 custom_options 를 볼 수
+    없기 때문이고, 배치인 이유는 나중에 마커에도 배지를 달면 N+1 이 되기 때문이다.
+
+    battery / link 이 null 이면 근거 채널이 없다는 뜻이다 — 이때 프론트는 배지를
+    아예 그리지 않는다(빈 아이콘은 "정보 없음"이 아니라 "0%"로 읽힌다).
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    ids = data.get('ids')
+    if not isinstance(ids, list) or not ids:
+        return jsonify({'ok': True, 'status': {}})
+
+    from aot.aot_flask.geo.device_link_status import read_link_status_batch
+    try:
+        status = read_link_status_batch([str(i) for i in ids[:100] if i])
+    except Exception as e:
+        current_app.logger.error(f"link_status 조회 실패: {e}")
+        return jsonify({'ok': False, 'status': {}}), 500
+    return jsonify({'ok': True, 'status': status})
+
+
 @blueprint.route('/api/geo/function/<string:kind>/<string:func_uuid>/activate', methods=['POST'])
 @login_required
 def api_geo_function_activate(kind, func_uuid):
@@ -3314,13 +3341,12 @@ def serve_geo_zone_photo(filename):
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/output_history', methods=['GET'])
 @login_required
 def api_geo_zone_output_history(zone_uuid):
-    """Zone 장치 작동 이력 (sensor chart 오버레이용).
+    """Zone 장치 작동 이력 (sensor chart 오버레이용) — 하위호환 별칭.
 
-    Query params: output_id (필수), hours (기본 24, 최대 168)
+    zone_uuid 는 존재 확인 외에는 쓰이지 않는다(조회는 output_id 로만 스코프).
+    정본은 /api/geo/output/<output_uuid>/history — 구역 밖(시설 모달·장치 마커
+    팝업)에서도 같은 이력 그래프를 그리려면 zone 스코프가 없어야 하기 때문이다.
     """
-    import time as _time
-    from aot.utils.influx import query_string, influx_to_list
-
     zone = GeoShape.query.filter_by(unique_id=zone_uuid, type='zone').first()
     if not zone:
         return jsonify({'ok': False, 'error': 'zone not found'}), 404
@@ -3328,9 +3354,29 @@ def api_geo_zone_output_history(zone_uuid):
     output_id = request.args.get('output_id', '').strip()
     if not output_id:
         return jsonify({'ok': False, 'error': 'output_id required'}), 400
+    return _output_history_response(output_id, request.args.get('hours'))
+
+
+@blueprint.route('/api/geo/output/<string:output_uuid>/history', methods=['GET'])
+@login_required
+def api_geo_output_history(output_uuid):
+    """장치(Output) 작동 이력 — 구역/시설/마커 팝업 공용.
+
+    Query params: hours (기본 24, 최대 168)
+    """
+    output_uuid = (output_uuid or '').strip()
+    if not output_uuid:
+        return jsonify({'ok': False, 'error': 'output_id required'}), 400
+    return _output_history_response(output_uuid, request.args.get('hours'))
+
+
+def _output_history_response(output_id, hours_arg):
+    """duty_cycle(%) 우선, 없으면 duration_time(작동 분) 시계열을 반환한다."""
+    import time as _time
+    from aot.utils.influx import query_string, influx_to_list
 
     try:
-        hours = min(max(float(request.args.get('hours', 24)), 1.0), 168.0)
+        hours = min(max(float(hours_arg if hours_arg is not None else 24), 1.0), 168.0)
     except (TypeError, ValueError):
         hours = 24.0
     past_sec = int(hours * 3600)

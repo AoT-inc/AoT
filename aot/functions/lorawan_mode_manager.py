@@ -302,7 +302,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'type': 'message',
-            'default_value': '<b>{}</b><br/><small>{}</small>'.format(lazy_gettext('Threshold Options'), lazy_gettext('Sets the mode-switching thresholds.'))
+            'default_value': '<b>{}</b><br/><small>{}</small>'.format(lazy_gettext('Threshold Options'), lazy_gettext('Sets the mode-switching thresholds. Defaults assume a 4S LiFePO4 pack (12.8 V nominal). For a 12 V lead-acid pack use 12.00 / 11.70 / 11.40 instead — the two chemistries have completely different voltage curves.'))
         },
         {
             'id': 'battery_policy_enabled',
@@ -315,26 +315,26 @@ FUNCTION_INFORMATION = {
         {
             'id': 'vbat_recover_v',
             'type': 'float',
-            'default_value': 12.00,
+            'default_value': 13.20,
             'required': True,
             'name': lazy_gettext('Performance Mode Threshold (V)'),
-            'phrase': lazy_gettext('Voltage threshold at which stable operation is possible')
+            'phrase': lazy_gettext('Voltage threshold at which stable operation is possible (4S LiFePO4: 13.20 V ≈ 70%; lead-acid 12 V: 12.00 V)')
         },
         {
             'id': 'vbat_low_v',
             'type': 'float',
-            'default_value': 11.70,
+            'default_value': 13.00,
             'required': True,
             'name': lazy_gettext('Power-saving Threshold (V)'),
-            'phrase': lazy_gettext('Voltage threshold for switching to power-saving mode')
+            'phrase': lazy_gettext('Voltage threshold for switching to power-saving mode (4S LiFePO4: 13.00 V ≈ 25%; lead-acid 12 V: 11.70 V)')
         },
         {
             'id': 'vbat_critical_v',
             'type': 'float',
-            'default_value': 11.40,
+            'default_value': 12.80,
             'required': True,
             'name': lazy_gettext('Ultra-saving Threshold (V)'),
-            'phrase': lazy_gettext('Voltage threshold for switching to ultra-saving mode')
+            'phrase': lazy_gettext('Voltage threshold for switching to ultra-saving mode (4S LiFePO4: 12.80 V ≈ 10%, past the knee; lead-acid 12 V: 11.40 V)')
         },
         {
             'id': 'missing_vbat_is_critical',
@@ -438,9 +438,15 @@ class ModeOpts:
     b_period_min: int = 30
     # MODE_C: performance profile heartbeat (min)
     c_period_min: int = 30
-    vbat_recover_v: float = 12.00
-    vbat_low_v: float = 11.70
-    vbat_critical_v: float = 11.40
+    # 4S 인산철(LiFePO4) 기준 — 2026-08-04 실측 대조로 납산 기준에서 이관.
+    # 인산철은 13.0~13.3V 구간이 극단적으로 평평해 그 안에서 잔량을 가르는 것은
+    # 무의미하다. 대신 "평탄부 위(여유) / 평탄부 하단(절전) / 무릎 아래(초절전)"
+    # 세 지점을 잡는다. device_link_status 의 lifepo4_4s 배지 곡선과 같은 점을
+    # 지나므로, 데몬이 절전으로 내릴 때 화면 배지도 25% 이하를 가리킨다.
+    #   납산 12V 팩이라면 12.00 / 11.70 / 11.40 으로 되돌려야 한다.
+    vbat_recover_v: float = 13.20    # ≈70%
+    vbat_low_v: float = 13.00        # ≈25%
+    vbat_critical_v: float = 12.80   # ≈10% (무릎 아래)
     link_rssi_min: int = -110
     link_snr_min: int = -10
 

@@ -142,7 +142,11 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 /* ── 팝업 타입별 클래스 ─────────────────────────────────────────────
    JS new maplibregl.Popup({ className: 'aot-popup aot-popup--*' }) 로 적용.
    width/max-width 는 CSS에서만 결정 — JS maxWidth 옵션 / !important 덮어쓰기 없음. */
-.aot-popup--device   { min-width: 200px; max-width: 200px; }
+/* 260px: [시작/종료 시각 설정] 버튼이 한 줄에 들어가는 최소 폭.
+   높이는 일부러 낮게 유지한다 — maplibregl.Popup 은 anchor 미지정 시 팝업
+   **높이**로 위/아래를 자동 결정하므로, 팝업이 커지면 마커 위치와 무관하게
+   항상 아래로만 붙는다(그래서 이 팝업에는 이력 그래프를 넣지 않는다). */
+.aot-popup--device   { min-width: 260px; max-width: 260px; }
 .aot-popup--facility { min-width: 200px; max-width: 200px; z-index: var(--z-map-popup-act) !important; }
 .aot-popup--note     { max-width: 260px; }
 .aot-popup--label    { max-width: 200px; }

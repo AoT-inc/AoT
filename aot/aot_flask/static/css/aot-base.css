@@ -618,8 +618,22 @@ html {
     background-color: var(--bg-inactive) !important;
 }
 
+/* 일시정지 — 사용자가 의도적으로 멈춘 상태(PID 일시정지/유지, AI 초안 대기 등).
+   실패가 아니므로 중립색(--bg-pause)을 유지한다. */
 .pause-background {
     background-color: var(--bg-pause) !important;
+}
+
+/* 무응답/오프라인(comm_fault) — 2026-08-04 .pause-background 에서 분리.
+   그전까지 "사용자가 멈춤"과 "장치가 응답 없음"이 한 클래스·한 설정 항목
+   (bg_warning, 설정 이름 "Warning State")을 공유했다. 두 상태는 성격이 달라
+   같은 색이면 안 되고(하나는 정상 운영, 하나는 고장), 색을 나누려 해도 설정
+   항목이 하나뿐이라 나눌 수가 없었다. 실패 쪽을 danger 로 뗀다 — 지도 팝업의
+   이름 강조(paintNameWarning)·센서 모달 제목·링크 배지 0막대와 같은 색이다.
+   배경만 칠한다(형제 클래스와 동일): 카드 전체에 글자색까지 강제하면 안에 든
+   입력·버튼의 자기 색과 싸운다. */
+.fault-background {
+    background-color: var(--aot-tint-danger-bg) !important;
 }
 
 .hold-background {

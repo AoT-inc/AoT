@@ -106,25 +106,16 @@ def widget_variables(widget_unique_id, widget_options):
     """
     vars = generate_page_variables_logic(widget_unique_id, widget_options)
 
-    # Detect GIS mode from active layers
-    # [Migration] Default is now 'vector' for Pure MapLibre support (3D, pitch, bearing)
+    # [Migration v2.0] Leaflet is gone, so the widget renders with Pure MapLibre
+    # regardless of which layer types the GIS config has — raster layers are drawn
+    # as MapLibre raster sources, not by a separate raster (Leaflet) code path.
+    # geo_mode is therefore a constant; it is still emitted because the client
+    # bundle and geo_config consumers read it.
     try:
         from aot.aot_flask.utils.utils_geo import get_geo_config
         geo_config = get_geo_config()
-        layers = geo_config.get('layers', [])
-
-        has_vector = any(l.get('type') == 'vector' for l in layers)
-        has_raster = any(l.get('type') in ('xyz', 'wms', 'tile') for l in layers)
-
-        if has_vector and has_raster:
-            geo_mode = 'vector'  # Both: use vector mode (supports raster overlays)
-        elif has_vector:
-            geo_mode = 'vector'
-        else:
-            geo_mode = 'vector'  # [Migration] Default: Pure MapLibre (raster fallback available)
-
-        vars['geo_mode'] = geo_mode
-        geo_config['geo_mode'] = geo_mode
+        vars['geo_mode'] = 'vector'
+        geo_config['geo_mode'] = 'vector'
         vars['geo_config'] = geo_config
     except Exception as e:
         logger.warning(f"[AoT_map] Failed to detect geo mode: {e}")
@@ -144,136 +135,6 @@ def widget_variables(widget_unique_id, widget_options):
 # Widget HTML Templates (Embedded)
 # ------------------------------------------------------------------------------
 
-WIDGET_HEAD_HTML_VECTOR = """
-<!-- Pure MapLibre Vector Map (Leaflet-free) -->
-<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css" crossorigin="" />
-<script src="/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js" crossorigin=""></script>
-
-<!-- Vector Layer Manager -->
-<script src="/static/js/geo/aot-vector-layer-manager.js"></script>
-
-<!-- Shared facility /runtime provider (dedup + short-TTL cache across pollers) -->
-<script src="/static/js/widgets/AoT_map/aot-facility-runtime.js?v=1"></script>
-
-<!-- Label layer registry & priority skeleton (rank x pin presets) -->
-<script src="/static/js/widgets/AoT_map/aot-map-label-layers.js?v=1"></script>
-
-<!-- Shared output-state classifier (pending/fault/on/off consistency) -->
-<script src="/static/js/common/aot-output-state.js?v=6"></script>
-
-<!-- Pure MapLibre Widget (no Leaflet dependency) -->
-<script src="/static/js/widgets/AoT_map/aot-map-widget-vector.js?v=20260726a"></script>
-
-<!-- Vector Map Styles -->
-<style>
-  .aot-map-container {
-    width: 100%;
-    height: 100%;
-    min-height: 120px;
-    position: relative;
-    overflow: hidden;
-  }
-  .aot-vector-marker {
-    cursor: pointer;
-  }
-  .aot-vector-marker:hover {
-    z-index: 1000 !important;
-  }
-  .maplibregl-ctrl-group {
-    border-radius: 4px !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-  }
-  .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
-    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29'%3E%3Cpath fill='%23333' d='M14.5 0l-5 9h10z'/%3E%3Cpath fill='%23ccc' d='M14.5 29l5-9h-10z'/%3E%3C/svg%3E");
-  }
-</style>
-"""
-
-WIDGET_HEAD_HTML_RASTER = """
-<!-- Leaflet Map Library (for raster mode) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
-<!-- MarkerCluster Vendor Assets (Leaflet-dependent) -->
-<link rel="stylesheet" href="/static/css/map/MarkerCluster.css">
-<link rel="stylesheet" href="/static/css/map/MarkerCluster.Default.css">
-<script src="/static/js/map/leaflet.markercluster.js?v=1.0.0"></script>
-
-<!-- AoT Map Loader -->
-<script src="/static/js/geo/aot-map-loader.js"></script>
-<script src="/static/js/geo/aot-map-controls.js"></script>
-<script src="/static/js/widgets/AoT_map/aot-stopwatch-manager.js"></script>
-<!-- Actuator/device control-list ordering (natural sort + drag reorder, shared) -->
-<script src="/static/js/widgets/AoT_facility/aot-actuator-order.js?v=3"></script>
-<!-- Shared output-state classifier (pending/fault/on/off consistency) -->
-<script src="/static/js/common/aot-output-state.js?v=6"></script>
-<!-- Shared popup utilities (input/output/note HTML builders + dot positioning) -->
-<script src="/static/js/widgets/AoT_map/aot-map-popup.js?v=21"></script>
-<script src="/static/js/widgets/AoT_map/aot-map-widget-v3.js?v=9.3.29"></script>
-
-<style>
-  .aot-map-container {
-    width: 100%;
-    height: 100%;
-    min-height: 120px;
-    z-index: 1;
-    overflow: hidden;
-  }
-  .leaflet-zoom-animated { }
-  .device-on {
-     border-color: #ffffff !important; 
-     z-index: 1000 !important;
-     transition: background-color 0.4s ease, border 0.4s ease, box-shadow 0.4s ease;
-  }
-  .marker-pill.device-on {
-      border-color: #ffffff !important;
-      z-index: 1000 !important;
-  }
-  .geo-label-marker {
-      background: none;
-      border: none;
-      margin: 0 !important;
-      z-index: 500;
-      will-change: transform;
-  }
-  .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
-    background-color: rgba(153, 90, 255, 0.2) !important;
-  }
-  .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
-    background-color: rgba(153, 90, 255, 0.8) !important;
-    border: 2px solid #fff;
-    color: #fff !important;
-    font-weight: bold;
-    font-family: 'Inter', sans-serif;
-    border-radius: 50%;
-  }
-  .marker-cluster span {
-      line-height: 28px;
-  }
-  .marker-pill {
-      display: inline-block;
-      padding: 2px 8px; 
-      border-radius: 4px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-      text-align: center;
-      white-space: nowrap;
-      font-weight: bold;
-      transition: background-color 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
-      box-sizing: border-box; 
-      border-width: 2px !important;
-      border-style: solid !important;
-  }
-  .marker-pill.device-on {
-      background-color: #28a745 !important;
-      border-color: #28a745 !important;
-  }
-  .leaflet-control-attribution img {
-      display: inline !important;
-      vertical-align: middle;
-  }
-</style>
-"""
-
 # Default: Pure MapLibre (Leaflet-free) - 3D, pitch, bearing supported
 # [Migration v2.0] Leaflet completely removed
 WIDGET_HEAD_HTML = """
@@ -283,7 +144,7 @@ WIDGET_HEAD_HTML = """
      If maplibregl is missing the widget init will log a clear error. -->
 
 <!-- Map tool styles (.map-tools-left/right, .tool-group, .btn-circle) — same as /geo/design -->
-<link rel="stylesheet" href="/static/css/map/map.css?v=20260725j" />
+<link rel="stylesheet" href="/static/css/map/map.css?v=20260804b" />
 
 <!-- 위젯 핵심 스크립트 11개 → 단일 번들 (static/js/tools/bundle.mjs: aot-map-widget).
      순서 보존: vector-layer-manager → map-loader → stopwatch → controls → custom-controls
@@ -312,9 +173,9 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
 <!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
 <script src="/static/js/common/aot-chart-core.js?v=2"></script>
-<script src="/static/js/common/sensor-label.js?v=27"></script>
-<script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=15"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=30">
+<script src="/static/js/common/sensor-label.js?v=35"></script>
+<script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=21"></script>
+<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=33">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
@@ -389,6 +250,13 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
   .aot-type-hidden {
     display: none !important;
   }
+
+  /* Zoom gate (LABEL_MIN_ZOOM): 축척이 낮을 때 장치 단위 라벨·키를 감춘다.
+     사용자 토글(.aot-type-hidden)과 같은 이유로 !important — 충돌 회피가
+     인라인 display:block 을 직접 찍기 때문에 클래스가 이겨야 한다. */
+  .aot-zoom-hidden {
+    display: none !important;
+  }
 </style>
 """
 
@@ -397,12 +265,18 @@ WIDGET_BODY_HTML = """
 <div id="aot-map-{{each_widget.unique_id}}" class="aot-map-container" style="position: relative;">
     <div id="aot-map-{{each_widget.unique_id}}-canvas" style="width: 100%; height: 100%;"></div>
 
-    <!-- Search Overlay (Raster mode only) -->
-    {% if geo_mode != 'vector' %}
+    <!-- Address search overlay. The toolbar's search button toggles `.d-none` on
+         this element (aot-map-widget-vector.js: `_wire(btnSearch, ...)`), and the
+         fly-to listener matches `search-comp-<uid>` — so it is required in vector
+         mode, i.e. always. It used to sit behind an if-block on `geo_mode`
+         labelled "raster only"; that only rendered because bare `geo_mode` is
+         undefined in this template context (widget vars arrive as
+         `widget_variables.*`), and Undefined != 'vector' is true. Making that
+         condition "correct" would have deleted the overlay and silently broken
+         address search. -->
     <div id="search-overlay-{{ each_widget.unique_id }}" class="map-search-overlay d-none">
         <aot-map-search-fixed id="search-comp-{{ each_widget.unique_id }}" placeholder="{{ _('Enter an address.') }}"></aot-map-search-fixed>
     </div>
-    {% endif %}
 
     <!-- AI Advice chip bar (top-center; populated from #aot-map-ai-advice-{{each_widget.unique_id}} by the inline script below) -->
     <div id="aot-map-advice-chips-{{each_widget.unique_id}}" class="aot-map-advice-chips" style="display:none;">
@@ -805,6 +679,19 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Label Text Size'),
             'phrase': lazy_gettext('Specify the size of all map labels (unit: em).'),
             'constraints': {'min': 1.0, 'max': 3.0}
+        },
+        {
+            'id': 'label_min_zoom',
+            'type': 'integer',
+            'default_value': 16,
+
+            'name': lazy_gettext('Hide Labels When Zoomed Out'),
+            'phrase': lazy_gettext(
+                'Below this zoom level, facility / output / input / function labels '
+                'and value keys are hidden. Site and zone labels always stay visible '
+                'so the map keeps its bearings. Set 0 to never hide.'
+            ),
+            'constraints': {'min': 0, 'max': 22}
         },
         {
             'id': 'label_priority_facility',

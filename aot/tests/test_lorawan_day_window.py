@@ -142,7 +142,12 @@ def test_solar_window_falls_back_when_kernel_raises(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def _mode(o, now_minute, **kwargs):
-    params = dict(vbat_V=12.5, now_hour=now_minute // 60, now_minute=now_minute,
+    # 기본 전압은 "배터리는 넉넉하다" 는 뜻일 뿐이다. 리터럴(12.5V)을 박아 뒀더니
+    # 임계값이 납산→인산철 4S 로 바뀌자(2026-08-04) 같은 값이 '치명'이 되어 이
+    # 파일 전체가 깨졌다 — 배터리와 무관한 주/야간 테스트인데도. 기준을 옵션에서
+    # 끌어와 임계값이 다시 바뀌어도 의미가 유지되게 한다.
+    params = dict(vbat_V=ModeOpts().vbat_recover_v + 0.5,
+                  now_hour=now_minute // 60, now_minute=now_minute,
                   valve_active=False, link_rssi=None, link_snr=None, o=o)
     params.update(kwargs)
     return compute_target_mode_period(**params)
@@ -204,6 +209,8 @@ def test_battery_gate_still_wins_over_solar_daytime(stub_solar):
     stub_solar['next_sunrise'] = now + timedelta(hours=17)
 
     o = _opts(day_window_mode='solar')
-    mode, _period, reason = _mode(o, _minute(12), vbat_V=11.0, target_id=TARGET, now=now)
+    mode, _period, reason = _mode(o, _minute(12),
+                                  vbat_V=ModeOpts().vbat_critical_v - 0.5,
+                                  target_id=TARGET, now=now)
     assert mode == MODE_B
     assert reason == 'critical_battery_b_mode'

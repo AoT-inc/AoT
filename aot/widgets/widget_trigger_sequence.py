@@ -320,7 +320,7 @@ WIDGET_INFORMATION = {
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
     <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css">
     <script src="/static/js/components/aot-time-wheel.js?v=20260722a"></script>
-    <script src="/static/js/common/aot-output-state.js?v=6"></script>
+    <script src="/static/js/common/aot-output-state.js?v=8"></script>
     <style>
         /* --- Layout --- */
         .seq-widget-container {
@@ -546,10 +546,13 @@ WIDGET_INFORMATION = {
         .seq-list-item:last-child { border-bottom: none; }
         .seq-list-item.active { background-color: var(--bg-active); border-left: 3px solid var(--aot-color-brand-secondary); padding-left: 7px; }
         .seq-list-item.disabled { opacity: 0.6; background-color: var(--bg-off); }
-        /* Device state (Model A): offline/unconfirmed target output */
-        .seq-list-item.seq-offline { border-left: 3px solid var(--bg-pause, #b0b0b0); padding-left: 7px; }
+        /* Device state (Model A): offline/unconfirmed target output.
+           2026-08-04: --bg-pause(일시정지) 에서 danger 틴트로 이관 — 무응답은
+           사용자가 멈춘 것이 아니라 고장이다. 배지 글자색이 #fff 고정이었는데
+           danger 틴트 배경은 밝아서 안 보인다 — fg 토큰과 쌍으로 쓴다. */
+        .seq-list-item.seq-offline { border-left: 3px solid var(--aot-tint-danger-fg, #b23b3b); padding-left: 7px; }
         .seq-dev-badge { margin-left: 6px; flex-shrink: 0; font-size: var(--aot-fs-caption, 0.72em); padding: 0 5px; border-radius: 8px; white-space: nowrap; vertical-align: middle; }
-        .seq-dev-offline { background: var(--bg-pause, #b0b0b0); color: #fff; opacity: 0.85; }
+        .seq-dev-offline { background: var(--aot-tint-danger-bg, #fbe7e7); color: var(--aot-tint-danger-fg, #b23b3b); opacity: 0.85; }
         .seq-dev-pending { background: var(--bg-hold, #f0ad4e); color: #fff; }
 
         /* --- Drag to reorder --- */
@@ -1392,6 +1395,48 @@ WIDGET_INFORMATION = {
     var SEQ_DND_START_PX = 5;     // mouse: travel that turns a press into a drag
     var SEQ_DND_CANCEL_PX = 10;   // touch: travel before the hold fires = scrolling, not reordering
 
+    // --- TEMPORARY diagnostics for the Samsung Internet drag-to-reorder bug ---
+    // Add ?seqdnd_debug=1 to the dashboard URL to show a live event log at the
+    // bottom of the screen while attempting the drag. Remove this block once
+    // the root cause is confirmed and fixed.
+    var SEQ_DND_DEBUG = (function() {
+        try { return /(^|[?&])seqdnd_debug=1(&|$)/.test(window.location.search); } catch (e) { return false; }
+    })();
+
+    function seq_dnd_log(msg) {
+        if (!SEQ_DND_DEBUG) return;
+        var box = document.getElementById('seq-dnd-debug-box');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'seq-dnd-debug-box';
+            box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:45vh;overflow:auto;' +
+                'background:rgba(0,0,0,0.88);color:#7CFC00;font:11px/1.4 monospace;padding:6px 8px;' +
+                'z-index:2147483647;white-space:pre-wrap;';
+            document.body.appendChild(box);
+        }
+        var t = new Date();
+        var ts = ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2) + '.' + ('00' + t.getMilliseconds()).slice(-3);
+        var line = document.createElement('div');
+        line.textContent = ts + '  ' + msg;
+        box.appendChild(line);
+        box.scrollTop = box.scrollHeight;
+        while (box.children.length > 200) box.removeChild(box.firstChild);
+    }
+
+    if (SEQ_DND_DEBUG) {
+        // Raw arrival log, independent of our own gesture logic — shows whether
+        // events reach the page at all, in what order, even if seq_dnd_down /
+        // seq_dnd_pointermove never run (e.g. something upstream swallows them).
+        ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'touchstart', 'touchmove', 'touchend'].forEach(function(type) {
+            document.addEventListener(type, function(ev) {
+                var onRow = ev.target && ev.target.closest && ev.target.closest('.seq-list-item');
+                seq_dnd_log('[raw] ' + type + ' ptrType=' + (ev.pointerType || '-') +
+                    ' cancelable=' + ev.cancelable + ' defaultPrevented=' + ev.defaultPrevented +
+                    ' onRow=' + !!onRow);
+            }, true);
+        });
+    }
+
     function seq_dnd_state() {
         if (!window.__seqDnd) window.__seqDnd = { pending: null };
         return window.__seqDnd;
@@ -1411,17 +1456,20 @@ WIDGET_INFORMATION = {
     function seq_attach_dnd(list) {
         if (list.__seqDndBound) return;
         list.__seqDndBound = true;
+        seq_dnd_log('seq_attach_dnd bound, wid=' + list.getAttribute('data-wid'));
         list.addEventListener('pointerdown', function(e) { seq_dnd_down(e, list); });
     }
 
     function seq_dnd_down(e, list) {
-        if (e.button !== undefined && e.button !== 0) return;
-        if (!e.target || !e.target.closest) return;
+        if (e.button !== undefined && e.button !== 0) { seq_dnd_log('down: ignored, button=' + e.button); return; }
+        if (!e.target || !e.target.closest) { seq_dnd_log('down: ignored, no e.target.closest'); return; }
         var row = e.target.closest('.seq-list-item');
-        if (!row || !list.contains(row)) return;
+        if (!row || !list.contains(row)) { seq_dnd_log('down: ignored, no row under target'); return; }
         // The enable checkbox keeps its own gesture.
-        if (e.target.closest('input, button, select, textarea')) return;
-        if (seq_dnd_rows(list).length < 2) return;
+        if (e.target.closest('input, button, select, textarea')) { seq_dnd_log('down: ignored, form control target'); return; }
+        if (seq_dnd_rows(list).length < 2) { seq_dnd_log('down: ignored, <2 rows'); return; }
+
+        seq_dnd_log('down: accepted ptrType=' + e.pointerType + ' x=' + Math.round(e.clientX) + ' y=' + Math.round(e.clientY));
 
         var st = seq_dnd_state();
         seq_dnd_cleanup(st);  // never keep two gestures alive at once
@@ -1437,6 +1485,7 @@ WIDGET_INFORMATION = {
             holdTimer: null, active: false, dy: 0
         };
         st.pending = p;
+        seq_dnd_log('down: p.touch=' + p.touch);
 
         p.onMove = function(ev) { seq_dnd_pointermove(ev); };
         p.onUp = function(ev) { seq_dnd_pointerup(ev); };
@@ -1445,12 +1494,32 @@ WIDGET_INFORMATION = {
         document.addEventListener('pointercancel', p.onUp, true);
 
         if (p.touch) {
-            p.holdTimer = setTimeout(function() { seq_dnd_activate(p); }, SEQ_DND_HOLD_MS);
+            // Suppress the native scroll from the very first touchmove, not just
+            // once the hold fires: Samsung Internet commits to a scroll gesture
+            // faster than Safari/Chrome do, before our hold timer below gets a
+            // chance to run, so waiting until activation to preventDefault is
+            // too late on that browser. seq_dnd_pointermove cancels the pending
+            // drag (and removes this listener via seq_dnd_cleanup) as soon as
+            // the finger travels past SEQ_DND_CANCEL_PX, so a genuine swipe
+            // still scrolls normally once that happens.
+            p.onTouchMove = function(ev) {
+                seq_dnd_log('touchmove(early) cancelable=' + ev.cancelable + ' active=' + p.active);
+                if (ev.cancelable) ev.preventDefault();
+            };
+            document.addEventListener('touchmove', p.onTouchMove, { passive: false });
+            seq_dnd_log('down: hold timer armed, ' + SEQ_DND_HOLD_MS + 'ms');
+            p.holdTimer = setTimeout(function() {
+                seq_dnd_log('hold timer fired -> activate');
+                seq_dnd_activate(p);
+            }, SEQ_DND_HOLD_MS);
+        } else {
+            seq_dnd_log('down: not touch -> no hold timer armed, no scroll suppression');
         }
     }
 
     function seq_dnd_activate(p) {
         if (p.active) return;
+        seq_dnd_log('activate: rows lifted, key=' + p.key);
         p.active = true;
         p.startY = p.lastY;
         p.rows = seq_dnd_block_rows(p.list, p.key);
@@ -1460,10 +1529,8 @@ WIDGET_INFORMATION = {
         for (var i = 0; i < p.rows.length; i++) p.rows[i].classList.add('seq-row-drag');
         // Freeze the list: a poll landing mid-drag must not re-render the rows.
         seq_get_sched_state(p.wid).dndActive = true;
-        // Non-passive so the list/page does not scroll for the rest of the gesture.
-        // The hold delay means the browser has not started a scroll yet.
-        p.onTouchMove = function(ev) { ev.preventDefault(); };
-        document.addEventListener('touchmove', p.onTouchMove, { passive: false });
+        // Touch's non-passive scroll suppression is already attached in
+        // seq_dnd_down; mouse drags never trigger native touch scrolling.
     }
 
     function seq_dnd_pointermove(ev) {
@@ -1472,9 +1539,10 @@ WIDGET_INFORMATION = {
         p.lastY = ev.clientY;
         if (!p.active) {
             var dist = Math.abs(ev.clientY - p.y0) + Math.abs(ev.clientX - p.x0);
+            seq_dnd_log('move(pending) dist=' + Math.round(dist) + ' touch=' + p.touch);
             if (p.touch) {
                 // Moved before the hold fired → the user is scrolling the list.
-                if (dist > SEQ_DND_CANCEL_PX) seq_dnd_cleanup(seq_dnd_state());
+                if (dist > SEQ_DND_CANCEL_PX) { seq_dnd_log('CANCEL_PX exceeded before hold -> cleanup'); seq_dnd_cleanup(seq_dnd_state()); }
             } else if (dist > SEQ_DND_START_PX) {
                 seq_dnd_activate(p);
             }
@@ -1525,6 +1593,7 @@ WIDGET_INFORMATION = {
     function seq_dnd_cleanup(st) {
         var p = st.pending;
         if (!p) return;
+        seq_dnd_log('cleanup, wasActive=' + p.active);
         if (p.holdTimer) clearTimeout(p.holdTimer);
         document.removeEventListener('pointermove', p.onMove, true);
         document.removeEventListener('pointerup', p.onUp, true);
@@ -1541,10 +1610,11 @@ WIDGET_INFORMATION = {
         st.pending = null;
     }
 
-    function seq_dnd_pointerup() {
+    function seq_dnd_pointerup(ev) {
         var st = seq_dnd_state();
         var p = st.pending;
         if (!p) return;
+        seq_dnd_log('up/cancel: type=' + (ev && ev.type) + ' wasActive=' + p.active);
         var wasActive = p.active;
         var wid = p.wid, fid = p.fid, order0 = p.order0 || [];
         var order = wasActive ? seq_dnd_rows(p.list).map(function(r) { return r.getAttribute('data-uid'); }) : null;

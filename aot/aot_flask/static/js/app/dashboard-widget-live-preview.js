@@ -312,7 +312,7 @@
     active_layers: 1, selected_base_layer: 1, ai_advice_enabled: 1,
     show_labels: 1, overlay_data_only: 1,
     enable_label_collision: 1,
-    global_label_size: 1, label_priority_facility: 1,
+    global_label_size: 1, label_priority_facility: 1, label_min_zoom: 1,
     sensor_label_style: 1, sensor_popup_enabled: 1,
     show_site_shape: 1, show_zone_shape: 1, show_facility_shape: 1,
     show_equipment_shape: 1, show_device_shapes: 1, show_drawn_shapes: 1,
@@ -348,7 +348,11 @@
   // own built-in fallback defaults, matching the constants.
   var MAP_SENSOR_LABEL_KEYS = {
     sensor_label_style: 1, sensor_popup_enabled: 1,
-    enable_label_collision: 1, label_priority_facility: 1
+    enable_label_collision: 1, label_priority_facility: 1,
+    // 'Label Text Size' 는 이름 라벨(site/zone/facility)뿐 아니라 측정값 키의
+    // 크기도 정한다(aot-map-widget-vector.js _sensorLabelOptsFrom). 여기에
+    // 없으면 옵션을 바꿔도 값 키만 새로고침 전까지 옛 크기로 남는다.
+    global_label_size: 1
   };
 
   function mapFieldValue(el) {
@@ -471,6 +475,12 @@
       else if (MAP_SENSOR_LABEL_KEYS[key] && typeof inst._reattachSensorLabels === 'function') {
         if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
         inst._reattachSensorLabels();
+      }
+      // 라벨 숨김 기준 줌 -> 저장된 옵션만 갱신하고 게이트를 즉시 재평가.
+      // 라벨을 다시 만들 필요가 없다(클래스 토글만 바뀐다).
+      else if (key === 'label_min_zoom' && typeof inst._applyZoomGate === 'function') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
+        inst._applyZoomGate();
       }
       // Measurement-panel refresh period -> restart its own polling loop in place.
       else if (key === 'input_update_interval' && typeof inst._setPanelRefreshInterval === 'function') {

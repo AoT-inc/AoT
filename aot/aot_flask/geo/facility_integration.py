@@ -48,7 +48,10 @@ _DM_NAME_TO_MTYPE = {
     'temperature': 'temperature', 'temp': 'temperature',
     'humidity': 'humidity', 'relative_humidity': 'humidity', 'rh': 'humidity',
     'co2': 'co2', 'carbon_dioxide': 'co2', 'co2_ppm': 'co2',
+    # 'vapor_' 는 미국식 철자. Mycodo 의 실제 measurement 값이 이쪽이라
+    # 영국식('vapour_')만 있던 동안 VPD 채널은 하나도 매핑되지 않았다.
     'vpd': 'vpd', 'vapour_pressure_deficit': 'vpd',
+    'vapor_pressure_deficit': 'vpd', 'auto_vpd': 'vpd',
     'speed': 'wind_speed', 'wind': 'wind_speed', 'wind_speed': 'wind_speed',
     'windspeed': 'wind_speed', 'wind_ms': 'wind_speed',
     'direction': 'wind_direction', 'wind_direction': 'wind_direction',
@@ -58,6 +61,10 @@ _DM_NAME_TO_MTYPE = {
     'pressure': 'pressure', 'atm': 'pressure', 'atmospheric_pressure': 'pressure',
     'rain': 'rain', 'rainfall': 'rain', 'rainrate': 'rain', 'rain_rate': 'rain',
     'precipitation': 'rain', 'length': 'rain', 'depth': 'rain',
+    # 메타 채널(장치 자신의 상태). DB 의 measurement_type 은 거의 항상 비어 있어
+    # measurement 이름으로만 잡힌다 — 이 세 줄이 없으면 facility_sensors 의
+    # _MTYPE_KEY 에 rssi/snr/battery 를 넣어도 실제 채널이 거기 닿지 않는다.
+    'rssi': 'rssi', 'snr': 'snr', 'battery': 'battery',
 }
 
 

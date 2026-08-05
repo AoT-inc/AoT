@@ -31,8 +31,9 @@ from aot.aot_flask.utils.utils_output import get_all_output_states
 from aot.utils import audit
 from aot.utils.audit import audit_log
 from aot.utils.database import db_retrieve_table
-from aot.utils.influx import (influx_to_list, influxdb_get_count_points,
-                                 influxdb_get_first_point, query_string)
+from aot.utils.influx import (bulk_key, influx_to_list, influxdb_get_count_points,
+                                 influxdb_get_first_point, query_last_values_bulk,
+                                 query_string)
 from aot.utils.service_control import reload_frontend, restart_daemon
 from aot.utils.system_pi import (assure_path_exists, is_int,
                                     return_measurement_info, str_is_float)
@@ -135,9 +136,14 @@ def custom_css():
             'badge_upgrade': ['--bg-upgrade', '--aot-bg-upgrade', '--bg-btn-upgrade', '--aot-btn-bg-upgrade'],
             'bg_active': ['--bg-active', '--aot-bg-active'],
             'bg_inactive': ['--bg-inactive', '--aot-bg-inactive'],
-            # 장치 offline/응답없음(comm_fault) 카드 배경. 소비처: aot-base.css
-            # .pause-background, aot-toggle.css, widget_trigger_sequence.py의
-            # seq-offline/seq-dev-offline 등(전부 --bg-pause 폴백 경유).
+            # **일시정지** 카드 배경(사용자가 의도적으로 멈춘 상태). 소비처:
+            # aot-base.css .pause-background — PID 일시정지/유지(AoT_PID.py,
+            # pid_entry/function_entry.html), AI 초안 대기(ai/scheduler.html),
+            # 폴링 전 초기 상태 컨테이너 몇 곳, aot-toggle.css.
+            # 2026-08-04 이전에는 **무응답(comm_fault)까지** 같은 클래스·같은
+            # 필드를 썼다. 정상 운영(멈춤)과 고장(무응답)이 한 색으로 보였고,
+            # 필드가 하나뿐이라 색을 나눌 수도 없었다. 무응답은 .fault-background
+            # (--aot-tint-danger-bg)로 분리했다 — 이 필드가 아니다.
             'bg_warning': ['--bg-pause', '--aot-bg-pause'],
             # 출력/입력 채널 행(개별 채널, 카드 전체 아님)의 켜짐/꺼짐 배경.
             # 소비처: aot-entry-ui.css .aot-entry-item-channel.active/inactive-
@@ -147,8 +153,12 @@ def custom_css():
             # 명령 전송 후 확인 대기 중 배경. 소비처: aot-base.css .hold-background.
             'bg_pending': ['--bg-hold', '--aot-bg-hold'],
             # "실행 중, 확인 불가" 인라인 틴트(aot-output-state.js
-            # paintUnverifiedRunning/paintNameWarning). 채널 행에서 bg_on/off
-            # 를 인라인 !important 로 덮어쓰는 원인이 이 토큰이었다.
+            # paintUnverifiedRunning). 채널 행에서 bg_on/off 를 인라인
+            # !important 로 덮어쓰는 원인이 이 토큰이었다.
+            # 2026-08-04: 무응답(comm_fault) 이름 강조(paintNameWarning)는 이
+            # 토큰을 **쓰지 않는다** — tint_danger_* 로 옮겼다. 설정 화면이 이
+            # 필드를 "확인 불가" 라고만 이름 붙여 놓은 탓에, 그 뜻으로 색을 고른
+            # 사용자에게서 무응답 장치가 초록으로 강조되는 일이 있었다.
             'tint_warning_bg': ['--aot-tint-warning-bg'],
             'tint_warning_fg': ['--aot-tint-warning-fg'],
             # 의미 색상. 종전에는 aot-theme-variables.css 고정값이라 운영자가
@@ -653,17 +663,45 @@ _BATCH_MAX_ITEMS = 300
 _BATCH_MAX_WORKERS = 8
 
 
-def _resolve_last_params(measurement_id):
+def _prefetch_last_metadata(measurement_ids):
+    """Warm a per-request cache of DeviceMeasurements + Conversion rows.
+
+    _resolve_last_params() used to issue two ORM queries per item, so a 107-item
+    batch meant 214 sequential round trips before any Influx work started
+    (measured at ~83ms of the request). Two `IN (...)` queries replace them.
+    Returns (measure_by_id, conversion_by_id); _resolve_last_params falls back to
+    its own query for anything missing (e.g. the setpoint indirection).
+    """
+    ids = [m for m in set(measurement_ids or []) if m]
+    if not ids:
+        return {}, {}
+    rows = DeviceMeasurements.query.filter(
+        DeviceMeasurements.unique_id.in_(ids)).all()
+    by_id = {r.unique_id: r for r in rows}
+    conv_ids = {r.conversion_id for r in rows if r.conversion_id}
+    conv_by_id = {}
+    if conv_ids:
+        conv_by_id = {c.unique_id: c for c in Conversion.query.filter(
+            Conversion.unique_id.in_(list(conv_ids))).all()}
+    return by_id, conv_by_id
+
+
+def _resolve_last_params(measurement_id, measure_cache=None, conv_cache=None):
     """Resolve (unit, channel, measurement) for a /last query on the request
     thread. Mirrors last_data()'s metadata block, including the setpoint special
     case. Returns None when the measurement cannot be resolved."""
-    measure = DeviceMeasurements.query.filter(
-        DeviceMeasurements.unique_id == measurement_id).first()
+    measure = (measure_cache or {}).get(measurement_id)
+    if measure is None:
+        measure = DeviceMeasurements.query.filter(
+            DeviceMeasurements.unique_id == measurement_id).first()
     if not measure:
         return None
 
-    conversion = Conversion.query.filter(
-        Conversion.unique_id == measure.conversion_id).first()
+    if measure.conversion_id and conv_cache is not None and measure.conversion_id in conv_cache:
+        conversion = conv_cache[measure.conversion_id]
+    else:
+        conversion = Conversion.query.filter(
+            Conversion.unique_id == measure.conversion_id).first()
     channel, unit, measurement = return_measurement_info(measure, conversion)
 
     if getattr(measure, 'measurement_type', None) == 'setpoint':
@@ -749,6 +787,11 @@ def data_batch():
     results = [None] * len(items)
     last_jobs = []  # (index, unique_id, unit, channel, measurement, period)
 
+    # 메타데이터를 항목별 ORM 왕복 2회로 풀던 것을 IN 조회 2회로 선주입.
+    meas_cache, conv_cache = _prefetch_last_metadata(
+        [it.get('measurement_id') for it in items
+         if isinstance(it, dict) and it.get('kind') != 'past'])
+
     for i, it in enumerate(items):
         if not isinstance(it, dict):
             continue
@@ -768,28 +811,77 @@ def data_batch():
         # kind == 'last' (default)
         if not str_is_float(period) or db_name != 'influxdb':
             continue
-        resolved = _resolve_last_params(measurement_id)
+        resolved = _resolve_last_params(measurement_id, meas_cache, conv_cache)
         if not resolved:
             continue
         unit, channel, measurement = resolved
         last_jobs.append((i, unique_id, unit, channel, measurement, period))
 
     if last_jobs:
-        max_workers = min(_BATCH_MAX_WORKERS, len(last_jobs))
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_idx = {
-                executor.submit(
-                    _query_last_value, j[1], j[2], j[3], j[4], j[5]): j[0]
-                for j in last_jobs
-            }
-            for future in as_completed(future_to_idx):
-                idx = future_to_idx[future]
-                try:
-                    results[idx] = future.result()
-                except Exception:
-                    results[idx] = None
+        _run_last_jobs(last_jobs, results)
 
     return jsonify({'results': results})
+
+
+def _run_last_jobs(last_jobs, results):
+    """Fill `results` for the resolved 'last' jobs.
+
+    Fast path: ONE Flux query for every series in the batch
+    (query_last_values_bulk). The per-item path issued one query per
+    measurement — measured at ~840-970ms for 107 items and scaling linearly,
+    which was the whole cost of a map widget's value refresh.
+
+    Anything the bulk result does not cover falls back to the original
+    per-item, thread-pooled path: a `period` of '0' means "no time bound"
+    (the bulk query always has a range), and a series can be missing simply
+    because it has no point inside the window — in the latter case the
+    fallback also returns nothing, but it keeps the two paths equivalent
+    rather than silently changing what "no data" means.
+    """
+    # 같은 lookback 끼리 묶는다 — 창이 다르면 한 쿼리로 합칠 수 없다.
+    by_period = {}
+    for job in last_jobs:
+        period = job[5]
+        if period == '0':
+            by_period.setdefault(None, []).append(job)
+            continue
+        try:
+            by_period.setdefault(int(float(period)), []).append(job)
+        except (TypeError, ValueError):
+            by_period.setdefault(None, []).append(job)
+
+    leftovers = list(by_period.pop(None, []))
+
+    for past_sec, jobs in by_period.items():
+        try:
+            bulk = query_last_values_bulk(
+                [(j[2], j[1], j[3], j[4]) for j in jobs], past_sec=past_sec)
+        except Exception:
+            logger.exception("data_batch bulk last-value query failed")
+            bulk = {}
+        for j in jobs:
+            hit = bulk.get(bulk_key(j[2], j[1], j[3], j[4]))
+            if hit is not None:
+                results[j[0]] = hit
+            else:
+                leftovers.append(j)
+
+    if not leftovers:
+        return
+
+    max_workers = min(_BATCH_MAX_WORKERS, len(leftovers))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_idx = {
+            executor.submit(
+                _query_last_value, j[1], j[2], j[3], j[4], j[5]): j[0]
+            for j in leftovers
+        }
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            try:
+                results[idx] = future.result()
+            except Exception:
+                results[idx] = None
 
 
 @blueprint.route('/export_data/<unique_id>/<measurement_id>/<start_seconds>/<end_seconds>')

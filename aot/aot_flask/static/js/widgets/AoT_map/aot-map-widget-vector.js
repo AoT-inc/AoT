@@ -200,6 +200,15 @@
         // would otherwise seed this same state). See _seedHiddenLabelsEarly.
         _seedHiddenLabelsEarly(uniqueId, vars);
 
+        // 직전 세션에서 본 측정값을 먼저 심는다 — Input 키가 첫 렌더부터 값을
+        // 갖고 그려지고, 실제 조회가 끝나면 조용히 교체된다. 마커 생성보다
+        // 반드시 앞이어야 한다(_deviceChannels 가 이 캐시를 읽는다).
+        try { _seedMeasValueCache(uniqueId, vars); } catch (e) {}
+
+        // 줌 게이트: 축척이 낮으면 장치 단위 라벨/키를 감춘다(LABEL_MIN_ZOOM).
+        // 라벨 렌더러보다 먼저 걸어 둬야 첫 렌더부터 기준이 적용된다.
+        try { _installZoomGate(instance, map); } catch (e) {}
+
         // Label layer registry skeleton (rank x pin presets). P1: init only —
         // renderers register entries in a later phase. Reading the toggle here so
         // the preset choice is bound up front.
@@ -503,28 +512,7 @@
             return v === true || v === 'true' || v === 1;
         }
         function _sensorLabelOpts(_vars) {
-            const o = ((_vars && _vars.vars) || wOpts) || {};
-            return {
-                show:         o.show_sensor_labels !== false && o.show_sensor_labels !== 'false',
-                style:        o.sensor_label_style || 'circle',
-                max_channels: parseInt(o.sensor_label_max_channels || 1, 10),
-                decimals:     parseInt(o.sensor_label_decimals != null ? o.sensor_label_decimals : 1, 10),
-                size_em:      parseFloat(o.sensor_label_size || 0.85),
-                bg:           o.sensor_label_bg || 'rgba(15,23,42,0.78)',
-                fg:           o.sensor_label_fg || '#f8fafc',
-                offset_y:     parseFloat(o.sensor_label_offset_y || 0),
-                opacity:      o.sensor_label_opacity != null ? parseFloat(o.sensor_label_opacity) : 0.7,
-                popup:        o.sensor_popup_enabled !== false && o.sensor_popup_enabled !== 'false',
-                // Label collision avoidance (keep spacing instead of hiding) — uses the custom_option 'label_spacing' px.
-                collision:    o.enable_label_collision !== false && o.enable_label_collision !== 'false',
-                spacing:      (function () { var s = parseInt(o.label_spacing, 10); return isNaN(s) ? 0 : s; })(),
-                refresh_seconds: parseInt(o.period || 60, 10),
-                // Stacking priority vs geo-design labels (ZINDEX_MAP: site=3, zone=2,
-                // facility=5, device=6). Without a z-index the sensor (facility key)
-                // labels fall UNDER zone labels. Facility-centric → above device (7);
-                // outdoor → below site (1). This makes the toggle visibly reorder them.
-                priority_z:   ((o.label_priority_facility === true || o.label_priority_facility === 'true') ? 7 : 1)
-            };
+            return _sensorLabelOptsFrom(((_vars && _vars.vars) || wOpts) || {}, uniqueId);
         }
 
         // Expose a live re-attach for the sensor-label settings (style/size/colors/
@@ -540,9 +528,15 @@
             if (_slInst) {
                 _slInst._reattachSensorLabels = function () {
                     if (!window.AoTMapSensorLabels) { return; }
+                    var _o = _sensorLabelOpts(vars);
+                    // 시설 밖(구역/맨지도)에 배치된 Input 값 키는 별도 마커라
+                    // attach() 재실행 대상이 아니다 — 같은 옵션으로 제자리
+                    // 재스타일링해 준다. 이게 없으면 시설 센서 라벨만 크기가
+                    // 바뀌고 Input 키는 옛 크기로 남는다.
+                    try { _restyleInputSensorMarkers(uniqueId, _o); } catch (e) {}
                     var facilities3d = _slInst.cachedFacilities3d;
                     if (!facilities3d || !facilities3d.length) { return; }
-                    try { AoTMapSensorLabels.attach(uniqueId, map, facilities3d, _sensorLabelOpts(vars)); } catch (e) {}
+                    try { AoTMapSensorLabels.attach(uniqueId, map, facilities3d, _o); } catch (e) {}
                 };
             }
         } catch (e) {}
@@ -695,9 +689,9 @@
             if (cached && (Date.now() - cached.ts) < _ZONE_HIST_CACHE_MS) {
                 return Promise.resolve(cached.data);
             }
-            var zoneUuid = z.zoneUuid;
-            return fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) +
-                         '/output_history?output_id=' + encodeURIComponent(outputId))
+            // 구역 스코프 없는 공용 이력 엔드포인트 — 시설 모달·장치 마커 팝업도
+            // 같은 것을 쓴다(구역 별칭 라우트는 하위호환용으로만 남아있다).
+            return fetch('/api/geo/output/' + encodeURIComponent(outputId) + '/history')
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (d) {
                     if (d && d.ok) {
@@ -742,57 +736,13 @@
             });
         }
 
-        // 독립 장치 이력 차트 렌더 (센서 없을 때 — 행 아래 토글)
+        // 독립 장치 이력 차트 렌더 (센서 없을 때 — 행 아래 토글).
+        // 그래프 자체는 공용 모듈이 그린다(sensor-label.js) — 팝업마다 자체
+        // Highstock 옵션을 두던 것을 통일한 결과.
         function _renderZoneDeviceChart(div, hist, name) {
-            if (!window.Highcharts) { return; }
-            var isOnOff = hist.series_type === 'onoff';
-            var pts = (hist.points || []).map(function (p) {
-                return [p[0] * 1000, p[1]];
-            }).sort(function (a, b) { return a[0] - b[0]; });
-            if (!pts.length) {
-                div.innerHTML = '<span class="aot-ov-muted" style="padding:8px;display:block">' +
-                                _tr('No data') + '</span>';
-                return;
+            if (window.AoTSensorLabel && window.AoTSensorLabel.renderOutputHistory) {
+                window.AoTSensorLabel.renderOutputHistory(div, hist, name, {});
             }
-            requestAnimationFrame(function () {
-                var w = div.offsetWidth || 280;
-                var h = Math.max(120, Math.min(200, Math.round(w * 0.46)));
-                if (window.AoTChart && window.AoTChart.applyGlobalDefaults) {
-                    window.AoTChart.applyGlobalDefaults();
-                }
-                try {
-                    div._aotChart = window.Highcharts.stockChart(div, {
-                        chart: { height: h, spacing: [4, 4, 4, 4] },
-                        rangeSelector: { enabled: false },
-                        navigator: { enabled: false },
-                        scrollbar: { enabled: false },
-                        credits: { enabled: false },
-                        exporting: { enabled: false },
-                        legend: { enabled: false },
-                        xAxis: { type: 'datetime',
-                                 labels: { style: { fontSize: '9px' } } },
-                        yAxis: { min: 0, title: { text: null },
-                                 labels: {
-                                     enabled: true,
-                                     style: { fontSize: '9px' },
-                                     formatter: isOnOff
-                                         ? function () { return this.value + 'm'; }
-                                         : function () { return this.value + '%'; }
-                                 }, gridLineWidth: 1 },
-                        tooltip: { valueDecimals: 1,
-                                   valueSuffix: isOnOff ? (' ' + _tr('min')) : ' %' },
-                        series: [{
-                            name: name,
-                            type: isOnOff ? 'column' : 'line',
-                            step: isOnOff ? undefined : 'left',
-                            data: pts,
-                            maxPointWidth: isOnOff ? 3 : undefined,
-                            borderWidth: isOnOff ? 0 : undefined,
-                            color: '#4a90d9'
-                        }]
-                    });
-                } catch (e) {}
-            });
         }
 
         // 장치 이름 클릭 → 이력 오버레이 on/off
@@ -948,7 +898,7 @@
                         var label = _escZ(rawLabel);
                         var ctrl = canCtrl
                             ? '<div class="aot-act-3btn">' +
-                              '<button type="button" class="aot-act-pbtn aot-zone-output-settings"' +
+                              '<button type="button" class="aot-act-pbtn aot-output-settings"' +
                               ' data-output-id="' + _escZ(out.unique_id) + '"' +
                               ' data-channel="' + ch.channel + '"' +
                               ' data-output-name="' + _escZ(rawLabel) + '"' +
@@ -1109,8 +1059,8 @@
                     return;
                 }
 
-                // 장치 설정 — 종료 시각을 지정해 "지금부터 그 시각까지" 켜기
-                var setBtn = e.target.closest('.aot-zone-output-settings');
+                // 장치 설정 — 시작/종료 시각 예약 (시설 모달·마커 팝업과 공용 창)
+                var setBtn = e.target.closest('.aot-output-settings');
                 if (setBtn && popupEl.contains(setBtn)) {
                     _openZoneOutputScheduleWheel(uid,
                         setBtn.dataset.outputId,
@@ -1187,7 +1137,7 @@
                     toggle.classList.toggle('aot-toggle-pending', !!cls.isPending);
                     toggle.classList.toggle('aot-toggle-fault', !!cls.isFault);
                     row.classList.remove('active-background', 'inactive-background',
-                                          'pause-background', 'hold-background');
+                                          'fault-background', 'hold-background');
                     if (cls.cssClass) { row.classList.add(cls.cssClass); }
                 });
             })
@@ -1204,99 +1154,19 @@
             z.pollTimer = setInterval(function () { _fetchAndUpdateZoneOutputStates(uid); }, refreshMs);
         }
 
-        // 장치별 마지막으로 저장한 종료 시각 기억(프론트엔드 세션 한정, 새로고침하면
-        // 사라짐) — 설정 창을 다시 열 때 매번 00:00 으로 리셋되면 방금 정한 값이
-        // 사라진 것처럼 보인다는 피드백 반영. 시작은 항상 "지금"이 맞으므로 기억하지
-        // 않는다.
-        var _zoneOutputEndMemory = {};
-
-        // 설정 버튼 — 시작(위)·종료(아래) 시각을 한 팝업에 같이 보여준다(따로 뜨면
-        // 지금 고르는 게 시작인지 종료인지 헷갈린다는 피드백 반영). 종료를 00:00으로
-        // 두면 무한 작동(자동 꺼짐 없음). 저장 시 지금~종료까지의 duration 을 계산해
-        // 기존 output/state 엔드포인트(duration 파라미터 지원)로 전송한다.
+        // 장치 시작/종료 예약 — 공용 모듈(AoTMapPopup.openOutputSchedule) 위임.
+        // 예전에는 이 파일 안에 구역 전용 시간휠 + setTimeout 구현이 있었다.
+        // 지금은 시설 모달·장치 마커 팝업과 같은 창을 쓰고, 미래 시작은 서버
+        // 스케줄러에 등록되므로 탭을 닫아도 실행된다.
         function _openZoneOutputScheduleWheel(uid, outputId, channel, outputName) {
-            if (!window.AoTTimeWheel) { console.warn('[AoT Map] AoTTimeWheel module not loaded'); return; }
-            var now = new Date();
-            var nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60);
-            var lastEndSec = _zoneOutputEndMemory.hasOwnProperty(outputId) ? _zoneOutputEndMemory[outputId] : 0;
-            var label = outputName ? _escZ(outputName) : '';
-
-            var html =
-                '<div class="aot-sensor-popup-header"><b>' + label + '</b></div>' +
-                '<div class="aot-act-group-header">' + _tr('Start time') + '</div>' +
-                '<div class="aot-sched-wheel aot-sched-wheel-start"></div>' +
-                '<div class="aot-act-group-header">' + _tr('End time') + '</div>' +
-                '<div class="aot-sched-wheel aot-sched-wheel-end"></div>' +
-                '<div class="aot-ov-muted" style="text-align:center;margin:.2rem 0 .5rem">' +
-                _tr('00:00 = run indefinitely (no auto off)') + '</div>' +
-                '<div class="aot-wheel-actions">' +
-                '<button type="button" class="btn aot-pill-btn aot-sched-cancel">' + _tr('Cancel') + '</button>' +
-                '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-save">' + _tr('Save') + '</button>' +
-                '</div>';
-
-            var popup = _showFacilityCenterOverlay(html, 'zone-sched-' + uid);
-            var el = popup.getElement();
-            var startWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-start'),
-                { value: nowSec, fields: 'hm' });
-            var endWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-end'),
-                { value: lastEndSec, fields: 'hm' });
-
-            el.querySelector('.aot-sched-cancel').addEventListener('click', function () { popup.remove(); });
-            el.querySelector('.aot-sched-save').addEventListener('click', function () {
-                var startSec = startWheel.read();
-                var endSec = endWheel.read();
-                _zoneOutputEndMemory[outputId] = endSec;
-                popup.remove();
-                _scheduleZoneOutputOnUntil(uid, outputId, channel, startSec, endSec);
+            if (!window.AoTMapPopup || !window.AoTMapPopup.openOutputSchedule) return;
+            window.AoTMapPopup.openOutputSchedule({
+                shell:     _showFacilityCenterOverlay,
+                outputId:  outputId,
+                channel:   channel,
+                name:      outputName,
+                onApplied: function () { _fetchAndUpdateZoneOutputStates(uid); }
             });
-        }
-
-        function _scheduleZoneOutputOnUntil(uid, outputId, channel, startSec, endSec) {
-            var nowMs = Date.now();
-            var n = new Date(nowMs);
-            var start = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
-                Math.floor(startSec / 3600), Math.floor((startSec % 3600) / 60), 0, 0);
-            // 이미 지난 시각을 골랐다면 "지금"으로 간주 — 다음 날로 밀지 않는다.
-            if (start.getTime() < nowMs) { start = new Date(nowMs); }
-
-            // 종료 00:00 = 무한 작동(자동 꺼짐 없음) — duration 을 아예 보내지 않는다.
-            var indefinite = (endSec === 0);
-            var durationSec = null;
-            if (!indefinite) {
-                var end = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
-                    Math.floor(endSec / 3600), Math.floor((endSec % 3600) / 60), 0, 0);
-                if (end.getTime() <= start.getTime()) { end.setDate(end.getDate() + 1); }
-                durationSec = Math.round((end.getTime() - start.getTime()) / 1000);
-            }
-            var delaySec = Math.max(0, Math.round((start.getTime() - nowMs) / 1000));
-
-            function fire() {
-                var body = { state: true, channel: channel };
-                if (durationSec !== null) { body.duration = durationSec; }
-                fetch('/api/geo/output/' + encodeURIComponent(outputId) + '/state', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json',
-                               'X-CSRFToken': _csrfHeader() },
-                    body: JSON.stringify(body)
-                })
-                .then(function (r) { return r.json(); })
-                .then(function (j) { if (j && j.ok) { _fetchAndUpdateZoneOutputStates(uid); } })
-                .catch(function () {});
-            }
-
-            if (delaySec <= 0) {
-                fire();
-                return;
-            }
-            // 시작이 미래인 경우 — 서버에 예약을 저장하지 않는 1회성 제어이므로 이 탭이
-            // 열려 있어야만 예정대로 켜진다. 조용히 실패하지 않도록 명시적으로 알린다.
-            if (!window.confirm(_tr('This will turn on at the chosen start time. Keep this browser tab open until then, or it will not run.'))) {
-                return;
-            }
-            if (window.showToast) {
-                window.showToast(_tr('Scheduled — keep this tab open until the start time.'), 'info');
-            }
-            setTimeout(fire, delaySec * 1000);
         }
 
         function _openZonePopup(uid, zoneUuid, zoneName) {
@@ -1603,9 +1473,19 @@
                     if (_uidInstTop && _uidInstTop._hiddenLabels && _uidInstTop._hiddenLabels.facility) {
                         bEl.classList.add('aot-type-hidden');
                     }
+                    // 시설(구역) 칩도 공용 z-order + "고른 라벨을 앞으로".
+                    // CSS 에 z-index:6 이 박혀 있던 것을 LABEL_Z.facility 로 옮겼다.
+                    var _bRestore = _uidInstTop
+                        ? _wireLabelStacking(_uidInstTop, bEl, 'facility') : null;
                     bEl.addEventListener('click', function (ev) {
                         ev.stopPropagation();
-                        _openBayPopup(uid, fac.unique_id, sl.id);
+                        if (_uidInstTop && _bRestore) {
+                            _uidInstTop._pinLabelToFront(bEl, _bRestore);
+                        }
+                        var _bp = _openBayPopup(uid, fac.unique_id, sl.id);
+                        if (_bp && _bp.on && _uidInstTop) {
+                            _bp.on('close', function () { _uidInstTop._unpinLabel(bEl); });
+                        }
                     });
                     // Anchored at the bay center; the vertical offset is computed
                     // per frame so the chip sits above the facility outline
@@ -1941,7 +1821,7 @@
             // Band color of the representative (averaged) value
             if (window.AoTMapSensorLabels && window.AoTMapSensorLabels.bandColor) {
                 var ranges = _facilityRanges_act(uid, facilityUuid);
-                var color = window.AoTMapSensorLabels.bandColor(sum.key, sum.avg, ranges);
+                var color = window.AoTMapSensorLabels.bandColor(sum.key, sum.avg, ranges, sum.unit);
                 if (color) {
                     sChip.style.background = color;
                     sChip.style.color = window.AoTMapSensorLabels.textOn(color);
@@ -2045,7 +1925,7 @@
                     sum.avg.toFixed(dec) + (sum.unit || '') +
                     (sum.more ? ' +' : '');
                 if (window.AoTMapSensorLabels && window.AoTMapSensorLabels.bandColor) {
-                    var color = window.AoTMapSensorLabels.bandColor(sum.key, sum.avg, ranges);
+                    var color = window.AoTMapSensorLabels.bandColor(sum.key, sum.avg, ranges, sum.unit);
                     if (color) {
                         bm.el.style.background = color;
                         bm.el.style.color = window.AoTMapSensorLabels.textOn(color);
@@ -2206,6 +2086,19 @@
                 var tgl = e.target.closest('.aot-iec-toggle-input');
                 if (tgl && scopeEl.contains(tgl)) {
                     _toggleIec(uid, facilityUuid, tgl);
+                    return;
+                }
+
+                // 장치 설정 — 시작/종료 시각 예약 (구역 모달·마커 팝업과 공용 창)
+                var setBtn = e.target.closest('.aot-output-settings');
+                if (setBtn && scopeEl.contains(setBtn) &&
+                    window.AoTMapPopup && window.AoTMapPopup.openOutputSchedule) {
+                    window.AoTMapPopup.openOutputSchedule({
+                        shell:    _showFacilityCenterOverlay,
+                        outputId: setBtn.dataset.outputId,
+                        channel:  parseInt(setBtn.dataset.channel || '0', 10),
+                        name:     setBtn.dataset.outputName || ''
+                    });
                     return;
                 }
 
@@ -2704,6 +2597,9 @@
                 if (document.hidden) return;
                 _loadOverview(uid, facilityUuid);
             }, st.refreshMs || _OV_REFRESH_MS);
+
+            // 호출자(구역 칩)가 close 를 구독해 "앞으로 고정"을 풀 수 있게 반환.
+            return popup;
         }
 
         // Poll refresh for the open bay modal — rebuild ONLY the acts section,
@@ -3218,11 +3114,10 @@
             e.style.pointerEvents = 'none';
         });
 
-        // Sort: highest zIndex first
+        // Sort: 충돌 우선순위가 높은(=더 구체적인) 라벨부터 자리를 잡는다.
+        // 쌓임 순서(z-index)와는 다른 축이다 — LABEL_COLLISION_RANK 주석 참고.
         var sorted = markers.slice().sort(function(a, b) {
-            var za = parseInt(a.getElement().style.zIndex) || 0;
-            var zb = parseInt(b.getElement().style.zIndex) || 0;
-            return zb - za;
+            return _collisionRank(b.getElement()) - _collisionRank(a.getElement());
         });
 
         if (sorted.length > 0) void sorted[0].getElement().offsetWidth; // force reflow
@@ -3470,24 +3365,29 @@
     function _runUnifiedLabelCollision(instance, map, spacing) {
         var sp = spacing;
 
-        // Reset absorbed-device counters on site/zone labels (recomputed below).
-        (instance.siteZoneLabelMarkers || []).forEach(function(m) {
+        // Reset absorbed counters on every group (recomputed below) — 어느 종류가
+        // 흡수하는 쪽이 될지는 패스 순서에 달렸으므로 전 그룹을 초기화한다.
+        _allLabelMarkers(instance).forEach(function(m) {
             var e = m.getElement && m.getElement(); if (e) e.__absorbedCount = 0;
         });
 
-        // Pass 1: site + zone (no pre-occupied)
+        // 패스 순서 = 충돌 우선순위. 구체적인 대상이 먼저 자리를 잡고, 넓은
+        // 대상이 그 자리를 피한다(겹치면 넓은 쪽이 접힌다).
+        // 쌓임 순서(LABEL_Z)는 이와 별개 축이다 — 그쪽은 site 가 위다.
+
+        // Pass 1: 장치 pill · 값 키 (가장 구체적)
         var occ1 = runLabelCollisionWithClustering(
-            instance.siteZoneLabelMarkers  || [], map, sp, instance, 'siteZoneClusterMarkers', []
+            instance.deviceLabelMarkers    || [], map, sp, instance, 'deviceClusterMarkers', []
         );
 
-        // Pass 2: geo aot_device labels (must avoid site+zone areas)
+        // Pass 2: geo aot_device 이름 라벨
         var occ2 = runLabelCollisionWithClustering(
             instance.geoDeviceLabelMarkers || [], map, sp, instance, 'geoDeviceClusterMarkers', occ1
         );
 
-        // Pass 3: pill device markers (lowest priority)
+        // Pass 3: 대지 + 구역 (가장 넓음 → 마지막)
         runLabelCollisionWithClustering(
-            instance.deviceLabelMarkers    || [], map, sp, instance, 'deviceClusterMarkers', occ1.concat(occ2)
+            instance.siteZoneLabelMarkers  || [], map, sp, instance, 'siteZoneClusterMarkers', occ1.concat(occ2)
         );
 
         // Represent device labels absorbed under a site/zone label using the SAME
@@ -3504,10 +3404,22 @@
     // For each visible site/zone label that swallowed device labels, hide the plain
     // label and show a standard cluster badge ("name +N") at its position — exactly
     // like the within-tier cluster badges. Clicking zooms in to reveal the devices.
+    /** 충돌 회피가 다루는 모든 라벨 마커(그룹 3종 합집합). */
+    function _allLabelMarkers(instance) {
+        return [].concat(
+            instance.deviceLabelMarkers    || [],
+            instance.geoDeviceLabelMarkers || [],
+            instance.siteZoneLabelMarkers  || []
+        );
+    }
+
     function _renderAbsorbedDeviceBadges(instance, map) {
         if (instance.absorbBadges) instance.absorbBadges.forEach(function(m) { try { m.remove(); } catch (e) {} });
         instance.absorbBadges = [];
-        (instance.siteZoneLabelMarkers || []).forEach(function(m) {
+        // 그룹을 가리지 않는다: 흡수한 쪽이 site/zone 일 수도, 장치 라벨일 수도
+        // 있다(패스 순서에 따라 달라진다). 어느 쪽이든 "+N" 으로 드러내지 않으면
+        // 가려진 라벨이 조용히 사라진다.
+        _allLabelMarkers(instance).forEach(function(m) {
             var e = m.getElement && m.getElement(); if (!e) return;
             // Remove any stale inline span left by an older build.
             var stale = e.querySelector('.aot-absorb-dev'); if (stale) stale.remove();
@@ -3657,15 +3569,17 @@
             'device':     labelTheme['input']  || '#995aff',
             'aot_device': labelTheme['input']  || '#995aff'
         };
-        // 넓은 영역일수록 아래, 구체 대상일수록 위: 대지(site) < 구역(zone)
-        // < 시설(facility) < 장비/장치. 시설 라벨이 대지 라벨에 가리지 않게 한다.
-        const ZINDEX_MAP = {
-            'site':       3,
-            'zone':       2,
-            'facility':   5,
-            'equipment':  6,
-            'device':     6,
-            'aot_device': 6
+        // parent_type → 공용 z-order 표(LABEL_Z)의 종류 키.
+        // 장치 라벨(device/aot_device)은 여기서 실제 장치 종류를 아직 모른다
+        // (_deviceTypeMap 은 addDeviceMarkers 에서 만들어진다) — 일단 output 단으로
+        // 두고, 그쪽에서 input/function 으로 정정한다(_applyGeoDeviceLabelZ).
+        const ZKIND_MAP = {
+            'site':       'site',
+            'zone':       'zone',
+            'facility':   'facility',
+            'equipment':  'equipment',
+            'device':     'output',
+            'aot_device': 'output'
         };
 
         try {
@@ -3697,7 +3611,7 @@
                 }
 
                 const color  = COLOR_MAP[pType] || '#666';
-                const zIndex = ZINDEX_MAP[pType] || 2;
+                const zKind  = ZKIND_MAP[pType] || 'zone';
                 const name   = props.label_name || '';
                 const area   = props.label_area  || '';
 
@@ -3745,43 +3659,10 @@
                     .setLngLat([coords[0], coords[1]])
                     .addTo(map);
 
-                el.style.zIndex = String(zIndex);
-
-                // Without label collision (enable_label_collision off, or this label
-                // is still mid-cluster), overlapping labels just stack in ZINDEX_MAP
-                // order — a label buried under others of the same/higher category is
-                // permanently unreadable. Bring the hovered/tapped label fully to
-                // front (temporarily) so any label in the stack can be singled out.
-                // A hover-only revert (mouseleave -> restore) snaps a clicked label
-                // straight back once the pointer leaves it to interact with the
-                // popup/modal that click opened, so a click instead PINS it: it stays
-                // in front until whatever it opened closes (or a different label is
-                // clicked/pinned). instance._pinLabelToFront/_unpinLabel are shared
-                // across every label so only one is ever pinned at a time.
-                if (!instance._pinLabelToFront) {
-                    instance._pinnedLabel = null; // { el, restore }
-                    instance._pinLabelToFront = function (pinEl, restoreFn) {
-                        if (instance._pinnedLabel && instance._pinnedLabel.el !== pinEl) {
-                            instance._pinnedLabel.restore();
-                        }
-                        pinEl.style.zIndex = '9000';
-                        instance._pinnedLabel = { el: pinEl, restore: restoreFn };
-                    };
-                    instance._unpinLabel = function (pinEl) {
-                        if (instance._pinnedLabel && instance._pinnedLabel.el === pinEl) {
-                            instance._pinnedLabel.restore();
-                            instance._pinnedLabel = null;
-                        }
-                    };
-                }
-                var _baseZ = zIndex;
-                var _restoreZ = function () { el.style.zIndex = String(_baseZ); };
-                el.addEventListener('mouseenter', function () { el.style.zIndex = '9000'; });
-                el.addEventListener('mouseleave', function () {
-                    // Don't un-front a pinned (clicked, popup/modal still open) label
-                    // just because the pointer moved off it to reach that popup.
-                    if (!instance._pinnedLabel || instance._pinnedLabel.el !== el) { _restoreZ(); }
-                });
+                // 공용 z-order + "고른 라벨을 앞으로" (LABEL_Z / _wireLabelStacking).
+                // 충돌 회피가 꺼져 있거나 아직 클러스터 중이면 라벨이 그냥 겹쳐
+                // 쌓이므로, 스택에 묻힌 라벨을 집어낼 수단이 반드시 필요하다.
+                var _restoreZ = _wireLabelStacking(instance, el, zKind);
 
                 // Click → popup (v3 port: name + Open Notes button + last note preview)
                 (function(lngLat, popupName, popupArea, tId, tType, nodeId) {
@@ -3798,7 +3679,10 @@
                         var safeName = (popupName || '').replace(/'/g, "\\'");
                         var openNoteAction = 'window.dispatchEvent(new CustomEvent(\'open-notes\',{detail:{targetId:\'' + tId + '\',targetType:\'' + tType + '\',name:\'' + safeName + '\'}}))';
                         var html = '<div class="aot-popup-body">'
-                            + '<div class="aot-popup-title">' + popupName + '</div>'
+                            + '<div class="aot-popup-header">'
+                            + '<div class="aot-popup-title" style="margin:0">' + popupName + '</div>'
+                            + '<span class="aot-link-badges-slot"></span>'
+                            + '</div>'
                             + (popupArea ? '<div class="aot-popup-subtitle">' + popupArea + '</div>' : '')
                             + '<hr class="aot-popup-divider">'
                             + '<button class="aot-popup-btn aot-popup-btn--primary aot-popup-btn--full" onclick="' + openNoteAction + '">'
@@ -3811,6 +3695,18 @@
                             .setHTML(html)
                             .addTo(map);
                         instance._labelPopup.on('close', function () { instance._unpinLabel(el); });
+                        // 배터리·통신 배지 — 장치 라벨에서만. site/zone 라벨은 장치가
+                        // 아니라 조회해 봐야 늘 빈 응답이다.
+                        if (tType === 'aot_device' && window.AoTSensorLabel &&
+                            window.AoTSensorLabel.fetchStatus) {
+                            (function (popupRef) {
+                                window.AoTSensorLabel.fetchStatus(tId).then(function (all) {
+                                    var root = popupRef.getElement && popupRef.getElement();
+                                    if (!root || instance._labelPopup !== popupRef) return;
+                                    window.AoTSensorLabel.fillLinkBadges(root, all[tId]);
+                                });
+                            }(instance._labelPopup));
+                        }
                         // Fetch last note
                         setTimeout(function() {
                             fetch('/notes/target/' + tId)
@@ -3909,6 +3805,65 @@
      * Used by facility/zone controls and the site-list modal.
      * uid is used only to de-duplicate: a second call with the same uid replaces the first.
      */
+    /**
+     * Sensor-label custom options (single source of truth).
+     *
+     * Module scope on purpose: the facility fitting labels, the style-reload
+     * re-attach path AND addDeviceMarkers (zone / bare-map Input labels) must all
+     * read the SAME options. While each site had its own inline copy, an Input
+     * placed in a zone silently ignored the sensor-label settings that the very
+     * same Input would have obeyed inside a facility.
+     */
+    /**
+     * onLabelEl callback for AoTMapSensorLabels.attach(): gives every facility
+     * fitting-sensor label the same base z-order + hover/click "bring to front"
+     * as every other label, and returns pin/unpin hooks for its detail modal.
+     * The sensor-label module has no widget instance, so the pin state lives here.
+     */
+    function _sensorLabelSelectHook(uniqueId) {
+        return function (el) {
+            const inst = window.AoTWidgetInstances[uniqueId];
+            if (!inst) return null;
+            const restore = _wireLabelStacking(inst, el, 'input');
+            return {
+                pin:   function () { inst._pinLabelToFront(el, restore); },
+                unpin: function () { inst._unpinLabel(el); }
+            };
+        };
+    }
+
+    function _sensorLabelOptsFrom(o, uniqueId) {
+        o = o || {};
+        return {
+            onLabelEl: uniqueId ? _sensorLabelSelectHook(uniqueId) : undefined,
+            show:         o.show_sensor_labels !== false && o.show_sensor_labels !== 'false',
+            style:        o.sensor_label_style || 'circle',
+            max_channels: parseInt(o.sensor_label_max_channels || 1, 10),
+            decimals:     parseInt(o.sensor_label_decimals != null ? o.sensor_label_decimals : 1, 10),
+            // 위젯 옵션 'Label Text Size'(global_label_size)는 phrase 그대로
+            // "지도의 **모든** 라벨" 크기다. 예전엔 site/zone/facility 이름 라벨과
+            // 장치 pill 만 반영하고 측정값 키(시설 센서 라벨 + 구역/지도 Input 키)는
+            // 고정 0.85em 이라, 이름은 커지는데 값은 그대로인 채로 남았다.
+            size_em:      parseFloat(o.sensor_label_size || 0.85) *
+                          (parseFloat(o.global_label_size) || 1.0),
+            bg:           o.sensor_label_bg || 'rgba(15,23,42,0.78)',
+            fg:           o.sensor_label_fg || '#f8fafc',
+            offset_y:     parseFloat(o.sensor_label_offset_y || 0),
+            opacity:      o.sensor_label_opacity != null ? parseFloat(o.sensor_label_opacity) : 0.7,
+            popup:        o.sensor_popup_enabled !== false && o.sensor_popup_enabled !== 'false',
+            // Label collision avoidance (keep spacing instead of hiding) — uses the custom_option 'label_spacing' px.
+            collision:    o.enable_label_collision !== false && o.enable_label_collision !== 'false',
+            spacing:      (function () { var s = parseInt(o.label_spacing, 10); return isNaN(s) ? 0 : s; })(),
+            refresh_seconds: parseInt(o.period || 60, 10),
+            // 시설 fitting 센서 라벨도 결국 Input 의 측정값 키다 — 공용 z-order 의
+            // input 단을 그대로 쓴다. 예전에는 label_priority_facility 토글이
+            // 이 값을 7/1 로 뒤집어 같은 지도 안에서 키가 site/zone 위로 갔다
+            // 아래로 갔다 했다. 그 토글은 이제 충돌 회피·줌 LOD 프리셋
+            // (AoTMapLabelLayers) 에만 쓰이고, 쌓임 순서는 LABEL_Z 로 고정된다.
+            priority_z:   LABEL_Z.input
+        };
+    }
+
     function _showFacilityCenterOverlay(html, uid) {
         var OVERLAY_ID = 'aot-facility-ctrl-overlay-' + uid;
         var existing = document.getElementById(OVERLAY_ID);
@@ -3978,6 +3933,162 @@
                 if (evt === 'close') _closeListeners.push(fn);
             }
         };
+    }
+
+    // ── Unified label/key stacking order ──────────────────────────────────────
+    // 하나의 표가 지도 위 **모든** 라벨·키의 z-index 를 정한다. 예전에는
+    // geo-design 라벨(ZINDEX_MAP), 장치 pill(지정 없음 → auto), 센서 값 키
+    // (priority_z), 구역 칩(CSS z-index:6)이 제각각이라 같은 지점에서 어느 것이
+    // 위로 오는지 예측할 수 없었다.
+    //
+    // 순서: 넓은 대상이 **위**, 구체적인 대상이 아래.
+    //   site > zone > facility > equipment > output > input > function
+    // (equipment 는 사용자 지정 순서에 없지만 시설 부속 설비이므로 facility
+    //  바로 아래에 둔다 — 나머지의 상대 순서는 지정 그대로다.)
+    var LABEL_Z = {
+        site: 7, zone: 6, facility: 5, equipment: 4,
+        output: 3, input: 2, 'function': 1
+    };
+
+    // ── 충돌 우선순위 (쌓임 순서와 **별개 축**) ───────────────────────────────
+    // 겹쳐서 하나만 남길 수 있을 때는 구체적인 대상이 남아야 한다: 대지 이름은
+    // 어차피 넓은 영역 어디서나 읽히지만, 특정 장치의 값 키는 그 자리에서만
+    // 읽을 수 있기 때문이다. 쌓임 순서(LABEL_Z)와 정반대이므로 같은 표를 쓸 수
+    // 없다 — 예전에는 충돌 회피가 z-index 를 그대로 정렬 기준으로 삼아서, 쌓임
+    // 순서를 뒤집자 site 라벨이 장치 키를 밀어내 버렸다.
+    var LABEL_COLLISION_RANK = {
+        'function': 7, input: 6, output: 5, equipment: 4,
+        facility: 3, zone: 2, site: 1
+    };
+
+    function _collisionRank(el) {
+        var r = el && el.dataset ? LABEL_COLLISION_RANK[el.dataset.labelKind] : null;
+        if (r != null) return r;
+        // 아직 종류가 안 찍힌 요소는 z-index 로 폴백(과거 동작).
+        return parseInt(el && el.style && el.style.zIndex, 10) || 0;
+    }
+
+    // ── 줌 게이트 ─────────────────────────────────────────────────────────────
+    // 이 종류들만 줌 기준의 적용을 받는다. 대지·구역은 멀리서 위치를 잡는
+    // 기준이라 항상 보이고, 개별 장치 단위 정보는 그 축척에서 읽히지도 않으면서
+    // 화면만 덮는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 16)이 정한다.
+    var LABEL_ZOOM_GATED = { facility: 1, output: 1, input: 1, 'function': 1 };
+    var LABEL_MIN_ZOOM_DEFAULT = 16;
+
+    /** 이 위젯의 라벨 숨김 기준 줌. 0(또는 미설정 0) = 숨기지 않음. */
+    function _labelMinZoom(instance) {
+        var o = (instance && instance.vars && instance.vars.vars) || {};
+        var v = parseFloat(o.label_min_zoom);
+        if (isNaN(v)) return LABEL_MIN_ZOOM_DEFAULT;
+        return Math.max(0, Math.min(22, v));
+    }
+    // 사용자가 고른(호버/클릭) 라벨은 종류와 무관하게 최상단으로 올린다.
+    var LABEL_Z_FRONT = 9000;
+
+    function _labelZ(kind) {
+        var z = LABEL_Z[kind];
+        return z != null ? z : LABEL_Z.zone;
+    }
+
+    // "고른 라벨을 앞으로" 동작을 인스턴스에 1회 설치한다.
+    // 클릭은 PIN(연 팝업/모달이 닫힐 때까지 유지) — hover-only 복귀는 팝업을
+    // 만지러 포인터가 라벨을 벗어나는 순간 되돌아가 버린다. 인스턴스당 하나만
+    // 핀 되도록 상태를 공유한다.
+    function _ensurePinHelpers(instance) {
+        if (instance._pinLabelToFront) return;
+        instance._pinnedLabel = null; // { el, restore }
+        instance._pinLabelToFront = function (pinEl, restoreFn) {
+            if (instance._pinnedLabel && instance._pinnedLabel.el !== pinEl) {
+                instance._pinnedLabel.restore();
+            }
+            pinEl.style.zIndex = String(LABEL_Z_FRONT);
+            instance._pinnedLabel = { el: pinEl, restore: restoreFn };
+        };
+        instance._unpinLabel = function (pinEl) {
+            if (instance._pinnedLabel && instance._pinnedLabel.el === pinEl) {
+                instance._pinnedLabel.restore();
+                instance._pinnedLabel = null;
+            }
+        };
+    }
+
+    /**
+     * Give one label/key element its base stacking order plus the shared
+     * hover/click "bring to front" behaviour. Returns the restore function so
+     * the caller can hand it to _pinLabelToFront on click.
+     *
+     *   kind : LABEL_Z key ('site' | 'zone' | 'facility' | 'equipment' |
+     *                       'output' | 'input' | 'function')
+     */
+    function _wireLabelStacking(instance, el, kind) {
+        _ensurePinHelpers(instance);
+        // 종류를 요소에 새긴다 — 쌓임(z), 충돌 우선순위, 줌 게이트가 모두 이걸 읽는다.
+        el.dataset.labelKind = kind;
+        // 기준 z 는 dataset 에 둔다 — 나중에 종류가 확정돼 바뀌어도
+        // (_setLabelBaseZ) 이미 붙은 복귀 핸들러가 옛 값을 되살리지 않는다.
+        el.dataset.baseZ = String(_labelZ(kind));
+        el.style.zIndex = el.dataset.baseZ;
+        _applyZoomGateTo(el, instance);
+        var restore = function () { el.style.zIndex = el.dataset.baseZ || '0'; };
+        el.addEventListener('mouseenter', function () {
+            el.style.zIndex = String(LABEL_Z_FRONT);
+        });
+        el.addEventListener('mouseleave', function () {
+            // 핀 된(클릭해서 팝업을 연) 라벨은 포인터가 떠나도 앞에 남긴다.
+            if (!instance._pinnedLabel || instance._pinnedLabel.el !== el) restore();
+        });
+        return restore;
+    }
+
+    /** Re-assign an already-wired label's base order (kind became known later). */
+    function _setLabelBaseZ(instance, el, kind) {
+        el.dataset.labelKind = kind;
+        el.dataset.baseZ = String(_labelZ(kind));
+        var pinned = instance._pinnedLabel && instance._pinnedLabel.el === el;
+        if (!pinned) el.style.zIndex = el.dataset.baseZ;
+        _applyZoomGateTo(el, instance);
+    }
+
+    /** 한 요소에 줌 게이트를 적용한다. 감춤은 .aot-zoom-hidden 클래스로만 한다 —
+     *  충돌 회피가 인라인 display 를 직접 건드리므로 그것과 섞이면 안 된다. */
+    function _applyZoomGateTo(el, instance) {
+        var map = instance && instance.map;
+        if (!el || !map || typeof map.getZoom !== 'function') return;
+        var min = _labelMinZoom(instance);
+        el.classList.toggle('aot-zoom-hidden',
+            min > 0 && !!LABEL_ZOOM_GATED[el.dataset.labelKind] && map.getZoom() < min);
+    }
+
+    /**
+     * Re-apply the zoom gate to every label/key of this widget.
+     * Installed once per instance; runs on zoom (rAF-throttled) and on zoomend.
+     */
+    function _applyZoomGate(instance) {
+        var map = instance && instance.map;
+        if (!map || typeof map.getContainer !== 'function') return;
+        var z = map.getZoom();
+        var min = _labelMinZoom(instance);
+        map.getContainer().querySelectorAll('[data-label-kind]').forEach(function (el) {
+            el.classList.toggle('aot-zoom-hidden',
+                min > 0 && !!LABEL_ZOOM_GATED[el.dataset.labelKind] && z < min);
+        });
+    }
+
+    function _installZoomGate(instance, map) {
+        if (instance._zoomGateHandler) return;
+        var raf = null;
+        instance._zoomGateHandler = function () {
+            if (raf) return;
+            raf = requestAnimationFrame(function () { raf = null; _applyZoomGate(instance); });
+        };
+        // 'zoom' 은 제스처 중에도 계속 발화 — 축척이 기준을 넘는 순간 바로 반응한다.
+        // 'zoomend' 는 마지막 상태를 확실히 맞추는 보정.
+        map.on('zoom', instance._zoomGateHandler);
+        map.on('zoomend', instance._zoomGateHandler);
+        // 설정 모달의 라이브 적용이 부르는 훅 — 옵션(label_min_zoom)만 바뀌면
+        // 라벨을 다시 만들 필요 없이 클래스만 재평가하면 된다.
+        instance._applyZoomGate = function () { _applyZoomGate(instance); };
+        _applyZoomGate(instance);
     }
 
     // ── Unified label-visibility model (shared constants) ──────────────────────
@@ -5752,22 +5863,8 @@
                 if (window.AoTMapSensorLabels) {
                     try {
                         var _vars = (window.AoTWidgetInstances[inst.uniqueId] || {}).vars || {};
-                        var _o = (_vars && _vars.vars) || {};
-                        AoTMapSensorLabels.attach(inst.uniqueId, map, inst.cachedFacilities3d, {
-                            show: _o.show_sensor_labels !== false && _o.show_sensor_labels !== 'false',
-                            style: _o.sensor_label_style || 'circle',
-                            max_channels: parseInt(_o.sensor_label_max_channels || 1, 10),
-                            decimals: parseInt(_o.sensor_label_decimals != null ? _o.sensor_label_decimals : 1, 10),
-                            size_em: parseFloat(_o.sensor_label_size || 0.85),
-                            bg: _o.sensor_label_bg || 'rgba(15,23,42,0.78)',
-                            fg: _o.sensor_label_fg || '#f8fafc',
-                            offset_y: parseFloat(_o.sensor_label_offset_y || 0),
-                            opacity: _o.sensor_label_opacity != null ? parseFloat(_o.sensor_label_opacity) : 0.7,
-                            popup: _o.sensor_popup_enabled !== false && _o.sensor_popup_enabled !== 'false',
-                            collision: _o.enable_label_collision !== false && _o.enable_label_collision !== 'false',
-                            spacing: (function () { var s = parseInt(_o.label_spacing, 10); return isNaN(s) ? 0 : s; })(),
-                            refresh_seconds: parseInt(_o.period || 60, 10)
-                        });
+                        AoTMapSensorLabels.attach(inst.uniqueId, map, inst.cachedFacilities3d,
+                            _sensorLabelOptsFrom((_vars && _vars.vars) || {}, inst.uniqueId));
                     } catch (e) {}
                 }
             }
@@ -6829,6 +6926,353 @@
     /**
      * Add device markers to map
      */
+    /**
+     * Channels for a map-placed device, in facility /runtime shape.
+     * Server now ships the band `key` on every measurement row
+     * (facility_sensors.channel_label_meta) — without it no band color is possible.
+     */
+    function _deviceBaseId(dev) {
+        return dev.device_id || dev.device_unique_id ||
+            (dev.unique_id ? dev.unique_id.split('::')[0] : (dev.id || '').split('::')[0]);
+    }
+
+    function _deviceChannels(dev, wOpts, instance) {
+        const targetMap = wOpts.all_measurements_map || wOpts.measurements_map || {};
+        if (!window.AoTMapSensorLabels) return [];
+        const channels = window.AoTMapSensorLabels.channelsFromMeasurements(
+            targetMap[_deviceBaseId(dev)] || []);
+        // /api/geo/devices 는 측정 **메타**만 준다(값 조회는 render 경로에서 뺐다 —
+        // 페이지 렌더 중 센서당 InfluxDB 조회가 위젯 로드를 느리게 만들었다).
+        // 값은 _refreshInputValues 가 /data_batch 로 따로 받아 여기 캐시에 넣는다.
+        const cache = instance && instance._measValues;
+        if (cache) {
+            channels.forEach(function (c) {
+                if (c.value == null && cache[c.measurement_id] != null) {
+                    c.value = cache[c.measurement_id];
+                }
+            });
+        }
+        return channels;
+    }
+
+    /**
+     * Live values for Input markers, via the existing /data_batch coalescer
+     * (one POST for every channel of every input on this map, instead of N GETs).
+     * Repaints only the input markers — the output/3-way refresh path has motion
+     * bookkeeping that must not run twice per tick.
+     */
+    const INPUT_VALUE_MIN_INTERVAL_MS = 30000;
+
+    // ── 측정값 세션 캐시 ───────────────────────────────────────────────────────
+    // 새로고침 직후 값 조회가 끝날 때까지 키가 "—" 로 남는 구간을 없앤다.
+    // 저장 수명은 /data_batch 가 쓰는 조회 창(period 600초)과 **같게** 맞췄다:
+    // 그 창 안의 값이면 라이브 경로가 돌려줄 값과 같은 신선도이므로, 낙관적으로
+    // 그려도 사용자가 보는 정보의 성격이 달라지지 않는다. 창을 넘긴 캐시는
+    // 버리고 예전처럼 "—" 로 시작한다.
+    var MEASVAL_CACHE_TTL_MS = 600000;
+
+    function _measValueCacheKey(uniqueId, wOpts) {
+        var inst = window.AoTWidgetInstances[uniqueId];
+        var vars = inst && inst.vars;
+        return 'aot_map_measvals_' + ((vars && vars.widgetId) || uniqueId);
+    }
+
+    function _saveMeasValueCache(uniqueId, wOpts) {
+        var inst = window.AoTWidgetInstances[uniqueId];
+        if (!inst || !inst._measValues) return;
+        try {
+            sessionStorage.setItem(_measValueCacheKey(uniqueId, wOpts),
+                JSON.stringify({ ts: Date.now(), v: inst._measValues }));
+        } catch (e) { /* 용량 초과/프라이빗 모드 — 캐시는 있으면 좋은 것뿐 */ }
+    }
+
+    /** 캐시된 값을 인스턴스에 심는다(첫 렌더 전에 호출). 성공 시 true. */
+    function _seedMeasValueCache(uniqueId, vars) {
+        var inst = window.AoTWidgetInstances[uniqueId];
+        if (!inst) return false;
+        try {
+            var raw = sessionStorage.getItem(_measValueCacheKey(uniqueId, null));
+            if (!raw) return false;
+            var c = JSON.parse(raw);
+            if (!c || !c.v || !c.ts) return false;
+            if (Date.now() - c.ts > MEASVAL_CACHE_TTL_MS) {
+                sessionStorage.removeItem(_measValueCacheKey(uniqueId, null));
+                return false;
+            }
+            inst._measValues = Object.assign({}, c.v, inst._measValues || {});
+            return true;
+        } catch (e) { return false; }
+    }
+
+    // 라벨이 대표값으로 고를 만한 채널을 앞으로 보내는 우선순위.
+    // 밴드 색이 정의된 환경값이 먼저고, 그중에서도 온도가 가장 자주 살아 있다.
+    var _VALUE_KEY_PRIORITY = ['T', 'RH', 'VPD', 'CO2', 'light', 'P', 'wind_ms', 'wind_deg'];
+
+    function _isMetaKey(key) {
+        return !!(window.AoTSensorLabel && window.AoTSensorLabel.isMetaChannel &&
+                  window.AoTSensorLabel.isMetaChannel({ key: key }));
+    }
+
+    /**
+     * 한 장치에서 값 조회 대상 채널을, 라벨이 고를 법한 순서로 정렬해 돌려준다.
+     * 메타 채널(rssi/snr/battery)은 제외 — renderValueLabel 이 라벨에서 이미
+     * 빼는데도 예전에는 조회는 하고 있었다(전체 107채널 중 39개가 이것이었다).
+     */
+    function _valueChannelsFor(rows) {
+        return (rows || [])
+            .filter(function (m) { return m && m.id && !_isMetaKey(m.key); })
+            .slice()
+            .sort(function (x, y) {
+                var ix = _VALUE_KEY_PRIORITY.indexOf(x.key);
+                var iy = _VALUE_KEY_PRIORITY.indexOf(y.key);
+                return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy);
+            });
+    }
+
+    /** 라벨이 실제로 표시하는 채널 수 (circle 은 대표값 1개). */
+    function _neededChannelCount(sOpts) {
+        if (sOpts.style === 'circle') return 1;
+        var n = parseInt(sOpts.max_channels, 10);
+        return (isNaN(n) || n < 1) ? 1 : n;
+    }
+
+    function _batchItem(baseId, mid) {
+        return { kind: 'last', unique_id: baseId, measure_type: 'input',
+                 measurement_id: mid, period: '600' };
+    }
+
+    function _postDataBatch(items) {
+        return fetch('/data_batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrfMeta() },
+            body: JSON.stringify({ items: items.slice(0, 300) })
+        })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) { return (j && Array.isArray(j.results)) ? j.results : null; });
+    }
+
+    /**
+     * Live values for Input markers.
+     *
+     * 라벨이 **표시하는 채널만** 조회한다. 예전에는 장치의 전 채널을 받았는데,
+     * 실측(입력 15대)에서 107채널 970ms 였고 그중 라벨이 쓰는 것은 15개(125ms)
+     * 뿐이었다. 비용은 항목 수에 완전 선형이다(/data_batch 는 측정 1건당 InfluxDB
+     * LAST 쿼리 1건, 8워커) — 즉 안 쓰는 채널을 빼는 것이 곧 그만큼의 단축이다.
+     *
+     * 대표 채널에 값이 없을 수 있으므로(전 채널을 받던 시절에는 다음 채널로
+     * 자연히 넘어갔다) 빈손으로 돌아온 장치에 한해 나머지 채널로 2차 조회한다.
+     * 흔한 경우엔 1차로 끝나고, 아닌 경우에도 예전처럼 값이 채워진다.
+     */
+    function _refreshInputValues(uniqueId, devices, wOpts) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance || !window.AoTMapSensorLabels) return;
+        // 장치 폴링 주기(period, 최소 5초)와 무관하게 측정값은 30초 이상 간격으로만
+        // 조회한다 — 시설 센서 라벨 폴러(refresh_seconds 최소 30초)와 같은 정책이고,
+        // 매 틱마다 InfluxDB 배치 조회를 돌리면 저사양 호스트에서 낭비가 크다.
+        const now = Date.now();
+        if (instance._measValuesTs && (now - instance._measValuesTs) < INPUT_VALUE_MIN_INTERVAL_MS) return;
+        instance._measValuesTs = now;
+
+        const targetMap = wOpts.all_measurements_map || wOpts.measurements_map || {};
+        const need = _neededChannelCount(_sensorLabelOptsFrom(wOpts));
+        const items = [];       // 1차: 장치당 대표 채널
+        const spare = {};       // baseId -> 남은 채널(2차 후보)
+        const seen = {};
+        devices.forEach(function (dev) {
+            if ((dev.device_type || dev.type) !== 'input') return;
+            const baseId = _deviceBaseId(dev);
+            if (seen[baseId]) return;
+            seen[baseId] = true;
+            const ch = _valueChannelsFor(targetMap[baseId]);
+            ch.slice(0, need).forEach(function (m) { items.push(_batchItem(baseId, m.id)); });
+            const rest = ch.slice(need);
+            if (rest.length) spare[baseId] = rest;
+        });
+        if (!items.length) return;
+
+        function absorb(results, sent) {
+            const inst = window.AoTWidgetInstances[uniqueId];
+            if (!inst || !results) return null;
+            inst._measValues = inst._measValues || {};
+            const gotByDevice = {};
+            results.forEach(function (res, i) {
+                const it = sent[i];
+                if (Array.isArray(res) && res[1] != null && !isNaN(+res[1])) {
+                    inst._measValues[it.measurement_id] = +res[1];
+                    gotByDevice[it.unique_id] = true;
+                }
+            });
+            return gotByDevice;
+        }
+
+        _postDataBatch(items)
+            .then(function (results) {
+                const got = absorb(results, items);
+                if (!got) return;
+                _repaintInputMarkers(uniqueId, devices, wOpts);
+                _saveMeasValueCache(uniqueId, wOpts);
+
+                // 2차: 대표 채널이 비어 있던 장치만 나머지 채널로 재시도.
+                const retry = [];
+                Object.keys(spare).forEach(function (baseId) {
+                    if (got[baseId]) return;
+                    spare[baseId].forEach(function (m) { retry.push(_batchItem(baseId, m.id)); });
+                });
+                if (!retry.length) return;
+                return _postDataBatch(retry).then(function (r2) {
+                    if (!absorb(r2, retry)) return;
+                    _repaintInputMarkers(uniqueId, devices, wOpts);
+                    _saveMeasValueCache(uniqueId, wOpts);
+                });
+            })
+            .catch(function () {});
+    }
+
+    function _repaintInputMarkers(uniqueId, devices, wOpts) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance || !window.AoTMapSensorLabels ||
+            !window.AoTMapSensorLabels.renderValueLabel) return;
+        const sOpts = _sensorLabelOptsFrom(wOpts);
+        devices.forEach(function (dev) {
+            if ((dev.device_type || dev.type) !== 'input') return;
+            const marker = instance.markers.get(dev.unique_id || dev.id);
+            if (!marker || typeof marker.getElement !== 'function') return;
+            const el = marker.getElement();
+            if (!el || !el.classList.contains('aot-sensor-map-marker')) return;
+            window.AoTMapSensorLabels.renderValueLabel(
+                el, _deviceChannels(dev, wOpts, instance), null, sOpts,
+                _deviceDisplayName(dev));
+        });
+    }
+
+    /**
+     * 툴팁의 전 채널 목록을 hover 시 채운다.
+     *
+     * 라벨은 대표 채널만 조회하므로(_refreshInputValues) circle 마커의 툴팁도
+     * 그 한 개만 담기게 된다. 예전에는 전 채널이 나왔고 그게 이 마커의 쓸모
+     * 중 하나였다 — 그래서 "필요할 때만" 되살린다: 한 장치를 처음 가리켰을 때
+     * 그 장치의 나머지 채널만 한 번 받아오고, 이후로는 캐시로 답한다.
+     * 첫 화면 로딩 비용은 그대로 두면서 정보는 잃지 않는다.
+     */
+    function _hydrateTooltip(uniqueId, dev, wOpts) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance) return;
+        const baseId = _deviceBaseId(dev);
+        instance._tipHydrated = instance._tipHydrated || {};
+        if (instance._tipHydrated[baseId]) return;
+        instance._tipHydrated[baseId] = true;   // 재진입 방지 (성공/실패 무관, 1회만)
+
+        const targetMap = wOpts.all_measurements_map || wOpts.measurements_map || {};
+        const missing = _valueChannelsFor(targetMap[baseId]).filter(function (m) {
+            return !(instance._measValues && instance._measValues[m.id] != null);
+        });
+        if (!missing.length) return;
+
+        _postDataBatch(missing.map(function (m) { return _batchItem(baseId, m.id); }))
+            .then(function (results) {
+                const inst = window.AoTWidgetInstances[uniqueId];
+                if (!inst || !results) return;
+                inst._measValues = inst._measValues || {};
+                results.forEach(function (res, i) {
+                    if (Array.isArray(res) && res[1] != null && !isNaN(+res[1])) {
+                        inst._measValues[missing[i].id] = +res[1];
+                    }
+                });
+                _repaintInputMarkers(uniqueId, [dev], wOpts);
+                _saveMeasValueCache(uniqueId, wOpts);
+            })
+            .catch(function () {});
+    }
+
+    /**
+     * Re-style the zone/bare-map Input value markers in place (no data needed).
+     * Used by the settings live-apply path when a sensor-label option that only
+     * affects presentation changes — 'Label Text Size' above all. Text/colour
+     * come from the next value poll; this only fixes the styling that was
+     * stamped at creation time.
+     */
+    function _restyleInputSensorMarkers(uniqueId, sOpts) {
+        const instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance || !instance.markers) return;
+        instance.markers.forEach(function (m) {
+            if (!m || typeof m.getElement !== 'function') return;
+            const el = m.getElement();
+            if (!el || !el.classList.contains('aot-sensor-map-marker')) return;
+            if (el.dataset.deviceType !== 'input') return;
+            if (sOpts.size_em != null) el.style.fontSize = sOpts.size_em + 'em';
+            if (sOpts.opacity != null) el.style.opacity  = sOpts.opacity;
+            el.classList.toggle('aot-sensor-map-marker--circle', sOpts.style === 'circle');
+        });
+    }
+
+    // layout.html 의 <meta name="csrf-token"> — routes_general 은 CSRF 보호가 켜져 있다.
+    function _csrfMeta() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return (meta && meta.getAttribute('content')) || '';
+    }
+
+    function _deviceDisplayName(dev) {
+        return (dev.device_name || dev.name ||
+            (dev.unique_id || dev.id || '').toString().split('::')[0] || '').toString().trim();
+    }
+
+    /**
+     * Marker for an Input placed outside a facility (zone / bare map).
+     *
+     * Deliberately mirrors aot-map-sensor-labels.attach(): same element class,
+     * same styling knobs, same renderer, and the click opens the same shared
+     * sensor modal (createDevicePopup already returns a proxy onto
+     * AoTSensorLabel.openPopup for inputs). Visibility follows the sensor-label
+     * option (show_sensor_labels → master "Show Labels"), like facility sensors —
+     * `show_device_labels` governs output/function pills, not measurement values.
+     */
+    function _addInputSensorMarker(uniqueId, map, instance, dev, popup, sOpts, wOpts) {
+        const devLat = dev.lat || dev.latitude;
+        const devLng = dev.lng || dev.longitude;
+        const displayName = _deviceDisplayName(dev);
+
+        const el = document.createElement('div');
+        el.className = 'aot-sensor-map-marker' +
+            (sOpts.style === 'circle' ? ' aot-sensor-map-marker--circle' : '');
+        el.dataset.deviceType = 'input';
+        el.dataset.labelName = displayName;
+        // 글자 크기·투명도는 renderValueLabel 이 매번 적용한다(옵션 변경 시
+        // 이미 그려진 마커도 따라가도록) — 여기서 중복으로 찍지 않는다.
+        // Persisted per-type hide state (Layers → Labels → Input)
+        if (instance._hiddenTypes && instance._hiddenTypes.input) {
+            el.classList.add('aot-type-hidden');
+        }
+
+        // 시설 밖 Input 은 소속 시설이 없으므로 밴드 구간은 기본값(DEFAULT_RANGES).
+        window.AoTMapSensorLabels.renderValueLabel(
+            el, _deviceChannels(dev, wOpts, instance), null, sOpts, displayName);
+
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([parseFloat(devLng), parseFloat(devLat)])
+            .addTo(map);
+
+        // 공용 z-order + "고른 키를 앞으로" — 다른 라벨과 같은 규칙(LABEL_Z.input).
+        const _restoreKeyZ = _wireLabelStacking(instance, el, 'input');
+        // 툴팁 전 채널은 처음 가리켰을 때만 받아온다(첫 로딩 비용에 포함하지 않는다).
+        el.addEventListener('mouseenter', function () {
+            _hydrateTooltip(uniqueId, dev, wOpts);
+        });
+        popup.on('close', function () { instance._unpinLabel(el); });
+        if (sOpts.popup !== false) {
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', function (e) {
+                e.stopPropagation();
+                instance._pinLabelToFront(el, _restoreKeyZ);
+                popup.setLngLat([parseFloat(devLng), parseFloat(devLat)]).addTo(map);
+            });
+        }
+
+        instance.markers.set(dev.unique_id || dev.id, marker);
+        instance.markers.set('__popup__' + (dev.unique_id || dev.id),
+                             { remove: function () { popup.remove(); } });
+        instance.deviceLabelMarkers.push(marker);
+    }
+
     function addDeviceMarkers(uniqueId, map, devices, theme, vars) {
         const instance = window.AoTWidgetInstances[uniqueId];
         if (!instance) return;
@@ -6872,7 +7316,9 @@
         });
 
         // Apply persisted hide state to geo-device labels now that _deviceTypeMap is built
-        // (loadGeoDesignLabels runs before this, so it can't do this itself)
+        // (loadGeoDesignLabels runs before this, so it can't do this itself).
+        // 같은 이유로 z-order 도 여기서 정정한다 — loadGeoDesignLabels 는 장치 이름
+        // 라벨을 만들 때 그 장치가 output/input/function 중 무엇인지 아직 모른다.
         var _hiddenTypes = instance._hiddenTypes || {};
         (instance.geoDeviceLabelMarkers || []).forEach(function(marker) {
             if (!marker || typeof marker.getElement !== 'function') return;
@@ -6882,7 +7328,11 @@
             var devType = instance._deviceTypeMap[parentId];
             if (!devType) return;
             el.classList.toggle('aot-type-hidden', !!_hiddenTypes[devType]);
+            if (LABEL_Z[devType] != null) _setLabelBaseZ(instance, el, devType);
         });
+
+        // Input(센서) 라벨 옵션 — 시설 fitting 센서와 **같은** 설정을 읽는다.
+        const sensorOpts = _sensorLabelOptsFrom(wOpts);
 
         devices.forEach(function(dev) {
             const devLat = dev.lat || dev.latitude;
@@ -6900,6 +7350,19 @@
             const userColor = getUnifiedDeviceColor(devType2, dev, theme);
 
             const popup = createDevicePopup(uniqueId, dev, wOpts);
+
+            // ── Input: 시설 배치 센서와 동일한 라벨/키 ─────────────────────────
+            // 예전에는 "이름 + 첫 측정값 원본 + 장치 색" pill 이라, 같은 Input 도
+            // 시설 안에 있으면 밴드 색·다채널 포맷·circle/text 스타일을 따르고
+            // 구역/맨지도에 있으면 안 따랐다. 이제 두 경로 모두
+            // AoTMapSensorLabels.renderValueLabel 하나를 쓴다.
+            // 라벨이 꺼진 상태(showDeviceLabels=false)는 종전대로 점 마커 —
+            // 값 라벨을 없앨 뿐 장치의 존재 표시까지 지우면 안 된다.
+            if (devType2 === 'input' && showDeviceLabels && sensorOpts.show &&
+                window.AoTMapSensorLabels && window.AoTMapSensorLabels.renderValueLabel) {
+                _addInputSensorMarker(uniqueId, map, instance, dev, popup, sensorOpts, wOpts);
+                return;
+            }
 
             if (showDeviceLabels) {
                 // Pill label style (show_device_labels = true)
@@ -6972,33 +7435,8 @@
                     .setLngLat([parseFloat(devLng), parseFloat(devLat)])
                     .addTo(map);
 
-                // Same "bring the hovered/tapped label to front" treatment as
-                // .geo-label-marker (loadGeoDesignLabels) — without label collision
-                // on, overlapping device pills otherwise stack in arbitrary DOM
-                // order with no way to single one out. A click PINS the pill in
-                // front for as long as its popup stays open (see _pinLabelToFront
-                // there for why hover-only revert isn't enough), instead of just
-                // reverting the instant the pointer leaves for the popup.
-                if (!instance._pinLabelToFront) {
-                    instance._pinnedLabel = null; // { el, restore }
-                    instance._pinLabelToFront = function (pinEl, restoreFn) {
-                        if (instance._pinnedLabel && instance._pinnedLabel.el !== pinEl) {
-                            instance._pinnedLabel.restore();
-                        }
-                        pinEl.style.zIndex = '9000';
-                        instance._pinnedLabel = { el: pinEl, restore: restoreFn };
-                    };
-                    instance._unpinLabel = function (pinEl) {
-                        if (instance._pinnedLabel && instance._pinnedLabel.el === pinEl) {
-                            instance._pinnedLabel.restore();
-                            instance._pinnedLabel = null;
-                        }
-                    };
-                }
-                el.addEventListener('mouseenter', function () { el.style.zIndex = '9000'; });
-                el.addEventListener('mouseleave', function () {
-                    if (!instance._pinnedLabel || instance._pinnedLabel.el !== el) { el.style.zIndex = ''; }
-                });
+                // 공용 z-order + "고른 라벨을 앞으로" — geo-design 라벨과 같은 규칙.
+                var _restorePillZ = _wireLabelStacking(instance, el, devType2);
                 popup.on('close', function () { instance._unpinLabel(el); });
 
                 el.addEventListener('click', function(e) {
@@ -7006,7 +7444,7 @@
                     if (popup.isOpen()) {
                         popup.remove(); // fires 'close' above -> unpins
                     } else {
-                        instance._pinLabelToFront(el, function () { el.style.zIndex = ''; });
+                        instance._pinLabelToFront(el, _restorePillZ);
                         popup.setLngLat([parseFloat(devLng), parseFloat(devLat)]).addTo(map);
                     }
                 });
@@ -7034,10 +7472,18 @@
                     .setLngLat([parseFloat(devLng), parseFloat(devLat)])
                     .addTo(map);
 
+                // 점 마커도 같은 규칙을 따른다. 예전엔 z-index 자체가 없어(auto)
+                // 겹치면 DOM 순서대로 쌓였고, 아래 깔린 점은 클릭조차 못 했다.
+                var _restoreDotZ = _wireLabelStacking(instance, el, devType2);
+                popup.on('close', function () { instance._unpinLabel(el); });
+
                 el.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (popup.isOpen()) { popup.remove(); }
-                    else { popup.setLngLat([parseFloat(devLng), parseFloat(devLat)]).addTo(map); }
+                    else {
+                        instance._pinLabelToFront(el, _restoreDotZ);
+                        popup.setLngLat([parseFloat(devLng), parseFloat(devLat)]).addTo(map);
+                    }
                 });
 
                 instance.markers.set(dev.unique_id || dev.id, marker);
@@ -7045,8 +7491,12 @@
             }
         });
 
-        // Device label collision — joins unified handler (all groups run together in priority order)
-        if (showDeviceLabels && labelCollision && instance.deviceLabelMarkers.length > 0) {
+        // Device label collision — joins unified handler (all groups run together in priority order).
+        // showDeviceLabels 를 조건에서 뺀 이유: Input 값 라벨은 이제 device-label
+        // 옵션이 아니라 센서 라벨 옵션을 따르므로, 장치 pill 이 꺼져 있어도
+        // deviceLabelMarkers 에 들어간다. 예전 조건이면 그 경우 충돌 회피가
+        // 통째로 꺼져 라벨이 서로 겹친 채 남는다.
+        if (labelCollision && instance.deviceLabelMarkers.length > 0) {
             instance._labelSpacing = labelSpacing;
             _updateUnifiedCollisionHandler(instance, map, labelSpacing);
             // Single settled reveal pass (see note in loadGeoDesignLabels) — avoids the
@@ -7056,6 +7506,9 @@
 
         // Sync device shape opacity with initial on/off state
         _updateDeviceShapeOpacity(instance, devices);
+
+        // Input 라벨의 실제 측정값 채우기 (메타만 오는 /api/geo/devices 보완)
+        try { _refreshInputValues(uniqueId, devices, wOpts); } catch (e) {}
     }
 
     function hexToRgba(hex, alpha) {
@@ -7108,20 +7561,22 @@
         // lightweight proxy implementing the MapLibre Popup interface that the marker
         // click handlers use, but driving the shared modal instead.
         if (isInput) {
+            // 채널 정규화는 라벨과 **같은** 함수를 쓴다. 예전에는 여기서만
+            // key 를 meas_name(번역된 표시명)으로 채웠는데, 그러면 차트가 key 로
+            // y축을 묶을 때 풍속과 풍향이 둘 다 'Wind' 라는 이유로 한 축에 겹쳤고
+            // 레전드 이름도 라벨 쪽과 달랐다.
             const sensorObj = {
                 name: displayName,
                 fitting_id: uniqueKey,
                 device_id: uniqueKey,
-                channels: devMeas.map(function(m) {
-                    var u = (window.aotMapUnits && window.aotMapUnits[m.id]) ? window.aotMapUnits[m.id] : (m.unit || '');
-                    return {
-                        key: m.meas_name || m.name || '',
-                        measurement_id: m.id,
-                        value: (m.last_value !== undefined && m.last_value !== null && m.last_value !== '') ? m.last_value : null,
-                        unit: (u === 'bearing') ? '' : u
-                    };
-                })
+                channels: (window.AoTMapSensorLabels &&
+                           window.AoTMapSensorLabels.channelsFromMeasurements)
+                    ? window.AoTMapSensorLabels.channelsFromMeasurements(devMeas)
+                    : []
             };
+            // 'close' 리스너 — 마커의 "앞으로 고정"을 모달이 닫힐 때 풀기 위해
+            // maplibregl.Popup 과 같은 on('close', fn) 계약을 흉내낸다.
+            const _closeFns = [];
             return {
                 // Click always (re)opens the modal — same UX as facility sensor labels.
                 isOpen: function() { return false; },
@@ -7142,7 +7597,10 @@
                                 sensorObj.comm_fault = !!st.comm_fault;
                                 window.AoTSensorLabel.openPopup(sensorObj, {
                                     modal: true,
-                                    note: { targetId: uniqueKey, targetType: 'device', name: displayName }
+                                    note: { targetId: uniqueKey, targetType: 'device', name: displayName },
+                                    onClose: function () {
+                                        _closeFns.forEach(function (fn) { try { fn(); } catch (e) {} });
+                                    }
                                 });
                             });
                     }
@@ -7152,7 +7610,10 @@
                     if (window.AoTSensorLabel && window.AoTSensorLabel.closePopup) window.AoTSensorLabel.closePopup();
                     return this;
                 },
-                on: function() { return this; },
+                on: function(evt, fn) {
+                    if (evt === 'close' && typeof fn === 'function') _closeFns.push(fn);
+                    return this;
+                },
                 getElement: function() { return null; }
             };
         }
@@ -7169,6 +7630,20 @@
         const devId = dev.id || dev.unique_id || '';
         const toggleId = 'toggle-' + devId;
 
+        // NOTE: 이 팝업에는 이력 그래프를 넣지 않는다. maplibregl.Popup 은 anchor 를
+        // 지정하지 않으면 **팝업 높이**로 위/아래를 자동 결정하는데, 그래프를 넣어
+        // 팝업이 커지면 "위에 들어갈 자리 없음"으로 판정돼 마커 위치와 무관하게 항상
+        // 아래로만 붙는다. 장치 이력은 구역·시설 모달에서 본다.
+
+        // 시작/종료 예약 버튼 — on/off 장치 전용(개폐율 장치는 duration 의미 없음).
+        const canSchedule = isOutput && devType === 'output' && dev.control_kind !== 'value_3way';
+        const schedHtml = canSchedule
+            ? '<button type="button" class="aot-popup-btn aot-popup-btn--secondary aot-popup-btn--full ' +
+              'aot-output-settings" data-output-id="' + uniqueKey + '" data-channel="' + channel + '" ' +
+              'data-output-name="' + displayName.replace(/"/g, '&quot;') + '">' +
+              (window._ ? window._('Set start/end time') : 'Set start/end time') + '</button>'
+            : '';
+
         let html = '';
 
         if (dev.control_kind === 'value_3way') {
@@ -7183,6 +7658,7 @@
             const headerHtml3 =
                 '<div class="aot-3way-header">' +
                 '<div class="aot-popup-title">' + displayName + '</div>' +
+                '<span class="aot-link-badges-slot"></span>' +
                 '<div id="' + posDispId + '" class="aot-3way-position">' + posRounded + '%</div></div>';
             const buttonsHtml =
                 '<div class="aot-3way-buttons">' +
@@ -7234,6 +7710,7 @@
             const headerHtml =
                 '<div class="aot-popup-header">' +
                 '<div class="aot-popup-title" style="margin:0">' + displayName + '</div>' +
+                '<span class="aot-link-badges-slot"></span>' +
                 '<div style="flex:0 0 auto">' + btnHtml + '</div></div>';
 
             const infoHtml =
@@ -7245,7 +7722,7 @@
                 '<span class="aot-popup-info-label">' + (window._ ? window._('Last Work Time') : 'Last Work Time') + '</span>' +
                 '<span id="last-dur-' + devId + '" class="aot-popup-info-value">00:00:00</span></div></div>';
 
-            html = '<div class="aot-popup-body">' + headerHtml + infoHtml + noteSectionHtml + '</div>';
+            html = '<div class="aot-popup-body">' + headerHtml + infoHtml + schedHtml + noteSectionHtml + '</div>';
         }
 
         const popup = new maplibregl.Popup({ offset: 12, className: 'aot-popup aot-popup--device' }).setHTML(html);
@@ -7278,6 +7755,32 @@
 
             // Input devices never reach onOpen — they return a modal proxy from
             // createDevicePopup and open AoTSensorLabel.openPopup directly.
+
+            // 배터리·통신 배지. Output 은 자기 배터리도 RSSI 도 갖고 있지 않다 —
+            // 서버가 DevEUI 로 하트비트 Input/Function 을 찾아 준다(짝이 없으면
+            // 빈 응답이 와서 아무것도 안 그려진다).
+            if (window.AoTSensorLabel && window.AoTSensorLabel.fetchStatus) {
+                window.AoTSensorLabel.fetchStatus(uniqueKey).then(function (all) {
+                    var root = popup.getElement && popup.getElement();
+                    if (!root || !popup.isOpen()) return;
+                    window.AoTSensorLabel.fillLinkBadges(root, all[uniqueKey]);
+                });
+            }
+
+            // 시작/종료 예약 — 구역·시설 모달과 동일한 공용 창
+            var popupRoot = popup.getElement && popup.getElement();
+            var schedBtn = popupRoot && popupRoot.querySelector('.aot-output-settings');
+            if (schedBtn && window.AoTMapPopup && window.AoTMapPopup.openOutputSchedule) {
+                schedBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    window.AoTMapPopup.openOutputSchedule({
+                        shell:    _showFacilityCenterOverlay,
+                        outputId: schedBtn.dataset.outputId,
+                        channel:  parseInt(schedBtn.dataset.channel || '0', 10),
+                        name:     schedBtn.dataset.outputName || ''
+                    });
+                });
+            }
 
             if (isOutput) {
                 var baseDevId = (dev.device_unique_id || dev.id || '').split('::')[0];
@@ -7457,6 +7960,7 @@
         const globalLabelSize = parseFloat(wOpts.global_label_size) || 1.0;
         const targetMap = wOpts.all_measurements_map || wOpts.measurements_map || {};
         const theme = (instance.vars && instance.vars.theme) || {};
+        const sensorOpts = _sensorLabelOptsFrom(wOpts);
 
         devices.forEach(function(dev) {
             const markerId = dev.unique_id || dev.id;
@@ -7468,6 +7972,15 @@
             const devType2 = dev.device_type || dev.type || '';
             const userColor = getUnifiedDeviceColor(devType2, dev, theme);
             const el = marker.getElement();
+
+            // Input: 생성 때와 같은 공용 렌더러로 값/밴드 색만 갱신 (facility 동일)
+            if (devType2 === 'input' && el &&
+                el.classList.contains('aot-sensor-map-marker') &&
+                window.AoTMapSensorLabels && window.AoTMapSensorLabels.renderValueLabel) {
+                window.AoTMapSensorLabels.renderValueLabel(
+                    el, _deviceChannels(dev, wOpts, instance), null, sensorOpts, _deviceDisplayName(dev));
+                return;
+            }
 
             // [3-way Actuator] Override "on" semantics: label ON only when MOTION is
             // happening (transient). Motion is detected via position changes between
@@ -7800,6 +8313,7 @@
                     // Update appearance only — no remove/re-add to prevent position flicker
                     if (devices.length > 0) {
                         refreshDeviceMarkersAppearance(uniqueId, devices, wOpts);
+                        try { _refreshInputValues(uniqueId, devices, wOpts); } catch (e) {}
                     }
                 })
                 .catch(function(e) { })
@@ -7847,6 +8361,13 @@
             instance.map.off('moveend', instance._unifiedCollisionHandler);
             instance.map.off('zoomend', instance._unifiedCollisionHandler);
             instance._unifiedCollisionHandler = null;
+        }
+
+        // Remove zoom gate handler
+        if (instance._zoomGateHandler && instance.map) {
+            instance.map.off('zoom', instance._zoomGateHandler);
+            instance.map.off('zoomend', instance._zoomGateHandler);
+            instance._zoomGateHandler = null;
         }
 
         // Remove geo/design label markers and cluster badges

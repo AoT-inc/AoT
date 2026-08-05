@@ -636,8 +636,11 @@ class SettingsCustomUI(FlaskForm):
     # "실행 중이지만 확인 불가"(comm_capable=false 이면서 on) 장치를 표시하는 틴트.
     # aot-output-state.js paintUnverifiedRunning()이 채널 행에 인라인
     # !important 로 강제 적용해 bg_on/bg_off 를 덮어쓴다 — 지금까지 하드코딩
-    # 이라 사용자가 "다른 색이 강제 적용된다"고 느꼈던 원인. 지도 팝업 이름
-    # 강조(paintNameWarning)에도 같은 토큰이 쓰인다(bg+fg 쌍).
+    # 이라 사용자가 "다른 색이 강제 적용된다"고 느꼈던 원인.
+    # 2026-08-04: 무응답(comm_fault) 이름 강조(paintNameWarning)는 여기서
+    # 분리해 tint_danger_* 로 옮겼다. 이 필드 이름이 "확인 불가" 하나만
+    # 가리키는데 두 상태가 같이 매달려 있어, 그 뜻대로 색을 고른 사용자에게서
+    # 무응답 장치가 초록(#B8DBC7)으로 강조되는 결과가 나왔다.
     tint_warning_bg = StringField(lazy_gettext('Unverified Running Tint'), default=THEME_DEFAULTS.get('tint_warning_bg', '#FFF3E2'), render_kw={"type": "color"})
     tint_warning_fg = StringField(lazy_gettext('Unverified Running Tint Text'), default=THEME_DEFAULTS.get('tint_warning_fg', '#94650A'), render_kw={"type": "color"})
     color_success = StringField(lazy_gettext('Success'), default=THEME_DEFAULTS.get('color_success', '#96C064'), render_kw={"type": "color"})

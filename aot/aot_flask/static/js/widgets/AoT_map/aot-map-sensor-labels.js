@@ -36,10 +36,28 @@
   var DEFAULT_RANGES = {
     T:       [10, 18, 26, 34, 45],
     RH:      [40, 55, 70, 85, 100],
-    VPD:     [0.4, 0.8, 1.2, 1.6, 3.0],
+    VPD:     [0.4, 0.8, 1.2, 1.6, 3.0],   // kPa
     light:   [200, 400, 600, 800, 1200],
-    wind_ms: [2, 4, 6, 9, 15]
+    wind_ms: [2, 4, 6, 9, 15],
+    P:       [995, 1005, 1015, 1025, 1040] // hPa (표준 대기압 1013 근처가 중간대)
   };
+
+  // 밴드 판정 전 단위 정규화 — 같은 key 라도 장치마다 저장 단위가 다르다.
+  // (실측: VPD 를 Pa 로 저장하는 입력과 kPa 로 저장하는 입력이 공존하고, 기압도
+  //  Pa / hPa 가 섞여 있다.) 정규화 없이 비교하면 Pa 로 저장된 VPD 630 이 kPa
+  //  기준 상한 3.0 을 항상 넘어 언제나 최고 단계 색으로 칠해진다.
+  // 값은 판정용으로만 환산한다 — 화면에 표시되는 숫자·단위는 그대로다.
+  var BAND_UNIT_SCALE = {
+    VPD: { 'pa': 0.001, 'hpa': 0.1, 'kpa': 1 },
+    P:   { 'pa': 0.01,  'hpa': 1,   'kpa': 10 }
+  };
+
+  function _bandValue(key, value, unit) {
+    var table = BAND_UNIT_SCALE[key];
+    if (!table) return value;
+    var s = table[String(unit || '').trim().toLowerCase()];
+    return (s == null) ? value : value * s;
+  }
 
   // For items with inverted meaning (e.g. humidity), use the default palette in reverse order
   var REVERSE_KEYS = { RH: true };
@@ -62,14 +80,16 @@
     return d ? { stages: d, colors: _defColors(key) } : null;
   }
 
-  function _bandColor(key, value, ranges) {
+  // unit 은 선택 인자 — 넘기면 BAND_UNIT_SCALE 로 판정 단위에 맞춰 환산한다.
+  function _bandColor(key, value, ranges, unit) {
     if (value == null || isNaN(value)) return null;
     var b = _resolveBand(key, ranges);
     if (!b || !b.stages.length) return null;
+    var v = _bandValue(key, value, unit);
     for (var i = 0; i < b.stages.length; i++) {
       var hi = parseFloat(b.stages[i]);
       if (isNaN(hi)) continue;
-      if (value <= hi) return b.colors[Math.min(i, b.colors.length - 1)];
+      if (v <= hi) return b.colors[Math.min(i, b.colors.length - 1)];
     }
     return b.colors[b.colors.length - 1];
   }
@@ -79,7 +99,7 @@
     for (var i = 0; i < (channels || []).length; i++) {
       var c = channels[i];
       if (!c || c.value == null) continue;
-      var color = _bandColor(c.key, +c.value, ranges);
+      var color = _bandColor(c.key, +c.value, ranges, c.unit);
       if (color) return color;
     }
     return null;
@@ -207,6 +227,101 @@
     el.style.opacity    = opts.opacity != null ? opts.opacity : 0.7;
   }
 
+  // ── Shared value-label renderer (facility fittings AND map/zone Inputs) ─────
+  // Paints ONE marker element with the facility label rules: circle (integer of
+  // first channel) vs text (formatLabel), measurement-band background, readable
+  // foreground, stale strike-through. Exported so device markers placed outside
+  // a facility (zone / bare map Input) render identically instead of keeping
+  // their own "first raw value + device color" variant.
+  //
+  //   el       marker element (gets .aot-sensor-map-marker styling from the caller)
+  //   channels facility-runtime-shaped channels [{key, value, unit, valid}]
+  //   ranges   facility view_options.sensor_ranges, or null → defaults
+  //   opts     _sensorLabelOpts() output (style/max_channels/decimals/bg/fg/…)
+  //   name     display name — used for the circle-mode tooltip only
+  function renderValueLabel(el, channels, ranges, opts, name) {
+    opts = opts || {};
+    var defBg = opts.bg || 'rgba(15,23,42,0.78)';
+    var defFg = opts.fg || '#f8fafc';
+    // 글자 크기/투명도도 여기서 매번 적용한다. 생성 시점에만 찍어 두면 위젯의
+    // 'Label Text Size' 를 바꿨을 때 이미 그려진 마커가 옛 크기로 남는다
+    // (값 갱신 폴링은 이 함수만 다시 부른다).
+    if (opts.size_em != null) el.style.fontSize = opts.size_em + 'em';
+    if (opts.opacity != null) el.style.opacity  = opts.opacity;
+    // 메타 채널(rssi/snr/battery)은 라벨 값에서 뺀다 — 모달 배지로 그린다.
+    // 빼기 전에는 하트비트 채널이 0번인 LoRaWAN 노드가 지도에 온도 대신
+    // 배터리 전압("3.98V")을 표시했다(첫 값 있는 채널을 쓰기 때문).
+    var _isMeta = (window.AoTSensorLabel && window.AoTSensorLabel.isMetaChannel)
+      ? window.AoTSensorLabel.isMetaChannel
+      : function () { return false; };
+    var renderable = (channels || []).filter(function (c) {
+      return c && c.value != null && !_isMeta(c);
+    });
+
+    if (!renderable.length) {
+      el.textContent = '—';
+      el.classList.remove('aot-stale');
+      el.style.background = defBg;
+      el.style.color      = defFg;
+      return;
+    }
+
+    var color;
+    if (opts.style === 'circle') {
+      var first = renderable[0];
+      el.textContent = String(Math.round(+first.value));
+      var title = (name ? name + ' ' : '') + (window.AoTSensorLabel
+        ? window.AoTSensorLabel.formatLabel(channels, { maxChannels: 9 })
+        : '');
+      if (window.AoTSetTitle) window.AoTSetTitle(el, title); else el.title = title;
+      color = _bandColor(first.key, +first.value, ranges, first.unit);
+    } else {
+      el.textContent = window.AoTSensorLabel
+        ? window.AoTSensorLabel.formatLabel(channels, {
+            maxChannels: opts.max_channels || 1,
+            decimals: opts.decimals
+          })
+        : '—';
+      color = _bandColorForChannels(channels, ranges);
+    }
+
+    // `valid` is only present on facility /runtime channels; map measurement
+    // rows have no freshness flag, so absence must NOT read as stale.
+    // 판정 대상은 표시되는 채널(renderable)뿐이다 — 배터리 하트비트만 살아 있고
+    // 정작 환경 채널이 전부 끊긴 노드가 "정상"으로 보이면 안 된다.
+    var hasValidFlag = renderable.some(function (c) { return c && 'valid' in c; });
+    el.classList.toggle('aot-stale',
+      hasValidFlag && !renderable.some(function (c) { return c && c.valid; }));
+
+    if (color) {
+      el.style.background = color;
+      el.style.color      = _textOn(color);
+    } else {
+      el.style.background = defBg;
+      el.style.color      = defFg;
+    }
+  }
+
+  // measurements_map 행 → facility runtime 채널 형태로 정규화.
+  // 서버가 붙여주는 `key`(facility_sensors.channel_label_meta 정본)를 그대로 쓴다 —
+  // meas_name 은 번역돼 오므로 밴드 판정 키로 쓸 수 없다.
+  function channelsFromMeasurements(rows) {
+    return (rows || []).map(function (m) {
+      var u = (window.aotMapUnits && window.aotMapUnits[m.id])
+        ? window.aotMapUnits[m.id]
+        : (m.display_unit || m.unit || '');
+      var v = (m.last_value !== undefined && m.last_value !== null && m.last_value !== '')
+        ? parseFloat(m.last_value) : null;
+      return {
+        key:            m.key || m.meas_name || m.name || '',
+        measurement_id: m.id,
+        channel:        m.channel,
+        value:          (v == null || isNaN(v)) ? null : v,
+        unit:           (u === 'bearing') ? '' : u
+      };
+    });
+  }
+
   function attach(uniqueId, map, facilities, opts) {
     detach(uniqueId);
     if (!map || !window.maplibregl) return;
@@ -232,8 +347,15 @@
         _applyStyle(el, opts);
         // Stacking priority vs geo-design labels. MapLibre markers each form a
         // transform stacking context, so an explicit z-index is required — otherwise
-        // (auto) these fall under zone labels (z-index 3) regardless of DOM order.
+        // (auto) these fall under other labels regardless of DOM order.
         if (opts.priority_z != null) el.style.zIndex = String(opts.priority_z);
+
+        // 호스트(지도 위젯)가 "고른 라벨을 앞으로" 동작을 붙일 수 있게 넘긴다.
+        // 이 모듈은 위젯 인스턴스를 모르므로 핀 상태는 호스트가 관리한다.
+        var _onSelect = null;
+        if (typeof opts.onLabelEl === 'function') {
+          try { _onSelect = opts.onLabelEl(el); } catch (e) {}
+        }
 
         if (opts.popup !== false) {
           el.style.cursor = 'pointer';
@@ -246,11 +368,13 @@
             if (window.AoTSensorLabel) {
               // Map widget host: the map container element (DOM ancestor of MapLibre canvas).
               var host = map.getContainer ? map.getContainer() : null;
+              if (_onSelect && _onSelect.pin) _onSelect.pin();
               window.AoTSensorLabel.openPopup(sensor, {
                 decimals: opts.decimals,
                 anchorEvent: ev,
                 host: host,
-                modal: true   // Render as a screen-centered modal, like the control label
+                modal: true,   // Render as a screen-centered modal, like the control label
+                onClose: (_onSelect && _onSelect.unpin) || undefined
               });
             }
           });
@@ -360,51 +484,11 @@
     var byId = {};
     fittingSensors.forEach(function (s) { byId[s.fitting_id] = s; });
     var ranges  = _facilityRanges(st, facilityUuid);
-    var defBg   = (st.opts && st.opts.bg) || 'rgba(15,23,42,0.78)';
-    var defFg   = (st.opts && st.opts.fg) || '#f8fafc';
     st.markers.forEach(function (m) {
       if (m.facilityUuid !== facilityUuid) return;
       var sensor = byId[m.fittingId];
-      if (!sensor || !sensor.channels) {
-        m.el.textContent = '—';
-        m.el.classList.remove('aot-stale');
-        m.el.style.background = defBg;
-        m.el.style.color      = defFg;
-        return;
-      }
-      var color;
-      if (st.opts.style === 'circle') {
-        // Circle mode: integer value of the first channel only; band color from
-        // the same channel. Full label text moves to the tooltip.
-        var first = null;
-        for (var ci = 0; ci < sensor.channels.length; ci++) {
-          if (sensor.channels[ci] && sensor.channels[ci].value != null) { first = sensor.channels[ci]; break; }
-        }
-        m.el.textContent = first ? String(Math.round(+first.value)) : '—';
-        var circleTitle = window.AoTSensorLabel
-          ? sensor.name + ' ' + window.AoTSensorLabel.formatLabel(sensor.channels, { maxChannels: 9 })
-          : (sensor.name || '');
-        if (window.AoTSetTitle) window.AoTSetTitle(m.el, circleTitle); else m.el.title = circleTitle;
-        color = first ? _bandColor(first.key, +first.value, ranges) : null;
-      } else {
-        m.el.textContent = window.AoTSensorLabel
-          ? window.AoTSensorLabel.formatLabel(sensor.channels, {
-              maxChannels: st.opts.max_channels || 1,
-              decimals: st.opts.decimals
-            })
-          : '—';
-        color = _bandColorForChannels(sensor.channels, ranges);
-      }
-      var anyValid = sensor.channels.some(function (c) { return c.valid; });
-      m.el.classList.toggle('aot-stale', !anyValid);
-      // Apply label background color based on the measurement band
-      if (color) {
-        m.el.style.background = color;
-        m.el.style.color      = _textOn(color);
-      } else {
-        m.el.style.background = defBg;
-        m.el.style.color      = defFg;
-      }
+      renderValueLabel(m.el, (sensor && sensor.channels) || [], ranges, st.opts,
+                       sensor && sensor.name);
     });
     // Label text (width) may have changed, so recompute collision avoidance.
     _spreadLabels(uniqueId);
@@ -490,6 +574,10 @@
   window.AoTMapSensorLabels = {
     attach: attach, detach: detach, setVisible: setVisible,
     // Shared helpers for the facility sensor summary chip (vector widget)
-    bandColor: _bandColor, textOn: _textOn
+    bandColor: _bandColor, textOn: _textOn,
+    // Shared with addDeviceMarkers so a zone/map-placed Input renders its label
+    // exactly like a facility fitting sensor.
+    renderValueLabel: renderValueLabel,
+    channelsFromMeasurements: channelsFromMeasurements
   };
 })();

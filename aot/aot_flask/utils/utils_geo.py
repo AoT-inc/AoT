@@ -1321,6 +1321,7 @@ def get_all_measurements_for_map(devices):
             DeviceMeasurements.unique_id,
             DeviceMeasurements.name,
             DeviceMeasurements.measurement,
+            DeviceMeasurements.measurement_type,
             DeviceMeasurements.channel,
             DeviceMeasurements.unit,
             DeviceMeasurements.rescaled_unit,
@@ -1336,21 +1337,34 @@ def get_all_measurements_for_map(devices):
             convs = Conversion.query.filter(Conversion.unique_id.in_(conv_ids)).all()
             conv_unit_lookup = {c.unique_id: (c.convert_unit_to or '') for c in convs}
 
+        from aot.aot_flask.geo.facility_sensors import channel_label_meta
+
         for m in all_meas_query:
             d_id = m.device_id
             if d_id not in all_measurements_map:
                 all_measurements_map[d_id] = []
             
             chan = m.channel if m.channel is not None else 0
+            raw_name = (m.name or m.measurement or '')
+            eff_unit = (conv_unit_lookup.get(m.conversion_id) if m.conversion_id else None) \
+                or m.rescaled_unit or m.unit or ''
+            # 시설 fitting 센서와 **같은** 규칙으로 밴드 key / 표시 단위를 붙인다.
+            # 이 key 가 없으면 시설 밖(구역·지도)에 배치된 Input 라벨은 측정 밴드
+            # 색상을 고를 수 없다 — meas_name 은 번역돼 나가므로 key 대용이 안 된다.
+            band_key, disp_unit = channel_label_meta(
+                m.measurement_type, raw_name, eff_unit, m.measurement or '')
             all_measurements_map[d_id].append({
-                'id': m.unique_id, 
-                'device_unique_id': d_id, 
+                'id': m.unique_id,
+                'device_unique_id': d_id,
                 'channel': chan,
-                'name': f"[CH{chan}] {m.name or m.measurement or ''}".strip(),
-                'meas_name': (m.name or m.measurement or ''),
+                'name': f"[CH{chan}] {raw_name}".strip(),
+                'meas_name': raw_name,
+                'measurement_type': m.measurement_type,
+                'key': band_key,
                 'device_type': m.device_type,
                 'device_name': device_name_lookup.get(d_id),
-                'unit': (conv_unit_lookup.get(m.conversion_id) if m.conversion_id else None) or m.rescaled_unit or m.unit or '',
+                'unit': eff_unit,
+                'display_unit': disp_unit,
             })
         
         # Sort by channel

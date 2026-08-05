@@ -15,6 +15,7 @@ Phase A 에서는 호출 지점을 확보하고 기본 구현체를 제공한다
 from __future__ import annotations
 
 import logging
+import math
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -399,7 +400,6 @@ class SafetyPostGate:
             value = cmd.get('value', 0.0)
 
             # ── NaN / Inf 방어 ──────────────────────────────────────────────
-            import math
             if not math.isfinite(value):
                 result[aid] = {'value': p.safe_default, 'reason': REASON_SAFETY_POST_GATE}
                 corrected = True

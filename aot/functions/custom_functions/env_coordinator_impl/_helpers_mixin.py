@@ -6,12 +6,14 @@ _helpers_mixin.py — HelpersMixin: small per-cycle helpers.
 import json
 import time
 from datetime import datetime, timezone as _tz
+from typing import Any
 
 from aot.databases.models import Actions
 from aot.functions.utils.env_control import (
     CH_DISPATCH_FAIL,
     write_decision_log,
 )
+from aot.functions.utils.env_control.types import SituationReport
 from aot.utils.database import db_retrieve_table_daemon
 
 
@@ -85,7 +87,7 @@ class HelpersMixin:
             self.logger.warning('_get_weeks_elapsed parse error: %s', exc)
             return 0.0
 
-    def _parse_schedule_dt(self, raw: str):
+    def _parse_schedule_dt(self, raw: str) -> 'datetime | None':
         """Parse a Growth Schedule date string into a timezone-aware datetime.
 
         Accepts the same formats as schedule_start_time:
@@ -146,7 +148,7 @@ class HelpersMixin:
             self.logger.warning('_schedule_ended parse error: %s', exc)
             return False
 
-    def _get_facility_tz(self):
+    def _get_facility_tz(self) -> 'Any | None':
         """Resolve the timezone from device/facility location coordinates and return a pytz object.
 
         If a value resolved at initialize() is present in _cached_tz, return it immediately.
@@ -171,7 +173,7 @@ class HelpersMixin:
         from aot.utils.device_tz import resolve_tz_from_coords
         from aot.utils.database import db_retrieve_table_daemon
 
-        def _tz_from_row(row):
+        def _tz_from_row(row: Any) -> 'Any | None':
             """Return a pytz object from a row (having a timezone column or latitude/longitude columns)."""
             if row is None:
                 return None
@@ -261,7 +263,7 @@ class HelpersMixin:
 
     # ── CO₂ setpoint ─────────────────────────────────────────────────────────
 
-    def _get_co2_setpoint(self):
+    def _get_co2_setpoint(self) -> 'float | None':
         """Return current CO₂ target (ppm) from static value or Method curve.
 
         Returns None when CO₂ control is disabled (target_co2 = 0 or no method configured).
@@ -312,7 +314,7 @@ class HelpersMixin:
 
     # ── VPD setpoint ─────────────────────────────────────────────────────────
 
-    def _get_vpd_setpoint(self):
+    def _get_vpd_setpoint(self) -> 'float | None':
         """Return current VPD target (kPa) from static value or Method curve."""
         sp_type = self.vpd_sp_type or 'static'
 
@@ -399,7 +401,7 @@ class HelpersMixin:
         total_min = total_min % (24 * 60)
         return f'{total_min // 60:02d}:{total_min % 60:02d}'
 
-    def _get_time_window(self):
+    def _get_time_window(self) -> tuple[str, str]:
         """Return (start_hhmm, end_hhmm) for the active time window.
 
         When photo_method_id is set, the Method returns photoperiod length (hours)
@@ -455,7 +457,7 @@ class HelpersMixin:
 
     # ── Email notification helpers ─────────────────────────────────────────────────────
 
-    def _get_email_actions(self):
+    def _get_email_actions(self) -> list:
         """Return the list of email actions registered on this Function (cached 5 min)."""
         now = time.time()
         cache_ts  = getattr(self, '_email_actions_ts',  0.0)
@@ -474,7 +476,7 @@ class HelpersMixin:
         except Exception:
             return []
 
-    def _send_critical_email(self, subject_key: str, message: str):
+    def _send_critical_email(self, subject_key: str, message: str) -> None:
         """Send a critical event by email (same subject_key limited to once per day).
 
         subject_key: deduplication key (e.g. 'wind_gate', 'rain_gate', 'extreme_heat')
@@ -511,7 +513,7 @@ class HelpersMixin:
 
     # ── P5-3: Authority alerts + Unattainable detection ─────────────────────────────
 
-    def _emit_authority_alerts(self, situation):
+    def _emit_authority_alerts(self, situation: 'SituationReport') -> None:
         """State-transition / cooldown-based alerts — minimize repeat notifications.
 
         Design principles:
@@ -544,11 +546,11 @@ class HelpersMixin:
             last = self._alert_last_ts.get(key, 0.0)
             return (now_ts - last) >= cooldown_h * 3600
 
-        def _mark_alerted(key: str):
+        def _mark_alerted(key: str) -> None:
             self._alert_last_ts[key] = now_ts
             self._alert_state[key]   = True
 
-        def _clear_alert(key: str):
+        def _clear_alert(key: str) -> None:
             """Reset state when the condition clears — alert immediately on next occurrence."""
             self._alert_state.pop(key, None)
             self._alert_last_ts.pop(key, None)
@@ -637,7 +639,7 @@ class HelpersMixin:
     # ── P5-5: Cumulative Goal Tracker ─────────────────────────────────────────
 
     def _update_cumulative_tracker(self, internal: dict, cycle_sec: float,
-                                   authority: dict):
+                                   authority: dict) -> None:
         """Accumulate DLI/GDD and, at day rollover, save to DB + generate compensation suggestions."""
         from aot.functions.utils.env_control.cumulative_tracker import (
             DailyAccumulator, accumulate_cycle, generate_suggestions, save_daily_state,
@@ -705,7 +707,7 @@ class HelpersMixin:
                 suggestions=[],
             )
 
-    def _apply_end_behaviors(self):
+    def _apply_end_behaviors(self) -> None:
         """Send end-of-window commands to each actuator based on its end_behavior setting."""
         actions = db_retrieve_table_daemon(Actions).filter(
             Actions.function_id == self.unique_id,
@@ -913,7 +915,9 @@ class HelpersMixin:
         emergency_sec = float(getattr(self, 'emergency_period_sec', 60.0) or 60.0)
         return normal_sec, emergency_sec
 
-    def _motor_motion_gate(self, target, last_sent, age, min_dwell, step):
+    def _motor_motion_gate(
+            self, target: float, last_sent: 'float | None', age: float,
+            min_dwell: float, step: float) -> tuple[float, bool]:
         """Decide whether a motor-driven actuator should move and what value to send.
 
         Returns (send_val, should_move):
@@ -940,7 +944,7 @@ class HelpersMixin:
             return last_sent, False          # minimum move interval not met
         return q, True
 
-    def _resolve_adapter(self, actuator_id: str):
+    def _resolve_adapter(self, actuator_id: str) -> Any:
         """Dynamically select the DispatchAdapter for a single actuator (daemon-safe).
 
         Used to backfill on the fly when not present in _adapter_by_id. Selects an
@@ -970,7 +974,7 @@ class HelpersMixin:
                 actuator_id, exc)
             return None
 
-    def _sync_prev_from_devices(self):
+    def _sync_prev_from_devices(self) -> None:
         """슬루 기준(prev_commands)을 actuator_paired 장치의 실제 위치로 동기화한다.
 
         코디네이터의 위치 기억(prev_commands, runtime_state)과 장치의 실측 위치
