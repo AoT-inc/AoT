@@ -17,8 +17,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_24_cold_storage_tables_20260804'
-AOT_VERSION = '26.08.1'
+ALEMBIC_VERSION = 'p6_25_measurement_battery_type_20260804'
+AOT_VERSION = '26.08.2'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
