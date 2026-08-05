@@ -30,7 +30,10 @@ permissions:
   contents: read
 
 jobs:
-  geo-integrity:
+  # 정적 검사는 의존성이 필요 없다(표준 라이브러리 AST). 별도 잡으로 떼어
+  # 두면 아래 잡의 설치가 깨져도 이 검사는 계속 돈다 — "설치 실패가 무결성
+  # 검사를 가리지 않게" 라는 원래 의도를 주석이 아니라 구조로 보장한다.
+  ownership:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,16 +42,36 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 공격 테스트는 Flask/SQLAlchemy 만 있으면 돈다 — 전체 requirements 를
-      # 설치하지 않는다(설치 실패가 무결성 검사를 가리는 것을 피한다).
-      - name: Install minimal deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install flask flask-sqlalchemy flask-babel sqlalchemy alembic shapely pytest
-
-      # 정적 검사 — 앱 import 가 필요 없다.
       - name: 소유권 검사 (geo 패키지 밖 지도 쓰기 금지)
         run: python3 aot/scripts/check_geo_writes.py
+
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 전체 requirements(119줄, opencv·numpy·grpcio 핀 고정)를 설치하지 않는다
+      # — 느리고, 핀 하나가 깨지면 무결성 검사가 통째로 가려진다.
+      #
+      # 목록이 이만큼 긴 이유: aot/tests/conftest.py 가 pytest_configure 에서
+      # aot.aot_flask.extensions 를 import 하고, 그것이 모델 패키지 전체를
+      # 끌어온다. 그래서 테스트 파일이 직접 쓰지 않는 것들(bcrypt·Pyro5·
+      # influxdb-client 등)까지 필요하다. **줄이지 말 것** — 도입 당시
+      # "Flask/SQLAlchemy 만 있으면 된다"고 가정했다가 이 워크플로가
+      # 2026-08-03~08-05 사이 13번 연속 실패했고(단 한 번도 성공한 적 없음),
+      # 그동안 불변식 공격 테스트는 한 번도 실행되지 않았다.
+      # 모델 쪽에 새 최상위 import 가 생기면 여기도 함께 늘려야 한다.
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            flask flask-sqlalchemy flask-babel flask-marshmallow flask-wtf \
+            flask-caching flask-login marshmallow-sqlalchemy sqlalchemy alembic \
+            shapely bcrypt requests importlib-metadata Pyro5 influxdb-client pytest
 
       # 우회 공격이 DB 계층에서 막히는지 — 불변식의 실제 차단력.
       - name: 불변식 공격 테스트
