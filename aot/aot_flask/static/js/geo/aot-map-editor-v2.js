@@ -130,17 +130,19 @@ const AoTMapEditor = {
     },
 
     _applyThemeConfig: function() {
-        if (!window.AOT_GEO_CONFIG || !window.AOT_GEO_CONFIG.theme_config) return;
-        
-        const theme = window.AOT_GEO_CONFIG.theme_config;
-        
-        // Helper to update specific style if color exists
+        // 그리는 중의 기본 스타일. 이 파일은 번들 밖에서 먼저 로드되지만 이
+        // 함수는 호출 시점에 참조하므로 헬퍼가 이미 올라와 있다(방어적 가드 유지).
+        const T = window.AoTGeoTheme;
+        if (!T) return;
+
+        // 새 도형은 아직 장치 종류를 모른다 — 장치 공통색으로 그리고, 장치에
+        // 연결되는 순간 종류별 색으로 다시 칠해진다(aot-geo-modules.js).
         const updateColor = (type, colorKey) => {
-            if (theme[colorKey] && this.styles[type]) {
-                this.styles[type].color = theme[colorKey];
+            if (this.styles[type]) {
+                this.styles[type].color = T.color(colorKey);
             }
         };
-        
+
         updateColor('site', 'site');
         updateColor('zone', 'zone');
         updateColor('facility', 'facility');

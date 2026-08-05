@@ -572,6 +572,42 @@ SVG `<text>` 축 라벨(별도 렌더링 경로) ③ Highcharts 게이지 dataLa
 (위 4번 항목, 미해결 백로그)로 전부 원인이 특정됨 — "정체불명의 잔여
 검정"은 남지 않음.
 
+## 5-5. 지도 도형 색은 별도 계통이다 — 정본은 `GeoSetting.theme_config` (2026-08-05)
+
+여기까지의 토큰 체계(`--aot-*`, custom_ui)는 **앱 UI** 색이다. 지도 위 도형·
+마커·라벨의 색은 그와 무관한 별도 계통으로, 정본은 `GeoSetting.theme_config`
+(전역 싱글톤 JSON) 하나다. geo/design 하단 모드탭의 원형 피커가 여기에 쓴다.
+키: `site` `zone` `facility` `equipment` `device` 와 장치 종류별 `input`
+`output` `function`. custom_ui 는 이 값을 읽지도 쓰지도 않는다.
+
+**해석은 반드시 `static/js/common/aot-geo-theme-colors.js`(`window.AoTGeoTheme`)
+를 거친다.** 기본값도 이 파일 `DEFAULTS` 한 벌뿐이다. 장치 종류별 색이
+미설정이면 장치 공통색(`device`)으로 수렴한다 — 종류마다 다른 폴백을 두지
+않는다.
+
+```js
+AoTGeoTheme.color('site')            // site/zone/facility/equipment/device
+AoTGeoTheme.deviceColor(devType)     // input/output/function + 세부 타입(trigger/pid/…)
+AoTGeoTheme.deviceColor(t, theme)    // 위젯처럼 서버가 넘긴 theme 을 쓸 때
+```
+
+**왜 한 곳으로 모았나** — 같은 질문("이 도형은 무슨 색인가")에 네 곳이 제각기
+답하고 있었고, 그래서 같은 도형이 geo/design 화면과 AoT_map 위젯에서 서로 다른
+색으로 그려졌다:
+
+| 갈래 | 정체 | 처리 |
+|------|------|------|
+| `GeoSetting.theme_config` | 정본 | 유지 |
+| `GeoMap.state_json.theme_config` | 지도별 override. 색을 고른 세션에서 만진 키만 담긴 부분 dict 가 지도 저장에 함께 실렸고, 위젯이 이를 전역 위에 덮어써 그 지도만 옛 색으로 굳었다 | 저장·읽기 양쪽 제거 |
+| `GeoShape.feature.properties.color` | 도형에 각인된 색. 렌더할 때마다 계산값을 되써 넣던 sync-back 의 산물로, 테마를 바꿔도 그 도형만 옛 색. 위젯은 이 값을 아예 안 읽어 불일치가 고정 | 제거 |
+| `localStorage.aot_config_color_*` | 브라우저별 잔재. 미러가 "값이 있을 때만" 덮어써서 설정에서 빠진 키는 옛 값이 계속 이겼다 | 제거(페이지 로드 시 자가 삭제) |
+
+폴백도 갈라져 있었다 — 위젯은 output `#dd4444`/function `#28a745`, geo/design 은
+`#995aff`. 미설정 종류의 색이 화면마다 달랐던 두 번째 원인이다.
+
+DB 에 남은 잔재 정리는 `python3 -m aot.scripts.fix_geo_theme_drift`
+(기본 dry-run, 반영은 `--apply`).
+
 ## 6. 남은 부채 (백로그, 우선순위순)
 
 1. `ai/ai_scheduler.css`(66), `map/map.css`(148), `pages/mcp_servers.css`(39),

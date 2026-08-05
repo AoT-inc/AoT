@@ -997,22 +997,14 @@ class AoTGeoDesign {
             layer.feature.properties.device_type = activeDev.type; // [Fix] Persist Device Type
             
             // Apply device theme color immediately
-            const devType = this.devices.activeDevice.type;
-            const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
-            let savedColor = devType ? localStorage.getItem(`aot_config_color_${devType}`) : null;
-            if (!savedColor && functionTypes.includes(devType)) {
-                savedColor = localStorage.getItem('aot_config_color_function');
-            }
-            const themeColor = savedColor || '#995aff';
+            const themeColor = window.AoTGeoTheme.deviceColor(this.devices.activeDevice.type);
 
             if (layer.setStyle) {
                 layer.setStyle({ color: themeColor, fillColor: themeColor });
             }
         } else if (type && ['site', 'zone', 'facility', 'equipment'].includes(type)) {
             // Apply Theme Color for Standard Types
-            const appTheme = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
-            const themeColor = appTheme[type] || localStorage.getItem(`aot_config_color_${type}`) || 
-                              (type === 'site' ? '#DF5353' : (type === 'zone' ? '#28a745' : (type === 'equipment' ? '#007bff' : '#82898f')));
+            const themeColor = window.AoTGeoTheme.color(type);
 
             if (layer.setStyle) {
                 layer.setStyle({ color: themeColor, fillColor: themeColor });
@@ -2139,20 +2131,12 @@ class AoTGeoDesign {
 
                 // [Fix] Device Handling (Special Case)
                 if (type === 'device' || type === 'aot_device') {
-                    // [Fix] Auto-Color for New Shapes
-                    const devType = props.device_type;
-                    if (devType) {
-                        let savedColor = localStorage.getItem(`aot_config_color_${devType}`);
-                        if (!savedColor && ['trigger', 'pid', 'conditional', 'custom', 'generic_function'].includes(devType)) {
-                            savedColor = localStorage.getItem('aot_config_color_function');
-                        }
-                        if (savedColor) {
-                            props.color = savedColor;
-                            // Apply style immediately if supported
-                            if (l.setStyle) {
-                                l.setStyle({ color: savedColor, fillColor: savedColor });
-                            }
-                        }
+                    // 색은 테마에서 계산만 하고 도형에 각인하지 않는다(props.color 금지).
+                    // 각인하면 그 값이 DB feature JSON 에 저장돼, 이후 테마를 바꿔도
+                    // 이 도형만 옛 색으로 남는다.
+                    const shapeColor = window.AoTGeoTheme.deviceColor(props.device_type);
+                    if (l.setStyle) {
+                        l.setStyle({ color: shapeColor, fillColor: shapeColor });
                     }
                     // [Fix] Link to Device Logic?
                     if (this.devices && this.devices.isDeviceOnMap(props.unique_id)) {
@@ -2321,8 +2305,12 @@ class AoTGeoDesign {
             locked: this.isLocked,
             hidden: this.isHidden,
             active_overlays: activeOverlays,
-            active_base_layer: activeBase,
-            theme_config: this.theme_config || {} // [New] Persist Map-Specific Theme
+            active_base_layer: activeBase
+            // 지도별 theme_config 는 더 이상 쓰지 않는다. 예전에는 이 자리에
+            // "그 세션에서 만진 색만 담긴 부분 dict"가 저장됐고, AoT_map 위젯이
+            // 그 값을 전역 테마 위에 덮어써서(geo/widget/maps.py) 그 지도만
+            // 옛 색으로 굳었다 — 전역을 아무리 바꿔도 바뀌지 않았다.
+            // 정본은 GeoSetting.theme_config 하나뿐이다.
         };
 
         const currentName = this.currentMapName.trim();
@@ -2754,15 +2742,10 @@ class AoTGeoDesign {
                     devType = this.ui.getDeviceSubMode();
                     props.device_type = devType;
                 }
-                if (devType) {
-                    let savedColor = localStorage.getItem(`aot_config_color_${devType}`);
-                    if (!savedColor && ['trigger', 'pid', 'conditional', 'custom', 'generic_function'].includes(devType)) {
-                        savedColor = localStorage.getItem('aot_config_color_function');
-                    }
-                    if (savedColor) {
-                        props.color = savedColor;
-                        if (layer.setStyle) layer.setStyle({ color: savedColor, fillColor: savedColor, fillOpacity: 0.5 });
-                    }
+                // 테마에서 계산만 한다 — props.color 로 각인하지 않는다(위 2134 주석).
+                const shapeColor = window.AoTGeoTheme.deviceColor(devType);
+                if (layer.setStyle) {
+                    layer.setStyle({ color: shapeColor, fillColor: shapeColor, fillOpacity: 0.5 });
                 }
             }
         });
@@ -3594,47 +3577,22 @@ class AoTGeoDesign {
         
         // [New] Apply Device Theme Color for Device Shapes
         if ((aotType === 'device' || aotType === 'aot_device') && l.feature.properties.device_id) {
-            // Priority: Saved Property Color > Device Type Config > Default
-            let color;
-            const isDevice = (aotType === 'device' || aotType === 'aot_device');
-            if (isDevice) {
-                const devType = l.feature.properties.device_type;
-                // [Fix] Apply Saved/Configured Color
-                let savedColor = devType ? localStorage.getItem(`aot_config_color_${devType}`) : null;
-                if (!savedColor && ['trigger', 'pid', 'conditional', 'custom', 'generic_function'].includes(devType)) {
-                    savedColor = localStorage.getItem('aot_config_color_function');
-                }
-                if (l.feature.properties.color) savedColor = l.feature.properties.color; // Prioritize saved prop if exists
-
-                const finalColor = savedColor || '#995aff';
-                l.feature.properties.color = finalColor; // Sync back
-                color = finalColor;
-            } else {
-                color = l.feature.properties.color;
-            }
-
-            if (!color && l.feature.properties.device_type) {
-                const dType = l.feature.properties.device_type;
-                color = localStorage.getItem(`aot_config_color_${dType}`);
-                if (!color && ['trigger', 'pid', 'conditional', 'custom', 'generic_function'].includes(dType)) {
-                    color = localStorage.getItem('aot_config_color_function');
-                }
-            }
-            color = color || '#995aff'; 
+            // 색의 정본은 theme_config 뿐이다. 예전에는 여기서
+            //   ① 도형에 각인된 properties.color 를 최우선으로 쓰고
+            //   ② 계산한 색을 다시 properties.color 에 써 넣었다(sync back).
+            // 그래서 한 번 각인된 도형은 이후 테마를 바꿔도 옛 색으로 되돌아왔고,
+            // properties.color 를 읽지 않는 AoT_map 위젯과 색이 어긋났다.
+            const color = window.AoTGeoTheme.deviceColor(l.feature.properties.device_type);
 
             // Apply Style
             if (l.setStyle) {
-                l.setStyle({ 
+                l.setStyle({
                     color: color,
                     fillColor: color,
                     fillOpacity: 0.5,
                     weight: 3
-                }); 
+                });
             }
-            // Ensure property is synced for future saves
-            // [Fix] Do NOT stamp the theme color back into the property. 
-            // This prevents "baking in" the theme color, allowing dynamic updates if the theme changes later.
-            // l.feature.properties.color = color;
         }
 
         if (isLabel) {

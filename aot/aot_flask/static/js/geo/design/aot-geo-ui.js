@@ -78,17 +78,15 @@ class AoTGeoUI {
 
         // console.log("[AoTGeoUI] Applying Theme Config:", theme);
 
-        // [Fix] Reconcile the legacy localStorage color source to the DB.
-        // Several device-shape render paths historically read
-        // localStorage.aot_config_color_<type> while others read theme_config; when
-        // the two diverged (e.g. a stale localStorage output color vs the saved DB
-        // value) device shapes flipped between the two on every re-render. The DB
-        // (theme_config) is authoritative, so mirror it into localStorage here. This
-        // runs on load and after every color change (applyThemeConfig is called from
-        // both), so all render paths resolve to the same value.
+        // 예전에는 여기서 theme_config 를 localStorage.aot_config_color_<type> 로
+        // 미러링했다. 렌더 경로 절반이 localStorage 를 먼저 읽었기 때문인데, 미러는
+        // theme[t] 가 있을 때만 덮어써서 설정에서 빠진 키(예: function)는 브라우저에
+        // 남은 옛 값이 계속 이겼고, PC 마다 색이 달랐다. 이제 모든 렌더 경로가
+        // AoTGeoTheme 로 theme_config 를 직접 읽으므로 미러가 필요 없다.
+        // 남아 있는 옛 키는 여기서 지운다(설치본마다 1회, 조용히).
         try {
             ['site', 'zone', 'facility', 'equipment', 'device', 'input', 'output', 'function'].forEach((t) => {
-                if (theme[t]) localStorage.setItem('aot_config_color_' + t, theme[t]);
+                localStorage.removeItem('aot_config_color_' + t);
             });
         } catch (e) {}
 
@@ -122,17 +120,18 @@ class AoTGeoUI {
             root.style.setProperty(`${cssVar}-sub`, `rgba(${rgb}, 0.2)`);
         };
         
-        // Standard Tiers with Fallbacks
-        applyColor('site', '--theme-site', '#DF5353');
-        applyColor('zone', '--theme-zone', '#28a745');
-        applyColor('facility', '--theme-facility', '#82898f');
-        applyColor('equipment', '--theme-equipment', '#007bff');
-        applyColor('device', '--theme-device', '#995aff');
-        
-        // Sub-types (Inputs/Outputs/Functions)
-        applyColor('input', '--theme-input', '#995aff');
-        applyColor('output', '--theme-output', '#995aff');
-        applyColor('function', '--theme-function', '#995aff');
+        // 기본값은 AoTGeoTheme.DEFAULTS 한 벌뿐이다(위젯도 같은 값을 쓴다).
+        const D = window.AoTGeoTheme.DEFAULTS;
+        applyColor('site', '--theme-site', D.site);
+        applyColor('zone', '--theme-zone', D.zone);
+        applyColor('facility', '--theme-facility', D.facility);
+        applyColor('equipment', '--theme-equipment', D.equipment);
+        applyColor('device', '--theme-device', D.device);
+
+        // Sub-types (Inputs/Outputs/Functions) — 미설정이면 장치 공통색으로 수렴.
+        window.AoTGeoTheme.DEVICE_KEYS.forEach((k) => {
+            applyColor(k, `--theme-${k}`, theme.device || D.device);
+        });
         
         // 2. Apply Panel Styles (RGBA)
         const panelHex = theme.panel_bg || '#ffffff';
@@ -475,30 +474,18 @@ class AoTGeoUI {
             return;
         }
 
-        // Helper to get Theme Color (Hex) - Bypasses Canvas var() issues
-        const getThemeColor = (k, defaultHex) => {
-            if (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config && window.AOT_GEO_CONFIG.theme_config[k]) {
-                return window.AOT_GEO_CONFIG.theme_config[k];
-            }
-            return defaultHex;
-        };
+        // 색은 theme_config 하나에서만 나온다(AoTGeoTheme). 예전에는 여기서
+        // localStorage.aot_config_color_<devType> 를 먼저 읽어, 브라우저에 남은
+        // 옛 값이 저장된 테마를 이기곤 했다.
+        const T = window.AoTGeoTheme;
 
         // Default Colors (Theme Hex)
         let color = '#3388ff'; // Default Blue
-        if (type === 'site') color = getThemeColor('site', '#DF5353'); 
-        else if (type === 'zone') color = getThemeColor('zone', '#28a745'); 
-        else if (type === 'facility') color = getThemeColor('facility', '#82898f');
-        else if (type === 'equipment') color = getThemeColor('equipment', '#007bff');
-        else if (type === 'aot_device') {
-            const devType = props.device_type;
-            const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
-            let savedColor = devType ? localStorage.getItem(`aot_config_color_${devType}`) : null;
-            if (!savedColor && functionTypes.includes(devType)) {
-                savedColor = localStorage.getItem('aot_config_color_function');
-            }
-            color = savedColor || getThemeColor('device', '#995aff'); 
-        }
-        else if (type === 'device') {
+        if (type === 'site') color = T.color('site');
+        else if (type === 'zone') color = T.color('zone');
+        else if (type === 'facility') color = T.color('facility');
+        else if (type === 'equipment') color = T.color('equipment');
+        else if (type === 'aot_device' || type === 'device') {
              let devType = props.device_type;
              // Fallback: Lookup from Markers if device_type missing
              if (!devType && this.parent.devices && props.device_id) {
@@ -507,14 +494,8 @@ class AoTGeoUI {
                       devType = marker.feature.properties.device_type;
                   }
              }
-             
-             const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
-             let savedColor = devType ? localStorage.getItem(`aot_config_color_${devType}`) : null;
-             if (!savedColor && functionTypes.includes(devType)) {
-                 savedColor = localStorage.getItem('aot_config_color_function');
-             }
-             color = savedColor || '#007bff'; 
-        } 
+             color = T.deviceColor(devType);
+        }
         
         const isMainPipe = (subType === 'pipe_main');
         const isPipe = (subType === 'pipe_branch' || isMainPipe);

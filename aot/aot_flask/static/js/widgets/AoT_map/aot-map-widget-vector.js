@@ -2713,26 +2713,31 @@
             delete _actLabelState[uid];
         }
 
-        // Theme colors from geo/design panel settings
-        // Device colors are stored by sub-type: theme['input'], theme['output'], theme['function']
+        // Theme colors from geo/design panel settings — resolved through the
+        // shared AoTGeoTheme helper so the widget and the geo/design canvas
+        // cannot drift apart on defaults (they used to: output fell back to
+        // '#dd4444' here and '#995aff' there).
         const theme = wOpts.theme_config || (vars && vars.theme) || {};
+        const _T = window.AoTGeoTheme;
         const C = {
-            site:      theme.site      || '#DF5353',
-            zone:      theme.zone      || '#28a745',
-            facility:  theme.facility  || '#82898f',
-            equipment: theme.equipment || '#007bff',
-            drawn:     theme.drawn     || '#f59e42'
+            site:      _T.color('site', theme),
+            zone:      _T.color('zone', theme),
+            facility:  _T.color('facility', theme),
+            equipment: _T.color('equipment', theme),
+            drawn:     theme.drawn || '#f59e42'
         };
-        // Data-driven device shape color: match GeoJSON device_type property to theme key
-        const _devInputColor    = theme['input']    || '#995aff';
-        const _devOutputColor   = theme['output']   || '#dd4444';
-        const _devFunctionColor = theme['function'] || '#28a745';
-        const _deviceColorExpr = ['match', ['get', 'device_type'],
-            'input',    _devInputColor,
-            'output',   _devOutputColor,
-            'function', _devFunctionColor,
-            _devInputColor
-        ];
+        // Data-driven device shape color: match GeoJSON device_type to a theme key.
+        // Function sub-types (trigger/pid/...) are listed explicitly — a shape saved
+        // with the raw sub-type used to miss every branch and fall through to the
+        // input color. The fallback is the shared device color, not input.
+        const _deviceColorExpr = ['match', ['get', 'device_type']];
+        ['input', 'output'].forEach(function (k) {
+            _deviceColorExpr.push(k, _T.deviceColor(k, theme));
+        });
+        _T.FUNCTION_TYPES.forEach(function (k) {
+            _deviceColorExpr.push(k, _T.deviceColor('function', theme));
+        });
+        _deviceColorExpr.push(_T.color('device', theme));
 
         // mapUuid: multiple fallback sources (fixes aot-device missing when contentMapUuid empty)
         const mapUuid = wOpts.selected_map_uuid || wOpts.map_uuid || (vars && vars.contentMapUuid) || '';
@@ -3561,13 +3566,19 @@
 
         // Theme colors from geo/design panel settings (mirrors shape fill color logic above)
         const labelTheme = wOpts.theme_config || (vars && vars.theme) || {};
+        const _LT = window.AoTGeoTheme;
+        // 장치 라벨은 이 시점에 장치 종류를 모른다(label_aux 는 parent_type 만 들고
+        // 온다). 예전에는 그 자리에 input 색을 박아 넣어, output·function 라벨까지
+        // 전부 input 색으로 칠해졌다 — 상태가 도착해도 OFF 장치는 회색으로만 덮여
+        // 끝내 정정되지 않았다. 종류를 모르는 동안에는 장치 공통색을 쓰고,
+        // _updateGeoDesignDeviceLabels 가 장치 상태와 함께 종류별 색으로 정정한다.
         const COLOR_MAP = {
-            'site':       labelTheme.site      || '#DF5353',
-            'zone':       labelTheme.zone      || '#28a745',
-            'facility':   labelTheme.facility  || '#82898f',
-            'equipment':  labelTheme.equipment || '#007bff',
-            'device':     labelTheme['input']  || '#995aff',
-            'aot_device': labelTheme['input']  || '#995aff'
+            'site':       _LT.color('site', labelTheme),
+            'zone':       _LT.color('zone', labelTheme),
+            'facility':   _LT.color('facility', labelTheme),
+            'equipment':  _LT.color('equipment', labelTheme),
+            'device':     _LT.color('device', labelTheme),
+            'aot_device': _LT.color('device', labelTheme)
         };
         // parent_type → 공용 z-order 표(LABEL_Z)의 종류 키.
         // 장치 라벨(device/aot_device)은 여기서 실제 장치 종류를 아직 모른다
@@ -7519,19 +7530,19 @@
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
     }
 
-    // Color priority: Theme (type-specific → generic) → device label_color → device color → fallback
+    // Color priority: theme (type-specific → device common) → per-device override.
+    // 종류별 테마 해석은 AoTGeoTheme 하나로 모았다 — 도형은 device_type 별 색을
+    // 쓰는데 마커만 다른 폴백 체인을 타서(function 이 theme.device 로, 도형은
+    // '#28a745' 로) 같은 장치의 도형과 마커 색이 어긋나던 문제를 없앤다.
     function getUnifiedDeviceColor(type, dev, theme) {
-        if (theme) {
-            if (theme[type + '-color']) return theme[type + '-color'];
-            if (theme[type]) return theme[type];
-            if (theme['aot_device-color']) return theme['aot_device-color'];
-            if (theme['aot_device']) return theme['aot_device'];
-            if (theme.device) return theme.device;
+        var t = theme || {};
+        if (window.AoTGeoTheme.normalizeDeviceType(type) || t.device) {
+            return window.AoTGeoTheme.deviceColor(type, t);
         }
         if (dev && dev.label_color) return dev.label_color;
         var bc = dev && (dev.color || dev.marker_color);
         if (bc && bc.trim()) return bc.trim();
-        return (theme && theme.primary) || '#995aff';
+        return window.AoTGeoTheme.deviceColor(type, t);
     }
 
     /**

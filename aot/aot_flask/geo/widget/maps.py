@@ -559,24 +559,19 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
             except Exception:
                 pass
         
-        # [New] Prioritize Map-Specific Theme Colors
+        # 지도별 theme_config 병합은 제거했다(2026-08-05).
+        #
+        # geo/design 에서 색을 고르면 전역 GeoSetting.theme_config 로 저장되는
+        # 동시에, 그 세션에서 만진 키만 담긴 부분 dict 가 GeoMap.state_json 에도
+        # 함께 기록됐다. 여기서 그 부분 dict 를 전역 위에 덮어썼기 때문에, 그
+        # 지도를 쓰는 위젯은 전역 색을 아무리 바꿔도 옛 색 그대로였다(예: 전역
+        # output #04a19a 인데 '영양' 지도만 #0084ff). 화면마다 다른 색이 나오는
+        # 주요 경로였고, 지도별 색을 의도적으로 쓰는 기능도 아니었다 — 부작용에
+        # 가깝다. 색의 정본은 전역 theme_config 하나뿐이다.
+        # 저장 쪽도 함께 끊었다(aot-geo-design-v3.js saveDesign),
+        # 남아 있던 state_json 값은 aot/scripts/fix_geo_theme_drift.py 로 제거.
         state = config_map.state_dict()
         if state:
-            # Only honor a map-specific theme when the widget is pinned to a
-            # specific map (selected_map). Without a pinned map, config_map falls
-            # back to _get_latest_geomap_cached() — the most-recently-updated
-            # GeoMap — whose per-map theme_config would then override the global
-            # device colors non-deterministically: device shapes flip color
-            # (e.g. global #00a19a ↔ some map's #0084ff) whenever a different map
-            # becomes "latest". Use the global theme in the unpinned case.
-            map_theme = state.get('theme_config', {}) if selected_map else {}
-            if map_theme:
-                # Merge map-specific theme into global theme_config
-                if not theme_config:
-                    theme_config = {}
-                theme_config.update(map_theme)
-                logger.info(f"[AoT Map Logic] Merged Map-Specific Theme: {map_theme}")
-
             if 'draw-fill-color' in state:
                 map_global_style['fillColor'] = state['draw-fill-color']
             if 'draw-stroke-color' in state:

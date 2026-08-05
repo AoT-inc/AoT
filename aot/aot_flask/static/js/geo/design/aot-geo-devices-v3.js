@@ -227,15 +227,9 @@ class AoTGeoDevices {
 
         // Determine Border/Theme Color
         const devType = dev.type;
-        const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
 
-        // [Fix] Centralized Theme Lookup (DB over localStorage)
-        const theme = window.AOT_GEO_CONFIG?.theme_config || {};
-        let themeColor = theme[devType] || theme['device'] || '#995aff';
-        
-        if (functionTypes.includes(devType)) {
-            themeColor = theme['function'] || theme['device'] || themeColor;
-        }
+        // 색 해석은 AoTGeoTheme 하나로 (도형·라벨·위젯과 같은 규칙).
+        const themeColor = window.AoTGeoTheme.deviceColor(devType);
 
         // Check Initial Visibility (Always visible by default in Design Mode unless filtered)
         let isVisible = true;
@@ -359,15 +353,9 @@ class AoTGeoDevices {
         };
 
         const devType = dev.type;
-        const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
 
-        // [Fix] Centralized Theme Lookup
-        const theme = window.AOT_GEO_CONFIG?.theme_config || {};
-        let themeColor = theme[devType] || theme['device'] || '#995aff';
-        
-        if (functionTypes.includes(devType)) {
-            themeColor = theme['function'] || theme['device'] || themeColor;
-        }
+        // 색 해석은 AoTGeoTheme 하나로 (도형·라벨·위젯과 같은 규칙).
+        const themeColor = window.AoTGeoTheme.deviceColor(devType);
 
         // Check visibility (Maintain current element display state)
         let isVisible = true;
@@ -468,7 +456,7 @@ class AoTGeoDevices {
         window.AOT_GEO_CONFIG.theme_config[targetType] = newColor;
 
         // Define Function Subtypes
-        const functionTypes = ['function', 'trigger', 'pid', 'conditional', 'custom', 'generic_function'];
+        const functionTypes = window.AoTGeoTheme.FUNCTION_TYPES;
 
         // Helper to check type match
         const isMatch = (l) => {
@@ -554,7 +542,7 @@ class AoTGeoDevices {
         // [Fix] Skip localStorage, rely on application state or backend if needed.
         // For Design Mode, we typically want visibility to be session-based or linked to layers.
 
-        const functionTypes = ['function', 'trigger', 'pid', 'conditional', 'custom', 'generic_function'];
+        const functionTypes = window.AoTGeoTheme.FUNCTION_TYPES;
 
         // [Perf] Sidebag holds layers physically removed from FeatureGroups while hidden.
         // Avoids CSS-only hiding that left SVG/GL nodes in the layer tree (caused viewport slowdown).
@@ -596,9 +584,7 @@ class AoTGeoDevices {
                         const props = l.feature.properties;
                         const type = props.device_type || targetType; // Fallback
 
-                        const theme = window.AOT_GEO_CONFIG?.theme_config || {};
-                        let themeColor = theme[type] || theme['device'] || '#995aff';
-                        if (functionTypes.includes(type)) themeColor = theme['function'] || theme['device'] || themeColor;
+                        const themeColor = window.AoTGeoTheme.deviceColor(type);
 
                         // Check if active
                         const isActive = (this.parent.activeLayer === l || (this.activeDevice && this.activeDevice.layer === l));

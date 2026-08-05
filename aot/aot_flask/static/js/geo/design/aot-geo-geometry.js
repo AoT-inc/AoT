@@ -562,11 +562,10 @@ class AoTGeoGeometry {
         if (!['site', 'zone'].includes(aotType) && !isPipe) return;
 
         const createLabelMarker = (lat, lng, text) => {
-            const config = window.AOT_GEO_CONFIG?.theme_config || {};
             let borderColor = '#999';
-            if (aotType === 'site') borderColor = config.site || '#DF5353';
-            else if (aotType === 'zone') borderColor = config.zone || '#28a745';
-            else if (isPipe) borderColor = config.equipment || '#007bff';
+            if (aotType === 'site') borderColor = window.AoTGeoTheme.color('site');
+            else if (aotType === 'zone') borderColor = window.AoTGeoTheme.color('zone');
+            else if (isPipe) borderColor = window.AoTGeoTheme.color('equipment');
 
             const typeClass = aotType === 'site' ? 'aot-site-label' : aotType === 'zone' ? 'aot-zone-label' : '';
             const cssClass = `aot-measure-label${typeClass ? ' ' + typeClass : ''}`;
@@ -780,8 +779,7 @@ class AoTGeoGeometry {
             const formattedLen = length.toFixed(1);
             const lat = center.geometry.coordinates[1]; const lng = center.geometry.coordinates[0];
             
-            const config = window.AOT_GEO_CONFIG?.theme_config || {};
-            const themeColor = config.equipment || '#007bff';
+            const themeColor = window.AoTGeoTheme.color('equipment');
 
             const pipeIconHtml = `<div style="background: ${themeColor}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: sans-serif; white-space: nowrap; box-shadow: 1px 1px 2px rgba(0,0,0,0.2); transform: translate(-50%, -50%); border: 1px solid white; display: inline-block; width: max-content;">${formattedLen}</div>`;
             const label = new AoTGeoMarker([lat, lng], {

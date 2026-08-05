@@ -168,13 +168,7 @@ class AoTGeoModules {
             } 
 
             // Apply Theme Color Immediately (device-type specific, 30% opacity)
-            const devType = activeDev.type;
-            const _funcTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
-            let themeColor = '#995aff'; // Default
-            if (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) {
-                const tc = window.AOT_GEO_CONFIG.theme_config;
-                themeColor = (_funcTypes.includes(devType) ? tc['function'] : tc[devType]) || tc['device'] || themeColor;
-            }
+            const themeColor = window.AoTGeoTheme.deviceColor(activeDev.type);
 
             if (layer.setStyle) {
                 layer.setStyle({ color: themeColor, fillColor: themeColor, fillOpacity: 0.3 });

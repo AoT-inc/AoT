@@ -178,13 +178,14 @@ class AoTGeoLabel {
 
         let color = '#333';
         const targetType = parentType || props.aot_type;
-        const config = window.AOT_GEO_CONFIG?.theme_config || {};
+        const T = window.AoTGeoTheme;
 
-        if (targetType === 'site') color = config.site || '#DF5353';
-        else if (targetType === 'zone') color = config.zone || '#28a745';
-        else if (targetType === 'facility') color = config.facility || '#82898f';
-        else if (targetType === 'equipment') color = config.equipment || '#007bff';
-        else if (targetType === 'device' || targetType === 'aot_device') color = config.device || '#995aff';
+        if (['site', 'zone', 'facility', 'equipment'].includes(targetType)) {
+            color = T.color(targetType);
+        } else if (targetType === 'device' || targetType === 'aot_device') {
+            // 라벨은 부모 도형의 장치 종류를 알면 그 색을, 모르면 장치 공통색을 쓴다.
+            color = T.deviceColor(props.device_type);
+        }
 
         this.updateLabelIcon(layer, name, area, color);
 

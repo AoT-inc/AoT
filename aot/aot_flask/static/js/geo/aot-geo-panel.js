@@ -342,9 +342,12 @@ class AoTGeoPanel {
                 const type = tierId;
                 
                 const appTheme = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
-                const serverColor = appTheme[type];
-                
-                const savedColor = serverColor || (type === 'function' ? '#995aff' : getComputedStyle(document.documentElement).getPropertyValue('--theme-device').trim() || '#9013FE');
+
+                // 피커에 표시할 현재 색 — 도형·마커와 같은 규칙으로 해석한다
+                // (미설정이면 장치 공통색). 예전에는 여기만 --theme-device
+                // computed 값이나 '#9013FE' 같은 별도 폴백을 써서, 피커가 지도에
+                // 실제로 칠해진 색과 다른 색을 보여줬다.
+                const savedColor = window.AoTGeoTheme.deviceColor(type, appTheme);
                 const savedVisValue = appTheme[`vis_${type}`];
                 const isVisible = (savedVisValue === undefined || savedVisValue === null) ? true : (savedVisValue === 'true' || savedVisValue === true);
 
@@ -1326,11 +1329,10 @@ class AoTGeoPanel {
             window.AOT_GEO_CONFIG.theme_config[type] = color;
         }
 
-        // [New] Sync to GeoDesign instance for map-specific persistence
-        if (this.geoDesign) {
-            if (!this.geoDesign.theme_config) this.geoDesign.theme_config = {};
-            this.geoDesign.theme_config[type] = color;
-        }
+        // 지도별 theme_config 축적은 제거했다. 색은 전역(GeoSetting.theme_config)
+        // 한 곳에만 저장한다 — 예전에는 여기서 쌓인 부분 dict 가 지도 저장 때
+        // GeoMap.state_json 에 함께 기록돼, 그 지도를 쓰는 위젯이 전역 대신
+        // 그 옛 색을 따르는 갈래가 생겼다.
 
         // 2. Apply to UI immediately via AoTGeoUI (updates CSS vars, RGB, etc.)
         if (this.geoDesign && this.geoDesign.ui && this.geoDesign.ui.applyThemeConfig) {
