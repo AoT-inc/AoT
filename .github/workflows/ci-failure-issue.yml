@@ -38,6 +38,11 @@ jobs:
             const marker = `<!-- ci-failure:${run.name} -->`;
 
             // 마커로 찾는다 — 제목 문구를 나중에 바꿔도 짝이 유지된다.
+            //
+            // labels= 필터는 이슈 생성 직후 약 3초간 그 이슈를 돌려주지 않는다
+            // (실측: +0/+1/+2초 0건, +3초부터 1건). 같은 워크플로가 3초 안에
+            // 두 번 실패하는 일은 없으므로 중복 이슈로 이어지지 않지만,
+            // 직접 만든 이슈가 조회에 안 잡혀도 로직 버그가 아니다.
             const { data: open } = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo,
               state: 'open', labels: 'ci-failure', per_page: 100,
