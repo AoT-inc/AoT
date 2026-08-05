@@ -1,0 +1,49 @@
+name: Alembic Chain
+
+# 업그레이드는 'head' 가 아니라 config.ALEMBIC_VERSION 을 목표로 실행된다
+# (폐기된 p5 계보가 두 번째 head 로 남아 'head' 를 쓰면 "Multiple head
+# revisions" 로 실패한다 — alembic_upgrade_db() 주석 참조).
+#
+# 그래서 마이그레이션을 추가하고 상수를 안 올리면 그 마이그레이션은 영원히
+# 실행되지 않는다. 에러도 경고도 없다: 앱은 "up to date" 를 로그에 남기고
+# 정상 기동하며, 모델·라우트는 존재하지 않는 컬럼을 참조한 채로 돈다.
+# 두 번 났다 — 2026-08-03 `6550f41`(p6_21·p6_22), 2026-08-05 v26.08.2(p6_25).
+# 두 번 다 사람이 눈으로 찾았다.
+#
+# pre-commit 훅(.githooks/pre-commit)이 로컬 1차 방어고, 여기는 훅을 켜지
+# 않은 클론과 우회 커밋을 받는 최종 관문이다.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'alembic_db/alembic/versions/**'
+      - 'aot/config/__init__.py'
+      - 'aot/scripts/check_alembic_head.py'
+      - '.github/workflows/alembic-chain.yml'
+  pull_request:
+    paths:
+      - 'alembic_db/alembic/versions/**'
+      - 'aot/config/__init__.py'
+      - 'aot/scripts/check_alembic_head.py'
+      - '.github/workflows/alembic-chain.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chain-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 의존성 설치가 없다 — 검사기는 표준 라이브러리만 쓰고 aot.config 를
+      # import 하지 않는다(설치 실패나 config 파손이 검사를 가리지 않도록).
+      - name: Check revision chain and ALEMBIC_VERSION
+        run: python3 aot/scripts/check_alembic_head.py

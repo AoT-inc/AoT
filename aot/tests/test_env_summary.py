@@ -7,10 +7,8 @@ Covers:
   3. FunctionRuntimeState.summary_json column presence
 """
 import json
-import re
 import types
 import unittest.mock
-from pathlib import Path
 
 import pytest
 
@@ -398,59 +396,38 @@ def test_gate_description_truncated_at_200():
 # line. The column those migrations added is covered by section 3, which reads
 # the model — the source of truth for new installs, since they run
 # db.create_all() and stamp the head rather than walking the chain.
+#
+# The checks themselves now live in aot/scripts/check_alembic_head.py so the
+# pre-commit hook and CI can run them too. That relocation is the point: this
+# section already asserted ALEMBIC_VERSION == chain head, and the constant
+# still shipped one revision behind in v26.08.2 — a suite that only runs when
+# someone remembers to run it does not guard a release. These tests stay as the
+# `pytest` entry point into that one implementation; do not re-inline the logic.
 
-_VERSIONS_DIR = (
-    Path(__file__).parent.parent.parent / "alembic_db" / "alembic" / "versions"
-)
-_BASELINE_REVISION = "p6_00_rebaseline_20260720"
-
-_REVISION_RE = re.compile(r"^revision\s*=\s*['\"]([^'\"]+)['\"]", re.M)
-_DOWN_REVISION_RE = re.compile(
-    r"^down_revision\s*=\s*(?:['\"]([^'\"]+)['\"]|None)", re.M)
+from aot.scripts import check_alembic_head as _alembic_check
 
 
-def _revision_chain():
-    """Map revision -> down_revision for every migration file on disk."""
-    chain = {}
-    for path in sorted(_VERSIONS_DIR.glob("*.py")):
-        text = path.read_text(encoding="utf-8")
-        rev = _REVISION_RE.search(text)
-        down = _DOWN_REVISION_RE.search(text)
-        assert rev, f"{path.name}: no revision identifier found"
-        assert down, f"{path.name}: no down_revision identifier found"
-        chain[rev.group(1)] = down.group(1)  # None literal -> group(1) is None
-    return chain
+def _findings_of(kind):
+    findings, _chain, _heads = _alembic_check.run_checks()
+    return [f for f in findings if f["kind"] == kind]
 
 
 def test_revision_chain_is_not_empty():
-    assert _revision_chain(), f"no migration files under {_VERSIONS_DIR}"
+    chain, problems = _alembic_check.revision_chain()
+    assert not problems, f"unparsable migration files: {problems}"
+    assert chain, f"no migration files under {_alembic_check.VERSIONS_DIR}"
 
 
 def test_revision_chain_has_single_root():
-    roots = [rev for rev, down in _revision_chain().items() if down is None]
-    assert roots == [_BASELINE_REVISION], (
-        f"expected {_BASELINE_REVISION} as the only root, got {roots}"
-    )
+    assert not _findings_of("single-root")
 
 
 def test_revision_chain_has_no_dangling_parent():
-    chain = _revision_chain()
-    dangling = {
-        rev: down for rev, down in chain.items()
-        if down is not None and down not in chain
-    }
-    assert not dangling, f"down_revision points at a missing revision: {dangling}"
-
-
-def _chain_head():
-    chain = _revision_chain()
-    parents = {down for down in chain.values() if down is not None}
-    return sorted(rev for rev in chain if rev not in parents)
+    assert not _findings_of("no-dangling")
 
 
 def test_revision_chain_has_single_head():
-    heads = _chain_head()
-    assert len(heads) == 1, f"alembic chain must have exactly one head, got {heads}"
+    assert not _findings_of("single-head")
 
 
 def test_alembic_version_constant_matches_chain_head():
@@ -461,12 +438,8 @@ def test_alembic_version_constant_matches_chain_head():
     second head). So a new migration whose author forgets to bump the constant
     is never applied on upgrade, and the mismatch is silent.
     """
-    from aot.config import ALEMBIC_VERSION
-    heads = _chain_head()
-    assert ALEMBIC_VERSION in heads, (
-        f"ALEMBIC_VERSION={ALEMBIC_VERSION!r} is not the chain head {heads} — "
-        "a new migration was added without bumping the constant"
-    )
+    findings = _findings_of("constant-matches")
+    assert not findings, findings[0]["message"] if findings else ""
 
 
 # ---------------------------------------------------------------------------

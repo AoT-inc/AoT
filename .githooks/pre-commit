@@ -41,3 +41,23 @@ if [ -z "$AOT_SKIP_GEO_WRITE_CHECK" ]; then
         fi
     fi
 fi
+
+# ── Alembic 체인 ↔ ALEMBIC_VERSION 일치 ───────────────────────────────────
+# 업그레이드는 'head' 가 아니라 이 상수를 목표로 돈다. 새 마이그레이션을
+# 넣고 상수를 안 올리면 그 마이그레이션은 영원히 실행되지 않으면서 앱은
+# "up to date" 라고 로그를 남긴다 — 6550f41 과 v26.08.2 에서 두 번 났다.
+# 인덱스를 검사한다: 마이그레이션만 stage 하고 상수 수정을 빠뜨린 커밋이
+# 정확히 막으려는 경우인데, 워킹트리를 보면 그게 통과해 버린다.
+# 우회: AOT_SKIP_ALEMBIC_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_ALEMBIC_CHECK" ]; then
+    AL_CHECK="$ROOT/aot/scripts/check_alembic_head.py"
+    if [ -f "$AL_CHECK" ] && git diff --cached --name-only \
+        | grep -qE '^(alembic_db/alembic/versions/|aot/config/__init__\.py$)'; then
+        if ! python3 "$AL_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 마이그레이션 체인과 ALEMBIC_VERSION 이 어긋납니다."
+            echo "  (의도한 커밋이라면 AOT_SKIP_ALEMBIC_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
