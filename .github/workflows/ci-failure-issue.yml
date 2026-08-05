@@ -1,0 +1,86 @@
+name: CI Failure Issue
+
+# main 의 CI 실패를 이슈로 남긴다.
+#
+# 알림이 없어서 놓치는 게 아니다. Geo Data Integrity 는 도입 이래 13번 연속
+# 실패했고 GitHub 은 13번 다 알림을 보냈지만, 13건 모두 안 읽음으로 알림함에
+# 쌓이기만 했다 — 아무도 몰랐고, 그동안 불변식 공격 테스트는 한 번도 돌지
+# 않았다. 알림은 읽지 않아도 조용히 사라지지만 이슈는 닫아야 사라진다.
+#
+# 같은 워크플로가 계속 실패하면 이슈를 새로 만들지 않고 기존 이슈에 코멘트만
+# 붙인다(13번 실패 = 이슈 1개 + 코멘트 12개). 성공하면 자동으로 닫는다.
+
+on:
+  workflow_run:
+    workflows:
+      - Alembic Chain
+      - Geo Data Integrity
+      - JS Bundle Drift
+      - Security Checks
+      - Deploy Documentation
+      - Publish Docker image
+    types: [completed]
+
+permissions:
+  issues: write
+
+jobs:
+  report:
+    # main 만 본다 — 기능 브랜치의 빨간불은 작업 중이라는 뜻이지 방치가 아니다.
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const failed = run.conclusion === 'failure';
+            const marker = `<!-- ci-failure:${run.name} -->`;
+
+            // 마커로 찾는다 — 제목 문구를 나중에 바꿔도 짝이 유지된다.
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'ci-failure', per_page: 100,
+            });
+            const existing = open.find(i => (i.body || '').includes(marker));
+
+            if (!failed) {
+              // 복구됨 — 열려 있던 이슈를 닫는다. 사람이 치우지 않아도 된다.
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `복구됨 — [\`${run.head_sha.slice(0, 7)}\`](${run.html_url}) 에서 성공했습니다.`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed',
+                });
+              }
+              return;
+            }
+
+            const body = [
+              marker,
+              `**워크플로**: ${run.name}`,
+              `**커밋**: \`${run.head_sha.slice(0, 7)}\` — ${run.head_commit?.message?.split('\n')[0] ?? ''}`,
+              `**실행**: ${run.html_url}`,
+              '',
+              '이 이슈는 해당 워크플로가 main 에서 다시 성공하면 자동으로 닫힙니다.',
+              '계속 실패하면 새 이슈 대신 아래에 코멘트가 쌓입니다 — 코멘트 수가',
+              '곧 연속 실패 횟수입니다.',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `또 실패 — [\`${run.head_sha.slice(0, 7)}\`](${run.html_url})`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `CI 실패: ${run.name}`,
+                body, labels: ['ci-failure'],
+              });
+            }
