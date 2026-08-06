@@ -78,6 +78,13 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     command: python aot/aot_mcp_server.py --http --port 5700
+    # 컨테이너 기본 hostname은 랜덤 컨테이너 ID(예: de4bf2a3f387)라, MCP 도구
+    # 응답에 자동으로 실리는 server_host(aot_mcp_server.py SERVER_HOST)가
+    # 알아볼 수 없는 값이 된다. 이 compose 파일은 여러 머신(로컬/koat-macmini
+    # 등)이 git으로 그대로 공유하므로 값을 하드코딩하면 전부 같은 이름이
+    # 되어 오히려 구분이 안 된다 — 머신별로 docker/.env 의 AOT_MCP_HOSTNAME
+    # 으로 override, 미설정 시에만 기본값 사용.
+    hostname: ${AOT_MCP_HOSTNAME:-aot-local-mcp}
     ports:
       - "100.111.33.43:5700:5700"
     volumes:

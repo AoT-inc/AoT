@@ -33,6 +33,7 @@ import os
 import json
 import logging
 import argparse
+import socket
 
 # ── Path bootstrap ─────────────────────────────────────────────────────────────
 # Ensure /opt/AoT is on sys.path so AoT modules can be imported regardless
@@ -48,6 +49,9 @@ logger = logging.getLogger("aot_mcp_server")
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "aot-mcp-server"
 SERVER_VERSION = "1.0.0"
+# 동일 사용자가 여러 AoT 인스턴스의 MCP 서버를 동시에 붙였을 때 응답을 구분할 수
+# 있도록, 관리자가 별도로 설정하지 않아도 프로세스 호스트명을 자동으로 싣는다.
+SERVER_HOST = socket.gethostname()
 
 # ── Native tool names handled by AoTNativeToolEngine ──────────────────────────
 _NATIVE_TOOLS = {"list_available_devices", "get_sensor_reading", "set_output_state"}
@@ -237,6 +241,8 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elic
         _record_audit(audit, tool_name, arguments, agent_id, permission,
                       reason, blocked, result, error_text)
 
+    if isinstance(result, dict):
+        result.setdefault("server_host", SERVER_HOST)
     return [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
 
 
@@ -529,7 +535,8 @@ class StdioMCPServer:
                 "result": {
                     "protocolVersion": PROTOCOL_VERSION,
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+                    "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
+                                   "host": SERVER_HOST},
                 },
             })
 
@@ -639,6 +646,7 @@ def _run_http_server(app, port=5700):
         return jsonify({
             "name": SERVER_NAME,
             "version": SERVER_VERSION,
+            "host": SERVER_HOST,
             "protocol": PROTOCOL_VERSION,
             "tool_count": len(tools),
         })
