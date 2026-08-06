@@ -124,6 +124,8 @@ Non-mutating **read tools** run immediately. **State-changing tools** pass throu
 
 Actions requiring approval are not applied immediately. In the **in-app assistant** they are presented in chat as an **approval card**, executed only once the user approves. Through the **external MCP server** they come back as a `pending_approval` response (a queued confirmation_id) and only proceed once the user explicitly approves or rejects that id — either path, nothing changes if the user rejects.
 
+Approving on the web review page (`AI → MCP Servers → AI Requests & Advice`) **runs it there and then**. Previously approval only issued a permit: the person had to go back to the AI and tell it, and the AI had to call again — a round trip the AI could not close on its own, since a chat model only acts when spoken to. The server now executes using exactly the arguments stored with the confirmation, so what the approval screen showed and what runs cannot diverge. If the AI later calls again with the same confirmation_id it gets that stored result back instead of a second execution. Only irreversible physical control (valves, pumps) asks for one extra confirmation on the approval screen.
+
 ---
 
 ## Knowledge Library
