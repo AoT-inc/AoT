@@ -24105,6 +24105,29 @@ msgid ""
 "an emergency and move vents immediately."
 msgstr "室内温度がこの速度より速く変化している場合、そのサイクルを緊急とみなし換気窓を即座に動かします。"
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:236
+msgid "Close Vents When Ventilation Cannot Help"
+msgstr "換気で目標に届かないときは窓を閉じる"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:238
+msgid ""
+"Ventilation can only pull the inside toward the outside. When the target "
+"lies on the far side of the outdoor air, opening moves away from it no "
+"matter how wide — the classic case is dehumidifying at night, when outdoor "
+"air is wetter than indoor and every opening makes it worse. With this on, "
+"vents and exhaust/intake fans park closed in that situation instead of "
+"holding a partial opening all night. Safety gates (wind, rain, heat, cold) "
+"still override this and move vents as needed. Turn it off if you want vents "
+"to keep tracking the target even when the outdoor air cannot deliver it."
+msgstr ""
+"換気は室内を屋外の状態へ引き寄せることしかできません。目標が屋外空気の反対側に"
+"ある場合、どれだけ大きく開けても目標から遠ざかります。代表例が夜間の除湿で、"
+"屋外が室内より湿っている夜は開けるほど湿ります。この設定を有効にすると、"
+"そうした状況で換気窓と排気・給気ファンは中途半端に開いたまま夜を越さず、"
+"閉じた位置へ退避します。安全ゲート（強風・降雨・高温・低温）はこの設定より"
+"優先され、必要に応じて換気窓を動かします。屋外空気で目標を達成できない場合でも"
+"目標を追い続けさせたい場合は無効にしてください。"
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
 msgid "Growth Schedule"
 msgstr "生育スケジュール"

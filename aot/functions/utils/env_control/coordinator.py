@@ -15,14 +15,26 @@ Control law (P6 재설계 — position-form PI):
     drive   = -residual × effect_sign        # 액추에이터 자기 프레임의 부호 있는 오차
                                              #  ( + = 더 열어야 함, - = 닫아야 함 )
     e_norm  = drive / pband                   # 비례 밴드(=PBAND_MULT×tolerance)로 정규화
-    I       = clamp(I + ki·e_norm, 0, 100)    # 적분 = '평형 개도(%)' 기억, 항상 [0,100]
-    cmd     = clamp(kp·e_norm·100 + I, 0,100)  # P(전이) + I(평형 유지)
+    e_eff   = sign(e_norm)·max(0,|e_norm|-hb) # 데드존(hb=HOLD_FRAC/PBAND_MULT)을 '뺀' 유효오차
+    I       = clamp(I + ki·e_eff, 0, 100)     # 적분 = '평형 개도(%)' 기억, 항상 [0,100]
+    cmd     = clamp(kp·e_eff·100 + I, 0,100)  # P(전이) + I(평형 유지)
 
   성질:
-    - 평형/밴드 내 → e_norm≈0 → P≈0, I 유지 → 직전 개도 hold (진동 제거)
+    - 평형/밴드 내 → e_eff=0 → P=0, I 유지 → 직전 개도 hold (진동 제거)
     - 오버슈트(너무 차가움 등) → drive<0 → I 감소 → 점진적 폐쇄
     - "올림" 방향도 effect_sign 으로 대칭 처리 (기존 부호 버그 제거)
     - I 는 [0,100] 하드클램프 + back-calculation anti-windup (무한 와인드업 제거)
+
+  데드존을 '빼는' 이유 (2026-08-06 aot-005 야간 창호 진동):
+    이전 구현은 |e_norm|<hb 이면 cmd=I, 아니면 cmd=I+kp·e_norm·100 으로 **분기**했다.
+    경계에서 P항이 0 에서 kp·hb·100(=8.33%p, 부호 반전 시 16.7%p)으로 **계단 점프**해,
+    입력이 경계를 넘나들기만 하면 평형 상태에서도 명령이 그만큼 튄다. 그런데 경계를
+    넘나들게 하는 데는 실제 외란이 필요 없다 — 습도 센서 1% 눈금(≈0.028kPa)이
+    데드존 반폭(tolerance×HOLD_FRAC=0.05kPa)의 절반을 넘으므로 센서 최소 눈금
+    하나로 충분하다. 실측: 새벽 VPD 편차 0.00~0.05kPa(허용오차 이내)인데 천창 명령이
+    ±8/±16%p 로 계속 튀어 6시간 동안 12회 움직였다.
+    데드존을 빼면 경계에서 P항이 0 으로 **연속** 수렴해 이 계단이 사라진다. 밴드 밖
+    기울기(kp·100)는 그대로이고, 완전동작 도달점만 e_norm=1 → 1+hb 로 밀린다.
 
   integral 키 규약 변경: 변수별(native) → 액추에이터별(개도 %). 과거 var-키/범위
   밖 값은 coordinate() 진입 시 자동 폐기(마이그레이션)된다.
@@ -37,6 +49,7 @@ Reference: docs/dev/integrated_env_control_design.md §4
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -61,9 +74,26 @@ PBAND_MULT = 6.0     # 비례 밴드 폭 = PBAND_MULT × tolerance (native). 편
                      # (작게 할수록 민감/급격, 크게 할수록 완만). 평형개도는 적분이 찾음.
 POS_KP     = 1.0     # 비례 이득 (e_norm → 명령 %)
 POS_KI     = 0.2     # 적분 이득 (사이클당 e_norm 만큼 평형 개도 누적)
-HOLD_FRAC  = 0.5     # |residual| < tolerance×HOLD_FRAC → 평형 유지(적분 동결)
+HOLD_FRAC  = 0.5     # 데드존 반폭 = tolerance×HOLD_FRAC. 이 안에서는 P·I 모두 0 이라
+                     # 직전 평형 개도를 유지한다. 데드존은 '분기'가 아니라 유효오차에서
+                     # '빼는' 방식이라 경계에서 P항이 연속이다(모듈 docstring 참조).
 RELAX_FACTOR = 0.6   # 폐쇄해야 할 때(충돌·gradient 없음) 평형 개도 감쇠 비율
 AW_BETA    = 0.5     # back-calculation anti-windup 강도
+
+# ── 환기 무익 게이트 (사용자 옵션 vent_futility_gate) ─────────────────────────
+# 외기와 공기를 바꾸는 장치는 실내 상태를 **실외 상태 쪽으로**밖에 못 민다.
+# 목표가 실외의 반대쪽에 있으면 아무리 열어도 목표에 가까워질 수 없다 — 야간
+# 제습이 대표적이다(실외 노점이 실내보다 높으면 창을 열수록 더 습해진다).
+# G_MIN_EFFECT 는 '구동력 크기'만 보므로 이 경우를 못 걸러낸다: 면적이 큰 천창은
+# 방향이 반대라도 magnitude 가 커서 항상 문턱을 통과한다. 실측(2026-08-06 aot-005)
+# 에서 밤새 근거코드가 전부 PRIMARY 였고 창이 40~70% 열린 채 유지됐다.
+VENTILATING_KINDS = frozenset({'opening', 'exhaust_fan', 'intake_fan'})
+
+# 판정 문턱 — 잡음으로 게이트가 깜빡이지 않게 한다.
+#   need  : |목표-측정| 이 tolerance×VENT_NEED_FRAC 미만이면 '중립'(찬반 근거 아님)
+#   avail : |실외-측정| 이 tolerance 미만이면 환기로 의미 있게 못 옮긴다고 본다
+VENT_NEED_FRAC = HOLD_FRAC   # 데드존과 같은 기준 — 제어가 쉬는 구간은 판정도 쉰다
+
 G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 변수를 비례밴드의
                      # 2.5%/cycle 미만으로밖에 못 움직이면(예: 환기인데 내외차 거의 없음)
                      # 권한 없음으로 보고 idle — 헛돌며 적분 와인드업 하는 것 방지.
@@ -191,6 +221,22 @@ def coordinate(
         if authority and is_natural_var(authority, v)
     }
 
+    # ── 2.5. 환기 무익 판정 (사용자 옵션) ──────────────────────────────────────
+    # 실외 상태 도달성으로 "이 환기가 목표에 다가갈 수 있는가"를 먼저 본다.
+    # 무익이면 편차 비례로 조금씩 여는 대신 NO_GRADIENT 완화 경로로 보내 닫는다.
+    vent_gate_on = bool(ctx.get('vent_futility_gate', False))
+    futile_ids: set = set()
+    if vent_gate_on:
+        futile_ids = {
+            p.actuator_id for p in available
+            if getattr(p, 'kind', '') in VENTILATING_KINDS
+            and _ventilation_is_futile(p, situation, ctx)
+        }
+        if futile_ids:
+            logger.debug(
+                '환기 무익 — 실외 상태로는 목표에 못 감, %d개 파킹: %s',
+                len(futile_ids), sorted(i[:8] for i in futile_ids))
+
     # ── 3. Per-actuator position-form PI (다목적 결합 drive) ───────────────────
     # accumulated: 이미 확정된 명령들이 만든 효과(native). 부하분담에 사용.
     accumulated: Dict[str, float] = {var: 0.0 for var in situation.deviation_native}
@@ -241,8 +287,9 @@ def coordinate(
                 primary_score = score
                 primary_var = v
 
-        if den <= 1e-12 or max_g < G_MIN_EFFECT:
-            # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) → 안전 idle
+        if den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in futile_ids:
+            # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 환기 무익
+            # (구동력은 있으나 실외가 목표 반대쪽 — 2.5 참조) → 안전 idle
             # 위치(safe_default)로 부드럽게 수렴하고 적분을 풀어준다. 100% 가동해도
             # 효과 없는 액추에이터를 편차 비례로 켜 두면 성과 없이 작동시간만 늘고
             # 적분이 와인드업한다. safe_default 기준으로 감쇠하므로 개구부(sd=0)는
@@ -263,13 +310,18 @@ def coordinate(
             reason = REASON_NO_GRADIENT
         else:
             e_norm = num / den
-            if abs(e_norm) < HOLD_FRAC / PBAND_MULT:
+            # 데드존을 분기가 아니라 '빼기'로 적용한다 — 경계에서 P항이 0 으로
+            # 연속 수렴하므로 입력이 경계를 넘나들어도 명령 계단이 생기지 않는다.
+            # (분기 구현이 만들던 ±kp·hb·100 계단 = 야간 창호 진동의 직접 원인)
+            e_eff = math.copysign(
+                max(0.0, abs(e_norm) - HOLD_FRAC / PBAND_MULT), e_norm)
+            if e_eff == 0.0:
                 # 평형 근방(결합오차 작음) → 적분 동결, 직전 평형 개도 유지
                 cmd_raw = _clamp(I, 0.0, 100.0)
                 reason = REASON_PRIMARY
             else:
-                I = _clamp(I + ki * e_norm, 0.0, 100.0)
-                p_term = kp * e_norm * 100.0
+                I = _clamp(I + ki * e_eff, 0.0, 100.0)
+                p_term = kp * e_eff * 100.0
                 cmd_unclamped = p_term + I
                 cmd_raw = _clamp(cmd_unclamped, 0.0, 100.0)
                 # back-calculation anti-windup: 포화분만큼 적분을 되돌림
@@ -345,6 +397,66 @@ def _clamp(val: float, lo: float, hi: float) -> float:
 
 def _same_sign(a: float, b: float) -> bool:
     return (a > 0 and b > 0) or (a < 0 and b < 0)
+
+
+def _outdoor_reachable(var: str, ctx: Dict) -> Optional[float]:
+    """환기를 최대로 했을 때 실내 변수가 수렴하는 값(= 실외 값). 모르면 None.
+
+    환기는 실내 공기를 실외 공기로 바꾸는 것이므로, 도달 가능한 끝점은 실외
+    상태다. 그 사이 어디까지 갈지는 개도와 풍량이 정하지만, **어느 쪽 방향으로
+    갈 수 있는지**는 이 값 하나로 정해진다.
+    """
+    if var == 'temperature':
+        return ctx.get('T_ext')
+    if var == 'humidity':
+        return ctx.get('RH_ext')
+    if var == 'co2':
+        return ctx.get('CO2_ext')
+    if var == 'vpd':
+        T_e, RH_e = ctx.get('T_ext'), ctx.get('RH_ext')
+        if T_e is None or RH_e is None:
+            return None
+        svp = 0.6108 * math.exp(17.27 * float(T_e) / (float(T_e) + 237.3))
+        return svp * (1.0 - float(RH_e) / 100.0)
+    return None
+
+
+def _ventilation_is_futile(profile: ActuatorProfile,
+                           situation: SituationReport,
+                           ctx: Dict) -> bool:
+    """이 환기 장치가 **어떤 제어변수도** 목표 쪽으로 못 옮기는가.
+
+    변수마다 세 가지를 본다.
+      need  = 목표 - 측정        (+ 면 값을 올려야 함)
+      avail = 실외 - 측정        (환기로 갈 수 있는 방향과 여유)
+      부호가 같고 둘 다 문턱을 넘으면 그 변수는 '환기로 개선 가능'.
+
+    하나라도 개선 가능하면 무익이 아니다(False). 판단 근거가 될 만큼 벗어난
+    변수가 하나도 없으면(전부 중립) 역시 False — 이때는 평상시 hold 가 맞다.
+    실외값을 모르면 보수적으로 False(게이트 미발동).
+
+    deviation_native 는 '측정 - 목표' 규약이므로 need = -deviation 이다.
+    """
+    decisive = False
+    for var in profile.live_effect:
+        if var not in situation.deviation_native:
+            continue
+        t = situation.target.get(var)
+        if t is None or t.tolerance <= 0:
+            continue
+        dev = situation.deviation_native[var]      # 측정 - 목표
+        need = -dev
+        if abs(need) <= t.tolerance * VENT_NEED_FRAC:
+            continue                              # 중립 — 찬반 근거가 못 된다
+        reachable = _outdoor_reachable(var, ctx)
+        if reachable is None:
+            return False                          # 판정 불가 → 미발동
+        measured = t.value + dev
+        avail = float(reachable) - measured
+        decisive = True
+        if abs(avail) >= t.tolerance and _same_sign(need, avail):
+            return False                          # 하나라도 환기로 개선 가능
+    return decisive
 
 
 def _log_cmd(

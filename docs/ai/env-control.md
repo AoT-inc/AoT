@@ -94,6 +94,7 @@ regardless of this setting — see the emergency fields below.
 | Emergency Minimum Interval (seconds) | 60 | Even during an emergency, vents will not be re-commanded more often than this — prevents rapid back-to-back moves. |
 | Emergency Deviation Threshold (× tolerance) | 3.0 | If a variable deviates from its target by more than this many times its tolerance, treat the cycle as an emergency and move vents immediately (ignore the actuation period above). |
 | Emergency Rate Threshold (°C / 10min) | 2.0 | If indoor temperature is changing faster than this rate, treat the cycle as an emergency and move vents immediately. |
+| Close Vents When Ventilation Cannot Help | On | Ventilation can only pull the inside toward the outside. When the target lies on the far side of the outdoor air, opening moves away from it no matter how wide — the classic case is dehumidifying at night, when outdoor air is wetter than indoor. With this on, vents and exhaust/intake fans park closed in that situation instead of holding a partial opening all night. Applies whenever the outdoor air cannot deliver the target, not only at night. Safety gates and the temperature/humidity limits still override it. |
 
 ### Growth Schedule
 

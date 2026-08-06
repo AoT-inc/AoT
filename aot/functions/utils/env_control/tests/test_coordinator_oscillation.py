@@ -128,3 +128,77 @@ class TestClosedLoopStability:
         if settled_T <= 24.0:
             assert settled_ap < 50.0, \
                 f"과냉인데 개도가 닫히지 않음: T={settled_T:.2f}, ap={settled_ap:.1f}%"
+
+
+class TestDeadzoneContinuity:
+    """데드존 경계에서 P항이 연속인지 (2026-08-06 aot-005 야간 창호 진동).
+
+    데드존을 '분기'로 구현하면 경계에서 P항이 0 ↔ kp×HOLD_FRAC/PBAND_MULT×100
+    (=8.33%p) 로 계단 점프한다. 그러면 입력이 경계를 넘나들기만 해도 — 외란이
+    아니라 센서 최소 눈금만으로도 — 명령이 그만큼 튀어 창이 계속 움직인다.
+    데드존을 유효오차에서 '빼면' 경계에서 P항이 0 으로 연속 수렴한다.
+    """
+
+    TOL = 0.5          # tolerance → 데드존 반폭 = TOL × HOLD_FRAC = 0.25°C
+
+    def _aperture_at(self, dT, I0=40.0):
+        """편차 dT(°C)에서의 단일 사이클 명령. 적분은 I0 에 고정해 P항만 본다."""
+        target = {'temperature': TargetVar(value=24.0, tolerance=self.TOL,
+                                           priority=1.0)}
+        p = make_opening_profile('v1')
+        st = CoordinatorState()
+        st.integral['v1'] = I0
+        st.prev_commands['v1'] = I0
+        ctx = make_ctx(T_int=24.0 + dT, T_ext=20.0, RH_int=60.0, RH_ext=55.0)
+        report, _ = assess(target, ctx['internal'], ctx['external'],
+                           cycle_sec=60.0, now_ts=ctx['now_ts'])
+        cmds, _st = coordinate(report, [p], st)
+        return cmds['v1'].aperture
+
+    def test_no_step_at_deadzone_boundary(self):
+        """경계 직전(0.24)→직후(0.26) 0.02°C 변화에 명령이 계단으로 튀지 않는다."""
+        inside  = self._aperture_at(0.24)
+        outside = self._aperture_at(0.26)
+        step = abs(outside - inside)
+        # 구현 이전: 8.67%p 계단. 연속이면 입력 초과분(0.01°C)에 비례한 미소값.
+        assert step < 1.0, f"경계에서 명령 계단 발생: {inside:.2f} → {outside:.2f}"
+
+    def test_slope_preserved_outside_deadzone(self):
+        """데드존 밖에서는 비례 기울기(kp)가 그대로 살아 있다.
+
+        데드존을 빼면 P항 크기는 hb 만큼 일률적으로 줄지만 기울기는 불변이다.
+        진동을 잡느라 응답을 통째로 둔화시키지 않았음을 고정한다.
+        """
+        a1 = self._aperture_at(0.35)
+        a2 = self._aperture_at(0.50)
+        # pband = PBAND_MULT×TOL = 3.0 → 0.15°C 차이는 명령 5%p 에 해당
+        assert 4.5 < (a2 - a1) < 5.5, \
+            f"데드존 밖 비례 응답 소실: {a1:.2f} → {a2:.2f}"
+
+    def test_sensor_dither_across_boundary_does_not_move_actuator(self):
+        """경계를 넘나드는 센서 눈금 잡음이 창을 움직이지 못한다.
+
+        현장 재현: 실제 편차는 데드존 근방에서 정지해 있는데 센서 최소 눈금
+        하나가 경계를 넘나든다. 사이클 간 명령 변화가 모터 최소 작동폭
+        (move_step_pct 기본 5%p) 미만이어야 디스패치가 걸러낸다.
+        """
+        target = {'temperature': TargetVar(value=24.0, tolerance=self.TOL,
+                                           priority=1.0)}
+        p = make_opening_profile('v1')
+        st = CoordinatorState()
+        st.integral['v1'] = 40.0
+        st.prev_commands['v1'] = 40.0
+
+        apertures = []
+        for i in range(40):
+            dT = 0.24 if i % 2 == 0 else 0.26   # 경계(0.25) 를 넘나드는 디더
+            ctx = make_ctx(T_int=24.0 + dT, T_ext=20.0, RH_int=60.0, RH_ext=55.0)
+            report, _ = assess(target, ctx['internal'], ctx['external'],
+                               cycle_sec=60.0, now_ts=ctx['now_ts'])
+            cmds, st = coordinate(report, [p], st)
+            st.prev_commands['v1'] = cmds['v1'].aperture
+            apertures.append(cmds['v1'].aperture)
+
+        jumps = [abs(b - a) for a, b in zip(apertures[-20:], apertures[-19:])]
+        assert max(jumps) < 5.0, \
+            f"디더가 모터 최소 작동폭을 넘김: 최대 {max(jumps):.2f}%p"

@@ -6,7 +6,7 @@ _helpers_mixin.py — HelpersMixin: small per-cycle helpers.
 import json
 import time
 from datetime import datetime, timezone as _tz
-from typing import Any
+from typing import Any, Optional
 
 from aot.databases.models import Actions
 from aot.functions.utils.env_control import (
@@ -15,6 +15,32 @@ from aot.functions.utils.env_control import (
 )
 from aot.functions.utils.env_control.types import SituationReport
 from aot.utils.database import db_retrieve_table_daemon
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 실내 VPD 측정 잡음 필터 (2026-08-06 aot-005 야간 창호 진동)
+# ─────────────────────────────────────────────────────────────────────────────
+# VPD 는 센서가 직접 주는 값이 아니라 T·RH 에서 계산된다. 그래서 습도 센서의
+# 최소 눈금(정수 %) 하나가 그대로 VPD 계단이 된다 — 23°C/85% 에서 RH 1%
+# = 0.028kPa 로, 제어 허용오차(tolerance_vpd 기본 0.1kPa)의 28% 다. 외란이 전혀
+# 없는 새벽에도 RH 가 85↔86 을 오가는 것만으로 조율기 입력이 계속 흔들리고,
+# 그 흔들림이 개구부 명령에 실려 창이 밤새 움직였다(실측 6시간 12회).
+#
+# 대책: 지수이동평균으로 눈금 디더를 눌러 준다. 다만 순수 EMA 는 실제 전이
+# (일출 직후 VPD 급상승 등)까지 늦추므로, 필터값과 원값이 _VPD_EMA_SNAP 이상
+# 벌어지면 실제 전이로 보고 즉시 원값으로 붙는다. 덕분에 추종 지연은 항상
+# _VPD_EMA_SNAP 이하로 유한하게 묶인다.
+_VPD_EMA_ALPHA = 0.3    # 평활 계수. 시상수 ≈ (1-α)/α = 2.3 사이클
+_VPD_EMA_SNAP  = 0.10   # kPa. 이만큼 벌어지면 즉시 추종(지연 상한이기도 하다)
+
+
+def smooth_vpd(prev: Optional[float], raw: float,
+               alpha: float = _VPD_EMA_ALPHA,
+               snap: float = _VPD_EMA_SNAP) -> float:
+    """VPD 측정 EMA 한 스텝. prev=None(첫 샘플)이거나 snap 초과면 raw 를 그대로 쓴다."""
+    if prev is None or abs(raw - prev) >= snap:
+        return raw
+    return prev + alpha * (raw - prev)
 
 
 class HelpersMixin:
@@ -821,6 +847,29 @@ class HelpersMixin:
                     # 판별하는 플래그 — 실제 실내 센서가 있으면 이미 차광이
                     # 반영돼 있으므로 추정을 덧씌우면 이중 계산이 된다.
                     result['_light_is_outdoor'] = True
+
+        # ── VPD 측정 잡음 필터 ────────────────────────────────────────────────
+        # 조율기의 1차 제어변수라 센서 눈금 디더가 그대로 개구부 명령이 된다.
+        # 여기 한 곳에서 걸러 situation/coordinator/광합성/greybox 가 모두 같은
+        # 값을 보게 한다 (제어와 진단이 갈리면 로그로 원인을 못 찾는다).
+        # 측정이 없는 사이클은 상태를 갱신하지 않는다 — 센서 만료 뒤 복귀할 때
+        # 낡은 필터값이 새 측정값을 끌어당기지 않도록.
+        try:
+            _vpd_raw = result.get('VPD')
+            if _vpd_raw is not None:
+                _prev = getattr(self, '_vpd_ema', None)
+                if not isinstance(_prev, float):
+                    _prev = None   # 첫 샘플 / 재시작 직후
+                _vpd_ema = smooth_vpd(_prev, float(_vpd_raw))
+                self._vpd_ema = _vpd_ema
+                if abs(_vpd_ema - float(_vpd_raw)) > 1e-9 and getattr(
+                        self, 'debug_logging', False):
+                    self.logger.debug(
+                        'VPD 잡음필터: 원값 %.3f → %.3f kPa',
+                        float(_vpd_raw), _vpd_ema)
+                result['VPD'] = _vpd_ema
+        except (TypeError, ValueError):
+            pass   # 측정값이 숫자가 아니면 원값을 그대로 둔다
 
         return result
 

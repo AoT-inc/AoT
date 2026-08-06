@@ -47,3 +47,7 @@ jobs:
       # import 하지 않는다(설치 실패나 config 파손이 검사를 가리지 않도록).
       - name: Check revision chain and ALEMBIC_VERSION
         run: python3 aot/scripts/check_alembic_head.py
+
+      # TEMPORARY — ci-failure-issue.yml 전 구간 검증용. 다음 커밋에서 제거한다.
+      - name: 일부러 실패 (검증용)
+        run: exit 1

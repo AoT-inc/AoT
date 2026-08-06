@@ -273,9 +273,18 @@
 
     // Enter (or the hidden widget_mod submit) must not trigger a full-page POST;
     // changes already auto-save. Delete/Duplicate submits are left to default.
+    //
+    // layout_default.html's [data-aot-confirm] handler (for the delete/duplicate
+    // confirm dialog) submits this same form programmatically via $form.submit()
+    // after appending a hidden `widget_delete`/`widget_duplicate` input — that
+    // jQuery-triggered submit has no e.originalEvent, so submitter is unavailable.
+    // Fall back to checking the form itself for that hidden input.
     $(form).on('submit.livePreview', function (e) {
       var submitter = e.originalEvent && e.originalEvent.submitter;
-      var name = submitter ? submitter.getAttribute('name') : null;
+      var name = submitter ? submitter.getAttribute('name') :
+        ($(form).find('input[name="widget_delete"], input[name="widget_duplicate"]').length
+          ? $(form).find('input[name="widget_delete"], input[name="widget_duplicate"]').first().attr('name')
+          : null);
       if (name === 'widget_duplicate' || name === 'widget_delete') { return; }
       e.preventDefault();
       $(modal).modal('hide');

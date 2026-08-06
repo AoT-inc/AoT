@@ -228,6 +228,25 @@ FUNCTION_INFORMATION = {
                 'treat the cycle as an emergency and move vents immediately.'
             ),
         },
+        {
+            'id': 'vent_futility_gate',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Close Vents When Ventilation Cannot Help'),
+            'phrase': lazy_gettext(
+                'Ventilation can only pull the inside toward the outside. When '
+                'the target lies on the far side of the outdoor air, opening '
+                'moves away from it no matter how wide — the classic case is '
+                'dehumidifying at night, when outdoor air is wetter than indoor '
+                'and every opening makes it worse. With this on, vents and '
+                'exhaust/intake fans park closed in that situation instead of '
+                'holding a partial opening all night. Safety gates (wind, rain, '
+                'heat, cold) still override this and move vents as needed. Turn '
+                'it off if you want vents to keep tracking the target even when '
+                'the outdoor air cannot deliver it.'
+            ),
+        },
 
         # ── Growth Schedule ───────────────────────────────────────────────────
         {

@@ -770,6 +770,12 @@ class CycleMixin:
             light_sat=self.light_max if (self.light_max and self.light_max > 0) else None,
         )
 
+        # 환기 무익 게이트(사용자 옵션) — coordinator 가 ctx 에서 읽는다.
+        # ctx 경유인 이유는 coordinate() 시그니처를 늘리지 않기 위해서다
+        # (vent_open_frac 과 같은 방식).
+        situation.context['vent_futility_gate'] = bool(
+            getattr(self, 'vent_futility_gate', True))
+
         # 편차/모드/제한인자는 write_cycle_metrics(env_control, CH30~32·71·72)로 일원화 기록.
 
         # ── 구동주기: 이번 사이클이 긴급인지 판정 ─────────────────────────────

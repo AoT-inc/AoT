@@ -24298,6 +24298,29 @@ msgid ""
 "an emergency and move vents immediately."
 msgstr "실내 온도가 이 속도보다 빠르게 변하면 이번 사이클을 긴급으로 간주해 즉시 환기창을 움직입니다."
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:236
+msgid "Close Vents When Ventilation Cannot Help"
+msgstr "환기로 목표에 갈 수 없으면 창을 닫기"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:238
+msgid ""
+"Ventilation can only pull the inside toward the outside. When the target "
+"lies on the far side of the outdoor air, opening moves away from it no "
+"matter how wide — the classic case is dehumidifying at night, when outdoor "
+"air is wetter than indoor and every opening makes it worse. With this on, "
+"vents and exhaust/intake fans park closed in that situation instead of "
+"holding a partial opening all night. Safety gates (wind, rain, heat, cold) "
+"still override this and move vents as needed. Turn it off if you want vents "
+"to keep tracking the target even when the outdoor air cannot deliver it."
+msgstr ""
+"환기는 실내를 실외 쪽으로만 끌어당길 수 있습니다. 목표가 실외 공기의 반대편에 "
+"있으면 아무리 활짝 열어도 목표에서 멀어집니다 — 대표적인 경우가 야간 제습입니다. "
+"실외가 실내보다 습한 밤에는 창을 열수록 더 습해집니다. 이 설정을 켜면 그런 "
+"상황에서 환기창과 배기·흡기팬이 어중간하게 열린 채 밤을 보내지 않고 닫힘으로 "
+"물러납니다. 안전 게이트(강풍·강우·폭염·한파)는 이 설정보다 우선이라 필요할 때 "
+"환기창을 그대로 움직입니다. 실외 공기로 목표를 맞출 수 없더라도 계속 목표를 "
+"따라가게 하려면 끄십시오."
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
 msgid "Growth Schedule"
 msgstr "생육 일정"
