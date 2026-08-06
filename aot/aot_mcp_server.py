@@ -750,6 +750,11 @@ def main():
     app = create_app()
     logger.info(f"[AoTMCP] Flask app context initialized (install dir: {_INSTALL_DIR})")
 
+    # 이 프로세스는 외부 AI 전용이다. 등록하지 않으면 여기서 나가는 장치 명령이
+    # 출처 불명(unknown)으로 감사로그에 남아 진짜 우회 접근과 구분되지 않는다.
+    from aot.utils.command_origin import ROLE_MCP, set_process_role
+    set_process_role(ROLE_MCP)
+
     if args.http:
         _run_http_server(app, port=args.port)
     else:

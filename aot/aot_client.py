@@ -35,6 +35,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.realpath(__file__), '../..'
 
 from aot.config import PYRO_URI
 from aot.databases.models import SMTP, Misc
+from aot.utils.command_origin import resolve_origin
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.send_data import send_email as send_email_notification
 from aot.utils.widget_generate_html import generate_widget_html
@@ -223,8 +224,18 @@ class DaemonControl:
 
     def output_off(self, output_id, output_channel=None, trigger_conditionals=True):
         try:
-            return self.proxy().output_off(
-                output_id, output_channel=output_channel, trigger_conditionals=trigger_conditionals)
+            origin = resolve_origin()
+            try:
+                return self.proxy().output_off(
+                    output_id, output_channel=output_channel,
+                    trigger_conditionals=trigger_conditionals, origin=origin)
+            except TypeError:
+                # 구버전 데몬은 origin 인자를 모른다. 업그레이드 중 aotflask 가
+                # 먼저 올라온 창에서 제어가 막히면 안 되므로 인자 없이 재시도한다.
+                logger.warning("데몬이 origin 인자를 지원하지 않습니다 — 출처 없이 전송합니다")
+                return self.proxy().output_off(
+                    output_id, output_channel=output_channel,
+                    trigger_conditionals=trigger_conditionals)
         except Pyro5.errors.TimeoutError as err:
             msg = f"Output OFF timed out: {err}"
             logger.error(msg)
@@ -247,10 +258,18 @@ class DaemonControl:
                   trigger_conditionals=True,
                   additional_options=None):
         try:
-            return self.proxy().output_on(
-                output_id, output_type=output_type, amount=amount, min_off=min_off,
-                output_channel=output_channel, trigger_conditionals=trigger_conditionals,
-                additional_options=additional_options)
+            origin = resolve_origin()
+            try:
+                return self.proxy().output_on(
+                    output_id, output_type=output_type, amount=amount, min_off=min_off,
+                    output_channel=output_channel, trigger_conditionals=trigger_conditionals,
+                    additional_options=additional_options, origin=origin)
+            except TypeError:
+                logger.warning("데몬이 origin 인자를 지원하지 않습니다 — 출처 없이 전송합니다")
+                return self.proxy().output_on(
+                    output_id, output_type=output_type, amount=amount, min_off=min_off,
+                    output_channel=output_channel, trigger_conditionals=trigger_conditionals,
+                    additional_options=additional_options)
         except Pyro5.errors.TimeoutError as err:
             msg = f"Output ON timed out: {err}"
             logger.error(msg)

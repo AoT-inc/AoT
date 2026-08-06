@@ -30,6 +30,7 @@ sys.path.append(
 import argparse
 import logging
 import resource
+import signal
 import threading
 import timeit
 import traceback
@@ -58,6 +59,8 @@ from aot.utils.actions import (get_condition_value,
                                   get_condition_value_dict,
                                   parse_action_information, trigger_action,
                                   trigger_controller_actions)
+from aot.utils import output_audit
+from aot.utils.command_origin import ROLE_DAEMON, set_process_role
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.github_release_info import AoTRelease
 from aot.utils.stats import (add_update_csv, recreate_stat_file,
@@ -128,6 +131,12 @@ class DaemonController:
         self.logger = logger
         time.sleep(5)  # Wait for UI to finish migrations
         self.flask_app = create_app()
+
+        # 이 프로세스가 데몬임을 등록한다. 이게 없으면 데몬 내부의 자동화 명령
+        # (PID·bang_bang·env_coordinator 등, 실행 컨텍스트를 안 심는 경로)이
+        # 출처 `unknown` 으로 분류돼 감사로그를 채우고 가짜 우회 경보를 낸다.
+        set_process_role(ROLE_DAEMON)
+        output_audit.start_writer(self.flask_app)
 
         self.logger.info(f"AoT daemon v{AOT_VERSION} starting")
 
@@ -859,7 +868,8 @@ class DaemonController:
         except Exception:
             self.logger.exception("Could not refresh trigger settings")
 
-    def output_off(self, output_id, output_channel=None, trigger_conditionals=True):
+    def output_off(self, output_id, output_channel=None, trigger_conditionals=True,
+                   origin=None):
         """
         Turn output off using default output controller
 
@@ -869,13 +879,17 @@ class DaemonController:
         :type output_channel: int
         :param trigger_conditionals: Whether to trigger output conditionals or not
         :type trigger_conditionals: bool
+        :param origin: 명령 출처 dict (aot/utils/command_origin.py). 호출자
+            스레드에서 이미 확정돼 넘어온 값이라 스레드 경계와 무관하다.
+        :type origin: dict
         """
         try:
             return self.controller['Output'].output_on_off(
                 output_id,
                 'off',
                 output_channel=output_channel,
-                trigger_conditionals=trigger_conditionals)
+                trigger_conditionals=trigger_conditionals,
+                origin=origin)
         except Exception as except_msg:
             message = f"Could not turn output off: {except_msg}"
             self.logger.exception(message)
@@ -888,7 +902,8 @@ class DaemonController:
                   amount=0.0,
                   min_off=0.0,
                   trigger_conditionals=True,
-                  additional_options=None):
+                  additional_options=None,
+                  origin=None):
         """
         Turn output on using default output controller
 
@@ -918,7 +933,8 @@ class DaemonController:
                     amount=amount,
                     min_off=min_off,
                     trigger_conditionals=trigger_conditionals,
-                    additional_options=additional_options)
+                    additional_options=additional_options,
+                    origin=origin)
         except Exception as except_msg:
             message = f"Could not turn output on: {except_msg}"
             self.logger.exception(message)
@@ -1142,6 +1158,14 @@ class DaemonController:
             self.logger.info("Output controller stopped")
         except Exception as err:
             self.logger.info(f"Output controller had an issue stopping: {err}")
+
+        # Output 정지가 각 장치에 Shutdown State 를 내보낸 직후다. 그 기록이 큐에
+        # 남은 채로 프로세스가 죽으면 "종료가 장치를 껐다"는 사실이 사라지므로
+        # 여기서 동기로 마저 쓴다.
+        try:
+            output_audit.stop_writer()
+        except Exception as err:
+            self.logger.info(f"감사 writer 종료 중 문제: {err}")
 
         try:
             self.controller['Widget'].stop_controller()
@@ -1492,7 +1516,8 @@ class PyroServer(object):
                   min_off=0.0,
                   output_channel=None,
                   trigger_conditionals=True,
-                  additional_options=None):
+                  additional_options=None,
+                  origin=None):
         """Turns output on from the client."""
         return self.aot.output_on(
             output_id,
@@ -1501,12 +1526,15 @@ class PyroServer(object):
             amount=amount,
             min_off=min_off,
             trigger_conditionals=trigger_conditionals,
-            additional_options=additional_options)
+            additional_options=additional_options,
+            origin=origin)
 
-    def output_off(self, output_id, output_channel=None, trigger_conditionals=True):
+    def output_off(self, output_id, output_channel=None, trigger_conditionals=True,
+                   origin=None):
         """Turns output off from the client."""
         return self.aot.output_off(
-            output_id, output_channel=output_channel, trigger_conditionals=trigger_conditionals)
+            output_id, output_channel=output_channel,
+            trigger_conditionals=trigger_conditionals, origin=origin)
 
     def output_sec_currently_on(self, output_id, output_channel=None):
         """Turns the amount of time a output has already been on."""
@@ -1751,5 +1779,30 @@ if __name__ == '__main__':
         _h.setLevel(log_level)
 
     daemon_controller = DaemonController()
+
+    # SIGTERM/SIGINT 을 systemd 의 ExecStop 과 같은 경로로 보낸다.
+    #
+    # 네이티브 설치는 `install/aot.service` 의
+    # `ExecStop=... aot_client.py -t`(terminate_daemon RPC)로 정상 종료 절차를
+    # 타지만, Docker 배포에는 ExecStop 개념이 없어 `docker stop` 이 곧바로
+    # SIGTERM 이었다. 핸들러가 없으니 프로세스가 그냥 죽어 각 Output 의
+    # Shutdown State 가 **전송되지 않았다** — 사용자가 "종료 시 끄기" 로 설정해도
+    # 컨테이너 재시작에서는 안 꺼졌다는 뜻이다. 설정과 실제 동작을 맞춘다.
+    #
+    # 여기서는 플래그만 내린다. run() 이 메인 스레드에서 돌고 있으므로 루프가
+    # 다음 회차에 빠져나가 stop_all_controllers() → 각 Output 의 Shutdown State
+    # → 감사 flush 까지 정상 순서로 진행한다. 신호 핸들러 안에서 블로킹하면
+    # 그 절차를 오히려 방해한다.
+    def _graceful_stop(signum, _frame):
+        if not daemon_controller.daemon_run:
+            logger.info(f"신호 {signum} 재수신 — 이미 종료 중입니다")
+            return
+        logger.info(f"신호 {signum} 수신 — 정상 종료 절차를 시작합니다")
+        daemon_controller.thread_shutdown_timer = timeit.default_timer()
+        daemon_controller.daemon_run = False
+
+    signal.signal(signal.SIGTERM, _graceful_stop)
+    signal.signal(signal.SIGINT, _graceful_stop)
+
     aot_daemon = AoTDaemon(daemon_controller)
     aot_daemon.start_daemon()

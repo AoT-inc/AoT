@@ -65,6 +65,9 @@ services:
   aot_daemon:
     image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
     command: python aot/aot_daemon.py
+    # SIGTERM 후 Shutdown State 전송 + 감사 flush 가 끝날 시간을 준다.
+    # 기본 10초면 절차가 SIGKILL 로 잘린다 (docker-compose.yml 주석 참고).
+    stop_grace_period: 180s
     volumes:
       # Same named volume as aot-app: daemon and UI must open the SAME aot.db.
       - aot_data:/app/aot_local

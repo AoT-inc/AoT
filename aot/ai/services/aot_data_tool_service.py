@@ -8,6 +8,9 @@ from aot.aot_flask.extensions import db
 from aot.databases.models import Input, Output, Camera, GeoShape, GeoLayer, DeviceMeasurements, Conversion, EnergyUsage, Misc, Notes, AITask
 from aot.ai.services.ai_context_service import AIContextService
 from aot.ai.services.ai_action_service import AIActionService
+from aot.utils.command_origin import TYPE_AI
+from aot.utils.execution_context import (clear_execution_context,
+                                         set_execution_context)
 from aot.utils.influx import read_influxdb_list
 from aot.utils.tools import return_energy_usage
 from aot.utils.system_pi import return_measurement_info
@@ -867,23 +870,33 @@ class AoTDataToolService:
             from aot.aot_client import DaemonControl
             daemon = DaemonControl()
 
-            if state in ('on', 'open'):
-                out_err, out_msg = daemon.output_on_off(
-                    resolved_uid, 'on', output_type='sec', amount=duration,
-                    output_channel=output_channel
-                )
-            elif state in ('off', 'close'):
-                out_err, out_msg = daemon.output_on_off(
-                    resolved_uid, 'off', output_type='sec', amount=0,
-                    output_channel=output_channel
-                )
-            elif state == 'set_value':
-                out_err, out_msg = daemon.output_on_off(
-                    resolved_uid, 'on', output_type='value', amount=duration,
-                    output_channel=output_channel
-                )
-            else:
-                return {"error": f"Unsupported state: {state}"}
+            # AI 가 낸 명령임을 명시한다. 이 도구는 웹 요청 문맥 안에서도(사용자가
+            # AI 에게 시킨 경우) MCP 서버 프로세스에서도 불린다. 표시가 없으면
+            # 앞은 사람이 직접 누른 것과 구분되지 않고, 뒤는 출처 불명(unknown)으로
+            # 남아 우회 접근 탐지 신호를 흐린다. override 라 요청 문맥보다 우선한다.
+            set_execution_context(
+                source_type=TYPE_AI,
+                source_id=kwargs.get('agent_id') or 'operate_device')
+            try:
+                if state in ('on', 'open'):
+                    out_err, out_msg = daemon.output_on_off(
+                        resolved_uid, 'on', output_type='sec', amount=duration,
+                        output_channel=output_channel
+                    )
+                elif state in ('off', 'close'):
+                    out_err, out_msg = daemon.output_on_off(
+                        resolved_uid, 'off', output_type='sec', amount=0,
+                        output_channel=output_channel
+                    )
+                elif state == 'set_value':
+                    out_err, out_msg = daemon.output_on_off(
+                        resolved_uid, 'on', output_type='value', amount=duration,
+                        output_channel=output_channel
+                    )
+                else:
+                    return {"error": f"Unsupported state: {state}"}
+            finally:
+                clear_execution_context()
 
             if out_err:
                 logger.error(f"[operate_device_tool] Daemon error: {out_msg}")

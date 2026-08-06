@@ -15,6 +15,13 @@ import timeit
 import Pyro5
 
 from aot.controllers.abstract_base_controller import AbstractBaseController
+from aot.utils.execution_context import set_thread_default
+
+
+def _controller_kind(class_name):
+    """'PIDController' -> 'pid'. 출처 표기에 쓰는 짧은 종류 이름."""
+    name = class_name[:-len('Controller')] if class_name.endswith('Controller') else class_name
+    return name.lower() or 'controller'
 
 
 class AbstractController(AbstractBaseController):
@@ -72,6 +79,17 @@ class AbstractController(AbstractBaseController):
 
     def run(self):
         """Execute the controller lifecycle: initialize, loop, and finalize."""
+        # 이 스레드가 대표하는 주체를 한 번 등록한다. 컨트롤러는 각자 자기
+        # 스레드에서 돌고, 장치 명령은 그 스레드에서 DaemonControl 로 나가므로
+        # 여기 한 줄이면 PID·Function·env_coordinator 등 44곳의 호출부를 건드리지
+        # 않고도 "어느 자동화가 명령했나" 가 감사·InfluxDB 양쪽에 채워진다.
+        try:
+            set_thread_default(
+                source_type=_controller_kind(type(self).__name__),
+                source_id=self.unique_id)
+        except Exception:
+            pass  # 출처 표기 실패가 컨트롤러 기동을 막지 않는다
+
         try:
             try:
                 self.initialize_variables()

@@ -32,7 +32,11 @@ from aot.databases.models import Misc
 from aot.databases.models import Output
 from aot.databases.models import SMTP
 from aot.aot_client import DaemonControl
+from aot.utils import output_audit
+from aot.utils.command_origin import TYPE_LIFECYCLE, should_audit
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.execution_context import clear_execution_context
+from aot.utils.execution_context import set_execution_context
 from aot.utils.modules import load_module_from_file
 from aot.utils.outputs import output_types
 from aot.utils.outputs import parse_output_information
@@ -121,6 +125,10 @@ class OutputController(AbstractController, threading.Thread):
         # Turn all outputs to their shutdown state
         for each_output_id in self.output_unique_id:
             shutdown_timer = timeit.default_timer()
+            # 종료 상태 전송도 게이트를 안 지난다. shutdown() 이 드라이버를 정리해
+            # 옵션을 못 읽게 되므로 반드시 **먼저** 기록한다.
+            self._audit_lifecycle(
+                each_output_id, 'state_shutdown', 'daemon_shutdown')
             # instruct each output to shut down
             self.output[each_output_id].shutdown(shutdown_timer)
 
@@ -163,6 +171,9 @@ class OutputController(AbstractController, threading.Thread):
                     if output_loaded:
                         self.output[each_output.unique_id] = output_loaded.OutputModule(each_output)
                         self.output[each_output.unique_id].try_initialize()
+                        # 기동 상태 전송은 게이트를 안 지난다 — 여기서만 남는다.
+                        self._audit_lifecycle(
+                            each_output.unique_id, 'state_startup', 'daemon_startup')
                         self.output[each_output.unique_id].init_post()
 
                 self.logger.debug(f"{each_output.unique_id.split('-')[0]} ({each_output.name}) Initialized")
@@ -288,6 +299,11 @@ class OutputController(AbstractController, threading.Thread):
                 pass
             else:
                 try:
+                    # 삭제 경로의 종료 상태 전송은 일부러 억제하지 않는다(장치를
+                    # 지우기 전에 shutdown 상태로 보내는 건 의미 있는 동작이다).
+                    # 그러니 실제로 나가는 만큼 기록도 남겨야 한다.
+                    self._audit_lifecycle(
+                        output_id, 'state_shutdown', 'output_delete')
                     self.output[output_id].shutdown(shutdown_timer)
                 except Exception as err:
                     self.logger.error(f"Could not shut down output gracefully: {err}")
@@ -310,10 +326,17 @@ class OutputController(AbstractController, threading.Thread):
                       amount=0.0,
                       min_off=0.0,
                       trigger_conditionals=True,
-                      additional_options=None):
+                      additional_options=None,
+                      origin=None):
         """
         Manipulate an output by passing on/off, a volume, or a PWM duty cycle
         to the output module.
+
+        **이 메서드가 모든 Output 명령의 단일 게이트다.** on 이든 off 든, 웹 UI 든
+        Function 이든 AI 든 드라이버든, 전부 여기로 수렴한다 (`aot_daemon.py` 의
+        `output_on`/`output_off` 둘 다 이걸 부른다). 그래서 "누가 이 장치를 켰나" 에
+        답할 기록도 여기 한 곳에서만 남긴다 — 라우트마다 감사로그를 심으면 새 경로가
+        생길 때마다 조용히 빠진다.
 
         :param output_id: ID for output
         :type output_id: str
@@ -333,6 +356,8 @@ class OutputController(AbstractController, threading.Thread):
         if output_id not in self.output:
             msg = f"Output {output_id} not found"
             self.logger.error(msg)
+            self._audit_command(output_id, state, output_channel, output_type,
+                                amount, origin, result='failure')
             return 1, msg
 
         # # TODO: Unimplemented until speed of current_amp_load() execution can be tested
@@ -355,14 +380,93 @@ class OutputController(AbstractController, threading.Thread):
         #         self.logger.warning(msg)
         #         return 1, msg
 
-        return self.output[output_id].output_on_off(
-            state,
-            output_channel=output_channel,
-            output_type=output_type,
-            amount=amount,
-            min_off=min_off,
-            trigger_conditionals=trigger_conditionals,
-            additional_options=additional_options)
+        # 실행 컨텍스트는 **이 스레드에서** 심어야 한다. 예전에는 호출자(Trigger 등)가
+        # 자기 스레드에 심었는데, 명령이 Pyro5 RPC 를 타고 워커 스레드로 넘어오면서
+        # thread-local 이 통째로 유실됐다 — 그래서 InfluxDB 의 source_type 태그가
+        # 30일 내내 한 건도 안 찍혔다. origin 은 이제 인자로 넘어오므로 여기서 다시
+        # 심으면 base_output 의 get_extra_tags() 가 제 값을 본다.
+        origin = origin or {}
+        set_execution_context(
+            source_type=origin.get('type'), source_id=origin.get('id'))
+        try:
+            ret = self.output[output_id].output_on_off(
+                state,
+                output_channel=output_channel,
+                output_type=output_type,
+                amount=amount,
+                min_off=min_off,
+                trigger_conditionals=trigger_conditionals,
+                additional_options=additional_options)
+        finally:
+            # 워커 스레드는 재사용된다. 안 지우면 다음 명령이 엉뚱한 행위자를
+            # 뒤집어쓴다 — 틀린 귀속은 기록이 없는 것보다 나쁘다.
+            clear_execution_context()
+
+        failed = bool(ret[0]) if isinstance(ret, (tuple, list)) and ret else False
+        self._audit_command(output_id, state, output_channel, output_type, amount,
+                            origin, result='failure' if failed else 'success')
+        return ret
+
+    def _audit_command(self, output_id, state, output_channel, output_type,
+                       amount, origin, result):
+        """감사 큐에 한 건 적재. 논블로킹이고 절대 예외를 올리지 않는다.
+
+        자동화(PID·env_coordinator 등)는 주기마다 명령하므로 관계형 감사로그에
+        넣지 않는다 — 사람/API/AI/불명만 남기고 나머지는 InfluxDB 태그로 추적한다.
+        """
+        try:
+            if not should_audit(origin):
+                return
+            driver = self.output.get(output_id)
+            output_audit.record({
+                'output_id': output_id,
+                'output_name': getattr(driver, 'output_name', None),
+                'channel': output_channel,
+                'state': state,
+                'output_type': output_type,
+                'amount': amount,
+                'origin': origin or {},
+                'ip_address': (origin or {}).get('ip'),
+                'result': result,
+            })
+        except Exception:
+            self.logger.debug("Output 감사 적재 실패", exc_info=True)
+
+    def _audit_lifecycle(self, output_id, option_id, phase):
+        """드라이버 생명주기 상태 전송을 감사에 남긴다.
+
+        **이 경로는 제어 게이트를 지나지 않는다.** 기동·종료·삭제 때 드라이버의
+        `initialize()`/`stop_output()` 이 하드웨어를 직접 건드리기 때문이다 — 예를
+        들어 `on_off_gpio` 는 `initialize()` 안에서 `GPIO.output()` 을 그냥 호출한다.
+        그래서 여기서 따로 남기지 않으면 물리 상태가 바뀐 기록이 아무 데도 없고,
+        "아무도 안 켰는데 켜져 있다" 가 그대로 재현된다.
+
+        `suppress_state_transition()` 이 None 으로 만든 채널과 '-1'(아무것도 안 함)은
+        실제 전송이 없으므로 건너뛴다 — 모든 드라이버가 0/1 이외 값을 무시한다는
+        공통 규약을 그대로 따른다.
+        """
+        try:
+            instance = self.output.get(output_id)
+            channel_options = dict(instance.options_channels[option_id])
+        except Exception:
+            return  # 해당 옵션이 없는 모듈 — 내보낼 상태가 없다
+        for channel, value in channel_options.items():
+            if value is None or value not in (0, 1, True, False, '0', '1'):
+                continue
+            try:
+                output_audit.record({
+                    'output_id': output_id,
+                    'output_name': getattr(instance, 'output_name', None),
+                    'channel': channel,
+                    'state': 'on' if value in (1, True, '1') else 'off',
+                    'output_type': option_id,
+                    'amount': None,
+                    'origin': {'type': TYPE_LIFECYCLE, 'id': phase, 'name': phase},
+                    'ip_address': None,
+                    'result': 'success',
+                })
+            except Exception:
+                self.logger.debug("생명주기 감사 적재 실패", exc_info=True)
 
     def output_setup(self, action, output_id):
         """Add, delete, or modify a specific output.

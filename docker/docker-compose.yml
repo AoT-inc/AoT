@@ -130,6 +130,13 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     command: python aot/aot_daemon.py
+    # 데몬은 SIGTERM 을 받으면 각 Output 의 Shutdown State 를 내보내고 감사
+    # 기록을 flush 한 뒤 끝난다(aot_daemon.py 의 _graceful_stop). 기본 10초로는
+    # 그 절차가 중간에 SIGKILL 로 잘려 장치가 어정쩡한 상태로 남는다 —
+    # LoRaWAN 은 다운링크 한 건이 사이트 전역 4초 슬롯을 기다리므로 특히 길다.
+    # 네이티브 설치의 aot.service 는 TimeoutSec=0(무제한)이고, 여기서는 무제한을
+    # 줄 수 없어 넉넉한 상한으로 맞춘다.
+    stop_grace_period: 180s
     volumes:
       - ../:/app
       - ../logs:/var/log/aot
