@@ -356,6 +356,25 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
                 "message": (f"This confirmation was issued for '{row.tool_name}' and "
                             f"cannot be used to run '{tool_name}'."),
             }
+        # 승인 시점에 서버가 이미 실행을 끝낸 건(p6_26). 재실행하지 않고 그때의
+        # 결과를 그대로 돌려준다 — 사람이 승인 버튼을 누른 것으로 이미 끝났고,
+        # 여기서 한 번 더 돌리면 밸브가 두 번 열린다. 이 재생 경로 덕분에 예전
+        # 방식대로 재호출하는 클라이언트도 고치지 않고 계속 동작한다.
+        if row.status in ('executed', 'failed'):
+            try:
+                stored = json.loads(row.result_json or '{}')
+            except Exception:
+                stored = {}
+            return {
+                "status": "already_executed",
+                "reason_code": "executed_on_approval",
+                "confirmation_id": row.unique_id,
+                "executed_at_approval": True,
+                "result": stored,
+                "message": ("This was already carried out when the user approved it. "
+                            "The result is included here — report it as the outcome "
+                            "and do NOT call the tool again."),
+            }
         if row.status == 'consumed':
             return {
                 "status": "refused",
@@ -583,6 +602,69 @@ def _decide(confirmation_id, status, user_id=None):
         logger.exception('[MCPGate] 감사 로그 상태 갱신 실패')
 
     return {"status": "success", "confirmation_id": confirmation_id, "new_status": status}
+
+
+#: 승인 화면에서 한 번 더 확인을 받는 도구 — 되돌릴 수 없는 물리 동작.
+#: 설정 변경은 승인 한 번으로 끝내고, 밸브·펌프가 실제로 움직이는 것만 재확인한다.
+PHYSICAL_TOOLS = frozenset({'operate_device', 'set_output_state', 'schedule_device_control'})
+
+
+def execute_approved(confirmation_id, role=None):
+    """승인된 요청을 서버가 직접 실행하고 결과를 레코드에 남긴다.
+
+    승인이 "실행 허가증"이던 시절에는 사람이 승인 버튼을 눌러도 아무 일이
+    없었고, 그 사람이 채팅으로 돌아가 AI 에게 알려줘야 AI 가 재호출해서 비로소
+    실행됐다. 챗 모델은 사람이 말을 걸어야만 움직이므로 그 왕복은 설계상
+    피할 수 없었다 — 그래서 실행 주체를 서버로 옮긴다.
+
+    저장해둔 인자(params_json)로만 실행하므로 승인 화면에 표시된 것과 실제
+    실행되는 것이 어긋날 수 없다. 인자 대조 단계가 아예 필요 없어진다.
+
+    Returns: (status, result_dict) — status 는 'executed' 또는 'failed'.
+    """
+    import json as _json
+    from aot.databases.models import MCPConfirmation
+
+    row = MCPConfirmation.query.filter_by(unique_id=confirmation_id).first()
+    if row is None:
+        return 'failed', {"status": "error", "message": "confirmation not found"}
+
+    try:
+        params = _json.loads(row.params_json or '{}')
+    except Exception:
+        params = {}
+
+    try:
+        # 실행 자체는 MCP 서버의 디스패치를 그대로 쓴다. 여기서 같은 로직을 다시
+        # 구현하면(핸들러 시그니처에 맞춘 메타키 제거 등) 두 벌이 서로 어긋난다.
+        from aot.aot_mcp_server import _dispatch_virtual_tool, _NATIVE_TOOLS
+
+        call_args = inject_agent(row.tool_name, strip_meta(params), row.agent_id)
+        if row.tool_name in _NATIVE_TOOLS:
+            from aot.ai.services.aot_native_tool_engine import AoTNativeToolEngine
+            result = AoTNativeToolEngine.execute(row.tool_name, call_args)
+        else:
+            result = _dispatch_virtual_tool(row.tool_name, call_args)
+        status = 'executed'
+    except Exception as exc:
+        logger.exception('[MCPGate] 승인 즉시 실행 실패 tool=%s confirmation=%s',
+                         row.tool_name, confirmation_id)
+        result = {"status": "error", "message": str(exc)}
+        status = 'failed'
+
+    if not isinstance(result, dict):
+        result = {"result": result}
+
+    row.status = status
+    try:
+        row.result_json = _json.dumps(result, ensure_ascii=False, default=str)
+    except Exception:
+        row.result_json = _json.dumps({"status": status})
+    row.save()
+
+    logger.info('[MCPGate] 승인 즉시 실행 tool=%s confirmation=%s -> %s',
+                row.tool_name, confirmation_id, status)
+    return status, result
 
 
 def approve(confirmation_id, user_id=None):

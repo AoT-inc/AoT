@@ -242,7 +242,11 @@ def mcp_server_restart(server_id):
 def mcp_review_page():
     """승인 대기 + 의견 원장 + 감사 로그를 한 화면에서 처리하는 페이지."""
     from flask import render_template
-    return render_template('pages/ai/mcp_review.html', active_page='mcp_servers')
+    from aot.ai.services import mcp_safety_gate as gate
+    # 물리 제어 목록은 게이트가 정본이다. 화면에 하드코딩하면 도구가 늘 때
+    # 조용히 어긋나고, 그 어긋남이 곧 "확인 없이 밸브가 열리는" 상태가 된다.
+    return render_template('pages/ai/mcp_review.html', active_page='mcp_servers',
+                           physical_tools=sorted(gate.PHYSICAL_TOOLS))
 
 
 @blueprint.route('/confirmations', methods=['GET'])
@@ -260,12 +264,30 @@ def mcp_confirmations_list():
 @blueprint.route('/confirmations/<confirmation_id>/approve', methods=['POST'])
 @flask_login.login_required
 def mcp_confirmation_approve(confirmation_id):
-    """대기 중인 요청을 승인. 외부 AI가 같은 인자로 재호출하면 1회 실행된다."""
+    """대기 중인 요청을 승인하고 **그 자리에서 실행**한다.
+
+    예전에는 승인이 실행 허가증일 뿐이어서, 사람이 승인 버튼을 누른 뒤 채팅으로
+    돌아가 AI 에게 알려줘야 AI 가 재호출해 실행됐다(승인 후 5분 안에). 농가가
+    한 마디 시킨 것을 반영하는 데 앱 전환 두 번이 필요했고, 승인해도 끝이 아니라는
+    점이 특히 혼란스러웠다. 이제 승인이 곧 실행이다.
+
+    실행은 저장해둔 인자로만 하므로 승인 화면에 보인 것과 실제 실행이 어긋나지
+    않는다. 나중에 AI 가 _confirmation_id 로 재호출하면 재실행 없이 저장된 결과가
+    돌아간다(mcp_safety_gate.gate 의 executed 분기).
+    """
     from aot.ai.services import mcp_safety_gate as gate
     try:
         user_id = getattr(flask_login.current_user, 'unique_id', None)
         result = gate.approve(confirmation_id, user_id=user_id)
-        return jsonify(result), (200 if result.get('status') == 'success' else 400)
+        if result.get('status') != 'success':
+            return jsonify(result), 400
+
+        exec_status, exec_result = gate.execute_approved(confirmation_id)
+        result['executed'] = (exec_status == 'executed')
+        result['execution'] = exec_result
+        # 실행이 실패해도 승인 자체는 처리된 것이므로 200 으로 돌려주고, 화면이
+        # 실패 사유를 그대로 보여준다. 400 으로 만들면 "승인이 안 됐다"로 오인된다.
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"MCP confirmation approve failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500

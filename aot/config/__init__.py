@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_25_measurement_battery_type_20260804'
+ALEMBIC_VERSION = 'p6_26_mcp_confirmation_result_20260807'
 AOT_VERSION = '26.08.2'
 
 # FORCE UPGRADE MASTER

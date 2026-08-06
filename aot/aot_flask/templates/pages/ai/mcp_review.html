@@ -22,7 +22,7 @@
     <!-- 실행 승인 대기 -->
     <h5 class="mt-4">{{ _('Control requests awaiting approval') }}</h5>
     <p class="aot-modal-body-text">
-        {{ _('These have NOT been executed. Approving lets the requesting AI run it once with the same arguments.') }}
+        {{ _('These have NOT been executed. Approving runs it immediately with exactly the arguments shown — you do not need to go back to the AI and tell it.') }}
     </p>
     <div id="pending-list"><p class="aot-modal-body-text">{{ _('Loading...') }}</p></div>
 
@@ -59,8 +59,13 @@
         rationale: {{ _('Rationale')|tojson }},
         proposed: {{ _('Proposed action')|tojson }},
         failed: {{ _('Request failed')|tojson }},
-        confirm_approve: {{ _('Approve this control request? The AI will be able to execute it once.')|tojson }}
+        confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
+        executed: {{ _('Approved and carried out.')|tojson }},
+        exec_failed: {{ _('Approved, but it failed to run')|tojson }}
     };
+    // 되돌릴 수 없는 물리 동작만 한 번 더 확인한다. 설정 변경까지 매번 물으면
+    // 확인창이 의미 없는 클릭으로 전락해 정작 중요한 순간에도 그냥 눌리게 된다.
+    var PHYSICAL_TOOLS = {{ physical_tools|tojson }};
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -68,11 +73,12 @@
         });
     }
 
-    function post(url, done) {
+    function post(url, done, onData) {
         fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(function (r) { return r.json().catch(function () { return {}; }); })
             .then(function (d) {
                 if (d && d.status === 'error') { alert(T.failed + ': ' + (d.message || '')); }
+                else if (onData) { onData(d); }
                 done();
             })
             .catch(function (e) { alert(T.failed + ': ' + e); done(); });
@@ -102,7 +108,7 @@
                 + '<details><summary class="aot-modal-body-text">raw params</summary>'
                 + '<pre class="aot-modal-body-text" style="white-space:pre-wrap;">' + esc(JSON.stringify(r.params, null, 2)) + '</pre></details>'
                 + '<div class="d-flex mt-2" style="gap:8px;">'
-                + '<button class="btn aot-pill-btn" data-approve="' + esc(r.confirmation_id) + '">' + esc(T.approve) + '</button>'
+                + '<button class="btn aot-pill-btn" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
                 + '<button class="btn aot-pill-btn" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
                 + '</div></div>';
         }).join('');
@@ -156,8 +162,17 @@
         if (!t || t.tagName !== 'BUTTON') { return; }
         var id;
         if ((id = t.getAttribute('data-approve'))) {
-            if (!confirm(T.confirm_approve)) { return; }
-            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve', loadAll);
+            if (PHYSICAL_TOOLS.indexOf(t.getAttribute('data-tool')) !== -1
+                && !confirm(T.confirm_physical)) { return; }
+            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve',
+                 loadAll, function (d) {
+                     if (d && d.executed === false) {
+                         var m = (d.execution && (d.execution.message || d.execution.error)) || '';
+                         safe_toast('error', T.exec_failed + (m ? ': ' + m : ''));
+                     } else if (d && d.executed) {
+                         safe_toast('success', T.executed);
+                     }
+                 });
         } else if ((id = t.getAttribute('data-reject-conf'))) {
             post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/reject', loadAll);
         } else if ((id = t.getAttribute('data-accept'))) {
