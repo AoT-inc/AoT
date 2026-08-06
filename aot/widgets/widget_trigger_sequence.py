@@ -1359,7 +1359,7 @@ WIDGET_INFORMATION = {
                     if (isTotal) nameCls += ' seq-name-total';
                     // Group tint + connection classes go on the name CELL; --gc set inline.
                     var nameCellStyle = inGroup ? ' style="--gc:' + groupColor + '"' : '';
-                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + displayName + '" data-uid="' + s.unique_id + '" data-name="' + displayName + '" data-device="' + deviceDetail + '" data-group="' + (effGroup || '') + '" data-type="' + s.type + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + displayName + '</span>' + devBadge + '</div>';
+                    listHtml += '<div class="seq-col-name seq-name-editable' + grpCellCls + '"' + nameCellStyle + ' title="' + displayName + '" data-uid="' + s.unique_id + '" data-name="' + displayName + '" data-device="' + deviceDetail + '" data-group="' + (effGroup || '') + '" data-type="' + s.type + '" data-lead="' + (s.total_lead || 0) + '" data-lag="' + (s.total_lag || 0) + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_name_modal(this)"><span class="' + nameCls + '">' + displayName + '</span>' + devBadge + '</div>';
 
                     var timeShown = isTotal ? window._('Total') : timeStr;
                     listHtml += '<div class="seq-col-time seq-time-editable" data-uid="' + s.unique_id + '" data-dur="' + durationSec + '" data-type="' + s.type + '" data-group="' + (effGroup || '') + '" data-name="' + displayName + '" data-wid="' + widget_id + '" data-fid="' + function_id + '" onclick="seq_open_time_modal(this)"><span class="seq-text-time">' + timeShown + '</span></div>';
@@ -2157,7 +2157,10 @@ WIDGET_INFORMATION = {
                 '<div class="seq-step-type-body"></div></div>' +
             '<div class="seq-step-section seq-step-group-sec"><div class="seq-step-label">' + window._('Group') + '</div>' +
                 '<div class="seq-step-group-body"></div>' +
-                '<div class="seq-step-newrow"><input type="text" class="seq-step-new-input" maxlength="24"></div></div>';
+                '<div class="seq-step-newrow"><input type="text" class="seq-step-new-input" maxlength="24"></div></div>' +
+            '<div class="seq-step-section seq-step-margin-sec"><div class="seq-step-label">' + window._('Margins (seconds)') + '</div>' +
+                '<div class="seq-step-newrow"><input type="number" min="0" class="seq-step-lead-input" placeholder="' + window._('Lead') + '" title="' + window._('Start this many seconds after the sequence begins') + '">' +
+                '<input type="number" min="0" class="seq-step-lag-input" placeholder="' + window._('Lag') + '" title="' + window._('Stop this many seconds before the sequence ends') + '"></div></div>';
 
         // Name (display name; blank falls back to the device name)
         var nameInput = content.querySelector('.seq-step-name-input');
@@ -2165,17 +2168,28 @@ WIDGET_INFORMATION = {
         nameInput.placeholder = deviceDetail || window._('Name');
 
         var groupSec = content.querySelector('.seq-step-group-sec');
+        // Margins are the mirror of the group section: they only mean something
+        // for a total step (a pump held inside its valves' window).
+        var marginSec = content.querySelector('.seq-step-margin-sec');
+        var leadInput = content.querySelector('.seq-step-lead-input');
+        var lagInput = content.querySelector('.seq-step-lag-input');
+        leadInput.value = parseFloat(cell.getAttribute('data-lead') || 0) || '';
+        lagInput.value = parseFloat(cell.getAttribute('data-lag') || 0) || '';
 
         // Type toggle (single / total); total hides the group section
         var typeBody = content.querySelector('.seq-step-type-body');
         var selectedType = (origType === 'total') ? 'total' : 'single';
+        var syncTypeSections = function() {
+            groupSec.style.display = (selectedType === 'total') ? 'none' : '';
+            marginSec.style.display = (selectedType === 'total') ? '' : 'none';
+        };
         var renderType = function() {
             typeBody.innerHTML = '';
             [['single', window._('Single')], ['total', window._('Total')]].forEach(function(pair) {
                 var btn = document.createElement('button'); btn.type = 'button';
                 btn.className = 'btn aot-pill-btn' + (pair[0] === selectedType ? ' aot-pill-btn-primary' : '');
                 btn.textContent = pair[1];
-                btn.addEventListener('click', function(){ selectedType = pair[0]; renderType(); groupSec.style.display = (selectedType === 'total') ? 'none' : ''; });
+                btn.addEventListener('click', function(){ selectedType = pair[0]; renderType(); syncTypeSections(); });
                 typeBody.appendChild(btn);
             });
         };
@@ -2203,7 +2217,7 @@ WIDGET_INFORMATION = {
         };
         renderGroups();
         newInput.oninput = renderGroups;
-        groupSec.style.display = (selectedType === 'total') ? 'none' : '';
+        syncTypeSections();
 
         saveBtn.onclick = function() {
             var displayName = nameInput.value.trim();
@@ -2214,6 +2228,10 @@ WIDGET_INFORMATION = {
             // per-day in per_day mode (so it's omitted from update_step there).
             var payload = { action_id: uid, display_name: displayName, sequence_mode: selectedType };
             if (!perDay) payload.group_name = finalGroup;
+            if (selectedType === 'total') {
+                payload.total_lead = parseFloat(leadInput.value) || 0;
+                payload.total_lag = parseFloat(lagInput.value) || 0;
+            }
             $.ajax({ url: '/function_sequence_update_step', type: 'POST', contentType: 'application/json',
                 data: JSON.stringify(payload),
                 success: function(){

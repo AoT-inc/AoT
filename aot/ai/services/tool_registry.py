@@ -232,6 +232,32 @@ TOOLS: List[Tool] = [
         "description": "Updates custom_options of an existing function and reloads it in the daemon. Requires human approval.",
         "usage_hint": "params.arguments: {function_id, params: {<option_id>: <value>}}",
     }),
+    # A sequence's schedule lives in Trigger columns/timer_schedule, not in
+    # custom_options, so modify_function_options cannot reach it (it now says
+    # so instead of silently no-op'ing). This is the way in.
+    Tool('modify_sequence_schedule', handler='modify_sequence_schedule', mutating=True, manifest={
+        "tool_name": "modify_sequence_schedule",
+        "action_type": "virtual_tool_call",
+        "description": "Changes WHEN a trigger_sequence runs — daily window, cycle period, and which weekdays. Use this (not modify_function_options) for any sequence timing change. Keeps the running cycle instead of restarting it. Requires human approval.",
+        "usage_hint": "params.arguments: {function_id, start:'HH:MM', end:'HH:MM', period_seconds, weekdays:[0-6, 0=Mon], day:0-6}. Call get_function_detail first to see the current schedule. Omit 'day' to change every enabled day; pass it to change one weekday only. This does NOT change the step order or per-step durations.",
+    }),
+    # One call = one weekday's whole plan. The per-step tool below still exists
+    # for touch-ups, but laying out a day through it costs ~20 gated calls, and
+    # that friction is what pushed a caller into making a redundant sequence.
+    Tool('configure_sequence_day', handler='configure_sequence_day', mutating=True, manifest={
+        "tool_name": "configure_sequence_day",
+        "action_type": "virtual_tool_call",
+        "description": "Sets ONE weekday's entire run plan on an existing sequence in a single call: which devices run, in what order, for how long, and which run together. Prefer this over repeated modify_sequence_step. Requires human approval.",
+        "usage_hint": "params.arguments: {function_id, day:0-6 (0=Mon), start:'HH:MM', slots:[{devices:['v321','v322'], minutes:40}, {devices:['v331'], minutes:60}]}. Slots run in the order given; devices inside one slot run SIMULTANEOUSLY. Steps not listed are turned off for that weekday only. end/period_seconds are optional — by default the window just fits one pass and it runs once. A different weekday needs another call with the same function_id; NEVER create a second sequence for that.",
+    }),
+    # create_sequence_function only lays down uniform steps; this shapes them
+    # (groups = simultaneous, per-step duration, total-step margins).
+    Tool('modify_sequence_step', handler='modify_sequence_step', mutating=True, manifest={
+        "tool_name": "modify_sequence_step",
+        "action_type": "virtual_tool_call",
+        "description": "Configures ONE step of a trigger_sequence: run order, device group (steps sharing a group run SIMULTANEOUSLY), duration, single/total mode, total-step lead/lag margins, enabled, label — globally, or for ONE weekday via 'day'. Requires human approval.",
+        "usage_hint": "params.arguments: {action_id, group_name, duration_seconds, mode:'single'|'total', enabled, display_name, lead_seconds, lag_seconds, order, day}. Get action_id from get_function_detail steps[].action_id. 'order' sets the run order (lower runs first). Pass 'day' (0=Mon..6=Sun) to override enabled/group_name/duration_seconds for that weekday only — that is how ONE sequence covers different valves on different days; do NOT create a second sequence for that. A group shares ONE duration — setting it on any member sets all. A 'total' step cannot be grouped; lead/lag apply only to it.",
+    }),
     Tool('create_sequence_function', handler='create_sequence_function', mutating=True, manifest={
         "tool_name": "create_sequence_function",
         "action_type": "virtual_tool_call",
@@ -1190,7 +1216,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "modify_function_options",
-        "description": "Updates custom_options of an existing function and reloads it in the daemon. Requires human approval.",
+        "description": "Updates custom_options of an existing function and reloads it in the daemon. Requires human approval. Does NOT work on Triggers (including sequences) — their settings are columns, not custom_options; use modify_sequence_schedule for a sequence's timing.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1198,6 +1224,72 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "params": {"type": "object", "description": "Dict of {option_id: value} to update."}
             },
             "required": ["function_id", "params"]
+        }
+    },
+    {
+        "tool_name": "configure_sequence_day",
+        "description": "Sets ONE weekday's entire run plan on an existing sequence in a single call — which devices run, in what order, how long, and which run together. Use this instead of many modify_sequence_step calls. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "function_id": {"type": "string", "description": "unique_id or exact name of the sequence."},
+                "day": {"type": "integer", "description": "Weekday this plan applies to, 0=Mon..6=Sun. Other weekdays are left alone."},
+                "slots": {
+                    "type": "array",
+                    "description": "Ordered run plan. Each entry is one time slot; devices listed in the same slot run SIMULTANEOUSLY.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "devices": {"type": "array", "items": {"type": "string"}, "description": "Device names (or step action_ids) that run together in this slot."},
+                            "minutes": {"type": "number", "description": "How long this slot runs, in minutes."},
+                            "seconds": {"type": "number", "description": "Alternative to minutes."},
+                            "group": {"type": "string", "description": "Optional label for a multi-device slot, shown in the widget."}
+                        },
+                        "required": ["devices"]
+                    }
+                },
+                "start": {"type": "string", "description": "When the day's run begins, 'HH:MM' local. Optional — keeps the current start if omitted."},
+                "end": {"type": "string", "description": "Window end 'HH:MM'. Optional — defaults to exactly one pass."},
+                "period_seconds": {"type": "number", "description": "Seconds between repeats. Optional — defaults to one pass, i.e. it runs once."},
+                "repeat": {"type": "boolean", "description": "Keep the existing repeat period instead of running once. Optional."}
+            },
+            "required": ["function_id", "day", "slots"]
+        }
+    },
+    {
+        "tool_name": "modify_sequence_step",
+        "description": "Configures ONE step of a trigger_sequence: device group, duration, single/total mode, total-step margins, enabled state, label. Steps sharing a group name run SIMULTANEOUSLY as one slot. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action_id": {"type": "string", "description": "The step's id — get_function_detail returns it as steps[].action_id."},
+                "group_name": {"type": "string", "description": "Device group. Steps sharing a name fire together as one slot with one common duration. Empty string ungroups. Not allowed on a 'total' step. Optional."},
+                "duration_seconds": {"type": "number", "description": "How long this step stays on. On a grouped step this sets the whole group, since a group has one shared duration. Optional."},
+                "mode": {"type": "string", "enum": ["single", "total"], "description": "'single' takes its turn in the running order; 'total' spans the whole cycle (a field's pump). Optional."},
+                "enabled": {"type": "boolean", "description": "Whether this step runs at all. Optional."},
+                "display_name": {"type": "string", "description": "Label shown in the widget. Empty string clears it back to the device name. Optional."},
+                "lead_seconds": {"type": "number", "description": "'total' steps only: start this many seconds after the sequence begins, so the valve opens before the pump runs. Optional."},
+                "lag_seconds": {"type": "number", "description": "'total' steps only: stop this many seconds before the sequence ends, so the pump stops before the valve closes. Optional."},
+                "order": {"type": "integer", "description": "Run order — the step with the lowest value goes first. Slots follow the order of their first member, so to move a whole group forward set it on that group's earliest step. Optional."},
+                "day": {"type": "integer", "description": "Scope this change to ONE weekday (0=Mon..6=Sun) instead of every day. Only enabled, group_name and duration_seconds can be per-weekday — this is how one sequence runs different valves on different days (e.g. an evening pass Thu and a dawn pass Fri) without creating a second sequence. Optional."}
+            },
+            "required": ["action_id"]
+        }
+    },
+    {
+        "tool_name": "modify_sequence_schedule",
+        "description": "Changes WHEN a trigger_sequence runs — daily window, cycle period, and which weekdays. Use this (not modify_function_options) for any sequence timing change. The running cycle is kept, not restarted. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "function_id": {"type": "string", "description": "unique_id or exact name of the sequence (from get_function_list)."},
+                "start": {"type": "string", "description": "Window start, 'HH:MM' (device local time). Optional."},
+                "end": {"type": "string", "description": "Window end, 'HH:MM'. '24:00' means end of day. Optional."},
+                "period_seconds": {"type": "number", "description": "Seconds between cycle starts. One full pass of the steps must fit inside the window, or the cycle is cut short. Optional."},
+                "weekdays": {"type": "array", "items": {"type": "integer"}, "description": "Days the sequence runs, 0=Mon..6=Sun. Replaces the current set. Optional."},
+                "day": {"type": "integer", "description": "Apply start/end/period_seconds to this ONE weekday (0=Mon..6=Sun) instead of every enabled day. Optional."}
+            },
+            "required": ["function_id"]
         }
     },
     {

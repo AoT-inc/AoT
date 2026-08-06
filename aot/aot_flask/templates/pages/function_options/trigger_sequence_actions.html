@@ -44,5 +44,14 @@
         <div class="sequence-duration-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') == 'total' %}display:none{% endif %}">
              <input type="text" class="form-control" name="group_name" value="{{ action_options.get('group_name', '') }}" placeholder="{{_('Group')}}" style="height: 26px; font-size: 0.8rem; text-align: center; border-radius: 14px; padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Steps sharing the same group name run together at once')}}">
         </div>
+
+        <!-- Total-mode margins: keep this step inside the others' window, e.g.
+             a pump that must start after the valve opens and stop before it closes -->
+        <div class="sequence-total-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') != 'total' %}display:none{% endif %}">
+             <input type="text" class="form-control aot-time-input" name="total_lead" value="{{ action_options.get('total_lead', 0) }}" placeholder="{{_('Lead')}}" style="height: 26px; font-size: 0.8rem; text-align: center; border-radius: 14px; padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Start this many seconds after the sequence begins')}}">
+        </div>
+        <div class="sequence-total-field-{{unique_id}}" style="flex: 1 1 auto; max-width: 140px; min-width: 70px; {% if action_options.get('sequence_mode', 'single') != 'total' %}display:none{% endif %}">
+             <input type="text" class="form-control aot-time-input" name="total_lag" value="{{ action_options.get('total_lag', 0) }}" placeholder="{{_('Lag')}}" style="height: 26px; font-size: 0.8rem; text-align: center; border-radius: 14px; padding: 0 4px; background-color: var(--aot-input-bg);" title="{{_('Stop this many seconds before the sequence ends')}}">
+        </div>
     </div>
 {% endcall %}

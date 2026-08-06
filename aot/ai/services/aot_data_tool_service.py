@@ -2792,6 +2792,82 @@ class AoTDataToolService:
             return {"error": f"Error while querying Function list: {str(e)}"}
 
     @staticmethod
+    def _sequence_detail(trig):
+        """Ordered steps + weekly schedule of a trigger_sequence.
+
+        Without this a sequence looks like a name and a period, so the AI can
+        neither explain what it does nor tell a valve from the pump. The
+        controller already derives the whole picture for the widget
+        (get_static_status: per-step start/end, group, duration, mode), so read
+        that rather than recomputing the slot maths here. DB-derived and
+        read-only — no daemon RPC, so it answers the same from any process.
+        """
+        try:
+            from aot.controllers.controller_trigger_sequence import SequenceTriggerController
+            status = SequenceTriggerController.get_static_status(trig.unique_id)
+        except Exception as exc:
+            logger.warning(f"[_sequence_detail] step read failed: {exc}")
+            return {"steps_error": str(exc)}
+
+        if not isinstance(status, dict) or status.get('error'):
+            return {"steps_error": str((status or {}).get('error'))}
+
+        steps = []
+        for s in status.get('steps') or []:
+            step = {
+                "action_id": s.get('unique_id'),
+                "device": s.get('device_detail'),
+                "label": s.get('display_name') or s.get('device_detail'),
+                # 'single' takes its turn in the running order; 'total' spans
+                # the whole cycle (a field's pump, typically).
+                "mode": s.get('type'),
+                "group": s.get('group_name'),
+                "enabled": s.get('enabled'),
+                "duration_seconds": s.get('original_duration'),
+                "starts_at_seconds": s.get('start'),
+                "ends_at_seconds": s.get('end'),
+            }
+            if s.get('type') == 'total':
+                step["lead_seconds"] = s.get('total_lead')
+                step["lag_seconds"] = s.get('total_lag')
+            steps.append(step)
+
+        # The resolved plan for EVERY weekday, not just today. Without this a
+        # caller configuring Friday from a Thursday session has no way to check
+        # what it built — 'steps' above is today's slot maths only.
+        weekly_plan = []
+        for idx in range(7):
+            try:
+                plan = SequenceTriggerController.plan_for_day(trig.unique_id, idx)
+            except Exception as exc:
+                logger.warning(f"[_sequence_detail] plan_for_day({idx}) failed: {exc}")
+                continue
+            if plan.get('runs'):
+                weekly_plan.append(plan)
+
+        return {
+            "window_start": status.get('window_start'),
+            "window_end": status.get('window_end'),
+            "cycle_period_seconds": status.get('period'),
+            "weekdays": status.get('weekdays'),
+            "schedule": status.get('schedule'),
+            "weekly_plan": weekly_plan,
+            "steps": steps,
+            "step_count": len(steps),
+            "steps_note": (
+                "'weekly_plan' is what actually happens, per weekday, in wall-clock "
+                "time — read that to answer 'when does it water?' and to check any "
+                "change you just made. 'steps' below is the raw step list with "
+                "today's offsets in seconds. Steps sharing a group run together. A "
+                "'total' step spans the whole cycle; its lead/lag hold it inside the "
+                "other steps' window (pump starts after the valve opens, stops before "
+                "it closes). A weekday can override which steps run, their group and "
+                "their duration — so ONE sequence covers different days; never create "
+                "a second sequence just because a day differs."
+            ),
+        }
+
+    @staticmethod
     def get_function_detail(function_id):
         """
         Returns detailed configuration for a specific Function-type controller.
@@ -2830,7 +2906,7 @@ class AoTDataToolService:
                 (Trigger.unique_id == function_id) | (Trigger.name == function_id)
             ).first()
             if trig:
-                return {
+                detail = {
                     "function_id": trig.unique_id,
                     "name": trig.name,
                     "function_type": "trigger",
@@ -2842,6 +2918,9 @@ class AoTDataToolService:
                     "log_level_debug": getattr(trig, 'log_level_debug', None),
                     "tab_id": getattr(trig, 'tab_id', None),
                 }
+                if getattr(trig, 'trigger_type', None) == 'trigger_sequence':
+                    detail.update(AoTDataToolService._sequence_detail(trig))
+                return detail
 
             pid = PID.query.filter(
                 (PID.unique_id == function_id) | (PID.name == function_id)
@@ -3470,6 +3549,19 @@ class AoTDataToolService:
         if func is None:
             return {"error": f"Function not found: {function_id}"}
 
+        # Trigger has no custom_options column (see models/function.py) — the
+        # write below would set an unmapped attribute that commit() silently
+        # drops, so this used to report success while changing nothing. Its
+        # schedule lives in timer_schedule/columns instead.
+        if isinstance(func, Trigger):
+            return {"error": (
+                "This function is a Trigger; its settings are columns, not "
+                "custom_options, so this tool cannot change them. For a "
+                "trigger_sequence use modify_sequence_schedule (window, period, "
+                "weekdays). Other trigger types must be edited in the web UI."),
+                "function_id": function_id,
+                "trigger_type": getattr(func, 'trigger_type', None)}
+
         existing = {}
         try:
             existing = _json.loads(getattr(func, 'custom_options', None) or '{}')
@@ -3491,6 +3583,620 @@ class AoTDataToolService:
 
         return {"function_id": function_id, "status": "modified",
                 "changed": list(params.keys())}
+
+    @staticmethod
+    def configure_sequence_day(function_id, day, slots, start=None, end=None,
+                               period_seconds=None, repeat=False):
+        """Set a whole weekday's run plan on a sequence in ONE call.
+
+        Doing this through modify_sequence_step meant one approval per step per
+        field — about twenty gated calls to lay out a single evening's watering,
+        which is enough friction that a caller gives up and makes a second
+        sequence instead (that is exactly what happened on 2026-08-06). Here a
+        caller says what a farmer says — "from 21:00, v321 and v322 together for
+        40 minutes, then v331 and v332 together for an hour" — and that is one
+        approval.
+
+        slots: ordered list of {devices: [name|action_id, ...], minutes|seconds,
+        group?}. Devices in the same slot run simultaneously. Any step of the
+        sequence not named here is switched OFF for this weekday only; other
+        weekdays keep their own plan.
+        """
+        import json as _json
+        from aot.databases.models.function import Actions, Trigger
+        from aot.databases.models.output import Output
+        from aot.utils.weekly_schedule import (
+            parse_schedule, from_legacy, validate, minutes_to_hhmm, time_to_minutes,
+            DAY_NAMES)
+        from aot.controllers.controller_trigger_sequence import SequenceTriggerController
+
+        if not function_id:
+            return {"error": "function_id is required"}
+        if not isinstance(slots, list) or not slots:
+            return {"error": "slots must be a non-empty ordered list, e.g. "
+                             "[{'devices': ['v321','v322'], 'minutes': 40}, ...]"}
+        try:
+            day = int(day)
+        except (TypeError, ValueError):
+            return {"error": f"day must be 0-6 (0=Mon), got {day!r}"}
+        if not 0 <= day <= 6:
+            return {"error": f"day must be 0-6 (0=Mon), got {day}"}
+
+        trig = Trigger.query.filter(
+            (Trigger.unique_id == function_id) | (Trigger.name == function_id)).first()
+        if not trig:
+            return {"error": f"Sequence not found: {function_id}"}
+        if trig.trigger_type != 'trigger_sequence':
+            return {"error": f"'{trig.name}' is a {trig.trigger_type}, not a sequence."}
+
+        steps = Actions.query.filter(Actions.function_id == trig.unique_id).all()
+        if not steps:
+            return {"error": f"'{trig.name}' has no steps yet — add devices to it first."}
+
+        out_names = {o.unique_id: o.name for o in Output.query.all()}
+        index, catalog = {}, []
+        for a in steps:
+            try:
+                o = _json.loads(a.custom_options) if a.custom_options else {}
+            except Exception:
+                o = {}
+            dev = out_names.get(str(o.get('output') or a.do_unique_id or '').split(',')[0], '')
+            label = (o.get('display_name') or '').strip()
+            for key in filter(None, (a.unique_id, dev, label)):
+                index.setdefault(key.lower(), a.unique_id)
+            catalog.append(label and f"{label} ({dev})" or dev)
+
+        resolved, unknown = [], []
+        for i, slot in enumerate(slots):
+            if not isinstance(slot, dict):
+                return {"error": f"slots[{i}] must be an object with 'devices' and a duration"}
+            names = slot.get('devices') or slot.get('device')
+            names = [names] if isinstance(names, str) else list(names or [])
+            if not names:
+                return {"error": f"slots[{i}] has no 'devices'"}
+            if slot.get('minutes') is not None:
+                secs = float(slot['minutes']) * 60
+            elif slot.get('seconds') is not None:
+                secs = float(slot['seconds'])
+            else:
+                return {"error": f"slots[{i}] needs 'minutes' (or 'seconds')"}
+            if secs <= 0:
+                return {"error": f"slots[{i}] duration must be positive"}
+            ids = []
+            for n in names:
+                uid = index.get(str(n).strip().lower())
+                (ids.append(uid) if uid else unknown.append(n))
+            resolved.append({"ids": ids, "seconds": secs,
+                             "group": (slot.get('group') or '').strip()})
+        if unknown:
+            return {"error": f"Not steps of '{trig.name}': {unknown}",
+                    "available_steps": sorted(set(catalog))}
+
+        listed = [uid for s in resolved for uid in s['ids']]
+        if len(listed) != len(set(listed)):
+            return {"error": "The same step appears in more than one slot."}
+
+        sched = parse_schedule(getattr(trig, 'timer_schedule', None)) or from_legacy(
+            trig.timer_start_time, trig.timer_end_time,
+            getattr(trig, 'timer_weekday', None), trig.period or 3600)
+        sched['mode'] = 'per_day'
+        entry = sched['days'].setdefault(str(day), {})
+
+        # Run order is global (there is no per-weekday order map), so only
+        # PERMUTE the order values these steps already hold. Steps that run on
+        # other days keep their own values and their position relative to this
+        # set, which is what stops one day's layout from scrambling another's.
+        opts_of = {}
+        for a in steps:
+            try:
+                opts_of[a.unique_id] = _json.loads(a.custom_options) if a.custom_options else {}
+            except Exception:
+                opts_of[a.unique_id] = {}
+        pool = sorted(opts_of[u].get('gridstack_y', opts_of[u].get('position', 0)) or 0
+                      for u in listed)
+        by_uid = {a.unique_id: a for a in steps}
+        for pos, uid in zip(pool, listed):
+            opts_of[uid]['gridstack_y'] = pos
+            by_uid[uid].custom_options = _json.dumps(opts_of[uid])
+
+        actions_map, groups_map, durations_map = {}, {}, {}
+        for i, s in enumerate(resolved):
+            gname = s['group'] or (f"g{i + 1}" if len(s['ids']) > 1 else '')
+            for uid in s['ids']:
+                actions_map[uid] = True
+                groups_map[uid] = gname
+                durations_map[uid] = s['seconds']
+        for a in steps:
+            if a.unique_id not in actions_map:
+                actions_map[a.unique_id] = False
+
+        entry['actions'] = actions_map
+        entry['groups'] = groups_map
+        entry['durations'] = durations_map
+        entry['enabled'] = True
+
+        span = sum(s['seconds'] for s in resolved)  # overlap=0 assumed for sizing
+        overlap = float(trig.output_duration or 0)
+        if overlap and len(resolved) > 1:
+            span += overlap * (len(resolved) - 1)
+
+        entry['start'] = str(start) if start else entry.get('start') or '00:00'
+        if end:
+            entry['end'] = '24:00' if str(end) == '00:00' else str(end)
+        else:
+            try:
+                fin = time_to_minutes(entry['start']) + int((span + 59) // 60)
+                entry['end'] = minutes_to_hhmm(min(fin, 1440))
+            except ValueError:
+                return {"error": f"start must be 'HH:MM', got {entry['start']!r}"}
+        entry['period'] = int(period_seconds) if period_seconds else (
+            int(span) if not repeat else int(entry.get('period') or span))
+
+        errors = validate(sched)
+        if errors:
+            return {"error": "The resulting schedule is not valid", "details": errors}
+
+        trig.timer_schedule = _json.dumps(sched)
+        if any(sched['days'].get(str(i), {}).get('enabled') for i in range(7)):
+            trig.timer_weekday = ','.join(
+                str(i) for i in range(7) if sched['days'].get(str(i), {}).get('enabled'))
+        db.session.commit()
+
+        try:
+            from aot.aot_client import DaemonControl
+            DaemonControl().refresh_daemon_trigger_settings(trig.unique_id)
+        except Exception as exc:
+            logger.warning(f"[configure_sequence_day] daemon refresh failed "
+                           f"(saved, applies on next start): {exc}")
+
+        plan = SequenceTriggerController.plan_for_day(trig.unique_id, day)
+        return {
+            "function_id": trig.unique_id,
+            "name": trig.name,
+            "status": "configured",
+            "plan": plan,
+            "note": (f"{DAY_NAMES[day]} only. Steps not listed are off for this weekday; "
+                     "other weekdays are untouched. Read 'plan' back to the user — it is "
+                     "the actual wall-clock result, not the request."),
+        }
+
+    @staticmethod
+    def _modify_sequence_step_for_day(action, opts, day, enabled=None, group_name=None,
+                                      duration_seconds=None, global_only=None):
+        """Per-weekday override for one step, stored in the trigger's schedule.
+
+        A sequence is one ordered step list, but weekly_schedule v1 lets each
+        weekday override which steps run (`actions`), how they are grouped
+        (`groups`) and how long they run (`durations`). That is how one sequence
+        covers, say, a Thursday-evening pass and a Friday-dawn pass with
+        different valves — no second sequence needed. The maps live on the
+        Trigger, not on the step, so this writes there.
+        """
+        import json as _json
+        from aot.databases.models.function import Actions, Trigger
+        from aot.utils.weekly_schedule import (
+            parse_schedule, from_legacy, validate, day_action_group, DAY_NAMES)
+
+        blocked = [k for k, v in (global_only or {}).items() if v is not None]
+        if blocked:
+            return {"error": f"{', '.join(blocked)} cannot be set per weekday — a "
+                             "weekday can override which steps run, their group and "
+                             "their duration, nothing else. Call again without 'day' "
+                             "to change these for every day."}
+        if enabled is None and group_name is None and duration_seconds is None:
+            return {"error": "With 'day', pass at least one of enabled, group_name, "
+                             "duration_seconds."}
+        try:
+            day = int(day)
+        except (TypeError, ValueError):
+            return {"error": f"day must be 0-6 (0=Mon), got {day!r}"}
+        if not 0 <= day <= 6:
+            return {"error": f"day must be 0-6 (0=Mon), got {day}"}
+
+        trig = Trigger.query.filter_by(unique_id=action.function_id).first()
+        if not trig:
+            return {"error": f"Sequence not found for step {action.unique_id}"}
+
+        sched = parse_schedule(getattr(trig, 'timer_schedule', None)) or from_legacy(
+            trig.timer_start_time, trig.timer_end_time,
+            getattr(trig, 'timer_weekday', None), trig.period or 3600)
+        sched['mode'] = 'per_day'
+        entry = sched['days'].setdefault(str(day), {})
+        uid = action.unique_id
+
+        if enabled is not None:
+            entry.setdefault('actions', {})[uid] = bool(enabled)
+        if group_name is not None:
+            # '' is meaningful here: "explicitly ungrouped on this day".
+            entry.setdefault('groups', {})[uid] = str(group_name).strip()
+
+        propagated = []
+        if duration_seconds is not None:
+            try:
+                dur = float(duration_seconds)
+            except (TypeError, ValueError):
+                return {"error": f"duration_seconds must be a number, got {duration_seconds!r}"}
+            if dur < 0:
+                return {"error": f"duration_seconds cannot be negative, got {dur}"}
+            entry.setdefault('durations', {})[uid] = dur
+            # Same invariant as the global path: a group runs on one duration,
+            # so every member sharing this day's effective group follows.
+            eff = day_action_group(sched, day, uid, (opts.get('group_name') or '').strip() or None)
+            if eff:
+                for sib in Actions.query.filter(
+                        Actions.function_id == action.function_id,
+                        Actions.unique_id != uid).all():
+                    try:
+                        sopts = _json.loads(sib.custom_options) if sib.custom_options else {}
+                    except Exception:
+                        sopts = {}
+                    sib_eff = day_action_group(
+                        sched, day, sib.unique_id,
+                        (sopts.get('group_name') or '').strip() or None)
+                    if sib_eff == eff:
+                        entry['durations'][sib.unique_id] = dur
+                        propagated.append(sib.unique_id)
+
+        errors = validate(sched)
+        if errors:
+            return {"error": "Invalid schedule after the per-day change", "details": errors}
+
+        trig.timer_schedule = _json.dumps(sched)
+        db.session.commit()
+
+        try:
+            from aot.aot_client import DaemonControl
+            DaemonControl().refresh_daemon_trigger_settings(trig.unique_id)
+        except Exception as exc:
+            logger.warning(f"[modify_sequence_step] daemon refresh failed "
+                           f"(saved, applies on next start): {exc}")
+
+        result = {
+            "action_id": uid,
+            "function_id": trig.unique_id,
+            "status": "modified",
+            "scope": f"{DAY_NAMES[day]} only",
+            "day": day,
+            "runs_this_day": entry.get('actions', {}).get(uid, opts.get('enabled', True)),
+            "group_this_day": entry.get('groups', {}).get(
+                uid, (opts.get('group_name') or '').strip() or None) or None,
+            "duration_this_day": entry.get('durations', {}).get(uid, opts.get('action_duration')),
+            "note": ("This overrides the step's global setting on this weekday only; "
+                     "other weekdays are untouched."),
+        }
+        if propagated:
+            result["duration_propagated_to"] = propagated
+        return result
+
+    @staticmethod
+    def modify_sequence_step(action_id, group_name=None, duration_seconds=None,
+                             mode=None, enabled=None, display_name=None,
+                             lead_seconds=None, lag_seconds=None, order=None,
+                             day=None):
+        """Configure ONE step of a trigger_sequence.
+
+        create_sequence_function only lays down uniform steps (same duration,
+        all 'single', never grouped), so without this the AI can build the
+        skeleton of a sequence but not the shape a real irrigation run needs —
+        valves opening together, different durations per slot, a pump spanning
+        the rest. Those live in the step's custom_options, which
+        modify_function_options cannot reach (it is Trigger-blind, and steps
+        are Actions rows anyway).
+
+        Mirrors the web routes' rules rather than inventing new ones:
+        - a device group has ONE common duration, so setting the duration of a
+          grouped step propagates to every member (function_sequence_update_
+          action_duration);
+        - joining an existing group inherits that group's duration;
+        - a 'total' step cannot be grouped, and lead/lag apply only to it
+          (function_sequence_update_step).
+        """
+        import json as _json
+        from aot.databases.models.function import Actions
+
+        if not action_id:
+            return {"error": "action_id is required (from get_function_detail steps[].action_id)"}
+        if all(v is None for v in (group_name, duration_seconds, mode, enabled,
+                                   display_name, lead_seconds, lag_seconds, order)):
+            return {"error": "Nothing to change: pass at least one of group_name, "
+                             "duration_seconds, mode, enabled, display_name, "
+                             "lead_seconds, lag_seconds, order."}
+        if mode is not None and mode not in ('single', 'total'):
+            return {"error": f"mode must be 'single' or 'total', got {mode!r}"}
+
+        action = Actions.query.filter_by(unique_id=action_id).first()
+        if not action:
+            return {"error": f"Step not found: {action_id}"}
+
+        try:
+            opts = _json.loads(action.custom_options) if action.custom_options else {}
+        except Exception:
+            opts = {}
+
+        if day is not None:
+            return AoTDataToolService._modify_sequence_step_for_day(
+                action, opts, day, enabled=enabled, group_name=group_name,
+                duration_seconds=duration_seconds,
+                global_only={'mode': mode, 'display_name': display_name,
+                             'lead_seconds': lead_seconds, 'lag_seconds': lag_seconds,
+                             'order': order})
+
+        effective_mode = mode or opts.get('sequence_mode', 'single')
+
+        def _members_of(name):
+            """Sibling steps sharing group `name` (excludes this one)."""
+            out = []
+            for m in Actions.query.filter(
+                    Actions.function_id == action.function_id,
+                    Actions.unique_id != action.unique_id).all():
+                try:
+                    mo = _json.loads(m.custom_options) if m.custom_options else {}
+                except Exception:
+                    mo = {}
+                if (mo.get('group_name') or '').strip() == name:
+                    out.append((m, mo))
+            return out
+
+        if display_name is not None:
+            if str(display_name).strip():
+                opts['display_name'] = str(display_name).strip()
+            else:
+                opts.pop('display_name', None)
+
+        if order is not None:
+            # Run order is by gridstack_y (the key the widget's drag-reorder
+            # writes, see routes_function.function_save_order) — steps have no
+            # separate ordering column. Without this the AI can group and time a
+            # sequence but not decide which slot goes first, which for irrigation
+            # is half the meaning of "sequence".
+            try:
+                opts['gridstack_y'] = int(order)
+            except (TypeError, ValueError):
+                return {"error": f"order must be an integer, got {order!r}"}
+
+        if enabled is not None:
+            opts['enabled'] = bool(enabled)
+
+        if mode is not None:
+            opts['sequence_mode'] = effective_mode
+
+        inherited = None
+        if effective_mode == 'total':
+            # Total steps are never grouped; margins are theirs alone.
+            opts.pop('group_name', None)
+            for key, val in (('total_lead', lead_seconds), ('total_lag', lag_seconds)):
+                if val is None:
+                    continue
+                try:
+                    margin = max(0.0, float(val))
+                except (TypeError, ValueError):
+                    return {"error": f"{key} must be a number of seconds, got {val!r}"}
+                if margin:
+                    opts[key] = margin
+                else:
+                    opts.pop(key, None)
+        else:
+            opts.pop('total_lead', None)
+            opts.pop('total_lag', None)
+            if group_name is not None:
+                name = str(group_name).strip()
+                if not name:
+                    opts.pop('group_name', None)
+                else:
+                    opts['group_name'] = name
+                    # Joining an existing group inherits its common duration,
+                    # unless this call sets one explicitly.
+                    if duration_seconds is None:
+                        for _m, mo in _members_of(name):
+                            if 'action_duration' in mo:
+                                opts['action_duration'] = mo['action_duration']
+                                inherited = mo['action_duration']
+                                break
+
+        propagated = []
+        if duration_seconds is not None:
+            try:
+                dur = float(duration_seconds)
+            except (TypeError, ValueError):
+                return {"error": f"duration_seconds must be a number, got {duration_seconds!r}"}
+            if dur < 0:
+                return {"error": f"duration_seconds cannot be negative, got {dur}"}
+            opts['action_duration'] = dur
+            # One group, one duration — keep the invariant whichever member was edited.
+            current_group = (opts.get('group_name') or '').strip()
+            if current_group:
+                for m, mo in _members_of(current_group):
+                    mo['action_duration'] = dur
+                    m.custom_options = _json.dumps(mo)
+                    propagated.append(m.unique_id)
+
+        action.custom_options = _json.dumps(opts)
+        db.session.commit()
+
+        try:
+            from aot.aot_client import DaemonControl
+            DaemonControl().refresh_daemon_trigger_settings(action.function_id)
+        except Exception as exc:
+            logger.warning(f"[modify_sequence_step] daemon refresh failed "
+                           f"(saved, applies on next start): {exc}")
+
+        result = {
+            "action_id": action.unique_id,
+            "function_id": action.function_id,
+            "status": "modified",
+            "mode": opts.get('sequence_mode', 'single'),
+            "group": opts.get('group_name'),
+            "duration_seconds": opts.get('action_duration'),
+            "enabled": opts.get('enabled', True),
+            "display_name": opts.get('display_name'),
+            "order": opts.get('gridstack_y'),
+        }
+        if opts.get('sequence_mode') == 'total':
+            result["lead_seconds"] = opts.get('total_lead', 0)
+            result["lag_seconds"] = opts.get('total_lag', 0)
+        if inherited is not None:
+            result["note"] = (f"Joined group '{opts.get('group_name')}' and inherited its "
+                              f"common duration ({inherited}s).")
+        if propagated:
+            result["duration_propagated_to"] = propagated
+            result["note"] = (f"A group shares one duration, so {len(propagated)} other "
+                              f"step(s) in '{opts.get('group_name')}' were set to {opts['action_duration']}s too.")
+        return result
+
+    @staticmethod
+    def modify_sequence_schedule(function_id, start=None, end=None,
+                                 period_seconds=None, weekdays=None, day=None):
+        """Change when a trigger_sequence runs: window, cycle period, weekdays.
+
+        The schedule of record is Trigger.timer_schedule (weekly_schedule v1);
+        the legacy timer_* columns are only a fallback the controller uses when
+        that JSON is absent, so writing them alone changes nothing for any
+        sequence that has one. This edits the JSON and back-syncs the columns,
+        exactly as the web form's /function_sequence_update_schedule does.
+
+        Reload goes through refresh_daemon_trigger_settings, which keeps the
+        running cycle — deactivate/activate would force every output off and
+        restart the cycle from zero, cutting irrigation short mid-run.
+
+        day: 0=Mon..6=Sun. Given, the window/period apply to that weekday only
+        (switching the schedule to per_day mode); omitted, they apply to every
+        enabled day. weekdays replaces the set of enabled days.
+        """
+        import json as _json
+        from aot.databases.models.function import Trigger
+        from aot.utils.weekly_schedule import (
+            parse_schedule, from_legacy, validate, to_legacy, build_warnings,
+            get_today_idx)
+
+        if not function_id:
+            return {"error": "function_id is required"}
+        if start is None and end is None and period_seconds is None and weekdays is None:
+            return {"error": "Nothing to change: pass at least one of "
+                             "start, end, period_seconds, weekdays."}
+
+        trig = Trigger.query.filter(
+            (Trigger.unique_id == function_id) | (Trigger.name == function_id)).first()
+        if not trig:
+            return {"error": f"Sequence not found: {function_id}"}
+        if trig.trigger_type != 'trigger_sequence':
+            return {"error": f"'{trig.name}' is a {trig.trigger_type}, not a sequence."}
+
+        sched = parse_schedule(getattr(trig, 'timer_schedule', None)) or from_legacy(
+            trig.timer_start_time, trig.timer_end_time,
+            getattr(trig, 'timer_weekday', None), trig.period or 3600)
+
+        # "00:00" as an end means end-of-day, stored as "24:00" (a literal
+        # 00:00 end would fail validation as start >= end).
+        if end is not None and str(end).strip() == '00:00':
+            end = '24:00'
+
+        if day is not None:
+            try:
+                day = int(day)
+            except (TypeError, ValueError):
+                return {"error": f"day must be 0-6 (0=Mon), got {day!r}"}
+            if not 0 <= day <= 6:
+                return {"error": f"day must be 0-6 (0=Mon), got {day}"}
+            sched['mode'] = 'per_day'
+            targets = [str(day)]
+        else:
+            targets = [k for k in (str(i) for i in range(7))
+                       if sched['days'].get(k, {}).get('enabled', True)] or \
+                      [str(i) for i in range(7)]
+
+        for key in targets:
+            entry = sched['days'].setdefault(key, {})
+            if start is not None:
+                entry['start'] = str(start)
+            if end is not None:
+                entry['end'] = str(end)
+            if period_seconds is not None:
+                entry['period'] = int(float(period_seconds))
+        if day is None:
+            shared = sched.setdefault('shared', {})
+            if start is not None:
+                shared['start'] = str(start)
+            if end is not None:
+                shared['end'] = str(end)
+            if period_seconds is not None:
+                shared['period'] = int(float(period_seconds))
+
+        if weekdays is not None:
+            if isinstance(weekdays, str):
+                weekdays = [t.strip() for t in weekdays.split(',') if t.strip()]
+            try:
+                wanted = {int(w) for w in weekdays}
+            except (TypeError, ValueError):
+                return {"error": f"weekdays must be numbers 0-6 (0=Mon), got {weekdays!r}"}
+            if not wanted or any(not 0 <= w <= 6 for w in wanted):
+                return {"error": f"weekdays must be numbers 0-6 (0=Mon), got {weekdays!r}"}
+            for i in range(7):
+                sched['days'].setdefault(str(i), {})['enabled'] = (i in wanted)
+
+        errors = validate(sched)
+        if errors:
+            return {"error": "Invalid schedule", "details": errors}
+
+        trig.timer_schedule = _json.dumps(sched)
+        leg_start, leg_end, leg_weekday, leg_period = to_legacy(sched)
+        trig.timer_start_time = leg_start
+        trig.timer_end_time = leg_end
+        trig.timer_weekday = leg_weekday or None
+        trig.period = leg_period
+        if sched.get('mode') == 'per_day':
+            # trigger.period is what function_status and the widget read, so
+            # point it at the period actually running today.
+            try:
+                from aot.utils.device_tz import get_device_tz
+                today = sched['days'].get(str(get_today_idx(str(get_device_tz(trig)))), {})
+                if today.get('period') is not None:
+                    trig.period = float(today['period'])
+            except Exception as exc:
+                logger.warning(f"[modify_sequence_schedule] today's period sync failed: {exc}")
+
+        db.session.commit()
+
+        try:
+            from aot.aot_client import DaemonControl
+            DaemonControl().refresh_daemon_trigger_settings(trig.unique_id)
+        except Exception as exc:
+            logger.warning(f"[modify_sequence_schedule] daemon refresh failed "
+                           f"(saved, applies on next start): {exc}")
+
+        # Report the days actually edited, not the legacy columns: to_legacy()
+        # summarises the whole week from the FIRST ENABLED day, so after a
+        # day-scoped edit those columns describe some other day. Relaying them
+        # as "the new window" would tell the user the wrong time.
+        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        applied = []
+        for key in targets:
+            entry = sched['days'].get(key, {})
+            applied.append({
+                "day": int(key),
+                "day_name": day_names[int(key)],
+                "start": entry.get('start'),
+                "end": entry.get('end'),
+                "period_seconds": entry.get('period'),
+                "runs_on_this_day": bool(entry.get('enabled', True)),
+            })
+
+        return {
+            "function_id": trig.unique_id,
+            "name": trig.name,
+            "status": "modified",
+            "mode": sched.get('mode'),
+            "applied": applied,
+            "enabled_weekdays": [
+                {"day": i, "day_name": day_names[i]}
+                for i in range(7)
+                if sched['days'].get(str(i), {}).get('enabled', True)
+            ],
+            "warnings": build_warnings(sched),
+            "note": ("'applied' lists only the weekdays this call changed. Other "
+                     "weekdays keep their own window/period — check 'schedule' in "
+                     "get_function_detail before telling the user the sequence "
+                     "runs at one time every day."),
+        }
 
     # ─────────────────────────────────────────────────────────────────────
     # Entity CRUD (Input / Output / Function) — lets the AI create, configure,

@@ -20,8 +20,9 @@ from aot.utils.system_pi import time_between_range
 from aot.utils.influx import get_last_measurement
 from aot.utils.device_tz import get_device_tz
 from aot.utils.weekly_schedule import (
-    active_entry_now, day_action_enabled, day_action_group, day_action_duration,
-    from_legacy, is_continuity_boundary, get_today_idx, parse_schedule, to_legacy
+    DAY_NAMES, active_entry_now, day_action_enabled, day_action_group,
+    day_action_duration, from_legacy, is_continuity_boundary, get_today_idx,
+    parse_schedule, time_to_minutes, to_legacy
 )
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,43 @@ def _group_key(action):
     """Return an action's device-group label, or None if ungrouped."""
     name = (_parse_opts(action).get('group_name') or '').strip()
     return name or None
+
+
+def _margins(opts):
+    """(lead, lag) seconds from a step's custom_options. Bad values read as 0."""
+    try:
+        return (max(0.0, float(opts.get('total_lead') or 0)),
+                max(0.0, float(opts.get('total_lag') or 0)))
+    except (TypeError, ValueError):
+        return (0.0, 0.0)
+
+
+def _total_window(opts, span, log=None, label=''):
+    """Start/end of a 'total' step inside a cycle of length ``span``.
+
+    A total step (typically the field's pump) runs across the whole sequence
+    while the single steps (valves) take their turns. Without margins it turns
+    on at elapsed 0.0 -- the same instant as the first valve slot -- and off at
+    the same instant as the last one, so nothing guarantees the valve is open
+    before the pump pushes against it, or that the pump has stopped before the
+    valve closes (water hammer).
+
+    ``total_lead``/``total_lag`` (seconds, per-step custom_options) inset the
+    total window inside the single-step envelope: lead delays the start, lag
+    brings the end forward. Both default to 0, which is the historical
+    behaviour. Margins that would swallow the window are ignored (a pump that
+    never runs is worse than one without margins).
+    """
+    lead, lag = _margins(opts)
+    start_t = lead
+    end_t = span - lag
+    if end_t <= start_t:
+        if log:
+            log.warning(
+                f"Total step {label}: lead({lead}s)+lag({lag}s) leaves no room in "
+                f"a {span}s cycle -- running the full span instead.")
+        return 0.0, span
+    return start_t, end_t
 
 
 def _build_slots(single_actions, group_of=None):
@@ -239,6 +277,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                  'original_duration': display_duration,
                  'group_name': (opts.get('group_name') or '').strip() or None,
                  'display_name': (opts.get('display_name') or '').strip() or None,
+                 'total_lead': _margins(opts)[0],
+                 'total_lag': _margins(opts)[1],
                  'is_active': act.unique_id in self.active_actions,
                  # Actual device state of the target output ('on'/'off'/'pending'/
                  # 'fault'/number/None) so the widget shows offline/pending per step
@@ -338,6 +378,14 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         total_mode_duration = max_end_time if max_end_time > 0 else float(trigger.period or 3600)
 
+        # Total steps were previously left out of the static schedule, so a
+        # deactivated sequence showed its pump row with no start/end at all.
+        # Mirror the live path (build_cycle_schedule) so the widget renders the
+        # same window whether or not the controller is running.
+        for action, aopts in total_actions:
+            start_t, end_t = _total_window(aopts, total_mode_duration)
+            schedule.append({'action_uid': action.unique_id, 'start': start_t, 'end': end_t})
+
         steps = []
         for action in actions:
             try:
@@ -375,6 +423,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
                 'original_duration': display_duration,
                 'group_name': (opts.get('group_name') or '').strip() or None,
                 'display_name': (opts.get('display_name') or '').strip() or None,
+                'total_lead': _margins(opts)[0],
+                'total_lag': _margins(opts)[1],
                 'is_active': False
             })
 
@@ -394,6 +444,129 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             'today_window': {'start': active[1]['start'], 'end': active[1]['end'], 'period': active[1]['period']} if active else None,
             'steps': steps
         }
+
+    @staticmethod
+    def plan_for_day(unique_id, day_idx):
+        """What this sequence actually does on one weekday, as wall-clock slots.
+
+        get_static_status() answers only for *today*, so anyone configuring
+        another weekday had no way to check their work — the schedule JSON says
+        which steps are enabled and how long they run, but the running order and
+        the resulting times come from slot maths that lived only inside the
+        controller. Resolving it here lets callers (the AI tools, tests) show
+        "Thu 21:00-21:40 v321+v322" instead of a raw map.
+
+        Read-only and DB-derived; safe to call from any process.
+        """
+        trigger = db_retrieve_table_daemon(Trigger, unique_id=unique_id)
+        if not trigger:
+            return {"error": f"Trigger {unique_id} not found"}
+
+        sched = parse_schedule(getattr(trigger, 'timer_schedule', None)) or from_legacy(
+            trigger.timer_start_time, trigger.timer_end_time,
+            getattr(trigger, 'timer_weekday', None), trigger.period or 3600)
+        entry = (sched.get('days') or {}).get(str(day_idx), {})
+        day_name = DAY_NAMES[day_idx] if 0 <= day_idx <= 6 else str(day_idx)
+
+        out = {
+            "day": day_idx,
+            "day_name": day_name,
+            "runs": bool(entry.get('enabled', True)),
+            "window_start": entry.get('start'),
+            "window_end": entry.get('end'),
+            "period_seconds": entry.get('period'),
+            "slots": [],
+            "excluded": [],
+            "warnings": [],
+        }
+        if not out["runs"]:
+            return out
+
+        actions = db_retrieve_table_daemon(Actions).filter(
+            Actions.function_id == unique_id).all()
+        try:
+            actions = sorted(actions, key=lambda x: x.position)
+        except Exception:
+            actions = sorted(actions, key=lambda x: x.id)
+
+        def _label(a):
+            o = _parse_opts(a)
+            return (o.get('display_name') or '').strip() or _resolve_device_detail(
+                a.do_unique_id or o.get('output') or o.get('input'))
+
+        on, off = [], []
+        for a in actions:
+            o = _parse_opts(a)
+            (on if day_action_enabled(sched, day_idx, a.unique_id,
+                                      o.get('enabled', True)) else off).append(a)
+        out["excluded"] = [_label(a) for a in off]
+
+        singles = [a for a in on if _parse_opts(a).get('sequence_mode', 'single') != 'total']
+        totals = [a for a in on if _parse_opts(a).get('sequence_mode', 'single') == 'total']
+
+        overlap = float(trigger.output_duration or 0)
+        slots = _build_slots(
+            singles, lambda a: day_action_group(sched, day_idx, a.unique_id, _group_key(a)))
+
+        try:
+            base_min = time_to_minutes(entry.get('start') or '00:00')
+        except ValueError:
+            base_min = 0
+
+        def _clock(seconds):
+            total = int(base_min * 60 + seconds)
+            return f"{(total // 3600) % 24:02d}:{(total % 3600) // 60:02d}"
+
+        prev_end = span = 0.0
+        for i, (gname, members) in enumerate(slots):
+            rep = members[0]
+            step = float(day_action_duration(
+                sched, day_idx, rep.unique_id,
+                float(_parse_opts(rep).get('action_duration', 0) or 0)))
+            head = overlap if i > 0 else 0
+            tail = overlap if i < len(slots) - 1 else 0
+            start_t = max(0.0, prev_end - overlap) if i > 0 else 0.0
+            end_t = start_t + head + step + tail
+            prev_end = end_t
+            span = max(span, end_t)
+            out["slots"].append({
+                "starts_at": _clock(start_t), "ends_at": _clock(end_t),
+                "minutes": round((end_t - start_t) / 60, 1),
+                "devices": [_label(a) for a in members],
+                "simultaneous": len(members) > 1,
+                "group": gname,
+            })
+
+        for a in totals:
+            s, e = _total_window(_parse_opts(a), span or float(entry.get('period') or 0))
+            out["slots"].append({
+                "starts_at": _clock(s), "ends_at": _clock(e),
+                "minutes": round((e - s) / 60, 1),
+                "devices": [_label(a)], "simultaneous": False,
+                "group": None, "spans_whole_cycle": True,
+            })
+
+        out["one_pass_seconds"] = span
+        try:
+            window_sec = (time_to_minutes(entry['end']) - time_to_minutes(entry['start'])) * 60
+        except (KeyError, ValueError):
+            window_sec = None
+        period = float(entry.get('period') or 0)
+        if not out["slots"]:
+            out["warnings"].append("No step runs on this day — the window opens but nothing happens.")
+        if window_sec is not None and span > window_sec:
+            out["warnings"].append(
+                f"One pass takes {span:.0f}s but the window is only {window_sec}s — "
+                "it will be cut off before finishing.")
+        if period and span > period:
+            out["warnings"].append(
+                f"One pass takes {span:.0f}s but the cycle restarts every {period:.0f}s — "
+                "it will restart before finishing.")
+        if window_sec is not None and period and period < window_sec and out["slots"]:
+            out["warnings"].append(
+                f"The cycle repeats every {period:.0f}s inside a {window_sec}s window, so "
+                f"it runs about {int(window_sec // period)} times that day, not once.")
+        return out
 
     def initialize_variables(self):
         self.trigger = db_retrieve_table_daemon(Trigger, unique_id=self.unique_id)
@@ -772,10 +945,13 @@ class SequenceTriggerController(AbstractController, threading.Thread):
 
         # 2. Add Total Actions
         for action in total_actions:
+             start_t, end_t = _total_window(
+                 _parse_opts(action), total_mode_duration,
+                 self.logger, action.unique_id)
              schedule.append({
                     'action': action,
-                    'start': 0.0,
-                    'end': total_mode_duration,
+                    'start': start_t,
+                    'end': end_t,
                     'is_output': 'output' in action.action_type,
                     'type': 'total'
                 })
@@ -883,6 +1059,19 @@ class SequenceTriggerController(AbstractController, threading.Thread):
              self.logger.debug(f" - Item {i}: Action {item['action'].unique_id} [{item['start']} ~ {item['end']}]")
 
 
+    def _off_order(self, action_ids):
+        """Order ids for shutdown: 'total' steps first, then the rest.
+
+        active_actions is a set, so iterating it directly gave an arbitrary
+        (hash-dependent) shutdown order -- the pump could be switched off
+        before or after the valves it feeds, differing run to run. Stopping
+        total steps first drains the line pressure before any valve closes.
+        Returns a plain list, safe to iterate while the set is mutated.
+        """
+        type_of = {item['action'].unique_id: item.get('type')
+                   for item in self.current_schedule}
+        return sorted(action_ids, key=lambda a: 0 if type_of.get(a) == 'total' else 1)
+
     def process_cycle(self, now):
         elapsed = now - self.cycle_start_time
         
@@ -898,7 +1087,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         
         # Turn OFF things that shouldn't be active
         # Create a copy to iterate because we modify the set
-        current_active_ids = list(self.active_actions)
+        current_active_ids = self._off_order(self.active_actions)
         for act_id in current_active_ids:
             if act_id not in desired_active:
                 # Need action object to turn off
@@ -963,9 +1152,8 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self._save_runtime_state()
 
     def stop_all_active(self):
-        # Force stop all
-        # Create list copy to avoid modification during iteration
-        for act_id in list(self.active_actions):
+        # Force stop all, pump (total) before valves -- see _off_order.
+        for act_id in self._off_order(self.active_actions):
             # Find action info 
             found_item = next((i for i in self.current_schedule if i['action'].unique_id == act_id), None)
             

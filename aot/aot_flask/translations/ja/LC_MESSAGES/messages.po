@@ -26074,3 +26074,23 @@ msgid ""
 msgstr ""
 "このズームレベルより縮小すると、施設 / 出力 / 入力 / 関数のラベルと値キーを隠します。敷地とゾーンのラベルは位置の把握のため常に表示されます。0"
 " なら隠しません。"
+
+#: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
+msgid "Lead"
+msgstr "開始遅延"
+
+#: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
+msgid "Lag"
+msgstr "早期停止"
+
+#: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
+msgid "Margins (seconds)"
+msgstr "余裕時間 (秒)"
+
+#: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
+msgid "Start this many seconds after the sequence begins"
+msgstr "シーケンス開始からこの秒数だけ遅れて開始します"
+
+#: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
+msgid "Stop this many seconds before the sequence ends"
+msgstr "シーケンス終了のこの秒数前に停止します"

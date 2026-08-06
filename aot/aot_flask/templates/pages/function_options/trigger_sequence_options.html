@@ -214,8 +214,10 @@
         window.toggleSequenceFields = function(id, mode) {
             if (mode === 'total') {
                 $('.sequence-duration-field-' + id).hide();
+                $('.sequence-total-field-' + id).show();
             } else {
                 $('.sequence-duration-field-' + id).show();
+                $('.sequence-total-field-' + id).hide();
             }
         };
     </script>

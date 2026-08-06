@@ -61,10 +61,21 @@ _APPROVED_TTL_SEC = int(os.environ.get('AOT_MCP_APPROVED_TTL_SEC', '300'))
 
 # 도구별 시간당 호출 상한.
 _DEFAULT_CALLS_PER_HOUR = 10
+# 주의: 이 상한은 "작업 횟수"가 아니라 "호출 횟수"다. 승인이 필요한 도구는
+# 승인 요청 호출과 승인 후 실행 호출이 각각 하나씩 세어지므로(아래
+# _check_rate_limit 이 승인 분기보다 먼저 돈다), 실제로 끝까지 수행되는
+# 작업 수는 상한의 절반이다. 값을 정할 때 이 점을 감안할 것.
 _RATE_LIMITS = {
     'operate_device': 20,
     'set_output_state': 20,
     'schedule_device_control': 20,
+    # 시퀀스 구성 도구는 본질적으로 "스텝 수만큼" 반복 호출된다. 8스텝짜리
+    # 관수 시퀀스 하나를 세팅하는 데만 승인 왕복 포함 16회가 필요해서,
+    # 기본값 10 으로는 한 시퀀스도 못 채우고 중간에 refused 로 끊긴다
+    # (2026-08-06 실제로 겪음 — 4스텝째에서 막혀 그룹 설정이 통째로 유실됐다).
+    # 장치를 직접 구동하지 않는 설정 변경이므로 폭주 방지 목적만 남기고 넉넉히 준다.
+    'modify_sequence_step': 60,
+    'modify_sequence_schedule': 20,
 }
 
 _RATE_WINDOW_SEC = 3600.0

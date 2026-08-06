@@ -872,7 +872,9 @@ Here is what that looks like over time:
 | Valve B (Single) | | ON → OFF | |
 | Valve C (Single) | | | ON → OFF |
 
-The moment valve C turns off, the pump turns off with it. The **Total** mode pattern is meant for exactly one device (usually the main pump) that must stay on until everything else finishes; the rest of the steps run in **Single** mode, one after another.
+The **Total** mode pattern is meant for exactly one device (usually the main pump) that must stay on until everything else finishes; the rest of the steps run in **Single** mode, one after another.
+
+Left at the defaults, the pump switches on at the **same instant** as valve A and off at the same instant as valve C. Running a pump against a closed valve, or closing a valve while the pump is still running, is hard on the plumbing — so give the pump step a **margin (lead / lag)** to hold its window inside the valves'. See [Margins](#total-margins) below.
 
 ### Worked Example: Opening Several Valves at Once
 
@@ -891,7 +893,37 @@ You can freely mix sequential steps (the pump and Single steps) with simultaneou
 - **Single (default)**: Applies an independent duration to each step.
     - **Formula**: `Total active time = Head Overlap + Base Duration + Tail Overlap`
     - **Behavior**: The next step starts `Overlap` seconds before the previous step ends, supporting a smooth transition (for example, opening the next valve a few seconds before closing the current one, so pipe pressure doesn't drop suddenly).
-- **Total (Full-span)**: As in the pump example above, used for a step that must stay on for the entire sequence. It is held from the start of the sequence until the last `Single` step ends.
+- **Total (Full-span)**: As in the pump example above, used for a step that must stay on for the entire sequence. It is held from the start of the sequence until the last `Single` step ends, and **margins** can narrow that window from either end (see below).
+
+### Margins: Keeping the Pump Inside the Valves { #total-margins }
+
+A **Total** step switches on at second 0 of the cycle and off together with the last step. That means the first valve and the pump start at the same instant, and the last valve and the pump stop at the same instant. For real irrigation the order matters:
+
+- If the pump runs before a valve is open, the pump takes the full pressure.
+- If a valve closes while the pump is still running, you get water hammer.
+
+Two values on a Total step address this. Both are in seconds and default to 0 (the previous behaviour).
+
+| Value | What it does |
+| :--- | :--- |
+| **Lead** (`total_lead`) | Switch on this many seconds after the sequence begins, leaving the valve time to open first. |
+| **Lag** (`total_lag`) | Switch off this many seconds before the sequence ends, so pressure drops before the valve closes. |
+
+With a lead of 10 s and a lag of 15 s on a 90-minute cycle:
+
+| | Starts | Ends |
+| :--- | :--- | :--- |
+| Valves (all Single steps) | 0 s | 5400 s |
+| Pump (Total) | 10 s | 5385 s |
+
+The pump's window sits strictly inside the valves', so the order is always "valve opens → pump starts … pump stops → valve closes". On shutdown, Total steps are switched off before the rest for the same reason.
+
+There are two places to set this, and both show the fields only on a step whose mode is **Total**:
+
+- The step row on the function settings screen: switching the mode to `Total` reveals the `Lead` and `Lag` fields.
+- The dashboard sequence widget: **Margins (seconds)** in the settings dialog opened by clicking a step name.
+
+If the margins are larger than the cycle itself — leaving the pump no time to run at all — they are ignored, the full span is used, and a warning is logged.
 
 ### Other Key Concepts
 
@@ -913,6 +945,8 @@ You can freely mix sequential steps (the pump and Single steps) with simultaneou
 | `time_offset_minutes` | The maximum validity age of a dynamic-duration measurement (in minutes). |
 | `enabled` | Whether an individual action is enabled. |
 | `sequence_mode` | Select 'single' or 'total'. |
+| `total_lead` | (Total mode only) Switch on this many seconds after the sequence begins. Default 0. |
+| `total_lag` | (Total mode only) Switch off this many seconds before the sequence ends. Default 0. |
 | `action_duration` | The base run time of that step (in seconds). |
 | `action_duration_id` | The device/measurement ID to fetch the dynamic run time from. |
 | `group_name` | The device-group name. Steps sharing the same name collapse into one slot and operate simultaneously (see below). If empty, the step operates standalone. |

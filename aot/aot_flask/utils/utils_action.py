@@ -80,13 +80,14 @@ def action_add(form, request_form=None):
 
             # Handle Sequence Action Fields from request_form
             if request_form:
-                for key in ['sequence_mode', 'action_duration', 'action_duration_id', 'group_name']:
+                for key in ['sequence_mode', 'action_duration', 'action_duration_id', 'group_name',
+                            'total_lead', 'total_lag']:
                     if key in request_form:
                         value = request_form[key]
 
                         if key == 'group_name':
                             options_dict[key] = value.strip()
-                        elif key == 'action_duration' and value:
+                        elif key in ('action_duration', 'total_lead', 'total_lag') and value:
                             from aot.utils.time_utils import parse_flexible_time
                             parsed = parse_flexible_time(value)
                             if parsed:
@@ -182,14 +183,15 @@ def action_mod(form, request_form):
                 options_dict['gridstack_y'] = _preserved_gridstack_y
                 updated = True
 
-            for key in ['sequence_mode', 'action_duration', 'action_duration_id', 'group_name']:
+            for key in ['sequence_mode', 'action_duration', 'action_duration_id', 'group_name',
+                        'total_lead', 'total_lag']:
                 if key in request_form:
                     value = request_form[key]
 
-                    # Parse action_duration with flexible time parsing
+                    # Parse durations/margins with flexible time parsing
                     if key == 'group_name':
                         options_dict[key] = value.strip()
-                    elif key == 'action_duration' and value:
+                    elif key in ('action_duration', 'total_lead', 'total_lag') and value:
                         from aot.utils.time_utils import parse_flexible_time
                         parsed = parse_flexible_time(value)
                         if parsed:

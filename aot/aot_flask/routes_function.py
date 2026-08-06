@@ -1793,6 +1793,8 @@ def function_sequence_update_step():
     - sequence_mode: 'single' or 'total'. A 'total' step can't be grouped.
     - group_name: joins/creates a device group (single steps only); joining an
       existing group inherits its common duration.
+    - total_lead/total_lag: seconds a 'total' step starts after / stops before
+      the rest of the sequence, so a pump stays inside its valves' window.
     """
     if not utils_general.user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission denied'}), 403
@@ -1824,6 +1826,21 @@ def function_sequence_update_step():
             opts.pop('display_name', None)
 
         opts['sequence_mode'] = seq_type
+
+        # Lead/lag margins apply to total steps only; a step switched back to
+        # 'single' drops them so a later switch to total starts from 0.
+        for margin_key in ('total_lead', 'total_lag'):
+            if seq_type != 'total':
+                opts.pop(margin_key, None)
+            elif margin_key in data:
+                try:
+                    margin = max(0.0, float(data.get(margin_key) or 0))
+                except (TypeError, ValueError):
+                    margin = 0.0
+                if margin:
+                    opts[margin_key] = margin
+                else:
+                    opts.pop(margin_key, None)
 
         # Global group — total steps can't be grouped. Only touched when the
         # request includes group_name (shared mode).

@@ -109,6 +109,22 @@ _SFK_AI_MUTATING_ADDITIONS = {'configure_library_source'}
 # SmartFarmKorea. tool_map + registry addition, no approval.
 _LIBRARY_CATALOG_TOOL_ADDITIONS = {'list_library_source_types'}
 
+# Sequence editing (2026-08-06). Three tools, all mutating → both approval sets.
+# - configure_sequence_day: lays out one weekday's whole plan in a single call.
+#   Doing it per step cost ~20 gated calls, and that friction pushed a caller
+#   into building a redundant second sequence instead.
+# - modify_sequence_schedule: modify_function_options writes custom_options, a
+#   column Trigger does not have, so every sequence timing edit reported success
+#   and changed nothing. It now refuses Triggers; this edits timer_schedule
+#   (weekly_schedule v1) properly.
+# - modify_sequence_step: create_sequence_function only lays down uniform steps
+#   (one duration for all, always 'single', never grouped), so the AI could make
+#   a sequence but not the shape real irrigation needs — valves opening together,
+#   different durations per slot, a pump spanning the rest.
+_SEQUENCE_SCHEDULE_TOOL_ADDITIONS = {'modify_sequence_schedule',
+                                     'modify_sequence_step',
+                                     'configure_sequence_day'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -145,7 +161,8 @@ def run():
     _check("tool_map keys",
            _ORIG_TOOL_MAP_KEYS | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
            | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_MAP_ADDITIONS
-           | _PHASE2_TOOL_MAP_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS,
+           | _PHASE2_TOOL_MAP_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
     # 2. VIRTUAL_TOOL_REGISTRY — original PLUS the drift-fix PLUS post-Phase-1 additions.
@@ -153,18 +170,21 @@ def run():
            _ORIG_VIRTUAL_TOOL_REGISTRY | _INTENDED_REGISTRY_ADDITIONS
            | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
            | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_ADDITIONS
-           | _PHASE2_REGISTRY_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS,
+           | _PHASE2_REGISTRY_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions.
     _check("_VIRTUAL_APPROVAL_TOOLS",
-           _ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS,
+           _ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
            set(R.virtual_approval_tools()))
 
     # 5. planner approval set — original PLUS the same mutating additions (none
     #    of the new tools are `physical`, so no extra physical/schedule tools).
     _check("_APPROVAL_REQUIRED_TOOLS",
-           _ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS,
+           _ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
            set(R.approval_required_tools()))
 
     # 3. manifest — every manifest entry names a known tool; the set of virtual-tool
