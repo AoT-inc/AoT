@@ -135,9 +135,11 @@
             <input type="text" name="google_picker_api_key" class="aot-modern-input form-control"
                    value="{{ misc.google_picker_api_key or '' }}"
                    autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore>
-            <div class="aot-modal-body-text" style="font-size: 0.85rem;">
-              {{_('Optional — only needed for the AI Library Google Drive source (file picker). A Cloud Console API key with the Picker API enabled, NOT the OAuth Client Secret above.')}}
-            </div>
+          </div>
+        </div>
+        <div class="aot-modal-option-row aot-modal-option-row-wrap">
+          <div class="aot-modal-body-text">
+            {{_('Optional — only needed for the AI Library Google Drive source (file picker). A Cloud Console API key with the Picker API enabled, NOT the OAuth Client Secret above.')}}
           </div>
         </div>
 
