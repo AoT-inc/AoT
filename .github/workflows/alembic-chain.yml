@@ -51,3 +51,5 @@ jobs:
       # TEMPORARY — ci-failure-issue.yml 전 구간 검증용. 다음 커밋에서 제거한다.
       - name: 일부러 실패 (검증용)
         run: exit 1
+
+# (검증 2/3 — 재실패 시 이슈가 새로 생기지 않고 코멘트가 붙는지 확인)
