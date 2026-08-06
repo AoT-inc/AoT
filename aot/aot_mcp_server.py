@@ -243,6 +243,9 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None, elic
 
     if isinstance(result, dict):
         result.setdefault("server_host", SERVER_HOST)
+        # 호출이 실제로 돌았는지를 도구별 어휘와 무관하게 한 키로 알린다.
+        # 여기가 stdio/HTTP 양쪽이 반드시 지나는 단일 지점이라 한 번만 찍으면 된다.
+        result["call_state"] = gate.call_state(blocked, result, error_text)
     return [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
 
 

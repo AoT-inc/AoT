@@ -85,6 +85,25 @@ Two things are worth knowing before using them:
 
 `modify_function_options` does not work on sequences (or any trigger) — their settings are database columns, not `custom_options`. It refuses with a pointer to the tools above.
 
+### Call state (`call_state`) { #call-state }
+
+Every `tools/call` response carries a `call_state`. It tells you **whether the call
+actually ran** without having to know each tool's own `status` vocabulary
+(`modified`, `created`, `deleted`, `configured`, `success`, …).
+
+| Value | Meaning | What the client should do |
+|------|------|------|
+| `executed` | Ran on this call (read tools included) | Report the result |
+| `already_executed` | The server already ran it when the user approved | Report the enclosed `result`; do not call again |
+| `pending_approval` | Not executed, waiting on a human | Point the user at the approval page and wait |
+| `approval_rejected` | The user rejected it | Do not execute; switch to advice |
+| `approval_expired` | The confirmation expired | Request approval again |
+| `refused` | Refused for another reason (rate limit, argument mismatch, …) | Read `reason_code` and explain |
+| `failed` | The tool ended in an error | Report the error |
+
+The existing `status` values are unchanged — code and deployed configs already
+branch on them, so this adds an axis rather than redefining one.
+
 ### Extended In-app Assistant Tools
 
 Beyond the MCP catalog above, the in-app AI assistant uses additional tools for entity assembly, automation, and knowledge. Every state-changing tool requires approval.

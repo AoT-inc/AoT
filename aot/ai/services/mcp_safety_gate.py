@@ -604,6 +604,53 @@ def _decide(confirmation_id, status, user_id=None):
     return {"status": "success", "confirmation_id": confirmation_id, "new_status": status}
 
 
+#: tools/call 이 항상 함께 실어 보내는 호출 상태. 이 도구가 실제로 돌았는지를
+#: 클라이언트가 도구별 어휘를 몰라도 판정할 수 있게 하는 단일 축이다.
+#:
+#: 기존 `status` 키에는 두 어휘가 섞여 있다 — 게이트의 승인 상태
+#: (pending_approval/refused)와 각 도구의 결과(modified/created/deleted/
+#: configured/placed/success… 12종). 그래서 "실행됐는가"를 알려면 도구마다 다른
+#: 단어를 알아야 했다. `status` 를 통일하는 쪽은 이미 그 값으로 분기하는 코드
+#: 46곳과 배포된 프롬프트를 깨므로, 축을 하나 더 두고 기존 값은 그대로 둔다.
+CALL_STATES = (
+    'executed',            # 이번 호출에서 실제로 실행됨 (읽기 도구 포함)
+    'already_executed',    # 승인 시점에 서버가 이미 실행함 — 결과 재생
+    'pending_approval',    # 실행 안 됨, 사람 승인 대기
+    'approval_rejected',   # 사람이 거부함
+    'approval_expired',    # 승인 대기가 만료됨
+    'refused',             # 그 밖의 거부 (레이트 리밋, 인자 불일치, 쓰기 비활성 등)
+    'failed',              # 도구가 예외/오류로 끝남
+)
+
+_REFUSAL_STATE = {
+    'confirmation_rejected': 'approval_rejected',
+    'confirmation_expired': 'approval_expired',
+}
+
+
+def call_state(blocked, result=None, error_text=''):
+    """(blocked, result) → CALL_STATES 중 하나.
+
+    blocked 는 gate() 의 반환값(None 이면 게이트를 통과해 실제로 실행된 것).
+    """
+    if blocked:
+        status = blocked.get('status')
+        if status == 'pending_approval':
+            return 'pending_approval'
+        if status == 'already_executed':
+            return 'already_executed'
+        return _REFUSAL_STATE.get(blocked.get('reason_code'), 'refused')
+    if error_text:
+        return 'failed'
+    if isinstance(result, dict):
+        # 실패를 알리는 관행이 두 가지다 — {"status": "error"} 38곳,
+        # {"error": "..."} 217곳. 뒤쪽이 주류라 이걸 빠뜨리면 "없는 id 조회"
+        # 같은 명백한 실패가 executed 로 보고된다.
+        if result.get('status') == 'error' or result.get('error'):
+            return 'failed'
+    return 'executed'
+
+
 #: 승인 화면에서 한 번 더 확인을 받는 도구 — 되돌릴 수 없는 물리 동작.
 #: 설정 변경은 승인 한 번으로 끝내고, 밸브·펌프가 실제로 움직이는 것만 재확인한다.
 PHYSICAL_TOOLS = frozenset({'operate_device', 'set_output_state', 'schedule_device_control'})
