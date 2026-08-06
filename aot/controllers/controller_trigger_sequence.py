@@ -562,10 +562,16 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             out["warnings"].append(
                 f"One pass takes {span:.0f}s but the cycle restarts every {period:.0f}s — "
                 "it will restart before finishing.")
-        if window_sec is not None and period and period < window_sec and out["slots"]:
+        # Only a genuine repeat is worth flagging. The old guard (period <
+        # window) fired even when the window fits exactly one pass, producing
+        # "runs about 1 times that day, not once" — self-contradictory, and the
+        # caller relays these warnings to the user verbatim.
+        repeats = int(window_sec // period) if (window_sec and period) else 0
+        out["runs_per_day"] = repeats or (1 if out["slots"] else 0)
+        if repeats >= 2 and out["slots"]:
             out["warnings"].append(
-                f"The cycle repeats every {period:.0f}s inside a {window_sec}s window, so "
-                f"it runs about {int(window_sec // period)} times that day, not once.")
+                f"The cycle repeats every {period:.0f}s inside a {window_sec}s window, "
+                f"so it runs about {repeats} times that day rather than once.")
         return out
 
     def initialize_variables(self):
