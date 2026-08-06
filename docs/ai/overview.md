@@ -66,12 +66,31 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 
 > In the in-app assistant, the control tools above and `add_schedule` execute only after confirmation via the approval card. Calling directly through the external MCP server goes through the same kind of gate: the first call is not executed and comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject that confirmation_id in chat (handled via `respond_to_confirmation`) or on the web review page, then the caller retries the same arguments plus `_confirmation_id` to actually execute it. See "Running the MCP Server" below for the full flow.
 
+### Sequences (user approval required)
+
+A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set order — the usual shape for irrigation, where valves take turns and a pump spans the run. These tools read and shape one.
+
+| Tool | Description |
+|------|-------------|
+| `configure_sequence_day` | Set one weekday's entire run plan in a single call: which devices run, in what order, for how long, and which run together |
+| `modify_sequence_step` | One step's group, duration, single/total mode, total-step lead/lag margins, run order, enabled state, label — globally or for one weekday |
+| `modify_sequence_schedule` | The daily window, cycle period and which weekdays the sequence runs |
+
+`get_function_detail` returns a sequence's steps plus `weekly_plan` — what actually runs each weekday, in wall-clock time. Read that back to confirm a change rather than repeating the request.
+
+Two things are worth knowing before using them:
+
+- **Devices listed in the same slot run simultaneously**, and a slot shares one duration. That is how "open these two valves together for 40 minutes" is expressed.
+- **A weekday can override which steps run, their group and their duration.** One sequence therefore covers, say, an evening pass on Thursday and a dawn pass on Friday. Do not create a second sequence just because a day differs.
+
+`modify_function_options` does not work on sequences (or any trigger) — their settings are database columns, not `custom_options`. It refuses with a pointer to the tools above.
+
 ### Extended In-app Assistant Tools
 
 Beyond the MCP catalog above, the in-app AI assistant uses additional tools for entity assembly, automation, and knowledge. Every state-changing tool requires approval.
 
 - **Input/Output management**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
-- **Functions (automation)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
+- **Functions (automation)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`, `modify_function_options` (not for triggers — see Sequences above), `activate_function`·`deactivate_function`·`delete_function`, plus the sequence tools `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`
 - **Schedule ledger**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
 - **GIS inputs (map layers)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input` (manage map layer providers such as VWorld/Google/OpenWeather)

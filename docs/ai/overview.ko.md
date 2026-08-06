@@ -66,12 +66,31 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 > 인앱 어시스턴트에서는 위 제어·`add_schedule` 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때도 동일하게 승인을 거칩니다 — 최초 호출은 실행되지 않고 `pending_approval`(대기 중인 confirmation_id)로 응답하며, 사용자가 그 confirmation_id를 채팅에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출(또는 웹 승인 페이지 클릭)로 처리되고, 그 뒤 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다. 자세한 흐름은 아래 "MCP 서버 실행"을 참고하세요.
 
+### 시퀀스 (사용자 승인 필요)
+
+[시퀀스](../Functions.ko.md#trigger-sequence)는 여러 출력 장치를 정해진 순서로 돌리는 기능으로, 밸브가 차례로 열리고 펌프가 전 구간을 도는 관수가 대표적인 형태입니다. 아래 도구로 시퀀스를 읽고 구성합니다.
+
+| 도구 | 설명 |
+|------|------|
+| `configure_sequence_day` | 한 요일의 실행 계획 전체를 한 번에 설정 — 어떤 장치가, 어떤 순서로, 얼마나, 무엇과 함께 도는지 |
+| `modify_sequence_step` | 스텝 하나의 그룹·지속시간·단일/전체 모드·전체 모드 리드/래그·실행 순서·활성 여부·라벨 (전체 적용 또는 특정 요일만) |
+| `modify_sequence_schedule` | 하루 실행 창, 사이클 주기, 운영 요일 |
+
+`get_function_detail`은 시퀀스의 스텝 목록과 함께 `weekly_plan`을 돌려줍니다 — 요일별로 실제 몇 시부터 몇 시까지 무엇이 도는지를 벽시계 시각으로 해결한 결과입니다. 변경한 뒤에는 요청을 되풀이하지 말고 이걸 읽어서 확인하세요.
+
+쓰기 전에 알아둘 것 두 가지입니다.
+
+- **같은 슬롯에 넣은 장치는 동시에 작동하고**, 슬롯 하나는 지속시간을 공유합니다. "이 밸브 두 개를 같이 40분" 이 이렇게 표현됩니다.
+- **요일마다 어떤 스텝이 돌지, 그룹과 지속시간을 따로 덮어쓸 수 있습니다.** 그래서 시퀀스 하나가 목요일 저녁 관수와 금요일 새벽 관수를 함께 담습니다. 요일이 다르다고 시퀀스를 새로 만들지 마세요.
+
+`modify_function_options`는 시퀀스(및 모든 트리거)에 통하지 않습니다 — 트리거의 설정은 `custom_options`가 아니라 DB 컬럼입니다. 호출하면 위 도구를 안내하며 거부합니다.
+
 ### 인앱 어시스턴트 확장 도구
 
 인앱 AI 어시스턴트는 위 MCP 카탈로그 외에 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 상태를 바꾸는 도구는 모두 승인이 필요합니다.
 
 - **입력/출력 관리**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
-- **함수(자동화)**: `get_function_list`, `create_function`, `create_sequence_function`, `modify_function_options`, `activate_function`·`deactivate_function`·`delete_function`
+- **함수(자동화)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`, `modify_function_options`(트리거에는 통하지 않음 — 위 시퀀스 절 참고), `activate_function`·`deactivate_function`·`delete_function`, 그리고 시퀀스 도구 `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`
 - **일정 원장**: `search_schedule`, `edit_schedule`, `delete_schedule`
 - **지도(GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
 - **GIS 입력(지도 레이어)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input`(VWorld/Google/OpenWeather 등 지도 레이어 제공자 관리)
