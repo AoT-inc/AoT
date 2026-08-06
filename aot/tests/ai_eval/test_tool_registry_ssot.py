@@ -125,6 +125,91 @@ _SEQUENCE_SCHEDULE_TOOL_ADDITIONS = {'modify_sequence_schedule',
                                      'modify_sequence_step',
                                      'configure_sequence_day'}
 
+# Scheduler CRUD close-out + per-location local time (2026-07-20, aa2c5bc
+# "스케줄 원장 SchedulerJobMeta 일원화"): search/edit/delete_schedule complete
+# the scheduler as a farm-operations ledger (@ANCHOR: SCHEDULE_CRUD_TOOLS);
+# get_local_time (@ANCHOR: GET_LOCAL_TIME_TOOL) is unrelated but landed in the
+# same commit. search_schedule and get_local_time are read-only; edit/delete
+# mutate an existing schedule row → approval-gated.
+_SCHEDULE_CRUD_TOOL_ADDITIONS = {'search_schedule', 'edit_schedule', 'delete_schedule'}
+_SCHEDULE_CRUD_MUTATING_ADDITIONS = {'edit_schedule', 'delete_schedule'}
+_LOCAL_TIME_TOOL_ADDITIONS = {'get_local_time'}
+
+# geo/design facility performance + map-drawn equipment (2026-07-22, cc4c9a6
+# "geo/design 설비 조회 도구 3종"): all three surface engineering reference
+# data computed elsewhere (facility_calc, equipment_collection GeoShapes) —
+# read-only, tool_map + registry only.
+_FACILITY_MAP_TOOL_ADDITIONS = {
+    'get_facility_capacity', 'get_map_equipment', 'get_map_equipment_detail',
+}
+
+# Reverse geocoding (2026-07-25, @ANCHOR: REVERSE_GEOCODE_TOOL): exposes the
+# existing VWorld getAddress pipeline as a standalone lookup. Read-only.
+_REVERSE_GEOCODE_TOOL_ADDITIONS = {'get_address'}
+
+# GIS Input CRUD + scheduling batch + target resolution (2026-07-26, 6a0788a
+# "외부 MCP 서버 사람 승인 게이트 + GIS 입력 CRUD + add_schedule_batch"):
+# - GIS_INPUT_CRUD_TOOLS: map-layer/provider CRUD, same shape as Input/Output
+#   CRUD — list is read-only, create/modify/activate/delete mutate.
+# - add_schedule_batch is `physical` (like add_schedule), not `mutating` — a
+#   scheduling tool, not an entity mutation, so it only joins the planner's
+#   approval_required_tools (mutating OR physical), not the dispatch-only
+#   virtual_approval_tools (mutating-only).
+# - resolve_target is the read-only name-resolution primitive the batch/CRUD
+#   tools' usage_hints tell the model to call first; no approval.
+_GIS_INPUT_CRUD_TOOL_ADDITIONS = {
+    'list_gis_inputs', 'create_gis_input', 'modify_gis_input',
+    'activate_gis_input', 'delete_gis_input',
+}
+_GIS_INPUT_CRUD_MUTATING_ADDITIONS = {
+    'create_gis_input', 'modify_gis_input', 'activate_gis_input', 'delete_gis_input',
+}
+_SCHEDULE_BATCH_TOOL_ADDITIONS = {'add_schedule_batch'}
+_SCHEDULE_BATCH_PHYSICAL_ADDITIONS = {'add_schedule_batch'}
+_TARGET_RESOLUTION_TOOL_ADDITIONS = {'resolve_target'}
+
+# In-chat confirmation relay (2026-07-26, @ANCHOR: CONFIRMATION_RELAY_TOOLS):
+# lets the human approve/reject a pending write from inside the chat instead
+# of the web review page. list_pending_confirmations is a normal read-only
+# virtual tool (tool_map + registry). respond_to_confirmation is registry-only
+# (handler=None, like ask_user/read_manual — the dispatch layer intercepts it
+# directly) but IS `mutating`: approving a confirmation triggers the write it
+# was gating, so it must sit behind the same human-approval bookkeeping.
+_CONFIRMATION_RELAY_TOOL_ADDITIONS = {'list_pending_confirmations', 'respond_to_confirmation'}
+_CONFIRMATION_RELAY_TOOL_MAP_ADDITIONS = {'list_pending_confirmations'}
+_CONFIRMATION_RELAY_MUTATING_ADDITIONS = {'respond_to_confirmation'}
+
+# Advisory read tools + advice ledger + orientation brief (2026-07-26,
+# @ANCHOR: ADVISORY_READ_TOOLS / ADVICE_LEDGER_TOOLS): read-only status tools
+# an external advisory AI needs (control state, forecast, anomalies, crop
+# status) plus the multi-AI opinion ledger. submit_advice writes a DB row but
+# is deliberately NOT `mutating` — per the in-file comment, gating "the AI
+# stating an opinion" behind human approval would defeat the ledger's purpose;
+# only executions (operate_device etc.) need that gate. get_system_brief is
+# the read-only orientation entry point. None are approval-gated.
+_ADVISORY_READ_TOOL_ADDITIONS = {
+    'get_control_state', 'get_weather_forecast', 'get_anomalies', 'get_crop_status',
+}
+_ADVICE_LEDGER_TOOL_ADDITIONS = {'submit_advice', 'list_advice'}
+_SYSTEM_BRIEF_TOOL_ADDITIONS = {'get_system_brief'}
+
+# Output current-state read tool (2026-07-28, b567814 "출력장치 현재 상태 읽기
+# 도구 get_output_state 추가"). Read-only.
+_OUTPUT_STATE_TOOL_ADDITIONS = {'get_output_state'}
+
+# Adaptive document storage — read half (2026-08-04, 9c68ef2 "문서 스토리지
+# 티어를 AI가 조회할 수 있게 (2/3)"). All three read tiering/archive state;
+# read-only, tool_map + registry only.
+_ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS = {
+    'get_storage_tier_status', 'search_archives', 'get_archived_document',
+}
+
+# Adaptive document storage — write half (2026-08-04, 8968d30 "스토리지 쓰기
+# 도구 4종"). All four mutate archive/tier state → approval-gated.
+_ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS = {
+    'archive_note', 'restore_note_from_archive', 'set_document_tier', 'delete_archive',
+}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -162,7 +247,14 @@ def run():
            _ORIG_TOOL_MAP_KEYS | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
            | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_MAP_ADDITIONS
            | _PHASE2_TOOL_MAP_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS
-           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
+           | _SCHEDULE_CRUD_TOOL_ADDITIONS | _LOCAL_TIME_TOOL_ADDITIONS
+           | _FACILITY_MAP_TOOL_ADDITIONS | _REVERSE_GEOCODE_TOOL_ADDITIONS
+           | _GIS_INPUT_CRUD_TOOL_ADDITIONS | _SCHEDULE_BATCH_TOOL_ADDITIONS
+           | _TARGET_RESOLUTION_TOOL_ADDITIONS | _CONFIRMATION_RELAY_TOOL_MAP_ADDITIONS
+           | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
+           | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
+           | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
     # 2. VIRTUAL_TOOL_REGISTRY — original PLUS the drift-fix PLUS post-Phase-1 additions.
@@ -171,20 +263,32 @@ def run():
            | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
            | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_ADDITIONS
            | _PHASE2_REGISTRY_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS
-           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
+           | _SCHEDULE_CRUD_TOOL_ADDITIONS | _LOCAL_TIME_TOOL_ADDITIONS
+           | _FACILITY_MAP_TOOL_ADDITIONS | _REVERSE_GEOCODE_TOOL_ADDITIONS
+           | _GIS_INPUT_CRUD_TOOL_ADDITIONS | _SCHEDULE_BATCH_TOOL_ADDITIONS
+           | _TARGET_RESOLUTION_TOOL_ADDITIONS | _CONFIRMATION_RELAY_TOOL_ADDITIONS
+           | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
+           | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
+           | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions.
     _check("_VIRTUAL_APPROVAL_TOOLS",
            _ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
-           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
+           | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
+           | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
            set(R.virtual_approval_tools()))
 
-    # 5. planner approval set — original PLUS the same mutating additions (none
-    #    of the new tools are `physical`, so no extra physical/schedule tools).
+    # 5. planner approval set — original PLUS the same mutating additions PLUS the
+    #    one new `physical` (not `mutating`) scheduling tool, add_schedule_batch.
     _check("_APPROVAL_REQUIRED_TOOLS",
            _ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
-           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS,
+           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
+           | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
+           | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
+           | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS,
            set(R.approval_required_tools()))
 
     # 3. manifest — every manifest entry names a known tool; the set of virtual-tool
