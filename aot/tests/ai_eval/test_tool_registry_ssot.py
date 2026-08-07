@@ -145,6 +145,45 @@ _CONFIG_ONLY_APPROVAL_EXEMPTIONS = {'modify_sequence_schedule',
                                     'create_sequence_function',
                                     'modify_function_options'}
 
+# ---------------------------------------------------------------------------
+# 이름 휴리스틱 가드 — 위 스냅샷들이 못 잡는 구멍을 메운다.
+#
+# 스냅샷은 **이미 누군가 판단한 도구만** 고정한다. 새 도구를 넣으면서 스냅샷을
+# 함께 갱신하면 검사는 통과한다 — 그 도구가 mutating/physical 선언을 빠뜨려
+# 승인 없이 도는 쓰기가 되어도 마찬가지다. 스냅샷 갱신이 곧 "판단했다"는
+# 증거는 아니기 때문이다.
+#
+# 그래서 선언과 무관하게 **이름만 보고** 한 번 더 본다. 이름이 쓰기형인데
+# mutating/physical 이 둘 다 없으면, 스냅샷을 아무리 맞춰도 여기서 걸린다.
+#
+# 휴리스틱의 한계는 분명하다 — 접두사에 안 걸리는 쓰기 도구
+# (knowledge_shelve 가 그런 경우)는 이름만으로는 못 잡는다. 그래서 면제 목록은
+# "접두사에 걸렸지만 봐준 것"이 아니라 **의도적으로 승인을 안 받는 쓰기 도구
+# 전체 명부**로 둔다. 한 곳에서 다 보이는 편이 낫다.
+_WRITE_NAME_PREFIXES = (
+    'create_', 'delete_', 'set_', 'modify_', 'update_', 'add_', 'edit_',
+    'configure_', 'activate_', 'deactivate_', 'respond_', 'submit_',
+    'archive_', 'restore_', 'operate_', 'schedule_',
+)
+
+# 여기에 이름을 넣는 것은 **승인 요구를 없애는 안전 결정**이다. 스냅샷 갱신과
+# 같은 무게로 다룰 것 — 근거를 주석으로 남기고, 되돌릴 수 있는 저위험 쓰기에만
+# 쓴다. 물리 제어나 엔티티 설정 변경은 절대 여기에 오면 안 된다.
+#
+# - create_note      (2026-07-18): 사용자가 직접 적어달라고 한 사적인 메모.
+#                    승인 큐에 태웠더니 저장이 조용히 누락되고 "기술적 오류"로
+#                    표면화됐다. 공개 게시물인 create_notice 는 계속 게이트 대상.
+# - knowledge_shelve (2026-07-19): 항상 최하위 신뢰 등급(provenance='ai_curated',
+#                    unconfirmed)으로만 쓰며, 사람이 확인하기 전까지 권위를 갖고
+#                    제시되지 않는다.
+# - submit_advice               : AI가 '의견을 말하는 것'에까지 승인을 요구하면
+#                    조언 원장의 존재 이유가 사라진다. 승인 대상은 실행이지 제안이 아니다.
+_INTENTIONALLY_UNGATED_WRITE_TOOLS = {
+    'create_note',
+    'knowledge_shelve',
+    'submit_advice',
+}
+
 # Scheduler CRUD close-out + per-location local time (2026-07-20, aa2c5bc
 # "스케줄 원장 SchedulerJobMeta 일원화"): search/edit/delete_schedule complete
 # the scheduler as a farm-operations ledger (@ANCHOR: SCHEDULE_CRUD_TOOLS);
@@ -332,6 +371,8 @@ def run():
     print(f"  OK  config_only exemptions: {len(_CONFIG_ONLY_APPROVAL_EXEMPTIONS)} tools, "
           f"all still classified as writes")
 
+    test_write_tools_are_gated()
+
     # 3. manifest — every manifest entry names a known tool; the set of virtual-tool
     #    manifest names is a subset of the registry (no phantom manifest entries).
     manifest = R.manifest_system_tools()
@@ -348,6 +389,57 @@ def run():
             raise AssertionError(f"tool '{t.name}' has no handler and is not in registry")
 
     print("\nALL SSOT DERIVATIONS MATCH (value-preserving; +2 intended registry drift fix).")
+
+
+def test_write_tools_are_gated():
+    """이름이 쓰기형인 도구는 mutating/physical 을 선언해야 한다.
+
+    스냅샷 검사와 독립적이다. 스냅샷은 갱신하면 통과하지만 이 검사는 갱신으로
+    통과시킬 수 없다 — 통과하려면 도구에 선언을 붙이거나, 승인을 안 받겠다는
+    결정을 _INTENTIONALLY_UNGATED_WRITE_TOOLS 에 근거와 함께 명시해야 한다.
+    """
+    from aot.ai.services import tool_registry as R
+
+    declared = {t.name for t in R.TOOLS}
+
+    # 1) 이름은 쓰기형인데 선언이 없는 도구.
+    ungated = sorted(
+        t.name for t in R.TOOLS
+        if t.name.startswith(_WRITE_NAME_PREFIXES)
+        and not (t.mutating or t.physical)
+        and t.name not in _INTENTIONALLY_UNGATED_WRITE_TOOLS
+    )
+    if ungated:
+        raise AssertionError(
+            "이름이 쓰기형인데 mutating=/physical= 선언이 없는 도구: "
+            f"{ungated}\n"
+            "  선언을 붙이거나, 승인을 안 받겠다는 결정이라면 "
+            "_INTENTIONALLY_UNGATED_WRITE_TOOLS 에 근거를 적어 넣을 것. "
+            "후자는 승인 요구를 없애는 안전 결정이다.")
+
+    # 2) 면제 명부에 남아 있는 유령 이름. 도구가 이름이 바뀌거나 사라지면
+    #    면제만 남아, 나중에 같은 이름의 새 도구가 아무 검토 없이 면제를
+    #    물려받는다.
+    stale = sorted(_INTENTIONALLY_UNGATED_WRITE_TOOLS - declared)
+    if stale:
+        raise AssertionError(
+            f"_INTENTIONALLY_UNGATED_WRITE_TOOLS 에 존재하지 않는 도구: {stale}\n"
+            "  이름이 바뀌었거나 삭제된 것이다. 면제를 함께 지울 것 — "
+            "남겨두면 같은 이름의 새 도구가 검토 없이 면제를 물려받는다.")
+
+    # 3) 면제 명부의 도구가 실제로 승인 집합 밖에 있는지. 명부에는 있는데
+    #    선언이 mutating 이면 서로 모순이다.
+    contradictory = sorted(
+        n for n in _INTENTIONALLY_UNGATED_WRITE_TOOLS
+        if n in R.approval_required_tools()
+    )
+    if contradictory:
+        raise AssertionError(
+            f"면제 명부에 있으면서 승인 대상이기도 한 도구: {contradictory}\n"
+            "  둘 중 하나가 틀렸다. 명부에서 빼거나 선언을 떼거나.")
+
+    print(f"  OK  write-name gating: {len(_WRITE_NAME_PREFIXES)} prefixes checked, "
+          f"{len(_INTENTIONALLY_UNGATED_WRITE_TOOLS)} deliberate exemptions, no gaps")
 
 
 if __name__ == '__main__':

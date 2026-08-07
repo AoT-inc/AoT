@@ -13,6 +13,7 @@ name: CI Failure Issue
 on:
   workflow_run:
     workflows:
+      - AI Tool Registry SSOT
       - Alembic Chain
       - Geo Data Integrity
       - JS Bundle Drift

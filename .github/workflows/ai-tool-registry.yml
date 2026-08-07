@@ -1,0 +1,49 @@
+name: AI Tool Registry SSOT
+
+# AI 도구 하나는 tool_registry.py 의 Tool(...) 선언 한 줄에서 5곳으로 파생된다:
+# tool_map(디스패치) · VIRTUAL_TOOL_REGISTRY(이름 검증) · _VIRTUAL_APPROVAL_TOOLS
+# (디스패치 승인) · _APPROVAL_REQUIRED_TOOLS(플래너 승인) · manifest(LLM 노출).
+# 이 검사가 그 다섯이 어긋나지 않게 지키는 유일한 가드이고, 핵심 가치는
+# **승인 게이트 누락**을 잡는 것이다 — 상태를 바꾸는 도구가 approval 집합에서
+# 빠지면 사람 승인 없이 실행되는 쓰기 도구가 생긴다.
+#
+# 왜 워크플로가 여기 새로 생겼나: CLAUDE.md 는 이 워크플로와
+# test_write_tools_are_gated() 가 있다고 적어 왔지만 레포에는 둘 다 없었다
+# (2026-08-07 확인). 즉 "지키는 검사가 있다"고 믿었을 뿐 실제로 도는 것은
+# 아무것도 없었다 — 2026-07-20~08-04 도구 32개가 스냅샷 갱신 없이 들어와
+# clean HEAD 에서도 실패하는 상태로 방치됐던 것과 같은 종류의 실패다.
+#
+# 의존성 설치가 없다: tool_registry 는 표준 라이브러리만 import 하고
+# (dataclasses/typing/copy), 검사도 그 모듈 하나만 읽는다. 설치가 깨져서
+# 검사가 통째로 가려지는 일이 없도록 일부러 이대로 둔다.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aot/ai/**'
+      - 'aot/tests/ai_eval/test_tool_registry_ssot.py'
+      - '.github/workflows/ai-tool-registry.yml'
+  pull_request:
+    paths:
+      - 'aot/ai/**'
+      - 'aot/tests/ai_eval/test_tool_registry_ssot.py'
+      - '.github/workflows/ai-tool-registry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ssot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check registry derivations and approval gating
+        run: python3 -m aot.tests.ai_eval.test_tool_registry_ssot
