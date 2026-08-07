@@ -28,7 +28,10 @@ class MCPAuditLog(CRUDMixin, db.Model):
     params_json         = db.Column(db.Text, default='{}')
     reason              = db.Column(db.Text, default='')
     permission          = db.Column(db.String(20), default='read')  # read | write
-    confirmation_status = db.Column(db.String(20), default='n/a')   # n/a | pending | approved | rejected | expired
+    # n/a | not_required | pending | approved | rejected | expired
+    # not_required: 쓰기지만 승인이 면제된 설정 편집(tool_registry 의 config_only).
+    # 'approved' 로 뭉뚱그리면 아무도 보지 않은 동작이 사람이 승인한 것으로 남는다.
+    confirmation_status = db.Column(db.String(20), default='n/a')
     confirmation_id     = db.Column(db.String(36), default=None)
     user_id             = db.Column(db.String(36), default=None)
     result_summary      = db.Column(db.Text, default='')

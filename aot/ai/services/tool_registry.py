@@ -44,6 +44,11 @@ class Tool:
     mutating   : a state-changing entity/function mutation → always needs human approval.
     physical   : a physical-control / scheduling tool → needs approval in the planner
                  path (the dispatch path gates these separately via the P4 hard gate).
+    config_only: a mutation that only edits a controller's CONFIGURATION — it moves no
+                 equipment by itself, because nothing runs until the function is
+                 activated, and activation is separately gated. Such a tool is still a
+                 write (role check + audit still apply) but is exempt from human
+                 approval. See _CONFIG_ONLY note below before adding one.
     manifest   : the VERBATIM manifest dict emitted into get_action_manifest()'s
                  system_tools list, or None to omit the tool from the LLM manifest.
                  Stored verbatim so the derived manifest is byte-identical to the
@@ -55,7 +60,30 @@ class Tool:
     registry: bool = True
     mutating: bool = False
     physical: bool = False
+    config_only: bool = False
     manifest: Optional[Dict[str, Any]] = None
+
+
+# ---------------------------------------------------------------------------
+# _CONFIG_ONLY — 승인을 면제해도 되는 조건.
+#
+# 2026-08-07, koat 감사 로그 실측: 하루 쓰기 호출 33건 중 실제로 장비를 움직인
+# 것은 2건(deactivate_function, operate_device)뿐이고 나머지 31건은 전부 시퀀스
+# 설정 편집이었다. 승인 클릭 21번 중 19번이 "물이 흐르지 않는 편집"에 쓰였다.
+# 게이트가 읽기/쓰기 이분법이라 밸브 여는 것과 단계 순서 바꾸는 것이 같은 무게를
+# 받았고, 그 마찰이 실제로 잘못된 우회를 낳은 적도 있다(요일이 다르다는 이유로
+# 시퀀스를 새로 만든 사건).
+#
+# config_only 를 붙이려면 셋 다 참이어야 한다:
+#   1. 이 도구만으로는 어떤 장비도 움직이지 않는다.
+#   2. 편집 결과가 실제로 도는 시점은 activate_function 을 지나야 하고,
+#      그 활성화는 계속 승인 대상이다.
+#   3. 되돌릴 수 있다. 삭제처럼 복구 불가능한 것은 해당 없음.
+#
+# 활성 상태인 시퀀스의 시간표를 고치면 오늘 밤 관수 시각이 승인 없이 바뀐다 —
+# 이건 알고 받아들인 절충이다(2026-08-07 사용자 결정). 되돌리려면 해당 도구의
+# config_only 를 떼면 된다. 삭제(delete_*)와 활성/비활성은 절대 넣지 말 것.
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -226,42 +254,42 @@ TOOLS: List[Tool] = [
         "description": "Creates a new automation function/controller. Requires human approval. This — NOT schedule_device_control — is the right home for RECURRING device control (daily/weekly watering → trigger_timer_daily_time_point / trigger_timer_daily_time_span / trigger_timer_duration) and CONDITION-BASED control (when humidity < X → conditional_conditional). function_type MUST be one of: conditional_conditional, pid_pid, trigger_edge, trigger_output, trigger_output_pwm, trigger_run_pwm_method, trigger_sequence, trigger_sunrise_sunset, trigger_timer_daily_time_point, trigger_timer_daily_time_span, trigger_timer_duration, function_actions. For SEQUENTIAL control of several devices (e.g. a valve sequence), use 'trigger_sequence'.",
         "usage_hint": "params.arguments accepts ONLY {function_type, name, params}. Do NOT pass 'devices' or any other top-level key — there is no device-list parameter. The function is created first; its device steps/order are configured afterward. params is a dict of custom_option overrides (e.g. select_measurement fields as 'device_id,meas_id').",
     }),
-    Tool('modify_function_options', handler='modify_function_options', mutating=True, manifest={
+    Tool('modify_function_options', handler='modify_function_options', mutating=True, config_only=True, manifest={
         "tool_name": "modify_function_options",
         "action_type": "virtual_tool_call",
-        "description": "Updates custom_options of an existing function and reloads it in the daemon. Requires human approval.",
+        "description": "Updates custom_options of an existing function and reloads it in the daemon. Applies immediately — no approval needed; activating the function is separately approved.",
         "usage_hint": "params.arguments: {function_id, params: {<option_id>: <value>}}",
     }),
     # A sequence's schedule lives in Trigger columns/timer_schedule, not in
     # custom_options, so modify_function_options cannot reach it (it now says
     # so instead of silently no-op'ing). This is the way in.
-    Tool('modify_sequence_schedule', handler='modify_sequence_schedule', mutating=True, manifest={
+    Tool('modify_sequence_schedule', handler='modify_sequence_schedule', mutating=True, config_only=True, manifest={
         "tool_name": "modify_sequence_schedule",
         "action_type": "virtual_tool_call",
-        "description": "Changes WHEN a trigger_sequence runs — daily window, cycle period, and which weekdays. Use this (not modify_function_options) for any sequence timing change. Keeps the running cycle instead of restarting it. Requires human approval.",
+        "description": "Changes WHEN a trigger_sequence runs — daily window, cycle period, and which weekdays. Use this (not modify_function_options) for any sequence timing change. Keeps the running cycle instead of restarting it. Applies immediately — no approval needed, because a sequence only runs once it is activated and activation is separately approved.",
         "usage_hint": "params.arguments: {function_id, start:'HH:MM', end:'HH:MM', period_seconds, weekdays:[0-6, 0=Mon], day:0-6}. Call get_function_detail first to see the current schedule. Omit 'day' to change every enabled day; pass it to change one weekday only. This does NOT change the step order or per-step durations.",
     }),
     # One call = one weekday's whole plan. The per-step tool below still exists
     # for touch-ups, but laying out a day through it costs ~20 gated calls, and
     # that friction is what pushed a caller into making a redundant sequence.
-    Tool('configure_sequence_day', handler='configure_sequence_day', mutating=True, manifest={
+    Tool('configure_sequence_day', handler='configure_sequence_day', mutating=True, config_only=True, manifest={
         "tool_name": "configure_sequence_day",
         "action_type": "virtual_tool_call",
-        "description": "Sets ONE weekday's entire run plan on an existing sequence in a single call: which devices run, in what order, for how long, and which run together. Prefer this over repeated modify_sequence_step. Requires human approval.",
+        "description": "Sets ONE weekday's entire run plan on an existing sequence in a single call: which devices run, in what order, for how long, and which run together. Prefer this over repeated modify_sequence_step. Applies immediately — no approval needed, because a sequence only runs once it is activated and activation is separately approved.",
         "usage_hint": "params.arguments: {function_id, day:0-6 (0=Mon), start:'HH:MM', slots:[{devices:['v321','v322'], minutes:40}, {devices:['v331'], minutes:60}]}. Slots run in the order given; devices inside one slot run SIMULTANEOUSLY. Steps not listed are turned off for that weekday only. end/period_seconds are optional — by default the window just fits one pass and it runs once. A different weekday needs another call with the same function_id; NEVER create a second sequence for that.",
     }),
     # create_sequence_function only lays down uniform steps; this shapes them
     # (groups = simultaneous, per-step duration, total-step margins).
-    Tool('modify_sequence_step', handler='modify_sequence_step', mutating=True, manifest={
+    Tool('modify_sequence_step', handler='modify_sequence_step', mutating=True, config_only=True, manifest={
         "tool_name": "modify_sequence_step",
         "action_type": "virtual_tool_call",
-        "description": "Configures ONE step of a trigger_sequence: run order, device group (steps sharing a group run SIMULTANEOUSLY), duration, single/total mode, total-step lead/lag margins, enabled, label — globally, or for ONE weekday via 'day'. Requires human approval.",
+        "description": "Configures ONE step of a trigger_sequence: run order, device group (steps sharing a group run SIMULTANEOUSLY), duration, single/total mode, total-step lead/lag margins, enabled, label — globally, or for ONE weekday via 'day'. Applies immediately — no approval needed, because a sequence only runs once it is activated and activation is separately approved.",
         "usage_hint": "params.arguments: {action_id, group_name, duration_seconds, mode:'single'|'total', enabled, display_name, lead_seconds, lag_seconds, order, day}. Get action_id from get_function_detail steps[].action_id. 'order' sets the run order (lower runs first). Pass 'day' (0=Mon..6=Sun) to override enabled/group_name/duration_seconds for that weekday only — that is how ONE sequence covers different valves on different days; do NOT create a second sequence for that. A group shares ONE duration — setting it on any member sets all. A 'total' step cannot be grouped; lead/lag apply only to it.",
     }),
-    Tool('create_sequence_function', handler='create_sequence_function', mutating=True, manifest={
+    Tool('create_sequence_function', handler='create_sequence_function', mutating=True, config_only=True, manifest={
         "tool_name": "create_sequence_function",
         "action_type": "virtual_tool_call",
-        "description": "Creates a trigger_sequence AND fills its steps — one ordered output action per device — so it is configured, not empty. Use for 'valve sequence' / sequential device control. Requires human approval.",
+        "description": "Creates a trigger_sequence AND fills its steps — one ordered output action per device — so it is configured, not empty. Use for 'valve sequence' / sequential device control. Created inactive and applies immediately — no approval needed; activate_function still needs approval.",
         "usage_hint": "params.arguments: {name, device_ids: ['<output_id>', ...] (ordered), state: 'on'|'off', step_duration (sec, optional), pause_seconds (optional)}",
     }),
     Tool('delete_function', handler='delete_function', mutating=True, manifest={
@@ -1839,18 +1867,36 @@ def virtual_tool_registry() -> frozenset:
     return frozenset(t.name for t in TOOLS if t.registry)
 
 
+def write_tools() -> frozenset:
+    """Every state-changing tool, INCLUDING the approval-exempt config_only ones.
+
+    This is the set that decides 'is this a write?' — role check, audit
+    permission column, and hiding tools from read-only keys. Approval is a
+    separate, narrower question; use approval_required_tools() for that.
+    Keeping the two apart is the point: a config_only tool must still be
+    refused for a read-only key and must still land in the audit log as a
+    write, even though nobody has to click Approve for it."""
+    return frozenset(t.name for t in TOOLS if t.mutating or t.physical)
+
+
+def config_only_tools() -> frozenset:
+    """Write tools exempt from human approval — see the _CONFIG_ONLY note above."""
+    return frozenset(t.name for t in TOOLS if t.config_only)
+
+
 def virtual_approval_tools() -> frozenset:
     """Mutating virtual tools that require human approval at DISPATCH
     (ai_dispatch_service._VIRTUAL_APPROVAL_TOOLS). Physical control is gated
     separately by the P4 hard gate, so it is NOT included here."""
-    return frozenset(t.name for t in TOOLS if t.mutating)
+    return frozenset(t.name for t in TOOLS if t.mutating and not t.config_only)
 
 
 def approval_required_tools() -> frozenset:
     """Tools the PLANNER executor must intercept as pending_approval
     (ai_planning_service._APPROVAL_REQUIRED_TOOLS): every mutation PLUS the
-    physical-control / scheduling tools."""
-    return frozenset(t.name for t in TOOLS if t.mutating or t.physical)
+    physical-control / scheduling tools, MINUS the config_only ones."""
+    return frozenset(t.name for t in TOOLS
+                     if (t.mutating or t.physical) and not t.config_only)
 
 
 def manifest_system_tools() -> List[Dict[str, Any]]:

@@ -98,20 +98,47 @@ def is_write_enabled() -> bool:
     return os.environ.get('AOT_MCP_WRITE_ENABLED', '1') not in ('0', 'false', 'False')
 
 
-def approval_tools() -> frozenset:
-    """승인이 필요한 도구 이름 집합 (레지스트리 SSOT + 네이티브 물리 도구)."""
+def write_tools() -> frozenset:
+    """상태를 바꾸는 도구 전부 — 승인이 면제된 설정 편집 도구도 포함한다.
+
+    '쓰기인가'와 '승인이 필요한가'는 다른 질문이다. 설정 편집 도구는 승인은
+    면제돼도 읽기 전용 키에는 여전히 거부돼야 하고 감사 로그에도 write 로
+    남아야 한다. 그래서 두 집합을 분리해 둔다."""
     try:
-        from aot.ai.services.tool_registry import approval_required_tools
-        return frozenset(approval_required_tools()) | _NATIVE_WRITE_TOOLS
+        from aot.ai.services.tool_registry import write_tools as _reg_write
+        return frozenset(_reg_write()) | _NATIVE_WRITE_TOOLS
     except Exception:
         # 레지스트리를 못 읽으면 게이트가 조용히 열리는 대신 네이티브 목록만이라도 막는다.
         logger.exception('[MCPGate] tool_registry 로드 실패 — 네이티브 쓰기 목록만 적용')
         return _NATIVE_WRITE_TOOLS
 
 
+def approval_tools() -> frozenset:
+    """사람 승인이 필요한 도구 이름 집합 (레지스트리 SSOT + 네이티브 물리 도구)."""
+    try:
+        from aot.ai.services.tool_registry import approval_required_tools
+        return frozenset(approval_required_tools()) | _NATIVE_WRITE_TOOLS
+    except Exception:
+        logger.exception('[MCPGate] tool_registry 로드 실패 — 네이티브 쓰기 목록만 적용')
+        return _NATIVE_WRITE_TOOLS
+
+
+def config_only_tools() -> frozenset:
+    """쓰기지만 승인이 면제된 설정 편집 도구 — tool_registry 의 _CONFIG_ONLY 주석 참고.
+
+    레지스트리를 못 읽으면 **빈 집합**을 돌려준다. 여기서 실패가 면제 쪽으로
+    기울면 게이트가 통째로 열린다 — 모르면 승인을 요구하는 쪽이 맞다."""
+    try:
+        from aot.ai.services.tool_registry import config_only_tools as _reg_config
+        return frozenset(_reg_config())
+    except Exception:
+        logger.exception('[MCPGate] tool_registry 로드 실패 — 승인 면제 없음으로 처리')
+        return frozenset()
+
+
 def classify_permission(tool_name: str) -> str:
-    """'write' (승인 필요) 또는 'read'."""
-    return 'write' if tool_name in approval_tools() else 'read'
+    """'write' (상태 변경) 또는 'read'. 승인 필요 여부와는 별개다."""
+    return 'write' if tool_name in write_tools() else 'read'
 
 
 def strip_meta(arguments: dict) -> dict:
@@ -281,6 +308,14 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
                 "as advice instead."),
             "tool_name": tool_name,
         }
+
+    # 설정 편집 도구는 여기서 통과시킨다 — 역할 검사와 write_enabled 검사를
+    # 지난 **뒤**여야 한다. 앞에 두면 읽기 전용 키가 설정을 고칠 수 있고,
+    # 조언 전용 모드(AOT_MCP_WRITE_ENABLED=0)도 뚫린다.
+    # 승인만 면제될 뿐 쓰기는 쓰기다: 호출자는 위에서 이미 걸러졌고,
+    # 감사 로그에는 호출자 순서상 write 로 남는다.
+    if tool_name in config_only_tools():
+        return None
 
     from aot.databases.models import MCPConfirmation
 

@@ -125,6 +125,26 @@ _SEQUENCE_SCHEDULE_TOOL_ADDITIONS = {'modify_sequence_schedule',
                                      'modify_sequence_step',
                                      'configure_sequence_day'}
 
+# 승인 면제 (2026-08-07, 사용자 결정). koat 감사 로그 하루치: 쓰기 33건 중 실제로
+# 장비를 움직인 것은 2건뿐이고 나머지는 전부 시퀀스 설정 편집이었다 — 승인 클릭
+# 21번 중 19번이 "물이 흐르지 않는 편집"에 쓰였다. 게이트가 읽기/쓰기 이분법이라
+# 단계 순서 바꾸기와 밸브 열기가 같은 무게를 받았고, 그 마찰이 실제로 잘못된 우회를
+# 낳은 적도 있다(요일이 다르다는 이유로 시퀀스를 새로 만든 사건).
+#
+# 이 도구들만으로는 어떤 장비도 움직이지 않는다 — 편집이 실제로 도는 시점은
+# activate_function 을 지나야 하고 그 활성화는 계속 승인 대상이다.
+# **알고 받아들인 절충**: 이미 활성 상태인 시퀀스의 시간표를 고치면 오늘 밤 관수
+# 시각이 승인 없이 바뀐다. 되돌리려면 tool_registry 에서 config_only 를 떼면 된다.
+#
+# 여기에 이름을 추가하는 것은 **승인 요구를 없애는 안전 결정**이다.
+# 삭제(delete_*)와 활성/비활성(activate_/deactivate_)은 절대 넣지 말 것 —
+# 전자는 복구 불가능하고 후자가 바로 "물이 흐르기 시작하는" 순간이다.
+_CONFIG_ONLY_APPROVAL_EXEMPTIONS = {'modify_sequence_schedule',
+                                    'modify_sequence_step',
+                                    'configure_sequence_day',
+                                    'create_sequence_function',
+                                    'modify_function_options'}
+
 # Scheduler CRUD close-out + per-location local time (2026-07-20, aa2c5bc
 # "스케줄 원장 SchedulerJobMeta 일원화"): search/edit/delete_schedule complete
 # the scheduler as a farm-operations ledger (@ANCHOR: SCHEDULE_CRUD_TOOLS);
@@ -273,23 +293,44 @@ def run():
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
-    # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions.
+    # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,
+    #    MINUS the config_only exemptions.
     _check("_VIRTUAL_APPROVAL_TOOLS",
-           _ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
-           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
-           | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
-           | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
+           (_ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
+            | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
+            | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
+            | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS)
+           - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
     # 5. planner approval set — original PLUS the same mutating additions PLUS the
-    #    one new `physical` (not `mutating`) scheduling tool, add_schedule_batch.
+    #    one new `physical` (not `mutating`) scheduling tool, add_schedule_batch,
+    #    MINUS the config_only exemptions.
     _check("_APPROVAL_REQUIRED_TOOLS",
-           _ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
-           | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
-           | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
-           | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-           | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS,
+           (_ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
+            | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
+            | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
+            | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
+            | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS)
+           - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
+
+    # 5b. 면제는 승인에서만 빠지고 '쓰기'에서는 빠지지 않는다. 이게 무너지면
+    #     읽기 전용 키가 설정을 고칠 수 있게 되므로 따로 못 박아 둔다.
+    missing_from_write = _CONFIG_ONLY_APPROVAL_EXEMPTIONS - set(R.write_tools())
+    if missing_from_write:
+        raise AssertionError(
+            f"config_only tools dropped out of write_tools(): {sorted(missing_from_write)} — "
+            "they would stop being role-checked and stop being audited as writes")
+    if set(R.config_only_tools()) != _CONFIG_ONLY_APPROVAL_EXEMPTIONS:
+        raise AssertionError(
+            "config_only_tools() drifted from the snapshot:\n"
+            f"  derived : {sorted(R.config_only_tools())}\n"
+            f"  snapshot: {sorted(_CONFIG_ONLY_APPROVAL_EXEMPTIONS)}\n"
+            "Exempting a tool from approval is a safety decision — update the snapshot "
+            "deliberately, with a dated reason.")
+    print(f"  OK  config_only exemptions: {len(_CONFIG_ONLY_APPROVAL_EXEMPTIONS)} tools, "
+          f"all still classified as writes")
 
     # 3. manifest — every manifest entry names a known tool; the set of virtual-tool
     #    manifest names is a subset of the registry (no phantom manifest entries).

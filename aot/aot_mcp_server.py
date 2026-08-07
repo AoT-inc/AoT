@@ -258,6 +258,7 @@ def _record_audit(audit, tool_name, arguments, agent_id, permission,
     exceptions, but the status mapping below is ours).
     """
     try:
+        from aot.ai.services import mcp_safety_gate as gate
         confirmation_id = (blocked or {}).get("confirmation_id")
         uid = audit.log_call(
             tool_name=tool_name,
@@ -269,6 +270,11 @@ def _record_audit(audit, tool_name, arguments, agent_id, permission,
         )
         if permission == "read":
             status = "n/a"
+        elif blocked is None and tool_name in gate.config_only_tools():
+            # 승인이 면제된 설정 편집. 'approved' 로 적으면 아무도 보지 않은
+            # 동작을 사람이 승인한 것처럼 남는다 — 안전 감사 로그에서 그건
+            # 거짓이다. 승인이 애초에 요구되지 않았음을 그대로 적는다.
+            status = "not_required"
         elif blocked is None:
             status = "approved"          # gate consumed a human approval
         elif blocked.get("status") == "pending_approval":

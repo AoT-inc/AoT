@@ -1,6 +1,6 @@
 # AI 기능 개요
 
-AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 상태를 바꾸는 모든 동작은 사용자 승인 후 실행됩니다.
+AoT는 MCP(Model Context Protocol) 기반 AI 에이전트를 통해 온실·재배 시설의 환경을 관찰·진단·제어합니다. AI는 시스템을 보조하는 역할로, 장비를 움직이는 동작은 사용자 승인 후 실행됩니다(설정만 바꾸는 편집은 예외 — 아래 시퀀스 절 참고).
 
 ---
 
@@ -28,7 +28,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ## MCP 도구 목록
 
-외부 MCP 서버와 내부 `mcp_aot` 엔진이 노출하는 도구입니다. 읽기 도구는 즉시 실행되고, 제어·일정 도구는 승인 게이트를 거칩니다 — 인앱 어시스턴트에서는 채팅의 승인 카드로, 외부 MCP 서버에서는 대기열(`pending_approval` + `respond_to_confirmation`)로 처리됩니다(자세한 내용은 아래 "MCP 서버 실행" 참고).
+외부 MCP 서버와 내부 `mcp_aot` 엔진이 노출하는 도구입니다. 읽기 도구와 설정 편집 도구는 즉시 실행되고, 제어·일정·활성화 도구는 승인 게이트를 거칩니다 — 인앱 어시스턴트에서는 채팅의 승인 카드로, 외부 MCP 서버에서는 대기열(`pending_approval` + `respond_to_confirmation`)로 처리됩니다(자세한 내용은 아래 "MCP 서버 실행" 참고).
 
 ### 관찰·조회 (읽기 — 즉시 실행)
 
@@ -66,7 +66,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 > 인앱 어시스턴트에서는 위 제어·`add_schedule` 호출이 승인 카드로 확인을 받은 뒤 실행됩니다. 외부 MCP 서버로 직접 호출할 때도 동일하게 승인을 거칩니다 — 최초 호출은 실행되지 않고 `pending_approval`(대기 중인 confirmation_id)로 응답하며, 사용자가 그 confirmation_id를 채팅에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출(또는 웹 승인 페이지 클릭)로 처리되고, 그 뒤 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다. 자세한 흐름은 아래 "MCP 서버 실행"을 참고하세요.
 
-### 시퀀스 (사용자 승인 필요)
+### 시퀀스 (설정 편집은 승인 불필요)
 
 [시퀀스](../Functions.ko.md#trigger-sequence)는 여러 출력 장치를 정해진 순서로 돌리는 기능으로, 밸브가 차례로 열리고 펌프가 전 구간을 도는 관수가 대표적인 형태입니다. 아래 도구로 시퀀스를 읽고 구성합니다.
 
@@ -75,6 +75,13 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 | `configure_sequence_day` | 한 요일의 실행 계획 전체를 한 번에 설정 — 어떤 장치가, 어떤 순서로, 얼마나, 무엇과 함께 도는지 |
 | `modify_sequence_step` | 스텝 하나의 그룹·지속시간·단일/전체 모드·전체 모드 리드/래그·실행 순서·활성 여부·라벨 (전체 적용 또는 특정 요일만) |
 | `modify_sequence_schedule` | 하루 실행 창, 사이클 주기, 운영 요일 |
+
+> **시퀀스 설정 편집은 승인 없이 바로 반영됩니다.** 위 세 도구와
+> `create_sequence_function`·`modify_function_options` 는 설정만 바꿀 뿐
+> 어떤 장비도 움직이지 않습니다 — 편집한 내용이 실제로 도는 시점은
+> `activate_function` 을 지나야 하고, 그 활성화는 계속 승인 대상입니다.
+> 대신 **이미 활성 상태인 시퀀스의 시간표를 고치면 승인 없이 다음 실행
+> 시각이 바뀝니다.** 알고 받아들인 절충입니다(2026-08-07).
 
 `get_function_detail`은 시퀀스의 스텝 목록과 함께 `weekly_plan`을 돌려줍니다 — 요일별로 실제 몇 시부터 몇 시까지 무엇이 도는지를 벽시계 시각으로 해결한 결과입니다. 변경한 뒤에는 요청을 되풀이하지 말고 이걸 읽어서 확인하세요.
 
@@ -106,7 +113,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 ### 인앱 어시스턴트 확장 도구
 
-인앱 AI 어시스턴트는 위 MCP 카탈로그 외에 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 상태를 바꾸는 도구는 모두 승인이 필요합니다.
+인앱 AI 어시스턴트는 위 MCP 카탈로그 외에 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 장비를 움직이거나 함수를 활성화·삭제하는 도구는 승인이 필요합니다.
 
 - **입력/출력 관리**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
 - **함수(자동화)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`, `modify_function_options`(트리거에는 통하지 않음 — 위 시퀀스 절 참고), `activate_function`·`deactivate_function`·`delete_function`, 그리고 시퀀스 도구 `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`

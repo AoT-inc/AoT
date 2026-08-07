@@ -1,6 +1,6 @@
 # AI Features Overview
 
-AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, and control the environment in greenhouses and growing facilities. The AI acts in an advisory role — every state-changing action requires user approval before execution.
+AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, and control the environment in greenhouses and growing facilities. The AI acts in an advisory role — any action that moves equipment requires user approval before execution (edits that only change configuration are exempt; see the Sequences section).
 
 ---
 
@@ -28,7 +28,7 @@ Both paths pull tools from the same registry (`aot/ai/services/tool_registry.py`
 
 ## MCP Tool List
 
-Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read tools run immediately; control and scheduling tools pass through an approval gate either way — the in-app assistant's chat approval card, or the external MCP server's approval queue (`pending_approval` + `respond_to_confirmation`, see "Running the MCP Server" below).
+Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read tools and configuration-edit tools run immediately; control, scheduling and activation tools pass through an approval gate either way — the in-app assistant's chat approval card, or the external MCP server's approval queue (`pending_approval` + `respond_to_confirmation`, see "Running the MCP Server" below).
 
 ### Observation (read — immediate)
 
@@ -66,7 +66,7 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 
 > In the in-app assistant, the control tools above and `add_schedule` execute only after confirmation via the approval card. Calling directly through the external MCP server goes through the same kind of gate: the first call is not executed and comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject that confirmation_id in chat (handled via `respond_to_confirmation`) or on the web review page, then the caller retries the same arguments plus `_confirmation_id` to actually execute it. See "Running the MCP Server" below for the full flow.
 
-### Sequences (user approval required)
+### Sequences (configuration edits need no approval)
 
 A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set order — the usual shape for irrigation, where valves take turns and a pump spans the run. These tools read and shape one.
 
@@ -75,6 +75,13 @@ A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set ord
 | `configure_sequence_day` | Set one weekday's entire run plan in a single call: which devices run, in what order, for how long, and which run together |
 | `modify_sequence_step` | One step's group, duration, single/total mode, total-step lead/lag margins, run order, enabled state, label — globally or for one weekday |
 | `modify_sequence_schedule` | The daily window, cycle period and which weekdays the sequence runs |
+
+> **Sequence configuration edits apply immediately, without approval.** The three
+> tools above, plus `create_sequence_function` and `modify_function_options`,
+> change configuration only — they move no equipment. An edit takes effect on the
+> ground only after `activate_function`, and activation is still gated.
+> The accepted trade-off: editing the schedule of an *already active* sequence
+> shifts its next run without approval (decided 2026-08-07).
 
 `get_function_detail` returns a sequence's steps plus `weekly_plan` — what actually runs each weekday, in wall-clock time. Read that back to confirm a change rather than repeating the request.
 
