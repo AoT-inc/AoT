@@ -177,12 +177,33 @@ This scoping keeps each facility's manuals and cultivation guidance separate whe
 A standard MCP server for external MCP clients. It is warm-started automatically when the app boots, and can also be run manually.
 
 ```bash
-# stdio mode (default) — local clients such as Claude Desktop
+# stdio mode (default) — a local client on the same machine
 python3 /opt/AoT/aot/aot_mcp_server.py
 
 # HTTP mode — remote clients (default port 5700)
 python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
 ```
+
+HTTP mode serves two things side by side.
+
+| Path | What | Used by |
+|------|------|------|
+| `POST /mcp` | **MCP Streamable HTTP** (the standard transport) | Claude Desktop/Code, Cursor, any MCP client |
+| `GET /mcp/info`, `GET /mcp/tools/list`, `POST /mcp/tools/call` | Custom REST | ChatGPT Custom GPT (OpenAPI Actions), curl checks |
+
+A standard client needs only the URL and an API key — no relay script.
+
+```bash
+claude mcp add --transport http aot https://<host>/aotmcp/mcp \
+  --header "X-API-KEY: <base64 api key>"
+```
+
+`GET /mcp` returns 405: this server offers no server-to-client SSE stream. It runs
+waitress with four threads, so one held connection would starve tool calls. The
+spec allows this, and it is where server-initiated notifications would go later.
+
+The REST API stays because ChatGPT Custom GPTs on ordinary plans cannot register
+an MCP server — they attach through OpenAPI Actions only.
 
 To connect from Claude Desktop, add to `claude_desktop_config.json`:
 

@@ -177,12 +177,33 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 외부 MCP 클라이언트용 표준 MCP 서버입니다. 앱 시작 시 자동으로 warm-start되며, 수동 실행도 가능합니다.
 
 ```bash
-# stdio 모드 (기본) — Claude Desktop 등 로컬 클라이언트
+# stdio 모드 (기본) — 같은 machine 의 로컬 클라이언트
 python3 /opt/AoT/aot/aot_mcp_server.py
 
 # HTTP 모드 — 원격 클라이언트 (기본 포트 5700)
 python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
 ```
+
+HTTP 모드는 두 가지를 함께 제공합니다.
+
+| 경로 | 무엇 | 쓰는 곳 |
+|------|------|------|
+| `POST /mcp` | **MCP Streamable HTTP** (표준 전송) | Claude Desktop·Code, Cursor 등 MCP 클라이언트 |
+| `GET /mcp/info`, `GET /mcp/tools/list`, `POST /mcp/tools/call` | 자체 REST | ChatGPT Custom GPT(OpenAPI Actions), curl 점검 |
+
+표준 클라이언트는 URL 과 API 키만 있으면 됩니다 — 중계 스크립트가 필요 없습니다.
+
+```bash
+claude mcp add --transport http aot https://<호스트>/aotmcp/mcp \
+  --header "X-API-KEY: <base64 API 키>"
+```
+
+`GET /mcp` 는 405 를 돌려줍니다. 서버→클라이언트 SSE 스트림은 제공하지 않습니다
+(waitress 를 4스레드로 돌리는 서버라 접속 하나가 스레드를 붙잡으면 도구 호출이
+밀립니다). 스펙이 허용하는 동작이며, 서버발 알림이 필요해지면 그때 여는 자리입니다.
+
+REST 를 남겨두는 이유는 일반 요금제의 ChatGPT Custom GPT 가 MCP 서버를 직접
+등록할 수 없고 OpenAPI Actions 로만 붙기 때문입니다.
 
 Claude Desktop에서 연결하려면 `claude_desktop_config.json`에 추가합니다:
 

@@ -614,15 +614,30 @@ class StdioMCPServer:
 # HTTP transport — Flask REST API (MCP-compatible)
 # =============================================================================
 
+#: initialize 에서 협상 가능한 프로토콜 버전. 도구만 노출하므로 이 범위에서는
+#: 능력 선언이 동일하고, 클라이언트가 요구한 버전을 그대로 돌려주면 된다.
+#: 2025-03-26 부터 Streamable HTTP 가 표준 전송이다.
+_SUPPORTED_PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
+
+
 def _run_http_server(app, port=5700):
-    """Serve MCP tools over HTTP REST API.
+    """Serve MCP over HTTP — standard Streamable HTTP plus the legacy REST API.
 
     Endpoints:
-      GET  /mcp/info         → server metadata
-      GET  /mcp/tools/list   → all tools
-      POST /mcp/tools/call   → {name, arguments} → {content}
+      POST /mcp              → MCP Streamable HTTP (JSON-RPC). 표준 클라이언트용.
+      GET  /mcp              → 405. 서버→클라이언트 SSE 스트림은 제공하지 않는다
+                               (아래 _mcp_streamable 주석 참조).
+      GET  /mcp/info         → server metadata (인증 불필요, 생존 확인)
+      GET  /mcp/tools/list   → all tools          ┐ 자체 REST. ChatGPT Actions 와
+      POST /mcp/tools/call   → {name, arguments}  ┘ curl 점검이 계속 쓴다.
+
+    REST 를 남겨두는 이유: 일반 요금제의 ChatGPT Custom GPT 는 MCP 서버를 직접
+    등록할 수 없고 OpenAPI Actions 로만 붙는다. 현장 운영자가 쓰는 경로가 그쪽이라
+    표준 전송이 생겼다고 걷어낼 수 없다.
     """
-    from flask import Flask, request, jsonify
+    import uuid as _uuid
+
+    from flask import Flask, request, jsonify, Response
     from aot.ai.services import mcp_auth
     from aot.databases.models import AIGlobalSettings
 
@@ -642,6 +657,105 @@ def _run_http_server(app, port=5700):
         if not _http_server_enabled():
             return jsonify({"error": "External MCP server is disabled in "
                                       "Settings > General > AI Service."}), 503
+
+    # ── MCP Streamable HTTP ────────────────────────────────────────────────
+    def _rpc_error(msg_id, code, message):
+        return {"jsonrpc": "2.0", "id": msg_id,
+                "error": {"code": code, "message": message}}
+
+    def _handle_rpc(msg, agent_id, role):
+        """One JSON-RPC message → response dict, or None for a notification.
+
+        Routes to the same _get_all_tools/_execute_tool the stdio transport and
+        the REST API use, so a tool never behaves differently depending on how
+        it was reached.
+        """
+        if not isinstance(msg, dict):
+            return _rpc_error(None, -32600, "Invalid Request")
+        method = msg.get("method", "")
+        msg_id = msg.get("id")
+        params = msg.get("params") or {}
+
+        if method == "initialize":
+            asked = (params.get("protocolVersion") or "").strip()
+            version = asked if asked in _SUPPORTED_PROTOCOLS else PROTOCOL_VERSION
+            return {"jsonrpc": "2.0", "id": msg_id, "result": {
+                "protocolVersion": version,
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
+                               "host": SERVER_HOST},
+            }}
+        if method.startswith("notifications/"):
+            return None                      # 알림에는 응답하지 않는다
+        if method == "ping":
+            return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
+        if method == "tools/list":
+            return {"jsonrpc": "2.0", "id": msg_id,
+                    "result": {"tools": _get_all_tools(app, role=role)}}
+        if method == "tools/call":
+            name = params.get("name", "")
+            if not name:
+                return _rpc_error(msg_id, -32602, "Missing tool name")
+            try:
+                content = _execute_tool(app, name, params.get("arguments") or {},
+                                        agent_id=agent_id, role=role)
+                return {"jsonrpc": "2.0", "id": msg_id,
+                        "result": {"content": content}}
+            except Exception as exc:
+                logger.exception("[AoTMCP] streamable tools/call 실패: %s", name)
+                return _rpc_error(msg_id, -32603, str(exc))
+        if msg_id is None:
+            return None
+        return _rpc_error(msg_id, -32601, f"Method not found: {method}")
+
+    @http_app.route("/mcp", methods=["POST"])
+    def mcp_streamable():
+        # DNS 리바인딩 방어: 브라우저에서 온 요청이면 Origin 이 붙는다. 이 서버는
+        # 브라우저용이 아니므로, Origin 이 있는데 우리 호스트가 아니면 거절한다.
+        origin = request.headers.get("Origin")
+        if origin and request.host not in origin:
+            return jsonify({"error": "origin not allowed"}), 403
+
+        declared = request.headers.get("X-MCP-Agent-Id")
+        with app.app_context():
+            ok, agent_id, role, err = mcp_auth.authenticate_http(request.headers, declared)
+        if not ok:
+            return jsonify(err), 401
+
+        payload = request.get_json(silent=True)
+        if payload is None:
+            return jsonify(_rpc_error(None, -32700, "Parse error")), 400
+
+        batch = isinstance(payload, list)
+        messages = payload if batch else [payload]
+        responses = [r for r in (_handle_rpc(m, agent_id, role) for m in messages)
+                     if r is not None]
+
+        # 알림만 담긴 요청에는 본문 없이 202 로 답한다(스펙 요구사항).
+        if not responses:
+            return Response(status=202)
+
+        body = responses if batch else responses[0]
+        resp = jsonify(body)
+        # 세션 식별자. 인증은 요청마다 헤더로 하므로 서버가 세션 상태를 들고
+        # 있지는 않지만, 클라이언트가 기대하는 값이라 initialize 응답에 실어준다.
+        if any((m or {}).get("method") == "initialize" for m in messages):
+            resp.headers["Mcp-Session-Id"] = _uuid.uuid4().hex
+        return resp
+
+    @http_app.route("/mcp", methods=["GET"])
+    def mcp_streamable_get():
+        # 서버→클라이언트 SSE 스트림은 제공하지 않는다. waitress 를 4스레드로
+        # 돌리는 서버라 접속 하나가 스레드를 붙잡고 있으면 도구 호출이 밀린다.
+        # 스펙은 스트림을 제공하지 않는 서버가 405 를 주도록 허용한다.
+        # 서버발 알림(tools/list_changed 등)이 필요해지면 그때 여는 자리다.
+        return jsonify({"error": "This server does not offer an SSE stream."}), 405
+
+    @http_app.route("/mcp", methods=["DELETE"])
+    def mcp_streamable_delete():
+        # 세션 상태를 두지 않으므로 종료할 것이 없다. 클라이언트의 정리 요청은
+        # 성공으로 받아준다.
+        return Response(status=204)
 
     @http_app.route("/mcp/info", methods=["GET"])
     def info():
