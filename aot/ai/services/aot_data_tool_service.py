@@ -3390,7 +3390,7 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
-    def create_function_tool(function_type=None, name=None, params=None, activate=False, **extra):
+    def create_function_tool(function_type=None, name=None, params=None, **extra):
         """
         Creates a new function of the given type.
         function_type: one of the registered FUNCTION_INFO keys, e.g.
@@ -3452,13 +3452,20 @@ class AoTDataToolService:
         if not new_function_id:
             return {"error": "Function created but unique_id not returned"}
 
-        # Look up the newly created record by unique_id
+        # Look up the newly created record by unique_id. `Function` MUST stay in this
+        # list: function_add() creates a plain Function row for 'function_actions', and
+        # while it was missing here new_func stayed None for that type — so `name` and
+        # `params` were silently dropped and the result reported name "" while the row
+        # kept its 'Function Name' default. Same class of omission as the one that made
+        # delete_function() report false-positive deletes. If a new controller table is
+        # ever added, add it here too.
         from aot.databases.models.controller import CustomController
-        from aot.databases.models.function import Conditional, Trigger
+        from aot.databases.models.function import Conditional, Function, Trigger
         from aot.databases.models.pid import PID
 
+        unapplied = []
         new_func = None
-        for Model in [CustomController, Conditional, PID, Trigger]:
+        for Model in [CustomController, Conditional, PID, Trigger, Function]:
             try:
                 row = Model.query.filter_by(unique_id=new_function_id).first()
                 if row:
@@ -3466,6 +3473,16 @@ class AoTDataToolService:
                     break
             except Exception:
                 continue
+
+        if new_func is None:
+            # Never fail silently again: the row exists (function_add returned its id)
+            # but no known model matched it, so nothing below can be applied.
+            logger.error(f"[create_function] created {new_function_id} but no controller "
+                         f"model matched it; name/params not applied")
+            if name:
+                unapplied.append("name")
+            if params:
+                unapplied.append("params")
 
         # Apply display name if provided
         if new_func and name:
@@ -3475,49 +3492,53 @@ class AoTDataToolService:
         # Apply custom params if provided
         logger.info(f"[create_function] new_func={new_func}, params={params}")
         if new_func and params and isinstance(params, dict):
-            existing = {}
-            try:
-                existing = _json.loads(getattr(new_func, 'custom_options', None) or '{}')
-            except Exception:
+            # Not every controller table has custom_options — `Function` does not.
+            # Assigning to a missing column would set a throwaway Python attribute and
+            # commit cleanly, reporting success for options that were never stored.
+            if not hasattr(type(new_func), 'custom_options'):
+                logger.warning(f"[create_function] {type(new_func).__name__} has no "
+                               f"custom_options column; params not applied")
+                unapplied.append("params")
+            else:
                 existing = {}
-            logger.info(f"[create_function] existing before update: {existing}")
-            existing.update(params)
-            logger.info(f"[create_function] existing after update: {existing}")
-            new_func.custom_options = _json.dumps(existing)
-            db.session.commit()
-            logger.info(f"[create_function] custom_options committed: {new_func.custom_options[:200]}")
+                try:
+                    existing = _json.loads(getattr(new_func, 'custom_options', None) or '{}')
+                except Exception:
+                    existing = {}
+                logger.info(f"[create_function] existing before update: {existing}")
+                existing.update(params)
+                logger.info(f"[create_function] existing after update: {existing}")
+                new_func.custom_options = _json.dumps(existing)
+                db.session.commit()
+                logger.info(f"[create_function] custom_options committed: {new_func.custom_options[:200]}")
 
         function_id = new_function_id
 
-        # Do NOT auto-activate. A freshly-created function has no device steps/targets
-        # configured yet; activating an empty function is wrong (it does nothing and
-        # confused users — "빈 함수를 활성화 시킴"). Configure it first (modify_function_options
-        # / editor / create_sequence_function for sequences), then activate explicitly
-        # via activate_function. Callers wanting the old behavior pass activate=True.
-        activated = False
-        if activate:
-            try:
-                from aot.aot_client import DaemonControl
-                DaemonControl().controller_activate(function_id)
-                activated = True
-            except Exception as e:
-                logger.warning(f"[create_function] daemon activate failed (non-fatal): {e}")
-
+        # Never auto-activate on creation — this is an absolute rule, not just a default:
+        # a freshly-created function has no device steps/targets configured yet, and
+        # activation must always be its own explicit, approval-gated step
+        # (activate_function), never bundled into creation. Do not reintroduce an
+        # 'activate' bypass parameter here.
         result = {
             "function_id": function_id,
             "name": getattr(new_func, 'name', ''),
             "function_type": function_type,
             "status": "created",
-            "activated": activated,
+            "activated": False,
+            "note": ("Created deactivated — configure its options/steps, then "
+                     "activate with activate_function."),
         }
-        if not activated:
-            result["note"] = ("Created deactivated — configure its options/steps, then "
-                              "activate with activate_function.")
         if ignored_args:
             result["ignored_args"] = ignored_args
             result["note"] = ("Ignored non-schema arg(s): "
                               f"{ignored_args}. The function was created (deactivated & empty); "
                               "configure its device steps, then activate.")
+        if unapplied:
+            # Say so rather than returning a clean result for settings that never landed.
+            result["unapplied"] = sorted(set(unapplied))
+            result["note"] = (f"Created, but {sorted(set(unapplied))} could not be applied "
+                              f"to a '{function_type}' function — set them via the function "
+                              "editor / modify_function_options, then activate.")
         return result
 
     @staticmethod
@@ -3533,11 +3554,11 @@ class AoTDataToolService:
             return {"error": "function_id and params are required"}
 
         from aot.databases.models.controller import CustomController
-        from aot.databases.models.function import Conditional, Trigger
+        from aot.databases.models.function import Conditional, Function, Trigger
         from aot.databases.models.pid import PID
 
         func = None
-        for Model in [CustomController, Conditional, PID, Trigger]:
+        for Model in [CustomController, Conditional, PID, Trigger, Function]:
             try:
                 row = Model.query.filter_by(unique_id=function_id).first()
                 if row:
@@ -3549,18 +3570,28 @@ class AoTDataToolService:
         if func is None:
             return {"error": f"Function not found: {function_id}"}
 
-        # Trigger has no custom_options column (see models/function.py) — the
-        # write below would set an unmapped attribute that commit() silently
-        # drops, so this used to report success while changing nothing. Its
-        # schedule lives in timer_schedule/columns instead.
-        if isinstance(func, Trigger):
-            return {"error": (
-                "This function is a Trigger; its settings are columns, not "
-                "custom_options, so this tool cannot change them. For a "
-                "trigger_sequence use modify_sequence_schedule (window, period, "
-                "weekdays). Other trigger types must be edited in the web UI."),
-                "function_id": function_id,
-                "trigger_type": getattr(func, 'trigger_type', None)}
+        # Only CustomController and Conditional have a custom_options column. For
+        # PID/Trigger/Function the settings are real columns, so the write below
+        # would set an unmapped attribute that commit() silently drops — reporting
+        # success while changing nothing. This guard used to name Trigger alone, so
+        # PID kept failing silently and Function was not even looked up. Test by
+        # column, not by class, so a new controller table cannot reopen the hole.
+        if not hasattr(type(func), 'custom_options'):
+            kind = type(func).__name__
+            hint = ("For a trigger_sequence use modify_sequence_schedule (window, "
+                    "period, weekdays). Other trigger types must be edited in the "
+                    "web UI." if isinstance(func, Trigger) else
+                    "Edit it in the web UI.")
+            err = {"error": (f"This function is a {kind}; its settings are columns, "
+                             f"not custom_options, so this tool cannot change them. {hint}"),
+                   "function_id": function_id,
+                   "controller_type": kind}
+            if isinstance(func, Trigger):
+                err["trigger_type"] = getattr(func, 'trigger_type', None)
+            return err
+
+        # Capture BEFORE the edit: a deactivated function must stay deactivated.
+        was_activated = bool(getattr(func, 'is_activated', False))
 
         existing = {}
         try:
@@ -3572,17 +3603,33 @@ class AoTDataToolService:
         func.custom_options = _json.dumps(existing)
         db.session.commit()
 
-        # Reload in daemon so changes take effect without manual restart
-        try:
-            from aot.aot_client import DaemonControl
-            daemon = DaemonControl()
-            daemon.controller_deactivate(function_id)
-            daemon.controller_activate(function_id)
-        except Exception as e:
-            logger.warning(f"[modify_function_options] daemon reload failed (non-fatal): {e}")
+        # Reload in daemon so changes take effect without manual restart — but ONLY
+        # if it was already running. daemon.controller_activate() is not a reload
+        # primitive: it sets is_activated=True in the database and starts the
+        # controller thread (aot_daemon.py). Calling it unconditionally meant that
+        # editing the options of a DEACTIVATED function turned it on — and since
+        # this tool is config_only (approval-exempt), that handed an unapproved
+        # path to real device control, breaking the config_only contract in
+        # tool_registry.py ("이 도구만으로는 어떤 장비도 움직이지 않는다").
+        # Activation stays where it belongs: activate_function, which needs approval.
+        reloaded = False
+        if was_activated:
+            try:
+                from aot.aot_client import DaemonControl
+                daemon = DaemonControl()
+                daemon.controller_deactivate(function_id)
+                daemon.controller_activate(function_id)
+                reloaded = True
+            except Exception as e:
+                logger.warning(f"[modify_function_options] daemon reload failed (non-fatal): {e}")
 
-        return {"function_id": function_id, "status": "modified",
-                "changed": list(params.keys())}
+        result = {"function_id": function_id, "status": "modified",
+                  "changed": list(params.keys()),
+                  "activated": was_activated, "reloaded": reloaded}
+        if not was_activated:
+            result["note"] = ("Saved while deactivated — it stays deactivated. "
+                              "Activate with activate_function (requires approval).")
+        return result
 
     @staticmethod
     def configure_sequence_day(function_id, day, slots, start=None, end=None,
@@ -4499,11 +4546,15 @@ class AoTDataToolService:
 
     @staticmethod
     def create_sequence_function(name=None, device_ids=None, state='on',
-                                 step_duration=0, pause_seconds=0, activate=True, **extra):
+                                 step_duration=0, pause_seconds=0, **extra):
         """Create a trigger_sequence AND fill its steps — one ordered output action per
         device — so it is actually configured, not an empty shell. This is what "밸브
         순차 제어 시퀀스" means: create the trigger, add an output_on_off action for each
-        valve in order, THEN activate (empty functions are never auto-activated).
+        valve in order. Always created deactivated — this tool is config_only (no human
+        approval gate) precisely because activation is a separate, approval-gated step
+        (activate_function). Do not add an 'activate' bypass here again: a config_only
+        tool that can also flip is_activated would let real device control turn on
+        without any approval.
 
         device_ids: ordered list of Output unique_ids (the valves).
         state: 'on'/'off' applied to every step. step_duration: seconds each step runs
@@ -4576,20 +4627,14 @@ class AoTDataToolService:
             return {"error": "None of the given device_ids resolved to Outputs; "
                              "no steps added.", "function_id": new_id}
 
-        # 3. Activate only now that it has steps.
-        activated = False
-        if activate:
-            try:
-                from aot.aot_client import DaemonControl
-                DaemonControl().controller_activate(new_id)
-                activated = True
-            except Exception as e:
-                logger.warning(f"[create_sequence] activate failed (non-fatal): {e}")
-
+        # Always created deactivated — this is a config_only (unapproved) tool, so it
+        # must never be the thing that turns on real device control. Activation is a
+        # separate, approval-gated step via activate_function.
         result = {
             "function_id": new_id, "function_type": "trigger_sequence",
             "name": (trig.name if trig else name), "status": "created",
-            "steps": steps, "step_count": len(steps), "activated": activated,
+            "steps": steps, "step_count": len(steps), "activated": False,
+            "note": "Created deactivated — activate with activate_function (requires approval).",
         }
         if extra:
             result["ignored_args"] = list(extra.keys())
@@ -4598,13 +4643,39 @@ class AoTDataToolService:
     @staticmethod
     def delete_function(function_id=None, **extra):
         """Delete a Function/Controller by unique_id (completes function CRUD)."""
-        from aot.aot_flask.utils.utils_function import function_del
+        from aot.aot_flask.utils.utils_misc import determine_controller_type
         if not function_id:
             return {"error": "function_id is required"}
+
+        # function_del() only deletes rows from the plain `Function` table
+        # (function_actions type). Conditional/PID/Trigger/CustomController live in
+        # their own tables, so calling function_del() on those unique_ids silently
+        # no-ops (no matching row to delete) while this tool still reported
+        # "status": "deleted" — a false-positive delete. Dispatch by actual
+        # controller_type, same as the web route (routes_function.py) and
+        # function_duplicate() already do.
+        controller_type = determine_controller_type(function_id)
+        if not controller_type or controller_type == 'Input':
+            return {"error": f"No function/controller found with id '{function_id}'"}
+
         try:
-            messages = function_del(function_id)
+            if controller_type == "Conditional":
+                from aot.aot_flask.utils.utils_conditional import conditional_del
+                messages = conditional_del(function_id)
+            elif controller_type == "PID":
+                from aot.aot_flask.utils.utils_pid import pid_del
+                messages = pid_del(function_id)
+            elif controller_type == "Trigger":
+                from aot.aot_flask.utils.utils_trigger import trigger_del
+                messages = trigger_del(function_id)
+            elif controller_type == "Function_Custom":
+                from aot.aot_flask.utils.utils_controller import controller_del
+                messages = controller_del(function_id)
+            else:  # "Function"
+                from aot.aot_flask.utils.utils_function import function_del
+                messages = function_del(function_id)
         except Exception as e:
-            logger.error(f"[delete_function] function_del raised: {e}")
+            logger.error(f"[delete_function] delete raised: {e}")
             return {"error": str(e)}
         if isinstance(messages, dict) and messages.get("error"):
             return {"error": "; ".join(messages["error"])}

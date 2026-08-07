@@ -683,6 +683,14 @@ def function_duplicate(form):
             if new_func:
                 new_function_id = new_func.unique_id
 
+                # 복제본은 사용자가 다시 활성화하기 전까지 비활성 상태여야
+                # 한다. clone_model()은 원본의 is_activated를 그대로 복사하므로
+                # (Function 모델처럼 이 필드가 없는 경우도 있어 hasattr로 방어),
+                # 여기서 강제로 되돌린다. input_duplicate()의 동일 원칙 참고.
+                if hasattr(new_func, 'is_activated') and new_func.is_activated:
+                    new_func.is_activated = False
+                    new_func.save()
+
                 # Clone Children: Actions
                 actions = Actions.query.filter(
                     Actions.function_id == function_id).all()
