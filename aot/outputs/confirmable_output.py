@@ -330,6 +330,26 @@ class ConfirmableOutputMixin:
         except Exception:
             pass
 
+    def note_device_alive(self, output_channel=0):
+        """Record proof of life without claiming to know the device's state.
+
+        For frames that show the device is reachable but carry no switch state
+        -- a heartbeat, a telemetry uplink. Clearing _offline restores normal
+        retrying delivery for the next command; leaving _cmd_fault_at alone
+        keeps 'the last command was never confirmed' true, because it still is.
+
+        Without this, _offline was only ever cleared by confirm_command(), so a
+        device that recovered and was heartbeating happily stayed marked
+        offline -- and every command to it went out as a single-shot probe with
+        no retransmission -- until some later command happened to be confirmed.
+
+        Returns True if the channel had been marked offline.
+        """
+        with self._confirm_lock:
+            was_offline = output_channel in self._offline
+            self._offline.discard(output_channel)
+        return was_offline
+
     def confirm_command(self, output_channel, actual_state, source='device'):
         """Record an authoritative device report and resolve any pending command.
 

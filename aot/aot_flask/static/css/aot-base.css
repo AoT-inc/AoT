@@ -640,6 +640,25 @@ html {
     background-color: var(--bg-hold) !important;
 }
 
+/* 상태 미상 — 서버에서 그 장치의 상태가 아예 오지 않은 경우(데몬 무응답으로
+   빈 응답을 받았거나, 응답에 그 키가 없음). 2026-08-07 분리: 그전까지 이 경우가
+   .inactive-background(꺼짐)로 그려져, 통신이 끊긴 장치가 "정상적으로 꺼져 있음"
+   과 화면에서 구분되지 않았다 — aot-output-state.js 가 스스로 "fault 는 가짜
+   off 가 아니다"라고 선언해 놓고 undefined 만은 off 로 접고 있었다.
+   .fault-background(danger)와도 구별한다: 그쪽은 "장치가 응답을 안 한다"는
+   확정 사실이고, 이쪽은 "우리가 물어보지 못했다"라 장치 자체는 멀쩡할 수 있다.
+   그래서 경보색이 아니라 중립 회색 + 사선으로 "정보 없음"만 표시한다. */
+.unknown-background {
+    background-color: var(--bg-pause) !important;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 6px,
+        rgba(127, 127, 127, 0.18) 6px,
+        rgba(127, 127, 127, 0.18) 12px
+    ) !important;
+}
+
 /* Communication-status tints on the Input/Output/Function cards are applied via
    inline style + JS (window.AoTOutputState.*, aot-output-state.js), not as CSS
    classes here — the elements involved carry their own

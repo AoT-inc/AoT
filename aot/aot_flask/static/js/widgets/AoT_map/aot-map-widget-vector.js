@@ -1137,7 +1137,8 @@
                     toggle.classList.toggle('aot-toggle-pending', !!cls.isPending);
                     toggle.classList.toggle('aot-toggle-fault', !!cls.isFault);
                     row.classList.remove('active-background', 'inactive-background',
-                                          'fault-background', 'hold-background');
+                                          'fault-background', 'hold-background',
+                                          'unknown-background');
                     if (cls.cssClass) { row.classList.add(cls.cssClass); }
                 });
             })

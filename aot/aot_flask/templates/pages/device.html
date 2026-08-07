@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
-<script src="/static/js/common/aot-output-state.js?v=8"></script>
+<script src="/static/js/common/aot-output-state.js?v=9"></script>
 {% endblock %}
 
 {%- block body %}
@@ -648,28 +648,40 @@
     });
 
     fetch('/outputstate').then(function (r) { return r.json(); }).then(function (outputStates) {
-      Object.keys(deviceSummaries).forEach(function (deviceId) {
-        var s = deviceSummaries[deviceId];
-        var rawStates = [];
-        s.outputs.forEach(function (out) {
-          var chStates = outputStates[out.unique_id] || {};
-          out.channels.forEach(function (ch) {
-            var raw = chStates[ch.channel];
-            rawStates.push(raw);
-            var el = document.getElementById('ostate_' + out.unique_id + '_' + ch.channel);
-            if (el && window.AoTOutputState) {
-              var c = window.AoTOutputState.classify(raw);
-              el.textContent = window.AoTOutputState.label(raw);
-              el.className = 'ch-state ' + c.cssClass;
-            }
-          });
+      paintOutputStates(outputStates);
+    }).catch(function () {
+      // A failed fetch used to leave the last good states on screen forever,
+      // so a dead server still showed confident on/off readings. Repainting
+      // with an empty map routes every channel through classify(undefined),
+      // which now reports 'unknown' rather than a fake 'off'.
+      paintOutputStates({});
+    });
+  }
+
+  function paintOutputStates(outputStates) {
+    Object.keys(deviceSummaries).forEach(function (deviceId) {
+      var s = deviceSummaries[deviceId];
+      var rawStates = [];
+      s.outputs.forEach(function (out) {
+        var chStates = outputStates[out.unique_id] || {};
+        out.channels.forEach(function (ch) {
+          var raw = chStates[ch.channel];
+          rawStates.push(raw);
+          var el = document.getElementById('ostate_' + out.unique_id + '_' + ch.channel);
+          if (el && window.AoTOutputState) {
+            var c = window.AoTOutputState.classify(raw);
+            el.textContent = window.AoTOutputState.label(raw);
+            el.className = 'ch-state ' + c.cssClass;
+          }
         });
-        if (window.AoTOutputState && rawStates.length) {
-          var agg = window.AoTOutputState.aggregate(rawStates);
-          s._outputComm = { hasCapable: true, hasFault: agg.isFault };
-        }
-        renderBadge(deviceId);
       });
+      if (window.AoTOutputState && rawStates.length) {
+        var agg = window.AoTOutputState.aggregate(rawStates);
+        // 'unknown' is not a device fault — we could not ask, so the device
+        // may well be fine. Only a real 'fault' marks the badge.
+        s._outputComm = { hasCapable: true, hasFault: agg.isFault };
+      }
+      renderBadge(deviceId);
     });
   }
 

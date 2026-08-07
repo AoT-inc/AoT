@@ -138,14 +138,14 @@ measurement = self.condition("asdf1234")  # Replace ID with correct one
 self.logger.info(f"Measurement is {measurement}")
 
 if measurement is not None:  # If measurement exists
-    self.message += "This message will be shown in email notifications and notes.\n"
+    self.message += "This message will be shown in email notifications and notes.\\n"
 
     if measurement < 23:  # If measurement is less than 23
-        self.message += f"Measurement is too low! Value: {measurement}.\n"
+        self.message += f"Measurement is too low! Value: {measurement}.\\n"
         self.run_all_actions(message=self.message)  # Execute all actions in sequence
 
     elif measurement > 27:  # If measurement is greater than 27
-        self.message += f"Measurement is too high! Value: {measurement}.\n"
+        self.message += f"Measurement is too high! Value: {measurement}.\\n"
         # Replace "qwer5678" with the appropriate action ID
         self.run_action("qwer5678", message=self.message)  # Execute specific action'''
             

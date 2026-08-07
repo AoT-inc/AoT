@@ -416,7 +416,7 @@ def api_facility_control(facility_uuid):
     import time as _time
     import json as _json
     from aot.databases.models import GeoFacility
-    from aot.aot_client import DaemonControl
+    from aot.aot_client import DaemonControl, daemon_call_failed
     from aot.aot_flask.geo.facility_integration import get_facility_integration
     from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors, compute_spatial_internal
     from aot.functions.utils.env_control.safety_gates import (
@@ -593,11 +593,12 @@ def api_facility_control(facility_uuid):
     # PWM·on/off 릴레이에서 % 명령이 무시되거나 단순 on/off 로만 처리되는 버그가 있었다.
     # env_coordinator 와 동일하게 장치 종류별로 value / pwm / sec(시간비례) 로 매핑한다.
     daemon = DaemonControl()
+    ret = None
     try:
         if action == 'off':
-            daemon.output_off(output_uuid, output_channel=0)
+            ret = daemon.output_off(output_uuid, output_channel=0)
         elif action == 'on':
-            daemon.output_on(output_uuid, output_channel=0, amount=0)
+            ret = daemon.output_on(output_uuid, output_channel=0, amount=0)
         elif action == 'set' and percent is not None:
             pct = float(percent)
             from aot.utils.outputs import parse_output_information
@@ -609,29 +610,39 @@ def api_facility_control(facility_uuid):
 
             if 'value' in types_list:
                 # actuator_paired / DAC 등 위치형 — % 그대로. source=manual 로 사용자 목표 추적.
-                daemon.output_on(output_uuid, output_type='value', amount=pct,
-                                 output_channel=0, additional_options={'source': 'manual'})
+                ret = daemon.output_on(output_uuid, output_type='value', amount=pct,
+                                       output_channel=0, additional_options={'source': 'manual'})
             elif 'pwm' in types_list:
                 # PWM 출력 — duty cycle(%). 0% 는 OFF.
                 if pct > 0.0:
-                    daemon.output_on(output_uuid, output_type='pwm', amount=pct,
-                                     output_channel=0)
+                    ret = daemon.output_on(output_uuid, output_type='pwm', amount=pct,
+                                           output_channel=0)
                 else:
-                    daemon.output_off(output_uuid, output_channel=0)
+                    ret = daemon.output_off(output_uuid, output_channel=0)
             elif 'on_off' in types_list:
                 # on/off 릴레이 — 1 사이클(60s) 내 비례 ON 시간으로 변환(시간비례 제어).
                 # 5% 미만은 소음·수명 보호를 위해 OFF.
                 if pct >= 5.0:
-                    daemon.output_on(output_uuid, output_type='sec',
-                                     amount=max(1.0, 60.0 * pct / 100.0),
-                                     output_channel=0)
+                    ret = daemon.output_on(output_uuid, output_type='sec',
+                                           amount=max(1.0, 60.0 * pct / 100.0),
+                                           output_channel=0)
                 else:
-                    daemon.output_off(output_uuid, output_channel=0)
+                    ret = daemon.output_off(output_uuid, output_channel=0)
             else:
                 # 알 수 없는 타입 — value 패스스루(기존 동작 유지).
-                daemon.output_on(output_uuid, output_type='value', amount=pct,
-                                 output_channel=0, additional_options={'source': 'manual'})
+                ret = daemon.output_on(output_uuid, output_type='value', amount=pct,
+                                       output_channel=0, additional_options={'source': 'manual'})
+
+        # The daemon returns (code, msg) on failure instead of raising, so the
+        # except below cannot see a timed-out command. Reporting ok here made a
+        # manual control that never reached the device look like it worked.
+        call_failed, fail_msg = daemon_call_failed(ret)
+        if call_failed:
+            logger.error("Facility control failed for %s (%s): %s",
+                         output_uuid, action, fail_msg)
+            return jsonify({'ok': False, 'message': fail_msg}), 502
     except Exception as e:
+        logger.exception("Facility control raised for %s (%s)", output_uuid, action)
         return jsonify({'ok': False, 'message': str(e)}), 500
 
     resp = {
@@ -654,7 +665,7 @@ def api_facility_estop(facility_uuid):
     """IEC § D — emergency stop: set all actuators to safe state for the preset."""
     import time as _time
     from aot.databases.models import GeoFacility, Output
-    from aot.aot_client import DaemonControl
+    from aot.aot_client import DaemonControl, daemon_call_failed
 
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'ok': False, 'message': 'Insufficient permission'}), 403
@@ -706,15 +717,27 @@ def api_facility_estop(facility_uuid):
             safe = 'off'
         try:
             if safe == 'off':
-                daemon.output_off(uuid, output_channel=0)
+                ret = daemon.output_off(uuid, output_channel=0)
             else:
-                daemon.output_on(uuid, output_channel=0, amount=0)
-            applied.append({'kind': kind, 'uuid': uuid, 'action': safe})
+                ret = daemon.output_on(uuid, output_channel=0, amount=0)
+            # The daemon call swallows timeouts and returns (code, msg) instead
+            # of raising, so the except below never fires on the failure that
+            # matters most here. Without this check an e-stop that reached
+            # nothing still answered ok/failed=0.
+            call_failed, fail_msg = daemon_call_failed(ret)
+            if call_failed:
+                logger.error(
+                    "E-stop could not command %s (%s): %s", uuid, kind, fail_msg)
+                failed.append({'kind': kind, 'uuid': uuid, 'error': fail_msg})
+            else:
+                applied.append({'kind': kind, 'uuid': uuid, 'action': safe})
         except Exception as e:
+            logger.exception("E-stop raised for %s (%s)", uuid, kind)
             failed.append({'kind': kind, 'uuid': uuid, 'error': str(e)})
 
     return jsonify({
-        'ok':      True,
+        # An e-stop that could not reach every actuator must not report ok.
+        'ok':      not failed,
         'applied': len(applied),
         'failed':  len(failed),
         'details': applied,

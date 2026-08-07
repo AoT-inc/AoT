@@ -121,21 +121,50 @@ class OutputController(AbstractController, threading.Thread):
                     turn_output_off.start()
 
     def run_finally(self):
-        """Run when the controller is shutting down."""
+        """Run when the controller is shutting down.
+
+        Every output is shut down independently. self.output_unique_id holds an
+        entry for outputs that never got a driver -- 'no_run' modules such as
+        output_spacer, and anything whose module failed to load -- because it is
+        filled in before those checks in all_outputs_initialize(). Indexing
+        self.output for one of those raises KeyError, and with no guard here
+        that escaped run_finally() (called from base_controller's finally),
+        killing the thread and silently dropping the Shutdown State of every
+        output after it. Nothing was logged; shutdown just looked fast.
+        """
         # Turn all outputs to their shutdown state
         for each_output_id in self.output_unique_id:
-            shutdown_timer = timeit.default_timer()
-            # 종료 상태 전송도 게이트를 안 지난다. shutdown() 이 드라이버를 정리해
-            # 옵션을 못 읽게 되므로 반드시 **먼저** 기록한다.
-            self._audit_lifecycle(
-                each_output_id, 'state_shutdown', 'daemon_shutdown')
-            # instruct each output to shut down
-            self.output[each_output_id].shutdown(shutdown_timer)
+            output_obj = self.output.get(each_output_id)
+            if output_obj is None:
+                continue  # No driver was ever built (no_run / load failure).
+            try:
+                shutdown_timer = timeit.default_timer()
+                # 종료 상태 전송도 게이트를 안 지난다. shutdown() 이 드라이버를 정리해
+                # 옵션을 못 읽게 되므로 반드시 **먼저** 기록한다.
+                self._audit_lifecycle(
+                    each_output_id, 'state_shutdown', 'daemon_shutdown')
+                # instruct each output to shut down
+                output_obj.shutdown(shutdown_timer)
+            except Exception:
+                # One driver must not take the rest of the site down with it.
+                self.logger.exception(
+                    f"Could not shut down output {each_output_id}; continuing "
+                    f"with the remaining outputs")
 
     def all_outputs_initialize(self, outputs):
-        """Initialize all output variables and classes."""
+        """Initialize all output variables and classes.
+
+        Drivers that opt into startup_state_is_deferrable() have their Startup
+        State held back and replayed from a background thread once every output
+        exists (see _apply_deferred_startup_states). Sending it inline made boot
+        O(N) on the site-wide LoRaWAN pacing slot -- ~254 s for 30 outputs --
+        and nothing else runs during that window: initialize_variables() has not
+        returned, so ready.set() has not fired, no Input controller has started,
+        and OutputController.loop() has not begun supervising timed outputs.
+        """
         self.dict_outputs = parse_output_information()
         self.output_types = output_types()
+        deferred_startup = []
 
         for each_output in outputs:
             if each_output.output_type not in self.dict_outputs:
@@ -169,16 +198,85 @@ class OutputController(AbstractController, threading.Thread):
                         'outputs')
 
                     if output_loaded:
-                        self.output[each_output.unique_id] = output_loaded.OutputModule(each_output)
-                        self.output[each_output.unique_id].try_initialize()
+                        output_obj = output_loaded.OutputModule(each_output)
+                        self.output[each_output.unique_id] = output_obj
+
+                        # Hold back the Startup State for rate-limited drivers
+                        # so try_initialize() below does not sit on the pacing
+                        # slot. The saved values are replayed after the loop.
+                        saved_startup = self._defer_startup_state(
+                            each_output.unique_id, output_obj)
+                        if saved_startup is not None:
+                            deferred_startup.append(
+                                (each_output.unique_id, saved_startup))
+
+                        output_obj.try_initialize()
                         # 기동 상태 전송은 게이트를 안 지난다 — 여기서만 남는다.
                         self._audit_lifecycle(
                             each_output.unique_id, 'state_startup', 'daemon_startup')
-                        self.output[each_output.unique_id].init_post()
+                        output_obj.init_post()
 
                 self.logger.debug(f"{each_output.unique_id.split('-')[0]} ({each_output.name}) Initialized")
             except:
                 self.logger.exception(f"Could not initialize output {each_output.unique_id}")
+
+        if deferred_startup:
+            self.logger.info(
+                f"Startup State deferred for {len(deferred_startup)} rate-limited "
+                f"output(s); sending in the background so boot is not blocked")
+            thread = threading.Thread(
+                target=self._apply_deferred_startup_states,
+                args=(deferred_startup,))
+            thread.daemon = True
+            thread.start()
+
+    def _defer_startup_state(self, output_id, output_obj):
+        """Blank a deferrable driver's Startup State, returning the saved values.
+
+        Returns None when the driver did not opt in (nothing was changed), so
+        the caller only queues the ones it actually suppressed.
+        """
+        try:
+            if not output_obj.startup_state_is_deferrable():
+                return None
+        except Exception:
+            return None
+        try:
+            saved = dict(output_obj.options_channels.get('state_startup') or {})
+        except Exception:
+            return None
+        if not saved:
+            return None
+        # Same mechanism the settings-reload path uses: every driver reads
+        # anything other than 0/1 as "do nothing" (see suppress_state_transition).
+        self.suppress_state_transition(output_obj, 'state_startup')
+        return saved
+
+    def _apply_deferred_startup_states(self, deferred_startup):
+        """Restore and send the Startup States held back during boot.
+
+        Runs on its own thread. Each send still waits on the site-wide pacing
+        slot, but off the boot path -- the daemon is already serving RPCs and
+        supervising timed outputs while these go out.
+        """
+        for output_id, saved_startup in deferred_startup:
+            try:
+                output_obj = self.output.get(output_id)
+                if output_obj is None:
+                    continue  # Removed while we were booting.
+                output_obj.options_channels['state_startup'].update(saved_startup)
+                output_obj.apply_startup_state()
+                # Audit here, not at construction. _audit_lifecycle() skips a
+                # channel whose value is None, and while we were booting these
+                # were blanked -- so the physical state change would otherwise
+                # go unrecorded, which is the exact gap that method exists to
+                # close. Recorded after the send, matching the inline path.
+                self._audit_lifecycle(
+                    output_id, 'state_startup', 'daemon_startup')
+            except Exception:
+                self.logger.exception(
+                    f"Could not apply deferred Startup State for {output_id}")
+        self.logger.info("Deferred Startup States sent")
 
     def suppress_state_transition(self, output_instance, option_id):
         """Neutralize a startup/shutdown state option before a settings reload.

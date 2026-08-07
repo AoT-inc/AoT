@@ -48,6 +48,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def daemon_call_failed(ret):
+    """Read a DaemonControl control-call result as (failed: bool, msg: str).
+
+    The control methods below (output_on/output_off/output_on_off/...) do NOT
+    raise on failure -- they catch Pyro5 timeouts and communication errors and
+    return a ``(code, msg)`` tuple with a non-zero code (see output_off). A
+    caller that only wraps the call in try/except therefore never sees the
+    failure and reports success, which is how an e-stop could answer
+    ``{'ok': True, 'failed': 0}`` while every channel had timed out.
+
+    Use this at every control call site instead of relying on exceptions.
+    Unknown/legacy shapes (None, plain strings) are reported as success so
+    this stays safe to drop into existing call sites.
+    """
+    if isinstance(ret, tuple) and len(ret) == 2:
+        try:
+            if int(ret[0]) != 0:
+                return True, str(ret[1])
+        except (TypeError, ValueError):
+            return False, ''
+    return False, ''
+
+
 class DaemonControl:
     """Communicate with the daemon to execute commands or retrieve information."""
     _rpc_timeout_cache = None
@@ -322,20 +345,23 @@ class DaemonControl:
             cached, expires = DaemonControl._states_all_cache
             if cached is not None and now < expires:
                 return cached
+        result = None
         try:
             result = self.proxy().output_states_all()
-            with DaemonControl._states_all_lock:
-                DaemonControl._states_all_cache = (result or {}, now + DaemonControl._STATES_CACHE_TTL)
-            return result
         except Pyro5.errors.TimeoutError as err:
             logger.error(f"output_states_all timed out: {err}")
-            return {}
         except Pyro5.errors.CommunicationError as err:
             logger.error(f"output_states_all communication error: {err}")
-            return {}
         except Exception as err:
             logger.error(f"output_states_all error: {err}")
-            return {}
+        # Cache the failure as well. With this write inside the try, a daemon
+        # that is down or slow was never cached, so every caller paid the full
+        # RPC timeout again -- the cache stopped working at exactly the moment
+        # it was needed, and the polling UI multiplied that cost per request.
+        with DaemonControl._states_all_lock:
+            DaemonControl._states_all_cache = (
+                result or {}, now + DaemonControl._STATES_CACHE_TTL)
+        return result if result is not None else {}
 
     def input_status_all(self):
         """Comm status (comm_capable/comm_is_fault/comm_last_success) for all Inputs.
@@ -349,20 +375,20 @@ class DaemonControl:
             cached, expires = DaemonControl._input_status_all_cache
             if cached is not None and now < expires:
                 return cached
+        result = None
         try:
             result = self.proxy().input_status_all()
-            with DaemonControl._input_status_all_lock:
-                DaemonControl._input_status_all_cache = (result or {}, now + DaemonControl._STATES_CACHE_TTL)
-            return result
         except Pyro5.errors.TimeoutError as err:
             logger.error(f"input_status_all timed out: {err}")
-            return {}
         except Pyro5.errors.CommunicationError as err:
             logger.error(f"input_status_all communication error: {err}")
-            return {}
         except Exception as err:
             logger.error(f"input_status_all error: {err}")
-            return {}
+        # Failures are cached too -- see output_states_all() for why.
+        with DaemonControl._input_status_all_lock:
+            DaemonControl._input_status_all_cache = (
+                result or {}, now + DaemonControl._STATES_CACHE_TTL)
+        return result if result is not None else {}
 
     def output_comm_capable_all(self):
         """{output_id: bool} — can this Output observe its device's state at all.

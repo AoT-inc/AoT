@@ -31,6 +31,10 @@ except ModuleNotFoundError:
 _GRPC_INSTALL_LOCK = threading.Lock()
 _GRPC_INSTALL_ATTEMPTED = False
 
+# Deadline for a single gRPC Enqueue. Matches the REST fallback's timeout so
+# neither transport can park a thread indefinitely on an unresponsive LNS.
+GRPC_ENQUEUE_TIMEOUT_S = 15
+
 # Site-wide downlink pacing is shared with the LoRaWAN class scheduler via
 # aot.utils.lorawan_pacing so that valve-control downlinks AND scheduler CFG
 # downlinks are paced together on the one half-duplex gateway. See that module.
@@ -283,6 +287,20 @@ class OutputModule(AbstractOutput):
             except Exception:
                 pass
 
+    def _log_error(self, msg):
+        """ERROR logging that is NEVER gated by 'Enable Debug Logging'.
+
+        Reserved for a command that did not reach the air (dropped downlink,
+        transport failure). Those are operational faults the site owner must
+        see even with debug logging off -- gating them is how a command can
+        vanish without a trace. Deliberately mirrors the ungated ERROR in
+        ConfirmableOutputMixin._notify_command_fault().
+        """
+        try:
+            self.logger.error(msg)
+        except Exception:
+            pass
+
     def _ensure_grpc_client(self) -> bool:
         global grpc, cs_api, _GRPC_INSTALL_ATTEMPTED
         if grpc and cs_api:
@@ -372,7 +390,18 @@ class OutputModule(AbstractOutput):
         except Exception as err:
             self._log_warning(f"Uplink listener not started: {err}")
 
-        # Execute Startup State best-effort
+        # Execute Startup State best-effort.
+        #
+        # On a daemon boot OutputController blanks 'state_startup' before it
+        # builds us (startup_state_is_deferrable() below) and replays it from a
+        # background thread once every output exists, so the loop here finds
+        # None and skips. That keeps each downlink's 4 s pacing slot off the
+        # boot path -- serialised here it was ~8 s per output, which is what
+        # made the daemon take ~254 s to start and left Input controllers and
+        # auto-off supervision stalled for that whole window.
+        #
+        # The loop still runs for every other path that builds this driver
+        # (settings reload, manual activation), where nothing is blanked.
         try:
             for channel in channels_dict:
                 startup = self.options_channels['state_startup'][channel]
@@ -393,6 +422,12 @@ class OutputModule(AbstractOutput):
                         pass
         except Exception:
             pass
+
+    def startup_state_is_deferrable(self):
+        """Yes -- every downlink here waits on the site-wide LoRaWAN pacing
+        slot, and this driver applies Startup State through output_switch(),
+        which is the contract AbstractOutput.apply_startup_state() replays."""
+        return True
 
     def _normalize_server(self):
         srv = (self._opt('cs_server', '') or '').strip()
@@ -807,6 +842,15 @@ class OutputModule(AbstractOutput):
 
             # 3) Heartbeat/status (optional): hook here if your heartbeat embeds valve state
             if f_port == FPORT_HB and len(b) > 0:
+                # A heartbeat proves the device is reachable but says nothing
+                # about the valve, so it must not confirm a state. It does
+                # clear the offline mark: without that, a recovered device kept
+                # receiving single-shot probes with no retransmission until
+                # some later command happened to be confirmed.
+                if self.note_device_alive(0):
+                    self._log_info(
+                        "[AoT] device is reachable again (heartbeat); resuming "
+                        "normal command delivery")
                 return
         except Exception:
             pass
@@ -845,7 +889,14 @@ class OutputModule(AbstractOutput):
                 req.queue_item.f_port = f_port_int
                 req.queue_item.confirmed = bool(confirmed)
                 req.queue_item.data = bytes(payload_bytes)
-                client.Enqueue(req, metadata=md)
+                # Deadline is mandatory here. Without one this call inherits no
+                # bound at all: a ChirpStack host that accepts the connection
+                # and then stops answering parks the calling thread until the
+                # OS connect/read timeout (~127 s on Linux). That thread is
+                # sometimes the non-daemon auto-off worker, which then blocks
+                # interpreter exit -- shutdown hangs on a radio that went away.
+                # The REST fallback below is already bounded at 15 s; match it.
+                client.Enqueue(req, metadata=md, timeout=GRPC_ENQUEUE_TIMEOUT_S)
                 return True
             except Exception as err:
                 self._log_warning(f"gRPC enqueue failed ({err}); attempting REST fallback.")
@@ -946,7 +997,13 @@ class OutputModule(AbstractOutput):
     def output_switch(self, state, output_type=None, amount=None, output_channel=0):
         """Enqueue an on/off downlink command and hand off to the base state
         machine (pending window, retransmission, timeout fault/revert, and
-        confirmation via ingest_uplink -> confirm_command)."""
+        confirmation via ingest_uplink -> confirm_command).
+
+        Returns the (code, msg) tuple AbstractOutput._switch_failed() reads:
+        code 0 = dispatched, non-zero = the command never reached the air. A
+        plain string here is read as success no matter what it says, which is
+        how a dropped downlink used to be recorded as a completed command.
+        """
         try:
             # ensure key exists
             if output_channel not in self.output_states:
@@ -961,13 +1018,17 @@ class OutputModule(AbstractOutput):
                 # only when the dispatch actually succeeded (no phantom 'on').
                 self.begin_command(output_channel, state, prev_state, dispatched_ok=ok)
             if not ok:
-                self._log_warning(
+                # Ungated: a command that never went out must be visible even
+                # with 'Enable Debug Logging' off.
+                self._log_error(
                     f"[AoT] enqueue failed ch={output_channel} state={state}; "
                     f"not arming pending/intent (no command was actually sent)")
-            msg = 'success' if ok else 'enqueue_failed'
+                return 1, 'enqueue_failed'
+            return 0, 'success'
         except Exception as e:
-            msg = f'State change error: {e}'
-        return msg
+            self._log_error(
+                f"[AoT] state change error ch={output_channel} state={state}: {e}")
+            return 1, f'State change error: {e}'
 
     # is_pending() is provided by ConfirmableOutputMixin.
 

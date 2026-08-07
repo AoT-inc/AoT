@@ -3152,7 +3152,7 @@ def api_geo_output_state(output_uuid):
         return jsonify({'ok': False, 'error': 'state required'}), 422
 
     try:
-        from aot.aot_client import DaemonControl
+        from aot.aot_client import DaemonControl, daemon_call_failed
         ctrl = DaemonControl()
         if duration is not None:
             ret = ctrl.output_on_off(output_uuid, bool(state),
@@ -3163,6 +3163,15 @@ def api_geo_output_state(output_uuid):
                                      output_channel=channel)
         if ret is None:
             return jsonify({'ok': False, 'error': 'daemon unreachable'}), 500
+        # output_on_off never returns None on a timeout -- it returns
+        # (code, msg) with a non-zero code, so the None check above cannot
+        # catch the failure that actually happens. Read the code.
+        call_failed, fail_msg = daemon_call_failed(ret)
+        if call_failed:
+            current_app.logger.error(
+                "api_geo_output_state could not command %s: %s",
+                output_uuid, fail_msg)
+            return jsonify({'ok': False, 'error': fail_msg}), 502
         return jsonify({'ok': True, 'result': ret})
     except Exception as e:
         current_app.logger.exception("api_geo_output_state failed")

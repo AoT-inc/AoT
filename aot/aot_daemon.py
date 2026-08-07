@@ -74,6 +74,23 @@ from aot.utils.influx import write_influxdb_value
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
 
+# Shutdown join budgets. Both were previously unbounded or silently short,
+# which is why no graceful shutdown completed between 2026-07-28 and 08-07.
+#
+# CONTROLLER: a controller whose loop() is blocked on a device read never sees
+# running=False. It is a daemon thread, so abandoning it is safe; waiting on it
+# forever is not.
+CONTROLLER_JOIN_TIMEOUT_S = 15
+# OUTPUT: sending every output's Shutdown State is O(N) -- on LoRaWAN each one
+# waits for the site-wide 4 s pacing slot (aot/utils/lorawan_pacing.py), about
+# 8 s per output. The old silent join(15) therefore cut a 30-output site off
+# after roughly the first two, dropping the rest with no log at all. Sized to
+# stay under docker-compose's stop_grace_period (180 s) with room for the audit
+# flush and Pyro teardown that follow; a site large enough to exceed it now
+# says so in the log instead of failing quietly.
+OUTPUT_JOIN_TIMEOUT_S = 120
+
+
 _TZ_CACHE = {'tz': None, 'expires': 0.0}
 
 
@@ -407,7 +424,15 @@ class DaemonController:
         self.controller[cont_type][cont_id] = controller_manage['function'](ready, cont_id)
         self.controller[cont_type][cont_id].daemon = True
         self.controller[cont_type][cont_id].start()
-        ready.wait()  # wait for thread to return ready
+        # Bounded wait: if initialize_variables() raises before the thread calls
+        # ready.set() (e.g. a broken user Python script), an unbounded wait()
+        # here deadlocks start_all_controllers() forever, starving every
+        # controller queued after this one (including Input -> no live data).
+        if not ready.wait(timeout=30):
+            self.logger.error(
+                f"{cont_type} controller with ID {cont_id} did not signal ready "
+                f"within 30s; continuing without waiting further (its "
+                f"initialize_variables() may have failed before calling ready.set()).")
 
         message = f"{cont_type} controller with ID {cont_id} activated."
         self.logger.debug(message)
@@ -1084,7 +1109,10 @@ class DaemonController:
         self.controller['Output'] = OutputController(ready, debug)
         self.controller['Output'].daemon = True
         self.controller['Output'].start()
-        ready.wait()  # wait for thread to return ready
+        if not ready.wait(timeout=30):
+            self.logger.error(
+                "Output Controller did not signal ready within 30s; continuing "
+                "without waiting further.")
 
         # Ensure Output controller has started before continuing
         time.sleep(0.5)
@@ -1099,6 +1127,15 @@ class DaemonController:
         for each_controller in self.cont_types:
             self.logger.debug(f"Starting all activated {each_controller} controllers")
             for each_entry in db_tables[each_controller]:
+                # A SIGTERM during boot used to be ignored outright: _graceful_stop
+                # only lowers this flag, and nothing on the startup path read it,
+                # so `docker stop` did nothing until SIGKILL. Boot is exactly when
+                # a stop is most likely -- it is the slowest part of the run.
+                if not self.daemon_run:
+                    self.logger.info(
+                        "Shutdown requested during startup — stopping before "
+                        f"the remaining {each_controller} controllers")
+                    return 0, "Startup aborted by shutdown request"
                 if each_entry.is_activated:
                     try:
                         self.controller_activate(each_entry.unique_id)
@@ -1113,7 +1150,10 @@ class DaemonController:
         self.controller['Widget'] = WidgetController(ready, debug)
         self.controller['Widget'].daemon = True
         self.controller['Widget'].start()
-        ready.wait()  # wait for thread to return ready
+        if not ready.wait(timeout=30):
+            self.logger.error(
+                "Widget Controller did not signal ready within 30s; continuing "
+                "without waiting further.")
 
         # Ensure Widget controller has started before continuing
         time.sleep(0.5)
@@ -1147,15 +1187,33 @@ class DaemonController:
         for each_controller in list(reversed(self.cont_types)):
             for cont_id in controller_running[each_controller]:
                 try:
-                    self.controller[each_controller][cont_id].join()
+                    # Bounded: a controller whose loop() is stuck in a blocking
+                    # device read never sees running=False, and an unbounded
+                    # join() here hangs shutdown forever behind it.
+                    self.controller[each_controller][cont_id].join(
+                        CONTROLLER_JOIN_TIMEOUT_S)
+                    if self.controller[each_controller][cont_id].is_alive():
+                        self.logger.error(
+                            f"{each_controller} controller {cont_id} did not stop "
+                            f"within {CONTROLLER_JOIN_TIMEOUT_S}s; abandoning it "
+                            f"(it is a daemon thread and will not block exit)")
                 except Exception as err:
                     self.logger.info(f"{each_controller} controller {cont_id} thread had an issue being joined: {err}")
             self.logger.info(f"All {each_controller} controllers stopped")
 
         try:
             self.controller['Output'].stop_controller()
-            self.controller['Output'].join(15)  # Give each thread 15 seconds to stop
-            self.logger.info("Output controller stopped")
+            self.controller['Output'].join(OUTPUT_JOIN_TIMEOUT_S)
+            if self.controller['Output'].is_alive():
+                # Loud on purpose: this join cutting in is how Shutdown States
+                # get dropped. Sending them is O(N) on the LoRaWAN pacing slot,
+                # so a large site needs far more than the old silent 15 s.
+                self.logger.error(
+                    f"Output controller did not stop within "
+                    f"{OUTPUT_JOIN_TIMEOUT_S}s; some Shutdown States were not "
+                    f"sent")
+            else:
+                self.logger.info("Output controller stopped")
         except Exception as err:
             self.logger.info(f"Output controller had an issue stopping: {err}")
 

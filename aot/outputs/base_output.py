@@ -149,6 +149,68 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         """Called when Output is stopped."""
         self.running = False
 
+    def startup_state_is_deferrable(self):
+        """True if this driver's Startup State may be sent after boot finishes.
+
+        Opt-in, default False. A driver that says True must apply its Startup
+        State through the plain output_switch('on'/'off') contract, because
+        OutputController replays it via apply_startup_state() below instead of
+        the driver's own initialize().
+
+        Why this exists: OutputController builds outputs one at a time, and a
+        driver whose dispatch is globally rate limited (LoRaWAN downlinks share
+        one site-wide 4 s slot, aot/utils/lorawan_pacing.py) turns boot into an
+        O(N) wait -- measured at ~254 s for 30 outputs, during which no Input
+        controller runs and OutputController.loop() has not started, so timed
+        outputs get no auto-off supervision either.
+
+        It is opt-in rather than blanket because Startup State is not uniform:
+        on_off_gpio writes the pin directly from the option value, so blanking
+        it there would drive the pin instead of skipping it.
+        """
+        return False
+
+    def apply_startup_state(self):
+        """Send this output's Startup State. Used for deferred drivers only.
+
+        Mirrors the shape every rate-limited driver uses in initialize():
+        1 = on, 0 = off, anything else = do nothing.
+        """
+        try:
+            channels = self.options_channels.get('state_startup') or {}
+        except Exception:
+            return
+
+        for channel, startup in list(channels.items()):
+            if startup == 1:
+                state = 'on'
+            elif startup == 0:
+                state = 'off'
+            else:
+                continue  # 'Do Nothing' (-1) or suppressed (None)
+
+            try:
+                ret = self.output_switch(state, output_channel=channel)
+                failed, fail_msg = self._switch_failed(ret)
+                if failed:
+                    self.logger.error(
+                        f"Startup State '{state}' for channel {channel} was not "
+                        f"delivered: {fail_msg}")
+                    continue
+                self.output_states[channel] = (state == 'on')
+            except Exception:
+                self.logger.exception(
+                    f"Applying Startup State for channel {channel}")
+                continue
+
+            try:
+                if (self.options_channels.get('trigger_functions_startup') or {}).get(channel):
+                    self.check_triggers(self.unique_id, output_channel=channel)
+            except Exception:
+                self.logger.exception(
+                    f"Could not check Trigger for channel {channel} of output "
+                    f"{self.unique_id}")
+
     #
     # Do not overwrite the function below
     #

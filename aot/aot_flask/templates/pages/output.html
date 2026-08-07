@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/static/css/gridstack-custom.css?v=20260611z1" />
 <link rel="stylesheet" href="/static/css/aot-entry-ui.css?v=phase9.8" />
 <script src="/static/js/vendor/gridstack-all.js"></script>
-<script src="/static/js/common/aot-output-state.js?v=8"></script>
+<script src="/static/js/common/aot-output-state.js?v=9"></script>
 
 
 <script>
@@ -112,7 +112,15 @@
     const url = '/outputstate';
     $.getJSON(url,
       function (data, responseText, jqXHR) {
-        if (jqXHR.status !== 204) {
+        // /outputstate answers 200 with {} when the daemon is unreachable
+        // (get_all_output_states -> output_states_all degrades to {}), so
+        // checking only for 204 was not enough: $.each({}) iterates zero
+        // times, nothing touched the DOM, and the page kept showing the last
+        // good on/off states for a daemon that had stopped answering.
+        // An install with genuinely zero outputs also lands here and simply
+        // has no rows to repaint.
+        var noData = !data || Object.keys(data).length === 0;
+        if (jqXHR.status !== 204 && !noData) {
           $.each(data,
             function (output_id, states) {
               for (let i = 0; i < Object.keys(states).length; i++) {
@@ -208,7 +216,7 @@
               var cardEl = document.getElementById('output_status_' + output_id);
               var agg = window.AoTOutputState.aggregate(Object.values(states));
               if (cardEl) {
-                cardEl.classList.remove('active-background', 'inactive-background', 'fault-background', 'hold-background');
+                cardEl.classList.remove('active-background', 'inactive-background', 'fault-background', 'hold-background', 'unknown-background');
                 cardEl.classList.add(agg.cssClass);
               }
             });
@@ -282,27 +290,51 @@
             }
           });
         } else {
-          {% for each_output in output %}
-          {% for each_output_channel in dict_outputs[each_output.output_type]['channels_dict'] %}
-          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block fault-background';
-          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = '{{_('No Connection')}}';
-          // Force Row to stay clean and apply pause background
-          document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state").className = "item_channel row small-gutters fault-background aot-entry-item-channel";
-
-          // Default toggle to false or unchecked if unknown
-          if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-toggle")) {
-            document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-toggle").checked = false;
-          }
-          {% endfor %}
-          if (document.getElementById('output_status_{{each_output.unique_id}}')) {
-            document.getElementById('output_status_{{each_output.unique_id}}').classList.remove(
-              'active-background', 'inactive-background', 'hold-background');
-            document.getElementById('output_status_{{each_output.unique_id}}').classList.add('fault-background');
-          }
-          {% endfor %}
+          // 204 = the app answered but the daemon gave it nothing. Reflect that
+          // on the brand tint now instead of waiting up to 60s for the next
+          // check_daemon_status poll (layout_default.html).
+          markAllDisconnected();
+          if (window.AoTBrandStatus) window.AoTBrandStatus.set('daemon');
         }
+      })
+      // Without this, a request that FAILS (daemon down, 500, network drop)
+      // never runs the success callback and nothing touches the DOM — the page
+      // kept showing the last good states indefinitely, so an operator saw
+      // confident on/off readings for a server that had stopped answering.
+      // The 204 branch above only covers "answered, but empty".
+      .fail(function () {
+        markAllDisconnected();
       });
-  } $(function () {
+  }
+
+  // Paint every channel as unreachable. Shared by the 204 ("answered empty")
+  // and .fail() ("did not answer") paths so both say the same thing.
+  function markAllDisconnected() {
+    {% for each_output in output %}
+    {% for each_output_channel in dict_outputs[each_output.output_type]['channels_dict'] %}
+    if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state")) {
+      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").className = 'form-control btn btn-primary btn-sm btn-block fault-background';
+      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-input-output-state").value = '{{_('No Connection')}}';
+    }
+    // Force Row to stay clean and apply pause background
+    if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state")) {
+      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-output-state").className = "item_channel row small-gutters fault-background aot-entry-item-channel";
+    }
+
+    // Default toggle to false or unchecked if unknown
+    if (document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-toggle")) {
+      document.getElementById("{{each_output.unique_id}}-{{each_output_channel}}-toggle").checked = false;
+    }
+    {% endfor %}
+    if (document.getElementById('output_status_{{each_output.unique_id}}')) {
+      document.getElementById('output_status_{{each_output.unique_id}}').classList.remove(
+        'active-background', 'inactive-background', 'hold-background');
+      document.getElementById('output_status_{{each_output.unique_id}}').classList.add('fault-background');
+    }
+    {% endfor %}
+  }
+
+  $(function () {
     // loadCommCapable() and gpioState() both hit the network — without this
     // sequencing, the FIRST gpioState() tick can land before commCapable is
     // populated (still {}), so `commCapable[output_id] === false` reads as

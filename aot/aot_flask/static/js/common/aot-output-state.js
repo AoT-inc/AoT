@@ -15,6 +15,10 @@
  *               timeout). Transient — resolves to on/off/fault. No runtime yet.
  *   - fault   : unconfirmed / offline. Distinct "no response" state — NOT a fake
  *               off, NOT an infinite wait. No runtime.
+ *   - unknown : no state arrived for this output at all (the daemon answered
+ *               {} or the key is missing). We did not fail to reach the
+ *               DEVICE — we failed to reach the SERVER, so the device may be
+ *               perfectly fine. Distinct from both 'off' and 'fault'.
  */
 (function (root) {
   var CLASS = {
@@ -26,7 +30,10 @@
     // 이 상수만 바꾸면 cssClass 를 쓰는 소비처는 전부 따라온다 — 다만
     // classList.remove(...) 목록에 'fault-background' 를 넣어 주지 않은 곳은
     // 빨강이 그대로 눌어붙으므로 소비처마다 확인이 필요하다.
-    fault:   'fault-background'
+    fault:   'fault-background',
+    // 2026-08-07: 상태가 아예 오지 않은 경우. fault(장치 무응답)와 다르다 —
+    // 서버에 못 물어본 것이므로 장치는 멀쩡할 수 있다. 경보색이 아닌 중립.
+    unknown: 'unknown-background'
   };
 
   function classify(raw) {
@@ -48,7 +55,19 @@
                isOffline: false, countsRuntime: on, value: raw,
                cssClass: on ? CLASS.on : CLASS.off };
     }
-    // 'off', false, null, undefined, or anything unrecognized
+    // No state arrived for this output. undefined = the key was absent from the
+    // response; null = the daemon RPC itself failed (aot_client.output_state()
+    // returns None on timeout/communication error). Neither says the device is
+    // off, and folding them into 'off' is what made an unreachable daemon
+    // render every output as a confident "Inactive" — the exact fake-off this
+    // module's own header says it does not do. aggregate() below has always
+    // skipped these rather than counting them as off; classify() now agrees.
+    if (raw === null || raw === undefined) {
+      return { kind: 'unknown', isOn: false, isPending: false, isFault: false,
+               isOffline: false, isUnknown: true, countsRuntime: false,
+               cssClass: CLASS.unknown };
+    }
+    // 'off', false, or anything unrecognized
     return { kind: 'off', isOn: false, isPending: false, isFault: false,
              isOffline: false, countsRuntime: false, cssClass: CLASS.off };
   }
@@ -59,6 +78,7 @@
     var c = classify(raw);
     if (c.kind === 'pending') return labels.pending || 'Confirming';
     if (c.kind === 'fault')   return labels.fault   || 'No response';
+    if (c.kind === 'unknown') return labels.unknown || 'Unknown';
     if (c.kind === 'on')      return labels.on      || 'Active';
     return labels.off || 'Inactive';
   }
@@ -100,8 +120,13 @@
       else if (c.isOn) sawOn = true;
     });
     if (!any) {
-      return { kind: 'off', isOn: false, isPending: false, isFault: false,
-               isOffline: false, countsRuntime: false, cssClass: CLASS.off };
+      // Nothing usable came back for any channel. Reporting 'off' here is the
+      // card-level version of the same fake-off classify() used to produce:
+      // an empty /outputstate response (daemon unreachable) painted every card
+      // a confident "inactive".
+      return { kind: 'unknown', isOn: false, isPending: false, isFault: false,
+               isOffline: false, isUnknown: true, countsRuntime: false,
+               cssClass: CLASS.unknown };
     }
     if (sawFault) {
       return { kind: 'fault', isOn: false, isPending: false, isFault: true,

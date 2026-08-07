@@ -184,15 +184,27 @@ def inject_variables():
         if not current_app.config['TESTING']:
             now = time.time()
             if now - _daemon_status_cache['ts'] > _DAEMON_STATUS_TTL:
-                control = DaemonControl()
-                _daemon_status_cache['value'] = control.daemon_status()
+                # Stamp the attempt BEFORE the RPC, not after it. This runs on
+                # every single page render (app_context_processor), and with the
+                # stamp after the call a failing daemon never advanced 'ts' --
+                # so the TTL stopped working at exactly the moment it mattered
+                # and every render paid the full RPC timeout again. With one
+                # gunicorn worker that saturates the thread pool and takes down
+                # pages that have nothing to do with the daemon.
                 _daemon_status_cache['ts'] = now
+                # Short timeout: rendering a page must not wait as long as an
+                # actual control command is allowed to.
+                control = DaemonControl(pyro_timeout=2)
+                _daemon_status_cache['value'] = control.daemon_status()
             daemon_status = _daemon_status_cache['value']
         else:
             daemon_status = '0'
     except Exception as e:
         logger.debug("URL for 'inject_variables' raised and error: "
                      "{err}".format(err=e))
+        # 'ts' is already stamped above, so the next render is served from
+        # cache instead of blocking on the daemon again.
+        _daemon_status_cache['value'] = '0'
         daemon_status = '0'
 
     languages_sorted = sorted(LANGUAGES.items(), key=operator.itemgetter(1))
