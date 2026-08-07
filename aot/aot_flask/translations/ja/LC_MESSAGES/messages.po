@@ -12118,11 +12118,11 @@ msgstr "MCP で接続した外部 AI は自ら何も変更できません。制�
 msgid "Control requests awaiting approval"
 msgstr "承認待ちの制御リクエスト"
 
-#: aot_flask/templates/pages/ai/mcp_review.html:25
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:20
 msgid ""
-"These have NOT been executed. Approving lets the requesting AI run it once "
-"with the same arguments."
-msgstr "まだ実行されていません。承認すると、要求した AI が同じ引数で一度だけ実行できます。"
+"These have NOT been executed. Approving runs it immediately with exactly the "
+"arguments shown — you do not need to go back to the AI and tell it."
+msgstr "まだ実行されていません。承認すると、画面に表示された引数のまま直ちに実行されます — AI に伝え直す必要はありません。"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:30
 msgid "AI advice ledger"
@@ -26094,3 +26094,15 @@ msgstr "シーケンス開始からこの秒数だけ遅れて開始します"
 #: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
 msgid "Stop this many seconds before the sequence ends"
 msgstr "シーケンス終了のこの秒数前に停止します"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "This moves real equipment (valves, pumps) as soon as you approve. Run it now?"
+msgstr "承認すると直ちに実際の機器（バルブ・ポンプ）が動きます。今すぐ実行しますか？"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Approved and carried out."
+msgstr "承認し、実行まで完了しました。"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Approved, but it failed to run"
+msgstr "承認しましたが、実行に失敗しました"

@@ -1,0 +1,146 @@
+{# 외부 AI 제어 요청 승인 대기 — 재사용 include.
+
+   전용 페이지(mcp_review)에만 있던 시절, 그 페이지로 가는 링크는 "MCP 서버 목록"
+   안의 버튼 하나뿐이었다. MCP 서버 목록은 연결을 설정하는 화면이라 현장 운영자가
+   매일 들어갈 이유가 없다 — 승인 대기 요청이 아무도 안 보는 곳에 쌓였다.
+   그래서 운영자가 일정 때문에 이미 들르는 일정(Scheduler) 화면에도 같은 목록을
+   띄운다. 승인은 유효시간이 짧아(5분) 발견이 늦으면 그대로 만료된다.
+
+   include 하는 쪽이 준비해야 할 것:
+     - 라우트 컨텍스트에 physical_tools (mcp_safety_gate.PHYSICAL_TOOLS 가 정본)
+   승인/거부가 일어나면 document 에 'aot:mcp-approval-changed' 를 쏜다.
+   같은 화면의 다른 목록(감사 로그 등)은 그 이벤트로 갱신하면 된다. #}
+
+<div class="aot-modal-group-title" id="mcp-pending-title">
+    {{ _('Control requests awaiting approval') }}
+    <span class="badge badge-pill badge-primary ml-1 d-none" id="mcp-pending-count"></span>
+</div>
+<p class="aot-modal-body-text">
+    {{ _('These have NOT been executed. Approving runs it immediately with exactly the arguments shown — you do not need to go back to the AI and tell it.') }}
+</p>
+<div id="mcp-pending-list"><p class="aot-modal-body-text">{{ _('Loading...') }}</p></div>
+
+<script>
+(function () {
+    var T = {
+        none_pending: {{ _('No control requests are waiting.')|tojson }},
+        approve: {{ _('Approve')|tojson }},
+        reject: {{ _('Reject')|tojson }},
+        // 어순이 언어마다 달라 숫자를 끼워 넣는 한 문장으로 둔다.
+        // NOTE: placeholder is '{sec}', NOT '%(sec)s' - newer jinja2's gettext()
+        // unconditionally applies %-formatting to every translated string, even
+        // with no kwargs passed (see jinja2/ext.py _make_new_gettext: "Always
+        // treat as a format string"), so a literal '%(sec)s' left for JS-side
+        // .replace() to fill in raises KeyError('sec') server-side before the
+        // page even renders. '{sec}' has no '%' in it, so it round-trips safely.
+        expires_fmt: {{ _('expires in {sec}s')|tojson }},
+        reason: {{ _('Reason')|tojson }},
+        failed: {{ _('Request failed')|tojson }},
+        confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
+        executed: {{ _('Approved and carried out.')|tojson }},
+        exec_failed: {{ _('Approved, but it failed to run')|tojson }}
+    };
+    // 되돌릴 수 없는 물리 동작만 한 번 더 확인한다. 설정 변경까지 매번 물으면
+    // 확인창이 의미 없는 클릭으로 전락해 정작 중요한 순간에도 그냥 눌리게 된다.
+    var PHYSICAL_TOOLS = {{ physical_tools|tojson }};
+    var listEl = document.getElementById('mcp-pending-list');
+    var countEl = document.getElementById('mcp-pending-count');
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function toast(msg, type) {
+        if (typeof window.showToast === 'function') { window.showToast(msg, type); }
+    }
+
+    function post(url, onData) {
+        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            .then(function (r) { return r.json().catch(function () { return {}; }); })
+            .then(function (d) {
+                if (d && d.status === 'error') { toast(T.failed + ': ' + (d.message || ''), 'error'); }
+                else if (onData) { onData(d); }
+            })
+            .catch(function (e) { toast(T.failed + ': ' + e, 'error'); })
+            // 성공이든 실패든 목록은 다시 읽는다. 실패했는데 행이 사라지면
+            // "처리됐다"로 오인되고, 성공했는데 남아 있으면 두 번 누르게 된다.
+            .then(function () {
+                load();
+                document.dispatchEvent(new CustomEvent('aot:mcp-approval-changed'));
+            });
+    }
+
+    function render(rows) {
+        if (countEl) {
+            countEl.textContent = rows && rows.length ? rows.length : '';
+            countEl.classList.toggle('d-none', !(rows && rows.length));
+        }
+        if (!rows || !rows.length) {
+            listEl.innerHTML = '<p class="aot-modal-body-text">' + esc(T.none_pending) + '</p>';
+            return;
+        }
+        listEl.innerHTML = rows.map(function (r) {
+            // `reason` now carries an auto-generated plain-language plan
+            // briefing (built server-side from the actual arguments, not
+            // from anything the requesting AI said in chat) whenever the
+            // tool call is spatial (target_name) or a batch (add_schedule_batch)
+            // - see mcp_safety_gate._build_human_briefing. Show it prominently,
+            // ahead of and visually distinct from the raw params dump, so
+            // approving here does not require trusting a chat paraphrase.
+            var briefing = r.reason
+                ? '<div class="aot-settings-card mb-2" style="white-space:pre-wrap;border-left:3px solid var(--aot-brand,#13261B);padding-left:10px;">'
+                    + '<strong>' + esc(T.reason) + '</strong><br>' + esc(r.reason) + '</div>'
+                : '';
+            return '<div class="aot-settings-card mb-2">'
+                + '<div><strong>' + esc(r.tool_name) + '</strong>'
+                + ' &mdash; <span class="aot-modal-body-text">' + esc(r.agent_id) + '</span>'
+                + ' <span class="aot-modal-body-text">('
+                + esc(T.expires_fmt.replace('{sec}', r.expires_in_sec)) + ')</span></div>'
+                + briefing
+                + '<details><summary class="aot-modal-body-text">raw params</summary>'
+                + '<pre class="aot-modal-body-text" style="white-space:pre-wrap;">' + esc(JSON.stringify(r.params, null, 2)) + '</pre></details>'
+                + '<div class="d-flex mt-2" style="gap:8px;">'
+                + '<button type="button" class="btn aot-pill-btn" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
+                + '<button type="button" class="btn aot-pill-btn" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
+                + '</div></div>';
+        }).join('');
+    }
+
+    function load() {
+        fetch('/api/v1/mcp/confirmations').then(function (r) { return r.json(); })
+            .then(function (d) { render(d.pending); })
+            .catch(function () { render([]); });
+    }
+
+    // 이 include 안에서만 듣는다. 페이지 전역 핸들러에 얹으면 include 를 쓰는
+    // 화면마다 중복 처리돼 승인이 두 번 전송된다.
+    listEl.addEventListener('click', function (ev) {
+        var t = ev.target;
+        if (!t || t.tagName !== 'BUTTON') { return; }
+        var id;
+        if ((id = t.getAttribute('data-approve'))) {
+            if (PHYSICAL_TOOLS.indexOf(t.getAttribute('data-tool')) !== -1
+                && !confirm(T.confirm_physical)) { return; }
+            t.disabled = true;
+            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve', function (d) {
+                if (d && d.executed === false) {
+                    var m = (d.execution && (d.execution.message || d.execution.error)) || '';
+                    toast(T.exec_failed + (m ? ': ' + m : ''), 'error');
+                } else if (d && d.executed) {
+                    toast(T.executed, 'success');
+                }
+            });
+        } else if ((id = t.getAttribute('data-reject-conf'))) {
+            t.disabled = true;
+            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/reject');
+        }
+    });
+
+    // 승인 유효시간이 5분이라 대기 목록은 짧은 주기로 새로 읽는다.
+    load();
+    setInterval(load, 15000);
+    document.addEventListener('aot:mcp-reload-pending', load);
+})();
+</script>

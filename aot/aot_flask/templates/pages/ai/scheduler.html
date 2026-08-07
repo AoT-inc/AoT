@@ -71,6 +71,15 @@
         </div>
     </div>
 
+    {# 외부 AI 제어 요청 승인 대기. 승인 유효시간이 5분이라 아무도 안 보는
+       화면에 두면 그대로 만료된다 — 운영자가 이미 들르는 이 화면에 올린다.
+       전용 화면(AI 요청 및 조언)은 의견 원장·감사 로그까지 함께 본다. #}
+    {% include 'pages/ai/_mcp_pending_approvals.html' %}
+    <div class="text-right mb-3">
+        <a href="{{ url_for('routes_mcp_api.mcp_review_page') }}"
+           class="aot-modal-body-text">{{ _('AI Requests & Advice') }} &rarr;</a>
+    </div>
+
     <!-- AI Proposals -->
     <div class="aot-modal-group-title">{{ _('AI Proposals') }}
         {% if drafts %}

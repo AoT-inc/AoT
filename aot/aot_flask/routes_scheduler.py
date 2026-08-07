@@ -156,7 +156,13 @@ def page_scheduler():
 
     active_agents = AIAgent.query.filter_by(is_activated=True).all()
 
+    # _mcp_pending_approvals.html include 가 요구한다. 물리 제어 목록은 게이트가
+    # 정본이다 — 화면에 하드코딩하면 도구가 늘 때 조용히 어긋나고, 그 어긋남이
+    # 곧 "확인 없이 밸브가 열리는" 상태가 된다.
+    from aot.ai.services import mcp_safety_gate as gate
+
     return render_template('pages/ai/scheduler.html',
+                           physical_tools=sorted(gate.PHYSICAL_TOOLS),
                            drafts=drafts,
                            active_jobs=active_jobs,
                            completed_jobs=completed_jobs,

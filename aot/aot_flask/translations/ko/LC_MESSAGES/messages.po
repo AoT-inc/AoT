@@ -12195,11 +12195,11 @@ msgstr ""
 msgid "Control requests awaiting approval"
 msgstr "승인 대기 중인 제어 요청"
 
-#: aot_flask/templates/pages/ai/mcp_review.html:25
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:20
 msgid ""
-"These have NOT been executed. Approving lets the requesting AI run it once "
-"with the same arguments."
-msgstr "아직 실행되지 않았습니다. 승인하면 요청한 AI가 같은 인자로 한 번 실행할 수 있습니다."
+"These have NOT been executed. Approving runs it immediately with exactly the "
+"arguments shown — you do not need to go back to the AI and tell it."
+msgstr "아직 실행되지 않았습니다. 승인하면 화면에 보이는 인자 그대로 즉시 실행됩니다 — AI에게 다시 알려줄 필요가 없습니다."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:30
 msgid "AI advice ledger"
@@ -26337,3 +26337,15 @@ msgstr "시퀀스가 시작되고 이 초만큼 지난 뒤에 켭니다"
 #: aot/aot_flask/templates/pages/function_options/trigger_sequence_actions.html
 msgid "Stop this many seconds before the sequence ends"
 msgstr "시퀀스가 끝나기 이 초 전에 끕니다"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "This moves real equipment (valves, pumps) as soon as you approve. Run it now?"
+msgstr "승인하는 즉시 실제 장비(밸브·펌프)가 움직입니다. 지금 실행할까요?"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Approved and carried out."
+msgstr "승인했고 실행까지 마쳤습니다."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Approved, but it failed to run"
+msgstr "승인했지만 실행에 실패했습니다"

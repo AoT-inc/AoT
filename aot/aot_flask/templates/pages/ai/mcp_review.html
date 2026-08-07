@@ -19,12 +19,8 @@
         {{ _('External AI connected over MCP cannot change anything on its own. Control requests wait here for your approval, and opinions are collected for you to compare.') }}
     </p>
 
-    <!-- 실행 승인 대기 -->
-    <h5 class="mt-4">{{ _('Control requests awaiting approval') }}</h5>
-    <p class="aot-modal-body-text">
-        {{ _('These have NOT been executed. Approving runs it immediately with exactly the arguments shown — you do not need to go back to the AI and tell it.') }}
-    </p>
-    <div id="pending-list"><p class="aot-modal-body-text">{{ _('Loading...') }}</p></div>
+    <!-- 실행 승인 대기 — 일정(Scheduler) 화면과 같은 include 를 쓴다 -->
+    {% include 'pages/ai/_mcp_pending_approvals.html' %}
 
     <!-- 의견 원장 -->
     <h5 class="mt-5">{{ _('AI advice ledger') }}</h5>
@@ -40,32 +36,17 @@
 
 <script>
 (function () {
+    // 승인 대기 목록은 _mcp_pending_approvals.html 이 통째로 담당한다
+    // (일정 화면과 공유). 여기 남은 것은 의견 원장과 감사 로그뿐이다.
     var T = {
-        none_pending: {{ _('No control requests are waiting.')|tojson }},
         none_advice: {{ _('No advice has been submitted yet.')|tojson }},
         none_audit: {{ _('No tool calls recorded yet.')|tojson }},
-        approve: {{ _('Approve')|tojson }},
         reject: {{ _('Reject')|tojson }},
         accept: {{ _('Accept')|tojson }},
-        // 어순이 언어마다 달라 숫자를 끼워 넣는 한 문장으로 둔다.
-        // NOTE: placeholder is '{sec}', NOT '%(sec)s' - newer jinja2's gettext()
-        // unconditionally applies %-formatting to every translated string, even
-        // with no kwargs passed (see jinja2/ext.py _make_new_gettext: "Always
-        // treat as a format string"), so a literal '%(sec)s' left for JS-side
-        // .replace() to fill in raises KeyError('sec') server-side before the
-        // page even renders. '{sec}' has no '%' in it, so it round-trips safely.
-        expires_fmt: {{ _('expires in {sec}s')|tojson }},
-        reason: {{ _('Reason')|tojson }},
         rationale: {{ _('Rationale')|tojson }},
         proposed: {{ _('Proposed action')|tojson }},
-        failed: {{ _('Request failed')|tojson }},
-        confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
-        executed: {{ _('Approved and carried out.')|tojson }},
-        exec_failed: {{ _('Approved, but it failed to run')|tojson }}
+        failed: {{ _('Request failed')|tojson }}
     };
-    // 되돌릴 수 없는 물리 동작만 한 번 더 확인한다. 설정 변경까지 매번 물으면
-    // 확인창이 의미 없는 클릭으로 전락해 정작 중요한 순간에도 그냥 눌리게 된다.
-    var PHYSICAL_TOOLS = {{ physical_tools|tojson }};
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -73,45 +54,19 @@
         });
     }
 
-    function post(url, done, onData) {
+    function post(url, done) {
         fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(function (r) { return r.json().catch(function () { return {}; }); })
             .then(function (d) {
-                if (d && d.status === 'error') { alert(T.failed + ': ' + (d.message || '')); }
-                else if (onData) { onData(d); }
+                if (d && d.status === 'error') {
+                    if (typeof window.showToast === 'function') { window.showToast(T.failed + ': ' + (d.message || ''), 'error'); }
+                }
                 done();
             })
-            .catch(function (e) { alert(T.failed + ': ' + e); done(); });
-    }
-
-    function renderPending(rows) {
-        var el = document.getElementById('pending-list');
-        if (!rows || !rows.length) { el.innerHTML = '<p class="aot-modal-body-text">' + esc(T.none_pending) + '</p>'; return; }
-        el.innerHTML = rows.map(function (r) {
-            // `reason` now carries an auto-generated plain-language plan
-            // briefing (built server-side from the actual arguments, not
-            // from anything the requesting AI said in chat) whenever the
-            // tool call is spatial (target_name) or a batch (add_schedule_batch)
-            // - see mcp_safety_gate._build_human_briefing. Show it prominently,
-            // ahead of and visually distinct from the raw params dump, so
-            // approving here does not require trusting a chat paraphrase.
-            var briefing = r.reason
-                ? '<div class="aot-settings-card mb-2" style="white-space:pre-wrap;border-left:3px solid var(--aot-brand,#13261B);padding-left:10px;">'
-                    + '<strong>' + esc(T.reason) + '</strong><br>' + esc(r.reason) + '</div>'
-                : '';
-            return '<div class="aot-settings-card mb-2">'
-                + '<div><strong>' + esc(r.tool_name) + '</strong>'
-                + ' &mdash; <span class="aot-modal-body-text">' + esc(r.agent_id) + '</span>'
-                + ' <span class="aot-modal-body-text">('
-                + esc(T.expires_fmt.replace('{sec}', r.expires_in_sec)) + ')</span></div>'
-                + briefing
-                + '<details><summary class="aot-modal-body-text">raw params</summary>'
-                + '<pre class="aot-modal-body-text" style="white-space:pre-wrap;">' + esc(JSON.stringify(r.params, null, 2)) + '</pre></details>'
-                + '<div class="d-flex mt-2" style="gap:8px;">'
-                + '<button class="btn aot-pill-btn" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
-                + '<button class="btn aot-pill-btn" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
-                + '</div></div>';
-        }).join('');
+            .catch(function (e) {
+                if (typeof window.showToast === 'function') { window.showToast(T.failed + ': ' + e, 'error'); }
+                done();
+            });
     }
 
     function renderAdvice(rows) {
@@ -149,8 +104,6 @@
     }
 
     function loadAll() {
-        fetch('/api/v1/mcp/confirmations').then(function (r) { return r.json(); })
-            .then(function (d) { renderPending(d.pending); }).catch(function () { renderPending([]); });
         fetch('/api/v1/ai/advice?status=pending&limit=50').then(function (r) { return r.json(); })
             .then(function (d) { renderAdvice(d.results); }).catch(function () { renderAdvice([]); });
         fetch('/api/v1/mcp/audit?limit=25').then(function (r) { return r.json(); })
@@ -161,30 +114,19 @@
         var t = ev.target;
         if (!t || t.tagName !== 'BUTTON') { return; }
         var id;
-        if ((id = t.getAttribute('data-approve'))) {
-            if (PHYSICAL_TOOLS.indexOf(t.getAttribute('data-tool')) !== -1
-                && !confirm(T.confirm_physical)) { return; }
-            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve',
-                 loadAll, function (d) {
-                     if (d && d.executed === false) {
-                         var m = (d.execution && (d.execution.message || d.execution.error)) || '';
-                         safe_toast('error', T.exec_failed + (m ? ': ' + m : ''));
-                     } else if (d && d.executed) {
-                         safe_toast('success', T.executed);
-                     }
-                 });
-        } else if ((id = t.getAttribute('data-reject-conf'))) {
-            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/reject', loadAll);
-        } else if ((id = t.getAttribute('data-accept'))) {
+        if ((id = t.getAttribute('data-accept'))) {
             post('/api/v1/ai/advice/' + encodeURIComponent(id) + '/accept', loadAll);
         } else if ((id = t.getAttribute('data-reject-adv'))) {
             post('/api/v1/ai/advice/' + encodeURIComponent(id) + '/reject', loadAll);
         } else if (t.id === 'btn-reload') {
             loadAll();
+            document.dispatchEvent(new CustomEvent('aot:mcp-reload-pending'));
         }
     });
 
-    // 승인 유효시간이 5분이라 대기 목록은 짧은 주기로 새로 읽는다.
+    // 승인이 나면 그 호출이 감사 로그에 남으므로 로그도 같이 다시 읽는다.
+    document.addEventListener('aot:mcp-approval-changed', loadAll);
+
     loadAll();
     setInterval(loadAll, 15000);
 })();
