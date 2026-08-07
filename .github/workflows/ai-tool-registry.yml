@@ -10,12 +10,14 @@ name: AI Tool Registry SSOT
 # 왜 워크플로가 여기 새로 생겼나: CLAUDE.md 는 이 워크플로와
 # test_write_tools_are_gated() 가 있다고 적어 왔지만 레포에는 둘 다 없었다
 # (2026-08-07 확인). 즉 "지키는 검사가 있다"고 믿었을 뿐 실제로 도는 것은
-# 아무것도 없었다 — 2026-07-20~08-04 도구 32개가 스냅샷 갱신 없이 들어와
-# clean HEAD 에서도 실패하는 상태로 방치됐던 것과 같은 종류의 실패다.
+# 아무것도 없었다.
 #
-# 의존성 설치가 없다: tool_registry 는 표준 라이브러리만 import 하고
-# (dataclasses/typing/copy), 검사도 그 모듈 하나만 읽는다. 설치가 깨져서
-# 검사가 통째로 가려지는 일이 없도록 일부러 이대로 둔다.
+# **잡을 둘로 나눈 이유.** tool_map 검사만이 실제 핸들러를 import 해야 하고,
+# 그 사슬이 서드파티 17개(flask/sqlalchemy/shapely/Pyro5/influxdb-client …)를
+# 끌어온다. 그 설치가 깨지면 승인 게이팅 검사까지 통째로 가려진다 —
+# geo-integrity 가 겪은 실패 방식 그대로다. 그래서 게이팅 쪽(gating)은 의존성
+# 없이 먼저 돌리고, 무거운 쪽(dispatch-map)은 별도 잡으로 뗀다. 아래 잡이
+# 설치 문제로 죽어도 위 잡은 계속 판정을 낸다.
 
 on:
   push:
@@ -36,7 +38,9 @@ permissions:
   contents: read
 
 jobs:
-  ssot:
+  # 안전에 직결되는 쪽. 선언만 읽으므로 설치가 없다 — 그래서 무엇도 이 판정을
+  # 가릴 수 없다. 승인 집합·config_only 면제·쓰기형 이름 게이팅이 여기 있다.
+  gating:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,5 +49,29 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Check registry derivations and approval gating
+      - name: Check approval sets and write-name gating (no dependencies)
+        run: python3 -m aot.tests.ai_eval.test_tool_registry_ssot --no-dispatch
+
+  # 선언된 도구가 실제로 디스패치되는지. 핸들러 import 사슬이 필요하다.
+  # 목록을 줄이지 말 것 — 하나라도 빠지면 ModuleNotFoundError 로 죽는다
+  # (2026-08-07 실측으로 뽑은 최소 집합이다). 모델에 새 최상위 import 가
+  # 생기면 여기도 함께 늘려야 한다.
+  dispatch-map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install handler import chain
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check \
+            pytz python-dateutil requests \
+            sqlalchemy flask flask-sqlalchemy flask-marshmallow marshmallow-sqlalchemy \
+            flask-wtf flask-caching flask-babel flask-login bcrypt \
+            influxdb-client Pyro5 importlib-metadata shapely
+
+      - name: Check tool_map dispatch resolution
         run: python3 -m aot.tests.ai_eval.test_tool_registry_ssot

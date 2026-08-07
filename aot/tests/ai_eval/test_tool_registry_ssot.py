@@ -296,12 +296,30 @@ def _check(name, expected, actual):
     print(f"  OK  {name}: {len(actual)} entries match")
 
 
-def run():
+def run(check_dispatch: bool = True):
+    """check_dispatch=False 면 tool_map 검사를 건너뛴다.
+
+    tool_map 검사만이 실제 핸들러를 필요로 한다 — build_tool_map() 이
+    AoTDataToolService 를 import 하고, 그 사슬이 서드파티 17개(flask/sqlalchemy/
+    shapely/Pyro5 …)를 끌어온다. 나머지 검사는 전부 선언만 읽으므로 표준
+    라이브러리만으로 돈다.
+
+    **승인 게이팅 검사가 설치 실패에 가려지면 안 된다.** 그래서 CI 는 잡을
+    나눠 게이팅 쪽을 의존성 없이 먼저 돌린다 — geo-integrity 가 무거운 설치
+    하나 때문에 통째로 가려졌던 것과 같은 실패를 피하려는 것이다.
+    """
     from aot.ai.services import tool_registry as R
 
     print("=== SSOT tool_registry derivations vs pre-refactor snapshots ===")
 
     # 1. tool_map keys — original PLUS documented post-Phase-1 additions.
+    #    (핸들러 import 가 필요한 유일한 검사)
+    _check_dispatch_map(R) if check_dispatch else print("  --  tool_map keys: 건너뜀 (--no-dispatch)")
+
+    _check_declarations(R)
+
+
+def _check_dispatch_map(R):
     _check("tool_map keys",
            _ORIG_TOOL_MAP_KEYS | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
            | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_MAP_ADDITIONS
@@ -316,6 +334,9 @@ def run():
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
+
+def _check_declarations(R):
+    """선언만 읽는 검사들 — 서드파티 의존성 없이 돈다."""
     # 2. VIRTUAL_TOOL_REGISTRY — original PLUS the drift-fix PLUS post-Phase-1 additions.
     _check("VIRTUAL_TOOL_REGISTRY (drift-fixed)",
            _ORIG_VIRTUAL_TOOL_REGISTRY | _INTENDED_REGISTRY_ADDITIONS
@@ -443,4 +464,5 @@ def test_write_tools_are_gated():
 
 
 if __name__ == '__main__':
-    run()
+    import sys
+    run(check_dispatch='--no-dispatch' not in sys.argv)
