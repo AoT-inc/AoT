@@ -51,7 +51,16 @@ class FacilityManager:
             if geo_id:
                 query = query.filter_by(geo_id=geo_id)
             rows = query.order_by(GeoFacility.updated_at.desc()).all()
-            return [FacilityManager._to_dict(r, include_shape=include_shape) for r in rows], None
+            # [Phase B] 바인딩 색인을 한 번만 만든다 — 시설마다 조회하면
+            # 목록 길이만큼 쿼리가 나간다(실측: 시설 11개 → 11회).
+            try:
+                from .device_binding import build_facility_index
+                bindex = build_facility_index([r.unique_id for r in rows])
+            except Exception:
+                bindex = None
+            return [FacilityManager._to_dict(r, include_shape=include_shape,
+                                             binding_index=bindex)
+                    for r in rows], None
         except Exception as e:
             current_app.logger.error(f"FacilityManager.list error: {e}")
             return None, str(e)
@@ -353,7 +362,7 @@ class FacilityManager:
             return None, str(e)
 
     @staticmethod
-    def _to_dict(f, include_shape=False):
+    def _to_dict(f, include_shape=False, binding_index=None):
         d = {
             'unique_id': f.unique_id,
             'shape_uuid': f.shape_uuid,
@@ -375,6 +384,22 @@ class FacilityManager:
             'created_at': f.created_at.isoformat() if f.created_at else None,
             'updated_at': f.updated_at.isoformat() if f.updated_at else None,
         }
+        # [Phase B] 장치 참조(fittings.actuator_id/input_id,
+        # actuators.device_uuid)를 geo_binding 기준으로 맞춘다. 이 한 곳이
+        # 시설 JSON 의 유일한 출구라, 여기 걸면 하위 소비처
+        # (facility_integration · irrigation_nozzles · facility_wind ·
+        # facility_calc · 3D 위젯)가 한 줄도 안 바뀌고 바인딩을 읽는다.
+        # 바인딩이 없으면 저장된 값 그대로(폴백) — 전환기 동안 안전하다.
+        try:
+            from .device_binding import resolve_facility_payload
+            resolve_facility_payload(f.unique_id, d, index=binding_index)
+        except Exception as exc:
+            # 해석 실패가 시설 조회 자체를 막으면 안 된다 — 폴백 값이 이미
+            # payload 에 들어 있으므로 종전 동작으로 계속 간다.
+            current_app.logger.warning(
+                '[FacilityIO] 바인딩 해석 실패(%s) — 저장값으로 계속: %s',
+                f.unique_id, exc)
+
         # bay 슬라이스(폭 방향 로컬 미터 구간) — 지도/3D 위젯의 구역 라벨 배치용.
         # 지연 import: facility_bays 는 모델만 다루는 순수 계산 모듈.
         try:

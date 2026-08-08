@@ -21,7 +21,8 @@ from flask import Flask
 from sqlalchemy.exc import IntegrityError
 
 from aot.aot_flask.extensions import db
-from aot.databases.geo_integrity_ddl import apply_tier1, apply_tier2
+from aot.databases.geo_integrity_ddl import (
+    apply_binding, apply_tier1, apply_tier2)
 from aot.databases.models import (
     GeoFacility, GeoFacilitySetpoint, GeoMap, GeoShape, Input, Output)
 
@@ -272,6 +273,238 @@ class TestTier2Attacks(_Base):
             self._insert_shape('p-1', 'site', geo_id='__parcel_import__')
         db.session.rollback()
         self.assertIn('GEO-I8', str(ctx.exception))
+
+
+class TestBindingAttacks(_Base):
+    """GB-1·GB-2 — 공간-장치 바인딩 (docs/design/geo-device-binding.md).
+
+    이 불변식들이 지키는 것은 "슬롯 하나에 지금 장치 하나"와 "바인딩은
+    지워지지 않고 끝난다"다. 둘 다 앱 계층에서만 지키면 장치 삭제 진입점
+    17곳이 각자 구현하게 되고, 그중 하나만 빠뜨려도 조용히 갈린다.
+    """
+    TIERS = (apply_tier1,)
+
+    def setUp(self):
+        super(TestBindingAttacks, self).setUp()
+        raw = db.engine.raw_connection()
+        try:
+            apply_binding(raw)
+            raw.commit()
+        finally:
+            raw.close()
+
+    def _bind(self, uid, spatial_kind='shape', spatial_id='sh-1',
+              role='marker', device_kind='output', device_id='dev-1',
+              channel_id='0', measurement_id=None, valid_to=None,
+              ended_reason=None, valid_from='2026-08-08 00:00:00'):
+        self._raw(
+            'INSERT INTO geo_binding '
+            '(unique_id, spatial_kind, spatial_id, role, device_kind,'
+            ' device_id, channel_id, measurement_id, valid_from, valid_to,'
+            ' ended_reason) '
+            'VALUES (:u, :sk, :si, :r, :dk, :d, :c, :m, :vf, :vt, :er)',
+            u=uid, sk=spatial_kind, si=spatial_id, r=role, dk=device_kind,
+            d=device_id, c=channel_id, m=measurement_id, vf=valid_from,
+            vt=valid_to, er=ended_reason)
+
+    # GB-1a — 단일 점유 -----------------------------------------------------
+    def test_gb1_single_slot_cannot_have_two_current_bindings(self):
+        """한 창을 두 모터가 열 수는 없다."""
+        self._bind('b-1', device_id='dev-1')
+        with self.assertRaises(IntegrityError):
+            self._bind('b-2', device_id='dev-2')
+        db.session.rollback()
+
+    def test_gb1_ended_binding_frees_the_slot(self):
+        """교체의 정상 경로 — 종료 후 같은 슬롯에 새 장치를 붙일 수 있다."""
+        self._bind('b-1', device_id='dev-1',
+                   valid_to='2026-08-08 01:00:00', ended_reason='replaced')
+        self._bind('b-2', device_id='dev-2')
+        self.assertEqual(
+            self._count('geo_binding', 'valid_to IS NULL'), 1)
+
+    def test_gb1_same_shape_different_channel_is_allowed(self):
+        """채널이 다르면 다른 슬롯이다(다채널 릴레이의 구역별 배정)."""
+        self._bind('b-1', spatial_id='sh-1', role='area', channel_id='5')
+        self._bind('b-2', spatial_id='sh-1', role='area', channel_id='6')
+        self.assertEqual(self._count('geo_binding', '1=1'), 2)
+
+    # GB-1b — 다중 점유 -----------------------------------------------------
+    def test_gb1_sensor_role_allows_multiple_devices(self):
+        """sensors 는 같은 role 에 여러 장치를 등록해 가중평균하는 것이
+        정상이다. 단일 규칙을 일괄 적용했다면 여기서 막혀 정상 기능이
+        DB 에서 거부됐을 것이다."""
+        self._bind('b-1', spatial_kind='sensor_role', spatial_id='fac-1',
+                   role='indoor_temp', device_kind='input', device_id='in-1',
+                   measurement_id='m-1')
+        self._bind('b-2', spatial_kind='sensor_role', spatial_id='fac-1',
+                   role='indoor_temp', device_kind='input', device_id='in-2',
+                   measurement_id='m-2')
+        self.assertEqual(
+            self._count('geo_binding', 'valid_to IS NULL'), 2)
+
+    def test_gb1_same_input_two_measurements_same_role_is_allowed(self):
+        """한 센서의 서로 다른 측정 채널 둘을 같은 role 에 넣는 것은 정상."""
+        self._bind('b-1', spatial_kind='sensor_role', spatial_id='fac-1',
+                   role='indoor_temp', device_kind='input', device_id='in-1',
+                   measurement_id='m-1')
+        self._bind('b-2', spatial_kind='sensor_role', spatial_id='fac-1',
+                   role='indoor_temp', device_kind='input', device_id='in-1',
+                   measurement_id='m-2')
+        self.assertEqual(
+            self._count('geo_binding', 'valid_to IS NULL'), 2)
+
+    def test_gb1_exact_duplicate_sensor_binding_blocked(self):
+        """같은 (장치, 채널, 측정값)의 중복 등록은 집계를 왜곡하므로 막는다."""
+        self._bind('b-1', spatial_kind='sensor_role', spatial_id='fac-1',
+                   role='indoor_temp', device_kind='input', device_id='in-1',
+                   measurement_id='m-1')
+        with self.assertRaises(IntegrityError):
+            self._bind('b-2', spatial_kind='sensor_role', spatial_id='fac-1',
+                       role='indoor_temp', device_kind='input',
+                       device_id='in-1', measurement_id='m-1')
+        db.session.rollback()
+
+    def test_gb1_duplicate_with_null_measurement_blocked(self):
+        """measurement_id 가 NULL 이어도 중복은 중복이다 — SQLite 의
+        'NULL 은 서로 다르다' 규칙을 COALESCE 로 접어 막는다."""
+        self._bind('b-1', spatial_kind='weather', spatial_id='fac-1',
+                   role='forecast_temperature', device_kind='input',
+                   device_id='in-1')
+        with self.assertRaises(IntegrityError):
+            self._bind('b-2', spatial_kind='weather', spatial_id='fac-1',
+                       role='forecast_temperature', device_kind='input',
+                       device_id='in-1')
+        db.session.rollback()
+
+    # GB-2 — 수명 정합 + 어휘 ----------------------------------------------
+    def test_gb2_ended_binding_requires_reason(self):
+        """이유 없는 종료는 '왜 끝났나'에 답할 수 없다 — 이력의 존재 이유가
+        사라진다."""
+        self._attack(
+            'GEO-GB2',
+            'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+            ' role, device_kind, device_id, channel_id, valid_from, valid_to)'
+            " VALUES ('b-x','shape','sh-1','marker','output','dev-1','0',"
+            "'2026-08-08 00:00:00','2026-08-08 01:00:00')")
+
+    def test_gb2_update_cannot_end_without_reason(self):
+        """UPDATE 경로도 같이 막는다 — 트리거가 INSERT 에만 있으면
+        '만들고 나서 고치기'로 우회된다."""
+        self._bind('b-1')
+        self._attack('GEO-GB2',
+                     "UPDATE geo_binding SET valid_to='2026-08-08 01:00:00' "
+                     "WHERE unique_id='b-1'")
+
+    def test_gb2_valid_to_before_valid_from_blocked(self):
+        self._attack(
+            'GEO-GB2',
+            'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+            ' role, device_kind, device_id, channel_id, valid_from, valid_to,'
+            ' ended_reason)'
+            " VALUES ('b-x','shape','sh-1','marker','output','dev-1','0',"
+            "'2026-08-08 02:00:00','2026-08-08 01:00:00','replaced')")
+
+    def test_gb2_unknown_spatial_kind_blocked(self):
+        self._attack(
+            'GEO-GB2',
+            'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+            ' role, device_kind, device_id, channel_id, valid_from)'
+            " VALUES ('b-x','banana','sh-1','marker','output','dev-1','0',"
+            "'2026-08-08 00:00:00')")
+
+    def test_gb2_unknown_device_kind_blocked(self):
+        self._attack(
+            'GEO-GB2',
+            'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+            ' role, device_kind, device_id, channel_id, valid_from)'
+            " VALUES ('b-x','shape','sh-1','marker','banana','dev-1','0',"
+            "'2026-08-08 00:00:00')")
+
+    def test_gb2_function_pid_trigger_kinds_are_allowed(self):
+        """마커는 Function·PID·Trigger 에도 붙는다(place_device). 어휘를
+        input/output/device 3종으로 좁혔다면 정상 배치가 여기서 막힌다."""
+        for i, kind in enumerate(
+                ('function', 'pid', 'trigger', 'conditional', 'device')):
+            self._bind('b-%d' % i, spatial_id='sh-%d' % i,
+                       device_kind=kind, device_id='dev-%d' % i)
+        self.assertEqual(self._count('geo_binding', 'valid_to IS NULL'), 5)
+
+    def test_gb2_unknown_end_reason_blocked(self):
+        self._attack(
+            'GEO-GB2',
+            'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+            ' role, device_kind, device_id, channel_id, valid_from, valid_to,'
+            ' ended_reason)'
+            " VALUES ('b-x','shape','sh-1','marker','output','dev-1','0',"
+            "'2026-08-08 00:00:00','2026-08-08 01:00:00','because')")
+
+    def test_gb2_null_channel_blocked(self):
+        """NULL/'0' 비대칭이 중복 마커의 실제 발생 경로였다(I2). 같은 구멍을
+        바인딩에서 되풀이하지 않는다."""
+        self._attack(
+            'GEO-GB2',
+            'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+            ' role, device_kind, device_id, channel_id, valid_from)'
+            " VALUES ('b-x','shape','sh-1','marker','output','dev-1',NULL,"
+            "'2026-08-08 00:00:00')")
+
+
+class TestBindingDriftSkipsMissingTable(unittest.TestCase):
+    """binding-drift 검사가 '못 본 것'을 '문제 없음'으로 보고하지 않는지.
+
+    두 경우를 갈라야 한다:
+      - geo_binding 이 **없는** 설치(p6_27 이전) → 검사 대상 아님, 빈 목록
+      - 테이블은 있는데 조회가 **실패**하는 경우(부분 적용 마이그레이션,
+        컬럼 누락, 파손) → 침묵하지 말고 위로 던져 종료 2 로 드러나야 한다
+
+    `try: 조회 except: return []` 는 둘을 구분하지 못해 후자를 '드리프트
+    0건'으로 만든다. 아래 두 번째 테스트가 그 차이를 잡는 음성 대조다 —
+    try/except 구현으로 되돌리면 실패한다.
+    """
+
+    def setUp(self):
+        self.app = _make_app()
+        # check_geo_integrity 는 aot.start_flask_ui 를 끌어오고, 그 사슬의
+        # lazy_gettext 가 current_app.extensions['babel'] 을 찾는다. 이
+        # 테스트의 앱은 맨 Flask 라 붙여 주지 않으면 KeyError 로 죽는다 —
+        # 검사 대상(세션 오염 방지)과 무관한 실패다.
+        try:
+            from flask_babel import Babel
+            Babel(self.app)
+        except Exception:
+            pass
+        self.ctx = self.app.app_context()
+        self.ctx.push()
+        db.create_all()
+        # p6_27 이전 상태 재현
+        db.session.execute(sa.text('DROP TABLE IF EXISTS geo_binding'))
+        db.session.commit()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.ctx.pop()
+
+    def test_missing_table_is_skipped_quietly(self):
+        """테이블이 아예 없으면 검사 대상이 아니다 — 조용히 건너뛴다."""
+        from aot.scripts.check_geo_integrity import _binding_drift
+
+        self.assertEqual(_binding_drift([], set()), [])
+
+    def test_broken_table_is_not_reported_as_clean(self):
+        """테이블은 있는데 스키마가 어긋난 경우(부분 적용된 마이그레이션).
+        '드리프트 0건'으로 침묵하면 사람은 정상이라고 믿는다."""
+        from aot.scripts.check_geo_integrity import _binding_drift
+
+        # 컬럼이 모자란 geo_binding — 조회가 실패하는 상태를 만든다.
+        db.session.execute(sa.text(
+            'CREATE TABLE geo_binding (id INTEGER PRIMARY KEY, '
+            'unique_id VARCHAR(36))'))
+        db.session.commit()
+
+        with self.assertRaises(Exception):
+            _binding_drift([], set())
 
 
 if __name__ == '__main__':

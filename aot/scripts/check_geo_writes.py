@@ -66,7 +66,13 @@ GRANDFATHERED = {
 
 # 쓰기로 간주하는 호출. 읽기(query/filter_by/all/first)는 대상이 아니다 —
 # 읽기는 오염을 만들지 않고, 막으면 정당한 조회까지 마비된다.
-WRITE_CLASSES = ('GeoShape', 'GeoFacility')
+#
+# [GB-7] GeoBinding 포함: 공간↔장치 연결의 정본이므로 GeoShape 와 같은
+# 소유권 규칙을 받는다. 장치 삭제 경로 17곳이 각자 바인딩을 종료시키기
+# 시작하면 "슬롯당 현재 1개"·"종료는 valid_to 기록" 같은 규칙을 열일곱 벌
+# 구현하게 되고, 그 중 하나만 빠뜨려도 조용히 고아가 생긴다 — 도형이
+# 정확히 그렇게 썩었다. 밖에서는 geo 패키지의 게이트웨이를 쓴다.
+WRITE_CLASSES = ('GeoShape', 'GeoFacility', 'GeoBinding')
 
 # geo_shape 를 건드리는 원시 SQL 문자열.
 RAW_SQL = re.compile(r'\bgeo_shape\b', re.I)

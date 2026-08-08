@@ -210,6 +210,107 @@ for _when, _suffix in (('INSERT', 'ins'), ('UPDATE OF geo_id', 'upd')):
     ]
 
 
+# ---------------------------------------------------------------------------
+# 공간-장치 바인딩 (GB-1, GB-2) — docs/design/geo-device-binding.md
+#
+# geo_binding 테이블 전용. Tier-1/2 와 분리한 이유: 그 둘은 geo_shape/geo_map
+# 이 있는 모든 설치에 적용되지만, 이쪽은 p6_27 이후에만 테이블이 존재한다.
+# 섞으면 테이블 없는 설치에서 Tier-1 전체가 죽는다.
+# ---------------------------------------------------------------------------
+
+# spatial_kind 어휘. 인벤토리 6곳 중 저장처가 다른 것마다 하나씩이며,
+# fitting(fittings[].actuator_id/input_id)과 actuator(actuators[].device_uuid)
+# 는 같은 시설의 다른 JSON 컬럼이라 합치지 않는다.
+VALID_SPATIAL_KINDS = ('shape', 'fitting', 'actuator', 'sensor_role', 'weather')
+
+# device_kind 어휘 = DEVICE_LINK_TABLES 와 같은 7종('device' = custom_controller).
+# 마커는 Function·PID·Trigger 에도 붙으므로 좁히면 백필이 조용히 버린다.
+VALID_DEVICE_KINDS = ('input', 'output', 'device', 'function', 'pid',
+                      'trigger', 'conditional')
+
+VALID_END_REASONS = ('replaced', 'device_deleted', 'unbound', 'spatial_deleted')
+
+# 단일 점유 — 한 창을 두 모터가 열지 않는다.
+SINGLE_OCCUPANCY_KINDS = ('shape', 'fitting', 'actuator')
+# 다중 점유 — GeoFacility.sensors 는 같은 role 에 여러 장치를 등록해
+# 가중평균하도록 설계돼 있다(모델 주석). 단일 규칙을 일괄 적용하면 정상
+# 기능을 DB 가 거부한다. 다만 같은 (장치, 채널, 측정값)의 중복 등록은 막는다.
+MULTI_OCCUPANCY_KINDS = ('sensor_role', 'weather')
+
+_SPATIAL_SQL = ', '.join("'%s'" % k for k in VALID_SPATIAL_KINDS)
+_DEVICE_SQL = ', '.join("'%s'" % k for k in VALID_DEVICE_KINDS)
+_REASON_SQL = ', '.join("'%s'" % k for k in VALID_END_REASONS)
+_SINGLE_SQL = ', '.join("'%s'" % k for k in SINGLE_OCCUPANCY_KINDS)
+_MULTI_SQL = ', '.join("'%s'" % k for k in MULTI_OCCUPANCY_KINDS)
+
+BINDING_STATEMENTS = [
+    # GB-1a — 단일 점유 슬롯의 현재 바인딩은 1개.
+    _drop('geo_itg_gb1_single_current', 'INDEX'),
+    """
+    CREATE UNIQUE INDEX geo_itg_gb1_single_current
+    ON geo_binding (spatial_kind, spatial_id, role, channel_id)
+    WHERE valid_to IS NULL AND spatial_kind IN ({single})
+    """.format(single=_SINGLE_SQL),
+
+    # GB-1b — 다중 점유 슬롯은 같은 (장치, 채널, 측정값)의 중복만 막는다.
+    # COALESCE: measurement_id 가 NULL 인 행끼리도 중복 판정 대상이 되도록
+    # (SQLite 는 NULL 을 서로 다른 값으로 보므로 그냥 두면 무제한 중복).
+    _drop('geo_itg_gb1_multi_current', 'INDEX'),
+    """
+    CREATE UNIQUE INDEX geo_itg_gb1_multi_current
+    ON geo_binding (spatial_kind, spatial_id, role, device_id, channel_id,
+                    COALESCE(measurement_id, ''))
+    WHERE valid_to IS NULL AND spatial_kind IN ({multi})
+    """.format(multi=_MULTI_SQL),
+]
+
+# GB-2 — 수명 정합 + 어휘. INSERT 와 UPDATE 양쪽에 건다.
+for _when, _suffix in (('INSERT', 'ins'), ('UPDATE', 'upd')):
+    BINDING_STATEMENTS += [
+        _drop('geo_itg_gb2_%s' % _suffix),
+        """
+        CREATE TRIGGER geo_itg_gb2_{suffix}
+        BEFORE {when} ON geo_binding
+        BEGIN
+            SELECT CASE
+              WHEN NEW.spatial_kind NOT IN ({spatial})
+                THEN RAISE(ABORT, 'GEO-GB2: spatial_kind 허용값 아님')
+              WHEN NEW.device_kind NOT IN ({device})
+                THEN RAISE(ABORT, 'GEO-GB2: device_kind 허용값 아님')
+              WHEN NEW.channel_id IS NULL
+                THEN RAISE(ABORT, 'GEO-GB2: channel_id 는 NULL 금지')
+              WHEN NEW.valid_to IS NOT NULL AND NEW.ended_reason IS NULL
+                THEN RAISE(ABORT, 'GEO-GB2: 종료된 바인딩은 ended_reason 필수')
+              WHEN NEW.ended_reason IS NOT NULL
+                   AND NEW.ended_reason NOT IN ({reason})
+                THEN RAISE(ABORT, 'GEO-GB2: ended_reason 허용값 아님')
+              WHEN NEW.valid_to IS NOT NULL AND NEW.valid_to < NEW.valid_from
+                THEN RAISE(ABORT, 'GEO-GB2: valid_to 가 valid_from 보다 이르다')
+            END;
+        END
+        """.format(when=_when, suffix=_suffix, spatial=_SPATIAL_SQL,
+                   device=_DEVICE_SQL, reason=_REASON_SQL),
+    ]
+
+
+def apply_binding(connection):
+    """GB-1·GB-2 를 적용한다(멱등). geo_binding 테이블이 있어야 한다 —
+    없으면 조용히 건너뛴다(테이블 생성은 p6_27 마이그레이션의 몫)."""
+    if not _table_exists(connection, 'geo_binding'):
+        return False
+    _run_all(connection, BINDING_STATEMENTS)
+    return True
+
+
+def _table_exists(connection, name):
+    sql = ("SELECT name FROM sqlite_master "
+           "WHERE type='table' AND name='%s'" % name)
+    exec_fn = getattr(connection, 'exec_driver_sql', None)
+    if exec_fn is None:                      # sqlite3.Connection
+        exec_fn = connection.execute
+    return exec_fn(sql).fetchone() is not None
+
+
 def apply_tier1(connection):
     """Tier-1 강제를 적용한다(멱등). connection 은 raw DB-API 커서를 만들 수
     있는 sqlite3.Connection 또는 SQLAlchemy Connection."""
@@ -224,7 +325,7 @@ def apply_tier2(connection):
 def remove_all(connection):
     """모든 geo 무결성 트리거·인덱스를 제거한다(롤백용)."""
     names = []
-    for stmts in (TIER1_STATEMENTS, TIER2_STATEMENTS):
+    for stmts in (TIER1_STATEMENTS, TIER2_STATEMENTS, BINDING_STATEMENTS):
         for s in stmts:
             if s.startswith('DROP '):
                 names.append(s)

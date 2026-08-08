@@ -202,6 +202,16 @@ S5 ✅ 단일 배치 게이트웨이 + 소유권 검사(I12) + pre-commit/CI
 - 유령 지도 도형 처분(phantom-map 보고 대상) — 위젯 참조 확인 후 사람이 판단.
 - 미사용 `Copy of` 지도 정리, 잔여 duplicate/orphan-label — 참조 확인 후 수동.
 
+## 다음 구조 작업 — 공간-장치 바인딩
+
+`GeoShape.device_id`·시설 JSON 의 장치 참조(fittings/sensors/weather)는
+`map_overlay_id` 와 같은 계열의 문제다 — 고정 자산(공간)이 유동 자산(장치)의
+uuid 를 정체성에 새기고 있어, 장치 삭제가 고아 도형을, 장치 교체가 재작도를
+낳는다. 이를 바인딩 테이블(이력 보존 관계)로 뒤집는 설계가
+[geo-device-binding.md](geo-device-binding.md) 에 정리돼 있다(불변식 GB-1~7,
+DDL 이 붙는 시점에 이 카탈로그로 흡수 예정). 위 GRANDFATHERED 이관도 그
+문서의 Phase C 에 합류한다.
+
 ## 새 코드를 쓸 때
 
 지도 데이터를 건드려야 한다면 geo 패키지의 문을 쓴다:

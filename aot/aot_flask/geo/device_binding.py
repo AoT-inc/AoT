@@ -1,0 +1,415 @@
+# coding=utf-8
+"""공간 요소 ↔ 장치 연결의 단일 리졸버 — geo 패키지의 세 번째 게이트웨이.
+
+`device_placement`(배치: 마커를 어디에 놓는가)·`device_membership`(소속: 그
+마커가 어느 zone 안인가)과 대칭이며, 이 모듈은 **그 자리에 지금 어떤 장치가
+매여 있는가**에 답한다. 설계 정본은 docs/design/geo-device-binding.md.
+
+## 왜 리졸버인가
+
+연결이 6곳에 흩어져 있어(도형 컬럼 1 + feature JSON 2 + 시설 JSON 3) 읽는
+경로마다 기준이 달랐다. 하나만 보는 코드는 나머지를 못 보고, 장치가 사라져도
+아무도 눈치채지 못한다. 읽기를 한 문으로 모아야 Phase C 에서 쓰기를 뒤집을
+수 있다 — `map_overlay_id` → `device_membership` 전환과 같은 절차다.
+
+## 폴백 규칙 (Phase B 전용)
+
+바인딩이 있으면 바인딩이 정본이고, 없으면 레거시 저장처를 읽는다. **폴백이
+실제로 쓰이면 로그를 남긴다** — 침묵 폴백은 "전환이 끝났다"는 착각을 만들고,
+그 착각 위에서 Phase C 가 레거시를 지우면 그때 터진다. 로그가 0 이 되는 것이
+Phase C 의 게이팅 조건이다.
+
+폴백은 Phase C 에서 통째로 제거된다. 새 코드는 폴백 동작에 의존하지 말 것.
+
+## 쓰기
+
+Phase B 는 읽기 전용이다. `bind`/`unbind`/`rebind`/`end_all_for_device` 는
+Phase C(쓰기 전환)에서 이 모듈에 추가되며, 그때까지 바인딩을 만드는 것은
+백필 스크립트뿐이다.
+
+@phase active
+@stability experimental
+"""
+import json
+import logging
+
+from aot.databases.models import GeoBinding
+
+logger = logging.getLogger(__name__)
+
+# 도형 종류 → 바인딩 role. 마커(위치 점)와 구역(담당 폴리곤)은 뜻이 다르다.
+SHAPE_TYPE_ROLES = {'aot_device': 'marker', 'device': 'area'}
+
+# 폴백 사용을 종류별로 한 번씩만 기록한다 — 핫패스(지도 렌더·시설 runtime)에서
+# 매 도형마다 찍으면 로그가 쓸모없어진다. 목적은 "아직 폴백이 살아 있다"는
+# 사실을 알리는 것이지 건수를 세는 것이 아니다(건수는 check_geo_integrity 의
+# binding-drift 가 정확히 센다).
+_fallback_seen = set()
+
+
+def _note_fallback(kind, detail=''):
+    if kind in _fallback_seen:
+        return
+    _fallback_seen.add(kind)
+    logger.info(
+        '[GeoBinding] 레거시 폴백 사용: %s%s — 아직 geo_binding 으로 전환되지 '
+        '않은 연결이 있다. `check_geo_integrity` 의 binding-drift 로 건수를 '
+        '확인하고 backfill_geo_binding 을 적용할 것.',
+        kind, (' (%s)' % detail) if detail else '')
+
+
+def reset_fallback_log():
+    """폴백 로그 기억을 비운다(테스트·진단용)."""
+    _fallback_seen.clear()
+
+
+def _any_device_exists(device_ids):
+    """주어진 uuid 중 실존하는 장치가 하나라도 있으면 True.
+
+    폴백 신호에서 **죽은 참조를 걸러내기 위한 것**이다. 백필은 실존하지 않는
+    장치를 가리키는 참조에 바인딩을 만들지 않는다(고아를 정본으로 승격시키지
+    않는 정책). 그래서 죽은 참조는 "바인딩 없음 + 레거시 값 있음"이 되어
+    폴백과 구분되지 않는데, 그대로 두면 백필을 다 끝내도 폴백 경고가 영원히
+    켜진 채로 남는다. 그 순간 이 신호는 Phase C 게이팅으로 못 쓰게 되고,
+    켜져 있는 게 정상인 경고는 아무도 안 보게 된다(CI 13연속 실패 교훈).
+
+    죽은 참조는 `check_geo_integrity` 의 orphan-device-shape /
+    dangling-fitting 이 담당한다 — 여기서 중복해서 울리지 않는다.
+
+    호출은 로그를 처음 남기려 할 때뿐이라(종류당 1회) 비용이 없다.
+    """
+    ids = {str(d).split('::')[0] for d in (device_ids or []) if d}
+    if not ids:
+        return False
+
+    from aot.databases.models import (
+        Conditional, CustomController, Function, Input, Output, PID, Trigger)
+
+    for model in (Input, Output, CustomController, Function, PID, Trigger,
+                  Conditional):
+        try:
+            if model.query.with_entities(model.unique_id).filter(
+                    model.unique_id.in_(ids)).first() is not None:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+# ---------------------------------------------------------------------------
+# 조회 — 바인딩 자체
+# ---------------------------------------------------------------------------
+
+def current(spatial_kind, spatial_id, role=None, channel_id=None):
+    """지금 유효한 바인딩 목록(valid_to IS NULL).
+
+    단일 점유 슬롯이라도 리스트를 돌려준다 — 호출자가 "하나뿐"을 가정하다
+    다중 점유(sensor_role)에서 조용히 첫 항목만 쓰는 사고를 막기 위함이다.
+    하나만 필요하면 `current_one()`.
+    """
+    q = GeoBinding.query.filter(
+        GeoBinding.spatial_kind == spatial_kind,
+        GeoBinding.spatial_id == spatial_id,
+        GeoBinding.valid_to.is_(None))
+    if role is not None:
+        q = q.filter(GeoBinding.role == role)
+    if channel_id is not None:
+        q = q.filter(GeoBinding.channel_id == str(channel_id))
+    return q.all()
+
+
+def current_one(spatial_kind, spatial_id, role=None, channel_id=None):
+    """단일 점유 슬롯의 현재 바인딩 하나. 없으면 None."""
+    rows = current(spatial_kind, spatial_id, role=role, channel_id=channel_id)
+    return rows[0] if rows else None
+
+
+def bindings_for_device(device_id, include_ended=False):
+    """이 장치가 매여 있는(있었던) 슬롯 전부. 장치 삭제·교체 화면의 근거."""
+    q = GeoBinding.query.filter(GeoBinding.device_id == device_id)
+    if not include_ended:
+        q = q.filter(GeoBinding.valid_to.is_(None))
+    return q.order_by(GeoBinding.valid_from).all()
+
+
+def history(spatial_kind, spatial_id, role=None):
+    """슬롯의 장치 교체사 — 종료된 것 포함, 시간순.
+
+    시계열 접합의 근거다: InfluxDB 태그는 device_id 그대로 두고(과거 데이터
+    재작성 금지), 조회 시점에 이 구간 목록으로 이어 붙인다.
+    """
+    q = GeoBinding.query.filter(
+        GeoBinding.spatial_kind == spatial_kind,
+        GeoBinding.spatial_id == spatial_id)
+    if role is not None:
+        q = q.filter(GeoBinding.role == role)
+    return q.order_by(GeoBinding.valid_from, GeoBinding.id).all()
+
+
+def unbound_slots(facility_uuid=None):
+    """장치가 매여 있지 않은 슬롯 — 삭제·교체 후 남은 자리.
+
+    Phase D 의 "미배정 슬롯" 화면이 쓸 목록이며, 그 화면이 생기기 전까지는
+    진단용이다. 시설의 fitting/actuator 만 본다 — 도형(shape)의 미배정은
+    "그냥 그려둔 도형"과 구별할 수 없어 슬롯 개념이 성립하지 않는다.
+    """
+    from aot.databases.models import GeoFacility
+
+    q = GeoFacility.query
+    if facility_uuid:
+        q = q.filter(GeoFacility.unique_id == facility_uuid)
+
+    out = []
+    for fac in q.all():
+        bound = {b.spatial_id for b in GeoBinding.query.filter(
+            GeoBinding.spatial_kind.in_(('fitting', 'actuator')),
+            GeoBinding.valid_to.is_(None)).all()}
+        for column, kind in (('fittings', 'fitting'), ('actuators', 'actuator')):
+            for item in _items(getattr(fac, column, None)):
+                item_id = item.get('id')
+                if not item_id:
+                    continue
+                slot = '%s:%s' % (fac.unique_id, item_id)
+                if slot in bound:
+                    continue
+                if not _legacy_device_ref(column, item):
+                    continue      # 애초에 장치를 매단 적 없는 항목 — 슬롯 아님
+                out.append({
+                    'spatial_kind': kind,
+                    'spatial_id': slot,
+                    'facility': fac.name,
+                    'facility_uuid': fac.unique_id,
+                    'item_id': item_id,
+                    'item_kind': item.get('kind'),
+                })
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 해석 — 공간 요소가 "지금 가리키는 장치"
+# ---------------------------------------------------------------------------
+
+def device_for_shape(shape):
+    """도형이 가리키는 장치 uuid. 없으면 None.
+
+    바인딩 우선, 없으면 `GeoShape.device_id` 컬럼(레거시).
+    """
+    role = SHAPE_TYPE_ROLES.get(getattr(shape, 'type', None))
+    if role is None:
+        return None
+
+    uid = getattr(shape, 'unique_id', None)
+    if uid:
+        row = current_one('shape', uid, role=role)
+        if row is not None:
+            return row.device_id
+
+    legacy = (getattr(shape, 'device_id', None) or '').strip()
+    if legacy:
+        _note_fallback('shape.device_id', 'type=%s' % shape.type)
+        return legacy.split('::')[0]
+    return None
+
+
+def devices_for_shapes(shapes):
+    """{GeoShape.unique_id: 장치 uuid} — 도형 목록의 일괄 해석.
+
+    `device_for_shape` 를 루프에서 부르면 도형 수만큼 쿼리가 나간다.
+    `get_overlays` 는 지도 렌더의 핫패스이므로(시설 위젯 LCP 사건 참조)
+    바인딩을 한 번에 읽어 dict 로 접는다. 폴백도 같은 규칙으로 적용한다.
+    """
+    uids = [s.unique_id for s in shapes
+            if getattr(s, 'type', None) in SHAPE_TYPE_ROLES
+            and getattr(s, 'unique_id', None)]
+    bound = {}
+    if uids:
+        rows = GeoBinding.query.filter(
+            GeoBinding.spatial_kind == 'shape',
+            GeoBinding.spatial_id.in_(uids),
+            GeoBinding.valid_to.is_(None)).all()
+        for b in rows:
+            bound[b.spatial_id] = b.device_id
+
+    out = {}
+    fell_back = []
+    for s in shapes:
+        if getattr(s, 'type', None) not in SHAPE_TYPE_ROLES:
+            continue
+        uid = getattr(s, 'unique_id', None)
+        if uid in bound:
+            out[uid] = bound[uid]
+            continue
+        legacy = (getattr(s, 'device_id', None) or '').strip()
+        if legacy:
+            out[uid] = legacy.split('::')[0]
+            fell_back.append(out[uid])
+    # 죽은 참조는 폴백이 아니다 — orphan-device-shape 가 담당한다.
+    if fell_back and 'shape.device_id' not in _fallback_seen:
+        if _any_device_exists(fell_back):
+            _note_fallback('shape.device_id')
+    return out
+
+
+def expand_device(device_kind, device_id):
+    """바인딩의 장치를 실제 제어/측정 대상 목록으로 편다.
+
+    복합장치(`device_kind='device'`, CustomController)는 하위 Input/Output 으로
+    펼친다. 전개 기준은 **소유 관계(`parent_device_id`)뿐**이다 —
+    `DeviceMember` 참조 관계는 전개하지 않는다. 참조는 소유가 아니고, 남의
+    장치 구성에 참조로 끼워 넣은 항목이 이 슬롯의 제어 대상이 되면 안 된다.
+
+    ⚠ `device_blueprint._linked_ids()` / `_device_descendants()` 를 쓰지 말 것.
+    두 함수 모두 `parent_device_id` 결과에 `DeviceMember` 를 합쳐 돌려주므로
+    위 규칙을 정확히 위반한다(이름과 위치상 가장 먼저 손이 가는 함수들이다).
+
+    Returns: [(kind, uuid), ...] — 'device' 가 아니면 자기 자신 하나.
+    """
+    if device_kind != 'device':
+        return [(device_kind, device_id)]
+
+    from aot.databases.models import Input, Output
+
+    out = []
+    for kind, model in (('input', Input), ('output', Output)):
+        rows = model.query.with_entities(model.unique_id).filter(
+            model.parent_device_id == device_id).all()
+        out.extend((kind, r[0]) for r in rows)
+    return out or [(device_kind, device_id)]
+
+
+# ---------------------------------------------------------------------------
+# 투영 — 시설 JSON 의 장치 참조를 바인딩 기준으로 덮어쓴다
+# ---------------------------------------------------------------------------
+
+# (컬럼, 키, spatial_kind, role) — 백필 5원과 같은 목록이어야 한다.
+# fittings 와 actuators 는 컬럼도 키 이름도 다르므로 하나만 보면 놓친다.
+_FACILITY_REFS = (
+    ('fittings', 'actuator_id', 'fitting', 'actuator'),
+    ('fittings', 'input_id', 'fitting', 'sensor'),
+    ('actuators', 'device_uuid', 'actuator', 'actuator'),
+)
+
+
+def _items(blob):
+    raw = blob
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+    if isinstance(raw, list):
+        return [x for x in raw if isinstance(x, dict)]
+    if isinstance(raw, dict):
+        return [x for x in raw.values() if isinstance(x, dict)]
+    return []
+
+
+def _legacy_device_ref(column, item):
+    for col, key, _kind, _role in _FACILITY_REFS:
+        if col == column and item.get(key):
+            return str(item[key])
+    return None
+
+
+def build_facility_index(facility_uuids):
+    """{(spatial_id, role): GeoBinding} — 시설 여러 개의 바인딩을 한 번에.
+
+    시설 목록 직렬화가 시설마다 조회하면 N+1 이 된다(실측: 시설 11개 →
+    쿼리 11회). 목록 경로는 이 색인을 만들어 `resolve_facility_payload` 에
+    넘긴다.
+    """
+    uuids = [u for u in (facility_uuids or []) if u]
+    if not uuids:
+        return {}
+    prefixes = ['%s:%%' % u for u in uuids]
+    from sqlalchemy import or_
+    rows = GeoBinding.query.filter(
+        GeoBinding.spatial_kind.in_(('fitting', 'actuator')),
+        GeoBinding.valid_to.is_(None),
+        or_(*[GeoBinding.spatial_id.like(p) for p in prefixes])).all()
+    return {(b.spatial_id, b.role): b for b in rows}
+
+
+def _cow(payload, column, seen):
+    """copy-on-write: payload[column] 리스트를 처음 고칠 때 한 번만 복사한다.
+
+    `_to_dict` 의 `'fittings': f.fittings or []` 는 ORM 이 들고 있는 JSON
+    객체를 **참조로** 넘긴다. 그 안의 dict 를 제자리에서 고치면 같은 세션의
+    뒤이은 독자(`check_geo_integrity` 의 dangling-fitting, 같은 요청 안의
+    다른 코드)가 저장값 대신 해석값을 보게 된다. 읽기 리졸버가 인메모리
+    상태를 바꾸면 "저장된 것"과 "해석된 것"의 구분이 사라진다.
+
+    (2026-08-08 확인: 이 제자리 수정이 **DB 까지 써지지는 않는다** —
+    `db.Column(JSON)` 은 Mutable 래퍼가 없어 SQLAlchemy 가 제자리 변경을
+    추적하지 않고, 통제 실험에서 이후 commit 이 값을 쓰지 않았다. 처음에는
+    되써넣기로 판단했으나 그 근거였던 실험이 잘못이었다 — 얕은 복사
+    `list(f.fittings)` 로 내부 dict 을 공유한 채 고치면 ORM 이 '변경 없음'
+    으로 보아 오염 자체가 저장되지 않았고, 그 결과를 되써넣기로 오독했다.
+    따라서 이 함수의 근거는 DB 보호가 아니라 위의 인메모리 격리다.)
+
+    전량 deepcopy 하지 않는 이유: 관수 노즐만 600개가 넘는 시설이 있어
+    읽을 때마다 통째로 복사하면 비싸다. 실제로 바뀌는 항목만 갈아끼운다.
+    """
+    if column not in seen:
+        payload[column] = list(_items(payload.get(column)))
+        seen.add(column)
+    return payload[column]
+
+
+def resolve_facility_payload(facility_uuid, payload, index=None):
+    """시설 직렬화 dict 의 장치 참조를 바인딩 기준으로 맞춘다(제자리 수정).
+
+    이 함수가 `FacilityManager._to_dict()` 한 곳에 걸리면 하위 소비처
+    (`facility_integration` · `irrigation_nozzles` · `facility_wind` ·
+    `facility_calc` · 3D 위젯)는 **한 줄도 고치지 않고** 바인딩을 읽게 된다.
+    그 소비처들은 JSON 을 인자로 받는 순수 함수라, 각각을 고치면 같은 규칙을
+    다섯 벌 구현하게 된다.
+
+    바인딩이 없는 항목은 저장된 값을 그대로 둔다(폴백). 값이 실제로 달라진
+    경우에만 기록한다 — 전환기에 두 저장처가 갈린 지점이 곧 버그 후보다.
+    """
+    if not facility_uuid or not isinstance(payload, dict):
+        return payload
+
+    # 목록 경로는 색인을 미리 만들어 넘긴다(N+1 회피). 단건 조회는 자기 것만.
+    by_slot = (index if index is not None
+               else build_facility_index([facility_uuid]))
+
+    used_fallback = []
+    copied = set()
+    for column, key, kind, role in _FACILITY_REFS:
+        for idx, item in enumerate(_items(payload.get(column))):
+            item_id = item.get('id')
+            if not item_id:
+                continue
+            b = by_slot.get(('%s:%s' % (facility_uuid, item_id), role))
+            if b is None:
+                if item.get(key):
+                    used_fallback.append(item[key])
+                continue
+
+            new_meas = (b.measurement_id if b.measurement_id
+                        and 'measurement_id' in item else item.get('measurement_id'))
+            if item.get(key) == b.device_id and new_meas == item.get('measurement_id'):
+                continue                      # 이미 같다 — 건드리지 않는다
+
+            if item.get(key) != b.device_id:
+                logger.warning(
+                    '[GeoBinding] 시설 %s 의 %s[%s].%s 가 바인딩과 다르다: '
+                    '저장=%s 바인딩=%s — 바인딩을 정본으로 쓴다(저장은 하지 않는다).',
+                    facility_uuid, column, item_id, key,
+                    item.get(key), b.device_id)
+
+            # ORM 이 들고 있는 dict 를 고치지 않는다 — 사본으로 갈아끼운다.
+            lst = _cow(payload, column, copied)
+            patched = dict(item)
+            patched[key] = b.device_id
+            if b.measurement_id and 'measurement_id' in patched:
+                patched['measurement_id'] = b.measurement_id
+            lst[idx] = patched
+
+    # 죽은 참조는 폴백이 아니다 — dangling-fitting 이 담당한다.
+    if used_fallback and 'facility.fittings/actuators' not in _fallback_seen:
+        if _any_device_exists(used_fallback):
+            _note_fallback('facility.fittings/actuators')
+    return payload

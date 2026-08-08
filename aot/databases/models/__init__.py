@@ -75,6 +75,7 @@ from .geo import GeoShape
 from .geo import GeoLayer
 from .geo import GeoFacility
 from .geo import GeoModelAsset
+from .geo_binding import GeoBinding
 from .irrigation import IrrigationDesign
 from .output import Output
 from .output import OutputChannel

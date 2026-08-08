@@ -85,6 +85,17 @@ class GeoOverlayManager:
             # Pre-fetch GeoFacility rows in one query when shapes include facilities,
             # so we can inject height_m/eave_h/name into facility feature.properties
             # for fill-extrusion rendering. Avoids N+1.
+            # [Phase B] 도형↔장치 연결도 같은 이유로 한 번에 읽는다. 도형마다
+            # 바인딩을 조회하면 지도 렌더가 도형 수만큼 쿼리를 낸다.
+            try:
+                from .device_binding import devices_for_shapes
+                bound_devices = devices_for_shapes(shapes)
+            except Exception as exc:
+                current_app.logger.warning(
+                    '[GeoOverlays] 바인딩 일괄 해석 실패 — device_id 컬럼으로 '
+                    '계속: %s', exc)
+                bound_devices = {}
+
             facility_meta = {}
             facility_shape_uuids = [s.unique_id for s in shapes if s.type == 'facility']
             if facility_shape_uuids:
@@ -147,7 +158,14 @@ class GeoOverlayManager:
                 if not feat['properties'].get('node_id'):
                     feat['properties']['node_id'] = s.unique_id
                 # [Fix] Inject Device/Channel IDs for Frontend Filtering (Strict Selection)
-                if hasattr(s, 'device_id') and s.device_id:
+                # [Phase B] 어느 장치인지는 geo_binding 이 정본이고, 바인딩이
+                # 없으면 device_id 컬럼으로 폴백한다(device_binding 리졸버가
+                # 그 순서를 담당). 마커·구역 외 종류는 리졸버가 None 을
+                # 돌려주므로 종전대로 컬럼 값을 쓴다.
+                resolved_device = bound_devices.get(s.unique_id)
+                if resolved_device:
+                    feat['properties']['device_id'] = resolved_device
+                elif hasattr(s, 'device_id') and s.device_id:
                     feat['properties']['device_id'] = s.device_id
                 if hasattr(s, 'channel_id') and s.channel_id:
                     feat['properties']['channel_id'] = s.channel_id
