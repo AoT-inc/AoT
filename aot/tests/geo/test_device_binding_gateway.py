@@ -534,6 +534,70 @@ class TestOverlaySaveRecordsBinding(_Base):
         self.assertEqual(GeoBinding.query.count(), 0)
 
 
+class TestUnboundSlotStory(_Base):
+    """빈 자리가 **왜** 비었는지를 사실대로 말해야 한다.
+
+    바인딩 이력만 보면 안 된다. 백필은 실존하지 않는 장치를 가리키는 참조에
+    바인딩을 만들지 않으므로(고아를 정본으로 승격시키지 않는 정책), 장치가
+    삭제된 자리는 이력이 텅 비어 있다. 그걸 "한 번도 연결한 적 없다"로 읽으면
+    화면이 사실과 정반대를 말한다 — 로컬에서 천창 16개가 정확히 그랬다.
+    """
+
+    def setUp(self):
+        super(TestUnboundSlotStory, self).setUp()
+        from aot.databases.models import GeoFacility, GeoMap
+        GeoMap(unique_id='m1', name='설명 검증', category='design').save()
+        self.fac = GeoFacility(unique_id='fac-story', shape_uuid='sh-f',
+                               geo_id='m1', name='온실A')
+        self.fac.save()
+
+    def _fittings(self, actuator_id):
+        from aot.aot_flask.extensions import db as _db
+        from sqlalchemy.orm.attributes import flag_modified
+        self.fac.fittings = [{'id': 'F1', 'kind': 'window', 'name': '천창 #1',
+                              'actuator_id': actuator_id}]
+        flag_modified(self.fac, 'fittings')
+        _db.session.commit()
+
+    def _slot(self):
+        rows = [s for s in B.unbound_slots(facility_uuid='fac-story')
+                if s['spatial_id'] == 'fac-story:F1']
+        return rows[0] if rows else None
+
+    def test_dead_reference_is_not_reported_as_never_bound(self):
+        """장치가 삭제된 자리 — 연결한 적이 **있다**."""
+        self._fittings('dev-deleted-9999')
+        slot = self._slot()
+        self.assertIsNotNone(slot)
+        self.assertFalse(slot['never_bound'],
+                         '삭제된 장치를 가리키는 자리를 "한 번도 연결한 적 '
+                         '없음"으로 보고했다 — 화면이 사실과 반대를 말한다')
+        self.assertEqual(slot['last_device_id'], 'dev-deleted-9999')
+        self.assertIsNone(slot['last_device_name'],
+                          '이름이 나오면 그 장치가 살아 있다는 뜻이다')
+
+    def test_ended_binding_reports_the_device_and_when(self):
+        """정상 해제 — 어떤 장치가 언제 빠졌는지 말한다."""
+        self._fittings(DEV_A)
+        B.sync_facility_bindings(self.fac, commit=True)
+        self._fittings(None)
+        B.sync_facility_bindings(self.fac, commit=True)
+
+        slot = self._slot()
+        self.assertIsNone(slot, '참조가 사라진 항목은 슬롯이 아니다')
+
+    def test_live_device_ended_binding_keeps_the_name(self):
+        self._fittings(DEV_A)
+        B.sync_facility_bindings(self.fac, commit=True)
+        row = B.current_one('fitting', 'fac-story:F1', role='actuator')
+        B.unbind(row.unique_id, 'unbound', commit=True)
+
+        slot = self._slot()
+        self.assertFalse(slot['never_bound'])
+        self.assertEqual(slot['last_device_name'], '출력 A')
+        self.assertIsNotNone(slot['ended_at'])
+
+
 class TestFacilityBindingSync(_Base):
     """시설 저장이 바인딩을 따라오게 한다 — 안 그러면 지운 배정이 안 지워진다.
 

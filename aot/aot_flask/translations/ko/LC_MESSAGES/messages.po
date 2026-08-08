@@ -26556,3 +26556,11 @@ msgstr "여기 있던 장치가 삭제됨"
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Was"
 msgstr "이전"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Areas you have drawn on this map with no device assigned yet. Click one to link a device."
+msgstr "이 지도에 그려 둔 구역 중 아직 담당 장치가 정해지지 않은 곳입니다. 눌러서 장치를 연결하십시오."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Every area on this map has a device linked."
+msgstr "이 지도의 모든 구역에 장치가 연결돼 있습니다."

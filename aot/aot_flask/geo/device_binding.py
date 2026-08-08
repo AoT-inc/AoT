@@ -203,8 +203,13 @@ def _device_names(device_ids):
     return out
 
 
-def unbound_slots(facility_uuid=None, map_uuid=None):
+def unbound_slots(facility_uuid=None, map_uuid=None, kinds=None):
     """장치가 연결되지 않은 자리 — 그려두거나 설치해 뒀는데 담당 장치가 없는 곳.
+
+    `kinds` 로 종류를 좁힌다(예: `('shape',)`). **화면은 반드시 좁혀서 쓴다** —
+    구역 폴리곤은 지도가, 시설 설비는 시설 편집기가 관할이고, 그 둘을 한
+    화면에 섞으면 사용자는 지도에서 천창을 보게 된다. 좁히지 않은 전체 목록은
+    진단·점검용이다.
 
     **이 목록이 있어야 Phase C 의 삭제 정책이 성립한다** — 장치를 지워도 도형을
     남기기로 한 이상, 남은 자리를 사람이 보고 재배정할 수단이 있어야 한다.
@@ -237,6 +242,21 @@ def unbound_slots(facility_uuid=None, map_uuid=None):
     out = []
     map_names = {m.unique_id: m.name for m in GeoMap.query.all()}
 
+    want = set(kinds) if kinds else None
+
+    if want is None or 'shape' in want:
+        _collect_shape_slots(out, map_names, map_uuid)
+    if want is None or want & {'fitting', 'actuator'}:
+        _collect_facility_slots(out, facility_uuid)
+
+    _annotate_slot_story(out)
+    return out
+
+
+def _collect_shape_slots(out, map_names, map_uuid=None):
+    """`type='device'` 구역 폴리곤 중 현재 'area' 바인딩이 없는 것."""
+    from aot.databases.models import GeoShape
+
     bound_shapes = {b.spatial_id for b in GeoBinding.query.filter(
         GeoBinding.spatial_kind == 'shape',
         GeoBinding.role == 'area',
@@ -259,6 +279,7 @@ def unbound_slots(facility_uuid=None, map_uuid=None):
             'spatial_id': shape.unique_id,
             'role': 'area',
             'item_kind': 'area',
+            'legacy_ref': (shape.device_id or '').split('::')[0] or None,
             'map_uuid': shape.geo_id,
             # 지도에서 찾아가는 쪽(panToShape)은 클라이언트 식별자로 레이어를
             # 찾는다 — spatial_id(=unique_id)로는 못 찾는다. 둘 다 싣는다.
@@ -268,6 +289,21 @@ def unbound_slots(facility_uuid=None, map_uuid=None):
             'size': _area_m2(feat),
             'at': _centroid(feat),
         })
+
+
+def _collect_facility_slots(out, facility_uuid=None):
+    """시설 fitting/actuator 중 장치를 매단 적이 있는데 지금 없는 것.
+
+    ⚠ **지도 화면에 섞지 말 것.** 시설 설비의 장치 배정은 시설 편집기의
+    인스펙터(fitting 별 액추에이터 드롭다운)가 정본 입력 수단이고, 그쪽은
+    `fittings[].actuator_id`(JSON)에 쓴다. 바인딩은 저장 후
+    `sync_facility_bindings` 가 그 JSON 에서 파생한다.
+
+    그래서 여기 목록에서 바인딩을 직접 만들면 **다음 시설 저장이 그 배정을
+    지운다** — JSON 이 여전히 비어 있으니 동기화가 "사라진 참조"로 보고
+    종료시킨다(2026-08-08 실측 확인). 이 목록은 진단·점검용으로만 쓴다.
+    """
+    from aot.databases.models import GeoFacility
 
     q = GeoFacility.query
     if facility_uuid:
@@ -294,26 +330,35 @@ def unbound_slots(facility_uuid=None, map_uuid=None):
                     # actuator_id(구동기)와 input_id(센서)가 같은 컬럼에 섞여 있다.
                     'role': _legacy_role(column, item) or 'actuator',
                     'item_kind': item.get('kind'),
+                    'legacy_ref': (_legacy_device_ref(column, item) or ''
+                                   ).split('::')[0] or None,
                     'facility_uuid': fac.unique_id,
                     'where': fac.name,
                     'what': (item.get('name') or '').strip(),
                     'item_id': item_id,
                 })
 
-    # 여기 뭐가 있었나 — 이름이 기본값인 자리에서는 이게 유일한 단서다.
+
+def _annotate_slot_story(out):
+    """각 자리에 "여기 뭐가 있었나"를 붙인다 — 이름이 기본값인 자리의 단서."""
     last = _last_device_of([(o['spatial_kind'], o['spatial_id'], o['role'])
                             for o in out])
     names = _device_names([b.device_id for b in last.values()])
     for o in out:
         b = last.get((o['spatial_kind'], o['spatial_id'], o['role']))
-        o['never_bound'] = b is None
-        o['last_device_id'] = b.device_id if b else None
+        o['last_device_id'] = b.device_id if b else o.get('legacy_ref')
         # 이름이 안 나오면 그 장치는 삭제된 것이다 — 그 사실도 정보다.
-        o['last_device_name'] = names.get(b.device_id) if b else None
+        o['last_device_name'] = (names.get(o['last_device_id'])
+                                 if o['last_device_id'] else None)
         o['ended_at'] = (b.valid_to.isoformat()
                          if b is not None and b.valid_to else None)
         o['ended_reason'] = b.ended_reason if b else None
-    return out
+        # **레거시 참조도 "연결했던 적 있음"이다.** 바인딩 이력만 보면
+        # 안 된다: 백필은 실존하지 않는 장치를 가리키는 참조에 바인딩을
+        # 만들지 않으므로(고아를 정본으로 승격시키지 않는 정책), 장치가
+        # 삭제된 자리는 이력이 비어 있다. 그걸 "한 번도 없었다"로 읽으면
+        # 화면이 사실과 정반대를 말한다 — 실제로 천창 16개가 그랬다.
+        o['never_bound'] = (b is None and not o.get('legacy_ref'))
 
 
 def _flat_coords(coords):

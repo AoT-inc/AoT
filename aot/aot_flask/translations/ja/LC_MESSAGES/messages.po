@@ -26310,3 +26310,11 @@ msgstr "ここにあった装置は削除されました"
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Was"
 msgstr "以前"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Areas you have drawn on this map with no device assigned yet. Click one to link a device."
+msgstr "この地図に描いたエリアのうち、まだ担当装置が決まっていない場所です。押して装置を接続してください。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Every area on this map has a device linked."
+msgstr "この地図のすべてのエリアに装置が接続されています。"

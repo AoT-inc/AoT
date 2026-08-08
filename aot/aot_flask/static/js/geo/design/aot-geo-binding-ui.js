@@ -417,9 +417,15 @@ class AoTGeoBinding {
         this._shell(this._t('Places with no device'));
         this._setBody(`<div class="text-muted">${this._t('Loading...')}</div>`);
 
+        // **구역만 본다.** 시설 설비(천창·팬 등)의 장치 배정은 시설 편집기의
+        // 인스펙터가 정본 입력 수단이고 그쪽은 시설 JSON 에 쓴다. 여기서
+        // 바인딩을 직접 만들면 다음 시설 저장이 그 배정을 지운다(실측 확인).
+        // 관할이 다른 것을 한 화면에 섞으면 지도에서 천창이 나온다.
         const mapUuid = this.parent && this.parent.currentMapUuid;
+        const q = '/api/geo/binding/unbound?kinds=shape'
+                + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : '');
         Promise.all([
-            this._api('GET', '/api/geo/binding/unbound'),
+            this._api('GET', q),
             this._loadDevices()
         ]).then(([res]) => {
             const payload = (res && res.data) || {};
@@ -433,12 +439,12 @@ class AoTGeoBinding {
 
             if (!slots.length) {
                 this._setBody(
-                    `<div class="text-muted text-center py-4">${this._t('Every area and fitting has a device linked.')}</div>`);
+                    `<div class="text-muted text-center py-4">${this._t('Every area on this map has a device linked.')}</div>`);
                 return;
             }
 
             let html = `<div class="alert alert-light border mb-3 py-2 px-3 small text-muted">
-                    ${this._t('Areas you have drawn and fittings you have installed, where no device is assigned yet. Click one to link a device.')}
+                    ${this._t('Areas you have drawn on this map with no device assigned yet. Click one to link a device.')}
                 </div><div class="list-group">`;
             slots.forEach((s, i) => {
                 const locatable = s.spatial_kind === 'shape' && s.at;

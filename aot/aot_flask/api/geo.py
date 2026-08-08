@@ -489,11 +489,19 @@ class GeoBindingUnbound(Resource):
     @ns_geo.doc(responses=default_responses)
     @login_required
     def get(self):
-        """Slots with no device bound — what a deletion or a swap left behind"""
+        """Slots with no device bound — what a deletion or a swap left behind.
+
+        `kinds` 로 반드시 좁혀서 부를 것(예: `kinds=shape`). 구역 폴리곤은
+        지도가, 시설 설비는 시설 편집기가 관할이라 한 화면에 섞으면 안 된다.
+        """
         from aot.aot_flask.geo import device_binding
+        raw = (request.args.get('kinds') or '').strip()
+        kinds = tuple(k for k in raw.split(',') if k) or None
         try:
             slots = device_binding.unbound_slots(
-                facility_uuid=request.args.get('facility_uuid') or None)
+                facility_uuid=request.args.get('facility_uuid') or None,
+                map_uuid=request.args.get('map_uuid') or None,
+                kinds=kinds)
             return {'ok': True, 'slots': slots}
         except Exception as e:
             current_app.logger.error('[GeoAPI] unbound slots: %s', e)
