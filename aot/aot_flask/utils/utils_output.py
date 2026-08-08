@@ -15,7 +15,6 @@ from aot.databases.models import DeviceMeasurements
 from aot.databases.models import Misc
 from aot.databases.models import Output
 from aot.databases.models import OutputChannel
-from aot.databases.models import GeoShape
 from aot.databases.models import Tab
 from aot.aot_client import DaemonControl
 from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
@@ -644,6 +643,11 @@ def output_del(form_output):
                 each_measurement.unique_id,
                 flash_message=False)
 
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
+        # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
+        # 이 게이트웨이를 지나간다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(output_id)
         deleted_output = delete_entry_with_id(
             Output,
             output_id,
@@ -652,8 +656,6 @@ def output_del(form_output):
         # 남는다. 과거 이 호출이 장치 삭제로 공유 디자인 지도를 통째로
         # 지웠다(임실군 62도형). 지도 삭제는 geo/design 에서 명시적으로만.
 
-        # [Fix] Delete associated Map Overlays (Level 2 Shapes)
-        GeoShape.query.filter(GeoShape.device_id == output_id).delete(synchronize_session=False)
 
         channels = OutputChannel.query.filter(
             OutputChannel.output_id == output_id).all()

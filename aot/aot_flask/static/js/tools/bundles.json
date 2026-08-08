@@ -63,6 +63,7 @@
       "geo/design/aot-geo-modules.js",
       "geo/design/aot-geo-label.js",
       "geo/design/aot-geo-devices-v3.js",
+      "geo/design/aot-geo-binding-ui.js",
       "geo/aot-map-utils.js",
       "geo/design/aot-geo-stats.js",
       "geo/design/aot-geo-preview.js",

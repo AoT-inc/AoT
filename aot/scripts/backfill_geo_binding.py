@@ -45,26 +45,16 @@ from collections import defaultdict
 
 from aot.start_flask_ui import app
 from aot.aot_flask.extensions import db
-from aot.databases.models import (
-    Conditional, CustomController, Function, GeoBinding, GeoFacility,
-    GeoShape, Input, Output, PID, Trigger)
+from aot.aot_flask.geo.device_binding import device_kind_models
+from aot.databases.models import GeoBinding, GeoFacility, GeoShape
 from aot.utils.time_utils import utc_now
 
 
-# device_kind ↔ 모델. geo_integrity_ddl.DEVICE_LINK_TABLES 와 같은 7종이다.
-# 마커는 Function·PID·Trigger 에도 붙으므로(place_device) 3종으로 좁히면
-# 그 마커들이 조용히 백필에서 빠진다 — 로컬에 이미 custom_controller 마커가
-# 있다. 순서가 곧 판별 우선순위이며, uuid 는 테이블 간 유일하므로 실제로
-# 충돌하지 않는다.
-DEVICE_KIND_MODELS = (
-    ('input', Input),
-    ('output', Output),
-    ('device', CustomController),
-    ('function', Function),
-    ('pid', PID),
-    ('trigger', Trigger),
-    ('conditional', Conditional),
-)
+# device_kind ↔ 모델. geo_integrity_ddl.DEVICE_LINK_TABLES 와 같은 7종이며
+# 게이트웨이(device_binding)가 정본이다 — 같은 매핑을 두 벌 두면 한쪽만
+# 늘어나 조용히 갈린다. 마커는 Function·PID·Trigger 에도 붙으므로
+# (place_device) 3종으로 좁히면 그 마커들이 백필에서 조용히 빠진다.
+DEVICE_KIND_MODELS = device_kind_models()
 
 # geo_shape.type → role. 'device' 는 장치가 담당하는 구역 폴리곤이다
 # (밸브 하나가 두 구역에 관수할 수 있어 장치당 여러 개가 정당하다).

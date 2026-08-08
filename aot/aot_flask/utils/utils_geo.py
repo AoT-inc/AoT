@@ -1080,9 +1080,20 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
                 
                 devices.append(dev_data)
 
+    # 복합장치(Device)와 Custom Function 은 같은 custom_controller 테이블을
+    # 쓰지만 사용자에게는 서로 다른 것이다 — /device 페이지가 별도로 있고,
+    # 지도에서도 따로 배치한다. 가르는 기준은 행이 아니라 그 행의 device 컬럼이
+    # 가리키는 모듈이 is_device 를 선언했는지다(device_module_names 가 유일한
+    # 판정처). 예전에는 둘 다 'function' 으로 나가서 지도에서 구분이 안 됐다.
+    from aot.utils.functions import device_module_names
+    device_names = device_module_names()
+    ctrl_devices = [c for c in ctrls if getattr(c, 'device', None) in device_names]
+    ctrl_functions = [c for c in ctrls if getattr(c, 'device', None) not in device_names]
+
     process_records(inputs, 'input', Input)
     process_records(outputs, 'output', Output)
-    process_records(ctrls, 'function', CustomController)
+    process_records(ctrl_devices, 'device', CustomController)
+    process_records(ctrl_functions, 'function', CustomController)
     process_records(pids, 'function', PID)
     process_records(triggers, 'function', Trigger)
     process_records(conditionals, 'function', Conditional)

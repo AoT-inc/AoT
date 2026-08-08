@@ -19,7 +19,7 @@ from aot.databases import clone_model
 from aot.databases import set_uuid
 from aot.databases.models import Actions
 from aot.databases.models import DeviceMeasurements
-from aot.databases.models import Input, GeoShape
+from aot.databases.models import Input
 from aot.databases.models import Tab
 from aot.databases.models import InputChannel
 from aot.databases.models import Misc
@@ -791,14 +791,16 @@ def input_del(input_id):
                 each_channel.unique_id,
                 flash_message=False)
 
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
+        # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
+        # 이 게이트웨이를 지나간다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(input_id)
         delete_entry_with_id(Input, input_id, flash_message=False)
         # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도 지도는
         # 남는다. 과거 이 호출이 장치 삭제로 공유 디자인 지도를 통째로
         # 지웠다(임실군 62도형). 지도 삭제는 geo/design 에서 명시적으로만.
 
-        # [Fix] Delete associated Map Overlays (Level 2 Shapes)
-        # Covers all channels for this device_id
-        GeoShape.query.filter(GeoShape.device_id == input_id).delete(synchronize_session=False)
 
         try:
             file_path = os.path.join(

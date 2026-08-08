@@ -293,6 +293,77 @@ for _when, _suffix in (('INSERT', 'ins'), ('UPDATE', 'upd')):
     ]
 
 
+# ---------------------------------------------------------------------------
+# GB-3 / GB-4 — 수명 연쇄 (Phase C)
+#
+# 장치가 사라지거나 공간 요소가 사라지면 현재 바인딩은 끝나야 한다. 앱 계층
+# (device_binding.end_all_for_device)이 이미 그 일을 하지만, 그것만으로는
+# 부족하다: 장치 삭제 진입점이 17곳이고 원시 SQL·bulk delete·진단 일괄
+# 삭제 같은 경로가 섞여 있어, 한 곳만 빠뜨려도 조용히 고아 바인딩이 남는다.
+# 그게 `geo_shape.device_id` 가 썩은 방식 그대로다.
+#
+# **역할 분담**: 트리거는 불변식(고아 바인딩 없음)을, 게이트웨이는 정책
+# (마커는 지우고 구역 폴리곤은 남긴다)을 담당한다. 트리거는 도형을 지우지
+# 않는다 — 정책을 DB 에 넣으면 정책을 바꿀 때 마이그레이션이 필요해진다.
+#
+# `valid_to` 를 `max(valid_from, now)` 로 쓰는 이유: SQLite 는 시각을
+# 문자열로 비교하고 SQLAlchemy 가 쓴 값은 소수점 6자리인데 strftime('%f') 는
+# 3자리다. 같은 초에 만들어 지운 바인딩이면 '12.500' < '12.500000' 이 되어
+# GB-2 의 "valid_to 가 valid_from 보다 이르다"에 걸린다.
+_NOW_SQL = "strftime('%Y-%m-%d %H:%M:%f', 'now')"
+_END_SET = ("valid_to = max(valid_from, {now}), ended_reason = '{{reason}}'"
+            .format(now=_NOW_SQL))
+
+# GB-3 — 장치 삭제 → 그 장치의 현재 바인딩 전부 종료.
+for _table in DEVICE_LINK_TABLES:
+    BINDING_STATEMENTS += [
+        _drop('geo_itg_gb3_%s' % _table),
+        """
+        CREATE TRIGGER geo_itg_gb3_{table}
+        AFTER DELETE ON {table}
+        BEGIN
+            UPDATE geo_binding
+               SET {setter}
+             WHERE device_id = OLD.unique_id AND valid_to IS NULL;
+        END
+        """.format(table=_table,
+                   setter=_END_SET.format(reason='device_deleted')),
+    ]
+
+# GB-4 — 공간 요소 삭제 → 그 자리의 현재 바인딩 종료.
+BINDING_STATEMENTS += [
+    _drop('geo_itg_gb4_shape'),
+    """
+    CREATE TRIGGER geo_itg_gb4_shape
+    AFTER DELETE ON geo_shape
+    BEGIN
+        UPDATE geo_binding
+           SET {setter}
+         WHERE spatial_kind = 'shape' AND spatial_id = OLD.unique_id
+           AND valid_to IS NULL;
+    END
+    """.format(setter=_END_SET.format(reason='spatial_deleted')),
+
+    # 시설은 슬롯 주소가 두 모양이다: fitting/actuator 는
+    # '<시설uuid>:<항목id>', sensor_role/weather 는 '<시설uuid>' 그대로.
+    # 한쪽만 보면 나머지가 남는다.
+    _drop('geo_itg_gb4_facility'),
+    """
+    CREATE TRIGGER geo_itg_gb4_facility
+    AFTER DELETE ON geo_facility
+    BEGIN
+        UPDATE geo_binding
+           SET {setter}
+         WHERE valid_to IS NULL
+           AND ((spatial_kind IN ('sensor_role', 'weather')
+                 AND spatial_id = OLD.unique_id)
+             OR (spatial_kind IN ('fitting', 'actuator')
+                 AND spatial_id LIKE OLD.unique_id || ':%'));
+    END
+    """.format(setter=_END_SET.format(reason='spatial_deleted')),
+]
+
+
 def apply_binding(connection):
     """GB-1·GB-2 를 적용한다(멱등). geo_binding 테이블이 있어야 한다 —
     없으면 조용히 건너뛴다(테이블 생성은 p6_27 마이그레이션의 몫)."""

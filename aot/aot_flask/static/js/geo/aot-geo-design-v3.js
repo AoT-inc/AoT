@@ -58,6 +58,9 @@ class AoTGeoDesign {
         this.modules = new AoTGeoModules(this);
         this.labels = new AoTGeoLabel(this);
         this.devices = new AoTGeoDevices(this);
+        // 공간 슬롯 ↔ 장치 배정(geo_binding). 배치(devices)와는 다른 축이다 —
+        // 저쪽은 좌표, 이쪽은 "이 자리를 지금 어느 장치가 맡는가"다.
+        this.binding = window.AoTGeoBinding ? new AoTGeoBinding(this) : null;
         this.stats = new AoTGeoStats(this);
     }
 

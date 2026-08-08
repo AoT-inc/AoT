@@ -221,21 +221,30 @@ def coordinate(
         if authority and is_natural_var(authority, v)
     }
 
-    # ── 2.5. 환기 무익 판정 (사용자 옵션) ──────────────────────────────────────
-    # 실외 상태 도달성으로 "이 환기가 목표에 다가갈 수 있는가"를 먼저 본다.
-    # 무익이면 편차 비례로 조금씩 여는 대신 NO_GRADIENT 완화 경로로 보내 닫는다.
-    vent_gate_on = bool(ctx.get('vent_futility_gate', False))
-    futile_ids: set = set()
-    if vent_gate_on:
-        futile_ids = {
-            p.actuator_id for p in available
-            if getattr(p, 'kind', '') in VENTILATING_KINDS
-            and _ventilation_is_futile(p, situation, ctx)
-        }
-        if futile_ids:
+    # ── 2.5. 개구부 파킹 판정 (사용자 옵션 2종) ────────────────────────────────
+    # 파킹된 액추에이터는 편차 비례로 조금씩 여는 대신 NO_GRADIENT 완화 경로로
+    # 보내 safe_default 로 수렴시킨다. 두 판정은 성격이 다르다.
+    #   (a) 환기 무익  — 실외 상태로는 목표에 갈 수 없다 (도달 가능성)
+    #   (b) 냉난방 연동 — 갈 수는 있으나 냉난방과 맞서 에너지를 버린다 (상충)
+    park_ids: set = set()
+    vents = [p for p in available if getattr(p, 'kind', '') in VENTILATING_KINDS]
+
+    if bool(ctx.get('vent_futility_gate', False)):
+        futile = {p.actuator_id for p in vents
+                  if _ventilation_is_futile(p, situation, ctx)}
+        if futile:
+            park_ids |= futile
             logger.debug(
                 '환기 무익 — 실외 상태로는 목표에 못 감, %d개 파킹: %s',
-                len(futile_ids), sorted(i[:8] for i in futile_ids))
+                len(futile), sorted(i[:8] for i in futile))
+
+    if bool(ctx.get('hvac_interlock', False)) and bool(ctx.get('hvac_running', False)):
+        locked = {p.actuator_id for p in vents}
+        if locked:
+            park_ids |= locked
+            logger.debug(
+                '냉난방 연동 — 가동 중이라 개구부 %d개 잠금: %s',
+                len(locked), sorted(i[:8] for i in locked))
 
     # ── 3. Per-actuator position-form PI (다목적 결합 drive) ───────────────────
     # accumulated: 이미 확정된 명령들이 만든 효과(native). 부하분담에 사용.
@@ -287,9 +296,9 @@ def coordinate(
                 primary_score = score
                 primary_var = v
 
-        if den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in futile_ids:
-            # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 환기 무익
-            # (구동력은 있으나 실외가 목표 반대쪽 — 2.5 참조) → 안전 idle
+        if den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
+            # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
+            # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle
             # 위치(safe_default)로 부드럽게 수렴하고 적분을 풀어준다. 100% 가동해도
             # 효과 없는 액추에이터를 편차 비례로 켜 두면 성과 없이 작동시간만 늘고
             # 적분이 와인드업한다. safe_default 기준으로 감쇠하므로 개구부(sd=0)는

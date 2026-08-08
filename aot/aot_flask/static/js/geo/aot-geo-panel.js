@@ -334,7 +334,14 @@ class AoTGeoPanel {
                     <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">${_('Input')}</div>
                     <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">${_('Output')}</div>
                     <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">${_('Function')}</div>
+                    <div class="mode-tab ${this._isActivePath('device_unit') ? 'active' : ''}" data-nav-sub="device_unit">${_('Device')}</div>
                 `;
+                // 선택된 구역 폴리곤이 있으면 그 자리의 배정을 바로 연다.
+                // 없을 때 버튼만 띄우면 눌러도 "먼저 구역을 고르세요" 밖에 못 한다.
+                if (this._selectedAreaShapeId()) {
+                    html += `<button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-bind-area">${_('Assign device')}</button>`;
+                }
+                html += `<button class="btn btn-aot-pill btn-aot-outline" id="btn-unbound-slots">${_('Unassigned slots')}</button>`;
                 break;
 
             // --- Tier 3: Aot Device Actions ---
@@ -353,7 +360,7 @@ class AoTGeoPanel {
 
                 html += `
                     <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('Selection list')} ></button>
-                    
+
                     <!-- Color Picker (26px Circle) -->
                     <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: 1px solid #ddd; margin: 0 4px;">
                         <input type="color" id="device-color-picker" value="${savedColor}" style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; cursor: pointer;">
@@ -366,6 +373,30 @@ class AoTGeoPanel {
                     </label>
                 `;
                 break;
+
+            // --- Tier 3: Aot Device > 복합장치(Device) ---
+            // 티어 id 가 'device' 가 아니라 'device_unit' 인 이유: 'device' 는
+            // 아래 Equipment > Device Categories 가 이미 쓰고 있고, 이 switch 는
+            // 티어 id 만 보므로 같은 이름을 쓰면 두 화면이 서로를 덮는다.
+            //
+            // 색 피커가 없는 것은 빠뜨린 게 아니다. 복합장치의 색은 장치
+            // 공통색(theme_config.device)이고, 그 키는 input/output/function 이
+            // 미설정일 때 수렴하는 폴백이기도 하다. 여기에 피커를 달면 복합장치
+            // 색을 바꾼 것이 나머지 종류의 폴백까지 바꾼다.
+            case 'device_unit': {
+                const devTheme = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
+                const devVis = devTheme['vis_device'];
+                const devVisible = (devVis === undefined || devVis === null) ? true : (devVis === 'true' || devVis === true);
+                html += `
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('Selection list')} ></button>
+
+                    <label class="switch" style="margin-left: 8px;">
+                        <input type="checkbox" id="device-visible-toggle" ${devVisible ? 'checked' : ''}>
+                        <span class="slider round"></span>
+                    </label>
+                `;
+                break;
+            }
 
             // --- Tier 3: Equipment > Device Categories ---
             case 'device':
@@ -506,6 +537,39 @@ class AoTGeoPanel {
     _isActivePath(key) {
         // Check if the key exists anywhere in the navigation stack
         return this.navStack.includes(key);
+    }
+
+    /**
+     * 티어 id → 장치 종류(collect_devices 의 `type`).
+     *
+     * 복합장치 티어만 이름이 다르다: 'device' 는 Equipment > Device Categories
+     * 가 이미 쓰는 티어 id 라 겹칠 수 없어 'device_unit' 으로 뒀다. 그 대신
+     * 장치 종류를 다루는 자리(모달 필터·표시 토글)에서는 반드시 이 함수를
+     * 거쳐 원래 이름 'device' 로 되돌린다 — 안 그러면 서버에 없는 종류로
+     * 조회하게 되어 목록이 빈 채로 뜬다.
+     */
+    _deviceTypeOfTier(tierId) {
+        return tierId === 'device_unit' ? 'device' : tierId;
+    }
+
+    /**
+     * 선택된 도형이 '구역 폴리곤'이면 그 GeoShape.unique_id, 아니면 null.
+     *
+     * 마커(점)는 제외한다 — 마커는 좌표의 문제이고(/api/geo/device/location),
+     * 구역은 소속의 문제다. 프런트에서는 둘 다 aot_type='aot_device' 로 보일
+     * 수 있어(get_overlays 가 'device'→'aot_device' 로 정규화한다) 종류
+     * 문자열만으로는 갈리지 않는다. 그래서 기하로 가른다.
+     */
+    _selectedAreaShapeId() {
+        const f = this.selectedFeature;
+        if (!f || !f.properties) return null;
+        const t = f.properties.aot_type;
+        if (t !== 'device' && t !== 'aot_device') return null;
+        if (f.geometry && f.geometry.type === 'Point') return null;
+        const layer = this.geoDesign && this.geoDesign.activeLayer;
+        if (layer && typeof layer.getLatLng === 'function'
+            && typeof layer.getLatLngs !== 'function') return null;
+        return f.properties.node_id || null;
     }
 
     _bindNavEvents(rootEl = this.viewport) {
@@ -742,6 +806,25 @@ class AoTGeoPanel {
             this._openDeviceModal(subMode);
         };
 
+        // 공간 슬롯 ↔ 장치 배정 (geo_binding). 좌표를 다루는 위 목록과 다른 축이다.
+        const btnBindArea = rootEl.querySelector('#btn-bind-area');
+        if (btnBindArea) btnBindArea.onclick = () => {
+            const shapeId = this._selectedAreaShapeId();
+            if (!shapeId || !this.geoDesign || !this.geoDesign.binding) return;
+            const props = (this.selectedFeature && this.selectedFeature.properties) || {};
+            this.geoDesign.binding.openForShape(shapeId, {
+                name: props.label_name || props.name || ''
+            });
+        };
+
+        const btnUnbound = rootEl.querySelector('#btn-unbound-slots');
+        if (btnUnbound) btnUnbound.onclick = () => {
+            if (this.geoDesign && this.geoDesign.binding) {
+                this.geoDesign.binding.openUnboundSlots();
+            }
+        };
+
+
         // Device Color Picker (Input/Output/Function)
         const deviceColorPicker = rootEl.querySelector('#device-color-picker');
         if (deviceColorPicker) {
@@ -780,10 +863,11 @@ class AoTGeoPanel {
         if (toggleVis) {
             toggleVis.onchange = (e) => {
                 const isVisible = e.target.checked;
-                const subMode = this.navStack[this.navStack.length - 1]; // e.g., 'input'
-                this._handleThemeColorChange(`vis_${subMode}`, isVisible);
+                const devType = this._deviceTypeOfTier(
+                    this.navStack[this.navStack.length - 1]); // 'input' … 'device'
+                this._handleThemeColorChange(`vis_${devType}`, isVisible);
                 if (this.geoDesign && this.geoDesign.setDeviceVisibility) {
-                    this.geoDesign.setDeviceVisibility(subMode, isVisible);
+                    this.geoDesign.setDeviceVisibility(devType, isVisible);
                 }
             };
         }
@@ -1209,7 +1293,7 @@ class AoTGeoPanel {
                 <div class="modal-dialog" style="max-width: 600px; width: calc(100% - 30px); margin: 30px auto;">
                     <div class="modal-content" style="border-radius: 20px; overflow: hidden; height: auto;">
                         <div class="modal-header border-0 bg-light">
-                            <h5 class="modal-title font-weight-bold">${_ (subMode)} ${_('Select')}</h5>
+                            <h5 class="modal-title font-weight-bold">${subMode === 'device_unit' ? _('Device') : _(subMode)} ${_('Select')}</h5>
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
                         <div class="modal-body p-4">
@@ -1243,7 +1327,7 @@ class AoTGeoPanel {
         if (!container || !this.allDevices) return;
         container.innerHTML = '';
 
-        let targetTypes = [subMode];
+        let targetTypes = [this._deviceTypeOfTier(subMode)];
         if (subMode === 'function') targetTypes = ['function', 'pid', 'trigger', 'conditional', 'custom'];
 
         const filtered = this.allDevices.filter(d => targetTypes.includes(d.type));
@@ -1308,7 +1392,7 @@ class AoTGeoPanel {
     }
 
     setDeviceSubMode(subMode) {
-        if (['input', 'output', 'function'].includes(subMode)) {
+        if (['input', 'output', 'function', 'device_unit'].includes(subMode)) {
             if (this.currentMode !== 'aot_device') this.currentMode = 'aot_device';
             this.navStack = ['main', 'aot_device', subMode];
             this.render();
@@ -1317,8 +1401,10 @@ class AoTGeoPanel {
 
     getDeviceSubMode() {
         // Check if we are in aot_device and have a 3rd tier
+        // 티어 id 가 아니라 **장치 종류**를 돌려준다 — 호출자가 이 값을
+        // feature.properties.device_type 에 그대로 심기 때문이다.
         if (this.currentMode === 'aot_device' && this.navStack.length >= 3) {
-            return this.navStack[2];
+            return this._deviceTypeOfTier(this.navStack[2]);
         }
         return 'input'; // Default
     }

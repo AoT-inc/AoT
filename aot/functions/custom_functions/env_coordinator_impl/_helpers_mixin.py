@@ -43,6 +43,27 @@ def smooth_vpd(prev: Optional[float], raw: float,
     return prev + alpha * (raw - prev)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 냉·난방 가동 감지 (hvac_interlock)
+# ─────────────────────────────────────────────────────────────────────────────
+# 냉난방과 환기가 맞서면 에너지를 그대로 버린다. 그런데 "지금 냉난방이 도는가"는
+# 조율기가 그 장치를 직접 명령할 때만 자명하다 — 사람이 벽 스위치로 켜는 냉방기는
+# 앱이 전기적으로 아무것도 모른다.
+#
+# **온도로 추론하지 않는다.** "일사가 있는데 실내가 실외보다 낮으면 냉방 중"은
+# 그럴듯하지만 실측에서 무너졌다(aot-005, 냉방기 없는 30일 4218표본):
+# 일사 300W/m² 이상 구간의 실내-실외 온도차 중앙값이 +0.03°C, 최솟값 -4.22°C 라
+# 마진 1.5°C 를 줘도 낮 표본의 13%가 오탐이었다. 환기 중이거나 차광된 온실은
+# 실외 기상대(햇볕·복사 지면 위)보다 얼마든지 시원할 수 있다. 이 추론으로
+# 개구부를 잠그면 한여름 대낮에 온실을 가둔다.
+#
+# 그래서 근거는 둘 뿐이고, 없으면 연동은 발동하지 않는다.
+#   1) 조율기가 명령한 cooler/heater 액추에이터 (직전 사이클 명령)
+#   2) 사용자가 지정한 가동 감지 신호 — 스마트플러그 전력(W), CT 전류(A),
+#      보조접점 on/off 등 무엇이든 '켜지면 값이 오르는' 측정값
+_HVAC_KINDS = frozenset({'cooler', 'heater'})
+
+
 class HelpersMixin:
     """Mixin: VPD setpoint, time window, end behaviors, sensor collection, gate env, dispatch."""
 
@@ -768,6 +789,51 @@ class HelpersMixin:
                 pct = float(opts.get('end_open_pct', 0.0) or 0.0)
                 self.control.output_on(device_id, output_type='value',
                                        amount=pct, output_channel=ch_obj)
+
+    def _hvac_running(self, prev_commands: dict = None) -> bool:
+        """냉·난방이 지금 돌고 있는가. 근거가 없으면 False (모듈 상단 주석 참조).
+
+        신호가 만료됐으면 **가동 중이 아닌 것으로 본다.** 반대로 잡으면 센서
+        하나가 죽었다는 이유로 한여름 대낮에 개구부가 잠긴 채 방치된다 —
+        에너지 손실보다 작물 손실이 크다. 대신 만료는 로그로 남긴다.
+
+        Args:
+            prev_commands: CoordinatorState.prev_commands (직전 사이클 명령).
+                조율기가 냉난방을 직접 명령하는 구성에서만 의미가 있고,
+                한 사이클 지연이 있다(명령은 openings 보다 뒤에 정해지므로
+                같은 사이클 값을 앞당겨 쓸 수 없다).
+        """
+        # 1) 조율기가 명령한 냉난방 액추에이터
+        if prev_commands:
+            for p in getattr(self, '_profiles', []):
+                if getattr(p, 'kind', '') in _HVAC_KINDS:
+                    try:
+                        if float(prev_commands.get(p.actuator_id, 0.0) or 0.0) > 0.0:
+                            return True
+                    except (TypeError, ValueError):
+                        continue
+
+        # 2) 사용자가 지정한 가동 감지 신호 (수동 조작 냉난방기용)
+        dev = getattr(self, 'hvac_interlock_signal_device_id', None)
+        meas = getattr(self, 'hvac_interlock_signal_measurement_id', None)
+        if not dev or not meas:
+            return False
+        try:
+            max_age = float(getattr(self, 'sensor_max_age', 0) or 0) or 600.0
+            ts, val = self.get_last_measurement(dev, meas, max_age=int(max_age))
+        except Exception as exc:
+            self.logger.debug('냉난방 감지 신호 조회 실패: %s', exc)
+            return False
+        if ts is None or val is None:
+            self.logger.warning(
+                'EnvCoordinator: 냉난방 감지 신호가 만료됐다(%ds) — '
+                '가동 중이 아닌 것으로 보고 개구부 잠금을 풀어 둔다.', int(max_age))
+            return False
+        try:
+            on_value = float(getattr(self, 'hvac_interlock_on_value', 0.5) or 0.5)
+            return float(val) >= on_value
+        except (TypeError, ValueError):
+            return False
 
     def _collect_internal(self, max_age: float, outdoor_data: dict = None) -> dict:
         """실내 센서 데이터 수집.

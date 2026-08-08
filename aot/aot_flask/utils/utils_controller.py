@@ -257,6 +257,11 @@ def controller_del(cond_id):
                     each_measurement.unique_id,
                     flash_message=False)
 
+            # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+            # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
+            # 정리하지 않아 고아 도형을 만들었다.
+            from aot.aot_flask.geo.device_binding import end_all_for_device
+            end_all_for_device(cond_id)
             delete_entry_with_id(
                 CustomController, cond_id, flash_message=False)
             # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도 지도는

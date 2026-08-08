@@ -180,6 +180,14 @@ class CustomModule(
         self.forecast_lookahead_h         = None
         self._last_ff_signal              = None   # FeedforwardSignal (last cycle)
 
+        # 냉·난방 연동 — 가동 중 개구부 잠금. 수동 조작 장치를 위해 감지 신호를
+        # 따로 받는다(_helpers_mixin 상단 주석 참조). select_measurement 는
+        # 프레임워크가 <id>_device_id / <id>_measurement_id 로 풀어 넣는다.
+        self.hvac_interlock                              = None
+        self.hvac_interlock_signal_device_id             = None
+        self.hvac_interlock_signal_measurement_id        = None
+        self.hvac_interlock_on_value                     = None
+
         # Diagnostics — gates per-cycle INFO/DEBUG noise
         self.debug_logging                = None
 

@@ -96,6 +96,26 @@ regardless of this setting — see the emergency fields below.
 | Emergency Rate Threshold (°C / 10min) | 2.0 | If indoor temperature is changing faster than this rate, treat the cycle as an emergency and move vents immediately. |
 | Close Vents When Ventilation Cannot Help | On | Ventilation can only pull the inside toward the outside. When the target lies on the far side of the outdoor air, opening moves away from it no matter how wide — the classic case is dehumidifying at night, when outdoor air is wetter than indoor. With this on, vents and exhaust/intake fans park closed in that situation instead of holding a partial opening all night. Applies whenever the outdoor air cannot deliver the target, not only at night. Safety gates and the temperature/humidity limits still override it. |
 
+### Heating / Cooling Interlock
+
+Venting against a running heater or cooler throws the energy straight back outside.
+This section parks vents closed while heating or cooling runs.
+
+Detection needs **evidence**, and there are only two sources: this coordinator
+commands the unit itself, or you point the signal field at a measurement that rises
+when the unit runs. Indoor temperature is deliberately **not** used to guess. It was
+tested against 30 days of real data from a house with no cooler installed: under
+300 W/m² or more of sun the indoor-to-outdoor difference had a median of +0.03 °C
+and a minimum of −4.22 °C, so "indoor cooler than outdoor means cooling is on"
+misfired on 13% of daytime samples even with a 1.5 °C margin. A ventilated or
+shaded greenhouse is simply often cooler than the outdoor weather station.
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| Keep Vents Closed While Heating or Cooling Runs | Off | Vents and exhaust/intake fans park closed while heating or cooling is detected as running. Your temperature/humidity limits and the safety gates still override this. |
+| Heating / Cooling Running Signal | (none) | For a unit switched on by hand. Pick any measurement that goes up when it runs — smart-plug watts, clamp-meter amps, an auxiliary contact as on/off. Leave empty if this coordinator commands the unit directly. With neither, the interlock never engages. A stale signal counts as not running. |
+| Running Signal Threshold | 0.5 | At or above this value the signal counts as running. Leave 0.5 for an on/off contact; for watts or amps set it above the unit's standby draw. |
+
 ### Growth Schedule
 
 | Field | Default | Description |

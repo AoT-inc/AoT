@@ -24321,6 +24321,66 @@ msgstr ""
 "환기창을 그대로 움직입니다. 실외 공기로 목표를 맞출 수 없더라도 계속 목표를 "
 "따라가게 하려면 끄십시오."
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Heating / Cooling Interlock"
+msgstr "냉·난방 연동"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Keep Vents Closed While Heating or Cooling Runs"
+msgstr "냉·난방 가동 중에는 창을 닫아 두기"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"Venting against a running heater or cooler throws the energy straight "
+"back outside. With this on, vents and exhaust/intake fans park closed "
+"whenever heating or cooling is detected as running. Detection needs "
+"evidence: either this coordinator commands the heater/cooler itself, "
+"or you point the signal field below at a measurement that rises when "
+"the unit runs. Indoor temperature is NOT used to guess — a ventilated "
+"or shaded greenhouse is often cooler than the outdoor weather station "
+"even with nothing running, so guessing would lock the vents shut on a "
+"hot afternoon. Your temperature and humidity limits and the safety "
+"gates still override this and open the vents when they must."
+msgstr ""
+"가동 중인 난방기·냉방기와 맞서 환기하면 그 에너지를 그대로 밖으로 버립니다. 이 설정을 켜면 냉·난방 가동이 감지되는 동안 "
+"환기창과 배기·흡기팬이 닫힘으로 물러납니다. 감지에는 근거가 필요합니다 — 이 조율기가 냉·난방기를 직접 명령하고 있거나, "
+"아래 신호 항목에 가동 시 값이 올라가는 측정값을 지정해야 합니다. 실내 온도로 추측하지 않습니다 — 환기 중이거나 차광된 "
+"온실은 아무것도 가동하지 않아도 실외 기상대보다 시원할 때가 많아, 추측으로 판단하면 한여름 오후에 창을 잠가 버립니다. "
+"설정하신 온·습도 상하한과 안전 게이트는 이 설정보다 우선하므로 필요할 때는 창을 엽니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Heating / Cooling Running Signal"
+msgstr "냉·난방 가동 감지 신호"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"For a unit switched on by hand, which this system does not control. "
+"Pick any measurement that goes up when the unit runs — a smart plug "
+"reporting watts, a clamp meter reporting amps, or an auxiliary "
+"contact reported as on/off. Leave empty if this coordinator commands "
+"the unit directly. With neither, the interlock has no evidence and "
+"never engages. If the signal goes stale past the sensor max age, it "
+"is treated as not running (a dead sensor must not seal the "
+"greenhouse)."
+msgstr ""
+"이 시스템이 제어하지 않고 사람이 직접 켜고 끄는 장치를 위한 항목입니다. 가동하면 값이 올라가는 측정값이면 무엇이든 됩니다 "
+"— 전력(W)을 보고하는 스마트플러그, 전류(A)를 보고하는 클램프 미터, on/off 로 보고되는 보조접점 등. 이 "
+"조율기가 장치를 직접 명령한다면 비워 두십시오. 둘 다 없으면 연동은 판단 근거가 없어 발동하지 않습니다. 신호가 센서 최대 "
+"경과시간을 넘겨 만료되면 가동 중이 아닌 것으로 봅니다(죽은 센서가 온실을 봉인해서는 안 됩니다)."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Running Signal Threshold"
+msgstr "가동 판정 문턱값"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"The signal counts as running at or above this value. Leave 0.5 for an "
+"on/off contact. For watts or amps, set it above the unit's standby "
+"draw so idle current does not read as running."
+msgstr ""
+"신호가 이 값 이상이면 가동 중으로 봅니다. on/off 접점이면 0.5 그대로 두십시오. 전력(W)이나 전류(A)라면 "
+"장치의 대기전력보다 높게 잡아 대기 상태가 가동으로 읽히지 않게 하십시오."
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
 msgid "Growth Schedule"
 msgstr "생육 일정"
@@ -26349,3 +26409,114 @@ msgstr "승인했고 실행까지 마쳤습니다."
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
 msgid "Approved, but it failed to run"
 msgstr "승인했지만 실행에 실패했습니다"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Assign another channel"
+msgstr "다른 채널에 배정"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Assign device"
+msgstr "장치 배정"
+
+
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Currently assigned"
+msgstr "현재 배정"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Device assigned"
+msgstr "장치를 배정했습니다"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Device assignment"
+msgstr "장치 배정"
+
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Device released. The area is now unassigned."
+msgstr "장치를 해제했습니다. 이 구역은 이제 미배정 상태입니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Every slot has a device."
+msgstr "모든 자리에 장치가 배정돼 있습니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Failed to save"
+msgstr "저장 실패"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact."
+msgstr "같은 모델로 고장 교체하는 것이라면, 새 장치를 만들지 말고 기존 장치의 접속정보(DevEUI·주소)만 바꾸십시오. 도형·이력·함수 연결이 모두 유지됩니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Is this a like-for-like hardware swap?"
+msgstr "같은 기종으로 바꾸는 것입니까?"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Map area"
+msgstr "지도 구역"
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "No device is assigned to this slot."
+msgstr "이 자리에는 배정된 장치가 없습니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "No devices found"
+msgstr "장치가 없습니다"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Open Input settings"
+msgstr "입력 설정 열기"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Open Output settings"
+msgstr "출력 설정 열기"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Or move this slot to a different device"
+msgstr "또는 이 자리를 다른 장치로 옮기기"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Places that lost their device, or were never assigned one. Click one to assign a device."
+msgstr "장치가 빠졌거나 아직 배정된 적이 없는 자리입니다. 눌러서 장치를 배정하십시오."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Previous devices"
+msgstr "이전 장치"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Replace"
+msgstr "교체"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Replace device"
+msgstr "장치 교체"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Search Device..."
+msgstr "장치 검색..."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Select a device"
+msgstr "장치 선택"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Select an area on the map first"
+msgstr "먼저 지도에서 구역을 선택하십시오"
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "This slot already has a device. Use Replace to swap it."
+msgstr "이 자리에는 이미 장치가 있습니다. 교체를 눌러 바꾸십시오."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Unassign"
+msgstr "배정 해제"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Unassigned slots"
+msgstr "미배정 자리"

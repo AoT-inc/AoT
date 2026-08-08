@@ -408,7 +408,7 @@ Phase C 의 게이팅 조건이다.**
   (침묵 폴백은 이 도메인의 고질병).
 - 게이팅: `binding-drift` 0건이 며칠 유지될 것.
 
-### Phase B-2 — geo/design 장치 추가·배치 UI (별도 세션)
+### Phase B-2 — geo/design 장치 추가·배치 UI ✅ 구현 완료 (2026-08-08)
 
 **Phase C 보다 먼저 온다.** UI 를 `device_binding` 게이트웨이 위에 지으면 쓰기
 전환이 UI 개발에 흡수된다 — 반대 순서면 아직 없는 UI 를 위해 레거시 경로를
@@ -417,24 +417,92 @@ Phase C 의 게이팅 조건이다.**
 
 인계 계약서: **[geo-device-placement-ui-contract.md](geo-device-placement-ui-contract.md)**
 (쓰기 게이트웨이 `bind`/`unbind`/`rebind` 시그니처, REST, 금지 사항 6종,
-불변식이 UI 에 뜻하는 것, 완료 판정).
+불변식이 UI 에 뜻하는 것, 완료 판정). **구현 결과와 계약이 정하지 않아 이
+세션이 정한 판단 7가지는 그 문서 §9 에 있다.**
 
-### Phase C — 쓰기 전환 + 사망 선고
+산출물: 쓰기 게이트웨이(`bind`·`unbind`·`rebind`·`resolve_device_kind`·
+`role_for_shape_type`) · `place_device`/`unplace_device` 의 바인딩 기록 ·
+REST 4종(`/api/geo/binding` GET/POST/PUT, `/binding/<uid>` DELETE,
+`/binding/unbound`) · `static/js/geo/design/aot-geo-binding-ui.js` ·
+복합장치(Device) 지도 배치 · `test_device_binding_gateway.py` 27종.
 
-- 쓰기 경로 전환: `place_device`/`unplace_device` 가 바인딩 기록,
-  `save_overlays` 의 `device_id` 각인 제거, facility 저장이 fitting 의
-  장치 키 대신 바인딩 기록.
+**복합장치를 지도에 배치할 수 있게 된 것이 이 단계의 부수 산출물이다.**
+지도 패널의 장치 탭은 입력·출력·함수 셋뿐이었고, `collect_devices` 가
+CustomController 를 전부 `type='function'` 으로 내보내 `/device` 페이지의
+복합장치는 Function 과 구분조차 되지 않았다. `device_module_names()`
+(is_device 판정의 유일한 정본)로 갈라 네 번째 탭을 뒀다. 이쪽이 이 문서의
+「바인딩 단위 — 양쪽 허용, 장치 우선」과도 맞는다 — 선호 단위인
+`device_kind='device'` 바인딩을 이제 사람이 지도에서 직접 만들 수 있다.
+(계약서 §4-A 의 "지도에서 장치 만들기"는 만들었다가 철회했다. 근거는
+계약서 §9-5-1.)
+
+**이 단계에서 결정적인 것 둘.**
+
+첫째, **장치를 고르지 않고 그린 구역 폴리곤도 이제 `type='device'` 로
+저장된다.** 예전에는 `type='aot_device'`(위치 마커의 종류)로 남았는데, I7 에
+따라 `type` 은 생성 후 불변이므로 그렇게 저장된 폴리곤에는 **나중에 장치를
+배정할 수단이 영영 없었다**(role 이 'marker' 로 잡힌다). "장치가 아직 안
+정해진 구역"을 표현할 수 있어야 미배정 슬롯 개념이 성립하고, 그게 없으면
+Phase C 의 처분 정책 전환이 곧바로 손댈 수 없는 도형을 만든다.
+
+둘째, **`unbound_slots()` 가 구역 폴리곤을 센다.** Phase B-1 에서는 "도형의
+미배정은 그냥 그려둔 도형과 구별할 수 없다"며 제외했지만, 위 변경으로
+`type='device'` 가 "장치가 담당하는 구역"이라는 선언이 되면서 구별이 선다.
+
+**GB-4(도형·시설 삭제 시 바인딩 종료)는 하지 않았다** — 구역 폴리곤을 지우면
+그 폴리곤을 가리키는 현재 바인딩이 남는다. `spatial_id` 는 재사용되지 않아
+그 행은 무해하게 떠 있을 뿐이며, 정리는 Phase C 의 DB 트리거 몫이다. 앱
+계층에서 일부 경로만 고치면 정확히 "4곳만 고치고 13곳이 조용히 남는" 그
+모양이 된다.
+
+### Phase C-1·C-2 — 삭제 통일 + 수명 연쇄 ✅ 구현 완료 (2026-08-08)
+
+**정책이 바뀌었다.** 장치를 지워도 구역 폴리곤·시설 슬롯은 남는다(B4).
+예외는 위치 마커 하나뿐. 남은 자리는 B-2 의 "미배정 자리" 화면에서 보고
+재배정한다 — 그 화면이 먼저 생겼기 때문에 이제 이 정책이 가능하다.
+
 - 장치 삭제 **17경로**(utils 7 + tab_service 7 + 진단 일괄 3)가 전부
-  `end_all_for_device()` 경유로 통일. 지금 도형을 건드리는 4곳만 고치면
-  나머지 13곳이 조용히 남는다 — 그 13곳이야말로 지금 고아를 만드는 쪽이다.
-  `GeoShape.query.filter(device_id==…).delete()` 직삭제 **4곳**(`utils_input`
-  :801, `utils_output`:656, `tab_service`:549·590) 제거 —
-  `check_geo_writes.py` 의 GRANDFATHERED 3파일을 이 시점에 비운다(원래
-  목표가 게이트웨이 이관이었다).
-  마커 예외 정책(교체 없는 삭제 시 마커 삭제)은 게이트웨이 안에서 처리.
-- GB-3~GB-6 트리거·검사 활성화. `GeoShape.device_id` 는 `map_overlay_id` 와
-  같은 사망 컬럼 절차(신규 참조 금지 → 후속 마이그레이션에서 제거).
-- 게이팅: Phase B 폴백 로그 0건, 공격 테스트 전부 통과.
+  `end_all_for_device()` 경유. `test_device_deletion_policy.py` 가 AST 로
+  17곳 전부를 고정한다 — 한 곳만 빠져도 그 경로는 조용히 옛날처럼 행동한다.
+  호출은 **엔티티 삭제 앞**에 둔다: 뒤에 두면 마커를 찾을 근거가 레거시
+  컬럼밖에 남지 않아, 그 컬럼이 죽는 순간 조용히 동작을 멈춘다.
+- 직삭제 4곳 제거, `check_geo_writes.py` 의 GRANDFATHERED **비움**.
+- GB-3(장치 7테이블 삭제 → 바인딩 종료)·GB-4(도형/시설 삭제 → 바인딩 종료)
+  트리거(`p6_28`, `ALEMBIC_VERSION` 동반 상승). 앱 계층이 이미 같은 일을
+  하는데도 거는 이유는 원시 SQL·bulk delete·진단 일괄 삭제가 규약을 아예
+  통과하지 않기 때문이다. **트리거는 도형을 지우지 않는다** — 그건 정책이고
+  게이트웨이의 몫이다. 트리거가 지키는 것은 불변식 하나: 현재 바인딩이
+  존재하지 않는 것을 가리키는 일은 없다.
+- GB-6 신규 참조 금지 검사(`check_geo_writes.py`). 남은 사용처를
+  `LEGACY_COLUMN_USERS` 에 고정했다 — **허가 목록이 아니라 "아직 못 옮긴
+  것"의 목록**이고, 비어야 끝난다. 유령 항목(명부에 있는데 실제로는 안 쓰는
+  파일)도 함께 잡아 명부가 줄어드는 것을 볼 수 있게 했다.
+
+> `valid_to = max(valid_from, now)` 인 이유: SQLite 는 시각을 문자열로
+> 비교하는데 SQLAlchemy 가 쓴 값은 소수점 6자리, `strftime('%f')` 는
+> 3자리다. 같은 초에 만들어 지운 바인딩이면 `'12.500' < '12.500000'` 이
+> 되어 GB-2 의 "valid_to 가 valid_from 보다 이르다"가 삭제를 통째로 막는다.
+
+### Phase C-3 — 쓰기 전환 ⏳ 남음
+
+- `save_overlays` 의 `device_id` 각인 제거 → `bind()`/`rebind()`.
+  **주의**: 이 함수는 도형 전량 유실의 최다 발생원이었다. 스코프 질의가
+  `filter_by(device_id=...)` 로 컬럼을 읽고 있어, 쓰기만 먼저 끊으면 새 행이
+  스코프에서 빠진다. 읽기·쓰기를 함께 옮겨야 한다.
+- 시설 저장(`facility_io`)이 fitting 의 장치 키 대신 바인딩 기록.
+- GB-5(저장 JSON 에 `properties.device_id`/`channel_id` 부재). I6 와 동형이나
+  **먼저 소비처를 옮겨야 한다** — `map_schema.py`·`ai_context_service`·
+  `ai_summary_service`·`geo_overlays` 의 델타/이름동기화가 저장된 JSON 에서
+  그 키를 직접 읽는다. 읽기 이전 없이 트리거만 켜면 그 경로들이 조용히
+  빈 값을 본다.
+- 레거시 컬럼 소비처 5곳을 리졸버로 이관(`utils_general` 의
+  `sync_geo_device_name`, `timekit` 의 장치→시간대, `ai_action_service` 의
+  마커 조회, `satellite_analysis`, `env_coordinator`). 전부 "이 장치의 마커
+  도형을 찾는다"는 같은 질문이라 `bindings_for_device()` 로 모을 수 있지만,
+  결과가 눈에 잘 안 띄는 경로라 각각 실증이 필요하다.
+- 폴백 제거(`device_binding` 의 레거시 읽기). 게이팅은 폴백 로그 0 —
+  현재 충족돼 있으나, 위 이관이 끝나기 전에 지우면 그 경로들이 죽는다.
+- 게이팅: 공격 테스트 전부 통과(현재 41종 통과).
 
 ### Phase D — 교체 UX + AI + 시계열 접합
 

@@ -21,11 +21,15 @@ Phase C 의 게이팅 조건이다.
 
 폴백은 Phase C 에서 통째로 제거된다. 새 코드는 폴백 동작에 의존하지 말 것.
 
-## 쓰기
+## 쓰기 (Phase B-2)
 
-Phase B 는 읽기 전용이다. `bind`/`unbind`/`rebind`/`end_all_for_device` 는
-Phase C(쓰기 전환)에서 이 모듈에 추가되며, 그때까지 바인딩을 만드는 것은
-백필 스크립트뿐이다.
+`bind`/`unbind`/`rebind` 가 바인딩을 만드는 유일한 문이다. UI·REST·마커
+배치 경로가 전부 여기를 지나간다 — 밖에서 `GeoBinding(...)` 을 직접 만들면
+`check_geo_writes.py` 의 GB-7 이 거부한다.
+
+`end_all_for_device()` 는 장치 삭제 17경로(utils_* 7 + tab_service 7 +
+진단 일괄 3)가 부르는 유일한 문이다. 도형은 지우지 않고 미배정 슬롯으로
+남긴다 — 예외는 위치 마커뿐.
 
 @phase active
 @stability experimental
@@ -33,7 +37,12 @@ Phase C(쓰기 전환)에서 이 모듈에 추가되며, 그때까지 바인딩�
 import json
 import logging
 
+from aot.aot_flask.extensions import db
+from aot.databases.geo_integrity_ddl import (
+    MULTI_OCCUPANCY_KINDS, SINGLE_OCCUPANCY_KINDS, VALID_DEVICE_KINDS,
+    VALID_END_REASONS, VALID_SPATIAL_KINDS)
 from aot.databases.models import GeoBinding
+from aot.utils.time_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -146,20 +155,64 @@ def history(spatial_kind, spatial_id, role=None):
     return q.order_by(GeoBinding.valid_from, GeoBinding.id).all()
 
 
-def unbound_slots(facility_uuid=None):
+def role_for_shape_type(shape_type):
+    """도형 종류 → 바인딩 role. 모르는 종류면 None(=장치를 매다는 자리가 아님).
+
+    클라이언트가 role 을 정하게 두지 않으려고 노출한다 — 지도 프런트의 종류
+    어휘는 `aot_type` 정규화 때문에 서버의 `type` 컬럼과 어긋나는 구간이 있고
+    (get_overlays 가 'device' 를 'aot_device' 로 바꿔 내보낸다), 그 어긋남이
+    role 로 새면 구역 배정이 마커 배정으로 저장된다.
+    """
+    return SHAPE_TYPE_ROLES.get(shape_type)
+
+
+def unbound_slots(facility_uuid=None, map_uuid=None):
     """장치가 매여 있지 않은 슬롯 — 삭제·교체 후 남은 자리.
 
-    Phase D 의 "미배정 슬롯" 화면이 쓸 목록이며, 그 화면이 생기기 전까지는
-    진단용이다. 시설의 fitting/actuator 만 본다 — 도형(shape)의 미배정은
-    "그냥 그려둔 도형"과 구별할 수 없어 슬롯 개념이 성립하지 않는다.
+    "미배정 슬롯" 화면이 쓰는 목록이다. **이 화면이 있어야 Phase C 를 시작할
+    수 있다** — 장치 삭제가 도형을 남기도록 처분 정책을 바꾸는 순간, 남은
+    자리를 보고 재배정할 화면이 없으면 손댈 수 없는 도형만 늘어난다.
+
+    두 종류를 센다:
+      - 시설의 fitting/actuator 항목 중 장치를 매단 적이 있는데 지금 없는 것
+      - `type='device'` 구역 폴리곤 중 현재 'area' 바인딩이 없는 것
+
+    구역 폴리곤을 포함하는 것은 Phase B-1 때와 달라진 판단이다. 그때는
+    "도형의 미배정은 그냥 그려둔 도형과 구별할 수 없다"고 봤지만,
+    `type='device'` 는 그 자체가 "장치가 담당하는 구역"이라는 선언이라
+    구별이 된다(그냥 그려둔 도형은 'feature'/'aot_device' 다).
     """
-    from aot.databases.models import GeoFacility
+    from aot.databases.models import GeoFacility, GeoShape
+
+    out = []
+
+    bound_shapes = {b.spatial_id for b in GeoBinding.query.filter(
+        GeoBinding.spatial_kind == 'shape',
+        GeoBinding.role == 'area',
+        GeoBinding.valid_to.is_(None)).all()}
+    sq = GeoShape.query.filter(GeoShape.type == 'device')
+    if map_uuid:
+        sq = sq.filter(GeoShape.geo_id == map_uuid)
+    for shape in sq.all():
+        if shape.unique_id in bound_shapes:
+            continue
+        props = {}
+        feat = shape.feature
+        if isinstance(feat, dict):
+            props = feat.get('properties') or {}
+        out.append({
+            'spatial_kind': 'shape',
+            'spatial_id': shape.unique_id,
+            'role': 'area',
+            'map_uuid': shape.geo_id,
+            'name': props.get('label_name') or props.get('name') or '',
+            'item_kind': 'area',
+        })
 
     q = GeoFacility.query
     if facility_uuid:
         q = q.filter(GeoFacility.unique_id == facility_uuid)
 
-    out = []
     for fac in q.all():
         bound = {b.spatial_id for b in GeoBinding.query.filter(
             GeoBinding.spatial_kind.in_(('fitting', 'actuator')),
@@ -177,12 +230,297 @@ def unbound_slots(facility_uuid=None):
                 out.append({
                     'spatial_kind': kind,
                     'spatial_id': slot,
+                    # role 은 어느 키에 장치가 매달렸었나로 정한다 — fitting 은
+                    # actuator_id(구동기)와 input_id(센서)가 같은 컬럼에 섞여 있다.
+                    'role': _legacy_role(column, item) or 'actuator',
                     'facility': fac.name,
                     'facility_uuid': fac.unique_id,
                     'item_id': item_id,
                     'item_kind': item.get('kind'),
                 })
     return out
+
+
+# ---------------------------------------------------------------------------
+# 쓰기 — 바인딩을 만드는 유일한 문 (GB-7)
+# ---------------------------------------------------------------------------
+
+class BindingError(Exception):
+    """바인딩 쓰기 거부 — 어휘 위반·인자 누락 등."""
+
+
+class BindingConflict(BindingError):
+    """슬롯이 이미 점유돼 있다(GB-1). 교체는 `rebind()` 다."""
+
+
+class BindingNotFound(BindingError):
+    """지정한 바인딩이 없다."""
+
+
+def device_kind_models():
+    """(device_kind, 모델) 7종 — `VALID_DEVICE_KINDS` 와 같은 어휘, 같은 순서.
+
+    순서가 곧 판별 우선순위이며, uuid 는 테이블 간 유일하므로 실제로 충돌
+    하지 않는다. `backfill_geo_binding` 이 이 함수를 쓴다 — 같은 매핑을 두
+    벌 두면 한쪽만 늘어나 조용히 갈린다.
+    """
+    from aot.databases.models import (
+        Conditional, CustomController, Function, Input, Output, PID, Trigger)
+    return (
+        ('input', Input),
+        ('output', Output),
+        ('device', CustomController),
+        ('function', Function),
+        ('pid', PID),
+        ('trigger', Trigger),
+        ('conditional', Conditional),
+    )
+
+
+def resolve_device_kind(device_id):
+    """장치 uuid 가 실존하는 테이블로 `device_kind` 를 판별한다. 없으면 None.
+
+    호출자가 들고 있는 종류 문자열을 믿지 않는 이유: 지도 UI 의 타입 어휘는
+    이 어휘와 다르다('function' 이 UI 에서는 CustomController 를 뜻하고
+    'generic_function' 이 Function 이다 — `/api/geo/device/location` 참조).
+    그 문자열을 그대로 `device_kind` 로 쓰면 바인딩의 종류가 실제 테이블과
+    어긋나고, 그 어긋남은 아무 에러 없이 저장된다.
+    """
+    if not device_id:
+        return None
+    uid = str(device_id).split('::')[0]
+    for kind, model in device_kind_models():
+        try:
+            if model.query.with_entities(model.unique_id).filter(
+                    model.unique_id == uid).first() is not None:
+                return kind
+        except Exception:
+            continue
+    return None
+
+
+def _norm_channel(channel_id):
+    """채널은 항상 문자열이고 기본값은 '0' — NULL/'0' 비대칭이 중복의 경로였다."""
+    if channel_id is None or channel_id == '':
+        return '0'
+    return str(channel_id)
+
+
+def _validate(spatial_kind, spatial_id, role, device_kind, device_id):
+    if spatial_kind not in VALID_SPATIAL_KINDS:
+        raise BindingError('spatial_kind 허용값 아님: %r (허용: %s)'
+                           % (spatial_kind, ', '.join(VALID_SPATIAL_KINDS)))
+    if device_kind not in VALID_DEVICE_KINDS:
+        raise BindingError('device_kind 허용값 아님: %r (허용: %s)'
+                           % (device_kind, ', '.join(VALID_DEVICE_KINDS)))
+    if not spatial_id:
+        raise BindingError('spatial_id 가 비었다')
+    if not role:
+        raise BindingError('role 이 비었다')
+    if not device_id:
+        raise BindingError('device_id 가 비었다')
+
+
+def bind(spatial_kind, spatial_id, role, device_kind, device_id,
+         channel_id='0', measurement_id=None, params=None, commit=False):
+    """새 현재 바인딩을 만든다. 반환: GeoBinding.
+
+    같은 슬롯에 이미 현재 바인딩이 있으면 `BindingConflict` 로 **실패한다**.
+    조용히 덮어쓰면 교체 이력이 사라지고, 이력이 사라지면 장치 교체를
+    관통하는 시계열 접합의 근거가 없어진다 — 교체는 `rebind()` 다.
+
+    점유 규칙은 종류마다 다르다(GB-1):
+      - 단일 점유(shape·fitting·actuator): 슬롯당 현재 1개. 한 창을 두
+        모터가 열지 않는다.
+      - 다중 점유(sensor_role·weather): 같은 role 에 여러 장치가 **정상**
+        이며(가중평균), 같은 (장치, 채널, 측정값)의 중복 등록만 막는다.
+
+    commit=False 기본 — 호출자의 트랜잭션에 합류한다(place_device 관례).
+    """
+    _validate(spatial_kind, spatial_id, role, device_kind, device_id)
+    ch = _norm_channel(channel_id)
+    dev = str(device_id).split('::')[0]
+
+    if spatial_kind in SINGLE_OCCUPANCY_KINDS:
+        occupied = current_one(spatial_kind, spatial_id, role=role,
+                               channel_id=ch)
+        if occupied is not None:
+            raise BindingConflict(
+                '슬롯이 이미 점유돼 있다: %s:%s/%s 채널 %s → %s. '
+                '교체하려면 rebind() 를 쓸 것(이력이 남는다).'
+                % (spatial_kind, spatial_id, role, ch, occupied.device_id))
+    else:
+        for b in current(spatial_kind, spatial_id, role=role, channel_id=ch):
+            if (b.device_id == dev
+                    and (b.measurement_id or '') == (measurement_id or '')):
+                raise BindingConflict(
+                    '같은 (장치, 채널, 측정값)이 이미 등록돼 있다: '
+                    '%s:%s/%s → %s' % (spatial_kind, spatial_id, role, dev))
+
+    row = GeoBinding(
+        spatial_kind=spatial_kind, spatial_id=spatial_id, role=role,
+        device_kind=device_kind, device_id=dev, channel_id=ch,
+        measurement_id=measurement_id or None, params=params,
+        valid_from=utc_now())
+    db.session.add(row)
+    # GB-1 부분 유니크 인덱스를 지금 물게 한다 — 커밋까지 미루면 위반이
+    # 호출자와 무관한 자리에서 터진다.
+    db.session.flush()
+    logger.info('[GeoBinding] bind %s:%s/%s ch=%s → %s:%s',
+                spatial_kind, spatial_id, role, ch, device_kind, dev)
+    if commit:
+        db.session.commit()
+    return row
+
+
+def unbind(binding_uid, reason, commit=False):
+    """현재 바인딩을 종료한다(valid_to=지금, ended_reason=reason).
+
+    **행을 지우지 않는다** — 이력이 시계열 접합의 근거다(B3).
+    이미 종료된 바인딩이면 아무것도 하지 않고 그대로 돌려준다(멱등).
+    """
+    if reason not in VALID_END_REASONS:
+        raise BindingError('ended_reason 허용값 아님: %r (허용: %s)'
+                           % (reason, ', '.join(VALID_END_REASONS)))
+    row = GeoBinding.query.filter_by(unique_id=binding_uid).first()
+    if row is None:
+        raise BindingNotFound('바인딩이 없다: %s' % binding_uid)
+    if row.valid_to is not None:
+        return row
+
+    row.valid_to = utc_now()
+    row.ended_reason = reason
+    db.session.flush()
+    logger.info('[GeoBinding] unbind %s:%s/%s → %s (%s)',
+                row.spatial_kind, row.spatial_id, row.role, row.device_id,
+                reason)
+    if commit:
+        db.session.commit()
+    return row
+
+
+def rebind(spatial_kind, spatial_id, role, device_kind, device_id,
+           channel_id='0', measurement_id=None, params=None, commit=False):
+    """교체 — 기존 현재 바인딩을 'replaced' 로 종료하고 새것을 만든다.
+
+    **한 트랜잭션**이어야 한다. 중간에 끊기면 슬롯이 빈 채로 남는다.
+    기존 바인딩이 없으면 그냥 만든다(신규 배정과 같다). 이미 같은 장치·
+    채널·측정값이면 아무것도 하지 않고 기존 것을 돌려준다 — 마커를 끌 때마다
+    호출되는 경로가 있어서, 값이 같은데도 교체 이력을 쌓으면 이력이
+    "무엇이 실제로 바뀌었나"를 더는 말해주지 못한다.
+
+    단일 점유 슬롯 전용이다. 다중 점유(sensor_role·weather)에서 슬롯 키로
+    교체하면 같은 role 의 나머지 장치까지 함께 종료돼 가중평균 구성이
+    통째로 날아간다 — 그쪽은 `unbind()` + `bind()` 로 대상을 명시할 것.
+    """
+    if spatial_kind in MULTI_OCCUPANCY_KINDS:
+        raise BindingError(
+            'rebind 는 단일 점유 슬롯 전용이다(%s 는 다중 점유). 교체 대상을 '
+            'unbind() 로 명시한 뒤 bind() 할 것.' % spatial_kind)
+    _validate(spatial_kind, spatial_id, role, device_kind, device_id)
+    ch = _norm_channel(channel_id)
+    dev = str(device_id).split('::')[0]
+
+    old = current_one(spatial_kind, spatial_id, role=role, channel_id=ch)
+    if old is not None:
+        if (old.device_id == dev
+                and (old.measurement_id or '') == (measurement_id or '')):
+            return old                       # 바뀐 것이 없다
+        old.valid_to = utc_now()
+        old.ended_reason = 'replaced'
+        # 종료를 새 행보다 먼저 DB 에 내보낸다. 지금은 이 flush 가 없어도
+        # 통과한다 — SQLAlchemy 의 save_obj 가 같은 테이블에서 UPDATE 를
+        # INSERT 보다 먼저 emit 하기 때문이며, 2026-08-08 음성 대조로
+        # 확인했다(flush 를 빼도 GB-1 충돌이 나지 않았다). 그 내부 순서에
+        # 기대지 않으려고 명시적으로 끊어 둔다: 옛 행이 아직 valid_to IS
+        # NULL 인 채로 새 행이 들어가면 GB-1a 부분 유니크 인덱스에 걸린다.
+        db.session.flush()
+        logger.info('[GeoBinding] rebind %s:%s/%s ch=%s: %s → %s',
+                    spatial_kind, spatial_id, role, ch, old.device_id, dev)
+
+    return bind(spatial_kind, spatial_id, role, device_kind, dev,
+                channel_id=ch, measurement_id=measurement_id, params=params,
+                commit=commit)
+
+
+def end_all_for_device(device_id, reason='device_deleted', commit=False):
+    """장치가 사라질 때 그 장치의 현재 바인딩을 전부 끝낸다. 반환: 종료 건수.
+
+    **장치 삭제 경로 17곳이 부르는 유일한 문이다**(utils_* 7 + tab_service 7 +
+    진단 일괄 3). 예전에는 그중 4곳만 도형을 정리했고 나머지 13곳으로 지운
+    장치의 도형은 아무 에러 없이 남았다 — 삭제 정책이 6갈래였던 게 아니라
+    아예 없는 곳이 대부분이었다.
+
+    ## 도형은 지우지 않는다 (B4)
+
+    구역 폴리곤·시설 fitting 은 **미배정 슬롯으로 남는다.** 도형은 자산
+    (측량·작도 결과)이고 장치는 소모품이라, 같이 지우면 자산이 날아간다.
+    남은 자리는 geo/design 의 "미배정 자리" 화면에서 보고 재배정한다 —
+    그 화면이 있기 때문에 이제 이 정책으로 바꿀 수 있다.
+
+    예전 동작(`GeoShape.query.filter(device_id==...).delete()`)은 구역
+    폴리곤까지 함께 지웠다. 그래서 장치를 갈아끼우려면 도형을 다시 그려야
+    했고, 그게 이 작업 전체의 출발점이었다.
+
+    ## 예외는 위치 마커 하나뿐
+
+    `aot_device` 점 마커는 유일하게 자산 가치가 없는 도형이다(장치를 놓으려고
+    찍은 점). 장치가 사라지면 그 점은 아무것도 가리키지 않으므로 함께 지운다.
+
+    삭제 순서가 중요하다: 마커를 먼저 지우면 그 도형의 바인딩이 GB-4 로
+    'spatial_deleted' 가 되어 사유가 갈린다. 그래서 **바인딩을 먼저 끝내고**
+    (전부 같은 사유로) 도형을 지운다.
+    """
+    if not device_id:
+        return 0
+    if reason not in VALID_END_REASONS:
+        raise BindingError('ended_reason 허용값 아님: %r' % (reason,))
+
+    dev = str(device_id).split('::')[0]
+    rows = GeoBinding.query.filter(
+        GeoBinding.device_id == dev,
+        GeoBinding.valid_to.is_(None)).all()
+
+    marker_shapes = [b.spatial_id for b in rows
+                     if b.spatial_kind == 'shape' and b.role == 'marker']
+
+    now = utc_now()
+    for row in rows:
+        row.valid_to = now
+        row.ended_reason = reason
+    db.session.flush()
+
+    _delete_markers(dev, marker_shapes)
+
+    if rows:
+        logger.info('[GeoBinding] end_all_for_device %s: 바인딩 %d건 종료(%s), '
+                    '마커 %d개 제거 — 구역·시설 도형은 미배정 슬롯으로 남는다',
+                    dev, len(rows), reason, len(marker_shapes))
+    if commit:
+        db.session.commit()
+    return len(rows)
+
+
+def _delete_markers(device_id, shape_uids):
+    """위치 마커 도형을 지운다 — 바인딩 기준 + 레거시 컬럼 기준 양쪽.
+
+    레거시(`GeoShape.device_id`) 기준을 함께 보는 이유: 백필이 죽은 참조에
+    바인딩을 만들지 않았고 쓰기 전환도 아직 진행 중이라, 바인딩 없이 컬럼만
+    가진 마커가 남아 있다. 그 마커는 바인딩만 보면 영원히 정리되지 않는다.
+    Phase C 의 레거시 제거가 끝나면 이 두 번째 조건은 사라진다.
+    """
+    from aot.databases.models import GeoShape
+
+    q = GeoShape.query.filter(GeoShape.type == 'aot_device')
+    if shape_uids:
+        cond = GeoShape.unique_id.in_(shape_uids)
+        q = q.filter(cond | (GeoShape.device_id == device_id))
+    else:
+        q = q.filter(GeoShape.device_id == device_id)
+    n = q.delete(synchronize_session=False)
+    if n:
+        db.session.expire_all()      # bulk delete 후 세션 캐시 무효화
+    return n
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +646,14 @@ def _legacy_device_ref(column, item):
     for col, key, _kind, _role in _FACILITY_REFS:
         if col == column and item.get(key):
             return str(item[key])
+    return None
+
+
+def _legacy_role(column, item):
+    """레거시 값이 매달려 있던 키로 role 을 정한다. 없으면 None."""
+    for col, key, _kind, role in _FACILITY_REFS:
+        if col == column and item.get(key):
+            return role
     return None
 
 

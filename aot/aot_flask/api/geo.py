@@ -301,6 +301,198 @@ class GeoSearch(Resource):
             current_app.logger.error(f" [GeoAPI] Search Exception: {e}")
             return {'ok': False, 'message': str(e)}, 500
 
+geo_binding_model = ns_geo.model('GeoBinding', {
+    'spatial_kind': fields.String(required=True,
+                                  description="shape|fitting|actuator|sensor_role|weather"),
+    'spatial_id': fields.String(required=True, description='Slot identifier'),
+    'role': fields.String(required=True, description='marker|area|actuator|sensor|...'),
+    'device_id': fields.String(required=True, description='Device unique_id'),
+    'device_kind': fields.String(description='Resolved server-side when omitted'),
+    'channel_id': fields.String(description="Defaults to '0'"),
+    'measurement_id': fields.String(description='DeviceMeasurements.unique_id'),
+})
+
+
+def _binding_dict(row):
+    return {
+        'unique_id': row.unique_id,
+        'spatial_kind': row.spatial_kind,
+        'spatial_id': row.spatial_id,
+        'role': row.role,
+        'device_kind': row.device_kind,
+        'device_id': row.device_id,
+        'channel_id': row.channel_id,
+        'measurement_id': row.measurement_id,
+        'valid_from': row.valid_from.isoformat() if row.valid_from else None,
+        'valid_to': row.valid_to.isoformat() if row.valid_to else None,
+        'ended_reason': row.ended_reason,
+    }
+
+
+def _binding_args(data):
+    """페이로드 → 게이트웨이 인자. device_kind 는 서버가 판별한다.
+
+    클라이언트가 보낸 종류 문자열을 믿지 않는 이유: 지도 UI 의 타입 어휘는
+    바인딩 어휘와 다르다('function' 이 UI 에서는 CustomController 다).
+    그대로 저장하면 바인딩의 종류가 실제 테이블과 어긋난 채 조용히 남는다.
+    """
+    from aot.aot_flask.geo import device_binding
+
+    device_id = (data.get('device_id') or '').split('::')[0]
+    kind = device_binding.resolve_device_kind(device_id)
+    if kind is None:
+        raise ValueError('존재하지 않는 장치: %s' % (data.get('device_id'),))
+    declared = data.get('device_kind')
+    if declared and declared != kind:
+        current_app.logger.info(
+            '[GeoAPI] device_kind 정정: 요청=%s 실제=%s (device=%s)',
+            declared, kind, device_id)
+
+    spatial_kind = data.get('spatial_kind')
+    spatial_id = data.get('spatial_id')
+    role = data.get('role')
+    if spatial_kind == 'shape':
+        # role 은 도형 자신의 type 컬럼에서만 나온다. 프런트의 aot_type 은
+        # get_overlays 가 'device'→'aot_device' 로 정규화해 내보내므로,
+        # 그 값을 role 로 쓰면 구역 배정이 마커 배정으로 저장된다.
+        shape = GeoShape.query.filter_by(unique_id=spatial_id).first()
+        if shape is None:
+            raise ValueError('존재하지 않는 도형: %s' % (spatial_id,))
+        role = device_binding.role_for_shape_type(shape.type)
+        if role is None:
+            raise ValueError(
+                "'%s' 종류의 도형에는 장치를 맬 수 없다 — 구역 폴리곤"
+                "(type='device')이나 위치 마커만 가능하다." % shape.type)
+
+    return {
+        'spatial_kind': spatial_kind,
+        'spatial_id': spatial_id,
+        'role': role,
+        'device_kind': kind,
+        'device_id': device_id,
+        'channel_id': data.get('channel_id') or '0',
+        'measurement_id': data.get('measurement_id') or None,
+    }
+
+
+@ns_geo.route('/binding')
+class GeoBindingResource(Resource):
+    """공간 슬롯 ↔ 장치 배정. 마커 좌표는 여기가 아니라 /device/location 이다.
+
+    구역 배정을 /device/location 에 얹지 않는 이유: 마커는 좌표(어디에
+    있는가)이고 구역은 소속(무엇을 담당하는가)이라 뜻이 다르다. 한
+    엔드포인트에 섞으면 좌표 없는 배정과 배정 없는 좌표를 구분할 수 없다.
+    """
+
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def get(self):
+        """Current bindings (and history) for one spatial slot"""
+        from aot.aot_flask.geo import device_binding
+        spatial_kind = request.args.get('spatial_kind')
+        spatial_id = request.args.get('spatial_id')
+        role = request.args.get('role') or None
+        if not spatial_kind or not spatial_id:
+            return {'ok': False,
+                    'message': 'spatial_kind, spatial_id required'}, 400
+        try:
+            rows = device_binding.current(spatial_kind, spatial_id, role=role)
+            past = [b for b in device_binding.history(
+                spatial_kind, spatial_id, role=role) if b.valid_to is not None]
+            return {'ok': True,
+                    'bindings': [_binding_dict(b) for b in rows],
+                    'history': [_binding_dict(b) for b in past]}
+        except Exception as e:
+            current_app.logger.error('[GeoAPI] binding get: %s', e)
+            return {'ok': False, 'message': str(e)}, 500
+
+    @ns_geo.doc(responses=default_responses)
+    @ns_geo.expect(geo_binding_model)
+    @login_required
+    def post(self):
+        """Bind a device to an unoccupied slot"""
+        if not utils_general.user_has_permission('edit_settings'):
+            abort(403)
+        from aot.aot_flask.geo import device_binding
+        data = request.get_json() or {}
+        try:
+            row = device_binding.bind(commit=True, **_binding_args(data))
+            return {'ok': True, 'binding': _binding_dict(row)}
+        except device_binding.BindingConflict as e:
+            db.session.rollback()
+            # 409 — UI 는 이 코드를 보고 교체(rebind) 플로우로 안내한다.
+            return {'ok': False, 'conflict': True, 'message': str(e)}, 409
+        except (device_binding.BindingError, ValueError) as e:
+            db.session.rollback()
+            return {'ok': False, 'message': str(e)}, 400
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error('[GeoAPI] binding post: %s', e)
+            return {'ok': False, 'message': str(e)}, 500
+
+    @ns_geo.doc(responses=default_responses)
+    @ns_geo.expect(geo_binding_model)
+    @login_required
+    def put(self):
+        """Replace the device on a slot (ends the old binding, keeps history)"""
+        if not utils_general.user_has_permission('edit_settings'):
+            abort(403)
+        from aot.aot_flask.geo import device_binding
+        data = request.get_json() or {}
+        try:
+            row = device_binding.rebind(commit=True, **_binding_args(data))
+            return {'ok': True, 'binding': _binding_dict(row)}
+        except (device_binding.BindingError, ValueError) as e:
+            db.session.rollback()
+            return {'ok': False, 'message': str(e)}, 400
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error('[GeoAPI] binding put: %s', e)
+            return {'ok': False, 'message': str(e)}, 500
+
+
+@ns_geo.route('/binding/unbound')
+class GeoBindingUnbound(Resource):
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def get(self):
+        """Slots with no device bound — what a deletion or a swap left behind"""
+        from aot.aot_flask.geo import device_binding
+        try:
+            slots = device_binding.unbound_slots(
+                facility_uuid=request.args.get('facility_uuid') or None)
+            return {'ok': True, 'slots': slots}
+        except Exception as e:
+            current_app.logger.error('[GeoAPI] unbound slots: %s', e)
+            return {'ok': False, 'message': str(e)}, 500
+
+
+@ns_geo.route('/binding/<string:binding_uid>')
+class GeoBindingDetail(Resource):
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def delete(self, binding_uid):
+        """End a binding. The row is kept — history is the point (B3)."""
+        if not utils_general.user_has_permission('edit_settings'):
+            abort(403)
+        from aot.aot_flask.geo import device_binding
+        data = request.get_json(silent=True) or {}
+        reason = data.get('reason') or request.args.get('reason') or 'unbound'
+        try:
+            row = device_binding.unbind(binding_uid, reason, commit=True)
+            return {'ok': True, 'binding': _binding_dict(row)}
+        except device_binding.BindingNotFound as e:
+            db.session.rollback()
+            return {'ok': False, 'message': str(e)}, 404
+        except device_binding.BindingError as e:
+            db.session.rollback()
+            return {'ok': False, 'message': str(e)}, 400
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error('[GeoAPI] binding delete: %s', e)
+            return {'ok': False, 'message': str(e)}, 500
+
+
 @ns_geo.route('/device/location')
 class GeoDeviceLocation(Resource):
     @ns_geo.doc(responses=default_responses)
@@ -333,6 +525,10 @@ class GeoDeviceLocation(Resource):
                 'pid': PID,
                 'trigger': Trigger,
                 'conditional': Conditional,
+                # 복합장치(Device)와 Custom Function 은 같은 테이블이지만 지도
+                # 에서는 따로 배치한다(collect_devices 가 is_device 로 가른다).
+                # 여기 'device' 가 없으면 장치 마커 저장이 400 으로 튕긴다.
+                'device': CustomController,
                 'function': CustomController,
                 'custom': CustomController,
                 'generic_function': Function

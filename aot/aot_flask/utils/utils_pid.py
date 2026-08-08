@@ -345,6 +345,11 @@ def pid_del(pid_id):
                 each_measurement.unique_id,
                 flash_message=False)
 
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+        # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
+        # 정리하지 않아 고아 도형을 만들었다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(pid_id)
         delete_entry_with_id(
             PID, pid_id, flash_message=False)
 

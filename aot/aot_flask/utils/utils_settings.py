@@ -2285,6 +2285,11 @@ def settings_diagnostic_delete_inputs():
                     if each_measurement.device_id == each_input.unique_id:
                         db.session.delete(each_measurement)
 
+                # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+                # 남는다(위치 마커만 예외). 이 일괄 삭제는 raw db.session.delete 라
+                # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
+                from aot.aot_flask.geo.device_binding import end_all_for_device
+                end_all_for_device(each_input.unique_id)
                 # Delete the input
                 db.session.delete(each_input)
             display_order.input = ''  # Clear the order
@@ -2365,6 +2370,11 @@ def settings_diagnostic_delete_outputs():
                 for each_output_channel in channels:
                     db.session.delete(each_output_channel)
 
+                # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+                # 남는다(위치 마커만 예외). 이 일괄 삭제는 raw db.session.delete 라
+                # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
+                from aot.aot_flask.geo.device_binding import end_all_for_device
+                end_all_for_device(each_output.unique_id)
                 db.session.delete(each_output)
                 db.session.commit()
             display_order.output = ''
@@ -2387,6 +2397,11 @@ def settings_diagnostic_delete_functions():
     if not error:
         try:
             for each_func in db_retrieve_table(CustomController):
+                # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+                # 남는다(위치 마커만 예외). 이 일괄 삭제는 raw db.session.delete 라
+                # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
+                from aot.aot_flask.geo.device_binding import end_all_for_device
+                end_all_for_device(each_func.unique_id)
                 db.session.delete(each_func)
                 db.session.commit()
             display_order.function = ''

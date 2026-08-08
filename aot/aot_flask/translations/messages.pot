@@ -23752,6 +23752,55 @@ msgid ""
 "to keep tracking the target even when the outdoor air cannot deliver it."
 msgstr ""
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Heating / Cooling Interlock"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Keep Vents Closed While Heating or Cooling Runs"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"Venting against a running heater or cooler throws the energy straight "
+"back outside. With this on, vents and exhaust/intake fans park closed "
+"whenever heating or cooling is detected as running. Detection needs "
+"evidence: either this coordinator commands the heater/cooler itself, "
+"or you point the signal field below at a measurement that rises when "
+"the unit runs. Indoor temperature is NOT used to guess — a ventilated "
+"or shaded greenhouse is often cooler than the outdoor weather station "
+"even with nothing running, so guessing would lock the vents shut on a "
+"hot afternoon. Your temperature and humidity limits and the safety "
+"gates still override this and open the vents when they must."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Heating / Cooling Running Signal"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"For a unit switched on by hand, which this system does not control. "
+"Pick any measurement that goes up when the unit runs — a smart plug "
+"reporting watts, a clamp meter reporting amps, or an auxiliary "
+"contact reported as on/off. Leave empty if this coordinator commands "
+"the unit directly. With neither, the interlock has no evidence and "
+"never engages. If the signal goes stale past the sensor max age, it "
+"is treated as not running (a dead sensor must not seal the "
+"greenhouse)."
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Running Signal Threshold"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"The signal counts as running at or above this value. Leave 0.5 for an "
+"on/off contact. For watts or amps, set it above the unit's standby "
+"draw so idle current does not read as running."
+msgstr ""
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
 msgid "Growth Schedule"
 msgstr ""

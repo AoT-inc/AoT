@@ -175,7 +175,22 @@ class AoTGeoModules {
             }
             
             // Force type override so it saves to correct 'device' slot
-            type = 'device'; 
+            type = 'device';
+        } else if (type === 'aot_device' && typeof layer.getLatLngs === 'function') {
+            // 장치를 고르지 않고 그린 '구역' 폴리곤·선도 type='device' 로 저장한다.
+            //
+            // 예전에는 이런 도형이 type='aot_device' 로 남았다. 그 종류는 위치
+            // 마커의 종류이고 I7 에 따라 생성 후 바뀌지 않으므로, 한번 그렇게
+            // 저장되면 나중에 장치를 배정할 수단이 영영 없다(role 이 'marker'
+            // 로 잡힌다). 반대로 type='device' + 배정 없음 은 그 자체로 뜻이
+            // 성립한다 — "장치가 아직 안 정해진 구역", 곧 미배정 슬롯이다.
+            //
+            // 점(마커)은 여기 오지 않는다: 마커는 그려서 만드는 것이 아니라
+            // /api/geo/device/location 이 만든다.
+            layer.feature = layer.feature || { properties: {} };
+            layer.feature.properties = layer.feature.properties || {};
+            layer.feature.properties.aot_type = 'device';
+            type = 'device';
         }
 
         this._ensurePipeProperties(layer, type);

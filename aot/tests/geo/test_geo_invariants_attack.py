@@ -307,6 +307,127 @@ class TestBindingAttacks(_Base):
             d=device_id, c=channel_id, m=measurement_id, vf=valid_from,
             vt=valid_to, er=ended_reason)
 
+    def _current(self, uid):
+        row = self._raw('SELECT valid_to, ended_reason FROM geo_binding '
+                        'WHERE unique_id=:u', u=uid).fetchone()
+        return row
+
+    # GB-3 — 장치 삭제 연쇄 -------------------------------------------------
+    #
+    # 앱 계층(end_all_for_device)이 이미 같은 일을 하고 삭제 경로 17곳이 전부
+    # 그 문을 지나간다. 그런데도 트리거를 두는 이유는 원시 SQL·bulk delete·
+    # 진단 일괄 삭제가 앱 규약을 아예 통과하지 않기 때문이다 — geo_shape.
+    # device_id 가 정확히 그렇게 썩었다(정책 6갈래, 진입점 17곳, 실제로
+    # 정리하는 곳 4곳, 아무도 몇 주 동안 모름).
+    def test_gb3_raw_device_delete_ends_its_bindings(self):
+        """앱을 통과하지 않은 삭제도 바인딩을 남기지 못한다."""
+        self._raw("INSERT INTO output (unique_id, name) VALUES ('dev-x', 'v')")
+        self._bind('b-1', device_id='dev-x', spatial_id='sh-1')
+
+        self._raw("DELETE FROM output WHERE unique_id='dev-x'")
+
+        valid_to, reason = self._current('b-1')
+        self.assertIsNotNone(valid_to, '장치가 사라졌는데 바인딩이 현재로 남았다')
+        self.assertEqual(reason, 'device_deleted')
+
+    def test_gb3_does_not_touch_other_devices(self):
+        self._raw("INSERT INTO output (unique_id, name) VALUES ('dev-x', 'v')")
+        self._raw("INSERT INTO output (unique_id, name) VALUES ('dev-y', 'w')")
+        self._bind('b-1', device_id='dev-x', spatial_id='sh-1')
+        self._bind('b-2', device_id='dev-y', spatial_id='sh-2')
+
+        self._raw("DELETE FROM output WHERE unique_id='dev-x'")
+        self.assertIsNone(self._current('b-2')[0])
+
+    def test_gb3_does_not_revive_an_already_ended_binding(self):
+        """이미 끝난 바인딩의 사유를 덧칠하지 않는다 — 이력이 왜곡된다."""
+        self._raw("INSERT INTO output (unique_id, name) VALUES ('dev-x', 'v')")
+        self._bind('b-1', device_id='dev-x', spatial_id='sh-1',
+                   valid_to='2026-08-08 01:00:00', ended_reason='replaced')
+
+        self._raw("DELETE FROM output WHERE unique_id='dev-x'")
+
+        valid_to, reason = self._current('b-1')
+        self.assertEqual(reason, 'replaced')
+        self.assertEqual(str(valid_to)[:19], '2026-08-08 01:00:00')
+
+    def test_gb3_covers_every_device_table(self):
+        """마커는 Function·PID·Trigger 에도 붙는다 — 3종으로 좁히면 샌다."""
+        cases = [('input', 'input'), ('output', 'output'), ('pid', 'pid'),
+                 ('trigger', 'trigger'), ('conditional', 'conditional'),
+                 ('custom_controller', 'device'), ('function', 'function')]
+        for i, (table, kind) in enumerate(cases):
+            dev, uid, shape = 'd-%d' % i, 'b-%d' % i, 'sh-%d' % i
+            self._raw("INSERT INTO %s (unique_id, name) VALUES (:d, 'x')"
+                      % table, d=dev)
+            self._bind(uid, device_id=dev, device_kind=kind, spatial_id=shape)
+            self._raw("DELETE FROM %s WHERE unique_id=:d" % table, d=dev)
+            self.assertIsNotNone(
+                self._current(uid)[0],
+                '%s 삭제가 바인딩을 끝내지 않았다' % table)
+
+    # GB-4 — 공간 요소 삭제 연쇄 --------------------------------------------
+    def test_gb4_shape_delete_ends_its_binding(self):
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-9', 'map-1', 'device', '{}')")
+        self._bind('b-1', spatial_id='sh-9', role='area')
+
+        self._raw("DELETE FROM geo_shape WHERE unique_id='sh-9'")
+
+        valid_to, reason = self._current('b-1')
+        self.assertIsNotNone(valid_to, '도형이 사라졌는데 바인딩이 남았다')
+        self.assertEqual(reason, 'spatial_deleted')
+
+    def test_gb4_facility_delete_ends_both_slot_shapes(self):
+        """시설 슬롯 주소는 두 모양이다 — 한쪽만 보면 나머지가 남는다."""
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-f', 'map-1', 'facility', '{}')")
+        self._raw("INSERT INTO geo_facility "
+                  "(unique_id, shape_uuid, geo_id, name, render_mode) "
+                  "VALUES ('fac-1', 'sh-f', 'map-1', '온실A', '3d')")
+        self._bind('b-1', spatial_kind='fitting', spatial_id='fac-1:F1',
+                   role='actuator')
+        self._bind('b-2', spatial_kind='sensor_role', spatial_id='fac-1',
+                   role='indoor_temp')
+
+        self._raw("DELETE FROM geo_facility WHERE unique_id='fac-1'")
+
+        self.assertIsNotNone(self._current('b-1')[0], 'fitting 이 남았다')
+        self.assertIsNotNone(self._current('b-2')[0], 'sensor_role 이 남았다')
+
+    def test_gb4_does_not_end_a_lookalike_prefix(self):
+        """'fac-1' 삭제가 'fac-10:...' 슬롯을 끌고 가면 안 된다."""
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-f', 'map-1', 'facility', '{}')")
+        self._raw("INSERT INTO geo_facility "
+                  "(unique_id, shape_uuid, geo_id, name, render_mode) "
+                  "VALUES ('fac-1', 'sh-f', 'map-1', '온실A', '3d')")
+        self._bind('b-1', spatial_kind='fitting', spatial_id='fac-10:F1',
+                   role='actuator')
+
+        self._raw("DELETE FROM geo_facility WHERE unique_id='fac-1'")
+        self.assertIsNone(self._current('b-1')[0],
+                          '이름이 비슷한 다른 시설의 슬롯까지 끝냈다')
+
+    def test_gb4_end_survives_gb2_timestamp_check(self):
+        """같은 초에 만들어 지운 바인딩도 GB-2 에 걸리지 않는다.
+
+        SQLite 는 시각을 문자열로 비교한다. SQLAlchemy 가 쓴 valid_from 은
+        소수점 6자리인데 트리거의 strftime('%f') 는 3자리라, 그냥 now() 를
+        쓰면 '12.500' < '12.500000' 이 되어 GB-2 의 "valid_to 가 valid_from
+        보다 이르다"가 삭제를 통째로 막는다.
+        """
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-9', 'map-1', 'device', '{}')")
+        self._raw("INSERT INTO geo_binding "
+                  "(unique_id, spatial_kind, spatial_id, role, device_kind,"
+                  " device_id, channel_id, valid_from) "
+                  "VALUES ('b-1','shape','sh-9','area','output','dev-1','0',"
+                  " strftime('%Y-%m-%d %H:%M:%f','now') || '999')")
+
+        self._raw("DELETE FROM geo_shape WHERE unique_id='sh-9'")
+        self.assertIsNotNone(self._current('b-1')[0])
+
     # GB-1a — 단일 점유 -----------------------------------------------------
     def test_gb1_single_slot_cannot_have_two_current_bindings(self):
         """한 창을 두 모터가 열 수는 없다."""

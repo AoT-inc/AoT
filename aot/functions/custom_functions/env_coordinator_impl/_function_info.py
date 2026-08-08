@@ -248,6 +248,66 @@ FUNCTION_INFORMATION = {
             ),
         },
 
+        # ── Heating / Cooling Interlock ───────────────────────────────────────
+        {
+            'type': 'header',
+            'name': lazy_gettext('Heating / Cooling Interlock'),
+        },
+        {
+            'id': 'hvac_interlock',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Keep Vents Closed While Heating or Cooling Runs'),
+            'phrase': lazy_gettext(
+                'Venting against a running heater or cooler throws the energy '
+                'straight back outside. With this on, vents and exhaust/intake '
+                'fans park closed whenever heating or cooling is detected as '
+                'running. Detection needs evidence: either this coordinator '
+                'commands the heater/cooler itself, or you point the signal '
+                'field below at a measurement that rises when the unit runs. '
+                'Indoor temperature is NOT used to guess — a ventilated or '
+                'shaded greenhouse is often cooler than the outdoor weather '
+                'station even with nothing running, so guessing would lock the '
+                'vents shut on a hot afternoon. Your temperature and humidity '
+                'limits and the safety gates still override this and open the '
+                'vents when they must.'
+            ),
+        },
+        {
+            'id': 'hvac_interlock_signal',
+            'type': 'select_measurement',
+            'default_value': '',
+            'required': False,
+            'options_select': [
+                'Input',
+                'Function',
+            ],
+            'name': lazy_gettext('Heating / Cooling Running Signal'),
+            'phrase': lazy_gettext(
+                'For a unit switched on by hand, which this system does not '
+                'control. Pick any measurement that goes up when the unit runs '
+                '— a smart plug reporting watts, a clamp meter reporting amps, '
+                'or an auxiliary contact reported as on/off. Leave empty if '
+                'this coordinator commands the unit directly. With neither, the '
+                'interlock has no evidence and never engages. If the signal '
+                'goes stale past the sensor max age, it is treated as not '
+                'running (a dead sensor must not seal the greenhouse).'
+            ),
+        },
+        {
+            'id': 'hvac_interlock_on_value',
+            'type': 'float',
+            'default_value': 0.5,
+            'required': False,
+            'name': lazy_gettext('Running Signal Threshold'),
+            'phrase': lazy_gettext(
+                'The signal counts as running at or above this value. Leave 0.5 '
+                'for an on/off contact. For watts or amps, set it above the '
+                'unit\'s standby draw so idle current does not read as running.'
+            ),
+        },
+
         # ── Growth Schedule ───────────────────────────────────────────────────
         {
             'type': 'header',

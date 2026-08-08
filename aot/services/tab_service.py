@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy import and_
 from flask import current_app
 
-from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements, GeoShape
+from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.config import PATH_PYTHON_CODE_USER
@@ -539,14 +539,16 @@ class TabService:
             delete_entry_with_id(InputChannel, channel.unique_id, flash_message=False)
         
         # Delete Input
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
+        # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
+        # 이 게이트웨이를 지나간다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(input_id)
         delete_entry_with_id(Input, input_id, flash_message=False)
 
         # Delete map config ONLY if no remaining Input/Output shares it.
         # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도
         # 지도는 남는다. 지도 삭제는 geo/design 에서 명시적으로만.
-
-        # Delete GeoShapes owned by this input (device-scoped, safe).
-        GeoShape.query.filter_by(device_id=input_id).delete(synchronize_session=False)
         
         # Delete Python code file
         try:
@@ -578,6 +580,11 @@ class TabService:
             delete_entry_with_id(OutputChannel, channel.unique_id, flash_message=False)
         
         # Delete Output
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
+        # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
+        # 이 게이트웨이를 지나간다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(output_id)
         delete_entry_with_id(Output, output_id, flash_message=False)
 
         # Delete map config ONLY if no remaining Output (or Input) shares it.
@@ -585,9 +592,6 @@ class TabService:
         # across pages; blindly deleting them wipes those shared shapes too.
         # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도
         # 지도는 남는다. 지도 삭제는 geo/design 에서 명시적으로만.
-
-        # Delete GeoShapes owned by this output (device-scoped, safe).
-        GeoShape.query.filter_by(device_id=output_id).delete(synchronize_session=False)
         
         # Notify daemon
         if not current_app.config.get('TESTING', False):
@@ -615,6 +619,11 @@ class TabService:
             delete_entry_with_id(Actions, action.unique_id, flash_message=False)
         
         # Delete Trigger
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+        # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
+        # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(trigger_id)
         delete_entry_with_id(Trigger, trigger_id, flash_message=False)
     
     @staticmethod
@@ -641,6 +650,11 @@ class TabService:
             delete_entry_with_id(Actions, action.unique_id, flash_message=False)
         
         # Delete Conditional
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+        # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
+        # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(conditional_id)
         delete_entry_with_id(Conditional, conditional_id, flash_message=False)
         
         # Delete Python code file
@@ -670,6 +684,11 @@ class TabService:
             delete_entry_with_id(DeviceMeasurements, measurement.unique_id, flash_message=False)
         
         # Delete PID
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+        # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
+        # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(pid_id)
         delete_entry_with_id(PID, pid_id, flash_message=False)
     
     @staticmethod
@@ -698,6 +717,11 @@ class TabService:
             delete_entry_with_id(FunctionChannel, channel.unique_id, flash_message=False)
         
         # Delete CustomController
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+        # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
+        # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(controller_id)
         delete_entry_with_id(CustomController, controller_id, flash_message=False)
 
         # Delete map config ONLY if no remaining device shares it.
@@ -720,6 +744,11 @@ class TabService:
             return
         
         # Delete Function
+        # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
+        # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
+        # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
+        from aot.aot_flask.geo.device_binding import end_all_for_device
+        end_all_for_device(function_id)
         delete_entry_with_id(Function, function_id, flash_message=False)
 
     # ========== Orphan Detection & Cleanup Methods ==========

@@ -24128,6 +24128,63 @@ msgstr ""
 "優先され、必要に応じて換気窓を動かします。屋外空気で目標を達成できない場合でも"
 "目標を追い続けさせたい場合は無効にしてください。"
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Heating / Cooling Interlock"
+msgstr "冷暖房インターロック"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Keep Vents Closed While Heating or Cooling Runs"
+msgstr "冷暖房の稼働中は窓を閉じたままにする"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"Venting against a running heater or cooler throws the energy straight "
+"back outside. With this on, vents and exhaust/intake fans park closed "
+"whenever heating or cooling is detected as running. Detection needs "
+"evidence: either this coordinator commands the heater/cooler itself, "
+"or you point the signal field below at a measurement that rises when "
+"the unit runs. Indoor temperature is NOT used to guess — a ventilated "
+"or shaded greenhouse is often cooler than the outdoor weather station "
+"even with nothing running, so guessing would lock the vents shut on a "
+"hot afternoon. Your temperature and humidity limits and the safety "
+"gates still override this and open the vents when they must."
+msgstr ""
+"稼働中の暖房機・冷房機に逆らって換気すると、そのエネルギーをそのまま外へ捨てることになります。この設定を有効にすると、冷暖房の稼働が検知されている間は換気窓と排気・給気ファンが閉じた位置へ退避します。検知には根拠が必要です "
+"— "
+"このコーディネーターが冷暖房機を直接制御しているか、下の信号項目に稼働時に値が上がる測定値を指定してください。室内温度から推測はしません。換気中や遮光された温室は何も稼働していなくても屋外気象台より涼しいことが多く、推測で判断すると真夏の午後に窓を閉じ込めてしまいます。設定した温湿度の上下限と安全ゲートはこの設定より優先され、必要なときは窓を開けます。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Heating / Cooling Running Signal"
+msgstr "冷暖房の稼働検知信号"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"For a unit switched on by hand, which this system does not control. "
+"Pick any measurement that goes up when the unit runs — a smart plug "
+"reporting watts, a clamp meter reporting amps, or an auxiliary "
+"contact reported as on/off. Leave empty if this coordinator commands "
+"the unit directly. With neither, the interlock has no evidence and "
+"never engages. If the signal goes stale past the sensor max age, it "
+"is treated as not running (a dead sensor must not seal the "
+"greenhouse)."
+msgstr ""
+"このシステムが制御せず、人が手動で入切する装置のための項目です。稼働すると値が上がる測定値であれば何でも構いません — "
+"電力(W)を報告するスマートプラグ、電流(A)を報告するクランプメーター、on/off "
+"として報告される補助接点など。このコーディネーターが装置を直接制御している場合は空欄にしてください。どちらもない場合、インターロックは判断根拠がないため作動しません。信号がセンサー最大経過時間を超えて失効した場合は、稼働していないものとして扱います（故障したセンサーが温室を封じてはいけません）。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid "Running Signal Threshold"
+msgstr "稼働判定のしきい値"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py:257
+msgid ""
+"The signal counts as running at or above this value. Leave 0.5 for an "
+"on/off contact. For watts or amps, set it above the unit's standby "
+"draw so idle current does not read as running."
+msgstr ""
+"信号がこの値以上であれば稼働中とみなします。on/off 接点の場合は 0.5 "
+"のままで構いません。電力(W)や電流(A)の場合は装置の待機電力より高く設定し、待機状態が稼働として読まれないようにしてください。"
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:235
 msgid "Growth Schedule"
 msgstr "生育スケジュール"
@@ -26106,3 +26163,114 @@ msgstr "承認し、実行まで完了しました。"
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
 msgid "Approved, but it failed to run"
 msgstr "承認しましたが、実行に失敗しました"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Assign another channel"
+msgstr "別のチャネルに割り当て"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Assign device"
+msgstr "装置を割り当て"
+
+
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Currently assigned"
+msgstr "現在の割り当て"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Device assigned"
+msgstr "装置を割り当てました"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Device assignment"
+msgstr "装置の割り当て"
+
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Device released. The area is now unassigned."
+msgstr "装置を解除しました。このエリアは未割り当てになりました。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Every slot has a device."
+msgstr "すべてのスロットに装置が割り当てられています。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Failed to save"
+msgstr "保存に失敗しました"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact."
+msgstr "同じ機種への故障交換であれば、新しい装置を作らず既存装置の接続情報（DevEUI・アドレス）だけを変更してください。図形・履歴・関数の接続はすべて維持されます。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Is this a like-for-like hardware swap?"
+msgstr "同じ機種への交換ですか？"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Map area"
+msgstr "地図エリア"
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "No device is assigned to this slot."
+msgstr "このスロットには装置が割り当てられていません。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "No devices found"
+msgstr "装置がありません"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Open Input settings"
+msgstr "入力設定を開く"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Open Output settings"
+msgstr "出力設定を開く"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Or move this slot to a different device"
+msgstr "または、このスロットを別の装置に移す"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Places that lost their device, or were never assigned one. Click one to assign a device."
+msgstr "装置が外れた、またはまだ割り当てられていない場所です。押して装置を割り当ててください。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Previous devices"
+msgstr "以前の装置"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Replace"
+msgstr "交換"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Replace device"
+msgstr "装置の交換"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Search Device..."
+msgstr "装置を検索..."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Select a device"
+msgstr "装置を選択"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Select an area on the map first"
+msgstr "先に地図でエリアを選択してください"
+
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "This slot already has a device. Use Replace to swap it."
+msgstr "このスロットには既に装置があります。交換を押して入れ替えてください。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Unassign"
+msgstr "割り当て解除"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Unassigned slots"
+msgstr "未割り当てスロット"
