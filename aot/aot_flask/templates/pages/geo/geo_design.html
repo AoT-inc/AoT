@@ -965,7 +965,7 @@
                 const statusEl = document.getElementById('parcel-save-status');
                 statusEl.textContent = (window._ ? window._('Saving...') : 'Saving...');
                 try {
-                    let saved = 0, failed = 0;
+                    let saved = 0, failed = 0, skipped = 0;
                     for (const feat of toSave) {
                         // Single parcel (regardless of merge): use the baseName the user entered/edited as-is.
                         // Only for multiple (unmerged) parcels, use each parcel's name, falling back to baseName.
@@ -973,14 +973,20 @@
                             ? baseName
                             : ((feat.properties && (feat.properties.name || feat.properties.addr)) || baseName);
                         const res = await window.AoTParcelImport.saveAsSite(feat, n, mapUuid);
-                        if (res.ok) saved++; else failed++;
+                        // 이미 가져온 필지는 실패가 아니라 '건너뜀'이다 —
+                        // 실패로 세면 사용자가 원인을 찾으러 나선다.
+                        if (res.ok) saved++;
+                        else if (res.duplicate) skipped++;
+                        else failed++;
                     }
-                    statusEl.textContent = `${saved} ${(window._ ? window._('saved') : 'saved')}` + (failed ? `, ${failed} ${(window._ ? window._('failed') : 'failed')}` : '');
+                    statusEl.textContent = `${saved} ${(window._ ? window._('saved') : 'saved')}`
+                        + (skipped ? `, ${skipped} ${(window._ ? window._('already imported') : 'already imported')}` : '')
+                        + (failed ? `, ${failed} ${(window._ ? window._('failed') : 'failed')}` : '');
                     // Remove preview layer
                     if (window.AoTParcelImport) window.AoTParcelImport.clearPreview();
                     _pendingFeatures = [];
                     // Reload map -> Site layer + labels auto-generated
-                    if (saved > 0 && window.geoDesign && mapUuid) {
+                    if ((saved > 0 || skipped > 0) && window.geoDesign && mapUuid) {
                         setTimeout(() => {
                             $('#modal-parcel-import').modal('hide');
                             window.geoDesign.loadMap(mapUuid);

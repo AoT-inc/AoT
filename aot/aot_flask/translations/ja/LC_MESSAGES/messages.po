@@ -26318,3 +26318,7 @@ msgstr "この地図に描いたエリアのうち、まだ担当装置が決ま
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Every area on this map has a device linked."
 msgstr "この地図のすべてのエリアに装置が接続されています。"
+
+#: aot_flask/templates/pages/geo/geo_design.html:0
+msgid "already imported"
+msgstr "取り込み済み"

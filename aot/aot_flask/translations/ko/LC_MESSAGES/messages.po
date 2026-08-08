@@ -26564,3 +26564,7 @@ msgstr "이 지도에 그려 둔 구역 중 아직 담당 장치가 정해지지
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Every area on this map has a device linked."
 msgstr "이 지도의 모든 구역에 장치가 연결돼 있습니다."
+
+#: aot_flask/templates/pages/geo/geo_design.html:0
+msgid "already imported"
+msgstr "이미 가져옴"

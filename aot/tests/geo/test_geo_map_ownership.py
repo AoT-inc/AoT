@@ -269,6 +269,114 @@ class TestMapMembershipIsDerived(unittest.TestCase):
         self.assertEqual(map_for_device(dev.unique_id, prefer='mB'), 'mA')
 
 
+class TestParcelImportDoesNotDuplicate(unittest.TestCase):
+    """같은 필지를 두 번 가져와도 도형이 두 벌이 되지 않는다.
+
+    예전에는 서버가 무조건 새로 만들었다. 클라이언트가 저장 중 버튼을
+    잠그지만 그건 **한 번의 저장 안에서 더블클릭만** 막는다 — 모달을 닫았다
+    다시 열어 같은 주소를 가져오면 대지와 라벨이 한 벌 더 생겼다. 실제로
+    81초 간격으로 만들어진 짝을 2026-08-08 에 지웠다.
+
+    판정 기준은 `check_geo_integrity` 의 duplicate 와 같은 규칙이어야 한다
+    (종류 + 좌표 반올림 기하). 다르면 만들 때는 통과하고 점검에서만 걸리는
+    상태가 된다.
+    """
+
+    def setUp(self):
+        self.app = Flask(__name__)
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(self.app)
+        try:                       # 라우트 모듈이 gettext 를 쓴다
+            from flask_babel import Babel
+            Babel(self.app)
+        except Exception:
+            pass
+        self.ctx = self.app.app_context()
+        self.ctx.push()
+        db.create_all()
+        GeoMap(unique_id='m1', name='필지 검증', category='design').save()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.ctx.pop()
+
+    GEOM = {'type': 'Polygon',
+            'coordinates': [[[127.5, 36.1], [127.5001, 36.1],
+                             [127.5001, 36.1001], [127.5, 36.1]]]}
+
+    def _site(self, geom):
+        GeoShape(geo_id='m1', type='site',
+                 feature={'type': 'Feature', 'geometry': geom,
+                          'properties': {'name': '기존 필지'}}).save()
+
+    def test_same_parcel_is_detected(self):
+        from aot.aot_flask.routes_geo import _find_duplicate_site
+        self._site(self.GEOM)
+        self.assertIsNotNone(_find_duplicate_site('m1', self.GEOM))
+
+    def test_different_parcel_is_not_blocked(self):
+        """과차단 방지 — 다른 필지는 정상적으로 들어와야 한다."""
+        from aot.aot_flask.routes_geo import _find_duplicate_site
+        self._site(self.GEOM)
+        other = {'type': 'Polygon',
+                 'coordinates': [[[127.6, 36.2], [127.6001, 36.2],
+                                  [127.6001, 36.2001], [127.6, 36.2]]]}
+        self.assertIsNone(_find_duplicate_site('m1', other))
+
+    def test_other_map_is_not_blocked(self):
+        """지도가 다르면 같은 필지를 가져올 수 있다 — 지도마다 독립이다."""
+        from aot.aot_flask.routes_geo import _find_duplicate_site
+        GeoMap(unique_id='m2', name='다른 지도', category='design').save()
+        self._site(self.GEOM)
+        self.assertIsNone(_find_duplicate_site('m2', self.GEOM))
+
+    def test_non_site_shapes_do_not_block(self):
+        """대지만 본다 — 같은 자리에 그린 구역이 필지 가져오기를 막으면 안 된다."""
+        from aot.aot_flask.routes_geo import _find_duplicate_site
+        GeoShape(geo_id='m1', type='zone',
+                 feature={'type': 'Feature', 'geometry': self.GEOM,
+                          'properties': {}}).save()
+        self.assertIsNone(_find_duplicate_site('m1', self.GEOM))
+
+    def test_the_endpoint_actually_calls_the_guard(self):
+        """가드 함수가 있어도 **부르지 않으면** 아무것도 막지 못한다.
+
+        음성 대조에서 실제로 드러났다: 호출부 한 줄을 지웠는데 함수 단위
+        테스트는 전부 통과했다. 함수의 정확성과 그 함수가 실제로 쓰이는지는
+        다른 문제다.
+        """
+        tree = ast.parse(open(os.path.join(ROOT, 'aot/aot_flask/routes_geo.py'),
+                              encoding='utf-8').read())
+        called = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and \
+                    node.name == 'api_geo_parcel_save_as_site':
+                for sub in ast.walk(node):
+                    if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name):
+                        called.add(sub.func.id)
+        self.assertIn('_find_duplicate_site', called,
+                      '필지 저장 경로가 중복 가드를 부르지 않는다')
+
+    def test_geometry_key_matches_the_integrity_checker(self):
+        """두 규칙이 갈리면 만들 때는 통과하고 점검에서만 걸린다."""
+        import importlib.util
+        from aot.aot_flask.routes_geo import _parcel_geom_key
+        path = os.path.join(ROOT, 'aot/scripts/check_geo_integrity.py')
+        spec = importlib.util.spec_from_file_location('_chk', path)
+        mod = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(mod)
+        except Exception:
+            self.skipTest('검사기 모듈을 단독 로드할 수 없음')
+        shape = GeoShape(geo_id='m1', type='site',
+                         feature={'type': 'Feature', 'geometry': self.GEOM,
+                                  'properties': {}})
+        self.assertEqual(_parcel_geom_key(self.GEOM),
+                         mod._geom_key(shape, 1e-6))
+
+
 class TestAllMapsAreEqual(unittest.TestCase):
     """P3 원칙 1 — 지도는 공간이지 장치의 소유물이 아니다.
 

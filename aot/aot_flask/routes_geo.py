@@ -532,6 +532,49 @@ def api_geo_parcel_from_csv():
     return jsonify(result)
 
 
+def _parcel_geom_key(geometry, tolerance=1e-6):
+    """기하를 좌표 반올림 후 정규화 문자열로. 없으면 None.
+
+    `check_geo_integrity._geom_key` 와 같은 규칙이다. 반올림하는 이유도 같다:
+    같은 필지를 두 번 가져오는 사이 좌표가 미세하게 달라질 수 있어, 완전
+    일치만 보면 중복을 놓친다.
+    """
+    import math
+    if not isinstance(geometry, dict) or not geometry.get('type'):
+        return None
+    ndigits = max(0, -int(round(math.log10(tolerance)))) if tolerance > 0 else 12
+
+    def _round(node):
+        if isinstance(node, (int, float)):
+            return round(float(node), ndigits)
+        if isinstance(node, (list, tuple)):
+            return [_round(x) for x in node]
+        return node
+
+    return json.dumps(
+        {'type': geometry['type'], 'coordinates': _round(geometry.get('coordinates'))},
+        sort_keys=True)
+
+
+def _find_duplicate_site(geo_id, geometry):
+    """같은 지도에 기하가 같은 site 도형이 있으면 그것을 반환. 없으면 None."""
+    key = _parcel_geom_key(geometry)
+    if not key:
+        return None
+    for s in GeoShape.query.filter_by(geo_id=geo_id, type='site').all():
+        feat = s.feature
+        if isinstance(feat, str):
+            try:
+                feat = json.loads(feat)
+            except Exception:
+                continue
+        if not isinstance(feat, dict):
+            continue
+        if _parcel_geom_key(feat.get('geometry')) == key:
+            return s
+    return None
+
+
 @blueprint.route('/api/geo/parcel/save_as_site', methods=['POST'])
 @login_required
 def api_geo_parcel_save_as_site():
@@ -565,6 +608,28 @@ def api_geo_parcel_save_as_site():
         return jsonify({'ok': False,
                         'message': f'map not found: {map_uuid}'}), 404
     geo_id = map_uuid
+
+    # [중복 방지] 같은 지도에 같은 필지가 이미 있으면 만들지 않는다.
+    #
+    # 예전에는 무조건 새로 만들었다. 클라이언트가 저장 중 버튼을 잠그지만
+    # 그건 **한 번의 저장 안에서 더블클릭만** 막는다 — 모달을 닫았다 다시
+    # 열어 같은 주소를 가져오면 대지와 라벨이 한 벌 더 생겼다. 실제로
+    # 81초 간격으로 그렇게 만들어진 짝을 2026-08-08 에 지웠다.
+    #
+    # 판정 기준은 `check_geo_integrity` 의 duplicate 와 **같은 규칙**이다
+    # (종류 + 좌표 반올림 기하). 검사기가 중복이라 부르는 것을 여기서 막지
+    # 않으면, 만들 때는 통과하고 점검에서만 걸리는 상태가 된다.
+    existing = _find_duplicate_site(geo_id, feature.get('geometry'))
+    if existing is not None:
+        ex_props = (existing.feature or {}).get('properties', {}) \
+            if isinstance(existing.feature, dict) else {}
+        return jsonify({
+            'ok': False,
+            'duplicate': True,
+            'shape_id': existing.id,
+            'existing_name': ex_props.get('name') or ex_props.get('label_name'),
+            'message': '이미 이 지도에 가져온 필지입니다.',
+        }), 409
 
     shape = GeoShape()
     shape.type = 'site'
