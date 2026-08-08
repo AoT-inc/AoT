@@ -364,6 +364,35 @@ BINDING_STATEMENTS += [
 ]
 
 
+# GB-5 — 저장된 feature JSON 에 device_id / channel_id 키 자체가 존재 불가.
+#
+# I6(aot_type)와 같은 발상이다: '드리프트를 검사'하는 게 아니라 '두 번째
+# 사본을 표현 불가능하게' 만든다. 어느 장치인지의 정본은 geo_binding 이고,
+# 읽을 때 `get_overlays` 가 리졸버 값을 주입한다 — 프런트 계약은 불변이다.
+#
+# 이 키가 저장돼 있으면 도형을 복제하거나 옛 페이로드를 되돌려보낼 때 죽은
+# 장치 참조가 되살아난다. 실제로 `clone_map_config` 가 그 방식으로 도형 98개를
+# 오염시켰다(2026-07-28, 6일 뒤에야 "시설이 지도에서 사라짐"으로 표면화).
+#
+# ⚠ `properties.unique_id` 는 대상이 아니다(GB-5b, 별도 게이팅). 그 키는
+# 사본이 아니라 프런트가 엔트리를 식별하는 계약이라(채널 0 = 장치 uuid,
+# 그 외 'uuid::N'), 서버가 조용히 비우면 지도·위젯의 엔트리 식별이 통째로
+# 깨진다. 프런트 이전을 확인한 뒤에만 켠다.
+for _when, _suffix in (('INSERT', 'ins'), ('UPDATE OF feature', 'upd')):
+    BINDING_STATEMENTS += [
+        _drop('geo_itg_gb5_%s' % _suffix),
+        """
+        CREATE TRIGGER geo_itg_gb5_{suffix}
+        BEFORE {when} ON geo_shape
+        WHEN json_extract(NEW.feature, '$.properties.device_id') IS NOT NULL
+          OR json_extract(NEW.feature, '$.properties.channel_id') IS NOT NULL
+        BEGIN
+            SELECT RAISE(ABORT, 'GEO-GB5: feature JSON 에 device_id/channel_id 저장 금지 (geo_binding 이 정본, 읽기 시 주입)');
+        END
+        """.format(when=_when, suffix=_suffix),
+    ]
+
+
 def apply_binding(connection):
     """GB-1·GB-2 를 적용한다(멱등). geo_binding 테이블이 있어야 한다 —
     없으면 조용히 건너뛴다(테이블 생성은 p6_27 마이그레이션의 몫)."""

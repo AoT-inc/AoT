@@ -564,20 +564,19 @@ class InputModule(AbstractInput):
         if lat is None or lng is None:
             self.logger.warning(f" [Satellite Sync] Device location missing. Searching fallback for Input {self.input_dev.unique_id}")
             
-            # [S3] 자기 위치 마커(GeoShape aot_device) 좌표 사용 — 과거의
-            # map_overlay_id(zone) 경유보다 직접적이고, 그 컬럼은 사망 상태다.
+            # [S3][GB-6] 자기 위치 마커 좌표 사용 — 과거의 map_overlay_id(zone)
+            # 경유보다 직접적이다. "이 장치의 도형"은 geo_binding 이 답한다;
+            # GeoShape.device_id 는 사망 선고된 컬럼이라 직접 조회하지 않는다.
             try:
-                from aot.databases.models import GeoShape
-                marker = GeoShape.query.filter(
-                    GeoShape.device_id == self.input_dev.unique_id,
-                    GeoShape.type.in_(('aot_device', 'device'))).first()
-                if marker and marker.feature:
+                from aot.aot_flask.geo.device_binding import shapes_for_device
+                for marker in shapes_for_device(self.input_dev.unique_id):
                     geom = (marker.feature or {}).get('geometry') or {}
                     coords = geom.get('coordinates')
                     if geom.get('type') == 'Point' and coords and len(coords) >= 2:
                         lat, lng = coords[1], coords[0]
                         self.logger.warning(
                             f" [Satellite Sync] Found marker location: {lat}, {lng}")
+                        break
             except Exception as e:
                 self.logger.error(f" [Satellite Sync] Failed to get marker location: {e}")
 

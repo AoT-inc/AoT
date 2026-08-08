@@ -164,10 +164,13 @@ def _inherited_tz_for_device(entity):
     if not uid:
         return None
     try:
-        from aot.databases.models.geo import GeoShape
-        shape = GeoShape.query.filter_by(device_id=uid).first()
-        if shape is not None:
-            return shape.resolve_timezone()
+        # [GB-6] "이 장치의 도형" 은 geo_binding 이 답한다 — 사망 선고된
+        # GeoShape.device_id 를 직접 조회하지 않는다(리졸버가 폴백까지 담당).
+        from aot.aot_flask.geo.device_binding import shapes_for_device
+        for shape in shapes_for_device(uid):
+            tz = shape.resolve_timezone()
+            if tz:
+                return tz
     except Exception:
         pass
     return None

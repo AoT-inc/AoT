@@ -1369,17 +1369,20 @@ class AIActionService:
                         setattr(device, key, val)
                         applied_keys.append(key)
                 
-                # E-5: Synchronize with GeoShape if location changed
+                # E-5: Synchronize map markers if location changed.
+                # [GB-6] 마커를 찾고 옮기는 일은 geo 패키지가 소유한다. 예전에는
+                # 여기서 device_id 로 도형을 직접 찾아 첫 한 개의 geometry 만
+                # 고쳤다 — 사망 선고된 컬럼을 읽었을 뿐 아니라, 채널이 여럿
+                # 이거나 여러 지도에 놓인 나머지 마커는 옛 자리에 남았다.
                 if 'latitude' in updates or 'longitude' in updates:
                     try:
-                        # Find the aot_device marker associated with this device
-                        marker = GeoShape.query.filter_by(device_id=target_id).first()
-                        if marker:
-                            feat = marker.feature
-                            if feat and 'geometry' in feat:
-                                feat['geometry']['coordinates'] = [device.longitude or 0, device.latitude or 0]
-                                marker.feature = feat # Trigger SQLAlchemy update
-                                logger.info(f"[AI Sync] Updated GeoShape marker for {target_id}")
+                        from aot.aot_flask.geo.device_placement import (
+                            move_device_markers)
+                        moved = move_device_markers(
+                            target_id, device.latitude, device.longitude)
+                        if moved:
+                            logger.info(
+                                f"[AI Sync] Moved {moved} map marker(s) for {target_id}")
                     except Exception as sync_err:
                         logger.error(f"[AI Sync] Failed to sync GeoShape: {sync_err}")
 

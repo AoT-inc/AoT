@@ -42,27 +42,16 @@ _NULLISH_STRINGS = {'', 'none', 'null'}  # 'false' removed - it's a valid boolea
 
 
 def sync_geo_device_name(device_id, new_name, channel_id=None):
+    """장치 이름 변경을 그 장치 도형의 표시 이름에 반영한다.
+
+    [GB-6] 도형을 어떻게 찾고 어떻게 고치는지는 geo 패키지가 안다. 예전에는
+    여기서 `GeoShape.query.filter_by(device_id=...)` 로 직접 찾아 feature 를
+    고쳤는데, 그건 장치 도메인이 지도의 내부 구조와 사망 선고된 컬럼을 둘 다
+    알고 있었다는 뜻이다.
     """
-    장치 이름이 설정에서 변경될 때 GeoShape feature의 name도 동기화한다.
-    channel_id를 지정하면 해당 채널의 shape만 갱신하고,
-    None이면 device_id가 일치하는 모든 shape를 갱신한다.
-    """
-    from aot.databases.models import GeoShape
+    from aot.aot_flask.geo.device_placement import sync_device_name
     try:
-        query = GeoShape.query.filter_by(device_id=str(device_id))
-        if channel_id is not None:
-            query = query.filter_by(channel_id=str(channel_id))
-        shapes = query.all()
-        for shape in shapes:
-            if not shape.feature or 'properties' not in shape.feature:
-                continue
-            feature = dict(shape.feature)
-            props = dict(feature.get('properties', {}))
-            props['name'] = new_name
-            feature['properties'] = props
-            shape.feature = feature
-        if shapes:
-            db.session.commit()
+        sync_device_name(device_id, new_name, channel_id=channel_id)
     except Exception as e:
         logger.error(f"[GeoSync] sync_geo_device_name({device_id}): {e}")
 

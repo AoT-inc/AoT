@@ -443,6 +443,152 @@ def rebind(spatial_kind, spatial_id, role, device_kind, device_id,
                 commit=commit)
 
 
+def facility_binding_targets(facility):
+    """저장된 시설 JSON 이 뜻하는 바인딩 집합.
+
+    {(spatial_kind, spatial_id, role, channel_id): [(device_id, measurement_id,
+    params), ...]} — 다중 점유 슬롯이 있으므로 값은 항상 리스트다.
+
+    백필의 5원(源)과 **같은 목록이어야 한다**. fittings 는 actuator_id(구동)와
+    input_id(센서)가 한 컬럼에 섞여 있고, actuators 는 컬럼도 키 이름도 다르며
+    (`device_uuid`), weather_bindings 는 또 `input_uuid` 다. 하나만 보면 놓친다.
+    """
+    fac_uuid = getattr(facility, 'unique_id', None)
+    if not fac_uuid:
+        return {}
+
+    out = {}
+
+    def _want(kind, sid, role, dev, measurement=None, params=None):
+        dev = str(dev or '').split('::')[0]
+        if not dev or not role:
+            return
+        out.setdefault((kind, sid, role, '0'), []).append(
+            (dev, (measurement or None), params))
+
+    for fit in _items(getattr(facility, 'fittings', None)):
+        fid = fit.get('id')
+        if not fid:
+            continue                 # 안정적으로 가리킬 수 없는 항목
+        slot = '%s:%s' % (fac_uuid, fid)
+        _want('fitting', slot, 'actuator', fit.get('actuator_id'))
+        _want('fitting', slot, 'sensor', fit.get('input_id'),
+              measurement=fit.get('measurement_id'))
+
+    for act in _items(getattr(facility, 'actuators', None)):
+        aid = act.get('id')
+        if not aid:
+            continue
+        _want('actuator', '%s:%s' % (fac_uuid, aid), 'actuator',
+              act.get('device_uuid'))
+
+    for sen in _items(getattr(facility, 'sensors', None)):
+        weight = sen.get('weight')
+        _want('sensor_role', fac_uuid, (sen.get('role') or '').strip(),
+              sen.get('device_id'), measurement=sen.get('measurement_id'),
+              params={'weight': weight} if weight is not None else None)
+
+    for wb in _items(getattr(facility, 'weather_bindings', None)):
+        max_age = wb.get('max_age_sec')
+        _want('weather', fac_uuid,
+              (wb.get('measurement_type') or '').strip(), wb.get('input_uuid'),
+              measurement=wb.get('measurement_id'),
+              params={'max_age_sec': max_age} if max_age else None)
+
+    return out
+
+
+def sync_facility_bindings(facility, commit=False):
+    """저장된 시설 JSON 과 바인딩을 일치시킨다. 반환: (만든 수, 끝낸 수).
+
+    **저장 직후에 불러야 한다.** 읽기 리졸버가 바인딩을 정본으로 쓰기
+    때문에, 이 동기화가 없으면 시설 편집기에서 fitting 의 장치를 **비워도
+    화면에는 계속 옛 장치가 보인다** — 저장은 됐는데 바인딩이 그대로라
+    읽기가 바인딩을 이긴다. Phase B-1 이 읽기를 바인딩으로 옮긴 순간
+    생긴 구멍이고, 여기서 닫는다.
+
+    **페이로드가 아니라 저장된 값을 기준으로 한다.** 부분 저장(어떤 키가
+    빠진 요청)에서 페이로드를 기준으로 삼으면 "빠진 것 = 지운 것"이 되어
+    멀쩡한 배정이 끊긴다 — `save_overlays` 가 정확히 그 프로토콜(I9) 때문에
+    도형을 잃었다.
+    """
+    from aot.databases.models import GeoFacility
+
+    if isinstance(facility, str):        # uuid 로 불러도 되게
+        facility = GeoFacility.query.filter_by(unique_id=facility).first()
+    fac_uuid = getattr(facility, 'unique_id', None)
+    if not fac_uuid:
+        return (0, 0)
+
+    want = facility_binding_targets(facility)
+
+    from sqlalchemy import or_
+    have = GeoBinding.query.filter(
+        GeoBinding.valid_to.is_(None),
+        or_(GeoBinding.spatial_kind.in_(('sensor_role', 'weather'))
+            & (GeoBinding.spatial_id == fac_uuid),
+            GeoBinding.spatial_kind.in_(('fitting', 'actuator'))
+            & GeoBinding.spatial_id.like('%s:%%' % fac_uuid))).all()
+
+    by_slot = {}
+    for b in have:
+        by_slot.setdefault(
+            (b.spatial_kind, b.spatial_id, b.role, b.channel_id), []).append(b)
+
+    created = ended = 0
+    for slot in set(by_slot) | set(want):
+        kind, sid, role, ch = slot
+        desired = want.get(slot) or []
+        rows = by_slot.get(slot, [])
+
+        if kind in SINGLE_OCCUPANCY_KINDS:
+            # 슬롯당 하나 — 교체는 rebind 로 간다. unbind+bind 로 하면 사유가
+            # 'unbound' 로 남아 "사람이 뗀 것"과 "다른 장치로 갈아낀 것"을
+            # 이력에서 구분할 수 없다.
+            if not desired:
+                for b in rows:
+                    unbind(b.unique_id, 'unbound')
+                    ended += 1
+                continue
+            dev, meas, params = desired[0]
+            device_kind = resolve_device_kind(dev)
+            if device_kind is None:
+                continue        # 실존하지 않는 장치는 승격시키지 않는다
+            before = rows[0].unique_id if rows else None
+            row = rebind(kind, sid, role, device_kind, dev, channel_id=ch,
+                         measurement_id=meas, params=params)
+            if row.unique_id != before:
+                created += 1
+                if before is not None:
+                    ended += 1
+            continue
+
+        # 다중 점유 — 집합 차이. 같은 role 에 여러 장치가 정상이다.
+        keep = {(d, m or '') for d, m, _p in desired}
+        for b in rows:
+            if (b.device_id, b.measurement_id or '') not in keep:
+                unbind(b.unique_id, 'unbound')
+                ended += 1
+        existing = {(b.device_id, b.measurement_id or '')
+                    for b in rows if b.valid_to is None}
+        for dev, meas, params in desired:
+            if (dev, meas or '') in existing:
+                continue
+            device_kind = resolve_device_kind(dev)
+            if device_kind is None:
+                continue
+            bind(kind, sid, role, device_kind, dev, channel_id=ch,
+                 measurement_id=meas, params=params)
+            created += 1
+
+    if (created or ended):
+        logger.info('[GeoBinding] 시설 %s 바인딩 동기화: +%d / 종료 %d',
+                    fac_uuid, created, ended)
+    if commit:
+        db.session.commit()
+    return (created, ended)
+
+
 def end_all_for_device(device_id, reason='device_deleted', commit=False):
     """장치가 사라질 때 그 장치의 현재 바인딩을 전부 끝낸다. 반환: 종료 건수.
 
@@ -585,6 +731,95 @@ def devices_for_shapes(shapes):
     if fell_back and 'shape.device_id' not in _fallback_seen:
         if _any_device_exists(fell_back):
             _note_fallback('shape.device_id')
+    return out
+
+
+def shapes_for_device(device_id, role=None, channel_id=None):
+    """이 장치가 매여 있는 도형(GeoShape) 목록. 바인딩 우선, 없으면 레거시.
+
+    "이 장치의 도형은 어느 것인가"는 다섯 곳이 각자
+    `GeoShape.query.filter_by(device_id=...)` 로 풀던 질문이다(이름 동기화·
+    시간대 상속·AI 좌표 동기화·위성 입력의 좌표 폴백·조율기 프로필 적재).
+    다섯 벌이면 다섯 번 다르게 틀린다 — 어떤 곳은 `type` 을 걸고 어떤 곳은
+    안 걸고, 채널을 보는 곳과 안 보는 곳이 갈렸다.
+
+    **바인딩이 하나라도 있으면 바인딩만 본다.** 부분적으로 섞어 합치면
+    "전환이 어디까지 됐나"를 아무도 말할 수 없게 된다 — 리졸버의 다른
+    함수와 같은 규칙이다.
+    """
+    from aot.databases.models import GeoShape
+
+    dev = str(device_id or '').split('::')[0]
+    if not dev:
+        return []
+
+    q = GeoBinding.query.filter(
+        GeoBinding.spatial_kind == 'shape',
+        GeoBinding.device_id == dev,
+        GeoBinding.valid_to.is_(None))
+    if role is not None:
+        q = q.filter(GeoBinding.role == role)
+    if channel_id is not None:
+        q = q.filter(GeoBinding.channel_id == str(channel_id))
+    uids = [b.spatial_id for b in q.all()]
+
+    if uids:
+        return GeoShape.query.filter(GeoShape.unique_id.in_(uids)).all()
+
+    legacy = GeoShape.query.filter(GeoShape.device_id == dev)
+    if channel_id is not None:
+        legacy = legacy.filter(GeoShape.channel_id == str(channel_id))
+    if role is not None:
+        wanted = [t for t, r in SHAPE_TYPE_ROLES.items() if r == role]
+        legacy = legacy.filter(GeoShape.type.in_(wanted))
+    rows = legacy.all()
+    if rows and 'shape.device_id' not in _fallback_seen:
+        _note_fallback('shape.device_id', 'shapes_for_device')
+    return rows
+
+
+def shapes_for_devices(device_ids, role=None):
+    """{장치 uuid: [GeoShape]} — 여러 장치를 한 번에(N+1 회피).
+
+    조율기 프로필 적재처럼 구동기 수십 개를 한 번에 도는 경로가 있다.
+    `shapes_for_device` 를 루프에서 부르면 장치마다 쿼리가 두 번씩 나간다.
+    """
+    from aot.databases.models import GeoShape
+
+    devs = {str(d).split('::')[0] for d in (device_ids or []) if d}
+    if not devs:
+        return {}
+
+    q = GeoBinding.query.filter(
+        GeoBinding.spatial_kind == 'shape',
+        GeoBinding.device_id.in_(devs),
+        GeoBinding.valid_to.is_(None))
+    if role is not None:
+        q = q.filter(GeoBinding.role == role)
+    rows = q.all()
+
+    by_uid = {}
+    for b in rows:
+        by_uid.setdefault(b.spatial_id, b.device_id)
+
+    out = {}
+    if by_uid:
+        for s in GeoShape.query.filter(
+                GeoShape.unique_id.in_(list(by_uid))).all():
+            out.setdefault(by_uid[s.unique_id], []).append(s)
+
+    # 바인딩이 없는 장치만 레거시로 채운다 — 있는 장치는 바인딩이 정본이다.
+    missing = devs - set(out)
+    if missing:
+        legacy = GeoShape.query.filter(GeoShape.device_id.in_(missing))
+        if role is not None:
+            wanted = [t for t, r in SHAPE_TYPE_ROLES.items() if r == role]
+            legacy = legacy.filter(GeoShape.type.in_(wanted))
+        found = legacy.all()
+        for s in found:
+            out.setdefault(s.device_id, []).append(s)
+        if found and 'shape.device_id' not in _fallback_seen:
+            _note_fallback('shape.device_id', 'shapes_for_devices')
     return out
 
 

@@ -315,6 +315,25 @@ class FacilityManager:
                     for n in linked_notes:
                         n.gps_lat, n.gps_lng = centroid
 
+            # [Phase C] 저장된 JSON 과 바인딩을 맞춘다.
+            #
+            # 이게 없으면 시설 편집기에서 fitting 의 장치를 **비워도 화면에는
+            # 계속 옛 장치가 보인다** — 읽기(_to_dict)가 바인딩을 정본으로
+            # 쓰기 때문에, 저장은 됐는데 바인딩이 그대로면 읽기가 저장을
+            # 이긴다. Phase B-1 이 읽기를 바인딩으로 옮긴 순간 생긴 구멍이다.
+            #
+            # 페이로드가 아니라 **저장된 facility** 를 기준으로 부른다: 부분
+            # 저장에서 페이로드를 기준으로 삼으면 "빠진 것 = 지운 것"이 되어
+            # 멀쩡한 배정이 끊긴다(save_overlays 가 그 프로토콜로 도형을 잃었다).
+            try:
+                from aot.aot_flask.geo import device_binding
+                with db.session.begin_nested():
+                    device_binding.sync_facility_bindings(facility)
+            except Exception as exc:
+                current_app.logger.warning(
+                    '[FacilityIO] 바인딩 동기화 실패(facility=%s) — %s',
+                    facility.unique_id, exc)
+
             db.session.commit()
             return {
                 'ok': True,

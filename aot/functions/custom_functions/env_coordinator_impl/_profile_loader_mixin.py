@@ -6,7 +6,7 @@ _profile_loader_mixin.py — ProfileLoaderMixin: _reload_profiles().
 import json
 from typing import Any, Callable
 
-from aot.databases.models import Actions, GeoShape, Output
+from aot.databases.models import Actions, Output
 from aot.utils.database import db_retrieve_table_daemon
 
 from aot.functions.utils.env_control.effect_functions import build_effect_model
@@ -321,14 +321,18 @@ class ProfileLoaderMixin:
                     vent_fallback_per_slot = 0.0
 
                 # 이슈 C: GeoShape N+1 → 한 번에 bulk fetch.
+                # [GB-6] 조회는 geo_binding 리졸버 경유(사망 컬럼 직접 조회 금지).
                 output_uuids_all = [ar.get('output_uuid') for ar in actuators_list
                                     if ar.get('output_uuid')]
                 shape_lookup: dict = {}
                 try:
                     if output_uuids_all:
-                        shape_rows = GeoShape.query.filter(
-                            GeoShape.device_id.in_(output_uuids_all)).all()
-                        shape_lookup = {s.device_id: s for s in shape_rows}
+                        from aot.aot_flask.geo.device_binding import (
+                            shapes_for_devices)
+                        for dev, rows in shapes_for_devices(
+                                output_uuids_all).items():
+                            if rows:
+                                shape_lookup[dev] = rows[0]
                 except Exception as exc:
                     self.logger.debug(
                         '_reload_profiles: GeoShape bulk fetch failed: %s', exc)
@@ -488,7 +492,11 @@ class ProfileLoaderMixin:
 
             if azimuth_deg is None or area_m2 is None:
                 try:
-                    shape = GeoShape.query.filter_by(device_id=out_uuid).first()
+                    # [GB-6] 사망 컬럼 직접 조회 금지 — 리졸버 경유.
+                    from aot.aot_flask.geo.device_binding import (
+                        shapes_for_device)
+                    rows = shapes_for_device(out_uuid)
+                    shape = rows[0] if rows else None
                 except Exception:
                     shape = None
                 if shape and shape.feature:

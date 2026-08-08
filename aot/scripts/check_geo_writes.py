@@ -104,16 +104,9 @@ LEGACY_COLUMN_USERS = {
     'aot/scripts/backfill_geo_binding.py',
     'aot/scripts/check_geo_integrity.py',
     'aot/scripts/fix_geo_theme_drift.py',
-    # ── 아직 리졸버로 옮기지 않은 소비처 ──
-    # 전부 "이 장치의 마커 도형을 찾는다"는 같은 질문을 컬럼으로 푼다.
-    # `device_binding.bindings_for_device()` 로 옮겨야 하지만, 시간대 해석과
-    # AI 제어 대상 판정처럼 결과가 눈에 잘 안 띄는 경로라 옮길 때 각각
-    # 실증이 필요하다. 옮기기 전에는 줄지 않는다는 사실이 여기 남아 있다.
-    'aot/aot_flask/utils/utils_general.py',      # sync_geo_device_name
-    'aot/utils/timekit.py',                      # 장치 좌표 → 시간대
-    'aot/ai/services/ai_action_service.py',      # AI 가 마커를 찾는 경로
-    'aot/inputs/satellite_analysis.py',
-    'aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py',
+    # geo 밖 소비처는 2026-08-08 에 전부 리졸버(`shapes_for_device`)로
+    # 옮겼다 — 이름 동기화·시간대 상속·AI 좌표 동기화·위성 좌표 폴백·조율기
+    # 프로필 적재 다섯 곳. 남은 것은 geo 패키지 자신과 진단 도구뿐이다.
 }
 
 # geo_shape 를 건드리는 원시 SQL 문자열.

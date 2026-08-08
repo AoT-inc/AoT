@@ -39,15 +39,23 @@ def _entry_uid(device_id, channel_id):
 
 def build_marker_feature(device_id, channel_id, lat, lng,
                          device_type=None, name=None):
-    """마커 feature JSON. aot_type 은 넣지 않는다 (I6)."""
+    """마커 feature JSON.
+
+    구조 필드는 넣지 않는다: `aot_type`(I6 — 정본은 type 컬럼),
+    `device_id`/`channel_id`(GB-5 — 정본은 geo_binding, 읽기 시
+    `get_overlays` 가 주입). 저장된 사본이 남아 있으면 도형 복제나 옛
+    페이로드 재전송이 죽은 참조를 되살린다.
+
+    `unique_id` 는 남는다 — 사본이 아니라 프런트가 엔트리를 식별하는
+    계약이다(채널 0 = 장치 uuid, 그 외 'uuid::N'). 서버가 조용히 비우면
+    지도·위젯의 엔트리 식별이 통째로 깨진다(GB-5b, 별도 게이팅).
+    """
     return {
         'type': 'Feature',
         'geometry': {'type': 'Point',
                      'coordinates': [float(lng), float(lat)]},
         'properties': {
             'unique_id': _entry_uid(device_id, channel_id),
-            'device_id': device_id,
-            'channel_id': str(channel_id),
             'device_type': device_type,
             'name': name or str(device_id),
         },
@@ -148,6 +156,87 @@ def unplace_device(device_id, map_uuid, channel_id=0, commit=False):
     if commit:
         db.session.commit()
     return None
+
+
+def move_device_markers(device_id, lat, lng, commit=False):
+    """장치 좌표가 바뀌었을 때 그 장치의 마커를 따라 옮긴다. 옮긴 개수 반환.
+
+    장치 설정에서 위도·경도를 고치는 경로(설정 폼·AI 편집)가 쓴다. 예전에는
+    그 경로가 `GeoShape.query.filter_by(device_id=...)` 로 도형을 직접 찾아
+    `feature['geometry']` 를 제자리에서 고쳤다 — 지도 데이터의 내부 구조를
+    장치 도메인이 알고 있었다는 뜻이고, 마커 하나만 고쳐서 다중 채널·다중
+    지도에 걸친 나머지는 그대로 남았다.
+
+    `place_device` 와 다르다: 저쪽은 "이 지도의 이 자리에 놓는다"이고 이쪽은
+    "이미 놓인 것들을 새 좌표로 따라오게 한다"다. 어느 지도에 몇 개가 놓여
+    있는지는 호출자가 알 필요가 없다.
+    """
+    from aot.aot_flask.geo import device_binding
+
+    if lat is None or lng is None:
+        return 0
+
+    moved = 0
+    for shape in device_binding.shapes_for_device(device_id, role='marker'):
+        feat = shape.feature
+        if not isinstance(feat, dict):
+            continue
+        geom = feat.get('geometry')
+        if not isinstance(geom, dict) or geom.get('type') != 'Point':
+            continue
+        # ORM 이 들고 있는 dict 를 제자리에서 고치지 않는다 — JSON 컬럼은
+        # Mutable 래퍼가 없어 제자리 변경을 SQLAlchemy 가 추적하지 못한다.
+        new_feat = dict(feat)
+        new_geom = dict(geom)
+        new_geom['coordinates'] = [float(lng), float(lat)]
+        new_feat['geometry'] = new_geom
+        shape.feature = new_feat
+        shape.updated_at = datetime.utcnow()
+        moved += 1
+
+    if moved:
+        logger.info('move_device_markers: device=%s 마커 %d개 이동',
+                    device_id, moved)
+        if commit:
+            db.session.commit()
+    return moved
+
+
+def sync_device_name(device_id, new_name, channel_id=None, commit=True):
+    """장치 이름이 바뀌면 그 장치 도형의 표시 이름도 따라간다. 갱신 개수 반환.
+
+    도형 JSON 을 고치는 일이라 geo 패키지가 소유한다 — 예전에는
+    `utils_general` 이 GeoShape 를 직접 조회해 feature 를 고쳤다.
+
+    ⚠ 마커에만 적용할지 구역까지 적용할지는 미결이다(설계 문서 「미결」 3번).
+    현재는 예전 동작 그대로 **양쪽 다** 갱신한다. "공간이 정본"이라는 B1 의
+    귀결은 사람이 지은 슬롯 이름을 보존하는 쪽이지만, 그 전환은 이름을 새로
+    지을 UI 와 함께 가야 한다 — 여기서 조용히 바꾸면 기존 도형 이름이 전부
+    장치 이름으로 덮인 채 되돌릴 방법이 없다.
+    """
+    from aot.aot_flask.geo import device_binding
+
+    if not device_id or not new_name:
+        return 0
+
+    updated = 0
+    for shape in device_binding.shapes_for_device(device_id,
+                                                  channel_id=channel_id):
+        feat = shape.feature
+        if not isinstance(feat, dict) or 'properties' not in feat:
+            continue
+        new_feat = dict(feat)
+        props = dict(new_feat.get('properties') or {})
+        if props.get('name') == new_name:
+            continue
+        props['name'] = new_name
+        new_feat['properties'] = props
+        shape.feature = new_feat
+        updated += 1
+
+    if updated and commit:
+        db.session.commit()
+    return updated
 
 
 def _end_marker_binding(device_id, map_uuid, channel_id):

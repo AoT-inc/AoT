@@ -312,6 +312,51 @@ class TestBindingAttacks(_Base):
                         'WHERE unique_id=:u', u=uid).fetchone()
         return row
 
+    # GB-5 — feature JSON 의 장치 사본 봉인 --------------------------------
+    #
+    # 사본이 위험한 이유는 갈리는 것 자체가 아니라 **되살아나는 것**이다.
+    # 도형을 복제하거나 옛 페이로드를 되돌려보내면 죽은 장치 참조가 JSON 을
+    # 타고 새 행에 실린다 — clone_map_config 가 그 방식으로 도형 98개를
+    # 오염시켰고 6일 뒤에야 표면화됐다.
+    def test_gb5_device_id_cannot_be_stored_in_feature_json(self):
+        self._attack(
+            'GEO-GB5',
+            "INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+            "VALUES ('sh-1', 'map-1', 'device', "
+            "'{\"properties\": {\"device_id\": \"dev-1\"}}')")
+
+    def test_gb5_channel_id_cannot_be_stored_either(self):
+        self._attack(
+            'GEO-GB5',
+            "INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+            "VALUES ('sh-1', 'map-1', 'device', "
+            "'{\"properties\": {\"channel_id\": \"3\"}}')")
+
+    def test_gb5_blocks_updates_too(self):
+        """복제·되돌려보내기는 UPDATE 로도 온다."""
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-1', 'map-1', 'device', '{\"properties\": {}}')")
+        self._attack(
+            'GEO-GB5',
+            "UPDATE geo_shape SET feature = "
+            "'{\"properties\": {\"device_id\": \"dev-1\"}}' "
+            "WHERE unique_id='sh-1'")
+
+    def test_gb5_leaves_unique_id_alone(self):
+        """properties.unique_id 는 사본이 아니라 프런트의 식별 계약이다(GB-5b)."""
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-1', 'map-1', 'aot_device', "
+                  "'{\"properties\": {\"unique_id\": \"dev-1::3\"}}')")
+        row = self._raw("SELECT feature FROM geo_shape WHERE unique_id='sh-1'"
+                        ).fetchone()
+        self.assertIn('dev-1::3', row[0])
+
+    def test_gb5_allows_shapes_without_the_keys(self):
+        """과차단 회귀 방지 — 정상 저장은 통과해야 한다."""
+        self._raw("INSERT INTO geo_shape (unique_id, geo_id, type, feature) "
+                  "VALUES ('sh-2', 'map-1', 'device', "
+                  "'{\"properties\": {\"name\": \"온실A 관수\"}}')")
+
     # GB-3 — 장치 삭제 연쇄 -------------------------------------------------
     #
     # 앱 계층(end_all_for_device)이 이미 같은 일을 하고 삭제 경로 17곳이 전부

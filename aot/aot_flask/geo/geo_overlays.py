@@ -202,7 +202,13 @@ class GeoOverlayManager:
     # 불가능하다 — Tier-2 트리거(GEO-I6, p6_23)가 DB 계층에서 이를 봉인한다.
     # 주의: equipment_collection 번들의 '자식' 피처는 DB 행이 없어 JSON 이
     # 유일한 정체성이므로 이 규칙의 대상이 아니다(트리거도 최상위만 검사).
-    _STORED_STRUCT_PROPS = ('aot_type',)
+    # [GB-5] device_id/channel_id 도 같은 이유로 제거한다 — 어느 장치인지의
+    # 정본은 geo_binding 이고, 읽을 때 get_overlays 가 주입한다. 저장된 사본이
+    # 남아 있으면 도형 복제·옛 페이로드 재전송이 죽은 참조를 되살린다
+    # (clone_map_config 가 그 방식으로 도형 98개를 오염시켰다).
+    # properties.unique_id 는 대상이 아니다 — 사본이 아니라 프런트의 식별
+    # 계약이다(GB-5b, 별도 게이팅).
+    _STORED_STRUCT_PROPS = ('aot_type', 'device_id', 'channel_id')
 
     @staticmethod
     def _strip_structural_props(feat):
@@ -217,6 +223,56 @@ class GeoOverlayManager:
         out['properties'] = {k: v for k, v in props.items()
                              if k not in GeoOverlayManager._STORED_STRUCT_PROPS}
         return out
+
+    @staticmethod
+    def _record_bindings(target_type, pending):
+        """도형↔장치 연결을 geo_binding 에 기록한다(도형 저장의 유일한 지점).
+
+        예전에는 이 함수가 `GeoShape.device_id` 컬럼에만 각인했다. 그러면
+        연결이 도형의 몸에 새겨져 장치보다 오래 살 수 없다 — 장치를 지우면
+        고아가 되고, 갈아끼우면 도형을 다시 그려야 했다. 컬럼 쓰기는 폴백
+        제거와 함께 사라지고, 그때까지 두 저장처를 같은 값으로 유지한다
+        (그래야 `check_geo_integrity` 의 binding-drift 가 계속 의미를 갖는다).
+
+        `rebind` 를 쓰는 이유: 같은 도형을 다시 저장하는 것이 정상 경로라
+        (지도를 저장할 때마다 전체가 올라온다) `bind` 면 매번 점유 충돌이
+        난다. rebind 는 값이 같으면 아무것도 하지 않는다.
+
+        실패해도 도형 저장을 막지 않는다 — 도형은 이미 레거시 컬럼에
+        저장됐고 백필이 나중에 같은 행을 만들 수 있는 반면, 여기서 예외를
+        올리면 사용자는 지도를 저장하지 못한다. 대신 SAVEPOINT 안에서 쓴다:
+        그냥 삼키면 실패한 flush 가 세션을 오염시킨 채 남아 뒤이은 커밋이
+        무관한 자리에서 죽는다.
+        """
+        from aot.aot_flask.geo import device_binding
+
+        role = device_binding.role_for_shape_type(target_type)
+        if role is None or not pending:
+            return          # 장치를 매다는 자리가 아닌 종류(site/zone/…)
+
+        wanted = [(shape, str(dev).split('::')[0], ch)
+                  for shape, dev, ch in pending if dev]
+        if not wanted:
+            return
+
+        try:
+            db.session.flush()          # INSERT 행의 unique_id 확보
+            with db.session.begin_nested():
+                for shape, dev, ch in wanted:
+                    if not shape.unique_id:
+                        continue
+                    kind = device_binding.resolve_device_kind(dev)
+                    if kind is None:
+                        # 실존하지 않는 장치에 바인딩을 만들지 않는다 —
+                        # 고아를 정본으로 승격시키지 않는 백필과 같은 정책.
+                        continue
+                    device_binding.rebind(
+                        'shape', shape.unique_id, role, kind, dev,
+                        channel_id=ch if ch is not None else '0')
+        except Exception as exc:
+            current_app.logger.warning(
+                '[GeoOverlays] 바인딩 기록 실패(type=%s, %d건) — %s',
+                target_type, len(wanted), exc)
 
     @staticmethod
     def save_overlays(data):
@@ -447,6 +503,13 @@ class GeoOverlayManager:
                         "kept. Deletions must be listed in deletes[].")
 
             # 5. Execute Operations
+            #
+            # [Phase C] 장치 연결은 geo_binding 이 정본이다. 아래 두 루프는
+            # 레거시 컬럼을 계속 쓰되(폴백 제거와 함께 사라진다) 연결을
+            # (도형, 장치, 채널) 로 모아 두었다가 커밋 직전에 게이트웨이로
+            # 기록한다. INSERT 된 도형의 unique_id 는 flush 이후에야 생기므로
+            # 루프 안에서 바로 bind 할 수 없다.
+            pending_bindings = []
 
             # B. UPDATE
             for db_id, feat in to_update:
@@ -470,7 +533,11 @@ class GeoOverlayManager:
                     ch_id = feat_props.get('channel_id')
                     if ch_id is not None:
                          row.channel_id = str(ch_id)
-                
+
+                pending_bindings.append(
+                    (row, device_id or feat_props.get('device_id'),
+                     feat_props.get('channel_id')))
+
             # C. INSERT
             for feat in to_insert:
                 s = GeoShape()
@@ -494,7 +561,11 @@ class GeoOverlayManager:
 
                 s.feature = GeoOverlayManager._strip_structural_props(feat)  # [I6]
                 db.session.add(s)
-                
+                pending_bindings.append(
+                    (s, device_id or feat_props.get('device_id'),
+                     feat_props.get('channel_id')))
+
+            GeoOverlayManager._record_bindings(target_type, pending_bindings)
             db.session.commit()
 
             # [Phase 3b] Materialize tz down the shape tree + linked devices.
@@ -783,9 +854,19 @@ class GeoOverlayManager:
                     GeoOverlayManager._sync_device_properties(feat)
                 
                 # We need to commit or flush to get the ID back
-                db.session.flush() 
+                db.session.flush()
                 if node_id:
                     id_map[node_id] = row.id
+
+                # [Phase C] 델타 경로도 바인딩을 남긴다. 여기가 빠지면 장치를
+                # 활성화한 채 그린 도형이 델타로 저장될 때만 연결이 컬럼에만
+                # 생겨, 같은 UI 안에서 저장 경로에 따라 결과가 갈린다.
+                # row.type 을 쓴다 — 클라이언트가 보낸 aot_type 은 I7 때문에
+                # 기존 행에 반영되지 않으므로 그 값으로 role 을 정하면
+                # 저장된 종류와 어긋난다.
+                if device_id:
+                    GeoOverlayManager._record_bindings(
+                        row.type, [(row, device_id, props.get('channel_id'))])
 
             db.session.commit()
             # [Phase 3b] tz 물질화/전파 (timezone-management.md §4)
