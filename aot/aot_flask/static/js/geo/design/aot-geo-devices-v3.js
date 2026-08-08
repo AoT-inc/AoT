@@ -455,16 +455,14 @@ class AoTGeoDevices {
         if (!window.AOT_GEO_CONFIG.theme_config) window.AOT_GEO_CONFIG.theme_config = {};
         window.AOT_GEO_CONFIG.theme_config[targetType] = newColor;
 
-        // Define Function Subtypes
-        const functionTypes = window.AoTGeoTheme.FUNCTION_TYPES;
-
-        // Helper to check type match
+        // 세부 타입 → 테마 키 변환은 AoTGeoTheme 한 곳에서 한다. 예전에는
+        // 'function' 만 특별 취급하고 나머지는 문자열 비교였는데, 복합장치는
+        // device_type='device' / 테마 키 'device_unit' 이라 그 비교로는
+        // 영원히 걸리지 않는다.
         const isMatch = (l) => {
             const type = l.feature?.properties?.device_type;
             if (!type) return false;
-            // Exact match or Group match
-            if (targetType === 'function') return functionTypes.includes(type);
-            return type === targetType;
+            return window.AoTGeoTheme.normalizeDeviceType(type) === targetType;
         };
 
         // Helper to update style
@@ -542,7 +540,8 @@ class AoTGeoDevices {
         // [Fix] Skip localStorage, rely on application state or backend if needed.
         // For Design Mode, we typically want visibility to be session-based or linked to layers.
 
-        const functionTypes = window.AoTGeoTheme.FUNCTION_TYPES;
+        // targetType 은 **테마 키**다(input/output/function/device_unit).
+        // 장치의 세부 타입이 아니다 — 변환은 AoTGeoTheme 한 곳에서 한다.
 
         // [Perf] Sidebag holds layers physically removed from FeatureGroups while hidden.
         // Avoids CSS-only hiding that left SVG/GL nodes in the layer tree (caused viewport slowdown).
@@ -569,8 +568,7 @@ class AoTGeoDevices {
             }
 
             if (!type) return false;
-            if (targetType === 'function') return functionTypes.includes(type);
-            return type === targetType;
+            return window.AoTGeoTheme.normalizeDeviceType(type) === targetType;
         };
 
         const updateVisibility = (l) => {

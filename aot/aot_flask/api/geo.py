@@ -329,6 +329,31 @@ def _binding_dict(row):
     }
 
 
+def _shape_by_node_id(node_id, map_uuid=None):
+    """feature.properties.node_id 로 도형을 찾는다(저장 전 클라이언트 식별자).
+
+    JSON 안을 봐야 해서 스캔이 필요하다. 지도 하나 범위이고 사람이 버튼을
+    누른 순간에만 도는 경로라 비용이 문제되지 않는다 — `save_overlays` 도
+    같은 이유로 같은 방식을 쓴다.
+    """
+    if not node_id:
+        return None
+    q = GeoShape.query
+    if map_uuid:
+        q = q.filter_by(geo_id=map_uuid)
+    for row in q.all():
+        feat = row.feature
+        if isinstance(feat, str):
+            try:
+                feat = json.loads(feat)
+            except Exception:
+                continue
+        if isinstance(feat, dict) and \
+                (feat.get('properties') or {}).get('node_id') == node_id:
+            return row
+    return None
+
+
 def _binding_args(data):
     """페이로드 → 게이트웨이 인자. device_kind 는 서버가 판별한다.
 
@@ -357,7 +382,15 @@ def _binding_args(data):
         # 그 값을 role 로 쓰면 구역 배정이 마커 배정으로 저장된다.
         shape = GeoShape.query.filter_by(unique_id=spatial_id).first()
         if shape is None:
-            raise ValueError('존재하지 않는 도형: %s' % (spatial_id,))
+            # 클라이언트가 아직 저장 전이라 GeoShape.unique_id 를 모르면
+            # 자기가 만든 node_id 를 보낸다. 그 값은 feature JSON 안에만
+            # 있으므로 지도 범위에서 찾아 준다 — 프런트가 어느 식별자가
+            # 정본인지 알아야 하는 상태로 두면, 저장 전후에 따라 배정이
+            # 되기도 하고 안 되기도 하는 화면이 된다.
+            shape = _shape_by_node_id(spatial_id, data.get('map_uuid'))
+            if shape is None:
+                raise ValueError('존재하지 않는 도형: %s' % (spatial_id,))
+        spatial_id = shape.unique_id
         role = device_binding.role_for_shape_type(shape.type)
         if role is None:
             raise ValueError(

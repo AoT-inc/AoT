@@ -26520,3 +26520,39 @@ msgstr "배정 해제"
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Unassigned slots"
 msgstr "미배정 자리"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Areas you have drawn and fittings you have installed, where no device is assigned yet. Click one to link a device."
+msgstr "그려 둔 구역과 설치한 설비 중 아직 담당 장치가 정해지지 않은 곳입니다. 눌러서 장치를 연결하십시오."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Every area and fitting has a device linked."
+msgstr "모든 구역과 설비에 장치가 연결돼 있습니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Fitting"
+msgstr "설비"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Link a device"
+msgstr "장치 연결"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "No device has ever been linked here"
+msgstr "아직 장치를 연결한 적 없음"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Places with no device"
+msgstr "장치 미연결"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Show on map"
+msgstr "지도에서 보기"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "The device that was here has been deleted"
+msgstr "여기 있던 장치가 삭제됨"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Was"
+msgstr "이전"

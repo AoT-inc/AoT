@@ -341,7 +341,7 @@ class AoTGeoPanel {
                 if (this._selectedAreaShapeId()) {
                     html += `<button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-bind-area">${_('Assign device')}</button>`;
                 }
-                html += `<button class="btn btn-aot-pill btn-aot-outline" id="btn-unbound-slots">${_('Unassigned slots')}</button>`;
+                html += `<button class="btn btn-aot-pill btn-aot-outline" id="btn-unbound-slots">${_('Places with no device')}</button>`;
                 break;
 
             // --- Tier 3: Aot Device Actions ---
@@ -379,16 +379,21 @@ class AoTGeoPanel {
             // 아래 Equipment > Device Categories 가 이미 쓰고 있고, 이 switch 는
             // 티어 id 만 보므로 같은 이름을 쓰면 두 화면이 서로를 덮는다.
             //
-            // 색 피커가 없는 것은 빠뜨린 게 아니다. 복합장치의 색은 장치
-            // 공통색(theme_config.device)이고, 그 키는 input/output/function 이
-            // 미설정일 때 수렴하는 폴백이기도 하다. 여기에 피커를 달면 복합장치
-            // 색을 바꾼 것이 나머지 종류의 폴백까지 바꾼다.
+            // 색 키도 'device_unit' 이다. 'device' 를 쓰면 안 된다 — 그 키는
+            // input/output/function 이 미설정일 때 수렴하는 **장치 공통색**
+            // 이라, 복합장치 색을 바꾼 것이 나머지 종류의 폴백까지 바꾼다.
             case 'device_unit': {
                 const devTheme = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
-                const devVis = devTheme['vis_device'];
+                const devColor = window.AoTGeoTheme.deviceColor('device', devTheme);
+                const devVis = devTheme['vis_device_unit'];
                 const devVisible = (devVis === undefined || devVis === null) ? true : (devVis === 'true' || devVis === true);
                 html += `
                     <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('Selection list')} ></button>
+
+                    <!-- Color Picker (26px Circle) -->
+                    <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: 1px solid #ddd; margin: 0 4px;">
+                        <input type="color" id="device-color-picker" value="${devColor}" style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; cursor: pointer;">
+                    </div>
 
                     <label class="switch" style="margin-left: 8px;">
                         <input type="checkbox" id="device-visible-toggle" ${devVisible ? 'checked' : ''}>
@@ -540,13 +545,18 @@ class AoTGeoPanel {
     }
 
     /**
-     * 티어 id → 장치 종류(collect_devices 의 `type`).
+     * 티어 id → **장치 종류**(`collect_devices` 의 `type`).
      *
-     * 복합장치 티어만 이름이 다르다: 'device' 는 Equipment > Device Categories
-     * 가 이미 쓰는 티어 id 라 겹칠 수 없어 'device_unit' 으로 뒀다. 그 대신
-     * 장치 종류를 다루는 자리(모달 필터·표시 토글)에서는 반드시 이 함수를
-     * 거쳐 원래 이름 'device' 로 되돌린다 — 안 그러면 서버에 없는 종류로
-     * 조회하게 되어 목록이 빈 채로 뜬다.
+     * 이 페이지에는 비슷하지만 다른 어휘가 셋 있다. 헷갈리면 목록이 빈 채로
+     * 뜨거나 색이 저장되지 않으므로 여기 적어 둔다:
+     *
+     *   티어 id   input / output / function / device_unit   (패널 내비게이션)
+     *   테마 키   input / output / function / device_unit   (티어 id 와 같다)
+     *   장치 종류 input / output / function / device        (서버가 내는 값)
+     *
+     * 즉 **색·표시 설정은 티어 id 를 그대로 쓰고, 장치를 조회할 때만** 이
+     * 함수로 바꾼다. 복합장치 티어가 'device' 가 아닌 이유는 그 이름을
+     * Equipment > Device Categories 가 이미 쓰기 때문이다.
      */
     _deviceTypeOfTier(tierId) {
         return tierId === 'device_unit' ? 'device' : tierId;
@@ -569,7 +579,11 @@ class AoTGeoPanel {
         const layer = this.geoDesign && this.geoDesign.activeLayer;
         if (layer && typeof layer.getLatLng === 'function'
             && typeof layer.getLatLngs !== 'function') return null;
-        return f.properties.node_id || null;
+        // shape_uuid 가 GeoShape.unique_id 다. node_id 는 클라이언트가 만든
+        // 값이라 저장된 도형에서는 둘이 다르다 — node_id 를 배정 대상으로
+        // 보내면 서버가 그 도형을 찾지 못한다. 아직 저장 전이라 shape_uuid
+        // 가 없으면 node_id 로 보내고, 서버가 지도 안에서 찾아 준다.
+        return f.properties.shape_uuid || f.properties.node_id || null;
     }
 
     _bindNavEvents(rootEl = this.viewport) {
@@ -863,11 +877,13 @@ class AoTGeoPanel {
         if (toggleVis) {
             toggleVis.onchange = (e) => {
                 const isVisible = e.target.checked;
-                const devType = this._deviceTypeOfTier(
-                    this.navStack[this.navStack.length - 1]); // 'input' … 'device'
-                this._handleThemeColorChange(`vis_${devType}`, isVisible);
+                // 티어 id 가 곧 테마 키다(input/output/function/device_unit).
+                // 여기서 장치 종류('device')로 바꾸면 저장 키와 렌더 키가
+                // 갈려, 토글은 먹는데 새로고침하면 되돌아온다.
+                const key = this.navStack[this.navStack.length - 1];
+                this._handleThemeColorChange(`vis_${key}`, isVisible);
                 if (this.geoDesign && this.geoDesign.setDeviceVisibility) {
-                    this.geoDesign.setDeviceVisibility(devType, isVisible);
+                    this.geoDesign.setDeviceVisibility(key, isVisible);
                 }
             };
         }

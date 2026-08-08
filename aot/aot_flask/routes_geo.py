@@ -332,11 +332,17 @@ def api_geo_settings():
             # 3. Theme Configuration
             try:
                 theme_conf = global_settings.state_dict().get('theme_config', {}) or {}
+                # 화이트리스트에 없는 키는 **조용히 버려진다.** 새 종류를
+                # 추가하면 여기도 함께 늘릴 것 — 안 그러면 피커는 색이 바뀐
+                # 것처럼 보이고 새로고침하면 되돌아온다(2026-08-08 실제로
+                # theme_vis_device_unit 이 빠져 복합장치 표시 토글이 저장되지
+                # 않았다).
                 theme_keys = [
                     'theme_site', 'theme_zone', 'theme_facility', 'theme_equipment', 'theme_device',
-                    'theme_input', 'theme_output', 'theme_function',
+                    'theme_input', 'theme_output', 'theme_function', 'theme_device_unit',
                     'theme_panel_bg', 'theme_panel_opacity',
-                    'theme_hide_label', 'theme_vis_input', 'theme_vis_output', 'theme_vis_function'
+                    'theme_hide_label', 'theme_vis_input', 'theme_vis_output',
+                    'theme_vis_function', 'theme_vis_device_unit'
                 ]
                 for key in theme_keys:
                     val = data.get(key)

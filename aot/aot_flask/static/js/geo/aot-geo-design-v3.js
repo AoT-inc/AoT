@@ -3380,13 +3380,17 @@ class AoTGeoDesign {
      * @param {string} color - Hex color
      */
     updateLayerStylesByType(type, color) {
+        // 장치 종류 키는 AoTGeoTheme 이 정본이다(DEVICE_KEYS). 여기 목록을
+        // 따로 들고 있다가 복합장치('device_unit')를 빠뜨려, 색을 바꿔도
+        // 새로고침 전까지 지도에 반영되지 않았다.
+        const deviceKeys = window.AoTGeoTheme.DEVICE_KEYS;
+
         // 1. Handle Aot-Device subtypes UI (Icons/Labels in Devices Module)
-        if (['input', 'output', 'function'].includes(type) && this.devices) {
+        if (deviceKeys.includes(type) && this.devices) {
             this.devices.updateDeviceColor(type, color);
         }
 
-        const isDeviceSubtype = ['input', 'output', 'function'].includes(type);
-        const functionTypes = ['trigger', 'pid', 'conditional', 'custom', 'generic_function'];
+        const isDeviceSubtype = deviceKeys.includes(type);
 
         // 2. Handle Map Layers (Storage + Active FeatureGroup)
         // [Fix] In Design Mode, the active type's layers are in featureGroup, not storageGroup.
@@ -3401,8 +3405,10 @@ class AoTGeoDesign {
                 // Match Logic: Check for direct type match OR device subtype match
                 let match = (layerType === type);
                 if (isDeviceSubtype && (layerType === 'aot_device' || layerType === 'device')) {
-                    if (type === 'function') match = functionTypes.includes(devType);
-                    else match = (devType === type);
+                    // 세부 타입 → 테마 키 변환은 AoTGeoTheme 한 곳에서.
+                    // 'custom' 이 Function 계열이자 복합장치의 행 종류라
+                    // 목록을 손으로 들고 있으면 반드시 갈린다.
+                    match = (window.AoTGeoTheme.normalizeDeviceType(devType) === type);
                 }
 
                 if (!match) return;

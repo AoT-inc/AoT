@@ -41,7 +41,10 @@
         'custom', 'generic_function', 'trigger_sequence'
     ];
 
-    var DEVICE_KEYS = ['input', 'output', 'function'];
+    // 테마 키. 복합장치(Device)는 'device' 가 아니라 'device_unit' 이다 —
+    // 'device' 는 종류별 색이 미설정일 때 수렴하는 **장치 공통색**이라, 거기에
+    // 복합장치 색을 쓰면 복합장치를 바꾼 것이 나머지 종류의 폴백까지 바꾼다.
+    var DEVICE_KEYS = ['input', 'output', 'function', 'device_unit'];
 
     function themeOf(theme) {
         if (theme && typeof theme === 'object') return theme;
@@ -49,10 +52,13 @@
         return (g && g.theme_config) || {};
     }
 
-    /** 장치 세부 타입 → 테마 키('input'|'output'|'function'). 모르면 null. */
+    /** 장치 세부 타입 → 테마 키(DEVICE_KEYS 중 하나). 모르면 null. */
     function normalizeDeviceType(devType) {
         if (!devType) return null;
         var t = String(devType).toLowerCase();
+        // 복합장치 먼저 — FUNCTION_TYPES 에 'custom' 이 있어 순서가 바뀌면
+        // 복합장치가 Function 색을 따라간다(둘 다 custom_controller 행이다).
+        if (t === 'device') return 'device_unit';
         if (FUNCTION_TYPES.indexOf(t) !== -1) return 'function';
         if (t === 'input' || t === 'output') return t;
         return null;

@@ -26274,3 +26274,39 @@ msgstr "割り当て解除"
 #: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
 msgid "Unassigned slots"
 msgstr "未割り当てスロット"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Areas you have drawn and fittings you have installed, where no device is assigned yet. Click one to link a device."
+msgstr "描いたエリアと設置した設備のうち、まだ担当装置が決まっていない場所です。押して装置を接続してください。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Every area and fitting has a device linked."
+msgstr "すべてのエリアと設備に装置が接続されています。"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Fitting"
+msgstr "設備"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Link a device"
+msgstr "装置を接続"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "No device has ever been linked here"
+msgstr "まだ装置を接続したことがありません"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Places with no device"
+msgstr "装置が未接続の場所"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Show on map"
+msgstr "地図で表示"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "The device that was here has been deleted"
+msgstr "ここにあった装置は削除されました"
+
+#: aot_flask/static/js/geo/design/aot-geo-binding-ui.js:0
+msgid "Was"
+msgstr "以前"

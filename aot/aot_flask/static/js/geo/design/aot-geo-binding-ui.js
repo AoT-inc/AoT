@@ -323,7 +323,10 @@ class AoTGeoBinding {
             spatial_kind: s.spatial_kind,
             spatial_id: s.spatial_id,
             device_id: deviceId,
-            channel_id: ch
+            channel_id: ch,
+            // 아직 저장 전이라 spatial_id 가 클라이언트 node_id 일 수 있다 —
+            // 서버가 이 지도 안에서 찾아 실제 도형으로 해석한다.
+            map_uuid: this.parent ? this.parent.currentMapUuid : null
         };
         if (s.role) body.role = s.role;
 
@@ -371,9 +374,47 @@ class AoTGeoBinding {
         } catch (e) { /* 지도 갱신 실패가 배정 성공을 덮지 않도록 */ }
     }
 
-    // ── C. 미배정 슬롯 ──────────────────────────────────────────────────
+    // ── C. 장치가 연결되지 않은 자리 ────────────────────────────────────
+    //
+    // 처음 만들었을 때는 목록에 'New aot_device / 지도 구역' 같은 줄이 떴다.
+    // 기계는 uuid 로 구분하지만 **사람은 그게 어디의 무엇인지 알 방법이
+    // 없었다.** 그래서 각 줄이 세 가지에 답하게 한다: 무엇인가 · 어디인가 ·
+    // 왜 비어 있나. 이름이 기본값인 구역에서는 면적과 이전 장치가 사실상
+    // 유일한 단서다.
+
+    /** 종류 라벨 — 이름이 없을 때 "이게 뭔지"를 대신 말한다. */
+    _slotKindLabel(slot) {
+        if (slot.spatial_kind === 'shape') return this._t('Zone');
+        const k = String(slot.item_kind || '').toLowerCase();
+        const map = {
+            window: 'Window', curtain: 'Curtain', shade: 'Shade',
+            fan: 'Fan', heater: 'Heater', cooler: 'Cooler',
+            fogger: 'Fogger', lighting: 'Lighting', sensor: 'Sensor',
+        };
+        return map[k] ? this._t(map[k]) : (slot.item_kind || this._t('Fitting'));
+    }
+
+    /** 첫 줄 — 무엇인가. 이름이 있으면 이름, 없으면 종류 + 크기. */
+    _slotTitle(slot) {
+        if (slot.what) return slot.what;
+        const kind = this._slotKindLabel(slot);
+        if (slot.size) return `${kind} ${Number(slot.size).toLocaleString()} m²`;
+        return kind;
+    }
+
+    /** 둘째 줄 — 왜 비어 있나. 이전 장치가 있으면 그게 가장 강한 단서다. */
+    _slotStory(slot) {
+        if (slot.never_bound) return this._t('No device has ever been linked here');
+        const when = (slot.ended_at || '').slice(0, 10);
+        if (slot.last_device_name) {
+            return `${this._t('Was')}: ${slot.last_device_name}${when ? ' · ' + when : ''}`;
+        }
+        // 이름이 안 나오면 그 장치는 삭제된 것이다 — 그 사실이 곧 답이다.
+        return `${this._t('The device that was here has been deleted')}${when ? ' · ' + when : ''}`;
+    }
+
     openUnboundSlots() {
-        this._shell(this._t('Unassigned slots'));
+        this._shell(this._t('Places with no device'));
         this._setBody(`<div class="text-muted">${this._t('Loading...')}</div>`);
 
         const mapUuid = this.parent && this.parent.currentMapUuid;
@@ -386,32 +427,78 @@ class AoTGeoBinding {
                 this._setBody(`<div class="text-danger">${payload.message || this._t('Failed to load')}</div>`);
                 return;
             }
-            // 다른 지도의 구역까지 섞이면 여기서 배정해도 지금 화면에 안 보인다.
+            // 다른 지도의 구역까지 섞이면 여기서 연결해도 지금 화면에 안 보인다.
             const slots = (payload.slots || []).filter(
                 s => !s.map_uuid || !mapUuid || s.map_uuid === mapUuid);
 
             if (!slots.length) {
-                this._setBody(`<div class="text-muted text-center py-4">${this._t('Every slot has a device.')}</div>`);
+                this._setBody(
+                    `<div class="text-muted text-center py-4">${this._t('Every area and fitting has a device linked.')}</div>`);
                 return;
             }
 
-            let html = `<div class="small text-muted mb-2">${this._t('Places that lost their device, or were never assigned one. Click one to assign a device.')}</div>`;
+            let html = `<div class="alert alert-light border mb-3 py-2 px-3 small text-muted">
+                    ${this._t('Areas you have drawn and fittings you have installed, where no device is assigned yet. Click one to link a device.')}
+                </div><div class="list-group">`;
             slots.forEach((s, i) => {
-                const where = s.facility ? s.facility : this._t('Map area');
-                const what = s.name || s.item_kind || s.item_id || s.spatial_id.slice(0, 8);
+                const locatable = s.spatial_kind === 'shape' && s.at;
                 html += `
-                    <div class="list-group-item d-flex justify-content-between align-items-center mb-1 border rounded-pill px-4"
-                         data-slot-index="${i}" style="cursor:pointer;">
-                        <span class="font-weight-600">${what}</span>
-                        <span class="small text-muted">${where}</span>
+                    <div class="list-group-item border rounded mb-2 px-4 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="font-weight-600">${this._slotTitle(s)}</span>
+                            <span class="small text-muted">${s.where || ''}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <span class="small text-muted">${this._slotStory(s)}</span>
+                            <span>
+                                ${locatable ? `<button class="btn btn-aot-pill btn-aot-outline" data-slot-locate="${i}">${this._t('Show on map')}</button>` : ''}
+                                <button class="btn btn-aot-pill btn-aot-action" data-slot-link="${i}">${this._t('Link a device')}</button>
+                            </span>
+                        </div>
                     </div>`;
             });
-            const body = this._setBody(`<div class="list-group">${html}</div>`);
+            html += `</div>`;
+
+            const body = this._setBody(html);
             if (!body) return;
-            body.querySelectorAll('[data-slot-index]').forEach(el => {
-                el.onclick = () => this.openForSlot(slots[parseInt(el.dataset.slotIndex, 10)]);
+            body.querySelectorAll('[data-slot-link]').forEach(el => {
+                el.onclick = () => this.openForSlot(
+                    slots[parseInt(el.dataset.slotLink, 10)]);
+            });
+            body.querySelectorAll('[data-slot-locate]').forEach(el => {
+                el.onclick = () => this._locate(
+                    slots[parseInt(el.dataset.slotLocate, 10)]);
             });
         });
+    }
+
+    /** 지도에서 그 자리로 이동한다 — "이게 어디지?" 가 첫 질문이기 때문이다.
+     *
+     * 이 페이지가 이미 갖고 있는 `panToShape` 를 쓴다. 지도를 화면 안으로
+     * 스크롤하고, 도형에 맞춰 확대하고, **그 도형을 선택 상태로 만든다** —
+     * 선택되면 패널에 '장치 배정' 버튼이 그대로 나타나므로 목록으로 돌아올
+     * 필요가 없다. 직접 flyTo 를 부르면 이 셋 중 둘을 잃는다(실제로 처음엔
+     * 그렇게 짰다가 지도가 아예 움직이지 않았다 — 호출 규약이 다르다).
+     */
+    _locate(slot) {
+        const nodeId = slot && (slot.node_id || slot.spatial_id);
+        if (!nodeId || !this.parent || typeof this.parent.panToShape !== 'function') {
+            return;
+        }
+        this._close();
+        try {
+            this.parent.panToShape(nodeId);
+            // panToShape 는 선택까지 해 주지만, 폴리곤은 fitBounds 경로가
+            // 이 지도 구현에서 조건을 못 넘겨 화면이 그대로일 때가 있다.
+            // 서버가 준 대표 좌표로 한 번 더 확실히 이동한다 — 선택만 되고
+            // 화면은 안 움직이면 사용자는 아무 일도 안 일어난 줄 안다.
+            const at = slot.at;
+            if (at && this.parent.map && typeof this.parent.map.jumpTo === 'function') {
+                this.parent.map.jumpTo({ center: [at[1], at[0]], zoom: 18 });
+            }
+        } catch (e) {
+            this._toast(this._t('Failed to load'), 'error');
+        }
     }
 }
 

@@ -157,6 +157,14 @@ class GeoOverlayManager:
                 # 이 백필만으로 레거시 부모↔라벨 매칭이 자동 복구된다.
                 if not feat['properties'].get('node_id'):
                     feat['properties']['node_id'] = s.unique_id
+                # [Phase C] 도형의 진짜 식별자. node_id 와 **다르다** —
+                # node_id 는 클라이언트가 만든 값이고 저장된 feature 안에
+                # 그대로 남아 있어, 위 백필은 그 값이 없을 때만 동작한다.
+                # 바인딩의 spatial_id 는 GeoShape.unique_id 여야 하므로
+                # 둘을 섞으면 배정이 엉뚱한 자리에 저장되거나 거부된다
+                # (실제로 그렇게 짰다가 지도에서 도형을 고르는 경로만
+                # 조용히 동작하지 않았다).
+                feat['properties']['shape_uuid'] = s.unique_id
                 # [Fix] Inject Device/Channel IDs for Frontend Filtering (Strict Selection)
                 # [Phase B] 어느 장치인지는 geo_binding 이 정본이고, 바인딩이
                 # 없으면 device_id 컬럼으로 폴백한다(device_binding 리졸버가

@@ -578,7 +578,16 @@ SVG `<text>` 축 라벨(별도 렌더링 경로) ③ Highcharts 게이지 dataLa
 마커·라벨의 색은 그와 무관한 별도 계통으로, 정본은 `GeoSetting.theme_config`
 (전역 싱글톤 JSON) 하나다. geo/design 하단 모드탭의 원형 피커가 여기에 쓴다.
 키: `site` `zone` `facility` `equipment` `device` 와 장치 종류별 `input`
-`output` `function`. custom_ui 는 이 값을 읽지도 쓰지도 않는다.
+`output` `function` `device_unit`. custom_ui 는 이 값을 읽지도 쓰지도 않는다.
+
+⚠ **`device` 와 `device_unit` 은 다르다.** `device` 는 종류별 색이 미설정일
+때 수렴하는 **장치 공통색**이고, `device_unit` 은 복합장치(Device 탭)의 색이다.
+복합장치 색을 `device` 에 쓰면 그것을 바꾼 순간 나머지 종류의 폴백까지 바뀐다.
+
+⚠ **새 키를 추가하면 `routes_geo.py` 의 `theme_keys` 화이트리스트에도 넣을 것.**
+거기 없는 키는 **조용히 버려진다** — 피커는 색이 바뀐 것처럼 보이고 새로고침하면
+되돌아온다(2026-08-08 `theme_vis_device_unit` 이 빠져 복합장치 표시 토글이
+저장되지 않았다).
 
 **해석은 반드시 `static/js/common/aot-geo-theme-colors.js`(`window.AoTGeoTheme`)
 를 거친다.** 기본값도 이 파일 `DEFAULTS` 한 벌뿐이다. 장치 종류별 색이

@@ -166,25 +166,76 @@ def role_for_shape_type(shape_type):
     return SHAPE_TYPE_ROLES.get(shape_type)
 
 
-def unbound_slots(facility_uuid=None, map_uuid=None):
-    """장치가 매여 있지 않은 슬롯 — 삭제·교체 후 남은 자리.
+def _last_device_of(slot_keys):
+    """{(spatial_kind, spatial_id, role): 마지막으로 매여 있던 바인딩} — 종료된 것 중 최근.
 
-    "미배정 슬롯" 화면이 쓰는 목록이다. **이 화면이 있어야 Phase C 를 시작할
-    수 있다** — 장치 삭제가 도형을 남기도록 처분 정책을 바꾸는 순간, 남은
-    자리를 보고 재배정할 화면이 없으면 손댈 수 없는 도형만 늘어난다.
+    화면에 "여기 뭐가 있었나"를 보여주기 위한 것이다. 사람이 빈 자리 목록을
+    보고 판단하려면 자리 이름만으로는 부족하다 — 지도에 그려진 도형 이름은
+    'New aot_device' 같은 기본값인 경우가 많아서, 이전 장치와 끊긴 시점이
+    실질적인 유일한 단서다.
+    """
+    if not slot_keys:
+        return {}
+    ids = {sid for _k, sid, _r in slot_keys}
+    rows = GeoBinding.query.filter(
+        GeoBinding.spatial_id.in_(ids),
+        GeoBinding.valid_to.isnot(None)).order_by(GeoBinding.valid_to).all()
+    out = {}
+    for b in rows:                      # 시간순이라 마지막이 최근
+        out[(b.spatial_kind, b.spatial_id, b.role)] = b
+    return out
+
+
+def _device_names(device_ids):
+    """{장치 uuid: 이름} — 없어진 장치는 목록에서 빠진다(그것도 정보다)."""
+    ids = {d for d in (device_ids or []) if d}
+    if not ids:
+        return {}
+    out = {}
+    for _kind, model in device_kind_models():
+        try:
+            for row in model.query.with_entities(
+                    model.unique_id, model.name).filter(
+                        model.unique_id.in_(ids)).all():
+                out.setdefault(row[0], row[1])
+        except Exception:
+            continue
+    return out
+
+
+def unbound_slots(facility_uuid=None, map_uuid=None):
+    """장치가 연결되지 않은 자리 — 그려두거나 설치해 뒀는데 담당 장치가 없는 곳.
+
+    **이 목록이 있어야 Phase C 의 삭제 정책이 성립한다** — 장치를 지워도 도형을
+    남기기로 한 이상, 남은 자리를 사람이 보고 재배정할 수단이 있어야 한다.
 
     두 종류를 센다:
-      - 시설의 fitting/actuator 항목 중 장치를 매단 적이 있는데 지금 없는 것
       - `type='device'` 구역 폴리곤 중 현재 'area' 바인딩이 없는 것
+      - 시설의 fitting/actuator 항목 중 장치를 매단 적이 있는데 지금 없는 것
 
     구역 폴리곤을 포함하는 것은 Phase B-1 때와 달라진 판단이다. 그때는
     "도형의 미배정은 그냥 그려둔 도형과 구별할 수 없다"고 봤지만,
     `type='device'` 는 그 자체가 "장치가 담당하는 구역"이라는 선언이라
     구별이 된다(그냥 그려둔 도형은 'feature'/'aot_device' 다).
+
+    ## 각 항목은 사람이 알아볼 수 있어야 한다
+
+    처음 만들었을 때는 `spatial_id` 와 이름만 돌려줬는데, 화면에 뜨는 것이
+    'New aot_device / 지도 구역' 같은 줄이라 **그게 어디의 무엇인지 알 방법이
+    없었다.** 기계는 uuid 로 구분하지만 사람은 못 한다. 그래서 각 항목에
+    다음을 함께 싣는다:
+
+      - `where` : 어느 지도 / 어느 시설인가
+      - `what`  : 무엇인가 (구역 이름, 또는 설비 종류)
+      - `size`  : 구역이면 면적 m² — 이름이 기본값일 때 유일한 식별 단서다
+      - `at`    : 지도에서 찾아갈 좌표 (lat, lng)
+      - `last_device_name` / `ended_at` : 여기 뭐가 있었고 언제 빠졌나
+      - `never_bound` : 한 번도 연결한 적 없음 (빠진 것과 뜻이 다르다)
     """
-    from aot.databases.models import GeoFacility, GeoShape
+    from aot.databases.models import GeoFacility, GeoMap, GeoShape
 
     out = []
+    map_names = {m.unique_id: m.name for m in GeoMap.query.all()}
 
     bound_shapes = {b.spatial_id for b in GeoBinding.query.filter(
         GeoBinding.spatial_kind == 'shape',
@@ -196,17 +247,26 @@ def unbound_slots(facility_uuid=None, map_uuid=None):
     for shape in sq.all():
         if shape.unique_id in bound_shapes:
             continue
-        props = {}
-        feat = shape.feature
-        if isinstance(feat, dict):
-            props = feat.get('properties') or {}
+        feat = shape.feature if isinstance(shape.feature, dict) else {}
+        props = feat.get('properties') or {}
+        name = (props.get('label_name') or props.get('name') or '').strip()
+        # 'New aot_device' 같은 기본 이름은 식별에 도움이 안 된다 — 이름이
+        # 없는 것으로 취급하고 면적·위치로 가리키게 한다.
+        if name.lower().startswith('new '):
+            name = ''
         out.append({
             'spatial_kind': 'shape',
             'spatial_id': shape.unique_id,
             'role': 'area',
-            'map_uuid': shape.geo_id,
-            'name': props.get('label_name') or props.get('name') or '',
             'item_kind': 'area',
+            'map_uuid': shape.geo_id,
+            # 지도에서 찾아가는 쪽(panToShape)은 클라이언트 식별자로 레이어를
+            # 찾는다 — spatial_id(=unique_id)로는 못 찾는다. 둘 다 싣는다.
+            'node_id': (props.get('node_id') or shape.unique_id),
+            'where': map_names.get(shape.geo_id, ''),
+            'what': name,
+            'size': _area_m2(feat),
+            'at': _centroid(feat),
         })
 
     q = GeoFacility.query
@@ -233,12 +293,61 @@ def unbound_slots(facility_uuid=None, map_uuid=None):
                     # role 은 어느 키에 장치가 매달렸었나로 정한다 — fitting 은
                     # actuator_id(구동기)와 input_id(센서)가 같은 컬럼에 섞여 있다.
                     'role': _legacy_role(column, item) or 'actuator',
-                    'facility': fac.name,
-                    'facility_uuid': fac.unique_id,
-                    'item_id': item_id,
                     'item_kind': item.get('kind'),
+                    'facility_uuid': fac.unique_id,
+                    'where': fac.name,
+                    'what': (item.get('name') or '').strip(),
+                    'item_id': item_id,
                 })
+
+    # 여기 뭐가 있었나 — 이름이 기본값인 자리에서는 이게 유일한 단서다.
+    last = _last_device_of([(o['spatial_kind'], o['spatial_id'], o['role'])
+                            for o in out])
+    names = _device_names([b.device_id for b in last.values()])
+    for o in out:
+        b = last.get((o['spatial_kind'], o['spatial_id'], o['role']))
+        o['never_bound'] = b is None
+        o['last_device_id'] = b.device_id if b else None
+        # 이름이 안 나오면 그 장치는 삭제된 것이다 — 그 사실도 정보다.
+        o['last_device_name'] = names.get(b.device_id) if b else None
+        o['ended_at'] = (b.valid_to.isoformat()
+                         if b is not None and b.valid_to else None)
+        o['ended_reason'] = b.ended_reason if b else None
     return out
+
+
+def _flat_coords(coords):
+    if not isinstance(coords, (list, tuple)) or not coords:
+        return []
+    if isinstance(coords[0], (int, float)) and len(coords) >= 2:
+        return [(float(coords[0]), float(coords[1]))]
+    out = []
+    for c in coords:
+        out.extend(_flat_coords(c))
+    return out
+
+
+def _centroid(feature):
+    """도형의 대표 좌표 [lat, lng] — 지도에서 찾아가기 위한 것."""
+    geom = (feature or {}).get('geometry') or {}
+    pts = _flat_coords(geom.get('coordinates'))
+    if not pts:
+        return None
+    return [round(sum(p[1] for p in pts) / len(pts), 7),
+            round(sum(p[0] for p in pts) / len(pts), 7)]
+
+
+def _area_m2(feature):
+    """폴리곤 면적(m²). 계산 불가면 None.
+
+    이름이 기본값인 구역에서는 면적이 사실상 유일한 식별 단서다.
+    """
+    try:
+        from .facility_geo_helpers import shape_azimuth_area
+        _az, area = shape_azimuth_area(feature)
+        return round(area) if area else None
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
