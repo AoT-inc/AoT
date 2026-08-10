@@ -243,7 +243,12 @@ do_backup() {
         return 1
     fi
 
-    BACKUP_DIR="$(docker exec "$_cid" python -m aot.utils.docker_backup_cli --create)"
+    # docker_backup_cli.py's contract is one clean line on stdout, but this
+    # value drives --restore during a rollback, so a stray line from anywhere
+    # in that dependency chain must not become part of the path. Take the
+    # last non-empty line rather than trusting the contract blindly.
+    _backup_raw="$(docker exec "$_cid" python -m aot.utils.docker_backup_cli --create)"
+    BACKUP_DIR="$(printf '%s\n' "$_backup_raw" | awk 'NF{line=$0} END{print line}')"
     if [ -z "$BACKUP_DIR" ]; then
         log "ERROR: backup failed"
         return 1

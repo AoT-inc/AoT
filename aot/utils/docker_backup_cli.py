@@ -16,6 +16,7 @@ migration has run, putting the old image back without putting the old schema
 back leaves old code reading a future schema.
 """
 import argparse
+import logging
 import sys
 
 
@@ -24,6 +25,15 @@ def _run(args):
     from aot.utils.docker_backup import (docker_backup_create,
                                          docker_backup_restore,
                                          docker_can_perform_backup)
+
+    # aot_client.py runs `logging.basicConfig(stream=sys.stdout, ...)` at
+    # import time, and docker_backup pulls it in transitively (via
+    # service_control). That is fine for the app itself (container logs go to
+    # stdout on purpose) but it is exactly wrong here: this CLI's stdout is a
+    # value the caller parses (a path), not a log stream. Force it back to
+    # stderr for this process only -- force=True re-points the already
+    # installed handler rather than adding a second one.
+    logging.basicConfig(stream=sys.stderr, force=True)
 
     if args.estimate:
         size, free_before, free_after = docker_can_perform_backup()

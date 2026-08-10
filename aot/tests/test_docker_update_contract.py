@@ -200,5 +200,48 @@ def test_script_passes_shell_syntax_check():
     assert result.returncode == 0, result.stderr
 
 
+def test_compose_image_lines_honor_aot_image_repo():
+    """실측(2026-08-10, 실제 GHCR 26.08.2->26.08.3->로컬 레지스트리 26.08.4)에서
+    발견: 업데이터는 AOT_IMAGE_REPO 로 사설 미러를 지원한다고 스스로 문서화하고
+    `docker pull` 은 실제로 그렇게 하는데, compose 파일의 `image:` 세 줄이
+    `ghcr.io/aot-inc/aot` 로 못박혀 있어 recreate 단계에서만 무시됐다. pull 은
+    미러에서 성공하고 컨테이너 기동은 GHCR 존재하지 않는 태그를 찾다 실패 →
+    "containers failed to start" 로 오판되어 불필요한 롤백이 발생했다.
+
+    기본값(레지스트리 미설정 시 ghcr.io/aot-inc/aot)은 실사용자에게 그대로다 —
+    이 테스트는 오버라이드 가능 여부만 고정한다."""
+    text = COMPOSE_PROD.read_text()
+    image_lines = re.findall(r'^\s*image:\s*(.+)$', text, re.MULTILINE)
+    # influxdb 서비스는 AoT 이미지가 아니다 — 제외
+    aot_image_lines = [l for l in image_lines if 'influxdb' not in l]
+    assert len(aot_image_lines) == 3, aot_image_lines  # aot-app, aot_daemon, aot_mcp
+    for line in aot_image_lines:
+        assert line == '${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}', line
+
+
+def test_backup_cli_forces_logging_off_stdout():
+    """실측에서 발견: docker_backup_cli.py 의 stdout(백업 경로 한 줄이어야 함)에
+    `aot.docker_backup` 의 INFO 로그 줄이 섞여 나왔다. aot_client.py 가 import
+    시점에 `logging.basicConfig(stream=sys.stdout, ...)` 를 실행하고,
+    docker_backup 이 service_control 을 거쳐 그걸 끌어오기 때문이다(앱 자체에는
+    맞는 설정 — 컨테이너 로그는 stdout 이어야 한다 — 이 CLI 에만 안 맞을 뿐).
+
+    실제 결과: status.json 의 backup 필드에 로그 줄이 끼어들었다. 롤백 시
+    docker_backup_restore(BACKUP_DIR) 에 이 값이 그대로 들어가면 존재하지 않는
+    경로가 된다. 여기서는 소스에 되돌림 코드가 있는지만 정적으로 고정하고,
+    실제 stdout 정결성은 실측(2026-08-10, 컨테이너 내 --create 직접 실행)으로
+    이미 확인했다 — 매 테스트마다 컨테이너를 띄우진 않는다."""
+    text = (REPO / "aot" / "utils" / "docker_backup_cli.py").read_text()
+    assert "stream=sys.stderr" in text
+    assert "force=True" in text
+
+
+def test_updater_takes_the_last_line_of_backup_output():
+    """방어 두 번째 겹 — 위 항목이 다시 깨지거나, 이 CLI 를 부르는 경로가
+    또 생겨도 셸 쪽에서 한 번 더 막는다. 마지막 비어있지 않은 줄만 취한다."""
+    text = SCRIPT.read_text()
+    assert "awk 'NF{line=$0} END{print line}'" in text
+
+
 if __name__ == '__main__':
     sys.exit(pytest.main([__file__, '-v']))

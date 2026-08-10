@@ -12,7 +12,7 @@ name: aot
 
 services:
   aot-app:
-    image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
+    image: ${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}
     command: gunicorn -c /app/install/gunicorn_conf.py --bind 0.0.0.0:80 aot.start_flask_ui:app
     ports:
       - "${AOT_PORT:-8084}:80"
@@ -73,7 +73,7 @@ services:
     restart: always
 
   aot_daemon:
-    image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
+    image: ${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}
     command: python aot/aot_daemon.py
     # SIGTERM 후 Shutdown State 전송 + 감사 flush 가 끝날 시간을 준다.
     # 기본 10초면 절차가 SIGKILL 로 잘린다 (docker-compose.yml 주석 참고).
@@ -113,7 +113,7 @@ services:
   # (mcp_confirmation)를 공유한다. 인증(mcp_auth.py, X-API-KEY)이 있지만 그와
   # 별개로 LAN/인터넷 노출을 막기 위해 127.0.0.1 로만 바인딩한다.
   aot_mcp:
-    image: ghcr.io/aot-inc/aot:${AOT_IMAGE_TAG:-latest}
+    image: ${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}
     command: python aot/aot_mcp_server.py --http --port 5700 --log INFO
     ports:
       - "127.0.0.1:5700:5700"
