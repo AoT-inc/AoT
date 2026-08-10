@@ -2,6 +2,7 @@
 import logging
 from flask import jsonify, request
 from flask_babel import lazy_gettext
+from flask_login import current_user
 from aot.widgets.base_widget import AbstractWidget
 from aot.ai.services.ai_reasoning_service import AIReasoningService
 from aot.ai.services.ai_action_service import AIActionService
@@ -22,6 +23,16 @@ def ai_get_reasoning():
 
 def ai_execute_proposed_action():
     """Endpoint for the widget to execute a specific proposed action."""
+    # Widget endpoints are registered via app.add_url_rule() directly (see
+    # register_widget_endpoints in aot_flask/app.py), which does not apply
+    # @login_required — every other control-capable widget (AoT_controller,
+    # widget_controller_activate_deactivate) checks this manually. This
+    # endpoint was missing the check, leaving an unauthenticated path to
+    # AIActionService.execute_action() (including physical device control)
+    # via the legacy no-history_id fallback below.
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "Authentication required"}), 401
+
     data = request.json or {}
     history_id = data.get('history_id')
     action_index = data.get('action_index', 0)

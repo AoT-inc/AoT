@@ -6,12 +6,15 @@
 *
 
 # --- 빌드에 필요한 것만 허용 ---
+# CLAUDE.md 의 배포 대상 목록(aot/, alembic_db/, install/, docker/)과 맞춘다.
+# docs/ 는 여기 없었다 -- manual_url()(aot/aot_flask/app.py)이 항상 외부
+# aot-inc.github.io 링크를 내보내, 이미지 안의 로컬 docs/ 는 어차피 읽힌 적이
+# 없다. 7.8MB 죽은 무게였다(2026-08-11 확인).
 !aot/
 !alembic_db/
 !install/
 !requirements.txt
 !aot.db
-!docs/
 
 # --- 허용된 디렉터리 내부에서도 제외 ---
 **/__pycache__/

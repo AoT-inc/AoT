@@ -251,13 +251,13 @@ class AoTNativeToolEngine:
                 # Delegate to the daemon control channel via AIActionService
                 from aot.ai.services.ai_action_service import AIActionService
                 result = AIActionService.execute_action(
-                    "output_on" if state == "on" else "output_off",
-                    {
-                        "output_id": device_id,
-                        "duration": duration,
-                        "state": state,
-                    }
+                    "control_output",
+                    device_id,
+                    {"state": state, "duration_seconds": duration},
                 )
+                if isinstance(result, dict) and result.get("status") == "error":
+                    logger.error(f"[NativeToolEngine] set_output_state failed for {device_id}: {result}")
+                    return {"status": "error", "device_id": device_id, "state": state, "result": result}
                 return {"status": "success", "device_id": device_id, "state": state, "result": result}
             except Exception as exc:
                 logger.error(f"[NativeToolEngine] set_output_state error: {exc}")

@@ -562,7 +562,22 @@ class AIActionService:
         Handles spatial nodes, devices, and context-based inference.
         """
         logger.info(f"[TargetResolver] Resolving '{target_id}' for action '{action_type}'")
-        
+
+        # 0. Defensive: a caller may pass the whole params dict as target_id by mistake
+        # (positional-argument slip). Recover the real id instead of crashing the SQL
+        # query below with a dict parameter.
+        if isinstance(target_id, dict):
+            _dict_target = target_id
+            ID_KEYS = ['device_id', 'target_id', 'output_id', 'target_zone', 'loc_id', 'node_id', 'target']
+            _recovered = next((_dict_target.get(k) for k in ID_KEYS if _dict_target.get(k)), None)
+            logger.warning(
+                f"[TargetResolver] target_id was a dict for action '{action_type}' "
+                f"(likely a caller bug) — recovered '{_recovered}'"
+            )
+            target_id = _recovered
+            if not params:
+                params = _dict_target
+
         # 1. Null handling & Placeholder handling (Inference from context or params)
         placeholders = ['none', 'null', 'here', 'this', 'current', 'system_internal', 'default']
         if not target_id or str(target_id).lower() in placeholders:

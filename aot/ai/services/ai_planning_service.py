@@ -680,7 +680,14 @@ class AIPlanningService:
                     if out_var and out_var.startswith('$'):
                         variables[out_var] = res.get('result') or res.get('data') or res
 
-                    log_entry = f"Step {step.get('step_id')} tool={_step_tool} ({action_type}) Success: {json.dumps(res, ensure_ascii=False)[:500]}"
+                    # execute_action reports internal failures by returning
+                    # {"status": "error", ...} rather than raising, so this must be
+                    # checked explicitly — otherwise a failed step still logs "Success"
+                    # and slips past the PhysicalGuard in ai_agent_service.py that scans
+                    # execution_logs for the substring "Success".
+                    _res_status = res.get('status') if isinstance(res, dict) else None
+                    _outcome = "Failed" if _res_status == 'error' else "Success"
+                    log_entry = f"Step {step.get('step_id')} tool={_step_tool} ({action_type}) {_outcome}: {json.dumps(res, ensure_ascii=False)[:500]}"
                     execution_logs.append(log_entry)
 
             except Exception as e:

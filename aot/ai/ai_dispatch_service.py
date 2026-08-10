@@ -202,15 +202,27 @@ class AIDispatchService:
             )
 
         immediate_results = []
+        _any_immediate_failed = False
         for a in immediate_to_run:
             try:
                 res = AIActionService.execute_action(a['action_type'], a.get('target_id'), a.get('params'))
+                # execute_action reports internal failures by returning
+                # {"status": "error", ...} rather than raising — must check explicitly,
+                # same convention as history.status in execute_logged_action() (ai_agent_service.py).
+                if isinstance(res, dict) and res.get('status') == 'error':
+                    _any_immediate_failed = True
                 immediate_results.append(f"Immediate Action '{a['action_type']}' Result: {json.dumps(res, ensure_ascii=False)}")
             except Exception as e:
+                _any_immediate_failed = True
                 logger.error(f"Failed to execute immediate action {a['action_type']}: {e}")
                 immediate_results.append(f"Immediate Action '{a['action_type']}' Failed: {str(e)}")
 
-        status = 'executed' if not proposed_to_draft else 'proposed'
+        if proposed_to_draft:
+            status = 'proposed'
+        elif _any_immediate_failed:
+            status = 'failed'
+        else:
+            status = 'executed'
         
         # Resolve user_id: prefer explicit parameter, fall back to Flask-Login current_user
         _user_id = user_id
