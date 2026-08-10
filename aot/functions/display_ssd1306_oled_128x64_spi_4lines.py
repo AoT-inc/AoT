@@ -177,7 +177,7 @@ FUNCTION_INFORMATION = {
 
     'dependencies_module': [
         ('apt', 'libjpeg-dev', 'libjpeg-dev'),
-        ('pip-pypi', 'PIL', 'Pillow==8.1.2'),
+        ('pip-pypi', 'PIL', 'Pillow==12.3.0'),
         ('pip-pypi', 'usb.core', 'pyusb==1.1.1'),
         ('pip-pypi', 'Adafruit_GPIO', 'Adafruit-GPIO==1.0.3'),
         ('pip-pypi', 'adafruit_extended_bus', 'Adafruit-extended-bus==1.0.2'),

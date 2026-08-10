@@ -26812,3 +26812,111 @@ msgstr "ファイルは最大{max}件まで添付できます。"
 #: aot/aot_flask/static/apps/notes-widget/src
 msgid "At most {max} files. Only the first {n} will be added."
 msgstr "ファイルは最大{max}件です。先頭の{n}件のみ追加します。"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Collect measurements from another AoT server over the network using its API. Enter the host and API key, set the number of measurements, and save — the Remote Measurement dropdown is then filled with the channels available on that server. Pick one per channel and set its Measurement Unit to match the unit shown in the dropdown. Values arrive with the remote timestamp, and any conversion configured on the remote channel is already applied."
+msgstr ""
+"別のAoTサーバーの測定値をAPI経由で収集します。ホストとAPIキーを入力し、測定数を設定して保存すると、リモート測定のドロップダウンにそのサーバーで利用できるチャンネルが表示されます。チャンネルごとに1つ選び、ドロップダウンに表示された単位に合わせて測定単位を設定してください。値はリモートのタイムスタンプのまま保存され、リモート側チャンネルに設定された変換は適用済みで届きます。"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"SECURITY: an AoT API key carries every permission of the user it belongs to. For a collect-only connection, create a user on the remote server whose role has only \"View Settings\" and use that user's key — a key from an admin account would also grant control of that server's devices. Keep TLS verification enabled unless you understand the risk."
+msgstr ""
+"セキュリティ: AoT APIキーは、そのキーが属するユーザーの全権限をそのまま渡します。収集専用の接続であれば、リモートサーバーに「設定の閲覧」権限のみを持つロールのユーザーを作成し、そのユーザーのキーを使用してください — 管理者アカウントのキーではそのサーバーの機器制御権限も渡ります。リスクを理解している場合を除き、TLS検証は有効のままにしてください。"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote AoT Host"
+msgstr ""
+"リモートAoTホスト"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)"
+msgstr ""
+"リモートAoTのホストまたはIPアドレス（ポートを含められます。例: 192.168.0.9:8084）"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote AoT API Key"
+msgstr ""
+"リモートAoT APIキー"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"The API key of the remote AoT, exactly as shown on that server"
+msgstr ""
+"リモートAoTのAPIキー。そのサーバーに表示された値をそのまま入力します"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Use HTTPS unless the remote AoT is only reachable over plain HTTP on a trusted network"
+msgstr ""
+"信頼できるネットワークで平文HTTPからのみ到達できる場合を除き、HTTPSを使用してください"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Verify TLS Certificate"
+msgstr ""
+"TLS証明書を検証"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Verify the remote server certificate. Turn this off only for a self-signed certificate on a trusted network — while off, the API key can be read by a man in the middle"
+msgstr ""
+"リモートサーバーの証明書を検証します。信頼できるネットワーク上の自己署名証明書の場合のみ無効にしてください — 無効の間は中間者にAPIキーを読み取られる可能性があります"
+
+#: inputs/remote_aot_input.py outputs/remote_output_pwm.py
+msgid ""
+"Request Timeout (Seconds)"
+msgstr ""
+"リクエストタイムアウト（秒）"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"HTTP read timeout. Raise it if the remote server is slow to answer a large batch"
+msgstr ""
+"HTTP読み取りタイムアウト。リモートサーバーが大きな一括要求への応答に時間がかかる場合は延ばしてください"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Initial Backfill (Hours)"
+msgstr ""
+"初回の遡り収集（時間）"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"How far back to collect on the first run. Later runs only fetch what has arrived since the last collection"
+msgstr ""
+"初回実行時に何時間前まで収集するかを指定します。以降の実行では前回の収集以降に届いた値のみ取得します"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote Measurement"
+msgstr ""
+"リモート測定"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"The measurement on the remote AoT to collect into this channel"
+msgstr ""
+"このチャンネルに収集するリモートAoTの測定"
+
+#: outputs/remote_output_on_off.py
+msgid ""
+"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select an On/Off Output Channel for this to work. Selecting a PWM, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
+msgstr ""
+"リモートAoTのAPIキーとIP/ホストアドレスを入力して保存すると、リモート出力のドロップダウンが設定されます。ドロップダウンに反映するには保存後にページを再読み込みする必要があります。制御したいリモートAoT出力を選んで再度保存してください。この機能が動作するにはOn/Off出力チャンネルを選択する必要があります。PWM、容量などの他のチャンネルを選ぶとエラーになります。セキュリティ: AoT APIキーはそのキーが属するユーザーの全権限をそのまま渡すため、このキーはリモートサーバーの制御権限でもあります。リスクを理解している場合を除き、TLS検証は有効のままにしてください — 無効にすると、接続を傍受できる者がキーを読み取れます。"
+
+#: outputs/remote_output_pwm.py
+msgid ""
+"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select a PWM Output Channel for this to work. Selecting an On/Off, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
+msgstr ""
+"リモートAoTのAPIキーとIP/ホストアドレスを入力して保存すると、リモート出力のドロップダウンが設定されます。ドロップダウンに反映するには保存後にページを再読み込みする必要があります。制御したいリモートAoT出力を選んで再度保存してください。この機能が動作するにはPWM出力チャンネルを選択する必要があります。On/Off、容量などの他のチャンネルを選ぶとエラーになります。セキュリティ: AoT APIキーはそのキーが属するユーザーの全権限をそのまま渡すため、このキーはリモートサーバーの制御権限でもあります。リスクを理解している場合を除き、TLS検証は有効のままにしてください — 無効にすると、接続を傍受できる者がキーを読み取れます。"
+
+#: outputs/remote_output_pwm.py
+msgid ""
+"HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
+msgstr ""
+"デューティ比コマンドのHTTP読み取りタイムアウト。リモートホストで最も時間のかかるコマンドより長く設定してください"

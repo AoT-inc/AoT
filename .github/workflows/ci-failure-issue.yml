@@ -15,6 +15,7 @@ on:
     workflows:
       - AI Tool Registry SSOT
       - Alembic Chain
+      - Driver Dependency Pins
       - Geo Data Integrity
       - JS Bundle Drift
       - Security Checks

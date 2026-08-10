@@ -1,0 +1,73 @@
+name: Driver Dependency Pins
+
+# 드라이버는 자기 의존성을 `dependencies_module` 에 직접 선언하고
+# (`('pip-pypi', 'requests', 'requests==2.31.0')`), `return_dependencies()`
+# 는 그 `==` 버전이 **설치본과 정확히 일치**하는지 비교한다. 그래서
+# requirements.txt 를 bump 하면 그 패키지를 선언한 드라이버가 전부 조용히
+# "unmet dependencies" 가 되고, 웹 UI 에서 그 장치를 추가할 수 없게 된다.
+#
+# 앱은 정상 기동하고 로그도 조용하다. 이미 만들어 둔 장치는 계속 돌기 때문에
+# 한참 뒤 새 장치를 추가하려는 순간에야 드러나고, 그때는 원인이 된 bump 에서
+# 멀어져 있다. 2026-08-10 에 두 건이 한꺼번에 발견됐다 —
+# requests(드라이버 10개), Pillow(드라이버 13개).
+#
+# 이 검사를 별도 워크플로로 두는 이유: 레포에서 pytest 를 도는 워크플로는
+# geo-integrity.yml 하나뿐이고 그것도 geo 테스트 파일 2개만 지정해 돌린다.
+# 즉 이 가드를 테스트 스위트에만 두면 사람이 로컬에서 pytest 를 돌릴 때만
+# 작동한다 — alembic 검사가 이미 겪은 구멍이다(CLAUDE.md 참조).
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'requirements.txt'
+      - 'aot/inputs/*.py'
+      - 'aot/outputs/*.py'
+      - 'aot/functions/*.py'
+      - 'aot/widgets/*.py'
+      - 'aot/actions/*.py'
+      - 'aot/inputs_gis/*.py'
+      - 'aot/devices/*.py'
+      - 'aot/tests/test_driver_dependency_pins.py'
+      - '.github/workflows/driver-dependency-pins.yml'
+  pull_request:
+    paths:
+      - 'requirements.txt'
+      - 'aot/inputs/*.py'
+      - 'aot/outputs/*.py'
+      - 'aot/functions/*.py'
+      - 'aot/widgets/*.py'
+      - 'aot/actions/*.py'
+      - 'aot/inputs_gis/*.py'
+      - 'aot/devices/*.py'
+      - 'aot/tests/test_driver_dependency_pins.py'
+      - '.github/workflows/driver-dependency-pins.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # pytest 하나만 설치한다. 검사기는 ast/re/pathlib 만 쓰고 aot 패키지를
+      # import 하지 않으므로, 앱 의존성 설치가 깨져도 이 검사가 가려지지 않는다.
+      # **이 목록을 늘리지 말 것** — 늘리는 순간 설치 실패가 검사를 가리는
+      # 경로가 생긴다(geo-integrity.yml 이 그 반대 사례다: conftest 가 모델
+      # 전체를 끌어와서 어쩔 수 없이 17개를 설치한다).
+      - name: Install pytest
+        run: python -m pip install --upgrade pip pytest
+
+      # conftest.py 를 건너뛴다 — aot/tests/conftest.py 는 pytest_configure 에서
+      # aot.aot_flask.extensions 를 import 해 모델 패키지 전체를 끌어오는데,
+      # 이 검사는 소스만 읽으므로 그게 필요 없고 설치 목록만 늘어난다.
+      - name: Check driver pip pins against requirements.txt
+        run: python3 -m pytest aot/tests/test_driver_dependency_pins.py -q -p no:cacheprovider --noconftest

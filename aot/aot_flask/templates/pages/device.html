@@ -485,6 +485,36 @@
     });
   };
 
+  /**
+   * innerHTML 로 넣은 조각 안의 인라인 <script> 를 실제로 실행시킨다.
+   *
+   * HTML5 규격상 innerHTML 로 삽입된 <script> 는 실행되지 않는다. 그래서 아래
+   * 설정 모달은 /function?function_type=options 조각을 받아 넣고도 그 안의
+   * 초기화 스크립트가 한 번도 돌지 않았다 — 대표적인 피해자가 지도 매크로
+   * (map_option_macros.html)로, `shown.bs.modal` 리스너를 다는 코드가 실행되지
+   * 않아 AoTMapModalController 가 아예 생성되지 않았고 장치 설정 모달의 지도는
+   * 늘 빈 화면이었다(2026-08-10 확인: 컨트롤러 인스턴스 0개, canvas 0개).
+   *
+   * function.html 의 initNewWidgetScripts() 와 같은 방식이다(gridstack 이
+   * addWidget 으로 넣은 마크업에서 겪은 동일 문제). <script> 노드를 새로 만든
+   * 것으로 교체하면 브라우저가 실행한다.
+   *
+   * 반드시 modal('show') **전에** 부를 것 — 지도 매크로는 lazy 초기화라
+   * `shown.bs.modal` 을 듣는데, show 이후에 스크립트를 실행하면 그 이벤트를
+   * 이미 놓친 뒤다.
+   */
+  function runInlineScripts(container) {
+    if (!container) return;
+    container.querySelectorAll('script').forEach(function (old) {
+      var s = document.createElement('script');
+      for (var i = 0; i < old.attributes.length; i++) {
+        s.setAttribute(old.attributes[i].name, old.attributes[i].value);
+      }
+      if (old.src) { s.src = old.src; } else { s.textContent = old.textContent; }
+      old.parentNode.replaceChild(s, old);
+    });
+  }
+
   document.querySelectorAll('.device-settings-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var id = btn.getAttribute('data-device-id');
@@ -498,6 +528,8 @@
           if (window.jQuery && jQuery.fn.selectpicker) {
             jQuery(optionsBody).find('select').selectpicker();
           }
+          // show 전에 실행해야 지도 매크로가 shown.bs.modal 을 놓치지 않는다.
+          runInlineScripts(optionsBody);
           if ($settingsModal) $settingsModal.modal('show');
         })
         .catch(function () {
@@ -598,7 +630,41 @@
   // 실시간 값 표시는 Input/Output 페이지의 역할). ----
   var deviceSummaries = {};
 
+  // 직전 주기가 아직 끝나지 않았으면 새 주기를 띄우지 않는다.
+  //
+  // setInterval(pollValues, 3000) 은 이전 호출이 끝났는지 보지 않는다. 서버가
+  // 3초 안에 못 답하면 요청이 겹쳐 쌓이고, 브라우저의 오리진당 6커넥션 한도에
+  // 걸려 뒤 요청이 앞 요청 뒤에 줄을 선다 — 한 번 밀리기 시작하면 스스로
+  // 회복하지 못하고 지연이 계속 커진다(실측: /outputstate 가 222ms → 12s →
+  // 30s → 47s 로 증가, 그 사이 설정 모달 클릭도 같은 줄에 서서 10초 넘게
+  // 열리지 않았다).
+  //
+  // 잠금은 반드시 스스로 풀려야 한다. 어느 경로로든(동기 예외, 정착하지 않는
+  // 프라미스) 해제가 누락되면 폴링이 영구히 멈추고 화면 값이 조용히 굳는다 —
+  // 잠금 없이 겹쳐 도는 것보다 나쁘다. 그래서 정상 종료·예외·타임아웃 세 경로
+  // 모두에서 푼다.
+  var _pollInFlight = false;
+
   function pollValues() {
+    if (_pollInFlight) return;
+    _pollInFlight = true;
+
+    var guard = setTimeout(function () {
+      _pollInFlight = false;
+      console.warn('[device] poll watchdog fired — 잠금을 강제 해제했습니다');
+    }, 15000);
+    var done = function () { clearTimeout(guard); _pollInFlight = false; };
+
+    try {
+      _pollValuesInner(done);
+    } catch (err) {
+      done();
+      console.error('[device] pollValues 동기 예외:', err);
+    }
+  }
+
+  function _pollValuesInner(done) {
+    var pending = [];
     var batchItems = [];
     Object.keys(deviceSummaries).forEach(function (deviceId) {
       deviceSummaries[deviceId].inputs.forEach(function (inp) {
@@ -614,7 +680,7 @@
     });
 
     if (batchItems.length) {
-      fetch('/data_batch', {
+      pending.push(fetch('/data_batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: batchItems })
@@ -628,10 +694,10 @@
             el.textContent = '—';
           }
         });
-      });
+      }));
     }
 
-    fetch('/inputstate').then(function (r) { return r.json(); }).then(function (inputStates) {
+    pending.push(fetch('/inputstate').then(function (r) { return r.json(); }).then(function (inputStates) {
       Object.keys(deviceSummaries).forEach(function (deviceId) {
         var s = deviceSummaries[deviceId];
         var hasCapable = false, hasFault = false;
@@ -645,9 +711,9 @@
         s._inputComm = { hasCapable: hasCapable, hasFault: hasFault };
         renderBadge(deviceId);
       });
-    });
+    }));
 
-    fetch('/outputstate').then(function (r) { return r.json(); }).then(function (outputStates) {
+    pending.push(fetch('/outputstate').then(function (r) { return r.json(); }).then(function (outputStates) {
       paintOutputStates(outputStates);
     }).catch(function () {
       // A failed fetch used to leave the last good states on screen forever,
@@ -655,7 +721,12 @@
       // with an empty map routes every channel through classify(undefined),
       // which now reports 'unknown' rather than a fake 'off'.
       paintOutputStates({});
-    });
+    }));
+
+    // 하나라도 실패해도 잠금은 반드시 풀어야 한다 — 안 풀면 폴링이 영구히 멈춘다.
+    Promise.all(pending.map(function (p) {
+      return p.catch(function (e) { console.error('[device] poll 요청 실패:', e); });
+    })).then(done, done);
   }
 
   function paintOutputStates(outputStates) {
@@ -698,17 +769,43 @@
     badgeEl.className = 'badge ' + b.cls;
   }
 
+  // pollValues() 는 deviceSummaries 전체를 훑는 **전역** 폴러다. 그런데 예전에는
+  // loadDevice() 안에서 장치마다 한 번씩 불렀다 — 장치가 N개면 페이지가 열릴 때
+  // 같은 전역 폴링이 N번 동시에 돌고, 요청은 3N개가 한꺼번에 나갔다. 브라우저는
+  // 오리진당 6개만 동시에 열 수 있으므로 나머지는 줄을 서고, 그 줄에 설정 모달
+  // 클릭의 요청까지 끼면서 모달이 10초 넘게 열리지 않았다. 장치를 하나 추가할
+  // 때마다 나빠지는 구조였다(실측: 장치 3개 → /outputstate 6건 동시 발사,
+  // 마지막 것이 47초).
+  //
+  // 요약 로딩이 끝날 때마다 한 번씩 부르는 대신, 짧게 모아서 한 번만 부른다.
+  var _pollCoalesce = null;
+  function schedulePoll() {
+    if (_pollCoalesce) return;
+    _pollCoalesce = setTimeout(function () {
+      _pollCoalesce = null;
+      pollValues();
+    }, 50);
+  }
+
   function loadDevice(deviceId) {
-    fetch('/device/' + deviceId + '/summary').then(function (r) { return r.json(); }).then(function (summary) {
+    return fetch('/device/' + deviceId + '/summary').then(function (r) { return r.json(); }).then(function (summary) {
       deviceSummaries[deviceId] = summary;
       renderCount(deviceId, summary);
-      pollValues();
     });
   }
 
-  document.querySelectorAll('#device_list [data-device-id]').forEach(function (card) {
-    loadDevice(card.getAttribute('data-device-id'));
+  // `[data-device-id]` 는 카드 하나당 여러 번 붙어 있다 — 카드 컨테이너,
+  // 설정 링크, 활성화/비활성화 버튼까지 같은 속성을 갖는다(실측: 장치 3개인데
+  // 12개가 잡힘). 그대로 순회하면 장치 하나를 4번씩 로드한다. id 로 중복을
+  // 걷어내고 장치당 한 번만 부른다.
+  var _deviceIds = [];
+  document.querySelectorAll('#device_list [data-device-id]').forEach(function (el) {
+    var id = el.getAttribute('data-device-id');
+    if (id && _deviceIds.indexOf(id) === -1) _deviceIds.push(id);
   });
+  Promise.all(_deviceIds.map(function (id) {
+    return loadDevice(id).catch(function () {});
+  })).then(schedulePoll);
 
   setInterval(pollValues, 3000);
 

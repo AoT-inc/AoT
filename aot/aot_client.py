@@ -245,6 +245,23 @@ class DaemonControl:
     # Output Controller
     #
 
+    @classmethod
+    def invalidate_states_cache(cls):
+        """Drop the cached output-state snapshot after a command changes an output.
+
+        output_states_all() caches for _STATES_CACHE_TTL seconds so the polling
+        dashboard does not hammer the daemon, but nothing used to clear it when a
+        command actually changed a state. For up to 3s afterwards a read-back
+        returned the PRE-command snapshot, while `seconds_on` — a separate,
+        uncached call — already counted from the new one. get_output_state, the
+        very tool an AI uses to confirm what it just toggled, would answer
+        "state: off, seconds_on: 1.08" and tell the operator the command had not
+        worked. Measured locally: wrong for ~2s after ON, and after OFF it kept
+        reporting 'on'.
+        """
+        with cls._states_all_lock:
+            cls._states_all_cache = (None, 0.0)
+
     def output_off(self, output_id, output_channel=None, trigger_conditionals=True):
         try:
             origin = resolve_origin()
@@ -271,6 +288,11 @@ class DaemonControl:
             msg = f"Output OFF error: {err}"
             logger.error(msg)
             return 1, msg
+        finally:
+            # In `finally`, not on the success path: a timed-out or errored
+            # command may still have reached the daemon, so a snapshot taken
+            # before it must not keep being served either way.
+            DaemonControl.invalidate_states_cache()
 
     def output_on(self,
                   output_id,
@@ -305,6 +327,9 @@ class DaemonControl:
             msg = f"Output ON error: {err}"
             logger.error(msg)
             return 1, msg
+        finally:
+            # See output_off — invalidate regardless of outcome.
+            DaemonControl.invalidate_states_cache()
 
     def output_on_off(self, output_id, state, output_type=None, amount=0.0, output_channel=None):
         """Turn an output on or off."""

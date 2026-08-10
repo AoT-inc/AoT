@@ -2,7 +2,6 @@
 #
 # remote_output_on_off.py - Output for controlling a remote AoT On/Off Output
 #
-import json
 import time
 from threading import Thread
 
@@ -11,6 +10,7 @@ from flask_babel import lazy_gettext
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.remote_aot_client import RemoteAoTClient, RemoteAoTError
 
 measurements_dict = {
     0: {
@@ -48,12 +48,22 @@ OUTPUT_INFORMATION = {
     'options_disabled': ['interface'],
 
     'dependencies_module': [
-        ('pip-pypi', 'requests', 'requests==2.31.0'),
+        ('pip-pypi', 'requests', 'requests==2.33.0'),
     ],
 
     'interfaces': ['API'],
 
-    'custom_options_message': 'Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select an On/Off Output Channel for this to work. Selecting a PWM, Volume, or other channel will cause an error.',
+    'custom_options_message': lazy_gettext(
+        'Enter the API key and IP/Host address of your remote AoT and save to populate '
+        'the Remote Output dropdown selection. You will need to refresh the page after '
+        'saving for the Remote AoT Output dropdown to populate. Configure which Remote '
+        'AoT Output you would like to control and save again. You must select an On/Off '
+        'Output Channel for this to work. Selecting a PWM, Volume, or other channel will '
+        'cause an error. '
+        'SECURITY: an AoT API key carries every permission of the user it belongs to, so '
+        'this key grants control of the remote server. Keep TLS verification enabled '
+        'unless you understand the risk — with it off, anyone who can intercept the '
+        'connection can read the key.'),
 
     'custom_options': [
         {
@@ -62,7 +72,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': "Remote AoT Host",
-            'phrase': lazy_gettext('The host or IP address of the remote AoT')
+            'phrase': lazy_gettext('The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)')
         },
         {
             'id': 'api_key',
@@ -70,7 +80,25 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': "Remote AoT API Key",
-            'phrase': lazy_gettext('The API key of the remote AoT')
+            'phrase': lazy_gettext('The API key of the remote AoT, exactly as shown on that server')
+        },
+        {
+            'id': 'scheme',
+            'type': 'select',
+            'default_value': 'https',
+            'options_select': [
+                ('https', 'HTTPS'),
+                ('http', 'HTTP')
+            ],
+            'name': lazy_gettext('Protocol'),
+            'phrase': lazy_gettext('Use HTTPS unless the remote AoT is only reachable over plain HTTP on a trusted network')
+        },
+        {
+            'id': 'verify_tls',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Verify TLS Certificate'),
+            'phrase': lazy_gettext('Verify the remote server certificate. Turn this off only for a self-signed certificate on a trusted network — while off, the API key can be read by a man in the middle')
         },
         {
             'id': 'state_query_period',
@@ -150,8 +178,15 @@ class OutputModule(AbstractOutput):
 
         self.api_key = None
         self.host = None
+        self.scheme = 'https'
+        self.verify_tls = True
         self.state_query_period = None
         self.request_timeout = 60
+
+        # HTTP/인증/TLS 는 전부 공용 클라이언트가 담당한다. 예전에는 이 파일과
+        # remote_output_pwm.py 가 각자 requests 호출을 갖고 있어 verify=False 가
+        # 네 곳에 흩어져 있었다(aot/utils/remote_aot_client.py 헤더 참조).
+        self._client = None
 
         self.api_output = None
         self.query_timer = 0
@@ -184,6 +219,13 @@ class OutputModule(AbstractOutput):
         self.setup_output_variables(OUTPUT_INFORMATION)
 
         if self.api_key and self.host:
+            self._client = RemoteAoTClient(
+                host=self.host,
+                api_key=self.api_key,
+                scheme=self.scheme,
+                verify_tls=self.verify_tls,
+                request_timeout=self.request_timeout,
+                logger_=self.logger)
             self.get_remote_output_information()
             if self.api_output:
                 self.parse_remote_output_info()
@@ -238,40 +280,19 @@ class OutputModule(AbstractOutput):
         allow_clear=False: on transient failure keep the last good api_output so
         send_remote_output can still resolve channels during a temporary outage.
         """
-        import requests
-
-        endpoint = 'outputs'
-        url = 'https://{ip}/api/{ep}'.format(ip=self.host, ep=endpoint)
-        headers = {
-            'Accept': 'application/vnd.aot.v1+json',
-            'X-API-KEY': self.api_key
-        }
-
-        try:
-            response = requests.get(
-                url, headers=headers, verify=False, timeout=5)
-        except requests.exceptions.RequestException as err:
-            self.logger.error(f"Remote output information request failed: {err}")
-            # Cannot reach the remote AoT at all — our view of every channel on
-            # it is stale from this moment, regardless of what was last seen.
+        if not self._client:
             self._remote_reachable = False
             if allow_clear:
                 self.api_output = None
             return
 
-        self.logger.debug(f"Response Status: {response.status_code}")
-        self.logger.debug(f"Response Headers: {response.headers}")
-
         try:
-            response_dict = json.loads(response.text)
-        except:
-            response_dict = {}
-        self.logger.debug(f"Response Dictionary: {response_dict}")
-
-        if response.status_code != 200:
-            self.logger.error("Response Status was not 200")
-            # Reachable but refusing to answer (auth, error): still no usable
-            # state, so treat it the same as unreachable.
+            response_dict = self._client.outputs()
+        except RemoteAoTError as err:
+            # Unreachable, rejected auth or a non-200 body all mean the same
+            # thing here: no usable state, so our view of every channel on that
+            # host is stale from this moment regardless of what was last seen.
+            self.logger.error(f"Remote output information request failed: {err}")
             self._remote_reachable = False
             if allow_clear:
                 self.api_output = None
@@ -347,7 +368,8 @@ class OutputModule(AbstractOutput):
                     # so a normal command round-trip does not flap the display.
 
     def send_remote_output(self, channel, state):
-        import requests
+        if not self._client:
+            raise RuntimeError("Remote AoT host or API key is not configured")
 
         if (not self.options_channels['remote_output'][channel] or
                 ',' not in self.options_channels['remote_output'][channel]):
@@ -360,45 +382,19 @@ class OutputModule(AbstractOutput):
         if device_channel is None:
             raise RuntimeError("Could not resolve remote output channel")
 
-        endpoint = f'outputs/{output_unique_id}'
-        url = 'https://{ip}/api/{ep}'.format(ip=self.host, ep=endpoint)
-        headers = {
-            'Accept': 'application/vnd.aot.v1+json',
-            'X-API-KEY': self.api_key
-        }
-
-        data = {
-            "channel": device_channel,
-            "state": state
-        }
-
-        # connect timeout 3 s (fast-fail if host is down),
-        # read timeout = self.request_timeout (configurable, default 15 s).
+        # read timeout = self.request_timeout (configurable, default 60 s) — it
+        # must outlast the slowest handler on the remote host. The connect
+        # timeout stays short so a dead host fails fast (client default).
         read_timeout = max(5, int(self.request_timeout or 15))
         try:
-            response = requests.post(
-                url, json=data, headers=headers, verify=False, timeout=(3, read_timeout))
-        except requests.exceptions.RequestException as err:
+            # Raises unless the remote answered 200 AND reported success; a
+            # non-success body must not be read as an applied command.
+            self._client.set_output_state(
+                output_unique_id, device_channel, state,
+                read_timeout=read_timeout)
+        except RemoteAoTError as err:
             self.logger.error(f"Remote output request failed: {err}")
-            raise RuntimeError(f"Remote host unreachable: {err}")
-
-        self.logger.debug(f"Response Status: {response.status_code}")
-        self.logger.debug(f"Response Headers: {response.headers}")
-
-        try:
-            response_dict = json.loads(response.text)
-        except:
-            response_dict = {}
-        self.logger.debug(f"Response Dictionary: {response_dict}")
-
-        if response.status_code != 200:
-            detail = response_dict.get('message', response.text[:200])
-            self.logger.error(f"Response Status was not 200: {response.status_code} — {detail}")
-            raise RuntimeError(f"Remote host returned status {response.status_code}: {detail}")
-
-        if not ('message' in response_dict and 'Success' in response_dict['message']):
-            self.logger.error("Did not receive success message from API")
-            raise RuntimeError("Remote host did not return a success message")
+            raise RuntimeError(str(err))
         # Success: the remote applied the command. State confirmation is handled
         # by the caller (output_switch -> confirm_command).
 
@@ -426,6 +422,15 @@ class OutputModule(AbstractOutput):
         own device is offline is still not a working output, so the remote's
         verdict is honoured rather than masked by our successful connection.
         """
+        # 접속정보가 없으면 원격 장치를 관측할 수도 조작할 수도 없다. 이걸 fault
+        # 로 보고하지 않으면 is_setup() 이 False 라 is_on() 이 None 을 돌려주고,
+        # output_state() 가 그대로 None 을 반환해 /outputstate 응답에 이 출력만
+        # **null** 로 남는다(다른 출력은 'on'/'off'). 화면은 그 null 을 상태
+        # 없음으로 그리고, 사용자는 무엇이 잘못됐는지 알 방법이 없다 —
+        # 청사진이 만든 직후의 원격 출력이 정확히 이 상태다(host 가 빈 값).
+        if not self._client:
+            return True
+
         # None = no poll has completed yet. Not a fault: at startup the state
         # thread has simply not run, and reporting every remote output as failed
         # for the first poll interval would be a false alarm.

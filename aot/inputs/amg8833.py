@@ -43,7 +43,7 @@ INPUT_INFORMATION = {
         ('apt', 'libjpeg-dev', 'libjpeg-dev'),
         ('apt', 'zlib1g-dev', 'zlib1g-dev'),
         ('pip-pypi', 'colour', 'colour==0.1.5'),
-        ('pip-pypi', 'PIL', 'Pillow==8.1.2'),
+        ('pip-pypi', 'PIL', 'Pillow==12.3.0'),
         ('pip-pypi', 'Adafruit_AMG88xx', 'git+https://github.com/adafruit/Adafruit_AMG88xx_python.git')
     ],
 

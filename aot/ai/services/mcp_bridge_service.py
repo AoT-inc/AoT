@@ -222,6 +222,15 @@ class MCPBridgeService:
                 import re as _re
                 server_command = _re.sub(r'/[^\s]*/Build/[^/]+/', project_root + '/', server_command)
 
+                # Self-heal a stale aot_mcp_server.py path. The command is
+                # rewritten to the running install at every create_app(), so
+                # whichever process started last owns this shared row — a run
+                # from a checkout elsewhere (worktree, temp copy) leaves a path
+                # that no longer exists, and every later spawn dies with
+                # "can't open file". Observed 2026-08-10: a human-scheduled
+                # relay failed at its scheduled minute because of it.
+                server_command = cls._heal_aot_script_path(server, server_command, project_root)
+
                 # Guard: Skip subprocess for Virtual MCP (empty command)
                 if not server_command or not server_command.strip():
                     logger.warning(f"[MCPBridge] Skipping subprocess for '{server.name}' — no command defined (Virtual MCP).")
@@ -243,7 +252,7 @@ class MCPBridgeService:
                     bufsize=1
                 )
                 cls._instances[server_id] = process
-                logger.info(f"Started MCP Server process: {server.name} (PID: {process.pid}, CMD: {server.command})")
+                logger.info(f"Started MCP Server process: {server.name} (PID: {process.pid}, CMD: {server_command})")
 
                 # v22: Spawn daemon thread to drain stderr to logs/aot.log (MCP_T12)
                 # Note: spawned before _do_initialize() to capture init-phase stderr (TG-03 safe).
@@ -271,6 +280,69 @@ class MCPBridgeService:
                 return None
 
     @classmethod
+    def _heal_aot_script_path(cls, server, server_command: str, project_root: str) -> str:
+        """Repoint a dead `aot_mcp_server.py` path at the running install.
+
+        Only touches the AoT system server's own script (and its interpreter);
+        an external MCP whose command is broken is the operator's to fix, and
+        guessing a path for it would be worse than the error.
+        """
+        import sys as _sys
+
+        tokens = server_command.split()
+        idx = next((i for i, t in enumerate(tokens)
+                    if t.rstrip('"\'').endswith('aot_mcp_server.py')), None)
+        if idx is None:
+            return server_command
+
+        script = tokens[idx].strip('"\'')
+        healed = False
+
+        if not os.path.isfile(script):
+            candidate = os.path.join(project_root, 'aot', 'aot_mcp_server.py')
+            if not os.path.isfile(candidate):
+                candidate = os.path.join(INSTALL_DIRECTORY, 'aot', 'aot_mcp_server.py')
+            if os.path.isfile(candidate):
+                logger.warning(
+                    "[MCPBridge] Stale MCP script path '%s' does not exist — "
+                    "repointing to '%s'", script, candidate)
+                tokens[idx] = candidate
+                healed = True
+            else:
+                return server_command  # nothing better to offer; let it fail loudly
+
+        # The interpreter recorded alongside it can be just as stale (a venv
+        # from another checkout). Only replace an absolute path that is gone —
+        # a bare `python` is resolved by the shell and must be left alone.
+        if idx > 0:
+            interp = tokens[idx - 1].strip('"\'')
+            if interp.startswith('/') and not os.path.isfile(interp):
+                logger.warning(
+                    "[MCPBridge] Stale MCP interpreter '%s' does not exist — "
+                    "using '%s'", interp, _sys.executable)
+                tokens[idx - 1] = _sys.executable
+                healed = True
+
+        if not healed:
+            return server_command
+
+        server_command = ' '.join(tokens)
+        # Persist, so the next spawn (and the CMD in the startup log) is honest
+        # instead of every process re-healing a row that stays poisoned.
+        try:
+            from aot.aot_flask.extensions import db
+            server.command = server_command
+            db.session.commit()
+        except Exception as exc:
+            logger.warning("[MCPBridge] Could not persist healed command: %s", exc)
+            try:
+                from aot.aot_flask.extensions import db
+                db.session.rollback()
+            except Exception:
+                pass
+        return server_command
+
+    @classmethod
     def get_active_servers(cls) -> List['MCPServer']:
         """
         [OPTION_D] Returns a list of MCPServer objects that are currently running.
@@ -294,8 +366,10 @@ class MCPBridgeService:
     @classmethod
     def call_tool(cls, server_id: str, tool_name: str, arguments: dict, agent_unique_id: str = None) -> dict:
         """Call a specific tool on an MCP server via JSON-RPC over stdio."""
-        # [DEBUG-BUG09] @ANCHOR: CALL_TOOL_DEBUG_LOG — log actual arguments reaching MCP layer
-        logger.warning("[DEBUG-BUG09] call_tool server=%s tool=%s args=%r", server_id, tool_name, arguments)
+        # @ANCHOR: CALL_TOOL_DEBUG_LOG — actual arguments reaching the MCP layer.
+        # DEBUG, not WARNING: this fires on every tool call and the arguments can
+        # carry injected tokens, so it does not belong in the normal log stream.
+        logger.debug("call_tool server=%s tool=%s args=%r", server_id, tool_name, arguments)
         process = cls.get_server_process(server_id)
         if not process:
             return {"status": "error", "message": "Server process not available"}

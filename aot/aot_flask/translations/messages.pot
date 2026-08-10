@@ -24755,3 +24755,93 @@ msgstr ""
 #: aot_flask/templates/pages/device.html:1
 msgid "Input / Output"
 msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Collect measurements from another AoT server over the network using its API. Enter the host and API key, set the number of measurements, and save — the Remote Measurement dropdown is then filled with the channels available on that server. Pick one per channel and set its Measurement Unit to match the unit shown in the dropdown. Values arrive with the remote timestamp, and any conversion configured on the remote channel is already applied."
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"SECURITY: an AoT API key carries every permission of the user it belongs to. For a collect-only connection, create a user on the remote server whose role has only \"View Settings\" and use that user's key — a key from an admin account would also grant control of that server's devices. Keep TLS verification enabled unless you understand the risk."
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote AoT Host"
+msgstr ""
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)"
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote AoT API Key"
+msgstr ""
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"The API key of the remote AoT, exactly as shown on that server"
+msgstr ""
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Use HTTPS unless the remote AoT is only reachable over plain HTTP on a trusted network"
+msgstr ""
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Verify TLS Certificate"
+msgstr ""
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Verify the remote server certificate. Turn this off only for a self-signed certificate on a trusted network — while off, the API key can be read by a man in the middle"
+msgstr ""
+
+#: inputs/remote_aot_input.py outputs/remote_output_pwm.py
+msgid ""
+"Request Timeout (Seconds)"
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"HTTP read timeout. Raise it if the remote server is slow to answer a large batch"
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Initial Backfill (Hours)"
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"How far back to collect on the first run. Later runs only fetch what has arrived since the last collection"
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote Measurement"
+msgstr ""
+
+#: inputs/remote_aot_input.py
+msgid ""
+"The measurement on the remote AoT to collect into this channel"
+msgstr ""
+
+#: outputs/remote_output_on_off.py
+msgid ""
+"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select an On/Off Output Channel for this to work. Selecting a PWM, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
+msgstr ""
+
+#: outputs/remote_output_pwm.py
+msgid ""
+"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select a PWM Output Channel for this to work. Selecting an On/Off, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
+msgstr ""
+
+#: outputs/remote_output_pwm.py
+msgid ""
+"HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
+msgstr ""

@@ -179,7 +179,7 @@ FUNCTION_INFORMATION = {
     'dependencies_module': [
         ('pip-pypi', 'usb.core', 'pyusb==1.1.1'),
         ('pip-pypi', 'luma.oled', 'luma.oled==3.8.1'),
-        ('pip-pypi', 'PIL', 'Pillow==8.1.2'),
+        ('pip-pypi', 'PIL', 'Pillow==12.3.0'),
         ('apt', 'libjpeg-dev', 'libjpeg-dev'),
         ('apt', 'zlib1g-dev', 'zlib1g-dev'),
         ('apt', 'libfreetype6-dev', 'libfreetype6-dev'),

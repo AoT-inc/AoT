@@ -482,6 +482,20 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     output_type='pwm',
                     amount=amount,
                     output_channel=output_channel)
+
+                # Same opt-in (code, msg) contract the on_off path above uses.
+                # Without this the PWM path captured out_ret and then reported
+                # success regardless, so a module that knew its command had
+                # failed (e.g. remote_output_pwm when the host is unreachable)
+                # had no way to say so. Legacy modules return a string or None
+                # and are unaffected — _switch_failed() only fires on the tuple.
+                failed, fail_msg = self._switch_failed(out_ret)
+                if failed:
+                    self.logger.error(
+                        f"Output {self.unique_id} CH{output_channel} ({self.output_name}) "
+                        f"failed to set duty cycle: {fail_msg}")
+                    return 1, fail_msg
+
                 self._ensure_started_marked(output_channel)
 
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} ({self.output_name}) " \

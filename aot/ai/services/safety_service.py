@@ -6,11 +6,25 @@ Validates physical thresholds, prevents duplicate channel activation,
 and enforces daily execution limits before any hardware action is performed.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from aot.aot_flask.extensions import db
 
 logger = logging.getLogger(__name__)
+
+
+def _as_utc(dt):
+    """Naive datetimes out of the DB are UTC; make that explicit."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _shape_name(shape):
+    """Human label for a GeoShape — there is no name column, it lives in the
+    GeoJSON properties."""
+    props = (shape.feature or {}).get('properties') or {}
+    return props.get('name') or shape.unique_id
 
 
 class SafetyViolation(Exception):
@@ -47,6 +61,9 @@ class SafetyService:
         """
         violations = []
 
+        action_type, target_id, params = SafetyService._unwrap_device_action(
+            action_type, target_id, params)
+
         if action_type == 'output':
             violations.extend(SafetyService._check_output_params(target_id, params))
         elif action_type == 'pid':
@@ -63,41 +80,136 @@ class SafetyService:
             raise SafetyViolation(violations)
 
     @staticmethod
+    def _unwrap_device_action(action_type, target_id, params):
+        """Resolve an mcp_tool_call/operate_device wrapper down to the device.
+
+        Physical control no longer arrives as action_type='output' — that form is
+        hard-blocked and every path now wraps it as an MCP tool call whose
+        target_id is the *MCP server* (routes_scheduler.api_propose_job,
+        AIActionService.get_action_manifest). Validating the wrapper checks
+        nothing: the server has no output params, no channel, no areas, and the
+        daily counter lands on the server instead of the device.
+        """
+        if action_type != 'mcp_tool_call':
+            return action_type, target_id, params
+
+        params = params or {}
+        if params.get('tool_name') != 'operate_device':
+            return action_type, target_id, params
+
+        args = params.get('arguments') or {}
+        device_id = args.get('device_id') or args.get('output_id')
+        if not device_id:
+            return action_type, target_id, params
+
+        state = args.get('state', 'on')
+        if isinstance(state, bool):
+            state = 'on' if state else 'off'
+
+        return 'output', device_id, {
+            'state': str(state).lower(),
+            'channel': args.get('channel', 0),
+            'amount': args.get('duration_seconds'),
+        }
+
+    @staticmethod
     def _check_spatial_conflicts(action_type, target_id):
-        """Check if action conflicts with a running abstract plan in the same area."""
+        """Check if action conflicts with a running abstract plan in the same area.
+
+        The plan side of the pair is scheduled against a *space* (a site/zone
+        GeoShape unique_id — see NoteResolver), the action side against a
+        *device*. Resolving one to the other is the whole job here: a device's
+        areas are the spaces its bound shapes sit in, plus their ancestors.
+        """
         violations = []
         if action_type == 'abstract_plan':
             return violations # Abstract plans don't conflict with each other for now
 
         try:
-            from aot.databases.models.output import Output
-            from aot.databases.models.geo import GeoShape
-            from aot.databases.models.scheduler import SchedulerJobMeta
-            from aot.utils.time_utils import get_local_now
-            now = get_local_now()
-            conflicts = SchedulerJobMeta.query.filter(
-                SchedulerJobMeta.action_type == 'abstract_plan',
-                SchedulerJobMeta.state.in_(['RUNNING', 'PENDING']),
-                SchedulerJobMeta.target_id.in_(areas_to_check)
-            ).all()
+            from aot.utils.time_utils import utc_now, to_local
 
-            for c in conflicts:
+            # Cheap gate first: no plan is scheduled anywhere, so nothing can
+            # conflict and we skip the (expensive) spatial resolution entirely.
+            plans = SafetyService._active_plan_jobs()
+            if not plans:
+                return violations
+
+            areas = SafetyService._areas_for_target(target_id)
+            if not areas:
+                return violations
+
+            now = utc_now()
+            for c in plans:
+                area = areas.get(c.target_id)
+                if area is None:
+                    continue
+
                 is_active = False
                 if c.state == 'RUNNING':
                     is_active = True
                 elif c.schedule_time and c.end_time:
-                    if c.schedule_time <= now <= c.end_time:
+                    # Stored naive = UTC; now is aware. Compare in one frame or
+                    # every comparison raises and the whole check dies silently.
+                    if _as_utc(c.schedule_time) <= now <= _as_utc(c.end_time):
                         is_active = True
-                
+
                 if is_active:
+                    until = to_local(c.end_time).strftime('%H:%M') if c.end_time else 'completed'
                     violations.append(
-                        f"Conflict with plan '{c.reasoning[:30]}' in {geo_shape.type} '{geo_shape.geo_id}' (Active until {c.end_time.strftime('%H:%M') if c.end_time else 'completed'})"
+                        f"Conflict with plan '{(c.reasoning or '')[:30]}' in "
+                        f"{area.type} '{_shape_name(area)}' (Active until {until})"
                     )
 
         except Exception as e:
-            logger.warning(f"Spatial conflict check failed for {target_id}: {e}")
-            
+            # Fail open: a geo/DB hiccup must not block every physical action.
+            # Logged at ERROR with a traceback because this check spent a long
+            # time raising NameError behind a one-line warning nobody read.
+            logger.error(
+                "Spatial conflict check failed for %s: %s", target_id, e, exc_info=True)
+
         return violations
+
+    @staticmethod
+    def _active_plan_jobs():
+        """Abstract-plan jobs that are running or still scheduled."""
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        return SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.action_type == 'abstract_plan',
+            SchedulerJobMeta.state.in_(['RUNNING', 'PENDING'])
+        ).all()
+
+    @staticmethod
+    def _areas_for_target(target_id):
+        """{shape unique_id: GeoShape} — every space that contains this device.
+
+        A device's own bound shape is usually a marker or an area polygon
+        (`type='device'`), not the site/zone a plan is scheduled against, so we
+        walk up the hierarchy as well. Targets that are not devices (an MCP
+        server id, for instance) simply resolve to no shapes.
+        """
+        from aot.databases.models import GeoShape
+        from aot.aot_flask.geo import device_binding
+        from aot.utils.geo_hierarchy import build_geo_parent_map
+
+        own = device_binding.shapes_for_device(target_id)
+        if not own:
+            return {}
+
+        all_shapes = GeoShape.query.all()
+        by_id = {s.id: s for s in all_shapes}
+        parent_map = build_geo_parent_map(all_shapes)
+
+        out = {}
+        for shape in own:
+            current, hops = shape, 0
+            # hops guard: parent_map is spatial-fallback derived, so a cycle is
+            # a data bug away rather than impossible.
+            while current is not None and hops < 20:
+                if current.type in ('site', 'zone') and current.unique_id:
+                    out[current.unique_id] = current
+                current = by_id.get(parent_map.get(current.id))
+                hops += 1
+        return out
 
     @staticmethod
     def _check_output_params(target_id, params):

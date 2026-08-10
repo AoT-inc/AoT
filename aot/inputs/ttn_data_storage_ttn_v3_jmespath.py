@@ -78,7 +78,7 @@ INPUT_INFORMATION = {
     ],
 
     'dependencies_module': [
-        ('pip-pypi', 'requests', 'requests==2.31.0'),
+        ('pip-pypi', 'requests', 'requests==2.33.0'),
         ('pip-pypi', 'jmespath', 'jmespath==0.10.0')
     ],
 

@@ -27060,3 +27060,111 @@ msgstr "파일은 최대 {max}개까지 첨부할 수 있습니다."
 #: aot/aot_flask/static/apps/notes-widget/src
 msgid "At most {max} files. Only the first {n} will be added."
 msgstr "파일은 최대 {max}개입니다. 앞의 {n}개만 추가합니다."
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Collect measurements from another AoT server over the network using its API. Enter the host and API key, set the number of measurements, and save — the Remote Measurement dropdown is then filled with the channels available on that server. Pick one per channel and set its Measurement Unit to match the unit shown in the dropdown. Values arrive with the remote timestamp, and any conversion configured on the remote channel is already applied."
+msgstr ""
+"다른 AoT 서버의 측정값을 API로 수집합니다. 호스트와 API 키를 입력하고 측정 개수를 정한 뒤 저장하면, 원격 측정 드롭다운이 그 서버에서 쓸 수 있는 채널로 채워집니다. 채널마다 하나씩 고르고, 드롭다운에 표시된 단위에 맞춰 측정 단위를 설정하세요. 값은 원격의 타임스탬프 그대로 저장되며, 원격 채널에 설정된 변환은 이미 적용된 상태로 들어옵니다."
+
+#: inputs/remote_aot_input.py
+msgid ""
+"SECURITY: an AoT API key carries every permission of the user it belongs to. For a collect-only connection, create a user on the remote server whose role has only \"View Settings\" and use that user's key — a key from an admin account would also grant control of that server's devices. Keep TLS verification enabled unless you understand the risk."
+msgstr ""
+"보안: AoT API 키는 그 키가 속한 사용자의 모든 권한을 그대로 넘깁니다. 수집 전용 연결이라면 원격 서버에 \"설정 보기\" 권한만 가진 역할의 사용자를 만들어 그 사용자의 키를 쓰세요 — 관리자 계정의 키는 그 서버의 장치 제어 권한까지 함께 넘깁니다. 위험을 이해한 경우가 아니라면 TLS 검증은 켜 두세요."
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote AoT Host"
+msgstr ""
+"원격 AoT 호스트"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"The host or IP address of the remote AoT (a port may be included, e.g. 192.168.0.9:8084)"
+msgstr ""
+"원격 AoT의 호스트 또는 IP 주소 (포트를 포함할 수 있습니다. 예: 192.168.0.9:8084)"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote AoT API Key"
+msgstr ""
+"원격 AoT API 키"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"The API key of the remote AoT, exactly as shown on that server"
+msgstr ""
+"원격 AoT의 API 키. 그 서버에 표시된 값을 그대로 입력합니다"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Use HTTPS unless the remote AoT is only reachable over plain HTTP on a trusted network"
+msgstr ""
+"신뢰할 수 있는 망에서 평문 HTTP로만 접근되는 경우가 아니라면 HTTPS를 사용하세요"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Verify TLS Certificate"
+msgstr ""
+"TLS 인증서 검증"
+
+#: inputs/remote_aot_input.py outputs/remote_output_on_off.py outputs/remote_output_pwm.py
+msgid ""
+"Verify the remote server certificate. Turn this off only for a self-signed certificate on a trusted network — while off, the API key can be read by a man in the middle"
+msgstr ""
+"원격 서버의 인증서를 검증합니다. 신뢰할 수 있는 망의 자체 서명 인증서일 때만 끄세요 — 꺼 두는 동안에는 중간자가 API 키를 읽을 수 있습니다"
+
+#: inputs/remote_aot_input.py outputs/remote_output_pwm.py
+msgid ""
+"Request Timeout (Seconds)"
+msgstr ""
+"요청 제한시간(초)"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"HTTP read timeout. Raise it if the remote server is slow to answer a large batch"
+msgstr ""
+"HTTP 읽기 제한시간. 원격 서버가 큰 묶음 요청에 느리게 답하면 늘리세요"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Initial Backfill (Hours)"
+msgstr ""
+"최초 수집 범위(시간)"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"How far back to collect on the first run. Later runs only fetch what has arrived since the last collection"
+msgstr ""
+"첫 실행에서 몇 시간 전까지 수집할지 정합니다. 이후 실행은 마지막 수집 이후에 들어온 값만 가져옵니다"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"Remote Measurement"
+msgstr ""
+"원격 측정"
+
+#: inputs/remote_aot_input.py
+msgid ""
+"The measurement on the remote AoT to collect into this channel"
+msgstr ""
+"이 채널로 수집할 원격 AoT의 측정"
+
+#: outputs/remote_output_on_off.py
+msgid ""
+"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select an On/Off Output Channel for this to work. Selecting a PWM, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
+msgstr ""
+"원격 AoT의 API 키와 IP/호스트 주소를 입력하고 저장하면 원격 출력 드롭다운이 채워집니다. 드롭다운이 채워지려면 저장 후 페이지를 새로고침해야 합니다. 제어할 원격 AoT 출력을 고른 뒤 다시 저장하세요. 이 기능이 동작하려면 On/Off 출력 채널을 선택해야 합니다. PWM, 용량 등 다른 채널을 고르면 오류가 발생합니다. 보안: AoT API 키는 그 키가 속한 사용자의 모든 권한을 그대로 넘기므로, 이 키는 원격 서버의 제어 권한이기도 합니다. 위험을 이해한 경우가 아니라면 TLS 검증은 켜 두세요 — 꺼 두면 연결을 가로챌 수 있는 사람이 키를 읽을 수 있습니다."
+
+#: outputs/remote_output_pwm.py
+msgid ""
+"Enter the API key and IP/Host address of your remote AoT and save to populate the Remote Output dropdown selection. You will need to refresh the page after saving for the Remote AoT Output dropdown to populate. Configure which Remote AoT Output you would like to control and save again. You must select a PWM Output Channel for this to work. Selecting an On/Off, Volume, or other channel will cause an error. SECURITY: an AoT API key carries every permission of the user it belongs to, so this key grants control of the remote server. Keep TLS verification enabled unless you understand the risk — with it off, anyone who can intercept the connection can read the key."
+msgstr ""
+"원격 AoT의 API 키와 IP/호스트 주소를 입력하고 저장하면 원격 출력 드롭다운이 채워집니다. 드롭다운이 채워지려면 저장 후 페이지를 새로고침해야 합니다. 제어할 원격 AoT 출력을 고른 뒤 다시 저장하세요. 이 기능이 동작하려면 PWM 출력 채널을 선택해야 합니다. On/Off, 용량 등 다른 채널을 고르면 오류가 발생합니다. 보안: AoT API 키는 그 키가 속한 사용자의 모든 권한을 그대로 넘기므로, 이 키는 원격 서버의 제어 권한이기도 합니다. 위험을 이해한 경우가 아니라면 TLS 검증은 켜 두세요 — 꺼 두면 연결을 가로챌 수 있는 사람이 키를 읽을 수 있습니다."
+
+#: outputs/remote_output_pwm.py
+msgid ""
+"HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
+msgstr ""
+"듀티사이클 명령의 HTTP 읽기 제한시간. 원격 호스트에서 가장 오래 걸리는 명령보다 길어야 합니다"
