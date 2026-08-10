@@ -4,6 +4,23 @@ AoT uses an MCP (Model Context Protocol) based AI agent to observe, diagnose, an
 
 ---
 
+## Getting started: there are two switches { #enable-and-start }
+
+Using the AI takes two switches in two different places. They are deliberately not one.
+
+| Switch | Where | What it turns on |
+|--------|-------|------------------|
+| **Enable AI Service** | Settings > General | The AI menu appears in the navigation and the AI page becomes reachable. Chat and advice requests work. |
+| **AI Service Operation** | AI > AI Agent | Work that runs without anyone asking for it — periodic summaries, context broadcast, weather summary, MCP health checks, real-time alerts. |
+
+The order is **enable in Settings → register a model (agent) on the AI page → start operation**.
+
+- **Operation cannot be started with no model registered.** Running background work with nothing to ask only piles up errors in the log every cycle. The switch is available only once at least one agent is activated.
+- **Deactivating or deleting the last model stops operation too.** Re-activating a model later does not silently resume autonomous operation — start it again on the AI page.
+- **Chat and advice requests still work while operation is off.** That way you can try a freshly registered model without committing to autonomous operation.
+
+---
+
 ## AI System Architecture { #agents }
 
 AoT's AI uses tools through two paths:

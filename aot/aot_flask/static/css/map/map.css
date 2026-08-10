@@ -149,7 +149,9 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
 .aot-popup--device   { min-width: 260px; max-width: 260px; }
 .aot-popup--facility { min-width: 200px; max-width: 200px; z-index: var(--z-map-popup-act) !important; }
 .aot-popup--note     { max-width: 260px; }
-.aot-popup--label    { max-width: 200px; }
+/* 라벨 팝업은 모달과 같은 노트 블록(제목 + 우측 알약 한 행)을 담는다. 200px 로만
+   묶어 두면 그 행이 눌려 제목과 버튼이 서로 붙는다 — 알약이 들어갈 만큼만 넓힌다. */
+.aot-popup--label    { min-width: 230px; max-width: 260px; }
 
 /* facility 팝업 — 액추에이터 목록이 많을 때 세로 스크롤 */
 .aot-popup--facility .maplibregl-popup-content {
@@ -363,18 +365,9 @@ body.aot-map-fullscreen-active .grid-stack-item:not(.aot-fs-parent) {
   justify-content: flex-end;
 }
 
-/* ── 노트 미리보기 ── */
-.aot-popup-note-preview {
-  font-size: 0.85em;           /* ~11px */
-  color: var(--aot-color-text-secondary, #666);
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  min-height: 1.2em;
-  line-height: 1.4;
-  margin-top: 6px;
-}
+/* 노트 미리보기(.aot-popup-note-preview)는 제거됐다 — 팝업마다 한 줄짜리 자체
+   미리보기를 두던 것을 모달과 같은 공용 노트 블록(AoTNotesBlock)으로 통일했다.
+   새 팝업에 노트를 붙일 때 여기에 자체 미리보기를 다시 만들지 말 것. */
 
 /* ── Map Notes 팝업 본문 텍스트 ── */
 .aot-popup-note-content {

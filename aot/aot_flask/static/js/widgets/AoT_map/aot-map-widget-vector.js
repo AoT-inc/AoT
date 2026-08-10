@@ -477,6 +477,9 @@
         if (!uuid) return null;
         if (kind === 'site')  return '/api/geo/site/'  + encodeURIComponent(uuid) + '/summary';
         if (kind === 'zone')  return '/api/geo/zone/'  + encodeURIComponent(uuid) + '/contents';
+        if (kind === 'facility') {
+            return '/api/aot/facility/' + encodeURIComponent(uuid) + '/overview';
+        }
         if (kind === 'device') {
             return '/api/geo/device/' + encodeURIComponent(uuid) + '/detail?channel=' +
                    encodeURIComponent(channel == null ? 0 : channel);
@@ -659,16 +662,13 @@
                    _zPane('about', '');
         }
 
-        // 노트 패널 열기 — [현황] 탭의 노트 블록이 쓴다. 패널이 모달에 가리므로
-        // 먼저 모달을 닫는다(시설 모달과 같은 처리).
-        function _openZoneNotesPanel(uid, zoneUuid, zoneName) {
+        // 노트 패널은 z-index 최상위라 모달 위로 뜨지 못한다 — 열기 전에 모달을
+        // 먼저 닫는다(필지·시설·장치 모달도 같은 처리).
+        function _closeZoneModal(uid) {
             var z2 = _zonePopupState[uid];
             if (z2 && z2.popup) {
                 try { z2.popup.remove(); } catch (e) {}
             }
-            window.dispatchEvent(new CustomEvent('open-notes', {
-                detail: { targetId: zoneUuid, targetType: 'GeoShape', name: zoneName || '' }
-            }));
         }
 
         // 현재 블록의 값을 눌러 이 구역의 대표 측정을 정한다.
@@ -719,22 +719,9 @@
             });
             _wireZoneRepPick(uid, pane, zoneUuid, data);
 
-            var _openNotes = function () {
-                _openZoneNotesPanel(uid, zoneUuid, z.name || '');
-            };
-            var noteBtn = pane.querySelector('.aot-ov-notes-open');
-            if (noteBtn) noteBtn.addEventListener('click', _openNotes);
-
-            var notesList = pane.querySelector('.aot-ov-notes-list');
-            if (notesList) {
-                fetch('/notes/target/' + encodeURIComponent(zoneUuid))
-                    .then(function (r) { return r.ok ? r.json() : []; })
-                    .then(function (notes) {
-                        if (!pane.isConnected) return;
-                        window.AoTMapPopup.fillOverviewNotes(notesList, notes, _openNotes);
-                    })
-                    .catch(function () {});
-            }
+            window.AoTNotesBlock.wire(pane,
+                { targetId: zoneUuid, targetType: 'GeoShape', name: z.name || '' },
+                { beforeOpen: function () { _closeZoneModal(uid); } });
         }
 
         // [개요] 탭 — 사진 + 구역 정보 (시설 [개요]와 같은 순서)
@@ -1701,6 +1688,11 @@
             _inst._openFacilityByShape = function (shapeUuid) {
                 _openFacilityFromShape(uniqueId, shapeUuid);
             };
+            // 도형 호버 예열이 시설 uuid 를 얻는 통로(_installShapeClick 은
+            // 형제 스코프다).
+            _inst._facilityUuidOfShape = function (shapeUuid) {
+                return _facilityUuidOfShape(uniqueId, shapeUuid);
+            };
             // 입력 라벨 토글(addLayerPanel 은 형제 스코프다)이 구역 라벨을
             // 다시 칠하게 하는 통로. 캐시해 둔 상태를 쓰므로 재조회는 없다.
             _inst._repaintZoneLabels = function () {
@@ -1775,7 +1767,6 @@
         function _renderDeviceBody(body, uid, data, deviceUuid, channel) {
             var pane = body.querySelector('.aot-bay-popup-pane[data-pane="dmain"]');
             if (!pane || !window.AoTMapPopup) return;
-            var P = window.AoTMapPopup;
             var dev = data.device || {};
             var name = dev.name || '';
 
@@ -1789,13 +1780,7 @@
                 '<div class="aot-ov-block aot-device-ctrl">' +
                     '<div class="aot-ov-sec-title">' + head + '</div>' +
                 '</div>' +
-                '<div class="aot-ov-block aot-ov-notes">' +
-                    '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
-                    '<span>' + _tr('Notes') + '</span>' +
-                    '<button type="button" class="aot-ov-notes-open">' +
-                    _tr('Create Note') + '</button></div>' +
-                    '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>' +
-                '</div>';
+                window.AoTNotesBlock.html();
 
             var host = pane.querySelector('.aot-device-ctrl');
             if (dev.kind === 'device') {
@@ -1811,25 +1796,12 @@
                 _wireDeviceStateAndTime(host, uid, deviceUuid, channel);
             }
 
-            var _openNotes = function () {
-                var d = _devicePopupState[uid];
-                if (d && d.popup) { try { d.popup.remove(); } catch (e) {} }
-                window.dispatchEvent(new CustomEvent('open-notes', {
-                    detail: { targetId: deviceUuid, targetType: 'device', name: name }
-                }));
-            };
-            var nb = pane.querySelector('.aot-ov-notes-open');
-            if (nb) nb.addEventListener('click', _openNotes);
-
-            var list = pane.querySelector('.aot-ov-notes-list');
-            if (list) {
-                fetch('/notes/target/' + encodeURIComponent(deviceUuid))
-                    .then(function (r) { return r.ok ? r.json() : []; })
-                    .then(function (notes) {
-                        if (pane.isConnected) P.fillOverviewNotes(list, notes, _openNotes);
-                    })
-                    .catch(function () {});
-            }
+            window.AoTNotesBlock.wire(pane,
+                { targetId: deviceUuid, targetType: 'device', name: name },
+                { beforeOpen: function () {
+                    var d = _devicePopupState[uid];
+                    if (d && d.popup) { try { d.popup.remove(); } catch (e) {} }
+                } });
 
             _loadDeviceHistory(pane, deviceUuid, name);
         }
@@ -2196,21 +2168,12 @@
             }
             html += '</div>';
 
-            html += '<div class="aot-ov-block">' +
-                    '<div class="aot-ov-sec-title">' + _tr('Notes') + '</div>';
-            var notes = data.notes || [];
-            if (notes.length) {
-                notes.forEach(function (n) {
-                    var txt = (n.note || '').replace(/\s+/g, ' ');
-                    if (txt.length > 60) txt = txt.substring(0, 60) + '…';
-                    html += '<div class="aot-ov-note-row">' +
-                            '<span class="aot-ov-note-text">' + _escZ(txt) + '</span>' +
-                            '</div>';
-                });
-            } else {
-                html += '<div class="aot-site-empty">' + _tr('No notes written') + '</div>';
-            }
-            html += '</div>';
+            // 노트 — 다른 계층과 **같은** 공용 블록. 예전에는 여기만 목록을 직접
+            // 그려서 노트로 들어가는 문이 아예 없었다(필지에 적어 둘 것이 가장
+            // 많은데도 화면에서 노트를 열 방법이 없었다). 목록은 /site summary 의
+            // 것을 버리고 블록이 /notes/target 으로 직접 채운다 — 그래야 날짜·
+            // 첨부 썸네일까지 다른 창과 같은 모양이 된다.
+            html += window.AoTNotesBlock.html();
             return html;
         }
 
@@ -2250,6 +2213,18 @@
         // 칩이 쓰는 것과 같은 목록이어야, 줄을 눌러 연 모달과 칩을 눌러 연 모달이
         // 같은 구역을 가리킨다(bay 1개 시설은 bays 가 비어 있고 slices 가 하나를
         // 만들어 낸다).
+        // 도형 uuid → 시설 uuid. 시설 모달은 시설 uuid 로 조회하므로 호버
+        // 예열도 이 변환을 거쳐야 한다.
+        function _facilityUuidOfShape(uid, shapeUuid) {
+            var facs = (_actLabelState[uid] || {}).facilities || [];
+            for (var i = 0; i < facs.length; i++) {
+                if (facs[i] && facs[i].shape_uuid === shapeUuid) {
+                    return facs[i].unique_id;
+                }
+            }
+            return null;
+        }
+
         function _openFacilityFromShape(uid, shapeUuid) {
             var facs = (_actLabelState[uid] || {}).facilities || [];
             var hit = null;
@@ -2287,6 +2262,16 @@
                 if (!pane) return;
                 pane.innerHTML = _buildSiteSummaryHTML(data);
                 _wireSiteRows(uid, pane);
+                // 필지 모달도 30초마다 다시 그린다 — 캐시로 깜빡임을 막는다.
+                s._notesCache = s._notesCache || {};
+                window.AoTNotesBlock.wire(pane,
+                    { targetId: siteUuid, targetType: 'GeoShape',
+                      name: (data.site && data.site.name) || siteName || '' },
+                    { cache: s._notesCache,
+                      beforeOpen: function () {
+                          var s2 = _sitePopupState[uid];
+                          if (s2 && s2.popup) { try { s2.popup.remove(); } catch (e) {} }
+                      } });
                 var titleEl = body.querySelector('.aot-sensor-popup-title');
                 if (titleEl && data.site && data.site.name) {
                     titleEl.textContent = data.site.name;
@@ -2559,6 +2544,12 @@
                     // CSS 에 z-index:6 이 박혀 있던 것을 LABEL_Z.facility 로 옮겼다.
                     var _bRestore = _uidInstTop
                         ? _wireLabelStacking(_uidInstTop, bEl, 'facility') : null;
+                    // 호버 예열 — 지도에서 시설 모달을 여는 실제 과녁이 이 칩이다.
+                    // 도형(facilities-fill) 호버만으로는 칩 위에 마우스가 올라간
+                    // 경우를 못 잡는다(칩은 DOM 이라 캔버스 이벤트가 안 온다).
+                    bEl.addEventListener('mouseenter', function () {
+                        warmModal('facility', fac.unique_id);
+                    });
                     bEl.addEventListener('click', function (ev) {
                         ev.stopPropagation();
                         if (_uidInstTop && _bRestore) {
@@ -3370,7 +3361,9 @@
             }).catch(function () {});
         }
 
-        function _loadOverview(uid, facilityUuid) {
+        // fresh=true 는 **쓰기 직후의 재조회**다(사진·설명·자동제어 토글).
+        // 캐시를 타면 방금 끈 것이 켜진 채로 보여 토글이 고장 난 것처럼 읽힌다.
+        function _loadOverview(uid, facilityUuid, fresh) {
             var st = _actLabelState[uid];
             if (!st || !st.openBayPopup) return;
             var popupEl = st.openBayPopup.getElement();
@@ -3415,20 +3408,19 @@
                     if (f && f.unique_id === facilityUuid) facName = f.name || '';
                 });
 
-                // 노트 패널 열기 (조회 + 작성) — 팝업 모달이 노트 패널을
-                // 가리므로(z-index 최상위) 먼저 모달을 닫는다.
-                function _openNotesPanel() {
-                    var st3 = _actLabelState[uid];
-                    if (st3 && st3.openBayPopup) {
-                        try { st3.openBayPopup.remove(); } catch (e) {}
-                    }
-                    window.dispatchEvent(new CustomEvent('open-notes', {
-                        detail: { targetId: facilityUuid,
-                                  targetType: 'GeoFacility', name: facName }
-                    }));
-                }
-                var noteBtn = pane.querySelector('.aot-ov-notes-open');
-                if (noteBtn) noteBtn.addEventListener('click', _openNotesPanel);
+                // 노트 블록 — [현황] pane 은 30초마다 통째로 다시 그려지므로
+                // cache 를 넘겨 placeholder(…)가 매번 스쳐 보이지 않게 한다.
+                // 캐시는 pane 이 아니라 위젯 상태에 산다(pane 은 교체된다).
+                st2._notesCache = st2._notesCache || {};
+                window.AoTNotesBlock.wire(pane,
+                    { targetId: facilityUuid, targetType: 'GeoFacility', name: facName },
+                    { cache: st2._notesCache,
+                      beforeOpen: function () {
+                          var st3 = _actLabelState[uid];
+                          if (st3 && st3.openBayPopup) {
+                              try { st3.openBayPopup.remove(); } catch (e) {}
+                          }
+                      } });
 
                 // 대표사진 업로드 (editor 이상에서만 버튼이 렌더됨).
                 // [개요] DOM 이 교체된 경우에만 wiring — 유지된 DOM 에
@@ -3448,7 +3440,7 @@
                             body: fd
                         })
                         .then(function (r) { return r.json(); })
-                        .then(function () { _loadOverview(uid, facilityUuid); })
+                        .then(function () { _loadOverview(uid, facilityUuid, true); })
                         .catch(function () { phBtn.disabled = false; });
                     });
                 }
@@ -3486,46 +3478,28 @@
                         .then(function (r) { return r.json(); })
                         .then(function () {
                             st2._ovEditing = false;
-                            _loadOverview(uid, facilityUuid);
+                            _loadOverview(uid, facilityUuid, true);
                         })
                         .catch(function () { descSave.disabled = false; });
                     });
                 }
 
-                // 노트 목록 — 30초 갱신 시 깜빡임 방지: 이전 렌더 내용을
-                // 즉시 복원해 placeholder(…)가 보이지 않게 하고, fetch 결과가
-                // 실제로 달라졌을 때만 DOM 을 교체한다.
-                var listEl = pane.querySelector('.aot-ov-notes-list');
-                function _bindNoteClicks(el) {
-                    el.querySelectorAll('.aot-ov-note').forEach(function (n) {
-                        n.addEventListener('click', _openNotesPanel);
-                    });
-                }
-                if (listEl && st2._notesHtml) {
-                    listEl.innerHTML = st2._notesHtml;
-                    _bindNoteClicks(listEl);
-                }
-                fetch('/notes/target/' + encodeURIComponent(facilityUuid))
-                    .then(_j)
-                    .then(function (notes) {
-                        var st4 = _actLabelState[uid];
-                        if (!st4 || !listEl) return;
-                        var tmp = document.createElement('div');
-                        window.AoTMapPopup.fillOverviewNotes(tmp, notes, null);
-                        if (tmp.innerHTML !== st4._notesHtml) {
-                            st4._notesHtml = tmp.innerHTML;
-                            listEl.innerHTML = tmp.innerHTML;
-                            _bindNoteClicks(listEl);
-                        }
-                    })
-                    .catch(function () {});
             };
 
             // env_summary + status + info 를 한 요청(/overview)으로 묶어
             // 받는다. 개별 fetch 3개는 gthread 워커 스레드 3개를 동시에
             // 점유해, 페이지 로드 직후 맵 폴링 버스트와 겹칠 때 스레드 풀이
             // 포화되어 모달 렌더가 1초+(콜드 시 4초+) 지연되는 주원인이었다.
-            fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) + '/overview')
+            var _ovReq;
+            if (fresh) {
+                invalidateModal('facility', facilityUuid);
+                _ovReq = fetch('/api/aot/facility/' +
+                               encodeURIComponent(facilityUuid) +
+                               '/overview?fresh=1');
+            } else {
+                _ovReq = modalFetch('facility', facilityUuid);
+            }
+            _ovReq
                 .then(_j).catch(function () { return null; })
                 .then(function (j) {
                     j = j || {};
@@ -3577,7 +3551,7 @@
             var _done = function () {
                 var st2 = _actLabelState[uid];
                 if (st2) st2._iecPending = false;
-                _loadOverview(uid, facilityUuid);
+                _loadOverview(uid, facilityUuid, true);
             };
             fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) + '/function_state', {
                 method: 'POST',
@@ -3808,7 +3782,7 @@
             st.openBayFacility = facilityUuid;
             st.openBayId = bayId;
             st.overlaySlot = null;
-            st._notesHtml = null;
+            st._notesCache = null;   // 시설이 바뀌면 이전 시설의 노트를 물려주지 않는다
             st._aboutHtml = null;
 
             // [현황] 데이터 로드 + 30초 주기 갱신 (팝업 열려있는 동안만 —
@@ -4284,14 +4258,21 @@
         // 도형 위를 지나가면 그 모달의 응답을 미리 받아 둔다(라벨 호버와 같은
         // 예열). 레이어 한정 mousemove 라 히트테스트는 MapLibre 가 하고, 같은
         // 도형 위에서는 uuid 가 안 바뀌어 한 번만 나간다.
+        // 시설은 도형 uuid 가 아니라 **시설 uuid** 로 조회한다(/overview) —
+        // 그 대응은 inst.cachedFacilities3d 가 들고 있다.
         var _lastWarmed = null;
-        [['zones-fill', 'zone'], ['sites-fill', 'site']].forEach(function (pair) {
+        [['zones-fill', 'zone'], ['sites-fill', 'site'],
+         ['facilities-fill', 'facility']].forEach(function (pair) {
             map.on('mousemove', pair[0], function (e) {
                 var f = e.features && e.features[0];
                 var u = f && f.properties && f.properties.shape_uuid;
                 if (!u || u === _lastWarmed) return;
                 _lastWarmed = u;
-                warmModal(pair[1], u);
+                warmModal(pair[1],
+                          pair[1] === 'facility'
+                            ? (inst._facilityUuidOfShape &&
+                               inst._facilityUuidOfShape(u))
+                            : u);
             });
         });
 
@@ -5031,7 +5012,7 @@
                 // 쌓이므로, 스택에 묻힌 라벨을 집어낼 수단이 반드시 필요하다.
                 var _restoreZ = _wireLabelStacking(instance, el, zKind);
 
-                // Click → popup (v3 port: name + Open Notes button + last note preview)
+                // Click → popup (이름 + 공용 노트 블록)
                 (function(lngLat, popupName, popupArea, tId, tType, nodeId) {
                     // 호버 예열 — 누르기 전에 응답을 받아 둔다. 예열은 공유
                     // 캐시에 담기므로 클릭이 안 와도 버려지지 않고, 여러 번
@@ -5059,9 +5040,10 @@
                             return;
                         }
                         if (instance._labelPopup) { instance._labelPopup.remove(); }
-                        var noteElId = 'label-note-' + tId;
-                        var safeName = (popupName || '').replace(/'/g, "\\'");
-                        var openNoteAction = 'window.dispatchEvent(new CustomEvent(\'open-notes\',{detail:{targetId:\'' + tId + '\',targetType:\'' + tType + '\',name:\'' + safeName + '\'}}))';
+                        // 노트 블록은 모달과 **같은** 공용 컴포넌트다. 예전에는
+                        // 여기만 전체폭 딥그린 슬래브 + 한 줄 미리보기여서, 같은
+                        // 지도에서 라벨을 눌렀을 때와 도형을 눌렀을 때 노트 문이
+                        // 아예 다른 물건처럼 보였다.
                         var html = '<div class="aot-popup-body">'
                             + '<div class="aot-popup-header">'
                             + '<div class="aot-popup-title" style="margin:0">' + popupName + '</div>'
@@ -5069,16 +5051,23 @@
                             + '</div>'
                             + (popupArea ? '<div class="aot-popup-subtitle">' + popupArea + '</div>' : '')
                             + '<hr class="aot-popup-divider">'
-                            + '<button class="aot-popup-btn aot-popup-btn--primary aot-popup-btn--full" onclick="' + openNoteAction + '">'
-                            + (window._ ? window._('Open Notes') : 'Open Notes') + '</button>'
-                            + '<div id="' + noteElId + '" class="aot-popup-note-preview">'
-                            + (window._ ? window._('Loading...') : 'Loading...') + '</div>'
+                            + window.AoTNotesBlock.html()
                             + '</div>';
                         instance._labelPopup = new maplibregl.Popup({ offset: 12, closeOnClick: true, className: 'aot-popup aot-popup--label' })
                             .setLngLat(lngLat)
                             .setHTML(html)
                             .addTo(map);
                         instance._labelPopup.on('close', function () { instance._unpinLabel(el); });
+                        (function (popupRef) {
+                            var root = popupRef.getElement &&
+                                       popupRef.getElement();
+                            if (!root) return;
+                            window.AoTNotesBlock.wire(root,
+                                { targetId: tId, targetType: tType, name: popupName || '' },
+                                { beforeOpen: function () {
+                                    try { popupRef.remove(); } catch (e) {}
+                                } });
+                        }(instance._labelPopup));
                         // 배터리·통신 배지 — 장치 라벨에서만. site/zone 라벨은 장치가
                         // 아니라 조회해 봐야 늘 빈 응답이다.
                         if (tType === 'aot_device' && window.AoTSensorLabel &&
@@ -5091,23 +5080,6 @@
                                 });
                             }(instance._labelPopup));
                         }
-                        // Fetch last note
-                        setTimeout(function() {
-                            fetch('/notes/target/' + tId)
-                                .then(function(r) { return r.json(); })
-                                .then(function(notes) {
-                                    var el = document.getElementById(noteElId);
-                                    if (!el) return;
-                                    if (notes && notes.length > 0) {
-                                        var txt = notes[0].note || '';
-                                        el.innerText = txt.substring(0, 30) + (txt.length > 30 ? '...' : '');
-                                        el.style.color = '#555';
-                                    } else {
-                                        el.innerText = window._ ? window._('No notes written') : 'No notes written';
-                                        el.style.color = '#ccc';
-                                    }
-                                }).catch(function() {});
-                        }, 100);
                     });
                 }([coords[0], coords[1]], name, area,
                   props.db_id || props.parent_id || name,
@@ -8950,7 +8922,6 @@
         const uniqueKey = dev.device_id || dev.device_unique_id ||
                           (dev.unique_id ? dev.unique_id.split('::')[0] : (dev.id || '').split('::')[0]);
         const channel = (dev.channel_id && dev.channel_id !== 'undefined') ? dev.channel_id : 0;
-        const notePreviewId = 'note-prev-' + uniqueKey; // matches AoTMapPopup.buildNoteSection()
 
         const targetMap = (wOpts && (wOpts.all_measurements_map || wOpts.measurements_map)) || {};
         const devMeas = targetMap[uniqueKey] || [];

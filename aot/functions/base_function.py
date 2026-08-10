@@ -12,6 +12,7 @@ import logging
 
 from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.databases.models import CustomController
+from aot.utils.database import disabled_measurement_channels
 
 
 class AbstractFunction(AbstractBaseController):
@@ -50,12 +51,12 @@ class AbstractFunction(AbstractBaseController):
         self.setup_device_measurement(self.unique_id)
 
     def is_enabled(self, channel):
-        """Return whether a measurement channel is enabled."""
-        try:
-            return self.channels_measurement[channel].is_enabled
-        except:
-            self.setup_device_measurement(self.unique_id)
-            return self.channels_measurement[channel].is_enabled
+        """Return whether a measurement channel is enabled.
+
+        channels_measurement 는 컨트롤러 기동 때 뜬 스냅샷이라 설정 변경이
+        재시작 전까지 반영되지 않는다. 정본인 DB 를 짧은 TTL 로 다시 읽는다.
+        """
+        return channel not in disabled_measurement_channels(self.unique_id)
 
     def setup_logger(self, testing=None, name=None, function=None):
         """Configure the logger with the function's unique ID and log level."""

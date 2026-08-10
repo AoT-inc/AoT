@@ -1372,6 +1372,11 @@ def form_input_choices(choices, each_input, dict_units, dict_measurements, prefe
             DeviceMeasurements.device_id == each_input.unique_id).all()
 
     for each_measure in device_measurements:
+        # 꺼 둔 채널은 더 이상 기록되지 않으므로 선택지에도 올리지 않는다.
+        # (is_enabled 가 NULL 인 옛 행은 모델 기본값대로 '켜짐'으로 본다.)
+        if each_measure.is_enabled is not None and not each_measure.is_enabled:
+            continue
+
         if prefetched_conversions is not None and each_measure.conversion_id:
              conversion = prefetched_conversions.get(each_measure.conversion_id)
         elif each_measure.conversion_id:

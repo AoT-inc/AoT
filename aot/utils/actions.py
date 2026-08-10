@@ -23,7 +23,8 @@ from aot.databases.models import Trigger
 from aot.databases.utils import session_scope
 from aot.devices.camera import camera_record
 from aot.aot_client import DaemonControl
-from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.database import (db_retrieve_table_daemon,
+                                filter_disabled_channels)
 from aot.utils.influx import get_last_measurement
 from aot.utils.influx import get_past_measurements
 from aot.utils.modules import load_module_from_file
@@ -442,6 +443,11 @@ def run_input_actions(unique_id, message, measurements_dict, debug=False):
     actions = db_retrieve_table_daemon(Actions).filter(
         Actions.function_id == unique_id).all()
 
+    # '활성화할 측정값 선택'에서 꺼 둔 채널은 여기서 잘라낸다. 이 함수는 폴링
+    # 입력(controller_input)과 푸시 입력(MQTT/HTTP) 양쪽이 모두 지나는 유일한
+    # 공통 지점이라, 여기서 거르면 Input Action 도 꺼진 채널을 보지 못한다.
+    measurements_dict = filter_disabled_channels(unique_id, measurements_dict)
+
     for each_action in actions:
         try:
             return_dict = control.trigger_action(
@@ -462,6 +468,10 @@ def run_input_actions(unique_id, message, measurements_dict, debug=False):
     # 전역 자동 VPD 서비스: 온습도 입력이면 VPD 채널을 계산해 함께 기록
     from aot.utils.auto_vpd import inject_auto_vpd
     measurements_dict = inject_auto_vpd(unique_id, measurements_dict)
+
+    # Action 이 되돌려준 dict 와 방금 주입한 VPD 채널까지 한 번 더 거른다
+    # (Action 은 measurements_dict 를 통째로 갈아치울 수 있다).
+    measurements_dict = filter_disabled_channels(unique_id, measurements_dict)
 
     return message, measurements_dict
 

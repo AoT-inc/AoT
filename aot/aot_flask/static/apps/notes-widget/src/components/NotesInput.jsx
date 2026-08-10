@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Camera, ArrowUp, X, Paperclip, Loader2, Plus, Image as ImageIcon, Tag, Hash } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { createNote, fetchTags } from '../lib/api'
+import { t, tf } from '../lib/i18n'
 
 export default function NotesInput({ target }) {
   const [text, setText] = useState('')
@@ -45,7 +46,7 @@ export default function NotesInput({ target }) {
     },
     onError: (err) => {
         isSubmitting.current = false
-        alert("Failed to save note: " + err.message)
+        alert(t('Failed to save note.') + ' ' + err.message)
     }
   })
 
@@ -118,11 +119,12 @@ export default function NotesInput({ target }) {
       if (files.length + incomingFiles.length > LIMIT) {
         const remainingSpace = LIMIT - files.length;
         if (remainingSpace <= 0) {
-          alert(`You can only upload a maximum of ${LIMIT} files.`);
+          alert(tf('You can attach at most {max} files.', { max: LIMIT }));
           e.target.value = '';
           return;
         }
-        alert(`Maximum ${LIMIT} files allowed. Only the first ${remainingSpace} files will be added.`);
+        alert(tf('At most {max} files. Only the first {n} will be added.',
+                 { max: LIMIT, n: remainingSpace }));
         filesToProcess = incomingFiles.slice(0, remainingSpace);
       }
 
@@ -165,7 +167,9 @@ export default function NotesInput({ target }) {
 
     const formData = new FormData()
     formData.append('note', text)
-    // Send "Quick Note" as title, backend smart subject logic will handle it
+    // 제목은 'Quick Note' **고정**. 이건 화면에 뜨는 문구가 아니라 서버가
+    // "제목 없는 노트"로 알아보는 표식이다(utils_notes.generic_titles) —
+    // 번역하면 서버가 못 알아보고 자동 제목 짓기가 조용히 멈춘다.
     formData.append('name', 'Quick Note')
     formData.append('target_id', target.targetId)
     formData.append('target_type', target.targetType)
@@ -203,7 +207,7 @@ export default function NotesInput({ target }) {
                     <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center bg-white text-blue-600 group-hover:bg-blue-50 transition-colors shadow-sm">
                         <Tag size={16} />
                     </div>
-                    <span>Add Tag</span>
+                    <span>{t('Add Tag')}</span>
                 </button>
                 <div className="border-t border-slate-100 my-1"></div>
                 <button 
@@ -214,7 +218,7 @@ export default function NotesInput({ target }) {
                     <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center bg-white text-slate-600 group-hover:bg-slate-100 transition-colors shadow-sm">
                         <Paperclip size={16} />
                     </div>
-                    <span>File</span>
+                    <span>{t('File')}</span>
                 </button>
                 <button 
                     type="button" 
@@ -224,7 +228,7 @@ export default function NotesInput({ target }) {
                     <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center bg-white text-slate-600 group-hover:bg-slate-100 transition-colors shadow-sm">
                         <Camera size={16} />
                     </div>
-                    <span>Camera</span>
+                    <span>{t('Camera')}</span>
                 </button>
                 <button 
                     type="button" 
@@ -234,7 +238,7 @@ export default function NotesInput({ target }) {
                     <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center bg-white text-slate-600 group-hover:bg-slate-100 transition-colors shadow-sm">
                         <ImageIcon size={16} />
                     </div>
-                    <span>Photo</span>
+                    <span>{t('Photo')}</span>
                 </button>
             </div>
          </div>
@@ -245,7 +249,7 @@ export default function NotesInput({ target }) {
          <div className="absolute bottom-full left-0 mb-3 bg-white border border-slate-200 rounded-[14px] shadow-xl p-3 animate-in fade-in slide-in-from-bottom-2 duration-200 z-30 min-w-[240px] max-w-full">
             <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                    <Hash size={12} /> Select/Create Tag
+                    <Hash size={12} /> {t('Select or create a tag')}
                 </span>
                 <button onClick={() => setShowTagInput(false)} className="text-slate-400 hover:text-slate-600">
                     <X size={14} />
@@ -273,7 +277,7 @@ export default function NotesInput({ target }) {
                     type="text"
                     value={newTagText}
                     onChange={e => setNewTagText(e.target.value)}
-                    placeholder="Enter new tag (Enter)"
+                    placeholder={t('New tag name (Enter)')}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-3 pr-8 text-xs focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
                 />
                 <button 
@@ -333,7 +337,7 @@ export default function NotesInput({ target }) {
             type="button"
             onClick={() => setShowMenu(!showMenu)}
             className="aot-icon-btn"
-            title="Attach or Tag"
+            title={t('Attach or Tag')}
           >
             {showMenu ? <X size={18} /> : <Plus size={20} />}
           </button>
@@ -369,7 +373,7 @@ export default function NotesInput({ target }) {
             value={text}
             onChange={e => setText(e.target.value)}
             onFocus={() => { setShowMenu(false); setShowTagInput(false); }}
-            placeholder="Note down your memo..."
+            placeholder={t('Write a note...')}
             className="aot-composer-input no-scrollbar"
             rows={1}
             onKeyDown={(e) => {

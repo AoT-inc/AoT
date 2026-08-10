@@ -1,5 +1,6 @@
 # coding=utf-8
 import logging
+import threading
 import time
 from sqlite3 import OperationalError
 
@@ -12,6 +13,11 @@ logger = logging.getLogger("aot.database")
 
 _LOCK_PHRASES = ("database is locked", "unable to open database")
 _IO_PHRASES = ("disk i/o error",)
+
+# 채널 활성/비활성 상태 캐시 (device_id -> (읽은 시각, 꺼진 채널 집합))
+DISABLED_CHANNEL_CACHE_SECONDS = 10.0
+_disabled_channel_cache = {}
+_disabled_channel_lock = threading.Lock()
 
 
 def _is_lock_error(exc) -> bool:
@@ -122,3 +128,59 @@ def db_retrieve_table_daemon(
         tries -= 1
 
     return _empty
+
+
+def disabled_measurement_channels(device_id, max_age=DISABLED_CHANNEL_CACHE_SECONDS):
+    """이 장치에서 사용자가 꺼 둔 측정 채널 번호 집합을 돌려준다.
+
+    '활성화할 측정값 선택'(`DeviceMeasurements.is_enabled`)의 정본은 DB 다.
+    데몬이 컨트롤러 기동 때 읽어 둔 스냅샷(`channels_measurement`)을 기준으로
+    삼으면 설정을 바꿔도 **컨트롤러를 다시 시작하기 전까지 반영되지 않는다** —
+    Input 저장 경로(`input_mod`)는 컨트롤러를 재시작하지 않기 때문이다.
+    그래서 여기서 짧은 TTL 로 다시 읽는다.
+
+    읽기에 실패하면 **빈 집합**을 돌려준다(fail-open). 읽기 실패가 멀쩡한
+    채널까지 막아 전체 측정을 잃는 것보다, 꺼 둔 채널이 잠시 더 기록되는
+    쪽이 낫다.
+    """
+    if not device_id:
+        return frozenset()
+
+    now = time.monotonic()
+    with _disabled_channel_lock:
+        cached = _disabled_channel_cache.get(device_id)
+        if cached and now - cached[0] < max_age:
+            return cached[1]
+
+    try:
+        from aot.databases.models import DeviceMeasurements
+        rows = db_retrieve_table_daemon(
+            DeviceMeasurements,
+            custom_name='device_id',
+            custom_value=device_id).all()
+        # is_enabled 가 NULL 인 행은 '켜짐'으로 본다 — 모델 기본값이 True 라
+        # 명시적으로 꺼진 것(False)만 제외 대상이다.
+        disabled = frozenset(
+            each.channel for each in rows
+            if each.channel is not None and each.is_enabled is not None
+            and not each.is_enabled)
+    except Exception:
+        logger.exception(
+            f"Could not read enabled measurement channels for {device_id}")
+        return frozenset()
+
+    with _disabled_channel_lock:
+        _disabled_channel_cache[device_id] = (now, disabled)
+    return disabled
+
+
+def filter_disabled_channels(device_id, measurements_dict):
+    """측정값 dict 에서 꺼 둔 채널을 걸러낸 새 dict 를 돌려준다."""
+    if not measurements_dict:
+        return measurements_dict
+    disabled = disabled_measurement_channels(device_id)
+    if not disabled:
+        return measurements_dict
+    return {channel: value
+            for channel, value in measurements_dict.items()
+            if channel not in disabled}

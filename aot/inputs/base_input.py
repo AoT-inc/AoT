@@ -13,6 +13,7 @@ import logging
 
 from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.databases.models import Input
+from aot.utils.database import disabled_measurement_channels
 
 
 class AbstractInput(AbstractBaseController):
@@ -160,11 +161,10 @@ class AbstractInput(AbstractBaseController):
         if channel not in self.channels_measurement:
             self.logger.error(f"Channel {channel} not found by is_enabled()")
             return
-        try:
-            return self.channels_measurement[channel].is_enabled
-        except:
-            self.setup_device_measurement(self.unique_id)
-            return self.channels_measurement[channel].is_enabled
+        # channels_measurement 는 컨트롤러 기동 때 뜬 스냅샷이라, 설정에서
+        # 채널을 켜고 끈 결과가 재시작 전까지 반영되지 않았다. 정본인 DB 를
+        # 짧은 TTL 로 다시 읽는다.
+        return channel not in disabled_measurement_channels(self.unique_id)
 
     def setup_logger(self, testing=None, name=None, input_dev=None):
         name = name if name else __name__

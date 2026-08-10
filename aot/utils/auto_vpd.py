@@ -69,18 +69,21 @@ def invalidate_enabled_cache():
 def _classify_channels(session, device_id):
     """device_id 의 DeviceMeasurements 를 분류.
 
-    반환: (temp_row, hum_row, has_native_vpd, auto_row, max_channel)
+    반환: (temp_row, hum_row, native_vpd_row, auto_row, max_channel)
     - temp_row/hum_row: 첫 번째 temperature/humidity 채널
-    - has_native_vpd: 서비스가 만들지 않은 vapor_pressure_deficit 채널 존재 여부
+    - native_vpd_row: 서비스가 만들지 않은 vapor_pressure_deficit 채널 (없으면 None)
     - auto_row: 서비스가 만든 auto_vpd 채널
     - max_channel: 이 입력의 **실제(auto 제외) 채널** 중 최댓값. "마지막 채널
       다음 번호"(= max_channel + 1)를 정하는 기준.
     """
     from aot.databases.models import DeviceMeasurements
+    # 채널 번호 순으로 본다 — "첫 번째 temperature" 가 조회 순서에 따라 달라지면
+    # 기온 대신 토양온도가 뽑혀 엉뚱한 VPD 가 나온다(둘 다 measurement 는
+    # 'temperature' 다).
     rows = session.query(DeviceMeasurements).filter(
-        DeviceMeasurements.device_id == device_id).all()
-    temp_row = hum_row = auto_row = None
-    has_native_vpd = False
+        DeviceMeasurements.device_id == device_id).order_by(
+        DeviceMeasurements.channel).all()
+    temp_row = hum_row = auto_row = native_vpd_row = None
     max_channel = -1
     for r in rows:
         if r.measurement_type == AUTO_VPD_TYPE:
@@ -93,9 +96,9 @@ def _classify_channels(session, device_id):
             temp_row = r
         elif meas == 'humidity' and hum_row is None:
             hum_row = r
-        elif meas == AUTO_VPD_MEASUREMENT:
-            has_native_vpd = True
-    return temp_row, hum_row, has_native_vpd, auto_row, max_channel
+        elif meas == AUTO_VPD_MEASUREMENT and native_vpd_row is None:
+            native_vpd_row = r
+    return temp_row, hum_row, native_vpd_row, auto_row, max_channel
 
 
 def inject_auto_vpd(unique_id, measurements_dict):
@@ -120,12 +123,22 @@ def _inject(unique_id, measurements_dict):
         calculate_vapor_pressure_deficit, convert_from_x_to_y_unit)
 
     with session_scope(AOT_DB_PATH) as session:
-        temp_row, hum_row, has_native_vpd, auto_row, max_channel = _classify_channels(
+        temp_row, hum_row, native_vpd_row, auto_row, max_channel = _classify_channels(
             session, unique_id)
 
-        # 물리센서가 자체 VPD 를 계산하면 이중처리 방지
-        if has_native_vpd:
-            return measurements_dict
+        # 물리센서가 자체 VPD 를 계산하면 이중처리 방지. 단 판정 기준은
+        # "vapor_pressure_deficit 채널이 있다"가 아니라 **이번 사이클에 그
+        # 채널로 값이 실제로 들어왔다**이다. 채널만 있고 값을 넣는 주체가
+        # 없으면(사용자가 채널 목록에 VPD 칸을 직접 만든 경우) 예전 판정은
+        # "센서가 자체 계산한다"고 오인해 자동 VPD 를 영구히 꺼 버렸고, 그
+        # 칸은 아무도 채우지 않아 영원히 비어 있었다.
+        if auto_row is None and native_vpd_row is not None:
+            if native_vpd_row.channel in measurements_dict:
+                return measurements_dict  # 센서가 직접 낸 값 — 손대지 않는다
+            # 빈 껍데기 칸이면 그 칸을 그대로 채운다. 새 채널을 만들면
+            # 화면에 빈 VPD 칸이 하나 더 늘어나고 채널 번호도 흔들린다.
+            auto_row = native_vpd_row
+
         if temp_row is None or hum_row is None:
             return measurements_dict
 
@@ -163,7 +176,7 @@ def _inject(unique_id, measurements_dict):
             auto_channel = max_channel + 1
             new_row = DeviceMeasurements()
             new_row.device_id = unique_id
-            new_row.name = 'VPD (auto)'
+            new_row.name = 'VPD'
             new_row.measurement = AUTO_VPD_MEASUREMENT
             new_row.measurement_type = AUTO_VPD_TYPE
             new_row.unit = AUTO_VPD_UNIT

@@ -11,7 +11,8 @@ from aot.config import INFLUXDB_PORT, resolve_measurement_db_host
 from aot.databases.models import (Conversion, DeviceMeasurements, Misc,
                                      Output)
 from aot.aot_client import DaemonControl
-from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.database import (db_retrieve_table_daemon,
+                                disabled_measurement_channels)
 from aot.utils.system_pi import return_measurement_info
 
 logger = logging.getLogger("aot.influx")
@@ -123,8 +124,17 @@ def add_measurements_influxdb_flux(unique_id, measurements, use_same_timestamp=T
         logger.error(f"Unknown Influxdb version: {settings.measurement_db_version}")
         return
 
+    # 마지막 관문: '활성화할 측정값 선택'에서 꺼 둔 채널은 저장하지 않는다.
+    # 입력 모듈이 100종이 넘고 그중 푸시형(MQTT/HTTP)은 value_set() 을 거치지
+    # 않고 이 함수로 바로 들어오므로, 모듈마다 검사를 심는 대신 저장 직전
+    # 한 곳에서 막는다. 여기까지 오는 경로가 곧 저장되는 경로다.
+    disabled_channels = disabled_measurement_channels(unique_id)
+
     with client.write_api(success_callback=write_success, error_callback=write_fail) as write_api:
         for each_channel, each_measurement in measurements.items():
+            if each_channel in disabled_channels:
+                continue  # measurement disabled by the user
+
             if 'value' not in each_measurement or each_measurement['value'] is None:
                 continue  # skip to next measurement to add
 

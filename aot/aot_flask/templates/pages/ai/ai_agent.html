@@ -39,6 +39,36 @@
   </div>
   <p class="aot-modal-body-text">{{_('AI Agents orchestration layer. Manage your AI services and agents to automate complex tasks.')}}</p>
 
+  <!-- AI 작동 시작/중지 — Settings > General 의 "AI 서비스 사용"(기능 활성화)과
+       분리된 스위치. 여기가 꺼져 있으면 사람이 부르지 않아도 도는 백그라운드
+       작동(주기 요약·컨텍스트 브로드캐스트·날씨 요약·MCP 헬스체크·실시간 알림)이
+       전부 멈춘다. 사용자가 직접 보내는 채팅/조언 요청은 그대로 동작한다. -->
+  <div class="aot-modal-container" id="aiRuntimeBlock">
+    <div class="aot-modal-option-row">
+      <div class="aot-modal-option-label">{{ _('AI Service Operation') }}</div>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" class="btn-toggle-input" id="toggleAiRunning"
+                 title="{{ _('Start or stop autonomous AI operation. Chat and advice requests you make yourself are unaffected.') }}"
+                 {% if ai_runtime and ai_runtime.ai_running %} checked{% endif %}
+                 {% if not ai_runtime or not ai_runtime.can_start %} disabled{% endif %}>
+          <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+        </label>
+      </div>
+    </div>
+    <div class="aot-modal-body-text" id="aiRuntimeHint" style="padding-top:0.25rem; padding-bottom:0.75rem;">
+      {%- if not ai_runtime or not ai_runtime.ai_enabled -%}
+        {{ _('The AI service is disabled. Enable it in Settings > General first.') }}
+      {%- elif ai_runtime.agent_count == 0 -%}
+        {{ _('No AI model is registered yet. Add and activate at least one agent below, then start the service.') }}
+      {%- elif ai_runtime.ai_running -%}
+        {{ _('Running. Periodic summaries, context broadcast and alerts are active.') }}
+      {%- else -%}
+        {{ _('Stopped. No background AI work runs; chat and advice requests you make yourself still work.') }}
+      {%- endif -%}
+    </div>
+  </div>
+
   <div style="clear: both; padding: 0.5em 0;"></div>
 
 <!-- v8 Add Panel: Compact Row, Role-First, AoT Design System -->
@@ -640,6 +670,38 @@
         $body.html('<p class="text-danger">{{ _("Failed to load MCP entries.") }}</p>');
       });
   }
+
+  // AI 작동 시작/중지 토글. 서버가 거부하면(모델 0개 등) 스위치를 되돌린다 —
+  // 화면만 켜진 채로 두면 "켰는데 아무것도 안 돈다" 가 된다.
+  $(document).on('change', '#toggleAiRunning', function() {
+    var $input = $(this);
+    var desired = $input.prop('checked');
+    $input.prop('disabled', true);
+    fetch('/api/v1/ai/settings/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+      body: JSON.stringify({ ai_running: desired })
+    })
+    .then(function(r) { return r.json().then(function(res) { return { ok: r.ok, res: res }; }); })
+    .then(function(out) {
+      $input.prop('disabled', false);
+      if (out.ok && out.res.status === 'success') {
+        $('#aiRuntimeHint').text(desired
+          ? '{{ _("Running. Periodic summaries, context broadcast and alerts are active.") }}'
+          : '{{ _("Stopped. No background AI work runs; chat and advice requests you make yourself still work.") }}');
+        window.showToast(desired
+          ? '{{ _("AI service started") }}'
+          : '{{ _("AI service stopped") }}', 'success');
+      } else {
+        $input.prop('checked', !desired);
+        window.showToast(out.res.message || '{{ _("Save failed") }}', 'error');
+      }
+    })
+    .catch(function() {
+      $input.prop('disabled', false).prop('checked', !desired);
+      window.showToast('{{ _("Error: Could not communicate with server") }}', 'error');
+    });
+  });
 
   // Save System Settings (Tab 1)
   $(document).on('click', '#btnSaveUnifiedSettings', function() {

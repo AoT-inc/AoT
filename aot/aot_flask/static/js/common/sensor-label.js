@@ -14,6 +14,10 @@
 //   fetchStatus(ids)                 → POST /api/geo/link_status
 // }
 //
+// 노트 진입점은 이 파일이 함께 내보내는 window.AoTNotesBlock 하나다
+// (html/fill/wire). 지도 팝업·모달과 시설 센서 팝업이 같은 블록을 쓴다 —
+// 자세한 배경은 그 선언부 주석 참조.
+//
 // 차트는 renderHistory / renderOutputHistory **둘뿐**이다. 팝업마다 자체
 // Highstock 호출을 두던 시절엔 같은 화면 안에서도 축·툴팁·레전드가 조금씩
 // 다른 그래프가 나왔다. openPopup 도 자기 차트·자기 레전드를 그리지 않고
@@ -217,47 +221,154 @@
     return '<div class="aot-sensor-popup-chart-wrap"></div>';
   }
 
-  // Optional note footer — shared so the facility sensor popup and the map
-  // input-device popup stay one component. note: { targetId, name, targetType }.
-  // Reuses the existing shared popup button + note-preview classes (map.css):
-  // .aot-popup-btn--primary (AoT brand primary) and .aot-popup-note-preview —
-  // no bespoke styling, same as every other map popup's Create Note button.
-  function _noteSectionHtml(note) {
-    if (!note || !note.targetId) return '';
-    return '<hr class="aot-popup-divider">' +
-      '<button type="button" class="aot-popup-btn aot-popup-btn--primary aot-popup-btn--full">' +
-        _escape(_t('Create Note')) + '</button>' +
-      '<div class="aot-popup-note-preview">' +
-        '<span style="color:#ccc;font-style:italic;">…</span></div>';
+  // ─── 노트 블록 (window.AoTNotesBlock) ──────────────────────────────────────
+  //
+  // **노트로 들어가는 문은 앱 전체에 이 한 벌뿐이다.** 예전에는 부르는 자리마다
+  // 자기 버튼을 그렸다: 시설·구역·장치 모달은 32px 테두리 알약("노트 작성하기")에
+  // 목록 밑에 26px 전체폭 버튼("View All", 번역 없음)이 하나 더 붙었고, 라벨
+  // 팝업과 센서 팝업은 전체폭 딥그린 슬래브("메모 열기"/"노트 작성하기")였다.
+  // 같은 창 안에서도 바로 위 [편집] 버튼(.aot-ov-pill)과 높이·모양이 달랐고,
+  // 필지 모달은 노트 목록만 있고 문이 아예 없었다.
+  //
+  // 그래서 골격·문구·배선을 여기 하나로 모은다. 스타일은 새로 만들지 않고
+  // 같은 모달의 [사진 변경]·[편집]·[저장]과 **같은 .aot-ov-pill** 을 쓴다.
+  // 목록 항목을 눌러도 같은 곳이 열리므로 목록 아래 버튼은 없앴다 — 같은 동작을
+  // 하는 문이 한 블록에 둘일 이유가 없다.
+  //
+  // 이 파일에 두는 이유: 지도 위젯(aot-map-popup 경유)과 시설 위젯(센서 팝업)이
+  // 함께 싣는 유일한 공용 모듈이라서다. 한쪽에만 두면 다시 두 벌이 된다.
+  var NOTES_MAX       = 2;    // 미리보기 개수
+  var NOTE_TEXT_MAX   = 60;   // 본문 미리보기 글자 수
+  var NOTE_THUMBS_MAX = 4;    // 첨부 썸네일 개수
+
+  function notesBlockHtml() {
+    return '<div class="aot-ov-block aot-ov-notes">' +
+             '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+               '<span>' + _escape(_t('Notes')) + '</span>' +
+               '<button type="button" class="aot-ov-pill aot-ov-notes-open">' +
+               _escape(_t('Open Notes')) + '</button>' +
+             '</div>' +
+             '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>' +
+           '</div>';
   }
 
-  function _wireNoteSection(scopeEl, note) {
-    if (!note || !note.targetId) return;
-    var btn = scopeEl.querySelector('.aot-popup-btn--primary');
-    if (btn) {
-      btn.addEventListener('click', function () {
-        window.dispatchEvent(new CustomEvent('open-notes', { detail: {
-          targetId:   note.targetId,
-          targetType: note.targetType || 'device',
-          name:       note.name || ''
-        } }));
-      });
+  // 미리보기 목록을 그린다. notes 는 /notes/target/<uuid> 응답(최신순).
+  function fillNotesList(listEl, notes) {
+    if (!listEl) return;
+    if (!Array.isArray(notes) || !notes.length) {
+      listEl.innerHTML = '<span class="aot-ov-muted">' +
+                         _escape(_t('No notes written')) + '</span>';
+      return;
     }
-    var prev = scopeEl.querySelector('.aot-popup-note-preview');
-    if (prev) {
-      fetch('/notes/target/' + encodeURIComponent(note.targetId))
-        .then(function (r) { return r.json(); })
-        .then(function (notes) {
-          if (Array.isArray(notes) && notes.length) {
-            prev.textContent = notes[0].note || '';
-          } else {
-            prev.innerHTML = '<span style="color:#ccc;font-style:italic;">' +
-              _escape(_t('No Notes')) + '</span>';
+    var html = '';
+    notes.slice(0, NOTES_MAX).forEach(function (n) {
+      // 날짜는 **장치 현지 시각**으로 읽는다. 브라우저 시각대로 찍으면, 다른
+      // 지역 농장을 원격으로 보는 사람에게 자정 언저리 노트의 날짜가 하루씩
+      // 어긋난다. /notes/target 이 그 노트가 속한 곳의 tz(date_tz)를 함께 준다.
+      var d = '';
+      try {
+        var dt = new Date(n.date_time);
+        if (!isNaN(dt)) {
+          if (n.date_tz && window.AoTTz && window.AoTTz.formatDevice) {
+            // opts.fmt 가 Intl 옵션 자리다 — 옵션을 바로 넘기면 무시되고
+            // 기본 datetimeShort 가 나온다.
+            d = window.AoTTz.formatDevice(n.date_time, n.date_tz,
+                  { fmt: { month: 'numeric', day: 'numeric' } });
           }
-        })
-        .catch(function () {});
-    }
+          if (!d) d = (dt.getMonth() + 1) + '/' + dt.getDate();
+        }
+      } catch (e) {}
+      var txt = String(n.note || '').replace(/\s+/g, ' ').slice(0, NOTE_TEXT_MAX);
+
+      // 첨부 처리: 이미지 → 썸네일(최대 4), 그 외 파일 → 개수 표기
+      var files = String(n.files || '').split(',')
+        .map(function (t) { return t.trim(); }).filter(Boolean);
+      var imgs = files.filter(function (f) {
+        return /\.(jpg|jpeg|png|gif|webp|bmp|heic)$/i.test(f);
+      });
+      var otherCnt = files.length - imgs.length;
+      var att = '';
+      if (imgs.length) {
+        att += '<div class="aot-ov-note-thumbs">' +
+               imgs.slice(0, NOTE_THUMBS_MAX).map(function (f) {
+                 return '<img src="/note_attachment/' + _escape(f) + '" alt="" loading="lazy">';
+               }).join('') +
+               (imgs.length > NOTE_THUMBS_MAX
+                 ? '<span class="aot-ov-muted">+' + (imgs.length - NOTE_THUMBS_MAX) +
+                   '</span>' : '') +
+               '</div>';
+      }
+      if (otherCnt > 0) {
+        att += '<div class="aot-ov-note-files">' + _escape(_t('Attachments')) +
+               ' ' + otherCnt + '</div>';
+      }
+
+      html += '<div class="aot-ov-note">' +
+              '<div class="aot-ov-note-row">' +
+              '<span class="aot-ov-note-date">' + _escape(d) + '</span>' +
+              '<span class="aot-ov-note-text">' + (_escape(txt) ||
+                ('<span class="aot-ov-muted">' + _escape(_t('Attachments')) + '</span>')) + '</span>' +
+              '</div>' + att + '</div>';
+    });
+    listEl.innerHTML = html;
   }
+
+  // 블록을 배선한다 — 버튼·목록 항목 클릭 → 노트 패널, 그리고 미리보기 로드.
+  //   target : { targetId, targetType, name }
+  //   opts.beforeOpen : 패널을 열기 전에 부를 것(팝업/모달 닫기 등).
+  //                     노트 패널은 z-index 최상위라 모달 위에 뜨지 않는다.
+  //   opts.cache      : { html: '<이전 렌더>' } — 주기 갱신하는 창(시설 모달은
+  //                     30초)에서 깜빡임을 막는다. 이전 내용을 먼저 그려 두고
+  //                     새 응답이 **실제로 달라졌을 때만** 교체한다.
+  function wireNotesBlock(scopeEl, target, opts) {
+    if (!scopeEl || !target || !target.targetId) return;
+    opts = opts || {};
+
+    function open() {
+      if (typeof opts.beforeOpen === 'function') {
+        try { opts.beforeOpen(); } catch (e) {}
+      }
+      window.dispatchEvent(new CustomEvent('open-notes', { detail: {
+        targetId:   target.targetId,
+        targetType: target.targetType || 'device',
+        name:       target.name || ''
+      } }));
+    }
+
+    var btn = scopeEl.querySelector('.aot-ov-notes-open');
+    if (btn) btn.addEventListener('click', open);
+
+    var listEl = scopeEl.querySelector('.aot-ov-notes-list');
+    if (!listEl) return;
+    // 목록은 컨테이너 하나에만 리스너를 단다. 항목마다 달면 갱신할 때마다 다시
+    // 달아야 하고, 한 경로에서 빠뜨리면 그 창에서만 항목 클릭이 조용히 죽는다.
+    listEl.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('.aot-ov-note')) open();
+    });
+
+    var cache = opts.cache;
+    if (cache && cache.html) listEl.innerHTML = cache.html;
+
+    fetch('/notes/target/' + encodeURIComponent(target.targetId))
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (notes) {
+        if (!listEl.isConnected) return;
+        var tmp = document.createElement('div');
+        fillNotesList(tmp, notes);
+        if (cache) {
+          if (tmp.innerHTML === cache.html) return;
+          cache.html = tmp.innerHTML;
+        }
+        listEl.innerHTML = tmp.innerHTML;
+      })
+      .catch(function () {});
+  }
+
+  window.AoTNotesBlock = {
+    html: notesBlockHtml,
+    fill: fillNotesList,
+    wire: wireNotesBlock
+  };
 
   // ─── 배터리 / 통신품질 배지 ────────────────────────────────────────────────
   // 지도 위젯의 세 모달(입력 센서 / 출력·함수 팝업 / aot_device 라벨 팝업)이
@@ -414,10 +525,13 @@
         '<span class="aot-sensor-popup-title"' + titleStyle + titleAttr + '>' + _escape(sensor.name || sensor.fitting_id) + '</span>' +
         '<span class="aot-link-badges-slot"></span>' +
         '<button class="aot-sensor-popup-close" type="button" aria-label="close">&#x2715;</button>' +
-      '</div>' + _detailBodyHtml() + _noteSectionHtml(opts.note);
+      '</div>' + _detailBodyHtml() +
+      ((opts.note && opts.note.targetId) ? notesBlockHtml() : '');
 
     _popupEl.querySelector('.aot-sensor-popup-close').addEventListener('click', closePopup);
-    _wireNoteSection(_popupEl, opts.note);
+    if (opts.note && opts.note.targetId) {
+      wireNotesBlock(_popupEl, opts.note);
+    }
     var _chartWrap = _popupEl.querySelector('.aot-sensor-popup-chart-wrap');
 
     // 배터리·통신 배지. 호출부가 이미 상태를 들고 있으면(지도 Input 마커는
