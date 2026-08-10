@@ -671,11 +671,53 @@
             }));
         }
 
+        // 현재 블록의 값을 눌러 이 구역의 대표 측정을 정한다.
+        //
+        // 저장은 도형(GeoShape.meta_json)이다 — 구역마다 볼 것이 다르고(육묘장은
+        // 온도, 노지는 토양수분), 도형에 붙어 있어야 지도 라벨·필지 요약·구역
+        // 모달이 **한 값**을 본다. 위젯 옵션에 두면 같은 구역이 대시보드마다
+        // 다른 것을 대표로 내세운다.
+        function _wireZoneRepPick(uid, pane, zoneUuid, data) {
+            if (!(data.zone || {}).can_edit) return;
+            window.AoTMapPopup.wireEnvNowPick(pane, function (key) {
+                fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) + '/rep_key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json',
+                               'X-CSRFToken': _csrfHeader() },
+                    body: JSON.stringify({ key: key })
+                })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (j) {
+                    if (!j || !j.ok) throw new Error('save failed');
+                    data.rep_key = j.rep_key || null;
+                    // 서버가 캐시를 비웠으니 클라이언트 캐시도 함께 버린다 —
+                    // 안 버리면 창을 닫았다 다시 열 때 옛 지정이 돌아온다.
+                    invalidateModal('zone', zoneUuid);
+                    // 지도 구역 라벨도 이 값을 쓴다. 상태는 60초 주기라
+                    // 다음 tick 까지 기다리면 방금 고른 것이 라벨에 안 뜬다.
+                    var inst = window.AoTWidgetInstances[uid];
+                    if (inst && inst._refreshZoneStatusNow) inst._refreshZoneStatusNow();
+                })
+                .catch(function () {
+                    // 되돌린다 — 저장 안 된 지정을 켜 둔 채로 두면 다음에 열었을
+                    // 때 사라져 있어 "왜 풀렸지"가 된다.
+                    pane.querySelectorAll('.aot-env-now-item').forEach(function (el) {
+                        el.classList.toggle('is-rep',
+                            !!data.rep_key && el.dataset.repKey === data.rep_key);
+                    });
+                });
+            });
+        }
+
         // [현황] 탭 — 현재 환경 + 노트 (시설 [현황]과 같은 순서)
         function _renderZoneOverview(uid, pane, data, zoneUuid) {
             var z = data.zone || {};
             if (!window.AoTMapPopup) { return; }
-            pane.innerHTML = window.AoTMapPopup.buildZoneStatusHtml(z);
+            pane.innerHTML = window.AoTMapPopup.buildZoneStatusHtml(z, {
+                repKey: data.rep_key || null,
+                selectable: !!z.can_edit
+            });
+            _wireZoneRepPick(uid, pane, zoneUuid, data);
 
             var _openNotes = function () {
                 _openZoneNotesPanel(uid, zoneUuid, z.name || '');
@@ -1513,6 +1555,9 @@
             }
             _tick();
             inst._zoneStatusTimer = setInterval(_tick, 60000);
+            // 대표 측정을 바꾼 직후처럼 다음 주기를 기다릴 수 없는 자리를 위해.
+            // 서버 캐시(60초)도 함께 비워졌을 때만 새 값이 온다.
+            inst._refreshZoneStatusNow = _tick;
         }
 
         // 라벨이 나타날 때까지 짧게 재시도. 라벨 생성은 다른 비동기 경로라
@@ -1587,8 +1632,7 @@
                     }
                     var rep = info.rep;
                     valEl.style.display = '';
-                    valEl.textContent = rep.value + (rep.unit || '') +
-                                        (rep.more ? ' +' : '');
+                    valEl.textContent = rep.value + (rep.unit || '');
                     // 밴드색은 지도 칩과 같은 함수가 낸다(경계·색표는 사용자가
                     // 바꿀 수 있고 그 정본은 JS 와 --aot-band-* 토큰이다).
                     if (window.AoTMapSensorLabels &&
@@ -2080,7 +2124,7 @@
             var rep = child.rep;
             var valTxt = '—', valCls = ' is-blank', style = '';
             if (rep && rep.value != null) {
-                valTxt = rep.value + (rep.unit || '') + (rep.more ? ' +' : '');
+                valTxt = rep.value + (rep.unit || '');
                 valCls = '';
                 // 지도 칩과 같은 밴드 색. ranges 는 구역엔 없으므로 기본 경계를
                 // 쓴다(시설별 sensor_ranges 는 시설 모달이 따로 적용한다).
@@ -2804,7 +2848,9 @@
         var _SENSOR_SUM_PRIORITY = ['VPD', 'T', 'RH', 'CO2', 'light', 'wind_ms'];
 
         // Aggregate fitting_sensors[] → { key, avg, unit, more } for the chip.
-        function _sensorSummary(sensors) {
+        // repKey: 사용자가 시설 [현황]에서 지정한 대표 측정. 지금 값을 못 내면
+        // 지정을 무시하고 우선순위로 물러선다(서버 _pick_rep 과 같은 규칙).
+        function _sensorSummary(sensors, repKey) {
             var byKey = {};
             (sensors || []).forEach(function (s) {
                 (s.channels || []).forEach(function (c) {
@@ -2817,12 +2863,16 @@
             var keys = Object.keys(byKey);
             if (!keys.length) return null;
             var primary = null;
-            for (var i = 0; i < _SENSOR_SUM_PRIORITY.length; i++) {
-                if (byKey[_SENSOR_SUM_PRIORITY[i]]) { primary = _SENSOR_SUM_PRIORITY[i]; break; }
+            if (repKey && byKey[repKey]) {
+                primary = repKey;
+            } else {
+                for (var i = 0; i < _SENSOR_SUM_PRIORITY.length; i++) {
+                    if (byKey[_SENSOR_SUM_PRIORITY[i]]) { primary = _SENSOR_SUM_PRIORITY[i]; break; }
+                }
             }
             if (!primary) primary = keys[0];
             var e2 = byKey[primary];
-            return { key: primary, avg: e2.sum / e2.n, unit: e2.unit, more: keys.length > 1 };
+            return { key: primary, avg: e2.sum / e2.n, unit: e2.unit };
         }
 
         function _facilityRanges_act(uid, facilityUuid) {
@@ -2847,13 +2897,13 @@
             var sChip = markerEntry.el.querySelector('.aot-sensor-sum-chip');
             if (!sChip) return;
 
-            var sum = _sensorSummary(st.sensorsByFac[facilityUuid]);
+            var sum = _sensorSummary(st.sensorsByFac[facilityUuid],
+                                     _facilityRepKey(uid, facilityUuid));
             if (!sum) { sChip.style.display = 'none'; return; }
 
             var dec = window.AoTSensorLabel ? window.AoTSensorLabel.defaultDecimals(sum.key) : 1;
             sChip.textContent = (sum.key === 'VPD' ? 'VPD ' : '') +
-                                sum.avg.toFixed(dec) + (sum.unit || '') +
-                                (sum.more ? ' +' : '');
+                                sum.avg.toFixed(dec) + (sum.unit || '');
             sChip.style.display = '';
 
             // Band color of the representative (averaged) value
@@ -2950,7 +3000,9 @@
                 if (bm.facilityUuid !== facilityUuid) return;
                 var valEl = bm.el.querySelector('.aot-bay-chip-val');
                 if (!valEl) return;
-                var sum = _sensorSummary(window.AoTMapBay.filterSensors(sensors, bm.bayId));
+                var sum = _sensorSummary(
+                    window.AoTMapBay.filterSensors(sensors, bm.bayId),
+                    _facilityRepKey(uid, facilityUuid));
                 if (!sum) {
                     // 값이 없으면 2행을 비운다 — '—' 를 남기면 이름만 있는 칩이
                     // 계속 두 줄 높이를 차지해 지도를 가린다(:empty 로 접힌다).
@@ -2962,8 +3014,7 @@
                 var dec = window.AoTSensorLabel ? window.AoTSensorLabel.defaultDecimals(sum.key) : 1;
                 valEl.textContent =
                     (sum.key === 'VPD' ? 'VPD ' : '') +
-                    sum.avg.toFixed(dec) + (sum.unit || '') +
-                    (sum.more ? ' +' : '');
+                    sum.avg.toFixed(dec) + (sum.unit || '');
                 if (window.AoTMapSensorLabels && window.AoTMapSensorLabels.bandColor) {
                     var color = window.AoTMapSensorLabels.bandColor(sum.key, sum.avg, ranges, sum.unit);
                     if (color) {
@@ -3220,6 +3271,59 @@
         // 8초 TTL + in-flight dedup 으로 코얼레싱하므로 요청이 늘지 않는다.
         // 그 응답의 indoor(가중평균)와 sensors(valid/total)는 계산돼 있으면서도
         // 화면에 쓰이는 곳이 한 군데도 없었다.
+        // 시설의 대표 측정 지정 — 구역과 같은 규칙, 같은 저장소(도형 meta_json).
+        // 여는 순간 /overview 가 실어 오고, 여기 담아 두면 [현황] 블록과 지도
+        // 라벨 칩이 같은 값을 본다.
+        // 우선순위: 모달에서 방금 받은 값 → 시설 목록이 실어 온 값.
+        // 목록에도 실어 두지 않으면 **모달을 한 번 열기 전까지** 지도 칩이
+        // 지정을 무시한다.
+        function _facilityRepKey(uid, facilityUuid) {
+            var st = _actLabelState[uid];
+            if (!st) return null;
+            if (st.repKeyByFac && st.repKeyByFac[facilityUuid] !== undefined) {
+                return st.repKeyByFac[facilityUuid];
+            }
+            var facs = st.facilities || [];
+            for (var i = 0; i < facs.length; i++) {
+                if (facs[i] && facs[i].unique_id === facilityUuid) {
+                    return facs[i].rep_key || null;
+                }
+            }
+            return null;
+        }
+
+        function _wireFacilityRepPick(uid, facilityUuid, pane, canEdit) {
+            if (!canEdit || !window.AoTMapPopup.wireEnvNowPick) return;
+            window.AoTMapPopup.wireEnvNowPick(pane, function (key) {
+                fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) +
+                      '/rep_key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json',
+                               'X-CSRFToken': _csrfHeader() },
+                    body: JSON.stringify({ key: key })
+                })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (j) {
+                    if (!j || !j.ok) throw new Error('save failed');
+                    var st = _actLabelState[uid];
+                    if (st) {
+                        st.repKeyByFac = st.repKeyByFac || {};
+                        st.repKeyByFac[facilityUuid] = j.rep_key || null;
+                    }
+                    // 지도 위 시설 칩도 이 값을 쓴다 — 다음 폴링을 기다리지
+                    // 않고 바로 다시 칠한다.
+                    _updateSensorSumChip(uid, facilityUuid);
+                })
+                .catch(function () {
+                    var cur = _facilityRepKey(uid, facilityUuid);
+                    pane.querySelectorAll('.aot-env-now-item').forEach(function (el) {
+                        el.classList.toggle('is-rep',
+                            !!cur && el.dataset.repKey === cur);
+                    });
+                });
+            });
+        }
+
         function _prependFacilityEnvNow(uid, facilityUuid, pane) {
             if (!window.AoTFacilityRuntime || !window.AoTMapPopup ||
                 !window.AoTMapPopup.buildEnvNowHtml) return;
@@ -3249,13 +3353,20 @@
                 if (od.humidity_pct != null) outdoor.push({ key: 'RH', value: od.humidity_pct, unit: '%' });
                 if (od.wind_ms != null) outdoor.push({ key: 'wind_ms', value: od.wind_ms, unit: 'm/s' });
 
+                var canEdit = !!(st.repEditByFac && st.repEditByFac[facilityUuid]);
                 var html = window.AoTMapPopup.buildEnvNowHtml({
                     readings: readings,
                     outdoor: outdoor,
                     sensors: { valid: sensors.valid_count || 0,
                                total: sensors.total_count || 0 }
+                }, {
+                    repKey: _facilityRepKey(uid, facilityUuid),
+                    selectable: canEdit
                 });
-                if (html) pane.insertAdjacentHTML('afterbegin', html);
+                if (html) {
+                    pane.insertAdjacentHTML('afterbegin', html);
+                    _wireFacilityRepPick(uid, facilityUuid, pane, canEdit);
+                }
             }).catch(function () {});
         }
 
@@ -3418,6 +3529,15 @@
                 .then(_j).catch(function () { return null; })
                 .then(function (j) {
                     j = j || {};
+                    // 대표 측정 지정·권한을 먼저 담는다 — _render 안에서
+                    // _prependFacilityEnvNow 가 바로 읽는다.
+                    var st0 = _actLabelState[uid];
+                    if (st0) {
+                        st0.repKeyByFac = st0.repKeyByFac || {};
+                        st0.repEditByFac = st0.repEditByFac || {};
+                        st0.repKeyByFac[facilityUuid] = j.rep_key || null;
+                        st0.repEditByFac[facilityUuid] = !!j.can_edit;
+                    }
                     _render([j.env_summary || null, j.status || null,
                              j.info || null]);
 

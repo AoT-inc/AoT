@@ -26964,3 +26964,11 @@ msgid ""
 "Saved, but the daemon could not be notified. The new schedule takes "
 "effect after the daemon restarts."
 msgstr "저장했지만 데몬에 알리지 못했습니다. 새 일정은 데몬이 다시 시작된 뒤 적용됩니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Representative measurement"
+msgstr "대표 측정값"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set as representative"
+msgstr "대표로 지정"

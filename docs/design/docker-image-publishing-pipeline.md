@@ -5,6 +5,12 @@
 (인앱 GitHub 업그레이드는 베어메탈 전용 — [docker-image 검토](../../.local/plans/version_tag_reconciliation.md) 및
 `project_inapp_github_upgrade_bugs` 참조.)
 
+> **2026-08-10 갱신** — 이 문서는 *이미지를 어떻게 발행하는가* 까지를 다룬다.
+> 발행된 이미지를 **어떻게 설치하는가**(가용 판정·원클릭·자동 설치·롤백)는
+> 별도 문서로 분리했다: [docker-auto-update.md](docker-auto-update.md).
+> 아래 5·7절의 "후속" 항목들은 그 문서에서 완료됐고, 6절의 하위호환 전제는
+> 폐기됐다(각 절 참조).
+
 ---
 
 ## 1. 배경 / 현재 상태
@@ -164,28 +170,42 @@ docker compose -f docker/docker-compose.prod.yml up -d
 ```
 롤백: `.env`의 태그를 이전 값으로 되돌리고 `pull && up -d`.
 
-## 5. 인앱 안내 갱신 (후속)
+## 5. 인앱 안내 갱신 ✅ (2026-08-10 완료, 설계 변경됨)
 
-`routes_admin.admin_upgrade`의 도커 안내는 현재 "git pull + up --build"만 안내.
-이미지 발행 활성화 후, 두 배포형을 함께 안내하도록 문구 갱신:
-- dev(bind-mount): 호스트 `git pull` + `docker compose up -d`
-- prod(image): `docker compose -f ...prod.yml pull && up -d`
-(현 dev/prod 판별은 env로 구분 어려움 → 두 방법 병기 권장. 새 msgid라 i18n 추출 필요.)
+당시 계획은 "dev/prod 를 구분할 수 없으니 두 방법을 병기" 였다. 실제로는 그럴
+필요가 없었다 — 판정 기준을 바꾸는 편이 나았기 때문이다.
+
+- **가용 판정을 레지스트리로 옮겼다.** git 태그는 밀자마자 생기고 이미지는
+  멀티아치 빌드가 끝나야 받을 수 있어, 태그 기준 안내는 "받을 수 없는
+  업데이트"를 알린다. 이제 GHCR 에 실제로 발행된 이미지를 본다.
+- **안내 대신 실행.** 옵트인 업데이터가 있으면 페이지에서 바로 설치하고,
+  없으면 호스트 명령을 안내한다. 자동 설치(토글 + 시각)도 여기에 붙는다.
+
+정본: [docker-auto-update.md](docker-auto-update.md).
 
 ## 6. 데이터/마이그레이션 안전성
 
 - 이미지 교체는 **코드만** 바꾸고, DB/secret/kma는 `aot_data` 볼륨에 남음 → 데이터 손실 없음.
-- 앱 기동 시 `alembic_upgrade_db`가 볼륨 DB를 head로 올림. **하위호환 마이그레이션 전제**(롤백 시 새 스키마를 구 이미지가 읽어야 하므로, 파괴적 스키마 변경은 major 경계에서).
+- 앱 기동 시 `alembic_upgrade_db`가 볼륨 DB를 head로 올림.
+- ~~**하위호환 마이그레이션 전제**(롤백 시 새 스키마를 구 이미지가 읽어야 하므로,
+  파괴적 스키마 변경은 major 경계에서).~~ **폐기(2026-08-10).** 이 전제는
+  지켜지는지 확인할 방법이 없었고, 어긋나는 순간 롤백이 조용히 망가진다.
+  대신 **업데이트 직전 스냅샷을 떠 두고, 롤백 시 이미지와 데이터를 함께
+  되돌린다.** 헬스 게이트가 버전과 스키마 리비전을 함께 확인하므로, 이미지만
+  되돌려 회복되지 않는 경우를 판별해 DB 복원까지 진행한다
+  ([docker-auto-update.md](docker-auto-update.md) 1-3·3절).
 - influxdb 데이터는 `influxdb_data` 볼륨.
 
 ## 7. 롤아웃 단계
 
-1. **선결**: GitHub 이전 + `v26.07.3` 태그 발행(현재 대기 중인 3단계). 워크플로는 GitHub에서만 동작.
-2. `.github/workflows/docker-publish.yml` 추가 → 태그 push 시 GHCR에 26.07.3 멀티아치 이미지 발행.
-3. GHCR 패키지 public 전환.
-4. `docker/docker-compose.prod.yml` + `.env.example` 추가, 매뉴얼에 이미지 업그레이드 절차 문서화.
+1. ✅ **선결**: GitHub 이전 + `v26.07.3` 태그 발행. 워크플로는 GitHub에서만 동작.
+2. ✅ `.github/workflows/docker-publish.yml` 추가 → 태그 push 시 GHCR에 멀티아치 이미지 발행.
+3. ✅ GHCR 패키지 public 전환(익명 pull 로 태그 목록 조회가 되는 것으로 확인됨 —
+   비공개였다면 가용 판정이 fail-closed 로 동작한다).
+4. ✅ `docker/docker-compose.prod.yml` + `.env.prod.example` 추가, 매뉴얼에 절차 문서화
+   (`docs/Upgrade-Backup-Restore.md` — Docker 절).
 5. 자기 서버(로컬·koat)는 dev(bind) 유지 or prod 전환 선택. 공개 사용자는 prod 권장.
-6. 인앱 도커 안내 문구 갱신(5절).
+6. ✅ 인앱 도커 안내 갱신(5절) — 안내를 넘어 원클릭·자동 설치까지.
 
 ## 8. 미결 결정 사항
 
@@ -196,5 +216,7 @@ docker compose -f docker/docker-compose.prod.yml up -d
 - [ ] influxdb/logs를 named volume로 통일할지(현 dev는 host bind)
 
 ## 9. 관련 문서
+- **설치·자동 업데이트(정본)**: [docker-auto-update.md](docker-auto-update.md)
+- 사용자 매뉴얼: `docs/Upgrade-Backup-Restore.md` (Docker 절)
 - 버전/태그 정합: `.local/plans/version_tag_reconciliation.md`
 - 인앱 업그레이드 버그/게이팅: 커밋 cefe847, 4481e0c

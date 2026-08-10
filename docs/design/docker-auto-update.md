@@ -16,6 +16,10 @@
 | 호스트 대안 | `install/aot-docker-update.service` / `.timer` |
 | 백업 진입점 | `aot/utils/docker_backup_cli.py` |
 
+관련 문서: 이미지를 **어떻게 발행하는가**는
+[docker-image-publishing-pipeline.md](docker-image-publishing-pipeline.md),
+사용자용 절차는 `docs/Upgrade-Backup-Restore.md` 의 Docker 절이다.
+
 ---
 
 ## 1. 왜 이런 모양인가

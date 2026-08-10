@@ -1,5 +1,12 @@
 {% extends "layout.html" %}
 {% set active_page = "upgrade" %}
+{# Docker deployments upgrade in a different way entirely, so send them to that
+   section rather than to the top of the page. #}
+{% if is_docker %}
+{% set help_page = [manual_url("Upgrade-Backup-Restore/#docker"), _('Upgrade')] %}
+{% else %}
+{% set help_page = [manual_url("Upgrade-Backup-Restore/"), _('Upgrade')] %}
+{% endif %}
 {% block title %} - Upgrade{% endblock %}
 
 {% block head %}

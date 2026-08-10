@@ -75,10 +75,9 @@ site 로 승격**한다. 전면 개편이 아니라 기존 집계·컴포넌트�
       "name": "3-2",
       "status": "fault",            // "ok" | "warning" | "fault" | "empty"
       "rep": {                      // 대표 측정값 — null 이면 표시할 값 없음
-        "key": "T",                 // 우선순위: VPD > T > RH > CO2 > light > wind_ms
-        "value": 37.6,
-        "unit": "°C",
-        "more": true                // 다른 측정 종류 존재 (bay 칩의 "+" 와 동일)
+        "key": "T",                 // 도형에 지정(meta_json.rep_key)이 있으면 그것,
+        "value": 37.6,              // 없으면 VPD > T > RH > CO2 > light > wind_ms
+        "unit": "°C"
       },
       "sensors": { "valid": 2, "total": 3 },   // 600초 이내 응답 기준
       "issues": { "comm_fault": 1, "battery_low": 0 },
@@ -89,7 +88,7 @@ site 로 승격**한다. 전면 개편이 아니라 기존 집계·컴포넌트�
       "kind": "facility",
       "name": "육묘장",
       "status": "ok",
-      "rep": { "key": "T", "value": 27.4, "unit": "°C", "more": true },
+      "rep": { "key": "T", "value": 27.4, "unit": "°C" },
       "sensors": { "valid": 3, "total": 3 },
       "issues": { "comm_fault": 0, "battery_low": 0 },
       "control": null

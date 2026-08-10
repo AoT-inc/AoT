@@ -1151,14 +1151,21 @@ def api_facility_overview(facility_uuid):
     # 이쪽은 장치가 살아 있는지를 말한다.
     site = None
     area_status = None
+    rep_key = None
     try:
-        from aot.databases.models import GeoFacility
+        from aot.databases.models import GeoFacility, GeoShape
         from aot.aot_flask.geo.site_summary import (
-            parent_site_for_shape, status_for_shape)
+            parent_site_for_shape, status_for_shape, rep_key_of)
         row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
         if row is not None and row.shape_uuid:
             site = parent_site_for_shape(row.shape_uuid)
             area_status = status_for_shape(row.shape_uuid)
+            # 대표 측정 지정은 구역과 **같은 자리**(도형의 meta_json)에 있다 —
+            # 필지 요약의 행(_child_entry)이 구역·시설을 가리지 않고 같은
+            # rep_key_of() 로 읽으므로, 시설만 다른 데 두면 그 행이 지정을 무시한다.
+            shape = GeoShape.query.filter_by(unique_id=row.shape_uuid).first()
+            if shape is not None:
+                rep_key = rep_key_of(shape)
     except Exception:
         logger.warning('[facility/overview] parent site / status lookup failed',
                        exc_info=True)
@@ -1170,8 +1177,54 @@ def api_facility_overview(facility_uuid):
         'info':        _unwrap(api_facility_info(facility_uuid)),
         'site':        site,
         'area_status': area_status,
+        'rep_key':     rep_key,
+        'can_edit':    utils_general.user_has_permission('edit_settings',
+                                                         silent=True),
         'ts':          _time.time(),
     })
+
+
+@blueprint.route('/api/aot/facility/<facility_uuid>/rep_key', methods=['POST'])
+@login_required
+def api_facility_rep_key(facility_uuid):
+    """시설의 대표 측정 지정 — 구역과 같은 자리·같은 규칙.
+
+    시설 uuid 로 들어와 **도형**(GeoFacility.shape_uuid)에 쓴다. 지도에 올라와
+    있지 않은 시설은 도형이 없어 지정할 자리도 없다(422).
+    """
+    from aot.aot_flask.extensions import db as _db
+    from aot.databases.models import GeoFacility, GeoShape
+    from aot.aot_flask.geo.site_summary import invalidate
+
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'error': 'permission denied'}), 403
+
+    row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+    if row is None:
+        return jsonify({'ok': False, 'error': 'facility not found'}), 404
+    if not row.shape_uuid:
+        return jsonify({'ok': False, 'error': 'facility has no shape'}), 422
+    shape = GeoShape.query.filter_by(unique_id=row.shape_uuid).first()
+    if shape is None:
+        return jsonify({'ok': False, 'error': 'shape not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    key = body.get('key')
+    if key is not None and not isinstance(key, str):
+        return jsonify({'ok': False, 'error': 'key must be a string or null'}), 422
+    key = (key or '').strip() or None
+
+    # dict() 로 새 객체 — 제자리 수정은 SQLAlchemy 가 못 본다(routes_geo 주석).
+    meta = dict(shape.meta_json or {})
+    if key:
+        meta['rep_key'] = key
+    else:
+        meta.pop('rep_key', None)
+    shape.meta_json = meta
+    _db.session.commit()
+
+    invalidate()
+    return jsonify({'ok': True, 'rep_key': key})
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/photo', methods=['POST'])

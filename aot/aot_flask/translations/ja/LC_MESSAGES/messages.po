@@ -26716,3 +26716,11 @@ msgid ""
 "Saved, but the daemon could not be notified. The new schedule takes "
 "effect after the daemon restarts."
 msgstr "保存しましたが、デーモンへ通知できませんでした。新しいスケジュールはデーモンの再起動後に反映されます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Representative measurement"
+msgstr "代表測定値"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Set as representative"
+msgstr "代表に指定"

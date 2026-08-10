@@ -1032,6 +1032,30 @@
   color: var(--aot-color-text-secondary);
 }
 
+/* 대표 측정 지정 — 값 자체가 버튼이다.
+   항목마다 padding 을 늘 잡아 둔다: 지정될 때만 주면 배경이 켜지는 순간 칸이
+   커지면서 옆 항목들이 밀린다(누른 자리가 손가락 밑에서 움직인다).
+   음수 마진으로 늘린 만큼 되돌려, 지정 전 배치는 예전과 같게 둔다. */
+.aot-env-now-item {
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: 4px;
+  transition: background-color 0.12s ease;
+}
+/* 지정된 것은 브랜드 강조 배경(--brand-accent)으로 남는다. 호버는 그보다
+   옅은 --bg-active — 둘이 같으면 마우스만 올려도 지정된 것처럼 보인다. */
+.aot-env-now-item.is-selectable { cursor: pointer; }
+.aot-env-now-item.is-selectable:hover,
+.aot-env-now-item.is-selectable:focus-visible {
+  background: var(--bg-active);
+  outline: none;
+}
+.aot-env-now-item.is-rep,
+.aot-env-now-item.is-rep.is-selectable:hover {
+  background: var(--brand-accent);
+  box-shadow: inset 0 0 0 1px var(--bd-btn-primary);
+}
+
 /* 센서 일부가 응답하지 않을 때만 나온다 — 값이 평균이라 몇 대가 빠졌는지
    모르면 숫자를 얼마나 믿을지 판단할 수 없다. */
 .aot-ov-degraded {

@@ -1511,6 +1511,25 @@ def api_facility_list():
     result, error = FacilityManager.list_facilities(geo_id=geo_id)
     if error:
         return jsonify({'ok': False, 'message': error}), 500
+
+    # 대표 측정 지정을 함께 실어 보낸다. 지도 위 시설 칩이 이 값을 쓰는데,
+    # 시설 모달(/overview)에서만 받으면 **모달을 한 번 열기 전까지** 칩이
+    # 지정을 무시하고 기본 우선순위를 내건다. 목록은 지도 로드 때 한 번만
+    # 부르는 자리라 여기 얹는 것이 가장 싸다.
+    try:
+        from aot.aot_flask.geo.site_summary import rep_key_of
+        shape_ids = [f.get('shape_uuid') for f in result if f.get('shape_uuid')]
+        by_shape = {}
+        if shape_ids:
+            for shape in GeoShape.query.filter(
+                    GeoShape.unique_id.in_(shape_ids)).all():
+                by_shape[shape.unique_id] = rep_key_of(shape)
+        for f in result:
+            f['rep_key'] = by_shape.get(f.get('shape_uuid'))
+    except Exception:
+        current_app.logger.warning('[facility/list] rep_key lookup failed',
+                                   exc_info=True)
+
     return jsonify({'ok': True, 'facilities': result})
 
 
@@ -3255,7 +3274,8 @@ def _build_zone_contents(zone_uuid):
     # 차트 레전드의 마지막 값에 의존하다 보니, 그래프를 못 읽거나 센서 탭을
     # 넘겨보지 않으면 알 수 없었다. 집계는 필지 요약과 같은 함수를 쓴다 —
     # 한쪽만 고치면 같은 구역이 두 화면에서 다른 온도를 말한다.
-    from aot.aot_flask.geo.site_summary import env_for_devices, status_from
+    from aot.aot_flask.geo.site_summary import (
+        env_for_devices, status_from, rep_key_of)
     try:
         env = env_for_devices(geo_device_ids)
     except Exception:
@@ -3274,6 +3294,7 @@ def _build_zone_contents(zone_uuid):
     # 다음 사람에게 그대로 간다. 라우트가 응답마다 다시 채운다.
     return {
         'ok': True,
+        'rep_key': rep_key_of(zone),
         'zone': {
             'unique_id': zone.unique_id,
             'name': zone_name,
@@ -3726,7 +3747,8 @@ def api_geo_zone_photo(zone_uuid):
     os.makedirs(PATH_GEO_ZONE_PHOTOS, exist_ok=True)
     file.save(os.path.join(PATH_GEO_ZONE_PHOTOS, unique_filename))
 
-    meta = zone.meta_json or {}
+    # dict() 필수 — 제자리 수정은 SQLAlchemy 가 못 본다(rep_key 라우트 주석).
+    meta = dict(zone.meta_json or {})
     old_fn = meta.get('photo_filename')
     if old_fn:
         old_path = os.path.join(PATH_GEO_ZONE_PHOTOS, old_fn)
@@ -3882,7 +3904,8 @@ def api_geo_zone_output_order(zone_uuid):
     if not isinstance(order, list):
         return jsonify({'ok': False, 'error': 'order must be a list'}), 422
 
-    meta = zone.meta_json or {}
+    # dict() 필수 — 제자리 수정은 SQLAlchemy 가 못 본다(rep_key 라우트 주석).
+    meta = dict(zone.meta_json or {})
     meta['output_order'] = [str(x) for x in order]
     zone.meta_json = meta
     _db.session.commit()
@@ -3890,6 +3913,56 @@ def api_geo_zone_output_order(zone_uuid):
     from aot.aot_flask.geo.site_summary import invalidate_zone_contents
     invalidate_zone_contents(zone_uuid)
     return jsonify({'ok': True})
+
+
+@blueprint.route('/api/geo/zone/<string:zone_uuid>/rep_key', methods=['POST'])
+@login_required
+def api_geo_zone_rep_key(zone_uuid):
+    """구역의 대표 측정 지정 — 현재 블록에서 값을 눌러 정한다.
+
+    도형에 붙인다(`meta_json['rep_key']`). 위젯 옵션에 두면 같은 구역이
+    대시보드마다 다른 것을 대표로 내세우고, 지도 라벨·필지 요약·구역 모달이
+    서로 다른 값을 말하게 된다.
+
+    `key` 가 비면 지정 해제(우선순위 기본값으로 돌아간다). 값이 실제로
+    존재하는 측정인지 검사하지 않는다 — 센서가 잠시 죽어도 지정은 남아야
+    하고, `_pick_rep` 이 값이 없을 때만 우선순위로 물러선다.
+    """
+    from aot.aot_flask.extensions import db as _db
+
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'error': 'permission denied'}), 403
+
+    zone = GeoShape.query.filter_by(unique_id=zone_uuid, type='zone').first()
+    if not zone:
+        return jsonify({'ok': False, 'error': 'zone not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    key = body.get('key')
+    if key is not None and not isinstance(key, str):
+        return jsonify({'ok': False, 'error': 'key must be a string or null'}), 422
+    key = (key or '').strip() or None
+
+    # dict() 로 **새 객체**를 만든다. meta_json 은 MutableDict 가 아닌 평범한
+    # JSON 컬럼이라, 기존 dict 를 제자리에서 고치고 같은 객체를 도로 대입하면
+    # SQLAlchemy 가 변경을 못 알아채고 UPDATE 를 아예 내지 않는다 — 에러 없이
+    # 저장만 안 된다. meta_json 이 비어 있을 때는 `or {}` 가 새 dict 를 만들어
+    # 우연히 동작하므로, 다른 값이 이미 있는 구역에서만 조용히 실패한다.
+    meta = dict(zone.meta_json or {})
+    if key:
+        meta['rep_key'] = key
+    else:
+        meta.pop('rep_key', None)
+    zone.meta_json = meta
+    _db.session.commit()
+
+    # 구역 내용(모달)과 라벨 상태(zones/status) 둘 다 이 값을 쓴다 — 하나만
+    # 버리면 라벨이 60초 동안 옛 대표를 계속 내건다.
+    from aot.aot_flask.geo.site_summary import (
+        invalidate_zone_contents, invalidate)
+    invalidate_zone_contents(zone_uuid)
+    invalidate()
+    return jsonify({'ok': True, 'rep_key': key})
 
 
 def _geo_map_state(geo_map):

@@ -347,7 +347,7 @@ def _device_ids_for(shape):
 
 
 def _child_entry(shape, device_ids, link_status, partial):
-    rep, sensors = _sensor_rollup(device_ids, partial)
+    rep, sensors = _sensor_rollup(device_ids, partial, rep_key_of(shape))
     issues = _issue_counts(device_ids, link_status)
 
     return {
@@ -431,7 +431,7 @@ def env_for_devices(device_ids):
     return {'readings': readings, 'sensors': {'valid': valid, 'total': total}}
 
 
-def _sensor_rollup(device_ids, partial):
+def _sensor_rollup(device_ids, partial, rep_key=None):
     """(rep, sensors) — 필지 행이 쓰는 축약형."""
     try:
         env = env_for_devices(device_ids)
@@ -439,19 +439,42 @@ def _sensor_rollup(device_ids, partial):
         logger.warning('[SiteSummary] 환경 집계 실패: %s', exc)
         _mark(partial, 'children.sensors')
         return None, {'valid': 0, 'total': 0}
-    return _pick_rep(env['readings']), env['sensors']
+    return _pick_rep(env['readings'], rep_key), env['sensors']
 
 
-def _pick_rep(readings):
-    """readings 는 이미 우선순위 순이라 첫 항목이 대표값이다."""
+def rep_key_of(shape):
+    """도형에 지정된 대표 측정 key(없으면 None).
+
+    사용자가 구역 모달의 현재 블록에서 값을 눌러 정한다. 도형에 붙어 있으므로
+    지도 라벨·필지 요약·구역 모달이 **한 값**을 본다 — 위젯 옵션에 두면 같은
+    구역이 대시보드마다 다른 것을 대표로 내세운다.
+    """
+    meta = getattr(shape, 'meta_json', None) or {}
+    key = meta.get('rep_key')
+    return key if isinstance(key, str) and key else None
+
+
+def _pick_rep(readings, rep_key=None):
+    """대표값 하나. 지정이 있으면 그것, 없으면 우선순위 첫 항목.
+
+    지정한 측정이 지금 값을 내지 못하면(센서 두절·미설치) 지정을 지우지 않고
+    **그때만** 우선순위로 물러선다 — 센서가 돌아오면 지정이 그대로 살아난다.
+    """
     if not readings:
         return None
     first = readings[0]
+    if rep_key:
+        for r in readings:
+            if r['key'] == rep_key:
+                first = r
+                break
+    # 'more'(뒤에 더 있음)는 내지 않는다 — 라벨에 붙던 ' +' 를 뗐다(2026-08-10).
+    # 좁은 라벨에서 그 한 글자가 숫자를 밀어내는데, "더 있다"는 사실만으로는
+    # 아무 판단도 못 한다. 더 보려면 어차피 눌러서 창을 연다.
     return {
         'key': first['key'],
         'value': first['value'],
         'unit': first['unit'],
-        'more': len(readings) > 1,
     }
 
 
@@ -584,7 +607,7 @@ def zone_status_for_map(map_uuid):
             issues = _issue_counts(ids, link_status)
             result[zone.unique_id] = {
                 'status': _child_status(ids, env['sensors'], issues),
-                'rep': _pick_rep(env['readings']),
+                'rep': _pick_rep(env['readings'], rep_key_of(zone)),
                 'sensors': env['sensors'],
                 'issues': issues,
             }

@@ -1190,8 +1190,21 @@
   //
   // 응답 수(valid/total)는 **모자랄 때만** 적는다. 전부 살아 있을 때 "3/3"을
   // 붙이면 매일 보는 숫자가 하나 느는 것뿐이고, 정작 봐야 할 "2/3"이 그 속에 묻힌다.
-  function buildEnvNowHtml(env) {
+  // 대표 측정 지정 — **값 자체가 버튼이다.**
+  //
+  // 서버는 VPD>T>RH>CO2>... 라는 고정 우선순위의 첫 항목을 대표로 내세우고
+  // (site_summary.SENSOR_KEY_PRIORITY), 그 대표값이 곧 지도 구역 라벨에 뜨는
+  // 값이다. 토양수분을 보려고 온 사람에게 그 순서는 남의 기준이다.
+  //
+  // 고르는 자리를 따로 만들지 않았다. 사람이 이미 보고 있는 숫자를 누르면
+  // 그것이 대표가 되고, 어느 것이 대표인지는 배경으로 남는다. 순서는 건드리지
+  // 않는다 — 누를 때마다 항목이 자리를 옮기면 다음 클릭이 어디로 갈지 모른다.
+  //
+  //   opts.repKey     지금 대표로 지정된 key(배경 표시)
+  //   opts.selectable 누를 수 있는가(edit_settings 권한자만)
+  function buildEnvNowHtml(env, opts) {
     env = env || {};
+    opts = opts || {};
     var readings = env.readings || [];
     var sensors = env.sensors || {};
     if (!readings.length && !sensors.total) return '';
@@ -1219,7 +1232,17 @@
         var unit = (window.AoTSensorLabel && window.AoTSensorLabel.displayUnit)
           ? window.AoTSensorLabel.displayUnit(r.unit)
           : String(r.unit || '').trim();
-        return '<div class="aot-env-now-item">' +
+        var isRep = !!(opts.repKey && r.key === opts.repKey);
+        // 지정 가능할 때만 버튼처럼 보이게 한다 — 권한이 없는 사람에게 눌리는
+        // 시늉을 보여 주면 눌러 보고 아무 일도 안 일어나는 것을 겪는다.
+        var hint = isRep ? _t('Representative measurement')
+                         : (opts.selectable ? _t('Set as representative') : '');
+        return '<div class="aot-env-now-item' +
+                 (isRep ? ' is-rep' : '') +
+                 (opts.selectable ? ' is-selectable' : '') + '"' +
+                 ' data-rep-key="' + _esc(r.key) + '"' +
+                 (hint ? ' title="' + _esc(hint) + '"' : '') +
+                 (opts.selectable ? ' role="button" tabindex="0"' : '') + '>' +
                  '<div class="aot-env-now-val">' +
                  _esc((+r.value).toFixed(dec)) +
                  '<span class="aot-env-now-unit">' + _esc(unit) + '</span>' +
@@ -1248,6 +1271,44 @@
     return '<div class="aot-ov-block">' + head + body + '</div>';
   }
 
+  // 현재 블록의 값 클릭 → 대표 지정. onPick(key|null) 로 넘긴다.
+  //
+  // 이미 대표인 것을 다시 누르면 **해제**다(null). 지정을 되돌릴 방법이 없으면
+  // 한 번 잘못 누른 사람이 원래대로 돌아갈 길이 없다.
+  // 배경은 서버 응답을 기다리지 않고 먼저 옮긴다 — 누른 것이 바로 켜지지
+  // 않으면 안 눌린 줄 알고 다시 누른다. 실패하면 onPick 쪽이 되돌린다.
+  //
+  // **한 root 에 한 번만 건다.** 시설 [현황]은 30초마다 다시 렌더되는데
+  // pane 요소 자체는 그대로 재사용된다 — 렌더마다 리스너를 더하면 클릭 한 번에
+  // 핸들러가 두 번 돌아 지정을 켰다 껐다 해서 **해제가 안 먹는다**(실제로
+  // 겪음). 콜백만 갈아 끼우고 리스너는 최초 한 번만 건다.
+  function wireEnvNowPick(root, onPick) {
+    if (!root || typeof onPick !== 'function') return;
+    root._aotEnvPick = onPick;
+    if (root._aotEnvPickWired) return;
+    root._aotEnvPickWired = true;
+    function pick(item) {
+      var key = item.dataset.repKey;
+      if (!key) return;
+      var wasRep = item.classList.contains('is-rep');
+      root.querySelectorAll('.aot-env-now-item.is-rep').forEach(function (el) {
+        el.classList.remove('is-rep');
+      });
+      if (!wasRep) item.classList.add('is-rep');
+      // 최신 콜백을 부른다 — 재렌더로 갈아 끼워졌을 수 있다.
+      root._aotEnvPick(wasRep ? null : key);
+    }
+    root.addEventListener('click', function (e) {
+      var item = e.target.closest('.aot-env-now-item.is-selectable');
+      if (item && root.contains(item)) pick(item);
+    });
+    root.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var item = e.target.closest('.aot-env-now-item.is-selectable');
+      if (item && root.contains(item)) { e.preventDefault(); pick(item); }
+    });
+  }
+
   // Zone [현황] 탭 — 지금 어떤가. 시설 [현황]과 같은 순서다(현재 환경 → 노트).
   //   zone: api_geo_zone_contents 응답의 zone 객체
   //         { unique_id, name, site_name, area_m2, counts, env, photo_url, can_edit }
@@ -1255,9 +1316,9 @@
   // 사진·면적·개수는 여기 있지 않다 — [개요]로 옮겼다. 예전에는 이 탭 이름이
   // [상태]인데 내용은 정적 인벤토리여서, "지금 괜찮은가"를 물으러 온 사용자가
   // 면적과 개수를 읽고 나가야 했다.
-  function buildZoneStatusHtml(zone) {
+  function buildZoneStatusHtml(zone, opts) {
     zone = zone || {};
-    return buildEnvNowHtml(zone.env) + _ovNotesBlock();
+    return buildEnvNowHtml(zone.env, opts) + _ovNotesBlock();
   }
 
   // Zone [개요] 탭 — 이것의 정체는 무엇인가. 시설 [개요]와 같은 순서다
@@ -1486,6 +1547,7 @@
     buildZoneStatusHtml:   buildZoneStatusHtml,
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildEnvNowHtml:       buildEnvNowHtml,
+    wireEnvNowPick:        wireEnvNowPick,
     buildModalHeader:      buildModalHeader,
     applyStatusDot:        applyStatusDot,
     emptyLine:             emptyLine,

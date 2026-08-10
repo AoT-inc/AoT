@@ -83,10 +83,12 @@
       return c.value != null && !isMetaChannel(c);
     });
     if (!renderable.length) return '—';
-    var shown = renderable.slice(0, maxN).map(function (c) {
+    // 잘린 채널이 있어도 ' +' 를 붙이지 않는다. 라벨은 좁아서 그 한 글자가
+    // 숫자를 밀어내는데, 정작 "뒤에 더 있다"는 사실만으로는 아무 판단도 할 수
+    // 없다 — 더 보려면 어차피 눌러서 팝업을 연다.
+    return renderable.slice(0, maxN).map(function (c) {
       return formatChannel(c, dec);
     }).join(' / ');
-    return renderable.length > maxN ? shown + ' +' : shown;
   }
 
   // ─── Popup (per-widget — appended to host element, not document.body) ──────
