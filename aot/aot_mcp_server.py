@@ -636,6 +636,7 @@ def _run_http_server(app, port=5700):
       GET  /mcp/info         → server metadata (인증 불필요, 생존 확인)
       GET  /mcp/tools/list   → all tools          ┐ 자체 REST. ChatGPT Actions 와
       POST /mcp/tools/call   → {name, arguments}  ┘ curl 점검이 계속 쓴다.
+                               arguments 는 object 또는 그 JSON 문자열.
 
     REST 를 남겨두는 이유: 일반 요금제의 ChatGPT Custom GPT 는 MCP 서버를 직접
     등록할 수 없고 OpenAPI Actions 로만 붙는다. 현장 운영자가 쓰는 경로가 그쪽이라
@@ -791,6 +792,30 @@ def _run_http_server(app, port=5700):
         arguments = data.get("arguments", {})
         if not tool_name:
             return jsonify({"error": "Missing 'name' field"}), 400
+        # arguments 를 JSON 문자열로도 받는다. ChatGPT Custom GPT 의 Actions 는
+        # properties 가 선언되지 않은 자유형 object 를 채우지 못하고 통째로 빠뜨린다
+        # (2026-08-09: list_devices_in_area 가 "area_name is required" 로 실패 —
+        # 실제로 나간 바디에 arguments 키 자체가 없었다). 도구 인자 키는 134 종이라
+        # OpenAPI 에 전부 선언할 수 없으므로, 문자열 한 칸으로 받아 여기서 푼다.
+        # 표준 MCP 전송(POST /mcp)은 규격대로 object 만 보내므로 그쪽은 손대지 않는다.
+        if isinstance(arguments, str):
+            blank = not arguments.strip()
+            try:
+                arguments = {} if blank else json.loads(arguments)
+            except ValueError as exc:
+                return jsonify({"error": f"'arguments' is not valid JSON: {exc}"}), 400
+            if not isinstance(arguments, dict):
+                return jsonify({
+                    "error": "'arguments' must decode to a JSON object, "
+                             f"got {type(arguments).__name__}."
+                }), 400
+        elif arguments is None:
+            arguments = {}
+        elif not isinstance(arguments, dict):
+            return jsonify({
+                "error": f"'arguments' must be an object or a JSON string, "
+                         f"got {type(arguments).__name__}."
+            }), 400
         # Identity comes from the API key, not from a self-declared header —
         # X-MCP-Agent-Id alone was spoofable, which made the audit trail and the
         # advice ledger's attribution untrustworthy. The header now only
