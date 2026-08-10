@@ -36,17 +36,8 @@ class AIGlobalSettings(CRUDMixin, db.Model):
     # Cost Management
     budget_limit_usd = db.Column(db.Float, default=10.0)
     
-    # Feature Toggle — "AI 를 쓸 수 있게 한다". Settings > General 에서 켠다.
-    # 메뉴 노출, AI 페이지 접근, 채팅/조언 요청이 여기에 달려 있다.
+    # Feature Toggle
     ai_enabled = db.Column(db.Boolean, default=False, nullable=False)
-
-    # Operation Toggle — "AI 가 스스로 돈다". AI 페이지에서 켠다.
-    # 사람이 부르지 않아도 도는 백그라운드 잡(주기 요약, 컨텍스트 브로드캐스트,
-    # 날씨 요약, MCP 헬스체크, 실시간 알림)만 이 스위치에 달려 있다. 사용자가
-    # 직접 보내는 채팅/조언 요청은 ai_enabled 만 보고 동작한다 — 모델을 막
-    # 등록한 사람이 켜기 전에 시험해 볼 수 있어야 하기 때문.
-    # 판정은 반드시 aot/ai/services/ai_runtime_state.py 를 거칠 것.
-    ai_running = db.Column(db.Boolean, default=False, nullable=True)
 
     # External MCP HTTP server master switch. Checked per-request by
     # aot_mcp_server.py's _run_http_server() routes — when False, the server

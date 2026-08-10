@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import NotesList from './NotesList'
 import NotesInput from './NotesInput'
-import { t, targetTypeLabel } from '../lib/i18n'
 
 export default function NotesDrawer({ isOpen, target, isGlobal, onClose }) {
 
@@ -155,10 +154,10 @@ export default function NotesDrawer({ isOpen, target, isGlobal, onClose }) {
         {/* Header */}
         <div className="aot-drawer-header">
             <div className="min-w-0 pr-2">
-                <h2 className="aot-drawer-title-text">{target.name || t('Notes')}</h2>
+                <h2 className="aot-drawer-title-text">{target.name || 'Notes'}</h2>
                 <div className="flex items-center gap-2 mt-1">
                     <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100">
-                        {targetTypeLabel(target.targetType)}
+                        {target.targetType}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono truncate" title={target.targetId}>
                         {target.targetId}
@@ -168,7 +167,7 @@ export default function NotesDrawer({ isOpen, target, isGlobal, onClose }) {
             <button
                 onClick={onClose}
                 className="aot-icon-btn"
-                aria-label={t('Close')}
+                aria-label="Close"
             >
                 <X size={22} />
             </button>

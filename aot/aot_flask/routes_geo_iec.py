@@ -997,12 +997,6 @@ def api_facility_function_state(facility_uuid):
         return jsonify({'ok': False, 'message': '; '.join(str(e) for e in errors),
                         'function_uuid': fn.unique_id}), 400
 
-    # 이 시설의 /overview 캐시를 버린다. 누른 사람의 창은 `?fresh=1` 로 다시
-    # 읽지만, **다른 창·다른 사람·다른 경로**(AI 도구·스케줄러)로 바뀐 경우에는
-    # 그 우회가 없다 — 안 버리면 열려 있는 모달이 최대 30초 동안 옛 운전 상태를
-    # 내건다. 상태를 바꾼 쪽이 버리는 것이 맞다.
-    invalidate_facility_overview(facility_uuid)
-
     return jsonify({
         'ok':            True,
         'function_uuid': fn.unique_id,
@@ -1127,30 +1121,6 @@ def api_facility_info(facility_uuid):
     })
 
 
-_OVERVIEW_CACHE = {}
-_OVERVIEW_LOCKS = {}
-_OVERVIEW_TTL_S = 30
-
-
-def invalidate_facility_overview(facility_uuid):
-    """이 시설의 overview 캐시를 버린다.
-
-    **상태를 바꾼 쪽이 부른다** — 대표 측정 지정(rep_key), 자동제어 토글
-    (function_state). `?fresh=1` 은 누른 사람의 창만 구하므로, 다른 탭·다른
-    사람·다른 경로(AI 도구·스케줄러)로 바뀐 경우에는 이것이 유일한 통로다.
-    """
-    _OVERVIEW_CACHE.pop(facility_uuid, None)
-
-
-def _unwrap_json(resp):
-    """뷰 함수를 직접 부른 결과(Response 또는 (Response, status))에서 dict 만."""
-    r = resp[0] if isinstance(resp, tuple) else resp
-    try:
-        return r.get_json()
-    except Exception:
-        return None
-
-
 @blueprint.route('/api/aot/facility/<facility_uuid>/overview', methods=['GET'])
 @login_required
 def api_facility_overview(facility_uuid):
@@ -1163,47 +1133,22 @@ def api_facility_overview(facility_uuid):
     같지만 나머지 스레드를 다른 요청에 양보한다.
 
     개별 엔드포인트(/status 5초 폴링 등)는 그대로 유지된다.
-
-    구역 내용과 같은 30초 캐시 + 단일 비행. 넣기 전 실측이 534~641ms 였고
-    **열 때마다** 그 값이었다(같은 시설의 /runtime 은 17ms). `?fresh=1` 로
-    우회한다 — 사진 교체·설명 저장·자동제어 토글 직후의 재조회는 캐시를
-    타면 안 된다. 방금 끈 것이 켜진 채로 보이면 토글이 고장 난 것처럼 읽힌다.
-    """
-    import time as _time
-    from aot.aot_flask.geo.site_summary import cached_build
-
-    force = request.args.get('fresh') in ('1', 'true')
-    payload = cached_build(_OVERVIEW_CACHE, _OVERVIEW_LOCKS, facility_uuid,
-                           _OVERVIEW_TTL_S,
-                           lambda: _build_facility_overview(facility_uuid),
-                           force)
-    if payload is None:
-        return jsonify({'ok': False, 'message': 'Facility not found'}), 404
-
-    # can_edit 는 캐시 밖에서 매번 다시 넣는다 — 캐시는 전역이라 처음 연
-    # 사람의 권한이 다음 사람에게 그대로 간다(구역 내용과 같은 규칙).
-    # info 안에도 같은 키가 있어 두 곳 다 덮는다.
-    payload = dict(payload)
-    can_edit = utils_general.user_has_permission('edit_settings', silent=True)
-    payload['can_edit'] = can_edit
-    if isinstance(payload.get('info'), dict):
-        payload['info'] = dict(payload['info'])
-        payload['info']['can_edit'] = can_edit
-    payload['ts'] = _time.time()
-    return jsonify(payload)
-
-
-def _build_facility_overview(facility_uuid):
-    """overview 응답 본체(캐시에 담기는 부분). 시설을 못 찾으면 None.
-
-    상위 site 는 모달 제목줄의 "상위로" 화살표용이다. 시설은 구역 안에 있을
-    수도 있어 한 단계 위가 아니라 site 가 나올 때까지 거슬러 올라간다.
-    `area_status` 는 구역·필지와 **같은 판정**을 쓴다(통신·배터리·센서 응답)
-    — IEC 의 `status.level` 과 다른 축이다. 그쪽은 자동제어가 도는지를 말하고
-    이쪽은 장치가 살아 있는지를 말한다.
     """
     import time as _time
 
+    def _unwrap(resp):
+        r = resp[0] if isinstance(resp, tuple) else resp
+        try:
+            return r.get_json()
+        except Exception:
+            return None
+
+    # 상위 site — 모달 제목줄의 "상위로" 화살표용. 시설은 구역 안에 있을 수도
+    # 있어 한 단계 위가 아니라 site 가 나올 때까지 거슬러 올라간다.
+    # 상위 site 와 상태 점 — 둘 다 시설 도형 기준이다. `area_status` 는
+    # 구역·필지와 **같은 판정**을 쓴다(통신·배터리·센서 응답). IEC 의
+    # `status.level` 과 다른 축이다 — 그쪽은 자동제어가 도는지를 말하고
+    # 이쪽은 장치가 살아 있는지를 말한다.
     site = None
     area_status = None
     rep_key = None
@@ -1225,21 +1170,18 @@ def _build_facility_overview(facility_uuid):
         logger.warning('[facility/overview] parent site / status lookup failed',
                        exc_info=True)
 
-    info = _unwrap_json(api_facility_info(facility_uuid))
-    if info is None:
-        return None   # 시설을 못 찾았다 — 캐시에 남기지 않는다
-
-    # can_edit 는 라우트가 응답마다 다시 넣는다(캐시는 전역).
-    return {
+    return jsonify({
         'ok':          True,
-        'env_summary': _unwrap_json(api_facility_env_summary(facility_uuid)),
-        'status':      _unwrap_json(api_facility_iec_status(facility_uuid)),
-        'info':        info,
+        'env_summary': _unwrap(api_facility_env_summary(facility_uuid)),
+        'status':      _unwrap(api_facility_iec_status(facility_uuid)),
+        'info':        _unwrap(api_facility_info(facility_uuid)),
         'site':        site,
         'area_status': area_status,
         'rep_key':     rep_key,
+        'can_edit':    utils_general.user_has_permission('edit_settings',
+                                                         silent=True),
         'ts':          _time.time(),
-    }
+    })
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/rep_key', methods=['POST'])
@@ -1252,7 +1194,7 @@ def api_facility_rep_key(facility_uuid):
     """
     from aot.aot_flask.extensions import db as _db
     from aot.databases.models import GeoFacility, GeoShape
-    from aot.aot_flask.geo.site_summary import invalidate_rep
+    from aot.aot_flask.geo.site_summary import invalidate
 
     if not utils_general.user_has_permission('edit_settings', silent=True):
         return jsonify({'ok': False, 'error': 'permission denied'}), 403
@@ -1281,8 +1223,7 @@ def api_facility_rep_key(facility_uuid):
     shape.meta_json = meta
     _db.session.commit()
 
-    invalidate_rep(shape)
-    invalidate_facility_overview(facility_uuid)
+    invalidate()
     return jsonify({'ok': True, 'rep_key': key})
 
 

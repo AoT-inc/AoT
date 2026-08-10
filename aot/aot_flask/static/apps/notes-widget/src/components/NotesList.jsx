@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotes } from '../lib/api'
 import { FileText, Download, X as CloseIcon, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react'
-import { t, relativeTime } from '../lib/i18n'
+import { formatDistanceToNow } from 'date-fns'
 import { createPortal } from 'react-dom'
 import { useState, useRef, useEffect } from 'react'
 
@@ -16,29 +16,31 @@ export default function NotesList({ target }) {
   if (isLoading) return (
      <div className="flex flex-col items-center justify-center py-10 text-slate-500">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mb-2"></div>
-        <p className="text-xs">{t('Loading...')}</p>
+        <p className="text-xs">Loading...</p>
      </div>
   )
 
   if (error) return (
      <div className="p-4 mx-4 bg-red-500/10 text-red-400 rounded-lg text-xs text-center border border-red-500/20">
-        {t('Failed to load notes.')}
+        Failed to load notes.
      </div>
   )
 
   if (!notes || notes.length === 0) return (
      <div className="flex flex-col items-center justify-center py-20 text-slate-600 opacity-50">
         <FileText size={48} strokeWidth={1} />
-        <p className="mt-2 text-sm">{t('No notes written')}</p>
+        <p className="mt-2 text-sm">No recorded notes found.</p>
      </div>
   )
 
   return (
     <div className="space-y-4">
         {notes.map((note) => (
-            <NoteItem
+            <NoteItem 
                 key={note.unique_id}
-                note={note}
+                note={note} 
+                onDelete={() => deleteMutation.mutate(note.unique_id)}
+                onUpdate={(updatedData) => updateMutation.mutate({ unique_id: note.unique_id, ...updatedData })}
                 onOpenGallery={(mediaFiles, index) => setGalleryState({ mediaFiles, index })}
             />
         ))}
@@ -54,13 +56,7 @@ export default function NotesList({ target }) {
   )
 }
 
-// 이 드로어에는 노트 삭제·수정이 **없다.** 예전에는 여기에 onDelete/onUpdate 를
-// 넘겼는데, 그 핸들러가 부르는 deleteMutation/updateMutation 은 어디에도 선언돼
-// 있지 않았고 api.js 에 해당 요청 함수조차 없었다. 부르는 버튼이 없어 터지지
-// 않았을 뿐, 삭제 버튼을 다는 순간 ReferenceError 로 목록 전체가 죽는 함정이었다.
-// 다시 붙일 때는 api.js 에 요청 함수부터 만들고 useMutation 을 실제로 선언할 것.
-// 노트 삭제는 현재 /notes 페이지에서 한다.
-const NoteItem = ({ note, onOpenGallery }) => {
+const NoteItem = ({ note, onDelete, onUpdate, onOpenGallery }) => {
     const files = note.files ? note.files.split(',').map(f => f.trim()).filter(f => f !== '') : []
     const noteDate = new Date(note.date_time);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -87,10 +83,10 @@ const NoteItem = ({ note, onOpenGallery }) => {
              {/* Note Header */}
              <div className="px-4 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                  <div className="flex items-center gap-2">
-                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{note.user || t('User')}</span>
+                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{note.user || 'User'}</span>
                  </div>
                  <span className="text-[10px] text-slate-400 font-medium">
-                    {relativeTime(noteDate)}
+                    {formatDistanceToNow(noteDate, { addSuffix: true })}
                  </span>
              </div>
              
@@ -213,7 +209,7 @@ function GalleryOverlay({ mediaFiles, initialIndex, onClose }) {
                                 <img 
                                     src={url} 
                                     key={url} // Reset transform on image change if handled by wrapper
-                                    alt={t('Full view')} 
+                                    alt="Full view" 
                                     className="max-w-[100vw] max-h-[100vh] object-contain" 
                                 />
                             </TransformComponent>
@@ -281,7 +277,7 @@ function MediaPreview({ file }) {
     }
     return (
         <div className="w-full h-full bg-slate-900 flex items-center justify-center text-white text-[8px]">
-            {t('Video')}
+            VIDEO
         </div>
     );
 }
@@ -372,7 +368,7 @@ function NoteTextContent({ text }) {
                     onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
                     className="mt-1 text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-0.5"
                 >
-                    {t('See more')} <ChevronRight size={12} />
+                    See more <ChevronRight size={12} />
                 </button>
             )}
             {isExpanded && (
@@ -380,7 +376,7 @@ function NoteTextContent({ text }) {
                     onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
                     className="mt-1 text-xs text-slate-500 hover:text-slate-700 font-medium flex items-center gap-0.5 ml-auto"
                 >
-                    {t('Collapse')} <ChevronUp size={12} />
+                    Collapse <ChevronUp size={12} />
                 </button>
             )}
         </div>

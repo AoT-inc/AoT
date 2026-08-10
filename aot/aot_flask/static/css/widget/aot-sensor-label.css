@@ -140,13 +140,6 @@
   position: relative;
 }
 
-/* 값이 하나도 없는 센서는 차트 대신 이 상태 문구만 들어온다. 문구가 absolute 라
-   wrap 높이는 0이 되고, 문구가 바로 아래 노트 블록 위로 겹쳐 앉아 [노트 열기]
-   버튼과 한 줄에 포개져 보였다. 문구만 있을 때는 자리를 잡아 준다. */
-.aot-sensor-popup-chart-wrap:has(> .aot-sensor-popup-chart-status:only-child) {
-  min-height: 96px;
-}
-
 .aot-sensor-popup-chart-status {
   position: absolute;
   inset: 28px 0 0 0;
@@ -554,11 +547,42 @@
   margin-top: 4px;
 }
 
-/* 노트창 호출 버튼 — **자체 스타일 없음**. .aot-ov-pill 을 그대로 쓴다(같은
-   창의 [사진 변경]·[편집]·[저장]과 같은 높이·라운드·색). 이 클래스는 JS 가
-   잡는 훅일 뿐이다. 예전에는 .aot-ov-pill 과 선언이 한 글자도 다르지 않은
-   사본이 여기 따로 있었고, 목록 밑에는 26px 짜리 전체폭 버튼(.aot-ov-notes-all)
-   이 하나 더 붙어 한 블록 안에서 버튼 두 개의 높이·모양이 서로 달랐다. */
+/* Notes head row: 제목 좌측 + 노트창 호출 버튼 우측 */
+.aot-ov-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Notes section title */
+.aot-ov-notes-title {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+/* 노트창 호출 버튼 — 전역 알약 스타일 (output 카드 버튼과 동일 변수) */
+.aot-ov-notes-open {
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border, #B6BABA);
+  background: var(--bg-btn-off, #5E6B64);
+  color: var(--text-color-tertiary, #FFFFFF);
+  font-size: var(--aot-font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .aot-ov-notes-open:hover {
+    filter: brightness(0.9);
+  }
+}
 
 /* Note item (행 + 첨부) — 클릭 시 노트 패널 열림 */
 .aot-ov-note {
@@ -611,6 +635,25 @@
   margin-top: 2px;
   font-size: var(--aot-font-size-xs);
   color: var(--aot-color-text-secondary);
+}
+
+/* All notes button: full-width-ish, small (전역 버튼 변수 준수) */
+.aot-ov-notes-all {
+  width: 100%;
+  height: var(--aot-btn-height-sm, 32px);
+  padding: 0 var(--aot-btn-padding-x, 12px);
+  margin-top: 4px;
+  font-size: var(--aot-font-size-sm);
+  font-weight: 600;
+  border-radius: var(--aot-btn-radius-sm, 16px);
+  border: 1px solid var(--bd-btn-border);
+  background: var(--bg-btn-off);
+  color: var(--text-color-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, filter 0.15s;
+}
+.aot-ov-notes-all:hover {
+  filter: brightness(0.9);
 }
 
 /* Muted text */
@@ -770,7 +813,8 @@
 }
 /* 터치 기기 sticky-hover 방지 — entry UI 와 동일 정책 */
 @media (hover: hover) and (pointer: fine) {
-  .aot-act-pbtn:hover {
+  .aot-act-pbtn:hover,
+  .aot-ov-notes-all:hover {
     filter: brightness(0.9);
   }
 }

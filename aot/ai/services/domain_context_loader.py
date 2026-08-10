@@ -138,26 +138,12 @@ class DomainContextLoader:
         Load (or return from cache) the facility registry YAML file.
         Performs mtime-based cache invalidation.
 
-        A missing registry file is a normal state, not a failure: the Context
-        Layer is optional and a site that has registered no domain modules
-        simply has no file. Raising here made _context_broadcast_job log
-        "Step 1 failed: [Errno 2] No such file or directory" every cycle, which
-        reads like a broken install. Return an empty registry instead — every
-        caller already handles "no facilities".
-
         Call Hierarchy
         --------------
         Parent  : cls.load_active_module(), cls.get_all_active_facilities()
         Children: (none — direct file I/O via yaml.safe_load)
         """
         registry_path = os.path.join(CONTEXT_LAYER_ROOT, 'facility_registry.yaml')
-        if not os.path.exists(registry_path):
-            # Drop any cache from a previous ON state so a deleted registry
-            # doesn't keep serving stale facilities.
-            with cls._lock:
-                cls._registry_cache = {}
-                cls._registry_mtime = 0.0
-            return {}
         current_mtime = os.path.getmtime(registry_path)
 
         with cls._lock:
@@ -165,10 +151,9 @@ class DomainContextLoader:
             if cls._registry_cache and current_mtime == cls._registry_mtime:
                 return cls._registry_cache
 
-            # Load from disk. An empty file parses to None — `or {}` keeps the
-            # contract "always a dict" so callers can .get() unconditionally.
+            # Load from disk
             with open(registry_path, 'r') as f:
-                data = yaml.safe_load(f) or {}
+                data = yaml.safe_load(f)
 
             cls._registry_cache = data
             cls._registry_mtime = current_mtime

@@ -3059,7 +3059,7 @@ msgstr "라이브러리 정보"
 
 #: config_translations_docs.py:133
 msgid "Notes & Device Notes"
-msgstr "노트 및 장치 노트"
+msgstr "Notes 및 장치 메모"
 
 #: config_translations_docs.py:134
 msgid ""
@@ -4498,7 +4498,7 @@ msgstr "직접 입력"
 #: aot_flask/forms/forms_ai_context.py:21
 #: aot_flask/static/js/ai/aot-ai-context.js:110
 msgid "Note/Description"
-msgstr "노트/설명"
+msgstr "메모/설명"
 
 #: aot_flask/forms/forms_ai_context.py:22
 #: aot_flask/static/js/ai/aot-ai-context.js:113
@@ -5528,7 +5528,7 @@ msgstr "파일 필터"
 
 #: aot_flask/forms/forms_notes.py:75
 msgid "Note Filter"
-msgstr "노트 필터"
+msgstr "메모 필터"
 
 #: aot_flask/forms/forms_notes.py:76 aot_flask/templates/tools/notes.html:192
 msgid "Sort By"
@@ -7270,7 +7270,7 @@ msgstr "스크롤로 글자 크기 조절"
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:3805
 msgid "Open Notes"
-msgstr "노트 열기"
+msgstr "메모 열기"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-v3.js:1786
@@ -7461,7 +7461,7 @@ msgstr "현재 작업 시간"
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:7274
 msgid "No Notes"
-msgstr "노트 없음"
+msgstr "메모 없음"
 
 #: aot_flask/static/js/dist/geo-design.bundle.js:2
 #: aot_flask/static/js/geo/design/aot-geo-ui.js:243
@@ -12503,7 +12503,7 @@ msgstr "반복 주기 (분)"
 
 #: aot_flask/templates/pages/ai/scheduler.html:692
 msgid "Task Note"
-msgstr "작업 노트"
+msgstr "작업 메모"
 
 #: aot_flask/templates/pages/ai/scheduler.html:705
 #: aot_flask/templates/pages/function_options/conditional_options.html:126
@@ -13331,7 +13331,7 @@ msgstr "Python 코드 실행 제한 시간"
 #: aot_flask/templates/pages/function_options/trigger_options.html:105
 #: aot_flask/templates/pages/function_options/trigger_sequence_options.html:81
 msgid "Manage Notes"
-msgstr "노트 관리"
+msgstr "메모 관리"
 
 #: aot_flask/templates/pages/function_options/conditional_options.html:122
 #: aot_flask/templates/pages/function_options/function_options.html:97
@@ -15344,7 +15344,7 @@ msgstr "이 테스트 결과를 무시합니다"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:3929
 msgid "Note (optional)"
-msgstr "노트 (선택사항)"
+msgstr "메모 (선택사항)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:3930
 msgid "Apply Judgment"
@@ -22927,7 +22927,7 @@ msgstr "데이터 소스"
 
 #: widgets/AoT_graph.py:471
 msgid "Note Tag"
-msgstr "노트 태그"
+msgstr "메모 태그"
 
 #: widgets/AoT_graph.py:476
 msgid "Press <kbd>Ctrl</kbd> or <kbd>&#8984;</kbd> to select multiple items."
@@ -26972,99 +26972,3 @@ msgstr "대표 측정값"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set as representative"
 msgstr "대표로 지정"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "AI Service Operation"
-msgstr "AI 서비스 작동"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Start or stop autonomous AI operation. Chat and advice requests you make yourself are unaffected."
-msgstr "AI 자율 작동을 시작하거나 중지합니다. 사용자가 직접 보내는 대화·조언 요청은 영향을 받지 않습니다."
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "The AI service is disabled. Enable it in Settings > General first."
-msgstr "AI 서비스가 비활성 상태입니다. 설정 > 일반에서 먼저 활성화하세요."
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "No AI model is registered yet. Add and activate at least one agent below, then start the service."
-msgstr "등록된 AI 모델이 없습니다. 아래에서 에이전트를 하나 이상 추가·활성화한 뒤 서비스를 시작하세요."
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Running. Periodic summaries, context broadcast and alerts are active."
-msgstr "작동 중입니다. 주기 요약, 컨텍스트 브로드캐스트, 알림이 동작합니다."
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Stopped. No background AI work runs; chat and advice requests you make yourself still work."
-msgstr "중지 상태입니다. 백그라운드 AI 작업은 돌지 않으며, 사용자가 직접 보내는 대화·조언 요청은 그대로 동작합니다."
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "AI service started"
-msgstr "AI 서비스를 시작했습니다"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "AI service stopped"
-msgstr "AI 서비스를 중지했습니다"
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "Enable the AI service in Settings > General first."
-msgstr "설정 > 일반에서 AI 서비스를 먼저 활성화하세요."
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "Register and activate at least one AI model before starting the service."
-msgstr "서비스를 시작하기 전에 AI 모델을 하나 이상 등록·활성화하세요."
-
-#: aot/aot_flask/templates/settings/general.html
-msgid "Enabling here only makes the AI available. Autonomous operation — periodic summaries, context broadcast and alerts — is started separately on the AI page, after at least one AI model is registered."
-msgstr "여기서 활성화하면 AI를 쓸 수 있게만 됩니다. 주기 요약·컨텍스트 브로드캐스트·알림 같은 자율 작동은 AI 모델을 하나 이상 등록한 뒤 AI 페이지에서 따로 시작합니다."
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "No AI model remains, so autonomous AI operation was stopped."
-msgstr "남은 AI 모델이 없어 AI 자율 작동을 중지했습니다."
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Failed to load notes."
-msgstr "노트를 불러오지 못했습니다."
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "See more"
-msgstr "더 보기"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Collapse"
-msgstr "접기"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Full view"
-msgstr "원본 보기"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Add Tag"
-msgstr "태그 추가"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Select or create a tag"
-msgstr "태그 선택 또는 새로 만들기"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "New tag name (Enter)"
-msgstr "새 태그 이름 (Enter)"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Attach or Tag"
-msgstr "첨부 · 태그"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Write a note..."
-msgstr "노트를 적어 두세요..."
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Failed to save note."
-msgstr "노트를 저장하지 못했습니다."
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "You can attach at most {max} files."
-msgstr "파일은 최대 {max}개까지 첨부할 수 있습니다."
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "At most {max} files. Only the first {n} will be added."
-msgstr "파일은 최대 {max}개입니다. 앞의 {n}개만 추가합니다."

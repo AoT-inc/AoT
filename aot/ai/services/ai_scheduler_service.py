@@ -76,11 +76,10 @@ def get_scheduler():
 def _ai_scheduler_mcp_health_job():
     """Background job to check health of all activated MCP servers.
 
-    Skipped unless AI background operation is active (ai_runtime_state
-    .ai_background_active: AI enabled AND started AND at least one activated
-    agent) — no AI code path can reach MCP tools otherwise, so probing servers
-    (and keeping their subprocesses warm) is wasted work. Any live subprocesses
-    are torn down on the transition so OFF means OFF.
+    Skipped when AIGlobalSettings.ai_enabled is False — no AI code path can
+    reach MCP tools in that state, so probing servers (and keeping their
+    subprocesses warm) is wasted work. Any live subprocesses are torn down
+    on the transition so OFF means OFF.
     """
     from aot.ai.services.mcp_bridge_service import MCPBridgeService
     global _flask_app
@@ -90,15 +89,14 @@ def _ai_scheduler_mcp_health_job():
 
     with _flask_app.app_context():
         try:
-            from aot.ai.services import ai_runtime_state
-            if not ai_runtime_state.ai_background_active():
+            from aot.databases.models import AIGlobalSettings
+            settings = AIGlobalSettings.query.first()
+            if settings is None or not settings.ai_enabled:
                 # Tear down any subprocesses left running from a prior ON window
                 if getattr(MCPBridgeService, '_instances', None):
                     try:
                         MCPBridgeService.shutdown_all()
-                        logger.debug(
-                            "[027_STEP_1] %s — MCP bridge subprocesses shut down",
-                            ai_runtime_state.background_skip_reason())
+                        logger.debug("[027_STEP_1] AI disabled — MCP bridge subprocesses shut down")
                     except Exception as _sd_err:
                         logger.warning(f"[027_STEP_1] MCP shutdown_all failed: {_sd_err}")
                 return
@@ -222,18 +220,15 @@ def _weather_summary_job():
 
     with _flask_app.app_context():
         try:
-            from aot.databases.models import Input, Notes
+            from aot.databases.models import AIGlobalSettings, Input, Notes
             from aot.ai.services.ai_doc_service import AiDocService
             from aot.ai.services.ai_action_service import AIActionService
-            from aot.ai.services import ai_runtime_state
             from aot.aot_flask.extensions import db
 
-            # Skip unless AI background operation is active — this job produces
-            # AI output, so it has nothing to do without a started service and
-            # at least one activated agent.
-            if not ai_runtime_state.ai_background_active():
-                logger.debug("[WeatherSummary] %s — skipping",
-                             ai_runtime_state.background_skip_reason())
+            # Skip when AI is globally disabled — this job produces AI output.
+            _settings = AIGlobalSettings.query.first()
+            if _settings is None or not _settings.ai_enabled:
+                logger.debug("[WeatherSummary] AI disabled — skipping")
                 return
 
             # 1. Identify weather-tagged input devices
@@ -339,19 +334,16 @@ def _realtime_alert_check_job() -> None:
     with _flask_app.app_context():
         try:
             from aot.config.mcp_config import REALTIME_ALERT_COOLDOWN_MINUTES
+            from aot.databases.models import AIGlobalSettings
             from aot.ai.services.ai_summary_service import AISummaryService
             from aot.ai.services.ai_anomaly_detector import AIAnomalyDetector
             from aot.ai.services.notification_service import NotificationService
-            from aot.ai.services import ai_runtime_state
             from datetime import datetime, timezone
 
-            # Skip unless the AI service has been started. This one gates on
-            # ai_autonomy_enabled, not ai_background_active: the check is
-            # rule-based and calls no model, so an empty agent roster is no
-            # reason to stop alerting. What must stop it is the operator
-            # deciding the AI service isn't running.
-            if not ai_runtime_state.ai_autonomy_enabled():
-                logger.debug("[RealtimeAlert] AI 자율 작동 꺼짐 — skipping")
+            # Skip when AI is globally disabled — this job produces AI alerts.
+            _settings = AIGlobalSettings.query.first()
+            if _settings is None or not _settings.ai_enabled:
+                logger.debug("[RealtimeAlert] AI disabled — skipping")
                 return
 
             current_data = AISummaryService.gather_scope_data('system', None)
@@ -451,15 +443,13 @@ def _context_broadcast_job() -> None:
     # The entire job body must run inside an application context — get_master_context()
     # and the summary/domain queries below all touch the DB via Flask-SQLAlchemy.
     with _flask_app.app_context():
-        from aot.ai.services import ai_runtime_state
+        from aot.databases.models import AIGlobalSettings
 
-        # Feature toggle check: skip unless AI background operation is active
-        # (enabled AND started AND at least one activated agent), or when the
+        # Feature toggle check: skip when AI is globally disabled or the
         # context-broadcast sub-toggle is off.
-        _settings = ai_runtime_state.get_settings()
-        if not ai_runtime_state.ai_background_active(_settings):
-            logger.debug("[ContextBroadcast] %s — skipping",
-                         ai_runtime_state.background_skip_reason(_settings))
+        _settings = AIGlobalSettings.query.first()
+        if _settings is None or not _settings.ai_enabled:
+            logger.debug("[ContextBroadcast] AI disabled — skipping")
             return
         if _settings.context_broadcast_enabled is False:
             logger.debug("[ContextBroadcast] Disabled via AI Settings — skipping")

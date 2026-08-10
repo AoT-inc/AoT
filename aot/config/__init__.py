@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_31_ai_running_20260810'
+ALEMBIC_VERSION = 'p6_30_docker_auto_update_20260810'
 AOT_VERSION = '26.08.2'
 
 # FORCE UPGRADE MASTER

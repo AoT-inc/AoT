@@ -127,7 +127,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <!-- [GIS Vector Migration] MapLibre Compatibility Layer:
        callInitHooks 패치는 aot-maplibre-patches.js 로 이전됨(멱등 apply). -->
 
-  <link href="/static/css/map/map.css?v=20260810b" rel="stylesheet">
+  <link href="/static/css/map/map.css?v=20260727a" rel="stylesheet">
   {% endif %}{# needs_map #}
 
   <!-- AoT timezone display utility (single source of truth for UTC → device/viewer TZ) -->
@@ -983,9 +983,9 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endif %}
 
   <!-- AoT Notes Widget (Global Integration) -->
-  <link href="/static/js/notes/notes-widget.css?v=prod_v22" rel="stylesheet">
+  <link href="/static/js/notes/notes-widget.css?v=prod_v20" rel="stylesheet">
   <div id="aot-notes-widget-root"></div>
-  <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v22"></script>
+  <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v20"></script>
   
   {% if ai_settings and ai_settings.ai_enabled %}
   <!-- AI Global Assistant -->

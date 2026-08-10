@@ -4460,7 +4460,7 @@ msgstr "手動入力"
 #: aot_flask/forms/forms_ai_context.py:21
 #: aot_flask/static/js/ai/aot-ai-context.js:110
 msgid "Note/Description"
-msgstr "ノート/説明"
+msgstr "メモ/説明"
 
 #: aot_flask/forms/forms_ai_context.py:22
 #: aot_flask/static/js/ai/aot-ai-context.js:113
@@ -5506,7 +5506,7 @@ msgstr "ノートを表示"
 
 #: aot_flask/forms/forms_notes.py:79
 msgid "Export Notes"
-msgstr "ノートをエクスポート"
+msgstr "メモをエクスポート"
 
 #: aot_flask/forms/forms_notes.py:80
 msgid "Note ZIP File"
@@ -5514,7 +5514,7 @@ msgstr "ノートZIPファイル"
 
 #: aot_flask/forms/forms_notes.py:81
 msgid "Import Notes"
-msgstr "ノートをインポート"
+msgstr "メモをインポート"
 
 #: aot_flask/forms/forms_notes.py:85 aot_flask/utils/utils_notes_report.py:93
 msgid "This Week"
@@ -6366,7 +6366,7 @@ msgstr "すべての入力を削除"
 #: aot_flask/forms/forms_settings.py:573
 #: aot_flask/templates/settings/diagnostic.html:61
 msgid "Delete All Notes and Note Tags"
-msgstr "すべてのノートとタグを削除"
+msgstr "すべてのメモとタグを削除"
 
 #: aot_flask/forms/forms_settings.py:574
 #: aot_flask/templates/settings/diagnostic.html:47
@@ -7170,7 +7170,7 @@ msgstr "地図をクリックして測定してください"
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:369
 msgid "Add note"
-msgstr "ノートを追加"
+msgstr "メモを追加"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:445
@@ -7228,7 +7228,7 @@ msgstr "スクロールで文字サイズを調整"
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:3805
 msgid "Open Notes"
-msgstr "ノートを開く"
+msgstr "メモを開く"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-v3.js:1786
@@ -7337,7 +7337,7 @@ msgstr "凡例"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:7165
 #: aot_flask/templates/tools/notes.html:338
 msgid "Create Note"
-msgstr "ノートを作成"
+msgstr "メモを作成"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:7189
@@ -7418,7 +7418,7 @@ msgstr "現在の作業時間"
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:7274
 msgid "No Notes"
-msgstr "ノートなし"
+msgstr "メモなし"
 
 #: aot_flask/static/js/dist/geo-design.bundle.js:2
 #: aot_flask/static/js/geo/design/aot-geo-ui.js:243
@@ -9812,7 +9812,7 @@ msgstr "コンテキストを追加"
 
 #: aot_flask/templates/pages/ai_context.html:105
 msgid "Notes (optional)"
-msgstr "ノート (任意)"
+msgstr "メモ (任意)"
 
 #: aot_flask/templates/pages/ai_context.html:121
 msgid "Context Records"
@@ -12426,7 +12426,7 @@ msgstr "繰り返し周期 (分)"
 
 #: aot_flask/templates/pages/ai/scheduler.html:692
 msgid "Task Note"
-msgstr "タスクノート"
+msgstr "タスクメモ"
 
 #: aot_flask/templates/pages/ai/scheduler.html:705
 #: aot_flask/templates/pages/function_options/conditional_options.html:126
@@ -15247,7 +15247,7 @@ msgstr "このテスト結果を無視する"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:3929
 msgid "Note (optional)"
-msgstr "ノート(任意)"
+msgstr "メモ(任意)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:3930
 msgid "Apply Judgment"
@@ -16979,7 +16979,7 @@ msgstr "ファイル %(logfile)s の最後 %(lines)s 行"
 #: aot_flask/templates/tools/note_edit.html:16
 #: aot_flask/templates/tools/notes.html:355
 msgid "Edit Note"
-msgstr "ノートを編集"
+msgstr "メモを編集"
 
 #: aot_flask/templates/tools/note_edit.html:18
 msgid ""
@@ -17039,11 +17039,11 @@ msgstr "検索条件を調整するか、新しいノートを追加してみて
 
 #: aot_flask/templates/tools/notes.html:276
 msgid "Add Note"
-msgstr "ノートを追加"
+msgstr "メモを追加"
 
 #: aot_flask/templates/tools/notes.html:294
 msgid "Create New Note"
-msgstr "新しいノートを作成"
+msgstr "新しいメモを作成"
 
 #: aot_flask/templates/tools/notes.html:302
 #: aot_flask/templates/tools/notes.html:363
@@ -17300,7 +17300,7 @@ msgstr "お知らせを削除しました"
 
 #: aot_flask/templates/tools/partials/note_item.html:33
 msgid "Delete this note?"
-msgstr "このノートを削除しますか？"
+msgstr "このメモを削除しますか？"
 
 #: aot_flask/templates/tools/partials/note_item.html:120
 msgid "No tags"
@@ -26724,99 +26724,3 @@ msgstr "代表測定値"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set as representative"
 msgstr "代表に指定"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "AI Service Operation"
-msgstr "AIサービス稼働"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Start or stop autonomous AI operation. Chat and advice requests you make yourself are unaffected."
-msgstr "AIの自律稼働を開始または停止します。ユーザーが自分で送るチャット・アドバイス要求には影響しません。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "The AI service is disabled. Enable it in Settings > General first."
-msgstr "AIサービスが無効です。設定 > 一般で先に有効化してください。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "No AI model is registered yet. Add and activate at least one agent below, then start the service."
-msgstr "AIモデルが登録されていません。下でエージェントを1つ以上追加・有効化してから、サービスを開始してください。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Running. Periodic summaries, context broadcast and alerts are active."
-msgstr "稼働中です。定期サマリー、コンテキストブロードキャスト、アラートが動作します。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "Stopped. No background AI work runs; chat and advice requests you make yourself still work."
-msgstr "停止中です。バックグラウンドのAI処理は動きません。ユーザーが自分で送るチャット・アドバイス要求はそのまま動作します。"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "AI service started"
-msgstr "AIサービスを開始しました"
-
-#: aot/aot_flask/templates/pages/ai/ai_agent.html
-msgid "AI service stopped"
-msgstr "AIサービスを停止しました"
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "Enable the AI service in Settings > General first."
-msgstr "設定 > 一般でAIサービスを先に有効化してください。"
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "Register and activate at least one AI model before starting the service."
-msgstr "サービスを開始する前に、AIモデルを1つ以上登録・有効化してください。"
-
-#: aot/aot_flask/templates/settings/general.html
-msgid "Enabling here only makes the AI available. Autonomous operation — periodic summaries, context broadcast and alerts — is started separately on the AI page, after at least one AI model is registered."
-msgstr "ここで有効にしてもAIが使えるようになるだけです。定期サマリー・コンテキストブロードキャスト・アラートなどの自律稼働は、AIモデルを1つ以上登録したうえでAIページから別途開始します。"
-
-#: aot/aot_flask/routes_ai_agent.py
-msgid "No AI model remains, so autonomous AI operation was stopped."
-msgstr "残りのAIモデルがないため、AIの自律稼働を停止しました。"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Failed to load notes."
-msgstr "ノートを読み込めませんでした。"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "See more"
-msgstr "もっと見る"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Collapse"
-msgstr "折りたたむ"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Full view"
-msgstr "原寸で表示"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Add Tag"
-msgstr "タグを追加"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Select or create a tag"
-msgstr "タグを選択または新規作成"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "New tag name (Enter)"
-msgstr "新しいタグ名 (Enter)"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Attach or Tag"
-msgstr "添付・タグ"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Write a note..."
-msgstr "ノートを書く..."
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "Failed to save note."
-msgstr "ノートを保存できませんでした。"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "You can attach at most {max} files."
-msgstr "ファイルは最大{max}件まで添付できます。"
-
-#: aot/aot_flask/static/apps/notes-widget/src
-msgid "At most {max} files. Only the first {n} will be added."
-msgstr "ファイルは最大{max}件です。先頭の{n}件のみ追加します。"

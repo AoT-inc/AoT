@@ -11,6 +11,7 @@
  *   buildActuatorCat(catKey, catLabel, states, canCtrl, lastCmd, catKeyFn, savedOrder?)
  *   wire(containerEl, onControl, lastCmdRef)
  *   buildInput(devName, measurements, devId)
+ *   buildNoteSection(uniqueKey, devName)
  * }
  *
  * @version 1
@@ -665,7 +666,7 @@
   // ── buildInput ────────────────────────────────────────────────────────────
   // Build the popup body HTML for an input device (v3 device-level popup).
   // The returned HTML starts with the title div and ends after the measurements.
-  // 노트 블록은 포함하지 않는다 — 필요하면 AoTNotesBlock.html() 을 덧붙인다.
+  // Note section is NOT included — call buildNoteSection separately and append.
   //
   //   devName       string
   //   measurements  array of { id, meas_name|name, last_value, unit }
@@ -695,6 +696,23 @@
     return html;
   }
 
+  // ── buildNoteSection ──────────────────────────────────────────────────────
+  // Build the "Create Note" button + preview div HTML shared across popup types.
+  // The preview div always has id="note-prev-{uniqueKey}" so the caller's
+  // fetchLastNote() can look it up by document.getElementById.
+  function buildNoteSection(uniqueKey, devName) {
+    var notePreviewId = 'note-prev-' + _esc(String(uniqueKey));
+    var safeName      = String(devName || '').replace(/'/g, "\\'");
+    var openAction    = 'window.dispatchEvent(new CustomEvent(\'open-notes\',' +
+                        '{detail:{targetId:\'' + _esc(String(uniqueKey)) + '\',' +
+                        'targetType:\'device\',name:\'' + safeName + '\'}}))';
+    return '<hr class="aot-popup-divider">' +
+           '<button class="aot-popup-btn aot-popup-btn--primary aot-popup-btn--full" onclick="' + openAction + '">' +
+           (window._ ? window._('Create Note') : 'Create Note') + '</button>' +
+           '<div id="' + notePreviewId + '" class="aot-popup-note-preview">' +
+           '<span style="color:#ccc;font-style:italic;">...</span></div>';
+  }
+
   // ── [현황] 탭 빌더들 ────────────────────────────────────────────────────────
   // env_summary(데몬 사이클 스냅샷) + status 를 4블록으로 요약 렌더.
   // 규격 정보는 의도적으로 배제 — "지금 무슨 일이 일어나는가"만.
@@ -704,6 +722,9 @@
   // [현황] 표시 정책 상수 — 본문에 숫자를 직접 박지 않는다.
   var TREND_LOOKAHEAD_MIN = 15;   // 추세 선형 외삽 구간 (분)
   var TREND_DELTA_CAP     = 5;    // 외삽 표시값 상한 (과신 방지)
+  var NOTES_MAX           = 2;    // 노트 미리보기 개수
+  var NOTE_TEXT_MAX       = 60;   // 노트 본문 미리보기 글자 수
+  var NOTE_THUMBS_MAX     = 4;    // 노트 첨부 썸네일 개수
 
   // 값은 전역 번역 카탈로그의 영어 msgid — 출력 시 _t() 로 감싼다.
   var _MODE_LABELS = {
@@ -1019,11 +1040,88 @@
     return _ovInfoBlocks(info);
   }
 
-  // 노트 블록 — 골격·문구·배선은 전부 공용 컴포넌트(AoTNotesBlock, sensor-label.js)
-  // 한 곳에 있다. 여기서 자체 마크업을 다시 짜지 말 것: 그렇게 갈라져서 창마다
-  // 노트 버튼 모양과 문구가 달랐다. 호출자는 렌더 뒤 AoTNotesBlock.wire() 를 부른다.
+  // 노트 블록 자리 — 목록은 호출자가 /notes/target/<uuid> 로 비동기 채움.
+  // 제목 행 우측의 노트창 호출 버튼(.aot-ov-notes-open)은 호출자가
+  // open-notes CustomEvent 디스패치로 wire 한다 (조회 + 작성 패널).
   function _ovNotesBlock() {
-    return window.AoTNotesBlock ? window.AoTNotesBlock.html() : '';
+    return '<div class="aot-ov-block aot-ov-notes">' +
+           '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+           '<span>' + _esc(_t('Notes')) + '</span>' +
+           '<button type="button" class="aot-ov-notes-open">' +
+           _esc(_t('Create Note')) + '</button>' +
+           '</div>' +
+           '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>' +
+           '</div>';
+  }
+
+  // 노트 목록 채우기 — buildOverviewSection 렌더 후 호출.
+  //   listEl: .aot-ov-notes-list, notes: /notes/target 응답 배열 (최신순)
+  function fillOverviewNotes(listEl, notes, onOpenAll) {
+    if (!listEl) return;
+    if (!Array.isArray(notes) || !notes.length) {
+      // 'No records' 는 번역이 없어 한국어 화면에 영어로 남아 있었다.
+      // 빈 상태 문구는 계층을 가리지 않고 이 하나를 쓴다.
+      listEl.innerHTML = emptyLine(_t('No notes written'));
+      return;
+    }
+    var html = '';
+    notes.slice(0, NOTES_MAX).forEach(function (n) {
+      // 날짜는 **장치 현지 시각**으로 읽는다. 브라우저 시각대로 찍으면, 다른
+      // 지역 농장을 원격으로 보는 사람에게 자정 언저리 노트의 날짜가 하루씩
+      // 어긋난다. /notes/target 이 그 노트가 속한 곳의 tz(date_tz)를 함께 준다.
+      var d = '';
+      try {
+        var dt = new Date(n.date_time);
+        if (!isNaN(dt)) {
+          if (n.date_tz && window.AoTTz && window.AoTTz.formatDevice) {
+            // opts.fmt 가 Intl 옵션 자리다 — 옵션을 바로 넘기면 무시되고
+            // 기본 datetimeShort 가 나온다.
+            d = window.AoTTz.formatDevice(n.date_time, n.date_tz,
+                  { fmt: { month: 'numeric', day: 'numeric' } });
+          }
+          if (!d) d = (dt.getMonth() + 1) + '/' + dt.getDate();
+        }
+      } catch (e) {}
+      var txt = String(n.note || '').replace(/\s+/g, ' ').slice(0, NOTE_TEXT_MAX);
+
+      // 첨부 처리: 이미지 → 썸네일(최대 4), 그 외 파일 → 개수 표기
+      var files = String(n.files || '').split(',')
+        .map(function (t) { return t.trim(); }).filter(Boolean);
+      var imgs = files.filter(function (f) {
+        return /\.(jpg|jpeg|png|gif|webp|bmp|heic)$/i.test(f);
+      });
+      var otherCnt = files.length - imgs.length;
+      var att = '';
+      if (imgs.length) {
+        att += '<div class="aot-ov-note-thumbs">' +
+               imgs.slice(0, NOTE_THUMBS_MAX).map(function (f) {
+                 return '<img src="/note_attachment/' + _esc(f) + '" alt="" loading="lazy">';
+               }).join('') +
+               (imgs.length > NOTE_THUMBS_MAX
+                 ? '<span class="aot-ov-muted">+' + (imgs.length - NOTE_THUMBS_MAX) +
+                   '</span>' : '') +
+               '</div>';
+      }
+      if (otherCnt > 0) {
+        att += '<div class="aot-ov-note-files">' + _esc(_t('Attachments')) + ' ' + otherCnt + '</div>';
+      }
+
+      html += '<div class="aot-ov-note">' +
+              '<div class="aot-ov-note-row">' +
+              '<span class="aot-ov-note-date">' + _esc(d) + '</span>' +
+              '<span class="aot-ov-note-text">' + (_esc(txt) ||
+                ('<span class="aot-ov-muted">' + _esc(_t('Attachments')) + '</span>')) + '</span>' +
+              '</div>' + att + '</div>';
+    });
+    if (onOpenAll) {
+      html += '<button type="button" class="aot-popup-btn aot-ov-notes-all">' +
+              _esc(_t('View All')) + '</button>';
+    }
+    listEl.innerHTML = html;
+    if (onOpenAll) {
+      var btn = listEl.querySelector('.aot-ov-notes-all');
+      if (btn) btn.addEventListener('click', onOpenAll);
+    }
   }
 
   // ── 모달 제목줄 (site·zone·facility 공용) ─────────────────────────────────
@@ -1441,9 +1539,11 @@
     buildSensorTabs:   buildSensorTabs,
     wire:              wire,
     buildInput:       buildInput,
+    buildNoteSection: buildNoteSection,
     buildSectionNav:       buildSectionNav,
     buildOverviewSection:  buildOverviewSection,
     buildAboutSection:     buildAboutSection,
+    fillOverviewNotes:     fillOverviewNotes,
     buildZoneStatusHtml:   buildZoneStatusHtml,
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildEnvNowHtml:       buildEnvNowHtml,

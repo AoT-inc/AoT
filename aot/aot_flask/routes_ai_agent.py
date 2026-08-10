@@ -104,17 +104,10 @@ def page_ai_agent():
     # .local/plans/phase6_knowledge_digest_design.md (multi-site addendum).
     facilities = GeoFacility.query.order_by(GeoFacility.name).all()
 
-    # "작동 시작" 스위치가 읽는 상태. 판정은 ai_runtime_state 한 곳에서만 한다 —
-    # 템플릿에서 agents|length 로 다시 세면 비활성 에이전트까지 포함돼 실제
-    # 게이트와 화면이 어긋난다.
-    from aot.ai.services import ai_runtime_state
-    ai_runtime = ai_runtime_state.runtime_status()
-
     return render_template('pages/ai/ai_agent.html',
                            entries=entries,
                            serialized_entries=serialized_entries,
                            agents=agents,
-                           ai_runtime=ai_runtime,
                            engine_presets=engine_presets,
                            role_presets=role_presets, # Added
                            api_keys=api_keys,
@@ -856,14 +849,8 @@ def ai_agent_delete(agent_id):
             if other_agents_count == 0:
                 entry.delete()
                 logger.info(f"Orphaned service '{entry.name}' cleaned up after deleting agent '{agent_name}'.")
-
+        
         flash(gettext("Agent '%(name)s' deleted.", name=agent_name), "success")
-
-        # 마지막 모델을 지웠으면 자율 작동도 함께 멈춘다 — 스위치만 켜진 채로
-        # 남으면 화면은 "작동 중"인데 실제로는 아무것도 안 도는 상태가 된다.
-        from aot.ai.services import ai_runtime_state
-        if ai_runtime_state.stop_if_no_models():
-            flash(gettext("No AI model remains, so autonomous AI operation was stopped."), "info")
     return redirect(url_for('routes_ai_agent.page_ai_agent'))
 
 
@@ -923,7 +910,6 @@ def ai_agent_activate(agent_id):
     return jsonify({"status": "success", "agent_id": agent_id})
 
 
-# @ANCHOR: AI_RUNNING_AUTOSTOP
 @blueprint.route('/ai/agent/deactivate/<agent_id>', methods=['POST'])
 @login_required
 def ai_agent_deactivate(agent_id):
@@ -954,11 +940,7 @@ def ai_agent_deactivate(agent_id):
                 logger.info(f"Deactivated MCPServer '{mcp.name}' (no other active agents)")
 
     db.session.commit()
-
-    # 마지막 모델을 내렸으면 자율 작동도 함께 멈춘다 (커밋 뒤에 호출할 것).
-    from aot.ai.services import ai_runtime_state
-    stopped = ai_runtime_state.stop_if_no_models()
-    return jsonify({"status": "success", "agent_id": agent_id, "ai_stopped": stopped})
+    return jsonify({"status": "success", "agent_id": agent_id})
 
 
 # ---------------------------------------------------------------------------
@@ -1497,27 +1479,6 @@ def api_update_ai_settings():
             new_val = bool(data['ai_enabled'])
             if ai_settings.ai_enabled != new_val:
                 ai_settings.ai_enabled = new_val
-
-        # AI Operation Toggle — "작동 시작". Separate from ai_enabled on purpose:
-        # enabling the service only opens the menu, this is what makes the AI
-        # run on its own. Starting with no activated agent is refused, because
-        # that is exactly the state that used to fill the log with
-        # "No suitable AI agent found for summary generation." every cycle.
-        if 'ai_running' in data:
-            from aot.ai.services import ai_runtime_state
-            new_val = bool(data['ai_running'])
-            if new_val:
-                if not ai_settings.ai_enabled:
-                    return jsonify({
-                        "status": "error",
-                        "message": gettext("Enable the AI service in Settings > General first."),
-                    }), 400
-                if ai_runtime_state.active_agent_count() <= 0:
-                    return jsonify({
-                        "status": "error",
-                        "message": gettext("Register and activate at least one AI model before starting the service."),
-                    }), 400
-            ai_settings.ai_running = new_val
 
         # Multi-site default facility — lives on Misc (shared with the rest
         # of the app), not AIGlobalSettings. This is the fallback
