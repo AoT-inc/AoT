@@ -563,20 +563,22 @@ class AIActionService:
         """
         logger.info(f"[TargetResolver] Resolving '{target_id}' for action '{action_type}'")
 
-        # 0. Defensive: a caller may pass the whole params dict as target_id by mistake
-        # (positional-argument slip). Recover the real id instead of crashing the SQL
-        # query below with a dict parameter.
+        # 0. Defensive: a caller may pass the whole params dict as target_id by
+        # mistake (positional-argument slip — see 9ceecf0). Fail loudly; do NOT
+        # try to recover the id out of the dict. This function can only hand back
+        # a resolved id — execute_action keeps its own `params`, so a "recovered"
+        # target would be executed with the caller's EMPTY params, and the
+        # control_output branch defaults state to 'off'. That turns a command
+        # meant to OPEN a valve into one that silently CLOSES it — strictly worse
+        # than the crash this guard replaced. execute_action's except block turns
+        # this into {"status": "error", ...}.
         if isinstance(target_id, dict):
-            _dict_target = target_id
-            ID_KEYS = ['device_id', 'target_id', 'output_id', 'target_zone', 'loc_id', 'node_id', 'target']
-            _recovered = next((_dict_target.get(k) for k in ID_KEYS if _dict_target.get(k)), None)
-            logger.warning(
-                f"[TargetResolver] target_id was a dict for action '{action_type}' "
-                f"(likely a caller bug) — recovered '{_recovered}'"
+            raise TypeError(
+                f"target_id must be a string id, got a dict for action '{action_type}'. "
+                f"The caller most likely passed params positionally — use "
+                f"execute_action(action_type, target_id, params=...). Received keys: "
+                f"{sorted(target_id.keys())}"
             )
-            target_id = _recovered
-            if not params:
-                params = _dict_target
 
         # 1. Null handling & Placeholder handling (Inference from context or params)
         placeholders = ['none', 'null', 'here', 'this', 'current', 'system_internal', 'default']

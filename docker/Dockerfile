@@ -16,8 +16,12 @@ WORKDIR /app
 COPY requirements.txt ./requirements.txt
 # 베이스 이미지에 딸려오는 pip/setuptools 자체에도 알려진 취약점이 있어 먼저 올린다
 # (requirements.txt 에 없는 빌드 도구라 그쪽으로는 통제되지 않는다).
+# pyrender 0.1.45 는 setup.py 에 PyOpenGL==3.1.0 을 못박아두었지만, 그 버전에는 OSMesa
+# 컨텍스트 생성 심볼(OSMesaCreateContextAttribs)이 빠져 있어 헤드리스 렌더링이 항상 실패한다.
+# --no-deps 로 pyrender 의 과도한 상한 핀을 우회해 최신 PyOpenGL 로 교체한다.
 RUN pip install --no-cache-dir --upgrade pip setuptools \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --no-deps --upgrade "PyOpenGL>=3.1.6"
 
 # ---- Runtime stage ----------------------------------------------------------
 # Only what the running app actually touches. No compiler, no libpq-dev (no
@@ -46,11 +50,22 @@ WORKDIR /app
 # nodesource setup script one line down -- kept rather than stripped after,
 # since it costs single-digit MB and a second apt pass to remove it isn't
 # worth the extra layer.
+# libgl1/libosmesa6/libx11-6/libxext6/libxrender1: pyrender(trimesh)의 시설 3D 모델(.glb)
+# 미리보기 썸네일 헤드리스 렌더링(OSMesa 소프트웨어 렌더러)에 필요. 없으면 `import pyrender`
+# 시점에 ImportError가 나서 미리보기가 조용히 회색 placeholder로만 생성된다.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libgl1 \
+    libosmesa6 \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+# GPU/디스플레이 없는 컨테이너이므로 pyrender 오프스크린 렌더러는 OSMesa(소프트웨어) 백엔드로 고정
+ENV PYOPENGL_PLATFORM=osmesa
 
 # Create the 'aot' user/group so set_user_grp() (aot/utils/system_pi.py) can chown
 # generated files instead of skipping with a "not found" warning

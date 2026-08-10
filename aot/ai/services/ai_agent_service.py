@@ -1571,6 +1571,7 @@ class AIAgentService:
             # safely reference them even if the plan block is not entered.
             chain_results: list = []
             chain_pending: list = []
+            chain_outcomes: list = []
             plan = AIAgentService.run_planner(
                 intent=intent_override,
                 command_text=goal,
@@ -1646,7 +1647,7 @@ class AIAgentService:
                     "model": "Planner Agent"
                 })
                 # v6 Execution: Run the action chain
-                chain_results, chain_pending = AIAgentService._execute_action_chain(
+                chain_results, chain_pending, chain_outcomes = AIAgentService._execute_action_chain(
                     agent_id=supervisor_id,
                     plan=plan,
                     context=context,
@@ -1683,7 +1684,7 @@ class AIAgentService:
                     )
                     if _retry_plan and _retry_plan.get('steps'):
                         logger.info("[TASK_9-D][PC097] Replanning succeeded. Re-running action chain.")
-                        chain_results, chain_pending = AIAgentService._execute_action_chain(
+                        chain_results, chain_pending, chain_outcomes = AIAgentService._execute_action_chain(
                             agent_id=supervisor_id,
                             plan=_retry_plan,
                             context=context,
@@ -1693,9 +1694,18 @@ class AIAgentService:
                     else:
                         logger.error("[TASK_9-D][PC097] Replanning failed. Falling through to legacy collaboration.")
 
-                # [v28.0 Physical Guard] Verify chain_results before Synthesizer pass-gate.
-                # pending_approval steps count as successful intent (approval required)
-                _successful_steps = [r for r in chain_results if isinstance(r, str) and ('Success' in r or 'pending_approval' in r)]
+                # [v28.0 Physical Guard] Verify the chain before the Synthesizer pass-gate.
+                # pending_approval steps count as successful intent (approval required).
+                #
+                # @ANCHOR: CHAIN_STEP_OUTCOMES — judge on the structured outcomes, not on
+                # the prose in chain_results. The old test was `'Success' in r`, which also
+                # matches "Successfully ..." appearing anywhere in a step's serialized
+                # result (e.g. a daemon message quoted inside a FAILED step's payload) —
+                # so a chain in which every step failed could still be declared successful
+                # and its false claim passed to the user.
+                from aot.ai.services.ai_planning_service import CHAIN_OUTCOMES_OK
+                _successful_steps = [o for o in chain_outcomes
+                                     if o.get('outcome') in CHAIN_OUTCOMES_OK]
                 _guard_extended = False
                 synth_result = None
                 if not _successful_steps:
@@ -1773,9 +1783,16 @@ class AIAgentService:
                 # CRITICAL: Do NOT fire when chain_pending is non-empty — schedule_device_control
                 # intercepted logs contain 'schedule_device', which would set _chain_used_schedule=True
                 # and skip APPROVAL_GATE, causing the approval button to never appear.
+                # @ANCHOR: CHAIN_STEP_OUTCOMES — same reasoning as PhysicalGuard above:
+                # match on the step's tool/action_type, not on the whole log line. The
+                # old scan read the serialized payload too, so any step whose result
+                # merely quoted "add_schedule" flipped this on.
+                from aot.ai.services.ai_planning_service import STEP_OUTCOME_PENDING_APPROVAL
                 _chain_used_schedule = any(
-                    ('schedule_device' in r or 'add_schedule' in r) and 'pending_approval' not in r
-                    for r in chain_results if isinstance(r, str)
+                    any(_s in (o.get('tool') or '') or _s in (o.get('action_type') or '')
+                        for _s in ('schedule_device', 'add_schedule'))
+                    and o.get('outcome') != STEP_OUTCOME_PENDING_APPROVAL
+                    for o in chain_outcomes
                 )
                 if _successful_steps and (intent_override == 'SCHEDULE' or _chain_used_schedule) and not chain_pending:
                     _sched_insight = (synth_result.get('insight') if synth_result else None) or (

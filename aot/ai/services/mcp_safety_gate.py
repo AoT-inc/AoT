@@ -737,6 +737,16 @@ def execute_approved(confirmation_id, role=None):
     if not isinstance(result, dict):
         result = {"result": result}
 
+    # 도구는 내부 실패를 예외가 아니라 {"status": "error"} 나 {"error": ...} 로
+    # 돌려주기도 한다. 예외만 보고 'executed' 를 적으면 감사 기록이 거짓말을 한다 —
+    # 2026-08-09 koat 밸브 건이 정확히 이 모양이었다(status='executed' 인데
+    # result_json 안에는 SQL 에러, 밸브는 열리지 않음). 재호출 경로는 'executed' 와
+    # 'failed' 를 이미 같이 처리하므로(2단계 replay 분기) 값이 늘어도 안전하다.
+    if status == 'executed' and (result.get('status') == 'error' or result.get('error')):
+        status = 'failed'
+        logger.warning('[MCPGate] 도구가 오류를 반환해 failed 로 기록 tool=%s confirmation=%s',
+                       row.tool_name, confirmation_id)
+
     row.status = status
     try:
         row.result_json = _json.dumps(result, ensure_ascii=False, default=str)

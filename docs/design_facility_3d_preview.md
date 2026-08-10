@@ -158,8 +158,18 @@ updated_at      DATETIME
 - 의존성: `trimesh`(GLB/메시 처리) + `pyrender`(오프스크린 렌더, EGL/osmesa). 환경 의존성 이슈 대비:
   - 1차: `pyrender` 시도
   - 2차 폴백: `trimesh.Scene.save_image()` (Pyglet 헤드리스)
-  - 3차 폴백: 회색 플레이스홀더 + `preview_status='failed'` 마킹
+  - 3차 폴백: 회색 플레이스홀더
 - 등록 직후 동기 호출(소형 자산), 25 MB 근접 자산은 백그라운드 큐(`threading` 또는 기존 스케줄러 활용 검토).
+- **구현 시 설계와의 차이 (2026-08-10 확인)**: 3차 폴백(플레이스홀더)도 `rendered=True`로 처리되어 `preview_status`는 항상 `'ok'`로 기록된다(`'failed'`로는 절대 남지 않음). 즉 DB만 보고는 실제 GLB 렌더가 성공했는지 플레이스홀더로 대체됐는지 구분할 수 없다. §5.2.1의 Docker 배포 이슈가 바로 이 사각지대 때문에 장기간 발견되지 않았다.
+
+#### 5.2.1 Docker 배포 환경 의존성 (2026-08-10 발견·수정)
+운영/배포용 `docker/Dockerfile`은 `pip install -r requirements.txt`만 수행하고 `pyrender`가 필요로 하는 시스템 레벨 OpenGL 런타임 라이브러리를 전혀 설치하지 않았다. 그 결과 Docker로 빌드된 모든 이미지에서 `import pyrender` 자체가 `ImportError`로 실패했고, 1·2차 렌더는 항상 실패해 모든 GLB 자산이 예외 없이 3차 폴백(회색 플레이스홀더)으로만 생성되고 있었다. 위 5.2 항목의 폴백 설계 덕분에 사용자에게 에러가 노출되지는 않았지만, 기능 자체가 Docker 배포본에서는 처음부터 한 번도 정상 동작한 적이 없었다.
+
+원인은 두 가지였다:
+1. `libgl1`/`libosmesa6`/`libx11-6`/`libxext6`/`libxrender1` 등 OpenGL·X11 공유 라이브러리가 Dockerfile에 없어 `import pyrender` 단계부터 실패.
+2. 위 라이브러리를 설치해도, `pyrender==0.1.45`가 `setup.py`에 `PyOpenGL==3.1.0`을 고정해 두었는데 그 버전에는 OSMesa 헤드리스 컨텍스트 생성에 필요한 `OSMesaCreateContextAttribs` 심볼이 없어 실제 렌더링(`OffscreenRenderer` 생성)은 여전히 실패.
+
+**해결**: `docker/Dockerfile`에 위 5개 apt 패키지 추가, `ENV PYOPENGL_PLATFORM=osmesa`(GPU 없는 컨테이너이므로 EGL 대신 소프트웨어 렌더러 채택 — EGL은 `/dev/dri` 필요), `pip install --no-deps --upgrade "PyOpenGL>=3.1.6"`로 pyrender의 과도한 상한 핀 우회. 실제 이미지 빌드 후 `render_preview()` Tier 1 코드경로를 그대로 재현해 렌더링 성공을 실측 확인. 이미지 크기는 약 507MB → 580MB로 +73MB(약 14%) 증가 (`libosmesa6`의 의존성인 `libllvm19`가 대부분).
 
 업로드 보안:
 - 확장자 화이트리스트: `.glb`, `.gltf`
@@ -351,3 +361,4 @@ static/js/widget/AoT_facility/
 | 2026-05-13 | 초안 | T2 |
 | 2026-05-13 | §12 결정사항 반영 (공용공유 P2 동시, 서버 썸네일, 드로잉 뷰 선택, 단위 선택/미터 정규화), 자산 라이브러리 진입 경로 D안 제안 | T2 |
 | 2026-05-13 | D안 채택 확정. §4 DB 스키마 확장(is_public, authored_unit, preview_status, tags), §4.4 단위 헬퍼, §5 썸네일 재생성·페이지 라우트·렌더러 추가, §11 Phase 1/2 작업 분해 재정렬 | T2 |
+| 2026-08-10 | §5.2 Docker 배포 환경에서 `pyrender` import/렌더링이 처음부터 항상 실패해 모든 GLB 자산이 플레이스홀더로만 생성되던 문제 및 수정 내용 반영(§5.2.1 신설). `preview_status`가 폴백 시에도 `'ok'`로 기록되는 구현-설계 불일치 기록 | Claude |

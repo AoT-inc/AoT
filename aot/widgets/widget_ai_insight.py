@@ -11,6 +11,14 @@ logger = logging.getLogger(__name__)
 
 def ai_get_reasoning():
     """Endpoint for the widget to fetch AI reasoning results."""
+    # Same missing-auth problem as ai_execute_proposed_action below: widget
+    # endpoints bypass @login_required. This one runs a full agent reasoning
+    # pass on an attacker-supplied `goal`, so leaving it open means an
+    # unauthenticated caller can drive the farm's LLM (API cost, prompt
+    # injection) and read back the system context it grounds on.
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "Authentication required"}), 401
+
     goal = request.args.get('goal', 'Optimize system for energy efficiency')
     agent_id = request.args.get('agent_id')
     try:

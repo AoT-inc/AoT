@@ -235,10 +235,16 @@ class AoTNativeToolEngine:
     @staticmethod
     def _exec_set_output_state(params: Dict) -> Dict:
         device_id = params.get("device_id")
-        state = params.get("state", "off")
+        state = params.get("state")
         duration = params.get("duration", 0)
         if not device_id:
             return {"status": "error", "message": "device_id is required"}
+        # `state` is required by the schema, so a missing value is a caller bug —
+        # not a reason to fall back to "off". Defaulting here would turn a
+        # malformed "turn it on" into an actual valve close.
+        if state not in ("on", "off"):
+            return {"status": "error",
+                    "message": f"state must be 'on' or 'off', got {state!r}"}
         
         from flask import current_app
         with current_app.app_context():

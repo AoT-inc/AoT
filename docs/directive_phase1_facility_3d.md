@@ -119,6 +119,16 @@ core/materials.js    -- MAT 팔레트
 
 ---
 
+## 8. 사후 발견 사항 (2026-08-10)
+
+§7 첫 항목("`trimesh`/`pyrender` 설치 불가")이 실제로 발생했다. `pip install`(로컬 venv) 자체는 성공했지만, **Docker 배포 이미지**(`docker/Dockerfile`)에는 `pyrender`가 요구하는 시스템 OpenGL 런타임 라이브러리(`libgl1` 등)가 설치되어 있지 않아 `import pyrender`가 항상 `ImportError`로 실패했다. §5.2 설계의 3-tier 폴백 덕분에 예외가 사용자에게 노출되지 않고 조용히 회색 플레이스홀더로 대체되어, Docker 배포본에서는 이 기능이 처음부터 한 번도 정상 동작한 적이 없었음에도 장기간 발견되지 않았다.
+
+- 근본 원인 2가지와 수정 내용: [design_facility_3d_preview.md §5.2.1](design_facility_3d_preview.md) 참조.
+- 수정 파일: `docker/Dockerfile` (apt 패키지 5종 + `PYOPENGL_PLATFORM=osmesa` + PyOpenGL 버전 핀 우회).
+- 검증: 실제 Dockerfile로 이미지를 빌드해 `render_preview()` Tier 1과 동일한 코드경로 실행 → 정상 렌더링 확인. 이미지 크기 +73MB(약 14%).
+
+---
+
 ## 승인 절차
 
 본 지시서로 진행하려면 다음 문구 회신:

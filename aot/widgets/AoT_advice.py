@@ -28,6 +28,13 @@ def advice_get_latest():
     @stability stable
     @dependency AISummaryService
     """
+    # Widget endpoints bypass @login_required (registered via add_url_rule), so
+    # each handler checks for itself — as advice_submit_learning already does.
+    # Without this, AI-generated farm summaries are readable without logging in.
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        return jsonify({'status': 'error', 'message': 'Authentication required'}), 401
+
     scope_type = request.args.get('scope_type', 'system')
     scope_id = request.args.get('scope_id') or None
     try:
@@ -80,6 +87,11 @@ def advice_get_history():
     @stability stable
     @dependency AISummaryService
     """
+    # See advice_get_latest — widget endpoints must check auth themselves.
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        return jsonify({'status': 'error', 'message': 'Authentication required'}), 401
+
     scope_type = request.args.get('scope_type', 'system')
     scope_id = request.args.get('scope_id') or None
     try:

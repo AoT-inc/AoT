@@ -12,6 +12,26 @@ logger = logging.getLogger(__name__)
 
 sse_queue_var = contextvars.ContextVar('sse_queue_var', default=None)
 
+# @ANCHOR: CHAIN_STEP_OUTCOMES
+# Vocabulary for the structured twin of _execute_action_chain's execution_logs.
+# The log strings are prose meant for the LLM and for metadata; they must never
+# be the basis for a control-flow decision. PhysicalGuard used to grep them for
+# the substring "Success" — which also matches "Successfully restarted ..." from
+# an unrelated daemon message, so a chain where every step failed could still be
+# judged successful. Downstream judgment reads these records instead.
+STEP_OUTCOME_SUCCESS = 'success'
+STEP_OUTCOME_FAILED = 'failed'
+STEP_OUTCOME_PENDING_APPROVAL = 'pending_approval'
+STEP_OUTCOME_SKIPPED = 'skipped'
+STEP_OUTCOME_BLOCKED_SAFETY = 'blocked_safety'
+STEP_OUTCOME_VALIDATION_FAILED = 'validation_failed'
+
+# Outcomes that mean "the step did what was asked, or is legitimately waiting on a
+# human" — i.e. the chain did NOT silently fail. Anything else must not be reported
+# to the user as a success.
+CHAIN_OUTCOMES_OK = frozenset({STEP_OUTCOME_SUCCESS, STEP_OUTCOME_PENDING_APPROVAL})
+
+
 class AIPlanningService:
     """
     Extracted planning methods from AIAgentService.
@@ -523,6 +543,10 @@ class AIPlanningService:
         variables = {}
         execution_logs = []
         pending_actions = []  # Control steps pending human approval
+        # @ANCHOR: CHAIN_STEP_OUTCOMES — structured twin of execution_logs.
+        # Every site that appends a log line must also record an outcome here, or
+        # the two drift and the guard downstream sees fewer steps than really ran.
+        step_outcomes = []
 
         logger.info(f"[Executor] Starting action chain with {len(steps)} steps using agent {exec_id}")
 
@@ -532,6 +556,18 @@ class AIPlanningService:
         state_lock = threading.Lock()
         completed_step_ids = set()
         pending_steps = steps.copy()
+
+        def _record(step, outcome, tool=None, action_type=None, detail=None):
+            """Record a structured outcome. The caller MUST already hold state_lock
+            (threading.Lock is not reentrant, and every call site is inside one)."""
+            step_outcomes.append({
+                'step_id': step.get('step_id'),
+                'tool': tool if tool is not None else (
+                    step.get('tool_name') or (step.get('params') or {}).get('tool_name', '')),
+                'action_type': action_type if action_type is not None else step.get('action_type'),
+                'outcome': outcome,
+                'detail': detail,
+            })
 
         def execute_single_step(step):
             try:
@@ -594,6 +630,7 @@ class AIPlanningService:
                         # so PhysicalGuard in ai_agent_service.py counts this step as non-failure.
                         # Format: "Step <id> (pending_approval) Intercepted: '<tool>' requires human approval."
                         execution_logs.append(f"Step {step.get('step_id')} (pending_approval) Intercepted: '{_step_tool}' requires human approval.")
+                        _record(step, STEP_OUTCOME_PENDING_APPROVAL, tool=_step_tool)
                     return
 
                 # @ANCHOR: UNRESOLVED_VAR_GUARD  [2026-03-27]
@@ -611,6 +648,8 @@ class AIPlanningService:
                             f"Step {step.get('step_id')} tool={_uv_tool} Skipped: "
                             f"unresolved variable(s) {_unresolved_keys} — prior step returned no results."
                         )
+                        _record(step, STEP_OUTCOME_SKIPPED, tool=_uv_tool,
+                                detail=f"unresolved {_unresolved_keys}")
                     logger.warning(f"[Executor][UNRESOLVED_VAR_GUARD] Step {step.get('step_id')} "
                                    f"skipped: unresolved {_unresolved_keys}")
                     return
@@ -625,6 +664,8 @@ class AIPlanningService:
                     except SafetyViolation as sv:
                         with state_lock:
                             execution_logs.append(f"Step {step.get('step_id')} Blocked by Safety: {sv}")
+                            _record(step, STEP_OUTCOME_BLOCKED_SAFETY,
+                                    action_type=action_type, detail=str(sv))
                         return
 
                 # 3. Handle Variable Substitution for target_id
@@ -644,6 +685,7 @@ class AIPlanningService:
                         variables[f"${step.get('id', 'err')}"] = f"Error: {err}"
                         # Log validation failure so PhysicalGuard can see it in chain_results
                         execution_logs.append(f"Step {step.get('step_id')} Validation Failed: {err}")
+                        _record(step, STEP_OUTCOME_VALIDATION_FAILED, detail=str(err))
                         return
 
                 action_type = step.get('action_type') or action_type
@@ -669,6 +711,7 @@ class AIPlanningService:
                         # @ANCHOR: CHAIN_RESULTS_PENDING_APPROVAL_FORMAT  [2026-03-27]
                         # Second intercept site (post-normalization). Same format as first site.
                         execution_logs.append(f"Step {step.get('step_id')} (pending_approval) Intercepted: '{_norm_tool}' requires human approval.")
+                        _record(step, STEP_OUTCOME_PENDING_APPROVAL, tool=_norm_tool)
                     return
 
                 # 4. Execute
@@ -685,15 +728,23 @@ class AIPlanningService:
                     # checked explicitly — otherwise a failed step still logs "Success"
                     # and slips past the PhysicalGuard in ai_agent_service.py that scans
                     # execution_logs for the substring "Success".
-                    _res_status = res.get('status') if isinstance(res, dict) else None
-                    _outcome = "Failed" if _res_status == 'error' else "Success"
+                    # Two failure conventions coexist in this codebase:
+                    # {"status": "error", ...} and a bare {"error": ...}. Check both.
+                    _is_err = isinstance(res, dict) and (
+                        res.get('status') == 'error' or res.get('error'))
+                    _outcome = "Failed" if _is_err else "Success"
                     log_entry = f"Step {step.get('step_id')} tool={_step_tool} ({action_type}) {_outcome}: {json.dumps(res, ensure_ascii=False)[:500]}"
                     execution_logs.append(log_entry)
+                    _record(step,
+                            STEP_OUTCOME_FAILED if _is_err else STEP_OUTCOME_SUCCESS,
+                            tool=_step_tool, action_type=action_type,
+                            detail=(res.get('message') or res.get('error')) if _is_err else None)
 
             except Exception as e:
                 with state_lock:
                     log_entry = f"Step {step.get('step_id')} ({action_type}) Failed: {str(e)}"
                     execution_logs.append(log_entry)
+                    _record(step, STEP_OUTCOME_FAILED, action_type=action_type, detail=str(e))
                     logger.error(f"[Executor] {log_entry}")
 
         with ThreadPoolExecutor(max_workers=5) as pool:
@@ -721,7 +772,7 @@ class AIPlanningService:
                         completed_step_ids.add(s.get('step_id'))
                         pending_steps.remove(s)
 
-        return execution_logs, pending_actions
+        return execution_logs, pending_actions, step_outcomes
 
 
     @staticmethod
