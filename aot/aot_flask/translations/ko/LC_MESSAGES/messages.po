@@ -25942,14 +25942,6 @@ msgstr "다음 실행"
 msgid "Which sun event should this Trigger fire on?"
 msgstr "이 트리거를 어떤 태양 이벤트에 발화시킬지 선택합니다"
 
-#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
-msgid "Next Execution"
-msgstr "다음 실행"
-
-#: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
-msgid "Which sun event should this Trigger fire on?"
-msgstr "이 트리거를 어떤 태양 이벤트에 발화시킬지 선택합니다"
-
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
 msgid "Hide model"
 msgstr "모델 숨기기"
