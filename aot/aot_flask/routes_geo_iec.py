@@ -1143,11 +1143,33 @@ def api_facility_overview(facility_uuid):
         except Exception:
             return None
 
+    # 상위 site — 모달 제목줄의 "상위로" 화살표용. 시설은 구역 안에 있을 수도
+    # 있어 한 단계 위가 아니라 site 가 나올 때까지 거슬러 올라간다.
+    # 상위 site 와 상태 점 — 둘 다 시설 도형 기준이다. `area_status` 는
+    # 구역·필지와 **같은 판정**을 쓴다(통신·배터리·센서 응답). IEC 의
+    # `status.level` 과 다른 축이다 — 그쪽은 자동제어가 도는지를 말하고
+    # 이쪽은 장치가 살아 있는지를 말한다.
+    site = None
+    area_status = None
+    try:
+        from aot.databases.models import GeoFacility
+        from aot.aot_flask.geo.site_summary import (
+            parent_site_for_shape, status_for_shape)
+        row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+        if row is not None and row.shape_uuid:
+            site = parent_site_for_shape(row.shape_uuid)
+            area_status = status_for_shape(row.shape_uuid)
+    except Exception:
+        logger.warning('[facility/overview] parent site / status lookup failed',
+                       exc_info=True)
+
     return jsonify({
         'ok':          True,
         'env_summary': _unwrap(api_facility_env_summary(facility_uuid)),
         'status':      _unwrap(api_facility_iec_status(facility_uuid)),
         'info':        _unwrap(api_facility_info(facility_uuid)),
+        'site':        site,
+        'area_status': area_status,
         'ts':          _time.time(),
     })
 

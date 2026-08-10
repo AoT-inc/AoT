@@ -81,6 +81,14 @@
       min-width: 280px;
       max-width: 92vw;
       padding: 0.4rem;
+      /* 스크롤은 되되 스크롤바는 보이지 않는다(앱 공통 규칙). 목록이 짧을 때는
+         드러나지 않던 문제인데, 구역 필터가 36줄이 되면서 눈에 띄었다. */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .aot-measure-menu::-webkit-scrollbar {
+      display: none;
     }
 
     .aot-measure-item {
@@ -106,6 +114,13 @@
     .aot-measure-item-text {
       font-size: 0.85rem;
       word-break: break-all;
+    }
+
+    .aot-measure-group-label {
+      padding: 0.45rem 0.6rem 0.2rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--aot-color-text-secondary, #5E6B64);
     }
 
     .aot-measure-empty {
@@ -189,7 +204,9 @@
       margin: 0;
       font-size: 0.85rem;
       color: var(--aot-color-text-secondary, #5E6B64);
+      white-space: nowrap;
     }
+
 
     .aot-height-field input {
       width: 90px;
@@ -235,6 +252,11 @@
     <div class="aot-graph-toolbar">
       <div class="aot-toolbar-section">
         <div class="aot-toolbar-label">{{_('Select measurements to display')}}</div>
+        {#- 구역 필터. 고르지 않으면 전체다 — 지도를 쓰지 않는 설치에서는 이
+            드롭다운이 비어 아예 뜨지 않는다. -#}
+        {% if choices_area %}
+
+        {% endif %}
         <div class="aot-measure-group">
         {% macro measure_dropdown(label, choices, dtype) -%}
           <div class="dropdown aot-measure-dropdown">
@@ -246,7 +268,7 @@
             {% if choices %}
               {% for each_choice in choices -%}
               <label class="aot-measure-item">
-                <input type="checkbox" name="selected_measure" value="{{each_choice['value']}},{{dtype}}"{% if each_choice['value'] + ',' + dtype in selected_ids_measures %} checked{% endif %}>
+                <input type="checkbox" name="selected_measure" value="{{each_choice['value']}},{{dtype}}"{% if each_choice['value'] + ',' + dtype in selected_raw %} checked{% endif %}>
                 <span class="aot-measure-item-text">{{each_choice['item']}}</span>
               </label>
               {% endfor -%}
@@ -256,6 +278,43 @@
             </div>
           </div>
         {%- endmacro %}
+          {#- 구역 필터. `<select>` 를 쓰지 않는다 — `.aot-modern-select` 는
+              layout 이 bootstrap-select 로 승격시키는데, 그러면 wrapper 와 내부
+              버튼이 각각 알약 테두리와 화살표를 그려 **테두리 두 겹·화살표 두
+              개**가 된다(aot-settings.css 가 설정 페이지에서 따로 처방을 둔
+              것과 같은 증상). 게다가 이 줄의 나머지는 전부 알약 드롭다운이라
+              select 하나만 이질적으로 보인다. 같은 셸을 단일 선택(radio)으로
+              쓴다. -#}
+          {% if choices_area %}
+          <div class="dropdown aot-measure-dropdown">
+            <button class="btn aot-measure-btn dropdown-toggle{% if area_filter %} has-selection{% endif %}" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <span class="aot-measure-label">{{_('Site / Zone')}}</span>
+              <span class="aot-measure-count"{% if not area_filter %} hidden{% endif %}>1</span>
+            </button>
+            <div class="dropdown-menu aot-measure-menu">
+              <label class="aot-measure-item">
+                <input type="radio" name="area_filter" value=""{% if not area_filter %} checked{% endif %}>
+                <span class="aot-measure-item-text">{{_('All sites and zones')}}</span>
+              </label>
+              {% for kind, kind_label in [('site', _('Sites')), ('zone', _('Zones'))] %}
+                {% set group = choices_area | selectattr('kind', 'equalto', kind) | list %}
+                {% if group %}
+                <div class="aot-measure-group-label">{{kind_label}}</div>
+                {% for each_area in group %}
+                <label class="aot-measure-item">
+                  <input type="radio" name="area_filter" value="{{each_area['value']}}"{% if each_area['value'] == area_filter %} checked{% endif %}>
+                  <span class="aot-measure-item-text">{{each_area['item']}}</span>
+                </label>
+                {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {#- 복합장치는 값을 재지 않는 그릇이다. 하나를 고르면 그 안의 측정값
+              전부를 뜻하므로 선택값은 `<uuid>,ALL,device` 하나이고 서버가 편다. -#}
+          {% if choices_device %}{{ measure_dropdown(_('Devices'), choices_device, 'ALL,device') }}{% endif %}
           {{ measure_dropdown(_('Inputs'), choices_input, 'input') }}
           {{ measure_dropdown(_('Outputs'), choices_output, 'output') }}
           {{ measure_dropdown(_('Functions'), choices_function, 'function') }}
@@ -278,6 +337,22 @@
           <label for="async_height">{{_('Height')}}</label>
           <input class="form-control" id="async_height" name="async_height" type="number" min="200" step="50" value="{{async_height}}">
         </div>
+        {#- 장치를 갈면 uuid 가 바뀌어 그래프가 그 시점에서 끊긴다. 사람이 보고
+            싶은 것은 "이 센서의 값"이 아니라 "이 자리의 값"이므로, 그 자리를
+            맡았던 이전 장치의 값을 이어 붙인다.
+
+            **교체 이력이 없으면 아예 내보내지 않는다.** 지도를 쓰지 않거나
+            장치를 바꾼 적 없는 사용자에게는 이어 붙일 것이 없는데, 그런
+            사람에게 이 옵션이 보이면 "장치를 교체하면 뭔가 달라지나" 로
+            읽힌다. -#}
+        {% if has_replacements %}
+        <div class="aot-height-field">
+          <label for="stitch_history" title="{{_('Only applies to devices placed on a map. The values of the device that held the same spot before are appended; past data is never rewritten.')}}">
+            <input type="checkbox" id="stitch_history" name="stitch_history" value="1"{% if stitch_history %} checked{% endif %}>
+            {{_('Include the previous device in this spot')}}
+          </label>
+        </div>
+        {% endif %}
         <button class="btn btn-primary aot-graph-submit" type="submit">{{_('Display Graph')}}</button>
       </div>
     </div>
@@ -299,9 +374,15 @@ $(document).ready(function () {
     e.stopPropagation();
   });
 
+  // 빈 값 라디오("전체")는 고른 것이 아니다 — 그것까지 세면 구역 필터가 늘
+  // 켜져 있는 것처럼 보인다.
+  function selectedInputs(scope) {
+    return $(scope).find('input:checked').filter(function () { return this.value !== ''; });
+  }
+
   function updateCounts() {
     $('.aot-measure-dropdown').each(function () {
-      const count = $(this).find('input:checked').length;
+      const count = selectedInputs(this).length;
       const badge = $(this).find('.aot-measure-count');
       badge.text(count);
       badge.prop('hidden', count === 0);
@@ -311,13 +392,19 @@ $(document).ready(function () {
 
   function renderChips() {
     const chips = $('#measure-chips').empty();
-    $('.aot-measure-menu input:checked').each(function () {
+    selectedInputs('.aot-measure-menu').each(function () {
       const input = this;
       const text = $(input).closest('.aot-measure-item').find('.aot-measure-item-text').text().trim();
       const chip = $('<span class="aot-measure-chip"></span>').text(text);
       const remove = $('<button type="button" class="aot-chip-remove" aria-label="{{_('Remove')}}">×</button>');
       remove.on('click', function () {
         input.checked = false;
+        // 라디오는 하나를 끄면 그 무리가 통째로 비어 버린다. "전체"로 되돌려
+        // 놓지 않으면 폼이 값을 안 보내고, 필터가 걸린 채인지 아닌지 화면에서
+        // 구분되지 않는다.
+        if (input.type === 'radio') {
+          $('input[type="radio"][name="' + input.name + '"][value=""]').prop('checked', true);
+        }
         updateCounts();
         renderChips();
       });
@@ -326,7 +413,7 @@ $(document).ready(function () {
     });
   }
 
-  $('.aot-measure-menu input[type="checkbox"]').on('change', function () {
+  $('.aot-measure-menu input').on('change', function () {
     updateCounts();
     renderChips();
   });
@@ -376,6 +463,15 @@ $(document).ready(function() {
     let _fullDataMin = null;
     let _fullDataMax = null;
 
+    // 장치 교체 관통 접합. 서버는 접합할 이력이 없으면 조용히 단일 장치 조회로
+    // 떨어지므로, 이 플래그가 켜져 있어도 이력 없는 자리는 예전과 똑같이 돈다.
+    const STITCH = {{ 'true' if stitch_history else 'false' }};
+    const _stitchQS = STITCH ? '?stitch=1' : '';
+    // 구역 필터는 노트 시리즈에도 따라가야 한다 — 목록만 좁히고 표시를 안
+    // 좁히면 태그를 골랐을 때 남의 구역 노트가 함께 뜬다.
+    const AREA = '{{ area_filter }}';
+    const _areaQS = AREA ? '&area=' + encodeURIComponent(AREA) : '';
+
     // Span (ms) for a range-selector button, used to re-anchor "최근 N" to now.
     function _rangeButtonSpanMs(btn) {
       const unit = {
@@ -388,8 +484,39 @@ $(document).ready(function() {
       return (btn.count || 1) * (unit[btn.type] || 0);
     }
 
+    /**
+     * 하드웨어가 바뀐 시점을 깃발로 찍는다.
+     *
+     * 두 종류를 한 줄에 모은다. 하나만 보면 절반을 놓친다:
+     *   - 다른 장치로 옮긴 교체 → 바인딩 구간 경계에만 남는다(uuid 가 바뀐다)
+     *   - 같은 모델로 갈아끼운 교체 → 바인딩에 흔적이 없다(uuid 가 그대로다).
+     *     그쪽의 유일한 기록이 maintenance 노트다.
+     *
+     * 접합 여부와 무관하게 그린다. 접합은 데이터를 잇는 선택이고, 이 표식은
+     * 사실이다 — 잇지 않고 보더라도 "여기서 기계가 갈렸다"는 알아야 한다.
+     *
+     * 아무 일도 없었으면 아무것도 그리지 않는다.
+     */
+    function drawHardwareEvents(device_id, measurement_id) {
+      $.getJSON('/async_segments/' + device_id + '/' + measurement_id, function (res) {
+        if (!res || !res.ok || !res.events || !res.events.length) return;
+        const series = chart[0] && chart[0].get('hardware-events');
+        if (!series) return;
+        series.setData(res.events.map(function (e) {
+          // 깃발 위 글자는 짧아야 읽힌다 — 길면 서로 겹쳐 아무것도 안 읽힌다.
+          // 자세한 내용은 툴팁이 맡는다.
+          const label = String(e.label || e.title || '');
+          return {
+            x: e.time * 1000,
+            title: label.length > 10 ? label.slice(0, 9) + '…' : label,
+            text: (e.title || '') + (e.text ? '<br/>' + e.text.replace(/\n/g, '<br/>') : '')
+          };
+        }), true, false);
+      });
+    }
+
     function getPastData(chart_number, series, device_id, device_type, measurement_id, start_time) {
-      const url = '/async/' + device_id + '/' + device_type + '/' + measurement_id + '/' + start_time + '/0';
+      const url = '/async/' + device_id + '/' + device_type + '/' + measurement_id + '/' + start_time + '/0' + (_stitchQS || '?') + _areaQS;
       $.getJSON(url,
         function(data, responseText, jqXHR) {
           if (jqXHR.status !== 204) {
@@ -495,7 +622,7 @@ $(document).ready(function() {
       chart[0].showLoading();
       for (let each_series in id_measure) {
         if (id_measure[each_series]['device_type'] !== 'tag') {
-          const url = '/async/' + id_measure[each_series]['device_id'] + '/' + id_measure[each_series]['device_type'] + '/' + id_measure[each_series]['measurement_id'] + '/' + Math.round(min) / 1000 + '/' + Math.round(max) / 1000;
+          const url = '/async/' + id_measure[each_series]['device_id'] + '/' + id_measure[each_series]['device_type'] + '/' + id_measure[each_series]['measurement_id'] + '/' + Math.round(min) / 1000 + '/' + Math.round(max) / 1000 + (_stitchQS || '?') + _areaQS;
           set_data_from_url(url, each_series, id_measure[each_series]['device_type'], gen);
         }
       }
@@ -536,6 +663,7 @@ $(document).ready(function() {
                 {%- set measurement_id = each_id_meas.split(',')[1] -%}
                 {%- set device_type = each_id_meas.split(',')[2] -%}
               getPastData(0, {{count_series|count}}, '{{device_id}}', '{{device_type}}', '{{measurement_id}}', '{{start_time_epoch}}');
+              {% if loop.first %}drawHardwareEvents('{{device_id}}', '{{measurement_id}}');{% endif %}
                 {%- do count_series.append(1) %}
               {% endfor %}
             },
@@ -891,6 +1019,21 @@ $(document).ready(function() {
           {% endfor %}
 
         {% endfor %}  {# End main for #}
+
+          {#- 하드웨어가 바뀐 시점. 측정값마다가 아니라 차트당 하나다 — 시리즈
+              수만큼 달면 같은 교체가 그래프에 여러 번 찍힌다. 값이 어느 시점에
+              한 단 뛰었을 때 그것이 환경의 변화인지 기계가 바뀐 탓인지는 사람이
+              판단해야 하고, 판단하려면 이 시점이 보여야 한다. 비어 있으면
+              아무것도 그리지 않으므로 늘 달아 둔다. -#}
+          {
+            id: 'hardware-events',
+            name: '{{_('Hardware changes')}}',
+            type: 'flags',
+            data: [],
+            shape: 'flag',
+            color: 'var(--aot-color-text-secondary, #5E6B64)',
+            showInLegend: false
+          }
 
         ]
     });

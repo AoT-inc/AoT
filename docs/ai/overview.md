@@ -118,7 +118,7 @@ Beyond the MCP catalog above, the in-app AI assistant uses additional tools for 
 - **Input/Output management**: `list_device_types`, `get_device_type_options`, `create_input`·`modify_input`·`delete_input`, `create_output`·`modify_output`·`delete_output`, `get_device_measurements`
 - **Functions (automation)**: `get_function_list`, `get_function_detail`, `create_function`, `create_sequence_function`, `modify_function_options` (not for triggers — see Sequences above), `activate_function`·`deactivate_function`·`delete_function`, plus the sequence tools `configure_sequence_day`·`modify_sequence_step`·`modify_sequence_schedule`
 - **Schedule ledger**: `search_schedule`, `edit_schedule`, `delete_schedule`
-- **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`
+- **Map (GIS)**: `list_geo_maps`, `get_device_location`, `set_device_location`, `delete_geo_shape`, `list_unbound_slots` (which places have no device), `rebind_device` (move every map slot of one device onto another)
 - **GIS inputs (map layers)**: `list_gis_inputs`, `create_gis_input`·`modify_gis_input`·`delete_gis_input`, `activate_gis_input` (manage map layer providers such as VWorld/Google/OpenWeather)
 - **Facility/equipment lookup**: `get_facility_capacity` (a facility's heating/cooling capacity, volume, ventilation, irrigation design summary), `get_map_equipment` (map-drawn equipment's irrigation design summary per site/zone, sprinkler vs. drip kept separate), `get_map_equipment_detail` (individual sprinkler positions/spacing/radius, per-pipe detail — only when the summary isn't enough)
 - **Notice board**: `create_notice`·`modify_notice`·`delete_notice`
@@ -145,7 +145,7 @@ New inputs and outputs are created with this enabled by default (`is_ai_enabled=
 
 Non-mutating **read tools** run immediately. **State-changing tools** pass through an approval gate no matter which path calls them.
 
-- **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices/AI agents/GIS inputs, map placement changes (`set_device_location`, `delete_geo_shape`), `add_schedule`·`add_schedule_batch`, `configure_library_source`, etc.
+- **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices/AI agents/GIS inputs, map placement changes (`set_device_location`, `delete_geo_shape`), device replacement (`rebind_device`), `add_schedule`·`add_schedule_batch`, `configure_library_source`, etc.
 - **No approval (low-risk writes)**: `create_note`, `knowledge_shelve` — reversible personal memos / unconfirmed knowledge that save immediately and are treated as non-authoritative until confirmed.
 
 Actions requiring approval are not applied immediately. In the **in-app assistant** they are presented in chat as an **approval card**, executed only once the user approves. Through the **external MCP server** they come back as a `pending_approval` response (a queued confirmation_id) and only proceed once the user explicitly approves or rejects that id — either path, nothing changes if the user rejects.

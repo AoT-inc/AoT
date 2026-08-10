@@ -173,9 +173,13 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
 <!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
 <script src="/static/js/common/aot-chart-core.js?v=2"></script>
-<script src="/static/js/common/sensor-label.js?v=35"></script>
+<!-- 출력 상태 공용 분류기(on/off/pending/fault). 위젯 코드가 이미 이것을
+     전제로 쓰고 있었는데 정작 로드는 안 하고 있어서, 늘 인라인 폴백으로
+     떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->
+<script src="/static/js/common/aot-output-state.js?v=9"></script>
+<script src="/static/js/common/sensor-label.js?v=36"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=21"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=33">
+<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=43">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
@@ -727,6 +731,21 @@ WIDGET_INFORMATION = {
             'default_value': True,
             'name': lazy_gettext('Enable Sensor Popup'),
             'phrase': lazy_gettext('Click a sensor label to open a detail popup with the last 24h chart.')
+        },
+        # 설정 간소화(e939cf4)에서 화면만 빠지고 값 전달은 그대로 남아 있었다 —
+        # 설정할 방법이 없는 옵션이 되어 있었다. 구역·시설·장치 모달이 같은 탭
+        # 세 개를 쓰게 되면서 이 설정이 세 계층 모두에 걸리므로 되살린다.
+        {
+            'id': 'popup_default_tab',
+            'type': 'select',
+            'default_value': 'overview',
+            'options_select': [
+                ('overview', lazy_gettext('Overview')),
+                ('envctl', lazy_gettext('Environment & Control')),
+                ('about', lazy_gettext('About')),
+            ],
+            'name': lazy_gettext('Popup Default Tab'),
+            'phrase': lazy_gettext('Which tab opens first in the zone and facility modals. The device modal has no tabs.')
         },
         {
             'type': 'collapse_end'

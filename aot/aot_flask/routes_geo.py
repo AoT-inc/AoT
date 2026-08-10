@@ -2992,15 +2992,25 @@ def _shape_feature_dict(shape):
     return {}
 
 
-def _shapes_to_geojson(shape_type, default_color):
+def _shapes_to_geojson(shape_type, default_color, map_uuid=None):
     """Build a FeatureCollection from GeoShape rows of the given type.
 
     GeoShape stores the GeoJSON Feature in the `feature` JSON column. The
     hierarchy field is `type` ('site', 'zone', 'feature', 'facility', ...),
     and there is no `name` / `category` column on GeoShape — the human-readable
     name lives inside feature.properties.
+
+    map_uuid, when given, scopes the query to one map's shapes (geo_id).
+    Omitting it returns shapes from every map — callers that render onto a
+    single map's widget must always pass it, or shapes belonging to other
+    maps bleed onto their view (2026-08-09: an "이천시" test shape named
+    청와대, located at the real Blue House in Seoul, rendered on the 김제
+    widget because this query had no map filter at all).
     """
-    shapes = GeoShape.query.filter_by(type=shape_type).all()
+    query = GeoShape.query.filter_by(type=shape_type)
+    if map_uuid:
+        query = query.filter_by(geo_id=map_uuid)
+    shapes = query.all()
     features = []
     for shape in shapes:
         try:
@@ -3010,6 +3020,11 @@ def _shapes_to_geojson(shape_type, default_color):
                 continue
             props = dict(feat.get('properties') or {})
             props.setdefault('id', shape.unique_id)
+            # 도형 uuid 를 **항상** 실어 보낸다. `id` 는 setdefault 라 저장된
+            # feature 에 draw id 가 이미 있으면 그것이 남고, MapLibre 는
+            # queryRenderedFeatures 에서 문자열 feature.id 를 버린다 — 그래서
+            # 도형 클릭이 uuid 를 되찾을 다른 길이 없다.
+            props['shape_uuid'] = shape.unique_id
             props.setdefault('name', props.get('name') or '')
             props['category'] = shape_type
             props.setdefault('color', props.get('fill') or default_color)
@@ -3027,9 +3042,9 @@ def _shapes_to_geojson(shape_type, default_color):
 @blueprint.route('/api/geo/sites', methods=['GET'])
 @login_required
 def api_geo_sites():
-    """Get all sites as GeoJSON for MapLibre overlay."""
+    """Get sites as GeoJSON for MapLibre overlay, scoped to ?map_uuid= when given."""
     try:
-        return jsonify(_shapes_to_geojson('site', '#DF5353'))
+        return jsonify(_shapes_to_geojson('site', '#DF5353', request.args.get('map_uuid')))
     except Exception as e:
         current_app.logger.exception("api_geo_sites failed")
         return jsonify({'error': str(e)}), 500
@@ -3038,9 +3053,9 @@ def api_geo_sites():
 @blueprint.route('/api/geo/zones', methods=['GET'])
 @login_required
 def api_geo_zones():
-    """Get all zones as GeoJSON for MapLibre overlay."""
+    """Get zones as GeoJSON for MapLibre overlay, scoped to ?map_uuid= when given."""
     try:
-        return jsonify(_shapes_to_geojson('zone', '#28a745'))
+        return jsonify(_shapes_to_geojson('zone', '#28a745', request.args.get('map_uuid')))
     except Exception as e:
         current_app.logger.exception("api_geo_zones failed")
         return jsonify({'error': str(e)}), 500
@@ -3049,9 +3064,9 @@ def api_geo_zones():
 @blueprint.route('/api/geo/shapes/<string:category>', methods=['GET'])
 @login_required
 def api_geo_shapes_by_category(category):
-    """Get shapes by hierarchy type (site, zone, facility, feature, ...)."""
+    """Get shapes by hierarchy type (site, zone, facility, feature, ...), scoped to ?map_uuid= when given."""
     try:
-        return jsonify(_shapes_to_geojson(category, '#995aff'))
+        return jsonify(_shapes_to_geojson(category, '#995aff', request.args.get('map_uuid')))
     except Exception as e:
         current_app.logger.exception("api_geo_shapes_by_category failed")
         return jsonify({'error': str(e)}), 500
@@ -3078,12 +3093,39 @@ def _polygon_area_m2(coords):
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/contents', methods=['GET'])
 @login_required
 def api_geo_zone_contents(zone_uuid):
-    """Zone 내부 센서·장치·함수 인벤토리 반환."""
+    """Zone 내부 센서·장치·함수 인벤토리 반환.
+
+    30초 캐시 + 단일 비행(site 요약과 같은 헬퍼). 캐시가 없을 때 로컬 실측
+    280ms 였고, 그게 **열 때마다** 나갔다 — 이 응답은 도형 스캔 + 장치별
+    DeviceMeasurements + influx 집계라 싸질 수 없다. 사람이 창을 여는
+    순간에만 필요한 값이고 30초 안에 달라질 것이 없어서, 계산을 줄이는
+    대신 캐시로 덮는 쪽이 맞다. 장치 on/off 는 이 응답이 아니라 별도
+    폴링이 따라가므로 캐시가 상태를 늦추지 않는다.
+
+    can_edit 는 권한이라 사용자마다 다르지만 캐시는 전역이다 —
+    캐시 밖에서 매번 다시 넣는다(아래).
+    """
+    from aot.aot_flask.geo.site_summary import cached_zone_contents
+
+    payload = cached_zone_contents(
+        zone_uuid, lambda: _build_zone_contents(zone_uuid))
+    if payload is None:
+        return jsonify({'ok': False, 'error': 'zone not found'}), 404
+
+    payload = dict(payload)
+    payload['zone'] = dict(payload['zone'])
+    payload['zone']['can_edit'] = utils_general.user_has_permission(
+        'edit_settings', silent=True)
+    return jsonify(payload)
+
+
+def _build_zone_contents(zone_uuid):
+    """구역 모달 응답 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
     from aot.databases.models import OutputChannel
 
     zone = GeoShape.query.filter_by(unique_id=zone_uuid, type='zone').first()
     if not zone:
-        return jsonify({'ok': False, 'error': 'zone not found'}), 404
+        return None
 
     zone_id = zone.id
     feat = _shape_feature_dict(zone)
@@ -3104,13 +3146,18 @@ def api_geo_zone_contents(zone_uuid):
     except Exception:
         pass
 
-    # 상위 site 이름
-    site_name = None
-    if zone.parent_id:
-        parent = GeoShape.query.get(zone.parent_id)
-        if parent:
-            pf = _shape_feature_dict(parent)
-            site_name = (pf.get('properties') or {}).get('name')
+    # 상위 site — 모달의 "상위로" 화살표와 [현황]의 소속 표시에 함께 쓴다.
+    # 예전에는 zone.parent_id 만 봤는데 그 컬럼은 운영 데이터에서 전 행이
+    # NULL 이라(geo_hierarchy 주석) 소속 줄이 늘 비어 있었다. 공간 포함
+    # 관계로 푸는 공용 리졸버로 바꾼다.
+    from aot.aot_flask.geo.site_summary import parent_site_for_shape
+    try:
+        parent_site = parent_site_for_shape(zone.unique_id)
+    except Exception:
+        current_app.logger.exception("zone contents: parent site lookup failed")
+        parent_site = None
+    site_name = parent_site['name'] if parent_site else None
+    site_uuid = parent_site['uuid'] if parent_site else None
 
     # ── 소속 판정: 순수 파생 (S3) ────────────────────────────────────────────
     # 과거에는 map_overlay_id 직접 매칭 + 기하 폴백의 합집합이었다. 저장된
@@ -3118,8 +3165,16 @@ def api_geo_zone_contents(zone_uuid):
     # (2026-08-03 사고), 합집합은 그 낡은 값으로 엉뚱한 장치까지 끌어왔다.
     # 이제 마커 좌표에서 실시간 파생하는 단일 리졸버만 쓴다 —
     # aot/aot_flask/geo/device_membership.py 가 유일한 정본이다.
-    from aot.aot_flask.geo.device_membership import device_ids_in_shape
-    geo_device_ids = device_ids_in_shape(zone)
+    # device_ids_in_area 는 4겹으로 본다: 마커 · 바인딩 · **그릇** · 참조.
+    # 예전에는 마커만 보는 device_ids_in_shape 를 썼는데, 그러면
+    #  - 복합장치(그릇)가 구역에 놓여 있어도 그 안의 Input/Output 이 빠지고
+    #    (실측: 구역 3-1 의 AoT-C 안에 있는 OpenWeather 가 목록에 없었다),
+    #  - 마커 없이 바인딩으로만 매인 출력이 통째로 빠진다(출력 16개 중 마커는 1개).
+    # 게다가 같은 구역을 두고 지도 라벨·필지 요약(site_summary)은 4겹으로,
+    # 이 모달만 1겹으로 세어 **같은 구역의 센서 수가 화면마다 달랐다.**
+    # 그래프 구역 필터도 같은 이유로 이미 이쪽으로 옮겼다(b72bc47).
+    from aot.aot_flask.geo.device_membership import device_ids_in_area
+    geo_device_ids = device_ids_in_area(zone.unique_id) or set()
 
     # 센서 목록 (Input)
     inputs = (Input.query.filter(Input.unique_id.in_(geo_device_ids)).all()
@@ -3159,6 +3214,15 @@ def api_geo_zone_contents(zone_uuid):
 
     # 함수 목록 (CustomController + Function + Conditional + Trigger + PID)
     # 함수도 지도에 배치되면 마커(device_id=함수 uuid)를 갖는다 — 같은 파생.
+    # 복합장치(그릇)는 함수와 같은 테이블에 있지만 성격이 다르다 — Input/Output 을
+    # 담는 그릇이지 무언가를 판단하는 규칙이 아니다. 목록에서 섞이면 "이 구역의
+    # 기능"에 장치가 끼어 보인다. 가르는 기준은 collect_devices 와 같다.
+    try:
+        from aot.utils.functions import device_module_names
+        _device_names = device_module_names()
+    except Exception:
+        _device_names = set()
+
     func_rows = []
     for model, kind in [
         (CustomController, 'custom'),
@@ -3171,10 +3235,13 @@ def api_geo_zone_contents(zone_uuid):
             break
         for row in model.query.filter(
                 model.unique_id.in_(geo_device_ids)).all():
+            row_kind = kind
+            if kind == 'custom' and getattr(row, 'device', None) in _device_names:
+                row_kind = 'device'
             func_rows.append({
                 'unique_id': row.unique_id,
                 'name': row.name,
-                'kind': kind,
+                'kind': row_kind,
                 'is_activated': bool(getattr(row, 'is_activated', False)),
             })
 
@@ -3184,27 +3251,74 @@ def api_geo_zone_contents(zone_uuid):
         'functions': len(func_rows),
     }
 
+    # 현재 환경 — 예전에는 구역 모달 어디에도 "지금 몇 도인가"가 숫자로 없었다.
+    # 차트 레전드의 마지막 값에 의존하다 보니, 그래프를 못 읽거나 센서 탭을
+    # 넘겨보지 않으면 알 수 없었다. 집계는 필지 요약과 같은 함수를 쓴다 —
+    # 한쪽만 고치면 같은 구역이 두 화면에서 다른 온도를 말한다.
+    from aot.aot_flask.geo.site_summary import env_for_devices, status_from
+    try:
+        env = env_for_devices(geo_device_ids)
+    except Exception:
+        current_app.logger.exception("zone contents: env aggregation failed")
+        env = {'readings': [], 'sensors': {'valid': 0, 'total': 0}}
+
+    # 제목줄 상태 점 — 필지 요약의 행과 같은 판정을 쓴다. env 를 넘겨
+    # influx 재조회를 피한다.
+    zone_status = status_from(geo_device_ids, env)
+
     meta = zone.meta_json or {}
     photo_url = meta.get('photo_url')
     output_order = meta.get('output_order', [])
-    can_edit = utils_general.user_has_permission('edit_settings', silent=True)
 
-    return jsonify({
+    # can_edit 는 여기서 넣지 않는다 — 캐시는 전역이라 처음 연 사람의 권한이
+    # 다음 사람에게 그대로 간다. 라우트가 응답마다 다시 채운다.
+    return {
         'ok': True,
         'zone': {
             'unique_id': zone.unique_id,
             'name': zone_name,
             'site_name': site_name,
+            'site_uuid': site_uuid,
             'area_m2': area_m2,
             'counts': counts,
             'photo_url': photo_url,
             'output_order': output_order,
-            'can_edit': can_edit,
+            'env': env,
+            'status': zone_status,
         },
         'sensors': sensors_out,
         'outputs': outputs_out,
         'functions': func_rows,
-    })
+    }
+
+
+@blueprint.route('/api/geo/site/<string:site_uuid>/summary', methods=['GET'])
+@login_required
+def api_geo_site_summary(site_uuid):
+    """site(필지) 요약 — 하위 구역·시설 상태 + 오늘 할 일 + 노트.
+
+    zone 은 `/contents` 로 인벤토리를 내지만 site 에는 대응물이 없어, 지도에서
+    필지를 눌러도 이름과 면적밖에 볼 게 없었다. 집계 본체는
+    aot/aot_flask/geo/site_summary.py 에 있다(정본 설계:
+    docs/design/map-site-summary.md).
+
+    `?force=1` 은 30초 캐시를 건너뛴다 — 사람이 새로고침을 누른 경우용.
+    """
+    from aot.aot_flask.geo import site_summary
+
+    force = request.args.get('force') in ('1', 'true', 'yes')
+    try:
+        payload = site_summary.summary_for_site(site_uuid, force=force)
+    except Exception as e:
+        current_app.logger.exception("api_geo_site_summary failed")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+    if payload is None:
+        return jsonify({'ok': False, 'error': 'site not found'}), 404
+
+    result = {'ok': True}
+    result.update(payload)
+    return jsonify(result)
 
 
 @blueprint.route('/api/geo/output/<string:output_uuid>/state', methods=['POST'])
@@ -3278,6 +3392,234 @@ def api_geo_output_states():
             continue
         states[uid] = {str(ch): raw for ch, raw in ch_states.items()}
     return jsonify({'ok': True, 'states': states})
+
+
+@blueprint.route('/api/geo/zones/status', methods=['GET'])
+@login_required
+def api_geo_zones_status():
+    """지도의 구역별 대표값·상태 일괄 — 지도 라벨용.
+
+    구역 라벨이 이름만 달고 있어, 어느 구역이 문제인지 알려면 하나씩 열어
+    봐야 했다. 시설 bay 칩이 이미 하는 일(대표값 + 밴드색)을 구역으로 올린다.
+    """
+    from aot.aot_flask.geo.site_summary import zone_status_for_map
+
+    map_uuid = request.args.get('map_uuid', '').strip()
+    if not map_uuid:
+        return jsonify({'ok': False, 'error': 'map_uuid required'}), 422
+    return jsonify({'ok': True, 'zones': zone_status_for_map(map_uuid)})
+
+
+@blueprint.route('/api/geo/device/<string:device_uuid>/detail', methods=['GET'])
+@login_required
+def api_geo_device_detail(device_uuid):
+    """장치 상세 모달용 묶음 — 정체·소속·상태·작동 시간.
+
+    마커의 소형 팝업은 "지도 위에서 빠른 제어"라는 고유 가치가 있어 그대로
+    두고(팝업 높이가 커지면 anchor 계산이 깨진다), 이력·소속·노트처럼 파고드는
+    정보는 이 응답으로 중앙 모달이 받는다.
+    """
+    from aot.databases.models import (
+        CustomController, DeviceMeasurements, Function, Input, Output,
+        OutputChannel)
+    from aot.aot_flask.geo.site_summary import (
+        parent_area_for_device, status_from)
+
+    channel = request.args.get('channel', '0')
+
+    name = kind = None
+    for model, label in ((Input, 'input'), (Output, 'output'),
+                         (CustomController, 'custom'), (Function, 'function')):
+        row = model.query.filter_by(unique_id=device_uuid).first()
+        if row is not None:
+            name, kind = row.name, label
+            break
+    if kind is None:
+        return jsonify({'ok': False, 'error': 'device not found'}), 404
+
+    # 복합장치(Device)는 CustomController 와 같은 테이블에 있다 — 가르는 기준은
+    # 행이 아니라 그 행의 device 모듈이 is_device 를 선언했는지다
+    # (device_module_names 가 유일한 판정처, collect_devices 와 같은 규칙).
+    if kind == 'custom':
+        try:
+            from aot.utils.functions import device_module_names
+            if getattr(row, 'device', None) in device_module_names():
+                kind = 'device'
+        except Exception:
+            current_app.logger.debug('device_module_names lookup failed')
+
+    # 개폐형(3-way)인가. 지도 마커가 쓰는 판정과 **같은 집합**을 본다
+    # (utils_geo.THREE_WAY_OUTPUT_TYPES = PAIRED_ACTUATOR_OUTPUT_TYPES).
+    # 이걸 안 보내면 모달이 개폐 3버튼 대신 ON/OFF 토글을 그린다 — 창문을
+    # 여닫는 장치에 켜기/끄기 스위치가 달린다.
+    control_kind = 'on_off'
+    if kind == 'output':
+        output_type = getattr(row, 'output_type', None)
+        try:
+            from aot.outputs.paired_actuator_common import (
+                PAIRED_ACTUATOR_OUTPUT_TYPES)
+            if output_type in PAIRED_ACTUATOR_OUTPUT_TYPES:
+                control_kind = 'value_3way'
+        except Exception:
+            current_app.logger.debug('paired actuator type lookup failed')
+
+        # PWM(듀티) 출력이면 켜기/끄기가 아니라 0~100% 를 정하는 장치다.
+        # 판정은 출력 모듈이 선언한 채널 타입으로 한다 — output_type 이름으로
+        # 넘겨짚으면 모듈이 늘 때마다 여기를 고쳐야 한다.
+        # 모듈 import 가 실패하는 환경(GPIO 없는 컨테이너 등)에서는 조용히
+        # on_off 로 남는다. 잘못된 UI 를 그리느니 기본형이 낫다.
+        if control_kind == 'on_off' and output_type:
+            try:
+                from aot.utils.outputs import parse_output_information
+                info = (parse_output_information() or {}).get(output_type) or {}
+                types = set()
+                for ch in (info.get('channels_dict') or {}).values():
+                    types.update(ch.get('types') or [])
+                if 'pwm' in types:
+                    control_kind = 'pwm'
+            except Exception:
+                current_app.logger.debug('output module type lookup failed')
+
+    # 복합장치는 그릇이다 — 안에 든 Input/Output 이 곧 이 장치의 내용물이다.
+    # 그릇만 보여 주면 "이 장치가 무엇을 재고 무엇을 움직이는가"를 알 수 없다.
+    children = []
+    if kind == 'device':
+        for model, label in ((Input, 'input'), (Output, 'output')):
+            for child in model.query.filter_by(
+                    parent_device_id=device_uuid).order_by(model.name).all():
+                children.append({'uuid': child.unique_id,
+                                 'name': child.name,
+                                 'kind': label})
+
+    # 채널 목록 — Input 은 측정 채널, Output 은 출력 채널.
+    channels = []
+    if kind == 'input':
+        for dm in DeviceMeasurements.query.filter_by(
+                device_id=device_uuid).order_by(DeviceMeasurements.channel).all():
+            channels.append({'channel': dm.channel,
+                             'name': dm.name or dm.measurement or ''})
+    elif kind == 'output':
+        for oc in OutputChannel.query.filter_by(
+                output_id=device_uuid).order_by(OutputChannel.channel).all():
+            channels.append({'channel': oc.channel,
+                             'name': oc.name or str(oc.channel)})
+
+    runtime = {'elapsed_sec': None, 'last_duration_sec': None,
+               'next_schedule': None}
+    if kind in ('output', 'function', 'custom'):
+        from aot.utils import runtime as _runtime
+        try:
+            runtime['elapsed_sec'] = _runtime.get_elapsed_seconds(
+                device_uuid, channel) or None
+        except Exception:
+            pass
+        if not runtime['elapsed_sec']:
+            try:
+                runtime['last_duration_sec'] = _runtime.get_last_duration(
+                    device_uuid, channel) or None
+            except Exception:
+                pass
+        runtime['next_schedule'] = _next_schedule_label(device_uuid)
+
+    return jsonify({
+        'ok': True,
+        'device': {'uuid': device_uuid, 'name': name, 'kind': kind,
+                   'channel': channel, 'channels': channels,
+                   'children': children, 'control_kind': control_kind},
+        'parent': parent_area_for_device(device_uuid),
+        'status': status_from({device_uuid}),
+        'runtime': runtime,
+    })
+
+
+@blueprint.route('/api/geo/output_runtimes', methods=['POST'])
+@login_required
+def api_geo_output_runtimes():
+    """출력들의 작동 경과·마지막 작동·다음 예약 일괄 조회 (모달 목록 2행용).
+
+    **`/api/geo/output_states` 와 분리한 이유가 있다.** 그쪽은 구역 모달이 5초마다
+    치는 폴링 경로다. 여기 있는 조회는 채널마다 influx 를 읽으므로(작동 시작
+    시각·마지막 작동), 5초 폴링에 얹으면 모달을 열어 둔 내내 influx 를 두들긴다.
+    이 응답은 모달을 열 때 한 번만 받는다.
+
+    예약 시각은 **서버가 문자열로 만들어 보낸다** — 장치 현지 시각대 해석은
+    서버에 있고(resolve_location_tz), 클라이언트가 다시 추측하면 두 벌이 된다.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    items = data.get('items')
+    if not isinstance(items, list) or not items:
+        return jsonify({'ok': True, 'runtimes': {}})
+
+    from aot.utils import runtime as _runtime
+
+    out = {}
+    for it in items[:60]:
+        if not isinstance(it, dict):
+            continue
+        oid = str(it.get('id') or '').strip()
+        if not oid:
+            continue
+        ch = it.get('channel', 0)
+        key = '%s::%s' % (oid, ch)
+
+        entry = {'elapsed_sec': None, 'last_duration_sec': None,
+                 'next_schedule': None}
+        try:
+            entry['elapsed_sec'] = _runtime.get_elapsed_seconds(oid, ch) or None
+        except Exception:
+            pass
+        # 작동 중이면 마지막 작동은 굳이 읽지 않는다 — 화면에 쓰지 않는 값에
+        # influx 왕복을 쓸 이유가 없다(우선순위: 작동 중 > 예약 > 마지막).
+        if not entry['elapsed_sec']:
+            try:
+                entry['last_duration_sec'] = _runtime.get_last_duration(oid, ch) or None
+            except Exception:
+                pass
+        entry['next_schedule'] = _next_schedule_label(oid)
+        out[key] = entry
+
+    return jsonify({'ok': True, 'runtimes': out})
+
+
+def _next_schedule_label(target_id):
+    """이 장치의 다음 예약 — 장치 현지 시각 'HH:MM'(오늘이 아니면 'M/D HH:MM')."""
+    from datetime import timedelta, timezone as _tz
+
+    from aot.databases.models.scheduler import SchedulerJobMeta
+    from aot.utils.time_utils import utc_now
+
+    try:
+        now = utc_now().replace(tzinfo=None)
+        row = (SchedulerJobMeta.query
+               .filter(SchedulerJobMeta.target_id == target_id,
+                       SchedulerJobMeta.state.in_(('DRAFT', 'PENDING', 'RUNNING')),
+                       SchedulerJobMeta.schedule_time.isnot(None),
+                       SchedulerJobMeta.schedule_time >= now)
+               .order_by(SchedulerJobMeta.schedule_time.asc())
+               .first())
+        if row is None:
+            return None
+
+        when = row.schedule_time.replace(tzinfo=_tz.utc)
+        try:
+            from aot.utils.device_tz import resolve_location_tz
+            tzinfo = resolve_location_tz(target_id)
+            if tzinfo is not None:
+                when = when.astimezone(tzinfo)
+                now_local = utc_now().astimezone(tzinfo)
+            else:
+                now_local = utc_now()
+        except Exception:
+            now_local = utc_now()
+
+        if when.date() == now_local.date():
+            return when.strftime('%H:%M')
+        if when.date() == (now_local + timedelta(days=1)).date():
+            return when.strftime('%H:%M') + '(+1)'
+        return when.strftime('%-m/%-d %H:%M')
+    except Exception:
+        current_app.logger.debug('next schedule lookup failed for %s', target_id)
+        return None
 
 
 @blueprint.route('/api/geo/link_status', methods=['POST'])
@@ -3400,6 +3742,8 @@ def api_geo_zone_photo(zone_uuid):
     zone.meta_json = meta
     _db.session.commit()
 
+    from aot.aot_flask.geo.site_summary import invalidate_zone_contents
+    invalidate_zone_contents(zone_uuid)
     return jsonify({'ok': True, 'photo_url': photo_url, 'ts': _time.time()})
 
 
@@ -3543,6 +3887,8 @@ def api_geo_zone_output_order(zone_uuid):
     zone.meta_json = meta
     _db.session.commit()
 
+    from aot.aot_flask.geo.site_summary import invalidate_zone_contents
+    invalidate_zone_contents(zone_uuid)
     return jsonify({'ok': True})
 
 

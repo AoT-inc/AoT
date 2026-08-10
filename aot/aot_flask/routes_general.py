@@ -553,6 +553,42 @@ def get_time():
     return jsonify(get_local_now().strftime('%m/%d %H:%M'))
 
 
+@blueprint.route('/health')
+def health():
+    """Liveness probe, deliberately terse when anonymous.
+
+    An update that swaps containers has to be able to ask "is the new build
+    actually serving, and did its migration land?" before it declares success,
+    and it has to be able to ask that while the app may be half-up -- so this
+    route takes no lock, touches no controller, and never 500s.
+
+    Anonymous callers get liveness only. Version and schema revision identify
+    the build precisely enough to look up its known issues, which is not
+    something to hand out unauthenticated on a farm controller, so detail
+    requires either a logged-in session or AOT_HEALTH_KEY (the shared secret
+    the updater sidecar is given).
+    """
+    from aot.utils.update_availability import health_detail_key, health_snapshot
+
+    detail = flask_login.current_user.is_authenticated
+    if not detail:
+        key = health_detail_key()
+        if key and request.headers.get('X-AOT-HEALTH-KEY') == key:
+            detail = True
+
+    try:
+        payload = health_snapshot(detail=detail)
+    except Exception:
+        logger.exception("health()")
+        payload = {'status': 'degraded'}
+
+    response = jsonify(payload)
+    # Never let a proxy or browser answer this from cache -- a cached "ok" from
+    # the old container is exactly the wrong answer during an update.
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
 @blueprint.route('/dl/<dl_type>/<path:filename>')
 @flask_login.login_required
 def download_file(dl_type, filename):
@@ -997,6 +1033,66 @@ def _query_count_and_first_point(unit, device_id, measurement, channel, settings
     return count_points, first_point
 
 
+def _stitch_range(segments, start_seconds, end_seconds):
+    """접합 조회의 시간 범위. '0' 은 "제한 없음"이라 이력이 대신 답한다."""
+    now = datetime.datetime.utcnow()
+    if start_seconds != '0':
+        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
+    else:
+        # 가장 이른 구간의 시작. 이력이 시작되기 전에는 이 자리가 없었다.
+        firsts = [s['valid_from'] for s in segments if s['valid_from']]
+        start = min(firsts) if firsts else now - datetime.timedelta(days=365)
+    end = (now if end_seconds == '0'
+           else datetime.datetime.utcfromtimestamp(float(end_seconds)))
+    return start, end
+
+
+def _stitched_or_none(device_id, measurement_id, start_seconds, end_seconds):
+    """접합된 [시각, 값] 목록. 접합할 이력이 없으면 None(호출자가 폴백)."""
+    from aot.aot_flask.utils import utils_series_stitch as stitch
+
+    try:
+        segments = stitch.slot_segments(device_id, measurement_id)
+        if not segments:
+            return None
+        start, end = _stitch_range(segments, start_seconds, end_seconds)
+        points, _segs = stitch.stitched_series(
+            device_id, measurement_id, start, end)
+        if points is None:
+            return None
+        return [[p[0], p[1]] for p in points]
+    except Exception as err:
+        # 접합 실패가 그래프를 통째로 날리면 안 된다 — 단일 장치 조회로
+        # 떨어지면 최소한 현재 장치의 값은 보인다.
+        logger.error("[SeriesStitch] 접합 실패, 단일 장치로 폴백: %s", err)
+        return None
+
+
+@blueprint.route('/async_segments/<device_id>/<measurement_id>')
+@flask_login.login_required
+def async_slot_segments(device_id, measurement_id):
+    """이 측정값이 놓인 자리의 **하드웨어 변경 시점** — 그래프 마커용.
+
+    `segments` 는 접합된 구간(범례·경계), `events` 는 화면에 찍을 표식이다.
+    events 는 장치 교체(바인딩 구간 경계)와 접속정보 갱신(maintenance 노트)을
+    함께 담는다 — 하나만 보면 절반을 놓친다.
+
+    아무 일도 없었으면 둘 다 빈 목록이고, 화면은 아무것도 그리지 않는다.
+    """
+    from aot.aot_flask.utils import utils_series_stitch as stitch
+
+    try:
+        segments = stitch.slot_segments(device_id, measurement_id)
+        return jsonify({'ok': True,
+                        'segments': stitch.segments_payload(segments),
+                        'events': stitch.hardware_events(device_id,
+                                                         measurement_id)})
+    except Exception as err:
+        logger.error("[SeriesStitch] 구간 조회 실패: %s", err)
+        return jsonify({'ok': False, 'segments': [], 'events': [],
+                        'message': str(err)})
+
+
 @blueprint.route('/async/<device_id>/<device_type>/<measurement_id>/<start_seconds>/<end_seconds>')
 @flask_login.login_required
 def async_data(device_id, device_type, measurement_id, start_seconds, end_seconds):
@@ -1021,7 +1117,22 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
 
         notes = Notes.query.filter(
             and_(Notes.date_time >= start, Notes.date_time <= end)).all()
+
+        # 구역 필터가 걸려 있으면 그 구역의 노트만 찍는다. 목록만 좁히고 표시를
+        # 안 좁히면 필터가 거짓말이 된다 — 태그를 골랐을 때 남의 구역 노트가
+        # 함께 뜬다. 해석에 실패하면 거르지 않는다(빈 그래프보다 낫다).
+        area = (request.args.get('area') or '').strip()
+        allowed_notes = None
+        if area:
+            try:
+                from aot.aot_flask.geo import device_membership
+                allowed_notes = device_membership.note_ids_in_area(area)
+            except Exception as err:
+                logger.error("[graph-async] 노트 구역 필터 실패: %s", err)
+
         for each_note in notes:
+            if allowed_notes is not None and each_note.unique_id not in allowed_notes:
+                continue
             if tag.unique_id in each_note.tags.split(','):
                 notes_list.append(
                     [each_note.date_time.strftime("%Y-%m-%dT%H:%M:%S.000000000Z"), each_note.name, each_note.note])
@@ -1047,6 +1158,17 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
         conversion = None
     channel, unit, measurement = return_measurement_info(
         measure, conversion)
+
+    # 장치 교체를 관통해 이어 붙이기 (?stitch=1).
+    # 응답 모양을 그대로 둔다 — 네비게이터·기간 버튼·요청 순번 배선이 전부
+    # "평평한 [시각, 값] 목록"을 전제로 짜여 있어서, 여기서 객체를 돌려주면
+    # 그 배선을 다시 써야 한다. 구간 경계는 별도 엔드포인트로 가져간다.
+    if request.args.get('stitch') in ('1', 'true', 'True'):
+        stitched = _stitched_or_none(
+            device_id, measurement_id, start_seconds, end_seconds)
+        if stitched is not None:
+            return jsonify(stitched) if stitched else ('', 204)
+        # None = 접합할 이력이 없다 → 아래 단일 장치 경로를 그대로 탄다.
 
     # Get all data if start/end not specified
     if start_seconds == '0' and end_seconds == '0':

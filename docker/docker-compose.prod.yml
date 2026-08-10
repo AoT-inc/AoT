@@ -51,6 +51,16 @@ services:
       - FLASK_ENV=production
       - PYTHONPATH=/app
       - DOCKER_CONTAINER=TRUE
+      # Display only — Admin → Upgrade shows which tag the host asked for.
+      # The authoritative running version is the AOT_VERSION baked into the
+      # image; a moving tag such as 'latest' does not identify a build.
+      - AOT_IMAGE_TAG=${AOT_IMAGE_TAG:-latest}
+      # Lets the updater sidecar read version + schema revision from /health
+      # (anonymous callers only get liveness). Declared HERE, not in the
+      # updater overlay, because the updater recreates this service with the
+      # base file alone — an overlay-only value would vanish at exactly the
+      # moment the health gate needs it. Empty unless the overlay is in use.
+      - AOT_HEALTH_KEY=${AOT_HEALTH_KEY:-}
       - HARDWARE_PROFILE=${HARDWARE_PROFILE:-LOW}
       - AOT_LOCAL_DIR=/app/aot_local
       - INFLUXDB_HOST=influxdb

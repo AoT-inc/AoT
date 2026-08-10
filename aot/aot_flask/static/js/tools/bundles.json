@@ -2,6 +2,7 @@
   "geo-facility": {
     "output": "dist/geo-facility.bundle.js",
     "inputs": [
+      "common/aot-device-connection.js",
       "widgets/AoT_facility/core/materials.js",
       "widgets/AoT_facility/core/parametric.js",
       "widgets/AoT_facility/assets/gltf_loader.js",
@@ -57,6 +58,7 @@
     "comment": "geo_design 페이지 전용 design 스크립트(소스 순서). vendor turf·공유 aot-map-custom-controls는 제외(외부 유지). 코어/어댑터/dist번들은 별개.",
     "inputs": [
       "common/aot-geo-theme-colors.js",
+      "common/aot-device-connection.js",
       "geo/design/aot-geo-ui.js",
       "geo/design/aot-geo-geometry.js",
       "geo/design/aot-geo-events.js",

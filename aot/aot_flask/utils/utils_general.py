@@ -1208,6 +1208,75 @@ def choices_outputs_pwm(output, table_output_channel, dict_outputs, dict_units, 
     return choices
 
 
+def choices_composite_devices():
+    """복합장치 목록 — 그래프 선택 목록의 "장치" 단위.
+
+    복합장치는 값을 재지 않는다. Input/Output 을 담는 **그릇**이라, 사람이
+    "AoT-C 를 보고 싶다"고 할 때 뜻하는 것은 그 안의 측정값 전부다. 그래서
+    선택값은 `<uuid>,ALL,device` 하나이고, 라우트가 그것을 하위 장치의
+    측정값들로 편다(`_expand_device_choice`).
+
+    하위 판정은 `parent_device_id`(소유)뿐이다 — `DeviceMember` 참조는
+    포함하지 않는다. 장치 페이지의 구성 요약(`/device/<id>/summary`)과
+    `device_binding.expand_device()` 가 쓰는 기준과 같게 둔다. 세 곳이
+    갈리면 같은 장치가 화면마다 다른 것을 담게 된다.
+
+    측정값이 하나도 없는 장치는 목록에 넣지 않는다 — 골라도 그래프에 아무것도
+    안 나오는 항목은 사람에게 "고장났다"로 읽힌다.
+    """
+    dict_controllers = parse_function_information()
+    device_names = device_module_names(dict_controllers)
+
+    devices = CustomController.query.filter(
+        CustomController.device.in_(device_names)).order_by(
+            CustomController.name).all() if device_names else []
+    if not devices:
+        return []
+
+    device_ids = [d.unique_id for d in devices]
+    child_ids = {}
+    for model, kind in ((Input, 'input'), (Output, 'output')):
+        for row in model.query.with_entities(
+                model.unique_id, model.parent_device_id).filter(
+                    model.parent_device_id.in_(device_ids)).all():
+            child_ids.setdefault(row[1], []).append((kind, row[0]))
+
+    all_children = [uid for pairs in child_ids.values() for _kind, uid in pairs]
+    with_data = set()
+    if all_children:
+        with_data = {r[0] for r in DeviceMeasurements.query.with_entities(
+            DeviceMeasurements.device_id).filter(
+                DeviceMeasurements.device_id.in_(all_children)).all()}
+
+    choices = []
+    for dev in devices:
+        pairs = child_ids.get(dev.unique_id) or []
+        if not any(uid in with_data for _kind, uid in pairs):
+            continue
+        choices.append({
+            'value': dev.unique_id,
+            'item': '{name} [{count}]'.format(
+                name=dev.name,
+                count=len([1 for _k, uid in pairs if uid in with_data])),
+        })
+    return choices
+
+
+def composite_device_measurements(device_id):
+    """복합장치 하나가 담고 있는 측정값들 — `[(자식 uuid, 측정 uuid, 종류)]`."""
+    out = []
+    for model, kind in ((Input, 'input'), (Output, 'output')):
+        rows = model.query.with_entities(model.unique_id).filter(
+            model.parent_device_id == device_id).all()
+        for row in rows:
+            for m in DeviceMeasurements.query.with_entities(
+                    DeviceMeasurements.unique_id).filter(
+                        DeviceMeasurements.device_id == row[0]).order_by(
+                            DeviceMeasurements.channel).all():
+                out.append((row[0], m[0], kind))
+    return out
+
+
 def choices_pids(pid, dict_units, dict_measurements):
     """populate form multi-select choices from PID entries."""
     choices = []

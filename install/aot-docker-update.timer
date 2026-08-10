@@ -1,0 +1,17 @@
+[Unit]
+Description=Poll for AoT Docker update requests
+Requires=aot-docker-update.service
+
+[Timer]
+OnBootSec=60s
+# Must stay comfortably under DOCKER_UPDATE_HEARTBEAT_MAX_AGE (120s in
+# aot/config/__init__.py): each run refreshes the heartbeat that tells the app
+# an updater exists. Raise the interval past that window and Admin -> Upgrade
+# hides the one-click button between runs, because from the app's side a stale
+# heartbeat is indistinguishable from no updater at all.
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=aot-docker-update.service
+
+[Install]
+WantedBy=timers.target

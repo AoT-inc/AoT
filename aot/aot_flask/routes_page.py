@@ -416,6 +416,37 @@ def page_export():
                            choices_output=choices_output)
 
 
+def _expand_device_choices(selected):
+    """`<uuid>,ALL,device` 선택을 그 장치가 담은 측정값들로 편다.
+
+    복합장치는 값을 재지 않는 그릇이므로 선택 목록에는 하나로 뜨고, 그래프에는
+    안에 든 것들이 뜬다. 폈다가 원본을 버리면 안 된다 — 체크박스 상태는 사람이
+    실제로 고른 것(`selected_raw`)으로 그려야 하고, 편 결과로 그리면 장치를
+    골랐던 사실이 화면에서 사라진다.
+    """
+    out = []
+    for item in selected:
+        parts = item.split(',')
+        if len(parts) == 3 and parts[1] == 'ALL' and parts[2] == 'device':
+            for child_id, meas_id, kind in \
+                    utils_general.composite_device_measurements(parts[0]):
+                out.append('%s,%s,%s' % (child_id, meas_id, kind))
+        else:
+            out.append(item)
+    return out
+
+
+def _filter_choices_by_area(choices, allowed_ids):
+    """선택지 목록을 구역 안의 장치로 좁힌다. `allowed_ids` 가 None 이면 그대로.
+
+    선택지의 value 는 `<장치 uuid>,<측정 uuid>` 또는 복합장치의 `<uuid>` 다.
+    """
+    if allowed_ids is None:
+        return choices
+    return [c for c in choices
+            if str(c.get('value', '')).split(',')[0] in allowed_ids]
+
+
 @blueprint.route('/graph-async', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_graph_async():
@@ -449,12 +480,25 @@ def page_graph_async():
         input_dev, dict_units, dict_measurements)
     choices_output = utils_general.choices_outputs(
         output, OutputChannel, dict_outputs, dict_units, dict_measurements)
+    # 복합장치는 값을 재지 않는다 — Input/Output 을 담는 그릇이라, 고르면 그
+    # 안의 측정값 전부를 뜻한다(선택값 `<uuid>,ALL,device` 를 아래에서 편다).
+    choices_device = utils_general.choices_composite_devices()
     choices_pid = utils_general.choices_pids(
         pid, dict_units, dict_measurements)
     choices_tag = utils_general.choices_tags(tag)
 
     selected_ids_measures = []
+    selected_raw = []
     start_time_epoch = 0
+    # 구역 필터. 빈 값은 "거르지 않는다" 이고, 고른 구역의 도형이 사라진
+    # 경우도 같게 다룬다 — 그때 목록을 비우면 화면이 통째로 사라진다.
+    area_filter = ''
+    choices_area = []
+    try:
+        from aot.aot_flask.geo import device_membership
+        choices_area = device_membership.area_choices()
+    except Exception:
+        logger.exception("[graph-async] 구역 목록을 읽지 못했다")
 
     device_measurements_dict = {}
     for meas in device_measurements:
@@ -472,8 +516,12 @@ def page_graph_async():
 
     async_height = 600
     period = 'all'
+    # 장치 교체를 관통해 이어 붙일지. 기본은 꺼짐 — 접합은 이력이 있는 자리에서만
+    # 의미가 있고, 없는 자리에서는 조용히 단일 장치 조회로 떨어진다.
+    stitch_history = False
 
     if request.method == 'POST':
+        stitch_history = bool(request.form.get('stitch_history'))
         if request.form.get('async_height'):
             async_height = request.form['async_height']
         # Period values are locale-independent identifiers (not button labels)
@@ -490,15 +538,63 @@ def page_graph_async():
             now = get_local_now()
             start_time_epoch = (now -
                                 datetime.timedelta(seconds=seconds)).timestamp()
-        selected_ids_measures = request.form.getlist('selected_measure')
+        selected_raw = request.form.getlist('selected_measure')
+        selected_ids_measures = _expand_device_choices(selected_raw)
+        area_filter = (request.form.get('area_filter') or '').strip()
 
     # Generate a dictionary of lists of y-axes
+    # 구역 필터를 선택지에 적용한다. 이미 고른 항목은 거르지 않는다 — 고른
+    # 뒤에 구역을 바꿨다고 그래프에서 사라지면 사람은 무엇이 빠졌는지 모른다.
+    allowed_ids = None
+    if area_filter:
+        try:
+            from aot.aot_flask.geo import device_membership
+            allowed_ids = device_membership.device_ids_in_area(area_filter)
+        except Exception:
+            logger.exception("[graph-async] 구역 필터 해석 실패")
+    if allowed_ids is not None:
+        choices_input = _filter_choices_by_area(choices_input, allowed_ids)
+        choices_output = _filter_choices_by_area(choices_output, allowed_ids)
+        choices_function = _filter_choices_by_area(choices_function, allowed_ids)
+        choices_pid = _filter_choices_by_area(choices_pid, allowed_ids)
+        choices_device = _filter_choices_by_area(choices_device, allowed_ids)
+        # 태그 자체는 구역에 속하지 않는다("관수"는 농장 전체의 어휘다).
+        # 구역에 속하는 것은 노트이므로, 그 구역에 노트가 있는 태그만 남긴다.
+        try:
+            from aot.aot_flask.geo import device_membership
+            note_ids = device_membership.note_ids_in_area(
+                area_filter, device_ids=allowed_ids)
+            tag_ids = device_membership.tag_ids_for_notes(note_ids or set())
+            # 태그 선택지의 value 는 `<uuid>,tag` 다(form_tag_choices).
+            # uuid 그대로 비교하면 하나도 안 맞는다.
+            choices_tag = [c for c in choices_tag
+                           if str(c.get('value', '')).split(',')[0] in tag_ids]
+        except Exception:
+            logger.exception("[graph-async] 노트 태그 필터 실패")
+
+    # 교체 이력이 하나도 없으면 이어 붙일 것이 없다. 그때 이 옵션을 보여주면
+    # 지도를 쓰지 않는 사용자가 "장치를 바꾸면 뭔가 달라지나" 로 읽는다.
+    has_replacements = False
+    try:
+        from aot.databases.models import GeoBinding, Notes
+        has_replacements = bool(
+            GeoBinding.query.filter(GeoBinding.valid_to.isnot(None)).first()
+            or Notes.query.filter(Notes.category == 'maintenance').first())
+    except Exception:
+        logger.exception("[graph-async] 교체 이력 확인 실패")
+
     y_axes = utils_dashboard.graph_y_axes_async(dict_measurements,
                                                 selected_ids_measures)
 
     return render_template('pages/graph-async.html',
                            conversion=Conversion,
                            async_height=async_height,
+                           stitch_history=stitch_history,
+                           has_replacements=has_replacements,
+                           area_filter=area_filter,
+                           choices_area=choices_area,
+                           choices_device=choices_device,
+                           selected_raw=selected_raw,
                            period=period,
                            start_time_epoch=start_time_epoch,
                            device_measurements_dict=device_measurements_dict,

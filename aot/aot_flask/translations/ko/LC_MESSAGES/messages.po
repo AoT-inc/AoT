@@ -7295,7 +7295,7 @@ msgstr "버튼 숨기기"
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:4882
 #: aot_flask/templates/pages/geo/geo_facility.html:1092
 msgid "Site"
-msgstr "대지"
+msgstr "필지"
 
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/dist/geo-design.bundle.js:163
@@ -26568,3 +26568,399 @@ msgstr "이 지도의 모든 구역에 장치가 연결돼 있습니다."
 #: aot_flask/templates/pages/geo/geo_design.html:0
 msgid "already imported"
 msgstr "이미 가져옴"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Update connection settings"
+msgstr "접속정보 갱신"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "This device has no connection settings to change."
+msgstr "이 장치에는 바꿀 접속정보가 없습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "The device will be restarted so the new settings take effect."
+msgstr "새 설정을 적용하기 위해 장치를 다시 시작합니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Connection settings updated"
+msgstr "접속정보를 갱신했습니다"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Nothing changed"
+msgstr "변경된 내용이 없습니다"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "No device was given."
+msgstr "장치가 지정되지 않았습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "That device no longer exists."
+msgstr "그 장치는 더 이상 존재하지 않습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(kind)s entries have no connection settings to change."
+msgstr "%(kind)s 에는 바꿀 접속정보가 없습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(field)s must be a number."
+msgstr "%(field)s 은(는) 숫자여야 합니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "'%(field)s' is not a connection setting of this device."
+msgstr "'%(field)s' 은(는) 이 장치의 접속정보가 아닙니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(field)s is fixed by this device's driver and cannot be changed."
+msgstr "%(field)s 은(는) 이 장치의 드라이버가 고정한 값이라 바꿀 수 없습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(field)s is not a connection setting."
+msgstr "%(field)s 은(는) 접속정보가 아닙니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "The device is saved but stayed off. Turn it back on from its settings page."
+msgstr "저장은 됐지만 장치가 다시 켜지지 않았습니다. 설정 페이지에서 활성화하십시오."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Connection settings changed (hardware swap)."
+msgstr "접속정보를 변경했습니다(하드웨어 교체)."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "Replaced: %(name)s"
+msgstr "교체: %(name)s"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Join across device replacements"
+msgstr "장치 교체를 관통해 잇기"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Joins the segments recorded in the binding history. Past data is never rewritten."
+msgstr "바인딩 이력에 기록된 구간을 이어 붙입니다. 과거 데이터를 다시 쓰지 않습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Replace hardware"
+msgstr "하드웨어 교체"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Click on the map to set the facility center"
+msgstr "지도에서 시설 중심을 클릭하십시오"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A device was removed here but the fitting stayed. Select a row to open it and pick a device."
+msgstr "여기 있던 장치가 사라졌지만 설비는 남아 있습니다. 행을 누르면 그 설비를 열어 장치를 고를 수 있습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "device was deleted"
+msgstr "장치가 삭제됨"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Every fitting has a device."
+msgstr "모든 설비에 장치가 연결돼 있습니다."
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Hardware changes"
+msgstr "하드웨어 변경"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Include the previous device in this spot"
+msgstr "같은 자리의 이전 장치 값도 함께"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Only applies to devices placed on a map. The values of the device that held the same spot before are appended; past data is never rewritten."
+msgstr "지도에 배치한 장치에만 해당합니다. 같은 자리를 맡았던 이전 장치의 값을 이어 붙이며, 과거 데이터를 고쳐 쓰지는 않습니다."
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "All areas"
+msgstr "전체 구역"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Site / Zone"
+msgstr "필지 · 구역"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "All sites and zones"
+msgstr "전체"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Sites"
+msgstr "필지"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Zone status"
+msgstr "구역 상태"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Facilities"
+msgstr "시설"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Today"
+msgstr "오늘"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Scheduled"
+msgstr "예정 작업"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Offline"
+msgstr "무응답"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Nothing to show yet"
+msgstr "아직 보여줄 것이 없습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Now"
+msgstr "현재"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Sensors responding"
+msgstr "센서 응답"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No sensor readings"
+msgstr "측정값 없음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Deviation from target"
+msgstr "목표 대비"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Go to site"
+msgstr "상위 필지로"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Attention"
+msgstr "주의"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Last run"
+msgstr "마지막 작동"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Next run"
+msgstr "예약"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Photo"
+msgstr "사진"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Add Photo"
+msgstr "사진 등록"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Change Photo"
+msgstr "사진 변경"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Go up"
+msgstr "상위로"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Channels"
+msgstr "채널"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Failed to load information"
+msgstr "정보를 불러오지 못했습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "No records"
+msgstr "기록 없음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Site list"
+msgstr "필지 목록"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Contents"
+msgstr "구성"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Running Image"
+msgstr "실행 중인 이미지"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Could not read the published image list from the container registry, "
+"so update availability is unknown. Check the network connection and "
+"try again."
+msgstr ""
+"컨테이너 레지스트리에서 발행된 이미지 목록을 읽지 못해 업데이트 가용 여부를 알 수 없습니다. 네트워크 연결을 확인한 뒤 다시 "
+"시도하세요."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "A new version is available and its image has been published."
+msgstr "새 버전이 있으며 이미지도 발행되어 있습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The installed version is the latest version published to the container "
+"registry."
+msgstr "설치된 버전이 컨테이너 레지스트리에 발행된 최신 버전입니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "This is a Docker deployment, so the update is applied on the host."
+msgstr "Docker 배포판이므로 업데이트는 호스트에서 적용합니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The one-click update button requires the optional updater service, "
+"which is not running on this system."
+msgstr "원클릭 업데이트 버튼은 선택 설치 항목인 업데이터 서비스를 필요로 하며, 이 시스템에서는 실행되고 있지 않습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"To update, run the following on the host in the directory holding the "
+"compose file, after setting the desired version in AOT_IMAGE_TAG:"
+msgstr ""
+"업데이트하려면 AOT_IMAGE_TAG 에 원하는 버전을 설정한 뒤, 호스트의 compose 파일이 있는 디렉터리에서 다음을 "
+"실행하세요:"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Data (database, uploaded files, backups) lives in Docker volumes and "
+"is preserved across image swaps. The database schema is migrated "
+"automatically when the new containers start."
+msgstr ""
+"데이터(데이터베이스, 업로드 파일, 백업)는 Docker 볼륨에 있어 이미지를 교체해도 보존됩니다. 데이터베이스 스키마는 새 "
+"컨테이너가 기동할 때 자동으로 마이그레이션됩니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Published images"
+msgstr "발행된 이미지"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"In-app upgrade is not available in Docker. On the host, pull the new "
+"image and recreate the containers (docker compose pull && docker "
+"compose up -d) instead."
+msgstr ""
+"Docker 에서는 앱 안에서 업그레이드할 수 없습니다. 호스트에서 새 이미지를 pull 한 뒤 컨테이너를 다시 만드세요 "
+"(docker compose pull && docker compose up -d)."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "AoT is currently updating."
+msgstr "AoT 를 업데이트하고 있습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The containers are being recreated on the new image. The web interface "
+"may briefly become unreachable; this page reconnects on its own."
+msgstr "새 이미지로 컨테이너를 다시 만들고 있습니다. 웹 화면이 잠시 끊길 수 있으며, 이 페이지는 스스로 다시 연결합니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"A backup is taken before the image is swapped. If the new version does "
+"not come up, the previous one is restored automatically."
+msgstr "이미지를 교체하기 전에 백업을 만듭니다. 새 버전이 정상적으로 뜨지 않으면 이전 버전으로 자동 복구합니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"A backup is taken before the image is swapped, and the previous "
+"version is restored automatically if the new one does not come up."
+msgstr "이미지를 교체하기 전에 백업을 만들며, 새 버전이 뜨지 않으면 이전 버전으로 자동 복구합니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Last update attempt"
+msgstr "마지막 업데이트 시도"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Pre-update backup"
+msgstr "업데이트 전 백업"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Update to %(version)s"
+msgstr "%(version)s 로 업데이트"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The containers will be recreated on the new image and control will "
+"pause briefly. A backup is taken first. Continue?"
+msgstr "새 이미지로 컨테이너를 다시 만들며 제어가 잠시 멈춥니다. 먼저 백업을 만듭니다. 진행할까요?"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"In-app upgrade is not available without the updater service. On the "
+"host, pull the new image and recreate the containers (docker compose "
+"pull && docker compose up -d) instead."
+msgstr ""
+"업데이터 서비스 없이는 앱 안에서 업그레이드할 수 없습니다. 호스트에서 새 이미지를 pull 한 뒤 컨테이너를 다시 만드세요 "
+"(docker compose pull && docker compose up -d)."
+
+#: aot/aot_flask/routes_admin.py
+msgid "An update is already in progress."
+msgstr "이미 업데이트가 진행 중입니다."
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"The update has been requested. The containers will be recreated on the "
+"new image; this page shows progress."
+msgstr "업데이트를 요청했습니다. 새 이미지로 컨테이너를 다시 만들며, 진행 상황은 이 페이지에 표시됩니다."
+
+#: aot/aot_flask/routes_admin.py
+msgid "Waiting for the updater to start..."
+msgstr "업데이터가 시작되기를 기다리는 중..."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Updated successfully."
+msgstr "업데이트에 성공했습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "The update failed and the previous version was restored."
+msgstr "업데이트에 실패해 이전 버전으로 복구했습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "The update failed."
+msgstr "업데이트에 실패했습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Install updates automatically"
+msgstr "업데이트 자동 설치"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Update time"
+msgstr "업데이트 시각"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Checked once a day at this local time. If a newer version has been "
+"published, it is installed the same way the button above does it: back "
+"up, swap the image, verify, and restore the previous version if it "
+"does not come up."
+msgstr ""
+"매일 이 시각(현지 시각)에 한 번 확인합니다. 새 버전이 발행돼 있으면 위 버튼과 같은 방식으로 설치합니다 — 백업하고, "
+"이미지를 교체하고, 확인하고, 뜨지 않으면 이전 버전으로 되돌립니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Control pauses for a few minutes while the containers restart, so pick "
+"an hour when nothing important is running."
+msgstr "컨테이너가 다시 뜨는 몇 분 동안 제어가 멈추므로, 중요한 작동이 없는 시각을 고르세요."
+
+#: aot/aot_flask/routes_admin.py
+msgid "Enter the update time as HH:MM (24-hour), e.g. 03:00."
+msgstr "업데이트 시각을 HH:MM(24시간) 형식으로 입력하세요. 예: 03:00"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"Automatic updates are on. A published update will be installed at "
+"%(time)s each day."
+msgstr "자동 업데이트를 켰습니다. 매일 %(time)s 에 발행된 업데이트를 설치합니다."
+
+#: aot/aot_flask/routes_admin.py
+msgid "Automatic updates are off."
+msgstr "자동 업데이트를 껐습니다."
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"Saved, but the daemon could not be notified. The new schedule takes "
+"effect after the daemon restarts."
+msgstr "저장했지만 데몬에 알리지 못했습니다. 새 일정은 데몬이 다시 시작된 뒤 적용됩니다."

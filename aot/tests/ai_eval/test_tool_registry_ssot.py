@@ -269,6 +269,12 @@ _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS = {
     'archive_note', 'restore_note_from_archive', 'set_document_tier', 'delete_archive',
 }
 
+# 공간-장치 바인딩 (2026-08-08, Phase D). list_unbound_slots 는 읽기;
+# rebind_device 는 "이 구역에 물을 주는 기계"를 바꾸므로 승인 필수이며
+# config_only 면제 대상이 절대 아니다(설계 문서 Phase D).
+_GEO_BINDING_TOOL_ADDITIONS = {'list_unbound_slots', 'rebind_device'}
+_GEO_BINDING_MUTATING_ADDITIONS = {'rebind_device'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -331,7 +337,8 @@ def _check_dispatch_map(R):
            | _TARGET_RESOLUTION_TOOL_ADDITIONS | _CONFIRMATION_RELAY_TOOL_MAP_ADDITIONS
            | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
-           | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
+           | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
+           | _GEO_BINDING_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -350,7 +357,8 @@ def _check_declarations(R):
            | _TARGET_RESOLUTION_TOOL_ADDITIONS | _CONFIRMATION_RELAY_TOOL_ADDITIONS
            | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
-           | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS,
+           | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
+           | _GEO_BINDING_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,
@@ -359,7 +367,8 @@ def _check_declarations(R):
            (_ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
-            | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS)
+            | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
+            | _GEO_BINDING_MUTATING_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
@@ -371,7 +380,7 @@ def _check_declarations(R):
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-            | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS)
+            | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
 

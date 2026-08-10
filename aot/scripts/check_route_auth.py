@@ -68,6 +68,11 @@ PUBLIC_ROUTES = {
     '/favicon.png': '파비콘',
     '/robots.txt': '크롤러 지침',
 
+    # 헬스체크 — 컨테이너 교체 중 "새 빌드가 실제로 서빙하는가"를 물어야 하는
+    # 자리라 로그인 세션을 전제할 수 없다. 익명 응답은 {status, docker} 뿐이고
+    # 버전·스키마 리비전은 로그인 세션 또는 AOT_HEALTH_KEY 를 요구한다.
+    '/health': '헬스체크(익명은 생존여부만, 상세는 인증/키 필요)',
+
     # 세션 부수 기능
     '/csrf-token': 'CSRF 토큰 재서명 — 세션이 이미 가진 비밀을 갱신할 뿐 새 권한 없음',
     '/logout': 'flask_login.login_required 가 붙어 있으나 목록 유지(가독성)',

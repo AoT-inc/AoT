@@ -26322,3 +26322,397 @@ msgstr "この地図のすべてのエリアに装置が接続されています
 #: aot_flask/templates/pages/geo/geo_design.html:0
 msgid "already imported"
 msgstr "取り込み済み"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Update connection settings"
+msgstr "接続情報を更新"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "This device has no connection settings to change."
+msgstr "この装置には変更できる接続情報がありません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "The device will be restarted so the new settings take effect."
+msgstr "新しい設定を反映するため装置を再起動します。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Connection settings updated"
+msgstr "接続情報を更新しました"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Nothing changed"
+msgstr "変更はありません"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "No device was given."
+msgstr "装置が指定されていません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "That device no longer exists."
+msgstr "その装置は既に存在しません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(kind)s entries have no connection settings to change."
+msgstr "%(kind)s には変更できる接続情報がありません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(field)s must be a number."
+msgstr "%(field)s は数値である必要があります。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "'%(field)s' is not a connection setting of this device."
+msgstr "'%(field)s' はこの装置の接続情報ではありません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(field)s is fixed by this device's driver and cannot be changed."
+msgstr "%(field)s はこの装置のドライバーが固定した値のため変更できません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "%(field)s is not a connection setting."
+msgstr "%(field)s は接続情報ではありません。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "The device is saved but stayed off. Turn it back on from its settings page."
+msgstr "保存はされましたが装置が再起動しませんでした。設定ページから有効化してください。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Connection settings changed (hardware swap)."
+msgstr "接続情報を変更しました（ハードウェア交換）。"
+
+#: aot/aot_flask/utils/utils_device_connection.py
+#, python-format
+msgid "Replaced: %(name)s"
+msgstr "交換: %(name)s"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Join across device replacements"
+msgstr "装置交換をまたいで接続"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Joins the segments recorded in the binding history. Past data is never rewritten."
+msgstr "バインディング履歴に記録された区間を接続します。過去のデータは書き換えません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Replace hardware"
+msgstr "ハードウェア交換"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Click on the map to set the facility center"
+msgstr "地図で施設の中心をクリックしてください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A device was removed here but the fitting stayed. Select a row to open it and pick a device."
+msgstr "ここにあった装置は削除されましたが設備は残っています。行を選ぶとその設備を開いて装置を選べます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "device was deleted"
+msgstr "装置が削除されました"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Every fitting has a device."
+msgstr "すべての設備に装置が接続されています。"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Hardware changes"
+msgstr "ハードウェア変更"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Include the previous device in this spot"
+msgstr "同じ位置の以前の装置の値も含める"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Only applies to devices placed on a map. The values of the device that held the same spot before are appended; past data is never rewritten."
+msgstr "地図に配置した装置にのみ適用されます。同じ位置を担っていた以前の装置の値を接続します。過去のデータは書き換えません。"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "All areas"
+msgstr "すべての区域"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Site / Zone"
+msgstr "筆地・区域"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "All sites and zones"
+msgstr "すべて"
+
+#: aot/aot_flask/templates/pages/graph-async.html
+msgid "Sites"
+msgstr "筆地"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Zone status"
+msgstr "区域の状態"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Facilities"
+msgstr "施設"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Today"
+msgstr "今日"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Scheduled"
+msgstr "予定作業"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Offline"
+msgstr "無応答"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Nothing to show yet"
+msgstr "表示できるものがまだありません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Now"
+msgstr "現在"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Sensors responding"
+msgstr "センサー応答"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No sensor readings"
+msgstr "測定値なし"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Deviation from target"
+msgstr "目標との差"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Go to site"
+msgstr "上位の筆地へ"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Attention"
+msgstr "注意"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Last run"
+msgstr "前回の作動"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Next run"
+msgstr "予約"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Photo"
+msgstr "写真"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Add Photo"
+msgstr "写真を追加"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Change Photo"
+msgstr "写真を変更"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Go up"
+msgstr "上位へ"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Channels"
+msgstr "チャンネル"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Failed to load information"
+msgstr "情報を読み込めませんでした"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "No records"
+msgstr "記録なし"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Site list"
+msgstr "筆地一覧"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js
+msgid "Contents"
+msgstr "構成"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Running Image"
+msgstr "実行中のイメージ"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Could not read the published image list from the container registry, "
+"so update availability is unknown. Check the network connection and "
+"try again."
+msgstr "コンテナレジストリから公開イメージ一覧を読み取れず、アップデートの有無を判定できません。ネットワーク接続を確認して再試行してください。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "A new version is available and its image has been published."
+msgstr "新しいバージョンがあり、イメージも公開されています。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The installed version is the latest version published to the container "
+"registry."
+msgstr "インストール済みのバージョンが、コンテナレジストリに公開されている最新バージョンです。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "This is a Docker deployment, so the update is applied on the host."
+msgstr "Docker 配備のため、アップデートはホスト側で適用します。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The one-click update button requires the optional updater service, "
+"which is not running on this system."
+msgstr "ワンクリック更新ボタンには任意導入のアップデータサービスが必要ですが、このシステムでは動作していません。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"To update, run the following on the host in the directory holding the "
+"compose file, after setting the desired version in AOT_IMAGE_TAG:"
+msgstr ""
+"アップデートするには、AOT_IMAGE_TAG に目的のバージョンを設定した上で、ホストの compose "
+"ファイルがあるディレクトリで次を実行してください:"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Data (database, uploaded files, backups) lives in Docker volumes and "
+"is preserved across image swaps. The database schema is migrated "
+"automatically when the new containers start."
+msgstr ""
+"データ（データベース、アップロードファイル、バックアップ）は Docker "
+"ボリュームにあり、イメージを入れ替えても保持されます。データベースのスキーマは新しいコンテナの起動時に自動で移行されます。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Published images"
+msgstr "公開イメージ"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"In-app upgrade is not available in Docker. On the host, pull the new "
+"image and recreate the containers (docker compose pull && docker "
+"compose up -d) instead."
+msgstr ""
+"Docker ではアプリ内からのアップグレードはできません。ホストで新しいイメージを pull し、コンテナを作り直してください "
+"(docker compose pull && docker compose up -d)。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "AoT is currently updating."
+msgstr "AoT をアップデートしています。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The containers are being recreated on the new image. The web interface "
+"may briefly become unreachable; this page reconnects on its own."
+msgstr "新しいイメージでコンテナを作り直しています。Web 画面が一時的に切れることがありますが、このページは自動で再接続します。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"A backup is taken before the image is swapped. If the new version does "
+"not come up, the previous one is restored automatically."
+msgstr "イメージを入れ替える前にバックアップを取得します。新しいバージョンが正常に起動しない場合は、以前のバージョンへ自動で復旧します。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"A backup is taken before the image is swapped, and the previous "
+"version is restored automatically if the new one does not come up."
+msgstr "イメージを入れ替える前にバックアップを取得し、新しいバージョンが起動しない場合は以前のバージョンへ自動で復旧します。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Last update attempt"
+msgstr "直近のアップデート結果"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Pre-update backup"
+msgstr "アップデート前のバックアップ"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Update to %(version)s"
+msgstr "%(version)s へアップデート"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The containers will be recreated on the new image and control will "
+"pause briefly. A backup is taken first. Continue?"
+msgstr "新しいイメージでコンテナを作り直すため、制御が一時的に停止します。先にバックアップを取得します。続行しますか？"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"In-app upgrade is not available without the updater service. On the "
+"host, pull the new image and recreate the containers (docker compose "
+"pull && docker compose up -d) instead."
+msgstr ""
+"アップデータサービスがないとアプリ内からのアップグレードはできません。ホストで新しいイメージを pull し、コンテナを作り直してください "
+"(docker compose pull && docker compose up -d)。"
+
+#: aot/aot_flask/routes_admin.py
+msgid "An update is already in progress."
+msgstr "すでにアップデートが進行中です。"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"The update has been requested. The containers will be recreated on the "
+"new image; this page shows progress."
+msgstr "アップデートを要求しました。新しいイメージでコンテナを作り直し、進行状況はこのページに表示されます。"
+
+#: aot/aot_flask/routes_admin.py
+msgid "Waiting for the updater to start..."
+msgstr "アップデータの開始を待っています..."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Updated successfully."
+msgstr "アップデートに成功しました。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "The update failed and the previous version was restored."
+msgstr "アップデートに失敗し、以前のバージョンへ復旧しました。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "The update failed."
+msgstr "アップデートに失敗しました。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Install updates automatically"
+msgstr "アップデートを自動でインストール"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Update time"
+msgstr "アップデート時刻"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Checked once a day at this local time. If a newer version has been "
+"published, it is installed the same way the button above does it: back "
+"up, swap the image, verify, and restore the previous version if it "
+"does not come up."
+msgstr ""
+"毎日この時刻（現地時刻）に一度確認します。新しいバージョンが公開されていれば、上のボタンと同じ手順で導入します — "
+"バックアップし、イメージを入れ替え、確認し、起動しなければ以前のバージョンへ戻します。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"Control pauses for a few minutes while the containers restart, so pick "
+"an hour when nothing important is running."
+msgstr "コンテナが再起動する数分間は制御が停止するため、重要な動作がない時刻を選んでください。"
+
+#: aot/aot_flask/routes_admin.py
+msgid "Enter the update time as HH:MM (24-hour), e.g. 03:00."
+msgstr "アップデート時刻を HH:MM（24時間表記）で入力してください。例: 03:00"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"Automatic updates are on. A published update will be installed at "
+"%(time)s each day."
+msgstr "自動アップデートを有効にしました。毎日 %(time)s に公開済みのアップデートを導入します。"
+
+#: aot/aot_flask/routes_admin.py
+msgid "Automatic updates are off."
+msgstr "自動アップデートを無効にしました。"
+
+#: aot/aot_flask/routes_admin.py
+msgid ""
+"Saved, but the daemon could not be notified. The new schedule takes "
+"effect after the daemon restarts."
+msgstr "保存しましたが、デーモンへ通知できませんでした。新しいスケジュールはデーモンの再起動後に反映されます。"

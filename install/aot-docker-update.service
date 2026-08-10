@@ -1,0 +1,46 @@
+[Unit]
+# Host-side alternative to the updater sidecar (docker/docker-compose.updater.yml).
+#
+# Same script, same behaviour -- but nothing in the AoT stack holds the Docker
+# socket. The privilege stays with root on the host, where it already is.
+# Use this instead of the sidecar if you would rather not run a container that
+# can start containers.
+#
+# Install (as root), for a checkout at /opt/AoT:
+#   cp install/aot-docker-update.service /etc/systemd/system/
+#   cp install/aot-docker-update.timer   /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now aot-docker-update.timer
+#
+# The service polls the shared state directory the same way the sidecar does,
+# so the Admin -> Upgrade button works with either. The directory lives in the
+# aot_data volume; find it with:
+#   docker volume inspect aot_aot_data --format '{{.Mountpoint}}'
+# and set AOT_UPDATE_DIR to <mountpoint>/update below.
+Description=AoT Docker updater (one poll)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/AoT
+
+# Absolute path of the checkout holding docker/docker-compose.prod.yml.
+Environment=AOT_PROJECT_DIR=/opt/AoT
+Environment=AOT_COMPOSE_FILE=docker/docker-compose.prod.yml
+# Shared state directory inside the aot_data volume (see the note above).
+Environment=AOT_UPDATE_DIR=/var/lib/docker/volumes/aot_aot_data/_data/update
+# On the host the compose network name is not resolvable, so reach the app
+# through its published port instead of the service name.
+Environment=AOT_HEALTH_URL=http://127.0.0.1:8084/health
+# Must match AOT_HEALTH_KEY in docker/.env, or the updater cannot tell which
+# build is serving and will refuse to update rather than guess.
+EnvironmentFile=-/opt/AoT/docker/.env
+
+# One pass: heartbeat, act on a pending request if there is one, exit. The
+# timer decides how often. A long-running --loop under systemd would work too,
+# but oneshot means a wedged run cannot silently stop polling forever.
+ExecStart=/opt/AoT/docker/updater/aot_docker_update.sh --once
+
+[Install]
+WantedBy=multi-user.target

@@ -170,6 +170,284 @@ def device_ids_in_shape(shape):
     return result
 
 
+def area_choices():
+    """필터용 필지·구역 목록 — `[{'value','item','kind'}]`, 종류별로 묶어 쓴다.
+
+    **필지(site)와 구역(zone)을 한 덩어리로 내보내면 안 된다.** 이름순으로
+    섞으면 '1-1'~'1-9' 같은 구역이 위를 다 차지하고 필지는 아래로 밀려, 화면만
+    보고는 필지가 아예 없는 줄 안다(실제로 그렇게 보고받았다). 호출자가
+    optgroup 으로 가를 수 있도록 `kind` 를 함께 준다.
+
+    이름이 없는 도형은 뺀다. 목록에서 고르는 수단은 이름뿐이라 `(site 1)`
+    같은 자리표시를 넣어 봐야 사용자가 그것이 무엇인지 알 방법이 없고, 로컬
+    실측에서 12개나 되어 정작 이름 있는 필지를 목록 아래로 밀어냈다.
+
+    같은 이름의 구역이 여러 지도에 있는 것은 정상이므로(1-1 하우스는 농장마다
+    있다) 지도 이름을 함께 보여준다.
+
+    **고를 것이 아무것도 없는 구역은 내보내지 않는다.** 로컬 실측에서 36개 중
+    25개가 장치도 노트도 없었는데, 그런 항목을 고르면 모든 목록이 통째로 비어
+    사용자는 "필터가 고장났다"로 읽는다. 측정값 없는 복합장치를 빼는 것과 같은
+    이유다. 판정은 마커·바인딩·노트만 보는 싼 것으로 한다 — 참조(PID·함수)는
+    이미 걸린 장치가 있어야 성립하므로 비어 있음 판정을 뒤집지 못한다.
+    """
+    from aot.databases.models import GeoMap
+
+    maps = {m.unique_id: (m.name or '') for m in GeoMap.query.all()}
+    rows = GeoShape.query.filter(
+        GeoShape.type.in_(_CONTAINER_TYPES)).order_by(GeoShape.id).all()
+
+    out = []
+    for shape in rows:
+        props = (_feature(shape).get('properties') or {})
+        name = (props.get('label_name') or props.get('name') or '').strip()
+        if not name:
+            continue
+        if not _area_has_anything(shape):
+            continue
+        where = maps.get(shape.geo_id) or ''
+        out.append({'value': shape.unique_id,
+                    'kind': shape.type,
+                    'item': ('%s · %s' % (where, name)) if where else name})
+    out.sort(key=lambda o: o['item'])
+    return out
+
+
+def _area_has_anything(shape):
+    """이 구역을 골랐을 때 화면에 뭐라도 남는가 — 싼 판정.
+
+    장치가 없어도 노트가 있으면 고를 값이 있다("3-2 구역의 기록만 보기").
+    둘 다 없으면 고르는 순간 모든 목록이 빈다.
+    """
+    from aot.databases.models import Notes
+
+    inside = {sh.unique_id for sh in _shapes_inside(shape)}
+    inside.add(shape.unique_id)
+    if device_ids_in_shape(shape) or _bound_device_ids(inside):
+        return True
+
+    # 공간에 붙은 노트. 좌표로만 찍힌 노트는 여기서 보지 않는다 — 그것까지
+    # 보려면 폴리곤 판정을 한 번 더 돌려야 하고, 로컬 실측에서 2건뿐이라
+    # 목록을 두 배로 느리게 만들 값이 아니다.
+    return Notes.query.filter(
+        Notes.target_id.in_(list(inside))).first() is not None
+
+
+def _shapes_inside(area_shape):
+    """구역 폴리곤 안에 있는 같은 지도의 도형들(자기 자신 포함).
+
+    판정은 대표점(representative point)으로 한다. 완전 포함을 요구하면 경계에
+    걸친 시설이 빠지고, 교차를 허용하면 옆 구역이 딸려 온다.
+    """
+    from shapely.geometry import shape as shapely_shape
+
+    geom = _feature(area_shape).get('geometry') or {}
+    if geom.get('type') not in ('Polygon', 'MultiPolygon'):
+        return []
+    try:
+        poly = shapely_shape(geom)
+    except Exception:
+        return []
+
+    out = []
+    for other in GeoShape.query.filter(
+            GeoShape.geo_id == area_shape.geo_id).all():
+        if other.unique_id == area_shape.unique_id:
+            out.append(other)
+            continue
+        g = _feature(other).get('geometry') or {}
+        if not g.get('type'):
+            continue
+        try:
+            if poly.contains(shapely_shape(g).representative_point()):
+                out.append(other)
+        except Exception:
+            continue
+    return out
+
+
+def _bound_device_ids(shape_uuids):
+    """도형들에 바인딩된 장치 + 그 도형에 놓인 시설의 설비에 바인딩된 장치.
+
+    마커만 보면 안 되는 이유: 로컬 실측에서 출력 16개 중 마커가 있는 것은 1개,
+    PID 는 0개다. 마커는 "지도에 점을 찍었다"는 뜻일 뿐이고, 구역을 담당하는
+    장치는 보통 구역 폴리곤이나 시설 설비에 매여 있다.
+    """
+    from aot.databases.models import GeoBinding, GeoFacility
+
+    if not shape_uuids:
+        return set()
+
+    ids = {b.device_id for b in GeoBinding.query.filter(
+        GeoBinding.spatial_kind == 'shape',
+        GeoBinding.spatial_id.in_(list(shape_uuids)),
+        GeoBinding.valid_to.is_(None)).all()}
+
+    facilities = [f.unique_id for f in GeoFacility.query.filter(
+        GeoFacility.shape_uuid.in_(list(shape_uuids))).all()]
+    for fac in facilities:
+        for b in GeoBinding.query.filter(
+                GeoBinding.spatial_id.like(fac + ':%'),
+                GeoBinding.valid_to.is_(None)).all():
+            ids.add(b.device_id)
+    return {i for i in ids if i}
+
+
+def _referencing_device_ids(known):
+    """이미 구역 안이라고 판정된 장치들을 **참조하는** PID·함수.
+
+    PID 는 자기 마커를 갖는 일이 거의 없다(로컬 2개 중 0개). 그런데 그 PID 가
+    읽는 센서와 움직이는 출력이 이 구역 안이면, 그 PID 는 이 구역의 것이다 —
+    마커만 보면 구역을 고르는 순간 PID 목록이 통째로 비고, 사용자는 "필터가
+    고장났다"로 읽는다.
+
+    함수(CustomController)의 참조는 custom_options JSON 에 자유 형식으로
+    들어 있어 스키마가 없다. 그래서 값 안에서 uuid 를 훑어 맞춰 본다 —
+    정밀하지는 않지만 빠뜨리는 쪽보다 낫고, 남의 구역 것을 끌어오려면 그
+    함수가 실제로 그 장치를 가리키고 있어야 한다.
+    """
+    import json as _json
+
+    from aot.databases.models import CustomController, PID
+
+    if not known:
+        return set()
+
+    extra = set()
+    for pid in PID.query.all():
+        refs = {(pid.measurement or '').split(',')[0],
+                pid.raise_output_id or '', pid.lower_output_id or ''}
+        if refs & known:
+            extra.add(pid.unique_id)
+
+    for fn in CustomController.query.all():
+        raw = fn.custom_options or ''
+        if not raw:
+            continue
+        try:
+            blob = _json.dumps(_json.loads(raw))
+        except Exception:
+            blob = raw
+        if any(dev in blob for dev in known):
+            extra.add(fn.unique_id)
+    return extra
+
+
+def device_ids_in_area(shape_uuid):
+    """구역/필지 uuid → 그 안에 속한 장치 id 집합. 도형을 못 찾으면 None.
+
+    None 은 "아무것도 없다"가 아니라 **"거르지 않는다"** 이다 — 둘을 같은
+    값으로 접으면 지워진 구역을 필터로 들고 있을 때 화면이 텅 빈다.
+
+    소속 판정은 네 겹이다. 하나만 쓰면 목록이 통째로 빈다:
+
+    1. **마커** — 폴리곤 안에 위치 점이 찍힌 장치.
+    2. **바인딩** — 그 안의 도형(구역 폴리곤)·시설 설비가 맡긴 장치. 실측상
+       이쪽이 훨씬 두껍다(출력 16개 중 마커는 1개뿐이다).
+    3. **그릇** — 복합장치가 안에 있으면 그 하위 Input/Output. 하위 장치는
+       보통 자기 마커가 없어(그릇만 지도에 놓는다) 1·2 로는 빠지는데, 그러면
+       "이 구역의 값"에서 정작 값을 재는 것들이 사라진다.
+    4. **참조** — 위에서 모인 장치를 읽거나 움직이는 PID·함수.
+    """
+    from aot.databases.models import Input, Output
+
+    shape = GeoShape.query.filter(GeoShape.unique_id == shape_uuid).first()
+    if shape is None:
+        return None
+
+    inside = _shapes_inside(shape)
+    ids = set(device_ids_in_shape(shape))
+    ids |= _bound_device_ids({sh.unique_id for sh in inside})
+    ids = {i for i in ids if i}
+    if not ids:
+        return ids
+
+    for model in (Input, Output):
+        rows = model.query.with_entities(model.unique_id).filter(
+            model.parent_device_id.in_(ids)).all()
+        ids.update(r[0] for r in rows)
+
+    ids |= _referencing_device_ids(ids)
+    return ids
+
+
+def note_ids_in_area(shape_uuid, device_ids=None):
+    """이 구역에 속한 노트 uuid 집합. 도형을 못 찾으면 None(= 거르지 않음).
+
+    노트는 세 가지로 구역에 매인다. 셋 다 봐야 한다:
+
+    - **공간에 붙은 노트**(`target_id` 가 도형·시설) — 로컬 실측에서 이쪽이
+      다수다(site 4 · zone 5 · GeoShape 3 · GeoFacility 4). 처음에 장치만
+      보고 만들었더니 구역을 골라도 노트가 0건이었다.
+    - **장치에 붙은 노트**(`target_id` 가 이 구역의 장치).
+    - **좌표**(`gps_lat`/`gps_lng`) — 무엇에도 매이지 않고 그 자리에 적은 노트.
+
+    태그 목록을 좁히는 데도, 그래프에 찍을 노트를 좁히는 데도 같은 집합을
+    쓴다. 목록만 좁히고 표시를 안 좁히면 필터가 거짓말이 된다 — 태그를 골랐을
+    때 남의 구역 노트가 함께 뜬다.
+    """
+    from shapely.geometry import Point, shape as shapely_shape
+
+    from aot.databases.models import Notes
+
+    shape = GeoShape.query.filter(GeoShape.unique_id == shape_uuid).first()
+    if shape is None:
+        return None
+
+    if device_ids is None:
+        device_ids = device_ids_in_area(shape_uuid) or set()
+
+    from aot.databases.models import GeoFacility
+
+    inside = {sh.unique_id for sh in _shapes_inside(shape)}
+    inside.add(shape.unique_id)
+    if inside:
+        inside |= {f.unique_id for f in GeoFacility.query.filter(
+            GeoFacility.shape_uuid.in_(list(inside))).all()}
+
+    poly = None
+    geom = _feature(shape).get('geometry') or {}
+    if geom.get('type') in ('Polygon', 'MultiPolygon'):
+        try:
+            poly = shapely_shape(geom)
+        except Exception:
+            poly = None
+
+    out = set()
+    for note in Notes.query.all():
+        if note.target_id and (note.target_id in device_ids
+                               or note.target_id in inside):
+            out.add(note.unique_id)
+            continue
+        if poly is not None and note.gps_lat is not None and note.gps_lng is not None:
+            try:
+                if poly.contains(Point(float(note.gps_lng), float(note.gps_lat))):
+                    out.add(note.unique_id)
+            except Exception:
+                continue
+    return out
+
+
+def tag_ids_for_notes(note_ids):
+    """주어진 노트들이 실제로 달고 있는 태그 uuid 집합.
+
+    태그 자체는 구역에 속하지 않는다("관수"는 농장 전체의 어휘다). 구역에
+    속하는 것은 노트이므로, 태그는 **그 구역에 노트가 하나라도 있을 때만**
+    목록에 남긴다 — 그러지 않으면 골라도 아무것도 안 뜨는 태그가 남는다.
+    """
+    from aot.databases.models import Notes
+
+    if not note_ids:
+        return set()
+    out = set()
+    for note in Notes.query.filter(Notes.unique_id.in_(list(note_ids))).all():
+        for tag in (note.tags or '').split(','):
+            tag = tag.strip()
+            if tag:
+                out.add(tag)
+    return out
+
+
 def maps_for_device(device_unique_id):
     """장치가 배치된 지도 uuid 목록 (배치 순서: geo_shape.id 오름차순).
 

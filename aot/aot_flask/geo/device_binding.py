@@ -597,6 +597,188 @@ def rebind(spatial_kind, spatial_id, role, device_kind, device_id,
                 commit=commit)
 
 
+def _available_channels(device_kind, device_id):
+    """새 장치가 실제로 가진 채널 번호 집합(문자열). 셀 수 없으면 None.
+
+    None 은 "채널이 없다"가 아니라 **"모른다"** 이다. 둘을 같은 값으로 접으면
+    채널을 셀 수 없는 종류를 교체할 때 모든 비-0 채널이 미배정으로 떨어진다.
+    """
+    from aot.databases.models import (
+        DeviceMeasurements, InputChannel, Output, OutputChannel)
+
+    if device_kind == 'output':
+        rows = OutputChannel.query.with_entities(OutputChannel.channel).filter(
+            OutputChannel.output_id == device_id).all()
+        # 채널 행이 아예 없는 단채널 출력이 있다 — 그때는 0번만 있는 것으로 본다.
+        if not rows:
+            exists = Output.query.with_entities(Output.unique_id).filter(
+                Output.unique_id == device_id).first()
+            return {'0'} if exists else None
+        return {str(r[0]) for r in rows if r[0] is not None}
+
+    if device_kind == 'input':
+        rows = InputChannel.query.with_entities(InputChannel.channel).filter(
+            InputChannel.input_id == device_id).all()
+        if not rows:
+            rows = DeviceMeasurements.query.with_entities(
+                DeviceMeasurements.channel).filter(
+                    DeviceMeasurements.device_id == device_id).all()
+        if not rows:
+            return None
+        return {str(r[0]) for r in rows if r[0] is not None}
+
+    # 복합장치·함수 계열은 채널이 하위 장치에 흩어져 있어 한 줄로 셀 수 없다.
+    return None
+
+
+def _marker_conflicts(bindings, new_device_id):
+    """교체하면 I2(지도·장치·채널당 마커 1개)를 깨뜨릴 자리들.
+
+    I2 유니크 인덱스는 `geo_shape.device_id` **컬럼**에 걸려 있는데 `rebind()`
+    는 바인딩만 옮긴다. 그래서 인덱스는 이 충돌을 보지 못한다 — 여기서
+    미리 봐야 한다. (C-4 로 컬럼이 죽으면 이 검사도 바인딩 기준으로 다시 쓴다.)
+    """
+    from aot.databases.models import GeoShape
+
+    out = []
+    for b in bindings:
+        if b.role != 'marker':
+            continue
+        shape = GeoShape.query.filter(
+            GeoShape.unique_id == b.spatial_id).first()
+        if shape is None:
+            continue
+        clash = GeoShape.query.filter(
+            GeoShape.geo_id == shape.geo_id,
+            GeoShape.device_id == new_device_id,
+            GeoShape.type == 'aot_device').first()
+        if clash is not None and clash.unique_id != shape.unique_id:
+            out.append(clash)
+    return out
+
+
+def _move_marker_column(spatial_id, new_device_id, channel_id):
+    """마커 도형의 레거시 `device_id` 를 바인딩과 같은 값으로 맞춘다.
+
+    바인딩만 옮기면 안 되는 이유는 정합성 미학이 아니라 고장이다:
+    `place_device`/`unplace_device` 는 마커를 `(geo_id, device_id, channel_id)`
+    컬럼으로 찾는다. 컬럼이 옛 장치를 가리킨 채 남으면 새 장치를 배치할 때
+    마커가 하나 더 생기고, 옛 장치를 치울 때 **새 장치의 마커가 지워진다.**
+    `binding-drift` 는 "레거시에만 있는 연결"만 보므로 이 어긋남을 못 잡는다.
+
+    ⚠ C-4(레거시 컬럼 제거)에서 이 함수는 통째로 사라진다. GB-6 명부가
+    비어야 끝이라는 뜻이 이것이다.
+    """
+    from aot.databases.models import GeoShape
+
+    shape = GeoShape.query.filter(GeoShape.unique_id == spatial_id).first()
+    if shape is None or shape.type != 'aot_device':
+        return
+    shape.device_id = new_device_id
+    # properties.unique_id 는 프런트가 엔트리를 식별하는 계약이다
+    # (채널 0 = 장치 uuid, 그 외 `uuid::N` — GB-5b). 여기를 안 고치면
+    # 마커를 눌렀을 때 없는 장치를 조회한다.
+    feat = shape.feature
+    if isinstance(feat, dict) and isinstance(feat.get('properties'), dict):
+        new_feat = dict(feat)
+        props = dict(new_feat['properties'])
+        ch = _norm_channel(channel_id)
+        props['unique_id'] = (new_device_id if ch == '0'
+                              else '%s::%s' % (new_device_id, ch))
+        new_feat['properties'] = props
+        shape.feature = new_feat
+
+
+def rebind_device(old_device_id, new_device_id, commit=False):
+    """장치 단위 교체 — 옛 장치가 맡던 **지도 자리 전부**를 새 장치로 옮긴다.
+
+    `rebind()` 는 슬롯 하나만 다룬다. 현장에서 "이 장치를 저 장치로 갈았다"는
+    말은 그 장치가 맡던 모든 자리를 뜻하므로, 그 쓸기를 여기서 한 트랜잭션에
+    묶는다. 결정 근거는 `docs/design/geo-device-binding.md` 「결정」 절.
+
+    **지도 도형(`spatial_kind='shape'`)만 옮긴다.** 시설 설비(fitting·actuator)
+    와 센서 역할(sensor_role·weather)은 시설 편집기가 정본이고 시설 JSON 에
+    쓴다 — 여기서 바인딩을 만들면 **다음 시설 저장이 그 배정을 지운다**(실측).
+    그래서 조용히 건너뛰지 않고 `refused` 로 돌려주고 이유를 말한다.
+
+    채널 축소(8채널 → 4채널)는 매핑 불가 채널을 `'replaced'` 로 종료해
+    미배정 자리로 남긴다. 거부하면 정당한 교체가 막히고, 그대로 두면 "장치가
+    붙어 있는데 아무 명령도 안 가는" 자리가 된다.
+
+    마커 충돌은 **아무것도 쓰기 전에** `BindingConflict` 로 거부한다. 옛 마커를
+    자동으로 지우거나 옮기지 않는다 — 좌표는 측량 결과이고, 둘 중 무엇이
+    맞는지는 사람만 안다.
+
+    반환: {'moved': [...], 'unassigned': [...], 'refused': [...],
+           'warnings': [...]}
+    """
+    old_uid = str(old_device_id or '').split('::')[0]
+    new_uid = str(new_device_id or '').split('::')[0]
+    if not old_uid or not new_uid:
+        raise BindingError('old_device_id 와 new_device_id 가 모두 필요하다')
+    if old_uid == new_uid:
+        raise BindingError('같은 장치로는 교체할 수 없다')
+
+    new_kind = resolve_device_kind(new_uid)
+    if new_kind is None:
+        raise BindingError('새 장치를 찾을 수 없다: %s' % new_uid)
+
+    rows = bindings_for_device(old_uid)
+    if not rows:
+        raise BindingNotFound(
+            '옛 장치에 현재 바인딩이 없다 — 옮길 자리가 없다: %s' % old_uid)
+
+    clashes = _marker_conflicts(rows, new_uid)
+    if clashes:
+        names = ', '.join(
+            (c.feature or {}).get('properties', {}).get('name') or c.unique_id[:8]
+            for c in clashes)
+        raise BindingConflict(
+            '새 장치가 같은 지도에 이미 마커를 갖고 있다(%s). 먼저 그 마커를 '
+            '정리한 뒤 교체할 것 — 좌표 둘 중 무엇이 맞는지는 사람만 안다.'
+            % names)
+
+    channels = _available_channels(new_kind, new_uid)
+    warnings = []
+    if channels is None:
+        warnings.append(
+            '새 장치의 채널 수를 셀 수 없어 채널 축소를 확인하지 못했다 — '
+            '옛 장치의 채널을 그대로 옮긴다.')
+
+    moved, unassigned, refused = [], [], []
+
+    for b in rows:
+        item = {'spatial_kind': b.spatial_kind, 'spatial_id': b.spatial_id,
+                'role': b.role, 'channel_id': b.channel_id}
+        if b.spatial_kind != 'shape':
+            item['reason'] = ('시설 편집기가 정본인 자리다. 여기서 바꾸면 다음 '
+                              '시설 저장이 되돌린다.')
+            refused.append(item)
+            continue
+
+        ch = _norm_channel(b.channel_id)
+        if channels is not None and ch not in channels:
+            unbind(b.unique_id, 'replaced')
+            item['reason'] = '새 장치에 %s번 채널이 없다 — 미배정 자리로 남긴다.' % ch
+            unassigned.append(item)
+            continue
+
+        rebind(b.spatial_kind, b.spatial_id, b.role, new_kind, new_uid,
+               channel_id=ch, measurement_id=b.measurement_id)
+        if b.role == 'marker':
+            _move_marker_column(b.spatial_id, new_uid, ch)
+        moved.append(item)
+
+    logger.info('[GeoBinding] rebind_device %s → %s: 이동 %d · 미배정 %d · 거부 %d',
+                old_uid, new_uid, len(moved), len(unassigned), len(refused))
+
+    if commit:
+        db.session.commit()
+    return {'old_device_id': old_uid, 'new_device_id': new_uid,
+            'moved': moved, 'unassigned': unassigned, 'refused': refused,
+            'warnings': warnings}
+
+
 def facility_binding_targets(facility):
     """저장된 시설 JSON 이 뜻하는 바인딩 집합.
 

@@ -447,6 +447,22 @@ TOOLS: List[Tool] = [
         "description": "Deletes a SINGLE geo shape (zone/area/marker) by unique_id. Requires human approval.",
         "usage_hint": "params.arguments: {shape_id}",
     }),
+    # --- 공간-장치 바인딩 (Phase D, docs/design/geo-device-binding.md) ---------
+    # rebind_device 는 config_only 로 면제하지 말 것. 설정 편집처럼 보이지만
+    # 결과는 "이 구역에 물을 주는 기계가 바뀐다" 이다 — 승인 없이 실행되면
+    # 사람이 모르는 사이에 다른 밸브가 열린다.
+    Tool('list_unbound_slots', handler='list_unbound_slots', manifest={
+        "tool_name": "list_unbound_slots",
+        "action_type": "virtual_tool_call",
+        "description": "Lists spatial slots (map zones, markers, facility fittings) that currently have NO device bound — what a device deletion or a swap left behind. The shape survives a device deletion on purpose, so these are real places waiting for a device, not errors. Read-only.",
+        "usage_hint": "params.arguments: {map_id (optional), facility_id (optional), kinds (optional — comma-separated: shape,fitting,actuator,sensor_role,weather; omit for all)}. Returns slots[{spatial_kind, spatial_id, role, name, last_device, ...}].",
+    }),
+    Tool('rebind_device', handler='rebind_device', mutating=True, manifest={
+        "tool_name": "rebind_device",
+        "action_type": "virtual_tool_call",
+        "description": "Moves every MAP slot held by one device (zones, markers) over to a different device, keeping the history of who held each slot. Use when hardware was physically replaced by a DIFFERENT device. Requires human approval — it changes which physical machine a zone commands. NOTE: if the same model was swapped in, updating the existing device's connection settings (DevEUI/address) is the better path and needs no rebinding at all. Facility fittings and sensor roles are refused here on purpose — the facility editor owns those, and a binding written here is erased by the next facility save.",
+        "usage_hint": "params.arguments: {old_device_id, new_device_id}. Returns moved[], unassigned[] (channels the new device does not have — left as unassigned slots), refused[] (facility slots), warnings[]. Refuses with conflict=true if the new device already has a marker on the same map.",
+    }),
     # --- Reverse geocoding (@ANCHOR: REVERSE_GEOCODE_TOOL, 2026-07-25) -----------
     # get_device_location / get_local_time only ever returned coordinates; there
     # was no way to ask "what's the address there". VWorld's getAddress API was

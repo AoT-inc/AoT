@@ -464,11 +464,62 @@
         }
         return fetch(url, opts);
     }
+    // ── 모달 응답도 공유 캐시를 탄다 ──────────────────────────────────────────
+    //
+    // 지도 레이어는 이미 AoTGeoData(파싱된 JSON 캐시 + 동시요청 합치기)를 쓰고
+    // 시설 모달은 AoTFacilityRuntime 을 쓴다. 필지·구역·장치 모달만 매번 생
+    // fetch 였다 — 콜드 실측 필지 요약 980ms, 구역 내용 280ms(구역은 서버
+    // 캐시도 없어 **열 때마다** 그 값이었다).
+    //
+    // 같은 통로로 옮기면 세 가지가 함께 온다: TTL 안의 재요청은 왕복 없음,
+    // 동시 요청 합치기(라벨 폴링과 클릭이 겹쳐도 한 번), 그리고 **호버 예열**.
+    function _modalUrl(kind, uuid, channel) {
+        if (!uuid) return null;
+        if (kind === 'site')  return '/api/geo/site/'  + encodeURIComponent(uuid) + '/summary';
+        if (kind === 'zone')  return '/api/geo/zone/'  + encodeURIComponent(uuid) + '/contents';
+        if (kind === 'device') {
+            return '/api/geo/device/' + encodeURIComponent(uuid) + '/detail?channel=' +
+                   encodeURIComponent(channel == null ? 0 : channel);
+        }
+        return null;
+    }
+
+    function modalFetch(kind, uuid, channel) {
+        var u = _modalUrl(kind, uuid, channel);
+        if (!u) return Promise.resolve({ ok: false, json: function () { return Promise.resolve(null); } });
+        return geoFetch(u);
+    }
+
+    // 라벨에 마우스가 닿는 순간 미리 받아 둔다. 올려놓고 누르기까지 보통
+    // 200~500ms 가 있고, 그 사이에 왕복이 끝나면 창은 값이 채워진 채로 열린다.
+    function warmModal(kind, uuid, channel) {
+        var u = _modalUrl(kind, uuid, channel);
+        if (u && window.AoTGeoData) window.AoTGeoData.prefetch([u]);
+    }
+
+    // 쓰기 직후의 재조회는 캐시를 타면 안 된다(방금 올린 사진이 안 보인다).
+    function invalidateModal(kind, uuid, channel) {
+        var u = _modalUrl(kind, uuid, channel);
+        if (u && window.AoTGeoData) window.AoTGeoData.invalidate(u);
+    }
+
+    // 예열은 지도가 다 그려진 뒤 한가할 때. 로드 순간에 끼워 넣으면 정작
+    // 타일·라벨이 밀린다(저사양 호스트에서 스레드풀을 함께 쓴다).
+    function _whenIdle(fn, delayMs) {
+        var run = function () { try { fn(); } catch (e) {} };
+        if (window.requestIdleCallback) {
+            setTimeout(function () { requestIdleCallback(run, { timeout: 4000 }); },
+                       delayMs || 0);
+        } else {
+            setTimeout(run, (delayMs || 0) + 500);
+        }
+    }
+
     function prefetchGeoLayers(wOpts, mapUuid, labelMapUuid) {
         function on(key) { const v = wOpts[key]; return v === true || v === 'true' || v === 1; }
         const urls = [];
-        if (on('show_site_shape')) urls.push('/api/geo/sites?format=geojson');
-        if (on('show_zone_shape')) urls.push('/api/geo/zones?format=geojson');
+        if (on('show_site_shape')) urls.push('/api/geo/sites?format=geojson' + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : ''));
+        if (on('show_zone_shape')) urls.push('/api/geo/zones?format=geojson' + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : ''));
         // Labels (label_aux markers) — loadGeoDesignLabels keys off vars.contentMapUuid,
         // which may differ from the shape mapUuid; prefetch so labels render early too.
         if (labelMapUuid && (on('show_site_label') || on('show_zone_label') || on('show_device_labels'))) {
@@ -498,6 +549,14 @@
             urls.forEach(function(u) { try { fetch(u); } catch (e) {} });
         }
     }
+
+    // 장치 상세 모달 진입점 다리.
+    // 모달을 여는 함수(_openDeviceModal)는 loadGeoJSONLayers 안에 있고, 마커
+    // 팝업을 만드는 createDevicePopup 은 그 바깥 형제 함수다 — 서로 스코프가
+    // 닿지 않는다. 팝업 HTML 을 만드는 쪽이 모달을 열 수 있도록 여기 참조를
+    // 남긴다(_showFacilityCenterOverlay 처럼 바깥에 두는 것이 더 깔끔하지만,
+    // 모달이 구역·시설 모달과 같은 상태 객체·헬퍼를 공유해서 함께 둔다).
+    var _deviceModalOpener = null;
 
     /**
      * Load GeoJSON layers (sites, zones, devices)
@@ -575,9 +634,11 @@
         }
 
         function _buildZonePopupHTML(zoneName, defSec) {
-            // defSec: initial active zone tab (zoverview / zdevices / zfunctions),
-            // mapped from the widget's popup_default_tab in _openZonePopup.
-            defSec = (defSec === 'zdevices' || defSec === 'zfunctions') ? defSec : 'zoverview';
+            // 탭 키·이름·순서는 시설 모달과 **같다**(overview/envctl/about).
+            // 예전에는 zone 만 zoverview/zdevices/zfunctions 를 쓰고 첫 탭 이름도
+            // [상태]여서, 시설에서 배운 화면 구조가 구역에서 통하지 않았다.
+            // 위젯 옵션 popup_default_tab 도 이 세 키를 그대로 쓰므로 매핑이 없다.
+            defSec = (defSec === 'envctl' || defSec === 'about') ? defSec : 'overview';
             function _zNav(sec, label) {
                 return '<button type="button" class="aot-act-tab-btn' +
                     (sec === defSec ? ' active' : '') + '" data-sec="' + sec + '">' + label + '</button>';
@@ -586,92 +647,102 @@
                 return '<div class="aot-bay-popup-pane" data-pane="' + sec + '"' +
                     (sec === defSec ? '' : ' style="display:none"') + '>' + inner + '</div>';
             }
-            return '<div class="aot-sensor-popup-header">' +
-                       '<span class="aot-sensor-popup-title">' + _escZ(zoneName || _tr('Zone')) + '</span>' +
-                   '</div>' +
+            return window.AoTMapPopup.buildModalHeader({
+                       name: zoneName || _tr('Zone'), up: true }) +
                    '<div class="aot-act-tabs-nav aot-bay-popup-nav">' +
-                       _zNav('zoverview', _tr('Status')) +
-                       _zNav('zdevices', _tr('Environment & Control')) +
-                       _zNav('zfunctions', _tr('Functions')) +
+                       _zNav('overview', _tr('Overview')) +
+                       _zNav('envctl', _tr('Environment & Control')) +
+                       _zNav('about', _tr('About')) +
                    '</div>' +
-                   _zPane('zoverview', _buildZoneSkel()) +
-                   _zPane('zdevices', '') +
-                   _zPane('zfunctions', '');
+                   _zPane('overview', _buildZoneSkel()) +
+                   _zPane('envctl', '') +
+                   _zPane('about', '');
         }
 
-        // [현황] 탭 — 사진 + 구역 정보 + 노트
+        // 노트 패널 열기 — [현황] 탭의 노트 블록이 쓴다. 패널이 모달에 가리므로
+        // 먼저 모달을 닫는다(시설 모달과 같은 처리).
+        function _openZoneNotesPanel(uid, zoneUuid, zoneName) {
+            var z2 = _zonePopupState[uid];
+            if (z2 && z2.popup) {
+                try { z2.popup.remove(); } catch (e) {}
+            }
+            window.dispatchEvent(new CustomEvent('open-notes', {
+                detail: { targetId: zoneUuid, targetType: 'GeoShape', name: zoneName || '' }
+            }));
+        }
+
+        // [현황] 탭 — 현재 환경 + 노트 (시설 [현황]과 같은 순서)
         function _renderZoneOverview(uid, pane, data, zoneUuid) {
             var z = data.zone || {};
             if (!window.AoTMapPopup) { return; }
-            pane.innerHTML = window.AoTMapPopup.buildZoneOverviewHtml(z);
+            pane.innerHTML = window.AoTMapPopup.buildZoneStatusHtml(z);
 
-            // 사진 업로드 wiring
-            var phBtn = pane.querySelector('.aot-ov-photo-btn');
-            var phInput = pane.querySelector('.aot-ov-photo-input');
-            if (phBtn && phInput) {
-                phBtn.addEventListener('click', function () { phInput.click(); });
-                phInput.addEventListener('change', function () {
-                    if (!phInput.files || !phInput.files[0]) return;
-                    var fd = new FormData();
-                    fd.append('photo', phInput.files[0]);
-                    phBtn.disabled = true;
-                    fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) + '/photo', {
-                        method: 'POST',
-                        headers: { 'X-CSRFToken': _csrfHeader() },
-                        body: fd
-                    })
-                    .then(function (r) { return r.json(); })
-                    .then(function (j) {
-                        phBtn.disabled = false;
-                        if (!j.ok) return;
-                        var img = pane.querySelector('.aot-ov-photo img');
-                        if (img) {
-                            img.src = j.photo_url;
-                        } else {
-                            // 사진 블록이 없던 경우 — 전체 개요 재렌더
-                            fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) + '/contents')
-                                .then(function (r) { return r.ok ? r.json() : null; })
-                                .then(function (d) {
-                                    if (d && d.ok) _renderZoneOverview(uid, pane, d, zoneUuid);
-                                })
-                                .catch(function () {});
-                        }
-                    })
-                    .catch(function () { phBtn.disabled = false; });
-                });
-            }
-
-            // 노트 패널 열기 함수
-            var zoneName = z.name || '';
-            function _openZoneNotesPanel() {
-                var z2 = _zonePopupState[uid];
-                if (z2 && z2.popup) {
-                    try { z2.popup.remove(); } catch (e) {}
-                }
-                window.dispatchEvent(new CustomEvent('open-notes', {
-                    detail: { targetId: zoneUuid, targetType: 'GeoShape', name: zoneName }
-                }));
-            }
-
+            var _openNotes = function () {
+                _openZoneNotesPanel(uid, zoneUuid, z.name || '');
+            };
             var noteBtn = pane.querySelector('.aot-ov-notes-open');
-            if (noteBtn) noteBtn.addEventListener('click', _openZoneNotesPanel);
+            if (noteBtn) noteBtn.addEventListener('click', _openNotes);
 
-            // 노트 목록 비동기 채움
             var notesList = pane.querySelector('.aot-ov-notes-list');
             if (notesList) {
                 fetch('/notes/target/' + encodeURIComponent(zoneUuid))
                     .then(function (r) { return r.ok ? r.json() : []; })
                     .then(function (notes) {
                         if (!pane.isConnected) return;
-                        window.AoTMapPopup.fillOverviewNotes(notesList, notes, _openZoneNotesPanel);
+                        window.AoTMapPopup.fillOverviewNotes(notesList, notes, _openNotes);
                     })
                     .catch(function () {});
             }
         }
 
-        // 현재 보이는 센서 차트 div 반환 (zdevices pane 내)
+        // [개요] 탭 — 사진 + 구역 정보 (시설 [개요]와 같은 순서)
+        function _renderZoneAbout(uid, pane, data, zoneUuid) {
+            var z = data.zone || {};
+            if (!window.AoTMapPopup) { return; }
+            pane.innerHTML = window.AoTMapPopup.buildZoneAboutHtml(z);
+
+            var phBtn = pane.querySelector('.aot-ov-photo-btn');
+            var phInput = pane.querySelector('.aot-ov-photo-input');
+            if (!phBtn || !phInput) return;
+            phBtn.addEventListener('click', function () { phInput.click(); });
+            phInput.addEventListener('change', function () {
+                if (!phInput.files || !phInput.files[0]) return;
+                var fd = new FormData();
+                fd.append('photo', phInput.files[0]);
+                phBtn.disabled = true;
+                fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) + '/photo', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': _csrfHeader() },
+                    body: fd
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (j) {
+                    phBtn.disabled = false;
+                    if (!j.ok) return;
+                    var img = pane.querySelector('.aot-ov-photo img');
+                    if (img) {
+                        img.src = j.photo_url;
+                    } else {
+                        // 사진 블록이 없던 경우 — [개요]만 재렌더.
+                        // 방금 쓴 직후라 캐시를 먼저 버린다.
+                        invalidateModal('zone', zoneUuid);
+                        modalFetch('zone', zoneUuid)
+                            .then(function (r) { return r.ok ? r.json() : null; })
+                            .then(function (d) {
+                                if (d && d.ok && pane.isConnected) {
+                                    _renderZoneAbout(uid, pane, d, zoneUuid);
+                                }
+                            })
+                            .catch(function () {});
+                    }
+                })
+                .catch(function () { phBtn.disabled = false; });
+            });
+        }
+
+        // 현재 보이는 센서 차트 div 반환 (envctl pane 내)
         function _zoneActiveChartDiv(popupEl) {
-            var devPane = popupEl.querySelector('.aot-bay-popup-pane[data-pane="zdevices"]');
+            var devPane = popupEl.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
             if (!devPane) return null;
             var charts = devPane.querySelectorAll('.aot-bay-sensor-chart');
             for (var i = 0; i < charts.length; i++) {
@@ -751,7 +822,7 @@
         function _selectZoneOutputOverlay(uid, popupEl, outputId, outputName) {
             var z = _zonePopupState[uid];
             if (!z) return;
-            var devPane = popupEl.querySelector('.aot-bay-popup-pane[data-pane="zdevices"]');
+            var devPane = popupEl.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
             var sensorChart = _zoneActiveChartDiv(popupEl);
 
             if (sensorChart) {
@@ -895,40 +966,51 @@
                         var rawLabel = out.channels.length > 1
                             ? out.name + ' – ' + ch.name
                             : out.name;
-                        var label = _escZ(rawLabel);
-                        var ctrl = canCtrl
-                            ? '<div class="aot-act-3btn">' +
-                              '<button type="button" class="aot-act-pbtn aot-output-settings"' +
-                              ' data-output-id="' + _escZ(out.unique_id) + '"' +
-                              ' data-channel="' + ch.channel + '"' +
-                              ' data-output-name="' + _escZ(rawLabel) + '"' +
-                              ' title="' + _tr('Set start/end time') + '">' + _tr('Settings') + '</button>' +
-                              '<label class="btn-toggle">' +
-                              '<input type="checkbox" class="btn-toggle-input aot-zone-output-toggle"' +
-                              ' data-output-id="' + _escZ(out.unique_id) + '"' +
-                              ' data-channel="' + ch.channel + '">' +
-                              '<span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>' +
-                              '</label>' +
-                              '</div>'
-                            : '';
-                        var drag = canCtrl
-                            ? '<span class="aot-act-drag-handle" title="' + _tr('Reorder') + '"><i class="fa fa-grip-lines"></i></span>'
-                            : '';
-                        html += '<div class="aot-act-row" data-slot="' + _escZ(out.unique_id) + '">' +
-                                '<div class="aot-act-line">' +
-                                drag +
-                                '<span class="aot-act-name" style="cursor:pointer"' +
+                        // 시설 액추에이터와 **같은 2행 골격**을 쓴다. 예전에는
+                        // 구역만 한 줄에 [설정][토글]을 몰아넣어, 같은 장치가
+                        // 구역 목록과 시설 목록에서 다르게 생겼다.
+                        var rtKey = out.unique_id + '::' + ch.channel;
+                        html += window.AoTMapPopup.buildOutputRow({
+                            slot: out.unique_id,
+                            name: rawLabel,
+                            drag: canCtrl,
+                            nameAttrs: ' style="cursor:pointer"' +
                                 ' data-output-id="' + _escZ(out.unique_id) + '"' +
-                                ' data-output-name="' + _escZ(rawLabel) + '">' +
-                                label + '</span>' +
-                                ctrl +
-                                '</div></div>';
+                                ' data-output-name="' + _escZ(rawLabel) + '"',
+                            primary: canCtrl
+                                ? '<label class="btn-toggle aot-act-toggle-right">' +
+                                  '<input type="checkbox" class="btn-toggle-input aot-zone-output-toggle"' +
+                                  ' data-output-id="' + _escZ(out.unique_id) + '"' +
+                                  ' data-channel="' + ch.channel + '">' +
+                                  '<span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>' +
+                                  '</label>'
+                                : '',
+                            // 시간 칸은 공용(AoTMapPopup.timeSlotHtml)이다 —
+                            // 시설·장치 모달과 같은 칸이라, 켜면 여기서도 곧바로
+                            // 타이머가 흐른다. deferLast: 마지막 작동 시간은
+                            // 아래 배치 한 방(_loadZoneOutputRuntimes)으로 온다.
+                            meta: window.AoTMapPopup.timeSlotHtml({
+                                      outputId: out.unique_id,
+                                      channel: ch.channel,
+                                      deferLast: true }) +
+                                  '<span class="aot-act-rt" data-rt-key="' +
+                                  _escZ(rtKey) + '"></span>',
+                            settings: canCtrl
+                                ? window.AoTMapPopup.scheduleButtonHtml({
+                                      outputId: out.unique_id,
+                                      channel: ch.channel,
+                                      name: rawLabel })
+                                : ''
+                        });
                     });
                 });
                 html += '</div>';
             } else {
-                html += '<div class="aot-act-empty">' + _tr('No devices') + '</div>';
+                html += window.AoTMapPopup.emptyLine(_tr('No devices'));
             }
+
+            // 기능 목록 — 별도 탭이었던 것을 이 탭 하단으로 흡수
+            html += _buildZoneFunctionsHtml(data, uid);
 
             // 상태 폴링(_fetchAndUpdateZoneOutputStates)이 재조회 없이 바로 쓸 수 있게
             // 이 팝업의 장치 id 목록과 렌더된 pane 을 상태 객체에 보관해 둔다.
@@ -936,6 +1018,10 @@
             z.devPane = pane;
 
             pane.innerHTML = html;
+
+            // 2행의 작동·예약 시간 — 모달을 열 때 한 번만. 5초 폴링에 얹으면
+            // influx 를 계속 두들긴다(서버 주석 참조).
+            _loadZoneOutputRuntimes(pane, outputs);
 
             // 드래그 정렬
             if (canCtrl && window.AoTActuatorOrder) {
@@ -957,16 +1043,50 @@
             }
         }
 
-        // [함수] 탭 렌더
-        function _renderZoneFunctions(pane, data, uid) {
+        // 출력 행 2행의 마지막 작동 시간·예약을 배치 한 번으로 채운다.
+        // 낱개로 물으면 장치 수만큼 influx 를 두들긴다. 자리는 렌더 때 이미
+        // 잡혀 있으므로 도착한 것만 갈아 끼운다.
+        function _loadZoneOutputRuntimes(pane, outputs) {
+            if (!pane || !outputs || !outputs.length || !window.AoTMapPopup) return;
+            var items = [];
+            outputs.forEach(function (out) {
+                (out.channels || []).forEach(function (ch) {
+                    items.push({ id: out.unique_id, channel: ch.channel });
+                });
+            });
+            if (!items.length) return;
+
+            fetch('/api/geo/output_runtimes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json',
+                           'X-CSRFToken': _csrfHeader() },
+                body: JSON.stringify({ items: items })
+            })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+                if (!j || !j.ok || !pane.isConnected) return;
+                pane.querySelectorAll('.aot-act-rt').forEach(function (cell) {
+                    var rt = j.runtimes[cell.dataset.rtKey];
+                    var row = cell.closest('.aot-act-row');
+                    window.AoTMapPopup.seedTimeSlot(
+                        row && row.querySelector('.aot-act-time'), rt);
+                    cell.innerHTML = window.AoTMapPopup.nextRunHtml(rt);
+                });
+            })
+            .catch(function () {});
+        }
+
+        // 기능 목록 — [환경·제어] 탭 하단 섹션. 예전에는 별도 탭이었는데,
+        // 시설은 탭이 3개(현황/환경·제어/개요)이고 구역만 4개라 같은 위치의
+        // 탭이 다른 것을 열었다. 기능은 "이 구역을 무엇이 움직이는가"이므로
+        // 장치 목록 바로 아래가 제자리다.
+        function _buildZoneFunctionsHtml(data, uid) {
             var canCtrl = _zoneCanCtrl(uid);
             var funcs = data.functions || [];
-            if (!funcs.length) {
-                pane.innerHTML = '<div class="aot-act-empty">' + _tr('No functions') + '</div>';
-                return;
-            }
+            if (!funcs.length) return '';
             var kindLabel = { 'custom': _tr('Custom'), 'function': _tr('Function'),
-                'conditional': _tr('Conditional'), 'trigger': _tr('Trigger'), 'pid': 'PID' };
+                'conditional': _tr('Conditional'), 'trigger': _tr('Trigger'),
+                'pid': 'PID', 'device': _tr('Device') };
             var html = '';
             funcs.forEach(function (fn) {
                 var kl = kindLabel[fn.kind] || fn.kind;
@@ -981,14 +1101,20 @@
                       '</label>'
                     : '<span class="aot-act-val-ro ' + (fn.is_activated ? 'aot-act-on' : 'aot-act-off') + '">' +
                       (fn.is_activated ? 'ON' : 'OFF') + '</span>';
+                // 복합장치(그릇)는 이름을 눌러 그 장치의 모달로 내려갈 수 있게
+                // 한다 — 안에 무엇이 들었는지는 거기서 본다.
+                var nameAttrs = (fn.kind === 'device')
+                    ? ' style="cursor:pointer" data-device-uuid="' + _escZ(fn.unique_id) +
+                      '" data-device-name="' + _escZ(fn.name) + '"'
+                    : '';
                 html += '<div class="aot-act-row">' +
                         '<div class="aot-act-line">' +
-                        '<span class="aot-act-name">' + _escZ(fn.name) +
+                        '<span class="aot-act-name"' + nameAttrs + '>' + _escZ(fn.name) +
                         ' <span class="aot-act-tag">' + _escZ(kl) + '</span></span>' +
                         ctrl +
                         '</div></div>';
             });
-            pane.innerHTML = html;
+            return '<div class="aot-act-group-header">' + _tr('Functions') + '</div>' + html;
         }
 
         // 이벤트 위임 — 탭 전환·센서 탭·장치 클릭·ON/OFF·함수 토글
@@ -1001,8 +1127,18 @@
                 var sensorTabBtn = e.target.closest('.aot-act-tab-btn[data-sensor-idx]');
                 if (sensorTabBtn && popupEl.contains(sensorTabBtn)) {
                     var idx = parseInt(sensorTabBtn.dataset.sensorIdx, 10);
-                    var devPane = popupEl.querySelector('.aot-bay-popup-pane[data-pane="zdevices"]');
+                    var devPane = popupEl.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
                     if (devPane) _activateZoneSensorTab(uid, devPane, idx);
+                    return;
+                }
+
+                // 복합장치 이름 클릭 → 그 장치의 모달 (구역 모달은 닫는다)
+                var devNameEl = e.target.closest('.aot-act-name[data-device-uuid]');
+                if (devNameEl && popupEl.contains(devNameEl)) {
+                    var z0 = _zonePopupState[uid];
+                    if (z0 && z0.popup) { try { z0.popup.remove(); } catch (err) {} }
+                    _openDeviceModal(uid, devNameEl.dataset.deviceUuid, '0',
+                                     devNameEl.dataset.deviceName || '');
                     return;
                 }
 
@@ -1027,8 +1163,8 @@
                     popupEl.querySelectorAll('.aot-bay-popup-pane').forEach(function (p) {
                         p.style.display = (p.dataset.pane === secKey) ? '' : 'none';
                     });
-                    if (secKey === 'zdevices') {
-                        var devPane2 = popupEl.querySelector('.aot-bay-popup-pane[data-pane="zdevices"]');
+                    if (secKey === 'envctl') {
+                        var devPane2 = popupEl.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
                         if (devPane2) {
                             var firstChart = devPane2.querySelector('.aot-bay-sensor-chart');
                             if (firstChart && firstChart.dataset.rendered !== '1') {
@@ -1140,6 +1276,11 @@
                                           'fault-background', 'hold-background',
                                           'unknown-background');
                     if (cls.cssClass) { row.classList.add(cls.cssClass); }
+                    // 2행 시간 칸도 같은 판정으로 따라간다 — 이걸 빼먹어서
+                    // 구역 목록만 켜고 꺼도 시간이 멈춰 있었다.
+                    window.AoTMapPopup.applyTimeSlot(
+                        row.querySelector('.aot-act-time'),
+                        { countsRuntime: cls.countsRuntime });
                 });
             })
             .catch(function () {});
@@ -1149,10 +1290,28 @@
             var z = _zonePopupState[uid];
             if (!z) return;
             if (z.pollTimer) { clearInterval(z.pollTimer); z.pollTimer = null; }
+            if (z.visHandler) {
+                document.removeEventListener('visibilitychange', z.visHandler);
+                z.visHandler = null;
+            }
             if (!z.outputIds || !z.outputIds.length) return;
             var refreshMs = ((_actLabelState[uid] || {}).refreshMs) || 5000;
             _fetchAndUpdateZoneOutputStates(uid);
             z.pollTimer = setInterval(function () { _fetchAndUpdateZoneOutputStates(uid); }, refreshMs);
+
+            // 백그라운드 탭에서는 setInterval 이 분당 1회 수준으로 스로틀된다.
+            // 모달을 탭 두 개에 띄워 놓고 한쪽에서 켜면 다른 쪽이 한참 옛 상태로
+            // 남는다 — 돌아오는 순간 바로 맞춘다.
+            z.visHandler = function () {
+                if (document.visibilityState !== 'visible') return;
+                var z2 = _zonePopupState[uid];
+                if (!z2 || !z2.popup) {
+                    document.removeEventListener('visibilitychange', z.visHandler);
+                    return;
+                }
+                _fetchAndUpdateZoneOutputStates(uid);
+            };
+            document.addEventListener('visibilitychange', z.visHandler);
         }
 
         // 장치 시작/종료 예약 — 공용 모듈(AoTMapPopup.openOutputSchedule) 위임.
@@ -1174,11 +1333,10 @@
             var st = _zonePopupState[uid] || {};
             if (st.popup) { try { st.popup.remove(); } catch (e) {} }
 
-            // Apply the widget's popup_default_tab to the zone popup. Facility tab keys
-            // (overview/envctl/about) map onto zone tab keys; 'about' has no zone
-            // equivalent so it falls back to the Status tab.
-            var _zdt = (_actLabelState[uid] || {}).popupDefaultTab;
-            var zoneDefSec = (_zdt === 'envctl') ? 'zdevices' : 'zoverview';
+            // 위젯 옵션 popup_default_tab 을 그대로 쓴다 — 구역 탭 키가 시설과
+            // 같아지면서 매핑이 필요 없어졌다(예전에는 'about' 에 해당하는 구역
+            // 탭이 없어 [상태]로 떨어졌다).
+            var zoneDefSec = (_actLabelState[uid] || {}).popupDefaultTab || 'overview';
 
             var popup = _showFacilityCenterOverlay(_buildZonePopupHTML(zoneName, zoneDefSec), uid);
             _zonePopupState[uid] = { popup: popup, zoneUuid: zoneUuid,
@@ -1192,11 +1350,14 @@
                 var z = _zonePopupState[uid];
                 if (z && z.popup === popup) {
                     if (z.pollTimer) { clearInterval(z.pollTimer); }
+                    if (z.visHandler) {
+                        document.removeEventListener('visibilitychange', z.visHandler);
+                    }
                     _zonePopupState[uid] = {};
                 }
             });
 
-            fetch('/api/geo/zone/' + encodeURIComponent(zoneUuid) + '/contents')
+            modalFetch('zone', zoneUuid)
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (data) {
                     if (!data || !data.ok) return;
@@ -1206,27 +1367,27 @@
                     // 센서 목록 저장 (탭 지연 렌더에 사용)
                     z._sensors = data.sensors || [];
 
-                    // [현황] 탭
-                    var ovPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="zoverview"]');
+                    // [현황] 탭 — 현재 환경 + 노트
+                    var ovPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="overview"]');
                     if (ovPane) _renderZoneOverview(uid, ovPane, data, zoneUuid);
 
-                    // [센서·장치] 탭
-                    var devPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="zdevices"]');
+                    // [환경·제어] 탭 — 차트 + 장치 + 기능
+                    var devPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
                     if (devPane) {
                         _renderZoneDevices(uid, devPane, data, zoneUuid);
                         _startZoneOutputPolling(uid);
                     }
 
-                    // [함수] 탭
-                    var fnPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="zfunctions"]');
-                    if (fnPane) _renderZoneFunctions(fnPane, data, uid);
+                    // [개요] 탭 — 사진 + 구역 정보
+                    var abPane = body && body.querySelector('.aot-bay-popup-pane[data-pane="about"]');
+                    if (abPane) _renderZoneAbout(uid, abPane, data, zoneUuid);
 
                     _wireZoneTabs(body, uid, zoneUuid);
 
                     // When the popup opened directly on the devices tab (popup_default_tab
                     // = envctl), render its sensor charts now — normally deferred to the
                     // nav click handler.
-                    if (zoneDefSec === 'zdevices' && devPane) {
+                    if (zoneDefSec === 'envctl' && devPane) {
                         var firstChart = devPane.querySelector('.aot-bay-sensor-chart');
                         if (firstChart && firstChart.dataset.rendered !== '1') {
                             _activateZoneSensorTab(uid, devPane, 0);
@@ -1234,15 +1395,888 @@
                         _reapplyZoneOverlay(uid, popupEl);
                     }
 
-                    // 제목 갱신
+                    // 제목 갱신 + 상태 점
                     var titleEl = body && body.querySelector('.aot-sensor-popup-title');
                     if (titleEl && data.zone && data.zone.name) {
                         titleEl.textContent = data.zone.name;
                     }
+                    window.AoTMapPopup.applyStatusDot(body, data.zone && data.zone.status);
+
+                    // 상위 필지로 올라가는 화살표
+                    _wireUpBtn(body, uid, {
+                        uuid: data.zone && data.zone.site_uuid,
+                        name: data.zone && data.zone.site_name
+                    }, function () {
+                        var z2 = _zonePopupState[uid];
+                        if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
+                    });
                 })
                 .catch(function () {});
         }
         // ── End Zone modal ─────────────────────────────────────────────────────
+
+        // ── 상위(필지)로 올라가는 화살표 — 구역·시설 모달 제목줄 공용 ──────────
+        //
+        // site → 구역/시설로 내려가는 길은 필지 요약의 줄 클릭으로 열렸는데,
+        // 되돌아오는 길이 없어 지도에서 라벨을 다시 찾아 눌러야 했다. 계층이
+        // 한 방향으로만 흐르면 위젯 안에서 길을 잃는다.
+        //
+        // 버튼 자체는 공용 제목줄 빌더(AoTMapPopup.buildModalHeader)가 그린다.
+        // 상위를 아직 모르는 동안에는 hidden 으로 자리만 잡아 두고, 상위가
+        // 확인되면 아래에서 드러낸다 — 처음부터 보이면 상위가 없는 도형(필지에
+        // 안 담긴 구역)에서 눌러도 아무 일도 일어나지 않는 버튼이 남는다.
+        //
+        // closeFn: 지금 열려 있는 모달을 닫는 방법(계층마다 다르다).
+        // 모달 위에 모달을 쌓지 않는다 — 뒤로 가기가 어디로 가는지 모르게 된다.
+        //
+        // parent: { kind: 'site'|'zone'|'facility', uuid, name }
+        // kind 를 안 주면 'site' 로 본다(구역·시설 모달의 상위는 늘 필지다).
+        function _wireUpBtn(body, uid, parent, closeFn) {
+            var btn = body && body.querySelector('.aot-modal-up');
+            // kind 'sitelist' 는 uuid 가 없다 — 필지 위에는 개별 도형이 아니라
+            // "이 지도의 필지 목록"이 있다.
+            if (!btn || !parent) return;
+            if (!parent.uuid && parent.kind !== 'sitelist') return;
+            btn.hidden = false;
+            btn.title = parent.name || '';
+            btn.setAttribute('aria-label', _tr('Go up') + ': ' + (parent.name || ''));
+            // _loadOverview 는 자동제어 토글 뒤에도 다시 돌아온다 — 그때마다
+            // 리스너를 얹으면 한 번 눌러도 여러 번 열린다.
+            if (btn.dataset.wired === '1') return;
+            btn.dataset.wired = '1';
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (closeFn) { try { closeFn(); } catch (err) {} }
+                var kind = parent.kind || 'site';
+                if (kind === 'sitelist') {
+                    // 목록 모달은 툴바 버튼 핸들러 안에 인라인으로 들어 있어
+                    // 부를 함수가 없다 — 같은 사용자 동작(버튼 클릭)을 그대로 쓴다.
+                    var listBtn = document.getElementById('tool-site-list-' + uid);
+                    if (listBtn) listBtn.click();
+                } else if (kind === 'zone') {
+                    _openZonePopup(uid, parent.uuid, parent.name);
+                } else if (kind === 'facility') {
+                    var slices = _facilityBaySlices(uid, parent.uuid);
+                    _openBayPopup(uid, parent.uuid,
+                                  slices.length ? slices[0].id : null);
+                } else {
+                    _openSitePopup(uid, parent.uuid, parent.name);
+                }
+            });
+        }
+
+        // 시설의 bay 슬라이스 — 지도 칩이 쓰는 것과 같은 목록이어야 같은
+        // 구역이 열린다(bay 1개 시설은 bays 가 비어 있고 slices 가 만들어 낸다).
+        function _facilityBaySlices(uid, facilityUuid) {
+            var facs = (_actLabelState[uid] || {}).facilities || [];
+            for (var i = 0; i < facs.length; i++) {
+                if (facs[i] && facs[i].unique_id === facilityUuid) {
+                    return (window.AoTMapBay &&
+                            window.AoTMapBay.slices(facs[i])) || [];
+                }
+            }
+            return [];
+        }
+
+        // ── 구역 라벨의 대표값·상태 ────────────────────────────────────────────
+        //
+        // 시설 bay 칩이 이미 하는 일(2행: 이름 + 대표값, 밴드색 배경)을 구역
+        // 라벨로 올린다. 예전에는 구역 라벨이 이름만 달고 있어, 지도를 열어도
+        // "어디가 문제인가"를 알려면 구역을 하나씩 눌러 봐야 했다.
+        //
+        // 서버가 60초 캐시를 들고 있으므로 그보다 자주 물어도 새 값이 오지
+        // 않는다. 값이 없는 구역은 2행을 그리지 않는다 — "—" 만 있는 줄은
+        // 라벨만 키우고 아무것도 알려주지 않는다.
+        function _startZoneLabelStatus(uid, mapUuid) {
+            if (!mapUuid) return;
+            var inst = window.AoTWidgetInstances[uid];
+            if (!inst || inst._zoneStatusTimer) return;
+
+            function _tick() {
+                var i2 = window.AoTWidgetInstances[uid];
+                if (!i2 || !i2.map) return;
+                fetch('/api/geo/zones/status?map_uuid=' + encodeURIComponent(mapUuid))
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (j) {
+                        if (!j || !j.ok) return;
+                        // 라벨이 아직 안 만들어졌을 수 있다 — 이 조회는 구역
+                        // GeoJSON 이 도착하자마자 시작하는데, 라벨은 별도의
+                        // label_aux 조회가 끝나야 생긴다. 응답을 들고 있다가
+                        // 라벨이 생기면 그때 칠한다(예전에는 60초 뒤 다음
+                        // 갱신까지 값이 안 나왔다).
+                        var i3 = window.AoTWidgetInstances[uid];
+                        if (i3) i3._zoneStatus = j.zones || {};
+                        _applyZoneLabelStatusSoon(uid, 0);
+                    })
+                    .catch(function () {});
+            }
+            _tick();
+            inst._zoneStatusTimer = setInterval(_tick, 60000);
+        }
+
+        // 라벨이 나타날 때까지 짧게 재시도. 라벨 생성은 다른 비동기 경로라
+        // 정확한 완료 시점을 알 수 없다.
+        function _applyZoneLabelStatusSoon(uid, attempt) {
+            var inst = window.AoTWidgetInstances[uid];
+            if (!inst || !inst._zoneStatus) return;
+            var painted = _applyZoneLabelStatus(uid, inst._zoneStatus);
+            if (painted > 0 || attempt >= 6) return;
+            setTimeout(function () {
+                _applyZoneLabelStatusSoon(uid, attempt + 1);
+            }, 1500);
+        }
+
+        // 구역 라벨이 값을 달지, 이름만 달지 — **입력 라벨이 켜져 있는가**가
+        // 정한다.
+        //
+        // 입력 라벨(“1-1 28.7°C”)이 지도에 떠 있으면 구역 라벨의 대표값은 바로
+        // 옆 숫자를 한 번 더 말하는 것이다. 같은 값이 두 번 뜨면 어느 쪽이
+        // 기준인지 헷갈리고, 밴드색까지 두 겹으로 칠해져 지도가 시끄러워진다.
+        // 그래서 그때는 예전처럼 이름만 남기고, 입력 라벨을 껐을 때만 구역
+        // 라벨이 그 몫을 대신 진다.
+        function _zoneLabelDetailOn(inst) {
+            return !!(inst && inst._hiddenLabels && inst._hiddenLabels.input);
+        }
+
+        // 이름만 남기기 — 값 줄·문제 점·밴드색을 모두 걷는다. 토글은 언제든
+        // 뒤집히므로 "안 그리기"로는 부족하고 이미 칠한 것을 되돌려야 한다.
+        //
+        // 배경은 **비우는 게 아니라 구역 기본색으로 되돌린다.** 라벨의 기본
+        // 배경은 CSS 가 아니라 생성 시 인라인으로 박히므로(labelTheme 의 zone
+        // 색), 그냥 지우면 투명한 글자만 남는다. 원래 색은 만들 때
+        // dataset.labelColor 에 남겨 뒀다.
+        function _stripZoneLabel(el) {
+            var valEl = el.querySelector('.aot-zone-label-val');
+            if (valEl) { valEl.style.display = 'none'; valEl.textContent = ''; }
+            var dot = el.querySelector('.aot-zone-label-flag');
+            if (dot) dot.remove();
+            el.removeAttribute('title');
+            _resetZoneLabelColor(el);
+        }
+
+        function _resetZoneLabelColor(el) {
+            el.style.backgroundColor = el.dataset.labelColor || '';
+            el.style.color = 'white';
+        }
+
+        function _applyZoneLabelStatus(uid, zones) {
+            var inst = window.AoTWidgetInstances[uid];
+            if (!inst) return 0;
+            var byNode = inst._zonesByNodeId || {};
+            var container = inst.map && inst.map.getContainer();
+            if (!container) return 0;
+            var detail = _zoneLabelDetailOn(inst);
+
+            var painted = 0;
+            container.querySelectorAll('.geo-label-marker[data-zone-node-id]')
+                .forEach(function (el) {
+                    painted++;
+                    if (!detail) { _stripZoneLabel(el); return; }
+                    var uuid = byNode[el.dataset.zoneNodeId];
+                    var info = uuid && zones[uuid];
+                    var valEl = el.querySelector('.aot-zone-label-val');
+                    if (!valEl) return;
+                    if (!info || !info.rep || info.rep.value == null) {
+                        valEl.style.display = 'none';
+                        // 값이 사라졌으면 밴드색도 함께 물러난다 — 안 그러면
+                        // 센서가 끊긴 구역이 마지막 밴드색을 계속 달고 있다.
+                        _resetZoneLabelColor(el);
+                        _setZoneLabelFlag(el, info);
+                        return;
+                    }
+                    var rep = info.rep;
+                    valEl.style.display = '';
+                    valEl.textContent = rep.value + (rep.unit || '') +
+                                        (rep.more ? ' +' : '');
+                    // 밴드색은 지도 칩과 같은 함수가 낸다(경계·색표는 사용자가
+                    // 바꿀 수 있고 그 정본은 JS 와 --aot-band-* 토큰이다).
+                    if (window.AoTMapSensorLabels &&
+                        window.AoTMapSensorLabels.bandColor) {
+                        var c = window.AoTMapSensorLabels.bandColor(
+                            rep.key, +rep.value, null, rep.unit);
+                        if (c) {
+                            el.style.backgroundColor = c;
+                            el.style.color = window.AoTMapSensorLabels.textOn(c);
+                        }
+                    }
+                    _setZoneLabelFlag(el, info);
+                });
+            return painted;
+        }
+
+        // 문제 표시 — 주의·이상일 때만. 라벨은 좁아서 글자를 더 넣을 수 없으니
+        // 점 하나로 알리고, 자세한 것은 눌러서 본다(모달 제목줄과 같은 규칙).
+        function _setZoneLabelFlag(el, info) {
+            var head = el.querySelector('.aot-zone-label-head');
+            if (!head) return;
+            var status = info && info.status;
+            var dot = head.querySelector('.aot-zone-label-flag');
+            if (status !== 'warning' && status !== 'fault') {
+                if (dot) dot.remove();
+                el.removeAttribute('title');
+                return;
+            }
+            if (!dot) {
+                dot = document.createElement('span');
+                dot.className = 'aot-zone-label-flag';
+                head.appendChild(dot);
+            }
+            dot.className = 'aot-zone-label-flag is-' + status;
+            var iss = (info && info.issues) || {};
+            var sen = (info && info.sensors) || {};
+            var why = iss.comm_fault ? _tr('Offline') + ' ' + iss.comm_fault
+                    : iss.battery_low ? _tr('Battery') + ' ' + iss.battery_low
+                    : (sen.total ? sen.valid + '/' + sen.total : _tr('Attention'));
+            el.title = why;
+        }
+
+        // ── 장치 상세 모달 ─────────────────────────────────────────────────────
+        //
+        // 마커의 소형 팝업은 그대로 둔다 — "지도 위에서 바로 켜고 끈다"는 고유
+        // 가치가 있고, 팝업이 커지면 anchor 계산이 깨져 늘 아래로 붙는다(그래서
+        // 이력 차트를 안 넣었다). 대신 [자세히]로 이 모달을 연다: 요약은 팝업,
+        // 파고들기는 모달로 **역할을 나눈다.**
+        //
+        // 탭은 구역·시설과 같은 셋이다(현황/환경·제어/개요).
+        var _devicePopupState = {};
+        _deviceModalOpener = _openDeviceModal;
+
+        // 도형 클릭 핸들러(_installShapeClick)는 이 스코프 바깥에 있다 —
+        // 모달 여는 함수들을 인스턴스에 걸어 두어야 닿는다(_onZoneLabelClick 과
+        // 같은 방식).
+        (function () {
+            var _inst = window.AoTWidgetInstances[uniqueId];
+            if (!_inst) return;
+            _inst._openZoneModal = function (zoneUuid, zoneName) {
+                _openZonePopup(uniqueId, zoneUuid, zoneName);
+            };
+            _inst._openSiteModal = function (siteUuid, siteName) {
+                _openSitePopup(uniqueId, siteUuid, siteName);
+            };
+            _inst._openFacilityByShape = function (shapeUuid) {
+                _openFacilityFromShape(uniqueId, shapeUuid);
+            };
+            // 입력 라벨 토글(addLayerPanel 은 형제 스코프다)이 구역 라벨을
+            // 다시 칠하게 하는 통로. 캐시해 둔 상태를 쓰므로 재조회는 없다.
+            _inst._repaintZoneLabels = function () {
+                var i = window.AoTWidgetInstances[uniqueId];
+                _applyZoneLabelStatus(uniqueId, (i && i._zoneStatus) || {});
+            };
+        }());
+
+        // ── 장치 모달 — 탭 없는 단일 창 ────────────────────────────────────────
+        //
+        // 구역·시설은 "머무는 곳"이라 탭이 값을 한다(현황/환경·제어/개요).
+        // 장치는 그렇지 않다 — **켜고 끄거나 열고 닫는 창**이다. 탭 셋으로
+        // 나눠 놓으니 조작 하나 하려고 탭을 고르는 단계가 먼저 왔고, [개요]에
+        // 담긴 것(유형·채널)은 그 조작에 아무 보탬이 안 됐다.
+        //
+        // 그래서 한 창에 세 덩이만 세운다: 이력 → 제어(시간·듀티 포함) → 노트.
+        // 이력이 맨 위인 이유 — 켜기 전에 보는 것이 "지금까지 얼마나 돌았나"라서다.
+        // 제어 행은 구역·시설 목록과 같은 2행 골격(buildOutputRow)이라,
+        // 같은 장치가 어느 화면에서든 같은 모양으로 보인다.
+        function _buildDevicePopupHTML(name) {
+            return window.AoTMapPopup.buildModalHeader({ name: name, up: true }) +
+                   '<div class="aot-bay-popup-pane" data-pane="dmain">' +
+                   _buildZoneSkel() + '</div>';
+        }
+
+        function _openDeviceModal(uid, deviceUuid, channel, deviceName, onClose) {
+            var st = _devicePopupState[uid] || {};
+            if (st.popup) { try { st.popup.remove(); } catch (e) {} }
+
+            var popup = _showFacilityCenterOverlay(
+                _buildDevicePopupHTML(deviceName || _tr('Device')), uid);
+            _devicePopupState[uid] = { popup: popup, deviceUuid: deviceUuid,
+                                       channel: channel };
+            if (typeof onClose === 'function') { popup.on('close', onClose); }
+
+            var popupEl = popup.getElement();
+            var body = popupEl && popupEl.querySelector('.maplibregl-popup-content');
+
+            popup.on('close', function () {
+                var d = _devicePopupState[uid];
+                if (d && d.popup === popup) { _devicePopupState[uid] = {}; }
+            });
+
+            modalFetch('device', deviceUuid, channel)
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    var d = _devicePopupState[uid];
+                    if (!data || !data.ok || !d || d.popup !== popup || !body) return;
+                    d.detail = data;
+
+                    var titleEl = body.querySelector('.aot-sensor-popup-title');
+                    if (titleEl && data.device && data.device.name) {
+                        titleEl.textContent = data.device.name;
+                    }
+                    window.AoTMapPopup.applyStatusDot(body, data.status);
+
+                    _renderDeviceBody(body, uid, data, deviceUuid, channel);
+
+                    _wireUpBtn(body, uid, data.parent, function () {
+                        var d2 = _devicePopupState[uid];
+                        if (d2 && d2.popup) { try { d2.popup.remove(); } catch (e) {} }
+                    });
+                })
+                .catch(function () {});
+        }
+
+        // 한 창의 본문: 이력 → 제어(또는 구성) → 노트.
+        // 이력이 맨 위인 이유 — 지난 작동 기록이 곧 "이 장치가 어떻게 돌고
+        // 있었나"의 답이라 제어 판단의 근거가 된다. 그래서 제어 행에서는 과거
+        // 시간을 따로 나열하지 않는다(아래 시간 슬롯 설명 참조).
+        // 복합장치는 자기 가동 이력이 없다 — 안에 든 것들이 각자 갖는다.
+        function _renderDeviceBody(body, uid, data, deviceUuid, channel) {
+            var pane = body.querySelector('.aot-bay-popup-pane[data-pane="dmain"]');
+            if (!pane || !window.AoTMapPopup) return;
+            var P = window.AoTMapPopup;
+            var dev = data.device || {};
+            var name = dev.name || '';
+
+            var head = (dev.kind === 'device') ? _tr('Contents') : _tr('Control');
+            pane.innerHTML =
+                (dev.kind === 'device' ? '' :
+                 '<div class="aot-ov-block aot-device-hist">' +
+                     '<div class="aot-ov-sec-title">' + _tr('History') + '</div>' +
+                     '<div class="aot-bay-sensor-chart">' + _buildZoneSkel() + '</div>' +
+                 '</div>') +
+                '<div class="aot-ov-block aot-device-ctrl">' +
+                    '<div class="aot-ov-sec-title">' + head + '</div>' +
+                '</div>' +
+                '<div class="aot-ov-block aot-ov-notes">' +
+                    '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+                    '<span>' + _tr('Notes') + '</span>' +
+                    '<button type="button" class="aot-ov-notes-open">' +
+                    _tr('Create Note') + '</button></div>' +
+                    '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>' +
+                '</div>';
+
+            var host = pane.querySelector('.aot-device-ctrl');
+            if (dev.kind === 'device') {
+                host.insertAdjacentHTML('beforeend', _buildDeviceChildrenHtml(dev));
+                _wireDeviceChildren(host, uid);
+            } else {
+                host.insertAdjacentHTML('beforeend',
+                    _buildDeviceControlHtml(uid, data, deviceUuid, channel));
+                _wireDeviceControl(host, uid, dev, deviceUuid, channel,
+                                   dev.control_kind);
+                // 현재 상태·작동 시간은 여기서 붙인다 — 이것을 빼먹어서
+                // 켜 놓은 장치를 열어도 토글이 꺼진 채였고 시간이 멈춰 있었다.
+                _wireDeviceStateAndTime(host, uid, deviceUuid, channel);
+            }
+
+            var _openNotes = function () {
+                var d = _devicePopupState[uid];
+                if (d && d.popup) { try { d.popup.remove(); } catch (e) {} }
+                window.dispatchEvent(new CustomEvent('open-notes', {
+                    detail: { targetId: deviceUuid, targetType: 'device', name: name }
+                }));
+            };
+            var nb = pane.querySelector('.aot-ov-notes-open');
+            if (nb) nb.addEventListener('click', _openNotes);
+
+            var list = pane.querySelector('.aot-ov-notes-list');
+            if (list) {
+                fetch('/notes/target/' + encodeURIComponent(deviceUuid))
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (notes) {
+                        if (pane.isConnected) P.fillOverviewNotes(list, notes, _openNotes);
+                    })
+                    .catch(function () {});
+            }
+
+            _loadDeviceHistory(pane, deviceUuid, name);
+        }
+
+        // 가동 이력 — 구역·시설 모달과 같은 렌더러(renderOutputHistory)와 같은
+        // 엔드포인트를 쓴다. 응답이 올 때까지는 스켈레톤이 자리를 지킨다.
+        function _loadDeviceHistory(pane, deviceUuid, name) {
+            var chartEl = pane.querySelector('.aot-device-hist .aot-bay-sensor-chart');
+            if (!chartEl) return;
+            fetch('/api/geo/output/' + encodeURIComponent(deviceUuid) + '/history')
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (j) {
+                    if (!pane.isConnected) return;
+                    if (!j || !j.ok || !window.AoTSensorLabel ||
+                        !window.AoTSensorLabel.renderOutputHistory) {
+                        chartEl.innerHTML = window.AoTMapPopup.emptyLine(_tr('No records'));
+                        return;
+                    }
+                    window.AoTSensorLabel.renderOutputHistory(chartEl, j, name, {});
+                })
+                .catch(function () {
+                    chartEl.innerHTML = window.AoTMapPopup.emptyLine(
+                        _tr('Failed to load information'));
+                });
+        }
+
+        // 상태·시간 채우기 — 마커 팝업이 쓰던 로직 그대로다.
+        // 상태 판정은 공용 분류기(AoTOutputState.classify)를 쓴다: 'fault'(무응답)를
+        // truthy 로 접으면 오프라인 장치가 켜진 것처럼 보이고, pending 은 아직
+        // 확정이 아니라 스톱워치를 돌리면 안 된다.
+        //
+        // **모달이 열려 있는 동안 계속 따라간다.** 한 번만 읽으면, 다른 창이나
+        // 스케줄러가 장치를 켜고 꺼도 이 모달은 열던 순간의 상태에 멈춰 있다.
+        function _wireDeviceStateAndTime(host, uid, deviceUuid, channel) {
+            _syncDeviceState(host, deviceUuid, channel);
+
+            var refreshMs = ((_actLabelState[uid] || {}).refreshMs) || 5000;
+            var timer = setInterval(function () {
+                if (!host.isConnected) { clearInterval(timer); _detachVis(); return; }
+                _syncDeviceState(host, deviceUuid, channel);
+            }, refreshMs);
+
+            // 백그라운드 탭에서는 setInterval 이 분당 1회 수준으로 스로틀된다 —
+            // 탭을 두 개 띄워 놓고 한쪽에서 켜면 다른 쪽이 한참 옛 상태로 남는다.
+            // 돌아오는 순간 바로 한 번 맞춘다.
+            function _onVis() {
+                if (document.visibilityState !== 'visible') return;
+                if (!host.isConnected) { _detachVis(); return; }
+                _syncDeviceState(host, deviceUuid, channel);
+            }
+            function _detachVis() {
+                document.removeEventListener('visibilitychange', _onVis);
+            }
+            document.addEventListener('visibilitychange', _onVis);
+        }
+
+        function _syncDeviceState(host, deviceUuid, channel) {
+            var tgl = host.querySelector('.aot-device-toggle');
+            var durEl = host.querySelector('.aot-act-time');
+            var duty = host.querySelector('.aot-device-duty');
+            var valEl = host.querySelector('.aot-act-val');
+
+            Promise.all([
+                fetch('/outputstate_unique_id/' + deviceUuid + '/' + channel)
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .catch(function () { return null; }),
+                fetch('/output_started_at_public/' + deviceUuid + '/' + channel)
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .catch(function () { return null; })
+            ]).then(function (res) {
+                if (!host.isConnected) return;
+                var state = res[0], startData = res[1];
+                var cls = window.AoTOutputState
+                    ? window.AoTOutputState.classify(state)
+                    : { isOn: (state === 'on' || (typeof state === 'number' && state > 0)),
+                        isPending: (state === 'pending'), isFault: (state === 'fault'),
+                        countsRuntime: (state === 'on' || (typeof state === 'number' && state > 0)) };
+
+                // 서버 시계로 시작 시각을 되짚는다 — 클라이언트 시계가 틀어져
+                // 있어도 경과가 어긋나지 않게.
+                var startEpoch = null;
+                if (startData) {
+                    if (startData.started_at_epoch) {
+                        startEpoch = startData.started_at_epoch;
+                    } else if (startData.elapsed_sec > 0 && startData.server_now_epoch) {
+                        startEpoch = startData.server_now_epoch - startData.elapsed_sec;
+                    }
+                }
+
+                // 사용자가 막 만지고 있는 토글은 건드리지 않는다 — 누른 직후
+                // 서버가 아직 옛 값을 주면 눈앞에서 도로 튕긴다(구역 목록 폴링과
+                // 같은 규칙).
+                if (tgl && !tgl.disabled && document.activeElement !== tgl) {
+                    tgl.checked = !!cls.isOn;
+                }
+                if (tgl) {
+                    tgl.classList.toggle('aot-toggle-pending', !!cls.isPending);
+                    tgl.classList.toggle('aot-toggle-fault', !!cls.isFault);
+                }
+                if (duty && typeof state === 'number' &&
+                    document.activeElement !== duty) {
+                    duty.value = String(Math.round(state));
+                    if (valEl) valEl.textContent = Math.round(state) + '%';
+                }
+                // 시간 칸은 구역·시설과 같은 공용 칸이다 — 갈아 끼우는 규칙도
+                // 거기 한 벌뿐이다.
+                window.AoTMapPopup.applyTimeSlot(durEl, {
+                    countsRuntime: cls.countsRuntime, startEpoch: startEpoch });
+            });
+        }
+
+        // 제어 행 — 1행 이름+주 제어, 2행 예약 + 설정(시간·듀티).
+        // 주 제어는 장치 종류가 정한다: 개폐형은 닫기/정지/열기, PWM 은 듀티
+        // 슬라이더, 나머지는 ON/OFF 토글. 셋 다 같은 골격에 얹혀서 목록과
+        // 모양이 어긋나지 않는다.
+        function _buildDeviceControlHtml(uid, data, deviceUuid, channel) {
+            var dev = data.device || {};
+            var ck = dev.control_kind || 'on_off';
+            var canCtrl = _zoneCanCtrl(uid);
+            // 상세 응답이 runtime(경과·마지막 작동)을 이미 들고 오므로 시간
+            // 칸은 첫 렌더부터 제 값으로 선다 — 추가 요청이 필요 없다.
+            var timeSlot = window.AoTMapPopup.timeSlotHtml({
+                outputId: deviceUuid, channel: channel, runtime: data.runtime });
+            if (!canCtrl) {
+                return window.AoTMapPopup.buildOutputRow({
+                    slot: deviceUuid, name: dev.name || '', meta: timeSlot
+                });
+            }
+
+            var primary, settings = '';
+            if (ck === 'value_3way') {
+                primary = '<div class="aot-act-3btn">' +
+                    '<button type="button" class="aot-act-pbtn" data-act="close">' +
+                    _tr('Close') + '</button>' +
+                    '<button type="button" class="aot-act-pbtn" data-act="stop">' +
+                    _tr('Stop') + '</button>' +
+                    '<button type="button" class="aot-act-pbtn" data-act="open">' +
+                    _tr('Open') + '</button></div>';
+            } else if (ck === 'pwm') {
+                // 듀티는 값이 곧 상태다 — 1행에 현재값, 2행에 슬라이더.
+                primary = '<span class="aot-act-val">0%</span>';
+                settings = '<input type="range" class="aot-act-slider aot-device-duty"' +
+                           ' min="0" max="100" step="1" value="0">';
+            } else {
+                primary = '<label class="btn-toggle aot-act-toggle-right">' +
+                    '<input type="checkbox" class="btn-toggle-input aot-device-toggle">' +
+                    '<span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>' +
+                    '</label>';
+                // 시작/종료 예약은 on/off 에만 의미가 있다 — 개폐율·듀티에는
+                // "언제부터 언제까지 켬"이라는 구간이 성립하지 않는다.
+                if (dev.kind === 'output') {
+                    settings = window.AoTMapPopup.scheduleButtonHtml({
+                        outputId: deviceUuid, channel: channel,
+                        name: dev.name || '' });
+                }
+            }
+
+            // 2행 왼쪽은 시간 칸 하나다(꺼짐=마지막 작동 / 켜짐=타이머).
+            // 예약이 걸려 있으면 그 뒤에 덧붙인다 — 설정 버튼 바로 옆이라
+            // "지금 무슨 예약이 걸려 있는가"가 그 버튼의 현재 값으로 읽힌다.
+            return window.AoTMapPopup.buildOutputRow({
+                slot: deviceUuid,
+                name: dev.name || '',
+                primary: primary,
+                meta: timeSlot + window.AoTMapPopup.nextRunHtml(data.runtime),
+                settings: settings
+            });
+        }
+
+        // 복합장치는 그릇이다 — 안에 든 Input/Output 을 세우고, 줄을 누르면 그
+        // 장치의 모달로 내려간다(필지 요약의 구역 줄과 같은 문법).
+        function _buildDeviceChildrenHtml(dev) {
+            var kids = dev.children || [];
+            if (!kids.length) {
+                return window.AoTMapPopup.emptyLine(_tr('No devices'));
+            }
+            var label = { input: _tr('Sensors'), output: _tr('Devices') };
+            return kids.map(function (c) {
+                return '<div class="aot-site-row" data-child-uuid="' +
+                       _escZ(c.uuid) + '" data-child-name="' + _escZ(c.name) + '">' +
+                       '<span class="aot-site-row-name">' + _escZ(c.name) + '</span>' +
+                       '<span class="aot-site-row-state">' +
+                       _escZ(label[c.kind] || c.kind) + '</span></div>';
+            }).join('');
+        }
+
+        function _wireDeviceChildren(host, uid) {
+            host.querySelectorAll('.aot-site-row[data-child-uuid]').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    var d = _devicePopupState[uid];
+                    if (d && d.popup) { try { d.popup.remove(); } catch (e) {} }
+                    _openDeviceModal(uid, row.dataset.childUuid, '0',
+                                     row.dataset.childName || '');
+                });
+            });
+        }
+
+        function _wireDeviceControl(host, uid, dev, deviceUuid, channel, ck) {
+            var tgl = host.querySelector('.aot-device-toggle');
+            if (tgl) {
+                tgl.addEventListener('change', function () {
+                    var on = tgl.checked;
+                    tgl.disabled = true;
+                    if (window.AoTMapLoader && window.AoTMapLoader.toggleDevice) {
+                        window.AoTMapLoader.toggleDevice(deviceUuid, on, channel,
+                                                         dev.kind);
+                    }
+                    setTimeout(function () { tgl.disabled = false; }, 600);
+                });
+            }
+
+            if (ck === 'value_3way') {
+                host.querySelectorAll('.aot-act-pbtn[data-act]').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        var act = b.dataset.act;
+                        var val = act === 'open' ? 100 : (act === 'close' ? 0 : null);
+                        if (window.AoTMapLoader && window.AoTMapLoader.commandActuator) {
+                            window.AoTMapLoader.commandActuator(
+                                deviceUuid, act, val, channel, uid);
+                        }
+                    });
+                });
+            }
+
+            var duty = host.querySelector('.aot-device-duty');
+            if (duty) {
+                var valEl = host.querySelector('.aot-act-val');
+                // 끄는 동안 1행 숫자가 따라 움직여야 어디에 놓았는지 보인다.
+                duty.addEventListener('input', function () {
+                    if (valEl) valEl.textContent = duty.value + '%';
+                });
+                duty.addEventListener('change', function () {
+                    if (window.AoTMapLoader && window.AoTMapLoader.commandActuator) {
+                        window.AoTMapLoader.commandActuator(
+                            deviceUuid, 'goto', parseFloat(duty.value), channel, uid);
+                    }
+                });
+            }
+
+            var setBtn = host.querySelector('.aot-output-settings');
+            if (setBtn && window.AoTMapPopup.openOutputSchedule) {
+                setBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    window.AoTMapPopup.openOutputSchedule({
+                        shell:    _showFacilityCenterOverlay,
+                        outputId: setBtn.dataset.outputId,
+                        channel:  parseInt(setBtn.dataset.channel || '0', 10),
+                        name:     setBtn.dataset.outputName || ''
+                    });
+                });
+            }
+        }
+
+        // ── Site(필지) 요약 모달 ───────────────────────────────────────────────
+        // 줌 아웃 화면에서 처음 만나는 계층이 site 인데, 예전 팝업은 이름·면적·
+        // 메모 한 줄이라 "여기 들어가 볼 필요가 있나"를 답하지 못했다. 하위
+        // 구역·시설을 한 눈에 세우고, 줄을 누르면 그 계층의 기존 모달로 넘긴다.
+        //
+        // 탭을 두지 않는다 — 이 모달은 머무는 곳이 아니라 갈 곳을 고르는 곳이다.
+        var _sitePopupState = {};
+
+        function _buildSitePopupHTML(siteName) {
+            // 필지 위에는 개별 도형이 아니라 "이 지도의 필지 목록"이 있다 —
+            // 계층을 끝까지 거슬러 올라갈 수 있어야 길을 잃지 않는다.
+            return window.AoTMapPopup.buildModalHeader({
+                       name: siteName || _tr('Site'), up: true }) +
+                   '<div class="aot-bay-popup-pane" data-pane="ssummary">' +
+                   _buildZoneSkel() + '</div>';
+        }
+
+        // 필지 요약의 마지막 응답을 들고 있는다. 서버가 30초 캐시를 갖고 있어도
+        // **첫 그림까지 왕복 한 번**이 남아 모달이 스켈레톤으로 먼저 뜬다 —
+        // 콜드 계산은 로컬 실측 600~700ms 다. 캐시가 있으면 즉시 그리고 응답이
+        // 오면 조용히 갈아 끼운다(값이 30초쯤 낡아 보이는 것보다 낫다).
+        var _siteSummaryCache = {};
+
+        // 상태 → 사람이 읽을 한 마디. 숫자를 함께 적는 이유: "이상"만 있으면
+        // 몇 대가 문제인지 알려고 결국 들어가 봐야 한다.
+        function _siteStateText(child) {
+            var iss = child.issues || {};
+            var sen = child.sensors || {};
+            if (child.status === 'empty')  return { text: _tr('No devices'), cls: '' };
+            if (iss.comm_fault)            return { text: _tr('Offline') + ' ' + iss.comm_fault, cls: 'is-fault' };
+            if (iss.battery_low)           return { text: _tr('Battery') + ' ' + iss.battery_low, cls: 'is-warning' };
+            if (sen.total && sen.valid < sen.total) {
+                return { text: sen.valid + '/' + sen.total, cls: 'is-warning' };
+            }
+            return { text: _tr('Normal'), cls: '' };
+        }
+
+        function _siteRowHTML(child) {
+            var rep = child.rep;
+            var valTxt = '—', valCls = ' is-blank', style = '';
+            if (rep && rep.value != null) {
+                valTxt = rep.value + (rep.unit || '') + (rep.more ? ' +' : '');
+                valCls = '';
+                // 지도 칩과 같은 밴드 색. ranges 는 구역엔 없으므로 기본 경계를
+                // 쓴다(시설별 sensor_ranges 는 시설 모달이 따로 적용한다).
+                if (window.AoTMapSensorLabels && window.AoTMapSensorLabels.bandColor) {
+                    var c = window.AoTMapSensorLabels.bandColor(rep.key, +rep.value, null, rep.unit);
+                    if (c) {
+                        style = ' style="background:' + c + ';color:' +
+                                window.AoTMapSensorLabels.textOn(c) + '"';
+                    }
+                }
+            }
+            var st = _siteStateText(child);
+            return '<div class="aot-site-row" data-kind="' + _escZ(child.kind) +
+                       '" data-uuid="' + _escZ(child.uuid) +
+                       '" data-name="' + _escZ(child.name) + '">' +
+                       '<span class="aot-site-row-name">' + _escZ(child.name) + '</span>' +
+                       '<span class="aot-site-row-val' + valCls + '"' + style + '>' +
+                       _escZ(valTxt) + '</span>' +
+                       '<span class="aot-site-row-state ' + st.cls + '">' +
+                       _escZ(st.text) + '</span>' +
+                   '</div>';
+        }
+
+        function _buildSiteSummaryHTML(data) {
+            var site = data.site || {};
+            var counts = site.counts || {};
+            var kids = data.children || [];
+            var live = kids.filter(function (c) { return c.status !== 'empty'; });
+            var empty = kids.filter(function (c) { return c.status === 'empty'; });
+
+            var html = '<div class="aot-ov-block">' +
+                '<div class="aot-ov-row"><span>' + _tr('Area') + '</span><span>' +
+                (site.area_m2 != null ? (+site.area_m2).toLocaleString() + ' m²' : '—') +
+                '</span></div>' +
+                '<div class="aot-ov-row"><span>' + _tr('Zones') + '</span><span>' +
+                (counts.zones || 0) + '</span></div>' +
+                '<div class="aot-ov-row"><span>' + _tr('Facilities') + '</span><span>' +
+                (counts.facilities || 0) + '</span></div>' +
+                '<div class="aot-ov-row"><span>' + _tr('Devices') + '</span><span>' +
+                (counts.devices || 0) + '</span></div>' +
+                '</div>';
+
+            html += '<div class="aot-ov-block">' +
+                    '<div class="aot-ov-sec-title">' + _tr('Zone status') + '</div>';
+            if (live.length) {
+                html += live.map(_siteRowHTML).join('');
+            } else {
+                html += '<div class="aot-site-empty">' + _tr('Nothing to show yet') + '</div>';
+            }
+            if (empty.length) {
+                html += '<div class="aot-site-empty">' + _tr('No devices') + ': ' +
+                        _escZ(empty.map(function (c) { return c.name; }).join(', ')) +
+                        '</div>';
+            }
+            html += '</div>';
+
+            var today = data.today || {};
+            html += '<div class="aot-ov-block">' +
+                '<div class="aot-ov-sec-title">' + _tr('Today') + '</div>' +
+                '<div class="aot-site-tiles">' +
+                    _siteTileHTML('schedule', today.schedule_count || 0, _tr('Scheduled')) +
+                    _siteTileHTML('advice', today.advice_open || 0, _tr('Advice')) +
+                    _siteTileHTML('offline', today.offline_devices || 0, _tr('Offline'),
+                                  (today.offline_devices ? ' is-fault' : '')) +
+                '</div>';
+            if (today.advice_latest && today.advice_latest.title) {
+                html += '<div class="aot-ov-trend">' +
+                        _escZ(today.advice_latest.title) + '</div>';
+            }
+            html += '</div>';
+
+            html += '<div class="aot-ov-block">' +
+                    '<div class="aot-ov-sec-title">' + _tr('Notes') + '</div>';
+            var notes = data.notes || [];
+            if (notes.length) {
+                notes.forEach(function (n) {
+                    var txt = (n.note || '').replace(/\s+/g, ' ');
+                    if (txt.length > 60) txt = txt.substring(0, 60) + '…';
+                    html += '<div class="aot-ov-note-row">' +
+                            '<span class="aot-ov-note-text">' + _escZ(txt) + '</span>' +
+                            '</div>';
+                });
+            } else {
+                html += '<div class="aot-site-empty">' + _tr('No notes written') + '</div>';
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function _siteTileHTML(key, num, label, extraCls) {
+            return '<div class="aot-site-tile" data-tile="' + key + '">' +
+                       '<div class="aot-site-tile-num' + (extraCls || '') + '">' +
+                       num + '</div>' +
+                       '<div class="aot-site-tile-label">' + _escZ(label) + '</div>' +
+                   '</div>';
+        }
+
+        // 줄을 누르면 그 계층의 기존 모달로 넘긴다. site 모달은 닫는다 —
+        // 모달 위에 모달을 쌓으면 뒤로 가기가 어디로 가는지 알 수 없다.
+        function _wireSiteRows(uid, body) {
+            Array.prototype.forEach.call(
+                body.querySelectorAll('.aot-site-row'), function (row) {
+                row.addEventListener('click', function () {
+                    var kind = row.dataset.kind;
+                    var uuid = row.dataset.uuid;
+                    var name = row.dataset.name;
+                    var st = _sitePopupState[uid];
+                    if (st && st.popup) { try { st.popup.remove(); } catch (e) {} }
+                    if (kind === 'zone') {
+                        _openZonePopup(uid, uuid, name);
+                    } else {
+                        _openFacilityFromShape(uid, uuid);
+                    }
+                });
+            });
+        }
+
+        // 시설 줄 → 시설 모달. site 요약은 도형(shape) uuid 를 들고 있는데
+        // 시설 모달은 GeoFacility uuid + bay id 로 열린다. 그 짝은 이미 받아 둔
+        // 시설 목록(_actLabelState.facilities)에 있다.
+        //
+        // bay id 는 bays 컬럼이 아니라 AoTMapBay.slices() 로 얻는다 — 지도의 bay
+        // 칩이 쓰는 것과 같은 목록이어야, 줄을 눌러 연 모달과 칩을 눌러 연 모달이
+        // 같은 구역을 가리킨다(bay 1개 시설은 bays 가 비어 있고 slices 가 하나를
+        // 만들어 낸다).
+        function _openFacilityFromShape(uid, shapeUuid) {
+            var facs = (_actLabelState[uid] || {}).facilities || [];
+            var hit = null;
+            for (var i = 0; i < facs.length; i++) {
+                if (facs[i] && facs[i].shape_uuid === shapeUuid) { hit = facs[i]; break; }
+            }
+            if (!hit) return;
+            var slices = (window.AoTMapBay && window.AoTMapBay.slices(hit)) || [];
+            _openBayPopup(uid, hit.unique_id, slices.length ? slices[0].id : null);
+        }
+
+        function _openSitePopup(uid, siteUuid, siteName) {
+            var st = _sitePopupState[uid] || {};
+            if (st.popup) { try { st.popup.remove(); } catch (e) {} }
+
+            var popup = _showFacilityCenterOverlay(_buildSitePopupHTML(siteName), uid);
+            _sitePopupState[uid] = { popup: popup, siteUuid: siteUuid };
+
+            var popupEl = popup.getElement();
+            var body = popupEl && popupEl.querySelector('.maplibregl-popup-content');
+
+            popup.on('close', function () {
+                var s = _sitePopupState[uid];
+                if (s && s.popup === popup) {
+                    if (s.pollTimer) { clearInterval(s.pollTimer); }
+                    _sitePopupState[uid] = {};
+                }
+            });
+
+            function _render(data) {
+                var s = _sitePopupState[uid];
+                if (!s || s.popup !== popup) return;
+                var pane = body && body.querySelector(
+                    '.aot-bay-popup-pane[data-pane="ssummary"]');
+                if (!pane) return;
+                pane.innerHTML = _buildSiteSummaryHTML(data);
+                _wireSiteRows(uid, pane);
+                var titleEl = body.querySelector('.aot-sensor-popup-title');
+                if (titleEl && data.site && data.site.name) {
+                    titleEl.textContent = data.site.name;
+                }
+                window.AoTMapPopup.applyStatusDot(
+                    body, data.site && data.site.status);
+            }
+
+            // 지난 응답이 있으면 먼저 그린다 — 스켈레톤을 보며 기다리는 대신
+            // 값이 바로 뜨고, 새 응답이 오면 조용히 갈아 끼운다.
+            if (_siteSummaryCache[siteUuid]) { _render(_siteSummaryCache[siteUuid]); }
+
+            function _load() {
+                modalFetch('site', siteUuid)
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (!data || !data.ok) return;
+                        _siteSummaryCache[siteUuid] = data;
+                        _render(data);
+                    })
+                    .catch(function () {});
+            }
+            _load();
+
+            // 필지 목록으로 올라가기 — 필지 위에는 개별 도형이 없다.
+            _wireUpBtn(body, uid, { kind: 'sitelist', name: _tr('Site list') },
+                function () {
+                    var s2 = _sitePopupState[uid];
+                    if (s2 && s2.popup) { try { s2.popup.remove(); } catch (e) {} }
+                });
+            // 서버 캐시가 30초라 그보다 자주 물어봐야 값이 새로 오지 않는다.
+            _sitePopupState[uid].pollTimer = setInterval(_load, 30000);
+        }
+        // ── End Site modal ─────────────────────────────────────────────────────
 
         var _ACT_CATS = [
             { key: 'envelope', label: (window._ ? window._('Thermal') : 'Thermal'),    kinds: ['curtain', 'shade'] },
@@ -1461,10 +2495,13 @@
                     bEl.className = 'aot-sensor-map-marker aot-sensor-label-clickable aot-bay-chip';
                     bEl.dataset.facilityId = fac.unique_id;
                     bEl.dataset.bayId = sl.id;
-                    // 2행 라벨: 1행 = 구역명, 2행 = 대표 측정값 (폴링 후 갱신)
+                    // 2행 라벨: 1행 = 구역명, 2행 = 대표 측정값 (폴링 후 갱신).
+                    // 2행은 빈 채로 만든다 — 값이 오기 전이나 아예 없는 시설에서
+                    // 자리표시자를 그리면 이름만 있는 칩이 두 줄 높이를 차지한다
+                    // (CSS `.aot-bay-chip-val:empty { display:none }` 가 접는다).
                     bEl.innerHTML =
                         '<div class="aot-bay-chip-name">' + _escAct(sl.name || sl.id) + '</div>' +
-                        '<div class="aot-bay-chip-val">—</div>';
+                        '<div class="aot-bay-chip-val"></div>';
                     bEl.style.fontSize = ctrlLabelEm + 'em';
                     bEl.style.transform = 'none';
                     // Bay chips attach asynchronously, well after the label toolbar's
@@ -1915,7 +2952,9 @@
                 if (!valEl) return;
                 var sum = _sensorSummary(window.AoTMapBay.filterSensors(sensors, bm.bayId));
                 if (!sum) {
-                    valEl.textContent = '—';
+                    // 값이 없으면 2행을 비운다 — '—' 를 남기면 이름만 있는 칩이
+                    // 계속 두 줄 높이를 차지해 지도를 가린다(:empty 로 접힌다).
+                    valEl.textContent = '';
                     bm.el.style.background = '';
                     bm.el.style.color = '';
                     return;
@@ -1971,9 +3010,7 @@
                         '<div class="aot-ov-skel-bar w40"></div>' +
                         '<div class="aot-ov-skel-bar w80"></div>' +
                         '</div>';
-            return '<div class="aot-sensor-popup-header">' +
-                       '<span class="aot-sensor-popup-title">' + _escAct(title) + '</span>' +
-                   '</div>' +
+            return window.AoTMapPopup.buildModalHeader({ name: title, up: true }) +
                    window.AoTMapPopup.buildSectionNav(defSec) +
                    '<div class="aot-bay-popup-pane" data-pane="overview"' +
                        (defSec === 'overview' ? '' : ' style="display:none"') + '>' +
@@ -2177,6 +3214,51 @@
         var _HIST_HOURS     = 24;     // 이력 조회 구간 (센서 차트와 동일)
 
         // ── [현황] pane: env_summary + status 로드 → 렌더 → 노트 비동기 채움 ──
+        // 시설 [현황] 맨 위의 현재 환경 블록.
+        //
+        // 데이터는 이미 폴링 중인 /runtime 을 재사용한다 — AoTFacilityRuntime 이
+        // 8초 TTL + in-flight dedup 으로 코얼레싱하므로 요청이 늘지 않는다.
+        // 그 응답의 indoor(가중평균)와 sensors(valid/total)는 계산돼 있으면서도
+        // 화면에 쓰이는 곳이 한 군데도 없었다.
+        function _prependFacilityEnvNow(uid, facilityUuid, pane) {
+            if (!window.AoTFacilityRuntime || !window.AoTMapPopup ||
+                !window.AoTMapPopup.buildEnvNowHtml) return;
+            window.AoTFacilityRuntime.get(facilityUuid).then(function (rt) {
+                if (!rt || !pane || !pane.isConnected) return;
+                var st = _actLabelState[uid];
+                if (!st || st.openBayFacility !== facilityUuid) return;
+
+                var indoor = rt.indoor || {};
+                var sensors = rt.sensors || {};
+                var readings = [];
+                if (indoor.temp_c != null) {
+                    readings.push({ key: 'T', value: indoor.temp_c, unit: '°C' });
+                }
+                if (indoor.humidity_pct != null) {
+                    readings.push({ key: 'RH', value: indoor.humidity_pct, unit: '%' });
+                }
+                if (indoor.co2_ppm != null) {
+                    readings.push({ key: 'CO2', value: indoor.co2_ppm, unit: 'ppm' });
+                }
+                // 외기 — runtime.outdoor 는 계산돼 있으면서 화면에 쓰이는 곳이
+                // 없었다. 실내값과 나란히 둬야 "안이 더운 것"과 "바깥이 더운 날"을
+                // 가를 수 있다.
+                var od = rt.outdoor || {};
+                var outdoor = [];
+                if (od.temp_c != null) outdoor.push({ key: 'T', value: od.temp_c, unit: '°C' });
+                if (od.humidity_pct != null) outdoor.push({ key: 'RH', value: od.humidity_pct, unit: '%' });
+                if (od.wind_ms != null) outdoor.push({ key: 'wind_ms', value: od.wind_ms, unit: 'm/s' });
+
+                var html = window.AoTMapPopup.buildEnvNowHtml({
+                    readings: readings,
+                    outdoor: outdoor,
+                    sensors: { valid: sensors.valid_count || 0,
+                               total: sensors.total_count || 0 }
+                });
+                if (html) pane.insertAdjacentHTML('afterbegin', html);
+            }).catch(function () {});
+        }
+
         function _loadOverview(uid, facilityUuid) {
             var st = _actLabelState[uid];
             if (!st || !st.openBayPopup) return;
@@ -2202,6 +3284,10 @@
                 // innerHTML 을 갈아끼우면 대표사진 <img> 가 다시 로드되며 깜빡인다.
                 pane.innerHTML = window.AoTMapPopup.buildOverviewSection(
                     res[0], res[1], { canToggle: st2.canCtrl });
+                // 현재 환경 + 센서 신뢰도를 맨 위에. 자동제어가 안 걸린 시설의
+                // [현황]은 예전에 "연동된 자동제어 없음" 한 줄이 전부여서, 수동
+                // 운영 시설에서는 탭이 통째로 빈 껍데기였다.
+                _prependFacilityEnvNow(uid, facilityUuid, pane);
                 var aboutChanged = false;
                 if (abPane) {
                     var aboutHtml = window.AoTMapPopup.buildAboutSection(res[2]);
@@ -2334,6 +3420,21 @@
                     j = j || {};
                     _render([j.env_summary || null, j.status || null,
                              j.info || null]);
+
+                    // 상위 필지로 올라가는 화살표 + 상태 점
+                    var st2 = _actLabelState[uid];
+                    var popupEl2 = st2 && st2.openBayPopup && st2.openBayPopup.getElement();
+                    var body2 = popupEl2 && popupEl2.querySelector('.maplibregl-popup-content');
+                    if (body2) {
+                        window.AoTMapPopup.applyStatusDot(body2, j.area_status);
+                        _wireUpBtn(body2, uid, j.site, function () {
+                            var st3 = _actLabelState[uid];
+                            if (st3 && st3.openBayPopup) {
+                                try { st3.openBayPopup.remove(); } catch (e) {}
+                                st3.openBayPopup = null;
+                            }
+                        });
+                    }
                 });
         }
 
@@ -2757,20 +3858,52 @@
         // getLayer), so calling one of these twice (init + on-demand) is safe.
         // ============================================================
 
+        // Site GeoJSON 은 도형뿐 아니라 site 라벨→요약 모달 콜백
+        // (_onSiteLabelClick) 등록에도 쓴다 — zone 과 같은 구조다. 라벨은
+        // show_site_label 로 도형과 독립 제어되므로, 도형을 끄고 라벨만 켠
+        // 경우에도 콜백은 등록되어야 한다(그러지 않으면 옛 팝업이 뜬다).
         async function _ensureSiteShapeLayer() {
             try {
-                const sitesResponse = await geoFetch('/api/geo/sites?format=geojson');
+                const sitesResponse = await geoFetch('/api/geo/sites?format=geojson' + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : ''));
                 if (sitesResponse.ok) {
                     const sitesGeoJSON = await sitesResponse.json();
                     if (sitesGeoJSON.features && sitesGeoJSON.features.length > 0) {
-                        addGeoJSONLayer(uniqueId, map, 'sites', sitesGeoJSON, {
-                            type: 'fill',
-                            paint: { 'fill-color': C.site, 'fill-opacity': 0.08 }
-                        }, 'sites-fill');
-                        addGeoJSONLayer(uniqueId, map, 'sites', sitesGeoJSON, {
-                            type: 'line',
-                            paint: { 'line-color': C.site, 'line-width': 3, 'line-opacity': 0.8 }
-                        }, 'sites-line');
+                        if (_boolOpt('show_site_shape')) {
+                            addGeoJSONLayer(uniqueId, map, 'sites', sitesGeoJSON, {
+                                type: 'fill',
+                                paint: { 'fill-color': C.site, 'fill-opacity': 0.08 }
+                            }, 'sites-fill');
+                            addGeoJSONLayer(uniqueId, map, 'sites', sitesGeoJSON, {
+                                type: 'line',
+                                paint: { 'line-color': C.site, 'line-width': 3, 'line-opacity': 0.8 }
+                            }, 'sites-line');
+                        }
+
+                        // node_id → uuid 맵 등록 (site label click 콜백용)
+                        var _sitesByNodeId = {};
+                        sitesGeoJSON.features.forEach(function(f) {
+                            if (f.properties && f.properties.node_id) {
+                                _sitesByNodeId[f.properties.node_id] = f.id || f.properties.id;
+                            }
+                        });
+                        var _sInst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
+                        if (_sInst) {
+                            // 라벨 호버 예열이 uuid 를 찾을 통로(_zonesByNodeId 와 같은 방식).
+                            _sInst._sitesByNodeId = _sitesByNodeId;
+                            _sInst._onSiteLabelClick = function(nodeId, siteName) {
+                                var siteUuid = _sitesByNodeId[nodeId];
+                                if (siteUuid) _openSitePopup(uniqueId, siteUuid, siteName);
+                            };
+                            // 필지 요약은 콜드가 1초에 가깝고 지도에 몇 개 없다.
+                            // 지도가 자리를 잡은 뒤 한가할 때 미리 데워 두면
+                            // 첫 클릭도 즉시 열린다(구역은 수가 많아 호버 예열만).
+                            var _warmSites = Object.keys(_sitesByNodeId).map(function (n) {
+                                return _sitesByNodeId[n];
+                            });
+                            _whenIdle(function () {
+                                _warmSites.forEach(function (u) { warmModal('site', u); });
+                            }, 3000);
+                        }
                     }
                 }
             } catch (e) {
@@ -2785,7 +3918,7 @@
         // 모달 대신 옛 maplibre 팝업이 떴다.)
         async function _ensureZoneShapeLayer() {
             try {
-                const zonesResponse = await geoFetch('/api/geo/zones?format=geojson');
+                const zonesResponse = await geoFetch('/api/geo/zones?format=geojson' + (mapUuid ? '&map_uuid=' + encodeURIComponent(mapUuid) : ''));
                 if (zonesResponse.ok) {
                     const zonesGeoJSON = await zonesResponse.json();
                     if (zonesGeoJSON.features && zonesGeoJSON.features.length > 0) {
@@ -2812,10 +3945,14 @@
                         });
                         var _inst = window.AoTWidgetInstances && window.AoTWidgetInstances[uniqueId];
                         if (_inst) {
+                            // 라벨의 상태·대표값 갱신도 같은 색인을 쓴다
+                            // (라벨에는 node_id 만 있고 uuid 가 없다).
+                            _inst._zonesByNodeId = _zonesByNodeId;
                             _inst._onZoneLabelClick = function(nodeId, zoneName) {
                                 var zoneUuid = _zonesByNodeId[nodeId];
                                 if (zoneUuid) _openZonePopup(uniqueId, zoneUuid, zoneName);
                             };
+                            _startZoneLabelStatus(uniqueId, mapUuid);
                         }
                     }
                 }
@@ -2991,7 +4128,7 @@
         } catch (e) {
         }
 
-        if (_boolOpt('show_site_shape')) { await _ensureSiteShapeLayer(); }
+        if (_boolOpt('show_site_shape') || _boolOpt('show_site_label')) { await _ensureSiteShapeLayer(); }
         if (_boolOpt('show_zone_shape') || _boolOpt('show_zone_label')) { await _ensureZoneShapeLayer(); }
 
         // facility/equipment/device/drawn require mapUuid
@@ -3005,6 +4142,86 @@
         if (_boolOpt('show_equipment_shape')) { await _ensureEquipmentShapeLayer(); }
         if (_boolOpt('show_device_shapes')) { await _ensureDeviceShapeLayer(); }
         if (_boolOpt('show_drawn_shapes')) { await _ensureDrawnShapeLayer(); }
+
+        _installShapeClick(uniqueId, map);
+    }
+
+    // ── 도형 클릭 ──────────────────────────────────────────────────────────────
+    //
+    // 예전에는 라벨(작은 알약)만 눌러야 모달이 열렸다. 폴리곤 전체가 눌리면
+    // 터치 타깃이 수십 배 커진다 — 특히 폰에서 라벨을 정확히 찍기 어렵다.
+    //
+    // 겹친 도형은 **좁은 것부터** 고른다(시설 > 구역 > 필지). 시설은 구역 안에,
+    // 구역은 필지 안에 있으므로 넓은 것을 먼저 집으면 안쪽을 영영 못 연다.
+    // (겹침에서 하나만 고르는 규칙은 삭제 클릭이 이미 쓰는 것과 같은 원칙이다.)
+    function _installShapeClick(uid, map) {
+        var inst = window.AoTWidgetInstances[uid];
+        if (!inst || inst._shapeClickWired) return;
+        inst._shapeClickWired = true;
+
+        var ORDER = ['facilities-fill', 'zones-fill', 'sites-fill'];
+
+        // 도형 위를 지나가면 그 모달의 응답을 미리 받아 둔다(라벨 호버와 같은
+        // 예열). 레이어 한정 mousemove 라 히트테스트는 MapLibre 가 하고, 같은
+        // 도형 위에서는 uuid 가 안 바뀌어 한 번만 나간다.
+        var _lastWarmed = null;
+        [['zones-fill', 'zone'], ['sites-fill', 'site']].forEach(function (pair) {
+            map.on('mousemove', pair[0], function (e) {
+                var f = e.features && e.features[0];
+                var u = f && f.properties && f.properties.shape_uuid;
+                if (!u || u === _lastWarmed) return;
+                _lastWarmed = u;
+                warmModal(pair[1], u);
+            });
+        });
+
+        map.on('click', function (e) {
+            // 도구(거리 측정·노트 찍기)가 켜져 있으면 클릭의 주인은 그쪽이다.
+            // 도구가 활성 상태를 커서로만 알려서 이렇게 본다 — 공용 플래그가
+            // 생기면 그걸로 바꿀 것.
+            var container = map.getContainer();
+            if (container && container.style.cursor === 'crosshair') return;
+            // 라벨·칩·마커는 DOM 요소라 이 핸들러까지 오지 않는다(캔버스 클릭만).
+
+            var ids = ORDER.filter(function (id) {
+                return map.getLayer(id);
+            });
+            if (!ids.length) return;
+
+            var feats;
+            try {
+                feats = map.queryRenderedFeatures(e.point, { layers: ids });
+            } catch (err) { return; }
+            if (!feats || !feats.length) return;
+
+            for (var i = 0; i < ids.length; i++) {
+                var layerId = ids[i];
+                for (var k = 0; k < feats.length; k++) {
+                    if (feats[k].layer && feats[k].layer.id === layerId) {
+                        _openShapeModal(uid, layerId, feats[k].properties || {});
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    function _openShapeModal(uid, layerId, props) {
+        // shape_uuid 는 서버가 항상 실어 보낸다 — properties.id 는 저장된
+        // feature 의 draw id 일 수 있고, MapLibre 는 문자열 feature.id 를 버린다.
+        var uuid = props.shape_uuid;
+        if (!uuid) return;
+        var name = props.label_name || props.name || '';
+        var inst = window.AoTWidgetInstances[uid];
+        if (!inst) return;
+
+        if (layerId === 'zones-fill' && inst._openZoneModal) {
+            inst._openZoneModal(uuid, name);
+        } else if (layerId === 'sites-fill' && inst._openSiteModal) {
+            inst._openSiteModal(uuid, name);
+        } else if (layerId === 'facilities-fill' && inst._openFacilityByShape) {
+            inst._openFacilityByShape(uuid);
+        }
     }
 
     /**
@@ -3667,6 +4884,24 @@
                     nameDiv.appendChild(valSpan);
                 }
 
+                // 구역 라벨 2행 — 1행 이름, 2행 대표값. 시설 bay 칩과 같은
+                // 문법이다(_updateZoneLabelStatus 가 값·색을 채운다). 구역
+                // 라벨이 이름만 달고 있어서, 어디가 문제인지 알려면 하나씩
+                // 열어 봐야 했다.
+                if (pType === 'zone') {
+                    // 구역 uuid 는 라벨에 직접 없다 — node_id 로만 이어진다
+                    // (클릭 콜백도 같은 경로를 쓴다: _zonesByNodeId).
+                    el.dataset.zoneNodeId = String(props.parent_node_id || '');
+                    // 문제 점의 기준 상자는 이름 줄이다 — 라벨 요소 자체에
+                    // position 을 주면 maplibre 의 절대배치를 덮어써서 라벨이
+                    // 전체 폭 막대로 흘러내린다.
+                    nameDiv.classList.add('aot-zone-label-head');
+                    const zValDiv = document.createElement('div');
+                    zValDiv.className = 'aot-zone-label-val';
+                    zValDiv.style.display = 'none';
+                    el.appendChild(zValDiv);
+                }
+
                 const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
                     .setLngLat([coords[0], coords[1]])
                     .addTo(map);
@@ -3678,12 +4913,29 @@
 
                 // Click → popup (v3 port: name + Open Notes button + last note preview)
                 (function(lngLat, popupName, popupArea, tId, tType, nodeId) {
+                    // 호버 예열 — 누르기 전에 응답을 받아 둔다. 예열은 공유
+                    // 캐시에 담기므로 클릭이 안 와도 버려지지 않고, 여러 번
+                    // 스쳐도 TTL 안에서는 한 번만 나간다.
+                    if (tType === 'zone' || tType === 'site') {
+                        el.addEventListener('mouseenter', function () {
+                            var byNode = (tType === 'zone'
+                                ? instance._zonesByNodeId : instance._sitesByNodeId) || {};
+                            warmModal(tType, byNode[nodeId]);
+                        });
+                    }
                     el.addEventListener('click', function(e) {
                         e.stopPropagation();
                         instance._pinLabelToFront(el, _restoreZ);
                         // zone label → zone modal (if callback registered)
                         if (tType === 'zone' && instance._onZoneLabelClick) {
                             instance._onZoneLabelClick(nodeId, popupName);
+                            return;
+                        }
+                        // site label → 필지 요약 모달. 콜백이 없으면(사이트
+                        // GeoJSON 을 아직 못 받았거나 도형·라벨이 모두 꺼진 경우)
+                        // 아래의 옛 팝업으로 흘러간다.
+                        if (tType === 'site' && instance._onSiteLabelClick) {
+                            instance._onSiteLabelClick(nodeId, popupName);
                             return;
                         }
                         if (instance._labelPopup) { instance._labelPopup.remove(); }
@@ -3954,12 +5206,19 @@
     // 위로 오는지 예측할 수 없었다.
     //
     // 순서: 넓은 대상이 **위**, 구체적인 대상이 아래.
-    //   site > zone > facility > equipment > output > input > function
+    //   site > zone > facility > equipment > device > output > input > function
     // (equipment 는 사용자 지정 순서에 없지만 시설 부속 설비이므로 facility
     //  바로 아래에 둔다 — 나머지의 상대 순서는 지정 그대로다.)
+    //
+    // 복합장치(device)는 여기 **반드시 있어야 한다.** collect_devices 가
+    // 복합장치를 `device_type='device'` 로 따로 내보내기 시작한 뒤(00764f1)
+    // 이 표에 키가 없어서 _labelZ 폴백(LABEL_Z.zone)에 걸렸고, 복합장치
+    // 라벨이 구역 라벨과 같은 단(6)에 올라가 시설·장치 라벨을 전부 덮었다.
+    // 복합장치는 장치이므로 장치 라벨 단에 두되, 그 안에서는 가장 위다
+    // (output/input/function 을 담는 그릇이라 이름이 가려지면 못 찾는다).
     var LABEL_Z = {
-        site: 7, zone: 6, facility: 5, equipment: 4,
-        output: 3, input: 2, 'function': 1
+        site: 8, zone: 7, facility: 6, equipment: 5,
+        device: 4, output: 3, input: 2, 'function': 1
     };
 
     // ── 충돌 우선순위 (쌓임 순서와 **별개 축**) ───────────────────────────────
@@ -3968,8 +5227,11 @@
     // 읽을 수 있기 때문이다. 쌓임 순서(LABEL_Z)와 정반대이므로 같은 표를 쓸 수
     // 없다 — 예전에는 충돌 회피가 z-index 를 그대로 정렬 기준으로 삼아서, 쌓임
     // 순서를 뒤집자 site 라벨이 장치 키를 밀어내 버렸다.
+    // 값은 LABEL_Z 의 정확한 역순이다 — 한쪽에 종류를 넣으면 다른 쪽에도 넣는다.
+    // 빠뜨리면 아래 폴백이 `style.zIndex` 를 읽는데, 그 값은 호버/핀 중에는
+    // LABEL_Z_FRONT(9000)라 우선순위가 포인터에 따라 튄다.
     var LABEL_COLLISION_RANK = {
-        'function': 7, input: 6, output: 5, equipment: 4,
+        'function': 8, input: 7, output: 6, device: 5, equipment: 4,
         facility: 3, zone: 2, site: 1
     };
 
@@ -3984,7 +5246,9 @@
     // 이 종류들만 줌 기준의 적용을 받는다. 대지·구역은 멀리서 위치를 잡는
     // 기준이라 항상 보이고, 개별 장치 단위 정보는 그 축척에서 읽히지도 않으면서
     // 화면만 덮는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 16)이 정한다.
-    var LABEL_ZOOM_GATED = { facility: 1, output: 1, input: 1, 'function': 1 };
+    // 복합장치(device)도 장치 단위 정보이므로 함께 게이트한다 — 빠뜨리면 다른
+    // 장치 라벨이 다 접힌 축척에서 복합장치 이름만 지도에 남는다.
+    var LABEL_ZOOM_GATED = { facility: 1, device: 1, output: 1, input: 1, 'function': 1 };
     var LABEL_MIN_ZOOM_DEFAULT = 16;
 
     /** 이 위젯의 라벨 숨김 기준 줌. 0(또는 미설정 0) = 숨기지 않음. */
@@ -5456,6 +6720,11 @@
                 }
                 if (!inst._hiddenLabels) inst._hiddenLabels = {};
                 inst._hiddenLabels[key] = hidden;
+                // 입력 라벨을 켜면 구역 라벨은 이름만, 끄면 대표값까지.
+                // 같은 값을 두 겹으로 띄우지 않기 위한 맞물림이다.
+                if (key === 'input' && inst._repaintZoneLabels) {
+                    try { inst._repaintZoneLabels(); } catch (e) {}
+                }
             }
 
             function _readLabelHidden(key) {
@@ -7630,244 +8899,44 @@
             };
         }
 
-        // ----- Notes section (shared utility) -----
-        const noteSectionHtml = window.AoTMapPopup
-            ? window.AoTMapPopup.buildNoteSection(uniqueKey, displayName)
-            : '<hr class="aot-popup-divider">' +
-              '<button class="aot-popup-btn aot-popup-btn--primary aot-popup-btn--full" onclick="window.dispatchEvent(new CustomEvent(\'open-notes\',{detail:{targetId:\'' + uniqueKey + '\',targetType:\'device\',name:\'' + displayName.replace(/'/g, "\\'") + '\'}}))"> ' +
-              (window._ ? window._('Create Note') : 'Create Note') + '</button>' +
-              '<div id="' + notePreviewId + '" class="aot-popup-note-preview"><span style="color:#ccc;font-style:italic">...</span></div>';
-
-        // Hoist devId/toggleId to function scope so onOpen closure can access them
-        const devId = dev.id || dev.unique_id || '';
-        const toggleId = 'toggle-' + devId;
-
-        // NOTE: 이 팝업에는 이력 그래프를 넣지 않는다. maplibregl.Popup 은 anchor 를
-        // 지정하지 않으면 **팝업 높이**로 위/아래를 자동 결정하는데, 그래프를 넣어
-        // 팝업이 커지면 "위에 들어갈 자리 없음"으로 판정돼 마커 위치와 무관하게 항상
-        // 아래로만 붙는다. 장치 이력은 구역·시설 모달에서 본다.
-
-        // 시작/종료 예약 버튼 — on/off 장치 전용(개폐율 장치는 duration 의미 없음).
-        const canSchedule = isOutput && devType === 'output' && dev.control_kind !== 'value_3way';
-        const schedHtml = canSchedule
-            ? '<button type="button" class="aot-popup-btn aot-popup-btn--secondary aot-popup-btn--full ' +
-              'aot-output-settings" data-output-id="' + uniqueKey + '" data-channel="' + channel + '" ' +
-              'data-output-name="' + displayName.replace(/"/g, '&quot;') + '">' +
-              (window._ ? window._('Set start/end time') : 'Set start/end time') + '</button>'
-            : '';
-
-        let html = '';
-
-        if (dev.control_kind === 'value_3way') {
-            // ----- 3-way Actuator popup: Open/Stop/Close + slider -----
-            const posInit = (typeof dev.position_pct === 'number') ? dev.position_pct : 0;
-            const posRounded = Math.round(posInit);
-            const posDispId = 'pos-disp-' + devId;
-            const sliderId = 'pos-slider-' + devId;
-            const cmd = function(action, valueExpr) {
-                return "window.AoTMapLoader.commandActuator('" + devId + "','" + action + "'," + valueExpr + ",'" + channel + "','" + uniqueId + "')";
+        // ----- Output / Function / 복합장치 / 3-way → 중앙 모달 -----
+        //
+        // 예전에는 이것들만 지도에 붙는 소형 팝업이었다. Input 은 모달, 구역·
+        // 시설도 모달인데 출력만 팝업이라 같은 지도 위에서 두 가지 창이 섞였고,
+        // 팝업은 높이 제약(anchor 계산) 때문에 이력·소속·채널을 담을 수도
+        // 없었다. 이제 전 계층이 같은 중앙 모달을 쓴다.
+        //
+        // Input 분기와 같은 방식으로, 마커 클릭 핸들러가 기대하는
+        // maplibregl.Popup 계약만 흉내 내는 얇은 프록시를 돌려준다.
+        if (!isInput) {
+            const _devCloseFns = [];
+            return {
+                isOpen: function () { return false; },
+                setLngLat: function () { return this; },
+                addTo: function () {
+                    if (_deviceModalOpener) {
+                        _deviceModalOpener(uniqueId, uniqueKey, channel, displayName,
+                                           function () {
+                                               _devCloseFns.forEach(function (fn) {
+                                                   try { fn(); } catch (e) {}
+                                               });
+                                           });
+                    }
+                    return this;
+                },
+                remove: function () { return this; },
+                on: function (evt, fn) {
+                    if (evt === 'close' && typeof fn === 'function') _devCloseFns.push(fn);
+                    return this;
+                },
+                getElement: function () { return null; }
             };
-            const headerHtml3 =
-                '<div class="aot-3way-header">' +
-                '<div class="aot-popup-title">' + displayName + '</div>' +
-                '<span class="aot-link-badges-slot"></span>' +
-                '<div id="' + posDispId + '" class="aot-3way-position">' + posRounded + '%</div></div>';
-            const buttonsHtml =
-                '<div class="aot-3way-buttons">' +
-                '<button class="aot-popup-btn aot-popup-btn--ctrl" onclick="' + cmd('close', '0') + '">' + (window._ ? window._('Close') : 'Close') + '</button>' +
-                '<button class="aot-popup-btn aot-popup-btn--ctrl" onclick="' + cmd('stop', 'null') + '">' + (window._ ? window._('Stop') : 'Stop') + '</button>' +
-                '<button class="aot-popup-btn aot-popup-btn--ctrl" onclick="' + cmd('open', '100') + '">' + (window._ ? window._('Open') : 'Open') + '</button></div>';
-            const sliderHtml =
-                '<div class="aot-3way-slider-wrap">' +
-                '<input type="range" id="' + sliderId + '" class="aot-3way-slider" min="0" max="100" step="1" value="' + posRounded + '" ' +
-                'data-current="' + posRounded + '" ' +
-                'style="--aot-current-pct: ' + posRounded + '%;" ' +
-                'oninput="document.getElementById(\'' + posDispId + '\').innerText = this.value + \'%\'" ' +
-                'onchange="' + cmd('goto', 'parseFloat(this.value)') + '">' +
-                '<div class="aot-3way-current-dot"></div></div>';
-            // [3-way] Only Last Work Time; Current Work Time has no meaningful value at rest.
-            const infoHtml3 =
-                '<div class="aot-3way-info">' +
-                '<div class="aot-3way-info-row">' +
-                '<span class="aot-3way-info-label">' + (window._ ? window._('Last Work Time') : 'Last Work Time') + '</span>' +
-                '<span id="last-dur-' + devId + '" class="aot-3way-info-value">00:00:00</span></div></div>';
-            html = '<div class="aot-3way-popup aot-popup-body">' + headerHtml3 + buttonsHtml + sliderHtml + infoHtml3 + noteSectionHtml + '</div>';
-
-        } else {
-            // ----- Output / Function popup: name + toggle + timer -----
-            const durId = 'dur-' + devId;
-            const canControl = isOutput;
-
-            const btnHtml = '<label class="btn-toggle" style="margin-bottom:0">' +
-                '<input type="checkbox" id="' + toggleId + '" class="btn-toggle-input" ' + (isON ? 'checked' : '') +
-                (canControl ? '' : ' disabled') +
-                ' onchange="(function(cb,ev){' +
-                    'if(ev)ev.stopPropagation();' +
-                    'var inst=window.AoTWidgetInstances&&window.AoTWidgetInstances[\'' + uniqueId + '\'];' +
-                    'if(inst&&inst.markers){var mk=inst.markers.get(\'' + devId + '\');' +
-                    'if(mk){mk._pendingToggle=Date.now();mk._isActive=cb.checked;}}' +
-                    'if(window.AoTMapLoader&&window.AoTMapLoader.toggleDevice){' +
-                    'window.AoTMapLoader.toggleDevice(\'' + devId + '\',cb.checked,\'' + channel + '\',\'' + devType + '\');}' +
-                    'else{' +
-                    'var bid=\'' + devId + '\'.split(\'::\')[0];' +
-                    'if(\'' + devType + '\'===\'function\'){' +
-                    'var fd=new FormData();fd.append(\'function_id\',bid);fd.append(cb.checked?\'function_activate\':\'function_deactivate\',\'True\');' +
-                    'fetch(\'/function_submit\',{method:\'POST\',body:fd}).catch(function(){});}' +
-                    'else{fetch(\'/api/outputs/\'+bid,{method:\'POST\',' +
-                    'headers:{\'Content-Type\':\'application/vnd.aot.v1+json\',\'Accept\':\'application/vnd.aot.v1+json\'},' +
-                    'body:JSON.stringify({state:cb.checked,channel:\'' + channel + '\'})}).catch(function(){});}}' +
-                '})(this,event)">' +
-                '<span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span></label>';
-
-            const headerHtml =
-                '<div class="aot-popup-header">' +
-                '<div class="aot-popup-title" style="margin:0">' + displayName + '</div>' +
-                '<span class="aot-link-badges-slot"></span>' +
-                '<div style="flex:0 0 auto">' + btnHtml + '</div></div>';
-
-            const infoHtml =
-                '<div class="aot-popup-info">' +
-                '<div class="aot-popup-info-row">' +
-                '<span class="aot-popup-info-label">' + (window._ ? window._('Current Work Time') : 'Current Work Time') + '</span>' +
-                '<span id="' + durId + '" class="aot-timer-display aot-popup-info-value">00:00:00</span></div>' +
-                '<div class="aot-popup-info-row">' +
-                '<span class="aot-popup-info-label">' + (window._ ? window._('Last Work Time') : 'Last Work Time') + '</span>' +
-                '<span id="last-dur-' + devId + '" class="aot-popup-info-value">00:00:00</span></div></div>';
-
-            html = '<div class="aot-popup-body">' + headerHtml + infoHtml + schedHtml + noteSectionHtml + '</div>';
         }
 
-        const popup = new maplibregl.Popup({ offset: 12, className: 'aot-popup aot-popup--device' }).setHTML(html);
-
-        // ----- onOpen: fetch fresh values + notes -----
-        function onOpen() {
-            // [3-way] Position current-dot after popup DOM is ready
-            if (dev.control_kind === 'value_3way') {
-                requestAnimationFrame(function () {
-                    var sl = document.getElementById('pos-slider-' + devId);
-                    if (sl && window.AoTMapPopup) window.AoTMapPopup.positionDots(sl.parentElement);
-                });
-            }
-
-            // Fetch last note
-            var noteEl = document.getElementById(notePreviewId);
-            if (noteEl) {
-                fetch('/notes/target/' + uniqueKey)
-                    .then(function(r) { return r.json(); })
-                    .then(function(notes) {
-                        if (!noteEl) return;
-                        if (notes && notes.length > 0) {
-                            noteEl.innerText = notes[0].note;
-                            noteEl.style.fontStyle = 'normal';
-                        } else {
-                            noteEl.innerHTML = '<span style="color:#ccc;font-style:italic">' + (window._ ? window._('No Notes') : 'No Notes') + '</span>';
-                        }
-                    }).catch(function() {});
-            }
-
-            // Input devices never reach onOpen — they return a modal proxy from
-            // createDevicePopup and open AoTSensorLabel.openPopup directly.
-
-            // 배터리·통신 배지. Output 은 자기 배터리도 RSSI 도 갖고 있지 않다 —
-            // 서버가 DevEUI 로 하트비트 Input/Function 을 찾아 준다(짝이 없으면
-            // 빈 응답이 와서 아무것도 안 그려진다).
-            if (window.AoTSensorLabel && window.AoTSensorLabel.fetchStatus) {
-                window.AoTSensorLabel.fetchStatus(uniqueKey).then(function (all) {
-                    var root = popup.getElement && popup.getElement();
-                    if (!root || !popup.isOpen()) return;
-                    window.AoTSensorLabel.fillLinkBadges(root, all[uniqueKey]);
-                });
-            }
-
-            // 시작/종료 예약 — 구역·시설 모달과 동일한 공용 창
-            var popupRoot = popup.getElement && popup.getElement();
-            var schedBtn = popupRoot && popupRoot.querySelector('.aot-output-settings');
-            if (schedBtn && window.AoTMapPopup && window.AoTMapPopup.openOutputSchedule) {
-                schedBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    window.AoTMapPopup.openOutputSchedule({
-                        shell:    _showFacilityCenterOverlay,
-                        outputId: schedBtn.dataset.outputId,
-                        channel:  parseInt(schedBtn.dataset.channel || '0', 10),
-                        name:     schedBtn.dataset.outputName || ''
-                    });
-                });
-            }
-
-            if (isOutput) {
-                var baseDevId = (dev.device_unique_id || dev.id || '').split('::')[0];
-                var durEl = document.getElementById('dur-' + (dev.id || dev.unique_id || ''));
-
-
-                // Async fetch: live state + start epoch, then register stopwatch
-                Promise.all([
-                    fetch('/outputstate_unique_id/' + baseDevId + '/' + channel)
-                        .then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
-                    fetch('/output_started_at_public/' + baseDevId + '/' + channel)
-                        .then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
-                ]).then(function(results) {
-                    var state = results[0];
-                    var startData = results[1];
-                    // Shared classifier: on/off/pending/fault consistent with v3.
-                    var cls = window.AoTOutputState
-                        ? window.AoTOutputState.classify(state)
-                        : { isOn: (state === 'on' || (typeof state === 'number' && state > 0)),
-                            isPending: (state === 'pending'), isFault: (state === 'fault'),
-                            countsRuntime: (state === 'on' || (typeof state === 'number' && state > 0)) };
-                    var liveON = (state !== null && state !== undefined) ? cls.isOn : isON;
-
-                    // Prefer started_at_epoch; fall back to server-computed elapsed_sec
-                    var startEpoch = null;
-                    if (startData) {
-                        if (startData.started_at_epoch) {
-                            startEpoch = startData.started_at_epoch;
-                        } else if (startData.elapsed_sec > 0 && startData.server_now_epoch) {
-                            // Reconstruct start epoch using server clock to avoid client-clock skew
-                            startEpoch = startData.server_now_epoch - startData.elapsed_sec;
-                        }
-                    }
-
-                    var cb = document.getElementById(toggleId);
-                    if (cb) {
-                        cb.checked = liveON;
-                        cb.classList.toggle('aot-toggle-pending', !!cls.isPending);
-                        cb.classList.toggle('aot-toggle-fault', !!cls.isFault);
-                    }
-                    // Runtime counts only for a confirmed-on device (Model A): the
-                    // stopwatch starts from the confirmed-on epoch. Pending/fault
-                    // (offline) never start it — no fictional runtime.
-                    if (durEl && window.AoTStopwatchManager) {
-                        window.AoTStopwatchManager.register(
-                            baseDevId, channel,
-                            cls.countsRuntime, cls.countsRuntime ? startEpoch : null,
-                            durEl, 7000, false
-                        );
-                    }
-                });
-
-                // Last Work Time (separate — no dependency on live state)
-                setTimeout(function() {
-                    var lastDurEl = document.getElementById('last-dur-' + (dev.id || dev.unique_id || ''));
-                    if (lastDurEl) {
-                        fetch('/output_last_duration_public/' + baseDevId + '/' + channel)
-                            .then(function(r) { return r.json(); })
-                            .then(function(d) {
-                                if (d && d.last_duration_sec !== undefined && d.last_duration_sec !== null && lastDurEl) {
-                                    var s = parseInt(d.last_duration_sec, 10);
-                                    if (isNaN(s)) return;
-                                    var h = Math.floor(s / 3600).toString().padStart(2, '0');
-                                    var mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-                                    var ss = (s % 60).toString().padStart(2, '0');
-                                    lastDurEl.innerText = h + ':' + mm + ':' + ss;
-                                }
-                            }).catch(function() {});
-                    }
-                }, 50);
-            }
-        }
-
-        popup.on('open', onOpen);
-        return popup;
+        // 여기 있던 소형 팝업 구성(HTML·스톱워치·예약 버튼·노트 미리보기)은
+        // 위 프록시가 중앙 모달로 보내면서 도달하지 않는 코드가 됐다. 남겨 두면
+        // "출력은 팝업"이라는 옛 모델이 코드에 계속 살아 있는 것처럼 읽힌다.
+        // 작동 시간·예약·노트는 모두 장치 모달이 대신 보여준다.
     }
 
     /**

@@ -234,41 +234,274 @@
   // 시작/종료 예약 버튼. 실제 제어 대상 UUID/채널은 slot_key(`<uuid>::<ch>`)가
   // 아니라 상태에 실린 output_uuid 를 우선한다 — 시설 슬롯 키는 UUID 와 다를 수
   // 있다(actuators_resolved.slot_key).
-  function _scheduleBtn(sk, s) {
-    var oid = (s && s.output_uuid) || String(sk).split('::')[0];
-    var ch  = (s && s.channel != null) ? s.channel : (String(sk).indexOf('::') > -1
-      ? String(sk).split('::')[1] : 0);
+  // 시작/종료 예약 버튼 — **여기가 유일한 생성처다.**
+  // 예전에는 시설 행·구역 목록·장치 모달이 각자 만들어서, 같은 버튼이 어떤
+  // 곳은 "설정", 어떤 곳은 "시작/종료 시각 설정"으로 보였다. 문구만 맞추면
+  // 다음에 또 갈라지므로 버튼 자체를 하나로 묶는다.
+  // 라벨은 짧게(좁은 행에 들어가야 한다), 무엇을 여는지는 title 로 말한다.
+  function scheduleButtonHtml(opts) {
+    opts = opts || {};
     var _tr = function (x) { return (window._ ? window._(x) : x); };
     return '<button type="button" class="aot-act-pbtn aot-output-settings"' +
-           ' data-output-id="' + _esc(oid) + '"' +
-           ' data-channel="' + _esc(String(ch || 0)) + '"' +
-           ' data-output-name="' + _esc((s && s.name) || sk) + '"' +
+           ' data-output-id="' + _esc(opts.outputId || '') + '"' +
+           ' data-channel="' + _esc(String(opts.channel == null ? 0 : opts.channel)) + '"' +
+           ' data-output-name="' + _esc(opts.name || '') + '"' +
            ' title="' + _esc(_tr('Set start/end time')) + '">' +
            _esc(_tr('Settings')) + '</button>';
   }
 
+  // 슬롯 키에서 실제 제어 대상(uuid/채널)을 뽑는다 — 예약 버튼과 시간 칸이
+  // 같은 대상을 가리켜야 한다.
+  function _slotIds(sk, s) {
+    return {
+      oid: (s && s.output_uuid) || String(sk).split('::')[0],
+      ch:  (s && s.channel != null) ? s.channel
+           : (String(sk).indexOf('::') > -1 ? String(sk).split('::')[1] : 0)
+    };
+  }
+
+  function _scheduleBtn(sk, s) {
+    var id = _slotIds(sk, s);
+    return scheduleButtonHtml({ outputId: id.oid, channel: id.ch,
+                                name: (s && s.name) || sk });
+  }
+
+  // ── 출력 행 공용 2행 골격 ──────────────────────────────────────────────────
+  //
+  //   1행: [드래그] 이름 ..................... 주 제어(슬라이드 토글/3버튼)
+  //   2행: 작동·예약 시간 ..................... 설정(예약 버튼 / 슬라이더)
+  //
+  // on/off·PWM·개폐형이 각각 1행·3행·2행이라 목록에서 줄 높이가 들쭉날쭉했고,
+  // "언제부터 켜져 있나"는 마커 팝업에만 있어 구역·시설 목록에서는 알 수 없었다.
+  // 종류가 달라도 **같은 자리에 같은 것**이 오도록 골격을 하나로 둔다:
+  // 왼쪽은 언제나 정체·상태, 오른쪽은 언제나 조작이다.
+  //
+  // opts: { slot, name, drag, primary, meta, settings }
+  //   primary  1행 우측 HTML (없으면 빈칸)
+  //   meta     2행 좌측 HTML (작동/예약 시간 — 없으면 '—')
+  //   settings 2행 우측 HTML (예약 버튼·슬라이더 등)
+  function buildOutputRow(opts) {
+    opts = opts || {};
+    var meta = opts.meta || '<span class="aot-act-meta-dim">—</span>';
+    var second = (opts.meta || opts.settings)
+      ? '<div class="aot-act-meta">' +
+          '<span class="aot-act-meta-text">' + meta + '</span>' +
+          '<span class="aot-act-meta-ctrl">' + (opts.settings || '') + '</span>' +
+        '</div>'
+      : '';
+    return '<div class="aot-act-row" data-slot="' + _esc(opts.slot || '') + '">' +
+             '<div class="aot-act-line">' +
+               (opts.drag ? _dragHandle() : '') +
+               '<span class="aot-act-name"' + (opts.nameAttrs || '') + '>' +
+               _esc(opts.name || '') + '</span>' +
+               (opts.primary || '') +
+             '</div>' + second +
+           '</div>';
+  }
+
+  // ── 작동 시간 한 칸 (공용) ─────────────────────────────────────────────────
+  //
+  //   꺼짐 → 마지막 작동 시간(흐림) / 켜짐 → 그 자리가 곧 흐르는 타이머(강조)
+  //
+  // **여기가 유일한 생성처이자 유일한 갱신처다.** 예전에는 시설이 정적
+  // 스냅샷을, 구역이 "열 때 한 번 채우고 끝"을, 장치 모달만 살아 움직이는
+  // 타이머를 각자 그렸다. 그래서 같은 장치가 세 화면에서 세 가지로 보였고,
+  // 구역 목록은 눈앞에서 장치를 켜도 시간이 그대로 멈춰 있었다.
+  //
+  // 문구("마지막 작동"/"실행 중")는 두지 않는다 — 어느 쪽인지는 같은 행의
+  // 토글과 색이 이미 말하고, 좁은 2행에서 다섯 글자는 정작 읽어야 할 숫자를
+  // 밀어낸다. 대신 숫자를 키우고, 무엇인지는 title 로 남긴다.
+  //
+  //   opts: { outputId, channel, runtime:{elapsed_sec,last_duration_sec}, on,
+  //           deferLast }
+  //   deferLast  마지막 작동 시간이 별도 배치로 뒤따라올 때(구역 목록).
+  //              켜져 있지도 않은 칸마다 낱개 요청을 보내지 않게 한다.
+  function timeSlotHtml(opts) {
+    var _tr = function (x) { return (window._ ? window._(x) : x); };
+    opts = opts || {};
+    var rt   = opts.runtime || {};
+    var on   = !!(opts.on || (rt.elapsed_sec != null && rt.elapsed_sec > 0));
+    var last = (rt.last_duration_sec != null) ? rt.last_duration_sec : null;
+    var txt;
+    if (on) {
+      txt = (rt.elapsed_sec != null && rt.elapsed_sec > 0)
+        ? _fmtDur(rt.elapsed_sec) : '…';
+    } else {
+      txt = (last != null && last > 0) ? _fmtDur(last) : '—';
+    }
+    _scheduleSlotSweep();
+    return '<span class="aot-act-time aot-timer-display' +
+           (on ? ' aot-act-time-on' : '') + '"' +
+           ' data-out="' + _esc(opts.outputId || '') + '"' +
+           ' data-ch="' + _esc(String(opts.channel == null ? 0 : opts.channel)) + '"' +
+           ' data-run="' + (on ? '1' : '0') + '"' +
+           (last != null ? ' data-last="' + _esc(String(last)) + '"' : '') +
+           (opts.deferLast ? ' data-deferlast="1"' : '') +
+           ' title="' + _esc(_tr(on ? 'Running' : 'Last run')) + '">' +
+           _esc(txt) + '</span>';
+  }
+
+  // 상태 폴링이 부르는 갱신구. 켜짐/꺼짐이 **바뀐 때만** 갈아 끼운다 —
+  // 폴링마다 register 하면 스톱워치가 매번 다시 맞춰져 초가 튄다.
+  //   st: { countsRuntime, startEpoch }
+  function applyTimeSlot(el, st) {
+    if (!el) return;
+    var _tr = function (x) { return (window._ ? window._(x) : x); };
+    var on    = !!(st && st.countsRuntime);
+    var first = (el._aotSwOn === undefined);
+    if (!first && el._aotSwOn === on) return;
+    el._aotSwOn = on;
+    el.dataset.run = on ? '1' : '0';
+    el.classList.toggle('aot-act-time-on', on);
+    el.title = _tr(on ? 'Running' : 'Last run');
+
+    var oid = el.dataset.out || '';
+    var ch  = el.dataset.ch || '0';
+    if (!oid) return;
+
+    if (!on) {
+      // 스톱워치에서 이 칸을 뗀다 — 안 떼면 매 tick 마다 "00:00:00" 이
+      // 마지막 작동 시간을 덮어쓴다.
+      if (window.AoTStopwatchManager && window.AoTStopwatchManager.unregister) {
+        window.AoTStopwatchManager.unregister(oid + '::' + ch, el);
+      }
+      if (first && el.dataset.deferlast === '1') return;  // 배치가 채운다
+      if (first && el.dataset.last !== undefined) {
+        var s0 = parseInt(el.dataset.last, 10);
+        el.textContent = (isNaN(s0) || s0 <= 0) ? '—' : _fmtDur(s0);
+        return;
+      }
+      fillLastDuration(el);
+      return;
+    }
+
+    if (st && st.startEpoch) { _regSlot(el, oid, ch, st.startEpoch); return; }
+    // 시작 시각을 모르는 채 등록하면 스톱워치가 **직전 가동의** startMs 를
+    // 그대로 물고 있어, 첫 sync 가 돌아올 때까지 엉뚱한 경과가 뜬다.
+    fetch('/output_started_at_public/' + encodeURIComponent(oid) + '/' +
+          encodeURIComponent(ch))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!el._aotSwOn || !document.body.contains(el)) return;
+        var se = null;
+        if (d) {
+          if (d.started_at_epoch) se = d.started_at_epoch;
+          else if (d.elapsed_sec > 0 && d.server_now_epoch) {
+            se = d.server_now_epoch - d.elapsed_sec;
+          }
+        }
+        _regSlot(el, oid, ch, se);
+      })
+      .catch(function () {
+        if (el._aotSwOn) _regSlot(el, oid, ch, null);
+      });
+  }
+
+  function _regSlot(el, oid, ch, startEpoch) {
+    if (!window.AoTStopwatchManager) return;
+    window.AoTStopwatchManager.register(oid, ch, true, startEpoch || null,
+                                        el, 7000, false);
+  }
+
+  function fillLastDuration(el) {
+    var oid = el.dataset.out || '', ch = el.dataset.ch || '0';
+    if (!oid) return;
+    fetch('/output_last_duration_public/' + encodeURIComponent(oid) + '/' +
+          encodeURIComponent(ch))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        // 그 사이 다시 켜졌으면 타이머가 이 칸의 주인이다.
+        if (!d || el._aotSwOn || !document.body.contains(el)) return;
+        var s = parseInt(d.last_duration_sec, 10);
+        el.dataset.last = isNaN(s) ? '0' : String(s);
+        delete el.dataset.deferlast;
+        el.textContent = (isNaN(s) || s <= 0) ? '—' : _fmtDur(s);
+      })
+      .catch(function () {});
+  }
+
+  // 배치로 받아 온 runtime 을 칸에 심는다(구역 목록). 켜져 있는 칸은
+  // 건드리지 않는다 — 거기는 스톱워치가 주인이다.
+  function seedTimeSlot(el, rt) {
+    if (!el) return;
+    rt = rt || {};
+    if (rt.last_duration_sec != null) {
+      el.dataset.last = String(rt.last_duration_sec);
+    }
+    delete el.dataset.deferlast;
+    if (el._aotSwOn) return;
+    var s = parseInt(el.dataset.last, 10);
+    el.textContent = (isNaN(s) || s <= 0) ? '—' : _fmtDur(s);
+  }
+
+  // innerHTML 으로 꽂힌 칸을 스톱워치에 물린다.
+  //
+  // 호출처가 이미 여섯 곳이고 앞으로 더 는다. 저마다 배선을 기억하게 두면
+  // 한 곳만 빠뜨려도 그 화면의 시간만 조용히 멈춘다 — 구역 목록이 정확히
+  // 그랬다. 그래서 **생성이 곧 예약**이다: timeSlotHtml 이 문서 전체 훑기를
+  // 한 번 걸어 두고, 아직 배선 안 된 칸(_aotSwOn 미정)만 붙잡는다.
+  function wireTimeSlots(root) {
+    var scope = root || document;
+    var els = scope.querySelectorAll('.aot-act-time[data-out]');
+    Array.prototype.forEach.call(els, function (el) {
+      applyTimeSlot(el, { countsRuntime: el.dataset.run === '1' });
+    });
+  }
+
+  var _slotSweep = null;
+  function _scheduleSlotSweep() {
+    if (_slotSweep) return;
+    _slotSweep = setTimeout(function () {
+      _slotSweep = null;
+      wireTimeSlots(document);
+    }, 0);
+  }
+
+  // 예약 시각 한 줄 — 시간 칸 옆에 덧붙는다. 시간 칸이 "지금/방금"을 말하고
+  // 이쪽이 "다음"을 말한다.
+  function nextRunHtml(rt) {
+    var _tr = function (x) { return (window._ ? window._(x) : x); };
+    if (!rt || !rt.next_schedule) return '';
+    return ' <span class="aot-act-meta-dim">' + _esc(_tr('Next run')) + ' ' +
+           _esc(rt.next_schedule) + '</span>';
+  }
+
+  // 초 → "HH:MM:SS". 공용 AoTTime.formatDuration 을 그대로 쓴다 — 장치 마커
+  // 팝업의 작동 시간 스톱워치와 같은 표기여야 하고, 시/분/초를 단어로 쓰면
+  // 언어마다 msgid 가 세 개 더 생긴다.
+  function _fmtDur(sec) {
+    if (window.AoTTime && window.AoTTime.formatDuration) {
+      return window.AoTTime.formatDuration(Math.max(0, Math.round(+sec || 0)));
+    }
+    var t = Math.max(0, Math.round(+sec || 0));
+    var p = function (n) { return n < 10 ? '0' + n : String(n); };
+    return p(Math.floor(t / 3600)) + ':' + p(Math.floor((t % 3600) / 60)) +
+           ':' + p(t % 60);
+  }
+
   function _buildActRow(sk, s, ct, canCtrl, lastCmd) {
-    var name     = _esc(s.name || sk);
     var _tr      = function (x) { return (window._ ? window._(x) : x); };
     var curPct   = s.percent != null ? parseFloat(s.percent) : (s.on ? 100 : 0);
 
-    // ── ON/OFF binary: [설정] + 공용 슬라이드 토글, 제목 오른쪽 끝 정렬 ──────
+    // ── ON/OFF binary: 1행 이름+토글 / 2행 작동·예약 시간 + [설정] ───────────
     // [설정] = 시작/종료 예약. on/off 장치에만 붙인다 — 개폐율(value)·PWM 은
     // "언제부터 언제까지 켬"이라는 duration 의미가 성립하지 않는다.
     if (ct === 'binary') {
-      var ctrl = canCtrl
-        ? '<div class="aot-act-3btn">' +
-          _scheduleBtn(sk, s) +
-          _slideToggle('', 'aot-act-toggle-input', sk, !!s.on) +
-          '</div>'
-        : '<span class="aot-act-val-ro aot-act-toggle-right ' +
-          (s.on ? 'aot-act-on' : 'aot-act-off') + '">' +
-          (s.on ? 'ON' : 'OFF') + '</span>';
-      return '<div class="aot-act-row" data-slot="' + _esc(sk) + '">' +
-             '<div class="aot-act-line">' +
-             (canCtrl ? _dragHandle() : '') +
-             '<span class="aot-act-name">' + name + '</span>' + ctrl +
-             '</div></div>';
+      var bid = _slotIds(sk, s);
+      return buildOutputRow({
+        slot: sk,
+        name: s.name || sk,
+        drag: canCtrl,
+        primary: canCtrl
+          ? _slideToggle('aot-act-toggle-right', 'aot-act-toggle-input', sk, !!s.on)
+          : '<span class="aot-act-val-ro aot-act-toggle-right ' +
+            (s.on ? 'aot-act-on' : 'aot-act-off') + '">' +
+            (s.on ? 'ON' : 'OFF') + '</span>',
+        meta: timeSlotHtml({ outputId: bid.oid, channel: bid.ch,
+                             runtime: s.runtime, on: !!s.on }) +
+              nextRunHtml(s.runtime),
+        settings: canCtrl ? _scheduleBtn(sk, s) : ''
+      });
     }
 
     // ── Paired actuator (value): 닫힘/중지/열림 3버튼 (output 카드 스타일) ───
@@ -312,14 +545,14 @@
                      '<div class="aot-3way-current-dot"></div></div>';
       }
 
-      return '<div class="aot-act-row" data-slot="' + _esc(sk) + '">' +
-             '<div class="aot-act-line">' +
-             (canCtrl ? _dragHandle() : '') +
-             '<span class="aot-act-name">' + name + '</span>' + btns +
-             '</div>' +
-             '<div class="aot-act-row-top">' +
-             '<span class="aot-act-val-current">' + _esc(info) + '</span><span></span>' +
-             '</div>' + sliderHtml + '</div>';
+      return buildOutputRow({
+        slot: sk,
+        name: s.name || sk,
+        drag: canCtrl,
+        primary: btns,
+        meta: '<span class="aot-act-val-current">' + _esc(info) + '</span>',
+        settings: sliderHtml
+      });
     }
 
     // ── PWM slider (기존 유지) ───────────────────────────────────────────────
@@ -327,18 +560,22 @@
                         window._aotActuatorTargetPct[sk.split('::')[0]] !== undefined)
                        ? window._aotActuatorTargetPct[sk.split('::')[0]] : null;
     var thumbPct = globalTarget !== null ? globalTarget : curPct;
+    var pid = _slotIds(sk, s);
 
-    var inner = '<span class="aot-act-name">' + name + '</span>' +
-                '<div class="aot-act-row-top">' +
-                '<span class="aot-act-val">' + curPct.toFixed(0) + '%</span>' +
-                '<span></span></div>';
-    if (canCtrl) {
-      inner += '<input type="range" class="aot-act-slider" min="0" max="100" step="1"' +
-               ' value="' + thumbPct.toFixed(0) + '"' +
-               ' data-slot="' + _esc(sk) + '" data-ct="' + ct + '">';
-    }
-    return '<div class="aot-act-row" data-slot="' + _esc(sk) + '">' +
-           (canCtrl ? _dragHandle() : '') + inner + '</div>';
+    return buildOutputRow({
+      slot: sk,
+      name: s.name || sk,
+      drag: canCtrl,
+      primary: '<span class="aot-act-val">' + curPct.toFixed(0) + '%</span>',
+      // 듀티가 0 보다 크면 돌고 있는 것이다 — PWM 도 "얼마나 돌았나"를 묻는다.
+      meta: timeSlotHtml({ outputId: pid.oid, channel: pid.ch,
+                           runtime: s.runtime, on: curPct > 0 }),
+      settings: canCtrl
+        ? '<input type="range" class="aot-act-slider" min="0" max="100" step="1"' +
+          ' value="' + thumbPct.toFixed(0) + '"' +
+          ' data-slot="' + _esc(sk) + '" data-ct="' + ct + '">'
+        : ''
+    });
   }
 
   // ── wire ──────────────────────────────────────────────────────────────────
@@ -700,6 +937,22 @@
     html += '<div class="aot-ov-block aot-ov-modes">' +
             '<div class="aot-ov-sec-title">' + _esc(_t('Status Summary')) + '</div>' +
             '<div class="aot-ov-modes-line">' + _esc(line) + '</div>';
+    // 목표 대비 편차 — "지금 얼마나 벗어나 있나". 운전 모드는 무엇을 하는
+    // 중인지만 말하고 추세는 어디로 가는지만 말해서, 정작 벗어난 폭은 어디에도
+    // 없었다. 서버는 계속 보내고 있었고 렌더 함수(_devRow)도 있었는데 부르는
+    // 곳이 없는 죽은 코드였다.
+    var dv = summary.deviation || {};
+    var devs = [
+      _devRow(_t('Temperature'), dv.temperature, '°C'),
+      _devRow(_t('Humidity'), dv.humidity, '%'),
+      _devRow('VPD', dv.vpd, ' kPa'),
+      _devRow('CO2', dv.co2, ' ppm')
+    ].filter(Boolean);
+    if (devs.length) {
+      html += '<div class="aot-ov-trend">' + _esc(_t('Deviation from target')) +
+              devs.join('') + '</div>';
+    }
+
     var tr = summary.trend || {};
     var t1 = _trendText(_t('Temperature'), tr.T_per_min, '°C');
     var t2 = _trendText(_t('Humidity'), tr.RH_per_min, '%');
@@ -806,16 +1059,28 @@
   function fillOverviewNotes(listEl, notes, onOpenAll) {
     if (!listEl) return;
     if (!Array.isArray(notes) || !notes.length) {
-      listEl.innerHTML = '<span class="aot-ov-muted">' +
-                         _esc(_t('No records')) + '</span>';
+      // 'No records' 는 번역이 없어 한국어 화면에 영어로 남아 있었다.
+      // 빈 상태 문구는 계층을 가리지 않고 이 하나를 쓴다.
+      listEl.innerHTML = emptyLine(_t('No notes written'));
       return;
     }
     var html = '';
     notes.slice(0, NOTES_MAX).forEach(function (n) {
+      // 날짜는 **장치 현지 시각**으로 읽는다. 브라우저 시각대로 찍으면, 다른
+      // 지역 농장을 원격으로 보는 사람에게 자정 언저리 노트의 날짜가 하루씩
+      // 어긋난다. /notes/target 이 그 노트가 속한 곳의 tz(date_tz)를 함께 준다.
       var d = '';
       try {
         var dt = new Date(n.date_time);
-        if (!isNaN(dt)) d = (dt.getMonth() + 1) + '/' + dt.getDate();
+        if (!isNaN(dt)) {
+          if (n.date_tz && window.AoTTz && window.AoTTz.formatDevice) {
+            // opts.fmt 가 Intl 옵션 자리다 — 옵션을 바로 넘기면 무시되고
+            // 기본 datetimeShort 가 나온다.
+            d = window.AoTTz.formatDevice(n.date_time, n.date_tz,
+                  { fmt: { month: 'numeric', day: 'numeric' } });
+          }
+          if (!d) d = (dt.getMonth() + 1) + '/' + dt.getDate();
+        }
       } catch (e) {}
       var txt = String(n.note || '').replace(/\s+/g, ' ').slice(0, NOTE_TEXT_MAX);
 
@@ -859,15 +1124,149 @@
     }
   }
 
-  // Zone [현황] 탭 HTML 빌더 — 대표사진 + 구역 정보 + 노트 블록.
+  // ── 모달 제목줄 (site·zone·facility 공용) ─────────────────────────────────
+  //
+  //   [← 상위]  이름  [상태 점]
+  //
+  // 계층마다 헤더 HTML 을 따로 짜던 것을 하나로 모은 것이다. 따로 짜면 상위
+  // 이동 화살표를 하나 추가할 때 세 군데를 고쳐야 하고, 실제로 한 곳은 빠졌다.
+  //
+  // opts: { name, up: bool, status: 'ok'|'warning'|'fault'|'empty'|null }
+  function buildModalHeader(opts) {
+    opts = opts || {};
+    // aria-label 은 종류를 가리지 않는 'Go up' 하나다 — 상위가 필지일 수도
+    // 구역일 수도 시설일 수도 있어서(장치 모달), 문구를 종류마다 나누면
+    // msgid 가 셋으로 늘고 정작 어느 것이 뜰지는 데이터가 정한다.
+    // 구체적인 상위 이름은 버튼의 title 로 붙인다(_wireUpBtn).
+    var up = opts.up
+      ? '<button type="button" class="aot-modal-up" hidden aria-label="' +
+        _esc(_t('Go up')) + '">&#x2190;</button>'
+      : '';
+    return '<div class="aot-sensor-popup-header">' + up +
+             '<span class="aot-modal-heading">' +
+               '<span class="aot-sensor-popup-title">' +
+               _esc(opts.name || '') + '</span>' +
+               statusDotHtml(opts.status) +
+             '</span>' +
+           '</div>';
+  }
+
+  // 상태 점 — **주의·이상일 때만 보인다.**
+  // 정상까지 초록 점을 찍으면 매일 보는 표식이 하나 늘 뿐이고, 정작 봐야 할
+  // 붉은 점이 그 속에 묻힌다(센서 응답 수를 모자랄 때만 적는 것과 같은 규칙).
+  // 판정은 서버가 필지·구역·시설 모두 같은 함수로 낸다.
+  var _STATUS_WORD = { fault: 'Fault', warning: 'Attention' };
+  function statusDotHtml(status) {
+    var word = _STATUS_WORD[status];
+    if (!word) return '';
+    return '<span class="aot-status-dot is-' + status + '" title="' +
+           _esc(_t(word)) + '" aria-label="' + _esc(_t(word)) + '"></span>';
+  }
+
+  // 렌더 뒤 상태가 도착했을 때 제목줄에 점을 넣는다.
+  function applyStatusDot(scopeEl, status) {
+    if (!scopeEl) return;
+    var head = scopeEl.querySelector('.aot-modal-heading');
+    if (!head) return;
+    var old = head.querySelector('.aot-status-dot');
+    if (old) old.remove();
+    var html = statusDotHtml(status);
+    if (html) head.insertAdjacentHTML('beforeend', html);
+  }
+
+  // 빈 상태 한 줄 — 계층마다 "장치 없음"/"기능 없음"/"No records" 가 서로
+  // 다른 마크업이었다. 문구는 호출자가 정하고 생김새는 여기서 하나로 둔다.
+  function emptyLine(msg) {
+    return '<div class="aot-ov-empty">' + _esc(msg) + '</div>';
+  }
+
+  // 현재 환경 블록 — 구역·시설 [현황] 공용.
+  //
+  //   env: { readings: [{key, value, unit, n}], sensors: {valid, total} }
+  //
+  // 값은 채널 종류별 평균이고, 순서는 서버가 대표값 우선순위대로 정렬해 보낸다.
+  // 센서가 아예 없으면 블록을 그리지 않는다 — "—" 만 남은 빈 상자는 값이 없다는
+  // 사실을 알리기보다 화면만 차지한다.
+  //
+  // 응답 수(valid/total)는 **모자랄 때만** 적는다. 전부 살아 있을 때 "3/3"을
+  // 붙이면 매일 보는 숫자가 하나 느는 것뿐이고, 정작 봐야 할 "2/3"이 그 속에 묻힌다.
+  function buildEnvNowHtml(env) {
+    env = env || {};
+    var readings = env.readings || [];
+    var sensors = env.sensors || {};
+    if (!readings.length && !sensors.total) return '';
+
+    var head = '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+               '<span>' + _esc(_t('Now')) + '</span>';
+    if (sensors.total && sensors.valid < sensors.total) {
+      // 'Sensors' 를 쓰지 않는다 — 그 msgid 는 설정 화면에서 "센서류"(장치 분류)
+      // 로 번역돼 있어 "센서류 2/3" 이 된다. 뜻이 다르면 msgid 를 나눈다.
+      head += '<span class="aot-ov-degraded">' +
+              _esc(_t('Sensors responding')) + ' ' +
+              sensors.valid + '/' + sensors.total +
+              '</span>';
+    }
+    head += '</div>';
+
+    var body;
+    if (readings.length) {
+      body = '<div class="aot-env-now">' + readings.map(function (r) {
+        var dec = (window.AoTSensorLabel && window.AoTSensorLabel.defaultDecimals)
+          ? window.AoTSensorLabel.defaultDecimals(r.key) : 1;
+        var name = (window.AoTSensorLabel && window.AoTSensorLabel.keyDisplay)
+          ? window.AoTSensorLabel.keyDisplay(r.key) : r.key;
+        // 단위 정규화는 공용 함수 하나만 쓴다(값 라벨·차트 레전드와 같은 판단).
+        var unit = (window.AoTSensorLabel && window.AoTSensorLabel.displayUnit)
+          ? window.AoTSensorLabel.displayUnit(r.unit)
+          : String(r.unit || '').trim();
+        return '<div class="aot-env-now-item">' +
+                 '<div class="aot-env-now-val">' +
+                 _esc((+r.value).toFixed(dec)) +
+                 '<span class="aot-env-now-unit">' + _esc(unit) + '</span>' +
+                 '</div>' +
+                 '<div class="aot-env-now-key">' + _esc(name) + '</div>' +
+               '</div>';
+      }).join('') + '</div>';
+    } else {
+      body = '<div class="aot-ov-muted">' + _esc(_t('No sensor readings')) + '</div>';
+    }
+
+    // 바깥 — 시설에만 있다(구역은 실내/실외 구분이 없다). 한 줄로 붙이는 이유:
+    // 안이 더운 것이 문제인지 그냥 바깥이 더운 날인지는 둘을 나란히 놔야
+    // 판단할 수 있는데, 값을 크게 넣으면 실내값과 구분이 안 된다.
+    var outdoor = (env.outdoor || []).filter(function (r) {
+      return r && r.value != null;
+    });
+    if (outdoor.length) {
+      body += '<div class="aot-ov-trend">' + _esc(_t('Outdoor')) + ' ' +
+              outdoor.map(function (r) {
+                var dec = (window.AoTSensorLabel && window.AoTSensorLabel.defaultDecimals)
+                  ? window.AoTSensorLabel.defaultDecimals(r.key) : 1;
+                return _esc((+r.value).toFixed(dec) + (r.unit || ''));
+              }).join(' · ') + '</div>';
+    }
+    return '<div class="aot-ov-block">' + head + body + '</div>';
+  }
+
+  // Zone [현황] 탭 — 지금 어떤가. 시설 [현황]과 같은 순서다(현재 환경 → 노트).
   //   zone: api_geo_zone_contents 응답의 zone 객체
-  //         { unique_id, name, site_name, area_m2, counts, photo_url, can_edit }
-  function buildZoneOverviewHtml(zone) {
+  //         { unique_id, name, site_name, area_m2, counts, env, photo_url, can_edit }
+  //
+  // 사진·면적·개수는 여기 있지 않다 — [개요]로 옮겼다. 예전에는 이 탭 이름이
+  // [상태]인데 내용은 정적 인벤토리여서, "지금 괜찮은가"를 물으러 온 사용자가
+  // 면적과 개수를 읽고 나가야 했다.
+  function buildZoneStatusHtml(zone) {
+    zone = zone || {};
+    return buildEnvNowHtml(zone.env) + _ovNotesBlock();
+  }
+
+  // Zone [개요] 탭 — 이것의 정체는 무엇인가. 시설 [개요]와 같은 순서다
+  // (사진 → 치수·소속 → 설명). 구역에는 설명 필드가 없어 두 블록뿐이다.
+  function buildZoneAboutHtml(zone) {
     zone = zone || {};
     var html = '';
     var counts = zone.counts || {};
 
-    // 대표사진 블록
     if (zone.photo_url || zone.can_edit) {
       html += '<div class="aot-ov-block aot-ov-photo-wrap">' +
               '<div class="aot-ov-sec-title">' + _esc(_t('Photo')) + '</div>';
@@ -886,7 +1285,6 @@
       html += '</div>';
     }
 
-    // 구역 정보
     function _zrow(label, val) {
       return '<div class="aot-ov-row"><span>' + _esc(label) + '</span>' +
              '<span>' + _esc(String(val)) + '</span></div>';
@@ -898,9 +1296,6 @@
     rows += _zrow(_t('Devices'), String(counts.outputs || 0));
     rows += _zrow(_t('Functions'), String(counts.functions || 0));
     html += '<div class="aot-ov-block aot-ov-dims">' + rows + '</div>';
-
-    // 노트 블록 (목록은 호출자가 /notes/target/<uuid>로 비동기 채움)
-    html += _ovNotesBlock();
 
     return html;
   }
@@ -1088,7 +1483,19 @@
     buildOverviewSection:  buildOverviewSection,
     buildAboutSection:     buildAboutSection,
     fillOverviewNotes:     fillOverviewNotes,
-    buildZoneOverviewHtml: buildZoneOverviewHtml
+    buildZoneStatusHtml:   buildZoneStatusHtml,
+    buildZoneAboutHtml:    buildZoneAboutHtml,
+    buildEnvNowHtml:       buildEnvNowHtml,
+    buildModalHeader:      buildModalHeader,
+    applyStatusDot:        applyStatusDot,
+    emptyLine:             emptyLine,
+    buildOutputRow:        buildOutputRow,
+    scheduleButtonHtml:    scheduleButtonHtml,
+    timeSlotHtml:          timeSlotHtml,
+    applyTimeSlot:         applyTimeSlot,
+    seedTimeSlot:          seedTimeSlot,
+    wireTimeSlots:         wireTimeSlots,
+    nextRunHtml:           nextRunHtml
   };
 
 })();

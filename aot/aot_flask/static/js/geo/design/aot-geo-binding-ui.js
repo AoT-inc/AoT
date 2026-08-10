@@ -181,7 +181,7 @@ class AoTGeoBinding {
                     <div class="d-flex justify-content-between align-items-center border rounded-pill px-4 py-2 mb-1">
                         <span class="font-weight-600">${this._deviceName(b.device_id)}${ch}</span>
                         <span>
-                            <button class="btn btn-aot-pill btn-aot-outline" data-bind-replace="${b.unique_id}" data-bind-channel="${b.channel_id}">${this._t('Replace')}</button>
+                            <button class="btn btn-aot-pill btn-aot-outline" data-bind-replace="${b.unique_id}" data-bind-channel="${b.channel_id}" data-bind-device="${b.device_id}">${this._t('Replace')}</button>
                             <button class="btn btn-aot-pill btn-aot-outline" data-bind-release="${b.unique_id}">${this._t('Unassign')}</button>
                         </span>
                     </div>`;
@@ -231,7 +231,8 @@ class AoTGeoBinding {
             el.onclick = () => this._release(el.dataset.bindRelease);
         });
         body.querySelectorAll('[data-bind-replace]').forEach(el => {
-            el.onclick = () => this._replaceNotice(el.dataset.bindChannel);
+            el.onclick = () => this._replaceNotice(el.dataset.bindChannel,
+                                                   el.dataset.bindDevice);
         });
 
         const search = body.querySelector('#geo-binding-search');
@@ -284,35 +285,98 @@ class AoTGeoBinding {
     }
 
     /**
-     * 교체 안내 — 고장 교체의 정답은 대개 삭제-재생성이 아니라 접속정보 갱신이다.
-     * DevEUI·주소만 바꾸면 도형·이력·함수 연결이 전부 유지된다. 사람들이
-     * "새로 만들고 옛것 삭제"로 가는 것은 이 경로가 화면에 없기 때문이므로,
-     * 교체를 누르면 먼저 이 길을 보여준다.
+     * 교체 화면 — 고장 교체의 정답은 대개 삭제-재생성이 아니라 접속정보 갱신이다.
+     * DevEUI·주소만 바꾸면 장치 uuid 가 그대로라 도형·이력·함수 연결·측정 채널이
+     * 전부 유지되고 시계열도 끊기지 않는다.
+     *
+     * 예전에는 그 안내 아래에 /input · /output 새 탭 링크만 있었다. 그건 길을
+     * 가리키기만 하고 걷게 하지는 않는다 — 사람은 설정 페이지에서 그 장치를 다시
+     * 찾고, 수십 개 필드 사이에서 접속정보를 골라내고, 활성 상태면 껐다 켜기까지
+     * 해야 한다. 그 왕복이 "새로 만들고 옛것 삭제"보다 번거로우면 안내문은 아무
+     * 효과가 없다. 그래서 여기서 바로 고치게 한다.
      */
-    _replaceNotice(channelId) {
+    _replaceNotice(channelId, deviceId) {
         this._setTitle(this._t('Replace device'));
-        this._setBody(`
-            <div class="alert alert-light border mb-3">
-                <div class="font-weight-bold mb-1">${this._t('Is this a like-for-like hardware swap?')}</div>
-                <div class="small text-muted">
-                    ${this._t('If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact.')}
-                </div>
+        this._setBody(`<div class="text-muted">${this._t('Loading...')}</div>`);
+        if (!deviceId) {
+            this._renderReplace(channelId, deviceId, null);
+            return;
+        }
+        // 폼 자체는 공용 모듈이 소유한다(common/aot-device-connection.js) —
+        // 같은 폼이 시설 편집기에도 뜨므로, 두 벌이면 두 번 다르게 틀린다.
+        window.AoTDeviceConnection.fetchSchema(deviceId)
+            .then(schema => this._renderReplace(channelId, deviceId, schema));
+    }
+
+    _renderReplace(channelId, deviceId, schema) {
+        const fields = (schema && schema.fields) || [];
+
+        // 1안 — 같은 기계로 교체(접속정보만 갱신).
+        let first = `
+            <div class="font-weight-bold mb-1">${this._t('Is this a like-for-like hardware swap?')}</div>
+            <div class="small text-muted mb-3">
+                ${this._t('If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact.')}
+            </div>`;
+
+        if (fields.length) {
+            first += window.AoTDeviceConnection.formHtml(schema);
+            first += `
+                <button class="btn btn-aot-pill btn-aot-action mt-2" id="geo-conn-save">
+                    ${this._t('Update connection settings')}
+                </button>`;
+        } else {
+            // 접속정보가 없는 장치(가상 출력·계산 함수 등)에서는 1안이 성립하지
+            // 않는다. 빈 폼을 보여주는 대신 그렇다고 말하고 설정 페이지를 준다.
+            first += `
+                <div class="small text-muted">${this._t('This device has no connection settings to change.')}</div>
                 <div class="mt-2">
                     <a class="btn btn-aot-pill btn-aot-outline" href="/input" target="_blank">${this._t('Open Input settings')}</a>
                     <a class="btn btn-aot-pill btn-aot-outline" href="/output" target="_blank">${this._t('Open Output settings')}</a>
-                </div>
-            </div>
+                </div>`;
+        }
+
+        this._setBody(`
+            <div class="alert alert-light border mb-3">${first}</div>
             <div class="small text-muted mb-1">${this._t('Or move this slot to a different device')}</div>
             <input type="text" class="form-control mb-2" id="geo-binding-search"
                    placeholder="${this._t('Search Device...')}" style="height: 38px; border-radius: 19px;">
             <div id="geo-binding-devices" class="list-group"></div>
             <button class="btn btn-aot-pill btn-aot-outline mt-3" id="geo-binding-back">${this._t('Back')}</button>
         `);
+
+        const save = document.getElementById('geo-conn-save');
+        if (save) save.onclick = () => this._saveConnection(deviceId, save);
+
         const search = document.getElementById('geo-binding-search');
         if (search) search.oninput = () => this._renderDeviceList(search.value, true, channelId);
         this._renderDeviceList('', true, channelId);
         const back = document.getElementById('geo-binding-back');
         if (back) back.onclick = () => this._refreshSlot();
+    }
+
+    /**
+     * 접속정보만 저장한다. 바인딩은 건드리지 않는다 — 장치가 그대로이므로
+     * 슬롯의 연결도 그대로이고, 이력에 새 구간을 만들면 오히려 거짓말이 된다.
+     */
+    _saveConnection(deviceId, button) {
+        const body = document.getElementById('geo-binding-body');
+        if (!body) return;
+
+        button.disabled = true;
+        const label = button.textContent;
+        button.textContent = this._t('Saving...');
+
+        window.AoTDeviceConnection
+            .save(deviceId, window.AoTDeviceConnection.collect(body))
+            .then(result => {
+                button.disabled = false;
+                button.textContent = label;
+                result.messages.forEach(m => this._toast(m.text, m.level));
+                if (result.ok && result.changed) {
+                    this._afterChange();
+                    this._refreshSlot();
+                }
+            });
     }
 
     _assign(deviceId, isReplace, channelId) {

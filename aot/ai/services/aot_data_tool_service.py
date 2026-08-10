@@ -732,13 +732,18 @@ class AoTDataToolService:
         """
         AoT 소프트웨어(시스템)의 업데이트 가용 여부를 확인합니다. 읽기 전용.
 
-        현재 설치된 버전(AOT_VERSION)을 GitHub 릴리스 태그와 비교합니다
-        (admin/upgrade 페이지와 동일한 AoTRelease().github_upgrade_exists() 사용).
-        GitHub 조회 실패/rate-limit 시 DB에 캐시된 Misc.aot_upgrade_available 로 폴백합니다.
+        현재 설치된 버전(AOT_VERSION)을, 이 설치가 실제로 업그레이드하는 경로의
+        정본과 비교합니다 — 네이티브 설치는 GitHub 릴리스 태그, Docker 배포는
+        컨테이너 레지스트리(GHCR)입니다. Docker에서 GitHub 태그를 보면 이미지
+        빌드가 끝나기 전 구간에서 "설치할 수 없는 업데이트"를 알리게 됩니다.
+        조회 실패/rate-limit 시 DB에 캐시된 Misc.aot_upgrade_available 로 폴백합니다.
         """
         try:
             from aot.config import AOT_VERSION
-            from aot.utils.github_release_info import AoTRelease
+            from aot.utils.update_availability import (check_upgrade_exists,
+                                                       is_docker_install,
+                                                       running_image_reference,
+                                                       updater_status)
 
             current_version = AOT_VERSION
             update_available = None
@@ -750,9 +755,9 @@ class AoTDataToolService:
             try:
                 (upgrade_exists,
                  releases,
-                 _aot_tags,
+                 _all_tags,
                  current_latest_tag,
-                 check_errors) = AoTRelease().github_upgrade_exists()
+                 check_errors) = check_upgrade_exists()
                 update_available = bool(upgrade_exists)
                 latest_version = current_latest_tag
                 available_releases = releases or []
@@ -769,13 +774,17 @@ class AoTDataToolService:
                 except Exception as e:
                     errors.append(str(e))
 
+            is_docker = is_docker_install()
+            source = "container registry (GHCR)" if is_docker else "GitHub release tags"
+
             if update_available is None:
                 return {
                     "current_version": current_version,
                     "update_available": None,
+                    "deployment": "docker" if is_docker else "native",
                     "message": (
-                        "Could not check for updates (GitHub unreachable or rate-limited). "
-                        "Try again later, or check Admin → Upgrade."
+                        f"Could not check for updates ({source} unreachable or "
+                        "rate-limited). Try again later, or check Admin → Upgrade."
                     ),
                     "errors": errors,
                 }
@@ -789,14 +798,31 @@ class AoTDataToolService:
             else:
                 message = f"You are on the latest version (currently {current_version})."
 
-            return {
+            result = {
                 "current_version": current_version,
                 "latest_version": latest_version,
                 "update_available": update_available,
                 "available_releases": available_releases,
+                "deployment": "docker" if is_docker else "native",
+                "update_source": source,
                 "message": message,
                 "errors": errors,
             }
+
+            if is_docker:
+                # Docker has no in-app upgrade path yet, so say how it is
+                # actually applied instead of leaving the caller to assume the
+                # Admin → Upgrade button exists.
+                result["image"] = running_image_reference()
+                result["one_click_update_available"] = updater_status()['present']
+                if update_available and not result["one_click_update_available"]:
+                    result["message"] += (
+                        " This is a Docker install: the update is applied on the"
+                        " host by pulling the new image and recreating the"
+                        " containers."
+                    )
+
+            return result
         except Exception as e:
             return {"error": str(e)}
 
@@ -4984,6 +5010,58 @@ class AoTDataToolService:
             db.session.rollback()
             return {"error": str(e)}
         return {"shape_id": shape_id, "shape_type": stype, "status": "deleted"}
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 공간-장치 바인딩 — 미배정 자리 조회 / 장치 단위 교체 (Phase D)
+    #
+    # 쓰기는 반드시 device_binding 게이트웨이를 지난다(GB-7). 여기서 GeoShape
+    # 나 geo_binding 을 직접 만지지 않는다 — 마커 충돌 판정·채널 축소 처리·
+    # 레거시 컬럼 동기화가 전부 게이트웨이 안에 있고, 그 셋 중 하나라도 빠지면
+    # 조용히 깨진다.
+    # ─────────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def list_unbound_slots(map_id=None, facility_id=None, kinds=None, **extra):
+        """Slots with no device bound — what a deletion or a swap left behind.
+        Read-only."""
+        from aot.aot_flask.geo import device_binding
+
+        if isinstance(kinds, str):
+            kinds = [k.strip() for k in kinds.split(',') if k.strip()]
+        try:
+            slots = device_binding.unbound_slots(
+                facility_uuid=facility_id or None,
+                map_uuid=map_id or None,
+                kinds=tuple(kinds) if kinds else None)
+        except Exception as e:
+            return {"error": str(e)}
+        return {"slots": slots, "count": len(slots)}
+
+    @staticmethod
+    def rebind_device(old_device_id=None, new_device_id=None, **extra):
+        """Move every map slot held by one device over to another device.
+        Requires human approval — this changes WHICH physical machine a zone
+        or marker commands."""
+        from aot.aot_flask.geo import device_binding
+
+        if not old_device_id or not new_device_id:
+            return {"error": "old_device_id and new_device_id are required"}
+        try:
+            result = device_binding.rebind_device(
+                old_device_id, new_device_id, commit=True)
+        except device_binding.BindingConflict as e:
+            db.session.rollback()
+            return {"error": str(e), "conflict": True}
+        except (device_binding.BindingError,
+                device_binding.BindingNotFound) as e:
+            db.session.rollback()
+            return {"error": str(e)}
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}
+
+        result["status"] = "rebound" if result["moved"] else "nothing_moved"
+        return result
 
     # ─────────────────────────────────────────────────────────────────────
     # AI Agent CRUD — create/edit/delete the pipeline agents. Reuses the same model

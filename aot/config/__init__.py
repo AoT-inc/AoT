@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_29_geo_binding_gb5_20260808'
+ALEMBIC_VERSION = 'p6_30_docker_auto_update_20260810'
 AOT_VERSION = '26.08.2'
 
 # FORCE UPGRADE MASTER
@@ -221,6 +221,37 @@ AUDIT_LOG_RETENTION_DAYS = 365
 UPGRADE_CHECK_INTERVAL = 172800
 
 TAGS_URL = 'https://api.github.com/repos/AoT-inc/AoT/git/refs/tags'
+
+# Docker distribution image. A GitHub release tag exists the moment the tag is
+# pushed, but the multi-arch image is only pullable once
+# .github/workflows/docker-publish.yml finishes -- so a Docker install must ask
+# the registry, not the git tag list, whether an upgrade is actually available.
+DOCKER_IMAGE_REGISTRY = 'ghcr.io'
+DOCKER_IMAGE_REPOSITORY = 'aot-inc/aot'
+DOCKER_IMAGE = f'{DOCKER_IMAGE_REGISTRY}/{DOCKER_IMAGE_REPOSITORY}'
+# Anonymous pull token endpoint (the package must be public on GHCR).
+DOCKER_REGISTRY_TOKEN_URL = (
+    f'https://{DOCKER_IMAGE_REGISTRY}/token'
+    f'?service={DOCKER_IMAGE_REGISTRY}'
+    f'&scope=repository:{DOCKER_IMAGE_REPOSITORY}:pull')
+DOCKER_REGISTRY_TAGS_URL = (
+    f'https://{DOCKER_IMAGE_REGISTRY}/v2/{DOCKER_IMAGE_REPOSITORY}/tags/list')
+# The image tag this container was started from. docker-compose.prod.yml passes
+# it through for display only -- the authoritative running version is the
+# AOT_VERSION baked into the image above. Absent on installs predating that.
+DOCKER_IMAGE_TAG = os.environ.get('AOT_IMAGE_TAG') or None
+
+# Docker update state, shared between the app and the (opt-in, phase 2) updater
+# sidecar through the aot_data volume. Nothing writes these yet; the app reads
+# them to decide whether a one-click update path exists on this install.
+DOCKER_UPDATE_PATH = os.path.join(
+    os.environ.get('AOT_LOCAL_DIR') or INSTALL_DIRECTORY, 'update')
+DOCKER_UPDATE_REQUEST_FILE = os.path.join(DOCKER_UPDATE_PATH, 'request.json')
+DOCKER_UPDATE_STATUS_FILE = os.path.join(DOCKER_UPDATE_PATH, 'status.json')
+DOCKER_UPDATE_HEARTBEAT_FILE = os.path.join(DOCKER_UPDATE_PATH, 'heartbeat.json')
+DOCKER_UPDATE_LOG_FILE = os.path.join(DOCKER_UPDATE_PATH, 'update.log')
+# Heartbeat older than this means the updater is gone, not merely idle.
+DOCKER_UPDATE_HEARTBEAT_MAX_AGE = 120
 
 LANGUAGES = {
     'ko': '한국어 (Korean)',

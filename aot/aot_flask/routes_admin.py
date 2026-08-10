@@ -25,7 +25,7 @@ from packaging.version import parse as parse_version
 from aot.utils.time_utils import utc_now, to_local
 from aot.config import (BACKUP_LOG_FILE, BACKUP_PATH, CAMERA_INFO,
                            DEPENDENCIES_GENERAL, DEPENDENCY_INIT_FILE,
-                           DEPENDENCY_LOG_FILE, DOCKER_CONTAINER,
+                           DEPENDENCY_LOG_FILE, DOCKER_CONTAINER, DOCKER_IMAGE,
                            FINAL_RELEASES,
                            FORCE_UPGRADE_MASTER, FUNCTION_INFO,
                            INSTALL_DIRECTORY, METHOD_INFO, AOT_VERSION,
@@ -46,9 +46,15 @@ from aot.utils.github_release_info import AoTRelease
 from aot.utils.service_control import reload_frontend, restart_daemon
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import parse_output_information
+from aot.aot_client import DaemonControl
+from aot.utils import docker_update
+from aot.utils.audit import audit_log
 from aot.utils.stats import return_stat_file_dict
 from aot.utils.system_pi import (can_perform_backup, cmd_output,
                                     get_directory_size, internet)
+from aot.utils.update_availability import (check_upgrade_exists,
+                                              running_image_reference,
+                                              updater_status)
 from aot.utils.widgets import parse_widget_information
 
 logger = logging.getLogger('aot.aot_flask.admin')
@@ -595,6 +601,18 @@ def admin_statistics():
 @flask_login.login_required
 def admin_upgrade_status():
     """Return the last 30 lines of the upgrade log."""
+    if DOCKER_CONTAINER:
+        # In Docker the upgrade is performed by the updater sidecar, which
+        # writes to the shared volume rather than to the bare-metal upgrade log.
+        # The page's polling JS is the same either way.
+        log_output = docker_update.read_log()
+        if log_output is None:
+            log_output = gettext(
+                "Waiting for the updater to start...")
+        response = make_response(log_output)
+        response.headers["content-type"] = "text/plain"
+        return response
+
     if os.path.isfile(UPGRADE_TMP_LOG_FILE):
         command = 'cat {log}'.format(log=UPGRADE_TMP_LOG_FILE)
         log = subprocess.Popen(
@@ -610,6 +628,160 @@ def admin_upgrade_status():
     return response
 
 
+@blueprint.route('/admin/upgrade_state')
+@flask_login.login_required
+def admin_upgrade_state():
+    """Whether a Docker update is still running, for the progress page.
+
+    The log tail alone cannot say this: an update that fails and rolls back
+    stops producing new lines exactly like one that succeeded.
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'forbidden'}), 403
+
+    status = docker_update.read_status() or {}
+    return jsonify({
+        'in_progress': docker_update.update_in_progress(),
+        'state': status.get('state'),
+        'message': status.get('message'),
+    })
+
+
+def _save_docker_auto_update(form):
+    """Save the auto-update toggle and the time of day it should run."""
+    enabled = form.get('docker_auto_update') == 'y'
+    schedule = (form.get('docker_auto_update_time') or '').strip()
+
+    if enabled and not docker_update.parse_schedule(schedule):
+        # Refusing beats storing something the daemon will silently never fire
+        # on -- "enabled but never runs" is the worst of the three states.
+        flash(gettext("Enter the update time as HH:MM (24-hour), e.g. 03:00."),
+              "error")
+        return
+
+    mod_misc = Misc.query.first()
+    if mod_misc is None:
+        return
+
+    before = {'docker_auto_update': mod_misc.docker_auto_update,
+              'docker_auto_update_time': mod_misc.docker_auto_update_time}
+    mod_misc.docker_auto_update = enabled
+    if schedule:
+        mod_misc.docker_auto_update_time = schedule
+    db.session.commit()
+
+    audit_log(
+        'settings.change',
+        target_type='Misc',
+        target_name='docker_auto_update',
+        before=before,
+        after={'docker_auto_update': mod_misc.docker_auto_update,
+               'docker_auto_update_time': mod_misc.docker_auto_update_time})
+
+    # The daemon holds the schedule in memory; without this the change only
+    # takes effect at the next daemon restart.
+    try:
+        DaemonControl().refresh_daemon_misc_settings()
+    except Exception:
+        logger.exception("Could not tell the daemon about the new schedule")
+        flash(gettext(
+            "Saved, but the daemon could not be notified. The new schedule "
+            "takes effect after the daemon restarts."), "warning")
+        return
+
+    if enabled:
+        flash(gettext(
+            "Automatic updates are on. A published update will be installed "
+            "at %(time)s each day.",
+            time=mod_misc.docker_auto_update_time), "success")
+    else:
+        flash(gettext("Automatic updates are off."), "success")
+
+
+def _admin_upgrade_docker():
+    """Admin → Upgrade for a Docker deployment.
+
+    The app never runs the update. It writes a request naming a version, and
+    the updater sidecar (if the operator opted into it) does the privileged
+    work and reports back through the same shared directory. With no updater
+    present this degrades to an accurate status page plus the host commands.
+    """
+    updater = updater_status()
+    status = docker_update.read_status()
+    in_progress = docker_update.update_in_progress()
+
+    (upgrade_exists,
+     releases,
+     _all_tags,
+     latest_release,
+     errors) = check_upgrade_exists()
+
+    if request.method == 'POST':
+        if request.form.get('form-name') == 'auto_update':
+            _save_docker_auto_update(request.form)
+        elif not updater['present']:
+            flash(gettext(
+                "In-app upgrade is not available without the updater service. "
+                "On the host, pull the new image and recreate the containers "
+                "(docker compose pull && docker compose up -d) instead."), "error")
+        elif in_progress:
+            flash(gettext("An update is already in progress."), "error")
+        elif not upgrade_exists or not latest_release:
+            flash(gettext(
+                "You cannot upgrade if an upgrade is not available"), "error")
+        else:
+            ok, result = docker_update.request_update(
+                latest_release,
+                requested_by=getattr(flask_login.current_user, 'name', None))
+            audit_log(
+                'system.upgrade_request',
+                target_type='docker_image',
+                target_name=f'{DOCKER_IMAGE}:{latest_release}',
+                result='success' if ok else 'failure',
+                detail=None if ok else str(result),
+                before={'version': AOT_VERSION},
+                after={'version': latest_release})
+            if ok:
+                flash(gettext(
+                    "The update has been requested. The containers will be "
+                    "recreated on the new image; this page shows progress."),
+                    "success")
+            else:
+                flash(str(result), "error")
+        return redirect(url_for('routes_admin.admin_upgrade'))
+
+    for each_error in errors:
+        flash(each_error, 'error')
+
+    # Same cache the nav badge and the MCP tool read, kept in step with the
+    # registry rather than with the git tag list.
+    mod_misc = Misc.query.first()
+    if mod_misc is not None and mod_misc.aot_upgrade_available != bool(upgrade_exists):
+        mod_misc.aot_upgrade_available = bool(upgrade_exists)
+        db.session.commit()
+
+    return render_template(
+        'admin/upgrade.html',
+        current_release=AOT_VERSION,
+        current_releases=releases,
+        current_latest_release=latest_release,
+        current_image=running_image_reference(),
+        registry_image=DOCKER_IMAGE,
+        upgrade_available=bool(upgrade_exists),
+        updater_present=updater['present'],
+        registry_ok=not errors,
+        docker_update_status=status,
+        auto_update_enabled=bool(getattr(mod_misc, 'docker_auto_update', False)),
+        auto_update_time=(getattr(mod_misc, 'docker_auto_update_time', None)
+                          or docker_update.DEFAULT_SCHEDULE),
+        # Reuses the page's existing progress view: the head block starts the
+        # log poller on upgrade == 1, and /admin/upgrade_status serves the
+        # updater's log in Docker.
+        upgrade=1 if in_progress else 0,
+        is_internet=True,
+        is_docker=True)
+
+
 @blueprint.route('/admin/upgrade', methods=('GET', 'POST'))
 @flask_login.login_required
 def admin_upgrade():
@@ -617,21 +789,17 @@ def admin_upgrade():
     if not utils_general.user_has_permission('edit_settings'):
         return redirect(url_for('routes_general.home'))
 
-    # The in-app upgrade replaces the on-disk install (move /opt/AoT, stop
-    # systemd services, etc.). In Docker the code is a bind mount, there is no
-    # /var/aot-root or /opt/AoT, and there is no systemd — the upgrade scripts
-    # cannot run and would fail partway. Block it and point to the host workflow.
+    # A Docker install upgrades by pulling an image, not by rewriting the
+    # on-disk install the way the bare-metal upgrade scripts do. Two
+    # consequences shape this branch:
+    #
+    #  * availability comes from the registry, not the git tag list — the image
+    #    is published minutes after the tag (aot/utils/update_availability.py);
+    #  * the app cannot apply the update itself, because `docker compose up -d`
+    #    recreates this very container. It hands a request to the opt-in updater
+    #    sidecar and watches the result (aot/utils/docker_update.py).
     if DOCKER_CONTAINER:
-        if request.method == 'POST':
-            flash(gettext(
-                "In-app upgrade is not available in Docker. On the host, update "
-                "the code (git pull) and rebuild/restart the containers "
-                "(docker compose up -d --build) instead."), "error")
-            return redirect(url_for('routes_admin.admin_upgrade'))
-        return render_template('admin/upgrade.html',
-                               current_release=AOT_VERSION,
-                               is_internet=True,
-                               is_docker=True)
+        return _admin_upgrade_docker()
 
     misc = Misc.query.first()
     if not internet(host=misc.net_test_ip,

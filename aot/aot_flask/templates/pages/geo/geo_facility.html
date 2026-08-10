@@ -731,6 +731,10 @@
                     title="{{ _('Actuator that operates this fitting (one can drive multiple fittings)') }}">
               <option value="">{{ _('— None —') }}</option>
             </select>
+            {# 고장 교체는 장치를 갈아치우는 것이 아니라 접속정보만 갈면 된다.
+               여기서 장치를 바꾸면 설비의 배정 자체가 바뀌지만, 같은 기계로
+               갈아끼운 것이라면 배정은 그대로 두고 DevEUI·주소만 고쳐야 한다. #}
+            <button type="button" id="fi-actuator-swap" class="btn aot-pill-btn mt-1 d-none">{{ _('Replace hardware') }}</button>
           </div>
         </div>
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-input">
@@ -740,6 +744,7 @@
                     title="{{ _('Select sensor device (Input / Function)') }}">
               <option value="">{{ _('— None —') }}</option>
             </select>
+            <button type="button" id="fi-device-swap" class="btn aot-pill-btn mt-1 d-none">{{ _('Replace hardware') }}</button>
           </div>
         </div>
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-channels">
@@ -795,6 +800,24 @@
   <p class="aot-modal-body-text fac-section-desc">
     {{ _('Everything placed in this facility, grouped by type. Select a row to open its 3D placement right below it.') }}
   </p>
+  {# 장치를 지워도 도형·설비는 남는다(삭제 정책 B4). 남은 자리를 사람이 볼 수
+     없으면 재배정할 수단이 없어 그 정책이 성립하지 않는다.
+     이 목록에서 바인딩을 직접 만들지 않는다 — 설비의 장치 배정은 시설 JSON 이
+     정본이라 여기서 만든 바인딩은 다음 시설 저장이 지운다. 행을 누르면 그
+     설비를 인스펙터에서 열어 드롭다운으로 고치게 한다. #}
+  <div class="aot-modal-container" id="fac-unbound-box" style="display:none;">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="aot-modal-group-title mb-0">{{ _('Places with no device') }}</span>
+      <button type="button" id="fac-unbound-toggle" class="btn aot-pill-btn">
+        <span id="fac-unbound-count">0</span>
+      </button>
+    </div>
+    <p class="aot-modal-body-text fac-section-desc mb-0">
+      {{ _('A device was removed here but the fitting stayed. Select a row to open it and pick a device.') }}
+    </p>
+    <div id="fac-unbound-list" style="display:none;"></div>
+  </div>
+
   <div class="aot-modal-container">
     <div id="fac-kind-tabs" class="fac-kind-tabs" role="tablist"></div>
     <table id="sensor-config-table" class="aot-module-table fac-table">
@@ -1048,6 +1071,14 @@ window.FAC_FUNCTION_DEVICES = {{ function_devices | tojson | safe }};
 <!-- IEC summary / fitting-kind i18n dict (must load before aot-facility-design.js) -->
 <script>
 window._IEC = {
+  swap_hw:{{ _('Replace hardware')|tojson }},
+  swap_hint:{{ _('If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact.')|tojson }},
+  conn_update:{{ _('Update connection settings')|tojson }},
+  loading:{{ _('Loading...')|tojson }}, saving:{{ _('Saving...')|tojson }},
+  saved:{{ _('Saved.')|tojson }},
+  unbound_none:{{ _('Every fitting has a device.')|tojson }},
+  unbound_never:{{ _('device was deleted')|tojson }},
+  place_center_hint:{{ _('Click on the map to set the facility center')|tojson }},
   no_facilities:{{ _('No facilities yet.')|tojson }},
   volume:{{ _('Volume')|tojson }}, envelope:{{ _('Envelope')|tojson }}, u_eff:{{ _('U-effective')|tojson }},
   vent_area:{{ _('Vent area')|tojson }}, none:{{ _('None')|tojson }},

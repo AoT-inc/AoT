@@ -60,10 +60,18 @@
     return (+v).toFixed(d);
   }
 
+  // 표시용 단위. 저장값 'none' 은 "단위 없음"을 뜻하는 값이지 화면에 쓸 글자가
+  // 아니다 — 그대로 붙이면 무차원 채널(토양 정전용량 등)이 "522.0none" 이 된다.
+  // 값·라벨·레전드가 모두 여기를 거치게 해서 한 곳에서만 판단한다.
+  function displayUnit(u) {
+    var s = String(u == null ? '' : u).trim();
+    return s.toLowerCase() === 'none' ? '' : s;
+  }
+
   function formatChannel(ch, decimals) {
     if (!ch || ch.value == null) return '—';
     var d = decimals != null ? decimals : (_DEFAULT_DECIMALS[ch.key] != null ? _DEFAULT_DECIMALS[ch.key] : 1);
-    return _fmtNumber(ch.value, d) + (ch.unit || '');
+    return _fmtNumber(ch.value, d) + displayUnit(ch.unit);
   }
 
   function formatLabel(channels, opts) {
@@ -566,7 +574,9 @@
           custom: { aotDecimals: (opts.decimals != null ? opts.decimals
                      : (_DEFAULT_DECIMALS[key] != null ? _DEFAULT_DECIMALS[key] : 1)) },
           // 단위 없는 채널(예: 풍향)에 ' ' 만 붙어 "302 " 처럼 끝나지 않게.
-          tooltip: { valueSuffix: j.ch.unit ? (' ' + j.ch.unit) : '' }
+          // displayUnit 을 거치는 이유는 저장 단위가 'none' 인 채널 때문이다 —
+          // 그대로 쓰면 레전드가 "토양 정전용량: 522.0 none" 이 된다.
+          tooltip: { valueSuffix: displayUnit(j.ch.unit) ? (' ' + displayUnit(j.ch.unit)) : '' }
         });
       });
 
@@ -716,6 +726,7 @@
     renderHistory: renderHistory,
     renderOutputHistory: renderOutputHistory,
     isMetaChannel:    isMetaChannel,
+    displayUnit:      displayUnit,
     linkBadgesHtml: linkBadgesHtml,
     fillLinkBadges: fillLinkBadges,
     fetchStatus:      fetchStatus,

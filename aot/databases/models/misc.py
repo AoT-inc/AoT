@@ -50,6 +50,11 @@ class Misc(CRUDMixin, db.Model):
     stats_opt_out = db.Column(db.Boolean, default=False)  # Opt not to send anonymous usage statistics
     enable_upgrade_check = db.Column(db.Boolean, default=True)  # Periodically check for a AoT upgrade
     aot_upgrade_available = db.Column(db.Boolean, default=False)  # Stores if an upgrade is available
+    # Docker only: install a published update automatically at a set local time
+    # (see docs/design/docker-auto-update.md). Off by default -- turning it on
+    # means accepting a brief control pause at that hour, unattended.
+    docker_auto_update = db.Column(db.Boolean, default=False)
+    docker_auto_update_time = db.Column(db.String(5), default='03:00')  # 'HH:MM', local time
     rpyc_timeout = db.Column(db.Integer, default=30)
     gunicorn_threads = db.Column(db.Integer, default=None)  # 웹서버 스레드 수동 설정 (NULL = 자동 산정)
     daemon_debug_mode = db.Column(db.Boolean, default=False)

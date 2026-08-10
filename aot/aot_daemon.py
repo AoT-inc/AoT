@@ -62,7 +62,9 @@ from aot.utils.actions import (get_condition_value,
 from aot.utils import output_audit
 from aot.utils.command_origin import ROLE_DAEMON, set_process_role
 from aot.utils.database import db_retrieve_table_daemon
-from aot.utils.github_release_info import AoTRelease
+from aot.utils import docker_update
+from aot.utils.audit import audit_log
+from aot.utils.update_availability import check_upgrade_exists, updater_status
 from aot.utils.stats import (add_update_csv, recreate_stat_file,
                                 return_stat_file_dict, send_anonymous_stats)
 from aot.utils.system_environment import detect as detect_system_environment
@@ -220,6 +222,14 @@ class DaemonController:
         self.output_usage_report_next_gen = None
         self.opt_out_statistics = None
         self.enable_upgrade_check = None
+        # Docker auto-update (see docs/design/docker-auto-update.md). The next
+        # run is an absolute epoch time rather than a "is it HH:MM right now?"
+        # test: the loop's period drifts, and a minute-equality check silently
+        # skips a day whenever it drifts past the minute.
+        self.docker_auto_update = None
+        self.docker_auto_update_time = None
+        self.docker_auto_update_tz = None
+        self.docker_update_next_run = None
         self.refresh_daemon_misc_settings()
 
         state = 'disabled' if self.opt_out_statistics else 'enabled'
@@ -282,6 +292,12 @@ class DaemonController:
                     while now > self.timer_upgrade:
                         self.timer_upgrade += UPGRADE_CHECK_INTERVAL
                     self.check_aot_upgrade_exists(now)
+
+                # Docker only: install a published update at the configured
+                # hour, if the operator turned that on.
+                if (self.docker_update_next_run and
+                        now >= self.docker_update_next_run):
+                    self.run_docker_auto_update()
 
                 # v26.0: Periodic AI Semantic Snapshot Generation
                 if now > self.timer_ai_summary:
@@ -881,8 +897,49 @@ class DaemonController:
             self.output_usage_report_span = misc.output_usage_report_span
             self.output_usage_report_day = misc.output_usage_report_day
             self.output_usage_report_hour = misc.output_usage_report_hour
+            self.refresh_docker_auto_update(misc)
         except Exception:
             self.logger.exception("Could not refresh misc settings")
+
+    def refresh_docker_auto_update(self, misc):
+        """Re-arm the Docker auto-update schedule from the saved settings.
+
+        Called on every misc refresh, which is what makes a schedule change in
+        the web UI take effect without restarting the daemon.
+        """
+        if not DOCKER_CONTAINER:
+            return
+
+        self.docker_auto_update = bool(getattr(misc, 'docker_auto_update', False))
+        self.docker_auto_update_time = (
+            getattr(misc, 'docker_auto_update_time', None)
+            or docker_update.DEFAULT_SCHEDULE)
+        # Take the timezone from the row we already hold rather than letting
+        # time_utils.get_timezone_name() look it up: that helper needs a Flask
+        # app context and falls back to UTC without one. The fallback is silent,
+        # and silently scheduling 03:00 UTC for someone who typed 03:00 KST
+        # runs the update at noon.
+        self.docker_auto_update_tz = getattr(misc, 'timezone', None) or None
+
+        if not self.docker_auto_update:
+            self.docker_update_next_run = None
+            return
+
+        self.docker_update_next_run = docker_update.next_scheduled_run(
+            self.docker_auto_update_time, tz_name=self.docker_auto_update_tz)
+        if self.docker_update_next_run is None:
+            # An unreadable time must not mean "run now" -- leaving the schedule
+            # unset is the safe reading, and saying so is how anyone finds out.
+            self.logger.error(
+                f"Docker auto-update is enabled but the configured time "
+                f"'{self.docker_auto_update_time}' is not a valid HH:MM. "
+                f"No automatic update will run until it is corrected.")
+            return
+
+        self.logger.info(
+            f"Docker auto-update enabled: next check at "
+            f"{docker_update.format_local(self.docker_update_next_run, self.docker_auto_update_tz)} "
+            f"(local, {self.docker_auto_update_time} daily)")
 
     def refresh_daemon_trigger_settings(self, unique_id):
         try:
@@ -1266,10 +1323,15 @@ class DaemonController:
     #
 
     def check_aot_upgrade_exists(self, now):
-        """Check for any new AoT releases on github."""
+        """Check whether a newer AoT release is available.
+
+        The source depends on how this install upgrades: git tags bare-metal,
+        the container registry in Docker (a git tag exists before the image is
+        pullable, so asking git tags in Docker announces upgrades that cannot
+        yet be installed). See aot/utils/update_availability.py.
+        """
         try:
-            aot_releases = AoTRelease()
-            (upgrade_exists, _, _, _, errors) = aot_releases.github_upgrade_exists()
+            (upgrade_exists, _, _, _, errors) = check_upgrade_exists()
 
             if errors:
                 for each_error in errors:
@@ -1295,6 +1357,80 @@ class DaemonController:
                     new_session.commit()
         except Exception:
             self.logger.exception("AoT Upgrade Check ERROR")
+
+    def run_docker_auto_update(self):
+        """The configured hour has arrived: ask the updater to install the
+        latest published release, if there is one.
+
+        The daemon decides *whether* and *when*; the updater sidecar does the
+        privileged work (docs/design/docker-auto-update.md). Keeping the
+        judgement here and the privilege there is deliberate -- the component
+        holding the Docker socket stays as simple as it can be.
+        """
+        # Re-arm first. Every path below can fail, and a schedule that only
+        # advances on success would retry on every loop pass for a whole day.
+        self.docker_update_next_run = docker_update.next_scheduled_run(
+            self.docker_auto_update_time, tz_name=self.docker_auto_update_tz)
+
+        try:
+            if docker_update.update_in_progress():
+                self.logger.info(
+                    "Docker auto-update: an update is already in progress, "
+                    "skipping this window")
+                return
+
+            if not updater_status()['present']:
+                self.logger.warning(
+                    "Docker auto-update is enabled but no updater service is "
+                    "running, so nothing can install the update. Enable the "
+                    "updater overlay or the host timer "
+                    "(docs/design/docker-auto-update.md).")
+                return
+
+            (upgrade_exists, _releases, _tags,
+             latest_release, errors) = check_upgrade_exists()
+
+            for each_error in errors:
+                self.logger.debug(f"Docker auto-update: {each_error}")
+
+            if not upgrade_exists or not latest_release:
+                # Once a day, at INFO: this line is the only evidence an
+                # operator has that the automation is alive and did its check.
+                # Silence here is indistinguishable from a schedule that never
+                # fires, which is the failure mode worth being loud about.
+                self.logger.info(
+                    f"Docker auto-update: already on the latest published "
+                    f"release ({AOT_VERSION}); next check "
+                    f"{docker_update.format_local(self.docker_update_next_run, self.docker_auto_update_tz)}")
+                return
+
+            ok, result = docker_update.request_update(
+                latest_release, requested_by='auto-update')
+            if ok:
+                self.logger.info(
+                    f"Docker auto-update: requested {AOT_VERSION} -> "
+                    f"{latest_release} (request {result})")
+            else:
+                self.logger.error(f"Docker auto-update: {result}")
+
+            # Same trail a button press leaves. An unattended action that
+            # restarts control is exactly the kind that has to be findable
+            # afterwards, and the daemon has an app context for this.
+            try:
+                with self.flask_app.app_context():
+                    audit_log(
+                        'system.upgrade_request',
+                        target_type='docker_image',
+                        target_name=latest_release,
+                        result='success' if ok else 'failure',
+                        detail=None if ok else str(result),
+                        before={'version': AOT_VERSION},
+                        after={'version': latest_release},
+                        username='auto-update')
+            except Exception:
+                self.logger.exception("Docker auto-update: audit log failed")
+        except Exception:
+            self.logger.exception("Docker auto-update ERROR")
 
     def check_all_timelapses(self, now):
         with session_scope(AOT_DB_PATH) as new_session:

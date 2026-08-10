@@ -260,20 +260,23 @@
 
 /* ── Bay(구역) chip — placed at each zone center ─────────────────────────────
    2-row label: row 1 = zone name, row 2 = representative value.
-   Background = measurement band color. */
+   Background = measurement band color.
+   테두리는 두지 않는다 — 다른 라벨(site/zone/device)은 전부 무테라 시설 칩만
+   눈에 띄어 지도 위 우선순위를 왜곡했다. 배경색+그림자만으로 충분히 읽힌다. */
 .aot-bay-chip {
   /* z-index 는 JS 공용 표(LABEL_Z, aot-map-widget-vector.js)가 정한다 —
      여기서 고정하면 site/zone/facility/output/input/function 순서를 깬다. */
   font-variant-numeric: tabular-nums;
-  /* currentColor: follows the dynamic text color set by _updateBayChips
-     (dark text on bright band colors, light text on dark backgrounds) */
-  border: 1px solid currentColor;
   white-space: nowrap;
   text-align: center;
   line-height: 1.25;
 }
 .aot-bay-chip .aot-bay-chip-name { font-weight: 700; }
 .aot-bay-chip .aot-bay-chip-val  { font-size: 0.92em; opacity: 0.95; }
+/* 값이 없으면 2행 자체를 없앤다 — 예전에는 '—' 한 글자가 그대로 남아 시설마다
+   빈 줄이 하나씩 붙었고, 시설이 몇 개만 모여도 그 빈 줄들이 지도를 가렸다.
+   요소는 남겨 둔다(_updateBayChips 가 querySelector 로 찾아 쓴다). */
+.aot-bay-chip .aot-bay-chip-val:empty { display: none; }
 
 /* Bay modal — inline sensor chart (top, fixed) + actuator tabs (bottom, scroll).
    Popup box is a flex column (80vh, JS inline) — the chart keeps its natural
@@ -892,4 +895,276 @@
   font-size: 9px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── 필지(site) 요약 모달 ──────────────────────────────────────────────────
+   구역·시설 한 줄 = [이름] [대표값] [상태] 세 칸. 한 칸에 한 정보만 둔다 —
+   이름 뒤에 배지를 붙이거나 "정상 · 34.2°C" 로 이어 붙이면 줄마다 폭이 달라져
+   훑어보는 눈이 세로로 못 내려간다.
+   대표값 알약의 배경색은 CSS 가 정하지 않는다: 지도 칩과 같은
+   AoTMapSensorLabels.bandColor() 결과를 인라인으로 받는다(밴드 경계·색표는
+   사용자가 바꿀 수 있고, 그 정본은 JS 와 --aot-band-* 토큰이다). */
+.aot-site-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  cursor: pointer;
+  color: var(--aot-color-text-primary);
+}
+.aot-site-row + .aot-site-row {
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+}
+@media (hover: hover) {
+  .aot-site-row:hover .aot-site-row-name { text-decoration: underline; }
+}
+.aot-site-row-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aot-site-row-val {
+  flex-shrink: 0;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+  background: var(--aot-surface-card, var(--bg-off));
+}
+.aot-site-row-val.is-blank {
+  background: none;
+  color: var(--aot-color-text-secondary);
+}
+.aot-site-row-state {
+  flex-shrink: 0;
+  min-width: 5.5em;
+  text-align: right;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-xs);
+}
+.aot-site-row-state.is-fault   { color: var(--aot-tint-danger-fg); }
+.aot-site-row-state.is-warning { color: var(--aot-color-warning, #ff9f43); }
+
+/* 장치도 센서도 없는 구역·시설은 줄로 세우지 않는다 — 로컬 실측에서 필지
+   하나에 7개 시설 중 5개가 빈 껍데기였고, 그대로 나열하면 정작 값이 있는
+   두 줄이 묻힌다. 존재는 알려야 하므로 이름만 한 줄에 모아 적는다. */
+.aot-site-empty {
+  margin-top: 6px;
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-xs);
+}
+
+.aot-site-tiles {
+  display: flex;
+  gap: 8px;
+}
+.aot-site-tile {
+  flex: 1;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: var(--aot-surface-card, var(--bg-off));
+  cursor: pointer;
+}
+.aot-site-tile-num {
+  font-size: var(--aot-font-size-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.aot-site-tile-num.is-fault { color: var(--aot-tint-danger-fg); }
+.aot-site-tile-label {
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-xs);
+}
+
+/* ── 상위(필지)로 올라가는 화살표 ─────────────────────────────────────────
+   구역·시설 모달 제목줄의 첫 칸. 닫기 버튼과 같은 조용한 톤을 쓴다 —
+   제목보다 눈에 띄면 계층 이동이 주된 행동처럼 보인다.
+   제목에 flex:1 을 주어야 화살표가 왼쪽에 붙고 제목이 그 옆을 채운다
+   (헤더는 space-between 이라, 안 주면 둘이 양 끝으로 갈라진다). */
+.aot-sensor-popup-header > .aot-sensor-popup-title { flex: 1; min-width: 0; }
+
+.aot-modal-up {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--aot-color-text-secondary);
+  padding: 4px 6px;
+  margin-left: -6px;   /* 제목이 모달 왼쪽 정렬을 유지하도록 광학 보정 */
+  border-radius: var(--aot-radius-sm, 6px);
+}
+.aot-modal-up[hidden] { display: none; }
+@media (hover: hover) {
+  .aot-modal-up:hover {
+    color: var(--aot-color-text-primary);
+    background: var(--aot-surface-card, var(--bg-off));
+  }
+}
+
+/* ── 현재 환경 (구역·시설 [현황] 첫 블록) ─────────────────────────────────
+   값이 주인공이라 숫자를 크게, 이름은 아래에 작게 둔다. 지도 라벨과 달리
+   밴드 색을 칠하지 않는다 — 여러 값이 나란히 서면 색이 다섯 개 겹쳐
+   "무엇이 문제인가"가 아니라 "알록달록하다"가 된다. */
+.aot-env-now {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.aot-env-now-val {
+  font-size: var(--aot-font-size-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--aot-color-text-primary);
+  line-height: 1.15;
+}
+.aot-env-now-unit {
+  font-size: var(--aot-font-size-xs);
+  font-weight: 400;
+  color: var(--aot-color-text-secondary);
+  margin-left: 1px;
+}
+.aot-env-now-key {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+}
+
+/* 센서 일부가 응답하지 않을 때만 나온다 — 값이 평균이라 몇 대가 빠졌는지
+   모르면 숫자를 얼마나 믿을지 판단할 수 없다. */
+.aot-ov-degraded {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-warning, #ff9f43);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 모달 제목줄 공용 (site·zone·facility) ────────────────────────────────
+   [← 상위] 이름 [상태 점]. 이름 묶음이 flex:1 이라 화살표는 왼쪽에 붙고
+   점은 이름 바로 뒤에 따라온다(헤더가 space-between 이라 묶지 않으면 점이
+   반대편 끝으로 날아간다). */
+.aot-modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.aot-modal-heading .aot-sensor-popup-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 상태 점 — 주의·이상일 때만 그린다(정상은 아예 없음). 색은 배지와 같은
+   토큰을 쓴다: warning 계열은 custom_ui 로 사용자가 바꿀 수 있어 "이상"이
+   평상시와 구분되지 않을 수 있으므로 fault 는 danger 를 쓴다. */
+.aot-status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.aot-status-dot.is-fault   { color: var(--aot-tint-danger-fg); }
+.aot-status-dot.is-warning { color: var(--aot-color-warning, #ff9f43); }
+
+/* ── 출력 행 2행 골격 ─────────────────────────────────────────────────────
+   1행 .aot-act-line = 이름 + 주 제어, 2행 .aot-act-meta = 시간 + 설정.
+   종류(on/off·PWM·개폐형)가 달라도 같은 자리에 같은 것이 오게 한다. */
+.aot-act-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-text-secondary);
+}
+.aot-act-meta-text {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+/* 설정 칸이 남은 폭을 먹는다 — 슬라이더가 여기 들어오면 줄 끝까지 늘어나고,
+   버튼 하나만 있으면 오른쪽 끝으로 밀린다. */
+.aot-act-meta-ctrl {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.aot-act-meta-ctrl .aot-act-slider,
+.aot-act-meta-ctrl .aot-3way-slider-wrap { width: 100%; }
+/* 강조(.aot-act-meta-on)는 시간 칸이 .aot-act-time-on 으로 이어받았다 —
+   2행에서 강조할 것은 "지금 돌고 있다" 하나뿐이라 규칙이 둘일 이유가 없다. */
+.aot-act-meta-dim { color: var(--aot-color-text-muted, var(--aot-color-text-secondary)); }
+
+/* ── 빈 상태 한 줄 (계층 공용) ────────────────────────────────────────────
+   "장치 없음"/"기능 없음"/"작성된 노트 없음" 이 서로 다른 마크업이던 것을
+   하나로. 기존 클래스도 같은 생김새로 맞춰 둔다. */
+.aot-ov-empty,
+.aot-act-empty,
+.aot-site-empty {
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-xs);
+  padding: 6px 0;
+}
+.aot-site-empty { padding: 0; margin-top: 6px; }
+
+/* ── 구역 라벨의 대표값·문제 표시 ─────────────────────────────────────────
+   시설 bay 칩과 같은 2행 문법(1행 이름, 2행 대표값). 배경 밴드색은 CSS 가
+   정하지 않는다 — AoTMapSensorLabels.bandColor() 결과를 인라인으로 받는다. */
+/* 플래그의 기준 상자는 라벨 자체가 아니라 **이름 줄**이다.
+   .geo-label-marker 에 position:relative 를 주면 maplibre 의 .maplibregl-marker
+   (position:absolute)를 덮어써서, 라벨이 전부 전체 폭 막대로 흘러내린다.
+   같은 특정도(클래스 하나)라 나중에 로드되는 이 파일이 이겨 버린다. */
+.aot-zone-label-head { position: relative; }
+/* 값 줄은 이름보다 작고 굵지 않다 — 시설 bay 칩(.aot-bay-chip-val)과 같은
+   비율이다. 이름과 같은 크기·굵기로 두었더니 구역 라벨만 알약이 통째로
+   커져서, 같은 지도의 필지·시설 라벨보다 눈에 먼저 들어왔다. 이름이 주인공이고
+   값은 그 아래 딸린 정보다. */
+.aot-zone-label-val {
+  font-size: 0.92em;
+  font-weight: 400;
+  opacity: 0.95;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+/* 라벨은 좁아서 글자를 더 넣을 수 없다 — 점 하나로 알리고 title 로 이유를 준다.
+   모서리에 얹어 이름·값의 가로폭을 건드리지 않는다. */
+.aot-zone-label-flag {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+}
+.aot-zone-label-flag.is-fault   { color: var(--aot-tint-danger-fg); }
+.aot-zone-label-flag.is-warning { color: var(--aot-color-warning, #ff9f43); }
+
+/* 장치 모달의 제어 블록 — 탭 없는 단일 창이라 행이 블록 안에 바로 놓인다.
+   블록 제목 아래 첫 행의 윗 여백만 없앤다. */
+.aot-device-ctrl .aot-act-row:first-of-type { padding-top: 0; }
+
+/* 작동 시간 한 칸 — 구역·시설·장치 모달 공용(AoTMapPopup.timeSlotHtml).
+   꺼져 있으면 마지막 작동 시간, 켜지면 같은 칸이 흐르는 타이머가 된다.
+
+   2행에서 **가장 큰 글자**로 둔다: 이 줄에서 사람이 실제로 읽는 것은 시간이고,
+   나머지(예약 문구·설정 버튼)는 곁들이다. 문구 없이 숫자만 두는 대신 크기로
+   무엇이 본문인지 말한다 — 어느 쪽 시간인지는 색과 title 이 맡는다.
+   tabular-nums 로 고정폭 — 초가 바뀔 때마다 칸이 흔들리면 눈이 따라간다. */
+.aot-act-time {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--aot-font-size-sm);
+  line-height: 1.2;
+  color: var(--aot-color-text-muted, var(--aot-color-text-secondary));
+}
+.aot-act-time-on {
+  color: var(--aot-color-text-primary);
+  font-weight: 600;
 }

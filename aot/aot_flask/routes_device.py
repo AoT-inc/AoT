@@ -279,3 +279,42 @@ def device_unlink(device_id):
     if err:
         return jsonify({'error': err}), 400
     return jsonify({'success': True})
+
+
+# ── 접속정보 (하드웨어 교체) ────────────────────────────────────────────────
+#
+# 이 두 경로는 Device 페이지 전용이 아니다 — device_id 는 Input/Output/
+# CustomController 어느 것이든 된다. 여기에 둔 이유는 "장치 하나를 두고 하는
+# 일"이 이미 이 파일에 모여 있어서다(요약·연결·해제). 응답 모양은 지도 배정
+# API(`/api/geo/binding`)와 맞춘다 — 같은 모달이 둘 다 부른다.
+
+@blueprint.route('/api/device/<device_id>/connection', methods=['GET'])
+@flask_login.login_required
+def device_connection_get(device_id):
+    """교체 시 갈아끼우는 접속정보 필드 — 스키마 + 현재값."""
+    from aot.aot_flask.utils import utils_device_connection as conn
+    try:
+        return jsonify({'ok': True, 'schema': conn.connection_schema(device_id)})
+    except conn.ConnectionSettingError as err:
+        return jsonify({'ok': False, 'message': str(err)}), 400
+
+
+@blueprint.route('/api/device/<device_id>/connection', methods=['POST'])
+@flask_login.login_required
+def device_connection_set(device_id):
+    """접속정보만 갱신한다(장치 uuid·도형·이력·함수 연결은 그대로).
+
+    Request body: {"values": {"dev_eui": "...", "i2c_location": "0x44"}}
+    """
+    if not utils_general.user_has_permission('edit_controllers'):
+        return jsonify({'ok': False, 'message': _('Permission denied')}), 403
+
+    from aot.aot_flask.utils import utils_device_connection as conn
+    data = request.get_json(silent=True) or {}
+    try:
+        result = conn.apply_connection(device_id, data.get('values') or {})
+    except conn.ConnectionSettingError as err:
+        return jsonify({'ok': False, 'message': str(err)}), 400
+
+    result['ok'] = True
+    return jsonify(result)

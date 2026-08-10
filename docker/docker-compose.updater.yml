@@ -1,0 +1,73 @@
+# Opt-in updater overlay — adds one-click / automated updates to a Docker
+# deployment. Stock installs do not get this, and nothing in the base stack
+# holds the Docker socket without it.
+#
+#   docker compose -f docker/docker-compose.prod.yml \
+#                  -f docker/docker-compose.updater.yml up -d
+#
+# Requires two settings in docker/.env (see .env.prod.example):
+#   AOT_PROJECT_DIR  absolute host path of this checkout (e.g. /opt/AoT)
+#   AOT_HEALTH_KEY   shared secret so the updater can read /health detail
+#
+# READ THIS BEFORE ENABLING
+#
+# /var/run/docker.sock is root on the host. Anything that can talk to it can
+# start a privileged container. This service is deliberately tiny and only ever
+# pulls ghcr.io/aot-inc/aot (the repository is hardcoded in the script, never
+# read from the request file), but the socket is still the socket -- enable
+# this only if you accept that trade. The alternative, with the same script and
+# no privileged container, is a systemd timer on the host (see
+# install/aot-docker-update.service).
+#
+# WHY THE UPDATER IS IN A SEPARATE FILE
+#
+# When it applies an update the updater runs `docker compose -f
+# docker-compose.prod.yml up -d aot-app aot_daemon aot_mcp` -- the base file
+# only. Its own service is not in that file, so compose leaves it alone and it
+# survives the recreation it is performing. Do not move this service into the
+# base compose file: it would recreate itself mid-update and the update would
+# die halfway through.
+
+name: aot
+
+services:
+  aot_updater:
+    build:
+      # Just this directory — the updater needs nothing from the application
+      # tree, and the repo-root .dockerignore whitelist excludes docker/ anyway.
+      context: updater
+      dockerfile: Dockerfile
+    volumes:
+      # The Docker socket. See the warning above.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # The project directory, mounted at the SAME absolute path it has on the
+      # host. This is not cosmetic: docker-compose.prod.yml has relative bind
+      # mounts (../aot/inputs/custom_inputs and friends) which compose resolves
+      # against the compose file's directory and then hands to the host daemon
+      # verbatim. Mount it anywhere else and those binds point at host paths
+      # that do not exist -- or, worse, at ones that do.
+      - ${AOT_PROJECT_DIR:?AOT_PROJECT_DIR must be set in docker/.env}:${AOT_PROJECT_DIR}
+      # Same volume the app writes its update requests into (the app sees it as
+      # /app/aot_local, so the shared directory is <volume>/update).
+      - aot_data:/state
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      - AOT_PROJECT_DIR=${AOT_PROJECT_DIR}
+      - AOT_COMPOSE_FILE=docker/docker-compose.prod.yml
+      - AOT_UPDATE_DIR=/state/update
+      # Reached over the compose network, so it never leaves the host.
+      - AOT_HEALTH_URL=http://aot-app/health
+      # Without this the updater cannot read the version from /health, and it
+      # refuses to update rather than guess whether the swap worked.
+      - AOT_HEALTH_KEY=${AOT_HEALTH_KEY:?AOT_HEALTH_KEY must be set in docker/.env}
+      - AOT_HEALTH_TIMEOUT=${AOT_HEALTH_TIMEOUT:-300}
+      - AOT_UPDATE_POLL=${AOT_UPDATE_POLL:-15}
+      # Delete superseded AoT images after a successful update. Off by default:
+      # the previous image is what a rollback needs.
+      - AOT_UPDATE_PRUNE=${AOT_UPDATE_PRUNE:-0}
+    depends_on:
+      - aot-app
+    restart: always
+
+volumes:
+  aot_data:

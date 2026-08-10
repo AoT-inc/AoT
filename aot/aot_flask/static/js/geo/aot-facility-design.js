@@ -892,6 +892,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     if (!f) {
       empty.style.display = '';
       content.style.display = 'none';
+      _syncSwapButtons(null);
       return;
     }
     empty.style.display = 'none';
@@ -1068,6 +1069,9 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var fanRoleSel = document.getElementById('fi-fan-role');
       if (fanRoleSel) fanRoleSel.value = f.fan_role || 'circulation_fan';
     }
+
+    // 교체 버튼은 장치가 실제로 물려 있을 때만 보인다.
+    _syncSwapButtons(f);
 
     if (!isSensor) {
       _fillActuatorSelect(f);
@@ -1674,6 +1678,180 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   }
 
   // ── Inspector input wiring — bidirectional binding with selected fitting ───
+  // ── 장치 없는 자리 (미배정 슬롯) ──────────────────────────────────────────
+  //
+  // 장치를 지워도 설비는 남는다(삭제 정책 B4 — 도형·설비는 측량·작도의 결과인
+  // 자산이고 장치는 소모품이다). 그 정책이 성립하려면 **남은 자리를 사람이 볼
+  // 수 있어야 한다.** 안 보이면 재배정할 방법이 없고, 그러면 사람은 설비를
+  // 새로 그리게 된다.
+  //
+  // 여기서 바인딩을 직접 만들지 않는다. 설비의 장치 배정은 시설 JSON 이
+  // 정본이고 바인딩은 저장 후 sync_facility_bindings 가 거기서 파생하므로,
+  // 이 목록에서 바인딩을 만들면 **다음 시설 저장이 그것을 지운다**(실측).
+  // 그래서 행을 누르면 그 설비를 인스펙터에서 열어 주기만 한다 — 고치는 것은
+  // 드롭다운이다.
+  var _unboundLoaded = false;
+
+  function _facilityUuid() {
+    try {
+      if (window.FacilityIO && FacilityIO.current) return FacilityIO.current();
+    } catch (e) { /* 아래 폴백 */ }
+    var el = document.getElementById('facility-page-vars');
+    if (!el) return null;
+    try { return (JSON.parse(el.textContent) || {}).facility_uuid || null; }
+    catch (e) { return null; }
+  }
+
+  function _renderUnbound(slots) {
+    var box = document.getElementById('fac-unbound-box');
+    var list = document.getElementById('fac-unbound-list');
+    var count = document.getElementById('fac-unbound-count');
+    if (!box || !list || !count) return;
+
+    // 빈 목록이면 아예 감춘다. "0건"을 늘 띄워 두면 화면만 시끄러워지고,
+    // 정상 상태에 늘 켜져 있는 표시는 곧 아무도 안 보게 된다.
+    if (!slots.length) { box.style.display = 'none'; return; }
+
+    box.style.display = '';
+    count.textContent = String(slots.length);
+    list.innerHTML = slots.map(function (s) {
+      var what = s.what || s.item_kind || s.item_id || '';
+      // "언제 뭐가 빠졌나"가 이 목록의 실질적 단서다. 설비 이름이 기본값인
+      // 경우가 많아 이름만으로는 어디인지 알 수 없다.
+      var story = s.last_device_name
+        ? s.last_device_name + (s.ended_at ? ' · ' + s.ended_at.slice(0, 10) : '')
+        : _T('unbound_never', 'device was deleted');
+      return '<div class="d-flex justify-content-between align-items-center py-2"' +
+        ' style="cursor:pointer;border-top:1px solid var(--aot-border-light,#f0f0f0);"' +
+        ' data-unbound-item="' + window.AoTDeviceConnection.esc(s.item_id) + '">' +
+        '<span>' + window.AoTDeviceConnection.esc(what) + '</span>' +
+        '<span class="small text-muted">' + window.AoTDeviceConnection.esc(story) + '</span>' +
+        '</div>';
+    }).join('');
+
+    list.querySelectorAll('[data-unbound-item]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        select(row.dataset.unboundItem);
+      });
+    });
+  }
+
+  function _loadUnboundSlots() {
+    var uuid = _facilityUuid();
+    var box = document.getElementById('fac-unbound-box');
+    if (!uuid) { if (box) box.style.display = 'none'; return; }
+    // kinds 로 반드시 좁힌다 — 좁히지 않으면 지도 구역까지 섞여 들어와,
+    // 시설 편집기에서 남의 관할을 보게 된다.
+    fetch('/api/geo/binding/unbound?kinds=fitting,actuator&facility_uuid=' +
+          encodeURIComponent(uuid), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { _renderUnbound((res && res.ok && res.slots) || []); })
+      .catch(function () { if (box) box.style.display = 'none'; });
+  }
+
+  function _bindUnboundPanel() {
+    if (_unboundLoaded) return;
+    _unboundLoaded = true;
+    var toggle = document.getElementById('fac-unbound-toggle');
+    if (toggle) toggle.addEventListener('click', function () {
+      var list = document.getElementById('fac-unbound-list');
+      if (!list) return;
+      var opening = list.style.display === 'none';
+      list.style.display = opening ? '' : 'none';
+      // 열 때마다 다시 읽는다. 이 목록의 근거는 저장된 시설이라, 편집 중인
+      // 화면 상태와 어긋날 수 있다 — 오래된 목록을 보여주느니 다시 묻는다.
+      if (opening) _loadUnboundSlots();
+    });
+    document.addEventListener('facility-loaded', _loadUnboundSlots);
+    document.addEventListener('facility-saved', _loadUnboundSlots);
+  }
+
+  // ── 하드웨어 교체 (접속정보 갱신) ─────────────────────────────────────────
+  //
+  // 설비의 장치 드롭다운을 바꾸는 것은 "이 설비를 다른 장치가 맡는다"는 뜻이다.
+  // 그런데 현장에서 훨씬 흔한 일은 **같은 자리에 같은 모델을 새로 단 것**이고,
+  // 그때 정답은 배정을 바꾸는 것이 아니라 기존 장치의 접속정보(DevEUI·주소)만
+  // 고치는 것이다 — 장치 uuid 가 그대로면 설비 배정·측정 채널·함수 연결·그래프가
+  // 전부 살아 있다. 그 경로가 화면에 없으면 사람은 장치를 새로 만들고 드롭다운을
+  // 갈아끼우게 되고, 그 순간 이력이 끊긴다.
+  //
+  // 폼은 공용 모듈(common/aot-device-connection.js)이 소유한다. 지도의 배정
+  // 모달과 같은 폼이어야 하고, 두 벌이면 두 번 다르게 틀린다.
+  //
+  // 여기서 바인딩은 건드리지 않는다. 시설 설비의 장치 배정은 시설 JSON 이
+  // 정본이라, 여기서 바인딩을 만들면 다음 시설 저장이 그것을 지운다.
+  function _swapModal(deviceId, deviceLabel) {
+    if (!deviceId || !window.AoTDeviceConnection) return;
+    var C = window.AoTDeviceConnection;
+    var id = 'fi-swap-modal';
+    var old = document.getElementById(id);
+    if (old) old.remove();
+
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="modal fade" id="' + id + '" tabindex="-1">' +
+        '<div class="modal-dialog" style="max-width: 520px; width: calc(100% - 30px); margin: 30px auto;">' +
+          '<div class="modal-content" style="border-radius: 20px; overflow: hidden; height: auto;">' +
+            '<div class="modal-header border-0 bg-light">' +
+              '<h5 class="modal-title font-weight-bold">' + _T('swap_hw','Replace hardware') +
+                (deviceLabel ? ' — ' + C.esc(deviceLabel) : '') + '</h5>' +
+              '<button type="button" class="close" data-dismiss="modal">&times;</button>' +
+            '</div>' +
+            '<div class="modal-body p-4" id="fi-swap-body" style="max-height: 60vh;">' +
+              '<div class="text-muted">' + _T('loading','Loading...') + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>');
+    $('#' + id).modal('show');
+
+    C.fetchSchema(deviceId).then(function (schema) {
+      var body = document.getElementById('fi-swap-body');
+      if (!body) return;
+      var fields = (schema && schema.fields) || [];
+      var html =
+        '<div class="small text-muted mb-3">' +
+        _T('swap_hint',
+           'If you are replacing broken hardware with the same model, update the connection settings (DevEUI, address) on the existing device instead. The shape, the history and every function link stay intact.') +
+        '</div>' + C.formHtml(schema);
+      if (fields.length) {
+        html += '<button type="button" class="btn aot-pill-btn mt-3" id="fi-swap-save">' +
+          _T('conn_update','Update connection settings') + '</button>';
+      }
+      body.innerHTML = html;
+
+      var saveBtn = document.getElementById('fi-swap-save');
+      if (!saveBtn) return;
+      saveBtn.addEventListener('click', function () {
+        saveBtn.disabled = true;
+        var label = saveBtn.textContent;
+        saveBtn.textContent = _T('saving','Saving...');
+        C.save(deviceId, C.collect(body)).then(function (result) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = label;
+          // 결과는 전역 토스트로 알린다(layout_default.html 의 window.showToast).
+          // 그것이 이 앱의 공통 규칙이고, AoTGlobalSettings 의 표시 여부 설정도
+          // 거기서 지켜진다 — 화면마다 자기 알림을 만들면 사용자가 끈 알림이
+          // 어떤 화면에서는 계속 뜬다.
+          result.messages.forEach(function (m) { window.showToast(m.text, m.level); });
+          // 값이 실제로 바뀐 경우에만 닫는다. 오류가 났으면 사람이 그 자리에서
+          // 값을 고쳐야 하므로 열어 둔다.
+          if (result.ok && result.changed) $('#' + id).modal('hide');
+        });
+      });
+    });
+  }
+
+  // 장치가 선택돼 있을 때만 교체 버튼을 보인다 — 빈 자리에는 갈아끼울 것이 없다.
+  function _syncSwapButtons(f) {
+    [['fi-actuator-swap', f && f.actuator_id],
+     ['fi-device-swap', f && f.input_id]].forEach(function (pair) {
+      var btn = document.getElementById(pair[0]);
+      if (!btn) return;
+      btn.classList.toggle('d-none', !pair[1]);
+      btn.dataset.deviceId = pair[1] || '';
+    });
+  }
+
   function _bindInspectorInputs() {
     // Detaching happens mid-edit, so the "back to automatic" row has to appear
     // then — _renderInspector only runs on selection.
@@ -1886,8 +2064,21 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var f = _getSel(); if (!f) return;
       f.actuator_id = actSel.value || null;
       _syncActuatorGroup(f.id);
+      _syncSwapButtons(f);
       _renderList();
       document.dispatchEvent(new CustomEvent('fittings-data-changed'));
+    });
+
+    ['fi-actuator-swap', 'fi-device-swap'].forEach(function (btnId) {
+      var btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var sel = document.getElementById(
+          btnId === 'fi-actuator-swap' ? 'fi-actuator' : 'fi-device');
+        var label = sel && sel.options[sel.selectedIndex]
+          ? sel.options[sel.selectedIndex].text : '';
+        _swapModal(btn.dataset.deviceId, label);
+      });
     });
 
     // Device dropdown — selecting a device resets channel_measurements and shows checkboxes.
@@ -1899,6 +2090,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       f.measurement_id     = null;
       f.measurement_type   = null;
       _renderChannelCheckboxes(f);
+      _syncSwapButtons(f);
       _renderList();
       document.dispatchEvent(new CustomEvent('fittings-data-changed'));
     });
@@ -1931,6 +2123,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   function init() {
     _render();
     _bindInspectorInputs();
+    _bindUnboundPanel();
+    _loadUnboundSlots();
 
     // Input choices are injected server-side (FAC_INPUT_CHOICES) — no fetch needed.
     // Fetch Output device list once for actuator inspector dropdowns.
@@ -2864,7 +3058,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   // drawer and lost the current step. These do it in place.
   window.FacilityIO = {
     select: selectFacility,
-    create: newFacility
+    create: newFacility,
+    // 지금 편집 중인 시설. 다른 IIFE(설비 인스펙터)가 시설 범위로 조회할 때
+    // 쓴다 — #facility-page-vars 는 첫 로드 시점의 값이라, 페이지를 새로고침
+    // 하지 않고 시설을 바꾸면 어긋난다.
+    current: function () { return State.facilityUuid || null; }
   };
 
   window.FacilityMapAPI = {
@@ -3303,7 +3501,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       State.map.scrollZoom.disable();
       State.map.touchZoomRotate.disable();
     }
-    showToast('Click on the map to set the facility center');
+    window.showToast(_T('place_center_hint','Click on the map to set the facility center'), 'info');
   }
 
   function finishPlaceMode() {
@@ -3911,7 +4109,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       const json = await res.json();
       if (json.ok) {
         State.facilityUuid = json.facility_uuid;
-        showToast('Saved.');
+        window.showToast(_T('saved','Saved.'), 'success');
         // Saving used to reload the page, which closed the step drawer and threw
         // away the step the user was on. Everything the reload was for is done
         // here instead: the URL, the page vars the delete path reads, the saved
@@ -4343,14 +4541,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     }
   }
 
-  function showToast(msg) {
-    const t = document.createElement('div');
-    t.textContent = msg;
-    t.style.cssText =
-      'position:fixed;bottom:30px;right:30px;background:var(--aot-color-brand-primary);color:var(--aot-color-text-tertiary);' +
-      'padding:.6rem 1.2rem;border-radius:6px;z-index:var(--aot-z-toast);' +
-      'font-size:var(--aot-font-size-base);box-shadow:var(--aot-shadow-md);';
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2500);
-  }
+  // 알림은 전역 window.showToast(layout_default.html) 하나만 쓴다.
+  // 예전에는 이 파일이 자기 토스트를 갖고 있었는데, 그것은 type 을 무시하고
+  // AoTGlobalSettings 의 표시 여부 설정도 보지 않았다 — 사용자가 성공 알림을
+  // 꺼도 이 화면에서만 계속 떴다. 화면마다 자기 알림을 만들면 그렇게 된다.
 })();
