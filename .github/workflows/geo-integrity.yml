@@ -70,7 +70,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install \
             flask flask-sqlalchemy flask-babel flask-marshmallow flask-wtf \
-            flask-caching flask-login marshmallow-sqlalchemy sqlalchemy alembic \
+            flask-caching flask-login flask-compress marshmallow-sqlalchemy \
+            sqlalchemy alembic \
             shapely bcrypt requests importlib-metadata Pyro5 influxdb-client pytest
 
       # 우회 공격이 DB 계층에서 막히는지 — 불변식의 실제 차단력.
