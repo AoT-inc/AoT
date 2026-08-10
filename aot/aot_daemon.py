@@ -1482,12 +1482,27 @@ class DaemonController:
             self.logger.exception("Error checking AI enabled status")
             return False
 
+    def _is_ai_background_active(self):
+        """Whether model-calling background AI work may run right now.
+
+        Enabled (Settings > General) AND started (AI page) AND at least one
+        activated agent. See aot/ai/services/ai_runtime_state.py — that module
+        is the single place this is decided.
+        """
+        try:
+            with self.flask_app.app_context():
+                from aot.ai.services import ai_runtime_state
+                return ai_runtime_state.ai_background_active()
+        except Exception:
+            self.logger.exception("Error checking AI background state")
+            return False
+
     def check_all_ai_summaries(self):
         """
         v26.0: Trigger periodic AI Semantic Snapshot generation.
         """
-        if not self._is_ai_enabled():
-            self.logger.debug("AI features disabled. Skipping periodic summary generation.")
+        if not self._is_ai_background_active():
+            self.logger.debug("AI background operation inactive. Skipping periodic summary generation.")
             return
 
         try:

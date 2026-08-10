@@ -3956,12 +3956,10 @@ def api_geo_zone_rep_key(zone_uuid):
     zone.meta_json = meta
     _db.session.commit()
 
-    # 구역 내용(모달)과 라벨 상태(zones/status) 둘 다 이 값을 쓴다 — 하나만
-    # 버리면 라벨이 60초 동안 옛 대표를 계속 내건다.
-    from aot.aot_flask.geo.site_summary import (
-        invalidate_zone_contents, invalidate)
-    invalidate_zone_contents(zone_uuid)
-    invalidate()
+    # 구역 모달·지도 라벨·필지 요약 셋이 이 값을 쓴다 — 하나만 버리면 라벨이
+    # 60초 동안 옛 대표를 계속 내건다.
+    from aot.aot_flask.geo.site_summary import invalidate_rep
+    invalidate_rep(zone)
     return jsonify({'ok': True, 'rep_key': key})
 
 

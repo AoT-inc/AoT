@@ -317,7 +317,13 @@ class AISummaryService:
             agent = AIAgent.query.filter_by(unique_id=agent_id).first()
         
         if not agent:
-            logger.error("No suitable AI agent found for summary generation.")
+            # Not an error — it means no model has been registered/activated yet.
+            # Background callers gate on ai_runtime_state.ai_background_active()
+            # so they never get this far; reaching here means a user asked for a
+            # summary directly (routes_ai_api /summary), and the honest answer is
+            # "there is no model to ask", not a stack of ERROR lines every cycle.
+            logger.info("Summary generation skipped: no activated AI agent "
+                        "(synthesizer/supervisor) is registered.")
             return None
 
         # 2. Prepare Context & Prompt
