@@ -65,14 +65,26 @@ jobs:
       # 2026-08-03~08-05 사이 13번 연속 실패했고(단 한 번도 성공한 적 없음),
       # 그동안 불변식 공격 테스트는 한 번도 실행되지 않았다.
       # 모델 쪽에 새 최상위 import 가 생기면 여기도 함께 늘려야 한다.
+      #
+      # 2026-08-10 (v26.08.3) 에 둘째 사슬이 열렸다: 새 검사 `_binding_drift` 의
+      # 테스트가 `aot.scripts.check_geo_integrity` 를 import 하는데, 그 모듈은
+      # `aot.start_flask_ui` → `aot.aot_flask.app` 을 끌어온다. conftest 사슬이
+      # 모델 패키지를 부르는 것과 달리 이쪽은 **Flask 앱 전체**를 부르므로
+      # flask-compress·flask-limiter·flask-session·flask-talisman 부터
+      # Pillow·apscheduler·flask-restx 까지 따라 들어온다.
+      # 아래 목록은 빈 venv 에 하나씩 채워 넣어 46 passed 가 될 때까지 실측한
+      # 최소 집합이다. 하나라도 빼면 ModuleNotFoundError 로 죽는다.
       - name: Install test deps
         run: |
           python -m pip install --upgrade pip
           pip install \
             flask flask-sqlalchemy flask-babel flask-marshmallow flask-wtf \
-            flask-caching flask-login flask-compress marshmallow-sqlalchemy \
+            flask-caching flask-login marshmallow-sqlalchemy \
             sqlalchemy alembic \
-            shapely bcrypt requests importlib-metadata Pyro5 influxdb-client pytest
+            shapely bcrypt requests importlib-metadata Pyro5 influxdb-client pytest \
+            flask-compress flask-limiter flask-session flask-talisman \
+            flask-restx flask-accept apscheduler \
+            distro geocoder influxdb Pillow pillow-heif beautifulsoup4
 
       # 우회 공격이 DB 계층에서 막히는지 — 불변식의 실제 차단력.
       - name: 불변식 공격 테스트
