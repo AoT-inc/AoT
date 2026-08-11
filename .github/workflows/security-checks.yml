@@ -23,12 +23,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 아래 두 검사는 표준 라이브러리만 쓰므로 의존성 설치가 필요 없다.
+      # 아래 검사들은 표준 라이브러리만 쓰므로 의존성 설치가 필요 없다.
       - name: 라우트 인증 게이트 점검
         run: python3 aot/scripts/check_route_auth.py
 
       - name: 정적 자산 참조 무결성
         run: python3 aot/scripts/check_static_refs.py
+
+      # 원격 AoT 등록이 관리자 비밀번호를 검증된 연결로만 보내는지.
+      # 되돌아가도 기능은 멀쩡히 동작하므로(사라지는 것은 보호뿐이다)
+      # 사람 눈으로는 잡히지 않는다.
+      - name: 원격 등록 인증서 고정 순서
+        run: python3 aot/tests/test_remote_host_enrollment.py
 
   sbom-and-vulns:
     runs-on: ubuntu-latest

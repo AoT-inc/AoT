@@ -33,11 +33,19 @@ import base64
 import hmac
 import logging
 import os
+import uuid
 from collections import namedtuple
 
 logger = logging.getLogger(__name__)
 
 UNAUTH_PREFIX = 'unauthenticated:'
+
+# 내부 AI 전용 서비스 계정. 사람 계정을 빌려 쓰지 않기 위한 것이다(아래
+# ensure_service_account 참조). 식별은 이름이 아니라 auth_provider 로 한다 —
+# 이름은 사람이 먼저 차지했을 수 있고, 그 계정을 서비스 계정으로 오인하면
+# 남의 계정에 키를 발급하게 된다.
+SERVICE_ACCOUNT_NAME = 'aot-system'
+SERVICE_ACCOUNT_PROVIDER = 'system'
 
 # 인증된 호출자 정보의 스냅샷 — SQLAlchemy ORM 인스턴스가 아니라 평범한 값만 담는다.
 # authenticate_http/authenticate_stdio 가 반환한 뒤에는 원래의 app_context/session이
@@ -89,38 +97,123 @@ def role_can_write(role) -> bool:
     return bool(role is not None and getattr(role, 'can_write', False))
 
 
+def ensure_service_account():
+    """내부 AI 가 자기 MCP 서버에 붙을 때 쓸 전용 계정을 찾거나 만든다.
+
+    Flask 앱 컨텍스트 안에서 호출해야 한다. 역할이 하나도 시딩돼 있지 않으면
+    None 을 돌려준다(그 경우 호출자가 경고를 남기고 넘어간다).
+
+    예전에는 "API 키가 없는 첫 번째 Admin/Editor" 를 골라 **그 사람 명의로**
+    키를 발급했다. 두 가지가 무너진다:
+      - 감사 로그의 agent_id 가 'user:<그 사람>' 이 되어, 내부 AI 가 한 일과
+        그 사람이 한 일을 구분할 수 없다. 이 파일이 애초에 없애려던 문제
+        (신원 자기신고)가 형태만 바꿔 되살아난다.
+      - User.api_key_hash 는 컬럼 하나뿐이라 1인 1키다. 그 사람이 나중에
+        설정 화면에서 자기 키를 재발급하면 덮어써지고, 내부 AI 는 아무 에러
+        없이 도구를 전부 잃는다.
+
+    이 계정으로는 로그인할 수 없다:
+      - 비밀번호 로그인은 routes_authentication.py 의 `elif not
+        user.password_hash` 가 거부한다(password_hash 를 비워 둔다).
+      - 키패드 로그인은 User.code 로 계정을 찾는데 code 가 None 이라 어떤
+        코드와도 매칭되지 않는다.
+      - Google 로그인은 email 로 대조하는데 그 값이 없다.
+    """
+    from aot.aot_flask.extensions import db
+    from aot.databases.models import Role, User
+
+    user = User.query.filter(
+        User.auth_provider == SERVICE_ACCOUNT_PROVIDER).first()
+    if user is not None:
+        return user
+
+    # 최소 권한: 쓰기 도구를 쓰려면 edit_controllers 가 필요하지만 사용자 관리
+    # 권한까지 줄 이유는 없다 — USER_ROLES 시딩상 그 조합이 Editor 다. 역할을
+    # 이름으로 찾지 않는 이유는 운영자가 이름을 바꿨을 수 있기 때문이다.
+    role = (Role.query
+            .filter(Role.edit_controllers.is_(True))
+            .filter(Role.edit_users.is_(False))
+            .order_by(Role.id).first()
+            or Role.query
+            .filter(Role.edit_controllers.is_(True))
+            .order_by(Role.id).first())
+    if role is None:
+        return None
+
+    name = SERVICE_ACCOUNT_NAME
+    if User.query.filter(User.name == name).first() is not None:
+        # User.name 은 unique 다. 사람이 이미 이 이름을 쓰고 있으면 비켜 간다.
+        name = '{}-{}'.format(SERVICE_ACCOUNT_NAME, uuid.uuid4().hex[:8])
+
+    user = User()
+    user.name = name
+    user.full_name = 'AoT System (internal AI)'
+    user.role_id = role.id
+    user.auth_provider = SERVICE_ACCOUNT_PROVIDER
+    user.is_enabled = True
+    user.is_approved = True
+    user.password_hash = None
+    user.email = None
+    user.code = None
+    db.session.add(user)
+    db.session.commit()
+    logger.info("[MCP] 내부 AI 전용 서비스 계정을 만들었습니다: '%s' (role=%s)",
+                name, role.name)
+    return user
+
+
 def resolve_key(raw_key: str):
-    """base64 API 키 → 소유 사용자. 유효하지 않으면 None.
+    """base64 API 키 → (소유 사용자, 키 행). 유효하지 않으면 (None, None).
 
     Flask 앱 컨텍스트 안에서 호출해야 한다.
 
     DB 에는 키의 SHA-256 만 저장되므로(p6_13) 제시된 키를 해시해 인덱스로
     조회한다. 이전 구현은 전 사용자를 순회하며 평문을 상수시간 비교했는데,
     해시 조회는 그 순회 자체가 없어 타이밍 노출면이 더 작다. 최종 확인의
-    상수시간 비교는 User.find_by_api_key 안에 있다.
+    상수시간 비교는 User.resolve_api_key 안에 있다.
+
+    **키 행까지 돌려주는 이유**: 스코프(readonly)가 여기서 버려지면 그 뒤로는
+    복구할 방법이 없다. 실제로 그랬다 — 예전에는 사용자만 돌려주어 읽기 전용
+    키로도 MCP 쓰기 도구를 전부 쓸 수 있었다. 메인 앱은 HTTP 메서드로 거르는
+    가드(app.py)가 막아 주지만, MCP 는 도구 호출이 전부 `POST /mcp` 한 경로라
+    메서드로는 구분되지 않는다.
+
+    레거시 컬럼으로 찾은 키는 행이 없어 (user, None) 이며, 스코프는 'full'
+    취급이다 — 스코프가 없던 시절 발급된 키는 실제로 전 권한이었다.
     """
     key_bytes = _decode(raw_key)
     if not key_bytes:
-        return None
+        return None, None
 
     from aot.databases.models import User
 
-    return User.find_by_api_key(key_bytes)
+    return User.resolve_api_key(key_bytes)
 
 
-def _role_for(user):
+def _role_for(user, key_row=None):
     """User.role_id → RoleInfo 스냅샷. User.role_id has no ORM relationship (raw
     FK-less integer column, per aot/databases/models/user.py), so every caller
     that needs the role looks it up this way — same query pattern as
     routes_authentication.py, but returns a plain namedtuple (see RoleInfo)
-    instead of the ORM row so it stays valid after this app_context ends."""
+    instead of the ORM row so it stays valid after this app_context ends.
+
+    key_row 가 읽기 전용 키면 역할이 무엇이든 can_write 를 끈다. 스코프는 역할
+    **위에** 얹히는 제한이라, 둘 중 좁은 쪽이 이겨야 한다 — 그러지 않으면
+    "읽기 전용으로 줬다" 가 거짓말이 된다.
+    """
     if user is None or user.role_id is None:
         return None
     from aot.databases.models import Role
     row = Role.query.filter(Role.id == user.role_id).first()
     if row is None:
         return None
-    return RoleInfo(name=row.name, can_write=bool(row.edit_controllers),
+    can_write = bool(row.edit_controllers)
+    if can_write and key_row is not None and getattr(key_row, 'is_readonly', False):
+        logger.info(
+            "[MCP] 읽기 전용 키 '%s' — 역할 %s 의 쓰기 권한을 이 연결에서는 끕니다.",
+            key_row.name or (key_row.unique_id or '')[:8], row.name)
+        can_write = False
+    return RoleInfo(name=row.name, can_write=can_write,
                      user_id=user.unique_id)
 
 
@@ -155,7 +248,7 @@ def authenticate_http(headers, declared_agent_id=None):
                         "Generate one under Settings > Users."),
         }
 
-    user = resolve_key(raw)
+    user, key_row = resolve_key(raw)
     if user is None:
         return False, '', None, {
             "error": "unauthorized",
@@ -168,7 +261,7 @@ def authenticate_http(headers, declared_agent_id=None):
     if label and label != agent_id:
         # 클라이언트 이름은 참고 정보로만 남긴다(같은 사용자 키로 여러 AI가 붙을 수 있다).
         agent_id = f"user:{user.name}/{label}"
-    return True, agent_id, _role_for(user), None
+    return True, agent_id, _role_for(user, key_row), None
 
 
 def authenticate_stdio(declared_agent_id=None):
@@ -188,7 +281,7 @@ def authenticate_stdio(declared_agent_id=None):
                         "To disable authentication, set AOT_MCP_REQUIRE_AUTH=0."),
         }
 
-    user = resolve_key(raw)
+    user, key_row = resolve_key(raw)
     if user is None:
         return False, '', None, {"error": "unauthorized",
                                   "message": "AOT_MCP_API_KEY is not a valid key."}
@@ -197,4 +290,4 @@ def authenticate_stdio(declared_agent_id=None):
     label = _clean_label(declared_agent_id)
     if label:
         agent_id = f"user:{user.name}/{label}"
-    return True, agent_id, _role_for(user), None
+    return True, agent_id, _role_for(user, key_row), None

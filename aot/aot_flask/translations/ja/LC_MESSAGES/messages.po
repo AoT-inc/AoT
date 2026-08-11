@@ -26920,3 +26920,91 @@ msgid ""
 "HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
 msgstr ""
 "デューティ比コマンドのHTTP読み取りタイムアウト。リモートホストで最も時間のかかるコマンドより長く設定してください"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API Keys"
+msgstr "APIキー"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Revoke"
+msgstr "失効"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "No API keys issued."
+msgstr "発行済みのAPIキーがありません。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Issue New Key"
+msgstr "新しいキーを発行"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Key Name"
+msgstr "キー名"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API key not found."
+msgstr "APIキーが見つかりません。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API key revoked."
+msgstr "APIキーを失効しました。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "A newly issued key appears here once"
+msgstr "新しく発行したキーはここに一度だけ表示されます"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "e.g. ChatGPT, Claude Desktop"
+msgstr "例: ChatGPT, Claude Desktop"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Revoke this API key? Anything using it will stop working."
+msgstr "このAPIキーを失効しますか？このキーを使用している連携はすべて停止します。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Name the client this key is for, so you know what you are cutting off later."
+msgstr "このキーの用途に名前を付けておくと、後で何を停止するのか分かります。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Full access"
+msgstr "フルアクセス"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Read only"
+msgstr "読み取り専用"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Read-only keys can fetch data but cannot change anything."
+msgstr "読み取り専用キーはデータを取得できますが、変更は一切できません。"
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid "Could not retrieve the TLS certificate from %(host)s: %(err)s"
+msgstr "%(host)s の TLS 証明書を取得できませんでした: %(err)s"
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid ""
+"The TLS certificate of %(host)s does not match the one pinned earlier "
+"(pinned %(old)s, now %(new)s). Nothing was sent. If the remote genuinely "
+"replaced its certificate, delete this remote host and add it again; "
+"otherwise the connection is being intercepted."
+msgstr ""
+"%(host)s の TLS 証明書が以前に固定したものと一致しません（固定された指紋 "
+"%(old)s、現在 %(new)s）。何も送信していません。リモートが実際に証明書を "
+"更新した場合は、このリモートホストを削除してから再度追加してください。"
+"そうでなければ接続が傍受されています。"
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid "Could not enroll with %(host)s: %(err)s"
+msgstr "%(host)s への登録に失敗しました: %(err)s"
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid ""
+"Pinned the certificate of %(host)s. Verify this fingerprint out of band "
+"before trusting the connection: %(fp)s"
+msgstr ""
+"%(host)s の証明書を固定しました。この接続を信頼する前に、別の経路で"
+"指紋を確認してください: %(fp)s"

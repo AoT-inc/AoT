@@ -331,6 +331,7 @@ def register_extensions(app):
     app = extension_compress(app)  # Compress app responses with gzip
     app = extension_limiter(app)  # Limit authentication blueprint requests to 200 per minute
     app = extension_login_manager(app)  # User login management
+    app = register_api_key_scope_guard(app)  # readonly API 키의 쓰기 차단
     app = extension_session(app)  # Server side session
     app = extension_csrf(app) # CSRF Protection
     app = extension_cache(app)  # API response caching
@@ -430,51 +431,63 @@ def register_extensions(app):
             # This is a stdio MCP subprocess the app spawns and talks to itself
             # (see mcp_bridge_service.py / mcp_auth.authenticate_stdio) — without
             # a key in its env, every initialize handshake fails auth and the AI
-            # gets 0 tools. Only runs when no valid key is configured yet, and
-            # never overwrites a key a human may already rely on for external API
-            # access (skips users that already have one).
+            # gets 0 tools.
+            #
+            # 키는 **전용 서비스 계정** 명의로 발급한다. 예전에는 "키가 없는 첫
+            # Admin/Editor" 를 골라 그 사람 명의로 발급했는데, 그러면 감사 로그가
+            # 내부 AI 의 행위를 그 사람의 행위로 기록해 "누가 지시했는가" 가
+            # 무너지고, 그 사람이 자기 키를 재발급하는 순간(api_key_hash 는 컬럼
+            # 하나라 덮어쓰기다) 내부 AI 가 아무 에러 없이 도구를 전부 잃었다.
+            # 자세한 배경은 mcp_auth.ensure_service_account 의 docstring 참조.
             try:
                 if _aot_mcp:
-                    from aot.databases.models import User, Role
-                    from aot.databases import set_api_key
+                    from aot.ai.services.mcp_auth import ensure_service_account
+                    from aot.databases.models import User
                     from aot.utils.system_pi import base64_encode_bytes
                     import base64 as _b64
 
-                    env_vars = _aot_mcp.env_vars or {}
-                    existing = env_vars.get('AOT_MCP_API_KEY')
-                    valid = False
-                    if existing:
-                        try:
-                            raw = _b64.b64decode(existing, validate=False)
-                        except Exception:
-                            raw = b''
-                        valid = bool(raw) and User.find_by_api_key(raw) is not None
+                    service_user = ensure_service_account()
+                    if service_user is None:
+                        logger.warning(
+                            "[Startup] Could not auto-provision AOT_MCP_API_KEY — no role "
+                            "with edit_controllers exists to attach the service account to.")
+                    else:
+                        env_vars = dict(_aot_mcp.env_vars or {})
+                        existing = env_vars.get('AOT_MCP_API_KEY')
+                        holder = None
+                        if existing:
+                            try:
+                                raw = _b64.b64decode(existing, validate=False)
+                            except Exception:
+                                raw = b''
+                            holder = User.find_by_api_key(raw) if raw else None
 
-                    if not valid:
-                        candidate = (
-                            User.query.join(Role, User.role_id == Role.id)
-                            .filter(Role.edit_controllers.is_(True))
-                            .filter(User.api_key_hash.is_(None))
-                            .filter(User.is_enabled.is_(True))
-                            .order_by(User.id)
-                            .first()
-                        )
-                        if candidate:
-                            raw_key = set_api_key(128)
-                            candidate.api_key = None
-                            candidate.api_key_hash = User.hash_api_key(raw_key)
+                        # 갈아 끼우는 경우는 둘이다: 설정된 키가 유효하지 않거나,
+                        # 예전 방식으로 **사람 계정** 명의로 발급돼 있는 경우.
+                        # 그 사람의 api_key_hash 는 건드리지 않는다 — 본인이 외부
+                        # 접속(ChatGPT/Claude 등)에 쓰고 있을 수 있고, 여기서 지우면
+                        # 그쪽이 조용히 죽는다.
+                        if holder is None or holder.id != service_user.id:
+                            # 서비스 계정의 옛 키는 폐기하고 새로 하나만 남긴다.
+                            # 사람 계정과 달리 여러 개를 들고 있을 이유가 없고,
+                            # 남겨 두면 어느 것이 실제로 쓰이는 키인지 모른다.
+                            for old in service_user.active_api_keys():
+                                old.revoke()
+                            raw_key = service_user.issue_api_key(
+                                'AoT System Expert Server')
                             env_vars['AOT_MCP_API_KEY'] = base64_encode_bytes(raw_key)
                             _aot_mcp.env_vars = env_vars
                             db.session.commit()
-                            logger.info(
-                                f"[Startup] Auto-provisioned AOT_MCP_API_KEY for AoT System "
-                                f"Expert Server (user: '{candidate.name}')")
-                        else:
-                            logger.warning(
-                                "[Startup] Could not auto-provision AOT_MCP_API_KEY — no "
-                                "Admin/Editor user without an existing API key was found. "
-                                "Generate one under Settings > Users and set it as this "
-                                "server's AOT_MCP_API_KEY env var under External MCP Servers.")
+                            if holder is not None:
+                                logger.info(
+                                    f"[Startup] AOT_MCP_API_KEY was issued in the name of the "
+                                    f"human account '{holder.name}'; switched to the service "
+                                    f"account '{service_user.name}'. That user's own API key "
+                                    f"was left intact.")
+                            else:
+                                logger.info(
+                                    f"[Startup] Auto-provisioned AOT_MCP_API_KEY for AoT System "
+                                    f"Expert Server (service account: '{service_user.name}')")
             except Exception as e:
                 logger.warning(f"[Startup] AOT_MCP_API_KEY auto-provision failed: {e}")
 
@@ -825,6 +838,101 @@ def _warn_api_key_in_url(req, user):
         logger.exception("Failed to record deprecated URL api_key usage")
 
 
+#: 상태를 바꾸지 않는 HTTP 메서드.
+_SAFE_METHODS = frozenset(('GET', 'HEAD', 'OPTIONS'))
+
+#: 메서드는 POST 지만 읽기 전용인 경로. 여기 없는 POST/PUT/PATCH/DELETE 는
+#: readonly 키에서 거부된다.
+#:
+#: `/data_batch` 는 대시보드가 여러 측정을 한 번에 조회하려고 만든 것이라 본문이
+#: 필요해 POST 일 뿐, 아무것도 바꾸지 않는다(routes_general.py 참조). 원격 AoT
+#: 수집도 이 경로로 값을 받아오므로 여기서 막으면 수집 전용 키가 성립하지 않는다.
+#:
+#: **경로를 추가할 때는 그 핸들러가 정말 아무것도 쓰지 않는지 본문을 읽고 확인할
+#: 것.** 이 목록이 스코프의 유일한 구멍이다.
+_READONLY_POST_PATHS = frozenset(('/data_batch',))
+
+
+def _raw_api_keys_from_request(req):
+    """요청이 실어 온 API 키 후보(평문 bytes)를 순서대로 내놓는다.
+
+    `load_user_from_request` 와 스코프 가드가 **같은 규칙**으로 키를 읽어야
+    한다. 두 곳이 서로 다른 경로를 보면, 가드가 못 보는 경로로 들어온 키는
+    스코프 없이 통과한다.
+    """
+    candidates = []
+
+    raw = req.args.get('api_key')
+    if raw:
+        candidates.append(raw.replace(' ', '+'))
+
+    auth = req.headers.get('Authorization') or ''
+    if auth.startswith('Basic '):
+        candidates.append(auth[len('Basic '):])
+    elif auth.startswith('Bearer '):
+        candidates.append(auth[len('Bearer '):])
+
+    header = req.headers.get('X-API-KEY')
+    if header:
+        candidates.append(header)
+
+    for value in candidates:
+        try:
+            yield base64.b64decode(value)
+        except Exception:
+            continue
+
+
+def register_api_key_scope_guard(app):
+    """readonly 키로 들어온 요청에서 상태 변경을 막는다.
+
+    **역할(role) 권한 검사보다 앞단에서 막는 이유**: `user_has_permission()` 은
+    라우트가 스스로 불러야 효력이 있다. 부르지 않는 라우트가 하나라도 있으면
+    그 경로로 스코프가 뚫린다. 게다가 API 키 인증은 `/api/` 뿐 아니라
+    `@login_required` 가 붙은 **모든** 라우트에 통하므로 검사 대상이 앱 전체다.
+    HTTP 메서드는 라우트가 무엇을 하든 요청 자체에 실려 오므로, 여기서 한 번
+    거르는 편이 빠짐없이 막힌다.
+
+    세션(쿠키)으로 로그인한 사용자는 영향을 받지 않는다 — 요청에 API 키가 없으면
+    가드는 아무 일도 하지 않는다.
+    """
+    @app.before_request
+    def _enforce_api_key_scope():
+        if request.method in _SAFE_METHODS:
+            return None
+        if request.path in _READONLY_POST_PATHS:
+            return None
+
+        try:
+            from aot.databases.models.user_api_key import UserAPIKey
+            for raw_key in _raw_api_keys_from_request(request):
+                row = UserAPIKey.find_active(raw_key)
+                if row is None:
+                    continue
+                if not row.is_readonly:
+                    return None          # 정상 권한 키 — 통과
+                logger.warning(
+                    "Read-only API key '%s' (user_id=%s) attempted %s %s",
+                    row.name or row.unique_id[:8], row.user_id,
+                    request.method, request.path)
+                message = ('This API key is read-only. It cannot perform '
+                           '{m} requests.'.format(m=request.method))
+                if request.path.startswith('/api/'):
+                    return jsonify({'error': 'Forbidden', 'message': message}), 403
+                return message, 403
+        except Exception:
+            # 가드가 죽어서 요청이 통과하면 스코프가 없는 것과 같다. 다만 여기서
+            # 예외를 올리면 앱 전체가 500 이 되므로, 로그를 남기고 거부한다 —
+            # 키를 못 읽었으면 애초에 이 요청은 세션 로그인일 가능성이 높지만,
+            # 확신할 수 없을 때 통과시키는 쪽을 택하지 않는다.
+            logger.exception("API key scope guard failed; denying the request")
+            return jsonify({'error': 'Forbidden'}), 403
+
+        return None
+
+    return app
+
+
 def extension_login_manager(app):
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
@@ -997,10 +1105,33 @@ def _purge_corrupt_session_files(session_dir):
 
 
 def extension_csrf(app):
+    """CSRF 보호를 켜고, 면제 대상을 **여기 한 곳에서만** 정한다.
+
+    면제를 흩어 놓으면(뷰마다 데코레이터) 무엇이 보호 밖인지 세어 보려면 레포
+    전체를 뒤져야 한다. 목록이 짧게 유지되는 한, 한자리에 모아 두는 편이 감사에
+    유리하다.
+    """
     from aot.aot_flask.extensions import csrf
     from aot.aot_flask.api import api_blueprint
     csrf.init_app(app)
     csrf.exempt(api_blueprint)
+
+    # `/data_batch` — POST 지만 아무것도 쓰지 않는 조회 전용 엔드포인트다.
+    #
+    # 왜 면제하나: CSRF 는 브라우저가 **자동으로 딸려 보내는** 자격증명(세션
+    # 쿠키)으로 상태가 바뀌는 것을 막는 장치다. 이 경로는 상태를 바꾸지 않고,
+    # 교차 출처 공격자는 동일 출처 정책 때문에 응답을 읽을 수도 없다. 반면
+    # API 키로 붙는 클라이언트(원격 AoT 수집 — utils/remote_aot_client.py 의
+    # `data_batch()`)는 세션이 없어 CSRF 토큰을 만들 방법이 아예 없다.
+    # 면제하지 않으면 스코프 가드가 이 경로를 읽기 전용 키에 열어 줘도
+    # (app.py `_READONLY_POST_PATHS`) CSRF 가 그 앞에서 막아, "수집 전용 키" 가
+    # 성립하지 않는다. 실제로 그 상태였다.
+    #
+    # **전제: 이 핸들러는 아무것도 쓰지 않는다.** 쓰기가 생기면 이 면제는 즉시
+    # 잘못된 것이 된다. 그 전제는 aot/tests/test_data_batch_readonly.py 가
+    # 정적으로 고정한다 — 쓰기 호출이 들어오면 테스트가 깨진다.
+    from aot.aot_flask.routes_general import data_batch
+    csrf.exempt(data_batch)
 
     # CSRF 검증 실패 시 400 대신 로그인 페이지로 리다이렉트.
     # 서버 재시작 후 세션이 만료/손상되면 브라우저의 기존 CSRF 토큰이 무효화되어

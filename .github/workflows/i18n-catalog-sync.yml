@@ -1,0 +1,46 @@
+name: i18n Catalog Sync
+
+# 앱이 실제로 읽는 것은 `.mo`(바이너리)다. `.po` 만 고치고 `pybabel compile` 을
+# 빠뜨리면 아무 에러도 나지 않고, 테스트도 통과하고, 리뷰에서도 안 보인다 —
+# `.mo` 는 바이너리라 diff 에 내용이 드러나지 않기 때문이다. 그 사이 그 언어
+# 사용자는 번역이 있는데도 영어를 본다. JS 번들 드리프트와 같은 종류의 조용한
+# 실패이고, 발견 경로도 같다: 무관한 작업 중 우연히 재컴파일하다 드러난다.
+#
+# 검사는 바이트가 아니라 **의미**를 본다 — 컴파일러 버전이 다르면 같은 `.po`
+# 에서도 바이트가 달라져, 바이트로 보면 정상 커밋을 계속 드리프트로 올린다.
+#
+# pre-commit 훅(.githooks/pre-commit)이 로컬 1차 방어고, 여기는 훅을 켜지 않은
+# 클론과 우회 커밋을 받는 최종 관문이다.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aot/aot_flask/translations/**'
+      - 'aot/scripts/check_po_mo_sync.py'
+      - '.github/workflows/i18n-catalog-sync.yml'
+  pull_request:
+    paths:
+      - 'aot/aot_flask/translations/**'
+      - 'aot/scripts/check_po_mo_sync.py'
+      - '.github/workflows/i18n-catalog-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 의존성 설치가 없다 — 검사기는 표준 라이브러리만으로 .po 와 .mo 를
+      # 직접 파싱한다. babel 이 없어도, 설치가 깨져도 이 검사는 돌아야 한다.
+      - name: Check .po ↔ .mo catalogs are in sync
+        run: python3 aot/scripts/check_po_mo_sync.py

@@ -669,6 +669,9 @@ def settings_users_submit():
              generated_api_key) = utils_settings.generate_api_key(
                 form_mod_user)
             user_id = form_mod_user.user_id.data
+        elif form_mod_user.user_revoke_api_key.data:
+            messages = utils_settings.revoke_api_key(form_mod_user)
+            user_id = form_mod_user.user_id.data
         elif form_mod_user.user_delete.data:
             user_id = form_mod_user.user_id.data
             messages = utils_settings.user_del(form_mod_user)
@@ -761,6 +764,9 @@ def settings_user_detail(unique_id):
                            user=user,
                            themes=THEMES,
                            user_roles=Role.query.all(),
+                           # 폐기된 키는 보내지 않는다 — 화면에 남으면 "아직
+                           # 쓸 수 있는 키" 로 읽힌다. 이력은 감사 로그가 갖는다.
+                           user_api_keys=user.active_api_keys(),
                            form_mod_user=forms_settings.UserMod())
 
 

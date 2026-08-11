@@ -103,24 +103,61 @@
         </div>
       </div>
 
-      {# 키 표시와 발급 버튼을 두 행으로 나눈다 — aot-api-key-group 은 60px 아이콘
-         버튼(render_api_key_picker)을 전제로 한 폭이라 글자 버튼이 들어가면 겹친다. #}
+      {# 한 사람이 키를 여러 개 갖는다(p6_32). 클라이언트마다 따로 발급해 두면
+         하나가 미심쩍을 때 그것만 끊을 수 있다 — 예전에는 키가 하나뿐이라
+         재발급이 곧 기존 연동 전부를 끊는 일이었다. #}
       <div class="aot-modal-option-row">
-        <label class="aot-modal-option-label">{{_('API Key')}}</label>
+        <label class="aot-modal-option-label">{{_('API Keys')}}</label>
         <div class="aot-modal-option-control">
+          {% if user_api_keys %}
+          <table class="table table-sm aot-modern-table" style="margin-bottom:8px">
+            <tbody>
+              {% for each_key in user_api_keys %}
+              <tr>
+                <td>{{each_key.name or _('Unnamed')}}</td>
+                <td class="text-muted small">{% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}</td>
+                <td class="text-muted small">{{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}</td>
+                <td style="width:1%;white-space:nowrap">
+                  <button type="submit" name="user_revoke_api_key" value="1"
+                    class="btn aot-pill-btn aot-pill-btn-secondary"
+                    data-revoke-key="{{each_key.unique_id}}"
+                    onclick="return confirm('{{_('Revoke this API key? Anything using it will stop working.')}}')">{{_('Revoke')}}</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-muted small" style="margin-bottom:8px">{{_('No API keys issued.')}}</div>
+          {% endif %}
+          {{form_mod_user.api_key_id(class_='api_key_id_' ~ user.unique_id)}}
           {# 키는 해시로만 저장되므로 기존 값을 다시 표시할 수 없다. 발급 직후에만
              users.html 의 JS 가 이 두 입력란을 채운다. #}
           {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id)}}
           <input type="text" class="form-control aot-modern-input visible_mod_key_{{user.unique_id}}" autocomplete="off"
             readonly title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false"
-            placeholder="{% if user.api_key_hash %}{{_('Issued — shown only once at generation')}}{% else %}{{_('Not issued')}}{% endif %}">
+            placeholder="{{_('A newly issued key appears here once')}}">
         </div>
       </div>
 
       <div class="aot-modal-option-row">
-        <label class="aot-modal-option-label">{{_('Generate API Key')}}</label>
-        <div class="aot-modal-option-control">
+        <label class="aot-modal-option-label"
+          title="{{_('Name the client this key is for, so you know what you are cutting off later.')}}">{{_('Issue New Key')}}</label>
+        <div class="aot-modal-option-control aot-api-key-group">
+          {{form_mod_user.api_key_name(class_='form-control aot-modern-input',
+            placeholder=_('e.g. ChatGPT, Claude Desktop'))}}
           {{form_mod_user.user_generate_api_key(class_='btn aot-pill-btn aot-pill-btn-primary', value=_('Generate'))}}
+        </div>
+      </div>
+
+      {# 읽기 전용 키는 그 키로 들어온 쓰기 요청 자체를 막는다(app.py 의 스코프
+         가드). 예전에는 키 하나가 곧 그 계정의 전 권한이라, 데이터를 받아가기만
+         하는 상대에게도 장치 제어권을 함께 넘겨야 했다. #}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label"
+          title="{{_('Read-only keys can fetch data but cannot change anything.')}}">{{_('Permissions')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.api_key_scope(class_='form-control aot-modern-input')}}
         </div>
       </div>
 

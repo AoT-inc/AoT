@@ -495,6 +495,20 @@ class AccountSelf(FlaskForm):
 
 class UserMod(FlaskForm):
     user_id = StringField(lazy_gettext('User ID'), widget=widgets.HiddenInput())
+    # 발급하려는 키에 붙일 이름("ChatGPT", "Claude Desktop"). 한 사람이 키를
+    # 여러 개 갖게 된 뒤로(p6_32) 이름이 없으면 어느 키가 무엇인지 알 수 없어,
+    # 끊을 때 무엇이 끊기는지 모른 채 끊게 된다.
+    api_key_name = StringField(lazy_gettext('Key Name'))
+    # 이 키로 무엇을 할 수 있는지. 기본은 'full' — 값을 안 고르고 발급했을 때
+    # 예전과 같이 동작해야 한다. 좁히는 것은 명시적 선택이어야 한다.
+    api_key_scope = SelectField(
+        lazy_gettext('Permissions'),
+        choices=[('full', lazy_gettext('Full access')),
+                 ('readonly', lazy_gettext('Read only'))],
+        default='full')
+    # 폐기 대상 키의 unique_id.
+    api_key_id = StringField(widget=widgets.HiddenInput())
+    user_revoke_api_key = SubmitField(lazy_gettext('Revoke'))
     full_name = StringField(lazy_gettext('Display Name'))
     is_enabled = BooleanField(lazy_gettext('Account Enabled'))
     email = EmailField(

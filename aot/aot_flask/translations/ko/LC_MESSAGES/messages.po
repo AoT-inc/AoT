@@ -27168,3 +27168,91 @@ msgid ""
 "HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
 msgstr ""
 "듀티사이클 명령의 HTTP 읽기 제한시간. 원격 호스트에서 가장 오래 걸리는 명령보다 길어야 합니다"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API Keys"
+msgstr "API 키"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Revoke"
+msgstr "폐기"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "No API keys issued."
+msgstr "발급된 API 키가 없습니다."
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Issue New Key"
+msgstr "새 키 발급"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Key Name"
+msgstr "키 이름"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API key not found."
+msgstr "API 키를 찾을 수 없습니다."
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API key revoked."
+msgstr "API 키를 폐기했습니다."
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "A newly issued key appears here once"
+msgstr "새로 발급한 키가 여기에 한 번만 표시됩니다"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "e.g. ChatGPT, Claude Desktop"
+msgstr "예: ChatGPT, Claude Desktop"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Revoke this API key? Anything using it will stop working."
+msgstr "이 API 키를 폐기할까요? 이 키를 쓰는 연동이 모두 중단됩니다."
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Name the client this key is for, so you know what you are cutting off later."
+msgstr "이 키를 어디에 쓸지 이름을 붙여 두면, 나중에 무엇을 끊는지 알 수 있습니다."
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Full access"
+msgstr "전체 권한"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Read only"
+msgstr "읽기 전용"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Read-only keys can fetch data but cannot change anything."
+msgstr "읽기 전용 키는 데이터를 가져올 수는 있지만 아무것도 바꿀 수 없습니다."
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid "Could not retrieve the TLS certificate from %(host)s: %(err)s"
+msgstr "%(host)s 의 TLS 인증서를 가져오지 못했습니다: %(err)s"
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid ""
+"The TLS certificate of %(host)s does not match the one pinned earlier "
+"(pinned %(old)s, now %(new)s). Nothing was sent. If the remote genuinely "
+"replaced its certificate, delete this remote host and add it again; "
+"otherwise the connection is being intercepted."
+msgstr ""
+"%(host)s 의 TLS 인증서가 이전에 고정한 것과 다릅니다(고정된 지문 %(old)s, "
+"현재 %(new)s). 아무것도 전송하지 않았습니다. 원격이 실제로 인증서를 "
+"교체했다면 이 원격 호스트를 삭제한 뒤 다시 추가하십시오. 그렇지 않다면 "
+"연결이 가로채이고 있습니다."
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid "Could not enroll with %(host)s: %(err)s"
+msgstr "%(host)s 에 등록하지 못했습니다: %(err)s"
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid ""
+"Pinned the certificate of %(host)s. Verify this fingerprint out of band "
+"before trusting the connection: %(fp)s"
+msgstr ""
+"%(host)s 의 인증서를 고정했습니다. 이 연결을 신뢰하기 전에 다른 경로로 "
+"지문을 확인하십시오: %(fp)s"

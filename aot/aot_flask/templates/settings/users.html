@@ -448,11 +448,21 @@
 
       if (action === 'settings_user_save' ||
           action === 'user_generate_api_key' ||
+          action === 'user_revoke_api_key' ||
           action === 'user_delete' ||
           action === 'user_save' ||
           action === 'user_approve' ||
           action === 'user_role_save' ||
           action === 'user_role_delete') {
+
+        // 폐기는 "어느 키인지" 를 함께 보내야 한다. 키 목록은 행마다 버튼이
+        // 하나씩이고 폼은 하나뿐이라, 누른 버튼의 id 를 제출 직전에 숨은
+        // 필드로 옮긴다. 옮기지 않으면 서버는 어느 키를 끊을지 알 수 없다.
+        let $revoked_row = null;
+        if (action === 'user_revoke_api_key') {
+          $(this).find('input[name="api_key_id"]').val(submitter_btn.data('revoke-key'));
+          $revoked_row = submitter_btn.closest('tr');
+        }
         // Saving a user changes several things the card shows at once — name,
         // role, the disabled badge and tint — and a role rename changes every
         // user row. Reload instead of patching each of those in place.
@@ -482,11 +492,18 @@
                 setTimeout(function () { window.location.reload(); }, 800);
                 return;
               }
-              if (action === 'user_generate_api_key' && 'generated_api_key' in data.data) {
+              // 값이 실제로 왔을 때만 채운다. 발급이 실패하면 서버가 null 을
+              // 보내는데(utils_settings.generate_api_key), 키 존재 여부만 보고
+              // 넣으면 입력란에 "null" 이 박혀 발급된 키처럼 보인다.
+              if (action === 'user_generate_api_key' && data.data.generated_api_key) {
                 var uid = data.data.user_id;
                 var new_val = data.data.generated_api_key;
                 document.querySelectorAll('.real_mod_key_' + uid).forEach(function (el) { el.value = new_val; });
                 document.querySelectorAll('.visible_mod_key_' + uid).forEach(function (el) { el.value = new_val; });
+              }
+              if (action === 'user_revoke_api_key' && $revoked_row) {
+                // 끊긴 키를 목록에 남겨 두면 아직 쓸 수 있는 키로 읽힌다.
+                $revoked_row.remove();
               }
               if (action === 'user_delete' && 'user_id' in data.data) {
                 $('[data-config-uid="' + data.data.user_id + '"]').hide('slow');

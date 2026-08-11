@@ -17,6 +17,7 @@ on:
       - Alembic Chain
       - Driver Dependency Pins
       - Geo Data Integrity
+      - i18n Catalog Sync
       - JS Bundle Drift
       - Security Checks
       - Deploy Documentation

@@ -24845,3 +24845,85 @@ msgstr ""
 msgid ""
 "HTTP read timeout for duty cycle commands. Must be longer than the slowest command on the remote host"
 msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API Keys"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Revoke"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "No API keys issued."
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Issue New Key"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Key Name"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API key not found."
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "API key revoked."
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "A newly issued key appears here once"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "e.g. ChatGPT, Claude Desktop"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Revoke this API key? Anything using it will stop working."
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Name the client this key is for, so you know what you are cutting off later."
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Full access"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Read only"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Read-only keys can fetch data but cannot change anything."
+msgstr ""
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid "Could not retrieve the TLS certificate from %(host)s: %(err)s"
+msgstr ""
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid ""
+"The TLS certificate of %(host)s does not match the one pinned earlier "
+"(pinned %(old)s, now %(new)s). Nothing was sent. If the remote genuinely "
+"replaced its certificate, delete this remote host and add it again; "
+"otherwise the connection is being intercepted."
+msgstr ""
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid "Could not enroll with %(host)s: %(err)s"
+msgstr ""
+
+#: aot_flask/utils/utils_remote_host.py
+#, python-format
+msgid ""
+"Pinned the certificate of %(host)s. Verify this fingerprint out of band "
+"before trusting the connection: %(fp)s"
+msgstr ""

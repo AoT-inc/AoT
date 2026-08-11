@@ -61,6 +61,7 @@ from .method import MethodData
 from .misc import EnergyUsage
 from .misc import Misc
 from .user import User
+from .user_api_key import UserAPIKey
 from .notes import NoteTags
 from .notes import Notes
 from .notice import NoticePost

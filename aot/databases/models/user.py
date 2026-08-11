@@ -1,6 +1,7 @@
 # coding=utf-8
 import hashlib
 import hmac
+import logging
 
 import bcrypt
 from flask_login import UserMixin
@@ -9,6 +10,37 @@ from aot.databases import CRUDMixin
 from aot.databases import set_uuid
 from aot.aot_flask.extensions import db
 from aot.aot_flask.extensions import ma
+
+logger = logging.getLogger(__name__)
+
+#: 레거시 폴백을 이미 보고한 사용자 id. 인증은 요청마다 일어나므로 그대로
+#: 로그를 남기면 초당 수십 줄이 쌓여, 정작 읽어야 할 다른 로그를 밀어낸다.
+#: 프로세스당 사용자당 한 번이면 "이 서버가 아직 레거시 컬럼에 기대고 있다" 는
+#: 사실을 알기에 충분하다.
+_LEGACY_FALLBACK_SEEN = set()
+
+
+def _note_legacy_fallback(user):
+    """`users.api_key_hash` 로 인증이 성사됐음을 알린다.
+
+    이 로그가 **한 줄도 없어야** 레거시 컬럼을 제거할 수 있다. 계측이 없으면
+    "폴백이 0 인가" 를 물어볼 방법 자체가 없어서(코드에는 폴백이 있고, 쓰이는지는
+    데이터에 달렸다) 제거 판단을 영원히 미루게 된다.
+
+    반대로 이 줄이 보이면 그 서버는 **백필이 안 돌았다.**
+    `python3 -m aot.scripts.check_api_key_fallback` 로 확인할 것.
+    """
+    try:
+        if user.id in _LEGACY_FALLBACK_SEEN:
+            return
+        _LEGACY_FALLBACK_SEEN.add(user.id)
+        logger.warning(
+            "[API키] 사용자 '%s' 가 레거시 컬럼(users.api_key_hash)으로 인증됐습니다 "
+            "— user_api_key 백필이 돌지 않은 키입니다. 이 로그가 남아 있는 한 "
+            "레거시 컬럼을 제거하면 안 됩니다.", user.name)
+    except Exception:
+        # 계측이 인증을 깨뜨리면 안 된다.
+        pass
 
 
 class User(UserMixin, CRUDMixin, db.Model):
@@ -107,24 +139,83 @@ class User(UserMixin, CRUDMixin, db.Model):
         return hashlib.sha256(raw_key).hexdigest()
 
     @classmethod
+    def resolve_api_key(cls, raw_key):
+        """제시된 API 키 → (사용자, 키 행). 찾지 못하면 (None, None).
+
+        키 행은 스코프를 판단하는 쪽(`load_user_from_request`, `mcp_auth`)이
+        필요로 한다. 레거시 컬럼으로 찾은 키는 행이 없으므로 (user, None) 이며,
+        스코프는 'full' 로 취급한다 — 스코프가 없던 시절에 발급된 키는 실제로
+        전 권한이었고, 업그레이드로 조용히 좁히면 돌던 연동이 끊긴다.
+        """
+        if not raw_key:
+            return None, None
+        candidate = cls.hash_api_key(raw_key)
+
+        from .user_api_key import UserAPIKey
+        row = UserAPIKey.query.filter_by(key_hash=candidate).first()
+        if row is not None and hmac.compare_digest(row.key_hash or '', candidate):
+            if row.revoked_at is not None:
+                return None, None
+            user = cls.query.filter_by(id=row.user_id).first()
+            if user is not None and user.is_enabled:
+                return user, row
+            return None, None
+
+        user = cls.query.filter_by(api_key_hash=candidate).first()
+        if user and hmac.compare_digest(user.api_key_hash or '', candidate):
+            if not user.is_enabled:
+                return None, None
+            _note_legacy_fallback(user)
+            return user, None
+        return None, None
+
+    @classmethod
     def find_by_api_key(cls, raw_key):
         """제시된 API 키로 사용자를 찾는다. 없으면 None.
 
-        해시 컬럼으로 인덱스 조회한 뒤 상수시간 비교로 한 번 더 확인한다
-        (인덱스 조회만으로도 값 비교는 일어나지만, 비교 자체를 상수시간으로
-        고정해 두면 이후 구현이 바뀌어도 타이밍 측면이 유지된다).
+        `resolve_api_key` 의 얇은 껍데기다 — 키 행이 필요 없는 호출자를 위한
+        것. **판정 규칙을 여기에 다시 쓰지 말 것.** 예전에는 두 메서드가 같은
+        규칙(폐기 검사·계정 활성 검사·레거시 폴백)을 각자 한 벌씩 들고 있어,
+        한쪽만 고치면 조용히 갈라지는 구조였다.
         """
-        if not raw_key:
-            return None
-        candidate = cls.hash_api_key(raw_key)
-        user = cls.query.filter_by(api_key_hash=candidate).first()
-        if user and hmac.compare_digest(user.api_key_hash or '', candidate):
-            # 꺼진 계정의 키는 통하지 않는다. 세 API 경로(url arg / Basic /
-            # X-API-KEY)가 모두 여기를 거치므로 검사는 이 한 곳이면 된다.
-            if not user.is_enabled:
-                return None
-            return user
-        return None
+        return cls.resolve_api_key(raw_key)[0]
+
+    def issue_api_key(self, name=None, scope=None):
+        """이 사용자에게 새 API 키를 하나 **추가** 발급한다.
+
+        기존 키는 건드리지 않는다 — 그것이 이 테이블이 생긴 이유다. 반환값은
+        평문 키(bytes)이며 호출자가 사용자에게 한 번 보여주고 버려야 한다.
+        서버에는 해시만 남는다.
+
+        scope 는 'full'(그 사용자의 권한 그대로) 또는 'readonly'(읽기만).
+        모르는 값이 오면 'full' 로 떨어뜨리지 않고 'readonly' 로 좁힌다 —
+        오타 하나가 조용히 전 권한 키를 만드는 쪽이 훨씬 위험하다.
+
+        커밋은 하지 않는다. 호출자가 자기 트랜잭션 경계에서 커밋한다.
+        """
+        from aot.databases import set_api_key
+        from .user_api_key import SCOPE_FULL, SCOPE_READONLY, SCOPES, UserAPIKey
+
+        raw_key = set_api_key(128)
+        row = UserAPIKey()
+        row.user_id = self.id
+        row.name = (name or '').strip()[:64] or None
+        row.key_hash = self.hash_api_key(raw_key)
+        if scope is None:
+            row.scope = SCOPE_FULL
+        else:
+            row.scope = scope if scope in SCOPES else SCOPE_READONLY
+        db.session.add(row)
+        return raw_key
+
+    def active_api_keys(self):
+        """폐기되지 않은 키 목록(최근 발급 순)."""
+        from .user_api_key import UserAPIKey
+        return (UserAPIKey.query
+                .filter(UserAPIKey.user_id == self.id)
+                .filter(UserAPIKey.revoked_at.is_(None))
+                .order_by(UserAPIKey.id.desc())
+                .all())
 
     @staticmethod
     def check_password(password, hashed_password):

@@ -91,6 +91,23 @@ issued by the remote host for this purpose — not the account's password or its
 If that stored token were ever exposed, only Remote Admin access to that one host is
 affected; the account's real login credentials are not.
 
+That one-time password is sent only over a connection verified against the
+remote's certificate. The certificate is fetched and pinned *first*, without
+sending any credentials; the password then travels only over a connection that
+this pinned certificate verifies. Earlier versions did the opposite — the
+password went out over an unverified connection and the certificate was taken
+from the reply body, so anyone in the middle could read the password and pin
+their own certificate for every connection that followed.
+
+Trust on first contact still rests with you: a certificate seen for the first
+time cannot be checked against anything. The SHA-256 fingerprint of what was
+pinned is therefore shown when a host is added — compare it out of band (on the
+remote machine itself) before trusting the connection.
+
+If the certificate later stops matching what was pinned, enrollment stops and
+nothing is sent. Should the remote genuinely have replaced its certificate,
+delete the remote host and add it again; deleting it also drops the old pin.
+
 !!! note "Existing remote hosts need to be re-added after upgrading"
     Instances upgrading from a version before this token-based scheme was introduced
     will find previously added remote hosts no longer connect. Removing and

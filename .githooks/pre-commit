@@ -61,3 +61,23 @@ if [ -z "$AOT_SKIP_ALEMBIC_CHECK" ]; then
         fi
     fi
 fi
+
+# ── 번역 카탈로그 .po ↔ .mo ───────────────────────────────────────────────
+# 앱이 읽는 것은 .mo 다. .po 만 고치고 컴파일을 빠뜨리면 아무 에러 없이 그
+# 언어 사용자만 영어를 본다 — .mo 는 바이너리라 diff 에도 안 드러난다.
+# 번들 드리프트와 같은 종류의 조용한 실패다.
+# 우회: AOT_SKIP_I18N_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_I18N_CHECK" ]; then
+    I18N_CHECK="$ROOT/aot/scripts/check_po_mo_sync.py"
+    if [ -f "$I18N_CHECK" ] && git diff --cached --name-only \
+        | grep -qE '^aot/aot_flask/translations/.*\.(po|mo)$'; then
+        if ! python3 "$I18N_CHECK" --staged; then
+            echo
+            echo "커밋 중단: .po 를 고치고 .mo 재컴파일을 빠뜨렸습니다."
+            echo "  pybabel compile -d aot/aot_flask/translations"
+            echo "  ※ -f 는 --force 가 아니라 --use-fuzzy 다. 붙이지 마세요."
+            echo "  (의도한 커밋이라면 AOT_SKIP_I18N_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi

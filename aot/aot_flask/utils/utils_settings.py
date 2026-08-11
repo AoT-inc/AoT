@@ -262,24 +262,70 @@ def generate_api_key(form):
     try:
         mod_user = User.query.filter(
             User.unique_id == form.user_id.data).first()
-        api_key = set_api_key(128)
-        # 해시만 저장한다 — 평문은 이 응답으로 한 번 전달되고 서버에 남지 않는다.
-        # api_key 컬럼은 p6_13 이후 사용하지 않으며, 재발급 시 과거 값이 남아
-        # 있지 않도록 명시적으로 비운다.
-        mod_user.api_key = None
-        mod_user.api_key_hash = User.hash_api_key(api_key)
+        # 키를 **추가** 발급한다. 예전에는 users.api_key_hash 컬럼 하나에
+        # 덮어썼기 때문에, 같은 사람이 두 번째 클라이언트를 붙이려고 발급하면
+        # 첫 번째 연동이 아무 에러 없이 죽었다(p6_32).
+        key_name = getattr(getattr(form, 'api_key_name', None), 'data', None)
+        key_scope = getattr(getattr(form, 'api_key_scope', None), 'data', None)
+        api_key = mod_user.issue_api_key(key_name, key_scope)
         db.session.commit()
         # The key itself is never written to the audit trail — only the fact
-        # that one was issued, and for whom.
+        # that one was issued, for whom, under what name, and with what scope.
+        # 스코프는 특히 남겨야 한다 — "읽기 전용으로 줬다" 는 나중에 물어볼 일이
+        # 생기는 사실이고, 키 행이 폐기돼도 이 기록은 남는다.
         audit_log(audit.API_KEY_ISSUE, target_type='User',
-                  target_id=mod_user.unique_id, target_name=mod_user.name)
+                  target_id=mod_user.unique_id, target_name=mod_user.name,
+                  detail='{} [{}]'.format(
+                      (key_name or '').strip()[:64] or '-',
+                      key_scope or 'full'))
         messages["success"].append(gettext(
             "API key generated. Copy it now — it is shown only once and "
             "cannot be retrieved later."))
     except Exception as except_msg:
+        # 저장이 실패했으면 키를 돌려주지 않는다. 화면에 보이는 키는 반드시 DB 에
+        # 남은 키여야 한다 — 그렇지 않으면 사용자는 "발급했는데 인증이 안 된다" 를
+        # 겪고, 원인이 발급 실패였다는 사실은 어디에도 드러나지 않는다.
+        # 사용자 조회 단계에서 실패한 경우(api_key 가 아직 None)는 더 나빴다:
+        # 아래 base64_encode_bytes(None) 이 TypeError 를 내며 이 try 밖으로
+        # 튀어나가, 깔끔한 오류 메시지 대신 500 이 나갔다.
+        # commit 이 실패한 세션은 rollback 하기 전까지 이후 쿼리를 전부 거부하므로
+        # 같은 요청의 뒷단이 연쇄로 실패하지 않도록 여기서 되돌린다.
+        db.session.rollback()
+        api_key = None
         messages["error"].append(except_msg)
 
-    return messages, base64_encode_bytes(api_key)
+    return messages, base64_encode_bytes(api_key) if api_key else None
+
+
+def revoke_api_key(form):
+    """API 키 하나를 폐기한다(행은 남는다).
+
+    키 단위로 끊을 수 있어야 하는 이유는, 예전처럼 사람 단위로만 끊으면 유출이
+    의심되는 연동 하나 때문에 그 사람의 **모든** 연동을 끊어야 하기 때문이다.
+    """
+    from aot.databases.models import UserAPIKey
+
+    messages = {"success": [], "info": [], "warning": [], "error": []}
+    try:
+        row = UserAPIKey.query.filter(
+            UserAPIKey.unique_id == form.api_key_id.data).first()
+        if row is None:
+            messages["error"].append(gettext("API key not found."))
+            return messages
+
+        mod_user = User.query.filter(User.id == row.user_id).first()
+        row.revoke()
+        db.session.commit()
+        audit_log(audit.API_KEY_REVOKE, target_type='User',
+                  target_id=mod_user.unique_id if mod_user else None,
+                  target_name=mod_user.name if mod_user else None,
+                  detail=row.name or None)
+        messages["success"].append(gettext("API key revoked."))
+    except Exception as except_msg:
+        db.session.rollback()
+        messages["error"].append(except_msg)
+
+    return messages
 
 
 def change_preferences(form):
