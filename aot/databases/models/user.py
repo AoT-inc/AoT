@@ -125,6 +125,55 @@ class User(UserMixin, CRUDMixin, db.Model):
         output = "<User: <name='{name}', email='{email}' is_admin='{isadmin}'>"
         return output.format(name=self.name, email=self.email, isadmin=bool(self.role_id == 1))
 
+    def session_auth_hash(self):
+        """비밀번호에서 파생된 세션 인증 해시.
+
+        이 값이 세션과 "90일간 유지" 쿠키에 함께 실리고, 요청마다
+        `user_loader` 가 대조한다. 비밀번호가 바뀌면 값이 달라지므로 **다른
+        기기에 남아 있던 세션과 90일 토큰이 전부 그 자리에서 무효가 된다.**
+
+        왜 필요한가: remember 토큰은 90일을 산다. 기기를 잃어버리거나 토큰이
+        유출됐을 때 예전에는 끊을 방법이 없었다 — 비밀번호를 바꿔도 그 토큰은
+        멀쩡히 살아 있었다. 이제 비밀번호 변경이 곧 "다른 기기 전부 로그아웃"
+        이다.
+
+        토큰이 아니라 **HMAC** 인 이유: flask-login 의 remember 쿠키는 서명은
+        돼 있지만 내용은 그대로 읽힌다. `password_hash` 를 그냥 해시해 넣으면
+        그 값이 쿠키에 노출돼, 쥔 사람이 "비밀번호가 바뀌었는지" 를 관찰하는
+        오라클이 된다. 앱 비밀키로 HMAC 을 걸면 밖에서는 의미 없는 값이다.
+
+        `password_hash` 가 없는 계정(구글 가입 직후)은 빈 값으로 계산한다 —
+        바꿀 비밀번호가 없으니 무효화할 것도 없다.
+        """
+        from flask import current_app
+        secret = current_app.secret_key or ''
+        if isinstance(secret, str):
+            secret = secret.encode('utf-8')
+        pw = self.password_hash or b''
+        if isinstance(pw, str):
+            pw = pw.encode('utf-8')
+        return hmac.new(secret, pw, hashlib.sha256).hexdigest()[:32]
+
+    def verify_session_auth_hash(self, token):
+        """세션/쿠키에 실려 온 인증 해시가 지금 비밀번호와 맞는가."""
+        try:
+            return hmac.compare_digest(str(token or ''), self.session_auth_hash())
+        except Exception:
+            return False
+
+    def get_id(self):
+        """flask-login 이 세션·remember 쿠키에 저장하는 식별자.
+
+        `<id>|<session_auth_hash>` 형식. UserMixin 의 기본 구현(=id 만)을
+        덮어쓴다. 짝이 되는 해석은 `app.py` 의 `user_loader` 에 있다 —
+        **한쪽만 고치면 전원이 로그아웃된다.**
+
+        주의: 로그인 경로는 이 메서드를 부를 수 있도록 반드시 **DB 행**을
+        `flask_login.login_user()` 에 넘겨야 한다. 예전처럼 id/name 만 채운 빈
+        `User()` 를 넘기면 `password_hash` 가 None 이라 엉뚱한 해시가 실린다.
+        """
+        return '%s|%s' % (self.id, self.session_auth_hash())
+
     def set_password(self, new_password):
         """saves a password hash  """
         if isinstance(new_password, str):

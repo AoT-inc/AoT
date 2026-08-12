@@ -203,14 +203,21 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
      * [Internationalization] JS Bridge for Translations
      */
     </script>
-    <script src="{{ url_for('routes_locale_api.get_js_translations') }}"></script>
+    {# ?lang= 은 캐시 지문이다. 이 응답은 Accept-Language 로 내용이 갈리는데 브라우저
+       캐시는 URL 로 항목을 찾으므로, 지문이 없으면 아이폰 시스템 언어를 바꿔도
+       max-age 동안 옛 언어 카탈로그를 계속 쓴다(HTML 은 no-cache 라 언어가 바뀌면
+       이 URL 은 즉시 새로 렌더된다). 계정 언어 변경처럼 Accept-Language 도 쿠키도
+       안 바뀌는 경로까지 이 한 줄이 덮는다 — Vary 만으로는 못 덮는다. #}
+    <script src="{{ url_for('routes_locale_api.get_js_translations', lang=current_locale) }}"></script>
     <script>
     /**
      * Translation helper for JS
      * @param {string} key - The translation key or the original string
      */
     window._ = function(key) {
-        return window.AOT_I18N[key] || key;
+        // 카탈로그 로드 실패 시에도 영어 원문으로 계속 돌아야 한다. 예전에는
+        // window.AOT_I18N[key] 라서 로드가 실패하면 TypeError 로 위젯 JS 전체가 죽었다.
+        return (window.AOT_I18N || {})[key] || key;
     };
 
     /**

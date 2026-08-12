@@ -410,7 +410,11 @@
           ('tint_danger_bg',  _('Danger Tint'),  _('Soft background for failures — also the row/card background and map-popup name highlight for offline or unresponsive devices')),
           ('tint_danger_fg',  _('Danger Tint Text'), _('Text color used on the danger tint')),
           ('tint_info_bg',    _('Info Tint'),    _('Soft badge background for in-progress/informational states')),
-          ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint'))
+          ('tint_info_fg',    _('Info Tint Text'), _('Text color used on the info tint')),
+          ('tint_success_border', _('Success Tint Border'), _('Border color for success notice boxes (Admin pages, e.g. Upgrade)')),
+          ('tint_warning_border', _('Warning Tint Border'), _('Border color for warning/default notice boxes')),
+          ('tint_danger_border',  _('Danger Tint Border'),  _('Border color for danger/error notice boxes')),
+          ('tint_info_border',    _('Info Tint Border'),    _('Border color for info notice boxes'))
         ] %}
         {% for field_name, label, desc in state_fields %}
         <div class="aot-color-row" data-css-key="{{field_name}}">
@@ -747,7 +751,9 @@
       color_danger:  '#DF5353', color_info:    '#029ACF',
       tint_success_bg: '#EEF6E6', tint_success_fg: '#557A30',
       tint_danger_bg:  '#FBE7E7', tint_danger_fg:  '#B23B3B',
-      tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B'
+      tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B',
+      tint_success_border: '#B8CBA6', tint_warning_border: '#DAC196',
+      tint_danger_border:  '#E1ABAB', tint_info_border:    '#98C6D9'
     };
 
     var BAND_CHART_DEFAULTS = {

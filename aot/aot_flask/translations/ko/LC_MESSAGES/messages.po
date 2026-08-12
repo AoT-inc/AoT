@@ -14101,9 +14101,10 @@ msgstr "지도에 배치"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1211
 msgid ""
-"Click \"Place on Map\" then click the facility center on the map. Form "
-"dimensions and rotation update the rectangle in real time."
-msgstr "\"지도에 배치\"를 클릭한 후 지도에서 시설 중심을 클릭하세요. 양식의 크기와 회전값이 실시간으로 사각형에 반영됩니다."
+"Click \"Place on Map\" then click the facility center on the map. Drag the "
+"placed facility to move it. Form dimensions and rotation update the rectangle "
+"in real time."
+msgstr "\"지도에 배치\"를 클릭한 후 지도에서 시설 중심을 클릭하세요. 배치된 시설은 드래그해서 옮길 수 있습니다. 양식의 크기와 회전값이 실시간으로 사각형에 반영됩니다."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1223
 msgid "3D Preview"
@@ -25931,8 +25932,10 @@ msgid ""
 msgstr "연동 요약 확인과 장치 점검은 시설을 저장한 뒤 사용할 수 있습니다."
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "Use \"Place on Map\" above the map to set the facility center."
-msgstr "시설 중심은 지도 위의 \"지도에 배치\" 버튼으로 지정합니다."
+msgid ""
+"Use \"Place on Map\" above the map to set the facility center, then drag "
+"the facility on the map to adjust it."
+msgstr "시설 중심은 지도 위의 \"지도에 배치\" 버튼으로 지정하고, 지도의 시설을 드래그해 위치를 조정하세요."
 
 #: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
 msgid "Next Execution"
@@ -27256,3 +27259,83 @@ msgid ""
 msgstr ""
 "%(host)s 의 인증서를 고정했습니다. 이 연결을 신뢰하기 전에 다른 경로로 "
 "지문을 확인하십시오: %(fp)s"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-v3.js:2051
+msgid "Load Failed"
+msgstr "불러오기 실패"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:2326
+msgid "Thermal"
+msgstr "보온·차광"
+
+#: aot_flask/app.py:1141
+msgid ""
+"The security token for this page had expired. Nothing was saved — please "
+"try again."
+msgstr "이 페이지의 보안 토큰이 만료됐습니다. 저장된 내용은 없으니 다시 시도해 주세요."
+
+#: aot_flask/app.py:1150
+msgid "Your session has expired. Please log in again."
+msgstr "세션이 만료됐습니다. 다시 로그인해 주세요."
+
+#: aot_flask/utils/utils_general.py:60
+msgid ""
+"For your security, log out and log in again before changing this. Your "
+"session was restored from the \"Remember Me\" cookie rather than a password."
+msgstr "보안을 위해 로그아웃 후 다시 로그인한 뒤 변경해 주세요. 지금 세션은 비밀번호가 아니라 '로그인 유지' 쿠키로 복구된 것입니다."
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Preview view"
+msgstr "미리보기 화면"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"No updater service is running on this system yet, so this schedule is "
+"saved but will not run until one is set up -- see below."
+msgstr ""
+"이 시스템에는 아직 업데이터 서비스가 없어, 이 일정은 저장은 되지만 업데이터가 설정되기 전까지는 실행되지 않습니다 — 아래를 "
+"참고하세요."
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Success Tint Border"
+msgstr "성공 톤 테두리"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Warning Tint Border"
+msgstr "경고 톤 테두리"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Danger Tint Border"
+msgstr "위험 톤 테두리"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Info Tint Border"
+msgstr "정보 톤 테두리"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
+msgstr "성공 안내 박스의 테두리 색(관리자 페이지, 예: 업그레이드)"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for warning/default notice boxes"
+msgstr "경고/기본 안내 박스의 테두리 색"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for danger/error notice boxes"
+msgstr "위험/오류 안내 박스의 테두리 색"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for info notice boxes"
+msgstr "정보 안내 박스의 테두리 색"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Gable ×2"
+msgstr "박공 2"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Check for updates now"
+msgstr "지금 업데이트 확인"
+
+#: aot/aot_flask/routes_admin.py
+msgid "You are already on the latest version (%(version)s)."
+msgstr "이미 최신 버전입니다(%(version)s)."

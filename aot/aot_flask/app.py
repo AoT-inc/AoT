@@ -6,6 +6,7 @@ import base64
 import logging
 import os
 import sys
+import time
 
 import flask_login
 from flask import Flask, flash, jsonify, redirect, request, url_for
@@ -205,6 +206,8 @@ def create_app(config=ProdConfig):
         except Exception:
             pass
         return response
+
+    register_response_guards(app)
 
     @app.context_processor
     def inject_current_locale():
@@ -595,6 +598,16 @@ def register_extensions(app):
         app.config['WTF_CSRF_SSL_STRICT'] = False
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
+    # "90일간 유지"(remember_token)에도 세션 쿠키와 같은 Secure 를 적용한다.
+    #
+    # Talisman 의 `session_cookie_secure` 는 이름 그대로 **세션 쿠키만** 건드린다.
+    # 그래서 force_https 를 켠 HTTPS 서버에서 session 에는 Secure 가 붙는데
+    # remember_token 에는 안 붙는 상태였다(2026-08-12 실측) — **가장 오래 사는
+    # 자격증명이 가장 약하게 보호되던 셈**이다. 90일짜리 토큰이 평문 HTTP 요청
+    # 한 번(주소창에 http:// 를 치거나, 혼합 콘텐츠, 다운그레이드 유도)에 그대로
+    # 실려 나간다. 세션 쿠키는 Secure 라 안 나가는데 이쪽만 나간다.
+    app.config['REMEMBER_COOKIE_SECURE'] = force_https
+
     # force_https above already accounts for the user's Misc.force_https
     # setting (General Settings → "Force HTTPS") and the Docker override —
     # previously this was computed and then discarded here, so the setting
@@ -933,19 +946,79 @@ def register_api_key_scope_guard(app):
     return app
 
 
+def _never_share_cache_a_response_that_sets_a_cookie(response):
+    """`Set-Cookie` 가 실린 응답은 절대 공유 캐시에 들어가면 안 된다.
+
+    들어가면 그 안에 박힌 **세션 ID 가 모든 클라이언트에게 배포된다.** 뒤에
+    오는 사람은 앞사람의 세션을 그대로 물려받아 앞사람 계정으로 로그인된
+    상태가 되고, 마지막으로 캐시에 들어간 사람이 전원의 신원이 된다.
+    기기도 브라우저도 다른데 신원이 함께 바뀌는 증상이 이것이다.
+
+    실제로 그 상태였다(2026-08-12):
+      /favicon.png → `Cache-Control: public, max-age=31536000` + Set-Cookie
+      /custom.css  → 앱은 no-store 를 붙였지만 엣지(openresty)의 `expires`
+                     규칙이 `max-age=66131` 로 덮어써서 공개 캐시 가능해짐
+    둘 다 `/static/` 밖의 Flask 라우트라 세션이 열리고, 렌더 도중 폼
+    인스턴스화(CSRF 토큰 생성)로 세션이 수정돼 Set-Cookie 가 붙었다.
+
+    개별 라우트를 하나씩 고치는 것으로는 부족하다 — 새 라우트가 하나만
+    어긋나도 같은 사고가 재발하고, 증상이 "가끔 남의 계정으로 보인다" 라
+    원인에 도달하기까지 오래 걸린다. 그래서 **출구에서 한 번에** 막는다.
+    여기서 강제하는 것은 캐시 공유 금지뿐이고, 캐시 여부 자체는 각 라우트가
+    정한 값을 존중한다(private 은 브라우저 개인 캐시는 계속 허용한다).
+
+    **주의: 엣지/nginx 의 `expires` 지시자는 이 헤더를 통째로 덮어쓴다.**
+    서버 쪽에서 `.css`/`.png` 에 일괄 `expires` 를 걸어 두면 여기서 무엇을
+    붙이든 소용없다 — 그래서 자산 라우트는 애초에 Set-Cookie 를 내보내지
+    않도록 `extension_session()` 에서 세션-생략/읽기전용으로 분류한다.
+    """
+    try:
+        if 'Set-Cookie' not in response.headers:
+            return response
+        cc = response.cache_control
+        if cc.public:
+            cc.public = False
+        if not (cc.private or cc.no_store):
+            cc.private = True
+    except Exception:
+        pass
+    return response
+
+
+def register_response_guards(app):
+    """응답 출구 가드 등록 (테스트에서 단독으로 붙일 수 있도록 분리)."""
+    app.after_request(_never_share_cache_a_response_that_sets_a_cookie)
+    return app
+
+
 def extension_login_manager(app):
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
 
     @login_manager.user_loader
     def user_loader(user_id):
-        user = User.query.filter(User.id == user_id).first()
+        # `User.get_id()` 가 만든 `<id>|<session_auth_hash>` 를 되푼다.
+        raw = str(user_id or '')
+        uid, sep, token = raw.partition('|')
+
+        user = User.query.filter(User.id == uid).first()
         if not user:
             return
         # 계정이 꺼지면 이미 열려 있던 세션도 다음 요청에서 끊긴다. 로그인
         # 시점의 검사(routes_authentication.py)만으로는 이미 로그인해 둔
         # 사람이 그대로 남아, 끄는 행위가 즉시 효력을 갖지 못한다.
         if not user.is_enabled:
+            return
+
+        # 비밀번호에서 파생된 해시를 대조한다. 비밀번호가 바뀌면 값이 달라져
+        # **다른 기기의 세션과 90일 remember 토큰이 그 자리에서 무효가 된다.**
+        # (User.session_auth_hash 주석 참조)
+        #
+        # 해시가 아예 없는 옛 형식(`'1'`)은 **거부한다.** 받아 주면 이 방어가
+        # 통째로 무의미해진다 — 무효화하려는 대상인 유출된 옛 remember 쿠키가
+        # 정확히 그 옛 형식이기 때문이다. 대신 이 변경을 배포하는 순간
+        # **모든 사용자가 한 번 로그아웃된다.**
+        if not sep or not user.verify_session_auth_hash(token):
             return
         return user
 
@@ -1016,6 +1089,18 @@ def extension_session(app):
         session_dir = os.path.join(os.getcwd(), f'flask_session_{uid}')
     os.makedirs(session_dir, exist_ok=True)
     app.config['SESSION_FILE_DIR'] = session_dir
+
+    # cachelib 의 기본 threshold 는 500 이다. 세션 파일은 **로그인한 사람 수**가
+    # 아니라 **세션 쿠키를 받은 방문 수**만큼 쌓인다 — 로그인 페이지를 열기만 한
+    # 브라우저, 봇, 404 한 번도 각자 파일 하나다(실측: 502개 중 로그인 세션은 23개,
+    # 나머지 479개가 익명). 파일 수가 threshold 를 넘으면 cachelib 은 세션을 저장할
+    # 때마다 `_remove_older()` 로 **만료가 가장 이른 것부터 지운다** — 익명 쓰레기가
+    # 다 소진되면 그 다음은 살아 있는 로그인 세션이다. 지워진 사람은 아무 예고 없이
+    # 로그아웃된다. 익명 세션 쪽을 줄이는 것이 정공법이지만(로그인 폼의 CSRF 토큰을
+    # 담아야 해서 없앨 수는 없다), 우선 실제 사용자가 밀려나지 않을 만큼 올린다.
+    # 파일 하나가 100~300B 라 1만 개라도 3MB 수준이다.
+    app.config.setdefault('SESSION_FILE_THRESHOLD', 10000)
+
     Session(app)
 
     # Defense in depth: purge any session files that fail to unpickle on startup.
@@ -1035,6 +1120,15 @@ def extension_session(app):
 
     _inner_interface = app.session_interface
 
+    # sid -> 마지막으로 디스크에 쓴 시각(monotonic). 아래 save_session 이 "안 바뀐
+    # 세션은 안 쓴다" 로 바뀌면서 파일의 TTL(31일)도 함께 갱신되지 않게 되므로,
+    # 읽기만 하는 세션도 주기적으로 한 번은 다시 써 준다. 세션 내용을 건드리지
+    # 않고 프로세스 메모리에만 두는 이유는, 갱신용 키를 세션에 심으면 그 쓰기
+    # 자체가 아래에서 막으려는 경합에 다시 참여하기 때문이다. (workers=1 이라
+    # 프로세스 메모리로 충분하고, 재시작 후 한 번 더 쓰는 것은 무해하다.)
+    _session_touch = {}
+    _SESSION_TOUCH_INTERVAL = 3600.0  # 1시간
+
     class _StaticSkippingSessionInterface:
         """Delegates to the real session interface, but treats /static/ requests
         as session-less (null session, no save, no Set-Cookie)."""
@@ -1042,10 +1136,39 @@ def extension_session(app):
         def __getattr__(self, name):
             return getattr(_inner_interface, name)
 
+        # `/static/` 밖에 있지만 세션이 전혀 필요 없는 자산 라우트들.
+        #
+        # 이들은 Flask 라우트라 세션이 열리고, 렌더 도중 폼 인스턴스화(CSRF 토큰
+        # 생성) 같은 부수효과로 세션이 수정돼 **Set-Cookie 가 붙는다.** 그런데
+        # 응답 자체는 오래 캐시되는 자산이라(favicon 은 `public, max-age=1년`),
+        # 중간 캐시가 저장하는 순간 그 세션 ID 가 모든 사람에게 배포된다.
+        # (출구의 `_never_share_cache_a_response_that_sets_a_cookie` 가 그 조합을
+        # 막지만, 애초에 세션을 만들지 않는 편이 낫다 — 로그인도 안 한 방문자
+        # 때문에 세션 파일이 쌓이는 것도 여기서 함께 줄어든다.)
+        #
+        # `/custom.css` 는 여기에 **넣지 않는다** — `current_user.theme` 를 읽어야
+        # 해서 세션이 필요하다. 대신 그 응답은 `no-store` 로 나간다.
+        _SESSIONLESS_PATHS = ('/favicon.png', '/favicon.ico')
+
+        # 세션을 **읽어야 하지만 쓸 일은 없는** 자산 라우트.
+        #
+        # `/custom.css` 는 `current_user.theme` 로 다크/라이트를 가르므로 세션이
+        # 필요하다. 그런데 렌더 중 `SettingsCustomUI()` 를 인스턴스화하면서 CSRF
+        # 토큰이 생겨 세션이 수정되고, 그 결과 **CSS 응답에 Set-Cookie 가 붙는다.**
+        # 이 응답이 캐시되면 그 세션 ID 가 모두에게 배포된다(2026-08-12 실제로
+        # 엣지가 그 상태였다 — 몇 분 전 방문자의 세션 쿠키를 계속 재발행).
+        #
+        # 앱이 `no-store` 를 붙여도 소용없었다: nginx/openresty 의 `expires` 지시자가
+        # Cache-Control 을 통째로 덮어쓴다. **헤더로는 막을 수 없으므로 쿠키를 아예
+        # 내보내지 않는다.** 읽기는 그대로 되니 테마 판정은 계속 동작한다.
+        _READONLY_SESSION_PATHS = ('/custom.css',)
+
         @staticmethod
         def _is_static():
             try:
-                return _request.path.startswith('/static/')
+                path = _request.path
+                return (path.startswith('/static/') or
+                        path in _StaticSkippingSessionInterface._SESSIONLESS_PATHS)
             except Exception:
                 return False
 
@@ -1067,6 +1190,44 @@ def extension_session(app):
         def save_session(self, app, session, response):
             if self._is_static():
                 return
+
+            # 읽기 전용 자산 라우트 — 저장도 Set-Cookie 도 하지 않는다.
+            # (위 _READONLY_SESSION_PATHS 주석 참조)
+            try:
+                if _request.path in self._READONLY_SESSION_PATHS:
+                    return
+            except Exception:
+                pass
+
+            # ── 안 바뀐 세션은 다시 쓰지 않는다 (lost update 방지) ──
+            #
+            # flask-session 0.5.0 의 save_session 은 session.modified 를 보지 않고
+            # **매 요청마다** `dict(session)` 전체를 파일에 덮어쓴다. gunicorn 은
+            # workers=1 · gthread 다중 스레드라 요청이 겹치는데, 겹친 두 요청은
+            # 각자 시작 시점의 스냅샷을 들고 있다가 끝날 때 통째로 되쓴다 —
+            # 늦게 끝난 쪽이 먼저 끝난 쪽의 변경을 지운다(전형적인 lost update).
+            #
+            # 지워지는 것이 CSRF 토큰이면 다음 POST 가 400 으로 떨어져
+            # "세션이 만료되었습니다" 가 뜨고, _user_id 면 그 자리에서 로그아웃된다.
+            # 새로고침하면 멀쩡한 이유도 여기 있다 — 경합이 없는 요청 하나가
+            # 지나가면 세션이 다시 온전해진다.
+            #
+            # 실측(로컬 도커, /custom.css 10개 동시 + 언어 변경 1개): 3회 중 2회
+            # 언어 변경이 유실. 동시 요청이 없으면 3회 3회 모두 저장.
+            #
+            # 겹치는 요청의 대부분은 세션을 **읽기만** 한다(/custom.css 는
+            # current_user.theme 를 보므로 세션이 필요해 /static 처럼 건너뛸 수도
+            # 없다). 그 요청들이 쓰지 않게 하면 경합 자체가 사라진다.
+            sid = getattr(session, 'sid', None)
+            now = time.monotonic()
+            if not getattr(session, 'modified', True):
+                last = _session_touch.get(sid) if sid else None
+                if last is not None and (now - last) < _SESSION_TOUCH_INTERVAL:
+                    return  # 최근에 썼다 — 파일 TTL 도 아직 넉넉하다
+            if sid:
+                if len(_session_touch) > 20000:
+                    _session_touch.clear()  # 무한 증가 방지 (재계산은 무해)
+                _session_touch[sid] = now
             return _inner_interface.save_session(app, session, response)
 
     app.session_interface = _StaticSkippingSessionInterface()
@@ -1084,24 +1245,40 @@ def _purge_corrupt_session_files(session_dir):
     Reading from offset 0 mis-parses the expiry header as a pickle opcode and
     flags EVERY valid session as corrupt, deleting all live logins on each
     startup (observed: "invalid load key 'Y'/'\\x00'/..." on healthy files).
+
+    이미 **만료된** 세션 파일도 함께 걷어낸다. 안 걷으면 파일 수가 계속 늘고,
+    cachelib 은 threshold 를 넘는 순간 "만료가 이른 것부터" 지우기 시작하는데 그
+    대상에는 살아 있는 로그인 세션도 섞인다(사용자 입장에서는 예고 없는 로그아웃).
+    만료된 것은 어차피 아무도 못 쓰므로, 그 압력을 미리 없애 두는 편이 낫다.
     """
     import glob
     import pickle
+    import struct
+    now = time.time()
     removed = 0
+    expired = 0
     for fpath in glob.glob(os.path.join(session_dir, '*')):
         try:
             with open(fpath, 'rb') as f:
-                if len(f.read(4)) < 4:
+                header = f.read(4)
+                if len(header) < 4:
                     raise ValueError("truncated session file (missing expiry header)")
                 pickle.load(f)  # validate the value payload after the 4-byte header
+            # cachelib 포맷: 4바이트 리틀엔디언 만료시각(0 = 무기한)
+            stamp = struct.unpack('<I', header)[0]
+            if stamp and stamp <= now:
+                os.remove(fpath)
+                expired += 1
         except Exception:
             try:
                 os.remove(fpath)
                 removed += 1
             except Exception:
                 pass
-    if removed:
-        logger.info(f"Purged {removed} corrupt session file(s) from {session_dir}")
+    if removed or expired:
+        logger.info(
+            f"Purged {removed} corrupt and {expired} expired session file(s) "
+            f"from {session_dir}")
 
 
 def extension_csrf(app):
@@ -1139,9 +1316,50 @@ def extension_csrf(app):
     from flask_wtf.csrf import CSRFError
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
-        from flask import request as _req, redirect as _redir, url_for as _url_for, flash as _flash
-        logger.warning("CSRF validation failed: %s %s — redirecting to login", _req.method, _req.path)
-        _flash("세션이 만료되었습니다. 다시 로그인해주세요.", "error")
+        """CSRF 실패를 400 대신 사람이 읽을 수 있는 결과로 바꾼다.
+
+        **로그인 여부로 갈라야 한다.** 예전에는 무조건 로그인 페이지로 보내면서
+        "세션이 만료되었습니다" 를 띄웠는데, 로그인한 사람에게 그건 거짓말이다 —
+        세션은 멀쩡하고 폼에 실려 온 토큰만 낡은 것이다(탭을 오래 열어 뒀거나,
+        서버 재시작으로 토큰이 새로 발급됐거나). 그런데 화면은 "만료됐으니 다시
+        로그인하라" 며 로그인 페이지를 보여 주고, 새로고침하면 멀쩡히 들어가진다.
+        사용자에게는 로그인 상태가 오락가락하는 것으로 보인다.
+
+        XHR 에는 리다이렉트를 주지 않는다. 302 를 받은 fetch/XHR 은 로그인 HTML
+        을 200 으로 받아 성공으로 오해하거나 JSON 파싱에서 죽는다 — 위젯 저장이
+        아무 말 없이 안 되는 증상이 이것이었다.
+        """
+        from flask import (request as _req, redirect as _redir,
+                           url_for as _url_for, flash as _flash,
+                           jsonify as _jsonify)
+        authed = False
+        try:
+            authed = bool(current_user.is_authenticated)
+        except Exception:
+            pass
+
+        logger.warning("CSRF validation failed: %s %s (authenticated=%s)",
+                       _req.method, _req.path, authed)
+
+        wants_json = (
+            _req.accept_mimetypes.best == 'application/json' or
+            _req.is_json or
+            _req.headers.get('X-Requested-With') == 'XMLHttpRequest')
+
+        if authed:
+            msg = gettext(
+                "The security token for this page had expired. Nothing was "
+                "saved — please try again.")
+            if wants_json:
+                return _jsonify({'status': 'error', 'error': 'csrf', 'message': msg}), 400
+            _flash(msg, "error")
+            # 로그인 페이지로 보내지 않는다. 로그인은 유지되고 있다.
+            return _redir(_req.referrer or _url_for('routes_general.home'))
+
+        msg = gettext("Your session has expired. Please log in again.")
+        if wants_json:
+            return _jsonify({'status': 'error', 'error': 'csrf', 'message': msg}), 401
+        _flash(msg, "error")
         return _redir(_url_for('routes_authentication.login_check'))
 
     return app

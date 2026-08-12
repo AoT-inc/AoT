@@ -414,7 +414,14 @@ def account_self_update(form):
                 logout = True
             if form.language.data in LANGUAGES or not form.language.data:
                 user.language = form.language.data or None
-                session['language'] = user.language
+                # "Browser Default" 를 고르면 세션 키를 **지운다**. None 을 넣어
+                # 두면 get_locale() 이 `session.get("language") and ...` 로 걸러
+                # 내긴 하지만, 세션에 죽은 키가 남아 다음에 읽는 코드가 "언어가
+                # 설정돼 있다" 로 오해할 여지를 남긴다.
+                if user.language:
+                    session['language'] = user.language
+                else:
+                    session.pop('language', None)
             # Personal display timezone (IANA). Valid zone stored; blank/invalid
             # → None (system default). (timezone-management.md §7)
             if hasattr(form, 'timezone'):

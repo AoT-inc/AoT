@@ -727,8 +727,13 @@ def _admin_upgrade_docker():
         elif in_progress:
             flash(gettext("An update is already in progress."), "error")
         elif not upgrade_exists or not latest_release:
+            # Reached by the "check now" button too (it always posts here,
+            # not only when the page already knew about an update) -- so this
+            # is the answer to "is there anything to do right now", not an
+            # error condition.
             flash(gettext(
-                "You cannot upgrade if an upgrade is not available"), "error")
+                "You are already on the latest version (%(version)s).",
+                version=AOT_VERSION), "info")
         else:
             ok, result = docker_update.request_update(
                 latest_release,

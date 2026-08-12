@@ -31,7 +31,7 @@
         );
         
         if (isHTML && hasLoginContent) {
-           document.getElementById("upgrade_status").innerHTML = `<div class="aot-upgrade-notice-box" style="text-align: center; padding: 20px;">
+           document.getElementById("upgrade_status").innerHTML = `<div class="aot-notice-box text-center">
              <strong>{{_('Upgrade completed! System is restarting...')}}</strong><br>
              {{_('The page will automatically reload in a moment.')}}
            </div>`;
@@ -60,7 +60,7 @@
         $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
       },
       error: function() {
-        document.getElementById("upgrade_status").innerHTML = `<div style="color: var(--aot-color-danger, #DF5353); padding: 20px;">
+        document.getElementById("upgrade_status").innerHTML = `<div class="aot-notice-box aot-notice-box-danger">
           {{_('Lost connection to server. This is normal during restart.')}}
         </div>`;
         // Keep logo red even on error
@@ -93,36 +93,7 @@
 {% endif %}
 </script>
 {% endif %}
-<style>
-  .aot-upgrade-notice-box {
-    background-color: var(--aot-tint-warning-bg, #fff3cd);
-    border: 1px solid #ffeeba;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    color: var(--aot-tint-warning-fg, #856404);
-    line-height: 1.6;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  }
-  .aot-upgrade-notice-box p {
-    margin-bottom: 10px;
-  }
-  .aot-upgrade-notice-box p:last-child {
-    margin-bottom: 0;
-  }
-  #upgrade_status {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    padding: 15px;
-    border-radius: 8px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9rem;
-    border: 1px solid #333;
-    overflow: auto;
-    resize: vertical;
-    height: 500px;
-  }
-</style>
+<link href="{{ url_for('static', filename='css/pages/admin-upgrade.css') }}?v=20260812c" rel="stylesheet">
 {% endblock %}
 
 {% block body %}
@@ -131,11 +102,11 @@
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
-    <div class="aot-modal-title" style="margin-left: 10px;">{{_('AoT Upgrade')}}</div>
+    <div class="aot-modal-title">{{_('AoT Upgrade')}}</div>
 
     {% if is_docker %}
 
-    <p style="padding-top: 0.5em">
+    <p class="pt-2">
       {{_('Installed Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
       {% if current_image %}<br>{{_('Running Image')}}: <code>{{current_image}}</code>{% endif %}
       {% if current_latest_release %}
@@ -145,24 +116,19 @@
 
     {% if upgrade == 1 %}
 
-    <div class="aot-upgrade-notice-box">
+    <div class="aot-notice-box">
       <p><strong>{{_('AoT is currently updating.')}}</strong></p>
       <p>{{_('The containers are being recreated on the new image. The web interface may briefly become unreachable; this page reconnects on its own.')}}</p>
       <p>{{_('A backup is taken before the image is swapped. If the new version does not come up, the previous one is restored automatically.')}}</p>
     </div>
-    <div style="padding: 0 10px 20px 10px;">
+    <div class="mb-3">
       <pre id="upgrade_status"></pre>
     </div>
 
     {% else %}
 
     {% if docker_update_status and docker_update_status.state in ('done', 'failed', 'failed_rolled_back') %}
-    <div class="aot-upgrade-notice-box"
-         {% if docker_update_status.state == 'done' %}
-         style="background-color: var(--aot-tint-success-bg, #d4edda); border-color: #c3e6cb; color: var(--aot-tint-success-fg, #155724);"
-         {% else %}
-         style="background-color: var(--aot-tint-danger-bg, #f8d7da); border-color: #f5c6cb; color: var(--aot-tint-danger-fg, #721c24);"
-         {% endif %}>
+    <div class="aot-notice-box {{ 'aot-notice-box-success' if docker_update_status.state == 'done' else 'aot-notice-box-danger' }}">
       <p><strong>{{_('Last update attempt')}}</strong>:
         {% if docker_update_status.state == 'done' %}
           {{_('Updated successfully.')}}
@@ -174,7 +140,7 @@
       </p>
       {# The updater is a shell script and reports in English only; keep it as
          detail rather than as the headline. #}
-      <p style="opacity: 0.85;"><code>{{docker_update_status.message}}</code></p>
+      <p class="small text-muted"><code>{{docker_update_status.message}}</code></p>
       {% if docker_update_status.backup %}
       <p>{{_('Pre-update backup')}}: <code>{{docker_update_status.backup}}</code></p>
       {% endif %}
@@ -183,13 +149,13 @@
 
     {% if not registry_ok %}
 
-    <div class="aot-upgrade-notice-box" style="background-color: var(--aot-tint-danger-bg, #f8d7da); border-color: #f5c6cb; color: var(--aot-tint-danger-fg, #721c24);">
+    <div class="aot-notice-box aot-notice-box-danger">
       {{_('Could not read the published image list from the container registry, so update availability is unknown. Check the network connection and try again.')}}
     </div>
 
     {% elif upgrade_available %}
 
-    <div class="aot-upgrade-notice-box">
+    <div class="aot-notice-box">
       <p><strong>{{_('A new version is available and its image has been published.')}}</strong></p>
       <p>
         <a href="https://github.com/AoT-inc/AoT/blob/main/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
@@ -198,22 +164,31 @@
 
     {% else %}
 
-    <div class="aot-upgrade-notice-box" style="background-color: var(--aot-tint-success-bg, #d4edda); border-color: #c3e6cb; color: var(--aot-tint-success-fg, #155724);">
+    <div class="aot-notice-box aot-notice-box-success">
       {{_('The installed version is the latest version published to the container registry.')}}
     </div>
 
     {% endif %}
 
     {% if updater_present %}
-
-    {% if upgrade_available %}
-    <div class="form-inline" style="padding-bottom: 1em">
+    {# One button, not two: it always posts here and the server re-checks the
+       registry on arrival (same check_upgrade_exists() this page just ran),
+       so it is correct to show regardless of what upgrade_available was at
+       render time -- someone who has had this page open for a while, or
+       whose last load raced a registry publish, isn't stuck reloading to
+       make the button reappear. The label just reflects what THIS render
+       already knows, for a more informative click target when it does. #}
+    <div class="form-inline pb-3">
       <form method="post" action="/admin/upgrade">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
           <button type="submit" class="btn btn-primary"
                   onclick="return confirm('{{_('The containers will be recreated on the new image and control will pause briefly. A backup is taken first. Continue?')}}')">
-            {{_('Update to %(version)s', version=current_latest_release)}}
+            {% if upgrade_available %}
+              {{_('Update to %(version)s', version=current_latest_release)}}
+            {% else %}
+              {{_('Check for updates now')}}
+            {% endif %}
           </button>
         </div>
       </form>
@@ -221,11 +196,16 @@
     <p>{{_('A backup is taken before the image is swapped, and the previous version is restored automatically if the new one does not come up.')}}</p>
     {% endif %}
 
-    <div class="aot-upgrade-notice-box" style="background-color: transparent; border-color: var(--aot-border-color, #e0e0e0); color: inherit; box-shadow: none;">
+    {# Settings are always editable, independent of whether an updater happens
+       to be running right now: the daemon checks updater_present itself, each
+       day, when the scheduled time arrives -- not when this form is saved. So
+       a schedule set before the updater exists just starts working once it
+       does, instead of being unreachable until then. #}
+    <div class="aot-notice-box aot-notice-box-plain">
       <form method="post" action="/admin/upgrade">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="form-name" value="auto_update">
-        <div class="form-check" style="margin-bottom: 12px;">
+        <div class="form-check mb-3">
           <input class="form-check-input" type="checkbox" value="y"
                  id="docker_auto_update" name="docker_auto_update"
                  {% if auto_update_enabled %}checked{% endif %}>
@@ -233,27 +213,30 @@
             <strong>{{_('Install updates automatically')}}</strong>
           </label>
         </div>
-        <div class="form-inline" style="margin-bottom: 12px;">
-          <label for="docker_auto_update_time" style="margin-right: 8px;">{{_('Update time')}}</label>
-          <input type="time" class="form-control" style="max-width: 9em;"
+        <div class="form-inline mb-3">
+          <label for="docker_auto_update_time" class="mr-2">{{_('Update time')}}</label>
+          <input type="time" class="form-control aot-upgrade-time-input"
                  id="docker_auto_update_time" name="docker_auto_update_time"
                  value="{{auto_update_time}}" required>
-          <button type="submit" class="btn btn-primary" style="margin-left: 10px;">{{_('Save')}}</button>
+          <button type="submit" class="btn btn-primary ml-2">{{_('Save')}}</button>
         </div>
-        <p style="margin-bottom: 0;">{{_('Checked once a day at this local time. If a newer version has been published, it is installed the same way the button above does it: back up, swap the image, verify, and restore the previous version if it does not come up.')}}</p>
-        <p style="margin-bottom: 0;">{{_('Control pauses for a few minutes while the containers restart, so pick an hour when nothing important is running.')}}</p>
+        <p class="mb-0">{{_('Checked once a day at this local time. If a newer version has been published, it is installed the same way the button above does it: back up, swap the image, verify, and restore the previous version if it does not come up.')}}</p>
+        <p class="mb-0">{{_('Control pauses for a few minutes while the containers restart, so pick an hour when nothing important is running.')}}</p>
+        {% if not updater_present %}
+        <p class="mb-0 text-muted">{{_('No updater service is running on this system yet, so this schedule is saved but will not run until one is set up -- see below.')}}</p>
+        {% endif %}
       </form>
     </div>
 
-    {% else %}
+    {% if not updater_present %}
 
-    <div class="aot-upgrade-notice-box">
+    <div class="aot-notice-box">
       <p><strong>{{_('This is a Docker deployment, so the update is applied on the host.')}}</strong></p>
       <p>{{_('The one-click update button requires the optional updater service, which is not running on this system.')}}</p>
       <p>{{_('To update, run the following on the host in the directory holding the compose file, after setting the desired version in AOT_IMAGE_TAG:')}}</p>
-      <pre style="margin: 0;">docker compose -f docker/docker-compose.prod.yml pull
+      <pre class="mb-0">docker compose -f docker/docker-compose.prod.yml pull
 docker compose -f docker/docker-compose.prod.yml up -d</pre>
-      <p style="margin-top: 10px;">{{_('Data (database, uploaded files, backups) lives in Docker volumes and is preserved across image swaps. The database schema is migrated automatically when the new containers start.')}}</p>
+      <p class="mt-2">{{_('Data (database, uploaded files, backups) lives in Docker volumes and is preserved across image swaps. The database schema is migrated automatically when the new containers start.')}}</p>
       <p>{{_('Published images')}}: <code>{{registry_image}}</code></p>
     </div>
 
@@ -263,7 +246,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% elif not is_internet %}
 
-    <div class="aot-upgrade-notice-box" style="background-color: var(--aot-tint-danger-bg, #f8d7da); border-color: #f5c6cb; color: var(--aot-tint-danger-fg, #721c24);">
+    <div class="aot-notice-box aot-notice-box-danger">
       {{_('Internet connection not detected. An internet connection is required to automatically upgrade AoT. Please refresh the page after connecting.')}}
       <br><br>
       {{_('Internet connection detection settings can be found in the Upgrade Options section of the configuration page.')}}
@@ -271,13 +254,13 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% elif upgrade == 1 %}
 
-    <div class="aot-upgrade-notice-box">
+    <div class="aot-notice-box">
       <p><strong>{{_('AoT is currently upgrading.')}}</strong></p>
       <p>{{_('Upgrades typically take a few minutes, but can take longer in some cases. Please wait until the upgrade is complete.')}}</p>
       <p>{{_('Once the upgrade is complete and the system restarts, the daemon status indicator (top-left logo) will return to green.')}}</p>
       <p>{{_('If an error occurs, please restart the system manually or check the log below.')}}</p>
     </div>
-    <div style="padding: 0 10px 20px 10px;">
+    <div class="mb-3">
       <pre id="upgrade_status"></pre>
     </div>
 
@@ -287,7 +270,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
           current_latest_release != '0.0.0' and
           upgrade != 1 %}
 
-    <p style="padding-top: 0.5em">
+    <p class="pt-2">
       {{_('Installed Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
       <br>{{_('Latest Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_latest_release}}" target="_blank">{{current_latest_release}}</a>
     </p>
@@ -295,10 +278,10 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
       <a href="https://github.com/AoT-inc/AoT/blob/main/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a> {{_('contains all changes.')}}
       <br>{{_('Major Version Changes')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_latest_major_version}}.0.0" target="_blank">{{current_latest_major_version}}.0.0</a>
     </p>
-    <p style="font-weight: bold; color: red">{{_('Major version change detected!')}}</p>
+    <p class="font-weight-bold text-danger">{{_('Major version change detected!')}}</p>
     <p>{{_('A new major version has been released on GitHub: v')}}{{current_latest_major_version}}{{"."}}{{_('x.x (current latest version v')}}{{current_latest_release}}{{_('). This update may cause system changes for some users, and existing system settings may not be maintained if upgraded. Before upgrading, it is recommended to perform a settings database export or record important information (GPIO pins, PID settings, etc.).')}}</p>
 
-    <div class="form-inline" style="padding-bottom: 1em">
+    <div class="form-inline pb-3">
       <form method="post" action="/admin/upgrade">
         <input type="hidden" name="form-name" value="upgrade">
         {{form_upgrade.csrf_token}}
@@ -312,7 +295,7 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% elif upgrade == 2 %}
 
-    <div style="padding: 0.5em 0">
+    <div class="py-2">
       <p>{{_('An error occurred during the upgrade.')}}</p>
       <p>{{_('Check the upgrade log')}}: /var/log/aot/aotupgrade.log.</p>
       <p>{{_('Deleting the /opt/AoT/.upgrade file will acknowledge this message and restore upgrade functionality.')}}</p>
@@ -320,20 +303,20 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% elif not upgrade_available %}
 
-    <div style="padding: 0.5em 0">
-      {{_('There is no new version available for upgrade. You are currently using the latest version:')}} 
+    <div class="py-2">
+      {{_('There is no new version available for upgrade. You are currently using the latest version:')}}
       <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{ current_release }}</a>
     </div>
 
     {% elif force_upgrade_master %}
 
-    <div style="padding: 1em 0 1.5em 0">
+    <div class="pt-3 pb-4">
       <p>{{_('Manual Upgrade Mode')}}</p>
       <p>{{_('FORCE_UPGRADE_MASTER is set to True in /opt/AoT/config.py.')}}</p>
       <p>{{_('Clicking the upgrade button below will perform an upgrade from the AoT main branch via the main.tar.gz archive.')}}</p>
       <p>{{_('To upgrade to the latest release version, set FORCE_UPGRADE_MASTER = False in /opt/AoT/aot/config.py, restart the web UI with the sudo service aotflask restart command, and refresh this page.')}}</p>
     </div>
-    <div class="form-inline" style="padding-bottom: 1em">
+    <div class="form-inline pb-3">
       <form method="post" action="/admin/upgrade">
         <input type="hidden" name="form-name" value="upgrade">
         {{form_upgrade.csrf_token}}
@@ -347,25 +330,25 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% elif not upgrade_available %}
 
-    <div style="padding: 0.5em 0">
-      {{_('There is no new version available for upgrade. You are currently using the latest version:')}} 
+    <div class="py-2">
+      {{_('There is no new version available for upgrade. You are currently using the latest version:')}}
       <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{ current_release }}</a>
     </div>
 
     {% elif upgrade_available %}
 
-    <div style="padding: 0.5em 0">
+    <div class="py-2">
       {{_('Installed Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_release}}" target="_blank">{{current_release}}</a>
       <br>{{_('Latest Version')}}: <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{current_major_release}}" target="_blank">{{current_major_release}}</a>
     </div>
-    <div style="padding: 0.5em 0">
+    <div class="py-2">
       {{_('You are')}} {{releases_behind}} {{_('releases behind current version.')}}
       <br>{{_('All changes can be found in the')}} <a href="https://github.com/AoT-inc/AoT/blob/main/CHANGELOG.md" target="_blank">{{_('Changelog')}}</a>.
     </div>
-    <div style="padding: 1em 0 1.5em 0">
+    <div class="pt-3 pb-4">
       {{_('Click the button below to start the upgrade. Upgrades typically take a few minutes, but can rarely take up to several hours. During this period, functions such as AoT web interface and server sensor data recording, and output manipulation will be completely suspended.')}}
     </div>
-    <div class="form-inline" style="padding-bottom: 1em">
+    <div class="form-inline pb-3">
       <form method="post" action="/admin/upgrade">
         <input type="hidden" name="form-name" value="upgrade">
         {{form_upgrade.csrf_token}}
@@ -379,15 +362,15 @@ docker compose -f docker/docker-compose.prod.yml up -d</pre>
 
     {% if releases_behind is not none and releases_behind > 1 %}
 
-    <div style="font-family: 'Courier New', monospace;">
-      <table class="table" style="width: auto">
+    <div class="aot-upgrade-mono-table">
+      <table class="table w-auto">
         <tr>
           <th>{{_('From current version to latest version')}}</th>
         </tr>
         {% for each_release in current_releases %}
           <tr>
             <td>
-              <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{ each_release }}" target="_blank" {% if current_release == each_release %}style="color: red"{% endif %}>v{{ each_release }}</a>
+              <a href="https://github.com/AoT-inc/AoT/releases/tag/v{{ each_release }}" target="_blank" class="{% if current_release == each_release %}text-danger{% endif %}">v{{ each_release }}</a>
             </td>
             <td>
               {% if each_release == current_release %}{{_('Current Version')}}{% elif each_release == current_major_release %}{{_('Latest Version')}}{% endif %}

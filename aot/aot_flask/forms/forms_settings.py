@@ -58,6 +58,9 @@ THEME_COLOR_FIELDS = [
     'color_success', 'color_warning', 'color_danger', 'color_info',
     'tint_success_bg', 'tint_success_fg', 'tint_danger_bg', 'tint_danger_fg',
     'tint_info_bg', 'tint_info_fg',
+    # 알림/안내 박스(.aot-notice-box) 테두리 — 위 tint bg/fg 쌍과 같은 축.
+    'tint_success_border', 'tint_warning_border', 'tint_danger_border',
+    'tint_info_border',
     'bg_llm', 'bg_mcp', 'badge_upgrade',
     'btn_primary_bg', 'btn_secondary_bg',
     'bg_btn_on', 'bg_btn_off',
@@ -476,11 +479,20 @@ class AccountSelf(FlaskForm):
     """Self-service account editing (nav-bar 'User Settings' modal) — a
     logged-in user editing their own name/email/password/language. Unlike
     UserMod (admin editing any user), no role/permission fields — those stay
-    admin-only in Settings > Users."""
-    name = StringField(TRANSLATIONS['user']['title'], validators=[DataRequired()])
+    admin-only in Settings > Users.
+
+    name/email 은 Optional 이다. 이 모달은 이름·이메일·비밀번호·언어·시간대를
+    한 폼으로 받고, account_self_update() 는 **빈 칸 = 변경 없음** 으로 읽는다
+    (`rename = new_name and new_name != user.name` 꼴). 여기에 DataRequired 를
+    걸면 그 계약이 깨진다 — 이메일이 없는 계정(구글 가입 직후·관리자 스크립트로
+    만든 계정)은 언어만 바꾸려 해도 **폼 전체가 검증에서 떨어져 아무것도 저장되지
+    않는다.** 사용자에게는 "언어를 골라 저장했는데 안 먹는다" 로 보인다.
+    값이 들어오면 그때만 형식을 검사한다."""
+    name = StringField(TRANSLATIONS['user']['title'],
+                       validators=[validators.Optional()])
     email = EmailField(
         TRANSLATIONS['email']['title'],
-        validators=[DataRequired(), validators.Email()])
+        validators=[validators.Optional(), validators.Email()])
     password_new = PasswordField(
         lazy_gettext('New Password'),
         validators=[
@@ -667,6 +679,10 @@ class SettingsCustomUI(FlaskForm):
     tint_danger_fg = StringField(lazy_gettext('Danger Tint Text'), default=THEME_DEFAULTS.get('tint_danger_fg', '#B23B3B'), render_kw={"type": "color"})
     tint_info_bg = StringField(lazy_gettext('Info Tint'), default=THEME_DEFAULTS.get('tint_info_bg', '#E7F4FB'), render_kw={"type": "color"})
     tint_info_fg = StringField(lazy_gettext('Info Tint Text'), default=THEME_DEFAULTS.get('tint_info_fg', '#06709B'), render_kw={"type": "color"})
+    tint_success_border = StringField(lazy_gettext('Success Tint Border'), default=THEME_DEFAULTS.get('tint_success_border', '#B8CBA6'), render_kw={"type": "color"})
+    tint_warning_border = StringField(lazy_gettext('Warning Tint Border'), default=THEME_DEFAULTS.get('tint_warning_border', '#DAC196'), render_kw={"type": "color"})
+    tint_danger_border = StringField(lazy_gettext('Danger Tint Border'), default=THEME_DEFAULTS.get('tint_danger_border', '#E1ABAB'), render_kw={"type": "color"})
+    tint_info_border = StringField(lazy_gettext('Info Tint Border'), default=THEME_DEFAULTS.get('tint_info_border', '#98C6D9'), render_kw={"type": "color"})
     bg_llm = StringField(lazy_gettext('BG LLM Badge'), default=THEME_DEFAULTS.get('bg_llm', '#6277C7'), render_kw={"type": "color"})
     bg_mcp = StringField(lazy_gettext('BG MCP Badge'), default=THEME_DEFAULTS.get('bg_mcp', '#64C762'), render_kw={"type": "color"})
     # 2026-07 통합: bg_upgrade(nav 배지) + bg_btn_upgrade(버튼) — 둘 다 같은

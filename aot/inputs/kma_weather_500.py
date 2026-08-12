@@ -35,8 +35,11 @@
 #  2025-11-03
 
 import copy
+import re
 import requests
 import datetime
+import time
+import zlib
 from datetime import timezone
 
 from flask_babel import lazy_gettext
@@ -46,10 +49,44 @@ try:
     from aot.config import AOT_DB_PATH
     from aot.databases.models import Input
     from aot.databases.utils import session_scope
-    from aot.utils.influx import add_measurements_influxdb
+    from aot.utils.influx import (
+        add_measurements_influxdb, read_influxdb_list, read_influxdb_single)
     _AOT_BACKFILL_AVAILABLE = True
 except Exception:
     _AOT_BACKFILL_AVAILABLE = False
+
+# --- Backfill request tuning ---------------------------------------------
+# apihub returns 504 on large windows: one-day chunks (288 rows at itv=5) timed
+# out repeatedly on 2026-08-12 while the smaller tail chunks went through. The
+# response size is what breaks, so the chunk is sized down rather than the
+# timeout up. These are settled values, not user choices — no options for them.
+BACKFILL_CHUNK_MINUTES = 360        # 72 rows per request at itv=5
+BACKFILL_TIMEOUT_SEC = 90
+BACKFILL_RETRY_COUNT = 3            # total attempts per window
+BACKFILL_RETRY_DELAY_SEC = 5        # backs off 5s, 10s between attempts
+BACKFILL_CHUNK_PAUSE_SEC = 1.0      # breathing room between windows
+BACKFILL_STAGGER_MAX_SEC = 20       # spread concurrent inputs at daemon start
+BACKFILL_RETRY_ROUNDS = 3           # later cycles given to a failed window
+BACKFILL_RETRIES_PER_CYCLE = 2      # windows retried per live cycle
+# A chunk counts as already stored above this fraction of its 5-minute slots.
+# Not 1.0: KMA itself has gaps, and a chunk that can never reach full coverage
+# would otherwise be re-requested on every single restart, forever.
+BACKFILL_COVERAGE_RATIO = 0.95
+
+_AUTH_KEY_RE = re.compile(r'(authKey=)[^&\s\'"]+')
+
+
+def _mask_key(text):
+    """Redact authKey= before anything reaches the log.
+
+    The KMA key rode into koat's log file inside requests' exception text
+    (the whole URL is in the message), where it sat in plaintext for anyone
+    reading the logs. Everything that can carry a URL goes through here.
+    """
+    try:
+        return _AUTH_KEY_RE.sub(r'\1***', str(text))
+    except Exception:
+        return '<unprintable>'
 
 # --- Simple QC bounds (conservative) ---
 QC_BOUNDS = {
@@ -125,6 +162,12 @@ INPUT_INFORMATION = {
     'measurements_dict': measurements_dict,
     'url_additional': 'https://apihub.kma.go.kr',
     'measurements_rescale': False,
+
+    # 저장 시각을 InfluxDB 가 찍게 두면 라이브 포인트는 관측 시각이 아니라 쓰기
+    # 시각(5분 경계 + 수십 초)에 떨어진다. 백필은 KMA 관측 시각(정확한 5분
+    # 경계)에 쓰므로 같은 관측이 서로 다른 두 점이 되어 이중 저장된다.
+    # 양쪽을 같은 격자에 올려 재백필이 덮어쓰기가 되게 한다.
+    'measurements_use_same_timestamp': False,
 
     'message': lazy_gettext('After issuing a free API key from the KMA API Hub, data is requested based on the location (latitude/longitude) in the input settings.'
                ' Note: the Korea Meteorological Administration API allows 20000 calls per day, and each call returns data for a single observation station.'),
@@ -242,6 +285,13 @@ class InputModule(AbstractInput):
         self.first_run = True
         self.latest_datetime = None
 
+        # Windows whose request failed transiently, retried on later cycles
+        self._backfill_retry_windows = []
+        # (channel, unit, measure) that answered the last freshness probe
+        self._probe_channel = None
+        # Rate limit for the recurring "response held no rows" notice
+        self._empty_response_streak = 0
+
         if not testing:
             self.setup_custom_options(INPUT_INFORMATION['custom_options'], input_dev)
             self.try_initialize()
@@ -264,6 +314,286 @@ class InputModule(AbstractInput):
             self.latest_datetime = getattr(self.input_dev, 'datetime', None)
         except Exception:
             self.latest_datetime = None
+
+    def _latest_stored_datetime(self, duration_sec=None):
+        """Newest stored data point for this input, as naive UTC (or None).
+
+        The freshness gate must ask the measurement store, not `Input.datetime`.
+        That column only ever advanced inside get_new_data(), so it recorded
+        "when a backfill last ran" rather than "how far the data reaches" —
+        letting a >7-day gap between daemon restarts re-download a week that
+        was already complete.
+        """
+        if not _AOT_BACKFILL_AVAILABLE:
+            return None
+        # Precipitation channels are skipped: their measurement name depends on
+        # the split_precip_measurements option, so a query would miss whichever
+        # naming the stored data used. The rest are ordered by how likely they
+        # are to be enabled — the common case costs one query, and a disabled
+        # channel costs none.
+        candidates = (
+            (0, 'C', 'temperature'),
+            (1, 'percent', 'humidity'),
+            (2, 'hPa', 'pressure'),
+            (9, 'C', 'dewpoint'),
+            (4, 'm_s', 'speed'),
+            (3, 'bearing', 'direction'),
+            (7, 'km', 'visibility'),
+            (8, 'cm', 'snowfall'),
+        )
+        for channel, unit, measure in candidates:
+            try:
+                if not self.is_enabled(channel):
+                    continue
+                last_time, _ = read_influxdb_single(
+                    self.unique_id, unit, channel, measure=measure,
+                    duration_sec=duration_sec, value='LAST')
+                if last_time:
+                    # Remember which channel answered: the coverage check must
+                    # count on a channel that actually holds data, or a chunk
+                    # would read as empty and be re-requested every restart.
+                    self._probe_channel = (channel, unit, measure)
+                    return datetime.datetime.utcfromtimestamp(float(last_time))
+            except Exception:
+                self.logger.exception(
+                    f"Reading the newest stored measurement failed (channel {channel})")
+                return None
+        return None
+
+    def _persist_latest_datetime(self, ts):
+        """Advance Input.datetime if `ts` is newer than what is stored."""
+        if not ts or not _AOT_BACKFILL_AVAILABLE:
+            return
+        try:
+            # Normalize to naive UTC for DB comparison/storage to avoid naive/aware TypeError
+            if ts.tzinfo is not None:
+                ts_naive_utc = ts.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                ts_naive_utc = ts
+
+            with session_scope(AOT_DB_PATH) as new_session:
+                mod_input = new_session.query(Input).filter(
+                    Input.unique_id == self.unique_id).first()
+                if mod_input is None:
+                    return
+                db_dt = getattr(mod_input, 'datetime', None)
+                if db_dt is not None and getattr(db_dt, 'tzinfo', None) is not None:
+                    db_dt_naive_utc = db_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                else:
+                    db_dt_naive_utc = db_dt
+
+                if db_dt_naive_utc is None or db_dt_naive_utc < ts_naive_utc:
+                    mod_input.datetime = ts_naive_utc
+                    new_session.commit()
+            self.latest_datetime = ts_naive_utc
+        except Exception as e:
+            self.logger.error(f"Persisting latest datetime failed: {e}")
+
+    def _observation_datetime(self, pub_timestamp):
+        """Convert a KMA 'YYYYMMDDHHMM' station-local stamp to naive UTC."""
+        try:
+            if not pub_timestamp or len(str(pub_timestamp)) != 12:
+                return None
+            device_tz = get_device_tz(self.input_dev)
+            ts_local = datetime.datetime.strptime(str(pub_timestamp), "%Y%m%d%H%M")
+            ts = device_tz.localize(ts_local).astimezone(timezone.utc).replace(tzinfo=None)
+            utc_now = datetime.datetime.utcnow()
+            if ts > utc_now + datetime.timedelta(minutes=2):
+                self.logger.warning(
+                    f"Observation ts in future after TZ adjust ({ts} > now). Clamping.")
+                ts = utc_now - datetime.timedelta(minutes=2)
+            return ts
+        except Exception:
+            return None
+
+    def _stagger_delay(self):
+        """Deterministic 0..N second offset, distinct per input.
+
+        Every KMA input starts its backfill in the same second at daemon start
+        and they all queue against the same upstream. Spreading them is not
+        politeness — concurrent large windows are what tips apihub into 504.
+        Derived from the uuid rather than random() so a restart reproduces the
+        same ordering and the logs stay comparable.
+        """
+        try:
+            return zlib.crc32(self.unique_id.encode()) % (BACKFILL_STAGGER_MAX_SEC + 1)
+        except Exception:
+            return 0
+
+    def _chunk_is_covered(self, start_local, end_local, device_tz):
+        """True when the store already holds this window at 5-minute density.
+
+        Refetching a stored window is not harmless: it is the slowest request
+        the driver makes, and enough of them in a row is what produced the 504
+        storm. Coverage is measured on whichever channel answered the freshness
+        probe, so a channel the user never enabled cannot report a false gap.
+        """
+        if not _AOT_BACKFILL_AVAILABLE or not self._probe_channel:
+            return False
+        channel, unit, measure = self._probe_channel
+        try:
+            start_utc = device_tz.localize(start_local).astimezone(timezone.utc)
+            end_utc = device_tz.localize(end_local).astimezone(timezone.utc)
+            expected = max(1, int((end_local - start_local).total_seconds() // 300))
+            stored = read_influxdb_list(
+                self.unique_id, unit, channel, measure=measure,
+                start_str=start_utc.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                end_str=end_utc.strftime('%Y-%m-%dT%H:%M:%SZ'))
+            count = len(stored) if stored else 0
+            ratio = count / float(expected)
+            if ratio >= BACKFILL_COVERAGE_RATIO:
+                self.logger.debug(
+                    f"Window {start_local:%Y%m%d%H%M}-{end_local:%Y%m%d%H%M} already stored "
+                    f"({count}/{expected} slots); skipping.")
+                return True
+            return False
+        except Exception:
+            # An unanswerable store must not block a backfill — fetch instead.
+            self.logger.debug("Coverage check failed; treating the window as missing.")
+            return False
+
+    def _plan_backfill_windows(self, now_local, minutes, device_tz):
+        """Split the requested span into chunks, dropping ones already stored."""
+        if self._probe_channel is None:
+            # The manual "Run Backfill Now" path never went through the
+            # freshness gate, so nothing has picked a probe channel yet.
+            self._latest_stored_datetime(duration_sec=int(minutes * 60) + 86400)
+        windows = []
+        skipped = 0
+        chunk_start = now_local - datetime.timedelta(minutes=minutes)
+        while chunk_start < now_local:
+            chunk_end = min(
+                chunk_start + datetime.timedelta(minutes=BACKFILL_CHUNK_MINUTES), now_local)
+            start, end = chunk_start, chunk_end
+            chunk_start = chunk_end
+            if start >= end:
+                continue
+            if self._chunk_is_covered(start, end, device_tz):
+                skipped += 1
+                continue
+            windows.append((start.strftime("%Y%m%d%H%M"), end.strftime("%Y%m%d%H%M")))
+        if skipped:
+            self.logger.info(
+                f"Backfill plan: {len(windows)} window(s) to fetch, "
+                f"{skipped} already stored.")
+        return windows
+
+    def _fetch_window(self, tm1, tm2):
+        """Fetch one window with retries. Returns (rows, ok).
+
+        `ok` is False only when the window is worth trying again later; an API
+        error (bad key, bad coordinates) is permanent and returns ok=True with
+        no rows so it is not queued forever.
+        """
+        url = (
+            "https://apihub.kma.go.kr/api/typ01/url/sfc_nc_var.php"
+            f"?tm1={tm1}&tm2={tm2}&lon={self.lon}&lat={self.lat}"
+            f"&obs=ta,hm,wd_10m,ws_10m,pa,rn_ox,rn_15m,vs,sd_tot"
+            f"&itv=5&help=0&authKey={self.api_key}"
+        )
+        self.logger.debug("Backfill URL: {}".format(_mask_key(url)))
+
+        last_error = None
+        for attempt in range(1, BACKFILL_RETRY_COUNT + 1):
+            try:
+                response = requests.get(url, timeout=BACKFILL_TIMEOUT_SEC)
+                response.raise_for_status()
+            except Exception as e:
+                last_error = _mask_key(e)
+                if attempt < BACKFILL_RETRY_COUNT:
+                    delay = BACKFILL_RETRY_DELAY_SEC * (2 ** (attempt - 1))
+                    self.logger.warning(
+                        f"Backfill {tm1}-{tm2} attempt {attempt}/{BACKFILL_RETRY_COUNT} "
+                        f"failed ({last_error}); retrying in {delay}s")
+                    time.sleep(delay)
+                    continue
+                # Transient by nature (timeout/gateway); worth a later cycle.
+                self.logger.error(
+                    f"Backfill {tm1}-{tm2} gave up after {BACKFILL_RETRY_COUNT} attempts: "
+                    f"{last_error}")
+                return [], False
+
+            if 'error' in response.text[:200]:
+                self.logger.error(
+                    f"Backfill API error for window {tm1}-{tm2}: "
+                    f"{_mask_key(response.text[:120])}")
+                return [], True
+
+            return self._parse_rows(response.text), True
+
+        return [], False
+
+    def _parse_rows(self, response_text):
+        """Parse the sfc_nc_var CSV body into row dicts."""
+        rows = []
+        for line in response_text.strip().split('\n'):
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            cols = [col.strip() for col in line.split(',')]
+            if len(cols) != 10:
+                continue
+            pub_timestamp = cols[0]
+            if len(pub_timestamp) != 12:
+                continue
+            # Skip obviously bogus triple-zero rows
+            try:
+                if (float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[5]) == 0.0):
+                    self.logger.debug(
+                        f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
+                    continue
+            except Exception:
+                pass
+            row = {
+                'pub_timestamp': pub_timestamp,
+                'ta': _to_float_or_none(cols[1]),
+                'hm': _to_float_or_none(cols[2]),
+                'wd_10m': _to_float_or_none(cols[3]),
+                'ws_10m': _to_float_or_none(cols[4]),
+                'pa': _to_float_or_none(cols[5]),
+                'rn_ox': _to_float_or_none(cols[6]),
+                'rn_15m': _to_float_or_none(cols[7]),
+                'vs': _to_float_or_none(cols[8]),
+                'sd_tot': _to_float_or_none(cols[9]),
+            }
+            # if all numeric fields are None, skip this row
+            if all(v is None for k, v in row.items() if k != 'pub_timestamp'):
+                continue
+            rows.append(row)
+        return rows
+
+    def _queue_failed_window(self, tm1, tm2):
+        """Hand a transiently-failed window to later live cycles."""
+        for pending in self._backfill_retry_windows:
+            if pending['tm1'] == tm1 and pending['tm2'] == tm2:
+                return
+        self._backfill_retry_windows.append({'tm1': tm1, 'tm2': tm2, 'rounds': 0})
+
+    def drain_backfill_retries(self):
+        """Retry a couple of previously-failed windows. Called per live cycle.
+
+        Without this a 504 silently costs a whole chunk of history: the old
+        code logged the error and moved on, and nothing ever came back for it.
+        """
+        if not self._backfill_retry_windows:
+            return
+        device_tz = get_device_tz(self.input_dev)
+        for _ in range(min(BACKFILL_RETRIES_PER_CYCLE, len(self._backfill_retry_windows))):
+            pending = self._backfill_retry_windows.pop(0)
+            pending['rounds'] += 1
+            rows, ok = self._fetch_window(pending['tm1'], pending['tm2'])
+            if rows:
+                self.logger.info(
+                    f"Backfill retry recovered {len(rows)} rows for "
+                    f"{pending['tm1']}-{pending['tm2']}.")
+                self._write_backfill_rows(rows, device_tz)
+            elif not ok:
+                if pending['rounds'] >= BACKFILL_RETRY_ROUNDS:
+                    self.logger.error(
+                        f"Backfill window {pending['tm1']}-{pending['tm2']} abandoned after "
+                        f"{pending['rounds']} rounds; that history stays missing.")
+                else:
+                    self._backfill_retry_windows.append(pending)
 
     def get_new_data(self, past_minutes):
         """Backfill: fetch [now - past_minutes, now] at 5-min interval and write to InfluxDB.
@@ -294,85 +624,51 @@ class InputModule(AbstractInput):
         if minutes < 5:
             self.logger.info("Backfill window <5 minutes; skipping.")
             return
-        itv = 5
 
         # KMA sfc_nc_var.php rejects windows >2 days (error -9) and silently
-        # truncates responses to ~1 day of rows, so fetch in 1-day chunks.
-        chunk_minutes = 1440
+        # truncates long responses, so the span is always chunked.
+        windows = self._plan_backfill_windows(now, minutes, device_tz)
+        if not windows:
+            self.logger.info("Backfill span is already stored in full; nothing to fetch.")
+            return
+
+        delay = self._stagger_delay()
+        if delay:
+            self.logger.debug(f"Staggering backfill start by {delay}s.")
+            time.sleep(delay)
+
         rows = []
         seen_ts = set()
-        chunk_start = now - datetime.timedelta(minutes=minutes)
-        while chunk_start < now:
-            chunk_end = min(chunk_start + datetime.timedelta(minutes=chunk_minutes), now)
-            tm1 = chunk_start.strftime("%Y%m%d%H%M")
-            tm2 = chunk_end.strftime("%Y%m%d%H%M")
-            chunk_start = chunk_end
-            if tm1 >= tm2:
-                continue
-
-            url = (
-                "https://apihub.kma.go.kr/api/typ01/url/sfc_nc_var.php"
-                f"?tm1={tm1}&tm2={tm2}&lon={self.lon}&lat={self.lat}"
-                f"&obs=ta,hm,wd_10m,ws_10m,pa,rn_ox,rn_15m,vs,sd_tot"
-                f"&itv={itv}&help=0&authKey={self.api_key}"
-            )
-            self.logger.debug("Backfill URL: {}".format(url))
-
-            try:
-                response = requests.get(url, timeout=180)
-                response.raise_for_status()
-            except Exception as e:
-                self.logger.error(f"Backfill request error ({tm1}-{tm2}): {e}")
-                continue
-
-            if 'error' in response.text[:200]:
-                self.logger.error(f"Backfill API error for window {tm1}-{tm2}: {response.text[:120]}")
-                continue
-
-            lines = response.text.strip().split('\n')
-            for line in lines:
-                line = line.strip()
-                if not line or line.startswith('#'):
+        failed = 0
+        for index, (tm1, tm2) in enumerate(windows):
+            if index:
+                time.sleep(BACKFILL_CHUNK_PAUSE_SEC)
+            chunk_rows, ok = self._fetch_window(tm1, tm2)
+            if not ok:
+                failed += 1
+                self._queue_failed_window(tm1, tm2)
+            for row in chunk_rows:
+                if row['pub_timestamp'] in seen_ts:
                     continue
-                cols = [col.strip() for col in line.split(',')]
-                if len(cols) != 10:
-                    continue
-                pub_timestamp = cols[0]
-                if len(pub_timestamp) != 12:
-                    continue
-                if pub_timestamp in seen_ts:
-                    continue
-                # Skip obviously bogus triple-zero rows
-                try:
-                    if (float(cols[1]) == 0.0 and float(cols[2]) == 0.0 and float(cols[5]) == 0.0):
-                        self.logger.debug(f"Ignoring invalid data row with ta=0, hm=0, pa=0 at {pub_timestamp}")
-                        continue
-                except Exception:
-                    pass
-                row = {
-                    'pub_timestamp': pub_timestamp,
-                    'ta': _to_float_or_none(cols[1] if len(cols) > 1 else None),
-                    'hm': _to_float_or_none(cols[2] if len(cols) > 2 else None),
-                    'wd_10m': _to_float_or_none(cols[3] if len(cols) > 3 else None),
-                    'ws_10m': _to_float_or_none(cols[4] if len(cols) > 4 else None),
-                    'pa': _to_float_or_none(cols[5] if len(cols) > 5 else None),
-                    'rn_ox': _to_float_or_none(cols[6] if len(cols) > 6 else None),
-                    'rn_15m': _to_float_or_none(cols[7] if len(cols) > 7 else None),
-                    'vs': _to_float_or_none(cols[8] if len(cols) > 8 else None),
-                    'sd_tot': _to_float_or_none(cols[9] if len(cols) > 9 else None),
-                }
-                # if all numeric fields are None, skip this row
-                if all(v is None for k, v in row.items() if k != 'pub_timestamp'):
-                    continue
-                seen_ts.add(pub_timestamp)
+                seen_ts.add(row['pub_timestamp'])
                 rows.append(row)
+
+        if failed:
+            self.logger.warning(
+                f"Backfill: {failed} of {len(windows)} window(s) failed; "
+                f"queued for retry on later cycles.")
 
         if not rows:
             self.logger.info("No rows parsed for backfill window.")
             return
-        self.logger.info(f"Backfill parsed {len(rows)} rows across {max(1, -(-minutes // chunk_minutes))} chunk(s).")
+        self.logger.info(
+            f"Backfill parsed {len(rows)} rows across {len(windows)} window(s).")
 
-        rows.sort(key=lambda r: r['pub_timestamp'])
+        self._write_backfill_rows(rows, device_tz)
+
+    def _write_backfill_rows(self, rows, device_tz):
+        """QC and store parsed backfill rows at their observation timestamps."""
+        rows = sorted(rows, key=lambda r: r['pub_timestamp'])
         latest_ts_seen = None
         rows_written = 0
 
@@ -503,29 +799,7 @@ class InputModule(AbstractInput):
             pass
 
         # Persist latest timestamp for this input (if newer)
-        if latest_ts_seen:
-            try:
-                # Normalize to naive UTC for DB comparison/storage to avoid naive/aware TypeError
-                latest_ts_aware = latest_ts_seen
-                if latest_ts_aware.tzinfo is not None:
-                    latest_ts_naive_utc = latest_ts_aware.astimezone(timezone.utc).replace(tzinfo=None)
-                else:
-                    latest_ts_naive_utc = latest_ts_aware
-
-                with session_scope(AOT_DB_PATH) as new_session:
-                    mod_input = new_session.query(Input).filter(Input.unique_id == self.unique_id).first()
-                    if mod_input is not None:
-                        db_dt = getattr(mod_input, 'datetime', None)
-                        if db_dt is not None and getattr(db_dt, 'tzinfo', None) is not None:
-                            db_dt_naive_utc = db_dt.astimezone(timezone.utc).replace(tzinfo=None)
-                        else:
-                            db_dt_naive_utc = db_dt
-
-                        if db_dt_naive_utc is None or db_dt_naive_utc < latest_ts_naive_utc:
-                            mod_input.datetime = latest_ts_naive_utc
-                            new_session.commit()
-            except Exception as e:
-                self.logger.error(f"Persisting latest datetime failed: {e}")
+        self._persist_latest_datetime(latest_ts_seen)
 
     def pre_fetch_data(self):
         """Perform the API call and response parsing, returning a dict with the latest data."""
@@ -535,7 +809,7 @@ class InputModule(AbstractInput):
             data_text = response.text
             self.logger.debug("KMA raw response:\n{}".format(data_text))
         except Exception as e:
-            self.logger.error(f"Error acquiring weather information: {e}")
+            self.logger.error(f"Error acquiring weather information: {_mask_key(e)}")
             return None
 
         lines = data_text.strip().split('\n')
@@ -594,8 +868,25 @@ class InputModule(AbstractInput):
                     "pub_timestamp": pub_timestamp
                 }
         if best_ts is None:
-            self.logger.error("No valid data found in the response.")
+            # A 5-minute window with no observation yet is ordinary at this
+            # grid resolution — koat logged 27 of these as ERROR in one day.
+            # Only a run of them means something is actually wrong.
+            #
+            # The escalation stays at ERROR rather than WARNING on purpose:
+            # an input logger sits at ERROR unless the user turns on debug
+            # logging for that input (base_input.py), so a WARNING here would
+            # make a real, sustained outage completely silent. Quiet for a
+            # single gap, loud once it persists.
+            self._empty_response_streak += 1
+            streak = self._empty_response_streak
+            if streak == 6 or (streak > 6 and streak % 12 == 0):
+                minutes = streak * int(self.period or 300) // 60
+                self.logger.error(
+                    f"No valid data in the last {streak} responses (~{minutes} min).")
+            else:
+                self.logger.debug("No valid data found in the response.")
             return None
+        self._empty_response_streak = 0
         return data
 
     def get_measurement(self):
@@ -643,8 +934,15 @@ class InputModule(AbstractInput):
                 self.logger.error(f"Failed to auto-reset backfill_request: {e}")
 
         # First-run backfill policy:
-        # - If DB has data within the last 7 days, SKIP the initial weekly backfill.
+        # - If the measurement store has data within the last 7 days, SKIP the
+        #   initial weekly backfill.
         # - Otherwise, backfill up to 7 days (or since last data, whichever is smaller).
+        #
+        # Freshness is judged from the measurement store, falling back to
+        # Input.datetime only when the store cannot answer. The column alone is
+        # not a freshness signal: it used to advance only inside get_new_data(),
+        # so a week without a daemon restart made the next restart re-download
+        # seven days that were already complete.
         if self.first_run:
             self.first_run = False
             week_sec = 7 * 86400
@@ -652,18 +950,34 @@ class InputModule(AbstractInput):
             seconds_download = week_sec
             try:
                 utc_now = datetime.datetime.utcnow()
-                if self.latest_datetime:
-                    # self.latest_datetime is stored as naive UTC (see get_new_data persist)
-                    seconds_since_last = (utc_now - self.latest_datetime).total_seconds()
+                # Bounded to just past the decision window: anything older than
+                # this cannot make the gate skip, and an unbounded last() would
+                # scan the whole retention on every daemon start.
+                last_dt = self._latest_stored_datetime(duration_sec=week_sec + 86400)
+                source = "measurement store"
+                if last_dt is None:
+                    last_dt = self.latest_datetime
+                    source = "Input.datetime"
+                if last_dt:
+                    # last_dt is naive UTC
+                    seconds_since_last = (utc_now - last_dt).total_seconds()
                     if 0 <= seconds_since_last <= week_sec:
                         # Recent data exists within 7 days → skip heavy initial backfill
-                        self.logger.info("Recent data found in DB within 7 days; skipping initial weekly backfill.")
+                        hours_ago = round(seconds_since_last / 3600.0, 1)
+                        self.logger.info(
+                            f"Recent data found ({source}, newest {hours_ago}h ago); "
+                            f"skipping initial weekly backfill.")
                         do_backfill = False
                     else:
                         # No recent data (or very old gap) → cap initial backfill to 7 days
                         seconds_download = min(max(0, seconds_since_last), week_sec) if seconds_since_last > 0 else week_sec
+                else:
+                    self.logger.info(
+                        "No stored data found for this input; a full initial backfill will run.")
             except Exception:
                 # On any error, fall back to a 7-day backfill to heal gaps
+                self.logger.exception(
+                    "Backfill freshness check failed; falling back to a full 7-day backfill")
                 seconds_download = week_sec
                 do_backfill = True
             if do_backfill:
@@ -680,6 +994,13 @@ class InputModule(AbstractInput):
         if did_backfill:
             self.logger.info("Skipping live fetch this cycle to avoid overlapping with backfill request.")
             return
+
+        # Windows that 504'd earlier get their later attempts here, spread
+        # across cycles instead of hammering the API in one burst.
+        try:
+            self.drain_backfill_retries()
+        except Exception:
+            self.logger.exception("Backfill retry drain crashed")
 
         qc_enable = bool(_get_opt(self, 'qc_enable', True))
         qc_hold_seconds = float(_get_opt(self, 'qc_hold_seconds', 1800))
@@ -701,7 +1022,7 @@ class InputModule(AbstractInput):
                 f"&obs=ta,hm,wd_10m,ws_10m,pa,rn_ox,rn_15m,vs,sd_tot"
                 f"&itv={itv}&help=0&authKey={self.api_key}"
             )
-            self.logger.debug("URL: {}".format(self.api_url))
+            self.logger.debug("URL: {}".format(_mask_key(self.api_url)))
         else:
             self.logger.error("API key or coordinates are missing. Please save the latitude/longitude in the input settings.")
             return
@@ -721,6 +1042,15 @@ class InputModule(AbstractInput):
         data = self.pre_fetch_data()
         if data is None:
             return
+
+        # Stamp the live reading with the KMA observation time, not the write
+        # time, so it lands on the same 5-minute grid the backfill writes to.
+        # Without this the two paths produce separate points for one
+        # observation and any overlapping backfill doubles the series.
+        live_ts = self._observation_datetime(data.get('pub_timestamp'))
+        if live_ts is None:
+            self.logger.debug(
+                "No usable observation timestamp in the response; falling back to write time.")
 
         # reset QC aggregation counters for live cycle
         self._qc_live_replaced = 0
@@ -795,24 +1125,28 @@ class InputModule(AbstractInput):
 
         # Classify the data and store it in self.return_dict
         if self.is_enabled(0) and ta is not None:
-            self.value_set(0, ta)
+            self.value_set(0, ta, timestamp=live_ts)
         if self.is_enabled(1) and hm is not None:
-            self.value_set(1, hm)
+            self.value_set(1, hm, timestamp=live_ts)
         if self.is_enabled(2) and pressure is not None:
-            self.value_set(2, pressure)
+            self.value_set(2, pressure, timestamp=live_ts)
         if self.is_enabled(3) and wd_10m is not None:
-            self.value_set(3, wd_10m)
+            self.value_set(3, wd_10m, timestamp=live_ts)
         if self.is_enabled(4) and ws_10m is not None:
-            self.value_set(4, ws_10m)
+            self.value_set(4, ws_10m, timestamp=live_ts)
         if self.is_enabled(5) and rn_ox is not None:
-            self.value_set(5, rn_ox)
+            self.value_set(5, rn_ox, timestamp=live_ts)
         if self.is_enabled(6) and rn_15m is not None:
-            self.value_set(6, rn_15m)
+            self.value_set(6, rn_15m, timestamp=live_ts)
         if self.is_enabled(7) and vs is not None:
-            self.value_set(7, vs)
+            self.value_set(7, vs, timestamp=live_ts)
         if self.is_enabled(8) and sd_tot is not None:
-            self.value_set(8, sd_tot)
+            self.value_set(8, sd_tot, timestamp=live_ts)
         if self.is_enabled(9) and dew_point is not None:
-            self.value_set(9, dew_point)
+            self.value_set(9, dew_point, timestamp=live_ts)
+
+        # Keep Input.datetime advancing on the live path too. Leaving it to the
+        # backfill alone is what made the freshness gate misfire.
+        self._persist_latest_datetime(live_ts)
 
         return self.return_dict

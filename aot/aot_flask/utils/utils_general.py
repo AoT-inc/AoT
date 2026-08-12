@@ -11,7 +11,7 @@ from werkzeug.datastructures import MultiDict
 
 import flask_login
 import sqlalchemy
-from flask import flash, redirect, request
+from flask import current_app, flash, redirect, request, session
 from flask_babel import gettext
 from importlib_metadata import version
 from sqlalchemy import and_
@@ -39,6 +39,73 @@ from aot.utils.widgets import parse_widget_information
 
 logger = logging.getLogger(__name__)
 _NULLISH_STRINGS = {'', 'none', 'null'}  # 'false' removed - it's a valid boolean value
+
+
+def regenerate_session_id():
+    """로그인 성공 직전에 세션 ID 를 새로 발급한다 (session fixation 방지).
+
+    **로그인 전에 브라우저가 갖고 있던 세션 ID 를 그대로 계속 쓰면, 그 ID 를
+    아는 사람은 누구나 그 로그인에 올라탄다.** 표준 방어는 인증에 성공하는
+    순간 ID 를 갈아 끼우고 옛 레코드를 지우는 것인데, flask-login 도
+    flask-session 도 이 일을 대신 해 주지 않는다 — 직접 불러야 한다.
+
+    2026-08-12 이게 없어서 실제로 사고가 났다. 엣지(openresty)가 `Set-Cookie`
+    가 실린 자산 응답(`/custom.css`·`/favicon.png`)을 캐시해 **모든 방문자에게
+    같은 세션 ID 를 배포**했고, 그 결과 컴퓨터와 아이폰이 세션 하나를 공유했다.
+    한쪽이 로그인하면 다른 쪽도 그 계정이 되고, 한쪽이 로그아웃하면 둘 다
+    나가졌다. 캐시를 고쳐 배포는 멈췄지만 **이미 브라우저에 저장된 쿠키까지
+    되돌릴 수는 없어**, 그 기기들은 계속 세션을 공유했다.
+
+    ID 를 갈면 그 상태가 저절로 풀린다: 로그인한 기기는 새 ID 를 받고 옛
+    레코드는 지워지므로, 같은 옛 ID 를 들고 있던 다른 기기는 다음 요청에서
+    빈 세션이 되어 각자 자기 세션으로 갈라진다.
+
+    세션 **내용은 유지**한다(로그인 전 고른 언어 등). 바꾸는 것은 ID 뿐이다.
+    """
+    try:
+        iface = current_app.session_interface
+        old_sid = getattr(session, 'sid', None)
+        new_sid = iface._generate_sid()
+        if old_sid:
+            try:
+                iface.cache.delete(iface.key_prefix + old_sid)
+            except Exception:
+                logger.warning("이전 세션 레코드 삭제 실패 (sid=%s)", old_sid)
+        session.sid = new_sid
+        session.modified = True  # 새 ID 로 반드시 저장·Set-Cookie 되도록
+        return True
+    except Exception:
+        # 재발급에 실패해도 로그인 자체는 진행시킨다. 로그인을 막는 것이
+        # 더 큰 피해다 — 대신 로그에는 남긴다.
+        logger.exception("세션 ID 재발급 실패 — 로그인은 계속 진행합니다")
+        return False
+
+
+def require_fresh_login(what=None):
+    """민감 작업 전 "이번에 실제로 비밀번호를 입력한 세션인가" 를 확인한다.
+
+    flask-login 의 `_fresh` 는 자격증명으로 방금 로그인했으면 True, **"90일간
+    유지" 쿠키로 복구된 세션이면 False** 다. 지금까지 앱에는 이 구분을 보는
+    곳이 하나도 없어서, 90일 토큰만 쥔 사람이 비밀번호와 이메일을 바꿔 계정을
+    통째로 가져갈 수 있었다 — 원래 주인을 끊어내면서.
+
+    비밀번호 변경을 막는 것이 특히 중요하다. 막지 않으면
+    `User.session_auth_hash()` 무효화(비밀번호 변경 = 다른 기기 전부 로그아웃)가
+    **공격자 쪽 무기가 된다** — 먼저 바꾼 쪽이 상대를 끊는다.
+
+    True 면 진행해도 된다. False 면 이미 flash 를 남겼으니 호출부는 그대로
+    되돌아가면 된다.
+    """
+    if flask_login.login_fresh():
+        return True
+    flash(gettext(
+        "For your security, log out and log in again before changing this. "
+        "Your session was restored from the \"Remember Me\" cookie rather "
+        "than a password."), "error")
+    logger.warning(
+        "비신선 세션의 민감 작업 차단: user=%s what=%s",
+        getattr(flask_login.current_user, 'name', '?'), what or '-')
+    return False
 
 
 def sync_geo_device_name(device_id, new_name, channel_id=None):

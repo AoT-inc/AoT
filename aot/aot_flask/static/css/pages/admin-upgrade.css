@@ -1,0 +1,41 @@
+/* Admin > Upgrade — live log tail during an update. Terminal look is
+   page-specific (nothing else shows a scrolling log like this), so it stays
+   out of the shared component sheet. */
+/* aot.css (global, loaded earlier) has `main.container > p { font-size: 1.2em; }`.
+   It only matches <p> that are DIRECT children of <main> -- on this page that
+   is just the one "Installed Version / Latest Version" paragraph at the top;
+   every other paragraph is one level deeper, inside a .aot-notice-box or
+   .form-inline, so it never gets the bump. The result was one paragraph
+   visibly larger than every other paragraph on the page for a reason that had
+   nothing to do with content, only incidental DOM depth. Loaded after aot.css
+   with equal selector specificity, so this wins and every paragraph on this
+   page renders at the same size regardless of how deep it's nested. The
+   source rule is `!important`, so this has to match that or lose regardless
+   of load order. */
+main.container > p {
+    font-size: inherit !important;
+}
+
+/* Time-of-day picker for the auto-update schedule -- narrower than the
+   form-control default so it doesn't stretch across the row next to Save. */
+.aot-upgrade-time-input {
+    max-width: 9em;
+}
+
+/* Version list under "releases behind" -- table of monospace version tags. */
+.aot-upgrade-mono-table {
+    font-family: 'Courier New', monospace;
+}
+
+#upgrade_status {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    border: 1px solid #333;
+    overflow: auto;
+    resize: vertical;
+    height: 500px;
+}

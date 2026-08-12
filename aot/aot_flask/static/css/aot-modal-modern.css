@@ -1870,6 +1870,31 @@ body { transition: padding-right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1); }
 .aot-status-badge.aot-status-fail    { background: var(--aot-tint-danger-bg);  color: var(--aot-tint-danger-fg); }
 .aot-status-badge.aot-status-running { background: var(--aot-tint-info-bg);    color: var(--aot-tint-info-fg); }
 
+/* ── Notice box — 페이지 상단 안내/경고/성공 박스 ─────────── */
+.aot-notice-box {
+    background: var(--aot-tint-warning-bg);
+    color: var(--aot-tint-warning-fg);
+    border: 1px solid var(--aot-tint-warning-border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.aot-notice-box p { margin-bottom: 10px; }
+.aot-notice-box p:last-child { margin-bottom: 0; }
+.aot-notice-box.aot-notice-box-success { background: var(--aot-tint-success-bg); color: var(--aot-tint-success-fg); border-color: var(--aot-tint-success-border); }
+.aot-notice-box.aot-notice-box-danger  { background: var(--aot-tint-danger-bg);  color: var(--aot-tint-danger-fg);  border-color: var(--aot-tint-danger-border); }
+.aot-notice-box.aot-notice-box-info    { background: var(--aot-tint-info-bg);    color: var(--aot-tint-info-fg);    border-color: var(--aot-tint-info-border); }
+/* 색 없이 테두리만 — 안내문이 아니라 설정 폼을 감쌀 때. 톤이 없으니 테두리도
+   시맨틱 톤이 아니라 일반 중립 테두리(--aot-border-neutral, custom_ui 밖) */
+.aot-notice-box.aot-notice-box-plain {
+    background: transparent;
+    color: inherit;
+    border-color: var(--aot-border-neutral);
+    box-shadow: none;
+}
+
 /* ── Tag — 읽기 전용 꼬리표(개수, 분류, 값 나열) ──────────── */
 .aot-tag {
     display: inline-block;

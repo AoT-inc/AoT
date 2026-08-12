@@ -39,6 +39,7 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
 | bg_on / bg_off | --bg-on/off | --aot-bg-on/off |
 | bg_pending | --bg-hold | --aot-bg-hold |
 | tint_warning_bg / fg | (없음) | --aot-tint-warning-bg/fg |
+| tint_success/warning/danger/info_border | (없음) | --aot-tint-{success,warning,danger,info}-border (2026-08-12 추가, .aot-notice-box 테두리) |
 | bg_llm / bg_mcp | --bg-llm/mcp | --aot-color-llm/mcp |
 | btn_primary_bg | --bd-tertiary, --bd-btn-primary, --bg-btn-active | --aot-btn-bg-primary, --aot-btn-bg-active |
 | btn_secondary_bg | --bd-btn-secondary, --bg-btn-inactive | --aot-btn-bg-secondary, --aot-btn-bg-inactive |

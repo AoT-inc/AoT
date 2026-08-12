@@ -73,6 +73,14 @@
   --aot-tint-danger-bg:  #fbe7e7;  --aot-tint-danger-fg:  #b23b3b;
   --aot-tint-info-bg:    #e7f4fb;  --aot-tint-info-fg:    #06709b;
   --aot-tint-neutral-bg: var(--aot-bg-off);  --aot-tint-neutral-fg: var(--aot-color-text-secondary);
+  /* Borders for the tint pairs above — a fixed blend of each bg/fg (35% toward
+     fg), not independently editable per-preset; the tint bg/fg above already
+     aren't either (SEMANTIC_DEFAULTS in custom_ui.html is shared across every
+     built-in preset). Consumed by .aot-notice-box (aot-modal-modern.css). */
+  --aot-tint-success-border: #b8cba6;
+  --aot-tint-warning-border: #dac196;
+  --aot-tint-danger-border:  #e1abab;
+  --aot-tint-info-border:    #98c6d9;
 
   /* ========================================================================
      Section 1.2b: color — measurement band (5단계 측정값 구간 전역 팔레트)

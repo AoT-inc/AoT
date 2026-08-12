@@ -299,12 +299,11 @@ def login_password():
                     audit_log(audit.LOGIN_SUCCESS, user_id=user.id,
                               username=user.name, ip_address=user_ip)
 
-                    # flask-login user
-                    login_user = User()
-                    login_user.id = user.id
-                    login_user.name = user.name
                     remember_me = True if form_login.remember.data else False
-                    flask_login.login_user(login_user, remember=remember_me)
+                    # 세션 고정 방지 — 반드시 login_user() **앞**에서 ID 를 갈아야
+                    # 로그인 정보가 새 ID 에 실린다. (utils_general 주석 참조)
+                    utils_general.regenerate_session_id()
+                    flask_login.login_user(user, remember=remember_me)
 
                     return redirect(url_for('routes_general.home'))
                 else:
@@ -371,10 +370,10 @@ def login_totp():
             audit_log(audit.LOGIN_SUCCESS, user_id=user.id, username=user.name,
                       ip_address=user_ip, detail='two-factor')
 
-            login_user = User()
-            login_user.id = user.id
-            login_user.name = user.name
-            flask_login.login_user(login_user, remember=remember_me)
+            # 세션 고정 방지 — 반드시 login_user() **앞**에서 ID 를 갈아야
+            # 로그인 정보가 새 ID 에 실린다. (utils_general 주석 참조)
+            utils_general.regenerate_session_id()
+            flask_login.login_user(user, remember=remember_me)
             return redirect(url_for('routes_general.home'))
 
         login_log(user.name, 'NA', user_ip, 'FAIL')
@@ -471,12 +470,11 @@ def login_keypad_code(code):
         audit_log(audit.LOGIN_SUCCESS, user_id=user.id, username=user.name,
                   ip_address=user_ip, detail='keypad')
 
-        # flask-login user
-        login_user = User()
-        login_user.id = user.id
-        login_user.name = user.name
         remember_me = True
-        flask_login.login_user(login_user, remember=remember_me)
+        # 세션 고정 방지 — 반드시 login_user() **앞**에서 ID 를 갈아야
+        # 로그인 정보가 새 ID 에 실린다. (utils_general 주석 참조)
+        utils_general.regenerate_session_id()
+        flask_login.login_user(user, remember=remember_me)
 
         return redirect(url_for('routes_general.home'))
 
@@ -549,10 +547,10 @@ def complete_google_login(tokens, email):
         role = Role.query.filter(Role.id == user.role_id).first()
         login_log(user.name, role.name if role else 'NA', user_ip, 'LOGIN (Google)')
 
-        login_user = User()
-        login_user.id = user.id
-        login_user.name = user.name
-        flask_login.login_user(login_user, remember=True)
+        # 세션 고정 방지 — 반드시 login_user() **앞**에서 ID 를 갈아야
+        # 로그인 정보가 새 ID 에 실린다. (utils_general 주석 참조)
+        utils_general.regenerate_session_id()
+        flask_login.login_user(user, remember=True)
 
         _link_google_calendar_connection(user.id, tokens, email)
         return redirect(url_for('routes_general.home'))
@@ -713,10 +711,10 @@ def remote_admin_login():
         token_row.last_used_at = utc_now()
         db.session.commit()
 
-        login_user = User()
-        login_user.id = user.id
-        login_user.name = user.name
-        flask_login.login_user(login_user, remember=False)
+        # 세션 고정 방지 — 반드시 login_user() **앞**에서 ID 를 갈아야
+        # 로그인 정보가 새 ID 에 실린다. (utils_general 주석 참조)
+        utils_general.regenerate_session_id()
+        flask_login.login_user(user, remember=False)
         return "Logged in via Remote Admin"
     else:
         return "ERROR"

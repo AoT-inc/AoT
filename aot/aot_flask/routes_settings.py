@@ -665,6 +665,13 @@ def settings_users_submit():
         if form_user.settings_user_save.data:
             messages = utils_settings.user(form_user)
         elif form_mod_user.user_generate_api_key.data:
+            # API 키 발급도 비신선 세션에서는 막는다. API 키는 비밀번호 변경으로
+            # 무효화되지 않으므로(세션·remember 토큰과 달리 `session_auth_hash`
+            # 와 무관하다), 여기를 열어 두면 90일 토큰만 쥔 사람이 **영구
+            # 자격증명을 하나 만들어 두고** 빠져나갈 수 있다 — 비밀번호를 바꿔도
+            # 안 끊긴다.
+            if not utils_general.require_fresh_login('api_key:generate'):
+                return redirect(url_for('routes_settings.settings_users'))
             (messages,
              generated_api_key) = utils_settings.generate_api_key(
                 form_mod_user)
@@ -1091,6 +1098,16 @@ def settings_account_self():
     form_account = forms_settings.AccountSelf()
     logout = False
     if form_account.validate_on_submit() and form_account.user_account_save.data:
+        # 비밀번호·이메일 변경은 계정 자체를 넘겨줄 수 있는 작업이라, "90일간
+        # 유지" 쿠키로 복구된 세션(_fresh=False)에서는 막는다. 언어·시간대 같은
+        # 나머지 항목은 그대로 저장된다 — 통째로 막으면 토큰으로 들어온 정상
+        # 사용자가 아무것도 못 바꾼다. (utils_general.require_fresh_login 참조)
+        new_email = (form_account.email.data or '').strip()
+        sensitive = bool(form_account.password_new.data) or (
+            new_email and new_email != (flask_login.current_user.email or ''))
+        if sensitive and not utils_general.require_fresh_login(
+                'account_self:password/email'):
+            return redirect(request.referrer or url_for('routes_general.home'))
         logout = utils_settings.account_self_update(form_account)
     else:
         utils_general.flash_form_errors(form_account)

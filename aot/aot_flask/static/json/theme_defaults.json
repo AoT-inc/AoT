@@ -45,5 +45,9 @@
   "tint_danger_bg": "#FBE7E7",
   "tint_danger_fg": "#B23B3B",
   "tint_info_bg": "#E7F4FB",
-  "tint_info_fg": "#06709B"
+  "tint_info_fg": "#06709B",
+  "tint_success_border": "#B8CBA6",
+  "tint_warning_border": "#DAC196",
+  "tint_danger_border": "#E1ABAB",
+  "tint_info_border": "#98C6D9"
 }

@@ -14011,9 +14011,10 @@ msgstr "地図に配置"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1211
 msgid ""
-"Click \"Place on Map\" then click the facility center on the map. Form "
-"dimensions and rotation update the rectangle in real time."
-msgstr "「地図に配置」をクリックし、地図上で施設の中心をクリックしてください。フォームの寸法と回転がリアルタイムで矩形に反映されます。"
+"Click \"Place on Map\" then click the facility center on the map. Drag the "
+"placed facility to move it. Form dimensions and rotation update the rectangle "
+"in real time."
+msgstr "\"地図に配置\"をクリックした後、地図で施設の中心をクリックしてください。配置した施設はドラッグして移動できます。フォームの寸法と回転がリアルタイムで長方形に反映されます。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1223
 msgid "3D Preview"
@@ -25687,8 +25688,10 @@ msgid ""
 msgstr "連携サマリーの確認と機器チェックは、施設を保存してから利用できます。"
 
 #: aot/aot_flask/templates/pages/geo/geo_facility.html
-msgid "Use \"Place on Map\" above the map to set the facility center."
-msgstr "施設の中心は、地図上部の「地図に配置」ボタンで指定します。"
+msgid ""
+"Use \"Place on Map\" above the map to set the facility center, then drag "
+"the facility on the map to adjust it."
+msgstr "施設の中心は地図上の\"地図に配置\"ボタンで指定し、地図上の施設をドラッグして位置を調整してください。"
 
 #: aot_flask/templates/pages/function_options/trigger_options/sunrise_sunset.html
 msgid "Next Execution"
@@ -27008,3 +27011,83 @@ msgid ""
 msgstr ""
 "%(host)s の証明書を固定しました。この接続を信頼する前に、別の経路で"
 "指紋を確認してください: %(fp)s"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-v3.js:2051
+msgid "Load Failed"
+msgstr "読み込み失敗"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:2326
+msgid "Thermal"
+msgstr "保温・遮光"
+
+#: aot_flask/app.py:1141
+msgid ""
+"The security token for this page had expired. Nothing was saved — please "
+"try again."
+msgstr "このページのセキュリティトークンの有効期限が切れました。保存された内容はありません。もう一度お試しください。"
+
+#: aot_flask/app.py:1150
+msgid "Your session has expired. Please log in again."
+msgstr "セッションの有効期限が切れました。もう一度ログインしてください。"
+
+#: aot_flask/utils/utils_general.py:60
+msgid ""
+"For your security, log out and log in again before changing this. Your "
+"session was restored from the \"Remember Me\" cookie rather than a password."
+msgstr "セキュリティのため、いったんログアウトして再度ログインしてから変更してください。現在のセッションはパスワードではなく「ログイン状態を保持」のCookieから復元されたものです。"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Preview view"
+msgstr "プレビュー表示"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"No updater service is running on this system yet, so this schedule is "
+"saved but will not run until one is set up -- see below."
+msgstr ""
+"このシステムにはまだアップデータサービスがないため、このスケジュールは保存されますが、アップデータが設定されるまでは実行されません — "
+"下記を参照してください。"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Success Tint Border"
+msgstr "成功トーンの枠線"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Warning Tint Border"
+msgstr "警告トーンの枠線"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Danger Tint Border"
+msgstr "危険トーンの枠線"
+
+#: aot/aot_flask/forms/forms_settings.py
+msgid "Info Tint Border"
+msgstr "情報トーンの枠線"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
+msgstr "成功時の案内ボックスの枠線色（管理者ページ、例: アップグレード）"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for warning/default notice boxes"
+msgstr "警告・既定の案内ボックスの枠線色"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for danger/error notice boxes"
+msgstr "危険・エラー案内ボックスの枠線色"
+
+#: aot/aot_flask/templates/settings/custom_ui.html
+msgid "Border color for info notice boxes"
+msgstr "情報案内ボックスの枠線色"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Gable ×2"
+msgstr "切妻 2"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Check for updates now"
+msgstr "今すぐアップデートを確認"
+
+#: aot/aot_flask/routes_admin.py
+msgid "You are already on the latest version (%(version)s)."
+msgstr "すでに最新バージョンです（%(version)s）。"
