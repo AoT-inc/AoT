@@ -8417,7 +8417,36 @@
                 }
             });
         }
+        _markChannelFreshness(channels, instance);
         return channels;
+    }
+
+    // 장치 주기를 넘겨 늦은 값이면 channel.valid=false 로 표시한다.
+    // 값을 지우지는 않는다 — 하루 한 번 재는 센서의 20시간 된 값은 정상이고,
+    // 숨기면 사용자는 "센서가 죽었나" 로 읽는다. 렌더러(renderValueLabel)가
+    // 이미 `valid` 가 있는 채널만 보고 .aot-stale 을 붙이므로, 여기서 플래그만
+    // 세우면 시설 fitting 센서 라벨과 같은 표시 정책으로 자동 수렴한다.
+    //
+    // 판정은 반드시 **그 장치의 주기 대비**로 한다. 전역 상수로는 불가능하다 —
+    // 300초 장치의 290초 값은 정상이고 하루 1회 장치의 20시간 값도 정상이다.
+    // 주기나 관측 시각을 모르면 `valid` 를 아예 붙이지 않는다: 모르면서
+    // "오래됨" 으로 그리면 정상 장치가 상시 흐리게 보인다(장주기 노드가 늘
+    // stale 로 보이던 문제 — device_link_status.LINK_MAX_AGE_S 주석과 같은 교훈).
+    //
+    // 배수 2 = 표본 1회 유실까지는 정상으로 본다. 1배로 하면 데몬·전송 지터
+    // 몇 초에도 매 주기 끝마다 깜빡인다.
+    const STALE_PERIOD_FACTOR = 2;
+
+    function _markChannelFreshness(channels, instance) {
+        const tsMap = instance && instance._measTs;
+        if (!tsMap) return;
+        const nowSec = Date.now() / 1000;
+        channels.forEach(function (c) {
+            const period = parseFloat(c.sample_period);
+            const ts = tsMap[c.measurement_id];
+            if (!isFinite(period) || period <= 0 || ts == null) return;
+            c.valid = (nowSec - ts) <= period * STALE_PERIOD_FACTOR;
+        });
     }
 
     /**
@@ -8430,10 +8459,13 @@
 
     // ── 측정값 세션 캐시 ───────────────────────────────────────────────────────
     // 새로고침 직후 값 조회가 끝날 때까지 키가 "—" 로 남는 구간을 없앤다.
-    // 저장 수명은 /data_batch 가 쓰는 조회 창(period 600초)과 **같게** 맞췄다:
-    // 그 창 안의 값이면 라이브 경로가 돌려줄 값과 같은 신선도이므로, 낙관적으로
-    // 그려도 사용자가 보는 정보의 성격이 달라지지 않는다. 창을 넘긴 캐시는
-    // 버리고 예전처럼 "—" 로 시작한다.
+    // 저장 수명은 /data_batch 요청의 창 하한(600초)에 맞춘 값이다. 그 안의 값이면
+    // 라이브 경로가 돌려줄 값과 같은 신선도이므로 낙관적으로 그려도 사용자가 보는
+    // 정보의 성격이 달라지지 않는다. 창을 넘긴 캐시는 버리고 "—" 로 시작한다.
+    // 주기가 600초보다 긴 장치는 서버가 창을 넓히므로 라이브 값이 이 TTL 보다
+    // 오래된 경우가 있는데, 그건 캐시를 늘려 해결할 문제가 아니다 — 관측 시각
+    // (_measTs)이 없는 캐시 값에는 신선도 플래그를 붙이지 않아, 흐리게 그려야
+    // 할 값을 정상으로 오인하지 않는다.
     var MEASVAL_CACHE_TTL_MS = 600000;
 
     function _measValueCacheKey(uniqueId, wOpts) {
@@ -8501,6 +8533,9 @@
         return (isNaN(n) || n < 1) ? 1 : n;
     }
 
+    // period 는 조회 창의 **하한**이다. 서버(_effective_lookback, routes_general.py)가
+    // 이 장치의 샘플링 주기를 보고 필요하면 넓힌다 — 하루 한 번 재는 센서까지
+    // 잡으려고 여기서 큰 값을 박으면, 15초 장치의 스캔 범위까지 같이 커진다.
     function _batchItem(baseId, mid) {
         return { kind: 'last', unique_id: baseId, measure_type: 'input',
                  measurement_id: mid, period: '600' };
@@ -8559,11 +8594,18 @@
             const inst = window.AoTWidgetInstances[uniqueId];
             if (!inst || !results) return null;
             inst._measValues = inst._measValues || {};
+            // 관측 시각도 함께 남긴다(payload 는 [epoch초, 값]). 예전엔 res[0] 을
+            // 버려서, 값이 방금 것인지 어제 것인지 화면이 구분할 수 없었다 —
+            // 조회 창을 장치 주기만큼 넓힌 뒤에는 그 구분이 꼭 필요하다.
+            inst._measTs = inst._measTs || {};
             const gotByDevice = {};
             results.forEach(function (res, i) {
                 const it = sent[i];
                 if (Array.isArray(res) && res[1] != null && !isNaN(+res[1])) {
                     inst._measValues[it.measurement_id] = +res[1];
+                    if (res[0] != null && !isNaN(+res[0])) {
+                        inst._measTs[it.measurement_id] = +res[0];
+                    }
                     gotByDevice[it.unique_id] = true;
                 }
             });

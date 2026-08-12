@@ -178,7 +178,7 @@ document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/scri
      떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->
 <script src="/static/js/common/aot-output-state.js?v=9"></script>
 <script src="/static/js/common/sensor-label.js?v=38"></script>
-<script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=21"></script>
+<script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=22"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=47">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
 

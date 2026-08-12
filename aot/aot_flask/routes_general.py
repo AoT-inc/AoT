@@ -613,6 +613,13 @@ def last_data(unique_id, measure_type, measurement_id, period):
     if measure_type not in ['input', 'function', 'output', 'pid']:
         return '', 204
 
+    # 조회 창을 이 장치의 샘플링 주기에 맞춰 넓힌다(좁히지는 않는다).
+    # 호출자들이 고정 창을 박아 두고 있어서(측정값 패널은 /600) 주기가 더 긴
+    # 장치는 값이 늘 창 밖이었다 — /data_batch 와 같은 규칙을 쓴다.
+    if measure_type == 'input':
+        period = _effective_lookback(
+            period, _sample_periods([unique_id]).get(unique_id))
+
     measure = DeviceMeasurements.query.filter(
         DeviceMeasurements.unique_id == measurement_id).first()
 
@@ -701,6 +708,50 @@ def past_data(unique_id, measure_type, measurement_id, past_seconds):
 # ──────────────────────────────────────────────────────────────────────────
 _BATCH_MAX_ITEMS = 300
 _BATCH_MAX_WORKERS = 8
+
+# ── 조회 창은 장치의 샘플링 주기에서 나온다 ────────────────────────────────
+# Input.period 는 15초부터 86400초(1일)까지 제각각이다. 호출자가 고정 창(지도
+# 위젯은 600초를 하드코딩하고 있었다)을 주면, 그보다 주기가 긴 장치는 최신 점이
+# 늘 창 밖이라 **값이 영구히 조회되지 않는다** — InfluxDB 에는 있는데 화면은
+# 빈칸이다. 하루 한 번 재는 센서가 지도에 절대 안 뜨는 것이 그 경우다.
+#
+# 그래서 창을 장치별로 넓힌다. 좁히지는 않는다 — 호출자가 요청한 창은 하한으로
+# 남겨, 주기가 짧은 장치의 스캔 범위가 커지지 않게 한다(15초 장치는 그대로).
+#
+# _run_last_jobs 가 창 크기별로 묶어 쿼리하므로 비용은 "서로 다른 주기 종류
+# 수"만큼이다(현장 기준 보통 2~3개). 반대로 period='0'(무제한)은 대량 쿼리를
+# 타지 못하고 항목별 느린 경로로 떨어지므로(107건 840~970ms) 쓰지 않는다.
+_PERIOD_LOOKBACK_FACTOR = 3        # 표본 2회 유실까지 견딘다
+_PERIOD_LOOKBACK_CAP_S = 2592000   # 30일 — 주기가 비정상적으로 큰 경우의 폭주 방지
+
+
+def _sample_periods(unique_ids):
+    """{Input.unique_id: period(초)} 를 IN 조회 한 번으로 가져온다.
+
+    Input 만 대상이다 — Output/Function/PID 의 주기는 "센서가 언제 값을 낼지"와
+    의미가 달라 창을 넓힐 근거가 되지 않는다.
+    """
+    ids = [u for u in set(unique_ids or []) if u]
+    if not ids:
+        return {}
+    rows = Input.query.filter(Input.unique_id.in_(ids)).with_entities(
+        Input.unique_id, Input.period).all()
+    return {uid: period for uid, period in rows if period}
+
+
+def _effective_lookback(requested, sample_period):
+    """호출자가 요청한 창과 장치 주기에서 실제 조회 창(초, 문자열)을 정한다."""
+    try:
+        req = float(requested)
+    except (TypeError, ValueError):
+        return requested
+    if req <= 0 or not sample_period:      # '0' = 무제한(그대로 둔다)
+        return requested
+    try:
+        derived = float(sample_period) * _PERIOD_LOOKBACK_FACTOR
+    except (TypeError, ValueError):
+        return requested
+    return str(int(min(max(req, derived), _PERIOD_LOOKBACK_CAP_S)))
 
 
 def _prefetch_last_metadata(measurement_ids):
@@ -832,6 +883,13 @@ def data_batch():
         [it.get('measurement_id') for it in items
          if isinstance(it, dict) and it.get('kind') != 'past'])
 
+    # 장치 샘플링 주기 — 조회 창을 장치별로 넓히는 근거(_effective_lookback).
+    # 여기서도 IN 조회 한 번이다; 항목별로 Input 을 찾으면 배치의 의미가 사라진다.
+    period_by_device = _sample_periods(
+        [it.get('unique_id') for it in items
+         if isinstance(it, dict) and it.get('kind') != 'past'
+         and it.get('measure_type') == 'input'])
+
     for i, it in enumerate(items):
         if not isinstance(it, dict):
             continue
@@ -855,6 +913,9 @@ def data_batch():
         if not resolved:
             continue
         unit, channel, measurement = resolved
+        # 창을 장치 주기에 맞춰 넓힌다 — 주기가 요청 창보다 긴 장치의 값이
+        # 조용히 누락되던 것을 막는다. 짧은 장치는 요청 창 그대로.
+        period = _effective_lookback(period, period_by_device.get(unique_id))
         last_jobs.append((i, unique_id, unit, channel, measurement, period))
 
     if last_jobs:

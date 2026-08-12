@@ -317,7 +317,11 @@
         measurement_id: m.id,
         channel:        m.channel,
         value:          (v == null || isNaN(v)) ? null : v,
-        unit:           (u === 'bearing') ? '' : u
+        unit:           (u === 'bearing') ? '' : u,
+        // 이 측정을 내는 장치의 샘플링 주기(초, 서버가 붙임). 신선도 판정은
+        // 전역 상수로 할 수 없다 — 15초 장치와 하루 1회 장치가 같은 지도에
+        // 섞이므로, 늦었는지는 그 장치의 주기 대비로만 말할 수 있다.
+        sample_period:  m.sample_period
       };
     });
   }

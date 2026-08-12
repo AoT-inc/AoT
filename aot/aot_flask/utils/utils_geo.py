@@ -1348,6 +1348,22 @@ def get_all_measurements_for_map(devices):
             convs = Conversion.query.filter(Conversion.unique_id.in_(conv_ids)).all()
             conv_unit_lookup = {c.unique_id: (c.convert_unit_to or '') for c in convs}
 
+        # 장치 샘플링 주기 — 클라이언트가 "이 값이 늦었는가"를 판정하는 근거다.
+        # 주기는 15초~86400초로 제각각이라 전역 상수(max_measure_age 등)로는
+        # 판정할 수 없다: 300초 장치는 290초 값이 정상인데, 하루 1회 장치는
+        # 20시간 된 값도 정상이다. 이게 없으면 라벨은 둘을 구분하지 못해
+        # 장주기 센서를 상시 "오래됨"으로 흐리게 그리거나(오경보) 아예 표시를
+        # 포기하게 된다. Input 만 대상 — Output/Function 의 주기는 의미가 다르다.
+        # 종류는 `DeviceMeasurements.device_type` 으로 가릴 수 없다 — 그 컬럼은
+        # 실제로 안 채워져 있다(로컬 실측 196행 전부 NULL). 그래서 Input 테이블
+        # 조회 자체를 권위로 쓴다: device_id 가 Input 이면 주기가 나오고,
+        # Output/Function 이면 아무 행도 안 나와 자연히 None 이 된다.
+        period_by_device = {
+            uid: period for uid, period in Input.query.filter(
+                Input.unique_id.in_(list(map_device_ids))
+            ).with_entities(Input.unique_id, Input.period).all() if period
+        }
+
         from aot.aot_flask.geo.facility_sensors import channel_label_meta
 
         for m in all_meas_query:
@@ -1376,6 +1392,10 @@ def get_all_measurements_for_map(devices):
                 'device_name': device_name_lookup.get(d_id),
                 'unit': eff_unit,
                 'display_unit': disp_unit,
+                # 이 측정을 내는 장치의 샘플링 주기(초). Input 이 아니거나
+                # 주기를 모르면 None — 그때는 클라이언트가 신선도 판정을
+                # 하지 않는다(모르면서 "오래됨"이라 그리지 않는다).
+                'sample_period': period_by_device.get(d_id),
             })
         
         # Sort by channel

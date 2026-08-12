@@ -19,6 +19,10 @@
               최종 판정은 --rebuild 로 한다.
   --rebuild   임시 트리에 실제로 재빌드해 바이트 비교 — 유일한 확정 판정.
               node + 설치된 node_modules 필요. CI 게이트용.
+  --range B..H 커밋 범위의 변경집합 검사. CI 에서 **vite 그룹을 지키는 유일한
+              수단**이다: --rebuild 는 재현성 미검증이라 그 그룹을 건너뛰고,
+              기본/--staged 모드는 깨끗한 체크아웃에서 워킹트리·인덱스가 비어
+              있어 "변경 없음"으로 통과해 버린다. 둘 다 CI 에서는 무력하다.
 
 종료 코드 0 = 정상, 1 = 드리프트/검증 불가.
 """
@@ -151,8 +155,10 @@ def registry():
 # 변경집합 기반 검사 (--staged / 워킹트리)
 # --------------------------------------------------------------------------
 
-def changed_paths(staged_only):
-    if staged_only:
+def changed_paths(staged_only, commit_range=None):
+    if commit_range:
+        names = git("diff", "--name-only", commit_range)
+    elif staged_only:
         names = git("diff", "--cached", "--name-only")
     else:
         # 스테이지 + 비스테이지 (추적 파일 기준)
@@ -160,9 +166,12 @@ def changed_paths(staged_only):
     return {p for p in names.splitlines() if p}
 
 
-def check_changeset(staged_only):
-    changed = changed_paths(staged_only)
-    label = "스테이지된 변경" if staged_only else "워킹트리 변경"
+def check_changeset(staged_only, commit_range=None):
+    changed = changed_paths(staged_only, commit_range)
+    if commit_range:
+        label = f"커밋 범위({commit_range}) 변경"
+    else:
+        label = "스테이지된 변경" if staged_only else "워킹트리 변경"
     if not changed:
         print(f"{label} 없음 — 검사 생략.")
         return 0
@@ -329,6 +338,11 @@ def main():
     g.add_argument("--staged", action="store_true", help="인덱스 변경만 검사(pre-commit)")
     g.add_argument("--history", action="store_true", help="히스토리 커밋시각 비교(자문용)")
     g.add_argument("--rebuild", action="store_true", help="실제 재빌드 후 바이트 비교(확정)")
+    g.add_argument("--range", dest="commit_range", metavar="BASE..HEAD",
+                   help="커밋 범위의 변경집합 검사(CI). --rebuild 가 건너뛰는 "
+                        "재현성 미검증 그룹(vite)을 CI 에서 지키는 유일한 수단이다 — "
+                        "깨끗한 체크아웃에서는 워킹트리·인덱스가 비어 있어 기본 모드가 "
+                        "'변경 없음'으로 통과해 버린다.")
     a = ap.parse_args()
     mp = check_manifest()
     if mp:
@@ -338,7 +352,7 @@ def main():
         return check_history()
     if a.rebuild:
         return check_rebuild()
-    return check_changeset(staged_only=a.staged)
+    return check_changeset(staged_only=a.staged, commit_range=a.commit_range)
 
 
 if __name__ == "__main__":
