@@ -18,11 +18,13 @@
               산출물이 바뀌지 않는 정상 케이스(빌드 결과 동일)도 걸리므로
               최종 판정은 --rebuild 로 한다.
   --rebuild   임시 트리에 실제로 재빌드해 바이트 비교 — 유일한 확정 판정.
+              세 그룹 전부를 검증한다(vite 는 2026-08-13 재현성 실측 후 편입).
               node + 설치된 node_modules 필요. CI 게이트용.
-  --range B..H 커밋 범위의 변경집합 검사. CI 에서 **vite 그룹을 지키는 유일한
-              수단**이다: --rebuild 는 재현성 미검증이라 그 그룹을 건너뛰고,
-              기본/--staged 모드는 깨끗한 체크아웃에서 워킹트리·인덱스가 비어
-              있어 "변경 없음"으로 통과해 버린다. 둘 다 CI 에서는 무력하다.
+  --range B..H 커밋 범위의 변경집합 검사. 깨끗한 체크아웃(CI·클론)에서는 워킹트리
+              ·인덱스가 비어 기본/--staged 모드가 "변경 없음"으로 통과하므로,
+              그 환경에서 변경집합을 보려면 이 모드가 필요하다. 다만 CI 게이트는
+              --rebuild 다 — 변경집합 모드는 "빌드 결과가 실제로 같은 정상 변경"
+              도 드리프트로 올린다(--history 와 같은 한계). 지금은 로컬 포렌식용.
 
 종료 코드 0 = 정상, 1 = 드리프트/검증 불가.
 """
@@ -134,17 +136,30 @@ def geo_bundles():
 
 
 def notes_bundle():
-    """vite build (outDir=../../js/notes). 재현성 미검증이라 --rebuild 대상 제외."""
+    """vite build (outDir=../../js/notes).
+
+    재현성 실측 완료(2026-08-13) — 세 축 모두 바이트 동일이라 --rebuild 대상이다:
+    같은 경로 2회 · 서로 다른 경로(절대경로 누출 없음) · macOS/Node25 대
+    linux/Node22 + 새 `npm ci`. 커밋된 산출물도 그 빌드와 바이트 동일했다.
+    재현되는 이유는 설정에 있다 — entry/chunk/assetFileNames 가 콘텐츠 해시 없이
+    고정 파일명이고 소스맵이 꺼져 있어 절대경로가 실릴 자리가 없다.
+    **vite.config.js 에서 파일명에 [hash] 를 넣거나 sourcemap 을 켜면 이 전제가
+    깨진다** — 그때는 다시 rebuild=False 로 내리고 그 근거를 여기 적을 것.
+
+    public/ 도 입력이고 그 복사본도 산출물이다(vite.svg). 예전에는 둘 다 목록에
+    없어서, public/ 을 고쳐도 어느 검사에도 걸리지 않았다.
+    """
     srcs = []
-    for dp, _, fns in os.walk(os.path.join(NOTES_SRC, "src")):
-        for fn in fns:
-            srcs.append(os.path.join(dp, fn))
+    for sub in ("src", "public"):
+        for dp, _, fns in os.walk(os.path.join(NOTES_SRC, sub)):
+            for fn in fns:
+                srcs.append(os.path.join(dp, fn))
     srcs += [os.path.join(NOTES_SRC, f)
              for f in ("index.html", "vite.config.js", "package.json")]
     outs = [os.path.join(JS, "notes", f)
-            for f in ("notes-widget.js", "notes-widget.css", "index.html")]
-    return [Bundle("notes-widget", "vite", outputs=outs,
-                   inputs=sorted(srcs), rebuild=False)]
+            for f in ("notes-widget.js", "notes-widget.css", "index.html",
+                      "vite.svg")]
+    return [Bundle("notes-widget", "vite", outputs=outs, inputs=sorted(srcs))]
 
 
 def registry():
@@ -286,14 +301,25 @@ def _copy_tree(src, dst, node_modules_link):
 
 
 def check_rebuild():
-    if not os.path.isdir(os.path.join(JS, "node_modules")) or \
-       not os.path.isdir(os.path.join(JS, "geo", "node_modules")):
-        print("FAIL: node_modules 없음 — 먼저 `cd aot/aot_flask/static/js && npm run install:all`.")
-        return 1
+    for d in (os.path.join(JS, "node_modules"),
+              os.path.join(JS, "geo", "node_modules"),
+              os.path.join(NOTES_SRC, "node_modules")):
+        if not os.path.isdir(d):
+            print(f"FAIL: node_modules 없음({rel(d)}) — 먼저 "
+                  f"`cd aot/aot_flask/static/js && npm run install:all`.")
+            return 1
     tmp = tempfile.mkdtemp(prefix="aot-bundle-verify-")
     try:
-        work = os.path.join(tmp, "js")
+        # 임시 트리는 static/ 의 구조를 그대로 흉내낸다: vite 의 outDir 이 소스 기준
+        # 상대경로(../../js/notes)라, apps/notes-widget 과 js 가 형제로 있어야
+        # 산출물이 work_js/notes 로 떨어진다. (그래서 tmp/js 가 아니라 tmp/static/js)
+        static = os.path.join(tmp, "static")
+        os.makedirs(static)
+        work = os.path.join(static, "js")
         _copy_tree(JS, work, ["", "geo"])
+        work_notes_src = os.path.join(static, "apps", "notes-widget")
+        os.makedirs(os.path.dirname(work_notes_src))
+        _copy_tree(NOTES_SRC, work_notes_src, [""])
         r = subprocess.run(["node", "tools/bundle.mjs"], cwd=work,
                            capture_output=True, text=True)
         if r.returncode != 0:
@@ -303,6 +329,11 @@ def check_rebuild():
                            capture_output=True, text=True)
         if r.returncode != 0:
             print("FAIL: geo rollup 재빌드 실패\n" + (r.stderr or r.stdout))
+            return 1
+        r = subprocess.run(["npx", "vite", "build"], cwd=work_notes_src,
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            print("FAIL: notes-widget vite 재빌드 실패\n" + (r.stderr or r.stdout))
             return 1
 
         problems = 0

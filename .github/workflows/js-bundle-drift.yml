@@ -13,9 +13,9 @@ on:
       - main
     paths:
       - 'aot/aot_flask/static/js/**'
-      # vite(notes-widget) 소스는 static/js 밖에 있다 — 산출물만 static/js/notes/
-      # 에 떨어진다. 이 줄이 없으면 소스만 고친 커밋은 워크플로 자체가 트리거되지
-      # 않아, 재빌드 누락이 어느 검사에도 걸리지 않는다.
+      # vite(notes-widget) 소스는 static/js 밖에 있고 산출물만 static/js/notes/ 에
+      # 떨어진다. 이 줄이 없으면 소스만 고친 커밋은 워크플로가 트리거조차 되지 않아
+      # 재빌드 누락이 그냥 통과한다.
       - 'aot/aot_flask/static/apps/**'
       - 'aot/scripts/check_js_bundles.py'
   pull_request:
@@ -32,10 +32,7 @@ jobs:
   rebuild-and-compare:
     runs-on: ubuntu-latest
     steps:
-      # 아래 변경집합 검사가 base..head 를 diff 하므로 얕은 체크아웃이면 안 된다.
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -48,35 +45,19 @@ jobs:
           cache-dependency-path: |
             aot/aot_flask/static/js/package-lock.json
             aot/aot_flask/static/js/geo/package-lock.json
+            aot/aot_flask/static/apps/notes-widget/package-lock.json
 
       # 산출물 재현성은 락파일에 고정된 빌더 버전에 달렸다 → ci(락 준수)로 설치.
-      # notes-widget(vite)은 --rebuild 대상이 아니라 설치하지 않는다.
+      # 설치 목록은 레포의 install:all 을 그대로 쓴다(geo + notes-widget) — 여기에
+      # 손으로 나열하면 빌드 그룹이 늘 때 조용히 어긋난다.
       - name: 빌드 도구 설치
         working-directory: aot/aot_flask/static/js
         run: |
           npm ci
-          npm --prefix geo ci
+          npm run install:all
 
+      # 세 그룹(esbuild·rollup·vite) 전부를 실제로 재빌드해 커밋된 산출물과 바이트
+      # 비교한다 = 드리프트의 확정 판정. vite 는 재현성을 실측(2026-08-13)한 뒤
+      # 편입했다 — 근거는 check_js_bundles.py notes_bundle() 주석에 있다.
       - name: 번들 재빌드 후 커밋본과 바이트 비교
         run: python3 aot/scripts/check_js_bundles.py --rebuild
-
-      # --rebuild 는 vite(notes-widget)를 재현성 미검증으로 건너뛴다. 그리고 기본/
-      # --staged 모드는 CI 의 깨끗한 체크아웃에서 워킹트리·인덱스가 비어 있어
-      # "변경 없음"으로 통과한다. 즉 이 단계가 없으면 notes-widget 은 CI 에서
-      # 아무 검사도 받지 않는다 — 소스만 고친 커밋을 --rebuild 가 green 으로
-      # 통과시키는 것을 실측 확인했다(2026-08-13).
-      # base 는 push/PR 에 따라 다르고, 첫 푸시·force push 에서는 all-zero 가
-      # 올 수 있어 그때는 건너뛴다(검사할 이전 상태가 없다).
-      - name: 변경집합 검사 (재빌드로 검증 못 하는 그룹)
-        env:
-          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            echo "비교할 base 커밋이 없다(첫 푸시/force push) — 건너뜀."
-            exit 0
-          fi
-          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            echo "base 커밋 $BASE 을 찾을 수 없다 — 건너뜀."
-            exit 0
-          fi
-          python3 aot/scripts/check_js_bundles.py --range "$BASE..${{ github.sha }}"
