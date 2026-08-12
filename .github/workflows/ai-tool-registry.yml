@@ -75,3 +75,25 @@ jobs:
 
       - name: Check tool_map dispatch resolution
         run: python3 -m aot.tests.ai_eval.test_tool_registry_ssot
+
+  # AILoaderService 가 import 만이 아니라 실제로 불렸을 때 도는지. 이 워크플로에
+  # 얹은 이유는 트리거 경로가 이미 정확히 같기 때문이다(aot/ai/**) — 같은
+  # 트리거를 가진 워크플로를 하나 더 만들 이유가 없다.
+  #
+  # 의존성을 둘로 줄인 것은 위 dispatch-map 과 같은 이유다: 무거운 설치가
+  # 깨져도 이 판정은 계속 나와야 한다. 이 모듈은 DB 를 못 읽으면 YAML 기본값으로
+  # 떨어지도록 스스로 선언하고 있어 flask 없이도 의미 있는 판정이 된다.
+  loader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install YAML seed + timezone deps
+        run: python3 -m pip install --quiet --disable-pip-version-check PyYAML pytz
+
+      - name: Check AILoaderService actually runs when called
+        run: python3 aot/tests/test_ai_loader_service.py

@@ -381,13 +381,14 @@ class OutputController(AbstractController, threading.Thread):
         try:
             self.dict_outputs = parse_output_information()
 
+            if output_id not in self.output_type:
+                msg = f"Output {output_id} Deleted (was not tracked by the running daemon)."
+                self.logger.debug(msg)
+                return 0, msg
+
             if ('no_run' in self.dict_outputs[self.output_type[output_id]] and
                     self.dict_outputs[self.output_type[output_id]]['no_run']):
                 pass
-            elif output_id not in self.output_type:
-                msg = "Output ID not found. Can't delete nonexistent Output."
-                self.logger.error(msg)
-                return 1, msg
 
             # instruct output to shutdown
             shutdown_timer = timeit.default_timer()

@@ -5368,20 +5368,13 @@ class AoTDataToolService:
         return None, None, None, None, None
 
     @staticmethod
-    def _geo_shape_descendant_unique_ids(root_shape):
-        """Return unique_ids of every GeoShape nested under root_shape (e.g. a
-        site's child zones). See aot/utils/geo_hierarchy.py for why this is
-        needed (GeoShape.parent_id is unset in production; the real parent
-        signal is spatial containment).
-        """
-        from aot.utils.geo_hierarchy import geo_descendant_unique_ids
-        return geo_descendant_unique_ids(root_shape)
-
-    @staticmethod
     def _geo_shape_descendants(root_shape):
-        """Same as _geo_shape_descendant_unique_ids but returns the GeoShape
-        rows themselves (needed when callers must read the child's own name/
-        type, not just its unique_id)."""
+        """Return every GeoShape nested under root_shape (e.g. a site's child
+        zones and the device markers inside them), as GeoShape rows. See
+        aot/utils/geo_hierarchy.py for why this is needed (GeoShape.parent_id
+        is unset in production; the real parent signal is spatial
+        containment).
+        """
         from aot.utils.geo_hierarchy import geo_descendant_shapes
         return geo_descendant_shapes(root_shape)
 
@@ -5511,7 +5504,18 @@ class AoTDataToolService:
             except Exception:
                 site_shape = None
             if site_shape:
-                ids.extend(AoTDataToolService._geo_shape_descendant_unique_ids(site_shape))
+                # A descendant 'device' marker's OWN unique_id is not what a
+                # note attaches to — the device panel writes the note against
+                # the underlying Input/Output's unique_id (shape.device_id),
+                # a distinct identity (same dual-identity issue documented on
+                # this method's docstring, above). Missing this union meant a
+                # site query silently dropped every note attached to a device
+                # placed under it (e.g. valve notes under '1포장').
+                for _desc in AoTDataToolService._geo_shape_descendants(site_shape):
+                    if _desc.unique_id:
+                        ids.append(_desc.unique_id)
+                    if _desc.device_id:
+                        ids.append(str(_desc.device_id).split('::')[0])
 
         # GeoShapes whose display name matches EXACTLY → add the shape's own id
         # and the device it represents.

@@ -2161,9 +2161,15 @@ def return_dependencies(device_type):
                 dep_message = each_section[device_type]["dependencies_message"]
 
             for each_device, each_dict in each_section[device_type].items():
+                # 예전에는 `if not each_dict: met_deps = True` 였다 -- 장치 딕셔너리의
+                # **아무** 필드나 비어 있으면(예: measurements_use_same_timestamp=False)
+                # met_deps 가 켜져, 의존성 상태와 무관한 값이 되어 있었다. 빈 값이
+                # "충족"을 뜻하는 건 dependencies_module 자체가 비었을 때뿐이다.
+                if each_device != 'dependencies_module':
+                    continue
                 if not each_dict:
                     met_deps = True
-                elif each_device == 'dependencies_module':
+                else:
                     for (install_type, package, install_id) in each_dict:
                         entry = (
                             package,
@@ -2204,9 +2210,12 @@ def return_dependencies(device_type):
                                 if entry not in unmet_deps:
                                     unmet_deps.append(entry)
                         elif install_type == 'apt':
-                            if (not dpkg_package_exists(package) and
-                                    entry not in unmet_deps):
-                                unmet_deps.append(entry)
+                            # 미충족 판정과 중복제거를 하나의 and 로 묶으면 안 된다 --
+                            # "미설치인데 이미 목록에 있음"이 else 로 떨어져
+                            # met_deps=True 가 됐었다. pip-pypi 분기와 같은 모양으로.
+                            if not dpkg_package_exists(package):
+                                if entry not in unmet_deps:
+                                    unmet_deps.append(entry)
                             else:
                                 met_deps = True
                         elif install_type == 'bash-commands':
@@ -2215,23 +2224,31 @@ def return_dependencies(device_type):
                                 if not os.path.isfile(each_file):
                                     files_not_found.append(each_file.split('/')[-1])
                             if files_not_found:
-                                if entry not in unmet_deps:
-                                    unmet_deps.append((
-                                        ", ".join(files_not_found),
-                                        install_id,
-                                        install_type,
-                                        ", ".join(files_not_found)
-                                    ))
-                                else:
-                                    met_deps = True
+                                # 중복제거 대상은 실제로 넣는 튜플이어야 한다 --
+                                # 예전엔 넣지도 않는 entry 로 검사해서 중복제거가
+                                # 늘 통과하고(같은 항목이 여러 번 쌓임) else 의
+                                # met_deps=True 는 도달 불가능한 죽은 코드였다.
+                                bash_entry = (
+                                    ", ".join(files_not_found),
+                                    install_id,
+                                    install_type,
+                                    ", ".join(files_not_found)
+                                )
+                                if bash_entry not in unmet_deps:
+                                    unmet_deps.append(bash_entry)
+                            else:
+                                # 파일이 전부 있으면 충족이다. 예전엔 이 else 가
+                                # 없어 highstock/그래프 위젯처럼 bash-commands 만
+                                # 선언한 장치가 met_deps 를 영영 못 켰다.
+                                met_deps = True
                         elif install_type == 'internal':
                             if package.startswith('file-exists'):
                                 filepath = package.split(' ', 1)[1]
                                 if not os.path.isfile(filepath):
                                     if entry not in unmet_deps:
                                         unmet_deps.append(entry)
-                                    else:
-                                        met_deps = True
+                                else:
+                                    met_deps = True
                             elif package.startswith('pip-exists'):
                                 py_module = package.split(' ', 1)[1]
                                 try:
@@ -2245,9 +2262,15 @@ def return_dependencies(device_type):
                                     if entry not in unmet_deps:
                                         unmet_deps.append(entry)
                             elif package.startswith('apt'):
-                                if (not dpkg_package_exists(package) and
-                                        entry not in unmet_deps):
-                                    unmet_deps.append(entry)
+                                # package 는 'apt <패키지명>' 형태다. 예전엔 이
+                                # 문자열을 통째로 dpkg-query 에 넘겨서 인자가 두
+                                # 개('apt' 와 실제 이름)가 됐고, 'apt' 자신이 늘
+                                # 설치돼 있으니 무엇을 선언하든 "설치됨"으로
+                                # 나왔다. file-exists/pip-exists 와 같이 자른다.
+                                apt_package = package.split(' ', 1)[1]
+                                if not dpkg_package_exists(apt_package):
+                                    if entry not in unmet_deps:
+                                        unmet_deps.append(entry)
                                 else:
                                     met_deps = True
 

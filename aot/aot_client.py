@@ -40,11 +40,6 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.send_data import send_email as send_email_notification
 from aot.utils.widget_generate_html import generate_widget_html
 
-logging.basicConfig(
-    stream=sys.stdout,
-    level=logging.INFO,
-    format='%(asctime)s %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +68,7 @@ def daemon_call_failed(ret):
 
 class DaemonControl:
     """Communicate with the daemon to execute commands or retrieve information."""
-    _rpc_timeout_cache = None
+    _rpc_timeout_cache = {}
 
     # output_states_all TTL cache: (result, expires_at)
     _states_all_cache = (None, 0.0)
@@ -95,13 +90,13 @@ class DaemonControl:
         try:
             if pyro_timeout:
                 self.pyro_timeout = min(pyro_timeout, cap)
-            elif DaemonControl._rpc_timeout_cache is not None:
-                self.pyro_timeout = DaemonControl._rpc_timeout_cache
+            elif cap in DaemonControl._rpc_timeout_cache:
+                self.pyro_timeout = DaemonControl._rpc_timeout_cache[cap]
             else:
                 misc = db_retrieve_table_daemon(Misc, entry='first')
                 if misc:
-                    self.pyro_timeout = min(misc.rpyc_timeout, self._MAX_RPC_TIMEOUT)
-                    DaemonControl._rpc_timeout_cache = self.pyro_timeout
+                    self.pyro_timeout = min(misc.rpyc_timeout, cap)
+                    DaemonControl._rpc_timeout_cache[cap] = self.pyro_timeout
         except Exception:
             logger.exception("Could not access SQL table to determine Pyro Timeout. Using 8 seconds.")
 
@@ -665,6 +660,22 @@ def parseargs(parser):
 
 
 if __name__ == "__main__":
+    # 로깅 설정은 **진입점에서만** 한다. 예전에는 이 줄이 모듈 최상단에 있어,
+    # 이 모듈을 import 하는 것만으로 프로세스 전역 로깅이 stdout 으로 바뀌었다
+    # — flask 라우트·유틸 등 12곳 이상이 이 모듈을 import 한다.
+    #
+    # 두 번 물렸다. (1) `docker_backup_cli` 는 stdout 이 caller 가 파싱하는
+    # 값(백업 경로)인데 로그 한 줄이 섞여 상태 파일이 오염됐다(v26.08.4 에서
+    # 발견, 그쪽은 force=True 로 되돌려 막아 뒀다). (2) 테스트에서 이 모듈이
+    # import 되는 순간 root 핸들러가 갈려 그 뒤에 도는 테스트의 caplog 이
+    # 로그를 못 받았다 — `test_safety_service` 가 전체 스위트에서만 실패하고
+    # 단독 실행에서는 통과해 원인을 찾기 어려웠다.
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.INFO,
+        format='%(asctime)s %(message)s'
+    )
+
     now = datetime.datetime.now
     parser = argparse.ArgumentParser(description="Client for AoT daemon.")
     args = parseargs(parser)

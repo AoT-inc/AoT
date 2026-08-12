@@ -24,9 +24,17 @@ logging.basicConfig(level=logging.INFO)
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)))
 
-# Mock time_utils to avoid pytz dependency
-sys.modules['aot.utils.time_utils'] = MagicMock()
-sys.modules['aot.utils.time_utils'].utc_now = datetime.utcnow
+# 예전에는 여기서 `sys.modules['aot.utils.time_utils']` 를 MagicMock 으로
+# 통째로 갈아끼우고 `utc_now` 를 naive 를 돌려주는 `datetime.utcnow` 로
+# 바꿨다("pytz 의존을 피하려고"). 그 대입은 **프로세스 전역이고 되돌리지
+# 않는다** — pytest 는 수집 단계에서 모든 테스트 모듈을 import 하므로, 이
+# 파일이 수집되는 순간부터 그 뒤에 도는 모든 테스트가 naive `utc_now` 를
+# 받는다. 실제로 test_safety_service 의 시간창 검사 2건이 전체 스위트에서만
+# "offset-naive 와 offset-aware 를 비교할 수 없다" 로 죽었고, 그 파일만
+# 따로 돌리면 멀쩡히 통과해 원인을 찾기 어려웠다.
+#
+# pytz 는 requirements.txt 에 있고 실제로 설치돼 있어 대체가 필요 없다.
+# 시간을 고정해야 한다면 이 모듈 전역이 아니라 테스트 안에서 patch 로 할 것.
 
 # Now import the module under test
 from aot.ai.services.tier_decision_engine import TierDecisionEngine, TierDecisionResult, AccessPatternResult

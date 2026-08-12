@@ -33,12 +33,19 @@ chart, the current reading of every measurement, and a shortcut to write a note.
 It is the **same window** you get when opening a sensor from a facility or zone
 modal.
 
-**Output / function** — you get:
+**Output / function** — opens the same centre window zones and facilities use,
+in three blocks from the top:
 
-- The device name and an On/Off toggle (shown only to users with **edit** permission)
-- Current run time / last run time
-- A **Set start/end time** button (on/off devices) — see [Scheduled On](#scheduled-on)
-- A shortcut to write a note
+1. **History** — the recent run chart. Before switching something on, what you
+   want first is how much it has already run.
+2. **Control** — the device name and an On/Off toggle (shown only to users with
+   **edit** permission), with the run time and a **Settings** button below it.
+3. **Notes**
+
+The run time is **one slot shared by two states**. While the device is off it
+shows how long it last ran (dimmed); the moment it turns on that same slot
+becomes a live running timer (bold). It keeps following the device while the
+window stays open, even if another window or a schedule switches it.
 
 Position actuators (windows, curtains, …) get Open/Stop/Close buttons and an opening-percentage slider instead.
 
@@ -50,7 +57,27 @@ Clicking a Zone or Site shape opens a popup listing every sensor and output devi
 
 - **Sensors**: If there's more than one, switch between them with tabs to see a 24-hour chart.
 - **Output device list**: On/Off toggle for immediate control (requires **edit** permission), drag to reorder.
+  Run times follow the same rule as the device window (off = last run, on = live timer).
 - **Settings (schedule on)**: Each output has a **Settings** button — see [Scheduled On](#scheduled-on).
+
+### Choosing the Representative Measurement { #representative-measurement }
+
+The **Status → Now** block of a zone or facility window lists the readings inside
+it side by side. **Click a value and that measurement becomes the representative
+one**; it keeps a filled background so you can see which one is chosen. Click it
+again to clear (requires **edit** permission).
+
+The choice is shared by three places:
+
+- the value on the **zone label** / **facility chip** on the map
+- the value on the zone/facility row of the **site summary** window
+- the Now block itself (the highlight)
+
+With nothing chosen, the order is VPD > temperature > humidity > CO₂ > light >
+wind speed. The choice is stored **per zone and per facility**, so a nursery can
+show temperature while an open field shows soil moisture. While the chosen sensor
+has no fresh reading the automatic order takes over temporarily; the choice comes
+back as soon as the sensor reports again.
 
 ### Scheduled On { #scheduled-on }
 
@@ -131,7 +158,7 @@ switch above.
 | :--- | :--- | :--- |
 | Prevent Label Collision | On | Clusters overlapping labels automatically. **The more specific label survives** — function > input > output > equipment > facility > zone > site claim space in that order, and whatever yields is surfaced as a `name +N` badge rather than disappearing silently. |
 | Label Text Size | 1.0 | Font size (em) of every map label and value key. 1.0–3.0. |
-| Hide Labels When Zoomed Out | 16 | Below this zoom level, facility / output / input / function labels and value keys are hidden. Site and zone labels always stay visible so the map keeps its bearings. **Set 0 to never hide.** |
+| Hide Labels When Zoomed Out | 17 | Below this zoom level, facility / output / input / function labels and value keys are hidden. Site and zone labels always stay visible so the map keeps its bearings, and **while input labels are hidden the zone label carries the reading instead** (see [Zone Labels](#zone-label-value) below). **Set 0 to never hide.** |
 | Facility-centric Labels | Off | Switches the per-zoom exposure rules between outdoor-centric (off, default) and facility-centric (on). Stacking order — which label draws on top — is unaffected and is always site > zone > facility > equipment > output > input > function. |
 | Sensor Marker Style | Circle | Circle (a compact round marker showing the representative value as an integer, colored by measurement band) or Text (value with unit). |
 | Enable Sensor Popup | On | Clicking a value key opens a detail window with a 24-hour chart. |
@@ -139,6 +166,24 @@ switch above.
 !!! note
     Hovering or clicking any label brings it to the very front, whatever its type.
     A label you clicked stays in front until the window it opened is closed.
+
+#### Zone Labels — Name Only vs Reading { #zone-label-value }
+
+A zone label carries a reading **only while input labels are not visible**.
+
+| Input labels | Zone label |
+| :--- | :--- |
+| Visible | Name only (`3-2`) |
+| Hidden — turned off in the label controller, or zoomed out past **Hide Labels When Zoomed Out** above | Name + representative reading + measurement-band colour (`3-2` / `32.4°C`), plus a corner dot when something needs attention |
+
+If the input labels are already stating the readings, a zone label repeating one
+puts the same number on screen twice and paints the band colour in two layers, so
+you cannot tell which one is the reference. Zoom out far enough that the input
+labels disappear, though, and that is exactly when you most want a number — so
+the zone label takes over, and hands it back when you zoom in again.
+
+Which measurement it shows is set per zone under
+[Choosing the Representative Measurement](#representative-measurement).
 
 ### Shapes
 

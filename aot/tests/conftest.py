@@ -59,6 +59,32 @@ def pytest_configure(config):
     config._aot_test_db = AOT_DB_PATH
 
 
+@pytest.fixture(autouse=True)
+def _isolate_aot_logger():
+    """`'aot'` 로거의 전역 상태를 테스트마다 되돌린다.
+
+    `aot/aot_daemon.py` 는 import 시점에 `'aot'` 로거에 자기 핸들러를 달고
+    **`propagate = False`** 를 건다. 데몬 프로세스에서는 옳다 — 그 모듈을
+    import 하는 것은 데몬 진입점뿐이다. 하지만 테스트가 데몬 함수를
+    monkeypatch 하려고 import 하는 순간 그 설정이 프로세스에 남고, 그 뒤에
+    도는 테스트에서는 `aot.*` 의 로그가 root 까지 올라오지 않아 pytest 의
+    `caplog` 이 아무것도 못 받는다.
+
+    실제로 겪었다: `test_safety_service` 의 "실패를 조용히 삼키지 않는다"
+    검사가 **전체 스위트에서만** 실패하고 그 파일만 돌리면 통과했다. 로그는
+    화면에 멀쩡히 찍히는데 `caplog.records` 만 비어 있어 원인을 찾기 어려웠다.
+
+    핸들러 목록까지 되돌리는 이유는 남은 핸들러가 테스트의 임시 로그 파일을
+    계속 붙들기 때문이다.
+    """
+    import logging
+    aot_logger = logging.getLogger('aot')
+    saved = (aot_logger.propagate, list(aot_logger.handlers), aot_logger.level)
+    yield
+    aot_logger.propagate, aot_logger.handlers[:], aot_logger.level = (
+        saved[0], saved[1], saved[2])
+
+
 @pytest.fixture(scope='session')
 def test_db_path():
     """이 세션이 쓰는 임시 DB 경로 — 격리가 깨졌는지 확인할 때 쓴다."""

@@ -93,3 +93,10 @@ jobs:
       # 게이트웨이 계약 + 소유권 회귀.
       - name: 게이트웨이 계약 테스트
         run: python3 -m pytest aot/tests/geo/test_geo_s5_gateway.py -q
+
+      # 도형의 이중 정체성(도형 자신의 unique_id ↔ 그것이 가리키는 장치의
+      # device_id)이 노트 조회에서 갈라지지 않는지. 여기 있는 이유는 같은
+      # 의존성 사슬이 필요하고, 이 워크플로가 aot/**/*.py 전체를 트리거로
+      # 잡아 실제 소비처(aot/ai/services/)의 변경에도 돌기 때문이다.
+      - name: site 질의의 하위 장치 노트 유니온
+        run: python3 -m pytest aot/tests/geo/test_search_notes_site_hierarchy.py -q

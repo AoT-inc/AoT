@@ -50,8 +50,11 @@ INPUT_INFORMATION = {
         'pre_output'
     ],
 
+    # libatlas-base-dev 는 뺐다(2026-08-10) — 네이티브 설치는
+    # upgrade_commands.sh 의 APT_PKGS 가 이미 무조건 설치하므로 이 선언이
+    # 트리거하는 일이 없고, Docker 에선 설치되지 않아 dpkg 검사만 실패해
+    # 장치 추가를 막는다. 자세한 근거는 config/__init__.py 의 DailyBezier 주석.
     'dependencies_module': [
-        ('apt', 'libatlas-base-dev', 'libatlas-base-dev'),
         ('pip-pypi', 'grovepi', 'grovepi==1.0.4')
     ],
 

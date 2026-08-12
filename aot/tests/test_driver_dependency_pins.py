@@ -65,6 +65,10 @@ def _normalize(name):
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+#: 버전 지정자. `==` 를 `===` 보다 뒤에 두면 안 된다(먼저 걸리는 쪽이 이긴다).
+_SPECIFIER_RE = re.compile(r"(===|==|>=|<=|~=|!=|<|>)")
+
+
 def _requirements_pins():
     """requirements.txt 의 `pkg==ver` 핀을 {정규화이름: 버전} 으로."""
     pins = {}
@@ -78,6 +82,27 @@ def _requirements_pins():
         if m:
             pins[_normalize(m.group(1))] = m.group(2)
     return pins
+
+
+def _requirements_ranges():
+    """requirements.txt 가 **범위**로 잡은 패키지 → {정규화이름: 지정자 전체}.
+
+    `==` 로 고정하지 않은 것들이다(`scipy>=1.7.0` 등). `_requirements_pins()`
+    는 `==` 만 읽으므로 이 부류를 아예 못 본다 — 그 사각지대가 실제로
+    `scipy==1.8.0` 을 살려 뒀다. 드라이버가 범위 패키지를 `==` 로 고정하면
+    설치본이 그 값과 다른 순간 그 장치는 웹 UI 에서 추가할 수 없게 된다.
+    """
+    ranges = {}
+    for raw in REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or line.startswith("-"):
+            continue
+        line = line.split(";")[0].split("#")[0].strip()
+        match = _SPECIFIER_RE.search(line)
+        if not match or line[match.start():match.end()] == "==":
+            continue
+        ranges[_normalize(line[:match.start()].strip())] = line[match.start():]
+    return ranges
 
 
 def _declared_pins():
@@ -147,5 +172,42 @@ def test_driver_pip_pins_match_requirements():
             "고치는 법: 각 드라이버의 dependencies_module 선언을 requirements.txt 의",
             "버전으로 맞추세요. 메이저 버전이 뛴 경우에는 핀만 맞추지 말고 그 드라이버가",
             "실제로 쓰는 API 가 살아 있는지 런타임으로 확인할 것.",
+        ]
+        pytest.fail("\n".join(lines))
+
+
+def test_drivers_do_not_pin_what_requirements_leaves_open():
+    """requirements.txt 가 범위로 둔 패키지를 드라이버가 `==` 로 굳히면 안 된다.
+
+    위 검사는 `==` 로 고정된 것만 대조하므로 이 부류를 못 본다. 그런데 결과는
+    같다 — 오히려 더 조용하다. requirements.txt 가 `scipy>=1.7.0` 이면 설치본은
+    해결된 최신 버전이고, 드라이버가 `scipy==1.8.0` 을 선언하면
+    `return_dependencies()` 의 정확일치 비교가 version_mismatch 를 내서 그
+    장치(anyleaf pH/ORP/EC)를 웹 UI 에서 추가할 수 없게 된다. 어디에도 에러는
+    남지 않고 그냥 "의존성 미충족" 으로만 보인다.
+
+    드라이버는 requirements.txt 와 **같은 지정자 형태**를 쓰면 된다. `==` 가
+    없으면 `return_dependencies()` 는 버전 비교 자체를 하지 않는다.
+    """
+    ranges = _requirements_ranges()
+    frozen = []
+    for rel_path, pkg, declared in _declared_pins():
+        spec = ranges.get(_normalize(pkg))
+        if spec is not None:
+            frozen.append((rel_path, pkg, declared, spec))
+
+    if frozen:
+        lines = [
+            "requirements.txt 가 범위로 둔 패키지를 드라이버가 `==` 로 고정했습니다.",
+            "설치본이 그 값과 달라지는 순간 그 장치는 웹 UI 에서 추가가 막힙니다.",
+            "",
+        ]
+        for rel_path, pkg, declared, spec in sorted(frozen):
+            lines.append(
+                f"  {rel_path}: {pkg}=={declared}  →  requirements.txt 는 {pkg}{spec}")
+        lines += [
+            "",
+            "고치는 법: 드라이버 선언을 requirements.txt 와 같은 형태로 두세요",
+            "(예: `('pip-pypi', 'scipy', 'scipy>=1.7.0')`).",
         ]
         pytest.fail("\n".join(lines))

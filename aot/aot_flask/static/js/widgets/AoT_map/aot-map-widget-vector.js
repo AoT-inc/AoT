@@ -1567,8 +1567,23 @@
         // 기준인지 헷갈리고, 밴드색까지 두 겹으로 칠해져 지도가 시끄러워진다.
         // 그래서 그때는 예전처럼 이름만 남기고, 입력 라벨을 껐을 때만 구역
         // 라벨이 그 몫을 대신 진다.
+        // 기준은 토글이 아니라 **지금 실제로 보이는가**다. 입력 라벨은 두 가지로
+        // 사라진다: 사람이 토글로 끄거나, 줌 게이트(label_min_zoom)가 가리거나.
+        // 처음에는 토글만 봤는데, "축소 시 라벨 숨기기"로 입력 라벨이 사라진
+        // 화면에서는 구역 라벨이 이름만 단 채 남아 **아무도 값을 말하지 않았다**
+        // — 정작 줌 아웃은 값이 가장 필요한 순간이다.
         function _zoneLabelDetailOn(inst) {
-            return !!(inst && inst._hiddenLabels && inst._hiddenLabels.input);
+            if (!inst) return false;
+            if (inst._hiddenLabels && inst._hiddenLabels.input) return true;
+            return _inputLabelsZoomHidden(inst);
+        }
+
+        // 줌 게이트가 지금 입력 라벨을 가리고 있는가(_applyZoomGate 와 같은 판정).
+        function _inputLabelsZoomHidden(inst) {
+            var map = inst && inst.map;
+            if (!map || typeof map.getZoom !== 'function') return false;
+            var min = _labelMinZoom(inst);
+            return min > 0 && map.getZoom() < min;
         }
 
         // 이름만 남기기 — 값 줄·문제 점·밴드색을 모두 걷는다. 토글은 언제든
@@ -5337,11 +5352,11 @@
     // ── 줌 게이트 ─────────────────────────────────────────────────────────────
     // 이 종류들만 줌 기준의 적용을 받는다. 대지·구역은 멀리서 위치를 잡는
     // 기준이라 항상 보이고, 개별 장치 단위 정보는 그 축척에서 읽히지도 않으면서
-    // 화면만 덮는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 16)이 정한다.
+    // 화면만 덮는다. 기준 줌 자체는 위젯 옵션(label_min_zoom, 기본 17)이 정한다.
     // 복합장치(device)도 장치 단위 정보이므로 함께 게이트한다 — 빠뜨리면 다른
     // 장치 라벨이 다 접힌 축척에서 복합장치 이름만 지도에 남는다.
     var LABEL_ZOOM_GATED = { facility: 1, device: 1, output: 1, input: 1, 'function': 1 };
-    var LABEL_MIN_ZOOM_DEFAULT = 16;
+    var LABEL_MIN_ZOOM_DEFAULT = 17;
 
     /** 이 위젯의 라벨 숨김 기준 줌. 0(또는 미설정 0) = 숨기지 않음. */
     function _labelMinZoom(instance) {
@@ -5436,10 +5451,21 @@
         if (!map || typeof map.getContainer !== 'function') return;
         var z = map.getZoom();
         var min = _labelMinZoom(instance);
+        var gated = min > 0 && z < min;
         map.getContainer().querySelectorAll('[data-label-kind]').forEach(function (el) {
             el.classList.toggle('aot-zoom-hidden',
-                min > 0 && !!LABEL_ZOOM_GATED[el.dataset.labelKind] && z < min);
+                gated && !!LABEL_ZOOM_GATED[el.dataset.labelKind]);
         });
+
+        // 입력 라벨이 줌으로 가려지는 순간 구역 라벨이 그 몫을 넘겨받고, 다시
+        // 드러나면 돌려준다(구역 라벨은 줌 게이트 대상이 아니라 계속 떠 있다).
+        // **바뀐 때만** 다시 칠한다 — 이 함수는 줌 제스처 내내 프레임마다 돈다.
+        if (instance._inputZoomGated !== gated) {
+            instance._inputZoomGated = gated;
+            if (instance._repaintZoneLabels) {
+                try { instance._repaintZoneLabels(); } catch (e) {}
+            }
+        }
     }
 
     function _installZoomGate(instance, map) {

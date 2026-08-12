@@ -108,12 +108,44 @@ def _ai_scheduler_mcp_health_job():
             logger.error(f"[027_STEP_1] Error in MCP health check job: {e}")
 
 
+# Last error reported per source, so a stuck one says it once instead of once
+# per interval. { source_id: "joined error text" }
+_context_sync_last_error = {}
+
+
+def _prune_orphan_jobs(scheduler, prefix, live_ids, tag):
+    """Drop per-entity jobs whose entity is no longer active.
+
+    The jobstore is persistent, so deactivating a source/connection leaves its
+    job behind. That used to be self-healing — the job noticed on its next fire
+    and removed itself — but the runtime gate now returns *before* that check
+    whenever AI is stopped, which is precisely when the job would otherwise sit
+    there firing forever with nothing to do.
+    """
+    try:
+        for job in scheduler.get_jobs():
+            if not job.id.startswith(prefix):
+                continue
+            if job.id[len(prefix):] in live_ids:
+                continue
+            scheduler.remove_job(job.id)
+            logger.info("%s Removed orphan job %s (entity inactive/deleted)", tag, job.id)
+    except Exception as exc:
+        logger.warning("%s Orphan job prune failed: %s", tag, exc)
+
+
 # @ANCHOR: CONTEXT_SOURCE_SYNC_JOB_FUNC
 def _context_source_sync_job(source_id):
     """
     Background job: sync a single AIContextSource by source_id.
     Runs inside Flask app context so DB and extensions are available.
     Delegates to sync_source() which handles last_synced_at / last_sync_status updates.
+
+    Skipped unless AI autonomy is on (ai_runtime_state.ai_autonomy_enabled: AI
+    enabled AND started). Pulling external data into the AI context is exactly
+    the "AI works on its own" behaviour the start switch governs — no model is
+    called, so ai_background_active (which also demands an agent) would be too
+    strict.
     """
     global _flask_app
     if not _flask_app:
@@ -122,6 +154,12 @@ def _context_source_sync_job(source_id):
 
     with _flask_app.app_context():
         try:
+            from aot.ai.services import ai_runtime_state
+            if not ai_runtime_state.ai_autonomy_enabled():
+                logger.debug("[ContextSourceSync] %s — source_id=%s skipped",
+                             ai_runtime_state.background_skip_reason(), source_id)
+                return
+
             from aot.ai.services.context_source_service import sync_source
             messages = sync_source(source_id)
             if messages.get("error"):
@@ -129,15 +167,31 @@ def _context_source_sync_job(source_id):
                 # recurring job so it stops firing; log at INFO, not WARNING (was noise).
                 if any("not found or inactive" in e for e in messages["error"]):
                     job_id = f'context_source_sync_{source_id}'
+                    _context_sync_last_error.pop(source_id, None)
                     try:
                         get_scheduler().remove_job(job_id)
                         logger.info("[ContextSourceSync] Removed stale job %s (source inactive/deleted)", job_id)
                     except Exception:
                         pass
                 else:
-                    # Real sync failure — keep the warning.
-                    logger.warning("[ContextSourceSync] source_id=%s errors: %s", source_id, messages["error"])
+                    # Real sync failure — loud once. A misconfigured source (no
+                    # file_path, no API key) fails identically every interval and
+                    # will not fix itself; repeating it hourly buries the log
+                    # without telling anyone anything new. A *changed* error is
+                    # new information, so it gets its own warning.
+                    text = '; '.join(messages["error"])
+                    if _context_sync_last_error.get(source_id) == text:
+                        logger.debug("[ContextSourceSync] source_id=%s still failing: %s",
+                                     source_id, text)
+                    else:
+                        _context_sync_last_error[source_id] = text
+                        logger.warning(
+                            "[ContextSourceSync] source_id=%s errors: %s "
+                            "(repeats logged at DEBUG until this changes)",
+                            source_id, messages["error"])
             else:
+                if _context_sync_last_error.pop(source_id, None):
+                    logger.info("[ContextSourceSync] source_id=%s recovered", source_id)
                 logger.debug("[ContextSourceSync] source_id=%s synced successfully", source_id)
         except Exception as exc:
             logger.exception("[ContextSourceSync] Unhandled error for source_id=%s: %s", source_id, exc)
@@ -147,13 +201,25 @@ def _context_source_sync_job(source_id):
 def _calendar_sync_job(connection_id):
     """Background job: two-way sync one UserCalendarConnection (Google Calendar).
     Runs inside app context; delegates to calendar_sync_service.sync_connection
-    which handles token refresh + last_synced_at/status."""
+    which handles token refresh + last_synced_at/status.
+
+    Skipped unless AI autonomy is on (ai_runtime_state.ai_autonomy_enabled: AI
+    enabled AND started), same gate as the context-source sync: OFF means
+    nothing in the AI scheduler moves on its own. Connecting a calendar does not
+    by itself start the sync — the AI service has to be running too.
+    """
     global _flask_app
     if not _flask_app:
         logger.error("[CalendarSync] Job called without _flask_app, connection_id=%s", connection_id)
         return
     with _flask_app.app_context():
         try:
+            from aot.ai.services import ai_runtime_state
+            if not ai_runtime_state.ai_autonomy_enabled():
+                logger.debug("[CalendarSync] %s — connection_id=%s skipped",
+                             ai_runtime_state.background_skip_reason(), connection_id)
+                return
+
             from aot.ai.services.calendar_sync_service import sync_connection
             messages = sync_connection(connection_id)
             if messages.get("error"):
@@ -793,6 +859,9 @@ class AISchedulerService:
                     max_instances=1,
                     replace_existing=True,
                 )
+            _prune_orphan_jobs(
+                scheduler, 'context_source_sync_',
+                {str(s.source_id) for s in active_sources}, '[ContextSourceSync]')
         except Exception as _css_err:
             logger.warning("[ContextSourceSync] Could not register context source sync jobs: %s", _css_err)
 
@@ -815,6 +884,9 @@ class AISchedulerService:
                     max_instances=1,
                     replace_existing=True,
                 )
+            _prune_orphan_jobs(
+                scheduler, 'calendar_sync_',
+                {str(c.id) for c in active_connections}, '[CalendarSync]')
         except Exception as _cal_err:
             logger.warning("[CalendarSync] Could not register calendar sync jobs: %s", _cal_err)
 

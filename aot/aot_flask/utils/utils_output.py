@@ -698,7 +698,11 @@ def manipulate_output(action, output_id):
     }
 
     try:
-        control = DaemonControl()
+        # Add/Modify can re-apply a channel's startup state, which for some
+        # output types (e.g. chirpstack_downlink) sends a real network
+        # command with its own multi-second timeout/fallback chain — give
+        # those extra room over the default RPC timeout.
+        control = DaemonControl(extended_timeout=(action in ('Add', 'Modify')))
         return_values = control.output_setup(action, output_id)
         if return_values and len(return_values) > 1:
             if return_values[0]:

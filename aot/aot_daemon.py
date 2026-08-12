@@ -83,6 +83,15 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(messag
 # running=False. It is a daemon thread, so abandoning it is safe; waiting on it
 # forever is not.
 CONTROLLER_JOIN_TIMEOUT_S = 15
+# Per controller *type*, how long stop_all_controllers() may wait for that type
+# to finish before it moves on to the next one (Function -> PID -> Input -> ...).
+# Was a flat sleep of the same length, paid in full every shutdown even when
+# every thread had already exited.
+CONTROLLER_TYPE_SETTLE_TIMEOUT_S = 2.5
+# Widget: same reasoning as CONTROLLER_JOIN_TIMEOUT_S. Named rather than the
+# bare 15 it used to be, because that number is now reported in the log line
+# that fires when the join does cut in.
+WIDGET_JOIN_TIMEOUT_S = 15
 # OUTPUT: sending every output's Shutdown State is O(N) -- on LoRaWAN each one
 # waits for the site-wide 4 s pacing slot (aot/utils/lorawan_pacing.py), about
 # 8 s per output. The old silent join(15) therefore cut a 30-output site off
@@ -1239,7 +1248,13 @@ class DaemonController:
                         controller_running[each_controller].append(cont_id)
                 except Exception as err:
                     self.logger.info(f"{each_controller} controller {cont_id} thread had an issue stopping: {err}")
-            time.sleep(2.5)  # Give time for each controller type to stop before stopping the next type
+            # Let this type finish before stopping the next one (Function stops
+            # ahead of PID, PID ahead of Input, ...). This used to be an
+            # unconditional time.sleep(2.5): 12.5 s of every shutdown was spent
+            # waiting on controllers that had already exited. Same upper bound,
+            # but it returns as soon as they are actually gone.
+            self.await_controllers_stopped(
+                each_controller, controller_running[each_controller])
 
         for each_controller in list(reversed(self.cont_types)):
             for cont_id in controller_running[each_controller]:
@@ -1284,10 +1299,35 @@ class DaemonController:
 
         try:
             self.controller['Widget'].stop_controller()
-            self.controller['Widget'].join(15)  # Give each thread 15 seconds to stop
-            self.logger.info("Widget controller stopped")
+            self.controller['Widget'].join(WIDGET_JOIN_TIMEOUT_S)
+            if self.controller['Widget'].is_alive():
+                # This line used to be unconditional, so a Widget controller
+                # that never stopped still logged "stopped" -- the 14.4 s the
+                # join actually burned looked like ordinary shutdown work.
+                self.logger.error(
+                    f"Widget controller did not stop within "
+                    f"{WIDGET_JOIN_TIMEOUT_S}s; abandoning it (daemon thread)")
+            else:
+                self.logger.info("Widget controller stopped")
         except Exception as err:
             self.logger.info(f"Widget controller had an issue stopping: {err}")
+
+    def await_controllers_stopped(self, cont_type, cont_ids):
+        """Wait (bounded) until this controller type's threads have exited.
+
+        Replaces a flat sleep between types. Returns as soon as every listed
+        controller is done, so a healthy site pays milliseconds instead of the
+        full budget, while a stuck controller still caps the wait.
+        """
+        deadline = time.time() + CONTROLLER_TYPE_SETTLE_TIMEOUT_S
+        while time.time() < deadline:
+            try:
+                if not any(self.controller[cont_type][cont_id].is_alive()
+                           for cont_id in cont_ids):
+                    return
+            except Exception:
+                return  # Controller went away mid-shutdown; nothing to wait for.
+            time.sleep(0.05)
 
     def trigger_action(self, action_id, value={}, debug=False):
         try:

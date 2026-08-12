@@ -18,7 +18,7 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = 'p6_33_api_key_scope_20260811'
-AOT_VERSION = '26.08.3'
+AOT_VERSION = '26.08.4'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -408,9 +408,17 @@ METHOD_INFO = {
     },
     'DailyBezier': {
         'name': f"{lg('Daily')} ({lg('Bezier Curve')})",
+        # libatlas-base-dev 는 뺐다(2026-08-10). numpy 는 이미 requirements.txt
+        # 에 있어 이미지에 baked-in 이고, manylinux 휠이 OpenBLAS 를 자체 번들
+        # (site-packages/numpy.libs/libopenblas64_*.so)해서 시스템 BLAS 가 필요
+        # 없다 — libatlas 없는 컨테이너에서 이 메서드가 쓰는 np.roots() 가
+        # 정상 동작함을 실측했다. 네이티브 설치는 upgrade_commands.sh 의
+        # APT_PKGS 가 libatlas-base-dev 를 무조건 깔아서 여기 선언이 있으나
+        # 없으나 늘 충족된 상태다. 즉 이 선언은 네이티브에선 무의미하고
+        # Docker 에선 dpkg 검사 실패 -> "has unmet dependencies" 로 Bezier
+        # 메서드 생성만 막는 순수 오탐이었다.
         'dependencies_module': [
-            ('apt', 'libatlas-base-dev', 'libatlas-base-dev'),
-            ('pip-pypi', 'numpy', 'numpy==1.22.3')
+            ('pip-pypi', 'numpy', 'numpy==1.26.4')
         ] + METHOD_DEP_BASE
     },
     'Cascade': {

@@ -29,6 +29,9 @@ _TTL_HOURS    = 6
 _REQUEST_TIMEOUT = 10  # seconds
 _DESC_MAX_LEN = 300
 
+# "no API key" is a config state, not a per-sync event — warn once per process.
+_KEY_WARNING_LOGGED = False
+
 
 # ---------------------------------------------------------------------------
 # @ANCHOR: PEST_MANAGEMENT_CLIENT
@@ -71,7 +74,16 @@ class PestManagementClient:
             year_month = config.get('year_month', None) or datetime.now().strftime('%Y%m')
 
             if not api_key:
-                logger.warning("EXT-KR-03: NCPMS_API_KEY not configured.")
+                # Once per process. A missing key is a static configuration
+                # state, not an event — repeating it every sync interval only
+                # buries the log. The status record below is what actually
+                # surfaces it to the user.
+                global _KEY_WARNING_LOGGED
+                if not _KEY_WARNING_LOGGED:
+                    _KEY_WARNING_LOGGED = True
+                    logger.warning(
+                        "EXT-KR-03: NCPMS_API_KEY not configured — pest forecast "
+                        "sync returns a status record only (logged once).")
                 return [
                     {
                         'parameter_name': 'pest_alert.status',

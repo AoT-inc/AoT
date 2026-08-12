@@ -14,8 +14,20 @@ Fallback: If DB is unavailable at startup, YAML defaults are used. System remain
 import logging
 import os
 import threading
+import yaml
+from datetime import timedelta
 from typing import Any, Dict, Optional
 from aot.utils.time_utils import utc_now
+
+logger = logging.getLogger(__name__)
+
+_CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config')
+_ROLE_SEED_PATH = os.path.join(_CONFIG_DIR, 'ai_role_config.yaml')
+_ACTION_SEED_PATH = os.path.join(_CONFIG_DIR, 'ai_action_registry.yaml')
+
+_CACHE_TTL_SECONDS = 300
+_loader_cache: Dict[str, Dict[str, Any]] = {}
+_cache_lock = threading.Lock()
 
 
 def _is_cache_valid(namespace: str) -> bool:

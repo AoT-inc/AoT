@@ -26,9 +26,12 @@ try:
 except ModuleNotFoundError:
     cs_api = None
 
+from flask import current_app
+
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import custom_channel_options_return_json
 from aot.aot_flask.utils.utils_general import custom_options_return_json
+from aot.aot_flask.utils.utils_output import manipulate_output
 from aot.databases.models import DeviceMeasurements
 from aot.databases.models import Input
 from aot.databases.models import InputChannel
@@ -326,6 +329,15 @@ def register_device_as_output(dev_eui, name=None,
                 device=OUTPUT_MODULE, use_defaults=True)
             new_channel.custom_options = ch_opts if isinstance(ch_opts, str) else json.dumps(ch_opts or {})
             new_channel.save()
+
+        # Tell the running daemon about the new output so it can later be
+        # deleted/modified (mirrors utils_output.output_add()); skipping this
+        # left the daemon unaware of chirpstack-onboarded outputs, causing a
+        # KeyError on delete.
+        if not current_app.config['TESTING']:
+            daemon_messages = manipulate_output('Add', new_output.unique_id)
+            messages["error"].extend(daemon_messages["error"])
+            messages["success"].extend(daemon_messages["success"])
 
         messages["success"].append(f"Registered output for device {dev_eui}")
         return messages, new_output.unique_id

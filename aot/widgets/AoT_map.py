@@ -687,7 +687,7 @@ WIDGET_INFORMATION = {
         {
             'id': 'label_min_zoom',
             'type': 'integer',
-            'default_value': 16,
+            'default_value': 17,
 
             'name': lazy_gettext('Hide Labels When Zoomed Out'),
             'phrase': lazy_gettext(
