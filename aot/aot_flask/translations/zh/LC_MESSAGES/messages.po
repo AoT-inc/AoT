@@ -24825,3 +24825,27 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "数据传输周期"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "小组件刷新周期（秒）"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "输入值刷新周期（秒）"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "面板中输入测量值的刷新频率。"
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "输出状态刷新周期（秒）"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "地图上输出开/关状态的刷新频率。"

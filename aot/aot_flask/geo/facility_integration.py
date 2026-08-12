@@ -522,6 +522,10 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
         'envelope_m2':           computed.get('envelope_m2'),
         'u_effective':           computed.get('u_effective'),
         'transmittance':         computed.get('transmittance'),
+        # With an opaque cover these two are the entire solar load — leaving
+        # them out would show a cooling figure with nothing to explain it.
+        'absorptance':           computed.get('absorptance'),
+        'solar_absorbed_kw':     computed.get('solar_absorbed_kw'),
         'vent_open_m2':          computed.get('vent_open_m2'),
         'vent_open_source':      computed.get('vent_open_source'),
         'vent_open_fittings_m2': computed.get('vent_open_fittings_m2'),

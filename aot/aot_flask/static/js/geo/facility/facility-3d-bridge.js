@@ -235,19 +235,26 @@
     // NOT y=ridgeH. Earlier versions placed boxes at y=ridgeH which floated
     // up to (ridgeH − apex_y) above the surface.
     var roofApexY;
-    if (roofType === 'gable' || roofType === 'flat' || roofType === 'box') {
+    if (roofType === 'gable' || roofType === 'gable2' ||
+        roofType === 'flat'  || roofType === 'box') {
       roofApexY = ridgeH;
     } else {
       // arch (default)
       roofApexY = (eaveH + 3 * ridgeH) / 4;
     }
 
+    // gable2 is a gable repeated twice across the bay, so its profile is the
+    // gable profile evaluated on a t that runs 0→1 twice. Folding it here keeps
+    // the vent-placement maths below identical for both.
+    function _gableT(t) { return roofType === 'gable2' ? (t * 2) % 1 : t; }
+
     // Roof surface Y at a normalised slope position t ∈ [0,1] (0 = left eave,
     // 0.5 = ridge, 1 = right eave). Used for the 'sides' roof-vent placement.
     function _roofYatT(t) {
-      if (roofType === 'gable') {
-        // Linear from eaveH → ridgeH → eaveH
-        return eaveH + (ridgeH - eaveH) * (1 - Math.abs(t - 0.5) * 2);
+      if (roofType === 'gable' || roofType === 'gable2') {
+        // Linear from eaveH → ridgeH → eaveH (twice over, for gable2)
+        var g = _gableT(t);
+        return eaveH + (ridgeH - eaveH) * (1 - Math.abs(g - 0.5) * 2);
       }
       if (roofType === 'flat' || roofType === 'box') {
         return ridgeH;
@@ -265,9 +272,12 @@
     function _roofNormalAtT(t) {
       if (roofType === 'flat' || roofType === 'box') return [0, 1, 0];
       var tx, ty;
-      if (roofType === 'gable') {
-        if (t < 0.5) { tx = span / 2; ty = ridgeH - eaveH; }
-        else         { tx = span / 2; ty = -(ridgeH - eaveH); }
+      if (roofType === 'gable' || roofType === 'gable2') {
+        // Half the run of one gable — a quarter span when the bay carries two.
+        var g  = _gableT(t);
+        var hx = (roofType === 'gable2') ? span / 4 : span / 2;
+        if (g < 0.5) { tx = hx; ty = ridgeH - eaveH; }
+        else         { tx = hx; ty = -(ridgeH - eaveH); }
       } else {
         // Cubic bezier derivative
         tx = (6 * t - 3 * t * t) * span;
@@ -393,7 +403,12 @@
                 position:   { x: _r(reinVentX), y: _r(st.y), z: _r(L / 2) },
                 size:       { w: _r(L * 0.97), h: _r(st.h), d: SV_DEPTH },
                 surface_normal: w.sn,
-                link_group: 'env_side_vent_outer_reinf_' + w.id + '_' + st.id
+                // Left and right are the same window mirrored, so they are one
+                // instance: the side is deliberately NOT part of the key. With
+                // it, a house with one unit put each wall in a group of one —
+                // the Linked row never appeared and resizing one wall's window
+                // left the opposite wall untouched.
+                link_group: 'env_side_vent_outer_reinf_' + st.id
               });
             } else {
               var ventX = w.baseX + w.outwardSign * (SV_DEPTH / 2);
@@ -404,9 +419,13 @@
                 position:   { x: _r(ventX), y: _r(st.y), z: _r(L / 2) },
                 size:       { w: _r(L * 0.97), h: _r(st.h), d: SV_DEPTH },
                 surface_normal: w.sn,
-                // Linked group: all per-unit copies of the same side+stage share
-                // size/kind so editing one updates them all (default inheritance).
-                link_group: 'env_side_vent_outer_' + w.id + '_' + st.id
+                // Linked group: every copy of this stage's side window — both
+                // walls, all units — is one instance, so editing any of them
+                // updates the rest (default inheritance, detachable per item).
+                // The side is not in the key on purpose: left and right are the
+                // same window mirrored, and each keeps its own position and
+                // surface normal because _syncGroup copies neither.
+                link_group: 'env_side_vent_outer_' + st.id
               });
             }
           });
@@ -453,11 +472,14 @@
               //   w → along facility length (Z), h → up the slope, d → out
               size:     { w: _r(L * 0.75), h: _r(span * 0.18), d: rvThick },
               surface_normal: sn,
-              // Every bay's left-slope vent is the same vent repeated, so they
-              // form one instance group (right slope is its own). Without this
-              // the roof vents were the only envelope family with no group,
-              // which meant editing 16 bays one at a time.
-              link_group: 'env_roof_vent_outer_' + p.sideId
+              // Every slope vent is the same vent repeated — across bays and
+              // across the two slopes, which are mirror images of each other.
+              // They form ONE instance group so editing any of them updates the
+              // rest; the slope used to be part of the key, which left the two
+              // sides unable to follow one another. Each member keeps its own
+              // position and surface_normal (_syncGroup copies neither), so the
+              // mirrored geometry survives the shared size.
+              link_group: 'env_roof_vent_outer_slope'
             });
           });
         } else {
@@ -579,6 +601,13 @@
         var sd = _toAxisSide(sdRaw);
         var sn = AXIS_NORMALS[sd];
         if (!sn) return;
+        // Group by AXIS, not by side: the two side walls (x_neg/x_pos) are one
+        // mirrored panel and so are the two gable ends (y_pos/y_neg) — but a
+        // side wall and a gable end are not, their sizes come from different
+        // dimensions (L×eaveH vs unitWidth×apexH). Merging all four would make
+        // an edit on one wall resize a panel it has nothing to do with.
+        var axisGroup = 'env_reinforcement_' + layer.id + '_' +
+                        (sd === 'x_neg' || sd === 'x_pos' ? 'x' : 'y');
         // Connected: one shared facility — reinforcement spans the whole envelope.
         // Single+N: each unit gets its own reinforcement panel on its own wall.
         UNITS.forEach(function (u) {
@@ -591,7 +620,7 @@
               position:  { x: _r(u.leftX - centreOffset), y: _r(eaveH / 2), z: _r(L / 2) },
               size:      { w: _r(L * 0.97), h: _r(eaveH), d: _r(th) },
               surface_normal: sn,
-              link_group: 'env_reinforcement_' + layer.id + '_' + sd
+              link_group: axisGroup
             };
           } else if (sd === 'x_pos') {
             item = {
@@ -601,7 +630,7 @@
               position:  { x: _r(u.rightX + centreOffset), y: _r(eaveH / 2), z: _r(L / 2) },
               size:      { w: _r(L * 0.97), h: _r(eaveH), d: _r(th) },
               surface_normal: sn,
-              link_group: 'env_reinforcement_' + layer.id + '_' + sd
+              link_group: axisGroup
             };
           } else {
             // Gable end wall (y_pos/y_neg) — per-unit width = unitWidth.
@@ -617,7 +646,7 @@
               position:  { x: _r(u.centerX), y: _r(apexH / 2), z: _r(zCenter) },
               size:      { w: _r(unitWidth * 0.97), h: _r(apexH), d: _r(th) },
               surface_normal: sn,
-              link_group: 'env_reinforcement_' + layer.id + '_' + sd
+              link_group: axisGroup
             };
           }
           items.push(item);
@@ -654,7 +683,10 @@
             size:      { w: _r(unitWidth), h: _r(apexH), d: _r(depth) },
             // Outward normal of y_pos face = +Z; y_neg = -Z.
             surface_normal: (sd === 'y_pos') ? [0, 0, 1] : [0, 0, -1],
-            link_group: 'env_front_reinf_' + layer.id + '_' + sd
+            // Both gable ends carry the same extension (unitWidth × apexH ×
+            // depth) mirrored front to back — one group, so an edit on one end
+            // reaches the other. Each keeps its own z and outward normal.
+            link_group: 'env_front_reinf_' + layer.id
           });
         });
       });
@@ -687,7 +719,9 @@
               position:  { x: _r(twX), y: _r(st.y), z: _r(L / 2) },
               size:      { w: _r(L * 0.97), h: _r(st.h), d: TW_DEPTH },
               surface_normal: w.sn,
-              link_group: 'env_curtain_thermal_wall_' + w.id + '_' + st.id
+              // Mirror pair, same as the side window it hangs behind — one
+              // group for both walls (see env_side_vent_outer_).
+              link_group: 'env_curtain_thermal_wall_' + st.id
             });
           });
         });
@@ -1469,7 +1503,21 @@
   var STEPS = ['basic', 'position', 'envelope', 'fittings', 'connect', 'check'];
   var _step = null;
 
-  function _stageFor(step) { return step === 'position' ? 'map' : '3d'; }
+  // Every step can show either view — the model and the map are two ways of
+  // looking at the same facility, and which one helps depends on what the user
+  // is checking, not on which step they happen to be in.
+  //
+  // The default is per step: the three steps that describe where and what the
+  // building physically is open on the map (it carries the site, the
+  // neighbouring facilities and the real orientation), the rest open on the
+  // isolated 3D scene. A choice made by hand is remembered for the session, so
+  // the default only decides the first visit to each step.
+  var _DEFAULT_STAGE = { position: 'map', envelope: 'map', fittings: 'map' };
+  var _stagePick     = {};   // step → '3d' | 'map', once the user picks
+
+  function _stageFor(step) {
+    return _stagePick[step] || _DEFAULT_STAGE[step] || '3d';
+  }
 
   function _showStage(which) {
     document.querySelectorAll('.fac-stage-view').forEach(function (v) {
@@ -1480,8 +1528,45 @@
     // told to re-measure (FacilityMapAPI exposes just that from the bundle).
     setTimeout(function () {
       window.dispatchEvent(new Event('resize'));
-      if (which === 'map' && window.FacilityMapAPI) FacilityMapAPI.resize();
+      if (which === 'map' && window.FacilityMapAPI) {
+        FacilityMapAPI.resize();
+        // Arriving at the map with the camera parked somewhere else shows bare
+        // tiles and reads as a broken preview. Only moves if it is off screen.
+        if (FacilityMapAPI.focusFacility) FacilityMapAPI.focusFacility();
+      }
+      // The 3D viewer renders on demand and its buffer does not survive being
+      // hidden — ask for a frame rather than trusting whatever the resize
+      // observer happens to see (identical size = no callback = blank panel).
+      if (which === '3d' && _ctx && typeof _ctx.requestRender === 'function') {
+        _ctx.requestRender();
+      }
     }, 30);
+  }
+
+  // Sync the 3D/Map picker to the step.
+  function _syncStageToggle(step) {
+    var box = document.getElementById('fac-stage-toggle');
+    if (!box) return;
+    box.hidden = false;
+    var cur = _stageFor(step);
+    box.querySelectorAll('[data-stage]').forEach(function (b) {
+      var sel = (b.dataset.stage === cur);
+      b.classList.toggle('active', sel);
+      b.classList.toggle('aot-pill-btn-primary', sel);
+      b.setAttribute('aria-pressed', sel ? 'true' : 'false');
+    });
+  }
+
+  function wireStageToggle() {
+    var box = document.getElementById('fac-stage-toggle');
+    if (!box) return;
+    box.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-stage]');
+      if (!btn || !_step) return;
+      _stagePick[_step] = btn.dataset.stage;
+      _showStage(_stageFor(_step));
+      _syncStageToggle(_step);
+    });
   }
 
   function _stepLabel(step) {
@@ -1512,6 +1597,7 @@
 
     if (step === 'check') _refreshCheckLock();
     refreshStepStatus();
+    _syncStageToggle(step);
     _showStage(_stageFor(step));
 
     // Scroll the drawer body back to the top on step change
@@ -1631,6 +1717,9 @@
     // fittings-data-changed.
     document.addEventListener('fitting-added',   mark);
     document.addEventListener('fitting-removed', mark);
+    // Placing or dragging the facility on the map moves it without touching a
+    // single form field, so nothing else here would notice the change.
+    document.addEventListener('facility-placed', mark);
 
     document.addEventListener('facility-saved', function () { _setDirty(false); });
     // Loading a facility populates every field — that is not a user edit
@@ -1699,6 +1788,7 @@
     wireInspectorFocus();
     wireSegmentedToggles();
     wireBandToggle();
+    wireStageToggle();
     wireDirtyTracking();
     refreshStepStatus();
     // Placing/removing things and loading a facility both change step status

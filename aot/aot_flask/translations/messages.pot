@@ -24927,3 +24927,27 @@ msgid ""
 "Pinned the certificate of %(host)s. Verify this fingerprint out of band "
 "before trusting the connection: %(fp)s"
 msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr ""

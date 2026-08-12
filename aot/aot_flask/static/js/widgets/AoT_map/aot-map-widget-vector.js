@@ -2506,7 +2506,10 @@
             } catch (e) { return null; }
         }
 
-        function _attachActuatorLabels(uid, facilities, opts, map, refreshSeconds) {
+        // Poll period comes from opts via _runtimePollSeconds — no separate
+        // refreshSeconds argument, so the caller cannot pick a rate that disagrees
+        // with the fitting sensor labels reading the same /runtime response.
+        function _attachActuatorLabels(uid, facilities, opts, map) {
             _detachActuatorLabels(uid);
             if (!map || !window.maplibregl) return;
             if (!Array.isArray(facilities) || !facilities.length) return;
@@ -2714,15 +2717,40 @@
             // Initial fetch
             facilities.forEach(function (fac) { _fetchAndUpdateActLabels(uid, fac.unique_id); });
 
-            // Polling
-            var interval = Math.max(5, parseFloat(refreshSeconds || (opts && opts.period) || 60)) * 1000;
-            _actLabelState[uid].refreshMs = interval;   // [현황] 갱신도 동일 주기 사용
-            _actLabelState[uid].pollTimer = setInterval(function () {
-                if (document.hidden) return;
+            // Polling (output status). Shared start/restart so the live settings-modal
+            // setter below (output_update_interval) doesn't duplicate this logic.
+            function _startActuatorPolling(ms) {
                 var st = _actLabelState[uid];
                 if (!st) return;
-                st.facilities.forEach(function (fac) { _fetchAndUpdateActLabels(uid, fac.unique_id); });
-            }, interval);
+                if (st.pollTimer) clearInterval(st.pollTimer);
+                st.refreshMs = ms;
+                st.pollTimer = setInterval(function () {
+                    if (document.hidden) return;
+                    var st2 = _actLabelState[uid];
+                    if (!st2) return;
+                    st2.facilities.forEach(function (fac) { _fetchAndUpdateActLabels(uid, fac.unique_id); });
+                }, ms);
+            }
+            // One /runtime fetch feeds BOTH the actuator on/off chip (output) and the
+            // bay's representative sensor-value chip (input) — see
+            // _fetchAndUpdateActLabels — so the period comes from the shared
+            // _runtimePollSeconds, the same value the fitting sensor labels use.
+            // The 5s floor is unchanged; AoTFacilityRuntime's 8s TTL is what actually
+            // bounds the network rate (~1 req / 10s / facility, measured).
+            function _actuatorPollMs() {
+                return Math.max(5, _runtimePollSeconds(opts)) * 1000;
+            }
+            _startActuatorPolling(_actuatorPollMs());
+
+            // Expose a live setter for output_update_interval/input_update_interval
+            // (settings-modal live-apply): re-derive from current opts (same object
+            // reference the modal writes into before calling this) and restart, no
+            // re-attach.
+            if (_uidInstTop) {
+                _uidInstTop._setActuatorRefreshInterval = function () {
+                    _startActuatorPolling(_actuatorPollMs());
+                };
+            }
         }
 
         function _fetchAndUpdateActLabels(uid, facilityUuid) {
@@ -4126,9 +4154,13 @@
                                             } catch (eSL) {
                                             }
                                         }
-                                        // Actuator category labels (map markers + popup controls)
+                                        // Actuator category labels (map markers + popup controls).
+                                        // Refresh period is derived from wOpts inside
+                                        // (_runtimePollSeconds) — output_update_interval /
+                                        // input_update_interval, no longer the widget's
+                                        // overall refresh period.
                                         try {
-                                            _attachActuatorLabels(uniqueId, facilities3d, wOpts, map, vars.refreshSeconds);
+                                            _attachActuatorLabels(uniqueId, facilities3d, wOpts, map);
                                         } catch (eAL) {
                                         }
                                     }
@@ -5203,6 +5235,37 @@
         };
     }
 
+    /**
+     * Effective facility /runtime poll period, in seconds (single source of truth).
+     *
+     * ONE /runtime response feeds three consumers — actuator chips (output state),
+     * bay chips (output state + representative input value) and the fitting sensor
+     * labels (input values) — so they must agree on ONE rate. Letting the sensor
+     * labels follow input_update_interval alone desynced them: with the 300s input
+     * default the fitting labels went 10x staler (30s -> 300s) while the very same
+     * number on the bay chip, riding the 5s output poll, stayed fresh.
+     *
+     * Both knobs are honored by taking the SHORTER period — asking for fresh input
+     * values necessarily means fetching the response that carries them.
+     *
+     * This does NOT weaken the load protections, which live downstream and are the
+     * actual governors (measured 2026-08-12, 4 facilities): AoTFacilityRuntime
+     * coalesces concurrent callers and caches for 8s (aot-facility-runtime.js), so
+     * the network settles at ~1 request / 10s / facility no matter how fast this
+     * ticks, and aot-map-sensor-labels.js keeps its own Math.max(30, ...) floor.
+     * With the defaults (input 300 / output 5) this returns 5 -> the label poller
+     * floors to 30s, exactly the historical value.
+     */
+    function _runtimePollSeconds(o) {
+        o = o || {};
+        var cands = [o.input_update_interval, o.output_update_interval]
+            .map(function (v) { return parseFloat(v); })
+            .filter(function (n) { return !isNaN(n) && n > 0; });
+        if (cands.length) { return Math.min.apply(null, cands); }
+        var p = parseFloat(o.period);
+        return (!isNaN(p) && p > 0) ? p : 60;
+    }
+
     function _sensorLabelOptsFrom(o, uniqueId) {
         o = o || {};
         return {
@@ -5225,7 +5288,10 @@
             // Label collision avoidance (keep spacing instead of hiding) — uses the custom_option 'label_spacing' px.
             collision:    o.enable_label_collision !== false && o.enable_label_collision !== 'false',
             spacing:      (function () { var s = parseInt(o.label_spacing, 10); return isNaN(s) ? 0 : s; })(),
-            refresh_seconds: parseInt(o.period || 60, 10),
+            // 시설/구역 라벨은 INPUT 값을 보여주므로 input_update_interval 을 따른다.
+            // 단 같은 /runtime 응답을 쓰는 액추에이터·구역 칩 폴러와 반드시 같은
+            // 주기여야 하므로 판정은 _runtimePollSeconds 한 곳에서만 한다.
+            refresh_seconds: _runtimePollSeconds(o),
             // 시설 fitting 센서 라벨도 결국 Input 의 측정값 키다 — 공용 z-order 의
             // input 단을 그대로 쓴다. 예전에는 label_priority_facility 토글이
             // 이 값을 7/1 로 뒤집어 같은 지도 안에서 키가 site/zone 위로 갔다

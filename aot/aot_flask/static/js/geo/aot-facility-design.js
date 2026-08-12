@@ -7,19 +7,38 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
 (function () {
   'use strict';
 
+  // Cover materials. The thermal numbers behind each key live in
+  // facility_calc.MATERIALS (server side) and the render colours in
+  // core/materials.js — a key added here has to exist in both or it silently
+  // falls back to vinyl_double's look and figures.
+  //
+  // Opaque materials belong on the outer list and on side reinforcement (which
+  // reuses that list): a knee wall of concrete, brick or insulated panel is
+  // built, not draped. Inside they only make sense as film, so the inner list
+  // takes the pigmented films and the panel but not the masonry.
   var COVERS_OUTER = [
-    { v: 'vinyl_single', l: 'vinyl_single' },
-    { v: 'vinyl_double', l: 'vinyl_double' },
-    { v: 'po_film',      l: 'po_film' },
-    { v: 'polycarbonate', l: 'polycarbonate' },
-    { v: 'glass',        l: 'glass' }
+    { v: 'vinyl_single',      l: _T('mat_vinyl_single', 'Vinyl (single)') },
+    { v: 'vinyl_double',      l: _T('mat_vinyl_double', 'Vinyl (double)') },
+    { v: 'po_film',           l: _T('mat_po_film', 'PO film') },
+    { v: 'polycarbonate',     l: _T('mat_polycarbonate', 'Polycarbonate') },
+    { v: 'glass',             l: _T('mat_glass', 'Glass') },
+    { v: 'film_white_opaque', l: _T('mat_film_white_opaque', 'Opaque white film') },
+    { v: 'film_black',        l: _T('mat_film_black', 'Black film') },
+    { v: 'film_grey',         l: _T('mat_film_grey', 'Grey film') },
+    { v: 'sandwich_panel',    l: _T('mat_sandwich_panel', 'Sandwich panel') },
+    { v: 'concrete',          l: _T('mat_concrete', 'Concrete') },
+    { v: 'brick',             l: _T('mat_brick', 'Brick') }
   ];
   var COVERS_INNER = [
-    { v: 'vinyl_single',     l: 'vinyl_single' },
-    { v: 'non_woven_fabric', l: 'non_woven_fabric' },
-    { v: 'pe_film',          l: 'pe_film' },
-    { v: 'polycarbonate',    l: 'polycarbonate' },
-    { v: 'air_cushion',      l: 'air_cushion' }
+    { v: 'vinyl_single',      l: _T('mat_vinyl_single', 'Vinyl (single)') },
+    { v: 'non_woven_fabric',  l: _T('mat_non_woven_fabric', 'Non-woven fabric') },
+    { v: 'pe_film',           l: _T('mat_pe_film', 'PE film') },
+    { v: 'polycarbonate',     l: _T('mat_polycarbonate', 'Polycarbonate') },
+    { v: 'air_cushion',       l: _T('mat_air_cushion', 'Air cushion') },
+    { v: 'film_white_opaque', l: _T('mat_film_white_opaque', 'Opaque white film') },
+    { v: 'film_black',        l: _T('mat_film_black', 'Black film') },
+    { v: 'film_grey',         l: _T('mat_film_grey', 'Grey film') },
+    { v: 'sandwich_panel',    l: _T('mat_sandwich_panel', 'Sandwich panel') }
   ];
 
   var _layers = [
@@ -766,28 +785,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   var _inputDevices    = (window.FAC_INPUT_DEVICES    || []);
   var _functionDevices = (window.FAC_FUNCTION_DEVICES || []);
 
-  function _findDevice(deviceId) {
-    return _inputDevices.find(function (d) { return d.input_id === deviceId; }) ||
-           _functionDevices.find(function (d) { return d.input_id === deviceId; }) || null;
-  }
-
   var OutputCache = { list: [], loaded: false };
-
-  // measurement slug → measurement_type key used by facility_sensors
-  var _MEAS_TYPE_MAP = {
-    temperature: 'temperature', temp: 'temperature', temp_c: 'temperature',
-    humidity: 'humidity', humidity_pct: 'humidity', relative_humidity: 'humidity',
-    co2: 'co2', co2_ppm: 'co2', carbon_dioxide: 'co2',
-    vpd: 'vpd', vpd_kpa: 'vpd', vapor_pressure_deficit: 'vpd',
-    light: 'light', solar: 'light', solar_wm2: 'light', irradiance: 'light',
-    ppfd: 'light', lux: 'light', par: 'light', radiation: 'light',
-    wind_speed: 'wind_speed', wind: 'wind_speed', wind_ms: 'wind_speed', windspeed: 'wind_speed',
-    speed: 'wind_speed',
-    wind_direction: 'wind_direction', wind_dir: 'wind_direction',
-    wind_bearing: 'wind_direction', wind_deg: 'wind_direction', direction: 'wind_direction',
-    rain: 'rain', rainfall: 'rain', rainrate: 'rain', rain_rate: 'rain',
-    precipitation: 'rain', length: 'rain', depth: 'rain',
-  };
 
   function _loadOutputs(force) {
     if (OutputCache.loaded && !force) return Promise.resolve(OutputCache.list);
@@ -953,8 +951,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if (actG) actG.style.display = isIrrLayer ? '' : 'none';
       if (isIrrLayer) _fillActuatorSelect(f);
       if (inpG) inpG.style.display = 'none';
-      var chsG = document.getElementById('fi-group-channels');
-      if (chsG) chsG.style.display = 'none';
       var inheritRow = document.getElementById('fi-group-inherit');
       _rowShow(inheritRow, false);
       if (isIrrLayer) {
@@ -1051,7 +1047,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     // Actuator (output device). Toggle the two dropdown groups accordingly.
     var actGroup         = document.getElementById('fi-group-actuator');
     var inpGroup         = document.getElementById('fi-group-input');
-    var channelsGroup    = document.getElementById('fi-group-channels');
     var sensorRoleGroup  = document.getElementById('fi-group-sensor-role');
     var measTypeGroup    = document.getElementById('fi-group-measurement-type');
     var fanRoleGroup     = document.getElementById('fi-group-fan-role');
@@ -1059,7 +1054,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     var isFan    = (f.kind === 'fan');
     _rowShow(actGroup, !isSensor);
     _rowShow(inpGroup, isSensor);
-    _rowShow(channelsGroup, isSensor && !!f.input_id);
     _rowShow(sensorRoleGroup, isSensor);
     if (measTypeGroup)   measTypeGroup.style.display   = isSensor ? '' : 'none';
     // Fan role (circulation/exhaust/intake) — maps a generic 'fan' fitting to a
@@ -1104,9 +1098,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         devSel.value = f.input_id || '';
       }
 
-      // Step 2: Render channel checkboxes for the selected device.
-      _renderChannelCheckboxes(f);
-
       // sensor_role: indoor (default) | outdoor
       var roleSel = document.getElementById('fi-sensor-role');
       if (roleSel) roleSel.value = f.sensor_role || 'indoor';
@@ -1121,114 +1112,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     _renderList();
     _renderInspector();
   }
-
-  // Render channel checkboxes for the selected sensor fitting.
-  // Called from _renderInspector() and from the device-change event handler.
-  // Custom dropdown for channel multi-select.
-  // Uses position:fixed so it escapes the inspector's overflow:hidden container.
-  var _chDropdownOpen = false;
-
-  function _closeChDropdown() {
-    var dd = document.getElementById('fi-ch-dropdown');
-    if (dd) dd.style.display = 'none';
-    _chDropdownOpen = false;
-  }
-
-  function _updateChBtn(f) {
-    var btn = document.getElementById('fi-ch-btn');
-    if (!btn) return;
-    var chs = Array.isArray(f && f.channel_measurements) ? f.channel_measurements : [];
-    if (chs.length === 0) {
-      btn.textContent = _T('Select Channel','Select Channel');
-    } else if (chs.length === 1) {
-      var dev = f.input_id && _findDevice(f.input_id);
-      var ch  = dev && dev.channels.find(function (c) { return c.measurement_id === chs[0].measurement_id; });
-      btn.textContent = ch ? (ch.measurement || ch.measurement_id) : chs[0].measurement_id;
-    } else {
-      btn.textContent = chs.length + _T('selected_word','selected');
-    }
-  }
-
-  function _renderChannelCheckboxes(f) {
-    var grp = document.getElementById('fi-group-channels');
-    var btn = document.getElementById('fi-ch-btn');
-    var dd  = document.getElementById('fi-ch-dropdown');
-    if (!btn || !dd) return;
-
-    var devId = f ? (f.input_id || '') : '';
-    var dev   = devId && _findDevice(devId);
-
-    if (!dev || !dev.channels || dev.channels.length === 0) {
-      _closeChDropdown();
-      if (grp) grp.style.display = devId ? '' : 'none';
-      _updateChBtn(f);
-      return;
-    }
-    if (grp) grp.style.display = '';
-    _updateChBtn(f);
-
-    // Build dropdown content
-    var selectedIds = {};
-    var chs = Array.isArray(f.channel_measurements) ? f.channel_measurements : [];
-    if (chs.length === 0 && f.measurement_id) {
-      chs = [{ measurement_id: f.measurement_id, measurement_type: f.measurement_type || null }];
-    }
-    chs.forEach(function (c) { selectedIds[c.measurement_id] = true; });
-
-    var rows = dev.channels.map(function (ch) {
-      var mtype   = _MEAS_TYPE_MAP[(ch.measurement || '').toLowerCase()] || '';
-      var unitStr = ch.unit ? ' (' + ch.unit + ')' : '';
-      var label   = (mtype ? '[' + mtype + '] ' : '') + (ch.measurement || ch.measurement_id) + unitStr;
-      var chkd    = selectedIds[ch.measurement_id] ? ' checked' : '';
-      var cid     = 'fi-ch-' + ch.measurement_id;
-      return '<label class="ch-item" for="' + cid + '">' +
-        '<input type="checkbox" id="' + cid + '" data-meas-id="' + ch.measurement_id + '" data-mtype="' + mtype + '"' + chkd + '>' +
-        '<span>' + label + '</span>' +
-        '</label>';
-    });
-    dd.innerHTML = rows.join('');
-
-    // Checkbox change → update fitting data
-    dd.querySelectorAll('input[type="checkbox"]').forEach(function (chk) {
-      chk.addEventListener('change', function () {
-        var fitting = _getSel(); if (!fitting) return;
-        var newChs = [];
-        dd.querySelectorAll('input[type="checkbox"]:checked').forEach(function (c) {
-          newChs.push({ measurement_id: c.dataset.measId, measurement_type: c.dataset.mtype || null });
-        });
-        fitting.channel_measurements = newChs;
-        fitting.measurement_id   = newChs.length > 0 ? newChs[0].measurement_id : null;
-        fitting.measurement_type = newChs.length > 0 ? (newChs[0].measurement_type || null) : null;
-        _updateChBtn(fitting);
-        _renderList();
-        document.dispatchEvent(new CustomEvent('fittings-data-changed'));
-      });
-    });
-
-    // Button toggle — position dropdown with fixed coords above the button
-    btn.onclick = function (e) {
-      e.stopPropagation();
-      if (_chDropdownOpen) { _closeChDropdown(); return; }
-      var rect = btn.getBoundingClientRect();
-      dd.style.display = 'block';
-      dd.style.left    = rect.left + 'px';
-      // Open upward from button
-      dd.style.top     = (rect.top - dd.offsetHeight - 4) + 'px';
-      // Clamp to viewport if it would go above screen
-      var top = rect.top - dd.offsetHeight - 4;
-      if (top < 8) top = rect.bottom + 4;
-      dd.style.top = top + 'px';
-      _chDropdownOpen = true;
-    };
-  }
-
-  // Close channel dropdown when clicking outside
-  document.addEventListener('click', function (e) {
-    if (!_chDropdownOpen) return;
-    var dd  = document.getElementById('fi-ch-dropdown');
-    var btn = document.getElementById('fi-ch-btn');
-    if (dd && !dd.contains(e.target) && e.target !== btn) _closeChDropdown();
-  });
 
   // Read the current facility dimensions from the form (best-effort fallback).
   function _facilityDims() {
@@ -1418,9 +1301,18 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if (f.id === sourceId || f.link_group !== groupId) return;
       if (f.inherit_size === false) return;   // detached replica
       f.kind = src.kind;
-      f.name = src.name;
+      // Envelope labels belong to the generator ("Roof vent Left side #2"),
+      // which rewrites them on every regeneration — copying the source's label
+      // over its siblings only makes them all read alike until then.
+      if (f.source !== 'envelope') f.name = src.name;
       f.size = { w: src.size.w, h: src.size.h, d: src.size.d };
       f.rotation_deg = src.rotation_deg;
+      // Carry the source's detachment across too. A member left on automatic
+      // geometry while holding a hand-set size is a contradiction the next
+      // envelope regeneration resolves by overwriting it — which is exactly
+      // how "I resized one roof vent and the others snapped back" happened:
+      // the size reached the siblings, the detachment did not.
+      if (src._auto_geom === false) f._auto_geom = false;
       changed = true;
     });
     return changed;
@@ -1902,6 +1794,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
             var gInfo = g.replica_info || {};
             // Always propagate rotation
             g.rotation_deg = f.rotation_deg;
+            var moved = true;
             // Position propagation requires compatible face
             if (gInfo.face === 'roof' && fInfo.face === 'roof') {
               var gLocalX = gInfo.x_mirror ? (span - masterLocalX) : masterLocalX;
@@ -1926,7 +1819,15 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
               };
             } else {
               // Unknown / legacy: keep position, only rotation propagates
+              moved = false;
             }
+            // Same rule as _syncGroup: a member that received a hand-set
+            // placement has to leave automatic geometry with the source, or the
+            // next envelope regeneration puts it back where the generator wants
+            // it while the edited one stays put. Members that kept their own
+            // position stay automatic — freezing them would quietly stop them
+            // tracking the facility's dimensions.
+            if (moved && f._auto_geom === false) g._auto_geom = false;
             dirty.push({ id: g.id, position: g.position, rotation_deg: g.rotation_deg });
           });
         }
@@ -2089,7 +1990,6 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       f.channel_measurements = [];
       f.measurement_id     = null;
       f.measurement_type   = null;
-      _renderChannelCheckboxes(f);
       _syncSwapButtons(f);
       _renderList();
       document.dispatchEvent(new CustomEvent('fittings-data-changed'));
@@ -2990,6 +2890,17 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       var f = _fittings.find(function (x) { return x.id === id; });
       if (!f || f.source !== 'envelope') return false;
       f._auto_geom = (on !== false);
+      // The whole group left automatic together when one of them was resized
+      // (see _syncGroup), so it has to come back together — otherwise "back to
+      // automatic" restores the one item on screen and leaves its siblings
+      // stuck at the hand-set size with no visible reason.
+      if (f.link_group && f.inherit_size !== false) {
+        _fittings.forEach(function (g) {
+          if (g.id === f.id || g.link_group !== f.link_group) return;
+          if (g.source !== 'envelope' || g.inherit_size === false) return;
+          g._auto_geom = f._auto_geom;
+        });
+      }
       return true;
     },
     setKind: function (id, kind) {
@@ -3022,7 +2933,14 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       if ('actuator_id' in props) _syncActuatorGroup(id);
       // Keep channel_measurements[0] in sync with top-level sensor channel fields
       // so facility_integration.py (which prefers channel_measurements) sees the change.
-      if (f.kind === 'sensor' && ('measurement_id' in props || 'measurement_type' in props)) {
+      //
+      // Skipped when the caller passed the array itself: it already said exactly
+      // which channels it wants, and the sync below would fabricate a row from
+      // the top-level fields — clearing the last channel arrives as
+      // {channel_measurements: [], measurement_id: null} and used to come back
+      // out as one phantom channel with a null id.
+      if (f.kind === 'sensor' && !('channel_measurements' in props) &&
+          ('measurement_id' in props || 'measurement_type' in props)) {
         if (!Array.isArray(f.channel_measurements)) f.channel_measurements = [];
         if (f.channel_measurements.length === 0) f.channel_measurements.push({});
         if ('measurement_id'   in props) f.channel_measurements[0].measurement_id   = props.measurement_id;
@@ -3045,6 +2963,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     center: null,           // [lng, lat] — facility center on the map
     orientationDeg: 0,      // 0~359, rotation around center
     placeMode: false,       // true while waiting for a single click to set center
+    baseLayer: null,        // AOT_GEO_CONFIG layer the base style was built from
+    pendingFit: false,      // selected map has no saved camera → fit its shapes
     sites: [],              // site features for the active map
     selectedSiteUuid: null, // GeoShape unique_id of the selected site
     _baseStyleLayerIds: []  // snapshot of base style layer IDs for layer panel
@@ -3072,7 +2992,35 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     isReady: function () { return !!State.map; },
     // Has the facility been placed on the map yet? The step bar uses this to
     // flag the position step as incomplete.
-    hasCenter: function () { return !!State.center; }
+    hasCenter: function () { return !!State.center; },
+    // Bring the placed facility back into view. The envelope step can show this
+    // same map, and arriving there to an empty patch of tiles (because the
+    // camera was last left somewhere else) reads as "the preview is broken".
+    // Only moves when the facility is actually off screen.
+    focusFacility: function (opts) {
+      if (!State.map || !State.center) return false;
+      const always = !!(opts && opts.always);
+      if (!always) {
+        try {
+          if (State.map.getBounds().contains(State.center)) return false;
+        } catch (e) { /* bounds unavailable before first render — just move */ }
+      }
+      State.map.stop();
+      State.map.easeTo({ center: State.center, duration: 400 });
+      return true;
+    },
+    // Rebuild the Three.js facility overlay after the base style was replaced.
+    // setStyle({diff:false}) throws every layer away, and a custom layer cannot
+    // be restored from the captured style — its render hooks are not in there.
+    // Only this module knows which facilities belong on the map, so the layer
+    // panel calls back here once the new style has settled.
+    restore3DOverlay: function () {
+      if (!State.map || !window.AoTFacilityMap3D) return;
+      AoTFacilityMap3D.attach(State.map, []);
+      const sel = document.getElementById('map-selector');
+      if (sel && sel.value) loadSavedFacilities(sel.value);
+      _update3DPreview();
+    }
   };
 
   const SITE_SRC = 'map-sites';
@@ -3109,6 +3057,9 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
   function resolveBaseStyle() {
     const cfg = window.AOT_GEO_CONFIG || {};
     const layers = Array.isArray(cfg.layers) ? cfg.layers : [];
+    // Remember which layer won: the camera ceiling depends on how deep that
+    // layer's tiles actually go (see FacilityMapZoom).
+    State.baseLayer = null;
 
     // 1. First active raster layer (xyz/wms/tile)
     for (const L of layers) {
@@ -3117,7 +3068,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       const opts = L.options || L;
       const url = opts.url || opts.tileUrl || opts.tiles || L.url;
       if (url && (t.includes('xyz') || t.includes('tile') || t.includes('raster') || t.includes('osm'))) {
-        return rasterStyleFromUrl(Array.isArray(url) ? url : [url], opts.attribution || L.attribution);
+        State.baseLayer = L;
+        return rasterStyleFromUrl(Array.isArray(url) ? url : [url], opts.attribution || L.attribution, L);
       }
     }
 
@@ -3127,7 +3079,8 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
       const p = providers[key];
       const url = (p && (p.url || p.tileUrl)) || null;
       if (url) {
-        return rasterStyleFromUrl([url], (p && p.attribution) || '');
+        State.baseLayer = p;
+        return rasterStyleFromUrl([url], (p && p.attribution) || '', p);
       }
     }
 
@@ -3136,7 +3089,7 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     return FALLBACK_RASTER_STYLE;
   }
 
-  function rasterStyleFromUrl(tiles, attribution) {
+  function rasterStyleFromUrl(tiles, attribution, layer) {
     return {
       version: 8,
       sources: {
@@ -3144,7 +3097,11 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
           type: 'raster',
           tiles: tiles,
           tileSize: 256,
-          maxzoom: 19,
+          // The tile server's own ceiling, not the camera's. Past this MapLibre
+          // upscales the deepest real tile, which is what makes digital zoom work.
+          maxzoom: window.FacilityMapZoom
+            ? FacilityMapZoom.nativeMaxZoom(layer)
+            : 19,
           attribution: attribution || ''
         }
       },
@@ -3186,14 +3143,21 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     const cfg = window.AOT_GEO_CONFIG || {};
     const initLat  = parseFloat(cfg.default_lat)  || 37.5665;
     const initLng  = parseFloat(cfg.default_lng)  || 126.9780;
-    const initZoom = parseFloat(cfg.zoom)         || 13;
+
+    // resolveBaseStyle() picks the layer, so it has to run before the ceilings
+    // are computed from it.
+    const style    = resolveBaseStyle();
+    const maxZoom  = FacilityMapZoom.cameraMaxZoom(State.baseLayer);
+    const initZoom = FacilityMapZoom.initialZoom(State.baseLayer, 13);
 
     State.map = new maplibregl.Map({
       container: 'facility-map-canvas',
-      style: resolveBaseStyle(),
+      style: style,
       center: [initLng, initLat],
       zoom: initZoom,
-      maxZoom: 19,             // basemap tiles end at z=19
+      // Global geo settings, same as /geo/design — a hardcoded ceiling here made
+      // the two maps stop zooming at different places.
+      maxZoom: maxZoom,
       pitch: 45,               // start in 3D camera so extrusion is visible
       bearing: 0,
       doubleClickZoom: false   // legacy; no-op since draw mode removed
@@ -3284,6 +3248,9 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         if (!State.placeMode) State.map.getCanvas().style.cursor = '';
       });
 
+      // Drag-to-move the facility under edit (needs facility-preview-fill)
+      bindFacilityDrag();
+
       // Register Three.js 3D overlay — hides fill-extrusion boxes, uses real mesh
       if (window.AoTFacilityMap3D) {
         AoTFacilityMap3D.attach(State.map, []);
@@ -3305,19 +3272,76 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     document.getElementById('map-selector').addEventListener('change', (e) => {
       const opt = e.target.selectedOptions[0];
       if (!opt) return;
-      const lat = parseFloat(opt.dataset.lat);
-      const lng = parseFloat(opt.dataset.lng);
-      const zoom = parseFloat(opt.dataset.zoom) || 13;
-      if (!isNaN(lat) && !isNaN(lng)) {
-        State.map.flyTo({ center: [lng, lat], zoom });
-      }
+      // No saved camera on this map → frame its shapes once they arrive.
+      State.pendingFit = !applyMapViewport(opt);
       // Reload saved facilities + sites for the newly selected map
-      loadSavedFacilities(opt.value);
-      loadSites(opt.value);
+      loadSavedFacilities(opt.value).then(fitLoadedMapContents);
+      loadSites(opt.value).then(fitLoadedMapContents);
     });
 
     const siteSel = document.getElementById('site-selector');
     if (siteSel) siteSel.addEventListener('change', (e) => onSiteChange(e.target.value));
+  }
+
+  /**
+   * Move the camera to the GeoMap the picker now points at.
+   *
+   * Three things used to make the change look like it had not registered:
+   *  · a map with no saved centre (lat/lng NaN) moved nothing at all, not even
+   *    the zoom, so picking it appeared to be a no-op;
+   *  · a saved zoom deeper than the old hardcoded ceiling was clamped, so the
+   *    view stayed where it was;
+   *  · flyTo animates, and a fly that is interrupted (or starts while the
+   *    canvas still carries a stale size from being built hidden) lands
+   *    somewhere other than the target.
+   * Re-measure, stop whatever is in flight, then jump.
+   *
+   * Returns false when the map has no saved camera at all, so the caller can
+   * fall back to the shapes it just loaded.
+   */
+  function applyMapViewport(opt) {
+    if (!State.map || !opt) return false;
+    const lat  = parseFloat(opt.dataset.lat);
+    const lng  = parseFloat(opt.dataset.lng);
+    const zoom = parseFloat(opt.dataset.zoom);
+
+    const target = {};
+    if (isFinite(lat) && isFinite(lng)) target.center = [lng, lat];
+    if (isFinite(zoom)) target.zoom = Math.min(zoom, State.map.getMaxZoom());
+    if (!target.center) return false;
+
+    State.map.stop();
+    State.map.resize();
+    State.map.jumpTo(target);
+    return true;
+  }
+
+  /**
+   * Frame everything the selected map holds. Used when the map has never had a
+   * camera saved: showing its sites beats jumping to a default coordinate that
+   * has nothing to do with it.
+   */
+  function fitLoadedMapContents() {
+    if (!State.map || !State.pendingFit) return;
+    const geoms = (State.sites || []).map(f => f && f.geometry).filter(Boolean);
+    try {
+      const src = State.map.getSource('facility-prod');
+      const data = src && src._data;
+      (data && data.features || []).forEach((f) => { if (f.geometry) geoms.push(f.geometry); });
+    } catch (e) { /* source not ready — sites alone are enough */ }
+    if (!geoms.length) return;
+
+    let bounds = null;
+    geoms.forEach((g) => {
+      const b = geometryBounds(g);
+      if (!b) return;
+      if (!bounds) bounds = b;
+      else { bounds.extend(b.getSouthWest()); bounds.extend(b.getNorthEast()); }
+    });
+    if (!bounds) return;
+    State.pendingFit = false;
+    State.map.stop();
+    State.map.fitBounds(bounds, { padding: 60, duration: 0, maxZoom: 18 });
   }
 
   function emptyFC() {
@@ -3521,10 +3545,116 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     rebuildOuterGeometry();
     finishPlaceMode();
     debouncedCompute();
+    _notifyPlaced();
   }
 
   function onMapDblClick(e) {
     // No-op — kept for backward compat with previous draw-mode listeners
+  }
+
+  // =========================================================
+  // Drag the placed facility
+  // =========================================================
+  // Nudging a facility by a few metres used to mean starting "Place on Map"
+  // again and re-clicking the new centre by eye — there was no way to adjust
+  // what was already there. The preview footprint is the handle: grab it and
+  // the whole model follows the pointer.
+  //
+  // The footprint is the ground polygon (facility-preview-fill). The Three.js
+  // mesh drawn over it is a custom layer, which MapLibre cannot hit-test, so
+  // the polygon is the only grabbable part — with the camera pitched, that
+  // means grabbing at the model's base rather than its roof.
+  let _drag = null;   // {dLng, dLat, next, moved, raf} while a drag is running
+
+  function bindFacilityDrag() {
+    const map = State.map;
+    const canvas = () => map.getCanvas();
+
+    // mousemove, not mouseenter: after a drag ends the pointer is still inside
+    // the polygon, and enter will not fire again to restore the grab cursor.
+    map.on('mousemove', 'facility-preview-fill', () => {
+      if (State.placeMode || _drag) return;
+      canvas().style.cursor = 'move';
+    });
+    map.on('mouseleave', 'facility-preview-fill', () => {
+      if (State.placeMode || _drag) return;
+      canvas().style.cursor = '';
+    });
+
+    map.on('mousedown', 'facility-preview-fill', (e) => {
+      if (State.placeMode || !State.center) return;
+      // Left button only. Right button and ctrl+left are the camera's — they
+      // rotate and pitch, and they must keep doing that over the facility too.
+      const oe = e.originalEvent || {};
+      if (oe.button !== 0 || oe.ctrlKey) return;
+      e.preventDefault();                 // keep dragPan from panning the map
+      _startDrag(e.lngLat);
+      map.on('mousemove', _onDragMove);
+      window.addEventListener('mouseup', _endDrag, { once: true });
+    });
+
+    // Touch: one finger drags the facility, two keep meaning zoom/rotate.
+    map.on('touchstart', 'facility-preview-fill', (e) => {
+      if (State.placeMode || !State.center) return;
+      if (e.points && e.points.length !== 1) return;
+      e.preventDefault();
+      _startDrag(e.lngLat);
+      map.on('touchmove', _onDragMove);
+      window.addEventListener('touchend', _endDrag, { once: true });
+      window.addEventListener('touchcancel', _endDrag, { once: true });
+    });
+  }
+
+  function _startDrag(lngLat) {
+    // Hold the grab offset, not the centre: grabbing a corner must not teleport
+    // the facility so its centre sits under the pointer.
+    _drag = {
+      dLng:  State.center[0] - lngLat.lng,
+      dLat:  State.center[1] - lngLat.lat,
+      next:  null,
+      moved: false,
+      raf:   0
+    };
+    State.map.getCanvas().style.cursor = 'grabbing';
+  }
+
+  function _onDragMove(e) {
+    if (!_drag) return;
+    _drag.next  = [e.lngLat.lng + _drag.dLng, e.lngLat.lat + _drag.dLat];
+    _drag.moved = true;
+    if (_drag.raf) return;
+    // One rebuild per frame. Move events arrive per pixel, and each rebuild
+    // regenerates the parametric 3D mesh.
+    _drag.raf = requestAnimationFrame(() => {
+      if (!_drag) return;
+      _drag.raf = 0;
+      State.center = _drag.next;
+      rebuildOuterGeometry();
+    });
+  }
+
+  function _endDrag() {
+    const map = State.map;
+    map.off('mousemove', _onDragMove);
+    map.off('touchmove', _onDragMove);
+    if (!_drag) return;
+    if (_drag.raf) cancelAnimationFrame(_drag.raf);
+    const moved = _drag.moved;
+    const last  = _drag.next;
+    _drag = null;
+    map.getCanvas().style.cursor = '';
+    if (!moved) return;
+    // Land on the last pointer position even if its frame never ran.
+    if (last) { State.center = last; rebuildOuterGeometry(); }
+    debouncedCompute();
+    _notifyPlaced();
+  }
+
+  // The unsaved-changes badge watches the drawer's form fields, and moving the
+  // facility touches none of them — without this the page would let a nudged
+  // facility be navigated away from without a word.
+  function _notifyPlaced() {
+    document.dispatchEvent(new CustomEvent('facility-placed'));
   }
 
   /** Build outer GeoJSON from form: dimensions + center + orientation + structure/bays/spacing. */
@@ -4256,6 +4386,19 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     document.addEventListener('envelope-data-changed',  debouncedCompute); // compute only, no 3D rebuild
     document.addEventListener('actuator-changed',       debouncedCompute);
     document.addEventListener('fittings-changed',       debouncedCompute);
+    // The envelope step can put the map on the stage, and the model shown there
+    // is the same parametric mesh — so vents, curtains and layers have to reach
+    // it too. Only the footprint-changing fields did before, which left the map
+    // preview showing an envelope the form had already moved on from.
+    document.addEventListener('envelope-changed',       debounced3DPreview);
+    document.addEventListener('envelope-data-changed',  debounced3DPreview);
+    // Individual components too — resizing a vent or placing a fan changes the
+    // same mesh the map draws. These three cover every edit path: the inspector
+    // and group sync end in fittings-data-changed, placement and deletion have
+    // their own events.
+    document.addEventListener('fittings-data-changed',  debounced3DPreview);
+    document.addEventListener('fitting-added',          debounced3DPreview);
+    document.addEventListener('fitting-removed',        debounced3DPreview);
     // Aggregate panel was retired with the legacy Fittings form section.
     // (FittingsUI.aggregate() is still public for compute summary use.)
 
@@ -4373,7 +4516,25 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
         spacing_m:       parseFloat((document.getElementById('spacing-m') || {}).value) || 0,
       },
       envelope: window.EnvelopeUI ? EnvelopeUI.read() : {},
+      // The map's model is built by the same buildFacilityMesh() the 3D stage
+      // uses, and without this it only ever saw the envelope — so every edit to
+      // an individual component (a resized vent, anything placed by hand) showed
+      // in 3D and not on the map. readAll(), not read(): this is a scene, not a
+      // save, so envelope-derived rows belong in it too.
+      fittings: window.FittingsUI ? FittingsUI.readAll() : [],
+      view_options: {
+        category_visibility: (window.FittingsUI && FittingsUI.getCategoryVisibility)
+          ? FittingsUI.getCategoryVisibility() : undefined
+      },
     };
+  }
+
+  // Envelope edits arrive in bursts (a slider drag fires per step); rebuilding
+  // the mesh on each one is wasted work the frame never shows.
+  let _previewTimer = null;
+  function debounced3DPreview() {
+    clearTimeout(_previewTimer);
+    _previewTimer = setTimeout(_update3DPreview, 150);
   }
 
   function _update3DPreview() {
@@ -4422,6 +4583,14 @@ function _T(k,f){var d=(typeof window!=="undefined"&&window._IEC)||{};return (d[
     html += '<span>'+_T('volume','Volume')+' <b>' + _integFmt(cm.volume_m3, 1) + ' m³</b></span>';
     html += '<span>'+_T('envelope','Envelope')+' <b>' + _integFmt(cm.envelope_m2, 1) + ' m²</b></span>';
     html += '<span>'+_T('u_eff','U-effective')+' <b>' + _integFmt(cm.u_effective, 3) + '</b></span>';
+    // With an opaque cover the absorbed share IS the solar load, so the number
+    // that separates a white roof from a black one has to be on screen —
+    // otherwise the cooling figure moves for no visible reason.
+    if (cm.absorptance != null) {
+      html += '<span>'+_T('absorptance','Absorptance')+' <b>' + _integFmt(cm.absorptance, 2) + '</b>'
+            + ' <span class="aot-modal-body-text">('+_T('solar_absorbed','solar absorbed')+' '
+            + _integFmt(cm.solar_absorbed_kw, 2) + ' kW)</span></span>';
+    }
     html += '<span>'+_T('vent_area','Vent area')+' <b>' + _integFmt(cm.vent_open_m2, 2) + ' m²</b>'
           + ' <span class="aot-tag' + srcCls + '">' + _integEsc(srcLbl) + '</span></span>';
     html += '</div>';

@@ -27091,3 +27091,95 @@ msgstr "今すぐアップデートを確認"
 #: aot/aot_flask/routes_admin.py
 msgid "You are already on the latest version (%(version)s)."
 msgstr "すでに最新バージョンです（%(version)s）。"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Vinyl (single)"
+msgstr "ビニール（単層）"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Vinyl (double)"
+msgstr "ビニール（二重）"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "PO film"
+msgstr "POフィルム"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "PE film"
+msgstr "PEフィルム"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Polycarbonate"
+msgstr "ポリカーボネート"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Glass"
+msgstr "ガラス"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Non-woven fabric"
+msgstr "不織布"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Air cushion"
+msgstr "エアクッション"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Opaque white film"
+msgstr "不透明白色フィルム"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Black film"
+msgstr "黒色フィルム"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Grey film"
+msgstr "グレーフィルム"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Sandwich panel"
+msgstr "サンドイッチパネル"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Concrete"
+msgstr "コンクリート"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Brick"
+msgstr "レンガ"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Absorptance"
+msgstr "吸収率"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "solar absorbed"
+msgstr "日射吸収"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "%(n)s channels"
+msgstr "チャンネル %(n)s個"
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "データ転送周期"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "ウィジェットの更新周期(秒)"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "入力値の更新周期(秒)"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "パネルの入力測定値を更新する周期です。"
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "出力状態の更新周期(秒)"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "地図上の出力のON/OFF状態を更新する周期です。"

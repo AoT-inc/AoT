@@ -25676,3 +25676,27 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "ช่วงเวลาการส่งข้อมูล"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "ช่วงเวลารีเฟรชวิดเจ็ต (วินาที)"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "ช่วงเวลารีเฟรชค่าอินพุต (วินาที)"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "ความถี่ในการรีเฟรชค่าการวัดอินพุตในแผงควบคุม"
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "ช่วงเวลารีเฟรชสถานะเอาต์พุต (วินาที)"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "ความถี่ในการรีเฟรชสถานะเปิด/ปิดของเอาต์พุตบนแผนที่"

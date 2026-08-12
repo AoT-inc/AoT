@@ -25903,3 +25903,27 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "Adatátviteli időköz"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "Widget frissítési időköze (másodperc)"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "Bemeneti érték frissítési időköze (másodperc)"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "Milyen gyakran frissülnek a panelen a bemeneti mérési értékek."
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "Kimeneti állapot frissítési időköze (másodperc)"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "Milyen gyakran frissül a térképen a kimenet be/ki állapota."

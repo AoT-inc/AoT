@@ -25905,3 +25905,27 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "Duomenų perdavimo periodas"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "Valdiklio atnaujinimo periodas (sekundėmis)"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "Įvesties reikšmių atnaujinimo periodas (sekundėmis)"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "Kaip dažnai skydelyje atnaujinamos įvesties matavimo reikšmės."
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "Išvesties būsenos atnaujinimo periodas (sekundėmis)"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "Kaip dažnai žemėlapyje atnaujinama išvesties įjungimo/išjungimo būsena."

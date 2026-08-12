@@ -5,12 +5,29 @@
 
   // opacity       — actual covering material property (based on light transmittance, simulation input)
   // renderOpacity — 3D-rendering-only transparency (falls back to opacity when unset)
+  // Opaque materials are NOT drawn fully opaque. The model is an editor: the
+  // user places sensors and actuators inside it, and a solid concrete wall
+  // would hide everything behind it. They are drawn markedly denser than the
+  // glazing (0.55–0.68 against 0.18–0.46) so the difference reads at a glance
+  // while the interior stays workable.
   const _COVER_OPTS = {
-    vinyl_single:  { color: 0x9ecfef, opacity: 0.75, renderOpacity: 0.25 },
-    vinyl_double:  { color: 0x9ecfef, opacity: 0.68, renderOpacity: 0.32 },
-    po_film:       { color: 0xbcdff0, opacity: 0.72, renderOpacity: 0.28 },
-    polycarbonate: { color: 0xdaeeff, opacity: 0.54, renderOpacity: 0.46 },
-    glass:         { color: 0xc8eecc, opacity: 0.82, renderOpacity: 0.18 },
+    vinyl_single:      { color: 0x9ecfef, opacity: 0.75, renderOpacity: 0.25 },
+    vinyl_double:      { color: 0x9ecfef, opacity: 0.68, renderOpacity: 0.32 },
+    po_film:           { color: 0xbcdff0, opacity: 0.72, renderOpacity: 0.28 },
+    polycarbonate:     { color: 0xdaeeff, opacity: 0.54, renderOpacity: 0.46 },
+    glass:             { color: 0xc8eecc, opacity: 0.82, renderOpacity: 0.18 },
+    // Inner-layer materials. They had no entry here at all and fell back to
+    // coverInner's generic pale blue, so a non-woven liner and a bubble film
+    // were drawn identically.
+    non_woven_fabric:  { color: 0xf0ece1, opacity: 0.50, renderOpacity: 0.30 },
+    pe_film:           { color: 0xd8ecf5, opacity: 0.85, renderOpacity: 0.22 },
+    air_cushion:       { color: 0xdff1fa, opacity: 0.75, renderOpacity: 0.26 },
+    film_white_opaque: { color: 0xf2f2f0, opacity: 0.0,  renderOpacity: 0.58 },
+    film_black:        { color: 0x33383b, opacity: 0.0,  renderOpacity: 0.60 },
+    film_grey:         { color: 0x9aa0a4, opacity: 0.0,  renderOpacity: 0.58 },
+    sandwich_panel:    { color: 0xdfe4e6, opacity: 0.0,  renderOpacity: 0.64 },
+    concrete:          { color: 0xb2aea7, opacity: 0.0,  renderOpacity: 0.68 },
+    brick:             { color: 0xa9613f, opacity: 0.0,  renderOpacity: 0.68 },
   };
   function _ro(o) { return o.renderOpacity != null ? o.renderOpacity : o.opacity; }
 

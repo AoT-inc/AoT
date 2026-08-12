@@ -46,12 +46,22 @@
     if (global.AoTMaterials) return global.AoTMaterials;
     // Inline fallback (mirrors core/materials.js)
     // opacity=material property (simulation), renderOpacity=render-only
+    // Opaque materials stay see-through on purpose — see core/materials.js.
     const _CO = {
-      vinyl_single:  { color: 0x9ecfef, opacity: 0.75, renderOpacity: 0.25 },
-      vinyl_double:  { color: 0x9ecfef, opacity: 0.68, renderOpacity: 0.32 },
-      po_film:       { color: 0xbcdff0, opacity: 0.72, renderOpacity: 0.28 },
-      polycarbonate: { color: 0xdaeeff, opacity: 0.54, renderOpacity: 0.46 },
-      glass:         { color: 0xc8eecc, opacity: 0.82, renderOpacity: 0.18 },
+      vinyl_single:      { color: 0x9ecfef, opacity: 0.75, renderOpacity: 0.25 },
+      vinyl_double:      { color: 0x9ecfef, opacity: 0.68, renderOpacity: 0.32 },
+      po_film:           { color: 0xbcdff0, opacity: 0.72, renderOpacity: 0.28 },
+      polycarbonate:     { color: 0xdaeeff, opacity: 0.54, renderOpacity: 0.46 },
+      glass:             { color: 0xc8eecc, opacity: 0.82, renderOpacity: 0.18 },
+      non_woven_fabric:  { color: 0xf0ece1, opacity: 0.50, renderOpacity: 0.30 },
+      pe_film:           { color: 0xd8ecf5, opacity: 0.85, renderOpacity: 0.22 },
+      air_cushion:       { color: 0xdff1fa, opacity: 0.75, renderOpacity: 0.26 },
+      film_white_opaque: { color: 0xf2f2f0, opacity: 0.0,  renderOpacity: 0.58 },
+      film_black:        { color: 0x33383b, opacity: 0.0,  renderOpacity: 0.60 },
+      film_grey:         { color: 0x9aa0a4, opacity: 0.0,  renderOpacity: 0.58 },
+      sandwich_panel:    { color: 0xdfe4e6, opacity: 0.0,  renderOpacity: 0.64 },
+      concrete:          { color: 0xb2aea7, opacity: 0.0,  renderOpacity: 0.68 },
+      brick:             { color: 0xa9613f, opacity: 0.0,  renderOpacity: 0.68 },
     };
     const _ro = o => o.renderOpacity != null ? o.renderOpacity : o.opacity;
     return {
@@ -143,6 +153,11 @@
     for (let b = 0; b < bayCount; b++) {
       const lx = b * (span + spacing), rx = lx + span;
       if (roofType === 'gable') { s.lineTo(lx + span / 2, ridgeH); s.lineTo(rx, eaveH); }
+      // gable2: two ridges over one bay, valley back to the eave between them
+      else if (roofType === 'gable2') {
+        s.lineTo(lx + span / 4, ridgeH); s.lineTo(lx + span / 2, eaveH);
+        s.lineTo(lx + span * 3 / 4, ridgeH); s.lineTo(rx, eaveH);
+      }
       else if (roofType === 'flat' || roofType === 'box') { s.lineTo(lx, ridgeH); s.lineTo(rx, ridgeH); s.lineTo(rx, eaveH); }
       else { s.bezierCurveTo(lx, ridgeH, rx, ridgeH, rx, eaveH); }
       if (spacing > 0 && b < bayCount - 1) s.lineTo(rx + spacing, eaveH);
@@ -328,6 +343,18 @@
   // Performs the same calculation as _renderEnvelopeFittings in geo_facility.html
   // using only the facility object, without DOM.
   // Returns: an array of fitting objects (marked with source:'envelope')
+  // IDS MUST MATCH facility-3d-bridge.js's _renderEnvelopeFittings().
+  //
+  // There are two generators for the same components: this one (used wherever a
+  // facility is drawn from saved data — the map overlay and the dashboard map
+  // widget) and the design page's, which is the one whose ids get persisted
+  // when the user edits a component by hand. They used to disagree — this file
+  // said 'env_rv_b0_left' where the editor said 'env_roof_vent_outer_b0_left' —
+  // and nothing could tell that those were the same vent. The saved override
+  // and the freshly generated default were both drawn: the same roof vent in
+  // its edited size and its default size, side by side. Renaming here is safe
+  // (these ids are never saved; the editor's are), and it lets _mergeFittings
+  // recognise a saved row as the override it is.
   function _generateEnvelopeFittings(facility) {
     var g3d = facility.geometry_3d || {};
     var env = facility.envelope || {};
@@ -355,11 +382,20 @@
     }
 
     // arch apex Y (cubic bezier vertex)
-    var roofApexY = (roofType === 'gable' || roofType === 'flat' || roofType === 'box')
+    var roofApexY = (roofType === 'gable' || roofType === 'gable2' ||
+                     roofType === 'flat'  || roofType === 'box')
       ? ridgeH : (eaveH + 3 * ridgeH) / 4;
 
+    // gable2 repeats a gable twice across the bay, so its profile is a single
+    // gable evaluated on a t that runs 0→1 twice. Everything downstream (vent
+    // placement, surface normals) then works unchanged.
+    function _gableT(t) { return roofType === 'gable2' ? (t * 2) % 1 : t; }
+
     function _roofYatT(t) {
-      if (roofType === 'gable') return eaveH + (ridgeH - eaveH) * (1 - Math.abs(t - 0.5) * 2);
+      if (roofType === 'gable' || roofType === 'gable2') {
+        var g = _gableT(t);
+        return eaveH + (ridgeH - eaveH) * (1 - Math.abs(g - 0.5) * 2);
+      }
       if (roofType === 'flat' || roofType === 'box') return ridgeH;
       var u2 = 1 - t;
       return u2*u2*u2*eaveH + 3*u2*u2*t*ridgeH + 3*u2*t*t*ridgeH + t*t*t*eaveH;
@@ -367,8 +403,11 @@
     function _roofNormalAtT(t) {
       if (roofType === 'flat' || roofType === 'box') return [0, 1, 0];
       var tx, ty;
-      if (roofType === 'gable') {
-        tx = span / 2; ty = (t < 0.5 ? 1 : -1) * (ridgeH - eaveH);
+      if (roofType === 'gable' || roofType === 'gable2') {
+        var g = _gableT(t);
+        // Half the run of one gable — a quarter span when there are two.
+        tx = roofType === 'gable2' ? span / 4 : span / 2;
+        ty = (g < 0.5 ? 1 : -1) * (ridgeH - eaveH);
       } else {
         tx = (6*t - 3*t*t) * span;
         ty = 3 * (1 - 2*t) * (ridgeH - eaveH);
@@ -423,13 +462,13 @@
             if (w.reinOff !== null) {
               var rfX = w.baseX + w.outSign * w.reinOff;
               var rvX = rfX + w.outSign * (SV_DEPTH / 2);
-              items.push({ id: 'env_sv_reinf_u'+u.index+'_'+w.id+'_'+si, kind: 'side_window', source: 'envelope',
+              items.push({ id: 'env_side_vent_outer_reinf_u'+u.index+'_'+w.id+'_'+st.id, kind: 'side_window', source: 'envelope',
                 position: { x: _r(rvX), y: _r(st.y), z: _r(L/2) },
                 size: { w: _r(L * 0.97), h: _r(st.h), d: SV_DEPTH },
                 surface_normal: w.sn });
             } else {
               var ventX = w.baseX + w.outSign * (SV_DEPTH / 2);
-              items.push({ id: 'env_sv_u'+u.index+'_'+w.id+'_'+si, kind: 'side_window', source: 'envelope',
+              items.push({ id: 'env_side_vent_outer_u'+u.index+'_'+w.id+'_'+st.id, kind: 'side_window', source: 'envelope',
                 position: { x: _r(ventX), y: _r(st.y), z: _r(L/2) },
                 size: { w: _r(L * 0.97), h: _r(st.h), d: SV_DEPTH },
                 surface_normal: w.sn });
@@ -448,13 +487,13 @@
         var bx = b * (span + effSp);
         if (placement === 'sides') {
           [{t:0.30,side:'left'},{t:0.70,side:'right'}].forEach(function (p) {
-            items.push({ id: 'env_rv_b'+b+'_'+p.side, kind: 'window', source: 'envelope',
+            items.push({ id: 'env_roof_vent_outer_b'+b+'_'+p.side, kind: 'window', source: 'envelope',
               position: { x: _r(bx + p.t * span), y: _r(_roofYatT(p.t)), z: _r(L/2) },
               size: { w: _r(L * 0.75), h: _r(span * 0.18), d: rvThick },
               surface_normal: _roofNormalAtT(p.t) });
           });
         } else {
-          items.push({ id: 'env_rv_b'+b+'_center', kind: 'window', source: 'envelope',
+          items.push({ id: 'env_roof_vent_outer_b'+b+'_center', kind: 'window', source: 'envelope',
             position: { x: _r(bx + span/2), y: _r(roofApexY - rvThick/2), z: _r(L/2) },
             size: { w: _r(span * 0.08), h: rvThick, d: _r(L * 0.75) },
             surface_normal: null });
@@ -477,7 +516,7 @@
           surface_normal: null });
       }
       for (var lc = 0; lc < tcLayers; lc++) {
-        items.push({ id: 'env_curtain_thermal_b'+b+'_l'+lc, kind: 'curtain', source: 'envelope',
+        items.push({ id: 'env_curtain_thermal_ceil_L'+lc+'_b'+b, kind: 'curtain', source: 'envelope',
           position: { x: cbx, y: _r(THERMAL_BASE_Y - lc * 0.10), z: _r(L/2) },
           size: { w: _r(span), h: 0.04, d: _r(L) },
           surface_normal: null });
@@ -510,7 +549,7 @@
             pos  = { x: _r(u.centerX), y: _r(apexH/2), z: _r(zC) };
             size = { w: _r(unitWidth * 0.97), h: _r(apexH), d: _r(th) };
           }
-          items.push({ id: 'env_reinf_'+layer.id+'_u'+u.index+'_'+sd, kind: 'reinforcement', source: 'envelope',
+          items.push({ id: 'env_reinforcement_'+layer.id+'_u'+u.index+'_'+sd, kind: 'reinforcement', source: 'envelope',
             position: pos, size: size, surface_normal: sn });
         });
       });
@@ -1999,10 +2038,22 @@
     if (canvas.parentElement) canvas.parentElement.appendChild(vcEl);
 
     // Resize observer
+    //
+    // requestRender() is not optional here. This viewer renders on demand, and
+    // setSize() reallocates the drawing buffer — with nothing drawn into it the
+    // canvas shows the clear colour, i.e. a blank white panel. Anything that
+    // changes the panel's width does it: switching steps, opening the settings
+    // drawer. The model only reappeared when the user happened to scroll,
+    // because that is a controls 'change' and controls are the only other thing
+    // that schedules a frame. (requestRender is a hoisted declaration further
+    // down this same scope.)
     const resizeObs = new ResizeObserver(() => {
       const cw=canvas.parentElement?canvas.parentElement.clientWidth:canvas.clientWidth;
       const ch=canvas.parentElement?canvas.parentElement.clientHeight:canvas.clientHeight;
-      if (cw>0&&ch>0) { renderer.setSize(cw,ch,false); camera.aspect=cw/ch; camera.updateProjectionMatrix(); }
+      if (cw>0&&ch>0) {
+        renderer.setSize(cw,ch,false); camera.aspect=cw/ch; camera.updateProjectionMatrix();
+        requestRender();
+      }
     });
     if (canvas.parentElement) resizeObs.observe(canvas.parentElement);
 
@@ -2985,14 +3036,37 @@
   }
 
   // ── buildFacilityMesh (map-layer usage, backward-compat) ────────────────────
+  // The saved fitting list and the freshly generated envelope items overlap:
+  // an envelope component the user edited by hand is persisted under the very
+  // id the generator will produce again (see FittingsUI.read — hand-sized
+  // items, wiring and detached members are kept precisely because
+  // regeneration cannot reproduce them). Concatenating the two lists therefore
+  // drew that component twice, once at the saved size and once at the
+  // generator's default — the "before and after both on screen" the map widget
+  // showed. The saved row wins: it is the one carrying the user's decision.
+  function _mergeFittings(saved, generated) {
+    var out = (saved || []).slice();
+    var seen = {};
+    out.forEach(function (f) { if (f && f.id) seen[f.id] = true; });
+    (generated || []).forEach(function (f) {
+      if (f && f.id && seen[f.id]) return;
+      out.push(f);
+    });
+    return out;
+  }
+
   function buildFacilityMesh(facility, opts) {
     var group;
     // Envelope-derived fittings drive the cover openings (side windows / end
     // windows punch real holes). Compute once and reuse for the fitting meshes.
     var envFittings = [];
     try { envFittings = _generateEnvelopeFittings(facility); } catch (e) {}
+    // One effective list for both the cover openings and the fitting meshes,
+    // so a hand-resized window gets a hole its own size instead of the union
+    // of the edited box and the generated one.
+    var allFittings = _mergeFittings(facility.fittings, envFittings);
     if (P) {
-      group = P.buildFacilityMeshGroup(facility, MAT, envFittings);
+      group = P.buildFacilityMeshGroup(facility, MAT, allFittings);
     } else {
       const g3d=facility.geometry_3d||{}, envelope=facility.envelope||{};
       const span=parseFloat(g3d.span_width_m)||7, eaveH=parseFloat(g3d.eave_height_m)||2;
@@ -3075,9 +3149,9 @@
       group.userData={cx:totalWidth/2,cz:length/2,orientDeg,totalWidth,length};
     }
 
-    // Fitting rendering: always added regardless of whether P is used (keeps parity with the geo/facility editor)
-    // envFittings was computed above (reused here for the cover openings + fitting meshes).
-    var allFittings = (facility.fittings || []).concat(envFittings);
+    // Fitting rendering: always added regardless of whether P is used (keeps
+    // parity with the geo/facility editor). allFittings was merged above and is
+    // the same list the cover openings were punched from.
 
     // Apply view_options.category_visibility
     var catVis = (facility.view_options && facility.view_options.category_visibility) || null;

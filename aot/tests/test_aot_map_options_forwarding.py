@@ -79,6 +79,49 @@ def test_passthrough_merge_present():
     )
 
 
+def test_integer_options_parsed_defensively():
+    """정수 custom_option 을 맨 int() 로 읽으면 대시보드 전체가 500 이 된다.
+
+    쓰기 경로가 타입을 검증하지 않는다 — `/save_widget_custom_options` 는 받은 JSON 을
+    위젯 `execute_at_modification` 에 그대로 넘기고 거기서 blind merge 되므로, 사용자가
+    숫자 칸을 비우면 `''` 가 그대로 저장된다(설정 모달의 400ms 자동저장 디바운스 때문에
+    "비우고 잠깐 멈춤"만으로 저장된다). 그 다음 렌더에서 `int('')` 가 ValueError 를 내고,
+    그게 페이지 렌더 중이라 **그 대시보드가 통째로 500** 이 된다 — 게다가 500 페이지에는
+    CSRF 토큰이 없어 그 화면에서는 값을 되돌릴 수도 없다(2026-08-12 로컬 재현).
+
+    그래서 widget_vars 를 만드는 정수 읽기는 전부 `_int_option`(try/except) 을 거쳐야 한다.
+    """
+    src = MAPS.read_text()
+    # 리터럴 키를 직접 int() 하는 자리만 잡는다 — `_int_option` 헬퍼 자신의 본문
+    # (int(widget_options.get(key, fallback)))은 변수 키라 걸리지 않는다.
+    bare = re.findall(r"int\(\s*widget_options\.get\(\s*['\"][^'\"]+['\"][^)]*\)\s*\)", src)
+    assert not bare, (
+        "maps.py 에 방어 없는 int(widget_options.get(...)) 가 남아 있다: "
+        f"{bare} — `_int_option(widget_options, key, fallback)` 을 쓸 것. "
+        "빈 문자열이 저장되는 순간 대시보드가 500 이 된다."
+    )
+    assert "def _int_option(" in src, (
+        "_int_option 헬퍼가 사라졌다 — 정수 옵션 방어 파싱의 단일 정본이다."
+    )
+    # 폼에 노출된(= 사용자가 비울 수 있는) 정수 옵션은 반드시 이 헬퍼를 거칠 것.
+    for key in ("input_update_interval", "output_update_interval", "max_measure_age"):
+        assert re.search(r"_int_option\(widget_options,\s*'%s'" % key, src), (
+            f"'{key}' 가 _int_option 을 거치지 않는다."
+        )
+
+
+def test_data_transfer_period_options_present():
+    """'데이터 전송 주기' 3종이 폼에서 사라지지 않도록 가드.
+
+    갱신 주기는 예전에 폼에서 통째로 빠진 이력이 있고(2026-07-22 간소화),
+    그 사이 input 값 갱신 주기는 저장은 되지만 조정할 수단이 없었다.
+    출력 상태 갱신 주기는 그때 아예 없어서 위젯 전체 주기에 얹혀 돌았다.
+    """
+    ids = _custom_option_ids()
+    for key in ("period", "input_update_interval", "output_update_interval"):
+        assert key in ids, f"'{key}' 가 custom_options 에서 사라졌다."
+
+
 def test_dead_options_removed():
     """소비처가 없어 제거한 옵션이 되살아나지 않도록 가드."""
     ids = _custom_option_ids()

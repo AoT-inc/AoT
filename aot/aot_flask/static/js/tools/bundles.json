@@ -8,6 +8,7 @@
       "widgets/AoT_facility/assets/gltf_loader.js",
       "widgets/AoT_facility/ui/asset_library.js",
       "widgets/AoT_facility/aot-facility-3d.js",
+      "geo/facility/map-zoom.js",
       "geo/aot-facility-map-3d.js",
       "geo/aot-facility-layer-panel.js",
       "geo/aot-facility-design.js",

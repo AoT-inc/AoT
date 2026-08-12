@@ -3,6 +3,7 @@
 
 Runs without Flask/DB. Tests the pure math/dict calculator only.
 """
+import math
 import unittest
 import sys
 import os
@@ -15,6 +16,10 @@ from aot.aot_flask.geo.facility_calc import (
     effective_transmittance,
     arch_section_area,
     arch_section_perimeter,
+    roof_section_area,
+    roof_section_perimeter,
+    solar_absorptance,
+    inward_absorbed_fraction,
     polygon_area_m2,
     polygon_perimeter_m,
     MATERIALS,
@@ -211,6 +216,136 @@ class TestComputeCapacity(unittest.TestCase):
         r_synced = compute_capacity(spec_synced)
         r_indep = compute_capacity(spec_indep)
         self.assertGreater(r_indep['vent_open_m2'], r_synced['vent_open_m2'])
+
+
+class TestSolarAbsorptance(unittest.TestCase):
+    """Colour reaches the numbers only through absorptance.
+
+    White, grey and black film conduct identically and all stop the light, so
+    without this term the three were the same facility with a different swatch.
+    """
+
+    @staticmethod
+    def _cover(material):
+        spec = _spec()
+        spec['envelope']['outer']['cover_material'] = material
+        return compute_capacity(spec)
+
+    def test_black_is_hotter_than_grey_is_hotter_than_white(self):
+        white = self._cover('film_white_opaque')['cooling_kw']
+        grey  = self._cover('film_grey')['cooling_kw']
+        black = self._cover('film_black')['cooling_kw']
+        self.assertLess(white, grey)
+        self.assertLess(grey, black)
+
+    def test_colour_does_not_touch_the_heating_load(self):
+        # Heating is sized on the coldest night. There is no sun to absorb then,
+        # and a colour that changed the heater size would be wrong.
+        white = self._cover('film_white_opaque')['heating_kw']
+        black = self._cover('film_black')['heating_kw']
+        self.assertAlmostEqual(white, black, places=6)
+
+    def test_opaque_cover_admits_sun_only_by_absorption(self):
+        r = self._cover('film_black')
+        self.assertEqual(r['solar_transmitted_kw'], 0.0)
+        self.assertGreater(r['solar_absorbed_kw'], 0.0)
+
+    def test_insulation_makes_colour_nearly_irrelevant(self):
+        # U 0.45 → about 2 % of what the skin absorbs gets inside, so a panel is
+        # not a colour decision the way a bare film is.
+        panel = inward_absorbed_fraction(MATERIALS['sandwich_panel']['u'])
+        film  = inward_absorbed_fraction(MATERIALS['film_black']['u'])
+        self.assertLess(panel, 0.05)
+        self.assertGreater(film, 0.20)
+
+    def test_inward_fraction_is_bounded(self):
+        self.assertEqual(inward_absorbed_fraction(0), 0.0)
+        self.assertEqual(inward_absorbed_fraction(-5), 0.0)
+        self.assertLessEqual(inward_absorbed_fraction(10 ** 6), 1.0)
+
+    def test_shade_curtain_cannot_undo_absorbed_heat(self):
+        # An indoor curtain intercepts light; it cannot intercept heat that is
+        # already conducting through the cover. Only the transmitted term drops.
+        plain = _spec()
+        plain['envelope']['outer']['cover_material'] = 'vinyl_double'
+        shaded = _spec()
+        shaded['envelope']['outer']['cover_material'] = 'vinyl_double'
+        shaded['envelope']['curtain']['shade'] = True
+
+        a, b = compute_capacity(plain), compute_capacity(shaded)
+        self.assertLess(b['solar_transmitted_kw'], a['solar_transmitted_kw'])
+        self.assertAlmostEqual(b['solar_absorbed_kw'], a['solar_absorbed_kw'], places=6)
+
+    def test_absorptance_comes_from_the_outer_layer_only(self):
+        # Sunlight is absorbed at the first surface it meets, so an inner liner
+        # must not change it.
+        one = _spec(layer_count=1)
+        one['envelope']['outer']['cover_material'] = 'film_black'
+        two = _spec(layer_count=2)
+        two['envelope']['outer']['cover_material'] = 'film_black'
+        self.assertEqual(compute_capacity(one)['absorptance'],
+                         compute_capacity(two)['absorptance'])
+
+    def test_unknown_material_falls_back_rather_than_raising(self):
+        self.assertEqual(solar_absorptance('nope_xyz'),
+                         MATERIALS[DEFAULT_MATERIAL]['absorptance'])
+
+
+class TestGable2Roof(unittest.TestCase):
+    """'gable2' — one bay carrying two gables, ridge/valley/ridge.
+
+    The pair of identities below is the whole shape in two numbers, and getting
+    either wrong is invisible on screen: the model would look right while the
+    heating and cooling figures were computed for a different roof.
+    """
+
+    SPAN, RISE = 8.0, 2.0
+
+    def test_area_matches_a_single_gable(self):
+        # Two triangles over half a span each == one triangle over the full
+        # span. Splitting the ridge buys headroom, not volume.
+        self.assertAlmostEqual(
+            roof_section_area('gable2', self.SPAN, self.RISE),
+            roof_section_area('gable', self.SPAN, self.RISE), places=9)
+
+    def test_surface_is_longer_than_a_single_gable(self):
+        # ... but the same volume is wrapped in more glazing, which is what the
+        # U-value and the heat load have to see.
+        self.assertGreater(
+            roof_section_perimeter('gable2', self.SPAN, self.RISE),
+            roof_section_perimeter('gable', self.SPAN, self.RISE))
+
+    def test_surface_is_four_quarter_span_slopes(self):
+        a = self.SPAN / 4.0
+        self.assertAlmostEqual(
+            roof_section_perimeter('gable2', self.SPAN, self.RISE),
+            4.0 * math.sqrt(a * a + self.RISE ** 2), places=9)
+
+    def test_flat_roof_is_still_the_degenerate_case(self):
+        # rise 0 collapses every gable variant onto the span
+        self.assertAlmostEqual(
+            roof_section_perimeter('gable2', self.SPAN, 0.0), self.SPAN, places=9)
+        self.assertAlmostEqual(
+            roof_section_area('gable2', self.SPAN, 0.0), 0.0, places=9)
+
+    @staticmethod
+    def _roofed(roof_type):
+        spec = _spec()
+        spec['geometry_3d']['roof_type'] = roof_type
+        return spec
+
+    def test_capacity_keeps_the_volume_and_raises_the_load(self):
+        g  = compute_capacity(self._roofed('gable'))
+        g2 = compute_capacity(self._roofed('gable2'))
+        self.assertAlmostEqual(g2['volume_m3'], g['volume_m3'], places=6)
+        self.assertGreater(g2['envelope_m2'], g['envelope_m2'])
+        self.assertGreater(g2['heating_kw'], g['heating_kw'])
+
+    def test_unknown_roof_type_still_falls_back_to_arch(self):
+        # 'gable2' must not have turned the dispatch into an exhaustive match
+        self.assertAlmostEqual(
+            roof_section_area('something-new', self.SPAN, self.RISE),
+            arch_section_area(self.SPAN, self.RISE), places=9)
 
 
 if __name__ == '__main__':

@@ -79,6 +79,31 @@ class GeoMap(CRUDMixin, db.Model):
         except Exception:
             return {}
 
+    def viewport(self):
+        """Where this map's camera sits: (lat, lng, zoom), None for unknown.
+
+        The live camera is saved into ``state_json`` ('center' as {lat, lng},
+        'zoom' as a float) — the latitude/longitude columns predate that and no
+        current write path fills them, so they are NULL on every real map. A
+        reader that consults only the columns therefore sends every map to the
+        same default coordinates and makes switching maps look like a no-op.
+        Returning None rather than a default lets the caller decide (leave the
+        camera alone, fit to the map's shapes) instead of teleporting to Seoul.
+        """
+        state = self.state_dict()
+        center = state.get('center')
+        lat = lng = None
+        if isinstance(center, dict):
+            lat, lng = center.get('lat'), center.get('lng')
+        elif isinstance(center, (list, tuple)) and len(center) >= 2:
+            lat, lng = center[0], center[1]
+        if lat is None or lng is None:
+            lat, lng = self.latitude, self.longitude
+        zoom = state.get('zoom')
+        if zoom is None:
+            zoom = self.zoom
+        return lat, lng, zoom
+
     def update_state(self, updates):
         if not updates:
             return False

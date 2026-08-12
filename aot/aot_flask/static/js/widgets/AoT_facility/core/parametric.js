@@ -15,6 +15,13 @@
       if (roofType === 'gable') {
         s.lineTo(lx + span / 2, ridgeH);
         s.lineTo(rx, eaveH);
+      } else if (roofType === 'gable2') {
+        // Two gables over one bay: ridge at a quarter and three quarters of the
+        // span with a valley back down to the eave between them.
+        s.lineTo(lx + span / 4, ridgeH);
+        s.lineTo(lx + span / 2, eaveH);
+        s.lineTo(lx + span * 3 / 4, ridgeH);
+        s.lineTo(rx, eaveH);
       } else if (roofType === 'flat' || roofType === 'box') {
         s.lineTo(lx, ridgeH);
         s.lineTo(rx, ridgeH);
@@ -286,6 +293,12 @@
       var lx = b * (span + spacing), rx = lx + span;
       if (roofType === 'gable') {
         pts.push([lx, eaveH]); pts.push([lx + span / 2, ridgeH]); pts.push([rx, eaveH]);
+      } else if (roofType === 'gable2') {
+        pts.push([lx, eaveH]);
+        pts.push([lx + span / 4, ridgeH]);
+        pts.push([lx + span / 2, eaveH]);
+        pts.push([lx + span * 3 / 4, ridgeH]);
+        pts.push([rx, eaveH]);
       } else if (roofType === 'flat' || roofType === 'box') {
         pts.push([lx, eaveH]); pts.push([lx, ridgeH]); pts.push([rx, ridgeH]); pts.push([rx, eaveH]);
       } else {
@@ -412,8 +425,11 @@
     group.name = 'facility_mesh_' + (facility.unique_id || 'unknown');
 
     // Outer cover as openable panels (side-window / end-window holes are real).
-    const _coverFittings = (Array.isArray(facility.fittings) ? facility.fittings : [])
-      .concat(Array.isArray(extraFittings) ? extraFittings : []);
+    // extraFittings is already the effective list — saved rows merged over the
+    // generated envelope items by id (see _mergeFittings in aot-facility-3d.js).
+    // Re-adding facility.fittings here would put a hand-resized window back in
+    // twice and punch its hole at both sizes.
+    const _coverFittings = Array.isArray(extraFittings) ? extraFittings : [];
     group.add(buildOuterCoverPanels({
       unitCount: unitCount, unitWidth: unitWidth, effectiveSpacing: effectiveSpacing,
       meshBayCount: meshBayCount, span: span, eaveH: eaveH, ridgeH: ridgeH,

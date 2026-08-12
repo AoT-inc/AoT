@@ -103,8 +103,22 @@
             console.warn('[FacilityLayerPanel] Skipping layer — invalid/empty tile URL:', l.id, JSON.stringify(l.url));
             return;
           }
-          mlMap.addSource(l.id, { type: 'raster', tiles: tiles, tileSize: 256 });
+          mlMap.addSource(l.id, {
+            type: 'raster', tiles: tiles, tileSize: 256,
+            // Without this the source keeps MapLibre's default ceiling of 22 and
+            // requests tiles the server does not have (404s and blank squares)
+            // instead of upscaling the deepest real one.
+            maxzoom: window.FacilityMapZoom ? FacilityMapZoom.nativeMaxZoom(l) : 19
+          });
         }
+      };
+
+      // How far the camera may zoom depends on the base layer in use, so the
+      // ceiling has to be recomputed whenever the base changes — otherwise a
+      // switch to a shallower or deeper source keeps the previous layer's limit.
+      const _applyCameraMax = (l) => {
+        if (!window.FacilityMapZoom) return;
+        try { mlMap.setMaxZoom(FacilityMapZoom.cameraMaxZoom(l)); } catch (e) {}
       };
 
       const _hideVectorBase = () => {
@@ -143,6 +157,7 @@
             if (beforeId) { try { mlMap.moveLayer(lyId, beforeId); } catch(e) {} }
           }
           _hideVectorBase();
+          _applyCameraMax(l);
           State._activeRasterBaseId = l.id;
           try {
             localStorage.setItem('aot_active_base_id', l.id);
@@ -154,6 +169,7 @@
       const _restoreVectorBase = () => {
         _deactivateRasterBase();
         _showVectorBase();
+        _applyCameraMax(State.baseLayer);
         try {
           localStorage.setItem('aot_active_base_type', 'vector_default');
           localStorage.removeItem('aot_active_base_id');
@@ -185,6 +201,7 @@
           State._baseStyleLayerIds = (mlMap.getStyle().layers || []).map(sl => sl.id);
           State._activeVectorStyleUrl = l.url;
           State._activeRasterBaseId = null;
+          _applyCameraMax(l);
           try {
             localStorage.setItem('aot_active_base_id', l.id);
             localStorage.setItem('aot_active_base_type', 'vector_channel');
@@ -197,6 +214,14 @@
           userLayers.forEach(sl => {
             try { if (!mlMap.getLayer(sl.id)) mlMap.addLayer(sl); } catch(e) {}
           });
+          // The snapshot above cannot carry the Three.js facility overlay:
+          // getStyle() leaves custom layers out of its layer list entirely, so
+          // the overlay was never captured and never came back — switching the
+          // base map left the footprint fill and no model. Only the page that
+          // owns the facility data can rebuild it.
+          if (window.FacilityMapAPI && FacilityMapAPI.restore3DOverlay) {
+            FacilityMapAPI.restore3DOverlay();
+          }
         };
         mlMap.once('style.load', _onLoad);
         _fallback = setTimeout(() => { if (!_handled && mlMap.isStyleLoaded()) _onLoad(); }, 3000);

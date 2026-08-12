@@ -27339,3 +27339,95 @@ msgstr "지금 업데이트 확인"
 #: aot/aot_flask/routes_admin.py
 msgid "You are already on the latest version (%(version)s)."
 msgstr "이미 최신 버전입니다(%(version)s)."
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Vinyl (single)"
+msgstr "비닐 (단층)"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Vinyl (double)"
+msgstr "비닐 (이중)"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "PO film"
+msgstr "PO 필름"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "PE film"
+msgstr "PE 필름"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Polycarbonate"
+msgstr "폴리카보네이트"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Glass"
+msgstr "유리"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Non-woven fabric"
+msgstr "부직포"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Air cushion"
+msgstr "에어쿠션"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Opaque white film"
+msgstr "불투명 흰색 필름"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Black film"
+msgstr "검정색 필름"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Grey film"
+msgstr "회색 필름"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Sandwich panel"
+msgstr "샌드위치 판넬"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Concrete"
+msgstr "콘크리트"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Brick"
+msgstr "벽돌"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "Absorptance"
+msgstr "흡수율"
+
+#: aot_flask/templates/pages/geo/geo_facility.html
+msgid "solar absorbed"
+msgstr "일사 흡수"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "%(n)s channels"
+msgstr "채널 %(n)s개"
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "데이터 전송 주기"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "위젯의 갱신 주기 (초)"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "입력 값 갱신 주기 (초)"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "패널의 입력 측정값을 갱신하는 주기입니다."
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "출력 상태 갱신 주기 (초)"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "지도에서 출력 on/off 상태를 갱신하는 주기입니다."

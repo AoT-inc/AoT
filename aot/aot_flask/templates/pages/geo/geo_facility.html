@@ -6,7 +6,7 @@
 <!-- MapLibre GL 은 layout.html head 에서 제공됨 (GIS 설정의 로컬/CDN 옵션 적용).
      여기서 재로드하면 window.maplibregl 을 덮어쓰므로 로드하지 않는다. -->
 <link rel="stylesheet" href="/static/css/map/map.css" />
-<link rel="stylesheet" href="/static/css/pages/geo-facility.css?v=20260803s" />
+<link rel="stylesheet" href="/static/css/pages/geo-facility.css?v=20260812d" />
 
 <script src="/static/js/widgets/AoT_facility/three.min.js?v=2"></script>
 <script src="/static/js/widgets/AoT_facility/OrbitControls.js?v=1"></script>
@@ -44,6 +44,14 @@
     <button type="button" class="btn aot-pill-btn fac-step" data-step="connect"  role="tab">{{ _('Connections') }}</button>
     <button type="button" class="btn aot-pill-btn fac-step" data-step="check"    role="tab"
             data-issue="{{ _('Not saved yet') }}">{{ _('Review') }}</button>
+
+    <!-- Stage picker — on every step. Which view opens first is per step
+         (see _DEFAULT_STAGE); the choice is remembered for the session. -->
+    <div class="fac-stage-toggle" id="fac-stage-toggle" role="group"
+         aria-label="{{ _('Preview view') }}" hidden>
+      <button type="button" class="btn aot-pill-btn" data-stage="3d">{{ _('3D') }}</button>
+      <button type="button" class="btn aot-pill-btn" data-stage="map">{{ _('Map') }}</button>
+    </div>
   </div>
 
   <!-- ── Stage — the 3D scene and the placement map. One is visible at a time;
@@ -60,7 +68,7 @@
     </div>
     <div id="facility-map-canvas"></div>
     <p class="aot-modal-body-text fac-map-hint">
-      {{ _('Click "Place on Map" then click the facility center on the map. Form dimensions and rotation update the rectangle in real time.') }}
+      {{ _('Click "Place on Map" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time.') }}
     </p>
   </div>
 
@@ -332,11 +340,16 @@
       <div class="aot-modal-option-control">
         <select id="map-selector" class="form-control aot-modern-select">
           <option value="" disabled selected>{{ _('Select a Map') }}</option>
+          {# The saved camera lives in state_json, not in the latitude/longitude
+             columns (those are NULL on every map) — GeoMap.viewport() resolves
+             both. Attributes are left off when unknown so the page can fit to
+             the map's shapes instead of jumping to a default coordinate. #}
           {% for m in map_configs %}
+            {% set vp = m.viewport() %}
             <option value="{{ m.unique_id }}"
-                    data-lat="{{ m.latitude or 37.5665 }}"
-                    data-lng="{{ m.longitude or 126.9780 }}"
-                    data-zoom="{{ m.zoom or 13 }}">{{ m.name }}</option>
+                    {% if vp[0] is not none %}data-lat="{{ vp[0] }}"{% endif %}
+                    {% if vp[1] is not none %}data-lng="{{ vp[1] }}"{% endif %}
+                    {% if vp[2] is not none %}data-zoom="{{ vp[2] }}"{% endif %}>{{ m.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -418,7 +431,7 @@
         <input type="range" id="orientation-slider" min="0" max="359" step="1" value="0"
                class="form-control-range mb-2" style="width:100%;">
         <p class="aot-modal-body-text mb-0">
-          {{ _('Use "Place on Map" above the map to set the facility center.') }}
+          {{ _('Use "Place on Map" above the map to set the facility center, then drag the facility on the map to adjust it.') }}
         </p>
       </div>
     </div>
@@ -481,6 +494,9 @@
         <select id="roof-type" class="form-control aot-modern-select">
           <option value="arch" selected>{{ _('Arch') }}</option>
           <option value="gable">{{ _('Gable') }}</option>
+          {# One bay, two ridges — the span carries two gables with a valley
+             between them, where plain "Gable" gives one roof per bay. #}
+          <option value="gable2">{{ _('Gable ×2') }}</option>
           <option value="flat">{{ _('Flat') }}</option>
         </select>
       </div>
@@ -747,13 +763,10 @@
             <button type="button" id="fi-device-swap" class="btn aot-pill-btn mt-1 d-none">{{ _('Replace hardware') }}</button>
           </div>
         </div>
-        <div class="aot-modal-option-row fi-dup d-none" id="fi-group-channels">
-          <label class="aot-modal-option-label">{{ _('Channel') }}</label>
-          <div class="aot-modal-option-control">
-            <button type="button" id="fi-ch-btn" class="btn aot-pill-btn">{{ _('Select Channel') }}</button>
-          </div>
-        </div>
-        <div id="fi-ch-dropdown"></div>
+        {# The channel picker used to live here. It is the component table's
+           now (sensor-ui.js, grouped by device, multi-select); this copy was
+           hidden by .fi-dup and unreachable, and the table pointed users at it
+           anyway. Removed 2026-08-12 — do not re-add a second one. #}
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-sensor-role">
           <label class="aot-modal-option-label">{{ _('Location') }}</label>
           <div class="aot-modal-option-control">
@@ -1081,6 +1094,7 @@ window._IEC = {
   place_center_hint:{{ _('Click on the map to set the facility center')|tojson }},
   no_facilities:{{ _('No facilities yet.')|tojson }},
   volume:{{ _('Volume')|tojson }}, envelope:{{ _('Envelope')|tojson }}, u_eff:{{ _('U-effective')|tojson }},
+  absorptance:{{ _('Absorptance')|tojson }}, solar_absorbed:{{ _('solar absorbed')|tojson }},
   vent_area:{{ _('Vent area')|tojson }}, none:{{ _('None')|tojson }},
   sec_actuators:{{ _('Actuator links')|tojson }}, sec_openings:{{ _('Openings')|tojson }},
   sec_sensors:{{ _('Sensor links')|tojson }}, sec_irrigation:{{ _('Irrigation system')|tojson }},
@@ -1116,6 +1130,22 @@ window._IEC = {
   spec_airflow:{{ _('Airflow')|tojson }},
   spec_fuel:{{ _('Fuel')|tojson }},
   spec_pressure:{{ _('Pressure')|tojson }},
+  {#- Cover materials. The keys match facility_calc.MATERIALS; the last six are
+      opaque, so they stop light entirely rather than dimming it. -#}
+  mat_vinyl_single:{{ _('Vinyl (single)')|tojson }},
+  mat_vinyl_double:{{ _('Vinyl (double)')|tojson }},
+  mat_po_film:{{ _('PO film')|tojson }},
+  mat_pe_film:{{ _('PE film')|tojson }},
+  mat_polycarbonate:{{ _('Polycarbonate')|tojson }},
+  mat_glass:{{ _('Glass')|tojson }},
+  mat_non_woven_fabric:{{ _('Non-woven fabric')|tojson }},
+  mat_air_cushion:{{ _('Air cushion')|tojson }},
+  mat_film_white_opaque:{{ _('Opaque white film')|tojson }},
+  mat_film_black:{{ _('Black film')|tojson }},
+  mat_film_grey:{{ _('Grey film')|tojson }},
+  mat_sandwich_panel:{{ _('Sandwich panel')|tojson }},
+  mat_concrete:{{ _('Concrete')|tojson }},
+  mat_brick:{{ _('Brick')|tojson }},
   env_outer_full:{{ _('Outer (full)')|tojson }},
   env_inner_full:{{ _('Inner (full)')|tojson }},
   env_side_reinf:{{ _('Side reinforcement')|tojson }},

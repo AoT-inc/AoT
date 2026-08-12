@@ -25903,3 +25903,27 @@ msgid ""
 "regardless of this flag."
 msgstr ""
 
+
+#: widgets/AoT_map.py
+msgid "Data Transfer Period"
+msgstr "Periodo di trasferimento dati"
+
+#: widgets/AoT_map.py
+msgid "Widget Refresh Period (Seconds)"
+msgstr "Periodo di aggiornamento del widget (secondi)"
+
+#: widgets/AoT_map.py
+msgid "Input Value Refresh Period (Seconds)"
+msgstr "Periodo di aggiornamento dei valori di ingresso (secondi)"
+
+#: widgets/AoT_map.py
+msgid "How often input measurement values in the panel are refreshed."
+msgstr "Con quale frequenza vengono aggiornati i valori di misura in ingresso nel pannello."
+
+#: widgets/AoT_map.py
+msgid "Output Status Refresh Period (Seconds)"
+msgstr "Periodo di aggiornamento dello stato di uscita (secondi)"
+
+#: widgets/AoT_map.py
+msgid "How often output on/off status is refreshed on the map."
+msgstr "Con quale frequenza viene aggiornato sulla mappa lo stato di accensione/spegnimento dell'uscita."

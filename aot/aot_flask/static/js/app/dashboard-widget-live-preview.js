@@ -308,14 +308,16 @@
   // inst._setLabel). DESTRUCTIVE options (map source / mode) are left to the Save
   // button. `map_uuid` is NEVER sent in a partial save (it would reset the view).
   // =========================================================================
-  // [Simplification] max_measure_age/input_update_interval/label_spacing/
-  // popup_default_tab/most sensor_label_* were removed from the settings form
-  // (constant-ized in maps.py widget_vars) and dropped from here too — no form
-  // field means this list entry would just never match. show_labels/
-  // ai_advice_enabled/period/overlay_data_only are now the "basic view" and are
-  // safe/non-destructive, so they belong here same as before.
+  // [Simplification] max_measure_age/label_spacing/popup_default_tab/most
+  // sensor_label_* were removed from the settings form (constant-ized in
+  // maps.py widget_vars) and dropped from here too — no form field means this
+  // list entry would just never match. show_labels/ai_advice_enabled/period/
+  // overlay_data_only are now the "basic view" and are safe/non-destructive,
+  // so they belong here same as before. input_update_interval/
+  // output_update_interval were restored to the "Data Transfer Period" group
+  // (see AoT_map.py) — both live-apply below (mapLiveApply), so both are safe.
   var MAP_SAFE_KEYS = {
-    period: 1,
+    period: 1, input_update_interval: 1, output_update_interval: 1,
     fallback_latitude: 1, fallback_longitude: 1,
     default_zoom: 1, default_pitch: 1, default_bearing: 1,
     active_layers: 1, selected_base_layer: 1, ai_advice_enabled: 1,
@@ -491,9 +493,24 @@
         if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
         inst._applyZoomGate();
       }
-      // Measurement-panel refresh period -> restart its own polling loop in place.
-      else if (key === 'input_update_interval' && typeof inst._setPanelRefreshInterval === 'function') {
-        inst._setPanelRefreshInterval(value);
+      // Input value refresh period -> mutate the shared options object FIRST (same
+      // pattern as MAP_SENSOR_LABEL_KEYS above), then restart every consumer that
+      // reads it: the measurement panel, the bay chip's representative sensor value
+      // (shares one /runtime fetch with the actuator on/off state — see
+      // _actuatorPollMs in aot-map-widget-vector.js, it just re-picks whichever of
+      // input/output_update_interval is shorter), and facility fitting sensor
+      // labels (their own poller inside AoTMapSensorLabels, restarted via re-attach).
+      else if (key === 'input_update_interval') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
+        if (typeof inst._setPanelRefreshInterval === 'function') { inst._setPanelRefreshInterval(value); }
+        if (typeof inst._setActuatorRefreshInterval === 'function') { inst._setActuatorRefreshInterval(); }
+        if (typeof inst._reattachSensorLabels === 'function') { inst._reattachSensorLabels(); }
+      }
+      // Output status refresh period -> mutate + restart the actuator/output polling
+      // loop in place (bay chip sensor value shares the same fetch — see above).
+      else if (key === 'output_update_interval') {
+        if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
+        if (typeof inst._setActuatorRefreshInterval === 'function') { inst._setActuatorRefreshInterval(); }
       }
     } catch (e) { /* ignore */ }
   }
@@ -557,6 +574,16 @@
     $(form).on('change.mapsave input.mapsave', 'input, select, textarea', function () {
       var name = this.getAttribute('name');
       if (!name || !MAP_SAFE_KEYS[name]) { return; }   // destructive/other → Save button
+      // An emptied number field must never be persisted. mapFieldValue returns '' for
+      // it (parseFloat('') is NaN), and nothing downstream type-checks: the partial-save
+      // endpoint blind-merges, so '' lands in custom_options and the next render of
+      // maps.py used to raise ValueError on int('') — a 500 for the whole dashboard.
+      // maps.py now falls back defensively, but writing garbage is still wrong: it
+      // silently discards the user's real value. This fires mid-edit too (clear the
+      // field, pause past the 400ms debounce), so the guard has to be here, not only
+      // on blur. Text fields are untouched — '' is a legitimate value for e.g.
+      // fallback_latitude / active_layers.
+      if (this.type === 'number' && this.value.trim() === '') { return; }
       var value = mapFieldValue(this);
       clearTimeout(mapTimers[name]);
       mapTimers[name] = setTimeout(function () {

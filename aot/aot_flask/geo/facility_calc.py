@@ -15,15 +15,41 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------
 # Material thermal/optical properties (DESIGN §5-1)
 # ----------------------------------------------------------------
+# u            — W/m²K, conduction through the cover
+# transmittance — share of sunlight that passes straight through
+# absorptance   — share of sunlight absorbed by the cover itself. What is
+#                 neither transmitted nor absorbed is reflected away. This is
+#                 the only term that separates a white cover from a black one:
+#                 they conduct identically, both stop all light, and the
+#                 difference the grower feels is how much of the sun the
+#                 surface soaks up and then radiates inward.
 MATERIALS = {
-    'vinyl_single':     {'u': 6.0, 'transmittance': 0.85},
-    'vinyl_double':     {'u': 4.0, 'transmittance': 0.78},
-    'po_film':          {'u': 6.5, 'transmittance': 0.85},
-    'polycarbonate':    {'u': 3.0, 'transmittance': 0.78},
-    'glass':            {'u': 5.8, 'transmittance': 0.85},
-    'non_woven_fabric': {'u': 3.5, 'transmittance': 0.50},
-    'pe_film':          {'u': 6.5, 'transmittance': 0.85},
-    'air_cushion':      {'u': 2.8, 'transmittance': 0.75},
+    # ── Glazing — light gets through, little is absorbed ────────────────────
+    'vinyl_single':     {'u': 6.0,  'transmittance': 0.85, 'absorptance': 0.08},
+    'vinyl_double':     {'u': 4.0,  'transmittance': 0.78, 'absorptance': 0.10},
+    'po_film':          {'u': 6.5,  'transmittance': 0.85, 'absorptance': 0.08},
+    'polycarbonate':    {'u': 3.0,  'transmittance': 0.78, 'absorptance': 0.10},
+    'glass':            {'u': 5.8,  'transmittance': 0.85, 'absorptance': 0.08},
+    'non_woven_fabric': {'u': 3.5,  'transmittance': 0.50, 'absorptance': 0.20},
+    'pe_film':          {'u': 6.5,  'transmittance': 0.85, 'absorptance': 0.08},
+    'air_cushion':      {'u': 2.8,  'transmittance': 0.75, 'absorptance': 0.10},
+
+    # ── Opaque — light does not get through ─────────────────────────────────
+    # Pigmented films are the same polymer at the same thickness as the clear
+    # ones, so they keep the film U-value; only the light is stopped. Colour
+    # lives entirely in absorptance: white reflects most of the sun away, black
+    # takes nearly all of it in.
+    'film_white_opaque': {'u': 6.5,  'transmittance': 0.0, 'absorptance': 0.25},
+    'film_grey':         {'u': 6.5,  'transmittance': 0.0, 'absorptance': 0.55},
+    'film_black':        {'u': 6.5,  'transmittance': 0.0, 'absorptance': 0.90},
+    # Insulated panel, ~50 mm EPS/urethane core — by far the best U here, which
+    # is the reason to build a wall out of it instead of covering it. Its light
+    # painted steel skin absorbs moderately, and almost none of that reaches
+    # the inside anyway (see inward_absorbed_fraction).
+    'sandwich_panel':    {'u': 0.45, 'transmittance': 0.0, 'absorptance': 0.30},
+    # Bare structural walls, no added insulation: ~200 mm concrete, ~190 mm brick.
+    'concrete':          {'u': 3.1,  'transmittance': 0.0, 'absorptance': 0.60},
+    'brick':             {'u': 2.4,  'transmittance': 0.0, 'absorptance': 0.70},
 }
 DEFAULT_MATERIAL = 'vinyl_double'
 
@@ -36,6 +62,7 @@ ASSUMPTIONS = {
     'solar_radiation_W_m2':  500.0,  # 평균 일사
     'transpiration_W_m2':    100.0,  # 작물 증산 부하
     'r_airgap_m2K_W':        0.18,   # 정지 공기층 열저항
+    'h_outside_W_m2K':       23.0,   # 외표면 열전달계수(여름 기준, ASHRAE ~22.7)
     'wind_factor_m_s':       1.5,    # 자연환기 환산 풍속
     'fan_default_m3h':       5000.0, # 매핑된 팬 1대 표준 용량
     'vent_height_m':         1.2,    # 측창 표준 높이
@@ -131,12 +158,15 @@ def arch_section_perimeter(span, rise):
 def roof_section_area(roof_type, span, rise):
     """Roof cross-section area dispatched by roof_type.
 
-    arch  → half-ellipse: π·(span/2)·rise / 2
-    gable → triangle:     span × rise / 2
-    flat  → 0 (no extra height above eave)
+    arch   → half-ellipse: π·(span/2)·rise / 2
+    gable  → triangle:     span × rise / 2
+    gable2 → two triangles over half a span each: 2 × (span/2 × rise / 2)
+             — the same total as one gable. Halving the base and doubling the
+             count cancels out, so a second ridge buys height, not volume.
+    flat   → 0 (no extra height above eave)
     """
     rt = (roof_type or 'arch').lower()
-    if rt == 'gable':
+    if rt in ('gable', 'gable2'):
         return float(span) * max(rise, 0.0) / 2.0
     if rt == 'flat':
         return 0.0
@@ -146,14 +176,21 @@ def roof_section_area(roof_type, span, rise):
 def roof_section_perimeter(roof_type, span, rise):
     """Roof surface length (along cross-section) dispatched by roof_type.
 
-    arch  → half-ellipse arc length (Ramanujan)
-    gable → 2 × √((span/2)² + rise²)  (two slopes of an isoceles triangle)
-    flat  → span (flat top equals the span)
+    arch   → half-ellipse arc length (Ramanujan)
+    gable  → 2 × √((span/2)² + rise²)  (two slopes of an isoceles triangle)
+    gable2 → 4 × √((span/4)² + rise²)  (four slopes, each over a quarter span).
+             Unlike the area this does NOT match a single gable: the same
+             volume is wrapped in more surface, which is the point of the
+             shape and what the U-value/heat-loss figures have to see.
+    flat   → span (flat top equals the span)
     """
     rt = (roof_type or 'arch').lower()
     if rt == 'gable':
         a = span / 2.0
         return 2.0 * math.sqrt(a*a + max(rise, 0.0)**2)
+    if rt == 'gable2':
+        a = span / 4.0
+        return 4.0 * math.sqrt(a*a + max(rise, 0.0)**2)
     if rt == 'flat':
         return float(span)
     return arch_section_perimeter(span, rise)
@@ -180,6 +217,36 @@ def effective_transmittance(layer_count, outer_material, inner_material=None):
         return t_outer
     t_inner = MATERIALS.get(inner_material, MATERIALS[DEFAULT_MATERIAL])['transmittance']
     return t_outer * t_inner
+
+
+def solar_absorptance(outer_material):
+    """Solar absorptance of the surface the sun actually strikes.
+
+    Only the outer layer takes any argument here: sunlight is absorbed at the
+    first surface it meets, so an inner liner cannot change how much of it the
+    cover soaks up. That asymmetry is why this takes a material rather than a
+    layer stack like effective_u/effective_transmittance.
+    """
+    m = MATERIALS.get(outer_material, MATERIALS[DEFAULT_MATERIAL])
+    return float(m.get('absorptance', 0.0))
+
+
+def inward_absorbed_fraction(u_value):
+    """Share of the absorbed sunlight that ends up inside rather than back out.
+
+    Heat absorbed by the cover leaves in both directions; how much comes inward
+    is set by the ratio of the path in (the assembly's U) to the path out (the
+    outside surface film). This is the standard opaque-wall simplification,
+    N = U / h_o — the same reasoning behind sol-air temperature.
+
+    It is what makes an insulated panel indifferent to its colour (U 0.45 → under
+    2 % of what it absorbs gets in) while a bare film passes nearly a third of
+    it, so black film bakes the house and white film does not.
+    """
+    h_o = ASSUMPTIONS['h_outside_W_m2K']
+    if h_o <= 0:
+        return 0.0
+    return min(max(float(u_value), 0.0) / h_o, 1.0)
 
 
 # ----------------------------------------------------------------
@@ -484,10 +551,29 @@ def compute_capacity(spec):
     heating_kw = envelope_m2 * u_for_heating * ASSUMPTIONS['delta_T_heating_K'] / 1000.0
 
     # ---- 8. Cooling load (kW) ----
+    # Sun reaches the inside two ways, and an opaque cover only closes the first:
+    #   · transmitted — straight through the glazing. A shade curtain intercepts
+    #     this, which is what it is for.
+    #   · absorbed    — soaked up by the cover, then conducted inward. An indoor
+    #     shade curtain cannot touch it: the heat is already past the glazing,
+    #     so this term is deliberately left unshaded.
+    # Without the second term every opaque cover looked identical and colour was
+    # a purely cosmetic choice.
+    solar = ASSUMPTIONS['solar_radiation_W_m2']
     t_for_cooling = t_eff
     if envelope['curtain_shade_enabled']:
         t_for_cooling *= 0.50  # 50% shade reduction assumption
-    cooling_W = (roof_m2 * ASSUMPTIONS['solar_radiation_W_m2'] * t_for_cooling
+
+    absorptance = solar_absorptance(outer_mat)
+    absorbed_W_m2 = solar * absorptance * inward_absorbed_fraction(u_eff)
+
+    # Both terms ride on roof_m2: the model treats the roof as the sunlit
+    # surface, and putting the absorbed share on a different area would mean
+    # inventing a second irradiance figure for the walls.
+    solar_absorbed_kw   = roof_m2 * absorbed_W_m2 / 1000.0
+    solar_transmitted_kw = roof_m2 * solar * t_for_cooling / 1000.0
+
+    cooling_W = (roof_m2 * (solar * t_for_cooling + absorbed_W_m2)
                  + floor_m2 * ASSUMPTIONS['transpiration_W_m2'])
     cooling_kw = cooling_W / 1000.0
 
@@ -568,6 +654,12 @@ def compute_capacity(spec):
         'vent_openings':  vent_openings,              # per-opening face/normal/area/actuator
         'u_effective':    round(u_eff, 3),
         'transmittance':  round(t_eff, 3),
+        # Absorptance and the heat it lets in are reported separately: with an
+        # opaque cover they are the whole of the solar load, and without them
+        # on screen there is no way to see why black and white differ.
+        'absorptance':    round(absorptance, 3),
+        'solar_transmitted_kw': round(solar_transmitted_kw, 2),
+        'solar_absorbed_kw':    round(solar_absorbed_kw, 2),
         'heating_kw':         round(heating_kw, 2),
         'cooling_kw':         round(cooling_kw, 2),
         'nameplate_heating_kw': round(nameplate_heating_kw, 2),

@@ -54,10 +54,32 @@ class TestFacilityCalcModule(unittest.TestCase):
         from aot.aot_flask.geo.facility_calc import compute_capacity
         self.assertTrue(callable(compute_capacity))
 
-    def test_materials_count(self):
+    def test_materials_roster(self):
         from aot.aot_flask.geo.facility_calc import MATERIALS
-        # Outer 5 + inner 3 unique additions = 8 total
-        self.assertEqual(len(MATERIALS), 8)
+        # Named rather than counted: a bare length said nothing about which
+        # material went missing, and adding one is a deliberate edit here.
+        # Glazing (light gets through) + opaque walls, added 2026-08-12.
+        expected = {
+            'vinyl_single', 'vinyl_double', 'po_film', 'polycarbonate',
+            'glass', 'non_woven_fabric', 'pe_film', 'air_cushion',
+            'film_white_opaque', 'film_black', 'film_grey',
+            'sandwich_panel', 'concrete', 'brick',
+        }
+        self.assertEqual(set(MATERIALS), expected)
+
+    def test_every_material_is_well_formed(self):
+        from aot.aot_flask.geo.facility_calc import MATERIALS
+        for key, m in MATERIALS.items():
+            self.assertGreater(m['u'], 0, '%s has no U-value' % key)
+            self.assertGreaterEqual(m['transmittance'], 0.0, key)
+            self.assertLessEqual(m['transmittance'], 1.0, key)
+            # Absorptance drives the solar gain of opaque covers; a material
+            # without it silently absorbs nothing.
+            self.assertIn('absorptance', m, '%s has no absorptance' % key)
+            self.assertGreaterEqual(m['absorptance'], 0.0, key)
+            # What is transmitted plus what is absorbed cannot exceed the sun
+            # that fell on it — the rest is reflected.
+            self.assertLessEqual(m['transmittance'] + m['absorptance'], 1.0, key)
 
 
 class TestWidgetModule(unittest.TestCase):

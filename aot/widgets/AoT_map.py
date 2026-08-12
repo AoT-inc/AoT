@@ -162,7 +162,7 @@ if (!window._aotThreeLoaded) {
 }
 if (!window._aotFacility3DLoaded) {
   window._aotFacility3DLoaded = true;
-  document.write('<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=32"><\/script>');
+  document.write('<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=36"><\/script>');
 }
 document.write('<script src="/static/js/geo/aot-facility-map-3d.js?v=28"><\/script>');
 </script>
@@ -555,13 +555,48 @@ WIDGET_INFORMATION = {
                 'Display the latest periodic AI advice summary for this map\'s facility/site.'
             )
         },
+        # --- Data Transfer Period ---
+        # [Restore] These three refresh knobs used to be scattered/removed
+        # during earlier simplification passes (input_update_interval was
+        # dropped from the form entirely; output status had no knob of its
+        # own and silently rode the widget period). Grouped together here
+        # because they answer one question users actually ask: "how fresh
+        # is what I'm looking at" — for the map view itself, for input
+        # readings, and for output on/off state, each on its own clock.
+        # Collapsed like the other secondary groups below (Device Filter,
+        # Measurement Panel, ...) — rarely-touched knobs, not part of the
+        # first-look basic view (Map / Display / AI Advice above stay open).
+        {
+            'type': 'collapse_start',
+            'id': 'data_transfer_period',
+            'name': lazy_gettext('Data Transfer Period')
+        },
         {
             'id': 'period',
             'type': 'integer',
             'default_value': '5',
-            'name': lazy_gettext('Period (Seconds)'),
+            'name': lazy_gettext('Widget Refresh Period (Seconds)'),
             'phrase': lazy_gettext('Refresh the widget every N seconds. 0 to disable.'),
             'constraints': {'min': 0, 'max': 86400}
+        },
+        {
+            'id': 'input_update_interval',
+            'type': 'integer',
+            'default_value': '300',
+            'name': lazy_gettext('Input Value Refresh Period (Seconds)'),
+            'phrase': lazy_gettext('How often input measurement values in the panel are refreshed.'),
+            'constraints': {'min': 5, 'max': 86400}
+        },
+        {
+            'id': 'output_update_interval',
+            'type': 'integer',
+            'default_value': '5',
+            'name': lazy_gettext('Output Status Refresh Period (Seconds)'),
+            'phrase': lazy_gettext('How often output on/off status is refreshed on the map.'),
+            'constraints': {'min': 5, 'max': 86400}
+        },
+        {
+            'type': 'collapse_end'
         },
 
         # ============================================================

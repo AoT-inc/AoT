@@ -84,7 +84,10 @@
 
   // Channel dropdown HTML — system-standard format: value='{input_id},{meas_id}'.
   // Combine Input + Function choices (distinguished by label)
-  var _inputChoices = (window.FAC_INPUT_CHOICES || []).concat(window.FAC_FUNCTION_CHOICES || []);
+  // FAC_INPUT_CHOICES (the flat 'input_id,measurement_id' list) is gone with the
+  // single-channel <select>; the picker groups by device instead, from
+  // FAC_INPUT_DEVICES. This map is still how a channel's measurement type is
+  // guessed from its slug.
   var _measIdSlug   = window.FAC_MEAS_ID_SLUG  || {};
   var _MTYPE_MAP = {
     temperature:'temperature', temp:'temperature',
@@ -114,21 +117,143 @@
     }).join('');
   }
 
-  function _channelOptHtml(selectedInputId, selectedMeasId) {
-    var curVal = (selectedInputId && selectedMeasId) ? (selectedInputId + ',' + selectedMeasId) : '';
-    var opts = ['<option value="">' + (window._ ? window._('— Select channel —') : '— Select channel —') + '</option>'];
-    _inputChoices.forEach(function (ch) {
-      var sel = ch.value === curVal ? ' selected' : '';
-      var slug = _measIdSlug[(ch.value || '').split(',')[1]] || '';
-      var mtype = _MTYPE_MAP[slug.toLowerCase()] || '';
-      opts.push(
-        '<option value="' + _esc(ch.value) + '"' + sel +
-        ' data-mtype="' + _esc(mtype) + '">' +
-        _esc(ch.item) +
-        '</option>'
-      );
+  // ── Channel picker (multi-select) ───────────────────────────────────────────
+  // A sensor fitting can read several channels of one device at once — a
+  // temp/humidity probe is one box reporting two numbers, and the model has
+  // always carried a channel_measurements array for it. The array survived a
+  // 2026-08-01 refactor that moved wiring out of the inspector and into this
+  // table; the multi-select picker did not, and the single <select> that
+  // replaced it could only ever hold one. Sensors that already had two were
+  // left uneditable, pointed at an inspector row that CSS hides for good.
+  //
+  // One device per fitting stays true: input_id follows the checked channels,
+  // and ticking a channel on a different device moves the whole fitting there
+  // rather than mixing two devices into one sensor.
+  function _channelList() {
+    return (window.FAC_INPUT_DEVICES || []).concat(window.FAC_FUNCTION_DEVICES || []);
+  }
+
+  function _findDevice(inputId) {
+    return _channelList().find(function (d) { return d.input_id === inputId; }) || null;
+  }
+
+  function _mtypeOf(measId) {
+    return _MTYPE_MAP[String(_measIdSlug[measId] || '').toLowerCase()] || '';
+  }
+
+  /** Rows the fitting currently reads, tolerating the legacy single-channel shape. */
+  function _selectedChannels(f) {
+    var chs = Array.isArray(f.channel_measurements) ? f.channel_measurements : [];
+    if (chs.length === 0 && f.measurement_id) {
+      return [{ measurement_id: f.measurement_id, measurement_type: f.measurement_type || null }];
+    }
+    return chs;
+  }
+
+  function _channelBtnLabel(f) {
+    var chs = _selectedChannels(f);
+    if (chs.length === 0) return (window._ ? window._('— Select channel —') : '— Select channel —');
+    if (chs.length === 1) {
+      var dev = _findDevice(f.input_id);
+      var ch  = dev && (dev.channels || []).find(function (c) {
+        return c.measurement_id === chs[0].measurement_id;
+      });
+      var name = ch ? (ch.measurement || ch.measurement_id) : chs[0].measurement_id;
+      return (dev ? dev.name + ' · ' : '') + name;
+    }
+    return (window._ ? window._('%(n)s channels') : '%(n)s channels').replace('%(n)s', chs.length);
+  }
+
+  function _openChannelPicker(btn, f) {
+    var existing = document.getElementById('fac-channel-dropdown');
+    if (existing) { existing.remove(); if (existing.dataset.fid === f.id) return; }
+
+    var dd = document.createElement('div');
+    dd.id = 'fac-channel-dropdown';
+    dd.dataset.fid = f.id;
+    dd.className = 'fac-dropdown-panel';
+
+    var selected = {};
+    _selectedChannels(f).forEach(function (c) { selected[c.measurement_id] = true; });
+    var curDev = f.input_id || '';
+
+    var html = '';
+    _channelList().forEach(function (dev) {
+      if (!dev.channels || !dev.channels.length) return;
+      html += '<div class="ch-group">' + _esc(dev.name) + '</div>';
+      dev.channels.forEach(function (ch) {
+        // Only the device this fitting is on can show ticks — the same channel
+        // id cannot be checked for two devices at once.
+        var on = (dev.input_id === curDev && selected[ch.measurement_id]) ? ' checked' : '';
+        html += '<label class="ch-item">' +
+          '<input type="checkbox" data-dev="' + _esc(dev.input_id) + '" ' +
+          'data-meas="' + _esc(ch.measurement_id) + '"' + on + '>' +
+          '<span>' + _esc(ch.measurement || ch.measurement_id) +
+          (ch.unit ? ' (' + _esc(ch.unit) + ')' : '') + '</span></label>';
+      });
     });
-    return opts.join('');
+    if (!html) {
+      html = '<div class="ch-group">' +
+        (window._ ? window._('— No devices (add at Setup → Input/Function) —')
+                  : '— No devices (add at Setup → Input/Function) —') + '</div>';
+    }
+    dd.innerHTML = html;
+
+    var rect = btn.getBoundingClientRect();
+    dd.style.left = rect.left + 'px';
+    dd.style.top  = (rect.bottom + 4) + 'px';
+    document.body.appendChild(dd);
+    // Clamp to the viewport now that it has been measured. The button sits in a
+    // drawer pinned to the right edge, so left-aligning the panel to it pushes
+    // the panel off screen; and the table sits low, so opening downward runs
+    // past the bottom.
+    if (rect.left + dd.offsetWidth + 8 > window.innerWidth) {
+      dd.style.left = Math.max(8, window.innerWidth - dd.offsetWidth - 8) + 'px';
+    }
+    if (rect.bottom + dd.offsetHeight + 8 > window.innerHeight) {
+      dd.style.top = Math.max(8, rect.top - dd.offsetHeight - 4) + 'px';
+    }
+
+    dd.addEventListener('change', function (e) {
+      var chk = e.target;
+      if (!chk || chk.type !== 'checkbox') return;
+      var dev = chk.dataset.dev;
+      // Switching device: this fitting reads one device, so the previous
+      // device's channels go rather than being silently mixed in.
+      if (dev !== (f.input_id || '')) {
+        dd.querySelectorAll('input[type="checkbox"]').forEach(function (c) {
+          if (c !== chk) c.checked = false;
+        });
+        f.input_id = dev;
+      }
+      var chs = [];
+      dd.querySelectorAll('input[type="checkbox"]:checked').forEach(function (c) {
+        chs.push({ measurement_id: c.dataset.meas, measurement_type: _mtypeOf(c.dataset.meas) || null });
+      });
+      if (window.FittingsUI && FittingsUI.patchFitting) {
+        FittingsUI.patchFitting(f.id, {
+          input_id:             chs.length ? dev : null,
+          channel_measurements: chs,
+          measurement_id:       chs.length ? chs[0].measurement_id : null,
+          measurement_type:     chs.length ? chs[0].measurement_type : null,
+        });
+      }
+      // No local label/type refresh: fittings-data-changed re-renders the table,
+      // which rebuilds this row — button text and measurement-type select
+      // included — from the model. Writing to `btn` here would only touch the
+      // node that re-render is about to replace. The panel itself survives: it
+      // hangs off <body>, not off the row.
+      document.dispatchEvent(new CustomEvent('fittings-data-changed'));
+    });
+
+    setTimeout(function () {
+      document.addEventListener('click', function _close(e) {
+        if (!dd.contains(e.target) && e.target !== btn) {
+          dd.remove();
+          document.removeEventListener('click', _close);
+        }
+      });
+    }, 50);
   }
 
   function _switchTo3d() {
@@ -252,13 +377,10 @@
         // Link: a measurement channel for sensors, an actuator for everything else
         '<td style="padding:5px 8px;">' +
           (def.detail === 'channel'
-            ? ((f.channel_measurements && f.channel_measurements.length > 1)
-                ? '<span class="fac-cell-note">' +
-                    (window._ ? window._('Multiple channels — edit in the inspector') : 'Multiple channels — edit in the inspector') +
-                  '</span>'
-                : '<select data-channel class="form-control aot-modern-select fac-cell-select">' +
-                    _channelOptHtml(f.input_id || '', f.measurement_id || '') +
-                  '</select>')
+            ? '<button type="button" data-channel-btn ' +
+                'class="btn aot-pill-btn fac-cell-select fac-cell-picker">' +
+                _esc(_channelBtnLabel(f)) +
+              '</button>'
             : '<select data-field="actuator_id" class="form-control aot-modern-select fac-cell-select">' +
                 _actuatorOptHtml(f.actuator_id || '') +
               '</select>') +
@@ -327,21 +449,14 @@
       });
 
       // Channel selection — split value='{input_id},{meas_id}' and store each field
-      var chSel   = tr.querySelector('[data-channel]');
+      var chBtn    = tr.querySelector('[data-channel-btn]');
       var mtypeSel = tr.querySelector('[data-field="measurement_type"]');
-      if (chSel) chSel.addEventListener('change', function (e) {
+      if (chBtn) chBtn.addEventListener('click', function (e) {
+        // Do not let the click select the row underneath — opening the picker
+        // and moving the 3D selection are two different intents.
         e.stopPropagation();
-        var parts = (chSel.value || '').split(',');
-        var opt   = chSel.options[chSel.selectedIndex];
-        var mtype = (opt && opt.dataset.mtype) || '';
-        if (window.FittingsUI && FittingsUI.patchFitting)
-          FittingsUI.patchFitting(f.id, {
-            input_id:       parts[0] || null,
-            measurement_id: parts[1] || null,
-            measurement_type: mtype || null,
-          });
-        if (mtypeSel) mtypeSel.value = mtype;
-        document.dispatchEvent(new CustomEvent('fittings-data-changed'));
+        e.preventDefault();
+        _openChannelPicker(chBtn, f);
       });
 
       // Manually set measurement type

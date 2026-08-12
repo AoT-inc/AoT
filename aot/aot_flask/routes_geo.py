@@ -146,15 +146,16 @@ def api_geo_designs_list():
         all_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
         result = []
         for m in all_maps:
-            state = m.state_dict()
-            # Basic metadata for dropdown
-            center = state.get('center', [37.5665, 126.9780])
+            # The saved camera lives in state_json under 'center' as {lat, lng};
+            # reading it as a list matched nothing and handed every map the same
+            # Seoul default. GeoMap.viewport() is the one place that resolves it.
+            lat, lng, zoom = m.viewport()
             result.append({
                 'unique_id': m.unique_id,
                 'name': m.name,
-                'latitude': center[0] if isinstance(center, list) and len(center) >= 2 else 37.5665,
-                'longitude': center[1] if isinstance(center, list) and len(center) >= 2 else 126.9780,
-                'zoom': state.get('zoom', 13)
+                'latitude': lat if lat is not None else 37.5665,
+                'longitude': lng if lng is not None else 126.9780,
+                'zoom': zoom if zoom is not None else 13
             })
         return jsonify(result)
     except Exception as e:

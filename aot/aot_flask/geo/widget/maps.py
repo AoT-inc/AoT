@@ -76,6 +76,33 @@ def normalize_layer_name(name):
     return cleaned.strip().lower()
 
 
+def _int_option(widget_options, key, fallback):
+    """Read an integer custom_option defensively.
+
+    Saved custom_options are NOT type-checked on every write path. The partial-save
+    endpoint (`routes_dashboard.save_widget_custom_options`) hands its JSON straight
+    to the widget's `execute_at_modification`, which blind-merges it — so a number
+    field the user simply cleared arrives here as `''`. A bare `int('')` then raises
+    ValueError while building widget_vars, and because that happens during page
+    render **the whole dashboard returns 500** — worse, the error page carries no
+    CSRF token, so the value cannot be corrected from that dashboard at all.
+
+    Reproduced locally 2026-08-12: clearing 'Input Value Refresh Period' and pausing
+    past the settings modal's 400ms autosave debounce persisted `''` and bricked the
+    dashboard. `period` above already had this try/except for the same reason; every
+    integer option reachable from the form needs it, not just that one.
+    """
+    if not widget_options:
+        return fallback
+    try:
+        return int(widget_options.get(key, fallback))
+    except (TypeError, ValueError):
+        logger.warning(
+            "[AoT Map] custom_option '%s' 값이 정수가 아니어서 기본값 %s 로 대체: %r",
+            key, fallback, widget_options.get(key))
+        return fallback
+
+
 def extract_device_ids(widget_options: dict) -> list:
     """Robustly extract device IDs from saved option keys.
 
@@ -364,7 +391,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     # device_shape_color = widget_options.get('device_shape_color', '#007bff') if widget_options else '#007bff'
     enable_label_collision = to_bool(widget_options.get('enable_label_collision'), True) if widget_options else True
     label_position = widget_options.get('label_position', 'bottom') if widget_options else 'bottom'
-    label_spacing = int(widget_options.get('label_spacing', 0)) if widget_options else 0
+    label_spacing = _int_option(widget_options, 'label_spacing', 0)
     # Master label switch. Drives every category render gate (site / zone / device /
     # sensor); per-device-type granularity lives in the runtime map controller.
     # Legacy widgets predate 'show_labels' — derive the master from the old per-category
@@ -819,15 +846,16 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
         'widget_unique_id': widget_unique_id,
         'label_position': label_position,
         'label_spacing': label_spacing,
-        'max_measure_age': int(widget_options.get('max_measure_age', 300)) if widget_options else 300,
-        'input_update_interval': int(widget_options.get('input_update_interval', 300)) if widget_options else 300,
+        'max_measure_age': _int_option(widget_options, 'max_measure_age', 300),
+        'input_update_interval': _int_option(widget_options, 'input_update_interval', 300),
+        'output_update_interval': _int_option(widget_options, 'output_update_interval', 5),
         # [Simplification] These sensor-label style knobs and the popup default tab
         # were removed from the widget settings form (rarely touched, mostly
         # clutter) and are now fixed sensible constants. `.get(key, constant)`
         # still honors any value a widget saved before the form field was
         # removed — only NEW widgets (no saved value) get the constant.
-        'sensor_label_max_channels': int(widget_options.get('sensor_label_max_channels', 1)) if widget_options else 1,
-        'sensor_label_decimals': int(widget_options.get('sensor_label_decimals', 1)) if widget_options else 1,
+        'sensor_label_max_channels': _int_option(widget_options, 'sensor_label_max_channels', 1),
+        'sensor_label_decimals': _int_option(widget_options, 'sensor_label_decimals', 1),
         'sensor_label_size': float(widget_options.get('sensor_label_size', 0.85)) if widget_options else 0.85,
         'sensor_label_bg': widget_options.get('sensor_label_bg', 'rgba(15,23,42,0.78)') if widget_options else 'rgba(15,23,42,0.78)',
         'sensor_label_fg': widget_options.get('sensor_label_fg', '#f8fafc') if widget_options else '#f8fafc',

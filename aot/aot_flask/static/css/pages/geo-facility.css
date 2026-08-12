@@ -519,6 +519,19 @@
     scroll-snap-align: start;
   }
 
+  /* 3D/Map picker — trails the steps, pushed to the far end while the bar has
+     room to spare. The bar scrolls when it does not, so it simply follows the
+     last step there. Same pill as the steps: this is a view choice, not a
+     control of its own kind. */
+  .fac-stage-toggle {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    padding-left: 8px;
+  }
+  .fac-stage-toggle[hidden] { display: none; }
+
   /* Unsaved-changes indicator */
   .fac-dirty-badge {
     align-self: center;
@@ -1044,27 +1057,43 @@
   }
   /* Two hand-built pickers on this page (sensor channels, group members). One
      definition, tokens only — they used to be a token rule and an inline
-     #fff/#ccc/rgba() string that drifted apart. */
-  #fi-ch-dropdown,
+     #fff/#ccc/rgba() string that drifted apart.
+
+     Popover, not dropdown: both are opened from inside the settings drawer and
+     appended to <body> to escape its scrolling, so at the dropdown level (1000)
+     they render BEHIND the drawer (5100) — present in the DOM, measurable, and
+     invisible. --aot-z-popover sits above the modal layer, which is what a
+     picker floating over a modal needs. */
   .fac-dropdown-panel {
-    position: fixed; z-index: var(--aot-z-dropdown);
+    position: fixed; z-index: var(--aot-z-popover);
     background: var(--aot-surface-dropdown); border: 1px solid var(--aot-border-neutral); border-radius: 6px;
     box-shadow: var(--aot-shadow-dropdown);
     padding: 4px 0; min-width: 180px; max-height: 220px; overflow-y: auto;
     font-size: var(--aot-font-size-sm); color: var(--aot-color-text-primary);
   }
-  /* The channel picker lives in the markup and is toggled; the group-member
-     panel is created on open and removed on close, so only the first one
-     starts hidden. */
-  #fi-ch-dropdown { display: none; }
-  #fi-ch-dropdown .ch-item,
+  /* Device heading inside the channel picker — the list spans every device, so
+     the ticks need to say which box they belong to. */
+  .fac-dropdown-panel .ch-group {
+    padding: 4px 10px 2px;
+    font-size: var(--aot-font-size-xs);
+    font-weight: 700;
+    color: var(--aot-color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  /* The channel cell is a picker button standing in for a select — it should
+     line up with the selects stacked under it in the same cell. */
+  .fac-cell-picker {
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .fac-dropdown-panel .ch-item {
     display: flex; align-items: center; gap: 8px;
     padding: 4px 10px; cursor: pointer; user-select: none;
   }
-  #fi-ch-dropdown .ch-item:hover,
   .fac-dropdown-panel .ch-item:hover { background: var(--aot-surface-body); }
-  #fi-ch-dropdown .ch-item input[type="checkbox"],
   .fac-dropdown-panel .ch-item input[type="checkbox"] { margin: 0; cursor: pointer; }
   /* Two link toggles share one control line. */
   #facility-3d-inspector .fi-inherit-opts { display: flex; gap: 12px; }
