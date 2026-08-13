@@ -1575,7 +1575,7 @@ def form_output_channel_measurement_choices(
         if explicit_ch:
             measurement_channels = explicit_ch.get('measurements', [])
         else:
-            # Template-only multi-channel outputs (FarmOn, mqtt_multi) declare
+            # Template-only multi-channel outputs (e.g. mqtt_multi) declare
             # channels_dict[0] only; runtime channels 1..N reuse the template
             # but each has its OWN DeviceMeasurements row at channel==N. The
             # previous fallback used ch_dict.get(0)['measurements'] (=[0]) and

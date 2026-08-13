@@ -127,6 +127,7 @@ class AoTGeoUI {
         applyColor('facility', '--theme-facility', D.facility);
         applyColor('equipment', '--theme-equipment', D.equipment);
         applyColor('device', '--theme-device', D.device);
+        applyColor('vegetation', '--theme-vegetation', D.vegetation);
 
         // Sub-types (Inputs/Outputs/Functions) — 미설정이면 장치 공통색으로 수렴.
         window.AoTGeoTheme.DEVICE_KEYS.forEach((k) => {
@@ -241,6 +242,11 @@ class AoTGeoUI {
         if (this.parent.activeMode === 'site' || this.parent.activeMode === 'zone') {
             addTool('far fa-square', window._('Rectangle'), 'rectangle');
             addTool('far fa-circle', window._('Circle'), 'circle');
+            addTool('fas fa-draw-polygon', window._('Polygon'), 'polygon');
+        } else if (this.parent.activeMode === 'vegetation') {
+            // 면적 있는 도형만. 식생 구획은 폴리곤이어야 하고(VP-1), 점·선은
+            // 구획이 될 수 없다 — 서버도 같은 규칙으로 거부한다.
+            addTool('far fa-square', window._('Rectangle'), 'rectangle');
             addTool('fas fa-draw-polygon', window._('Polygon'), 'polygon');
         } else if (this.parent.activeMode === 'device' || ['facility', 'equipment', 'aot_device'].includes(this.parent.activeMode)) {
             addTool('fas fa-slash', window._('Line'), 'polyline');
@@ -483,6 +489,23 @@ class AoTGeoUI {
         let color = '#3388ff'; // Default Blue
         if (type === 'site') color = T.color('site');
         else if (type === 'zone') color = T.color('zone');
+        // 식생 구획의 스타일 정본은 vegetation 모듈이다 — 개별 색
+        // (GeoPlanting.color)과 모드별 강조(활성 모드에서 진하게)를 함께
+        // 봐야 하는데 여기서는 그 둘을 알 수 없다.
+        //
+        // 위임하지 않고 여기서 색만 칠하면 **모드 전환 때마다 강조가 풀린다** —
+        // updateLayerStyles() 가 모든 레이어를 훑으며 이 함수를 부르기 때문에,
+        // 식생 모드에 처음 들어온 직후 강조가 사라지고 "나갔다 다시 들어와야
+        // 강조된다" 는 증상이 된다.
+        else if (type === 'vegetation') {
+            const veg = this.parent && this.parent.vegetation;
+            const uuid = props.planting_uuid;
+            if (veg && uuid) {
+                veg._styleLayer(layer, veg.data.get(uuid));
+                return;
+            }
+            color = T.color('vegetation');
+        }
         else if (type === 'facility') color = T.color('facility');
         else if (type === 'equipment') color = T.color('equipment');
         else if (type === 'aot_device' || type === 'device') {

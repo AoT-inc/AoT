@@ -215,14 +215,28 @@ const AoTMapEditor = {
         // Stop other modes first
         this.stopAll('draw');
 
+        // DrawManager 검사가 **activeShape 설정보다 먼저**여야 한다.
+        //
+        // 순서가 반대면 초기화 전에 도구를 누른 사용자가 영구히 그릴 수 없게
+        // 된다: activeShape 만 설정된 채 return 하므로 버튼은 켜진 것처럼
+        // 보이는데 drawManager 의 _currentDrawType 은 null 이고, 그 다음부터는
+        // 툴바의 토글 로직(activeShape === shape → stopAll)이 매번 "취소"로
+        // 해석해 다시 시작되지 않는다. 콘솔 에러 한 줄 말고는 아무 표시도 없다.
+        // 페이지 로드 직후 몇 초 안에 도구를 누르면 실제로 재현된다.
+        if (!this.drawManager) {
+            console.error('[AoTMapEditor] DrawManager not initialized');
+            if (window.showToast) {
+                window.showToast(
+                    (window._ ? window._('Map is still loading. Try again in a moment.')
+                              : 'Map is still loading. Try again in a moment.'),
+                    'warning');
+            }
+            return;
+        }
+
         this.activeShape = shape;
         this.currentDrawingType = shape === 'label' ? 'label' : null;
         console.log(`[AoTMapEditor] activeShape set to: ${this.activeShape}`);
-
-        if (!this.drawManager) {
-            console.error('[AoTMapEditor] DrawManager not initialized');
-            return;
-        }
 
         // Disable double click zoom for polyline (prevents premature finish)
         if (shape === 'polyline') {

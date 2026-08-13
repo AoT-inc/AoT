@@ -356,6 +356,70 @@ TOOLS: List[Tool] = [
         "description": "Deletes an Output by unique_id. Requires human approval.",
         "usage_hint": "params.arguments: {output_id: '<unique_id>'}",
     }),
+    # --- 식생 구획(작기) — docs/design/geo-vegetation-planting.md -------------
+    # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제다. 시설은 crop_preset /
+    # facility_registry 로 알 수 있었지만 노지는 알 방법이 없어, AI 가 노지
+    # 구역에 대해서는 작물을 모른 채 답하고 있었다.
+    #
+    # 쓰기 3종은 전부 승인 대상이다. config_only 로 면제하지 말 것 —
+    # end/delete 는 되돌릴 수단이 없고(그 자리의 이력이 사라진다),
+    # create 는 사람이 밭에서 확인해야 하는 사실을 기록하는 행위다.
+    Tool('list_plantings', handler='list_plantings', manifest={
+        "tool_name": "list_plantings",
+        "action_type": "virtual_tool_call",
+        "description": ("Lists vegetation plots (what crop is planted where). "
+                        "Growing plots only unless include_ended=true. Read-only."),
+        "usage_hint": "params.arguments: {map_id?, include_ended?, on?: 'YYYY-MM-DD'}",
+    }),
+    Tool('get_planting', handler='get_planting', manifest={
+        "tool_name": "get_planting",
+        "action_type": "virtual_tool_call",
+        "description": ("One plot in detail: crop, variety, period, area, size "
+                        "(width x length), and which sensors it reads (own plot or "
+                        "falls back to its zone). Give both spacings to get row and "
+                        "plant counts. Read-only."),
+        "usage_hint": ("params.arguments: {planting_id, row_spacing_cm?, "
+                       "plant_spacing_cm?, edge_margin_cm?, bed_width_cm?, "
+                       "path_width_cm?} — spacings go together, bed+path go "
+                       "together, and both extras need the spacings"),
+    }),
+    Tool('get_planting_history', handler='get_planting_history', manifest={
+        "tool_name": "get_planting_history",
+        "action_type": "virtual_tool_call",
+        "description": ("What was planted on this spot before — the basis for crop "
+                        "rotation and soil-borne disease judgement. Read-only."),
+        "usage_hint": "params.arguments: {planting_id} or {zone_id}",
+    }),
+    Tool('create_planting', handler='create_planting', mutating=True, manifest={
+        "tool_name": "create_planting",
+        "action_type": "virtual_tool_call",
+        "description": ("Creates a vegetation plot from a GeoJSON polygon. The owning "
+                        "zone is derived server-side. Requires human approval."),
+        "usage_hint": ("params.arguments: {map_id, geometry: <GeoJSON Polygon>, crop, "
+                       "planted_on: 'YYYY-MM-DD', variety?, name?, expected_end_on?, color?}"),
+    }),
+    Tool('modify_planting', handler='modify_planting', mutating=True, manifest={
+        "tool_name": "modify_planting",
+        "action_type": "virtual_tool_call",
+        "description": ("Edits a plot's crop / variety / name / period / colour. "
+                        "Geometry is not editable here. Requires human approval."),
+        "usage_hint": "params.arguments: {planting_id, crop?, variety?, name?, planted_on?, expected_end_on?, color?}",
+    }),
+    Tool('end_planting', handler='end_planting', mutating=True, manifest={
+        "tool_name": "end_planting",
+        "action_type": "virtual_tool_call",
+        "description": ("Ends a planting (harvested/failed/removed). The row is KEPT as "
+                        "history — it only leaves the map. Requires human approval."),
+        "usage_hint": "params.arguments: {planting_id, ended_on?, reason?: harvested|failed|replaced|removed}",
+    }),
+    Tool('delete_planting', handler='delete_planting', mutating=True, manifest={
+        "tool_name": "delete_planting",
+        "action_type": "virtual_tool_call",
+        "description": ("Deletes a plot record outright — for mistakes only. A harvested "
+                        "crop should use end_planting so its history survives. "
+                        "Requires human approval."),
+        "usage_hint": "params.arguments: {planting_id}",
+    }),
     Tool('list_geo_maps', handler='list_geo_maps', manifest={
         "tool_name": "list_geo_maps",
         "action_type": "virtual_tool_call",
@@ -709,7 +773,7 @@ TOOLS: List[Tool] = [
         "tool_name": "resolve_target",
         "action_type": "virtual_tool_call",
         "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Returns target_type and, if the entity has finer-grained children (e.g. a site containing zones), their exact names in 'children'. A write tool call attaches to ONLY the resolved entity, never to 'children' automatically. Call this first whenever the request could apply per-sub-unit ('each zone', '구역별', 'per section') so you know whether to loop the write tool once per child instead of writing once to the container.",
-        "usage_hint": "params.arguments: {target_name: '<place/device name>'}. Returns {status, target_id, target_type, resolved_name, children, note}. If status is 'needs_disambiguation', show available_targets to the user via ask_user and retry with the exact name.",
+        "usage_hint": "params.arguments: {target_name: '<place/device name>'}. Returns {status, target_id, target_type, resolved_name, children, note}. A CROP name also resolves ('콩밭', '상추 재배지' → the zone that crop currently grows in) — growers name plots by what is in them, so pass the user's own words rather than translating them to a map name first. If status is 'needs_disambiguation', show available_targets AND crop_targets to the user via ask_user and retry with the exact name (a crop growing in several zones is deliberately not guessed).",
     }),
     Tool('get_device_list', handler='get_device_list_tool'),
     Tool('search_notes', handler='search_notes_tool', manifest={
@@ -789,6 +853,114 @@ for _t in TOOLS:
 # to the MCP surface. That is why the two are separate fields, not one derivation.
 # ---------------------------------------------------------------------------
 _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
+    # ── 식생 구획(작기) — docs/design/geo-vegetation-planting.md ──────────────
+    # MCP 카탈로그의 정본은 **이 목록**이다. Tool(...) 선언만 추가하면 디스패치는
+    # 되지만 `tools/list` 에 안 실려 클라이언트가 도구를 아예 못 본다
+    # (2026-08-13 실제로 그렇게 빠뜨려, 서버에는 등록됐는데 Claude/ChatGPT 에는
+    # 안 보이는 상태로 한참 헤맸다).
+    {
+        "tool_name": "list_plantings",
+        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_planting on the one plot. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "map_id": {"type": "string", "description": "Map (farm) unique_id. Omit for all maps."},
+                "include_ended": {"type": "boolean", "description": "Include finished plantings (history). Default: false."},
+                "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD' — what was growing on that day."}
+            }
+        }
+    },
+    {
+        "tool_name": "get_planting",
+        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass row_spacing_cm AND plant_spacing_cm to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. If the plot records a bed layout (두둑/고랑) it is applied automatically; otherwise the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and write the agreed spec back with modify_planting. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "planting_id": {"type": "string", "description": "Plot unique_id."},
+                "row_spacing_cm": {"type": "number", "description": "Spacing between rows in cm (e.g. 40). Rows are counted across the plot's SHORT side. Must be given together with plant_spacing_cm."},
+                "plant_spacing_cm": {"type": "number", "description": "Spacing between plants within a row in cm (e.g. 15). Plants are counted along the plot's LONG side. Must be given together with row_spacing_cm."},
+                "edge_margin_cm": {"type": "number", "description": "Extra margin left free at every edge, in cm — headland for machinery turning, bed shoulders, a path. Default 0. Half a spacing is ALREADY free at each edge without this, so only pass it when the plot genuinely needs more (e.g. 200 for a 2 m turning strip). Requires both spacings."},
+                "bed_width_cm": {"type": "number", "description": "Raised-bed (두둑) width in cm, e.g. 120 — ONLY to override what the plot already records, e.g. to try a different layout. The plot's own bed spec is used automatically when it has one, and 'capacity_estimate.bed_spec_source' says which was used. Without either, the count assumes flat planting and OVERSTATES a bedded plot by 20-30%."},
+                "path_width_cm": {"type": "number", "description": "Furrow/path (고랑) width between beds in cm, e.g. 40. Furrows carry no plants. Overrides the plot's recorded value the same way bed_width_cm does."}
+            },
+            "required": ["planting_id"]
+        }
+    },
+    {
+        "tool_name": "get_planting_history",
+        "description": "What was grown on this same ground before — the basis for crop-rotation and soil-borne disease judgement. Give either a plot or a zone; returns every planting whose area overlaps it, past and present, with the overlapping area. Always check this before advising whether a crop can be planted again. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "planting_id": {"type": "string", "description": "Use this plot's outline as the reference area."},
+                "zone_id": {"type": "string", "description": "Or use a zone's outline (GeoShape unique_id)."},
+                "map_id": {"type": "string", "description": "Optional map hint."}
+            }
+        }
+    },
+    {
+        "tool_name": "create_planting",
+        "description": "Records a new vegetation plot from a GeoJSON polygon. The owning zone is derived from the geometry — do not ask the user for it. Overlapping plots are NORMAL (intercropping), so do not refuse or warn about overlap. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "map_id": {"type": "string", "description": "Map (farm) unique_id."},
+                "geometry": {"type": "object", "description": "GeoJSON Polygon or MultiPolygon. Points and lines are rejected."},
+                "crop": {"type": "string", "description": "Crop name."},
+                "planted_on": {"type": "string", "description": "Planting date 'YYYY-MM-DD'."},
+                "variety": {"type": "string", "description": "Cultivar (optional)."},
+                "name": {"type": "string", "description": "Plot name, e.g. 'front bed' (optional)."},
+                "expected_end_on": {"type": "string", "description": "Expected end date 'YYYY-MM-DD' (optional)."},
+                "color": {"type": "string", "description": "Display colour '#rrggbb'. Omit to follow the map theme."},
+                "bed_width_cm": {"type": "integer", "description": "Raised-bed (두둑) width in cm, if known. Recording it here means row/plant counts can be worked out later without asking again. Goes with path_width_cm."},
+                "path_width_cm": {"type": "integer", "description": "Furrow/path (고랑) width between beds in cm. Use 0 for beds laid side by side with no furrow. Goes with bed_width_cm."}
+            },
+            "required": ["map_id", "geometry", "crop", "planted_on"]
+        }
+    },
+    {
+        "tool_name": "modify_planting",
+        "description": "Edits a plot's crop, variety, name, dates, colour or bed layout. Once you have settled the bed and furrow width with the grower, write them here so the plot carries its own layout and nobody is asked again. Geometry is NOT editable here — reshaping a plot is done on the map design page. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "planting_id": {"type": "string", "description": "Plot unique_id."},
+                "crop": {"type": "string"},
+                "variety": {"type": "string"},
+                "name": {"type": "string"},
+                "planted_on": {"type": "string", "description": "'YYYY-MM-DD'"},
+                "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
+                "color": {"type": "string", "description": "'#rrggbb'"},
+                "bed_width_cm": {"type": "integer", "description": "Raised-bed (두둑) width in cm. Goes with path_width_cm — a plot cannot have one without the other."},
+                "path_width_cm": {"type": "integer", "description": "Furrow/path (고랑) width between beds in cm. 0 means beds laid side by side with no furrow."}
+            },
+            "required": ["planting_id"]
+        }
+    },
+    {
+        "tool_name": "end_planting",
+        "description": "Marks a planting as finished (harvested / failed / replaced / removed). The record is KEPT as history — it only leaves the map, so later crop-rotation checks still see it. Prefer this over delete_planting for anything that was actually grown. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "planting_id": {"type": "string", "description": "Plot unique_id."},
+                "ended_on": {"type": "string", "description": "End date 'YYYY-MM-DD'. Default: today."},
+                "reason": {"type": "string", "description": "harvested | failed | replaced | removed. Default: harvested."}
+            },
+            "required": ["planting_id"]
+        }
+    },
+    {
+        "tool_name": "delete_planting",
+        "description": "Deletes a plot record outright. FOR MISTAKES ONLY — the ground's cropping history is lost, which breaks future rotation advice. If the crop was actually grown and is now finished, use end_planting instead. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "planting_id": {"type": "string", "description": "Plot unique_id."}
+            },
+            "required": ["planting_id"]
+        }
+    },
     {
         "tool_name": "get_storage_tier_status",
         "description": "Reports the adaptive document storage state: whether tiering is enabled, how many documents sit in each tier (1=hot, 2=warm, 3=cold), and how many are ACTUALLY archived. A tier value records an intent to move; only a row in the archive means the content was really moved. Relay any 'warning' or 'note' field to the user instead of dropping it.",
@@ -899,7 +1071,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_name": {"type": "string", "description": "Name of the place/device to resolve (e.g. '3-1', '1포장 1-1', '온실')."}
+                "target_name": {"type": "string", "description": "Name of the place/device to resolve (e.g. '3-1', '1포장 1-1', '온실'). A CROP name works too ('콩밭', '상추 재배지') and resolves to the zone that crop currently grows in — pass the user's own words instead of guessing a map name."}
             },
             "required": ["target_name"]
         }

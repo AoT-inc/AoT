@@ -22,6 +22,64 @@
         document.head.appendChild(_styleEl);
     }
 
+    // ── 타일 메모리 캐시 정원 (데스크탑 전용) ─────────────────────────────────
+    // MapLibre 4.1.2 는 화면 밖 타일 캐시의 크기를 뷰포트에서 계산한다
+    // (`SourceCache.updateCacheSize`, 벤더 번들에서 확인):
+    //
+    //   cacheMax = floor( (ceil(W/tileSize)+1) × (ceil(H/tileSize)+1) × Z )
+    //            = (한 화면분 타일 수) × Z          Z = maxTileCacheZoomLevels (기본 5)
+    //
+    // 즉 기본값은 "화면 5장분"이다. `maxTileCacheSize` 는 이 값을 **올리지 못한다**
+    // — `Math.min` 으로 걸리는 상한일 뿐이라 정원을 키우는 손잡이는 Z 하나다.
+    //
+    // **실측(2026-08-13, 로컬 · 800×400 지도 · zoom 11 · 256px 타일):**
+    //   Z=기본(5)  → cacheMax 75,  화면 안 12장
+    //   Z=20       → cacheMax 300  (공식대로 15 × Z)
+    //   가로 800×400 → 세로 400×800 회전: 신규 3장, 화면 밖 캐시로 3장 이동
+    //   다시 가로로 회전:            **재요청 0건** (전부 메모리 캐시 적중)
+    //
+    // 그래서 **회전만 놓고 보면 이 손잡이는 아무것도 하지 않는다** — 기본값이 이미
+    // 화면 5장분을 들고 있고 회전이 밀어내는 것은 한 화면분에도 한참 못 미친다.
+    // 회전 비용은 프록시 캐시(`utils_http.tile_conditional`)가 없앤 것이지 여기가 아니다.
+    // 이 값이 실제로 듣는 곳은 **줌 왕복과 넓은 팬** — 화면 5장분을 넘겨 훑고
+    // 돌아오는 경우다. 그때조차 프록시 캐시가 생긴 뒤로는 재요청이 왕복이 아니라
+    // 브라우저 디스크 캐시(실측 2ms / 0바이트) + 디코드 비용이므로, 아끼는 것은
+    // 네트워크가 아니라 디코드다. 그래서 2배(10)로만 올린다.
+    //
+    // **모바일에서 켜지 않는 이유**: 보관되는 타일은 256×256 RGBA 텍스처 한 장당
+    // 약 256KB 다. 정원을 2배로 하면 상한도 2배가 된다 — 지도 위젯 하나(800×500)
+    // 기준 75장 19MB → 150장 38MB. 폰에서 그만큼을 얻자고 쓰기에는 비싸고,
+    // 폰이야말로 이 프로젝트가 발열·메모리를 아끼려고 애쓰는 쪽이다.
+    var _DESKTOP_TILE_CACHE_ZOOM_LEVELS = 10;
+
+    /**
+     * 데스크탑급 기기인가.
+     *
+     * **화면 회전으로 뒤집히지 않는 신호만 쓴다.** 뷰포트 폭(`innerWidth <= 768`)
+     * 으로 가르면 폰을 가로로 눕히는 순간(예: 844×390) 데스크탑으로 분류된다 —
+     * 정확히 이 값이 없어야 할 상황에서 켜지는 셈이다. 그래서
+     *   - `pointer: coarse` / `hover: none` : 터치가 주 입력 → 폰·태블릿
+     *   - `max(screen.width, screen.height)`: 방향과 무관한 화면 긴 변
+     *   - `navigator.deviceMemory`          : 저사양 기기 제외
+     * 셋을 본다. 판정 불가면 **모바일로 본다**(안전한 쪽 = 기본값 유지).
+     */
+    function _isDesktopClass() {
+        try {
+            var mm = window.matchMedia;
+            if (mm && (mm('(pointer: coarse)').matches || mm('(hover: none)').matches)) {
+                return false;
+            }
+            var longEdge = Math.max(window.screen && window.screen.width || 0,
+                                    window.screen && window.screen.height || 0);
+            if (!longEdge || longEdge <= 1024) return false;
+            var mem = navigator.deviceMemory;
+            if (typeof mem === 'number' && mem <= 2) return false;
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     window.initAoTMapVectorWidget = async function(uniqueId) {
 
         // Get widget data from embedded JSON
@@ -87,7 +145,7 @@
             return;
         }
 
-        const map = new maplibregl.Map({
+        const mapOptions = {
             container: canvasId,
             style: baseStyleUrl,
             center: [defaultLng, defaultLat],
@@ -96,7 +154,18 @@
             pitch: defaultPitch,
             bearing: defaultBearing,
             attributionControl: false
-        });
+        };
+        // 데스크탑에서만 화면 밖 타일 캐시를 넓힌다 (근거·실측은 파일 상단
+        // _DESKTOP_TILE_CACHE_ZOOM_LEVELS 주석). 폰·태블릿은 기본값(5) 그대로 —
+        // 정원을 넓히면 보관 텍스처 메모리 상한이 그대로 따라 오른다.
+        // 이 옵션은 SourceCache 가 만들어질 때 map 에서 읽어가므로(onAdd) 생성
+        // 시점에 넣어야 한다. 나중에 map._maxTileCacheZoomLevels 를 바꿔도 이미
+        // 붙은 소스에는 반영되지 않는다.
+        if (_isDesktopClass()) {
+            mapOptions.maxTileCacheZoomLevels = _DESKTOP_TILE_CACHE_ZOOM_LEVELS;
+        }
+
+        const map = new maplibregl.Map(mapOptions);
 
         // 전역 가드: 빈/잘못된 타일 URL 의 raster 소스 추가를 거부한다.
         // tiles:[''] 같은 소스는 MapLibre 워커가 보이는 타일마다 빈 URL 을
@@ -263,11 +332,37 @@
                 window.AoTVectorLayerManager.init(map);
             }
 
+            // 식생 구획(작기). GeoShape 가 아니라 별도 테이블이라 아래 오버레이
+            // 로더를 타지 않는다 — 자기 API(/api/geo/plantings)로 따로 온다.
+            //
+            // **await 하지 않는다.** 아래 로더들이 느리거나 하나가 걸리면 식생까지
+            // 함께 멈추기 때문이다(실제로 그 자리에 두었더니 레이어가 아예 안
+            // 올라왔다). fetch 왕복이 있어 실제 추가는 대개 도형 뒤가 된다.
+            try {
+                if (window.AoTMapVegetation) {
+                    const _vegOpts = (vars && vars.vars) || {};
+                    const _vegMapUuid = _vegOpts.selected_map_uuid ||
+                                        _vegOpts.map_uuid ||
+                                        (vars && vars.contentMapUuid) || '';
+                    const _vegOpt = _vegOpts.show_vegetation;
+                    window.AoTMapVegetation.load(uniqueId, map, {
+                        mapUuid: _vegMapUuid,
+                        shell: _showFacilityCenterOverlay,
+                        facilityCentric: !!_vegOpts.label_priority_facility,
+                        labelSizeEm: _vegOpts.global_label_size,
+                        visible: !(_vegOpt === false || _vegOpt === 'false')
+                    });
+                }
+            } catch (e) {
+                console.warn('[AoT Map] 식생 레이어 초기화 실패:', e);
+            }
+
             // Add GeoJSON layers for sites/zones/devices
             await loadGeoJSONLayers(uniqueId, map, vars);
 
             // Add geo/design labels (label_aux markers)
             await loadGeoDesignLabels(uniqueId, map, vars);
+
 
             // Overlay raster layers (오버레이지도, e.g. soil-info WMS) are added
             // LAST and DEFERRED — see the map.once('idle') block after the legend.
@@ -7349,6 +7444,12 @@
                     inst.layers.set(layerId, entry.layerDef.type);
                 }
             });
+            // 식생 구획도 setStyle 에 함께 지워진다 — layerDefs 캐시에는 없으므로
+            // (자기 소스로 따로 올린다) 여기서 자기 캐시로 되살린다.
+            if (window.AoTMapVegetation && window.AoTMapVegetation.rehydrate) {
+                try { window.AoTMapVegetation.rehydrate(uniqueId, map); } catch (e) {}
+            }
+
             // Re-attach Three.js facility overlay (custom layer also wiped by setStyle).
             // attach() calls nativeMap.addLayer which puts the layer at absolute top —
             // this is intentional so it renders above all 2D GeoJSON layers.

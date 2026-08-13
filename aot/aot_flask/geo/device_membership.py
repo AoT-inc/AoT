@@ -134,28 +134,59 @@ def zone_for_device(device_unique_id, map_uuid):
     return _best_container(pt, load_containers(map_uuid))
 
 
-def device_ids_in_shape(shape):
-    """도형(site/zone) 폴리곤 안에 마커가 있는 device_id 집합.
+def container_for_geometry(map_uuid, geom, containers=None):
+    """폴리곤을 감싸는 site/zone GeoShape (없으면 None).
 
-    site 폴리곤은 내부 zone 들을 기하학적으로 포함하므로, site 에 대해
-    호출하면 하위 zone 의 장치까지 자연히 포함된다 — 별도의 계층 순회가
-    필요 없다.
+    판정은 **대표점** 기준이다 — 구획이 zone 경계를 살짝 넘거나 두 zone 에
+    걸친 경우에도 답이 하나로 정해져야 하고, 면적 교차 최대로 정하면 경계를
+    조금 손볼 때마다 소속이 튄다. `representative_point()` 는 오목한 폴리곤
+    에서도 반드시 내부에 있다(centroid 는 밖으로 나갈 수 있다).
+
+    `containers` 를 넘기면 재사용한다 — 여러 구획을 한 번에 처리할 때
+    지도 도형 전량 스캔이 반복되지 않도록.
+    """
+    from shapely.geometry import shape as shapely_shape
+
+    geom = geom or {}
+    if geom.get('type') not in ('Polygon', 'MultiPolygon'):
+        return None
+    try:
+        pt = shapely_shape(geom).representative_point()
+    except Exception as exc:
+        logger.warning('membership: 기하 해석 실패(컨테이너 판정): %s', exc)
+        return None
+    if containers is None:
+        containers = load_containers(map_uuid)
+    return _best_container((pt.x, pt.y), containers)
+
+
+def device_ids_in_geometry(map_uuid, geom, _label='geometry'):
+    """임의 폴리곤 안에 마커가 있는 device_id 집합.
+
+    `device_ids_in_shape` 의 알맹이. GeoShape 행이 아닌 기하로도 물어야 하는
+    소비처가 있어서 분리했다 — 식생 구획(GeoPlanting)은 GeoShape 가 아니지만
+    "이 폴리곤 안의 센서" 라는 질문은 완전히 같다
+    (docs/design/geo-vegetation-planting.md §센서 참조 계약).
+
+    ⚠ 이 함수는 **참조**를 답할 뿐 소속을 정하지 않는다. 소속 판정의 컨테이너
+    목록(`_CONTAINER_TYPES`)에 식생 구획 같은 단명 대상을 추가하지 말 것 —
+    "겹치면 zone 이 site 를 이긴다" 규칙에 끼어들면 장치의 소속이 작기마다
+    바뀌고, 작기가 끝나는 순간 그 장치가 무소속이 된다.
     """
     from shapely.geometry import Point, shape as shapely_shape
 
-    geom = _feature(shape).get('geometry') or {}
+    geom = geom or {}
     if geom.get('type') not in ('Polygon', 'MultiPolygon'):
         return set()
     try:
         poly = shapely_shape(geom)
     except Exception as exc:
-        logger.warning('membership: 도형 id=%s 기하 해석 실패: %s',
-                       shape.id, exc)
+        logger.warning('membership: %s 기하 해석 실패: %s', _label, exc)
         return set()
 
     result = set()
     markers = GeoShape.query.filter(
-        GeoShape.geo_id == shape.geo_id,
+        GeoShape.geo_id == map_uuid,
         GeoShape.device_id.isnot(None),
         GeoShape.type.in_(_MARKER_TYPES)).all()
     for m in markers:
@@ -168,6 +199,18 @@ def device_ids_in_shape(shape):
         except Exception:
             continue
     return result
+
+
+def device_ids_in_shape(shape):
+    """도형(site/zone) 폴리곤 안에 마커가 있는 device_id 집합.
+
+    site 폴리곤은 내부 zone 들을 기하학적으로 포함하므로, site 에 대해
+    호출하면 하위 zone 의 장치까지 자연히 포함된다 — 별도의 계층 순회가
+    필요 없다.
+    """
+    return device_ids_in_geometry(
+        shape.geo_id, _feature(shape).get('geometry'),
+        _label='도형 id=%s' % shape.id)
 
 
 def area_choices():

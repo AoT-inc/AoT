@@ -33,3 +33,10 @@ aot/databases/*.db
 **/ssl_certs/
 aot/databases/flask_secret_key
 aot/aot_flask/templates/user_templates/widget_template_*.html
+
+# --- 비공개 드라이버 ---
+# 상업용 제작물이라 공개 배포 대상이 아니다. .gitignore 에도 같은 항목이 있어
+# 저장소에는 들어가지 않지만, 여기 화이트리스트가 aot/ 를 통째로 허용하므로
+# 워킹트리에 파일이 있는 상태로 로컬 빌드하면 이미지에 그대로 실린다.
+# 로컬 compose 는 ../:/app 을 bind-mount 하므로 빼도 개발에 지장이 없다.
+aot/outputs/custom_outputs/on_off_mqtt_farmon_v1.py

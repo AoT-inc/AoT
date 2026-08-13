@@ -70,3 +70,46 @@ def json_conditional(response, req):
     response.cache_control.no_cache = True
     response.cache_control.private = True
     return response
+
+
+def tile_conditional(req, payload, content_type, max_age):
+    """타일 바이너리 응답에 ETag + 장기 `max-age` 를 달고 조건부 요청을 처리한다.
+
+    `json_conditional()` 과 목적이 다르다. 저쪽은 "매번 재검증(no-cache)하되
+    본문 전송만 아끼는" 폴링용이고, 이쪽은 **네트워크 왕복 자체를 없애는**
+    타일용이다 — 타일은 좌표가 곧 내용이라 같은 URL 이 다른 그림을 주지 않는다.
+
+    그래서 `max-age` 를 길게 주는 것이 핵심이고, ETag 는 만료 **후** 재검증을
+    27KB 재다운로드가 아니라 304 한 줄로 끝내는 보조 수단이다. 실측(로컬,
+    ISRIC SoilGrids 타일 1장): 상류 왕복 1,739ms / 27,012바이트 대 브라우저
+    캐시 적중 5ms / 0바이트.
+
+    Args:
+        req: 현재 `flask.request`.
+        payload: 타일 바이트.
+        content_type: 예) `image/png`.
+        max_age: 브라우저 캐시 수명(초).
+
+    Returns:
+        200 응답(ETag + Cache-Control 포함) 또는 본문 없는 304.
+
+    `public` 으로 내보내지만, 응답에 `Set-Cookie` 가 붙으면 출구 가드
+    (`app._never_share_cache_a_response_that_sets_a_cookie`)가 `private` 으로
+    낮춘다 — 세션이 실린 응답이 공유 캐시에 들어가는 사고를 막는 그 가드다.
+    여기서 `public` 을 직접 떼지 않는 이유는 그 판단이 한 곳에만 있어야 하기
+    때문이다.
+    """
+    etag = hashlib.sha1(payload).hexdigest()
+    cache_control = 'public, max-age={}'.format(int(max_age))
+
+    if etag in incoming_etags(req):
+        not_modified = current_app.response_class(status=304)
+        not_modified.set_etag(etag)
+        not_modified.headers['Cache-Control'] = cache_control
+        return not_modified
+
+    response = current_app.response_class(
+        payload, status=200, content_type=content_type)
+    response.set_etag(etag)
+    response.headers['Cache-Control'] = cache_control
+    return response

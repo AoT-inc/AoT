@@ -28,7 +28,12 @@ class AoTGeoDesign {
             'aot_device': new AoTGeoLayerGroup('aot_device'),
             'infra_blob': new AoTGeoLayerGroup('infra_blob'),
             'reference': new AoTGeoLayerGroup('reference'),
-            'label_aux': new AoTGeoLayerGroup('label_aux')
+            'label_aux': new AoTGeoLayerGroup('label_aux'),
+            // 식생 구획은 GeoShape 가 아니지만(별도 테이블) 그룹은 필요하다 —
+            // 편집 도구가 여기서 레이어를 찾아 정점 편집 대상으로 삼는다
+            // (_onDrawEdited 의 layerStorage 순회). 저장은 typesToSync 가
+            // 아니라 vegetation 모듈이 자기 API 로 한다.
+            'vegetation': new AoTGeoLayerGroup('vegetation')
         };
         
         // [Optimization] Dirty Tracking for Delta Save
@@ -61,6 +66,10 @@ class AoTGeoDesign {
         // 공간 슬롯 ↔ 장치 배정(geo_binding). 배치(devices)와는 다른 축이다 —
         // 저쪽은 좌표, 이쪽은 "이 자리를 지금 어느 장치가 맡는가"다.
         this.binding = window.AoTGeoBinding ? new AoTGeoBinding(this) : null;
+        // 식생 구획(작기). 저장처가 GeoShape 가 아니라 geo_planting 이라
+        // saveDesign/typesToSync 경로를 타지 않는다 — 자기 API 로만 오간다.
+        this.vegetation = window.AoTGeoVegetation
+            ? new AoTGeoVegetation(this) : null;
         this.stats = new AoTGeoStats(this);
     }
 
@@ -801,9 +810,12 @@ class AoTGeoDesign {
         // [Fix] Dynamic Editor Pane Assignment
         // Ensure Editor's featureGroup belongs to the current mode's Pane
         if (this.map && this.featureGroup) {
-            const paneName = (mode === 'site' ? 'sitePane' : 
-                             (mode === 'zone' ? 'zonePane' : 
-                             (mode === 'facility' ? 'facilityPane' : 
+            // 식생은 zone 안에 그려지므로 zonePane 을 함께 쓴다 — 전용 pane 을
+            // 새로 만들면 Leaflet/MapLibre 두 경로의 z-index 표를 모두 손봐야
+            // 하는데 얻는 것이 없다.
+            const paneName = (mode === 'site' ? 'sitePane' :
+                             (mode === 'zone' || mode === 'vegetation' ? 'zonePane' :
+                             (mode === 'facility' ? 'facilityPane' :
                              (mode === 'equipment' ? 'equipmentPane' : 
                              (mode === 'aot_device' || mode === 'device' ? 'devicePane' : 'overlayPane')))));
             
@@ -871,6 +883,21 @@ class AoTGeoDesign {
         // Update device marker draggability — only allowed in aot_device mode
         if (this.devices && this.devices.updateMarkersInteractivity) {
             this.devices.updateMarkersInteractivity();
+        }
+
+        // 식생 구획은 별도 테이블이라 _switchLayerContext 의 대상이 아니다.
+        // 처음 이 모드에 들어올 때 한 번 불러온다(이후는 캐시).
+        if (this.vegetation) {
+            // 식생 모드에서만 진하게 — 다른 모드에서는 배경으로 물러난다.
+            this.vegetation.setEmphasis(mode === 'vegetation');
+            // **모드와 무관하게 불러온다.** 예전에는 식생 모드일 때만 load()
+            // 를 불러서, 페이지를 열면(초기 모드 'site') 구획이 아예 없다가
+            // 식생 탭에 한 번 들어가야 나타났다 — 다른 모드에서 배치를 조정할
+            // 때 참고할 것이 없다는 뜻이다. load() 는 자체 캐시 가드가 있어
+            // 여러 번 불러도 서버 요청은 한 번이다.
+            this.vegetation.bindEditHook();
+            this.vegetation.bindDeleteHook();
+            this.vegetation.load();
         }
 
         // Auto Save Mode Change

@@ -7,6 +7,7 @@ human approval workflow, and persistent job storage via SQLAlchemyJobStore.
 """
 import logging
 import json
+import re
 import threading
 import pytz
 from datetime import datetime, timezone, timedelta
@@ -14,7 +15,7 @@ from aot.utils.time_utils import utc_now, get_local_now, to_local
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR, EVENT_JOB_MISSED
 
 from aot.config import DATABASE_PATH
 from aot.aot_flask.extensions import db
@@ -70,6 +71,11 @@ def get_scheduler():
             }
         )
         _scheduler.add_listener(_job_event_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+        # 건너뛴 실행(misfire)도 들어야 한다. 예전에는 EXECUTED|ERROR 만 들어서,
+        # 앱이 misfire_grace_time 보다 오래 내려가 있으면 그 예약은 **한 번도
+        # 돌지 않고 조용히 사라졌다** — meta 행은 PENDING(1회성) 이나 직전 실행의
+        # COMPLETED(반복) 로 남아 아무도 누락을 알아채지 못한다.
+        _scheduler.add_listener(_job_missed_listener, EVENT_JOB_MISSED)
     return _scheduler
 
 
@@ -756,6 +762,34 @@ def _job_event_listener(event):
             logger.exception(f"Error in job event listener for {event.job_id}: {e}")
 
 
+def _job_missed_listener(event):
+    """건너뛴 실행(EVENT_JOB_MISSED)을 눈에 보이는 실패로 남긴다.
+
+    APScheduler 는 예정 시각이 misfire_grace_time 을 넘어서야 잡을 집으면
+    실행하지 않고 이 이벤트만 낸다(앱이 내려가 있었거나, 잡스토어가 밀렸거나,
+    같은 잡이 max_instances 로 겹쳤을 때). 아무도 듣지 않으면:
+      - 1회성 예약: meta 는 PENDING 인 채로 영원히 남고 APScheduler 잡은 사라진다.
+      - 반복(cron) 예약: 직전 성공의 COMPLETED 가 그대로 남아 **이번 회차가
+        건너뛰어진 사실이 어디에도 없다.**
+    두 경우 다 화면상 '문제 없음'으로 보이는 미실행이다.
+    """
+    from aot.ai.services.ai_scheduler_service import AISchedulerService, _flask_app
+    if not _flask_app:
+        logger.error("Job missed listener called without _flask_app")
+        return
+    with _flask_app.app_context():
+        try:
+            _when = getattr(event, 'scheduled_run_time', None)
+            logger.error("Job %s MISSED its scheduled run at %s — it did NOT execute",
+                         event.job_id, _when)
+            AISchedulerService.update_job_state(
+                event.job_id, JOB_STATE_FAILED,
+                execution_result=(f"NOT EXECUTED: misfire — scheduled run at {_when} was "
+                                  f"skipped (app down or past misfire_grace_time)"))
+        except Exception as e:
+            logger.exception(f"Error in job missed listener for {event.job_id}: {e}")
+
+
 class AISchedulerService:
     """
     Service layer for managing scheduled jobs with Human-AI collaboration.
@@ -778,18 +812,53 @@ class AISchedulerService:
     _NOT_RUN_MARKERS = (
         'pending_approval', 'awaiting_user', 'was NOT executed',
         'LEGACY_BLOCKED', 'requires_approval', 'not_executed',
+        # 승인 게이트의 거부 어휘. gate() 는 승인 대기 말고도 여러 이유로
+        # "실행하지 않음"을 돌려주는데, 그 응답에는 'pending_approval' 이 없다:
+        #   insufficient_role · write_disabled · rate_limited · user_declined ·
+        #   confirmation_expired/rejected/params_mismatch/already_used …
+        # 전부 status='refused' 다. 이 줄들이 없으면 레이트 리밋에 걸린 예약이
+        # 그대로 COMPLETED 로 기록된다.
+        'insufficient_role', 'write_disabled', 'rate_limited', 'user_declined',
+        'confirmation_not_found', 'confirmation_tool_mismatch',
+        'confirmation_already_used', 'confirmation_rejected',
+        'confirmation_expired', 'confirmation_params_mismatch',
+        'needs_disambiguation',
     )
+
+    # AoT MCP 서버가 **모든** tools/call 응답에 찍는 단일 판정 축
+    # (mcp_safety_gate.CALL_STATES / aot_mcp_server._execute_tool).
+    # 도구별 status 어휘(created/modified/placed…12종)를 몰라도 "이번 호출에서
+    # 실제로 돌았는가"만 답한다. 문자열 마커보다 이쪽이 정본이다.
+    _EXECUTED_CALL_STATES = frozenset({'executed', 'already_executed'})
+    _CALL_STATE_RE = re.compile(r'["\']call_state["\']\s*:\s*["\']([a-z_]+)["\']')
+    _IS_ERROR_RE = re.compile(r'["\']isError["\']\s*:\s*(?:True|true)')
 
     @staticmethod
     def _retval_indicates_not_executed(retval):
-        """미실행로 보이면 그 근거 문자열을, 정상 실행이면 None 을 돌려준다."""
+        """미실행으로 보이면 그 근거 문자열을, 정상 실행이면 None 을 돌려준다.
+
+        판정 순서:
+          1) 최상위 dict 의 status (호출 래퍼가 스스로 실패라고 말한 경우)
+          2) 페이로드 어디에든 있는 call_state (MCP 응답의 정본 축)
+          3) 문자열 마커 (구조를 못 알아본 경우의 그물)
+        과소탐지보다 과대탐지를 택한다 — 안 켜진 예약을 성공으로 적는 쪽이
+        훨씬 위험하다.
+        """
         if retval is None:
             return None
         if isinstance(retval, dict):
             st = str(retval.get('status', '')).lower()
-            if st in ('error', 'failed', 'blocked', 'pending_approval'):
+            if st in ('error', 'failed', 'blocked', 'pending_approval', 'refused'):
                 return f"status={retval.get('status')}"
         blob = str(retval)
+        for state in AISchedulerService._CALL_STATE_RE.findall(blob):
+            if state not in AISchedulerService._EXECUTED_CALL_STATES:
+                return f"call_state={state}"
+        # MCP 표준 오류 플래그. MCPBridgeService.call_tool 은 이걸 읽지 않고
+        # {"status":"success","result":{...}} 로 감싸므로, 서드파티 MCP 서버가
+        # 도구 실행 실패를 규격대로 알려와도 바깥에서는 성공으로 보인다.
+        if AISchedulerService._IS_ERROR_RE.search(blob):
+            return 'isError=true'
         for mk in AISchedulerService._NOT_RUN_MARKERS:
             if mk.lower() in blob.lower():
                 return mk
@@ -1415,11 +1484,34 @@ def _execute_scheduled_action(action_type, target_id, params, meta_id=None):
             finally:
                 clear_execution_context()
 
-            # Update SchedulerJobMeta state after execution
+            # Update SchedulerJobMeta state after execution.
+            #
+            # 최상위 status 만 보면 안 된다 — 승인 게이트에 걸린 MCP 호출은
+            # {"status":"success","result":{...content[].text 안에 pending_approval...}}
+            # 로 온다. _job_event_listener 가 나중에 같은 판정을 한 번 더 하지만,
+            # 여기서도 같은 헬퍼를 쓰는 이유가 둘 있다: (1) 리스너가 어떤 이유로든
+            # 못 돌면 이 값이 최종본이 되고, (2) 아래 500자 자르기가 근거를 잘라내지
+            # 않도록 근거 문자열을 **맨 앞**에 붙여야 한다.
             if meta_id:
                 import json as _json
-                _new_state = JOB_STATE_COMPLETED if result.get('status') == 'success' else JOB_STATE_FAILED
-                AISchedulerService.update_job_state(meta_id, _new_state, _json.dumps(result, ensure_ascii=False)[:500])
+                try:
+                    _payload = _json.dumps(result, ensure_ascii=False, default=str)
+                except Exception:
+                    _payload = str(result)
+                _not_run = AISchedulerService._retval_indicates_not_executed(result)
+                if _not_run:
+                    logger.error("Scheduled action %s on %s did NOT execute: %s",
+                                 action_type, target_id, _not_run)
+                    AISchedulerService.update_job_state(
+                        meta_id, JOB_STATE_FAILED,
+                        f"NOT EXECUTED: {_not_run} | {_payload}"[:2000])
+                elif result.get('status') == 'success':
+                    AISchedulerService.update_job_state(
+                        meta_id, JOB_STATE_COMPLETED, _payload[:2000])
+                else:
+                    AISchedulerService.update_job_state(
+                        meta_id, JOB_STATE_FAILED,
+                        f"status={result.get('status')} | {_payload}"[:2000])
 
             return result
 

@@ -388,7 +388,7 @@ class OutputModule(AbstractOutput):
     def _running_relay_id(self):
         """Return the relay reference for the direction currently driving, or None.
 
-        FarmOn-style toggle protocols flip a relay's state on every command, so a
+        Toggle-style protocols flip a relay's state on every command, so a
         redundant OFF sent to an already-off relay activates it. Stop must only
         target the relay we know is running — never blast both directions.
         """
@@ -407,7 +407,7 @@ class OutputModule(AbstractOutput):
     def stop_output(self):
         self._cancel_watchdog()
         # Only OFF the running direction. The opposite direction must NEVER be
-        # touched on stop — under FarmOn toggle protocol a redundant OFF on an
+        # touched on stop — under a toggle protocol a redundant OFF on an
         # already-off relay activates it, energizing both directions of an
         # H-bridge motor driver simultaneously (motor damage / short circuit).
         running = self._running_relay_id()
@@ -471,7 +471,7 @@ class OutputModule(AbstractOutput):
         opposite_id = close_id if new_dir == 'open' else open_id
 
         # Only touch the opposite relay when actually reversing direction.
-        # Some underlying outputs (e.g. FarmOn MQTT) use a toggle protocol where
+        # Some underlying outputs use a toggle protocol where
         # a redundant OFF on an already-off relay can flip it ON.
         if self._last_direction not in ('idle', new_dir):
             self._relay_off(opposite_id)
@@ -543,7 +543,7 @@ class OutputModule(AbstractOutput):
         self.logger.info("Travel time elapsed — motion complete, forcing Stop")
         # Same safety rule as stop_output: only OFF the relay that is running.
         # Touching the opposite (idle) relay can phantom-activate it under
-        # toggle protocols (FarmOn) and energize both motor directions.
+        # toggle protocols and energize both motor directions.
         running = self._running_relay_id()
         if running:
             self._relay_off(running)

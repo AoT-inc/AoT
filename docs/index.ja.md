@@ -14,6 +14,8 @@ See the [README](https://github.com/AoT-inc/AoT#uses) for features, projects usi
 *   Debian系OS
 *   アクティブなインターネット接続
 
+Dockerが動作するLinux・macOS・Windows環境でも実行できます — 下記の[Dockerでインストール](#install-with-docker)を参照してください。
+
 ### インストール
 
 起動してログインしたら、次のコマンドを実行してAoTのインストールを開始してください
@@ -27,6 +29,42 @@ curl -L https://aot-inc.github.io/AoT/install | bash
 ```
 https://127.0.0.1
 ```
+
+### Dockerでインストール { #install-with-docker }
+
+必須条件: [Docker](https://docs.docker.com/get-docker/)（Compose v2を含む）。公式イメージは `linux/amd64` と `linux/arm64` で発行されています。
+
+composeファイルはリポジトリ内のカスタム拡張ディレクトリ（`aot/inputs/custom_inputs` など）をマウントするため、先にリポジトリを取得してください。
+
+```bash
+git clone https://github.com/AoT-inc/AoT.git /opt/AoT
+cd /opt/AoT
+cp docker/.env.prod.example docker/.env
+```
+
+`docker/.env` で次の項目を確認してください。
+
+*   `AOT_IMAGE_TAG` — インストールするバージョン。[リリース](https://github.com/AoT-inc/AoT/releases)の正確なバージョンに固定することを推奨します。
+*   `AOT_PORT` — Webインターフェースを公開するホストのポート（既定 `8084`）。
+*   `TZ` — コンテナのタイムゾーン（既定 `Asia/Seoul`）。データはUTCで保存され、この値はログ表示とローカル時刻ベースのスケジュールに影響します。
+*   `HARDWARE_PROFILE` — `LOW`（Raspberry Pi・小規模VM）または `HIGH`。
+
+起動:
+
+```bash
+docker compose -f docker/docker-compose.prod.yml up -d
+```
+
+そのポートにブラウザでアクセスすると、管理者ユーザーの作成とログインが求められます。
+
+```
+http://127.0.0.1:8084
+```
+
+Docker版のアップグレードは、ディスク上のファイルを置き換えるのではなく、新しいイメージを取得してコンテナを作り直す方式です。[アップグレード/バックアップ/復元](Upgrade-Backup-Restore.md#docker)を参照してください。
+
+!!! note
+    Docker構成では、ホストのGPIO・I2C・1-Wireデバイスはコンテナに渡されません。Raspberry Piのピンに直接接続したセンサーやリレーを使う場合は直接インストールを利用してください。LoRaWAN（ChirpStack）・Modbus TCP・MQTTなどネットワーク接続のデバイスは、どちらのインストール方式でも同じように動作します。
 
 ### サポート
 

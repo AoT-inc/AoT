@@ -1,0 +1,533 @@
+/**
+ * aot-map-vegetation.js — AoT_map 위젯의 식생 구획(작기) 레이어.
+ *
+ * 설계 정본: docs/design/geo-vegetation-planting.md
+ *
+ * 역할 분담: geo/design 은 구획을 **만들고 고치는** 곳이고, 여기는 **운영**
+ * 이다 — 무엇이 심겨 있나, 이 자리에 뭐가 있었나, 노트. 다른 도형(구역·시설)과
+ * 같은 분담이다.
+ *
+ * 라벨이 이미 많은 화면이라 공간을 아껴 쓴다:
+ *   - 라벨은 줌 16 이상에서만(label-layers 프리셋의 vegetation.pin='gated').
+ *   - 라벨 문구는 작물 이름 하나. 이름·품종·면적은 모달에서 본다.
+ *   - 채움은 옅게(겹침이 정상이라 진하면 아래 구획이 안 보인다).
+ */
+(function () {
+    'use strict';
+
+    var STATE = {};       // uid → { plantings, srcId, fillId, lineId, labels[] }
+
+    function _t(k) { return (window._ ? window._(k) : k); }
+
+    function _color(p) {
+        if (p && p.color) return p.color;
+        return window.AoTGeoTheme ? window.AoTGeoTheme.color('vegetation') : '#6a8f3c';
+    }
+
+    // 레이어 id 접두사는 'aot-vegetation-' 이어야 한다. 지도의 레이어 컨트롤이
+    // `getLayerIdsByType('vegetation')` 로 **이름을 보고** 켜고 끄기 때문이다
+    // (aot-map-custom-controls.js). 짧게 'aot-veg-' 로 줄이면 그 컨트롤이
+    // 이 레이어를 찾지 못해 체크박스가 아무 일도 하지 않는다.
+    function _ids(uid) {
+        return {
+            src:  'aot-vegetation-src-' + uid,
+            fill: 'aot-vegetation-fill-' + uid,
+            line: 'aot-vegetation-line-' + uid
+        };
+    }
+
+    /** #rrggbb → [r,g,b] (0~255). 못 읽으면 null. */
+    function _rgb(hex) {
+        var h = String(hex || '').replace('#', '');
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        if (h.length !== 6) return null;
+        return [parseInt(h.substr(0, 2), 16),
+                parseInt(h.substr(2, 2), 16),
+                parseInt(h.substr(4, 2), 16)];
+    }
+
+    function _hex(rgb) {
+        return '#' + rgb.map(function (c) {
+            return ('0' + Math.max(0, Math.min(255, Math.round(c))).toString(16)).slice(-2);
+        }).join('');
+    }
+
+    /** WCAG 상대 휘도 (0=검정, 1=흰색). */
+    function _luminance(rgb) {
+        var a = rgb.map(function (c) {
+            c = c / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+    }
+
+    /**
+     * 글자색 — 도형색을 기준으로 **읽히는 쪽**을 고른다.
+     *
+     * 무조건 어둡게 하면 남색·진갈색처럼 원래 어두운 구획색에서 글자가 배경에
+     * 묻힌다. 그래서 휘도를 보고 방향을 정한다: 밝은 색은 더 어둡게, 어두운
+     * 색은 흰색 쪽으로 끌어올린다. 같은 계열을 유지하므로 어느 구획의 이름인지
+     * 색으로 계속 알 수 있고, 테두리(halo) 없이도 읽힌다.
+     */
+    function _labelColor(hex) {
+        var rgb = _rgb(hex);
+        if (!rgb) return '#2b3a1c';
+        if (_luminance(rgb) > 0.35) {
+            // 밝은 구획색 → 같은 색을 진하게
+            return _hex(rgb.map(function (c) { return c * 0.42; }));
+        }
+        // 어두운 구획색 → 흰색과 섞어 밝게 (채도를 남겨 계열은 유지)
+        return _hex(rgb.map(function (c) { return c + (255 - c) * 0.72; }));
+    }
+
+    function _featureCollection(rows) {
+        return {
+            type: 'FeatureCollection',
+            features: (rows || []).map(function (p) {
+                var f = (p.feature && p.feature.geometry)
+                    ? { type: 'Feature', geometry: p.feature.geometry, properties: {} }
+                    : null;
+                if (!f) return null;
+                var c = _color(p);
+                f.properties = {
+                    planting_uuid: p.unique_id,
+                    crop: p.crop || '',
+                    color: c,
+                    // 글자색은 여기서 함께 실어야 한다 — symbol 레이어의
+                    // ['get','label_color'] 가 이 값을 읽는다. 빠뜨리면 글자가
+                    // 기본 검정으로 떨어져 "도형색 하나로" 라는 규칙이 깨진다.
+                    label_color: _labelColor(c)
+                };
+                return f;
+            }).filter(Boolean)
+        };
+    }
+
+    /**
+     * 지도에 식생 레이어를 올린다. 이미 있으면 데이터만 갱신한다.
+     *
+     * 종료된 작기는 서버가 기본 목록에서 빼 준다 — 몇 년 지난 지도가 옛
+     * 두둑으로 뒤덮이지 않게.
+     */
+    function load(uid, map, opts) {
+        opts = opts || {};
+        if (!map || !opts.mapUuid) return Promise.resolve([]);
+
+        return fetch('/api/geo/plantings?map_uuid=' + encodeURIComponent(opts.mapUuid))
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res || !res.ok) return [];
+                var rows = res.plantings || [];
+                var st = STATE[uid] = STATE[uid] || {};
+                st.plantings = rows;
+                st.mapUuid = opts.mapUuid;
+                st.opts = opts;          // 스타일 전환 후 재생성에 그대로 쓴다
+                _render(uid, map, rows, opts);
+                _scheduleRefresh(uid, map, opts);
+                return rows;
+            })
+            .catch(function () { return []; });
+    }
+
+    // 구획 목록을 주기적으로 다시 받는다.
+    //
+    // 식생은 geo/design 이나 다른 브라우저에서 바뀐다(새로 그리기·재배 종료).
+    // 한 번만 받으면 위젯은 그때 상태에 머물러, **종료한 구획이 지도에 계속
+    // 남는다** — 실제로 그렇게 보였다. 다만 자주 바뀌는 데이터가 아니므로
+    // 센서값처럼 몇 초 주기로 돌 이유는 없다. 5분이면 충분하고, 그보다 급한
+    // 갱신은 이 위젯 안에서 편집했을 때인데 그 경로는 즉시 load() 를 부른다.
+    var REFRESH_MS = 300000;
+
+    function _scheduleRefresh(uid, map, opts) {
+        var st = STATE[uid] = STATE[uid] || {};
+        if (st.timer) return;                    // 이미 걸려 있다
+        st.timer = setInterval(function () {
+            // 탭이 숨겨져 있으면 건너뛴다 — 안 보이는 화면을 위해 폴링할 이유가
+            // 없고, 폰에서는 그 한 번이 라디오를 깨운다.
+            if (document.hidden) return;
+            var cur = STATE[uid];
+            if (!cur || !cur.opts) return;
+            fetch('/api/geo/plantings?map_uuid=' +
+                  encodeURIComponent(cur.opts.mapUuid || ''))
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (!res || !res.ok) return;
+                    cur.plantings = res.plantings || [];
+                    _render(uid, map, cur.plantings, cur.opts);
+                })
+                .catch(function () {});
+        }, REFRESH_MS);
+    }
+
+    function _render(uid, map, rows, opts) {
+        var id = _ids(uid);
+        var data = _featureCollection(rows);
+
+        try {
+            if (map.getSource(id.src)) {
+                map.getSource(id.src).setData(data);
+            } else {
+                map.addSource(id.src, { type: 'geojson', data: data });
+                map.addLayer({
+                    id: id.fill, type: 'fill', source: id.src,
+                    paint: {
+                        'fill-color': ['get', 'color'],
+                        // 겹침(간작·혼작)이 정상이라 옅게 — 진하면 아래가 안 보인다.
+                        'fill-opacity': 0.22
+                    }
+                });
+                map.addLayer({
+                    id: id.line, type: 'line', source: id.src,
+                    paint: { 'line-color': ['get', 'color'], 'line-width': 1.5 }
+                });
+                _bindClick(uid, map, opts);
+            }
+        } catch (e) {
+            console.warn('[AoT Map] 식생 레이어 렌더 실패:', e);
+            return;
+        }
+
+        _renderLabels(uid, map, rows, opts);
+        setVisible(uid, map, opts.visible !== false);
+    }
+
+    // ── 라벨 ────────────────────────────────────────────────────────────────
+    //
+    // 위젯의 다른 라벨과 **같은 방식**(DOM 마커 + `aot-sensor-map-marker` 칩)을
+    // 쓴다. 예전에는 MapLibre symbol 텍스트로 그렸는데, 위성지도 위에서는
+    // 배경 밝기가 제각각이라 **어떤 단색 글자도 읽히지 않았다** — 흰 테두리를
+    // 두르면 지저분하고, 안 두르면 묻힌다. 배경 알약이 있는 기존 칩은 그
+    // 문제가 없고 화면 전체의 라벨 생김새도 하나로 맞는다.
+    //
+    // 글자 크기는 위젯 옵션 'Label Text Size'(em)를 그대로 쓴다(bay 칩과 동일).
+    function _labelEm(opts) {
+        var em = parseFloat(opts && opts.labelSizeEm);
+        return (isFinite(em) && em > 0) ? em : 1.0;
+    }
+
+    /**
+     * 라벨 자리 [lng, lat].
+     *
+     * geo/design 에서 사람이 칩을 옮겨 두었으면 **그 자리를 그대로 쓴다** —
+     * 겹치는 칩을 거기서 풀어 놓았는데 위젯이 도형 중앙으로 되돌리면 그 작업이
+     * 무의미해진다. 없으면 폴리곤 대표점(오목한 두둑에서도 내부에 놓인다).
+     */
+    function _labelPoint(geom, planting) {
+        var props = (planting && planting.feature && planting.feature.properties) || {};
+        if (Array.isArray(props.label_lnglat) && props.label_lnglat.length === 2) {
+            return props.label_lnglat;
+        }
+        try {
+            if (window.turf && window.turf.pointOnFeature) {
+                var pt = window.turf.pointOnFeature({ type: 'Feature', properties: {},
+                                                      geometry: geom });
+                return pt.geometry.coordinates;
+            }
+        } catch (e) { /* turf 없으면 평균으로 */ }
+        var ring = (geom.type === 'MultiPolygon') ? geom.coordinates[0][0]
+                                                  : geom.coordinates[0];
+        if (!ring || !ring.length) return null;
+        var sx = 0, sy = 0;
+        ring.forEach(function (c) { sx += c[0]; sy += c[1]; });
+        return [sx / ring.length, sy / ring.length];
+    }
+
+    function _clearLabels(uid) {
+        var st = STATE[uid];
+        if (!st || !st.markers) return;
+        st.markers.forEach(function (m) { try { m.remove(); } catch (e) {} });
+        st.markers = [];
+    }
+
+    function _renderLabels(uid, map, rows, opts) {
+        var st = STATE[uid] = STATE[uid] || {};
+        _clearLabels(uid);
+        if (!window.maplibregl || !window.maplibregl.Marker) return;
+
+        var reg = window.AoTMapLabelLayers;
+        var desc = reg && reg.resolve
+            ? reg.resolve(!!(opts && opts.facilityCentric), 'vegetation')
+            : { minZoom: 16 };
+        st.labelMinZoom = desc.minZoom || 16;
+        st.markers = [];
+
+        (rows || []).forEach(function (p) {
+            var geom = p.feature && p.feature.geometry;
+            if (!geom || !p.crop) return;
+            var pos = _labelPoint(geom, p);
+            if (!pos) return;
+
+            var el = document.createElement('div');
+            el.className = 'aot-sensor-map-marker aot-bay-chip aot-vegetation-chip';
+            el.innerHTML = '<div class="aot-bay-chip-name"></div>';
+            el.querySelector('.aot-bay-chip-name').textContent = p.crop;
+            el.style.fontSize = _labelEm(opts) + 'em';
+            // 배경은 그 구획의 색 — 어느 구획의 이름인지 색으로 드러난다.
+            el.style.background = _color(p);
+            el.style.color = _readableOn(_color(p));
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                openModal(uid, map, p.unique_id, st.opts || opts);
+            });
+
+            try {
+                st.markers.push(new window.maplibregl.Marker({ element: el })
+                    .setLngLat(pos).addTo(map));
+            } catch (e) { /* 마커 하나 실패가 나머지를 막지 않는다 */ }
+        });
+
+        _applyLabelZoom(uid, map);
+        if (!st.zoomBound) {
+            st.zoomBound = true;
+            map.on('zoom', function () { _applyLabelZoom(uid, map); });
+        }
+
+        if (reg && reg.register) {
+            try {
+                reg.register(uid, 'vegetation',
+                             { key: reg.makeKey('vegetation', 'shape', uid) });
+            } catch (e) { /* 레지스트리는 보조 */ }
+        }
+    }
+
+    /** 줌 게이트 — 라벨이 이미 많은 화면이라 당겨야 보인다. */
+    function _applyLabelZoom(uid, map) {
+        var st = STATE[uid];
+        if (!st || !st.markers) return;
+        var show = (st.visible !== false) &&
+                   (map.getZoom() >= (st.labelMinZoom || 16));
+        st.markers.forEach(function (m) {
+            try { m.getElement().style.display = show ? '' : 'none'; } catch (e) {}
+        });
+    }
+
+    /** 배경색 위에서 읽히는 글자색 — 흰색/검정 중 대비가 큰 쪽. */
+    function _readableOn(hex) {
+        var rgb = _rgb(hex);
+        if (!rgb) return '#ffffff';
+        return _luminance(rgb) > 0.45 ? '#1a1a1a' : '#ffffff';
+    }
+
+    /** 도형·라벨 표시 토글. custom option 과 레이어 컨트롤이 함께 쓴다. */
+    function setVisible(uid, map, visible) {
+        var id = _ids(uid);
+        var v = visible ? 'visible' : 'none';
+        [id.fill, id.line].forEach(function (lid) {
+            try {
+                if (map.getLayer(lid)) map.setLayoutProperty(lid, 'visibility', v);
+            } catch (e) { /* 아직 안 올라간 레이어 */ }
+        });
+        var st = STATE[uid];
+        if (st) st.visible = !!visible;
+        _applyLabelZoom(uid, map);      // 라벨은 DOM 마커라 따로 숨긴다
+    }
+
+    function isVisible(uid) {
+        var st = STATE[uid];
+        return !st || st.visible !== false;
+    }
+
+    // 레이어 컨트롤(지도 우측 패널)의 '식생' 체크박스와 상태를 맞춘다.
+    //
+    // 그 컨트롤은 레이어 id 접두사로 직접 visibility 를 바꾸므로 화면은 바로
+    // 반응하지만, 모듈의 상태(st.visible)를 모른다. 동기화하지 않으면 베이스
+    // 지도를 바꿔 rehydrate 될 때 옵션 기본값으로 되돌아가 **꺼둔 레이어가
+    // 되살아난다.**
+    window.addEventListener('layer-toggle', function (ev) {
+        var d = (ev && ev.detail) || {};
+        if (d.layerId !== 'vegetation') return;
+        Object.keys(STATE).forEach(function (uid) {
+            var st = STATE[uid];
+            if (st) st.visible = !!d.visible;
+            if (st && st.opts) st.opts.visible = !!d.visible;
+        });
+    });
+
+    // ── 클릭 → 중앙 모달 ────────────────────────────────────────────────────
+
+    function _bindClick(uid, map, opts) {
+        var st = STATE[uid] = STATE[uid] || {};
+        // 베이스 지도를 바꾸면 레이어는 사라지지만 **핸들러는 남는다.**
+        // 다시 바인딩하면 클릭 한 번에 모달이 두 번 열린다.
+        if (st.clickBound) return;
+        st.clickBound = true;
+        var id = _ids(uid);
+        map.on('click', id.fill, function (e) {
+            var f = e.features && e.features[0];
+            if (!f) return;
+            var uuid = f.properties && f.properties.planting_uuid;
+            if (uuid) openModal(uid, map, uuid, opts);
+        });
+        map.on('mouseenter', id.fill, function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', id.fill, function () {
+            map.getCanvas().style.cursor = '';
+        });
+    }
+
+    /**
+     * 구획 모달. 팝업 말풍선이 아니라 **중앙 모달**을 쓴다 — 작물·기간·센서
+     * 출처·이력·노트가 함께 들어가야 해서 말풍선 폭으로는 부족하다.
+     */
+    function openModal(uid, map, uuid, opts) {
+        opts = opts || {};
+        var shell = opts.shell;                 // 위젯의 _showFacilityCenterOverlay
+        var popupApi = window.AoTMapPopup;
+        if (!shell || !popupApi || !popupApi.buildPlantingModal) return;
+
+        fetch('/api/geo/planting/' + encodeURIComponent(uuid))
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res || !res.ok) return;
+                var p = res.planting;
+                var popup = shell(popupApi.buildPlantingModal(p, {}), uid);
+                var el = popup && popup.getElement && popup.getElement();
+                var body = el && el.querySelector('.maplibregl-popup-content');
+                if (!body) return;
+
+                _wireEdit(uid, map, body, p, opts);
+
+                // 노트 — 공용 컴포넌트에 배선만 넘긴다(자체 노트 UI 금지).
+                if (window.AoTNotesBlock && window.AoTNotesBlock.wire) {
+                    window.AoTNotesBlock.wire(body, {
+                        targetId: p.unique_id,
+                        targetType: 'planting',
+                        name: p.name || p.crop || ''
+                    });
+                }
+
+                // 이 자리 이력 — 기하 교차라 POST 다(폴리곤이 URL 에 안 들어간다).
+                var st = STATE[uid] || {};
+                fetch('/api/geo/plantings/history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': _csrf()
+                    },
+                    body: JSON.stringify({ map_uuid: st.mapUuid || p.geo_id,
+                                           planting_uuid: p.unique_id })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (h) {
+                        if (h && h.ok) {
+                            popupApi.fillPlantingHistory(body, h.history, p.unique_id);
+                        }
+                    })
+                    .catch(function () {});
+            })
+            .catch(function () {});
+    }
+
+    function _csrf() {
+        var m = document.querySelector('meta[name="csrf-token"]');
+        return (m && m.getAttribute('content')) || '';
+    }
+
+    function _api(method, url, body) {
+        return fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': _csrf()
+            },
+            body: body ? JSON.stringify(body) : undefined
+        }).then(function (r) {
+            return r.json().then(function (d) { return { status: r.status, data: d }; });
+        });
+    }
+
+    /**
+     * 모달의 정보 편집 배선 — 보기 ↔ 편집 토글, 저장, 재배 종료.
+     *
+     * 저장하면 지도 레이어도 함께 갱신한다(작물 이름이 라벨이고 색이 도형색이라
+     * 화면과 데이터가 갈리면 바로 눈에 띈다).
+     */
+    function _wireEdit(uid, map, body, p, opts) {
+        var view = body.querySelector('.aot-ov-planting-view');
+        var form = body.querySelector('.aot-ov-planting-edit-wrap');
+        var btnEdit = body.querySelector('.aot-ov-planting-edit');
+        if (!view || !form || !btnEdit) return;
+
+        function show(editing) {
+            view.style.display = editing ? 'none' : '';
+            form.style.display = editing ? '' : 'none';
+            btnEdit.style.display = editing ? 'none' : '';
+        }
+        btnEdit.addEventListener('click', function () { show(true); });
+        var btnCancel = body.querySelector('.aot-ov-planting-cancel');
+        if (btnCancel) btnCancel.addEventListener('click', function () { show(false); });
+
+        function refresh() {
+            // 저장 뒤 목록을 다시 받아 레이어·라벨을 갱신하고 모달을 다시 연다.
+            var st = STATE[uid] || {};
+            load(uid, map, st.opts || opts || {}).then(function () {
+                openModal(uid, map, p.unique_id, st.opts || opts);
+            });
+        }
+
+        var btnSave = body.querySelector('.aot-ov-planting-save');
+        if (btnSave) btnSave.addEventListener('click', function () {
+            var payload = { unique_id: p.unique_id };
+            form.querySelectorAll('[data-pf]').forEach(function (el) {
+                payload[el.getAttribute('data-pf')] = el.value || '';
+            });
+            if (!payload.crop) return;
+            _api('POST', '/api/geo/planting', payload).then(function (res) {
+                if (res.status >= 400 || !res.data.ok) {
+                    if (window.showToast) {
+                        window.showToast(res.data.message || _t('Save failed'), 'error');
+                    }
+                    return;
+                }
+                refresh();
+            });
+        });
+
+        // 재배 종료는 되돌리는 수단이 화면에 없다(지도에서 사라지고 기본
+        // 목록에서도 빠진다). 버튼 하나로 끝나면 안 된다 — 무엇이 일어나는지
+        // 말하고 한 번 더 묻는다.
+        var btnEnd = body.querySelector('.aot-ov-planting-end');
+        if (btnEnd) btnEnd.addEventListener('click', function () {
+            var msg = _t('End this planting?') + '\n\n' +
+                      _t('It disappears from the map and stays only as history. ' +
+                         'This cannot be undone here.');
+            if (!window.confirm(msg)) return;
+            _api('POST', '/api/geo/planting/' + p.unique_id + '/end',
+                 { reason: 'harvested' }).then(function (res) {
+                if (res.status >= 400 || !res.data.ok) return;
+                // 종료하면 기본 목록에서 빠지므로 지도에서도 사라진다.
+                var st = STATE[uid] || {};
+                load(uid, map, st.opts || opts || {});
+                var ov = document.getElementById('aot-facility-ctrl-overlay-' + uid);
+                if (ov) ov.remove();
+            });
+        });
+    }
+
+    /**
+     * 베이스 지도 전환 후 레이어를 다시 올린다.
+     *
+     * `map.setStyle({diff:false})` 는 커스텀 소스·레이어를 **전부 지운다** —
+     * 위젯의 `_rehydrateFromCache()` 가 다른 도형을 되살릴 때 이것도 함께 부른다.
+     * 서버를 다시 부르지 않고 이미 받아 둔 목록으로 그린다(전환할 때마다
+     * 네트워크를 다시 타면 베이스 전환이 느려진다).
+     */
+    function rehydrate(uid, map) {
+        var st = STATE[uid];
+        if (!st || !st.plantings || !map) return;
+        _render(uid, map, st.plantings, st.opts || {});
+    }
+
+    window.AoTMapVegetation = {
+        load: load,
+        rehydrate: rehydrate,
+        setVisible: setVisible,
+        isVisible: isVisible,
+        openModal: openModal,
+        state: function (uid) { return STATE[uid]; }
+    };
+})();

@@ -563,7 +563,7 @@
 <script src="/static/js/geo/aot-map-loader.js"></script>
 <script src="/static/js/geo/aot-map-controls.js"></script>
 <script src="/static/js/geo/aot-map-data.js"></script>
-<script src="/static/js/geo/aot-map-editor-v2.js?v=20260619a"></script>
+<script src="/static/js/geo/aot-map-editor-v2.js?v=20260813a"></script>
 
 <!-- Turf.js (vendor) + Custom Map Controls — 외부 유지 (turf=vendor·layout 공유,
      custom-controls=AoT_map 위젯과 공유). 번들보다 먼저 로드. -->
@@ -571,8 +571,9 @@
 <script src="/static/js/geo/aot-map-custom-controls.js?v=20260612a"></script>
 
 <!-- geo_design design 모듈 → 단일 번들 (concat+minify, tools/bundle.mjs: geo-design).
-     14 소스: design/*(ui,geometry,events,modules,label,devices-v3,stats,preview,export,
-     mapview) + aot-map-utils/panel/migration/design-v3. 소스 순서 보존(preview→panel 등).
+     18 소스: design/*(ui,geometry,events,modules,label,devices-v3,binding-ui,vegetation,
+     stats,preview,export,mapview) + theme-colors/device-connection/aot-map-utils/
+     panel/migration/design-v3. 소스 순서 보존(preview→panel 등).
      소스 수정 시 npm run build:bundles geo-design → asset() 핑거프린팅으로 캐시 자동 무효화.
      coreㆍ어댑터ㆍdist 번들 레이어는 위에 그대로(번들 미포함). -->
 <script src="{{ asset('geo-design') }}"></script>

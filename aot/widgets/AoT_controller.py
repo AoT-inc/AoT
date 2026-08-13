@@ -146,6 +146,12 @@ WIDGET_INFORMATION = {
     'widget_width': 24,
     'widget_height': 5,
 
+    # On mobile (<=768px), take the whole row instead of sharing it with a
+    # second widget. Each row is a controller name plus its switch; at half a
+    # phone row the name wraps away from the switch it belongs to, which is
+    # exactly the pairing a user must not misread before flipping it.
+    'mobile_full_width': True,
+
     'endpoints': [
         # Route URL, route endpoint name, view function, methods
         ("/aot_controller_state/<unique_id>", "aot_controller_state", aot_controller_state, ["GET"]),

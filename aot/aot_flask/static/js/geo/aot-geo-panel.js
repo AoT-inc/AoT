@@ -263,6 +263,7 @@ class AoTGeoPanel {
                     <div class="mode-tab ${this.currentMode === 'site' ? 'active' : ''}" data-nav-mode="site">${_('Site')}</div>
                     <div class="mode-tab ${this.currentMode === 'zone' ? 'active' : ''}" data-nav-mode="zone">${_('Zone')}</div>
                     <div class="mode-tab ${this.currentMode === 'facility' ? 'active' : ''}" data-nav-mode="facility">${_('Facility')}</div>
+                    <div class="mode-tab ${this.currentMode === 'vegetation' ? 'active' : ''}" data-nav-mode="vegetation">${_('Planting')}</div>
                     <div class="mode-tab ${this.currentMode === 'equipment' ? 'active' : ''}" data-nav-mode="equipment">${_('Equipment')}</div>
                     <div class="mode-tab ${this.currentMode === 'aot_device' ? 'active' : ''}" data-nav-mode="aot_device">${_('A')}</div>
                 `;
@@ -305,6 +306,25 @@ class AoTGeoPanel {
                     </div>
                     <button class="btn btn-aot-pill btn-aot-outline" id="btn-facility-design">${_('Facility Design')}</button>
                     <button class="btn btn-aot-pill btn-aot-outline ${this.isFacilityLabelHidden ? 'active' : ''}" id="btn-hide-type-label" style="min-width: 70px;">${this.isFacilityLabelHidden ? _('Show labels') : _('Hide labels')}</button>
+                `;
+                break;
+            }
+
+            // --- Tier 2: 식생 구획(작기) ---
+            // 색 피커의 data-type 은 'vegetation' — theme_config 의 키와 같아야
+            // 하고, 그 기본값은 aot-geo-theme-colors.js 의 DEFAULTS 한 벌뿐이다.
+            // 여기에 새 폴백 색을 적지 말 것.
+            case 'vegetation': {
+                const vegConfig = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
+                const vegColor = vegConfig['vegetation'] ||
+                    (window.AoTGeoTheme ? window.AoTGeoTheme.DEFAULTS.vegetation : '#6a8f3c');
+                // 그리기·편집·삭제는 **오른쪽 그리기 컨트롤 패널**이 담당한다
+                // (다른 도형과 같다). 여기에 같은 기능의 버튼을 또 두면 진입점이
+                // 둘로 갈린다. 이 티어에는 종류별 설정(색)만 둔다.
+                html += `
+                    <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
+                        <input type="color" id="theme-color-picker" data-type="vegetation" value="${vegColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
+                    </div>
                 `;
                 break;
             }
@@ -838,7 +858,9 @@ class AoTGeoPanel {
             }
         };
 
-
+        // 식생 — 패널에서 바로 그리기. 우측 툴바를 찾지 않아도 되게 한다.
+        // 상위 zone 은 고르지 않는다: 그냥 그리면 서버가 공간 포함으로
+        // 판정한다(equipment 와 같은 모델).
         // Device Color Picker (Input/Output/Function)
         const deviceColorPicker = rootEl.querySelector('#device-color-picker');
         if (deviceColorPicker) {

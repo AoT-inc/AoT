@@ -77,6 +77,7 @@ from .geo import GeoLayer
 from .geo import GeoFacility
 from .geo import GeoModelAsset
 from .geo_binding import GeoBinding
+from .geo_planting import GeoPlanting
 from .irrigation import IrrigationDesign
 from .output import Output
 from .output import OutputChannel

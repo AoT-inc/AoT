@@ -73,6 +73,18 @@ class AoTGeoModules {
             }
         }
 
+        // 식생 구획은 저장처가 GeoShape 가 아니라 geo_planting 이다. 아래
+        // 표준 경로(saveDesign → saveOverlays)에 태우면 GeoShape 로 저장되어
+        // 두 정본이 생긴다. 기하 검증(위 turf 블록)은 통과한 뒤 갈라진다.
+        if (this.parent.activeMode === 'vegetation') {
+            if (this.parent.vegetation) {
+                this.parent.vegetation.onShapeCreated(layer);
+            } else {
+                console.warn('[GeoModules] vegetation 모듈이 없어 구획을 저장하지 못했다');
+            }
+            return;
+        }
+
         // 0. Initial Property Setup for Pipes
         if (this.parent.pendingOp) {
             const drawId = window.uuidv4 ? window.uuidv4() : 'draw-' + Math.random().toString(36).substr(2, 9);

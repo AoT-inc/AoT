@@ -1740,7 +1740,145 @@
              warn: _t('Scheduled — keep this tab open until the start time.') };
   }
 
+  // ── 식생 구획(작기) 모달 ────────────────────────────────────────────────
+  //
+  // geo/design 은 도형을 만들고 고치는 곳이고, **운영 정보는 여기가 맡는다**
+  // (구역·시설 모달과 같은 역할 분담). 그래서 작물·기간 같은 사실과 노트·이력을
+  // 함께 싣는다.
+  //
+  // 셸은 위젯의 `_showFacilityCenterOverlay`(중앙 모달) 를 쓴다 — 팝업 말풍선은
+  // 폭이 좁아 이력 목록이 들어가지 않는다.
+  //
+  // 노트 블록은 공용 컴포넌트(_ovNotesBlock → AoTNotesBlock)를 그대로 쓴다.
+  // 여기서 자체 노트 마크업을 다시 짜지 말 것.
+  function buildPlantingModal(p, opts) {
+    p = p || {};
+    opts = opts || {};
+    // 기존 모달의 행 마크업과 같은 것을 쓴다(buildAboutSection 의 _row).
+    function _ovRow(label, val) {
+      return '<div class="aot-ov-row"><span>' + _esc(label) + '</span><span>' +
+             val + '</span></div>';
+    }
+    var html = buildModalHeader({ name: p.name || p.crop || _t('Planting'),
+                                  up: false, status: null });
+
+    // 1) 무엇이 언제 — 이 모달의 본론. 보기와 편집을 같은 블록에 두고
+    //    토글한다(구역 모달의 설명 편집과 같은 방식: aot-ov-desc-*).
+    //    geo/design 은 도형만 다루므로 **작물·기간을 고치는 자리는 여기다.**
+    html += '<div class="aot-ov-block aot-ov-planting-info">' +
+            '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
+            '<span>' + _esc(_t('Crop')) + '</span>' +
+            '<button type="button" class="aot-ov-pill aot-ov-planting-edit">' +
+            _esc(_t('Edit')) + '</button></div>';
+
+    html += '<div class="aot-ov-planting-view">';
+    html += _ovRow(_t('Crop'), _esc(p.crop || '—') +
+                   (p.variety ? ' · ' + _esc(p.variety) : ''));
+    if (p.name) html += _ovRow(_t('Plot name'), _esc(p.name));
+    html += _ovRow(_t('Planted on'), _esc(p.planted_on || '—'));
+    if (p.expected_end_on) {
+      html += _ovRow(_t('Expected end'), _esc(p.expected_end_on));
+    }
+    if (p.ended_on) html += _ovRow(_t('Ended'), _esc(p.ended_on));
+    if (p.area_m2 != null) {
+      html += _ovRow(_t('Area'), Number(p.area_m2).toLocaleString() + ' m²');
+    }
+    html += '</div>';
+
+    // 편집 폼 (기본 숨김). 기하는 여기서 고치지 않는다 — 도형은 geo/design 이다.
+    //
+    // 골격은 **AoT 현대화 모달 스타일**을 그대로 쓴다:
+    //   aot-modal-container > aot-modal-option-row (label / control) + aot-modern-input
+    // 그래야 입력창 가로폭이 자동으로 맞고(개별 width 지정 금지), 색 입력도
+    // 공용 pill 형태(aot-detail-field-color)로 충분히 커진다.
+    var _v = function (x) { return _esc(x == null ? '' : x); };
+    var _fRow = function (label, control) {
+      return '<div class="aot-modal-option-row">' +
+             '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
+             '<div class="aot-modal-option-control">' + control + '</div></div>';
+    };
+    var _inp = function (field, type, val) {
+      return '<input type="' + type + '" class="aot-modern-input form-control" ' +
+             'data-pf="' + field + '" value="' + _v(val) + '">';
+    };
+
+    html += '<div class="aot-ov-planting-edit-wrap" style="display:none">' +
+            '<div class="aot-modal-container">' +
+            _fRow(_t('Crop'), _inp('crop', 'text', p.crop)) +
+            _fRow(_t('Variety'), _inp('variety', 'text', p.variety)) +
+            _fRow(_t('Plot name'), _inp('name', 'text', p.name)) +
+            _fRow(_t('Planted on'), _inp('planted_on', 'date', p.planted_on)) +
+            _fRow(_t('Expected end'), _inp('expected_end_on', 'date', p.expected_end_on)) +
+            '<div class="aot-modal-option-row">' +
+            '<div class="aot-modal-option-label">' + _esc(_t('Colour')) + '</div>' +
+            '<div class="aot-modal-option-control aot-modal-detail-field aot-detail-field-color">' +
+            '<input type="color" class="aot-modern-input form-control" data-pf="color" value="' +
+            _v(p.color || '#6a8f3c') + '"></div></div>' +
+            '</div>' +
+            '<div class="aot-ov-desc-actions">' +
+            '<button type="button" class="btn aot-pill-btn aot-ov-planting-cancel">' +
+            _esc(_t('Cancel')) + '</button>' +
+            '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-planting-save">' +
+            _esc(_t('Save')) + '</button>' +
+            (p.active ? '<button type="button" class="btn aot-pill-btn aot-ov-planting-end">' +
+                        _esc(_t('End planting')) + '</button>' : '') +
+            '</div></div>';
+    html += '</div>';
+
+    // 2) 어느 센서를 보고 있나 — 값이 아니라 **출처**를 말한다.
+    //    구획마다 따로 잰 값으로 읽히면 안 된다(대개 구역 대표값이다).
+    var s = p.sensors;
+    if (s) {
+      var line;
+      if (s.source === 'plot') {
+        line = _t('Sensors inside this plot') + ' · ' + (s.in_plot || []).length;
+      } else if (s.source === 'zone') {
+        line = _t('Using zone sensors') +
+               (s.zone_name ? ' (' + _esc(s.zone_name) + ')' : '') +
+               ' · ' + (s.from_zone || []).length;
+      } else {
+        line = _t('No sensor nearby');
+      }
+      html += '<div class="aot-ov-block">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Sensors')) + '</div>' +
+              '<div class="aot-ov-muted">' + line + '</div></div>';
+    }
+
+    // 3) 이 자리 이력 — 연작 장해·윤작 판단의 근거.
+    html += '<div class="aot-ov-block aot-ov-planting-history">' +
+            '<div class="aot-ov-sec-title">' + _esc(_t('History here')) + '</div>' +
+            '<div class="aot-ov-planting-history-list">' +
+            '<span class="aot-ov-muted">…</span></div></div>';
+
+    // 4) 노트
+    html += _ovNotesBlock();
+    return html;
+  }
+
+  // 이력 목록을 채운다. rows 는 /api/geo/plantings/history 의 history 배열.
+  function fillPlantingHistory(scopeEl, rows, currentUuid) {
+    if (!scopeEl) return;
+    var list = scopeEl.querySelector('.aot-ov-planting-history-list');
+    if (!list) return;
+    var others = (rows || []).filter(function (r) { return r.unique_id !== currentUuid; });
+    if (!others.length) {
+      list.innerHTML = '<span class="aot-ov-muted">' +
+                       _esc(_t('No past plantings on this spot.')) + '</span>';
+      return;
+    }
+    var html = '';
+    others.forEach(function (h) {
+      var period = (h.planted_on || '?') + ' → ' + (h.ended_on || _t('ongoing'));
+      html += '<div class="aot-ov-row"><span>' + _esc(h.crop) +
+              (h.variety ? ' · ' + _esc(h.variety) : '') + '</span><span>' +
+              _esc(period) + '</span></div>';
+    });
+    list.innerHTML = html;
+  }
+
   window.AoTMapPopup = {
+    buildPlantingModal:  buildPlantingModal,
+    fillPlantingHistory: fillPlantingHistory,
     positionDots:      positionDots,
     openOutputSchedule: openOutputSchedule,
     buildActuatorCat:  buildActuatorCat,

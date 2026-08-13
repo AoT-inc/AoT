@@ -121,6 +121,12 @@ WIDGET_INFORMATION = {
     'widget_width': 4,
     'widget_height': 6,
 
+    # On mobile (<=768px), take the whole row instead of sharing it with a
+    # second widget. The body is two block-level buttons (Activate/Deactivate)
+    # plus the controller's status line; at half a phone row the labels wrap
+    # inside the buttons and the two sit close enough to mis-tap.
+    'mobile_full_width': True,
+
     'endpoints': [
         # Route URL, route endpoint name, view function, methods
         ("/widget_cad_controller_state/<unique_id>", "widget_cad_controller_state", widget_cad_controller_state, ["GET"]),

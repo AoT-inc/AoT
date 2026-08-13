@@ -51,6 +51,7 @@
       "widgets/AoT_map/aot-facility-runtime.js",
       "widgets/AoT_map/aot-geo-data.js",
       "widgets/AoT_map/aot-map-label-layers.js",
+      "widgets/AoT_map/aot-map-vegetation.js",
       "widgets/AoT_map/aot-map-widget-vector.js"
     ]
   },
@@ -67,6 +68,7 @@
       "geo/design/aot-geo-label.js",
       "geo/design/aot-geo-devices-v3.js",
       "geo/design/aot-geo-binding-ui.js",
+      "geo/design/aot-geo-vegetation.js",
       "geo/aot-map-utils.js",
       "geo/design/aot-geo-stats.js",
       "geo/design/aot-geo-preview.js",

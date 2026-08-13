@@ -10,6 +10,7 @@ and auditable (Law 3 — Physical Truth).
 Ref: 008_TASK_3_STEP4_RESOLVER_DESIGN_SUPPLEMENT (physical_control_resolver)
 """
 import logging
+import re
 from typing import Any, Dict, Optional
 
 from aot.ai.services.resolvers.base_resolver import BaseActionResolver
@@ -169,6 +170,18 @@ class PhysicalControlResolver(BaseActionResolver):
         [023_STEP_4][LAW_3] Verify that the hardware returned a physical SUCCESS signal.
         Parses MCP protocol content payload for explicit failure keywords.
         'Fake Success' (bridge returned ok but hardware failed) is prohibited.
+
+        키워드만으로는 못 잡는 미실행이 셋 있었다 (2026-08-13 감사):
+          1. 승인 게이트 응답 — {"status":"pending_approval", ... "It was NOT
+             executed ..."}. 실패 어휘가 한 글자도 없어 그대로 통과했다.
+             이것이 지도 위젯 예약 6건이 장치를 못 켠 채 COMPLETED 로 기록된
+             경로다.
+          2. MCP 표준 오류 플래그 `isError: true` — 브리지가 읽지 않아
+             {"status":"success"} 로 감싸여 온다.
+          3. **내용이 아예 없는 응답** — content 가 비면 outcome_text 가 ''
+             이라 키워드 검사가 통째로 건너뛰어지고 "hardware execution
+             confirmed" 로 기록됐다. 실행 증거가 없는 것을 성공이라 부르는 것이
+             정확히 PC-099 가 금지하는 것이다.
         """
         if result.get('status') == 'error':
             logger.error(
@@ -179,31 +192,75 @@ class PhysicalControlResolver(BaseActionResolver):
             return result
 
         # MCP tool result format: {"status": "success", "result": {"content": [{"type": "text", "text": "..."}]}}
-        mcp_result = result.get('result', {})
-        content_list = mcp_result.get('content', [])
+        mcp_result = result.get('result', {}) or {}
+        content_list = mcp_result.get('content', []) or []
 
-        outcome_text = ''
-        for item in content_list:
-            if isinstance(item, dict) and item.get('type') == 'text':
-                outcome_text = item.get('text', '')
-                break
+        # 텍스트 블록을 전부 모은다 — 첫 블록만 보고 break 하면 뒤 블록에 실린
+        # 오류를 못 본다.
+        outcome_text = '\n'.join(
+            item.get('text', '') for item in content_list
+            if isinstance(item, dict) and item.get('type') == 'text'
+        ).strip()
 
-        # Check for explicit hardware failure signals in the response
-        _FAILURE_SIGNALS = ('error', 'fail', 'denied', 'exception', '오류', '실패', '거부')
-        if outcome_text and any(sig in outcome_text.lower() for sig in _FAILURE_SIGNALS):
+        def _failed(reason: str) -> Dict[str, Any]:
             logger.error(
-                f"[LAW_3][PHYSICAL_FAILED] Hardware signal indicates failure for tool='{tool_name}': "
-                f"{outcome_text[:300]}"
+                f"[PC-099-ERROR][LAW_3][PHYSICAL_FAILED] tool='{tool_name}': {reason[:300]}"
             )
             return {
                 'status': 'error',
-                'message': f"[PC-099-ERROR] Physical Execution Failed: {outcome_text[:300]}",
+                'message': f"[PC-099-ERROR] Physical Execution Failed: {reason[:300]}",
                 'physical_outcome': 'failed',
             }
 
+        # (2) MCP 표준 오류 플래그
+        if mcp_result.get('isError'):
+            return _failed(f"MCP tool reported isError=true: {outcome_text[:200]}")
+
+        # (1) 실행되지 않았다고 응답이 스스로 말하는 경우. AoT MCP 서버는 모든
+        # tools/call 에 call_state 를 찍으므로 그것이 정본이다
+        # (mcp_safety_gate.CALL_STATES). 승인 대기·거부·만료는 전부 미실행이다.
+        _not_run = self._response_says_not_executed(outcome_text)
+        if _not_run:
+            return _failed(f"tool responded but did NOT execute ({_not_run}): {outcome_text[:200]}")
+
+        # (3) 실행 증거가 없는 응답
+        if not outcome_text:
+            return _failed(
+                "MCP response carried no content — there is no evidence the hardware "
+                "was actually operated (PC-099 forbids reporting this as success)")
+
+        # Check for explicit hardware failure signals in the response
+        _FAILURE_SIGNALS = ('error', 'fail', 'denied', 'exception', '오류', '실패', '거부')
+        if any(sig in outcome_text.lower() for sig in _FAILURE_SIGNALS):
+            return _failed(outcome_text)
+
         logger.info(
             f"[LAW_3][PHYSICAL_VERIFIED] tool='{tool_name}' hardware execution confirmed. "
-            f"Response: {outcome_text[:200] if outcome_text else '(no content)'}"
+            f"Response: {outcome_text[:200]}"
         )
         result['physical_outcome'] = 'success'
         return result
+
+    # 승인 게이트/거부 어휘. call_state 가 정본이고, 그 키가 없는 (구버전이거나
+    # 서드파티) 서버를 위해 reason_code·status 문자열도 함께 본다.
+    _EXECUTED_CALL_STATES = frozenset({'executed', 'already_executed'})
+    _CALL_STATE_RE = re.compile(r'["\']call_state["\']\s*:\s*["\']([a-z_]+)["\']')
+    _NOT_RUN_MARKERS = (
+        'pending_approval', 'awaiting_user', 'was NOT executed',
+        'requires_approval', 'insufficient_role', 'write_disabled',
+        'rate_limited', 'user_declined', 'confirmation_',
+    )
+
+    @classmethod
+    def _response_says_not_executed(cls, outcome_text: str) -> Optional[str]:
+        """응답이 '실행하지 않았다'고 말하면 그 근거를, 아니면 None."""
+        if not outcome_text:
+            return None
+        for state in cls._CALL_STATE_RE.findall(outcome_text):
+            if state not in cls._EXECUTED_CALL_STATES:
+                return f"call_state={state}"
+        low = outcome_text.lower()
+        for mk in cls._NOT_RUN_MARKERS:
+            if mk.lower() in low:
+                return mk
+        return None

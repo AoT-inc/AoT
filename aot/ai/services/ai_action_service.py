@@ -973,10 +973,28 @@ class AIActionService:
                     return {"status": "error", "message": "Missing value for PID adjustment"}
                 value = float(value)
                 res = daemon.pid_set(target_id, setting, value)
+                # 데몬의 pid_set 은 실패해도 예외를 올리지 않는다 — 컨트롤러가
+                # 안 돌고 있으면(self.controller['PID'][id] KeyError) 로그만 남기고
+                # **None** 을 돌려주고, 모르는 setting 이름이면 어느 분기에도 안
+                # 걸려 역시 None 이 나온다. 성공 경로는 항상 "Setpoint set to ..."
+                # 같은 문자열이다. 예전에는 그 None 을 그대로 success 로 감싸,
+                # PID 가 꺼져 있는 예약이 매번 COMPLETED 로 기록됐다.
+                if res is None:
+                    return {"status": "error",
+                            "message": (f"PID '{setting}' was not applied — the PID controller "
+                                        f"is not running, or '{setting}' is not a known setting. "
+                                        f"(daemon returned nothing)")}
                 return {"status": "success", "result": res}
 
             elif action_type == 'function':
                 res = daemon.trigger_all_actions(target_id)
+                # trigger_all_actions 도 예외를 삼킨다 — 성공하면 dict
+                # ({'message': ...}) 를, 실패하면 "Could not trigger Conditional
+                # Actions: ..." 라는 **문자열**을 돌려준다. 문자열을 success 로
+                # 감싸면 아무 액션도 안 돈 예약이 COMPLETED 가 된다.
+                if res is None or isinstance(res, str):
+                    return {"status": "error",
+                            "message": f"Function actions did not run: {res or 'daemon returned nothing'}"}
                 return {"status": "success", "result": res}
 
             elif action_type == 'human_device_control':
@@ -1491,6 +1509,15 @@ class AIActionService:
                     except Exception as reload_err:
                         logger.error(f"[AI Sync] Failed to reload daemon for {target_id}: {reload_err}")
 
+                # 화이트리스트에 하나도 안 걸리면 아무 필드도 안 바뀐 것이다.
+                # 예전에는 그래도 "Device xxx updated ()" 를 success 로 돌려줘,
+                # 예약이 존재하지 않는 필드를 고치려 했다는 사실이 COMPLETED 뒤에
+                # 묻혔다.
+                if not applied_keys:
+                    return {"status": "error",
+                            "message": (f"No field was changed on {target_id} — none of "
+                                        f"{list(updates.keys())} is an editable field "
+                                        f"(rejected: {rejected_keys})")}
                 result_msg = f"Device {target_id} updated ({', '.join(applied_keys)})"
                 if rejected_keys:
                     result_msg += f" | Rejected unsafe fields: {rejected_keys}"

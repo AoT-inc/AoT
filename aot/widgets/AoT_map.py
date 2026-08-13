@@ -528,6 +528,19 @@ WIDGET_INFORMATION = {
             )
         },
         {
+            # 식생 구획(작기) 레이어. 라벨이 이미 많은 화면이라 기본은 켜되
+            # 줌 16 이상에서만 라벨이 뜬다(label-layers 의 vegetation 프리셋).
+            # 지도의 레이어 컨트롤에서도 같은 축을 끄고 켤 수 있다.
+            'id': 'show_vegetation',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Show Plantings'),
+            'phrase': lazy_gettext(
+                'Show vegetation plots (what is planted where). '
+                'Plot labels appear when zoomed in.'
+            )
+        },
+        {
             'id': 'overlay_data_only',
             'type': 'bool',
             'default_value': False,

@@ -23,7 +23,7 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
               더 INSERT → 두 벌. 6일간 아무도 몰랐고, 08-03 시설 하나를
               추가하자 "예전 시설이 지도에서 사라짐"으로 표면화됐다.
 
-검사 항목 8종:
+검사 항목 12종 (GeoShape 8 + GeoPlanting 4):
   type-mismatch   type 컬럼 ≠ properties.aot_type
   duplicate       같은 지도 안에서 (종류, 기하) 가 겹치는 도형.
                   좌표는 --tolerance(기본 1e-6 도, 약 0.1m) 로 반올림해 비교한다
@@ -48,6 +48,18 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
   binding-drift   레거시 저장처에는 있는데 geo_binding 에 현재 바인딩이 없는
                   연결. 두 저장처가 공존하는 Phase B 완료 전까지의 감시자다.
                   geo_binding 테이블이 없는 설치에서는 건너뛴다.
+
+식생 구획(docs/design/geo-vegetation-planting.md) 관련 4종:
+
+  planting-bad-geometry   기하가 Polygon/MultiPolygon 이 아님(VP-1). 지도에
+                  아예 그려지지 않는다 — 목록에는 있는데 화면에 없는 상태.
+  planting-bad-dates      ended_on < planted_on (VP-2).
+  planting-embedded-ref   feature.properties 에 device_id/색 사본 각인(VP-4).
+                  사본은 원본이 바뀌어도 따라오지 않아 조용히 갈린다.
+  planting-phantom-map    GeoMap 행이 없는 geo_id — 자동 삭제 금지.
+
+  ⚠ 구획끼리의 **겹침은 검사하지 않는다.** 간작·혼작이 정상이다(VP-3).
+    "겹치면 안 될 것 같다"는 직관으로 검사를 추가하지 말 것.
 
 쓰기는 일절 하지 않는다. 운영 서버에 그대로 돌려도 안전하다.
 
@@ -355,7 +367,64 @@ def collect(map_uuid=None, tolerance=1e-6):
             'geo_id': geo_id, 'shape_count': len(ids),
             'shape_ids': ids[:20]})
 
+    # ── 식생 구획(작기) ────────────────────────────────────────────────
+    _collect_plantings(findings, map_uuid, map_names)
+
     return dict(findings), len(shapes)
+
+
+def _collect_plantings(findings, map_uuid, map_names):
+    """GeoPlanting 불변식 VP-1·VP-2·VP-4 + 유령 지도.
+
+    GeoPlanting 은 GeoShape 가 아니라 별도 테이블이므로 위 검사들의 대상이
+    아니다(그것이 이 설계의 요점이다 — docs/design/geo-vegetation-planting.md).
+    대신 자기 불변식은 여기서 함께 본다: 검사기를 둘로 나누면 한쪽만 돌리는
+    운용이 생기고, 그러면 안 도는 쪽이 조용히 썩는다.
+
+    **겹침은 검사하지 않는다.** 간작·혼작은 정상이다(VP-3) — 여기에 겹침
+    검사를 추가하지 말 것.
+    """
+    try:
+        from aot.databases.models import GeoPlanting
+    except ImportError:
+        return          # 마이그레이션 전 설치 — 검사할 것이 없다
+
+    try:
+        rows = (GeoPlanting.query.filter_by(geo_id=map_uuid).all() if map_uuid
+                else GeoPlanting.query.all())
+    except Exception:
+        # 테이블이 아직 없는 서버(p6_34 미적용). 검사 실패로 올리지 않는다 —
+        # 나머지 8종의 판정을 가리면 안 된다.
+        return
+
+    forbidden = ('device_id', 'channel_id', 'color', 'zone_uuid', 'zone_id')
+
+    for r in rows:
+        where = {'planting_id': r.id, 'unique_id': r.unique_id,
+                 'crop': r.crop,
+                 'map': map_names.get(r.geo_id, r.geo_id)}
+
+        feat = r.feature if isinstance(r.feature, dict) else {}
+        geom = feat.get('geometry') if isinstance(feat, dict) else None
+        gtype = (geom or {}).get('type')
+        if gtype not in ('Polygon', 'MultiPolygon'):
+            findings['planting-bad-geometry'].append(
+                dict(where, geometry_type=gtype))
+
+        if r.ended_on and r.planted_on and r.ended_on < r.planted_on:
+            findings['planting-bad-dates'].append(
+                dict(where, planted_on=str(r.planted_on),
+                     ended_on=str(r.ended_on)))
+
+        props = (feat.get('properties') or {}) if isinstance(feat, dict) else {}
+        embedded = [k for k in forbidden if k in props]
+        if embedded:
+            findings['planting-embedded-ref'].append(
+                dict(where, keys=embedded))
+
+        if r.geo_id not in map_names:
+            findings['planting-phantom-map'].append(
+                dict(where, geo_id=r.geo_id))
 
 
 HEADINGS = {
@@ -368,6 +437,10 @@ HEADINGS = {
     'orphan-device-shape': '실존하지 않는 장치를 가리키는 도형 (고아 도형)',
     'dangling-fitting':    '실존하지 않는 장치를 가리키는 시설 참조',
     'binding-drift':       '레거시 저장처에는 있는데 geo_binding 에 없는 연결',
+    'planting-bad-geometry': '식생 구획이 폴리곤이 아님 (VP-1)',
+    'planting-bad-dates':    '식생 구획의 종료일이 파종일보다 빠름 (VP-2)',
+    'planting-embedded-ref': '식생 구획 feature 에 장치/색 사본 각인 (VP-4)',
+    'planting-phantom-map':  '유령 지도의 식생 구획 — 자동삭제 금지',
 }
 
 # 데이터가 실제로 안 보이거나 잘못 붙는 항목. 이게 있으면 화면이 이미 틀어져 있다.
@@ -375,8 +448,12 @@ HEADINGS = {
 # 계속 그려지고(장치는 없는데 구역이 남는다), 죽은 fitting 참조는 시설
 # 3D 의 창호·팬이 존재하지 않는 액추에이터를 가리킨 채 제어 UI 에 뜬다.
 # binding-drift 는 전환기의 정합 경고라 severe 가 아니다.
+# planting-bad-geometry 를 넣는 이유: 폴리곤이 아닌 구획은 지도에 아예 그려지지
+# 않는다(면적 계산도 0). 목록에는 있는데 화면에 없는 상태다.
+# planting-bad-dates / embedded-ref 는 정합 경고라 severe 가 아니다.
 SEVERE = ('type-mismatch', 'dangling-link', 'orphan-facility',
-          'orphan-device-shape', 'dangling-fitting')
+          'orphan-device-shape', 'dangling-fitting',
+          'planting-bad-geometry')
 
 
 def report(findings, shape_count, quiet=False):

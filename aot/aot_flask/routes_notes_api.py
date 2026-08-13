@@ -102,6 +102,26 @@ def api_notes_create():
                         gps_lat, gps_lng = centroid
             except Exception as _e:
                 current_app.logger.warning(f"facility centroid lookup failed: {_e}")
+
+        # 식생 구획(작기)도 같은 규칙 — 구획 폴리곤의 대표점을 좌표로 삼는다.
+        # 좌표가 있어야 나중에 그 자리를 다시 물었을 때(연작 장해·윤작)
+        # 노트가 공간 질의에 걸린다. 구획 자체는 몇 달 뒤 종료되지만 노트는
+        # 좌표로 남으므로 이력 조회에서 계속 잡힌다.
+        if target_type == 'planting' and target_id and gps_lat is None:
+            try:
+                from aot.databases.models import GeoPlanting
+                from aot.aot_flask.geo import planting_context
+                from shapely.geometry import shape as _shapely_shape
+                row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+                if row is not None:
+                    geom = planting_context.geometry_of(row)
+                    if geom.get('type') in ('Polygon', 'MultiPolygon'):
+                        # centroid 가 아니라 representative_point — 오목한
+                        # 두둑에서 centroid 는 구획 밖으로 나간다.
+                        pt = _shapely_shape(geom).representative_point()
+                        gps_lat, gps_lng = pt.y, pt.x
+            except Exception as _e:
+                current_app.logger.warning(f"planting centroid lookup failed: {_e}")
         category = data.get('category', 'general')
         priority = int(data.get('priority', 0))
         

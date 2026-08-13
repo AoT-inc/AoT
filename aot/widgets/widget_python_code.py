@@ -138,6 +138,12 @@ WIDGET_INFORMATION = {
     'widget_width': 5,
     'widget_height': 4,
 
+    # On mobile (<=768px), take the whole row instead of sharing it with a
+    # second widget. This widget renders arbitrary user HTML, so its content
+    # width is unknowable here; half a phone row truncates or wraps anything
+    # wider than a few words. Matches AoT_map / AoT_timer / widget_notice.
+    'mobile_full_width': True,
+
     'execute_at_creation': execute_at_creation,
     'execute_at_modification': execute_at_modification,
     'execute_at_deletion': execute_at_deletion,

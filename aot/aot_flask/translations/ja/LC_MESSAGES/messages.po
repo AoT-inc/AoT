@@ -27450,6 +27450,148 @@ msgstr "既存の予約と重なります"
 msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr "既存の予約と重なります — %(time)s に一緒にオフになります"
 
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Planting"
+msgstr "植生"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Area allocation"
+msgstr "面積配分"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Select a planting"
+msgstr "区画の選択"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Several plantings overlap here. Pick one."
+msgstr "ここは複数の区画が重なっています。一つを選んでください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "New planting"
+msgstr "新しい区画"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Crop"
+msgstr "作物"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Variety"
+msgstr "品種"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Plot name"
+msgstr "区画名"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Planted on"
+msgstr "播種日"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Expected end"
+msgstr "終了予定日"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Colour"
+msgstr "色"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Bed layout"
+msgstr "畝の配置"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Bed width (cm)"
+msgstr "畝幅 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Furrow width (cm)"
+msgstr "溝幅 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Not known"
+msgstr "不明"
+
+
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Crop is required"
+msgstr "作物を入力してください"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No map selected"
+msgstr "地図が選択されていません"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Draw an area (polygon) for a planting."
+msgstr "植生区画は面で描いてください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Sensors inside this plot"
+msgstr "この区画内のセンサー"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Using zone sensors"
+msgstr "区域のセンサーを使用"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No sensor nearby"
+msgstr "近くにセンサーがありません"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "History here"
+msgstr "この場所の履歴"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Copy as new"
+msgstr "コピーして新規作成"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "End planting"
+msgstr "栽培終了"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Planting ended"
+msgstr "栽培を終了しました"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Delete this planting record? Use \"End planting\" instead if it was harvested."
+msgstr "この区画の記録を削除しますか？収穫が終わった場合は「栽培終了」を使ってください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No past plantings on this spot."
+msgstr "この場所の過去の記録はありません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Past and present plantings overlapping this spot — useful for crop rotation."
+msgstr "この場所と重なる過去・現在の区画です。輪作の判断に使います。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "ongoing"
+msgstr "栽培中"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Overlap"
+msgstr "重なり面積"
+
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Zone area"
+msgstr "区域の面積"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Some plantings overlap (intercropping), so the percentages add up to more than 100%."
+msgstr "重ねて植えた区画があるため、割合の合計が100%を超えます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Unassigned"
+msgstr "未割当"
+
+
+
+
+#: aot/aot_flask/static/js/geo/aot-map-editor-v2.js:1
+msgid "Map is still loading. Try again in a moment."
+msgstr "地図をまだ読み込んでいます。しばらくしてからもう一度お試しください。"
+
 #: aot/aot_flask/templates/admin/upgrade.html
 msgid "Still reconnecting"
 msgstr "再接続を試みています"
@@ -27473,3 +27615,51 @@ msgid ""
 "The automatic rollback may have failed too. Manual recovery is likely "
 "needed -- check the host directly:"
 msgstr "自動ロールバックも失敗した可能性があります。手動復旧が必要な可能性が高いです — ホストで直接確認してください:"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Copy"
+msgstr "コピー"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Same shape, new period."
+msgstr "同じ形で新しい期間を始めます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Keeps the record for crop rotation."
+msgstr "輪作の判断のため記録は残ります。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "For mistakes only — the record is gone."
+msgstr "誤って作成した場合のみ — 記録が消えます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Ended plantings cannot be reshaped."
+msgstr "終了した区画は形を変更できません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Growing period"
+msgstr "栽培期間"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Show Plantings"
+msgstr "植生区画を表示"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Show vegetation plots (what is planted where). Plot labels appear when zoomed in."
+msgstr "植生区画（何がどこに植えられているか）を表示します。区画名は拡大すると表示されます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Ended"
+msgstr "終了日"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Days since planting"
+msgstr "栽培日数"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "End this planting?"
+msgstr "栽培を終了しますか？"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "It disappears from the map and stays only as history. This cannot be undone here."
+msgstr "地図から消え、履歴としてのみ残ります。ここでは元に戻せません。"

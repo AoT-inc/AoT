@@ -24,7 +24,7 @@
     // ── Category taxonomy ────────────────────────────────────────────────────
     // Single 1st-class classification axis. `source` (shape/facility/device/meas)
     // is kept on each entry as secondary info but never drives priority.
-    var CATEGORIES = ['land', 'zone', 'facility', 'equipment', 'device', 'sensor', 'measurement', 'drawn'];
+    var CATEGORIES = ['land', 'zone', 'vegetation', 'facility', 'equipment', 'device', 'sensor', 'measurement', 'drawn'];
 
     // ── Priority presets (code constants, not settings) ──────────────────────
     // rank: higher = wins collisions. pin: zoom LOD behavior.
@@ -36,6 +36,10 @@
         outdoor: {
             land:        { rank: 90, pin: 'always' },
             zone:        { rank: 80, pin: 'always' },
+            // 식생 구획은 zone 을 나눈 것이라 zone 보다 낮고, 줌을 당겨야
+            // 의미가 있다(한 화면에 두둑이 수십 개면 라벨이 서로를 가린다).
+            // 라벨이 이미 많은 화면이라 'always' 로 두면 안 된다.
+            vegetation:  { rank: 70, pin: 'gated',   minZoom: 16 },
             facility:    { rank: 50, pin: 'gated',   minZoom: 15 },
             sensor:      { rank: 40, pin: 'cluster', clusterAtZoom: 17 },
             device:      { rank: 30, pin: 'cluster', clusterAtZoom: 16 },
@@ -51,6 +55,8 @@
             device:      { rank: 60, pin: 'gated',   minZoom: 14 },
             equipment:   { rank: 50, pin: 'gated',   minZoom: 15 },
             zone:        { rank: 40, pin: 'gated',   minZoom: 15 },
+            // 시설 중심 화면에서는 노지 구획이 주인공이 아니다 — zone 아래.
+            vegetation:  { rank: 35, pin: 'gated',   minZoom: 16 },
             land:        { rank: 30, pin: 'cluster', clusterAtZoom: 13 },
             drawn:       { rank: 10, pin: 'gated',   minZoom: 16 }
         }

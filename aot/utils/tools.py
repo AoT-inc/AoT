@@ -400,7 +400,7 @@ def return_output_usage(
         output_channels = table_output_channels.query.filter(table_output_channels.output_id == each_output.unique_id).all()
         for each_channel in output_channels:
             channel_options = custom_options_values_output_channels[each_output.unique_id][each_channel.channel]
-            # Dynamic multi-channel outputs (FarmOn, mqtt_multi) declare
+            # Dynamic multi-channel outputs (e.g. mqtt_multi) declare
             # channels_dict[0] as a template and register runtime channels
             # 1..N dynamically; channels_dict[N] raises KeyError for N>=1
             # which causes this aggregator to skip those channels entirely,

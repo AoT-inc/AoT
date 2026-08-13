@@ -27690,6 +27690,148 @@ msgstr "기존 예약과 겹칩니다"
 msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr "기존 예약과 겹칩니다 — %(time)s 에 함께 꺼집니다"
 
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Planting"
+msgstr "식생"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Area allocation"
+msgstr "면적 배분"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Select a planting"
+msgstr "구획 선택"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Several plantings overlap here. Pick one."
+msgstr "이 자리에 여러 구획이 겹쳐 있습니다. 하나를 고르세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "New planting"
+msgstr "새 구획"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Crop"
+msgstr "작물"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Variety"
+msgstr "품종"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Plot name"
+msgstr "구획 이름"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Planted on"
+msgstr "파종일"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Expected end"
+msgstr "예상 종료일"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Colour"
+msgstr "색"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Bed layout"
+msgstr "두둑 배치"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Bed width (cm)"
+msgstr "두둑 폭 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Furrow width (cm)"
+msgstr "고랑 폭 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Not known"
+msgstr "모름"
+
+
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Crop is required"
+msgstr "작물을 입력하세요"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No map selected"
+msgstr "선택된 지도가 없습니다"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Draw an area (polygon) for a planting."
+msgstr "식생 구획은 면으로 그려 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Sensors inside this plot"
+msgstr "이 구획 안의 센서"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Using zone sensors"
+msgstr "구역 센서를 사용"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No sensor nearby"
+msgstr "가까운 센서 없음"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "History here"
+msgstr "이 자리 이력"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Copy as new"
+msgstr "복사해서 새로 만들기"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "End planting"
+msgstr "재배 종료"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Planting ended"
+msgstr "재배를 종료했습니다"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Delete this planting record? Use \"End planting\" instead if it was harvested."
+msgstr "이 구획 기록을 삭제할까요? 수확이 끝난 것이라면 \"재배 종료\"를 쓰세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No past plantings on this spot."
+msgstr "이 자리의 지난 기록이 없습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Past and present plantings overlapping this spot — useful for crop rotation."
+msgstr "이 자리와 겹치는 지난·현재 구획입니다. 돌려짓기 판단에 씁니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "ongoing"
+msgstr "재배 중"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Overlap"
+msgstr "겹친 면적"
+
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Zone area"
+msgstr "구역 면적"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Some plantings overlap (intercropping), so the percentages add up to more than 100%."
+msgstr "겹쳐 심은 구획이 있어 비율의 합이 100%를 넘습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Unassigned"
+msgstr "미배정"
+
+
+
+
+#: aot/aot_flask/static/js/geo/aot-map-editor-v2.js:1
+msgid "Map is still loading. Try again in a moment."
+msgstr "지도를 아직 불러오는 중입니다. 잠시 후 다시 시도하세요."
+
 #: aot/aot_flask/templates/admin/upgrade.html
 msgid "Still reconnecting"
 msgstr "재연결 시도 중"
@@ -27713,3 +27855,51 @@ msgid ""
 "The automatic rollback may have failed too. Manual recovery is likely "
 "needed -- check the host directly:"
 msgstr "자동 롤백도 실패했을 수 있습니다. 수동 복구가 필요할 가능성이 높습니다 — 호스트에서 직접 확인하세요:"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Copy"
+msgstr "복사"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Same shape, new period."
+msgstr "같은 모양으로 새 기간을 시작합니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Keeps the record for crop rotation."
+msgstr "돌려짓기 판단을 위해 기록은 남습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "For mistakes only — the record is gone."
+msgstr "잘못 만든 경우에만 — 기록이 사라집니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Ended plantings cannot be reshaped."
+msgstr "종료된 구획은 모양을 바꿀 수 없습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Growing period"
+msgstr "재배 기간"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Show Plantings"
+msgstr "식생 구획 표시"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Show vegetation plots (what is planted where). Plot labels appear when zoomed in."
+msgstr "식생 구획(무엇이 어디에 심겨 있는지)을 표시합니다. 구획 이름은 확대하면 나타납니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Ended"
+msgstr "종료일"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "Days since planting"
+msgstr "재배 일수"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "End this planting?"
+msgstr "재배를 종료할까요?"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
+msgid "It disappears from the map and stays only as history. This cannot be undone here."
+msgstr "지도에서 사라지고 이력으로만 남습니다. 여기서는 되돌릴 수 없습니다."

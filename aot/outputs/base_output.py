@@ -717,7 +717,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     self.output_time_turned_on[output_channel] = None
 
                 # determine which measurement of the output_channel is a duration.
-                # Multi-channel outputs (e.g. FarmOn MQTT) declare channels_dict[0]
+                # Some multi-channel MQTT outputs declare channels_dict[0]
                 # as a template and register runtime channels 1..N dynamically — a
                 # bare channels_dict[output_channel] lookup raises KeyError for any
                 # ch>=1 and silently kills the DB-write path. Mirror the ON-side

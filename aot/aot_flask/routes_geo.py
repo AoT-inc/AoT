@@ -100,6 +100,126 @@ def _get_wms_layer_info(unique_id):
     _wms_layer_info_cache[unique_id] = (base_url, leaflet_opts, now + _WMS_LAYER_INFO_TTL)
     return base_url, leaflet_opts
 
+# ---------------------------------------------------------------------------
+# 오버레이지도 타일 캐시 정책
+# ---------------------------------------------------------------------------
+# 화면 회전(세로↔가로)은 뷰포트 종횡비를 바꿔 MapLibre 가 새 타일 집합을 요구하게
+# 만든다. 그것 자체는 정상인데, 예전 헤더(`max-age=300`)로는 5분만 지나면 이미
+# 받았던 타일까지 **전량 재다운로드**됐다 — ETag 도 없어 304 재검증조차 불가능해
+# 조건부 요청으로 아낄 여지가 아예 없었다. 실측(로컬, ISRIC SoilGrids 타일 1장):
+#   첫 요청 1,739ms / 27,012바이트   ↔   캐시 적중 5ms / 0바이트
+# 회전 한 번에 타일 10여 장이면 그 차이가 그대로 체감 지연이 된다.
+#
+# 게다가 MapLibre 의 `refreshExpiredTiles`(기본 켜짐)는 응답의 `max-age` 를 읽어
+# **타일마다 만료 타이머**를 건다(maplibre-gl 4.1.2 `_setTileReloadTimer`). 즉
+# 300초짜리 헤더는 아무도 지도를 만지지 않아도 5분마다 오버레이 전체를 다시 받게
+# 한다. 헤더를 길게 주는 것은 캐시 정책이자 그 타이머를 끄는 수단이기도 하다.
+#
+# **상류 헤더를 그대로 따르지 않는다.** ISRIC 은 정적 데이터셋(SoilGrids, 2020)에
+# `cache-control: max-age=0, must-revalidate, no-cache, no-store` 를 보낸다
+# (2026-08-13 실측) — MapServer 기본값일 뿐 "자주 바뀐다"는 뜻이 아니다. 그대로
+# 따르면 캐시가 통째로 무력화되므로, 캐시 수명은 프록시가 스스로 정한다.
+_WMS_TILE_TTL = 86400          # 브라우저 캐시 수명(초). 토양도·지적도는 정적이다.
+_WMS_TILE_SERVER_TTL = 604800  # 서버 캐시 수명(초). 브라우저가 비어도 상류 왕복 회피.
+
+# NASA GIBS / 네이버 / 카카오 타일 프록시(`/api/geo/tile_proxy`)의 수명.
+# **여기는 WMS 처럼 늘리면 안 된다.** GIBS 는 `date_mode='default'` 일 때 URL 의
+# 시간 자리가 문자열 `default`(= NASA 최신 가용 데이터)로 남는다 — URL 은 그대로인데
+# 그림은 매일 바뀐다. 하루짜리 캐시는 어제 데이터를 하루 더 보여준다는 뜻이다.
+# 1시간이면 회전·새로고침 비용은 이미 전부 사라지고(그 간격은 초·분 단위다)
+# 시간축 레이어의 신선도도 지킨다. 서버 캐시도 같은 값을 쓴다.
+_TILE_PROXY_TTL = 3600
+
+# 시간에 따라 변하는 WMS(기상 등)를 붙일 때를 위한 탈출구. 입력 모듈이
+# `get_leaflet_options()` 에 이 키를 넣으면 그 레이어만 짧은 수명을 갖는다.
+_WMS_TTL_OPTION_KEYS = ('cache_seconds', 'cacheSeconds', 'cache_max_age')
+
+
+_tile_cache_lock = threading.Lock()
+_tile_cache_store = [None]
+
+
+def _tile_cache():
+    """오버레이지도 타일 전용 파일 캐시(프로세스 간 공유).
+
+    **앱 공용 `cache` 를 쓰지 않는 이유**: 그쪽은 `threshold=500`(cachelib 기본)
+    이고 site_summary 같은 짧은 항목이 함께 산다. 27KB 짜리 타일 수백 장이
+    같은 저장소에 들어가면 넘칠 때마다 그 항목들까지 함께 잘려나간다 — 타일을
+    아끼려다 남의 캐시를 밀어내는 셈이다. 그래서 디렉터리와 정원을 따로 둔다.
+
+    **정원(threshold)을 크게 잡지 말 것 — `/tmp` 는 tmpfs, 즉 RAM 이다.**
+    (배포 서버 실측 2026-08-13: `tmpfs 3.8G /tmp`.) 타일 한 장이 5~30KB 이므로
+    800장이면 최대 20MB 남짓이고, 이는 라즈베리파이급 장비의 tmpfs 에서도
+    안전한 크기다. 넉넉하기도 하다 — 폰 화면 하나가 한 줌(약 15장)이고
+    줌 단계를 오가도 레이어당 수십 장이다. SD 카드 마모를 피하려고 디스크가
+    아니라 `/tmp` 를 쓰는 것은 앱 공용 캐시(`/tmp/aot_flask_cache`)와 같은 선택이다.
+
+    지연 생성인 이유는 디렉터리 만들기를 import 시점에 하지 않기 위해서다
+    (테스트·CLI 가 이 모듈만 import 할 때 파일시스템을 건드리지 않는다).
+    """
+    if _tile_cache_store[0] is None:
+        with _tile_cache_lock:
+            if _tile_cache_store[0] is None:
+                from cachelib import FileSystemCache
+                _tile_cache_store[0] = FileSystemCache(
+                    '/tmp/aot_geo_tile_cache',
+                    threshold=800,
+                    default_timeout=_WMS_TILE_SERVER_TTL)
+    return _tile_cache_store[0]
+
+
+def _tile_cache_key(base_url, params):
+    """상류 요청(=타일 내용)을 그대로 식별하는 키.
+
+    요청 URL 이 아니라 **상류 파라미터**로 키를 만든다. 레이어 설정이 바뀌면
+    (LAYERS·STYLES·FORMAT 등) 같은 BBOX 라도 다른 그림이 나오는데, URL 로만
+    키를 잡으면 설정 변경 후에도 옛 그림이 계속 나온다.
+    """
+    import hashlib as _hashlib
+    payload = json.dumps([base_url, sorted((str(k), str(v)) for k, v in params.items())],
+                         ensure_ascii=False)
+    return 'geotile:' + _hashlib.sha1(payload.encode('utf-8')).hexdigest()
+
+
+def _tile_cache_get(base_url, params):
+    """`(bytes, content_type)` 또는 미적중 시 None. 캐시 장애는 미적중과 같다."""
+    try:
+        hit = _tile_cache().get(_tile_cache_key(base_url, params))
+    except Exception:
+        return None
+    if isinstance(hit, (tuple, list)) and len(hit) == 2 and isinstance(hit[0], bytes):
+        return (hit[0], hit[1])
+    return None
+
+
+def _tile_cache_set(base_url, params, value, timeout=None):
+    """타일을 서버 캐시에 넣는다. 실패해도 요청은 정상 처리된다(캐시는 보조수단)."""
+    try:
+        _tile_cache().set(_tile_cache_key(base_url, params), value,
+                          timeout=timeout or _WMS_TILE_SERVER_TTL)
+    except Exception:
+        pass
+
+
+def _wms_tile_ttl(leaflet_opts):
+    """레이어별 타일 캐시 수명(초). 미지정이면 `_WMS_TILE_TTL`.
+
+    상류가 정적 데이터에도 `no-store` 를 보내는 경우가 있어(위 주석) 상류 헤더는
+    보지 않는다. 대신 레이어 자신이 값을 선언하면 그것을 따른다.
+    """
+    for key in _WMS_TTL_OPTION_KEYS:
+        raw = (leaflet_opts or {}).get(key)
+        if raw in (None, '', False):
+            continue
+        try:
+            ttl = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if ttl > 0:
+            return ttl
+    return _WMS_TILE_TTL
+
+
 # Minimal 1×1 transparent PNG — returned by the WMS proxy when the upstream
 # WMS server responds with an XML/HTML service exception so that MapLibre can
 # decode the tile without triggering "source image could not be decoded" errors.
@@ -341,6 +461,7 @@ def api_geo_settings():
                 # 않았다).
                 theme_keys = [
                     'theme_site', 'theme_zone', 'theme_facility', 'theme_equipment', 'theme_device',
+                    'theme_vegetation',
                     'theme_input', 'theme_output', 'theme_function', 'theme_device_unit',
                     'theme_panel_bg', 'theme_panel_opacity',
                     'theme_hide_label', 'theme_vis_input', 'theme_vis_output',
@@ -1096,7 +1217,6 @@ def api_geo_proxy_rainviewer_timestamps():
 
 @blueprint.route('/api/geo/proxy/wms/<unique_id>', methods=['GET'])
 @login_required
-@cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_wms_proxy_error') and g._wms_proxy_error)
 def api_geo_proxy_wms(unique_id):
     """
     Server-side WMS tile proxy.
@@ -1106,11 +1226,19 @@ def api_geo_proxy_wms(unique_id):
 
     MapLibre uses this URL template:
         /api/geo/proxy/wms/<unique_id>?BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256
+
+    캐시는 두 겹이다(정책 근거는 파일 상단 `_WMS_TILE_TTL` 주석):
+      - 서버: `_tile_cache` — 브라우저 캐시가 비어도 상류 왕복(실측 1.7초)을 피한다.
+      - 브라우저: `utils_http.tile_conditional()` 이 다는 장기 `max-age` + ETag.
+
+    **`@cache.cached` 를 다시 붙이지 말 것.** 그 데코레이터는 뷰가 돌려준 응답을
+    그대로 캐시하는데, 이 뷰는 `If-None-Match` 가 맞으면 **304** 를 돌려준다 —
+    그 304 가 캐시되면 ETag 를 보내지 않은 다음 사람이 본문 없는 304 를 받아
+    타일이 영영 안 뜬다. 그래서 캐시 대상은 응답이 아니라 **타일 바이트**다.
     """
     try:
         base_url, leaflet_opts = _get_wms_layer_info(unique_id)
         if base_url is None:
-            g._wms_proxy_error = True
             return Response('Layer not found or not configured', status=404)
 
         bbox = request.args.get('BBOX', '')
@@ -1118,7 +1246,6 @@ def api_geo_proxy_wms(unique_id):
         height = request.args.get('HEIGHT', '256')
 
         if not bbox:
-            g._wms_proxy_error = True
             return Response('Missing BBOX parameter', status=400)
 
         wms_params = {
@@ -1147,28 +1274,30 @@ def api_geo_proxy_wms(unique_id):
             if k.lower() not in _WMS_STANDARD and v not in (None, '', False):
                 wms_params[k] = v
 
-        resp = requests.get(base_url, params=wms_params, timeout=15,
-                            headers={'Referer': request.host_url})
+        cached = _tile_cache_get(base_url, wms_params)
+        if cached is None:
+            resp = requests.get(base_url, params=wms_params, timeout=15,
+                                headers={'Referer': request.host_url})
 
-        content_type = resp.headers.get('Content-Type', 'image/png')
-        if resp.status_code != 200 or 'xml' in content_type or 'html' in content_type:
-            current_app.logger.warning(
-                f'[WMS Proxy] Upstream error {resp.status_code} for {unique_id}: {resp.text[:200]}'
-            )
-            g._wms_proxy_error = True
-            return Response(
-                _TRANSPARENT_1X1_PNG,
-                status=200,
-                content_type='image/png',
-                headers={'Cache-Control': 'no-cache'}
-            )
+            content_type = resp.headers.get('Content-Type', 'image/png')
+            if resp.status_code != 200 or 'xml' in content_type or 'html' in content_type:
+                current_app.logger.warning(
+                    f'[WMS Proxy] Upstream error {resp.status_code} for {unique_id}: {resp.text[:200]}'
+                )
+                # 실패는 캐시하지 않는다 — 상류가 잠깐 흔들린 것을 몇 시간짜리
+                # 빈 타일로 굳혀 버리면 복구가 사용자 눈에는 영영 안 온다.
+                return Response(
+                    _TRANSPARENT_1X1_PNG,
+                    status=200,
+                    content_type='image/png',
+                    headers={'Cache-Control': 'no-cache'}
+                )
 
-        return Response(
-            resp.content,
-            status=200,
-            content_type=content_type,
-            headers={'Cache-Control': 'public, max-age=300'}
-        )
+            cached = (resp.content, content_type)
+            _tile_cache_set(base_url, wms_params, cached)
+
+        return utils_http.tile_conditional(
+            request, cached[0], cached[1], _wms_tile_ttl(leaflet_opts))
 
     except Exception as e:
         # Even if the upstream WMS (e.g. maps.isric.org) is slow or unresponsive and
@@ -1177,7 +1306,6 @@ def api_geo_proxy_wms(unique_id):
         # working overlays. Just like a non-200 response, gracefully degrade with a
         # transparent tile (200) — only the overlay is blank while the map keeps working.
         current_app.logger.warning(f'[WMS Proxy] Exception for {unique_id}: {e}')
-        g._wms_proxy_error = True
         return Response(
             _TRANSPARENT_1X1_PNG,
             status=200,
@@ -1238,28 +1366,35 @@ def api_geo_tile_proxy():
             'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
         }
 
-        # Fetch the tile
-        import requests
-        resp = requests.get(target_url, headers=headers, timeout=10)
+        # 서버 캐시 먼저 — WMS 프록시와 같은 이유다(파일 상단 주석). 여기는
+        # 원래 서버 캐시가 아예 없어서 회전·새로고침마다 상류로 나갔다.
+        cache_params = {'url': target_url}
+        cached = _tile_cache_get('tile_proxy', cache_params)
 
-        if resp.status_code != 200:
-            current_app.logger.warning(f'[Tile Proxy] Non-200 status: {resp.status_code} for {target_url}')
-            return Response(
-                _TRANSPARENT_1X1_PNG,
-                status=200,
-                mimetype='image/png'
-            )
-        
-        # Determine content type
-        content_type = resp.headers.get('Content-Type', 'image/png')
-        
-        return Response(
-            resp.content,
-            status=200,
-            content_type=content_type,
-            headers={'Cache-Control': 'public, max-age=3600'}
-        )
-        
+        if cached is None:
+            # Fetch the tile
+            import requests
+            resp = requests.get(target_url, headers=headers, timeout=10)
+
+            if resp.status_code != 200:
+                current_app.logger.warning(f'[Tile Proxy] Non-200 status: {resp.status_code} for {target_url}')
+                # 실패는 캐시하지 않는다 — 상류의 일시 장애를 굳히지 않기 위해서.
+                return Response(
+                    _TRANSPARENT_1X1_PNG,
+                    status=200,
+                    mimetype='image/png',
+                    headers={'Cache-Control': 'no-cache'}
+                )
+
+            # Determine content type
+            content_type = resp.headers.get('Content-Type', 'image/png')
+            cached = (resp.content, content_type)
+            _tile_cache_set('tile_proxy', cache_params, cached, timeout=_TILE_PROXY_TTL)
+
+        return utils_http.tile_conditional(
+            request, cached[0], cached[1], _TILE_PROXY_TTL)
+
+
     except requests.Timeout:
         current_app.logger.error(f'[Tile Proxy] Timeout for {target_url}')
         return Response("Tile request timeout", status=504)
@@ -4129,3 +4264,4 @@ def api_geo_map_site_order_save(map_uuid):
 # ── Sub-module route registrations ────────────────────────────────────────
 from aot.aot_flask import routes_geo_commissioning  # noqa: E402,F401
 from aot.aot_flask import routes_geo_iec            # noqa: E402,F401
+from aot.aot_flask import routes_geo_planting       # noqa: E402,F401
