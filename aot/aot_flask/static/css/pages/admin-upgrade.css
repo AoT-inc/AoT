@@ -27,14 +27,43 @@ main.container > p {
     font-family: 'Courier New', monospace;
 }
 
+/* This page's notice boxes are progress/status information, not urgent
+   alerts competing for attention -- the semantic tint fill and border
+   (success green / danger red / warning tan) read as noisy rather than
+   helpful, and on some presets fought the brand palette instead of matching
+   it (2026-08-13 user feedback: every box on this page, tint included,
+   should look like the plain "Install updates automatically" box below it).
+   Flatten every variant on THIS page to the same neutral brand surface +
+   border + text. Scoped to the upgrade page only -- other pages' notice
+   boxes (e.g. facility warnings) keep full tint. */
+main.container .aot-notice-box {
+    background: var(--bd-secondary) !important;
+    color: var(--text-color-primary) !important;
+    border-color: var(--aot-border-neutral) !important;
+}
+
+/* Bootstrap's global `code { color: #e83e8c }` (bootstrap.min.css) otherwise
+   leaves the registry/backup paths on this page in a pink that has nothing
+   to do with the theme and was never asked for (2026-08-13 user feedback --
+   the only text meant to stand out from body copy on this page is the
+   version number links, which already get the normal link color). */
+main.container code,
+main.container pre {
+    color: var(--text-color-primary);
+}
+
+/* The live update log tail. Was a hardcoded dark "terminal" look, unrelated
+   to any custom_ui color -- same fix as above: brand surface + text instead
+   of an invented palette. Monospace/scroll/resize stay, those are about the
+   content being a raw log, not about color. */
 #upgrade_status {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: var(--bd-secondary);
+    color: var(--text-color-primary);
     padding: 15px;
     border-radius: 8px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.9rem;
-    border: 1px solid #333;
+    border: 1px solid var(--aot-border-neutral);
     overflow: auto;
     resize: vertical;
     height: 500px;

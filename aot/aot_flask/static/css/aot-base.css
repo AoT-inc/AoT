@@ -604,9 +604,15 @@ html {
     color: var(--text-color-tertiary) !important;
 }
 
-.dropdown-item.aot-nav-upgrade:hover,
-.dropdown-item.aot-nav-upgrade:focus {
-    background-color: var(--bg-upgrade);
+/* aot.css 의 .navbar.main-navbar .dropdown-menu .dropdown-item:hover 가
+   --primary(브랜드 강조색이 아니라 옛 노란 액센트, #F2D524)로 호버 배경을
+   덮어써, 업그레이드 배지의 어두운 배경+맞춘 문자색 조합이 호버 시에만
+   거의 흰빛에 가까운 노랑으로 바뀌어 다시 읽을 수 없어졌다(2026-08-13
+   사용자 리포트). 위 색 대비 규칙과 같은 조상 경로+특정도로 배경을
+   고정한다. */
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade:hover,
+.navbar.main-navbar .dropdown-menu .dropdown-item.aot-nav-upgrade:focus {
+    background-color: var(--bg-upgrade) !important;
     opacity: 0.85;
 }
 

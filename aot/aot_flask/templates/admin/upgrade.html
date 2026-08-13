@@ -13,23 +13,57 @@
 {% if upgrade == 1 %}
 <script>
   let prev_string = '';
+  // How long the connection has been down, tracked across polls so the
+  // message can escalate instead of repeating "this is normal" forever.
+  // A routine recreate is unreachable for well under a minute; anything past
+  // that is more likely a stuck rollback (see aot_docker_update.sh rollback()
+  // -- a failed rollback can spend up to ~2x AOT_HEALTH_TIMEOUT retrying
+  // before it gives up and writes state "failed").
+  let disconnected_since = null;
+
+  function disconnect_message(down_for_sec) {
+    // #upgrade_status is a <pre> (it normally holds a raw log tail), which
+    // does not wrap long lines -- these notice boxes need white-space: normal
+    // of their own or the text runs off the right edge instead of wrapping.
+    if (down_for_sec < 60) {
+      return `<div class="aot-notice-box aot-notice-box-danger" style="white-space: normal;">
+        {{_('Lost connection to server. This is normal during restart.')}}
+      </div>`;
+    }
+    if (down_for_sec < 180) {
+      const waited = Math.floor(down_for_sec / 60);
+      // Base .aot-notice-box (no modifier) already renders in the warning
+      // tint -- there is no separate "-warning" modifier class.
+      return `<div class="aot-notice-box" style="white-space: normal;">
+        <strong>{{_('Still reconnecting')}}</strong> (${waited} {{_('min so far')}}).
+        {{_('A normal restart is usually done within a minute. This may mean the update failed and an automatic rollback is in progress.')}}
+      </div>`;
+    }
+    return `<div class="aot-notice-box aot-notice-box-danger" style="white-space: normal;">
+      <strong>{{_('Reconnection has been failing for several minutes.')}}</strong><br>
+      {{_('The automatic rollback may have failed too. Manual recovery is likely needed -- check the host directly:')}}
+      <pre class="mb-0 mt-1" style="white-space: pre-wrap;">docker compose -f docker/docker-compose.prod.yml ps</pre>
+    </div>`;
+  }
+
   function check_upgrade_status() {
     const url = '/admin/upgrade_status';
     $.ajax(url, {
       success: function(new_string, responseText, jqXHR) {
+        disconnected_since = null;
         // Enhanced redirection check: Detect if the response is HTML (not plain text log)
         // and contains login-related content
         const contentType = jqXHR.getResponseHeader('Content-Type') || '';
         const isHTML = contentType.includes('text/html');
         const hasLoginContent = new_string && (
-          new_string.includes('id="login"') || 
+          new_string.includes('id="login"') ||
           new_string.includes('/login') ||
           new_string.includes('csrf_token') ||
           new_string.includes('form-signin') ||
           new_string.includes('<html') ||
           new_string.includes('<!DOCTYPE')
         );
-        
+
         if (isHTML && hasLoginContent) {
            document.getElementById("upgrade_status").innerHTML = `<div class="aot-notice-box text-center">
              <strong>{{_('Upgrade completed! System is restarting...')}}</strong><br>
@@ -55,14 +89,16 @@
         else {
           document.getElementById("upgrade_status").innerHTML = "{{_('Reading AoT upgrade logs. Please wait...')}}";
         }
-        
+
         // During upgrade progress, continuously force logo to red
         $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
       },
       error: function() {
-        document.getElementById("upgrade_status").innerHTML = `<div class="aot-notice-box aot-notice-box-danger">
-          {{_('Lost connection to server. This is normal during restart.')}}
-        </div>`;
+        if (disconnected_since === null) {
+          disconnected_since = Date.now();
+        }
+        const down_for_sec = (Date.now() - disconnected_since) / 1000;
+        document.getElementById("upgrade_status").innerHTML = disconnect_message(down_for_sec);
         // Keep logo red even on error
         $('#daemon-icon').attr('src', '/static/img/logo_red.svg');
       },
@@ -78,7 +114,10 @@
   // In Docker the update ends without the app restarting under us in a way the
   // log tail can see: a run that failed and rolled back stops producing lines
   // exactly like one that succeeded. Ask for the state instead, and reload once
-  // it reaches a terminal one so the page shows the result.
+  // it reaches a terminal one so the page shows the result. No error handler
+  // needed here -- check_upgrade_status()'s poll on the same interval already
+  // surfaces connectivity loss, and this one silently retries until the app
+  // answers again.
   setInterval(function() {
       $.ajax('/admin/upgrade_state', {
         success: function(data) {
@@ -93,7 +132,7 @@
 {% endif %}
 </script>
 {% endif %}
-<link href="{{ url_for('static', filename='css/pages/admin-upgrade.css') }}?v=20260812c" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/pages/admin-upgrade.css') }}?v=20260813b" rel="stylesheet">
 {% endblock %}
 
 {% block body %}

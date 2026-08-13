@@ -27449,3 +27449,27 @@ msgstr "既存の予約と重なります"
 #, python-format
 msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr "既存の予約と重なります — %(time)s に一緒にオフになります"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Still reconnecting"
+msgstr "再接続を試みています"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "min so far"
+msgstr "分経過"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"A normal restart is usually done within a minute. This may mean the "
+"update failed and an automatic rollback is in progress."
+msgstr "通常の再起動は1分以内に終わります。アップデートが失敗し、自動ロールバックが進行中の可能性があります。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Reconnection has been failing for several minutes."
+msgstr "再接続が数分間失敗し続けています。"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The automatic rollback may have failed too. Manual recovery is likely "
+"needed -- check the host directly:"
+msgstr "自動ロールバックも失敗した可能性があります。手動復旧が必要な可能性が高いです — ホストで直接確認してください:"

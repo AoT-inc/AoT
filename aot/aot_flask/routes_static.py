@@ -173,6 +173,39 @@ def _battery_type_choices():
     ]
 
 
+def upgrade_badge_is_light(custom_theme):
+    """Is the nav-bar "Upgrade" badge's background light or dark?
+
+    Drives which text color variant (aot-nav-upgrade-light/dark, aot-base.css)
+    the template picks for readable contrast.
+
+    bg_upgrade was folded into badge_upgrade in the 2026-07 field
+    consolidation and dropped from stored custom_theme_json
+    (LEGACY_THEME_FIELDS_DROP) -- reading it directly here always returned
+    None, and the SettingsCustomUI().bg_upgrade attribute this used to fall
+    back to no longer exists either, so this silently fell into the
+    `except: True` fallback on every render. With the default badge_upgrade
+    (#13261B, dark) and the default text-color-primary being that same
+    #13261B, "light" text-on-text made the label unreadable (2026-08-13 user
+    report).
+
+    Reads THEME_DEFAULTS directly rather than instantiating SettingsCustomUI()
+    for the fallback -- the form needs a request/session context to
+    construct (CSRF setup), which this is not guaranteed to have every place
+    it could reasonably be called from (a context processor is fine, a test
+    or a future non-request caller is not).
+    """
+    try:
+        from aot.aot_flask.forms.forms_settings import (
+            THEME_DEFAULTS, migrate_theme_dict)
+        migrated_theme = migrate_theme_dict(dict(custom_theme or {}))
+        bg_value = (migrated_theme.get('badge_upgrade')
+                    or THEME_DEFAULTS.get('badge_upgrade', '#13261B'))
+        return is_hex_color_light(bg_value)
+    except Exception:
+        return True
+
+
 @blueprint.app_context_processor
 def inject_variables():
     """Variables to send with every page request."""
@@ -227,16 +260,9 @@ def inject_variables():
     except Exception:
         custom_css_version = '0'
 
-    # nav-bar 관리 메뉴의 "업그레이드" 항목: settings/custom_ui 의 bg_upgrade
+    # nav-bar 관리 메뉴의 "업그레이드" 항목: settings/custom_ui 의 badge_upgrade
     # 배경색 밝기에 따라 텍스트를 기본/3차 색 중 무엇으로 할지 서버에서 미리 판정.
-    try:
-        bg_upgrade_value = custom_theme.get('bg_upgrade')
-        if not bg_upgrade_value:
-            from aot.aot_flask.forms.forms_settings import SettingsCustomUI
-            bg_upgrade_value = SettingsCustomUI().bg_upgrade.default
-        upgrade_bg_is_light = is_hex_color_light(bg_upgrade_value)
-    except Exception:
-        upgrade_bg_is_light = True
+    upgrade_bg_is_light = upgrade_badge_is_light(custom_theme)
 
     from aot.aot_flask.utils.utils_geo import get_geo_config
     geo_config = get_geo_config()

@@ -27689,3 +27689,27 @@ msgstr "기존 예약과 겹칩니다"
 #, python-format
 msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr "기존 예약과 겹칩니다 — %(time)s 에 함께 꺼집니다"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Still reconnecting"
+msgstr "재연결 시도 중"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "min so far"
+msgstr "분 경과"
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"A normal restart is usually done within a minute. This may mean the "
+"update failed and an automatic rollback is in progress."
+msgstr "정상적인 재시작은 보통 1분 안에 끝납니다. 업데이트가 실패해서 자동 롤백이 진행 중일 수 있습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid "Reconnection has been failing for several minutes."
+msgstr "재연결이 몇 분째 실패하고 있습니다."
+
+#: aot/aot_flask/templates/admin/upgrade.html
+msgid ""
+"The automatic rollback may have failed too. Manual recovery is likely "
+"needed -- check the host directly:"
+msgstr "자동 롤백도 실패했을 수 있습니다. 수동 복구가 필요할 가능성이 높습니다 — 호스트에서 직접 확인하세요:"
