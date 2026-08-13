@@ -1311,3 +1311,150 @@ class TestPlaceSuffixStripping(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# 10. 시설 bay 흡수 (Phase 2) — 기하는 참조가 아니라 스냅샷
+# ---------------------------------------------------------------------------
+
+class TestBayBackfill(unittest.TestCase):
+    """`bays[].crop` → GeoPlanting 백필의 판정 규칙.
+
+    실제 이관은 운영 데이터에서만 일어나므로(개발 DB 에는 bay 작물이 없다),
+    **무엇을 옮기고 무엇을 건너뛰는지**를 여기서 고정한다. 조용히 잘못 옮기면
+    지도에 안 그려지는 유령 구획이 생기거나 같은 작물이 두 벌이 된다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'bay.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def setUp(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility, GeoPlanting, GeoShape
+        for model in (GeoPlanting, GeoShape, GeoFacility):
+            model.query.delete()
+        db.session.commit()
+
+    def _facility_with_bay(self, crop, with_geometry=True, bay_id='bay_1'):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoFacility, GeoShape
+
+        # 시설 외곽 도형 — GeoFacility.shape_uuid 는 필수다.
+        outer = GeoShape(geo_id='map-bay', type='facility',
+                         feature={'type': 'Feature', 'properties': {},
+                                  'geometry': _square(0.0, 0.0, 0.002)})
+        db.session.add(outer)
+        db.session.flush()
+
+        shape_uuid = None
+        if with_geometry:
+            shape = GeoShape(geo_id='map-bay', type='facility_bay',
+                             parent_id=outer.id,
+                             feature={'type': 'Feature', 'properties': {},
+                                      'geometry': _square(0.0, 0.0, 0.0005)})
+            db.session.add(shape)
+            db.session.flush()
+            shape_uuid = shape.unique_id
+
+        fac = GeoFacility(name='온실1', geo_id='map-bay',
+                          shape_uuid=outer.unique_id, bays=[{
+            'id': bay_id, 'name': '1동', 'crop': crop,
+            'polygon_shape_uuid': shape_uuid,
+        }])
+        db.session.add(fac)
+        db.session.commit()
+        return fac
+
+    def _plan(self):
+        from aot.scripts.backfill_facility_bay_crops import _plan
+        return _plan(None)
+
+    def test_bay_with_crop_and_geometry_is_planned(self):
+        self._facility_with_bay('토마토')
+        planned, skipped = self._plan()
+        self.assertEqual(len(planned), 1)
+        self.assertEqual(planned[0]['crop'], '토마토')
+        self.assertIn(':', planned[0]['source_ref'])   # <facility>:<bay>
+
+    def test_bay_without_geometry_is_skipped_not_created(self):
+        """기하 없이 만들면 지도에 안 그려지는 유령 구획이 된다."""
+        self._facility_with_bay('상추', with_geometry=False)
+        planned, skipped = self._plan()
+        self.assertEqual(planned, [])
+        self.assertEqual(skipped[0]['why'], 'no-geometry')
+
+    def test_bay_without_crop_is_ignored(self):
+        self._facility_with_bay('')
+        planned, skipped = self._plan()
+        self.assertEqual(planned, [])
+        self.assertEqual(skipped, [])
+
+    def test_rerun_does_not_duplicate(self):
+        """재실행해도 두 벌이 되지 않는다 — source_ref 로 알아본다."""
+        from aot.scripts.backfill_facility_bay_crops import _apply
+
+        self._facility_with_bay('오이')
+        planned, _ = self._plan()
+        made, failed = _apply(None, planned)
+        self.assertEqual(len(made), 1)
+        self.assertEqual(failed, [])
+
+        planned2, skipped2 = self._plan()
+        self.assertEqual(planned2, [])
+        self.assertEqual(skipped2[0]['why'], 'already-migrated')
+
+    def test_migrated_plot_is_a_snapshot_not_a_reference(self):
+        """bay 기하가 바뀌어도 옮긴 구획은 따라 움직이지 않는다.
+
+        따라 움직이면 "작년에 여기 뭐가 있었나" 의 답이 조용히 달라진다.
+        """
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlanting, GeoShape
+        from aot.scripts.backfill_facility_bay_crops import _apply
+
+        self._facility_with_bay('딸기')
+        planned, _ = self._plan()
+        _apply(None, planned)
+
+        before = json.dumps(GeoPlanting.query.first().feature['geometry'],
+                            sort_keys=True)
+
+        # bay 를 다시 나눈 것처럼 원본 도형의 기하를 바꾼다
+        shape = GeoShape.query.filter_by(type='facility_bay').first()
+        shape.feature = {'type': 'Feature', 'properties': {},
+                         'geometry': _square(9.0, 9.0, 0.0005)}
+        db.session.commit()
+
+        after = json.dumps(GeoPlanting.query.first().feature['geometry'],
+                           sort_keys=True)
+        self.assertEqual(before, after, '스냅샷이 아니라 참조로 붙어 있다')
+
+    def test_source_kind_marks_origin(self):
+        from aot.databases.models import GeoPlanting
+        from aot.scripts.backfill_facility_bay_crops import _apply
+
+        self._facility_with_bay('가지')
+        planned, _ = self._plan()
+        _apply(None, planned)
+        self.assertEqual(GeoPlanting.query.first().source_kind, 'bay_snapshot')

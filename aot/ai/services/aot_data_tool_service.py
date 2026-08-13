@@ -6545,8 +6545,22 @@ class AoTDataToolService:
             except Exception as exc:
                 logger.warning("get_crop_status: 식생 구획 조회 실패: %s", exc)
 
+            # 시설 bay 에서 옮겨온 구획(source_kind='bay_snapshot')은 노지가
+            # 아니다 — 이름을 섞으면 AI 가 온실 작물을 노지로 읽는다.
+            # `bays[].crop` 은 아직 살아 있어(폴백) 같은 작물이 facilities 와
+            # 여기 양쪽에 보일 수 있다. 그 사실을 note 로 밝힌다.
+            bay_plots = [d for d in plots if d.get('source_kind') == 'bay_snapshot']
+            open_plots = [d for d in plots if d.get('source_kind') != 'bay_snapshot']
+
             result = {"status": "success", "count": len(rows), "facilities": rows,
-                      "open_field_plots": plots, "plot_count": len(plots)}
+                      "open_field_plots": open_plots, "plot_count": len(open_plots)}
+            if bay_plots:
+                result["facility_bay_plots"] = bay_plots
+                result["facility_bay_plot_note"] = (
+                    "These came from greenhouse bays and now carry a planting date and "
+                    "history of their own. The same crop may still appear under "
+                    "'facilities' because the legacy bays[].crop field is kept until "
+                    "the migration is verified in production — do not count it twice.")
             if not rows and not plots:
                 result["message"] = (
                     "No active env_coordinator carries crop information. Check whether an "

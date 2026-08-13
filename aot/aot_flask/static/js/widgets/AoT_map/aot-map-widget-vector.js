@@ -6584,6 +6584,11 @@
             // toggle, _applyShapeLOD would re-show it on load/zoom, drawing the extrusion
             // box on top of the 3D model (box + model duplicate). Only the flat footprint
             // (fill/line) follows the facility category toggle.
+            // 식생 구획 — 레이어 id 는 uid 가 붙어 고정 문자열이 아니다.
+            // `layers` 는 아래 _applyShapeLOD/_applyShapeVisible 이 쓰는 실제 id 라
+            // 여기서 만들어 넣는다(aot-map-vegetation.js 의 _ids 와 같은 규약).
+            { cat: 'vegetation', label: (window._ ? window._('Planting') : 'Planting'),
+              layers: ['aot-vegetation-fill-' + uniqueId, 'aot-vegetation-line-' + uniqueId] },
             { cat: 'facility',  label: (window._ ? window._('Facility') : 'Facility'),  layers: ['facilities-fill', 'facilities-line'], labelType: 'facility' },
             { cat: 'equipment', label: (window._ ? window._('Equipment') : 'Equipment'),layers: ['equipment-line', 'equipment-fill'],                  labelType: 'equipment' },
             { cat: 'device',    label: (window._ ? window._('Device') : 'Device'),      layers: ['aot-devices-line', 'aot-devices-fill'],              labelType: 'aot_device', markers: true },
@@ -6608,7 +6613,8 @@
         // AoT_map.py option id, not a naming mistake.
         const _CAT_SHOW_KEY = {
             land: 'show_site_shape', zone: 'show_zone_shape', facility: 'show_facility_shape',
-            equipment: 'show_equipment_shape', device: 'show_device_shapes', drawn: 'show_drawn_shapes'
+            equipment: 'show_equipment_shape', device: 'show_device_shapes', drawn: 'show_drawn_shapes',
+            vegetation: 'show_vegetation'
         };
 
         function _catReadSaved(cat) {
@@ -6686,6 +6692,12 @@
             _catHidden[cat] = !visible;
             if (window.AoTMapLabelLayers) {
                 try { AoTMapLabelLayers.setShapeVisible(uniqueId, cat, visible); } catch (e) { }
+            }
+            // 식생 칩은 DOM 마커라 setLayoutProperty 로 안 꺼진다 — 모듈이
+            // 도형·칩을 함께 처리한다. 이걸 빠뜨리면 도형만 사라지고 라벨이
+            // 허공에 남는다.
+            if (cat === 'vegetation' && window.AoTMapVegetation) {
+                try { window.AoTMapVegetation.setVisible(uniqueId, map, visible); } catch (e) { }
             }
             // Turning a category ON that was OFF at widget load never had its
             // MapLibre layer created (loadGeoJSONLayers only fetches/adds a

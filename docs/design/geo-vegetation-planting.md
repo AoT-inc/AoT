@@ -529,10 +529,28 @@ VP-6 은 이력 보호다. 날짜 정정·이름 변경·삭제(오기입)는 �
 - `theme_config` 에 `vegetation` 키 + `DEFAULTS` 한 벌
 - 검사 4종 · i18n(ko/ja) · 회귀 테스트
 
-### Phase 2 — 시설 bay 흡수
-- bay → 작기 생성 (기하 스냅샷)
-- `get_crop_status` GeoPlanting 우선 + 폴백
-- 백필 스크립트
+### Phase 2 — 시설 bay 흡수 ✅ 백필·읽기 완료 (2026-08-13), 폴백 제거는 배포 뒤
+
+- 백필: `aot/scripts/backfill_facility_bay_crops.py` (기본 dry-run, `--apply`)
+- 읽기: `get_crop_status` 가 bay 유래 구획을 `facility_bay_plots` 로 따로 싣는다.
+  노지(`open_field_plots`)와 섞지 않는다 — 섞으면 AI 가 온실 작물을 노지로 읽는다.
+- 회귀: `test_geo_planting.py::TestBayBackfill` (6건)
+
+**옮기는 규칙**
+- 기하는 **스냅샷 복사**다. `polygon_shape_uuid` 가 가리키는 bay 폴리곤의 그
+  시점 기하를 복사하고 `source_kind='bay_snapshot'`,
+  `source_ref='<facility_uuid>:<bay_id>'` 로 출처만 남긴다. 참조로 붙이면
+  나중에 `bay_count` 를 바꿀 때 과거 작기가 따라 움직여 이력이 거짓말이 된다.
+- **기하를 못 찾는 bay 는 만들지 않는다**(`bay_start~bay_end` 범위로만 정의된
+  구역). 지도에 안 그려지는 유령 구획이 된다 — 보고만 한다.
+- 파종일은 **오늘**로 둔다. `bays[].crop` 에는 날짜가 없다 — 없는 날짜를
+  지어내는 것보다 사람이 고치게 하는 편이 낫다.
+- 재실행해도 두 벌이 되지 않는다(`source_ref` 로 판별).
+
+**⏳ 남은 것 — `bays[].crop` 제거는 배포에 걸려 있다.** 운영 서버에 백필을
+돌리고 폴백(=`facilities` 쪽 작물)이 실제로 안 쓰이는 것을 확인한 뒤다. 지금
+지우면 백필이 안 돌아간 서버의 온실 작물 정보가 즉시 사라진다
+(geo_binding Phase C-4·API 키 레거시 컬럼과 같은 이유).
 
 ### Phase 3 — 교차와 배분 표시
 - 밸브 폴리곤 교차 → 이 구획을 적시는 밸브
