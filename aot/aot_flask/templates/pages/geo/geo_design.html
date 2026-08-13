@@ -5,7 +5,7 @@
 {% block head %}
 <!-- ANTIGRAVITY_v3_VERIFY_20251227_01 -->
 <!-- Leaflet & Draw CSS [Globalized in layout.html] -->
-<link rel="stylesheet" href="/static/css/map/map.css" />
+<link rel="stylesheet" href="/static/css/map/map.css?v=20260814a" />
 <style>
     /* Card Styles */
     .card {
@@ -524,31 +524,31 @@
 </script>
 
 <!-- Leaflet Compatibility Layer (for legacy components like aot-geo-panel.js) -->
-<script src="/static/js/geo/aot-leaflet-compat.js"></script>
+<script src="/static/js/geo/aot-leaflet-compat.js?v=20260814a"></script>
 
 <!-- [GIS Pure MapLibre v5.0] Leaflet-Free MapLibre GL Architecture -->
 <!-- ====================================================== -->
 
 <!-- NEW: AoT MapLibre Core Modules (Pure MapLibre, Leaflet-Free) -->
-<script src="/static/js/geo/src/maplibre/AoTMapLibreCore.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTMapLibreLayer.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTMapLibreFeatureGroup.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTMapLibreDrawTool.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTMapLibrePopup.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTMapLibreTooltip.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTGeoCompatibility.js"></script>
-<script src="/static/js/geo/src/maplibre/AoTMapLibreCompatShim.js"></script>
-<script src="/static/js/geo/src/maplibre/index.js"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreCore.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreLayer.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreFeatureGroup.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreDrawTool.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibrePopup.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreTooltip.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTGeoCompatibility.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/AoTMapLibreCompatShim.js?v=20260814a"></script>
+<script src="/static/js/geo/src/maplibre/index.js?v=20260814a"></script>
 
 <!-- MapLibre Draw Module (AoT Native Implementation) -->
 <script src="/static/js/geo/maplibre/maplibre-draw.js?v=20260728a"></script>
 
 <!-- Vector Modules (MapLibre) -->
-<script src="/static/js/geo/src/core/maplibre-core.js"></script>
-<script src="/static/js/geo/aot-vector-layer-manager.js"></script>
-<script src="/static/js/geo/aot-maplibre-raster-bridge.js"></script>
-<script src="/static/js/geo/src/draw/maplibre-draw.js"></script>
-<script src="/static/js/geo/src/loaders/map-loader.js"></script>
+<script src="/static/js/geo/src/core/maplibre-core.js?v=20260814a"></script>
+<script src="/static/js/geo/aot-vector-layer-manager.js?v=20260814a"></script>
+<script src="/static/js/geo/aot-maplibre-raster-bridge.js?v=20260814a"></script>
+<script src="/static/js/geo/src/draw/maplibre-draw.js?v=20260814a"></script>
+<script src="/static/js/geo/src/loaders/map-loader.js?v=20260814a"></script>
 
 <!-- RenderBucket (Phase 1: category-based layer consolidation) -->
 <script src="/static/js/geo/aot-geo-render-bucket.js?v=20260614a"></script>
@@ -557,17 +557,17 @@
 <script src="/static/js/geo/aot-geo-layer.js?v=20260615a"></script>
 
 <!-- ES Module Bundle -->
-<script src="/static/js/geo/dist/aot-geo-all.bundle.js"></script>
+<script src="/static/js/geo/dist/aot-geo-all.bundle.js?v=20260814a"></script>
 
 <!-- AoTMapLoader (Map initialization) -->
-<script src="/static/js/geo/aot-map-loader.js"></script>
-<script src="/static/js/geo/aot-map-controls.js"></script>
-<script src="/static/js/geo/aot-map-data.js"></script>
+<script src="/static/js/geo/aot-map-loader.js?v=20260814a"></script>
+<script src="/static/js/geo/aot-map-controls.js?v=20260814a"></script>
+<script src="/static/js/geo/aot-map-data.js?v=20260814a"></script>
 <script src="/static/js/geo/aot-map-editor-v2.js?v=20260813a"></script>
 
 <!-- Turf.js (vendor) + Custom Map Controls — 외부 유지 (turf=vendor·layout 공유,
      custom-controls=AoT_map 위젯과 공유). 번들보다 먼저 로드. -->
-<script src="/static/js/common/turf.min.js"></script>
+<script src="/static/js/common/turf.min.js?v=20260814a"></script>
 <script src="/static/js/geo/aot-map-custom-controls.js?v=20260612a"></script>
 
 <!-- geo_design design 모듈 → 단일 번들 (concat+minify, tools/bundle.mjs: geo-design).
@@ -584,8 +584,8 @@
 <script src="/static/js/geo/aot-facility-map-3d.js?v=27"></script>
 
 <!-- Search Components -->
-<script src="/static/js/components/aot-map-search-fixed.js"></script>
-<script src="/static/js/components/aot-map-search-controller.js"></script>
+<script src="/static/js/components/aot-map-search-fixed.js?v=20260814a"></script>
+<script src="/static/js/components/aot-map-search-controller.js?v=20260814a"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
