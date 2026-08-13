@@ -38,7 +38,7 @@ Nothing in the tool forces you to follow this order (you can place a device befo
 
 ## Editing Modes { #editing-modes }
 
-Select the editing target in the top mode panel — there are **5 modes**: Site, Zone, Facility, Equipment, and Device (labeled **A** in the panel, for "AoT device"). Each has different drawable shapes and properties.
+Select the editing target in the top mode panel — there are **6 modes**: Site, Zone, Facility, Planting, Equipment, and Device (labeled **A** in the panel, for "AoT device"). Each has different drawable shapes and properties.
 
 ### Site
 
@@ -65,6 +65,32 @@ Places physical buildings (greenhouses, warehouses, equipment rooms).
 - **Draw**: Line, Rectangle, Circle, Polygon, Marker, or Label — draw the building footprint as a polygon.
 - **Properties**: Name, theme color.
 - **Special**: After saving, use the **Facility Design** button (or go to `/geo/facility`) for 3D modeling, engineering calculations, and picking the parent zone — all of that happens on that page, not here. See [Facility Management](facility.md).
+
+### Planting { #vegetation }
+
+Records **what is planted where**. If a Zone says "this area is block 3-1", a planting plot says "in this part of block 3-1, lettuce has been growing since March 20".
+
+- **Draw**: Rectangle, Circle, Polygon.
+- **Properties**: Crop, variety, plot name, planted-on date, expected end date, color, bed width and furrow width.
+
+!!! note "Unlike zones, plantings have a lifespan"
+    A planting plot ends — 3 to 9 months for open-field beds, 30 years for an orchard. It is therefore **stored separately** from other shapes, and ending a season does not erase it: the record stays as history. That is what lets you answer "what has been in this spot for the last three years" for crop-rotation and replant-disease decisions.
+
+**Overlapping is allowed.** Intercropping and mixed cropping are normal, so plots are not prevented from overlapping. Area percentages summing above 100% is not an error.
+
+**You do not pick a parent zone.** Just draw it — which zone it belongs to is derived from its position, the same way equipment and devices work.
+
+#### Bed layout { #bed-layout }
+
+If you record bed width and furrow width, asking the AI "how many rows fit here?" is answered the way the field actually works — **plants go on the beds, not in the furrows**. Counting rows uniformly across the whole plot overestimated by 24% in a measured case (28.4 m wide, 40 cm row spacing: 71 rows uniform → 54 rows with 120 cm beds and 40 cm furrows).
+
+- Both fields may be **left blank**, meaning "not known". Asked without them, the AI will **ask you first** rather than quietly handing you a uniform-layout number.
+- A furrow width of `0` is a valid value (beds built flush against each other) — it is different from blank.
+- Bed dimensions are **a property of the field**, so recording them once means not restating them in every conversation. To explore a different figure in one conversation, just say so; the stored value is untouched.
+
+#### Migrating crops from facility bays
+
+Crop names previously entered on facility (greenhouse) bays can be migrated into planting plots with a backfill script — ask your administrator. Geometry is **copied** as a snapshot at that moment, so changing the bay count later does not drag past seasons along with it.
 
 ### Equipment
 

@@ -60,6 +60,21 @@ Clicking a Zone or Site shape opens a popup listing every sensor and output devi
   Run times follow the same rule as the device window (off = last run, on = live timer).
 - **Settings (schedule on)**: Each output has a **Settings** button — see [Scheduled On](#scheduled-on).
 
+### Clicking a Planting Plot — What Is Growing Here { #vegetation }
+
+Plots drawn in the design tool's [Planting mode](design-tool.md#vegetation) appear on the map; clicking one opens the operational view for that season.
+
+- **Crop, variety, growing period**, and days elapsed.
+- **Area and dimensions** — width and length are shown together, because area alone cannot answer "how many rows fit here?".
+- **Irrigation** — which valves wet this plot, and how much of it each one covers. One valve waters several crops and one crop may straddle two valves, so no single valve is designated; the overlapping areas are shown as they are. Percentages are **relative to the plot** ("how much of my bed gets wet"). Any part with no watering yet is shown rather than hidden.
+- **Sensors** — sensors inside the plot, falling back to the parent zone's sensors if there are none.
+- **Notes** — the same shared notes block as other shapes.
+
+!!! note "Water volume is not calculated"
+    Water is physically shared across overlapping areas, so summing per-crop requirements produces a wrong number. The widget shows the inputs and leaves the judgement to you.
+
+Plot labels (chips) appear from **zoom 16** — the map already carries many labels, so always-on labels would collide. Toggle them from the layer control or the **Show Plantings** setting; both share the same value.
+
 ### Choosing the Representative Measurement { #representative-measurement }
 
 The **Status → Now** block of a zone or facility window lists the readings inside
@@ -196,6 +211,7 @@ Toggles, by type, whether the polygons you drew in the design tool are shown as 
 | Facility Shape | Building footprints. |
 | Equipment Shape | Shapes for equipment such as pipes. |
 | Device Shape | The area a device occupies. |
+| Show Plantings | Planting plots (what is planted where). Plot labels appear from zoom 16. |
 | Other Drawn Shapes | Freeform shapes made with the drawing tools. |
 | Device Shape Opacity | Opacity of the device shapes above (0–100) — 0 is transparent, 100 is fully opaque. |
 
