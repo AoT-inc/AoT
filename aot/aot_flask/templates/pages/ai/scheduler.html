@@ -31,9 +31,9 @@
 </style>
 <!-- Vis-Timeline -->
 <link href="https://unpkg.com/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
-<link href="{{ url_for('static', filename='css/ai/device-timeline.css', v='20260814a') }}" rel="stylesheet" type="text/css" />
-<link href="{{ url_for('static', filename='css/aot-settings.css', v='20260814a') }}?v=12" rel="stylesheet" type="text/css" />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css', v='20260814a') }}?v=phase9.6" />
+<link href="{{ url_for('static', filename='css/ai/device-timeline.css') }}" rel="stylesheet" type="text/css" />
+<link href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-entry-ui.css') }}?v=phase9.6" />
 {% endblock %}
 
 {% macro state_label(state) -%}
@@ -1039,6 +1039,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- Device Timeline Scripts -->
 <script src="https://unpkg.com/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
-<script src="{{ url_for('static', filename='js/ai/device-timeline.js', v='20260814a') }}"></script>
-<script src="{{ url_for('static', filename='js/ai/device-timeline-mobile.js', v='20260814a') }}"></script>
+<script src="{{ url_for('static', filename='js/ai/device-timeline.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ai/device-timeline-mobile.js') }}"></script>
 {% endblock %}

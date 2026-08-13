@@ -409,7 +409,7 @@ class AoTGeoDesign {
                 // Try to load the script dynamically
                 if (!document.querySelector('script[src*="aot-map-custom-controls"]')) {
                     var script = document.createElement('script');
-                    script.src = '/static/js/geo/aot-map-custom-controls.js';
+                    script.src = '/static/js/geo/aot-map-custom-controls.js?v=' + (window.AOT_ASSET_V || '');
                     script.onload = function() {
                         if (window.AoTMapCustomControls && window.AoTMapCustomControls.addStandardCustomControls) {
                             var customControls = window.AoTMapCustomControls.addStandardCustomControls(self.map._originalMap || self.map, {

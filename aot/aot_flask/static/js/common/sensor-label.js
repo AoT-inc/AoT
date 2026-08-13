@@ -591,7 +591,7 @@
     if (_hcLoading) return _hcLoading;
     _hcLoading = new Promise(function (resolve) {
       var s = document.createElement('script');
-      s.src = '/static/js/vendor/user_js/highstock-9.1.2.js';
+      s.src = '/static/js/vendor/user_js/highstock-9.1.2.js?v=' + (window.AOT_ASSET_V || '');
       s.async = true;
       s.onload = function () { resolve(true); };
       s.onerror = function () { resolve(false); };

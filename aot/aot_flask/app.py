@@ -207,6 +207,38 @@ def create_app(config=ProdConfig):
             pass
         return response
 
+    @app.after_request
+    def _static_cache_policy(response):
+        """정적 자산의 캐시 수명을 **버전 유무로** 가른다.
+
+        `SEND_FILE_MAX_AGE_DEFAULT` 는 1년이다. 버전 쿼리가 붙은 URL 에는 그것이 맞다 —
+        내용이 바뀌면 URL 이 바뀌므로 재검증이 무의미하다. 그러나 **버전이 없는 URL 은
+        내용이 바뀌어도 URL 이 그대로**여서, 1년 캐시가 곧 "1년간 옛 코드 실행" 이 된다.
+
+        2026-08-13 지도 삭제 사고가 그것이다. `geo_design.html` 이 `aot-map-data.js` 를
+        버전 없이 불렀고, 08-03 에 그 파일이 바뀌었는데도(삭제 목록을 싣는 코드 추가)
+        그 전에 방문한 브라우저는 서버에 묻지도 않고 옛 사본을 계속 실행했다. 같은 날
+        서버가 "페이로드에 없음 = 삭제" 를 폐지한 터라, 목록을 못 싣는 옛 클라이언트의
+        삭제는 **정상 응답을 받으며 아무것도 지우지 않았다.**
+
+        버전이 없으면 오래 캐시하지 않는다. 실수를 없애지는 못하지만 **실패 반경을 1년에서
+        5분으로 줄인다** — 이 한 층만 있었어도 그 사고는 나지 않았다.
+
+        주의: Flask 는 after_request 를 **역순**으로 실행한다. 정적 응답의 Cache-Control 을
+        건드리는 핸들러를 이보다 **앞서** 등록하면 이 정책을 덮어쓴다.
+        """
+        try:
+            if request.endpoint == 'static':
+                if request.args.get('v'):
+                    response.headers['Cache-Control'] = \
+                        'public, max-age=31536000, immutable'
+                else:
+                    response.headers['Cache-Control'] = \
+                        'public, max-age=300, must-revalidate'
+        except Exception:
+            pass
+        return response
+
     register_response_guards(app)
 
     @app.context_processor
@@ -255,6 +287,65 @@ def create_app(config=ProdConfig):
             prefix = '/' + lang if lang in MANUAL_LANGS else ''
             return 'https://aot-inc.github.io/AoT{}/{}'.format(prefix, path.lstrip('/'))
         return {'manual_url': manual_url}
+
+    # ── 정적 자산 자동 버전 — url_for('static', …) 에 내용 해시를 붙인다 ──
+    #
+    # 손으로 ?v= 를 올리는 규약은 지킬 수 없다: 어긴 것이 화면에도 로그에도 테스트에도
+    # 드러나지 않고(개발자는 늘 새 코드를 본다), 파일을 고치는 사람과 참조를 적은 사람이
+    # 다르며, 한 번 놓치면 1년 캐시라 그 사용자는 1년간 옛 코드를 실행한다.
+    # 2026-08-13 지도 삭제 사고가 그렇게 났다. 그래서 사람이 아니라 기계가 붙인다.
+    #
+    # 토큰은 **내용 해시**다. mtime 은 git pull 만 해도 바뀌어, 내용이 같은 파일까지
+    # 전 사용자에게 재다운로드를 시킨다. 해시는 (mtime, size) 가 그대로면 재사용하므로
+    # 파일당 프로세스 수명 동안 한 번만 계산된다(실측: 126종 3.7MB → 41.9ms, 이후
+    # 페이지당 0.22ms).
+    #
+    # 이것이 덮는 것은 `url_for('static', …)` 뿐이다. 리터럴 "/static/…" 문자열은
+    # 지나지 않으므로 `aot/scripts/check_static_cache_busting.py` 가 따로 막는다.
+    _static_ver_cache = {}
+
+    def _static_version(filename):
+        path = os.path.join(app.static_folder, filename)
+        try:
+            st = os.stat(path)
+        except OSError:
+            return None          # 없는 파일은 버전 없이 — 404 는 별개 문제다
+        key = (st.st_mtime, st.st_size)
+        hit = _static_ver_cache.get(filename)
+        if hit and hit[0] == key:
+            return hit[1]
+        import hashlib
+        h = hashlib.md5()        # 무결성이 아니라 캐시 키다 — 속도 우선
+        try:
+            with open(path, 'rb') as fh:
+                for chunk in iter(lambda: fh.read(65536), b''):
+                    h.update(chunk)
+        except OSError:
+            return None
+        token = h.hexdigest()[:10]
+        _static_ver_cache[filename] = (key, token)
+        return token
+
+    @app.url_defaults
+    def _static_cache_bust(endpoint, values):
+        if endpoint != 'static':
+            return
+        filename = values.get('filename')
+        if not filename or 'v' in values:   # 명시 지정은 존중한다
+            return
+        token = _static_version(filename)
+        if token:
+            values['v'] = token
+
+    # JS 가 런타임에 <script>/<link> 를 만드는 자리(약 8곳)는 url_for 를 지나지 않는다.
+    # 그쪽에 줄 단일 버전 값. 프로세스 시작마다 바뀌므로 배포하면 갱신된다 — 파일별
+    # 해시가 아니어도 되는 이유는 이 경로가 소수이고 목적이 "배포 후 갱신" 이기 때문이다.
+    from aot.config import AOT_VERSION as _AOT_VERSION
+    _ASSET_BUILD_ID = '%s-%x' % (_AOT_VERSION, int(time.time()))
+
+    @app.context_processor
+    def inject_static_build_id():
+        return {'static_build_id': _ASSET_BUILD_ID}
 
     # ── Bundle asset() — content-hash cache-busting for built JS bundles ──
     # Reads static/js/dist/manifest.json (bundle name -> content hash, written by

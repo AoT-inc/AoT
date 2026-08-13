@@ -1,0 +1,55 @@
+name: Static Cache Busting
+
+# 정적 자산은 `SEND_FILE_MAX_AGE_DEFAULT` 1년으로 나간다. 버전 쿼리가 붙은 URL 에는
+# 그것이 맞지만(내용이 바뀌면 URL 이 바뀐다), **버전 없는 리터럴 `/static/…` 참조**는
+# 내용이 바뀌어도 URL 이 그대로여서 1년 캐시가 곧 "1년간 옛 코드 실행" 이 된다.
+#
+# 2026-08-13 지도 삭제 사고가 그것이다. `geo_design.html` 이 `aot-map-data.js` 를 버전
+# 없이 불렀고, 08-03 에 그 파일이 바뀌었는데도(삭제 목록을 싣는 코드 추가) 그 전에
+# 방문한 브라우저는 서버에 묻지도 않고 옛 사본을 계속 실행했다. 같은 날 서버가
+# "페이로드에 없음 = 삭제" 를 폐지한 터라, 목록을 못 싣는 옛 클라이언트의 삭제 요청은
+# **정상 응답을 받으며 아무것도 지우지 않았다.** 화면에도 로그에도 테스트에도 드러나지
+# 않는다 — 개발자는 늘 새 코드를 보고, 옛 코드가 도는 것은 사용자 브라우저다.
+#
+# `url_for('static', …)` 은 앱이 `url_defaults` 로 버전을 자동 주입하므로 통과한다.
+# 이 검사가 막는 것은 그 경로를 지나지 않는 **리터럴 문자열**이다.
+#
+# pre-commit 훅(.githooks/pre-commit)이 로컬 1차 방어고, 여기는 훅을 켜지 않은
+# 클론과 우회 커밋을 받는 최종 관문이다.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aot/aot_flask/templates/**'
+      - 'aot/aot_flask/static/js/**'
+      - 'aot/widgets/**'
+      - 'aot/scripts/check_static_cache_busting.py'
+      - '.github/workflows/static-cache-busting.yml'
+  pull_request:
+    paths:
+      - 'aot/aot_flask/templates/**'
+      - 'aot/aot_flask/static/js/**'
+      - 'aot/widgets/**'
+      - 'aot/scripts/check_static_cache_busting.py'
+      - '.github/workflows/static-cache-busting.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cache-busting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 의존성 설치가 없다 — 검사기는 표준 라이브러리만 쓴다. 설치가 깨져도
+      # 이 검사는 돌아야 한다.
+      - name: Check static refs carry a cache-busting version
+        run: python3 aot/scripts/check_static_cache_busting.py

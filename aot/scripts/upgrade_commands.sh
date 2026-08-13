@@ -10,8 +10,18 @@ exec 2>&1
 #     exit 1
 # fi
 
-# Current AoT major version number
-AOT_MAJOR_VERSION="8"
+# Current AoT major version number, read from the installed version rather than
+# hardcoded. It sat at "8" -- the Mycodo 8.x lineage this project came from --
+# for the whole 26.x era, so `upgrade-aot` asked GitHub for the newest 8.x
+# release, got nothing back, and aborted with "Latest version: None". The
+# upgrade looked broken while the release was sitting right there
+# (2026-08-13, aot-005, upgrading 26.08.2 -> 26.08.5).
+#
+# Deliberately no numeric fallback: a default here is exactly what went stale.
+# If this cannot be read, 'upgrade-aot' below says so and stops.
+_AOT_VERSION_FILE="$(dirname "${BASH_SOURCE[0]}")/../config/__init__.py"
+AOT_MAJOR_VERSION="$(sed -n "s/^AOT_VERSION[[:space:]]*=[[:space:]]*'\([0-9][0-9]*\)\..*/\1/p" \
+    "${_AOT_VERSION_FILE}" 2>/dev/null | head -1)"
 
 # Runtime service user/group (Mycodo-like default). Can be overridden via environment.
 AOT_USER="${AOT_USER:-aot}"
@@ -801,6 +811,12 @@ case "${1:-''}" in
         fi
     ;;
     'upgrade-aot')
+        if [ -z "${AOT_MAJOR_VERSION}" ]; then
+            printf "\n#### ERROR: could not read AOT_VERSION from %s\n" "${_AOT_VERSION_FILE}"
+            printf "Cannot determine which major release line to upgrade to.\n"
+            printf "Pass it explicitly instead: %s upgrade-release-major <major>\n" "${0}"
+            exit 1
+        fi
         /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_download.sh upgrade-release-major "${AOT_MAJOR_VERSION}"
     ;;
     'upgrade-release-major')

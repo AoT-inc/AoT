@@ -2,7 +2,7 @@
 {% block title %}- {{ _('AI Scheduler') }}{% endblock %}
 
 {% block head %}
-<link href="{{ url_for('static', filename='css/ai/ai_scheduler.css', v='20260814a') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/ai/ai_scheduler.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" />
 <script src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
 {% endblock %}
@@ -253,6 +253,6 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/ai/scheduler-batch.js', v='20260814a') }}?v={{ range(1, 1000000) | random }}"></script>
-<script src="{{ url_for('static', filename='js/ai/aot-ai-gantt.js', v='20260814a') }}?v={{ range(1, 1000000) | random }}"></script>
+<script src="{{ url_for('static', filename='js/ai/scheduler-batch.js') }}?v={{ range(1, 1000000) | random }}"></script>
+<script src="{{ url_for('static', filename='js/ai/aot-ai-gantt.js') }}?v={{ range(1, 1000000) | random }}"></script>
 {% endblock %}

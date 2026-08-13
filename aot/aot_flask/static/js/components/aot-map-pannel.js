@@ -29,7 +29,7 @@
     }
 
     static get toggleCssUrl() {
-      return '/static/css/components/btn-toggle.css';
+      return '/static/css/components/btn-toggle.css?v=' + (window.AOT_ASSET_V || '');
     }
 
     render() {

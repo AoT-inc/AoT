@@ -20,6 +20,7 @@ on:
       - i18n Catalog Sync
       - JS Bundle Drift
       - Security Checks
+      - Static Cache Busting
       - Deploy Documentation
       - Publish Docker image
     types: [completed]

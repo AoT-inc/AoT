@@ -82,7 +82,7 @@
 
     if (!window.THREE && !document.querySelector('script[src*="three.min.js"]')) {
       var s = document.createElement('script');
-      s.src = '/static/js/widgets/AoT_facility/three.min.js';
+      s.src = '/static/js/widgets/AoT_facility/three.min.js?v=' + (window.AOT_ASSET_V || '');
       document.head.appendChild(s);
     }
 

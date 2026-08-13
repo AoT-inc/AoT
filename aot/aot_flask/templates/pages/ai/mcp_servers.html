@@ -3,8 +3,8 @@
 {% block title %} - {{ _('MCP Servers') }}{% endblock %}
 
 {% block head %}
-<link href="{{ url_for('static', filename='css/pages/mcp_servers.css', v='20260814a') }}?v=v21" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css', v='20260814a') }}?v=12" />
+<link href="{{ url_for('static', filename='css/pages/mcp_servers.css') }}?v=v21" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
 {% endblock %}
 
 {% block body %}
@@ -116,6 +116,6 @@
 </div>
 
 <!-- MCP Server Management Logic -->
-<script src="{{ url_for('static', filename='js/geo/dist/mcp_servers.bundle.js', v='20260814a') }}?v=v21"></script>
+<script src="{{ url_for('static', filename='js/geo/dist/mcp_servers.bundle.js') }}?v=v21"></script>
 
 {% endblock %}

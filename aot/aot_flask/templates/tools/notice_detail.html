@@ -5,7 +5,7 @@
 {% block title %} - {{ post.title }}{% endblock %}
 
 {% block body %}
-<script src="{{ url_for('static', filename='js/components/aot-notice-render.js', v='20260814a') }}?v=20260708"></script>
+<script src="{{ url_for('static', filename='js/components/aot-notice-render.js') }}?v=20260708"></script>
 <script type="application/json" id="noticeBodyData">{{ post.body | tojson }}</script>
 <style>
     .notice-detail-card {

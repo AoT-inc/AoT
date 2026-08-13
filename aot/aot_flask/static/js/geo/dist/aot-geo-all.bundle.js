@@ -2123,7 +2123,7 @@ var AoTGeo = (function (exports) {
 	        var loadLeaflet = config.loadLeaflet === true;
 
 	        // 1. Start loading MapLibre-GL CSS (Priority for 3D)
-	        loadCss('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css');
+	        loadCss('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.css?v=' + (window.AOT_ASSET_V || ''));
 
 	        // 1b. [GIS Pure MapLibre v4.0] Leaflet CSS no longer loaded by default
 	        // If explicitly requested, load for backward compatibility only
@@ -2132,7 +2132,7 @@ var AoTGeo = (function (exports) {
 	        }
 
 	        // 2. Load MapLibre-GL JS (Vector Tile Support - Required for 3D)
-	        var pMapLibre = loadScript('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js');
+	        var pMapLibre = loadScript('/static/vendor/maplibre-gl-4.1.2/maplibre-gl.js?v=' + (window.AOT_ASSET_V || ''));
 
 	        // 2b. Load Leaflet only if explicitly requested (backward compatibility)
 	        var pLeaflet = Promise.resolve();
@@ -2149,7 +2149,7 @@ var AoTGeo = (function (exports) {
 	        var pClient = Promise.resolve();
 	        if (loadLeaflet) {
 	            pClient = pLeaflet.then(function() {
-	                return loadScript('/static/js/map/bundles/aot-map-client.js')
+	                return loadScript('/static/js/map/bundles/aot-map-client.js?v=' + (window.AOT_ASSET_V || ''))
 	                    .catch(function(err) { console.error('Failed to load MapClient:', err); });
 	            });
 	        }

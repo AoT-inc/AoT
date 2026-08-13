@@ -81,3 +81,22 @@ if [ -z "$AOT_SKIP_I18N_CHECK" ]; then
         fi
     fi
 fi
+
+# ── 정적 자산 캐시 무효화 ────────────────────────────────────────────────
+# 버전 없는 리터럴 "/static/…" 참조는 1년 캐시에 걸려 브라우저가 옛 파일을
+# 영구히 실행한다. 2026-08-13 지도 삭제 사고가 그 형태였다 — 화면에도 로그에도
+# 테스트에도 드러나지 않고, 개발자는 늘 새 코드를 보므로 사람이 잡을 수 없다.
+# 우회: AOT_SKIP_STATIC_CACHE_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_STATIC_CACHE_CHECK" ]; then
+    SC_CHECK="$ROOT/aot/scripts/check_static_cache_busting.py"
+    if [ -f "$SC_CHECK" ] && git diff --cached --name-only \
+        | grep -qE '^(aot/aot_flask/templates/|aot/widgets/|aot/aot_flask/static/js/)'; then
+        if ! python3 "$SC_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 버전 없는 정적 리터럴 참조가 있습니다."
+            echo "  템플릿/위젯 : {{ url_for('static', filename='js/foo.js') }}"
+            echo "  (의도한 커밋이라면 AOT_SKIP_STATIC_CACHE_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi

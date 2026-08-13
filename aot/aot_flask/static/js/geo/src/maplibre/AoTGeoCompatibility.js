@@ -55,7 +55,7 @@
         }
 
         const script = document.createElement('script');
-        script.src = '/static/js/common/turf.min.js';
+        script.src = '/static/js/common/turf.min.js?v=' + (window.AOT_ASSET_V || '');
         script.async = true;
         script.onload = () => {
           this._turf = global.turf;
