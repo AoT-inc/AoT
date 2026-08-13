@@ -193,7 +193,10 @@ def _read_latest_started_at(device_unique_id, primary_ch_index, lookback_sec):
                 duration_sec=lookback_sec
             )
             if data:
-                last_ts, last_val = data[-1]
+                # read_influxdb_list 는 시간순을 보장하지 않는다 — data[-1] 을 최신으로
+                # 집으면 몇 시간 전 ON 시각이 뽑혀 '작동 시간' 이 00:00 이 아니라
+                # 1:48:xx 부터 세기 시작한다(2026-08-13 실측).
+                last_ts, last_val = max(data, key=lambda _p: int(_p[0]))
                 candidates.append((int(last_ts), last_val))
 
         # Primary first
@@ -302,8 +305,9 @@ def _read_last_duration(device_unique_id, primary_ch_index, lookback_sec):
                     duration_sec=lookback_sec
                 )
                 if data:
-                    # take newest by ts
-                    last_ts, last_val = data[-1]
+                    # take newest by ts — read_influxdb_list 는 시간순을 보장하지
+                    # 않으므로 data[-1] 이 아니라 timestamp 최대값으로 고른다.
+                    last_ts, last_val = max(data, key=lambda _p: int(_p[0]))
                     try:
                         v = int(float(last_val))
                     except Exception:
@@ -1220,8 +1224,8 @@ WIDGET_INFORMATION = {
     'widget_dashboard_head': """
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
     <!-- Shared time-wheel module (also used by other widgets) -->
-    <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css">
-    <script src="/static/js/components/aot-time-wheel.js"></script>
+    <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
+    <script src="/static/js/components/aot-time-wheel.js?v=20260813d"></script>
     """,
 
     'endpoints': [
@@ -1585,23 +1589,6 @@ WIDGET_INFORMATION = {
         }
       }
 
-      function fmtSeconds(sec){
-        if (!isFinite(sec) || sec <= 0) { return '--'; }
-        const total = Math.max(0, Math.floor(sec));
-        const h = Math.floor(total / 3600);
-        const m = Math.floor((total % 3600) / 60);
-        const s = total % 60;
-        const parts = [];
-        if (h > 0) parts.push(h + 'h');
-        if (m > 0) parts.push(m + 'm');
-        if (h === 0 && (m === 0 || s > 0)) {
-          parts.push(s + 's');
-        } else if (s > 0) {
-          parts.push(s + 's');
-        }
-        return parts.join(' ');
-      }
-
       async function fetchStatus(wid){
         const info = parseInfo(wid);
         if (!info.device || !info.channel) { return; }
@@ -1623,12 +1610,19 @@ WIDGET_INFORMATION = {
         if (typeof s !== 'string') { return s; }
         return s.replace(_UUID_RE, '').replace(/\s{2,}/g, ' ').trim();
       }
+      // 총 작동 시간은 늘 HH:MM:SS 다. 예전에는 1시간 미만일 때 시 자리를 떨어뜨려
+      // "12:34" 로 나왔는데, 바로 아래 Run/Rest 는 secToHMS 로 "00:12:34" 라
+      // 같은 카드 안에서 자릿수가 갈렸다.
+      // secToHMS 를 쓰면 안 된다 — 그쪽은 시간 입력 위젯용이라 23:59:59 에서
+      // 값을 자른다. 총 작동 시간은 하루를 넘길 수 있으므로 자르지 않는 공용
+      // 포매터를 쓴다.
       function fmtClock(sec){
-        sec = Math.max(0, Math.floor(sec));
-        const h = Math.floor(sec / 3600);
-        const m = Math.floor((sec % 3600) / 60);
-        const s = sec % 60;
-        return (h > 0 ? (h + ':' + pad2(m)) : pad2(m)) + ':' + pad2(s);
+        const total = Math.max(0, Math.floor(sec));
+        if (window.AoTTime && window.AoTTime.formatDuration) {
+          return window.AoTTime.formatDuration(total);
+        }
+        return pad2(Math.floor(total / 3600)) + ':' +
+               pad2(Math.floor((total % 3600) / 60)) + ':' + pad2(total % 60);
       }
 
       // ---- Live time counting (shared-timer style, ref AoT_timer.py) ----

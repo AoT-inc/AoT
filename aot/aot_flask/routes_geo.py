@@ -20,6 +20,7 @@ import threading
 from flask_login import login_required, current_user
 from flask_babel import gettext as _
 from aot.aot_flask.utils import utils_general
+from aot.aot_flask.utils import utils_http
 from aot.databases.models import GeoMap, GeoSetting, GeoLayer, GeoShape, Input, Output, PID, Trigger, Conditional, CustomController, Function, DeviceMeasurements
 from aot.aot_flask.extensions import db, cache
 from aot.utils.inputs import parse_input_information
@@ -1300,12 +1301,17 @@ def api_geo_devices_list():
         
         # [New] Fetch all measurements for Popups
         all_measurements_map = utils_geo.get_all_measurements_for_map(devices)
-        
-        return jsonify({
-            'ok': True, 
+
+        resp = jsonify({
+            'ok': True,
             'devices': devices,
             'all_measurements_map': all_measurements_map
         })
+
+        # 지도 위젯이 이 응답을 5초마다 다시 받는데, 실측상 폴링 사이에 바이트가
+        # 완전히 동일하다(66KB~125KB). 조건부 응답으로 304(본문 0)를 돌려준다 —
+        # 함정과 근거는 utils_http.json_conditional 의 독스트링에 있다.
+        return utils_http.json_conditional(resp, request)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -2032,7 +2038,10 @@ def api_facility_runtime(facility_uuid):
         # 조합해 구역별 뷰를 구성한다.
         'bays': (integ.get('bays') or []) if integ else [],
     }
-    return jsonify(runtime)
+    # 시설 1개당 분당 3회 안팎으로 폴링되고, 액추에이터 상태·센서값이 안 바뀌면
+    # 응답 바이트가 그대로다(실측 815 B, 3회 연속 해시 동일). 조건부 응답으로
+    # 안 바뀐 주기의 회선·파싱을 없앤다.
+    return utils_http.json_conditional(jsonify(runtime), request)
 
 
 @blueprint.route('/api/aot/facility/<facility_uuid>/actuator_order', methods=['POST'])
@@ -3527,7 +3536,7 @@ def api_geo_device_detail(device_uuid):
                              'name': oc.name or str(oc.channel)})
 
     runtime = {'elapsed_sec': None, 'last_duration_sec': None,
-               'next_schedule': None}
+               'next_schedule': None, 'schedules': []}
     if kind in ('output', 'function', 'custom'):
         from aot.utils import runtime as _runtime
         try:
@@ -3541,7 +3550,11 @@ def api_geo_device_detail(device_uuid):
                     device_uuid, channel) or None
             except Exception:
                 pass
-        runtime['next_schedule'] = _next_schedule_label(device_uuid)
+        # 모달의 '예약 상황' 블록은 이 목록을 그대로 그린다 — 라벨과 같은
+        # 조회에서 나와야 한쪽만 갱신되는 순간이 없다.
+        runtime['schedules'] = pending_schedules(device_uuid)
+        runtime['next_schedule'] = (runtime['schedules'][0]['start']
+                                    if runtime['schedules'] else None)
 
     return jsonify({
         'ok': True,
@@ -3585,7 +3598,7 @@ def api_geo_output_runtimes():
         key = '%s::%s' % (oid, ch)
 
         entry = {'elapsed_sec': None, 'last_duration_sec': None,
-                 'next_schedule': None}
+                 'next_schedule': None, 'schedules': []}
         try:
             entry['elapsed_sec'] = _runtime.get_elapsed_seconds(oid, ch) or None
         except Exception:
@@ -3597,14 +3610,46 @@ def api_geo_output_runtimes():
                 entry['last_duration_sec'] = _runtime.get_last_duration(oid, ch) or None
             except Exception:
                 pass
-        entry['next_schedule'] = _next_schedule_label(oid)
+        entry['schedules'] = pending_schedules(oid)
+        entry['next_schedule'] = (entry['schedules'][0]['start']
+                                  if entry['schedules'] else None)
         out[key] = entry
 
     return jsonify({'ok': True, 'runtimes': out})
 
 
-def _next_schedule_label(target_id):
-    """이 장치의 다음 예약 — 장치 현지 시각 'HH:MM'(오늘이 아니면 'M/D HH:MM')."""
+def _schedule_display_tz(target_id):
+    """예약 시각을 보여줄 시간대 — 장치 로컬(timezone-management.md §6)."""
+    try:
+        from aot.utils.device_tz import resolve_location_tz
+        return resolve_location_tz(target_id)
+    except Exception:
+        return None
+
+
+def _fmt_schedule_when(when_utc, tzinfo, now_local):
+    """UTC datetime → 표시 문자열. 오늘 'HH:MM' · 내일 'HH:MM(+1)' · 그 외 'M/D HH:MM'."""
+    from datetime import timedelta, timezone as _tz
+    when = when_utc.replace(tzinfo=_tz.utc)
+    if tzinfo is not None:
+        when = when.astimezone(tzinfo)
+    if when.date() == now_local.date():
+        return when.strftime('%H:%M')
+    if when.date() == (now_local + timedelta(days=1)).date():
+        return when.strftime('%H:%M') + '(+1)'
+    return when.strftime('%-m/%-d %H:%M')
+
+
+def pending_schedules(target_id, limit=20):
+    """이 장치에 걸린 예약 — 설정 모달의 '예약 상황' 블록용.
+
+    라벨(_next_schedule_label)은 다음 하나를 문자열로만 준다. 모달은 시작·종료·
+    작동 시간을 각각 보여주고 취소까지 해야 하므로 job_id 와 초 단위 값이 필요하다.
+
+    **정본은 서버다.** 예약을 브라우저에 저장하면 같은 예약이 다른 사람에게도,
+    같은 사람의 다른 기기에도 보이지 않는다 — 예약은 브라우저를 닫아도 실행되는
+    것이므로 화면만 모르는 상태가 된다.
+    """
     from datetime import timedelta, timezone as _tz
 
     from aot.databases.models.scheduler import SchedulerJobMeta
@@ -3612,36 +3657,57 @@ def _next_schedule_label(target_id):
 
     try:
         now = utc_now().replace(tzinfo=None)
-        row = (SchedulerJobMeta.query
-               .filter(SchedulerJobMeta.target_id == target_id,
-                       SchedulerJobMeta.state.in_(('DRAFT', 'PENDING', 'RUNNING')),
-                       SchedulerJobMeta.schedule_time.isnot(None),
-                       SchedulerJobMeta.schedule_time >= now)
-               .order_by(SchedulerJobMeta.schedule_time.asc())
-               .first())
-        if row is None:
-            return None
+        q = (SchedulerJobMeta.query
+             .filter(SchedulerJobMeta.target_id == target_id,
+                     SchedulerJobMeta.state.in_(('DRAFT', 'PENDING', 'RUNNING')),
+                     SchedulerJobMeta.schedule_time.isnot(None),
+                     SchedulerJobMeta.schedule_time >= now)
+             .order_by(SchedulerJobMeta.schedule_time.asc()))
+        cap = max(1, int(limit))
+        rows = q.limit(cap + 1).all()
+        # 상한을 넘겼다는 사실을 숨기지 않는다 — 조용히 자르면 화면은 "이게
+        # 전부" 라고 말하게 되고, 안 보이는 예약이 시간에 맞춰 장치를 움직인다.
+        # 한 건 더 읽어 초과 여부만 보고, 목록 자체는 상한까지만 돌려준다.
+        overflow = len(rows) > cap
+        rows = rows[:cap]
+        if not rows:
+            return []
 
-        when = row.schedule_time.replace(tzinfo=_tz.utc)
-        try:
-            from aot.utils.device_tz import resolve_location_tz
-            tzinfo = resolve_location_tz(target_id)
-            if tzinfo is not None:
-                when = when.astimezone(tzinfo)
-                now_local = utc_now().astimezone(tzinfo)
-            else:
-                now_local = utc_now()
-        except Exception:
-            now_local = utc_now()
+        tzinfo = _schedule_display_tz(target_id)
+        now_local = utc_now().astimezone(tzinfo) if tzinfo is not None else utc_now()
 
-        if when.date() == now_local.date():
-            return when.strftime('%H:%M')
-        if when.date() == (now_local + timedelta(days=1)).date():
-            return when.strftime('%H:%M') + '(+1)'
-        return when.strftime('%-m/%-d %H:%M')
+        out = []
+        for row in rows:
+            dur = int(row.duration_sec or 0) or None
+            end_utc = row.end_time
+            if end_utc is None and dur:
+                end_utc = row.schedule_time + timedelta(seconds=dur)
+            out.append({
+                'job_id': row.id,
+                'state': row.state,
+                'start': _fmt_schedule_when(row.schedule_time, tzinfo, now_local),
+                'start_epoch': int(row.schedule_time.replace(
+                    tzinfo=_tz.utc).timestamp()),
+                'duration_sec': dur,
+                'end': (_fmt_schedule_when(end_utc, tzinfo, now_local)
+                        if end_utc is not None else None),
+            })
+        if overflow:
+            out[-1]['more'] = True
+        return out
     except Exception:
-        current_app.logger.debug('next schedule lookup failed for %s', target_id)
-        return None
+        current_app.logger.debug('pending schedule lookup failed for %s', target_id)
+        return []
+
+
+def _next_schedule_label(target_id):
+    """이 장치의 다음 예약 — 장치 현지 시각 'HH:MM'(오늘이 아니면 'M/D HH:MM').
+
+    pending_schedules 의 첫 줄을 그대로 쓴다 — 라벨과 모달이 같은 조회에서
+    나오지 않으면 한쪽만 갱신되는 순간이 생긴다.
+    """
+    rows = pending_schedules(target_id, limit=1)
+    return rows[0]['start'] if rows else None
 
 
 @blueprint.route('/api/geo/link_status', methods=['POST'])

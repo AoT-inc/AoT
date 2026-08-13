@@ -145,14 +145,19 @@ WIDGET_INFORMATION = {
     'widget_dashboard_body': """
   {%- set device_id = widget_options['measurement'].split(",")[0] -%}
   {%- set measurement_id = widget_options['measurement'].split(",")[1] -%}
-  
+  {#- 이 측정의 단위. 's'(출력 작동 시간 등 지속시간)면 값을 HH:MM:SS 로 찍고
+      단위 접미사는 붙이지 않는다 — "00:12:05 s" 는 틀린 표기다. -#}
+  {%- set aot_value_unit = dict_units[dict_measure_units[measurement_id]]['unit']
+        if dict_measure_units[measurement_id] in dict_units else '' -%}
+
   <div style="text-align: center">
   
   {%- for each_input in input if each_input.unique_id == device_id and measurement_id in device_measurements_dict -%}
   
-    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}"></span><span class="widget-measurement-unit aot-w-unit">
+    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}" data-unit="{{aot_value_unit}}"></span><span class="widget-measurement-unit aot-w-unit">
         {%- if dict_measure_units[measurement_id] in dict_units and
                dict_units[dict_measure_units[measurement_id]]['unit'] and
+               aot_value_unit != 's' and
                widget_options['enable_unit'] -%}
           {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
         {%- endif -%}
@@ -184,9 +189,10 @@ WIDGET_INFORMATION = {
   
   {%- for each_function in function if each_function.unique_id == device_id and measurement_id in device_measurements_dict -%}
 
-    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}"></span><span class="aot-w-unit">
+    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}" data-unit="{{aot_value_unit}}"></span><span class="aot-w-unit">
         {%- if dict_measure_units[measurement_id] in dict_units and
                dict_units[dict_measure_units[measurement_id]]['unit'] and
+               aot_value_unit != 's' and
                widget_options['enable_unit'] -%}
           {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
         {%- endif -%}
@@ -218,9 +224,10 @@ WIDGET_INFORMATION = {
 
   {%- for each_output in output  if each_output.unique_id == device_id and measurement_id in device_measurements_dict -%}
 
-    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}"></span><span class="aot-w-unit">
+    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}" data-unit="{{aot_value_unit}}"></span><span class="aot-w-unit">
         {%- if dict_measure_units[measurement_id] in dict_units and
                dict_units[dict_measure_units[measurement_id]]['unit'] and
+               aot_value_unit != 's' and
                widget_options['enable_unit'] -%}
           {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
         {%- endif -%}
@@ -252,9 +259,10 @@ WIDGET_INFORMATION = {
 
   {%- for each_pid in pid  if each_pid.unique_id == device_id and measurement_id in device_measurements_dict -%}
 
-    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}"></span><span class="aot-w-unit">
+    <span class="widget-measurement-value aot-w-value" id="value-{{each_widget.unique_id}}" data-unit="{{aot_value_unit}}"></span><span class="aot-w-unit">
         {%- if dict_measure_units[measurement_id] in dict_units and
                dict_units[dict_measure_units[measurement_id]]['unit'] and
+               aot_value_unit != 's' and
                widget_options['enable_unit'] -%}
           {{' ' + dict_units[dict_measure_units[measurement_id]]['unit']}}
         {%- endif -%}
@@ -296,6 +304,17 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_js': """
   // Retrieve the latest/last measurement for Measurement widget
+  // 값 표시. 단위가 's'(지속시간)면 초를 그대로 찍지 않고 HH:MM:SS 로 —
+  // 출력 작동 시간이 "4234" 로 나와 사람이 암산해야 했다.
+  function formatMeasurementValue(el, value, decimal_places) {
+    const unit = (el && el.dataset) ? el.dataset.unit : '';
+    if (window.AoTTime && window.AoTTime.isDurationUnit &&
+        window.AoTTime.isDurationUnit(unit)) {
+      return window.AoTTime.formatDuration(value);
+    }
+    return value.toFixed(decimal_places);
+  }
+
   function getLastDataMeasurement(widget_id,
                        unique_id,
                        measure_type,
@@ -320,8 +339,9 @@ WIDGET_INFORMATION = {
         else {
           const formattedTime = epoch_to_timestamp(data[0] * 1000);
           const measurement = data[1];
-          if (document.getElementById('value-' + widget_id)) {
-            document.getElementById('value-' + widget_id).innerHTML = measurement.toFixed(decimal_places);
+          const value_el = document.getElementById('value-' + widget_id);
+          if (value_el) {
+            value_el.innerHTML = formatMeasurementValue(value_el, measurement, decimal_places);
           }
           if (document.getElementById('timestamp-' + widget_id)) {
             document.getElementById('timestamp-' + widget_id).innerHTML = formattedTime;

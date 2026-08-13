@@ -99,9 +99,42 @@
 
   function colByName(name){ return el.querySelector('.aot-wheel-col[data-col="' + name + '"]'); }
   function rawIndex(col){ return Math.round(col.scrollTop / ITEM_H); }
+  // Tapping an item starts a **smooth** scroll, so scrollTop still holds the old
+  // position for the whole animation. Anything reading the wheel during that
+  // window (a live preview, or an impatient Save click) gets the previous value —
+  // the wheel appears to lag one selection behind. The tap target is known
+  // exactly, so record it and let it win until the scroll settles.
   function selectedVal(col){
+    if (col._pending != null) { return col._pending; }
     var c = col._count;
     return ((rawIndex(col) % c) + c) % c;
+  }
+  // Tap → scroll to that item. The tapped value is recorded immediately (see
+  // selectedVal) so readers don't lag behind the animation, and the record is
+  // dropped once the scroll settles. If the smooth scroll never materialises at
+  // all — nothing scrolls, so no settle timer ever runs — the record would stay
+  // forever and read() would keep disagreeing with what the wheel shows. Jump
+  // hard in that case, and if even that can't reach the target, drop the record
+  // so the displayed value wins.
+  function tapTo(col, raw, val, done){
+    col._pending = val;
+    var top = raw * ITEM_H;
+    var seen = 0;
+    function onScroll(){ seen++; }
+    col.addEventListener('scroll', onScroll);
+    if (col.scrollTo) { col.scrollTo({ top: top, behavior: 'smooth' }); }
+    else { col.scrollTop = top; }
+    setTimeout(function(){
+      col.removeEventListener('scroll', onScroll);
+      if (col._pending == null) { return; }      // settle timer already resolved it
+      if (!seen) { col.scrollTop = top; }        // no animation happened at all
+      if (col.scrollTop === top || col._pending !== val) { return; }
+      // Target unreachable (clamped, or recentering fought the jump) — stop
+      // claiming a value the wheel isn't showing.
+      col._pending = null;
+      render(col);
+      if (typeof done === 'function') { done(); }
+    }, 260);
   }
   function scrollToVal(col, val, smooth){
     var raw = MID * col._count + val;
@@ -155,15 +188,15 @@
           raf[key] = requestAnimationFrame(function(){ raf[key] = null; render(col); });
         }
         if (snapTimers[key]) { clearTimeout(snapTimers[key]); }
-        snapTimers[key] = setTimeout(function(){ render(col); }, 90);
+        snapTimers[key] = setTimeout(function(){ col._pending = null; render(col); }, 90);
       });
     });
     el.addEventListener('click', function(e){
       var item = e.target.closest && e.target.closest('.aot-wheel-item');
       if (item) {
         var col = item.closest('.aot-wheel-col');
-        var raw = parseInt(item.getAttribute('data-idx'), 10);
-        col.scrollTo ? col.scrollTo({ top: raw * ITEM_H, behavior: 'smooth' }) : (col.scrollTop = raw * ITEM_H);
+        tapTo(col, parseInt(item.getAttribute('data-idx'), 10),
+              parseInt(item.getAttribute('data-val'), 10));
         return;
       }
       if (e.target.classList.contains('aot-wheel-cancel')) { close(); return; }
@@ -262,17 +295,29 @@
     }
     var byName = function(n){ return wrap.querySelector('.aot-wheel-col[data-col="' + n + '"]'); };
     var lsnap = {}, lraf = {};
+    // The inline wheel has no OK button, so the embedding panel needs to know when
+    // the selection changed — polling on click/wheel from outside cannot work: the
+    // value is only settled after the smooth scroll ends, which is after any event
+    // the panel could listen to. Fires on tap (target known immediately) and again
+    // when scrolling settles.
+    var onChange = (typeof opts.onChange === 'function') ? opts.onChange : null;
+    function notify(){ if (onChange) { try { onChange(handle.read()); } catch (e) {} } }
     Array.prototype.forEach.call(cols, function(col){
       col.addEventListener('scroll', function(){
         var key = col.getAttribute('data-col');
         loopRecenter(col);
         if (!lraf[key]) { lraf[key] = requestAnimationFrame(function(){ lraf[key] = null; render(col); }); }
         if (lsnap[key]) { clearTimeout(lsnap[key]); }
-        lsnap[key] = setTimeout(function(){ render(col); }, 90);
+        lsnap[key] = setTimeout(function(){ col._pending = null; render(col); notify(); }, 90);
       });
       col.addEventListener('click', function(e){
         var item = e.target.closest && e.target.closest('.aot-wheel-item');
-        if (item) { var raw = parseInt(item.getAttribute('data-idx'), 10); col.scrollTo ? col.scrollTo({ top: raw * ITEM_H, behavior: 'smooth' }) : (col.scrollTop = raw * ITEM_H); }
+        if (item) {
+          overridden = true;
+          tapTo(col, parseInt(item.getAttribute('data-idx'), 10),
+                parseInt(item.getAttribute('data-val'), 10), notify);
+          notify();
+        }
       });
     });
     var ssCol = byName('ss'), ssSep = wrap.querySelector('.aot-wheel-sep-ss');
@@ -288,19 +333,42 @@
     // the column is left at raw scrollTop 0 — the very edge of the repeated block
     // range — where loopRecenter's edge-correction fights every subsequent scroll
     // attempt back toward 0, making the wheel appear stuck at 00:00.
+    // The deferred pass is a safety net for containers not yet laid out, but it
+    // must never overwrite a value chosen AFTER mount. rAF does not fire while the
+    // tab isn't painting, so it can land arbitrarily late — long after a caller
+    // seeded the wheel from the server or the user tapped. Measured: a wheel set
+    // to 12:11 snapped back to the mount-time 12:09 half a minute later, when the
+    // window was brought forward and the queued rAF finally ran.
+    var overridden = false;
     function _initPositions(){
       scrollToVal(byName('hh'), hh, false);
       scrollToVal(byName('mm'), mm, false);
       if (!hide) { scrollToVal(ssCol, ss, false); }
     }
     _initPositions();
-    requestAnimationFrame(_initPositions);
-    return {
+    requestAnimationFrame(function(){ if (!overridden) { _initPositions(); } });
+    var handle = {
       read: function(){
         var h = selectedVal(byName('hh')), m = selectedVal(byName('mm')), s = hide ? 0 : selectedVal(byName('ss'));
         return clampSec((h * 3600) + (m * 60) + s, max);
+      },
+      // 외부에서 값을 맞춘다(예: 서버에 걸려 있는 예약을 휠에 반영). 탭 기록은
+      // 지운다 — 안 지우면 방금 프로그램으로 옮긴 위치보다 예전 탭이 이긴다.
+      set: function(v){
+        overridden = true;
+        var tot = clampSec(toSeconds(v), max);
+        var cols2 = [['hh', Math.floor(tot / 3600)], ['mm', Math.floor((tot % 3600) / 60)]];
+        if (!hide) { cols2.push(['ss', tot % 60]); }
+        cols2.forEach(function(pair){
+          var c = byName(pair[0]);
+          if (!c) { return; }
+          c._pending = null;
+          scrollToVal(c, pair[1], false);
+        });
+        return tot;
       }
     };
+    return handle;
   }
 
   window.AoTTimeWheel = {

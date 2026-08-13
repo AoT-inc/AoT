@@ -264,24 +264,26 @@ def api_propose_job():
         # control must go through action_type='mcp_tool_call' / tool_name='operate_device'
         # (same translation AIActionService.get_action_manifest() documents via mcp_binding).
         if action_type == 'output':
-            from aot.databases.models.mcp_server import MCPServer as _MCPSrv
-            _aot_srv = (
-                _MCPSrv.query.filter(_MCPSrv.is_activated == True, _MCPSrv.command.contains('aot_mcp_server')).first()
-                or _MCPSrv.query.filter(_MCPSrv.is_activated == True, _MCPSrv.scope == 'general').first()
-                or _MCPSrv.query.filter(_MCPSrv.is_activated == True, _MCPSrv.name.ilike('%aot%')).first()
-            )
-            if not _aot_srv:
-                return jsonify({'error': 'No active AoT MCP server found; cannot schedule device control'}), 400
-
-            arguments = {'device_id': target_id, 'state': params.get('state', 'on')}
+            # 사람이 대시보드에서 만든 장치 예약이다. **MCP 로 보내지 않는다.**
+            #
+            # 예전에는 여기서 mcp_tool_call/operate_device 로 바꿔 보냈다 —
+            # "'output' 은 폐기됐고 모든 물리 제어는 MCP 도구로" 라는 규칙 때문이다.
+            # 그런데 그 도구는 AI 호출자를 전제로 MCP **서버** 쪽 승인 게이트를 갖고
+            # 있고, 스케줄러가 넘기는 _approved=True 는 로컬 리졸버까지만 살아남는다
+            # (MCPBridgeService.call_tool 에 승인 인자가 없다). 그래서 "대시보드에서
+            # 예약 → 실행 시각에 사람 승인을 다시 요구 → 그 시각엔 아무도 없음" 이
+            # 되어 **한 번도 켜지지 않았다**. 2026-08-13 실측: 예약 6건 전부 정시에
+            # 트리거되고도 미실행, 승인 큐에 pending 확인요청만 8건 쌓였다.
+            #
+            # human_device_control 은 대시보드 즉시 버튼과 같은 데몬 경로로 직접
+            # 실행하며, _approved=True 없이는 거부된다(AI 경로는 그대로 둔다).
+            action_type = 'human_device_control'
+            _p = {'state': params.get('state', 'on')}
             if params.get('channel') is not None:
-                arguments['channel'] = params.get('channel')
+                _p['channel'] = params.get('channel')
             if params.get('amount'):
-                arguments['duration_seconds'] = params.get('amount')
-
-            action_type = 'mcp_tool_call'
-            target_id = _aot_srv.unique_id
-            params = {'tool_name': 'operate_device', 'arguments': arguments}
+                _p['duration_sec'] = params.get('amount')
+            params = _p
 
         meta = AISchedulerService.propose_job(
             action_type=action_type,
@@ -316,7 +318,7 @@ def api_approve_job(job_id):
     if not user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission denied'}), 403
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     try:
         meta = AISchedulerService.approve_job(
             job_id,
@@ -338,7 +340,7 @@ def api_reject_job(job_id):
     if not user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission denied'}), 403
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     try:
         meta = AISchedulerService.reject_job(
             job_id,
@@ -367,7 +369,7 @@ def api_update_job(job_id):
     if not user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission denied'}), 403
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     from aot.ai.services.aot_data_tool_service import AoTDataToolService
     result = AoTDataToolService.edit_schedule_tool(
         job_id=str(job_id),
@@ -393,7 +395,11 @@ def api_delete_job(job_id):
     if not user_has_permission('edit_controllers'):
         return jsonify({'error': 'Permission denied'}), 403
 
-    data = request.get_json() or {}
+    # silent=True 는 필수다. 본문(reason)은 선택인데, silent 없이 부르면 Flask 가
+    # Content-Type 이 application/json 이 아닌 요청에 **415 를 던지고 뷰에 들어오지도
+    # 않는다** — `or {}` 는 실행될 기회가 없다. 취소 버튼처럼 본문 없이 DELETE 만
+    # 보내는 호출부가 정상인데도 실패한다(지도 위젯의 [예약 취소] 가 그랬다).
+    data = request.get_json(silent=True) or {}
     from aot.ai.services.aot_data_tool_service import AoTDataToolService
     result = AoTDataToolService.delete_schedule_tool(
         job_id=str(job_id),

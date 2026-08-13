@@ -13421,9 +13421,8 @@ msgstr ""
 #: aot_flask/templates/pages/camera_options/libcamera.html:81
 #: aot_flask/templates/pages/camera_options/raspistill.html:73
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Sun"
-msgstr "Sunset"
+msgstr "sk"
 
 #: aot_flask/templates/pages/camera_options/libcamera.html:82
 #: aot_flask/templates/pages/camera_options/raspistill.html:74
@@ -18880,33 +18879,28 @@ msgid "Activate or deactivate this sequence"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Mon"
-msgstr "On"
+msgstr "pr"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Tue"
-msgstr "Hue"
+msgstr "an"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Wed"
-msgstr "Web"
+msgstr "tr"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Thu"
-msgstr "Hue"
+msgstr "kt"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
 msgid "Fri"
-msgstr ""
+msgstr "pn"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Sat"
-msgstr "State"
+msgstr "št"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:27
 msgid "Run the sequence on this weekday. Unchecked days are skipped."
@@ -25929,3 +25923,217 @@ msgstr "Išvesties būsenos atnaujinimo periodas (sekundėmis)"
 #: widgets/AoT_map.py
 msgid "How often output on/off status is refreshed on the map."
 msgstr "Kaip dažnai žemėlapyje atnaujinama išvesties įjungimo/išjungimo būsena."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%b '%y"
+msgstr "%Y-%m"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%e. %b"
+msgstr "%m-%e"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Apr"
+msgstr "bal."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "April"
+msgstr "balandis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Aug"
+msgstr "rugp."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "August"
+msgstr "rugpjūtis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Dec"
+msgstr "gruod."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "December"
+msgstr "gruodis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Feb"
+msgstr "vas."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "February"
+msgstr "vasaris"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Friday"
+msgstr "penktadienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jan"
+msgstr "saus."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "January"
+msgstr "sausis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jul"
+msgstr "liep."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "July"
+msgstr "liepa"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jun"
+msgstr "birž."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "June"
+msgstr "birželis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Mar"
+msgstr "kov."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "March"
+msgstr "kovas"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "May"
+msgstr "geg."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Monday"
+msgstr "pirmadienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Nov"
+msgstr "lapkr."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "November"
+msgstr "lapkritis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Oct"
+msgstr "spal."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "October"
+msgstr "spalis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Saturday"
+msgstr "šeštadienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sep"
+msgstr "rugs."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "September"
+msgstr "rugsėjis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sunday"
+msgstr "sekmadienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Thursday"
+msgstr "ketvirtadienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Tuesday"
+msgstr "antradienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Wednesday"
+msgstr "trečiadienis"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M"
+msgstr "%m-%e, %a %H:%M"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S"
+msgstr "%m-%e, %a %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S.%L"
+msgstr "%m-%e, %a %H:%M:%S.%L"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %Y"
+msgstr "%Y-%m-%e, %a"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%B %Y"
+msgstr "%Y m. %B"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e"
+msgstr "%m-%e, %a"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Run time"
+msgstr "Veikimo laikas"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "immediately"
+msgstr "nedelsiant"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "no auto off"
+msgstr "be automatinio išjungimo"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule registered"
+msgstr "Tvarkaraštis išsaugotas"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Cancel schedule"
+msgstr "Atšaukti tvarkaraštį"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned on now"
+msgstr "Įjungta dabar"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "auto off after %(dur)s"
+msgstr "automatinis išjungimas po %(dur)s"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turn off now"
+msgstr "Išjungti dabar"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule canceled"
+msgstr "Tvarkaraštis atšauktas"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned off"
+msgstr "Išjungta"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule status"
+msgstr "Grafiko būsena"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Elapsed"
+msgstr "Praėjo"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No schedule"
+msgstr "Grafiko nėra"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Overlaps an existing schedule"
+msgstr "Sutampa su esamu grafiku"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "Overlaps an existing schedule — turns off at %(time)s"
+msgstr "Sutampa su esamu grafiku — išsijungs %(time)s"

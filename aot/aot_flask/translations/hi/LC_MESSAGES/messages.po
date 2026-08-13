@@ -13419,9 +13419,8 @@ msgstr ""
 #: aot_flask/templates/pages/camera_options/libcamera.html:81
 #: aot_flask/templates/pages/camera_options/raspistill.html:73
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Sun"
-msgstr "Sunset"
+msgstr "रवि"
 
 #: aot_flask/templates/pages/camera_options/libcamera.html:82
 #: aot_flask/templates/pages/camera_options/raspistill.html:74
@@ -18878,33 +18877,28 @@ msgid "Activate or deactivate this sequence"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Mon"
-msgstr "On"
+msgstr "सोम"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Tue"
-msgstr "Hue"
+msgstr "मंगल"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Wed"
-msgstr "Web"
+msgstr "बुध"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Thu"
-msgstr "Hue"
+msgstr "गुरु"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
 msgid "Fri"
-msgstr ""
+msgstr "शुक्र"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Sat"
-msgstr "State"
+msgstr "शनि"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:27
 msgid "Run the sequence on this weekday. Unchecked days are skipped."
@@ -25927,3 +25921,221 @@ msgstr "आउटपुट स्थिति रीफ़्रेश अवध
 #: widgets/AoT_map.py
 msgid "How often output on/off status is refreshed on the map."
 msgstr "मानचित्र पर आउटपुट ऑन/ऑफ स्थिति कितनी बार रीफ़्रेश होती है।"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d"
+msgstr "%d/%m/%Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d %H:%M:%S"
+msgstr "%d/%m/%Y %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%b '%y"
+msgstr "%b %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%e. %b"
+msgstr "%e %b"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Apr"
+msgstr "अप्रैल"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "April"
+msgstr "अप्रैल"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Aug"
+msgstr "अग॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "August"
+msgstr "अगस्त"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Dec"
+msgstr "दिस॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "December"
+msgstr "दिसंबर"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Feb"
+msgstr "फ़र॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "February"
+msgstr "फ़रवरी"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Friday"
+msgstr "शुक्रवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jan"
+msgstr "जन॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "January"
+msgstr "जनवरी"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jul"
+msgstr "जुल॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "July"
+msgstr "जुलाई"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jun"
+msgstr "जून"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "June"
+msgstr "जून"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Mar"
+msgstr "मार्च"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "March"
+msgstr "मार्च"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "May"
+msgstr "मई"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Monday"
+msgstr "सोमवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Nov"
+msgstr "नव॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "November"
+msgstr "नवंबर"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Oct"
+msgstr "अक्तू॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "October"
+msgstr "अक्तूबर"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Saturday"
+msgstr "शनिवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sep"
+msgstr "सित॰"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "September"
+msgstr "सितंबर"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sunday"
+msgstr "रविवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Thursday"
+msgstr "गुरुवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Tuesday"
+msgstr "मंगलवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Wednesday"
+msgstr "बुधवार"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M"
+msgstr "%a, %e %b %H:%M"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S"
+msgstr "%a, %e %b %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S.%L"
+msgstr "%a, %e %b %H:%M:%S.%L"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %Y"
+msgstr "%a, %e %b %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e"
+msgstr "%a, %e %b"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Run time"
+msgstr "संचालन समय"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "immediately"
+msgstr "तुरंत"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "no auto off"
+msgstr "स्वतः बंद नहीं"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule registered"
+msgstr "शेड्यूल सहेजा गया"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Cancel schedule"
+msgstr "शेड्यूल रद्द करें"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned on now"
+msgstr "अभी चालू किया"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "auto off after %(dur)s"
+msgstr "%(dur)s बाद स्वतः बंद"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turn off now"
+msgstr "अभी बंद करें"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule canceled"
+msgstr "शेड्यूल रद्द किया गया"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned off"
+msgstr "बंद कर दिया"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule status"
+msgstr "शेड्यूल स्थिति"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Elapsed"
+msgstr "बीता समय"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No schedule"
+msgstr "कोई शेड्यूल नहीं"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Overlaps an existing schedule"
+msgstr "मौजूदा शेड्यूल से टकराता है"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "Overlaps an existing schedule — turns off at %(time)s"
+msgstr "मौजूदा शेड्यूल से टकराता है — %(time)s पर बंद होगा"

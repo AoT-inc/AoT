@@ -440,6 +440,9 @@
         if (vars.refreshSeconds > 0) {
             setupRefresh(uniqueId, vars.refreshSeconds);
         }
+        // 출력 상태는 위젯 갱신 주기가 아니라 '출력 상태 갱신 주기' 를 따른다.
+        // 목록 재조회(무겁다)와 분리된 가벼운 폴러다.
+        setupOutputStateRefresh(uniqueId, wOpts.output_update_interval);
         // Expose a live refresh-interval setter so the settings modal can apply the
         // `period` option immediately (auto-save + live) instead of on reload.
         try {
@@ -534,9 +537,10 @@
             // 3D data feeds Facility/Sensor Values labels too, not just the shape.
             if (on('show_facility_shape') || on('show_labels')) {
                 urls.push('/api/geo/overlays?map_uuid=' + mu + '&type=facility');
-                if (window.AoTFacilityMap3D && window.AoTFacility3D) {
-                    urls.push('/api/geo/facility/list?geo_id=' + mu);
-                }
+                // 3D 스택 존재 여부로 걸지 않는다 — 이제 지연 로드라 이 시점에는
+                // 아직 없는 것이 정상이고, 이 목록이야말로 3D 를 받을지 말지를
+                // 정하는 근거다(_ensureFacilityShapeLayer 가 같은 URL 을 쓴다).
+                urls.push('/api/geo/facility/list?geo_id=' + mu);
             }
             if (on('show_equipment_shape')) urls.push('/api/geo/overlays?map_uuid=' + mu + '&type=equipment');
             if (on('show_device_shapes'))   urls.push('/api/geo/overlays?map_uuid=' + mu + '&type=aot_device');
@@ -1981,7 +1985,8 @@
                 slot: deviceUuid,
                 name: dev.name || '',
                 primary: primary,
-                meta: timeSlot + window.AoTMapPopup.nextRunHtml(data.runtime),
+                meta: timeSlot + window.AoTMapPopup.nextRunHtml(
+                    data.runtime, deviceUuid + '::' + channel),
                 settings: settings
             });
         }
@@ -2024,6 +2029,9 @@
                         window.AoTMapLoader.toggleDevice(deviceUuid, on, channel,
                                                          dev.kind);
                     }
+                    // 예전에는 아무 갱신도 걸지 않아(aot-map-loader 주석: "wait for
+                    // polling") 다음 위젯 주기까지 마커가 옛 상태였다.
+                    _refreshOutputStatesAfterCommand(uid);
                     setTimeout(function () { tgl.disabled = false; }, 600);
                 });
             }
@@ -2037,6 +2045,7 @@
                             window.AoTMapLoader.commandActuator(
                                 deviceUuid, act, val, channel, uid);
                         }
+                        _refreshOutputStatesAfterCommand(uid);
                     });
                 });
             }
@@ -2053,6 +2062,7 @@
                         window.AoTMapLoader.commandActuator(
                             deviceUuid, 'goto', parseFloat(duty.value), channel, uid);
                     }
+                    _refreshOutputStatesAfterCommand(uid);
                 });
             }
 
@@ -2451,7 +2461,7 @@
             })
             .then(function (r) { return r.json(); })
             .then(function (d) {
-                _fetchAndUpdateActLabels(uid, facilityUuid);
+                _fetchAndUpdateActLabels(uid, facilityUuid, true);   // 제어 직후 = 캐시 우회
                 // 수동 제어한 장치가 오버레이 선택 중이면 5초 뒤 이력 재조회
                 // (Output 컨트롤러의 Influx 기록 반영 시간 고려)
                 var st = _actLabelState[uid];
@@ -2726,6 +2736,9 @@
                 st.refreshMs = ms;
                 st.pollTimer = setInterval(function () {
                     if (document.hidden) return;
+                    // 시설 수만큼 /runtime 을 부르는 가장 무거운 폴러다 —
+                    // 화면 밖 지도에서는 통째로 쉰다.
+                    if (!_isWidgetVisible(window.AoTWidgetInstances[uid])) return;
                     var st2 = _actLabelState[uid];
                     if (!st2) return;
                     st2.facilities.forEach(function (fac) { _fetchAndUpdateActLabels(uid, fac.unique_id); });
@@ -2753,11 +2766,15 @@
             }
         }
 
-        function _fetchAndUpdateActLabels(uid, facilityUuid) {
+        // force=true: 8초 TTL 캐시를 건너뛴다. 제어 **직후** 갱신에는 반드시 필요하다 —
+        // 캐시를 그대로 쓰면 방금 켠 장치가 최대 8초간 옛 상태로 보인다. 프로바이더가
+        // 이 옵션을 처음부터 그 용도로 두고 있었는데(aot-facility-runtime.js 주석)
+        // 정작 쓰는 곳이 없었다.
+        function _fetchAndUpdateActLabels(uid, facilityUuid, force) {
             // 공용 런타임 프로바이더로 요청 통합 — 센서 라벨 폴러와 동일
             // /runtime 을 공유해 저사양(Pi) 스레드 풀 포화를 막는다.
             var _rt = window.AoTFacilityRuntime
-                ? window.AoTFacilityRuntime.get(facilityUuid)
+                ? window.AoTFacilityRuntime.get(facilityUuid, { force: !!force })
                 : fetch('/api/aot/facility/' + encodeURIComponent(facilityUuid) + '/runtime')
                     .then(function (r) { return r.ok ? r.json() : null; });
             _rt
@@ -4134,7 +4151,14 @@
                         }
 
                         // Attach Three.js greenhouse model overlay (replaces fill-extrusion box)
-                        if (window.AoTFacilityMap3D && window.AoTFacility3D) {
+                        //
+                        // 3D 스택(three + facility-3d + map-3d, 831KB)은 여기서 **처음
+                        // 필요해질 때** 받는다. 예전에는 위젯 head 가 document.write 로
+                        // 무조건 받아 놓고 이 자리에서 존재 여부만 확인했다 — 3D 시설이
+                        // 하나도 없는 지도에서도 831KB 를 파싱했다는 뜻이다.
+                        // 목록 조회가 먼저이고, 3D 지오메트리를 가진 시설이 하나라도
+                        // 있을 때만 로드한다. 없으면 831KB 는 영영 안 받는다.
+                        {
                             try {
                                 const facListRes = await geoFetch('/api/geo/facility/list?geo_id=' + encodeURIComponent(mapUuid));
                                 if (facListRes.ok) {
@@ -4146,6 +4170,8 @@
                                     const _fi = window.AoTWidgetInstances[uniqueId];
                                     if (_fi) _fi.cachedFacilities3d = facilities3d;
                                     if (facilities3d.length) {
+                                        if (window.AoTFacility3DLoader) await window.AoTFacility3DLoader.ensure();
+                                        if (!window.AoTFacilityMap3D || !window.AoTFacility3D) throw new Error('3D stack unavailable');
                                         AoTFacilityMap3D.attach(map, facilities3d, { hideLayers: ['facilities-3d'], renderMode: wOpts.facility_render_mode || 'default' });
                                         // Sensor value labels (overlay markers + 24h popup)
                                         if (window.AoTMapSensorLabels) {
@@ -4166,6 +4192,11 @@
                                     }
                                 }
                             } catch (e3d) {
+                                // 예전에는 3D 스택이 늘 로드돼 있어 여기 남는 것은 데이터
+                                // 문제뿐이었다. 이제 로드 실패도 여기로 떨어지는데, 그때
+                                // 증상은 "3D 온실만 조용히 안 보임"이라 조용히 삼키면
+                                // 원인 도달이 매우 늦어진다.
+                                console.error('[AoT Map] 3D facility overlay failed:', e3d);
                             }
                         }
                     }
@@ -7650,6 +7681,7 @@
                     _lastRefresh[l.id] = Date.now();
                     inst.layerRefreshTimers[l.id] = setInterval(function() {
                         if (document.hidden) return;
+                        if (!_isWidgetVisible(inst)) return;
                         if (activeOverlays.indexOf(l.name) === -1) return;
                         _refreshOverlayLayer(l);
                         _lastRefresh[l.id] = Date.now();
@@ -7845,6 +7877,7 @@
         renderMapNotes();
         instance.notePollTimer = setInterval(function() {
             if (document.hidden) return;
+            if (!_isWidgetVisible(instance)) return;
             renderMapNotes();
         }, _noteIntervalMs);
     }
@@ -8056,6 +8089,7 @@
             if (instance.panelRefreshTimer) clearInterval(instance.panelRefreshTimer);
             instance.panelRefreshTimer = setInterval(function() {
                 if (document.hidden) return;
+                if (!_isWidgetVisible(instance)) return;
                 refreshMeasurementPanelValues(uniqueId);
             }, refreshMs);
 
@@ -8066,6 +8100,7 @@
                 if (instance.panelRefreshTimer) clearInterval(instance.panelRefreshTimer);
                 instance.panelRefreshTimer = setInterval(function () {
                     if (document.hidden) return;
+                    if (!_isWidgetVisible(instance)) return;
                     refreshMeasurementPanelValues(uniqueId);
                 }, ms);
             };
@@ -9171,16 +9206,40 @@
      * each widget issuing its own.
      */
     const _geoDevicesCache = {};  // paramsString -> { ts, promise }
+    const _geoDevicesEtag = {};   // paramsString -> { etag, data }
     const GEO_DEVICES_SHARE_TTL_MS = 5000;
 
-    function fetchGeoDevicesShared(paramsString) {
+    /**
+     * @param {string} paramsString
+     * @param {{skipIfUnchanged?: boolean}} [opts]
+     *   skipIfUnchanged=true 면 서버가 304(변화 없음)를 준 경우 **null** 을 돌려준다.
+     *   주기 갱신 경로 전용이다 — 최초 렌더 경로에서 쓰면 마커가 안 그려진다.
+     */
+    function fetchGeoDevicesShared(paramsString, opts) {
         const now = Date.now();
         let entry = _geoDevicesCache[paramsString];
         if (!entry || (now - entry.ts) >= GEO_DEVICES_SHARE_TTL_MS) {
-            const promise = fetch('/api/geo/devices?' + paramsString)
+            const prev = _geoDevicesEtag[paramsString];
+            const headers = {};
+            if (prev && prev.etag) headers['If-None-Match'] = prev.etag;
+            // cache:'no-store' — 브라우저 HTTP 캐시가 우리 조건부 요청을 가로채면
+            // 304 가 여기까지 올라오지 않고 200(캐시본)으로 둔갑한다. 그러면 본문을
+            // 다시 파싱하게 되어 아끼려던 것을 그대로 쓴다.
+            const promise = fetch('/api/geo/devices?' + paramsString, {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: headers
+                })
                 .then(function(r) {
+                    if (r.status === 304 && prev) {
+                        return { data: prev.data, unchanged: true };
+                    }
                     if (!r.ok) throw new Error('geo/devices HTTP ' + r.status);
-                    return r.json();
+                    const tag = r.headers.get('ETag');
+                    return r.json().then(function(data) {
+                        _geoDevicesEtag[paramsString] = { etag: tag, data: data };
+                        return { data: data, unchanged: false };
+                    });
                 });
             entry = { ts: now, promise: promise };
             _geoDevicesCache[paramsString] = entry;
@@ -9191,8 +9250,11 @@
         }
         // Each caller gets its own copy — widgets mutate the response in place
         // (all_measurements_map merge etc.) and must not affect each other.
-        return entry.promise.then(function(data) {
-            try { return structuredClone(data); } catch (e) { return data; }
+        return entry.promise.then(function(res) {
+            // 변화가 없고 호출자가 건너뛰기를 원하면 복제조차 하지 않는다 —
+            // 125KB 객체 그래프 복제도 5초마다면 공짜가 아니다.
+            if (res.unchanged && opts && opts.skipIfUnchanged) return null;
+            try { return structuredClone(res.data); } catch (e) { return res.data; }
         });
     }
 
@@ -9200,10 +9262,27 @@
      * A widget can be on a hidden dashboard tab while its timers keep firing.
      * offsetParent is null when the container (or an ancestor) is display:none.
      */
+    // 예전에는 offsetParent 만 봤다 — 그건 display:none 검사이지 "화면에 보이는가"
+    // 가 아니다. 폰에서 대시보드는 세로로 길어(실측 3,550px) 스크롤로 밀려난 지도도
+    // 늘 '보임' 으로 판정돼 계속 폴링하고 마커를 다시 계산했다.
+    //
+    // 지도 위젯의 타이머는 지도 로드 이후에 걸리는 것이 많아 AoTPoll 의 ready_end
+    // 귀속 구간을 벗어난다. 그래서 여기서 직접 뷰포트를 본다.
+    // 여백은 AoTPoll 의 rootMargin 과 같은 뜻 — 한 화면쯤 미리 깨워 둔다.
+    const _VIEWPORT_MARGIN_PX = 300;
+
     function _isWidgetVisible(instance) {
         try {
             const el = instance && instance.map && instance.map.getContainer();
-            return !!(el && el.offsetParent !== null);
+            if (!el || el.offsetParent === null) return false;   // display:none 은 여전히 제외
+            const r = el.getBoundingClientRect();
+            if (r.width === 0 && r.height === 0) return false;
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            const vw = window.innerWidth || document.documentElement.clientWidth;
+            return r.bottom >= -_VIEWPORT_MARGIN_PX &&
+                   r.top    <=  vh + _VIEWPORT_MARGIN_PX &&
+                   r.right  >= -_VIEWPORT_MARGIN_PX &&
+                   r.left   <=  vw + _VIEWPORT_MARGIN_PX;
         } catch (e) { return true; }
     }
 
@@ -9243,6 +9322,11 @@
                 // labels (parent_type=aot_device). Without this they wait one full
                 // poll cycle before showing the position %.
                 const instance = window.AoTWidgetInstances[uniqueId];
+                // 출력 상태 폴러가 쓸 목록을 여기서 남긴다. 서버 렌더의 vars.devices
+                // 는 비어 있고(장치 조회는 클라이언트가 한다) setupRefresh 는 위젯
+                // 주기(기본 30초)가 지나야 처음 채우므로, 그때까지 폴러가 갱신할
+                // 대상이 없었다.
+                if (instance) { instance._devices = devices; }
                 if (instance) {
                     try { _updateGeoDesignDeviceLabels(instance, devices, vars.theme); } catch (e) {}
                 }
@@ -9586,6 +9670,117 @@
         } catch (e) {}
     }
 
+
+    // ── 출력 상태 전용 폴러 ─────────────────────────────────────────────────────
+    // 장치 "목록" 과 "상태" 는 성격이 다르다: 목록은 배치를 바꿀 때만 변하고 조회가
+    // 무겁다(/api/geo/devices), 상태는 수시로 변하고 조회가 가볍다(/outputstate —
+    // 실측 출력 31개 15ms). 예전에는 둘이 위젯 갱신 주기 한 타이머에 묶여 있어서,
+    // 출력을 켜도 그 주기가 돌아올 때까지(기본 30초) 마커가 옛 상태로 남았다.
+    // 이제 상태만 '출력 상태 갱신 주기' 로 따로 돈다.
+    function _outputDevicesOf(instance) {
+        var list = (instance && instance._devices)
+                || (instance && instance.vars && instance.vars.devices) || [];
+        return list.filter(function (d) {
+            return (d.device_type || d.type) === 'output';
+        });
+    }
+
+    function _applyOutputStates(uniqueId, states) {
+        var instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance || !states) return;
+        var wOpts = (instance.vars && instance.vars.vars) || {};
+        var touched = [];
+        _outputDevicesOf(instance).forEach(function (dev) {
+            // 식별은 마커 렌더러(refreshDeviceMarkersAppearance)와 같은 규칙으로.
+            var base = dev.device_id || dev.device_unique_id
+                || String(dev.unique_id || dev.id || '').split('::')[0];
+            var byCh = states[base];
+            if (!byCh) return;
+            var ch = (dev.channel_id != null) ? String(dev.channel_id) : '0';
+            var st = byCh[ch];
+            if (st == null) return;
+            dev.status = st;                       // 렌더러가 읽는 필드
+            dev.is_activated = (st === 'on');
+            touched.push(dev);
+        });
+        // **전체 목록**으로 부른다. 부분 목록으로 부르면 안 된다 —
+        // refreshDeviceMarkersAppearance 끝의 _updateDeviceShapeOpacity 가 넘겨받은
+        // 목록만으로 도형 레이어의 **전역** paint 표현식
+        // (['match', device_id, onIds, 0.9, base])을 다시 쓰기 때문에, 목록에 빠진
+        // ON 출력은 꺼진 것으로 칠해진다(/outputstate 가 모르는 출력이 그 경우다).
+        // 상태는 위에서 같은 객체에 이미 써 넣었으므로 전체를 넘겨도 값은 최신이다.
+        if (touched.length) {
+            var all = (instance._devices)
+                   || (instance.vars && instance.vars.devices) || [];
+            refreshDeviceMarkersAppearance(uniqueId, all.length ? all : touched, wOpts);
+        }
+    }
+
+    // /outputstate 는 전 출력을 한 번에 주는 **전역** 응답이고 데몬 RPC 를 탄다.
+    // 대시보드에 지도 위젯이 여러 개면 같은 틱에 위젯 수만큼 같은 요청이 나가므로
+    // (실측 3개 위젯 = 5초마다 3회) 짧은 TTL + in-flight 합치기로 1회로 접는다.
+    // TTL 은 폴링 주기(최소 2초)보다 충분히 짧게 둔다 — 다음 틱은 반드시 새로 받는다.
+    var _outStateCache = { ts: 0, data: null, inflight: null };
+    var _OUT_STATE_TTL_MS = 900;
+
+    function _fetchOutputStates(force) {
+        var now = Date.now();
+        if (!force) {
+            if (_outStateCache.data && (now - _outStateCache.ts) < _OUT_STATE_TTL_MS) {
+                return Promise.resolve(_outStateCache.data);
+            }
+            if (_outStateCache.inflight) { return _outStateCache.inflight; }
+        }
+        var pr = fetch('/outputstate')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+                if (d) { _outStateCache = { ts: Date.now(), data: d, inflight: null }; }
+                else { _outStateCache.inflight = null; }
+                return d;
+            })
+            .catch(function () { _outStateCache.inflight = null; return null; });
+        if (!force) { _outStateCache.inflight = pr; }
+        return pr;
+    }
+
+    // force=true 는 캐시를 건너뛴다 — 제어 직후에는 방금 보낸 명령보다 오래된
+    // 응답을 쓰면 안 된다(시설 경로의 AoTFacilityRuntime force 와 같은 이유).
+    function _refreshOutputStatesNow(uniqueId, force) {
+        return _fetchOutputStates(force)
+            .then(function (states) { _applyOutputStates(uniqueId, states); })
+            .catch(function () { /* 데몬 불가 — 다음 주기에 다시 본다 */ });
+    }
+
+    // 제어 직후. 데몬이 상태를 반영하는 데 한 박자 걸리므로 짧게 여러 번 확인한다.
+    // 화면을 낙관적으로 먼저 뒤집지는 않는다 — 명령이 실패하면 그 표시가 거짓이 된다.
+    var _POST_CMD_REFRESH_MS = [120, 700, 1800];
+    function _refreshOutputStatesAfterCommand(uniqueId) {
+        _POST_CMD_REFRESH_MS.forEach(function (ms) {
+            setTimeout(function () { _refreshOutputStatesNow(uniqueId, true); }, ms);
+        });
+    }
+
+    function setupOutputStateRefresh(uniqueId, seconds) {
+        var instance = window.AoTWidgetInstances[uniqueId];
+        if (!instance) return;
+        if (instance.outputStateTimer) { clearInterval(instance.outputStateTimer); }
+        var sec = parseFloat(seconds);
+        // 0 = 끔. 위젯 갱신 주기(period)와는 독립이다 — 각 손잡이가 자기 것만 다스린다.
+        if (!isFinite(sec) || sec <= 0) { instance.outputStateTimer = null; }
+        else {
+            var ms = Math.max(2, sec) * 1000;
+            instance.outputStateTimer = setInterval(function () {
+                if (document.hidden) return;
+                if (!_isWidgetVisible(instance)) return;
+                _refreshOutputStatesNow(uniqueId);
+            }, ms);
+        }
+        // 설정 모달 라이브 반영용
+        instance._setOutputStateInterval = function (s) {
+            setupOutputStateRefresh(uniqueId, s);
+        };
+    }
+
     function setupRefresh(uniqueId, intervalSeconds) {
         const instance = window.AoTWidgetInstances[uniqueId];
         if (!instance) return;
@@ -9611,10 +9806,30 @@
             if (deviceIds) params.set('device_ids', deviceIds);
             params.set('include_all', String(includeAll));
 
-            fetchGeoDevicesShared(params.toString())
+            fetchGeoDevicesShared(params.toString(), { skipIfUnchanged: true })
                 .then(function(data) {
-                    if (!data.ok) return;
+                    // null = 서버가 304. 파싱과 마커 외형 재계산은 건너뛴다 —
+                    // 목록과 **상태**(status/position_pct)는 이 응답에 실려 있으니
+                    // 304 면 그대로라는 뜻이 맞다.
+                    //
+                    // 하지만 측정 **값** 은 이 응답에 애초에 없다(실측: 측정행 195개
+                    // 전부 last_value 없음 — 값은 /data_batch 가 따로 받는다). 그래서
+                    // 값 갱신까지 함께 건너뛰면, 목록이 안 변하는 **정상 상태**에서
+                    // 값이 영구히 멈춘다: 첫 로드가 한 번 비어 온 화면은 새로고침
+                    // 말고는 복구할 방법이 없어진다. "장시간 미접속 후 열면 '—' 만
+                    // 뜨고 갱신 주기에도 안 바뀐다" 는 증상이 이것이었다 —
+                    // 콜드 캐시로 첫 조회가 비면 재시도가 사라진 것이 원인이고,
+                    // 재현이 어려운 이유는 실패 자체가 일시적이기 때문이다.
+                    if (!data || !data.ok) {
+                        var known = instance._devices;
+                        if (known && known.length) {
+                            try { _refreshInputValues(uniqueId, known, wOpts); } catch (e) {}
+                        }
+                        return;
+                    }
                     const devices = data.devices || [];
+                    // 상태 폴러가 쓸 최신 목록을 남긴다(목록과 상태의 갱신 주기가 다르다).
+                    if (devices.length > 0) instance._devices = devices;
                     if (data.all_measurements_map) wOpts.all_measurements_map = data.all_measurements_map;
                     // Update appearance only — no remove/re-add to prevent position flicker
                     if (devices.length > 0) {
@@ -9651,6 +9866,9 @@
         }
         if (instance.panelRefreshTimer) {
             clearInterval(instance.panelRefreshTimer);
+        }
+        if (instance.outputStateTimer) {
+            clearInterval(instance.outputStateTimer);
         }
         // Detach sensor labels
         if (window.AoTMapSensorLabels) {

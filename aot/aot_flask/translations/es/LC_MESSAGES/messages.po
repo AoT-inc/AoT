@@ -13225,7 +13225,7 @@ msgstr "para obtener más información."
 #: aot_flask/templates/pages/camera_options/raspistill.html:73
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
 msgid "Sun"
-msgstr "Sol"
+msgstr "dom"
 
 #: aot_flask/templates/pages/camera_options/libcamera.html:82
 #: aot_flask/templates/pages/camera_options/raspistill.html:74
@@ -25953,3 +25953,225 @@ msgstr "Período de actualización del estado de salida (segundos)"
 #: widgets/AoT_map.py
 msgid "How often output on/off status is refreshed on the map."
 msgstr "Frecuencia con la que se actualiza el estado de encendido/apagado de la salida en el mapa."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d"
+msgstr "%d/%m/%Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d %H:%M:%S"
+msgstr "%d/%m/%Y %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%b '%y"
+msgstr "%b %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%e. %b"
+msgstr "%e %b"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Apr"
+msgstr "abr"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "April"
+msgstr "abril"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Aug"
+msgstr "ago"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "August"
+msgstr "agosto"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Dec"
+msgstr "dic"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "December"
+msgstr "diciembre"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Feb"
+msgstr "feb"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "February"
+msgstr "febrero"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Friday"
+msgstr "viernes"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jan"
+msgstr "ene"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "January"
+msgstr "enero"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jul"
+msgstr "jul"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "July"
+msgstr "julio"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jun"
+msgstr "jun"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "June"
+msgstr "junio"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Mar"
+msgstr "mar"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "March"
+msgstr "marzo"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "May"
+msgstr "may"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Monday"
+msgstr "lunes"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Nov"
+msgstr "nov"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "November"
+msgstr "noviembre"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Oct"
+msgstr "oct"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "October"
+msgstr "octubre"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Saturday"
+msgstr "sábado"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sep"
+msgstr "sept"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "September"
+msgstr "septiembre"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sunday"
+msgstr "domingo"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Thursday"
+msgstr "jueves"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Tuesday"
+msgstr "martes"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Wednesday"
+msgstr "miércoles"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M"
+msgstr "%a, %e %b %H:%M"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S"
+msgstr "%a, %e %b %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S.%L"
+msgstr "%a, %e %b %H:%M:%S.%L"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %Y"
+msgstr "%a, %e %b %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%B %Y"
+msgstr "%B de %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e"
+msgstr "%a, %e %b"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Run time"
+msgstr "Tiempo de funcionamiento"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "immediately"
+msgstr "inmediatamente"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "no auto off"
+msgstr "sin apagado automático"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule registered"
+msgstr "Programación guardada"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Cancel schedule"
+msgstr "Cancelar programación"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned on now"
+msgstr "Encendido ahora"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "auto off after %(dur)s"
+msgstr "apagado automático tras %(dur)s"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turn off now"
+msgstr "Apagar ahora"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule canceled"
+msgstr "Programación cancelada"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned off"
+msgstr "Apagado"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule status"
+msgstr "Estado de la programación"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Elapsed"
+msgstr "Transcurrido"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No schedule"
+msgstr "Sin programación"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Overlaps an existing schedule"
+msgstr "Se solapa con una programación existente"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "Overlaps an existing schedule — turns off at %(time)s"
+msgstr "Se solapa con una programación existente — se apaga a las %(time)s"

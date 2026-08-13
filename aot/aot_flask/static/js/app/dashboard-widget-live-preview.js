@@ -506,10 +506,13 @@
         if (typeof inst._setActuatorRefreshInterval === 'function') { inst._setActuatorRefreshInterval(); }
         if (typeof inst._reattachSensorLabels === 'function') { inst._reattachSensorLabels(); }
       }
-      // Output status refresh period -> mutate + restart the actuator/output polling
-      // loop in place (bay chip sensor value shares the same fetch — see above).
+      // Output status refresh period -> restart BOTH output-state consumers:
+      // the standalone /outputstate poller that repaints output markers, and the
+      // facility actuator/bay poller (which shares one /runtime fetch with the bay
+      // chip's sensor value — see above).
       else if (key === 'output_update_interval') {
         if (inst.vars && inst.vars.vars) { inst.vars.vars[key] = value; }
+        if (typeof inst._setOutputStateInterval === 'function') { inst._setOutputStateInterval(value); }
         if (typeof inst._setActuatorRefreshInterval === 'function') { inst._setActuatorRefreshInterval(); }
       }
     } catch (e) { /* ignore */ }

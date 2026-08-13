@@ -9,6 +9,15 @@
 {%- set widget_options = custom_options_values_widgets.get(each_widget.unique_id, {}) -%}
 {%- set widget_variables = custom_widget_variables.get(each_widget.unique_id, {}) -%}
 {%- if each_widget.graph_type in list_html_files_js_ready_end -%}
+{#- 뷰포트 게이팅 귀속 구간 — dashboard_entry.html 과 같은 이유다. 옵션 변경으로
+    위젯을 제자리 재초기화할 때도 새 인터벌이 이 위젯에 귀속돼야, 화면 밖으로
+    나갔을 때 함께 멈춘다. 빠뜨리면 "설정을 한 번 만진 위젯만 게이팅이 안 되는"
+    재현 어려운 상태가 된다. -#}
+if (window.AoTPoll && AoTPoll.enterWidget) AoTPoll.enterWidget('{{each_widget.unique_id}}');
+try {
 {%- include 'user_templates/{}'.format(list_html_files_js_ready_end[each_widget.graph_type]) -%}
+} finally {
+  if (window.AoTPoll && AoTPoll.exitWidget) AoTPoll.exitWidget();
+}
 {%- endif -%}
 {%- endif -%}

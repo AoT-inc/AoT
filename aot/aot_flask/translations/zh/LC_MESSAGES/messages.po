@@ -12922,7 +12922,7 @@ msgstr "以获取更多信息。"
 #: aot_flask/templates/pages/camera_options/raspistill.html:73
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
 msgid "Sun"
-msgstr "晴天"
+msgstr "周日"
 
 #: aot_flask/templates/pages/camera_options/libcamera.html:82
 #: aot_flask/templates/pages/camera_options/raspistill.html:74
@@ -17835,7 +17835,7 @@ msgstr "未找到PID或没有测量值"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:167
 msgid "5m"
-msgstr "5m"
+msgstr "5分钟"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
@@ -24849,3 +24849,269 @@ msgstr "输出状态刷新周期（秒）"
 #: widgets/AoT_map.py
 msgid "How often output on/off status is refreshed on the map."
 msgstr "地图上输出开/关状态的刷新频率。"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d"
+msgstr "%Y/%m/%d"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d %H:%M:%S"
+msgstr "%Y/%m/%d %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%b '%y"
+msgstr "%Y年%m月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%e. %b"
+msgstr "%m月%e日"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "15m"
+msgstr "15分钟"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "1m"
+msgstr "1分钟"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "1mo"
+msgstr "1个月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "1w"
+msgstr "1周"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "1y"
+msgstr "1年"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "3mo"
+msgstr "3个月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Apr"
+msgstr "4月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "April"
+msgstr "四月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Aug"
+msgstr "8月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "August"
+msgstr "八月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Dec"
+msgstr "12月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "December"
+msgstr "十二月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Feb"
+msgstr "2月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "February"
+msgstr "二月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Friday"
+msgstr "星期五"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jan"
+msgstr "1月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "January"
+msgstr "一月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jul"
+msgstr "7月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "July"
+msgstr "七月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jun"
+msgstr "6月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "June"
+msgstr "六月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Mar"
+msgstr "3月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "March"
+msgstr "三月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "May"
+msgstr "5月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Monday"
+msgstr "星期一"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "No data to display"
+msgstr "没有可显示的数据"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Nov"
+msgstr "11月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "November"
+msgstr "十一月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Oct"
+msgstr "10月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "October"
+msgstr "十月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Reset zoom"
+msgstr "重置缩放"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Reset zoom level 1:1"
+msgstr "将缩放比例重置为 1:1"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Saturday"
+msgstr "星期六"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sep"
+msgstr "9月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "September"
+msgstr "九月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sunday"
+msgstr "星期日"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Thursday"
+msgstr "星期四"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Tuesday"
+msgstr "星期二"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Wednesday"
+msgstr "星期三"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Zoom"
+msgstr "缩放"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M"
+msgstr "%m月%e日%a %H:%M"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S"
+msgstr "%m月%e日%a %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S.%L"
+msgstr "%m月%e日%a %H:%M:%S.%L"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %Y"
+msgstr "%Y年%m月%e日%a"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%B %Y"
+msgstr "%Y年%m月"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Week from %A, %b %e, %Y"
+msgstr "%Y年%m月%e日%a 当周"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e"
+msgstr "%m月%e日%a"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Run time"
+msgstr "运行时长"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "immediately"
+msgstr "立即"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "no auto off"
+msgstr "不自动关闭"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule registered"
+msgstr "已保存预约"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Cancel schedule"
+msgstr "取消预约"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned on now"
+msgstr "已立即开启"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "auto off after %(dur)s"
+msgstr "%(dur)s 后自动关闭"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turn off now"
+msgstr "立即关闭"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule canceled"
+msgstr "已取消预约"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned off"
+msgstr "已关闭"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule status"
+msgstr "预约状态"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Elapsed"
+msgstr "已用"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No schedule"
+msgstr "无预约"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Overlaps an existing schedule"
+msgstr "与现有预约重叠"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "Overlaps an existing schedule — turns off at %(time)s"
+msgstr "与现有预约重叠 — 将在 %(time)s 一起关闭"

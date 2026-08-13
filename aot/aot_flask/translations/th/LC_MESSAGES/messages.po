@@ -13173,7 +13173,7 @@ msgstr "สำหรับข้อมูลเพิ่มเติม"
 #: aot_flask/templates/pages/camera_options/raspistill.html:73
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
 msgid "Sun"
-msgstr "แดด"
+msgstr "อา."
 
 #: aot_flask/templates/pages/camera_options/libcamera.html:82
 #: aot_flask/templates/pages/camera_options/raspistill.html:74
@@ -25700,3 +25700,221 @@ msgstr "ช่วงเวลารีเฟรชสถานะเอาต์
 #: widgets/AoT_map.py
 msgid "How often output on/off status is refreshed on the map."
 msgstr "ความถี่ในการรีเฟรชสถานะเปิด/ปิดของเอาต์พุตบนแผนที่"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d"
+msgstr "%d/%m/%Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%Y-%m-%d %H:%M:%S"
+msgstr "%d/%m/%Y %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%b '%y"
+msgstr "%b %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%e. %b"
+msgstr "%e %b"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Apr"
+msgstr "เม.ย."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "April"
+msgstr "เมษายน"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Aug"
+msgstr "ส.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "August"
+msgstr "สิงหาคม"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Dec"
+msgstr "ธ.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "December"
+msgstr "ธันวาคม"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Feb"
+msgstr "ก.พ."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "February"
+msgstr "กุมภาพันธ์"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Friday"
+msgstr "วันศุกร์"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jan"
+msgstr "ม.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "January"
+msgstr "มกราคม"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jul"
+msgstr "ก.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "July"
+msgstr "กรกฎาคม"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jun"
+msgstr "มิ.ย."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "June"
+msgstr "มิถุนายน"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Mar"
+msgstr "มี.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "March"
+msgstr "มีนาคม"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "May"
+msgstr "พ.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Monday"
+msgstr "วันจันทร์"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Nov"
+msgstr "พ.ย."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "November"
+msgstr "พฤศจิกายน"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Oct"
+msgstr "ต.ค."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "October"
+msgstr "ตุลาคม"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Saturday"
+msgstr "วันเสาร์"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sep"
+msgstr "ก.ย."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "September"
+msgstr "กันยายน"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sunday"
+msgstr "วันอาทิตย์"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Thursday"
+msgstr "วันพฤหัสบดี"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Tuesday"
+msgstr "วันอังคาร"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Wednesday"
+msgstr "วันพุธ"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M"
+msgstr "%a %e %b %H:%M"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S"
+msgstr "%a %e %b %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S.%L"
+msgstr "%a %e %b %H:%M:%S.%L"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %Y"
+msgstr "%a %e %b %Y"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e"
+msgstr "%a %e %b"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Run time"
+msgstr "ระยะเวลาทำงาน"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "immediately"
+msgstr "ทันที"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "no auto off"
+msgstr "ไม่ปิดอัตโนมัติ"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule registered"
+msgstr "บันทึกการตั้งเวลาแล้ว"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Cancel schedule"
+msgstr "ยกเลิกการตั้งเวลา"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned on now"
+msgstr "เปิดแล้วเดี๋ยวนี้"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "auto off after %(dur)s"
+msgstr "ปิดอัตโนมัติหลัง %(dur)s"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turn off now"
+msgstr "ปิดเดี๋ยวนี้"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule canceled"
+msgstr "ยกเลิกการตั้งเวลาแล้ว"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned off"
+msgstr "ปิดแล้ว"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule status"
+msgstr "สถานะการตั้งเวลา"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Elapsed"
+msgstr "ผ่านไป"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No schedule"
+msgstr "ไม่มีการตั้งเวลา"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Overlaps an existing schedule"
+msgstr "ทับซ้อนกับการตั้งเวลาที่มีอยู่"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "Overlaps an existing schedule — turns off at %(time)s"
+msgstr "ทับซ้อนกับการตั้งเวลาที่มีอยู่ — จะปิดเวลา %(time)s"

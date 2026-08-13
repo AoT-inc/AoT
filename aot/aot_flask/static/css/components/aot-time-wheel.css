@@ -76,4 +76,10 @@ body.aot-wheel-lock{ overflow:hidden !important; }
   border-radius:8px;
 }
 .aot-wheel-actions{ display:flex; gap:8px; margin-top:12px; }
+
+/* 휠 두 개를 나란히 (예: 시작 시각 | 작동 시간). 세로로 쌓으면 180px 짜리 휠이
+   둘이라 공용 중앙 모달(height:min(80vh,760px), overflow:hidden) 안에서 아래쪽
+   버튼이 잘린다. 각 칸은 min-width:0 이라야 좁은 화면에서 휠이 넘치지 않는다. */
+.aot-wheel-pair{ display:flex; gap:12px; align-items:flex-start; }
+.aot-wheel-pair > *{ flex:1 1 0; min-width:0; }
 .aot-wheel-actions .btn.aot-pill-btn{ flex:1; }

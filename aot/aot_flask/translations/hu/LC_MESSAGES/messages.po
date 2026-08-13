@@ -13419,9 +13419,8 @@ msgstr ""
 #: aot_flask/templates/pages/camera_options/libcamera.html:81
 #: aot_flask/templates/pages/camera_options/raspistill.html:73
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Sun"
-msgstr "Sunset"
+msgstr "V"
 
 #: aot_flask/templates/pages/camera_options/libcamera.html:82
 #: aot_flask/templates/pages/camera_options/raspistill.html:74
@@ -18878,33 +18877,28 @@ msgid "Activate or deactivate this sequence"
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Mon"
-msgstr "On"
+msgstr "H"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Tue"
-msgstr "Hue"
+msgstr "K"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Wed"
-msgstr "Web"
+msgstr "Sze"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Thu"
-msgstr "Hue"
+msgstr "Cs"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
 msgid "Fri"
-msgstr ""
+msgstr "P"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:21
-#, fuzzy
 msgid "Sat"
-msgstr "State"
+msgstr "Szo"
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:27
 msgid "Run the sequence on this weekday. Unchecked days are skipped."
@@ -25927,3 +25921,217 @@ msgstr "Kimeneti állapot frissítési időköze (másodperc)"
 #: widgets/AoT_map.py
 msgid "How often output on/off status is refreshed on the map."
 msgstr "Milyen gyakran frissül a térképen a kimenet be/ki állapota."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%b '%y"
+msgstr "%Y. %b"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%e. %b"
+msgstr "%b %e."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Apr"
+msgstr "ápr."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "April"
+msgstr "április"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Aug"
+msgstr "aug."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "August"
+msgstr "augusztus"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Dec"
+msgstr "dec."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "December"
+msgstr "december"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Feb"
+msgstr "febr."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "February"
+msgstr "február"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Friday"
+msgstr "péntek"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jan"
+msgstr "jan."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "January"
+msgstr "január"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jul"
+msgstr "júl."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "July"
+msgstr "július"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Jun"
+msgstr "jún."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "June"
+msgstr "június"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Mar"
+msgstr "márc."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "March"
+msgstr "március"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "May"
+msgstr "máj."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Monday"
+msgstr "hétfő"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Nov"
+msgstr "nov."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "November"
+msgstr "november"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Oct"
+msgstr "okt."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "October"
+msgstr "október"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Saturday"
+msgstr "szombat"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sep"
+msgstr "szept."
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "September"
+msgstr "szeptember"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Sunday"
+msgstr "vasárnap"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Thursday"
+msgstr "csütörtök"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Tuesday"
+msgstr "kedd"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "Wednesday"
+msgstr "szerda"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M"
+msgstr "%b %e., %a %H:%M"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S"
+msgstr "%b %e., %a %H:%M:%S"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %H:%M:%S.%L"
+msgstr "%b %e., %a %H:%M:%S.%L"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e, %Y"
+msgstr "%Y. %b %e., %a"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%B %Y"
+msgstr "%Y. %B"
+
+#: aot_flask/static/js/common/aot-chart-core.js:1
+msgid "%A, %b %e"
+msgstr "%b %e., %a"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Run time"
+msgstr "Működési idő"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "immediately"
+msgstr "azonnal"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "no auto off"
+msgstr "nincs automatikus kikapcsolás"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule registered"
+msgstr "Időzítés mentve"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Cancel schedule"
+msgstr "Időzítés törlése"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned on now"
+msgstr "Most bekapcsolva"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "auto off after %(dur)s"
+msgstr "automatikus kikapcsolás %(dur)s múlva"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turn off now"
+msgstr "Kikapcsolás most"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule canceled"
+msgstr "Időzítés törölve"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Turned off"
+msgstr "Kikapcsolva"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Schedule status"
+msgstr "Ütemezés állapota"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Elapsed"
+msgstr "Eltelt"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No schedule"
+msgstr "Nincs ütemezés"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Overlaps an existing schedule"
+msgstr "Átfedi egy meglévő ütemezést"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+#, python-format
+msgid "Overlaps an existing schedule — turns off at %(time)s"
+msgstr "Átfedi egy meglévő ütemezést — %(time)s-kor kikapcsol"

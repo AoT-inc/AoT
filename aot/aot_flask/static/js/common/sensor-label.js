@@ -603,6 +603,27 @@
   var _PALETTE_LIGHT = ['#FEA60B','#8BC1C1','#93B261','#F4D624','#DF5353','#008DDE','#7cb5ec','#434348','#90ed7d','#f7a35c','#8085e9','#f15c80','#e4d354','#2b908f','#f45b5b','#91e8e1'];
   var _PALETTE_DARK  = ['#FEA60B','#8BC1C1','#93B261','#F4D624','#DF5353','#008DDE','#2b908f','#90ee7e','#f45b5b','#7798BF','#aaeeee','#ff0066','#eeaaee','#55BF3B','#DF5353','#7798BF','#aaeeee'];
 
+  // ─── 플롯 높이 고정 ────────────────────────────────────────────────────────
+  // 그래프 영역(플롯)의 높이는 시리즈 수·모달 폭과 무관하게 늘 같아야 한다.
+  // 값을 눈으로 비교하는 화면이라 세로 축척이 열 때마다 달라지면 못 읽는다.
+  var PLOT_H = 190;              // 센서 이력 차트 플롯 높이(px)
+  var PLOT_H_OUTPUT = 130;       // 장치 작동 이력 차트 플롯 높이(px)
+  var PLOT_CHROME_GUESS = 60;    // 첫 페인트용 어림값(레전드+x축 라벨)
+
+  function _lockPlot(chart, plotH) {
+    if (window.AoTChart && window.AoTChart.lockPlotHeight) {
+      window.AoTChart.lockPlotHeight(chart, plotH);
+    }
+  }
+
+  // Highstock 분할 툴팁의 시각 머리글은 기본이 x축 **아래**라 레전드·아래 컨텐츠를
+  // 가린다. 플롯 위쪽으로 올린다 (자세한 배경은 aot-chart-core 쪽 주석).
+  function _headerTop(chart) {
+    if (window.AoTChart && window.AoTChart.splitTooltipHeaderTop) {
+      window.AoTChart.splitTooltipHeaderTop(chart);
+    }
+  }
+
   function _chartColors() {
     var isDark = document.documentElement.classList.contains('dark') ||
                  document.body.classList.contains('dark') ||
@@ -618,13 +639,16 @@
   //
   //   containerEl : target element (content replaced)
   //   sensors     : runtime fitting_sensors[] entries ({device_id, name, channels[]})
-  //   opts        : { hours = 24, height = width*0.62 (180..320 clamp),
-  //                   heightScale = 1 (그 기본 높이의 배수) }
+  //   opts        : { hours = 24, plotHeight = PLOT_H, heightScale = 1 }
   //
-  // heightScale: 레전드는 차트 높이 **안에서** 자리를 먹으므로, 채널이 많은
-  // 센서일수록 플롯 영역이 눌린다. 센서 전용 모달처럼 그래프가 주인공인
-  // 호스트는 이 배수로 플롯 영역을 넓힌다. (구역/시설 모달은 액추에이터 목록과
-  // 공간을 나눠 써야 하므로 기본값 1 을 유지한다.)
+  // **플롯 높이는 고정이다.** 예전에는 전체 높이를 폭에서 뽑고(width*0.62,
+  // 180~320 클램프) 그 안에서 레전드가 자리를 먹어, 같은 화면인데도 그래프가
+  // 108px~230px 로 두 배 넘게 오락가락했다 — 채널이 많은 센서일수록, 그리고
+  // 모달이 좁을수록 작아졌다. 이제 플롯 높이를 목표로 잡고 레전드가 커지면
+  // 카드가 그만큼 길어진다(AoTChart.lockPlotHeight).
+  //
+  // heightScale: 그래프가 주인공인 호스트(센서 전용 모달)가 플롯을 키우는 배수.
+  // 구역/시설 모달은 액추에이터 목록과 공간을 나눠 쓰므로 기본값 1 을 유지한다.
   function renderHistory(containerEl, sensors, opts) {
     opts = opts || {};
     containerEl.innerHTML =
@@ -710,10 +734,9 @@
           window.AoTChart.applyGlobalDefaults();
         }
         requestAnimationFrame(function () {
-          var w = chartEl.offsetWidth || 300;
-          var h = opts.height ||
-                  Math.round(Math.max(180, Math.min(320, Math.round(w * 0.62))) *
-                             (opts.heightScale || 1));
+          var plotH = Math.round((opts.plotHeight || PLOT_H) * (opts.heightScale || 1));
+          // 첫 페인트용 어림값. render 에서 실측해 정확히 맞춘다.
+          var h = plotH + PLOT_CHROME_GUESS;
           var yAxes = [];
           for (var a = 0; a < axisCount; a++) {
             yAxes.push({ title: { text: null }, labels: { enabled: false },
@@ -724,7 +747,13 @@
             // 오버레이(시리즈 추가)가 접근한다. 기존 동작 불변.
             containerEl._aotChart = window.Highcharts.stockChart(chartEl, {
               colors: _chartColors(),
-              chart: { height: h, spacing: [4, 4, 4, 4] },
+              chart: {
+                height: h,
+                spacing: [4, 4, 4, 4],
+                events: {
+                  render: function () { _lockPlot(this, plotH); }
+                }
+              },
               rangeSelector: { enabled: false },
               navigator: { enabled: false },
               scrollbar: { enabled: false },
@@ -742,8 +771,12 @@
                   if (lastVal == null) return this.name;
                   var dec = (this.options.custom && this.options.custom.aotDecimals != null)
                     ? this.options.custom.aotDecimals : 2;
-                  return this.name + ': <b>' +
-                    window.Highcharts.numberFormat(lastVal, dec) + unit + '</b>';
+                  // chart-core 가 없는 상황에서도 범례가 죽으면 안 된다 —
+                  // labelFormatter 가 던지면 차트 전체가 안 그려진다.
+                  var shown = (window.AoTChart && window.AoTChart.formatSeriesValue)
+                    ? window.AoTChart.formatSeriesValue(lastVal, unit, dec)
+                    : window.Highcharts.numberFormat(lastVal, dec) + unit;
+                  return this.name + ': <b>' + shown + '</b>';
                 },
                 itemStyle: { fontSize: '1em' },   // AoT_graph 기본값(1.0em)과 동일
                 margin: 4, padding: 2
@@ -753,6 +786,8 @@
               tooltip: { shared: true, valueDecimals: 2 },
               series: series
             });
+            // 시각 머리글을 x축 아래에서 플롯 위쪽으로 (레전드를 가리지 않게)
+            _headerTop(containerEl._aotChart);
             statusEl.style.display = 'none';
           } catch (e) {
             statusEl.textContent = 'chart error: ' + e.message;
@@ -770,7 +805,7 @@
   //   containerEl : 대상 엘리먼트 (내용 교체)
   //   hist        : /api/geo/output/<uuid>/history 응답 {series_type, points[[sec,v]]}
   //   name        : 시리즈 이름 (장치명)
-  //   opts        : { height }
+  //   opts        : { plotHeight = PLOT_H_OUTPUT }  — 플롯 높이는 폭과 무관하게 고정
   function renderOutputHistory(containerEl, hist, name, opts) {
     opts = opts || {};
     var isOnOff = hist && hist.series_type === 'onoff';
@@ -794,11 +829,17 @@
         window.AoTChart.applyGlobalDefaults();
       }
       requestAnimationFrame(function () {
-        var w = containerEl.offsetWidth || 280;
-        var h = opts.height || Math.max(120, Math.min(200, Math.round(w * 0.46)));
+        var plotH = opts.plotHeight || PLOT_H_OUTPUT;
+        var h = plotH + PLOT_CHROME_GUESS;
         try {
           containerEl._aotChart = window.Highcharts.stockChart(containerEl, {
-            chart: { height: h, spacing: [4, 4, 4, 4] },
+            chart: {
+              height: h,
+              spacing: [4, 4, 4, 4],
+              events: {
+                render: function () { _lockPlot(this, plotH); }
+              }
+            },
             rangeSelector: { enabled: false },
             navigator: { enabled: false },
             scrollbar: { enabled: false },
@@ -829,6 +870,7 @@
               color: '#4a90d9'
             }]
           });
+          _headerTop(containerEl._aotChart);
         } catch (e) {}
       });
     });

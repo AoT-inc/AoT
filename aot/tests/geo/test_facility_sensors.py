@@ -418,3 +418,121 @@ class TestComputeSpatialInternal:
         assert r['rejected_count'] == 0
         assert r['T'] == pytest.approx(35.0)  # 평균 — 분리 불가
         assert r['T_max'] == pytest.approx(45.0)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 유효 수명(max_age)을 장치 주기로 정하기 — 표시 vs 제어
+#
+# Input.period 는 15초~86400초(1일)로 제각각인데 예전에는 고정 300초였다. 그래서
+# 하루 한 번 재는 센서는 **정상인데도 항상** 300초를 넘겨, 라벨은 상시 흐리게
+# 표시되고 indoor/outdoor 집계에서는 값이 통째로 빠졌다.
+#
+# 반대로 제어(env_coordinator)가 넘기는 max_age 는 "이보다 오래된 값으로는 작동하지
+# 않는다"는 안전 결정이라 주기로 넓혀서는 안 된다. 이 구분이 이 파일의 핵심 계약이다.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestPeriodAwareMaxAge:
+
+    def test_max_age_for_matrix(self):
+        """_max_age_for 가 유일한 판정 지점이다."""
+        from aot.aot_flask.geo.facility_sensors import (
+            _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
+
+        # 표시 경로(None): 하한 DEFAULT_MAX_AGE_S 에서 시작해 주기×배수로 넓힌다
+        assert _max_age_for(None, 15.0) == DEFAULT_MAX_AGE_S      # 짧은 주기는 넓히지 않음
+        assert _max_age_for(None, 300.0) == 300 * STALE_PERIOD_FACTOR
+        assert _max_age_for(None, 86400.0) == 86400 * STALE_PERIOD_FACTOR
+        # 주기를 모르면 하한 (비 Input 이거나 DB 를 못 읽는 경우)
+        assert _max_age_for(None, None) == DEFAULT_MAX_AGE_S
+        assert _max_age_for(None, 0) == DEFAULT_MAX_AGE_S
+
+        # 제어가 명시한 값은 절대 넓히지 않는다 — 안전 기준이다
+        assert _max_age_for(300, 86400.0) == 300
+        assert _max_age_for(60, 300.0) == 60
+
+    def _run_facility(self, *, period, age_s, max_age):
+        """max_age 를 **존중하는** fake 로 read_facility_sensors 를 돌린다.
+
+        이 파일의 다른 fake 들은 max_age 를 무시하므로 임계값 자체를 검증하지 못한다.
+        """
+        import time
+        from aot.aot_flask.geo import facility_sensors as fs
+        ts = time.time() - age_s
+
+        def fake_get_last(device_id, measurement_id, max_age=None):
+            if max_age is not None and age_s > max_age:
+                return [None, None]
+            return [ts, 21.5]
+
+        with patch.object(fs, 'get_last_measurement', side_effect=fake_get_last), \
+             patch.object(fs, '_period_by_device', return_value={'dev-1': period}):
+            return fs.read_facility_sensors([_binding()], max_age=max_age)
+
+    def test_display_accepts_value_older_than_300_when_period_is_long(self):
+        """주기 600초 장치의 500초 된 값은 정상이다 — 예전에는 통째로 빠졌다."""
+        r = self._run_facility(period=600.0, age_s=500, max_age=None)
+        assert r['sensors'][0]['valid'] is True
+        assert r['sensors'][0]['stale'] is False
+        assert r['indoor']['temp_c'] == pytest.approx(21.5)   # 가중평균에 포함됨
+        assert r['degraded'] is False
+
+    def test_control_still_refuses_the_same_value(self):
+        """제어가 300 을 명시하면 같은 값을 거부한다(안전 기준 불변)."""
+        r = self._run_facility(period=600.0, age_s=500, max_age=300)
+        assert r['sensors'][0]['valid'] is False
+        assert r['sensors'][0]['stale'] is True               # 데이터는 있으나 기준 초과
+        assert r['indoor']['temp_c'] is None                  # 집계에서 제외
+        assert r['degraded'] is True
+
+    def test_daily_sensor_is_normal_on_display(self):
+        """하루 1회 센서의 20시간 된 값 — 표시에서는 정상."""
+        r = self._run_facility(period=86400.0, age_s=72000, max_age=None)
+        assert r['sensors'][0]['valid'] is True
+        assert r['indoor']['temp_c'] == pytest.approx(21.5)
+
+    def test_short_period_device_is_not_widened(self):
+        """주기 15초 장치는 하한(300초)까지만 — 넓히지 않는다."""
+        r = self._run_facility(period=15.0, age_s=400, max_age=None)
+        assert r['sensors'][0]['valid'] is False
+
+    def test_falls_back_to_floor_without_db(self):
+        """주기 조회가 실패(DB·앱 컨텍스트 없음)해도 죽지 않고 하한으로 판정한다."""
+        import time
+        from aot.aot_flask.geo import facility_sensors as fs
+        ts = time.time() - 400
+
+        def fake_get_last(device_id, measurement_id, max_age=None):
+            if max_age is not None and 400 > max_age:
+                return [None, None]
+            return [ts, 21.5]
+
+        # _period_by_device 를 패치하지 않는다 — 실제로 DB 가 없어 빈 dict 가 나온다.
+        with patch.object(fs, 'get_last_measurement', side_effect=fake_get_last):
+            r = fs.read_facility_sensors([_binding()])
+        assert r['sensors'][0]['valid'] is False   # 하한 300 < 400
+        assert r['sensors'][0]['stale'] is True
+
+    def test_fitting_sensors_also_derive(self):
+        """라벨 경로(read_fitting_sensors)도 같은 판정을 쓴다.
+
+        _get_last 는 함수 안에서 aot.utils.influx 를 직접 import 하므로 패치 지점이
+        모듈 전역(get_last_measurement)이 아니다.
+        """
+        import time
+        from aot.aot_flask.geo import facility_sensors as fs
+        ts = time.time() - 500
+        sensors = [{'fitting_id': 'f1', 'name': 'F1', 'input_uuid': 'dev-1',
+                    'measurement_id': 'dm-1', 'measurement_type': 'temperature'}]
+
+        def fake_get_last(device_id, measurement_id, max_age=None):
+            if max_age is not None and 500 > max_age:
+                return [None, None]
+            return [ts, 21.5]
+
+        with patch('aot.utils.influx.get_last_measurement', side_effect=fake_get_last), \
+             patch.object(fs, '_period_by_device', return_value={'dev-1': 600.0}), \
+             patch.object(fs, 'channel_meta_for_dm', return_value={}):
+            out = fs.read_fitting_sensors(sensors)
+        ch = out[0]['channels'][0]
+        assert ch['valid'] is True and ch['stale'] is False
+        assert ch['value'] == pytest.approx(21.5)

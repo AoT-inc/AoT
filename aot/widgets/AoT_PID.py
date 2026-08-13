@@ -514,7 +514,7 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
 {% endif %}
 {% if "aot_chart_core" not in dashboard_dict %}
-  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=2"></script>
+  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=20260813i"></script>
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
 {% if current_user.theme in dark_themes %}
@@ -1080,7 +1080,10 @@ function sendPIDCommandAoT(cmd) {
 function printPidValueAoT(data, nm, wid, decs) {
   let entry = data[nm];
   if(entry && Array.isArray(entry) && entry[1] != null) {
-    let val = parseFloat(entry[1]).toFixed(decs);
+    // duration_time 은 출력이 켜져 있던 '초' 다 — 숫자로 찍으면 사람이 암산해야 한다.
+    let val = (nm === "duration_time")
+      ? AoTChart.formatDuration(parseFloat(entry[1]))
+      : parseFloat(entry[1]).toFixed(decs);
     $("#"+nm+"-"+wid).text(val);
     if(entry[0]) {
       let tsEl = document.getElementById(nm + "-" + wid + "-timestamp");
@@ -1501,12 +1504,10 @@ widget['{{each_widget.unique_id}}'] = new Highcharts.StockChart({
     shared: true,
     useHTML: true,
     formatter: function () {
-      let s = '<b>' + Highcharts.dateFormat('%B %e, %Y %H:%M:%S', this.x) + '</b>';
+      let s = '<b>' + AoTChart.formatDateTime(this.x) + '</b>';
       $.each(this.points, function (i, point) {
         s += '<br/><span style="color:' + point.color + '">\\u25CF</span> '
-           + point.series.name + ': '
-           + Highcharts.numberFormat(point.y, point.series.tooltipOptions.valueDecimals)
-           + ' ' + (point.series.tooltipOptions.valueSuffix || '');
+           + point.series.name + ': ' + AoTChart.formatPointValue(point);
       });
       return s;
     }

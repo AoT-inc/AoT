@@ -734,9 +734,24 @@ def _job_event_listener(event):
                 AISchedulerService.update_job_state(event.job_id, JOB_STATE_FAILED,
                                                     execution_result=str(event.exception))
             else:
-                logger.debug(f"Job {event.job_id} completed")
-                AISchedulerService.update_job_state(event.job_id, JOB_STATE_COMPLETED,
-                                                    execution_result=str(event.retval))
+                # 예외가 없다고 실행된 것이 아니다. MCP 도구는 승인 게이트에 걸리면
+                # 예외 대신 {"status":"pending_approval", ... "It was NOT executed"}
+                # 를 정상 반환한다. 그걸 그대로 COMPLETED 로 적으면 **한 번도 켜지지
+                # 않은 예약이 성공으로 기록**된다 — 2026-08-13 지도 위젯 예약 6건이
+                # 전부 정시에 트리거되고도 장치를 켜지 못한 채 COMPLETED 였다.
+                # 승인 큐에는 아무도 답할 수 없는 pending 확인요청만 쌓였다.
+                _rv = event.retval
+                _not_run = AISchedulerService._retval_indicates_not_executed(_rv)
+                if _not_run:
+                    logger.error("Job %s fired on time but did NOT execute: %s",
+                                 event.job_id, _not_run)
+                    AISchedulerService.update_job_state(
+                        event.job_id, JOB_STATE_FAILED,
+                        execution_result=f"NOT EXECUTED: {_not_run} | {_rv}")
+                else:
+                    logger.debug(f"Job {event.job_id} completed")
+                    AISchedulerService.update_job_state(event.job_id, JOB_STATE_COMPLETED,
+                                                        execution_result=str(_rv))
         except Exception as e:
             logger.exception(f"Error in job event listener for {event.job_id}: {e}")
 
@@ -751,6 +766,34 @@ class AISchedulerService:
     @stability stable
     @dependency SchedulerJobMeta
     """
+
+    # 도구가 "실행하지 않았다" 고 말하는 응답을 판별한다.
+    #
+    # 예외를 던지지 않는 미실행이 여러 형태로 온다:
+    #   - 승인 게이트: {"status":"pending_approval", "reason_code":"awaiting_user", ...}
+    #   - 내부 오류를 감싼 성공: {"status":"success","result":{... "status":"error" ...}}
+    # MCP 응답은 result.content[].text 안에 JSON 문자열이 한 겹 더 들어 있어서
+    # 상위 status 만 보면 전부 success 로 보인다. 그래서 문자열까지 훑는다 —
+    # 구조가 바뀌어도 조용히 통과하지 않는 쪽을 택한다(과소탐지보다 과대탐지).
+    _NOT_RUN_MARKERS = (
+        'pending_approval', 'awaiting_user', 'was NOT executed',
+        'LEGACY_BLOCKED', 'requires_approval', 'not_executed',
+    )
+
+    @staticmethod
+    def _retval_indicates_not_executed(retval):
+        """미실행로 보이면 그 근거 문자열을, 정상 실행이면 None 을 돌려준다."""
+        if retval is None:
+            return None
+        if isinstance(retval, dict):
+            st = str(retval.get('status', '')).lower()
+            if st in ('error', 'failed', 'blocked', 'pending_approval'):
+                return f"status={retval.get('status')}"
+        blob = str(retval)
+        for mk in AISchedulerService._NOT_RUN_MARKERS:
+            if mk.lower() in blob.lower():
+                return mk
+        return None
 
     @staticmethod
     def init_app(app):

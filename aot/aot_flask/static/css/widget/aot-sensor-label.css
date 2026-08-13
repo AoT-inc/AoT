@@ -1081,6 +1081,22 @@
    2행에서 강조할 것은 "지금 돌고 있다" 하나뿐이라 규칙이 둘일 이유가 없다. */
 .aot-act-meta-dim { color: var(--aot-color-text-muted, var(--aot-color-text-secondary)); }
 
+/* 타이머 시간 ↔ 예약 시간 구분선. 두 시각이 붙어 있으면 하나의 긴 숫자처럼
+   읽힌다 — 사이를 끊고 양쪽에 여백을 준다. 예약 시각 자체는 .aot-act-time 을
+   써서 타이머 표시와 같은 크기·색·자간(tabular-nums)으로 맞춘다. */
+.aot-act-meta-sep {
+  padding: 0 6px;
+  color: var(--aot-color-text-muted, var(--aot-color-text-secondary));
+}
+
+/* 예약 겹침 경고 한 줄. 막지 않고 알리기만 하므로(특수한 사정으로 일부러 겹치게
+   두는 경우가 있다) 경고색으로만 구분한다 — 공용 --aot-color-warning 사용. */
+.aot-sched-warn {
+  color: var(--aot-color-warning, #ff9f43);
+  text-align: center;
+  margin: 0 0 .4rem;
+}
+
 /* ── 빈 상태 한 줄 (계층 공용) ────────────────────────────────────────────
    "장치 없음"/"기능 없음"/"작성된 노트 없음" 이 서로 다른 마크업이던 것을
    하나로. 기존 클래스도 같은 생김새로 맞춰 둔다. */

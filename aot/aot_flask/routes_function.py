@@ -60,7 +60,8 @@ from aot.aot_flask.forms import (forms_action, forms_conditional,
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import (utils_action, utils_conditional,
                                        utils_controller, utils_function,
-                                       utils_general, utils_pid, utils_trigger)
+                                       utils_general, utils_http, utils_pid,
+                                       utils_trigger)
 from aot.aot_flask.geo.device_membership import map_for_device
 from aot.aot_flask.utils.utils_map_config import ensure_map_config
 from aot.aot_flask.utils.utils_general import generate_form_action_list
@@ -1466,6 +1467,11 @@ def function_status_activated(unique_id):
             except Exception as e:
                 logger.error(f"Error polyfilling device details: {e}")
 
+        # 시퀀스/함수 상태 위젯이 5초마다 다시 받는데 실측 5,734 B 가 폴링 사이에
+        # 그대로다(3회 연속 해시 동일). GET 에만 조건부 응답을 얹는다 — POST 는
+        # 캐시 검증 대상이 아니고, 조건부 응답을 붙이면 의미가 어긋난다.
+        if request.method == 'GET':
+            return utils_http.json_conditional(jsonify(data), request)
         return jsonify(data)
     except Exception as err:
         logger.error("Function Status Error: {}".format(err))

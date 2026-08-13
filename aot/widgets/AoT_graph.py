@@ -489,7 +489,7 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
 {% endif %}
 {% if "aot_chart_core" not in dashboard_dict %}
-  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=2"></script>
+  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=20260813i"></script>
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
 
@@ -1205,7 +1205,7 @@ WIDGET_INFORMATION = {
         labelFormatter: function () {
             let lastVal = this.yData[this.yData.length - 1];
             let unit = this.tooltipOptions.valueSuffix || '';
-            return this.name + ': <b>' + Highcharts.numberFormat(lastVal, 2) + unit + '</b>';
+            return this.name + ': <b>' + AoTChart.formatSeriesValue(lastVal, unit, 2) + '</b>';
         },
         itemStyle: {
             fontSize:'{{widget_options['graph_font_size_em_legend']}}em'
@@ -1333,17 +1333,16 @@ WIDGET_INFORMATION = {
       shared: true,
       useHTML: true,
       formatter: function(){
-        const d = new Date(this.x);
         if (this.point) {
-          return '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds()
+          return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
                + '</b><br/>' + this.series.name
                + '<br/>' + this.point.title
                + '<br/>' + this.point.text;
         }
         else {
-          let s = '<b>' + Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+          let s = '<b>' + AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
           $.each(this.points, function(i, point) {
-              s += '<br/><span style="color:' + point.color + '">&#9679;</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
+              s += '<br/><span style="color:' + point.color + '">&#9679;</span> ' + point.series.name + ': ' + AoTChart.formatPointValue(point);
           });
           return s;
         }

@@ -1175,7 +1175,8 @@ body.modal-open {
 
 /* --- modal-footer: 고정 ---
    min-height: 50px = main-navbar 높이와 동일 */
-.aot-option-modal .modal-footer {
+.aot-option-modal .modal-footer,
+.aot-center-modal .modal-footer {
     flex: 0 0 auto !important;
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -1200,7 +1201,8 @@ body.modal-open {
 /* --- modal-footer 버튼: 기본 AoT btn 과 동일 높이(32px) 유지 ---
    베이스 .btn.aot-pill-btn { height: 32px } 그대로 사용해 다른 페이지
    버튼들과 시각적 일관성 확보. footer min-height 50px = 9px + 32px + 9px */
-.aot-option-modal .modal-footer .btn.aot-pill-btn {
+.aot-option-modal .modal-footer .btn.aot-pill-btn,
+.aot-center-modal .modal-footer .btn.aot-pill-btn {
     flex: 0 0 auto !important;
     min-width: 56px !important;
     font-size: 0.8rem !important;
@@ -1273,7 +1275,8 @@ body.modal-open {
     }
 
     /* 모바일 푸터: 안전 영역 재정의 (상위 룰 padding-bottom override) */
-    .modal.aot-option-modal .modal-footer {
+    .modal.aot-option-modal .modal-footer,
+    .aot-center-modal .modal-footer {
         border-radius: 0 !important;
         padding-bottom: max(9px, env(safe-area-inset-bottom, 9px)) !important;
     }

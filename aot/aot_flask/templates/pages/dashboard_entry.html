@@ -106,9 +106,18 @@
 <script>
   $(document).ready(function () {
     {% if each_widget.graph_type in list_html_files_js_ready_end %}
+    // 뷰포트 게이팅 귀속 구간: 이 안에서 등록되는 setInterval 은 이 위젯의 것으로
+    // 표시되어, 위젯이 화면 밖으로 나가면 함께 멈춘다(aot-poll-visibility.js).
+    // 위젯 21종을 고치지 않으려고 여기 한 곳에 둔다. finally 로 반드시 닫을 것 —
+    // 안 닫으면 이후에 등록되는 모든 인터벌이 이 위젯에 잘못 귀속된다.
+    if (window.AoTPoll && AoTPoll.enterWidget) AoTPoll.enterWidget('{{each_widget.unique_id}}');
+    try {
     // Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_js_ready_end template for {{each_widget.unique_id}} begin
     {% include 'user_templates/{}'.format(list_html_files_js_ready_end[each_widget.graph_type]) %}
     // Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_js_ready_end template for {{each_widget.unique_id}} end
+    } finally {
+      if (window.AoTPoll && AoTPoll.exitWidget) AoTPoll.exitWidget();
+    }
   {% endif %}
   });
 </script>

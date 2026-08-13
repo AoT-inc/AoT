@@ -59,8 +59,12 @@ def get_started_at(device_unique_id, channel_id=0, lookback_days=30):
                 pass
             return None
 
-        # 가장 최근 포인트 선택
-        point_ts, last_val = data[-1]
+        # 가장 최근 포인트 선택 — read_influxdb_list 는 여러 시리즈/테이블 결과를
+        # 이어 붙여 주므로 **시간순을 보장하지 않는다.** data[-1] 을 최신으로
+        # 가정하면 몇 시간 전 ON 시각이 뽑혀, 방금 켠 장치의 '작동 시간' 이
+        # 00:00 이 아니라 1:48:xx 부터 세기 시작한다(2026-08-13 실측).
+        # get_last_duration 도 같은 실수를 갖고 있었다.
+        point_ts, last_val = max(data, key=lambda _p: int(_p[0]))
         point_ts = int(point_ts)
 
         # 값(last_val)이 유효한 Epoch인지 확인
@@ -261,18 +265,20 @@ def get_last_duration(device_unique_id, channel_id=0, lookback_days=30):
                         duration_sec=lookback_sec
                     )
 
-                if data:
-                     data = read_influxdb_list(
-                        unique_id=device_unique_id,
-                        unit='s',
-                        channel=None,
-                        measure=m,
-                        duration_sec=lookback_sec
-                    )
+                # (예전에 여기 `if data:` 로 채널 지정 조회 결과를 버리고 channel=None
+                # 으로 다시 조회해 덮어쓰는 블록이 있었다. 채널을 좁혀 성공한 결과를
+                # 굳이 넓혀 다시 받을 이유가 없다 — 메타데이터가 없는 경우는 바로 위
+                # `if not data` 폴백이 이미 담당한다.)
 
                 if data:
-                    # 가장 최근 값 선택 (timestamp 기준)
-                    last_ts, last_val = data[-1]
+                    # data 는 **시간순이 아니다.** 여러 시리즈/테이블의 결과가 이어
+                    # 붙어 오므로 data[-1] 이 최신이라는 보장이 없다. 실측(2026-08-13,
+                    # v332): [60.0@09:18:44, 114.2@08-10 18:55, 123.6@02:26:51] 이
+                    # 이 순서로 와서 data[-1] 이 3일 전도 아니고 그날 새벽 값이었다.
+                    # 그래서 60초 작동 뒤에도 "마지막 작동 시간 00:02:03(=123초)" 가
+                    # 표시됐고, 새로 작동시켜도 값이 바뀌지 않는 것처럼 보였다.
+                    # timestamp 최대값을 고른다.
+                    last_ts, last_val = max(data, key=lambda _p: int(_p[0]))
                     try:
                         v = int(float(last_val))
                     except Exception:
@@ -336,7 +342,10 @@ def read_latest_started_at(device_unique_id, primary_ch_index, lookback_sec):
                 duration_sec=lookback_sec
             )
             if data:
-                last_ts, last_val = data[-1]
+                # read_influxdb_list 는 시간순을 보장하지 않는다 — data[-1] 을 최신으로
+                # 집으면 몇 시간 전 ON 시각이 뽑혀 '작동 시간' 이 00:00 이 아니라
+                # 1:48:xx 부터 세기 시작한다(2026-08-13 실측).
+                last_ts, last_val = max(data, key=lambda _p: int(_p[0]))
                 candidates.append((int(last_ts), last_val))
 
         if primary_ch_index is not None:

@@ -412,6 +412,10 @@ WIDGET_INFORMATION = {
   <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
   {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
 {% endif %}
+{% if "aot_chart_core" not in dashboard_dict %}
+  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=20260813i"></script>
+  {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
+{% endif %}
 
 {% if current_user.theme in dark_themes %}
   <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js"></script>
@@ -560,6 +564,11 @@ WIDGET_INFORMATION = {
 """,
 
     'widget_dashboard_js': """
+  // 월·요일 이름과 날짜 라벨 서식을 현재 언어로. 색 불투명도는 아래에서 직접
+  // 조정하므로 applyGlobalDefaults() 전체가 아니라 언어 부분만 부른다
+  // (두 번 적용하면 색이 겹쳐 어두워진다).
+  AoTChart.applyLangDefaults();
+
   Highcharts.setOptions({
     global: {
       useUTC: false
@@ -948,7 +957,12 @@ WIDGET_INFORMATION = {
           }
         },
         labels: {
+    {%- if dict_units[each_axis_meas]['unit'] == 's' %}
+          /* 지속시간 축(출력 작동 시간)은 눈금도 HH:MM:SS 로 */
+          formatter: function () { return AoTChart.formatDuration(this.value); },
+    {%- else %}
           format: '{value}',
+    {%- endif %}
           style: {
             fontSize:'{{widget_options['graph_font_size_em_axes']}}em',
             color: 'var(--aot-color-text-secondary, #666666)'
@@ -991,46 +1005,46 @@ WIDGET_INFORMATION = {
       buttons: [{
         count: 1,
         type: 'minute',
-        text: '1m'
+        text: '{{_("1m")}}'
       }, {
         count: 5,
         type: 'minute',
-        text: '5m'
+        text: '{{_("5m")}}'
       }, {
         count: 15,
         type: 'minute',
-        text: '15m'
+        text: '{{_("15m")}}'
       }, {
         count: 30,
         type: 'minute',
-        text: '30m'
+        text: '{{_("30m")}}'
       }, {
         type: 'hour',
         count: 1,
-        text: '1h'
+        text: '{{_("1h")}}'
       }, {
         type: 'hour',
         count: 6,
-        text: '6h'
+        text: '{{_("6h")}}'
       }, {
         type: 'day',
         count: 1,
-        text: '1d'
+        text: '{{_("1d")}}'
       }, {
         type: 'week',
         count: 1,
-        text: '1w'
+        text: '{{_("1w")}}'
       }, {
         type: 'month',
         count: 1,
-        text: '1m'
+        text: '{{_("1mo")}}'
       }, {
         type: 'month',
         count: 3,
-        text: '3m'
+        text: '{{_("3mo")}}'
       }, {
         type: 'all',
-        text: '{{_("Full")}}'
+        text: '{{_("All")}}'
       }],
       selected: 15
     },
@@ -1045,17 +1059,16 @@ WIDGET_INFORMATION = {
       shared: true,
       useHTML: true,
       formatter: function(){
-        const d = new Date(this.x);
         if (this.point) {
-          return '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds()
+          return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
                + '</b><br/>' + this.series.name
                + '<br/>' + this.point.title
                + '<br/>' + this.point.text;
         }
         else {
-          let s = '<b>' + Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+          let s = '<b>' + AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
           $.each(this.points, function(i, point) {
-              s += '<br/><span style="color:' + point.color + '">&#9679;</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
+              s += '<br/><span style="color:' + point.color + '">&#9679;</span> ' + point.series.name + ': ' + AoTChart.formatPointValue(point);
           });
           return s;
         }

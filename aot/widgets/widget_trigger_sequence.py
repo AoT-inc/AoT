@@ -318,8 +318,8 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_head': """
     <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
-    <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css">
-    <script src="/static/js/components/aot-time-wheel.js?v=20260722a"></script>
+    <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
+    <script src="/static/js/components/aot-time-wheel.js?v=20260813d"></script>
     <script src="/static/js/common/aot-output-state.js?v=9"></script>
     <style>
         /* --- Layout --- */

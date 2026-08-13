@@ -35,15 +35,27 @@
         },
 
         /**
-         * Format total seconds into HH:MM:SS
+         * Format total seconds into HH:MM:SS.
+         * 24시간을 넘으면 시 자리가 그대로 늘어난다(25:00:00) — 일 단위로 접으면
+         * 출력 누적 시간처럼 긴 값이 "1d 1h" 같은 다른 표기로 갈라진다.
          */
         formatDuration: function (totalSeconds) {
-            if (totalSeconds < 0 || isNaN(totalSeconds)) totalSeconds = 0;
-            const h = Math.floor(totalSeconds / 3600);
-            const m = Math.floor((totalSeconds % 3600) / 60);
-            const s = Math.floor(totalSeconds % 60);
-            const pad = (n) => (n < 10 ? '0' + n : n);
+            let total = Number(totalSeconds);
+            if (!isFinite(total) || total < 0) total = 0;
+            const h = Math.floor(total / 3600);
+            const m = Math.floor((total % 3600) / 60);
+            const s = Math.floor(total % 60);
+            const pad = (n) => (n < 10 ? '0' + n : String(n));
             return `${pad(h)}:${pad(m)}:${pad(s)}`;
+        },
+
+        /**
+         * 이 단위가 '지속시간(초)' 인가. 측정 단위 키('s')로 판별한다 —
+         * 값이 초라는 사실은 화면마다 다시 알아낼 수 없고, 단위가 유일한 근거다.
+         * 앞뒤 공백은 툴팁 valueSuffix 가 ' s' 처럼 붙여 오기 때문에 흡수한다.
+         */
+        isDurationUnit: function (unit) {
+            return String(unit == null ? '' : unit).trim() === 's';
         },
 
         /**

@@ -35,6 +35,7 @@
    * 시리즈 색상 불투명도 0.6. 여러 위젯이 호출해도 1회만 적용된다.
    */
   AoTChart.applyGlobalDefaults = function () {
+    AoTChart.applyLangDefaults();
     if (AoTChart._defaultsApplied || typeof window.Highcharts === 'undefined') return;
     AoTChart._defaultsApplied = true;
     const Highcharts = window.Highcharts;
@@ -45,6 +46,154 @@
     });
     Highcharts.getOptions().colors = Highcharts.getOptions().colors.map(function (color) {
       return Highcharts.Color(color).setOpacity(0.6).get('rgba');
+    });
+  };
+
+  // ----- 날짜·시간 현지화 -------------------------------------------------
+  //
+  // Highcharts 는 월/요일 이름과 날짜 라벨 서식을 **영어로 하드코딩**해 들고 있다
+  // (lang.months = "January February …", xAxis 일 라벨 = '%e. %b').
+  // 그래서 앱 UI 를 한국어로 써도 그래프 축은 "5. Aug", 툴팁은 "August 5, 2026"
+  // 으로 나왔다. 위젯마다 lang 을 따로 넣으면 화면마다 갈리므로 여기 한 곳에서만
+  // 세운다 — layout 이 심어 주는 전역 번역 함수 window._() 를 그대로 쓴다.
+  //
+  // 서식 문자열(`%e. %b` 등)까지 번역 대상인 이유: 이름만 바꾸면 "5. 8월" 처럼
+  // 어순이 영어로 남는다. 로케일마다 연·월·일 순서가 다르므로 서식 자체가
+  // 번역돼야 한다.
+
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
+                    'Thursday', 'Friday', 'Saturday'];
+  const SHORT_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  /** 전역 번역 함수. 카탈로그가 아직 없으면 영어 원문 그대로. */
+  function t(key) {
+    return (typeof window._ === 'function') ? window._(key) : key;
+  }
+  AoTChart.t = t;
+
+  /**
+   * 번역된 날짜·시간 서식 문자열 (Highcharts strftime 문법).
+   * msgid 는 Highcharts 기본값 그대로라, 번역이 없는 언어는 원래 모습으로 남는다.
+   */
+  AoTChart.dateFormats = function () {
+    return {
+      dayLabel: t('%e. %b'),          // 축: 일/주 눈금
+      monthLabel: t("%b '%y"),        // 축: 월 눈금
+      yearLabel: '%Y',
+      dateTime: t('%Y-%m-%d %H:%M:%S'),   // 툴팁: 전체 일시
+      date: t('%Y-%m-%d'),                // 툴팁: 날짜만
+      time: '%H:%M'
+    };
+  };
+
+  /**
+   * 타임스탬프(ms)를 현지화된 일시 문자열로. opts.ms=true 면 밀리초까지.
+   * 그래프 툴팁의 `Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', x)` 하드코딩을
+   * 대체한다.
+   */
+  AoTChart.formatDateTime = function (timestamp, opts) {
+    opts = opts || {};
+    const f = AoTChart.dateFormats();
+    let out = (typeof window.Highcharts !== 'undefined')
+      ? window.Highcharts.dateFormat(f.dateTime, timestamp)
+      : new Date(timestamp).toISOString();
+    if (opts.ms) {
+      const ms = new Date(timestamp).getMilliseconds();
+      out += '.' + String(ms).padStart(3, '0');
+    }
+    return out;
+  };
+
+  /**
+   * Highcharts 전역 lang·날짜 라벨 서식을 현재 언어로 세운다.
+   * applyGlobalDefaults() 가 자동으로 부르지만, 색 불투명도 조정을 자체적으로
+   * 하는 위젯(widget_graph_synchronous)은 이것만 따로 부른다.
+   */
+  AoTChart.applyLangDefaults = function () {
+    if (AoTChart._langApplied || typeof window.Highcharts === 'undefined') return;
+    AoTChart._langApplied = true;
+
+    // Highcharts 의 `%e`(일)는 한 자리 날짜 앞에 공백을 넣는다. 영어 기본값
+    // '%e. %b' 에서는 라벨 맨 앞이라 눈에 안 띄지만, 날짜가 가운데 오는 언어에서는
+    // "8월  5일" 처럼 사이가 벌어진다. 한 자리 날짜를 안 채우도록 바꾼다 —
+    // 다른 토큰(%d)은 0 을 채우므로 "8월 05일" 이 되어 더 나쁘다.
+    // 차트의 Time 인스턴스(this)를 거쳐야 useUTC/타임존 설정을 따라간다.
+    window.Highcharts.dateFormats.e = function (timestamp) {
+      return this.get('Date', new this.Date(timestamp));
+    };
+
+    const f = AoTChart.dateFormats();
+    // 기본 툴팁용 서식 묶음. msgid 는 Highcharts 기본값 그대로다.
+    const fmt = {
+      ms: t('%A, %b %e, %H:%M:%S.%L'),
+      sec: t('%A, %b %e, %H:%M:%S'),
+      time: t('%A, %b %e, %H:%M'),
+      date: t('%A, %b %e, %Y'),
+      dateShort: t('%A, %b %e'),
+      week: t('Week from %A, %b %e, %Y'),
+      month: t('%B %Y')
+    };
+    window.Highcharts.setOptions({
+      lang: {
+        months: MONTHS.map(t),
+        shortMonths: SHORT_MONTHS.map(t),
+        weekdays: WEEKDAYS.map(t),
+        shortWeekdays: SHORT_WEEKDAYS.map(t),
+        rangeSelectorZoom: t('Zoom'),
+        resetZoom: t('Reset zoom'),
+        resetZoomTitle: t('Reset zoom level 1:1'),
+        loading: t('Loading...'),
+        noData: t('No data to display')
+      },
+      xAxis: {
+        dateTimeLabelFormats: {
+          day: { main: f.dayLabel },
+          week: { main: f.dayLabel },
+          month: { main: f.monthLabel },
+          year: { main: f.yearLabel }
+        }
+      },
+      // 자체 formatter 가 없는 차트(지도 위젯의 베이 모달·팝업 인라인 차트 등)가
+      // 쓰는 기본 툴팁 서식. 이름만 번역하면 "수요일, 8월 13, 14:20" 처럼 어순이
+      // 영어로 남으므로 서식 자체를 번역 대상으로 둔다. msgid 는 Highcharts
+      // 기본값 그대로이고, 조각을 이어붙이면 어순을 바꾼 번역에서 깨지므로
+      // 단위별로 완성된 서식 하나씩을 쓴다.
+      tooltip: {
+        dateTimeLabelFormats: {
+          millisecond: fmt.ms,
+          second: fmt.sec,
+          minute: fmt.time,
+          hour: fmt.time,
+          day: fmt.date,
+          week: fmt.week,
+          month: fmt.month,
+          year: '%Y'
+        }
+      },
+      // **여기까지만 하면 지도 모달 툴팁은 안 바뀐다.** 데이터가 묶인(dataGrouping)
+      // 시리즈는 툴팁 머리글을 tooltip.dateTimeLabelFormats 가 아니라 이쪽에서
+      // 가져온다 — 값도 `[전체, 시작, 끝]` 3원소 배열이라 모양까지 다르다.
+      // 실측으로 확인했다(베이 모달이 5분 묶음이라 "12:30-12:34" 로 나온다).
+      plotOptions: {
+        series: {
+          dataGrouping: {
+            dateTimeLabelFormats: {
+              millisecond: [fmt.ms, fmt.ms, '-%H:%M:%S.%L'],
+              second: [fmt.sec, fmt.sec, '-%H:%M:%S'],
+              minute: [fmt.time, fmt.time, '-%H:%M'],
+              hour: [fmt.time, fmt.time, '-%H:%M'],
+              day: [fmt.date, fmt.dateShort, '-' + fmt.date],
+              week: [fmt.week, fmt.dateShort, '-' + fmt.date],
+              month: [fmt.month, '%B', '-' + fmt.month],
+              year: ['%Y', '%Y', '-%Y']
+            }
+          }
+        }
+      }
     });
   };
 
@@ -83,6 +232,155 @@
     fn();
   };
 
+  // ----- 지속시간(초) 값 표시 ---------------------------------------------
+  //
+  // 출력(액추에이터)의 작동 시간은 `duration_time` 측정으로 단위가 's' 다.
+  // 그대로 찍으면 "4234 s" 라 사람이 읽어서 시:분:초를 암산해야 했다.
+  // 단위가 's' 인 값은 축 눈금·툴팁·범례 어디서든 HH:MM:SS 로 쓴다.
+  //
+  // 초 → HH:MM:SS 의 정본은 aot-time-utils.js(window.AoTTime)다. 여기 폴백을
+  // 두는 이유는 chart-core 가 layout 밖(위젯 head)에서도 실리기 때문이고,
+  // 폴백이 정본과 갈라지지 않도록 서식은 한 줄로만 유지한다.
+
+  AoTChart.isDurationUnit = function (unit) {
+    if (window.AoTTime && window.AoTTime.isDurationUnit) {
+      return window.AoTTime.isDurationUnit(unit);
+    }
+    return String(unit == null ? '' : unit).trim() === 's';
+  };
+
+  AoTChart.formatDuration = function (seconds) {
+    if (window.AoTTime && window.AoTTime.formatDuration) {
+      return window.AoTTime.formatDuration(seconds);
+    }
+    let total = Number(seconds);
+    if (!isFinite(total) || total < 0) total = 0;
+    const pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return pad(Math.floor(total / 3600)) + ':' +
+           pad(Math.floor((total % 3600) / 60)) + ':' +
+           pad(Math.floor(total % 60));
+  };
+
+  /**
+   * 시리즈 값 한 개를 화면 문자열로. 단위가 초면 HH:MM:SS(단위 접미사 없음),
+   * 아니면 기존대로 숫자 + 단위.
+   *   value    : 값
+   *   suffix   : 시리즈의 tooltipOptions.valueSuffix (' °C', ' s' …)
+   *   decimals : 소수 자릿수 (기본 2)
+   */
+  AoTChart.formatSeriesValue = function (value, suffix, decimals) {
+    if (AoTChart.isDurationUnit(suffix)) {
+      return AoTChart.formatDuration(value);
+    }
+    const dec = (decimals == null) ? 2 : decimals;
+    const num = (typeof window.Highcharts !== 'undefined')
+      ? window.Highcharts.numberFormat(value, dec)
+      : String(value);
+    return num + (suffix || '');
+  };
+
+  /** 툴팁/범례에서 포인트 하나를 그대로 넘길 때 쓰는 편의 래퍼. */
+  AoTChart.formatPointValue = function (point, decimals) {
+    const opts = (point.series && point.series.tooltipOptions) || {};
+    const dec = (decimals != null) ? decimals
+              : (opts.valueDecimals != null ? opts.valueDecimals : 2);
+    return AoTChart.formatSeriesValue(point.y, opts.valueSuffix || '', dec);
+  };
+
+  // ----- 플롯 영역 높이 고정 ----------------------------------------------
+  //
+  // Highcharts 의 `chart.height` 는 **전체** 높이라 레전드·x축 라벨이 그 안에서
+  // 자리를 먹는다. 그래서 시리즈가 늘어 레전드가 두세 줄이 되면 정작 그래프가
+  // 눌린다. 지도 위젯 베이 모달 실측: 폭 308px·5시리즈에서 전체 191px 중 플롯이
+  // 108px 뿐이었고, 시리즈가 적고 폭이 넓으면 230px 가까이 나왔다 — 같은 화면을
+  // 열 때마다 그래프 크기가 두 배 넘게 달라져 값을 눈으로 비교할 수 없었다.
+  //
+  // 그래서 **플롯 높이를 목표로 잡고 전체 높이를 거기에 맞춰 늘린다.** 레전드가
+  // 커지면 카드가 그만큼 길어질 뿐, 그래프 자체는 늘 같은 높이다.
+  //
+  // 레전드 높이는 렌더해 봐야 알 수 있으므로(줄바꿈이 폭에 달렸다) 생성 시점에
+  // 계산할 수 없다 — render 이벤트에서 실측하고 그만큼 되키운다.
+
+  const PLOT_LOCK_TOLERANCE = 1;   // 1px 미만 차이는 무시(진동 방지)
+  const PLOT_LOCK_MAX_PASSES = 4;  // 되키움이 레전드 줄바꿈을 다시 바꿀 수 있다
+
+  /**
+   * chart 의 플롯(그리는 영역) 높이를 targetPx 로 고정한다.
+   * chart.events.render 에서 호출한다 — 데이터·레전드·폭이 바뀔 때마다 다시 맞는다.
+   */
+  AoTChart.lockPlotHeight = function (chart, targetPx) {
+    if (!chart || !targetPx || !chart.plotHeight) return;
+    if (chart._aotPlotBusy) return;                     // setSize 재진입 방지
+
+    // 목표나 폭이 바뀌면 되키움 횟수를 새로 센다
+    if (chart._aotPlotTarget !== targetPx || chart._aotPlotWidth !== chart.chartWidth) {
+      chart._aotPlotTarget = targetPx;
+      chart._aotPlotWidth = chart.chartWidth;
+      chart._aotPlotPasses = 0;
+    }
+    const diff = targetPx - chart.plotHeight;
+    if (Math.abs(diff) <= PLOT_LOCK_TOLERANCE) return;
+    if (chart._aotPlotPasses >= PLOT_LOCK_MAX_PASSES) return;
+    chart._aotPlotPasses += 1;
+
+    chart._aotPlotBusy = true;
+    try {
+      chart.setSize(null, chart.chartHeight + diff, false);
+    } finally {
+      chart._aotPlotBusy = false;
+    }
+  };
+
+  // ----- 분할 툴팁의 시각 머리글을 위로 ------------------------------------
+  //
+  // Highstock 은 `tooltip.split` 이 기본 true 다. 시리즈 값은 각 선 옆에 붙고,
+  // 시각(머리글)은 **x축 아래**에 따로 놓인다. 그 자리가 x축 눈금 라벨과 레전드
+  // 위라서, 지도 위젯 모달에서 커서를 올리면 시각 상자가 레전드의 값들을 가렸다.
+  //
+  // Highcharts 가 머리글을 위로 올리는 조건은 `xAxis[0].opposite` 하나뿐인데
+  // (renderSplit 의 headerTop), 그걸 켜면 x축 눈금 라벨까지 위로 옮겨간다.
+  // 그래서 렌더 뒤에 머리글 상자만 플롯 안쪽 위로 옮긴다.
+  //
+  // 자리는 플롯 **안쪽 위**다. 위에 여백을 예약해 보기도 했는데, 툴팁을 띄우지
+  // 않는 대부분의 시간에는 그냥 빈 공간이라 되돌렸다 — 툴팁이 그래프 위를 잠깐
+  // 덮는 것은 정상 동작이고, 문제였던 것은 플롯 **바깥** 컨텐츠를 가리는 쪽이다.
+  //
+  // **anchorY 를 건드리지 말 것.** 말풍선 꼬리 방향은 Highcharts 의 callout 심볼이
+  // anchorY 와 상자의 관계로 정한다 — `anchorY <= 상자top` 이면 위쪽 꼬리,
+  // `anchorY >= 상자bottom` 이면 아래쪽 꼬리다. Highcharts 가 머리글에 넣어 두는
+  // anchorY 는 플롯 중앙이므로, 상자가 아래에 있을 때는 자연히 위를 가리켰다.
+  // 상자를 위로 올리면 그대로 아래를 가리켜야 맞는데, 꼬리를 없앨 셈으로
+  // anchorY 를 상자 안(=상자top)에 넣었더니 '위쪽 꼬리' 조건에 걸려 꼬리가
+  // 그래프 반대쪽을 향했다. 그래서 원래 anchorY 를 **새 y 기준으로 다시 넣는다** —
+  // 심볼이 쓰는 값은 (anchorY - 상자y) 라, y 만 바꾸면 옛 기준으로 굳는다.
+  //
+  // 프로토타입이 아니라 **차트 인스턴스의 refresh 만** 감싼다(다른 차트 영향 없음).
+  // Highcharts 내부(tooltip.tt)가 바뀌면 조용히 원래 자리로 돌아간다.
+
+  AoTChart.splitTooltipHeaderTop = function (chart) {
+    const tip = chart && chart.tooltip;
+    if (!tip || tip._aotHeaderTop) return;
+    if (!tip.options || tip.options.split === false) return;
+    tip._aotHeaderTop = true;
+    const origRefresh = tip.refresh;
+    tip.refresh = function () {
+      origRefresh.apply(this, arguments);
+      try {
+        const header = this.tt;   // renderSplit 이 머리글 라벨을 여기에 둔다
+        if (!header || !header.attr || !header.element) return;
+        // 정말 머리글인지 클래스로 확인한다 — Highcharts 내부가 바뀌어 tt 가
+        // 다른 상자를 가리키게 되면, 엉뚱한 값 상자를 위로 옮겨 버린다.
+        const cls = header.element.getAttribute('class') || '';
+        if (cls.indexOf('highcharts-tooltip-header') === -1) return;
+        const y = chart.plotTop + 2;
+        if (header.attr('y') === y) return;
+        // anchorY 는 Highcharts 가 잡아 둔 값(플롯 중앙)을 그대로 다시 넣는다.
+        // 값은 같지만 새 y 기준으로 다시 계산돼야 꼬리가 아래(그래프 쪽)를 본다.
+        header.attr({ y: y, anchorY: header.anchorY });
+      } catch (e) { /* 위치 보정 실패는 툴팁 자체를 막지 않는다 */ }
+    };
+  };
+
   // ----- 다중 y축 자동 조정 -----------------------------------------------
 
   /**
@@ -117,7 +415,18 @@
       opposite: !!opts.opposite,
       id: opts.id
     };
-    return Object.assign(base, opts.extra || {});
+    const axis = Object.assign(base, opts.extra || {});
+    // 지속시간 축은 눈금도 HH:MM:SS 로. extra 가 labels 를 통째로 갈아끼우는
+    // 호출부(graph-async)가 있어 **병합 뒤에** 얹는다. Highcharts 는 labels.format
+    // 이 있으면 formatter 를 무시하므로 그 자리도 비운다.
+    if (AoTChart.isDurationUnit(opts.unit) || AoTChart.isDurationUnit(opts.id)) {
+      axis.labels = Object.assign({}, axis.labels);
+      delete axis.labels.format;
+      axis.labels.formatter = function () {
+        return AoTChart.formatDuration(this.value);
+      };
+    }
+    return axis;
   };
 
   /**

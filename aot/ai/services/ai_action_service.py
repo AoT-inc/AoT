@@ -979,6 +979,71 @@ class AIActionService:
                 res = daemon.trigger_all_actions(target_id)
                 return {"status": "success", "result": res}
 
+            elif action_type == 'human_device_control':
+                # 사람이 대시보드에서 만든 장치 예약. **MCP 를 타지 않는다.**
+                #
+                # 예전에는 routes_scheduler 가 이걸 mcp_tool_call/operate_device 로
+                # 바꿔 보냈다("모든 물리 제어는 MCP 로" 규칙). 그런데 그 도구는 AI
+                # 호출자를 전제로 MCP **서버** 쪽 승인 게이트를 갖고 있고, 스케줄러가
+                # 넘긴 _approved=True 는 로컬 리졸버까지만 살아남는다
+                # (MCPBridgeService.call_tool 시그니처에 승인 인자가 없다). 결과는
+                # "대시보드에서 예약 → 실행 시각에 사람 승인을 다시 요구 → 그 시각엔
+                # 아무도 없음 → 900초 후 만료" 였다. 2026-08-13 실측: 예약 6건이 전부
+                # 정시에 트리거되고도 장치를 켜지 못한 채 COMPLETED 로 기록됐고,
+                # 승인 큐에는 아무도 답할 수 없는 pending 확인요청만 쌓였다.
+                #
+                # 그래서 대시보드 즉시 버튼과 **같은 경로**(DaemonControl.output_on_off)
+                # 로 직접 실행한다. AI 경로는 건드리지 않는다 — 이 action_type 은
+                # _approved=True 없이는 거부되고, 그 토큰은 사람이 만든 예약이
+                # approve_job 을 거칠 때만 붙는다.
+                if not _approved:
+                    return {"status": "error",
+                            "message": "human_device_control requires an approval token "
+                                       "(_approved=True); it is reachable only through a "
+                                       "human-created schedule."}
+                _st = params.get('state')
+                if _st is None:
+                    return {"status": "error", "message": "Missing state"}
+                if isinstance(_st, str):
+                    _on = _st.strip().lower() in ('on', 'true', '1', 'open')
+                else:
+                    _on = bool(_st)
+                try:
+                    _chan = int(params.get('channel') or 0)
+                except (TypeError, ValueError):
+                    _chan = 0
+                _amount = params.get('duration_sec') or params.get('amount')
+                # 안전 검사는 그대로 거친다(경로만 바뀐 것이지 검증을 뺀 것이 아니다).
+                try:
+                    from aot.ai.services.safety_service import SafetyService
+                    SafetyService.validate(action_type, target_id, params)
+                except ImportError:
+                    pass
+                # DaemonControl 은 모듈 최상단에서 이미 import 돼 있다. 여기서 다시
+                # `from ... import DaemonControl` 하면 그 이름이 **이 함수 전체의
+                # 지역변수**가 되어, 함수 앞부분의 `daemon = DaemonControl(...)` 이
+                # UnboundLocalError 로 죽는다 — execute_action 이 통째로 망가진다
+                # (2026-08-13 실제로 그렇게 깨뜨렸다). 새 이름만 가져온다.
+                from aot.aot_client import daemon_call_failed as _daemon_call_failed
+                _ctrl = DaemonControl()
+                if _amount:
+                    _ret = _ctrl.output_on_off(target_id, _on, output_channel=_chan,
+                                               output_type='sec', amount=float(_amount))
+                else:
+                    _ret = _ctrl.output_on_off(target_id, _on, output_channel=_chan)
+                # 데몬이 확인해 준 것만 성공으로 본다 — output_on_off 는 타임아웃에도
+                # None 이 아니라 (code, msg) 를 돌려주므로 코드를 읽어야 한다.
+                if _ret is None:
+                    return {"status": "error", "message": "daemon unreachable"}
+                _failed, _msg = _daemon_call_failed(_ret)
+                if _failed:
+                    return {"status": "error", "message": f"daemon refused: {_msg}",
+                            "result": str(_ret)}
+                return {"status": "success",
+                        "result": {"device_id": target_id, "channel": _chan,
+                                   "state": "on" if _on else "off",
+                                   "duration_sec": _amount, "daemon": str(_ret)}}
+
             elif action_type in ('activate', 'deactivate'):
                 # Scheduled activate/deactivate of an Input or controller
                 # (Conditional/Trigger/PID/CustomController). Same DB+daemon

@@ -11,6 +11,7 @@
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=12" />
 
   <script type="text/javascript" src="{{ asset('highcharts-stack') }}"></script>
+  <script type="text/javascript" src="/static/js/common/aot-chart-core.js?v=20260813i"></script>
 
   {% if current_user.theme in dark_themes %}
     <script src="/static/js/vendor/user_js/dark-unica-custom.js"></script>
@@ -220,6 +221,9 @@ $('.collapse').on('show.bs.collapse', function(){
 
 {% if graph_info %}
 <script>
+// 월·요일 이름과 날짜 라벨 서식을 현재 언어로 (전역 번역 경유).
+AoTChart.applyLangDefaults();
+
 Highcharts.setOptions({
   global: {
     useUTC: false
@@ -323,15 +327,14 @@ $(document).ready(function() {
         tooltip: {
           shared: true,
           formatter: function(){
-            const d = new Date(this.x);
             if (this.point) {
-              return '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds()
+              return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
                    + '</b><br/>' + this.series.name
                    + '<br/>' + this.point.title
                    + '<br/>' + this.point.text;
             }
             else {
-              let s = '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+              let s = '<b>'+ AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
               $.each(this.points, function(i, point) {
                   s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
               });
@@ -446,15 +449,14 @@ $(document).ready(function() {
       tooltip: {
         shared: true,
         formatter: function(){
-          const d = new Date(this.x);
           if (this.point) {
-            return '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds()
+            return '<b>'+ AoTChart.formatDateTime(this.x, {ms: true})
                  + '</b><br/>' + this.series.name
                  + '<br/>' + this.point.title
                  + '<br/>' + this.point.text;
           }
           else {
-            let s = '<b>'+ Highcharts.dateFormat('%B %e, %Y %H:%M:%S.', this.x) + d.getMilliseconds() + '</b>';
+            let s = '<b>'+ AoTChart.formatDateTime(this.x, {ms: true}) + '</b>';
             $.each(this.points, function(i, point) {
                 s += '<br/><span style="color:' + point.color + '">\u25CF</span> ' + point.series.name + ': ' + Highcharts.numberFormat(point.y, this.series.tooltipOptions.valueDecimals) + ' ' + this.series.tooltipOptions.valueSuffix;
             });

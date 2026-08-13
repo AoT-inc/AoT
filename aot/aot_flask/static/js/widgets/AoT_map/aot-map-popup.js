@@ -458,11 +458,144 @@
 
   // 예약 시각 한 줄 — 시간 칸 옆에 덧붙는다. 시간 칸이 "지금/방금"을 말하고
   // 이쪽이 "다음"을 말한다.
-  function nextRunHtml(rt) {
+  //
+  // rtKey(`<uuid>::<채널>`)를 주면 내용이 없어도 **빈 칸을 남긴다.** 예약을 저장한
+  // 직후 그 자리를 찾아 갈아 끼우려면(refreshOutputScheduleLabel) 자리가 먼저
+  // 있어야 한다 — 예약이 없을 때 아무것도 안 그리면 갱신할 대상이 없어서 모달을
+  // 닫았다 열 때까지 방금 넣은 예약이 안 보인다. 구역 모달은 이미 자기 칸을
+  // 갖고 있으므로 키 없이 부른다(중첩 방지).
+  function nextRunHtml(rt, rtKey) {
     var _tr = function (x) { return (window._ ? window._(x) : x); };
-    if (!rt || !rt.next_schedule) return '';
-    return ' <span class="aot-act-meta-dim">' + _esc(_tr('Next run')) + ' ' +
-           _esc(rt.next_schedule) + '</span>';
+    var inner = (rt && rt.next_schedule)
+      // 타이머 시간 바로 옆이므로 구분선을 세우고 여백을 둔다(.aot-act-meta-sep).
+      // 예약 시각은 .aot-act-time 을 써서 타이머 표시와 같은 크기·색으로 보인다 —
+      // 예전에는 .aot-act-meta-dim 이라 더 작고 흐려서 다른 종류의 정보처럼 읽혔다.
+      ? '<span class="aot-act-meta-sep">|</span>' +
+        '<span class="aot-act-time">' + _esc(_tr('Next run')) + ' ' +
+        _esc(rt.next_schedule) + '</span>'
+      : '';
+    if (!rtKey) return inner;
+    return '<span class="aot-act-rt" data-rt-key="' + _esc(rtKey) + '">' + inner + '</span>';
+  }
+
+  // 한 장치의 런타임(작동 중 여부·예약 목록)을 서버에서 읽는다. 배치 엔드포인트를
+  // 항목 하나로 쓴다 — 예약 상황과 행 라벨이 **같은 조회**에서 나와야 한쪽만
+  // 갱신되는 순간이 없다. force 성 요구이므로 조건부 요청을 걸지 않는다.
+  function _outputRuntime(outputId, channel) {
+    var ch = parseInt(channel || 0, 10) || 0;
+    return fetch('/api/geo/output_runtimes', {
+      method: 'POST', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+      body: JSON.stringify({ items: [{ id: outputId, channel: ch }] })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        return (j && j.ok && j.runtimes) ? j.runtimes[outputId + '::' + ch] : null;
+      })
+      .catch(function () { return null; });
+  }
+
+  // '예약 상황' 블록 — 시작·종료·작동 시간을 한 줄씩. 예약이 여러 건이면 모두
+  // 보여준다(취소 버튼도 각각). 지금 작동 중이면 그 사실을 위에 먼저 놓는다 —
+  // 즉시 실행은 예약 목록에 남지 않으므로 여기 없으면 아무 흔적이 없다.
+  function _schedStateHtml(rt) {
+    var rows = (rt && rt.schedules) || [];
+    var running = !!(rt && rt.elapsed_sec);
+    var html = '<div class="aot-act-group-header">' + _esc(_t('Schedule status')) + '</div>';
+    if (running) {
+      html += '<div class="aot-ov-row"><span>' + _esc(_t('Running')) + '</span><span>' +
+              _esc(_t('Elapsed')) + ' ' + _esc(_fmtDur(rt.elapsed_sec)) + '</span></div>' +
+              '<div class="aot-wheel-actions" style="margin-top:6px">' +
+              '<button type="button" class="btn aot-pill-btn aot-sched-off">' +
+              _esc(_t('Turn off now')) + '</button></div>';
+    }
+    if (!rows.length) {
+      if (!running) {
+        html += '<div class="aot-ov-muted" style="text-align:center">' +
+                _esc(_t('No schedule')) + '</div>';
+      }
+      return html;
+    }
+    rows.forEach(function (s) {
+      html += '<div class="aot-ov-row"><span>' + _esc(_t('Start time')) + '</span><span>' +
+              _esc(s.start || '—') + '</span></div>' +
+              '<div class="aot-ov-row"><span>' + _esc(_t('End time')) + '</span><span>' +
+              _esc(s.end || _t('no auto off')) + '</span></div>' +
+              '<div class="aot-ov-row"><span>' + _esc(_t('Run time')) + '</span><span>' +
+              _esc(s.duration_sec ? _fmtRunLen(s.duration_sec) : '—') + '</span></div>' +
+              '<div class="aot-wheel-actions" style="margin-top:6px">' +
+              '<button type="button" class="btn aot-pill-btn aot-sched-drop" data-job-id="' +
+              _esc(String(s.job_id)) + '">' + _esc(_t('Cancel schedule')) +
+              '</button></div>';
+      // 서버가 상한을 넘겼다고 알려 주면 그 사실을 적는다 — 목록만 잘라 보이면
+      // 화면이 "이게 전부" 라고 거짓말한다.
+      if (s.more) {
+        html += '<div class="aot-ov-muted" style="text-align:center">…</div>';
+      }
+    });
+    return html;
+  }
+
+  // 블록 안의 [예약 취소]·[지금 끄기] 배선. 되돌린 뒤에는 서버를 다시 읽어
+  // 블록을 그린다 — 클라이언트가 결과를 짐작해 그리면 실패한 취소가 성공처럼
+  // 보인다.
+  function _wireSchedState(stateEl, statusEl, outputId, channel, reload) {
+    if (!stateEl || stateEl._wired) return;
+    stateEl._wired = true;
+    stateEl.addEventListener('click', function (e) {
+      var drop = e.target.closest('.aot-sched-drop');
+      var off  = e.target.closest('.aot-sched-off');
+      if (!drop && !off) return;
+      var btn = drop || off;
+      btn.disabled = true;
+      if (statusEl) statusEl.textContent = _t('Saving...');
+      var pr = drop
+        ? fetch('/api/v1/scheduler/jobs/' + encodeURIComponent(btn.dataset.jobId),
+                { method: 'DELETE', headers: { 'X-CSRFToken': _csrf() } })
+        : fetch('/api/geo/output/' + encodeURIComponent(outputId) + '/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+            body: JSON.stringify({ state: false, channel: channel || 0 }) });
+      pr.then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (statusEl) {
+            statusEl.textContent = drop ? _t('Schedule canceled') : _t('Turned off');
+          }
+          refreshOutputScheduleLabel(outputId, channel);
+          return reload();
+        })
+        .catch(function () {
+          btn.disabled = false;
+          if (statusEl) statusEl.textContent = _t('Failed');
+        });
+    });
+  }
+
+  // 예약을 저장·취소한 직후 그 장치의 '다음 예약'·시간 칸을 즉시 갱신한다.
+  // 화면 세 곳(시설 모달·구역 모달·마커 팝업)이 같은 자리를 다르게 렌더하므로
+  // 호출부마다 배선하지 않고 **문서 전체에서 그 키를 가진 칸**을 갱신한다.
+  // 예약 라벨은 서버가 PENDING 잡을 보고 만들므로 저장 직후 값이 곧 정답이다.
+  function refreshOutputScheduleLabel(outputId, channel) {
+    if (!outputId) return Promise.resolve();
+    var ch = parseInt(channel || 0, 10) || 0;
+    var key = outputId + '::' + ch;
+    return fetch('/api/geo/output_runtimes', {
+      method: 'POST', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+      body: JSON.stringify({ items: [{ id: outputId, channel: ch }] })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.ok) return;
+        var rt = j.runtimes[key];
+        document.querySelectorAll('.aot-act-rt[data-rt-key="' + key + '"]')
+          .forEach(function (cell) {
+            cell.innerHTML = nextRunHtml(rt);
+            var row = cell.closest('.aot-act-row');
+            if (row) { seedTimeSlot(row.querySelector('.aot-act-time'), rt); }
+          });
+      })
+      .catch(function () {});
   }
 
   // 초 → "HH:MM:SS". 공용 AoTTime.formatDuration 을 그대로 쓴다 — 장치 마커
@@ -498,7 +631,7 @@
             (s.on ? 'ON' : 'OFF') + '</span>',
         meta: timeSlotHtml({ outputId: bid.oid, channel: bid.ch,
                              runtime: s.runtime, on: !!s.on }) +
-              nextRunHtml(s.runtime),
+              nextRunHtml(s.runtime, bid.oid + '::' + bid.ch),
         settings: canCtrl ? _scheduleBtn(sk, s) : ''
       });
     }
@@ -1277,7 +1410,10 @@
   //
   //   opts = { shell(html) → popup, outputId, channel, name, onApplied }
   //     shell : 중앙 모달 셸 팩토리(위젯의 _showFacilityCenterOverlay)
-  var _endMemory = {};   // outputId → 마지막 종료 시각(초). 새로고침하면 사라짐.
+  // outputId → 마지막으로 고른 **작동 시간**(초). 새로고침하면 사라진다.
+  // 종료 '시각' 을 기억하던 것을 바꿨다 — 같은 장치를 늘 같은 길이로 돌리는 쪽이
+  // 흔하고("이건 항상 10분"), 시각을 기억하면 다음 날엔 이미 지난 시각이 된다.
+  var _durMemory = {};
 
   function _csrf() {
     var meta = document.querySelector('meta[name="csrf-token"]');
@@ -1304,46 +1440,156 @@
       return;
     }
     var channel = parseInt(opts.channel || 0, 10) || 0;
+    var name = opts.name || '';
     var now = new Date();
     var nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60);
-    var lastEndSec = Object.prototype.hasOwnProperty.call(_endMemory, outputId)
-      ? _endMemory[outputId] : 0;
+    var lastDur = Object.prototype.hasOwnProperty.call(_durMemory, outputId)
+      ? _durMemory[outputId] : 0;
 
+    // 입력은 '시작 시각 + 작동 시간'. 예전에는 시작/종료 두 시각이었는데, 장치에
+    // 실제로 보내는 값은 duration 이라 사용자에게 역산을 시키는 셈이었고, 종료가
+    // 시작보다 이르면 코드가 "다음 날이겠지" 라고 짐작해야 했다. 작동 시간을 직접
+    // 받으면 그 짐작이 사라진다. 종료 시각은 아래 미리보기로 보여준다 — 종료로
+    // 생각하는 사람도 답을 얻지만 입력하지는 않는다.
     var html =
-      '<div class="aot-sensor-popup-header"><b>' + _esc(opts.name || '') + '</b></div>' +
-      '<div class="aot-act-group-header">' + _esc(_t('Start time')) + '</div>' +
-      '<div class="aot-sched-wheel aot-sched-wheel-start"></div>' +
-      '<div class="aot-act-group-header">' + _esc(_t('End time')) + '</div>' +
-      '<div class="aot-sched-wheel aot-sched-wheel-end"></div>' +
-      '<div class="aot-ov-muted" style="text-align:center;margin:.2rem 0 .5rem">' +
-      _esc(_t('00:00 = run indefinitely (no auto off)')) + '</div>' +
-      '<div class="aot-sched-status aot-ov-muted" style="text-align:center;margin:0 0 .4rem"></div>' +
-      '<div class="aot-wheel-actions">' +
-      '<button type="button" class="btn aot-pill-btn aot-sched-cancel">' + _esc(_t('Cancel')) + '</button>' +
+      '<div class="aot-sensor-popup-header"><b>' + _esc(name) + '</b></div>' +
+      // 본문은 공용 스크롤 페인 안에, 버튼은 그 **밖에** 둔다. 공용 중앙 모달은
+      // 높이가 min(80vh,760px) 로 고정이고 overflow:hidden 이라, 본문이 넘치면
+      // 조용히 잘리는 곳이 하필 저장 버튼이다(세로가 짧은 창에서 실제로 잘렸다).
+      '<div class="aot-bay-popup-pane">' +
+        '<div class="aot-wheel-pair">' +
+          '<div>' +
+            '<div class="aot-act-group-header">' + _esc(_t('Start time')) + '</div>' +
+            '<div class="aot-sched-wheel aot-sched-wheel-start"></div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="aot-act-group-header">' + _esc(_t('Run time')) + '</div>' +
+            '<div class="aot-sched-wheel aot-sched-wheel-dur"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="aot-ov-muted" style="text-align:center;margin:.2rem 0 .5rem">' +
+        _esc(_t('00:00 = run indefinitely (no auto off)')) + '</div>' +
+        '<div class="aot-sched-preview" style="text-align:center;margin:0 0 .5rem"></div>' +
+        '<div class="aot-sched-warn"></div>' +
+        '<div class="aot-sched-status aot-ov-muted" style="text-align:center;margin:0 0 .4rem"></div>' +
+        // 지금 이 장치에 무엇이 걸려 있는지 — 저장 결과도 여기에 반영된다.
+        // 별도 결과 화면을 띄우지 않는 이유: 창을 갈아 끼우면 방금 무엇을
+        // 고쳤는지 대조할 수 없고, 다시 열었을 때 그 정보가 사라진다.
+        '<div class="aot-sched-state"></div>' +
+      '</div>' +
+      // 하단은 설정 모달(.aot-option-modal)의 푸터를 그대로 쓴다 — 같은 클래스이면
+      // 높이 50px·안전영역(iOS 홈 인디케이터) 여백·모바일 규칙까지 함께 따라온다.
+      // 규칙은 aot-modal-modern.css 에서 .aot-center-modal 로 확장했다(복제 아님).
+      // 순서·문구도 그쪽과 같게: [닫기][저장]. '취소' 가 아니라 '닫기' 인 이유는
+      // 저장해도 창이 남기 때문이고, 바로 위 '예약 취소' 와도 구분된다.
+      '<div class="modal-footer">' +
+      '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-cancel">' + _esc(_t('Close')) + '</button>' +
       '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-sched-save">' + _esc(_t('Save')) + '</button>' +
       '</div>';
 
     var popup = shell(html, 'output-sched-' + outputId);
     var el = popup.getElement();
     var startWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-start'),
-      { value: nowSec, fields: 'hm' });
-    var endWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-end'),
-      { value: lastEndSec, fields: 'hm' });
+      { value: nowSec, fields: 'hm', onChange: function () { renderPreview(); } });
+    var durWheel = window.AoTTimeWheel.mount(el.querySelector('.aot-sched-wheel-dur'),
+      { value: lastDur, fields: 'hm', onChange: function () { renderPreview(); } });
+    var previewEl = el.querySelector('.aot-sched-preview');
     var statusEl = el.querySelector('.aot-sched-status');
+    var stateEl = el.querySelector('.aot-sched-state');
     var saveBtn = el.querySelector('.aot-sched-save');
+    var cancelBtn = el.querySelector('.aot-sched-cancel');
+    var warnEl = el.querySelector('.aot-sched-warn');
+    var wheelsSeeded = false;
+    // 겹침 판정용 — 서버가 말한 기존 예약.
+    var known = [];
 
-    el.querySelector('.aot-sched-cancel').addEventListener('click', function () { popup.remove(); });
+    // 서버에서 지금 상태를 가져와 '예약 상황' 블록을 그린다. 저장·취소 직후에도
+    // 같은 함수를 부른다 — 화면에 보이는 예약은 언제나 **서버가 말한 것**이다.
+    // 브라우저에 담아 두면 다른 사람·다른 기기에서 안 보이고, 예약은 브라우저를
+    // 닫아도 실행되므로 화면만 모르는 상태가 된다.
+    function loadState(seedWheels) {
+      return _outputRuntime(outputId, channel).then(function (rt) {
+        if (!stateEl.isConnected) return;
+        stateEl.innerHTML = _schedStateHtml(rt);
+        // 예약이 걸려 있으면 휠을 그 값으로 맞춘다 — 다시 열었을 때 걸려 있는
+        // 예약이 곧 현재 설정으로 보이는 것이 자연스럽다. 한 번만 한다(저장
+        // 직후에 다시 맞추면 사용자가 고르던 값을 덮어쓴다).
+        known = (rt && rt.schedules) || [];
+        renderPreview();
+        var first = (rt && rt.schedules && rt.schedules[0]) || null;
+        if (seedWheels && !wheelsSeeded && first && first.start_epoch) {
+          wheelsSeeded = true;
+          var d = new Date(first.start_epoch * 1000);
+          startWheel.set(d.getHours() * 3600 + d.getMinutes() * 60);
+          durWheel.set(first.duration_sec || 0);
+          renderPreview();
+        }
+        _wireSchedState(stateEl, statusEl, outputId, channel, loadState);
+      })
+      // 조용히 실패하면 "예약 상황" 이 빈 채로 남아 예약이 없는 것과 구별되지
+      // 않는다. 실제로 그랬다 — set() 이 없던 옛 캐시본에서 TypeError 가 나
+      // 블록만 그려지고 휠 반영이 멈췄는데 화면에는 아무 표시가 없었다.
+      .catch(function (e) {
+        if (statusEl) statusEl.textContent = _t('Failed');
+        try { console.warn('[AoT Map] schedule state load failed', e); } catch (_e) {}
+      });
+    }
+    loadState(true);
+
+    // 고른 값이 실제로 무엇을 뜻하는지 저장 전에 보여준다 — 시작이 이미 지난
+    // 시각이면 "지금", 작동 시간 0 이면 자동 꺼짐 없음.
+    function renderPreview() {
+      if (!previewEl) return;
+      var plan = _planSchedule(startWheel.read(), durWheel.read());
+      var when = plan.immediate ? _t('immediately') : _fmtClock(plan.start);
+      var line = when + ' → ' +
+        (plan.durationSec === null
+          ? _t('no auto off')
+          : _fmtClock(plan.end) + ' (' + _fmtRunLen(plan.durationSec) + ')');
+      previewEl.textContent = line;
+      // 겹쳐도 막지 않는다(일부러 겹치게 두어야 하는 사정이 있다). 대신 실제로
+      // 어떻게 되는지 미리 말한다 — 겹친 구간에서는 **먼저 끝나는 타이머**에
+      // 함께 꺼진다(실측: 20초 예약이 도는 중 60초 명령을 주면 60초가 아니라
+      // 20초 만료에 꺼졌다. 데몬이 이미 흐른 시간을 이어받아 계산한다).
+      if (warnEl) {
+        var ov = _overlapInfo(plan, known);
+        warnEl.textContent = !ov ? ''
+          : (ov.offAt
+              ? _t('Overlaps an existing schedule — turns off at %(time)s')
+                  .replace('%(time)s', _fmtClock(ov.offAt))
+              : _t('Overlaps an existing schedule'));
+      }
+    }
+    renderPreview();
+    // 휠의 onChange 로만 다시 그린다. 예전에는 팝업의 click/touchend/wheel 을 받아
+    // 그렸는데, 항목을 탭하면 smooth 스크롤이 **그 이벤트 뒤에** 진행되므로 그
+    // 시점의 값은 아직 이전 선택이다 — 미리보기가 한 칸씩 늦게 따라왔다
+    // (00:01 을 골라도 '자동 꺼짐 없음', 다시 00:00 으로 오면 직전 길이가 보였다).
+    // 값이 확정되는 시점을 아는 곳은 휠뿐이다.
+    // 초 단위로 흐르는 '지금' 도 미리보기에 걸려 있다(시작이 현재 분이면 즉시 실행).
+
+    cancelBtn.addEventListener('click', function () { popup.remove(); });
     saveBtn.addEventListener('click', function () {
       var startSec = startWheel.read();
-      var endSec = endWheel.read();
-      _endMemory[outputId] = endSec;
+      var durSec = durWheel.read();
+      _durMemory[outputId] = durSec;
       saveBtn.disabled = true;
       statusEl.textContent = _t('Saving...');
-      _applySchedule(outputId, channel, opts.name || '', startSec, endSec)
+      _applySchedule(outputId, channel, name, startSec, durSec)
         .then(function (res) {
-          popup.remove();
-          if (res.warn && window.showToast) window.showToast(res.warn, 'warning');
-          else if (res.info && window.showToast) window.showToast(res.info, 'info');
+          // 창을 갈아 끼우지 않는다. 예전에는 결과 전용 화면으로 바꿨는데,
+          // 방금 무엇을 고쳤는지 대조할 수 없고 다시 열면 그 정보가 사라졌다.
+          // 지금은 한 줄 상태 + 아래 '예약 상황' 블록(서버에서 다시 읽은 것)이
+          // 답한다 — 즉시 실행이라 예약 목록에 안 남는 경우도 그 블록의
+          // '작동 중' 으로 드러난다.
+          saveBtn.disabled = false;
+          statusEl.textContent = (res && res.mode === 'scheduled')
+            ? _t('Schedule registered')
+            : (res && res.mode === 'tab-timer')
+              ? _t('Scheduled — keep this tab open until the start time.')
+              : _t('Turned on now');
+          refreshOutputScheduleLabel(outputId, channel);
+          loadState(false);
           if (typeof opts.onApplied === 'function') opts.onApplied(res);
         })
         .catch(function (e) {
@@ -1353,30 +1599,91 @@
     });
   }
 
-  // 시작/종료(하루 안의 시:분) → 실제 제어 또는 예약 등록.
-  // 종료 00:00 = 무한 작동(자동 꺼짐 없음) → duration 을 아예 보내지 않는다.
-  function _applySchedule(outputId, channel, name, startSec, endSec) {
+  function _fmtClock(d) {
+    if (!(d instanceof Date)) return '';
+    return _pad2(d.getHours()) + ':' + _pad2(d.getMinutes());
+  }
+
+  // 고른 작동 시간은 **휠과 같은 자리수**로 보여준다. _fmtDur 은 실제로 흐른
+  // 시간(마지막 작동 시간)을 위한 HH:MM:SS 포맷터라, 분 단위로 고른 값에 쓰면
+  // 설정하지도 않은 초 자리가 보인다("1분" 을 골랐는데 00:01:00).
+  function _fmtRunLen(sec) {
+    var t = Math.max(0, Math.round(+sec || 0));
+    return _pad2(Math.floor(t / 3600)) + ':' + _pad2(Math.floor((t % 3600) / 60));
+  }
+
+  // 고른 구간이 기존 예약과 겹치는지. 겹치면 그 구간에서 먼저 끝나는 타이머의
+  // 시각을 함께 돌려준다 — 사용자가 고른 종료 시각이 아니라 그때 꺼진다.
+  // 작동 시간 00:00(무한)은 끝이 없으므로 이후 모든 예약과 겹친다.
+  function _overlapInfo(plan, known) {
+    if (!known || !known.length) return null;
+    var s = plan.start.getTime();
+    var e = (plan.durationSec === null) ? Infinity : plan.end.getTime();
+    var ends = [];
+    known.forEach(function (k) {
+      if (!k || !k.start_epoch) return;
+      var ks = k.start_epoch * 1000;
+      // 지금 화면에 보이는 그 예약(= 방금 저장한 것)과 자기 자신을 겹친다고 하지
+      // 않는다. **이 창에서 만든 예약 전부를 빼면 안 된다** — 하나 저장한 뒤 다른
+      // 시각을 고를 때 그 예약과의 겹침을 못 보게 된다(실제로 그랬다).
+      // 판정 기준은 "고른 구간과 정확히 같은가" 하나다.
+      var sameStart = Math.abs(ks - s) < 60000;
+      var sameDur = ((k.duration_sec || null) === plan.durationSec);
+      if (sameStart && sameDur) return;
+      var ke = k.duration_sec ? (ks + k.duration_sec * 1000) : Infinity;
+      if (ks < e && s < ke) { ends.push(ke); }
+    });
+    if (!ends.length) return null;
+    ends.push(e);
+    var first = Math.min.apply(null, ends);
+    return { offAt: isFinite(first) ? new Date(first) : null };
+  }
+
+  // 고른 시작 시각(초)+작동 시간(초) → 실제로 언제 무엇이 일어나는지.
+  // UI 미리보기와 저장이 **같은 함수**를 쓴다 — 둘이 갈리면 화면에 보인 것과
+  // 등록된 것이 달라진다.
+  function _planSchedule(startSec, durSec) {
     var nowMs = Date.now();
     var n = new Date(nowMs);
     var start = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
       Math.floor(startSec / 3600), Math.floor((startSec % 3600) / 60), 0, 0);
-    // 이미 지난 시각을 골랐다면 "지금"으로 간주 — 다음 날로 밀지 않는다.
-    if (start.getTime() < nowMs) start = new Date(nowMs);
-
-    var durationSec = null;
-    if (endSec !== 0) {
-      var end = new Date(n.getFullYear(), n.getMonth(), n.getDate(),
-        Math.floor(endSec / 3600), Math.floor((endSec % 3600) / 60), 0, 0);
-      if (end.getTime() <= start.getTime()) end.setDate(end.getDate() + 1);
-      durationSec = Math.round((end.getTime() - start.getTime()) / 1000);
-    }
+    var immediate = false;
+    // 이미 지난 시각을 골랐다면 "지금" 으로 본다 — 다음 날로 밀지 않는다.
+    if (start.getTime() < nowMs) { start = new Date(nowMs); immediate = true; }
+    var durationSec = (durSec && durSec > 0) ? durSec : null;   // 00:00 = 무한
     var delaySec = Math.max(0, Math.round((start.getTime() - nowMs) / 1000));
+    // 임계값은 "지금/과거를 골랐다" 만 걸러낼 만큼만. 휠이 분 단위라 '다음 분'
+    // 선택의 실제 지연은 1~59초이고, 예전 60초 임계값은 그것을 전부 삼켰다.
+    if (delaySec <= 5) immediate = true;
+    return {
+      start: start,
+      end: (durationSec === null) ? null : new Date(start.getTime() + durationSec * 1000),
+      durationSec: durationSec,
+      delaySec: delaySec,
+      immediate: immediate
+    };
+  }
 
-    if (delaySec <= 60) return _fireNow(outputId, channel, durationSec);
-    return _proposeJob(outputId, channel, name, start, durationSec)
+  // 시작 시각 + 작동 시간 → 실제 제어 또는 예약 등록.
+  // 계획은 _planSchedule 한 곳에서만 계산한다(미리보기와 동일한 값).
+  // 작동 시간 00:00 = 무한 작동 → duration 을 아예 보내지 않는다.
+  function _applySchedule(outputId, channel, name, startSec, durSec) {
+    var plan = _planSchedule(startSec, durSec);
+    // 결과 화면이 되돌리기(예약 취소 / 지금 끄기)에 쓸 정보를 함께 실어 보낸다.
+    var base = { start: plan.start, end: plan.end, durationSec: plan.durationSec,
+                 outputId: outputId, channel: channel };
+    function merge(res) {
+      for (var k in base) if (!(k in res)) res[k] = base[k];
+      return res;
+    }
+    if (plan.immediate) {
+      return _fireNow(outputId, channel, plan.durationSec).then(merge);
+    }
+    return _proposeJob(outputId, channel, name, plan.start, plan.durationSec)
+      .then(merge)
       .catch(function () {
-        // 스케줄러 등록 실패(MCP 서버 미설정/권한 등) → 탭 바인딩 폴백.
-        return _fallbackTimer(outputId, channel, durationSec, delaySec);
+        // 스케줄러 등록 실패(권한 등) → 탭 바인딩 폴백.
+        return merge(_fallbackTimer(outputId, channel, plan.durationSec, plan.delaySec));
       });
   }
 
@@ -1457,7 +1764,8 @@
     applyTimeSlot:         applyTimeSlot,
     seedTimeSlot:          seedTimeSlot,
     wireTimeSlots:         wireTimeSlots,
-    nextRunHtml:           nextRunHtml
+    nextRunHtml:           nextRunHtml,
+    refreshOutputScheduleLabel: refreshOutputScheduleLabel
   };
 
 })();
