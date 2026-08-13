@@ -27903,3 +27903,11 @@ msgstr "재배를 종료할까요?"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "It disappears from the map and stays only as history. This cannot be undone here."
 msgstr "지도에서 사라지고 이력으로만 남습니다. 여기서는 되돌릴 수 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "No valve assigned"
+msgstr "밸브 미배정"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "unassigned"
+msgstr "미배정"

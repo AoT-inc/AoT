@@ -27663,3 +27663,11 @@ msgstr "栽培を終了しますか？"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "It disappears from the map and stays only as history. This cannot be undone here."
 msgstr "地図から消え、履歴としてのみ残ります。ここでは元に戻せません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "No valve assigned"
+msgstr "バルブ未割当"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "unassigned"
+msgstr "未割当"

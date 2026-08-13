@@ -375,9 +375,9 @@ TOOLS: List[Tool] = [
         "tool_name": "get_planting",
         "action_type": "virtual_tool_call",
         "description": ("One plot in detail: crop, variety, period, area, size "
-                        "(width x length), and which sensors it reads (own plot or "
-                        "falls back to its zone). Give both spacings to get row and "
-                        "plant counts. Read-only."),
+                        "(width x length), which sensors it reads (own plot or "
+                        "falls back to its zone), and which irrigation valves overlap "
+                        "it. Give both spacings to get row and plant counts. Read-only."),
         "usage_hint": ("params.arguments: {planting_id, row_spacing_cm?, "
                        "plant_spacing_cm?, edge_margin_cm?, bed_width_cm?, "
                        "path_width_cm?} — spacings go together, bed+path go "
@@ -872,7 +872,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_planting",
-        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass row_spacing_cm AND plant_spacing_cm to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. If the plot records a bed layout (두둑/고랑) it is applied automatically; otherwise the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and write the agreed spec back with modify_planting. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. Read-only.",
+        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass row_spacing_cm AND plant_spacing_cm to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. If the plot records a bed layout (두둑/고랑) it is applied automatically; otherwise the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and write the agreed spec back with modify_planting. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {

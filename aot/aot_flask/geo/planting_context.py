@@ -547,6 +547,84 @@ def plantings_overlapping(map_uuid, geom, since=None, until=None,
 
 
 # ---------------------------------------------------------------------------
+# 관수 — 밸브 담당 구역과의 교차
+# ---------------------------------------------------------------------------
+#
+# 밸브와 식생은 **계층이 아니라 교차**다. 밸브 하나가 상추와 배추를 같이
+# 적시고, 한 작물이 두 밸브에 걸치기도 한다. 그래서 소속으로 묶지 않고
+# 겹치는 면적을 낸다(설계 §자원 배분).
+#
+# 담당 구역은 `GeoShape type='device'` 폴리곤이다. 장치 해소는 `device_binding`
+# 이 정본이고, 바인딩이 없으면 미배정 슬롯 — 그 자체가 정보라 함께 돌려준다
+# ("이 구획은 밸브가 안 정해진 구역에 걸쳐 있다").
+
+def valves_for_planting(planting):
+    """구획을 적시는 밸브 목록.
+
+    `[{shape_uuid, shape_name, device_id, device_name, overlap_m2,
+       coverage_pct}]` — `coverage_pct` 는 **구획 면적 대비** 덮인 비율이다.
+    밸브 구역 대비가 아니다: 사람이 알고 싶은 것은 "내 두둑이 얼마나 젖는가"
+    이지 "밸브가 얼마나 쓰이는가" 가 아니다.
+
+    관수량을 여기서 계산하지 않는다. 겹친 영역에서 물은 물리적으로 공유되므로
+    작물별 요구량을 합산하면 틀린 숫자가 나온다 — 재료만 내고 판단은 사람이
+    한다(설계 §자원 배분).
+    """
+    from aot.aot_flask.geo import device_binding
+
+    src = _shapely(geometry_of(planting))
+    if src is None:
+        return []
+    total = shapely_area_m2(src)
+
+    rows = GeoShape.query.filter(
+        GeoShape.geo_id == planting.geo_id,
+        GeoShape.type == 'device').all()
+
+    out = []
+    for shape in rows:
+        other = _shapely(geometry_of(shape))
+        if other is None:
+            continue
+        try:
+            inter = src.intersection(other)
+        except Exception:
+            continue
+        if inter.is_empty:
+            continue
+        overlap = shapely_area_m2(inter)
+        if overlap <= 0:
+            continue
+
+        device_id, device_name = None, None
+        try:
+            binding = device_binding.current_one('shape', shape.unique_id,
+                                                 role='area')
+            if binding is not None:
+                device_id = binding.device_id
+                device_name = device_binding._device_names(
+                    [device_id]).get(device_id)
+        except Exception as exc:
+            logger.warning('planting: 밸브 바인딩 해소 실패(%s): %s',
+                           shape.unique_id, exc)
+
+        out.append({
+            'shape_uuid': shape.unique_id,
+            'shape_name': _shape_name(shape),
+            'device_id': device_id,
+            'device_name': device_name,
+            'overlap_m2': round(overlap, 1),
+            'coverage_pct': round(overlap / total * 100.0, 1) if total > 0 else None,
+            # 밸브가 안 정해진 구역에 걸친 것도 알아야 한다 — 물을 줄 수단이
+            # 아직 없다는 뜻이다.
+            'unassigned': device_id is None,
+        })
+
+    out.sort(key=lambda v: v['overlap_m2'], reverse=True)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # 면적 배분
 # ---------------------------------------------------------------------------
 
@@ -663,6 +741,9 @@ def to_dict(row, containers=None, with_sensors=False):
     }
     if with_sensors:
         out['sensors'] = sensors_for_planting(row, containers=containers)
+        # 밸브 교차는 상세 조회에서만 낸다 — 목록에서 구획마다 지도 도형을
+        # 전량 훑으면 구획 수 × 도형 수가 된다.
+        out['valves'] = valves_for_planting(row)
     else:
         zone = zone_for_planting(row, containers=containers)
         out['zone_uuid'] = zone.unique_id if zone is not None else None

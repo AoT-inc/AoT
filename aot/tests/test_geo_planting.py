@@ -1458,3 +1458,113 @@ class TestBayBackfill(unittest.TestCase):
         planned, _ = self._plan()
         _apply(None, planned)
         self.assertEqual(GeoPlanting.query.first().source_kind, 'bay_snapshot')
+
+
+# ---------------------------------------------------------------------------
+# 11. 관수 밸브 교차 (Phase 3) — 계층이 아니라 교차
+# ---------------------------------------------------------------------------
+
+class TestValveIntersection(unittest.TestCase):
+    """밸브와 식생은 소속 관계가 아니다.
+
+    밸브 하나가 두 작물을 적시고, 한 작물이 두 밸브에 걸친다. 그래서 "이
+    구획의 밸브" 를 하나로 정하지 않고 **겹치는 면적**을 낸다. 여기서 관수량을
+    계산하지 않는 것도 같은 이유다 — 겹친 곳에서 물은 공유되므로 작물별
+    요구량을 합산하면 물리적으로 틀린 숫자가 된다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'valve.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def setUp(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlanting, GeoShape
+        GeoPlanting.query.delete()
+        GeoShape.query.delete()
+        db.session.commit()
+
+    def _plot(self, x0=0.0, size=0.001):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlanting
+        row = GeoPlanting(geo_id='m-valve', crop='상추',
+                          planted_on=date.today(),
+                          feature={'type': 'Feature', 'properties': {},
+                                   'geometry': _square(x0, 0.0, size)})
+        db.session.add(row)
+        db.session.commit()
+        return row
+
+    def _valve_area(self, x0, size=0.001, name='밸브구역'):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoShape
+        shape = GeoShape(geo_id='m-valve', type='device',
+                         feature={'type': 'Feature',
+                                  'properties': {'name': name},
+                                  'geometry': _square(x0, 0.0, size)})
+        db.session.add(shape)
+        db.session.commit()
+        return shape
+
+    def _valves(self, row):
+        from aot.aot_flask.geo import planting_context
+        return planting_context.valves_for_planting(row)
+
+    def test_no_overlap_no_valve(self):
+        row = self._plot()
+        self._valve_area(5.0)                 # 멀리 떨어진 구역
+        self.assertEqual(self._valves(row), [])
+
+    def test_coverage_is_relative_to_the_plot_not_the_valve(self):
+        """사람이 알고 싶은 것은 "내 두둑이 얼마나 젖는가" 다."""
+        row = self._plot(size=0.001)
+        self._valve_area(0.0005, size=0.001)   # 절반 겹침
+        v = self._valves(row)
+        self.assertEqual(len(v), 1)
+        self.assertAlmostEqual(v[0]['coverage_pct'], 50.0, delta=2.0)
+
+    def test_two_valves_on_one_plot(self):
+        """한 작물이 두 밸브에 걸치는 것은 정상이다."""
+        row = self._plot(size=0.001)
+        self._valve_area(-0.0004, name='A')
+        self._valve_area(0.0006, name='B')
+        v = self._valves(row)
+        self.assertEqual(len(v), 2)
+        # 많이 덮는 것이 먼저 온다
+        self.assertGreaterEqual(v[0]['overlap_m2'], v[1]['overlap_m2'])
+
+    def test_unassigned_valve_area_is_reported_not_hidden(self):
+        """밸브가 안 정해진 구역에 걸친 것도 알아야 한다 — 물 줄 수단이 없다."""
+        row = self._plot()
+        self._valve_area(0.0)
+        v = self._valves(row)
+        self.assertEqual(len(v), 1)
+        self.assertTrue(v[0]['unassigned'])
+        self.assertIsNone(v[0]['device_id'])
+
+    def test_no_water_amount_is_computed(self):
+        """관수량을 내지 않는다 — 겹친 곳에서 물은 공유된다."""
+        row = self._plot()
+        self._valve_area(0.0)
+        for key in ('water_l', 'liters', 'demand', 'amount'):
+            self.assertNotIn(key, self._valves(row)[0])

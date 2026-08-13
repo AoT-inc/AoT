@@ -1844,13 +1844,35 @@
               '<div class="aot-ov-muted">' + line + '</div></div>';
     }
 
-    // 3) 이 자리 이력 — 연작 장해·윤작 판단의 근거.
+    // 3) 관수 — 밸브와 식생은 계층이 아니라 교차다. 밸브 하나가 두 작물을
+    //    적시고 한 작물이 두 밸브에 걸친다. 그래서 "이 구획의 밸브" 가 아니라
+    //    "얼마나 덮이는가" 를 보여준다. 관수량은 계산하지 않는다 — 겹친 곳에서
+    //    물은 공유되므로 작물별 요구량 합산은 물리적으로 틀린다.
+    var valves = p.valves;
+    if (Array.isArray(valves) && valves.length) {
+      html += '<div class="aot-ov-block">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Irrigation')) + '</div>';
+      valves.forEach(function (v) {
+        var who = v.device_name || v.shape_name ||
+                  (v.unassigned ? _t('No valve assigned') : _t('Valve'));
+        var cover = (v.coverage_pct != null)
+          ? v.coverage_pct + '% · ' + Number(v.overlap_m2).toLocaleString() + ' m²'
+          : Number(v.overlap_m2).toLocaleString() + ' m²';
+        html += '<div class="aot-ov-row"><span>' + _esc(who) +
+                (v.unassigned ? ' <span class="aot-ov-muted">(' +
+                                _esc(_t('unassigned')) + ')</span>' : '') +
+                '</span><span>' + _esc(cover) + '</span></div>';
+      });
+      html += '</div>';
+    }
+
+    // 4) 이 자리 이력 — 연작 장해·윤작 판단의 근거.
     html += '<div class="aot-ov-block aot-ov-planting-history">' +
             '<div class="aot-ov-sec-title">' + _esc(_t('History here')) + '</div>' +
             '<div class="aot-ov-planting-history-list">' +
             '<span class="aot-ov-muted">…</span></div></div>';
 
-    // 4) 노트
+    // 5) 노트
     html += _ovNotesBlock();
     return html;
   }
