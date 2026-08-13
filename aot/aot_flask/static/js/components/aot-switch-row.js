@@ -16,7 +16,7 @@
      * - name: Name for the internal checkbox.
      * - id: ID for the internal checkbox (optional).
      */
-    const AOT_SWITCH_ROW_TOGGLE_CSS = '/static/css/components/btn-toggle.css';
+    const AOT_SWITCH_ROW_TOGGLE_CSS = '/static/css/components/btn-toggle.css?v=20260814a';
 
     class AoTSwitchRow extends HTMLElement {
         static get observedAttributes() {

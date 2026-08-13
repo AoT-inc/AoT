@@ -161,7 +161,7 @@ WIDGET_HEAD_HTML = """
 <script src="/static/js/common/aot-facility-3d-loader.js?v=1"></script>
 
 <!-- GeoJSON overlay support -->
-<script src="/static/js/geo/aot-geojson-manager.js"></script>
+<script src="/static/js/geo/aot-geojson-manager.js?v=20260814a"></script>
 
 <!-- Sensor labels (facility fittings measurement labels + 24h popup) -->
 <!-- aot-chart-core: 공용 Highcharts 기본값(local TZ 등) — bay 모달 인라인 차트가 사용 -->
@@ -173,7 +173,7 @@ WIDGET_HEAD_HTML = """
 <script src="/static/js/common/sensor-label.js?v=44"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=22"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=49">
-<link rel="stylesheet" href="/static/css/components/aot-toggle.css">
+<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->
 <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">

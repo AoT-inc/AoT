@@ -5,10 +5,10 @@
 {% block title %} - {{_('Export and Import')}}{% endblock %}
 
 {% block head %}
-<script type="text/javascript" src="/static/js/vendor/moment.min.js"></script>
-<script type="text/javascript" src="/static/js/vendor/daterangepicker.js"></script>
-<link rel="stylesheet" type="text/css" href="/static/css/daterangepicker.css" />
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css') }}?v=15" />
+<script type="text/javascript" src="/static/js/vendor/moment.min.js?v=20260814a"></script>
+<script type="text/javascript" src="/static/js/vendor/daterangepicker.js?v=20260814a"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/daterangepicker.css?v=20260814a" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/aot-settings.css', v='20260814a') }}?v=15" />
 {% endblock %}
 
 {% block body %}

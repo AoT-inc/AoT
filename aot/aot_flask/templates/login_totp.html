@@ -11,21 +11,21 @@
   <title>{{dict_translation['login']['title']}}</title>
 
   <!-- Bootstrap core CSS -->
-  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-  <link href="/static/css/aot-theme-variables.css" rel="stylesheet">
+  <link href="/static/css/bootstrap.min.css?v=20260814a" rel="stylesheet">
+  <link href="/static/css/aot-theme-variables.css?v=20260814a" rel="stylesheet">
 
   {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else '/static/css/bootstrap-4-themes/aot.css' %}
   {% if effective_theme in dark_themes %}
-  <link href="/static/css/custom-dark.css" rel="stylesheet">
+  <link href="/static/css/custom-dark.css?v=20260814a" rel="stylesheet">
   {% else %}
-  <link href="/static/css/custom-light.css" rel="stylesheet">
+  <link href="/static/css/custom-light.css?v=20260814a" rel="stylesheet">
   {% endif %}
   <link href="{{ effective_theme }}" rel="stylesheet">
   <link href="/custom.css" rel="stylesheet">
 
-  <link href="/static/css/signin.css" rel="stylesheet">
+  <link href="/static/css/signin.css?v=20260814a" rel="stylesheet">
 
-  <script src="/static/js/vendor/jquery-3.4.1.min.js"></script>
+  <script src="/static/js/vendor/jquery-3.4.1.min.js?v=20260814a"></script>
 </head>
 <body>
 
@@ -74,6 +74,6 @@
 
   </div>
 
-<script src="/static/js/vendor/bootstrap.min.js"></script>
+<script src="/static/js/vendor/bootstrap.min.js?v=20260814a"></script>
 </body>
 </html>

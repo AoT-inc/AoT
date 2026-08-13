@@ -93,8 +93,8 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_head': """{% if "aot_calendar_render" not in dashboard_dict %}
   {% set _dummy = dashboard_dict.update({"aot_calendar_render": 1}) %}
-<link rel="stylesheet" href="/static/vendor/fullcalendar-5.11.5/main.min.css">
-<script src="/static/vendor/fullcalendar-5.11.5/main.min.js"></script>
+<link rel="stylesheet" href="/static/vendor/fullcalendar-5.11.5/main.min.css?v=20260814a">
+<script src="/static/vendor/fullcalendar-5.11.5/main.min.js?v=20260814a"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=9">
 <script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=10"></script>
 {% endif %}

@@ -225,10 +225,10 @@ WIDGET_INFORMATION = {
   <script src="{{ asset('highcharts-stack') }}"></script>
   {% set _dummy = dashboard_dict.update({"highstock": 1}) %}
 {% endif %}
-<script src="/static/js/vendor/user_js/solid-gauge-9.1.2.js"></script>
+<script src="/static/js/vendor/user_js/solid-gauge-9.1.2.js?v=20260814a"></script>
 
 {% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js"></script>
+  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
 {% endif %}
 """,
 

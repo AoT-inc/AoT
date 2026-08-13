@@ -518,7 +518,7 @@ WIDGET_INFORMATION = {
   {% set _dummy = dashboard_dict.update({"aot_chart_core": 1}) %}
 {% endif %}
 {% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js"></script>
+  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
 {% endif %}
 """,
 
@@ -761,7 +761,7 @@ WIDGET_INFORMATION = {
 </style>
 
 
-<link rel="stylesheet" href="/static/css/components/aot-toggle.css">
+<link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 {% set this_pid = table_pid.query.filter(table_pid.unique_id == widget_options['pid']).first() %}
 
 <div class="frame-aot" id="pid_container_{{each_widget.unique_id}}">

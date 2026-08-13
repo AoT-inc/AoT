@@ -1222,7 +1222,7 @@ WIDGET_INFORMATION = {
 
     # ------------------ HEAD (CSS) ------------------
     'widget_dashboard_head': """
-    <link rel="stylesheet" href="/static/css/components/aot-toggle.css">
+    <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
     <!-- Shared time-wheel module (also used by other widgets) -->
     <link rel="stylesheet" href="/static/css/components/aot-time-wheel.css?v=20260813a">
     <script src="/static/js/components/aot-time-wheel.js?v=20260813d"></script>

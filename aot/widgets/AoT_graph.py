@@ -494,7 +494,7 @@ WIDGET_INFORMATION = {
 {% endif %}
 
 {% if current_user.theme in dark_themes %}
-  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js"></script>
+  <script type="text/javascript" src="/static/js/vendor/user_js/dark-unica-custom.js?v=20260814a"></script>
 {% endif %}
 """,
 
