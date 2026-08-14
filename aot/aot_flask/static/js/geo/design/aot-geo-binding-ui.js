@@ -279,7 +279,7 @@ class AoTGeoBinding {
                 <span class="font-weight-600">${d.name}</span>
                 <span class="small text-muted">${this._typeLabel(d.type)}</span>`;
             item.style.cursor = 'pointer';
-            item.onclick = () => this._assign(d.id, isReplace, channelId);
+            item.onclick = () => this._assign(d.id, isReplace, channelId, d.type);
             box.appendChild(item);
         });
     }
@@ -379,7 +379,7 @@ class AoTGeoBinding {
             });
     }
 
-    _assign(deviceId, isReplace, channelId) {
+    _assign(deviceId, isReplace, channelId, deviceType) {
         const s = this.slot;
         const chEl = document.getElementById('geo-binding-channel');
         const ch = channelId || (chEl && chEl.value.trim()) || '0';
@@ -398,6 +398,10 @@ class AoTGeoBinding {
         this._api(method, '/api/geo/binding', body).then(({ status, data }) => {
             if (data && data.ok) {
                 this._toast(this._t('Device assigned'), 'success');
+                // 배정된 장치의 테마색을 **즉시** 도형에 입힌다. 서버는 도형을
+                // 읽을 때 device_type 을 주입해 주지만, 그건 다음 로드 때 일이라
+                // 그때까지 도형이 옛 색으로 남는다(= 새로고침해야 색이 바뀜).
+                this._stampBinding(s.spatial_id, deviceId, ch, deviceType);
                 this._afterChange();
                 this._refreshSlot();
                 return;
@@ -418,6 +422,7 @@ class AoTGeoBinding {
             if (data && data.ok) {
                 // 도형은 지우지 않는다 — 미배정 슬롯으로 남는다(설계 원칙 B4).
                 this._toast(this._t('Device released. The area is now unassigned.'), 'success');
+                this._stampBinding(this.slot && this.slot.spatial_id, null, null, null);
                 this._afterChange();
                 this._refreshSlot();
             } else {
@@ -426,13 +431,63 @@ class AoTGeoBinding {
         });
     }
 
+    /**
+     * 배정 결과를 **그 도형에 바로 입힌다** — 색이 장치 종류를 따르기 때문.
+     *
+     * 도형의 `device_id`/`device_type` 은 저장되는 값이 아니라 서버가 도형을
+     * 읽어 줄 때 바인딩에서 파생해 주입하는 값이다(geo_overlays 의 GB-5 규약).
+     * 그래서 배정 직후에는 화면의 도형이 그 값을 아직 모르고, **새로고침해야
+     * 색이 바뀌는** 것처럼 보였다. 여기서 같은 값을 미리 채워 넣고 다시 칠해
+     * 즉시 반영한다 — 다음 로드 때 서버가 주는 값과 같은 값이라 어긋나지 않는다.
+     *
+     * `deviceId` 가 null 이면 해제로 보고 지운다(미배정 색으로 돌아간다).
+     */
+    _stampBinding(spatialId, deviceId, channelId, deviceType) {
+        const p = this.parent;
+        if (!spatialId || !p) return;
+        const match = (l) => {
+            const props = (l && l.feature && l.feature.properties) || {};
+            return (props.shape_uuid || props.node_id) === spatialId;
+        };
+        const stamp = (l) => {
+            const props = l.feature.properties = l.feature.properties || {};
+            if (deviceId) {
+                props.device_id = deviceId;
+                props.channel_id = channelId || '0';
+                if (deviceType) props.device_type = deviceType;
+            } else {
+                delete props.device_id;
+                delete props.channel_id;
+                delete props.device_type;
+            }
+            // 색은 스타일 파이프라인 한 곳이 정한다 — 여기서 직접 칠하면
+            // 모드 전환 때 다시 칠해지며 원래대로 돌아간다.
+            if (p.ui && p.ui._setLayerStyle) p.ui._setLayerStyle(l, l === p.activeLayer);
+        };
+        let done = false;
+        ['device', 'aot_device'].forEach(k => {
+            const g = p.layerStorage && p.layerStorage[k];
+            if (!g || typeof g.eachLayer !== 'function') return;
+            g.eachLayer(l => { if (!done && match(l)) { stamp(l); done = true; } });
+        });
+        if (!done && window.AoTMapEditor && window.AoTMapEditor.featureGroup) {
+            window.AoTMapEditor.featureGroup.eachLayer(l => {
+                if (!done && match(l)) { stamp(l); done = true; }
+            });
+        }
+    }
+
     /** 배정이 바뀌면 지도에 반영한다 — 도형 색·라벨이 장치를 따르기 때문. */
     _afterChange() {
         this._devices = null;
         try {
-            if (this.parent && this.parent.loadOverlays) {
-                this.parent.loadOverlays();
-            } else if (this.parent && this.parent.devices) {
+            // ⚠ 예전에는 `parent.loadOverlays()` 를 먼저 시도했는데 **그런 함수가
+            // 없다** — 늘 아래 폴백으로 떨어져 장치 **마커만** 다시 읽었다.
+            // 도형(담당 구역)은 갱신되지 않아 배정해도 색이 그대로였다.
+            // 도형 쪽은 `_stampBinding` 이 즉시 반영하므로, 여기서는 마커만
+            // 다시 읽으면 된다(도면 전체를 다시 읽으면 배정 한 번에 화면이
+            // 통째로 깜빡인다).
+            if (this.parent && this.parent.devices) {
                 this.parent.devices.loadMapDevices();
             }
         } catch (e) { /* 지도 갱신 실패가 배정 성공을 덮지 않도록 */ }

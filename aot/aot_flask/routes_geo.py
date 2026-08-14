@@ -465,7 +465,13 @@ def api_geo_settings():
                     'theme_input', 'theme_output', 'theme_function', 'theme_device_unit',
                     'theme_panel_bg', 'theme_panel_opacity',
                     'theme_hide_label', 'theme_vis_input', 'theme_vis_output',
-                    'theme_vis_function', 'theme_vis_device_unit'
+                    'theme_vis_function', 'theme_vis_device_unit',
+                    # 모드별 "지도에서 보기"(설정 드로어). 장치 종류별
+                    # theme_vis_* 와 키를 나눈 이유는 'equipment' 처럼 이름이
+                    # 겹치는 축이 있어서다 — 같은 키를 쓰면 서로를 덮어쓴다.
+                    'theme_vis_shape_site', 'theme_vis_shape_zone',
+                    'theme_vis_shape_facility', 'theme_vis_shape_vegetation',
+                    'theme_vis_shape_equipment', 'theme_vis_shape_aot_device',
                 ]
                 for key in theme_keys:
                     val = data.get(key)
@@ -4265,3 +4271,5 @@ def api_geo_map_site_order_save(map_uuid):
 from aot.aot_flask import routes_geo_commissioning  # noqa: E402,F401
 from aot.aot_flask import routes_geo_iec            # noqa: E402,F401
 from aot.aot_flask import routes_geo_planting       # noqa: E402,F401
+# routes_geo_planting 뒤에 와야 한다 — 공용 분할 파라미터 계층을 그쪽에서 가져온다.
+from aot.aot_flask import routes_geo_device_split   # noqa: E402,F401

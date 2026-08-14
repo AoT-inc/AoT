@@ -581,6 +581,391 @@ VP-6 은 이력 보호다. 날짜 정정·이름 변경·삭제(오기입)는 �
 자리를 아직 정하지 않았다 — geo/design 은 도형만 다루고, 위젯 구획 모달은 구획
 하나가 단위라 zone 전체 배분과 결이 다르다).
 
+### 구역 분할 — `orientation` 은 `parts` 등분에서만 뒤집는다 (구현 확정, 2026-08-14)
+
+`planting_split.split_shape()`(`aot_flask/geo/planting_split.py`)는 zone/site 도형을
+`propose_planting_split`/`apply_planting_split` 로 조각내는 순수 기하 계산이다. 처음엔
+방향이 항상 **최소회전 외접사각형의 긴 변**이었다 — 노지 두둑은 실제로 밭의 긴 방향을
+따라 놓이므로(고랑 = 배수·농기계 작업 방향) 그 자체는 맞는 기본값이다.
+
+문제는 이 정책이 `strip_width_cm`(두둑 폭 지정)과 `parts`(단순 N등분) 두 경로에
+**똑같이** 걸려 있었다는 것이다. 실사용에서 걸렸다: 2,618.6㎡ 구역을 `parts=5` 로
+나눴더니 6.43m × 81.7m 짜리 띠 5개(비율 12.7:1)가 나왔다. `parts` 는 "이 구역에 작물
+5개를 나눠 심겠다"는 뜻일 뿐 두둑·고랑 개념이 없다 — 그런데 긴 변을 강제로 따르니
+관리하기 불편한 가늘고 긴 모양만 나올 수 있었다("누가 이렇게 가늘고 긴 밭을
+선호하냐").
+
+**두 경로가 서로 다른 이유로 서로 다른 결론에 도달한다:**
+
+- **`strip_width_cm`(두둑)** — 고랑 방향이 실제 작업 방향과 일치해야 하므로 긴 변
+  기준이 맞다. **건드리지 않는다.**
+- **`parts`(등분)** — 두둑 개념이 없다. 오히려 정방형에 가까울수록 관리(밸브 배치,
+  접근성, 시각적 구분)가 편하다.
+
+**채택한 안**: `orientation='long'|'short'` 파라미터를 `split_shape()` 에 추가한다.
+기본값은 `'long'`(기존 동작과 동일) 이고, `'short'` 를 주면 짧은 변을 눕혀 그 반대쪽을
+등분한다 — 위 사례라면 16.4m × 32m(비율 2:1)가 된다. 최소회전 사각형의 두 변은 서로
+수직이므로 구현은 긴 변 각도에 90도를 더하는 것 하나다(`_longest_edge_angle()` 재사용,
+새 기하 계산 불필요) — `strips`/`length_m`/`area_m2` 응답 계약은 그대로다.
+
+**기각한 안**: 격자 분할(rows × cols)로 항상 정방형에 가깝게 만드는 안. `parts=5`,
+`7` 처럼 소수인 경우 격자 조합이 `1×N` 밖에 없어 예외 처리가 필요하고, 기존 "조각
+하나 = strips 리스트 한 행" 계약을 깨거나 별도 분기를 요구한다. `orientation` 두
+값이면 실사용 사례를 충분히 덮으면서 계약을 그대로 유지할 수 있어 이쪽을 택했다.
+
+**종횡비 경고**: `orientation` 을 굳이 켜지 않아도 사람이 알아챌 수 있도록,
+`parts` 등분에서 조각 종횡비가 4:1 을 넘으면 `info['aspect_ratio']` 와 `note` 에
+`orientation='short'` 를 써 보라는 문구가 붙는다. `strip_width_cm` 는 원래 가늘고
+긴 것이 정상 설계라 이 경고 대상이 아니다(`aspect_ratio` 는 `null`).
+
+지도 UI(`geo/design` 식생 모드, `aot-geo-vegetation.js`)의 분할 폼에는 "방향" 선택이
+`parts`(등분) 모드에서만 보이고 `strip_width_cm`(띠 폭) 모드로 바꾸면 숨겨지며 값도
+`'long'` 으로 되돌아간다 — 의미 없는 조합을 화면에서부터 없앤다.
+
+회귀: `test_geo_planting.py::TestSplitShape` 의
+`test_orientation_short_cuts_across_the_long_side` ·
+`test_orientation_default_is_long_and_unchanged` ·
+`test_invalid_orientation_is_rejected` ·
+`test_aspect_ratio_flags_long_narrow_parts_split` ·
+`test_aspect_ratio_absent_for_strip_width_mode`.
+
+### 구역 분할 — `angle_deg` 로 임의 각도 지정, 지도 위 기준선 회전 (구현 확정, 2026-08-14)
+
+`orientation='long'|'short'` 두 프리셋만으로는 부족한 경우가 실사용에서 나왔다 —
+농부가 원하는 두둑 방향이 밭의 긴 변도 짧은 변도 아닌 경우다(예: 인접 필지의 기존
+두둑과 줄을 맞추고 싶을 때). 각도를 자유롭게 줄 방법이 없어 이번에 추가했다.
+
+**서버**: `split_shape()` 에 `angle_deg`(0≤값<180) 파라미터를 추가했다. 주어지면
+`_longest_edge_angle()`/`orientation` 계산을 건너뛰고 그 각도를 그대로 조각
+elongation 축으로 쓴다 — 회전 원점(`rect.centroid`)과 이후 자르기 로직은 손대지
+않았다. **`orientation` 과 동시에 주어지면 `angle_deg` 가 이긴다** — `orientation`
+값은 조용히 무시되고, 응답의 `info['orientation']` 은 `'custom'` 이 된다.
+`REST`(`_split_args`/`_compute_split`)는 두 파라미터를 그대로 통과시킬 뿐이라 별도
+분기가 없다.
+
+**AI/MCP 도구는 건드리지 않았다** — `propose_planting_split`/`apply_planting_split`
+에는 `angle_deg` 를 노출하지 않는다. LLM 은 지도를 볼 수 없어 임의 각도를 스스로
+고를 근거가 없고, 쓰지 않을 설정을 노출하는 것 자체가 비용이다(불필요한 설정 추가
+금지 원칙). UI 전용 파라미터로 시작하고, 실사용 후 필요해지면 그때 추가한다.
+
+**지도 UI**(`aot-geo-vegetation.js`): "방향" select 에 세 번째 선택지
+"자유 각도"(`custom`)를 추가했다 — 고르면 각도 슬라이더(0~179°)가 나타난다.
+슬라이더를 움직이면:
+
+1. **기준선** — 선택된 구역의 중심(turf.centroid)을 지나는 점선을 그 각도로 즉시
+   그린다. **서버를 부르지 않는다** — feature 는 이미 클라이언트에 있고
+   (`_findAreaFeature()`), turf 만으로 충분하다. 각도 → 나침반 방위각 변환은
+   `bearing = 90 - angleDeg` 다(`planting_context.local_frame()` 이 위경도=동/북 축
+   등장방형 근사를 쓰므로 지역 규모에서 이 변환이 맞는다).
+2. **분할 조각** — 250ms 디바운스로 `split-preview` 를 다시 불러 점선 폴리곤을
+   갱신한다. 이 "초안" 레이어(`_splitLiveSrc` 등)는 **커밋된 미리보기와 다른 GL
+   소스**를 쓴다 — 폼을 다시 열어 각도만 만져보다 취소하면, 이미 커밋된
+   `this._split.info` 와 화면에 남는 점선이 달라지는 사고를 막기 위해서다. 모달이
+   어떻게 닫히든(`hidden.bs.modal`) 초안 레이어는 무조건 지운다.
+
+"미리보기" 버튼(폼 제출)을 누르면 기존 흐름 그대로 `_previewSplit()` 이 **같은
+파라미터로 다시 계산**해 커밋된 레이어에 그리고 모달을 닫는다 — 슬라이더로 보던
+것과 같은 각도이므로 결과가 달라지지 않는다. "구획 만들기" 도 기존과 동일하게
+`split-apply` 가 같은 파라미터로 재계산한다(좌표를 클라이언트가 되돌려보내지
+않는다는 원칙은 유지).
+
+회귀: `test_geo_planting.py::TestSplitShape` 의
+`test_angle_deg_sets_a_custom_direction` ·
+`test_angle_deg_overrides_orientation_when_both_given` ·
+`test_angle_deg_works_with_strip_width_mode_too` ·
+`test_angle_deg_out_of_range_is_rejected` ·
+`test_angle_deg_non_numeric_is_rejected` ·
+`test_angle_deg_absent_leaves_orientation_behavior_unchanged`.
+
+### 구역 분할 — `parts` 와 `strip_width_cm` 를 같이 주면 균등분할이 아니다 (구현 확정, 2026-08-14)
+
+지금까지 `parts`(등분)와 `strip_width_cm`(띠 폭)는 상호배타였다 — 하나만 주면
+서버가 나머지를 계산했다(등분은 폭이 나오고, 폭이면 개수가 `floor` 로 나온다).
+"N개를, 정확히 이만큼 간격으로" 직접 정하고 싶은 경우(예: 이미 정해진 재식
+간격으로 5줄만 자르고 나머지 공간은 통로로 남기기)는 이 둘 중 어느 쪽으로도
+표현할 수 없었다 — 등분은 남는 폭을 허용하지 않고, 띠 폭은 개수를 직접 고를
+수 없었다.
+
+**채택한 안**: `split_shape()` 이 이제 `parts` 와 `strip_width_cm` 를 **동시에**
+받는다. 둘 다 주면 정확히 `parts`개를, 정확히 `strip_width_cm` 폭으로 자르고,
+`parts × strip_width_cm` 을 채우고 남는 치수는 (등분·자동폭 모드와 같은 규칙으로)
+짧은 축 양쪽에 절반씩 여백으로 돌린다. 남는 치수가 음수면(그 개수·폭이 도형보다
+크면) 거부한다. 세 가지 입력 조합이 이제 모두 다른 결과를 낸다:
+
+| 입력 | 개수 | 폭 | 여백 |
+|---|---|---|---|
+| `parts=3` | 3 (고정) | 자동(짧은 축/3) | 없음 |
+| `strip_width_cm=400` | 자동(`floor`) | 4m (고정) | 있음(자동 계산된 만큼) |
+| `parts=3, strip_width_cm=400` | 3 (고정) | 4m (고정) | 있음(사용자가 사실상 결정) |
+
+**방향도 다시 의미를 가진다.** `strip_width_cm` 단독 모드는 고랑 방향이 실제
+작업 방향과 같아야 해서 방향을 고정했지만(위 "orientation" 절), 개수까지 같이
+주면 그때부터는 `parts` 처럼 "N개를 어느 방향으로 늘어놓을지"의 문제가 되므로
+`orientation`/`angle_deg` 를 그대로 받는다.
+
+**지도 UI**(`aot-geo-vegetation.js`): "띠 폭" 모드에 "정확한 조각 수(선택)" 칸을
+추가했다 — 비우면 지금까지처럼 자동(`floor`)이고, 채우면 그 개수로 정확히
+자른다. 이 칸이 채워지면 "방향" 행이 다시 나타난다(자유 각도 포함). REST
+계층(`_split_args`/`_compute_split`)은 `parts`/`strip_width_cm` 를 원래도 무조건
+같이 통과시키고 있었으므로 **변경이 필요 없었다** — 상호배타 검증은
+`split_shape()` 안에만 있었다.
+
+**AI/MCP 도구는 건드리지 않았다** — `propose_planting_split` 의 스키마 설명이
+이미 "Give this OR parts, never both" 라고 명시하므로 그대로 둔다. 필요해지면
+그때 스키마를 갱신한다.
+
+회귀: `test_geo_planting.py::TestSplitShape` 의
+`test_neither_parts_nor_width_is_rejected` ·
+`test_parts_and_width_together_gives_exact_count_at_exact_width` ·
+`test_parts_and_width_together_respects_orientation_and_angle` ·
+`test_parts_and_width_together_rejects_when_shape_too_small` ·
+`test_parts_and_width_together_differs_from_either_alone`.
+
+### 구역 분할 — `widths_cm` 로 조각마다 다른 폭 (구현 확정, 2026-08-14)
+
+지금까지 세 가지 입력(`parts`/`strip_width_cm`/둘 다)은 모두 **조각들의 폭이
+서로 같다**는 전제를 공유했다. 실제 밭은 그렇지 않을 때가 있다 — 가장자리
+한 줄만 통로로 넓게 두거나, 작물별로 필요한 이랑 폭이 달라서 구획마다 폭을
+다르게 잘라야 하는 경우다. 등분·자동폭·조합 모드 중 무엇으로도 표현할 수
+없었다.
+
+**채택한 안**: `split_shape()` 에 `widths_cm`(cm 단위 리스트, 2개 이상)를
+추가했다. 있으면 `parts`/`strip_width_cm` 는 완전히 무시된다(대체이지 조합이
+아니다 — 목록 자체가 이미 개수와 각 폭을 다 말하고 있어서 둘을 섞을 이유가
+없다). 리스트 합이 도형의 짧은 축보다 작으면 그 차이를 여백으로 양쪽에 절반씩
+돌린다(자동폭 모드와 같은 규칙). 크면 아래 "마지막 조각 자동 축소" 절대로
+처리한다 — 무조건 거부하지 않는다. 다른 모드와 마찬가지로
+`orientation`/`angle_deg`/`edge_margin_cm` 은 그대로 받는다 — 목록은 축을 따라
+놓일 조각들의 두께만 정하고, 축 자체는 여전히 방향 파라미터가 정한다.
+
+합 비교에는 **조각당 0.5cm 허용오차**(`0.005 * 조각수`, 미터)를 둔다. UI 가
+이 함수 자신의 균등분할 결과(`strip_widths_m`, cm 로 반올림)를 그대로
+되돌려보내는 왕복 경로가 있는데, cm 반올림 자체가 조각마다 최대 0.5cm 오차를
+낼 수 있어 "도형과 정확히 같은 폭인데 부동소수 오차로 거부됨" 이 나올 수
+있었다(실사용에서 68.2/68.2 경계에 걸린 회귀, `test_widths_cm_round_trip_from_
+equal_split_is_accepted`).
+
+`info` 딕셔너리에 `strip_widths_m`(각 조각의 실제 폭, m) 를 추가했다 — 이제
+모든 모드(등분·자동폭·조합·목록)에서 항상 채워진다. UI 가 "기본은 균등분할,
+그 결과를 시작점으로 조각별 폭을 편집" 이라는 흐름을 만들 수 있는 것은 이
+값이 모드에 상관없이 항상 나오기 때문이다.
+
+**마지막 조각 자동 축소.** widths_cm 합이 도형을 넘으면 무조건 거부하던 첫
+구현을 되돌렸다 — 조각을 하나씩 입력하다 마지막 값이 남는 자리보다 커서
+거부당하는 것이 실사용에서 흔했다("마지막 입력값이 커서 전체 가로폭을
+초과해도 가능한 최대 크기로 분할하게 할 것"). 이제는 **마지막 조각만** 남는
+자리(`across - 앞선 조각들의 합`)에 맞춰 줄인다. 앞선 조각들만으로도 이미
+넘치면(마지막을 0으로 줄여도 안 들어가면) 그건 "마지막이 커서" 가 아니라
+애초에 안 맞는 요청이므로 그대로 거부한다. 잘렸으면
+`info['widths_clamped_from_cm']` 에 원래 요청값(cm)을 남기고 `note` 에도
+문구를 붙인다 — `strip_widths_m` 의 마지막 값은 이미 잘린 값이므로, 저장 시
+서버가 같은 파라미터로 다시 계산해도 미리보기와 똑같은 결과가 나온다("본
+것과 저장된 것이 같다" 원칙은 그대로 유지된다).
+
+**지도 UI**(`aot-geo-vegetation.js`): 분할 폼에 "구획별 폭 직접 조정" 토글을
+추가했다. 끄면 지금까지의 등분/띠 폭 모드 그대로다. 켜면:
+- 이미 나온 미리보기의 `strip_widths_m` 로 조각별 입력칸을 채운다(없으면
+  2개짜리 기본값으로 시작). 조각 수/폭 칸은 숨긴다 — 더 이상 의미가 없다.
+- 입력 단위는 **m** 이다(예: `22.73`) — 서버 `widths_cm` 는 cm 이므로 전송
+  직전에만 ×100 한다. 밭 폭은 보통 수십 cm~수십 m 라 cm 입력은 자릿수가
+  크고 소수점 두 자리로 딱 떨어지는 값(예: 22.73m)을 표현할 수 없었다.
+- 각 칸을 고치거나, 조각을 더하고 뺄 수 있다(최소 2개 — 서버 검증과 같은
+  하한). 값이 바뀔 때마다 위 모드들과 같은 250ms 디바운스 실시간 미리보기가
+  돈다.
+- 마지막 조각이 서버에서 잘렸으면 입력칸은 **원래 값 그대로 둔다**(사용자가
+  타이핑 중인 값을 되돌려쓰지 않는다) — 대신 요약 줄에 "마지막 구획을 줄여
+  맞춤 N m" 을 띄워 실제로 무엇이 만들어질지 알린다.
+- "방향" 행은 목록 모드에서도 항상 보인다 — `parts+strip_width_cm` 조합 모드와
+  같은 이유로, 이미 N개를 명시적으로 늘어놓는 것이라 방향이 늘 의미를 갖는다
+  (`hasExactCount()` 가 이 토글도 같은 취급을 한다).
+- `.aot-modal-option-row` 는 공용 CSS 가 `display: flex !important` 로 못
+  박아 둔다(드로어에서 버튼 묶음 줄을 세로로 쌓기 위한 규칙,
+  `aot-base-ui.css`). 이 토글을 만들며 발견한 **기존 버그** — "정확한 조각
+  수"/"방향"/"각도" 행을 여닫던 기존 코드가 `row.style.display='none'`(플레인,
+  !important 없음)이라 실제로는 전혀 숨겨지지 않고 있었다. `showRow()` 헬퍼
+  (`el.style.setProperty('display','none','important')`)로 여기서 함께
+  고쳤다.
+
+지도 미리보기 폴리곤에 **조각 번호 라벨**을 붙였다(`_aot_split_preview_label`,
+symbol 레이어) — 입력칸의 "구획 1", "구획 2" 와 지도 위 어느 조각인지 맞춰
+볼 수 있게. **미리보기에만** 있다 — 저장된 실제 구획은 이름으로 구분하지
+번호 라벨을 달지 않는다.
+
+REST 계층(`routes_geo_planting.py`): `_split_args` 에 `widths_cm` 파서
+(`_num_list`)를 추가했다 — POST(JSON)는 배열 그대로, GET(라이브 미리보기의
+쿼리스트링)은 값이 문자열뿐이라 콤마로 구분해 받는다(`widths_cm=500,1000,300`).
+`_compute_split` 은 이를 그대로 `split_shape()` 에 전달한다.
+
+**AI/MCP 도구는 건드리지 않았다** — `propose_planting_split` 스키마에
+`widths_cm` 을 아직 노출하지 않는다. 필요해지면 그때 스키마를 갱신한다.
+
+회귀: `test_geo_planting.py::TestSplitShape` 의
+`test_widths_cm_gives_each_piece_its_own_width` ·
+`test_widths_cm_overrides_parts_and_strip_width_cm` ·
+`test_widths_cm_rejects_too_few_pieces` ·
+`test_widths_cm_rejects_non_positive_width` ·
+`test_widths_cm_last_piece_is_clamped_when_it_overflows` ·
+`test_widths_cm_rejects_when_earlier_pieces_alone_exceed_short_axis` ·
+`test_widths_cm_respects_orientation_and_angle` ·
+`test_widths_cm_round_trip_from_equal_split_is_accepted` ·
+`test_uniform_modes_also_report_strip_widths_m`.
+
+### 분할 폼을 모달에서 설정 드로어로 (구현 확정, 2026-08-14)
+
+분할 폼은 지도를 덮는 Bootstrap 모달이었다. 그래서 "미리보기" 를 누르면 **모달을
+닫아야** 점선을 볼 수 있었고, 조건을 고치려면 다시 열어야 했다 — 설정과 그 결과를
+동시에 볼 수 없다는 것이 이 화면의 근본 문제였다. 자유 각도 슬라이더를 넣으면서
+임시로 "초안 레이어(모달 안에서 라이브) + 커밋 레이어(모달 닫고 확정)" 2층 구조를
+뒀는데, 이는 모달이라는 제약을 우회하려던 것이지 원하는 구조가 아니었다.
+
+**geo/design 의 모드 패널 전체를 드로어로 옮기면서 함께 해결했다.** 하단 가로바에는
+모드 탭만 남기고(`nav-v-panel` 90px→50px), 각 모드의 설정 tier 는
+`#geo-settings-drawer` 로 간다. 드로어는 대시보드 위젯·Input/Output 설정이 이미
+쓰는 `.aot-widget-drawer` 공용 컴포넌트라 **새 CSS 도 새 열림 로직도 쓰지 않았다** —
+`aot-modal-modern.css` 가 지도를 덮는 대신 페이지를 드로어 폭만큼 밀어내고,
+`common/aot-widget-drawer.js` 가 `body.aot-widget-drawer-open` 토글과 push 후
+resize(맵 reflow)를 맡는다. 드로어 안에서 tier 가 세로로 감싸도록 하는 규칙만
+`#geo-settings-drawer` 로 범위를 좁혀 더했다(가로바용 기본값은 한 줄 고정 +
+가로 스크롤이라 520px 세로 패널에서 잘린다).
+
+그 결과 분할은 **자체 모달을 버리고** 식생 모드의 하위 tier(`split`)가 됐다. 내용과
+배선은 여전히 vegetation 모듈이 쥔다(`splitPanelHtml()` / `bindSplitPanel()`) —
+폼이 지도(미리보기 점선·기준선)와 한 몸이라 패널이 흉내 낼 수 있는 것이 아니다.
+패널은 tier 자리만 내주고 `_buildTier` 에서 배선을 위임한다.
+
+**2층 미리보기와 "확정" 단계를 없앴다.** 드로어가 지도를 가리지 않으므로 화면에
+보이는 것이 곧 제안이다. 값이 바뀌면 기준선은 즉시(turf, 서버 없이), 조각은 250ms
+디바운스로 갱신되고, "구획 만들기" 를 누르면 서버가 **같은 파라미터로 다시 계산**해
+저장한다 — "본 것과 저장된 것이 같다" 는 보장은 그 재계산이 하지 확정 단계가 하는
+것이 아니었다. 함께 사라진 것: 초안 레이어(`_splitLive*`), `_previewSplit`/
+`_liveSplitPreview` 2벌, 패널 막대의 적용·취소 버튼과 `_refreshPanel()`(요약은 이제
+tier 를 다시 그리지 않고 드로어 안에서 제자리 갱신한다 — 다시 그리면 편집 중인
+폼이 날아간다).
+
+편집 중 서버가 거절하면 토스트 대신 요약 줄에만 남긴다 — 슬라이더를 끄는 동안
+매번 알림이 뜨면 그것이 방해다. 저장을 막아야 할 오류는 만들기 때 분명히 알린다.
+
+### 식생 구획이 생성 직후 안 보이거나 테두리가 없던 버그 (구현 확정, 2026-08-14)
+
+"구획을 만들었는데 즉시 화면에 안 나온다", "구획에 테두리가 없다" 는 두 신고는
+증상만 다른 **같은 버그**였다. 지도를 열자마자 그 밭의 구획 18개를 한 번에
+붙이는 실험으로 재현했다: 1개만 화면에 남고 17개는 GL 소스도 레이어도 아예
+없었다(그러니 도형도, 도형에 붙는 line 레이어인 테두리도 없다).
+
+**원인**: MapLibre 는 같은 동기 틱(같은 함수 호출 안) 에서 서로 다른 구획에
+대해 `addSource`+`addLayer` 를 여러 번 연달아 부르면 **첫 번째만 실제로 붙고
+나머지는 예외 없이 조용히 사라진다.** `_addLayer()` 가 구획마다
+`layer.addTo(map)`(직접, 재시도 없음) 를 부른 **다음** `store.addLayer(layer)`
+(레이어 그룹의 `doAdd()`, `idle` 재시도·스타일 캐시 재적용까지 하는 더 성숙한
+경로) 도 불러 같은 레이어를 두 개의 부착 경로로 동시에 밀어 넣고 있었다 —
+이것도 원인에 한몫했다(다른 도형 종류는 `group.addLayer()` 하나만 쓴다).
+
+**확인**: 콘솔에서 `layer.addTo()` 를 프레임 하나씩 띄워 순서대로 부르면
+전부 붙고, 동기 루프로 한 번에 부르면 처음 하나만 붙는 것을 직접 실측으로
+재현·반증했다.
+
+**고친 방식**: `_addLayer()` 에서 직접 `layer.addTo()` 를 부르지 않고,
+`store.addLayer(layer)` 하나로 통일하면서 **부착을 requestAnimationFrame
+큐로 직렬화**했다(`_queueAttach`/`_drainAttachQueue`) — 여러 구획이 한꺼번에
+등록돼도 프레임당 하나씩만 실제 GL 부착을 시도한다. `load()`(지도 로드),
+`_addLayer()`(신규/수정), `_verifyAttached()`(재확인 안전망) 가 모두 이
+큐를 거친다. `setEmphasis()`(모드 전환 시 강조/배경 전환)는 대상을 바꾸지
+않았다 — 이미 붙은 레이어의 `setPaintProperty` 재적용일 뿐이라 같은 종류의
+버그가 아니고, 여기까지 큐로 미루면 모드 전환마다 구획들이 한 프레임씩
+어긋나며 켜지는 새로운 깜빡임이 생긴다.
+
+### 거리 조회 — 읽기전용 리졸버를 따로 둔다 (구현 확정, 2026-08-14)
+
+`nearest` / `distance_between` (`aot/utils/geo_distance.py`). 실제로 나온 요청은
+*"관리사무소에서 가까운 순으로 품종을 배정해 달라"* 였고, 그때는 임시 스크립트로
+중심점과 거리를 계산해 **숫자 목록을 만들어 준 뒤** AI 가 그것을 읽게 했다. 그
+계산을 도구로 고정한 것이다 — LLM 은 좌표 산술을 조용히 틀리고, 틀린 거리는
+그대로 배치 결정이 된다.
+
+#### 쓰기 리졸버를 빌려 쓰지 않는다 (설계의 핵심)
+
+`_resolve_note_target` 이 이름을 해석하지만, 작물명은 `_resolve_target_by_crop`
+→ `_one_zone()` 을 거쳐 **구획이 아니라 소속 zone 으로 치환된다.** 그래서 한
+zone 을 5등분해 서로 다른 품종을 심은 상태(바로 이 문서가 다루는 정상 상태)에서
+품종명 다섯 개를 넘기면 **다섯 개가 전부 같은 zone 중심으로 해석되어 거리가
+전부 같게** 나온다. 형식은 멀쩡하고 숫자만 틀리는 종류라 알아채기 어렵다.
+
+그 리졸버를 고쳐서 구획을 돌려주게 만들 수도 **없다.** 호출처 17곳 중
+`add_schedule` · `create_note` · `schedule_device_control` 이 **쓰기** 도구이고,
+"target 은 무언가를 쓸 수 있는 GeoShape 여야 한다" 가 이 문서의 정본이다
+(위 §"이름 해석" 절, `_active_crop_plots` docstring). 거기를 건드리면 예약이
+GeoPlanting uuid 에 걸린다.
+
+그래서 **읽기전용 리졸버를 따로 둔다**(`geo_distance.resolve_query`). 읽기전용
+이라는 것이 곧 능력이다 — 쓰기 리졸버가 못 하는 두 가지를 할 수 있다.
+
+1. **구획 자신을 가리킨다.** 쓸 대상이 아니므로 GeoShape 로 올라갈 이유가 없다.
+2. **모호하면 고르지 않고 후보를 uuid 와 함께 돌려준다.** 5-튜플 계약에는
+   "모호함" 을 담을 자리가 없어 쓰기 리졸버는 그냥 실패해야 했지만, 여기서는
+   되물을 수 있다.
+
+검정콩을 다섯 조각에 심었으면 *"검정콩까지 거리"* 는 **답이 없는 질문**이다
+(1-4 구역이 실제로 그 상태다). 하나를 골라 답하면 그 숫자가 조용히 틀린다.
+
+#### 해석 층위 — 위에서 하나라도 걸리면 아래로 안 내려간다
+
+| | 층위 | 비고 |
+|---|---|---|
+| 0 | `unique_id` | 도구 체이닝이 이름 검색을 거치면 안 된다 |
+| 1 | GeoShape 이름 정확일치 | **지도의 정식 어휘가 항상 이긴다** — 구획 이름이 우연히 '3-1' 이어도 구역 '3-1' 이 먼저다 |
+| 2 | 활성 구획의 `name`/`crop`/`variety` 정확일치 | 활성만 — 작년 배추가 올해 질문을 끌고 가면 안 된다 |
+| 3 | 장치 이름 정확일치 | |
+| 4 | 부분일치(위 셋을 한꺼번에) | **양쪽 다 두 글자 이상**일 때만 — 한 글자 작물명 '마' 가 '고구마' 에 걸리는 것을 막는다(`_resolve_note_target` 과 같은 가드) |
+
+정확일치 층에서 여러 개가 나오면 그것은 **진짜 모호**다. 층을 섞어 점수를
+매기지 않는 이유가 그것이다 — 섞으면 "왜 이게 골라졌는지" 를 설명할 수 없다.
+
+`nearest` 는 후보마다 이 검색을 돌리므로 **카탈로그(도형·구획·장치 목록)를
+호출당 한 번만 만든다**(`build_catalog`). 안 그러면 후보 200개에 전체 스캔이
+200번 돈다.
+
+#### 대표점은 개체마다 하나씩, 기존 정본을 깨지 않는다
+
+| 개체 | 대표점 | 근거 |
+|---|---|---|
+| `GeoShape` | `get_centroid()` (꼭짓점 평균) | **이미 `get_address`·`get_local_time` 이 쓰는 정본.** 여기서만 면적 중심으로 바꾸면 "3-1 이 어디냐" 의 답이 도구마다 달라진다 |
+| `GeoPlanting` | 면적 중심, 오목이면 `representative_point()` | 기존 정본이 없었으므로 옳은 쪽을 고른다 |
+| 장치 | 자기 `latitude`/`longitude` | `resolve_location_coords` 그대로 |
+
+`GeoShape` 쪽이 면적 중심이 아닌 것은 알고 남긴 타협이다 — 정확도보다 **한
+시스템 안에서 한 개체의 좌표가 하나** 인 것이 우선한다(이 저장소가 반복해서
+데인 형태).
+
+`resolve_location_coords`(`aot/utils/device_tz.py`)에 GeoPlanting 분기를 넣지
+않고 `geo_distance` 에 따로 둔 이유도 같다 — 그쪽을 고치면 `get_address` ·
+`get_local_time` 의 동작까지 함께 바뀐다.
+
+#### 거리 정의를 매번 응답에 싣는다
+
+**중심점 사이의 직선거리**다. 맞닿은 두 구획도 중심이 40m 떨어져 있으면 40m 로
+답한다 — 경계 사이 최단거리가 아니다. `basis` 가 이것을 매번 말하지 않으면
+읽는 쪽이 경계 거리로 오해한다. 투영은 `planting_context`·`facility_calc` 와
+**같은 평면 근사**를 쓴다(같은 지도에서 면적과 거리가 다른 평면에서 재어지면
+설명 없이 어긋난다).
+
+#### 조용히 줄이지 않는다
+
+- 해석 못 한 후보는 목록에서 빠지지 않고 `unresolved`(그런 이름이 없다) 또는
+  `ambiguous`(여럿에 걸렸다) 로 나온다 — **없는 것과 먼 것과 못 고른 것은
+  전부 다르다.** 목록이 짧아진 것을 "멀어서 빠졌나" 로 읽으면 안 되고, 특히
+  `ambiguous` 는 **답이 있는데 못 고른 것**이라 되물으면 해결된다.
+- 후보 200개를 넘으면 잘라내지 않고 **거부한다**(`planting_split` 과 같은 규칙).
+- 응답에 **좌표를 싣지 않는다** — 호출자가 좌표로 다시 계산하기 시작하면 이
+  도구를 만든 이유가 사라진다.
+- 구획의 `name` 은 분할로 만들면 비어 있는 것이 정상이라, 표시명은
+  `name → crop (variety) → uuid 앞자리` 로 떨어진다. 폴백이 없으면 결과가
+  `null` 다섯 줄이 된다(실제 데이터가 그랬다).
+
+회귀: `aot/tests/test_geo_distance.py` (35건). 쓰기 리졸버
+(`_resolve_note_target` / `_resolve_target_by_crop`)를 끌어다 쓰기 시작하는
+회귀를 소스 검사로 막고, 같은 작물이 여러 구획에 있을 때 하나를 골라버리는
+회귀를 해석 테스트로 막는다.
+
 ### Phase 4 — 미룸
 - 시점 슬라이더
 - 자동 자원 계산 (겹침 규칙이 실사용으로 검증된 뒤)

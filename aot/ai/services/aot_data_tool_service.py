@@ -5168,6 +5168,61 @@ class AoTDataToolService:
                     device_id, prefer=getattr(obj, 'map_config_id', None))}
 
     @staticmethod
+    def _distance_error(err):
+        """오류를 응답 dict 로. 모호할 때는 후보를 실은 dict 가 그대로 온다 —
+        문구로 뭉개면 되물을 근거(후보 uuid)가 사라진다."""
+        return err if isinstance(err, dict) else {"error": err}
+
+    @staticmethod
+    def distance_between(target_a=None, target_b=None, **extra):
+        """[읽기전용] 지도 위 두 개체 사이의 거리(m). 저장하지 않는다.
+
+        **거리를 직접 계산하지 말 것.** 좌표 산술은 조용히 틀리고, 틀린 거리는
+        그대로 배치 결정이 된다. 이 도구가 서버에서 센다.
+
+        이름(사람이 부르는 대로) 또는 unique_id 를 받는다. 이름이 여러 개에
+        걸리면 **하나를 고르지 않고** `needs_disambiguation` 과 후보 목록을
+        돌려준다 — 검정콩을 다섯 조각에 심었으면 "검정콩까지 거리" 는 답이
+        없는 질문이다. 그 후보를 사람에게 보여 되물을 것.
+        """
+        try:
+            from aot.utils import geo_distance
+            if not target_a or not target_b:
+                return {"error": "target_a and target_b are required "
+                                 "(names or unique_ids)"}
+            result, err = geo_distance.distance_between(target_a, target_b)
+            if err:
+                return AoTDataToolService._distance_error(err)
+            return result
+        except Exception as e:
+            logger.exception("Error in distance_between")
+            return {"error": str(e)}
+
+    @staticmethod
+    def nearest(reference=None, candidates=None, **extra):
+        """[읽기전용] 기준 개체에서 가까운 순으로 후보를 정렬한다.
+
+        "관리사무소에서 가까운 순으로 품종을 배정" 같은 요청이 이 도구 하나로
+        끝난다 — 후보마다 distance_between 을 부르고 손으로 정렬하지 말 것.
+
+        결과에서 빠진 후보는 `unresolved`(못 찾음) 또는 `ambiguous`(여러 개에
+        걸림) 로 실린다. **둘 다 사람에게 그대로 알릴 것** — 목록이 짧아진
+        이유는 "멀어서" 가 아니고, 특히 ambiguous 는 답이 있는데 못 고른
+        것이라 되물으면 해결된다.
+        """
+        try:
+            from aot.utils import geo_distance
+            if not reference:
+                return {"error": "reference is required (a name or unique_id)"}
+            result, err = geo_distance.nearest(reference, candidates)
+            if err:
+                return AoTDataToolService._distance_error(err)
+            return result
+        except Exception as e:
+            logger.exception("Error in nearest")
+            return {"error": str(e)}
+
+    @staticmethod
     def set_device_location(device_id=None, lat=None, lng=None, map_id=None, **extra):
         """Place / move a device (Input or Output) on the map by writing its
         latitude/longitude columns (the authoritative location). Optional map_id binds
@@ -7610,12 +7665,17 @@ class AoTDataToolService:
 
     @staticmethod
     def propose_planting_split(zone_id=None, parts=None, strip_width_cm=None,
-                               edge_margin_cm=0, **extra):
+                               edge_margin_cm=0, orientation='long', **extra):
         """[읽기전용] 구역/대지를 나눈 제안을 계산한다. 저장하지 않는다.
 
         **좌표를 만들지 않는 분할 경로다.** 사람이 이미 그려 둔 도형을 서버가
         긴 변 방향으로 나눈다 — LLM 은 구역이 지도 어디인지 알 수 없으므로
         (어떤 도구도 경계 폴리곤을 안 내준다) 이 길이 없으면 좌표를 지어내게 된다.
+
+        `orientation='short'` 를 주면 짧은 변을 따라 눕혀 정방형에 가까운
+        조각을 낸다 — `parts` 등분(작물을 나눠 심을 때)에서만 의미가 있다.
+        `strip_width_cm`(두둑)는 고랑 방향이 실제 작업 방향과 맞아야 하므로
+        기본(`'long'`)을 그대로 쓴다.
 
         폴리곤 자체는 돌려주지 않는다. 조각 수·길이·면적 같은 **요약만** 낸다 —
         좌표 수백 개를 컨텍스트에 실을 이유가 없고, 실제로 만들 때는
@@ -7631,15 +7691,16 @@ class AoTDataToolService:
                 return {"error": f"zone/shape not found: {zone_id}"}
             strips, info = planting_split.split_shape(
                 shape, parts=parts, strip_width_cm=strip_width_cm,
-                edge_margin_cm=edge_margin_cm)
+                edge_margin_cm=edge_margin_cm, orientation=orientation)
             if strips is None:
                 return {"error": info}
             lengths = [s['length_m'] for s in strips]
-            return {
+            result = {
                 "zone_id": zone_id,
                 "pieces": info['count'],
                 "piece_width_m": info['strip_width_m'],
                 "length_m": {"min": min(lengths), "max": max(lengths)},
+                "orientation": info['orientation'],
                 "orientation_deg": info['orientation_deg'],
                 "source_area_m2": info['source_area_m2'],
                 "covered_area_m2": info['covered_area_m2'],
@@ -7651,6 +7712,9 @@ class AoTDataToolService:
                          "create them, call apply_planting_split with the SAME "
                          "zone_id and parts/strip_width_cm plus the crop."),
             }
+            if info.get('aspect_ratio') is not None:
+                result["aspect_ratio"] = info['aspect_ratio']
+            return result
         except Exception as e:
             logger.exception("Error in propose_planting_split")
             return {"error": str(e)}
@@ -7658,13 +7722,13 @@ class AoTDataToolService:
     @staticmethod
     def apply_planting_split(zone_id=None, crop=None, planted_on=None,
                              parts=None, strip_width_cm=None, edge_margin_cm=0,
-                             variety=None, name=None, expected_end_on=None,
-                             color=None, **extra):
+                             orientation='long', variety=None, name=None,
+                             expected_end_on=None, color=None, **extra):
         """[쓰기] 분할 제안을 실제 구획으로 만든다. 사람 승인 필요.
 
-        `propose_planting_split` 와 **같은 파라미터로 다시 계산**한다 — 제안을
-        저장해 두지 않는 이유는 분할이 결정적이기 때문이다. 도형이 그 사이에
-        바뀌었으면 새 모양대로 나뉜다(그게 맞다).
+        `propose_planting_split` 와 **같은 파라미터로 다시 계산**한다(`orientation`
+        포함) — 제안을 저장해 두지 않는 이유는 분할이 결정적이기 때문이다.
+        도형이 그 사이에 바뀌었으면 새 모양대로 나뉜다(그게 맞다).
 
         조각 하나가 구획 하나(GeoPlanting 한 행)다. `parts=3` 이면 세 행,
         `strip_width_cm=160` 이면 두둑 수만큼. **개수를 보고 부르라** — 41행이
@@ -7683,7 +7747,7 @@ class AoTDataToolService:
                         "message": f"zone/shape not found: {zone_id}"}
             strips, info = planting_split.split_shape(
                 shape, parts=parts, strip_width_cm=strip_width_cm,
-                edge_margin_cm=edge_margin_cm)
+                edge_margin_cm=edge_margin_cm, orientation=orientation)
             if strips is None:
                 return {"status": "error", "message": info}
 

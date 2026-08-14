@@ -424,10 +424,10 @@ TOOLS: List[Tool] = [
         "tool_name": "propose_planting_split",
         "action_type": "virtual_tool_call",
         "description": ("Works out how a zone/site would divide into plots along "
-                        "its longest side. Computes only — creates nothing. "
-                        "Read-only."),
+                        "its longest side (or shortest, with orientation='short'). "
+                        "Computes only — creates nothing. Read-only."),
         "usage_hint": ("params.arguments: {zone_id, parts? | strip_width_cm?, "
-                       "edge_margin_cm?}"),
+                       "edge_margin_cm?, orientation?}"),
     }),
     Tool('apply_planting_split', handler='apply_planting_split', mutating=True, manifest={
         "tool_name": "apply_planting_split",
@@ -435,7 +435,8 @@ TOOLS: List[Tool] = [
         "description": ("Creates one plot per piece of a split, recomputed from "
                         "the same arguments. Requires human approval."),
         "usage_hint": ("params.arguments: {zone_id, crop, planted_on, "
-                       "parts? | strip_width_cm?, edge_margin_cm?, name?}"),
+                       "parts? | strip_width_cm?, edge_margin_cm?, orientation?, "
+                       "name?}"),
     }),
     Tool('copy_planting', handler='copy_planting', mutating=True, manifest={
         "tool_name": "copy_planting",
@@ -538,6 +539,25 @@ TOOLS: List[Tool] = [
         "action_type": "virtual_tool_call",
         "description": "Reads a device's current map location (lat/lng). Read-only.",
         "usage_hint": "params.arguments: {device_id}",
+    }),
+    # --- 지도 거리 (@ANCHOR: GEO_DISTANCE_TOOLS, 2026-08-14) ------------------
+    # LLM 은 좌표 산술을 조용히 틀린다. 거리는 서버가 세고 LLM 은 받는다.
+    # uuid 만 받는 이유는 aot/utils/geo_distance.py docstring 참조 — 이름을
+    # 받으면 작물명이 구획이 아니라 소속 zone 으로 해석되어 조용히 틀린다.
+    Tool('distance_between', handler='distance_between', manifest={
+        "tool_name": "distance_between",
+        "action_type": "virtual_tool_call",
+        "description": ("Distance in metres between two map entities, by name "
+                        "or unique_id. Ambiguous names are returned as "
+                        "candidates, never guessed. Read-only."),
+        "usage_hint": "params.arguments: {target_a, target_b}",
+    }),
+    Tool('nearest', handler='nearest', manifest={
+        "tool_name": "nearest",
+        "action_type": "virtual_tool_call",
+        "description": ("Sorts candidate entities by distance from a reference "
+                        "entity, by name or unique_id. Read-only."),
+        "usage_hint": "params.arguments: {reference, candidates: [name|unique_id, ...]}",
     }),
     Tool('set_device_location', handler='set_device_location', mutating=True, manifest={
         "tool_name": "set_device_location",
@@ -977,21 +997,22 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "propose_planting_split",
-        "description": "Works out how a zone or site would divide into planting plots, WITHOUT creating anything. Pieces run along the shape's longest side (not north-south) because that is how a field is actually worked, and irregular edges are clipped, so pieces differ in length. Give parts (how many pieces — e.g. 3 to put three crops in one zone) OR strip_width_cm (how wide each piece — e.g. 160 for bed-by-bed). You get counts, widths and lengths back, not coordinates. Tell the grower they can SEE the proposal drawn on the map design page (vegetation mode) before deciding. Read-only.",
+        "description": "Works out how a zone or site would divide into planting plots, WITHOUT creating anything. By default pieces run along the shape's longest side (not north-south) because that is how a field is actually worked, and irregular edges are clipped, so pieces differ in length. Give parts (how many pieces — e.g. 3 to put three crops in one zone) OR strip_width_cm (how wide each piece — e.g. 160 for bed-by-bed). You get counts, widths and lengths back, not coordinates. If the response includes aspect_ratio much above ~4:1, the pieces are long and narrow — for splitting a zone between DIFFERENT CROPS (parts mode), consider re-calling with orientation='short' for squarer pieces; for bed-by-bed splits (strip_width_cm) that shape is normal, leave orientation alone. Tell the grower they can SEE the proposal drawn on the map design page (vegetation mode) before deciding. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "zone_id": {"type": "string", "description": "The zone or site shape to divide (GeoShape unique_id, from get_spatial_tree)."},
-                "parts": {"type": "integer", "description": "Divide into this many equal pieces (2 or more). Use for 'three crops in this zone'."},
+                "parts": {"type": "integer", "description": "Divide into this many equal pieces (1 or more). Use for 'three crops in this zone'. Pass 1 to NOT divide — the whole zone becomes a single plot (still inset by edge_margin_cm if given), which is what a grower means by 'plant this whole field as one'."},
                 "strip_width_cm": {"type": "number", "description": "Or make pieces this wide in cm, e.g. 160. Use for bed-by-bed. Give this OR parts, never both."},
-                "edge_margin_cm": {"type": "number", "description": "Leave this much free inside the whole outline, in cm — headland for machinery. Default 0."}
+                "edge_margin_cm": {"type": "number", "description": "Leave this much free inside the whole outline, in cm — headland for machinery. Default 0."},
+                "orientation": {"type": "string", "enum": ["long", "short"], "description": "Which side the pieces run along. Default 'long' (matches how furrows/beds are normally laid). 'short' cuts across the long side instead, giving squarer pieces — only meaningful with parts (splitting a zone between different crops); strip_width_cm (bed-by-bed) should keep the default."}
             },
             "required": ["zone_id"]
         }
     },
     {
         "tool_name": "apply_planting_split",
-        "description": "Creates one vegetation plot per piece of a split — the write half of propose_planting_split. Pass the SAME zone_id and parts/strip_width_cm; the split is recomputed, not replayed from a stored proposal. Each piece becomes its own plot row, so check the piece count first: 41 pieces means 41 plots to manage, each with its own notes and history. For one crop over a whole zone use create_planting with zone_id instead. Requires human approval.",
+        "description": "Creates one vegetation plot per piece of a split — the write half of propose_planting_split. Pass the SAME zone_id, parts/strip_width_cm AND orientation used in the proposal; the split is recomputed, not replayed from a stored proposal. Each piece becomes its own plot row, so check the piece count first: 41 pieces means 41 plots to manage, each with its own notes and history. For one crop over a whole zone use create_planting with zone_id instead. Requires human approval.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1001,6 +1022,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "parts": {"type": "integer", "description": "Same value used in propose_planting_split."},
                 "strip_width_cm": {"type": "number", "description": "Same value used in propose_planting_split."},
                 "edge_margin_cm": {"type": "number", "description": "Same value used in propose_planting_split. Default 0."},
+                "orientation": {"type": "string", "enum": ["long", "short"], "description": "Same value used in propose_planting_split. Default 'long'."},
                 "variety": {"type": "string"},
                 "name": {"type": "string", "description": "Base name; pieces are numbered from it, e.g. 'A' becomes 'A 1', 'A 2'."},
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
@@ -1725,6 +1747,30 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "device_id": {"type": "string", "description": "unique_id of the device."}
             },
             "required": ["device_id"]
+        }
+    },
+    {
+        "tool_name": "distance_between",
+        "description": "How far apart two things on the map are, in metres. DO NOT work distances out yourself from coordinates — that goes wrong quietly and the wrong number becomes a real decision about where to plant or place something. Takes either the name the grower uses ('관리사무소', '3-1', a crop name) or a unique_id; pass the user's own words rather than guessing a map name. If a name matches several things the reply is 'needs_disambiguation' with the candidates and their ids — a crop planted in five plots is the usual cause, and 'how far to the black beans' genuinely has no single answer then. Show those candidates and ask which one; do NOT pick one yourself. Measured centre point to centre point, so two plots that touch along an edge are still reported as tens of metres apart; pass that caveat on rather than presenting the number as a gap between boundaries. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "target_a": {"type": "string", "description": "Name or unique_id of the first entity (zone/site/facility, vegetation plot, or device)."},
+                "target_b": {"type": "string", "description": "Name or unique_id of the second entity."}
+            },
+            "required": ["target_a", "target_b"]
+        }
+    },
+    {
+        "tool_name": "nearest",
+        "description": "Ranks things by how far they are from one reference thing — 'which plots are closest to the office', 'which valve is nearest this bed'. Answers the whole question in ONE call: do not loop distance_between over the candidates and sort the numbers yourself. Names or unique_ids both work. Candidates that could not be placed come back in 'unresolved' (nothing of that name) or 'ambiguous' (several matches, with their ids) instead of being dropped — relay BOTH, because a shorter list otherwise reads as 'those were further away', and an ambiguous one is a question you can still get answered by asking which was meant. Distances are centre point to centre point, not edge to edge. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "reference": {"type": "string", "description": "Name or unique_id of the thing to measure from (e.g. the office)."},
+                "candidates": {"type": "array", "items": {"type": "string"}, "description": "Names or unique_ids to rank, closest first. Max 200."}
+            },
+            "required": ["reference", "candidates"]
         }
     },
     {

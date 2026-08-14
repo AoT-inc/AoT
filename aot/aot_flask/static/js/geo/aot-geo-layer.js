@@ -362,9 +362,9 @@
                     paintProps = { 'line-color': '#3388ff', 'line-width': 2 };
                 } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
                     mlLayerType = 'fill';
-                    paintProps = { 'fill-color': '#3388ff', 'fill-opacity': 0.3, 'fill-outline-color': '#3388ff' };
+                    paintProps = { 'fill-color': '#3388ff', 'fill-opacity': 0.3 };
                 }
-                
+
                 // Create source with feature data
                 if (!mlMap.getSource(sourceId)) {
                     mlMap.addSource(sourceId, {
@@ -372,7 +372,7 @@
                         data: this.feature
                     });
                 }
-                
+
                 // Create layer if not exists
                 if (!mlMap.getLayer(layerId)) {
                     mlMap.addLayer({
@@ -382,9 +382,60 @@
                         paint: paintProps
                     });
                 }
+
+                // 폴리곤에는 fill 레이어 하나로는 테두리를 낼 수 없다(아래
+                // `_ensurePolygonOutline` 설명 참조) — 병행 line 레이어를 만든다.
+                if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                    AoTGeoLayer._ensurePolygonOutline(mlMap, layerId, sourceId);
+                }
             }
-            
+
             return this;
+        }
+
+        /**
+         * 폴리곤 도형에 테두리 line 레이어를 짝지어 만든다.
+         *
+         * **MapLibre 의 `fill` 레이어에는 두께 있는 테두리가 없다.** `fill-outline-color`
+         * 라는 속성이 있긴 하지만 항상 1px 고정이고 점선도 못 그린다 — 그래서
+         * `setStyle()` 이 `weight`/`dashArray` 를 아무리 보내도(예전 코드는 이걸
+         * `fill-width`/`fill-dasharray` 로 보냈는데, **그런 속성 자체가 없다** —
+         * `setPaintProperty` 가 조용히 실패해 아무 효과가 없었다) 도형에 테두리가
+         * 나타나지 않았다(활성 모드 강조는커녕 항상 테두리가 없었다).
+         *
+         * AoT_map 위젯(`aot-map-widget-vector.js`)은 애초에 이 문제가 없다 —
+         * `sites-fill` + `sites-line` 처럼 종류마다 **두 레이어**를 만든다. 여기서도
+         * 같은 규약(`<layerId>-line`)을 따른다 — 같은 도형인데 위젯에서는 테두리가
+         * 보이고 geo/design 에서는 안 보였던 것이 이 차이 때문이었다.
+         */
+        /**
+         * 폴리곤의 **짝 레이어를 함께 지운다** — 채움만 지우면 테두리가 허공에
+         * 남는다(도형을 지웠는데 선만 남아 새로고침해야 사라지는 증상).
+         *
+         * `-3d`(시설 압출)도 같은 이유로 여기서 함께 지운다. 짝 레이어를 늘릴
+         * 때는 반드시 이 함수에도 추가할 것 — 만드는 곳(`_ensurePolygonOutline`)
+         * 과 지우는 곳이 갈리면 지울 때만 빠진다.
+         */
+        static _removeCompanionLayers(mlMap, layerId) {
+            if (!mlMap || !layerId || typeof mlMap.removeLayer !== 'function') return;
+            ['-line', '-3d'].forEach(suffix => {
+                const id = layerId + suffix;
+                try { if (mlMap.getLayer(id)) mlMap.removeLayer(id); } catch (e) { /* 이미 없음 */ }
+            });
+        }
+
+        static _ensurePolygonOutline(mlMap, layerId, sourceId, visibility) {
+            const lineId = layerId + '-line';
+            if (mlMap.getLayer(lineId)) return;
+            try {
+                mlMap.addLayer({
+                    id: lineId, type: 'line', source: sourceId,
+                    // 채움과 **같은 프레임에** 표시 상태를 정한다 — 만든 뒤
+                    // 끄면 그 사이 한 프레임 테두리만 번쩍인다.
+                    layout: { visibility: visibility || 'visible' },
+                    paint: { 'line-color': '#3388ff', 'line-width': 2, 'line-opacity': 1 }
+                });
+            } catch (e) { /* 스타일 준비 전이면 다음 addTo 에서 다시 시도된다 */ }
         }
 
         // ----- Styling (Leaflet-style → MapLibre paint) -----
@@ -395,32 +446,62 @@
             // Use _layerId (actual MapLibre layer ID), not _mlLayer.id (placeholder)
             const layerId = this._layerId;
             const geomType = this.feature?.geometry?.type;
-            
+            const isPolygon = (geomType === 'Polygon' || geomType === 'MultiPolygon');
+
             // Determine layer type from geometry
             let layerType = 'fill';
             if (geomType === 'Point') layerType = 'circle';
             else if (geomType === 'LineString' || geomType === 'MultiLineString') layerType = 'line';
-            else if (geomType === 'Polygon' || geomType === 'MultiPolygon') layerType = 'fill';
+            else if (isPolygon) layerType = 'fill';
 
             try {
+                const mlMap = this._map._mlMap || this._map;
                 const paintProps = {};
 
-                if (style.color) paintProps[layerType + '-color'] = style.color;
-                if (style.fillColor) paintProps['fill-color'] = style.fillColor;
-                if (style.weight !== undefined) paintProps[layerType + '-width'] = style.weight;
-                if (style.opacity !== undefined) paintProps[layerType + '-opacity'] = style.opacity;
-                if (style.fillOpacity !== undefined) paintProps['fill-opacity'] = style.fillOpacity;
-                if (style.dashArray) paintProps[layerType + '-dasharray'] = style.dashArray;
+                // 폴리곤은 fill 레이어에 **채움만** 낸다 — 테두리(color/weight/
+                // dashArray)는 아래에서 병행 line 레이어로 보낸다. fill 레이어에는
+                // 그런 속성이 없다(위 `_ensurePolygonOutline` 참조).
+                if (isPolygon) {
+                    if (style.fillColor || style.color) {
+                        paintProps['fill-color'] = style.fillColor || style.color;
+                    }
+                    if (style.fillOpacity !== undefined) paintProps['fill-opacity'] = style.fillOpacity;
+                } else {
+                    if (style.color) paintProps[layerType + '-color'] = style.color;
+                    if (style.fillColor) paintProps['fill-color'] = style.fillColor;
+                    if (style.weight !== undefined) paintProps[layerType + '-width'] = style.weight;
+                    if (style.opacity !== undefined) paintProps[layerType + '-opacity'] = style.opacity;
+                    if (style.dashArray) paintProps[layerType + '-dasharray'] = style.dashArray;
+                }
                 if (style.radius !== undefined) paintProps['circle-radius'] = style.radius;
 
                 if (Object.keys(paintProps).length > 0) {
-                    const mlMap = this._map._mlMap || this._map;
                     mlMap.setLayoutProperty(layerId, 'visibility', 'visible');
                     Object.entries(paintProps).forEach(([prop, value]) => {
                         try {
                             mlMap.setPaintProperty(layerId, prop, value);
                         } catch (e) {}
                     });
+                }
+
+                if (isPolygon) {
+                    const lineId = layerId + '-line';
+                    if (mlMap.getLayer(lineId)) {
+                        const lineProps = {};
+                        if (style.color) lineProps['line-color'] = style.color;
+                        if (style.weight !== undefined) lineProps['line-width'] = style.weight;
+                        if (style.opacity !== undefined) lineProps['line-opacity'] = style.opacity;
+                        mlMap.setLayoutProperty(lineId, 'visibility', 'visible');
+                        Object.entries(lineProps).forEach(([prop, value]) => {
+                            try { mlMap.setPaintProperty(lineId, prop, value); } catch (e) {}
+                        });
+                        // dashArray 는 없앨 때도 명시적으로 지워야 한다 — 예전 값이
+                        // 남아 있으면 "실선으로 바꿔라" 는 요청이 무시된 것처럼 보인다.
+                        try {
+                            mlMap.setPaintProperty(lineId, 'line-dasharray',
+                                                   style.dashArray || undefined);
+                        } catch (e) {}
+                    }
                 }
             } catch (e) {
                 // Silent fail for style updates on non-visible layers
@@ -507,6 +588,9 @@
                     const latlng = this._latlng;
                     const el = this._icon?.createIcon?.() || (() => { const d = document.createElement('div'); d.style.cssText = 'width:0;height:0;overflow:visible;'; return d; })();
                     this._markerEl = el;
+                    // 마커는 GL 이 아니라 DOM 이라 visibility 가 아니라 display
+                    // 로 감춘다. 지도에 붙이기 **전에** 정해야 한번도 안 보인다.
+                    if (this._desiredVisibility === 'none') el.style.display = 'none';
                     this._mlDomMarker = new window.maplibregl.Marker({ element: el, anchor: 'center', draggable: this._draggable })
                         .setLngLat([latlng.lng, latlng.lat])
                         .addTo(mlMap);
@@ -548,8 +632,9 @@
                     return this;
                 }
                 mlLayerType = 'fill';
-                paintProps = { 'fill-color': '#3388ff', 'fill-opacity': 0.3, 'fill-outline-color': '#3388ff' };
+                paintProps = { 'fill-color': '#3388ff', 'fill-opacity': 0.3 };
             }
+            const isPolygonGeom = (geomType === 'Polygon' || geomType === 'MultiPolygon');
 
             const doAddToMap = () => {
                 if (!mlMap.getSource(sourceId)) {
@@ -562,7 +647,20 @@
                 }
                 if (!mlMap.getLayer(layerId)) {
                     try {
-                        mlMap.addLayer({ id: layerId, type: mlLayerType, source: sourceId, paint: paintProps });
+                        // 표시 상태는 **만들 때 함께** 정한다(그룹 경로와 같은
+                        // 규칙) — 만든 뒤 끄면 그 사이 한 프레임이 그려진다.
+                        mlMap.addLayer({
+                            id: layerId, type: mlLayerType, source: sourceId,
+                            paint: paintProps,
+                            layout: { visibility: this._desiredVisibility || 'visible' }
+                        });
+                        // 이 그룹 경로가 geo/design 이 실제로 쓰는 주 생성 경로다
+                        // (layerStorage[type].addLayer(layer)) — 테두리
+                        // line 레이어도 여기서 만들어야 한다.
+                        if (isPolygonGeom) {
+                            AoTGeoLayer._ensurePolygonOutline(
+                                mlMap, layerId, sourceId, this._desiredVisibility);
+                        }
                         // Apply any style that was cached while the layer was pending
                         if (this._styleCache && Object.keys(this._styleCache).length > 0) {
                             this.setStyle(this._styleCache);
@@ -697,6 +795,9 @@
                             if (!mlMap.getLayer(layerId)) {
                                 try {
                                     mlMap.addLayer({ id: layerId, type: 'fill', source: sourceId,
+                                        // 원(구역·시설 등)도 같은 규칙 — 만들 때
+                                        // 표시 상태를 함께 정해 번쩍임을 막는다.
+                                        layout: { visibility: layer._desiredVisibility || 'visible' },
                                         paint: { 'fill-color': '#3388ff', 'fill-opacity': 0.3, 'fill-outline-color': '#3388ff' } });
                                     layer._mlLayer = { id: layerId };
                                     // Apply cached style (set by applyStyle() or setStyle() before GL
@@ -731,6 +832,10 @@
                             const latlng = layer._latlng || layer.getLatLng?.();
                             const el = layer._icon?.createIcon?.() || (() => { const d = document.createElement('div'); d.style.cssText = 'width:0;height:0;overflow:visible;'; return d; })();
                             layer._markerEl = el;
+                            // 마커는 GL 이 아니라 DOM 이라 visibility 가 아니라
+                            // display 로 감춘다. 지도에 붙이기 **전에** 정해야
+                            // 한번도 안 보인다(붙인 뒤 끄면 한 프레임 깜빡인다).
+                            if (layer._desiredVisibility === 'none') el.style.display = 'none';
                             const isLabelAux = layer.feature?.properties?.aot_type === 'label_aux';
                             layer._mlDomMarker = new window.maplibregl.Marker({ element: el, anchor: 'center', draggable: isLabelAux ? true : layer._draggable })
                                 .setLngLat([latlng.lng, latlng.lat])
@@ -813,29 +918,40 @@
                         paintProps = { 'line-color': '#3388ff', 'line-width': 2 };
                     } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
                         mlLayerType = 'fill';
-                        paintProps = { 'fill-color': '#3388ff', 'fill-opacity': 0.3, 'fill-outline-color': '#3388ff' };
+                        paintProps = { 'fill-color': '#3388ff', 'fill-opacity': 0.3 };
                     }
+                    const isPolygonGeomIdle = (geomType === 'Polygon' || geomType === 'MultiPolygon');
 
                     const mlLayerSpec = {
                         id: layerId,
                         type: mlLayerType,
                         source: sourceId,
-                        paint: paintProps
+                        paint: paintProps,
+                        // **표시 상태를 만들 때 함께 정한다.** 예전에는 일단
+                        // 만들고 아래에서 `setLayoutProperty` 로 껐는데, 생성과
+                        // 끄기 사이에 한 프레임이 그려지면 감춘 도형이 번쩍인다.
+                        // layout 에 넣으면 그 레이어는 애초에 안 보이는 상태로
+                        // 태어나므로 구조적으로 번쩍일 수가 없다.
+                        layout: { visibility: layer._desiredVisibility || 'visible' }
                     };
 
                     if (!mlMap.getLayer(layerId)) {
                         try {
                             mlMap.addLayer(mlLayerSpec);
+                            // 스타일이 아직 준비 전이라(`idle` 대기 경로) 여기서도
+                            // 병행 line 레이어를 만들어야 한다 — 도형이 이 경로로
+                            // 만들어지는 것은 지도 로드 초기(디자인 불러오기)라
+                            // 빈도가 낮지 않다.
+                            if (isPolygonGeomIdle) {
+                                AoTGeoLayer._ensurePolygonOutline(
+                                    mlMap, layerId, sourceId, layer._desiredVisibility);
+                            }
                             // Apply cached style immediately after layer is created
                             if (layer._styleCache && Object.keys(layer._styleCache).length > 0) {
                                 layer.setStyle(layer._styleCache);
                             }
-                            // Apply desired initial visibility stamped before addLayer() was called.
-                            // This embeds visibility at GL layer creation time, avoiding the race
-                            // where a post-creation setLayoutProperty call finds no layer yet.
-                            if (layer._desiredVisibility) {
-                                try { mlMap.setLayoutProperty(layerId, 'visibility', layer._desiredVisibility); } catch(_e) {}
-                            }
+                            // 표시 상태는 위 `mlLayerSpec.layout` 이 이미 정했다 —
+                            // 여기서 다시 setLayoutProperty 를 부르지 않는다.
                         } catch (e) {
                             console.warn('[AoTGeoLayerGroup] addLayer error:', e.message);
                         }
@@ -940,9 +1056,10 @@
                 let mlMap = this._map._originalMap || (this._map.getNativeMap && this._map.getNativeMap()) || this._map._mlMap || this._map;
                 if (mlMap && typeof mlMap.removeLayer === 'function') {
                     const layerId = existing._layerId;
-                    // Phase 2: drop facility 3D extrusion layer first (shares the source)
-                    const extrusionLayerId = layerId + '-3d';
-                    if (mlMap.getLayer(extrusionLayerId)) mlMap.removeLayer(extrusionLayerId);
+                    // 짝 레이어(테두리 -line, 시설 압출 -3d)를 먼저 지운다 —
+                    // 같은 소스를 쓰므로 남겨 두면 소스 제거가 막히고, 테두리만
+                    // 허공에 남는다.
+                    AoTGeoLayer._removeCompanionLayers(mlMap, layerId);
                     if (mlMap.getLayer(layerId)) mlMap.removeLayer(layerId);
                     const sourceId = 'aot-source-' + layerId;
                     if (mlMap.getSource(sourceId)) mlMap.removeSource(sourceId);
@@ -986,6 +1103,7 @@
                 if (mlMap && layer._layerId) {
                     const layerId = layer._layerId;
                     const sourceId = 'aot-source-' + layerId;
+                    AoTGeoLayer._removeCompanionLayers(mlMap, layerId);
                     try { if (mlMap.getLayer && mlMap.getLayer(layerId)) mlMap.removeLayer(layerId); } catch(e) {}
                     try { if (mlMap.getSource && mlMap.getSource(sourceId)) mlMap.removeSource(sourceId); } catch(e) {}
                 }

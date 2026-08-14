@@ -52,26 +52,62 @@
         overflow-y: auto;
     }
 
-    /* Fullscreen Behavior */
-    #geo-design-wrapper:fullscreen {
-        width: 100vw;
-        height: 100vh;
-        background: white;
-        overflow: hidden;
-        padding: 0;
-        margin: 0;
-        border-radius: 0;
+    /* ── 지도 최대화 — **브라우저 뷰포트 기준**(네이티브 전체화면 API 아님) ──
+       예전에는 `#geo-design-wrapper.requestFullscreen()` 이었다. 그 방식은 이
+       화면에서 두 가지가 깨진다:
+
+       1. **드로어와 지도 컨트롤이 공존하지 못한다.** 드로어는 이 wrapper 안에
+          있어야 top layer 에 함께 올라가는데(그래야 전체화면에서 사라지지
+          않는다), 그러면 드로어가 지도 오른쪽 컨트롤 위를 덮는다. wrapper 를
+          좁혀 피하려 해도 드로어가 wrapper 의 자손이라 같이 딸려 들어온다.
+       2. **임베드 환경에서 아예 안 켜진다.** iframe 에 `allow="fullscreen"`
+          이 없으면 `requestFullscreen()` 이 "Permissions check failed" 로
+          거부된다(실측). AoT 는 엣지 프록시 뒤에서 임베드되어 열리는 경우가
+          정상 사용 경로다.
+
+       그래서 top layer 를 쓰지 않고 **뷰포트를 덮는 고정 배치**로 바꿨다.
+       그러면 드로어는 평소와 완전히 같은 일반 요소로 남고, 아래 규칙 하나로
+       지도 오른쪽을 드로어 폭만큼 비워 둘 수 있다 — 겹치지 않으니 컨트롤도
+       드로어도 동시에 보인다. 대시보드 지도 위젯이 iOS 에서 쓰는
+       `.aot-map-pseudo-fullscreen`(map.css) 과 같은 발상이다. */
+    body.aot-geo-maximized {
+        overflow: hidden !important;
     }
 
-    #geo-design-wrapper:fullscreen #geo-map {
+    body.aot-geo-maximized #geo-design-wrapper {
+        position: fixed !important;
+        inset: 0 !important;
+        /* 내비바(--aot-z-navbar: 3000) 위, 드로어(--aot-z-modal: 5100) 아래.
+           둘이 겹치지는 않지만 순서는 분명히 해 둔다. */
+        z-index: var(--aot-z-overlay) !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        background: #fff;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden;
+    }
+
+    body.aot-geo-maximized #geo-map {
         height: 100% !important;
         width: 100% !important;
     }
 
-    /* Adjust Tool Position in Fullscreen if needed */
-    /* Adjust Tool Position in Fullscreen if needed */
-    #geo-design-wrapper:fullscreen .map-tools-left,
-    #geo-design-wrapper:fullscreen .map-tools-right {
+    /* 드로어가 열리면 최대화된 지도의 **오른쪽 끝을 드로어 폭만큼 당긴다**.
+       평소(최대화 아님)에는 `body.aot-widget-drawer-open` 의 padding-right 가
+       페이지를 밀어내지만(aot-modal-modern.css), 최대화된 wrapper 는
+       `position: fixed` 라 body 패딩이 닿지 않으므로 여기서 직접 비운다.
+       폰(<768px)은 드로어가 화면을 덮는 바텀시트라 대상이 아니다. */
+    @media (min-width: 768px) {
+        body.aot-geo-maximized.aot-widget-drawer-open #geo-design-wrapper {
+            right: var(--aot-wdrawer-w) !important;
+        }
+    }
+
+    body.aot-geo-maximized .map-tools-left,
+    body.aot-geo-maximized .map-tools-right {
         top: 10px;
     }
 
@@ -466,6 +502,45 @@
             <div id="search-overlay" class="d-none map-search-overlay">
                 <aot-map-search-fixed id="design-search"></aot-map-search-fixed>
             </div>
+
+            <!-- 모드별 설정 드로어 ──────────────────────────────────────────
+                 하단 가로바(#nav-mode-panel)에는 **모드 탭만** 남기고, 각 모드의
+                 설정 tier(배관 각도·간격, 장치 분류, 식생 분할 등)는 여기로 온다.
+                 설정을 만지는 동안 지도를 봐야 하는데, 하단바는 2줄(90px)뿐이라
+                 슬라이더 하나에도 자리가 모자랐고 분할 폼은 지도를 덮는 모달로
+                 빠져 있었다.
+
+                 지도 위에 겹치지 않는다 — `.aot-widget-drawer` 가 페이지를 드로어
+                 폭만큼 밀어내므로(aot-modal-modern.css) 지도는 좁아질 뿐 가려지지
+                 않는다. 백드롭도 없어 드로어를 연 채로 지도를 조작할 수 있다.
+                 폰에서는 전체를 덮고, `.aot-drawer-fullcover` 의 내리기 손잡이로
+                 내려서 지도를 볼 수 있다.
+
+                 최대화(전체화면 버튼)와도 함께 뜬다. 예전에는 그러려고 이
+                 드로어를 `#geo-design-wrapper` **안에** 두어야 했다 — 네이티브
+                 `requestFullscreen()` 의 top layer 에 함께 끼려면 자손이어야
+                 했기 때문이다. 그런데 그러면 드로어가 지도 오른쪽 컨트롤을
+                 덮었다. 지금은 최대화가 top layer 를 쓰지 않으므로(위 CSS 의
+                 `body.aot-geo-maximized`) 그 제약이 없고, 지도 쪽이 드로어
+                 폭만큼 오른쪽을 비워 둘이 나란히 선다.
+
+                 내용은 aot-geo-panel.js 가 주입한다 — 여기에는 골격만 둔다. -->
+            <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover"
+                 id="geo-settings-drawer" tabindex="-1" role="dialog"
+                 data-backdrop="false" aria-hidden="true">
+                <div class="modal-dialog aot-modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="geo-settings-drawer-title">{{ _('Settings') }}</h5>
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="{{ _('Close') }}"><span aria-hidden="true">&times;</span></button>
+                        </div>
+                        <div class="modal-body" id="geo-settings-drawer-body">
+                            <!-- 설정 tier 는 JS 가 넣는다 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -526,6 +601,10 @@
 <!-- Leaflet Compatibility Layer (for legacy components like aot-geo-panel.js) -->
 <script src="{{ url_for('static', filename='js/geo/aot-leaflet-compat.js') }}"></script>
 
+<!-- 설정 드로어의 열림/닫힘 동작(body.aot-widget-drawer-open 토글 + push 후 resize).
+     이게 빠지면 드로어는 뜨지만 지도가 밀리지 않아 화면 절반을 덮는다. -->
+<script src="{{ url_for('static', filename='js/common/aot-widget-drawer.js') }}"></script>
+
 <!-- [GIS Pure MapLibre v5.0] Leaflet-Free MapLibre GL Architecture -->
 <!-- ====================================================== -->
 
@@ -541,7 +620,7 @@
 <script src="{{ url_for('static', filename='js/geo/src/maplibre/index.js') }}"></script>
 
 <!-- MapLibre Draw Module (AoT Native Implementation) -->
-<script src="/static/js/geo/maplibre/maplibre-draw.js?v=20260728a"></script>
+<script src="{{ url_for('static', filename='js/geo/maplibre/maplibre-draw.js') }}"></script>
 
 <!-- Vector Modules (MapLibre) -->
 <script src="{{ url_for('static', filename='js/geo/src/core/maplibre-core.js') }}"></script>
@@ -551,10 +630,10 @@
 <script src="{{ url_for('static', filename='js/geo/src/loaders/map-loader.js') }}"></script>
 
 <!-- RenderBucket (Phase 1: category-based layer consolidation) -->
-<script src="/static/js/geo/aot-geo-render-bucket.js?v=20260614a"></script>
+<script src="{{ url_for('static', filename='js/geo/aot-geo-render-bucket.js') }}"></script>
 
 <!-- AoT Geo Layer (MapLibre-backed, RenderBucket-integrated) -->
-<script src="/static/js/geo/aot-geo-layer.js?v=20260615a"></script>
+<script src="{{ url_for('static', filename='js/geo/aot-geo-layer.js') }}"></script>
 
 <!-- ES Module Bundle -->
 <script src="{{ url_for('static', filename='js/geo/dist/aot-geo-all.bundle.js') }}"></script>
@@ -563,12 +642,12 @@
 <script src="{{ url_for('static', filename='js/geo/aot-map-loader.js') }}"></script>
 <script src="{{ url_for('static', filename='js/geo/aot-map-controls.js') }}"></script>
 <script src="{{ url_for('static', filename='js/geo/aot-map-data.js') }}"></script>
-<script src="/static/js/geo/aot-map-editor-v2.js?v=20260813a"></script>
+<script src="{{ url_for('static', filename='js/geo/aot-map-editor-v2.js') }}"></script>
 
 <!-- Turf.js (vendor) + Custom Map Controls — 외부 유지 (turf=vendor·layout 공유,
      custom-controls=AoT_map 위젯과 공유). 번들보다 먼저 로드. -->
 <script src="{{ url_for('static', filename='js/common/turf.min.js') }}"></script>
-<script src="/static/js/geo/aot-map-custom-controls.js?v=20260612a"></script>
+<script src="{{ url_for('static', filename='js/geo/aot-map-custom-controls.js') }}"></script>
 
 <!-- geo_design design 모듈 → 단일 번들 (concat+minify, tools/bundle.mjs: geo-design).
      18 소스: design/*(ui,geometry,events,modules,label,devices-v3,binding-ui,vegetation,
@@ -579,9 +658,9 @@
 <script src="{{ asset('geo-design') }}"></script>
 
 <!-- Facility 3D overlay on map (Three.js custom layer) -->
-<script src="/static/js/widgets/AoT_facility/three.min.js?v=2"></script>
-<script src="/static/js/widgets/AoT_facility/aot-facility-3d.js?v=36"></script>
-<script src="/static/js/geo/aot-facility-map-3d.js?v=27"></script>
+<script src="{{ url_for('static', filename='js/widgets/AoT_facility/three.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/widgets/AoT_facility/aot-facility-3d.js') }}"></script>
+<script src="{{ url_for('static', filename='js/geo/aot-facility-map-3d.js') }}"></script>
 
 <!-- Search Components -->
 <script src="{{ url_for('static', filename='js/components/aot-map-search-fixed.js') }}"></script>
@@ -668,11 +747,17 @@
 {% include 'modals/geo_settings_modal.html' %}
 
 <!-- [Parcel Import Modal] address -> parcel -> Site conversion -->
-<div class="modal fade" id="modal-parcel-import" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-lg" role="document">
+<!-- 주소로 필지 가져오기 — 설정 드로어와 **같은 오른쪽 서랍**으로 연다.
+     지도를 덮는 팝업이면 "여기가 맞나" 를 확인하려고 창을 닫았다 다시 열어야
+     한다. 서랍은 지도를 밀어낼 뿐이라 찾은 필지가 지도에 그려지는 것을 보면서
+     이어서 다음 주소를 넣을 수 있다.
+     한 번에 하나만 열린다 — common/aot-widget-drawer.js 가 다른 서랍을 닫는다. -->
+<div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover"
+     id="modal-parcel-import" tabindex="-1" role="dialog" data-backdrop="false">
+  <div class="modal-dialog aot-modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-map-marker-alt mr-2"></i>{{ _('Import Site by Address') }}</h5>
+        <h5 class="modal-title">{{ _('Import Site by Address') }}</h5>
         <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
       </div>
       <div class="modal-body">

@@ -7108,6 +7108,10 @@ msgstr "保存済み"
 msgid "Fullscreen"
 msgstr "フルスクリーン"
 
+#: aot_flask/static/js/geo/design/aot-geo-events.js:1
+msgid "Exit fullscreen"
+msgstr "フルスクリーンを終了"
+
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/geo/aot-map-controls.js:233
 msgid "Address Search"
@@ -27657,12 +27661,60 @@ msgid "Piece width (cm)"
 msgstr "区画の幅 (cm)"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Exact piece count (optional)"
+msgstr "正確な区画数(任意)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Give an exact count to cut exactly that many pieces at this width — the rest becomes margin, split evenly on both sides."
+msgstr "正確な数を入力すると、その幅でその数だけ切り、残りは両側の余白になります。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Exact piece count must be a whole number of 1 or more."
+msgstr "正確な区画数は1以上の整数で入力してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Long side (default)"
+msgstr "長辺（既定）"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Short side (squarer pieces)"
+msgstr "短辺（より正方形に近い）"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Custom angle"
+msgstr "自由角度"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Edge margin (cm)"
 msgstr "外周の余白 (cm)"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Room to turn machinery along the edge."
 msgstr "外周に農機が旋回する余地を残します。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Adjust each piece width"
+msgstr "区画ごとの幅を個別に調整"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Starts from the equal split above — edit any width, or add or remove a piece."
+msgstr "上の均等分割から始まります — 幅を編集したり、区画を追加・削除したりできます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Piece"
+msgstr "区画"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Add piece"
+msgstr "区画を追加"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Each piece width must be greater than 0."
+msgstr "各区画の幅は0より大きくしてください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Last piece shortened to fit"
+msgstr "最後の区画を短くして調整"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Pieces follow the longest side of the shape, and irregular edges are clipped."
@@ -27703,6 +27755,10 @@ msgstr "区画の幅"
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Dropped as too short"
 msgstr "短すぎて除いた区画"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Aspect ratio"
+msgstr "縦横比"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Some pieces could not be saved."
@@ -27755,3 +27811,151 @@ msgstr "バルブ未割当"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "unassigned"
 msgstr "未割当"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Assign"
+msgstr "割り当て"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Assigns a device to the zone you selected on the map."
+msgstr "地図で選んだ区域に機器を割り当てます。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Branch at 90 degrees"
+msgstr "枝管を直角に"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Choose a category, then pick the part to place on the map."
+msgstr "分類を選び、地図に置く部品を選びます。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Design the structure, covering and actuators of the selected facility."
+msgstr "選んだ施設の構造・被覆・アクチュエータを設計します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Device kind"
+msgstr "機器の種類"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Divides a zone you already drew into several plots, instead of drawing each one by hand."
+msgstr "すでに描いた区域を複数の区画に分割します（一つずつ描く必要はありません）。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Draw"
+msgstr "描画"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Draw the reference line and the main pipe first — branches are generated from them."
+msgstr "先に基準線と主管を描きます。枝管はそれを基準に生成されます。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Generate branches"
+msgstr "枝管を生成"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Joints"
+msgstr "継手"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Lays branches square to the main pipe instead of following the reference line."
+msgstr "基準線ではなく主管に直角に枝管を配置します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Lists the zones that still have no device assigned."
+msgstr "まだ機器が割り当てられていない区域を表示します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Looks up a parcel by address and draws its boundary for you."
+msgstr "住所から筆界を検索し、境界を自動で描きます。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Pick a part, then click the map to place it."
+msgstr "部品を選び、地図をクリックして配置します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Pick which devices of this kind appear on the map."
+msgstr "この種類の機器のうち地図に表示するものを選びます。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Pipe labels"
+msgstr "配管ラベル"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Place on map"
+msgstr "地図に配置"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Removes the generated pipes so you can start over."
+msgstr "生成した配管を削除してやり直せるようにします。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Show length labels"
+msgstr "長さを表示"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Shows the measured length of each edge on the map."
+msgstr "各辺の長さを地図に表示します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Spacing and angle"
+msgstr "間隔と角度"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Sprinklers"
+msgstr "スプリンクラー"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "The map updates as you drag — branches follow the reference line at this angle."
+msgstr "ドラッグ中に地図がすぐ追従します。枝管はこの角度で基準線に沿います。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "What to place"
+msgstr "何を配置するか"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Basic settings"
+msgstr "基本設定"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Hides this kind of shape while you work on another mode."
+msgstr "他のモードで作業する間、この種類の図形を一時的に隠します。"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Split into device areas"
+msgstr "デバイス区域に分割"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Area name"
+msgstr "区域名"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Link only this device kind"
+msgstr "この種類のデバイスのみ連結"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Any kind"
+msgstr "すべての種類"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Create device areas"
+msgstr "デバイス区域を作成"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Areas created"
+msgstr "作成した区域"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "linked"
+msgstr "連結済み"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "not linked"
+msgstr "未連結"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Each new area is linked to the device whose marker falls inside it. Areas with no device — or more than one — are left unlinked and reported."
+msgstr "各区域は、その中にマーカーがあるデバイスと連結されます。デバイスが無い、または複数ある場合は連結せずに報告します。"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Nothing is saved until you create the areas."
+msgstr "区域を作成するまでは何も保存されません。"

@@ -7150,6 +7150,10 @@ msgstr "저장됨"
 msgid "Fullscreen"
 msgstr "전체화면"
 
+#: aot_flask/static/js/geo/design/aot-geo-events.js:1
+msgid "Exit fullscreen"
+msgstr "전체화면 나가기"
+
 #: aot_flask/static/js/dist/aot-map-widget.bundle.js:23
 #: aot_flask/static/js/geo/aot-map-controls.js:233
 msgid "Address Search"
@@ -27897,12 +27901,60 @@ msgid "Piece width (cm)"
 msgstr "조각 폭 (cm)"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Exact piece count (optional)"
+msgstr "정확한 조각 수 (선택)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Give an exact count to cut exactly that many pieces at this width — the rest becomes margin, split evenly on both sides."
+msgstr "정확한 개수를 입력하면 그 폭 그대로 그만큼만 자르고, 남는 만큼은 양쪽 여백이 됩니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Exact piece count must be a whole number of 1 or more."
+msgstr "정확한 조각 수는 1 이상의 정수여야 합니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Long side (default)"
+msgstr "긴 변 (기본)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Short side (squarer pieces)"
+msgstr "짧은 변 (더 정방형)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Custom angle"
+msgstr "자유 각도"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Edge margin (cm)"
 msgstr "가장자리 여백 (cm)"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Room to turn machinery along the edge."
 msgstr "가장자리에 농기계가 돌 자리를 남깁니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Adjust each piece width"
+msgstr "구획별 폭 직접 조정"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Starts from the equal split above — edit any width, or add or remove a piece."
+msgstr "위에서 계산한 균등 분할에서 시작합니다 — 폭을 고치거나 구획을 더하고 뺄 수 있습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Piece"
+msgstr "구획"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Add piece"
+msgstr "구획 추가"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Each piece width must be greater than 0."
+msgstr "각 구획의 폭은 0보다 커야 합니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Last piece shortened to fit"
+msgstr "마지막 구획을 줄여 맞춤"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Pieces follow the longest side of the shape, and irregular edges are clipped."
@@ -27943,6 +27995,10 @@ msgstr "조각 폭"
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Dropped as too short"
 msgstr "너무 짧아 버린 조각"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Aspect ratio"
+msgstr "가로세로 비율"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Some pieces could not be saved."
@@ -27995,3 +28051,151 @@ msgstr "밸브 미배정"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "unassigned"
 msgstr "미배정"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Assign"
+msgstr "배정"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Assigns a device to the zone you selected on the map."
+msgstr "지도에서 고른 구역에 장치를 배정합니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Branch at 90 degrees"
+msgstr "가지를 직각으로"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Choose a category, then pick the part to place on the map."
+msgstr "분류를 고른 뒤, 지도에 놓을 부품을 고릅니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Design the structure, covering and actuators of the selected facility."
+msgstr "고른 시설의 구조·피복·구동기를 설계합니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Device kind"
+msgstr "장치 종류"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Divides a zone you already drew into several plots, instead of drawing each one by hand."
+msgstr "이미 그려 둔 구역을 여러 구획으로 나눕니다 — 하나씩 그리지 않아도 됩니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Draw"
+msgstr "그리기"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Draw the reference line and the main pipe first — branches are generated from them."
+msgstr "기준선과 주 배관을 먼저 그립니다 — 가지 배관은 그것을 기준으로 만들어집니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Generate branches"
+msgstr "가지 배관 만들기"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Joints"
+msgstr "조인트"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Lays branches square to the main pipe instead of following the reference line."
+msgstr "기준선 대신 주 배관에 직각으로 가지를 놓습니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Lists the zones that still have no device assigned."
+msgstr "아직 장치가 배정되지 않은 구역을 보여 줍니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Looks up a parcel by address and draws its boundary for you."
+msgstr "주소로 필지를 찾아 경계를 대신 그려 줍니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Pick a part, then click the map to place it."
+msgstr "부품을 고른 뒤 지도를 눌러 놓습니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Pick which devices of this kind appear on the map."
+msgstr "이 종류의 장치 중 지도에 표시할 것을 고릅니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Pipe labels"
+msgstr "배관 라벨"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Place on map"
+msgstr "지도에 놓기"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Removes the generated pipes so you can start over."
+msgstr "만들어진 배관을 지워 처음부터 다시 할 수 있게 합니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Show length labels"
+msgstr "길이 표시"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Shows the measured length of each edge on the map."
+msgstr "각 변의 길이를 지도에 표시합니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Spacing and angle"
+msgstr "간격과 각도"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Sprinklers"
+msgstr "스프링클러"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "The map updates as you drag — branches follow the reference line at this angle."
+msgstr "끄는 동안 지도가 바로 따라옵니다 — 가지 배관이 기준선을 이 각도로 따릅니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "What to place"
+msgstr "무엇을 놓을지"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Basic settings"
+msgstr "기본 설정"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Hides this kind of shape while you work on another mode."
+msgstr "다른 모드를 손보는 동안 이 종류의 도형을 잠시 감춥니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Split into device areas"
+msgstr "장치 구역으로 나누기"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Area name"
+msgstr "구역 이름"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Link only this device kind"
+msgstr "이 종류의 장치만 연결"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Any kind"
+msgstr "모든 종류"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Create device areas"
+msgstr "장치 구역 만들기"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Areas created"
+msgstr "만든 구역"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "linked"
+msgstr "연결됨"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "not linked"
+msgstr "연결 안 됨"
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Each new area is linked to the device whose marker falls inside it. Areas with no device — or more than one — are left unlinked and reported."
+msgstr "각 구역은 그 안에 마커가 있는 장치와 연결됩니다. 장치가 없거나 둘 이상이면 연결하지 않고 그대로 알려 줍니다."
+
+#: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
+msgid "Nothing is saved until you create the areas."
+msgstr "구역을 만들기 전까지는 아무것도 저장되지 않습니다."

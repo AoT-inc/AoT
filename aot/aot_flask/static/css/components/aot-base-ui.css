@@ -1038,9 +1038,10 @@ input:checked+.slider:before {
     transform: translateX(-50%);
     width: 800px;
     max-width: calc(100% - 20px);
-    /* [Refined] Optimal Height: 90px (10+30+10+30+10) */
-    height: 90px;
-    /* 45px * 2 (36px button + ~9px padding) */
+    /* 한 줄(모드 탭)만 남는다: padding-top 10 + tier 30 + margin-bottom 10.
+       설정 tier 는 오른쪽 드로어(#geo-settings-drawer)로 옮겼다 — 예전의 90px
+       는 여기에 설정 줄을 하나 더 얹던 시절의 높이다. */
+    height: 50px;
     background: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
     backdrop-filter: blur(10px);
     border-radius: 16px;
@@ -1123,6 +1124,158 @@ input:checked+.slider:before {
         padding: 0 16px; /* Horizontal buffer for scroll ends */
         /* margin: 0 auto and justify-content: center are inherited from base */
     }
+}
+
+/* --- 설정 드로어 안의 tier ---------------------------------------------
+   같은 `.nav-tier` 골격이 두 곳에 쓰인다: 하단 가로바(모드 탭)와 오른쪽 설정
+   드로어. 위 기본값은 가로바용이라 한 줄 고정(height:30px)에 줄바꿈 없이
+   가로 스크롤(white-space:nowrap)이다 — 폭 520px 짜리 세로 드로어에 그대로
+   두면 슬라이더·버튼이 옆으로 잘려 나간다.
+
+   드로어 안에서는 반대로 간다: 높이는 내용만큼, 줄은 넘치면 감싼다. 가로
+   스크롤을 없애야 잘리지 않는다. */
+#geo-settings-drawer .nav-tier {
+    height: auto;
+    overflow-x: visible;
+    white-space: normal;
+    padding: 0;
+    margin: 0 0 12px 0;
+}
+
+#geo-settings-drawer .nav-tier-inner {
+    width: 100%;
+    height: auto;
+    flex-wrap: wrap;
+    white-space: normal;
+    justify-content: flex-start;
+    row-gap: 8px;
+}
+
+/* tier-inner 는 flex 컨테이너다. 그 자식(설정 묶음)은 기본이 `min-width:auto`
+   라서, 안에 줄바꿈이 안 되는 것이 하나라도 있으면 min-content 만큼 부풀어
+   드로어 폭(520px)을 넘겨 가로 스크롤이 생긴다. 한 줄로 못 줄이는 것은
+   자기 안에서 감싸게 하고, 바깥으로는 넘치지 않게 못 박는다. */
+#geo-settings-drawer .nav-tier-inner > * {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+/* 뒤로 버튼은 예외 — 폭 전체로 늘리면 거대한 타원이 된다. */
+#geo-settings-drawer .nav-tier-inner > .btn-nav-back {
+    flex: 0 0 auto;
+}
+#geo-settings-drawer .aot-modal-option-row {
+    flex-wrap: wrap;
+    min-width: 0;
+}
+#geo-settings-drawer .aot-modal-option-label,
+#geo-settings-drawer .aot-modal-option-control {
+    min-width: 0;
+}
+
+/* 드로어의 tier 사이 구분선 — 모드 tier(설정 묶음)와 그 하위 tier 를 눈으로
+   가른다. 마지막 tier 뒤에는 긋지 않는다. */
+#geo-settings-drawer .nav-tier:not(:last-child) {
+    border-bottom: 1px solid var(--border-neutral, #dee2e6);
+    padding-bottom: 12px;
+}
+
+/* --- 드로어 설정 컨트롤 -------------------------------------------------
+   하단 가로바 시절에는 자리가 없어 색 피커를 라벨 없는 26px 동그라미로,
+   값 칸을 50px 로, 토글을 글자가 바뀌는 pill 로 압축했다. 드로어에서는
+   geo/facility 설정과 같은 라벨+컨트롤 한 줄로 편다. */
+
+/* 색 피커 — 네이티브 컨트롤의 기본 테두리/여백을 걷고 둥근 견본으로 만든다.
+   `.aot-option-modal input { width:100% }`(aot-modal-modern.css)를 이겨야
+   견본이 칸 전체로 늘어나지 않으므로 id 로 특정도를 올린다. */
+#geo-settings-drawer .aot-geo-color-input,
+.aot-geo-color-input {
+    width: 46px !important;
+    height: 28px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--border-neutral, #dee2e6);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+}
+.aot-geo-color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+.aot-geo-color-input::-webkit-color-swatch { border: none; border-radius: 6px; }
+.aot-geo-color-input::-moz-color-swatch { border: none; border-radius: 6px; }
+
+/* 숫자 + 단위 — 단위를 값 칸 밖 오른쪽에 두어 입력폭을 잡아먹지 않게 한다. */
+.aot-geo-input-unit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+}
+.aot-geo-input-unit .aot-modern-input {
+    width: 90px;
+    text-align: right;
+}
+.aot-geo-unit {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #5E6B64);
+    white-space: nowrap;
+}
+
+/* 슬라이더 현재값 — 라벨 옆에 붙어 드래그 중에도 숫자가 보인다. */
+.aot-geo-slider-value {
+    font-weight: 700;
+    color: var(--aot-color-brand-primary, #13261B);
+    margin-left: 4px;
+}
+#geo-settings-drawer .aot-modal-option-row .custom-range { width: 100%; }
+
+/* 버튼 묶음 — 드로어 폭에서 자연스럽게 감싼다. 라벨 옆 좁은 칸이 아니라
+   라벨 아래 한 줄을 통째로 쓴다(`.aot-geo-row-stack`). */
+.aot-geo-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    /* 컨트롤 칸이 내용 크기로 줄어들면(shrink-to-fit) 버튼 세 개가 두 줄로
+       접힌다. 줄 전체를 쓰게 해서 한 줄에 들어가게 한다. */
+    width: 100%;
+}
+
+/* `.aot-modal-option-row` 는 공용 CSS 에서 flex 로 못 박혀 있다(!important).
+   버튼 묶음 줄만 세로로 쌓으려면 같은 무게로 되돌려야 한다. */
+#geo-settings-drawer .aot-modal-option-row.aot-geo-row-stack {
+    display: block !important;
+}
+/* 공용 CSS 의 컨트롤 칸은 `flex: 0 0 160px` 로 폭이 못 박혀 있다(값 칸을
+   오른쪽에 가지런히 세우려는 규칙). 버튼 묶음 줄에서는 그 160px 때문에
+   버튼 세 개가 두 줄로 접히므로, 이 줄에서만 폭 제한을 푼다. */
+#geo-settings-drawer .aot-geo-row-stack .aot-modal-option-control {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 8px;
+    text-align: left;
+}
+
+/* 선택된 탭 — 가로바에서는 어두운 반투명 패널 위라 흰 글씨였다. 드로어는
+   바탕이 희어서 그대로 두면 **글자가 보이지 않는다**(흰 글씨 + 투명 배경).
+   여기서는 브랜드색으로 채워 선택 상태를 드러낸다. */
+#geo-settings-drawer .mode-tab.active {
+    background: var(--aot-color-brand-primary, #13261B) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+/* 드로어 안 뒤로 버튼 — 가로바용 원형 버튼은 여기서 폭 전체로 늘어난다.
+   왼쪽에 붙는 작은 버튼으로 되돌린다. */
+#geo-settings-drawer .btn-nav-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--aot-bg-off, #f3f6f5);
+    cursor: pointer;
+    margin-bottom: 8px;
 }
 
 /* Trigger min-width 100% just in case for small contents to allow spacing?
@@ -1241,6 +1394,23 @@ input:checked+.slider:before {
 .nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="equipment"]:hover {
     background: var(--theme-equipment, var(--aot-color-info));
     border-color: var(--theme-equipment, var(--aot-color-info));
+    color: var(--text-color-tertiary);
+}
+
+/* Planting (Vegetation)
+   ⚠ 이 규칙이 없으면 식생 탭은 활성일 때 **글자가 보이지 않는다.** 다른 모드가
+   여기서 배경색을 받아 흰 글씨를 읽히게 하는데, 식생만 빠져 있어
+   `.mode-tab.active { color: 흰색 !important }` 과 `.mode-tab { background: 흰색 }`
+   이 겹쳤다. 모드를 추가하면 이 블록도 함께 추가해야 한다. */
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="vegetation"] {
+    border-color: var(--theme-vegetation, #6a8f3c);
+    border-width: 3px;
+}
+
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="vegetation"].active,
+.nav-tier[data-tier-id="main"] .mode-tab[data-nav-mode="vegetation"]:hover {
+    background: var(--theme-vegetation, #6a8f3c);
+    border-color: var(--theme-vegetation, #6a8f3c);
     color: var(--text-color-tertiary);
 }
 

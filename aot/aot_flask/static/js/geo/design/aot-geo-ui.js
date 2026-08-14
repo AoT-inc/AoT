@@ -3,6 +3,13 @@
  * UI & Theme Management for AoTGeoDesign
  */
 
+/**
+ * 아직 장치가 배정되지 않은 담당 구역의 색 — 장치 종류 어느 것과도 겹치지 않는
+ * 중립 회색이라야 "배정됨 / 미배정" 이 색으로 갈린다. 장치 팔레트
+ * (`AoTGeoTheme`)에 넣지 않는 이유는 이것이 **장치 종류가 아니라 상태**여서다.
+ */
+const UNASSIGNED_AREA_COLOR = '#9e9e9e';
+
 class AoTGeoUI {
     constructor(parent) {
         this.parent = parent;
@@ -473,7 +480,22 @@ class AoTGeoUI {
         const props = layer.feature?.properties || {};
         const type = props.aot_type;
         const subType = props.sub_type;
-        
+
+        // 숨겨 둔 레이어는 다시 켜지 않는다.
+        //
+        // 이 함수는 `updateLayerStyles()`/`_swapStorageLayers()` 를 통해 **모드를
+        // 바꿀 때마다** 모든 레이어에 대해 불리고, 그 과정에서 GL 레이어의
+        // visibility 를 'visible' 로 되돌린다. 여기서 숨김을 다시 적용하지 않으면
+        // 사용자가 감춘 도형이 다른 모드로 갔다 오는 것만으로 되살아난다.
+        //
+        // 아래의 connection·vegetation early-return 보다 **먼저** 판단해야 한다 —
+        // 그 두 종류는 여기서 스타일을 안 칠하고 빠져나가므로, 뒤에 두면 장비
+        // 연결부와 식생이 숨김에서 빠진다.
+        if (this.parent && this.parent._applyVisibilityToLayer) {
+            this.parent._applyVisibilityToLayer(layer);
+            if (this.parent._isLayerHidden && this.parent._isLayerHidden(layer)) return;
+        }
+
         // [Fix] Exempt Connections/Fittings from Theme Styling
         // They have specific colors assigned at creation (mT=Orange, bT=Yellow, etc)
         if (type === 'connection' || ['mT', 'mbT', 'bT', 'mE', 'bE', 'tee', 'elbow'].includes(subType)) {
@@ -517,7 +539,16 @@ class AoTGeoUI {
                       devType = marker.feature.properties.device_type;
                   }
              }
-             color = T.deviceColor(devType);
+             // **배정된 장치가 없으면 중립색**으로 둔다.
+             //
+             // `deviceColor(undefined)` 는 복합장치(device_unit) 색으로 떨어지는데,
+             // 그 색은 함수(function) 색과도 같다. 그대로 쓰면 "아직 장치가 없는
+             // 구역" 과 "함수가 배정된 구역" 이 화면에서 똑같아 보여서, 색으로
+             // 배정 상태를 읽을 수 없다 — 색을 장치 종류에 맞추는 목적 자체가
+             // 사라진다. 미배정은 회색으로 두어 한눈에 갈리게 한다
+             // (패널의 "장치 미연결" 목록과 같은 개념).
+             const isAssigned = !!(devType || props.device_id);
+             color = isAssigned ? T.deviceColor(devType) : UNASSIGNED_AREA_COLOR;
         }
         
         const isMainPipe = (subType === 'pipe_main');
@@ -561,7 +592,14 @@ class AoTGeoUI {
 
                 // [New] Drip Override
                 let finalColor = color;
-                let finalWeight = isMainPipe ? 4 : (isCoverage ? 1 : 2);
+                // 지금 모드의 도형은 **테두리를 굵게** 해서 그 종류의 색이
+                // 드러나게 한다. 예전에는 채움 투명도(0.1↔0.3)만 달라서, 옅은
+                // 색이나 위성사진 위에서는 어느 것이 지금 만지는 종류인지
+                // 구분되지 않았다 — 색은 같은데 두께가 같으니 테두리가 정보를
+                // 주지 못했다. 배관·커버리지는 원래 두께가 의미를 가지므로
+                // (주배관 4 / 커버리지 1) 그대로 둔다.
+                let finalWeight = isMainPipe ? 4
+                                : (isCoverage ? 1 : (isActiveMode ? 4 : 2));
 
                 if (isDrip) {
                     finalColor = '#000000'; // Black
@@ -1330,10 +1368,62 @@ AoTGeoUI.prototype._toggleLayerPanel = function() {
         panel.appendChild(groupDiv);
     });
 
+    // -- 도형 그룹 --------------------------------------------------------
+    //
+    // 모드별 "지도에서 보기" 를 여기에도 낸다. 설정 드로어의 스위치와 **같은
+    // 상태**(`_hiddenShapeTypes` / `vis_shape_<모드>`)를 보고 쓰므로 두 곳이
+    // 어긋나지 않는다 — 배경지도를 고르러 온 김에 도형도 끄고 켤 수 있게
+    // 하려는 것이지, 별도의 표시 상태를 하나 더 만드는 것이 아니다.
+    const design = self.parent;
+    if (design && design.shapeTypesForMode && design.setShapeTypeVisibility) {
+        const MODES = [
+            ['site', window._ ? window._('Site') : 'Site'],
+            ['zone', window._ ? window._('Zone') : 'Zone'],
+            ['facility', window._ ? window._('Facility') : 'Facility'],
+            ['vegetation', window._ ? window._('Planting') : 'Planting'],
+            ['equipment', window._ ? window._('Equipment') : 'Equipment'],
+            ['aot_device', window._ ? window._('Device') : 'Device'],
+        ];
+        const shapeDiv = document.createElement('div');
+        shapeDiv.style.marginBottom = '8px';
+        shapeDiv.innerHTML = '<div style="font-weight:bold;padding:2px 0;color:#444;font-size:11px;' +
+            'text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #eee;margin-bottom:4px;">' +
+            (window._ ? window._('Shapes') : 'Shapes') + '</div>';
+        MODES.forEach(([mode, label]) => {
+            const visible = !design.shapeTypesForMode(mode)
+                .some(t => design.isShapeTypeHidden(t));
+            const itemDiv = document.createElement('div');
+            itemDiv.style.padding = '3px 0';
+            itemDiv.innerHTML = '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;">' +
+                '<input type="checkbox"' + (visible ? ' checked' : '') +
+                ' data-shape-mode="' + mode + '"> ' +
+                '<span style="font-size:13px;">' + label + '</span></label>';
+            shapeDiv.appendChild(itemDiv);
+        });
+        panel.appendChild(shapeDiv);
+    }
+
     // -- Event handler ----------------------------------------------------
     panel.onchange = function(e) {
         const input = e.target;
         if (input.type !== 'checkbox' && input.type !== 'radio') return;
+
+        // 도형 표시 — 드로어 스위치와 같은 경로로 보낸다(저장·복원 포함).
+        if (input.dataset.shapeMode) {
+            const mode = input.dataset.shapeMode;
+            const visible = input.checked;
+            if (design.setShapeTypeVisibility) design.setShapeTypeVisibility(mode, visible);
+            if (design.panel && design.panel._handleThemeColorChange) {
+                design.panel._handleThemeColorChange(`vis_shape_${mode}`, visible);
+            }
+            // 드로어가 같은 모드를 열어 두고 있으면 스위치도 함께 움직인다.
+            const drawerToggle = document.getElementById('shape-visible-toggle');
+            if (drawerToggle && drawerToggle.dataset.shapeType === mode) {
+                drawerToggle.checked = visible;
+            }
+            return;
+        }
+
         const map = self.parent?.map?._originalMap || self.parent?.map;
         if (!map) return;
 

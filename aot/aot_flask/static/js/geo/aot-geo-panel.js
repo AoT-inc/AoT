@@ -1,8 +1,14 @@
 class AoTGeoPanel {
     constructor(containerId, geoDesign) {
-        // Target the tiered navigation panel
+        // 하단 가로바 — **모드 탭('main' tier)만** 여기 남는다.
         this.container = document.getElementById('nav-mode-panel');
         this.viewport = document.getElementById('nav-tier-viewport');
+        // 모드별 설정 tier 는 지도를 가리지 않는 오른쪽 드로어로 간다
+        // (골격: geo_design.html 의 #geo-settings-drawer, 스타일·열림동작은
+        // aot-modal-modern.css / common/aot-widget-drawer.js 공용).
+        this.drawer = document.getElementById('geo-settings-drawer');
+        this.drawerBody = document.getElementById('geo-settings-drawer-body');
+        this.drawerTitle = document.getElementById('geo-settings-drawer-title');
         this.geoDesign = geoDesign;
 
         this.currentMode = 'site';
@@ -30,14 +36,6 @@ class AoTGeoPanel {
         this._isDragging = false; // Mouse drag state helper
 
         this.lastStack = []; // track for animations
-
-        // Bind event for vertical swipe/scroll handling
-        if (this.viewport) {
-            this.viewport.addEventListener('scroll', this._handleVerticalScroll.bind(this));
-        }
-
-        // [Refined] Initial Scroll Check
-        this._updateScrollLock();
 
         // [Fix] V8: Prevent Map Zoom when scrolling panel (MouseWheel)
         // [MapLibre] Use native DOM events instead of L.DomEvent
@@ -119,134 +117,214 @@ class AoTGeoPanel {
         }
 
         try {
-            this._suppressScroll = true;
+            // ── 두 곳에 나눠 그린다 ──────────────────────────────────────
+            //
+            //   하단 가로바 : 'main' tier(모드 탭)만. **항상** 보인다.
+            //   설정 드로어 : 그 모드의 설정 tier(index 1 이상).
+            //
+            // 예전에는 둘 다 하단바 2줄에 욱여넣었다. 그래서 배관 각도 슬라이더는
+            // min-width 320px 를 잡아야 했고, 식생 분할은 자리가 없어 지도를 덮는
+            // 모달로 빠져 있었다 — 설정을 만지는 동안 그 결과를 볼 수 없다는 것이
+            // 문제였다. 드로어는 지도를 덮지 않고 밀어내므로 둘 다 해결된다.
+            //
+            // 모드 전환 슬라이드 애니메이션도 함께 걷어냈다. 그것은 하단바가
+            // 얕은/깊은 tier 사이를 갈아끼울 때 쓰던 것인데, 이제 하단바 내용은
+            // 모드 탭 하나로 고정이라 갈아끼울 것이 없다(드로어는 자기 슬라이드가
+            // 있다).
+            this.viewport.innerHTML = '';
+            this.viewport.appendChild(this._buildTier({ id: 'main', index: 0 }));
 
-            // [New] Animation Logic (Horizontal Slide for Tier 1 <-> Tier 2, Instant for others)
-            // Define 'Deep' modes that trigger main slide animation
-            const deepModes = ['equipment', 'aot_device'];
-            const isDeep = (stack) => stack.length > 1 && deepModes.includes(stack[1]);
-
-            const prevDeep = isDeep(this.lastStack);
-            const currDeep = isDeep(this.navStack);
-
-            let isAnim = false;
-            let leaveClass = '';
-            let enterClass = '';
-
-            // 1. Enter Deep Mode (Shallow -> Deep)
-            if (!prevDeep && currDeep) {
-                isAnim = true;
-                leaveClass = 'slide-next-leave';
-                enterClass = 'slide-next-enter';
-            }
-            // 2. Exit Deep Mode (Deep -> Shallow)
-            else if (prevDeep && !currDeep) {
-                isAnim = true;
-                leaveClass = 'slide-back-leave';
-                enterClass = 'slide-back-enter';
-            }
-            // 3. Else (Deep -> Deep, Shallow -> Shallow) -> Instant
-
-            // Store old elements
-            const oldTiers = Array.from(this.viewport.children);
-            
-            if (isAnim) {
-                // Apply Leaving Class
-                oldTiers.forEach(t => t.classList.add(leaveClass));
-            } else {
-                // Instant Removal
-                oldTiers.forEach(t => t.remove());
-            }
-
-            const simpleModes = ['site', 'zone', 'facility'];
-            let tiersToRender = [];
-
-            if (this.navStack.length <= 1) {
-                // Root
-                tiersToRender = [{ id: 'main', index: 0, isBack: false }];
-            } else if (simpleModes.includes(this.currentMode)) {
-                // Simple
-                tiersToRender.push({ id: 'main', index: 0, isBack: false });
-                tiersToRender.push({ id: this.currentMode, index: 1, isBack: false });
-            } else {
-                // Complex (Option 2 Logic)
-                const headerIndex = 1;
-                const isDeep = this.navStack.length > 3;
-
-                tiersToRender.push({ id: this.navStack[headerIndex], index: headerIndex, isBack: true });
-
+            // 설정 tier: navStack[1] 이 모드, 그보다 깊으면 잎(leaf)까지 둘.
+            // 예전에는 simple(site/zone/facility)과 complex(equipment 등)를 갈라
+            // 처리했는데, 하단바에서 'main' 을 빼고 나니 둘이 같은 모양이 된다.
+            const settingsTiers = [];
+            if (this.navStack.length > 1) {
+                settingsTiers.push({ id: this.navStack[1], index: 1 });
                 if (this.navStack.length > 2) {
-                    // Tier 2 (Leaf)
                     const leafIndex = this.navStack.length - 1;
-                    tiersToRender.push({ id: this.navStack[leafIndex], index: leafIndex, isBack: false });
-                }
-            }
-
-            // Create new tiers
-            const newTierEls = tiersToRender.map((tierObj) => {
-                const tierEl = document.createElement('div');
-                tierEl.className = 'nav-tier';
-                if (isAnim) tierEl.classList.add(enterClass);
-
-                tierEl.dataset.tierId = tierObj.id;
-                tierEl.dataset.index = tierObj.index;
-
-                let content = this._getTierContent(tierObj.id, tierObj.index);
-
-                // [Refined] Inject Back Button if this is the Header Tier (Tier 1 in Modal)
-                if (tierObj.isBack) {
-                    // Prepend Back Button
-                    const iconClass = tierObj.index > 1 ? 'fa-arrow-up' : 'fa-arrow-left';
-                    const backBtn = `<div class="btn-nav-back" data-nav-action="back"><i class="fas ${iconClass}"></i></div>`;
-                    content = backBtn + content;
-                }
-
-                // [Refined] Wrap content in inner container for safe centering
-                tierEl.innerHTML = `<div class="nav-tier-inner">${content}</div>`;
-
-                // [Feature] Mouse Drag Scrolling
-                this._attachDragScroll(tierEl);
-                this._bindNavEvents(tierEl);
-
-                return tierEl;
-            });
-
-            // Append New Tiers
-            newTierEls.forEach(el => this.viewport.appendChild(el));
-
-            // Execute Animation
-            if (isAnim) {
-                // Clean Old Tiers after transition
-                setTimeout(() => {
-                    oldTiers.forEach(t => t.remove());
-                }, 400); // Match CSS transition duration
-
-                // Trigger New Tier Entry
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        newTierEls.forEach(el => el.classList.remove(enterClass));
+                    // 되돌아갈 중간 tier 가 있을 때만 뒤로 버튼을 낸다. 예전에는
+                    // tier 1 에 "모드 목록으로" 버튼이 있었지만, 모드 탭이 이제
+                    // 하단바에 늘 떠 있으므로 그 버튼은 갈 곳이 없어졌다.
+                    settingsTiers.push({
+                        id: this.navStack[leafIndex],
+                        index: leafIndex,
+                        isBack: this.navStack.length > 3,
                     });
-                });
-            } else {
-                // Already clean. No animation needed.
+                }
             }
+
+            if (this.drawerBody) {
+                this.drawerBody.innerHTML = '';
+                settingsTiers.forEach(t => this.drawerBody.appendChild(this._buildTier(t)));
+            }
+            if (this.drawerTitle) {
+                this.drawerTitle.textContent = this._modeLabel(this.currentMode);
+            }
+            // 설정이 없는 상태(모드 미선택)에서 드로어가 열려 있으면 빈 창이 남는다.
+            if (!settingsTiers.length) this.closeSettings();
 
             this.lastStack = [...this.navStack];
-            this._updateScrollLock();
-            this._scrollToActiveTier();
-            setTimeout(() => { this._suppressScroll = false; }, 600); // [Fix] Allow smooth scroll to finish
         } catch (e) {
             // console.error("[AoTGeoPanel] Render Error:", e);
             this.viewport.innerHTML = `<div class="text-danger p-2 small">Render Error: ${e.message}</div>`;
         }
     }
 
+    /** tier 하나를 DOM 으로. 하단바와 드로어가 같은 골격을 쓴다. */
+    _buildTier({ id, index, isBack }) {
+        const tierEl = document.createElement('div');
+        tierEl.className = 'nav-tier';
+        tierEl.dataset.tierId = id;
+        tierEl.dataset.index = index;
+
+        let content = this._getTierContent(id, index);
+        if (isBack) {
+            content = '<div class="btn-nav-back" data-nav-action="back">' +
+                      '<i class="fas fa-arrow-up"></i></div>' + content;
+        }
+        tierEl.innerHTML = `<div class="nav-tier-inner">${content}</div>`;
+
+        this._attachDragScroll(tierEl);
+        this._bindNavEvents(tierEl);
+        // 분할 폼은 자기 입력들을 스스로 배선한다(라이브 미리보기까지).
+        // tier id 로 판정하지 않는다 — 분할 폼은 'vegetation' tier 안에 바로
+        // 이어 붙으므로(더 이상 별도 'split' tier 가 아니다), 내용에 그 폼의
+        // 표식(zone_id select)이 있는지로 판정하는 편이 실제로 맞다.
+        const veg = this.geoDesign && this.geoDesign.vegetation;
+        if (veg && veg.bindSplitPanel && tierEl.querySelector('[data-veg-split="zone_id"]')) {
+            veg.bindSplitPanel(tierEl);
+        }
+        const ds = this.geoDesign && this.geoDesign.deviceSplit;
+        if (ds && ds.bindPanel && tierEl.querySelector('[data-devsplit="zone_id"]')) {
+            ds.bindPanel(tierEl);
+        }
+        return tierEl;
+    }
+
+    /** 드로어 제목에 쓰는 모드 이름 — 하단바 탭과 같은 문구를 쓴다. */
+    _modeLabel(mode) {
+        const labels = {
+            site: _('Site'), zone: _('Zone'), facility: _('Facility'),
+            vegetation: _('Planting'), equipment: _('Equipment'),
+            aot_device: _('A'),
+        };
+        return labels[mode] || _('Settings');
+    }
+
     /**
-     * Centers the view. (Obsolete Row Logic Removed).
-     * Since we only render visible tiers, just ensure top alignment.
+     * 설정 드로어를 연다.
+     *
+     * **첫 렌더에서는 부르지 않는다** — 페이지를 열자마자 지도가 드로어 폭만큼
+     * 밀려 있으면 지도를 보러 온 사람에게 설명되지 않는다. 모드 탭을 실제로
+     * 누를 때만 연다(`_bindNavEvents` 의 `data-nav-mode` 핸들러).
      */
-    _scrollToActiveTier() {
-        if (this.viewport) this.viewport.scrollTop = 0;
+    openSettings() {
+        if (!this.drawer || !window.jQuery) return;
+        if (!this.drawerBody || !this.drawerBody.children.length) return;
+        window.jQuery(this.drawer).modal('show');
+    }
+
+    closeSettings() {
+        if (!this.drawer || !window.jQuery) return;
+        window.jQuery(this.drawer).modal('hide');
+    }
+
+    // ── 드로어 마크업 헬퍼 ──────────────────────────────────────────────
+    //
+    // 설정이 하단 가로바에 있던 시절에는 자리가 없어 라벨을 지우고(11px 회색
+    // 글씨), 값 칸을 50px 로 줄이고, 토글은 눌릴 때마다 글자가 바뀌는 pill 로
+    // 압축했다. 드로어(520px 세로)는 그럴 이유가 없다 — geo/facility 설정과
+    // 같은 골격(`aot-modal-group-title` + `aot-modal-container` +
+    // `aot-modal-option-row`)으로 라벨과 값을 나란히 둔다.
+    //
+    // ⚠ 여기서 만드는 요소의 **id 와 data 속성은 바꾸지 말 것.** `_bindNavEvents`
+    //   가 그것으로 찾는다 — 겉모습만 바꾸고 동작은 그대로 두는 것이 이 헬퍼의 목적이다.
+
+    /** 설정 묶음 제목. */
+    _group(title) {
+        return `<div class="aot-modal-group-title">${title}</div>`;
+    }
+
+    /**
+     * 라벨 + 컨트롤 한 줄. `hint` 는 라벨 아래 설명.
+     *
+     * 버튼 묶음이 들어오면 줄을 **세로로 쌓는다** — 버튼 서너 개를 라벨 옆
+     * 좁은 칸에 밀어 넣으면 오른쪽에서 어색하게 감긴다.
+     */
+    _row(label, control, hint) {
+        const stack = control.indexOf('aot-geo-btn-row') !== -1
+            ? ' aot-geo-row-stack' : '';
+        return `
+            <div class="aot-modal-option-row${stack}">
+                <div class="aot-modal-option-label">${label}${
+                    hint ? `<div class="aot-modal-body-text">${hint}</div>` : ''}</div>
+                <div class="aot-modal-option-control">${control}</div>
+            </div>`;
+    }
+
+    /** 색 피커 한 줄 — 예전에는 라벨 없는 26px 동그라미만 떠 있었다. */
+    _colorRow(id, attrs, value, label) {
+        return this._row(label || _('Colour'),
+            `<input type="color" class="aot-geo-color-input" id="${id}" ${attrs}
+                    value="${value}">`);
+    }
+
+    /**
+     * 켜고 끄는 스위치 한 줄 — 눌릴 때마다 글자가 바뀌는 pill 을 대신한다.
+     *
+     * 골격은 공용 토글(`components/aot-toggle.css` 의 `.btn-toggle`)이다.
+     * layout 이 전역으로 싣고 설정 화면들이 이미 이것을 쓴다 — 이 페이지에만
+     * 있는 `.switch`(aot-base-ui.css) 를 쓰면 같은 뜻의 스위치가 화면마다
+     * 다르게 생긴다.
+     */
+    _switchRow(id, checked, label, hint, attrs) {
+        return this._row(label,
+            `<label class="btn-toggle mb-0">
+                 <input type="checkbox" class="btn-toggle-input" id="${id}"
+                        ${attrs || ''} ${checked ? 'checked' : ''}>
+                 <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+             </label>`, hint);
+    }
+
+    /**
+     * 그 종류의 도형을 지도에서 보일지 — 모드마다 같은 자리에 둔다.
+     *
+     * 길이 라벨 토글과 짝이 되는 스위치다(라벨만 끄는 것과 도형째 감추는 것은
+     * 다른 요구다 — 다른 모드를 손볼 때 이 모드 도형이 눈에 걸리지 않게 한다).
+     * 저장 키는 `vis_shape_<type>` 로, 장치 쪽 `vis_<type>` 와 겹치지 않는다.
+     */
+    _shapeVisibilityRow(type) {
+        const cfg = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config)
+            ? window.AOT_GEO_CONFIG.theme_config : {};
+        const saved = cfg[`vis_shape_${type}`];
+        const visible = (saved === undefined || saved === null)
+            ? true : (saved === 'true' || saved === true);
+        return this._switchRow('shape-visible-toggle', visible, _('Show on map'),
+            _('Hides this kind of shape while you work on another mode.'),
+            `data-shape-type="${type}"`);
+    }
+
+    /** 숫자 입력 한 줄. `unit` 은 값 뒤에 붙는 단위. */
+    _numberRow(id, value, label, unit, step) {
+        return this._row(label,
+            `<div class="aot-geo-input-unit">
+                 <input type="number" class="aot-modern-input form-control"
+                        id="${id}" value="${value}"${step ? ` step="${step}"` : ''}>
+                 ${unit ? `<span class="aot-geo-unit">${unit}</span>` : ''}
+             </div>`);
+    }
+
+    /** 슬라이더 한 줄 — 값이 라벨 옆에 함께 뜬다. */
+    _sliderRow(id, valueId, value, label, unit, min, max, step) {
+        return this._row(
+            `${label} <span class="aot-geo-slider-value" id="${valueId}">${value}${unit}</span>`,
+            `<input type="range" class="custom-range" id="${id}"
+                    min="${min}" max="${max}" step="${step}" value="${value}">`);
+    }
+
+    /** 버튼·탭을 감싸는 줄 — 드로어에서 자연스럽게 감싸도록 한다. */
+    _btnRow(inner) {
+        return `<div class="aot-geo-btn-row">${inner}</div>`;
     }
 
     /**
@@ -272,41 +350,50 @@ class AoTGeoPanel {
             case 'site': {
                 const config = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
                 const activeColor = config['site'] || '#DF5353';
-                html += `
-                    <!-- Theme Color Picker (26px Circle) -->
-                    <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
-                        <input type="color" id="theme-color-picker" data-type="site" value="${activeColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
-                    </div>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-add-from-address">${_('Add from Address')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.isSiteLabelHidden ? 'active' : ''}" id="btn-hide-type-label" style="min-width: 70px;">${this.isSiteLabelHidden ? _('Show labels') : _('Hide labels')}</button>
-                `;
+                html += this._group(_('Basic settings')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('theme-color-picker', 'data-type="site"', activeColor) +
+                    this._shapeVisibilityRow('site') +
+                    this._switchRow('btn-hide-type-label', !this.isSiteLabelHidden,
+                                    _('Show length labels'),
+                                    _('Shows the measured length of each edge on the map.')) +
+                    this._row(_('Add from Address'),
+                        `<button class="btn aot-pill-btn" id="btn-add-from-address">${
+                            _('Search')}</button>`,
+                        _('Looks up a parcel by address and draws its boundary for you.')) +
+                    `</div>`;
                 break;
             }
 
             case 'zone': {
                 const config = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
                 const activeColor = config['zone'] || '#28a745';
-                html += `
-                    <!-- Theme Color Picker (26px Circle) -->
-                    <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
-                        <input type="color" id="theme-color-picker" data-type="zone" value="${activeColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
-                    </div>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.isZoneLabelHidden ? 'active' : ''}" id="btn-hide-type-label" style="min-width: 70px;">${this.isZoneLabelHidden ? _('Show labels') : _('Hide labels')}</button>
-                `;
+                html += this._group(_('Basic settings')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('theme-color-picker', 'data-type="zone"', activeColor) +
+                    this._shapeVisibilityRow('zone') +
+                    this._switchRow('btn-hide-type-label', !this.isZoneLabelHidden,
+                                    _('Show length labels'),
+                                    _('Shows the measured length of each edge on the map.')) +
+                    `</div>`;
                 break;
             }
 
             case 'facility': {
                 const config = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
                 const activeColor = config['facility'] || '#82898f';
-                html += `
-                    <!-- Theme Color Picker (26px Circle) -->
-                    <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
-                        <input type="color" id="theme-color-picker" data-type="facility" value="${activeColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
-                    </div>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-facility-design">${_('Facility Design')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.isFacilityLabelHidden ? 'active' : ''}" id="btn-hide-type-label" style="min-width: 70px;">${this.isFacilityLabelHidden ? _('Show labels') : _('Hide labels')}</button>
-                `;
+                html += this._group(_('Basic settings')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('theme-color-picker', 'data-type="facility"', activeColor) +
+                    this._shapeVisibilityRow('facility') +
+                    this._switchRow('btn-hide-type-label', !this.isFacilityLabelHidden,
+                                    _('Show length labels'),
+                                    _('Shows the measured length of each edge on the map.')) +
+                    this._row(_('Facility Design'),
+                        `<button class="btn aot-pill-btn" id="btn-facility-design">${
+                            _('Open')}</button>`,
+                        _('Design the structure, covering and actuators of the selected facility.')) +
+                    `</div>`;
                 break;
             }
 
@@ -322,27 +409,19 @@ class AoTGeoPanel {
                 // (다른 도형과 같다). 여기에 같은 기능의 버튼을 또 두면 진입점이
                 // 둘로 갈린다. 이 티어에는 종류별 설정(색)만 둔다.
                 //
-                // 분할은 예외다. 그것은 새 도형을 **그리는** 일이 아니라 이미
-                // 그려 둔 구역을 고르는 일이라 그리기 도구에 자리가 없다.
+                // **분할 폼은 "열기" 버튼 없이 바로 이어 붙인다.** 예전에는
+                // 여기 "구획으로 나누기 → 열기" 버튼이 있어 별도 tier 로
+                // 들어가야 했는데, 식생 드로어를 여는 것 자체가 대개 분할을
+                // 하려는 것이다 — 버튼을 한 번 더 누르게 하는 것은 중복이다.
+                // 내용·배선은 여전히 vegetation 모듈이 쥔다(폼이 지도의 미리보기
+                // 점선·기준선과 한 몸이라 패널이 흉내 낼 수 있는 것이 아니다).
+                html += this._group(_('Basic settings')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('theme-color-picker', 'data-type="vegetation"', vegColor) +
+                    this._shapeVisibilityRow('vegetation') +
+                    `</div>`;
                 const veg = this.geoDesign && this.geoDesign.vegetation;
-                const hasSplitPreview = !!(veg && veg.hasSplitPreview &&
-                                           veg.hasSplitPreview());
-                html += `
-                    <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
-                        <input type="color" id="theme-color-picker" data-type="vegetation" value="${vegColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
-                    </div>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-veg-split">${_('Split into plots')}</button>
-                `;
-                // 미리보기가 떠 있는 동안에만 적용·취소가 나온다. 지도를 가리는
-                // 모달이 아니라 여기 두는 이유는, 점선을 **보면서** 정해야 하기
-                // 때문이다.
-                if (hasSplitPreview) {
-                    html += `
-                        <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-veg-split-apply">${_('Create plots')}</button>
-                        <button class="btn btn-aot-pill btn-aot-outline" id="btn-veg-split-cancel">${_('Discard preview')}</button>
-                        <span class="small text-muted ml-2">${veg.splitSummaryText()}</span>
-                    `;
-                }
+                html += (veg && veg.splitPanelHtml) ? veg.splitPanelHtml() : '';
                 break;
             }
 
@@ -351,35 +430,59 @@ class AoTGeoPanel {
                 const eqConfig = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) ? window.AOT_GEO_CONFIG.theme_config : {};
                 const eqColor = eqConfig['equipment'] || '#007bff';
 
-                html += `
-                    <!-- Theme Color Picker (26px Circle) -->
-                    <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
-                        <input type="color" id="theme-color-picker" data-type="equipment" value="${eqColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
-                    </div>
-                    <div class="mode-tab ${this._isActivePath('device') ? 'active' : ''}" data-nav-sub="device">${_('Device')}</div>
-                    <div class="mode-tab ${this._isActivePath('pipe') ? 'active' : ''}" data-nav-sub="pipe">${_('Pipe')}</div>
-                    <div class="mode-tab ${this._isActivePath('sprinkler') ? 'active' : ''}" data-nav-sub="sprinkler">${_('Irrigation')}</div>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.isPipeLabelHidden ? 'active' : ''}" id="btn-hide-pipe-label" style="min-width: 70px;">${this.isPipeLabelHidden ? _('Show pipe labels') : _('Hide pipe labels')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.isSprinklerPointsHidden ? 'active' : ''}" id="btn-hide-sprinkler-points" style="min-width: 70px;">${this.isSprinklerPointsHidden ? _('Show sprinklers') : _('Hide sprinklers')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.isConnectionPointsHidden ? 'active' : ''}" id="btn-hide-connection-points" style="min-width: 70px;">${this.isConnectionPointsHidden ? _('Show joints') : _('Hide joints')}</button>
-                `;
+                html += this._group(_('Basic settings')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('theme-color-picker', 'data-type="equipment"', eqColor) +
+                    this._shapeVisibilityRow('equipment') +
+                    this._row(_('What to place'), this._btnRow(`
+                        <div class="mode-tab ${this._isActivePath('device') ? 'active' : ''}" data-nav-sub="device">${_('Device')}</div>
+                        <div class="mode-tab ${this._isActivePath('pipe') ? 'active' : ''}" data-nav-sub="pipe">${_('Pipe')}</div>
+                        <div class="mode-tab ${this._isActivePath('sprinkler') ? 'active' : ''}" data-nav-sub="sprinkler">${_('Irrigation')}</div>
+                    `)) +
+                    `</div>` +
+                    this._group(_('Show on map')) +
+                    `<div class="aot-modal-container">` +
+                    this._switchRow('btn-hide-pipe-label', !this.isPipeLabelHidden,
+                                    _('Pipe labels')) +
+                    this._switchRow('btn-hide-sprinkler-points', !this.isSprinklerPointsHidden,
+                                    _('Sprinklers')) +
+                    this._switchRow('btn-hide-connection-points', !this.isConnectionPointsHidden,
+                                    _('Joints')) +
+                    `</div>`;
                 break;
 
             // --- Tier 2: Aot Device Root ---
-            case 'aot_device':
-                html += `
-                    <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">${_('Input')}</div>
-                    <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">${_('Output')}</div>
-                    <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">${_('Function')}</div>
-                    <div class="mode-tab ${this._isActivePath('device_unit') ? 'active' : ''}" data-nav-sub="device_unit">${_('Device')}</div>
-                `;
+            case 'aot_device': {
+                html += this._group(_('Basic settings')) +
+                    `<div class="aot-modal-container">` +
+                    this._shapeVisibilityRow('aot_device') +
+                    this._row(_('Device kind'), this._btnRow(`
+                        <div class="mode-tab ${this._isActivePath('input') ? 'active' : ''}" data-nav-sub="input">${_('Input')}</div>
+                        <div class="mode-tab ${this._isActivePath('output') ? 'active' : ''}" data-nav-sub="output">${_('Output')}</div>
+                        <div class="mode-tab ${this._isActivePath('function') ? 'active' : ''}" data-nav-sub="function">${_('Function')}</div>
+                        <div class="mode-tab ${this._isActivePath('device_unit') ? 'active' : ''}" data-nav-sub="device_unit">${_('Device')}</div>
+                    `));
                 // 선택된 구역 폴리곤이 있으면 그 자리의 배정을 바로 연다.
                 // 없을 때 버튼만 띄우면 눌러도 "먼저 구역을 고르세요" 밖에 못 한다.
                 if (this._selectedAreaShapeId()) {
-                    html += `<button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-bind-area">${_('Assign device')}</button>`;
+                    html += this._row(_('Assign device'),
+                        `<button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-bind-area">${
+                            _('Assign')}</button>`,
+                        _('Assigns a device to the zone you selected on the map.'));
                 }
-                html += `<button class="btn btn-aot-pill btn-aot-outline" id="btn-unbound-slots">${_('Places with no device')}</button>`;
+                html += this._row(_('Places with no device'),
+                        `<button class="btn aot-pill-btn" id="btn-unbound-slots">${
+                            _('Show')}</button>`,
+                        _('Lists the zones that still have no device assigned.')) +
+                    `</div>`;
+                // 구역 나누기 — 식생 모드와 같은 자리, 같은 흐름.
+                // site/zone 을 골라 잘라서 장치 담당 구역을 얻는다.
+                {
+                    const ds = this.geoDesign && this.geoDesign.deviceSplit;
+                    html += (ds && ds.panelHtml) ? ds.panelHtml() : '';
+                }
                 break;
+            }
 
             // --- Tier 3: Aot Device Actions ---
             case 'input': case 'output': case 'function':
@@ -395,20 +498,18 @@ class AoTGeoPanel {
                 const savedVisValue = appTheme[`vis_${type}`];
                 const isVisible = (savedVisValue === undefined || savedVisValue === null) ? true : (savedVisValue === 'true' || savedVisValue === true);
 
-                html += `
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('Selection list')} ></button>
-
-                    <!-- Color Picker (26px Circle) -->
-                    <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: 1px solid #ddd; margin: 0 4px;">
-                        <input type="color" id="device-color-picker" value="${savedColor}" style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; cursor: pointer;">
-                    </div>
-
-                    <!-- Slide Toggle Switch -->
-                    <label class="switch" style="margin-left: 8px;">
-                        <input type="checkbox" id="device-visible-toggle" ${isVisible ? 'checked' : ''}>
-                        <span class="slider round"></span>
-                    </label>
-                `;
+                html += this._group(
+                        type === 'input' ? _('Input')
+                        : type === 'output' ? _('Output') : _('Function')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('device-color-picker', '', savedColor) +
+                    this._switchRow('device-visible-toggle', isVisible,
+                                    _('Show on map')) +
+                    this._row(_('Selection list'),
+                        `<button class="btn aot-pill-btn" id="btn-device-list">${
+                            _('Open')}</button>`,
+                        _('Pick which devices of this kind appear on the map.')) +
+                    `</div>`;
                 break;
 
             // --- Tier 3: Aot Device > 복합장치(Device) ---
@@ -424,87 +525,98 @@ class AoTGeoPanel {
                 const devColor = window.AoTGeoTheme.deviceColor('device', devTheme);
                 const devVis = devTheme['vis_device_unit'];
                 const devVisible = (devVis === undefined || devVis === null) ? true : (devVis === 'true' || devVis === true);
-                html += `
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-device-list">${_('Selection list')} ></button>
-
-                    <!-- Color Picker (26px Circle) -->
-                    <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: 1px solid #ddd; margin: 0 4px;">
-                        <input type="color" id="device-color-picker" value="${devColor}" style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; cursor: pointer;">
-                    </div>
-
-                    <label class="switch" style="margin-left: 8px;">
-                        <input type="checkbox" id="device-visible-toggle" ${devVisible ? 'checked' : ''}>
-                        <span class="slider round"></span>
-                    </label>
-                `;
+                html += this._group(_('Device')) +
+                    `<div class="aot-modal-container">` +
+                    this._colorRow('device-color-picker', '', devColor) +
+                    this._switchRow('device-visible-toggle', devVisible,
+                                    _('Show on map')) +
+                    this._row(_('Selection list'),
+                        `<button class="btn aot-pill-btn" id="btn-device-list">${
+                            _('Open')}</button>`,
+                        _('Pick which devices of this kind appear on the map.')) +
+                    `</div>`;
                 break;
             }
 
             // --- Tier 3: Equipment > Device Categories ---
             case 'device':
-                html += `
-                    <div class="mode-tab ${this._isActivePath('supply') ? 'active' : ''}" data-nav-cat="supply">${_('Water supply')}</div>
-                    <div class="mode-tab ${this._isActivePath('filter') ? 'active' : ''}" data-nav-cat="filter">${_('Filter')}</div>
-                    <div class="mode-tab ${this._isActivePath('valve') ? 'active' : ''}" data-nav-cat="valve">${_('Valve')}</div>
-                    <div class="mode-tab ${this._isActivePath('conn') ? 'active' : ''}" data-nav-cat="conn">${_('Connection')}</div>
-                `;
+                html += this._group(_('Device')) +
+                    `<div class="aot-modal-container">` +
+                    this._row(_('Category'), this._btnRow(`
+                        <div class="mode-tab ${this._isActivePath('supply') ? 'active' : ''}" data-nav-cat="supply">${_('Water supply')}</div>
+                        <div class="mode-tab ${this._isActivePath('filter') ? 'active' : ''}" data-nav-cat="filter">${_('Filter')}</div>
+                        <div class="mode-tab ${this._isActivePath('valve') ? 'active' : ''}" data-nav-cat="valve">${_('Valve')}</div>
+                        <div class="mode-tab ${this._isActivePath('conn') ? 'active' : ''}" data-nav-cat="conn">${_('Connection')}</div>
+                    `), _('Choose a category, then pick the part to place on the map.')) +
+                    `</div>`;
                 break;
 
             // --- Tier 3: Equipment > Pipe Actions ---
             case 'pipe':
-                html += `
-                    <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_settings">${_('Settings')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-draw-ref">${_('Reference line')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-draw-main">${_('Main pipe')}</button>
-                    <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-gen-pipe">${_('Generate')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.pipeConfig.is90Deg ? 'active' : ''}" id="btn-90deg">${_('90 degree')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-clear-equip" data-clear-mode="all">${_('Reset')}</button>
-                `;
+                html += this._group(_('Pipe')) +
+                    `<div class="aot-modal-container">` +
+                    this._row(_('Draw'), this._btnRow(`
+                        <button class="btn aot-pill-btn" id="btn-draw-ref">${_('Reference line')}</button>
+                        <button class="btn aot-pill-btn" id="btn-draw-main">${_('Main pipe')}</button>
+                    `), _('Draw the reference line and the main pipe first — branches are generated from them.')) +
+                    this._switchRow('btn-90deg', this.pipeConfig.is90Deg,
+                                    _('Branch at 90 degrees'),
+                                    _('Lays branches square to the main pipe instead of following the reference line.')) +
+                    this._row(_('Spacing and angle'),
+                        `<button class="btn aot-pill-btn" data-nav-sub="pipe_settings">${
+                            _('Open')}</button>`) +
+                    `</div>` +
+                    `<div class="aot-modal-container">` +
+                    this._row(_('Generate branches'),
+                        `<button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-gen-pipe">${
+                            _('Generate')}</button>`) +
+                    this._row(_('Reset'),
+                        `<button class="btn aot-pill-btn" id="btn-clear-equip" data-clear-mode="all">${
+                            _('Reset')}</button>`,
+                        _('Removes the generated pipes so you can start over.')) +
+                    `</div>`;
                 break;
 
             // --- Tier 3: Equipment > Irrigation (Shared Controller) ---
-            case 'sprinkler':
-                html += `
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.irrigationType === 'sprinkler' ? 'active' : ''}" id="btn-set-sprinkler">${_('Sprinkler')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline ${this.irrigationType === 'drip' ? 'active' : ''}" id="btn-set-drip">${_('Drip')}</button>
-                    <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-gen-irrigation">${_('Generate')}</button>
-                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-clear-equip" data-clear-mode="sprinkler">${_('Reset')}</button>
-                `;
-
-                // Separator
-                html += `<div style="width: 1px; height: 16px; background: #ddd; margin: 0 8px;"></div>`;
-                if (this.irrigationType === 'sprinkler') {
-
-                    html += `
-                        <div class="d-flex align-items-center">
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Spacing')}</span>
-                            <input type="number" class="form-control-compact" id="sp-interval" value="${this.sprinklerConfig.interval}" style="width: 50px; margin-right: 8px;">
-                            
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Radius')}</span>
-                            <input type="number" class="form-control-compact" id="sp-radius" value="${this.sprinklerConfig.radius}" style="width: 50px; margin-right: 8px;">
-                            
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Flow rate')}</span>
-                            <input type="number" class="form-control-compact" id="sp-flow" value="${this.sprinklerConfig.flow}" style="width: 50px; margin-right: 8px;">
-                            
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Pressure')}</span>
-                            <input type="number" class="form-control-compact" id="sp-pressure" value="${this.sprinklerConfig.pressure}" style="width: 50px; margin-right: 8px;">
-                        </div>
-                    `;
+            case 'sprinkler': {
+                const isSp = this.irrigationType === 'sprinkler';
+                html += this._group(_('Irrigation')) +
+                    `<div class="aot-modal-container">` +
+                    this._row(_('Type'), this._btnRow(`
+                        <button class="btn aot-pill-btn ${isSp ? 'aot-pill-btn-primary' : ''}" id="btn-set-sprinkler">${_('Sprinkler')}</button>
+                        <button class="btn aot-pill-btn ${!isSp ? 'aot-pill-btn-primary' : ''}" id="btn-set-drip">${_('Drip')}</button>
+                    `)) +
+                    `</div>` +
+                    this._group(isSp ? _('Sprinkler') : _('Drip')) +
+                    `<div class="aot-modal-container">`;
+                if (isSp) {
+                    html += this._numberRow('sp-interval', this.sprinklerConfig.interval,
+                                            _('Spacing'), 'm', '0.5') +
+                            this._numberRow('sp-radius', this.sprinklerConfig.radius,
+                                            _('Radius'), 'm', '0.5') +
+                            this._numberRow('sp-flow', this.sprinklerConfig.flow,
+                                            _('Flow rate'), 'L/h', '10') +
+                            this._numberRow('sp-pressure', this.sprinklerConfig.pressure,
+                                            _('Pressure'), 'bar', '0.1');
                 } else {
-                    html += `
-                         <div class="d-flex align-items-center">
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Spacing')}</span>
-                            <input type="number" class="form-control-compact" id="dp-interval" value="${this.dripConfig.interval}" style="width: 50px; margin-right: 8px;">
-                            
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Flow rate')}</span>
-                            <input type="number" class="form-control-compact" id="dp-flow" value="${this.dripConfig.flow}" style="width: 50px; margin-right: 8px;">
-                            
-                            <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 4px;">${_('Pressure')}</span>
-                            <input type="number" class="form-control-compact" id="dp-pressure" value="${this.dripConfig.pressure}" style="width: 50px; margin-right: 8px;">
-                        </div>
-                    `;
+                    html += this._numberRow('dp-interval', this.dripConfig.interval,
+                                            _('Spacing'), 'm', '0.1') +
+                            this._numberRow('dp-flow', this.dripConfig.flow,
+                                            _('Flow rate'), 'L/h', '0.1') +
+                            this._numberRow('dp-pressure', this.dripConfig.pressure,
+                                            _('Pressure'), 'bar', '0.1');
                 }
+                html += `</div>` +
+                    `<div class="aot-modal-container">` +
+                    this._row(_('Generate'),
+                        `<button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-gen-irrigation">${
+                            _('Generate')}</button>`) +
+                    this._row(_('Reset'),
+                        `<button class="btn aot-pill-btn" id="btn-clear-equip" data-clear-mode="sprinkler">${
+                            _('Reset')}</button>`) +
+                    `</div>`;
                 break;
+            }
 
 
 
@@ -512,61 +624,48 @@ class AoTGeoPanel {
 
 
             // --- Tier 4: Device Items ---
-            case 'supply': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="river">${_('River')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="tank">${_('Water tank')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="pump">${_('Pump')}</button>`; break;
-            case 'filter': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="disc">${_('Disc')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="screen">${_('Screen')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="sand">${_('Sand')}</button>`; break;
-            case 'valve': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="union">${_('Union valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="m-single">${_('Adapter valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="f-single">${_('Inline valve')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="reducer">${_('Reducer')}</button>`; break;
-            case 'conn': html += `<button class="btn btn-aot-pill btn-aot-outline" data-device-item="suction">${_('Suction')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="elbow">${_('Elbow')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="tee">${_('Tee')}</button><button class="btn btn-aot-pill btn-aot-outline" data-device-item="reducer">${_('Reducer')}</button>`; break;
+            // 부품 목록 — 누르면 지도에 그 부품을 놓는다. 종류가 몇 개뿐이라
+            // 라벨 한 줄로 감싸는 것보다 버튼을 그대로 늘어놓는 편이 읽기 쉽다.
+            case 'supply': case 'filter': case 'valve': case 'conn': {
+                const items = {
+                    supply: [['river', _('River')], ['tank', _('Water tank')], ['pump', _('Pump')]],
+                    filter: [['disc', _('Disc')], ['screen', _('Screen')], ['sand', _('Sand')]],
+                    valve: [['union', _('Union valve')], ['m-single', _('Adapter valve')],
+                            ['f-single', _('Inline valve')], ['reducer', _('Reducer')]],
+                    conn: [['suction', _('Suction')], ['elbow', _('Elbow')],
+                           ['tee', _('Tee')], ['reducer', _('Reducer')]],
+                }[tierId];
+                const titles = {
+                    supply: _('Water supply'), filter: _('Filter'),
+                    valve: _('Valve'), conn: _('Connection'),
+                };
+                html += this._group(titles[tierId]) +
+                    `<div class="aot-modal-container">` +
+                    this._row(_('Place on map'), this._btnRow(items.map(
+                        ([k, label]) => `<button class="btn aot-pill-btn" data-device-item="${k}">${label}</button>`
+                    ).join('')), _('Pick a part, then click the map to place it.')) +
+                    `</div>`;
+                break;
+            }
 
             // --- Tier 4: Pipe Settings ---
+            // 예전에는 여기서 화면 폭을 재어(`window.innerWidth > 768`) 폰이면
+            // 슬라이더 대신 `pipe_angle`/`pipe_offset` 하위 tier 로 들어가는
+            // 버튼을 냈다. 하단 가로바에 슬라이더 둘이 안 들어갔기 때문인데,
+            // 드로어는 폰에서도 화면을 다 쓰므로 그 우회가 필요 없어졌다 —
+            // 두 하위 tier 와 함께 지웠다.
             case 'pipe_settings':
-                const isDesktop = window.innerWidth > 768;
-                if (isDesktop) {
-                    html += `
-                        <div class="d-flex align-items-center bg-white rounded-pill px-2 border mr-2" style="height: 28px; min-width: 95px;">
-                            <span class="small text-muted mr-1">${_('spacing')}</span>
-                            <input type="number" step="0.5" class="form-control-compact border-0 p-0" id="pipe-spacing" value="${this.pipeConfig.spacing}" style="width: 50px;">
-                        </div>
-                        <div class="d-flex align-items-center bg-light rounded-pill px-2 mr-2" style="height: 28px; flex: 2; min-width: 320px;">
-                            <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('Angle')}</span>
-                            <input type="range" class="custom-range flex-fill" id="pipe-angle" min="-90" max="90" step="1" value="${this.pipeConfig.angle}">
-                            <span class="small font-weight-bold ml-1 text-primary" id="val-angle" style="min-width: 32px; text-align: right;">${this.pipeConfig.angle}°</span>
-                        </div>
-                        <div class="d-flex align-items-center bg-light rounded-pill px-2" style="height: 28px; flex: 2; min-width: 320px;">
-                            <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('Offset')}</span>
-                            <input type="range" class="custom-range flex-fill" id="pipe-offset" min="-15" max="15" step="0.5" value="${this.pipeConfig.offset}">
-                            <span class="small font-weight-bold ml-1 text-primary" id="val-offset" style="min-width: 42px; text-align: right;">${this.pipeConfig.offset}m</span>
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="d-flex align-items-center bg-white rounded-pill px-2 border mr-1" style="height: 28px;">
-                            <span class="small text-muted mr-1">${_('spacing')}</span>
-                            <input type="number" step="0.5" class="form-control-compact border-0 p-0" id="pipe-spacing" value="${this.pipeConfig.spacing}">
-                        </div>
-                        <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_angle">${_('Angle')} ></button>
-                        <button class="btn btn-aot-pill btn-aot-outline" data-nav-sub="pipe_offset">${_('Offset')} ></button>
-                    `;
-                }
-                break;
-
-            // --- Tier 5: Pipe Sliders ---
-            case 'pipe_angle':
-                html += `
-                    <div class="d-flex align-items-center bg-light rounded-pill px-2 mx-1" style="height: 28px; width: calc(100% - 10px); min-width: 280px;">
-                        <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('angle')}</span>
-                        <input type="range" class="custom-range flex-fill" id="pipe-angle" min="-90" max="90" step="1" value="${this.pipeConfig.angle}">
-                        <span class="small font-weight-bold ml-1 text-primary" id="val-angle" style="min-width: 32px; text-align: right;">${this.pipeConfig.angle}°</span>
-                    </div>
-                `;
-                break;
-            case 'pipe_offset':
-                html += `
-                    <div class="d-flex align-items-center bg-light rounded-pill px-2 mx-1" style="height: 28px; width: calc(100% - 10px); min-width: 280px;">
-                        <span class="small font-weight-bold text-muted mr-1" style="white-space: nowrap;">${_('Offset')}</span>
-                        <input type="range" class="custom-range flex-fill" id="pipe-offset" min="-15" max="15" step="0.5" value="${this.pipeConfig.offset}">
-                        <span class="small font-weight-bold ml-1 text-primary" id="val-offset" style="min-width: 42px; text-align: right;">${this.pipeConfig.offset}m</span>
-                    </div>
-                `;
+                html += this._group(_('Spacing and angle')) +
+                    `<div class="aot-modal-container">` +
+                    this._numberRow('pipe-spacing', this.pipeConfig.spacing,
+                                    _('Spacing'), 'm', '0.5') +
+                    this._sliderRow('pipe-angle', 'val-angle', this.pipeConfig.angle,
+                                    _('Angle'), '°', -90, 90, 1) +
+                    this._sliderRow('pipe-offset', 'val-offset', this.pipeConfig.offset,
+                                    _('Offset'), 'm', -15, 15, 0.5) +
+                    `<div class="aot-modal-body-text">${
+                        _('The map updates as you drag — branches follow the reference line at this angle.')}</div>` +
+                    `</div>`;
                 break;
 
             // [Legacy] sprinkler_set/drip_set removed, merged into 'irrigation_settings'
@@ -632,6 +731,9 @@ class AoTGeoPanel {
                 // [Refined] Delegate to render(mode) to handle Auto-Drill Defaults
                 this.render(mode);
                 if (this.geoDesign && this.geoDesign.setMode) this.geoDesign.setMode(mode);
+                // 탭을 누르는 것이 그 모드의 설정을 여는 동작이다 — 하단바에는
+                // 이제 탭만 있으므로, 열지 않으면 설정에 닿을 길이 없다.
+                this.openSettings();
             };
         });
 
@@ -654,19 +756,10 @@ class AoTGeoPanel {
             el.onclick = () => {
                 if (this._isDragging) return;
                 // [Refined] Context-Aware Back Logic
-                const tierEl = el.closest('.nav-tier');
-                const tierIndex = tierEl ? parseInt(tierEl.dataset.index) : 1;
-
-                // Tier 1 Back Button (Left Arrow) -> Always Exit to Main
-                if (tierIndex === 1) {
-                    this.render('site');
-                    if (this.geoDesign && this.geoDesign.setMode) {
-                        this.geoDesign.setMode('site');
-                    }
-                } else {
-                    // Tier 2 Back Button (Up Arrow) -> Drill Up (Pop Stack)
-                    this._popTier();
-                }
+                // 드로어 안의 drill-up 하나뿐이다. 예전에는 tier 1 의 뒤로
+                // 버튼이 "모드 목록으로" 였지만, 모드 탭이 이제 하단바에 늘 떠
+                // 있어 그 버튼은 render() 에서 더 이상 만들지 않는다.
+                this._popTier();
             };
         });
 
@@ -677,25 +770,6 @@ class AoTGeoPanel {
         if (btnAddFromAddress) btnAddFromAddress.onclick = () => {
             const modal = document.getElementById('modal-parcel-import');
             if (modal && window.$) $(modal).modal('show');
-        };
-
-        // 식생 분할 (Planting tier) — 계산·그리기는 vegetation 모듈이 한다.
-        // 패널은 진입점과 상태 표시만 맡는다.
-        const veg = () => this.geoDesign && this.geoDesign.vegetation;
-        const btnVegSplit = rootEl.querySelector('#btn-veg-split');
-        if (btnVegSplit) btnVegSplit.onclick = () => {
-            const v = veg();
-            if (v && v.openSplitForm) v.openSplitForm();
-        };
-        const btnVegSplitApply = rootEl.querySelector('#btn-veg-split-apply');
-        if (btnVegSplitApply) btnVegSplitApply.onclick = () => {
-            const v = veg();
-            if (v && v.applySplit) v.applySplit();
-        };
-        const btnVegSplitCancel = rootEl.querySelector('#btn-veg-split-cancel');
-        if (btnVegSplitCancel) btnVegSplitCancel.onclick = () => {
-            const v = veg();
-            if (v && v.clearSplitPreview) v.clearSplitPreview();
         };
 
         // Facility Design navigation (Facility tier)
@@ -946,6 +1020,21 @@ class AoTGeoPanel {
             };
         }
 
+        // 도형 종류 표시/숨김 (site/zone/facility/vegetation/equipment)
+        const toggleShapeVis = rootEl.querySelector('#shape-visible-toggle');
+        if (toggleShapeVis) {
+            toggleShapeVis.onchange = (e) => {
+                const shapeType = e.target.dataset.shapeType;
+                const isVisible = e.target.checked;
+                // 장치 쪽 `vis_<type>` 와 키를 나눈다 — 'equipment' 처럼 이름이
+                // 겹치는 축이 있어, 같은 키를 쓰면 서로의 상태를 덮어쓴다.
+                this._handleThemeColorChange(`vis_shape_${shapeType}`, isVisible);
+                if (this.geoDesign && this.geoDesign.setShapeTypeVisibility) {
+                    this.geoDesign.setShapeTypeVisibility(shapeType, isVisible);
+                }
+            };
+        }
+
         // Device Items (Place on Map)
         rootEl.querySelectorAll('[data-device-item]').forEach(el => {
             el.onclick = () => {
@@ -995,34 +1084,6 @@ class AoTGeoPanel {
 
 
             this.render();
-        }
-    }
-
-    _handleVerticalScroll() {
-        if (!this.viewport) return;
-        const scrollTop = this.viewport.scrollTop;
-        const tierHeight = 38; // [Refined] 28px + 10px
-
-        // "Swipe Up" to go back
-        // If we scroll UP significantly past the target scroll point, it means user wants to see previous.
-        // Current Target Y is (N-2)*40.
-        // If scrollTop < (N-2)*40 - Threshold, then POP.
-
-        if (this._suppressScroll) return; // [Fix] Ignore system-dimmed scrolls (render)
-
-        if (this.navStack.length > 2) { // Only if we have history beyond main+1
-            const targetY = (this.navStack.length - 2) * tierHeight;
-            // [Tuned] Increased threshold to 25px (more intent required)
-            // Added check to ensure we are actually scrolling UP (scrollTop < previous) - simple check
-            const threshold = 25;
-            if (scrollTop < targetY - threshold) {
-                // Debounce simple accidental scrolls
-                if (!this._scrollDebounce) {
-                    this._scrollDebounce = true;
-                    this._popTier();
-                    setTimeout(() => this._scrollDebounce = false, 800); // Increased cooldown
-                }
-            }
         }
     }
 
@@ -1344,21 +1405,6 @@ class AoTGeoPanel {
         }
     }
 
-    /**
-     * [Refined] Locks vertical scroll if content fits in panel (<= 2 tiers).
-     * Prevents "swipe-to-scroll" on buttons, improving clickability.
-     */
-    _updateScrollLock() {
-        if (!this.viewport) return;
-        const totalTiers = this.navStack.length; // Use navStack length as proxy for tiers logic
-        if (totalTiers <= 2) {
-            this.viewport.style.overflowY = 'hidden';
-            this.viewport.scrollTop = 0; // Ensure reset
-        } else {
-            this.viewport.style.overflowY = 'auto';
-        }
-    }
-
     // --- Device Modal Logic ---
     _openDeviceModal(subMode) {
         $('#deviceSelectModal').remove();
@@ -1562,6 +1608,7 @@ class AoTGeoPanel {
         let themeVar = '--theme-site';
         if (mode === 'zone') themeVar = '--theme-zone';
         else if (mode === 'facility') themeVar = '--theme-facility';
+        else if (mode === 'vegetation') themeVar = '--theme-vegetation';
         else if (mode === 'equipment') themeVar = '--theme-equipment';
         else if (mode === 'aot_device') themeVar = '--theme-device';
 

@@ -27,7 +27,15 @@ class AoTGeoVegetation {
         this._splitSrc = '_aot_split_preview_src';
         this._splitFill = '_aot_split_preview_fill';
         this._splitLine = '_aot_split_preview_line';
+        // 조각 번호 라벨 — 개별 폭 조정 입력칸("구획 1", "구획 2", …)과
+        // 지도 위 조각을 맞춰 볼 수 있게 미리보기에만 붙인다(실제 저장되는
+        // 구획에는 없다 — 저장 후에는 이름으로 구분한다).
+        this._splitLabel = '_aot_split_preview_label';
         this._split = null;
+
+        // 구역 중심을 지나는 기준선 — 서버 호출 없이 turf 로 즉시 계산해 그린다.
+        this._splitAxisSrc = '_aot_split_axis_src';
+        this._splitAxisLine = '_aot_split_axis_line';
     }
 
     _t(key) { return (window._ ? window._(key) : key); }
@@ -101,6 +109,13 @@ class AoTGeoVegetation {
                 this._loaded = true;
                 this._renderChips();
                 this._verifyAttached();
+                // 식생 레이어는 도면 로드가 끝난 뒤 이 모듈이 따로 만든다 —
+                // 그때 이미 반영된 "지도에서 보기" 상태는 이 레이어들에 닿지
+                // 않았으므로 여기서 한 번 더 반영한다(안 그러면 새로고침 때만
+                // 숨김이 풀린다).
+                if (this.parent && this.parent._applyShapeVisibility) {
+                    this.parent._applyShapeVisibility();
+                }
                 return res.plantings || [];
             })
             .catch(() => []);
@@ -137,8 +152,7 @@ class AoTGeoVegetation {
 
         const existing = this.layers.get(planting.unique_id);
         if (existing) {
-            this._ensureOnMap(existing);
-            this._styleLayer(existing, planting);
+            this._queueAttach(existing, planting);
             return existing;
         }
 
@@ -156,36 +170,13 @@ class AoTGeoVegetation {
             if (!layer) return null;
             layer.feature = feature;
             layer._aotPlantingUuid = planting.unique_id;
+            // setStyle() 은 첫 줄이 `if (!this._map) return` 이다 — 실제 GL
+            // 부착은 아래 큐에서 하지만, 그 전에 setStyle() 이 불려도 최소한
+            // 캐시(styleCache)에는 쌓이도록 참조를 미리 둔다.
+            layer._map = this.parent.map;
 
-            if (this.parent.map && layer.addTo) layer.addTo(this.parent.map);
-            // 편집 도구가 찾을 수 있도록 layerStorage 에도 등록한다
-            // (_onDrawEdited 가 layerStorage 를 순회해 편집된 레이어를 찾는다).
-            // 저장은 이 그룹을 통하지 않는다 — typesToSync 에 없으므로
-            // saveOverlays 는 이 레이어를 보지 못한다.
-            const store = this.parent.layerStorage &&
-                          this.parent.layerStorage['vegetation'];
-            if (store && store.addLayer) store.addLayer(layer);
-
-            // `addTo()` 는 대상이 레이어 그룹이면 그룹에 위임하고 **`_map` 을
-            // 설정하지 않는다**(aot-geo-layer.js:339). 그런데 `setStyle()` 은
-            // 첫 줄에서 `if (!this._map) return` 이다 — 그래서 색·굵기가
-            // _styleCache 에만 쌓이고 화면은 어댑터 기본 파랑(#3388ff)으로
-            // 남는다. GL 레이어는 멀쩡히 올라가 있어서 "도형은 보이는데 색만
-            // 안 먹는" 모양이 된다(실측으로 확인).
-            if (!layer._map) layer._map = this.parent.map;
-
-            // 붙었는지 확인하고 아니면 다시 붙인다. 레이어 그룹에 넣는 위
-            // 단계가 어떤 조건에서는 방금 만든 GL 소스를 남기지 않는다 —
-            // 두 구획을 연달아 그리면 뒤엣것만 소스 없이 남는 것을 실측했다.
-            // 원인이 어느 쪽이든 화면에 안 그려지는 것은 조용한 실패라
-            // 여기서 확인하고 복구한다.
-            this._ensureOnMap(layer);
-
-            this._styleLayer(layer, planting);
-            if (this._emphasis !== false && layer.bringToFront) {
-                try { layer.bringToFront(); } catch (e) {}
-            }
             this._bindClick(layer, planting.unique_id);
+            this._queueAttach(layer, planting);
         } catch (e) {
             console.error('[Vegetation] 레이어 생성 실패:', e);
             return null;
@@ -193,6 +184,50 @@ class AoTGeoVegetation {
 
         this.layers.set(planting.unique_id, layer);
         return layer;
+    }
+
+    /**
+     * MapLibre 는 같은 동기 틱 안에서 addSource+addLayer 를 여러 구획에 대해
+     * 연달아 부르면 **첫 번째만 실제로 붙고 나머지는 예외 없이 조용히
+     * 사라진다**(실측: 지도를 열자마자 구획 18개를 한 번에 그리면 1개만
+     * 남고 17개는 소스도 레이어도 없다 — 도형도 테두리도 안 보이는 이유가
+     * 이것이다). 한 프레임씩 띄워 순서대로 부착하면 전부 붙는다(실측 확인) —
+     * 그래서 부착을 프레임당 하나씩 처리하는 큐로 직렬화한다.
+     *
+     * 예전 코드는 `layer.addTo(this.parent.map)` 를 직접 부른 **다음**
+     * `store.addLayer(layer)` 도 불렀다 — 같은 레이어를 두 개의 다른 부착
+     * 경로로 동시에 밀어 넣은 것이다. `store.addLayer()`(레이어 그룹의
+     * `doAdd()`) 쪽이 스타일 미준비 시 `idle` 재시도, 캐시된 스타일 재적용,
+     * 초기 표시상태 반영까지 다 하는 더 성숙한 경로라 이제 그것 하나만
+     * 쓴다(다른 도형 종류가 쓰는 것과 같은 관용구).
+     */
+    _queueAttach(layer, planting) {
+        if (!this._attachQueue) this._attachQueue = [];
+        this._attachQueue.push({ layer, planting });
+        if (!this._attachDraining) this._drainAttachQueue();
+    }
+
+    _drainAttachQueue() {
+        this._attachDraining = true;
+        const step = () => {
+            const item = this._attachQueue.shift();
+            if (!item) { this._attachDraining = false; return; }
+            const { layer, planting } = item;
+            const store = this.parent.layerStorage &&
+                          this.parent.layerStorage['vegetation'];
+            if (store && store.addLayer) store.addLayer(layer);
+            // 편집 도구가 layerStorage 를 순회해 찾을 수 있게 위에서 이미
+            // 등록됐다. 혹시 store.addLayer() 가 스타일 미준비 등으로 못
+            // 붙였으면 한 번 더 시도한다(안전망).
+            this._ensureOnMap(layer);
+            this._styleLayer(layer, planting);
+            if (this._emphasis !== false && layer.bringToFront) {
+                try { layer.bringToFront(); } catch (e) {}
+            }
+            if (this._attachQueue.length) requestAnimationFrame(step);
+            else this._attachDraining = false;
+        };
+        requestAnimationFrame(step);
     }
 
     /**
@@ -236,9 +271,13 @@ class AoTGeoVegetation {
         const map = this.parent.map;
         if (!map) return;
         const ml = map._originalMap || map;
+        // 빠진 것만 큐에 넣는다 — 전부 다시 큐에 넣으면(이미 붙은 것까지)
+        // 프레임당 하나씩 처리하는 큐 특성상 구획 수만큼 불필요하게 오래
+        // 걸린다.
         const run = () => this.layers.forEach((layer, uuid) => {
-            this._ensureOnMap(layer);
-            this._styleLayer(layer, this.data.get(uuid));
+            if (layer._layerId && ml.getLayer && !ml.getLayer(layer._layerId)) {
+                this._queueAttach(layer, this.data.get(uuid));
+            }
         });
 
         if (ml.isStyleLoaded && ml.isStyleLoaded()) { run(); return; }
@@ -878,9 +917,35 @@ class AoTGeoVegetation {
         return out;
     }
 
+    /**
+     * `shape_uuid` 로 그 도형의 GeoJSON feature 를 찾는다 — 기준선을 그리려면
+     * 중심(centroid)이 필요한데, `_areaShapes()` 는 이름만 낸다.
+     */
+    _findAreaFeature(zoneId) {
+        if (!zoneId) return null;
+        let found = null;
+        const scan = (kind) => {
+            if (found) return;
+            const group = this.parent && this.parent.layerStorage &&
+                          this.parent.layerStorage[kind];
+            if (!group || typeof group.eachLayer !== 'function') return;
+            try {
+                group.eachLayer((layer) => {
+                    if (found) return;
+                    const feature = layer && layer.feature;
+                    const props = (feature && feature.properties) || {};
+                    if (props.shape_uuid === zoneId) found = feature;
+                });
+            } catch (e) { /* 그룹이 아직 준비 전 */ }
+        };
+        scan('zone');
+        scan('site');
+        return found;
+    }
+
     hasSplitPreview() { return !!(this._split && this._split.info); }
 
-    /** 미리보기 요약 한 줄 — 패널 막대와 토스트가 같은 문구를 쓴다. */
+    /** 미리보기 요약 한 줄 — 드로어 안에 그대로 뜬다. */
     splitSummaryText() {
         if (!this.hasSplitPreview()) return '';
         const info = this._split.info;
@@ -895,49 +960,127 @@ class AoTGeoVegetation {
             parts.push(`${this._t('Length')} ${lo === hi ? lo : lo + '–' + hi} m`);
         }
         parts.push(`${this._t('Direction')} ${info.orientation_deg}°`);
+        // parts(등분) 모드에서만 온다 — 가늘고 길수록 관리가 불편하다는 신호.
+        if (typeof info.aspect_ratio === 'number') {
+            parts.push(`${this._t('Aspect ratio')} ${info.aspect_ratio}:1`);
+        }
         // 버린 조각을 숨기지 않는다 — 개수가 요청과 다른 이유가 그것이다.
         if (info.dropped) {
             parts.push(`${this._t('Dropped as too short')} ${info.dropped}`);
+        }
+        // 개별 폭 조정에서 마지막 조각이 남는 자리에 맞게 줄었으면 숨기지
+        // 않는다 — 입력칸에는 여전히 원래 요청값이 보이므로, 실제로 무엇이
+        // 만들어질지는 여기서 알려야 한다.
+        if (info.widths_clamped_from_cm != null) {
+            const lastM = info.strip_widths_m &&
+                          info.strip_widths_m[info.strip_widths_m.length - 1];
+            parts.push(`${this._t('Last piece shortened to fit')} ${lastM} m`);
         }
         return parts.join(' · ');
     }
 
     /**
-     * 패널 막대를 지금 상태로 다시 그린다.
+     * 분할 폼 HTML — 설정 드로어의 'split' tier 가 이것을 담는다.
      *
-     * `render()` 를 인자 없이 부르면 `selectedFeature` 가 지워지고 파이프
-     * 설정이 기본값으로 리셋된다. 지금 값을 그대로 넘겨 다시 그린다.
+     * 예전에는 지도를 덮는 모달이었다. 그래서 "미리보기" 를 누르면 모달을 닫아야
+     * 점선을 볼 수 있었고, 조건을 고치려면 다시 열어야 했다 — 설정과 그 결과를
+     * 동시에 볼 수 없다는 것이 이 화면의 문제였다. 드로어는 지도를 밀어낼 뿐
+     * 가리지 않으므로, 이제 **폼을 띄운 채로** 값이 바뀔 때마다 지도가 따라온다.
      */
-    _refreshPanel() {
-        const panel = this.parent && this.parent.panel;
-        if (!panel || typeof panel.render !== 'function') return;
-        try { panel.render(panel.currentMode, panel.selectedFeature); } catch (e) {}
-    }
-
-    /** 분할 입력 폼을 연다. 이미 미리보기가 있으면 그 값으로 채운다. */
-    openSplitForm() {
+    splitPanelHtml() {
         const areas = this._areaShapes();
         if (!areas.length) {
-            this._toast(this._t('No zones or sites on this map. Draw one first.'),
-                        'warning');
-            return;
+            return `<div class="aot-modal-body-text">${
+                this._t('No zones or sites on this map. Draw one first.')}</div>`;
         }
         const prev = (this._split && this._split.args) || {};
         const prevValues = (this._split && this._split.values) || {};
-        const themeColor = this.colorOf(null);
-
-        const body = this._shell(this._t('Split into plots'), true,
-                                 this._t('Preview'));
         // 작물·기간 칸은 생성 폼과 **같은 골격**을 쓴다. 만들 때와 나눌 때
         // 같은 값을 두 군데서 배우게 하지 않는다.
-        body.innerHTML = this._splitFormHtml(areas, prev) +
-                         this._formHtml(Object.assign(
-                             { planted_on: this._today(), color: themeColor },
-                             prevValues));
+        return this._splitFormHtml(areas, prev) +
+               this._formHtml(Object.assign(
+                   { planted_on: this._today(), color: this.colorOf(null) },
+                   prevValues)) +
+               `<div class="aot-modal-container">
+                    <div class="aot-modal-body-text" data-veg-split-summary></div>
+                    <button type="button"
+                            class="btn aot-pill-btn aot-pill-btn-primary"
+                            data-veg-split-create>${this._t('Create plots')}</button>
+                </div>`;
+    }
+
+    /**
+     * 분할 폼의 입력들을 배선한다 — 값이 바뀌면 곧바로 지도에 반영된다.
+     *
+     * 패널이 tier 를 다시 그릴 때마다 불린다(`_buildTier`). 폼 요소가 통째로
+     * 새로 만들어지므로 이전 리스너를 떼어낼 필요가 없다.
+     */
+    bindSplitPanel(root) {
+        const body = root;
+        const themeColor = this.colorOf(null);
+        if (!body.querySelector('[data-veg-split="zone_id"]')) return;
 
         const modeEl = body.querySelector('[data-veg-split="mode"]');
+        const modeRow = modeEl && modeEl.closest('.aot-modal-option-row');
         const labelEl = body.querySelector('[data-veg-split-amount]');
+        const amountRow = labelEl && labelEl.closest('.aot-modal-option-row');
         const amountEl = body.querySelector('[data-veg-split="amount"]');
+        const zoneEl = body.querySelector('[data-veg-split="zone_id"]');
+        const marginEl = body.querySelector('[data-veg-split="edge_margin_cm"]');
+        const exactPartsEl = body.querySelector('[data-veg-split="exact_parts"]');
+        const exactPartsRow = exactPartsEl &&
+                              exactPartsEl.closest('.aot-modal-option-row');
+        const orientationEl = body.querySelector('[data-veg-split="orientation"]');
+        const orientationRow = orientationEl &&
+                               orientationEl.closest('.aot-modal-option-row');
+        const angleEl = body.querySelector('[data-veg-split="angle_deg"]');
+        const angleRow = angleEl && angleEl.closest('.aot-modal-option-row');
+        const angleValEl = body.querySelector('[data-veg-split-angle-value]');
+        const customToggleEl = body.querySelector('[data-veg-split="custom_widths"]');
+        const widthsListEl = body.querySelector('[data-veg-split-widths-list]');
+        const widthsHintEl = body.querySelector('[data-veg-split-widths-hint]');
+
+        /**
+         * `.aot-modal-option-row` 는 공용 CSS 가 `display: flex !important` 로
+         * 못 박아 둔다(드로어에서 버튼 묶음 줄을 세로로 쌓기 위한 규칙,
+         * `aot-base-ui.css` 참고). 그냥 `row.style.display = 'none'` 은
+         * !important 가 없어 이 규칙에 늘 진다 — 인라인 쪽도 !important 를
+         * 줘야 실제로 숨겨진다.
+         */
+        const showRow = (el, show) => {
+            if (!el) return;
+            if (show) el.style.removeProperty('display');
+            else el.style.setProperty('display', 'none', 'important');
+        };
+
+        /**
+         * 정확한 조각 수(선택)가 유효하게 채워졌는지 — 폭 모드에서만 의미가
+         * 있다. 개별 폭 조정(widths_cm) 이 켜져 있어도 조각을 축을 따라
+         * 하나씩 명시적으로 늘어놓는 것이므로 같은 취급을 받는다.
+         */
+        const hasExactCount = () => {
+            if (customToggleEl && customToggleEl.checked) return true;
+            if (!modeEl || modeEl.value !== 'width') return false;
+            const v = exactPartsEl && parseFloat(exactPartsEl.value);
+            return isFinite(v) && v >= 2;
+        };
+        const syncAngleRow = () => {
+            const custom = orientationEl && orientationEl.value === 'custom';
+            showRow(angleRow, custom);
+        };
+        /**
+         * 방향 선택은 등분(parts) 모드에서 늘 의미가 있고, 폭(width) 모드는
+         * 원래 긴 변 고정이지만 "정확한 조각 수" 를 같이 채우면 그때부터는
+         * parts 처럼 N개를 특정 방향으로 늘어놓는 것이라 방향이 다시 의미를
+         * 갖는다(설계: planting_split.py 의 조합 모드 절).
+         */
+        const syncOrientationRow = () => {
+            const byWidth = modeEl && modeEl.value === 'width';
+            const show = !byWidth || hasExactCount();
+            showRow(orientationRow, show);
+            if (!show && orientationEl) orientationEl.value = 'long';
+            syncAngleRow();
+        };
         const syncMode = () => {
             const byWidth = modeEl && modeEl.value === 'width';
             if (labelEl) {
@@ -945,38 +1088,217 @@ class AoTGeoVegetation {
                                               : this._t('Number of pieces');
             }
             if (amountEl) {
-                amountEl.min = byWidth ? '1' : '2';
+                // 등분도 최소 1 — 1 은 "나누지 않고 구역 전체를 하나로".
+                amountEl.min = '1';
                 amountEl.step = byWidth ? '10' : '1';
             }
+            showRow(exactPartsRow, byWidth);
+            syncOrientationRow();
         };
         if (modeEl) {
             modeEl.addEventListener('change', () => {
                 // 값을 지운다 — "3" 이 3등분에서 3cm 로 조용히 바뀌면
                 // 사용자가 말하지 않은 굵기로 나뉜 제안을 보게 된다.
                 if (amountEl) amountEl.value = '';
+                if (exactPartsEl) exactPartsEl.value = '';
                 syncMode();
+                scheduleLivePreview();
+            });
+        }
+        if (exactPartsEl) {
+            exactPartsEl.addEventListener('input', () => {
+                syncOrientationRow();
+                scheduleLivePreview();
+            });
+        }
+        if (orientationEl) {
+            orientationEl.addEventListener('change', () => {
+                syncAngleRow();
+                scheduleLivePreview();
             });
         }
         syncMode();
 
-        this._wireForm(body, (values) => {
-            if (!values.crop) {
-                this._toast(this._t('Crop is required'), 'warning');
-                return;
+        // ── 개별 폭 조정(균등분할 대신 조각마다 다른 폭) ──────────────────
+        //
+        // 기본은 위 등분/폭 모드가 계산한 균등 분할이다. 이 토글을 켜면 그
+        // 결과(strip_widths_m)를 시작점으로 조각별 입력칸을 채우고, 그때부터는
+        // '조각 수/폭' 칸 대신 이 목록이 서버로 간다(widths_cm). 방향/각도/
+        // 여백은 이 모드에서도 그대로 의미가 있다 — 폭 목록은 축을 따라 놓일
+        // 조각들의 두께만 정할 뿐 축 자체는 orientation/angle_deg 가 정한다.
+        // 입력 단위는 m 다(서버 widths_cm 는 cm — _splitArgsFrom 에서 ×100
+        // 해서 보낸다). 밭 폭은 보통 수십 cm~수십 m 라 cm 로 입력하면 자릿수가
+        // 크고 소수점도 못 써서 "22.7m" 처럼 딱 떨어지지 않는 값을 표현할 수
+        // 없었다.
+        const currentWidths = () => {
+            if (!widthsListEl) return [];
+            return Array.from(widthsListEl.querySelectorAll('[data-veg-split-width]'))
+                .map(el => parseFloat(el.value) || 0);
+        };
+        const renderWidthsList = (widths) => {
+            if (!widthsListEl) return;
+            widthsListEl.innerHTML = widths.map((w, i) => `
+                <div class="aot-modal-option-row">
+                    <div class="aot-modal-option-label">${
+                        this._t('Piece')} ${i + 1} (m)</div>
+                    <div class="aot-modal-option-control d-flex align-items-center gap-1">
+                        <input type="number" min="0.01" step="0.01"
+                               class="aot-modern-input form-control"
+                               data-veg-split-width value="${
+                                   this._esc(Math.round(w * 100) / 100)}">
+                        <button type="button" class="btn aot-pill-btn"
+                                data-veg-width-remove="${i}"${
+                                    widths.length <= 1 ? ' disabled' : ''}>×</button>
+                    </div>
+                </div>`).join('') +
+                `<div class="aot-modal-container">
+                     <button type="button" class="btn aot-pill-btn"
+                             data-veg-width-add>${this._t('Add piece')}</button>
+                 </div>`;
+            widthsListEl.querySelectorAll('[data-veg-split-width]').forEach(el => {
+                el.addEventListener('input', scheduleLivePreview);
+            });
+            widthsListEl.querySelectorAll('[data-veg-width-remove]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.getAttribute('data-veg-width-remove'), 10);
+                    const widths = currentWidths();
+                    if (widths.length <= 1) return;   // 마지막 하나는 남긴다
+                    widths.splice(idx, 1);
+                    renderWidthsList(widths);
+                    scheduleLivePreview();
+                });
+            });
+            const addBtn = widthsListEl.querySelector('[data-veg-width-add]');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    const widths = currentWidths();
+                    const avg = widths.length ?
+                        widths.reduce((a, b) => a + b, 0) / widths.length : 1;
+                    widths.push(Math.round(avg * 100) / 100);
+                    renderWidthsList(widths);
+                    scheduleLivePreview();
+                });
             }
-            // 색을 손대지 않았으면 저장하지 않는다 — 생성 폼과 같은 규칙
-            // (각인해 두면 나중에 테마 색을 바꿔도 그 구획만 옛 색으로 남는다).
-            if (values.color &&
-                values.color.toLowerCase() === themeColor.toLowerCase()) {
-                delete values.color;
+        };
+        const syncCustomWidths = () => {
+            const on = !!(customToggleEl && customToggleEl.checked);
+            // widthsListEl/widthsHintEl 은 `.aot-modal-option-row` 가 아니라
+            // 위 !important 규칙에 걸리지 않는다 — 그냥 인라인으로 충분하다.
+            if (widthsListEl) widthsListEl.style.display = on ? '' : 'none';
+            if (widthsHintEl) widthsHintEl.style.display = on ? '' : 'none';
+            showRow(modeRow, !on);
+            showRow(amountRow, !on);
+            if (on) {
+                // 조각 수/폭 칸을 대신하니 여기서는 늘 숨긴다. 방향은 폭 목록
+                // 모드에서도 늘 의미가 있으므로 그대로 보인다(hasExactCount
+                // 가 이 토글을 이미 반영한다).
+                showRow(exactPartsRow, false);
+                showRow(orientationRow, true);
+                syncAngleRow();
+            } else {
+                // 꺼졌으면 mode 선택값 기준으로 exactParts/orientation/angle
+                // 행 표시를 다시 계산한다 — 여기서 무작정 보이게 하면 '등분'
+                // 모드에서도 정확한 조각 수 칸이 도로 나타난다.
+                syncMode();
             }
+            if (on && !widthsListEl.querySelector('[data-veg-split-width]')) {
+                // 이미 나온 미리보기가 있으면 그 두께로 시작한다 — 없으면(폼을
+                // 열자마자 토글을 켠 경우) 조각 2개짜리 기본값으로 시작한다.
+                const info = this._split && this._split.info;
+                const seed = (info && info.strip_widths_m &&
+                              info.strip_widths_m.length >= 1)
+                    ? info.strip_widths_m.slice()
+                    : [1, 1];
+                renderWidthsList(seed);
+            }
+        };
+        if (customToggleEl) {
+            customToggleEl.addEventListener('change', () => {
+                syncCustomWidths();
+                scheduleLivePreview();
+            });
+        }
+
+        // ── 실시간 미리보기 ────────────────────────────────────────────
+        //
+        // 값이 바뀌면 지도가 곧바로 따라온다. 미리보기를 "확정" 하는 단계는
+        // 없다 — 드로어가 지도를 가리지 않으므로 화면에 보이는 것이 곧 제안이고,
+        // 만들기를 누르면 서버가 **같은 파라미터로 다시 계산**해 저장한다(본 것과
+        // 저장된 것이 같다는 보장은 그 재계산이 하지, 확정 단계가 하는 것이 아니다).
+        //
+        // 기준선은 서버 없이 즉시, 조각은 디바운스해서 갱신한다 — 슬라이더를
+        // 빠르게 끄는 동안 매 프레임 요청이 나가지 않게 한다.
+        let liveTimer = null;
+        const scheduleLivePreview = () => {
             const parsed = this._splitArgsFrom(body);
+            if (parsed.args && parsed.args.angle_deg != null) {
+                const feature = this._findAreaFeature(parsed.args.zone_id);
+                if (feature) this._drawSplitAxis(feature, parsed.args.angle_deg);
+                else this._clearSplitAxis();
+            } else {
+                this._clearSplitAxis();
+            }
+            clearTimeout(liveTimer);
             if (parsed.error) {
-                this._toast(parsed.error, 'warning');
+                this.clearSplitPreview();
+                this._renderSplitSummary(body);
                 return;
             }
-            this._previewSplit(parsed.args, values);
-        });
+            liveTimer = setTimeout(
+                () => this._runSplitPreview(parsed.args, body), 250);
+        };
+        if (zoneEl) zoneEl.addEventListener('change', scheduleLivePreview);
+        if (amountEl) amountEl.addEventListener('input', scheduleLivePreview);
+        if (marginEl) marginEl.addEventListener('input', scheduleLivePreview);
+        if (angleEl) {
+            angleEl.addEventListener('input', () => {
+                if (angleValEl) angleValEl.textContent = angleEl.value;
+                scheduleLivePreview();
+            });
+        }
+        // 폼이 열리는 순간 이미 유효한 값이면(구역 하나 + 등분 수) 바로 그려
+        // 준다 — 사용자가 아무것도 건드리지 않았는데 지도가 비어 있으면 이
+        // 화면이 무엇을 하는 곳인지 알 수 없다.
+        scheduleLivePreview();
+
+        const createBtn = body.querySelector('[data-veg-split-create]');
+        if (createBtn) {
+            createBtn.onclick = () => {
+                const values = {};
+                body.querySelectorAll('[data-veg-field]').forEach(el => {
+                    values[el.getAttribute('data-veg-field')] = el.value || '';
+                });
+                if (!values.crop) {
+                    this._toast(this._t('Crop is required'), 'warning');
+                    return;
+                }
+                // 색을 손대지 않았으면 저장하지 않는다 — 생성 폼과 같은 규칙
+                // (각인해 두면 나중에 테마 색을 바꿔도 그 구획만 옛 색으로 남는다).
+                if (values.color &&
+                    values.color.toLowerCase() === themeColor.toLowerCase()) {
+                    delete values.color;
+                }
+                const parsed = this._splitArgsFrom(body);
+                if (parsed.error) {
+                    this._toast(parsed.error, 'warning');
+                    return;
+                }
+                this.applySplit(parsed.args, values);
+            };
+        }
+    }
+
+    /** 요약 줄을 지금 미리보기 상태로 다시 쓴다 — tier 를 다시 그리지 않는다. */
+    _renderSplitSummary(root) {
+        const el = root && root.querySelector('[data-veg-split-summary]');
+        if (!el) return;
+        el.textContent = this.splitSummaryText();
+        // 서버(planting_split._ASPECT_RATIO_WARNING)와 같은 기준 — 가늘고 긴
+        // 조각은 정보가 아니라 눈에 띄는 경고다.
+        const info = this._split && this._split.info;
+        const elongated = info && typeof info.aspect_ratio === 'number' &&
+                          info.aspect_ratio > 4.0;
+        el.classList.toggle('text-warning', !!elongated);
     }
 
     _splitFormHtml(areas, prev) {
@@ -1001,6 +1323,13 @@ class AoTGeoVegetation {
         const byWidth = prev.strip_width_cm != null;
         const amount = byWidth ? prev.strip_width_cm
                                : (prev.parts != null ? prev.parts : '');
+        // 폭 모드에서 parts 까지 같이 왔다면 "정확한 개수" 필드에 채운다 —
+        // 등분(parts만) 모드의 amount 필드와는 다른 칸이다.
+        const exactParts = (byWidth && prev.parts != null) ? prev.parts : '';
+        const hasAngle = prev.angle_deg != null;
+        const orientation = hasAngle ? 'custom'
+                           : (prev.orientation === 'short' ? 'short' : 'long');
+        const angleValue = hasAngle ? Math.round(prev.angle_deg) : 0;
 
         return `
             <div class="aot-modal-group-title">${this._t('Split into plots')}</div>
@@ -1019,10 +1348,31 @@ class AoTGeoVegetation {
                                this._t('Strip width')}</option>
                        </select>`)}
                 ${row(this._t('Number of pieces'),
-                      `<input type="number" min="2" step="1"
+                      `<input type="number" min="1" step="1"
                               class="aot-modern-input form-control"
                               data-veg-split="amount" value="${this._esc(amount)}">`,
                       ' data-veg-split-amount')}
+                ${row(this._t('Exact piece count (optional)'),
+                      `<input type="number" min="1" step="1"
+                              class="aot-modern-input form-control"
+                              data-veg-split="exact_parts"
+                              value="${this._esc(exactParts)}">`)}
+                ${row(this._t('Direction'),
+                      `<select class="aot-modern-input form-control"
+                               data-veg-split="orientation">
+                           <option value="long"${orientation === 'long' ? ' selected' : ''}>${
+                               this._t('Long side (default)')}</option>
+                           <option value="short"${orientation === 'short' ? ' selected' : ''}>${
+                               this._t('Short side (squarer pieces)')}</option>
+                           <option value="custom"${orientation === 'custom' ? ' selected' : ''}>${
+                               this._t('Custom angle')}</option>
+                       </select>`,
+                      ' data-veg-split-orientation')}
+                ${row(`${this._t('Angle')}: <span data-veg-split-angle-value>${
+                          angleValue}</span>°`,
+                      `<input type="range" min="0" max="179" step="1"
+                              class="form-control-range"
+                              data-veg-split="angle_deg" value="${angleValue}">`)}
                 ${row(this._t('Edge margin (cm)'),
                       `<input type="number" min="0" step="10"
                               class="aot-modern-input form-control"
@@ -1031,15 +1381,37 @@ class AoTGeoVegetation {
                 <div class="aot-modal-body-text">${
                     this._t('Room to turn machinery along the edge.')}</div>
                 <div class="aot-modal-body-text">${
+                    this._t('Give an exact count to cut exactly that many pieces at this width — the rest becomes margin, split evenly on both sides.')}</div>
+                <div class="aot-modal-body-text">${
                     this._t('Pieces follow the longest side of the shape, and irregular edges are clipped.')}</div>
                 <div class="aot-modal-body-text">${
                     this._t('Each piece is numbered after the plot name.')}</div>
                 <div class="aot-modal-body-text">${
                     this._t('Nothing is saved until you create the plots.')}</div>
+                ${row(this._t('Adjust each piece width'),
+                      `<label class="btn-toggle mb-0">
+                           <input type="checkbox" class="btn-toggle-input"
+                                  data-veg-split="custom_widths">
+                           <span class="btn-toggle-slider">
+                               <span class="btn-toggle-thumb"></span></span>
+                       </label>`)}
+                <div class="aot-modal-body-text" data-veg-split-widths-hint>${
+                    this._t('Starts from the equal split above — edit any width, or add or remove a piece.')}</div>
+                <div data-veg-split-widths-list style="display:none;"></div>
             </div>`;
     }
 
-    /** 폼 → 서버 파라미터. 등분과 폭은 **한 칸**이라 둘 다 보낼 수 없다. */
+    /**
+     * 폼 → 서버 파라미터. 등분과 폭은 **한 칸**(amount)이라 서로 못 보낸다 —
+     * 다만 폭 모드에서는 "정확한 조각 수"(exact_parts) 를 곁들여 parts 와
+     * strip_width_cm 를 **같이** 보낼 수 있다(설계: planting_split.py 의
+     * "둘 다 주면 균등분할이 아니다" 절 — N개를 정확히 그 폭으로 자르고
+     * 남는 만큼만 여백이 된다).
+     *
+     * "개별 폭 조정" 토글이 켜져 있으면 amount/mode/exact_parts 는 아예 읽지
+     * 않는다 — 조각별 입력칸의 값을 widths_cm 목록으로 대신 보낸다(서버는
+     * widths_cm 가 있으면 parts/strip_width_cm 를 무시한다).
+     */
     _splitArgsFrom(body) {
         const get = (key) => {
             const el = body.querySelector(`[data-veg-split="${key}"]`);
@@ -1049,13 +1421,58 @@ class AoTGeoVegetation {
         if (!zoneId) {
             return { error: this._t('Pick a zone or site to split.') };
         }
-        const amount = parseFloat(get('amount'));
-        if (!isFinite(amount) || amount <= 0) {
-            return { error: this._t('Enter how many pieces, or how wide each piece is.') };
-        }
         const args = { zone_id: zoneId };
-        if (get('mode') === 'width') args.strip_width_cm = amount;
-        else args.parts = Math.round(amount);
+        const customEl = body.querySelector('[data-veg-split="custom_widths"]');
+        const useCustom = !!(customEl && customEl.checked);
+        // 폭 목록 모드는 조각을 축을 따라 하나씩 명시적으로 늘어놓는 것이라
+        // "정확한 개수" 를 준 것과 같다 — 방향이 항상 의미를 가진다.
+        let hasExactCount = useCustom;
+
+        if (useCustom) {
+            // 입력칸은 m 단위다 — 서버 widths_cm 는 cm 이므로 여기서만 ×100.
+            const widthsM = Array.from(
+                body.querySelectorAll('[data-veg-split-width]'))
+                .map(el => parseFloat(el.value));
+            if (!widthsM.length || widthsM.some(w => !isFinite(w) || w <= 0)) {
+                return { error: this._t('Each piece width must be greater than 0.') };
+            }
+            args.widths_cm = widthsM.map(w => w * 100);
+        } else {
+            const amount = parseFloat(get('amount'));
+            if (!isFinite(amount) || amount <= 0) {
+                return { error: this._t('Enter how many pieces, or how wide each piece is.') };
+            }
+            const byWidth = get('mode') === 'width';
+            if (byWidth) {
+                args.strip_width_cm = amount;
+                const exactRaw = get('exact_parts');
+                if (exactRaw !== '') {
+                    const exact = parseFloat(exactRaw);
+                    if (!isFinite(exact) || exact < 1 || Math.round(exact) !== exact) {
+                        return { error: this._t('Exact piece count must be a whole number of 1 or more.') };
+                    }
+                    args.parts = Math.round(exact);
+                    hasExactCount = true;
+                }
+            } else {
+                args.parts = Math.round(amount);
+            }
+        }
+        // 폭만 있고 정확한 개수가 없으면 방향을 건드리지 않는다 — 서버 기본값
+        // ('long') 그대로 둔다(설계: planting_split.py 의 orientation 절).
+        // 정확한 개수(또는 폭 목록)까지 주면 parts 처럼 방향이 다시 의미를 갖는다.
+        const byWidthOnly = !useCustom && get('mode') === 'width';
+        const orientation = (byWidthOnly && !hasExactCount) ? 'long' : get('orientation');
+        if (orientation === 'custom') {
+            // 'custom' 은 서버가 모르는 값이다(orientation은 'long'/'short'만
+            // 받는다) — angle_deg 를 대신 보내고 orientation 은 아예 안 보낸다.
+            // 서버는 angle_deg 가 있으면 orientation 을 무시하므로 기본값('long')
+            // 그대로 둬도 안전하다.
+            const angle = parseFloat(get('angle_deg'));
+            args.angle_deg = isFinite(angle) ? angle : 0;
+        } else if (orientation === 'short') {
+            args.orientation = 'short';
+        }
 
         const margin = parseFloat(get('edge_margin_cm'));
         if (isFinite(margin) && margin > 0) args.edge_margin_cm = margin;
@@ -1063,50 +1480,52 @@ class AoTGeoVegetation {
     }
 
     /**
-     * 제안을 받아 지도에 그리고 모달을 닫는다.
-     *
-     * 모달을 닫는 이유는 그것이 지도 가운데를 덮기 때문이다 — 보라고 그린
-     * 점선을 볼 수 없으면 미리보기가 아니다. 적용·취소는 지도를 가리지 않는
-     * 위 패널 막대로 넘어간다.
-     */
-    _previewSplit(args, values) {
+    /** 분할 파라미터 → 쿼리스트링. */
+    _splitQuery(args) {
         const q = new URLSearchParams();
         q.set('zone_id', args.zone_id);
         if (args.parts != null) q.set('parts', args.parts);
         if (args.strip_width_cm != null) q.set('strip_width_cm', args.strip_width_cm);
+        if (args.widths_cm != null) q.set('widths_cm', args.widths_cm.join(','));
         if (args.edge_margin_cm != null) q.set('edge_margin_cm', args.edge_margin_cm);
-
-        return this._api('GET', '/api/geo/planting/split-preview?' + q.toString())
-            .then(({ status, data }) => {
-                if (status >= 400 || !data || !data.ok) {
-                    this._toast((data && data.message) || this._t('Split failed'),
-                                'error');
-                    return;
-                }
-                this._split = { args: args, values: values,
-                                info: data.info, strips: data.strips || [] };
-                if (!this._drawSplitPreview(this._split.strips)) {
-                    this._split = null;
-                    this._toast(this._t('Could not draw the preview.'), 'error');
-                    return;
-                }
-                this._close();
-                this._refreshPanel();
-                this._toast(this.splitSummaryText(), 'info');
-            })
-            .catch(() => this._toast(this._t('Split failed'), 'error'));
+        if (args.orientation) q.set('orientation', args.orientation);
+        if (args.angle_deg != null) q.set('angle_deg', args.angle_deg);
+        return q;
     }
 
     /**
-     * 제안 폴리곤을 **점선**으로 그린다 — 실제 구획(굵은 실선 + 진한 채움)과
-     * 한눈에 갈려야 한다. 클릭 핸들러를 붙이지 않고, 이 페이지의 도형 선택은
-     * 전부 `layers:` 를 명시한 `queryRenderedFeatures` 라 이 레이어는 잡히지
-     * 않는다 — 미리보기를 선택하거나 지울 수 있으면 그것부터 사고다.
+     * 지금 폼 값으로 제안을 받아 지도에 그린다.
+     *
+     * 편집 중 잠깐의 오류(값이 비었거나 서버가 거절)는 요약 줄에만 남기고
+     * 토스트를 띄우지 않는다 — 슬라이더를 끄는 동안 매번 알림이 뜨면 그것이
+     * 오히려 방해다. 만들기를 누를 때는 서버가 같은 파라미터로 다시 계산하므로,
+     * 저장을 막아야 할 오류라면 그때 분명히 알려 준다.
      */
-    _drawSplitPreview(strips) {
+    _runSplitPreview(args, root) {
+        return this._api('GET', '/api/geo/planting/split-preview?' +
+                         this._splitQuery(args).toString())
+            .then(({ status, data }) => {
+                if (status >= 400 || !data || !data.ok) {
+                    this.clearSplitPreview();
+                    const el = root && root.querySelector('[data-veg-split-summary]');
+                    if (el) {
+                        el.textContent = (data && data.message) || '';
+                        el.classList.add('text-warning');
+                    }
+                    return;
+                }
+                this._split = { args: args, values: (this._split || {}).values,
+                                info: data.info, strips: data.strips || [] };
+                this._drawSplitPreview(this._split.strips);
+                this._renderSplitSummary(root);
+            })
+            .catch(() => { /* 편집 중 — 다음 입력에서 다시 시도된다 */ });
+    }
+
+    /** 점선 폴리곤 레이어(+ 조각 번호 라벨)를 그리거나 갱신한다. */
+    _paintSplitLayer(srcId, fillId, lineId, labelId, strips, style) {
         const map = this._nativeMap();
         if (!map || typeof map.addSource !== 'function') return false;
-        const color = this.colorOf(null);
         const data = {
             type: 'FeatureCollection',
             features: (strips || []).map(s => ({
@@ -1116,25 +1535,44 @@ class AoTGeoVegetation {
             }))
         };
         try {
-            if (map.getSource(this._splitSrc)) {
-                map.getSource(this._splitSrc).setData(data);
+            if (map.getSource(srcId)) {
+                map.getSource(srcId).setData(data);
             } else {
-                map.addSource(this._splitSrc, { type: 'geojson', data: data });
+                map.addSource(srcId, { type: 'geojson', data: data });
             }
-            if (!map.getLayer(this._splitFill)) {
+            if (!map.getLayer(fillId)) {
                 map.addLayer({
-                    id: this._splitFill, type: 'fill', source: this._splitSrc,
-                    paint: { 'fill-color': color, 'fill-opacity': 0.15 }
+                    id: fillId, type: 'fill', source: srcId,
+                    paint: { 'fill-color': style.color, 'fill-opacity': style.fillOpacity }
                 });
             }
-            if (!map.getLayer(this._splitLine)) {
+            if (!map.getLayer(lineId)) {
                 map.addLayer({
-                    id: this._splitLine, type: 'line', source: this._splitSrc,
+                    id: lineId, type: 'line', source: srcId,
                     paint: {
-                        'line-color': color,
-                        'line-width': 3,
-                        'line-opacity': 0.95,
-                        'line-dasharray': [2, 2]
+                        'line-color': style.color,
+                        'line-width': style.lineWidth,
+                        'line-opacity': style.lineOpacity,
+                        'line-dasharray': style.dash
+                    }
+                });
+            }
+            // 조각 번호 — 개별 폭 입력칸("구획 1", "구획 2", …)과 지도 위
+            // 조각을 맞춰 볼 수 있게. 폴리곤 소스라 심볼 레이어가 자동으로
+            // 각 조각의 대표점(폴리곤 안쪽 한 점)에 하나씩 붙인다.
+            if (labelId && !map.getLayer(labelId)) {
+                map.addLayer({
+                    id: labelId, type: 'symbol', source: srcId,
+                    layout: {
+                        'text-field': ['to-string', ['get', 'index']],
+                        'text-size': 14,
+                        'text-allow-overlap': true,
+                        'text-ignore-placement': true
+                    },
+                    paint: {
+                        'text-color': style.color,
+                        'text-halo-color': '#ffffff',
+                        'text-halo-width': 1.5
                     }
                 });
             }
@@ -1145,11 +1583,93 @@ class AoTGeoVegetation {
         return true;
     }
 
+    /**
+     * 제안 폴리곤을 **점선**으로 그린다 — 실제 구획(굵은 실선 + 진한 채움)과
+     * 한눈에 갈려야 한다. 클릭 핸들러를 붙이지 않고, 이 페이지의 도형 선택은
+     * 전부 `layers:` 를 명시한 `queryRenderedFeatures` 라 이 레이어는 잡히지
+     * 않는다 — 미리보기를 선택하거나 지울 수 있으면 그것부터 사고다.
+     */
+    _drawSplitPreview(strips) {
+        return this._paintSplitLayer(this._splitSrc, this._splitFill, this._splitLine,
+            this._splitLabel, strips,
+            { color: this.colorOf(null), fillOpacity: 0.15,
+             lineWidth: 3, lineOpacity: 0.95, dash: [2, 2] });
+    }
+
+    /**
+     * 구역 중심을 지나는 기준선을 각도에 맞춰 그린다 — **서버 호출 없이**
+     * turf 로 클라이언트에서 즉시 계산한다(feature 는 이미 지도에 올라와
+     * 있다). 슬라이더를 아무리 빨리 움직여도 서버 부담이 없는 이유다.
+     *
+     * `angleDeg` 는 `planting_split.py` 의 `angle` 과 같은 좌표계다 — 로컬
+     * 평면(동쪽=0°, 반시계)에서 잰 각도이므로, 나침반 방위각으로 바꾸려면
+     * `bearing = 90 - angleDeg` 다(투영은 위경도=동/북 축의 등장방형
+     * 근사라 이 변환이 지역 규모에서 충분히 정확하다 — `planting_context.
+     * local_frame` 참조).
+     */
+    _drawSplitAxis(feature, angleDeg) {
+        const map = this._nativeMap();
+        const turf = window.turf;
+        if (!map || typeof map.addSource !== 'function' || !turf || !feature) {
+            return false;
+        }
+        try {
+            const centroid = turf.centroid(feature);
+            const bbox = turf.bbox(feature);
+            const diag = turf.distance(turf.point([bbox[0], bbox[1]]),
+                                       turf.point([bbox[2], bbox[3]]),
+                                       { units: 'meters' });
+            const reach = Math.max(diag * 0.6, 5);
+            const bearing = (90 - angleDeg + 360) % 360;
+            const p1 = turf.destination(centroid, reach, bearing, { units: 'meters' });
+            const p2 = turf.destination(centroid, reach, bearing + 180, { units: 'meters' });
+            const line = {
+                type: 'Feature', properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: [p1.geometry.coordinates, p2.geometry.coordinates]
+                }
+            };
+            if (map.getSource(this._splitAxisSrc)) {
+                map.getSource(this._splitAxisSrc).setData(line);
+            } else {
+                map.addSource(this._splitAxisSrc, { type: 'geojson', data: line });
+            }
+            if (!map.getLayer(this._splitAxisLine)) {
+                map.addLayer({
+                    id: this._splitAxisLine, type: 'line', source: this._splitAxisSrc,
+                    paint: {
+                        'line-color': '#13261B',
+                        'line-width': 2,
+                        'line-opacity': 0.85,
+                        'line-dasharray': [3, 2]
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('[Vegetation] 기준선 그리기 실패:', e);
+            return false;
+        }
+        return true;
+    }
+
+    _clearSplitAxis() {
+        const map = this._nativeMap();
+        if (!map) return;
+        try { if (map.getLayer && map.getLayer(this._splitAxisLine)) map.removeLayer(this._splitAxisLine); }
+        catch (e) { /* 이미 없음 */ }
+        try {
+            if (map.getSource && map.getSource(this._splitAxisSrc)) {
+                map.removeSource(this._splitAxisSrc);
+            }
+        } catch (e) { /* 이미 없음 */ }
+    }
+
     /** 미리보기를 걷는다. 아무것도 저장되지 않았으므로 되돌릴 것이 없다. */
     clearSplitPreview() {
         const map = this._nativeMap();
         if (map) {
-            [this._splitLine, this._splitFill].forEach(id => {
+            [this._splitLabel, this._splitLine, this._splitFill].forEach(id => {
                 try { if (map.getLayer && map.getLayer(id)) map.removeLayer(id); }
                 catch (e) { /* 이미 없음 */ }
             });
@@ -1160,22 +1680,24 @@ class AoTGeoVegetation {
             } catch (e) { /* 이미 없음 */ }
         }
         this._split = null;
-        this._refreshPanel();
     }
 
     /**
      * 제안을 실제 구획으로 만든다 — 서버가 **같은 파라미터로 다시 계산**한다.
      *
+     * 화면에 보이는 폼 값을 그대로 넘긴다. 미리보기를 따로 "확정" 해 두지
+     * 않기 때문에(드로어가 지도를 가리지 않아 그럴 이유가 없다), 지금 폼이
+     * 곧 요청이다.
+     *
      * 일부만 저장된 것을 성공이라 말하지 않는다. 지도에는 몇 개만 뜨는데
      * 응답이 성공이면 나머지가 어디 갔는지 알 방법이 없다.
      */
-    applySplit() {
-        if (!this.hasSplitPreview() || this._splitBusy) return;
-        const pending = this._split;
+    applySplit(args, values) {
+        if (!args || this._splitBusy) return;
         this._splitBusy = true;
 
         this._api('POST', '/api/geo/planting/split-apply',
-                  Object.assign({}, pending.args, pending.values))
+                  Object.assign({}, args, values))
             .then(({ status, data }) => {
                 this._splitBusy = false;
                 if (status >= 400) {

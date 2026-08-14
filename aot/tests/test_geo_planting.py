@@ -716,12 +716,194 @@ class TestSplitShape(unittest.TestCase):
             strips, info = self.ps.split_shape(u, parts=n)
             self.assertIsNotNone(strips, info)
 
-    def test_parts_and_width_are_mutually_exclusive(self):
+    def test_neither_parts_nor_width_is_rejected(self):
+        """적어도 하나는 줘야 한다 — 굵기를 사용자가 정하지 않으면 안 된다."""
         geom = self._rot_rect(30.0, 90.0)
-        for kw in ({}, {'parts': 3, 'strip_width_cm': 400}):
-            out, err = self.ps.split_shape(geom, **kw)
-            self.assertIsNone(out)
-            self.assertIn('either parts', err)
+        out, err = self.ps.split_shape(geom)
+        self.assertIsNone(out)
+        self.assertIn('parts', err)
+
+    def test_parts_one_uses_the_whole_area(self):
+        """`parts=1` 은 "나누지 않는다" — 구역 전체가 구획 하나가 된다.
+
+        예전에는 2 이상만 받아서, 밭 하나를 통째로 한 작기로 쓰려는 사람이
+        이 도구를 아예 쓸 수 없었다(도형을 손으로 다시 그려야 했다)."""
+        geom = self._rot_rect(30.0, 90.0)
+        strips, info = self.ps.split_shape(geom, parts=1)
+        self.assertEqual(len(strips), 1)
+        self.assertEqual(info['count'], 1)
+        # 도형 전체를 덮는다 — 잘려 나간 면적이 없어야 한다.
+        self.assertAlmostEqual(info['covered_area_m2'], info['source_area_m2'],
+                               delta=1.0)
+        self.assertEqual(info['strip_widths_m'], [30.0])
+
+    def test_parts_one_still_honours_edge_margin(self):
+        """전체를 쓰더라도 가장자리 여백은 그대로 적용된다 — 여백을 준 만큼
+        안으로 들어온 하나가 나온다."""
+        geom = self._rot_rect(30.0, 90.0)
+        whole, _i1 = self.ps.split_shape(geom, parts=1)
+        inset, _i2 = self.ps.split_shape(geom, parts=1, edge_margin_cm=200)
+        self.assertEqual(len(inset), 1)
+        self.assertLess(inset[0]['area_m2'], whole[0]['area_m2'])
+
+    def test_parts_one_does_not_warn_about_aspect_ratio(self):
+        """나눌 것이 없는데 "짧은 변으로 바꿔 보라" 는 조언은 할 말이 아니다."""
+        # 30x90 은 3:1 이라 경고 기준(4:1) 아래지만, 가늘고 긴 밭이면
+        # parts=1 에서도 종횡비가 크게 잡힌다 — 아예 내지 않는 것이 맞다.
+        _s, info = self.ps.split_shape(self._rot_rect(10.0, 90.0), parts=1)
+        self.assertIsNone(info['aspect_ratio'])
+        self.assertNotIn("orientation='short'", info['note'])
+
+    def test_parts_zero_or_negative_is_still_rejected(self):
+        for bad in (0, -1):
+            out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=bad)
+            self.assertIsNone(out, 'parts=%r should be rejected' % bad)
+            self.assertIn('parts', err)
+
+    def test_parts_and_width_together_gives_exact_count_at_exact_width(self):
+        """둘 다 주면 균등분할이 아니다 — 정확히 N개, 정확히 W 폭, 남는 만큼 여백.
+
+        30x90 사각형(짧은 축 30m)에서 parts=3, strip_width_cm=400(4m)를 같이
+        주면: 3개 × 4m = 12m 만 자르고, 남는 18m 은 양쪽에 9m 씩 여백이 된다.
+        parts 만 줬다면(등분) 조각 폭이 10m 이었을 것이고, strip_width_cm 만
+        줬다면(자동) 개수가 7개 나왔을 것이다 — 둘 다 다른 결과다.
+        """
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=3,
+                                           strip_width_cm=400)
+        self.assertEqual(len(strips), 3)
+        self.assertEqual(info['count'], 3)
+        self.assertAlmostEqual(info['strip_width_m'], 4.0)
+        for b in strips:
+            self.assertAlmostEqual(b['length_m'], 90.0, delta=1.0)
+        # 3*4=12m 만 덮는다 — 30m 전체를 덮는 등분(parts=3)과는 다르다.
+        self.assertAlmostEqual(info['covered_area_m2'], 12.0 * 90.0,
+                               delta=12.0 * 90.0 * 0.05)
+        self.assertIn('leftover', info['note'])
+
+    def test_parts_and_width_together_respects_orientation_and_angle(self):
+        """조합 모드도 방향/각도 파라미터를 그대로 받는다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                           strip_width_cm=400,
+                                           orientation='short')
+        self.assertEqual(len(strips), 2)
+        for b in strips:
+            self.assertAlmostEqual(b['length_m'], 30.0, delta=1.0)
+
+    def test_parts_and_width_together_rejects_when_shape_too_small(self):
+        """N개 * W 폭이 짧은 축보다 크면 여백이 음수가 되므로 거부한다."""
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=10,
+                                       strip_width_cm=400)
+        self.assertIsNone(out)
+        self.assertIn('short axis', err)
+
+    def test_parts_and_width_together_differs_from_either_alone(self):
+        """세 입력 조합이 서로 다른 결과를 낸다는 것을 명시적으로 고정한다."""
+        geom = self._rot_rect(30.0, 90.0)
+        parts_only, _ = self.ps.split_shape(geom, parts=3)
+        width_only, _ = self.ps.split_shape(geom, strip_width_cm=400)
+        both, _ = self.ps.split_shape(geom, parts=3, strip_width_cm=400)
+        self.assertEqual(len(parts_only), 3)
+        self.assertEqual(len(width_only), 7)
+        self.assertEqual(len(both), 3)
+        self.assertNotAlmostEqual(parts_only[0]['area_m2'], both[0]['area_m2'],
+                                  delta=0.01)
+
+    # -- widths_cm: 조각마다 다른 폭 ----------------------------------------
+
+    def test_widths_cm_gives_each_piece_its_own_width(self):
+        """세 조각을 각각 다른 폭으로 — 등분이 아니다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           widths_cm=[500, 1000, 300])
+        self.assertEqual(len(strips), 3)
+        self.assertEqual(info['count'], 3)
+        self.assertEqual(info['strip_widths_m'], [5.0, 10.0, 3.0])
+        for b in strips:
+            self.assertAlmostEqual(b['length_m'], 90.0, delta=1.0)
+        # 조각 면적이 폭에 비례해 서로 다르다(90m 길이 * 폭).
+        widths_sorted = sorted(s['area_m2'] for s in strips)
+        self.assertLess(widths_sorted[0], widths_sorted[1])
+        self.assertLess(widths_sorted[1], widths_sorted[2])
+        # 5+10+3=18m, 짧은 축 30m 중 12m 이 여백 — note 에 남는다.
+        self.assertIn('leftover', info['note'])
+
+    def test_widths_cm_overrides_parts_and_strip_width_cm(self):
+        """셋 다 주면 widths_cm 가 이긴다 — 나머지는 조용히 무시된다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           parts=99, strip_width_cm=1,
+                                           widths_cm=[500, 500])
+        self.assertEqual(len(strips), 2)
+        self.assertEqual(info['strip_widths_m'], [5.0, 5.0])
+
+    def test_widths_cm_accepts_a_single_piece(self):
+        """폭 하나짜리 목록도 받는다 — `parts=1` 에서 시작해 개별 폭 조정을
+        켜면 조각이 하나뿐인 목록이 만들어진다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           widths_cm=[500])
+        self.assertEqual(len(strips), 1)
+        self.assertEqual(info['strip_widths_m'], [5.0])
+
+    def test_widths_cm_rejects_empty_list(self):
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0), widths_cm=[])
+        self.assertIsNone(out)
+        self.assertIn('widths_cm', err)
+
+    def test_widths_cm_rejects_non_positive_width(self):
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                       widths_cm=[500, 0])
+        self.assertIsNone(out)
+        self.assertIn('widths_cm', err)
+
+    def test_widths_cm_last_piece_is_clamped_when_it_overflows(self):
+        """마지막 조각만 커서 넘치면 거부 대신 들어가는 만큼 잘라 준다 —
+        조각을 하나씩 입력하다 마지막 값이 남는 자리보다 큰, 실사용에서
+        흔한 경우."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           widths_cm=[2000, 2000])
+        self.assertIsNotNone(strips)
+        self.assertEqual(len(strips), 2)
+        # 첫 조각은 요청대로 20m, 마지막은 남는 10m로 줄어든다(첫 조각을
+        # 안 건드리는 것이 "마지막이 커서 넘쳤다" 는 문제 정의와 맞다).
+        self.assertEqual(info['strip_widths_m'], [20.0, 10.0])
+        self.assertEqual(info['widths_clamped_from_cm'], 2000)
+        self.assertIn('shortened', info['note'])
+
+    def test_widths_cm_rejects_when_earlier_pieces_alone_exceed_short_axis(self):
+        """마지막 조각을 0으로 줄여도 안 들어가면 "마지막이 커서" 가 아니라
+        애초에 안 맞는 요청이다 — 그때는 그대로 거부한다."""
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                       widths_cm=[3500, 500])
+        self.assertIsNone(out)
+        self.assertIn('short axis', err)
+
+    def test_widths_cm_respects_orientation_and_angle(self):
+        """조합 모드와 마찬가지로 widths_cm 도 방향/각도를 그대로 받는다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           widths_cm=[500, 1000],
+                                           orientation='short')
+        for b in strips:
+            self.assertAlmostEqual(b['length_m'], 30.0, delta=1.0)
+
+    def test_widths_cm_round_trip_from_equal_split_is_accepted(self):
+        """UI 는 균등분할의 strip_widths_m(cm 반올림)을 그대로 되돌려보낸다
+        (개별 폭 조정 토글을 막 켰을 때). 부동소수 합산 오차만으로 "정확히
+        도형 크기인데 초과" 판정이 나면 안 된다 — 실사용에서 68.2/68.2 처럼
+        딱 맞아떨어지는 경계에서 걸린 회귀."""
+        shape = self._rot_rect(68.2, 90.0)
+        _s, info = self.ps.split_shape(shape, parts=3)
+        widths_cm = [round(w * 100) for w in info['strip_widths_m']]
+        strips, info2 = self.ps.split_shape(shape, widths_cm=widths_cm)
+        self.assertIsNotNone(strips)
+        self.assertEqual(len(strips), 3)
+
+    def test_uniform_modes_also_report_strip_widths_m(self):
+        """등분·자동폭·조합 모드도 조각별 폭 리스트를 낸다 — 전부 같은 값의
+        반복이지만, UI 가 모드에 관계없이 이 리스트 하나로 개별 폭 입력칸을
+        채울 수 있어야 한다."""
+        _s, info_parts = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=3)
+        self.assertEqual(info_parts['strip_widths_m'], [10.0, 10.0, 10.0])
+        _s, info_width = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                             strip_width_cm=400)
+        self.assertEqual(info_width['strip_widths_m'], [4.0] * 7)
 
     def test_too_many_pieces_is_refused_not_truncated(self):
         """조용히 자르면 사용자는 자기가 본 것이 전부인 줄 안다."""
@@ -746,6 +928,112 @@ class TestSplitShape(unittest.TestCase):
         self.assertIn('covered_area_m2', info)
         self.assertNotIn('planted_area_m2', info)
         self.assertIn('NOT the plantable area', info['note'])
+
+    def test_orientation_short_cuts_across_the_long_side(self):
+        """orientation='short' 는 짧은 변을 눕혀 정방형에 가까운 조각을 낸다.
+
+        재현 사례: 2,618.6㎡ 구역을 parts=5 로 나누면 6.43m×81.7m(12.7:1)가
+        나왔다 — 짧은 변(32m) 기준이면 32m×16.4m(2:1)로 훨씬 정방형에
+        가까웠을 것이다. 여기서는 30x90 사각형으로 같은 관계를 고정한다.
+        """
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                           orientation='short')
+        self.assertEqual(len(strips), 2)
+        for b in strips:
+            self.assertAlmostEqual(b['length_m'], 30.0, delta=1.0)
+        self.assertAlmostEqual(info['strip_width_m'], 45.0, delta=0.5)
+        self.assertAlmostEqual(info['orientation_deg'], 0.0, delta=2.0)
+        self.assertEqual(info['orientation'], 'short')
+
+    def test_orientation_default_is_long_and_unchanged(self):
+        """파라미터를 안 주면 지금까지의 동작(긴 변 기준)과 같아야 한다."""
+        strips_default, info_default = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), parts=2)
+        strips_long, info_long = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), parts=2, orientation='long')
+        self.assertEqual(info_default['orientation'], 'long')
+        self.assertAlmostEqual(info_default['strip_width_m'],
+                               info_long['strip_width_m'])
+        for a, b in zip(strips_default, strips_long):
+            self.assertAlmostEqual(a['length_m'], b['length_m'], delta=0.1)
+
+    def test_invalid_orientation_is_rejected(self):
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                       orientation='sideways')
+        self.assertIsNone(out)
+        self.assertIn('orientation', err)
+
+    def test_aspect_ratio_flags_long_narrow_parts_split(self):
+        """parts 등분이 가늘고 길면 orientation='short' 를 쓰라고 알린다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=5)
+        self.assertIsNotNone(info['aspect_ratio'])
+        self.assertGreater(info['aspect_ratio'], 4.0)
+        self.assertIn("orientation='short'", info['note'])
+
+    def test_aspect_ratio_absent_for_strip_width_mode(self):
+        """두둑 폭 지정은 원래 가늘고 길다 — parts 전용 경고 대상이 아니다."""
+        _strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                            strip_width_cm=400)
+        self.assertIsNone(info['aspect_ratio'])
+        self.assertNotIn("orientation=", info['note'])
+
+    # -- angle_deg: 임의 각도가 orientation 프리셋을 덮어쓴다 --------------
+
+    def test_angle_deg_sets_a_custom_direction(self):
+        """angle_deg 는 long/short 프리셋이 아닌 임의 각도를 그대로 쓴다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                           angle_deg=45.0)
+        self.assertIsNotNone(strips)
+        self.assertAlmostEqual(info['orientation_deg'], 45.0, delta=1.0)
+        self.assertEqual(info['orientation'], 'custom')
+        self.assertIn('custom', info['note'])
+
+    def test_angle_deg_overrides_orientation_when_both_given(self):
+        """둘 다 주어지면 angle_deg 가 이긴다 — orientation 은 조용히 무시된다.
+
+        rot_rect(10, 50, rot=35) 의 긴 변은 125도다(다른 테스트에서 고정한
+        값). orientation='short' 만 줬다면 (125+90)%180=35도가 나왔을
+        것이다 — angle_deg=125 를 같이 주면 그 대신 125도가 나와야 한다.
+        """
+        strips, info = self.ps.split_shape(self._rot_rect(10.0, 50.0, rot=35.0),
+                                           parts=2, orientation='short',
+                                           angle_deg=125.0)
+        self.assertIsNotNone(strips)
+        self.assertAlmostEqual(info['orientation_deg'], 125.0, delta=2.0)
+        self.assertEqual(info['orientation'], 'custom')
+
+    def test_angle_deg_works_with_strip_width_mode_too(self):
+        """orientation 과 달리 angle_deg 는 두둑(strip_width_cm) 경로도 받는다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           strip_width_cm=400, angle_deg=90.0)
+        self.assertIsNotNone(strips)
+        self.assertAlmostEqual(info['orientation_deg'], 90.0, delta=1.0)
+
+    def test_angle_deg_out_of_range_is_rejected(self):
+        for bad in (180.0, -1.0, 360.0):
+            out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                           angle_deg=bad)
+            self.assertIsNone(out, 'angle_deg=%r should have been rejected' % bad)
+            self.assertIn('angle_deg', err)
+
+    def test_angle_deg_non_numeric_is_rejected(self):
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                       angle_deg='sideways')
+        self.assertIsNone(out)
+        self.assertIn('angle_deg', err)
+
+    def test_angle_deg_absent_leaves_orientation_behavior_unchanged(self):
+        """회귀: angle_deg 를 안 주면 orientation 만으로 지금과 같이 동작한다."""
+        strips_long, info_long = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), parts=2)
+        strips_short, info_short = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), parts=2, orientation='short')
+        self.assertEqual(info_long['orientation'], 'long')
+        self.assertEqual(info_short['orientation'], 'short')
+        for b in strips_long:
+            self.assertAlmostEqual(b['length_m'], 90.0, delta=1.0)
+        for b in strips_short:
+            self.assertAlmostEqual(b['length_m'], 30.0, delta=1.0)
 
 
 class TestBedSpecIsNotAColumn(unittest.TestCase):

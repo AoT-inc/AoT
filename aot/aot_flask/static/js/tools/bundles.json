@@ -69,6 +69,7 @@
       "geo/design/aot-geo-devices-v3.js",
       "geo/design/aot-geo-binding-ui.js",
       "geo/design/aot-geo-vegetation.js",
+      "geo/design/aot-geo-device-split.js",
       "geo/aot-map-utils.js",
       "geo/design/aot-geo-stats.js",
       "geo/design/aot-geo-preview.js",

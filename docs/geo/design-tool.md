@@ -22,23 +22,23 @@ Nothing in the tool forces you to follow this order (you can place a device befo
 ## Screen Layout
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  Top mode panel (Site / Zone / Facility / ...)       │
-├──────┬──────────────────────────────────┬────────────┤
+┌──────┬──────────────────────────────────┬────────────┐
 │      │                                  │            │
-│ Left │       Map canvas                 │   Right    │
-│tools │  (MapLibre GL vector rendering)  │  property  │
-│      │                                  │   panel    │
-├──────┴──────────────────────────────────┴────────────┤
-│  Bottom status bar (coordinates, zoom, save state)   │
-└─────────────────────────────────────────────────────┘
+│ Left │       Map canvas                 │  Settings  │
+│tools │  (MapLibre GL vector rendering)  │  drawer    │
+│      │                                  │            │
+│      │  ┌────────────────────────────┐  │ (per mode) │
+│      │  │ Mode tabs (Site/Zone/…)    │  │            │
+└──────┴──┴────────────────────────────┴──┴────────────┘
 ```
+
+**Mode tabs sit in a bar below the map; that mode's settings live in a drawer to the right.** The drawer pushes the map aside rather than covering it, so you can see the effect of a setting while you change it, and you can still pan the map or click shapes with the drawer open. On a phone the drawer covers the screen, and a handle at the top drops it down so you can see the map.
 
 ---
 
 ## Editing Modes { #editing-modes }
 
-Select the editing target in the top mode panel — there are **6 modes**: Site, Zone, Facility, Planting, Equipment, and Device (labeled **A** in the panel, for "AoT device"). Each has different drawable shapes and properties.
+Select the editing target from the mode tabs below the map — there are **6 modes**: Site, Zone, Facility, Planting, Equipment, and Device (labeled **A**, for "AoT device"). Each has different drawable shapes and properties. Pressing a tab also opens that mode's settings drawer.
 
 ### Site
 
@@ -82,17 +82,19 @@ Records **what is planted where**. If a Zone says "this area is block 3-1", a pl
 
 #### Splitting a zone into plots { #split }
 
-When one zone is planted in several pieces, you do not have to draw each piece — you can have it **split**. Use the **Split into plots** button in Planting mode.
+When one zone is planted in several pieces, you do not have to draw each piece — you can have it **split**. Switch to Planting mode and the split form is already there, above the plot's crop/variety fields.
 
 - **Area to split** — pick from the zones and sites already drawn on the map. A shape you have not saved yet is not in the list (save it first).
-- **Split by** — either **Equal parts** (how many pieces) or **Strip width** (how many cm each piece is). Not both.
+- **Split by** — either **Equal parts** (how many pieces) or **Strip width** (how many cm each piece is). Setting **Equal parts** to **1** does not divide at all — the whole area becomes a single plot (still inset if you set an edge margin), which is what you want when a field is planted as one. Choosing **Strip width** also reveals **Exact piece count (optional)** — leave it empty and the count is worked out automatically from the width (as many as fit); fill it in and exactly that many pieces are cut at exactly that width, with the leftover space becoming margin split evenly on both sides. This is not an equal split — use it when both the count and the spacing are already decided (e.g. "5 rows, exactly 40 cm apart").
+- **Direction** — shown for **Equal parts**, and for **Strip width** once you fill in an exact piece count (both are then "N pieces laid out which way"). **Long side** (default) follows the field's long direction; **Short side** divides across it instead, giving squarer pieces. If the goal is splitting the zone between different crops rather than laying beds, the short side is often easier to manage. **Custom angle** shows an angle slider so you can rotate to any direction — while you drag it, a baseline through the zone's center turns to match on the map, and after a brief pause the piece preview redraws at that angle.
 - **Edge margin** — leaves room inside the shape for machinery to turn. Use 0 if you do not need it.
+- **Adjust each piece width** — the modes above all cut equal-width pieces. Turn this on to give each piece its own width instead: it starts from the equal split you already have, with one number field per piece (in meters) so you can edit them, plus buttons to add or remove a piece (minimum 2). Direction still applies — the width list only sets how thick each piece is, not which way the cutting axis runs. If the last piece you enter is too wide for what is left, it is not rejected — it is shortened to whatever fits, and the summary line below says so. On the map, each dashed preview piece is numbered to match its input field.
 - **Crop, variety, plot name, planted-on date, color** — every piece gets the same values. The plot name gets the piece number appended (`Trial 1`, `Trial 2`, …).
 
-Press **Preview** and the proposal is drawn on the map as a **dashed** outline, with the piece count, piece width, length range and direction shown in the bar above. Nothing is saved up to this point — if it looks right press **Create plots**, otherwise **Discard preview**. To try different numbers, press **Split into plots** again.
+**The map follows as you change values.** The proposal is drawn as a **dashed** outline, with the piece count, piece width, length range and direction shown below the form. If the pieces come out long and narrow (roughly above 4:1), the aspect ratio is shown as a warning — a hint to try the short side instead. There is no separate step to confirm the preview — because the drawer does not cover the map, **what you see is the proposal**. If it looks right press **Create plots**; otherwise just close the drawer (nothing is saved).
 
-!!! note "Pieces follow the long direction of the field"
-    Cutting on true north leaves beds running diagonally across an irregular field, producing nothing but offcuts. So pieces follow the shape's **longest side**, and irregular edges are clipped. That is why pieces differ in length, and pieces too short to be a bed (under 2 m) are dropped — the number dropped is shown too.
+!!! note "Pieces follow the field's long direction by default"
+    Cutting on true north leaves beds running diagonally across an irregular field, producing nothing but offcuts. So pieces follow the shape's **longest side** by default, and irregular edges are clipped. That is why pieces differ in length, and pieces too short to be a bed (under 2 m) are dropped — the number dropped is shown too. Strip-width (bed-by-bed) splits always follow the long side — furrow direction has to match how the field is actually worked, so direction cannot be changed there.
 
 #### Bed layout goes in a note { #bed-layout }
 

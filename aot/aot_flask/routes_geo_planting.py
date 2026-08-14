@@ -236,8 +236,13 @@ def api_plantings_history():
 # 도형이 그 사이에 바뀌면 결과도 바뀐다. 그것이 맞다 — 사람이 밭 모양을 고쳤으면
 # 새 모양대로 나뉘어야 한다.
 
-def _split_args(src):
-    """요청에서 분할 파라미터를 뽑는다 → (kwargs, 오류문구)."""
+def split_args_from(src):
+    """요청에서 분할 파라미터를 뽑는다 → (kwargs, 오류문구).
+
+    **식생 전용이 아니다.** 장치 담당 구역 분할(`routes_geo_device_split`)도
+    같은 파라미터를 쓰므로 여기 하나를 공유한다 — 두 벌로 두면 한쪽에만 옵션이
+    붙어 미리보기와 실제 결과가 갈린다.
+    """
     shape_id = src.get('zone_id') or src.get('shape_id')
     if not shape_id:
         return None, 'zone_id is required'
@@ -251,26 +256,72 @@ def _split_args(src):
         except (TypeError, ValueError):
             raise ValueError('%s must be a number' % key)
 
+    def _num_list(key):
+        """조각별 폭 목록. POST(JSON)는 배열 그대로, GET(쿼리스트링)은 값이
+        문자열뿐이라 콤마로 구분해 받는다(`widths_cm=500,1000,300`)."""
+        v = src.get(key)
+        if v in (None, ''):
+            return None
+        if isinstance(v, (list, tuple)):
+            items = v
+        else:
+            items = [x for x in str(v).split(',') if x.strip() != '']
+        try:
+            return [float(x) for x in items]
+        except (TypeError, ValueError):
+            raise ValueError('%s must be a list of numbers' % key)
+
+    orientation = src.get('orientation') or 'long'
+    if hasattr(orientation, 'strip'):
+        orientation = orientation.strip().lower()
+
     try:
         return {
             'shape_id': shape_id,
             'parts': int(_num('parts')) if _num('parts') is not None else None,
             'strip_width_cm': _num('strip_width_cm'),
+            # 있으면 parts/strip_width_cm 보다 우선한다(split_shape 의 규칙 —
+            # 대체가 아니라 항상 함께 넘긴다, 상호배타 판단은 그쪽에서 한다).
+            'widths_cm': _num_list('widths_cm'),
             'edge_margin_cm': _num('edge_margin_cm') or 0,
+            # 이보다 짧은 조각은 버린다(cm). 두둑 기준 기본값(2m)은 장치 담당
+            # 구역에는 너무 커서 좁은 구역이 조용히 사라진다 — 호출자가 정할 수
+            # 있게 열어 둔다. **미리보기와 적용이 같은 값을 써야** 화면에서 본
+            # 조각 수와 실제로 만들어지는 수가 갈리지 않는다.
+            'min_length_cm': _num('min_length_cm'),
+            'orientation': orientation,
+            # 각도가 있으면 위 orientation 은 서버(split_shape)에서 무시된다 —
+            # 대체가 아니라 공존이다. UI 는 둘 중 하나만 채워 보낸다.
+            'angle_deg': _num('angle_deg'),
         }, None
     except ValueError as exc:
         return None, str(exc)
 
 
-def _compute_split(args):
-    """(strips, info) 또는 (None, (응답, 코드))."""
+def split_kwargs_from(args):
+    """`split_args_from` 결과 → `planting_split.split_shape` 키워드.
+
+    한 곳에서 만든다 — 미리보기와 적용이 각자 조립하면 옵션 하나가 빠진 쪽만
+    다른 결과를 낸다.
+    """
+    kwargs = dict(
+        parts=args['parts'], strip_width_cm=args['strip_width_cm'],
+        widths_cm=args.get('widths_cm'),
+        edge_margin_cm=args['edge_margin_cm'], orientation=args['orientation'],
+        angle_deg=args.get('angle_deg'))
+    min_cm = args.get('min_length_cm')
+    if min_cm is not None:
+        kwargs['min_bed_length_m'] = float(min_cm) / 100.0
+    return kwargs
+
+
+def compute_split(args):
+    """(strips, info, shape) 또는 (None, (응답, 코드))."""
     shape = GeoShape.query.filter_by(unique_id=args['shape_id']).first()
     if shape is None:
         return None, (jsonify({'ok': False,
                                'message': 'shape not found: %s' % args['shape_id']}), 404)
-    strips, info = planting_split.split_shape(
-        shape, parts=args['parts'], strip_width_cm=args['strip_width_cm'],
-        edge_margin_cm=args['edge_margin_cm'])
+    strips, info = planting_split.split_shape(shape, **split_kwargs_from(args))
     if strips is None:
         return None, (jsonify({'ok': False, 'message': info}), 400)
     return (strips, info, shape), None
@@ -283,10 +334,10 @@ def api_planting_split_preview():
 
     지도가 이것을 점선으로 그린다. 사람이 보고 판단한 뒤 apply 로 넘어간다.
     """
-    args, err = _split_args(request.args)
+    args, err = split_args_from(request.args)
     if err:
         return jsonify({'ok': False, 'message': err}), 400
-    out, fail = _compute_split(args)
+    out, fail = compute_split(args)
     if fail:
         return fail
     strips, info, shape = out
@@ -308,12 +359,12 @@ def api_planting_split_apply():
         return denied
 
     data = request.get_json(silent=True) or {}
-    args, err = _split_args(data)
+    args, err = split_args_from(data)
     if err:
         return jsonify({'ok': False, 'message': err}), 400
     if not (data.get('crop') or '').strip():
         return jsonify({'ok': False, 'message': 'crop is required'}), 400
-    out, fail = _compute_split(args)
+    out, fail = compute_split(args)
     if fail:
         return fail
     strips, info, shape = out

@@ -39,12 +39,12 @@ class AoTGeoEvents {
         bindIfExists('tool-zoom-out', () => p.map.zoomOut());
 
         // Location Tools
-        bindIfExists('tool-fullscreen', () => {
-            const el = document.getElementById('geo-design-wrapper');
-            if (!document.fullscreenElement) {
-                el.requestFullscreen().catch(err => { /* console.error(err); */ });
-            } else {
-                document.exitFullscreen();
+        bindIfExists('tool-fullscreen', () => this._toggleMaximize(p));
+        // 최대화는 뷰포트를 덮을 뿐 브라우저 전체화면이 아니라, 브라우저가
+        // ESC 를 대신 처리해 주지 않는다 — 직접 받는다.
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.body.classList.contains('aot-geo-maximized')) {
+                this._toggleMaximize(p);
             }
         });
 
@@ -564,10 +564,56 @@ class AoTGeoEvents {
     }
 
     /**
+     * 지도를 브라우저 뷰포트 가득 채우거나 되돌린다 — **네이티브 전체화면이
+     * 아니다**(`body.aot-geo-maximized` 클래스 하나로 CSS 가 한다, 규칙은
+     * geo_design.html).
+     *
+     * 네이티브 `requestFullscreen()` 을 쓰지 않는 이유는 두 가지다:
+     *
+     * 1. **드로어와 지도 컨트롤이 공존하지 못한다.** 전체화면은 wrapper 를
+     *    top layer 로 올리는데, 드로어가 화면에 남으려면 그 wrapper 안에
+     *    있어야 하고, 그러면 드로어가 지도 오른쪽 컨트롤 위를 덮는다.
+     * 2. **임베드 환경에서 거부된다.** iframe 에 `allow="fullscreen"` 이
+     *    없으면 "Permissions check failed" 로 실패한다(실측). AoT 를 엣지
+     *    프록시 뒤에서 임베드해 여는 것은 정상 사용 경로다.
+     *
+     * 클래스 방식은 드로어를 평범한 요소로 두므로, 지도 오른쪽을 드로어
+     * 폭만큼 비우는 CSS 한 줄로 둘이 나란히 선다.
+     */
+    _toggleMaximize(p) {
+        const on = document.body.classList.toggle('aot-geo-maximized');
+
+        const btn = document.getElementById('tool-fullscreen');
+        if (btn) {
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-expand', !on);
+                icon.classList.toggle('fa-compress', on);
+            }
+            const label = on ? (window._ ? window._('Exit fullscreen') : 'Exit fullscreen')
+                             : (window._ ? window._('Fullscreen') : 'Fullscreen');
+            btn.setAttribute('title', label);
+            btn.setAttribute('aria-label', label);
+        }
+
+        // MapLibre 는 컨테이너 크기를 스스로 감시하지 않는다 — 크기가 바뀐 뒤
+        // resize() 를 불러야 캔버스와 투영이 새 크기를 따라온다. 드로어 밀림
+        // 트랜지션(0.4s, aot-modal-modern.css)까지 끝난 뒤 한 번 더 부른다.
+        const resize = () => { try { p.map.resize(); } catch (e) { /* 아직 준비 전 */ } };
+        requestAnimationFrame(resize);
+        setTimeout(resize, 450);
+    }
+
+    /**
      * Native Fullscreen API puts #geo-design-wrapper in the browser's top-layer;
      * Bootstrap modals/backdrops opened while it's active are siblings appended
      * to <body> and render behind it regardless of z-index. Reparent them into
      * the fullscreen element for the duration of the modal, then restore.
+     *
+     * geo/design 자체는 이제 네이티브 전체화면을 쓰지 않는다(`_toggleMaximize`
+     * 참조). 다른 경로(브라우저 기본 전체화면 단축키 등)로 들어가는 경우를
+     * 위한 안전망으로 남겨 둔다 — `document.fullscreenElement` 가 있을 때만
+     * 동작하므로 평소에는 아무 일도 하지 않는다.
      */
     _bindFullscreenModalFix() {
         if (window._aotFsModalFixBound || !window.$) return;

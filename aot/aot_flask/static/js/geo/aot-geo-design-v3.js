@@ -35,7 +35,25 @@ class AoTGeoDesign {
             // 아니라 vegetation 모듈이 자기 API 로 한다.
             'vegetation': new AoTGeoLayerGroup('vegetation')
         };
-        
+
+        // **감춘 도형 종류는 지도를 만들기 전에 알아야 한다.**
+        // 이 집합은 설정값(`AOT_GEO_CONFIG.theme_config`)만 읽으므로 지도도
+        // 도형도 필요 없다 — 그래서 여기, 가장 이른 시점에 채운다.
+        //
+        // 예전에는 도면을 다 그린 **뒤에**(`loadMap` 의 finally) 채웠다. 그런데
+        // 도형은 만들어지는 즉시 `ui._setLayerStyle → _applyVisibilityToLayer`
+        // 로 표시 여부를 판정받는데, 그때 이 집합이 아직 `undefined` 라 전부
+        // "보임" 으로 칠해졌다. 그 뒤 뒤늦게 집합이 채워지고 다시 훑어 감추니,
+        // 감춘 도형이 한 번 번쩍였다가 사라졌다 — 그것이 로딩 깜빡임의 원인이다.
+        // 여기서 채우면 그 첫 판정부터 답이 맞으므로, 감춘 도형은 **한 번도
+        // 그려지지 않는다**.
+        this._hiddenShapeTypes = AoTGeoDesign.readHiddenShapeTypes();
+        // 장치 **종류별**(입력/출력/함수/복합) 숨김도 같은 시점에 채운다 —
+        // 모드 숨김과 AND 로 합쳐진다(둘 중 하나라도 끄면 안 보인다).
+        // 이후로는 종류 토글(`devices.setDeviceTypeVisibility`)이 이 집합을
+        // 갱신하고, 설정 스냅샷을 다시 읽지 않는다.
+        this._hiddenDeviceKinds = AoTGeoDesign.readHiddenDeviceKinds();
+
         // [Optimization] Dirty Tracking for Delta Save
         this.dirtyNodeIds = new Set();
         this.deletedNodeIds = new Set(); // Tracks node_ids (str) or db_ids (int)
@@ -70,6 +88,10 @@ class AoTGeoDesign {
         // saveDesign/typesToSync 경로를 타지 않는다 — 자기 API 로만 오간다.
         this.vegetation = window.AoTGeoVegetation
             ? new AoTGeoVegetation(this) : null;
+        // 장치 모드의 구역 나누기 — 식생 분할과 같은 흐름, 결과물만 다르다
+        // (작기 대신 장치 담당 구역 + 조각 안 마커로 자동 배정).
+        this.deviceSplit = window.AoTGeoDeviceSplit
+            ? new AoTGeoDeviceSplit(this) : null;
         this.stats = new AoTGeoStats(this);
     }
 
@@ -560,9 +582,11 @@ class AoTGeoDesign {
         if (!mlMap || !mlMap.setLayoutProperty) return;
         const visibility = visible ? 'visible' : 'none';
         const toggleLayer = (l) => {
-            if (l && l._layerId) {
-                try { mlMap.setLayoutProperty(l._layerId, 'visibility', visibility); } catch(e) {}
-            }
+            if (!l || !l._layerId) return;
+            // 줌으로 다시 켤 때, 사용자가 "지도에서 보기" 로 꺼 둔 것까지 켜면
+            // 안 된다 — 지도를 확대하는 것만으로 감춘 장비가 되살아난다.
+            if (visible && this._isLayerHidden && this._isLayerHidden(l)) return;
+            try { mlMap.setLayoutProperty(l._layerId, 'visibility', visibility); } catch(e) {}
         };
         const scanGroup = (group) => {
             if (!group || !group.eachLayer) return;
@@ -597,25 +621,30 @@ class AoTGeoDesign {
         this._applyConnectionVisibility(visible);
     }
 
+    /**
+     * 줌 컬링 결과를 **기록만** 하고, 실제 표시 여부는 `_applyBucketVisibility`
+     * 가 다른 조건(모드 숨김·세부 토글)과 함께 정한다.
+     *
+     * 예전에는 여기서 곧바로 `aot-bucket-connection-dot` 을 켰다. 그래서 장비를
+     * 감춰 둔 채 지도를 조작하면(줌·모드 전환·배관 재구성) 이 함수가 점을 도로
+     * 켜고 다음 표시 반영이 다시 끄기를 반복해 **연결부 점이 깜빡였다**.
+     */
     _applyConnectionVisibility(visible) {
+        if (visible !== undefined) this._zoomDetailVisible = !!visible;
+        this._applyBucketVisibility();
+
+        // 버킷 이전(legacy) 상태로 남아 있는 개별 연결부 레이어 — 버킷이 없을
+        // 때만 의미가 있다. 여기서도 모드 숨김을 함께 본다.
         const mlMap = (this.map && this.map._originalMap) || this.map;
         if (!mlMap || !mlMap.setLayoutProperty) return;
-        const visibility = visible ? 'visible' : 'none';
-
-        // Phase 3: Use the single 'connection-dot' bucket layer instead of iterating
-        // each connection wrapper layer individually. This is much faster (1 call vs N calls).
-        try {
-            mlMap.setLayoutProperty('aot-bucket-connection-dot', 'visibility', visibility);
-        } catch (e) {
-            // Fallback: iterate all layers in the connection group (for mixed bucket/pre-bucket state)
-            const connGroup = this.layerStorage['connection'];
-            if (connGroup && connGroup.eachLayer) {
-                connGroup.eachLayer(l => {
-                    if (l && l._layerId) {
-                        try { mlMap.setLayoutProperty(l._layerId, 'visibility', visibility); } catch(e2) {}
-                    }
-                });
-            }
+        if (mlMap.getLayer && mlMap.getLayer('aot-bucket-connection-dot')) return;
+        const vis = this._resolveBucketVisibility('aot-bucket-connection-dot');
+        const connGroup = this.layerStorage['connection'];
+        if (connGroup && connGroup.eachLayer) {
+            connGroup.eachLayer(l => {
+                if (!l || !l._layerId) return;
+                try { mlMap.setLayoutProperty(l._layerId, 'visibility', vis); } catch (e2) {}
+            });
         }
     }
 
@@ -879,6 +908,22 @@ class AoTGeoDesign {
         // Restore length-label visibility for the new mode.
         // Each mode tracks its own hidden flag; switching modes must re-apply the correct class.
         this._applyLengthLabelState();
+
+        // 같은 이유로 "지도에서 보기" 상태도 다시 반영한다 — 위
+        // `updateLayerStyles()` 와 `_swapStorageLayers()` 가 레이어를 다시
+        // 칠하고 그룹 사이로 옮기므로, 상태만 들고 있으면 화면과 어긋난다.
+        this._applyShapeVisibility();
+
+        // 활성 모드 도형 테두리 강조 — `updateLayerStyles()`/`_swapStorageLayers()`
+        // 에 얹지 않고 따로 돈다. 이유: 그 둘은 "지금 편집 중인 도형 하나"(주황
+        // 강조, `activeLayer`)와 "지금 모드의 도형 전체"(테마색 강조)를 같은
+        // `isActive` 매개변수 하나로 얽어 놓았다 — teardown 루프·editor 루프·
+        // 개별 activeLayer 재적용이 서로 다른 타이밍에 서로 다른 레이어 부분
+        // 집합만 건드리다 보니, 실측에서 site 는 모드를 나가도 굵기가 안 돌아오고
+        // facility 는 8개 중 1개만 굵어지는 식으로 수렴하지 못했다. 여기서는
+        // "지금 모드에 속한 종류인가" 하나만 보고 storage·editor 구분 없이 전부
+        // 훑어 굵기를 못박는다 — 결과가 항상 같은 값으로 수렴한다.
+        this._applyActiveModeEmphasis();
 
         // Update device marker draggability — only allowed in aot_device mode
         if (this.devices && this.devices.updateMarkersInteractivity) {
@@ -1738,6 +1783,10 @@ class AoTGeoDesign {
             // [New] Ensure Layer Order (Editor Group on Top)
             this._enforceLayerOrder();
 
+            // 저장해 둔 "지도에서 보기" 상태를 되살린다 — 도형이 방금 새로
+            // 만들어졌으므로 여기서 한 번 반영해야 새로고침 후에도 유지된다.
+            this.restoreShapeVisibility();
+
             // [New] Load Map Devices (Real Devices linked via location) as background task
             this._loadMapDevices(mapUuid);
 
@@ -1898,7 +1947,16 @@ class AoTGeoDesign {
                                 nativeMap.addSource(sourceId, { type: 'geojson', data: feature });
                             }
                             if (!nativeMap.getLayer(layerId)) {
-                                nativeMap.addLayer({ id: layerId, type: mlLayerType, source: sourceId, paint: paintProps });
+                                // 이 구제 경로도 표시 상태를 **만들 때** 정한다 —
+                                // 사용자가 감춘 종류를 여기서 보이게 만들어 놓으면
+                                // 로딩 1초 뒤에 도형이 튀어나왔다 다시 사라진다.
+                                const vis = this._isLayerHidden(layer) ? 'none' : 'visible';
+                                layer._desiredVisibility = vis;
+                                nativeMap.addLayer({ id: layerId, type: mlLayerType, source: sourceId,
+                                                     layout: { visibility: vis }, paint: paintProps });
+                                if (mlLayerType === 'fill') {
+                                    AoTGeoLayer._ensurePolygonOutline(nativeMap, layerId, sourceId, vis);
+                                }
                                 // Restore cached style instead of leaving hardcoded blue
                                 if (layer._styleCache && Object.keys(layer._styleCache).length > 0) {
                                     layer.setStyle(layer._styleCache);
@@ -2054,6 +2112,11 @@ class AoTGeoDesign {
                 if (l._mlDomMarker) { l._mlDomMarker.remove(); l._mlDomMarker = null; }
                 if (mlMap && l._layerId) {
                     const lid = l._layerId, sid = 'aot-source-' + lid;
+                    // 짝 레이어(테두리 -line, 압출 -3d)를 먼저 — 남기면 채움만
+                    // 사라지고 선이 허공에 뜬다(새로고침해야 없어진다).
+                    if (window.AoTGeoLayer && window.AoTGeoLayer._removeCompanionLayers) {
+                        window.AoTGeoLayer._removeCompanionLayers(mlMap, lid);
+                    }
                     try { if (mlMap.getLayer && mlMap.getLayer(lid)) mlMap.removeLayer(lid); } catch(e) {}
                     try { if (mlMap.getSource && mlMap.getSource(sid)) mlMap.removeSource(sid); } catch(e) {}
                 }
@@ -2597,6 +2660,11 @@ class AoTGeoDesign {
                 if (l._mlDomMarker) { l._mlDomMarker.remove(); l._mlDomMarker = null; }
                 if (mlMap && l._layerId) {
                     const lid = l._layerId, sid = 'aot-source-' + lid;
+                    // 짝 레이어(테두리 -line, 압출 -3d)를 먼저 — 남기면 채움만
+                    // 사라지고 선이 허공에 뜬다(새로고침해야 없어진다).
+                    if (window.AoTGeoLayer && window.AoTGeoLayer._removeCompanionLayers) {
+                        window.AoTGeoLayer._removeCompanionLayers(mlMap, lid);
+                    }
                     try { if (mlMap.getLayer && mlMap.getLayer(lid)) mlMap.removeLayer(lid); } catch(e) {}
                     try { if (mlMap.getSource && mlMap.getSource(sid)) mlMap.removeSource(sid); } catch(e) {}
                 }
@@ -3330,42 +3398,50 @@ class AoTGeoDesign {
         container.classList.toggle('aot-hide-pipe-labels');
     }
 
+    /**
+     * 스프링클러 표시 세부 토글. 공유 버킷은 직접 켜지 않고
+     * `_applyBucketVisibility` 에 맡긴다 — 모드 숨김·줌 컬링과 다투지 않게.
+     */
     _toggleSprinklerPoints(visible) {
         const mlMap = (this.map && this.map._originalMap) || this.map;
         if (!mlMap || !mlMap.setLayoutProperty) return;
-        const vis = visible ? 'visible' : 'none';
+        if (this.panel) this.panel.isSprinklerPointsHidden = !visible;
+        this._applyBucketVisibility();
 
-        // RenderBucket GL layers: sprinkler dot + coverage circle
-        // These are shared bucket layers — toggle once, not per-instance
-        try { mlMap.setLayoutProperty('aot-bucket-sprinkler-dot', 'visibility', vis); } catch(e) {}
-        try { mlMap.setLayoutProperty('aot-bucket-sprinkler-coverage', 'visibility', vis); } catch(e) {}
+        // 스프링클러 중심 점(`aot-bucket-sprinkler-dot`)은 데이터 전용이라
+        // 원래 그리지 않는다(aot-geo-layer.js 참조) — 여기서도 건드리지 않는다.
 
-        // Per-instance GL layers (legacy / non-bucket path)
-        const scanGroup = (group) => {
-            if (!group || !group.eachLayer) return;
-            group.eachLayer(l => {
-                const sub = l.feature?.properties?.sub_type;
-                if (sub !== 'sprinkler' && sub !== 'sprinkler_coverage') return;
-                try { mlMap.setLayoutProperty(l._layerId, 'visibility', vis); } catch(e) {}
-            });
-        };
-        scanGroup(this.layerStorage['equipment']);
-        const fg = window.AoTMapEditor?.featureGroup;
-        if (fg && fg.getLayers) fg.getLayers().forEach(l => {
+        // 버킷 이전(legacy) 개별 레이어. 모드 숨김이면 켜지 않는다.
+        const hiddenByMode = this.isShapeTypeHidden('equipment');
+        const vis = (visible && !hiddenByMode) ? 'visible' : 'none';
+        const applyOne = (l) => {
             const sub = l.feature?.properties?.sub_type;
             if (sub !== 'sprinkler' && sub !== 'sprinkler_coverage') return;
             try { mlMap.setLayoutProperty(l._layerId, 'visibility', vis); } catch(e) {}
-        });
+        };
+        const eq = this.layerStorage['equipment'];
+        if (eq && eq.eachLayer) eq.eachLayer(applyOne);
+        const fg = window.AoTMapEditor?.featureGroup;
+        if (fg && fg.getLayers) fg.getLayers().forEach(applyOne);
     }
 
+    /**
+     * 배관 조인트(엘보·티) 점 표시 세부 토글. 위와 같은 이유로 공유 버킷은
+     * `_applyBucketVisibility` 가 정한다.
+     */
     _toggleConnectionPoints(visible) {
-        // [Perf] Toggle pipe-junction (elbow/tee) marker visibility at the GL layer level.
-        // Uses MapLibre setLayoutProperty so hidden layers incur zero render cost.
         const mlMap = (this.map && this.map._originalMap) || this.map;
         if (!mlMap || !mlMap.setLayoutProperty) return;
+        if (this.panel) this.panel.isConnectionPointsHidden = !visible;
+        this._applyBucketVisibility();
+
+        // 버킷 이전(legacy) 개별 레이어. 모드 숨김이면 켜지 않는다.
+        const hiddenByMode = this.isShapeTypeHidden('connection') ||
+                             this.isShapeTypeHidden('equipment');
+        const vis = (visible && !hiddenByMode) ? 'visible' : 'none';
         const apply = (l) => {
             if (l.feature?.properties?.aot_type !== 'connection') return;
-            try { mlMap.setLayoutProperty(l._layerId, 'visibility', visible ? 'visible' : 'none'); } catch(e) {}
+            try { mlMap.setLayoutProperty(l._layerId, 'visibility', vis); } catch(e) {}
         };
         const connGroup = this.layerStorage['connection'];
         if (connGroup && connGroup.eachLayer) connGroup.eachLayer(apply);
@@ -3386,7 +3462,10 @@ class AoTGeoDesign {
     /* --- Device Placement & Linking --- */
 
     async _loadMapDevices(mapUuid) {
-        if (this.devices) this.devices.loadMapDevices();
+        if (this.devices) await this.devices.loadMapDevices();
+        // 장치 마커는 도면 로드가 끝난 뒤 배경으로 붙는다 — 그 전에 반영한
+        // 숨김 상태는 이 마커들에 닿지 않으므로 여기서 한 번 더 반영한다.
+        this._applyShapeVisibility();
     }
 
     placeDeviceOnMap(dev) {
@@ -3399,6 +3478,446 @@ class AoTGeoDesign {
 
     setDeviceVisibility(type, isVisible) {
         if (this.devices) this.devices.setDeviceTypeVisibility(type, isVisible);
+    }
+
+    /**
+     * 모드 하나가 지도에 그리는 **도형 종류 목록**.
+     *
+     * 모드와 `aot_type` 은 1:1 이 아니다 — 장비는 배관(equipment)과 연결부
+     * (connection)를, 장치는 마커(aot_device)와 구역 배정 폴리곤(device)을
+     * 함께 그린다. 이 표를 안 보고 모드 이름만으로 감추면 절반만 사라져서
+     * "될 때도 있고 안 될 때도 있다" 가 된다(실제로 그랬다: 배관 294개는
+     * 감춰지고 연결부 56개는 그대로 남았다).
+     */
+    static SHAPE_TYPES_BY_MODE = {
+        site: ['site'],
+        zone: ['zone'],
+        facility: ['facility'],
+        vegetation: ['vegetation'],
+        equipment: ['equipment', 'connection'],
+        aot_device: ['aot_device', 'device'],
+    };
+
+    shapeTypesForMode(mode) {
+        return AoTGeoDesign.SHAPE_TYPES_BY_MODE[mode] || [mode];
+    }
+
+    /**
+     * 모드가 쓰는 **공유 버킷 GL 레이어** 목록.
+     *
+     * 도형마다 GL 레이어가 하나씩 있는 것이 아니다. 배관 294개와 연결부 56개는
+     * 성능 때문에 한 소스로 합쳐져(RenderBucket) 버킷 레이어 몇 개로 그려진다 —
+     * 그래서 개별 `_layerId` 로 setLayoutProperty 를 부르면 그런 GL 레이어가
+     * 없어 조용히 실패한다(장비를 감춰도 남아 있던 이유다). 버킷은 레이어 id 로
+     * 한 번에 끈다 — 스프링클러 토글(`_toggleSprinklerPoints`)이 이미 쓰는 방식.
+     */
+    static BUCKET_LAYERS_BY_MODE = {
+        equipment: ['aot-bucket-pipe-main', 'aot-bucket-pipe-branch',
+                    'aot-bucket-sprinkler-coverage', 'aot-bucket-connection-dot'],
+    };
+
+    /** 이 종류가 지금 숨김 상태인가 — 스타일 파이프라인이 물어본다. */
+    isShapeTypeHidden(type) {
+        return !!(this._hiddenShapeTypes && this._hiddenShapeTypes.has(type));
+    }
+
+    /**
+     * 모드가 그리는 도형을 지도에서 감추거나 되살린다.
+     *
+     * **숨김은 스타일이 아니라 상태다.** 예전에는 여기서 opacity 0 을 칠하기만
+     * 했는데, 모드를 바꾸면 `setMode → ui.updateLayerStyles()` 가 모든 레이어를
+     * 다시 칠하면서 그 0 을 덮어써 숨긴 것이 되살아났다. 그래서 숨김 종류를
+     * 집합으로 들고, 칠하는 쪽(`ui._setLayerStyle`)이 그것을 보게 했다 — 다시
+     * 칠해도 숨김이 유지된다.
+     *
+     * 여기서는 집합을 갱신하고 지금 화면에 반영만 한다.
+     */
+    setShapeTypeVisibility(mode, isVisible) {
+        if (!this._hiddenShapeTypes) this._hiddenShapeTypes = new Set();
+        this.shapeTypesForMode(mode).forEach(t => {
+            if (isVisible) this._hiddenShapeTypes.delete(t);
+            else this._hiddenShapeTypes.add(t);
+        });
+        this._applyShapeVisibility();
+    }
+
+    /**
+     * 이 레이어가 숨겨져야 하는가 — 모드 스위치와 장치 종류별 스위치를 함께 본다.
+     *
+     * 장치는 두 스위치가 겹친다: 모드 전체("지도에서 보기")와 종류별
+     * (입력/출력/함수/복합, `vis_<종류>`). 둘 중 하나라도 꺼져 있으면 안 보이는
+     * 것이 맞다 — 종류별 상태를 여기서 안 보면, 종류 하나를 꺼 둔 채 모드를
+     * 바꿨을 때 이 경로가 도로 켜 버린다.
+     */
+    _isLayerHidden(layer) {
+        const hidden = this._hiddenShapeTypes;
+        const props = (layer && layer.feature && layer.feature.properties) || {};
+        const type = props.aot_type;
+        if (!type) return false;
+        if (hidden && hidden.has(type)) return true;
+        if (type !== 'aot_device' && type !== 'device') return false;
+
+        const T = window.AoTGeoTheme;
+        const kind = (T && T.normalizeDeviceType)
+            ? T.normalizeDeviceType(props.device_type) : null;
+        if (!kind) return false;
+        // **화면에서 지금 켜져 있는 값**을 본다. 예전에는 `AOT_GEO_CONFIG.
+        // theme_config` 스냅샷을 읽었는데, 그것은 페이지를 열 때의 값이라
+        // 사용자가 방금 바꾼 종류 토글을 반영하지 못했다 — 그래서 다음 반영에서
+        // 옛 상태로 되돌아가 "켰다 껐다가 중복돼 이상하게 동작" 했다.
+        // 집합은 생성자가 설정에서 한 번 채우고, 그 뒤로는 토글이 갱신한다.
+        return !!(this._hiddenDeviceKinds && this._hiddenDeviceKinds.has(kind));
+    }
+
+    /**
+     * 레이어 하나에 표시/숨김을 적용한다.
+     *
+     * **`setStyle` 로는 안 된다.** 배관 연결부(connection)는 렌더 버킷이 그리는
+     * 객체라 `setStyle` 이 통째로 무시된다(호출해도 `_styleCache` 가 그대로다).
+     * 그래서 장비를 감추면 배관 294개는 사라지고 연결부 56개는 남아 "될 때도
+     * 있고 안 될 때도 있다" 로 보였다.
+     *
+     * 확실한 지렛대는 GL 레이어 자체의 visibility 다 — 줌에 따라 장비를 감추는
+     * `_setEquipmentLayerVisibility` 가 이미 쓰는 방식이고, 연결부를 포함해
+     * `_layerId` 를 가진 모든 레이어에 통한다. 마커(장치)는 GL 이 아니라 DOM
+     * 이므로 element 를 감춘다.
+     */
+    _applyVisibilityToLayer(layer) {
+        if (!layer) return;
+        const isHidden = this._isLayerHidden(layer);
+
+        // **GL 레이어가 아직 없을 때를 대비해 원하는 상태를 새겨 둔다.**
+        // 아래 `setLayoutProperty` 는 레이어가 존재해야 먹는데, 스타일 로딩이
+        // 안 끝났으면 생성이 뒤로 밀린다(aot-geo-layer.js 의 idle/지연 경로).
+        // 그때는 이 값이 레이어를 만드는 쪽에서 읽혀 **처음부터 감춘 채로**
+        // 만들어진다 — 만들고 나서 끄면 그 사이 한 프레임이 보이고, 그것이
+        // 깜빡임이다.
+        layer._desiredVisibility = isHidden ? 'none' : 'visible';
+
+        const mlMap = (this.map && this.map._originalMap) || this.map;
+        const want = isHidden ? 'none' : 'visible';
+        // 이미 그 상태면 쓰지 않는다. 이 함수는 스타일을 다시 칠할 때마다
+        // (모드 전환·강조 갱신·안전망 루프) 도형마다 불리는데, 같은 값을
+        // 매번 다시 쓰면 실측 3,500회가 넘는 무의미한 GL 호출이 로딩 중에
+        // 쌓인다 — 사용자가 말한 "불필요한 로딩 반복" 의 실체다.
+        //
+        // ⚠ **"지난번에 쓴 값" 을 기억해 두고 비교하면 안 된다.** GL 레이어는
+        // 모드 전환 등으로 **다시 만들어지는** 일이 있고(그러면 새 레이어는
+        // 보임 상태다), 기억한 값은 여전히 'none' 이라 교정이 영영 막힌다
+        // (실측: 그 방식으로 장치 도형 16개가 감춰지지 않고 남았다). 그래서
+        // 지도의 **실제 상태**를 읽어 비교한다 — getLayoutProperty 는 메모리
+        // 조회라 setLayoutProperty(스타일 재계산 유발)보다 훨씬 싸다.
+        const glVisOf = (id) => {
+            try { return mlMap.getLayoutProperty(id, 'visibility') || 'visible'; }
+            catch (e) { return null; }   // 레이어가 아직 없다
+        };
+        if (layer._layerId && mlMap && mlMap.setLayoutProperty) {
+            if (glVisOf(layer._layerId) !== want) {
+                try {
+                    mlMap.setLayoutProperty(layer._layerId, 'visibility', want);
+                } catch (e) { /* 스타일이 아직 준비 전이면 다음 반영 때 걸린다 */ }
+            }
+            // 폴리곤은 채움(fill)과 테두리(line)가 **별개 GL 레이어**다
+            // (aot-geo-layer.js 의 `_ensurePolygonOutline` 참조 — fill 레이어에는
+            // 두께 있는 테두리 자체가 없어 line 레이어를 병행해 만든다). 채움만
+            // 끄면 테두리가 허공에 남으므로 같이 꺼야 한다.
+            const geomType = layer.feature && layer.feature.geometry &&
+                             layer.feature.geometry.type;
+            if ((geomType === 'Polygon' || geomType === 'MultiPolygon') &&
+                glVisOf(layer._layerId + '-line') !== want) {
+                try {
+                    mlMap.setLayoutProperty(layer._layerId + '-line', 'visibility', want);
+                } catch (e) { /* 아직 없으면 다음 반영 때 걸린다 */ }
+            }
+        }
+
+        const el = this._domElementOf(layer);
+        if (el) el.style.display = isHidden ? 'none' : '';
+    }
+
+    /**
+     * 레이어의 DOM 노드 — 마커처럼 GL 이 아니라 DOM 으로 그려지는 것들.
+     *
+     * `getElement()` 하나만 믿으면 안 된다. 장치 마커(AoTGeoMarker)는 그 함수를
+     * 가지고 있으면서도 **null 을 돌려준다** — 실제 노드는 `_markerEl` 이나
+     * MapLibre 마커 안에 있다. 이걸 몰라서 장치는 "라벨만 사라지고 도형은
+     * 그대로" 로 보였다.
+     */
+    _domElementOf(layer) {
+        if (!layer) return null;
+        let el = null;
+        try { el = layer.getElement ? layer.getElement() : null; } catch (e) { el = null; }
+        if (el) return el;
+        if (layer._markerEl) return layer._markerEl;
+        if (layer._icon) return layer._icon;
+        const dom = layer._mlDomMarker || layer._mlMarker;
+        if (dom && typeof dom.getElement === 'function') {
+            try { return dom.getElement(); } catch (e) { /* noop */ }
+        }
+        return null;
+    }
+
+    /**
+     * 숨김 집합을 지금 지도에 반영한다.
+     *
+     * 모드 전환·도면 로드 뒤에도 불러야 한다 — 그때 레이어가 보관 그룹과 편집
+     * 그룹 사이를 오가고 마커는 아이콘이 새로 만들어져, 상태만 들고 있고 반영을
+     * 안 하면 화면과 어긋난다.
+     */
+    _applyShapeVisibility() {
+        const hidden = this._hiddenShapeTypes;
+        if (!hidden) return;
+
+        const eachGroup = (group) => {
+            if (!group || typeof group.eachLayer !== 'function') return;
+            group.eachLayer(l => this._applyVisibilityToLayer(l));
+        };
+
+        Object.keys(this.layerStorage).forEach(k => {
+            if (k === 'label_aux') return;   // 라벨은 아래에서 따로
+            eachGroup(this.layerStorage[k]);
+        });
+        if (window.AoTMapEditor && window.AoTMapEditor.featureGroup) {
+            eachGroup(window.AoTMapEditor.featureGroup);
+        }
+
+        // 합쳐 그리는 것(배관·연결부)은 도형마다가 아니라 **버킷 레이어 단위**로
+        // 끈다 — 그리고 그 판단은 `_applyBucketVisibility` 한 곳이 한다.
+        this._applyBucketVisibility();
+
+        // 도형만 감추고 이름표가 허공에 남으면 무엇의 라벨인지 알 수 없다.
+        const labels = this.layerStorage['label_aux'];
+        if (labels && typeof labels.eachLayer === 'function') {
+            labels.eachLayer(marker => {
+                const props = (marker.feature && marker.feature.properties) || {};
+                const parent = props.parent_type;
+                if (!parent) return;
+                const el = this._domElementOf(marker);
+                if (el) el.style.display = hidden.has(parent) ? 'none' : '';
+            });
+        }
+    }
+
+    /**
+     * 공유 버킷 레이어(배관·연결부·스프링클러)의 표시 상태를 **한 곳에서** 정한다.
+     *
+     * 이 레이어들은 도형 하나가 아니라 수백 개를 합쳐 그리는 공용 레이어라,
+     * 끄고 켜는 주체가 여럿이었다:
+     *
+     *   - 모드 숨김("지도에서 보기")            → 감춰야 한다
+     *   - 줌 컬링(`_applyConnectionVisibility`) → 확대했으니 켠다
+     *   - 세부 토글(스프링클러·조인트)          → 그 항목만 끈다
+     *
+     * 이들이 **각자 setLayoutProperty 를 부르면 서로를 덮어쓴다.** 실제로
+     * 장비를 감춰 둔 채 지도를 조작하면(줌·모드 전환·배관 편집 후 재구성)
+     * 줌 컬링이 연결부 점을 도로 켜고, 다음 표시 반영이 다시 끄기를 반복해
+     * **점이 깜빡였다** — 사용자 신고 그대로다.
+     *
+     * 그래서 각 주체는 자기 **조건만 기록**하고, 최종 판단과 GL 쓰기는 이
+     * 함수 하나가 한다. 조건이 하나라도 "감춤" 이면 감춘다.
+     */
+    _resolveBucketVisibility(layerId) {
+        // 1) 모드 숨김이 가장 세다 — 사용자가 그 종류를 안 보겠다고 한 것이다.
+        const mode = Object.keys(AoTGeoDesign.BUCKET_LAYERS_BY_MODE).find(
+            m => (AoTGeoDesign.BUCKET_LAYERS_BY_MODE[m] || []).includes(layerId));
+        if (mode && this.shapeTypesForMode(mode).some(t => this.isShapeTypeHidden(t))) {
+            return 'none';
+        }
+        // 2) 줌 컬링 — 멀리서 보면 점·배관은 뭉쳐서 의미가 없다.
+        //    `_zoomDetailVisible` 은 `_setDetailLabelVisibility` 가 기록한다.
+        //    undefined(아직 판정 전)면 켜 둔다 — 예전 동작과 같다.
+        if (this._zoomDetailVisible === false) return 'none';
+        // 3) 세부 토글 — 장비 안에서 그 항목만 끈 경우.
+        if (this.panel) {
+            if (layerId === 'aot-bucket-connection-dot' &&
+                this.panel.isConnectionPointsHidden) return 'none';
+            if (layerId === 'aot-bucket-sprinkler-coverage' &&
+                this.panel.isSprinklerPointsHidden) return 'none';
+        }
+        return 'visible';
+    }
+
+    /** 모든 공유 버킷 레이어에 위 판단을 반영한다(값이 같으면 쓰지 않는다). */
+    _applyBucketVisibility() {
+        const mlMap = (this.map && this.map._originalMap) || this.map;
+        if (!mlMap || !mlMap.setLayoutProperty) return;
+        Object.keys(AoTGeoDesign.BUCKET_LAYERS_BY_MODE).forEach(mode => {
+            (AoTGeoDesign.BUCKET_LAYERS_BY_MODE[mode] || []).forEach(lid => {
+                if (!mlMap.getLayer || !mlMap.getLayer(lid)) return;
+                const want = this._resolveBucketVisibility(lid);
+                let now;
+                try { now = mlMap.getLayoutProperty(lid, 'visibility') || 'visible'; }
+                catch (e) { return; }
+                if (now === want) return;   // 같은 값을 다시 쓰지 않는다
+                try { mlMap.setLayoutProperty(lid, 'visibility', want); }
+                catch (e) { /* 스타일 준비 전 */ }
+            });
+        });
+    }
+
+    /**
+     * 활성 모드에 속한 **폴리곤** 도형의 테두리를 굵게, 나머지는 가늘게 —
+     * storage·editor 구분 없이 전부 훑어 **`aot_type` 이 지금 모드에 속하는가**
+     * 하나만으로 판정한다.
+     *
+     * `updateLayerStyles()`/`_swapStorageLayers()` 에 얹지 않는 이유: 그 둘은
+     * "지금 편집 중인 도형 하나"(주황 강조, `activeLayer`)와 "지금 모드의 도형
+     * 전체"를 같은 `isActive` 매개변수로 얽어 놓았다 — teardown 루프·editor
+     * 루프·개별 activeLayer 재적용이 서로 다른 타이밍에 서로 다른 레이어
+     * 부분집합만 건드리다 보니(실측: site 는 모드를 나가도 굵기가 안 돌아오고,
+     * facility 는 8개 중 1개만 굵어졌다) 결과가 매번 다르게 수렴했다. 여기서는
+     * 매번 전체를 다시 훑어 같은 값으로 못박는다 — 어디서 얼마나 어긋나 있었든
+     * 상관없다.
+     *
+     * 폴리곤에만 적용한다 — 배관(선)·연결부(버킷)·식생(자기 emphasis 시스템이
+     * 이미 있다)은 대상이 아니다.
+     */
+    _applyActiveModeEmphasis() {
+        const mlMap = (this.map && this.map._originalMap) || this.map;
+        if (!mlMap || !mlMap.setPaintProperty) return 0;
+        const activeTypes = new Set(this.shapeTypesForMode(this.activeMode));
+        // 아직 GL 레이어가 안 생긴 도형의 수 — 0 이면 더 기다릴 이유가 없다
+        // (아래 idle 루프가 이 값으로 수렴을 판단해 스스로 멈춘다).
+        let pending = 0;
+
+        const paint = (layer) => {
+            if (!layer || !layer._layerId || layer === this.activeLayer) return; // 주황 강조가 우선
+            const feature = layer.feature;
+            const geomType = feature && feature.geometry && feature.geometry.type;
+            if (geomType !== 'Polygon' && geomType !== 'MultiPolygon') return;
+            const type = (feature.properties || {}).aot_type;
+            if (type === 'vegetation') return; // 자기 emphasis 시스템이 따로 있다
+            const lineId = layer._layerId + '-line';
+            if (!mlMap.getLayer(lineId)) { pending++; return; }
+
+            const isEmph = activeTypes.has(type);
+            try {
+                mlMap.setPaintProperty(lineId, 'line-width', isEmph ? 4 : 2);
+                mlMap.setPaintProperty(lineId, 'line-opacity', 1);
+                mlMap.setPaintProperty(lineId, 'line-dasharray', isEmph ? undefined : [5, 5]);
+            } catch (e) { /* 스타일 준비 전 */ }
+            try {
+                mlMap.setPaintProperty(layer._layerId, 'fill-opacity', isEmph ? 0.3 : 0.1);
+            } catch (e) { /* 스타일 준비 전 */ }
+        };
+
+        const eachGroup = (group) => {
+            if (group && typeof group.eachLayer === 'function') group.eachLayer(paint);
+        };
+        Object.keys(this.layerStorage).forEach(k => {
+            if (k === 'label_aux') return;
+            eachGroup(this.layerStorage[k]);
+        });
+        if (window.AoTMapEditor && window.AoTMapEditor.featureGroup) {
+            eachGroup(window.AoTMapEditor.featureGroup);
+        }
+        return pending;
+    }
+
+    /**
+     * 저장된 표시 상태(`vis_shape_<mode>`) → 감출 aot_type 집합.
+     *
+     * **순수 함수다** — 설정값만 읽고 지도·도형을 건드리지 않는다. 그래서
+     * 생성자에서, 즉 도형이 하나도 만들어지기 전에 부를 수 있다(깜빡임을
+     * 없애는 핵심: 첫 표시 판정부터 답이 맞아야 한다).
+     */
+    /**
+     * 저장된 장치 **종류별** 표시 상태(`vis_<kind>`) → 감출 종류 집합.
+     *
+     * 생성자에서 **한 번만** 부른다. 지도를 바꿀 때 다시 읽지 않는 이유는,
+     * 종류 토글이 서버에 저장되는 것과 별개로 페이지 안의
+     * `AOT_GEO_CONFIG.theme_config` 스냅샷은 갱신되지 않아서다 — 다시 읽으면
+     * 사용자가 방금 바꾼 값이 옛 값으로 되돌아간다(이 함수가 고치려는 바로
+     * 그 증상).
+     */
+    static readHiddenDeviceKinds() {
+        const cfg = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) || {};
+        const T = window.AoTGeoTheme;
+        const keys = (T && T.DEVICE_KEYS) || ['input', 'output', 'function', 'device_unit'];
+        const hidden = new Set();
+        keys.forEach(k => {
+            const saved = cfg[`vis_${k}`];
+            if (saved === false || saved === 'false') hidden.add(k);
+        });
+        return hidden;
+    }
+
+    static readHiddenShapeTypes() {
+        const cfg = (window.AOT_GEO_CONFIG && window.AOT_GEO_CONFIG.theme_config) || {};
+        const hidden = new Set();
+        Object.keys(AoTGeoDesign.SHAPE_TYPES_BY_MODE).forEach(mode => {
+            const saved = cfg[`vis_shape_${mode}`];
+            if (saved === false || saved === 'false') {
+                // `shapeTypesForMode()` 와 같은 폴백(항목이 없으면 모드 이름
+                // 자체가 곧 aot_type)을 쓴다 — 두 곳이 어긋나면 어떤 모드는
+                // 껐는데 안 꺼진다.
+                (AoTGeoDesign.SHAPE_TYPES_BY_MODE[mode] || [mode]).forEach(t => hidden.add(t));
+            }
+        });
+        return hidden;
+    }
+
+    /**
+     * 저장된 표시 상태를 지금 지도에 반영한다.
+     *
+     * 집합 자체는 생성자가 이미 채웠다 — 여기서는 설정이 그 사이 바뀐 경우를
+     * 위해 한 번 더 읽고(같은 값이면 그대로), 화면에 적용한다.
+     */
+    restoreShapeVisibility() {
+        this._hiddenShapeTypes = AoTGeoDesign.readHiddenShapeTypes();
+        this._applyShapeVisibility();
+        this._applyActiveModeEmphasis();
+
+        // 지금 한 번으로는 부족하다 — GL 레이어는 도형 객체가 만들어진 **뒤에**
+        // 비동기로 붙고(식생·장치는 자기 모듈이 나중에 싣는다), 아직 없는
+        // 레이어에 setLayoutProperty 를 부르면 조용히 실패한다. 언제 붙을지
+        // 시점을 맞히려 하지 말고, 지도가 그리기를 마칠 때마다(`idle`) 다시
+        // 반영해 수렴시킨다 — 감춘 것이 없으면 곧바로 빠져나오므로 평소에는
+        // 비용이 없다.
+        this._bindShapeVisibilityIdle();
+    }
+
+    /**
+     * 로딩 막바지의 **안전망** — 수렴하면 스스로 끊는다.
+     *
+     * 도형은 만들어질 때 이미 제 표시 상태로 태어난다(생성자가 감춤 집합을
+     * 미리 채우고, `_applyVisibilityToLayer` 가 `_desiredVisibility` 를 새겨
+     * 두면 레이어 생성 시점에 반영된다). 그런데 GL 레이어가 **뒤늦게** 붙는
+     * 경로가 몇 개 남아 있다(스타일 로딩 전 지연 생성, 버킷 초기화 재시도,
+     * loadMap 의 1초 FAILSAFE). 그 경우만 여기서 메운다.
+     *
+     * 예전에는 이 리스너가 **영영** 살아 있으면서 idle 마다 모든 그룹을 훑고
+     * 도형마다 paint 속성 네 개를 다시 썼다 — 이미 같은 값인데도. 지도를
+     * 움직일 때마다 도는 그 작업이 사용자가 말한 "불필요한 로딩 반복" 이다.
+     * 이제는 아직 안 생긴 레이어가 하나도 없는 상태가 연달아 두 번 나오면
+     * 다 붙은 것으로 보고 리스너를 뗀다. 그 뒤 표시 상태가 바뀌는 일
+     * (토글·모드 전환)은 각자 자기 자리에서 직접 반영하므로 이 루프가 필요
+     * 없다.
+     */
+    _bindShapeVisibilityIdle() {
+        if (this._shapeVisIdleBound) return;
+        const ml = (this.map && this.map._originalMap) || this.map;
+        if (!ml || typeof ml.on !== 'function') return;
+        this._shapeVisIdleBound = true;
+
+        let settled = 0;
+        let passes = 0;
+        // 끝내 안 생기는 레이어가 하나라도 있으면(예: loadMap 의 FAILSAFE 가
+        // 테두리 없이 만든 도형) 수렴 조건이 영영 안 차므로, 횟수로도 끊는다.
+        // 로딩이 끝나고도 계속 도는 것을 막는 것이 목적이라 넉넉하게 잡는다.
+        const MAX_PASSES = 40;
+        const onIdle = () => {
+            if (this._hiddenShapeTypes && this._hiddenShapeTypes.size > 0) {
+                this._applyShapeVisibility();
+            }
+            const pending = this._applyActiveModeEmphasis();
+            settled = pending ? 0 : settled + 1;
+            if (settled >= 2 || ++passes >= MAX_PASSES) {
+                try { ml.off('idle', onIdle); } catch (e) { /* 어댑터에 off 가 없으면 그대로 둔다 */ }
+                this._shapeVisIdleBound = false;
+            }
+        };
+        ml.on('idle', onIdle);
     }
 
     /**
@@ -3630,6 +4149,15 @@ class AoTGeoDesign {
                 });
             }
         }
+
+        // **붙이기 전에 표시 상태를 새긴다.** 아래 `addLayer` 들이 이 값을 읽어
+        // GL 레이어를 처음부터 감춘 채로 만든다(aot-geo-layer.js 의 layout.
+        // visibility). 이 줄이 addLayer **뒤에** 있으면(예전 코드) 레이어는
+        // 일단 보이게 태어났다가 `_setLayerStyle` 이 뒤늦게 끄고, 그 사이에
+        // 그려진 프레임이 곧 로딩 깜빡임이다.
+        try {
+            l._desiredVisibility = this._isLayerHidden(l) ? 'none' : 'visible';
+        } catch (e) { /* feature 가 아직 없으면 기본값(보임)으로 둔다 */ }
 
         if (isLabel) {
             if (this.labels) {

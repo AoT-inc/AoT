@@ -443,6 +443,20 @@
                             paint: Object.assign({}, spec.paint),
                             layout: Object.assign({}, spec.layout || {})
                         };
+                        // 감춰야 할 버킷이면 **처음부터 감춘 채로** 만든다.
+                        // 만들고 나서 끄면(예전 방식) 배관·연결부·스프링클러가
+                        // 로딩이나 재구성 때 한 번 번쩍였다 사라진다.
+                        //
+                        // 판단은 `_resolveBucketVisibility` 하나가 한다 —
+                        // 모드 숨김·줌·세부 토글을 여기서 따로 계산하면
+                        // 그쪽과 어긋나 다시 깜빡임이 생긴다.
+                        try {
+                            const gd = typeof window !== 'undefined' && window.geoDesign;
+                            if (gd && gd._resolveBucketVisibility) {
+                                layerDef.layout.visibility =
+                                    gd._resolveBucketVisibility(layerId);
+                            }
+                        } catch (e) { /* 판단할 수 없으면 스펙 기본값대로 둔다 */ }
                         // minzoomFromConfig: dynamically read AOT_GEO_CONFIG (e.g. equipment_cull_zoom)
                         if (spec.minzoomFromConfig) {
                             const cfg = (typeof window !== 'undefined' && window.AOT_GEO_CONFIG) || {};

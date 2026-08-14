@@ -231,8 +231,11 @@ class AoTGeoDevices {
         // 색 해석은 AoTGeoTheme 하나로 (도형·라벨·위젯과 같은 규칙).
         const themeColor = window.AoTGeoTheme.deviceColor(devType);
 
-        // Check Initial Visibility (Always visible by default in Design Mode unless filtered)
-        let isVisible = true;
+        // 처음부터 감춘 채로 만든다 — "일단 보이게 만들고 나중에 끄기" 는
+        // 사용자가 꺼 둔 장치가 로딩 때 한 번 번쩍이는 원인이다(설정은 지도가
+        // 만들어지기 전에 이미 읽혀 있다, AoTGeoDesign 생성자 참조).
+        const isVisible = !(this.parent && this.parent.isShapeTypeHidden &&
+                            this.parent.isShapeTypeHidden('aot_device'));
 
         // Pill Style Icon
         const iconHtml = `<div class="aot-map-label-marker" style="
@@ -536,130 +539,52 @@ class AoTGeoDevices {
         // Removed duplicate debounced save here to prevent double POST.
     }
 
+    /**
+     * 장치 **종류별**(입력/출력/함수/복합) 표시 토글.
+     *
+     * 여기서 직접 감추지 않는다 — 상태만 바꾸고 반영은 모드 토글과 **같은
+     * 경로**(`_applyShapeVisibility`)에 맡긴다.
+     *
+     * 예전에는 이 함수가 자기만의 방식으로 감췄다: 레이어를 그룹에서 **물리적으로
+     * 빼내 곁주머니(`_hiddenLayerBag`)에 넣고**, 다시 켤 때 집어넣으며 opacity/
+     * display 를 되살렸다. 그래서 모드 토글("aot device 지도에서 보기")과 겹치면
+     * 서로를 덮어썼다:
+     *
+     *   - 종류를 감추면 그 레이어는 그룹에서 사라져, 모드 토글이 아예 보지
+     *     못한다(상태가 두 곳으로 갈린다).
+     *   - 종류를 다시 켜면 **모드가 꺼져 있는지 보지 않고** 되살려서, 감춰 둔
+     *     장치가 되살아난다.
+     *   - 게다가 `_isLayerHidden` 은 종류별 상태를 `AOT_GEO_CONFIG.theme_config`
+     *     **스냅샷**에서 읽었다 — 화면에서 방금 바꾼 값이 아니라 페이지를 열 때의
+     *     값이라, 다음 반영에서 옛 상태로 되돌려 버렸다.
+     *
+     * 이제 종류별 상태는 `parent._hiddenDeviceKinds` 한 곳에 살고, 감추는 방법도
+     * 하나뿐이다(GL visibility / DOM display). 두 토글은 AND 로 합쳐진다 —
+     * 둘 중 하나라도 끄면 안 보인다.
+     */
     setDeviceTypeVisibility(targetType, isVisible) {
-        // [Fix] Skip localStorage, rely on application state or backend if needed.
-        // For Design Mode, we typically want visibility to be session-based or linked to layers.
+        if (!targetType) return;
+        const parent = this.parent;
+        if (!parent._hiddenDeviceKinds) parent._hiddenDeviceKinds = new Set();
+        if (isVisible) parent._hiddenDeviceKinds.delete(targetType);
+        else parent._hiddenDeviceKinds.add(targetType);
 
-        // targetType 은 **테마 키**다(input/output/function/device_unit).
-        // 장치의 세부 타입이 아니다 — 변환은 AoTGeoTheme 한 곳에서 한다.
+        // 곁주머니는 더 쓰지 않는다. 이전 판에서 빼둔 레이어가 남아 있으면
+        // 그룹에 돌려놓는다 — 안 그러면 그 장치는 영영 안 보인다.
+        this._drainHiddenLayerBag();
 
-        // [Perf] Sidebag holds layers physically removed from FeatureGroups while hidden.
-        // Avoids CSS-only hiding that left SVG/GL nodes in the layer tree (caused viewport slowdown).
-        if (!this.parent._hiddenLayerBag) this.parent._hiddenLayerBag = {};
+        parent._applyShapeVisibility();
+    }
+
+    /** 옛 곁주머니에 남은 레이어를 원래 그룹으로 돌려놓는다(한 번만 의미 있다). */
+    _drainHiddenLayerBag() {
         const bag = this.parent._hiddenLayerBag;
-        if (!bag[targetType]) bag[targetType] = [];
-
-        const isMatch = (l) => {
-            let type = l.feature?.properties?.device_type;
-            
-            // [Fix] Fallback: If device_type missing on shape, lookup via device_id link
-            if (!type && l.feature?.properties?.device_id) {
-                const marker = this.findDeviceMarker(l.feature.properties.device_id);
-                if (marker && marker.feature && marker.feature.properties) {
-                    type = marker.feature.properties.device_type;
-                }
-            }
-            
-            if (!type) {
-                // [Fix] If still not found, check if the layer itself is an aot_device marker
-                if (l.feature?.properties?.aot_type === 'aot_device') {
-                    type = l.feature.properties.device_type;
-                }
-            }
-
-            if (!type) return false;
-            return window.AoTGeoTheme.normalizeDeviceType(type) === targetType;
-        };
-
-        const updateVisibility = (l) => {
-            if (isMatch(l)) {
-                if (isVisible) {
-                    // [Fix] Safe call for Markers
-                    if (l.setOpacity) l.setOpacity(1);
-
-                    // Re-render Icon for Markers to ensure correct opacity in style string
-                    if (l.setIcon) {
-                        const props = l.feature.properties;
-                        const type = props.device_type || targetType; // Fallback
-
-                        const themeColor = window.AoTGeoTheme.deviceColor(type);
-
-                        // Check if active
-                        const isActive = (this.parent.activeLayer === l || (this.activeDevice && this.activeDevice.layer === l));
-                        const style = isActive ? `background: ${themeColor}; color: white; border: 2px solid white;` : `background: white; color: #333; border: 2px solid ${themeColor};`;
-
-                        const iconHtml = `<div class="aot-map-label-marker" style="
-                            ${style}
-                            padding: 4px 10px; 
-                            border-radius: 20px; 
-                            opacity: 1;
-                            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                            white-space: nowrap;
-                            width: max-content;
-                            font-weight: 600;
-                            font-size: 13px;
-                            transform: translate(-50%, -50%);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                        ">${props.name || 'Device'}</div>`;
-
-                        l.setIcon(this._makeIcon('aot-device-marker-wrapper', iconHtml));
-                    }
-
-                    // [Fix] Safe call for DOM elements
-                    const el = l.getElement ? l.getElement() : null;
-                    if (el) el.style.display = '';
-
-                    // [Fix] Style for Vector Shapes (Paths)
-                    if (l.setStyle) l.setStyle({ opacity: 1, fillOpacity: 0.6 });
-                } else {
-                    if (l.setOpacity) l.setOpacity(0);
-
-                    const el = l.getElement ? l.getElement() : null;
-                    if (el) el.style.display = 'none';
-
-                    if (l.setStyle) l.setStyle({ opacity: 0, fillOpacity: 0 });
-                }
-            }
-        };
-
-        // [Perf] Physically remove hidden layers from their containers; restore from sidebag when shown.
-        const removeHidden = (group) => {
-            if (!group) return;
-            const toRemove = [];
-            group.eachLayer(l => {
-                if (isMatch(l)) toRemove.push(l);
+        if (!bag) return;
+        Object.keys(bag).forEach(k => {
+            (bag[k] || []).forEach(({ group, layer }) => {
+                try { if (group && group.addLayer) group.addLayer(layer); } catch (e) {}
             });
-            toRemove.forEach(layer => {
-                group.removeLayer(layer);
-                bag[targetType].push({ group, layer });
-            });
-        };
-        const restoreHidden = () => {
-            const remaining = [];
-            bag[targetType].forEach(({ group, layer }) => {
-                if (group && group.addLayer) {
-                    group.addLayer(layer);
-                    updateVisibility(layer);
-                } else {
-                    remaining.push({ group, layer });
-                }
-            });
-            bag[targetType] = remaining;
-        };
-
-        if (isVisible) {
-            restoreHidden();
-            if (this.parent.layerStorage['aot_device']) this.parent.layerStorage['aot_device'].eachLayer(updateVisibility);
-            if (this.parent.layerStorage['device']) this.parent.layerStorage['device'].eachLayer(updateVisibility);
-            if (window.AoTMapEditor && window.AoTMapEditor.featureGroup) window.AoTMapEditor.featureGroup.eachLayer(updateVisibility);
-        } else {
-            removeHidden(this.parent.layerStorage['aot_device']);
-            removeHidden(this.parent.layerStorage['device']);
-            if (window.AoTMapEditor && window.AoTMapEditor.featureGroup) {
-                removeHidden(window.AoTMapEditor.featureGroup);
-            }
-        }
+            bag[k] = [];
+        });
     }
 }
