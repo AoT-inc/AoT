@@ -71,7 +71,7 @@ Places physical buildings (greenhouses, warehouses, equipment rooms).
 Records **what is planted where**. If a Zone says "this area is block 3-1", a planting plot says "in this part of block 3-1, lettuce has been growing since March 20".
 
 - **Draw**: Rectangle, Circle, Polygon.
-- **Properties**: Crop, variety, plot name, planted-on date, expected end date, color, bed width and furrow width.
+- **Properties**: Crop, variety, plot name, planted-on date, expected end date, color.
 
 !!! note "Unlike zones, plantings have a lifespan"
     A planting plot ends — 3 to 9 months for open-field beds, 30 years for an orchard. It is therefore **stored separately** from other shapes, and ending a season does not erase it: the record stays as history. That is what lets you answer "what has been in this spot for the last three years" for crop-rotation and replant-disease decisions.
@@ -80,13 +80,21 @@ Records **what is planted where**. If a Zone says "this area is block 3-1", a pl
 
 **You do not pick a parent zone.** Just draw it — which zone it belongs to is derived from its position, the same way equipment and devices work.
 
-#### Bed layout { #bed-layout }
+#### Bed layout goes in a note { #bed-layout }
 
-If you record bed width and furrow width, asking the AI "how many rows fit here?" is answered the way the field actually works — **plants go on the beds, not in the furrows**. Counting rows uniformly across the whole plot overestimated by 24% in a measured case (28.4 m wide, 40 cm row spacing: 71 rows uniform → 54 rows with 120 cm beds and 40 cm furrows).
+Ask the AI "how many rows fit here?" and it counts the way the field actually works — **plants go on the beds, not in the furrows**. Counting rows uniformly across the whole plot overestimated by 24% in a measured case (28.4 m wide: 71 rows uniform → 54 rows bedded).
 
-- Both fields may be **left blank**, meaning "not known". Asked without them, the AI will **ask you first** rather than quietly handing you a uniform-layout number.
-- A furrow width of `0` is a valid value (beds built flush against each other) — it is different from blank.
-- Bed dimensions are **a property of the field**, so recording them once means not restating them in every conversation. To explore a different figure in one conversation, just say so; the stored value is untouched.
+That layout is recorded as **a sentence in the plot's notes, not in a form field**. When the AI does not know the layout it will **ask you first** rather than quietly handing you a uniform-layout number, and tell you to record what you agree on as a note. The next conversation reads that note.
+
+!!! note "Why not a form field"
+    Ask for "bed width" and some people answer with the **planting surface excluding the furrow** while others give **the bed and its furrow as one set**. The same field gets recorded as `120+40` or as `160+0`, and **nothing errors — only the bed count changes.** A number field cannot carry which reading was meant. Bed layout is also only the start; mulching, trellising and irrigation practice follow, and those cannot all become fields. That is what notes are for.
+
+Two values are used when you ask for a count:
+
+- **Bed pitch** — centre of one bed to the centre of the next, **furrow included**, as a single number (a 120 cm bed with a 40 cm furrow is `160`). Growers do not count a bed and its furrow separately, so asking for one number avoids the split reading.
+- **Rows per bed** — crop-dependent: peppers take one row, lettuce or cabbage two or three. The pitch alone cannot say how many rows fit.
+
+The two go **together**. For flat (unbedded) planting, give row spacing instead.
 
 #### Migrating crops from facility bays
 
