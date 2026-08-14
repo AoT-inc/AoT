@@ -111,12 +111,21 @@ services:
   # 재시작/재빌드 때마다 죽고 키도 없어 인증이 깨지므로 쓰지 않는다.
   # aot-app 과 같은 aot_data 볼륨을 마운트해야 같은 aot.db 를 열고 승인 큐
   # (mcp_confirmation)를 공유한다. 인증(mcp_auth.py, X-API-KEY)이 있지만 그와
-  # 별개로 LAN/인터넷 노출을 막기 위해 127.0.0.1 로만 바인딩한다.
+  # 별개로 LAN/인터넷 노출을 막기 위해 기본값은 127.0.0.1 로만 바인딩한다.
   aot_mcp:
     image: ${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}
     command: python aot/aot_mcp_server.py --http --port 5700 --log INFO
+    # 컨테이너 기본 hostname 은 랜덤 컨테이너 ID(예: de4bf2a3f387)라, MCP 응답에
+    # 자동으로 실리는 server_host(aot_mcp_server.py SERVER_HOST)가 알아볼 수 없는
+    # 값이 된다. 여러 서버를 붙여 쓰는 클라이언트에서 어느 농장 응답인지 구분해야
+    # 하므로 이름을 고정한다 — 설치가 여럿이면 .env 에서 각자 이름을 준다.
+    hostname: ${AOT_MCP_HOSTNAME:-aot-mcp}
     ports:
-      - "127.0.0.1:5700:5700"
+      # 기본은 localhost 전용. 원격 MCP 클라이언트가 리버스 프록시를 통해 붙는
+      # 설치에서는 프록시가 이 호스트에 없을 수 있어(예: 별도 엣지가 tailscale 로
+      # 직접 접속) 그 인터페이스 주소를 .env 의 AOT_MCP_BIND 로 지정한다.
+      # 공개 인터페이스(0.0.0.0)로 열지 말 것 — 인증은 있지만 노출면을 넓힌다.
+      - "${AOT_MCP_BIND:-127.0.0.1}:5700:5700"
     volumes:
       # aot-app/aot_daemon 과 동일하게 이미지 코드만 실행한다 — 예전엔 여기만
       # `../:/app`(호스트 소스)를 바인드해서 이미지의 /app 을 통째로 덮어썼는데,
