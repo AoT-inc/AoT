@@ -6,7 +6,6 @@ import sqlalchemy
 from flask import current_app, request
 from markupsafe import Markup
 
-from aot.config import PATH_PYTHON_CODE_USER
 from aot.config_translations import TRANSLATIONS
 from aot.databases.models import Actions
 from aot.databases.models import Conditional
@@ -147,11 +146,8 @@ def conditional_del(cond_id):
 
             messages["success"].append("조건부 기능 삭제 완료")
 
-            try:
-                file_path = os.path.join(PATH_PYTHON_CODE_USER, 'conditional_{}.py'.format(cond.unique_id))
-                os.remove(file_path)
-            except:
-                pass
+            from aot.utils.code_verification import delete_python_file
+            delete_python_file('conditional', cond.unique_id)
 
             db.session.commit()
     except sqlalchemy.exc.OperationalError as except_msg:

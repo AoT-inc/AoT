@@ -20,6 +20,7 @@
 """
 import ast
 import os
+import time
 import unittest
 
 from flask import Flask
@@ -114,6 +115,160 @@ class TestAllDeletePathsGoThroughTheGateway(unittest.TestCase):
                 offenders.append(path)
         self.assertEqual(sorted(set(offenders)), [],
                          '장치 삭제 경로가 도형을 직접 지운다: %s' % offenders)
+
+
+# 사용자 코드 파일을 만드는 종류만 대상이다 — PID·Trigger·시퀀스는 파이썬
+# 코드를 저장하지 않으므로 지울 파일도 없다.
+USER_CODE_DELETE_PATHS = [
+    ('aot/aot_flask/utils/utils_input.py', 'input_del'),
+    ('aot/aot_flask/utils/utils_output.py', 'output_del'),
+    ('aot/aot_flask/utils/utils_conditional.py', 'conditional_del'),
+    ('aot/aot_flask/utils/utils_controller.py', 'controller_del'),
+    ('aot/aot_flask/utils/utils_settings.py', 'settings_diagnostic_delete_inputs'),
+    ('aot/aot_flask/utils/utils_settings.py', 'settings_diagnostic_delete_outputs'),
+    # 탭 삭제 연쇄. 처음 이 가드를 쓸 때 여기를 빠뜨렸는데, 로컬에 고아
+    # conditional 파일 5개가 남아 있는 것을 보고 되짚어 찾았다 — 목록이
+    # 불완전하면 가드가 통과하면서도 같은 구멍이 남는다.
+    ('aot/services/tab_service.py', '_delete_input_entry'),
+    ('aot/services/tab_service.py', '_delete_output_entry'),
+    ('aot/services/tab_service.py', '_delete_conditional_entry'),
+    ('aot/services/tab_service.py', '_delete_custom_controller_entry'),
+]
+
+
+class TestUserCodeFilesAreDeletedWithTheDevice(unittest.TestCase):
+    """장치를 지우면 그 장치의 사용자 코드 파일도 사라져야 한다.
+
+    2026-08-14 운영에서 발견: 출력 삭제가 `user_python_code/output_*.py` 를
+    하나도 지우지 않아 고아 파일 3개가 남아 있었다. 그 파일에는 실제 장치
+    uuid 와 output_on/output_off 호출이 그대로 들어 있었다. DB 행이 없어
+    실행되지는 않지만(데몬은 Output 행을 보고 실행한다), 지워진 설비의 제어
+    코드가 디스크에 남는 것 자체가 위생 문제다.
+
+    당시 정리하던 곳은 6경로 중 둘뿐이었고 그마저 서로 다른 파일에 인라인으로
+    복제돼 있었다 — `end_all_for_device` 와 똑같은 모양의 배선 누락이라,
+    똑같이 소스 수준에서 고정한다.
+    """
+
+    def test_every_path_calls_the_shared_helper(self):
+        missing = []
+        for path, func in USER_CODE_DELETE_PATHS:
+            calls = _calls_in(path, func)
+            if not calls:
+                missing.append('%s:%s (함수를 찾지 못함)' % (path, func))
+            elif 'delete_python_file' not in calls:
+                missing.append('%s:%s' % (path, func))
+        self.assertEqual(missing, [],
+                         '이 삭제 경로가 사용자 코드 파일을 남긴다: %s' % missing)
+
+    def test_no_inline_os_remove_of_user_code(self):
+        """이름 규약을 인라인으로 다시 쓰지 말 것 — 한 벌만 고치면 갈린다."""
+        offenders = []
+        for path, _func in USER_CODE_DELETE_PATHS:
+            text = open(os.path.join(ROOT, path), encoding='utf-8').read()
+            if 'PATH_PYTHON_CODE_USER' in text and 'os.remove' in text:
+                offenders.append(path)
+        self.assertEqual(sorted(set(offenders)), [],
+                         '사용자 코드 파일을 직접 지운다(헬퍼를 쓸 것): %s' % offenders)
+
+    def test_helper_covers_every_kind_that_writes_code(self):
+        """파일을 만드는 종류는 전부 지우는 표에도 있어야 한다."""
+        from aot.utils.code_verification import USER_CODE_FILENAME
+        self.assertEqual(sorted(USER_CODE_FILENAME),
+                         ['conditional', 'input', 'output'])
+        # 생성 쪽 이름과 실제로 일치하는지 — 출력은 'output_<id>.py' 다
+        # (aot/outputs/on_off_python.py · pwm_python.py 의 file_run).
+        self.assertEqual(USER_CODE_FILENAME['output'], 'output_{}.py')
+        self.assertEqual(USER_CODE_FILENAME['input'],
+                         'input_python_code_{}.py')
+        self.assertEqual(USER_CODE_FILENAME['conditional'],
+                         'conditional_{}.py')
+
+
+class TestStartupPurgesOrphanUserCode(unittest.TestCase):
+    """기동 자가정리 — 이미 생긴 고아는 배포본이 스스로 걷어낸다.
+
+    삭제 경로를 고쳐도 **이미 남은 고아는 사라지지 않는다.** 그것을 운영자가
+    서버에 들어가 지우게 하거나 사용자에게 안내하는 것은 해법이 아니다 —
+    코드가 만든 쓰레기는 코드가 치운다.
+
+    여기서 지키는 것은 "지운다" 보다 **"살아 있는 것을 안 지운다"** 다.
+    오판으로 멀쩡한 장치의 코드를 날리면 되돌릴 방법이 없다.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.app = _make_app()
+        self.ctx = self.app.app_context()
+        self.ctx.push()
+        db.create_all()
+        self.dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        db.session.remove()
+        db.drop_all()
+        self.ctx.pop()
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _write(self, name, age_sec):
+        path = os.path.join(self.dir, name)
+        with open(path, 'w') as fh:
+            fh.write('# t\n')
+        stamp = time.time() - age_sec
+        os.utime(path, (stamp, stamp))
+        return path
+
+    def _purge(self):
+        # 모듈이 import 시점에 상수를 바인딩하므로 config 가 아니라 그 모듈의
+        # 이름을 바꿔야 한다.
+        from aot.utils import code_verification as cv
+        original = cv.PATH_PYTHON_CODE_USER
+        cv.PATH_PYTHON_CODE_USER = self.dir
+        try:
+            cv.purge_orphan_user_code()
+        finally:
+            cv.PATH_PYTHON_CODE_USER = original
+
+    def test_live_device_file_is_never_removed(self):
+        out = Output(unique_id='live-0001')
+        db.session.add(out)
+        db.session.commit()
+        keep = self._write('output_live-0001.py', 3600)
+        self._purge()
+        self.assertTrue(os.path.exists(keep),
+                        '살아 있는 장치의 코드를 지웠다')
+
+    def test_orphan_is_removed(self):
+        db.session.add(Output(unique_id='live-0001'))
+        db.session.commit()
+        gone = self._write('output_dead-0002.py', 3600)
+        self._purge()
+        self.assertFalse(os.path.exists(gone))
+
+    def test_freshly_written_file_is_left_alone(self):
+        """저장 도중 기동이 겹치는 경우를 배제한다."""
+        db.session.add(Output(unique_id='live-0001'))
+        db.session.commit()
+        fresh = self._write('output_dead-0003.py', 5)
+        self._purge()
+        self.assertTrue(os.path.exists(fresh))
+
+    def test_unrelated_files_are_left_alone(self):
+        db.session.add(Output(unique_id='live-0001'))
+        db.session.commit()
+        other = self._write('README.txt', 3600)
+        init = self._write('__init__.py', 3600)
+        self._purge()
+        self.assertTrue(os.path.exists(other))
+        self.assertTrue(os.path.exists(init))
+
+    def test_empty_database_deletes_nothing(self):
+        """장치가 하나도 없으면 판단 근거가 없다 — 전량 삭제로 가면 안 된다."""
+        survivor = self._write('output_dead-0004.py', 3600)
+        self._purge()
+        self.assertTrue(os.path.exists(survivor),
+                        '장치 목록이 비었는데 파일을 지웠다')
 
 
 class TestDeletionKeepsAssets(unittest.TestCase):

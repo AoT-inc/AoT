@@ -7,7 +7,6 @@ import sqlalchemy
 # 번역 기능 사용하지 않으므로 gettext 대신 한글 문자열을 직접 사용합니다.
 # from flask_babel import gettext
 
-from aot.config import PATH_PYTHON_CODE_USER
 from aot.config_translations import TRANSLATIONS
 from aot.databases.models import CustomController
 from aot.databases.models import DeviceMeasurements
@@ -280,13 +279,8 @@ def controller_del(cond_id):
                 action=TRANSLATIONS['delete']['title'],
                 controller=TRANSLATIONS['controller']['title']))
 
-            try:
-                file_path = os.path.join(
-                    PATH_PYTHON_CODE_USER, 'conditional_{}.py'.format(
-                        cond.unique_id))
-                os.remove(file_path)
-            except:
-                pass
+            from aot.utils.code_verification import delete_python_file
+            delete_python_file('conditional', cond.unique_id)
 
             db.session.commit()
     except sqlalchemy.exc.OperationalError as except_msg:

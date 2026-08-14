@@ -356,6 +356,11 @@ class AoTDataToolService:
 
         `measurement_type` 으로 좁히는 것을 권한다 — 안 주면 그 구역의 모든
         측정이 딸려 와 답이 길어진다.
+
+        한 장치가 채널을 여럿 갖고 같은 `measurement` 라벨을 공유할 수 있다
+        (예: 토양센서의 대기 채널과 토양 채널이 둘 다 "temperature"). 그래서
+        각 항목에 `channel` 을 함께 싣는다 — 라벨만으로는 어느 채널인지
+        구분되지 않는다.
         """
         try:
             from aot.utils.influx import read_influxdb_list
@@ -445,7 +450,7 @@ class AoTDataToolService:
                     'min': min(vals), 'max': max(vals),
                     'avg': sum(vals) / len(vals), 'count': len(vals)}
 
-            zones_out, skipped = [], 0
+            zones_out, skipped = [], []
             for shape, ids in per_zone:
                 readings = []
                 for did in sorted(ids):
@@ -457,6 +462,7 @@ class AoTDataToolService:
                         readings.append({
                             "device_id": did,
                             "device_name": names.get(did) or did,
+                            "channel": channel,
                             "measurement": meas, "unit": unit,
                             "last_value": round(v, 2),
                             "last_time": (t.isoformat() if hasattr(t, 'isoformat')
@@ -466,7 +472,11 @@ class AoTDataToolService:
                                       "avg": round(s['avg'], 2),
                                       "count": s['count']}})
                 if not readings:
-                    skipped += 1
+                    # zone_id/zone_name 을 여기서 담아 둔다 — 개수만 세면 호출자가
+                    # 요청 목록과 응답 목록을 직접 대조해야 "어느 구역인지" 알 수
+                    # 있고, 센서가 아예 없던 구역은 이름 조회 기회조차 없다.
+                    skipped.append({"zone_id": shape.unique_id,
+                                    "zone_name": AoTDataToolService._shape_display_name(shape)})
                     continue
                 zones_out.append({
                     "zone_id": shape.unique_id,

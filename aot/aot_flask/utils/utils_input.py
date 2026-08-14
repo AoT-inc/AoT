@@ -13,7 +13,6 @@ _ = gettext
 from sqlalchemy import and_
 from sqlalchemy import or_
 
-from aot.config import PATH_PYTHON_CODE_USER
 from aot.config_translations import TRANSLATIONS
 from aot.databases import clone_model
 from aot.databases import set_uuid
@@ -802,12 +801,8 @@ def input_del(input_id):
         # 지웠다(임실군 62도형). 지도 삭제는 geo/design 에서 명시적으로만.
 
 
-        try:
-            file_path = os.path.join(
-                PATH_PYTHON_CODE_USER, f'input_python_code_{input_dev.unique_id}.py')
-            os.remove(file_path)
-        except:
-            pass
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('input', input_dev.unique_id)
 
         db.session.commit()
         messages["success"].append(

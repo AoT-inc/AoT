@@ -15,7 +15,6 @@ from flask import current_app
 from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
-from aot.config import PATH_PYTHON_CODE_USER
 
 logger = logging.getLogger(__name__)
 
@@ -550,13 +549,8 @@ class TabService:
         # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도
         # 지도는 남는다. 지도 삭제는 geo/design 에서 명시적으로만.
         
-        # Delete Python code file
-        try:
-            file_path = os.path.join(PATH_PYTHON_CODE_USER, f'input_python_code_{input_id}.py')
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception as e:
-            logger.warning(f"Could not delete Python code file for Input {input_id}: {e}")
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('input', input_id)
     
     @staticmethod
     def _delete_output_entry(output_id: str):
@@ -599,6 +593,13 @@ class TabService:
                 manipulate_output('Delete', output_id)
             except Exception as e:
                 logger.warning(f"Could not notify daemon about Output deletion {output_id}: {e}")
+
+        # 사용자 코드 파일은 데몬이 이 출력을 놓은 **뒤에** 지운다 — 위
+        # manipulate_output('Delete') 가 컨트롤러를 내리며 off 코드를 실행할 수
+        # 있어, 그 앞에서 지우면 정지 경로가 깨질 수 있다(utils_output.output_del
+        # 과 같은 순서).
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('output', output_id)
     
     @staticmethod
     def _delete_trigger_entry(trigger_id: str):
@@ -657,13 +658,8 @@ class TabService:
         end_all_for_device(conditional_id)
         delete_entry_with_id(Conditional, conditional_id, flash_message=False)
         
-        # Delete Python code file
-        try:
-            file_path = os.path.join(PATH_PYTHON_CODE_USER, f'conditional_{conditional_id}.py')
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception as e:
-            logger.warning(f"Could not delete Python code file for Conditional {conditional_id}: {e}")
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('conditional', conditional_id)
     
     @staticmethod
     def _delete_pid_entry(pid_id: str):
@@ -728,13 +724,8 @@ class TabService:
         # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도
         # 지도는 남는다. 지도 삭제는 geo/design 에서 명시적으로만.
         
-        # Delete Python code file
-        try:
-            file_path = os.path.join(PATH_PYTHON_CODE_USER, f'conditional_{controller_id}.py')
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception as e:
-            logger.warning(f"Could not delete Python code file for CustomController {controller_id}: {e}")
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('conditional', controller_id)
     
     @staticmethod
     def _delete_function_entry(function_id: str):

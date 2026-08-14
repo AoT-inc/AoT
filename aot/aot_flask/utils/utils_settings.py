@@ -2343,6 +2343,8 @@ def settings_diagnostic_delete_inputs():
                 # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
                 from aot.aot_flask.geo.device_binding import end_all_for_device
                 end_all_for_device(each_input.unique_id)
+                from aot.utils.code_verification import delete_python_file
+                delete_python_file('input', each_input.unique_id)
                 # Delete the input
                 db.session.delete(each_input)
             display_order.input = ''  # Clear the order
@@ -2428,6 +2430,8 @@ def settings_diagnostic_delete_outputs():
                 # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
                 from aot.aot_flask.geo.device_binding import end_all_for_device
                 end_all_for_device(each_output.unique_id)
+                from aot.utils.code_verification import delete_python_file
+                delete_python_file('output', each_output.unique_id)
                 db.session.delete(each_output)
                 db.session.commit()
             display_order.output = ''

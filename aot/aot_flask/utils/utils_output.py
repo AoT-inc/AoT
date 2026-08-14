@@ -675,6 +675,12 @@ def output_del(form_output):
                 'Delete', form_output.output_id.data)
             messages["error"].extend(new_messages["error"])
             messages["success"].extend(new_messages["success"])
+
+        # 사용자 코드 파일은 데몬이 이 출력을 놓은 **뒤에** 지운다 — 위
+        # manipulate_output('Delete') 가 컨트롤러를 내리면서 off 코드를
+        # 실행할 수 있으므로, 그 앞에서 파일을 지우면 정지 경로가 깨진다.
+        from aot.utils.code_verification import delete_python_file
+        delete_python_file('output', output_id)
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 

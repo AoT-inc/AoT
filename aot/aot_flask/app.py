@@ -473,6 +473,12 @@ def register_extensions(app):
             except Exception as _bg_err:
                 logger.warning("[Startup] bootstrap_ai_glossary failed: %s", _bg_err)
 
+            # 지워진 장치의 사용자 코드 파일을 걷어낸다. 배포된 서버가 스스로
+            # 낫게 하는 것이 목적이다 — 고아를 남긴 것은 코드의 잘못이므로,
+            # 그 뒷정리를 운영자나 사용자에게 시켜서는 안 된다.
+            from aot.utils.code_verification import purge_orphan_user_code
+            purge_orphan_user_code()
+
             # Ensure AoT system MCP server entry exists and is active on every startup
             try:
                 from aot.databases.models.mcp_server import MCPServer
