@@ -1,11 +1,12 @@
 import logging
+import re
 from aot.utils.time_utils import utc_now, to_local, serialize_ts
 from aot.utils.tz_utils import now_utc, to_utc
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 
 from aot.aot_flask.extensions import db
-from aot.databases.models import Input, Output, Camera, GeoShape, GeoLayer, DeviceMeasurements, Conversion, EnergyUsage, Misc, Notes, AITask
+from aot.databases.models import Input, Output, Camera, GeoShape, GeoLayer, DeviceMeasurements, Conversion, EnergyUsage, Misc, Notes, AITask, CustomController
 from aot.ai.services.ai_context_service import AIContextService
 from aot.ai.services.ai_action_service import AIActionService
 from aot.utils.command_origin import TYPE_AI
@@ -16,6 +17,20 @@ from aot.utils.tools import return_energy_usage
 from aot.utils.system_pi import return_measurement_info
 
 logger = logging.getLogger(__name__)
+
+
+_UUID_RE = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
+
+
+def _looks_like_uuid(value):
+    """uuid 꼴인가 — 이름 기반 폴백을 건너뛸지 판정한다.
+
+    이름 부분일치는 사람이 말한 이름('1포장')을 위한 것인데, uuid 를 그 자리에
+    넣으면 우연한 문자열 포함으로 엉뚱한 도형이 걸린다. uuid 로 물어 못 찾았다면
+    "없다" 가 정답이다.
+    """
+    return bool(_UUID_RE.match(str(value).strip()))
 
 
 def _devices_on_map_p2(map_uuid):
@@ -79,7 +94,8 @@ class AoTDataToolService:
             return False, f"Error while checking InfluxDB: {str(e)}"
 
     @staticmethod
-    def _get_last_values_fallback(target_input, device_measurements):
+    def _get_last_values_fallback(target_input, device_measurements,
+                                  is_function=False):
         """InfluxDB 사용 불가 시 read_influxdb_single(LAST)로 최신 값만 시도합니다."""
         from aot.utils.influx import read_influxdb_single
         results = []
@@ -104,6 +120,7 @@ class AoTDataToolService:
                             pass
                     results.append({
                         "device_name": target_input.name or target_input.unique_id,
+                        "device_kind": "function" if is_function else "input",
                         "measurement": measurement or m.measurement,
                         "last_value": round(last[1], 2),
                         "last_time": _t.isoformat() if hasattr(_t, 'isoformat') else str(_t),
@@ -131,6 +148,17 @@ class AoTDataToolService:
                     Input.unique_id.in_(_devices_on_map_p2(loc_id)))
             ).first()
 
+            # 집계 함수(VPD·평균·Equation 등)는 CustomController 로 살지만
+            # DeviceMeasurements 와 InfluxDB 기록은 Input 과 같은 규약을 쓴다
+            # (write_influxdb_value(self.unique_id, ...)). 아래 측정 조회는
+            # unique_id/name 만 보므로 그대로 통한다. 이 분기가 없으면 사람이
+            # 화면에서 만들어 둔 함수 값을 AI 가 "그런 장치 없다" 로 답한다.
+            is_function = False
+            if not target_input:
+                target_input = CustomController.query.filter_by(
+                    unique_id=loc_id).first()
+                is_function = target_input is not None
+
             if not target_input:
                 # 구역인 경우 (unique_id 또는 geo_id 지원)
                 target_zone = GeoShape.query.filter(
@@ -139,7 +167,13 @@ class AoTDataToolService:
                 # [WEATHER_TOOL_UNIFICATION] Name-based fallback: loc_id may be a zone name (e.g. '1포장')
                 # not a UUID. Match by feature.properties.name so both get_sensor_detail and
                 # get_weather behave consistently regardless of which tool the AI selects.
-                if not target_zone and loc_id:
+                # 부분일치가 양방향(`_sname in _loc_lower`)이라 한 글자 구역
+                # 이름('2')이 uuid 안에 우연히 들어 있기만 해도 걸린다. 실측에서
+                # 함수 uuid 8개 중 7개가 엉뚱한 Zone '2'/'1' 로 해소돼, 묻지도
+                # 않은 구역을 답으로 내놓았다. 길이로 막으면 이름이 한 글자인
+                # 구역(로컬에 4개 실재)을 이름으로 못 찾으므로, 위 주석이 이미
+                # 말하는 전제 — "loc_id 가 uuid 가 아닐 때" — 를 실제로 건다.
+                if not target_zone and loc_id and not _looks_like_uuid(loc_id):
                     import json as _json_sd
                     _loc_lower = str(loc_id).strip().lower()
                     for _shape in GeoShape.query.all():
@@ -214,7 +248,8 @@ class AoTDataToolService:
             if not influx_ok:
                 logger.warning(f"[AoTDataTool] InfluxDB 사용 불가: {influx_msg}")
                 # 폴백: 최신 값이라도 반환 시도
-                fallback = AoTDataToolService._get_last_values_fallback(target_input, device_measurements)
+                fallback = AoTDataToolService._get_last_values_fallback(
+                    target_input, device_measurements, is_function=is_function)
                 if fallback:
                     return {
                         "warning": f"InfluxDB unavailable ({influx_msg}). Only the latest value is provided.",
@@ -265,6 +300,9 @@ class AoTDataToolService:
                     _keep = int(limit) if limit else 20
                     results.append({
                         "device_name": target_input.name or target_input.unique_id,
+                        # 함수 값은 계산된 것(예: 센서 여럿의 평균, VPD)이다.
+                        # 구분해 내보내지 않으면 직접 잰 값으로 보고된다.
+                        "device_kind": "function" if is_function else "input",
                         "measurement": measurement or m.measurement,
                         "readings": readings[-_keep:],  # limit 파라미터로 조절 (기본 20건)
                         "total_readings": len(readings),
@@ -289,6 +327,166 @@ class AoTDataToolService:
         except Exception as e:
             logger.exception("Error in get_sensor_detail")
             return {"error": f"Error while querying sensor data: {str(e)}"}
+
+    @staticmethod
+    def _shape_display_name(shape):
+        import json as _json
+        feat = shape.feature
+        if isinstance(feat, str):
+            try:
+                feat = _json.loads(feat or '{}')
+            except Exception:
+                feat = {}
+        props = (feat or {}).get('properties') or {} if isinstance(feat, dict) else {}
+        return (props.get('name') or props.get('label')
+                or props.get('label_name') or props.get('title') or '').strip()
+
+    @staticmethod
+    def get_zone_sensor_summary(zone_ids=None, measurement_type=None,
+                                time_range="7d", **extra):
+        """[읽기전용] 여러 구역의 센서 최신값 + 기간 통계를 한 번에.
+
+        "밭 전체에서 어디가 마른가" 류 질문은 구역마다 get_sensor_detail 을
+        반복해야 했다. 이 도구는 그것을 한 호출로 접는다.
+
+        **함수를 만들지 않는다.** 대상도 기간도 질문마다 달라 고정 계산기로는
+        답할 수 없으므로, aot/utils/influx.py 의 무상태 헬퍼를 그때그때 조합해
+        계산만 하고 아무것도 남기지 않는다(집계 Function 은 제어 입력이나 이력
+        보존이 필요할 때 사람이 만든다).
+
+        `measurement_type` 으로 좁히는 것을 권한다 — 안 주면 그 구역의 모든
+        측정이 딸려 와 답이 길어진다.
+        """
+        try:
+            from aot.utils.influx import read_influxdb_list
+            from aot.aot_flask.geo.device_membership import device_ids_in_area
+
+            past_sec = AoTDataToolService._parse_range(time_range)
+
+            if isinstance(zone_ids, str):
+                zone_ids = [zone_ids]
+            if zone_ids:
+                shapes = GeoShape.query.filter(
+                    GeoShape.unique_id.in_(list(zone_ids))).all()
+                missing = set(zone_ids) - {s.unique_id for s in shapes}
+                if missing and not shapes:
+                    return {"error": "zone not found: %s" % ', '.join(sorted(missing))}
+            else:
+                shapes = [s for s in GeoShape.query.filter(
+                    GeoShape.type.in_(('site', 'zone'))).order_by(GeoShape.id).all()
+                    if AoTDataToolService._shape_display_name(s)]
+            if not shapes:
+                return {"error": "no zone/site found"}
+
+            wanted = (AoTDataToolService._device_ids_with_measurement(measurement_type)
+                      if measurement_type else None)
+
+            # 1) 구역 → 장치. 2) 장치 → 측정 채널. 여기까지가 SQL 이다.
+            per_zone, all_ids = [], set()
+            for shape in shapes:
+                ids = device_ids_in_area(shape.unique_id) or set()
+                if wanted is not None:
+                    ids = ids & wanted
+                if ids:
+                    all_ids |= ids
+                per_zone.append((shape, ids))
+
+            if not all_ids:
+                return {"count": 0, "zones": [],
+                        "message": ("No sensor with that measurement was found in "
+                                    "the requested area." if measurement_type else
+                                    "No sensor was found in the requested area.")}
+
+            mq = DeviceMeasurements.query.filter(
+                DeviceMeasurements.device_id.in_(list(all_ids)))
+            if measurement_type:
+                mq = mq.filter(DeviceMeasurements.measurement.like(
+                    "%%%s%%" % str(measurement_type).strip()))
+            chans = mq.all()
+
+            names = {i.unique_id: i.name for i in Input.query.filter(
+                Input.unique_id.in_(list(all_ids))).all()}
+
+            specs, by_device = [], {}
+            for m in chans:
+                conv = (Conversion.query.filter(
+                    Conversion.unique_id == m.conversion_id).first()
+                    if m.conversion_id else None)
+                channel, unit, meas = return_measurement_info(m, conv)
+                if not unit:
+                    continue
+                specs.append((unit, m.device_id, channel, meas))
+                by_device.setdefault(m.device_id, []).append(
+                    (unit, channel, meas))
+
+            # 3) 채널마다 한 번씩 읽고 통계는 여기서 센다.
+            #
+            # **벌크 Flux 로 접지 말 것.** 시리즈를 device_id 집합(`contains`)으로
+            # 거르는 쿼리는 인덱스로 내려가지 않아 전량 스캔이 된다 — 실측(센서
+            # 5개·7일): query_last_values_bulk 3,612ms · reduce 통계 3,045ms 대
+            # 개별 read_influxdb_list 5회 합계 **169ms**. `contains` 벌크가 이기는
+            # 것은 장치가 수십 개이고 창이 짧을 때다(query_last_values_bulk
+            # docstring 의 지도 위젯 사례). 여기 워크로드는 그 반대다.
+            series, degraded = {}, False
+            for unit, did, channel, meas in specs:
+                rows = read_influxdb_list(did, unit, channel, measure=meas,
+                                          duration_sec=past_sec,
+                                          datetime_obj=True)
+                if rows is None:
+                    degraded = True
+                    continue
+                if not rows:
+                    continue
+                vals = [r[1] for r in rows if r[1] is not None]
+                if not vals:
+                    continue
+                series[(did, channel, meas)] = {
+                    'last': rows[-1], 'unit': unit,
+                    'min': min(vals), 'max': max(vals),
+                    'avg': sum(vals) / len(vals), 'count': len(vals)}
+
+            zones_out, skipped = [], 0
+            for shape, ids in per_zone:
+                readings = []
+                for did in sorted(ids):
+                    for unit, channel, meas in by_device.get(did, []):
+                        s = series.get((did, channel, meas))
+                        if s is None:
+                            continue
+                        t, v = s['last']
+                        readings.append({
+                            "device_id": did,
+                            "device_name": names.get(did) or did,
+                            "measurement": meas, "unit": unit,
+                            "last_value": round(v, 2),
+                            "last_time": (t.isoformat() if hasattr(t, 'isoformat')
+                                          else str(t)),
+                            "stats": {"min": round(s['min'], 2),
+                                      "max": round(s['max'], 2),
+                                      "avg": round(s['avg'], 2),
+                                      "count": s['count']}})
+                if not readings:
+                    skipped += 1
+                    continue
+                zones_out.append({
+                    "zone_id": shape.unique_id,
+                    "zone_name": AoTDataToolService._shape_display_name(shape),
+                    "zone_type": shape.type,
+                    "sensors": readings})
+
+            out = {"count": len(zones_out), "time_range": time_range,
+                   "zones": zones_out}
+            if measurement_type:
+                out["measurement_type"] = measurement_type
+            if skipped:
+                out["zones_without_data"] = skipped
+            if degraded:
+                out["warning"] = ("InfluxDB returned nothing for any series — "
+                                  "this may be a read failure, not an absence of data.")
+            return out
+        except Exception as e:
+            logger.exception("Error in get_zone_sensor_summary")
+            return {"error": str(e)}
 
     @staticmethod
     def get_spatial_tree(depth=2, filter_type=None):
@@ -373,7 +571,36 @@ class AoTDataToolService:
         return results
 
     @staticmethod
-    def search_devices(query):
+    def _annotate_device_zone(results):
+        """결과에 소속 구역 이름을 제자리에서 채운다(있는 것만)."""
+        try:
+            from aot.ai.services.ai_context_service import AIContextService
+            zmap = AIContextService.get_device_zone_map()
+        except Exception:
+            return results
+        for r in results:
+            if r.get('type') in ('input', 'output') and zmap.get(r.get('id')):
+                r['zone'] = zmap[r['id']]
+        return results
+
+    @staticmethod
+    def _device_ids_with_measurement(measurement_type):
+        """그 측정을 **실제로 가진** 장치 id 집합. 이름은 보지 않는다.
+
+        이름으로 센서를 찾는 것은 믿을 수 없다 — 같은 토양수분 센서가
+        '토양온습도_1' 이기도 '온습도_1' 이기도 하다. 그래서 후보를 이름으로
+        추려 놓고 장치마다 get_device_measurements 를 불러 채널을 확인하는
+        왕복이 생겼다(실측 7회). DeviceMeasurements.measurement 로 한 번에
+        거르면 그 왕복 전체가 사라진다.
+        """
+        like = "%%%s%%" % str(measurement_type).strip()
+        rows = DeviceMeasurements.query.with_entities(
+            DeviceMeasurements.device_id).filter(
+                DeviceMeasurements.measurement.like(like)).all()
+        return {r[0] for r in rows if r[0]}
+
+    @staticmethod
+    def search_devices(query=None, measurement_type=None):
         """
         이름 또는 타입으로 장치를 검색합니다.
         v2: Multi-token query expansion.
@@ -382,12 +609,48 @@ class AoTDataToolService:
           - Loads term aliases from AIDomainGlossary (category='term_alias')
             to handle user-specific terms (e.g. "1포장" → "1구역").
           - Deduplicates results by unique_id.
+        v3: measurement_type 필터.
+          - 그 측정을 실제로 가진 장치만 남긴다(이름 무관).
+          - query 없이 단독으로도 쓴다 — "토양수분 센서 전부" 가 한 번에 온다.
+          - query 와 함께 주면 교집합("1포장 안의 토양수분 센서").
         """
-        if not query:
-            return {"error": "Query string is empty"}
+        if not query and not measurement_type:
+            return {"error": "query or measurement_type is required"}
 
         try:
             import re
+
+            candidate_ids = None
+            if measurement_type:
+                candidate_ids = AoTDataToolService._device_ids_with_measurement(
+                    measurement_type)
+                if not candidate_ids:
+                    return {"results": [], "count": 0,
+                            "message": ("No device has a measurement matching "
+                                        "'%s'." % measurement_type)}
+
+            # 측정 종류만 물은 경우. 이름 검색 경로(토큰 확장·별칭·구역 확장)를
+            # 태울 근거가 없으므로 후보를 그대로 낸다.
+            if not query:
+                results = []
+                for item in Input.query.filter(
+                        Input.unique_id.in_(list(candidate_ids))).all():
+                    results.append({"id": item.unique_id, "name": item.name,
+                                    "type": "input", "device": item.device})
+                for item in Output.query.filter(
+                        Output.unique_id.in_(list(candidate_ids))).all():
+                    results.append({"id": item.unique_id, "name": item.name,
+                                    "type": "output", "device": item.output_type})
+                # 집계 함수(VPD·평균 등)도 자기 측정 채널을 갖는다. 빼면
+                # measurement_type='vapor_pressure_deficit' 이 0건이 되는데,
+                # get_sensor_detail 은 그 값을 읽을 수 있다(찾을 수만 없다).
+                for item in CustomController.query.filter(
+                        CustomController.unique_id.in_(list(candidate_ids))).all():
+                    results.append({"id": item.unique_id, "name": item.name,
+                                    "type": "function", "device": item.device})
+                results = AoTDataToolService._annotate_device_zone(results)
+                results = AoTDataToolService._annotate_device_membership(results)
+                return {"results": results, "count": len(results)}
 
             def _normalize_variants(term):
                 """Generate search variants for a term to handle spacing differences.
@@ -466,7 +729,9 @@ class AoTDataToolService:
                 # 행. PLC 처럼 "장치 하나"로 물어보면 그 자체가 검색되고,
                 # member_ids 로 하위 Input/Output 을 바로 가리킬 수 있다.
                 try:
-                    from aot.databases.models.controller import CustomController
+                    # CustomController 는 모듈 상단에서 임포트한다. 여기서 다시
+                    # 지역 임포트하면 그 이름이 함수 전체의 지역변수가 되어,
+                    # 이 블록보다 앞에서 쓰는 자리가 UnboundLocalError 로 죽는다.
                     from aot.utils.functions import device_module_names
                     _dev_names = device_module_names()
                     if _dev_names:
@@ -605,6 +870,12 @@ class AoTDataToolService:
                     results = [r for r in results
                                if r.get('type') not in ('input', 'output')
                                or r.get('zone') in allowed_zones]
+
+            if candidate_ids is not None:
+                # 이름 검색이 끝난 뒤에 거른다 — 구역 확장까지 마친 집합에
+                # 걸어야 "1포장 안의 토양수분 센서" 가 성립한다. 측정을 갖지
+                # 않는 종류(구역·카메라)는 이 질문의 답이 아니므로 함께 빠진다.
+                results = [r for r in results if r.get('id') in candidate_ids]
 
             results = AoTDataToolService._annotate_device_membership(results)
             return {"results": results, "count": len(results)}
@@ -2670,7 +2941,11 @@ class AoTDataToolService:
             target_shape = None
             if zone_id:
                 target_shape = GeoShape.query.filter_by(unique_id=zone_id).first()
-            if not target_shape and zone_name:
+            # uuid 를 이름 자리에 넣으면 부분일치가 엉뚱한 도형을 잡는다 —
+            # 여기서는 그 도형의 **좌표**까지 돌려주고 "이 좌표로 날씨를 조회
+            # 하라" 고 시키므로, 오답이 다음 단계로 조용히 이어진다.
+            # (get_sensor_detail 의 같은 폴백과 같은 이유·같은 가드)
+            if not target_shape and zone_name and not _looks_like_uuid(zone_name):
                 _zn = zone_name.strip().lower()
                 for shape in GeoShape.query.all():
                     try:
@@ -7071,9 +7346,12 @@ class AoTDataToolService:
     @staticmethod
     def _planting_brief(row, with_sensors=False, row_spacing_cm=None,
                         plant_spacing_cm=None, edge_margin_cm=None,
-                        bed_pitch_cm=None, rows_per_bed=None):
+                        bed_pitch_cm=None, rows_per_bed=None,
+                        containers=None, markers=None, with_valves=None):
         from aot.aot_flask.geo import planting_context
-        d = planting_context.to_dict(row, with_sensors=with_sensors)
+        d = planting_context.to_dict(row, with_sensors=with_sensors,
+                                     containers=containers, markers=markers,
+                                     with_valves=with_valves)
         # feature 전체(좌표 수백 개)는 LLM 컨텍스트에 실을 이유가 없다.
         d.pop('feature', None)
         # 다만 면적 하나만 남기면 방향이 있는 질문("몇 줄 들어가나")에 답할 수
@@ -7092,11 +7370,17 @@ class AoTDataToolService:
         return d
 
     @staticmethod
-    def list_plantings(map_id=None, include_ended=False, on=None, **extra):
+    def list_plantings(map_id=None, include_ended=False, on=None,
+                       with_sensors=False, **extra):
         """[읽기전용] 식생 구획(작기) 목록 — 어디에 무엇이 심겨 있는가.
 
         기본은 **재배 중인 것만**. `include_ended=True` 면 종료된 작기까지
         준다(연작 판단용). `on='YYYY-MM-DD'` 로 과거 시점을 물을 수 있다.
+
+        `with_sensors=True` 면 구획마다 참조 센서(`in_plot`/`from_zone`/
+        `source`)를 함께 낸다. 밸브 교차는 **포함하지 않는다** — 그쪽이 비용의
+        대부분이고(실측 구획 8개: 센서 37 쿼리 · 밸브 120 쿼리) 목록에서 필요한
+        일이 드물다. 밸브가 필요하면 그 구획 하나만 `get_planting` 으로 본다.
         """
         try:
             from datetime import datetime
@@ -7124,7 +7408,25 @@ class AoTDataToolService:
                 for m in GeoMap.query.all():
                     rows.extend(planting_context.active_plantings(m.unique_id, on=as_of))
 
-            items = [AoTDataToolService._planting_brief(r) for r in rows]
+            # 지도 단위 사전 로드. 구획마다 컨테이너·마커를 다시 읽으면 구획
+            # 수만큼 전량 스캔이 반복된다 — 센서를 넣기 전부터 있던 N+1 이라,
+            # 여기서 캐시하지 않고 with_sensors 만 열면 오히려 더 나빠진다.
+            from aot.aot_flask.geo import device_membership as _dm
+            _containers, _markers = {}, {}
+
+            def _cached(m_uuid):
+                if m_uuid not in _containers:
+                    _containers[m_uuid] = _dm.load_containers(m_uuid)
+                    _markers[m_uuid] = (_dm.load_markers(m_uuid)
+                                        if with_sensors else None)
+                return _containers[m_uuid], _markers[m_uuid]
+
+            items = []
+            for r in rows:
+                _c, _mk = _cached(r.geo_id)
+                items.append(AoTDataToolService._planting_brief(
+                    r, with_sensors=with_sensors, with_valves=False,
+                    containers=_c, markers=_mk))
             return {"count": len(items), "plantings": items,
                     "note": ("Only plantings currently growing are listed. "
                              "Pass include_ended=true for history.")

@@ -494,7 +494,7 @@ def _only_sensor_ids(device_ids):
     return {r[0] for r in rows}
 
 
-def sensors_for_planting(planting, containers=None):
+def sensors_for_planting(planting, containers=None, markers=None):
     """구획이 참조할 장치 → `{'in_plot', 'from_zone', 'zone_uuid', 'source'}`.
 
     1순위는 구획 폴리곤 안의 장치, 없으면 소속 zone 의 장치다. 노지 zone 의
@@ -511,13 +511,13 @@ def sensors_for_planting(planting, containers=None):
     """
     in_plot = sorted(_only_sensor_ids(device_membership.device_ids_in_geometry(
         planting.geo_id, geometry_of(planting),
-        _label='planting %s' % planting.unique_id)))
+        _label='planting %s' % planting.unique_id, markers=markers)))
 
     zone = zone_for_planting(planting, containers=containers)
     from_zone = []
     if zone is not None:
         from_zone = sorted(_only_sensor_ids(
-            device_membership.device_ids_in_shape(zone)))
+            device_membership.device_ids_in_shape(zone, markers=markers)))
 
     if in_plot:
         source = 'plot'
@@ -777,8 +777,16 @@ def _has_overlap(geoms):
 # 직렬화
 # ---------------------------------------------------------------------------
 
-def to_dict(row, containers=None, with_sensors=False):
-    """GeoPlanting → API 응답 dict."""
+def to_dict(row, containers=None, with_sensors=False, markers=None,
+            with_valves=None):
+    """GeoPlanting → API 응답 dict.
+
+    `with_valves` 는 기본적으로 `with_sensors` 를 따른다 — 상세 조회의 기존
+    동작을 그대로 둔다. 목록처럼 **센서만** 필요한 자리는 `with_valves=False`
+    로 밸브 교차를 뺀다. 실측(구획 8개): 센서 37 쿼리 · 밸브 120 쿼리로 비용의
+    대부분이 밸브 쪽이라, 둘을 한 플래그로 묶어 두면 가벼운 센서까지 함께
+    막힌다.
+    """
     out = {
         'unique_id': row.unique_id,
         'geo_id': row.geo_id,
@@ -797,12 +805,15 @@ def to_dict(row, containers=None, with_sensors=False):
         'active': row.is_active(),
         'area_m2': round(area_m2(row), 1),
     }
+    if with_valves is None:
+        with_valves = with_sensors
     if with_sensors:
-        out['sensors'] = sensors_for_planting(row, containers=containers)
-        # 밸브 교차는 상세 조회에서만 낸다 — 목록에서 구획마다 지도 도형을
-        # 전량 훑으면 구획 수 × 도형 수가 된다.
-        out['valves'] = valves_for_planting(row)
+        out['sensors'] = sensors_for_planting(row, containers=containers,
+                                              markers=markers)
     else:
         zone = zone_for_planting(row, containers=containers)
         out['zone_uuid'] = zone.unique_id if zone is not None else None
+    if with_valves:
+        # 목록에서 구획마다 지도 도형을 전량 훑으면 구획 수 × 도형 수가 된다.
+        out['valves'] = valves_for_planting(row)
     return out

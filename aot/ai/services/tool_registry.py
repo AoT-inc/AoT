@@ -190,8 +190,20 @@ TOOLS: List[Tool] = [
     Tool('search_devices', handler='search_devices', manifest={
         "tool_name": "search_devices",
         "action_type": "virtual_tool_call",
-        "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — results of type 'device' list its member_ids, and any input/output result belonging to one carries parent_device_id + parent_device_name. When a result has a parent device, prefer answering/acting at that device level rather than treating the input/output as standalone.",
-        "usage_hint": "Call with params.arguments.query='<keyword>'. Returns list of matching devices with their unique_ids.",
+        "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword, and/or by the measurement a device actually records. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — results of type 'device' list its member_ids, and any input/output result belonging to one carries parent_device_id + parent_device_name. When a result has a parent device, prefer answering/acting at that device level rather than treating the input/output as standalone.",
+        "usage_hint": "params.arguments: {query?: '<keyword>', measurement_type?: '<e.g. volumetric_water_content>'} — at least one. measurement_type finds every device that really records it regardless of its name; give both to intersect (e.g. query='1포장' + measurement_type='temperature'). Returns matching devices with their unique_ids.",
+    }),
+    # 구역 단위 집계. Function 을 만들지 않는다 — 대상·기간이 질문마다 달라
+    # 고정 계산기로는 답할 수 없고, influx.py 의 무상태 헬퍼를 조합해 계산만
+    # 하고 남기지 않는다. 읽기 전용이므로 승인 대상이 아니다.
+    Tool('get_zone_sensor_summary', handler='get_zone_sensor_summary', manifest={
+        "tool_name": "get_zone_sensor_summary",
+        "action_type": "virtual_tool_call",
+        "description": ("Latest reading plus period min/max/avg for the sensors of "
+                        "MANY zones in one call — use instead of looping "
+                        "get_sensor_detail per zone. Read-only."),
+        "usage_hint": ("params.arguments: {zone_ids?: [uuid,...], measurement_type?, "
+                       "time_range?: '24h'|'7d'} — omit zone_ids for every zone."),
     }),
     Tool('get_device_measurements', handler='get_device_measurements', manifest={
         "tool_name": "get_device_measurements",
@@ -368,8 +380,11 @@ TOOLS: List[Tool] = [
         "tool_name": "list_plantings",
         "action_type": "virtual_tool_call",
         "description": ("Lists vegetation plots (what crop is planted where). "
-                        "Growing plots only unless include_ended=true. Read-only."),
-        "usage_hint": "params.arguments: {map_id?, include_ended?, on?: 'YYYY-MM-DD'}",
+                        "Growing plots only unless include_ended=true. "
+                        "with_sensors=true adds each plot's sensors in one call. "
+                        "Read-only."),
+        "usage_hint": ("params.arguments: {map_id?, include_ended?, "
+                       "on?: 'YYYY-MM-DD', with_sensors?}"),
     }),
     Tool('get_planting', handler='get_planting', manifest={
         "tool_name": "get_planting",
@@ -885,13 +900,14 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 안 보이는 상태로 한참 헤맸다).
     {
         "tool_name": "list_plantings",
-        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_planting on the one plot. Read-only.",
+        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_planting on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_planting per plot — the reply then carries sensors.in_plot / sensors.from_zone / sensors.source for each plot, and 'source' says whether a reading is measured in that plot ('plot') or is its zone's representative value ('zone'), which you must pass on when reporting a number. Irrigation valves are NOT included here (they are the expensive part); call get_planting on the single plot when you need them. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "map_id": {"type": "string", "description": "Map (farm) unique_id. Omit for all maps."},
                 "include_ended": {"type": "boolean", "description": "Include finished plantings (history). Default: false."},
-                "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD' — what was growing on that day."}
+                "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD' — what was growing on that day."},
+                "with_sensors": {"type": "boolean", "description": "Include each plot's referenced sensors (in_plot / from_zone / source). Default false. Use this instead of calling get_planting once per plot when the question spans several plots ('which plots are too wet'). Valves are still excluded."}
             }
         }
     },
@@ -1146,14 +1162,26 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         }
     },
     {
-        "tool_name": "search_devices",
-        "description": "Search for devices (inputs, outputs, cameras, complex devices) by name or type keyword. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — its 'device' result lists member_ids, and any input/output belonging to one carries parent_device_id + parent_device_name.",
+        "tool_name": "get_zone_sensor_summary",
+        "description": "Latest reading plus period statistics (min/max/avg/count) for the sensors of MANY zones in ONE call. Use this whenever a question spans more than one zone or the whole farm — 'which plots are too dry', 'soil moisture across the farm', 'compare the zones' — instead of calling get_sensor_detail once per zone. Narrow it with measurement_type (e.g. 'volumetric_water_content' for soil moisture), otherwise every measurement in those zones comes back and the answer gets long. Zones with no matching sensor are left out and counted in 'zones_without_data'. If 'warning' is present the readings may be missing because InfluxDB could not be read, NOT because there is no data — say so rather than reporting zero. Read-only; it computes on the fly and stores nothing.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Search keyword for device name or type"}
-            },
-            "required": ["query"]
+                "zone_ids": {"type": "array", "items": {"type": "string"}, "description": "Zone/site unique_ids to report on. Omit for every named zone and site. Get ids from get_spatial_tree or resolve_target."},
+                "measurement_type": {"type": "string", "description": "Restrict to one measurement, e.g. 'volumetric_water_content' (soil moisture), 'temperature', 'humidity'. Substring match. Strongly recommended."},
+                "time_range": {"type": "string", "description": "Window for the statistics, e.g. '24h', '7d', '30d'. Default '7d'. The latest value is looked up within the same window."}
+            }
+        }
+    },
+    {
+        "tool_name": "search_devices",
+        "description": "Search for devices (inputs, outputs, cameras, complex devices) by name or type keyword, and/or by the measurement they actually record. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — its 'device' result lists member_ids, and any input/output belonging to one carries parent_device_id + parent_device_name. IMPORTANT: to find every sensor of a kind (all soil-moisture sensors, all thermometers), use measurement_type — device names are not reliable for this, the same soil probe may be called '토양온습도_1' on one plot and '온습도_1' on the next, so a name search silently misses sensors.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search keyword for device name or type. Optional when measurement_type is given."},
+                "measurement_type": {"type": "string", "description": "Measurement the device records, e.g. 'volumetric_water_content' (soil moisture), 'temperature', 'humidity', 'co2'. Substring match against the measurement name. Matches on what the device MEASURES, not what it is called. Alone it returns every such device; combined with query it narrows to the intersection (e.g. query='1포장' + measurement_type='temperature')."}
+            }
         }
     },
     {

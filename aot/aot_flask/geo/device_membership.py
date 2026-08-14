@@ -120,6 +120,25 @@ def membership_for_map(map_uuid):
     return result
 
 
+def load_markers(map_uuid):
+    """지도의 장치 마커를 `[(device_id, (lng, lat))]` 로 — 반복 호출용 사전 로드.
+
+    `load_containers` 와 같은 목적이다. 구획 목록처럼 같은 지도에 대해 폴리곤
+    판정을 N번 도는 자리에서, 마커 전량 조회가 N번 반복되지 않도록 한 번만
+    읽어 넘긴다.
+    """
+    out = []
+    rows = GeoShape.query.filter(
+        GeoShape.geo_id == map_uuid,
+        GeoShape.device_id.isnot(None),
+        GeoShape.type.in_(_MARKER_TYPES)).all()
+    for m in rows:
+        pt = _marker_point(m)
+        if pt and m.device_id:
+            out.append((m.device_id, pt))
+    return out
+
+
 def zone_for_device(device_unique_id, map_uuid):
     """장치 하나의 소속 site/zone GeoShape (없으면 None)."""
     marker = GeoShape.query.filter(
@@ -147,21 +166,28 @@ def container_for_geometry(map_uuid, geom, containers=None):
     """
     from shapely.geometry import shape as shapely_shape
 
+    from aot.utils.geo_hierarchy import containment_point
+
     geom = geom or {}
     if geom.get('type') not in ('Polygon', 'MultiPolygon'):
         return None
     try:
-        pt = shapely_shape(geom).representative_point()
+        pt = containment_point(shapely_shape(geom))
     except Exception as exc:
         logger.warning('membership: 기하 해석 실패(컨테이너 판정): %s', exc)
+        return None
+    if pt is None:
         return None
     if containers is None:
         containers = load_containers(map_uuid)
     return _best_container((pt.x, pt.y), containers)
 
 
-def device_ids_in_geometry(map_uuid, geom, _label='geometry'):
+def device_ids_in_geometry(map_uuid, geom, _label='geometry', markers=None):
     """임의 폴리곤 안에 마커가 있는 device_id 집합.
+
+    `markers` 를 넘기면(`load_markers` 결과) 마커 전량 조회를 생략한다 — 같은
+    지도에서 여러 폴리곤을 판정할 때 조회가 폴리곤 수만큼 반복되지 않도록.
 
     `device_ids_in_shape` 의 알맹이. GeoShape 행이 아닌 기하로도 물어야 하는
     소비처가 있어서 분리했다 — 식생 구획(GeoPlanting)은 GeoShape 가 아니지만
@@ -185,23 +211,18 @@ def device_ids_in_geometry(map_uuid, geom, _label='geometry'):
         return set()
 
     result = set()
-    markers = GeoShape.query.filter(
-        GeoShape.geo_id == map_uuid,
-        GeoShape.device_id.isnot(None),
-        GeoShape.type.in_(_MARKER_TYPES)).all()
-    for m in markers:
-        pt = _marker_point(m)
-        if not pt:
-            continue
+    if markers is None:
+        markers = load_markers(map_uuid)
+    for device_id, pt in markers:
         try:
             if poly.contains(Point(pt[0], pt[1])):
-                result.add(m.device_id)
+                result.add(device_id)
         except Exception:
             continue
     return result
 
 
-def device_ids_in_shape(shape):
+def device_ids_in_shape(shape, markers=None):
     """도형(site/zone) 폴리곤 안에 마커가 있는 device_id 집합.
 
     site 폴리곤은 내부 zone 들을 기하학적으로 포함하므로, site 에 대해
@@ -210,7 +231,7 @@ def device_ids_in_shape(shape):
     """
     return device_ids_in_geometry(
         shape.geo_id, _feature(shape).get('geometry'),
-        _label='도형 id=%s' % shape.id)
+        _label='도형 id=%s' % shape.id, markers=markers)
 
 
 def area_choices():
@@ -284,6 +305,8 @@ def _shapes_inside(area_shape):
     """
     from shapely.geometry import shape as shapely_shape
 
+    from aot.utils.geo_hierarchy import containment_point
+
     geom = _feature(area_shape).get('geometry') or {}
     if geom.get('type') not in ('Polygon', 'MultiPolygon'):
         return []
@@ -302,7 +325,8 @@ def _shapes_inside(area_shape):
         if not g.get('type'):
             continue
         try:
-            if poly.contains(shapely_shape(g).representative_point()):
+            pt = containment_point(shapely_shape(g))
+            if pt is not None and poly.contains(pt):
                 out.append(other)
         except Exception:
             continue

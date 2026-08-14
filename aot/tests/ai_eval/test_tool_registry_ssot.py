@@ -299,6 +299,10 @@ _PLANTING_WRITE_TOOL_ADDITIONS = {
 }
 _GEO_BINDING_MUTATING_ADDITIONS = {'rebind_device'}
 
+# 구역 단위 센서 집계(2026-08-14). 읽기 전용이라 승인 집합에는 들어가지 않는다 —
+# 값을 계산해 낼 뿐 Function 도 채널도 만들지 않는다.
+_ZONE_SUMMARY_TOOL_ADDITIONS = {'get_zone_sensor_summary'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -363,7 +367,8 @@ def _check_dispatch_map(R):
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
-           | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS,
+           | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+           | _ZONE_SUMMARY_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -384,7 +389,8 @@ def _check_declarations(R):
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
-           | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS,
+           | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+           | _ZONE_SUMMARY_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,

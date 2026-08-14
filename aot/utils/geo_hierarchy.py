@@ -1,5 +1,10 @@
 """Site → zone (and deeper) GeoShape hierarchy resolution.
 
+포함 판정의 기준점은 `containment_point()` 하나다 — 이 도메인은 "읽는 경로마다
+기준이 다름"으로 이미 크게 데었고, 포함 판정도 그랬다(2026-08-14 실측: 완전포함
+`contains(g)` · 대표점 · 중심점 `centroid` 세 갈래가 동시에 돌고 있었다).
+
+
 GeoShape.parent_id is the intended parent FK, but in production data it is
 left NULL on every site/zone row (checked 2026-07-24) — the only real signal
 that a zone belongs to a site is that the zone's polygon is drawn spatially
@@ -29,6 +34,28 @@ def _parse_geometry(shape_row):
         return None
 
 
+def containment_point(g):
+    """포함 판정에 쓸 대표점. 소속 판정의 단일 기준이다.
+
+    **완전 포함(`contains(g)`)을 쓰지 말 것.** 경계를 조금 넘은 도형이 통째로
+    빠져 소속이 한 단계 위로 밀린다 — 실측에서 밸브 담당구역 10개가 자기 zone
+    (`1-4` 등)을 못 찾고 site(`1포장`)로 밀렸고, zone 하나는 부모를 아예 잃었다.
+
+    **`centroid` 도 쓰지 말 것.** 오목한 폴리곤(ㄷ자 구역·도넛 필지)에서는
+    중심점이 자기 밖으로 나가 남의 구역에 떨어지거나 아무 데도 안 걸린다.
+    `representative_point()` 는 반드시 내부에 있음이 보장된다. (현재 데이터에는
+    그런 도형이 0개라 아직 증상이 없을 뿐, 구역을 ㄷ자로 그리는 순간 터진다.)
+
+    Point 기하는 그 자신이 대표점이라 마커 판정은 지금과 완전히 동일하다.
+    """
+    if g is None:
+        return None
+    try:
+        return g if g.geom_type == 'Point' else g.representative_point()
+    except Exception:
+        return None
+
+
 def build_geo_parent_map(all_shapes):
     """Map every GeoShape.id -> its parent's id (or None), across the given
     shape rows. parent_id wins when set; otherwise the smallest site/zone
@@ -46,12 +73,22 @@ def build_geo_parent_map(all_shapes):
         g = geoms.get(s.id)
         if g is None or g.geom_type not in ('Point', 'Polygon', 'MultiPolygon'):
             return None
+        pt = containment_point(g)
+        if pt is None:
+            return None
+        # 자기보다 작은 도형은 부모가 될 수 없다. 완전 포함 판정은 이것을
+        # 암묵적으로 보장했지만(작은 zone 이 큰 site 를 통째로 담을 수는 없다)
+        # 대표점으로 바꾸면 그 보호가 사라진다 — 실측에서 site '2포장' 의
+        # 대표점이 하필 자기 안의 zone '2-2' 에 떨어져, 자식이 부모로 뒤집혔다.
+        own_area = getattr(g, 'area', 0.0) or 0.0
         matches = []
         for cid, cg in containers:
             if cid == s.id:
                 continue
             try:
-                if cg.contains(g):
+                if cg.area < own_area:
+                    continue
+                if cg.contains(pt):
                     matches.append((cid, cg.area))
             except Exception:
                 continue

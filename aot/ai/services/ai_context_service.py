@@ -214,25 +214,29 @@ class AIContextService:
                     if g.geom_type not in ('Point', 'Polygon', 'MultiPolygon'):
                         return None
 
-                    is_point = g.geom_type == 'Point'
-                    p_x, p_y = (g.x, g.y) if is_point else (None, None)
-                    g_bounds = None if is_point else g.bounds
+                    # 판정 기준은 geo_hierarchy.containment_point 하나다
+                    # (거기 docstring 에 완전포함·centroid 를 쓰면 안 되는
+                    # 이유가 있다). Point 는 그 자신이 대표점이라 마커 판정은
+                    # 종전과 동일하고, 폴리곤만 대표점으로 바뀐다.
+                    from aot.utils.geo_hierarchy import containment_point
+
+                    pt = containment_point(g)
+                    if pt is None:
+                        return None
+                    p_x, p_y = pt.x, pt.y
                     matches = []
                     for c in containers:
                         if c['id'] == s.id:
                             continue  # a polygon never contains itself
                         b = c['bounds']
-                        # Bounding Box 1차 사전 필터링 (최적화)
-                        if is_point:
-                            if p_x < b[0] or p_x > b[2] or p_y < b[1] or p_y > b[3]:
-                                continue
-                        else:
-                            if (g_bounds[0] < b[0] or g_bounds[2] > b[2]
-                                    or g_bounds[1] < b[1] or g_bounds[3] > b[3]):
-                                continue
+                        # Bounding Box 1차 사전 필터링 (최적화). 대표점 하나만
+                        # 보므로 폴리곤도 점과 같은 필터를 쓴다 — 예전의 bbox
+                        # 전체포함 필터를 남겨두면 경계를 넘은 도형이 여기서
+                        # 먼저 잘려 대표점 판정까지 가지도 못한다.
+                        if p_x < b[0] or p_x > b[2] or p_y < b[1] or p_y > b[3]:
+                            continue
 
-                        # 실제 다각형 포함 여부 확인
-                        if c['geom'].contains(g):
+                        if c['geom'].contains(pt):
                             matches.append(c)
 
                     if matches:
@@ -1113,7 +1117,11 @@ class AIContextService:
                 if not did or not geom or did in out:
                     continue
                 try:
-                    c = _shape(geom).centroid
+                    from aot.utils.geo_hierarchy import containment_point
+
+                    c = containment_point(_shape(geom))
+                    if c is None:
+                        continue
                     px, py = c.x, c.y
                     matches = [z for z in zones
                                if not (px < z['bounds'][0] or px > z['bounds'][2]
@@ -1171,9 +1179,13 @@ class AIContextService:
                     continue
                 (sites if s.type == 'site' else zones).append({'name': name, 'geom': g, 'area': g.area})
 
+            from aot.utils.geo_hierarchy import containment_point
+
             out = {}
             for z in zones:
-                c = z['geom'].centroid
+                c = containment_point(z['geom'])
+                if c is None:
+                    continue
                 containing = [s for s in sites if s['geom'].contains(c)]
                 if containing:
                     containing.sort(key=lambda x: x['area'])  # smallest containing site
