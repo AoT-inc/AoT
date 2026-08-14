@@ -27624,6 +27624,106 @@ msgstr "終了した区画は形を変更できません。"
 msgid "Growing period"
 msgstr "栽培期間"
 
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Split into plots"
+msgstr "区画に分ける"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No zones or sites on this map. Draw one first."
+msgstr "この地図に区域・敷地がありません。先に描いてください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Area to split"
+msgstr "分ける図形"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Split by"
+msgstr "分け方"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Equal parts"
+msgstr "等分"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Strip width"
+msgstr "帯の幅"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Number of pieces"
+msgstr "区画数"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Piece width (cm)"
+msgstr "区画の幅 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Edge margin (cm)"
+msgstr "外周の余白 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Room to turn machinery along the edge."
+msgstr "外周に農機が旋回する余地を残します。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Pieces follow the longest side of the shape, and irregular edges are clipped."
+msgstr "区画は図形の最も長い辺に沿って並び、いびつな縁は切り取られます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Each piece is numbered after the plot name."
+msgstr "区画名のうしろに番号が付きます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Nothing is saved until you create the plots."
+msgstr "区画を作成するまで何も保存されません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Pick a zone or site to split."
+msgstr "分ける区域か敷地を選んでください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Enter how many pieces, or how wide each piece is."
+msgstr "区画数か区画の幅を入力してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Could not draw the preview."
+msgstr "プレビューを描画できませんでした。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Split failed"
+msgstr "分割できませんでした"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Pieces"
+msgstr "区画数"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Piece width"
+msgstr "区画の幅"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Dropped as too short"
+msgstr "短すぎて除いた区画"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Some pieces could not be saved."
+msgstr "一部の区画を保存できませんでした。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Plots created"
+msgstr "区画を作成しました"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Preview"
+msgstr "プレビュー"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Create plots"
+msgstr "区画を作成"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Discard preview"
+msgstr "プレビューを消す"
+
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "Show Plantings"
 msgstr "植生区画を表示"

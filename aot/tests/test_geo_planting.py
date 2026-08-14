@@ -621,6 +621,133 @@ class TestNoHardcodedLocale(unittest.TestCase):
                                  '%s: 걷어낸 라벨 %r 가 되살아났다' % (lang, banned))
 
 
+class TestSplitShape(unittest.TestCase):
+    """대지/구역을 식생 구획으로 분할한다 — 긴 변 방향을 따른다.
+
+    LLM 은 구역이 지도 어디에 있는지 알 방법이 없어(어떤 도구도 경계 폴리곤을
+    안 내준다) 좌표를 지어내면 엉뚱한 자리에 조용히 저장된다. 그래서 사람이
+    이미 그려 둔 도형을 서버가 나눈다.
+    """
+
+    def setUp(self):
+        from aot.aot_flask.geo import planting_split
+        self.ps = planting_split
+
+    def _rot_rect(self, w, l, rot=0.0):
+        return _rect_at(_KIMJE_LNG, _KIMJE_LAT, w, l, rot_deg=rot)
+
+    def test_parts_gives_that_many_pieces(self):
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=3)
+        self.assertEqual(len(strips), 3)
+        self.assertEqual(info['count'], 3)
+        # 등분은 남는 폭이 없다 — 세 조각이 도형을 다 덮는다.
+        self.assertAlmostEqual(info['covered_area_m2'], info['source_area_m2'],
+                               delta=info['source_area_m2'] * 0.02)
+
+    def test_strip_width_gives_floor_of_the_short_axis(self):
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                           strip_width_cm=400)
+        self.assertEqual(len(strips), 7)      # 30m / 4m = 7.5 → 7
+        self.assertEqual(info['strip_width_m'], 4.0)
+
+    def test_pieces_run_along_the_longest_side(self):
+        """축이 아니라 **밭의 긴 방향**을 따라야 한다.
+
+        35도 기울어진 10x50 밭을 축(정북)으로 자르면 조각이 밭을 비스듬히
+        가로질러 길이가 50m 가 안 나온다. 긴 변을 따르면 50m 가 나온다.
+        """
+        strips, info = self.ps.split_shape(self._rot_rect(10.0, 50.0, rot=35.0),
+                                           parts=2)
+        for b in strips:
+            self.assertAlmostEqual(b['length_m'], 50.0, delta=1.0)
+        # 방향은 0~180 으로 정규화된 값이고, 35도 회전한 긴 변은 125도다
+        # (긴 변이 원래 세로였으므로 35+90).
+        self.assertAlmostEqual(info['orientation_deg'], 125.0, delta=2.0)
+
+    def test_edge_margin_shrinks_inward(self):
+        """여백은 안쪽 버퍼다 — 외접사각형에서 빼면 오목한 곳에 안 남는다."""
+        plain, _ = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2)
+        inset, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                          edge_margin_cm=200)
+        self.assertLess(info['covered_area_m2'],
+                        sum(b['area_m2'] for b in plain))
+        for b in inset:
+            self.assertAlmostEqual(b['length_m'], 86.0, delta=1.5)
+
+    def test_concave_shape_breaks_a_strip_into_separate_pieces(self):
+        """끊긴 띠는 각각 다른 구획이다 — 하나로 묶으면 길이가 거짓이 된다."""
+        import math
+
+        m_lat = 111320.0
+        m_lng = m_lat * math.cos(math.radians(_KIMJE_LAT))
+
+        def _p(x, y):
+            return [_KIMJE_LNG + x / m_lng, _KIMJE_LAT + y / m_lat]
+
+        # ㄷ자: 가운데가 깊게 파여 위쪽 띠가 좌우로 끊긴다.
+        u = {'type': 'Polygon', 'coordinates': [[
+            _p(0, 0), _p(60, 0), _p(60, 40), _p(40, 40), _p(40, 10),
+            _p(20, 10), _p(20, 40), _p(0, 40), _p(0, 0),
+        ]]}
+        strips, info = self.ps.split_shape(u, parts=2)
+        self.assertGreater(len(strips), 2, '끊긴 조각이 합쳐졌다')
+        self.assertEqual(info['count'], len(strips))
+
+    def test_parts_survives_the_loop(self):
+        """루프 안 지역변수가 파라미터 `parts` 를 덮으면 안 된다.
+
+        구현 중 실제로 `parts = list(piece.geoms)` 로 덮어썼다 — each_input
+        클로버 버그와 같은 형태다. 오목한 도형은 띠가 끊겨 그 경로를 반드시
+        지나므로 여기서 걸린다.
+        """
+        import math
+
+        m_lat = 111320.0
+        m_lng = m_lat * math.cos(math.radians(_KIMJE_LAT))
+
+        def _p(x, y):
+            return [_KIMJE_LNG + x / m_lng, _KIMJE_LAT + y / m_lat]
+
+        u = {'type': 'Polygon', 'coordinates': [[
+            _p(0, 0), _p(60, 0), _p(60, 40), _p(40, 40), _p(40, 10),
+            _p(20, 10), _p(20, 40), _p(0, 40), _p(0, 0),
+        ]]}
+        for n in (2, 3, 5):
+            strips, info = self.ps.split_shape(u, parts=n)
+            self.assertIsNotNone(strips, info)
+
+    def test_parts_and_width_are_mutually_exclusive(self):
+        geom = self._rot_rect(30.0, 90.0)
+        for kw in ({}, {'parts': 3, 'strip_width_cm': 400}):
+            out, err = self.ps.split_shape(geom, **kw)
+            self.assertIsNone(out)
+            self.assertIn('either parts', err)
+
+    def test_too_many_pieces_is_refused_not_truncated(self):
+        """조용히 자르면 사용자는 자기가 본 것이 전부인 줄 안다."""
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                       strip_width_cm=1)
+        self.assertIsNone(out)
+        self.assertIn('more than this tool will propose', err)
+
+    def test_strip_wider_than_the_shape_is_refused(self):
+        out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                       strip_width_cm=5000)
+        self.assertIsNone(out)
+        self.assertIn('across its short axis', err)
+
+    def test_covered_area_is_not_called_planted_area(self):
+        """띠는 도형을 빈틈없이 덮는다 — 고랑을 뺀 식재 면적이 아니다.
+
+        고랑 폭을 모르는 것이 이 설계의 선택이므로 식재 면적은 낼 수 없다.
+        이름이 'planted' 였다면 그 숫자가 그대로 모종 주문량이 된다.
+        """
+        _strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=3)
+        self.assertIn('covered_area_m2', info)
+        self.assertNotIn('planted_area_m2', info)
+        self.assertIn('NOT the plantable area', info['note'])
+
+
 class TestBedSpecIsNotAColumn(unittest.TestCase):
     """두둑 배치는 컬럼이 아니라 구획 노트에 남는다.
 

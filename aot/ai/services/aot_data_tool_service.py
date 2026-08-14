@@ -7209,21 +7209,58 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
-    def create_planting(map_id=None, geometry=None, crop=None, planted_on=None,
-                        variety=None, name=None, expected_end_on=None,
-                        color=None, **extra):
+    def create_planting(map_id=None, geometry=None, zone_id=None, crop=None,
+                        planted_on=None, variety=None, name=None,
+                        expected_end_on=None, color=None, **extra):
         """[쓰기] 식생 구획을 만든다. 사람 승인 필요.
 
-        `geometry` 는 GeoJSON Polygon/MultiPolygon 이다. 상위 zone 은 받지
-        않는다 — 서버가 공간 포함으로 판정한다.
+        기하는 둘 중 하나로 준다.
 
-        두둑 규격을 알면 여기서 함께 적는다. 안 적으면 나중에 식재량을 물을
-        때마다 다시 물어야 한다.
+        - `zone_id` — **그 구역(또는 대지) 전체에 심었다.** 서버가 그 도형의
+          기하를 복사한다. 좌표를 하나도 만들 필요가 없다.
+        - `geometry` — GeoJSON Polygon/MultiPolygon 을 직접.
+
+        **`zone_id` 를 먼저 쓸 것.** LLM 은 구역이 지도 어디에 있는지 알 방법이
+        없다(어떤 도구도 구역 경계 폴리곤을 내주지 않는다). 좌표를 지어내면
+        엉뚱한 자리에 저장되고, 그것은 실패했다고 말해주지도 않는다 — 구역
+        밖이면 `zone_uuid` 가 null 로 남을 뿐이다.
+
+        구역의 **일부**에만 심는 경우는 여기서 만들지 말 것. 지도 설계 화면에서
+        그리거나, 지난 작기가 있으면 `copy_planting` 을 쓴다.
+
+        상위 zone 은 받아도 저장하지 않는다 — 읽을 때 공간 포함으로 파생한다.
+        여기서 `zone_id` 는 **기하의 출처**일 뿐 소속이 아니다.
         """
         try:
-            from aot.aot_flask.geo import planting_io
+            from aot.aot_flask.geo import planting_io, planting_context
+            from aot.databases.models import GeoShape
+
+            if geometry and zone_id:
+                return {"status": "error",
+                        "message": "give either geometry or zone_id, not both"}
+            source_kind = 'drawn'
+            source_ref = None
+            if zone_id:
+                shape = GeoShape.query.filter_by(unique_id=zone_id).first()
+                if shape is None:
+                    return {"status": "error",
+                            "message": f"zone/shape not found: {zone_id}"}
+                geometry = planting_context.geometry_of(shape)
+                if not geometry:
+                    return {"status": "error",
+                            "message": f"shape {zone_id} has no polygon to copy"}
+                map_id = map_id or shape.geo_id
+                # bay 스냅샷과 같은 이유로 **복사**다: zone 도형이 나중에 바뀌어도
+                # 과거 작기의 기하가 따라가면 "여기 뭐가 있었나" 의 답이 조용히
+                # 달라진다. 출처만 남긴다.
+                source_kind = 'copied'
+                source_ref = zone_id
             if not geometry:
-                return {"status": "error", "message": "geometry is required"}
+                return {"status": "error",
+                        "message": ("geometry or zone_id is required. Prefer "
+                                    "zone_id — you cannot know where a zone is "
+                                    "on the map, so invented coordinates land "
+                                    "in the wrong place silently.")}
             result, err = planting_io.save_planting({
                 'map_uuid': map_id,
                 'feature': {'type': 'Feature', 'properties': {},
@@ -7231,6 +7268,7 @@ class AoTDataToolService:
                 'crop': crop, 'variety': variety, 'name': name,
                 'planted_on': planted_on, 'expected_end_on': expected_end_on,
                 'color': color,
+                'source_kind': source_kind, 'source_ref': source_ref,
             })
             if err:
                 return {"status": "error", "message": err}
@@ -7266,6 +7304,144 @@ class AoTDataToolService:
             return {"status": "success", "planting": result}
         except Exception as e:
             logger.exception("Error in modify_planting")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def propose_planting_split(zone_id=None, parts=None, strip_width_cm=None,
+                               edge_margin_cm=0, **extra):
+        """[읽기전용] 구역/대지를 나눈 제안을 계산한다. 저장하지 않는다.
+
+        **좌표를 만들지 않는 분할 경로다.** 사람이 이미 그려 둔 도형을 서버가
+        긴 변 방향으로 나눈다 — LLM 은 구역이 지도 어디인지 알 수 없으므로
+        (어떤 도구도 경계 폴리곤을 안 내준다) 이 길이 없으면 좌표를 지어내게 된다.
+
+        폴리곤 자체는 돌려주지 않는다. 조각 수·길이·면적 같은 **요약만** 낸다 —
+        좌표 수백 개를 컨텍스트에 실을 이유가 없고, 실제로 만들 때는
+        `apply_planting_split` 가 같은 파라미터로 다시 계산한다(결정적이다).
+        """
+        try:
+            from aot.aot_flask.geo import planting_split
+            from aot.databases.models import GeoShape
+            if not zone_id:
+                return {"error": "zone_id is required"}
+            shape = GeoShape.query.filter_by(unique_id=zone_id).first()
+            if shape is None:
+                return {"error": f"zone/shape not found: {zone_id}"}
+            strips, info = planting_split.split_shape(
+                shape, parts=parts, strip_width_cm=strip_width_cm,
+                edge_margin_cm=edge_margin_cm)
+            if strips is None:
+                return {"error": info}
+            lengths = [s['length_m'] for s in strips]
+            return {
+                "zone_id": zone_id,
+                "pieces": info['count'],
+                "piece_width_m": info['strip_width_m'],
+                "length_m": {"min": min(lengths), "max": max(lengths)},
+                "orientation_deg": info['orientation_deg'],
+                "source_area_m2": info['source_area_m2'],
+                "covered_area_m2": info['covered_area_m2'],
+                "dropped": info['dropped'],
+                "basis": info['note'],
+                "next": ("Nothing was created. Show these numbers to the grower "
+                         "and tell them they can SEE the proposal on the map "
+                         "design page (vegetation mode) before deciding. To "
+                         "create them, call apply_planting_split with the SAME "
+                         "zone_id and parts/strip_width_cm plus the crop."),
+            }
+        except Exception as e:
+            logger.exception("Error in propose_planting_split")
+            return {"error": str(e)}
+
+    @staticmethod
+    def apply_planting_split(zone_id=None, crop=None, planted_on=None,
+                             parts=None, strip_width_cm=None, edge_margin_cm=0,
+                             variety=None, name=None, expected_end_on=None,
+                             color=None, **extra):
+        """[쓰기] 분할 제안을 실제 구획으로 만든다. 사람 승인 필요.
+
+        `propose_planting_split` 와 **같은 파라미터로 다시 계산**한다 — 제안을
+        저장해 두지 않는 이유는 분할이 결정적이기 때문이다. 도형이 그 사이에
+        바뀌었으면 새 모양대로 나뉜다(그게 맞다).
+
+        조각 하나가 구획 하나(GeoPlanting 한 행)다. `parts=3` 이면 세 행,
+        `strip_width_cm=160` 이면 두둑 수만큼. **개수를 보고 부르라** — 41행이
+        생기면 노트도 이력도 41벌이 된다.
+        """
+        try:
+            from aot.aot_flask.geo import planting_split, planting_io
+            from aot.databases.models import GeoShape
+            if not zone_id:
+                return {"status": "error", "message": "zone_id is required"}
+            if not (crop or '').strip():
+                return {"status": "error", "message": "crop is required"}
+            shape = GeoShape.query.filter_by(unique_id=zone_id).first()
+            if shape is None:
+                return {"status": "error",
+                        "message": f"zone/shape not found: {zone_id}"}
+            strips, info = planting_split.split_shape(
+                shape, parts=parts, strip_width_cm=strip_width_cm,
+                edge_margin_cm=edge_margin_cm)
+            if strips is None:
+                return {"status": "error", "message": info}
+
+            created, errors = [], []
+            for strip in strips:
+                payload = {
+                    'map_uuid': shape.geo_id,
+                    'feature': {'type': 'Feature', 'properties': {},
+                                'geometry': strip['geometry']},
+                    'crop': crop, 'variety': variety,
+                    'planted_on': planted_on,
+                    'expected_end_on': expected_end_on, 'color': color,
+                    'source_kind': 'copied', 'source_ref': shape.unique_id,
+                }
+                if name:
+                    payload['name'] = '%s %d' % (name, strip['index'])
+                row, err = planting_io.save_planting(payload)
+                if err:
+                    errors.append({'index': strip['index'], 'message': err})
+                    continue
+                row.pop('feature', None)
+                created.append(row)
+
+            # 일부만 저장된 것을 성공으로 말하지 않는다.
+            return {
+                "status": "success" if not errors else "partial",
+                "created_count": len(created),
+                "failed_count": len(errors),
+                "errors": errors or None,
+                "plantings": created,
+            }
+        except Exception as e:
+            logger.exception("Error in apply_planting_split")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def copy_planting(planting_id=None, crop=None, planted_on=None, **extra):
+        """[쓰기] 지난 작기의 기하를 그대로 새 작기로. 사람 승인 필요.
+
+        **"작년에 콩 심었던 그 자리에 올해도" 는 실제로 가장 흔한 요청이고,
+        좌표가 하나도 필요 없다.** 구현은 이미 있었는데(`planting_io.copy_planting`,
+        REST `/api/geo/planting/<uuid>/copy`) AI 도구로만 없어서, 같은 자리를
+        다시 심는 것을 말로는 시킬 수 없었다.
+
+        기하만 복사하고 기간은 새로 받는다. 작물을 안 주면 원본과 같은 작물이다
+        (같은 자리에 같은 것을 또 심는 것이 연작이고, 그것 자체가 판단 대상이라
+        막지는 않는다 — `get_planting_history` 로 확인하고 조언할 것).
+        """
+        try:
+            from aot.aot_flask.geo import planting_io
+            if not planting_id:
+                return {"status": "error", "message": "planting_id is required"}
+            result, err = planting_io.copy_planting(
+                planting_id, planted_on=planted_on, crop=crop)
+            if err:
+                return {"status": "error", "message": err}
+            result.pop('feature', None)
+            return {"status": "success", "planting": result}
+        except Exception as e:
+            logger.exception("Error in copy_planting")
             return {"status": "error", "message": str(e)}
 
     @staticmethod

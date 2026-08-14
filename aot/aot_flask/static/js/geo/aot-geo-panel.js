@@ -321,11 +321,28 @@ class AoTGeoPanel {
                 // 그리기·편집·삭제는 **오른쪽 그리기 컨트롤 패널**이 담당한다
                 // (다른 도형과 같다). 여기에 같은 기능의 버튼을 또 두면 진입점이
                 // 둘로 갈린다. 이 티어에는 종류별 설정(색)만 둔다.
+                //
+                // 분할은 예외다. 그것은 새 도형을 **그리는** 일이 아니라 이미
+                // 그려 둔 구역을 고르는 일이라 그리기 도구에 자리가 없다.
+                const veg = this.geoDesign && this.geoDesign.vegetation;
+                const hasSplitPreview = !!(veg && veg.hasSplitPreview &&
+                                           veg.hasSplitPreview());
                 html += `
                     <div style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: none; margin: 0 8px 0 4px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.1);">
                         <input type="color" id="theme-color-picker" data-type="vegetation" value="${vegColor}" style="width: 140%; height: 140%; margin: -20%; cursor: pointer; border: none; padding: 0;">
                     </div>
+                    <button class="btn btn-aot-pill btn-aot-outline" id="btn-veg-split">${_('Split into plots')}</button>
                 `;
+                // 미리보기가 떠 있는 동안에만 적용·취소가 나온다. 지도를 가리는
+                // 모달이 아니라 여기 두는 이유는, 점선을 **보면서** 정해야 하기
+                // 때문이다.
+                if (hasSplitPreview) {
+                    html += `
+                        <button class="btn btn-aot-pill btn-aot-action font-weight-bold" id="btn-veg-split-apply">${_('Create plots')}</button>
+                        <button class="btn btn-aot-pill btn-aot-outline" id="btn-veg-split-cancel">${_('Discard preview')}</button>
+                        <span class="small text-muted ml-2">${veg.splitSummaryText()}</span>
+                    `;
+                }
                 break;
             }
 
@@ -660,6 +677,25 @@ class AoTGeoPanel {
         if (btnAddFromAddress) btnAddFromAddress.onclick = () => {
             const modal = document.getElementById('modal-parcel-import');
             if (modal && window.$) $(modal).modal('show');
+        };
+
+        // 식생 분할 (Planting tier) — 계산·그리기는 vegetation 모듈이 한다.
+        // 패널은 진입점과 상태 표시만 맡는다.
+        const veg = () => this.geoDesign && this.geoDesign.vegetation;
+        const btnVegSplit = rootEl.querySelector('#btn-veg-split');
+        if (btnVegSplit) btnVegSplit.onclick = () => {
+            const v = veg();
+            if (v && v.openSplitForm) v.openSplitForm();
+        };
+        const btnVegSplitApply = rootEl.querySelector('#btn-veg-split-apply');
+        if (btnVegSplitApply) btnVegSplitApply.onclick = () => {
+            const v = veg();
+            if (v && v.applySplit) v.applySplit();
+        };
+        const btnVegSplitCancel = rootEl.querySelector('#btn-veg-split-cancel');
+        if (btnVegSplitCancel) btnVegSplitCancel.onclick = () => {
+            const v = veg();
+            if (v && v.clearSplitPreview) v.clearSplitPreview();
         };
 
         // Facility Design navigation (Facility tier)

@@ -113,6 +113,35 @@ def _mean_lat(geom):
     return sum(c[1] for c in pts) / len(pts)
 
 
+def local_frame(geom):
+    """geometry → `(to_m, from_m, lat0)` — 도↔미터 변환 함수 쌍.
+
+    **투영 정의는 여기 한 곳뿐이어야 한다.** 면적(`_ring_area_m2`)·치수
+    (`dimensions`)·분할(`planting_split`)이 각자 상수를 들고 있으면 같은 구획이
+    계산마다 조금씩 다른 평면에서 재어지고, 그 차이는 화면에서 설명되지 않는다.
+
+    `from_m` 은 `to_m` 의 정확한 역함수다 — 분할처럼 미터 평면에서 만든 도형을
+    다시 위경도로 돌려놓아야 하는 쪽이 쓴다.
+    """
+    import math
+
+    lat0 = _mean_lat(geom)
+    if lat0 is None:
+        return None, None, None
+    m_per_deg_lat = 111320.0
+    m_per_deg_lng = m_per_deg_lat * math.cos(math.radians(lat0))
+    if m_per_deg_lng == 0:
+        return None, None, None
+
+    def to_m(x, y, z=None):
+        return (x * m_per_deg_lng, y * m_per_deg_lat)
+
+    def from_m(x, y, z=None):
+        return (x / m_per_deg_lng, y / m_per_deg_lat)
+
+    return to_m, from_m, lat0
+
+
 def _to_local_m(geom):
     """geometry dict → 로컬 등장방형 평면(미터)의 shapely 기하.
 
@@ -130,15 +159,10 @@ def _to_local_m(geom):
     poly = _shapely(geom)
     if poly is None or poly.is_empty:
         return None
-    lat0 = _mean_lat(geom)
-    if lat0 is None:
+    to_m, _from_m, _lat0 = local_frame(geom)
+    if to_m is None:
         return None
-    import math
-
-    m_per_deg_lat = 111320.0
-    m_per_deg_lng = m_per_deg_lat * math.cos(math.radians(lat0))
-    return transform(lambda x, y, z=None: (x * m_per_deg_lng, y * m_per_deg_lat),
-                     poly)
+    return transform(to_m, poly)
 
 
 # 외접사각형 면적이 실제 면적의 이 배를 넘으면 "사각형으로 보면 안 된다" 고

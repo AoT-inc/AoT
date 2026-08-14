@@ -405,6 +405,31 @@ TOOLS: List[Tool] = [
                         "Geometry is not editable here. Requires human approval."),
         "usage_hint": "params.arguments: {planting_id, crop?, variety?, name?, planted_on?, expected_end_on?, color?}",
     }),
+    Tool('propose_planting_split', handler='propose_planting_split', manifest={
+        "tool_name": "propose_planting_split",
+        "action_type": "virtual_tool_call",
+        "description": ("Works out how a zone/site would divide into plots along "
+                        "its longest side. Computes only — creates nothing. "
+                        "Read-only."),
+        "usage_hint": ("params.arguments: {zone_id, parts? | strip_width_cm?, "
+                       "edge_margin_cm?}"),
+    }),
+    Tool('apply_planting_split', handler='apply_planting_split', mutating=True, manifest={
+        "tool_name": "apply_planting_split",
+        "action_type": "virtual_tool_call",
+        "description": ("Creates one plot per piece of a split, recomputed from "
+                        "the same arguments. Requires human approval."),
+        "usage_hint": ("params.arguments: {zone_id, crop, planted_on, "
+                       "parts? | strip_width_cm?, edge_margin_cm?, name?}"),
+    }),
+    Tool('copy_planting', handler='copy_planting', mutating=True, manifest={
+        "tool_name": "copy_planting",
+        "action_type": "virtual_tool_call",
+        "description": ("Re-uses a past plot's outline for a new planting — "
+                        "'same spot as last year'. No coordinates needed. "
+                        "Requires human approval."),
+        "usage_hint": "params.arguments: {planting_id, crop?, planted_on?}",
+    }),
     Tool('end_planting', handler='end_planting', mutating=True, manifest={
         "tool_name": "end_planting",
         "action_type": "virtual_tool_call",
@@ -900,12 +925,13 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_planting",
-        "description": "Records a new vegetation plot from a GeoJSON polygon. The owning zone is derived from the geometry — do not ask the user for it. Overlapping plots are NORMAL (intercropping), so do not refuse or warn about overlap. Requires human approval.",
+        "description": "Records a new vegetation plot. Give zone_id (copies that zone/site outline — the usual case, no coordinates needed) OR geometry. For part of a zone, or a new shape, the map design page is the place to draw it. The owning zone is derived from the geometry — do not ask the user for it. Overlapping plots are NORMAL (intercropping), so do not refuse or warn about overlap. Requires human approval.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "map_id": {"type": "string", "description": "Map (farm) unique_id."},
-                "geometry": {"type": "object", "description": "GeoJSON Polygon or MultiPolygon. Points and lines are rejected."},
+                "zone_id": {"type": "string", "description": "PREFERRED. The zone/site shape whose outline to copy — use this when the crop fills a whole zone. You cannot know where a zone is on the map (no tool returns zone boundaries), so inventing coordinates puts the plot in the wrong place and nothing reports it. Get the id from get_spatial_tree."},
+                "geometry": {"type": "object", "description": "GeoJSON Polygon or MultiPolygon — only when the caller genuinely has real coordinates. Do NOT construct one from a guessed centre point. Points and lines are rejected."},
                 "crop": {"type": "string", "description": "Crop name."},
                 "planted_on": {"type": "string", "description": "Planting date 'YYYY-MM-DD'."},
                 "variety": {"type": "string", "description": "Cultivar (optional)."},
@@ -913,7 +939,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "expected_end_on": {"type": "string", "description": "Expected end date 'YYYY-MM-DD' (optional)."},
                 "color": {"type": "string", "description": "Display colour '#rrggbb'. Omit to follow the map theme."}
             },
-            "required": ["map_id", "geometry", "crop", "planted_on"]
+            "required": ["crop", "planted_on"]
         }
     },
     {
@@ -929,6 +955,53 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "planted_on": {"type": "string", "description": "'YYYY-MM-DD'"},
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
                 "color": {"type": "string", "description": "'#rrggbb'"}
+            },
+            "required": ["planting_id"]
+        }
+    },
+    {
+        "tool_name": "propose_planting_split",
+        "description": "Works out how a zone or site would divide into planting plots, WITHOUT creating anything. Pieces run along the shape's longest side (not north-south) because that is how a field is actually worked, and irregular edges are clipped, so pieces differ in length. Give parts (how many pieces — e.g. 3 to put three crops in one zone) OR strip_width_cm (how wide each piece — e.g. 160 for bed-by-bed). You get counts, widths and lengths back, not coordinates. Tell the grower they can SEE the proposal drawn on the map design page (vegetation mode) before deciding. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "zone_id": {"type": "string", "description": "The zone or site shape to divide (GeoShape unique_id, from get_spatial_tree)."},
+                "parts": {"type": "integer", "description": "Divide into this many equal pieces (2 or more). Use for 'three crops in this zone'."},
+                "strip_width_cm": {"type": "number", "description": "Or make pieces this wide in cm, e.g. 160. Use for bed-by-bed. Give this OR parts, never both."},
+                "edge_margin_cm": {"type": "number", "description": "Leave this much free inside the whole outline, in cm — headland for machinery. Default 0."}
+            },
+            "required": ["zone_id"]
+        }
+    },
+    {
+        "tool_name": "apply_planting_split",
+        "description": "Creates one vegetation plot per piece of a split — the write half of propose_planting_split. Pass the SAME zone_id and parts/strip_width_cm; the split is recomputed, not replayed from a stored proposal. Each piece becomes its own plot row, so check the piece count first: 41 pieces means 41 plots to manage, each with its own notes and history. For one crop over a whole zone use create_planting with zone_id instead. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "zone_id": {"type": "string", "description": "The zone or site shape to divide."},
+                "crop": {"type": "string", "description": "Crop for every piece."},
+                "planted_on": {"type": "string", "description": "Planting date 'YYYY-MM-DD'."},
+                "parts": {"type": "integer", "description": "Same value used in propose_planting_split."},
+                "strip_width_cm": {"type": "number", "description": "Same value used in propose_planting_split."},
+                "edge_margin_cm": {"type": "number", "description": "Same value used in propose_planting_split. Default 0."},
+                "variety": {"type": "string"},
+                "name": {"type": "string", "description": "Base name; pieces are numbered from it, e.g. 'A' becomes 'A 1', 'A 2'."},
+                "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
+                "color": {"type": "string", "description": "'#rrggbb'"}
+            },
+            "required": ["zone_id", "crop", "planted_on"]
+        }
+    },
+    {
+        "tool_name": "copy_planting",
+        "description": "Creates a new planting on the SAME ground as an existing one, by copying its outline. This is how you answer 'plant it where the beans were last year' — no coordinates are involved. Check get_planting_history first if the same crop is going back on the same ground (soil-borne disease). Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "planting_id": {"type": "string", "description": "The plot whose outline to re-use (past or present)."},
+                "crop": {"type": "string", "description": "Crop for the new planting. Omit to repeat the same crop as the source."},
+                "planted_on": {"type": "string", "description": "Planting date 'YYYY-MM-DD'. Default: today."}
             },
             "required": ["planting_id"]
         }

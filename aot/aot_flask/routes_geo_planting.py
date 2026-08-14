@@ -12,7 +12,7 @@ from datetime import datetime
 from flask import request, jsonify
 from flask_login import login_required
 
-from aot.aot_flask.geo import planting_context, planting_io
+from aot.aot_flask.geo import planting_context, planting_io, planting_split
 from aot.aot_flask.utils import utils_general
 from aot.databases.models import GeoPlanting, GeoShape
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
@@ -224,3 +224,128 @@ def api_plantings_history():
         d['overlap_m2'] = round(overlap_m2, 1)
         items.append(d)
     return jsonify({'ok': True, 'history': items, 'count': len(items)})
+
+
+# ── 분할 (미리보기 / 적용) ─────────────────────────────────────────────────
+#
+# **미리보기를 저장하지 않는다.** 분할은 결정적이라(같은 도형 + 같은 파라미터 →
+# 항상 같은 결과) 미리보기는 보관할 상태가 아니라 다시 계산하면 되는 것이다.
+# 그래서 임시 저장소도, TTL 도, 만료 처리도 없다 — 지도는 preview 로 그리고,
+# 적용은 같은 파라미터로 재계산해서 만든다.
+#
+# 도형이 그 사이에 바뀌면 결과도 바뀐다. 그것이 맞다 — 사람이 밭 모양을 고쳤으면
+# 새 모양대로 나뉘어야 한다.
+
+def _split_args(src):
+    """요청에서 분할 파라미터를 뽑는다 → (kwargs, 오류문구)."""
+    shape_id = src.get('zone_id') or src.get('shape_id')
+    if not shape_id:
+        return None, 'zone_id is required'
+
+    def _num(key):
+        v = src.get(key)
+        if v in (None, ''):
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            raise ValueError('%s must be a number' % key)
+
+    try:
+        return {
+            'shape_id': shape_id,
+            'parts': int(_num('parts')) if _num('parts') is not None else None,
+            'strip_width_cm': _num('strip_width_cm'),
+            'edge_margin_cm': _num('edge_margin_cm') or 0,
+        }, None
+    except ValueError as exc:
+        return None, str(exc)
+
+
+def _compute_split(args):
+    """(strips, info) 또는 (None, (응답, 코드))."""
+    shape = GeoShape.query.filter_by(unique_id=args['shape_id']).first()
+    if shape is None:
+        return None, (jsonify({'ok': False,
+                               'message': 'shape not found: %s' % args['shape_id']}), 404)
+    strips, info = planting_split.split_shape(
+        shape, parts=args['parts'], strip_width_cm=args['strip_width_cm'],
+        edge_margin_cm=args['edge_margin_cm'])
+    if strips is None:
+        return None, (jsonify({'ok': False, 'message': info}), 400)
+    return (strips, info, shape), None
+
+
+@blueprint.route('/api/geo/planting/split-preview', methods=['GET'])
+@login_required
+def api_planting_split_preview():
+    """분할 제안을 계산해 돌려준다 — 아무것도 저장하지 않는다.
+
+    지도가 이것을 점선으로 그린다. 사람이 보고 판단한 뒤 apply 로 넘어간다.
+    """
+    args, err = _split_args(request.args)
+    if err:
+        return jsonify({'ok': False, 'message': err}), 400
+    out, fail = _compute_split(args)
+    if fail:
+        return fail
+    strips, info, shape = out
+    return jsonify({'ok': True, 'strips': strips, 'info': info,
+                    'shape_uuid': shape.unique_id, 'geo_id': shape.geo_id})
+
+
+@blueprint.route('/api/geo/planting/split-apply', methods=['POST'])
+@login_required
+def api_planting_split_apply():
+    """미리보기와 **같은 파라미터로 재계산**해 구획을 만든다.
+
+    미리보기에서 본 폴리곤을 클라이언트가 되돌려보내지 않는다 — 그러면 화면에서
+    한 번 계산하고 저장할 때 다른 것을 보낼 수 있는 경로가 생긴다. 서버가 다시
+    계산하는 편이 "본 것과 저장된 것이 같다" 를 구조로 보장한다.
+    """
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+    args, err = _split_args(data)
+    if err:
+        return jsonify({'ok': False, 'message': err}), 400
+    if not (data.get('crop') or '').strip():
+        return jsonify({'ok': False, 'message': 'crop is required'}), 400
+    out, fail = _compute_split(args)
+    if fail:
+        return fail
+    strips, info, shape = out
+
+    name_base = (data.get('name') or '').strip()
+    created, errors = [], []
+    for strip in strips:
+        payload = {
+            'map_uuid': shape.geo_id,
+            'feature': {'type': 'Feature', 'properties': {},
+                        'geometry': strip['geometry']},
+            'crop': data.get('crop'),
+            'variety': data.get('variety'),
+            'planted_on': data.get('planted_on'),
+            'expected_end_on': data.get('expected_end_on'),
+            'color': data.get('color'),
+            'source_kind': 'copied',
+            'source_ref': shape.unique_id,
+        }
+        if name_base:
+            payload['name'] = '%s %d' % (name_base, strip['index'])
+        row, error = planting_io.save_planting(payload)
+        if error:
+            errors.append({'index': strip['index'], 'message': error})
+            continue
+        row.pop('feature', None)
+        created.append(row)
+
+    # 일부만 저장된 것을 성공으로 말하지 않는다 — 지도에는 몇 개만 뜨는데
+    # 응답은 성공이면 사용자는 나머지가 어디 갔는지 알 방법이 없다.
+    return jsonify({'ok': not errors, 'created': created, 'info': info,
+                    'errors': errors,
+                    'message': (None if not errors else
+                                '%d of %d pieces failed to save'
+                                % (len(errors), len(strips)))})

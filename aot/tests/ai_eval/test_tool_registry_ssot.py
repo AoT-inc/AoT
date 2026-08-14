@@ -279,12 +279,23 @@ _GEO_BINDING_TOOL_ADDITIONS = {'list_unbound_slots', 'rebind_device'}
 # facility_registry) 외에는 AI 가 알 방법이 없었다. 읽기 3 + 쓰기 4.
 _PLANTING_READ_TOOL_ADDITIONS = {
     'list_plantings', 'get_planting', 'get_planting_history',
+    # propose_planting_split (2026-08-14): 계산만 하고 아무것도 만들지 않는다.
+    'propose_planting_split',
 }
 # 쓰기 4종은 전부 승인 대상이다. config_only 로 면제하지 말 것 — end/delete 는
 # 되돌릴 수단이 없고(그 자리의 이력이 사라진다), create/modify 는 사람이 밭에서
 # 확인해야 하는 사실을 기록하는 행위다.
 _PLANTING_WRITE_TOOL_ADDITIONS = {
     'create_planting', 'modify_planting', 'end_planting', 'delete_planting',
+    # copy_planting (2026-08-14): 구현은 planting_io 와 REST 에 있었는데 AI
+    # 도구로만 없었다. "작년 그 자리에 또" 는 가장 흔한 요청이고 좌표가 하나도
+    # 필요 없는 유일한 생성 경로다 — LLM 은 구역이 지도 어디인지 알 방법이
+    # 없으므로(어떤 도구도 경계 폴리곤을 안 내준다) 이 길이 없으면 좌표를
+    # 지어내게 된다. 쓰기이므로 승인 대상.
+    'copy_planting',
+    # apply_planting_split (2026-08-14): 분할 제안을 실제 구획으로 만든다.
+    # 조각마다 GeoPlanting 한 행이 생기므로 쓰기이고 승인 대상.
+    'apply_planting_split',
 }
 _GEO_BINDING_MUTATING_ADDITIONS = {'rebind_device'}
 

@@ -27864,6 +27864,106 @@ msgstr "종료된 구획은 모양을 바꿀 수 없습니다."
 msgid "Growing period"
 msgstr "재배 기간"
 
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Split into plots"
+msgstr "구획으로 나누기"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "No zones or sites on this map. Draw one first."
+msgstr "이 지도에 구역·대지가 없습니다. 먼저 그려 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Area to split"
+msgstr "나눌 도형"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Split by"
+msgstr "나누는 기준"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Equal parts"
+msgstr "등분"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Strip width"
+msgstr "띠 폭"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Number of pieces"
+msgstr "조각 수"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Piece width (cm)"
+msgstr "조각 폭 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Edge margin (cm)"
+msgstr "가장자리 여백 (cm)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Room to turn machinery along the edge."
+msgstr "가장자리에 농기계가 돌 자리를 남깁니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Pieces follow the longest side of the shape, and irregular edges are clipped."
+msgstr "조각은 도형의 가장 긴 변을 따라 놓이고, 비뚤어진 가장자리는 잘립니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Each piece is numbered after the plot name."
+msgstr "구획 이름 뒤에 조각 번호가 붙습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Nothing is saved until you create the plots."
+msgstr "구획을 만들기 전까지는 아무것도 저장되지 않습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Pick a zone or site to split."
+msgstr "나눌 구역이나 대지를 고르세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Enter how many pieces, or how wide each piece is."
+msgstr "조각 수나 조각 폭을 입력하세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Could not draw the preview."
+msgstr "미리보기를 그리지 못했습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Split failed"
+msgstr "분할하지 못했습니다"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Pieces"
+msgstr "조각 수"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Piece width"
+msgstr "조각 폭"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Dropped as too short"
+msgstr "너무 짧아 버린 조각"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Some pieces could not be saved."
+msgstr "일부 조각을 저장하지 못했습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Plots created"
+msgstr "구획을 만들었습니다"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
+msgid "Preview"
+msgstr "미리보기"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Create plots"
+msgstr "구획 만들기"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js:1
+msgid "Discard preview"
+msgstr "미리보기 지우기"
+
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "Show Plantings"
 msgstr "식생 구획 표시"

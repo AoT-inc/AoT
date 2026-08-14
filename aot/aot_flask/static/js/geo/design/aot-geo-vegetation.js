@@ -21,6 +21,13 @@ class AoTGeoVegetation {
         this.layers = new Map();      // unique_id → layer
         this.data = new Map();        // unique_id → planting dict
         this._loaded = false;
+
+        // 분할 미리보기 — 저장되지 않는 제안 하나. 지도에는 자기 GL 소스로만
+        // 올라가므로 layerStorage 에도, 저장 경로에도 실리지 않는다.
+        this._splitSrc = '_aot_split_preview_src';
+        this._splitFill = '_aot_split_preview_fill';
+        this._splitLine = '_aot_split_preview_line';
+        this._split = null;
     }
 
     _t(key) { return (window._ ? window._(key) : key); }
@@ -290,6 +297,10 @@ class AoTGeoVegetation {
         // 전환에서도 `_switchLayerContext` 는 레이어를 떼기 때문에, 여기서
         // 재부착을 확인하지 않으면 그 뒤로 식생이 영영 사라진다.
         this._emphasis = !!on;
+        // 식생 모드를 벗어나면 분할 미리보기를 걷는다. 저장되지 않은 제안인데
+        // 다른 모드에 점선만 남으면 적용·취소할 버튼이 화면에서 사라진 채로
+        // 지도에 계속 떠 있는다 — 무엇인지 알 길이 없는 도형이 된다.
+        if (!this._emphasis && this.hasSplitPreview()) this.clearSplitPreview();
         // 칩은 **모든 모드에서** 띄운다 — 장치·배관을 배치할 때 어디에 무엇이
         // 심겨 있는지가 배치의 근거라, 도형만 옅게 남기면 무엇인지 알 수 없다.
         // 대신 활성 모드가 아니면 살짝 흐리게 해 작업 대상과 구분한다.
@@ -816,6 +827,387 @@ class AoTGeoVegetation {
         this._renderChips();
     }
 
+    // ── 분할 — 구역 하나를 여러 구획으로 나눈다 ──────────────────────────
+    //
+    // 서버(`planting_split`)가 도형의 **긴 변을 따라** 조각을 낸다. 여기서는
+    // 그 제안을 점선으로 그려 보여주기만 하고, 만들 때는 apply 가 **같은
+    // 파라미터로 다시 계산**한다 — 화면이 본 폴리곤을 되돌려보내지 않는다.
+    // 그러면 한 번 계산하고 다른 것을 저장하는 경로가 생기기 때문이고,
+    // 분할은 결정적이라 재계산이 "본 것과 저장된 것이 같다" 를 구조로
+    // 보장한다(routes_geo_planting.py 의 같은 주석).
+    //
+    // **진입은 지도 클릭이 아니라 목록이다.** 식생 모드에서 zone 도형은 클릭
+    // 대상이 아니고(설계 정본: 겹침이 기본이라 클릭은 식생 후보만 고른다),
+    // 이 페이지에는 "선택된 zone" 상태 자체가 없다. 클릭으로 고르게 하려면
+    // 그 상태부터 만들어야 하는데, 그것은 예전에 사고를 낸 자리다.
+
+    _nativeMap() {
+        const m = this.parent && this.parent.map;
+        return (m && (m._originalMap || m._mlMap)) || m || null;
+    }
+
+    /**
+     * 지도에 올라와 있는 **나눌 수 있는 도형**(구역·대지) 목록.
+     *
+     * `shape_uuid` 가 GeoShape.unique_id 다(get_overlays 가 항상 싣는다).
+     * 아직 저장되지 않은 도형에는 그것이 없다 — 서버가 찾지 못하므로 목록에
+     * 올리지 않는다. 그리자마자 나누려면 먼저 저장해야 한다.
+     */
+    _areaShapes() {
+        const out = [];
+        const seen = new Set();
+        const scan = (kind) => {
+            const group = this.parent && this.parent.layerStorage &&
+                          this.parent.layerStorage[kind];
+            if (!group || typeof group.eachLayer !== 'function') return;
+            try {
+                group.eachLayer((layer) => {
+                    const feature = layer && layer.feature;
+                    const props = (feature && feature.properties) || {};
+                    const uuid = props.shape_uuid;
+                    if (!uuid || seen.has(uuid)) return;
+                    const gtype = feature.geometry && feature.geometry.type;
+                    if (gtype !== 'Polygon' && gtype !== 'MultiPolygon') return;
+                    seen.add(uuid);
+                    out.push({ uuid: uuid, kind: kind, name: props.name || '' });
+                });
+            } catch (e) { /* 그룹이 아직 준비 전 */ }
+        };
+        scan('zone');       // 구역이 먼저다 — 나누는 대상은 거의 구역이다
+        scan('site');
+        return out;
+    }
+
+    hasSplitPreview() { return !!(this._split && this._split.info); }
+
+    /** 미리보기 요약 한 줄 — 패널 막대와 토스트가 같은 문구를 쓴다. */
+    splitSummaryText() {
+        if (!this.hasSplitPreview()) return '';
+        const info = this._split.info;
+        const parts = [];
+        parts.push(`${this._t('Pieces')} ${info.count}`);
+        parts.push(`${this._t('Piece width')} ${info.strip_width_m} m`);
+        const lens = (this._split.strips || [])
+            .map(s => s.length_m).filter(n => typeof n === 'number');
+        if (lens.length) {
+            const lo = Math.min.apply(null, lens);
+            const hi = Math.max.apply(null, lens);
+            parts.push(`${this._t('Length')} ${lo === hi ? lo : lo + '–' + hi} m`);
+        }
+        parts.push(`${this._t('Direction')} ${info.orientation_deg}°`);
+        // 버린 조각을 숨기지 않는다 — 개수가 요청과 다른 이유가 그것이다.
+        if (info.dropped) {
+            parts.push(`${this._t('Dropped as too short')} ${info.dropped}`);
+        }
+        return parts.join(' · ');
+    }
+
+    /**
+     * 패널 막대를 지금 상태로 다시 그린다.
+     *
+     * `render()` 를 인자 없이 부르면 `selectedFeature` 가 지워지고 파이프
+     * 설정이 기본값으로 리셋된다. 지금 값을 그대로 넘겨 다시 그린다.
+     */
+    _refreshPanel() {
+        const panel = this.parent && this.parent.panel;
+        if (!panel || typeof panel.render !== 'function') return;
+        try { panel.render(panel.currentMode, panel.selectedFeature); } catch (e) {}
+    }
+
+    /** 분할 입력 폼을 연다. 이미 미리보기가 있으면 그 값으로 채운다. */
+    openSplitForm() {
+        const areas = this._areaShapes();
+        if (!areas.length) {
+            this._toast(this._t('No zones or sites on this map. Draw one first.'),
+                        'warning');
+            return;
+        }
+        const prev = (this._split && this._split.args) || {};
+        const prevValues = (this._split && this._split.values) || {};
+        const themeColor = this.colorOf(null);
+
+        const body = this._shell(this._t('Split into plots'), true,
+                                 this._t('Preview'));
+        // 작물·기간 칸은 생성 폼과 **같은 골격**을 쓴다. 만들 때와 나눌 때
+        // 같은 값을 두 군데서 배우게 하지 않는다.
+        body.innerHTML = this._splitFormHtml(areas, prev) +
+                         this._formHtml(Object.assign(
+                             { planted_on: this._today(), color: themeColor },
+                             prevValues));
+
+        const modeEl = body.querySelector('[data-veg-split="mode"]');
+        const labelEl = body.querySelector('[data-veg-split-amount]');
+        const amountEl = body.querySelector('[data-veg-split="amount"]');
+        const syncMode = () => {
+            const byWidth = modeEl && modeEl.value === 'width';
+            if (labelEl) {
+                labelEl.textContent = byWidth ? this._t('Piece width (cm)')
+                                              : this._t('Number of pieces');
+            }
+            if (amountEl) {
+                amountEl.min = byWidth ? '1' : '2';
+                amountEl.step = byWidth ? '10' : '1';
+            }
+        };
+        if (modeEl) {
+            modeEl.addEventListener('change', () => {
+                // 값을 지운다 — "3" 이 3등분에서 3cm 로 조용히 바뀌면
+                // 사용자가 말하지 않은 굵기로 나뉜 제안을 보게 된다.
+                if (amountEl) amountEl.value = '';
+                syncMode();
+            });
+        }
+        syncMode();
+
+        this._wireForm(body, (values) => {
+            if (!values.crop) {
+                this._toast(this._t('Crop is required'), 'warning');
+                return;
+            }
+            // 색을 손대지 않았으면 저장하지 않는다 — 생성 폼과 같은 규칙
+            // (각인해 두면 나중에 테마 색을 바꿔도 그 구획만 옛 색으로 남는다).
+            if (values.color &&
+                values.color.toLowerCase() === themeColor.toLowerCase()) {
+                delete values.color;
+            }
+            const parsed = this._splitArgsFrom(body);
+            if (parsed.error) {
+                this._toast(parsed.error, 'warning');
+                return;
+            }
+            this._previewSplit(parsed.args, values);
+        });
+    }
+
+    _splitFormHtml(areas, prev) {
+        const row = (label, control, labelAttr) => `
+            <div class="aot-modal-option-row">
+                <div class="aot-modal-option-label"${labelAttr || ''}>${label}</div>
+                <div class="aot-modal-option-control">${control}</div>
+            </div>`;
+
+        // 구역과 대지를 optgroup 으로 가른다 — 이름 뒤에 종류를 이어붙이면
+        // 한 칸이 두 가지를 말하게 된다.
+        const group = (kind, label) => {
+            const items = areas.filter(a => a.kind === kind);
+            if (!items.length) return '';
+            return `<optgroup label="${this._esc(label)}">` + items.map(a =>
+                `<option value="${this._esc(a.uuid)}"${
+                    a.uuid === prev.zone_id ? ' selected' : ''}>${
+                    this._esc(a.name || this._t('Unnamed'))}</option>`).join('') +
+                `</optgroup>`;
+        };
+
+        const byWidth = prev.strip_width_cm != null;
+        const amount = byWidth ? prev.strip_width_cm
+                               : (prev.parts != null ? prev.parts : '');
+
+        return `
+            <div class="aot-modal-group-title">${this._t('Split into plots')}</div>
+            <div class="aot-modal-container">
+                ${row(this._t('Area to split'),
+                      `<select class="aot-modern-input form-control"
+                               data-veg-split="zone_id">${
+                          group('zone', this._t('Zone'))}${
+                          group('site', this._t('Site'))}</select>`)}
+                ${row(this._t('Split by'),
+                      `<select class="aot-modern-input form-control"
+                               data-veg-split="mode">
+                           <option value="parts"${byWidth ? '' : ' selected'}>${
+                               this._t('Equal parts')}</option>
+                           <option value="width"${byWidth ? ' selected' : ''}>${
+                               this._t('Strip width')}</option>
+                       </select>`)}
+                ${row(this._t('Number of pieces'),
+                      `<input type="number" min="2" step="1"
+                              class="aot-modern-input form-control"
+                              data-veg-split="amount" value="${this._esc(amount)}">`,
+                      ' data-veg-split-amount')}
+                ${row(this._t('Edge margin (cm)'),
+                      `<input type="number" min="0" step="10"
+                              class="aot-modern-input form-control"
+                              data-veg-split="edge_margin_cm"
+                              value="${this._esc(prev.edge_margin_cm || 0)}">`)}
+                <div class="aot-modal-body-text">${
+                    this._t('Room to turn machinery along the edge.')}</div>
+                <div class="aot-modal-body-text">${
+                    this._t('Pieces follow the longest side of the shape, and irregular edges are clipped.')}</div>
+                <div class="aot-modal-body-text">${
+                    this._t('Each piece is numbered after the plot name.')}</div>
+                <div class="aot-modal-body-text">${
+                    this._t('Nothing is saved until you create the plots.')}</div>
+            </div>`;
+    }
+
+    /** 폼 → 서버 파라미터. 등분과 폭은 **한 칸**이라 둘 다 보낼 수 없다. */
+    _splitArgsFrom(body) {
+        const get = (key) => {
+            const el = body.querySelector(`[data-veg-split="${key}"]`);
+            return el ? String(el.value || '').trim() : '';
+        };
+        const zoneId = get('zone_id');
+        if (!zoneId) {
+            return { error: this._t('Pick a zone or site to split.') };
+        }
+        const amount = parseFloat(get('amount'));
+        if (!isFinite(amount) || amount <= 0) {
+            return { error: this._t('Enter how many pieces, or how wide each piece is.') };
+        }
+        const args = { zone_id: zoneId };
+        if (get('mode') === 'width') args.strip_width_cm = amount;
+        else args.parts = Math.round(amount);
+
+        const margin = parseFloat(get('edge_margin_cm'));
+        if (isFinite(margin) && margin > 0) args.edge_margin_cm = margin;
+        return { args: args };
+    }
+
+    /**
+     * 제안을 받아 지도에 그리고 모달을 닫는다.
+     *
+     * 모달을 닫는 이유는 그것이 지도 가운데를 덮기 때문이다 — 보라고 그린
+     * 점선을 볼 수 없으면 미리보기가 아니다. 적용·취소는 지도를 가리지 않는
+     * 위 패널 막대로 넘어간다.
+     */
+    _previewSplit(args, values) {
+        const q = new URLSearchParams();
+        q.set('zone_id', args.zone_id);
+        if (args.parts != null) q.set('parts', args.parts);
+        if (args.strip_width_cm != null) q.set('strip_width_cm', args.strip_width_cm);
+        if (args.edge_margin_cm != null) q.set('edge_margin_cm', args.edge_margin_cm);
+
+        return this._api('GET', '/api/geo/planting/split-preview?' + q.toString())
+            .then(({ status, data }) => {
+                if (status >= 400 || !data || !data.ok) {
+                    this._toast((data && data.message) || this._t('Split failed'),
+                                'error');
+                    return;
+                }
+                this._split = { args: args, values: values,
+                                info: data.info, strips: data.strips || [] };
+                if (!this._drawSplitPreview(this._split.strips)) {
+                    this._split = null;
+                    this._toast(this._t('Could not draw the preview.'), 'error');
+                    return;
+                }
+                this._close();
+                this._refreshPanel();
+                this._toast(this.splitSummaryText(), 'info');
+            })
+            .catch(() => this._toast(this._t('Split failed'), 'error'));
+    }
+
+    /**
+     * 제안 폴리곤을 **점선**으로 그린다 — 실제 구획(굵은 실선 + 진한 채움)과
+     * 한눈에 갈려야 한다. 클릭 핸들러를 붙이지 않고, 이 페이지의 도형 선택은
+     * 전부 `layers:` 를 명시한 `queryRenderedFeatures` 라 이 레이어는 잡히지
+     * 않는다 — 미리보기를 선택하거나 지울 수 있으면 그것부터 사고다.
+     */
+    _drawSplitPreview(strips) {
+        const map = this._nativeMap();
+        if (!map || typeof map.addSource !== 'function') return false;
+        const color = this.colorOf(null);
+        const data = {
+            type: 'FeatureCollection',
+            features: (strips || []).map(s => ({
+                type: 'Feature',
+                properties: { index: s.index },
+                geometry: s.geometry
+            }))
+        };
+        try {
+            if (map.getSource(this._splitSrc)) {
+                map.getSource(this._splitSrc).setData(data);
+            } else {
+                map.addSource(this._splitSrc, { type: 'geojson', data: data });
+            }
+            if (!map.getLayer(this._splitFill)) {
+                map.addLayer({
+                    id: this._splitFill, type: 'fill', source: this._splitSrc,
+                    paint: { 'fill-color': color, 'fill-opacity': 0.15 }
+                });
+            }
+            if (!map.getLayer(this._splitLine)) {
+                map.addLayer({
+                    id: this._splitLine, type: 'line', source: this._splitSrc,
+                    paint: {
+                        'line-color': color,
+                        'line-width': 3,
+                        'line-opacity': 0.95,
+                        'line-dasharray': [2, 2]
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('[Vegetation] 분할 미리보기 그리기 실패:', e);
+            return false;
+        }
+        return true;
+    }
+
+    /** 미리보기를 걷는다. 아무것도 저장되지 않았으므로 되돌릴 것이 없다. */
+    clearSplitPreview() {
+        const map = this._nativeMap();
+        if (map) {
+            [this._splitLine, this._splitFill].forEach(id => {
+                try { if (map.getLayer && map.getLayer(id)) map.removeLayer(id); }
+                catch (e) { /* 이미 없음 */ }
+            });
+            try {
+                if (map.getSource && map.getSource(this._splitSrc)) {
+                    map.removeSource(this._splitSrc);
+                }
+            } catch (e) { /* 이미 없음 */ }
+        }
+        this._split = null;
+        this._refreshPanel();
+    }
+
+    /**
+     * 제안을 실제 구획으로 만든다 — 서버가 **같은 파라미터로 다시 계산**한다.
+     *
+     * 일부만 저장된 것을 성공이라 말하지 않는다. 지도에는 몇 개만 뜨는데
+     * 응답이 성공이면 나머지가 어디 갔는지 알 방법이 없다.
+     */
+    applySplit() {
+        if (!this.hasSplitPreview() || this._splitBusy) return;
+        const pending = this._split;
+        this._splitBusy = true;
+
+        this._api('POST', '/api/geo/planting/split-apply',
+                  Object.assign({}, pending.args, pending.values))
+            .then(({ status, data }) => {
+                this._splitBusy = false;
+                if (status >= 400) {
+                    // 하나도 만들어지지 않았다 — 미리보기는 남겨 둔다.
+                    this._toast((data && data.message) || this._t('Split failed'),
+                                'error');
+                    return;
+                }
+                const created = (data && data.created) || [];
+                const errors = (data && data.errors) || [];
+                // 무엇이든 저장됐으면 화면의 점선은 이미 사실과 다르다.
+                this.clearSplitPreview();
+                this.load(true);
+                if (errors.length) {
+                    this._toast(`${this._t('Some pieces could not be saved.')} (${
+                        errors.length}/${errors.length + created.length})`, 'error');
+                    return;
+                }
+                if (!created.length) {
+                    this._toast((data && data.message) || this._t('Split failed'),
+                                'error');
+                    return;
+                }
+                this._toast(`${this._t('Plots created')} (${created.length})`,
+                            'success');
+            })
+            .catch(() => {
+                this._splitBusy = false;
+                this._toast(this._t('Split failed'), 'error');
+            });
+    }
+
     // ── 모달 셸 ─────────────────────────────────────────────────────────
     //
     // AoT 현대화 모달 구조를 그대로 쓴다(정본: layout_default.html 의
@@ -832,11 +1224,15 @@ class AoTGeoVegetation {
     // 인라인 오버라이드는 모바일 미디어쿼리(전체화면 전환)를 덮어써 폰에서
     // 레이아웃이 깨진다.
 
-    /** `withSave=false` 면 저장 버튼을 두지 않는다 (고르기만 하는 창). */
-    _shell(title, withSave) {
+    /**
+     * `withSave=false` 면 저장 버튼을 두지 않는다 (고르기만 하는 창).
+     * `saveLabel` 로 그 버튼의 문구를 바꾼다 — 분할 창에서는 누르는 순간
+     * 저장되는 것이 아니라 미리보기를 계산할 뿐이라 "저장" 이면 거짓말이다.
+     */
+    _shell(title, withSave, saveLabel) {
         const save = (withSave === false) ? '' : `
                             <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
-                                    data-veg-save>${this._t('Save')}</button>`;
+                                    data-veg-save>${saveLabel || this._t('Save')}</button>`;
         $('#' + this._modalId).remove();
         document.body.insertAdjacentHTML('beforeend', `
             <div class="modal fade aot-option-modal" id="${this._modalId}"

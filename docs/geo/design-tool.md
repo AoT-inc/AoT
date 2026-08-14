@@ -80,6 +80,20 @@ Records **what is planted where**. If a Zone says "this area is block 3-1", a pl
 
 **You do not pick a parent zone.** Just draw it — which zone it belongs to is derived from its position, the same way equipment and devices work.
 
+#### Splitting a zone into plots { #split }
+
+When one zone is planted in several pieces, you do not have to draw each piece — you can have it **split**. Use the **Split into plots** button in Planting mode.
+
+- **Area to split** — pick from the zones and sites already drawn on the map. A shape you have not saved yet is not in the list (save it first).
+- **Split by** — either **Equal parts** (how many pieces) or **Strip width** (how many cm each piece is). Not both.
+- **Edge margin** — leaves room inside the shape for machinery to turn. Use 0 if you do not need it.
+- **Crop, variety, plot name, planted-on date, color** — every piece gets the same values. The plot name gets the piece number appended (`Trial 1`, `Trial 2`, …).
+
+Press **Preview** and the proposal is drawn on the map as a **dashed** outline, with the piece count, piece width, length range and direction shown in the bar above. Nothing is saved up to this point — if it looks right press **Create plots**, otherwise **Discard preview**. To try different numbers, press **Split into plots** again.
+
+!!! note "Pieces follow the long direction of the field"
+    Cutting on true north leaves beds running diagonally across an irregular field, producing nothing but offcuts. So pieces follow the shape's **longest side**, and irregular edges are clipped. That is why pieces differ in length, and pieces too short to be a bed (under 2 m) are dropped — the number dropped is shown too.
+
 #### Bed layout goes in a note { #bed-layout }
 
 Ask the AI "how many rows fit here?" and it counts the way the field actually works — **plants go on the beds, not in the furrows**. Counting rows uniformly across the whole plot overestimated by 24% in a measured case (28.4 m wide: 71 rows uniform → 54 rows bedded).
