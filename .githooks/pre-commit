@@ -100,3 +100,23 @@ if [ -z "$AOT_SKIP_STATIC_CACHE_CHECK" ]; then
         fi
     fi
 fi
+
+# ── 최근 커밋을 되돌리는 변경 ────────────────────────────────────────────
+# 오래된 base 에서 편집한 파일이 방금 한 작업을 덮어쓰는 것. 문법도 멀쩡하고
+# 테스트도 지워진 기능을 안 부르니 통과한다 — 지워지는 것이 선언·등록·문서면
+# 구현과 테스트만 고아로 남고 아무도 모른다. 2026-08-14 에 실제로 그랬고
+# (거리 도구 2개가 3개 파일에서 사라졌다), 그때 잡은 것은 우연히 돌려 본
+# SSOT 테스트였다 — 그 밖에서 같은 일이 나면 잡을 수단이 없었다.
+# 우회: AOT_SKIP_REVERT_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_REVERT_CHECK" ]; then
+    RV_CHECK="$ROOT/aot/scripts/check_revert_drift.py"
+    if [ -f "$RV_CHECK" ]; then
+        if ! python3 "$RV_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 최근 커밋이 넣은 줄이 통째로 사라집니다."
+            echo "  되돌리려는 것이 맞으면 그대로 진행하세요."
+            echo "  (의도한 커밋이라면 AOT_SKIP_REVERT_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
