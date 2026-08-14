@@ -233,6 +233,8 @@ class TestDimensions(unittest.TestCase):
 
 
 class TestCapacityEstimate(unittest.TestCase):
+    """평평한 배치 — 줄 간격 + 그루 간격."""
+
     def setUp(self):
         from aot.aot_flask.geo import planting_context
         self.ctx = planting_context
@@ -247,28 +249,22 @@ class TestCapacityEstimate(unittest.TestCase):
         """
         cap = self.ctx.capacity_estimate(self.dims, 40, 15)
 
+        self.assertEqual(cap['layout'], 'flat')
         self.assertEqual(cap['rows_possible'], 10)
         self.assertEqual(cap['plants_per_row'], int(2000 // 15))
         self.assertEqual(cap['total_plants'],
                          cap['rows_possible'] * cap['plants_per_row'])
 
     def test_half_spacing_stays_free_at_each_edge_by_default(self):
-        """여백을 안 줘도 칸 세기가 양쪽에 간격 절반씩을 남긴다.
-
-        10줄 × 40cm = 400cm 로 폭을 정확히 채우고, 줄은 각 칸의 가운데(20cm,
-        60cm … 380cm)에 선다 — 경계에서 20cm 떨어진다.
-        """
+        """여백을 안 줘도 칸 세기가 양쪽에 간격 절반씩을 남긴다."""
         cap = self.ctx.capacity_estimate(self.dims, 40, 15)
         self.assertEqual(cap['edge_margin_cm'], 0.0)
-        used_cm = cap['rows_possible'] * cap['row_spacing_cm']
-        self.assertLessEqual(used_cm, self.dims['width_m'] * 100.0)
+        self.assertLessEqual(cap['rows_possible'] * 40, self.dims['width_m'] * 100)
 
     def test_basis_always_says_it_is_approximate(self):
-        """근사임을 말하지 않으면 이 숫자가 그대로 모종 주문량이 된다."""
         cap = self.ctx.capacity_estimate(self.dims, 40, 15)
         self.assertIn('Approximate', cap['basis'])
         self.assertIn('bounding rectangle', cap['basis'])
-        # 여백을 안 줬을 때는 줄 수 있다는 사실을 알려야 한다.
         self.assertIn('edge_margin_cm', cap['basis'])
 
     def test_shape_warning_is_carried_into_basis(self):
@@ -288,127 +284,41 @@ class TestCapacityEstimate(unittest.TestCase):
         self.assertIn('FEWER', cap['basis'])
 
     def test_edge_margin_eats_into_both_axes(self):
-        """농기계 선회 공간 1m — 간격 절반으로는 감당되지 않는 크기."""
         cap = self.ctx.capacity_estimate(self.dims, 40, 15, edge_margin_cm=100)
 
-        # 폭 4m 에서 양쪽 1m 씩 → 2m 만 남는다.
         self.assertEqual(cap['usable_width_m'], 2.0)
         self.assertEqual(cap['usable_length_m'], 18.0)
         self.assertEqual(cap['rows_possible'], 5)
         self.assertEqual(cap['plants_per_row'], 120)
-
-    def test_edge_margin_is_reported_so_the_number_is_auditable(self):
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15, edge_margin_cm=100)
-        self.assertEqual(cap['edge_margin_cm'], 100.0)
         self.assertIn('100 cm was taken off each edge', cap['basis'])
 
     def test_margin_larger_than_the_plot_yields_zero_not_a_negative_count(self):
-        """여백이 밭을 다 먹으면 0 이라고 말한다 — 음수 줄 수는 답이 아니다."""
         cap = self.ctx.capacity_estimate(self.dims, 40, 15, edge_margin_cm=300)
-
         self.assertEqual(cap['rows_possible'], 0)
         self.assertEqual(cap['total_plants'], 0)
         self.assertIn('Nothing fits', cap['basis'])
 
     def test_zero_margin_is_allowed_and_means_zero(self):
-        """0 은 '안 줬다' 가 아니라 '여백 없이 심겠다' 는 유효한 선택이다."""
         cap = self.ctx.capacity_estimate(self.dims, 40, 15, edge_margin_cm=0)
         self.assertEqual(cap['edge_margin_cm'], 0.0)
         self.assertEqual(cap['rows_possible'], 10)
 
-    def test_flat_layout_tells_the_caller_to_settle_the_bed_spec(self):
-        """두둑 규격 없이 낸 숫자를 그대로 답으로 쓰면 20~30% 과다추정이다.
-
-        그 사실이 응답 어디에도 없으면 AI 는 균일 배치 숫자를 확신하고 답한다.
-        """
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15)
-
-        self.assertEqual(cap['layout'], 'flat')
-        self.assertIn('ask_user', cap)
-        self.assertIn('bed_width_cm', cap['ask_user'])
-        self.assertNotIn('beds_possible', cap)
-
-    def test_bed_layout_counts_beds_and_rows_per_bed(self):
-        """폭 4m 에 두둑 120 + 고랑 40 → 두둑 2개, 두둑당 3줄 = 6줄.
-
-        균일 배치의 10줄과 크게 다르다 — 고랑에는 아무것도 안 심고, 남은
-        120cm 는 앞에 고랑 40 을 두면 두둑이 들어가지 않는다.
-        """
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15,
-                                         bed_width_cm=120, path_width_cm=40)
-
-        self.assertEqual(cap['layout'], 'beds')
-        self.assertEqual(cap['beds_possible'], 2)
-        self.assertEqual(cap['rows_per_bed'], 3)
-        self.assertEqual(cap['rows_possible'], 6)
-        self.assertNotIn('ask_user', cap)
-
-    def test_last_bed_needs_no_trailing_furrow(self):
-        """n 두둑은 `n·두둑 + (n-1)·고랑` 을 쓴다 — 마지막 두둑 뒤는 밭 끝이다.
-
-        폭 4m 에 두둑 100 + 고랑 50 이면 100·3 + 50·2 = 400 으로 3개가 정확히
-        들어간다. `n·(두둑+고랑)` 으로 세면 400/150 = 2 개가 되어 두둑 하나가
-        통째로 사라진다.
-        """
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15,
-                                         bed_width_cm=100, path_width_cm=50)
-        self.assertEqual(cap['beds_possible'], 3)
-
-    def test_bed_narrower_than_row_spacing_is_zero_with_a_reason(self):
-        """두둑 30cm 에 40cm 간격 줄은 한 줄도 안 선다."""
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15,
-                                         bed_width_cm=30, path_width_cm=40)
-        self.assertEqual(cap['rows_possible'], 0)
-        self.assertIn('narrower than', cap['basis'])
-
-    def test_bed_wider_than_the_plot_is_zero_with_a_reason(self):
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15,
-                                         bed_width_cm=600, path_width_cm=40)
-        self.assertEqual(cap['beds_possible'], 0)
-        self.assertEqual(cap['total_plants'], 0)
-        self.assertIn('not enough for one', cap['basis'])
-
-    def test_bed_and_path_must_come_together(self):
-        with self.assertRaises(ValueError):
-            self.ctx.capacity_estimate(self.dims, 40, 15, bed_width_cm=120)
-        with self.assertRaises(ValueError):
-            self.ctx.capacity_estimate(self.dims, 40, 15, path_width_cm=40)
-
-    def test_zero_furrow_is_allowed(self):
-        """고랑 0 = 두둑을 붙여 만드는 배치. 유효한 선택이다."""
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15,
-                                         bed_width_cm=100, path_width_cm=0)
-        self.assertEqual(cap['beds_possible'], 4)
-
-    def test_bed_spec_combines_with_edge_margin(self):
-        """여백을 먼저 빼고 남은 폭에 두둑을 놓는다."""
-        cap = self.ctx.capacity_estimate(self.dims, 40, 15, edge_margin_cm=50,
-                                         bed_width_cm=100, path_width_cm=50)
-        self.assertEqual(cap['usable_width_m'], 3.0)
-        self.assertEqual(cap['beds_possible'], 2)
-
-    def test_no_spacing_means_not_asked(self):
+    def test_nothing_asked_is_none(self):
         self.assertIsNone(self.ctx.capacity_estimate(self.dims))
 
-    def test_bed_spec_without_spacing_is_an_error(self):
+    def test_plant_spacing_is_required_for_any_count(self):
+        """그루 간격 없이는 어떤 배치에서도 셀 수 없다."""
         with self.assertRaises(ValueError):
-            self.ctx.capacity_estimate(self.dims, bed_width_cm=120,
-                                       path_width_cm=40)
-
-    def test_one_spacing_alone_is_an_error_not_a_silent_skip(self):
-        """간격을 말했는데 답에 계산이 없으면 무시된 것을 아무도 모른다."""
-        with self.assertRaises(ValueError):
-            self.ctx.capacity_estimate(self.dims, 40, None)
-        with self.assertRaises(ValueError):
-            self.ctx.capacity_estimate(self.dims, None, 15)
-
-    def test_margin_without_spacing_is_an_error_too(self):
-        """여백만 주면 계산이 안 되는데, 조용히 넘기면 반영된 줄 안다."""
+            self.ctx.capacity_estimate(self.dims, 40)
         with self.assertRaises(ValueError):
             self.ctx.capacity_estimate(self.dims, edge_margin_cm=100)
 
-    def test_non_positive_or_garbage_spacing_is_rejected(self):
-        for bad in (0, -40, 'abc', None):
+    def test_flat_layout_needs_a_row_spacing(self):
+        with self.assertRaises(ValueError):
+            self.ctx.capacity_estimate(self.dims, None, 15)
+
+    def test_garbage_spacing_is_rejected(self):
+        for bad in (0, -40, 'abc'):
             with self.assertRaises(ValueError):
                 self.ctx.capacity_estimate(self.dims, bad, 15)
 
@@ -416,6 +326,129 @@ class TestCapacityEstimate(unittest.TestCase):
         for bad in (-10, 'abc'):
             with self.assertRaises(ValueError):
                 self.ctx.capacity_estimate(self.dims, 40, 15, edge_margin_cm=bad)
+
+
+class TestBedLayout(unittest.TestCase):
+    """두둑 배치 — 간격(고랑 포함) + 두둑당 줄 수.
+
+    두둑 폭 + 고랑 폭 쌍은 폐기했다. 농부는 둘을 따로 세지 않아서, 같은 밭이
+    120+40 으로도 160+0 으로도 기록됐다 — 에러 없이 두둑 수만 달라지는 종류다.
+    """
+
+    def setUp(self):
+        from aot.aot_flask.geo import planting_context
+        self.ctx = planting_context
+        self.dims = self.ctx.dimensions(
+            _FakeRow(_rect_at(_KIMJE_LNG, _KIMJE_LAT, 4.0, 20.0)))
+
+    def test_pitch_already_includes_the_furrow(self):
+        """폭 4m 를 160cm 간격으로 → 두둑 2개. 두둑당 2줄이면 4줄."""
+        cap = self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                         bed_pitch_cm=160, rows_per_bed=2)
+
+        self.assertEqual(cap['layout'], 'beds')
+        self.assertEqual(cap['beds_possible'], 2)
+        self.assertEqual(cap['rows_per_bed'], 2)
+        self.assertEqual(cap['rows_possible'], 4)
+        self.assertNotIn('ask_user', cap)
+
+    def test_row_spacing_is_neither_needed_nor_used(self):
+        """두둑당 줄 수가 그 자리를 대신한다 — 요구하면 헛것을 묻는 셈이다."""
+        cap = self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                         bed_pitch_cm=160, rows_per_bed=2)
+        self.assertNotIn('row_spacing_cm', cap)
+
+        with_row = self.ctx.capacity_estimate(
+            self.dims, row_spacing_cm=40, plant_spacing_cm=15,
+            bed_pitch_cm=160, rows_per_bed=2)
+        self.assertEqual(with_row['rows_possible'], cap['rows_possible'])
+
+    def test_basis_says_the_spacing_includes_the_furrow(self):
+        """이 문장이 없으면 사용자가 두둑 윗면 폭을 넣어도 알 길이 없다."""
+        cap = self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                         bed_pitch_cm=160, rows_per_bed=2)
+        self.assertIn('includes the furrow', cap['basis'])
+        self.assertIn('conservative', cap['basis'])
+
+    def test_pitch_and_rows_must_come_together(self):
+        with self.assertRaises(ValueError):
+            self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                       bed_pitch_cm=160)
+        with self.assertRaises(ValueError):
+            self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                       rows_per_bed=2)
+
+    def test_rows_per_bed_must_be_a_whole_number_of_one_or_more(self):
+        for bad in (0, -1, 2.5, 'abc'):
+            with self.assertRaises(ValueError):
+                self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                           bed_pitch_cm=160, rows_per_bed=bad)
+
+    def test_pitch_wider_than_the_plot_is_zero_with_a_reason(self):
+        cap = self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                         bed_pitch_cm=600, rows_per_bed=2)
+        self.assertEqual(cap['beds_possible'], 0)
+        self.assertEqual(cap['total_plants'], 0)
+        self.assertIn('not enough for one bed', cap['basis'])
+
+    def test_bed_layout_combines_with_edge_margin(self):
+        """여백을 먼저 빼고 남은 폭에 두둑을 놓는다."""
+        cap = self.ctx.capacity_estimate(self.dims, plant_spacing_cm=15,
+                                         edge_margin_cm=50, bed_pitch_cm=150,
+                                         rows_per_bed=1)
+        self.assertEqual(cap['usable_width_m'], 3.0)
+        self.assertEqual(cap['beds_possible'], 2)
+
+
+class TestFlatLayoutAsksForNotes(unittest.TestCase):
+    """배치를 모르면 "노트로 남겨라" 고 시킨다 — 컬럼으로 저장하지 않는다.
+
+    한 번 컬럼으로 만들었다가 되돌렸다. 대화에서 나오는 결론마다 컬럼을 늘릴
+    수 없고, 모호한 말을 정수 칸에 밀어 넣으면 같은 밭이 두 가지로 기록된다.
+    """
+
+    def setUp(self):
+        from aot.aot_flask.geo import planting_context
+        self.ctx = planting_context
+        self.dims = self.ctx.dimensions(
+            _FakeRow(_rect_at(_KIMJE_LNG, _KIMJE_LAT, 4.0, 20.0)))
+
+    def test_flat_layout_carries_the_instruction(self):
+        cap = self.ctx.capacity_estimate(self.dims, 40, 15)
+        self.assertEqual(cap['layout'], 'flat')
+        self.assertIn('ask_user', cap)
+
+    def test_it_points_at_a_note_not_a_column(self):
+        """노트가 정본이다. 저장 도구(modify_planting)를 시키면 안 된다."""
+        ask = self.ctx._FLAT_LAYOUT_ASK
+        self.assertIn('create_note', ask)
+        self.assertIn("target_type=\"planting\"", ask)
+        self.assertNotIn('modify_planting', ask)
+
+    def test_it_asks_the_pitch_as_one_number(self):
+        """두둑과 고랑을 따로 물으면 같은 밭이 두 가지로 기록된다."""
+        ask = self.ctx._FLAT_LAYOUT_ASK
+        self.assertIn('ONE number', ask)
+        self.assertIn('bed_pitch_cm', ask)
+        self.assertIn('rows_per_bed', ask)
+
+    def test_it_names_no_country(self):
+        """ko/ja 를 함께 쓰고 설치처의 나라도 고정이 아니다."""
+        ask = self.ctx._FLAT_LAYOUT_ASK
+        for banned in ('Korea', 'Korean', 'Japan', 'Japanese'):
+            self.assertNotIn(banned, ask)
+
+
+class TestPlantingNotesAreVisible(unittest.TestCase):
+    """구획 노트가 AI 컨텍스트에 실리는 통로 — 여기가 비면 "적어 두라" 가 헛돈다."""
+
+    def test_note_digest_resolves_planting_names(self):
+        src = _read(os.path.join(_ROOT, 'ai', 'services', 'ai_context_service.py'))
+        digest = src[src.index('def get_note_digests'):]
+        digest = digest[:digest.index('def ', 10)]
+        self.assertIn('GeoPlanting', digest,
+                      '구획이 이름맵에 없으면 노트가 다이제스트에서 버려진다')
+        self.assertIn("'planting'", digest)
 
 
 # ---------------------------------------------------------------------------
@@ -563,33 +596,61 @@ class TestNoHardcodedLocale(unittest.TestCase):
         for banned in ('Korea', 'Korean', 'Japan', 'Japanese'):
             self.assertNotIn(banned, text)
 
-    def test_ui_strings_are_translated_in_both_catalogs(self):
-        """번역 없는 문구는 ja 화면에서 영어로 남는다 — 조용한 종류다."""
+    def test_no_bed_layout_ui_strings_remain(self):
+        """두둑 배치는 화면 입력이 아니라 노트로 남긴다 — 라벨이 되살아나면 안 된다.
+
+        26.08.5 에 지도 폼의 두둑 폭·고랑 폭 입력과 ko/ja 라벨이 있었고,
+        p6_36 에서 컬럼과 함께 걷어냈다. 다시 들어오면 노트 정본과 화면 입력이
+        두 벌이 되어, 같은 밭이 두 군데에 서로 다르게 적히게 된다.
+        """
         from babel.messages.pofile import read_po
 
-        needed = ('Bed layout', 'Bed width (cm)', 'Furrow width (cm)',
-                  'Not known')
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'design', 'aot-geo-vegetation.js'))
+        for banned in ('Bed layout', 'Bed width (cm)', 'Furrow width (cm)',
+                       'bed_width_cm', 'path_width_cm'):
+            self.assertNotIn(banned, js)
+
         for lang in ('ko', 'ja'):
             path = os.path.join(_ROOT, 'aot_flask', 'translations', lang,
                                 'LC_MESSAGES', 'messages.po')
             with open(path, encoding='utf-8') as fh:
                 cat = read_po(fh)
-            for msgid in needed:
-                self.assertIn(msgid, cat, '%s: %r 가 카탈로그에 없다' % (lang, msgid))
-                self.assertTrue(cat[msgid].string,
-                                '%s: %r 가 번역되지 않았다' % (lang, msgid))
+            for banned in ('Bed layout', 'Bed width (cm)', 'Furrow width (cm)'):
+                self.assertNotIn(banned, cat,
+                                 '%s: 걷어낸 라벨 %r 가 되살아났다' % (lang, banned))
 
-    def test_compiled_catalog_is_not_stale(self):
-        """.po 만 고치고 .mo 를 안 만들면 화면은 그대로다 — 에러도 안 난다."""
-        import gettext
 
-        for lang in ('ko', 'ja'):
-            path = os.path.join(_ROOT, 'aot_flask', 'translations', lang,
-                                'LC_MESSAGES', 'messages.mo')
-            with open(path, 'rb') as fh:
-                tr = gettext.GNUTranslations(fh)
-            self.assertNotEqual(tr.gettext('Bed width (cm)'), 'Bed width (cm)',
-                                '%s: .mo 가 .po 보다 오래됐다' % lang)
+class TestBedSpecIsNotAColumn(unittest.TestCase):
+    """두둑 배치는 컬럼이 아니라 구획 노트에 남는다.
+
+    26.08.5 에 `bed_width_cm`/`path_width_cm` 컬럼이 있었고 p6_36 에서 걷어냈다.
+    되살리면 두 가지가 다시 성립한다 — 농부가 "두둑 폭" 을 고랑 포함으로도
+    제외로도 답해 같은 밭이 두 가지로 기록되고, 대화에서 나오는 결론마다
+    컬럼이 늘어난다.
+    """
+
+    def test_model_has_no_bed_columns(self):
+        from aot.databases.models import GeoPlanting
+        cols = set(GeoPlanting.__table__.columns.keys())
+        for banned in ('bed_width_cm', 'path_width_cm',
+                       'bed_pitch_cm', 'rows_per_bed'):
+            self.assertNotIn(banned, cols)
+
+    def test_write_path_does_not_persist_a_bed_spec(self):
+        from aot.aot_flask.geo import planting_io
+        src = _read(planting_io.__file__.replace('.pyc', '.py'))
+        for banned in ('bed_width_cm', 'path_width_cm', 'bed_pitch_cm'):
+            self.assertNotIn(banned, src)
+
+    def test_drop_migration_rescues_values_into_notes(self):
+        """사람이 적은 사실을 스키마 결정 때문에 조용히 버리지 않는다."""
+        mig = os.path.join(_ROOT, '..', 'alembic_db', 'alembic', 'versions',
+                           'p6_36_drop_planting_bed_spec_20260814.py')
+        src = _read(mig)
+        self.assertIn('INSERT INTO notes', src)
+        self.assertIn("'planting'", src)
+        self.assertIn('drop_column', src)
 
 
 class TestOverlapStaysAllowed(unittest.TestCase):
@@ -818,142 +879,6 @@ class TestSaveRoundTrip(unittest.TestCase):
         self.assertEqual(json.dumps(copied['feature']['geometry'], sort_keys=True),
                          json.dumps(created['feature']['geometry'], sort_keys=True))
         self.assertNotEqual(copied['unique_id'], created['unique_id'])
-
-    def test_bed_spec_round_trips(self):
-        created, err = self._save(bed_width_cm=120, path_width_cm=40)
-        self.assertIsNone(err)
-        self.assertEqual(created['bed_width_cm'], 120)
-        self.assertEqual(created['path_width_cm'], 40)
-
-    def test_bed_spec_defaults_to_unknown_not_flat(self):
-        """None 은 "평평하다" 가 아니라 "모른다" — 그 구분이 조회를 좌우한다."""
-        created, _ = self._save()
-        self.assertIsNone(created['bed_width_cm'])
-        self.assertIsNone(created['path_width_cm'])
-
-    def test_zero_furrow_is_stored_not_treated_as_empty(self):
-        """0 은 유효한 배치(두둑을 붙여 만듦)다. None 으로 뭉개면 안 된다."""
-        created, err = self._save(bed_width_cm=100, path_width_cm=0)
-        self.assertIsNone(err)
-        self.assertEqual(created['path_width_cm'], 0)
-
-    def test_half_a_bed_spec_is_rejected(self):
-        _, err = self._save(bed_width_cm=120)
-        self.assertIsNotNone(err)
-
-    def test_editing_only_the_furrow_of_a_stored_spec_is_allowed(self):
-        """병합 후 값으로 검사하지 않으면 이 정상 수정이 막힌다."""
-        from aot.aot_flask.geo import planting_io
-        created, _ = self._save(bed_width_cm=120, path_width_cm=40)
-
-        updated, err = planting_io.save_planting({
-            'unique_id': created['unique_id'], 'path_width_cm': 50,
-        })
-        self.assertIsNone(err)
-        self.assertEqual(updated['bed_width_cm'], 120)
-        self.assertEqual(updated['path_width_cm'], 50)
-
-    def test_bed_spec_survives_an_unrelated_partial_update(self):
-        from aot.aot_flask.geo import planting_io
-        created, _ = self._save(bed_width_cm=120, path_width_cm=40)
-
-        updated, err = planting_io.save_planting({
-            'unique_id': created['unique_id'], 'crop': '배추',
-        })
-        self.assertIsNone(err)
-        self.assertEqual(updated['bed_width_cm'], 120)
-
-    def test_bed_spec_editable_after_end_unlike_geometry(self):
-        """나중에 규격을 알게 되어 채우는 것은 이력을 고치는 일이 아니다."""
-        from aot.aot_flask.geo import planting_io
-        created, _ = self._save()
-        planting_io.end_planting(created['unique_id'])
-
-        updated, err = planting_io.save_planting({
-            'unique_id': created['unique_id'],
-            'bed_width_cm': 150, 'path_width_cm': 50,
-        })
-        self.assertIsNone(err)
-        self.assertEqual(updated['bed_width_cm'], 150)
-
-    def test_copy_carries_the_bed_spec(self):
-        """같은 자리를 다시 심는 것이므로 두둑도 그대로다."""
-        from aot.aot_flask.geo import planting_io
-        created, _ = self._save(bed_width_cm=120, path_width_cm=40)
-        copied, err = planting_io.copy_planting(created['unique_id'])
-
-        self.assertIsNone(err)
-        self.assertEqual(copied['bed_width_cm'], 120)
-        self.assertEqual(copied['path_width_cm'], 40)
-
-    def test_stored_bed_spec_is_used_without_being_passed(self):
-        """저장해 뒀는데 매번 다시 물으면 저장한 의미가 없다."""
-        from aot.databases.models import GeoPlanting
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
-
-        created, _ = self._save(bed_width_cm=120, path_width_cm=40)
-        row = GeoPlanting.query.filter_by(unique_id=created['unique_id']).first()
-
-        brief = S._planting_brief(row, row_spacing_cm=40, plant_spacing_cm=15)
-        cap = brief['capacity_estimate']
-
-        self.assertEqual(cap['layout'], 'beds')
-        self.assertEqual(cap['bed_spec_source'], 'stored')
-        self.assertNotIn('ask_user', cap)
-
-    def test_passed_bed_spec_overrides_the_stored_one(self):
-        """"이번엔 150 으로 잡으면?" 은 저장값을 건드리지 않고 계산만 바꾼다."""
-        from aot.databases.models import GeoPlanting
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
-
-        created, _ = self._save(bed_width_cm=120, path_width_cm=40)
-        row = GeoPlanting.query.filter_by(unique_id=created['unique_id']).first()
-
-        cap = S._planting_brief(row, row_spacing_cm=40, plant_spacing_cm=15,
-                                bed_width_cm=150)['capacity_estimate']
-
-        self.assertEqual(cap['bed_width_cm'], 150)
-        self.assertEqual(cap['path_width_cm'], 40)   # 저장값에서 옴
-        self.assertEqual(cap['bed_spec_source'], 'given')
-        self.assertEqual(row.bed_width_cm, 120)      # 저장값은 그대로
-
-    def test_plain_read_of_a_plot_with_a_stored_spec_does_not_error(self):
-        """저장된 규격이 '묻지 않은 조건' 자리로 새면 그냥 조회가 깨진다.
-
-        실제로 한 번 깨뜨렸다: 두둑 규격을 기록한 구획을
-        `get_planting(planting_id)` 로만 불렀더니 "간격이 있어야 계산할 수
-        있다" 는 오류가 났다 — 아무것도 묻지 않았는데.
-        """
-        from aot.databases.models import GeoPlanting
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
-
-        created, _ = self._save(bed_width_cm=120, path_width_cm=40)
-        out = S.get_planting(planting_id=created['unique_id'])
-
-        self.assertNotIn('error', out)
-        self.assertEqual(out['planting']['bed_width_cm'], 120)
-        # 아무것도 안 물었으므로 식재량 계산은 붙지 않는다.
-        self.assertNotIn('capacity_estimate', out['planting'])
-
-    def test_bed_spec_alone_without_spacings_still_errors(self):
-        """저장값을 안 끌어오는 것과, 호출자 실수를 눈감는 것은 다르다."""
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
-
-        created, _ = self._save()
-        out = S.get_planting(planting_id=created['unique_id'], bed_width_cm=120)
-        self.assertIn('error', out)
-
-    def test_plot_without_a_bed_spec_still_asks(self):
-        from aot.databases.models import GeoPlanting
-        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
-
-        created, _ = self._save()
-        row = GeoPlanting.query.filter_by(unique_id=created['unique_id']).first()
-
-        cap = S._planting_brief(row, row_spacing_cm=40,
-                                plant_spacing_cm=15)['capacity_estimate']
-        self.assertEqual(cap['layout'], 'flat')
-        self.assertIn('ask_user', cap)
 
     def test_overlapping_plantings_both_save(self):
         """VP-3 — 간작·혼작. 겹친다고 거부하면 실제 농사를 담지 못한다."""

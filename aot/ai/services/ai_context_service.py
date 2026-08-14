@@ -412,6 +412,25 @@ class AIContextService:
                             name_map[d.unique_id] = (str(d.name or _tt), _tt)
                 except Exception:
                     continue
+            # 식생 구획(작기). GeoShape 가 아닌 별도 테이블이라 위 루프가 못 훑는다
+            # — 빠뜨리면 구획에 붙인 노트가 이름 없이 남아 다이제스트에서 버려진다.
+            #
+            # **이 자리가 중요한 이유**: 두둑 배치·멀칭·관행처럼 대화에서 확정되는
+            # 사실은 컬럼이 아니라 구획 노트로 남긴다(planting_context 의
+            # _FLAT_LAYOUT_ASK 참조). 그 노트가 다음 대화에 실려 오는 통로가
+            # 여기이므로, 여기가 비면 "적어 두라" 는 지시 자체가 헛돈다.
+            #
+            # 이름은 구획 이름 → 작물 순으로 잡는다. 이름 없는 구획이 흔하고
+            # (그릴 때 선택), 그때는 '상추' 가 uuid 보다 훨씬 쓸모 있다.
+            try:
+                from aot.databases.models import GeoPlanting
+                for p in GeoPlanting.query.all():
+                    if p.unique_id:
+                        label = str(p.name or p.crop or 'planting').strip()
+                        name_map[p.unique_id] = (label or 'planting', 'planting')
+            except Exception:
+                pass
+
 
             def _fmt(n):
                 try:

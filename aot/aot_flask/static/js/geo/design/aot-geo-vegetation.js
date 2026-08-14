@@ -747,20 +747,6 @@ class AoTGeoVegetation {
                 ${row(this._t('Colour'),
                       `<input type="color" class="aot-modern-input form-control aot-detail-field-color"
                               data-veg-field="color" value="${v(p.color || this.colorOf(p))}">`)}
-            </div>
-
-            <div class="aot-modal-group-title">${this._t('Bed layout')}</div>
-            <div class="aot-modal-container">
-                ${row(this._t('Bed width (cm)'),
-                      `<input type="number" min="1" step="10"
-                              class="aot-modern-input form-control"
-                              data-veg-field="bed_width_cm" value="${v(p.bed_width_cm)}"
-                              placeholder="${this._t('Not known')}">`)}
-                ${row(this._t('Furrow width (cm)'),
-                      `<input type="number" min="0" step="10"
-                              class="aot-modern-input form-control"
-                              data-veg-field="path_width_cm" value="${v(p.path_width_cm)}"
-                              placeholder="${this._t('Not known')}">`)}
             </div>`;
     }
 

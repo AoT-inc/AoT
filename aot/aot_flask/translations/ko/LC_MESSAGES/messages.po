@@ -27734,22 +27734,6 @@ msgstr "예상 종료일"
 msgid "Colour"
 msgstr "색"
 
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Bed layout"
-msgstr "두둑 배치"
-
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Bed width (cm)"
-msgstr "두둑 폭 (cm)"
-
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Furrow width (cm)"
-msgstr "고랑 폭 (cm)"
-
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Not known"
-msgstr "모름"
-
 
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1

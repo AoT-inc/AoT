@@ -214,9 +214,9 @@ def dimensions(row):
 
 
 def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
-                      edge_margin_cm=None, bed_width_cm=None,
-                      path_width_cm=None, bed_spec_source='given'):
-    """간격(cm) → 줄 수·그루 수. 간격이 둘 다 없으면 None(묻지 않은 것).
+                      edge_margin_cm=None, bed_pitch_cm=None,
+                      rows_per_bed=None):
+    """간격(cm) → 줄 수·그루 수. 아무것도 안 주면 None(묻지 않은 것).
 
     `get_facility_capacity` 가 냉난방 용량을 서버에서 계산해 내려주는 것과 같은
     이유로 여기서 센다 — LLM 에 암산을 맡기면 조용히 틀린다.
@@ -232,50 +232,86 @@ def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
     주지 않으면 0 — 즉 기본값은 "칸으로만 센 값"이고, 여백을 뺐다고 거짓말하지
     않는다.
 
-    **`bed_width_cm` + `path_width_cm` 이 있으면 두둑 배치로 센다.** 없으면
-    평평하게 깐 것으로 계산하되 응답에 `ask_user` 를 실어, 규격을 묻거나
-    제안해 확정한 뒤 다시 부르라고 시킨다 — 고랑에는 아무것도 안 심으므로
-    균일 배치는 두둑 농사에서 20~30% 과다추정이 되는데, 그 사실이 응답에
-    없으면 AI 가 그 숫자를 그대로 확신하고 답한다.
+    **`bed_pitch_cm` + `rows_per_bed` 가 있으면 두둑 배치로 센다.**
+
+    처음에는 두둑 폭 + 고랑 폭을 따로 받았다가 폐기했다. 농부는 둘을 따로 세지
+    않는다 — 두둑을 만들면 고랑은 딸려 온다. 그래서 "두둑 폭" 을 물으면 고랑을
+    뺀 윗면으로 답하는 사람과 고랑까지 포함한 한 세트로 답하는 사람이 갈리고,
+    같은 밭이 120+40 으로도 160+0 으로도 기록된다. 에러 없이 두둑 수만 달라진다.
+    **간격 하나(고랑 포함 중심간 거리)로 받으면 그 갈림이 성립하지 않는다.**
+
+    대신 두둑 하나에 몇 줄을 놓는지를 받는다 — 고추는 한 줄, 상추·배추는 두세
+    줄이라 이 값 없이는 줄 수를 셀 수 없다. `row_spacing_cm` 은 **평평한
+    배치에서만** 쓴다: 두둑 배치에서는 두둑당 줄 수가 그 자리를 대신하므로
+    요구하면 쓰지도 않을 값을 묻는 셈이 된다.
+
+    배치를 모르면 평평하게 깐 것으로 계산하되 응답에 `ask_user` 를 실어, 묻거나
+    제안해 확정한 뒤 **구획 노트로 남기라고** 시킨다 — 고랑에는 아무것도 안
+    심으므로 균일 배치는 두둑 농사에서 20~30% 과다추정이 되는데, 그 사실이
+    응답에 없으면 AI 가 그 숫자를 그대로 확신하고 답한다.
 
     Raises:
-        ValueError: 간격을 한쪽만 주거나(두둑 규격도 마찬가지), 양수로 읽히지
-            않는 값을 준 경우. 조용히 건너뛰면 사용자는 조건을 말했는데 답에는
-            그것이 반영되지 않은 상태가 된다 — 무시된 것을 아무도 모른다.
+        ValueError: 필요한 값이 빠졌거나, 두둑 배치를 한쪽만 주거나, 양수로
+            읽히지 않는 값을 준 경우. 조용히 건너뛰면 사용자는 조건을 말했는데
+            답에는 그것이 반영되지 않은 상태가 된다 — 무시된 것을 아무도 모른다.
     """
-    if row_spacing_cm is None and plant_spacing_cm is None:
-        if all(v is None for v in
-               (edge_margin_cm, bed_width_cm, path_width_cm)):
-            return None
-        # 여백이나 두둑 규격만 주는 것은 계산이 성립하지 않는다. 조용히
-        # 무시하면 사용자는 그것이 반영된 줄 알고 답을 읽는다.
+    if all(v is None for v in (row_spacing_cm, plant_spacing_cm,
+                               edge_margin_cm, bed_pitch_cm, rows_per_bed)):
+        return None
+    if plant_spacing_cm is None:
+        # 그루 간격 없이는 어떤 배치에서도 셀 수 없다. 조용히 무시하면
+        # 사용자는 자기가 말한 조건이 반영된 줄 알고 답을 읽는다.
+        raise ValueError('plant_spacing_cm is required to count anything')
+    if (bed_pitch_cm is None) != (rows_per_bed is None):
         raise ValueError(
-            'row_spacing_cm and plant_spacing_cm are required to compute '
-            'anything from edge_margin_cm / bed_width_cm / path_width_cm')
-    if row_spacing_cm is None or plant_spacing_cm is None:
-        raise ValueError(
-            'row_spacing_cm and plant_spacing_cm must be given together')
+            'bed_pitch_cm and rows_per_bed must be given together — a bed '
+            'spacing alone does not say how many rows go on one bed')
 
-    def _cm(value, field, allow_zero=False):
+    def _cm(value, field):
         try:
             out = float(value)
         except (TypeError, ValueError):
             raise ValueError('%s must be a number in centimeters' % field)
-        if out < 0 or (out == 0 and not allow_zero):
+        if out <= 0:
             raise ValueError('%s must be greater than 0' % field)
         return out
 
-    if (bed_width_cm is None) != (path_width_cm is None):
-        raise ValueError(
-            'bed_width_cm and path_width_cm must be given together')
+    def _cm0(value, field):
+        """0 을 허용하는 길이 — 여백은 "없음" 이 유효한 값이다."""
+        try:
+            out = float(value)
+        except (TypeError, ValueError):
+            raise ValueError('%s must be a number in centimeters' % field)
+        if out < 0:
+            raise ValueError('%s cannot be negative' % field)
+        return out
 
-    row_cm = _cm(row_spacing_cm, 'row_spacing_cm')
+    def _count(value, field):
+        """줄 수는 개수라 정수여야 한다 — 2.5줄은 밭에 놓을 수 없다."""
+        try:
+            out = float(value)
+        except (TypeError, ValueError):
+            raise ValueError('%s must be a whole number' % field)
+        if out != int(out) or int(out) < 1:
+            raise ValueError('%s must be a whole number of 1 or more' % field)
+        return int(out)
+
     plant_cm = _cm(plant_spacing_cm, 'plant_spacing_cm')
     margin_cm = (0.0 if edge_margin_cm is None
-                 else _cm(edge_margin_cm, 'edge_margin_cm', allow_zero=True))
-    bedded = bed_width_cm is not None
-    bed_cm = _cm(bed_width_cm, 'bed_width_cm') if bedded else None
-    path_cm = _cm(path_width_cm, 'path_width_cm', allow_zero=True) if bedded else None
+                 else _cm0(edge_margin_cm, 'edge_margin_cm'))
+    bedded = bed_pitch_cm is not None
+    pitch_cm = _cm(bed_pitch_cm, 'bed_pitch_cm') if bedded else None
+    per_bed = _count(rows_per_bed, 'rows_per_bed') if bedded else None
+
+    # 줄 간격은 평평한 배치에서만 필요하다. 두둑 배치에서 요구하면 쓰지도 않을
+    # 값을 묻는 셈이 된다.
+    row_cm = None
+    if not bedded:
+        if row_spacing_cm is None:
+            raise ValueError(
+                'row_spacing_cm is required unless a bed layout is given '
+                '(bed_pitch_cm + rows_per_bed)')
+        row_cm = _cm(row_spacing_cm, 'row_spacing_cm')
 
     if not dims:
         return None
@@ -286,28 +322,28 @@ def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
     usable_l = max(dims['length_m'] * 100.0 - 2 * margin_cm, 0.0)
 
     per_row = int(usable_l // plant_cm)
-    beds = rows_per_bed = None
+    beds = None
 
     if bedded:
-        # 두둑 n 개는 n·두둑 + (n-1)·고랑 만큼을 쓴다 — 마지막 두둑 뒤에는
-        # 고랑이 필요 없다. 이걸 n·(두둑+고랑) 으로 세면 밭 하나가 통째로 빠진다.
-        beds = int((usable_w + path_cm) // (bed_cm + path_cm))
-        rows_per_bed = int(bed_cm // row_cm)
-        rows = beds * rows_per_bed
+        # 간격이 이미 고랑을 품고 있으므로 `폭 ÷ 간격` 이 곧 두둑 수다. 폭과
+        # 고랑을 따로 받던 때의 "마지막 고랑은 빼야 한다" 보정은 여기서 성립하지
+        # 않는다 — 고랑이 얼마인지 더 이상 알지 못하기 때문이다. 그래서 마지막
+        # 두둑의 고랑까지 세는 셈이 되어 한 두둑쯤 보수적으로 나올 수 있다.
+        beds = int(usable_w // pitch_cm)
+        rows = beds * per_bed
     else:
         rows = int(usable_w // row_cm)
 
     if rows == 0 or per_row == 0:
-        if bedded and beds and rows_per_bed == 0:
+        if bedded and not beds:
             basis = (
-                'Nothing fits: a %.0f cm bed is narrower than the %.0f cm row '
-                'spacing, so not even one row fits on a bed. Widen the bed or '
-                'narrow the row spacing.' % (bed_cm, row_cm))
-        elif bedded and not beds:
+                'Nothing fits: the usable width is %.1f m, not enough for one bed '
+                'at %.0f cm spacing. Narrow the bed spacing or the edge margin.'
+                % (usable_w / 100.0, pitch_cm))
+        elif bedded:
             basis = (
-                'Nothing fits: the usable width is %.1f m, not enough for one '
-                '%.0f cm bed. Narrow the bed, the furrow or the edge margin.'
-                % (usable_w / 100.0, bed_cm))
+                'Nothing fits: the usable length is %.1f m, shorter than one %.0f cm '
+                'plant spacing.' % (usable_l / 100.0, plant_cm))
         else:
             basis = (
                 'Nothing fits: after taking %.0f cm off each edge the usable area '
@@ -320,13 +356,11 @@ def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
                  % (dims['width_m'], dims['length_m']))
         if bedded:
             basis += (
-                '%d beds of %.0f cm fit across the %.1f m usable width with %.0f cm '
-                'furrows between them, and %d rows fit on each bed. Furrows carry '
-                'no plants. '
-                % (beds, bed_cm, usable_w / 100.0, path_cm, rows_per_bed))
-            if bed_spec_source == 'stored':
-                basis += ('The bed spec is the one recorded on this plot, not one '
-                          'you supplied. ')
+                '%d beds fit across the %.1f m usable width at %.0f cm spacing '
+                '(that spacing already includes the furrow), with %d row(s) on each '
+                'bed. Furrows carry no plants. The last bed\'s furrow is counted too, '
+                'so this can be one bed conservative. '
+                % (beds, usable_w / 100.0, pitch_cm, per_bed))
         else:
             basis += (
                 'Each plant is given a full %.0f x %.0f cm cell, so half a spacing '
@@ -343,7 +377,6 @@ def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
         basis += ' ' + dims['shape_note']
 
     out = {
-        'row_spacing_cm': row_cm,
         'plant_spacing_cm': plant_cm,
         'edge_margin_cm': margin_cm,
         'usable_width_m': round(usable_w / 100.0, 1),
@@ -355,45 +388,50 @@ def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
         'basis': basis.strip(),
     }
     if bedded:
-        out['bed_width_cm'] = bed_cm
-        out['path_width_cm'] = path_cm
-        # 구획에 기록된 규격인지, 이번 호출에서 받은 값인지. 사람이 확인해
-        # 저장해 둔 값과 그때그때 가정한 값은 신뢰도가 다르다.
-        out['bed_spec_source'] = bed_spec_source
+        out['bed_pitch_cm'] = pitch_cm
+        out['rows_per_bed'] = per_bed
         # "두둑을 몇 줄이나 만들 수 있을까" 는 실제로 받은 질문이다. 줄 수에서
         # 역산하게 두지 말고 그 숫자 자체를 낸다.
         out['beds_possible'] = beds
-        out['rows_per_bed'] = rows_per_bed
     else:
         out['ask_user'] = _FLAT_LAYOUT_ASK
 
     return out
 
 
-# 두둑 규격을 모를 때 응답에 싣는 지시. **조용히 균일 배치로 계산하고 마는 것이
+# 두둑 배치를 모를 때 응답에 싣는 지시. **조용히 균일 배치로 계산하고 마는 것이
 # 이 필드가 막으려는 실패다** — 고랑에는 아무것도 안 심는데 균일 배치는 거기까지
 # 줄을 세우므로 두둑 농사에서 20~30% 과다추정이 된다. 그런데 그 사실이 응답
 # 어디에도 없으면 AI 는 그 숫자를 그대로 확신하고 답한다.
 #
-# 규격을 여기서 정해 내려보내지 않는 이유: 작물·지역·농기계 폭에 따라 달라서
-# 서버가 아는 척할 수 있는 값이 아니다. 대신 **묻거나 제안해서 확정하라**고
-# 시키고, 확정된 값은 구획에 저장하게 한다(modify_planting) — 같은 밭에 대해
-# 매번 다시 묻는 것도 그 자체로 실패다.
+# 배치를 여기서 정해 내려보내지 않는 이유: 작물·지역·농기계 폭에 따라 달라서
+# 서버가 아는 척할 수 있는 값이 아니다. 대신 묻거나 제안해 확정하고, 그 결론을
+# **구획 노트로 남기라고** 시킨다.
 #
-# ⚠ 특정 나라의 관행을 문장에 박지 말 것. 처음 판에 "Most **Korean** open-field
-# vegetables…" 라고 적었는데, 이 제품은 ko/ja 를 함께 쓰고 설치처의 나라도
-# 고정이 아니다. 두둑 농사 자체는 어디서나 흔하므로 나라 이름 없이도 같은 말이
-# 된다 — 굳이 붙이면 다른 지역 사용자에게는 틀린 근거가 된다.
+# ⚠ 컬럼으로 저장하지 않는다. 한 번 그렇게 만들었다가 되돌렸다 —
+# 대화에서 나오는 결론(두둑 배치·멀칭·지주·관행)마다 컬럼을 늘릴 수는 없고,
+# 모호한 사람의 말을 정수 칸에 밀어 넣는 순간 "두둑 폭이 고랑 포함이냐" 같은
+# 갈림이 생겨 같은 밭이 두 가지로 기록된다. 노트는 정확히 그런 것을 담으라고
+# 있는 자리이고, 엔티티별 노트 다이제스트가 이미 AI 컨텍스트에 미리 실린다 —
+# 다음 대화에서는 이 문장을 읽고 숫자만 파라미터로 넘기면 된다.
+#
+# ⚠ 특정 나라의 관행을 문장에 박지 말 것. 처음 판은 "Most **Korean** open-field
+# vegetables…" 였는데, 이 제품은 ko/ja 를 함께 쓰고 설치처의 나라도 고정이 아니다.
 _FLAT_LAYOUT_ASK = (
     'NO bed layout was assumed: rows are spread evenly across the whole width, '
     'which is only right for flat or broadcast planting. Open-field vegetables '
     'are commonly grown on raised beds with furrows between them, and furrows '
     'carry no plants — where that is the practice it cuts the count by 20-30%. '
-    'Before you report this number, ask the grower how this plot is laid out '
-    '(bed width and furrow width), or propose a spec and get it confirmed, then '
-    'call again with bed_width_cm and path_width_cm. Once it is settled, record '
-    'it on the plot with modify_planting so nobody has to be asked again. Do not '
-    'present the flat-layout number as the answer without settling this first.'
+    'Before you report this number, settle the layout with the grower: the bed '
+    'spacing (centre to centre, the furrow included — ask it as ONE number, '
+    'growers do not count a bed and its furrow separately) and how many rows go '
+    'on one bed. Ask, or propose both and get them confirmed. Then call again '
+    'with bed_pitch_cm and rows_per_bed. Once settled, WRITE IT DOWN as a note '
+    'on this plot: create_note(target_id=<this planting_id>, '
+    'target_type="planting", note="..."). The note is how the next conversation '
+    'knows it — plot notes are pre-injected into your context, so nobody has to '
+    'be asked twice. Do not present the flat-layout number as the answer without '
+    'settling this first.'
 )
 
 
@@ -734,10 +772,6 @@ def to_dict(row, containers=None, with_sensors=False):
         'color': row.color,
         'active': row.is_active(),
         'area_m2': round(area_m2(row), 1),
-        # None 은 "평평하다" 가 아니라 "모른다" — 화면과 AI 가 그 둘을 구분할 수
-        # 있어야 규격을 물을 시점을 안다.
-        'bed_width_cm': row.bed_width_cm,
-        'path_width_cm': row.path_width_cm,
     }
     if with_sensors:
         out['sensors'] = sensors_for_planting(row, containers=containers)

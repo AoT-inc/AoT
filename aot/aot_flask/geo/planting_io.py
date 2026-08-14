@@ -42,24 +42,6 @@ def _parse_date(value, field):
         return None, '%s: 날짜 형식이 YYYY-MM-DD 가 아닙니다 (%r)' % (field, value)
 
 
-def _parse_bed_cm(value, field, allow_zero=False):
-    """두둑/고랑 폭 → int cm. 빈 값은 None(모른다). 틀리면 (None, 오류).
-
-    **None 과 0 은 다르다.** 0 은 "고랑 없이 두둑을 붙여 만든다" 는 유효한
-    배치이고, None 은 "아직 모른다" 이다. 이 구분이 무너지면 조회가 모르는
-    규격으로 계산한 숫자를 확신하며 내민다.
-    """
-    if value in (None, ''):
-        return None, None
-    try:
-        out = int(round(float(value)))
-    except (TypeError, ValueError):
-        return None, '%s: 숫자(cm)여야 합니다 (%r)' % (field, value)
-    if out < 0 or (out == 0 and not allow_zero):
-        return None, '%s: 0보다 커야 합니다 (%r)' % (field, value)
-    return out, None
-
-
 def _strip_forbidden(feature):
     """VP-4 — 금지 키를 조용히 제거하고 제거한 목록을 돌려준다.
 
@@ -185,25 +167,6 @@ def save_planting(data):
     if ended_reason not in (None, '') and ended_reason not in _VALID_END_REASONS:
         return None, 'ended_reason 허용값 아님: %r' % ended_reason
 
-    # ── 두둑 규격 ─────────────────────────────────────────────────────
-    bed_cm, err = _parse_bed_cm(data.get('bed_width_cm'), 'bed_width_cm')
-    if err:
-        return None, err
-    path_cm, err = _parse_bed_cm(data.get('path_width_cm'), 'path_width_cm',
-                                 allow_zero=True)
-    if err:
-        return None, err
-
-    # 한쪽만으로는 배치가 정해지지 않는다. 검사는 **병합 후 값**으로 한다 —
-    # 이미 두둑 폭이 저장된 구획의 고랑만 고치는 것은 정상이라, 페이로드만
-    # 보고 판정하면 그 정상 수정이 막힌다.
-    eff_bed = bed_cm if 'bed_width_cm' in data else (row.bed_width_cm if row else None)
-    eff_path = path_cm if 'path_width_cm' in data else (row.path_width_cm if row else None)
-    if (eff_bed is None) != (eff_path is None):
-        return None, ('두둑 폭과 고랑 폭은 함께 있어야 합니다 '
-                      '(두둑=%r, 고랑=%r). 고랑이 없는 배치는 0 으로 적으세요.'
-                      % (eff_bed, eff_path))
-
     # ── 저장 ──────────────────────────────────────────────────────────
     try:
         if is_new:
@@ -220,8 +183,6 @@ def save_planting(data):
                 source_ref=(data.get('source_ref') or None),
                 name=(data.get('name') or None),
                 color=(data.get('color') or None),
-                bed_width_cm=bed_cm,
-                path_width_cm=path_cm,
             )
             db.session.add(row)
         else:
@@ -248,12 +209,6 @@ def save_planting(data):
                 row.ended_reason = ended_reason or None
             if source_kind:
                 row.source_kind = source_kind
-            # 기하와 달리 종료된 작기에서도 고칠 수 있다 — 나중에 규격을 알게
-            # 되어 채워 넣는 것은 "그 자리에 뭐가 있었나" 를 바꾸는 일이 아니다.
-            if 'bed_width_cm' in data:
-                row.bed_width_cm = bed_cm
-            if 'path_width_cm' in data:
-                row.path_width_cm = path_cm
 
         db.session.commit()
     except Exception as exc:
@@ -331,10 +286,6 @@ def copy_planting(unique_id, planted_on=None, crop=None):
         'variety': src.variety,
         'name': src.name,
         'color': src.color,
-        # 두둑 규격도 함께 옮긴다 — 같은 자리를 다시 심는 것이므로 두둑도
-        # 그대로다. 빠뜨리면 복사한 작기만 규격을 모르는 상태가 된다.
-        'bed_width_cm': src.bed_width_cm,
-        'path_width_cm': src.path_width_cm,
         'planted_on': planted_on or date.today().isoformat(),
         'source_kind': 'copied',
         'source_ref': src.unique_id,

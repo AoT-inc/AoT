@@ -27494,22 +27494,6 @@ msgstr "終了予定日"
 msgid "Colour"
 msgstr "色"
 
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Bed layout"
-msgstr "畝の配置"
-
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Bed width (cm)"
-msgstr "畝幅 (cm)"
-
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Furrow width (cm)"
-msgstr "溝幅 (cm)"
-
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Not known"
-msgstr "不明"
-
 
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1

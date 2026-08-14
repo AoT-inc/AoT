@@ -896,7 +896,10 @@ case "${1:-''}" in
     ;;
     'web-server-enable')
         printf "\n#### Enabling services for fronted\n"
-        mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+        mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d
+        # 이 map 은 sites-available/aot 이 참조하는 변수를 정의한다. 없으면 변수가
+        # 빈 값이 되어 정적 자산에 Cache-Control 이 아예 안 붙으므로, 반드시 먼저 둔다.
+        cp -f "${AOT_PATH}"/install/aotflask_static_cache.conf /etc/nginx/conf.d/aotflask_static_cache.conf
         cp -f "${AOT_PATH}"/install/aotflask_nginx.conf /etc/nginx/sites-available/aot
         rm -f /etc/nginx/sites-enabled/default
         ln -sf /etc/nginx/sites-available/aot /etc/nginx/sites-enabled/aot

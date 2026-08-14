@@ -7071,7 +7071,7 @@ class AoTDataToolService:
     @staticmethod
     def _planting_brief(row, with_sensors=False, row_spacing_cm=None,
                         plant_spacing_cm=None, edge_margin_cm=None,
-                        bed_width_cm=None, path_width_cm=None):
+                        bed_pitch_cm=None, rows_per_bed=None):
         from aot.aot_flask.geo import planting_context
         d = planting_context.to_dict(row, with_sensors=with_sensors)
         # feature 전체(좌표 수백 개)는 LLM 컨텍스트에 실을 이유가 없다.
@@ -7081,28 +7081,12 @@ class AoTDataToolService:
         dims = planting_context.dimensions(row)
         if dims:
             d['dimensions'] = dims
-        # 두둑 규격은 밭의 성질이라 구획에 저장돼 있다. 호출자가 준 값이
-        # 있으면 그것이 이긴다("이번엔 두둑 150 으로 잡으면?" 같은 가정),
-        # 없으면 기록된 값으로 계산한다 — 같은 밭에 대해 매번 다시 묻게
-        # 만들면 저장한 의미가 없다.
-        #
-        # ⚠ 저장값은 **간격을 물어봤을 때만** 끌어온다. 안 그러면 두둑 규격이
-        # 기록된 구획은 그냥 조회(`get_planting(planting_id)`)만 해도
-        # "간격이 있어야 계산할 수 있다" 는 오류가 난다 — 아무것도 묻지
-        # 않았는데 저장값이 '묻지 않은 조건' 자리로 흘러들어가기 때문이다.
-        # 호출자가 직접 준 값은 그대로 넘겨 그 경우의 오류는 살려 둔다.
-        asked = row_spacing_cm is not None or plant_spacing_cm is not None
-        given_bed = bed_width_cm is not None or path_width_cm is not None
-        eff_bed, eff_path = bed_width_cm, path_width_cm
-        if asked:
-            if eff_bed is None:
-                eff_bed = row.bed_width_cm
-            if eff_path is None:
-                eff_path = row.path_width_cm
+        # 두둑 배치는 컬럼으로 저장하지 않는다 — 확정된 배치는 구획 노트에
+        # 남고(planting_context._FLAT_LAYOUT_ASK 참조), 그 노트가 다음 대화의
+        # 컨텍스트에 실려 온다. 여기로는 숫자만 파라미터로 들어온다.
         cap = planting_context.capacity_estimate(
             dims, row_spacing_cm, plant_spacing_cm, edge_margin_cm,
-            eff_bed, eff_path,
-            bed_spec_source='given' if given_bed else 'stored')
+            bed_pitch_cm, rows_per_bed)
         if cap:
             d['capacity_estimate'] = cap
         return d
@@ -7152,14 +7136,15 @@ class AoTDataToolService:
     @staticmethod
     def get_planting(planting_id=None, row_spacing_cm=None,
                      plant_spacing_cm=None, edge_margin_cm=None,
-                     bed_width_cm=None, path_width_cm=None, **extra):
+                     bed_pitch_cm=None, rows_per_bed=None, **extra):
         """[읽기전용] 구획 하나의 상세 — 작물·기간·면적·치수 + 참조 센서 출처.
 
         간격 두 개를 주면 `capacity_estimate`(줄 수·그루 수)까지 센다.
         `edge_margin_cm` 은 농기계 선회 공간 같은 여백을 추가로 빼고,
-        `bed_width_cm`+`path_width_cm` 은 두둑 배치로 세게 한다(두둑 개수까지
-        낸다). 두둑 규격이 없으면 평평하게 깐 것으로 계산하되 응답의
-        `capacity_estimate.ask_user` 가 규격을 확정하고 다시 부르라고 시킨다.
+        `bed_pitch_cm`(고랑 포함 간격)+`rows_per_bed` 는 두둑 배치로 세게 한다
+        (두둑 개수까지 낸다). 배치를 모르면 평평하게 깐 것으로 계산하되 응답의
+        `capacity_estimate.ask_user` 가 배치를 확정해 **구획 노트로 남기라고**
+        시킨다 — 컬럼으로 저장하지 않는 이유는 planting_context 의 주석 참조.
 
         조건을 한쪽만 주면 계산이 성립하지 않으므로 조용히 넘기지 않고 오류로
         말한다 — 사용자가 말한 조건이 답에 반영되지 않은 것을 아무도 모르는
@@ -7178,8 +7163,8 @@ class AoTDataToolService:
                     row_spacing_cm=row_spacing_cm,
                     plant_spacing_cm=plant_spacing_cm,
                     edge_margin_cm=edge_margin_cm,
-                    bed_width_cm=bed_width_cm,
-                    path_width_cm=path_width_cm)
+                    bed_pitch_cm=bed_pitch_cm,
+                    rows_per_bed=rows_per_bed)
             except ValueError as ve:
                 return {"error": str(ve)}
             return {"planting": brief}
@@ -7226,8 +7211,7 @@ class AoTDataToolService:
     @staticmethod
     def create_planting(map_id=None, geometry=None, crop=None, planted_on=None,
                         variety=None, name=None, expected_end_on=None,
-                        color=None, bed_width_cm=None, path_width_cm=None,
-                        **extra):
+                        color=None, **extra):
         """[쓰기] 식생 구획을 만든다. 사람 승인 필요.
 
         `geometry` 는 GeoJSON Polygon/MultiPolygon 이다. 상위 zone 은 받지
@@ -7247,7 +7231,6 @@ class AoTDataToolService:
                 'crop': crop, 'variety': variety, 'name': name,
                 'planted_on': planted_on, 'expected_end_on': expected_end_on,
                 'color': color,
-                'bed_width_cm': bed_width_cm, 'path_width_cm': path_width_cm,
             })
             if err:
                 return {"status": "error", "message": err}
@@ -7273,8 +7256,7 @@ class AoTDataToolService:
                 return {"status": "error", "message": "planting_id is required"}
             payload = {'unique_id': planting_id}
             for k in ('crop', 'variety', 'name', 'planted_on',
-                      'expected_end_on', 'color',
-                      'bed_width_cm', 'path_width_cm'):
+                      'expected_end_on', 'color'):
                 if k in fields and fields[k] is not None:
                     payload[k] = fields[k]
             result, err = planting_io.save_planting(payload)

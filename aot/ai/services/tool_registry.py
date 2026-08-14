@@ -378,10 +378,10 @@ TOOLS: List[Tool] = [
                         "(width x length), which sensors it reads (own plot or "
                         "falls back to its zone), and which irrigation valves overlap "
                         "it. Give both spacings to get row and plant counts. Read-only."),
-        "usage_hint": ("params.arguments: {planting_id, row_spacing_cm?, "
-                       "plant_spacing_cm?, edge_margin_cm?, bed_width_cm?, "
-                       "path_width_cm?} — spacings go together, bed+path go "
-                       "together, and both extras need the spacings"),
+        "usage_hint": ("params.arguments: {planting_id, plant_spacing_cm, "
+                       "row_spacing_cm? (flat only), bed_pitch_cm? + "
+                       "rows_per_bed? (bed layout), edge_margin_cm?} — "
+                       "bed_pitch_cm and rows_per_bed go together"),
     }),
     Tool('get_planting_history', handler='get_planting_history', manifest={
         "tool_name": "get_planting_history",
@@ -872,16 +872,16 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_planting",
-        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass row_spacing_cm AND plant_spacing_cm to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. If the plot records a bed layout (두둑/고랑) it is applied automatically; otherwise the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and write the agreed spec back with modify_planting. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. Read-only.",
+        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass plant_spacing_cm (plus row_spacing_cm for flat planting, or bed_pitch_cm + rows_per_bed for beds) to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. Without a bed layout the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and record the agreed layout as a NOTE on the plot (create_note with target_type='planting'), which is what the next conversation reads. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "planting_id": {"type": "string", "description": "Plot unique_id."},
-                "row_spacing_cm": {"type": "number", "description": "Spacing between rows in cm (e.g. 40). Rows are counted across the plot's SHORT side. Must be given together with plant_spacing_cm."},
-                "plant_spacing_cm": {"type": "number", "description": "Spacing between plants within a row in cm (e.g. 15). Plants are counted along the plot's LONG side. Must be given together with row_spacing_cm."},
+                "row_spacing_cm": {"type": "number", "description": "Spacing between rows in cm (e.g. 40), for FLAT planting only. Rows are counted across the plot's SHORT side. Not needed — and not used — when a bed layout (bed_pitch_cm + rows_per_bed) is given, because rows_per_bed takes its place."},
+                "plant_spacing_cm": {"type": "number", "description": "Spacing between plants within a row in cm (e.g. 15). Plants are counted along the plot's LONG side. Required for any count, in both flat and bed layouts."},
                 "edge_margin_cm": {"type": "number", "description": "Extra margin left free at every edge, in cm — headland for machinery turning, bed shoulders, a path. Default 0. Half a spacing is ALREADY free at each edge without this, so only pass it when the plot genuinely needs more (e.g. 200 for a 2 m turning strip). Requires both spacings."},
-                "bed_width_cm": {"type": "number", "description": "Raised-bed (두둑) width in cm, e.g. 120 — ONLY to override what the plot already records, e.g. to try a different layout. The plot's own bed spec is used automatically when it has one, and 'capacity_estimate.bed_spec_source' says which was used. Without either, the count assumes flat planting and OVERSTATES a bedded plot by 20-30%."},
-                "path_width_cm": {"type": "number", "description": "Furrow/path (고랑) width between beds in cm, e.g. 40. Furrows carry no plants. Overrides the plot's recorded value the same way bed_width_cm does."}
+                "bed_pitch_cm": {"type": "number", "description": "Bed spacing (두둑 간격) in cm, centre to centre — the furrow is INCLUDED, e.g. 160 for a 120 cm bed with a 40 cm furrow. Ask the grower for this as ONE number: they do not count a bed and its furrow separately, and asking for both invites two different readings of the same field. Give it with rows_per_bed to count the layout as actually planted; without it the count assumes flat planting and OVERSTATES a bedded plot by 20-30%."},
+                "rows_per_bed": {"type": "integer", "description": "How many rows go on ONE bed, e.g. 2. Whole number, 1 or more. Crop-dependent — peppers take one row, lettuce or cabbage two or three. Must be given together with bed_pitch_cm; the bed spacing alone cannot say how many rows fit. When this is given, row_spacing_cm is not used."}
             },
             "required": ["planting_id"]
         }
@@ -911,16 +911,14 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "variety": {"type": "string", "description": "Cultivar (optional)."},
                 "name": {"type": "string", "description": "Plot name, e.g. 'front bed' (optional)."},
                 "expected_end_on": {"type": "string", "description": "Expected end date 'YYYY-MM-DD' (optional)."},
-                "color": {"type": "string", "description": "Display colour '#rrggbb'. Omit to follow the map theme."},
-                "bed_width_cm": {"type": "integer", "description": "Raised-bed (두둑) width in cm, if known. Recording it here means row/plant counts can be worked out later without asking again. Goes with path_width_cm."},
-                "path_width_cm": {"type": "integer", "description": "Furrow/path (고랑) width between beds in cm. Use 0 for beds laid side by side with no furrow. Goes with bed_width_cm."}
+                "color": {"type": "string", "description": "Display colour '#rrggbb'. Omit to follow the map theme."}
             },
             "required": ["map_id", "geometry", "crop", "planted_on"]
         }
     },
     {
         "tool_name": "modify_planting",
-        "description": "Edits a plot's crop, variety, name, dates, colour or bed layout. Once you have settled the bed and furrow width with the grower, write them here so the plot carries its own layout and nobody is asked again. Geometry is NOT editable here — reshaping a plot is done on the map design page. Requires human approval.",
+        "description": "Edits a plot's crop, variety, name, dates, colour or bed layout. Geometry is NOT editable here — reshaping a plot is done on the map design page. Requires human approval.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -930,9 +928,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "name": {"type": "string"},
                 "planted_on": {"type": "string", "description": "'YYYY-MM-DD'"},
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
-                "color": {"type": "string", "description": "'#rrggbb'"},
-                "bed_width_cm": {"type": "integer", "description": "Raised-bed (두둑) width in cm. Goes with path_width_cm — a plot cannot have one without the other."},
-                "path_width_cm": {"type": "integer", "description": "Furrow/path (고랑) width between beds in cm. 0 means beds laid side by side with no furrow."}
+                "color": {"type": "string", "description": "'#rrggbb'"}
             },
             "required": ["planting_id"]
         }

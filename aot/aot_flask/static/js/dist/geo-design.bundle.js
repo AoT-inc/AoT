@@ -191,18 +191,6 @@ ${c}`;let f=e.options.color||e.options.fillColor;!f&&e.feature&&e.feature.proper
                               data-veg-field="expected_end_on" value="${t(e.expected_end_on)}">`)}
                 ${o(this._t("Colour"),`<input type="color" class="aot-modern-input form-control aot-detail-field-color"
                               data-veg-field="color" value="${t(e.color||this.colorOf(e))}">`)}
-            </div>
-
-            <div class="aot-modal-group-title">${this._t("Bed layout")}</div>
-            <div class="aot-modal-container">
-                ${o(this._t("Bed width (cm)"),`<input type="number" min="1" step="10"
-                              class="aot-modern-input form-control"
-                              data-veg-field="bed_width_cm" value="${t(e.bed_width_cm)}"
-                              placeholder="${this._t("Not known")}">`)}
-                ${o(this._t("Furrow width (cm)"),`<input type="number" min="0" step="10"
-                              class="aot-modern-input form-control"
-                              data-veg-field="path_width_cm" value="${t(e.path_width_cm)}"
-                              placeholder="${this._t("Not known")}">`)}
             </div>`}_wireForm(e,t){const o=e.closest(".modal-content"),i=o&&o.querySelector("[data-veg-save]");i&&(i.onclick=()=>{const r={};e.querySelectorAll("[data-veg-field]").forEach(s=>{r[s.getAttribute("data-veg-field")]=s.value||""}),t(r)})}bindDeleteHook(){this._deleteHookBound||(this._deleteHookBound=!0,window.addEventListener("aot:editor:deleted",e=>{const t=e&&e.detail||{},o=t.features||t.layers||[],i=r=>{if(!r)return;const s=r._aotPlantingUuid||r.properties&&r.properties.planting_uuid||r.feature&&r.feature.properties&&r.feature.properties.planting_uuid;!s||!this.data.has(s)||this._api("DELETE",`/api/geo/planting/${s}`).then(()=>{this._dropLayer(s),this._toast(this._t("Deleted"),"success")}).catch(()=>{this._toast(this._t("Failed"),"error"),this.load(!0)})};typeof o.forEach=="function"?o.forEach(i):typeof o.eachLayer=="function"&&o.eachLayer(i)}))}_dropLayer(e){const t=this.layers.get(e);if(t)try{this.parent.map&&this.parent.map.hasLayer&&this.parent.map.hasLayer(t)&&this.parent.map.removeLayer(t)}catch{}this.layers.delete(e),this.data.delete(e),this._renderChips()}_shell(e,t){const o=t===!1?"":`
                             <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
                                     data-veg-save>${this._t("Save")}</button>`;return $("#"+this._modalId).remove(),document.body.insertAdjacentHTML("beforeend",`
