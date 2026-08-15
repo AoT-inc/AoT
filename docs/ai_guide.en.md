@@ -13,8 +13,10 @@ How AoT's AI agent observes, diagnoses, and controls greenhouses and growing fac
 | Observe | `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree | No |
 | Observe | `resolve_target` | Resolve a name to its exact entity, check whether it's a container (has children) | No |
 | Observe | `get_device_list` | List of all registered devices | No |
-| Observe | `search_devices` | Find devices by name/type | No |
-| Observe | `get_sensor_detail` | Sensor time-series history (min/max/avg) | No |
+| Observe | `search_devices` | Find devices by name/type, or by `measurement_type`; combinable with a zone name | No |
+| Observe | `get_sensor_detail` | Sensor time-series history (min/max/avg), including Function (aggregated) values | No |
+| Observe | `get_zone_sensor_summary` | Latest values + period stats for all sensors in one or more zones, in one call | No |
+| Observe | `list_plantings` | List vegetation plantings; `with_sensors` also returns each planting's sensor readings | No |
 | Observe | `get_weather` | Current weather for a field/zone | No |
 | Observe | `get_energy_report` | Energy usage by period/zone | No |
 | Observe | `get_cumulative_status` | EnvCoordinator DLI/GDD cumulative status | No |

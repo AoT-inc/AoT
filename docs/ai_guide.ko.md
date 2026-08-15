@@ -13,8 +13,10 @@ AoT의 AI 에이전트가 온실·재배 시설을 관찰·진단·제어하는 
 | 관찰 | `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 | 불필요 |
 | 관찰 | `resolve_target` | 이름→정확한 엔티티 해석, 컨테이너(하위 구역 보유) 여부 확인 | 불필요 |
 | 관찰 | `get_device_list` | 등록된 전체 장치 목록 | 불필요 |
-| 관찰 | `search_devices` | 이름·유형으로 장치 검색 | 불필요 |
-| 관찰 | `get_sensor_detail` | 센서 시계열 이력(min/max/avg) | 불필요 |
+| 관찰 | `search_devices` | 이름·유형 또는 측정 종류(`measurement_type`)로 장치 검색, 구역 이름과 병용 가능 | 불필요 |
+| 관찰 | `get_sensor_detail` | 센서 시계열 이력(min/max/avg), Function(집계값)도 포함 | 불필요 |
+| 관찰 | `get_zone_sensor_summary` | 구역(들) 전체 센서 최신값+기간 통계를 한 번에 집계 | 불필요 |
+| 관찰 | `list_plantings` | 식생 구획(작기) 목록, `with_sensors`로 구획별 센서값까지 함께 조회 | 불필요 |
 | 관찰 | `get_weather` | 포장·구역 현재 기상 | 불필요 |
 | 관찰 | `get_energy_report` | 기간·구역별 에너지 사용량 | 불필요 |
 | 관찰 | `get_cumulative_status` | EnvCoordinator DLI·GDD 누적 상태 | 불필요 |
