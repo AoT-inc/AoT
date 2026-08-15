@@ -26,6 +26,7 @@ execute_action chain / special action types like read_manual). Tools whose `hand
 None are known-but-not-VirtualToolResolver-dispatched — they stay out of `tool_map`.
 """
 import copy
+import os
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 
@@ -53,6 +54,19 @@ class Tool:
                  system_tools list, or None to omit the tool from the LLM manifest.
                  Stored verbatim so the derived manifest is byte-identical to the
                  original hand-written entries.
+    노출 등급(domain·base_tier·never_demote)은 이 선언이 아니라 아래
+    `_TIER_ASSIGNMENT` 표가 갖는다. 주기적으로 사람이 다시 보는 판단이라
+    한눈에 보이는 표가 검토 단위이기 때문이다 — 그 절의 주석 참조.
+
+    (참고) domain : 어느 서랍에 들어가는가. 서랍은 **도메인 이름**으로 묶는다 —
+                 빈도 기준 서랍("자주 안 쓰는 것 모음")은 LLM 이 안을 예측할 수
+                 없어 여러 개를 열게 되고, 고정비를 줄이려다 왕복을 늘린다.
+    base_tier  : 사용 데이터가 없을 때의 자리. 'core'=상시 노출, 'drawer'=서랍.
+                 개발 단계에서는 이 값이 곧 유효 등급이다.
+    never_demote: 호출이 적어도 자동 강등하지 않는다. 기준은 "사용자가 이름을
+                 말해주는가, AI 가 스스로 떠올려야 하는가" — 후자만 보호한다.
+                 (계절성만으로는 사유가 안 된다. 정식·수확은 사용자가 명시적으로
+                 요청하므로 서랍이어도 단서가 서랍을 고른다.)
     """
     name: str
     handler: Optional[str] = None
@@ -205,6 +219,10 @@ TOOLS: List[Tool] = [
         "usage_hint": ("params.arguments: {zone_ids?: [uuid,...], measurement_type?, "
                        "time_range?: '24h'|'7d'} — omit zone_ids for every zone."),
     }),
+    # 서랍을 여는 유일한 수단. manifest 는 None 이다 — 등급이 켜졌을 때만
+    # _drawer_index_manifest() 가 서랍 목록과 함께 싣는다(꺼져 있으면 서랍
+    # 자체가 없으므로 이 도구도 보일 이유가 없다).
+    Tool('open_drawer', handler='open_drawer'),
     Tool('get_device_measurements', handler='get_device_measurements', manifest={
         "tool_name": "get_device_measurements",
         "action_type": "virtual_tool_call",
@@ -892,6 +910,176 @@ for _t in TOOLS:
     if _t.name in _BY_NAME:
         raise ValueError(f"Duplicate tool declared in tool_registry: {_t.name}")
     _BY_NAME[_t.name] = _t
+
+
+# ---------------------------------------------------------------------------
+# 노출 등급 배정 — 설계: docs/design/ai-tool-architecture.md
+#
+# **왜 Tool(...) 안이 아니라 표인가.** 이 배정은 주기적으로 사람이 다시 보는
+# 판단이다. 110개 선언에 흩어 두면 "지금 무엇이 상시 노출인가" 를 한눈에 볼 수
+# 없어 검토가 불가능해진다. 표는 그 자체가 검토 단위다. 드리프트(도구를 추가하고
+# 표를 빠뜨림)는 test_tool_registry_ssot 가 양방향으로 잡는다.
+#
+# 서랍은 도메인 이름으로 묶는다 — LLM 이 열기 전에 안을 예측할 수 있어야 한다.
+DRAWERS = {
+    'device':      '장치 조작·상태·검색',
+    'measurement': '센서 값·환경·날씨·에너지',
+    'function':    '함수·제어기·시퀀스',
+    'schedule':    '일정·예약',
+    'record':      '노트·공지·지식·조언',
+    'space':       '지도·구역·시설·작물 구획',
+    'definition':  '장치 정의 추가·수정·삭제',
+    'system':      'AI 설정·시스템 상태·진단·매뉴얼',
+}
+
+# name → (domain, base_tier, never_demote)
+#
+# core 16개의 근거는 농장 관리자의 일상 동선(보기·켜고 끄기·기록·일정)에
+# 해소(resolve_target)와 대화 수단(ask_user·get_tool_detail)을 더한 것이다.
+# never_demote 5개의 기준은 "사용자가 이름을 말해주는가, AI 가 스스로 떠올려야
+# 하는가" — 후자만 보호한다. 설계 문서의 두 절에 근거가 있다.
+_TIER_ASSIGNMENT = {
+    # --- 장치 ---------------------------------------------------------------
+    'operate_device':            ('device', 'core', False),
+    'set_output_state':          ('device', 'core', False),
+    'get_output_state':          ('device', 'core', False),
+    'get_control_state':         ('device', 'drawer', False),
+    'search_devices':            ('device', 'core', False),
+    'get_device_measurements':   ('device', 'core', False),
+    'get_device_list':           ('device', 'drawer', False),
+    'list_available_devices':    ('device', 'drawer', False),
+    'list_unbound_slots':        ('device', 'drawer', False),
+    'rebind_device':             ('device', 'drawer', False),
+    # --- 측정 ---------------------------------------------------------------
+    'get_sensor_detail':         ('measurement', 'core', False),
+    'get_sensor_reading':        ('measurement', 'core', False),
+    'get_zone_sensor_summary':   ('measurement', 'core', False),
+    'get_weather':               ('measurement', 'core', False),
+    'get_weather_forecast':      ('measurement', 'drawer', False),
+    'get_anomalies':             ('measurement', 'drawer', False),
+    'get_cumulative_status':     ('measurement', 'drawer', False),
+    'get_energy_report':         ('measurement', 'drawer', False),
+    # --- 함수 ---------------------------------------------------------------
+    'get_function_list':         ('function', 'core', False),
+    'get_function_detail':       ('function', 'drawer', False),
+    'get_function_doc':          ('function', 'drawer', False),
+    'get_active_functions_summary': ('function', 'drawer', False),
+    'activate_function':         ('function', 'drawer', False),
+    'deactivate_function':       ('function', 'drawer', False),
+    'create_function':           ('function', 'drawer', False),
+    'delete_function':           ('function', 'drawer', False),
+    'modify_function_options':   ('function', 'drawer', False),
+    'create_sequence_function':  ('function', 'drawer', False),
+    'configure_sequence_day':    ('function', 'drawer', False),
+    'modify_sequence_schedule':  ('function', 'drawer', False),
+    'modify_sequence_step':      ('function', 'drawer', False),
+    'function':                  ('function', 'drawer', False),
+    'pid':                       ('function', 'drawer', False),
+    # --- 일정 ---------------------------------------------------------------
+    'search_schedule':           ('schedule', 'core', False),
+    'add_schedule':              ('schedule', 'core', False),
+    'edit_schedule':             ('schedule', 'drawer', False),
+    'delete_schedule':           ('schedule', 'drawer', False),
+    'add_schedule_batch':        ('schedule', 'drawer', False),
+    'schedule_device_control':   ('schedule', 'drawer', False),
+    # --- 기록 ---------------------------------------------------------------
+    'create_note':               ('record', 'core', False),
+    'search_notes':              ('record', 'core', False),
+    'note':                      ('record', 'drawer', False),
+    'archive_note':              ('record', 'drawer', False),
+    'restore_note_from_archive': ('record', 'drawer', False),
+    'search_archives':           ('record', 'drawer', False),
+    'get_archived_document':     ('record', 'drawer', False),
+    'delete_archive':            ('record', 'drawer', False),
+    'set_document_tier':         ('record', 'drawer', False),
+    'knowledge_search':          ('record', 'drawer', True),
+    'knowledge_shelve':          ('record', 'drawer', False),
+    'list_notices':              ('record', 'drawer', False),
+    'create_notice':             ('record', 'drawer', False),
+    'modify_notice':             ('record', 'drawer', False),
+    'delete_notice':             ('record', 'drawer', False),
+    'list_advice':               ('record', 'drawer', False),
+    'submit_advice':             ('record', 'drawer', False),
+    'configure_library_source':  ('record', 'drawer', False),
+    'list_library_source_types': ('record', 'drawer', False),
+    'smartfarmkorea_lookup':     ('record', 'drawer', False),
+    # --- 공간 ---------------------------------------------------------------
+    'list_plantings':            ('space', 'core', False),
+    'get_planting':              ('space', 'drawer', False),
+    'get_planting_history':      ('space', 'drawer', False),
+    'create_planting':           ('space', 'drawer', False),
+    'modify_planting':           ('space', 'drawer', False),
+    'end_planting':              ('space', 'drawer', False),
+    'delete_planting':           ('space', 'drawer', False),
+    'copy_planting':             ('space', 'drawer', False),
+    'propose_planting_split':    ('space', 'drawer', False),
+    'apply_planting_split':      ('space', 'drawer', False),
+    'get_spatial_tree':          ('space', 'drawer', False),
+    'get_crop_status':           ('space', 'drawer', False),
+    'list_geo_maps':             ('space', 'drawer', False),
+    'delete_geo_shape':          ('space', 'drawer', False),
+    'get_device_location':       ('space', 'drawer', False),
+    'set_device_location':       ('space', 'drawer', False),
+    'get_map_equipment':         ('space', 'drawer', False),
+    'get_map_equipment_detail':  ('space', 'drawer', False),
+    'get_facility_capacity':     ('space', 'drawer', False),
+    'get_address':               ('space', 'drawer', False),
+    'distance_between':          ('space', 'drawer', False),
+    'nearest':                   ('space', 'drawer', False),
+    # --- 장치 정의 ----------------------------------------------------------
+    'create_input':              ('definition', 'drawer', False),
+    'modify_input':              ('definition', 'drawer', False),
+    'delete_input':              ('definition', 'drawer', False),
+    'create_output':             ('definition', 'drawer', False),
+    'modify_output':             ('definition', 'drawer', False),
+    'delete_output':             ('definition', 'drawer', False),
+    'create_gis_input':          ('definition', 'drawer', False),
+    'modify_gis_input':          ('definition', 'drawer', False),
+    'delete_gis_input':          ('definition', 'drawer', False),
+    'activate_gis_input':        ('definition', 'drawer', False),
+    'list_gis_inputs':           ('definition', 'drawer', False),
+    'list_device_types':         ('definition', 'drawer', False),
+    'get_device_type_options':   ('definition', 'drawer', False),
+    'get_input_doc':             ('definition', 'drawer', False),
+    'get_output_doc':            ('definition', 'drawer', False),
+    # --- 시스템 -------------------------------------------------------------
+    # 매니페스트도 핸들러도 없는 이름 검증용 항목이라 노출 비용이 0이다.
+    'abstract_plan':             ('system', 'drawer', False),
+    # 서랍을 여는 수단이라 core 이자 never_demote 다. 이것이 내려가면 나머지
+    # 도구가 영영 안 열린다.
+    'open_drawer':               ('system', 'core', True),
+    'resolve_target':            ('system', 'core', False),
+    'ask_user':                  ('system', 'core', False),
+    'get_tool_detail':           ('system', 'core', False),
+    'get_local_time':            ('system', 'core', False),
+    # 아래 둘은 사고 이력 때문에 core 다 — 2026-08-13 예약 10건이 전부 승인
+    # 대기에 걸려 장치가 한 번도 안 켜졌는데 그때 아무도 큐를 안 봤다.
+    # 서랍에 있으면 AI 도 안 본다.
+    'list_pending_confirmations': ('system', 'core', True),
+    'analyze_system_failure':    ('system', 'core', True),
+    'respond_to_confirmation':   ('system', 'drawer', True),
+    'read_manual':               ('system', 'drawer', True),
+    'get_system_brief':          ('system', 'drawer', False),
+    'get_system_update_status':  ('system', 'drawer', False),
+    'get_storage_tier_status':   ('system', 'drawer', False),
+    'get_detailed_manifest':     ('system', 'drawer', False),
+    'list_ai_agents':            ('system', 'drawer', False),
+    'list_ai_entries':           ('system', 'drawer', False),
+    'create_ai_agent':           ('system', 'drawer', False),
+    'modify_ai_agent':           ('system', 'drawer', False),
+    'delete_ai_agent':           ('system', 'drawer', False),
+}
+
+# Tool 은 frozen 이다 — 선언을 뒤에서 고쳐 쓰지 않는다. 배정은 표에서 조회한다.
+for _name in _TIER_ASSIGNMENT:
+    if _name not in _BY_NAME:
+        raise ValueError(
+            f"tool_registry: 배정표에 실재하지 않는 도구가 있습니다 — {_name}")
+
+
+def tier_of(name):
+    """(domain, base_tier, never_demote). 배정이 없으면 보수적 기본값."""
+    return _TIER_ASSIGNMENT.get(name, ('system', 'drawer', False))
 
 
 # ---------------------------------------------------------------------------
@@ -2230,10 +2418,75 @@ def approval_required_tools() -> frozenset:
                      if (t.mutating or t.physical) and not t.config_only)
 
 
+def tiering_enabled() -> bool:
+    """등급 적용 여부. **기본은 꺼짐이다.**
+
+    켜면 매니페스트가 core + 서랍 목록으로 줄고, 나머지는 `open_drawer` 로만
+    닿는다. 배포만으로 동작이 바뀌면 안 되므로 기본을 끔으로 두었다 — 켜는 것이
+    명시적 결정이어야 하고, 문제가 생기면 이 스위치 하나로 되돌아간다.
+
+    환경변수로 둔 이유: 안전 스위치는 **DB 가 이상해도 동작해야** 한다.
+    """
+    return os.environ.get('AOT_AI_TOOL_TIERING', '0') == '1'
+
+
+def _drawer_index_manifest() -> Dict[str, Any]:
+    """서랍 목록을 도구 하나로 싣는다 — 상시 노출.
+
+    서랍의 **존재와 내용 힌트**까지 숨기면 LLM 은 열 생각을 못 한다. 목록 자체는
+    수백 자로 싸다. 설명은 DRAWERS 에서 만들어 드리프트가 생기지 않게 한다.
+    """
+    listing = ' / '.join('%s(%s)' % (name, desc)
+                         for name, desc in DRAWERS.items())
+    return {
+        "tool_name": "open_drawer",
+        "action_type": "virtual_tool_call",
+        "description": (
+            "Opens a drawer and returns the full definitions of the tools inside. "
+            "Only frequently used tools are listed up front; everything else lives "
+            "in a drawer, grouped by what it is for. If no listed tool fits what you "
+            "need, open the drawer whose name matches the job before concluding that "
+            "it cannot be done. Drawers: " + listing),
+        "usage_hint": "params.arguments: {drawer: '<drawer name from the list>'}",
+    }
+
+
+def core_tools() -> frozenset:
+    """상시 노출 도구 — 개발 단계의 유효 등급이 곧 base_tier 다."""
+    return frozenset(n for n in _BY_NAME if tier_of(n)[1] == 'core')
+
+
+def never_demote_tools() -> frozenset:
+    """호출이 적어도 자동 강등하지 않는 도구."""
+    return frozenset(n for n in _BY_NAME if tier_of(n)[2])
+
+
+def drawer_index() -> List[Dict[str, str]]:
+    """서랍 목록(이름 + 한 줄). **상시 노출에 남긴다** — 서랍의 존재까지 숨기면
+    LLM 은 열 생각을 못 한다. 비용은 수백 자로 싸다."""
+    return [{'drawer': name, 'description': desc}
+            for name, desc in DRAWERS.items()]
+
+
+def tools_in_drawer(drawer: str) -> List[str]:
+    """그 서랍 안의 도구 이름 — 상시 노출이 아닌 것만."""
+    return sorted(n for n in _BY_NAME
+                  if tier_of(n)[0] == drawer and tier_of(n)[1] != 'core')
+
+
 def manifest_system_tools() -> List[Dict[str, Any]]:
     """The system_tools list for get_action_manifest — emitted in declaration
-    order, byte-identical to the original hand-written entries."""
-    return [dict(t.manifest) for t in TOOLS if t.manifest]
+    order, byte-identical to the original hand-written entries.
+
+    등급이 켜져 있으면 core 만 싣고 서랍 목록을 더한다. 꺼져 있으면 예전과
+    **바이트 단위로 같다** — SSOT 스냅샷 검사가 그것을 고정한다."""
+    entries = [dict(t.manifest) for t in TOOLS if t.manifest]
+    if not tiering_enabled():
+        return entries
+    core = core_tools()
+    kept = [e for e in entries if e.get('tool_name') in core]
+    kept.append(_drawer_index_manifest())
+    return kept
 
 
 def virtual_tools() -> List[Dict[str, Any]]:
@@ -2260,4 +2513,21 @@ def virtual_tools() -> List[Dict[str, Any]]:
             "description": payload["description"],
             "input_schema": copy.deepcopy(payload["input_schema"]),
         })
-    return out
+    if not tiering_enabled():
+        return out
+    core = core_tools()
+    kept = [e for e in out if e["tool_name"] in core]
+    index = _drawer_index_manifest()
+    kept.append({
+        "tool_name": index["tool_name"],
+        "description": index["description"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"drawer": {
+                "type": "string",
+                "description": "Drawer name from the list in the description.",
+                "enum": sorted(DRAWERS)}},
+            "required": ["drawer"],
+        },
+    })
+    return kept

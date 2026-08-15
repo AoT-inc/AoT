@@ -58,10 +58,36 @@
     // 복합장치 색을 쓰면 복합장치를 바꾼 것이 나머지 종류의 폴백까지 바꾼다.
     var DEVICE_KEYS = ['input', 'output', 'function', 'device_unit'];
 
+    /**
+     * 쓸 테마 객체 — **넘어온 테마를 전역 테마 위에 얹는다.**
+     *
+     * 예전에는 인자가 객체이기만 하면 그것을 **그대로** 썼다. 그래서 부분적으로만
+     * 채워진 테마(또는 빈 `{}`)를 넘기는 소비처에서는, 빠진 키가 전역 설정으로
+     * 내려가지 못하고 곧장 하드코딩 기본값으로 떨어졌다.
+     *
+     * 실제로 지도 위젯이 그랬다: `wOpts.theme_config || vars.theme || {}` 를
+     * 넘기는데 그 안에 장치 색이 없으면 `t.output` 이 undefined 라 **출력에
+     * 연결된 도형도 장치 공통색**으로 칠해졌다. 같은 도형이 geo/design 에서는
+     * (테마를 안 넘겨 전역 설정을 그대로 읽으므로) 제 색으로 나와서, 두 화면의
+     * 색이 갈렸다.
+     *
+     * 병합이면 명시한 값은 그대로 이기고, 안 준 값만 전역 설정 → 기본값 순으로
+     * 내려간다. 화면마다 색이 달라지지 않는다.
+     */
     function themeOf(theme) {
-        if (theme && typeof theme === 'object') return theme;
         var g = global.AOT_GEO_CONFIG;
-        return (g && g.theme_config) || {};
+        var base = (g && g.theme_config) || {};
+        if (!theme || typeof theme !== 'object') return base;
+        var out = {}, k;
+        for (k in base) { if (Object.prototype.hasOwnProperty.call(base, k)) out[k] = base[k]; }
+        for (k in theme) {
+            // 빈 문자열/null 은 "설정 안 함" 으로 본다 — 그것까지 덮어쓰면
+            // 위젯이 값을 비워 둔 것만으로 전역 설정이 무시된다.
+            if (!Object.prototype.hasOwnProperty.call(theme, k)) continue;
+            if (theme[k] === null || theme[k] === undefined || theme[k] === '') continue;
+            out[k] = theme[k];
+        }
+        return out;
     }
 
     /** 장치 세부 타입 → 테마 키(DEVICE_KEYS 중 하나). 모르면 null. */

@@ -20,6 +20,18 @@ logger = logging.getLogger(__name__)
 _SPATIAL_CACHE = None
 _LAST_GEO_UPDATE = None
 
+# 공간 트리에서 LLM 에게 실어 보낼 properties 키. **화이트리스트다** —
+# 여기 없는 키는 나가지 않는다. 판단 기준은 하나: "LLM 이 이 값으로 무엇을
+# 답하는가". 클라이언트 내부 배선(node_id·parent_node_id·db_id·shape_uuid·
+# is_label·gen_config_*)은 그 질문에 답하지 못하므로 넣지 않는다.
+_TREE_PROP_ALLOWLIST = ('area', 'area_m2', 'device_type', 'crop', 'variety')
+
+# 지도 라벨을 그리기 위한 보조 도형. 농장 구조가 아니라 화면 장식이라
+# 트리에 넣지 않는다(실측: 노드 33개 13,793자 = 응답의 26%). 자식을 갖지
+# 않는 잎이므로 빼도 하위가 끊기지 않는다 — 자식을 갖는 종류를 여기
+# 추가하려면 자식을 위로 이어붙이는 처리가 함께 필요하다.
+_TREE_EXCLUDED_TYPES = ('label_aux',)
+
 class AIContextService:
     """
     Service to aggregate multi-modal system data (Spatial, Energy, Visual, Semantic)
@@ -253,6 +265,9 @@ class AIContextService:
             
             # 3. Build Tree
             def build_tree(s, tier='standard'):
+                # 화면 장식용 도형은 트리에 넣지 않는다(_TREE_EXCLUDED_TYPES).
+                if s.type in _TREE_EXCLUDED_TYPES:
+                    return None
                 meta = s.meta_json or {}
                 if isinstance(meta, str):
                     try: meta = json.loads(meta)
@@ -290,22 +305,43 @@ class AIContextService:
                         return None
                 
                 # v14.0: Node Construction with Semantic Priority
+                # unique_id 는 **도형 자신의 id** 다. 예전에는 s.geo_id(지도 id)
+                # 를 넣어, 같은 지도의 노드 74개가 전부 같은 값을 달고 나갔다
+                # (실측: 노드 142개에 서로 다른 값 8개). 도구 설명이 AI 에게
+                # "get_spatial_tree 에서 id 를 얻어 zone_id 로 넘겨라" 라고
+                # 시키고 있으므로(copy_planting·geo_distance), 그 값은 지도가
+                # 아니라 도형을 가리켜야 한다. semantic_note 도 같은 이유로
+                # 비어 있었다 — 노트는 엔티티 unique_id 에 붙는다.
                 node = {
                     "name": display_name,
                     "type": s.type,
-                    "semantic_note": semantic_map.get(s.geo_id, ""),
-                    "id": s.id,
-                    "unique_id": s.geo_id,
-                    "device_id": clean_d_id,
+                    "unique_id": s.unique_id,
                     "children": []
                 }
-                
-                # Merge additional metadata if relevant
+                # 빈 값은 키째로 뺀다. 노드 142개 × 빈 문자열이 3,000자였고,
+                # LLM 에게 ""는 아무것도 알려주지 않는다.
+                note = semantic_map.get(s.unique_id, "")
+                if note:
+                    node["semantic_note"] = note
+                if clean_d_id:
+                    node["device_id"] = clean_d_id
+                #
+                # `id`(정수 PK)는 싣지 않는다. 도구는 전부 unique_id 문자열을
+                # 받으므로 쓸 데가 없고, 두 식별자를 함께 주면 LLM 이 틀린
+                # 쪽을 고를 여지만 생긴다.
+                #
+                # properties 는 화이트리스트만. 예전에는 geometry/name/label 만
+                # 빼고 전부 실었는데, 남은 37키의 대부분이 클라이언트 내부
+                # 배선이었다(node_id·parent_node_id·db_id·shape_uuid·is_label·
+                # gen_config_*). 실측 26,533자로 응답의 절반을 차지하면서 농장
+                # 구조에 대해서는 아무것도 말해주지 않았다.
+                # 여기에 키를 더할 때는 "LLM 이 이걸로 무엇을 답하는가" 에
+                # 답할 수 있어야 한다.
                 if props:
-                    # Filter out noisy props
-                    relevant_props = {k: v for k, v in props.items() if k not in ['geometry', 'name', 'label']}
-                    if relevant_props:
-                        node["properties"] = relevant_props
+                    kept = {k: props[k] for k in _TREE_PROP_ALLOWLIST
+                            if props.get(k) not in (None, '', {}, [])}
+                    if kept:
+                        node["properties"] = kept
 
                 # v14.0: Equipment Aggregation Logic
                 # Separate children into 'Spatial' (Site/Zone/Device) and 'Asset' (Equipment/Fixed Feature)

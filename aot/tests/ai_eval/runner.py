@@ -87,15 +87,22 @@ def run_scenario(scenario):
     """
     from aot.ai.services.ai_agent_service import AIAgentService
 
+    from aot.tests.ai_eval.tool_call_probe import ToolCallProbe
+
     result = {'id': scenario['id'], 'category': scenario['category'], 'prompt': scenario['prompt']}
     if scenario.get('seed_recent_control') and scenario.get('thread_id'):
         _seed_recent_control(scenario['thread_id'], scenario['seed_recent_control'])
     start = time.monotonic()
     try:
-        ai_result = AIAgentService.process_natural_language_command(
-            agent_id='auto', command_text=scenario['prompt'],
-            thread_id=scenario.get('thread_id'), page_context=scenario.get('page_context'),
-        )
+        # 왕복·도구 호출·실토큰 계측(Phase 0 나머지 절반). 이것 없이는
+        # 매니페스트를 줄인 변경이 왕복을 늘려 손해인지 알 수 없다 —
+        # approx_tokens 는 최종 답변 글자수일 뿐이다.
+        with ToolCallProbe() as probe:
+            ai_result = AIAgentService.process_natural_language_command(
+                agent_id='auto', command_text=scenario['prompt'],
+                thread_id=scenario.get('thread_id'), page_context=scenario.get('page_context'),
+            )
+        result['tool_metrics'] = probe.summary()
         result['insight'] = ai_result.get('insight', '')
         result['intent'] = ai_result.get('intent')
         result['path'] = ai_result.get('_intercept') or 'legacy_ai_agent_service'
@@ -111,8 +118,9 @@ def run_scenario(scenario):
         result['error'] = f'{type(e).__name__}: {e}'
 
     result['latency_ms'] = int((time.monotonic() - start) * 1000)
-    # Rough approximation only (chars/4) — Phase 0 has no per-model tokenizer
-    # wired in yet. Do not treat this as billing-accurate.
+    # Rough approximation only (chars/4) — kept for continuity with the frozen
+    # baseline. `tool_metrics.prompt_tokens` is the REAL number (provider usage
+    # metadata, summed over every round trip); prefer it for cost comparisons.
     result['approx_tokens'] = (len(result.get('insight', '')) + len(scenario['prompt'])) // 4
 
     result['check_passed'], result['check_reasons'] = _run_checks(scenario, result)
@@ -264,6 +272,12 @@ def _write_results(results, save_baseline=False, label=None):
         f.write(f"- scenarios: {summary['total']} · passed: {summary['passed']} · "
                 f"failed: {summary['failed']} · skipped(degraded, no credentials): {summary['skipped']} · "
                 f"avg_latency_ms: {summary['avg_latency_ms']}\n")
+        f.write(f"- per turn: llm_calls={summary['avg_llm_calls']} · "
+                f"tool_calls={summary['avg_tool_calls']} · "
+                f"prompt_tokens={summary['avg_prompt_tokens']} · "
+                f"output_tokens={summary['avg_output_tokens']} · "
+                f"declared_tools={summary['avg_declared_tools']} · "
+                f"drawer_opens(total)={summary['total_drawer_opens']}\n")
         for cat, stats in summary['by_category'].items():
             f.write(f"  - {cat}: {stats['passed']} passed / {stats['failed']} failed / "
                     f"{stats['skipped']} skipped (of {stats['total']}), avg_latency_ms={stats['avg_latency_ms']}\n")
@@ -275,6 +289,10 @@ def _summarize(results):
     failed = sum(1 for r in results if r['check_passed'] is False)
     skipped = sum(1 for r in results if r['check_passed'] is None)
     avg_latency = int(sum(r['latency_ms'] for r in results) / total) if total else 0
+
+    def _m(key):
+        vals = [(r.get('tool_metrics') or {}).get(key) or 0 for r in results]
+        return round(sum(vals) / len(vals), 2) if vals else 0
 
     by_category = {}
     for r in results:
@@ -295,6 +313,14 @@ def _summarize(results):
     return {
         'total': total, 'passed': passed, 'failed': failed, 'skipped': skipped,
         'avg_latency_ms': avg_latency, 'by_category': by_category,
+        # 턴당 평균 — 매니페스트/컨텍스트를 줄이는 변경의 실제 효과는 여기서 본다.
+        'avg_llm_calls': _m('llm_calls'),
+        'avg_tool_calls': _m('tool_calls'),
+        'avg_prompt_tokens': _m('prompt_tokens'),
+        'avg_output_tokens': _m('output_tokens'),
+        'avg_declared_tools': _m('declared_tools_first_call'),
+        'total_drawer_opens': sum((r.get('tool_metrics') or {}).get('drawer_open_count') or 0
+                                  for r in results),
     }
 
 

@@ -360,7 +360,8 @@ class AgentLoopService:
         return "\n".join(parts)
 
     @staticmethod
-    def _finish(agent_id, command_text, insight, thread_id, actions=None, extra_meta=None):
+    def _finish(agent_id, command_text, insight, thread_id, actions=None,
+                extra_meta=None, steps=None, tool_log=None):
         """Shared terminal path — reuses the SAME dispatch/approval mechanism
         every other pipeline uses, so AgentLoopService's return shape is
         identical to process_natural_language_command's (drop-in for the
@@ -369,6 +370,22 @@ class AgentLoopService:
         meta = {'intent': 'AGENT_LOOP'}
         if extra_meta:
             meta.update(extra_meta)
+        # 이 턴이 **몇 번 만에 끝났는지와 어떤 순서로 도구를 불렀는지**를 남긴다.
+        #
+        # 예전에는 최종 결과만 남아서, 루프가 12번 헤매다 답한 것과 한 번에
+        # 맞힌 것이 기록상 똑같이 "1행" 이었다(2026-08-15 실측: 요청 311건 중
+        # 대부분이 1턴으로 보였다). 그래서 "헤맸는가" 를 물을 근거가 아예
+        # 없었고, 선례 학습의 성공 판정도 세울 수 없었다.
+        #
+        # metadata_json 에 넣으므로 마이그레이션이 필요 없다. 계측을 위해
+        # 몽키패치를 운영에 올리지 않는다 — 루프가 자기 걸음 수를 아는 것이
+        # 자연스럽고, 여기가 그 유일한 종료 지점이다.
+        if steps is not None:
+            meta['loop_steps'] = steps
+        if tool_log is not None:
+            meta['tool_sequence'] = [
+                t.get('tool') or t.get('tool_name')
+                for t in tool_log if isinstance(t, dict)][:40]
         dispatch_res = AIDispatchService._dispatch_actions(
             agent_id=agent_id, goal=command_text, insight=insight or '',
             actions=actions or [], thread_id=thread_id, message_type='ai', metadata=meta)
@@ -465,7 +482,8 @@ class AgentLoopService:
                 if AgentLoopService._looks_like_question(last_insight):
                     _meta = {'intent': 'CLARIFY'}
                 return AgentLoopService._finish(agent.unique_id, command_text, last_insight,
-                                                thread_id, extra_meta=_meta)
+                                                thread_id, extra_meta=_meta,
+                                                steps=step + 1, tool_log=tool_log)
 
             write_actions = [a for a in actions if AIActionService.requires_approval(AgentLoopService._tool_name(a))]
             if write_actions:
@@ -498,7 +516,9 @@ class AgentLoopService:
                 # reused unchanged, so this loop never re-implements that logic.
                 logger.info(f"[AgentLoop] step {step}: proposing "
                             f"{[AgentLoopService._tool_name(a) for a in write_actions]} for approval")
-                return AgentLoopService._finish(agent.unique_id, command_text, last_insight, thread_id, actions=actions)
+                return AgentLoopService._finish(agent.unique_id, command_text, last_insight,
+                                                thread_id, actions=actions,
+                                                steps=step + 1, tool_log=tool_log)
 
             # All actions are read tools — execute now, feed results back, keep looping.
             # Dedup by (tool_name, params) within this run: the model sometimes

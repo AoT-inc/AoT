@@ -499,6 +499,33 @@ class AoTDataToolService:
             return {"error": str(e)}
 
     @staticmethod
+    def open_drawer(drawer=None, **extra):
+        """[읽기전용] 서랍을 열어 그 안 도구들의 정의를 돌려준다.
+
+        매니페스트에는 자주 쓰는 도구만 싣고 나머지는 서랍에 둔다. 이 도구가
+        그 서랍을 여는 유일한 수단이다 — 그래서 절대 서랍 안으로 내려가지
+        않는다(`never_demote`, 가드가 고정한다).
+
+        모르는 이름이면 **오류가 아니라 목록을 돌려준다.** 서랍 이름을 틀렸을
+        때 "없다" 로 끝내면 LLM 이 포기하는데, 목록을 주면 다시 고를 수 있다.
+        """
+        from aot.ai.services import tool_registry as registry
+
+        known = registry.DRAWERS
+        if not drawer or drawer not in known:
+            return {
+                "error": ("unknown drawer: %s" % drawer) if drawer
+                         else "drawer is required",
+                "drawers": registry.drawer_index(),
+            }
+
+        names = set(registry.tools_in_drawer(drawer))
+        tools = [dict(t.manifest) for t in registry.TOOLS
+                 if t.manifest and t.name in names]
+        return {"drawer": drawer, "description": known[drawer],
+                "count": len(tools), "tools": tools}
+
+    @staticmethod
     def get_spatial_tree(depth=2, filter_type=None):
         """
         시스템의 공간 계층 구조를 트리 형태로 반환합니다.

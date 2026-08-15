@@ -1070,6 +1070,36 @@ def devices_for_shapes(shapes):
     return out
 
 
+def device_kinds_for_shapes(shapes):
+    """{GeoShape.unique_id: device_type 문자열} — 도형 목록의 장치 **종류** 일괄 해석.
+
+    `devices_for_shapes` 가 "어느 장치인가" 를 답한다면 이쪽은 "어느 종류인가" 다.
+    화면이 도형을 **장치 종류 색**으로 칠하려면 종류를 알아야 하는데, 지금까지는
+    그 값을 내려보내지 않아 소비처마다 스스로 알아내야 했다 — geo/design 은
+    마커를 뒤져 보완했고(그래서 맞았고), 지도 위젯은 그런 수단이 없어(데이터
+    기반 색 표현식이라 조회를 못 한다) 배정된 도형까지 장치 공통색으로 칠했다.
+    한 곳에서 내려주면 두 화면이 갈릴 이유가 없다.
+
+    돌려주는 값은 프런트의 `normalizeDeviceType` 이 아는 어휘다 — 복합장치는
+    `device_unit` 이 아니라 **`device`** 로 준다(그쪽 정규화가 'device' 를
+    복합장치로 읽는다).
+    """
+    uids = [s.unique_id for s in shapes
+            if getattr(s, 'type', None) in SHAPE_TYPE_ROLES
+            and getattr(s, 'unique_id', None)]
+    if not uids:
+        return {}
+    out = {}
+    rows = GeoBinding.query.filter(
+        GeoBinding.spatial_kind == 'shape',
+        GeoBinding.spatial_id.in_(uids),
+        GeoBinding.valid_to.is_(None)).all()
+    for b in rows:
+        kind = b.device_kind
+        out[b.spatial_id] = 'device' if kind == 'device_unit' else kind
+    return out
+
+
 def shapes_for_device(device_id, role=None, channel_id=None):
     """이 장치가 매여 있는 도형(GeoShape) 목록. 바인딩 우선, 없으면 레거시.
 

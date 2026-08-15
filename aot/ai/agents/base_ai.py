@@ -1,6 +1,7 @@
 # coding=utf-8
 import logging
 import json
+import os
 import re
 from abc import ABC, abstractmethod
 
@@ -23,6 +24,9 @@ class AbstractAI(ABC):
     # Whether this engine accepts image inputs (multimodal). Vision-capable
     # providers override this to True and consume ai_request_context.get_attachments().
     supports_vision = False
+    # 이 엔진이 도구를 tools[] 로 따로 보내는가(function_declarations / tool_use).
+    # False 면 프롬프트의 capabilities 가 유일한 채널이므로 절대 빼면 안 된다.
+    supports_native_tools = False
 
     def __init__(self, agent_config):
         self.agent_config = agent_config
@@ -115,6 +119,64 @@ class AbstractAI(ABC):
             return min(db_val, tier_limit) if db_val > 0 else tier_limit
             
         return db_val if db_val > 0 else tier_limit
+
+    # Native tool-calling loops (Anthropic's fc_turn while-loop, Gemini's
+    # equivalent) append each tool's raw result to the running message/contents
+    # list with NO length guard — unlike the initial prompt, which _build_prompt()
+    # truncates via get_context_budget(), that guard never runs again once the
+    # loop starts. A single unfiltered tool call (e.g. list_plantings with no
+    # map_id, or get_zone_sensor_summary with no measurement_type) can return
+    # tens of thousands of characters, and because these APIs are stateless each
+    # subsequent fc_turn resends the WHOLE accumulated history — 2-3 such turns
+    # can burn a request's entire token budget on data the model only needed to
+    # summarize, not quote in full. truncate_tool_result_json() caps each
+    # individual tool result before it enters that loop.
+    TOOL_RESULT_MAX_CHARS = {
+        'lightweight': 4000,
+        'standard': 12000,
+        'heavy': 40000,
+    }
+
+    def truncate_tool_result_json(self, exec_result):
+        """Serialize a tool's exec_result to JSON, capped to this engine's tier budget.
+
+        Fits as-is → returned unchanged. Too large → top-level list fields (the
+        usual source of bloat: rows/plots/zones/sensors arrays) are shrunk first,
+        with a note telling the model how many items were dropped and how to
+        narrow its next call, so it doesn't mistake the truncated slice for the
+        complete answer. Only if that still doesn't fit does it fall back to a
+        hard string cut.
+        """
+        max_chars = self.TOOL_RESULT_MAX_CHARS.get(self.model_tier, 12000)
+        raw = json.dumps(exec_result, ensure_ascii=False, default=str)
+        if len(raw) <= max_chars:
+            return raw
+
+        if isinstance(exec_result, dict):
+            shrunk = dict(exec_result)
+            list_keys = [k for k, v in shrunk.items() if isinstance(v, list) and v]
+            # Largest offenders first so one shrink pass is usually enough.
+            list_keys.sort(key=lambda k: -len(json.dumps(shrunk[k], ensure_ascii=False, default=str)))
+            for key in list_keys:
+                original = shrunk[key]
+                keep = max(1, len(original) // 4)
+                if keep >= len(original):
+                    continue
+                shrunk[key] = original[:keep]
+                shrunk[f"_{key}_truncated"] = (
+                    f"showing {keep} of {len(original)} items - response was too large for this "
+                    "request's token budget. Narrow your filters (map_id, zone_ids, measurement_type, "
+                    "on date, etc.) and call the tool again for the rest instead of assuming this is everything."
+                )
+                raw = json.dumps(shrunk, ensure_ascii=False, default=str)
+                if len(raw) <= max_chars:
+                    return raw
+
+        logger.warning(
+            f"[{self.__class__.__name__}] tool result still {len(raw)} chars after list-shrink, "
+            f"hard-truncating to {max_chars}"
+        )
+        return raw[:max_chars] + "\n...[TRUNCATED: response cut off to control token usage; narrow your filters and call again for the rest]"
 
     @abstractmethod
     def run_reasoning(self, context, goal):
@@ -249,12 +311,43 @@ class AbstractAI(ABC):
                 )
             mcp_addon += "When the user's request can be fulfilled by an MCP tool, you MUST use it.\n"
 
-        # v16.2: Tier-based JSON formatting (Token Diet)
-        if self.model_tier == 'lightweight':
-            # Remove all whitespace/indentation to save ~25% characters
-            ctx_str = json.dumps(context, separators=(',', ':'), default=str)
-        else:
-            ctx_str = json.dumps(context, indent=2, default=str)
+        # 도구 정의를 어느 채널로 보낼지 — 기본은 종전대로 **양쪽**이다.
+        #
+        # 지금 도구 정의가 한 요청에 두 번 실린다: 이 프롬프트의
+        # `capabilities` 와, gemini·anthropic 이 따로 보내는 `tools[]`
+        # (function_declarations / tool_use). 실측(2026-08-15) 왕복당
+        # 199,057자 = 프롬프트의 37.6%.
+        #
+        # 그런데 **한쪽을 그냥 지울 수 없다.**
+        # - openai·groq·mistral·ollama·minimax 는 tools[] 를 아예 안 보낸다.
+        #   프롬프트 사본이 유일한 채널이라 지우면 도구를 통째로 잃는다.
+        # - gemini·anthropic 의 네이티브 경로는 승인 게이트까지 갖춘 정식
+        #   경로다(GEMINI/ANTHROPIC_NATIVE_APPROVAL_GATE). tools[] 를 지우면
+        #   그 경로가 죽는다.
+        # - 실측은 gemini 한 모델에서 "텍스트 JSON 을 쓴다" 만 보여준다.
+        #   그 관측을 anthropic 으로 옮길 근거가 없다.
+        #
+        # 그래서 자르지 않고 **고를 수 있게** 한다. 어느 쪽이 나은지는 A/B 로
+        # 재고 정한다(aot/tests/ai_eval/drawer_ab.py).
+        #   both   (기본) 종전과 동일 — 프롬프트 + tools[]
+        #   prompt 프롬프트만 — 네이티브 지원 엔진에서 tools[] 를 뺀다
+        #   native tools[] 만 — 네이티브 지원 엔진에서 프롬프트 사본을 뺀다
+        channel = os.environ.get('AOT_AI_TOOL_CHANNEL', 'both')
+        if channel == 'native' and self.supports_native_tools:
+            context = {k: v for k, v in context.items() if k != 'capabilities'}
+
+        # 컨텍스트 JSON 은 **항상 compact** 로 보낸다.
+        #
+        # 예전에는 lightweight 티어만 compact 였고 나머지(기본값 'standard' 포함)
+        # 는 indent=2 였다. 들여쓰기는 사람이 읽을 때 쓸모가 있지 컨텍스트를
+        # 읽는 모델에게는 아니다 — 실측(2026-08-15): capabilities 만으로도
+        # 151,228자 → 121,917자, **29,311자(19%)가 공백**이었다. 이 프롬프트는
+        # 왕복당 수십만 자라 요청 한두 개로 분당 토큰 쿼터에 걸리는 상황이고,
+        # 그 비용의 5분의 1이 들여쓰기였다.
+        #
+        # 답변 품질이 나빠지면 되돌리기는 한 줄이다(A/B 하네스:
+        # aot/tests/ai_eval/drawer_ab.py).
+        ctx_str = json.dumps(context, separators=(',', ':'), default=str)
 
         full_prompt = (
             f"{system_overview}"

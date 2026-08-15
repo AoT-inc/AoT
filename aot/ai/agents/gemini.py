@@ -1,6 +1,7 @@
 # coding=utf-8
 import json
 import logging
+import os
 import requests
 from aot.ai.agents.base_ai import AbstractAI
 from flask_babel import lazy_gettext as lg
@@ -47,6 +48,7 @@ class GeminiAI(AbstractAI):
     """
     MCP_SPECIALTY = "General Purpose Assistant (Advanced Multimodal)"
     supports_vision = True  # Gemini models accept inline_data image parts
+    supports_native_tools = True   # function_declarations 로 도구를 따로 보낸다
 
     def __init__(self, agent_config):
         super().__init__(agent_config)
@@ -186,7 +188,10 @@ class GeminiAI(AbstractAI):
         headers = {"Content-Type": "application/json"}
 
         # Build tools schema from context.capabilities (empty list = plain text mode)
-        tools_schema = self._build_tools_schema(context)
+        # 채널 선택(base_ai._build_prompt 주석 참조). 'prompt' 면 프롬프트
+        # 사본만 쓰고 tools[] 는 보내지 않는다.
+        tools_schema = ([] if os.environ.get('AOT_AI_TOOL_CHANNEL') == 'prompt'
+                        else self._build_tools_schema(context))
         logger.info(f"[GeminiAI] tools_schema count={len(tools_schema)}")
 
         # Multi-turn conversation payload
@@ -303,7 +308,7 @@ class GeminiAI(AbstractAI):
                                 exec_result = AIActionService.execute_action(
                                     action_type, target_id, params
                                 )
-                            tool_result_str = json.dumps(exec_result, ensure_ascii=False, default=str) if exec_result else '{"error": "tool execution failed"}'
+                            tool_result_str = self.truncate_tool_result_json(exec_result) if exec_result else '{"error": "tool execution failed"}'
 
                             # Append model's functionCall turn
                             contents.append({"parts": [part]})

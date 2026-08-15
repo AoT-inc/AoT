@@ -88,13 +88,16 @@ class GeoOverlayManager:
             # [Phase B] 도형↔장치 연결도 같은 이유로 한 번에 읽는다. 도형마다
             # 바인딩을 조회하면 지도 렌더가 도형 수만큼 쿼리를 낸다.
             try:
-                from .device_binding import devices_for_shapes
+                from .device_binding import (devices_for_shapes,
+                                             device_kinds_for_shapes)
                 bound_devices = devices_for_shapes(shapes)
+                bound_kinds = device_kinds_for_shapes(shapes)
             except Exception as exc:
                 current_app.logger.warning(
                     '[GeoOverlays] 바인딩 일괄 해석 실패 — device_id 컬럼으로 '
                     '계속: %s', exc)
                 bound_devices = {}
+                bound_kinds = {}
 
             facility_meta = {}
             facility_shape_uuids = [s.unique_id for s in shapes if s.type == 'facility']
@@ -177,6 +180,14 @@ class GeoOverlayManager:
                     feat['properties']['device_id'] = s.device_id
                 if hasattr(s, 'channel_id') and s.channel_id:
                     feat['properties']['channel_id'] = s.channel_id
+                # 배정된 장치의 **종류**도 함께 내려준다 — 화면이 도형을 종류
+                # 색으로 칠하는 데 쓴다. 이 값이 없으면 지도 위젯처럼 조회
+                # 수단이 없는 소비처는 배정된 도형까지 공통색으로 칠한다.
+                # 저장된 값이 있으면 건드리지 않는다(그쪽이 더 구체적일 수 있다).
+                if not feat['properties'].get('device_type'):
+                    bound_kind = bound_kinds.get(s.unique_id)
+                    if bound_kind:
+                        feat['properties']['device_type'] = bound_kind
 
                 # Overwrite aot_type if missing OR null (old Leaflet data stored aot_type: null)
                 if not feat['properties'].get('aot_type'):
