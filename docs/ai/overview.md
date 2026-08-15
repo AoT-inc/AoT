@@ -229,7 +229,93 @@ spec allows this, and it is where server-initiated notifications would go later.
 The REST API stays because ChatGPT Custom GPTs on ordinary plans cannot register
 an MCP server — they attach through OpenAPI Actions only.
 
-To connect from Claude Desktop, add to `claude_desktop_config.json`:
+### Connecting a ChatGPT Custom GPT { #chatgpt-setup }
+
+Register the three REST paths above (`/mcp/info`, `/mcp/tools/list`,
+`/mcp/tools/call`) as an **OpenAPI Action**.
+
+1. **Issue an API key** — under `Settings > Users`, generate a new API key for
+   your account (name it something like "ChatGPT" so you can revoke just this
+   connection later). If this GPT should only ever read, pick scope
+   `readonly` at issue time — write tool calls are then refused server-side,
+   so a Custom GPT misconfiguration cannot touch a device by accident.
+2. **Confirm HTTP mode is on and reachable** — the server must be running
+   with `--http --port 5700`, and ChatGPT must be able to reach that port (or
+   whatever path your reverse proxy exposes it at). Check unauthenticated
+   first (returns only version and tool count, no key needed):
+   ```bash
+   curl https://<host>:5700/mcp/info
+   ```
+3. In ChatGPT, go to **Explore GPTs → Create → Configure → Actions → Create
+   new action** and paste the schema below (replace `<host>` with your real
+   address):
+
+   ```yaml
+   openapi: 3.1.0
+   info:
+     title: AoT MCP
+     version: "1.0.0"
+   servers:
+     - url: https://<host>:5700
+   paths:
+     /mcp/tools/list:
+       get:
+         operationId: listTools
+         summary: List available tools and each tool's argument schema.
+         responses:
+           "200": { description: OK }
+     /mcp/tools/call:
+       post:
+         operationId: callTool
+         summary: Call one tool by name with arguments.
+         requestBody:
+           required: true
+           content:
+             application/json:
+               schema:
+                 type: object
+                 required: [name]
+                 properties:
+                   name:
+                     type: string
+                     description: A tool name returned by listTools
+                   arguments:
+                     type: string
+                     description: >-
+                       Tool arguments serialized as a JSON object string.
+                       E.g. "{\"zone_name\": \"North Field\"}". Empty is "{}".
+         responses:
+           "200": { description: OK }
+   ```
+
+4. **Set authentication**: Authentication → API Key → Auth Type `Custom` →
+   Header name `X-API-KEY` → value is the API key (base64) from step 1.
+5. **⚠️ Declare `arguments` as a string — never as an object.** There are
+   over 100 tools, so their argument shapes cannot all be declared in one
+   OpenAPI schema. Leave `arguments` as a free-form object and ChatGPT
+   Actions silently drops the field it cannot fill (real incident,
+   2026-08-09: a `list_devices_in_area` call required `area_name`, but the
+   request body arrived with no `arguments` key at all). Declare it as a
+   string as shown above, and tell the Custom GPT in its Instructions:
+   "When calling callTool, always JSON-encode arguments into that string."
+6. **State-changing tools still don't execute immediately on this path.** The
+   first call comes back as `pending_approval` with a `confirmation_id` —
+   ChatGPT should show that to the user, who approves it on the web review
+   page (`/ai/mcp_review`), then the same call is retried with
+   `_confirmation_id` added to actually execute. There is no automatic
+   re-approval inside a Custom GPT.
+
+> The map-related bug fixes covered on this page (`get_weather` name lookup
+> always landing on the same wrong shape, `get_spatial_tree`'s filter doing
+> nothing, a zone disappearing from the hierarchy query) ship in **AoT app
+> v26.08.8 and later**. Right after connecting, call the
+> `get_system_update_status` tool once to confirm the installed version — on
+> an older install, questions asked by field/zone name may still return the
+> old wrong answers.
+
+### Connecting Claude Desktop
+
+Add to `claude_desktop_config.json`:
 
 ```json
 {

@@ -229,7 +229,91 @@ claude mcp add --transport http aot https://<호스트>/aotmcp/mcp \
 REST 를 남겨두는 이유는 일반 요금제의 ChatGPT Custom GPT 가 MCP 서버를 직접
 등록할 수 없고 OpenAPI Actions 로만 붙기 때문입니다.
 
-Claude Desktop에서 연결하려면 `claude_desktop_config.json`에 추가합니다:
+### ChatGPT Custom GPT 연결 { #chatgpt-setup }
+
+위 REST 세 경로(`/mcp/info`, `/mcp/tools/list`, `/mcp/tools/call`)를 **OpenAPI
+Action**으로 등록합니다.
+
+1. **API 키 발급** — `설정 > 사용자`에서 본인 계정의 API 키를 새로 만듭니다
+   (이름을 "ChatGPT"처럼 구분되게 붙여 두면 나중에 이 연결만 따로 폐기하기
+   편합니다). 조회만 시킬 계획이면 발급 시 스코프를 `readonly`로 선택하세요 —
+   쓰기 도구 호출 자체가 서버에서 거부되어, Custom GPT 설정 실수로 장치를
+   잘못 건드릴 위험이 원천 차단됩니다.
+2. **HTTP 모드가 켜져 있고 외부에서 닿는지 확인** — 서버가
+   `--http --port 5700`으로 떠 있어야 하고, ChatGPT 가 그 포트(또는 리버스
+   프록시 경로)에 접속할 수 있어야 합니다. 인증 없이 아래를 먼저 열어
+   확인하세요(버전·도구 수만 나옵니다):
+   ```bash
+   curl https://<호스트>:5700/mcp/info
+   ```
+3. ChatGPT에서 **Explore GPTs → Create → Configure → Actions → Create new
+   action**으로 들어가 아래 OpenAPI 스키마를 붙여넣습니다(`<호스트>`를 실제
+   주소로 바꾸세요):
+
+   ```yaml
+   openapi: 3.1.0
+   info:
+     title: AoT MCP
+     version: "1.0.0"
+   servers:
+     - url: https://<호스트>:5700
+   paths:
+     /mcp/tools/list:
+       get:
+         operationId: listTools
+         summary: 사용 가능한 도구 목록과 각 도구의 인자 스키마를 받는다.
+         responses:
+           "200": { description: OK }
+     /mcp/tools/call:
+       post:
+         operationId: callTool
+         summary: 도구 하나를 이름과 인자로 호출한다.
+         requestBody:
+           required: true
+           content:
+             application/json:
+               schema:
+                 type: object
+                 required: [name]
+                 properties:
+                   name:
+                     type: string
+                     description: listTools 가 돌려준 도구 이름
+                   arguments:
+                     type: string
+                     description: >-
+                       도구 인자를 JSON 오브젝트로 직렬화한 문자열.
+                       예 "{\"zone_name\": \"3포장\"}". 인자가 없으면 "{}".
+         responses:
+           "200": { description: OK }
+   ```
+
+4. **인증 등록**: Authentication → API Key → Auth Type `Custom` → Header name
+   `X-API-KEY` → 값에 1번에서 발급한 API 키(base64)를 넣습니다.
+5. **⚠️ `arguments`는 반드시 문자열(`string`)로 선언할 것 — object 로 두지
+   마세요.** 도구가 100종 넘게 있어 인자 스키마를 OpenAPI 에 전부 선언할 수
+   없습니다. `arguments`를 자유형 object 로 두면 ChatGPT Actions 가 값을
+   채우지 못하고 **그 키를 통째로 빠뜨립니다**(실사례 2026-08-09:
+   `list_devices_in_area` 호출이 `area_name`은 필수인데 요청 바디에
+   `arguments` 키 자체가 없어 실패했습니다). 위 스키마처럼 문자열로 선언하고,
+   Custom GPT 의 Instructions 에 "callTool 을 부를 때 arguments 는 항상 JSON을
+   문자열로 인코딩해서 보내라"를 명시하세요.
+6. **상태를 바꾸는 도구는 이 경로에서도 즉시 실행되지 않습니다.** 최초 호출은
+   `pending_approval` + `confirmation_id`를 반환합니다 — ChatGPT 는 그 값을
+   사람에게 보여주고, 사람이 웹 승인 페이지(`/ai/mcp_review`)에서 승인한 뒤
+   같은 인자에 `_confirmation_id`를 채워 **같은 도구를 다시** 호출해야
+   실제로 실행됩니다. Custom GPT 안에서 자동 재승인은 없습니다.
+
+> 이 페이지가 다루는 지도 관련 버그 수정(`get_weather` 이름 조회가 항상
+> 같은 도형으로 떨어지던 것, `get_spatial_tree` 필터 무동작, 구역이 계층
+> 조회에서 사라지던 것)은 **AoT 앱 v26.08.8 이상**부터 적용됩니다. 연결
+> 직후 `get_system_update_status` 도구를 한 번 호출해 설치 버전을 확인하세요
+> — 그보다 낮은 버전이면 포장·구역 이름으로 묻는 질문에서 예전처럼 엉뚱한
+> 응답이 나올 수 있습니다.
+
+### Claude Desktop 연결
+
+`claude_desktop_config.json`에 추가합니다:
 
 ```json
 {
