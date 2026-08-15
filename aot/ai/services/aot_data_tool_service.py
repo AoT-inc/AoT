@@ -532,16 +532,25 @@ class AoTDataToolService:
         """
         try:
             full_tree = AIContextService.get_spatial_hierarchy()
-            # depth 및 filter_type에 따른 가지치기는 추후 복잡도에 따라 구현 가능
-            # 현재는 전체 트리를 반환하거나 기본적인 필터링만 수행
+            # depth 에 따른 가지치기는 추후 복잡도에 따라 구현 가능
             if filter_type:
-                # 간단한 타입 필터링 예시
+                # 모든 노드가 "children" 키를 항상 갖고 있어(빈 리스트라도)
+                # 예전 조건 `c.get('type') == filter_type or 'children' in c`
+                # 는 뒤쪽 항이 노드마다 항상 True 라 사실상 아무것도 걸러내지
+                # 못했다 — filter_type 을 줘도 전체 트리가 그대로 나왔다.
+                # 이제 노드 자신이 filter_type 이거나, 그 밑에 filter_type
+                # 인 자손이 남아 있을 때만 남긴다(중간 컨테이너는 경로를
+                # 잇기 위해 유지하되, 매치가 하나도 없으면 가지째 잘라낸다).
                 def filter_node(node):
-                    if 'children' in node:
-                        node['children'] = [filter_node(c) for c in node['children'] if c.get('type') == filter_type or 'children' in c]
-                    return node
-                full_tree = [filter_node(n) for n in full_tree]
-                
+                    kept_children = [c for c in
+                                      (filter_node(child) for child in node.get('children', []))
+                                      if c is not None]
+                    node = dict(node, children=kept_children)
+                    if node.get('type') == filter_type or kept_children:
+                        return node
+                    return None
+                full_tree = [n for n in (filter_node(root) for root in full_tree) if n is not None]
+
             return {"hierarchy": full_tree}
         except Exception as e:
             return {"error": str(e)}
@@ -2984,16 +2993,43 @@ class AoTDataToolService:
             # (get_sensor_detail 의 같은 폴백과 같은 이유·같은 가드)
             if not target_shape and zone_name and not _looks_like_uuid(zone_name):
                 _zn = zone_name.strip().lower()
+                _named_shapes = []
                 for shape in GeoShape.query.all():
                     try:
                         feat = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
                         props = feat.get('properties') or {}
                         _name = str(props.get('name') or props.get('label') or props.get('title') or '').lower()
+                        # 이름 없는 도형은 매치 대상에서 제외한다. 빈 문자열은
+                        # 파이썬에서 모든 문자열의 부분집합이라(`'' in x`),
+                        # 이 가드 없이는 이름 없는 도형이 쿼리 순서상 먼저
+                        # 나오기만 하면 **어떤 zone_name 을 넣어도** 그리로
+                        # 떨어진다 — 실측(koat): 도형 150개 중 52개가 이름이
+                        # 비어 있고, '1포장'·'2포장'·'3포장' 전부 같은 고아
+                        # 도형 하나로 낙착했다.
+                        if _name:
+                            _named_shapes.append((shape, _name))
+                    except Exception:
+                        continue
+
+                # 1차: 완전 일치를 최우선으로 본다 — 결정적이라 충돌이 없다.
+                for shape, _name in _named_shapes:
+                    if _name == _zn:
+                        target_shape = shape
+                        break
+
+                # 2차: 완전 일치가 없을 때만 부분일치로 넓힌다. 단 한 글자
+                # 이름은 부분일치에서 제외한다 — 실측: 존재하지 않는 이름
+                # 'xyz없는이름123'이 그 안의 숫자 '2' 하나 때문에 구역 '2'
+                # 와 우연히 매치됐다. 길이 가드를 여기 전체에 걸면 한 글자
+                # 구역(로컬에 4개 실재)을 이름으로 못 찾게 되므로, 그 구역은
+                # 위 1차(완전 일치)로만 찾을 수 있게 남겨 둔다.
+                if not target_shape:
+                    for shape, _name in _named_shapes:
+                        if len(_name) < 2:
+                            continue
                         if _zn in _name or _name in _zn:
                             target_shape = shape
                             break
-                    except Exception:
-                        continue
 
             # Step 2: Resolve display name; return error if zone not found
             _resolved_name = zone_name or zone_id or "Unknown zone"

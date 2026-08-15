@@ -173,7 +173,8 @@ class AIContextService:
             semantic_map = {n.target_id: n.note for n in ai_notes if n.target_id}
 
             all_shapes = GeoShape.query.all()
-            
+            _valid_shape_ids = {s.id for s in all_shapes}
+
             # 1. Pre-process Geometries (BBox & Caching)
             containers = [] # Used for fast spatial matching
             for s in all_shapes:
@@ -210,8 +211,17 @@ class AIContextService:
                 
                 # A. Explicit Fallback Priority
                 if s.parent_id:
-                    return s.parent_id
-                    
+                    if s.parent_id in _valid_shape_ids:
+                        return s.parent_id
+                    # parent_id 가 존재하지 않는 도형을 가리키면(dangling)
+                    # 그 값을 믿지 않는다. 예전에는 그대로 반환했는데, 그러면
+                    # 이 도형은 루트로도(parent_map 값이 None 이 아니므로)
+                    # 누구의 자식으로도(그 parent_id 를 가진 도형이 실재하지
+                    # 않으므로) 안 잡혀 **트리 어디에도 나타나지 않고 조용히
+                    # 사라졌다.** 공간 포함 검사로 재시도하고, 그것도 실패하면
+                    # 최후에 루트로 노출한다 — "안 보임"보다 "위치가 아리송한
+                    # 채로라도 보임" 이 낫다.
+
                 # B. Spatial Inclusion Check (Only for Point geometries like markers)
                 if not feat or 'geometry' not in feat:
                     return None
