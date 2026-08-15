@@ -155,14 +155,13 @@ class AIContextService:
         v14.1: tier parameter for thread safety (replaces _current_tier class variable).
         """
         try:
-            from shapely.geometry import shape, Point
             # import json (removed local import to prevent shadowing/unbound error)
-            
+
             # --- Phase 6: Spatial Cache Check ---
             global _SPATIAL_CACHE, _LAST_GEO_UPDATE
             latest_geo = GeoShape.query.order_by(GeoShape.id.desc()).first()
             current_tag = latest_geo.id if latest_geo else 0
-            
+
             if _SPATIAL_CACHE is not None and _LAST_GEO_UPDATE == current_tag:
                 return copy.deepcopy(_SPATIAL_CACHE)  # E-1: Deep Copy
             # ------------------------------------
@@ -173,106 +172,32 @@ class AIContextService:
             semantic_map = {n.target_id: n.note for n in ai_notes if n.target_id}
 
             all_shapes = GeoShape.query.all()
-            _valid_shape_ids = {s.id for s in all_shapes}
 
-            # 1. Pre-process Geometries (BBox & Caching)
-            containers = [] # Used for fast spatial matching
+            # 부모 판정은 geo_hierarchy.build_geo_parent_map 하나로 통일한다.
+            # 이 파일은 예전에 같은 판정을 따로(bbox 사전필터를 곁들여) 다시
+            # 구현해 두고 있어서, geo_hierarchy 쪽에 넣은 수정 — 대표점 통일,
+            # dangling parent_id 방어, **자기보다 작은 도형은 부모가 될 수
+            # 없다** — 이 여기엔 반영되지 않은 채로 남아 있었다. 실측(koat):
+            # site '2포장'의 대표점이 하필 자기 zone '2-2' 안에 떨어졌는데,
+            # 이 파일의 복사본에는 면적 가드가 없어 자식이 부모로 뒤집혔다.
+            # 2-2 는 explicit parent_id 로 2포장을 정확히 가리키고 있었으므로
+            # 2포장↔2-2 가 서로를 부모로 가리키는 2노드 순환이 되어, 어느
+            # 쪽도 루트가 못 되고 누구의 자식으로도 안 잡혀 트리 전체에서
+            # 사라졌다 — resolve_target 으로는 정상 조회되는데
+            # get_spatial_tree 목록에만 없던 이유가 이것이다.
+            from aot.utils.geo_hierarchy import build_geo_parent_map
+            parent_map = build_geo_parent_map(all_shapes)
+
+            # build_tree 가 쓸 파싱된 feature 를 도형마다 캐싱해 둔다.
             for s in all_shapes:
-                if s.type in ['site', 'zone']:
-                    feat = s.feature
-                    if isinstance(feat, str):
-                        try: feat = json.loads(feat)
-                        except Exception: feat = {}
-
-                    if feat and 'geometry' in feat:
-                        try:
-                            g = shape(feat['geometry'])
-                            if g.is_valid and g.geom_type in ['Polygon', 'MultiPolygon']:
-                                containers.append({
-                                    'id': s.id,
-                                    'geom': g,
-                                    'bounds': g.bounds, # Fast BBox check (minx, miny, maxx, maxy)
-                                    'is_zone': s.type == 'zone',
-                                    'area': g.area
-                                })
-                        except Exception:
-                            pass
-            
-            # 2. Determine Spatial Parent
-            def find_parent_id(s):
-                # Safe JSON parsing for feature
                 feat = s.feature
                 if isinstance(feat, str):
                     try: feat = json.loads(feat)
                     except Exception: feat = {}
                 elif not isinstance(feat, dict):
                     feat = {}
-                s._parsed_feat = feat # Cache it for build_tree
-                
-                # A. Explicit Fallback Priority
-                if s.parent_id:
-                    if s.parent_id in _valid_shape_ids:
-                        return s.parent_id
-                    # parent_id 가 존재하지 않는 도형을 가리키면(dangling)
-                    # 그 값을 믿지 않는다. 예전에는 그대로 반환했는데, 그러면
-                    # 이 도형은 루트로도(parent_map 값이 None 이 아니므로)
-                    # 누구의 자식으로도(그 parent_id 를 가진 도형이 실재하지
-                    # 않으므로) 안 잡혀 **트리 어디에도 나타나지 않고 조용히
-                    # 사라졌다.** 공간 포함 검사로 재시도하고, 그것도 실패하면
-                    # 최후에 루트로 노출한다 — "안 보임"보다 "위치가 아리송한
-                    # 채로라도 보임" 이 낫다.
+                s._parsed_feat = feat
 
-                # B. Spatial Inclusion Check (Only for Point geometries like markers)
-                if not feat or 'geometry' not in feat:
-                    return None
-                    
-                try:
-                    g = shape(feat['geometry'])
-                    # Device markers are Points; zone/site polygons are drawn one
-                    # inside the other on the map (a zone polygon fully inside its
-                    # site polygon) — parent_id is left unset for both in practice,
-                    # so both geometry kinds need a containment check here, not
-                    # just Point markers.
-                    if g.geom_type not in ('Point', 'Polygon', 'MultiPolygon'):
-                        return None
-
-                    # 판정 기준은 geo_hierarchy.containment_point 하나다
-                    # (거기 docstring 에 완전포함·centroid 를 쓰면 안 되는
-                    # 이유가 있다). Point 는 그 자신이 대표점이라 마커 판정은
-                    # 종전과 동일하고, 폴리곤만 대표점으로 바뀐다.
-                    from aot.utils.geo_hierarchy import containment_point
-
-                    pt = containment_point(g)
-                    if pt is None:
-                        return None
-                    p_x, p_y = pt.x, pt.y
-                    matches = []
-                    for c in containers:
-                        if c['id'] == s.id:
-                            continue  # a polygon never contains itself
-                        b = c['bounds']
-                        # Bounding Box 1차 사전 필터링 (최적화). 대표점 하나만
-                        # 보므로 폴리곤도 점과 같은 필터를 쓴다 — 예전의 bbox
-                        # 전체포함 필터를 남겨두면 경계를 넘은 도형이 여기서
-                        # 먼저 잘려 대표점 판정까지 가지도 못한다.
-                        if p_x < b[0] or p_x > b[2] or p_y < b[1] or p_y > b[3]:
-                            continue
-
-                        if c['geom'].contains(pt):
-                            matches.append(c)
-
-                    if matches:
-                        # 중첩 우선순위 (Zone이 Site보다 우선, 면적이 작은 것이 우선)
-                        matches.sort(key=lambda x: (not x['is_zone'], x['area']))
-                        return matches[0]['id']
-                except Exception:
-                    pass
-                
-                return None
-
-            # Pre-calculate spatial relationships
-            parent_map = {s.id: find_parent_id(s) for s in all_shapes}
-            
             # 3. Build Tree
             def build_tree(s, tier='standard'):
                 # 화면 장식용 도형은 트리에 넣지 않는다(_TREE_EXCLUDED_TYPES).

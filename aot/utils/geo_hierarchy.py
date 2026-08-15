@@ -66,10 +66,19 @@ def build_geo_parent_map(all_shapes):
     containers = [(s.id, geoms[s.id]) for s in all_shapes
                   if s.type in ('site', 'zone') and geoms.get(s.id) is not None
                   and geoms[s.id].geom_type in ('Polygon', 'MultiPolygon')]
+    valid_ids = {s.id for s in all_shapes}
 
     def _find_parent(s):
         if s.parent_id:
-            return s.parent_id
+            if s.parent_id in valid_ids:
+                return s.parent_id
+            # parent_id 가 존재하지 않는 도형을 가리키면(dangling) 그 값을
+            # 믿지 않는다 — 그대로 반환하면 이 도형은 루트로도(부모값이
+            # None 이 아니므로) 누구의 자식으로도(그 parent_id 를 가진
+            # 도형이 실재하지 않으므로) 안 잡혀 트리 어디에도 나타나지
+            # 않고 조용히 사라진다. 공간 포함 검사로 재시도하고, 그것도
+            # 실패하면 최후에 None(루트)으로 노출한다 — "안 보임"보다
+            # "위치가 아리송한 채로라도 보임" 이 낫다.
         g = geoms.get(s.id)
         if g is None or g.geom_type not in ('Point', 'Polygon', 'MultiPolygon'):
             return None
