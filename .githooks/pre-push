@@ -1,0 +1,23 @@
+#!/bin/sh
+# origin(GitHub)에 로컬 상세 히스토리가 새는 것을 막는다.
+#
+# 2026-08-15 사고: 로컬 main(전체 상세 히스토리)에서 만든 태그를 그대로
+# origin 에 push 해, 그 커밋의 조상 828개(2026-05-14 최초 커밋부터, 과거
+# STATS_PASSWORD 유출 구간 포함)가 GitHub 로 전송됐다. 태그 참조를 지워도
+# 객체 자체는 해시를 아는 사람이면 여전히 fetch 할 수 있었다(직접 재현
+# 확인됨). origin 에는 commit-tree 로 만든 스쿼시 동기화 커밋만 올라가야
+# 한다 — 이 훅이 push 시점에 그것을 강제한다.
+#
+# 활성화: git config core.hooksPath .githooks   (클론마다 1회, pre-commit 과 공유)
+# 우회  : AOT_SKIP_ORIGIN_HISTORY_CHECK=1 git push ...
+if [ -n "$AOT_SKIP_ORIGIN_HISTORY_CHECK" ]; then
+    echo "[pre-push] AOT_SKIP_ORIGIN_HISTORY_CHECK=1 — origin 히스토리 검사 건너뜀." >&2
+    exit 0
+fi
+
+ROOT=$(git rev-parse --show-toplevel)
+CHECK="$ROOT/aot/scripts/check_origin_push_safety.py"
+[ -f "$CHECK" ] || exit 0
+
+python3 "$CHECK" "$1" "$2"
+exit $?
