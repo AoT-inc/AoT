@@ -670,12 +670,23 @@ def settings_users_submit():
             # 와 무관하다), 여기를 열어 두면 90일 토큰만 쥔 사람이 **영구
             # 자격증명을 하나 만들어 두고** 빠져나갈 수 있다 — 비밀번호를 바꿔도
             # 안 끊긴다.
-            if not utils_general.require_fresh_login('api_key:generate'):
-                return redirect(url_for('routes_settings.settings_users'))
-            (messages,
-             generated_api_key) = utils_settings.generate_api_key(
-                form_mod_user)
+            #
+            # 이 라우트는 AJAX 전용(jsonify 만 반환)이라 여기서 redirect 하면
+            # 안 된다 — jQuery 가 그 302 를 따라가 /settings/users 의 HTML을
+            # 200으로 받고 `data.data.messages` 를 읽다 조용히 TypeError 로
+            # 죽는다. 화면은 아무 반응도 없고(에러 토스트조차 없음), 발급도
+            # 되지 않는다. 실측(2026-08-16, 로컬): 비신선 세션에서 발급 버튼을
+            # 눌러도 키가 만들어지지 않고 콘솔에만
+            # "Cannot read properties of undefined (reading 'messages')".
             user_id = form_mod_user.user_id.data
+            if not utils_general.require_fresh_login(
+                    'api_key:generate', flash_error=False):
+                messages["error"].append(
+                    utils_general.fresh_login_required_message())
+            else:
+                (messages,
+                 generated_api_key) = utils_settings.generate_api_key(
+                    form_mod_user)
         elif form_mod_user.user_revoke_api_key.data:
             messages = utils_settings.revoke_api_key(form_mod_user)
             user_id = form_mod_user.user_id.data

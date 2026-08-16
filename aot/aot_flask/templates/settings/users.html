@@ -461,7 +461,8 @@
         let $revoked_row = null;
         if (action === 'user_revoke_api_key') {
           $(this).find('input[name="api_key_id"]').val(submitter_btn.data('revoke-key'));
-          $revoked_row = submitter_btn.closest('tr');
+          // API 키 목록은 <tr> 표가 아니라 한 줄에 하나씩인 .aot-list-row 다.
+          $revoked_row = submitter_btn.closest('.aot-list-row');
         }
         // Saving a user changes several things the card shows at once — name,
         // role, the disabled badge and tint — and a role rename changes every
@@ -498,8 +499,10 @@
               if (action === 'user_generate_api_key' && data.data.generated_api_key) {
                 var uid = data.data.user_id;
                 var new_val = data.data.generated_api_key;
-                document.querySelectorAll('.real_mod_key_' + uid).forEach(function (el) { el.value = new_val; });
                 document.querySelectorAll('.visible_mod_key_' + uid).forEach(function (el) { el.value = new_val; });
+                // 발급 전에는 d-none 으로 숨겨 둔 행이라(user_detail.html) 값을
+                // 채우는 것만으로는 안 보인다 — 클래스를 지워 보여준다.
+                document.querySelectorAll('.aot-api-key-reveal-' + uid).forEach(function (el) { el.classList.remove('d-none'); });
               }
               if (action === 'user_revoke_api_key' && $revoked_row) {
                 // 끊긴 키를 목록에 남겨 두면 아직 쓸 수 있는 키로 읽힌다.

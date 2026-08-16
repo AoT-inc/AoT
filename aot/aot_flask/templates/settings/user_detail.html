@@ -103,40 +103,64 @@
         </div>
       </div>
 
+    </div>
+
+    {# API 키는 계정 기본 설정과 별개 단락이다 — 좁은 160px 컨트롤 칸(단일
+       입력용)에 발급 목록·발급·권한을 욱여넣으면 목록이 표 컬럼째로 잘려
+       보인다. full-width 행으로 폭을 확보한다. #}
+    <div class="aot-modal-group-title">{{_('API Key')}}</div>
+    <div class="aot-modal-container">
+
       {# 한 사람이 키를 여러 개 갖는다(p6_32). 클라이언트마다 따로 발급해 두면
          하나가 미심쩍을 때 그것만 끊을 수 있다 — 예전에는 키가 하나뿐이라
-         재발급이 곧 기존 연동 전부를 끊는 일이었다. #}
-      <div class="aot-modal-option-row">
-        <label class="aot-modal-option-label">{{_('API Keys')}}</label>
-        <div class="aot-modal-option-control">
+         재발급이 곧 기존 연동 전부를 끊는 일이었다. 한 줄에 하나씩 — 이름·
+         권한·발급일·폐기 버튼을 표 컬럼으로 욱여넣으면 드로어 폭에서 다
+         잘린다. #}
+      <div class="aot-modal-option-row aot-full-width-row">
+        <label class="aot-modal-option-label">{{_('Issued Keys')}}</label>
+        {# .aot-modal-option-control 자체가 display:flex(행 방향) + align-items:
+           center 라, 감싸는 div 없이 .aot-list-row 를 바로 넣으면 키들이 한
+           줄에 나란히 눕고, align-items:center 때문에 각 행이 내용만큼만
+           좁아져 이름 옆 버튼이 줄바꿈된다 — flex-column + stretch 래퍼로
+           세로로 쌓고 각 행이 폭 전체를 쓰게 한다. #}
+        <div class="aot-modal-option-control d-flex flex-column" style="width:100%; align-items:stretch">
           {% if user_api_keys %}
-          <table class="table table-sm aot-modern-table" style="margin-bottom:8px">
-            <tbody>
-              {% for each_key in user_api_keys %}
-              <tr>
-                <td>{{each_key.name or _('Unnamed')}}</td>
-                <td class="text-muted small">{% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}</td>
-                <td class="text-muted small">{{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}</td>
-                <td style="width:1%;white-space:nowrap">
-                  <button type="submit" name="user_revoke_api_key" value="1"
-                    class="btn aot-pill-btn aot-pill-btn-secondary"
-                    data-revoke-key="{{each_key.unique_id}}"
-                    onclick="return confirm('{{_('Revoke this API key? Anything using it will stop working.')}}')">{{_('Revoke')}}</button>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          {% for each_key in user_api_keys %}
+          {# 이름·권한/발급일·버튼을 고정 비율로 나눠 여러 키가 나열될 때
+             세로로 열이 맞게 정렬한다(이름 길이에 따라 버튼 위치가 밀리지
+             않도록). #}
+          <div class="aot-list-row">
+            <div class="aot-list-row-main" style="flex:0 1 35%">
+              {{each_key.name or _('Unnamed')}}
+            </div>
+            <div class="text-muted small" style="flex:1 1 35%; min-width:0">
+              {% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}
+              · {{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}
+            </div>
+            <div class="aot-btn-group" style="flex:0 0 auto">
+              <button type="submit" name="user_revoke_api_key" value="1"
+                class="btn aot-pill-btn aot-pill-btn-secondary"
+                data-revoke-key="{{each_key.unique_id}}"
+                onclick="return confirm('{{_('Revoke this API key? Anything using it will stop working.')}}')">{{_('Revoke')}}</button>
+            </div>
+          </div>
+          {% endfor %}
           {% else %}
-          <div class="text-muted small" style="margin-bottom:8px">{{_('No API keys issued.')}}</div>
+          <div class="text-muted small">{{_('No API keys issued.')}}</div>
           {% endif %}
           {{form_mod_user.api_key_id(class_='api_key_id_' ~ user.unique_id)}}
-          {# 키는 해시로만 저장되므로 기존 값을 다시 표시할 수 없다. 발급 직후에만
-             users.html 의 JS 가 이 두 입력란을 채운다. #}
-          {{form_mod_user.api_key(style='display:none;', class_='real_mod_key_' ~ user.unique_id)}}
-          <input type="text" class="form-control aot-modern-input visible_mod_key_{{user.unique_id}}" autocomplete="off"
-            readonly title="API Key (Base64)" data-lpignore="true" data-dashlane-ignore="true" spellcheck="false"
-            placeholder="{{_('A newly issued key appears here once')}}">
+        </div>
+      </div>
+
+      {# 읽기 전용 키는 그 키로 들어온 쓰기 요청 자체를 막는다(app.py 의 스코프
+         가드). 예전에는 키 하나가 곧 그 계정의 전 권한이라, 데이터를 받아가기만
+         하는 상대에게도 장치 제어권을 함께 넘겨야 했다. 발급 버튼보다 앞에 둬
+         발급을 누르기 전에 권한부터 고르게 한다. #}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label"
+          title="{{_('Read-only keys can fetch data but cannot change anything.')}}">{{_('Permissions')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.api_key_scope(class_='form-control aot-modern-input')}}
         </div>
       </div>
 
@@ -150,14 +174,23 @@
         </div>
       </div>
 
-      {# 읽기 전용 키는 그 키로 들어온 쓰기 요청 자체를 막는다(app.py 의 스코프
-         가드). 예전에는 키 하나가 곧 그 계정의 전 권한이라, 데이터를 받아가기만
-         하는 상대에게도 장치 제어권을 함께 넘겨야 했다. #}
-      <div class="aot-modal-option-row">
-        <label class="aot-modal-option-label"
-          title="{{_('Read-only keys can fetch data but cannot change anything.')}}">{{_('Permissions')}}</label>
-        <div class="aot-modal-option-control">
-          {{form_mod_user.api_key_scope(class_='form-control aot-modern-input')}}
+      {# 발급 직후에만 채워진다(키는 해시로만 저장되므로 기존 키는 다시 표시할
+         수 없다). 발급 전에는 아예 숨겨 둔다 — 목록 칸에 항상 떠 있으면
+         "여기서 기존 키를 보여줘야 하는데 안 보여준다" 로 오해하기 쉽다.
+         발급 버튼 바로 아래에 둬 발급→확인이 한 시선에 들어오게 한다.
+         d-none(아래) 을 써야 한다 — .aot-modal-option-row 가 display:flex 를
+         !important 로 걸어서 인라인 style="display:none" 은 씹힌다. #}
+      <div class="aot-modal-option-row aot-full-width-row aot-api-key-reveal-{{user.unique_id}} d-none">
+        <label class="aot-modal-option-label">{{_('New Key')}}</label>
+        <div class="aot-modal-option-control aot-api-key-group">
+          {{form_mod_user.api_key(class_='form-control aot-modern-input visible_mod_key_' ~ user.unique_id,
+            readonly=True, autocomplete='off',
+            **{'data-lpignore': 'true', 'data-dashlane-ignore': 'true', 'spellcheck': 'false'})}}
+          <input type="button" class="btn aot-pill-btn aot-pill-btn-secondary" value="{{_('Copy')}}"
+            onclick="setClipboard(document.querySelector('.visible_mod_key_{{user.unique_id}}').value)">
+        </div>
+        <div class="col-12 text-muted small" style="padding:0.4rem 0 0">
+          {{_('Copy it now — it is shown only once and cannot be retrieved later.')}}
         </div>
       </div>
 

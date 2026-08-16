@@ -27959,3 +27959,15 @@ msgstr "各区域は、その中にマーカーがあるデバイスと連結さ
 #: aot_flask/static/js/geo/design/aot-geo-device-split.js:1
 msgid "Nothing is saved until you create the areas."
 msgstr "区域を作成するまでは何も保存されません。"
+
+#: aot_flask/templates/settings/user_detail.html:120
+msgid "Issued Keys"
+msgstr "発行済みキー"
+
+#: aot_flask/templates/settings/user_detail.html:184
+msgid "New Key"
+msgstr "新しいキー"
+
+#: aot_flask/templates/settings/user_detail.html:193
+msgid "Copy it now — it is shown only once and cannot be retrieved later."
+msgstr "今すぐコピーしてください — 一度だけ表示され、その後は確認できません。"

@@ -81,7 +81,23 @@ def regenerate_session_id():
         return False
 
 
-def require_fresh_login(what=None):
+def fresh_login_required_message():
+    """`require_fresh_login()` 이 막을 때 보여줄 안내문.
+
+    별도 함수로 뺀 이유는 표시 방법이 호출부마다 다르기 때문이다 — 고전
+    폼 라우트(`settings_account_self`)는 flash+redirect 로 다음 페이지
+    렌더에서 보여주면 되지만, AJAX/JSON 라우트(`settings_users_submit`)는
+    flash 가 이번 요청에서 소비되지 않아 **엉뚱한 다음 페이지에 뜬금없이
+    뜬다.** 문구를 공유해야 두 경로가 같은 말을 하면서도 각자 맞는 방식으로
+    보여줄 수 있다.
+    """
+    return gettext(
+        "For your security, log out and log in again before changing this. "
+        "Your session was restored from the \"Remember Me\" cookie rather "
+        "than a password.")
+
+
+def require_fresh_login(what=None, flash_error=True):
     """민감 작업 전 "이번에 실제로 비밀번호를 입력한 세션인가" 를 확인한다.
 
     flask-login 의 `_fresh` 는 자격증명으로 방금 로그인했으면 True, **"90일간
@@ -93,15 +109,15 @@ def require_fresh_login(what=None):
     `User.session_auth_hash()` 무효화(비밀번호 변경 = 다른 기기 전부 로그아웃)가
     **공격자 쪽 무기가 된다** — 먼저 바꾼 쪽이 상대를 끊는다.
 
-    True 면 진행해도 된다. False 면 이미 flash 를 남겼으니 호출부는 그대로
-    되돌아가면 된다.
+    True 면 진행해도 된다. False 면 호출부가 그대로 되돌아가면 된다.
+    `flash_error=False` 인 호출부는 flash 를 직접 소비하지 않는 JSON 응답이라
+    (예: API 키 발급 AJAX) — 이때는 flash 대신
+    `fresh_login_required_message()` 를 응답 본문에 직접 담을 것.
     """
     if flask_login.login_fresh():
         return True
-    flash(gettext(
-        "For your security, log out and log in again before changing this. "
-        "Your session was restored from the \"Remember Me\" cookie rather "
-        "than a password."), "error")
+    if flash_error:
+        flash(fresh_login_required_message(), "error")
     logger.warning(
         "비신선 세션의 민감 작업 차단: user=%s what=%s",
         getattr(flask_login.current_user, 'name', '?'), what or '-')

@@ -25217,3 +25217,19 @@ msgstr ""
 #, python-format
 msgid "Overlaps an existing schedule — turns off at %(time)s"
 msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html:120
+msgid "Issued Keys"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html:184
+msgid "New Key"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html:189
+msgid "Copy"
+msgstr ""
+
+#: aot_flask/templates/settings/user_detail.html:193
+msgid "Copy it now — it is shown only once and cannot be retrieved later."
+msgstr ""
