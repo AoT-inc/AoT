@@ -23,17 +23,25 @@ LLM 이 만드는 숫자는 간격 하나뿐이고, 좌표는 하나도 만들�
 그 사각형의 긴 변이 곧 밭의 지배 방향이다. 방향을 그렇게 잡으면 비정형 가장자리는
 교차 연산이 알아서 잘라내므로, 예외 처리를 따로 쓸 일이 없다.
 
-### `orientation` — `parts` 등분에서만 뒤집을 이유가 있다
+### `orientation` — 기본값이 모드에 따라 갈린다
 
 `strip_width_cm`(두둑 폭 지정)은 고랑 방향이 곧 배수·농기계 작업 방향이라 긴 변을
-따르는 것이 실제로 맞다 — 기본값을 바꾸지 않는다.
+따르는 것이 실제로 맞다 — **주어지면(단독이든 `parts` 와 조합이든) 기본값은
+`'long'`이다.**
 
 `parts`(단순 N등분, "이 구역에 작물 5개 나눠 심기")는 두둑 개념이 없다. 긴 변을
 그대로 따르면 조각이 가늘고 길어진다(2,618㎡ 구역을 5등분한 실사례: 6.43m×81.7m,
 비율 12.7:1) — 서로 다른 작물을 나눠 심을 구획을 원했을 뿐인데 관리하기 불편한
-모양이 나온다. `orientation='short'` 를 주면 **짧은 변을 눕혀** 그 반대쪽을 등분한다
-(같은 예: 6.43m×81.7m → 16.4m×32m, 비율 2:1). 기본값은 여전히 `'long'` 이라
-파라미터를 주지 않으면 지금과 동일하게 동작한다.
+모양이 나온다. 그래서 **`strip_width_cm` 이 없을 때(순수 `parts` 등분, 또는
+`widths_cm` 만 준 경우)는 기본값이 `'short'` 다** — 짧은 변을 눕혀 그 반대쪽을
+등분한다(같은 예: 6.43m×81.7m → 16.4m×32m, 비율 2:1). `orientation` 을 직접
+주면(둘 중 어느 값이든) 그 값이 항상 이긴다 — 이 기본값 분기는 **생략했을 때만**
+적용된다.
+
+이 분기는 `split_shape()` 하나에만 있다 — 호출자(REST `routes_geo_planting.py`,
+MCP `aot_data_tool_service.py`)는 `orientation` 을 생략(`None`)으로 그냥 통과시켜야
+한다. 예전에는 두 호출자가 각자 `'long'` 을 하드코딩해 두어(두 곳이 따로 놀 여지가
+있었다), 이제 여기 한 곳만 정본이다.
 
 ### `angle_deg` — `orientation` 을 덮어쓰는 임의 각도
 
@@ -91,8 +99,8 @@ def _longest_edge_angle(rect):
 
 
 def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
-                edge_margin_cm=0, min_bed_length_m=_MIN_BED_LENGTH_M,
-                orientation='long', angle_deg=None):
+                edge_margin_m=0, min_bed_length_m=_MIN_BED_LENGTH_M,
+                orientation=None, angle_deg=None):
     """도형을 띠 폴리곤 목록으로 → `(strips, info)` 또는 `(None, 오류문구)`.
 
     **조각 하나가 무엇인지는 호출자가 정한다.** 구역을 세 작물로 나누는 것과
@@ -135,11 +143,16 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
         0보다 커야 한다(1개면 그 폭짜리 조각 하나 — `parts=1` 에서 시작해
         개별 폭 조정을 켠 경우가 그렇다). 주어지면 `parts`/`strip_width_cm`
         보다 우선한다.
-    edge_margin_cm: 도형 경계에서 안쪽으로 뺄 여백 (cm). 농기계 선회 공간.
+    edge_margin_m : 도형 경계에서 안쪽으로 뺄 여백 (m). 농기계 선회 공간. 옛
+        이름 `edge_margin_cm`(단위 cm)에서 이 이름으로 바뀌었다 — 단위만
+        조용히 바꾸면 옛 호출자가 100배 잘못된 여백을 아무 에러 없이 받게
+        되므로, 이름을 함께 바꿔 옛 키워드를 그대로 쓰면 `TypeError` 로
+        확실히 실패하게 했다.
     min_bed_length_m : 이보다 짧은 조각은 버린다.
-    orientation   : `'long'`(기본) 또는 `'short'`. 어느 변을 따라 조각이
-        놓이는지 — 모듈 docstring의 "`orientation` — `parts` 등분에서만
-        뒤집을 이유가 있다" 참조. 기본값은 기존 동작과 같다.
+    orientation   : `'long'` 또는 `'short'`. 어느 변을 따라 조각이 놓이는지 —
+        모듈 docstring의 "`orientation` — 기본값이 모드에 따라 갈린다" 참조.
+        생략(`None`)하면 `strip_width_cm` 이 주어졌는지에 따라 `'long'`(주어짐)
+        또는 `'short'`(안 주어짐, 순수 `parts`/`widths_cm`)로 자동 결정된다.
     angle_deg     : 조각이 놓이는 방향을 각도(도, 0≤값<180)로 직접 지정.
         주어지면 `orientation` 을 무시하고 이 각도를 쓴다 — 모듈 docstring의
         "`angle_deg` — `orientation` 을 덮어쓰는 임의 각도" 참조.
@@ -149,7 +162,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
     strips : [{'geometry': GeoJSON Polygon, 'index': int, 'length_m': float,
                'area_m2': float}, ...] — 긴 축을 따라 놓이고 짧은 축 순서로 번호.
     info : {'orientation', 'orientation_deg', 'strip_width_cm', 'strip_widths_m',
-            'edge_margin_cm', 'count', 'source_area_m2', 'covered_area_m2',
+            'edge_margin_m', 'count', 'source_area_m2', 'covered_area_m2',
             'dropped', 'aspect_ratio', 'note'}
     """
     from shapely import affinity
@@ -189,12 +202,19 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
         if parts < 1:
             return None, 'parts must be 1 or more'
     try:
-        margin_m = float(edge_margin_cm or 0) / 100.0
+        margin_m = float(edge_margin_m or 0)
     except (TypeError, ValueError):
-        return None, 'edge_margin_cm must be a number in centimeters'
+        return None, 'edge_margin_m must be a number in meters'
     if margin_m < 0:
-        return None, 'edge_margin_cm cannot be negative'
-    orientation = (orientation or 'long').strip().lower()
+        return None, 'edge_margin_m cannot be negative'
+    if orientation:
+        orientation = orientation.strip().lower()
+    else:
+        # 생략(None/'')이면 모드로 정한다 — strip_width_cm 이 있으면(단독이든
+        # parts 와 조합이든) 고랑 방향이 곧 작업 방향이라 'long', 없으면(순수
+        # parts 등분 또는 widths_cm 단독) 두둑 개념이 없으므로 'short'. 모듈
+        # docstring "orientation — 기본값이 모드에 따라 갈린다" 참조.
+        orientation = 'long' if strip_width_cm is not None else 'short'
     if orientation not in ('long', 'short'):
         return None, "orientation must be 'long' or 'short'"
     if angle_deg is not None:
@@ -218,8 +238,8 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
     if margin_m > 0:
         plane = plane.buffer(-margin_m)
         if plane.is_empty:
-            return None, ('edge_margin_cm %.0f cm leaves nothing of this shape'
-                          % (margin_m * 100))
+            return None, ('edge_margin_m %.1f m leaves nothing of this shape'
+                          % margin_m)
 
     try:
         import warnings
@@ -438,7 +458,7 @@ def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
         # 조정" 흐름을 만들 때, 모드에 관계없이 이 리스트 하나로 시작 값을
         # 채우면 된다 — widths_cm 로 다시 보낼 때도 이 값을 그대로 쓰면 된다.
         'strip_widths_m': [round(h, 2) for h in step_list_m],
-        'edge_margin_cm': round(margin_m * 100),
+        'edge_margin_m': round(margin_m, 2),
         'count': len(strips),
         'source_area_m2': round(source_area, 1),
         # **덮은 면적**이지 심는 면적이 아니다. 띠는 도형을 빈틈없이 덮으므로

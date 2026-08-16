@@ -441,11 +441,13 @@ TOOLS: List[Tool] = [
     Tool('propose_planting_split', handler='propose_planting_split', manifest={
         "tool_name": "propose_planting_split",
         "action_type": "virtual_tool_call",
-        "description": ("Works out how a zone/site would divide into plots along "
-                        "its longest side (or shortest, with orientation='short'). "
-                        "Computes only — creates nothing. Read-only."),
-        "usage_hint": ("params.arguments: {zone_id, parts? | strip_width_cm?, "
-                       "edge_margin_cm?, orientation?}"),
+        "description": ("Works out how a zone/site would divide into plots. "
+                        "Direction defaults by mode: strip_width_cm (beds) follows "
+                        "the longest side, parts alone follows the shortest side "
+                        "(squarer pieces) — override with orientation. Computes "
+                        "only — creates nothing. Read-only."),
+        "usage_hint": ("params.arguments: {zone_id, parts? | strip_width_cm? | "
+                       "widths_cm?, edge_margin_m?, orientation?, angle_deg?}"),
     }),
     Tool('apply_planting_split', handler='apply_planting_split', mutating=True, manifest={
         "tool_name": "apply_planting_split",
@@ -453,8 +455,8 @@ TOOLS: List[Tool] = [
         "description": ("Creates one plot per piece of a split, recomputed from "
                         "the same arguments. Requires human approval."),
         "usage_hint": ("params.arguments: {zone_id, crop, planted_on, "
-                       "parts? | strip_width_cm?, edge_margin_cm?, orientation?, "
-                       "name?}"),
+                       "parts? | strip_width_cm? | widths_cm?, edge_margin_m?, "
+                       "orientation?, angle_deg?, name?}"),
     }),
     Tool('copy_planting', handler='copy_planting', mutating=True, manifest={
         "tool_name": "copy_planting",
@@ -1185,22 +1187,24 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "propose_planting_split",
-        "description": "Works out how a zone or site would divide into planting plots, WITHOUT creating anything. By default pieces run along the shape's longest side (not north-south) because that is how a field is actually worked, and irregular edges are clipped, so pieces differ in length. Give parts (how many pieces — e.g. 3 to put three crops in one zone) OR strip_width_cm (how wide each piece — e.g. 160 for bed-by-bed). You get counts, widths and lengths back, not coordinates. If the response includes aspect_ratio much above ~4:1, the pieces are long and narrow — for splitting a zone between DIFFERENT CROPS (parts mode), consider re-calling with orientation='short' for squarer pieces; for bed-by-bed splits (strip_width_cm) that shape is normal, leave orientation alone. Tell the grower they can SEE the proposal drawn on the map design page (vegetation mode) before deciding. Read-only.",
+        "description": "Works out how a zone or site would divide into planting plots, WITHOUT creating anything. Give parts (how many pieces — e.g. 3 to put three crops in one zone), strip_width_cm (how wide each piece is, in cm — e.g. 160 for bed-by-bed), or widths_cm (a list of per-piece widths in cm when pieces should NOT all be equal). Irregular edges are clipped, so pieces differ in length. Direction needs no input in the common case — it defaults by mode: with strip_width_cm, pieces follow the shape's LONGEST side (furrow direction must match the actual working/drainage direction); with parts alone (no strip_width_cm), pieces follow the SHORTEST side instead, since there is no furrow to align and squarer plots are easier to manage when splitting a zone between different crops. Override either default with orientation, or set angle_deg for an arbitrary direction — only pass angle_deg when a human looked at the map and chose that angle (e.g. to match an adjacent field's beds); never invent one. angle_deg wins over orientation if both are given. You get counts, widths and lengths back, not coordinates. If the response includes aspect_ratio much above ~4:1 for a parts-only split, the pieces are unusually long and narrow — try orientation='long' or 'short' (whichever was not already used) for squarer pieces. Tell the grower they can SEE the proposal drawn on the map design page (vegetation mode) before deciding. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "zone_id": {"type": "string", "description": "The zone or site shape to divide (GeoShape unique_id, from get_spatial_tree)."},
-                "parts": {"type": "integer", "description": "Divide into this many equal pieces (1 or more). Use for 'three crops in this zone'. Pass 1 to NOT divide — the whole zone becomes a single plot (still inset by edge_margin_cm if given), which is what a grower means by 'plant this whole field as one'."},
-                "strip_width_cm": {"type": "number", "description": "Or make pieces this wide in cm, e.g. 160. Use for bed-by-bed. Give this OR parts, never both."},
-                "edge_margin_cm": {"type": "number", "description": "Leave this much free inside the whole outline, in cm — headland for machinery. Default 0."},
-                "orientation": {"type": "string", "enum": ["long", "short"], "description": "Which side the pieces run along. Default 'long' (matches how furrows/beds are normally laid). 'short' cuts across the long side instead, giving squarer pieces — only meaningful with parts (splitting a zone between different crops); strip_width_cm (bed-by-bed) should keep the default."}
+                "parts": {"type": "integer", "description": "Divide into this many equal pieces (1 or more). Use for 'three crops in this zone'. Pass 1 to NOT divide — the whole zone becomes a single plot (still inset by edge_margin_m if given), which is what a grower means by 'plant this whole field as one'. Ignored if widths_cm is given."},
+                "strip_width_cm": {"type": "number", "description": "Or make pieces this wide in cm, e.g. 160. Use for bed-by-bed. Give this OR parts (or both together for an exact count at an exact width), never with widths_cm."},
+                "widths_cm": {"type": "array", "items": {"type": "number"}, "description": "Give each piece its own width in cm instead of equal pieces, e.g. [200, 500, 300] for three different widths in that order. Overrides parts/strip_width_cm entirely. If the widths add up to more than the shape's short axis, only the LAST piece is shortened to fit (see widths_clamped_from_cm in the response) rather than rejecting the whole request; if the earlier pieces alone already don't fit, the request is rejected."},
+                "edge_margin_m": {"type": "number", "description": "Leave this much free inside the whole outline, in METERS — headland for machinery. Default 0."},
+                "orientation": {"type": "string", "enum": ["long", "short"], "description": "Which side the pieces run along. Optional — if omitted, the default depends on mode: 'long' when strip_width_cm is given (furrows must follow the shape's long side), 'short' when only parts (or only widths_cm) is given (squarer pieces, better for splitting between different crops). Pass explicitly to override that default. Ignored if angle_deg is given."},
+                "angle_deg": {"type": "number", "description": "Direction in degrees (0 up to but excluding 180) for the pieces, overriding orientation entirely. Only meaningful when a human has looked at the map and chosen a specific angle (e.g. to match an adjacent field's existing beds) — do not invent a value yourself; the grower must supply it."}
             },
             "required": ["zone_id"]
         }
     },
     {
         "tool_name": "apply_planting_split",
-        "description": "Creates one vegetation plot per piece of a split — the write half of propose_planting_split. Pass the SAME zone_id, parts/strip_width_cm AND orientation used in the proposal; the split is recomputed, not replayed from a stored proposal. Each piece becomes its own plot row, so check the piece count first: 41 pieces means 41 plots to manage, each with its own notes and history. For one crop over a whole zone use create_planting with zone_id instead. Requires human approval.",
+        "description": "Creates one vegetation plot per piece of a split — the write half of propose_planting_split. Pass the SAME zone_id and parts/strip_width_cm/widths_cm, edge_margin_m, orientation and angle_deg used in the proposal (including leaving orientation/angle_deg out if you left them out there) — the split is recomputed, not replayed from a stored proposal, and the same arguments must produce the same default direction. Each piece becomes its own plot row, so check the piece count first: 41 pieces means 41 plots to manage, each with its own notes and history. For one crop over a whole zone use create_planting with zone_id instead. Requires human approval.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1209,8 +1213,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "planted_on": {"type": "string", "description": "Planting date 'YYYY-MM-DD'."},
                 "parts": {"type": "integer", "description": "Same value used in propose_planting_split."},
                 "strip_width_cm": {"type": "number", "description": "Same value used in propose_planting_split."},
-                "edge_margin_cm": {"type": "number", "description": "Same value used in propose_planting_split. Default 0."},
-                "orientation": {"type": "string", "enum": ["long", "short"], "description": "Same value used in propose_planting_split. Default 'long'."},
+                "widths_cm": {"type": "array", "items": {"type": "number"}, "description": "Same value used in propose_planting_split."},
+                "edge_margin_m": {"type": "number", "description": "Same value used in propose_planting_split, in METERS. Default 0."},
+                "orientation": {"type": "string", "enum": ["long", "short"], "description": "Same value used in propose_planting_split. Leave out if it was left out there — the mode-based default must match."},
+                "angle_deg": {"type": "number", "description": "Same value used in propose_planting_split."},
                 "variety": {"type": "string"},
                 "name": {"type": "string", "description": "Base name; pieces are numbered from it, e.g. 'A' becomes 'A 1', 'A 2'."},
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},

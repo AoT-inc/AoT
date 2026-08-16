@@ -69,7 +69,7 @@ def split_shape_into_device_areas(shape, name_base=None, device_kind=None,
     """`shape` 를 잘라 장치 구역 행들을 만든다 → `(result, 오류문구)`.
 
     `split_kwargs` 는 `planting_split.split_shape` 와 같다(parts /
-    strip_width_cm / widths_cm / orientation / angle_deg / edge_margin_cm).
+    strip_width_cm / widths_cm / orientation / angle_deg / edge_margin_m).
 
     반환 `result`:
       - `created`  : [{'unique_id', 'index', 'name', 'device_id'|None, 'area_m2'}]

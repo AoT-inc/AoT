@@ -1377,7 +1377,9 @@ class AoTGeoVegetation {
                       `<input type="number" min="0" step="10"
                               class="aot-modern-input form-control"
                               data-veg-split="edge_margin_cm"
-                              value="${this._esc(prev.edge_margin_cm || 0)}">`)}
+                              value="${this._esc(
+                                  prev.edge_margin_m != null
+                                      ? Math.round(prev.edge_margin_m * 100) : 0)}">`)}
                 <div class="aot-modal-body-text">${
                     this._t('Room to turn machinery along the edge.')}</div>
                 <div class="aot-modal-body-text">${
@@ -1474,8 +1476,10 @@ class AoTGeoVegetation {
             args.orientation = 'short';
         }
 
-        const margin = parseFloat(get('edge_margin_cm'));
-        if (isFinite(margin) && margin > 0) args.edge_margin_cm = margin;
+        // 입력칸은 cm 다(위젯과 같은 단위 감각) — 서버 edge_margin_m 는 m
+        // 이므로 여기서만 ÷100 한다(widths_cm 와 반대 방향의 같은 규칙).
+        const marginCm = parseFloat(get('edge_margin_cm'));
+        if (isFinite(marginCm) && marginCm > 0) args.edge_margin_m = marginCm / 100;
         return { args: args };
     }
 
@@ -1487,7 +1491,7 @@ class AoTGeoVegetation {
         if (args.parts != null) q.set('parts', args.parts);
         if (args.strip_width_cm != null) q.set('strip_width_cm', args.strip_width_cm);
         if (args.widths_cm != null) q.set('widths_cm', args.widths_cm.join(','));
-        if (args.edge_margin_cm != null) q.set('edge_margin_cm', args.edge_margin_cm);
+        if (args.edge_margin_m != null) q.set('edge_margin_m', args.edge_margin_m);
         if (args.orientation) q.set('orientation', args.orientation);
         if (args.angle_deg != null) q.set('angle_deg', args.angle_deg);
         return q;

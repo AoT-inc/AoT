@@ -603,10 +603,15 @@ VP-6 은 이력 보호다. 날짜 정정·이름 변경·삭제(오기입)는 �
   접근성, 시각적 구분)가 편하다.
 
 **채택한 안**: `orientation='long'|'short'` 파라미터를 `split_shape()` 에 추가한다.
-기본값은 `'long'`(기존 동작과 동일) 이고, `'short'` 를 주면 짧은 변을 눕혀 그 반대쪽을
-등분한다 — 위 사례라면 16.4m × 32m(비율 2:1)가 된다. 최소회전 사각형의 두 변은 서로
-수직이므로 구현은 긴 변 각도에 90도를 더하는 것 하나다(`_longest_edge_angle()` 재사용,
-새 기하 계산 불필요) — `strips`/`length_m`/`area_m2` 응답 계약은 그대로다.
+당시 기본값은 `'long'`(기존 동작과 동일) 이었고, `'short'` 를 주면 짧은 변을 눕혀 그
+반대쪽을 등분한다 — 위 사례라면 16.4m × 32m(비율 2:1)가 된다. 최소회전 사각형의 두
+변은 서로 수직이므로 구현은 긴 변 각도에 90도를 더하는 것 하나다(`_longest_edge_angle()`
+재사용, 새 기하 계산 불필요) — `strips`/`length_m`/`area_m2` 응답 계약은 그대로다.
+
+> **갱신(2026-08-16)**: "파라미터를 주지 않으면 `'long'`" 이던 기본값을 모드별로
+> 갈랐다 — 아래 "`orientation` 기본값을 모드별로 분기" 절 참조. 이 절의 나머지
+> 내용(두 경로가 왜 다른 결론에 도달하는지, 종횡비 경고, 격자 분할을 기각한 이유)은
+> 그대로 유효하다.
 
 **기각한 안**: 격자 분할(rows × cols)로 항상 정방형에 가깝게 만드는 안. `parts=5`,
 `7` 처럼 소수인 경우 격자 조합이 `1×N` 밖에 없어 예외 처리가 필요하고, 기존 "조각
@@ -624,10 +629,11 @@ VP-6 은 이력 보호다. 날짜 정정·이름 변경·삭제(오기입)는 �
 
 회귀: `test_geo_planting.py::TestSplitShape` 의
 `test_orientation_short_cuts_across_the_long_side` ·
-`test_orientation_default_is_long_and_unchanged` ·
 `test_invalid_orientation_is_rejected` ·
 `test_aspect_ratio_flags_long_narrow_parts_split` ·
-`test_aspect_ratio_absent_for_strip_width_mode`.
+`test_aspect_ratio_absent_for_strip_width_mode`
+(기본값 자체의 회귀는 2026-08-16 절 참조 — `test_orientation_default_is_long_and_
+unchanged` 는 그때 모드별 기본값 테스트로 대체됐다).
 
 ### 구역 분할 — `angle_deg` 로 임의 각도 지정, 지도 위 기준선 회전 (구현 확정, 2026-08-14)
 
@@ -643,10 +649,17 @@ elongation 축으로 쓴다 — 회전 원점(`rect.centroid`)과 이후 자르�
 `REST`(`_split_args`/`_compute_split`)는 두 파라미터를 그대로 통과시킬 뿐이라 별도
 분기가 없다.
 
-**AI/MCP 도구는 건드리지 않았다** — `propose_planting_split`/`apply_planting_split`
-에는 `angle_deg` 를 노출하지 않는다. LLM 은 지도를 볼 수 없어 임의 각도를 스스로
-고를 근거가 없고, 쓰지 않을 설정을 노출하는 것 자체가 비용이다(불필요한 설정 추가
-금지 원칙). UI 전용 파라미터로 시작하고, 실사용 후 필요해지면 그때 추가한다.
+**AI/MCP 도구는 처음엔 건드리지 않았다** — 당시 `propose_planting_split`/
+`apply_planting_split` 에는 `angle_deg` 를 노출하지 않았다. LLM 은 지도를 볼 수
+없어 임의 각도를 스스로 고를 근거가 없고, 쓰지 않을 설정을 노출하는 것 자체가
+비용이라(불필요한 설정 추가 금지 원칙) UI 전용 파라미터로 시작했다.
+
+> **갱신(2026-08-16)**: 실사용에서 "사람이 지도에서 각도를 정하고 그 값을 AI에게
+> 불러 주는" 흐름(예: 사람이 드로어에서 슬라이더로 각도를 확인한 뒤 "이 각도로
+> 만들어 줘"라고 말하는 경우)이 나오면서 스키마에 추가했다 — 아래 "MCP 도구에
+> `angle_deg`/`widths_cm` 노출, 여백 단위를 m 로" 절 참조. LLM 이 스스로 각도를
+> 지어내면 안 된다는 원칙은 그대로라, 도구 설명에 "사람이 지도를 보고 정한 값만
+> 전달하고 직접 고르지 말 것"을 명시했다.
 
 **지도 UI**(`aot-geo-vegetation.js`): "방향" select 에 세 번째 선택지
 "자유 각도"(`custom`)를 추가했다 — 고르면 각도 슬라이더(0~179°)가 나타난다.
@@ -710,9 +723,14 @@ elongation 축으로 쓴다 — 회전 원점(`rect.centroid`)과 이후 자르�
 같이 통과시키고 있었으므로 **변경이 필요 없었다** — 상호배타 검증은
 `split_shape()` 안에만 있었다.
 
-**AI/MCP 도구는 건드리지 않았다** — `propose_planting_split` 의 스키마 설명이
-이미 "Give this OR parts, never both" 라고 명시하므로 그대로 둔다. 필요해지면
-그때 스키마를 갱신한다.
+**AI/MCP 도구는 당시 건드리지 않았다** — `propose_planting_split` 의 스키마 설명이
+그때는 "Give this OR parts, never both" 라고만 돼 있었다.
+
+> **갱신(2026-08-16)**: 다른 파라미터(`angle_deg`/`widths_cm`/`edge_margin_m`)를
+> 정리하는 김에 이 문구도 실제 동작(둘을 같이 주면 정확한 개수·정확한 폭 조합이
+> 된다)에 맞게 고쳤다 — "Give this OR parts (or both together for an exact count
+> at an exact width), never with widths_cm." 기능 자체는 이미 2026-08-14 부터
+> `split_shape()` 에 있었고, 이번엔 스키마 설명 문구만 실제와 맞췄다.
 
 회귀: `test_geo_planting.py::TestSplitShape` 의
 `test_neither_parts_nor_width_is_rejected` ·
@@ -796,8 +814,11 @@ REST 계층(`routes_geo_planting.py`): `_split_args` 에 `widths_cm` 파서
 쿼리스트링)은 값이 문자열뿐이라 콤마로 구분해 받는다(`widths_cm=500,1000,300`).
 `_compute_split` 은 이를 그대로 `split_shape()` 에 전달한다.
 
-**AI/MCP 도구는 건드리지 않았다** — `propose_planting_split` 스키마에
-`widths_cm` 을 아직 노출하지 않는다. 필요해지면 그때 스키마를 갱신한다.
+**AI/MCP 도구는 당시 건드리지 않았다** — `propose_planting_split` 스키마에
+`widths_cm` 을 노출하지 않았다.
+
+> **갱신(2026-08-16)**: 아래 "MCP 도구에 `angle_deg`/`widths_cm` 노출, 여백
+> 단위를 m 로" 절에서 노출했다.
 
 회귀: `test_geo_planting.py::TestSplitShape` 의
 `test_widths_cm_gives_each_piece_its_own_width` ·
@@ -809,6 +830,88 @@ REST 계층(`routes_geo_planting.py`): `_split_args` 에 `widths_cm` 파서
 `test_widths_cm_respects_orientation_and_angle` ·
 `test_widths_cm_round_trip_from_equal_split_is_accepted` ·
 `test_uniform_modes_also_report_strip_widths_m`.
+
+### `orientation` 기본값을 모드별로 분기, MCP 도구 노출, 여백 단위를 m 로 (구현 확정, 2026-08-16)
+
+세 가지를 한 번에 정리했다 — 셋 다 위 세 절(orientation/angle_deg/widths_cm)이
+"당시엔 이렇게 남겨 뒀다"고 적어 둔 미완의 꼬리였다.
+
+**1. `orientation` 생략 시 기본값이 모드로 갈린다.** 위 "orientation" 절이 이미
+`parts`(등분)와 `strip_width_cm`(두둑)이 서로 다른 결론에 도달해야 한다고
+결론 내렸는데도, 실제 기본값은 두 모드 모두 `'long'` 으로 남아 있었다 — 이유
+자체는 있는데 정작 적용은 안 된 상태였다. 이제 `orientation=None`(생략)이면
+`split_shape()` 이 직접 고른다:
+
+- `strip_width_cm` 이 주어졌으면(단독이든 `parts` 와 조합이든) `'long'`.
+- 주어지지 않았으면(순수 `parts` 등분, 또는 `widths_cm` 단독) `'short'`.
+
+**`strip_width_cm` 모드의 기본값은 절대 건드리지 않는다** — 이번 작업에서 가장
+쉽게 저지를 수 있는 실수가 이것이었다(두둑 방향이 실제 작업 방향과 어긋나는
+회귀). 직접 `orientation='long'|'short'` 을 주면 모드와 상관없이 그 값이
+언제나 이긴다 — 이 분기는 **생략했을 때만** 적용된다.
+
+분기는 `split_shape()` 하나에만 있다. 예전에는 `aot_data_tool_service.py` 의
+MCP 핸들러 두 개와 `routes_geo_planting.py` 의 `split_args_from` 이 각자
+`orientation='long'` 을 파라미터 기본값으로 하드코딩해 두고 있었다 — 둘 다 정본
+분기를 우회해서 항상 `'long'` 만 서버에 전달했다는 뜻이다. 이제 둘 다
+`orientation=None` 을 그대로 통과시킨다. 이 드리프트(같은 개념이 여러 곳에
+따로 박제된 것)를 방치했다면 REST 라우트와 MCP 도구가 서로 다른 기본값을 내는
+사고가 조만간 났을 것이다 — 회귀 `test_mcp_and_route_layer_agree_on_the_
+default_orientation` 이 그 둘의 일치를 고정한다.
+
+지도 UI(`aot-geo-vegetation.js`)는 이 서버 쪽 기본값 변경에 맞춰 고치지
+**않았다** — 드롭다운은 여전히 "긴 변(기본)"을 시각적으로 기본 선택해 두고,
+값을 만지지 않으면 `orientation` 을 아예 보내지 않는다(생략). `parts`(등분)
+모드에서 사용자가 방향을 건드리지 않으면, 화면은 "긴 변"을 보여주면서 실제로는
+서버 기본값(`'short'`)으로 계산된다 — **알려진 화면 표시 불일치**다. 기능적으로
+틀린 것은 아니다(오히려 새 기본값이 사용자가 원하는 정방형에 가까운 결과를
+낸다), 다만 드롭다운이 실제로 적용된 방향을 정확히 보여주지 못한다. 드롭다운의
+기본 선택을 모드별로 맞추려면 `_splitArgsFrom` 이 `'long'` 을 명시적으로 보내지
+않고 생략하는 부분도 함께 고쳐야 왕복(재렌더 시 이전 선택 복원)이 깨지지
+않는데, UI 문구·상태 동기화까지는 이번 범위에 넣지 않았다 — 필요해지면 그때
+고친다.
+
+**2. `angle_deg`/`widths_cm` 를 MCP 도구까지 관통시켰다.** `propose_planting_split`/
+`apply_planting_split` 시그니처와 `tool_registry.py` 의 두 스키마에 추가했다.
+설명 문구는 `planting_split.py` 모듈 docstring 수준으로 옮겨 적었고, "`angle_deg`
+는 사람이 지도를 보고 고른 값만 전달할 것 — LLM 이 스스로 지어내지 말 것"을
+명시했다(LLM 은 지도를 볼 수 없다). `orientation` 과 동시에 주면 `angle_deg` 가
+이긴다는 계약도 두 스키마 설명에 동일하게 적었다 — `apply_planting_split` 는
+"propose 와 같은 값을 쓰라"는 기존 패턴을 그대로 따른다.
+
+**3. `edge_margin_cm`(cm) → `edge_margin_m`(m).** 이름과 단위를 함께 바꿨다 —
+단위만 조용히 바꾸면 옛 이름으로 부르는 호출자가 100배 잘못된 값을 에러 없이
+받는다(이 저장소가 여러 번 데인 "조용한 실패" 모양과 같다). 이름까지 바꾸면
+옛 키워드로는 `TypeError` 로 확실히 실패한다. `split_shape()`/MCP 두 도구/REST
+`_split_args`(`_split_args_from`)/지도 UI 두 개(`aot-geo-vegetation.js`,
+`aot-geo-device-split.js`)를 모두 맞췄다. **`get_planting`/`create_planting` 의
+동명 `edge_margin_cm`(식재량 계산용, `planting_context.capacity_estimate`)은
+완전히 다른 기능이라 건드리지 않았다** — 그쪽은 여전히 cm 다.
+
+지도 UI 입력칸 자체는 여전히 cm 로 받는다(`widths_cm` 입력이 이미 m 로 받고
+서버 전송 직전에만 ×100 하는 것과 반대 방향의 같은 규칙) — 사용자가 여백을
+입력하는 감각은 두둑 폭과 비슷한 자릿수(수십~수백 cm)라 바꿀 이유가 없었다.
+`_splitArgsFrom`/`_argsFrom` 이 전송 직전에만 ÷100 해서 `edge_margin_m` 으로
+보낸다.
+
+회귀: `test_geo_planting.py::TestSplitShape` 의
+`test_orientation_default_depends_on_strip_width_cm` ·
+`test_explicit_orientation_overrides_the_mode_default` ·
+`test_default_orientation_matches_an_explicit_call_with_the_same_result` ·
+`test_default_short_for_parts_avoids_the_narrow_aspect_ratio`, 그리고 기본값
+변경으로 `orientation='long'` 을 명시적으로 고정해야 했던 기존 테스트 다수
+(`test_pieces_run_along_the_longest_side` · `test_edge_margin_shrinks_inward` ·
+`test_concave_shape_breaks_a_strip_into_separate_pieces` ·
+`test_parts_survives_the_loop` · `test_parts_one_uses_the_whole_area` ·
+`test_widths_cm_gives_each_piece_its_own_width` ·
+`test_widths_cm_last_piece_is_clamped_when_it_overflows` ·
+`test_widths_cm_rejects_when_earlier_pieces_alone_exceed_short_axis` ·
+`test_widths_cm_round_trip_from_equal_split_is_accepted` ·
+`test_uniform_modes_also_report_strip_widths_m` ·
+`test_aspect_ratio_flags_long_narrow_parts_split` ·
+`test_angle_deg_absent_leaves_orientation_behavior_unchanged`). 새 클래스
+`TestSplitAcrossLayers` 는 MCP 도구·REST 라우트 두 계층 모두 새 파라미터를
+관통시키고 같은 기본값에 합의하는지 확인한다(임시 sqlite, 라이브 DB 미접촉).
 
 ### 분할 폼을 모달에서 설정 드로어로 (구현 확정, 2026-08-14)
 

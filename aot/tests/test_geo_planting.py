@@ -657,7 +657,7 @@ class TestSplitShape(unittest.TestCase):
         가로질러 길이가 50m 가 안 나온다. 긴 변을 따르면 50m 가 나온다.
         """
         strips, info = self.ps.split_shape(self._rot_rect(10.0, 50.0, rot=35.0),
-                                           parts=2)
+                                           parts=2, orientation='long')
         for b in strips:
             self.assertAlmostEqual(b['length_m'], 50.0, delta=1.0)
         # 방향은 0~180 으로 정규화된 값이고, 35도 회전한 긴 변은 125도다
@@ -666,9 +666,10 @@ class TestSplitShape(unittest.TestCase):
 
     def test_edge_margin_shrinks_inward(self):
         """여백은 안쪽 버퍼다 — 외접사각형에서 빼면 오목한 곳에 안 남는다."""
-        plain, _ = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2)
+        plain, _ = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                       orientation='long')
         inset, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
-                                          edge_margin_cm=200)
+                                          orientation='long', edge_margin_m=2)
         self.assertLess(info['covered_area_m2'],
                         sum(b['area_m2'] for b in plain))
         for b in inset:
@@ -689,7 +690,9 @@ class TestSplitShape(unittest.TestCase):
             _p(0, 0), _p(60, 0), _p(60, 40), _p(40, 40), _p(40, 10),
             _p(20, 10), _p(20, 40), _p(0, 40), _p(0, 0),
         ]]}
-        strips, info = self.ps.split_shape(u, parts=2)
+        # parts 단독 기본값이 'short' 로 바뀌었다 — 이 노치는 가로띠(long)로
+        # 잘라야만 끊긴다(세로띠로 자르면 안 끊긴다), 그래서 방향을 고정한다.
+        strips, info = self.ps.split_shape(u, parts=2, orientation='long')
         self.assertGreater(len(strips), 2, '끊긴 조각이 합쳐졌다')
         self.assertEqual(info['count'], len(strips))
 
@@ -713,7 +716,10 @@ class TestSplitShape(unittest.TestCase):
             _p(20, 10), _p(20, 40), _p(0, 40), _p(0, 0),
         ]]}
         for n in (2, 3, 5):
-            strips, info = self.ps.split_shape(u, parts=n)
+            # parts 단독 기본값이 'short' 로 바뀌면서 이 노치는 세로띠로는
+            # 안 끊긴다 — 위 docstring 이 말하는 경로를 실제로 타려면 방향을
+            # 고정해야 한다.
+            strips, info = self.ps.split_shape(u, parts=n, orientation='long')
             self.assertIsNotNone(strips, info)
 
     def test_neither_parts_nor_width_is_rejected(self):
@@ -729,7 +735,11 @@ class TestSplitShape(unittest.TestCase):
         예전에는 2 이상만 받아서, 밭 하나를 통째로 한 작기로 쓰려는 사람이
         이 도구를 아예 쓸 수 없었다(도형을 손으로 다시 그려야 했다)."""
         geom = self._rot_rect(30.0, 90.0)
-        strips, info = self.ps.split_shape(geom, parts=1)
+        # parts=1 은 나누지 않으므로 어느 축을 골라도 같은 폴리곤이 나오지만,
+        # strip_widths_m 이 보고하는 축(=orientation)은 여전히 갈린다 — 기본값
+        # 자체(모드별 분기)는 아래 test_orientation_default_depends_on_mode 가
+        # 다루므로 여기서는 'long' 을 고정해 원래 숫자(30.0)를 그대로 본다.
+        strips, info = self.ps.split_shape(geom, parts=1, orientation='long')
         self.assertEqual(len(strips), 1)
         self.assertEqual(info['count'], 1)
         # 도형 전체를 덮는다 — 잘려 나간 면적이 없어야 한다.
@@ -742,7 +752,7 @@ class TestSplitShape(unittest.TestCase):
         안으로 들어온 하나가 나온다."""
         geom = self._rot_rect(30.0, 90.0)
         whole, _i1 = self.ps.split_shape(geom, parts=1)
-        inset, _i2 = self.ps.split_shape(geom, parts=1, edge_margin_cm=200)
+        inset, _i2 = self.ps.split_shape(geom, parts=1, edge_margin_m=2)
         self.assertEqual(len(inset), 1)
         self.assertLess(inset[0]['area_m2'], whole[0]['area_m2'])
 
@@ -811,9 +821,14 @@ class TestSplitShape(unittest.TestCase):
     # -- widths_cm: 조각마다 다른 폭 ----------------------------------------
 
     def test_widths_cm_gives_each_piece_its_own_width(self):
-        """세 조각을 각각 다른 폭으로 — 등분이 아니다."""
+        """세 조각을 각각 다른 폭으로 — 등분이 아니다.
+
+        widths_cm 단독 기본값이 'short' 로 바뀌었으므로(순수 parts 와 같은
+        취급), 90m 축을 따라 놓이는지 확인하려면 'long' 을 고정해야 한다.
+        """
         strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
-                                           widths_cm=[500, 1000, 300])
+                                           widths_cm=[500, 1000, 300],
+                                           orientation='long')
         self.assertEqual(len(strips), 3)
         self.assertEqual(info['count'], 3)
         self.assertEqual(info['strip_widths_m'], [5.0, 10.0, 3.0])
@@ -856,9 +871,11 @@ class TestSplitShape(unittest.TestCase):
     def test_widths_cm_last_piece_is_clamped_when_it_overflows(self):
         """마지막 조각만 커서 넘치면 거부 대신 들어가는 만큼 잘라 준다 —
         조각을 하나씩 입력하다 마지막 값이 남는 자리보다 큰, 실사용에서
-        흔한 경우."""
+        흔한 경우. 'long' 고정 — widths_cm 기본값('short')이면 짧은 축이
+        90m 가 되어 40m 가 넘치지 않는다."""
         strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0),
-                                           widths_cm=[2000, 2000])
+                                           widths_cm=[2000, 2000],
+                                           orientation='long')
         self.assertIsNotNone(strips)
         self.assertEqual(len(strips), 2)
         # 첫 조각은 요청대로 20m, 마지막은 남는 10m로 줄어든다(첫 조각을
@@ -869,9 +886,11 @@ class TestSplitShape(unittest.TestCase):
 
     def test_widths_cm_rejects_when_earlier_pieces_alone_exceed_short_axis(self):
         """마지막 조각을 0으로 줄여도 안 들어가면 "마지막이 커서" 가 아니라
-        애초에 안 맞는 요청이다 — 그때는 그대로 거부한다."""
+        애초에 안 맞는 요청이다 — 그때는 그대로 거부한다. 'long' 고정 —
+        기본값('short')이면 짧은 축이 90m 가 되어 3500cm 도 들어간다."""
         out, err = self.ps.split_shape(self._rot_rect(30.0, 90.0),
-                                       widths_cm=[3500, 500])
+                                       widths_cm=[3500, 500],
+                                       orientation='long')
         self.assertIsNone(out)
         self.assertIn('short axis', err)
 
@@ -887,19 +906,25 @@ class TestSplitShape(unittest.TestCase):
         """UI 는 균등분할의 strip_widths_m(cm 반올림)을 그대로 되돌려보낸다
         (개별 폭 조정 토글을 막 켰을 때). 부동소수 합산 오차만으로 "정확히
         도형 크기인데 초과" 판정이 나면 안 된다 — 실사용에서 68.2/68.2 처럼
-        딱 맞아떨어지는 경계에서 걸린 회귀."""
+        딱 맞아떨어지는 경계에서 걸린 회귀. 'long' 을 양쪽에 고정한다 — 짧은
+        축(68.2m)에 걸리는 경계를 재현하려는 것이라, 두 호출이 기본값('short'
+        면 짧은 축이 90m 가 되어 경계 자체가 사라진다)에 각자 알아서 맡기면
+        안 된다."""
         shape = self._rot_rect(68.2, 90.0)
-        _s, info = self.ps.split_shape(shape, parts=3)
+        _s, info = self.ps.split_shape(shape, parts=3, orientation='long')
         widths_cm = [round(w * 100) for w in info['strip_widths_m']]
-        strips, info2 = self.ps.split_shape(shape, widths_cm=widths_cm)
+        strips, info2 = self.ps.split_shape(shape, widths_cm=widths_cm,
+                                            orientation='long')
         self.assertIsNotNone(strips)
         self.assertEqual(len(strips), 3)
 
     def test_uniform_modes_also_report_strip_widths_m(self):
         """등분·자동폭·조합 모드도 조각별 폭 리스트를 낸다 — 전부 같은 값의
         반복이지만, UI 가 모드에 관계없이 이 리스트 하나로 개별 폭 입력칸을
-        채울 수 있어야 한다."""
-        _s, info_parts = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=3)
+        채울 수 있어야 한다. parts 는 'long' 고정 — 기본값('short')이면 짧은
+        축이 90m 가 되어 폭이 [10,10,10]이 아니라 [30,30,30]이 된다."""
+        _s, info_parts = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=3,
+                                             orientation='long')
         self.assertEqual(info_parts['strip_widths_m'], [10.0, 10.0, 10.0])
         _s, info_width = self.ps.split_shape(self._rot_rect(30.0, 90.0),
                                              strip_width_cm=400)
@@ -945,16 +970,50 @@ class TestSplitShape(unittest.TestCase):
         self.assertAlmostEqual(info['orientation_deg'], 0.0, delta=2.0)
         self.assertEqual(info['orientation'], 'short')
 
-    def test_orientation_default_is_long_and_unchanged(self):
-        """파라미터를 안 주면 지금까지의 동작(긴 변 기준)과 같아야 한다."""
+    def test_orientation_default_depends_on_strip_width_cm(self):
+        """생략하면 모드로 정해진다 — strip_width_cm 이 있으면(단독/조합)
+        'long', 순수 parts 나 widths_cm 단독이면 'short'.
+
+        strip_width_cm(두둑)은 고랑 방향이 실제 작업 방향과 맞아야 하므로
+        방향을 바꾸지 않는다는 계약이 이 테스트의 핵심이다 — 여기서 회귀가
+        나면 실제 두둑이 엉뚱한 방향으로 잘린다.
+        """
+        _s, info_parts = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2)
+        self.assertEqual(info_parts['orientation'], 'short')
+
+        _s, info_strip = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                             strip_width_cm=400)
+        self.assertEqual(info_strip['orientation'], 'long')
+
+        # 조합(parts + strip_width_cm)도 strip_width_cm 쪽 계약을 따른다.
+        _s, info_both = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=2,
+                                            strip_width_cm=400)
+        self.assertEqual(info_both['orientation'], 'long')
+
+        # widths_cm 단독은 parts 단독과 같은 취급 — 'short'.
+        _s, info_widths = self.ps.split_shape(self._rot_rect(30.0, 90.0),
+                                              widths_cm=[500, 500])
+        self.assertEqual(info_widths['orientation'], 'short')
+
+    def test_explicit_orientation_overrides_the_mode_default(self):
+        """직접 주면 모드와 상관없이 그 값이 이긴다 — 생략했을 때만 자동."""
+        _s, info_parts_long = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), parts=2, orientation='long')
+        self.assertEqual(info_parts_long['orientation'], 'long')
+
+        _s, info_strip_short = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), strip_width_cm=400, orientation='short')
+        self.assertEqual(info_strip_short['orientation'], 'short')
+
+    def test_default_orientation_matches_an_explicit_call_with_the_same_result(self):
+        """생략과 그 결과에 해당하는 명시적 값이 완전히 같은 조각을 낸다."""
         strips_default, info_default = self.ps.split_shape(
             self._rot_rect(30.0, 90.0), parts=2)
-        strips_long, info_long = self.ps.split_shape(
-            self._rot_rect(30.0, 90.0), parts=2, orientation='long')
-        self.assertEqual(info_default['orientation'], 'long')
+        strips_short, info_short = self.ps.split_shape(
+            self._rot_rect(30.0, 90.0), parts=2, orientation='short')
         self.assertAlmostEqual(info_default['strip_width_m'],
-                               info_long['strip_width_m'])
-        for a, b in zip(strips_default, strips_long):
+                               info_short['strip_width_m'])
+        for a, b in zip(strips_default, strips_short):
             self.assertAlmostEqual(a['length_m'], b['length_m'], delta=0.1)
 
     def test_invalid_orientation_is_rejected(self):
@@ -964,11 +1023,27 @@ class TestSplitShape(unittest.TestCase):
         self.assertIn('orientation', err)
 
     def test_aspect_ratio_flags_long_narrow_parts_split(self):
-        """parts 등분이 가늘고 길면 orientation='short' 를 쓰라고 알린다."""
-        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=5)
+        """parts 등분이 가늘고 길면 orientation='short' 를 쓰라고 알린다.
+
+        'long' 고정 — 기본값이 'short' 로 바뀐 뒤에도 명시적으로 긴 변을
+        고르면 여전히 가늘고 길어질 수 있다는 것을 확인한다. 기본값 자체가
+        이 문제를 피해가는지는 아래
+        test_default_short_for_parts_avoids_the_narrow_aspect_ratio 가 본다.
+        """
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=5,
+                                           orientation='long')
         self.assertIsNotNone(info['aspect_ratio'])
         self.assertGreater(info['aspect_ratio'], 4.0)
         self.assertIn("orientation='short'", info['note'])
+
+    def test_default_short_for_parts_avoids_the_narrow_aspect_ratio(self):
+        """실사용 재현 사례 — 예전 기본값(긴 변)이면 이 요청이 12.7:1 짜리
+        가늘고 긴 조각을 냈다. 기본값이 'short' 로 바뀐 지금은 같은 요청이
+        정방형에 가까운 조각을 내고, 경고도 붙지 않는다."""
+        strips, info = self.ps.split_shape(self._rot_rect(30.0, 90.0), parts=5)
+        self.assertIsNotNone(strips)
+        self.assertLess(info['aspect_ratio'], 4.0)
+        self.assertNotIn("orientation='short'", info['note'])
 
     def test_aspect_ratio_absent_for_strip_width_mode(self):
         """두둑 폭 지정은 원래 가늘고 길다 — parts 전용 경고 대상이 아니다."""
@@ -1023,9 +1098,13 @@ class TestSplitShape(unittest.TestCase):
         self.assertIn('angle_deg', err)
 
     def test_angle_deg_absent_leaves_orientation_behavior_unchanged(self):
-        """회귀: angle_deg 를 안 주면 orientation 만으로 지금과 같이 동작한다."""
+        """회귀: angle_deg 를 안 주면 orientation 만으로 지금과 같이 동작한다.
+
+        parts 단독 기본값이 'short' 로 바뀌었으므로, 'long' 쪽은 명시적으로
+        고정해야 이 테스트가 원래 의도(두 프리셋을 대조)대로 성립한다.
+        """
         strips_long, info_long = self.ps.split_shape(
-            self._rot_rect(30.0, 90.0), parts=2)
+            self._rot_rect(30.0, 90.0), parts=2, orientation='long')
         strips_short, info_short = self.ps.split_shape(
             self._rot_rect(30.0, 90.0), parts=2, orientation='short')
         self.assertEqual(info_long['orientation'], 'long')
@@ -1034,6 +1113,172 @@ class TestSplitShape(unittest.TestCase):
             self.assertAlmostEqual(b['length_m'], 90.0, delta=1.0)
         for b in strips_short:
             self.assertAlmostEqual(b['length_m'], 30.0, delta=1.0)
+
+
+class TestSplitAcrossLayers(unittest.TestCase):
+    """MCP 도구·REST 라우트가 `planting_split.split_shape()` 를 어떻게
+    감싸는지 — 두 계층 모두 새 파라미터를 그대로 관통시키고, `orientation`
+    을 하드코딩하지 않아 모드별 기본값이 어긋나지 않는지 확인한다.
+
+    임시 sqlite DB 만 쓰고 라이브를 건드리지 않는다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+        from flask_babel import Babel
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'split_layers.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        # routes_geo_planting 는 라우트 모듈이라 forms_dashboard(위젯 목록의
+        # gettext 지연문자열)까지 딸려 들어온다 — Babel 확장이 없으면 임포트
+        # 시점에 KeyError('babel') 로 죽는다.
+        Babel(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+        # routes_geo_planting 를 바로 임포트하면 routes_geo_device_split 과의
+        # 순환 임포트에 걸린다(그쪽이 이 모듈의 _require_edit 을 가져오려다
+        # 아직 초기화가 끝나지 않은 이 모듈을 만난다) — 실제 앱이 하는 순서
+        # 그대로 routes_geo 를 먼저 임포트해 전체 체인이 정상 순서로 돌게 한다.
+        import aot.aot_flask.routes_geo  # noqa: F401
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def _zone(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoShape
+        shape = GeoShape(
+            geo_id='map-split-layers', type='zone',
+            feature={'type': 'Feature', 'properties': {},
+                    'geometry': _rect_at(_KIMJE_LNG, _KIMJE_LAT, 30.0, 90.0)})
+        db.session.add(shape)
+        db.session.commit()
+        return shape
+
+    # -- MCP 도구(aot_data_tool_service) ------------------------------------
+
+    def test_mcp_propose_defaults_short_for_parts_alone(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        zone = self._zone()
+        result = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, parts=2)
+        self.assertNotIn('error', result)
+        self.assertEqual(result['orientation'], 'short')
+
+    def test_mcp_propose_defaults_long_for_strip_width_cm(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        zone = self._zone()
+        result = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, strip_width_cm=400)
+        self.assertNotIn('error', result)
+        self.assertEqual(result['orientation'], 'long')
+
+    def test_mcp_propose_passes_through_angle_deg_and_widths_cm(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        zone = self._zone()
+
+        by_angle = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, parts=2, angle_deg=45.0)
+        self.assertNotIn('error', by_angle)
+        self.assertEqual(by_angle['orientation'], 'custom')
+        self.assertAlmostEqual(by_angle['orientation_deg'], 45.0, delta=1.0)
+
+        by_widths = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, widths_cm=[500, 1000, 300])
+        self.assertNotIn('error', by_widths)
+        self.assertEqual(by_widths['pieces'], 3)
+
+    def test_mcp_propose_edge_margin_m_is_meters_not_centimeters(self):
+        """edge_margin_m=2 는 2m 여백이다 — 옛 cm 계약대로 200 을 넘기면
+        도형(짧은 축 30m)이 통째로 사라져 에러가 난다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        zone = self._zone()
+        plain = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, parts=1)
+        inset = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, parts=1, edge_margin_m=2)
+        self.assertNotIn('error', inset)
+        self.assertLess(inset['covered_area_m2'], plain['covered_area_m2'])
+
+        overflowed = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, parts=1, edge_margin_m=200)
+        self.assertIn('error', overflowed)
+
+    def test_mcp_apply_creates_plots_with_widths_cm(self):
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        zone = self._zone()
+        result = AoTDataToolService.apply_planting_split(
+            zone_id=zone.unique_id, crop='상추',
+            planted_on=date.today().isoformat(),
+            widths_cm=[500, 1000, 300])
+        self.assertEqual(result['status'], 'success')
+        self.assertEqual(result['created_count'], 3)
+
+    # -- REST 라우트(routes_geo_planting) ------------------------------------
+
+    def test_route_layer_also_defaults_short_for_parts_alone(self):
+        from aot.aot_flask import routes_geo_planting as routes
+        zone = self._zone()
+        args, err = routes.split_args_from({'zone_id': zone.unique_id, 'parts': 2})
+        self.assertIsNone(err)
+        out, fail = routes.compute_split(args)
+        self.assertIsNone(fail)
+        _strips, info, _shape = out
+        self.assertEqual(info['orientation'], 'short')
+
+    def test_route_layer_also_defaults_long_for_strip_width_cm(self):
+        from aot.aot_flask import routes_geo_planting as routes
+        zone = self._zone()
+        args, err = routes.split_args_from(
+            {'zone_id': zone.unique_id, 'strip_width_cm': 400})
+        self.assertIsNone(err)
+        out, fail = routes.compute_split(args)
+        self.assertIsNone(fail)
+        _strips, info, _shape = out
+        self.assertEqual(info['orientation'], 'long')
+
+    def test_route_layer_edge_margin_m_field_name(self):
+        from aot.aot_flask import routes_geo_planting as routes
+        zone = self._zone()
+        args, err = routes.split_args_from(
+            {'zone_id': zone.unique_id, 'parts': 1, 'edge_margin_m': 2})
+        self.assertIsNone(err)
+        out, fail = routes.compute_split(args)
+        self.assertIsNone(fail)
+        _strips, info, _shape = out
+        self.assertAlmostEqual(info['edge_margin_m'], 2.0)
+
+    # -- 두 계층이 어긋나지 않는지 --------------------------------------------
+
+    def test_mcp_and_route_layer_agree_on_the_default_orientation(self):
+        """같은 도형·같은 모드에 대해 MCP 와 REST 가 같은 기본값을 낸다 —
+        어느 한쪽이 'long' 을 다시 하드코딩하면 여기서 걸린다."""
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService
+        from aot.aot_flask import routes_geo_planting as routes
+        zone = self._zone()
+
+        mcp_result = AoTDataToolService.propose_planting_split(
+            zone_id=zone.unique_id, parts=2)
+        args, err = routes.split_args_from({'zone_id': zone.unique_id, 'parts': 2})
+        self.assertIsNone(err)
+        out, fail = routes.compute_split(args)
+        self.assertIsNone(fail)
+        _strips, route_info, _shape = out
+
+        self.assertEqual(mcp_result['orientation'], route_info['orientation'])
 
 
 class TestBedSpecIsNotAColumn(unittest.TestCase):

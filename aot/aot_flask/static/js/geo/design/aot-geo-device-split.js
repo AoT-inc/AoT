@@ -264,8 +264,10 @@ class AoTGeoDeviceSplit {
         } else if (orientation === 'short') {
             args.orientation = 'short';
         }
-        const margin = parseFloat(get('edge_margin_cm'));
-        if (isFinite(margin) && margin > 0) args.edge_margin_cm = margin;
+        // 입력칸은 cm 다 — 서버 edge_margin_m 는 m 이므로 여기서만 ÷100 한다
+        // (식생 분할과 같은 규칙, aot-geo-vegetation.js 참조).
+        const marginCm = parseFloat(get('edge_margin_cm'));
+        if (isFinite(marginCm) && marginCm > 0) args.edge_margin_m = marginCm / 100;
 
         // 장치 구역은 두둑이 아니다 — 서버 기본 하한(2m)을 그대로 쓰면 좁은
         // 구역이 조용히 사라진다. **미리보기와 적용이 같은 값을 보내야**
@@ -279,7 +281,7 @@ class AoTGeoDeviceSplit {
         q.set('zone_id', args.zone_id);
         if (args.parts != null) q.set('parts', args.parts);
         if (args.strip_width_cm != null) q.set('strip_width_cm', args.strip_width_cm);
-        if (args.edge_margin_cm != null) q.set('edge_margin_cm', args.edge_margin_cm);
+        if (args.edge_margin_m != null) q.set('edge_margin_m', args.edge_margin_m);
         if (args.orientation) q.set('orientation', args.orientation);
         if (args.angle_deg != null) q.set('angle_deg', args.angle_deg);
         if (args.min_length_cm != null) q.set('min_length_cm', args.min_length_cm);

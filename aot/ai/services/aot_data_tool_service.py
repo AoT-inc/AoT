@@ -7738,17 +7738,34 @@ class AoTDataToolService:
 
     @staticmethod
     def propose_planting_split(zone_id=None, parts=None, strip_width_cm=None,
-                               edge_margin_cm=0, orientation='long', **extra):
+                               widths_cm=None, edge_margin_m=0, orientation=None,
+                               angle_deg=None, **extra):
         """[읽기전용] 구역/대지를 나눈 제안을 계산한다. 저장하지 않는다.
 
         **좌표를 만들지 않는 분할 경로다.** 사람이 이미 그려 둔 도형을 서버가
-        긴 변 방향으로 나눈다 — LLM 은 구역이 지도 어디인지 알 수 없으므로
-        (어떤 도구도 경계 폴리곤을 안 내준다) 이 길이 없으면 좌표를 지어내게 된다.
+        나눈다 — LLM 은 구역이 지도 어디인지 알 수 없으므로(어떤 도구도 경계
+        폴리곤을 안 내준다) 이 길이 없으면 좌표를 지어내게 된다.
 
-        `orientation='short'` 를 주면 짧은 변을 따라 눕혀 정방형에 가까운
-        조각을 낸다 — `parts` 등분(작물을 나눠 심을 때)에서만 의미가 있다.
-        `strip_width_cm`(두둑)는 고랑 방향이 실제 작업 방향과 맞아야 하므로
-        기본(`'long'`)을 그대로 쓴다.
+        방향은 보통 `orientation` 을 생략하는 편이 낫다 — 서버가 모드로 알아서
+        고른다: `strip_width_cm` 를 줬으면(두둑) 고랑 방향이 실제 작업 방향과
+        맞아야 하므로 도형의 긴 변을 따르고, `parts` 만 줬으면(작물을 나눠
+        심을 때) 두둑 개념이 없으므로 짧은 변을 눕혀 정방형에 가까운 조각을
+        낸다. 이 기본값이 마음에 안 들 때만 `orientation='long'|'short'` 로
+        직접 뒤집을 것.
+
+        `angle_deg`(0≤값<180)를 주면 그 두 프리셋을 무시하고 임의 각도를 그대로
+        쓴다 — 인접 필지의 기존 두둑과 줄을 맞추는 등, 긴 변도 짧은 변도 아닌
+        방향이 필요할 때만 쓴다. 지도를 볼 수 없는 LLM 은 스스로 각도를 고를
+        근거가 없으므로, 사람이 지도 설계 화면에서 각도를 확인하며 정한 뒤
+        불러 준 값을 그대로 전달하는 용도다 — 값을 지어내지 말 것.
+        `orientation` 과 동시에 주면 `angle_deg` 가 이긴다(`orientation` 은
+        조용히 무시된다).
+
+        `widths_cm`(cm 리스트, 2개 이상)를 주면 `parts`/`strip_width_cm` 는
+        무시하고 조각마다 다른 폭으로 순서대로 자른다 — 같은 폭 N개라는 전제가
+        안 맞을 때(가장자리 한 줄만 넓게, 작물별로 이랑 폭이 다를 때) 쓴다.
+        합이 도형의 짧은 축보다 크면 마지막 조각만 들어가는 만큼 줄어든다
+        (`widths_clamped_from_cm` 로 원래 요청값을 알 수 있다).
 
         폴리곤 자체는 돌려주지 않는다. 조각 수·길이·면적 같은 **요약만** 낸다 —
         좌표 수백 개를 컨텍스트에 실을 이유가 없고, 실제로 만들 때는
@@ -7764,7 +7781,8 @@ class AoTDataToolService:
                 return {"error": f"zone/shape not found: {zone_id}"}
             strips, info = planting_split.split_shape(
                 shape, parts=parts, strip_width_cm=strip_width_cm,
-                edge_margin_cm=edge_margin_cm, orientation=orientation)
+                widths_cm=widths_cm, edge_margin_m=edge_margin_m,
+                orientation=orientation, angle_deg=angle_deg)
             if strips is None:
                 return {"error": info}
             lengths = [s['length_m'] for s in strips]
@@ -7794,14 +7812,18 @@ class AoTDataToolService:
 
     @staticmethod
     def apply_planting_split(zone_id=None, crop=None, planted_on=None,
-                             parts=None, strip_width_cm=None, edge_margin_cm=0,
-                             orientation='long', variety=None, name=None,
+                             parts=None, strip_width_cm=None, widths_cm=None,
+                             edge_margin_m=0, orientation=None, angle_deg=None,
+                             variety=None, name=None,
                              expected_end_on=None, color=None, **extra):
         """[쓰기] 분할 제안을 실제 구획으로 만든다. 사람 승인 필요.
 
-        `propose_planting_split` 와 **같은 파라미터로 다시 계산**한다(`orientation`
-        포함) — 제안을 저장해 두지 않는 이유는 분할이 결정적이기 때문이다.
-        도형이 그 사이에 바뀌었으면 새 모양대로 나뉜다(그게 맞다).
+        `propose_planting_split` 와 **같은 파라미터로 다시 계산**한다
+        (`orientation`/`angle_deg`/`widths_cm` 포함) — 제안을 저장해 두지 않는
+        이유는 분할이 결정적이기 때문이다. 도형이 그 사이에 바뀌었으면 새
+        모양대로 나뉜다(그게 맞다). `orientation` 을 생략했다면 그때와 똑같이
+        생략할 것 — 서버가 모드로 고르는 기본값이 두 호출 사이에서도 같아야
+        미리보기에서 본 것과 실제로 만들어지는 것이 갈리지 않는다.
 
         조각 하나가 구획 하나(GeoPlanting 한 행)다. `parts=3` 이면 세 행,
         `strip_width_cm=160` 이면 두둑 수만큼. **개수를 보고 부르라** — 41행이
@@ -7820,7 +7842,8 @@ class AoTDataToolService:
                         "message": f"zone/shape not found: {zone_id}"}
             strips, info = planting_split.split_shape(
                 shape, parts=parts, strip_width_cm=strip_width_cm,
-                edge_margin_cm=edge_margin_cm, orientation=orientation)
+                widths_cm=widths_cm, edge_margin_m=edge_margin_m,
+                orientation=orientation, angle_deg=angle_deg)
             if strips is None:
                 return {"status": "error", "message": info}
 

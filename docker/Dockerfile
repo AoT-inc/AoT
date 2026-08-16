@@ -79,5 +79,12 @@ COPY . .
 # Expose the application port (HTTP default)
 EXPOSE 80
 
+# Runs once per container start (regenerates widget_template_*.html, which
+# is never baked into the image -- see install/docker_entrypoint.sh), then
+# execs whichever command the service actually wants (CMD below for aot-app,
+# or docker-compose.prod.yml's per-service `command:` override for
+# aot_daemon/aot_mcp).
+ENTRYPOINT ["install/docker_entrypoint.sh"]
+
 # Run the application (using start_flask_ui.py without SSL for local dev connectivity)
 CMD ["python", "aot/start_flask_ui.py", "-s", "-p", "80"]

@@ -271,7 +271,7 @@ def split_args_from(src):
         except (TypeError, ValueError):
             raise ValueError('%s must be a list of numbers' % key)
 
-    orientation = src.get('orientation') or 'long'
+    orientation = src.get('orientation') or None
     if hasattr(orientation, 'strip'):
         orientation = orientation.strip().lower()
 
@@ -283,12 +283,15 @@ def split_args_from(src):
             # 있으면 parts/strip_width_cm 보다 우선한다(split_shape 의 규칙 —
             # 대체가 아니라 항상 함께 넘긴다, 상호배타 판단은 그쪽에서 한다).
             'widths_cm': _num_list('widths_cm'),
-            'edge_margin_cm': _num('edge_margin_cm') or 0,
+            'edge_margin_m': _num('edge_margin_m') or 0,
             # 이보다 짧은 조각은 버린다(cm). 두둑 기준 기본값(2m)은 장치 담당
             # 구역에는 너무 커서 좁은 구역이 조용히 사라진다 — 호출자가 정할 수
             # 있게 열어 둔다. **미리보기와 적용이 같은 값을 써야** 화면에서 본
             # 조각 수와 실제로 만들어지는 수가 갈리지 않는다.
             'min_length_cm': _num('min_length_cm'),
+            # 생략(None)이면 split_shape() 이 모드(strip_width_cm 유무)로
+            # 기본값을 정한다 — 여기서 'long' 을 하드코딩하면 그 분기와
+            # 어긋날 수 있으므로 그대로 통과시킨다.
             'orientation': orientation,
             # 각도가 있으면 위 orientation 은 서버(split_shape)에서 무시된다 —
             # 대체가 아니라 공존이다. UI 는 둘 중 하나만 채워 보낸다.
@@ -307,7 +310,7 @@ def split_kwargs_from(args):
     kwargs = dict(
         parts=args['parts'], strip_width_cm=args['strip_width_cm'],
         widths_cm=args.get('widths_cm'),
-        edge_margin_cm=args['edge_margin_cm'], orientation=args['orientation'],
+        edge_margin_m=args['edge_margin_m'], orientation=args['orientation'],
         angle_deg=args.get('angle_deg'))
     min_cm = args.get('min_length_cm')
     if min_cm is not None:

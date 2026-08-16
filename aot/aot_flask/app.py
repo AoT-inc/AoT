@@ -123,6 +123,18 @@ def create_app(config=ProdConfig):
     app = Flask(__name__)
     app.config.from_object(config)
 
+    # Give this process's 'aot' logger somewhere to go. Only aot_daemon.py
+    # ever set this up (inline, at its own module import time) -- gunicorn
+    # importing this module never does, so every logger.info()/warning()
+    # anywhere under aot.* (this file included) was silently going nowhere
+    # under gunicorn: with no handler anywhere in the logger's ancestry,
+    # Python's handler of last resort only prints WARNING+ to stderr, so
+    # even that was invisible for INFO calls specifically (2026-08-16, found
+    # chasing a log line that never appeared). Idempotent, so re-entrant
+    # create_app() calls (aot_mcp_server.py also calls this) are harmless.
+    from aot.utils.logging_setup import configure_aot_file_logging
+    configure_aot_file_logging()
+
     # Standardize JSON datetime serialization to UTC ISO 8601 with offset
     # (e.g. '2026-05-06T12:34:56+00:00'). Frontend converts to device/viewer TZ.
     try:
