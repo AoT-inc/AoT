@@ -232,13 +232,18 @@ an MCP server — they attach through OpenAPI Actions only.
 ### Connecting a ChatGPT Custom GPT { #chatgpt-setup }
 
 Register the three REST paths above (`/mcp/info`, `/mcp/tools/list`,
-`/mcp/tools/call`) as an **OpenAPI Action**.
+`/mcp/tools/call`) as an **OpenAPI Action**. Creating a Custom GPT with
+Actions requires a paid ChatGPT plan (Plus/Team/Enterprise/Pro) — free
+accounts cannot use this path at all.
 
 1. **Issue an API key** — under `Settings > Users`, generate a new API key for
    your account (name it something like "ChatGPT" so you can revoke just this
    connection later). If this GPT should only ever read, pick scope
    `readonly` at issue time — write tool calls are then refused server-side,
-   so a Custom GPT misconfiguration cannot touch a device by accident.
+   so a Custom GPT misconfiguration cannot touch a device by accident. If
+   more than one person will use it, issue a separate key per person — the
+   audit log then shows who called what, and a leaked key can be revoked
+   without cutting off everyone else.
 2. **Confirm HTTP mode is on and reachable** — the server must be running
    with `--http --port 5700`, and ChatGPT must be able to reach that port (or
    whatever path your reverse proxy exposes it at). Check unauthenticated
@@ -246,9 +251,37 @@ Register the three REST paths above (`/mcp/info`, `/mcp/tools/list`,
    ```bash
    curl https://<host>:5700/mcp/info
    ```
-3. In ChatGPT, go to **Explore GPTs → Create → Configure → Actions → Create
-   new action** and paste the schema below (replace `<host>` with your real
-   address):
+3. **Create the GPT**: in ChatGPT, go to **Explore GPTs → Create →
+   Configure**. Fill in a name and description, and in **Instructions** paste
+   at least the following — copy it verbatim or adapt it to your site:
+
+   ```
+   You are an assistant for this AoT system: you observe status, advise, and
+   can register device-control requests when asked.
+
+   - Don't call listTools out of habit. The full tool catalog is a large
+     response that eats into the conversation budget. Call it once early to
+     learn tool names and arguments, then call only the tools you need.
+   - Prefer narrow tools. For a single device or zone, use a tool that
+     targets just that instead of a broad summary tool.
+   - When calling callTool, always JSON-encode `arguments` into a string.
+     E.g. not {"zone_name": "North Field"} but
+     "{\"zone_name\": \"North Field\"}". Empty is "{}".
+   - Every tool response carries call_state. Judge success/failure from that
+     field alone — each tool's own `status` field uses different words:
+       executed / already_executed → done, relay the result
+       pending_approval            → not yet run, tell the user to approve it
+       approval_rejected           → rejected, don't retry — offer advice instead
+       approval_expired            → approval window expired, ask again
+       refused / failed            → refused or errored, relay the reason
+   - If a state-changing request comes back pending_approval, don't retry it
+     yourself — tell the user to approve it on the web approval screen.
+   - Answer in plain language, without jargon.
+   ```
+
+4. **Add the Action**: further down the same screen, under **Actions →
+   Create new action**, paste the schema below (replace `<host>` with your
+   real address):
 
    ```yaml
    openapi: 3.1.0
@@ -288,22 +321,39 @@ Register the three REST paths above (`/mcp/info`, `/mcp/tools/list`,
            "200": { description: OK }
    ```
 
-4. **Set authentication**: Authentication → API Key → Auth Type `Custom` →
+5. **Set authentication**: Authentication → API Key → Auth Type `Custom` →
    Header name `X-API-KEY` → value is the API key (base64) from step 1.
-5. **⚠️ Declare `arguments` as a string — never as an object.** There are
+6. **⚠️ Declare `arguments` as a string — never as an object.** There are
    over 100 tools, so their argument shapes cannot all be declared in one
    OpenAPI schema. Leave `arguments` as a free-form object and ChatGPT
    Actions silently drops the field it cannot fill (real incident,
    2026-08-09: a `list_devices_in_area` call required `area_name`, but the
-   request body arrived with no `arguments` key at all). Declare it as a
-   string as shown above, and tell the Custom GPT in its Instructions:
-   "When calling callTool, always JSON-encode arguments into that string."
-6. **State-changing tools still don't execute immediately on this path.** The
+   request body arrived with no `arguments` key at all). Declaring it as a
+   string, as shown above, already avoids this — and step 3's Instructions
+   restate the same rule for the same reason.
+7. **Save and verify**: keep visibility set to **Only me** unless you mean to
+   share it. In the chat, ask something like "give me a status briefing" — if
+   a tool call and a response come back, it's connected.
+8. **State-changing tools still don't execute immediately on this path.** The
    first call comes back as `pending_approval` with a `confirmation_id` —
-   ChatGPT should show that to the user, who approves it on the web review
-   page (`/ai/mcp_review`), then the same call is retried with
-   `_confirmation_id` added to actually execute. There is no automatic
-   re-approval inside a Custom GPT.
+   ChatGPT should show that to the user, who approves it on the web approval
+   screen, then the same call is retried with `_confirmation_id` added to
+   actually execute. There is no automatic re-approval inside a Custom GPT.
+   Two screens show the approval list — day to day, the scheduler page
+   (`/scheduler`) works fine (the "Pending control requests" block at the
+   top). For the audit log and advice history alongside it, there's a
+   dedicated page (`/api/v1/mcp/review_page`, menu: **AI → MCP Servers → AI
+   Requests & Advice**) — the approval list itself is the same either way.
+
+**When it won't connect**
+
+| Symptom | Check |
+|---|---|
+| "unauthorized" / API key error | Whitespace around the key pasted in step 5, or a revoked key |
+| Action won't save | Whether step 4's schema was pasted whole — a truncated brace breaks the save |
+| Keeps answering "I can't find that tool" | The GPT isn't calling listTools first — nudge it with "check the tool list first" |
+| Reads fine but never controls anything | Expected — writes always go through human approval (step 8) |
+| Name-based questions still give odd answers | Check the version with `get_system_update_status` — see the note below |
 
 > The map-related bug fixes covered on this page (`get_weather` name lookup
 > always landing on the same wrong shape, `get_spatial_tree`'s filter doing
@@ -328,7 +378,7 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-> State-changing tool calls do not execute immediately here either (`aot/ai/services/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the web review page (`/ai/mcp_review`), which is handled through `respond_to_confirmation`. Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
+> State-changing tool calls do not execute immediately here either (`aot/ai/services/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the scheduler page (`/scheduler`; for the audit log too, `/api/v1/mcp/review_page`), which is handled through `respond_to_confirmation`. Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
 
 ---
 

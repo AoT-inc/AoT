@@ -232,13 +232,17 @@ REST 를 남겨두는 이유는 일반 요금제의 ChatGPT Custom GPT 가 MCP �
 ### ChatGPT Custom GPT 연결 { #chatgpt-setup }
 
 위 REST 세 경로(`/mcp/info`, `/mcp/tools/list`, `/mcp/tools/call`)를 **OpenAPI
-Action**으로 등록합니다.
+Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유료
+요금제(Plus/Team/Enterprise/Pro)에서만 됩니다 — 무료 계정은 이 경로 자체를
+쓸 수 없습니다.
 
 1. **API 키 발급** — `설정 > 사용자`에서 본인 계정의 API 키를 새로 만듭니다
    (이름을 "ChatGPT"처럼 구분되게 붙여 두면 나중에 이 연결만 따로 폐기하기
    편합니다). 조회만 시킬 계획이면 발급 시 스코프를 `readonly`로 선택하세요 —
    쓰기 도구 호출 자체가 서버에서 거부되어, Custom GPT 설정 실수로 장치를
-   잘못 건드릴 위험이 원천 차단됩니다.
+   잘못 건드릴 위험이 원천 차단됩니다. 여러 사람이 쓴다면 각자 이름으로
+   따로 발급하세요 — 감사 로그에 누가 호출했는지 남고, 유출됐을 때 그
+   키 하나만 폐기하면 됩니다.
 2. **HTTP 모드가 켜져 있고 외부에서 닿는지 확인** — 서버가
    `--http --port 5700`으로 떠 있어야 하고, ChatGPT 가 그 포트(또는 리버스
    프록시 경로)에 접속할 수 있어야 합니다. 인증 없이 아래를 먼저 열어
@@ -246,9 +250,37 @@ Action**으로 등록합니다.
    ```bash
    curl https://<호스트>:5700/mcp/info
    ```
-3. ChatGPT에서 **Explore GPTs → Create → Configure → Actions → Create new
-   action**으로 들어가 아래 OpenAPI 스키마를 붙여넣습니다(`<호스트>`를 실제
-   주소로 바꾸세요):
+3. **새 GPT 만들기**: ChatGPT에서 **탐색(Explore GPTs) → 만들기(Create) →
+   구성(Configure)** 탭으로 들어갑니다. 이름·설명을 원하는 대로 채우고,
+   **지침(Instructions)**에는 최소한 아래 내용을 넣으세요 — 그대로 복사해도
+   되고, 농장·현장에 맞게 다듬어도 됩니다:
+
+   ```
+   당신은 이 AoT 시스템의 상태를 조회하고, 자문하고, 필요하면 장치 제어
+   요청을 등록하는 도우미입니다.
+
+   - listTools 를 습관적으로 호출하지 마세요. 도구 전체 목록은 응답이 커서
+     대화 용량을 많이 잡아먹습니다. 처음 한 번만 불러 도구 이름과 인자를
+     파악하고, 이후에는 필요한 도구만 바로 호출하세요.
+   - 좁은 도구를 먼저 쓰세요. 장치 하나·구역 하나를 물으면 전체 요약형
+     도구보다 그 대상만 짚는 도구를 먼저 씁니다.
+   - callTool 을 부를 때 arguments 는 항상 JSON 오브젝트를 **문자열로
+     인코딩**해서 넣으세요. 예: {"zone_name": "1포장"} 이 아니라
+     "{\"zone_name\": \"1포장\"}". 인자가 없으면 "{}".
+   - 모든 도구 응답에는 call_state 가 들어 있습니다. 이 값으로만
+     성공/실패를 판단하세요(도구별 status 값은 제각각입니다):
+       executed / already_executed → 실행됨, 결과를 그대로 전달
+       pending_approval            → 아직 미실행, 사람의 승인 대기 안내
+       approval_rejected           → 거부됨, 실행하지 말고 자문으로 전환
+       approval_expired            → 승인 대기 만료, 다시 요청
+       refused / failed            → 거부·오류, 사유를 그대로 전달
+   - 상태를 바꾸는 요청이 pending_approval 로 돌아오면, 직접 재시도하지
+     말고 사용자에게 웹 승인 화면에서 승인하라고 안내하세요.
+   - 답변은 전문 용어 없이 알기 쉽게 요약해서 답하세요.
+   ```
+
+4. **액션(Actions) 추가**: 같은 화면 아래 **액션 → 새 액션 만들기**에서
+   아래 OpenAPI 스키마를 붙여넣습니다(`<호스트>`를 실제 주소로 바꾸세요):
 
    ```yaml
    openapi: 3.1.0
@@ -288,21 +320,37 @@ Action**으로 등록합니다.
            "200": { description: OK }
    ```
 
-4. **인증 등록**: Authentication → API Key → Auth Type `Custom` → Header name
+5. **인증 등록**: Authentication → API Key → Auth Type `Custom` → Header name
    `X-API-KEY` → 값에 1번에서 발급한 API 키(base64)를 넣습니다.
-5. **⚠️ `arguments`는 반드시 문자열(`string`)로 선언할 것 — object 로 두지
+6. **⚠️ `arguments`는 반드시 문자열(`string`)로 선언할 것 — object 로 두지
    마세요.** 도구가 100종 넘게 있어 인자 스키마를 OpenAPI 에 전부 선언할 수
    없습니다. `arguments`를 자유형 object 로 두면 ChatGPT Actions 가 값을
    채우지 못하고 **그 키를 통째로 빠뜨립니다**(실사례 2026-08-09:
    `list_devices_in_area` 호출이 `area_name`은 필수인데 요청 바디에
-   `arguments` 키 자체가 없어 실패했습니다). 위 스키마처럼 문자열로 선언하고,
-   Custom GPT 의 Instructions 에 "callTool 을 부를 때 arguments 는 항상 JSON을
-   문자열로 인코딩해서 보내라"를 명시하세요.
-6. **상태를 바꾸는 도구는 이 경로에서도 즉시 실행되지 않습니다.** 최초 호출은
+   `arguments` 키 자체가 없어 실패했습니다). 위 스키마처럼 문자열로 선언했다면
+   이미 안전하고, 3번의 Instructions 예시도 같은 이유로 그 규칙을 반복합니다.
+7. **저장하고 확인**: 공개 범위는 **나만 보기(Only me)**로 두는 것을
+   권장합니다. 대화창에서 "지금 상태 브리핑해줘" 처럼 물어봐서 도구 호출과
+   응답이 오면 정상입니다.
+8. **상태를 바꾸는 도구는 이 경로에서도 즉시 실행되지 않습니다.** 최초 호출은
    `pending_approval` + `confirmation_id`를 반환합니다 — ChatGPT 는 그 값을
-   사람에게 보여주고, 사람이 웹 승인 페이지(`/ai/mcp_review`)에서 승인한 뒤
-   같은 인자에 `_confirmation_id`를 채워 **같은 도구를 다시** 호출해야
-   실제로 실행됩니다. Custom GPT 안에서 자동 재승인은 없습니다.
+   사람에게 보여주고, 사람이 웹 승인 화면에서 승인한 뒤 같은 인자에
+   `_confirmation_id`를 채워 **같은 도구를 다시** 호출해야 실제로 실행됩니다.
+   Custom GPT 안에서 자동 재승인은 없습니다. 승인 화면은 두 곳에서 볼 수
+   있습니다 — 평소에는 스케줄러 페이지(`/scheduler`)를 그대로 쓰면 됩니다
+   (맨 위 "승인 대기 중인 제어 요청"). 감사 로그·조언 이력까지 함께 보려면
+   전용 페이지(`/api/v1/mcp/review_page`, 메뉴: **AI → MCP 서버 목록 → AI
+   요청 및 조언**)로 갑니다 — 승인 목록 자체는 같습니다.
+
+**연결이 안 될 때**
+
+| 증상 | 확인할 것 |
+|---|---|
+| "unauthorized" / API key 오류 | 5번에서 넣은 키 값에 앞뒤 공백이 섞이지 않았는지, 키가 폐기되지 않았는지 |
+| 액션 저장이 안 됨 | 4번 스키마를 한 번에 전체 복사했는지 — 중괄호가 잘리면 저장이 거부됩니다 |
+| 매번 "도구를 못 찾겠다"는 식으로 답함 | GPT 가 listTools 를 안 부르고 바로 답하려는 경우 — "먼저 도구 목록부터 확인해줘"로 유도 |
+| 조회는 되는데 제어가 안 됨 | 정상입니다 — 쓰기는 항상 사람 승인을 거칩니다(8번) |
+| 이름으로 물으면 계속 이상한 답 | `get_system_update_status` 로 버전 확인 — 아래 버전 안내 참고 |
 
 > 이 페이지가 다루는 지도 관련 버그 수정(`get_weather` 이름 조회가 항상
 > 같은 도형으로 떨어지던 것, `get_spatial_tree` 필터 무동작, 구역이 계층
@@ -326,7 +374,7 @@ Action**으로 등록합니다.
 }
 ```
 
-> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/ai/services/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화(또는 웹 승인 페이지 `/ai/mcp_review`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다. 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
+> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/ai/services/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화(또는 스케줄러 페이지 `/scheduler`, 감사 로그까지 보려면 `/api/v1/mcp/review_page`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다. 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 
