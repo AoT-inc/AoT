@@ -2,7 +2,7 @@ description: Documentation for AoT, an open source GIS- and AI-based environment
 
 ## AoT 환경 모니터링 및 제어 시스템
 
-AoT는 온실·축사·노지를 모니터링하고 제어하는 오픈소스 소프트웨어입니다. 모든 장치·센서·구조물이 지도 위 실제 위치를 갖는 **GIS 디지털 트윈**과, 그 지도를 읽고 진단하며 사용자 승인을 받아 조작하는 **MCP(Model Context Protocol) 기반 AI**를 중심으로 만들어졌습니다.
+AoT는 센서로 환경을 관측하고 장치를 원격 제어하는 오픈소스 소프트웨어로, 특정 용도나 장소에 매이지 않습니다. 모든 장치·센서·구조물이 지도 위 실제 위치를 갖는 **GIS 디지털 트윈**과, 그 지도를 읽고 진단하며 사용자 승인을 받아 조작하는 **MCP(Model Context Protocol) 기반 AI**를 중심으로 만들어졌습니다.
 
 [라즈베리 파이](https://en.wikipedia.org/wiki/Raspberry_Pi) 등 단일 보드 컴퓨터(SBC)에 직접 설치하거나, 일반 서버·PC에서 Docker로 실행할 수 있습니다.
 

@@ -1,4 +1,6 @@
-AoT is an open-source monitoring and control system for greenhouses, livestock barns, and field sites. It runs natively on single-board computers such as the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi), and in Docker on ordinary servers and PCs.
+AoT is an open-source system for monitoring an environment with sensors and controlling devices remotely. It is not tied to any particular purpose or kind of site — greenhouses, barns, and fields, but equally parks, public infrastructure, and traffic: anywhere the things you want to watch are laid out in space.
+
+It runs natively on single-board computers such as the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi), and in Docker on ordinary servers and PCs.
 
 Two things define AoT:
 

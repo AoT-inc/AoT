@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="AoT is open-source software for monitoring sensors and remotely controlling devices in greenhouses, livestock barns, and other facilities. AoT는 온실·축사 등 농업 시설의 센서를 모니터링하고 장치를 원격 제어하는 오픈소스 스마트팜 자동화 소프트웨어입니다.">
+  <meta name="description" content="AoT is open-source software for monitoring sensors and remotely controlling devices from a map-based interface — greenhouses and livestock barns, parks, public infrastructure, and more. AoT는 센서를 모니터링하고 장치를 지도 위에서 원격 제어하는 오픈소스 소프트웨어입니다. 온실·축사 같은 스마트팜부터 공원·시설물·교통까지 용도를 가리지 않습니다.">
   <meta name="application-name" content="AoT">
   <meta property="og:site_name" content="AoT">
-  <meta property="og:title" content="AoT - Open-Source Smart-Farm Automation">
-  <meta property="og:description" content="AoT is open-source software for monitoring sensors and remotely controlling devices in greenhouses, livestock barns, and other facilities. AoT는 온실·축사 등 농업 시설의 센서를 모니터링하고 장치를 원격 제어하는 오픈소스 스마트팜 자동화 소프트웨어입니다.">
+  <meta property="og:title" content="AoT - Open-Source Monitoring &amp; Facility Automation">
+  <meta property="og:description" content="AoT is open-source software for monitoring sensors and remotely controlling devices from a map-based interface — greenhouses and livestock barns, parks, public infrastructure, and more. AoT는 센서를 모니터링하고 장치를 지도 위에서 원격 제어하는 오픈소스 소프트웨어입니다. 온실·축사 같은 스마트팜부터 공원·시설물·교통까지 용도를 가리지 않습니다.">
   <meta property="og:type" content="website">
   <link rel="icon" href="/favicon.png">
 
@@ -164,17 +164,19 @@
   <div class="landing-hero">
     <img class="logo" src="{{ url_for('static', filename='img/aot-logo-white.svg') }}" alt="AoT">
     <h1>AoT</h1>
-    <p class="tagline">Open-Source Smart-Farm &amp; Facility Automation<br>오픈소스 스마트팜·시설 자동화 시스템</p>
+    <p class="tagline">Open-Source Monitoring &amp; Facility Automation<br>오픈소스 모니터링·시설 자동화 시스템</p>
     <p class="lead">
       AoT is open-source software for monitoring sensors and remotely controlling devices
-      (irrigation, ventilation, lighting) in greenhouses, livestock barns, and other facilities —
-      from a map-based interface, with a built-in AI assistant.
+      (irrigation, ventilation, lighting) from a map-based interface, with a built-in AI assistant.
+      It is not tied to any particular purpose or kind of site — greenhouses and livestock barns,
+      but equally parks, public infrastructure, and traffic.
       Anyone can install it on their own server or a device such as a Raspberry Pi and run it free of charge.
     </p>
     <p class="lead">
-      AoT는 온실, 축사 등 농업·산업 시설의 센서 값을 실시간으로 모니터링하고, 관수·환기·조명 같은
-      장치를 지도 기반 화면에서 원격 제어할 수 있게 해주는 오픈소스 소프트웨어입니다. 누구나 자신의
-      서버나 라즈베리 파이 같은 장치에 직접 설치해 무료로 운영할 수 있습니다.
+      AoT는 센서 값을 실시간으로 모니터링하고, 관수·환기·조명 같은 장치를 지도 기반 화면에서
+      원격 제어할 수 있게 해주는 오픈소스 소프트웨어입니다. 특정 용도나 장소에 매이지 않습니다 —
+      온실·축사는 물론 공원·시설물·교통에도 그대로 쓸 수 있습니다. 누구나 자신의 서버나
+      라즈베리 파이 같은 장치에 직접 설치해 무료로 운영할 수 있습니다.
     </p>
     <div class="hero-img-wrap">
       <img src="{{ url_for('static', filename='img/aot-hero-dashboard-v2.jpg') }}" alt="AoT GIS 대시보드 화면">

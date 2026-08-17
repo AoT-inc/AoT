@@ -8520,13 +8520,13 @@ msgstr "品質保証に関する通知"
 
 #: aot_flask/templates/create_admin.html:55
 msgid ""
-"AoT is an open-source agricultural monitoring and control system built "
-"around a GIS digital twin and an MCP-based AI assistant. Some parts derive "
-"from the open-source Mycodo project; a warranty for the software added by "
-"AoT is available under a separate contract. The parts related to AoT follow "
-"the warranty information below."
+"AoT is an open-source monitoring and control system built around a GIS "
+"digital twin and an MCP-based AI assistant. Some parts derive from the "
+"open-source Mycodo project; a warranty for the software added by AoT is "
+"available under a separate contract. The parts related to AoT follow the "
+"warranty information below."
 msgstr ""
-"AoTはGISデジタルツインとMCPベースのAIアシスタントを中心に構築されたオープンソースの農業監視・制御システムです。一部の構成はオープンソースのMycodoプロジェクトに由来します。AoTで追加されたソフトウェアは別契約で保証を受けられる場合があります。AoTに関連する部分は以下の保証情報に従います。"
+"AoTはGISデジタルツインとMCPベースのAIアシスタントを中心に構築されたオープンソースの監視・制御システムです。一部の構成はオープンソースのMycodoプロジェクトに由来します。AoTで追加されたソフトウェアは別契約で保証を受けられる場合があります。AoTに関連する部分は以下の保証情報に従います。"
 
 #: aot_flask/templates/create_admin.html:56
 msgid ""

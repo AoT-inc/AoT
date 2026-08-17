@@ -2,7 +2,7 @@ description: Documentation for AoT, an open source GIS- and AI-based environment
 
 ## AoT 環境監視・制御システム
 
-AoTは温室・畜舎・露地を監視・制御するオープンソースソフトウェアです。すべてのデバイス・センサー・構造物が地図上の実際の位置を持つ **GISデジタルツイン** と、その地図を読み、診断し、ユーザーの承認を得て操作する **MCP（Model Context Protocol）ベースのAI** を中心に構築されています。
+AoTはセンサーで環境を観測し、機器を遠隔制御するオープンソースソフトウェアで、特定の用途や場所に縛られません。すべてのデバイス・センサー・構造物が地図上の実際の位置を持つ **GISデジタルツイン** と、その地図を読み、診断し、ユーザーの承認を得て操作する **MCP（Model Context Protocol）ベースのAI** を中心に構築されています。
 
 [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) などのシングルボードコンピュータに直接インストールするほか、一般的なサーバーやPCではDockerで実行できます。
 
