@@ -144,6 +144,26 @@ def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
         except Exception as exc:
             logger.debug(f"resolve_location_tz: GeoShape lookup failed for {target_id}: {exc}")
 
+        # 식생 구획(GeoPlanting)은 GeoShape 가 아니라 별도 테이블이다. 여기에
+        # 없으면 시스템 tz 로 조용히 떨어져, 여러 지역에 걸친 지도에서 구획에
+        # 걸린 일정의 벽시계가 남의 지역 시각으로 표시된다.
+        #
+        # 해석은 **소속 구역**을 따른다 — 설계 §8 "운영 그룹은 한 시계를
+        # 공유한다" 와 같은 규칙이고, 구획은 공간적으로 그 구역 안에 있다.
+        # 소속은 저장하지 않고 파생하므로 여기서도 파생해서 쓴다.
+        try:
+            from aot.databases.models import GeoPlanting
+            planting = GeoPlanting.query.filter_by(unique_id=target_id).first()
+            if planting is not None:
+                from aot.aot_flask.geo import planting_context
+                container = planting_context.zone_for_planting(planting)
+                if container is not None:
+                    tz = container.resolve_timezone()
+                    if tz is not None:
+                        return tz
+        except Exception as exc:
+            logger.debug(f"resolve_location_tz: GeoPlanting lookup failed for {target_id}: {exc}")
+
         try:
             from aot.databases.models import Input, Output, Function, Conditional, Trigger, PID, CustomController
             for model in (Input, Output, Function, Conditional, Trigger, PID, CustomController):

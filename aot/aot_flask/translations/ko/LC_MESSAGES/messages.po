@@ -28403,3 +28403,15 @@ msgstr "지금 값을 보내지 않습니다"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "no data"
 msgstr "값 없음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Coming up"
+msgstr "다가오는 일정"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Field work"
+msgstr "농작업"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Device schedule"
+msgstr "장치 예약"

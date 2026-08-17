@@ -3499,6 +3499,15 @@ def _build_zone_contents(zone_uuid):
     except Exception:
         current_app.logger.exception("zone contents: 식생 배분 계산 실패")
 
+    # 다가오는 일정 — 구역 자신을 대상으로 한 농작업(제초·방제 등)과 구역 안
+    # 장치의 예약. `target_id` 가 도형 uuid 도 담는다는 것이 근거다.
+    schedule = {'own': [], 'devices': []}
+    try:
+        from aot.aot_flask.geo.site_summary import upcoming_schedule
+        schedule = upcoming_schedule(zone, geo_device_ids)
+    except Exception:
+        current_app.logger.exception("zone contents: 일정 조회 실패")
+
     sensors_out = inv['sensors']
     outputs_out = inv['outputs']
     func_rows = inv['functions']
@@ -3531,6 +3540,7 @@ def _build_zone_contents(zone_uuid):
             # 지금 심겨 있는 것. `zone` 안에 두는 이유는 [현황] 탭이 이 객체
             # 하나만 받기 때문이다(buildZoneStatusHtml).
             'allocation': allocation,
+            'schedule': schedule,
         },
         'sensors': sensors_out,
         'outputs': outputs_out,

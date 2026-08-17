@@ -28162,3 +28162,15 @@ msgstr "現在、値を送っていません"
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "no data"
 msgstr "データなし"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Coming up"
+msgstr "今後の予定"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Field work"
+msgstr "農作業"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Device schedule"
+msgstr "機器の予約"

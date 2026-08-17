@@ -1540,8 +1540,13 @@ def _handle_fired_event(source_type, source_id, name, next_run_epoch):
     
     now = time.time()
     last_fire = _last_fired_at.get(source_id, 0)
-    
-    # Throttling: Skip if fired within 5 seconds to avoid DB bloat
+
+    # Root cause fixed at the source: controller_conditional.py now only
+    # sends conditional_fired when AbstractConditional.action_fired was set
+    # this cycle (run_action()/run_all_actions() actually called), not on
+    # every period tick — see project_scheduler_conditional_flood_incident
+    # memory (41,000+ noise rows/month on aot-005 before this). This 5s
+    # window is just a plain duplicate-delivery guard, not a volume cap.
     if now - last_fire < 5:
         return
         

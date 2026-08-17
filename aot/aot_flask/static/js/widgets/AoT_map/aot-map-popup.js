@@ -1443,7 +1443,50 @@
     zone = zone || {};
     return buildEnvNowHtml(zone.env, opts) +
            buildZonePlantingsHtml(zone.allocation) +
+           buildScheduleHtml(zone.schedule) +
            _ovNotesBlock();
+  }
+
+  // ── 다가오는 일정 ─────────────────────────────────────────────────────────
+  //
+  // 사람이 나가서 하는 일(`own` — 제초·방제)과 기계가 스스로 하는 일
+  // (`devices` — 관수 예약)을 **가른다.** 한 줄에 섞으면 무엇을 준비해야
+  // 하는지 읽히지 않는다.
+  //
+  // 없으면 블록 자체를 그리지 않는다 — 대부분의 날은 비어 있고, 빈 블록은
+  // 화면에 노이즈로만 남는다.
+  function buildScheduleHtml(sched) {
+    if (!sched) return '';
+    var own = sched.own || [], dev = sched.devices || [];
+    if (!own.length && !dev.length) return '';
+
+    function _rows(items, label) {
+      if (!items.length) return '';
+      var h = '<div class="aot-ov-sub-title">' + _esc(_t(label)) + '</div>';
+      items.forEach(function (it) {
+        h += '<div class="aot-ov-row"><span>' + _esc(it.content || '—') +
+             (it.worker ? ' <span class="aot-ov-muted">· ' +
+                          _esc(it.worker) + '</span>' : '') +
+             '</span><span>' + _esc(_fmtWhen(it.when)) + '</span></div>';
+      });
+      return h;
+    }
+    return '<div class="aot-ov-block aot-ov-schedule-upcoming">' +
+           '<div class="aot-ov-sec-title">' + _esc(_t('Coming up')) + '</div>' +
+           _rows(own, 'Field work') + _rows(dev, 'Device schedule') + '</div>';
+  }
+
+  // ISO(앵커 tz 포함) → 사람이 읽는 짧은 시각. 오늘이면 시각만 낸다 —
+  // 매 줄에 같은 날짜를 반복하면 정작 봐야 할 시간이 묻힌다.
+  function _fmtWhen(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    var hm = String(d.getHours()).padStart(2, '0') + ':' +
+             String(d.getMinutes()).padStart(2, '0');
+    var now = new Date();
+    if (d.toDateString() === now.toDateString()) return hm;
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm;
   }
 
   // ── 지금 심겨 있는 것 (구역 [현황]) ────────────────────────────────────────
@@ -1994,6 +2037,10 @@
     // 정상일 때는 나오지 않으므로 평소 화면을 어지럽히지 않는다.
     html += _plantingNoValveHtml(p);
 
+    // 다가오는 일정 — 구역과 **같은 빌더**를 쓴다. 비어 있으면 아무것도
+    // 그리지 않으므로 노트가 밀려나지 않는다.
+    html += buildScheduleHtml(p.schedule);
+
     // 노트 — 이 탭의 본론.
     html += _ovNotesBlock();
     return html;
@@ -2159,6 +2206,7 @@
     buildOverviewSection:  buildOverviewSection,
     buildAboutSection:     buildAboutSection,
     buildZoneStatusHtml:   buildZoneStatusHtml,
+    buildScheduleHtml:     buildScheduleHtml,
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildEnvNowHtml:       buildEnvNowHtml,
     wireEnvNowPick:        wireEnvNowPick,

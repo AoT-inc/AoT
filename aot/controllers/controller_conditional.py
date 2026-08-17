@@ -98,13 +98,20 @@ class ConditionalController(AbstractController, threading.Thread):
             finally:
                 clear_execution_context()
 
-            # Emit signal for AISchedulerService to track
-            conditional_fired.send(
-                self,
-                conditional_id=self.unique_id,
-                name=db_retrieve_table_daemon(Conditional, unique_id=self.unique_id, entry='first').name,
-                next_run=self.timer_period
-            )
+            # Emit signal for AISchedulerService to track — only when this
+            # cycle's user code actually called run_action()/run_all_actions()
+            # (AbstractConditional.action_fired). Every period tick used to
+            # send this signal regardless of outcome, which turned every
+            # active Conditional into a permanent once-a-period row in
+            # scheduler_jobs_meta (41,000+ rows/month on a single box —
+            # see project_scheduler_conditional_flood_incident memory).
+            if getattr(self.conditional_run, 'action_fired', False):
+                conditional_fired.send(
+                    self,
+                    conditional_id=self.unique_id,
+                    name=db_retrieve_table_daemon(Conditional, unique_id=self.unique_id, entry='first').name,
+                    next_run=self.timer_period
+                )
 
 
     def initialize_variables(self):
@@ -186,6 +193,11 @@ class ConditionalController(AbstractController, threading.Thread):
 
     def check_conditionals(self):
         """Check if conditional is activated and execute its user-defined code."""
+        # Reset before every cycle (not just on success) so a stale True from
+        # a prior cycle can never leak into this one's conditional_fired
+        # decision, including on the early-return/exception paths below.
+        self.conditional_run.action_fired = False
+
         cond = db_retrieve_table_daemon(
             Conditional, unique_id=self.unique_id, entry='first')
         if cond is None:

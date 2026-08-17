@@ -3058,3 +3058,159 @@ class TestHistoryRequestsAreBatched(unittest.TestCase):
         body = self._js().split('function _fetchPastSeries', 1)[1].split(
             '\n  function ', 1)[0]
         self.assertIn('jobs.length === 1', body)
+
+
+class TestScheduleScoping(unittest.TestCase):
+    """일정의 대상은 장치 id 만이 아니다.
+
+    `SchedulerJobMeta.target_id` 는 site·zone 도형 uuid 도 담는다 — 실제
+    데이터에 "제초작업 - 투입인원 4명…" 같은 농작업 이벤트가 필지/구역을
+    대상으로 들어 있다. 예전에는 장치 id 만 봐서 **그 계층 자신에게 걸린
+    일정이 그 계층 모달에서 영영 안 보였다**(실측: 1포장에 자기 uuid 를
+    대상으로 한 활성 이벤트가 있는데 집계는 0이었다).
+    """
+
+    def _src(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+
+    def test_targets_include_the_shape_itself(self):
+        from aot.aot_flask.geo import site_summary as ss
+
+        class _Shape(object):
+            unique_id = 'shape-1'
+
+        got = ss.schedule_targets(_Shape(), {'dev-a', 'dev-b'})
+        self.assertIn('shape-1', got)
+        self.assertIn('dev-a', got)
+
+    def test_targets_include_children_for_the_rollup(self):
+        """필지 요약은 이미 하위 구역의 장치·상태를 합산한다 — 일정만 자기
+        것으로 좁히면 같은 화면 안에서 기준이 갈린다."""
+        from aot.aot_flask.geo import site_summary as ss
+
+        class _Shape(object):
+            unique_id = 'site-1'
+
+        got = ss.schedule_targets(_Shape(), set(), ['zone-1', 'zone-2'])
+        self.assertEqual(got, {'site-1', 'zone-1', 'zone-2'})
+
+    def test_count_uses_the_shared_target_set(self):
+        body = self._src().split('def _schedule_count', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertIn('schedule_targets(', body)
+        # 장치 id 만 보던 옛 형태로 되돌아가면 안 된다
+        self.assertNotIn('target_id.in_(list(device_ids))', body)
+
+    def test_live_states_are_declared_once(self):
+        """세는 곳과 나열하는 곳이 다른 집합을 쓰면 "3건 예정" 인데 목록에는
+        2건만 나온다."""
+        src = self._src()
+        self.assertIn('SCHEDULE_LIVE_STATES', src)
+        self.assertEqual(src.count("('DRAFT', 'PENDING', 'RUNNING')"), 1)
+
+    def test_upcoming_splits_field_work_from_device_jobs(self):
+        """사람이 나가서 하는 일과 기계가 스스로 하는 일은 성격이 다르다."""
+        body = self._src().split('def upcoming_schedule', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertIn("'own'", body)
+        self.assertIn("'devices'", body)
+        self.assertIn('shape_targets', body)
+
+    def test_upcoming_reuses_the_ai_serializer(self):
+        """앵커 tz 로 벽시계를 맞추는 규칙이 거기 하나뿐이다 — 다시 만들면
+        같은 일정이 화면과 AI 답변에서 다른 시각으로 나온다."""
+        body = self._src().split('def upcoming_schedule', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertIn('_schedule_summary(row)', body)
+
+    def test_zone_contents_carries_schedule(self):
+        body = _read(_ROUTES_GEO).split('def _build_zone_contents', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertIn('upcoming_schedule(', body)
+        self.assertIn("'schedule': schedule", body)
+
+    def test_empty_schedule_draws_nothing(self):
+        """대부분의 날은 비어 있다 — 빈 블록은 화면에 노이즈로만 남는다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = js.split('function buildScheduleHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("if (!own.length && !dev.length) return '';", body)
+
+
+class TestPlantingSchedule(unittest.TestCase):
+    """구획에도 다가오는 일정을 낸다 — **닿는 것만**."""
+
+    def _src(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+
+    def test_detail_endpoint_carries_it_not_contents(self):
+        """**[현황] 탭은 상세 조회로 그려진다.**
+
+        `/contents` 는 [환경·제어] 전용이라, 거기 넣으면 API 에는 값이 있는데
+        화면에는 안 뜬다 — 실제로 그렇게 만들어 놓고 이 테스트의 옛 버전이
+        "contents 에 필드가 있는가" 만 보느라 통과시켰다. 사용자가 화면을
+        확인해 달라고 해서야 드러났다.
+        """
+        src = self._src()
+        self.assertIn("out['schedule'] = _planting_schedule(row)", src)
+        contents = src.split('def _build_planting_contents', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertNotIn("'schedule'", contents)
+
+    def test_scope_is_direct_not_the_whole_zone(self):
+        """구역 장치까지 넣으면 없앤 "구역 패널의 복사본" 이 일정 쪽으로
+        되살아난다."""
+        body = self._src().split('def _planting_schedule', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertIn('upcoming_schedule(row, plot | valves)', body)
+        self.assertNotIn('device_ids_in_shape', body)
+
+    def test_planting_itself_is_a_target(self):
+        """구획을 대상으로 하는 일정 경로가 생겼을 때 화면만 조용히 못
+        따라가는 일이 없게, 대상 집합에 구획 자신을 넣어 둔다."""
+        body = self._src().split('def _planting_schedule', 1)[1].split(
+            '\ndef ', 1)[0]
+        # upcoming_schedule 의 첫 인자가 구획 행이면 그 uuid 가 own 대상이 된다
+        self.assertIn('upcoming_schedule(row,', body)
+
+    def test_overview_renders_it_with_the_shared_builder(self):
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = js.split('function _plantingOverviewHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('buildScheduleHtml(p.schedule)', body)
+        # 노트가 여전히 마지막 — 일정 블록이 본론을 밀어내면 안 된다
+        self.assertLess(body.index('buildScheduleHtml'), body.index('_ovNotesBlock()'))
+
+
+class TestPlantingTimezone(unittest.TestCase):
+    """구획의 현지 시각은 **소속 구역**을 따른다.
+
+    `resolve_location_tz` 가 GeoPlanting 을 모르면 시스템 tz 로 조용히 떨어져,
+    여러 지역에 걸친 지도에서 구획에 걸린 일정이 남의 지역 시각으로 표시된다.
+    """
+
+    def _src(self):
+        return _read(os.path.join(_ROOT, 'utils', 'device_tz.py'))
+
+    def test_planting_branch_exists(self):
+        src = self._src()
+        body = src.split('def resolve_location_tz', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('GeoPlanting', body)
+        self.assertIn('zone_for_planting', body)
+
+    def test_it_resolves_through_the_container_not_its_own_column(self):
+        """구획에는 tz 컬럼이 없다 — 소속 도형의 resolve_timezone 을 쓴다
+        (설계 §8: 운영 그룹은 한 시계를 공유한다)."""
+        body = self._src().split('def resolve_location_tz', 1)[1].split(
+            '\ndef ', 1)[0]
+        self.assertIn('container.resolve_timezone()', body)
+
+    def test_lookup_failure_falls_through(self):
+        """구획 조회가 실패해도 장치 조회·시스템 폴백이 계속 이어져야 한다."""
+        body = self._src().split('def resolve_location_tz', 1)[1].split(
+            '\ndef ', 1)[0]
+        seg = body.split('GeoPlanting', 1)[1]
+        self.assertIn('except Exception', seg)
+        self.assertIn('return get_device_tz(None)', body)

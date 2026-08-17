@@ -185,7 +185,7 @@ if (!window._aotFacility3DLoaded) {
 <!-- 위젯 비가드 스크립트 9개 → 단일 번들(concat+minify, static/js/tools/bundle.mjs: aot-facility-widget).
      three.min/aot-facility-3d 가드 로드는 위에 그대로 유지(AoT_map 위젯과 공유 가드). 소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
 <script src="{{ asset('aot-facility-widget') }}"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=55">
+<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=57">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 """
 

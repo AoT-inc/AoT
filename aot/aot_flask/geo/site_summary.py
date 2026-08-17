@@ -361,7 +361,8 @@ def _build_summary(site_uuid):
             }, **_planting_counts(site)),
         },
         'children': children,
-        'today': _today_block(site, all_ids, offline_total, partial),
+        'today': _today_block(site, all_ids, offline_total, partial,
+                              [c.unique_id for c in children_shapes]),
         'notes': _notes_block(site, partial),
         'generated_at': _now_iso(),
         'partial': partial,
@@ -760,40 +761,116 @@ def _rollup_status(children):
 
 # ── 오늘 ────────────────────────────────────────────────────────────────────
 
-def _today_block(site, device_ids, offline_total, partial):
+def _today_block(site, device_ids, offline_total, partial, child_uuids=()):
     advice = _advice(site, partial)
     return {
-        'schedule_count': _schedule_count(site, device_ids, partial),
+        'schedule_count': _schedule_count(site, device_ids, partial, child_uuids),
         'advice_open': 1 if advice else 0,
         'offline_devices': offline_total,
         'advice_latest': advice,
     }
 
 
-def _schedule_count(site, device_ids, partial):
+# 아직 일어나지 않은 일정의 상태들. 한 곳에 둔다 — 세는 곳과 목록을 내는 곳이
+# 다른 집합을 쓰면 "3건 예정" 인데 목록에는 2건만 나온다.
+SCHEDULE_LIVE_STATES = ('DRAFT', 'PENDING', 'RUNNING')
+
+
+def schedule_targets(shape, device_ids, child_uuids=()):
+    """이 계층에 걸린 일정의 **대상 집합**.
+
+    `SchedulerJobMeta.target_id` 는 장치 id 만 담지 않는다 — 실제 데이터에는
+    site·zone 도형 uuid 를 대상으로 한 농작업 이벤트("제초작업 - 투입인원
+    4명…")가 들어 있다. 예전에는 장치 id 만 봐서 **그 계층 자신에게 걸린
+    일정이 그 계층 모달에서 영영 안 보였다**(실측: 1포장에 자기 uuid 를
+    대상으로 한 활성 이벤트가 있는데 그 모달의 집계는 0이었다).
+
+    자식 도형까지 넣는 이유는 이 값이 **롤업**이기 때문이다 — 필지 요약은
+    이미 하위 구역의 장치·상태를 합산해 보여준다. 일정만 자기 것으로 좁히면
+    같은 화면 안에서 기준이 갈린다.
+    """
+    targets = set(device_ids or ())
+    if shape is not None and getattr(shape, 'unique_id', None):
+        targets.add(shape.unique_id)
+    targets.update(u for u in (child_uuids or ()) if u)
+    return targets
+
+
+def _schedule_count(site, device_ids, partial, child_uuids=()):
     """오늘 예정된 작업 수.
 
-    **대상이 장치인 것만 센다.** 함수·시퀀스를 대상으로 하는 일정까지 풀려면
-    각 함수가 어느 구역에 속하는지 다시 해석해야 하는데, 그 해석이 이 팝업의
-    비용을 두 배로 만든다. 이건 실패가 아니라 정의상의 축소라서 `partial` 에
-    올리지 않는다 — 둘을 섞으면 "일부 실패"와 "원래 안 세는 것"을 구분할 수
-    없다.
+    **함수·시퀀스를 대상으로 하는 일정은 세지 않는다.** 각 함수가 어느 구역에
+    속하는지 다시 해석해야 하는데, 그 해석이 이 팝업의 비용을 두 배로 만든다.
+    이건 실패가 아니라 정의상의 축소라서 `partial` 에 올리지 않는다 — 둘을
+    섞으면 "일부 실패"와 "원래 안 세는 것"을 구분할 수 없다.
     """
     from aot.databases.models.scheduler import SchedulerJobMeta
 
-    if not device_ids:
+    targets = schedule_targets(site, device_ids, child_uuids)
+    if not targets:
         return 0
     try:
         start, end = _local_day_bounds_utc(site)
         return SchedulerJobMeta.query.filter(
-            SchedulerJobMeta.target_id.in_(list(device_ids)),
-            SchedulerJobMeta.state.in_(('DRAFT', 'PENDING', 'RUNNING')),
+            SchedulerJobMeta.target_id.in_(list(targets)),
+            SchedulerJobMeta.state.in_(SCHEDULE_LIVE_STATES),
             SchedulerJobMeta.schedule_time >= start,
             SchedulerJobMeta.schedule_time < end).count()
     except Exception as exc:
         logger.warning('[SiteSummary] 일정 조회 실패: %s', exc)
         _mark(partial, 'today.schedule')
         return 0
+
+
+def upcoming_schedule(shape, device_ids, child_uuids=(), limit=5):
+    """다가오는 일정 → `{'own': [...], 'devices': [...]}` (없으면 빈 목록).
+
+    **"오늘"이 아니라 "지금부터"** 인 이유: 구역 하나에 오늘 잡힌 일이 있는
+    날은 드물어서, 오늘만 보이면 그 블록은 대부분 비어 있다. 빈 블록은 화면에
+    노이즈로만 남는다. 필지의 숫자 타일은 창이 고정돼야 뜻이 서므로 "오늘"을
+    그대로 둔다 — 세는 것과 나열하는 것은 다른 질문이다.
+
+    `own` 은 이 도형(과 자식 도형)을 대상으로 한 농작업, `devices` 는 하위
+    장치의 예약이다. 둘은 성격이 다르다 — 사람이 나가서 하는 일과 기계가
+    스스로 하는 일이라 한 줄에 섞으면 무엇을 준비해야 하는지 읽히지 않는다.
+    """
+    from aot.databases.models.scheduler import SchedulerJobMeta
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService
+    from aot.utils.time_utils import utc_now
+
+    shape_targets = set()
+    if shape is not None and getattr(shape, 'unique_id', None):
+        shape_targets.add(shape.unique_id)
+    shape_targets.update(u for u in (child_uuids or ()) if u)
+    dev_targets = set(device_ids or ())
+    if not shape_targets and not dev_targets:
+        return {'own': [], 'devices': []}
+
+    try:
+        rows = SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.target_id.in_(list(shape_targets | dev_targets)),
+            SchedulerJobMeta.state.in_(SCHEDULE_LIVE_STATES),
+            SchedulerJobMeta.schedule_time.isnot(None),
+            SchedulerJobMeta.schedule_time >= utc_now().replace(tzinfo=None),
+        ).order_by(SchedulerJobMeta.schedule_time.asc()).limit(limit * 2).all()
+    except Exception as exc:
+        logger.warning('[SiteSummary] 예정 일정 조회 실패: %s', exc)
+        return {'own': [], 'devices': []}
+
+    out = {'own': [], 'devices': []}
+    for row in rows:
+        # 직렬화는 AI 도구와 **같은 함수**를 쓴다 — 앵커 tz 로 벽시계를 맞추는
+        # 규칙(§7)이 거기 하나뿐이라, 여기서 다시 만들면 같은 일정이 화면과
+        # AI 답변에서 다른 시각으로 나온다.
+        try:
+            item = AoTDataToolService._schedule_summary(row)
+        except Exception:
+            logger.exception('[SiteSummary] 일정 직렬화 실패')
+            continue
+        bucket = 'own' if row.target_id in shape_targets else 'devices'
+        if len(out[bucket]) < limit:
+            out[bucket].append(item)
+    return out
 
 
 def _local_day_bounds_utc(site):

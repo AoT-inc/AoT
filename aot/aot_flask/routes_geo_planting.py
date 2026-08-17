@@ -76,8 +76,37 @@ def api_planting_get(planting_uuid):
     row = GeoPlanting.query.filter_by(unique_id=planting_uuid).first()
     if row is None:
         return jsonify({'ok': False, 'message': 'planting not found'}), 404
-    return jsonify({'ok': True,
-                    'planting': planting_context.to_dict(row, with_sensors=True)})
+    out = planting_context.to_dict(row, with_sensors=True)
+    out['schedule'] = _planting_schedule(row)
+    return jsonify({'ok': True, 'planting': out})
+
+
+def _planting_schedule(row):
+    """구획의 다가오는 일정 — **이 구획에 닿는 것만**.
+
+    ⚠ **[현황] 탭은 이 응답(상세 조회)으로 그려진다.** `/contents` 는
+    [환경·제어] 전용이라, 거기 넣으면 API 에는 값이 있는데 화면에는 안 뜬다 —
+    실제로 그렇게 만들어 놓고 테스트까지 통과했다(테스트가 "contents 에 필드가
+    있는가" 를 봤기 때문이다). 어느 응답이 어느 탭을 그리는지 먼저 볼 것.
+
+    구역 장치까지 넣지 않는다 — 없앤 "구역 패널의 복사본" 이 일정 쪽으로
+    되살아난다. 구획 자신을 대상으로 한 이벤트도 함께 본다(지금은 그런 일정을
+    만드는 경로가 없어 늘 비지만, 빼 두면 경로가 생겼을 때 화면만 조용히 못
+    따라간다).
+    """
+    from aot.aot_flask.geo import device_membership
+    from aot.aot_flask.geo.site_summary import upcoming_schedule
+
+    try:
+        geom = planting_context.geometry_of(row)
+        plot = set(device_membership.device_ids_in_geometry(
+            row.geo_id, geom, _label='planting %s' % row.unique_id) or [])
+        valves = {v['device_id'] for v in planting_context.valves_for_planting(row)
+                  if v.get('device_id')}
+        return upcoming_schedule(row, plot | valves)
+    except Exception:
+        current_app.logger.exception('planting detail: 일정 조회 실패')
+        return {'own': [], 'devices': []}
 
 
 @blueprint.route('/api/geo/planting/<string:planting_uuid>/contents',

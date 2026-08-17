@@ -33,11 +33,19 @@ class AbstractConditional:
         self.message = message
         self.running = True
         self.control = DaemonControl(pyro_timeout=timeout)
+        # Set by run_action()/run_all_actions() when THIS check cycle actually
+        # triggered an action — the only reliable "did it really fire" signal,
+        # since conditional_statement is arbitrary user code with no other
+        # structured way to report outcome. ConditionalController resets this
+        # to False before each conditional_code_run() call and only emits
+        # conditional_fired when it ends up True (see controller_conditional.py).
+        self.action_fired = False
 
     def run_all_actions(self, message=None):
         """Trigger execution of all actions associated with this conditional."""
         if message is None:
             message = self.message
+        self.action_fired = True
         self.message = self.control.trigger_all_actions(self.function_id, message=message)
 
     def run_action(self, action_id, value=None, message=None):
@@ -61,6 +69,7 @@ class AbstractConditional:
         if value:
             send_dict['value'] = value
 
+        self.action_fired = True
         return_dict = self.control.trigger_action(
             full_action_id, value=send_dict)
 
