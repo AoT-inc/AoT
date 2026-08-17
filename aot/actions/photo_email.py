@@ -129,7 +129,8 @@ class ActionModule(AbstractFunctionAction):
                            smtp.user, smtp.passw, smtp.email_from,
                            email_recipients, message_send,
                            attachment_file=attachment_file,
-                           attachment_type="still")
+                           attachment_type="still",
+                           logger=self.logger)
             else:
                 self.logger.error(
                     f"Wait {smtp_wait_timer - time.time():.0f} seconds to email again.")

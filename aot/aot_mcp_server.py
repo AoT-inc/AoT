@@ -52,6 +52,15 @@ SERVER_VERSION = "1.0.0"
 # 동일 사용자가 여러 AoT 인스턴스의 MCP 서버를 동시에 붙였을 때 응답을 구분할 수
 # 있도록, 관리자가 별도로 설정하지 않아도 프로세스 호스트명을 자동으로 싣는다.
 SERVER_HOST = socket.gethostname()
+# initialize 응답의 result.instructions로 전달되는 안내문. MCP 클라이언트(사람이
+# 아니라 이 서버를 사용하는 AI)에게 노출되는 필드이므로, 도구 설명이 아니라 여기
+# 한 곳에만 적어 두면 모든 클라이언트/세션에 일관되게 반영된다.
+SERVER_INSTRUCTIONS = (
+    "When reporting results to the user, never surface raw unique_id/note_id "
+    "UUIDs. Most lookup tools here return both a human-readable name (zone, "
+    "crop, device, etc.) and its unique_id — refer to the entity by name "
+    "instead. Only include the raw id if the user explicitly asks for it."
+)
 
 # ── Native tool names handled by AoTNativeToolEngine ──────────────────────────
 _NATIVE_TOOLS = {"list_available_devices", "get_sensor_reading", "set_output_state"}
@@ -546,6 +555,7 @@ class StdioMCPServer:
                     "capabilities": {"tools": {}},
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                    "host": SERVER_HOST},
+                    "instructions": SERVER_INSTRUCTIONS,
                 },
             })
 
@@ -691,6 +701,7 @@ def _run_http_server(app, port=5700):
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                "host": SERVER_HOST},
+                "instructions": SERVER_INSTRUCTIONS,
             }}
         if method.startswith("notifications/"):
             return None                      # 알림에는 응답하지 않는다

@@ -974,7 +974,7 @@ class CustomModule(AbstractFunction):
             return
         send_email(smtp.host, smtp.protocol, smtp.port,
                    smtp.user, smtp.passw, smtp.email_from,
-                   self.email_notification, message)
+                   self.email_notification, message, logger=self.logger)
 
     def reset_timer_ec(self, args_dict):
         self.email_timers['notify_ec'] = 0

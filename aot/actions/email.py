@@ -94,7 +94,7 @@ class ActionModule(AbstractFunctionAction):
                 return message_send
             send_email(smtp.host, smtp.protocol, smtp.port,
                        smtp.user, smtp.passw, smtp.email_from,
-                       email_recipients, message_send)
+                       email_recipients, message_send, logger=self.logger)
         else:
             self.logger.error(
                 f"Wait {smtp_wait_timer - time.time():.0f} seconds to email again.")
