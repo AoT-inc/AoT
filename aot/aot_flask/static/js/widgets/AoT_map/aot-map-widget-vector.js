@@ -350,7 +350,17 @@
                         shell: _showFacilityCenterOverlay,
                         facilityCentric: !!_vegOpts.label_priority_facility,
                         labelSizeEm: _vegOpts.global_label_size,
-                        visible: !(_vegOpt === false || _vegOpt === 'false')
+                        visible: !(_vegOpt === false || _vegOpt === 'false'),
+                        // 구역·시설과 같은 옵션을 식생 모달도 따른다(탭 세 키가
+                        // 같아 매핑이 없다).
+                        defaultTab: _vegOpts.popup_default_tab,
+                        // [환경·제어] 배선은 위젯이 빌려준다 — shell 과 같은
+                        // 이음매다(_attachPlantingControl 주석 참조). 등록소를
+                        // 거치는 이유는 그 함수가 아직 정의되기 전이기 때문이다.
+                        attachControl: function (uid, popup, body, plantingUuid) {
+                            const fn = _plantingControlHooks[uid];
+                            if (fn) fn(uid, popup, body, plantingUuid);
+                        }
                     });
                 }
             } catch (e) {
@@ -571,6 +581,15 @@
     //
     // 같은 통로로 옮기면 세 가지가 함께 온다: TTL 안의 재요청은 왕복 없음,
     // 동시 요청 합치기(라벨 폴링과 클릭이 겹쳐도 한 번), 그리고 **호버 예열**.
+    // 식생 모달에 [환경·제어]를 붙여 주는 함수의 위젯별 등록소.
+    //
+    // 그 함수는 `loadGeoJSONLayers` 안(구역 모달 기계가 사는 곳)에 정의되는데,
+    // 식생 로더는 `initAoTMapVectorWidget` 에서 **그보다 먼저** 호출된다 —
+    // 이름을 직접 참조하면 다른 스코프라 ReferenceError 가 나고, 그 자리의
+    // try/catch 가 삼켜 **식생 레이어가 통째로 안 뜬다**(실제로 그렇게 됐다).
+    // 그래서 늦게 찾아 쓴다.
+    var _plantingControlHooks = {};
+
     function _modalUrl(kind, uuid, channel) {
         if (!uuid) return null;
         if (kind === 'site')  return '/api/geo/site/'  + encodeURIComponent(uuid) + '/summary';
@@ -818,6 +837,21 @@
             });
             _wireZoneRepPick(uid, pane, zoneUuid, data);
 
+            // 구획 줄 → 그 구획 모달로 내려간다. 구역 모달은 닫는다 —
+            // 모달 위에 모달을 쌓으면 뒤로 가기가 어디로 가는지 알 수 없다
+            // (필지 → 구역 줄 클릭과 같은 규약).
+            pane.querySelectorAll('.aot-ov-planting-link').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    var pUuid = row.dataset.plantingUuid;
+                    if (!pUuid || !window.AoTMapVegetation) return;
+                    var st = window.AoTMapVegetation.state(uid);
+                    if (!st || !st.opts) return;
+                    _closeZoneModal(uid);
+                    window.AoTMapVegetation.openModal(
+                        uid, (_actLabelState[uid] || {}).map, pUuid, st.opts);
+                });
+            });
+
             window.AoTNotesBlock.wire(pane,
                 { targetId: zoneUuid, targetType: 'GeoShape', name: z.name || '' },
                 { beforeOpen: function () { _closeZoneModal(uid); } });
@@ -1045,9 +1079,19 @@
         }
 
         // [센서·장치] 탭 렌더
+        //
+        // **구역과 식생이 이 하나를 함께 쓴다.** 모달은 한 번에 하나만 열리므로
+        // 상태 슬롯(`_zonePopupState[uid]`)도 공유한다 — 다른 점은 `z.scope`
+        // 하나뿐이다(`{kind:'zone'|'planting', uuid}`).
+        //
+        // 식생에서 달라지는 것은 **드래그 정렬을 저장하지 않는다** 는 것뿐이다:
+        // 장치 순서는 구역의 속성이라, 구획 창에서 바꾸면 그 구역을 보는 다른
+        // 사람의 순서까지 조용히 바뀐다. 구획별 순서를 따로 저장하는 것은
+        // "참조 결과를 저장하지 말 것"(C-2)에 걸린다.
         function _renderZoneDevices(uid, pane, data, zoneUuid) {
             var canCtrl = _zoneCanCtrl(uid);
             var z = _zonePopupState[uid] || {};
+            var isPlanting = !!(z.scope && z.scope.kind === 'planting');
             var outputOrder = (data.zone && data.zone.output_order) || [];
             var sensors = z._sensors || [];
             var html = '';
@@ -1057,15 +1101,37 @@
             if (sensors.length) {
                 var sensorTabs = sensors.length > 1
                     ? '<div class="aot-act-tabs-nav">' + sensors.map(function (s, i) {
+                        // 구역에서 빌려온 센서는 그 사실을 탭에서도 말한다 —
+                        // 안 그러면 구획마다 따로 잰 값으로 읽힌다.
                         return '<button type="button" class="aot-act-tab-btn' + (i === 0 ? ' active' : '') + '"' +
-                               ' data-sensor-idx="' + i + '">' + _escZ(s.name) + '</button>';
+                               ' data-sensor-idx="' + i + '">' + _escZ(s.name) +
+                               window.AoTMapPopup.scopeBadgeHtml(s.scope, s.distance_m,
+                                                                 s.nearest_reason) +
+                               window.AoTMapPopup.noDataBadgeHtml(s.no_data) + '</button>';
                       }).join('') + '</div>'
                     : '';
                 var sensorCharts = sensors.map(function (s, i) {
                     return '<div class="aot-bay-sensor-chart" data-sensor-idx="' + i + '"' +
                            (i === 0 ? '' : ' style="display:none"') + '></div>';
                 }).join('');
-                html += '<div class="aot-zone-sensor-sec">' + sensorTabs + sensorCharts + '</div>';
+                // 센서가 하나면 탭이 없어 이름도 배지도 걸릴 자리가 없다.
+                // 그런데 그 하나가 **구획 밖에서 온 값**이면(가장 가까운 것)
+                // 그 사실이 사라지는 것이 가장 위험하다 — 사용자는 이 구획에서
+                // 잰 값으로 읽는다. 탭 대신 설명 한 줄을 둔다(누를 것이 하나뿐인
+                // 탭은 아무것도 제어하지 않는 컨트롤이라 두지 않는다).
+                var sensorCaption = '';
+                if (sensors.length === 1 && sensors[0] && sensors[0].scope &&
+                        sensors[0].scope !== 'plot') {
+                    sensorCaption = '<div class="aot-ov-muted aot-zone-sensor-src">' +
+                        _escZ(sensors[0].name) +
+                        window.AoTMapPopup.scopeBadgeHtml(sensors[0].scope,
+                                                          sensors[0].distance_m,
+                                                          sensors[0].nearest_reason) +
+                        window.AoTMapPopup.noDataBadgeHtml(sensors[0].no_data) +
+                        '</div>';
+                }
+                html += '<div class="aot-zone-sensor-sec">' + sensorTabs +
+                        sensorCaption + sensorCharts + '</div>';
             } else {
                 // 입력(센서)이 없어도 그래프 영역은 항상 확보 — 장치 선택 전에는
                 // 안내 문구를 보여주고, 선택 시 _selectZoneOutputOverlay 가 이 자리에 렌더한다.
@@ -1098,10 +1164,21 @@
                         // 구역만 한 줄에 [설정][토글]을 몰아넣어, 같은 장치가
                         // 구역 목록과 시설 목록에서 다르게 생겼다.
                         var rtKey = out.unique_id + '::' + ch.channel;
+                        // 영향 범위 — "켜면 무엇이 함께 젖는가". 토글 바로
+                        // 아래(2행)에 둔다. 경고가 토글에서 멀어지면 켜는
+                        // 순간에는 안 읽힌다.
+                        var coverHtml = window.AoTMapPopup.coverageHtml(
+                            out.also_covers, out.coverage_pct);
                         html += window.AoTMapPopup.buildOutputRow({
                             slot: out.unique_id,
-                            name: rawLabel,
-                            drag: canCtrl,
+                            // rawName 이라 **여기서 이스케이프한다** — 장치
+                            // 이름은 사용자 입력이다.
+                            name: _escZ(rawLabel) +
+                                  window.AoTMapPopup.scopeBadgeHtml(out.scope,
+                                                                    out.distance_m,
+                                                                    out.nearest_reason),
+                            rawName: true,
+                            drag: canCtrl && !isPlanting,
                             nameAttrs: ' style="cursor:pointer"' +
                                 ' data-output-id="' + _escZ(out.unique_id) + '"' +
                                 ' data-output-name="' + _escZ(rawLabel) + '"',
@@ -1123,6 +1200,9 @@
                                       deferLast: true }) +
                                   '<span class="aot-act-rt" data-rt-key="' +
                                   _escZ(rtKey) + '"></span>',
+                            // 자기 줄을 갖는 칸으로 넘긴다 — meta 에 이어붙이면
+                            // 시간 숫자에 달라붙는다(buildOutputRow 주석 참조).
+                            note: coverHtml,
                             settings: canCtrl
                                 ? window.AoTMapPopup.scheduleButtonHtml({
                                       outputId: out.unique_id,
@@ -1151,8 +1231,9 @@
             // influx 를 계속 두들긴다(서버 주석 참조).
             _loadZoneOutputRuntimes(pane, outputs);
 
-            // 드래그 정렬
-            if (canCtrl && window.AoTActuatorOrder) {
+            // 드래그 정렬 — 구역에서만. 순서는 구역의 속성이라 구획 창에서
+            // 바꾸면 그 구역을 보는 다른 사람의 순서까지 함께 바뀐다.
+            if (canCtrl && !isPlanting && window.AoTActuatorOrder) {
                 var listEl = pane.querySelector('.aot-zone-output-list');
                 if (listEl) {
                     window.AoTActuatorOrder.makeSortable(listEl, {
@@ -1238,7 +1319,8 @@
                 html += '<div class="aot-act-row">' +
                         '<div class="aot-act-line">' +
                         '<span class="aot-act-name"' + nameAttrs + '>' + _escZ(fn.name) +
-                        ' <span class="aot-act-tag">' + _escZ(kl) + '</span></span>' +
+                        ' <span class="aot-act-tag">' + _escZ(kl) + '</span>' +
+                        window.AoTMapPopup.scopeBadgeHtml(fn.scope, fn.distance_m) + '</span>' +
                         ctrl +
                         '</div></div>';
             });
@@ -1542,6 +1624,97 @@
                 .catch(function () {});
         }
         // ── End Zone modal ─────────────────────────────────────────────────────
+
+        // ── 식생 모달에 [환경·제어]를 붙인다 ───────────────────────────────────
+        //
+        // 구획 모달 자체는 `aot-map-vegetation.js` 가 그린다(작물·기간·이력·노트는
+        // 그쪽 일이다). 제어 배선만 여기서 빌려준다 — 폴링·토글·예약·이력
+        // 오버레이가 전부 이 파일의 `_zonePopupState` 위에 서 있어서, 그쪽으로
+        // 옮기면 같은 기계를 두 벌 갖게 된다.
+        //
+        // `shell` 을 opts 로 넘기는 것과 같은 이음매다. 모달은 한 번에 하나만
+        // 열리므로 상태 슬롯도 구역과 **공유**한다 — 구역 모달이 열려 있었다면
+        // 그쪽 폴링은 이미 자기 close 훅에서 정리됐다.
+        function _attachPlantingControl(uid, popup, body, plantingUuid) {
+            if (!popup || !body) return;
+            var pane = body.querySelector('.aot-bay-popup-pane[data-pane="envctl"]');
+            if (!pane) return;
+
+            var prev = _zonePopupState[uid];
+            if (prev && prev.pollTimer) { clearInterval(prev.pollTimer); }
+            if (prev && prev.visHandler) {
+                document.removeEventListener('visibilitychange', prev.visHandler);
+            }
+
+            _zonePopupState[uid] = {
+                popup: popup,
+                // zoneUuid 는 비운다 — 구역 전용 쓰기(rep_key·output_order)가
+                // 실수로 구획 창에서 나가면 **그 구역을 보는 다른 사람의 설정**을
+                // 바꾼다. 값이 없으면 그 경로는 애초에 성립하지 않는다.
+                zoneUuid: null,
+                scope: { kind: 'planting', uuid: plantingUuid },
+                _sensors: [], _histCache: {},
+                overlayOutputId: null, overlayOutputName: null
+            };
+
+            popup.on('close', function () {
+                var z = _zonePopupState[uid];
+                if (z && z.popup === popup) {
+                    if (z.pollTimer) { clearInterval(z.pollTimer); }
+                    if (z.visHandler) {
+                        document.removeEventListener('visibilitychange', z.visHandler);
+                    }
+                    _zonePopupState[uid] = {};
+                }
+            });
+
+            pane.innerHTML = _buildZoneSkel();
+
+            fetch('/api/geo/planting/' + encodeURIComponent(plantingUuid) + '/contents',
+                  { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.ok) { pane.innerHTML = ''; return; }
+                    var z = _zonePopupState[uid];
+                    if (!z || z.popup !== popup || !pane.isConnected) return;
+
+                    z._sensors = data.sensors || [];
+                    // `_renderZoneDevices` 는 `data.zone.output_order` 를 읽는다.
+                    // 구획에는 순서가 없다 — 빈 객체를 주어 구역의 순서를
+                    // 빌려오지 않게 한다(빌려오면 구역 창과 달라 보인다).
+                    _renderZoneDevices(uid, pane, {
+                        zone: {}, outputs: data.outputs, functions: data.functions
+                    }, null);
+                    _startZoneOutputPolling(uid);
+
+                    // 소속 구역으로 올라가는 화살표. 구역 uuid 는 저장된 값이
+                    // 아니라 기하에서 파생된 것이라 이 응답에서만 알 수 있다.
+                    _wireUpBtn(body, uid, {
+                        kind: 'zone',
+                        uuid: (data.planting || {}).zone_uuid,
+                        name: (data.planting || {}).zone_name
+                    }, function () {
+                        var z2 = _zonePopupState[uid];
+                        if (z2 && z2.popup) { try { z2.popup.remove(); } catch (e) {} }
+                    });
+
+                    // 지금 이 탭이 열려 있으면 센서 차트를 바로 그린다(탭 클릭
+                    // 핸들러가 하는 지연 렌더를 대신한다).
+                    if (pane.style.display !== 'none') {
+                        var first = pane.querySelector('.aot-bay-sensor-chart');
+                        if (first && first.dataset.rendered !== '1') {
+                            _activateZoneSensorTab(uid, pane, 0);
+                        }
+                    }
+                })
+                .catch(function () { pane.innerHTML = ''; });
+
+            // 탭·토글·이력 오버레이는 구역과 같은 위임 핸들러를 쓴다.
+            _wireZoneTabs(body, uid, null);
+        }
+
+        // 식생 로더가 늦게 찾아 쓸 수 있게 등록한다(등록소 주석 참조).
+        _plantingControlHooks[uniqueId] = _attachPlantingControl;
 
         // ── 상위(필지)로 올라가는 화살표 — 구역·시설 모달 제목줄 공용 ──────────
         //
@@ -2257,6 +2430,17 @@
                 (counts.facilities || 0) + '</span></div>' +
                 '<div class="aot-ov-row"><span>' + _tr('Devices') + '</span><span>' +
                 (counts.devices || 0) + '</span></div>' +
+                // 작물은 **숫자로만** 낸다. 아래 구역 행(이름|값|상태)에
+                // 작물명을 이어붙이면 한 열이 두 가지를 말하게 되고 열 간격이
+                // 틀어진다 — 필지에서 알고 싶은 것은 규모 감각이다.
+                (counts.plantings
+                  ? '<div class="aot-ov-row"><span>' + _tr('Growing now') +
+                    '</span><span>' +
+                    _tr('%(crops)s crops · %(plots)s plots')
+                      .replace('%(crops)s', String(counts.crops || 0))
+                      .replace('%(plots)s', String(counts.plantings)) +
+                    '</span></div>'
+                  : '') +
                 '</div>';
 
             html += '<div class="aot-ov-block">' +
@@ -8065,6 +8249,37 @@
     }
 
     /**
+     * (Re)start the docked measurement panel's periodic poll, with a
+     * visibilitychange catch-up — same pattern as setupRefresh: while the tab
+     * is hidden the setInterval below no-ops every tick (document.hidden), so
+     * a tab left in the background for hours would otherwise sit on a stale
+     * value until its next natural tick after becoming visible again.
+     */
+    function _startPanelRefresh(instance, uniqueId, ms) {
+        if (instance.panelRefreshTimer) clearInterval(instance.panelRefreshTimer);
+        if (instance._panelRefreshVisHandler) {
+            document.removeEventListener('visibilitychange', instance._panelRefreshVisHandler);
+            instance._panelRefreshVisHandler = null;
+        }
+        var _lastTick = 0;
+        function _tick() {
+            _lastTick = Date.now();
+            refreshMeasurementPanelValues(uniqueId);
+        }
+        instance.panelRefreshTimer = setInterval(function() {
+            if (document.hidden) return;
+            if (!_isWidgetVisible(instance)) return;
+            _tick();
+        }, ms);
+        instance._panelRefreshVisHandler = function() {
+            if (document.hidden) return;
+            if (!_isWidgetVisible(instance)) return;
+            if ((Date.now() - _lastTick) >= ms) _tick();
+        };
+        document.addEventListener('visibilitychange', instance._panelRefreshVisHandler);
+    }
+
+    /**
      * Add bottom-center measurement panel using AoTMapCustomControls.
      */
     /**
@@ -8199,23 +8414,13 @@
 
             // Periodic refresh for measurement values
             const refreshMs = Math.max(10, (innerVars.input_update_interval || 60)) * 1000;
-            if (instance.panelRefreshTimer) clearInterval(instance.panelRefreshTimer);
-            instance.panelRefreshTimer = setInterval(function() {
-                if (document.hidden) return;
-                if (!_isWidgetVisible(instance)) return;
-                refreshMeasurementPanelValues(uniqueId);
-            }, refreshMs);
+            _startPanelRefresh(instance, uniqueId, refreshMs);
 
             // Expose a live setter for input_update_interval (settings-modal live-apply):
             // restart the same polling loop above with the new period, no panel rebuild.
             instance._setPanelRefreshInterval = function (seconds) {
                 var ms = Math.max(10, parseFloat(seconds) || 60) * 1000;
-                if (instance.panelRefreshTimer) clearInterval(instance.panelRefreshTimer);
-                instance.panelRefreshTimer = setInterval(function () {
-                    if (document.hidden) return;
-                    if (!_isWidgetVisible(instance)) return;
-                    refreshMeasurementPanelValues(uniqueId);
-                }, ms);
+                _startPanelRefresh(instance, uniqueId, ms);
             };
         }
     }
@@ -9901,10 +10106,14 @@
         if (instance.refreshTimer) {
             clearInterval(instance.refreshTimer);
         }
+        if (instance._deviceRefreshVisHandler) {
+            document.removeEventListener('visibilitychange', instance._deviceRefreshVisHandler);
+            instance._deviceRefreshVisHandler = null;
+        }
 
-        instance.refreshTimer = setInterval(function() {
-            if (document.hidden) return;
-            if (!_isWidgetVisible(instance)) return;
+        var _lastTick = 0;
+        function _tick() {
+            _lastTick = Date.now();
             const vars = instance.vars;
             const map = instance.map;
             if (!vars || !map) return;
@@ -9951,7 +10160,27 @@
                     }
                 })
                 .catch(function(e) { })
+        }
+
+        instance.refreshTimer = setInterval(function() {
+            if (document.hidden) return;
+            if (!_isWidgetVisible(instance)) return;
+            _tick();
         }, intervalSeconds * 1000);
+
+        // 탭이 오래(수 시간) 숨어 있는 동안 위 setInterval 은 매 틱 document.hidden 에
+        // 막혀 아무 것도 하지 않는다 — 다시 보이는 순간 다음 자연 틱까지 기다리지
+        // 않고 즉시 한 번 갱신한다. 레이어 갱신(7806줄 _overlayVisHandler)과 같은
+        // 패턴: "오랫동안 방문 없다가 열면 값이 안 뜨고 다음 갱신 주기까지 기다려야
+        // 한다"는 증상이 이 손잡이의 부재였다 — 값 자체는 서버가 이미 장치 주기
+        // 기준으로 조회 창을 넓혀 두므로(_effective_lookback) 항상 가져올 수 있는데,
+        // 클라이언트가 그 요청을 던지는 시점만 숨은 탭의 다음 틱까지 밀렸다.
+        instance._deviceRefreshVisHandler = function() {
+            if (document.hidden) return;
+            if (!_isWidgetVisible(instance)) return;
+            if ((Date.now() - _lastTick) >= intervalSeconds * 1000) _tick();
+        };
+        document.addEventListener('visibilitychange', instance._deviceRefreshVisHandler);
     }
 
     /**
@@ -9974,11 +10203,19 @@
             document.removeEventListener('visibilitychange', instance._rvVisHandler);
             instance._rvVisHandler = null;
         }
+        if (instance._deviceRefreshVisHandler) {
+            document.removeEventListener('visibilitychange', instance._deviceRefreshVisHandler);
+            instance._deviceRefreshVisHandler = null;
+        }
         if (instance.refreshTimer) {
             clearInterval(instance.refreshTimer);
         }
         if (instance.panelRefreshTimer) {
             clearInterval(instance.panelRefreshTimer);
+        }
+        if (instance._panelRefreshVisHandler) {
+            document.removeEventListener('visibilitychange', instance._panelRefreshVisHandler);
+            instance._panelRefreshVisHandler = null;
         }
         if (instance.outputStateTimer) {
             clearInterval(instance.outputStateTimer);

@@ -2153,3 +2153,908 @@ class TestValveIntersection(unittest.TestCase):
         self._valve_area(0.0)
         for key in ('water_l', 'liters', 'demand', 'amount'):
             self.assertNotIn(key, self._valves(row)[0])
+
+
+class _FakeCalRow(object):
+    """달력 계산(elapsed_days 등)은 행에서 날짜만 읽는다 — DB 를 켤 이유가 없다.
+
+    기존 `_FakeRow`(geometry 전용)를 고치지 않고 따로 둔다 — 그쪽 시그니처를
+    바꾸면 이미 그것을 쓰는 치수 테스트들이 함께 흔들린다.
+    """
+
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+
+class TestElapsedDays(unittest.TestCase):
+    """재배 일수 — 심은 날이 1일차, 끝난 작기는 종료일에서 멈춘다.
+
+    +1 을 한 곳에서만 한다. 화면마다 0일차/1일차가 갈리면 같은 두둑이 창마다
+    하루씩 다른 나이를 갖는다.
+    """
+
+    def _row(self, planted, ended=None, expected=None):
+        return _FakeCalRow(planted_on=planted, ended_on=ended,
+                           expected_end_on=expected)
+
+    def test_planting_day_is_day_one(self):
+        from aot.aot_flask.geo import planting_context
+        today = date.today()
+        self.assertEqual(planting_context.elapsed_days(self._row(today)), 1)
+
+    def test_counts_forward(self):
+        from aot.aot_flask.geo import planting_context
+        row = self._row(date.today() - timedelta(days=3))
+        self.assertEqual(planting_context.elapsed_days(row), 4)
+
+    def test_ended_planting_stops_at_its_end_date(self):
+        """작년에 끝난 작기가 오늘까지 나이를 먹으면 이력이 거짓말이 된다."""
+        from aot.aot_flask.geo import planting_context
+        row = self._row(date(2025, 4, 1), ended=date(2025, 6, 30))
+        self.assertEqual(planting_context.elapsed_days(row), 91)
+        # 며칠 뒤에 물어도 같은 답이어야 한다
+        self.assertEqual(
+            planting_context.elapsed_days(row, on=date(2026, 1, 1)), 91)
+
+    def test_no_planted_on_is_none_not_zero(self):
+        from aot.aot_flask.geo import planting_context
+        self.assertIsNone(planting_context.elapsed_days(self._row(None)))
+
+
+class TestDaysToExpectedEnd(unittest.TestCase):
+    """예상 종료까지 — 지난 것을 숨기지 않는다(음수로 낸다)."""
+
+    def _row(self, expected, ended=None):
+        return _FakeCalRow(planted_on=date.today() - timedelta(days=10),
+                           ended_on=ended, expected_end_on=expected)
+
+    def test_future_is_positive(self):
+        from aot.aot_flask.geo import planting_context
+        row = self._row(date.today() + timedelta(days=44))
+        self.assertEqual(planting_context.days_to_expected_end(row), 44)
+
+    def test_past_is_negative_not_hidden(self):
+        """늦어지고 있다는 것 자체가 사용자가 봐야 할 사실이다."""
+        from aot.aot_flask.geo import planting_context
+        row = self._row(date.today() - timedelta(days=12))
+        self.assertEqual(planting_context.days_to_expected_end(row), -12)
+
+    def test_ended_planting_has_no_countdown(self):
+        from aot.aot_flask.geo import planting_context
+        row = self._row(date.today() + timedelta(days=5), ended=date.today())
+        self.assertIsNone(planting_context.days_to_expected_end(row))
+
+    def test_unset_is_none(self):
+        from aot.aot_flask.geo import planting_context
+        self.assertIsNone(planting_context.days_to_expected_end(self._row(None)))
+
+
+class TestDimsAreDetailOnly(unittest.TestCase):
+    """치수는 상세 조회에만 싣는다 — 목록에서 행마다 돌릴 이유가 없다.
+
+    DB 를 타지 않지만 구획마다 최소회전 외접사각형을 구하는 기하 계산이다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'dims.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def _row(self):
+        # to_dict 는 소속 zone 을 공간 포함으로 파생하므로(저장하지 않는다)
+        # DB 가 필요하다 — 그 자체가 이 설계의 핵심이라 대역으로 가리지 않는다.
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlanting
+        GeoPlanting.query.delete()
+        row = GeoPlanting(geo_id='m-dims', crop='상추',
+                          planted_on=date.today(),
+                          feature={'type': 'Feature', 'properties': {},
+                                   'geometry': _square(0.0, 0.0, 0.0005)})
+        db.session.add(row)
+        db.session.commit()
+        return row
+
+    def test_list_payload_has_no_dims(self):
+        from aot.aot_flask.geo import planting_context
+        d = planting_context.to_dict(self._row(), with_sensors=False,
+                                     with_valves=False)
+        self.assertNotIn('dims', d)
+
+    def test_days_are_always_present(self):
+        """달력만 보는 값이라 목록에도 싣는다 — 구역 요약이 이걸 쓴다."""
+        from aot.aot_flask.geo import planting_context
+        d = planting_context.to_dict(self._row(), with_sensors=False,
+                                     with_valves=False)
+        self.assertEqual(d['days_since_planted'], 1)
+        self.assertIn('days_to_expected_end', d)
+
+    def test_dims_can_be_asked_for_explicitly(self):
+        from aot.aot_flask.geo import planting_context
+        d = planting_context.to_dict(self._row(), with_sensors=False,
+                                     with_valves=False, with_dims=True)
+        self.assertIsNotNone(d['dims'])
+        self.assertIn('width_m', d['dims'])
+
+    def test_ai_brief_does_not_carry_two_names_for_dimensions(self):
+        """`_planting_brief` 는 `dimensions` 키로 직접 싣는다 —
+        `to_dict` 가 `dims` 로 한 번 더 실으면 LLM 컨텍스트에 같은 것을
+        가리키는 이름이 둘이 된다."""
+        src = _read(os.path.join(_ROOT, 'ai', 'services',
+                                 'aot_data_tool_service.py'))
+        head = src.split('def _planting_brief', 1)[1][:900]
+        self.assertIn('with_dims=False', head)
+
+
+class TestAlsoCovers(unittest.TestCase):
+    """"켜면 무엇이 함께 젖는가" — valves_for_planting 의 역방향.
+
+    밸브를 켜는 사람이 알아야 하는 것은 "이 구획이 얼마나 젖는가" 가 아니라
+    무엇이 **함께** 젖는가다. 겹침이 정상인 도메인이라 한 밸브가 여러 작물을
+    적시는 것이 예외가 아니라 기본이다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'cover.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def setUp(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlanting
+        GeoPlanting.query.delete()
+        db.session.commit()
+
+    def _plot(self, x0, crop, size=0.001, ended=None):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlanting
+        row = GeoPlanting(geo_id='m-cov', crop=crop,
+                          planted_on=date.today() - timedelta(days=1),
+                          ended_on=ended,
+                          feature={'type': 'Feature', 'properties': {},
+                                   'geometry': _square(x0, 0.0, size)})
+        db.session.add(row)
+        db.session.commit()
+        return row
+
+    def _covered(self, geom, exclude=None):
+        from aot.aot_flask.geo import planting_context
+        return planting_context.plantings_covered_by_shape(
+            geom, 'm-cov', exclude_uuid=exclude)
+
+    def test_lists_every_plot_the_valve_touches(self):
+        a = self._plot(0.0, '상추')
+        self._plot(0.0005, '대파')          # 겹침
+        got = self._covered(_square(0.0, 0.0, 0.001), exclude=a.unique_id)
+        self.assertEqual([p['crop'] for p in got], ['대파'])
+
+    def test_excludes_itself(self):
+        """자기 자신이 "함께 젖는 것" 으로 나오면 안 된다."""
+        a = self._plot(0.0, '상추')
+        got = self._covered(_square(0.0, 0.0, 0.001), exclude=a.unique_id)
+        self.assertEqual(got, [])
+
+    def test_touching_edges_do_not_count(self):
+        """경계를 맞대고 있을 뿐인 옆 두둑은 함께 젖지 않는다."""
+        self._plot(0.001, '대파', size=0.001)      # 딱 붙어 있다
+        got = self._covered(_square(0.0, 0.0, 0.001))
+        self.assertEqual(got, [])
+
+    def test_ended_plantings_are_not_watered(self):
+        """끝난 작기는 이제 그 자리에 없다."""
+        self._plot(0.0005, '대파', ended=date.today() - timedelta(days=1))
+        got = self._covered(_square(0.0, 0.0, 0.001))
+        self.assertEqual(got, [])
+
+    def test_sorted_by_how_much_gets_wet(self):
+        self._plot(0.0009, '조금')          # 살짝 겹침
+        self._plot(0.0001, '많이')          # 많이 겹침
+        got = self._covered(_square(0.0, 0.0, 0.001))
+        self.assertEqual([p['crop'] for p in got], ['많이', '조금'])
+
+    def test_no_water_amount(self):
+        """역방향에서도 관수량을 계산하지 않는다."""
+        self._plot(0.0005, '대파')
+        got = self._covered(_square(0.0, 0.0, 0.001))
+        for key in ('water_l', 'liters', 'demand'):
+            self.assertNotIn(key, got[0])
+
+
+class TestAreaContentsIsShared(unittest.TestCase):
+    """구역과 식생이 인벤토리를 **같은 본체**로 센다.
+
+    두 벌로 복사하면 같은 장치를 두 화면이 다르게 세게 되고, 이 도메인은
+    이미 그 실패로 크게 데었다("같은 구역의 센서 수가 화면마다 달랐다").
+    """
+
+    def test_zone_builder_delegates(self):
+        src = _read(_ROUTES_GEO)
+        body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('_build_area_contents(', body)
+        # 구역이 자기 벌로 다시 세면 안 된다
+        self.assertNotIn('Output.query.filter(', body)
+        self.assertNotIn('DeviceMeasurements.query.filter_by(', body)
+
+    def test_planting_builder_delegates(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+        body = src.split('def _build_planting_contents', 1)[1]
+        self.assertIn('_build_area_contents(', body)
+        self.assertNotIn('Output.query.filter(', body)
+
+    def test_scope_is_opt_in_so_zone_payload_is_unchanged(self):
+        """구역은 빌려오는 것이 없다 — `scope` 키가 붙으면 안 된다."""
+        src = _read(_ROUTES_GEO)
+        body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        self.assertNotIn('scope_of', body)
+
+    def test_planting_is_not_a_container(self):
+        """구획은 컨테이너가 아니다 — 인벤토리를 만든다고 소속으로 만들지 말 것."""
+        src = _read(_MEMBERSHIP)
+        head = src.split('_CONTAINER_TYPES', 1)[1][:400]
+        self.assertNotIn('planting', head)
+        self.assertNotIn('vegetation', head)
+
+
+class TestPlantingCacheInvalidation(unittest.TestCase):
+    """저장·종료·삭제가 모달 캐시를 버린다.
+
+    쓰기는 REST 만 지나가는 것이 아니라 AI/MCP 도구도 `planting_io` 로 온다.
+    라우트에 흩으면 새 진입점이 조용히 빠지고, 증상은 "저장은 됐는데 화면이
+    30초 동안 안 바뀐다" 라 버그로 읽히지도 않는다.
+    """
+
+    def _io_src(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'planting_io.py'))
+
+    def test_every_commit_path_invalidates(self):
+        src = self._io_src()
+        for fn in ('def save_planting', 'def end_planting', 'def delete_planting'):
+            body = src.split(fn, 1)[1].split('\ndef ', 1)[0]
+            self.assertIn('_invalidate_caches()', body,
+                          '%s 가 캐시를 안 버린다' % fn)
+
+    def test_invalidation_clears_all_not_just_one(self):
+        """새 구획이 생기면 같은 밸브를 쓰는 이웃의 also_covers 도 달라진다."""
+        src = self._io_src()
+        body = src.split('def _invalidate_caches', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('invalidate_planting_contents(None)', body)
+
+    def test_planting_cache_is_separate_from_zone_cache(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+        self.assertIn('_PLANTING_CONTENTS_CACHE', src)
+        self.assertIn('def cached_planting_contents', src)
+
+
+class TestCoverageWarningIsSymmetric(unittest.TestCase):
+    """"켜면 무엇이 함께 젖는가" 는 **구역·식생 양쪽**에 있어야 한다.
+
+    식생 창에만 경고를 두면 "구역에서 켜면 안전하다"는 잘못된 대비가 생긴다.
+    구역에서 켠 밸브도 그 안의 여러 작물에 물을 준다.
+    """
+
+    def test_zone_contents_attaches_also_covers(self):
+        src = _read(_ROUTES_GEO)
+        body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('plantings_by_valve_device', body)
+        self.assertIn("also_covers", body)
+
+    def test_planting_contents_attaches_also_covers(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+        body = src.split('def _build_planting_contents', 1)[1]
+        self.assertIn('plantings_by_valve_device', body)
+        self.assertIn('also_covers', body)
+
+    def test_both_use_the_same_counter(self):
+        """따로 세면 같은 밸브가 두 화면에서 다른 작물 목록을 갖는다."""
+        zone = _read(_ROUTES_GEO).split(
+            'def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        plant = _read(os.path.join(
+            _ROOT, 'aot_flask', 'routes_geo_planting.py')).split(
+            'def _build_planting_contents', 1)[1]
+        for body in (zone, plant):
+            self.assertIn('covered_crop_names(', body)
+
+    def test_only_the_planting_view_excludes_itself(self):
+        """구역에서는 그 구역의 모든 작물이 나와야 한다 — 뺄 '자기' 가 없다."""
+        zone = _read(_ROUTES_GEO).split(
+            'def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        plant = _read(os.path.join(
+            _ROOT, 'aot_flask', 'routes_geo_planting.py')).split(
+            'def _build_planting_contents', 1)[1]
+        self.assertNotIn('exclude_uuid', zone)
+        self.assertIn('exclude_uuid', plant)
+
+    def test_names_not_uuids(self):
+        """화면에 uuid 를 내보내지 않는다 — 사람이 읽을 이름만."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
+                                 'planting_context.py'))
+        body = src.split('def covered_crop_names', 1)[1].split('\ndef ', 1)[0]
+        self.assertNotIn("'unique_id'", body.split('exclude_uuid')[-1])
+
+
+class TestPlantingControlReusesZoneMachinery(unittest.TestCase):
+    """식생 [환경·제어]는 구역의 기계를 **빌려 쓴다**.
+
+    폴링·토글·예약·이력 오버레이를 따로 구현하면 같은 장치가 두 화면에서
+    다르게 움직인다. 모달은 한 번에 하나만 열리므로 상태 슬롯도 공유한다.
+    """
+
+    def _vector(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map',
+                                  'aot-map-widget-vector.js'))
+
+    def test_planting_does_not_get_its_own_polling(self):
+        src = self._vector()
+        body = src.split('function _attachPlantingControl', 1)[1].split(
+            '\n        function ', 1)[0]
+        self.assertIn('_startZoneOutputPolling(uid)', body)
+        self.assertIn('_renderZoneDevices(', body)
+        self.assertIn('_wireZoneTabs(', body)
+
+    def test_planting_never_writes_zone_scoped_settings(self):
+        """구획 창에서 구역 설정(rep_key·output_order)을 쓰면 **그 구역을 보는
+        다른 사람의 설정**이 바뀐다. zoneUuid 를 비워 그 경로를 없앤다."""
+        src = self._vector()
+        body = src.split('function _attachPlantingControl', 1)[1].split(
+            '\n        // ── ', 1)[0]
+        self.assertIn('zoneUuid: null', body)
+        # 주석은 그 두 이름을 **설명하려고** 언급한다 — 코드만 본다.
+        code = '\n'.join(l for l in body.split('\n')
+                         if not l.lstrip().startswith('//'))
+        self.assertNotIn("/output_order", code)
+        self.assertNotIn("/rep_key", code)
+
+    def test_drag_reorder_is_zone_only(self):
+        src = self._vector()
+        body = src.split('function _renderZoneDevices', 1)[1].split(
+            '\n        function ', 1)[0]
+        self.assertIn('isPlanting', body)
+        self.assertIn('canCtrl && !isPlanting && window.AoTActuatorOrder', body)
+
+    def test_hook_is_late_bound(self):
+        """제어 함수는 식생 로더보다 **늦게** 정의된다 — 직접 참조하면
+        ReferenceError 가 나고 try/catch 가 삼켜 식생 레이어가 통째로 안 뜬다."""
+        src = self._vector()
+        self.assertIn('_plantingControlHooks', src)
+        self.assertIn('_plantingControlHooks[uniqueId] = _attachPlantingControl',
+                      src)
+        # 로더 쪽은 등록소를 거쳐야 한다(이름 직접 참조 금지)
+        loader = src.split('AoTMapVegetation.load(', 1)[1][:900]
+        self.assertNotIn('attachControl: _attachPlantingControl', loader)
+
+
+class TestScopeBadgeAndCoverageMarkup(unittest.TestCase):
+    """배지·경고의 표시 규칙 — 색을 고정하지 않고, 숨기지 않는다."""
+
+    def _popup(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
+
+    def _css(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css',
+                                  'widget', 'aot-sensor-label.css'))
+
+    def test_only_nearest_gets_a_badge(self):
+        """배지는 `nearest` 하나뿐이다.
+
+        'plot' 은 기본이라 말할 것이 없고, 'irrigation' 은 **마커가 구획 밖에
+        있다**는 뜻일 뿐인데 화면에서는 기능 분류처럼 읽혔다 — 같은 밸브가
+        구획에 따라 [관수] 였다 아니었다 했다. 왜 여기 있고 얼마나 중요한지는
+        덮는 비율이 이미 말한다. 거리는 비율이 대신 말해 주지 못한다.
+        """
+        body = self._popup().split('function scopeBadgeHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("scope === 'nearest'", body)
+        self.assertNotIn("scope === 'irrigation'", body)
+        self.assertIn("return '';", body)
+
+    def test_irrigation_badge_style_is_gone_too(self):
+        self.assertNotIn('aot-scope-irrigation', self._css())
+
+    def test_zone_scope_is_gone(self):
+        """'구역에 있다' 는 이유만으로 싣던 것은 폐지됐다 — 이 구획에 닿지도
+        않는 장치까지 나와 식생 패널이 구역 패널의 복사본이 됐다."""
+        body = self._popup().split('function scopeBadgeHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertNotIn("scope === 'zone'", body)
+
+    def test_badge_color_is_inherited_not_fixed(self):
+        """고정색을 주면 어느 바탕과 반드시 부딪친다 — 실제로 비활성 탭
+        배경과 같은 값이라 글자가 통째로 사라졌다."""
+        css = self._css()
+        block = css.split('.aot-act-tag.aot-scope-nearest', 1)[1][:700]
+        self.assertIn('color: inherit', block)
+        self.assertIn('border: 1px solid currentColor', block)
+
+    def test_percent_is_not_double_escaped(self):
+        """printf 가 아니라 문자열 치환이라 %% 는 그대로 두 개가 찍힌다."""
+        body = self._popup().split('function coverageHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertNotIn('%% of this plot', body)
+        self.assertIn('%(pct)s% of this plot', body)
+
+    def test_coverage_goes_in_its_own_slot(self):
+        """meta 에 이어붙이면 `.aot-act-meta-text` 안쪽이라 flex 자식이 아니고,
+        줄바꿈이 안 먹어 시간 숫자에 달라붙는다."""
+        popup = self._popup()
+        row = popup.split('function buildOutputRow', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('opts.note', row)
+        vector = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                    'widgets', 'AoT_map',
+                                    'aot-map-widget-vector.js'))
+        self.assertIn('note: coverHtml', vector)
+
+    def test_coverage_is_not_hidden_behind_a_tooltip(self):
+        """물은 되돌릴 수 없다 — 접거나 툴팁으로 숨기지 않는다."""
+        css = self._css()
+        block = css.split('.aot-act-coverage {', 1)[1][:400]
+        self.assertNotIn('display: none', block)
+        self.assertIn('white-space: normal', block)
+
+
+class TestZoneShowsWhatIsPlanted(unittest.TestCase):
+    """구역 [현황]이 "지금 심겨 있는 것" 을 싣는다.
+
+    농장 지도인데 계층 어디에도 작물이 없었다 — 구역 모달은 센서·장치·기능만
+    알고 무엇이 자라는지는 몰랐다.
+    """
+
+    def test_zone_contents_carries_allocation(self):
+        src = _read(_ROUTES_GEO)
+        body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('zone_allocation(', body)
+        self.assertIn("'allocation'", body)
+
+    def test_allocation_reports_days(self):
+        """"무엇이 며칠째" 를 한 줄로 말하려면 재배 일수가 배분에 있어야 한다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
+                                 'planting_context.py'))
+        body = src.split('def zone_allocation', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('days_since_planted', body)
+        self.assertIn('elapsed_days(row', body)
+
+    def test_unassigned_uses_union_not_sum(self):
+        """단순 합으로 빼면 겹친 만큼 이중으로 빠져 미배정이 음수가 된다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
+                                 'planting_context.py'))
+        body = src.split('def zone_allocation', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('unary_union', body)
+
+    def test_no_total_row_in_the_ui(self):
+        """비율의 합이 100%를 넘는 것이 정상이라(간작·혼작) 합계를 내지 않는다 —
+        띄우면 사용자가 그것을 오류로 읽는다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = src.split('function buildZonePlantingsHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        for word in ("_t('Total')", "'Sum'", 'reduce('):
+            self.assertNotIn(word, body)
+
+    def test_rows_link_down_to_the_planting(self):
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertIn('aot-ov-planting-link', popup)
+        vector = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                    'widgets', 'AoT_map',
+                                    'aot-map-widget-vector.js'))
+        body = vector.split('function _renderZoneOverview', 1)[1].split(
+            '\n        function ', 1)[0]
+        # 내려가기 전에 구역 모달을 닫는다 — 모달을 쌓지 않는다
+        self.assertIn('_closeZoneModal(uid)', body)
+        self.assertIn('AoTMapVegetation.openModal', body)
+
+
+class TestSiteCropCount(unittest.TestCase):
+    """필지는 작물을 **숫자로만** 낸다.
+
+    구역 행은 이미 `이름 | 값 | 상태` 3열이라 작물명을 이어붙이면 한 열이 두
+    가지를 말하게 되고 열 간격이 틀어진다.
+    """
+
+    def test_counts_include_crops(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+        self.assertIn('_planting_counts', src)
+        body = src.split('def _planting_counts', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn("'crops'", body)
+        self.assertIn("'plantings'", body)
+
+    def test_child_rows_do_not_carry_crop_names(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+        body = src.split('def _child_entry', 1)[1].split('\ndef ', 1)[0]
+        self.assertNotIn('crop', body)
+
+    def test_failure_does_not_break_the_site_modal(self):
+        """식생이 없는 지도가 정상이다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+        body = src.split('def _planting_counts', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('except Exception', body)
+        self.assertIn("{'crops': 0, 'plantings': 0}", body)
+
+
+class TestPlantingCacheAlsoDropsZone(unittest.TestCase):
+    """구획을 고치면 **구역 응답도** 달라진다.
+
+    구역 [현황]이 작물 목록·면적 배분을 싣고 출력마다 `also_covers` 를 단다.
+    구획의 소속은 저장돼 있지 않고 기하에서 파생되므로, 기하를 옮기면 "전" 과
+    "후" 두 구역이 함께 낡는다 — 어느 쪽인지 따지지 않고 전부 버린다.
+    """
+
+    def test_invalidates_zone_cache_too(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'planting_io.py'))
+        body = src.split('def _invalidate_caches', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('invalidate_zone_contents_all()', body)
+
+    def test_helper_exists(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+        self.assertIn('def invalidate_zone_contents_all', src)
+
+
+class TestPlantingGoesUpToItsZone(unittest.TestCase):
+    """식생 → 구역 → 필지로 거슬러 올라갈 수 있어야 한다.
+
+    계층이 한 방향으로만 흐르면 위젯 안에서 길을 잃는다.
+    """
+
+    def test_header_has_the_up_button(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = src.split('function buildPlantingModal', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('up: true', body)
+
+    def test_up_target_is_the_zone_from_the_response(self):
+        """구역 uuid 는 저장된 값이 아니라 기하에서 파생된다 —
+        응답에서만 알 수 있으므로 하드코딩하거나 추측하지 않는다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map',
+                                 'aot-map-widget-vector.js'))
+        body = src.split('function _attachPlantingControl', 1)[1].split(
+            '\n        // ── ', 1)[0]
+        self.assertIn("kind: 'zone'", body)
+        self.assertIn('zone_uuid', body)
+
+
+class TestPlantingShowsOnlyWhatItTouches(unittest.TestCase):
+    """식생 패널은 **이 구획에 닿는 것만** 낸다.
+
+    합집합(구획 안 ∪ 구역 전체 ∪ 밸브)으로 내던 시절에는 이 구획에 물 한 방울
+    주지 않는 밸브까지 올라와, 식생 패널이 구역 패널의 복사본이 됐다 — 그럴
+    거면 구역 패널을 열면 된다. 실측(김제 새바람): 출력 4개 중 실제로 닿는
+    것은 2개, 나머지 둘은 교차가 0이었다.
+    """
+
+    def _src(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+
+    def _body(self):
+        return self._src().split('def _build_planting_contents', 1)[1]
+
+    def test_zone_devices_are_not_unioned_in(self):
+        body = self._body()
+        self.assertNotIn('plot_ids | zone_ids | valve_ids', body)
+        self.assertIn('direct = plot_ids | valve_ids', body)
+
+    def test_fallback_is_per_kind(self):
+        """종류를 섞어 판정하면 "센서는 있는데 밸브가 없는" 구획에서 센서까지
+        폴백이 걸린다."""
+        body = self._body()
+        self.assertIn("for kind in ('inputs', 'outputs', 'functions')", body)
+        self.assertIn('have = kinds_direct[kind]', body)
+        self.assertIn('if have or not kinds_zone[kind]', body)
+
+    def test_fallback_takes_only_the_closest(self):
+        body = self._body()
+        self.assertIn('nearest_devices(', body)
+        self.assertIn('limit=1', body)
+
+    def test_distance_is_reported(self):
+        """왜 여기 있는지, 얼마나 믿을 값인지 판단할 근거."""
+        self.assertIn("item['distance_m'] = nearest", self._body())
+
+    def test_devices_without_markers_are_skipped(self):
+        """위치를 모르면 "가장 가깝다" 고 말할 근거가 없다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
+                                 'planting_context.py'))
+        body = src.split('def nearest_devices', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('load_markers', body)
+        self.assertIn('representative_point', body)
+
+    def test_single_sensor_still_says_where_it_came_from(self):
+        """센서가 하나면 탭이 없어 배지가 걸릴 자리가 없다 — 그 하나가 구획
+        밖에서 온 값이면 그 사실이 사라지는 것이 가장 위험하다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map',
+                                 'aot-map-widget-vector.js'))
+        self.assertIn('aot-zone-sensor-src', src)
+        self.assertIn("sensors[0].scope !== 'plot'", src)
+
+
+class TestOverviewIsAboutNotesNotDevices(unittest.TestCase):
+    """식생 [현황]의 중심은 **노트**다.
+
+    현 상황(관찰·작업·사진)을 말할 수 있는 것은 노트뿐이다. 예전에는 여기에
+    "이 구획 안의 센서 · 1" 같은 **개수**와 밸브 커버리지 목록이 있었다 —
+    값도 없이 장치 이야기만 하면서 정작 봐야 할 노트를 아래로 밀어냈고,
+    그 내용은 [환경·제어]가 값·배지·영향 범위까지 제대로 낸다.
+    """
+
+    def _body(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        return src.split('function _plantingOverviewHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+
+    def test_no_device_listing(self):
+        body = self._body()
+        for gone in ('_plantingSensorsHtml', '_plantingValvesHtml'):
+            self.assertNotIn(gone, body)
+
+    def test_those_helpers_are_deleted_not_orphaned(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        self.assertNotIn('function _plantingSensorsHtml', src)
+        self.assertNotIn('function _plantingValvesHtml', src)
+
+    def test_notes_are_present(self):
+        self.assertIn('_ovNotesBlock()', self._body())
+
+    def test_missing_valve_is_still_reported(self):
+        """밸브 목록이 아니라 **빠진 것**을 알리는 줄은 남는다 — "적실 수단이
+        아직 없다" 는 장치 나열이 아니라 상태다."""
+        self.assertIn('_plantingNoValveHtml', self._body())
+
+
+class TestInvolvementOrdering(unittest.TestCase):
+    """관여도가 높은 장치가 위로.
+
+    DB 순서 그대로 두면 이 구획의 75.9% 를 적시는 밸브가 24.1% 짜리 아래로
+    내려간다(실측). 급한 상황에서 사람은 맨 위를 누른다.
+    """
+
+    def _key(self):
+        import importlib
+        mod = importlib.import_module('aot.aot_flask.routes_geo_planting')
+        return mod._involvement_key
+
+    def test_higher_coverage_comes_first(self):
+        key = self._key()
+        rows = [{'name': 'low', 'scope': 'irrigation', 'coverage_pct': 24.1},
+                {'name': 'high', 'scope': 'plot', 'coverage_pct': 75.9}]
+        rows.sort(key=key)
+        self.assertEqual([r['name'] for r in rows], ['high', 'low'])
+
+    def test_plot_device_without_coverage_counts_as_full(self):
+        """비율은 밸브에만 있는 개념이다 — 구획 안의 팬·조명에는 잴 것이 없다."""
+        key = self._key()
+        rows = [{'name': 'valve', 'scope': 'irrigation', 'coverage_pct': 90.0},
+                {'name': 'fan', 'scope': 'plot'}]
+        rows.sort(key=key)
+        self.assertEqual([r['name'] for r in rows], ['fan', 'valve'])
+
+    def test_nearest_always_last(self):
+        key = self._key()
+        rows = [{'name': 'far', 'scope': 'nearest', 'distance_m': 5.0},
+                {'name': 'weak', 'scope': 'irrigation', 'coverage_pct': 0.1}]
+        rows.sort(key=key)
+        self.assertEqual([r['name'] for r in rows], ['weak', 'far'])
+
+    def test_same_scope_is_ordered_by_coverage(self):
+        """스코프가 같으면 비율만이 순서를 정한다.
+
+        이 경우가 실제 버그를 드러냈다 — plot/irrigation 이 섞인 구획은
+        스코프만으로도 우연히 맞아서 한동안 안 보였다.
+        """
+        key = self._key()
+        rows = [{'name': 'v312', 'scope': 'irrigation', 'coverage_pct': 39.8},
+                {'name': 'v321', 'scope': 'irrigation', 'coverage_pct': 60.2}]
+        rows.sort(key=key)
+        self.assertEqual([r['name'] for r in rows], ['v321', 'v312'])
+
+    def test_coverage_is_attached_before_sorting(self):
+        """**호출 순서**가 틀리면 키가 맞아도 결과가 틀린다.
+
+        정렬이 `coverage_pct` 부착보다 앞서면 정렬 시점에 비율이 없어 전부
+        0으로 읽히고 조용히 이름순으로 떨어진다. 실제로 그렇게 나갔다
+        (블랙틴: 39.8% 가 60.2% 보다 위). 키만 단위테스트하면 못 잡는다.
+        """
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+        body = src.split('def _build_planting_contents', 1)[1]
+        attach = body.index("out['coverage_pct'] = pct")
+        sort_at = body.index('inv[group].sort(key=_involvement_key)')
+        self.assertLess(attach, sort_at,
+                        'coverage_pct 부착이 관여도 정렬보다 뒤에 있다')
+
+    def test_zone_modal_keeps_its_drag_order(self):
+        """사람이 드래그로 정한 순서는 명시적 의사표시라 계산이 이겨선 안 된다."""
+        src = _read(_ROUTES_GEO)
+        body = src.split('def _build_zone_contents', 1)[1].split('\ndef ', 1)[0]
+        self.assertNotIn('_involvement_key', body)
+
+
+class TestFallbackWhenSensorGivesNoData(unittest.TestCase):
+    """구획 안에 센서가 **있어도 값을 못 주면** 인접 센서를 함께 낸다.
+
+    빈 차트만 보여주면 사용자는 "이 구획은 볼 값이 없다" 로 읽는다 — 바로
+    옆에 멀쩡한 센서가 있는데도.
+    """
+
+    def _src(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'routes_geo_planting.py'))
+
+    def test_liveness_not_just_existence(self):
+        body = self._src().split('def _build_planting_contents', 1)[1]
+        self.assertIn('_env_of(', body)
+        self.assertIn("valid', 0) == 0", body)
+        self.assertIn("reason = 'stale'", body)
+
+    def test_dead_sensor_is_kept_not_hidden(self):
+        """빼면 고장이 화면에서 사라져 아무도 고치지 않는다."""
+        body = self._src().split('def _build_planting_contents', 1)[1]
+        self.assertIn("item['no_data'] = True", body)
+
+    def test_live_sensor_is_ordered_first(self):
+        """첫 탭이 자동으로 그려진다 — 죽은 센서가 앞이면 열자마자 빈 차트다."""
+        import importlib
+        mod = importlib.import_module('aot.aot_flask.routes_geo_planting')
+        rows = [{'name': 'dead', 'scope': 'plot', 'no_data': True},
+                {'name': 'live', 'scope': 'nearest', 'distance_m': 36.6}]
+        rows.sort(key=mod._sensor_order_key)
+        self.assertEqual([r['name'] for r in rows], ['live', 'dead'])
+
+    def test_liveness_uses_the_shared_counter(self):
+        """필지·구역이 "센서 응답 2/3" 을 셀 때 쓰는 것과 같은 함수여야 한다."""
+        body = self._src().split('def _env_of', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('env_for_devices', body)
+
+    def test_query_failure_is_not_read_as_dead(self):
+        """인플럭스가 잠깐 흔들릴 때마다 옆 구획 센서로 갈아타면 안 된다."""
+        body = self._src().split('def _env_of', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn("'valid': 1", body.split('except Exception')[1])
+
+    def test_env_is_measured_once_not_twice(self):
+        """판정용과 인벤토리용으로 같은 influx 왕복을 두 번 하지 않는다
+        (실측 약 64ms). 집합이 안 바뀌었으면 잰 것을 그대로 넘긴다."""
+        body = self._src().split('def _build_planting_contents', 1)[1]
+        self.assertIn('env=(None if added_input else plot_env)', body)
+        src = _read(_ROUTES_GEO)
+        head = src.split('def _build_area_contents', 1)[1][:200]
+        self.assertIn('env=None', head)
+
+
+class TestNoDataStatusTakesItsOwnSpace(unittest.TestCase):
+    """차트 없이 문구만 남을 때 absolute 를 푼다.
+
+    absolute 는 로딩 중 차트 **위에** 얹히기 위한 것이다. 그릴 차트가 없으면
+    부모 높이가 0이 되어 문구가 아래 장치 목록 위로 겹쳐 앉는다(실측 118px).
+    """
+
+    def _js(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'common', 'sensor-label.js'))
+
+    def test_empty_chart_box_is_removed(self):
+        body = self._js().split('function renderHistory', 1)[1]
+        seg = body.split('if (!series.length)', 1)[1][:400]
+        self.assertIn('chartEl.remove()', seg)
+        self.assertIn('_standaloneStatus(', seg)
+
+    def test_both_empty_paths_use_the_same_helper(self):
+        body = self._js().split('function renderHistory', 1)[1]
+        self.assertEqual(body.count('_standaloneStatus('), 2)
+
+    def test_css_releases_absolute(self):
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css',
+                                 'widget', 'aot-sensor-label.css'))
+        block = css.split('.aot-sensor-popup-chart-status.is-standalone', 1)[1][:300]
+        self.assertIn('position: static', block)
+        self.assertIn('min-height', block)
+
+
+class TestHistoryRequestsAreBatched(unittest.TestCase):
+    """센서 이력을 채널마다 낱개로 치지 않는다.
+
+    온습도 노드 하나가 6채널이면 차트 한 개에 요청 6건이고, 브라우저의 오리진당
+    ~6 연결 상한에 그대로 걸린다 — 폰에서는 그만큼 라디오를 깨운다.
+    `/data_batch` 가 이미 `kind:'past'` 를 받고 응답 모양도 같다.
+    """
+
+    def _js(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'common', 'sensor-label.js'))
+
+    def test_uses_the_batch_endpoint(self):
+        body = self._js().split('function _fetchPastSeries', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("'/data_batch'", body)
+        self.assertIn("kind: 'past'", body)
+
+    def test_falls_back_to_single_requests(self):
+        """배치가 실패해도 차트가 비면 안 된다 —
+        `aot-data-batch.js` 의 directFallback 과 같은 태도."""
+        body = self._js().split('function _fetchPastSeries', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('_fetchPastOneByOne(chunk, past)', body)
+        self.assertEqual(body.count('_fetchPastOneByOne'), 3)  # 길이불일치·throw·단건
+
+    def test_length_mismatch_is_not_trusted(self):
+        """정렬이 깨진 배치 결과를 그리면 온도 자리에 습도가 들어간다."""
+        body = self._js().split('function _fetchPastSeries', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('res.length !== chunk.length', body)
+
+    def test_chunk_cap_matches_server_workers(self):
+        """서버가 past 를 동시에 처리하므로(_run_past_jobs, 워커 8) 한 요청이
+        곧 한 번의 동시 실행 파도다 — 상한을 워커 수에 맞춘다."""
+        self.assertIn('_PAST_BATCH_MAX = 8', self._js())
+        rg = _read(os.path.join(_ROOT, 'aot_flask', 'routes_general.py'))
+        self.assertIn('_BATCH_MAX_WORKERS = 8', rg)
+
+    def test_server_runs_past_items_concurrently(self):
+        """ORM·request 는 요청 스레드에서 다 풀고, 스레드에는 문자열·숫자만
+        들어간다 — 그래야 influx 조회를 동시에 돌릴 수 있다."""
+        rg = _read(os.path.join(_ROOT, 'aot_flask', 'routes_general.py'))
+        self.assertIn('def _run_past_jobs', rg)
+        self.assertIn('def _resolve_past_job', rg)
+        body = rg.split('def _run_past_jobs', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('ThreadPoolExecutor', body)
+        self.assertIn('_series_points', body)
+
+    def test_series_points_takes_no_orm_object(self):
+        """만료된 ORM 속성을 스레드에서 건드리면 그 스레드가 DB 를 친다."""
+        rg = _read(os.path.join(_ROOT, 'aot_flask', 'routes_general.py'))
+        head = rg.split('def _series_points', 1)[1][:400]
+        self.assertIn('db_name', head)
+        self.assertNotIn('settings', head)
+
+    def test_count_window_asymmetry_is_preserved(self):
+        """무제한 조회는 COUNT 에 범위를 주지 않는다 — 리팩터 중 여기에 범위를
+        넣어 /async/…/0/0 이 662점에서 204(빈 응답)로 깨졌다."""
+        rg = _read(os.path.join(_ROOT, 'aot_flask', 'routes_general.py'))
+        body = rg.split('def _series_points', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('count_start_str', body)
+        self.assertIn('count_end_str', body)
+
+    def test_single_channel_skips_the_batch(self):
+        """1건이면 POST 로 감쌀 이유가 없다."""
+        body = self._js().split('function _fetchPastSeries', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('jobs.length === 1', body)

@@ -28,6 +28,32 @@ _VALID_END_REASONS = ('harvested', 'failed', 'replaced', 'removed')
 _VALID_SOURCE_KINDS = ('drawn', 'bay_snapshot', 'copied')
 
 
+def _invalidate_caches():
+    """구획이 바뀐 직후 모달 캐시를 버린다 — **커밋 뒤에** 부른다.
+
+    라우트마다 부르지 않고 이 게이트웨이에 두는 이유: 쓰기는 REST 만 지나가는
+    것이 아니라 AI/MCP 도구도 여기로 온다(`planting_io` 가 유일한 쓰기
+    게이트웨이라는 설계 전제). 라우트에 흩으면 새 진입점 하나가 조용히 빠지고,
+    증상은 "저장은 됐는데 화면이 30초 동안 안 바뀐다" 라 버그로 읽히지도 않는다.
+
+    구획 하나가 아니라 **전부** 버린다 — 새 구획이 생기면 같은 밸브를 공유하는
+    이웃의 `also_covers`("켜면 무엇이 함께 젖는가")가 달라지기 때문이다.
+
+    **구역 캐시도 함께 버린다.** 구역 [현황]이 "지금 심겨 있는 것"(작물 목록 ·
+    면적 배분 · 미배정)을 싣고 출력마다 `also_covers` 를 달고 있어서, 구획을
+    고치면 구역 응답도 달라진다. 어느 구역인지 따지지 않고 전부 버리는 이유는
+    구획의 소속이 **저장돼 있지 않고 기하에서 파생**되기 때문이다 — 기하를
+    옮기면 소속 구역 자체가 바뀌므로 "고치기 전 구역" 과 "고친 뒤 구역" 둘 다
+    버려야 하고, 그러느니 전부 버리는 편이 틀릴 여지가 없다(30초 캐시다).
+    """
+    try:
+        from aot.aot_flask.geo import site_summary
+        site_summary.invalidate_planting_contents(None)
+        site_summary.invalidate_zone_contents_all()
+    except Exception as exc:      # 캐시 정리 실패가 저장을 되돌리면 안 된다
+        logger.warning('[Planting] 모달 캐시 무효화 실패: %s', exc)
+
+
 def _parse_date(value, field):
     """'YYYY-MM-DD' → date. 빈 값은 None. 형식이 틀리면 (None, 오류)."""
     if value in (None, ''):
@@ -216,6 +242,7 @@ def save_planting(data):
         logger.error('[Planting] 저장 실패: %s', exc)
         return None, str(exc)
 
+    _invalidate_caches()
     return planting_context.to_dict(row), None
 
 
@@ -248,6 +275,7 @@ def end_planting(unique_id, ended_on=None, reason='harvested'):
     except Exception as exc:
         db.session.rollback()
         return None, str(exc)
+    _invalidate_caches()
     return planting_context.to_dict(row), None
 
 
@@ -266,6 +294,7 @@ def delete_planting(unique_id):
     except Exception as exc:
         db.session.rollback()
         return None, str(exc)
+    _invalidate_caches()
     return {'ok': True, 'deleted': unique_id}, None
 
 

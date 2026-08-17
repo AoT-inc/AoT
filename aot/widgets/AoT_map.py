@@ -170,9 +170,9 @@ WIDGET_HEAD_HTML = """
      전제로 쓰고 있었는데 정작 로드는 안 하고 있어서, 늘 인라인 폴백으로
      떨어져 있었다 — 'fault'(무응답) 판정이 화면마다 달라질 수 있는 상태였다. -->
 <script src="/static/js/common/aot-output-state.js?v=9"></script>
-<script src="/static/js/common/sensor-label.js?v=44"></script>
+<script src="/static/js/common/sensor-label.js?v=48"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=22"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=49">
+<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=55">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->

@@ -7921,9 +7921,13 @@ class AoTDataToolService:
                         bed_pitch_cm=None, rows_per_bed=None,
                         containers=None, markers=None, with_valves=None):
         from aot.aot_flask.geo import planting_context
+        # with_dims=False 로 못 박는다 — 아래에서 `dimensions` 키로 직접 싣기
+        # 때문이다(그쪽은 with_sensors 와 무관하게 **항상** 나가야 한다).
+        # 기본값에 맡기면 with_sensors=True 일 때 같은 값이 `dims` 로 한 번 더
+        # 실려, LLM 컨텍스트에 같은 것을 가리키는 이름이 둘이 된다.
         d = planting_context.to_dict(row, with_sensors=with_sensors,
                                      containers=containers, markers=markers,
-                                     with_valves=with_valves)
+                                     with_valves=with_valves, with_dims=False)
         # feature 전체(좌표 수백 개)는 LLM 컨텍스트에 실을 이유가 없다.
         d.pop('feature', None)
         # 다만 면적 하나만 남기면 방향이 있는 질문("몇 줄 들어가나")에 답할 수

@@ -856,6 +856,75 @@ def _past_payload(unique_id, measure_type, measurement_id, past_seconds):
         return None
 
 
+def _resolve_past_job(unique_id, measure_type, measurement_id, past_seconds,
+                      db_name, measure_cache=None, conv_cache=None):
+    """요청 스레드에서 ORM 을 **다 풀어** `_series_points` 인자 튜플로 만든다.
+
+    스레드에 ORM 을 들고 들어가지 않기 위한 분리다. 해석 규칙은 `async_data`
+    와 **같아야 한다** — `_resolve_last_params` 를 재사용하지 않는 이유가
+    그것이다: 그쪽에는 `/last` 전용 setpoint 우회가 들어 있어서, 빌려 쓰면
+    같은 측정이 그래프와 배치에서 다른 시리즈를 가리킬 수 있다.
+    """
+    try:
+        past_sec_int = int(past_seconds)
+    except (TypeError, ValueError):
+        return None
+    if past_sec_int <= 0:
+        return None
+    if measure_type not in ('input', 'function', 'output', 'pid'):
+        return None
+
+    measure = (measure_cache or {}).get(measurement_id)
+    if measure is None:
+        measure = DeviceMeasurements.query.filter(
+            DeviceMeasurements.unique_id == measurement_id).first()
+    if not measure:
+        return None
+    if measure.conversion_id and conv_cache is not None and \
+            measure.conversion_id in conv_cache:
+        conversion = conv_cache[measure.conversion_id]
+    else:
+        conversion = Conversion.query.filter(
+            Conversion.unique_id == measure.conversion_id).first()
+    channel, unit, measurement = return_measurement_info(measure, conversion)
+
+    # `/past/<…>/<sec>` 과 같은 창: 지금부터 과거 sec 초.
+    end = datetime.datetime.utcnow()
+    start = datetime.datetime.utcfromtimestamp(end.timestamp() - past_sec_int)
+    end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    return (unit, unique_id, measurement, channel, db_name,
+            start_str, end_str, end_str, end)
+
+
+def _run_past_jobs(past_jobs, results):
+    """`past` 항목의 influx 조회를 **동시에** 돌린다.
+
+    예전에는 순차였다 — `async_data` 가 ORM·request 컨텍스트에 묶여 있어
+    스레드에 올릴 수 없었기 때문이다. 지금은 그 머리를 `_resolve_past_job` 이
+    요청 스레드에서 다 풀고, 여기서 도는 `_series_points` 는 문자열·숫자만
+    받는다. `query_string()` 은 호출마다 자기 클라이언트를 열므로 안전하다
+    ('last' 경로가 이미 같은 전제로 돈다).
+    """
+    if not past_jobs:
+        return
+    if len(past_jobs) == 1:
+        idx, args = past_jobs[0]
+        results[idx] = _series_points(*args)
+        return
+    max_workers = min(_BATCH_MAX_WORKERS, len(past_jobs))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_idx = {executor.submit(_series_points, *args): idx
+                         for idx, args in past_jobs}
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            try:
+                results[idx] = future.result()
+            except Exception:
+                logger.exception('data_batch: past 항목 조회 실패')
+                results[idx] = None
+
+
 @blueprint.route('/data_batch', methods=['POST'])
 @flask_login.login_required
 def data_batch():
@@ -877,11 +946,13 @@ def data_batch():
 
     results = [None] * len(items)
     last_jobs = []  # (index, unique_id, unit, channel, measurement, period)
+    past_jobs = []  # (index, _series_points 인자 튜플)
 
     # 메타데이터를 항목별 ORM 왕복 2회로 풀던 것을 IN 조회 2회로 선주입.
+    # past 항목도 같은 선주입을 쓴다 — 예전에는 past 만 항목별 ORM 왕복 2회를
+    # 그대로 냈다.
     meas_cache, conv_cache = _prefetch_last_metadata(
-        [it.get('measurement_id') for it in items
-         if isinstance(it, dict) and it.get('kind') != 'past'])
+        [it.get('measurement_id') for it in items if isinstance(it, dict)])
 
     # 장치 샘플링 주기 — 조회 창을 장치별로 넓히는 근거(_effective_lookback).
     # 여기서도 IN 조회 한 번이다; 항목별로 Input 을 찾으면 배치의 의미가 사라진다.
@@ -902,8 +973,10 @@ def data_batch():
             continue
 
         if it.get('kind') == 'past':
-            results[i] = _past_payload(
-                unique_id, measure_type, measurement_id, period)
+            args = _resolve_past_job(unique_id, measure_type, measurement_id,
+                                     period, db_name, meas_cache, conv_cache)
+            if args:
+                past_jobs.append((i, args))
             continue
 
         # kind == 'last' (default)
@@ -920,6 +993,8 @@ def data_batch():
 
     if last_jobs:
         _run_last_jobs(last_jobs, results)
+    if past_jobs:
+        _run_past_jobs(past_jobs, results)
 
     return jsonify({'results': results})
 
@@ -1059,11 +1134,15 @@ def export_data(unique_id, measurement_id, start_seconds, end_seconds):
     return response
 
 
-def _query_count_and_first_point(unit, device_id, measurement, channel, settings,
+def _query_count_and_first_point(unit, device_id, measurement, channel, db_name,
                                   start_str=None, end_str=None):
     """Query COUNT and first data point from InfluxDB for a given time range.
 
     Returns (count_points, first_point) or (None, None) if no data found.
+
+    `db_name` 은 ORM 객체가 아니라 **문자열**이다(`Misc.measurement_db_name`).
+    이 함수는 배치 경로에서 **스레드로 돈다** — ORM 인스턴스를 들고 들어가면
+    만료된 속성을 건드리는 순간 그 스레드에서 DB 조회가 일어난다.
     """
     data = query_string(
         unit, device_id,
@@ -1077,7 +1156,7 @@ def _query_count_and_first_point(unit, device_id, measurement, channel, settings
         return None, None
 
     count_points = None
-    if settings.measurement_db_name == 'influxdb':
+    if db_name == 'influxdb':
         count_points = influxdb_get_count_points(data)
 
     data = query_string(
@@ -1092,7 +1171,7 @@ def _query_count_and_first_point(unit, device_id, measurement, channel, settings
         return None, None
 
     first_point = None
-    if settings.measurement_db_name == 'influxdb':
+    if db_name == 'influxdb':
         first_point = influxdb_get_first_point(data)
 
     return count_points, first_point
@@ -1165,10 +1244,10 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
     Return data from start_seconds to end_seconds from influxdb.
     Used for asynchronous graph display of many points (up to millions).
     """
-    count_points = None
-    first_point = None
-
     settings = Misc.query.first()
+    # 아래 influx 꼬리(_series_points)는 ORM 인스턴스를 받지 않는다 — 배치가
+    # 그것을 스레드로 돌리기 때문이다. 여기서 스칼라로 뽑아 넘긴다.
+    db_name = settings.measurement_db_name if settings else None
 
     if device_type == 'tag':
         notes_list = []
@@ -1235,90 +1314,95 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
             return jsonify(stitched) if stitched else ('', 204)
         # None = 접합할 이력이 없다 → 아래 단일 장치 경로를 그대로 탄다.
 
-    # Get all data if start/end not specified
+    # ⚠ 무제한(0/0) 분기는 **COUNT 쿼리에 범위를 주지 않는다.** 최종 조회에는
+    # end_str 을 주면서 COUNT 에는 안 주는 이 비대칭이 원래 동작이고, 여기에
+    # 범위를 넣으면 응답이 통째로 비어 버린다(리팩터 중 실제로 그렇게 깨뜨렸다:
+    # /async/…/0/0 이 662점 → 204). 그래서 두 창을 따로 넘긴다.
     if start_seconds == '0' and end_seconds == '0':
         end = datetime.datetime.utcnow()
+        count_start_str, count_end_str = None, None
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        count_points, first_point = _query_count_and_first_point(
-            unit, device_id, measurement, channel, settings)
-
-    # Set the time frame to the past start epoch to now
     elif start_seconds != '0' and end_seconds == '0':
         start = datetime.datetime.utcfromtimestamp(float(start_seconds))
-        start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         end = datetime.datetime.utcnow()
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        count_points, first_point = _query_count_and_first_point(
-            unit, device_id, measurement, channel, settings,
-            start_str=start_str, end_str=end_str)
-
+        count_start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        count_end_str = end_str
     else:
         start = datetime.datetime.utcfromtimestamp(float(start_seconds))
-        start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         end = datetime.datetime.utcfromtimestamp(float(end_seconds))
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        count_points, first_point = _query_count_and_first_point(
-            unit, device_id, measurement, channel, settings,
-            start_str=start_str, end_str=end_str)
+        count_start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        count_end_str = end_str
 
-    if count_points is None or first_point is None:
+    points = _series_points(unit, device_id, measurement, channel, db_name,
+                            count_start_str, count_end_str, end_str, end)
+    if points is None:
         return '', 204
+    return jsonify(points)
 
+
+# ──────────────────────────────────────────────────────────────────────────
+# 이력 조회의 influx 전용 꼬리
+#
+# `async_data` 의 머리(ORM 3조회 + `?stitch` 검사)와 갈라 둔 이유는 **배치가
+# 이것을 스레드로 돌리기 때문**이다. ORM 세션과 request 컨텍스트는 요청 스레드
+# 밖에서 안전하지 않지만, `query_string()` 은 호출마다 자기 클라이언트를 열고
+# 데몬 세션을 쓰므로 안전하다(`data_batch` 의 'last' 경로가 이미 그렇게 쓴다).
+#
+# **구현은 여기 하나뿐이어야 한다.** 배치용으로 한 벌 더 만들면 다운샘플링
+# 기준(700점)이나 빈 응답 처리가 한쪽에서만 바뀌어, 같은 센서의 그래프가
+# 단건 조회와 배치 조회에서 다르게 보인다.
+# ──────────────────────────────────────────────────────────────────────────
+_DOWNSAMPLE_TARGET_POINTS = 700
+
+
+def _series_points(unit, device_id, measurement, channel, db_name,
+                   count_start_str, count_end_str, end_str, end_dt):
+    """[[ts, value], ...] 또는 None(데이터 없음). **스레드에서 돈다.**
+
+    인자는 전부 문자열·숫자·datetime 이다 — ORM 인스턴스를 받지 않는다.
+
+    COUNT 쿼리의 창(`count_*`)과 최종 조회의 창이 **다를 수 있다**: 무제한
+    조회는 COUNT 에 범위를 주지 않는다(호출부 주석 참조). 하나로 합치지 말 것.
+    """
+    count_points, first_point = _query_count_and_first_point(
+        unit, device_id, measurement, channel, db_name,
+        start_str=count_start_str, end_str=count_end_str)
+    if count_points is None or first_point is None:
+        return None
+
+    # 조회 시작점은 실제 첫 점으로 당긴다(요청 창보다 데이터가 늦게 시작할 수
+    # 있다) — 기존 동작 그대로다.
     start_str = first_point.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    time_difference_seconds = end_dt.timestamp() - first_point.timestamp()
 
-    logger.debug(f'Count = {count_points}')
-    logger.debug(f'Start = {first_point}')
-    logger.debug(f'End   = {end}')
+    # 점이 너무 많으면 700개 구간으로 묶어 평균낸다.
+    group_seconds = None
+    if count_points > _DOWNSAMPLE_TARGET_POINTS:
+        group_seconds = int(time_difference_seconds / _DOWNSAMPLE_TARGET_POINTS)
 
-    # How many seconds between the start and end period
-    time_difference_seconds = end.timestamp() - first_point.timestamp()
-    logger.debug(f'Difference seconds = {time_difference_seconds}')
-
-    # If there are more than 700 points in the time frame, we need to group
-    # data points into 700 groups with points averaged in each group.
-    if count_points > 700:
-        # Average period between input reads
-        seconds_per_point = time_difference_seconds / count_points
-        logger.debug(f'Seconds per point = {seconds_per_point}')
-
-        # How many seconds to group data points in
-        group_seconds = int(time_difference_seconds / 700)
-        logger.debug(f'Group seconds = {group_seconds}')
-
-        try:
-            data = query_string(
-                unit, device_id,
-                measure=measurement,
-                channel=channel,
-                start_str=start_str,
-                end_str=end_str,
-                group_sec=group_seconds)
-
-            if not data:
-                return '', 204
-
-            if settings.measurement_db_name == 'influxdb':
-                return jsonify(influx_to_list(data))
-        except Exception as err:
-            logger.error(f"URL for 'async_data' raised and error: {err}")
-            return '', 204
-    else:
-        try:
-            data = query_string(
-                unit, device_id,
-                measure=measurement,
-                channel=channel,
-                start_str=start_str,
-                end_str=end_str)
-
-            if not data:
-                return '', 204
-
-            if settings.measurement_db_name == 'influxdb':
-                return jsonify(influx_to_list(data))
-        except Exception as err:
-            logger.error(f"URL for 'async_data' raised and error: {err}")
-            return '', 204
+    try:
+        data = query_string(
+            unit, device_id,
+            measure=measurement,
+            channel=channel,
+            start_str=start_str,
+            end_str=end_str,
+            group_sec=group_seconds) if group_seconds else query_string(
+            unit, device_id,
+            measure=measurement,
+            channel=channel,
+            start_str=start_str,
+            end_str=end_str)
+        if not data:
+            return None
+        if db_name == 'influxdb':
+            return influx_to_list(data)
+        return None
+    except Exception as err:
+        logger.error(f"URL for 'async_data' raised and error: {err}")
+        return None
 
 
 @blueprint.route('/async_usage/<device_id>/<unit>/<channel>/<start_seconds>/<end_seconds>')

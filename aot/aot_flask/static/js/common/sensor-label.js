@@ -649,6 +649,96 @@
   //
   // heightScale: 그래프가 주인공인 호스트(센서 전용 모달)가 플롯을 키우는 배수.
   // 구역/시설 모달은 액추에이터 목록과 공간을 나눠 쓰므로 기본값 1 을 유지한다.
+  // 차트 없이 문구만 남는 상태 — absolute 를 풀고 **자기 자리를 차지하게** 한다.
+  //
+  // `.aot-sensor-popup-chart-status` 가 absolute 인 것은 로딩 중 차트 **위에**
+  // 얹히기 위해서다. 그릴 차트가 아예 없으면 그 전제가 사라지는데, 그대로 두면
+  // 부모 높이가 0이 되어 문구가 아래 내용 위로 겹친다. 컨테이너마다 CSS 로
+  // 막으면(예전에 chart-wrap 하나에만 :has() 로 막았다) 새 컨테이너가 생길
+  // 때마다 같은 겹침이 재발한다 — 문구 자신이 알고 있게 한다.
+  function _standaloneStatus(statusEl, text) {
+    if (!statusEl) return;
+    statusEl.classList.add('is-standalone');
+    statusEl.textContent = text;
+  }
+
+  // ── 채널별 이력을 **한 번의 왕복**으로 ────────────────────────────────────
+  //
+  // 예전에는 채널마다 `/past/<dev>/input/<meas>/<sec>` 를 낱개로 쳤다. 온습도
+  // 노드 하나가 6채널이면 차트 한 개에 요청 6건이고, 브라우저의 오리진당 ~6
+  // 연결 상한에 그대로 걸린다 — 폰에서는 그만큼 라디오를 깨운다.
+  //
+  // `/data_batch` 는 이미 `kind:'past'` 를 받고 응답 모양(`[[ts,value],…]`)도
+  // 같다. 대시보드 위젯들은 jQuery transport(`aot-data-batch.js`)가 자동으로
+  // 묶어 주는데, 이 함수는 `fetch` 를 쓰므로 그 경로를 타지 못한다 — 그래서
+  // 직접 부른다.
+  //
+  // **배치가 실패해도 차트가 비면 안 된다.** 실패하면 예전 낱개 경로로
+  // 되돌아간다(`aot-data-batch.js` 의 directFallback 과 같은 태도).
+  // 한 요청에 담는 채널 수의 상한.
+  //
+  // 서버(`data_batch`)가 past 항목을 **동시에** 처리하므로(_run_past_jobs,
+  // 워커 8) 묶는다고 직렬로 길어지지 않는다. 그래서 서버 워커 수에 맞춘다 —
+  // 한 요청이 곧 한 번의 동시 실행 파도가 된다.
+  //
+  // 실측(로컬, 6채널 · 각 7회 중앙값): 배치 1연결 **172ms** vs 낱개 6연결
+  // 199ms. 서버를 병렬화하기 전에는 반대였다(197 vs 155) — 그때는 한 응답이
+  // 6배로 직렬화됐다.
+  var _PAST_BATCH_MAX = 8;
+
+  function _pastUrl(j, past) {
+    return '/past/' + encodeURIComponent(j.sensor.device_id) +
+           '/input/' + encodeURIComponent(j.ch.measurement_id) + '/' + past;
+  }
+
+  function _fetchPastOneByOne(jobs, past) {
+    return Promise.all(jobs.map(function (j) {
+      return fetch(_pastUrl(j, past), { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    }));
+  }
+
+  function _fetchPastSeries(jobs, past) {
+    if (!jobs.length) return Promise.resolve([]);
+    if (jobs.length === 1) return _fetchPastOneByOne(jobs, past);
+
+    var chunks = [];
+    for (var i = 0; i < jobs.length; i += _PAST_BATCH_MAX) {
+      chunks.push(jobs.slice(i, i + _PAST_BATCH_MAX));
+    }
+    var csrfEl = document.querySelector('meta[name="csrf-token"]');
+    var csrf = csrfEl ? csrfEl.getAttribute('content') : '';
+
+    return Promise.all(chunks.map(function (chunk) {
+      return fetch('/data_batch', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({
+          items: chunk.map(function (j) {
+            return { kind: 'past', unique_id: j.sensor.device_id,
+                     measure_type: 'input',
+                     measurement_id: j.ch.measurement_id, period: String(past) };
+          })
+        })
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          // 길이가 안 맞으면 정렬이 깨진 것이다 — 그 조각만 낱개로 다시 받는다.
+          // 잘못 정렬된 시리즈를 그리면 온도 자리에 습도가 들어간다.
+          var res = d && d.results;
+          if (!Array.isArray(res) || res.length !== chunk.length) {
+            return _fetchPastOneByOne(chunk, past);
+          }
+          return res;
+        })
+        .catch(function () { return _fetchPastOneByOne(chunk, past); });
+    })).then(function (parts) {
+      return parts.reduce(function (a, b) { return a.concat(b); }, []);
+    });
+  }
+
   function renderHistory(containerEl, sensors, opts) {
     opts = opts || {};
     containerEl.innerHTML =
@@ -673,7 +763,7 @@
       // 메타 채널만 가진 장치(하트비트 전용 노드 등)가 여기로 온다. 빈 차트 박스를
       // 남기면 "로딩이 안 끝났나" 로 보이므로 통째로 치운다 — 배지만 남는다.
       chartEl.remove();
-      statusEl.textContent = _t('No Measurements');
+      _standaloneStatus(statusEl, _t('No Measurements'));
       return;
     }
     var multiSensor = Object.keys(nameSet).length > 1;
@@ -681,15 +771,7 @@
     var _rNowMs = Date.now();
     var _rMinMs = _rNowMs - past * 1000;
 
-    var requests = jobs.map(function (j) {
-      var url = '/past/' + encodeURIComponent(j.sensor.device_id) +
-                '/input/' + encodeURIComponent(j.ch.measurement_id) +
-                '/' + past;
-      return fetch(url).then(function (r) { return r.ok ? r.json() : null; })
-                       .catch(function () { return null; });
-    });
-
-    Promise.all(requests).then(function (responses) {
+    _fetchPastSeries(jobs, past).then(function (responses) {
       var axisIndex = {}, axisCount = 0;
       var series = [];
       responses.forEach(function (rows, i) {
@@ -721,7 +803,11 @@
       });
 
       if (!series.length) {
-        statusEl.textContent = _t('No data');
+        // 빈 차트 박스를 남기면 안 된다 — 상태 문구가 absolute 라 그 박스는
+        // 높이를 못 갖고, 문구는 바깥 조상 기준으로 퍼져 **아래 장치 목록 위에
+        // 겹쳐 앉는다**(실측 118px). 위 `!jobs.length` 와 같은 처리를 한다.
+        chartEl.remove();
+        _standaloneStatus(statusEl, _t('No data'));
         return;
       }
 

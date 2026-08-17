@@ -9,7 +9,7 @@ routes_geo.py 맨 아래에서 import 되어 공유 blueprint 에 등록된다
 import logging
 from datetime import datetime
 
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_login import login_required
 
 from aot.aot_flask.geo import planting_context, planting_io, planting_split
@@ -78,6 +78,290 @@ def api_planting_get(planting_uuid):
         return jsonify({'ok': False, 'message': 'planting not found'}), 404
     return jsonify({'ok': True,
                     'planting': planting_context.to_dict(row, with_sensors=True)})
+
+
+@blueprint.route('/api/geo/planting/<string:planting_uuid>/contents',
+                 methods=['GET'])
+@login_required
+def api_planting_contents(planting_uuid):
+    """식생 구획 모달의 [환경·제어] 인벤토리 — 구역 모달과 **같은 모양**.
+
+    본체는 구역과 공유한다(`_build_area_contents`). 두 벌로 만들면 같은 장치를
+    두 화면이 다르게 세게 되고, 이 도메인은 이미 그 실패로 크게 데었다.
+
+    ⚠ 이 응답은 **소유가 아니라 참조**다. 구획은 컨테이너가 아니므로
+    (`device_membership._CONTAINER_TYPES` 에 넣지 말 것 — 설계 §256) 여기 실린
+    장치는 "이 구획의 것" 이 아니라 "이 구획을 다루려면 손대는 것" 이다.
+    그래서 항목마다 `scope` 로 **왜 여기 보이는지**를 함께 낸다.
+
+    캐시는 구역과 같은 30초. can_edit 는 권한이라 캐시 밖에서 매번 채운다.
+    """
+    from aot.aot_flask.geo.site_summary import cached_planting_contents
+
+    payload = cached_planting_contents(
+        planting_uuid, lambda: _build_planting_contents(planting_uuid))
+    if payload is None:
+        return jsonify({'ok': False, 'error': 'planting not found'}), 404
+
+    payload = dict(payload)
+    payload['planting'] = dict(payload['planting'])
+    payload['planting']['can_edit'] = utils_general.user_has_permission(
+        'edit_settings', silent=True)
+    return jsonify(payload)
+
+
+def _env_of(input_ids):
+    """센서 묶음의 현재 환경 — `{'readings', 'sensors': {'valid','total'}}`.
+
+    `valid > 0` 이면 **지금 값을 주고 있다**는 뜻이다. 판정을 `env_for_devices`
+    하나로 하는 이유: 필지 요약·구역 모달이 "센서 응답 2/3" 을 셀 때 쓰는 것과
+    같은 함수여야 한다. 여기서 따로 세면 같은 센서를 두고 한 화면은 살아 있다
+    하고 다른 화면은 죽었다 한다.
+
+    조회가 실패하면 **살아 있는 것으로 본다**(`valid`를 1로). 실패를 "죽었다"
+    로 읽으면 인플럭스가 잠깐 흔들릴 때마다 화면이 옆 구획 센서로 갈아탄다.
+    """
+    if not input_ids:
+        return {'readings': [], 'sensors': {'valid': 0, 'total': 0}}
+    from aot.aot_flask.geo.site_summary import env_for_devices
+    try:
+        return env_for_devices(input_ids)
+    except Exception:
+        current_app.logger.exception('planting contents: 센서 신선도 판정 실패')
+        return {'readings': [], 'sensors': {'valid': 1, 'total': 1}}
+
+
+def _sensor_order_key(item):
+    """값을 주는 것 → 구획 안 → 가까운 것 순."""
+    return (1 if item.get('no_data') else 0,
+            0 if item.get('scope') == 'plot' else 1,
+            item.get('distance_m') if item.get('distance_m') is not None else 0,
+            item.get('name') or '')
+
+
+def _involvement_key(item):
+    """관여도 정렬 키 — 높을수록 위. `sort()` 용이라 **작을수록 앞**으로 뒤집는다.
+
+    관여도의 정의:
+      * 덮는 비율(`coverage_pct`)이 있으면 그 값. 측정된 정도라 가장 강한 근거다.
+      * 없고 구획 안에 있으면(`plot`) 100 — 구획 전체를 상대한다고 본다.
+        비율은 밸브에만 있는 개념이라, 구획 안의 팬·조명에는 잴 것이 없다.
+      * 구획 밖에서 적시는데 비율이 없으면 0.
+      * `nearest` 는 **직접 관여가 아니다** — 항상 맨 아래로 보내고, 그 안에서만
+        가까운 순으로 둔다.
+    """
+    scope = item.get('scope')
+    if scope == 'nearest':
+        # 관여도 축 밖. 거리가 가까울수록 앞.
+        return (1, item.get('distance_m') if item.get('distance_m') is not None
+                else float('inf'), item.get('name') or '')
+
+    pct = item.get('coverage_pct')
+    if pct is None:
+        pct = 100.0 if scope == 'plot' else 0.0
+    return (0, -float(pct), item.get('name') or '')
+
+
+def _classify_devices(device_ids):
+    """장치 id 집합 → `{'inputs','outputs','functions'}` 로 나눈 집합들.
+
+    종류별 폴백("센서가 하나도 없으면 가장 가까운 센서")을 하려면 어느 것이
+    센서인지 **미리** 알아야 한다. id 만 뽑는 가벼운 조회 3번이다.
+    """
+    from aot.databases.models import (Conditional, CustomController, Function,
+                                      Input, Output, Trigger, PID)
+
+    if not device_ids:
+        return {'inputs': set(), 'outputs': set(), 'functions': set()}
+
+    ids = list(device_ids)
+
+    def _pick(model):
+        return {r[0] for r in model.query.with_entities(
+            model.unique_id).filter(model.unique_id.in_(ids)).all()}
+
+    funcs = set()
+    for model in (CustomController, Function, Conditional, Trigger, PID):
+        funcs |= _pick(model)
+    return {'inputs': _pick(Input), 'outputs': _pick(Output),
+            'functions': funcs}
+
+
+def _build_planting_contents(planting_uuid):
+    """식생 모달 인벤토리 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
+    from aot.aot_flask.geo import device_membership
+    from aot.aot_flask.routes_geo import _build_area_contents
+
+    row = GeoPlanting.query.filter_by(unique_id=planting_uuid).first()
+    if row is None:
+        return None
+
+    geom = planting_context.geometry_of(row)
+
+    # ── 무엇을 낼 것인가: **이 구획에 닿는 것만** ──────────────────────────
+    #
+    # 예전에는 구획 안 ∪ 구역 전체 ∪ 밸브를 합집합으로 냈다. 그러면 이 구획에
+    # 물 한 방울 주지 않는 밸브까지 목록에 올라와, 식생 패널이 구역 패널의
+    # 복사본이 된다 — 그럴 거면 구역 패널을 열면 된다. 실측(김제 새바람):
+    # 출력 4개 중 실제로 이 구획에 닿는 것은 2개였고 나머지 둘은 교차가 0이었다.
+    #
+    #  plot        구획 폴리곤 안에 있다
+    #  irrigation  구획 밖이지만 **이 구획을 적신다**(면적이 있는 교차)
+    #  nearest     위 둘이 그 종류에서 하나도 없을 때만, 가장 가까운 것 하나
+    #
+    # 'zone'(구역에 있다는 이유만으로 싣기)은 없앴다. 구역 전체를 보려면 위로
+    # 올라가는 화살표가 있다.
+    plot_ids = set(device_membership.device_ids_in_geometry(
+        row.geo_id, geom, _label='planting %s' % row.unique_id) or [])
+
+    zone = planting_context.zone_for_planting(row)
+    zone_ids = set(device_membership.device_ids_in_shape(zone) or []) if zone else set()
+
+    # valves_for_planting 은 **면적이 있는 교차만** 낸다 — 여기 오는 밸브는
+    # 전부 실제로 이 구획을 적신다.
+    valves = planting_context.valves_for_planting(row)
+    valve_ids = {v['device_id'] for v in valves if v.get('device_id')}
+
+    direct = plot_ids | valve_ids
+
+    # 종류별로 비었을 때만 가장 가까운 것 하나를 더한다. 종류를 섞어 판정하면
+    # "센서는 있는데 밸브가 없는" 구획에서 센서까지 폴백이 걸린다.
+    kinds_direct = _classify_devices(direct)
+    kinds_zone = _classify_devices(zone_ids - direct)
+    markers = device_membership.load_markers(row.geo_id)
+
+    # 센서는 **있느냐가 아니라 값을 주느냐**로 판정한다. 구획 안에 센서가
+    # 놓여 있어도 죽어 있으면 화면은 빈 차트가 되고, 사용자는 "이 구획은 볼
+    # 값이 없다" 로 읽는다 — 바로 옆에 멀쩡한 센서가 있는데도.
+    #
+    # 죽은 센서를 목록에서 **빼지는 않는다.** 빼면 고장이 화면에서 사라져
+    # 아무도 고치지 않는다. 대신 대체값을 함께 올리고, 정렬에서 값을 주는
+    # 쪽을 위로 보낸다(아래 _sensor_order_key).
+    #
+    # env 는 여기서 **한 번만** 잰다. 판정에 쓰고, 값을 안 바꿔도 되는 경우
+    # (= 인접 센서를 안 끌어온 경우)에는 그대로 아래 인벤토리에 넘긴다 —
+    # 예전에는 같은 influx 왕복을 두 번 했다(실측 약 64ms 낭비).
+    plot_env = None
+    stale_direct = False
+    if kinds_direct['inputs']:
+        plot_env = _env_of(kinds_direct['inputs'])
+        stale_direct = (plot_env.get('sensors') or {}).get('valid', 0) == 0
+
+    nearest = {}          # device_id -> 거리(m)
+    nearest_reason = {}   # device_id -> 'missing' | 'stale'
+    for kind in ('inputs', 'outputs', 'functions'):
+        have = kinds_direct[kind]
+        reason = 'missing'
+        if kind == 'inputs' and have and stale_direct:
+            have = set()          # 있어도 값을 못 주면 없는 것으로 친다
+            reason = 'stale'
+        if have or not kinds_zone[kind]:
+            continue
+        for did, dist in planting_context.nearest_devices(
+                row, kinds_zone[kind], markers=markers, limit=1):
+            nearest[did] = dist
+            nearest_reason[did] = reason
+
+    # "켜면 무엇이 함께 젖는가" — 구역 모달과 **같은 함수**로 센다. 여기서
+    # 따로 세면 같은 밸브가 두 화면에서 다른 작물 목록을 갖게 된다.
+    cover = planting_context.plantings_by_valve_device(row.geo_id)
+
+    coverage = {v['device_id']: v.get('coverage_pct')
+                for v in valves if v.get('device_id')}
+
+    def _scope_of(uid):
+        if uid in plot_ids:
+            return 'plot'
+        if uid in nearest:
+            return 'nearest'
+        return 'irrigation'
+
+    # 인접 센서를 끌어왔으면 집합이 달라졌으니 다시 재야 한다. 아니면 위에서
+    # 이미 잰 것이 그대로 맞다 — env 는 Input 만 보고, direct 의 Input 은
+    # kinds_direct['inputs'] 뿐이다(나머지는 Output·Function).
+    added_input = any(d in kinds_zone['inputs'] for d in nearest)
+    inv = _build_area_contents(direct | set(nearest), scope_of=_scope_of,
+                               env=(None if added_input else plot_env))
+
+    # 가장 가까운 것으로 끌어온 장치는 **거리를 함께 낸다** — 왜 여기 있는지,
+    # 얼마나 믿을 값인지 사람이 판단할 근거다.
+    for group in ('sensors', 'outputs', 'functions'):
+        for item in inv[group]:
+            if item['unique_id'] in nearest:
+                item['distance_m'] = nearest[item['unique_id']]
+                item['nearest_reason'] = nearest_reason.get(item['unique_id'])
+
+    # 값을 못 주는 구획 센서에 표시를 남긴다 — 화면이 "왜 옆 것을 보여주나"
+    # 를 설명할 근거이자, 고장이 있다는 사실 자체다.
+    if stale_direct:
+        for item in inv['sensors']:
+            if item.get('scope') == 'plot':
+                item['no_data'] = True
+
+    # 값을 주는 센서가 먼저 온다 — 첫 탭이 자동으로 그려지므로, 죽은 센서가
+    # 앞에 있으면 열자마자 빈 차트를 보게 된다.
+    inv['sensors'].sort(key=_sensor_order_key)
+
+    # 밸브 정보는 출력 행에 붙인다 — 별도 블록으로 내면 화면이 같은 장치를
+    # 두 번 그리게 되고, 토글 옆에 있어야 할 경고가 토글에서 멀어진다.
+    for out in inv['outputs']:
+        pct = coverage.get(out['unique_id'])
+        if pct is not None:
+            out['coverage_pct'] = pct
+        # 자기 자신은 "함께 젖는 것" 이 아니다.
+        names = planting_context.covered_crop_names(
+            cover.get(out['unique_id']), exclude_uuid=row.unique_id)
+        if names:
+            out['also_covers'] = names
+
+    # ── 순서: 관여도가 높은 것이 위 ────────────────────────────────────────
+    #
+    # DB 순서 그대로 두면 이 구획의 75.9% 를 적시는 밸브가 24.1% 짜리 아래로
+    # 내려간다(실측). 목록의 첫 줄이 가장 관여도가 낮은 장치면, 급한 상황에서
+    # 사람이 맨 위를 누른다.
+    #
+    # ⚠ **`coverage_pct` 를 붙인 뒤에 정렬한다.** 순서를 바꾸면 정렬 시점에
+    # 비율이 아직 없어 전부 0으로 읽히고, 조용히 **이름순**으로 떨어진다.
+    # 실제로 그렇게 나갔다: 둘 다 irrigation 인 구획(블랙틴)에서 39.8% 가
+    # 60.2% 보다 위였다. plot 과 irrigation 이 섞인 구획은 스코프만으로도
+    # 우연히 맞아서 한동안 드러나지 않았다.
+    #
+    # 정렬은 **서버가** 한다 — 화면마다 각자 정렬하면 같은 구획이 창마다 다른
+    # 순서로 보이고, AI 도구가 보는 순서와도 갈린다.
+    #
+    # 구역 모달은 이 정렬을 쓰지 않는다. 그쪽은 사람이 드래그로 정한 순서
+    # (`output_order`)가 있고, 그것은 명시적 의사표시라 계산이 이겨선 안 된다.
+    for group in ('outputs', 'functions'):
+        inv[group].sort(key=_involvement_key)
+
+    sensors = planting_context.sensors_for_planting(row)
+
+    return {
+        'ok': True,
+        'planting': {
+            'unique_id': row.unique_id,
+            'crop': row.crop,
+            'variety': row.variety,
+            'name': row.name,
+            'area_m2': round(planting_context.area_m2(row), 1),
+            'dims': planting_context.dimensions(row),
+            'days_since_planted': planting_context.elapsed_days(row),
+            'days_to_expected_end': planting_context.days_to_expected_end(row),
+            'active': row.is_active(),
+            'zone_uuid': sensors.get('zone_uuid'),
+            'zone_name': sensors.get('zone_name'),
+            'counts': inv['counts'],
+            'env': inv['env'],
+            'status': inv['status'],
+        },
+        # 대표값의 출처 — 목록(위 sensors/outputs)이 "손댈 수 있는 것 전부"
+        # 라면 이쪽은 "이 구획을 대표하는 값이 어디서 오는가" 하나다. 둘은
+        # 다른 질문이라 한쪽으로 합치지 말 것.
+        'source': sensors.get('source'),
+        'sensors': inv['sensors'],
+        'outputs': inv['outputs'],
+        'functions': inv['functions'],
+    }
 
 
 # ── 쓰기 ───────────────────────────────────────────────────────────────────

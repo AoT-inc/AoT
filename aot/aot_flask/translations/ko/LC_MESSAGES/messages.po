@@ -28211,3 +28211,192 @@ msgstr "새 키"
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr "지금 복사하세요 — 1회만 표시되며 이후에는 다시 확인할 수 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Growing now"
+msgstr "재배 현황"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Grown for"
+msgstr "재배 기간"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Day %(n)s"
+msgstr "%(n)s일차"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "in %(n)s days"
+msgstr "%(n)s일 남음"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(n)s days overdue"
+msgstr "%(n)s일 지남"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Plot information"
+msgstr "구획 정보"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Dimensions"
+msgstr "크기"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "This plot is not rectangular, so these dimensions are the enclosing rectangle — the usable area is smaller."
+msgstr "이 구획은 직사각형이 아닙니다. 위 크기는 구획을 감싸는 사각형이라 실제 쓸 수 있는 면적은 그보다 작습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(n)s days"
+msgstr "%(n)s일"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Minimum level"
+msgstr "최소 레벨"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Live"
+msgstr "실시간"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Download"
+msgstr "내려받기"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Lines"
+msgstr "줄 수"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Clear selection"
+msgstr "선택 해제"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Explain"
+msgstr "설명"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Diagnose the cause"
+msgstr "원인 진단"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "How do I fix it?"
+msgstr "해결 방법은?"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Web app"
+msgstr "웹 앱"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Updated"
+msgstr "갱신"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Command not available on this system: %(command)s"
+msgstr "이 시스템에서 사용할 수 없는 명령입니다: %(command)s"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Unknown log source"
+msgstr "알 수 없는 로그 소스입니다"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Timed out reading this log source"
+msgstr "로그를 읽는 데 시간이 너무 오래 걸렸습니다"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Explain what these log lines mean."
+msgstr "이 로그가 무슨 뜻인지 설명해 주세요."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Diagnose these log lines: what is failing, and why?"
+msgstr "이 로그를 진단해 주세요. 무엇이 잘못됐고 왜 그런가요?"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Tell me the concrete steps to fix what these log lines show."
+msgstr "이 로그에 나타난 문제를 해결하는 구체적인 방법을 알려 주세요."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "The selected log lines are sent to the AI model you configured. Do not send lines containing credentials."
+msgstr "선택한 로그 줄은 설정한 AI 모델로 전송됩니다. 인증정보가 담긴 줄은 보내지 마세요."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "No log entries match the current filter."
+msgstr "현재 필터에 해당하는 로그가 없습니다."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "%d line(s) selected. The selected lines are sent to the AI."
+msgstr "%d줄 선택됨. 선택한 줄이 AI에 전달됩니다."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Nothing selected — the AI gets the errors and warnings currently in view (%e error(s), %w warning(s)). Click a line to pick it; shift-click for a range."
+msgstr "선택 없음 — 화면에 보이는 오류·경고(오류 %e건, 경고 %w건)가 AI에 전달됩니다. 줄을 클릭하면 선택되고 shift-클릭은 범위 선택입니다."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Nothing selected — the AI gets the lines currently in view. Click a line to pick it; shift-click for a range."
+msgstr "선택 없음 — 화면에 보이는 줄이 AI에 전달됩니다. 줄을 클릭하면 선택되고 shift-클릭은 범위 선택입니다."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "%d entries"
+msgstr "%d건"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Scan limit reached — older matching lines exist but were not read. Narrow the search or pick a more specific log source."
+msgstr "검색 한도에 도달했습니다 — 조건에 맞는 더 오래된 줄이 남아 있지만 읽지 않았습니다. 검색어를 좁히거나 더 구체적인 로그를 고르세요."
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Failed to load the log"
+msgstr "로그를 불러오지 못했습니다"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "There are no log lines to ask about."
+msgstr "질문할 로그 줄이 없습니다."
+
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "irrigation"
+msgstr "관수"
+
+
+
+
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(pct)s% of this plot"
+msgstr "이 구획의 %(pct)s%"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Also waters"
+msgstr "함께 적심"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Nothing is planted in this zone."
+msgstr "이 구역에 심겨 있는 것이 없습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(crops)s crops · %(plots)s plots"
+msgstr "%(crops)s종 · %(plots)s구획"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Outside this plot, but it waters this plot"
+msgstr "이 구획 밖이지만 이 구획을 적십니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "nearest"
+msgstr "가장 가까움"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Nothing in this plot — showing the closest one"
+msgstr "이 구획 안에 없어 가장 가까운 것을 보여줍니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "An irrigation area over this plot has no valve assigned yet."
+msgstr "이 구획에 걸친 관수 구역에 아직 밸브가 지정되지 않았습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The sensor in this plot is not reporting — showing the closest one"
+msgstr "이 구획의 센서가 값을 보내지 않아 가장 가까운 것을 보여줍니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "This sensor is not reporting right now"
+msgstr "지금 값을 보내지 않습니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "no data"
+msgstr "값 없음"

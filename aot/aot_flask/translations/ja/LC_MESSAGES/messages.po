@@ -27971,3 +27971,192 @@ msgstr "新しいキー"
 #: aot_flask/templates/settings/user_detail.html:193
 msgid "Copy it now — it is shown only once and cannot be retrieved later."
 msgstr "今すぐコピーしてください — 一度だけ表示され、その後は確認できません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Growing now"
+msgstr "生育状況"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Grown for"
+msgstr "栽培期間"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Day %(n)s"
+msgstr "%(n)s日目"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "in %(n)s days"
+msgstr "あと%(n)s日"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(n)s days overdue"
+msgstr "%(n)s日超過"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Plot information"
+msgstr "区画情報"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Dimensions"
+msgstr "寸法"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "This plot is not rectangular, so these dimensions are the enclosing rectangle — the usable area is smaller."
+msgstr "この区画は長方形ではありません。上の寸法は区画を囲む矩形なので、実際に使える面積はそれより小さくなります。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(n)s days"
+msgstr "%(n)s日"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Minimum level"
+msgstr "最小レベル"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Live"
+msgstr "ライブ"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Download"
+msgstr "ダウンロード"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Lines"
+msgstr "行数"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Clear selection"
+msgstr "選択解除"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Explain"
+msgstr "説明"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Diagnose the cause"
+msgstr "原因を診断"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "How do I fix it?"
+msgstr "解決方法は?"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Web app"
+msgstr "ウェブアプリ"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Updated"
+msgstr "更新"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Command not available on this system: %(command)s"
+msgstr "このシステムでは利用できないコマンドです: %(command)s"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Unknown log source"
+msgstr "不明なログソースです"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Timed out reading this log source"
+msgstr "ログの読み取りがタイムアウトしました"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Explain what these log lines mean."
+msgstr "これらのログ行の意味を説明してください。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Diagnose these log lines: what is failing, and why?"
+msgstr "このログ行を診断してください。何が失敗していて、なぜですか?"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Tell me the concrete steps to fix what these log lines show."
+msgstr "このログ行が示す問題を解決する具体的な手順を教えてください。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "The selected log lines are sent to the AI model you configured. Do not send lines containing credentials."
+msgstr "選択したログ行は設定済みのAIモデルに送信されます。認証情報を含む行は送らないでください。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "No log entries match the current filter."
+msgstr "現在のフィルターに一致するログがありません。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "%d line(s) selected. The selected lines are sent to the AI."
+msgstr "%d行を選択中。選択した行がAIに渡されます。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Nothing selected — the AI gets the errors and warnings currently in view (%e error(s), %w warning(s)). Click a line to pick it; shift-click for a range."
+msgstr "未選択 — 表示中のエラー・警告(エラー%e件、警告%w件)がAIに渡されます。行をクリックで選択、shift+クリックで範囲選択です。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Nothing selected — the AI gets the lines currently in view. Click a line to pick it; shift-click for a range."
+msgstr "未選択 — 表示中の行がAIに渡されます。行をクリックで選択、shift+クリックで範囲選択です。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "%d entries"
+msgstr "%d件"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Scan limit reached — older matching lines exist but were not read. Narrow the search or pick a more specific log source."
+msgstr "スキャン上限に達しました — 条件に合う古い行がまだありますが読み込んでいません。検索を絞るか、より具体的なログを選んでください。"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "Failed to load the log"
+msgstr "ログを読み込めませんでした"
+
+#: aot_flask/templates/tools/logview.html aot_flask/static/js/tools/aot-logview.js aot_flask/routes_page.py
+msgid "There are no log lines to ask about."
+msgstr "質問できるログ行がありません。"
+
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "irrigation"
+msgstr "かん水"
+
+
+
+
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(pct)s% of this plot"
+msgstr "この区画の%(pct)s%"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Also waters"
+msgstr "一緒に潤す"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Nothing is planted in this zone."
+msgstr "このゾーンに植えられているものはありません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(crops)s crops · %(plots)s plots"
+msgstr "%(crops)s種・%(plots)s区画"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Outside this plot, but it waters this plot"
+msgstr "この区画の外ですが、この区画に水をやります"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "nearest"
+msgstr "最寄り"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Nothing in this plot — showing the closest one"
+msgstr "この区画内にないため、最も近いものを表示しています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "An irrigation area over this plot has no valve assigned yet."
+msgstr "この区画にかかるかん水エリアに、まだバルブが割り当てられていません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "The sensor in this plot is not reporting — showing the closest one"
+msgstr "この区画のセンサーが値を送っていないため、最も近いものを表示しています"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "This sensor is not reporting right now"
+msgstr "現在、値を送っていません"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "no data"
+msgstr "データなし"

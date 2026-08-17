@@ -371,6 +371,39 @@
      * 구획 모달. 팝업 말풍선이 아니라 **중앙 모달**을 쓴다 — 작물·기간·센서
      * 출처·이력·노트가 함께 들어가야 해서 말풍선 폭으로는 부족하다.
      */
+    /**
+     * 탭 전환 — 구역·시설 모달과 **같은 마크업 계약**(`.aot-bay-popup-nav` 의
+     * `[data-sec]` 버튼 ↔ `.aot-bay-popup-pane` 의 `[data-pane]`)을 쓴다.
+     *
+     * 위젯의 `_wireZoneTabs` 를 빌려 오지 않는다 — 그쪽은 구역 상태(센서 서브탭·
+     * 이력 오버레이·복합장치 진입)에 묶여 있어서, 식생이 갖지 않은 것을 함께
+     * 끌고 온다. 여기서 필요한 것은 pane 을 바꿔 다는 것뿐이다.
+     *
+     * `wantSec` 를 돌려주도록 활성 탭을 노출한다 — 저장 후 다시 열 때 사용자가
+     * 보던 탭으로 돌아가야 한다(편집은 [개요]에서 하는데 [현황]으로 튕기면
+     * 방금 무엇을 고쳤는지 확인할 수 없다).
+     */
+    function _wireTabs(body) {
+        if (!body || body._plantingTabsWired) return;
+        body._plantingTabsWired = true;
+        body.addEventListener('click', function (ev) {
+            var btn = ev.target.closest('.aot-bay-popup-nav .aot-act-tab-btn[data-sec]');
+            if (!btn || !body.contains(btn)) return;
+            var sec = btn.dataset.sec;
+            body.querySelectorAll('.aot-bay-popup-nav .aot-act-tab-btn')
+                .forEach(function (b) { b.classList.toggle('active', b === btn); });
+            body.querySelectorAll('.aot-bay-popup-pane').forEach(function (pane) {
+                pane.style.display = (pane.dataset.pane === sec) ? '' : 'none';
+            });
+        });
+    }
+
+    function _activeSec(body) {
+        var on = body && body.querySelector(
+            '.aot-bay-popup-nav .aot-act-tab-btn.active[data-sec]');
+        return on ? on.dataset.sec : null;
+    }
+
     function openModal(uid, map, uuid, opts) {
         opts = opts || {};
         var shell = opts.shell;                 // 위젯의 _showFacilityCenterOverlay
@@ -382,10 +415,29 @@
             .then(function (res) {
                 if (!res || !res.ok) return;
                 var p = res.planting;
-                var popup = shell(popupApi.buildPlantingModal(p, {}), uid);
+                // 열 탭: 명시 지정(저장 후 복귀) > 위젯 옵션 popup_default_tab.
+                var want = opts.openTab || opts.defaultTab;
+                var popup = shell(popupApi.buildPlantingModal(
+                    p, { defaultTab: want }), uid);
                 var el = popup && popup.getElement && popup.getElement();
                 var body = el && el.querySelector('.maplibregl-popup-content');
                 if (!body) return;
+
+                // [환경·제어] — 제어 배선은 위젯이 빌려준다. 여기서 다시
+                // 구현하면 폴링·토글·예약이 두 벌이 된다.
+                //
+                // 위젯이 붙여 주면 **탭 전환도 그쪽 위임 핸들러가 맡는다**
+                // (구역과 같은 것이라, [환경·제어]로 넘어갈 때 센서 차트 지연
+                // 렌더까지 함께 따라온다). 그래서 우리 것은 안 붙인다 —
+                // 둘을 다 붙이면 같은 클릭에 핸들러 두 개가 돈다.
+                var attached = false;
+                if (typeof opts.attachControl === 'function') {
+                    try {
+                        opts.attachControl(uid, popup, body, p.unique_id);
+                        attached = true;
+                    } catch (e) { /* 제어가 안 붙어도 나머지 탭은 살아야 한다 */ }
+                }
+                if (!attached) _wireTabs(body);
 
                 _wireEdit(uid, map, body, p, opts);
 
@@ -463,9 +515,15 @@
 
         function refresh() {
             // 저장 뒤 목록을 다시 받아 레이어·라벨을 갱신하고 모달을 다시 연다.
+            //
+            // 보던 탭으로 되돌아간다 — 편집은 [개요]에서 하는데 저장하고 [현황]
+            // 으로 튕기면 방금 무엇이 바뀌었는지 확인할 수 없다.
             var st = STATE[uid] || {};
-            load(uid, map, st.opts || opts || {}).then(function () {
-                openModal(uid, map, p.unique_id, st.opts || opts);
+            var base = st.opts || opts || {};
+            var sec = _activeSec(body);
+            var next = Object.assign({}, base, sec ? { openTab: sec } : {});
+            load(uid, map, base).then(function () {
+                openModal(uid, map, p.unique_id, next);
             });
         }
 

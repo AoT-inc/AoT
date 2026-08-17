@@ -282,20 +282,103 @@
   function buildOutputRow(opts) {
     opts = opts || {};
     var meta = opts.meta || '<span class="aot-act-meta-dim">—</span>';
-    var second = (opts.meta || opts.settings)
+    // note: 2행에서 **자기 줄을 갖는** 칸(관수 영향 범위 등).
+    // `meta` 에 이어붙이면 `.aot-act-meta-text` 안쪽이라 flex 자식이 아니고,
+    // 그러면 줄바꿈 규칙이 안 먹어 시간 숫자에 그대로 달라붙는다
+    // (실제로 "05:51:59함께 적심: …" 로 나갔다).
+    var second = (opts.meta || opts.settings || opts.note)
       ? '<div class="aot-act-meta">' +
           '<span class="aot-act-meta-text">' + meta + '</span>' +
           '<span class="aot-act-meta-ctrl">' + (opts.settings || '') + '</span>' +
+          (opts.note || '') +
         '</div>'
       : '';
     return '<div class="aot-act-row" data-slot="' + _esc(opts.slot || '') + '">' +
              '<div class="aot-act-line">' +
                (opts.drag ? _dragHandle() : '') +
+               // rawName: 이름 옆에 배지 같은 마크업을 붙이는 호출부용.
+               // 그 호출부가 **직접 이스케이프한다** — 기본은 계속 이스케이프다.
                '<span class="aot-act-name"' + (opts.nameAttrs || '') + '>' +
-               _esc(opts.name || '') + '</span>' +
+               (opts.rawName ? (opts.name || '') : _esc(opts.name || '')) +
+               '</span>' +
                (opts.primary || '') +
              '</div>' + second +
            '</div>';
+  }
+
+  // ── 스코프 배지 — "이 장치가 왜 여기 보이나" ──────────────────────────────
+  //
+  // 식생 모달에만 붙는다. 구역은 빌려오는 것이 없어 서버가 scope 를 안 주고,
+  // 그러면 이 함수도 빈 문자열을 돌려준다(구역 화면은 그대로).
+  //
+  //   plot        구획 안에 있다 → 배지 없음(기본이라 말할 것이 없다)
+  //   zone        소속 구역의 것을 빌려 본다
+  //   irrigation  구획에도 구역에도 없지만 이 구획을 적신다
+  //
+  // 'zone' 을 말하지 않으면 사용자는 구획마다 따로 잰 값으로 읽는다.
+  function scopeBadgeHtml(scope, distanceM, reason) {
+    if (scope === 'nearest') {
+      // 거리를 배지 글자로 쓴다 — 좁은 센서 탭에도 들어가고, "왜 여기 있나"
+      // 보다 "얼마나 떨어져 있나" 가 값을 믿을지 정하는 근거다.
+      // 이유는 title 로 붙인다 — 없어서인지, 있는데 죽어서인지는 다른 사건이다.
+      var d = (distanceM != null) ? Math.round(distanceM) + 'm' : _t('nearest');
+      var why = (reason === 'stale')
+        ? _t('The sensor in this plot is not reporting — showing the closest one')
+        : _t('Nothing in this plot — showing the closest one');
+      return ' <span class="aot-act-tag aot-scope-nearest" title="' +
+             _esc(why) + '">' + _esc(d) + '</span>';
+    }
+    // 'plot' 과 'irrigation' 에는 배지를 달지 않는다.
+    //
+    // 'irrigation' 은 **마커가 구획 밖에 있다**는 뜻일 뿐인데, 화면에서는
+    // 기능 분류처럼 읽혔다. 실제로 같은 밸브 v341 이 어떤 구획에서는 [관수]
+    // 이고 다른 구획에서는 아무 표시가 없었다(마커가 그 폴리곤 안에 들어갔다는
+    // 이유뿐이다). "v331 96.4% / v332 [관수] 3.6%" 는 v331 이 관수용이 아닌
+    // 것처럼 읽힌다 — 둘 다 밸브다.
+    //
+    // 왜 여기 있고 얼마나 중요한지는 바로 아래 줄의 덮는 비율이 이미 말한다.
+    // 'nearest' 만 배지를 갖는 이유도 같다: 거리는 비율이 대신 말해 주지
+    // 못하는, 값을 믿을지 정하는 근거다.
+    return '';
+  }
+
+  // 값을 못 주는 센서 표시 — 목록에서 빼지 않는다. 빼면 고장이 화면에서
+  // 사라져 아무도 고치지 않는다.
+  function noDataBadgeHtml(on) {
+    if (!on) return '';
+    return ' <span class="aot-act-tag aot-scope-nodata" title="' +
+           _esc(_t('This sensor is not reporting right now')) + '">' +
+           _esc(_t('no data')) + '</span>';
+  }
+
+  // ── 영향 범위 — "켜면 무엇이 함께 젖는가" ─────────────────────────────────
+  //
+  // **구역 모달과 식생 모달 양쪽에 들어간다.** 겹침이 정상인 도메인이라(간작·
+  // 혼작) 한 밸브가 여러 작물을 적시는 것이 예외가 아니라 기본인데, 한쪽
+  // 화면에만 경고를 두면 "구역에서 켜면 안전하다"는 잘못된 대비가 생긴다.
+  //
+  // 접거나 툴팁으로 숨기지 말 것 — 물은 되돌릴 수 없다.
+  //
+  //   coveragePct  이 구획이 얼마나 젖는가(식생 모달에만 온다). 낮은 값을
+  //                감추면 작물 단위로 급수했다고 오해한다.
+  function coverageHtml(alsoCovers, coveragePct) {
+    var parts = [];
+    if (coveragePct != null) {
+      // `%%` 를 쓰지 말 것 — 여기는 printf 가 아니라 문자열 치환이라 그대로
+      // 두 개가 찍힌다(실제로 "75.9%%" 로 나갔다).
+      parts.push('<span class="aot-act-cover-pct">' +
+                 _esc(_t('%(pct)s% of this plot')
+                      .replace('%(pct)s', String(coveragePct))) + '</span>');
+    }
+    if (alsoCovers && alsoCovers.length) {
+      // 개수와 목록을 같이 쓰지 않는다 — 목록을 다 보여주므로 "3곳" 은
+      // 같은 말을 두 번 하는 것이고, 좁은 2행에서 자리만 먹는다.
+      parts.push('<span class="aot-act-cover-also">' +
+                 _esc(_t('Also waters')) + ': ' +
+                 _esc(alsoCovers.join(', ')) + '</span>');
+    }
+    if (!parts.length) return '';
+    return '<span class="aot-act-coverage">' + parts.join(' · ') + '</span>';
   }
 
   // ── 작동 시간 한 칸 (공용) ─────────────────────────────────────────────────
@@ -859,8 +942,13 @@
   };
 
   // 섹션 탭 내비 — [현황](동적) / [환경·제어](센서+제어) / [개요](정적)
-  function buildSectionNav(active) {
-    var secs = [
+  //
+  // `secs` 를 넘기면 그 목록으로 그린다. 계층마다 탭 수가 달라도(식생은 아직
+  // [환경·제어]가 없다) **내비 빌더는 하나여야 한다** — 계층별로 자기 내비를
+  // 손으로 그리기 시작하면 탭 키·순서·클래스가 조용히 갈리고, 구역이 시설과
+  // 탭을 맞추느라 한 번 겪은 일이 그대로 재발한다.
+  function buildSectionNav(active, secs) {
+    secs = secs || [
       { key: 'overview', label: 'Overview' },
       { key: 'envctl',   label: 'Environment & Control' },
       { key: 'about',    label: 'About' }
@@ -1353,7 +1441,65 @@
   // 면적과 개수를 읽고 나가야 했다.
   function buildZoneStatusHtml(zone, opts) {
     zone = zone || {};
-    return buildEnvNowHtml(zone.env, opts) + _ovNotesBlock();
+    return buildEnvNowHtml(zone.env, opts) +
+           buildZonePlantingsHtml(zone.allocation) +
+           _ovNotesBlock();
+  }
+
+  // ── 지금 심겨 있는 것 (구역 [현황]) ────────────────────────────────────────
+  //
+  // 농장 지도인데 계층 어디에도 작물이 없었다 — 구역 모달은 센서·장치·기능만
+  // 알고 무엇이 자라는지는 몰랐다.
+  //
+  // **합계를 내지 않는다.** 겹침이 정상이라(간작·혼작, VP-3) 비율의 합이 100%를
+  // 넘는 것이 맞는데, 합계를 띄우면 사용자는 그것을 오류로 읽는다. 미배정은
+  // 서버가 **합집합**으로 뺀 값을 그대로 쓴다(단순 합으로 빼면 음수가 된다).
+  function buildZonePlantingsHtml(alloc) {
+    if (!alloc) return '';
+    var items = alloc.plantings || [];
+    var html = '<div class="aot-ov-block aot-ov-zone-plantings">' +
+               '<div class="aot-ov-sec-title">' +
+               _esc(_t('Growing now')) + '</div>';
+
+    if (!items.length) {
+      html += '<div class="aot-ov-muted">' +
+              _esc(_t('Nothing is planted in this zone.')) + '</div></div>';
+      return html;
+    }
+
+    items.forEach(function (p) {
+      var right = [];
+      if (p.days_since_planted != null) {
+        right.push(_esc(_t('Day %(n)s')
+                        .replace('%(n)s', String(p.days_since_planted))));
+      }
+      if (p.area_m2 != null) {
+        var a = Number(p.area_m2).toLocaleString() + ' m²';
+        if (p.ratio_pct != null) a += ' (' + p.ratio_pct + '%)';
+        right.push(_esc(a));
+      }
+      // 줄을 누르면 그 구획 모달로 내려간다(필지 → 구역과 같은 규약).
+      html += '<div class="aot-ov-row aot-ov-planting-link" ' +
+              'data-planting-uuid="' + _esc(p.unique_id) + '" ' +
+              'style="cursor:pointer"><span>' +
+              _esc(p.crop || p.name || '—') +
+              (p.variety ? ' <span class="aot-ov-muted">· ' +
+                           _esc(p.variety) + '</span>' : '') +
+              '</span><span>' + right.join(' · ') + '</span></div>';
+    });
+
+    if (alloc.unassigned_m2 != null) {
+      // 반올림해서 0%가 되면 퍼센트를 아예 뺀다 — "4.4 m² (0%)" 는 계산이
+      // 틀린 것처럼 읽힌다. 남은 것이 있다는 사실은 면적이 이미 말한다.
+      var _p = (alloc.zone_area_m2 > 0)
+        ? Math.round(alloc.unassigned_m2 / alloc.zone_area_m2 * 100) : 0;
+      var pct = _p > 0 ? ' (' + _p + '%)' : '';
+      html += '<div class="aot-ov-row aot-ov-muted"><span>' +
+              _esc(_t('Unassigned')) + '</span><span>' +
+              _esc(Number(alloc.unassigned_m2).toLocaleString() + ' m²' + pct) +
+              '</span></div>';
+    }
+    return html + '</div>';
   }
 
   // Zone [개요] 탭 — 이것의 정체는 무엇인가. 시설 [개요]와 같은 순서다
@@ -1751,38 +1897,142 @@
   //
   // 노트 블록은 공용 컴포넌트(_ovNotesBlock → AoTNotesBlock)를 그대로 쓴다.
   // 여기서 자체 노트 마크업을 다시 짜지 말 것.
+  // 탭 구성 — 시설·구역과 **같은 세 키**(overview/envctl/about). 위젯 옵션
+  // popup_default_tab 이 그대로 걸린다.
+  var _PLANTING_SECS = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'envctl',   label: 'Environment & Control' },
+    { key: 'about',    label: 'About' }
+  ];
+
+  // 위젯 옵션 popup_default_tab 은 세 키를 쓰는데 식생은 그중 둘만 갖는다 —
+  // 'envctl' 로 설정된 대시보드에서 식생을 열면 존재하지 않는 탭을 요구받는다.
+  // 그때는 조용히 [현황]으로 떨어뜨린다(빈 화면보다 낫다).
+  function plantingDefaultSec(want) {
+    for (var i = 0; i < _PLANTING_SECS.length; i++) {
+      if (_PLANTING_SECS[i].key === want) return want;
+    }
+    return 'overview';
+  }
+
+  // 기존 모달의 행 마크업과 같은 것을 쓴다(buildAboutSection 의 _row).
+  function _pRow(label, val) {
+    return '<div class="aot-ov-row"><span>' + _esc(label) + '</span><span>' +
+           val + '</span></div>';
+  }
+
+  function _pPane(key, active, inner) {
+    return '<div class="aot-bay-popup-pane" data-pane="' + key + '"' +
+           (key === active ? '' : ' style="display:none"') + '>' + inner + '</div>';
+  }
+
   function buildPlantingModal(p, opts) {
     p = p || {};
     opts = opts || {};
-    // 기존 모달의 행 마크업과 같은 것을 쓴다(buildAboutSection 의 _row).
-    function _ovRow(label, val) {
-      return '<div class="aot-ov-row"><span>' + _esc(label) + '</span><span>' +
-             val + '</span></div>';
-    }
-    var html = buildModalHeader({ name: p.name || p.crop || _t('Planting'),
-                                  up: false, status: null });
+    var defSec = plantingDefaultSec(opts.defaultTab);
+    // up: 소속 구역으로 올라간다. 버튼은 hidden 으로 자리만 잡고, 상위가
+    // 확인되면 위젯이 드러낸다(_wireUpBtn) — 구역을 못 찾은 구획에서는 눌러도
+    // 아무 일 없는 버튼이 남지 않는다.
+    return buildModalHeader({ name: p.name || p.crop || _t('Planting'),
+                              up: true, status: null }) +
+           buildSectionNav(defSec, _PLANTING_SECS) +
+           _pPane('overview', defSec, _plantingOverviewHtml(p)) +
+           // [환경·제어]는 별도 조회(/contents)라 빈 칸으로 열어 두고
+           // 도착하면 채운다 — 그 왕복 때문에 모달 전체를 늦추지 않는다.
+           _pPane('envctl',   defSec, '') +
+           _pPane('about',    defSec, _plantingAboutHtml(p));
+  }
 
-    // 1) 무엇이 언제 — 이 모달의 본론. 보기와 편집을 같은 블록에 두고
-    //    토글한다(구역 모달의 설명 편집과 같은 방식: aot-ov-desc-*).
-    //    geo/design 은 도형만 다루므로 **작물·기간을 고치는 자리는 여기다.**
-    html += '<div class="aot-ov-block aot-ov-planting-info">' +
+  // ── [현황] — 지금 이 구획이 어떤 상태인가 ────────────────────────────────
+  //
+  // **중심은 노트다.** 현 상황(관찰·작업·사진)을 말할 수 있는 것은 노트뿐이고,
+  // 그것이 이 탭에 오는 이유다.
+  //
+  // 예전에는 여기에 "이 구획 안의 센서 · 1" 같은 **개수**와 밸브 커버리지
+  // 목록이 있었다. 둘 다 "어떤 장치로 관리하느냐" 인데 그건 [환경·제어]가
+  // 값·스코프 배지·영향 범위까지 제대로 낸다 — 여기 있던 것은 값도 없이
+  // 장치 이야기만 하면서 정작 봐야 할 노트를 아래로 밀어냈다.
+  function _plantingOverviewHtml(p) {
+    var html = '<div class="aot-ov-block">' +
+               '<div class="aot-ov-sec-title">' + _esc(_t('Growing now')) +
+               '</div>';
+
+    html += _pRow(_t('Crop'), _esc(p.crop || '—') +
+                  (p.variety ? ' · ' + _esc(p.variety) : ''));
+
+    // 재배 일수 — 심은 날이 1일차(서버 elapsed_days 가 정본).
+    //
+    // 끝난 작기는 **기간**이지 나이가 아니다. 같은 숫자라도 "60일차"(지금 60일째
+    // 자라는 중)와 "60일"(60일간 길렀다)은 다른 말이라, 종료된 작기에 '일차'를
+    // 쓰면 아직 자라고 있는 것처럼 읽힌다.
+    if (p.days_since_planted != null) {
+      var n = String(p.days_since_planted);
+      html += _pRow(p.ended_on ? _t('Grown for') : _t('Days since planting'),
+                    _esc((p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
+                         .replace('%(n)s', n)));
+    }
+    html += _pRow(_t('Planted on'), _esc(p.planted_on || '—'));
+
+    // 예상 종료까지 — 지난 것을 숨기지 않는다. 늦어지고 있다는 것 자체가
+    // 사용자가 봐야 할 사실이다.
+    if (p.expected_end_on) {
+      var due = _esc(p.expected_end_on);
+      var d = p.days_to_expected_end;
+      if (d != null) {
+        due += ' <span class="aot-ov-muted">(' +
+               (d >= 0
+                 ? _esc(_t('in %(n)s days').replace('%(n)s', String(d)))
+                 : _esc(_t('%(n)s days overdue').replace('%(n)s',
+                        String(-d)))) + ')</span>';
+      }
+      html += _pRow(_t('Expected end'), due);
+    }
+    if (p.ended_on) html += _pRow(_t('Ended'), _esc(p.ended_on));
+    html += '</div>';
+
+    // 물 줄 수단이 없다 — 장치 목록이 아니라 **빠진 것**을 알리는 줄이다.
+    // 정상일 때는 나오지 않으므로 평소 화면을 어지럽히지 않는다.
+    html += _plantingNoValveHtml(p);
+
+    // 노트 — 이 탭의 본론.
+    html += _ovNotesBlock();
+    return html;
+  }
+
+  // 구획에 걸친 관수 구역에 밸브가 배정돼 있지 않으면 알린다.
+  // 밸브 목록을 내는 것이 아니다(그건 [환경·제어]) — "적실 수단이 아직 없다"
+  // 는 상태를 말하는 것이고, 그래서 [현황]에 있다.
+  function _plantingNoValveHtml(p) {
+    var valves = p.valves;
+    if (!Array.isArray(valves)) return '';
+    var open = valves.filter(function (v) { return v.unassigned; });
+    if (!open.length) return '';
+    return '<div class="aot-ov-block aot-ov-planting-novalve">' +
+           '<div class="aot-ov-muted">' +
+           _esc(_t('An irrigation area over this plot has no valve assigned yet.')) +
+           '</div></div>';
+  }
+
+  // ── [개요] — 잘 안 변하는 사실 + 편집 ───────────────────────────────────
+  function _plantingAboutHtml(p) {
+    // 보기와 편집을 같은 블록에 두고 토글한다(구역 모달의 설명 편집과 같은
+    // 방식: aot-ov-desc-*). geo/design 은 도형만 다루므로 **작물·기간을 고치는
+    // 자리는 여기다.**
+    var html = '<div class="aot-ov-block aot-ov-planting-info">' +
             '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
             '<span>' + _esc(_t('Crop')) + '</span>' +
             '<button type="button" class="aot-ov-pill aot-ov-planting-edit">' +
             _esc(_t('Edit')) + '</button></div>';
 
     html += '<div class="aot-ov-planting-view">';
-    html += _ovRow(_t('Crop'), _esc(p.crop || '—') +
+    html += _pRow(_t('Crop'), _esc(p.crop || '—') +
                    (p.variety ? ' · ' + _esc(p.variety) : ''));
-    if (p.name) html += _ovRow(_t('Plot name'), _esc(p.name));
-    html += _ovRow(_t('Planted on'), _esc(p.planted_on || '—'));
+    if (p.name) html += _pRow(_t('Plot name'), _esc(p.name));
+    html += _pRow(_t('Planted on'), _esc(p.planted_on || '—'));
     if (p.expected_end_on) {
-      html += _ovRow(_t('Expected end'), _esc(p.expected_end_on));
+      html += _pRow(_t('Expected end'), _esc(p.expected_end_on));
     }
-    if (p.ended_on) html += _ovRow(_t('Ended'), _esc(p.ended_on));
-    if (p.area_m2 != null) {
-      html += _ovRow(_t('Area'), Number(p.area_m2).toLocaleString() + ' m²');
-    }
+    if (p.ended_on) html += _pRow(_t('Ended'), _esc(p.ended_on));
     html += '</div>';
 
     // 편집 폼 (기본 숨김). 기하는 여기서 고치지 않는다 — 도형은 geo/design 이다.
@@ -1825,56 +2075,52 @@
             '</div></div>';
     html += '</div>';
 
-    // 2) 어느 센서를 보고 있나 — 값이 아니라 **출처**를 말한다.
-    //    구획마다 따로 잰 값으로 읽히면 안 된다(대개 구역 대표값이다).
-    var s = p.sensors;
-    if (s) {
-      var line;
-      if (s.source === 'plot') {
-        line = _t('Sensors inside this plot') + ' · ' + (s.in_plot || []).length;
-      } else if (s.source === 'zone') {
-        line = _t('Using zone sensors') +
-               (s.zone_name ? ' (' + _esc(s.zone_name) + ')' : '') +
-               ' · ' + (s.from_zone || []).length;
-      } else {
-        line = _t('No sensor nearby');
-      }
-      html += '<div class="aot-ov-block">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Sensors')) + '</div>' +
-              '<div class="aot-ov-muted">' + line + '</div></div>';
-    }
+    html += _plantingDimsHtml(p);
 
-    // 3) 관수 — 밸브와 식생은 계층이 아니라 교차다. 밸브 하나가 두 작물을
-    //    적시고 한 작물이 두 밸브에 걸친다. 그래서 "이 구획의 밸브" 가 아니라
-    //    "얼마나 덮이는가" 를 보여준다. 관수량은 계산하지 않는다 — 겹친 곳에서
-    //    물은 공유되므로 작물별 요구량 합산은 물리적으로 틀린다.
-    var valves = p.valves;
-    if (Array.isArray(valves) && valves.length) {
-      html += '<div class="aot-ov-block">' +
-              '<div class="aot-ov-sec-title">' + _esc(_t('Irrigation')) + '</div>';
-      valves.forEach(function (v) {
-        var who = v.device_name || v.shape_name ||
-                  (v.unassigned ? _t('No valve assigned') : _t('Valve'));
-        var cover = (v.coverage_pct != null)
-          ? v.coverage_pct + '% · ' + Number(v.overlap_m2).toLocaleString() + ' m²'
-          : Number(v.overlap_m2).toLocaleString() + ' m²';
-        html += '<div class="aot-ov-row"><span>' + _esc(who) +
-                (v.unassigned ? ' <span class="aot-ov-muted">(' +
-                                _esc(_t('unassigned')) + ')</span>' : '') +
-                '</span><span>' + _esc(cover) + '</span></div>';
-      });
-      html += '</div>';
-    }
-
-    // 4) 이 자리 이력 — 연작 장해·윤작 판단의 근거.
+    // 이 자리 이력 — 연작 장해·윤작 판단의 근거. 도형과 함께 잘 안 변하는
+    // 사실이라 [개요]에 둔다(채우는 것은 fillPlantingHistory).
     html += '<div class="aot-ov-block aot-ov-planting-history">' +
             '<div class="aot-ov-sec-title">' + _esc(_t('History here')) + '</div>' +
             '<div class="aot-ov-planting-history-list">' +
             '<span class="aot-ov-muted">…</span></div></div>';
-
-    // 5) 노트
-    html += _ovNotesBlock();
     return html;
+  }
+
+
+
+  // 구획 정보 — 면적과 치수. 면적만으로는 방향이 있는 질문("몇 줄 들어가나")에
+  // 답할 수 없어서 서버가 최소회전 외접사각형의 두 변을 함께 준다.
+  //
+  // ⚠ `dims.shape_note` 를 여기 그대로 띄우지 말 것 — 그것은 AI 에게 "이 숫자를
+  // 보고할 때 이렇게 말하라" 고 지시하는 문장이라, 사용자가 자기에게 하는 말이
+  // 아닌 지시문을 읽게 된다. 사람에게는 `rect_fill_pct` 를 근거로 이 자리의
+  // 문구를 따로 만든다.
+  //
+  // 식재량(줄 수·그루 수)은 아직 싣지 않는다 — 간격을 받는 칸이 화면에 없고,
+  // 간격 없이는 서버도 세지 않는다(capacity_estimate 는 None 을 돌려준다).
+  function _plantingDimsHtml(p) {
+    var d = p.dims;
+    var rows = '';
+    if (p.area_m2 != null) {
+      rows += _pRow(_t('Area'), _esc(Number(p.area_m2).toLocaleString() + ' m²'));
+    }
+    if (d && d.width_m != null && d.length_m != null) {
+      rows += _pRow(_t('Dimensions'),
+                    _esc(d.length_m + ' × ' + d.width_m + ' m'));
+    }
+    if (!rows) return '';
+    var note = '';
+    // 서버의 경고 기준(_SHAPE_WARN_RATIO 1.3 = 채움 약 77%)과 같은 선을 쓴다.
+    if (d && d.rect_fill_pct != null && d.rect_fill_pct < 77) {
+      // msgid 는 한 줄 리터럴로 둔다 — 문자열을 이어붙이면 babel 추출이
+      // 조각을 따로 잡거나 아예 놓쳐, 번역이 있는데도 영어가 나온다.
+      note = '<div class="aot-ov-muted">' +
+             _esc(_t('This plot is not rectangular, so these dimensions are the enclosing rectangle — the usable area is smaller.')) +
+             '</div>';
+    }
+    return '<div class="aot-ov-block">' +
+           '<div class="aot-ov-sec-title">' + _esc(_t('Plot information')) +
+           '</div>' + rows + note + '</div>';
   }
 
   // 이력 목록을 채운다. rows 는 /api/geo/plantings/history 의 history 배열.
@@ -1900,6 +2146,7 @@
 
   window.AoTMapPopup = {
     buildPlantingModal:  buildPlantingModal,
+    plantingDefaultSec:  plantingDefaultSec,
     fillPlantingHistory: fillPlantingHistory,
     positionDots:      positionDots,
     openOutputSchedule: openOutputSchedule,
@@ -1916,6 +2163,9 @@
     buildEnvNowHtml:       buildEnvNowHtml,
     wireEnvNowPick:        wireEnvNowPick,
     buildModalHeader:      buildModalHeader,
+    scopeBadgeHtml:        scopeBadgeHtml,
+    noDataBadgeHtml:       noDataBadgeHtml,
+    coverageHtml:          coverageHtml,
     applyStatusDot:        applyStatusDot,
     emptyLine:             emptyLine,
     buildOutputRow:        buildOutputRow,

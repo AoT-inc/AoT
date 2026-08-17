@@ -1164,3 +1164,90 @@
   color: var(--aot-color-text-primary);
   font-weight: 600;
 }
+
+/* ── 스코프 배지 + 관수 영향 범위 (구역·식생 모달 공용) ────────────────────
+
+   배지는 "이 장치가 왜 여기 보이나" 를 말한다. 식생 모달에서만 붙는다 —
+   구역은 빌려오는 것이 없어 서버가 scope 를 아예 안 준다.
+
+   영향 범위(.aot-act-coverage)는 **양쪽 모달에 다 붙는다.** 겹침이 정상인
+   도메인이라 한 밸브가 여러 작물을 적시는 것이 기본인데, 식생 창에만
+   경고를 두면 "구역에서 켜면 안전하다" 는 잘못된 대비가 생긴다.
+   그래서 접거나 툴팁으로 숨기지 않고 2행에 항상 펼쳐 둔다. */
+/* 색을 고정하지 말 것 — 이 배지는 어두운 활성 탭·회색 비활성 탭·밝은 장치
+   행에 **전부** 올라간다. 고정색을 주면 그중 하나와 반드시 부딪친다: 실제로
+   --aot-color-text-secondary 가 비활성 탭 배경과 같은 값이라 글자가 통째로
+   사라졌다. 주변 글자색을 그대로 따르면 어느 바탕에서도 읽힌다. */
+.aot-act-tag.aot-scope-nearest {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: var(--aot-font-size-xs);
+  font-weight: 500;
+  line-height: 1.6;
+  color: inherit;
+  border: 1px solid currentColor;
+  opacity: .75;      /* 이름보다 낮은 층위 — 색이 아니라 농도로 낮춘다 */
+}
+/* 직접 닿지 않는다는 표시는 **테두리 모양**으로 한다 — 색으로 가르면 위와
+   같은 바탕 충돌이 다시 생긴다. */
+.aot-act-tag.aot-scope-nearest {
+  border-style: dashed;
+}
+
+/* 2행 안에서 시간 칸 다음에 온다. 줄이 좁으면 아래로 흐르게 두되(wrap),
+   말줄임으로 잘라내지 않는다 — 잘리면 무엇이 함께 젖는지가 사라진다. */
+.aot-act-coverage {
+  flex: 1 1 100%;
+  order: 9;
+  min-width: 0;
+  margin-top: 2px;
+  font-size: var(--aot-font-size-xs);
+  line-height: 1.5;
+  color: var(--aot-color-text-secondary);
+  white-space: normal;
+}
+.aot-act-cover-pct { font-variant-numeric: tabular-nums; }
+/* 함께 젖는 것은 경고색으로. 막는 것이 아니라 알리는 것이므로 예약 겹침
+   경고(.aot-sched-warn)와 같은 축의 색을 쓴다. */
+.aot-act-cover-also { color: var(--aot-color-warning, #ff9f43); }
+
+/* 2행이 두 줄이 될 수 있으므로 wrap 을 허용한다. 시간·설정 칸은 그대로
+   첫 줄에 남고(둘 다 flex-shrink:0 / flex:1), 영향 범위만 아래로 내려간다. */
+.aot-act-meta { flex-wrap: wrap; }
+
+/* 센서가 하나뿐일 때의 출처 한 줄 — 탭이 없어 이름·배지가 걸릴 자리가 없다.
+   그 하나가 구획 밖에서 온 값이면 그 사실이 사라지는 것이 가장 위험하다. */
+.aot-zone-sensor-src {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: var(--aot-font-size-xs);
+}
+
+/* 차트 없이 상태 문구만 남을 때 — absolute 를 푼다.
+   absolute 는 로딩 중 차트 **위에** 얹히기 위한 것이고, 그릴 차트가 없으면
+   부모 높이가 0이 되어 문구가 아래 목록 위로 겹쳐 앉는다(실측 118px).
+   컨테이너별로 막지 않고 문구 자신이 자리를 잡게 한다 — 새 컨테이너가 생겨도
+   같은 겹침이 재발하지 않는다. */
+.aot-sensor-popup-chart-status.is-standalone {
+  position: static;
+  inset: auto;
+  min-height: 72px;
+  padding: 12px 0;
+}
+
+/* 값을 못 주는 센서 — 경고색. 목록에서 빼지 않고 표시만 한다(빼면 고장이
+   화면에서 사라져 아무도 고치지 않는다). 색을 쓰는 유일한 배지인 이유는
+   이것만이 **고장**이기 때문이다 — 나머지 둘(관수·거리)은 정상 상태다. */
+.aot-act-tag.aot-scope-nodata {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: var(--aot-font-size-xs);
+  font-weight: 500;
+  line-height: 1.6;
+  border: 1px solid currentColor;
+  color: var(--aot-color-warning, #ff9f43);
+}

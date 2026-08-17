@@ -14,6 +14,7 @@
 넘는다" 같은 물리적으로 불가능한 화면이 나온다.
 """
 import logging
+import math
 from datetime import date
 
 from aot.aot_flask.geo import device_membership
@@ -686,6 +687,168 @@ def valves_for_planting(planting):
     return out
 
 
+def plantings_covered_by_shape(shape_geom, map_uuid, on=None,
+                               exclude_uuid=None, candidates=None):
+    """도형(관수 구역 등)이 덮는 **재배 중인** 구획들.
+
+    `valves_for_planting` 의 **역방향**이다. 그쪽이 "이 구획을 적시는 밸브" 라면
+    이쪽은 "이 밸브가 적시는 구획들" 이다.
+
+    제어 화면에 이 방향이 필요한 이유: 밸브를 켜는 사람이 알아야 하는 것은 "이
+    구획이 얼마나 젖는가" 가 아니라 **"켜면 무엇이 함께 젖는가"** 다. 겹침이
+    정상인 도메인(간작·혼작, VP-3)이라 한 밸브가 여러 작물을 적시는 것이 예외가
+    아니라 기본이고, 그 사실을 말하지 않으면 사용자는 자기가 고른 작물에만
+    물을 준다고 읽는다.
+
+    `candidates` 로 활성 구획 목록을 넘기면 재사용한다 — 밸브마다 다시 조회하면
+    밸브 수 × 구획 수가 된다.
+    """
+    src = _shapely(shape_geom)
+    if src is None:
+        return []
+
+    rows = candidates if candidates is not None else active_plantings(map_uuid, on=on)
+    out = []
+    for row in rows:
+        if exclude_uuid and row.unique_id == exclude_uuid:
+            continue
+        other = _shapely(geometry_of(row))
+        if other is None:
+            continue
+        try:
+            inter = src.intersection(other)
+        except Exception:
+            continue
+        if inter.is_empty:
+            continue
+        # 경계를 맞대고 있을 뿐인 옆 두둑을 "함께 젖는다" 고 하면 안 된다 —
+        # 면적이 있는 교차만 센다(plantings_overlapping 과 같은 기준).
+        overlap = shapely_area_m2(inter)
+        if overlap <= 0:
+            continue
+        out.append({
+            'unique_id': row.unique_id,
+            'crop': row.crop,
+            'name': row.name,
+            'overlap_m2': round(overlap, 1),
+        })
+    out.sort(key=lambda p: p['overlap_m2'], reverse=True)
+    return out
+
+
+def plantings_by_valve_device(map_uuid, on=None):
+    """`{device_id: [구획, ...]}` — 지도의 관수 장치별로 "무엇을 적시는가".
+
+    **구역 모달과 식생 모달이 함께 쓴다.** 구역에서 켠 밸브도 그 안의 여러
+    작물에 물을 준다 — 식생 모달에만 경고를 붙이면 "구역에서 켜면 안전하다"는
+    잘못된 대비가 생긴다. 같은 사실을 양쪽이 같은 근거로 말해야 한다.
+
+    지도 전체를 **한 번에** 만든다. 출력마다 되짚으면 출력 수 × 도형 수 ×
+    구획 수가 되는데, 구역 모달은 출력이 여럿이라 그 곱이 바로 드러난다.
+    """
+    from aot.aot_flask.geo import device_binding
+
+    active = active_plantings(map_uuid, on=on)
+    if not active:
+        return {}
+
+    shapes = GeoShape.query.filter(
+        GeoShape.geo_id == map_uuid,
+        GeoShape.type == 'device').all()
+
+    out = {}
+    for shape in shapes:
+        covered = plantings_covered_by_shape(
+            geometry_of(shape), map_uuid, on=on, candidates=active)
+        if not covered:
+            continue
+        try:
+            binding = device_binding.current_one('shape', shape.unique_id,
+                                                 role='area')
+        except Exception as exc:
+            logger.warning('planting: 밸브 바인딩 해소 실패(%s): %s',
+                           shape.unique_id, exc)
+            continue
+        device_id = binding.device_id if binding is not None else None
+        if not device_id:
+            # 밸브 미배정 구역 — 켤 장치가 없으니 "함께 젖는다" 를 말할 대상도
+            # 없다. 미배정 사실 자체는 valves_for_planting 이 따로 낸다.
+            continue
+        # 같은 장치가 여러 관수 구역에 걸릴 수 있다 — 구획 기준으로 합친다.
+        bucket = out.setdefault(device_id, {})
+        for c in covered:
+            prev = bucket.get(c['unique_id'])
+            if prev is None or c['overlap_m2'] > prev['overlap_m2']:
+                bucket[c['unique_id']] = c
+
+    return {did: sorted(items.values(),
+                        key=lambda p: p['overlap_m2'], reverse=True)
+            for did, items in out.items()}
+
+
+def nearest_devices(planting, candidate_ids, markers=None, limit=1):
+    """구획에서 **가장 가까운** 장치 → `[(device_id, 거리_m)]`.
+
+    구획 안에도 없고 구획을 적시지도 않는데 "이 구역에 있다" 는 이유만으로
+    목록에 넣으면, 식생 패널이 구역 패널의 복사본이 된다 — 그럴 거면 구역
+    패널을 열면 된다. 직접 닿는 것이 하나도 없을 때만, 값을 읽을 최소한의
+    수단으로 가장 가까운 것을 낸다.
+
+    거리는 구획의 **대표점**에서 장치 마커까지다. 대표점은 오목한 폴리곤에서도
+    반드시 내부에 있다(centroid 는 밖으로 나갈 수 있다 — container_for_geometry
+    와 같은 이유).
+
+    마커가 없는 장치는 **뺀다**. 위치를 모르면 "가장 가깝다" 고 말할 근거가
+    없고, 근거 없이 고른 것을 대표값으로 내세우는 쪽이 아무것도 안 내는 것보다
+    나쁘다.
+    """
+    if not candidate_ids:
+        return []
+
+    poly = _shapely(geometry_of(planting))
+    if poly is None:
+        return []
+    try:
+        ref = poly.representative_point()
+    except Exception:
+        return []
+
+    to_m, _from_m, lat0 = local_frame(geometry_of(planting))
+    if to_m is None:
+        return []
+    rx, ry = to_m(ref.x, ref.y)
+
+    if markers is None:
+        markers = device_membership.load_markers(planting.geo_id)
+
+    best = {}
+    for device_id, pt in markers:
+        if device_id not in candidate_ids or not pt:
+            continue
+        mx, my = to_m(pt[0], pt[1])
+        d = math.hypot(mx - rx, my - ry)
+        if device_id not in best or d < best[device_id]:
+            best[device_id] = d
+
+    ordered = sorted(best.items(), key=lambda kv: kv[1])
+    return [(did, round(d, 1)) for did, d in ordered[:max(limit, 0)]]
+
+
+def covered_crop_names(covered, exclude_uuid=None):
+    """구획 목록 → 화면에 쓸 이름들. **uuid 는 내보내지 않는다.**
+
+    `crop` 이 사람이 부르는 이름이고, 없으면 구획 이름으로 떨어진다.
+    """
+    names = []
+    for c in covered or []:
+        if exclude_uuid and c.get('unique_id') == exclude_uuid:
+            continue
+        label = c.get('crop') or c.get('name')
+        if label and label not in names:
+            names.append(label)
+    return names
+
+
 # ---------------------------------------------------------------------------
 # 면적 배분
 # ---------------------------------------------------------------------------
@@ -726,6 +889,9 @@ def zone_allocation(zone_shape, on=None):
             'variety': row.variety,
             'area_m2': round(a, 1),
             'ratio_pct': round(a / zone_area * 100.0, 1) if zone_area > 0 else None,
+            # 달력만 보는 값이라 여기서 함께 낸다 — 구역 [현황]이 "무엇이
+            # 며칠째 자라고 있나" 를 한 줄로 말할 수 있어야 한다.
+            'days_since_planted': elapsed_days(row, on=on),
         })
 
     used = 0.0
@@ -777,8 +943,35 @@ def _has_overlap(geoms):
 # 직렬화
 # ---------------------------------------------------------------------------
 
+def elapsed_days(row, on=None):
+    """재배 일수 — **심은 날이 1일차**. 기하가 아니라 달력만 본다.
+
+    +1 을 여기서 한 번만 한다. 화면마다 "0일차부터 세는 곳" 과 "1일차부터 세는
+    곳" 이 갈리면 같은 두둑이 창마다 하루씩 다른 나이를 갖는다. 농사에서 "정식
+    후 며칠" 은 심은 날을 1일로 세는 관행이라 그쪽에 맞춘다.
+
+    종료된 작기는 오늘이 아니라 **종료일** 을 기준으로 센다 — 작년에 끝난 작기가
+    오늘까지 계속 나이를 먹으면 이력 목록이 곧 거짓말이 된다.
+    """
+    if row.planted_on is None:
+        return None
+    ref = row.ended_on or (on or date.today())
+    return (ref - row.planted_on).days + 1
+
+
+def days_to_expected_end(row, on=None):
+    """예상 종료일까지 남은 날 (음수 = 지났다). 없으면 None.
+
+    지난 것을 숨기지 않는다 — "예상보다 20일 지났다" 는 수확을 미루고 있다는
+    뜻이라 그 자체가 사용자가 봐야 할 사실이다.
+    """
+    if row.expected_end_on is None or row.ended_on is not None:
+        return None
+    return (row.expected_end_on - (on or date.today())).days
+
+
 def to_dict(row, containers=None, with_sensors=False, markers=None,
-            with_valves=None):
+            with_valves=None, with_dims=None):
     """GeoPlanting → API 응답 dict.
 
     `with_valves` 는 기본적으로 `with_sensors` 를 따른다 — 상세 조회의 기존
@@ -786,6 +979,15 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
     로 밸브 교차를 뺀다. 실측(구획 8개): 센서 37 쿼리 · 밸브 120 쿼리로 비용의
     대부분이 밸브 쪽이라, 둘을 한 플래그로 묶어 두면 가벼운 센서까지 함께
     막힌다.
+
+    `with_dims` 도 기본은 `with_sensors` 를 따른다. DB 를 타지 않지만 구획마다
+    최소회전 외접사각형을 구하는 기하 계산이라, 목록 응답에서 행 수만큼 돌릴
+    이유가 없다 — 치수를 읽는 자리는 상세(모달) 하나다.
+
+    ⚠ `dims['shape_note']` 는 **사람에게 보여줄 문구가 아니다.** AI 에게 "이
+    숫자를 보고할 때 이렇게 말하라" 고 지시하는 문장이라, 화면에 그대로 띄우면
+    사용자가 자기에게 하는 말이 아닌 지시문을 읽게 된다. 화면은 대신
+    `rect_fill_pct` 를 근거로 자기 문구를 만든다.
     """
     out = {
         'unique_id': row.unique_id,
@@ -804,9 +1006,17 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         'color': row.color,
         'active': row.is_active(),
         'area_m2': round(area_m2(row), 1),
+        # 달력만 보는 값이라 목록에서도 항상 싣는다 — 구역 모달의 "지금 심겨
+        # 있는 것" 목록이 이 값으로 재배 일수를 보인다.
+        'days_since_planted': elapsed_days(row),
+        'days_to_expected_end': days_to_expected_end(row),
     }
     if with_valves is None:
         with_valves = with_sensors
+    if with_dims is None:
+        with_dims = with_sensors
+    if with_dims:
+        out['dims'] = dimensions(row)
     if with_sensors:
         out['sensors'] = sensors_for_planting(row, containers=containers,
                                               markers=markers)

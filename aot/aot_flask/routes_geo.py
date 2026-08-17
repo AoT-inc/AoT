@@ -3289,9 +3289,136 @@ def api_geo_zone_contents(zone_uuid):
     return jsonify(payload)
 
 
+def _build_area_contents(device_ids, scope_of=None, env=None):
+    """장치 참조 집합 → 모달의 인벤토리(센서·장치·기능 + 집계 + 상태).
+
+    **구역 모달과 식생 모달이 이 하나를 함께 쓴다.** 두 벌로 복사하면 같은
+    장치를 두 화면이 다르게 세게 되는데, 이 도메인은 정확히 그 실패로 이미
+    크게 데었다(`_build_zone_contents` 의 "같은 구역의 센서 수가 화면마다
+    달랐다" 주석 참조). 스코프를 정하는 일(어떤 장치가 이 영역의 것인가)은
+    호출자가 하고, 여기서는 **정해진 집합을 푸는 일만** 한다.
+
+    `scope_of(unique_id) -> 'plot'|'zone'|None` 를 주면 항목마다 `scope` 를
+    붙인다. 식생 모달이 "구획 안의 것" 과 "구역에서 빌려온 것" 을 화면에서
+    구분하는 근거다 — 구역 모달은 빌려오는 것이 없으므로 주지 않는다(그러면
+    키 자체가 안 붙어 기존 응답 모양이 그대로 유지된다).
+    """
+    from aot.databases.models import OutputChannel
+    from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
+
+    device_ids = device_ids or set()
+
+    def _scope(uid):
+        return {'scope': scope_of(uid)} if scope_of else {}
+
+    # 센서 목록 (Input)
+    inputs = (Input.query.filter(Input.unique_id.in_(device_ids)).all()
+              if device_ids else [])
+
+    sensors_out = []
+    for inp in inputs:
+        meas = DeviceMeasurements.query.filter_by(device_id=inp.unique_id).all()
+        channels = [channel_meta_for_dm(m) for m in meas]
+        row = {
+            'unique_id': inp.unique_id,
+            'name': inp.name,
+            'device': getattr(inp, 'device', ''),
+            'is_activated': bool(inp.is_activated),
+            'interface': getattr(inp, 'interface', ''),
+            'channels': channels,
+        }
+        row.update(_scope(inp.unique_id))
+        sensors_out.append(row)
+
+    # 장치 목록 (Output) — 동일하게 파생만 사용
+    outputs_rows = (Output.query.filter(
+        Output.unique_id.in_(device_ids)).all()
+        if device_ids else [])
+
+    outputs_out = []
+    for out in outputs_rows:
+        channels = OutputChannel.query.filter_by(output_id=out.unique_id).order_by(OutputChannel.channel).all()
+        ch_list = [{'channel': c.channel, 'name': c.name or str(c.channel)} for c in channels]
+        if not ch_list:
+            ch_list = [{'channel': 0, 'name': out.name}]
+        row = {
+            'unique_id': out.unique_id,
+            'name': out.name,
+            'output_type': out.output_type or '',
+            'channels': ch_list,
+        }
+        row.update(_scope(out.unique_id))
+        outputs_out.append(row)
+
+    # 함수 목록 (CustomController + Function + Conditional + Trigger + PID)
+    # 함수도 지도에 배치되면 마커(device_id=함수 uuid)를 갖는다 — 같은 파생.
+    # 복합장치(그릇)는 함수와 같은 테이블에 있지만 성격이 다르다 — Input/Output 을
+    # 담는 그릇이지 무언가를 판단하는 규칙이 아니다. 목록에서 섞이면 "이 구역의
+    # 기능"에 장치가 끼어 보인다. 가르는 기준은 collect_devices 와 같다.
+    try:
+        from aot.utils.functions import device_module_names
+        _device_names = device_module_names()
+    except Exception:
+        _device_names = set()
+
+    func_rows = []
+    for model, kind in [
+        (CustomController, 'custom'),
+        (Function,         'function'),
+        (Conditional,      'conditional'),
+        (Trigger,          'trigger'),
+        (PID,              'pid'),
+    ]:
+        if not device_ids:
+            break
+        for row in model.query.filter(
+                model.unique_id.in_(device_ids)).all():
+            row_kind = kind
+            if kind == 'custom' and getattr(row, 'device', None) in _device_names:
+                row_kind = 'device'
+            item = {
+                'unique_id': row.unique_id,
+                'name': row.name,
+                'kind': row_kind,
+                'is_activated': bool(getattr(row, 'is_activated', False)),
+            }
+            item.update(_scope(row.unique_id))
+            func_rows.append(item)
+
+    # 현재 환경 — 예전에는 구역 모달 어디에도 "지금 몇 도인가"가 숫자로 없었다.
+    # 차트 레전드의 마지막 값에 의존하다 보니, 그래프를 못 읽거나 센서 탭을
+    # 넘겨보지 않으면 알 수 없었다. 집계는 필지 요약과 같은 함수를 쓴다 —
+    # 한쪽만 고치면 같은 구역이 두 화면에서 다른 온도를 말한다.
+    # env 를 이미 계산해 둔 호출자는 넘겨서 **influx 왕복을 한 번 아낀다**.
+    # 넘길 수 있는 조건은 하나뿐이다: 그 계산의 대상 집합이 여기 `device_ids`
+    # 와 **같은 Input 들을 담을 때**. env 는 Input 만 보므로 Output·Function 이
+    # 더 있고 없고는 상관없다(실측: 왕복 1회 약 64ms).
+    from aot.aot_flask.geo.site_summary import env_for_devices, status_from
+    if env is None:
+        try:
+            env = env_for_devices(device_ids)
+        except Exception:
+            current_app.logger.exception("area contents: env aggregation failed")
+            env = {'readings': [], 'sensors': {'valid': 0, 'total': 0}}
+
+    # 제목줄 상태 점 — 필지 요약의 행과 같은 판정을 쓴다. env 를 넘겨
+    # influx 재조회를 피한다.
+    return {
+        'sensors': sensors_out,
+        'outputs': outputs_out,
+        'functions': func_rows,
+        'counts': {
+            'sensors': len(sensors_out),
+            'outputs': len(outputs_out),
+            'functions': len(func_rows),
+        },
+        'env': env,
+        'status': status_from(device_ids, env),
+    }
+
+
 def _build_zone_contents(zone_uuid):
     """구역 모달 응답 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
-    from aot.databases.models import OutputChannel
 
     zone = GeoShape.query.filter_by(unique_id=zone_uuid, type='zone').first()
     if not zone:
@@ -3346,96 +3473,40 @@ def _build_zone_contents(zone_uuid):
     from aot.aot_flask.geo.device_membership import device_ids_in_area
     geo_device_ids = device_ids_in_area(zone.unique_id) or set()
 
-    # 센서 목록 (Input)
-    inputs = (Input.query.filter(Input.unique_id.in_(geo_device_ids)).all()
-              if geo_device_ids else [])
+    inv = _build_area_contents(geo_device_ids)
 
-    from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
-    sensors_out = []
-    for inp in inputs:
-        meas = DeviceMeasurements.query.filter_by(device_id=inp.unique_id).all()
-        channels = [channel_meta_for_dm(m) for m in meas]
-        sensors_out.append({
-            'unique_id': inp.unique_id,
-            'name': inp.name,
-            'device': getattr(inp, 'device', ''),
-            'is_activated': bool(inp.is_activated),
-            'interface': getattr(inp, 'interface', ''),
-            'channels': channels,
-        })
-
-    # 장치 목록 (Output) — 동일하게 파생만 사용
-    outputs_rows = (Output.query.filter(
-        Output.unique_id.in_(geo_device_ids)).all()
-        if geo_device_ids else [])
-
-    outputs_out = []
-    for out in outputs_rows:
-        channels = OutputChannel.query.filter_by(output_id=out.unique_id).order_by(OutputChannel.channel).all()
-        ch_list = [{'channel': c.channel, 'name': c.name or str(c.channel)} for c in channels]
-        if not ch_list:
-            ch_list = [{'channel': 0, 'name': out.name}]
-        outputs_out.append({
-            'unique_id': out.unique_id,
-            'name': out.name,
-            'output_type': out.output_type or '',
-            'channels': ch_list,
-        })
-
-    # 함수 목록 (CustomController + Function + Conditional + Trigger + PID)
-    # 함수도 지도에 배치되면 마커(device_id=함수 uuid)를 갖는다 — 같은 파생.
-    # 복합장치(그릇)는 함수와 같은 테이블에 있지만 성격이 다르다 — Input/Output 을
-    # 담는 그릇이지 무언가를 판단하는 규칙이 아니다. 목록에서 섞이면 "이 구역의
-    # 기능"에 장치가 끼어 보인다. 가르는 기준은 collect_devices 와 같다.
+    # "켜면 무엇이 함께 젖는가" — 식생 모달에만 붙이면 안 된다. 구역에서 켠
+    # 밸브도 그 안의 여러 작물에 물을 주므로, 한쪽에만 경고가 있으면
+    # "구역에서 켜면 안전하다" 는 잘못된 대비가 생긴다(설계 §5-2).
     try:
-        from aot.utils.functions import device_module_names
-        _device_names = device_module_names()
+        from aot.aot_flask.geo import planting_context
+        _cover = planting_context.plantings_by_valve_device(zone.geo_id)
+        for _out in inv['outputs']:
+            names = planting_context.covered_crop_names(
+                _cover.get(_out['unique_id']))
+            if names:
+                _out['also_covers'] = names
     except Exception:
-        _device_names = set()
+        # 식생이 없는 지도가 정상이다 — 여기서 실패해도 구역 모달은 떠야 한다.
+        current_app.logger.exception("zone contents: 관수 교차 계산 실패")
 
-    func_rows = []
-    for model, kind in [
-        (CustomController, 'custom'),
-        (Function,         'function'),
-        (Conditional,      'conditional'),
-        (Trigger,          'trigger'),
-        (PID,              'pid'),
-    ]:
-        if not geo_device_ids:
-            break
-        for row in model.query.filter(
-                model.unique_id.in_(geo_device_ids)).all():
-            row_kind = kind
-            if kind == 'custom' and getattr(row, 'device', None) in _device_names:
-                row_kind = 'device'
-            func_rows.append({
-                'unique_id': row.unique_id,
-                'name': row.name,
-                'kind': row_kind,
-                'is_activated': bool(getattr(row, 'is_activated', False)),
-            })
-
-    counts = {
-        'sensors': len(sensors_out),
-        'outputs': len(outputs_out),
-        'functions': len(func_rows),
-    }
-
-    # 현재 환경 — 예전에는 구역 모달 어디에도 "지금 몇 도인가"가 숫자로 없었다.
-    # 차트 레전드의 마지막 값에 의존하다 보니, 그래프를 못 읽거나 센서 탭을
-    # 넘겨보지 않으면 알 수 없었다. 집계는 필지 요약과 같은 함수를 쓴다 —
-    # 한쪽만 고치면 같은 구역이 두 화면에서 다른 온도를 말한다.
-    from aot.aot_flask.geo.site_summary import (
-        env_for_devices, status_from, rep_key_of)
+    # 지금 심겨 있는 것 — 농장 지도인데 계층 어디에도 작물이 없었다.
+    # 배분 계산(미배정 = **합집합**으로 빼기)은 zone_allocation 이 정본이다.
+    allocation = None
     try:
-        env = env_for_devices(geo_device_ids)
+        from aot.aot_flask.geo import planting_context as _pc
+        allocation = _pc.zone_allocation(zone)
     except Exception:
-        current_app.logger.exception("zone contents: env aggregation failed")
-        env = {'readings': [], 'sensors': {'valid': 0, 'total': 0}}
+        current_app.logger.exception("zone contents: 식생 배분 계산 실패")
 
-    # 제목줄 상태 점 — 필지 요약의 행과 같은 판정을 쓴다. env 를 넘겨
-    # influx 재조회를 피한다.
-    zone_status = status_from(geo_device_ids, env)
+    sensors_out = inv['sensors']
+    outputs_out = inv['outputs']
+    func_rows = inv['functions']
+    counts = inv['counts']
+    env = inv['env']
+    zone_status = inv['status']
+
+    from aot.aot_flask.geo.site_summary import rep_key_of
 
     meta = zone.meta_json or {}
     photo_url = meta.get('photo_url')
@@ -3457,6 +3528,9 @@ def _build_zone_contents(zone_uuid):
             'output_order': output_order,
             'env': env,
             'status': zone_status,
+            # 지금 심겨 있는 것. `zone` 안에 두는 이유는 [현황] 탭이 이 객체
+            # 하나만 받기 때문이다(buildZoneStatusHtml).
+            'allocation': allocation,
         },
         'sensors': sensors_out,
         'outputs': outputs_out,

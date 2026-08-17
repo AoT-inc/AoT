@@ -104,6 +104,47 @@ def cached_zone_contents(zone_uuid, build, force=False):
                         zone_uuid, _ZONE_CONTENTS_TTL_S, build, force)
 
 
+_PLANTING_CONTENTS_CACHE = {}
+_PLANTING_CONTENTS_LOCKS = {}
+
+
+def cached_planting_contents(planting_uuid, build, force=False):
+    """식생 구획 모달 응답 캐시 — 구역 모달과 **같은 수명**(30초).
+
+    사전을 따로 두는 이유는 무효화 단위가 다르기 때문이다: 구획을 고치면 그
+    구획만 버려야 하는데 하나를 같이 쓰면 uuid 공간이 섞여, 구역 무효화가
+    구획 캐시를 함께 날리거나 그 반대가 된다.
+    """
+    return cached_build(_PLANTING_CONTENTS_CACHE, _PLANTING_CONTENTS_LOCKS,
+                        planting_uuid, _ZONE_CONTENTS_TTL_S, build, force)
+
+
+def invalidate_planting_contents(planting_uuid=None):
+    """구획이 바뀐 직후(저장·종료·삭제) 부른다.
+
+    `None` 이면 전부 버린다 — 새 구획이 생기면 **다른 구획의 응답도** 달라지기
+    때문이다(같은 밸브를 공유하는 이웃의 `also_covers` 에 그 구획이 나타나야
+    한다). 자기 것만 버리면 이웃 창은 30초 동안 "함께 젖는 것" 목록에서 새
+    구획을 빠뜨린 채로 보인다.
+    """
+    with _CACHE_LOCK:
+        if planting_uuid is None:
+            _PLANTING_CONTENTS_CACHE.clear()
+        else:
+            _PLANTING_CONTENTS_CACHE.pop(planting_uuid, None)
+
+
+def invalidate_zone_contents_all():
+    """구역 모달 캐시 전량 폐기.
+
+    식생 구획이 바뀌었을 때 쓴다 — 구획의 소속 구역은 저장돼 있지 않고 기하에서
+    파생되므로, 기하를 옮기면 "전" 과 "후" 두 구역이 함께 낡는다. 어느 쪽인지
+    따지느니 전부 버린다(30초 캐시다).
+    """
+    with _CACHE_LOCK:
+        _ZONE_CONTENTS_CACHE.clear()
+
+
 def invalidate_zone_contents(zone_uuid):
     """구역 내용이 바뀐 직후(사진 교체·장치 순서 저장) 부른다.
 
@@ -313,11 +354,11 @@ def _build_summary(site_uuid):
             'name': _shape_name(site),
             'area_m2': _shape_area_m2(site),
             'status': _rollup_status(children),
-            'counts': {
+            'counts': dict({
                 'zones': sum(1 for c in children if c['kind'] == 'zone'),
                 'facilities': sum(1 for c in children if c['kind'] == 'facility'),
                 'devices': len(all_ids),
-            },
+            }, **_planting_counts(site)),
         },
         'children': children,
         'today': _today_block(site, all_ids, offline_total, partial),
@@ -325,6 +366,37 @@ def _build_summary(site_uuid):
         'generated_at': _now_iso(),
         'partial': partial,
     }
+
+
+def _planting_counts(site):
+    """필지 안에서 재배 중인 작물 종수·구획 수 → `{'crops', 'plantings'}`.
+
+    **작물 이름을 구역 행에 넣지 않는다.** 그 행은 이미 `이름 | 값 | 상태`
+    3열이라 거기에 작물을 이어붙이면 한 열이 두 가지를 말하게 되고 열 간격이
+    틀어진다. 필지에서 알고 싶은 것은 "여기 몇 가지가 자라고 있나" 라는 규모
+    감각이므로 숫자 타일 하나로 낸다.
+
+    실패해도 필지 요약 전체를 막지 않는다 — 식생이 없는 지도가 정상이다.
+    """
+    try:
+        from aot.aot_flask.geo import planting_context
+
+        rows = planting_context.active_plantings(site.geo_id)
+        if not rows:
+            return {'crops': 0, 'plantings': 0}
+
+        site_geom = planting_context.geometry_of(site)
+        inside = []
+        for row in rows:
+            covered = planting_context.plantings_covered_by_shape(
+                site_geom, site.geo_id, candidates=[row])
+            if covered:
+                inside.append(row)
+        return {'crops': len({r.crop for r in inside if r.crop}),
+                'plantings': len(inside)}
+    except Exception:
+        logger.exception('site summary: 식생 집계 실패')
+        return {'crops': 0, 'plantings': 0}
 
 
 def _direct_children(site):
