@@ -20,15 +20,13 @@ from flask_babel import gettext
 _ = gettext
 from sqlalchemy import and_
 
-from aot.config import (ALEMBIC_VERSION, BACKUP_LOG_FILE,
-                           DAEMON_LOG_FILE,
-                           DEPENDENCY_LOG_FILE, DOCKER_CONTAINER,
-                           FRONTEND_PID_FILE, HTTP_ACCESS_LOG_FILE,
-                           HTTP_ERROR_LOG_FILE, IMPORT_LOG_FILE,
-                           INSTALL_DIRECTORY,
-                           KEEPUP_LOG_FILE, LOGIN_LOG_FILE, AOT_DB_PATH,
-                           AOT_VERSION, RESTORE_LOG_FILE, SQL_DATABASE_AOT,
-                           THEMES_DARK, UPGRADE_LOG_FILE)
+# 로그 파일 경로 상수는 더 이상 여기서 쓰지 않는다 — 소스 정의는 전부
+# aot/utils/log_reader.py 의 레지스트리 한 곳에 있다.
+from aot.config import (ALEMBIC_VERSION, DOCKER_CONTAINER,
+                           FRONTEND_PID_FILE,
+                           INSTALL_DIRECTORY, AOT_DB_PATH,
+                           AOT_VERSION, SQL_DATABASE_AOT,
+                           THEMES_DARK)
 from aot.config_devices_units import MEASUREMENTS
 from aot.databases.models import (PID, AlembicVersion, Camera, Conversion,
                                      CustomController, DeviceMeasurements,
@@ -921,110 +919,149 @@ def page_live():
                            use_unit=use_unit)
 
 
-@blueprint.route('/logview', methods=('GET', 'POST'))
+# 로그 소스 목록·읽기는 aot/utils/log_reader.py 하나가 담당한다. 이 라우트는
+# 권한 검사와 직렬화만 한다 — 예전처럼 여기서 셸 명령을 조립하지 않는다
+# (사용자 검색어가 `shell=True` 파이프라인에 그대로 들어가 셸 주입이었다).
+def _logview_source_groups():
+    """카테고리별로 묶은, 번역된 소스 목록."""
+    from aot.utils import log_reader
+
+    buckets = OrderedDict()
+    for key in log_reader.CATEGORY_ORDER:
+        buckets[key] = {'key': key,
+                        'label': gettext(log_reader.CATEGORY_LABELS[key]),
+                        'sources': []}
+
+    for source in log_reader.list_sources():
+        group = buckets.get(source['category'])
+        if group is None:
+            group = buckets.setdefault(
+                source['category'],
+                {'key': source['category'], 'label': source['category'],
+                 'sources': []})
+        group['sources'].append({
+            'id': source['id'],
+            'label': gettext(source['label']),
+            'available': source['available'],
+            'reason': _logview_reason_text(source['reason']),
+            'origin': source['origin'],
+        })
+
+    return [g for g in buckets.values() if g['sources']]
+
+
+def _logview_reason_text(reason):
+    """(사유키, 인자) → 번역된 문장. 문장 조립을 여기서 하는 이유는
+    log_reader.list_sources() 주석 참조."""
+    from aot.utils import log_reader
+
+    if not reason:
+        return None
+    key, arg = reason
+    if key == log_reader.REASON_COMMAND_MISSING:
+        return gettext('Command not available on this system: %(command)s',
+                       command=arg)
+    return gettext('File not found')
+
+
+@blueprint.route('/logview', methods=('GET',))
 @flask_login.login_required
 def page_logview():
-    """Display the last (n) lines from a log file."""
+    """Log viewer shell. The log content itself arrives via /logview/data."""
     if not utils_general.user_has_permission('view_logs'):
         return redirect(url_for('routes_general.home'))
 
-    form_log_view = forms_misc.LogView()
-    log_output = None
-    lines = 30
-    search = ''
-    logfile = ''
-    log_field = None
-    command = None
+    from aot.utils import log_reader
 
-    if form_log_view.lines.data:
-        lines = form_log_view.lines.data
-
-    if form_log_view.search.data:
-        search = form_log_view.search.data
-
-    if form_log_view.log.data:
-        log_field = form_log_view.log.data
-
-    # Find which log file was requested, generate command to execute
-    if form_log_view.log.data == 'log_nginx':
-        if DOCKER_CONTAINER:
-            command = f'docker logs -n {lines} aot_nginx'
-            if search:
-                command += f' 2>&1 | grep "{search}"'
-        else:
-            command = f'journalctl -u nginx -n {lines} --no-pager'
-            if search:
-                command += f' | grep "{search}"'
-    elif form_log_view.log.data == 'log_flask':
-        if DOCKER_CONTAINER:
-            command = f'docker logs -n {lines} aot_flask'
-            if search:
-                command += f' 2>&1 | grep "{search}"'
-        else:
-            command = f'journalctl -u aotflask -n {lines} --no-pager'
-            if search:
-                command += f' | grep "{search}"'
-    elif form_log_view.log.data == 'log_pid_settings':
-        logfile = DAEMON_LOG_FILE
-        logrotate_file = logfile + '.1'
-        if (logrotate_file and os.path.exists(logrotate_file) and
-                logfile and os.path.isfile(logfile)):
-            command = f'cat {logrotate_file} {logfile} | grep -a "PID Settings" | tail -n {lines}'
-        else:
-            command = f'grep -a "PID Settings" {logfile} | tail -n {lines}'
-    else:
-        if form_log_view.log.data == 'log_login':
-            logfile = LOGIN_LOG_FILE
-        elif form_log_view.log.data == 'log_http_access':
-            logfile = HTTP_ACCESS_LOG_FILE
-        elif form_log_view.log.data == 'log_http_error':
-            logfile = HTTP_ERROR_LOG_FILE
-        elif form_log_view.log.data == 'log_daemon':
-            logfile = DAEMON_LOG_FILE
-        elif form_log_view.log.data == 'log_dependency':
-            logfile = DEPENDENCY_LOG_FILE
-        elif form_log_view.log.data == 'log_import':
-            logfile = IMPORT_LOG_FILE
-        elif form_log_view.log.data == 'log_keepup':
-            logfile = KEEPUP_LOG_FILE
-        elif form_log_view.log.data == 'log_backup':
-            logfile = BACKUP_LOG_FILE
-        elif form_log_view.log.data == 'log_restore':
-            logfile = RESTORE_LOG_FILE
-        elif form_log_view.log.data == 'log_upgrade':
-            logfile = UPGRADE_LOG_FILE
-        else:
-            logfile = DAEMON_LOG_FILE  # Default
-
-        logrotate_file = logfile + '.1'
-        if (logrotate_file and os.path.exists(logrotate_file) and
-                logfile and os.path.isfile(logfile)):
-            command = f'cat {logrotate_file} {logfile} | tail -n {lines}'
-            if search:
-                command += f' | grep "{search}"'
-        elif os.path.isfile(logfile):
-            command = f'tail -n {lines} {logfile}'
-            if search:
-                command += f' | grep "{search}"'
-
-    # Execute command and generate the output to display to the user
-    if command:
-        log = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-        (log_output, _) = log.communicate()
-        log.wait()
-        log_output = str(log_output, 'utf-8', errors='replace')
-    else:
-        log_output = 404
+    source = request.args.get('source') or log_reader.DEFAULT_SOURCE
+    if log_reader.get_source(source) is None:
+        source = log_reader.DEFAULT_SOURCE
 
     return render_template('tools/logview.html',
-                           form_log_view=form_log_view,
-                           lines=lines,
-                           log_field=log_field,
-                           logfile=logfile,
-                           log_output=log_output,
-                           search=search)
+                           source_groups=_logview_source_groups(),
+                           level_choices=log_reader.LEVEL_CHOICES,
+                           selected_source=source,
+                           default_lines=200)
+
+
+@blueprint.route('/logview/data', methods=('GET',))
+@flask_login.login_required
+def page_logview_data():
+    """JSON log tail — polled by the viewer, so it is a conditional request.
+
+    `offset` is the byte position the client already has; passing it back turns
+    the poll into an incremental read of only what was appended. It is a hint,
+    not a contract: on rotation/truncation the reader silently falls back to a
+    full tail and answers `incremental: false`, which the client uses to decide
+    replace-vs-append.
+    """
+    if not utils_general.user_has_permission('view_logs'):
+        return jsonify({'error': 'permission denied'}), 403
+
+    from aot.aot_flask.utils import utils_http
+    from aot.utils import log_reader
+
+    source = request.args.get('source') or log_reader.DEFAULT_SOURCE
+    search = request.args.get('search') or ''
+    min_level = (request.args.get('level') or '').upper()
+    if min_level not in log_reader.LEVEL_RANK:
+        min_level = ''
+
+    try:
+        lines = int(request.args.get('lines', 200))
+    except (TypeError, ValueError):
+        lines = 200
+
+    offset = request.args.get('offset')
+    try:
+        offset = int(offset) if offset not in (None, '') else None
+    except (TypeError, ValueError):
+        offset = None
+
+    result = log_reader.read_log(source, lines=lines, search=search,
+                                 min_level=min_level, offset=offset)
+    result['label'] = gettext(result['label'])
+    if result.get('error'):
+        result['error'] = gettext(result['error'])
+
+    return utils_http.json_conditional(jsonify(result), request)
+
+
+@blueprint.route('/logview/download', methods=('GET',))
+@flask_login.login_required
+def page_logview_download():
+    """Download the currently filtered view as a plain text file."""
+    if not utils_general.user_has_permission('view_logs'):
+        return redirect(url_for('routes_general.home'))
+
+    from aot.utils import log_reader
+
+    # 알 수 없는 소스는 여기서 기본값으로 되돌린다. read_log() 는 모르는 id 를
+    # 에러 결과로 돌려주지만, 그 id 가 그대로 Content-Disposition 에 실리면
+    # 사용자 문자열이 응답 헤더로 들어간다(개행 주입).
+    source = request.args.get('source') or log_reader.DEFAULT_SOURCE
+    if log_reader.get_source(source) is None:
+        source = log_reader.DEFAULT_SOURCE
+
+    search = request.args.get('search') or ''
+    min_level = (request.args.get('level') or '').upper()
+    if min_level not in log_reader.LEVEL_RANK:
+        min_level = ''
+
+    try:
+        lines = int(request.args.get('lines', 2000))
+    except (TypeError, ValueError):
+        lines = 2000
+
+    result = log_reader.read_log(source, lines=lines, search=search,
+                                 min_level=min_level)
+    body = '\n'.join(entry['raw'] for entry in result['entries'])
+
+    return Response(
+        body + '\n',
+        mimetype='text/plain',
+        headers={'Content-Disposition':
+                 'attachment; filename=aot-{}.log'.format(source)})
 
 
 # Audit log actions offered in the filter dropdown. Kept in sync with the

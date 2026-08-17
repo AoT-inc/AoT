@@ -27,10 +27,15 @@ elif [[ "$INSTALL_DIRECTORY" != "/opt/AoT" && -d /opt/AoT ]]; then
   exit 1
 fi
 
-# Fix for below issue(s)
-# https://github.com/pypa/setuptools/issues/3278
-# https://github.com/AoT-inc/AoT/issues/1149
-export SETUPTOOLS_USE_DISTUTILS=stdlib
+# 예전엔 pypa/setuptools#3278(Python 3.10/3.11 시절 setuptools/distutils
+# 상호운용 버그) 대응으로 여기서 SETUPTOOLS_USE_DISTUTILS=stdlib 를 강제했다.
+# Python 3.12부터 stdlib distutils 자체가 제거돼, 이 변수를 켠 채로는
+# setuptools.build_meta import 가 ModuleNotFoundError: No module named
+# 'distutils' 로 즉시 죽는다 - sdist(휠 없음)로 빌드되는 패키지 전부의 설치가
+# 막히고, pip install -r requirements.txt 가 그 자리에서 중단돼 venv 에
+# pip 외 아무것도 안 남는 사고로 이어졌다(2026-08-17 aot-gw-001, Debian 13
+# trixie/Python 3.13 재현). 최신 setuptools는 자체 vendored distutils를
+# 기본으로 쓰므로 이 변수 없이도 원래 버그가 재발하지 않는다 - 다시 켜지 말 것.
 
 
 if [ "$EUID" -ne 0 ]; then

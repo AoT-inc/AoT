@@ -27,6 +27,47 @@ AOT_MAJOR_VERSION="$(sed -n "s/^AOT_VERSION[[:space:]]*=[[:space:]]*'\([0-9][0-9
 AOT_USER="${AOT_USER:-aot}"
 AOT_GROUP="${AOT_GROUP:-${AOT_USER}}"
 
+# 소스 컴파일(numpy 등) 시 코어 여러 개가 한꺼번에 최대클럭까지 치솟으면 전류가
+# 급증한다. 현장 전원(배터리/솔라/부실한 어댑터 등, 항상 5V/3A가 보장되지 않는
+# 환경)에서는 이게 저전압 브라운아웃→보드 재부팅으로 이어질 수 있다(2026-08-17
+# aot-gw-001 실측: numpy 메타데이터 준비 중 재부팅, dmesg에 Undervoltage
+# detected 다수 + vcgencmd get_throttled 에 언더볼트 이력 플래그 남음).
+# taskset으로 코어 수 자체를 줄이면 nproc()을 참조하는 대부분의 빌드 백엔드
+# (ninja/make/meson)가 스스로 job 수를 낮춘다 - 개별 패키지마다 빌드 플래그를
+# 맞출 필요가 없다. MAKEFLAGS/NPY_NUM_BUILD_JOBS/CMAKE_BUILD_PARALLEL_LEVEL는
+# nproc()을 안 쓰는 소수의 백엔드를 위한 보조 장치.
+# INSTALL_TARGET(raspi/debian/docker)이 아니라 MACHINE_TYPE(아키텍처)로 가른다 -
+# 전원 부실 위험은 OS 배포판이 아니라 ARM SBC라는 하드웨어 특성에서 온다.
+# detect_platform.sh를 거치지 않은 단독 호출(예: aot-commands) 대비 자체 폴백 포함.
+if [ -z "${MACHINE_TYPE}" ]; then
+    case "$(uname -m)" in
+        aarch64|arm64) MACHINE_TYPE="arm64" ;;
+        armv7l|armv6l) MACHINE_TYPE="armhf" ;;
+        *)             MACHINE_TYPE="$(uname -m)" ;;
+    esac
+fi
+_AOT_NPROC="$(nproc 2>/dev/null || echo 4)"
+if [ -z "${AOT_BUILD_JOBS}" ]; then
+    if [[ "${MACHINE_TYPE}" == 'arm64' || "${MACHINE_TYPE}" == 'armhf' ]]; then
+        # 1코어(완전 직렬)가 가장 안전하지만 빌드 시간이 크게 늘어난다. 절반
+        # 코어를 절충값으로 쓴다 - 4코어 기준 피크 전류를 대략 반으로 줄이면서
+        # 완전 직렬보다는 빠르다. 전원이 확실하면 AOT_BUILD_JOBS=4 처럼 직접
+        # 지정해서 풀 수 있고, 전원이 더 불안하면 1로 낮출 수도 있다.
+        AOT_BUILD_JOBS=$(( (_AOT_NPROC + 1) / 2 ))
+        [ "${AOT_BUILD_JOBS}" -lt 1 ] && AOT_BUILD_JOBS=1
+    else
+        AOT_BUILD_JOBS="${_AOT_NPROC}"
+    fi
+fi
+if [ "${AOT_BUILD_JOBS}" -lt "${_AOT_NPROC}" ] 2>/dev/null; then
+    AOT_TASKSET_PREFIX=(taskset -c "0-$((AOT_BUILD_JOBS - 1))")
+else
+    AOT_TASKSET_PREFIX=()
+fi
+export MAKEFLAGS="-j${AOT_BUILD_JOBS}"
+export NPY_NUM_BUILD_JOBS="${AOT_BUILD_JOBS}"
+export CMAKE_BUILD_PARALLEL_LEVEL="${AOT_BUILD_JOBS}"
+
 # Dependency versions/URLs
 PIGPIO_URL="https://github.com/joan2937/pigpio/archive/v79.tar.gz"
 MCB2835_URL="http://www.airspayce.com/mikem/bcm2835/bcm2835-1.50.tar.gz"
@@ -36,7 +77,17 @@ WIRINGPI_URL_ARM64="https://github.com/WiringPi/WiringPi/releases/download/3.10/
 INFLUXDB1_VERSION="1.8.10"
 
 # Required apt packages
-APT_PKGS="gcc g++ git jq libatlas-base-dev libffi-dev libgeos-dev libheif-dev libi2c-dev logrotate mawk moreutils netcat-openbsd nginx python3 python3-dev python3-pip python3-setuptools python3-venv rng-tools sqlite3 unzip wget"
+# build-essential/pkg-config: numpy 등 ARM64용 wheel이 없는 패키지가 소스
+# 컴파일로 빠질 때 필요(gcc/g++만으로는 make/dpkg-dev/pkg-config가 안 갖춰짐).
+# swig/liblgpio-dev: Adafruit-Blinka가 lgpio 백엔드(Raspberry Pi 5 등 신형
+# GPIO칩)로 빌드될 때 필요 - 없으면 MCP23017 등 Blinka 기반 장치 추가 시
+# "자동 설치되어야 하는데 계속 실패"로 나타난다(2026-08-16 라즈베리파이 설치 사건).
+# libopenblas-dev: numpy/scipy용 BLAS. libatlas-base-dev는 Debian 13(trixie)에서
+# 완전히 제거돼(ATLAS 폐기, OpenBLAS로 대체) 패키지명이 목록에 남아있으면 apt가
+# 배치 전체를 거부한다 - 이 한 줄 때문에 nginx/gcc/python3-dev 등 APT_PKGS
+# 전부가 설치되지 않고, 그 상태에서 numpy 빌드도 실패해 pip install이 통째로
+# 중단되는 사고로 이어졌다(2026-08-17 aot-gw-001 재설치 검증에서 재현).
+APT_PKGS="build-essential gcc g++ git jq libffi-dev libgeos-dev libheif-dev libi2c-dev liblgpio-dev libopenblas-dev logrotate mawk moreutils netcat-openbsd nginx pkg-config python3 python3-dev python3-pip python3-setuptools python3-venv rng-tools sqlite3 swig unzip wget"
 
 UNAME_TYPE=$(uname -m)
 MACHINE_TYPE=$(dpkg --print-architecture)
@@ -140,9 +191,14 @@ case "${1:-''}" in
         printf "\n#### Compiling Translations\n"
         cd "${AOT_PATH}"/aot || return
         # Hybrid Optimization: Use local venv if AOT_LOCAL_DIR is set
-        PYTHON_BIN="${AOT_PATH}/env/bin/python"
-        [ -n "${AOT_LOCAL_DIR}" ] && [ -f "${AOT_LOCAL_DIR}/env/bin/python3" ] && PYTHON_BIN="${AOT_LOCAL_DIR}/env/bin/python3"
-        "${PYTHON_BIN}" -m pybabel compile -d aot_flask/translations
+        PYBABEL_BIN="${AOT_PATH}/env/bin/pybabel"
+        [ -n "${AOT_LOCAL_DIR}" ] && [ -f "${AOT_LOCAL_DIR}/env/bin/pybabel" ] && PYBABEL_BIN="${AOT_LOCAL_DIR}/env/bin/pybabel"
+        # 'python -m pybabel' 는 항상 "No module named pybabel" 로 실패한다 -
+        # 배포되는 것은 babel 패키지고, pybabel 은 그 콘솔스크립트 진입점
+        # (babel.messages.frontend:main) 이지 모듈이 아니다. 스크립트를 직접
+        # 불러야 한다(docker-compile-translations 와 동일 방식, 2026-08-17
+        # aot-gw-001 네이티브 설치에서 매번 조용히 실패하던 것 확인 후 수정).
+        "${PYBABEL_BIN}" compile -d aot_flask/translations
     ;;
     'create-files-directories')
         printf "\n#### Creating files and directories\n"
@@ -246,9 +302,9 @@ case "${1:-''}" in
             cd "${AOT_PATH}"/aot/aot_flask/static/apps/notes-widget || return
             printf "#### Installing node dependencies...\n"
             rm -rf node_modules package-lock.json
-            npm install --no-audit --no-fund
+            "${AOT_TASKSET_PREFIX[@]}" npm install --no-audit --no-fund
             printf "#### Building bundle...\n"
-            npm run build
+            "${AOT_TASKSET_PREFIX[@]}" npm run build
             # Correct permissions if needed
             chown -R "${AOT_USER}:${AOT_GROUP}" dist/ 2>/dev/null || true
             chown -R "${AOT_USER}:${AOT_GROUP}" ../../js/notes/ 2>/dev/null || true
@@ -626,7 +682,11 @@ case "${1:-''}" in
         fi
 
         # 2. Ensure Org 'aot' exists
-        if influx org list --json | grep -q '"name":"aot"'; then
+        # jq로 파싱한다 - influx CLI가 pretty-print("name": "aot", 콜론 뒤 공백)로
+        # 내보내는데 예전엔 grep '"name":"aot"'(공백 없음)라 절대 매치되지 않았다.
+        # 그 결과 매번 "이미 있음"을 "없음"으로 오판해 influx setup 직후에도 org
+        # create를 다시 시도해 "already exists" 에러가 항상 찍혔다(기능은 무해).
+        if influx org list --json | jq -e '.[] | select(.name=="aot")' >/dev/null 2>&1; then
             printf "#### Organization 'aot' already exists.\n"
         else
             printf "#### Creating Organization 'aot'...\n"
@@ -634,7 +694,7 @@ case "${1:-''}" in
         fi
 
         # 3. Ensure Bucket 'aot_db' exists
-        if influx bucket list --org aot --json | grep -q '"name":"aot_db"'; then
+        if influx bucket list --org aot --json | jq -e '.[] | select(.name=="aot_db")' >/dev/null 2>&1; then
             printf "#### Bucket 'aot_db' already exists.\n"
         else
             printf "#### Creating Bucket 'aot_db'...\n"
@@ -769,7 +829,12 @@ case "${1:-''}" in
         chown -R  "${AOT_USER}:${AOT_GROUP}" /opt/AoT
 
         find "${AOT_PATH}" -type d -exec chmod u+wx,g+wx {} +
-        find "${AOT_PATH}" -type f -exec chmod u+w,g+w,o+r {} +
+        # g+r 없이 g+w 만 추가하면, 소스 트리에 이미 그룹-읽기가 빠진 파일(예:
+        # 특이한 체크아웃/umask 로 700 근처 권한이 남은 파일)은 이 단계를 거치고도
+        # 계속 그룹에서 못 읽는다 - nginx 워커(www-data, aot 그룹)가 정적 파일을
+        # 403 으로 못 읽는 사고로 이어진다(2026-08-17 aot-gw-001, logo.svg 등
+        # nav_bar 브랜드 아이콘 + 로그인 페이지 로고가 깨져 있던 원인).
+        find "${AOT_PATH}" -type f -exec chmod u+w,g+rw,o+r {} +
         chmod 770 /opt/AoT  # Exclude other users from viewing files
 
         chown root:"${AOT_USER}" "${AOT_PATH}"/aot/scripts/aot_wrapper
@@ -790,9 +855,9 @@ case "${1:-''}" in
         if [[ ! -d ${AOT_PATH}/env ]]; then
             printf "\n## Error: Virtualenv doesn't exist. Create with %s setup-virtualenv\n" "${0}"
         else
-            "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements.txt
+            "${AOT_TASKSET_PREFIX[@]}" "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements.txt
             if [[ -f "${AOT_PATH}"/install/requirements-testing.txt ]]; then
-                "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements-testing.txt
+                "${AOT_TASKSET_PREFIX[@]}" "${AOT_PATH}"/env/bin/python -m pip install --upgrade -r "${AOT_PATH}"/install/requirements-testing.txt
             fi
         fi
     ;;
@@ -903,6 +968,15 @@ case "${1:-''}" in
         cp -f "${AOT_PATH}"/install/aotflask_nginx.conf /etc/nginx/sites-available/aot
         rm -f /etc/nginx/sites-enabled/default
         ln -sf /etc/nginx/sites-available/aot /etc/nginx/sites-enabled/aot
+
+        # nginx 워커(www-data)가 /opt/AoT(0770 aot:aot)를 순회할 수 있어야
+        # location /static/ 이 403 없이 서빙된다. 근거는 aotflask_nginx.conf
+        # 상단 주석 - 예전엔 그 주석만 있고 실제 명령이 배선돼 있지 않아
+        # 화면은 뜨는데 CSS가 전혀 적용되지 않는 사고로 이어졌다.
+        if getent passwd www-data >/dev/null 2>&1; then
+            usermod -aG "${AOT_GROUP}" www-data 2>/dev/null || true
+        fi
+
         systemctl enable nginx || true
         systemctl enable "${AOT_PATH}"/install/aotflask.service || true
     ;;
@@ -989,7 +1063,7 @@ case "${1:-''}" in
         if [[ ! -d ${AOT_PATH}/env ]]; then
             printf "\n## Error: Virtualenv doesn't exist. Create with %s setup-virtualenv\n" "${0}"
         else
-            "${AOT_PATH}"/env/bin/python -m pip install --no-cache-dir -r "${AOT_PATH}"/install/requirements.txt
+            "${AOT_TASKSET_PREFIX[@]}" "${AOT_PATH}"/env/bin/python -m pip install --no-cache-dir -r "${AOT_PATH}"/install/requirements.txt
         fi
     ;;
     'install-docker')

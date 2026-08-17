@@ -21,9 +21,9 @@ INSTALL_DIRECTORY=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd -P )
 INSTALL_CMD="/bin/bash ${INSTALL_DIRECTORY}/aot/scripts/upgrade_commands.sh"
 LOG_LOCATION=${INSTALL_DIRECTORY}/install/setup.log
 
-# Fix for below issue(s)
-# https://github.com/pypa/setuptools/issues/3278
-export SETUPTOOLS_USE_DISTUTILS=stdlib
+# setup.sh 참고: SETUPTOOLS_USE_DISTUTILS=stdlib 는 Python 3.12+에서
+# setuptools.build_meta import 자체를 깨뜨려(stdlib distutils 제거됨)
+# sdist 빌드가 전부 실패한다 - 절대 다시 켜지 말 것.
 
 if [ "$EUID" -ne 0 ]; then
     printf "Must be run as root: \"sudo /bin/bash %s/install/setup_unattended.sh [influx-option] [--target TARGET]\"\n" "${INSTALL_DIRECTORY}"

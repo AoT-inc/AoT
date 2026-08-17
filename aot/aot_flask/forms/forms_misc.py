@@ -7,13 +7,10 @@ from flask_babel import lazy_gettext
 from flask_wtf import FlaskForm
 from wtforms import FileField
 from wtforms import HiddenField
-from wtforms import IntegerField
 from wtforms import SelectField
 from wtforms import StringField
 from wtforms import SubmitField
-from wtforms import validators
 from wtforms import widgets
-from wtforms.widgets import NumberInput
 
 from aot.config_translations import TRANSLATIONS
 
@@ -73,23 +70,9 @@ class ExportInfluxdb(FlaskForm):
 #
 # Log viewer
 #
-
-class LogView(FlaskForm):
-    lines = IntegerField(
-        lazy_gettext('Number of Log Lines to Display'),
-        render_kw={'placeholder': lazy_gettext('Number of Lines')},
-        validators=[validators.NumberRange(
-            min=1,
-            message=lazy_gettext('Number of lines to display must be greater than 0.')
-        )],
-        widget=NumberInput()
-    )
-    search = StringField(
-        lazy_gettext('Search'),
-        render_kw={'placeholder': lazy_gettext('Search')},)
-    log = StringField(lazy_gettext('Log'))
-    log_view = SubmitField(lazy_gettext('View Log'))
-
+# LogView 폼은 제거됐다. /logview 는 POST 폼 제출이 아니라 GET 쿼리 + JSON
+# 폴링(/logview/data)으로 동작하며, 필터 상태는 URL 에 실린다(공유·새로고침).
+#
 
 #
 # Upgrade

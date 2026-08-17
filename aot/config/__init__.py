@@ -136,6 +136,12 @@ IMPORT_LOG_FILE = os.path.join(LOG_PATH, 'aotimport.log')
 UPGRADE_LOG_FILE = os.path.join(LOG_PATH, 'aotupgrade.log')
 UPGRADE_TMP_LOG_FILE = '/tmp/aotupgrade.log'
 RESTORE_LOG_FILE = os.path.join(LOG_PATH, 'aotrestore.log')
+# aot_mcp_server.py 는 별도 프로세스(도커에서는 별도 컨테이너)라 'aot' 로거를
+# 안 타고 자기 basicConfig 로 stderr 에만 쓴다. 그러면 웹 UI 에서 MCP 로그를
+# 볼 방법이 아예 없다 — 도커 배포에서는 앱 컨테이너에 docker CLI 가 없어
+# `docker logs` 로도 못 읽는다. LOG_PATH 는 세 컨테이너가 같은 디렉터리를
+# 공유하므로(compose 의 ../logs:/var/log/aot), 여기 파일로 떨구면 읽힌다.
+MCP_LOG_FILE = os.path.join(LOG_PATH, 'mcp.log')
 HTTP_ACCESS_LOG_FILE = '/var/log/nginx/access.log'
 HTTP_ERROR_LOG_FILE = '/var/log/nginx/error.log'
 # End of global definitions

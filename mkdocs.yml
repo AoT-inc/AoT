@@ -144,6 +144,7 @@ nav:
   - System:
     - System Information: System-Information.md
     - System Configuration: Configuration-Settings.md
+    - Log Viewer: Log-Viewer.md
     - Security.md
     - Time & Timezones: time-handling.md
     - Upgrade/Backup/Restore: Upgrade-Backup-Restore.md

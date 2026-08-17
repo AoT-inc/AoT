@@ -1,0 +1,217 @@
+/* /logview — 로그 뷰어.
+ *
+ * 색·표면은 전부 테마 토큰(--aot-*)을 쓴다. 리터럴 색을 쓰면 다크모드에서
+ * custom-dark.css 가 표면만 바꾸고 이 화면은 그대로 남아 읽을 수 없게 된다.
+ */
+
+.aot-log-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.aot-log-toolbar .aot-log-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.aot-log-toolbar label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--aot-text-secondary, #5E6B64);
+}
+
+.aot-log-toolbar .form-control {
+  height: calc(1.5em + 0.75rem + 2px);
+}
+
+.aot-log-search {
+  min-width: 14rem;
+}
+
+/* 라이브 토글 + 버튼은 한 덩어리로 입력줄 바닥에 맞춘다. */
+.aot-log-toolbar .aot-log-actions {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 버튼은 절대 줄바꿈하지 않는다. 좁은 화면에서 flex 가 눌리면 한글 버튼이
+   글자 하나씩 세로로 쌓여 버튼 모양이 무너진다(폰에서 실제로 그랬다). */
+.aot-log-toolbar .btn,
+.aot-log-livebox .custom-control-label {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.aot-log-livebox {
+  padding-left: 1.5rem;
+}
+
+.aot-log-livebox .custom-control-label {
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.is-hidden { display: none !important; }
+
+/* 상태줄 — 소스 경로·건수·마지막 갱신. */
+.aot-log-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  padding: 0.5rem 0 0.35rem;
+  font-size: 0.78rem;
+  color: var(--aot-text-secondary, #5E6B64);
+}
+
+.aot-log-status code {
+  font-size: 0.78rem;
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+
+.aot-log-notice {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--aot-tint-warning-border, #dac196);
+  background: var(--aot-tint-warning-bg, #fff3e2);
+  color: var(--aot-tint-warning-fg, #94650a);
+  font-size: 0.8rem;
+  border-radius: 3px;
+}
+
+.aot-log-notice.is-error {
+  border-color: var(--aot-tint-danger-border, #e1abab);
+  background: var(--aot-tint-danger-bg, #fbe7e7);
+  color: var(--aot-tint-danger-fg, #b23b3b);
+}
+
+/* --- 로그 본문 ------------------------------------------------------- */
+
+.aot-log-pane {
+  border: 1px solid var(--aot-border-neutral, #dddddd);
+  background: var(--aot-surface-card, #ffffff);
+  border-radius: 3px;
+  overflow: auto;
+  resize: vertical;
+  height: 60vh;
+  min-height: 14rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  /* 스크롤은 되되 스크롤바는 보이지 않게 — 앱 전역 규칙. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.aot-log-pane::-webkit-scrollbar { width: 0; height: 0; }
+
+.aot-log-row {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.05rem 0.5rem;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.aot-log-row:hover {
+  background: var(--aot-tint-neutral-bg, #F3F6F5);
+}
+
+.aot-log-row.is-selected {
+  background: var(--aot-tint-info-bg, #e7f4fb);
+  border-left-color: var(--aot-tint-info-fg, #06709b);
+}
+
+.aot-log-ts,
+.aot-log-level,
+.aot-log-logger {
+  flex: 0 0 auto;
+  color: var(--aot-text-secondary, #5E6B64);
+  white-space: nowrap;
+}
+
+.aot-log-ts { width: 7rem; }
+.aot-log-ts .aot-log-date { padding-right: 0.4em; }
+.aot-log-level { width: 4.4rem; font-weight: 600; }
+.aot-log-logger { width: 12rem; overflow: hidden; text-overflow: ellipsis; }
+
+.aot-log-msg {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--aot-text-main, #13261B);
+}
+
+.aot-log-msg mark {
+  padding: 0;
+  background: var(--aot-color-primary, #F2D524);
+  color: var(--aot-color-brand-primary, #13261B);
+}
+
+/* 레벨별 강조 — 왼쪽 띠 + 레벨 글자색만 바꾼다. 행 전체를 물들이면
+   ERROR 가 연속으로 나올 때 본문을 읽기 어렵다. */
+.aot-log-row.lv-error,
+.aot-log-row.lv-critical { border-left-color: var(--aot-color-danger, #DF5353); }
+.aot-log-row.lv-error .aot-log-level,
+.aot-log-row.lv-critical .aot-log-level { color: var(--aot-tint-danger-fg, #b23b3b); }
+.aot-log-row.lv-critical .aot-log-msg { color: var(--aot-tint-danger-fg, #b23b3b); }
+
+.aot-log-row.lv-warning { border-left-color: var(--aot-color-warning, #FEA60B); }
+.aot-log-row.lv-warning .aot-log-level { color: var(--aot-tint-warning-fg, #94650a); }
+
+.aot-log-row.lv-info { border-left-color: transparent; }
+.aot-log-row.lv-debug { opacity: 0.72; }
+
+.aot-log-empty {
+  padding: 1.5rem 0.75rem;
+  text-align: center;
+  color: var(--aot-text-secondary, #5E6B64);
+  font-size: 0.85rem;
+}
+
+/* --- AI 바 ----------------------------------------------------------- */
+
+.aot-log-aibar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  margin-top: 0.6rem;
+  border: 1px solid var(--aot-border-neutral, #dddddd);
+  border-radius: 3px;
+  background: var(--aot-surface-body, #f8f9fa);
+}
+
+/* 전역 AI FAB 이 뷰포트 우하단에 고정돼 있어, 페이지를 끝까지 내리면 이 줄의
+   버튼 위에 겹친다. 아래 여백이 그만큼 있어야 버튼이 FAB 위로 올라온다. */
+.aot-log-aibar ~ .aot-log-status { margin-bottom: 4.5rem; }
+
+.aot-log-aibar .aot-log-aihint {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--aot-text-secondary, #5E6B64);
+}
+
+.aot-log-aibar .btn { white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .aot-log-search { min-width: 100%; }
+  .aot-log-toolbar .aot-log-field { flex: 1 1 8rem; }
+  /* 버튼 묶음은 한 줄을 통째로 쓴다. 다른 필드와 같은 8rem 을 나눠 가지면
+     버튼이 눌려 세로로 쌓인다. */
+  .aot-log-toolbar .aot-log-actions { flex: 1 1 100%; }
+  .aot-log-pane { height: 55vh; font-size: 0.72rem; }
+  /* 폰에서는 로거 이름과 날짜를 접는다 — 가로가 부족하면 메시지가 먼저 잘린다. */
+  .aot-log-logger { display: none; }
+  .aot-log-ts { width: 4.4rem; }
+  .aot-log-ts .aot-log-date { display: none; }
+  .aot-log-level { width: 3.9rem; }
+}

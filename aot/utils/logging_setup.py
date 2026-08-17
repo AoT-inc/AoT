@@ -23,7 +23,7 @@ import sys
 import time
 from logging.handlers import RotatingFileHandler
 
-_TZ_CACHE = {'tz': None, 'expires': 0.0}
+_TZ_CACHE = {'tz': None, 'expires': 0.0, 'resolving': False}
 
 
 def _user_tz_converter(secs):
@@ -34,15 +34,35 @@ def _user_tz_converter(secs):
         import pytz
         from datetime import datetime as _dt
 
-        from aot.databases.models import Misc
-        from aot.utils.database import db_retrieve_table_daemon
-
         now = time.time()
-        if _TZ_CACHE['tz'] is None or now > _TZ_CACHE['expires']:
+        if _TZ_CACHE['tz'] is not None and now <= _TZ_CACHE['expires']:
+            return _dt.fromtimestamp(secs, _TZ_CACHE['tz']).timetuple()
+
+        if _TZ_CACHE['resolving']:
+            # Re-entrancy guard. db_retrieve_table_daemon() logs its own
+            # retry/failure lines via the 'aot' logger, which get formatted
+            # through this same converter before the outer call below
+            # returns. Without this guard, a missing `misc` table (e.g. a
+            # brand new install, before db.create_all() has run) turns every
+            # one of those retry log lines into a fresh 5-retry DB lookup of
+            # its own, which logs more lines, which trigger more lookups -
+            # a self-sustaining loop that stalled app startup indefinitely
+            # (2026-08-17 aot-gw-001: fresh install's aotflask/aot_daemon
+            # spun on "no such table: misc" continuously and never finished
+            # booting). Just fall back to gmtime for this one line instead.
+            return time.gmtime(secs)
+
+        _TZ_CACHE['resolving'] = True
+        try:
+            from aot.databases.models import Misc
+            from aot.utils.database import db_retrieve_table_daemon
+
             misc = db_retrieve_table_daemon(Misc, entry='first')
             tz_name = misc.timezone if misc and getattr(misc, 'timezone', None) else 'UTC'
             _TZ_CACHE['tz'] = pytz.timezone(tz_name)
             _TZ_CACHE['expires'] = now + 60
+        finally:
+            _TZ_CACHE['resolving'] = False
         return _dt.fromtimestamp(secs, _TZ_CACHE['tz']).timetuple()
     except Exception:
         return time.gmtime(secs)

@@ -34,6 +34,7 @@ import json
 import logging
 import argparse
 import socket
+from logging.handlers import RotatingFileHandler
 
 # ── Path bootstrap ─────────────────────────────────────────────────────────────
 # Ensure /opt/AoT is on sys.path so AoT modules can be imported regardless
@@ -890,14 +891,34 @@ def main():
     )
     args = parser.parse_args()
 
-    handlers = [logging.StreamHandler(sys.stderr)]
-    aot_local_dir = os.environ.get('AOT_LOCAL_DIR')
-    if aot_local_dir and os.path.exists(os.path.join(aot_local_dir, 'logs')):
-        log_file = os.path.join(aot_local_dir, 'logs', 'mcp.log')
-        handlers.append(logging.FileHandler(log_file))
+    cli_level = getattr(logging, args.log.upper(), logging.WARNING)
+    # 파일에는 최소 INFO 를 남긴다. stderr 는 --log 가 정한 그대로다.
+    # 기본값(WARNING)으로 파일까지 묶으면 정상 운용 중에는 파일이 계속 비어
+    # 있고, /logview 의 'MCP Server' 는 "로그가 없다" 로만 보인다 — MCP 로그를
+    # 볼 수 없던 원래 문제가 파일만 생긴 채 그대로 남는다.
+    file_level = min(cli_level, logging.INFO)
+
+    stream_handler = logging.StreamHandler(sys.stderr)
+    stream_handler.setLevel(cli_level)
+    handlers = [stream_handler]
+
+    # 파일 핸들러는 config.MCP_LOG_FILE(= LOG_PATH/mcp.log) 하나로 통일한다.
+    # 예전에는 AOT_LOCAL_DIR/logs 에만 썼는데 도커에서는 그 디렉터리가 없어
+    # (LOG_PATH 는 /var/log/aot) 파일이 아예 안 생겼고, 앱 컨테이너에 docker
+    # CLI 도 없어서 MCP 로그를 웹 UI 에서 볼 방법이 전혀 없었다. LOG_PATH 는
+    # 세 컨테이너가 같은 호스트 디렉터리를 공유하므로 여기 쓰면 /logview 가 읽는다.
+    try:
+        from aot.config import MCP_LOG_FILE
+        file_handler = RotatingFileHandler(
+            MCP_LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=3,
+            encoding='utf-8')
+        file_handler.setLevel(file_level)
+        handlers.append(file_handler)
+    except Exception as err:  # 로그 파일 하나 때문에 MCP 가 못 뜨면 안 된다
+        print(f"[AoTMCP] file logging disabled: {err}", file=sys.stderr)
 
     logging.basicConfig(
-        level=getattr(logging, args.log.upper(), logging.WARNING),
+        level=file_level,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
         handlers=handlers
     )

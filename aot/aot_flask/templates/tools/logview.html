@@ -1,6 +1,11 @@
 {% extends "layout.html" %}
 {% set active_page = "logview" %}
+{% set help_page = [manual_url("Log-Viewer/"), _("Log View")] %}
 {% block title %} - {{_('Log View')}}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pages/logview.css') }}" />
+{% endblock %}
 
 {% block body %}
 <div class="container-fluid px-0">
@@ -8,49 +13,91 @@
   <main role="main" class="container py-4">
     {% include 'flash_messages.html' %}
 
-    <form class="row" method="post" action="/logview" style="padding-top: 0.5em">
-      <input type="hidden" name="form-name" value="logview">
-      {{form_log_view.hidden_tag()}}
-      <div class="col-12 col-sm-2">
-        {{form_log_view.lines(class_='form-control', type="number", value=lines)}}
-      </div>
-      <div class="col-auto">
-        <select class="form-control form-tooltip form-dropdown" data-placement="top" id="log" name="log" title="{{_('Select Log')}}">
-          <option value="log_daemon"{% if log_field == "log_daemon" %} selected{% endif %}>{{_('Daemon')}}</option>
-          <option value="log_pid_settings"{% if log_field == "log_pid_settings" %} selected{% endif %}>{{_('Daemon (PID settings)')}}</option>
-          <option value="log_keepup"{% if log_field == "log_keepup" %} selected{% endif %}>{{_('Daemon keepup')}}</option>
-          <option value="log_dependency"{% if log_field == "log_dependency" %} selected{% endif %}>{{_('Dependency')}}</option>
-          <option value="log_import"{% if log_field == "log_import" %} selected{% endif %}>{{_('Import settings')}}</option>
-          <option value="log_nginx"{% if log_field == "log_nginx" %} selected{% endif %}>{{_('Nginx')}}</option>
-          <option value="log_backup"{% if log_field == "log_backup" %} selected{% endif %}>{{_('AoT backup')}}</option>
-          <option value="log_restore"{% if log_field == "log_restore" %} selected{% endif %}>{{_('AoT restore')}}</option>
-          <option value="log_upgrade"{% if log_field == "log_upgrade" %} selected{% endif %}>{{_('AoT upgrade')}}</option>
-          <option value="log_flask"{% if log_field == "log_flask" %} selected{% endif %}>{{_('Web')}}</option>
-          <option value="log_http_access"{% if log_field == "log_http_access" %} selected{% endif %}>{{_('Web access')}}</option>
-          <option value="log_http_error"{% if log_field == "log_http_error" %} selected{% endif %}>{{_('Web error')}}</option>
-          <option value="log_login"{% if log_field == "log_login" %} selected{% endif %}>{{_('Web login')}}</option>
+    <div class="aot-log-toolbar">
+      <div class="aot-log-field">
+        <label for="logview-source">{{_('Log')}}</label>
+        <select class="form-control" id="logview-source">
+          {% for group in source_groups %}
+          <optgroup label="{{ group.label }}">
+            {% for source in group.sources %}
+            <option value="{{ source.id }}"
+                    {% if source.id == selected_source %} selected{% endif %}
+                    {% if not source.available %} disabled{% endif %}
+                    title="{{ source.reason or source.origin }}">
+              {{ source.label }}{% if not source.available %} — {{ source.reason }}{% endif %}
+            </option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
         </select>
       </div>
-      <div class="col-auto">
-        {{form_log_view.search(class_='form-control', value=search)}}
-      </div>
-      <div class="col-auto">
-        {{form_log_view.log_view(class_='btn btn-primary btn-block')}}
-      </div>
-    </form>
 
-    {%- if log_output != None -%}
-    <div style="padding-top:1.5em">
-      {%- if log_output == 404 -%}
-        {{_('File not found')}}: {{logfile}}
-      {%- elif log_output == '' -%}
-        {{_('File is empty')}}: {{logfile}}
-      {%- else -%}
-        {{_('Last %(lines)s lines of file %(logfile)s', lines=lines, logfile=logfile)}}:
-        <pre style="resize: vertical; padding: 0.5em; border: 1px solid Black;">{{log_output}}</pre>
-      {%- endif -%}
+      <div class="aot-log-field">
+        <label for="logview-level">{{_('Minimum level')}}</label>
+        <select class="form-control" id="logview-level">
+          <option value="">{{_('All')}}</option>
+          {% for level in level_choices %}
+          <option value="{{ level }}">{{ level }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="aot-log-field aot-log-search">
+        <label for="logview-search">{{_('Search')}}</label>
+        <input class="form-control" type="search" id="logview-search"
+               placeholder="{{_('Search')}}" autocomplete="off">
+      </div>
+
+      <div class="aot-log-field">
+        <label for="logview-lines">{{_('Lines')}}</label>
+        <select class="form-control" id="logview-lines">
+          {% for count in [100, 200, 500, 1000, 2000] %}
+          <option value="{{ count }}"{% if count == default_lines %} selected{% endif %}>{{ count }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="aot-log-field aot-log-actions">
+        <div class="custom-control custom-checkbox aot-log-livebox">
+          <input type="checkbox" class="custom-control-input" id="logview-live">
+          <label class="custom-control-label" for="logview-live">{{_('Live')}}</label>
+        </div>
+        <button type="button" class="btn btn-primary" id="logview-refresh">{{_('Refresh')}}</button>
+        <a class="btn btn-secondary" id="logview-download" href="#" download>{{_('Download')}}</a>
+      </div>
     </div>
-    {%- endif -%}
+
+    <div class="aot-log-status">
+      <code id="logview-origin"></code>
+      <span id="logview-count"></span>
+      <span id="logview-updated"></span>
+    </div>
+
+    <div class="aot-log-notice is-hidden" id="logview-notice"></div>
+
+    <div class="aot-log-pane" id="logview-pane"></div>
+
+    {% if ai_settings and ai_settings.ai_enabled %}
+    <div class="aot-log-aibar" id="logview-aibar">
+      <span class="aot-log-aihint" id="logview-aihint"></span>
+      <button type="button" class="btn btn-sm btn-secondary is-hidden"
+              id="logview-clear-selection">{{_('Clear selection')}}</button>
+      <button type="button" class="btn btn-sm btn-primary"
+              data-logview-ask="{{_('Explain what these log lines mean.')}}">{{_('Explain')}}</button>
+      <button type="button" class="btn btn-sm btn-primary"
+              data-logview-ask="{{_('Diagnose these log lines: what is failing, and why?')}}">{{_('Diagnose the cause')}}</button>
+      <button type="button" class="btn btn-sm btn-primary"
+              data-logview-ask="{{_('Tell me the concrete steps to fix what these log lines show.')}}">{{_('How do I fix it?')}}</button>
+    </div>
+    <div class="aot-log-status">
+      <span>{{_('The selected log lines are sent to the AI model you configured. Do not send lines containing credentials.')}}</span>
+    </div>
+    {% endif %}
+
+    <script type="application/json" id="aot-logview-config">
+      {{ {'defaultLines': default_lines} | tojson }}
+    </script>
+    <script src="{{ url_for('static', filename='js/tools/aot-logview.js') }}"></script>
 
   </main>
 </div>

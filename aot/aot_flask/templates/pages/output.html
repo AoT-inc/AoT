@@ -96,6 +96,14 @@
     }
   }
 
+  // Whether this page actually has any Output devices configured. `/outputstate`
+  // answers {} both when there are genuinely zero outputs AND when the daemon
+  // is unreachable (get_all_output_states degrades to {}) - those two cases
+  // are indistinguishable from the response alone. Gates the 'daemon down'
+  // brand tint below so a fresh install with no outputs yet doesn't show up
+  // as a dead daemon.
+  var hasAnyOutputs = {{ (output|length > 0)|tojson }};
+
   // {output_id: bool} — whether each output can observe its device's state.
   // Static per output, so it is fetched once instead of on every 1s state poll.
   // Empty until that fetch lands: `=== false` below means an output is only
@@ -292,9 +300,12 @@
         } else {
           // 204 = the app answered but the daemon gave it nothing. Reflect that
           // on the brand tint now instead of waiting up to 60s for the next
-          // check_daemon_status poll (layout_default.html).
+          // check_daemon_status poll (layout_default.html). An install with
+          // genuinely zero outputs also lands here (see hasAnyOutputs above) -
+          // that is not a daemon failure, so only tint when there is actually
+          // something the daemon should have reported on.
           markAllDisconnected();
-          if (window.AoTBrandStatus) window.AoTBrandStatus.set('daemon');
+          if (hasAnyOutputs && window.AoTBrandStatus) window.AoTBrandStatus.set('daemon');
         }
       })
       // Without this, a request that FAILS (daemon down, 500, network drop)

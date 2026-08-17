@@ -68,6 +68,8 @@ OUTPUT_INFORMATION = {
     'options_disabled': ['interface'],
 
     'dependencies_module': [
+        ('apt', 'swig', 'swig'),
+        ('apt', 'liblgpio-dev', 'liblgpio-dev'),
         ('pip-pypi', 'usb.core', 'pyusb==1.1.1'),
         ('pip-pypi', 'adafruit_extended_bus', 'Adafruit-extended-bus==1.0.2'),
         ('pip-pypi', 'adafruit_mcp230xx', 'adafruit-circuitpython-mcp230xx==2.4.6')

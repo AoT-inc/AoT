@@ -62,7 +62,7 @@ class Misc(CRUDMixin, db.Model):
     net_test_port = db.Column(db.Integer, default=53)
     net_test_timeout = db.Column(db.Integer, default=3)
     default_login_page = db.Column(db.String(16), default='password')
-    brand_display = db.Column(db.String(36), default='hostname')
+    brand_display = db.Column(db.String(36), default='default')
     title_display = db.Column(db.String(36), default='hostname')
     hostname_override = db.Column(db.String(36), default='')
     brand_image = db.Column(db.BLOB, default=b'')
