@@ -313,6 +313,13 @@ _DRAWER_TOOL_ADDITIONS = {'open_drawer'}
 # 둘 다 읽기전용이라 승인 집합에는 넣지 않는다.
 _GEO_DISTANCE_TOOL_ADDITIONS = {'distance_between', 'nearest'}
 
+# 장치 신선도 (2026-08-17). get_anomalies 의 comm_offline_devices 는 드라이버가
+# 스스로 보고한 통신 장애만 세므로, "39시간째 값이 안 들어오는 센서" 는 거기에
+# 절대 안 잡힌다 — 그리고 잡히게 만들면 안 된다(침묵은 장애 신호가 아니다).
+# 그래서 판정을 바꾸는 대신 사실만 보고하는 읽기 도구를 따로 뒀다. 이름·의미를
+# comm_* 와 분리해 두는 것이 이 도구의 목적이다. 읽기 전용.
+_DEVICE_FRESHNESS_TOOL_ADDITIONS = {'get_device_freshness'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -379,7 +386,7 @@ def _check_dispatch_map(R):
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
-           | _DRAWER_TOOL_ADDITIONS,
+           | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -402,7 +409,7 @@ def _check_declarations(R):
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
-           | _DRAWER_TOOL_ADDITIONS,
+           | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,

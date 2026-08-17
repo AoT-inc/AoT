@@ -205,7 +205,7 @@ TOOLS: List[Tool] = [
         "tool_name": "search_devices",
         "action_type": "virtual_tool_call",
         "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword, and/or by the measurement a device actually records. A complex device (e.g. a PLC) is one physical unit whose readings/controls are split across separate Input and Output entries — results of type 'device' list its member_ids, and any input/output result belonging to one carries parent_device_id + parent_device_name. When a result has a parent device, prefer answering/acting at that device level rather than treating the input/output as standalone.",
-        "usage_hint": "params.arguments: {query?: '<keyword>', measurement_type?: '<e.g. volumetric_water_content>'} — at least one. measurement_type finds every device that really records it regardless of its name; give both to intersect (e.g. query='1포장' + measurement_type='temperature'). Returns matching devices with their unique_ids.",
+        "usage_hint": "params.arguments: {query?: '<keyword>', measurement_type?: '<e.g. volumetric_water_content>'} — at least one. measurement_type finds every device that really records it regardless of its name; give both to intersect (e.g. query='1포장' + measurement_type='temperature'). It matches the STORED name, not the everyday word — soil moisture is 'volumetric_water_content' ('moisture' returns nothing), rain is 'precipitation'. On 0 results check the real names with get_device_measurements. Returns matching devices with their unique_ids.",
     }),
     # 구역 단위 집계. Function 을 만들지 않는다 — 대상·기간이 질문마다 달라
     # 고정 계산기로는 답할 수 없고, influx.py 의 무상태 헬퍼를 조합해 계산만
@@ -876,6 +876,10 @@ TOOLS: List[Tool] = [
     Tool('get_control_state', handler='get_control_state'),
     Tool('get_weather_forecast', handler='get_weather_forecast'),
     Tool('get_anomalies', handler='get_anomalies'),
+    # comm_offline_devices 의 빈자리를 메우는 **별개 축**. 침묵을 장애로 승격하지
+    # 않고 사실(마지막 수신 시각 · 주기 대비 배수)만 보고한다 — 이름과 의미를
+    # get_anomalies 와 분리해 두는 것이 이 도구의 존재 이유다.
+    Tool('get_device_freshness', handler='get_device_freshness'),
     Tool('get_crop_status', handler='get_crop_status'),
     Tool('get_output_state', handler='get_output_state'),
 
@@ -959,6 +963,7 @@ _TIER_ASSIGNMENT = {
     'get_weather':               ('measurement', 'core', False),
     'get_weather_forecast':      ('measurement', 'drawer', False),
     'get_anomalies':             ('measurement', 'drawer', False),
+    'get_device_freshness':      ('measurement', 'drawer', False),
     'get_cumulative_status':     ('measurement', 'drawer', False),
     'get_energy_report':         ('measurement', 'drawer', False),
     # --- 함수 ---------------------------------------------------------------
@@ -1396,7 +1401,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search keyword for device name or type. Optional when measurement_type is given."},
-                "measurement_type": {"type": "string", "description": "Measurement the device records, e.g. 'volumetric_water_content' (soil moisture), 'temperature', 'humidity', 'co2'. Substring match against the measurement name. Matches on what the device MEASURES, not what it is called. Alone it returns every such device; combined with query it narrows to the intersection (e.g. query='1포장' + measurement_type='temperature')."}
+                "measurement_type": {"type": "string", "description": "Measurement the device records. Substring match on the STORED name, which is rarely the everyday word: soil moisture = 'volumetric_water_content' ('moisture' matches nothing), rain = 'precipitation', wind = 'speed'/'direction'; also 'temperature', 'humidity', 'pressure', 'co2', 'dewpoint', 'battery_voltage', 'vapor_pressure_deficit'. Alone it returns every such device; with query it intersects (query='1포장' + measurement_type='temperature'). On 0 results check the real names with get_device_measurements instead of concluding there are none."}
             }
         }
     },
@@ -1508,7 +1513,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_weather",
-        "description": "Current weather for a site or zone. Returns temperature, humidity, wind speed, precipitation and condition.",
+        "description": "Current weather for a site or zone, read from the weather station serving it (KMA / SenseCAP / Ecowitt / OpenWeatherMap, or any input recording wind or rain). Check 'weather_source' before reporting: 'weather_station' = real observations, and 'weather_device' names the station; 'nearby_sensor' = this farm has NO weather station, so the values are an ordinary sensor's readings (no wind, rain or solar) and must not be called the weather. 'weather_device_scope' tells you whether that station stands in the requested zone ('in_zone') or not; say so when it does not. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2293,12 +2298,23 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_anomalies",
-        "description": "On-demand check for anomalies right now - threshold violations, device-offline ratio and an alert level (none/info/warning/critical). It only evaluates; it sends no notifications. For system/integration faults use analyze_system_failure. Read-only.",
+        "description": "On-demand check for anomalies right now - threshold violations, device-offline ratio and an alert level (none/info/warning/critical). It only evaluates; it sends no notifications. Read 'metrics_definitions' in the reply before quoting a number: total_devices counts inputs only (get_system_brief's device_count also counts outputs/cameras, so the two differ by definition), and comm_offline_devices counts only drivers that report a fault themselves - a device that just went silent is never in it, use get_device_freshness for those. For system/integration faults use analyze_system_failure. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "scope_type": {"type": "string", "description": "Scope: system | farm | zone | facility (default system)."},
                 "scope_id": {"type": "string", "description": "unique_id of the scope target (omit for system)."}
+            }
+        }
+    },
+    {
+        "tool_name": "get_device_freshness",
+        "description": "Which sensors have stopped reporting - the question get_anomalies cannot answer (comm_offline_devices only counts drivers that report a fault themselves). Returns last_seen, age_readable and periods_late per device; stale means the newest value is older than 3x that device's OWN sampling period (minimum 300s), since periods range from 15 seconds to a full day and a fixed threshold would mark healthy daily sensors as broken. Switched-off devices go to inactive_devices, devices with no stored value to no_data_devices. These are observations, not a verdict: silence is not proof of failure, so report what is late and by how many periods rather than calling it a fault. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {"type": "string", "description": "Check one input only. Omit to check every input."},
+                "include_fresh": {"type": "boolean", "description": "Also return the devices that are reporting normally (default false - only counts are given)."}
             }
         }
     },
@@ -2329,7 +2345,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # ── (C) 오리엔테이션 + 의견 원장 ──────────────────────────────────────────
     {
         "tool_name": "get_system_brief",
-        "description": "Start here. Returns what this farm is and how it is doing right now in one call - spatial hierarchy (site/zone/facility), crop and growth stage, active environment-control targets, current anomalies, device count and advice-ledger status. The how_to_proceed list at the end names the next tools to use in order. It does not replace the individual query tools; it tells you where to dig. Read-only.",
+        "description": "Start here. Returns what this farm is and how it is doing right now in one call - spatial hierarchy (site/zone/facility), crop and growth stage, active environment-control targets, current anomalies, device count and advice-ledger status. devices.device_count counts every registered entity (inputs+outputs+cameras+complex devices, broken down in count_by_type) while the anomalies block's total_devices counts inputs only - they differ by design. The how_to_proceed list at the end names the next tools to use in order. It does not replace the individual query tools; it tells you where to dig. Read-only.",
         "input_schema": {"type": "object", "properties": {}}
     },
     {

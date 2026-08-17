@@ -229,14 +229,17 @@ INPUT_INFORMATION = {
             'name': lazy_gettext("Run Backfill Now"),
             'phrase': lazy_gettext("When enabled after saving, performs a single backfill immediately and then turns off automatically.")
         },
-        {
-            'id': 'split_precip_measurements',
-            'type': 'bool',
-            'default_value': True,
-            'required': False,
-            'name': lazy_gettext("Separate Precipitation Series"),
-            'phrase': lazy_gettext("Record the precipitation indicator (rn_ox) and 15-min precipitation (rn_15m) under different measurement names to avoid conflicts.")
-        },
+        # NOTE (2026-08-17): 'split_precip_measurements' was removed. It renamed
+        # channel 5/6 to 'precipitation_flag'/'precipitation_mm_15m' at WRITE
+        # time only, while DeviceMeasurements (the table every READ path resolves
+        # the measure tag from — return_measurement_info) still said
+        # 'precipitation'. Influx stores the name as the `measure` tag, so every
+        # read filtered on a tag that was never written: graphs, /last,
+        # get_sensor_detail and the MCP tools all reported precipitation as
+        # having no data at all, while snowfall (not renamed) recorded 0.0
+        # normally. The conflict it claimed to avoid does not exist — the two
+        # channels already differ by both `channel` tag and Influx measurement
+        # (unit 'none' vs 'mm'), so they were never one series.
         {
             'id': 'qc_zero_accept_margin_deg',
             'type': 'float',
@@ -326,11 +329,12 @@ class InputModule(AbstractInput):
         """
         if not _AOT_BACKFILL_AVAILABLE:
             return None
-        # Precipitation channels are skipped: their measurement name depends on
-        # the split_precip_measurements option, so a query would miss whichever
-        # naming the stored data used. The rest are ordered by how likely they
-        # are to be enabled — the common case costs one query, and a disabled
-        # channel costs none.
+        # Precipitation channels are skipped: historical points written before
+        # 2026-08-17 carry the old renamed measure tag
+        # ('precipitation_flag'/'precipitation_mm_15m'), so probing them would
+        # read as empty on exactly the installs that do have history. The rest
+        # are ordered by how likely they are to be enabled — the common case
+        # costs one query, and a disabled channel costs none.
         candidates = (
             (0, 'C', 'temperature'),
             (1, 'percent', 'humidity'),
@@ -726,14 +730,14 @@ class InputModule(AbstractInput):
                 measurements[3] = {'measurement': 'direction', 'unit': 'bearing', 'value': row['wd_10m'], 'timestamp_utc': ts}
             if self.is_enabled(4) and row.get('ws_10m') is not None:
                 measurements[4] = {'measurement': 'speed', 'unit': 'm_s', 'value': row['ws_10m'], 'timestamp_utc': ts}
-            # Choose measurement names for precipitation series to avoid overwrite
-            split_precip = bool(_get_opt(self, 'split_precip_measurements', True))
-            meas_rn_flag = 'precipitation_flag' if split_precip else 'precipitation'
-            meas_rn_15m = 'precipitation_mm_15m' if split_precip else 'precipitation'
+            # The measurement name MUST stay the one in measurements_dict — it is
+            # what DeviceMeasurements holds and therefore what every read path
+            # filters the `measure` tag on. See the removed-option note in
+            # INPUT_INFORMATION.
             if self.is_enabled(5) and row.get('rn_ox') is not None:
-                measurements[5] = {'measurement': meas_rn_flag, 'unit': 'none', 'value': row['rn_ox'], 'timestamp_utc': ts}
+                measurements[5] = {'measurement': 'precipitation', 'unit': 'none', 'value': row['rn_ox'], 'timestamp_utc': ts}
             if self.is_enabled(6) and row.get('rn_15m') is not None:
-                measurements[6] = {'measurement': meas_rn_15m, 'unit': 'mm', 'value': row['rn_15m'], 'timestamp_utc': ts}
+                measurements[6] = {'measurement': 'precipitation', 'unit': 'mm', 'value': row['rn_15m'], 'timestamp_utc': ts}
             if self.is_enabled(7) and row.get('vs') is not None:
                 measurements[7] = {'measurement': 'visibility', 'unit': 'km', 'value': row['vs'], 'timestamp_utc': ts}
             if self.is_enabled(8) and row.get('sd_tot') is not None:
@@ -1027,18 +1031,9 @@ class InputModule(AbstractInput):
             self.logger.error("API key or coordinates are missing. Please save the latitude/longitude in the input settings.")
             return
 
+        # measurements_dict is the single source for the measurement names; the
+        # live path must not rewrite them (see the removed-option note above).
         self.return_dict = copy.deepcopy(measurements_dict)
-        # Align live measurement names with split option (to match backfill)
-        try:
-            split_precip = bool(_get_opt(self, 'split_precip_measurements', True))
-        except Exception:
-            split_precip = True
-        if split_precip:
-            self.return_dict[5]['measurement'] = 'precipitation_flag'
-            self.return_dict[6]['measurement'] = 'precipitation_mm_15m'
-        else:
-            self.return_dict[5]['measurement'] = 'precipitation'
-            self.return_dict[6]['measurement'] = 'precipitation'
         data = self.pre_fetch_data()
         if data is None:
             return

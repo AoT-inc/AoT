@@ -33,6 +33,60 @@ def _looks_like_uuid(value):
     return bool(_UUID_RE.match(str(value).strip()))
 
 
+# ---------------------------------------------------------------------------
+# @ANCHOR: WEATHER_DEVICE_KINDS
+# Input.device values of the drivers that actually observe the weather.
+#
+# get_weather used to hand the zone uuid straight to get_sensor_detail, which
+# takes the FIRST Input that happens to sit inside the polygon. On a real farm
+# that is a soil probe: koat's '1포장' answered "No data for device
+# '토양온습도_2'" (a soil sensor with no recent rows) and '3포장' answered with a
+# plain air-temp/humidity node's readings — LoRaWAN rssi/snr included, and not
+# one rain/wind field — while a dedicated KMA input and a SenseCAP weather
+# station sat on both plots unused.
+#
+# A name list is deliberate: "is this a weather station" is a property of the
+# DRIVER, not of the readings. Deriving it from measurements alone would let any
+# node reporting temperature+humidity pass, which is exactly the wrong answer
+# here. _WEATHER_MEASUREMENTS below is only a secondary net for drivers not
+# listed here (a generic MQTT/Modbus feed wired to a real weather mast), and it
+# asks for a measurement that only a weather station has — wind or rain.
+#
+# Add new weather drivers here when they are written.
+_WEATHER_INPUT_DEVICES = frozenset({
+    'KMA_weather_500',
+    'KMA_weather_stn',
+    'sensecap_weather',
+    'ecowitt_weather',
+    'OPENWEATHERMAP_CALL_WEATHER',
+    'OPENWEATHERMAP_CALL_ONECALL',
+})
+
+# Measurements no ordinary sensor node carries. Used only for devices whose
+# driver is not in _WEATHER_INPUT_DEVICES. 'temperature'/'humidity'/'pressure'
+# are NOT here on purpose — every second sensor in the system has them.
+# A bare 'speed' is deliberately NOT here — it is generic enough to match
+# non-weather hardware, and every driver that reports wind speed also reports
+# wind direction.
+_WEATHER_MEASUREMENTS = frozenset({
+    'direction',      # wind direction (unit 'bearing')
+    'precipitation',
+    'rain',
+    'snowfall',
+})
+
+
+# get_sensor_detail(sensor_type='weather') 가 남길 측정 이름의 부분문자열.
+# 'precipitation'/'snow'/'visibility' 가 명시적으로 들어 있는 이유: 'rain' 은
+# 'precipitation' 의 부분문자열이 **아니라서**, 날씨를 묻는 바로 그 질의가 KMA
+# 입력의 강수 채널을 통째로 걸러내고 있었다.
+_WEATHER_METRIC_KEYWORDS = (
+    'temperature', 'humidity', 'pressure', 'wind', 'rain', 'precipitation',
+    'snow', 'visibility', 'solar', 'radiation', 'uv', 'dewpoint',
+    'speed', 'direction',
+)
+
+
 def _devices_on_map_p2(map_uuid):
     """[P2] 지도에 배치된 장치 uuid 집합. map_config_id 조회의 대체.
 
@@ -235,8 +289,9 @@ class AoTDataToolService:
 
                 if search_term == 'weather':
                     # Special Case: 'weather' maps to multiple common atmospheric metrics
-                    weather_metrics = ['temperature', 'humidity', 'pressure', 'wind', 'rain', 'solar', 'uv', 'dewpoint', 'speed', 'direction']
-                    device_measurements = [m for m in device_measurements if any(wm in (m.measurement or "").lower() for wm in weather_metrics)]
+                    device_measurements = [m for m in device_measurements
+                                           if any(wm in (m.measurement or "").lower()
+                                                  for wm in _WEATHER_METRIC_KEYWORDS)]
                 else:
                     device_measurements = [m for m in device_measurements if search_term in (m.measurement or "").lower()]
 
@@ -2973,6 +3028,122 @@ class AoTDataToolService:
             return {"error": f"Error while running diagnostic tool: {str(e)}"}
 
     @staticmethod
+    def _weather_inputs():
+        """{unique_id: Input} for every Input that actually observes weather.
+
+        See the _WEATHER_INPUT_DEVICES note above for why the driver name is the
+        primary test and the measurement set is only a secondary net.
+        """
+        rows = {}
+        try:
+            for i in Input.query.filter(
+                    Input.device.in_(sorted(_WEATHER_INPUT_DEVICES))).all():
+                rows[i.unique_id] = i
+        except Exception:
+            logger.exception("[WEATHER_TOOL] weather driver lookup failed")
+        try:
+            extra = {r[0] for r in DeviceMeasurements.query.with_entities(
+                DeviceMeasurements.device_id).filter(
+                    DeviceMeasurements.measurement.in_(
+                        sorted(_WEATHER_MEASUREMENTS))).all() if r[0]}
+            extra -= set(rows)
+            if extra:
+                for i in Input.query.filter(
+                        Input.unique_id.in_(list(extra))).all():
+                    rows[i.unique_id] = i
+        except Exception:
+            logger.debug("[WEATHER_TOOL] wind/rain measurement scan failed",
+                         exc_info=True)
+        return rows
+
+    @staticmethod
+    def _name_affinity(device_name, zone_name):
+        """1 when the device name carries the zone's name ('기상청-1포장' ↔ '1포장').
+
+        Placement is the authority, but a KMA/API input often has no marker on
+        the map at all — its name is then the only link it has to the plot it
+        was created for, and without this tie-break a farm with three KMA
+        inputs answers every zone with whichever row the DB returned first.
+        """
+        try:
+            dn = ''.join(str(device_name or '').lower().split())
+            zn = ''.join(str(zone_name or '').lower().split())
+        except Exception:
+            return 0
+        if len(zn) < 2 or not dn:
+            return 0
+        return 1 if (zn in dn or dn in zn) else 0
+
+    @staticmethod
+    def _pick_weather_input(target_shape, resolved_name):
+        """Choose the weather device for a zone/site.
+
+        Returns (Input|None, scope, others) where scope is 'in_zone' |
+        'same_map' | 'elsewhere' and `others` names the weather devices that
+        were not chosen (so the caller can say which else exist).
+        """
+        candidates = AoTDataToolService._weather_inputs()
+        if not candidates:
+            return None, None, []
+
+        in_shape = []
+        try:
+            from aot.aot_flask.geo.device_membership import device_ids_in_shape
+            for _id in (device_ids_in_shape(target_shape) or set()):
+                if _id in candidates:
+                    in_shape.append(candidates[_id])
+        except Exception:
+            logger.debug("[WEATHER_TOOL] shape membership lookup failed",
+                         exc_info=True)
+
+        on_map = []
+        try:
+            _map = getattr(target_shape, 'geo_id', None)
+            if _map:
+                for _id in (_devices_on_map_p2(_map) or set()):
+                    if _id in candidates:
+                        on_map.append(candidates[_id])
+        except Exception:
+            logger.debug("[WEATHER_TOOL] map membership lookup failed",
+                         exc_info=True)
+
+        for tier, scope in ((in_shape, 'in_zone'),
+                            (on_map, 'same_map'),
+                            (list(candidates.values()), 'elsewhere')):
+            if not tier:
+                continue
+            tier = sorted(
+                tier,
+                key=lambda i: (-AoTDataToolService._name_affinity(i.name,
+                                                                 resolved_name),
+                               str(i.name or '')))
+            chosen = tier[0]
+            others = [{"name": i.name, "device_id": i.unique_id,
+                       "driver": i.device}
+                      for i in tier[1:]]
+            return chosen, scope, others
+        return None, None, []
+
+    @staticmethod
+    def _weather_time_range(device):
+        """Lookback for a weather read, as a get_sensor_detail range string.
+
+        Fixed at 1h the window was shorter than some devices' own sampling
+        period, so a perfectly healthy hourly input answered "no data". Same
+        rule as routes_general._effective_lookback: never narrower than the
+        request, widened to 3 sampling periods, capped at 30 days.
+        """
+        seconds = 3600
+        try:
+            period = float(getattr(device, 'period', None) or 0)
+            if period > 0:
+                seconds = max(seconds, period * 3)
+        except (TypeError, ValueError):
+            pass
+        seconds = min(seconds, 30 * 86400)
+        return "%dh" % max(1, int((seconds + 3599) // 3600))
+
+    @staticmethod
     def get_weather_tool(zone_name=None, zone_id=None, **kwargs):
         """
         포장/구역의 기상 센서 데이터를 InfluxDB에서 조회합니다.
@@ -3054,20 +3225,83 @@ class AoTDataToolService:
                     "available_zones": _available[:10]
                 }
 
-            # Step 3: Delegate to get_sensor_detail via zone unique_id.
-            # get_sensor_detail resolves: GeoShape.unique_id → Input(map_overlay_id)
-            #   → DeviceMeasurements(device_id + channel) → InfluxDB read.
-            # No external HTTP calls are made here.
-            logger.info(f"[WEATHER_TOOL] Querying InfluxDB for zone '{_resolved_name}' (id={target_shape.unique_id})")
-            _result = AoTDataToolService.get_sensor_detail(loc_id=target_shape.unique_id, time_range='1h')
+            # Step 3: Pick the device to read. A weather question must be
+            # answered by a weather station — see _WEATHER_INPUT_DEVICES for
+            # what "just take the first Input in the polygon" produced.
+            def _read(loc_id, time_range):
+                """Weather-filtered read, falling back to unfiltered."""
+                res = AoTDataToolService.get_sensor_detail(
+                    loc_id=loc_id, time_range=time_range, sensor_type='weather')
+                if isinstance(res, dict) and res.get('error'):
+                    return AoTDataToolService.get_sensor_detail(
+                        loc_id=loc_id, time_range=time_range)
+                return res
 
-            # Step 4: Attach zone context and return
-            if isinstance(_result, list):
-                return {"zone_name": _resolved_name, "data": _result}
-            if isinstance(_result, dict):
-                _result['zone_name'] = _resolved_name
-                return _result
-            return {"zone_name": _resolved_name, "data": _result}
+            def _envelope(res):
+                out = dict(res) if isinstance(res, dict) else {"data": res}
+                out['zone_name'] = _resolved_name
+                return out
+
+            chosen, scope, others = AoTDataToolService._pick_weather_input(
+                target_shape, _resolved_name)
+
+            if chosen is not None:
+                _range = AoTDataToolService._weather_time_range(chosen)
+                logger.info(
+                    "[WEATHER_TOOL] zone '%s' → weather device '%s' (%s, %s, %s)",
+                    _resolved_name, chosen.name, chosen.device, scope, _range)
+                out = _envelope(_read(chosen.unique_id, _range))
+                out['weather_source'] = 'weather_station'
+                out['weather_device'] = {"name": chosen.name,
+                                         "device_id": chosen.unique_id,
+                                         "driver": chosen.device}
+                out['weather_device_scope'] = scope
+                if scope != 'in_zone':
+                    out['weather_device_note'] = (
+                        "This weather device is not placed inside '%s' — it is the "
+                        "closest match available (%s). Say so when reporting."
+                        % (_resolved_name, scope))
+                if others:
+                    out['other_weather_devices'] = others
+                return out
+
+            # No weather station anywhere: fall back to whatever sensor the zone
+            # has, but never present it as a weather observation.
+            logger.info(
+                "[WEATHER_TOOL] zone '%s' has no weather station; falling back "
+                "to a general-purpose sensor", _resolved_name)
+            # 폴백도 주기를 보고 창을 정한다. 예전 고정 '1h' 는 자기 주기가 그보다
+            # 긴 장치에서 **정상인데도** "No data for device ... in the last 1h"
+            # 로 답했다(koat '1포장' 이 그 응답이었다).
+            fallback_dev = None
+            try:
+                from aot.aot_flask.geo.device_membership import device_ids_in_shape
+                _ids = device_ids_in_shape(target_shape) or set()
+                if _ids:
+                    fallback_dev = Input.query.filter(
+                        Input.unique_id.in_(list(_ids))).first()
+            except Exception:
+                logger.debug("[WEATHER_TOOL] fallback device lookup failed",
+                             exc_info=True)
+            if fallback_dev is not None:
+                out = _envelope(_read(
+                    fallback_dev.unique_id,
+                    AoTDataToolService._weather_time_range(fallback_dev)))
+                out['fallback_device'] = {"name": fallback_dev.name,
+                                          "device_id": fallback_dev.unique_id,
+                                          "driver": fallback_dev.device}
+            else:
+                out = _envelope(_read(target_shape.unique_id, '1h'))
+            out['weather_source'] = 'nearby_sensor'
+            out['weather_device_scope'] = 'in_zone'
+            out['weather_source_warning'] = (
+                "No dedicated weather station (KMA / SenseCAP / Ecowitt / "
+                "OpenWeatherMap or any wind/rain-recording input) is registered for "
+                "this farm. The values below come from an ordinary sensor inside "
+                "'%s' and are NOT weather observations — there is no wind, rain or "
+                "solar data. Report them as a sensor reading, not as the weather."
+                % _resolved_name)
+            return out
 
         except Exception as e:
             logger.exception("[WEATHER_TOOL] Unexpected error")
@@ -6859,12 +7093,201 @@ class AoTDataToolService:
                 "alert_level": verdict.get('alert_level', 'none'),
                 "anomalies": verdict.get('anomalies', []),
                 "metrics": current.get('metrics', {}),
+                # 두 가지를 응답 안에서 못 박는다. 둘 다 실제로 사람을 헷갈리게
+                # 한 적이 있다(2026-08-17).
+                "metrics_definitions": {
+                    "total_devices": ("Inputs (sensors) in this scope ONLY. "
+                                      "get_system_brief's devices.device_count is a "
+                                      "different number by design — it also counts "
+                                      "outputs, cameras and complex devices."),
+                    "active_devices": ("Inputs the operator has switched ON. This is "
+                                       "intent, not reachability."),
+                    "comm_capable_devices": ("Inputs whose driver can observe its own "
+                                             "link at all. Most cannot."),
+                    "comm_offline_devices": (
+                        "Inputs whose driver REPORTS a communication fault "
+                        "(comm_is_fault). A device that simply stopped sending data is "
+                        "NOT counted here and never will be — silence is not a fault "
+                        "signal. To find long-silent devices call get_device_freshness."),
+                },
                 "compared_with": ("이전 요약 v%s" % previous.version) if previous else None,
                 "evaluated_at": current.get('timestamp'),
             }
         except Exception as e:
             logger.exception("Error in get_anomalies")
             return {"status": "error", "message": str(e)}
+
+    # 신선도 판정 상수 — 전역 임계값이 아니라 **장치 주기의 배수**다.
+    # Input.period 는 15초부터 86400초(1일)까지라 고정 상수로 판정하면 하루 한 번
+    # 재는 센서가 늘 고장으로 보인다(CLAUDE.md "측정값 신선도는 장치 주기 대비로만").
+    # 표시 경로(facility_sensors.STALE_PERIOD_FACTOR=2)보다 한 칸 넉넉한 3배를
+    # 쓰는 이유는 여기가 "사람에게 이상하다고 알리는" 자리이기 때문이다 —
+    # 표본 한 번 유실로 목록이 흔들리면 목록 자체를 안 보게 된다.
+    _FRESHNESS_PERIOD_FACTOR = 3
+    _FRESHNESS_MIN_AGE_S = 300          # 하한: 주기가 아주 짧은 장치의 지터 흡수
+    _FRESHNESS_SCAN_CAP_S = 30 * 86400  # 조회 창 상한(무제한 스캔 방지)
+    _FRESHNESS_MAX_CHANNELS = 4         # 장치당 물어볼 채널 수 상한
+
+    @staticmethod
+    def _last_seen_seconds(device_id):
+        """(age_seconds, last_seen_iso, channel_label) — 없으면 (None, None, None).
+
+        채널을 하나씩 물어 **처음 답하는 채널**에서 멈춘다. 전 채널의 최댓값을
+        구하면 정확하지만 장치당 질의가 채널 수만큼 늘고, "이 장치가 최근에
+        말을 했는가" 라는 질문에는 한 채널이면 충분하다.
+        """
+        from aot.utils.influx import read_influxdb_single
+
+        rows = DeviceMeasurements.query.filter(
+            DeviceMeasurements.device_id == device_id).all()
+        rows = [m for m in rows if getattr(m, 'is_enabled', True)]
+        rows.sort(key=lambda m: (m.channel if m.channel is not None else 9999))
+
+        newest_ts, newest_label = None, None
+        for m in rows[:AoTDataToolService._FRESHNESS_MAX_CHANNELS]:
+            conversion = (Conversion.query.filter(
+                Conversion.unique_id == m.conversion_id).first()
+                if m.conversion_id else None)
+            channel, unit, measurement = return_measurement_info(m, conversion)
+            try:
+                last_time, _ = read_influxdb_single(
+                    device_id, unit, channel, measure=measurement,
+                    duration_sec=AoTDataToolService._FRESHNESS_SCAN_CAP_S,
+                    value='LAST')
+            except Exception:
+                logger.debug("[FRESHNESS] %s ch%s 조회 실패", device_id, channel,
+                             exc_info=True)
+                continue
+            if last_time:
+                newest_ts = float(last_time)
+                newest_label = "%s (ch%s)" % (measurement or m.measurement, channel)
+                break
+
+        if newest_ts is None:
+            return None, None, None
+        try:
+            from datetime import timezone as _tz
+            seen = datetime.fromtimestamp(newest_ts, _tz.utc)
+            age = (now_utc() - seen).total_seconds()
+        except Exception:
+            return None, None, None
+        return max(0.0, age), seen.isoformat(), newest_label
+
+    @staticmethod
+    def get_device_freshness(device_id=None, include_fresh=False, **extra):
+        """[읽기전용] 장치마다 마지막으로 값이 들어온 시각과 **정상 주기 대비**
+        몇 배나 늦었는지.
+
+        get_anomalies 의 comm_offline_devices 와 **다른 축이다.** 그쪽은 드라이버가
+        스스로 통신 실패를 보고한 것만 센다(comm_is_fault). 데이터가 그냥 끊긴
+        장치는 거기 절대 안 잡히고, 잡히게 만들어서도 안 된다 — 침묵은 장애 신호가
+        아니다(하루 한 번 재는 센서, 겨울에 꺼 둔 장치, 비 올 때만 보내는 노드).
+        그래서 이 도구는 **판정하지 않고 사실만 보고한다**: 마지막 수신 시각,
+        경과 시간, 그 장치 자신의 주기 대비 배수. 조치 여부는 사람이 정한다.
+
+        판정 기준은 장치 주기다 — 전역 상수가 아니다. period=15s 장치의 45초와
+        period=1d 장치의 3일은 같은 무게이고, 300초 같은 고정 임계값을 쓰면
+        후자는 정상인데도 항상 목록에 뜬다.
+        """
+        try:
+            q = Input.query
+            if device_id:
+                q = q.filter(Input.unique_id == device_id)
+            devices = q.all()
+            if not devices:
+                return {"status": "success", "checked": 0, "stale_devices": [],
+                        "message": ("No such device." if device_id
+                                    else "No inputs are registered.")}
+
+            try:
+                from aot.ai.services.ai_context_service import AIContextService
+                zone_map = AIContextService.get_device_zone_map() or {}
+            except Exception:
+                zone_map = {}
+
+            stale, fresh, no_data, inactive = [], [], [], []
+            for d in devices:
+                try:
+                    period = float(d.period) if d.period else None
+                except (TypeError, ValueError):
+                    period = None
+                threshold = AoTDataToolService._FRESHNESS_MIN_AGE_S
+                if period:
+                    threshold = max(threshold,
+                                    period * AoTDataToolService._FRESHNESS_PERIOD_FACTOR)
+
+                age, seen_iso, label = AoTDataToolService._last_seen_seconds(
+                    d.unique_id)
+                entry = {
+                    "name": d.name,
+                    "device_id": d.unique_id,
+                    "driver": d.device,
+                    "zone": zone_map.get(d.unique_id),
+                    "is_activated": bool(d.is_activated),
+                    "period_seconds": period,
+                    "expected_within_seconds": int(threshold),
+                    "last_seen": seen_iso,
+                    "last_seen_channel": label,
+                    "age_seconds": int(age) if age is not None else None,
+                    "age_readable": (AoTDataToolService._readable_age(age)
+                                     if age is not None else None),
+                    "periods_late": (round(age / period, 1)
+                                     if (age is not None and period) else None),
+                }
+                if not d.is_activated:
+                    # 사람이 꺼 둔 장치가 말이 없는 것은 당연하다. 섞으면 목록이
+                    # 정상 상태로 가득 차 실제 침묵이 묻힌다.
+                    inactive.append(entry)
+                elif age is None:
+                    no_data.append(entry)
+                elif age > threshold:
+                    stale.append(entry)
+                else:
+                    fresh.append(entry)
+
+            stale.sort(key=lambda e: -(e["periods_late"] or 0))
+            result = {
+                "status": "success",
+                "checked": len(devices),
+                "basis": ("A device is listed as stale when its newest stored value is "
+                          "older than %dx its own sampling period (minimum %ds). This is "
+                          "an observation, not a fault verdict — see 'caveat'."
+                          % (AoTDataToolService._FRESHNESS_PERIOD_FACTOR,
+                             AoTDataToolService._FRESHNESS_MIN_AGE_S)),
+                "caveat": ("Silence is not proof of failure. Event-driven inputs, "
+                           "seasonal equipment and devices whose gateway is simply idle "
+                           "look identical here. Report what is late and by how many "
+                           "periods; do not call it a fault. A real communication fault "
+                           "appears in get_anomalies' comm_offline_devices."),
+                "stale_devices": stale,
+                "stale_count": len(stale),
+                "no_data_devices": no_data,
+                "no_data_count": len(no_data),
+                "inactive_devices": inactive,
+                "inactive_count": len(inactive),
+                "fresh_count": len(fresh),
+                "scan_window_days": int(AoTDataToolService._FRESHNESS_SCAN_CAP_S / 86400),
+            }
+            if include_fresh:
+                result["fresh_devices"] = fresh
+            return result
+        except Exception as e:
+            logger.exception("Error in get_device_freshness")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def _readable_age(seconds):
+        try:
+            seconds = int(seconds)
+        except (TypeError, ValueError):
+            return None
+        if seconds < 60:
+            return "%ds" % seconds
+        if seconds < 3600:
+            return "%dm" % (seconds // 60)
+        if seconds < 86400:
+            return "%dh %dm" % (seconds // 3600, (seconds % 3600) // 60)
+        return "%dd %dh" % (seconds // 86400, (seconds % 86400) // 3600)
 
     @staticmethod
     def get_crop_status(facility_id=None, facility_name=None, **extra):
@@ -7101,10 +7524,28 @@ class AoTDataToolService:
         # 핸들러 이름은 get_device_list_tool 이다(도구명과 다름). _safe 가 예외를
         # 처리하므로 hasattr 류의 방어 가드는 두지 않는다 — 가드를 두면 이름이
         # 틀렸을 때 조용히 빈 값이 되어 오히려 사실을 감춘다.
-        brief["devices"] = _safe("장치 요약", lambda: {
-            "device_count": (S.get_device_list_tool() or {}).get("count"),
-            "note": "Use get_device_list / search_devices for the full list",
-        })
+        # 집계의 정의를 응답에 함께 싣는다. 이 수(63)는 get_anomalies 의
+        # metrics.total_devices(32)와 **다른 것을 센다** — 여기는 Input+Output+
+        # Camera+복합장치 전부, 저기는 Input 만이다. 정의를 안 적어 두면 둘을
+        # 나란히 본 AI 가 "장치 31개가 사라졌다" 로 읽는다(2026-08-17 실제 혼동).
+        def _device_summary():
+            _res = (S.get_device_list_tool() or {}).get("results") or []
+            _by_type = {}
+            for _r in _res:
+                _t = _r.get("type") or "unknown"
+                _by_type[_t] = _by_type.get(_t, 0) + 1
+            return {
+                "device_count": len(_res),
+                "count_by_type": _by_type,
+                "counts": ("device_count = every registered entity: inputs + "
+                           "outputs + cameras + complex devices. get_anomalies' "
+                           "metrics.total_devices counts INPUTS ONLY, so it is "
+                           "normally smaller — the two are different definitions, "
+                           "not a discrepancy."),
+                "note": "Use get_device_list / search_devices for the full list",
+            }
+
+        brief["devices"] = _safe("장치 요약", _device_summary)
         pending = _safe("의견 원장", lambda: S.list_advice(status='pending', limit=5))
         brief["advice_ledger"] = {
             "pending_count": pending.get("count") if isinstance(pending, dict) else None,
@@ -7118,7 +7559,10 @@ class AoTDataToolService:
             "2. To judge control, read get_control_state for current targets, the limiting "
             "factor and safety-gate status.",
             "3. Sensor history: get_sensor_detail. Forecast: get_weather_forecast (always "
-            "check the 'stale' flag).",
+            "check the 'stale' flag). If a reading looks missing or frozen, call "
+            "get_device_freshness — anomalies.comm_offline_devices only counts drivers "
+            "that report a fault themselves and stays 0 for a device that simply went "
+            "silent.",
             "4. Look up growing guidance and manual references with knowledge_search.",
             "5. Check search_schedule for already-planned work to avoid duplicate or "
             "conflicting instructions.",
