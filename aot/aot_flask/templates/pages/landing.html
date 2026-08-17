@@ -167,7 +167,8 @@
     <p class="tagline">Open-Source Smart-Farm &amp; Facility Automation<br>오픈소스 스마트팜·시설 자동화 시스템</p>
     <p class="lead">
       AoT is open-source software for monitoring sensors and remotely controlling devices
-      (irrigation, ventilation, lighting) in greenhouses, livestock barns, and other facilities.
+      (irrigation, ventilation, lighting) in greenhouses, livestock barns, and other facilities —
+      from a map-based interface, with a built-in AI assistant.
       Anyone can install it on their own server or a device such as a Raspberry Pi and run it free of charge.
     </p>
     <p class="lead">
@@ -184,10 +185,13 @@
     <h2>AoT를 만든 이유</h2>
     <p>
       AoT는 라즈베리 파이 같은 소형 컴퓨터부터 Docker 환경까지, 다양한 하드웨어에서 동작하는
-      오픈소스 환경 모니터링·제어 시스템입니다. 오픈소스 프로젝트 Mycodo에서 출발해, 여러 시설을
-      한 번에 다루기 쉽도록 지도 위에 실제 위치를 갖는 <strong>GIS 기반 디지털 트윈</strong>으로
-      발전시켰습니다. 그 아래에는 Mycodo의 검증된 제어 모델을 그대로 유지하면서, GIS·AI·새로운
-      UI를 더했습니다.
+      오픈소스 환경 모니터링·제어 시스템입니다. 여러 시설을 한 번에 다룰 수 있도록, 모든 장치와
+      센서가 지도 위에 실제 위치를 갖는 <strong>GIS 기반 디지털 트윈</strong>을 중심에 두었습니다.
+    </p>
+    <p>
+      그 위에 <strong>MCP(Model Context Protocol) 기반 AI</strong>가 얹혀 있습니다. AI가 지도와
+      측정값을 직접 읽어 상황을 진단하고, 장비를 움직이는 동작은 사용자 승인을 받아 실행합니다.
+      Claude Desktop 같은 외부 AI 클라이언트를 AoT에 직접 연결할 수도 있습니다.
     </p>
     <p>
       AoT는 소프트웨어를 특정 회사나 클라우드에 종속시키지 않고, 누구나 자신의 서버에 설치해
@@ -197,16 +201,20 @@
 
     <div class="feature-grid">
       <div class="feature-card">
-        <h3>입력 · 출력 · 함수</h3>
-        <p>센서 측정값 수집(입력), 장치 제어(출력), PID·시퀀스·조건부 등 상위 자동화(함수)까지 세 가지 컨트롤러로 구성됩니다.</p>
-      </div>
-      <div class="feature-card">
         <h3>GIS 디지털 트윈</h3>
         <p>모든 장치·센서·구조물이 지도 위 실제 위치를 갖는 지도·시설 중심 인터페이스로, 여러 지점을 한눈에 파악할 수 있습니다.</p>
       </div>
       <div class="feature-card">
         <h3>{{_('AI Assistant')}}</h3>
-        <p>자연어로 장치를 제어하거나 스케줄을 만들고, 시스템 상태를 질의할 수 있는 AI 어시스턴트를 내장하고 있습니다.</p>
+        <p>자연어로 장치를 제어하거나 스케줄을 만들고, 시스템 상태를 질의할 수 있습니다. 상태를 바꾸는 동작은 사용자 승인 후 실행됩니다.</p>
+      </div>
+      <div class="feature-card">
+        <h3>MCP 서버</h3>
+        <p>표준 MCP 프로토콜로 시스템 전체를 도구로 노출합니다. Claude Desktop 등 외부 AI 클라이언트를 직접 연결할 수 있습니다.</p>
+      </div>
+      <div class="feature-card">
+        <h3>입력 · 출력 · 함수</h3>
+        <p>센서 측정값 수집(입력), 장치 제어(출력), PID·시퀀스·조건부 등 상위 자동화(함수)까지 세 가지 컨트롤러가 제어의 토대를 이룹니다.</p>
       </div>
       <div class="feature-card">
         <h3>오픈소스</h3>

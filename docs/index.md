@@ -1,12 +1,14 @@
-description: Documentation for AoT, an open source environmental monitoring and regulation system.
+description: Documentation for AoT, an open source GIS- and AI-based environmental monitoring and control system.
 
-## AoT Environmental Monitoring and Regulation System
+## AoT Environmental Monitoring and Control System
 
-AoT is open source software designed to run on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs). It couples inputs and outputs in interesting ways to sense and manipulate the environment.
+AoT is open source software for monitoring and controlling greenhouses, livestock barns, and field sites. It is built around a **GIS digital twin** — every device, sensor, and structure has a real place on a map — and an **AI layer built on MCP** (Model Context Protocol) that can read that map, diagnose it, and act on it with your approval.
+
+It runs natively on the [Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) and other single-board computers (SBCs), and in Docker on ordinary servers and PCs.
 
 ### Information
 
-See the [README](https://github.com/AoT-inc/AoT#uses) for features, projects using AoT, screenshots, and other information.
+See [About](About.md) for what AoT does and how the pieces fit together, or the [README](https://github.com/AoT-inc/AoT) for features, screenshots, and other information.
 
 ### Prerequisites
 

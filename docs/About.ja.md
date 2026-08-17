@@ -1,15 +1,64 @@
-AoTはシングルボードコンピュータ（特に[Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi)）で動作するように設計されたオープンソースの環境監視・制御システムです。
+AoTは温室・畜舎・露地のためのオープンソースの監視・制御システムです。[Raspberry Pi](https://en.wikipedia.org/wiki/Raspberry_Pi) などのシングルボードコンピュータに直接インストールするほか、一般的なサーバーやPCではDockerで実行できます。
 
-Originally developed for cultivating edible mushrooms, AoT has grown to do much more. The system consists of two parts, a backend (daemon) and a frontend (web server). The backend performs tasks such as acquiring measurements from sensors and devices and coordinating a diverse set of responses to those measurements, including the ability to modulate outputs (switch relays, generate PWM signals, operate pumps, switch wireless outlets, publish/subscribe to MQTT, among others), regulate environmental conditions with PID control, schedule timers, capture photos and stream video, trigger actions when measurements meet certain conditions, and more. The frontend hosts a web interface that enables viewing and configuration from any browser-enabled device.
+AoTを特徴づけるのは次の2点です。
 
-There are a number of different uses for AoT. Some users simply store sensor measurements to monitor conditions remotely, others regulate the environmental conditions of a physical space, while others capture motion-activated or time-lapse photography, among other uses.
+- **GISデジタルツイン** — すべてのデバイス・センサー・構造物が地図上の実際の位置を持ち、数値の一覧ではなく地図が主画面になります。
+- **MCP（Model Context Protocol）ベースのAI** — その地図を読み、診断し、機器を動かす操作はユーザーの承認を得てから実行するアシスタントです。
 
-Input controllers acquire measurements and store them in the InfluxDB time series database. Measurements typically come from sensors, but may also be configured to use the return value of Linux Bash or Python commands, or math equations, making this a very dynamic system for acquiring and generating data.
+この2つの土台には、実績のある入力・出力・ファンクションの制御モデルがあります。AoTが出発点とした Mycodo プロジェクトから受け継いだ部分です（[由来](#origins) を参照）。
 
-Output controllers produce changes to the general input/output (GPIO) pins or may be configured to execute Linux Bash or Python commands, enabling a variety of potential uses. There are a few different types of outputs: simple switching of GPIO pins (HIGH/LOW), generating pulse-width modulated (PWM) signals, controlling peristaltic pumps, MQTT publishing, and more.
+## GIS — 地図・施設・情報
 
-When Inputs and Outputs are combined, Function controllers may be used to create feedback loops that uses the Output device to modulate an environmental condition the Input measures. Certain Inputs may be coupled with certain Outputs to create a variety of different control and regulation applications. Beyond simple regulation, Methods may be used to create a changing setpoint over time, enabling such things as thermal cyclers, reflow ovens, environmental simulation for terrariums, food and beverage fermentation or curing, and cooking food ([sous-vide](https://en.wikipedia.org/wiki/Sous-vide)), to name a few.
+地図はデバイス一覧に付け足したビューアではなく、デバイスが実際に置かれる場所です。
 
-Triggers can be set to activate events based on specific dates and times, according to durations of time, or the sunrise/sunset at a specific latitude and longitude.
+- **空間階層** — サイト > ゾーン > 施設 > 植栽区画が実際の階層をなします。「東側のハウスはどうなっているか」という問いに明確な答えが出ます。
+- **3D施設** — 温室・畜舎の外形をポリゴンで定義して3Dで可視化し、天窓・カーテンなどの構成要素を形状に結び付けてその場で制御します。
+- **GISデータソース** — 気象・衛星・土壌レイヤーを入力として登録するため、外部の地図データがセンサーと同じ時系列データベースに入ります。
+- **地図上のデバイス** — センサー入力と出力機器（バルブ、リレー、カーテン、換気窓）を地図に配置し、地図や施設画面から直接操作します。
+- **形状が制御を決めます** — 施設単位の環境制御が開口面積・方位角・風向といった形状情報をそのまま利用し、複数のアクチュエータを1つのフィードバックループとして協調させます（例：風向に応じた差動換気）。
 
-AoT has been translated to several languages. By default, the language of the browser will determine which language is used, but may be overridden in the General Settings, on the `[Gear Icon] -> Configure -> General` page. If you find an issue and would like to correct a translation or would like to add another language, this can be done at [https://translate.kylegabriel.com](https://translate.kylegabriel.com/engage/aot/).
+## AIとMCP
+
+AoTはデバイス・測定値・空間ツリー・ファンクション・スケジュール・ノートなどシステム全体をMCPツールとして公開します。2つの経路が同じツールレジストリを使うため、一覧が食い違うことはありません。
+
+- **アプリ内アシスタント** — ダッシュボードのチャットアシスタント。単一のエージェントループがツールカタログ全体を見て、自らツールを選択・実行します。
+- **外部MCPサーバー** — `aot/aot_mcp_server.py` が標準MCPプロトコル（stdio/HTTP）で動作し、Claude Desktop などの外部クライアントがAoTのツールを直接呼び出せます。
+
+AIができること:
+
+- **観測・診断** — センサー履歴を読み、ゾーンの状態を要約し、異常を見つけます。一般論ではなく実際の施設データに基づいて回答します。
+- **操作** — 出力の切り替え、デバイス制御の予約、設定値の調整。**状態を変えるすべての操作は承認ゲートを通ります** — アプリ内ではチャットの承認カード、外部MCPクライアントでは待機キューで処理されます。
+- **作成・編集** — 依頼に応じて入力・出力・ファンクション・GIS図形・植栽区画を作成・編集します。
+
+モデルはユーザーが選びます。Claude・Gemini・GPT・Mistral・Groq およびローカルの Ollama モデルに対応しており、AoTは特定のプロバイダを必須にしたり既定にしたりしません。
+
+## 制御モデル: 入力・出力・ファンクション
+
+上記のすべては3種類のコントローラの上に成り立っています。
+
+- **入力（Input）** — 測定値を取得し、InfluxDB時系列データベースに保存します。測定値は通常センサーから得られますが、Linux Bash・Pythonコマンドの戻り値、数式、GISデータソースの場合もあります。
+- **出力（Output）** — 変化を生み出します：GPIOピンの切り替え（HIGH/LOW）、PWM信号の生成、ポンプの駆動、MQTTへの発行、コマンドの実行など。
+- **ファンクション（Function）** — 入力と出力を組み合わせて上位の動作を作ります：PIDフィードバックループ、シーケンス、タイマー、条件分岐、そして時間とともに変化する設定値（メソッド）。
+
+多様なセンサー・リレー・コントローラを標準でサポートしています — [対応入力](Supported-Inputs.md) と [対応出力](Supported-Outputs.md) を参照してください。
+
+## 接続
+
+- **LoRaWAN** — ChirpStack連携、サイト単位のClass A/Cスケジューラ、ダウンリンクのペーシングによるバルブ命令の信頼性確保。
+- **Modbus TCP・MQTT・HTTP** — ネットワーク接続のデバイスは、直接インストールでもDockerインストールでも同じように動作します。
+- **GPIO・I2C・1-Wire** — Raspberry Piのピンに直接接続する場合は直接インストールを利用します。
+
+## ユーザーインターフェース
+
+- **タブシステム** — 入力・出力・ファンクションのページとダッシュボードがタブで構成され、デバイスが多くても画面が複数あっても管理しやすくなっています。
+- **カスタムカラー・スタイル** — ブランドカラー、チャートのパレット、ライト／ダークテーマをユーザーが設定でき、ウィジェットとページ全体に一貫して適用されます。
+
+## Raspberry PiとDockerで動作
+
+AoTはRaspberry Pi OSやDebianにネイティブでインストールするか、他のプラットフォームでは **Docker** で実行できます — ハードウェアに合った方式を選べば、同じアプリケーションが動作します。
+
+## 由来 { #origins }
+
+AoTは Kyle T. Gabriel 氏によるオープンソースの [Mycodo](https://github.com/kizniche/Mycodo) プロジェクトをベースに開発を始めました。Mycodoはセンサー入力と機器出力を組み合わせて環境を検知・制御するもので、インターフェースはテキストの数値とグラフが中心です。
+
+AoTはその制御モデルを維持したまま、それ以外を新たに構築しました — デバイス一覧に代わるGISデジタルツイン、MCPベースのAI、施設規模の環境制御、LoRaWANデバイス管理、そして刷新されたUI。入力・出力・ファンクション層の土台は今もMycodoであり、その貢献に感謝します。

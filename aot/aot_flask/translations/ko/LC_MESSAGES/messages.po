@@ -8569,11 +8569,14 @@ msgstr "품질 보증 공지"
 
 #: aot_flask/templates/create_admin.html:55
 msgid ""
-"AoT is an agricultural control system based on Mycodo. Users can receive a "
-"warranty for the software added by AoT under a separate contract. The parts "
-"related to AoT follow the warranty information below."
+"AoT is an open-source agricultural monitoring and control system built "
+"around a GIS digital twin and an MCP-based AI assistant. Some parts derive "
+"from the open-source Mycodo project; a warranty for the software added by "
+"AoT is available under a separate contract. The parts related to AoT follow "
+"the warranty information below."
 msgstr ""
-"AoT는 Mycodo 기반의 농업 제어 시스템입니다. 사용자는 별도의 계약을 통해 AoT가 추가한 소프트웨어에 대한 보증을 받을 수 "
+"AoT는 GIS 디지털 트윈과 MCP 기반 AI 어시스턴트를 중심으로 만들어진 오픈소스 농업 모니터링·제어 시스템입니다. 일부 "
+"구성은 오픈소스 Mycodo 프로젝트에서 유래했으며, AoT가 추가한 소프트웨어에 대한 보증은 별도의 계약을 통해 받을 수 "
 "있습니다. AoT와 관련된 부분은 아래 보증 정보를 따릅니다."
 
 #: aot_flask/templates/create_admin.html:56
