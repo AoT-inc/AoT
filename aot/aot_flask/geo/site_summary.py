@@ -361,6 +361,11 @@ def _build_summary(site_uuid):
             }, **_planting_counts(site)),
         },
         'children': children,
+        # 다가오는 일정 — 구역·식생·시설과 **같은 창(지금부터)·같은 목록**이다.
+        # 예전에는 여기만 "오늘 N건" 숫자라서, 대지가 0인데 구역을 열면 내일
+        # 일이 있는 상태가 났다(실측). 자식 도형까지 넣는 것은 롤업이라서다.
+        'schedule': upcoming_schedule(
+            site, all_ids, [c.unique_id for c in children_shapes]),
         'today': _today_block(site, all_ids, offline_total, partial,
                               [c.unique_id for c in children_shapes]),
         'notes': _notes_block(site, partial),
@@ -822,7 +827,7 @@ def _schedule_count(site, device_ids, partial, child_uuids=()):
         return 0
 
 
-def upcoming_schedule(shape, device_ids, child_uuids=(), limit=5):
+def upcoming_schedule(shape, device_ids, extra_targets=(), limit=5):
     """다가오는 일정 → `{'own': [...], 'devices': [...]}` (없으면 빈 목록).
 
     **"오늘"이 아니라 "지금부터"** 인 이유: 구역 하나에 오늘 잡힌 일이 있는
@@ -830,9 +835,17 @@ def upcoming_schedule(shape, device_ids, child_uuids=(), limit=5):
     노이즈로만 남는다. 필지의 숫자 타일은 창이 고정돼야 뜻이 서므로 "오늘"을
     그대로 둔다 — 세는 것과 나열하는 것은 다른 질문이다.
 
-    `own` 은 이 도형(과 자식 도형)을 대상으로 한 농작업, `devices` 는 하위
-    장치의 예약이다. 둘은 성격이 다르다 — 사람이 나가서 하는 일과 기계가
-    스스로 하는 일이라 한 줄에 섞으면 무엇을 준비해야 하는지 읽히지 않는다.
+    `own` 은 이 도형(과 `extra_targets`)을 대상으로 한 일정, `devices` 는 하위
+    장치의 예약이다. 화면은 둘을 한 목록으로 합쳐 보여준다 — 시스템에 그런
+    구분이 없어서다(buildScheduleHtml 주석). 나눠 담는 것은 호출자가 필요하면
+    쓰라는 것뿐이다.
+
+    `extra_targets` 는 "이 도형과 **같은 것을 가리키는** 다른 id" 다:
+      * site      직속 자식 도형들(롤업 — 필지 요약은 이미 하위를 합산한다)
+      * facility  GeoFacility uuid. 시설은 정체성이 둘이다 — 노트·일정은
+                  GeoFacility uuid 로 붙는데 장치·기하는 GeoShape 쪽에 있어서,
+                  도형 uuid 만 보면 방금 만든 일정이 그 시설 화면에서 안 보인다
+                  (실제로 그렇게 나갔다).
     """
     from aot.databases.models.scheduler import SchedulerJobMeta
     from aot.ai.services.aot_data_tool_service import AoTDataToolService
@@ -841,7 +854,7 @@ def upcoming_schedule(shape, device_ids, child_uuids=(), limit=5):
     shape_targets = set()
     if shape is not None and getattr(shape, 'unique_id', None):
         shape_targets.add(shape.unique_id)
-    shape_targets.update(u for u in (child_uuids or ()) if u)
+    shape_targets.update(u for u in (extra_targets or ()) if u)
     dev_targets = set(device_ids or ())
     if not shape_targets and not dev_targets:
         return {'own': [], 'devices': []}

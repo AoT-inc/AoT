@@ -1253,7 +1253,7 @@
 }
 
 /* 블록 안의 소제목 — 성격이 다른 두 목록을 한 블록에서 가를 때 쓴다
-   (다가오는 일정의 '농작업' 과 '장치 예약'). 섹션 제목보다 한 단 낮다. */
+   (통합 기록 블록의 '예정' 과 '지난 것'). 섹션 제목보다 한 단 낮다. */
 .aot-ov-sub-title {
   margin: 6px 0 2px;
   font-size: var(--aot-font-size-xs);
@@ -1261,3 +1261,11 @@
   color: var(--aot-color-text-secondary);
 }
 .aot-ov-sub-title:first-of-type { margin-top: 0; }
+
+/* 통합 기록 폼의 안내 한 줄 — '언제' 를 비우면 노트가 된다는 것을 말한다.
+   버튼 문구도 같은 것을 말하지만(노트로 저장 / 예정으로 저장), 폼을 처음
+   여는 사람은 아직 버튼을 보고 있지 않다. */
+.aot-ov-record-hint {
+  margin: 4px 0 8px;
+  line-height: 1.5;
+}

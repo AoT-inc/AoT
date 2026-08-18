@@ -3548,6 +3548,180 @@ def _build_zone_contents(zone_uuid):
     }
 
 
+
+# ── 일정: 네 계층 공통 ──────────────────────────────────────────────────────
+#
+# 대지·구역·식생·시설이 **같은 창(지금부터)·같은 목록**을 쓴다. 예전에는
+# 대지만 "오늘 N건" 숫자였고 구역·식생은 목록, 시설은 아예 없었다 — 창이
+# 달라서 **대지가 0인데 구역을 열면 내일 일이 있는** 상태가 실제로 났다
+# (실측: 3포장 '오늘 0' / 3-2 구역 8/19 08:00 제초). 위 계층이 아래를 덮지
+# 못하면 롤업이라고 부를 수 없다.
+
+@blueprint.route('/api/geo/schedule/<string:target_id>', methods=['GET'])
+@login_required
+def api_schedule_for_target(target_id):
+    """이 대상(도형·구획)에 걸린 다가오는 일정."""
+    payload = _schedule_payload(target_id)
+    if payload is None:
+        return jsonify({'ok': False, 'message': 'target not found'}), 404
+    return jsonify(dict(payload, ok=True))
+
+
+def _schedule_payload(target_id):
+    """대상 종류를 가려 `upcoming_schedule` 을 부른다. 못 찾으면 None.
+
+    종류별로 무엇을 하위로 볼지가 다르다:
+      site      직속 자식 도형 + 그 아래 장치 전부 (롤업)
+      zone      그 구역의 장치
+      facility  그 시설의 장치
+      planting  구획에 **닿는** 장치만(구획 안 + 겹치는 장치 영역)
+    """
+    from aot.aot_flask.geo import device_membership
+    from aot.aot_flask.geo.site_summary import upcoming_schedule, _direct_children
+
+    shape = GeoShape.query.filter_by(unique_id=target_id).first()
+    if shape is not None:
+        ids = device_membership.device_ids_in_area(shape.unique_id) or set()
+        kids = []
+        if shape.type == 'site':
+            try:
+                kids = [c.unique_id for c in _direct_children(shape)]
+            except Exception:
+                current_app.logger.exception('schedule: 자식 도형 조회 실패')
+        return upcoming_schedule(shape, ids, kids)
+
+    from aot.databases.models import GeoPlanting
+    row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+    if row is not None:
+        from aot.aot_flask.routes_geo_planting import _planting_schedule
+        return _planting_schedule(row)
+
+    # 시설은 GeoFacility 이고 도형(GeoShape)이 따로 있다 — 도형으로 옮겨 푼다.
+    from aot.databases.models import GeoFacility
+    fac = GeoFacility.query.filter_by(unique_id=target_id).first()
+    if fac is not None:
+        sh = GeoShape.query.filter_by(
+            unique_id=getattr(fac, 'shape_uuid', None)).first()
+        if sh is not None:
+            ids = device_membership.device_ids_in_area(sh.unique_id) or set()
+            # 시설 uuid 도 대상에 넣는다 — 일정·노트는 GeoFacility uuid 로
+            # 붙는데 장치·기하는 도형 쪽이라, 도형만 보면 방금 만든 일정이
+            # 그 시설 화면에서 안 보인다.
+            return upcoming_schedule(sh, ids, [fac.unique_id])
+        return {'own': [], 'devices': []}
+    return None
+
+
+@blueprint.route('/api/geo/schedule', methods=['POST'])
+@login_required
+def api_schedule_create():
+    """어느 계층에든 일정 하나를 만든다.
+
+    본문: `{target_id, date:'YYYY-MM-DD', time:'HH:MM', content, worker?}`
+
+    **대상은 uuid 로 온다** — 이름으로 고르지 않는다. 이름 리졸버는 같은
+    작물이 두 구역에 있을 때 하나를 골라버리는 문제가 있어 구역을 돌려주도록
+    정해져 있고(설계 §이름 해석), 이 경로는 사람이 그 모달을 열어 놓고 쓰므로
+    고를 것이 없다.
+
+    `action_type='human'` 이라 장치를 움직이지 않는다(APScheduler 트리거 없음).
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
+    data = request.get_json(silent=True) or {}
+    target_id = (data.get('target_id') or '').strip()
+    content = (data.get('content') or '').strip()
+    date_str = (data.get('date') or '').strip()
+    if not target_id:
+        return jsonify({'ok': False, 'message': 'target_id required'}), 400
+    if not content:
+        return jsonify({'ok': False, 'message': _('Enter what to do')}), 400
+    if not date_str:
+        return jsonify({'ok': False, 'message': _('Enter a date')}), 400
+
+    label, kind = _schedule_target_label(target_id)
+    if label is None:
+        return jsonify({'ok': False, 'message': 'target not found'}), 404
+
+    return _create_human_schedule(
+        target_id, kind, label, date_str,
+        (data.get('time') or '').strip(),
+        content, (data.get('worker') or '').strip())
+
+
+def _create_human_schedule(target_id, kind, label, date_str, time_str,
+                           content, worker):
+    """사람이 만든 예정 하나. (flask 응답, 상태코드) 를 돌려준다.
+
+    `/api/geo/schedule`(지도 모달)과 `/notes/<id>/schedule`(노트 구간 선택)이
+    **함께 쓴다** — 두 벌로 두면 `propose_job` 의 자가승인 같은 함정을 한쪽
+    에서만 지키게 된다.
+    """
+    time_str = time_str or '09:00'
+
+    from aot.ai.services.aot_data_tool_service import AoTDataToolService as _T
+    from aot.ai.services.ai_scheduler_service import AISchedulerService
+
+    anchor_tz, anchor_name, anchor_src = _T._resolve_schedule_anchor(target_id)
+    try:
+        run_at = _T._schedule_wall_to_utc(date_str, time_str, anchor_tz=anchor_tz)
+    except Exception as exc:
+        return jsonify({'ok': False,
+                        'message': '날짜/시각 형식이 올바르지 않습니다 (%s)' % exc}), 400
+
+    params = {'content': content, 'worker': worker, 'target_type': kind,
+              'target_name': label, 'tags': 'human_work'}
+    try:
+        # ⚠ `propose_job` 은 proposed_by='HUMAN' 이고 승인이 필요 없으면
+        # **스스로 approve_job 까지 부른다.** 뒤에서 또 부르면 "not in DRAFT
+        # state" 로 죽는데, 행은 이미 만들어진 뒤라 사용자는 "저장 실패" 를
+        # 보면서 일정은 생겨 있다(실제로 그렇게 나갔다).
+        meta = AISchedulerService.propose_job(
+            action_type='human', target_id=target_id, params=params,
+            reasoning='[human_schedule] %s @ %s | tags: human_work' % (content, label),
+            schedule_time=run_at, proposed_by='HUMAN',
+            approval_required=False, source_type='human')
+        meta.anchor_tz = anchor_name
+        meta.anchor_source = anchor_src
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('schedule: 생성 실패')
+        return jsonify({'ok': False, 'message': str(exc)}), 500
+
+    # 방금 만든 것이 바로 보여야 한다 — 모달들이 30초 캐시를 다시 읽는다.
+    try:
+        from aot.aot_flask.geo.site_summary import (
+            invalidate_planting_contents, invalidate_zone_contents_all,
+            invalidate)
+        invalidate_planting_contents(None)
+        invalidate_zone_contents_all()
+        invalidate()
+    except Exception:
+        pass
+
+    return jsonify({'ok': True, 'kind': 'schedule', 'job_id': meta.unique_id,
+                    'schedule': _schedule_payload(target_id)})
+
+
+def _schedule_target_label(target_id):
+    """(사람이 읽을 이름, 종류) 또는 (None, None)."""
+    from aot.databases.models import GeoFacility, GeoPlanting
+
+    shape = GeoShape.query.filter_by(unique_id=target_id).first()
+    if shape is not None:
+        props = (_shape_feature_dict(shape).get('properties') or {})
+        return props.get('name') or target_id, shape.type
+    row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+    if row is not None:
+        return row.crop or row.name or target_id, 'planting'
+    fac = GeoFacility.query.filter_by(unique_id=target_id).first()
+    if fac is not None:
+        return getattr(fac, 'name', None) or target_id, 'facility'
+    return None, None
+
+
 @blueprint.route('/api/geo/site/<string:site_uuid>/summary', methods=['GET'])
 @login_required
 def api_geo_site_summary(site_uuid):

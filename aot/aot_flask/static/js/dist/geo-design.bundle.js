@@ -159,9 +159,9 @@ ${a}`;let f=e.options.color||e.options.fillColor;!f&&e.feature&&e.feature.proper
                 <div class="aot-modal-option-label">${i}</div>
                 <div class="aot-modal-option-control">${r}</div>
             </div>`;return`
-            <div class="aot-modal-group-title">${this._t("Crop")}</div>
+            <div class="aot-modal-group-title">${this._t("Planted")}</div>
             <div class="aot-modal-container">
-                ${o(this._t("Crop"),`<input type="text" class="aot-modern-input form-control"
+                ${o(this._t("Planted"),`<input type="text" class="aot-modern-input form-control"
                               data-veg-field="crop" value="${t(e.crop)}" autocomplete="off">`)}
                 ${o(this._t("Variety"),`<input type="text" class="aot-modern-input form-control"
                               data-veg-field="variety" value="${t(e.variety)}">`)}

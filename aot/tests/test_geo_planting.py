@@ -2835,7 +2835,11 @@ class TestOverviewIsAboutNotesNotDevices(unittest.TestCase):
         self.assertNotIn('function _plantingValvesHtml', src)
 
     def test_notes_are_present(self):
-        self.assertIn('_ovNotesBlock()', self._body())
+        """노트는 여전히 이 탭의 본론이다 — 다만 이제 **통합 기록 블록 안**에
+        있다(Phase 2). 블록이 직접 그리지 않고 공용 컴포넌트를 부르므로,
+        여기서는 '기록 블록이 있는가' 로 확인하고 '그 블록이 공용 노트
+        컴포넌트를 쓰는가' 는 test_geo_record_unified.py 가 본다."""
+        self.assertIn('buildRecordBlock(', self._body())
 
     def test_missing_valve_is_still_reported(self):
         """밸브 목록이 아니라 **빠진 것**을 알리는 줄은 남는다 — "적실 수단이
@@ -3108,8 +3112,14 @@ class TestScheduleScoping(unittest.TestCase):
         self.assertIn('SCHEDULE_LIVE_STATES', src)
         self.assertEqual(src.count("('DRAFT', 'PENDING', 'RUNNING')"), 1)
 
-    def test_upcoming_splits_field_work_from_device_jobs(self):
-        """사람이 나가서 하는 일과 기계가 스스로 하는 일은 성격이 다르다."""
+    def test_upcoming_keeps_the_two_target_buckets(self):
+        """서버는 대상(도형/장치)으로 나눠 담는다 — 화면이 필요하면 쓰라고.
+
+        ⚠ **화면에서는 이 둘을 카테고리로 보여주지 않는다.** 한때 '농작업' /
+        '장치 예약' 이라 이름 붙였는데 둘 다 틀렸다: 시스템에 그런 구분이
+        없고(전부 같은 SchedulerJobMeta), 그 이름은 용도를 농업으로 못 박는다
+        — 이 소프트웨어는 공원·시설물·교통에도 쓴다고 이미 정해 두었다.
+        """
         body = self._src().split('def upcoming_schedule', 1)[1].split(
             '\ndef ', 1)[0]
         self.assertIn("'own'", body)
@@ -3130,12 +3140,41 @@ class TestScheduleScoping(unittest.TestCase):
         self.assertIn("'schedule': schedule", body)
 
     def test_empty_schedule_draws_nothing(self):
-        """대부분의 날은 비어 있다 — 빈 블록은 화면에 노이즈로만 남는다."""
+        """대부분의 날은 비어 있다 — 빈 블록은 화면에 노이즈로만 남는다.
+        단 추가 버튼이 있는 화면(구획)은 그리지 않으면 더할 자리가 없어진다."""
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
         body = js.split('function buildScheduleHtml', 1)[1].split(
             '\n  function ', 1)[0]
-        self.assertIn("if (!own.length && !dev.length) return '';", body)
+        self.assertIn("if (!items.length && !opts.addable) return '';", body)
+
+    def test_no_invented_categories_in_the_ui(self):
+        """화면은 하나의 목록이다 — 시스템에 없는 구분을 만들지 않는다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        for gone in ("_t('Field work')", "_t('Device schedule')"):
+            self.assertNotIn(gone, js)
+
+        # 소제목(aot-ov-sub-title) 자체는 금지 대상이 아니다 — 금지해야 할
+        # 것은 **시스템에 없는 구분**이다. 통합 기록 블록의 '예정'/'지난 것'
+        # 은 실재하는 구분(시각이 앞이냐 뒤냐)이라 소제목이 맞다.
+        for line in js.splitlines():
+            if 'aot-ov-sub-title' not in line or '.aot-ov-sub-title' in line:
+                continue
+            self.assertTrue(
+                ("_t('Coming up')" in line or "_t('Up to now')" in line
+                 or 'opts.sub' in line or 'title' in line),
+                '설명 없는 소제목: %s' % line.strip())
+
+    def test_no_agriculture_only_wording_in_generic_surfaces(self):
+        """이 소프트웨어는 용도를 농업으로 한정하지 않는다(landing 문구).
+        일정은 어느 현장에나 있는 것이라 그 이름에 '농' 을 넣지 않는다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = js.split('function buildScheduleHtml', 1)[1].split(
+            '\n  function _fmtWhen', 1)[0]
+        for word in ('Field work', 'farm', 'Farm', 'irrigation', 'waters'):
+            self.assertNotIn(word, body)
 
 
 class TestPlantingSchedule(unittest.TestCase):
@@ -3174,14 +3213,23 @@ class TestPlantingSchedule(unittest.TestCase):
         # upcoming_schedule 의 첫 인자가 구획 행이면 그 uuid 가 own 대상이 된다
         self.assertIn('upcoming_schedule(row,', body)
 
+    def test_creation_is_one_shared_endpoint(self):
+        """구획 전용 생성 경로를 두지 않는다 — 대지·구역·시설도 같은 것을
+        쓴다. 계층마다 만들면 tz 앵커·중복 승인 같은 함정을 각자 다시 밟는다."""
+        self.assertNotIn('api_planting_add_schedule', self._src())
+        rg = _read(_ROUTES_GEO)
+        self.assertIn("@blueprint.route('/api/geo/schedule', methods=['POST'])", rg)
+        self.assertIn('def _schedule_payload', rg)
+
     def test_overview_renders_it_with_the_shared_builder(self):
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
         body = js.split('function _plantingOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
-        self.assertIn('buildScheduleHtml(p.schedule)', body)
-        # 노트가 여전히 마지막 — 일정 블록이 본론을 밀어내면 안 된다
-        self.assertLess(body.index('buildScheduleHtml'), body.index('_ovNotesBlock()'))
+        # Phase 2: 예정과 노트가 한 블록이라 빌더도 하나다. 순서(노트가
+        # 마지막)는 이제 블록 **안**의 문제라 buildRecordBlock 이 지킨다.
+        self.assertIn('buildRecordBlock(p.schedule,', body)
+        self.assertNotIn('_ovNotesBlock()', body)
 
 
 class TestPlantingTimezone(unittest.TestCase):
@@ -3214,3 +3262,166 @@ class TestPlantingTimezone(unittest.TestCase):
         seg = body.split('GeoPlanting', 1)[1]
         self.assertIn('except Exception', seg)
         self.assertIn('return get_device_tz(None)', body)
+
+
+class TestNoWateringLanguage(unittest.TestCase):
+    """"적신다" 고 쓰지 않는다 — 그 장치가 관수 장치라는 근거가 없다.
+
+    판정은 *장치 영역 도형이 구획과 겹친다* 하나뿐이다. 실측(김제): 영역에
+    묶인 출력이 전부 `virtual_on_off_single`(범용 on/off)이고, 'v341' 같은
+    이름은 그 농장의 작명일 뿐 시스템이 읽는 값이 아니다. 관수인지 조명인지
+    모르는 채 "물" 을 말하면 다른 장치를 쓰는 농장에서 화면이 거짓말이 된다.
+    """
+
+    def _popup(self):
+        return _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
+
+    def test_ui_string_is_neutral(self):
+        body = self._popup().split('function coverageHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("_t('Also covers')", body)
+        self.assertNotIn('Also waters', body)
+
+    def test_missing_device_notice_is_neutral(self):
+        src = self._popup()
+        self.assertIn('A device area over this plot has no device assigned yet.',
+                      src)
+        self.assertNotIn('An irrigation area over this plot', src)
+
+    def test_server_helper_warns_about_its_own_name(self):
+        """이름(`valves_*`)이 가정을 담고 있어 다음 사람이 되살리기 쉽다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo',
+                                 'planting_context.py'))
+        body = src.split('def valves_for_planting', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('관수 장치를 가려내지 않는다', body)
+        self.assertIn('virtual_on_off_single', body)
+
+
+class TestScheduleIsConsistentAcrossLayers(unittest.TestCase):
+    """대지·구역·식생·시설이 **같은 창·같은 블록**으로 일정을 보여준다.
+
+    예전에는 대지만 "오늘 N건" 숫자, 구역·식생은 목록(지금부터), 시설은 아예
+    없었다. 창이 달라서 **대지가 0인데 구역을 열면 내일 일이 있는** 상태가
+    실제로 났다(실측: 3포장 '오늘 0' / 3-2 구역 8/19 08:00). 위 계층이 아래를
+    덮지 못하면 롤업이라고 부를 수 없다.
+    """
+
+    def test_site_summary_carries_the_same_list(self):
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'geo', 'site_summary.py'))
+        self.assertIn("'schedule': upcoming_schedule(", src)
+
+    def test_site_tile_no_longer_duplicates_it(self):
+        """숫자 타일('오늘')과 목록('지금부터')이 나란히 있으면 두 값이
+        어긋나는 것이 정상처럼 보인다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        body = js.split('function _buildSiteSummaryHTML', 1)[1].split(
+            '\n        function ', 1)[0]
+        self.assertNotIn("_siteTileHTML('schedule'", body)
+        self.assertIn('buildScheduleHtml(', body)
+
+    def test_every_layer_can_add(self):
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        # 구역·대지·시설 세 곳에서 공용 배선을 부른다
+        self.assertGreaterEqual(js.count('wireScheduleAdd('), 3)
+        # **구획에는 추가 배선이 없다.** 예정을 만드는 자리는 노트 하나로
+        # 옮겼다(노트 본문의 한 구간을 골라 시각을 준다) — 지도 모달의 폼도
+        # 결국 쓰기 **전에** 종류를 묻는 것이라 철회했다.
+        # 계약은 test_note_schedule_link.py 가 지킨다.
+        veg = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-vegetation.js'))
+        self.assertNotIn('wireRecordAdd(', veg)
+        self.assertNotIn('wireScheduleAdd(', veg)
+
+    def test_facility_identity_is_covered(self):
+        """시설은 정체성이 둘이다 — 일정은 GeoFacility uuid 로 붙는데 장치·기하는
+        GeoShape 쪽이다. 도형만 보면 방금 만든 일정이 안 보인다."""
+        rg = _read(_ROUTES_GEO)
+        body = rg.split('def _schedule_payload', 1)[1].split('\ndef ', 1)[0]
+        self.assertIn('upcoming_schedule(sh, ids, [fac.unique_id])', body)
+
+    def test_notes_stay_last_everywhere(self):
+        """네 계층 모두 노트가 마지막 — 화면을 옮겨 다녀도 같은 자리에서
+        같은 것을 찾게 한다. 일정 블록은 그 앞에 들어간다."""
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        body = js.split('function _appendFacilitySchedule', 1)[1].split(
+            '\n        function ', 1)[0]
+        self.assertIn("pane.querySelector('.aot-ov-notes')", body)
+        self.assertIn('insertBefore(node, notes)', body)
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        # 구획은 예정과 노트가 한 블록이므로(Phase 2) 순서를 블록 안에서
+        # 지킨다 — 예정이 먼저, 노트가 뒤.
+        rec = popup.split('function buildRecordBlock', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertLess(rec.index("_t('Coming up')"),
+                        rec.index('window.AoTNotesBlock.html('))
+
+
+class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
+    """AoT 는 용도를 농업으로 한정하지 않는다.
+
+    소개 문구가 이미 그렇게 정해져 있다(landing: "특정 용도나 장소에 매이지
+    않습니다 — 온실·축사·노지는 물론 공원·시설물·교통처럼…"). 그런데 화면
+    문구는 이 농장 사례 하나를 보고 '재배'·'파종'·'농작업' 처럼 농업에서만
+    통하는 말을 쓰고 있었다. 공원·도로 현장에서는 그 말이 그냥 틀린 말이 된다.
+
+    **판정은 한국어 번역으로 한다** — 영어 msgid 가 중립이어도 번역이 농업으로
+    좁히면 화면은 좁아진다(실제로 'Planted on' 이 '파종일' 이었다).
+    """
+
+    _BANNED = ('재배', '파종', '농작업', '농장', '작물')
+
+    def _ko(self):
+        import re
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'translations', 'ko',
+                                 'LC_MESSAGES', 'messages.po'))
+        out = {}
+        for m in re.finditer(r'msgid "([^"]*)"\nmsgstr "([^"]*)"', src):
+            out[m.group(1)] = m.group(2)
+        return out
+
+    def _modal_msgids(self):
+        """모달 빌더들이 실제로 쓰는 msgid 만 본다 — 카탈로그 전체에는 다른
+        화면(작물 관리 등)의 문구도 있다."""
+        import re
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        return set(re.findall(r"_t\('([^']+)'\)", src))
+
+    def test_no_agriculture_only_korean_in_modal_strings(self):
+        ko = self._ko()
+        bad = []
+        for mid in self._modal_msgids():
+            val = ko.get(mid)
+            if not val:
+                continue
+            for w in self._BANNED:
+                if w in val:
+                    bad.append('%s -> %s (%s)' % (mid, val, w))
+        self.assertEqual(bad, [], '농업 한정 단어가 모달 문구에 남아 있다: %s' % bad)
+
+    def test_crop_msgid_is_gone(self):
+        """'Crop' 은 영어에서도 수확물을 뜻한다 — 공원의 나무는 crop 이 아니다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        design = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                    'design', 'aot-geo-vegetation.js'))
+        for s in (src, design):
+            self.assertNotIn("_t('Crop')", s)
+
+    def test_block_title_does_not_repeat_its_first_label(self):
+        """'심겨 있는 것 / 심은 것' 처럼 제목과 첫 행이 같은 말이면 안 된다."""
+        src = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = src.split('function _plantingOverviewHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("_t('This plot')", body)
+        self.assertNotIn("_t('Growing now')", body)
+        # [개요]도 같은 문제를 겪었다 — 제목과 첫 행이 둘 다 '심은 것' 이었다.
+        about = src.split('function _plantingAboutHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("_t('Basics')", about)

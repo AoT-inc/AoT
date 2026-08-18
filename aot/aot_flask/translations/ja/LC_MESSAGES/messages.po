@@ -10752,7 +10752,7 @@ msgstr "シンセサイザー"
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:33
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:11
 msgid "Worker"
-msgstr "ワーカー"
+msgstr "担当"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:84
 msgid "MCP Server"
@@ -27476,9 +27476,6 @@ msgstr "ここは複数の区画が重なっています。一つを選んでく
 msgid "New planting"
 msgstr "新しい区画"
 
-#: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
-msgid "Crop"
-msgstr "作物"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Variety"
@@ -27490,7 +27487,7 @@ msgstr "区画名"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Planted on"
-msgstr "播種日"
+msgstr "植えた日"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Expected end"
@@ -27536,7 +27533,7 @@ msgstr "コピーして新規作成"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "End planting"
-msgstr "栽培終了"
+msgstr "植栽の終了"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Planting ended"
@@ -27556,7 +27553,7 @@ msgstr "この場所と重なる過去・現在の区画です。輪作の判断
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "ongoing"
-msgstr "栽培中"
+msgstr "継続中"
 
 #: aot/aot_flask/static/js/geo/design/aot-geo-vegetation.js:1
 msgid "Overlap"
@@ -27796,7 +27793,7 @@ msgstr "終了日"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "Days since planting"
-msgstr "栽培日数"
+msgstr "経過日数"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-vegetation.js:1
 msgid "End this planting?"
@@ -27976,11 +27973,11 @@ msgstr "今すぐコピーしてください — 一度だけ表示され、そ�
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Growing now"
-msgstr "生育状況"
+msgstr "植えられているもの"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Grown for"
-msgstr "栽培期間"
+msgstr "経過期間"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Day %(n)s"
@@ -28123,17 +28120,11 @@ msgstr "かん水"
 msgid "%(pct)s% of this plot"
 msgstr "この区画の%(pct)s%"
 
-#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "Also waters"
-msgstr "一緒に潤す"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Nothing is planted in this zone."
 msgstr "このゾーンに植えられているものはありません。"
 
-#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "%(crops)s crops · %(plots)s plots"
-msgstr "%(crops)s種・%(plots)s区画"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "Outside this plot, but it waters this plot"
@@ -28147,9 +28138,6 @@ msgstr "最寄り"
 msgid "Nothing in this plot — showing the closest one"
 msgstr "この区画内にないため、最も近いものを表示しています"
 
-#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "An irrigation area over this plot has no valve assigned yet."
-msgstr "この区画にかかるかん水エリアに、まだバルブが割り当てられていません。"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
 msgid "The sensor in this plot is not reporting — showing the closest one"
@@ -28167,10 +28155,124 @@ msgstr "データなし"
 msgid "Coming up"
 msgstr "今後の予定"
 
-#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "Field work"
-msgstr "農作業"
+
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
-msgid "Device schedule"
-msgstr "機器の予約"
+msgid "What"
+msgstr "作業内容"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Enter a date and what to do"
+msgstr "日付と作業内容を入力してください"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Also covers"
+msgstr "同時に作動"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "A device area over this plot has no device assigned yet."
+msgstr "この区画にかかる機器エリアに、まだ機器が割り当てられていません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Nothing scheduled yet."
+msgstr "予定はありません。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Planted"
+msgstr "植えたもの"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(kinds)s kinds · %(plots)s plots"
+msgstr "%(kinds)s種・%(plots)s区画"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "This plot"
+msgstr "この区画"
+
+#: aot/aot_flask/templates/pages/ai/scheduler.html:1
+msgid "Show automated records (%(n)s)"
+msgstr "自動実行の記録を表示 (%(n)s件)"
+
+#: aot/aot_flask/templates/pages/ai/scheduler.html:1
+msgid "Hide automated records (%(n)s)"
+msgstr "自動実行の記録を隠す (%(n)s件)"
+
+#: aot/aot_flask/templates/pages/ai/scheduler.html:1
+msgid "Include notes on the calendar (read-only)"
+msgstr "カレンダーにノートも表示します（読み取り専用）"
+
+#: aot/aot_flask/templates/pages/ai/scheduler.html:1
+msgid "Show Notice"
+msgstr "お知らせを表示"
+
+#: aot/aot_flask/templates/pages/ai/scheduler.html:1
+msgid "Include notice posts on the calendar (read-only)"
+msgstr "カレンダーにお知らせも表示します（読み取り専用）"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Records"
+msgstr "記録"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "When"
+msgstr "いつ"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Leave the date empty and it is saved as a note."
+msgstr "日付を空にするとノートとして保存されます。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Save as note"
+msgstr "ノートとして保存"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Save as upcoming"
+msgstr "予定として保存"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Enter what to do"
+msgstr "内容を入力してください"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Enter a date"
+msgstr "日付を入力してください"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "Up to now"
+msgstr "これまで"
+
+#: aot/aot_flask/static/apps/notes-widget/src/components/ScheduleFromSelection.jsx:1
+msgid "Schedule this"
+msgstr "この部分を予定に"
+
+#: aot/aot_flask/static/apps/notes-widget/src/components/ScheduleFromSelection.jsx:1
+msgid "This text is no longer in the note"
+msgstr "この文がノートから消えています"
+
+#: aot/aot_flask/static/apps/notes-widget/src/components/ScheduleFromSelection.jsx:1
+msgid "Unlink only"
+msgstr "リンクのみ解除"
+
+#: aot/aot_flask/static/apps/notes-widget/src/components/ScheduleFromSelection.jsx:1
+msgid "Cancel the schedule"
+msgstr "予定を取り消す"
+
+#: aot/aot_flask/static/apps/notes-widget/src/components/ScheduleFromSelection.jsx:1
+msgid "Select some text first"
+msgstr "先に文を選択してください"
+
+#: aot/aot_flask/static/apps/notes-widget/src/components/ScheduleFromSelection.jsx:1
+msgid "That text is no longer in the note"
+msgstr "その文はノートにもうありません"
+
+#: aot/aot_flask/templates/tools/note_edit.html:1
+msgid "These schedules lose their text"
+msgstr "これらの予定が本文から消えます"
+
+#: aot/aot_flask/templates/tools/note_edit.html:1
+msgid "Keep the schedules"
+msgstr "予定は残す"
+
+#: aot/aot_flask/templates/tools/note_edit.html:1
+msgid "Cancel the schedules"
+msgstr "予定も取り消す"

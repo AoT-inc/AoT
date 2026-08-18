@@ -222,8 +222,11 @@ def oauth_google_callback():
 @login_required
 def api_available_calendars():
     """Calendars the current user can toggle in the calendar widget:
-      - AoT native sources split by category (AI / User / Device) — the SAME
-        buckets the Google category calendars mirror, and
+      - AoT native sources split by category (User / Notes / Notice / Device /
+        AI) — AI·Device 는 Google 카테고리 캘린더가 미러하는 버킷 그대로이고,
+        Notes·Notice 는 각자 provider 를 갖는다
+        (aot/utils/calendar_event_providers.py). 순서는 **사람이 쓴 것부터** —
+        기계가 남긴 것(AI 249건)이 목록 맨 위를 차지하면 사람 글이 묻힌다.
       - the user's Google calendars EXCLUDING the AoT-managed category calendars
         (those are already represented by the native AoT sources, so offering
         them would double-show the same events).
@@ -231,10 +234,15 @@ def api_available_calendars():
     Domain-neutral: no 'farm' assumption — this runs at any kind of site."""
     from flask_babel import gettext
     from aot.utils.calendar_event_providers import _BUCKET_COLOR
+    # 노트·공지도 같은 피커에 둔다 — 저장 위치가 셋일 뿐 사용자에게는 같은
+    # 것(문장 + 어디 + 언제)이고, 실제로 경계가 양방향으로 새고 있다
+    # (`action_type='note'` 인 일정과 `category='schedule'` 인 노트가 둘 다 있다).
     result = {'aot': [
-        {'key': 'ai', 'name': gettext('AI'), 'color': _BUCKET_COLOR['ai']},
         {'key': 'user', 'name': gettext('User'), 'color': _BUCKET_COLOR['user']},
+        {'key': 'note', 'name': gettext('Notes'), 'color': _BUCKET_COLOR['note']},
+        {'key': 'notice', 'name': gettext('Notice'), 'color': _BUCKET_COLOR['notice']},
         {'key': 'device', 'name': gettext('Device'), 'color': _BUCKET_COLOR['device']},
+        {'key': 'ai', 'name': gettext('AI'), 'color': _BUCKET_COLOR['ai']},
     ], 'google': []}
 
     connection = (UserCalendarConnection.query

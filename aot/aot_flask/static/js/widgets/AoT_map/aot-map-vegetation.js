@@ -410,7 +410,11 @@
         var popupApi = window.AoTMapPopup;
         if (!shell || !popupApi || !popupApi.buildPlantingModal) return;
 
-        fetch('/api/geo/planting/' + encodeURIComponent(uuid))
+        // cache:'no-store' — 이 응답에는 Cache-Control 이 없어서 브라우저가
+        // 휴리스틱 캐시를 걸 수 있다. 저장 직후 다시 여는 경로가 있는데
+        // (일정 추가·작물 편집) 거기서 옛 사본이 나오면 "저장했는데 화면이
+        // 그대로" 가 된다.
+        fetch('/api/geo/planting/' + encodeURIComponent(uuid), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (!res || !res.ok) return;
@@ -565,6 +569,7 @@
             });
         });
     }
+
 
     /**
      * 베이스 지도 전환 후 레이어를 다시 올린다.

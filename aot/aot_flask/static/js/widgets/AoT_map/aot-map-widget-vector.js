@@ -833,9 +833,20 @@
             if (!window.AoTMapPopup) { return; }
             pane.innerHTML = window.AoTMapPopup.buildZoneStatusHtml(z, {
                 repKey: data.rep_key || null,
-                selectable: !!z.can_edit
+                selectable: !!z.can_edit,
+                canAdd: !!z.can_edit
             });
             _wireZoneRepPick(uid, pane, zoneUuid, data);
+            // 일정 추가 — 네 계층 공용 배선. 저장하면 [현황]만 다시 그린다
+            // (모달 전체를 다시 열 이유가 없다).
+            window.AoTMapPopup.wireScheduleAdd(pane, {
+                targetId: zoneUuid,
+                onSaved: function (sched) {
+                    data.zone.schedule = sched;
+                    invalidateModal('zone', zoneUuid);
+                    _renderZoneOverview(uid, pane, data, zoneUuid);
+                }
+            });
 
             // 구획 줄 → 그 구획 모달로 내려간다. 구역 모달은 닫는다 —
             // 모달 위에 모달을 쌓으면 뒤로 가기가 어디로 가는지 알 수 없다
@@ -2436,8 +2447,8 @@
                 (counts.plantings
                   ? '<div class="aot-ov-row"><span>' + _tr('Growing now') +
                     '</span><span>' +
-                    _tr('%(crops)s crops · %(plots)s plots')
-                      .replace('%(crops)s', String(counts.crops || 0))
+                    _tr('%(kinds)s kinds · %(plots)s plots')
+                      .replace('%(kinds)s', String(counts.crops || 0))
                       .replace('%(plots)s', String(counts.plantings)) +
                     '</span></div>'
                   : '') +
@@ -2461,7 +2472,9 @@
             html += '<div class="aot-ov-block">' +
                 '<div class="aot-ov-sec-title">' + _tr('Today') + '</div>' +
                 '<div class="aot-site-tiles">' +
-                    _siteTileHTML('schedule', today.schedule_count || 0, _tr('Scheduled')) +
+                    // 일정은 타일(숫자)에서 뺐다 — 아래 목록이 같은 것을
+                    // 더 정확히 말한다. 숫자는 '오늘' 창이라 목록('지금부터')과
+                    // 어긋나, 대지가 0인데 구역엔 내일 일이 있는 상태가 났다.
                     _siteTileHTML('advice', today.advice_open || 0, _tr('Advice')) +
                     _siteTileHTML('offline', today.offline_devices || 0, _tr('Offline'),
                                   (today.offline_devices ? ' is-fault' : '')) +
@@ -2471,6 +2484,10 @@
                         _escZ(today.advice_latest.title) + '</div>';
             }
             html += '</div>';
+
+            // 다가오는 일정 — 구역·식생·시설과 같은 블록·같은 창.
+            html += window.AoTMapPopup.buildScheduleHtml(
+                data.schedule, { addable: true });
 
             // 노트 — 다른 계층과 **같은** 공용 블록. 예전에는 여기만 목록을 직접
             // 그려서 노트로 들어가는 문이 아예 없었다(필지에 적어 둘 것이 가장
@@ -2566,6 +2583,16 @@
                 if (!pane) return;
                 pane.innerHTML = _buildSiteSummaryHTML(data);
                 _wireSiteRows(uid, pane);
+                // 일정 추가 — 네 계층 공용 배선. 저장하면 요약을 다시 그린다.
+                window.AoTMapPopup.wireScheduleAdd(pane, {
+                    targetId: siteUuid,
+                    onSaved: function (sched) {
+                        data.schedule = sched;
+                        _siteSummaryCache[siteUuid] = data;
+                        pane.innerHTML = _buildSiteSummaryHTML(data);
+                        _wireSiteRows(uid, pane);
+                    }
+                });
                 // 필지 모달도 30초마다 다시 그린다 — 캐시로 깜빡임을 막는다.
                 s._notesCache = s._notesCache || {};
                 window.AoTNotesBlock.wire(pane,
@@ -3654,6 +3681,59 @@
             });
         }
 
+        // 시설 [현황]의 다가오는 일정.
+        //
+        // [현황] pane 은 30초마다 통째로 다시 그려지므로 `_prependFacilityEnvNow`
+        // 와 같은 방식으로 매번 다시 끼운다. 응답을 위젯 상태에 캐시하는 것도
+        // 같은 이유다 — 안 하면 30초마다 블록이 사라졌다 나타난다.
+        //
+        // 노트 **앞**에 넣는다. 네 계층 모두 노트가 마지막이고, 그 순서가
+        // 화면을 옮겨 다녀도 같은 자리에서 같은 것을 찾게 해 준다.
+        function _appendFacilitySchedule(uid, facilityUuid, pane) {
+            if (!window.AoTMapPopup || !window.AoTMapPopup.buildScheduleHtml) return;
+            var st = _actLabelState[uid];
+            if (!st) return;
+
+            var insert = function (sched) {
+                if (!pane || !pane.isConnected) return;
+                var st2 = _actLabelState[uid];
+                if (!st2 || st2.openBayFacility !== facilityUuid) return;
+                if (pane.querySelector('.aot-ov-schedule-upcoming')) return;
+                var html = window.AoTMapPopup.buildScheduleHtml(
+                    sched, { addable: !!st2.canCtrl });
+                if (!html) return;
+                var notes = pane.querySelector('.aot-ov-notes');
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                var node = tmp.firstElementChild;
+                if (notes) { pane.insertBefore(node, notes); } else { pane.appendChild(node); }
+                window.AoTMapPopup.wireScheduleAdd(pane, {
+                    targetId: facilityUuid,
+                    onSaved: function (next) {
+                        st2._schedCache = next;
+                        var old = pane.querySelector('.aot-ov-schedule-upcoming');
+                        if (old) old.remove();
+                        insert(next);
+                    }
+                });
+            };
+
+            if (st._schedCache) insert(st._schedCache);
+            fetch('/api/geo/schedule/' + encodeURIComponent(facilityUuid),
+                  { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (!d || !d.ok) return;
+                    var st2 = _actLabelState[uid];
+                    if (!st2) return;
+                    st2._schedCache = { own: d.own || [], devices: d.devices || [] };
+                    var old = pane.querySelector('.aot-ov-schedule-upcoming');
+                    if (old) old.remove();
+                    insert(st2._schedCache);
+                })
+                .catch(function () {});
+        }
+
         function _prependFacilityEnvNow(uid, facilityUuid, pane) {
             if (!window.AoTFacilityRuntime || !window.AoTMapPopup ||
                 !window.AoTMapPopup.buildEnvNowHtml) return;
@@ -3731,6 +3811,7 @@
                 // [현황]은 예전에 "연동된 자동제어 없음" 한 줄이 전부여서, 수동
                 // 운영 시설에서는 탭이 통째로 빈 껍데기였다.
                 _prependFacilityEnvNow(uid, facilityUuid, pane);
+                _appendFacilitySchedule(uid, facilityUuid, pane);
                 var aboutChanged = false;
                 if (abPane) {
                     var aboutHtml = window.AoTMapPopup.buildAboutSection(res[2]);

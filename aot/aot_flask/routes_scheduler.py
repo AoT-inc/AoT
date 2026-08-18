@@ -105,9 +105,23 @@ def page_scheduler():
     if not user_has_permission('edit_controllers'):
         return redirect(url_for('routes_ai_agent.page_ai_dashboard'))
 
-    jobs = SchedulerJobMeta.query.order_by(
-        SchedulerJobMeta.created_at.desc()
-    ).limit(200).all()
+    # 기계가 스스로 남긴 실행 기록(automated_fire)은 **기본으로 숨긴다.**
+    #
+    # 실측: 전체 323건 중 249건(77%)이 automated_fire 다. 최근 200건을 그대로
+    # 실으면 사람이 만든 일정(13건)·장치 예약(12건)이 그 속에 묻혀, 이 화면이
+    # "내 일을 보는 곳" 이 아니라 "로그를 보는 곳" 이 된다.
+    #
+    # 숨기되 **몇 건을 숨겼는지 화면에 적는다** — 말없이 빼면 "일정이
+    # 사라졌다" 로 읽힌다. 토글(`?show_automated=1`)로 언제든 되돌린다.
+    show_automated = request.args.get('show_automated') in ('1', 'true', 'True')
+
+    base = SchedulerJobMeta.query
+    automated_count = base.filter(
+        SchedulerJobMeta.action_type == 'automated_fire').count()
+    if not show_automated:
+        base = base.filter(SchedulerJobMeta.action_type != 'automated_fire')
+
+    jobs = base.order_by(SchedulerJobMeta.created_at.desc()).limit(200).all()
     for j in jobs:
         _enrich_job_display(j)
 
@@ -162,6 +176,8 @@ def page_scheduler():
     from aot.ai.services import mcp_safety_gate as gate
 
     return render_template('pages/ai/scheduler.html',
+                           show_automated=show_automated,
+                           automated_count=automated_count,
                            physical_tools=sorted(gate.PHYSICAL_TOOLS),
                            drafts=drafts,
                            active_jobs=active_jobs,
@@ -437,9 +453,13 @@ def api_calendar_events():
 
     Unlike /timeline, this supports FullCalendar's own start/end range params
     (so a month view only pays for a month of rows) and a `sources` filter
-    (comma-separated; only 'schedule' is registered today — see
-    aot/utils/calendar_event_providers.py for the extension point). Event
-    titles are resolved content+location (never a raw target_id/UUID).
+    (comma-separated: 'schedule' | 'note' | 'notice' — see
+    aot/utils/calendar_event_providers.py). Event titles are resolved
+    content+location (never a raw target_id/UUID).
+
+    세 소스를 한 피드로 합치는 이유: 저장 위치가 셋일 뿐 사용자에게는 같은
+    것이다(문장 + 어디 + 언제). 실제로 경계가 양방향으로 새고 있다 —
+    `action_type='note'` 인 일정과 `category='schedule'` 인 노트가 둘 다 있다.
     """
     from aot.utils.calendar_event_providers import CALENDAR_EVENT_PROVIDERS
 
@@ -494,9 +514,14 @@ def _job_target_tz_name(job):
 @login_required
 def api_timeline_events():
     """Return jobs formatted for FullCalendar."""
-    jobs = SchedulerJobMeta.query.filter(
+    # 페이지 목록과 **같은 기본값**을 쓴다 — 목록에서 숨긴 것이 달력에는
+    # 그대로 뜨면 두 화면이 다른 말을 한다.
+    _tl = SchedulerJobMeta.query.filter(
         SchedulerJobMeta.state.in_([JOB_STATE_DRAFT, JOB_STATE_PENDING, 'RUNNING', JOB_STATE_COMPLETED])
-    ).order_by(SchedulerJobMeta.created_at.desc()).limit(200).all()
+    )
+    if request.args.get('show_automated') not in ('1', 'true', 'True'):
+        _tl = _tl.filter(SchedulerJobMeta.action_type != 'automated_fire')
+    jobs = _tl.order_by(SchedulerJobMeta.created_at.desc()).limit(200).all()
 
     events = []
     for j in jobs:

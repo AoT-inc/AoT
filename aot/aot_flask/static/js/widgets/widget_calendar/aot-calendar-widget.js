@@ -368,7 +368,16 @@
     var SEL_KEY = 'aot-cal-src-' + uniqueId;
     var googleMeta = {};   // calId -> {name, color}
 
-    var AOT_BUCKETS = ['ai', 'user', 'device'];
+    // 버킷 → 이벤트 소스. ai/user/device 는 한 테이블(SchedulerJobMeta)을
+    // action_type 으로 가른 것이고, note/notice 는 각자 provider 를 갖는다.
+    var AOT_SOURCE_OF = { ai: 'schedule', user: 'schedule', device: 'schedule',
+                          note: 'note', notice: 'notice' };
+    var AOT_BUCKETS = ['user', 'note', 'notice', 'device', 'ai'];
+
+    // 기본으로 켜는 것 — **기계가 스스로 남긴 실행 기록(ai)은 뺀다.**
+    // 실측 323건 중 249건(77%)이 automated_fire 라, 켜 두면 사람이 쓴 것
+    // (일정 13 · 노트 31 · 공지 5)이 그 속에 묻힌다. 피커에서 언제든 켤 수 있다.
+    var AOT_DEFAULT_BUCKETS = ['user', 'note', 'notice', 'device'];
     function loadSel() {
       try {
         var v = JSON.parse(localStorage.getItem(SEL_KEY));
@@ -376,12 +385,16 @@
           // migrate the old single 'aot:schedule' key → the 3 category buckets
           if (v.indexOf('aot:schedule') !== -1) {
             v = v.filter(function (k) { return k !== 'aot:schedule'; })
-                 .concat(AOT_BUCKETS.map(function (b) { return 'aot:' + b; }));
+                 .concat(AOT_DEFAULT_BUCKETS.map(function (b) { return 'aot:' + b; }));
           }
           return v;
         }
       } catch (e) { /* ignore */ }
-      return options.includeSchedule ? AOT_BUCKETS.map(function (b) { return 'aot:' + b; }) : [];
+      var def = [];
+      if (options.includeSchedule) { def = def.concat(['aot:user', 'aot:device']); }
+      if (options.includeNote) { def.push('aot:note'); }
+      if (options.includeNotice) { def.push('aot:notice'); }
+      return def;
     }
     function saveSel(list) {
       try { localStorage.setItem(SEL_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
@@ -390,7 +403,10 @@
 
     function fetchAot(bucket) {
       return function (info, ok, fail) {
-        var p = new URLSearchParams({ start: info.startStr, end: info.endStr, sources: 'schedule', category: bucket, limit: 500 });
+        var p = new URLSearchParams({
+          start: info.startStr, end: info.endStr,
+          sources: AOT_SOURCE_OF[bucket] || 'schedule',
+          category: bucket, limit: 500 });
         fetch('/api/v1/scheduler/calendar_events?' + p.toString())
           .then(function (r) { return r.json(); }).then(ok).catch(fail);
       };
@@ -420,7 +436,7 @@
       calendar.getEventSources().forEach(function (s) { s.remove(); });
       selected.forEach(function (k) {
         if (k.indexOf('aot:') === 0) {
-          // AoT category bucket (ai/user/device); events self-color via colorHint.
+          // AoT 버킷(user/note/notice/device/ai) — 색은 이벤트의 colorHint 가 정한다.
           calendar.addEventSource({ id: k, events: fetchAot(k.slice(4)) });
         } else if (k.indexOf('google:') === 0) {
           var cid = k.slice(7);

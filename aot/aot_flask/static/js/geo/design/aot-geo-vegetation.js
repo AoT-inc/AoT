@@ -773,9 +773,9 @@ class AoTGeoVegetation {
             </div>`;
 
         return `
-            <div class="aot-modal-group-title">${this._t('Crop')}</div>
+            <div class="aot-modal-group-title">${this._t('Planted')}</div>
             <div class="aot-modal-container">
-                ${row(this._t('Crop'),
+                ${row(this._t('Planted'),
                       `<input type="text" class="aot-modern-input form-control"
                               data-veg-field="crop" value="${v(p.crop)}" autocomplete="off">`)}
                 ${row(this._t('Variety'),

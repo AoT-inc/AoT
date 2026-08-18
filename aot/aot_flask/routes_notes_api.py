@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from aot.utils.time_utils import utc_now, api_iso
 import uuid
+from sqlalchemy import or_
 from aot.databases.models import Notes, NoteTags
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_general
@@ -21,6 +22,54 @@ _MIME_TO_EXT = {
     'video/webm': 'webm', 'application/pdf': 'pdf', 'text/plain': 'txt',
     'text/csv': 'csv',
 }
+
+def resolve_target_gps(target_type, target_id):
+    """대상의 대표 좌표 (lat, lng). 못 구하면 (None, None).
+
+    **좌표 해석을 여기 하나로 둔다.** 두 벌로 두면 한쪽에만 종류가 추가되고,
+    그 경로로 남긴 노트만 좌표 없이 저장된다.
+    에러가 안 나므로 몇 달 뒤 공간 질의에서 "그때 노트가 안 잡힌다" 로 나타난다.
+
+    좌표가 필요한 이유는 대상이 **사라져도 자리는 남기 때문**이다. 식생 구획은
+    몇 달 뒤 종료되지만 그 자리를 다시 물을 일이 있고(연작 장해·윤작),
+    그때 노트를 찾는 근거는 좌표뿐이다.
+    """
+    if not target_id:
+        return None, None
+
+    if target_type == 'facility':
+        try:
+            from aot.databases.models import GeoFacility
+            from aot.aot_flask.geo.facility_io import _geometry_centroid
+            facility = GeoFacility.query.filter_by(unique_id=target_id).first()
+            if facility and facility.shape:
+                geom = (facility.shape.feature or {}).get('geometry')
+                centroid = _geometry_centroid(geom)
+                if centroid:
+                    return centroid[0], centroid[1]
+        except Exception as _e:
+            current_app.logger.warning(f"facility centroid lookup failed: {_e}")
+        return None, None
+
+    if target_type == 'planting':
+        try:
+            from aot.databases.models import GeoPlanting
+            from aot.aot_flask.geo import planting_context
+            from shapely.geometry import shape as _shapely_shape
+            row = GeoPlanting.query.filter_by(unique_id=target_id).first()
+            if row is not None:
+                geom = planting_context.geometry_of(row)
+                if geom.get('type') in ('Polygon', 'MultiPolygon'):
+                    # centroid 가 아니라 representative_point — 오목한 두둑에서
+                    # centroid 는 구획 밖으로 나간다.
+                    pt = _shapely_shape(geom).representative_point()
+                    return pt.y, pt.x
+        except Exception as _e:
+            current_app.logger.warning(f"planting centroid lookup failed: {_e}")
+        return None, None
+
+    return None, None
+
 
 @blueprint.route('/notes/target/<target_id>', methods=['GET'])
 @login_required
@@ -41,6 +90,16 @@ def api_notes_target_get(target_id):
         except Exception:
             location_tz = None
 
+        # 구간→예정 링크를 **함께** 싣는다. 별도 조회로 두면 노트 수만큼
+        # 왕복이 생기고(30건이면 30회), 목록이 먼저 그려진 뒤 하이라이트가
+        # 뒤늦게 얹혀 글이 한 번 튄다.
+        links_by_note = {}
+        try:
+            from aot.aot_flask import note_links
+            links_by_note = note_links.links_for_notes(notes)
+        except Exception:
+            current_app.logger.exception('notes: 링크 조회 실패')
+
         result = []
         for n in notes:
             result.append({
@@ -51,7 +110,8 @@ def api_notes_target_get(target_id):
                 # [Fix] Return Author Name if available, else fallback to Note Name (Title)
                 'user': n.author.name if n.author else (n.name or '?'), 
                 'files': n.files,
-                'tags': n.tags
+                'tags': n.tags,
+                'links': links_by_note.get(n.unique_id, [])
             })
             
         return jsonify(result)
@@ -88,40 +148,8 @@ def api_notes_create():
         gps_lat = data.get('gps_lat')
         gps_lng = data.get('gps_lng')
 
-        # Auto-populate position from facility polygon centroid when target is a facility
-        # and the caller did not supply explicit coordinates.
-        if target_type == 'facility' and target_id and gps_lat is None:
-            try:
-                from aot.databases.models import GeoFacility
-                from aot.aot_flask.geo.facility_io import _geometry_centroid
-                facility = GeoFacility.query.filter_by(unique_id=target_id).first()
-                if facility and facility.shape:
-                    geom = (facility.shape.feature or {}).get('geometry')
-                    centroid = _geometry_centroid(geom)
-                    if centroid:
-                        gps_lat, gps_lng = centroid
-            except Exception as _e:
-                current_app.logger.warning(f"facility centroid lookup failed: {_e}")
-
-        # 식생 구획(작기)도 같은 규칙 — 구획 폴리곤의 대표점을 좌표로 삼는다.
-        # 좌표가 있어야 나중에 그 자리를 다시 물었을 때(연작 장해·윤작)
-        # 노트가 공간 질의에 걸린다. 구획 자체는 몇 달 뒤 종료되지만 노트는
-        # 좌표로 남으므로 이력 조회에서 계속 잡힌다.
-        if target_type == 'planting' and target_id and gps_lat is None:
-            try:
-                from aot.databases.models import GeoPlanting
-                from aot.aot_flask.geo import planting_context
-                from shapely.geometry import shape as _shapely_shape
-                row = GeoPlanting.query.filter_by(unique_id=target_id).first()
-                if row is not None:
-                    geom = planting_context.geometry_of(row)
-                    if geom.get('type') in ('Polygon', 'MultiPolygon'):
-                        # centroid 가 아니라 representative_point — 오목한
-                        # 두둑에서 centroid 는 구획 밖으로 나간다.
-                        pt = _shapely_shape(geom).representative_point()
-                        gps_lat, gps_lng = pt.y, pt.x
-            except Exception as _e:
-                current_app.logger.warning(f"planting centroid lookup failed: {_e}")
+        if gps_lat is None:
+            gps_lat, gps_lng = resolve_target_gps(target_type, target_id)
         category = data.get('category', 'general')
         priority = int(data.get('priority', 0))
         
@@ -251,6 +279,25 @@ def api_notes_create():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+#: 지도에 **자기 표시가 이미 있는** 대상의 노트는 핀을 만들지 않는다.
+#
+# 구획·시설·구역·대지는 지도에 도형으로 그려져 있고, 그 도형을 누르면 모달에서
+# 노트를 본다. 거기에 핀을 하나 더 얹으면 같은 자리를 두 번 가리키면서 지도만
+# 어지럽힌다 — 사용자가 만들지 않은 표시이므로 지울 방법도 마땅치 않다.
+#
+# **좌표 자체는 계속 저장한다.** 좌표의 목적은 표시가 아니라 **대상이 사라져도
+# 자리는 남기는 것**이다(식생 구획은 몇 달 뒤 종료되지만 그 자리를 다시 물을
+# 일이 있고, 그때 노트를 찾는 근거는 좌표뿐이다 — resolve_target_gps 주석).
+# 그래서 저장이 아니라 **노출**에서 가른다.
+#
+# 화이트리스트인 이유: 새 대상 종류가 생길 때 기본값이 "핀 없음" 이어야 한다.
+# 블랙리스트로 두면 종류를 하나 추가할 때마다 여기 넣는 것을 기억해야 하고,
+# 빠뜨리면 그 종류만 조용히 핀이 돋는다(지금 planting 이 그랬다).
+_PIN_TARGET_TYPES = (
+    'map_location',   # 사용자가 지도를 찍어 만든 노트 — 핀이 유일한 위치 표현
+)
+
+
 @blueprint.route('/notes/geo', methods=['GET'])
 @login_required
 def api_notes_geo_get():
@@ -263,7 +310,16 @@ def api_notes_geo_get():
         # Filter where gps_lat is NOT NULL
         # [Fix] Filter out notes with map_hidden tag
         query = Notes.query.filter(Notes.gps_lat.isnot(None), Notes.gps_lng.isnot(None))
-        
+
+        # 자기 도형이 있는 대상의 노트는 뺀다(위 _PIN_TARGET_TYPES 주석).
+        # target_type 이 비어 있는 노트는 남긴다 — 가리킬 도형이 없으므로
+        # 핀이 그 노트의 유일한 위치 표현이다.
+        query = query.filter(or_(
+            Notes.target_type.is_(None),
+            Notes.target_type == '',
+            Notes.target_type.in_(_PIN_TARGET_TYPES),
+        ))
+
         if hidden_tag_id:
             # Naive text match for UUID in comma-separated list
             # Ideally we'd use a many-to-many table, but current implementation uses Text column
@@ -357,6 +413,155 @@ def api_notes_toggle_map_visibility():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# ─── 노트 구간 → 예정 (링크로 잇는다) ──────────────────────────────────────
+#
+# **진입점은 노트 하나다.** 예전에는 쓰기 전에 "노트인가 일정인가" 를 골라야
+# 했는데, 그 구분은 저장 테이블 이름이지 사람이 아는 구분이 아니다. 이제
+# 사용자는 노트만 쓰고, 쓴 뒤에 한 구간을 골라 시각을 준다.
+#
+# 정본 로직(재탐색·자가 치유·고아 판정)은 `aot/aot_flask/note_links.py` 하나에
+# 있다 — 여기서 다시 구현하지 말 것.
+
+@blueprint.route('/notes/<note_id>/links', methods=['GET'])
+@login_required
+def api_note_links(note_id):
+    """이 노트에 걸린 예정들 (구간 위치 포함)."""
+    from aot.aot_flask import note_links
+    note = Notes.query.filter_by(unique_id=note_id).first()
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+    return jsonify({'ok': True, 'links': note_links.links_for_note(note)})
+
+
+@blueprint.route('/notes/<note_id>/schedule', methods=['POST'])
+@login_required
+@csrf.exempt
+def api_note_schedule(note_id):
+    """선택한 구간을 예정으로 만든다.
+
+    본문: `{start, end, text, date:'YYYY-MM-DD', time?:'HH:MM', worker?}`
+
+    **내용을 따로 받지 않는다** — 사용자가 이미 고른 텍스트가 곧 내용이다.
+    그것이 이 방식의 요점이고, 여기서 별도 입력을 받기 시작하면 노트와 일정이
+    다시 서로 다른 글이 된다.
+
+    대상(어디)은 **노트에서 승계한다.** 노트가 구획에 붙어 있으면 그 예정도
+    같은 구획에 붙는다 — 사용자가 장소를 다시 고를 일이 없다.
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'Permission Denied'}), 403
+
+    note = Notes.query.filter_by(unique_id=note_id).first()
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    text = (data.get('text') or '').strip()
+    date_str = (data.get('date') or '').strip()
+    if not text:
+        return jsonify({'ok': False, 'message': _('Select some text first')}), 400
+    if not date_str:
+        return jsonify({'ok': False, 'message': _('Enter a date')}), 400
+
+    try:
+        start = int(data.get('start') or 0)
+        end = int(data.get('end') or 0)
+    except (TypeError, ValueError):
+        start = end = 0
+    body = note.note or ''
+    # 클라이언트가 준 offset 을 믿지 않는다 — 그 사이에 다른 창에서 노트가
+    # 바뀌었을 수 있다. 실제 본문에서 확인하고, 어긋나면 텍스트로 다시 찾는다.
+    if not (0 <= start < end <= len(body) and body[start:end] == text):
+        idx = body.find(text)
+        if idx < 0:
+            return jsonify({'ok': False,
+                            'message': _('That text is no longer in the note')}), 409
+        start, end = idx, idx + len(text)
+
+    from aot.aot_flask.routes_geo import (_create_human_schedule,
+                                          _schedule_target_label)
+    from aot.databases.models import NoteScheduleLink
+
+    target_id = note.target_id or 'none'
+    label, kind = _schedule_target_label(target_id)
+    if label is None:
+        # 대상이 없는(또는 이미 사라진) 노트도 예정을 가질 수 있다 — 그 경우
+        # 장소 없는 일정이 된다. 거절하면 "어디" 를 안 적었다는 이유로 "언제"
+        # 를 못 적게 된다.
+        target_id, label, kind = 'none', (note.name or _('Note')), 'general'
+
+    resp = _create_human_schedule(
+        target_id, kind, label, date_str,
+        (data.get('time') or '').strip(), text,
+        (data.get('worker') or '').strip())
+    payload = resp[0] if isinstance(resp, tuple) else resp
+    body_json = payload.get_json() if hasattr(payload, 'get_json') else {}
+    if not body_json.get('ok'):
+        return resp
+
+    try:
+        link = NoteScheduleLink(
+            note_id=note.unique_id, job_uid=body_json['job_id'],
+            start_offset=start, end_offset=end, text_snapshot=text)
+        db.session.add(link)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('note_links: 링크 생성 실패')
+        return jsonify({'ok': False, 'message': str(exc)}), 500
+
+    from aot.aot_flask import note_links as _nl
+    return jsonify({'ok': True, 'link_id': link.unique_id,
+                    'links': _nl.links_for_note(note)})
+
+
+@blueprint.route('/notes/link/<link_id>', methods=['DELETE', 'POST'])
+@login_required
+@csrf.exempt
+def api_note_link_delete(link_id):
+    """링크를 끊는다. `?cancel_job=1` 이면 예정도 취소한다.
+
+    **기본은 예정을 남기는 것.** 이미 잡힌 약속이 글 편집으로 조용히 사라지면
+    안 된다 — 사람이 그러라고 말했을 때만 취소한다.
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'error': 'Permission Denied'}), 403
+
+    from aot.aot_flask import note_links
+    from aot.databases.models import NoteScheduleLink
+    link = NoteScheduleLink.query.filter_by(unique_id=link_id).first()
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+    cancel = (request.args.get('cancel_job') in ('1', 'true', 'True')
+              or (request.get_json(silent=True) or {}).get('cancel_job') is True)
+    try:
+        note_links.unlink(link, cancel_job=cancel)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('note_links: 링크 해제 실패')
+        return jsonify({'ok': False, 'message': str(exc)}), 500
+    return jsonify({'ok': True, 'cancelled': bool(cancel)})
+
+
+@blueprint.route('/notes/<note_id>/orphaned', methods=['POST'])
+@login_required
+@csrf.exempt
+def api_note_orphaned(note_id):
+    """이 본문으로 저장하면 구간이 사라지는 예정들. 본문: `{note: '...'}`
+
+    **저장 전에** 부른다 — 저장한 뒤 물으면 사용자는 이미 없어진 글을 보며
+    무엇을 지웠는지 기억해내야 한다.
+    """
+    from aot.aot_flask import note_links
+    note = Notes.query.filter_by(unique_id=note_id).first()
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+    data = request.get_json(silent=True) or {}
+    return jsonify({'ok': True,
+                    'orphaned': note_links.orphaned_after_edit(
+                        note, data.get('note') or '')})
+
+
 @blueprint.route('/notes/tags', methods=['GET'])
 @login_required
 def api_notes_tags_get():
@@ -445,7 +650,12 @@ def api_notes_delete(unique_id):
         note = Notes.query.filter_by(unique_id=unique_id).first()
         if not note:
             return jsonify({'error': 'Note not found'}), 404
-            
+
+        # 링크를 함께 걷는다 — 노트가 없으면 링크는 아무 데서도 안 읽히는 채
+        # DB 에 영원히 남는다. 예정 자체는 남긴다(다른 결정이다).
+        from aot.aot_flask import note_links
+        note_links.drop_for_note(unique_id)
+
         db.session.delete(note)
         db.session.commit()
         return jsonify({'ok': True})

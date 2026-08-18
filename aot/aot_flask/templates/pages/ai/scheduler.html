@@ -206,7 +206,21 @@
     <div style="clear: both; padding: 1em 0;"></div>
 
     <!-- History -->
-    <div class="aot-modal-group-title">{{ _('History') }}</div>
+    <div class="aot-modal-group-title aot-ov-sec-title--row">
+      <span>{{ _('History') }}</span>
+      {#- 자동 실행 기록은 기본으로 숨긴다(전체의 77%). 말없이 빼면 "일정이
+          사라졌다" 로 읽히므로 **몇 건을 숨겼는지 적고** 되돌릴 길을 준다. -#}
+      {% if automated_count %}
+      <a class="aot-ov-pill" style="text-decoration:none"
+         href="{{ url_for('routes_scheduler.page_scheduler') }}{% if not show_automated %}?show_automated=1{% endif %}">
+        {% if show_automated %}
+          {{ _('Hide automated records (%(n)s)', n=automated_count) }}
+        {% else %}
+          {{ _('Show automated records (%(n)s)', n=automated_count) }}
+        {% endif %}
+      </a>
+      {% endif %}
+    </div>
 
     <div style="clear: both; padding: 0.5em 0;"></div>
 

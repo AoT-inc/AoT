@@ -64,6 +64,7 @@ from .user import User
 from .user_api_key import UserAPIKey
 from .notes import NoteTags
 from .notes import Notes
+from .note_schedule_link import NoteScheduleLink
 from .notice import NoticePost
 from .notice import NoticePoll
 from .notice import NoticePollOption

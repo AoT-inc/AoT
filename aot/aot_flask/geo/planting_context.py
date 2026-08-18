@@ -622,7 +622,15 @@ def plantings_overlapping(map_uuid, geom, since=None, until=None,
 # ("이 구획은 밸브가 안 정해진 구역에 걸쳐 있다").
 
 def valves_for_planting(planting):
-    """구획을 적시는 밸브 목록.
+    """구획과 겹치는 **장치 영역** 목록.
+
+    ⚠ **이름이 오해를 부른다 — 이 함수는 관수 장치를 가려내지 않는다.**
+    판정 근거는 `GeoShape.type == 'device'` 인 영역 도형이 구획과 면적을 갖고
+    겹친다는 것 하나뿐이다. 그 장치가 물을 주는지 빛을 주는지 바람을 넣는지
+    시스템은 모른다 — 실측(김제): 영역에 묶인 출력이 전부
+    `output_type='virtual_on_off_single'`(범용 on/off)이고, 'v341' 같은 이름은
+    그 농장의 작명일 뿐 어디서도 읽지 않는다. 화면 문구를 "적신다" 로 쓰지
+    말 것(coverageHtml 주석 참조). 이름은 역사적인 것이다.
 
     `[{shape_uuid, shape_name, device_id, device_name, overlap_m2,
        coverage_pct}]` — `coverage_pct` 는 **구획 면적 대비** 덮인 비율이다.
@@ -737,7 +745,9 @@ def plantings_covered_by_shape(shape_geom, map_uuid, on=None,
 
 
 def plantings_by_valve_device(map_uuid, on=None):
-    """`{device_id: [구획, ...]}` — 지도의 관수 장치별로 "무엇을 적시는가".
+    """`{device_id: [구획, ...]}` — 지도의 **영역 장치**별로 "무엇에 걸치는가".
+
+    ⚠ 관수 장치라는 근거는 없다 — `valves_for_planting` 의 경고를 그대로 읽을 것.
 
     **구역 모달과 식생 모달이 함께 쓴다.** 구역에서 켠 밸브도 그 안의 여러
     작물에 물을 준다 — 식생 모달에만 경고를 붙이면 "구역에서 켜면 안전하다"는

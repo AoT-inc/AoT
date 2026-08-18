@@ -78,6 +78,44 @@
 
   </form>
 
+  <!-- 이 노트의 한 구간으로 만든 예정이 있는데, 그 구간이 이번 편집으로
+       본문에서 사라지면 **묻는다.**
+
+       묻지 않고 취소하면 오타 하나 고치다 잡아둔 약속이 사라지고, 묻지 않고
+       남기면 본문에 없는 약속이 조용히 남는다. 둘 다 사용자가 모르는 채로
+       일어나므로 판정만 서버가 하고 결정은 사람이 한다.
+       판정은 저장 **전**에 부른다(POST /notes/<id>/orphaned) — 저장 뒤 물으면
+       이미 없어진 글을 보며 무엇을 지웠는지 기억해내야 한다. -->
+  <div class="modal fade aot-option-modal" id="modal_note_orphaned" tabindex="-1"
+       role="dialog" aria-hidden="true">
+    <div class="modal-dialog aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _('These schedules lose their text') }}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="aot-modal-container" id="note_orphaned_list"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
+          <button type="button" class="btn aot-pill-btn" id="note_orphaned_keep">{{ _('Keep the schedules') }}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="note_orphaned_cancel">{{ _('Cancel the schedules') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/tools/note-orphaned-links.js') }}"></script>
+  <script>
+    AoTNoteOrphanedLinks.init({
+      noteId: {{ this_note.unique_id | tojson }},
+      csrf: {{ csrf_token() | tojson }}
+    });
+  </script>
+
   <div style="clear: both; padding: 0.5em 0;"></div>
 
 {% if this_note.files %}

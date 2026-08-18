@@ -62,6 +62,23 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Include scheduled jobs on the calendar')
         },
         {
+            # 등록된 소스마다 토글이 하나씩 있어야 한다 — 이 모듈의 원래
+            # 주석이 요구한 짝이다("a toggle for a source with no registered
+            # provider is dead UI"). 이제 provider 가 셋 다 있다.
+            'id': 'include_note',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Show Notes'),
+            'phrase': lazy_gettext('Include notes on the calendar (read-only)')
+        },
+        {
+            'id': 'include_notice',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Show Notice'),
+            'phrase': lazy_gettext('Include notice posts on the calendar (read-only)')
+        },
+        {
             'id': 'default_view',
             'type': 'select',
             'default_value': 'dayGridMonth',
@@ -96,7 +113,7 @@ WIDGET_INFORMATION = {
 <link rel="stylesheet" href="/static/vendor/fullcalendar-5.11.5/main.min.css?v=20260814a">
 <script src="/static/vendor/fullcalendar-5.11.5/main.min.js?v=20260814a"></script>
 <link rel="stylesheet" href="/static/css/widget/aot-calendar-widget.css?v=9">
-<script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=10"></script>
+<script src="/static/js/widgets/widget_calendar/aot-calendar-widget.js?v=11"></script>
 {% endif %}
 <style>
   .aot-calendar-widget-outer { height: 100%; display: flex; flex-flow: column; overflow: hidden; }
@@ -168,6 +185,8 @@ WIDGET_INFORMATION = {
     'widget_dashboard_js_ready_end': """
 aotCalendarWidgetInit('{{each_widget.unique_id}}', {
   includeSchedule: {{widget_options['include_schedule']|lower}},
+  includeNote: {{widget_options['include_note']|lower}},
+  includeNotice: {{widget_options['include_notice']|lower}},
   defaultView: {{widget_options['default_view']|tojson}},
   refreshSeconds: {{widget_options['refresh_seconds']}},
   daysAheadList: {{widget_options['days_ahead_list']}},

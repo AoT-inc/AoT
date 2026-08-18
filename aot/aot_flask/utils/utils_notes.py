@@ -491,6 +491,15 @@ def note_del(form):
             os.remove(filename)
 
     if not error:
+        # 링크를 함께 걷는다 — 노트가 없으면 링크는 아무 데서도 안 읽히는 채
+        # DB 에 영원히 남는다(note_links.drop_for_note 주석). 예정은 남긴다.
+        try:
+            from aot.aot_flask import note_links
+            note_links.drop_for_note(form.note_unique_id.data)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("note_del: 예정 링크 정리 실패")
         delete_entry_with_id(Notes, form.note_unique_id.data)
 
     flash_success_errors(error, action, url_for('routes_page.page_notes'))

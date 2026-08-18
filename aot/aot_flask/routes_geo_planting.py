@@ -12,6 +12,7 @@ from datetime import datetime
 from flask import request, jsonify, current_app
 from flask_login import login_required
 
+from aot.aot_flask.extensions import db
 from aot.aot_flask.geo import planting_context, planting_io, planting_split
 from aot.aot_flask.utils import utils_general
 from aot.databases.models import GeoPlanting, GeoShape

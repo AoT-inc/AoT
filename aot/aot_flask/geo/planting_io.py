@@ -288,6 +288,25 @@ def delete_planting(unique_id):
     row = GeoPlanting.query.filter_by(unique_id=unique_id).first()
     if row is None:
         return None, 'planting not found: %s' % unique_id
+    # 이 구획을 대상으로 한 일정은 함께 정리한다. 안 하면 대상이 사라진
+    # 일정이 남아 화면·AI 양쪽에서 "어디의 일인지 모르는 일" 이 된다.
+    #
+    # 지우지 않고 ARCHIVED 로 내린다 — 감사 로그가 그 행을 가리키고 있고,
+    # 종료(`end_planting`)가 행을 남기는 것과 같은 태도다. 정상 종료에서는
+    # 아무 일도 하지 않는다(구획 행이 그대로 남으므로 일정도 유효하다).
+    orphaned = 0
+    try:
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        live = SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.target_id == unique_id,
+            SchedulerJobMeta.state.in_(('DRAFT', 'PENDING', 'RUNNING'))).all()
+        for job in live:
+            job.state = 'ARCHIVED'
+            job.deletion_reason = 'planting deleted'
+            orphaned += 1
+    except Exception as exc:
+        logger.warning('[Planting] 일정 정리 실패: %s', exc)
+
     try:
         db.session.delete(row)
         db.session.commit()
@@ -295,7 +314,7 @@ def delete_planting(unique_id):
         db.session.rollback()
         return None, str(exc)
     _invalidate_caches()
-    return {'ok': True, 'deleted': unique_id}, None
+    return {'ok': True, 'deleted': unique_id, 'archived_jobs': orphaned}, None
 
 
 def copy_planting(unique_id, planted_on=None, crop=None):

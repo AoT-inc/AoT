@@ -241,15 +241,24 @@
   var NOTE_TEXT_MAX   = 60;   // 본문 미리보기 글자 수
   var NOTE_THUMBS_MAX = 4;    // 첨부 썸네일 개수
 
-  function notesBlockHtml() {
-    return '<div class="aot-ov-block aot-ov-notes">' +
-             '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
-               '<span>' + _escape(_t('Notes')) + '</span>' +
-               '<button type="button" class="aot-ov-pill aot-ov-notes-open">' +
-               _escape(_t('Open Notes')) + '</button>' +
-             '</div>' +
-             '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>' +
-           '</div>';
+  //   opts.title  섹션 제목 대체(기본 '노트'). **번역은 호출자가 한다** —
+  //               여기서 _t() 를 다시 걸면 babel 추출기가 리터럴을 못 본다.
+  //   opts.sub    소제목 단으로 낮춰 **다른 블록 안에** 넣는다. 바깥
+  //               .aot-ov-block 을 그리지 않으므로 블록이 중첩되지 않는다.
+  //               통합 기록 블록(지도 모달)이 쓴다 — 그래도 문·문구·배선은
+  //               그대로 이 컴포넌트 것이라 진입점은 여전히 하나다.
+  function notesBlockHtml(opts) {
+    opts = opts || {};
+    var head =
+      '<div class="' + (opts.sub ? 'aot-ov-sub-title' : 'aot-ov-sec-title') +
+        ' aot-ov-sec-title--row">' +
+        '<span>' + _escape(opts.title || _t('Notes')) + '</span>' +
+        '<button type="button" class="aot-ov-pill aot-ov-notes-open">' +
+        _escape(_t('Open Notes')) + '</button>' +
+      '</div>';
+    var list = '<div class="aot-ov-notes-list"><span class="aot-ov-muted">…</span></div>';
+    if (opts.sub) return head + list;
+    return '<div class="aot-ov-block aot-ov-notes">' + head + list + '</div>';
   }
 
   // 미리보기 목록을 그린다. notes 는 /notes/target/<uuid> 응답(최신순).
