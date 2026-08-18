@@ -53,6 +53,14 @@ def _invalidate_caches():
     except Exception as exc:      # 캐시 정리 실패가 저장을 되돌리면 안 된다
         logger.warning('[Planting] 모달 캐시 무효화 실패: %s', exc)
 
+    # 포함 관계 캐시도 함께 버린다 — 구획을 옮기면 소속 구역이 바뀌는데,
+    # 이 캐시는 TTL 안전망이 있어도 그때까지 낡은 소속을 답한다.
+    try:
+        from aot.aot_flask.geo import containment_cache
+        containment_cache.invalidate()
+    except Exception as exc:
+        logger.warning('[Planting] 포함 캐시 무효화 실패: %s', exc)
+
 
 def _parse_date(value, field):
     """'YYYY-MM-DD' → date. 빈 값은 None. 형식이 틀리면 (None, 오류)."""

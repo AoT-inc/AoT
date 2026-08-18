@@ -13,6 +13,19 @@ except ImportError:
 from aot.databases.models import GeoShape, Input, Output, OutputChannel, PID, Trigger, Conditional, CustomController, Function, GeoFacility, GeoFacilitySetpoint
 from aot.aot_flask.extensions import db
 
+def _drop_containment_cache():
+    """도형 기하가 바뀐 직후 포함 관계 캐시를 버린다.
+
+    캐시에는 TTL(10분) 안전망이 있지만, 그것만 믿으면 사용자가 구역을 그리고
+    "왜 그 안 구획이 안 잡히지" 를 10분 동안 본다. 정상 경로는 즉시 버린다.
+    """
+    try:
+        from aot.aot_flask.geo import containment_cache
+        containment_cache.invalidate()
+    except Exception:
+        pass
+
+
 class GeoOverlayManager:
     """
     Manages Map Overlays (Features).
@@ -375,6 +388,9 @@ class GeoOverlayManager:
                 )
                 db.session.add(s)
                 db.session.commit()
+                # 기하가 바뀌면 포함 관계 캐시는 낡는다. 지우기만 하므로
+                # 과하게 불러도 손해는 재계산 비용뿐이다.
+                _drop_containment_cache()
                 
                 return {
                     'ok': True,
@@ -586,6 +602,9 @@ class GeoOverlayManager:
 
             GeoOverlayManager._record_bindings(target_type, pending_bindings)
             db.session.commit()
+            # 기하가 바뀌면 포함 관계 캐시는 낡는다. 지우기만 하므로
+            # 과하게 불러도 손해는 재계산 비용뿐이다.
+            _drop_containment_cache()
 
             # [Phase 3b] Materialize tz down the shape tree + linked devices.
             # Post-commit, own transaction — safe. (timezone-management.md §4)
@@ -674,6 +693,9 @@ class GeoOverlayManager:
                         break
             if changed:
                 db.session.commit()
+                # 기하가 바뀌면 포함 관계 캐시는 낡는다. 지우기만 하므로
+                # 과하게 불러도 손해는 재계산 비용뿐이다.
+                _drop_containment_cache()
         except Exception as e:
             db.session.rollback()
             current_app.logger.warning(f"[GeoOverlay] materialize_timezones failed for {map_uuid}: {e}")
@@ -888,6 +910,9 @@ class GeoOverlayManager:
                         row.type, [(row, device_id, props.get('channel_id'))])
 
             db.session.commit()
+            # 기하가 바뀌면 포함 관계 캐시는 낡는다. 지우기만 하므로
+            # 과하게 불러도 손해는 재계산 비용뿐이다.
+            _drop_containment_cache()
             # [Phase 3b] tz 물질화/전파 (timezone-management.md §4)
             GeoOverlayManager.materialize_timezones(map_uuid)
             return {'ok': True, 'id_map': id_map}, None

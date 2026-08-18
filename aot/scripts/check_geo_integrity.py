@@ -369,6 +369,7 @@ def collect(map_uuid=None, tolerance=1e-6):
 
     # ── 식생 구획(작기) ────────────────────────────────────────────────
     _collect_plantings(findings, map_uuid, map_names)
+    _check_containment_cache(findings, map_uuid, map_names)
 
     return dict(findings), len(shapes)
 
@@ -427,6 +428,59 @@ def _collect_plantings(findings, map_uuid, map_names):
                 dict(where, geo_id=r.geo_id))
 
 
+def _check_containment_cache(findings, map_uuid, map_names):
+    """포함 관계 캐시가 기하와 어긋나는가.
+
+    **정본은 기하다.** 캐시(`geo_containment_cache`)는 파생값이고, 어긋나면
+    캐시가 틀린 것이다 — 이 검사는 그 방향으로만 읽는다.
+
+    드리프트가 보인다는 것은 기하를 바꾸면서 `containment_cache.invalidate()`
+    를 부르지 않은 경로가 있다는 뜻이다. 캐시에 TTL(10분) 안전망이 있어 스스로
+    낫지만, 그 사이에는 화면과 AI 가 낡은 소속을 본다. 그래서 **어느 경로가
+    빠졌는지 알려주는 것**이 이 검사의 목적이다.
+
+    읽기 전용이다 — 고치지 않는다. 캐시를 지우는 것은 언제든 안전하지만,
+    검사기가 데이터를 건드리기 시작하면 운영 서버에 돌릴 수 없게 된다.
+    """
+    try:
+        from aot.databases.models import GeoContainmentCache, GeoShape
+        from aot.utils.geo_hierarchy import build_geo_parent_map
+    except ImportError:
+        return
+
+    try:
+        rows = GeoContainmentCache.query.filter_by(child_kind='shape').all()
+    except Exception:
+        return          # 테이블이 아직 없는 서버(p6_38 미적용)
+    if not rows:
+        return
+
+    try:
+        shapes = (GeoShape.query.filter_by(geo_id=map_uuid).all() if map_uuid
+                  else GeoShape.query.all())
+        truth_by_id = build_geo_parent_map(shapes, use_cache=False)
+    except Exception:
+        return
+
+    uuid_by_id = {sh.id: sh.unique_id for sh in shapes}
+    by_uuid = {sh.unique_id: sh for sh in shapes}
+    cached = {r.child_uuid: r.parent_uuid for r in rows}
+
+    for sh in shapes:
+        if sh.unique_id not in cached:
+            continue        # 미계산은 드리프트가 아니다
+        want = uuid_by_id.get(truth_by_id.get(sh.id))
+        got = cached[sh.unique_id]
+        if want != got:
+            findings['containment-cache-drift'].append({
+                'shape_id': sh.id, 'unique_id': sh.unique_id,
+                'type': sh.type,
+                'map': map_names.get(sh.geo_id, sh.geo_id),
+                'cached_parent': got, 'geometry_says': want,
+            })
+    del by_uuid
+
+
 HEADINGS = {
     'type-mismatch':   'type 컬럼과 properties.aot_type 불일치',
     'duplicate':       '같은 지도 안 (종류, 기하) 중복',
@@ -441,6 +495,7 @@ HEADINGS = {
     'planting-bad-dates':    '식생 구획의 종료일이 파종일보다 빠름 (VP-2)',
     'planting-embedded-ref': '식생 구획 feature 에 장치/색 사본 각인 (VP-4)',
     'planting-phantom-map':  '유령 지도의 식생 구획 — 자동삭제 금지',
+    'containment-cache-drift': '포함 캐시가 기하와 불일치 (무효화 누락 경로)',
 }
 
 # 데이터가 실제로 안 보이거나 잘못 붙는 항목. 이게 있으면 화면이 이미 틀어져 있다.

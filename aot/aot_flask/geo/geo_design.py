@@ -148,6 +148,12 @@ class GeoDesignManager:
                 return None, "Map not found"
 
             db.session.commit()
+            # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
+            try:
+                from aot.aot_flask.geo import containment_cache
+                containment_cache.invalidate()
+            except Exception:
+                pass
             invalidate_geomap_cache(map_uuid)
 
             return {'ok': True}, None

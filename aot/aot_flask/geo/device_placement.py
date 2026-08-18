@@ -95,6 +95,12 @@ def place_device(device_id, map_uuid, lat, lng, channel_id=0,
     _record_marker_binding(marker, device_id, ch)
     if commit:
         db.session.commit()
+        # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
+        try:
+            from aot.aot_flask.geo import containment_cache
+            containment_cache.invalidate()
+        except Exception:
+            pass
     return marker
 
 
@@ -155,6 +161,12 @@ def unplace_device(device_id, map_uuid, channel_id=0, commit=False):
                     device_id, ch, map_uuid)
     if commit:
         db.session.commit()
+        # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
+        try:
+            from aot.aot_flask.geo import containment_cache
+            containment_cache.invalidate()
+        except Exception:
+            pass
     return None
 
 
@@ -199,6 +211,12 @@ def move_device_markers(device_id, lat, lng, commit=False):
                     device_id, moved)
         if commit:
             db.session.commit()
+            # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
+            try:
+                from aot.aot_flask.geo import containment_cache
+                containment_cache.invalidate()
+            except Exception:
+                pass
     return moved
 
 
@@ -237,6 +255,12 @@ def sync_device_name(device_id, new_name, channel_id=None, commit=True):
 
     if updated and commit:
         db.session.commit()
+        # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
+        try:
+            from aot.aot_flask.geo import containment_cache
+            containment_cache.invalidate()
+        except Exception:
+            pass
     return updated
 
 
@@ -283,6 +307,12 @@ def delete_shape(shape_unique_id, commit=False):
     db.session.expire_all()          # bulk delete 후 세션 캐시 무효화
     if commit:
         db.session.commit()
+        # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
+        try:
+            from aot.aot_flask.geo import containment_cache
+            containment_cache.invalidate()
+        except Exception:
+            pass
     logger.info('delete_shape: 도형 삭제 uuid=%s type=%s',
                 shape_unique_id, stype)
     return stype

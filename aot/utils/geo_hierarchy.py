@@ -56,12 +56,21 @@ def containment_point(g):
         return None
 
 
-def build_geo_parent_map(all_shapes):
+def build_geo_parent_map(all_shapes, use_cache=True):
     """Map every GeoShape.id -> its parent's id (or None), across the given
     shape rows. parent_id wins when set; otherwise the smallest site/zone
     polygon that spatially contains the shape (Point marker OR Polygon
     zone/site) is used.
+
+    **캐시가 있으면 기하를 파싱하지 않는다.** 파싱 자체가 비용의 큰 몫이라
+    (실측 42.5ms/150도형) "포함 판정만 건너뛰기" 로는 거의 아껴지지 않는다.
+    캐시는 파생값일 뿐이고 정본은 기하다 — 어긋나면 기하가 맞다.
     """
+    if use_cache:
+        hit = _parent_map_from_cache(all_shapes)
+        if hit is not None:
+            return hit
+
     geoms = {s.id: _parse_geometry(s) for s in all_shapes}
     containers = [(s.id, geoms[s.id]) for s in all_shapes
                   if s.type in ('site', 'zone') and geoms.get(s.id) is not None
@@ -108,10 +117,60 @@ def build_geo_parent_map(all_shapes):
         matches.sort(key=lambda m: m[1])
         return matches[0][0]
 
-    return {s.id: _find_parent(s) for s in all_shapes}
+    result = {s.id: _find_parent(s) for s in all_shapes}
+    if use_cache:
+        _store_parent_map(all_shapes, result)
+    return result
 
 
-def geo_descendant_shapes(root_shape, all_shapes=None):
+def _parent_map_from_cache(all_shapes):
+    """캐시가 **이 도형 전부** 를 덮을 때만 쓴다. 하나라도 빠지면 None.
+
+    부분 히트를 쓰지 않는 이유: 빠진 것을 채우려면 어차피 기하를 파싱해야
+    하고, 그러면 아낀 것이 없다. 전부-아니면-전무가 판단도 단순하다.
+    """
+    try:
+        from aot.aot_flask.geo import containment_cache as cc
+    except Exception:
+        return None
+    by_uuid = {s.unique_id: s for s in all_shapes if s.unique_id}
+    if len(by_uuid) != len(all_shapes):
+        return None          # uuid 없는 행이 섞이면 캐시로 표현할 수 없다
+    cached = cc.load(kind=cc.KIND_SHAPE)
+    out = {}
+    for s in all_shapes:
+        key = (cc.KIND_SHAPE, s.unique_id)
+        if key not in cached:
+            return None
+        puid = cached[key]
+        if puid is None:
+            out[s.id] = None
+        else:
+            parent = by_uuid.get(puid)
+            if parent is None:
+                return None  # 부모가 이 집합 밖 — 캐시가 낡았다
+            out[s.id] = parent.id
+    return out
+
+
+def _store_parent_map(all_shapes, id_map):
+    try:
+        from aot.aot_flask.geo import containment_cache as cc
+    except Exception:
+        return
+    uuid_by_id = {s.id: s.unique_id for s in all_shapes}
+    entries = []
+    for s in all_shapes:
+        if not s.unique_id:
+            continue
+        pid = id_map.get(s.id)
+        entries.append((cc.KIND_SHAPE, s.unique_id,
+                        uuid_by_id.get(pid) if pid else None,
+                        getattr(s, 'geo_id', None)))
+    cc.store(entries)
+
+
+def geo_descendant_shapes(root_shape, all_shapes=None, use_cache=True):
     """Every GeoShape nested under root_shape (e.g. a site's child zones),
     breadth-first, deepest levels included. Returns GeoShape rows.
     """
@@ -119,7 +178,7 @@ def geo_descendant_shapes(root_shape, all_shapes=None):
         from aot.databases.models import GeoShape
         all_shapes = GeoShape.query.all()
 
-    parent_map = build_geo_parent_map(all_shapes)
+    parent_map = build_geo_parent_map(all_shapes, use_cache=use_cache)
     children_map = {}
     for s in all_shapes:
         pid = parent_map.get(s.id)
@@ -166,7 +225,7 @@ def geo_descendant_unique_ids(root_shape, all_shapes=None):
 # 하나라도 빠뜨리면 그 종류에 붙은 것만 조용히 사라진다.
 
 
-def _planting_ids_inside(shape_ids, geo_ids=None):
+def _planting_ids_inside(shape_ids, geo_ids=None, use_cache=True):
     """주어진 도형들 안에 있는 활성 GeoPlanting 의 unique_id.
 
     식생은 소속 컬럼이 없다(설계상 소속은 저장하지 않고 파생한다 —
@@ -179,6 +238,25 @@ def _planting_ids_inside(shape_ids, geo_ids=None):
 
     if not shape_ids:
         return []
+
+    # 캐시가 활성 구획 **전부** 를 덮으면 기하를 아예 돌지 않는다. 실측에서
+    # 이 함수가 계층 질의 비용의 대부분이었다(73.9ms 중 72.4ms).
+    want = set(shape_ids)
+    try:
+        if not use_cache:
+            raise RuntimeError('cache disabled')
+        from aot.aot_flask.geo import containment_cache as cc
+        cached = cc.load(kind=cc.KIND_PLANTING)
+        actives = GeoPlanting.query.filter(GeoPlanting.ended_on.is_(None))
+        if geo_ids:
+            actives = actives.filter(GeoPlanting.geo_id.in_(list(geo_ids)))
+        actives = actives.all()
+        keys = [(cc.KIND_PLANTING, p.unique_id) for p in actives]
+        if keys and all(k in cached for k in keys):
+            return [p.unique_id for p, k in zip(actives, keys)
+                    if cached[k] in want]
+    except Exception:
+        pass
 
     polys = []
     for row in GeoShape.query.filter(GeoShape.unique_id.in_(list(shape_ids))).all():
@@ -195,21 +273,58 @@ def _planting_ids_inside(shape_ids, geo_ids=None):
     if geo_ids:
         q = q.filter(GeoPlanting.geo_id.in_(list(geo_ids)))
 
-    out = []
+    # 캐시에 적는 값은 **호출 범위와 무관해야 한다.** 후보를 이번 질의의
+    # shape_ids 로 잡으면, '3-2' 만 물어 본 순간 3-1 의 구획들이 "부모 없음"
+    # 으로 캐시되고, 그 뒤 '3포장' 질의가 캐시 히트로 그것들을 통째로 빠뜨린다
+    # — 에러 없이 결과만 줄어드는, 가장 찾기 어려운 종류의 오답이다.
+    # 그래서 후보는 **그 지도의 site/zone 전체**로 고정한다.
+    cand_q = GeoShape.query.filter(GeoShape.type.in_(('site', 'zone')))
+    if geo_ids:
+        cand_q = cand_q.filter(GeoShape.geo_id.in_(list(geo_ids)))
+    named = []
+    for row in cand_q.all():
+        try:
+            g = _parse_geometry(row)
+            if g is not None and not g.is_empty:
+                named.append((row.unique_id, g, getattr(g, 'area', 0.0) or 0.0))
+        except Exception:
+            continue
+    named.sort(key=lambda t: t[2])   # 가장 작은 = 가장 구체적인 부모
+
+    out, entries = [], []
     for pl in q.all():
         try:
             geom = planting_context.geometry_of(pl)
             pt = containment_point(_shapely_shape(geom))
             if pt is None:
                 continue
-            if any(poly.contains(pt) for poly in polys):
+            parent = None
+            for uid, poly, _a in named:
+                if poly.contains(pt):
+                    parent = uid
+                    break
+            # 반환 판정은 **이번 질의 범위**로, 캐시는 절대값으로.
+            if parent is not None and parent in want:
                 out.append(pl.unique_id)
+            elif parent is None and any(poly.contains(pt) for poly in polys):
+                # 후보 site/zone 어디에도 안 들어가지만 물어본 도형(시설 등)
+                # 안에는 있는 경우 — 결과에는 넣되 캐시에는 부모 없음으로 적는다.
+                out.append(pl.unique_id)
+            entries.append((pl.unique_id, parent, pl.geo_id))
         except Exception:
             continue
+
+    try:
+        if use_cache:
+            from aot.aot_flask.geo import containment_cache as cc
+            cc.store([(cc.KIND_PLANTING, u, p, g) for (u, p, g) in entries])
+    except Exception:
+        pass
     return out
 
 
-def descendant_target_ids(root_shape, all_shapes=None, include_self=True):
+def descendant_target_ids(root_shape, all_shapes=None, include_self=True,
+                          use_cache=True):
     """이 대상 아래에서 노트·일정이 붙을 수 있는 target_id 전부.
 
     돌려주는 것은 `(ids, breakdown)` — `breakdown` 은 무엇을 얼마나 훑었는지를
@@ -229,7 +344,8 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True):
         shape_ids.append(root_shape.unique_id)
         breakdown['self'] = 1
 
-    kids = geo_descendant_shapes(root_shape, all_shapes=all_shapes)
+    kids = geo_descendant_shapes(root_shape, all_shapes=all_shapes,
+                                 use_cache=use_cache)
     for k in kids:
         if k.unique_id:
             ids.append(k.unique_id)
@@ -255,7 +371,8 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True):
 
     geo_ids = {s.geo_id for s in ([root_shape] + list(kids)) if getattr(s, 'geo_id', None)}
     try:
-        for pid in _planting_ids_inside(shape_ids, geo_ids=geo_ids):
+        for pid in _planting_ids_inside(shape_ids, geo_ids=geo_ids,
+                                        use_cache=use_cache):
             ids.append(pid)
             breakdown['plantings'] += 1
     except Exception:
