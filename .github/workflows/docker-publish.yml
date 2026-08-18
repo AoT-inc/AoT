@@ -1,14 +1,17 @@
 name: Publish Docker image
 
-# Builds a multi-arch (amd64 + arm64) image and pushes it to GHCR.
+# Builds a multi-arch (amd64 + arm64) image and pushes it to GHCR and Docker Hub.
 # Triggers on a release tag (v*.*.*) or manual dispatch.
 # The image tag is derived from AOT_VERSION in aot/config/__init__.py so the
 # zero-padded scheme (e.g. 26.07.3 / 26.07) is preserved (semver would drop the 0).
 #
 # Prerequisites (one-time):
 #   - Repo hosted on GitHub (this workflow does NOT run on Gitea).
-#   - After the first publish, set the GHCR package visibility to Public
+#   - GHCR: after the first publish, set the package visibility to Public
 #     (repo → Packages → aot → Package settings), or configure org policy.
+#   - Docker Hub: create the aotinc/aot repository, generate an access token
+#     (Account Settings → Security → New Access Token, Read & Write), then add
+#     repo secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN.
 
 on:
   push:
@@ -45,11 +48,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Docker metadata (tags/labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/aot
+          images: |
+            ghcr.io/${{ github.repository_owner }}/aot
+            docker.io/aotinc/aot
           tags: |
             type=raw,value=${{ steps.ver.outputs.version }}
             type=raw,value=${{ steps.ver.outputs.majorminor }}
