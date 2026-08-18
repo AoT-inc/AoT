@@ -117,6 +117,14 @@ def invalidate(geo_id=None, child_uuids=None):
 
     지우는 방향으로만 동작하므로 과하게 불러도 손해는 재계산 비용뿐이다.
     """
+    # 이름 해석 인덱스도 함께 버린다 — 도형이 바뀌면 둘 다 낡는다.
+    # 무효화 배선을 두 벌로 늘리면 한쪽만 부르는 경로가 반드시 생긴다.
+    try:
+        from aot.aot_flask.geo import shape_index
+        shape_index.invalidate()
+    except Exception:
+        pass
+
     try:
         q = GeoContainmentCache.query
         if geo_id:

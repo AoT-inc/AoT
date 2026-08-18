@@ -3158,14 +3158,16 @@ class TestScheduleScoping(unittest.TestCase):
         self.assertIn('upcoming_schedule(', body)
         self.assertIn("'schedule': schedule", body)
 
-    def test_empty_schedule_draws_nothing(self):
-        """대부분의 날은 비어 있다 — 빈 블록은 화면에 노이즈로만 남는다.
-        단 추가 버튼이 있는 화면(구획)은 그리지 않으면 더할 자리가 없어진다."""
+    def test_empty_schedule_says_so_instead_of_vanishing(self):
+        """**계약이 바뀌었다.** 예전에는 예정이 없으면 블록을 아예 안 그렸다
+        (빈 블록은 노이즈였다). 지금은 예정과 노트가 한 블록이라 그럴 수 없다 —
+        노트는 거의 항상 있고, 예정만 없다고 블록을 지우면 노트가 함께 사라진다.
+        대신 "예정 없음" 한 줄을 낸다."""
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = js.split('function buildScheduleHtml', 1)[1].split(
+        body = js.split('function buildRecordBlock', 1)[1].split(
             '\n  function ', 1)[0]
-        self.assertIn("if (!items.length && !opts.addable) return '';", body)
+        self.assertIn("_t('Nothing scheduled yet.')", body)
 
     def test_no_invented_categories_in_the_ui(self):
         """화면은 하나의 목록이다 — 시스템에 없는 구분을 만들지 않는다."""
@@ -3190,7 +3192,7 @@ class TestScheduleScoping(unittest.TestCase):
         일정은 어느 현장에나 있는 것이라 그 이름에 '농' 을 넣지 않는다."""
         js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                 'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = js.split('function buildScheduleHtml', 1)[1].split(
+        body = js.split('function buildRecordBlock', 1)[1].split(
             '\n  function _fmtWhen', 1)[0]
         for word in ('Field work', 'farm', 'Farm', 'irrigation', 'waters'):
             self.assertNotIn(word, body)
@@ -3338,42 +3340,48 @@ class TestScheduleIsConsistentAcrossLayers(unittest.TestCase):
         body = js.split('function _buildSiteSummaryHTML', 1)[1].split(
             '\n        function ', 1)[0]
         self.assertNotIn("_siteTileHTML('schedule'", body)
-        self.assertIn('buildScheduleHtml(', body)
+        self.assertIn('buildRecordBlock(', body)
 
-    def test_every_layer_can_add(self):
-        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
-                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
-        # 구역·대지·시설 세 곳에서 공용 배선을 부른다
-        self.assertGreaterEqual(js.count('wireScheduleAdd('), 3)
-        # **구획에는 추가 배선이 없다.** 예정을 만드는 자리는 노트 하나로
-        # 옮겼다(노트 본문의 한 구간을 골라 시각을 준다) — 지도 모달의 폼도
-        # 결국 쓰기 **전에** 종류를 묻는 것이라 철회했다.
-        # 계약은 test_note_schedule_link.py 가 지킨다.
-        veg = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
-                                 'widgets', 'AoT_map', 'aot-map-vegetation.js'))
-        self.assertNotIn('wireRecordAdd(', veg)
-        self.assertNotIn('wireScheduleAdd(', veg)
+    def test_no_layer_has_its_own_add_form(self):
+        """**계약이 뒤집혔다.** 예정을 만드는 자리는 노트 하나다 — 본문의 한
+        구간을 골라 시각을 준다. 계층마다 폼을 두면 사용자가 쓰기 **전에**
+        종류를 고르는 옛 방식으로 되돌아간다(2026-08-18, 네 계층 통합).
+        계약은 test_note_schedule_link.py 가 지킨다."""
+        for f in ('aot-map-widget-vector.js', 'aot-map-vegetation.js',
+                  'aot-map-popup.js'):
+            js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                    'widgets', 'AoT_map', f))
+            for gone in ('wireScheduleAdd', 'wireRecordAdd', '_scheduleFormHtml'):
+                self.assertNotIn(gone, js, '%s 에 %s 가 남아 있다' % (f, gone))
 
     def test_facility_identity_is_covered(self):
         """시설은 정체성이 둘이다 — 일정은 GeoFacility uuid 로 붙는데 장치·기하는
         GeoShape 쪽이다. 도형만 보면 방금 만든 일정이 안 보인다."""
         rg = _read(_ROUTES_GEO)
         body = rg.split('def _schedule_payload', 1)[1].split('\ndef ', 1)[0]
-        self.assertIn('upcoming_schedule(sh, ids, [fac.unique_id])', body)
+        # 시설 uuid 는 자손 목록과 **함께** 들어간다 — 자손 확장이 붙은 뒤에도
+        # 이 uuid 를 빠뜨리면 방금 만든 일정이 그 시설 화면에서 안 보인다.
+        self.assertIn('list(kids) + [fac.unique_id]', body)
 
-    def test_notes_stay_last_everywhere(self):
-        """네 계층 모두 노트가 마지막 — 화면을 옮겨 다녀도 같은 자리에서
-        같은 것을 찾게 한다. 일정 블록은 그 앞에 들어간다."""
-        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
-                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
-        body = js.split('function _appendFacilitySchedule', 1)[1].split(
-            '\n        function ', 1)[0]
-        self.assertIn("pane.querySelector('.aot-ov-notes')", body)
-        self.assertIn('insertBefore(node, notes)', body)
+    def test_every_layer_uses_the_same_record_block(self):
+        """네 계층이 **같은 빌더**를 쓴다 — 계층마다 다른 모양이면 사용자는
+        화면을 옮길 때마다 어디에 무엇이 있는지 다시 찾아야 한다.
+
+        순서(예정 먼저, 노트 뒤)는 이제 블록 **안**의 문제라 빌더가 지킨다."""
         popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                    'widgets', 'AoT_map', 'aot-map-popup.js'))
-        # 구획은 예정과 노트가 한 블록이므로(Phase 2) 순서를 블록 안에서
-        # 지킨다 — 예정이 먼저, 노트가 뒤.
+        # zone
+        zone = popup.split('function buildZoneStatusHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn('buildRecordBlock(', zone)
+        # site · facility
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                'widgets', 'AoT_map', 'aot-map-widget-vector.js'))
+        for fn in ('_buildSiteSummaryHTML', '_appendFacilitySchedule'):
+            body = js.split('function %s' % fn, 1)[1].split(
+                '\n        function ', 1)[0]
+            self.assertIn('buildRecordBlock(', body, '%s 가 공용 빌더를 안 쓴다' % fn)
+        # 블록 안의 순서
         rec = popup.split('function buildRecordBlock', 1)[1].split(
             '\n  function ', 1)[0]
         self.assertLess(rec.index("_t('Coming up')"),

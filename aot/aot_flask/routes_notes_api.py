@@ -71,14 +71,79 @@ def resolve_target_gps(target_type, target_id):
     return None, None
 
 
+def _display_name_for_target(tid):
+    """노트가 붙은 대상의 사람이 읽을 이름. 못 찾으면 None.
+
+    도형·식생·시설·장치가 각각 다른 테이블이라 한 곳에서 훑는다 — 부르는
+    자리마다 따로 찾으면 어느 한 종류가 조용히 빠지고, 그 노트만 출처 없이
+    목록에 섞인다.
+    """
+    if not tid:
+        return None
+    try:
+        from aot.databases.models import GeoShape, GeoPlanting, GeoFacility
+        sh = GeoShape.query.filter_by(unique_id=tid).first()
+        if sh is not None:
+            feat = sh.feature if isinstance(sh.feature, dict) else {}
+            props = (feat.get('properties') or {})
+            return (props.get('name') or props.get('label')
+                    or props.get('title') or None)
+        pl = GeoPlanting.query.filter_by(unique_id=tid).first()
+        if pl is not None:
+            return pl.name or pl.crop
+        fac = GeoFacility.query.filter_by(unique_id=tid).first()
+        if fac is not None:
+            return getattr(fac, 'name', None)
+        from aot.databases.models import Input, Output
+        for model in (Input, Output):
+            row = model.query.filter_by(unique_id=tid).first()
+            if row is not None:
+                return row.name
+    except Exception:
+        pass
+    return None
+
+
 @blueprint.route('/notes/target/<target_id>', methods=['GET'])
 @login_required
 def api_notes_target_get(target_id):
-    """Get notes for a specific target (device, etc.)"""
+    """Get notes for a specific target (device, etc.).
+
+    `?descendants=1` 이면 **그 안에서 쓴 노트 전부**를 함께 낸다(구역·시설·
+    장치·식생). 컨테이너를 열었을 때 자기 것만 보이면 대부분 비어 있다 —
+    실측(2026-08-18 김제): 필지 '3포장' 자체 노트 0건, 그 아래 16건.
+    AI(`search_notes`)는 이미 자손을 훑고 있어서 **화면과 AI 가 다른 답**을
+    하고 있었다.
+
+    각 노트에 `target_name` 이 실린다 — 어느 구역·구획 것인지 구분되지 않으면
+    합쳐 놓은 것이 오히려 혼란이 된다.
+    """
     try:
+        want_desc = request.args.get('descendants') in ('1', 'true', 'True')
+        target_ids = [target_id]
+        if want_desc:
+            try:
+                from aot.databases.models import GeoShape
+                from aot.utils.geo_hierarchy import descendant_target_ids
+                sh = GeoShape.query.filter_by(unique_id=target_id).first()
+                if sh is None:
+                    # 시설은 정체성이 둘이다 — 노트는 GeoFacility uuid 에
+                    # 붙는데 기하는 도형 쪽이라, 도형으로 옮겨 풀어야 자손이 나온다.
+                    from aot.databases.models import GeoFacility
+                    fac = GeoFacility.query.filter_by(unique_id=target_id).first()
+                    if fac is not None:
+                        sh = GeoShape.query.filter_by(
+                            unique_id=getattr(fac, 'shape_uuid', None)).first()
+                if sh is not None:
+                    more, _bd = descendant_target_ids(sh, include_self=False)
+                    target_ids.extend(more)
+            except Exception:
+                current_app.logger.exception('notes: 자손 확장 실패')
+
         # [Fix] Filter by target_id.
         # Note: notes table now has target_id column
-        notes = Notes.query.filter_by(target_id=target_id).order_by(Notes.date_time.desc()).all()
+        notes = (Notes.query.filter(Notes.target_id.in_(target_ids))
+                 .order_by(Notes.date_time.desc()).all())
 
         # All notes here share one target → its location tz. Emit it so the frontend
         # can render note times in that entity's local clock (AoTTz.formatDevice),
@@ -111,7 +176,12 @@ def api_notes_target_get(target_id):
                 'user': n.author.name if n.author else (n.name or '?'), 
                 'files': n.files,
                 'tags': n.tags,
-                'links': links_by_note.get(n.unique_id, [])
+                'links': links_by_note.get(n.unique_id, []),
+                # 어느 대상 것인지. 자손까지 합쳐 보여줄 때 이것이 없으면
+                # 합친 목록이 오히려 혼란이 된다.
+                'target_id': n.target_id,
+                'target_name': (_display_name_for_target(n.target_id)
+                                if n.target_id != target_id else None),
             })
             
         return jsonify(result)

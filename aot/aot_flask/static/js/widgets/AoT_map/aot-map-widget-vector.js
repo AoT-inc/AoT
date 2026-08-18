@@ -837,16 +837,9 @@
                 canAdd: !!z.can_edit
             });
             _wireZoneRepPick(uid, pane, zoneUuid, data);
-            // 일정 추가 — 네 계층 공용 배선. 저장하면 [현황]만 다시 그린다
-            // (모달 전체를 다시 열 이유가 없다).
-            window.AoTMapPopup.wireScheduleAdd(pane, {
-                targetId: zoneUuid,
-                onSaved: function (sched) {
-                    data.zone.schedule = sched;
-                    invalidateModal('zone', zoneUuid);
-                    _renderZoneOverview(uid, pane, data, zoneUuid);
-                }
-            });
+            // 예정을 만드는 자리는 **노트 하나**다(노트 본문의 한 구간을 골라
+            // 시각을 준다). 계층마다 별도 폼을 두면 사용자가 쓰기 전에 종류를
+            // 고르는 옛 방식으로 되돌아간다.
 
             // 구획 줄 → 그 구획 모달로 내려간다. 구역 모달은 닫는다 —
             // 모달 위에 모달을 쌓으면 뒤로 가기가 어디로 가는지 알 수 없다
@@ -863,9 +856,11 @@
                 });
             });
 
+            // 컨테이너다 — 그 안(구획·시설·장치)의 노트까지 함께 낸다.
+            // 자기 것만 보이면 대부분 비어 있고, AI 는 이미 자손을 훑는다.
             window.AoTNotesBlock.wire(pane,
                 { targetId: zoneUuid, targetType: 'GeoShape', name: z.name || '' },
-                { beforeOpen: function () { _closeZoneModal(uid); } });
+                { descendants: true, beforeOpen: function () { _closeZoneModal(uid); } });
         }
 
         // [개요] 탭 — 사진 + 구역 정보 (시설 [개요]와 같은 순서)
@@ -2485,16 +2480,12 @@
             }
             html += '</div>';
 
-            // 다가오는 일정 — 구역·식생·시설과 같은 블록·같은 창.
-            html += window.AoTMapPopup.buildScheduleHtml(
-                data.schedule, { addable: true });
-
-            // 노트 — 다른 계층과 **같은** 공용 블록. 예전에는 여기만 목록을 직접
-            // 그려서 노트로 들어가는 문이 아예 없었다(필지에 적어 둘 것이 가장
-            // 많은데도 화면에서 노트를 열 방법이 없었다). 목록은 /site summary 의
-            // 것을 버리고 블록이 /notes/target 으로 직접 채운다 — 그래야 날짜·
-            // 첨부 썸네일까지 다른 창과 같은 모양이 된다.
-            html += window.AoTNotesBlock.html();
+            // 기록 — 예정과 노트가 **한 블록**이다(구역·식생과 같은 빌더).
+            // 목록은 /site summary 의 것을 버리고 블록이 /notes/target 으로
+            // 직접 채운다 — 그래야 날짜·첨부 썸네일까지 다른 창과 같은 모양이
+            // 된다. 예전에는 여기만 목록을 직접 그려서 노트로 들어가는 문이
+            // 아예 없었다(필지에 적어 둘 것이 가장 많은데도).
+            html += window.AoTMapPopup.buildRecordBlock(data.schedule);
             return html;
         }
 
@@ -2583,22 +2574,16 @@
                 if (!pane) return;
                 pane.innerHTML = _buildSiteSummaryHTML(data);
                 _wireSiteRows(uid, pane);
-                // 일정 추가 — 네 계층 공용 배선. 저장하면 요약을 다시 그린다.
-                window.AoTMapPopup.wireScheduleAdd(pane, {
-                    targetId: siteUuid,
-                    onSaved: function (sched) {
-                        data.schedule = sched;
-                        _siteSummaryCache[siteUuid] = data;
-                        pane.innerHTML = _buildSiteSummaryHTML(data);
-                        _wireSiteRows(uid, pane);
-                    }
-                });
+                // 예정을 만드는 자리는 **노트 하나**다 — 계층마다 별도 폼을
+                // 두면 사용자가 쓰기 전에 종류를 고르는 옛 방식으로 되돌아간다.
                 // 필지 모달도 30초마다 다시 그린다 — 캐시로 깜빡임을 막는다.
                 s._notesCache = s._notesCache || {};
+                // 컨테이너다 — 그 안(구역·구획·시설·장치)의 노트까지.
+                // 필지 자체 노트는 실측 0건이었다(그 아래는 16건).
                 window.AoTNotesBlock.wire(pane,
                     { targetId: siteUuid, targetType: 'GeoShape',
                       name: (data.site && data.site.name) || siteName || '' },
-                    { cache: s._notesCache,
+                    { descendants: true, cache: s._notesCache,
                       beforeOpen: function () {
                           var s2 = _sitePopupState[uid];
                           if (s2 && s2.popup) { try { s2.popup.remove(); } catch (e) {} }
@@ -3689,33 +3674,53 @@
         //
         // 노트 **앞**에 넣는다. 네 계층 모두 노트가 마지막이고, 그 순서가
         // 화면을 옮겨 다녀도 같은 자리에서 같은 것을 찾게 해 준다.
+        // 노트 배선 — 두 곳에서 부른다(첫 렌더 · 기록 블록 교체 뒤).
+        //
+        // [현황] pane 은 30초마다 통째로 다시 그려지므로 cache 를 넘겨
+        // placeholder(…)가 매번 스쳐 보이지 않게 한다. 캐시는 pane 이 아니라
+        // 위젯 상태에 산다(pane 은 교체된다).
+        function _wireFacilityNotes(uid, facilityUuid, pane) {
+            var st = _actLabelState[uid];
+            if (!st || !pane || !window.AoTNotesBlock) return;
+            var facName = '';
+            (st.facilities || []).forEach(function (f) {
+                if (f && f.unique_id === facilityUuid) facName = f.name || '';
+            });
+            st._notesCache = st._notesCache || {};
+            // 시설도 컨테이너다(베이·장치를 담는다). 시설은 정체성이 둘이라
+            // 서버가 도형으로 옮겨 자손을 푼다.
+            window.AoTNotesBlock.wire(pane,
+                { targetId: facilityUuid, targetType: 'GeoFacility', name: facName },
+                { descendants: true, cache: st._notesCache,
+                  beforeOpen: function () {
+                      var st3 = _actLabelState[uid];
+                      if (st3 && st3.openBayPopup) {
+                          try { st3.openBayPopup.remove(); } catch (e) {}
+                      }
+                  } });
+        }
+
         function _appendFacilitySchedule(uid, facilityUuid, pane) {
-            if (!window.AoTMapPopup || !window.AoTMapPopup.buildScheduleHtml) return;
+            if (!window.AoTMapPopup || !window.AoTMapPopup.buildRecordBlock) return;
             var st = _actLabelState[uid];
             if (!st) return;
 
+            // 노트 블록을 **기록 블록으로 교체**한다 — 예정과 노트가 한
+            // 블록이라는 점이 구역·식생과 같다. 교체이므로 노트를 다시
+            // 배선해야 한다(새 DOM 이다).
             var insert = function (sched) {
                 if (!pane || !pane.isConnected) return;
                 var st2 = _actLabelState[uid];
                 if (!st2 || st2.openBayFacility !== facilityUuid) return;
-                if (pane.querySelector('.aot-ov-schedule-upcoming')) return;
-                var html = window.AoTMapPopup.buildScheduleHtml(
-                    sched, { addable: !!st2.canCtrl });
+                var html = window.AoTMapPopup.buildRecordBlock(sched);
                 if (!html) return;
-                var notes = pane.querySelector('.aot-ov-notes');
                 var tmp = document.createElement('div');
                 tmp.innerHTML = html;
                 var node = tmp.firstElementChild;
-                if (notes) { pane.insertBefore(node, notes); } else { pane.appendChild(node); }
-                window.AoTMapPopup.wireScheduleAdd(pane, {
-                    targetId: facilityUuid,
-                    onSaved: function (next) {
-                        st2._schedCache = next;
-                        var old = pane.querySelector('.aot-ov-schedule-upcoming');
-                        if (old) old.remove();
-                        insert(next);
-                    }
-                });
+                var slot = pane.querySelector('.aot-ov-record') ||
+                           pane.querySelector('.aot-ov-notes');
+                if (slot) { slot.replaceWith(node); } else { pane.appendChild(node); }
+                _wireFacilityNotes(uid, facilityUuid, pane);
             };
 
             if (st._schedCache) insert(st._schedCache);
@@ -3727,8 +3732,6 @@
                     var st2 = _actLabelState[uid];
                     if (!st2) return;
                     st2._schedCache = { own: d.own || [], devices: d.devices || [] };
-                    var old = pane.querySelector('.aot-ov-schedule-upcoming');
-                    if (old) old.remove();
                     insert(st2._schedCache);
                 })
                 .catch(function () {});
@@ -3823,24 +3826,7 @@
                 }
                 var wireEl = abPane || pane;   // 사진/설명은 [개요] pane (노트는 [현황])
 
-                var facName = '';
-                (st2.facilities || []).forEach(function (f) {
-                    if (f && f.unique_id === facilityUuid) facName = f.name || '';
-                });
-
-                // 노트 블록 — [현황] pane 은 30초마다 통째로 다시 그려지므로
-                // cache 를 넘겨 placeholder(…)가 매번 스쳐 보이지 않게 한다.
-                // 캐시는 pane 이 아니라 위젯 상태에 산다(pane 은 교체된다).
-                st2._notesCache = st2._notesCache || {};
-                window.AoTNotesBlock.wire(pane,
-                    { targetId: facilityUuid, targetType: 'GeoFacility', name: facName },
-                    { cache: st2._notesCache,
-                      beforeOpen: function () {
-                          var st3 = _actLabelState[uid];
-                          if (st3 && st3.openBayPopup) {
-                              try { st3.openBayPopup.remove(); } catch (e) {}
-                          }
-                      } });
+                _wireFacilityNotes(uid, facilityUuid, pane);
 
                 // 대표사진 업로드 (editor 이상에서만 버튼이 렌더됨).
                 // [개요] DOM 이 교체된 경우에만 wiring — 유지된 DOM 에

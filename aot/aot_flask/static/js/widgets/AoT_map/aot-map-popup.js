@@ -1448,124 +1448,11 @@
   // 면적과 개수를 읽고 나가야 했다.
   function buildZoneStatusHtml(zone, opts) {
     zone = zone || {};
+    // 예정과 노트는 **한 블록**이다 — 식생과 같은 빌더. 계층마다 다른 모양을
+    // 쓰면 사용자는 화면을 옮길 때마다 어디에 무엇이 있는지 다시 찾아야 한다.
     return buildEnvNowHtml(zone.env, opts) +
            buildZonePlantingsHtml(zone.allocation) +
-           buildScheduleHtml(zone.schedule, { addable: !!(opts && opts.canAdd) }) +
-           _ovNotesBlock();
-  }
-
-  // ── 다가오는 일정 ─────────────────────────────────────────────────────────
-  //
-  // **하나의 목록이다.** 예전에는 이것을 '농작업' 과 '장치 예약' 으로 갈랐는데
-  // 둘 다 틀렸다:
-  //
-  //  1. 시스템에 그런 구분이 없다. 전부 같은 `SchedulerJobMeta` 이고, 내가
-  //     가른 축은 실은 **대상이 도형이냐 장치냐** 였다. 그걸 일의 종류인 것처럼
-  //     이름 붙이면 화면이 없는 개념을 있는 것처럼 말한다.
-  //  2. '농작업' 은 용도를 농업으로 못 박는 말이다. 이 소프트웨어는 온실·축사만
-  //     아니라 공원·시설물·교통에도 쓴다고 이미 정해 두었다(landing 문구).
-  //
-  // 구분이 필요하면 줄 자체가 말한다 — 담당자가 있으면 사람이 하는 일이고,
-  // 'On (20min)' 이면 장치가 하는 일이다.
-  //
-  //   opts.addable  추가 버튼을 헤더에 단다(구획 모달). 이때는 목록이 비어도
-  //                 블록을 그린다 — 안 그러면 더할 자리가 아예 없어진다.
-  function buildScheduleHtml(sched, opts) {
-    opts = opts || {};
-    var items = [].concat((sched && sched.own) || [],
-                          (sched && sched.devices) || []);
-    if (!items.length && !opts.addable) return '';
-
-    items.sort(function (a, b) {
-      return String(a.when || '').localeCompare(String(b.when || ''));
-    });
-
-    var html = '<div class="aot-ov-block aot-ov-schedule-upcoming">' +
-      '<div class="aot-ov-sec-title' +
-      (opts.addable ? ' aot-ov-sec-title--row' : '') + '">' +
-      '<span>' + _esc(_t('Coming up')) + '</span>' +
-      (opts.addable
-        ? '<button type="button" class="aot-ov-pill aot-ov-sched-open">' +
-          _esc(_t('Add')) + '</button>'
-        : '') + '</div>';
-
-    if (!items.length) {
-      html += '<div class="aot-ov-muted">' +
-              _esc(_t('Nothing scheduled yet.')) + '</div>';
-    }
-    items.forEach(function (it) {
-      html += '<div class="aot-ov-row"><span>' + _esc(it.content || '—') +
-              (it.worker ? ' <span class="aot-ov-muted">· ' +
-                           _esc(it.worker) + '</span>' : '') +
-              '</span><span>' + _esc(_fmtWhen(it.when)) + '</span></div>';
-    });
-    return html + (opts.addable ? _scheduleFormHtml() : '') + '</div>';
-  }
-
-
-  // 일정 추가 폼 배선 — **네 계층 공통**(대지·구역·식생·시설).
-  //
-  // 대상은 uuid 로 넘긴다. 이름으로 고르지 않는 이유는 서버 주석에 있다 —
-  // 같은 작물이 두 곳에 있으면 이름만으로는 못 고른다.
-  //
-  //   onSaved(schedule)  저장 뒤 갱신 방법은 계층마다 다르다(모달을 다시 열기도
-  //                      하고, 블록만 갈아 끼우기도 한다) — 호출자가 정한다.
-  function wireScheduleAdd(scopeEl, opts) {
-    opts = opts || {};
-    var wrap = scopeEl && scopeEl.querySelector('.aot-ov-schedule-upcoming');
-    if (!wrap || wrap._schedWired) return;
-    var form = wrap.querySelector('.aot-ov-sched-form');
-    var open = wrap.querySelector('.aot-ov-sched-open');
-    if (!form || !open || !opts.targetId) return;
-    wrap._schedWired = true;
-
-    function show(on) {
-      form.style.display = on ? '' : 'none';
-      open.style.display = on ? 'none' : '';
-      if (on) {
-        var c = form.querySelector('[data-sf="content"]');
-        if (c) c.focus();
-      }
-    }
-    open.addEventListener('click', function () { show(true); });
-    var cancel = wrap.querySelector('.aot-ov-sched-cancel');
-    if (cancel) cancel.addEventListener('click', function () { show(false); });
-
-    var save = wrap.querySelector('.aot-ov-sched-save');
-    if (!save) return;
-    save.addEventListener('click', function () {
-      var payload = { target_id: opts.targetId };
-      form.querySelectorAll('[data-sf]').forEach(function (el) {
-        payload[el.getAttribute('data-sf')] = el.value || '';
-      });
-      if (!payload.content || !payload.date) {
-        if (window.showToast) {
-          window.showToast(_t('Enter a date and what to do'), 'warning');
-        }
-        return;
-      }
-      save.disabled = true;
-      var meta = document.querySelector('meta[name="csrf-token"]');
-      fetch('/api/geo/schedule', {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json',
-                   'X-Requested-With': 'XMLHttpRequest',
-                   'X-CSRFToken': meta ? meta.getAttribute('content') : '' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) { return r.json().catch(function () { return null; }); })
-        .then(function (d) {
-          save.disabled = false;
-          if (!d || !d.ok) {
-            if (window.showToast) {
-              window.showToast((d && d.message) || _t('Save failed'), 'error');
-            }
-            return;
-          }
-          if (opts.onSaved) opts.onSaved(d.schedule);
-        })
-        .catch(function () { save.disabled = false; });
-    });
+           buildRecordBlock(zone.schedule);
   }
 
   // ── 기록 — 예정과 지난 것을 한 블록에 ──────────────────────────────────
@@ -1611,6 +1498,16 @@
                            _esc(it.worker) + '</span>' : '') +
               '</span><span>' + _esc(_fmtWhen(it.when)) + '</span></div>';
     });
+
+    // 표시 상한을 넘겼으면 **넘겼다고 말한다.** 안 그러면 사용자는 보이는
+    // 것이 전부라고 읽고, "없는 것" 과 "안 보여준 것" 이 같은 화면이 된다.
+    var total = (sched && sched.total) || 0;
+    if (total > items.length) {
+      html += '<div class="aot-ov-muted">' +
+              _esc(_t('%(n)s more').replace('%(n)s',
+                                            String(total - items.length))) +
+              '</div>';
+    }
 
     // 지난 것 = 노트. 소제목 단으로 낮춰 이 블록 안에 넣는다.
     html += (window.AoTNotesBlock
@@ -2206,48 +2103,6 @@
   }
 
 
-  // ── 일정 추가 폼 ─────────────────────────────────────────────────────────
-  //
-  // **구획을 직접 겨냥하는 유일한 경로다.** 이름 리졸버는 그대로 구역을
-  // 돌려준다(설계 §이름 해석) — 이름만으로 고르면 같은 작물이 두 구역에 있을
-  // 때 엉뚱한 곳에 조용히 남기 때문이다. 이 폼은 사람이 그 구획의 모달을 열어
-  // 놓고 쓰므로 고를 것이 없다.
-  //
-  // 새 모달을 띄우지 않는다 — 모달 위에 모달을 쌓지 않는다는 규약이 있고,
-  // 입력이 네 칸뿐이라 접힌 폼으로 충분하다.
-  function _scheduleFormHtml() {
-    var _v = function (x) { return _esc(x == null ? '' : x); };
-    var _row = function (label, ctrl) {
-      return '<div class="aot-modal-option-row">' +
-             '<div class="aot-modal-option-label">' + _esc(label) + '</div>' +
-             '<div class="aot-modal-option-control">' + ctrl + '</div></div>';
-    };
-    var _in = function (f, t) {
-      return '<input type="' + t + '" class="aot-modern-input form-control" ' +
-             'data-sf="' + f + '">';
-    };
-    // 기본 날짜는 내일 — 오늘 잡는 일보다 앞으로 잡는 일이 많다.
-    var d = new Date(Date.now() + 86400000);
-    var def = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
-              '-' + String(d.getDate()).padStart(2, '0');
-
-    return '<div class="aot-ov-sched-form" style="display:none">' +
-      '<div class="aot-modal-container">' +
-      _row(_t('Date'), '<input type="date" class="aot-modern-input form-control"' +
-           ' data-sf="date" value="' + _v(def) + '">') +
-      _row(_t('Time'), '<input type="time" class="aot-modern-input form-control"' +
-           ' data-sf="time" value="07:00">') +
-      _row(_t('What'), _in('content', 'text')) +
-      _row(_t('Worker'), _in('worker', 'text')) +
-      '</div>' +
-      '<div class="aot-ov-desc-actions">' +
-      '<button type="button" class="btn aot-pill-btn aot-ov-sched-cancel">' +
-      _esc(_t('Cancel')) + '</button>' +
-      '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary aot-ov-sched-save">' +
-      _esc(_t('Save')) + '</button>' +
-      '</div></div>';
-  }
-
   // ── [개요] — 잘 안 변하는 사실 + 편집 ───────────────────────────────────
   function _plantingAboutHtml(p) {
     // 보기와 편집을 같은 블록에 두고 토글한다(구역 모달의 설명 편집과 같은
@@ -2396,8 +2251,6 @@
     buildOverviewSection:  buildOverviewSection,
     buildAboutSection:     buildAboutSection,
     buildZoneStatusHtml:   buildZoneStatusHtml,
-    buildScheduleHtml:     buildScheduleHtml,
-    wireScheduleAdd:       wireScheduleAdd,
     buildRecordBlock:      buildRecordBlock,
     buildZoneAboutHtml:    buildZoneAboutHtml,
     buildEnvNowHtml:       buildEnvNowHtml,

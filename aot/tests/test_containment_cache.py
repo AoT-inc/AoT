@@ -125,6 +125,14 @@ class TestInvalidationIsWired(unittest.TestCase):
             self.assertIn('containment_cache', src,
                           '%s 가 포함 캐시를 안 버린다' % parts[-1])
 
+    def test_name_index_is_scoped_per_database(self):
+        """프로세스 전역이면 각자 임시 DB 를 만드는 테스트끼리 서로의 도형을
+        본다 — 단독 실행은 통과하고 스위트로 돌리면 깨지는, 원인을 찾기 어려운
+        실패다(2026-08-18 실제로 그렇게 잡았다)."""
+        src = _read('aot_flask', 'geo', 'shape_index.py')
+        self.assertIn('def _scope_key', src)
+        self.assertIn('db.engine.url', src)
+
     def test_invalidate_only_deletes(self):
         """지우는 방향으로만 동작하므로 과하게 불러도 손해는 재계산 비용뿐이다."""
         body = _fn(_read('aot_flask', 'geo', 'containment_cache.py'),

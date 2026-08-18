@@ -28517,3 +28517,7 @@ msgstr "예정은 남기기"
 #: aot/aot_flask/templates/tools/note_edit.html:1
 msgid "Cancel the schedules"
 msgstr "예정도 취소"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(n)s more"
+msgstr "외 %(n)s건"

@@ -857,7 +857,7 @@ def upcoming_schedule(shape, device_ids, extra_targets=(), limit=5):
     shape_targets.update(u for u in (extra_targets or ()) if u)
     dev_targets = set(device_ids or ())
     if not shape_targets and not dev_targets:
-        return {'own': [], 'devices': []}
+        return {'own': [], 'devices': [], 'total': 0}
 
     try:
         rows = SchedulerJobMeta.query.filter(
@@ -865,12 +865,15 @@ def upcoming_schedule(shape, device_ids, extra_targets=(), limit=5):
             SchedulerJobMeta.state.in_(SCHEDULE_LIVE_STATES),
             SchedulerJobMeta.schedule_time.isnot(None),
             SchedulerJobMeta.schedule_time >= utc_now().replace(tzinfo=None),
-        ).order_by(SchedulerJobMeta.schedule_time.asc()).limit(limit * 2).all()
+        ).order_by(SchedulerJobMeta.schedule_time.asc()).limit(limit * 4).all()
     except Exception as exc:
         logger.warning('[SiteSummary] 예정 일정 조회 실패: %s', exc)
-        return {'own': [], 'devices': []}
+        return {'own': [], 'devices': [], 'total': 0}
 
-    out = {'own': [], 'devices': []}
+    # `total` 은 **표시 상한을 넘은 것이 있는지** 말하기 위한 것이다. 5건만
+    # 보여주고 더 있다는 말이 없으면 사용자는 그것이 전부라고 읽는다 —
+    # "없는 것" 과 "안 보여준 것" 이 같은 화면이 되면 안 된다.
+    out = {'own': [], 'devices': [], 'total': len(rows)}
     for row in rows:
         # 직렬화는 AI 도구와 **같은 함수**를 쓴다 — 앵커 tz 로 벽시계를 맞추는
         # 규칙(§7)이 거기 하나뿐이라, 여기서 다시 만들면 같은 일정이 화면과

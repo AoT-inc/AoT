@@ -118,6 +118,129 @@ class TestToolsExpandAndReport(unittest.TestCase):
         self.assertIn('GeoFacility', body)
 
 
+class TestNameResolutionReadsShapesOnce(unittest.TestCase):
+    """이름 하나 해석에 `GeoShape.query.all()` 이 세 번 돌고 있었다.
+
+    실측(2026-08-18, 도형 150): 그 조회 하나가 23.5ms 이고 feature 파싱은
+    사실상 공짜다 — **비용은 파싱이 아니라 JSON 컬럼이 실린 행을 읽는 것**.
+    공용 인덱스로 모은 뒤 `search_schedule('3포장')` 110.5 → 47.6ms,
+    `search_notes('3-1')` 95.7 → 31.9ms.
+    """
+
+    def test_index_module_exists(self):
+        self.assertTrue(os.path.exists(os.path.join(
+            _ROOT, 'aot_flask', 'geo', 'shape_index.py')))
+
+    def test_resolvers_use_the_shared_index(self):
+        src = _read('..', 'aot', 'ai', 'services', 'aot_data_tool_service.py')
+        for fn in ('_resolve_note_target', '_resolve_note_target_ids'):
+            body = _fn(src, fn)
+            self.assertIn('shape_index.named_shapes()', body,
+                          '%s 가 공용 인덱스를 안 쓴다' % fn)
+            # 주석에는 그 문자열이 나온다(왜 안 쓰는지 적어 두었다) —
+            # 코드 줄만 본다.
+            code = [l for l in body.splitlines()
+                    if not l.strip().startswith('#')]
+            self.assertNotIn('GeoShape.query.all()', '\n'.join(code),
+                             '%s 가 아직 전체 조회를 한다' % fn)
+
+    def test_no_orm_rows_in_the_cache(self):
+        """세션이 닫히면 detached 가 되고, 그때 로드되지 않은 속성을 건드리면
+        캐시 히트일 때만 터진다 — 재현이 고약한 종류다."""
+        src = _read('aot_flask', 'geo', 'shape_index.py')
+        self.assertIn('namedtuple', src)
+        body = _fn(src, 'named_shapes')
+        self.assertIn('ShapeRec(', body)
+
+    def test_invalidation_is_wired_to_the_same_place(self):
+        """무효화 배선을 두 벌로 늘리면 한쪽만 부르는 경로가 반드시 생긴다."""
+        cc = _read('aot_flask', 'geo', 'containment_cache.py')
+        self.assertIn('shape_index.invalidate()', _fn(cc, 'invalidate'))
+
+    def test_scope_does_not_resolve_twice(self):
+        """`_resolve_note_target_ids` 가 이미 `_resolve_note_target` 을 부른다."""
+        src = _read('..', 'aot', 'ai', 'services', 'aot_data_tool_service.py')
+        body = _fn(src, '_scope_for_target')
+        self.assertLess(body.index('_resolve_note_target_ids('),
+                        body.index('_resolve_note_target('))
+
+
+class TestScreenAndAiAgree(unittest.TestCase):
+    """화면과 AI 가 **같은 범위**를 답해야 한다.
+
+    2026-08-18 실측(김제) — 둘이 달랐다:
+
+        구역 '3-1'  화면 일정 0건 / AI 2건   (사용자가 방금 만든 예정이 안 보임)
+        필지 '3포장' 화면 일정 1건 / AI 7건
+        필지 '3포장' 화면 노트 0건 / AI 16건
+
+    화면은 site 만 직속 자식 도형까지 봤고 zone 은 자기 것만 봤으며, 식생은
+    `GeoShape` 가 아니라 어느 층위에서도 빠졌다. 노트는 어느 계층에서도
+    자기 것만이었다.
+    """
+
+    def test_schedule_uses_the_shared_descendant_helper(self):
+        """두 벌로 두면 한쪽만 고쳐지고, 그 어긋남은 "AI 는 아는데 화면은
+        모른다" 로 나타난다."""
+        body = _fn(_read('aot_flask', 'routes_geo.py'), '_schedule_payload')
+        self.assertIn('descendant_target_ids(', body)
+        self.assertNotIn('_direct_children(', body)
+
+    def test_notes_can_include_descendants(self):
+        src = _read('aot_flask', 'routes_notes_api.py')
+        body = _fn(src, 'api_notes_target_get')
+        self.assertIn("request.args.get('descendants')", body)
+        self.assertIn('descendant_target_ids(', body)
+        self.assertIn('Notes.target_id.in_(target_ids)', body)
+
+    def test_facility_notes_resolve_through_its_shape(self):
+        """시설은 정체성이 둘이다 — 노트는 GeoFacility uuid 에 붙는데 기하는
+        도형 쪽이라, 도형으로 옮겨야 자손이 나온다."""
+        body = _fn(_read('aot_flask', 'routes_notes_api.py'),
+                   'api_notes_target_get')
+        self.assertIn('GeoFacility', body)
+        self.assertIn('shape_uuid', body)
+
+    def test_each_note_says_where_it_came_from(self):
+        """합쳐 놓고 출처가 없으면 오히려 혼란이 된다."""
+        src = _read('aot_flask', 'routes_notes_api.py')
+        self.assertIn('def _display_name_for_target', src)
+        body = _fn(src, '_display_name_for_target')
+        for model in ('GeoShape', 'GeoPlanting', 'GeoFacility'):
+            self.assertIn(model, body)
+        js = _read('aot_flask', 'static', 'js', 'common', 'sensor-label.js')
+        self.assertIn('n.target_name', js)
+
+    def test_containers_ask_for_descendants(self):
+        """대지·구역·시설은 컨테이너다. 식생은 최하위라 자기 것만."""
+        js = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+                   'aot-map-widget-vector.js')
+        self.assertGreaterEqual(js.count('descendants: true'), 3)
+        veg = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+                    'aot-map-vegetation.js')
+        self.assertNotIn('descendants', veg)
+
+    def test_area_for_descendants_always_includes_the_root(self):
+        """`include_self` 는 결과 목록에 root 를 넣을지만 정한다. 판정 영역까지
+        같이 묶었더니 `include_self=False` 로 부른 화면에서 **root 안에 직접
+        있는 구획이 통째로 빠졌다**(구역 모달 예정 0건)."""
+        body = _fn(_read('utils', 'geo_hierarchy.py'), 'descendant_target_ids')
+        self.assertIn('if root_shape.unique_id:', body)
+        self.assertIn('if include_self:', body)
+
+    def test_truncated_list_says_so(self):
+        """5건만 보여주고 더 있다는 말이 없으면 사용자는 그것이 전부라고 읽는다
+        — "없는 것" 과 "안 보여준 것" 이 같은 화면이 되면 안 된다."""
+        body = _fn(_read('aot_flask', 'geo', 'site_summary.py'),
+                   'upcoming_schedule')
+        self.assertIn("'total': len(rows)", body)
+        popup = _read('aot_flask', 'static', 'js', 'widgets', 'AoT_map',
+                      'aot-map-popup.js')
+        rec = _fn(popup, 'buildRecordBlock')
+        self.assertIn("_t('%(n)s more')", rec)
+        self.assertIn('total > items.length', rec)
+
+
 class TestCropNameResolvesToThePlot(unittest.TestCase):
     """작물 이름은 그 **구획**으로 풀린다 — 예전에는 구역으로 접혔다."""
 

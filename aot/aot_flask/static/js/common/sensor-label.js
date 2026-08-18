@@ -312,11 +312,17 @@
                ' ' + otherCnt + '</div>';
       }
 
+      // 어디 것인지 — 자손까지 합쳐 보여줄 때 이것이 없으면 합친 목록이
+      // 오히려 혼란이 된다. 자기 것이면 서버가 null 을 주므로 안 붙는다.
+      var where = n.target_name
+        ? ' <span class="aot-ov-muted">· ' + _escape(n.target_name) + '</span>'
+        : '';
       html += '<div class="aot-ov-note">' +
               '<div class="aot-ov-note-row">' +
               '<span class="aot-ov-note-date">' + _escape(d) + '</span>' +
               '<span class="aot-ov-note-text">' + (_escape(txt) ||
-                ('<span class="aot-ov-muted">' + _escape(_t('Attachments')) + '</span>')) + '</span>' +
+                ('<span class="aot-ov-muted">' + _escape(_t('Attachments')) + '</span>')) +
+                where + '</span>' +
               '</div>' + att + '</div>';
     });
     listEl.innerHTML = html;
@@ -329,6 +335,10 @@
   //   opts.cache      : { html: '<이전 렌더>' } — 주기 갱신하는 창(시설 모달은
   //                     30초)에서 깜빡임을 막는다. 이전 내용을 먼저 그려 두고
   //                     새 응답이 **실제로 달라졌을 때만** 교체한다.
+  //   opts.descendants: 컨테이너(대지·구역·시설)에서 **그 안의 노트까지**.
+  //                     자기 것만 보이면 대부분 비어 있다(실측: 필지 자체
+  //                     0건, 그 아래 16건). AI 는 이미 자손을 훑으므로 이것이
+  //                     없으면 화면과 AI 가 다른 답을 한다.
   function wireNotesBlock(scopeEl, target, opts) {
     if (!scopeEl || !target || !target.targetId) return;
     opts = opts || {};
@@ -358,7 +368,8 @@
     var cache = opts.cache;
     if (cache && cache.html) listEl.innerHTML = cache.html;
 
-    fetch('/notes/target/' + encodeURIComponent(target.targetId))
+    fetch('/notes/target/' + encodeURIComponent(target.targetId) +
+          (opts.descendants ? '?descendants=1' : ''))
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (notes) {
         if (!listEl.isConnected) return;

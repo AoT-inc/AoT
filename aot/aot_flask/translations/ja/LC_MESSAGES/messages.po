@@ -28276,3 +28276,7 @@ msgstr "予定は残す"
 #: aot/aot_flask/templates/tools/note_edit.html:1
 msgid "Cancel the schedules"
 msgstr "予定も取り消す"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js:1
+msgid "%(n)s more"
+msgstr "ほか %(n)s件"

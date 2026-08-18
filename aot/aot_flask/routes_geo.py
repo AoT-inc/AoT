@@ -3570,24 +3570,31 @@ def api_schedule_for_target(target_id):
 def _schedule_payload(target_id):
     """대상 종류를 가려 `upcoming_schedule` 을 부른다. 못 찾으면 None.
 
-    종류별로 무엇을 하위로 볼지가 다르다:
-      site      직속 자식 도형 + 그 아래 장치 전부 (롤업)
-      zone      그 구역의 장치
-      facility  그 시설의 장치
-      planting  구획에 **닿는** 장치만(구획 안 + 겹치는 장치 영역)
+    **"그 안에서 일어나는 일" 전부다.** 예전에는 site 만 직속 자식 도형까지
+    보고 zone 은 자기 것만 봤으며, 식생은 `GeoShape` 가 아니라 어느 층위에서도
+    빠졌다. 그 결과 화면과 AI 가 **다른 답**을 했다 — 실측(2026-08-18 김제):
+    구역 '3-1' 모달은 예정 0건인데 `search_schedule('3-1')` 은 2건(그 안 식생의
+    드론 점검·지게차)이었고, '3포장' 은 1건 대 7건이었다. 사용자가 방금 만든
+    예정이 그 구역 화면에 안 보였다.
+
+    이제 AI 도구와 **같은 헬퍼**(`descendant_target_ids`)를 쓴다. 두 벌로 두면
+    한쪽만 고쳐지고, 그 어긋남은 "AI 는 아는데 화면은 모른다" 로 나타난다.
+
+      planting  구획에 **닿는** 장치만(구획 안 + 겹치는 장치 영역) — 최하위라
+                자손이 없고, 별도 경로(`_planting_schedule`)가 맡는다.
     """
     from aot.aot_flask.geo import device_membership
-    from aot.aot_flask.geo.site_summary import upcoming_schedule, _direct_children
+    from aot.aot_flask.geo.site_summary import upcoming_schedule
+    from aot.utils.geo_hierarchy import descendant_target_ids
 
     shape = GeoShape.query.filter_by(unique_id=target_id).first()
     if shape is not None:
         ids = device_membership.device_ids_in_area(shape.unique_id) or set()
-        kids = []
-        if shape.type == 'site':
-            try:
-                kids = [c.unique_id for c in _direct_children(shape)]
-            except Exception:
-                current_app.logger.exception('schedule: 자식 도형 조회 실패')
+        try:
+            kids, _bd = descendant_target_ids(shape, include_self=False)
+        except Exception:
+            kids = []
+            current_app.logger.exception('schedule: 자손 조회 실패')
         return upcoming_schedule(shape, ids, kids)
 
     from aot.databases.models import GeoPlanting
@@ -3607,7 +3614,11 @@ def _schedule_payload(target_id):
             # 시설 uuid 도 대상에 넣는다 — 일정·노트는 GeoFacility uuid 로
             # 붙는데 장치·기하는 도형 쪽이라, 도형만 보면 방금 만든 일정이
             # 그 시설 화면에서 안 보인다.
-            return upcoming_schedule(sh, ids, [fac.unique_id])
+            try:
+                kids, _bd = descendant_target_ids(sh, include_self=False)
+            except Exception:
+                kids = []
+            return upcoming_schedule(sh, ids, list(kids) + [fac.unique_id])
         return {'own': [], 'devices': []}
     return None
 
@@ -3625,6 +3636,12 @@ def api_schedule_create():
     고를 것이 없다.
 
     `action_type='human'` 이라 장치를 움직이지 않는다(APScheduler 트리거 없음).
+
+    **지도 모달은 더 이상 이 경로를 쓰지 않는다**(2026-08-18). 예정을 만드는
+    자리는 노트 하나로 모았다 — 노트 본문의 한 구간을 골라 시각을 주면
+    `/notes/<id>/schedule` 이 같은 헬퍼(`_create_human_schedule`)를 부른다.
+    이 라우트는 API 계약으로 남긴다. **여기에 기대어 새 UI 를 만들지 말 것** —
+    화면에 두 번째 입력 경로가 생기는 순간 "쓰기 전에 종류 고르기" 로 되돌아간다.
     """
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'ok': False, 'message': 'Permission Denied'}), 403

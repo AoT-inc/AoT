@@ -338,11 +338,16 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True,
     if root_shape is None:
         return ids, breakdown
 
+    # 판정 **영역**에는 root 가 항상 들어간다 — `include_self` 는 결과 목록에
+    # root 자신의 uuid 를 넣을지만 정한다. 둘을 같이 묶었더니
+    # `include_self=False` 로 부른 화면에서 **root 안에 직접 있는 구획이 통째로
+    # 빠졌다**(구역 '3-1' 모달 예정 0건 — 그 안 식생의 예정 2건이 있는데도).
     shape_ids = []
-    if include_self and root_shape.unique_id:
-        ids.append(root_shape.unique_id)
+    if root_shape.unique_id:
         shape_ids.append(root_shape.unique_id)
-        breakdown['self'] = 1
+        if include_self:
+            ids.append(root_shape.unique_id)
+            breakdown['self'] = 1
 
     kids = geo_descendant_shapes(root_shape, all_shapes=all_shapes,
                                  use_cache=use_cache)

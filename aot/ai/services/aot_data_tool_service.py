@@ -5993,23 +5993,18 @@ class AoTDataToolService:
         prefers the most specific shape (zone/feature over site) and uses a site
         token to disambiguate via parent_id → substring fallback → Input/Output.
         """
-        import json as _json
         if not target_name or not str(target_name).strip():
             return None, None, None, None, None
         _q = str(target_name).strip()
         _ql = _q.lower()
 
-        # Parse every named GeoShape once: (shape, name, name_lower).
-        shapes = []
-        for shape in GeoShape.query.all():
-            try:
-                feat = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
-                props = feat.get('properties') or {}
-                _name = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
-                if _name:
-                    shapes.append((shape, _name, _name.lower()))
-            except Exception:
-                continue
+        # 이름이 있는 도형: 파싱 결과를 공용 인덱스에서 받는다.
+        # 예전에는 이 함수와 `_resolve_note_target_ids` 가 각자
+        # `GeoShape.query.all()` 을 돌아, 이름 하나 해석에 그 조회가 세 번
+        # 났다(실측 23.5ms × 3). 비용은 파싱이 아니라 JSON 컬럼이 실린 행을
+        # 읽는 것이다.
+        from aot.aot_flask.geo import shape_index
+        shapes = shape_index.named_shapes()
 
         def _ret(shape, name):
             _tt = shape.type if shape.type in ('zone', 'site', 'facility', 'facility_bay', 'equipment') else 'zone'
@@ -6259,21 +6254,26 @@ class AoTDataToolService:
         if not target_name or not str(target_name).strip():
             return [], scope
 
-        tid, ttype, rname, _la, _ln = \
-            AoTDataToolService._resolve_note_target(target_name)
-        if not tid:
+        # 이름이 여러 정체성에 걸릴 수 있다(장치 = Input/Output + 마커 + 폴리곤).
+        # 그 합집합은 `_resolve_note_target_ids` 가 계산하고, **그 안에서 이미**
+        # `_resolve_note_target` 을 부른다 — 여기서 또 부르면 같은 해석을 두 번
+        # 한다(실측 22.6ms 중복).
+        try:
+            ids, rname = AoTDataToolService._resolve_note_target_ids(target_name)
+        except Exception:
+            ids, rname = [], None
+        if not ids:
             return [], scope
 
+        tid = ids[0]
+        try:
+            _t, ttype, _r, _la, _ln = \
+                AoTDataToolService._resolve_note_target(target_name)
+        except Exception:
+            ttype = None
         scope.update({'resolved': True, 'resolved_name': rname,
                       'target_type': ttype})
-
-        # 이름이 여러 정체성에 걸릴 수 있다(장치 = Input/Output + 마커 + 폴리곤).
-        # 그 합집합은 이미 _resolve_note_target_ids 가 계산한다.
-        try:
-            ids, _rn = AoTDataToolService._resolve_note_target_ids(target_name)
-        except Exception:
-            ids = [tid]
-        ids = list(ids or [tid])
+        ids = list(ids)
 
         # 도형이면 그 아래 전부로 넓힌다(구역·시설·장치·식생).
         try:
@@ -6477,6 +6477,8 @@ class AoTDataToolService:
             except Exception:
                 site_shape = None
             if site_shape:
+                # 여기서는 ORM 행이 필요하다(기하 파싱 → 자손 판정). 공용
+                # 인덱스는 이름 해석용 경량 레코드라 기하를 들지 않는다.
                 # A descendant 'device' marker's OWN unique_id is not what a
                 # note attaches to — the device panel writes the note against
                 # the underlying Input/Output's unique_id (shape.device_id),
@@ -6491,16 +6493,11 @@ class AoTDataToolService:
                         ids.append(str(_desc.device_id).split('::')[0])
 
         # GeoShapes whose display name matches EXACTLY → add the shape's own id
-        # and the device it represents.
+        # and the device it represents. 같은 공용 인덱스를 쓴다(위 주석 참조).
         try:
-            for shape in GeoShape.query.all():
-                try:
-                    feat = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
-                    props = feat.get('properties') or {}
-                    _name = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
-                except Exception:
-                    continue
-                if _name and _name.lower() == _ql:
+            from aot.aot_flask.geo import shape_index
+            for shape, _name, _nl in shape_index.named_shapes():
+                if _nl == _ql:
                     if shape.unique_id:
                         ids.append(shape.unique_id)
                     if shape.device_id:
