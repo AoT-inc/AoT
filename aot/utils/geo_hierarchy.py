@@ -143,3 +143,129 @@ def geo_descendant_shapes(root_shape, all_shapes=None):
 def geo_descendant_unique_ids(root_shape, all_shapes=None):
     """Convenience wrapper: unique_ids of geo_descendant_shapes()."""
     return [s.unique_id for s in geo_descendant_shapes(root_shape, all_shapes=all_shapes) if s.unique_id]
+
+
+# ─── 노트·일정이 붙을 수 있는 자리 전부 ────────────────────────────────────
+#
+# "3포장의 예정을 요약해" 는 3포장 **안에서 일어나는 일** 을 묻는 것이지 3포장
+# 도형 자체에 붙은 것만 묻는 것이 아니다. 그런데 조회는 `target_id ==` 정확
+# 일치였다 — 실측(2026-08-18, 김제): `search_schedule('3포장')` 이 0건을 돌려
+# 주는데 실제로는 구역에 1건, 그 안 식생에 2건이 있었다.
+#
+# 더 나쁜 것은 **에러가 아니라 0건** 이라는 점이다. AI 는 그것을 "예정 없음"
+# 으로 읽고 "충돌 없습니다" 라고 답한다. 없는 것과 못 찾는 것이 같은 응답이라
+# 틀린 답이 확신에 찬 문장으로 나온다.
+#
+# 한 대상 아래에는 **정체성이 여러 벌** 있어서 도형 uuid 만으로는 부족하다:
+#   - 시설: `GeoFacility.unique_id` ≠ 그 시설 도형의 `unique_id`.
+#     노트·일정은 GeoFacility 쪽에 붙는데 기하는 도형 쪽이다.
+#   - 장치 마커: 노트는 마커가 아니라 그 Input/Output 의 uuid 에 붙는다
+#     (`shape.device_id`).
+#   - 식생: `GeoPlanting` 은 GeoShape 가 **아니라서** 자손 순회에 아예 안
+#     들어간다. 소속 컬럼도 없어 기하로 판정해야 한다.
+# 하나라도 빠뜨리면 그 종류에 붙은 것만 조용히 사라진다.
+
+
+def _planting_ids_inside(shape_ids, geo_ids=None):
+    """주어진 도형들 안에 있는 활성 GeoPlanting 의 unique_id.
+
+    식생은 소속 컬럼이 없다(설계상 소속은 저장하지 않고 파생한다 —
+    docs/design/geo-vegetation-planting.md). 쓰기(장치 소속)에는 맞는 원칙이지만
+    읽기에서는 "식생만 안 보인다" 로 나타나므로, 조회 시점에 기하로 판정한다.
+    """
+    from shapely.geometry import shape as _shapely_shape
+    from aot.databases.models import GeoShape, GeoPlanting
+    from aot.aot_flask.geo import planting_context
+
+    if not shape_ids:
+        return []
+
+    polys = []
+    for row in GeoShape.query.filter(GeoShape.unique_id.in_(list(shape_ids))).all():
+        try:
+            g = _parse_geometry(row)
+            if g is not None and not g.is_empty:
+                polys.append(g)
+        except Exception:
+            continue
+    if not polys:
+        return []
+
+    q = GeoPlanting.query.filter(GeoPlanting.ended_on.is_(None))
+    if geo_ids:
+        q = q.filter(GeoPlanting.geo_id.in_(list(geo_ids)))
+
+    out = []
+    for pl in q.all():
+        try:
+            geom = planting_context.geometry_of(pl)
+            pt = containment_point(_shapely_shape(geom))
+            if pt is None:
+                continue
+            if any(poly.contains(pt) for poly in polys):
+                out.append(pl.unique_id)
+        except Exception:
+            continue
+    return out
+
+
+def descendant_target_ids(root_shape, all_shapes=None, include_self=True):
+    """이 대상 아래에서 노트·일정이 붙을 수 있는 target_id 전부.
+
+    돌려주는 것은 `(ids, breakdown)` — `breakdown` 은 무엇을 얼마나 훑었는지를
+    사람과 AI 에게 말하기 위한 것이다. **개수를 함께 돌려주는 이유**: 결과가
+    0건일 때 "정말 없다" 와 "못 찾았다" 를 구분할 근거가 그것뿐이다.
+    """
+    from aot.databases.models import GeoFacility
+
+    ids, breakdown = [], {'self': 0, 'shapes': 0, 'facilities': 0,
+                          'devices': 0, 'plantings': 0}
+    if root_shape is None:
+        return ids, breakdown
+
+    shape_ids = []
+    if include_self and root_shape.unique_id:
+        ids.append(root_shape.unique_id)
+        shape_ids.append(root_shape.unique_id)
+        breakdown['self'] = 1
+
+    kids = geo_descendant_shapes(root_shape, all_shapes=all_shapes)
+    for k in kids:
+        if k.unique_id:
+            ids.append(k.unique_id)
+            shape_ids.append(k.unique_id)
+            breakdown['shapes'] += 1
+        # 장치 마커의 노트는 마커가 아니라 그 Input/Output 에 붙는다.
+        if k.device_id:
+            ids.append(str(k.device_id).split('::')[0])
+            breakdown['devices'] += 1
+
+    # 시설은 정체성이 둘이다 — 노트·일정은 GeoFacility uuid 쪽에 붙는다.
+    fac_shape_ids = [s.unique_id for s in ([root_shape] + list(kids))
+                     if s.type == 'facility' and s.unique_id]
+    if fac_shape_ids:
+        try:
+            for f in GeoFacility.query.filter(
+                    GeoFacility.shape_uuid.in_(fac_shape_ids)).all():
+                if f.unique_id:
+                    ids.append(f.unique_id)
+                    breakdown['facilities'] += 1
+        except Exception:
+            pass
+
+    geo_ids = {s.geo_id for s in ([root_shape] + list(kids)) if getattr(s, 'geo_id', None)}
+    try:
+        for pid in _planting_ids_inside(shape_ids, geo_ids=geo_ids):
+            ids.append(pid)
+            breakdown['plantings'] += 1
+    except Exception:
+        pass
+
+    # 순서를 지키며 중복 제거 — 첫 항목이 root 자신이어야 호출자가 "자기 것"
+    # 을 먼저 보여줄 수 있다.
+    seen, uniq = set(), []
+    for i in ids:
+        if i and i not in seen:
+            seen.add(i)
+            uniq.append(i)
+    return uniq, breakdown

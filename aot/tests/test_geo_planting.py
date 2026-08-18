@@ -1641,8 +1641,14 @@ class TestCropNameTargetResolution(unittest.TestCase):
 
     이 폴백은 **쓰기 도구**(add_schedule·create_note)의 타깃 해석에도 그대로
     쓰인다. 그래서 여기서 고정하는 것 중 진짜 위험한 것은 "찾는다"가 아니라
-    **"애매하면 안 찾는다"** 쪽이다: 같은 작물이 두 구역에 있을 때 하나를
+    **"애매하면 안 찾는다"** 쪽이다: 같은 작물이 두 구획에 있을 때 하나를
     골라버리면 엉뚱한 밭에 조용히 기록이 남는다.
+
+    **2026-08-18 계약 변경**: 예전에는 작물명이 그 작물이 든 **구역**으로
+    풀렸다(구획은 쓰기 대상이 아니었으므로). 노트의 선택 구간이 구획에 붙은
+    예정이 되면서 그 전제가 깨졌다 — 구역으로 접으면 사용자가 '장풍' 을
+    물었을 때 리졸버는 '3-1' 이라 답하고, 정작 장풍에 달린 예정 2건은 어떤
+    이름으로도 닿지 못한다(실측: 0건). 이제 **구획**으로 푼다.
     """
 
     @classmethod
@@ -1711,24 +1717,25 @@ class TestCropNameTargetResolution(unittest.TestCase):
         from aot.ai.services.aot_data_tool_service import AoTDataToolService
         return AoTDataToolService._resolve_note_target(name)
 
-    def test_crop_with_place_suffix_resolves_to_its_zone(self):
-        """'콩밭' → 콩이 심긴 zone. 이 폴백이 없던 시절의 실패 사례 그대로."""
+    def test_crop_with_place_suffix_resolves_to_its_plot(self):
+        """'콩밭' → 콩이 심긴 **구획**. 구역이 아니다(클래스 docstring 참조)."""
         target_id, target_type, name, _, _ = self._resolve('콩밭')
-        self.assertEqual(name, '3-1')
-        self.assertEqual(target_type, 'zone')
+        self.assertEqual(name, '콩')
+        self.assertEqual(target_type, 'planting')
         self.assertTrue(target_id)
 
     def test_spaced_suffix_also_resolves(self):
         """'상추 재배지' — 붙여 쓰든 띄어 쓰든 같은 답이어야 한다."""
-        self.assertEqual(self._resolve('상추 재배지')[2], '3-2')
-        self.assertEqual(self._resolve('상추재배지')[2], '3-2')
+        self.assertEqual(self._resolve('상추 재배지')[2], '상추')
+        self.assertEqual(self._resolve('상추재배지')[2], '상추')
 
     def test_bare_crop_name_resolves(self):
-        self.assertEqual(self._resolve('콩')[2], '3-1')
+        self.assertEqual(self._resolve('콩')[2], '콩')
 
     def test_variety_name_resolves(self):
         """품종으로 부르는 사람도 있다 — '청치마'는 상추 구획의 품종."""
-        self.assertEqual(self._resolve('청치마')[2], '3-2')
+        self.assertEqual(self._resolve('청치마')[1], 'planting')
+        self.assertEqual(self._resolve('청치마')[2], '상추')
 
     def test_zone_name_still_wins_over_crop(self):
         """폴백은 **최후**다. 지도 이름이 맞으면 그것이 답이어야 한다."""
@@ -1757,7 +1764,11 @@ class TestCropNameTargetResolution(unittest.TestCase):
             db.session.commit()
 
     def test_same_crop_in_two_zones_refuses_to_guess(self):
-        """모호하면 매치하지 않는다 — 이 리졸버는 쓰기 도구가 함께 쓴다."""
+        """모호하면 매치하지 않는다 — 이 리졸버는 쓰기 도구가 함께 쓴다.
+
+        구획 단위로 풀게 된 뒤에도 그대로다: 같은 작물의 구획이 둘이면 어느
+        쪽인지 알 방법이 없고, 하나를 골라 버리면 엉뚱한 밭에 조용히 쓰인다.
+        """
         from aot.aot_flask.extensions import db
 
         self._second_bean.ended_on = None       # 3-3 의 콩을 되살린다
@@ -1768,8 +1779,13 @@ class TestCropNameTargetResolution(unittest.TestCase):
             self._second_bean.ended_on = date.today() - timedelta(days=1)
             db.session.commit()
 
-    def test_plot_outside_every_zone_is_not_a_target(self):
-        """zone 밖 구획은 쓸 대상이 없다 — GeoPlanting 자신은 쓰기 대상이 아니다."""
+    def test_plot_outside_every_zone_is_still_a_target(self):
+        """zone 밖 구획도 대상이다 — **계약이 뒤집혔다.**
+
+        예전에는 버렸다(구획에는 쓸 수 없으니 담을 GeoShape 가 있어야 했다).
+        지금은 구획 자신이 노트·예정을 갖는다. 버리면 사용자가 방금 만든 것에
+        리졸버가 도달하지 못한다.
+        """
         from aot.aot_flask.extensions import db
         from aot.databases.models import GeoPlanting
 
@@ -1780,7 +1796,10 @@ class TestCropNameTargetResolution(unittest.TestCase):
         db.session.add(row)
         db.session.commit()
         try:
-            self.assertIsNone(self._resolve('들깨밭')[0])
+            tid, ttype, name, _, _ = self._resolve('들깨밭')
+            self.assertTrue(tid)
+            self.assertEqual(ttype, 'planting')
+            self.assertEqual(name, '들깨')
         finally:
             db.session.delete(row)
             db.session.commit()

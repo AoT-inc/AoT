@@ -1655,15 +1655,26 @@ class AoTDataToolService:
             # exists as an Input/Output row AND as map shape(s) with different
             # unique_ids, and a note may be attached to any of them — so query the
             # union, not just the single most-specific match.
+            scope = None
             if target_id:
                 candidate_ids = [target_id]
             elif target_name:
-                candidate_ids, resolved_name = \
-                    AoTDataToolService._resolve_note_target_ids(target_name)
+                # 대상 안에서 일어나는 일 **전부** — 구역·시설·장치·식생.
+                # 예전에는 site 일 때만 자손 도형을 붙였고, 식생은 GeoShape 가
+                # 아니라 어느 층위에서도 보이지 않았다(2026-08-18 실측: 구역을
+                # 물어도 그 안 식생 노트가 0건).
+                candidate_ids, scope = \
+                    AoTDataToolService._scope_for_target(target_name)
+                resolved_name = scope.get('resolved_name')
                 if not candidate_ids:
                     return {
                         "status": "success", "count": 0, "results": [],
+                        "scope": scope,
                         "message": f"Location/device '{target_name}' was not found.",
+                        "warning": (
+                            "The name did not resolve, so this is NOT evidence "
+                            "that there are no notes. Ask for the exact name, or "
+                            "call resolve_target first."),
                     }
 
             # The LLM frequently passes an ENTITY NAME in `query` instead of
@@ -1702,10 +1713,15 @@ class AoTDataToolService:
             if not rows:
                 _where = (f"location/device '{resolved_name or target_name}'"
                           if (target_name or target_id) else f"query '{query}'")
-                return {
+                out = {
                     "status": "success", "count": 0, "results": [],
                     "message": f"No notes found for {_where}.",
                 }
+                # 무엇을 훑고 0건인지 말한다 — 그래야 "정말 없다" 와 "못
+                # 찾았다" 가 구분된다.
+                if scope is not None:
+                    out["scope"] = scope
+                return out
 
             # Each note displays in ITS OWN location tz (the device/zone/site it is
             # attached to) — consistent with how that entity's schedules show device
@@ -1754,6 +1770,21 @@ class AoTDataToolService:
                                     break
                         except Exception:
                             pass
+                    # 식생·시설은 GeoShape 가 아니다. 이름이 없으면 AI 는 "어느
+                    # 구획 것인지" 를 구분할 수 없는데, 이 도구는 site 를 물으면
+                    # 그 아래 전부를 돌려주므로 구분이 곧 답의 정확도가 된다.
+                    if not _nm:
+                        try:
+                            from aot.databases.models import GeoPlanting, GeoFacility
+                            pl = GeoPlanting.query.filter_by(unique_id=tid).first()
+                            if pl is not None:
+                                _nm = pl.name or pl.crop
+                            else:
+                                fac = GeoFacility.query.filter_by(unique_id=tid).first()
+                                if fac is not None:
+                                    _nm = getattr(fac, 'name', None)
+                        except Exception:
+                            pass
                     _name_by_target[tid] = _nm
                 return _name_by_target[tid]
 
@@ -1784,13 +1815,16 @@ class AoTDataToolService:
                     "target_name": _note_target_name(r.target_id),
                 })
 
-            return {
+            out = {
                 "status": "success",
                 "count": len(results),
                 "results": results,
                 "query": query,
                 "target": resolved_name or target_name or target_id,
             }
+            if scope is not None:
+                out["scope"] = scope
+            return out
         except Exception as e:
             logger.error(f"Error in search_notes_tool: {e}")
             return {"error": f"Error while querying notes: {str(e)}"}
@@ -2730,11 +2764,17 @@ class AoTDataToolService:
                 q = q.filter(_or(SchedulerJobMeta.reasoning.like(like),
                                  SchedulerJobMeta.params_json.like(like)))
 
+            # 대상 안에서 일어나는 일 **전부** 를 본다 — 구역·시설·장치·식생.
+            # 정확 일치만 보던 때는 site 를 물으면 0건이 나왔다(_scope_for_target).
+            scope = None
             if target_name:
-                target_id, _tt, _rn, _lat, _lng = \
-                    AoTDataToolService._resolve_note_target(target_name)
-                if target_id:
-                    q = q.filter(SchedulerJobMeta.target_id == target_id)
+                ids, scope = AoTDataToolService._scope_for_target(target_name)
+                if ids:
+                    q = q.filter(SchedulerJobMeta.target_id.in_(ids))
+                else:
+                    # 이름을 못 찾았다. 여기서 필터를 걸지 않으면 **전체 일정**
+                    # 이 그 대상의 것인 양 돌아간다.
+                    q = q.filter(SchedulerJobMeta.target_id == '\x00none')
 
             # 예정은 임박한 순, 과거 포함이면 최신순
             if include_past:
@@ -2744,11 +2784,22 @@ class AoTDataToolService:
 
             rows = q.limit(max(1, int(limit))).all()
             results = [AoTDataToolService._schedule_summary(r) for r in rows]
-            return {
+            out = {
                 "status": "success",
                 "count": len(results),
                 "results": results,
             }
+            if scope is not None:
+                out["scope"] = scope
+                if not scope['resolved']:
+                    # 0건을 "예정 없음" 으로 읽으면 "충돌 없습니다" 라는 틀린
+                    # 답이 확신에 찬 문장으로 나간다. 못 찾은 것은 없는 것이 아니다.
+                    out["warning"] = (
+                        "'%s' could not be resolved to any place or device, so "
+                        "this is NOT evidence that nothing is scheduled. Ask the "
+                        "user for the exact name, or call resolve_target first."
+                        % target_name)
+            return out
         except Exception as e:
             logger.error(f"Error in search_schedule_tool: {e}")
             return {"error": f"Error while querying schedules: {str(e)}"}
@@ -6051,11 +6102,15 @@ class AoTDataToolService:
     @staticmethod
     def _active_crop_plots():
         """Active GeoPlanting rows paired with the zone that contains them, as
-        [{'crop','variety','name','zone_id','zone_type','zone_name'}].
+        [{'crop','variety','name','plot_id','zone_id','zone_type','zone_name'}].
 
-        Plots outside every zone are dropped: this feeds target resolution, and
-        a target must be a GeoShape something can be written against — a
-        GeoPlanting is never a write target (docs/design/geo-vegetation-planting.md).
+        **A plot IS a write target now.** It was not when this was written —
+        notes and schedules only attached to GeoShapes, so a plot outside every
+        zone was useless and got dropped. Since 2026-08-18 a note's selected
+        span can become a schedule attached to the plot itself, so dropping
+        those rows means the resolver cannot reach what the user just created.
+        `zone_*` stays (a plot is still reported with the zone it sits in), but
+        it is no longer required.
         """
         import json as _json
         from aot.databases.models import GeoMap
@@ -6083,39 +6138,45 @@ class AoTDataToolService:
                     zone = planting_context.zone_for_planting(row, containers=containers)
                 except Exception:
                     zone = None
-                if zone is None:
-                    continue
-                try:
-                    feat = zone.feature if isinstance(zone.feature, dict) else _json.loads(zone.feature or '{}')
-                    props = feat.get('properties') or {}
-                    zone_name = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
-                except Exception:
-                    zone_name = ''
-                if not zone_name:
-                    continue
-                _zt = zone.type if zone.type in ('zone', 'site', 'facility', 'facility_bay', 'equipment') else 'zone'
+                zone_name, zone_id, _zt = '', None, None
+                if zone is not None:
+                    try:
+                        feat = zone.feature if isinstance(zone.feature, dict) else _json.loads(zone.feature or '{}')
+                        props = feat.get('properties') or {}
+                        zone_name = str(props.get('name') or props.get('label') or props.get('title') or '').strip()
+                    except Exception:
+                        zone_name = ''
+                    zone_id = zone.unique_id
+                    _zt = zone.type if zone.type in ('zone', 'site', 'facility', 'facility_bay', 'equipment') else 'zone'
                 out.append({
                     'crop': row.crop, 'variety': row.variety, 'name': row.name,
-                    'zone_id': zone.unique_id, 'zone_type': _zt, 'zone_name': zone_name,
+                    'plot_id': row.unique_id,
+                    'zone_id': zone_id, 'zone_type': _zt, 'zone_name': zone_name,
                 })
         return out
 
     @staticmethod
     def _resolve_target_by_crop(query):
-        """Resolve '콩밭' / '상추 재배지' to the zone that crop grows in.
+        """Resolve '콩밭' / '장풍' to the PLOT that crop grows in.
 
         Farm hands name a plot by what is in it, not by the map's zone name
         ('3-1'), so every zone-name pass above misses those words entirely.
         Matching runs against ACTIVE plantings only — last year's crop must not
-        steer this year's note — and resolves to the CONTAINING ZONE, because
-        the callers of this resolver write against GeoShapes.
+        steer this year's note.
+
+        **It resolves to the plot, not its zone.** It used to return the
+        containing zone, because a GeoPlanting could not be written against.
+        That stopped being true on 2026-08-18: a note's selected span becomes a
+        schedule attached to the plot. Returning the zone meant the user asked
+        about '장풍', the resolver answered 'zone 3-1', and the two schedules
+        sitting on 장풍 itself were unreachable by any name (measured — 0 hits).
 
         Returns the same 5-tuple as _resolve_note_target(), or None for no match.
 
-        One crop spread over several zones resolves to None on purpose. The
+        One crop spread over several PLOTS resolves to None on purpose. The
         5-tuple cannot carry 'ambiguous', and this resolver feeds write tools
-        (add_schedule, create_note) — picking the first of several zones would
-        silently write to the wrong field. No match lets the caller ask.
+        (add_schedule, create_note) — picking the first would silently write to
+        the wrong plot. No match lets the caller ask.
         """
         try:
             plots = AoTDataToolService._active_crop_plots()
@@ -6135,10 +6196,22 @@ class AoTDataToolService:
                     if v and str(v).strip()]
 
         def _one_zone(hits):
-            zone_ids = {p['zone_id'] for p in hits}
+            """이름 하나가 구획 하나로 좁혀질 때만 답한다.
+
+            같은 작물이 두 구획에 있으면 None — 5-tuple 에 '모호함' 을 담을
+            자리가 없고, 이 리졸버는 쓰기 도구도 쓰므로 하나를 골라 버리면
+            엉뚱한 구획에 조용히 쓰인다.
+            """
+            plot_ids = {p.get('plot_id') for p in hits if p.get('plot_id')}
+            if len(plot_ids) == 1:
+                p = next(h for h in hits if h.get('plot_id'))
+                label = p.get('name') or p.get('crop')
+                return p['plot_id'], 'planting', label, None, None
+            # 구획 id 가 없는(옛 데이터) 경우에만 zone 으로 물러선다.
+            zone_ids = {p['zone_id'] for p in hits if p.get('zone_id')}
             if len(zone_ids) != 1:
                 return None
-            p = hits[0]
+            p = next(h for h in hits if h.get('zone_id'))
             return p['zone_id'], p['zone_type'], p['zone_name'], None, None
 
         stems = [ql]
@@ -6163,6 +6236,66 @@ class AoTDataToolService:
                 return _one_zone(hits)
 
         return None
+
+    @staticmethod
+    def _scope_for_target(target_name):
+        """이름 하나를 **그 안에서 일어나는 일 전부**의 target_id 집합으로.
+
+        "3포장의 예정을 요약해" 는 3포장 안에서 일어나는 일을 묻는 것이지 3포장
+        도형에 붙은 것만 묻는 것이 아니다. 예전에는 `target_id ==` 정확 일치라
+        실측(2026-08-18 김제)에서 `search_schedule('3포장')` 이 0건을 냈다 —
+        실제로는 구역에 1건, 그 안 식생에 2건이 있었다.
+
+        `scope` 를 함께 돌려주는 것이 요점이다. 결과가 0건일 때 **"정말 없다"
+        와 "못 찾았다" 를 구분할 근거**가 그것뿐이기 때문이다. 이름이 아예
+        해석되지 않으면 `scope['resolved']` 가 False 이고, 그때 0건은
+        "없음" 이 아니라 "묻는 대상을 못 찾음" 이다.
+
+        Returns (ids: list[str], scope: dict).
+        """
+        scope = {'requested': target_name, 'resolved': False,
+                 'resolved_name': None, 'target_type': None,
+                 'expanded': None, 'searched_ids': 0}
+        if not target_name or not str(target_name).strip():
+            return [], scope
+
+        tid, ttype, rname, _la, _ln = \
+            AoTDataToolService._resolve_note_target(target_name)
+        if not tid:
+            return [], scope
+
+        scope.update({'resolved': True, 'resolved_name': rname,
+                      'target_type': ttype})
+
+        # 이름이 여러 정체성에 걸릴 수 있다(장치 = Input/Output + 마커 + 폴리곤).
+        # 그 합집합은 이미 _resolve_note_target_ids 가 계산한다.
+        try:
+            ids, _rn = AoTDataToolService._resolve_note_target_ids(target_name)
+        except Exception:
+            ids = [tid]
+        ids = list(ids or [tid])
+
+        # 도형이면 그 아래 전부로 넓힌다(구역·시설·장치·식생).
+        try:
+            shape = GeoShape.query.filter_by(unique_id=tid).first()
+        except Exception:
+            shape = None
+        if shape is not None:
+            from aot.utils.geo_hierarchy import descendant_target_ids
+            try:
+                more, breakdown = descendant_target_ids(shape)
+                ids.extend(more)
+                scope['expanded'] = breakdown
+            except Exception as _e:
+                logger.debug(f"_scope_for_target: 자손 확장 실패: {_e}")
+
+        seen, uniq = set(), []
+        for i in ids:
+            if i and i not in seen:
+                seen.add(i)
+                uniq.append(i)
+        scope['searched_ids'] = len(uniq)
+        return uniq, scope
 
     @staticmethod
     def _geo_shape_descendants(root_shape):
@@ -6233,6 +6366,30 @@ class AoTDataToolService:
             }
 
         children = []
+        # 구역도 컨테이너다 — 그 안에 식생 구획이 들어 있고, 그 구획이 자기
+        # 노트·일정을 갖는다. site 만 펼치던 때는 "3-1 에 무엇이 있나" 에
+        # 답할 수 없었고, 작업을 구획별로 나눠 걸어야 할 때 AI 가 그 존재를
+        # 몰랐다.
+        if target_type in ('site', 'zone'):
+            try:
+                _root = GeoShape.query.filter_by(unique_id=target_id).first()
+                if _root is not None:
+                    from aot.utils.geo_hierarchy import _planting_ids_inside
+                    from aot.databases.models import GeoPlanting
+                    _ids = [_root.unique_id] + [
+                        c.unique_id for c in
+                        AoTDataToolService._geo_shape_descendants(_root)
+                        if c.unique_id]
+                    for _pid in _planting_ids_inside(
+                            _ids, geo_ids={_root.geo_id} if _root.geo_id else None):
+                        _pl = GeoPlanting.query.filter_by(unique_id=_pid).first()
+                        if _pl is None:
+                            continue
+                        _pn = _pl.name or _pl.crop
+                        if _pn:
+                            children.append({"name": _pn, "type": "planting"})
+            except Exception:
+                pass
         if target_type == 'site':
             try:
                 site_shape = GeoShape.query.filter_by(unique_id=target_id).first()
@@ -6255,7 +6412,7 @@ class AoTDataToolService:
                             seen_names.add(c_name)
                             children.append({"name": c_name, "type": c.type})
             except Exception:
-                children = []
+                pass
 
         note = (
             "This name resolves to exactly one entity. A write tool called with "
