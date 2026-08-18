@@ -9,7 +9,7 @@ name: Publish Docker image
 #   - Repo hosted on GitHub (this workflow does NOT run on Gitea).
 #   - GHCR: after the first publish, set the package visibility to Public
 #     (repo → Packages → aot → Package settings), or configure org policy.
-#   - Docker Hub: create the aotinc/aot repository, generate an access token
+#   - Docker Hub: create the aotinckr/aot repository, generate an access token
 #     (Account Settings → Security → New Access Token, Read & Write), then add
 #     repo secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN.
 
@@ -60,7 +60,7 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository_owner }}/aot
-            docker.io/aotinc/aot
+            docker.io/aotinckr/aot
           tags: |
             type=raw,value=${{ steps.ver.outputs.version }}
             type=raw,value=${{ steps.ver.outputs.majorminor }}
