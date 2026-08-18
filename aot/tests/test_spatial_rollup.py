@@ -149,8 +149,8 @@ class TestNameResolutionReadsShapesOnce(unittest.TestCase):
         캐시 히트일 때만 터진다 — 재현이 고약한 종류다."""
         src = _read('aot_flask', 'geo', 'shape_index.py')
         self.assertIn('namedtuple', src)
-        body = _fn(src, 'named_shapes')
-        self.assertIn('ShapeRec(', body)
+        # 레코드를 만드는 곳은 all_shapes() 다(named_shapes 는 그걸 거른다).
+        self.assertIn('ShapeRec(', _fn(src, 'all_shapes'))
 
     def test_invalidation_is_wired_to_the_same_place(self):
         """무효화 배선을 두 벌로 늘리면 한쪽만 부르는 경로가 반드시 생긴다."""
@@ -163,6 +163,61 @@ class TestNameResolutionReadsShapesOnce(unittest.TestCase):
         body = _fn(src, '_scope_for_target')
         self.assertLess(body.index('_resolve_note_target_ids('),
                         body.index('_resolve_note_target('))
+
+
+class TestDescendantsAreReadLightweight(unittest.TestCase):
+    """자손을 ORM 으로 읽던 마지막 조회를 지웠다.
+
+    `_resolve_note_target_ids('3포장')` 22.6ms 중 거의 전부가
+    `GeoShape.query.all()`(16.8ms/150행) 하나였다. 자손에서 실제로 읽는 것은
+    uuid · device_id · type · geo_id · name 뿐이라, 부모 관계가 캐시돼 있으면
+    그 조회가 통째로 불필요하다.
+
+        _geo_shape_descendants   23.4 → 0.8 ms
+        search_schedule('3포장')  47.6 → 3.6 ms
+        search_notes('3-1')      31.9 → 9.1 ms
+    """
+
+    def test_lightweight_variant_exists(self):
+        gh = _read('utils', 'geo_hierarchy.py')
+        self.assertIn('def geo_descendant_recs', gh)
+
+    def test_orm_variant_is_kept_for_geometry(self):
+        """`geo_descendant_shapes` 는 계약을 바꾸지 않는다 — 자손의 폴리곤이
+        필요한 호출자가 있고, 경량 레코드에는 기하가 없다."""
+        gh = _read('utils', 'geo_hierarchy.py')
+        self.assertIn('def geo_descendant_shapes', gh)
+        # 레코드 **필드 목록**으로 본다 — 주석·docstring 에는 왜 안 담는지가
+        # 적혀 있어서 본문 문자열 검사로는 늘 걸린다.
+        idx = _read('aot_flask', 'geo', 'shape_index.py')
+        fields = idx.split("'id unique_id", 1)[1].split("'", 1)[0]
+        for banned in ('feature', 'geometry', 'geom'):
+            self.assertNotIn(banned, fields)
+
+    def test_cache_miss_falls_back_to_orm(self):
+        """첫 호출·무효화 직후에는 기하로 파생해야 한다. 그때도 결과는 같고
+        비용만 옛날과 같다 — 폴백이 없으면 캐시가 빈 순간 답이 비어버린다."""
+        body = _fn(_read('utils', 'geo_hierarchy.py'), 'geo_descendant_recs')
+        self.assertIn('geo_descendant_shapes(root_shape', body)
+        self.assertIn('ShapeRec(', body)
+
+    def test_hot_paths_use_the_lightweight_variant(self):
+        gh = _read('utils', 'geo_hierarchy.py')
+        self.assertIn('geo_descendant_recs(root_shape',
+                      _fn(gh, 'descendant_target_ids'))
+        svc = _read('..', 'aot', 'ai', 'services', 'aot_data_tool_service.py')
+        self.assertIn('geo_descendant_recs(root_shape)',
+                      _fn(svc, '_geo_shape_descendants'))
+
+    def test_names_survive_the_lightweight_path(self):
+        """자손에서 `feature` 를 읽던 곳은 전부 **이름**만 뽑았다. 레코드가
+        이름을 들지 않으면 컨테이너의 children 이 통째로 비어 버린다."""
+        idx = _read('aot_flask', 'geo', 'shape_index.py')
+        self.assertIn("'id unique_id type parent_id device_id geo_id name'", idx)
+        svc = _read('..', 'aot', 'ai', 'services', 'aot_data_tool_service.py')
+        body = _fn(svc, 'resolve_target_tool')
+        self.assertIn('c.name', body)
+        self.assertNotIn('c.feature', body)
 
 
 class TestScreenAndAiAgree(unittest.TestCase):

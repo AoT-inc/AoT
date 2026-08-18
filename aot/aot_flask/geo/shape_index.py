@@ -25,7 +25,7 @@ from collections import namedtuple
 # 필드가 늘수록 이 캐시가 ORM 객체 흉내를 내기 시작하고, 그러면 위 주석이
 # 경고하는 detached 문제를 결국 다시 만나게 된다.
 ShapeRec = namedtuple('ShapeRec',
-                      'id unique_id type parent_id device_id geo_id')
+                      'id unique_id type parent_id device_id geo_id name')
 
 _TTL_S = 30
 _LOCK = threading.Lock()
@@ -44,11 +44,16 @@ def _scope_key():
         return '?'
 
 
-def named_shapes():
-    """이름이 있는 도형: `[(ShapeRec, name, name_lower)]`.
+def all_shapes():
+    """**모든** 도형의 경량 레코드: `[ShapeRec]` (이름 없는 것 포함).
 
-    이름이 없는 도형은 애초에 이름으로 찾을 수 없으므로 뺀다 — 목록이
-    작아지면 순회도 그만큼 짧아진다.
+    계층 순회에는 이름 없는 도형도 필요하다 — 장치 마커의 노트는 그 마커가
+    아니라 `device_id` 가 가리키는 Input/Output 에 붙고, 라벨은 부모를 잇는
+    고리다. 이름 해석만 쓰는 목록(`named_shapes`)과 **같은 조회**를 공유한다.
+
+    **기하(feature.geometry)는 담지 않는다.** 담으면 행 하나가 무거워져
+    이 캐시가 존재할 이유(150행을 읽는 23.5ms)가 사라지고, 무엇보다
+    ORM 객체 흉내가 시작된다. 기하가 필요한 계산은 ORM 을 직접 읽을 것.
     """
     now = time.time()
     key = _scope_key()
@@ -67,16 +72,22 @@ def named_shapes():
             name = str(props.get('name') or props.get('label')
                        or props.get('title') or '').strip()
         except Exception:
-            continue
-        if not name:
-            continue
-        out.append((ShapeRec(s.id, s.unique_id, s.type, s.parent_id,
-                             s.device_id, s.geo_id),
-                    name, name.lower()))
+            name = ''
+        out.append(ShapeRec(s.id, s.unique_id, s.type, s.parent_id,
+                            s.device_id, s.geo_id, name))
 
     with _LOCK:
         _CACHE[key] = {'rows': out, 'at': now}
     return out
+
+
+def named_shapes():
+    """이름이 있는 도형: `[(ShapeRec, name, name_lower)]`.
+
+    이름이 없는 도형은 애초에 이름으로 찾을 수 없으므로 뺀다 — 목록이
+    작아지면 순회도 그만큼 짧아진다. 조회는 `all_shapes()` 와 공유한다.
+    """
+    return [(r, r.name, r.name.lower()) for r in all_shapes() if r.name]
 
 
 def invalidate():

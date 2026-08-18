@@ -6305,8 +6305,15 @@ class AoTDataToolService:
         is unset in production; the real parent signal is spatial
         containment).
         """
-        from aot.utils.geo_hierarchy import geo_descendant_shapes
-        return geo_descendant_shapes(root_shape)
+        # **경량 레코드**를 돌려준다(ShapeRec: id·unique_id·type·parent_id·
+        # device_id·geo_id·name). 자손에서 읽는 것이 그뿐이라 ORM 전체 조회
+        # (16.8ms/150행)가 통째로 빠진다 — `_resolve_note_target_ids` 의
+        # site 확장 경로 22.6ms 가 거의 전부 그 조회였다.
+        #
+        # **기하는 없다.** 자손의 폴리곤이 필요하면 `geo_descendant_shapes`
+        # 를 직접 쓸 것.
+        from aot.utils.geo_hierarchy import geo_descendant_recs
+        return geo_descendant_recs(root_shape)
 
     @staticmethod
     def resolve_target_tool(target_name):
@@ -6402,12 +6409,7 @@ class AoTDataToolService:
                         # to loop over"; devices/labels would just be noise here.
                         if c.type != 'zone':
                             continue
-                        try:
-                            feat = c.feature if isinstance(c.feature, dict) else _json.loads(c.feature or '{}')
-                            props = feat.get('properties') or {}
-                            c_name = props.get('name') or props.get('label') or props.get('title')
-                        except Exception:
-                            c_name = None
+                        c_name = c.name or None
                         if c_name and c_name not in seen_names:
                             seen_names.add(c_name)
                             children.append({"name": c_name, "type": c.type})

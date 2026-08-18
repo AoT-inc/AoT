@@ -199,6 +199,63 @@ def geo_descendant_shapes(root_shape, all_shapes=None, use_cache=True):
     return out
 
 
+def geo_descendant_recs(root_shape, use_cache=True):
+    """자손을 **경량 레코드**로 — 기하가 필요 없는 호출자용.
+
+    `geo_descendant_shapes()` 는 ORM 행을 돌려주는데, 그러려면 `GeoShape` 를
+    통째로 읽어야 한다(실측 16.8ms/150행). 자손에서 실제로 읽는 것은
+    `unique_id` · `device_id` · `type` · `geo_id` · `name` 뿐이라, 부모 관계가
+    캐시돼 있으면 그 조회가 통째로 불필요하다 — `_resolve_note_target_ids`
+    의 site 확장 경로 22.6ms 가 거의 전부 여기였다.
+
+    부모 캐시가 비어 있으면(첫 호출·무효화 직후) 기하로 파생해야 하므로
+    ORM 경로로 물러선다. 그때도 결과는 같고 비용만 옛날과 같다.
+    """
+    if use_cache:
+        try:
+            from aot.aot_flask.geo import shape_index
+            recs = shape_index.all_shapes()
+            pmap = _parent_map_from_cache(recs)
+            if pmap is not None:
+                by_id = {r.id: r for r in recs}
+                children = {}
+                for r in recs:
+                    pid = pmap.get(r.id)
+                    if pid is not None:
+                        children.setdefault(pid, []).append(r)
+                out, seen, frontier = [], {root_shape.id}, [root_shape.id]
+                while frontier:
+                    nxt = []
+                    for pid in frontier:
+                        for ch in children.get(pid, []):
+                            if ch.id in seen:
+                                continue
+                            seen.add(ch.id)
+                            nxt.append(ch.id)
+                            out.append(ch)
+                    frontier = nxt
+                del by_id
+                return out
+        except Exception:
+            pass
+
+    # 폴백 — ORM. 반환 모양은 같게 맞춘다(호출자가 분기하지 않도록).
+    from aot.aot_flask.geo.shape_index import ShapeRec
+    out = []
+    for s in geo_descendant_shapes(root_shape, use_cache=use_cache):
+        name = ''
+        try:
+            feat = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+            props = feat.get('properties') or {}
+            name = str(props.get('name') or props.get('label')
+                       or props.get('title') or '').strip()
+        except Exception:
+            pass
+        out.append(ShapeRec(s.id, s.unique_id, s.type, s.parent_id,
+                            s.device_id, s.geo_id, name))
+    return out
+
+
 def geo_descendant_unique_ids(root_shape, all_shapes=None):
     """Convenience wrapper: unique_ids of geo_descendant_shapes()."""
     return [s.unique_id for s in geo_descendant_shapes(root_shape, all_shapes=all_shapes) if s.unique_id]
@@ -349,8 +406,12 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True,
             ids.append(root_shape.unique_id)
             breakdown['self'] = 1
 
-    kids = geo_descendant_shapes(root_shape, all_shapes=all_shapes,
-                                 use_cache=use_cache)
+    # 자손에서 읽는 것은 uuid·device_id·type·geo_id 뿐이라 경량 레코드로
+    # 충분하다 — ORM 전체 조회(16.8ms)를 지운다.
+    kids = (geo_descendant_recs(root_shape, use_cache=use_cache)
+            if all_shapes is None
+            else geo_descendant_shapes(root_shape, all_shapes=all_shapes,
+                                       use_cache=use_cache))
     for k in kids:
         if k.unique_id:
             ids.append(k.unique_id)
