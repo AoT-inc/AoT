@@ -210,12 +210,12 @@ docker compose -f docker/docker-compose.prod.yml up -d
 ## 8. 미결 결정 사항
 
 - [x] **레지스트리: GHCR 확정(2026-08-18).** `docker-publish.yml`이 GHCR과
-  Docker Hub(`docker.io/aotinc/aot`) 양쪽에 같은 태그로 발행하지만, 이는
+  Docker Hub(`docker.io/aotinckr/aot`) 양쪽에 같은 태그로 발행하지만, 이는
   **Docker Hub 검색으로 이미지를 찾아 최초 설치하는 진입점**만을 위한
   미러다. 설치 후 가용 여부 판정(`registry_release_info.py`)과
   `docker-compose.prod.yml`의 기본 `AOT_IMAGE_REPO`는 계속 GHCR만 본다 —
   업데이트 경로를 Docker Hub까지 이중으로 볼 필요가 없다는 판단. Docker Hub
-  이미지로 직접 pull하려는 사용자는 `.env`에서 `AOT_IMAGE_REPO=docker.io/aotinc/aot`로
+  이미지로 직접 pull하려는 사용자는 `.env`에서 `AOT_IMAGE_REPO=docker.io/aotinckr/aot`로
   수동 오버라이드할 수 있지만, 그 경우 "업데이트 있음" 배지는 여전히 GHCR
   기준으로 뜬다(알려진 불일치, 감수).
 - [ ] 아키텍처: amd64+arm64 확정? (armv7 32bit RPi도 필요하면 linux/arm/v7 추가 — 빌드시간·호환성 비용 큼)
