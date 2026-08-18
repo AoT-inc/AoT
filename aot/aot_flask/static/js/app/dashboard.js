@@ -87,6 +87,7 @@ const DashboardGrid = {
         // Configuration
         const cellHeight = (typeof window.AOT_GRID_CELL_HEIGHT !== 'undefined') ? window.AOT_GRID_CELL_HEIGHT : 150;
         const isLocked = (typeof window.AOT_DASHBOARD_LOCKED !== 'undefined') && window.AOT_DASHBOARD_LOCKED;
+        const canEditControllers = (typeof window.AOT_CAN_EDIT_CONTROLLERS === 'undefined') || window.AOT_CAN_EDIT_CONTROLLERS;
         
         const options = {
             cellHeight: cellHeight,
@@ -151,8 +152,13 @@ const DashboardGrid = {
             window.dispatchEvent(new Event('resize'));
         });
 
-        // If not locked, enable save and UI interactions
-        if (!isLocked) {
+        // Only enable drag/resize + autosave for viewers who can actually save
+        // a layout change. Binding this for a read-only viewer meant a passive
+        // page load or window resize could fire an unauthorized autosave POST,
+        // which surfaced as a permission-denied toast on some later, unrelated
+        // page load (see enableEditing()'s save error handler for the case
+        // where an actual edit gesture is denied).
+        if (!isLocked && canEditControllers) {
             this.enableEditing();
         }
     },
@@ -315,8 +321,18 @@ const DashboardGrid = {
                     data: payload,
                     contentType: "application/json; charset=utf-8",
                     success: () => { /* silent success */ },
-                    error: () => {
-                        window.showToast(_('layout_save_fail'), 'error');
+                    error: (jqXHR) => {
+                        // Permission was revoked mid-session (e.g. role change in
+                        // another tab): surface it right now, tied to this actual
+                        // edit gesture, instead of leaving it to appear later.
+                        // Reuses the same catalog string the server flashes for
+                        // this exact denial, so the wording matches everywhere.
+                        if (jqXHR && jqXHR.status === 403) {
+                            const template = _('Insufficient permission: %(permission)s');
+                            window.showToast(template.replace('%(permission)s', 'edit_controllers'), 'error');
+                        } else {
+                            window.showToast(_('layout_save_fail'), 'error');
+                        }
                     }
                 });
             } catch (e) {
