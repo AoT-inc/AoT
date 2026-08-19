@@ -172,7 +172,7 @@ WIDGET_HEAD_HTML = """
 <script src="/static/js/common/aot-output-state.js?v=9"></script>
 <script src="/static/js/common/sensor-label.js?v=50"></script>
 <script src="/static/js/widgets/AoT_map/aot-map-sensor-labels.js?v=22"></script>
-<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=58">
+<link rel="stylesheet" href="/static/css/widget/aot-sensor-label.css?v=59">
 <link rel="stylesheet" href="/static/css/components/aot-toggle.css?v=20260814a">
 
 <!-- Shared time-wheel module (also used by AoT_timer, sequence widgets) — zone popup "settings" (turn on until end time) -->

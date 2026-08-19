@@ -74,19 +74,24 @@ def api_facility_iec_status(facility_uuid):
     function_name = None
 
     # ── IEC function state ────────────────────────────────────────────────────
+    # facility 에 실제로 연결된 코디네이터만 본다 (env_summary 와 동일 기준 —
+    # 시스템 전체에서 아무거나 골라 남의 코디네이터 상태를 표시하지 않는다).
     function_uuid = request.args.get('function_uuid', '').strip()
+    if function_uuid:
+        candidate = CustomController.query.filter_by(
+            unique_id=function_uuid, device='env_coordinator').first()
+        if candidate is None:
+            return jsonify({'ok': False, 'message': 'function_uuid not found'}), 404
+        if not _function_belongs_to_facility(candidate, facility_uuid):
+            return jsonify({
+                'ok': False,
+                'message': 'function_uuid does not belong to this facility',
+            }), 400
+
     try:
-        fn = None
-        if function_uuid:
-            fn = CustomController.query.filter_by(
-                unique_id=function_uuid, device='env_coordinator').first()
-        if fn is None:
-            # Auto-select: prefer activated
-            fn = CustomController.query.filter_by(
-                device='env_coordinator', is_activated=True).first()
-            if fn is None:
-                fn = CustomController.query.filter_by(
-                    device='env_coordinator').first()
+        fn = (CustomController.query.filter_by(
+                  unique_id=function_uuid, device='env_coordinator').first()
+              if function_uuid else _find_facility_env_coordinator(facility_uuid))
 
         if fn:
             function_name = fn.name
@@ -113,8 +118,9 @@ def api_facility_iec_status(facility_uuid):
                     if level == 'idle':
                         level = 'warn'
         else:
-            reasons.append('No IEC function configured')
-            level = 'warn'
+            # 이 시설에 연결된 코디네이터가 없다 — 문제 상황이 아니라 "자동
+            # 제어 없음" 상태이므로 level 은 건드리지 않는다(경고로 승격 금지).
+            reasons.append('No IEC function linked to this facility')
     except Exception as exc:
         logger.warning('[facility/status] function state error: %s', exc)
 
@@ -749,27 +755,33 @@ def api_facility_estop(facility_uuid):
 # ── 맵 팝업 [현황] 탭 APIs ──────────────────────────────────────────────────────
 
 
+def _function_belongs_to_facility(fn, facility_uuid):
+    """fn(env_coordinator CustomController) 이 facility_uuid 에 연결된 것인지 확인.
+
+    custom_options 의 geo_facility_id_device_id (또는 legacy geo_facility_id)
+    로 링크를 판정한다 — status/env_summary 공용 기준.
+    """
+    import json as _json
+    try:
+        opts = _json.loads(fn.custom_options or '{}') or {}
+    except (TypeError, ValueError):
+        return False
+    fac_id = (opts.get('geo_facility_id_device_id')
+              or opts.get('geo_facility_id') or '')
+    return fac_id == facility_uuid
+
+
 def _find_facility_env_coordinator(facility_uuid):
     """facility 에 연결된 env_coordinator CustomController 를 역추적한다.
 
-    custom_options 의 geo_facility_id_device_id (또는 legacy geo_facility_id)
-    가 facility_uuid 와 일치하는 function 을 찾는다. 복수면 활성 우선.
+    복수면 활성 우선.
     """
-    import json as _json
     from aot.databases.models.controller import CustomController
 
     matched = []
     try:
         funcs = CustomController.query.filter_by(device='env_coordinator').all()
-        for f in funcs:
-            try:
-                opts = _json.loads(f.custom_options or '{}') or {}
-            except (TypeError, ValueError):
-                continue
-            fac_id = (opts.get('geo_facility_id_device_id')
-                      or opts.get('geo_facility_id') or '')
-            if fac_id == facility_uuid:
-                matched.append(f)
+        matched = [f for f in funcs if _function_belongs_to_facility(f, facility_uuid)]
     except Exception as exc:
         logger.warning('[env_coordinator lookup] %s', exc)
         return None

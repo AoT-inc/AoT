@@ -3414,7 +3414,14 @@
                    '</div>' +
                    '<div class="aot-bay-popup-pane" data-pane="envctl"' +
                        (defSec === 'envctl' ? '' : ' style="display:none"') + '>' +
-                       '<div class="aot-bay-popup-section" data-zone="sensors"></div>' +
+                       '<div class="aot-bay-popup-section" data-zone="sensors">' +
+                           // 센서가 없어도 제목과 안내는 남긴다 — 값이 붙으면
+                           // _renderBayChart 가 이 자리를 통째로 갈아끼운다.
+                           window.AoTMapPopup.emptyBlock(
+                               (window._ ? window._('Sensors') : 'Sensors'),
+                               (window._ ? window._('No sensors are linked to this place yet.')
+                                         : 'No sensors are linked to this place yet.')) +
+                       '</div>' +
                        '<div class="aot-bay-popup-section" data-zone="acts">' +
                            window.AoTMapPopup.buildActuatorTabs(activeActCat, _ACT_CATS, states,
                                st.canCtrl, st._lastCmd || {}, _actKindToCat, savedOrder) +

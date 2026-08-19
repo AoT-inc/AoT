@@ -79,6 +79,14 @@
     });
   }
 
+  // 빈 상태도 제목을 달아 내보낸다 — 안내문만 떠 있으면 "무엇이 없다는
+  // 것인지" 를 화면이 말해 주지 못한다(현황 pane 의 블록들과 같은 골격).
+  function _emptyBlock(title, msg) {
+    return '<div class="aot-ov-block aot-ov-inactive">' +
+           '<div class="aot-ov-sec-title">' + _esc(title) + '</div>' +
+           '<div class="aot-ov-muted">' + _esc(msg) + '</div></div>';
+  }
+
   // ── buildActuatorCat ───────────────────────────────────────────────────────
   // Build the innerHTML for a facility-level actuator category popup.
   //
@@ -93,7 +101,7 @@
   function buildActuatorCat(catKey, catLabel, states, canCtrl, lastCmd, catKeyFn, savedOrder) {
     var rows = _buildCatRows(catKey, states, canCtrl, lastCmd, catKeyFn, savedOrder);
     if (!rows) {
-      return '<div class="aot-act-empty">' + (window._ ? window._('No actuators') : 'No actuators') + '</div>';
+      return _emptyBlock(_t('Actuators'), _t('No actuators'));
     }
     return '<div class="aot-act-group-header" data-cat="' + _esc(catKey) + '">' +
            _esc(catLabel) + '</div>' + rows;
@@ -141,7 +149,7 @@
     });
     var avail = cats.filter(function (c) { return (counts[c.key] || 0) > 0; });
     if (!avail.length) {
-      return '<div class="aot-act-empty">' + (window._ ? window._('No actuators') : 'No actuators') + '</div>';
+      return _emptyBlock(_t('Actuators'), _t('No actuators'));
     }
     // Resolve active tab: keep requested one if it still has actuators.
     var active = avail.some(function (c) { return c.key === activeCatKey; })
@@ -189,7 +197,7 @@
     });
     var keys = Object.keys(groups);
     if (!keys.length) {
-      return '<div class="aot-act-empty">' + (window._ ? window._('No Measurements') : 'No Measurements') + '</div>';
+      return _emptyBlock(_t('Sensors'), _t('No Measurements'));
     }
     keys.sort(function (a, b) {
       var ia = _SENSOR_KEY_ORDER.indexOf(a), ib = _SENSOR_KEY_ORDER.indexOf(b);
@@ -1077,8 +1085,10 @@
     var html    = '';
 
     // ── 블록 0: IEC 헤더 (시설 전체 표기 + 자동제어 토글) ────────────────
-    html += '<div class="aot-ov-block aot-ov-iec">';
+    // 함수가 없으면 이 블록은 내용이 하나도 없다 — 그래도 내보내면 테두리만
+    // 있는 빈 상자가 안내문 위에 뜬다. 빈 상태의 안내는 아래 블록이 맡는다.
     if (fn) {
+      html += '<div class="aot-ov-block aot-ov-iec">';
       html += '<span class="aot-ov-fn-name">' + _esc(_t(fn.name || '')) + '</span>';
       if (opts.canToggle) {
         // 공용 슬라이드 토글 (AoT_timer 등과 동일한 btn-toggle 컴포넌트)
@@ -1092,12 +1102,16 @@
         html += '<span class="aot-act-val-ro">' +
                 _esc(fn.active ? _t('Auto Control On') : _t('Auto Control Off')) + '</span>';
       }
+      html += '</div>';
     }
-    html += '</div>';
 
     if (!fn) {
+      // 안내만 덩그러니 두지 않는다 — 무엇에 대한 안내인지 제목이 말해야 한다.
       html += '<div class="aot-ov-block aot-ov-inactive">' +
-              _esc(_t('No automatic control is linked to this facility')) + '</div>';
+              '<div class="aot-ov-sec-title">' + _esc(_t('Automatic control')) +
+              '</div><div class="aot-ov-muted">' +
+              _esc(_t('No automatic control is linked to this facility')) +
+              '</div></div>';
       return html + _ovNotesBlock();
     }
     if (stale || !summary) {
@@ -1337,7 +1351,10 @@
     opts = opts || {};
     var readings = env.readings || [];
     var sensors = env.sensors || {};
-    if (!readings.length && !sensors.total) return '';
+    // **빈 블록을 통째로 지우지 않는다.** 예전에는 센서가 하나도 없으면 제목까지
+    // 사라져, 사용자는 "현재" 라는 칸이 있다는 것조차 몰랐다 — 붙일 센서가 없는
+    // 것인지 화면이 덜 그려진 것인지 구분할 수 없다.
+    var _empty = (!readings.length && !sensors.total);
 
     var head = '<div class="aot-ov-sec-title aot-ov-sec-title--row">' +
                '<span>' + _esc(_t('Now')) + '</span>';
@@ -1381,7 +1398,9 @@
                '</div>';
       }).join('') + '</div>';
     } else {
-      body = '<div class="aot-ov-muted">' + _esc(_t('No sensor readings')) + '</div>';
+      body = '<div class="aot-ov-muted">' +
+             _esc(_empty ? _t('No sensors are linked to this place yet.')
+                         : _t('No sensor readings')) + '</div>';
     }
 
     // 바깥 — 시설에만 있다(구역은 실내/실외 구분이 없다). 한 줄로 붙이는 이유:
@@ -1758,7 +1777,11 @@
     rows += _zrow(_t('Sensors'), String(counts.sensors || 0));
     rows += _zrow(_t('Devices'), String(counts.outputs || 0));
     rows += _zrow(_t('Functions'), String(counts.functions || 0));
-    html += '<div class="aot-ov-block aot-ov-dims">' + rows + '</div>';
+    // 제목 없는 블록은 사진 블록 아래에 다섯 줄이 떠 있는 모양이 된다 —
+    // 구획 모달의 "구획 정보" 와 같은 자리이므로 같은 방식으로 이름을 준다.
+    html += '<div class="aot-ov-block aot-ov-dims">' +
+            '<div class="aot-ov-sec-title">' + _esc(_t('Zone information')) +
+            '</div>' + rows + '</div>';
 
     return html;
   }
@@ -2693,6 +2716,7 @@
     openOutputSchedule: openOutputSchedule,
     buildActuatorCat:  buildActuatorCat,
     buildActuatorTabs: buildActuatorTabs,
+    emptyBlock:        _emptyBlock,
     buildSensorTabs:   buildSensorTabs,
     wire:              wire,
     buildInput:       buildInput,

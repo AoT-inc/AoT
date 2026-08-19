@@ -438,6 +438,13 @@
   font-style: italic;
 }
 
+/* 제목은 이탤릭에서 뺀다 — 블록 제목은 다른 블록과 같은 모양이어야
+   "여기 무엇이 있는지" 를 훑을 때 한 줄만 다르게 읽히지 않는다. */
+.aot-ov-inactive .aot-ov-sec-title {
+  font-style: normal;
+  color: var(--aot-color-text-primary);
+}
+
 /* Reasons for inactivity */
 .aot-ov-reasons {
   color: var(--aot-color-text-secondary);

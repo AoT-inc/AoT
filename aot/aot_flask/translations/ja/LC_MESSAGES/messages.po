@@ -28672,3 +28672,84 @@ msgstr "詳細区分"
 
 msgid "Plots here"
 msgstr "このゾーンの区画"
+
+msgid "Zone information"
+msgstr "ゾーン情報"
+
+msgid "%(label)s %(dir)s, about %(delta)s expected in %(min)s min"
+msgstr "%(label)s %(dir)s、%(min)s分後に約 %(delta)s の見込み"
+
+msgid "Auto Control Off"
+msgstr "自動制御オフ"
+
+msgid "Auto Control On"
+msgstr "自動制御オン"
+
+msgid "Automatic control"
+msgstr "自動制御"
+
+msgid "Automatic control inactive"
+msgstr "自動制御が無効です"
+
+msgid "Automatic control not responding (no cycle in 5 minutes)"
+msgstr "自動制御が応答していません（5分間動作なし）"
+
+msgid "Control Status"
+msgstr "制御状態"
+
+msgid "Current / Target"
+msgstr "現在 / 目標"
+
+msgid "Idle (within target range)"
+msgstr "待機中（目標範囲内）"
+
+msgid "Interior Volume"
+msgstr "内部容積"
+
+msgid "Interior Volume (est.)"
+msgstr "内部容積（推定）"
+
+msgid "Light Level"
+msgstr "光量"
+
+msgid "Limiting factor"
+msgstr "制限要因"
+
+msgid "No automatic control is linked to this facility"
+msgstr "この施設に紐づく自動制御がありません"
+
+msgid "No description"
+msgstr "説明なし"
+
+msgid "No sensors are linked to this place yet."
+msgstr "この場所にはまだセンサーが紐づいていません。"
+
+msgid "Photosynthesis"
+msgstr "光合成"
+
+msgid "Photosynthesis mode disabled"
+msgstr "光合成モードオフ"
+
+msgid "Photosynthesis rate"
+msgstr "光合成速度"
+
+msgid "Safety Gate"
+msgstr "安全ゲート"
+
+msgid "Status Summary"
+msgstr "状態サマリー"
+
+msgid "Ventilation"
+msgstr "換気"
+
+msgid "Week %(n)s"
+msgstr "%(n)s週目"
+
+msgid "bays"
+msgstr "棟"
+
+msgid "falling"
+msgstr "下降中"
+
+msgid "rising"
+msgstr "上昇中"

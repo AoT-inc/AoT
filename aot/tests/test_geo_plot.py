@@ -3704,6 +3704,30 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         self.assertIn('cumulative_tracker', body)
         self.assertIn('Tmax', body)
 
+    def test_singular_and_plural_mean_the_same_thing(self):
+        """같은 것을 단수는 "함수", 복수는 "기능" 이라 부르고 있었다.
+
+        구역 모달의 "기능 0" 은 AoT Function 의 개수인데, 메뉴에서는 같은 것을
+        "함수" 라 부른다. 영어(`Function`/`Functions`)로는 자연스러운 단복수라
+        리뷰에서 안 보인다 — `Period`="주기" 와 같은 계열이다.
+        """
+        import re
+        ko = _read(os.path.join(_ROOT, 'aot_flask', 'translations', 'ko',
+                                'LC_MESSAGES', 'messages.po'))
+        cat = dict(re.findall(
+            r'^msgid "((?:[^"\\]|\\.)*)"\nmsgstr "((?:[^"\\]|\\.)*)"', ko, re.M))
+        self.assertEqual(cat.get('Function'), cat.get('Functions'),
+                         '단수·복수가 다른 말로 번역돼 있다')
+
+    def test_zone_about_block_has_a_title(self):
+        """제목 없는 블록은 사진 아래에 다섯 줄이 떠 있는 모양이 된다 —
+        구획 모달의 "구획 정보" 와 같은 자리이므로 같은 방식으로 이름을 준다."""
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        body = popup.split('function buildZoneAboutHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("_t('Zone information')", body)
+
     def test_tabs_split_by_now_versus_fixed(self):
         """[현황]=지금 값 · [개요]=바뀌지 않는 사실.
 
@@ -5877,3 +5901,67 @@ class TestProgramSeed(unittest.TestCase):
         # 999 는 "끝까지" 다 — 길이로 옮기지 않는다.
         self.assertIsNone(stages[-1]['days'])
 
+
+
+class TestEmptyStatesKeepTheirTitle(unittest.TestCase):
+    """**연결된 것이 없어도 제목과 안내는 남는다.**
+
+    빈 블록을 통째로 지우면 사용자는 "그 칸이 있다는 것" 조차 모른다 — 붙일
+    것이 없는 것인지 화면이 덜 그려진 것인지 구분할 수단이 없다. 실제로 시설
+    모달의 [현황]이 센서가 없으면 아무것도 안 그렸고, [환경·제어]는 제목 없이
+    "액추에이터 없음" 한 줄만 떠 있었다(2026-08-19).
+    """
+
+    _POPUP = os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                          'widgets', 'AoT_map', 'aot-map-popup.js')
+    _VECTOR = os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                           'widgets', 'AoT_map', 'aot-map-widget-vector.js')
+
+    def test_env_now_block_survives_having_no_sensors(self):
+        body = _read(self._POPUP).split('function buildEnvNowHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        self.assertIn("_t('No sensors are linked to this place yet.')", body)
+        # 제목 없이 빠져나가는 길이 없어야 한다.
+        self.assertNotIn("return '';", body)
+
+    def test_actuator_empty_state_carries_a_title(self):
+        js = _read(self._POPUP)
+        # 제목 없는 맨 안내문(옛 형태)이 되살아나면 잡는다.
+        self.assertNotIn("'<div class=\"aot-act-empty\">'", js)
+        self.assertEqual(2, js.count("_emptyBlock(_t('Actuators'), _t('No actuators'))"))
+
+    def test_sensor_section_is_seeded_so_the_tab_is_never_blank(self):
+        """[환경·제어]의 센서 자리는 값이 없으면 렌더가 아예 안 돈다
+        (`_renderBayChart` 가 `sensors.length` 에서 즉시 반환). 그래서 빈 상태는
+        **처음 markup 에 심어** 둬야 한다 — 값이 붙으면 그 자리를 통째로
+        갈아끼우므로 남지 않는다."""
+        js = _read(self._VECTOR)
+        # 시설 모달의 센서 자리 — 구역 팝업에도 같은 data-pane 이 있어 그쪽을
+        # 집지 않도록 섹션 마크업에서 바로 자른다.
+        sec = js.split('data-zone="sensors"', 1)[1][:800]
+        self.assertIn('AoTMapPopup.emptyBlock(', sec)
+        self.assertIn("'No sensors are linked to this place yet.'", sec)
+
+    def test_missing_coordinator_notice_is_a_titled_block(self):
+        body = _read(self._POPUP).split('function buildOverviewSection', 1)[1].split(
+            '\n  function ', 1)[0]
+        notice = body.split('if (!fn) {', 1)[1].split('return html', 1)[0]
+        self.assertIn("_t('Automatic control')", notice)
+        self.assertIn("_t('No automatic control is linked to this facility')", notice)
+        # 함수가 없을 때 내용 없는 헤더 블록을 내보내지 않는다(테두리만 남는다).
+        header = body.split('블록 0', 1)[1].split('if (!fn)', 1)[0]
+        self.assertIn("if (fn) {", header.split('html +=', 1)[0] + 'html +=')
+
+    def test_empty_state_titles_are_translated(self):
+        """번역이 없으면 한국어 화면에 영어 한 줄만 남는다 — 빈 상태는 그 자체로
+        드물어서 눈에 잘 안 띈다."""
+        po = os.path.join(_ROOT, 'aot_flask', 'translations', 'ko',
+                          'LC_MESSAGES', 'messages.po')
+        src = _read(po)
+        for msgid in ('No sensors are linked to this place yet.',
+                      'No automatic control is linked to this facility',
+                      'Automatic control', 'Actuators', 'No actuators', 'Sensors'):
+            needle = 'msgid "%s"\nmsgstr "' % msgid
+            self.assertIn(needle, src, '%s 번역 없음' % msgid)
+            after = src.split(needle, 1)[1].split('"', 1)[0]
+            self.assertTrue(after.strip(), '%s 번역이 비어 있다' % msgid)

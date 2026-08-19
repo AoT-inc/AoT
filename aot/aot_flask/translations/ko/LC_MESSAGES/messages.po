@@ -14399,7 +14399,7 @@ msgstr "삭제 모드: 항목을 클릭하면 제거됩니다"
 #: aot_flask/templates/pages/geo/geo_facility.html:1375
 #: aot_flask/templates/pages/geo/geo_facility.html:1536
 msgid "Sensors"
-msgstr "센서류"
+msgstr "센서"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1377
 msgid "Sensor — click a position to place"
@@ -26292,7 +26292,7 @@ msgstr "개요"
 
 #. AoT_map/AoT_facility popup unification (map widget modals)
 msgid "Functions"
-msgstr "기능"
+msgstr "함수"
 
 #. AoT_map/AoT_facility popup unification (map widget modals)
 msgid "No devices"
@@ -28913,3 +28913,84 @@ msgstr "세부 구분"
 
 msgid "Plots here"
 msgstr "이 구역의 구획"
+
+msgid "Zone information"
+msgstr "구역 정보"
+
+msgid "%(label)s %(dir)s, about %(delta)s expected in %(min)s min"
+msgstr "%(label)s %(dir)s, %(min)s분 뒤 약 %(delta)s 예상"
+
+msgid "Auto Control Off"
+msgstr "자동 제어 꺼짐"
+
+msgid "Auto Control On"
+msgstr "자동 제어 켜짐"
+
+msgid "Automatic control"
+msgstr "자동 제어"
+
+msgid "Automatic control inactive"
+msgstr "자동 제어가 꺼져 있습니다"
+
+msgid "Automatic control not responding (no cycle in 5 minutes)"
+msgstr "자동 제어가 응답하지 않습니다 (5분간 동작 없음)"
+
+msgid "Control Status"
+msgstr "제어 상태"
+
+msgid "Current / Target"
+msgstr "현재 / 목표"
+
+msgid "Idle (within target range)"
+msgstr "대기 중 (목표 범위 안)"
+
+msgid "Interior Volume"
+msgstr "내부 용적"
+
+msgid "Interior Volume (est.)"
+msgstr "내부 용적 (추정)"
+
+msgid "Light Level"
+msgstr "광량"
+
+msgid "Limiting factor"
+msgstr "제한 요인"
+
+msgid "No automatic control is linked to this facility"
+msgstr "이 시설에 연결된 자동 제어가 없습니다"
+
+msgid "No description"
+msgstr "설명 없음"
+
+msgid "No sensors are linked to this place yet."
+msgstr "이 자리에 연결된 센서가 아직 없습니다."
+
+msgid "Photosynthesis"
+msgstr "광합성"
+
+msgid "Photosynthesis mode disabled"
+msgstr "광합성 모드 꺼짐"
+
+msgid "Photosynthesis rate"
+msgstr "광합성 속도"
+
+msgid "Safety Gate"
+msgstr "안전 게이트"
+
+msgid "Status Summary"
+msgstr "상태 요약"
+
+msgid "Ventilation"
+msgstr "환기"
+
+msgid "Week %(n)s"
+msgstr "%(n)s주차"
+
+msgid "bays"
+msgstr "동"
+
+msgid "falling"
+msgstr "내려가는 중"
+
+msgid "rising"
+msgstr "올라가는 중"
