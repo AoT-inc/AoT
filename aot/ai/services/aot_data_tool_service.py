@@ -110,6 +110,27 @@ def _map_for_device_p2(device_uuid, prefer=None):
 
 
 
+def _control_targets_for(controller):
+    """이 코디네이터가 따르는 목표 → AI 가 읽는 dict.
+
+    함수 옵션이 아니라 **제어와 같은 계산**을 거친다. 옛 키를 읽으면 AI 는 늘
+    "목표 없음" 으로 보고 조언한다.
+    """
+    try:
+        from aot.aot_flask.geo import coordinator_plot
+        t = coordinator_plot.control_targets(controller)
+        return {'vpd_kpa': (t.get('vpd') or {}).get('value'),
+                'vpd_curve': bool((t.get('vpd') or {}).get('method_id')),
+                'co2_ppm': (t.get('co2') or {}).get('value'),
+                'co2_curve': bool((t.get('co2') or {}).get('method_id')),
+                'dli': t.get('dli'), 'gdd_daily': t.get('gdd_daily'),
+                'plot': t.get('plot_name'),
+                'stage': (t.get('stage') or {}).get('name'),
+                'reason': t.get('reason')}
+    except Exception:                                       # noqa: BLE001
+        return {'reason': 'error'}
+
+
 def _plot_started_on(controller):
     """이 코디네이터가 따르는 구획의 시작일 → ISO 문자열|None.
 
@@ -7029,8 +7050,9 @@ class AoTDataToolService:
 
                 # 이 코디네이터가 **무엇을 기르고 있는가**. 설정값을 판단하려면
                 # 목표 온습도만으로는 부족하다 — 같은 25도가 상추에는 높고
-                # 토마토에는 적정이다. `crop_preset` 은 사람이 고른 프리셋이라
-                # 실제로 심긴 것과 다를 수 있어, 식생 구획을 따로 싣는다.
+                # 토마토에는 적정이다. 작물도 목표도 구획의 프로그램에서 온다
+                # (예전에는 함수에서 고른 `crop_preset` 이 실제로 심긴 것과
+                # 다를 수 있었다).
                 _bay = (o.get('bay_scope') or '').strip() or None
                 _plants = []
                 if fid:
@@ -7051,13 +7073,9 @@ class AoTDataToolService:
                     "bay_scope": o.get('bay_scope') or None,
                     "plots": _plants,
                     "effect_engine": o.get('effect_engine', 'legacy'),
-                    "crop_preset": o.get('crop_preset'),
                     "targets": {
-                        "vpd_kpa": o.get('target_vpd'),
-                        "vpd_source": o.get('vpd_sp_type'),
-                        "temperature_c": o.get('target_temperature'),
-                        "humidity_pct": o.get('target_humidity'),
-                        "co2_ppm": o.get('target_co2'),
+                        "source": "plot program",
+                        **_control_targets_for(c),
                     },
                     "tolerance": {
                         "vpd": o.get('tolerance_vpd'),
@@ -7486,7 +7504,9 @@ class AoTDataToolService:
         없었다.
 
         두 소스를 겹쳐 읽는다:
-          1) env_coordinator 의 crop_preset — 항상 사용 가능한 1차 소스
+          1) **구획의 프로그램** — 무엇을 언제 심었고 지금 몇 단계인가
+             (예전에는 함수에서 고른 `crop_preset` 을 1차 소스로 썼는데, 그것은
+             사람이 고른 프리셋이라 실제로 심긴 것과 다를 수 있었다)
           2) 도메인 레지스트리(facility_registry.yaml)의 crop_type+planting_date
              → GrowthStageResolver 로 생육단계·재배일수·단계별 최적범위
         레지스트리가 없는 설치도 실제로 존재하므로(이 저장소의 개발 환경이 그렇다),
@@ -7516,7 +7536,8 @@ class AoTDataToolService:
                 rows.append({
                     "facility_id": fid,
                     "facility_name": fname,
-                    "crop_preset": o.get('crop_preset'),
+                    "crop": _control_targets_for(c).get('plot'),
+                    "stage": _control_targets_for(c).get('stage'),
                     "controlled_by": c.unique_id,
                     "season_window": [_plot_started_on(c),
                                       o.get('schedule_end_time')],
@@ -7540,7 +7561,7 @@ class AoTDataToolService:
                     registry_note = (
                         "Growth stage unavailable: could not read the domain registry "
                         f"(facility_registry.yaml) ({type(exc).__name__}). The crop type is "
-                        "still available via crop_preset, but days-after-plot and "
+                        "still available from the plot program, but days-after-plot and "
                         "stage-specific optimal ranges require planting_date/crop_type to be "
                         "registered there.")
 

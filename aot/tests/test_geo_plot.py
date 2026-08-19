@@ -6294,7 +6294,10 @@ class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
         src = _read(self._INFO)
         for oid in ('target_vpd', 'target_co2', 'dli_target', 'gdd_target_daily',
                     'vpd_sp_type', 'co2_sp_type', 'vpd_method_id', 'co2_method_id',
-                    'schedule_start_time', 'target_source'):
+                    'schedule_start_time', 'target_source',
+                    # 작물이 무엇인가도 프로그램이 안다 — 코드에 박힌 5종 중
+                    # 하나를 함수에서 또 고르면 실제로 심긴 것과 갈린다.
+                    'crop_preset'):
             self.assertNotIn("'id': '%s'" % oid, src,
                              '%s 가 되살아났다 — 설정이 다시 두 곳이 된다' % oid)
 
@@ -6304,7 +6307,7 @@ class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
         src = _read(self._INFO)
         for oid in ('temp_max', 'temp_min', 'humid_max', 'humid_min',
                     'guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max',
-                    'schedule_end_time', 'schedule_week_offset', 'crop_preset'):
+                    'schedule_end_time', 'schedule_week_offset'):
             self.assertIn("'id': '%s'" % oid, src, '%s 가 사라졌다' % oid)
 
     def test_preset_no_longer_writes_targets(self):
@@ -6332,3 +6335,68 @@ class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
             '_cycle_mixin.py'))
         body = cyc.split('def _run_cycle', 1)[1][:800]
         self.assertIn('self._plot_targets_cache = None', body)
+
+
+class TestModelConstantsComeFromTheProgram(_CoordPlotFixture, unittest.TestCase):
+    """Big-Leaf 모델 상수도 프로그램이 정본이다.
+
+    예전에는 코드에 박힌 작물 5종 중 하나를 코디네이터 설정에서 골랐다 — 같은
+    작물을 프로그램과 함수 두 곳에서 정하는 셈이었고, 함수에서 고른 것이 실제로
+    심긴 것과 다를 수 있었다.
+    """
+
+    def _linked(self, photo):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+        prog = GeoProgram(name='P', kind='vegetation', subject='상추',
+                          stages=[{'key': 'veg', 'name': '생육', 'days': 30,
+                                   'targets': {'vpd': 0.9}}],
+                          photosynthesis=photo)
+        db.session.add(prog)
+        db.session.commit()
+        row = self._plot('상추')
+        row.program_uuid = prog.unique_id
+        db.session.commit()
+        return row
+
+    def test_model_constants_are_carried(self):
+        from aot.aot_flask.geo import coordinator_plot
+        self._linked({'A_max': 30.0, 'K_L': 150.0, 'K_C': 800.0,
+                      'T_opt': 20.0, 'T_sigma': 7.0, 'VPD_half': 0.9,
+                      'T_base': 4.0})
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual(30.0, t['model']['A_max'])
+        self.assertEqual(0.9, t['model']['VPD_half'])
+        self.assertEqual(4.0, t['T_base'])
+
+    def test_keys_match_the_control_side_dataclass(self):
+        """이름이 갈리면 값이 조용히 무시된다 — 그때 모델은 기본값으로 돈다."""
+        from aot.functions.utils.env_control.photosynthesis import CropParams
+        from aot.aot_flask.geo import coordinator_plot
+        for key in coordinator_plot.MODEL_KEYS:
+            self.assertTrue(hasattr(CropParams(), key), '%s 가 CropParams 에 없다' % key)
+
+    def test_no_plot_means_generic_defaults(self):
+        """기를 것이 없으면 최적화할 대상도 없다 — 옛 동작(함수에서 고른
+        프리셋)으로 되돌리면 다시 두 곳에서 작물을 정하게 된다."""
+        from aot.aot_flask.geo import coordinator_plot
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual({}, t['model'])
+
+    def test_editor_saves_every_model_key(self):
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        from aot.aot_flask.geo import coordinator_plot
+        for key in coordinator_plot.MODEL_KEYS:
+            self.assertIn("key: '%s'" % key, js, '%s 편집란이 없다' % key)
+        self.assertIn('[data-photo]', js)
+
+    def test_server_validates_them(self):
+        """틀린 값이 들어가도 에러가 나지 않는다 — 모델이 엉뚱한 제한 요인을
+        고를 뿐이다. 그래서 저장할 때 한 번 본다."""
+        from aot.aot_flask.geo import program_io
+        self.assertIsNone(program_io._check_photosynthesis({'A_max': 25}))
+        self.assertTrue(program_io._check_photosynthesis({'A_max': 'x'}))
+        self.assertTrue(program_io._check_photosynthesis({'VPD_half': 99}))
+        # 모르는 키는 거부하지 않는다 — 어휘가 늘 때 저장이 막히면 안 된다.
+        self.assertIsNone(program_io._check_photosynthesis({'future_key': 1}))

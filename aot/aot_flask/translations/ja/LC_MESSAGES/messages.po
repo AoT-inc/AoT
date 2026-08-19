@@ -28852,3 +28852,33 @@ msgstr "目標なし — 安全範囲のみ維持します。"
 
 msgid "Stop Control On"
 msgstr "制御終了日"
+
+msgid "Photosynthesis model"
+msgstr "光合成モデル"
+
+msgid "Used only when the coordinator runs photosynthesis-oriented control. Leave them alone unless you have measured values — templates come filled in."
+msgstr "コーディネーターが光合成志向制御を行うときだけ使われます。実測値がなければそのままにしてください — テンプレートから作ると既に入っています。"
+
+msgid "Max photosynthesis"
+msgstr "最大光合成速度"
+
+msgid "Light half-saturation"
+msgstr "光半飽和定数"
+
+msgid "CO2 half-saturation"
+msgstr "CO₂半飽和定数"
+
+msgid "Optimum temperature"
+msgstr "最適温度"
+
+msgid "Temperature width"
+msgstr "温度応答幅"
+
+msgid "VPD half-saturation"
+msgstr "VPD半飽和定数"
+
+msgid "Suggested DLI"
+msgstr "推奨日積算光量"
+
+msgid "Suggested GDD per day"
+msgstr "推奨日積算温度"

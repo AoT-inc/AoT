@@ -497,6 +497,7 @@ class CycleMixin:
         # 번 치는 것도 문제지만, 그 사이에 값이 바뀌면 **한 사이클 안에서 서로
         # 다른 목표**를 보게 된다.
         self._plot_targets_cache = None
+        self._crop_params_cache = None
 
         if not self._profiles:
             if getattr(self, 'debug_logging', False):
@@ -1015,9 +1016,9 @@ class CycleMixin:
         if self.photosynth_mode_enabled and internal.get('light') is not None:
             from aot.functions.utils.env_control.photosynthesis import (
                 boost_limiting_priority, decay_priorities,
-                find_limiting_factor, get_crop_params,
+                find_limiting_factor,
             )
-            crop = get_crop_params(self.crop_preset)
+            crop = self._crop_params()
             vpd_now = internal.get('VPD') or 0.0
             limiting = find_limiting_factor(
                 L=internal.get('light', 0.0),
@@ -1401,8 +1402,8 @@ class CycleMixin:
         photo = {'enabled': bool(getattr(self, 'photosynth_mode_enabled', False))}
         try:
             from aot.functions.utils.env_control.photosynthesis import (
-                estimate_net_photosynthesis, get_crop_params)
-            crop = get_crop_params(getattr(self, 'crop_preset', None))
+                estimate_net_photosynthesis)
+            crop = self._crop_params()
             L   = internal.get('light')
             CO2 = internal.get('CO2')
             T   = internal.get('T')

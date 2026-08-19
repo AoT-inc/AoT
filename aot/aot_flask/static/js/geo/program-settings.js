@@ -21,6 +21,18 @@
     return (d[k] != null && d[k] !== '') ? d[k] : f;
   }
 
+  // Big-Leaf 모델 상수 — 이름은 서버·제어와 같다(`CropParams`).
+  var _PHOTO_FIELDS = [
+    { key: 'A_max',    tkey: 'p_amax',  label: 'Max photosynthesis', unit: 'µmol/m²/s' },
+    { key: 'K_L',      tkey: 'p_kl',    label: 'Light half-saturation', unit: 'µmol/m²/s' },
+    { key: 'K_C',      tkey: 'p_kc',    label: 'CO2 half-saturation', unit: 'ppm' },
+    { key: 'T_opt',    tkey: 'p_topt',  label: 'Optimum temperature', unit: '°C' },
+    { key: 'T_sigma',  tkey: 'p_tsig',  label: 'Temperature width', unit: '°C' },
+    { key: 'VPD_half', tkey: 'p_vpdh',  label: 'VPD half-saturation', unit: 'kPa' },
+    { key: 'dli_target', tkey: 'p_dli', label: 'Suggested DLI', unit: 'mol/m²/d' },
+    { key: 'gdd_daily',  tkey: 'p_gdd', label: 'Suggested GDD per day', unit: '°C·d/d' }
+  ];
+
   function _esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
@@ -439,6 +451,31 @@
             (tBase == null ? '' : _esc(String(tBase))) + '"' +
             (ro ? ' disabled' : '') + '></div></div>';
 
+        // 광합성 모델 상수. **접어 둔다** — 대부분의 사람은 손대지 않고,
+        // 템플릿에서 만들면 이미 채워져 있다. 여기 있는 이유는 이것이 작물
+        // 지식이기 때문이다: 예전에는 코디네이터 설정에서 코드에 박힌 작물
+        // 5종 중 하나를 고르게 해, 같은 작물을 두 곳에서 정해야 했다.
+        var photoRows = _PHOTO_FIELDS.map(function (f) {
+          var v = (p.photosynthesis || {})[f.key];
+          return '<div class="aot-modal-option-row">' +
+            '<div class="aot-modal-option-label">' + _esc(_T(f.tkey, f.label)) +
+              ' <span class="aot-prog-unit">' + _esc(f.unit) + '</span></div>' +
+            '<div class="aot-modal-option-control"><input type="number" ' +
+              'step="any" class="form-control aot-modern-input" data-photo="' +
+              f.key + '" value="' + (v == null ? '' : _esc(String(v))) + '"' +
+              (ro ? ' disabled' : '') + '></div></div>';
+        }).join('');
+        var photoBlock =
+          '<details class="aot-prog-photo"><summary>' +
+            _esc(_T('photo_model', 'Photosynthesis model')) +
+          '</summary>' +
+          '<div class="aot-modal-body-text">' +
+            _esc(_T('photo_note',
+              'Used only when the coordinator runs photosynthesis-oriented ' +
+              'control. Leave them alone unless you have measured values — ' +
+              'templates come filled in.')) +
+          '</div>' + photoRows + '</details>';
+
         // 자동 승인(P7). **기본은 꺼짐** — 켜져 있는 것이 기본이면 사람이 아무
         // 결정도 하지 않았는데 단계가 스스로 넘어간다.
         var autoRow = '<div class="aot-modal-option-row">' +
@@ -464,7 +501,8 @@
                      _esc(_T('gdd_note',
                        'With a base temperature and a GDD per stage, stages ' +
                        'advance on accumulated heat instead of the calendar.')) +
-                   '</div>';
+                   '</div>' +
+                   photoBlock;
 
         // `map` 은 index 를 두 번째 인자로 넘긴다 — 그대로 두면 첫 단계만
         // 접히고 나머지가 전부 펼쳐진다(open 으로 읽힌다).
@@ -594,11 +632,17 @@
     var au = host.querySelector('[data-auto]');
     if (au) out.auto_advance = !!au.checked;
 
+    // 기준온도와 모델 상수는 같은 JSON 에 담긴다. **비운 칸은 키를 지운다** —
+    // 남겨 두면 "예전에 넣었던 값" 이 계속 쓰인다.
     var tb = host.querySelector('[data-tbase]');
     if (tb) {
       var photo = {};
       var raw = (tb.value || '').trim();
       if (raw !== '') photo.T_base = raw;
+      host.querySelectorAll('[data-photo]').forEach(function (el) {
+        var v = (el.value || '').trim();
+        if (v !== '') photo[el.getAttribute('data-photo')] = v;
+      });
       out.photosynthesis = Object.keys(photo).length ? photo : null;
     }
 

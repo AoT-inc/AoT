@@ -29093,3 +29093,33 @@ msgstr "목표 없음 — 안전 범위만 지킵니다."
 
 msgid "Stop Control On"
 msgstr "제어 종료일"
+
+msgid "Photosynthesis model"
+msgstr "광합성 모델"
+
+msgid "Used only when the coordinator runs photosynthesis-oriented control. Leave them alone unless you have measured values — templates come filled in."
+msgstr "코디네이터가 광합성 지향 제어를 돌 때만 쓰입니다. 실측값이 없다면 그대로 두세요 — 템플릿에서 만들면 이미 채워져 있습니다."
+
+msgid "Max photosynthesis"
+msgstr "최대 광합성률"
+
+msgid "Light half-saturation"
+msgstr "광 반포화 상수"
+
+msgid "CO2 half-saturation"
+msgstr "CO₂ 반포화 상수"
+
+msgid "Optimum temperature"
+msgstr "최적 온도"
+
+msgid "Temperature width"
+msgstr "온도 응답 폭"
+
+msgid "VPD half-saturation"
+msgstr "VPD 반포화 상수"
+
+msgid "Suggested DLI"
+msgstr "권장 일적산광량"
+
+msgid "Suggested GDD per day"
+msgstr "권장 일 적산온도"

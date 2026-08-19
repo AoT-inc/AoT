@@ -368,6 +368,39 @@ class HelpersMixin:
             self._plot_targets_cache = cached
         return cached
 
+    def _crop_params(self):
+        """Big-Leaf 모델 상수 → `CropParams`.
+
+        **정본은 구획의 프로그램**(`photosynthesis`)이고, 키 이름이 `CropParams`
+        와 같아 그대로 얹는다. 프로그램에 없는 항목은 기본값이 남는다.
+
+        구획이 없으면 기본값(generic)이다 — 광합성 모드는 "이 작물을 최적화"
+        하는 기능이라 기를 것이 없으면 최적화할 대상도 없다. 예전에는 코드에
+        박힌 작물 5종 중 하나를 함수 설정에서 고르게 했는데, 같은 작물 정보를
+        프로그램과 함수 두 곳에서 고르는 셈이었다.
+        """
+        from aot.functions.utils.env_control.photosynthesis import CropParams
+
+        cached = getattr(self, '_crop_params_cache', None)
+        if cached is not None:
+            return cached
+        params = CropParams()
+        model = (self._plot_targets() or {}).get('model') or {}
+        for key, val in model.items():
+            if hasattr(params, key) and val is not None:
+                try:
+                    setattr(params, key, float(val))
+                except (TypeError, ValueError):
+                    continue
+        t_base = (self._plot_targets() or {}).get('T_base')
+        if t_base is not None:
+            params.T_base = float(t_base)
+        name = (self._plot_targets() or {}).get('plot_name')
+        if name:
+            params.name = name
+        self._crop_params_cache = params
+        return params
+
     # ── CO₂ setpoint ─────────────────────────────────────────────────────────
 
     def _get_co2_setpoint(self) -> 'float | None':
@@ -752,7 +785,6 @@ class HelpersMixin:
             DailyAccumulator, accumulate_cycle, generate_suggestions, save_daily_state,
             local_today,
         )
-        from aot.functions.utils.env_control.photosynthesis import get_crop_params
 
         # 일별 경계는 시설 로컬 타임존 기준(다른 일별 로직과 일관). 미해석 시 UTC.
         tz = getattr(self, '_cached_tz', None)
@@ -765,9 +797,7 @@ class HelpersMixin:
         # T_base 가 갈리면 같은 구획의 GDD 가 화면(구획 모달)과 제어에서 서로
         # 다른 값이 된다 — 프로그램에 없을 때만 광합성 모델 작물에서 온다.
         pt = self._plot_targets()
-        crop = get_crop_params(self.crop_preset)
-        T_base = pt.get('T_base')
-        T_base = float(T_base) if T_base is not None else crop.T_base
+        T_base = self._crop_params().T_base
 
         dli_t = float(pt.get('dli') or 0.0) or None
         gdd_t = float(pt.get('gdd_daily') or 0.0) or None

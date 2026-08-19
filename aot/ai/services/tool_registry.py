@@ -387,7 +387,7 @@ TOOLS: List[Tool] = [
         "usage_hint": "params.arguments: {output_id: '<unique_id>'}",
     }),
     # --- 식생 구획(작기) — docs/design/geo-vegetation-plot.md -------------
-    # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제다. 시설은 crop_preset /
+    # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제다. 시설은 구획 프로그램 /
     # facility_registry 로 알 수 있었지만 노지는 알 방법이 없어, AI 가 노지
     # 구역에 대해서는 작물을 모른 채 답하고 있었다.
     #
@@ -2411,7 +2411,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_crop_status",
-        "description": "Crop and growth stage per facility - crop_preset, growing-season window, and (when the domain registry is configured) growth stage, days after plot and stage-specific optimal ranges. Optimal-growing advice is not possible without knowing the crop, so check this before advising on cultivation. If the growth stage is missing, the reason is returned with it. Read-only.",
+        "description": "Crop and growth stage per facility - taken from the plot program growing there (crop, stage, growing-season window) and, when the domain registry is configured, stage-specific optimal ranges. Optimal-growing advice is not possible without knowing the crop, so check this before advising on cultivation. If the growth stage is missing, the reason is returned with it. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {

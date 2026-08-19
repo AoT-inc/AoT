@@ -762,29 +762,10 @@ FUNCTION_INFORMATION = {
             'phrase': lazy_gettext(
                 'When enabled, the Big-Leaf photosynthesis model identifies the current '
                 'limiting factor (Light / CO₂ / Temperature / VPD) each cycle and '
-                'dynamically raises that variable\'s priority. '
-                'Requires Light sensor. Recommended when ≥ 3 active actuator types are available.'
-            ),
-        },
-        {
-            'id': 'crop_preset',
-            'type': 'select',
-            'default_value': 'tomato',
-            'required': False,
-            'options_select': [
-                ('tomato',     lazy_gettext('Tomato')),
-                ('lettuce',    lazy_gettext('Lettuce / Leafy greens')),
-                ('cucumber',   lazy_gettext('Cucumber')),
-                ('strawberry', lazy_gettext('Strawberry')),
-                ('pepper',     lazy_gettext('Pepper / Paprika')),
-            ],
-            'name': lazy_gettext('Photosynthesis Model Crop'),
-            'phrase': lazy_gettext(
-                'Selects the Big-Leaf model parameters (A_max, K_L, K_C, T_opt, VPD_half) '
-                'used by Photosynthesis-Oriented Control to decide which factor is limiting. '
-                'It also fills the target options (VPD, CO₂, Temp min/max, DLI, GDD) on Save, '
-                'but only while "Where Targets Come From" is set to Crop Preset — once the '
-                'targets come from a plot, this preset no longer touches them.'
+                'dynamically raises that variable\'s priority. Requires a light sensor. '
+                'The crop parameters come from the program of the plot growing here — '
+                'with no plot the model falls back to generic values, since there is no '
+                'crop to optimise for.'
             ),
         },
 

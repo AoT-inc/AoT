@@ -137,7 +137,6 @@ class CustomModule(
 
         # Photosynthesis Model
         self.photosynth_mode_enabled = None
-        self.crop_preset             = None
         self._priority_ewa_state: dict = {}   # P5-4: {var: ewa_priority}
 
         # Cumulative Goal Tracker (P5-5)

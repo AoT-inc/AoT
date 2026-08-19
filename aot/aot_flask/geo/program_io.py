@@ -208,22 +208,52 @@ def _clean_stage_functions(value):
     return (out or None), None
 
 
-def _check_t_base(photo):
-    """`photosynthesis.T_base` 가 있으면 숫자·범위인지 본다 → error|None.
+# 광합성(Big-Leaf) 모델 상수와 허용 범위. 이름은 `CropParams` 와 **같다** —
+# 그 계약이 이미 있었고, 새 이름을 지으면 같은 값이 두 이름을 갖는다.
+#
+# 범위는 **틀린 값을 막기 위한 것이지 정답을 정하는 것이 아니다**(작물마다
+# 다르다). 좁게 잡으면 실제 작물을 거부하게 된다.
+_PHOTO_FIELDS = {
+    'T_base':     (-20.0, 40.0,   '기준온도(T_base)'),
+    'A_max':      (0.1,   100.0,  '최대 광합성률(A_max)'),
+    'K_L':        (1.0,   2000.0, '광 반포화 상수(K_L)'),
+    'K_C':        (1.0,   3000.0, 'CO₂ 반포화 상수(K_C)'),
+    'T_opt':      (-10.0, 50.0,   '최적 온도(T_opt)'),
+    'T_sigma':    (0.5,   30.0,   '온도 응답 폭(T_sigma)'),
+    'VPD_half':   (0.1,   10.0,   'VPD 반포화(VPD_half)'),
+    'dli_target': (0.0,   80.0,   '권장 DLI'),
+    'gdd_daily':  (0.0,   60.0,   '권장 일 적산온도'),
+}
 
-    GDD 의 기준온도다. 틀린 값이 들어가면 적산이 통째로 어긋나는데 **에러가 나지
-    않는다** — 단계가 너무 빨리 넘어가거나 영영 안 넘어갈 뿐이다. 범위는 틀린
-    값을 막기 위한 것이지 정답을 정하는 것이 아니다(작물마다 다르다).
+
+def _check_photosynthesis(photo):
+    """`photosynthesis` 값 검증 → error|None.
+
+    틀린 값이 들어가도 **에러가 나지 않는다** — 단계가 너무 빨리 넘어가거나
+    영영 안 넘어가고, 광합성 모드가 엉뚱한 제한 요인을 고를 뿐이다. 그래서
+    저장할 때 한 번 본다.
+
+    모르는 키는 **거부하지 않는다** — 이 JSON 은 `CropParams` 와 같은 어휘라
+    그쪽이 늘면 여기도 함께 늘어야 하는데, 거부하면 그때까지 저장이 막힌다.
     """
-    if not isinstance(photo, dict) or photo.get('T_base') in (None, ''):
-        return None
-    try:
-        val = float(photo['T_base'])
-    except (TypeError, ValueError):
-        return '기준온도(T_base)가 숫자가 아닙니다'
-    if not (-20.0 <= val <= 40.0):
-        return '기준온도(T_base)가 범위를 벗어납니다 (-20~40)'
+    if not isinstance(photo, dict):
+        return None if photo in (None, '', {}) else '광합성 값 형식이 올바르지 않습니다'
+    for key, (lo, hi, label) in _PHOTO_FIELDS.items():
+        raw = photo.get(key)
+        if raw in (None, ''):
+            continue
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            return '%s 가 숫자가 아닙니다' % label
+        if not (lo <= val <= hi):
+            return '%s 가 범위를 벗어납니다 (%g~%g)' % (label, lo, hi)
+        # **숫자로 되돌려 담는다.** 화면은 입력칸의 문자열을 보내므로 그대로
+        # 두면 `"19.5"` 가 저장되고, 다음 저장 때 `"19.5" != 19.5` 라 바뀌지
+        # 않았는데도 바뀐 것으로 잡힌다(버전이 헛돈다).
+        photo[key] = val
     return None
+
 
 
 def _clean_target_methods(methods):
@@ -301,7 +331,7 @@ def _apply_fields(row, data):
 
     if 'photosynthesis' in data:
         photo = data.get('photosynthesis') or None
-        perr = _check_t_base(photo)
+        perr = _check_photosynthesis(photo)
         if perr:
             return None, perr
         if (row.photosynthesis or None) != photo:

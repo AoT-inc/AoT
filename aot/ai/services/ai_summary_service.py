@@ -259,7 +259,6 @@ class AISummaryService:
                     'function_name': controller.name,
                     'bay_scope': opts.get('bay_scope') or None,
                     'effect_engine': opts.get('effect_engine', 'legacy'),
-                    'crop_preset': opts.get('crop_preset'),
                     # 목표는 함수 옵션에 없다 — 구획의 프로그램이 정본이고
                     # 제어와 같은 계산을 거쳐 온다. 옛 키를 그대로 읽으면 AI 가
                     # 늘 "목표 없음" 으로 보고 엉뚱한 조언을 한다.

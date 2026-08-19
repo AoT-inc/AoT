@@ -43,6 +43,10 @@ PHOTO_MAP = (
     ('gdd_daily', '°C·d/d'),
 )
 
+# Big-Leaf 광합성 모델 상수 — `CropParams` 와 **같은 이름**이다(그 계약이
+# 이미 있었다). 새 이름을 지으면 같은 값이 두 이름을 갖는다.
+MODEL_KEYS = ('A_max', 'K_L', 'K_C', 'T_opt', 'T_sigma', 'VPD_half')
+
 # 단계에는 있으나 이 코디네이터가 목표로 쓰지 않는 항목 — 화면에 참고로만.
 UNMAPPED_UNITS = {'temp_day': '°C', 'temp_night': '°C', 'rh': '%'}
 
@@ -98,7 +102,7 @@ def control_targets(fn, on=None):
            'started_on': None, 'stage': None,
            'vpd': {'value': None, 'method_id': None},
            'co2': {'value': None, 'method_id': None},
-           'dli': None, 'gdd_daily': None, 'T_base': None}
+           'dli': None, 'gdd_daily': None, 'T_base': None, 'model': {}}
 
     scope = plot_context.plot_for_coordinator(fn, on=on)
     out['reason'] = scope.get('reason')
@@ -146,6 +150,10 @@ def control_targets(fn, on=None):
             out['dli'] = _num(t.get('value'))
 
     photo = prow.photosynthesis if isinstance(prow.photosynthesis, dict) else {}
+    # Big-Leaf 모델 상수도 프로그램이 정본이다 — 코드에 박힌 작물 5종은 이제
+    # 프로그램을 만들 때 값을 채워 주는 **출발점**일 뿐이다.
+    out['model'] = {k: _num(photo.get(k)) for k in MODEL_KEYS
+                    if photo.get(k) is not None}
     out['gdd_daily'] = _num(photo.get('gdd_daily'))
     # T_base 도 프로그램이 정본이다 — 없으면 코디네이터의 광합성 모델 작물에서
     # 온다. 둘이 다르면 같은 구획의 GDD 가 화면과 제어에서 갈린다.

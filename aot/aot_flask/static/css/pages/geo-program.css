@@ -124,3 +124,25 @@
 
 /* 목록 항목 아래 편집 영역 — 항목과 시각적으로 이어 보이게. */
 .aot-entry-detail { padding: 0 0 0.75em 0; }
+
+/* 광합성 모델 상수 — 접어 둔다. 대부분은 손대지 않고, 템플릿에서 만들면 이미
+   채워져 있다. 펼쳐 두면 "채워야 할 칸" 으로 읽힌다. */
+.aot-prog-photo {
+  margin-top: 10px;
+  border-top: 1px solid var(--aot-border-neutral, var(--aot-border-light));
+  padding-top: 8px;
+}
+.aot-prog-photo > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--aot-color-text-primary);
+  list-style: none;
+}
+.aot-prog-photo > summary::-webkit-details-marker { display: none; }
+.aot-prog-photo > summary::before { content: '▸ '; }
+.aot-prog-photo[open] > summary::before { content: '▾ '; }
+.aot-prog-unit {
+  color: var(--aot-color-text-secondary);
+  font-size: var(--aot-font-size-xs);
+  font-weight: 400;
+}
