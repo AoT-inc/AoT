@@ -24,6 +24,23 @@ if ! python3 "$CHECK" --staged; then
     exit 1
 fi
 
+# ── 정의 없이 불리는 JS 내부 함수 ────────────────────────────────────────
+# 큰 함수를 잘라 옮기다 이웃 함수를 통째로 삼키는 실수가 두 번 났다.
+# `node --check`·번들 빌드·정적 참조 검사가 **전부 통과**하고, 화면에서는 그
+# 모달이 그냥 안 열린다(예외가 promise 안에서 삼켜지는 경로가 있다).
+# 우회: AOT_SKIP_JS_UNDEF_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_JS_UNDEF_CHECK" ]; then
+    UNDEF_CHECK="$ROOT/aot/scripts/check_js_undefined_calls.py"
+    if [ -f "$UNDEF_CHECK" ] && git diff --cached --name-only | grep -q '\.js$'; then
+        if ! python3 "$UNDEF_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 정의가 없는 내부 함수를 부르고 있습니다."
+            echo "  (의도한 커밋이라면 AOT_SKIP_JS_UNDEF_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
 # ── 지도 데이터 쓰기 소유권 (S5) ──────────────────────────────────────────
 # geo 패키지 밖에서 GeoShape 를 직접 쓰면 지도 불변식(타입 어휘·채널 정규화·
 # aot_type 미저장·마커 유일성·시설 연쇄)을 그 코드가 다 알아야 하고, 결국

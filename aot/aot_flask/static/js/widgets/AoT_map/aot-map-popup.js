@@ -1678,12 +1678,10 @@
               '<div class="aot-modal-container">' +
               zoneCtl +
               _fr(_t('Kind'), _kindSelect('data-nf="kind"', 'vegetation')) +
-              _fr('<span class="aot-ov-plot-lbl-subject">' +
-                    _esc(_plotSubjectLabel(null)) + '</span>',
-                  _in('subject', 'text', '')) +
-              _fr('<span class="aot-ov-plot-lbl-variety">' +
-                    _esc(_plotVarietyLabel(null)) + '</span>',
-                  _in('variety', 'text', '')) +
+              // `_fr` 은 라벨을 이스케이프한다 — HTML 을 넘기면 태그가 그대로
+              // 화면에 찍힌다. 라벨은 **문자열**로만 넘긴다.
+              _fr(_plotSubjectLabel(null), _in('subject', 'text', '')) +
+              _fr(_plotVarietyLabel(null), _in('variety', 'text', '')) +
               _fr(_t('Start date'), _in('started_on', 'date', opts.today || '')) +
               _fr(_t('Expected end'), _in('expected_end_on', 'date', '')) +
               '</div>' +
@@ -2179,12 +2177,12 @@
     // 제목은 목록 쪽('심겨 있는 것')과 달라야 한다 — 같은 말을 쓰면 블록
     // 제목과 첫 행 라벨이 겹쳐 "심겨 있는 것 / 심은 것" 으로 읽힌다.
     var html = '<div class="aot-ov-block">' +
-               '<div class="aot-ov-sec-title">' + _esc(_t('This plot')) +
+               '<div class="aot-ov-sec-title">' + _esc(_t('Right now')) +
                '</div>';
 
-    html += _pRow(_plotSubjectLabel(p), _esc(p.subject || '—') +
-                  (p.variety ? ' · ' + _esc(p.variety) : ''));
-
+    // 대상·시작일·예상 종료일은 [개요] 가 맡는다 — 바뀌지 않는 사실이고,
+    // 두 탭에 같은 행을 두면 어느 쪽이 정본인지 사람이 매번 확인하게 된다.
+    //
     // 재배 일수 — 심은 날이 1일차(서버 elapsed_days 가 정본).
     //
     // 끝난 작기는 **기간**이지 나이가 아니다. 같은 숫자라도 "60일차"(지금 60일째
@@ -2196,10 +2194,8 @@
                     _esc((p.ended_on ? _t('%(n)s days') : _t('Day %(n)s'))
                          .replace('%(n)s', n)));
     }
-    html += _pRow(_t('Start date'), _esc(p.started_on || '—'));
-
-    // 예상 종료까지 — 지난 것을 숨기지 않는다. 늦어지고 있다는 것 자체가
-    // 사용자가 봐야 할 사실이다.
+    // 남은 일수는 날마다 바뀌므로 여기(지금 값)에 둔다. 예상 종료일 자체는
+    // 계획이라 [개요] 가 갖는다.
     if (p.expected_end_on) {
       // **한 열에는 한 정보만.** 예전에는 한 행이
       // "2026-09-07 (프로그램 기준) (19일 남음)" 이었다 — 날짜·출처·남은 일수
@@ -2208,7 +2204,6 @@
       //
       // 출처는 빼도 된다: 바로 위 [개요] 탭의 프로그램 블록이 무엇을 따르는지
       // 이미 말하고, 사람이 날짜를 직접 적으면 그 값이 이긴다.
-      html += _pRow(_t('Expected end'), _esc(p.expected_end_on));
       var d = p.days_to_expected_end;
       if (d != null) {
         html += _pRow(_t('Days left'),
@@ -2218,8 +2213,51 @@
                              String(-d))));
       }
     }
-    if (p.ended_on) html += _pRow(_t('Ended'), _esc(p.ended_on));
+    var _stg = p.stage;
+    if (_stg && _stg.state === 'running') {
+      html += _pRow(_t('Current stage'),
+                    _esc(_stg.name || _stg.key || '') +
+                    ' <span class="aot-ov-muted">(' + _stg.index + '/' +
+                    _stg.total + ')</span>');
+      if (_stg.days_left != null) {
+        html += _pRow(_t('Next stage'),
+                      _esc((_stg.next_name || '—') + ' · ' +
+                           _t('in %(n)s days').replace('%(n)s',
+                                String(_stg.days_left))));
+      } else if (_stg.source === 'gdd' && _stg.gdd_left != null) {
+        html += _pRow(_t('Next stage'),
+                      _esc((_stg.next_name || '—') + ' · ' +
+                           _t('in {n} GDD').replace('{n}',
+                                String(_stg.gdd_left))));
+      }
+    } else if (_stg && _stg.state === 'not_started') {
+      html += _pRow(_t('Current stage'), _esc(_t('Not started yet')));
+    } else if (_stg && _stg.state === 'past_end') {
+      html += _pRow(_t('Current stage'), _esc(_t('Past the programme end')));
+    }
+    html += _plotGddRows(_stg);
     html += '</div>';
+
+    // 단계 전환 제안·목표·자원 — 전부 **지금** 의 값이다. 프로그램이 무엇인지
+    // (이름·단계 수·전체 기간)는 바뀌지 않는 사실이라 [개요] 가 갖는다.
+    var _ask = _plotStageProposalHtml(p);
+    if (_ask) {
+      html += '<div class="aot-ov-block">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Stage change')) +
+              '</div>' + _ask + '</div>';
+    }
+    var _tg = _plotStageTargetRows(_stg);
+    if (_tg) {
+      html += '<div class="aot-ov-block">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Targets')) +
+              '</div>' + _tg + '</div>';
+    }
+    var _rs = _plotStageResourceRows(_stg);
+    if (_rs) {
+      html += '<div class="aot-ov-block">' +
+              '<div class="aot-ov-sec-title">' + _esc(_t('Resources')) +
+              '</div>' + _rs + '</div>';
+    }
 
     // 물 줄 수단이 없다 — 장치 목록이 아니라 **빠진 것**을 알리는 줄이다.
     // 정상일 때는 나오지 않으므로 평소 화면을 어지럽히지 않는다.
@@ -2376,68 +2414,6 @@
   //
   // 프로그램이 지워졌으면 그 사실을 말한다(조용히 빈칸으로 두면 "원래 없었다"로
   // 읽혀 다시 고를 생각을 못 한다).
-  function _plotProgramHtml(p) {
-    var pr = p.program;
-    if (!pr) return '';
-    var rows;
-    if (pr.missing) {
-      rows = '<div class="aot-ov-muted">' +
-             _esc(_t('The program this plot followed is gone. Pick another.')) +
-             '</div>';
-    } else {
-      rows = _pRow(_t('Name'), _esc(pr.name || '—'));
-      // 현재 단계 — "3/7" 로 진행을 함께 보인다. 단계 이름만 있으면 얼마나 남았는지
-      // 알 수 없고, 숫자만 있으면 그것이 무엇인지 알 수 없다.
-      var stg = p.stage;
-      if (stg && stg.state === 'running') {
-        var lbl = _esc(stg.name || stg.key || '') +
-                  ' <span class="aot-ov-muted">(' + stg.index + '/' + stg.total + ')</span>';
-        rows += _pRow(_t('Current stage'), lbl);
-        if (stg.days_left != null) {
-          rows += _pRow(_t('Next stage'),
-                        _esc((stg.next_name || '—') + ' · ' +
-                             _t('in %(n)s days').replace('%(n)s', String(stg.days_left))));
-        } else if (stg.source === 'gdd' && stg.gdd_left != null) {
-          // GDD 판정에는 "며칠 남았나" 가 없다 — 남은 것은 날이 아니라 온도다.
-          // 날짜로 환산해 보이면 지어낸 예측이 된다(앞으로의 기온을 모른다).
-          rows += _pRow(_t('Next stage'),
-                        _esc((stg.next_name || '—') + ' · ' +
-                             _t('in {n} GDD').replace('{n}', String(stg.gdd_left))));
-        }
-      } else if (stg && stg.state === 'not_started') {
-        // 계획만 세운 구획을 "육묘기" 라 부르면 심지도 않은 것을 기르는 중으로 읽는다.
-        rows += _pRow(_t('Current stage'), _esc(_t('Not started yet')));
-      } else if (stg && stg.state === 'past_end') {
-        rows += _pRow(_t('Current stage'), _esc(_t('Past the programme end')));
-      }
-      rows += _plotStageProposalHtml(p);
-      rows += _plotGddRows(stg);
-      rows += _plotStageTargetRows(stg);
-      rows += _plotStageResourceRows(stg);
-      rows += _pRow(_t('Stage count'), _esc(String(pr.stage_count || 0)));
-      if (pr.total_days) {
-        rows += _pRow(_t('Programme length'),
-                      _esc(_t('%(n)s days').replace('%(n)s', String(pr.total_days))));
-      }
-      rows += _plotStageHistoryHtml(p);
-      // 프로그램이 그 뒤 갱신됐다는 사실만 알린다 — 해석은 고정 버전으로 한다.
-      if (pr.newer_version) {
-        rows += '<div class="aot-ov-muted">' +
-                _esc(_t('A newer version of this program exists (not applied).')) +
-                '</div>';
-      }
-    }
-    return '<div class="aot-ov-block">' +
-           '<div class="aot-ov-sec-title">' + _esc(_t('Program')) +
-           '</div>' + rows + '</div>';
-  }
-
-  // 자원(관수·시비) — 선언과 **실제 상태**를 나란히 보인다.
-  //
-  // 이 블록의 값은 자동화가 아니라 대조다: "이 단계에는 시비가 돌아야 하는데
-  // 꺼져 있다" 는 사람이 지금 알 수 없는 사실이고, 알면 바로 고칠 수 있다.
-  // 프로그램은 함수를 스스로 켜지 않는다 — 관수를 켜는 것은 물이 나오는 일이라
-  // 사람이 [적용]을 눌러야 한다.
   var _RESOURCE_ROLES = {
     irrigation: 'Irrigation', fertigation: 'Fertigation', other: 'Other'
   };
@@ -2594,6 +2570,37 @@
            '<div class="aot-ov-muted">' +
            _esc(_t('Targets are shown for reference. Control is not changed automatically.')) +
            '</div>';
+  }
+
+  function _plotProgramHtml(p) {
+    var pr = p.program;
+    if (!pr) return '';
+    var rows;
+    if (pr.missing) {
+      rows = '<div class="aot-ov-muted">' +
+             _esc(_t('The program this plot followed is gone. Pick another.')) +
+             '</div>';
+    } else {
+      // **바뀌지 않는 사실만.** 현재 단계·적산온도·목표·자원·전환 제안은 전부
+      // "지금" 의 값이라 [현황] 이 갖는다 — 두 탭에 같은 것을 두면 어느 쪽이
+      // 정본인지 사람이 매번 확인하게 된다.
+      rows = _pRow(_t('Name'), _esc(pr.name || '—'));
+      rows += _pRow(_t('Stage count'), _esc(String(pr.stage_count || 0)));
+      if (pr.total_days) {
+        rows += _pRow(_t('Programme length'),
+                      _esc(_t('%(n)s days').replace('%(n)s', String(pr.total_days))));
+      }
+      // 프로그램이 그 뒤 갱신됐다는 사실만 알린다 — 해석은 고정 버전으로 한다.
+      if (pr.newer_version) {
+        rows += '<div class="aot-ov-muted">' +
+                _esc(_t('A newer version of this program exists (not applied).')) +
+                '</div>';
+      }
+      rows += _plotStageHistoryHtml(p);
+    }
+    return '<div class="aot-ov-block">' +
+           '<div class="aot-ov-sec-title">' + _esc(_t('Program')) +
+           '</div>' + rows + '</div>';
   }
 
   // 시설 구획의 자리 — 좌표가 아니라 **이름**이 위치다.

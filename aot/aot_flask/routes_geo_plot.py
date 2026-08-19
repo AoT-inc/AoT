@@ -153,6 +153,13 @@ def api_program_templates():
         from aot.scripts.seed_programs import catalog
         items = [{
             'key': t['key'], 'name': t['name'], 'subject': t['subject'],
+            'kind': t.get('kind'),
+            # scope 로 화면이 "카테고리에서 넓게 시작" 과 "작물별로 정확하게
+            # 시작" 을 나눠 보여줄 수 있다 — category 는 소속 작물종 키를
+            # (members), species 는 소속 카테고리 키를(category) 함께 싣는다.
+            'scope': t.get('scope', 'species'),
+            'category': t.get('category'),
+            'members': t.get('members'),
             'stage_count': len(t['stages']),
             'has_targets': any(st.get('targets') for st in t['stages']),
         } for t in catalog()]
@@ -188,9 +195,15 @@ def api_program_create():
         data = dict(data)
         data.setdefault('name', tpl['name'])
         data.setdefault('subject', tpl['subject'])
+        data.setdefault('kind', tpl.get('kind', 'vegetation'))
         data.setdefault('stages', tpl['stages'])
         data.setdefault('photosynthesis', tpl['photosynthesis'])
         data.setdefault('source_note', 'template:%s' % tkey)
+        # 카테고리 템플릿은 "이건 중앙값입니다, 실제에 맞게 고치세요" 를
+        # notes 에 담아 둔다 — 만든 프로그램에도 그대로 남아야 사람이 나중에
+        # 이걸 조사된 값으로 오해하지 않는다.
+        if tpl.get('notes'):
+            data.setdefault('notes', tpl['notes'])
 
     result, error = program_io.create_program(data, source='user')
     if error:

@@ -3704,6 +3704,43 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         self.assertIn('cumulative_tracker', body)
         self.assertIn('Tmax', body)
 
+    def test_tabs_split_by_now_versus_fixed(self):
+        """[현황]=지금 값 · [개요]=바뀌지 않는 사실.
+
+        예전에는 대상·시작일·예상 종료일이 **두 탭에 다** 있었고, 현재 단계·
+        목표·자원은 [개요] 에만 있었다 — 어느 쪽이 정본인지 알 수 없고, "지금
+        어떤가" 를 보러 온 사람이 [개요] 까지 뒤져야 했다.
+        """
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        over = popup.split('function _plotOverviewHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        about = popup.split('function _plotAboutHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        prog = popup.split('function _plotProgramHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+
+        # 지금 값은 [현황] 에만.
+        for now in ('_plotStageProposalHtml', '_plotStageTargetRows',
+                    '_plotStageResourceRows', '_plotGddRows'):
+            self.assertIn(now, over, '%s 가 [현황] 에 없다' % now)
+            self.assertNotIn(now, about, '%s 가 [개요] 에도 있다' % now)
+            self.assertNotIn(now, prog, '%s 가 프로그램 블록에 남아 있다' % now)
+
+        # 정체성은 [개요] 에만 — 두 탭에 같은 행을 두지 않는다.
+        self.assertIn('_plotSubjectLabel(p)', about)
+        self.assertNotIn('_plotSubjectLabel(p)', over)
+        self.assertIn("_t('Start date')", about)
+        self.assertNotIn("_t('Start date')", over)
+
+    def test_form_labels_are_plain_text(self):
+        """`_fr`·`_fRow` 는 라벨을 이스케이프한다 — HTML 을 넘기면 태그가 그대로
+        화면에 찍힌다(실제로 `<span …>품목</span>` 이 보였다)."""
+        popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                                   'widgets', 'AoT_map', 'aot-map-popup.js'))
+        for bad in ('_fr(\'<span', '_fRow(\'<span'):
+            self.assertNotIn(bad, popup)
+
     def test_expected_end_row_carries_one_fact(self):
         """한 열에는 한 정보만.
 
@@ -3714,12 +3751,17 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
         """
         popup = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js',
                                    'widgets', 'AoT_map', 'aot-map-popup.js'))
-        body = popup.split('function _plotOverviewHtml', 1)[1].split(
+        over = popup.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
-        self.assertIn("_pRow(_t('Expected end'), _esc(p.expected_end_on))", body)
-        self.assertIn("_t('Days left')", body)
+        about = popup.split('function _plotAboutHtml', 1)[1].split(
+            '\n  function ', 1)[0]
+        # 날짜는 [개요](바뀌지 않는 사실), 남은 일수는 [현황](지금 값).
+        self.assertIn("_pRow(_t('Expected end'), _esc(p.expected_end_on))", about)
+        self.assertIn("_t('Days left')", over)
+        self.assertNotIn("_t('Expected end')", over)
         # 출처 꼬리표를 되살리지 않는다.
-        self.assertNotIn('from programme', body)
+        self.assertNotIn('from programme', over)
+        self.assertNotIn('from programme', about)
 
     def test_stage_targets_come_from_the_server(self):
         """항목 어휘·단위를 화면이 다시 조립하지 않는다.
@@ -3807,7 +3849,8 @@ class TestVocabularyIsNotAgricultureOnly(unittest.TestCase):
                                  'widgets', 'AoT_map', 'aot-map-popup.js'))
         body = src.split('function _plotOverviewHtml', 1)[1].split(
             '\n  function ', 1)[0]
-        self.assertIn("_t('This plot')", body)
+        # [현황] 은 "지금" 이다 — 대상·시작일 같은 정체성은 [개요] 가 갖는다.
+        self.assertIn("_t('Right now')", body)
         self.assertNotIn("_t('Growing now')", body)
         # [개요]도 같은 문제를 겪었다 — 제목과 첫 행이 둘 다 '심은 것' 이었다.
         about = src.split('function _plotAboutHtml', 1)[1].split(
