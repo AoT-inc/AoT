@@ -4965,6 +4965,139 @@ class TestProgram(unittest.TestCase):
         for w in ('db.session.add', 'db.session.commit'):
             self.assertNotIn(w, body)
 
+    def test_ai_manifest_names_match_the_handlers(self):
+        """매니페스트가 시키는 인자 이름이 핸들러가 받는 이름이어야 한다.
+
+        `crop`→`subject` 로 옮기고 매니페스트를 안 고쳐서, LLM 은 `crop` 을
+        넘기라는 안내를 읽고 그대로 넘겼다 — `create_plot` 은 "subject
+        required" 로 실패하고 `modify_plot` 은 **아무것도 안 바꾸고 success** 를
+        돌려줬다. 문서가 거짓말을 하면 도구는 있으나 마나다.
+        """
+        import inspect
+        from aot.ai.services import tool_registry as R
+        from aot.ai.services.aot_data_tool_service import AoTDataToolService as S
+
+        src = _read(os.path.join(_ROOT, 'ai', 'services', 'tool_registry.py'))
+        # 구획 도구의 매니페스트에 옛 이름이 남아 있으면 안 된다.
+        for bad in ('"required": ["crop", "started_on"]',
+                    '"required": ["zone_id", "crop", "started_on"]'):
+            self.assertNotIn(bad, src)
+
+        # 핸들러가 실제로 받는 이름인지 확인한다.
+        for tool, must in (('create_plot', ('subject', 'kind', 'program_id')),
+                           ('confirm_plot_stage', ('plot_id', 'stage_key',
+                                                   'started_on')),
+                           ('apply_plot_resources', ('plot_id',)),
+                           ('undo_plot_stage', ('plot_id',))):
+            fn = getattr(S, tool)
+            params = set(inspect.signature(fn).parameters)
+            for name in must:
+                self.assertIn(name, params, '%s 가 %s 를 안 받는다' % (tool, name))
+
+    def test_modify_plot_refuses_a_no_op(self):
+        """알아듣지 못한 인자에 success 를 돌려주면 AI 는 바꿨다고 보고하고
+        사용자는 반영된 줄 안다 — 이 저장소가 반복해서 겪은 계열이다."""
+        src = _read(os.path.join(_ROOT, 'ai', 'services',
+                                 'aot_data_tool_service.py'))
+        body = src.split('def modify_plot', 1)[1].split('\n    @staticmethod', 1)[0]
+        self.assertIn('nothing to change', body)
+        self.assertIn('unknown field', body)
+
+    def test_stage_tools_are_gated(self):
+        """단계 확정은 기준점을 옮기고, 자원 적용은 물이 나온다."""
+        from aot.ai.services import tool_registry as R
+
+        approval = set(R.approval_required_tools())
+        for t in ('confirm_plot_stage', 'undo_plot_stage',
+                  'apply_plot_resources'):
+            self.assertIn(t, approval, '%s 가 승인 대상이 아니다' % t)
+        # 자원 적용은 물리 행위다 — `activate_function` 과 같은 무게로 둔다.
+        src = _read(os.path.join(_ROOT, 'ai', 'services', 'tool_registry.py'))
+        decl = src.split("Tool('apply_plot_resources'", 1)[1][:200]
+        self.assertIn('physical=True', decl)
+
+    def test_stage_editor_fits_a_fixed_width_drawer(self):
+        """단계 편집이 드로어(520px 고정) 안에 들어가야 한다.
+
+        예전에는 5열 표였는데 `grid-template-columns` 는 4트랙이었다 — 다섯
+        번째가 암시적 트랙으로 밀려 [목표]·[×] 가 화면 밖 253px 에 놓였고,
+        `overflow-x: hidden` 이라 스크롤로도 못 갔다. **목표·자원을 아예 설정할
+        수 없었고 단계 삭제도 안 됐다.**
+
+        그래서 표를 버리고 접히는 항목으로 갔다. 여기서 고정하는 것은 "표로
+        돌아가지 않는다" 다.
+        """
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'pages',
+                                 'geo-program.css'))
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        # 다열 표를 되살리지 않는다.
+        self.assertNotIn('.veg-stage-head', css)
+        self.assertNotIn('veg-stage-row', js)
+        # 접힘/펼침 구조가 있다.
+        self.assertIn('veg-stage-summary', js)
+        self.assertIn('veg-stage-detail', js)
+        self.assertIn("data-act=\"stage-toggle\"", js)
+
+    def test_stage_editor_does_not_branch_on_viewport(self):
+        """드로어는 1440px 화면에서도 520px 다 — 좁은 것은 뷰포트가 아니라
+        드로어라, 뷰포트 브레이크포인트는 데스크탑에서 영영 걸리지 않는다."""
+        import re
+        css = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'css', 'pages',
+                                 'geo-program.css'))
+        # 주석 안의 `@media` 는 "예전에 이랬다" 는 설명이다 — 규칙만 본다.
+        stripped = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+        self.assertNotIn('@media', stripped)
+
+    def test_add_selector_uses_the_app_dropdown(self):
+        """`aot-standard-select` 는 **`selectpicker` 와 한 쌍**이다.
+
+        그 CSS 는 `.bootstrap-select.aot-standard-select` 를 겨냥하므로,
+        selectpicker 없이 원본 select 에만 붙이면 스타일이 하나도 안 걸리고
+        브라우저 기본 드롭다운이 뜬다 — 앱의 다른 목록(function·output·camera)과
+        생김새도 동작도 갈린다.
+        """
+        html = _read(os.path.join(_ROOT, 'aot_flask', 'templates', 'pages',
+                                  'geo', 'programs.html'))
+        block = html.split('id="veg-base"', 1)[0][-260:] + \
+                html.split('id="veg-base"', 1)[1][:260]
+        self.assertIn('selectpicker', block)
+        self.assertIn('aot-standard-select', block)
+
+    def test_add_selector_is_refreshed_after_refill(self):
+        """selectpicker 는 원본 select 를 **복제해** 자기 목록을 그린다.
+
+        `innerHTML` 을 갈아끼운 뒤 알리지 않으면 화면에는 옛 목록("불러오는
+        중…")이 그대로 남는다 — 값은 바뀌는데 보이는 것만 낡는 종류라
+        알아채기 어렵다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        body = js.split('function renderBase', 1)[1].split('\n  function ', 1)[0]
+        self.assertIn("selectpicker('refresh')", body)
+
+    def test_program_card_follows_the_input_card(self):
+        """카드에 버튼을 늘리지 않는다 — 좁은 화면에서 밀리는 것은 버튼 수다.
+
+        input 카드와 같은 골격: 드래그 핸들 · 이름 · 부가정보 · 톱니 하나.
+        삭제·복제는 드로어 푸터로 내린다.
+        """
+        js = _read(os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'geo',
+                                'program-settings.js'))
+        html = _read(os.path.join(_ROOT, 'aot_flask', 'templates', 'pages',
+                                  'geo', 'programs.html'))
+        self.assertIn('aot-entry-drag-handle', js)
+        self.assertIn('fa-grip-lines', js)
+        self.assertIn('fa-cog', js)
+        # 카드에서 삭제·복제 버튼을 없앴다(푸터로 옮겼다).
+        card = js.split('function _rowHtml', 1)[1].split('\n  /**', 1)[0]
+        self.assertNotIn("data-act=\"delete\"", card)
+        self.assertNotIn("data-act=\"copy\"", card)
+        self.assertIn('veg-drawer-del', html)
+        self.assertIn('veg-drawer-copy', html)
+        # 이름 앞 배지 금지 — 한 열에는 한 정보만.
+        self.assertNotIn('_sourceBadge', js)
+
     def test_program_never_switches_functions_itself(self):
         """프로그램이 함수를 스스로 켜고 끄지 않는다.
 

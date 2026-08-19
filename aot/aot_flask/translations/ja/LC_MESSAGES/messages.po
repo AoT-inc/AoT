@@ -28645,3 +28645,15 @@ msgstr "このステージで宣言された機能をオンにしますか？宣
 
 msgid "Some functions could not be started."
 msgstr "一部の機能を開始できませんでした。"
+
+msgid "Management Programs"
+msgstr "管理プログラム"
+
+msgid "Delete this stage"
+msgstr "このステージを削除"
+
+msgid "built-in"
+msgstr "内蔵"
+
+msgid "external"
+msgstr "外部"

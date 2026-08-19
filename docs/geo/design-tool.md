@@ -38,7 +38,7 @@ Nothing in the tool forces you to follow this order (you can place a device befo
 
 ## Editing Modes { #editing-modes }
 
-Select the editing target from the mode tabs below the map — there are **6 modes**: Site, Zone, Facility, Planting, Equipment, and Device (labeled **A**, for "AoT device"). Each has different drawable shapes and properties. Pressing a tab also opens that mode's settings drawer.
+Select the editing target from the mode tabs below the map — there are **6 modes**: Site, Zone, Facility, Plot, Equipment, and Device (labeled **A**, for "AoT device"). Each has different drawable shapes and properties. Pressing a tab also opens that mode's settings drawer.
 
 ### Site
 
@@ -66,15 +66,19 @@ Places physical buildings (greenhouses, warehouses, equipment rooms).
 - **Properties**: Name, theme color.
 - **Special**: After saving, use the **Facility Design** button (or go to `/geo/facility`) for 3D modeling, engineering calculations, and picking the parent zone — all of that happens on that page, not here. See [Facility Management](facility.md).
 
-### Planting { #vegetation }
+### Plot { #plot }
 
-Records **what is planted where**. If a Zone says "this area is block 3-1", a planting plot says "in this part of block 3-1, lettuce has been growing since March 20".
+Records **what is where**. If a Zone says "this area is block 3-1", a plot says "in this part of block 3-1, lettuce has been there since March 20".
+
+**Not vegetation-only.** A plot has a **kind** — Vegetation, Livestock, Facility, Other. Choosing the kind narrows the program choices to that kind.
+
+**Attach a program** and the current stage, target environment and expected end date follow automatically. See [Management Programs](programs.md).
 
 - **Draw**: Rectangle, Circle, Polygon.
 - **Properties**: Crop, variety, plot name, planted-on date, expected end date, color.
 
-!!! note "Unlike zones, plantings have a lifespan"
-    A planting plot ends — 3 to 9 months for open-field beds, 30 years for an orchard. It is therefore **stored separately** from other shapes, and ending a season does not erase it: the record stays as history. That is what lets you answer "what has been in this spot for the last three years" for crop-rotation and replant-disease decisions.
+!!! note "Unlike zones, plots have a lifespan"
+    A plot ends — 3 to 9 months for open-field beds, 30 years for an orchard. It is therefore **stored separately** from other shapes, and ending a season does not erase it: the record stays as history. That is what lets you answer "what has been in this spot for the last three years" for crop-rotation and replant-disease decisions.
 
 **Overlapping is allowed.** Intercropping and mixed cropping are normal, so plots are not prevented from overlapping. Area percentages summing above 100% is not an error.
 
@@ -82,7 +86,7 @@ Records **what is planted where**. If a Zone says "this area is block 3-1", a pl
 
 #### Splitting a zone into plots { #split }
 
-When one zone is planted in several pieces, you do not have to draw each piece — you can have it **split**. Switch to Planting mode and the split form is already there, above the plot's crop/variety fields.
+When one zone is planted in several pieces, you do not have to draw each piece — you can have it **split**. Switch to Plot mode and the split form is already there, above the plot's subject/variety fields.
 
 - **Area to split** — pick from the zones and sites already drawn on the map. A shape you have not saved yet is not in the list (save it first).
 - **Split by** — either **Equal parts** (how many pieces) or **Strip width** (how many cm each piece is). Setting **Equal parts** to **1** does not divide at all — the whole area becomes a single plot (still inset if you set an edge margin), which is what you want when a field is planted as one. Choosing **Strip width** also reveals **Exact piece count (optional)** — leave it empty and the count is worked out automatically from the width (as many as fit); fill it in and exactly that many pieces are cut at exactly that width, with the leftover space becoming margin split evenly on both sides. This is not an equal split — use it when both the count and the spacing are already decided (e.g. "5 rows, exactly 40 cm apart").
@@ -114,7 +118,7 @@ The two go **together**. For flat (unbedded) planting, give row spacing instead.
 
 #### Migrating crops from facility bays
 
-Crop names previously entered on facility (greenhouse) bays can be migrated into planting plots with a backfill script — ask your administrator. Geometry is **copied** as a snapshot at that moment, so changing the bay count later does not drag past seasons along with it.
+Crop names previously entered on facility (greenhouse) bays can be migrated into plots with a backfill script — ask your administrator. Geometry is **copied** as a snapshot at that moment, so changing the bay count later does not drag past seasons along with it.
 
 ### Equipment
 

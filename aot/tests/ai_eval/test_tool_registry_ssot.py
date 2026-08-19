@@ -297,6 +297,19 @@ _PLANTING_WRITE_TOOL_ADDITIONS = {
     # 조각마다 GeoPlot 한 행이 생기므로 쓰기이고 승인 대상.
     'apply_plot_split',
 }
+
+# 단계 전환·자원 (2026-08-19, P5~P7). 셋 다 승인 대상이다.
+#
+# - confirm_plot_stage / undo_plot_stage: **기준점을 옮긴다.** 이후 단계가 통째로
+#   다시 계산되므로 "기록 하나 남기는 일" 이 아니다. 되돌리기가 있지만 마지막
+#   것만 무를 수 있어, 잘못 확정하면 사람이 원장을 다시 정리해야 한다.
+# - apply_plot_resources: **물이 나온다.** 그래서 `physical=True` 다 —
+#   `activate_function` 이 승인 대상인 것과 같은 이유이고, 프로그램이 함수를
+#   스스로 켜지 않기로 한 결정(P6)이 이 도구에서도 유지돼야 한다.
+#   config_only 로 면제하지 말 것.
+_PLOT_STAGE_TOOL_ADDITIONS = {
+    'confirm_plot_stage', 'undo_plot_stage', 'apply_plot_resources',
+}
 # 재배 프로그램 — docs/design/program-layer.md (2026-08-19, P3).
 # 작물의 단계·기간 템플릿. 구획에 붙이면 단계·예상 수확일이 따라오므로, AI 가
 # 구획을 만들 때 고를 수 있어야 하고(읽기 2) 없으면 만들 수 있어야 한다(쓰기 2).
@@ -398,6 +411,7 @@ def _check_dispatch_map(R):
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+           | _PLOT_STAGE_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
@@ -422,6 +436,7 @@ def _check_declarations(R):
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
            | _GEO_BINDING_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+           | _PLOT_STAGE_TOOL_ADDITIONS
            | _CROP_PROGRAM_READ_TOOL_ADDITIONS | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS,
@@ -435,6 +450,7 @@ def _check_declarations(R):
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+            | _PLOT_STAGE_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
@@ -448,7 +464,7 @@ def _check_declarations(R):
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
-            | _PLANTING_WRITE_TOOL_ADDITIONS
+            | _PLANTING_WRITE_TOOL_ADDITIONS | _PLOT_STAGE_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))

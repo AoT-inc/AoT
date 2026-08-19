@@ -473,7 +473,7 @@ TOOLS: List[Tool] = [
                         "location IS the bay. Outdoors pass zone_id (whole zone) or "
                         "a GeoJSON polygon; the owning zone is derived server-side. "
                         "Requires human approval."),
-        "usage_hint": ("params.arguments: {map_id, crop, started_on: 'YYYY-MM-DD', "
+        "usage_hint": ("params.arguments: {map_id, subject, kind?, program_id?, started_on: 'YYYY-MM-DD', "
                        "facility_id? + bay_id? | zone_id? | geometry: <GeoJSON Polygon>, "
                        "program_id?, variety?, name?, expected_end_on?, color?}"),
     }),
@@ -483,7 +483,7 @@ TOOLS: List[Tool] = [
         "description": ("Edits a plot's crop / variety / name / period / colour, and "
                         "for a facility plot the bay it sits in. Geometry is not "
                         "editable here. Requires human approval."),
-        "usage_hint": ("params.arguments: {plot_id, crop?, variety?, name?, "
+        "usage_hint": ("params.arguments: {plot_id, subject?, kind?, program_uuid?, variety?, name?, "
                        "started_on?, expected_end_on?, color?, bay_id?, program_uuid?}"),
     }),
     Tool('propose_plot_split', handler='propose_plot_split', manifest={
@@ -502,7 +502,7 @@ TOOLS: List[Tool] = [
         "action_type": "virtual_tool_call",
         "description": ("Creates one plot per piece of a split, recomputed from "
                         "the same arguments. Requires human approval."),
-        "usage_hint": ("params.arguments: {zone_id, crop, started_on, "
+        "usage_hint": ("params.arguments: {zone_id, subject, started_on, "
                        "parts? | strip_width_cm? | widths_cm?, edge_margin_m?, "
                        "orientation?, angle_deg?, name?}"),
     }),
@@ -512,7 +512,7 @@ TOOLS: List[Tool] = [
         "description": ("Re-uses a past plot's outline for a new plot — "
                         "'same spot as last year'. No coordinates needed. "
                         "Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id, crop?, started_on?}",
+        "usage_hint": "params.arguments: {plot_id, subject?, started_on?}",
     }),
     Tool('end_plot', handler='end_plot', mutating=True, manifest={
         "tool_name": "end_plot",
@@ -520,6 +520,41 @@ TOOLS: List[Tool] = [
         "description": ("Ends a plot (harvested/failed/removed). The row is KEPT as "
                         "history — it only leaves the map. Requires human approval."),
         "usage_hint": "params.arguments: {plot_id, ended_on?, reason?: harvested|failed|replaced|removed}",
+    }),
+    Tool('confirm_plot_stage', handler='confirm_plot_stage', mutating=True,
+         manifest={
+        "tool_name": "confirm_plot_stage",
+        "action_type": "virtual_tool_call",
+        "description": ("Confirms that a plot moved into a new stage. This MOVES "
+                        "THE ANCHOR — the remaining stages are recomputed from the "
+                        "date given, so do not invent one: use get_plot's "
+                        "stage_proposal.started_on (derived from the data) unless "
+                        "the grower states a different day. If stage_proposal is "
+                        "null there is nothing to confirm. Requires human approval."),
+        "usage_hint": ("params.arguments: {plot_id, stage_key (from "
+                       "stage_proposal.stage_key), started_on?: 'YYYY-MM-DD'}"),
+    }),
+    Tool('undo_plot_stage', handler='undo_plot_stage', mutating=True, manifest={
+        "tool_name": "undo_plot_stage",
+        "action_type": "virtual_tool_call",
+        "description": ("Undoes the most recently confirmed stage change. The row "
+                        "is KEPT (marked undone); the previous confirmation becomes "
+                        "the anchor again and later stages are recomputed. Only the "
+                        "last one can be undone. Requires human approval."),
+        "usage_hint": "params.arguments: {plot_id}",
+    }),
+    Tool('apply_plot_resources', handler='apply_plot_resources', mutating=True,
+         physical=True, manifest={
+        "tool_name": "apply_plot_resources",
+        "action_type": "virtual_tool_call",
+        "description": ("Starts the irrigation/fertigation Functions the current "
+                        "stage DECLARES. This makes water flow — it is a physical "
+                        "action. Only declared functions are touched; nothing is "
+                        "ever switched off. Read get_plot's stage.resources first "
+                        "to see what is declared and what is already running, and "
+                        "check 'failed' in the reply: some may not have started. "
+                        "Requires human approval."),
+        "usage_hint": "params.arguments: {plot_id}",
     }),
     Tool('delete_plot', handler='delete_plot', mutating=True, manifest={
         "tool_name": "delete_plot",
@@ -1180,15 +1215,15 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_plot",
-        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass plant_spacing_cm (plus row_spacing_cm for flat plot, or bed_pitch_cm + rows_per_bed for beds) to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. Without a bed layout the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and record the agreed layout as a NOTE on the plot (create_note with target_type='plot'), which is what the next conversation reads. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. Read-only.",
+        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, size, and which sensors it reads. 'dimensions' gives the plot's width and length in meters (bounding rectangle) — use it for any 'how many rows / will it fit' question, since area alone cannot answer one. Pass plant_spacing_cm (plus row_spacing_cm for a flat layout, or bed_pitch_cm + rows_per_bed for beds) to also get 'capacity_estimate' (rows, plants per row, total) computed here rather than in your head. Without a bed layout the reply carries an 'ask_user' field telling you to settle the layout with the grower first — follow it instead of reporting the flat-layout number, and record the agreed layout as a NOTE on the plot (create_note with target_type='plot'), which is what the next conversation reads. Read 'basis' and any 'dimensions.shape_note' and pass the caveat on — the counts are approximate. IMPORTANT: the 'sensors.source' field says whether the readings come from inside the plot ('plot') or are the zone's representative values ('zone') — say which one when you report a value, because a zone value is not measured in this plot. 'valves' lists the irrigation valves overlapping this plot with the % of the plot each covers; an entry marked unassigned means that ground has no way to be watered yet. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "Plot unique_id."},
-                "row_spacing_cm": {"type": "number", "description": "Spacing between rows in cm (e.g. 40), for FLAT plot only. Rows are counted across the plot's SHORT side. Not needed — and not used — when a bed layout (bed_pitch_cm + rows_per_bed) is given, because rows_per_bed takes its place."},
+                "row_spacing_cm": {"type": "number", "description": "Spacing between rows in cm (e.g. 40), for a FLAT layout only. Rows are counted across the plot's SHORT side. Not needed — and not used — when a bed layout (bed_pitch_cm + rows_per_bed) is given, because rows_per_bed takes its place."},
                 "plant_spacing_cm": {"type": "number", "description": "Spacing between plants within a row in cm (e.g. 15). Plants are counted along the plot's LONG side. Required for any count, in both flat and bed layouts."},
                 "edge_margin_cm": {"type": "number", "description": "Extra margin left free at every edge, in cm — headland for machinery turning, bed shoulders, a path. Default 0. Half a spacing is ALREADY free at each edge without this, so only pass it when the plot genuinely needs more (e.g. 200 for a 2 m turning strip). Requires both spacings."},
-                "bed_pitch_cm": {"type": "number", "description": "Bed spacing (두둑 간격) in cm, centre to centre — the furrow is INCLUDED, e.g. 160 for a 120 cm bed with a 40 cm furrow. Ask the grower for this as ONE number: they do not count a bed and its furrow separately, and asking for both invites two different readings of the same field. Give it with rows_per_bed to count the layout as actually planted; without it the count assumes flat plot and OVERSTATES a bedded plot by 20-30%."},
+                "bed_pitch_cm": {"type": "number", "description": "Bed spacing (두둑 간격) in cm, centre to centre — the furrow is INCLUDED, e.g. 160 for a 120 cm bed with a 40 cm furrow. Ask the grower for this as ONE number: they do not count a bed and its furrow separately, and asking for both invites two different readings of the same field. Give it with rows_per_bed to count the layout as actually planted; without it the count assumes a flat layout and OVERSTATES a bedded one by 20-30%."},
                 "rows_per_bed": {"type": "integer", "description": "How many rows go on ONE bed, e.g. 2. Whole number, 1 or more. Crop-dependent — peppers take one row, lettuce or cabbage two or three. Must be given together with bed_pitch_cm; the bed spacing alone cannot say how many rows fit. When this is given, row_spacing_cm is not used."}
             },
             "required": ["plot_id"]
@@ -1215,14 +1250,16 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "map_id": {"type": "string", "description": "Map (farm) unique_id."},
                 "zone_id": {"type": "string", "description": "PREFERRED. The zone/site shape whose outline to copy — use this when the crop fills a whole zone. You cannot know where a zone is on the map (no tool returns zone boundaries), so inventing coordinates puts the plot in the wrong place and nothing reports it. Get the id from get_spatial_tree."},
                 "geometry": {"type": "object", "description": "GeoJSON Polygon or MultiPolygon — only when the caller genuinely has real coordinates. Do NOT construct one from a guessed centre point. Points and lines are rejected."},
-                "crop": {"type": "string", "description": "Crop name."},
-                "started_on": {"type": "string", "description": "Plot date 'YYYY-MM-DD'."},
+                "subject": {"type": "string", "description": "What is in the plot — crop, tree species, animal, whatever the kind implies."},
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"], "description": "Subject kind. Default 'vegetation'. A program can only be attached if its kind matches."},
+                "program_id": {"type": "string", "description": "Management program to attach (unique_id from list_programs). Its kind must match this plot's kind. Brings stages, targets and the expected end date."},
+                "started_on": {"type": "string", "description": "Start date 'YYYY-MM-DD'."},
                 "variety": {"type": "string", "description": "Cultivar (optional)."},
                 "name": {"type": "string", "description": "Plot name, e.g. 'front bed' (optional)."},
                 "expected_end_on": {"type": "string", "description": "Expected end date 'YYYY-MM-DD' (optional)."},
                 "color": {"type": "string", "description": "Display colour '#rrggbb'. Omit to follow the map theme."}
             },
-            "required": ["crop", "started_on"]
+            "required": ["subject", "started_on"]
         }
     },
     {
@@ -1232,7 +1269,9 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "Plot unique_id."},
-                "crop": {"type": "string"},
+                "subject": {"type": "string"},
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"]},
+                "program_uuid": {"type": "string", "description": "Attach or change the management program. Empty string detaches. Kind must match."},
                 "variety": {"type": "string"},
                 "name": {"type": "string"},
                 "started_on": {"type": "string", "description": "'YYYY-MM-DD'"},
@@ -1244,7 +1283,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "propose_plot_split",
-        "description": "Works out how a zone or site would divide into plot plots, WITHOUT creating anything. Give parts (how many pieces — e.g. 3 to put three crops in one zone), strip_width_cm (how wide each piece is, in cm — e.g. 160 for bed-by-bed), or widths_cm (a list of per-piece widths in cm when pieces should NOT all be equal). Irregular edges are clipped, so pieces differ in length. Direction needs no input in the common case — it defaults by mode: with strip_width_cm, pieces follow the shape's LONGEST side (furrow direction must match the actual working/drainage direction); with parts alone (no strip_width_cm), pieces follow the SHORTEST side instead, since there is no furrow to align and squarer plots are easier to manage when splitting a zone between different crops. Override either default with orientation, or set angle_deg for an arbitrary direction — only pass angle_deg when a human looked at the map and chose that angle (e.g. to match an adjacent field's beds); never invent one. angle_deg wins over orientation if both are given. You get counts, widths and lengths back, not coordinates. If the response includes aspect_ratio much above ~4:1 for a parts-only split, the pieces are unusually long and narrow — try orientation='long' or 'short' (whichever was not already used) for squarer pieces. Tell the grower they can SEE the proposal drawn on the map design page (vegetation mode) before deciding. Read-only.",
+        "description": "Works out how a zone or site would divide into plots, WITHOUT creating anything. Give parts (how many pieces — e.g. 3 to put three crops in one zone), strip_width_cm (how wide each piece is, in cm — e.g. 160 for bed-by-bed), or widths_cm (a list of per-piece widths in cm when pieces should NOT all be equal). Irregular edges are clipped, so pieces differ in length. Direction needs no input in the common case — it defaults by mode: with strip_width_cm, pieces follow the shape's LONGEST side (furrow direction must match the actual working/drainage direction); with parts alone (no strip_width_cm), pieces follow the SHORTEST side instead, since there is no furrow to align and squarer plots are easier to manage when splitting a zone between different crops. Override either default with orientation, or set angle_deg for an arbitrary direction — only pass angle_deg when a human looked at the map and chose that angle (e.g. to match an adjacent field's beds); never invent one. angle_deg wins over orientation if both are given. You get counts, widths and lengths back, not coordinates. If the response includes aspect_ratio much above ~4:1 for a parts-only split, the pieces are unusually long and narrow — try orientation='long' or 'short' (whichever was not already used) for squarer pieces. Tell the grower they can SEE the proposal drawn on the map design page (plot mode) before deciding. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1266,8 +1305,8 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "zone_id": {"type": "string", "description": "The zone or site shape to divide."},
-                "crop": {"type": "string", "description": "Crop for every piece."},
-                "started_on": {"type": "string", "description": "Plot date 'YYYY-MM-DD'."},
+                "subject": {"type": "string", "description": "Subject for every piece."},
+                "started_on": {"type": "string", "description": "Start date 'YYYY-MM-DD'."},
                 "parts": {"type": "integer", "description": "Same value used in propose_plot_split."},
                 "strip_width_cm": {"type": "number", "description": "Same value used in propose_plot_split."},
                 "widths_cm": {"type": "array", "items": {"type": "number"}, "description": "Same value used in propose_plot_split."},
@@ -1279,7 +1318,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
                 "color": {"type": "string", "description": "'#rrggbb'"}
             },
-            "required": ["zone_id", "crop", "started_on"]
+            "required": ["zone_id", "subject", "started_on"]
         }
     },
     {
@@ -1289,8 +1328,8 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "The plot whose outline to re-use (past or present)."},
-                "crop": {"type": "string", "description": "Crop for the new plot. Omit to repeat the same crop as the source."},
-                "started_on": {"type": "string", "description": "Plot date 'YYYY-MM-DD'. Default: today."}
+                "subject": {"type": "string", "description": "Subject for the new plot. Omit to repeat the source's."},
+                "started_on": {"type": "string", "description": "Start date 'YYYY-MM-DD'. Default: today."}
             },
             "required": ["plot_id"]
         }

@@ -110,17 +110,28 @@
       html += '</optgroup>';
     }
     sel.innerHTML = html;
+    // selectpicker 는 원본 select 를 **복제해** 자기 목록을 그린다. innerHTML 을
+    // 갈아끼운 뒤 알리지 않으면 화면에는 옛 목록(여기서는 "불러오는 중…")이
+    // 그대로 남는다 — 값은 바뀌는데 보이는 것만 낡는 종류라 알아채기 어렵다.
+    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.selectpicker) {
+      window.jQuery(sel).selectpicker('refresh');
+    }
   }
 
   // ── 목록 ──────────────────────────────────────────────────────────────
-  function _sourceBadge(p) {
-    // 출처가 신뢰를 정한다 — 그래서 목록에서 바로 보여야 한다.
-    var label = { builtin: 'built-in', external: 'external', user: 'user',
-                  ai: 'AI' }[p.source] || p.source;
-    var cls = (p.source === 'ai' && !p.usable_for_control)
-      ? 'badge-warning' : 'badge-secondary';
-    return '<span class="badge ' + cls + ' aot-badge-inline">' +
-           _esc(label) + '</span>';
+
+  function _kindRow(p, ro) {
+    var cur = p.kind || 'vegetation';
+    var sel = '<select class="form-control aot-modern-input" data-pf="kind"' +
+              (ro ? ' disabled' : '') + '>';
+    _KINDS.forEach(function (k) {
+      sel += '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' +
+             _esc(_kindLabel(k)) + '</option>';
+    });
+    sel += '</select>';
+    return '<div class="aot-modal-option-row">' +
+           '<div class="aot-modal-option-label">' + _esc(_T('kind', 'Kind')) +
+           '</div><div class="aot-modal-option-control">' + sel + '</div></div>';
   }
 
   var _KINDS = ['vegetation', 'livestock', 'facility', 'other'];
@@ -129,6 +140,19 @@
     return _T('kind_' + (k || 'vegetation'), k || 'vegetation');
   }
 
+  /**
+   * 목록 카드 — **input 페이지 카드와 같은 골격**이다.
+   *
+   *   [≡ 핸들] [이름] [부가정보] [톱니]
+   *
+   * 그 배치는 이유가 있어 정해진 것이다: 좁은 화면에서 밀리는 것은 **버튼 수**
+   * 이므로, 카드에는 자주 쓰는 것 하나(편집=톱니)만 두고 나머지(삭제·복제)는
+   * 드로어 푸터로 내린다. 예전에는 [편집][복제][삭제] 셋이 카드에 있어 모바일
+   * 에서 이름과 부가정보를 밀어냈다.
+   *
+   * 이름 앞에 출처 배지를 붙이지 않는다 — 한 열에는 한 정보만 둔다(배지가 이름
+   * 앞에 오면 열 간격이 카드마다 달라진다). 출처는 부가정보 줄로 옮긴다.
+   */
   function _rowHtml(p) {
     var meta = [
       _esc(_kindLabel(p.kind)),
@@ -136,20 +160,9 @@
       _esc(_T('n_stages', '{n} stages').replace('{n}', String(p.stage_count || 0))),
       p.total_days
         ? _esc(_T('n_days', '{n} days').replace('{n}', String(p.total_days)))
-        : ''
+        : '',
+      p.source && p.source !== 'user' ? _esc(_sourceLabel(p)) : ''
     ].filter(Boolean).join(' · ');
-
-    var actions = '';
-    if (p.editable) {
-      actions += '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
-                 'data-act="edit">' + _esc(_T('edit', 'Edit')) + '</button>';
-    }
-    actions += '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
-               'data-act="copy">' + _esc(_T('copy', 'Copy')) + '</button>';
-    if (p.editable) {
-      actions += '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
-                 'data-act="delete">' + _esc(_T('del', 'Delete')) + '</button>';
-    }
 
     var warn = '';
     if (p.source === 'ai' && !p.usable_for_control) {
@@ -160,19 +173,31 @@
              '</button></div>';
     }
 
-    return '<div class="aot-entry-item" data-uuid="' + _esc(p.unique_id) + '" ' +
-             'data-config-uid="' + _esc(p.unique_id) + '">' +
+    return '<div class="aot-entry-item row small-gutters" data-uuid="' +
+             _esc(p.unique_id) + '" data-config-uid="' + _esc(p.unique_id) + '">' +
+             '<div class="aot-entry-drag-handle"><i class="fa fa-grip-lines"></i></div>' +
              '<div class="aot-entry-content-item aot-col-name">' +
-               '<div class="form-control aot-entry-name-input">' +
-                 _sourceBadge(p) + ' ' + _esc(p.name) +
-               '</div>' +
+               '<div class="form-control aot-entry-name-input" title="' +
+                 _esc(p.name) + '">' + _esc(p.name) + '</div>' +
              '</div>' +
              '<div class="aot-entry-content-item aot-col-uuid">' +
-               '<span class="aot-modal-body-text">' + meta + '</span>' +
+               '<span class="aot-modal-body-text" title="' + meta + '">' +
+                 meta + '</span>' +
              '</div>' +
-             '<div class="aot-entry-actions aot-col-action">' + actions + '</div>' +
+             // 편집은 톱니 하나 — input 카드와 같다. 읽기 전용 프로그램에도
+             // 띄운다(드로어가 값을 보여 주고 저장 버튼만 숨긴다).
+             '<div class="aot-entry-settings">' +
+               '<a class="btn p-0" role="button" data-act="edit" ' +
+                 'title="' + _esc(_T('edit', 'Edit')) + '">' +
+                 '<i class="fas fa-cog"></i></a>' +
+             '</div>' +
              warn +
            '</div>';
+  }
+
+  /** 출처 표시 — 이름 앞이 아니라 부가정보 줄에 둔다. */
+  function _sourceLabel(p) {
+    return _T('source_' + p.source, p.source);
   }
 
   function renderList() {
@@ -248,53 +273,84 @@
            '</div>';
   }
 
-  function _stageRow(st) {
+  /**
+   * 단계 한 항목 — **접힌 요약 + 펼친 상세**.
+   *
+   * 표(한 줄에 다섯 칸)를 버린 이유는 폭이다. 드로어는 520px 로 **고정**돼 있고
+   * (`--aot-wdrawer-w`, 페이지를 정확히 그만큼 밀어내므로 뷰포트를 따라 커지면
+   * 안 된다) 5열은 860px 를 요구했다 — 실제로 [목표]·[×] 버튼이 화면 밖
+   * 253px 에 놓여 **누를 수 없었다.**
+   *
+   * 그래서 화면 폭으로 분기하지 않는다. 모바일(309px)과 드로어(454px)는 둘 다
+   * 좁은 단일 컬럼이고, 좁은 쪽 하나에 맞추면 양쪽이 함께 맞는다. 분기를 늘리면
+   * 지금처럼 한쪽만 고쳐진다.
+   *
+   * 접힌 줄이 **요약을 겸한다** — 단계 구조(순서·기간·설정 유무)를 한눈에 보는
+   * 목적은 그대로 유지된다. 한 번에 한 단계만 펼치므로 7단계 × 여러 칸이 동시에
+   * 쏟아지지 않는다.
+   */
+  function _stageRow(st, open) {
     st = st || { key: '', name: '', days: '' };
-    var hasT = st.targets && Object.keys(st.targets).length;
-    return '<div class="veg-stage-block">' +
-           '<div class="aot-modal-option-row veg-stage-row">' +
-             '<div class="aot-modal-option-control">' +
-               '<input type="text" class="form-control aot-modern-input" ' +
-                 'data-sf="name" placeholder="' + _esc(_T('stage_name', 'Stage name')) +
-                 '" value="' + _esc(st.name || '') + '">' +
+    var hasT = !!(st.targets && Object.keys(st.targets).length);
+    var hasF = !!(st.functions && st.functions.length);
+    return '<div class="veg-stage-block' + (open ? ' is-open' : '') + '">' +
+           _stageSummary(st, hasT, hasF) +
+           '<div class="veg-stage-detail"' + (open ? '' : ' hidden') + '>' +
+             _stageField(_T('stage_name', 'Stage name'), 'name', 'text',
+                         st.name, '') +
+             _stageField(_T('stage_key', 'Key'), 'key', 'text', st.key, '') +
+             '<div class="veg-stage-nums">' +
+               _stageField(_T('stage_days', 'Days'), 'days', 'number',
+                           st.days, _T('until_end', 'until the end')) +
+               _stageField(_T('stage_gdd', 'GDD'), 'gdd', 'number',
+                           st.gdd, _T('by_days', 'by days')) +
              '</div>' +
-             '<div class="aot-modal-option-control">' +
-               '<input type="text" class="form-control aot-modern-input" ' +
-                 'data-sf="key" placeholder="' + _esc(_T('stage_key', 'Key')) +
-                 '" value="' + _esc(st.key || '') + '">' +
-             '</div>' +
-             '<div class="aot-modal-option-control">' +
-               '<input type="number" min="1" class="form-control aot-modern-input" ' +
-                 'data-sf="days" placeholder="' + _esc(_T('until_end', 'until the end')) +
-                 '" value="' + (st.days == null ? '' : st.days) + '">' +
-             '</div>' +
-             // 적산온도(GDD). 비우면 날짜로 넘어간다 — 한 단계라도 비면 서버가
-             // GDD 판정을 통째로 포기하므로(두 기준을 한 프로그램에 섞지 않는다)
-             // 전부 채우거나 전부 비우는 것이 맞다.
-             '<div class="aot-modal-option-control">' +
-               '<input type="number" min="1" step="any" class="form-control aot-modern-input" ' +
-                 'data-sf="gdd" placeholder="' + _esc(_T('by_days', 'by days')) +
-                 '" value="' + (st.gdd == null ? '' : st.gdd) + '">' +
-             '</div>' +
-             '<div class="aot-modal-option-control">' +
-               '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
-                 'data-act="stage-targets">' + _esc(_T('targets', 'Targets')) +
-                 (hasT ? ' ●' : '') + '</button> ' +
-               '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
-                 'data-act="stage-del">×</button>' +
-             '</div>' +
-           '</div>' +
-           // 목표는 기본으로 접어 둔다 — 7단계면 여섯 칸씩 42개가 한 화면에
-           // 펼쳐져 정작 단계 구조가 안 보인다. 값이 있는 단계는 ● 로 표시한다.
-           '<div class="veg-stage-targets"' + (hasT ? '' : ' style="display:none"') + '>' +
-             _targetInputs(st.targets) +
+             '<div class="veg-stage-sub">' + _esc(_T('targets', 'Targets')) + '</div>' +
+             '<div class="veg-stage-targets">' + _targetInputs(st.targets) + '</div>' +
              '<div class="aot-modal-body-text">' +
                _esc(_T('targets_note',
                        'Used for display and advice. Control is not changed automatically.')) +
              '</div>' +
              _resourceRows(st.functions) +
-           '</div>' +
-           '</div>';
+             // 삭제는 **펼친 안**에 둔다. 접힌 줄의 × 는 좁은 폭에서 오터치를
+             // 부르고, 되돌릴 수단이 없다.
+             '<div class="aot-ov-desc-actions">' +
+               '<button type="button" class="btn aot-pill-btn aot-pill-btn-sm" ' +
+                 'data-act="stage-del">' +
+                 _esc(_T('stage_delete', 'Delete this stage')) + '</button>' +
+             '</div>' +
+           '</div></div>';
+  }
+
+  /** 접힌 줄 — 이름과 요약. 이 줄 전체가 펼치기 버튼이다. */
+  function _stageSummary(st, hasT, hasF) {
+    var bits = [];
+    if (st.days != null && st.days !== '') {
+      bits.push(_T('n_days', '{n} days').replace('{n}', String(st.days)));
+    } else {
+      bits.push(_T('until_end', 'until the end'));
+    }
+    if (st.gdd != null && st.gdd !== '') bits.push(st.gdd + ' GDD');
+    if (hasT) bits.push(_T('targets', 'Targets'));
+    if (hasF) bits.push(_T('resources', 'Resources'));
+    return '<button type="button" class="veg-stage-summary" data-act="stage-toggle">' +
+           '<span class="veg-stage-caret" aria-hidden="true"></span>' +
+           '<span class="veg-stage-title">' +
+             _esc(st.name || st.key || _T('stage_name', 'Stage name')) + '</span>' +
+           '<span class="veg-stage-meta">' + _esc(bits.join(' \u00b7 ')) + '</span>' +
+           '</button>';
+  }
+
+  /** 라벨 위, 입력 아래. 520px 에서 label|value 2열은 값이 너무 좁다. */
+  function _stageField(label, field, type, value, placeholder) {
+    var attrs = (type === 'number') ? ' min="1" step="any"' : '';
+    return '<label class="veg-stage-field">' +
+           '<span>' + _esc(label) + '</span>' +
+           '<input type="' + type + '"' + attrs +
+             ' class="form-control aot-modern-input" data-sf="' + field + '"' +
+             ' placeholder="' + _esc(placeholder || '') + '"' +
+             ' value="' + _esc(value == null ? '' : String(value)) + '">' +
+           '</label>';
   }
 
   /**
@@ -305,6 +361,12 @@
    *
    * 드로어의 값은 저장을 눌러야 반영된다 — 잘못 고치고 닫으면 원래 값이 남는다.
    */
+  /** 드로어를 닫는다 — 삭제·복제 뒤에는 열려 있을 대상이 사라지거나 바뀐다. */
+  function _closeDrawer() {
+    var modal = document.getElementById('veg-drawer');
+    if (modal && window.jQuery) window.jQuery(modal).modal('hide');
+  }
+
   function openEditor(uuid) {
     var modal = document.getElementById('veg-drawer');
     var host = document.getElementById('veg-drawer-body');
@@ -329,6 +391,9 @@
         // 보여 주는 것은 사용자에게 거짓말이다.
         var saveBtn = document.getElementById('veg-drawer-save');
         if (saveBtn) saveBtn.style.display = ro ? 'none' : '';
+        // 내장·외부는 지울 수도 없다. **복제는 남긴다** — 고치는 유일한 길이다.
+        var delBtn = document.getElementById('veg-drawer-del');
+        if (delBtn) delBtn.style.display = ro ? 'none' : '';
         var title = document.getElementById('vegDrawerLabel');
         if (title) title.textContent = p.name || '';
         var _row = function (label, field, value) {
@@ -385,7 +450,11 @@
                        'advance on accumulated heat instead of the calendar.')) +
                    '</div>';
 
-        var stages = (p.stages || []).map(_stageRow).join('');
+        // `map` 은 index 를 두 번째 인자로 넘긴다 — 그대로 두면 첫 단계만
+        // 접히고 나머지가 전부 펼쳐진다(open 으로 읽힌다).
+        var stages = (p.stages || []).map(function (st) {
+          return _stageRow(st);
+        }).join('');
         var curves = _curveSection(p, ro);
         // 저장·닫기는 **드로어 푸터**가 맡는다(input 페이지와 같은 자리).
         // 본문에 또 두면 같은 일을 하는 버튼이 두 벌이 된다.
@@ -397,45 +466,12 @@
             '<button type="button" class="btn aot-pill-btn" data-act="stage-add">' +
             _esc(_T('add_stage', 'Add stage')) + '</button></div>';
 
-        // 열 머리 — 값이 차 있으면 placeholder 가 안 보여 어느 칸이 무엇인지
-        // 알 수 없다. 기간 칸은 비우면 "끝까지" 라는 것을 여기서 밝힌다.
-        var thead = '<div class="aot-modal-option-row veg-stage-head">' +
-          '<div class="aot-modal-option-control aot-modal-body-text">' +
-            _esc(_T('stage_name', 'Stage name')) + '</div>' +
-          '<div class="aot-modal-option-control aot-modal-body-text">' +
-            _esc(_T('stage_key', 'Key')) + '</div>' +
-          '<div class="aot-modal-option-control aot-modal-body-text">' +
-            _esc(_T('stage_days', 'Days')) + ' · ' +
-            _esc(_T('until_end', 'blank = until the end')) + '</div>' +
-          '<div class="aot-modal-option-control aot-modal-body-text">' +
-            _esc(_T('stage_gdd', 'GDD')) + '</div>' +
-          '<div class="aot-modal-option-control"></div></div>';
-
+        // 열 머리는 두지 않는다 — 접힌 항목에는 열이 없다. 각 칸의 라벨은
+        // 펼친 상세에 값 위로 붙는다(`_stageField`).
         host.innerHTML = '<div class="aot-modal-container">' + head + curves +
-                         (ro ? '' : thead) +
                          '<div class="veg-stages">' + stages + '</div>' +
                          actions + '</div>';
       });
-  }
-
-  /**
-   * 대상 종류(kind) 줄.
-   *
-   * 식생만 다루던 화면이 아니다 — 가축·시설물·도로도 같은 구조로 관리한다.
-   * 소비처는 자기 종류만 고른다(식생 구획은 `plot` 만 본다).
-   */
-  function _kindRow(p, ro) {
-    var cur = p.kind || 'vegetation';
-    var sel = '<select class="form-control aot-modern-input" data-pf="kind"' +
-              (ro ? ' disabled' : '') + '>';
-    _KINDS.forEach(function (k) {
-      sel += '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' +
-             _esc(_kindLabel(k)) + '</option>';
-    });
-    sel += '</select>';
-    return '<div class="aot-modal-option-row">' +
-           '<div class="aot-modal-option-label">' + _esc(_T('kind', 'Kind')) +
-           '</div><div class="aot-modal-option-control">' + sel + '</div></div>';
   }
 
   /**
@@ -511,17 +547,17 @@
                  (ro ? ' disabled' : '') + '>' + opts + '</select>' +
              '</label>';
     }).join('');
-    return '<div class="aot-modal-option-row aot-full-width-row">' +
-             '<div class="aot-modal-option-label">' +
-               _esc(_T('curves', 'Target curves')) +
-               '<div class="aot-modal-body-text">' +
-                 _esc(_T('curves_note',
-                         'A curve overrides the stage value for that item. ' +
-                         'Time runs from the start date.')) +
-               '</div>' +
-             '</div>' +
-             '<div class="veg-stage-targets">' + rows + '</div>' +
-           '</div>';
+    // 제목·설명을 **라벨 열 안에** 넣지 않는다. 공용 option-row 의 라벨 열은
+    // 좁아서(모바일에서 ~10자) "곡선을 연결하면 그 / 항목은 단계 값 대신" 처럼
+    // 끊긴다. 단계 상세와 같은 골격 — 제목 줄, 설명 줄, 그리고 격자.
+    return '<div class="veg-stage-sub">' + _esc(_T('curves', 'Target curves')) +
+           '</div>' +
+           '<div class="aot-modal-body-text">' +
+             _esc(_T('curves_note',
+                     'A curve overrides the stage value for that item. ' +
+                     'Time runs from the start date.')) +
+           '</div>' +
+           '<div class="veg-stage-targets">' + rows + '</div>';
   }
 
   function collect(host) {
@@ -648,7 +684,9 @@
       var act = btn.dataset.act;
       var item = btn.closest('[data-uuid]');
       var host = btn.closest('[data-detail]');
-      var uuid = (item && item.dataset.uuid) || (host && host.dataset.detail);
+      // 푸터의 삭제·복제는 카드 밖에 있다 — 지금 열려 있는 프로그램이 대상이다.
+      var uuid = (item && item.dataset.uuid) || (host && host.dataset.detail)
+                 || State.openId;
       if (!uuid) return;
 
       if (act === 'edit') {
@@ -661,6 +699,7 @@
               return;
             }
             State.openId = r.data.program.unique_id;
+            _closeDrawer();
             load();
           });
       } else if (act === 'delete') {
@@ -672,6 +711,7 @@
               return;
             }
             if (State.openId === uuid) State.openId = null;
+            _closeDrawer();
             load();
           });
       } else if (act === 'review') {
@@ -697,11 +737,25 @@
       var act = btn.dataset.act;
       if (act === 'stage-add') {
         drawer.querySelector('.veg-stages')
-              .insertAdjacentHTML('beforeend', _stageRow(null));
-      } else if (act === 'stage-targets') {
+              .insertAdjacentHTML('beforeend', _stageRow(null, true));
+      } else if (act === 'stage-toggle') {
+        // 한 번에 하나만 펼친다 — 7단계가 동시에 펼쳐지면 표로 돌아간 것과 같다.
         var blk = btn.closest('.veg-stage-block');
-        var box = blk && blk.querySelector('.veg-stage-targets');
-        if (box) box.style.display = (box.style.display === 'none') ? '' : 'none';
+        var opening = blk && blk.hasAttribute('data-collapsed') === false
+                          && !blk.classList.contains('is-open');
+        drawer.querySelectorAll('.veg-stage-block.is-open').forEach(function (b) {
+          if (b === blk) return;
+          b.classList.remove('is-open');
+          var d = b.querySelector('.veg-stage-detail');
+          if (d) d.hidden = true;
+        });
+        if (blk) {
+          var open = !blk.classList.contains('is-open');
+          blk.classList.toggle('is-open', open);
+          var det = blk.querySelector('.veg-stage-detail');
+          if (det) det.hidden = !open;
+        }
+        void opening;
       } else if (act === 'stage-del') {
         var row = btn.closest('.veg-stage-block');
         if (row) row.remove();

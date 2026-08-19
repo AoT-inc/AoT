@@ -121,6 +121,7 @@ nav:
       - Overview: geo/overview.md
       - Getting Started: geo/getting-started.md
       - Design Tool: geo/design-tool.md
+      - Management Programs: geo/programs.md
       - Facility Management: geo/facility.md
       - GIS Layers: geo/layers.md
       - Map Widget: geo/map-widget.md

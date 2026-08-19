@@ -28886,3 +28886,15 @@ msgstr "이 단계에 선언된 함수를 켤까요? 선언에 없는 함수는 
 
 msgid "Some functions could not be started."
 msgstr "일부 함수를 켜지 못했습니다."
+
+msgid "Management Programs"
+msgstr "관리 프로그램"
+
+msgid "Delete this stage"
+msgstr "이 단계 삭제"
+
+msgid "built-in"
+msgstr "내장"
+
+msgid "external"
+msgstr "외부"

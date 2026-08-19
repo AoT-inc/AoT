@@ -8206,7 +8206,8 @@ class AoTDataToolService:
     @staticmethod
     def create_program(name=None, subject=None, crop=None, stages=None,
                             variety=None, source_note=None, notes=None,
-                            kind=None, **extra):
+                            kind=None, base_temp_c=None, auto_advance=None,
+                            **extra):
         """[쓰기] 관리 프로그램을 만든다. 사람 승인 필요.
 
         `kind` 는 대상 종류다(기본 `vegetation`). 식생만이 아니라 가축·시설물·
@@ -8233,11 +8234,18 @@ class AoTDataToolService:
                         "message": ("source_note is required: state what this "
                                     "programme is based on (guideline, source, "
                                     "or observed cycle).")}
-            result, err = program_io.create_program({
+            payload = {
                 'name': name, 'subject': subject or crop, 'variety': variety,
                 'kind': kind or 'vegetation',
                 'stages': stages, 'source_note': source_note, 'notes': notes,
-            }, source='ai')
+            }
+            if base_temp_c is not None:
+                # 기준온도는 `photosynthesis.T_base` 에 산다(FunctionCropPreset 과
+                # 같은 키). AI 에게 그 중첩을 시키지 않고 평평한 이름으로 받는다.
+                payload['photosynthesis'] = {'T_base': base_temp_c}
+            if auto_advance is not None:
+                payload['auto_advance'] = bool(auto_advance)
+            result, err = program_io.create_program(payload, source='ai')
             if err:
                 return {"status": "error", "message": err}
             return {"status": "success", "program": result,
@@ -8263,8 +8271,13 @@ class AoTDataToolService:
                 return {"status": "error", "message": "program_id is required"}
             payload = {k: v for k, v in fields.items()
                        if k in ('name', 'variety', 'stages', 'notes',
-                                'source_note', 'targets_methods', 'kind')
+                                'source_note', 'targets_methods', 'kind',
+                                'auto_advance', 'photosynthesis')
                        and v is not None}
+            # 기준온도는 `photosynthesis.T_base` 에 산다(FunctionCropPreset 과
+            # 같은 키). AI 에게 그 중첩을 시키지 않고 평평한 이름으로 받는다.
+            if fields.get('base_temp_c') is not None:
+                payload['photosynthesis'] = {'T_base': fields['base_temp_c']}
             if not payload:
                 return {"status": "error", "message": "nothing to change"}
             result, err = program_io.update_program(program_id, payload)
@@ -8420,7 +8433,8 @@ class AoTDataToolService:
     def create_plot(map_id=None, geometry=None, zone_id=None, subject=None,
                         started_on=None, variety=None, name=None,
                         expected_end_on=None, color=None,
-                        facility_id=None, bay_id=None, program_id=None, **extra):
+                        facility_id=None, bay_id=None, program_id=None,
+                        kind=None, **extra):
         """[쓰기] 식생 구획을 만든다. 사람 승인 필요.
 
         위치는 셋 중 하나로 준다.
@@ -8469,6 +8483,7 @@ class AoTDataToolService:
                     'map_uuid': map_id,
                     'facility_uuid': facility_id, 'bay_id': bay_id,
                     'subject': subject, 'variety': variety, 'name': name,
+                    'kind': kind or 'vegetation',
                     'started_on': started_on,
                     'expected_end_on': expected_end_on, 'color': color,
                     'program_uuid': program_id,
@@ -8535,10 +8550,25 @@ class AoTDataToolService:
             payload = {'unique_id': plot_id}
             # `bay_id` — 시설 안에서 구역을 옮긴다(모종을 다른 동으로 옮겨
             # 심는 경우). 종료된 작기의 이동은 서버가 거부한다(VP-6).
-            for k in ('subject', 'variety', 'name', 'started_on',
+            for k in ('subject', 'kind', 'variety', 'name', 'started_on',
                       'expected_end_on', 'color', 'bay_id', 'program_uuid'):
                 if k in fields and fields[k] is not None:
                     payload[k] = fields[k]
+            # **알아듣지 못한 인자를 성공이라 답하지 않는다.** 예전에는
+            # `modify_plot(plot_id, crop='...')` 이 아무것도 바꾸지 않은 채
+            # `status: success` 를 돌려줬다 — AI 는 바꿨다고 보고하고, 사용자는
+            # 반영된 줄 안다. 이 저장소가 반복해서 겪은 "성공이라 답하는데 안 돈
+            # 것" 계열이라, 바꿀 것이 없으면 이유와 함께 거절한다.
+            if len(payload) <= 1:
+                known = ('subject', 'kind', 'variety', 'name', 'started_on',
+                         'expected_end_on', 'color', 'bay_id', 'program_uuid')
+                unknown = [k for k in fields if k not in known
+                           and not k.startswith('_')]
+                msg = 'nothing to change'
+                if unknown:
+                    msg = ('unknown field(s): %s — allowed: %s'
+                           % (', '.join(sorted(unknown)), ', '.join(known)))
+                return {"status": "error", "message": msg}
             result, err = plot_io.save_plot(payload)
             if err:
                 return {"status": "error", "message": err}
@@ -8740,6 +8770,85 @@ class AoTDataToolService:
             return {"status": "error", "message": str(e)}
 
     @staticmethod
+    @staticmethod
+    def confirm_plot_stage(plot_id=None, stage_key=None, started_on=None,
+                           **extra):
+        """[쓰기] 단계 전환을 확인해 원장에 남긴다. 사람 승인 필요.
+
+        **이 한 줄이 기준점을 옮긴다** — 이후 단계는 여기 적힌 날부터 계산된다.
+        그래서 날짜를 지어내지 말 것: `get_plot` 의 `stage_proposal.started_on`
+        이 자료에서 되짚은 날이고, 사람이 다른 날을 말하면 그것을 쓴다.
+
+        무엇을 확인할지는 `stage_proposal` 이 말해 준다. 제안이 없으면(=null)
+        확인할 전환이 없다는 뜻이다.
+        """
+        try:
+            from aot.aot_flask.geo import plot_io
+
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            if not stage_key:
+                return {"status": "error",
+                        "message": ("stage_key is required — read it from "
+                                    "get_plot's stage_proposal.stage_key")}
+            result, err = plot_io.accept_stage(
+                plot_id, stage_key=stage_key, started_on=started_on,
+                source='manual', decided_by='AI')
+            if err:
+                return {"status": "error", "message": err}
+            return {"status": "success", "event": result,
+                    "note": ("The anchor moved — remaining stages are now "
+                             "computed from this date.")}
+        except Exception as e:
+            logger.exception("Error in confirm_plot_stage")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def undo_plot_stage(plot_id=None, **extra):
+        """[쓰기] 마지막으로 확인된 단계 전환을 되돌린다. 사람 승인 필요.
+
+        기록은 지워지지 않는다(`undone` 으로 남는다). **마지막 것만** 무를 수
+        있고, 무르면 그 전 전환이 다시 기준점이 되어 이후 단계가 다시 계산된다.
+        """
+        try:
+            from aot.aot_flask.geo import plot_io
+
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            result, err = plot_io.undo_stage(plot_id, decided_by='AI')
+            if err:
+                return {"status": "error", "message": err}
+            return {"status": "success", "event": result}
+        except Exception as e:
+            logger.exception("Error in undo_plot_stage")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def apply_plot_resources(plot_id=None, **extra):
+        """[쓰기·물리] 현재 단계에 **선언된** 자원 함수를 켠다. 사람 승인 필요.
+
+        관수를 켜는 것은 물이 나오는 일이다. 프로그램은 함수를 스스로 켜지
+        않으므로, 이 도구가 그 유일한 경로다.
+
+        **선언된 것만 건드린다** — 선언에 없는 함수를 끄지 않는다. 무엇이
+        선언됐고 지금 어떤 상태인지는 `get_plot` 의 `stage.resources` 가
+        말해 준다(`active:false` 인 것만 켜진다).
+
+        응답의 `failed` 를 반드시 볼 것 — 일부만 켜졌을 수 있다.
+        """
+        try:
+            from aot.aot_flask.geo import plot_io
+
+            if not plot_id:
+                return {"status": "error", "message": "plot_id is required"}
+            result, err = plot_io.apply_stage_resources(plot_id)
+            if err:
+                return {"status": "error", "message": err}
+            return {"status": "success", "result": result}
+        except Exception as e:
+            logger.exception("Error in apply_plot_resources")
+            return {"status": "error", "message": str(e)}
+
     def delete_plot(plot_id=None, **extra):
         """[쓰기] 구획 기록을 삭제한다. 사람 승인 필요.
 

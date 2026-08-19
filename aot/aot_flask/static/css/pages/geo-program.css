@@ -1,41 +1,126 @@
-/* 설정 > 식생(재배 프로그램) — 목록·단계 편집.
+/* 설정 > 프로그램 — 목록·단계 편집.
 
    공용 클래스(aot-entry-*, aot-modal-*)로 안 되는 **격자만** 여기 둔다.
-   색·버튼·입력은 전부 공용을 그대로 쓴다(이 저장소 규칙). */
+   색·버튼·입력은 전부 공용을 그대로 쓴다(이 저장소 규칙).
 
-/* 단계 한 줄: 이름 / 키 / 기간 / 동작 — 화면이 좁아지면 두 줄로 접힌다. */
-.veg-stage-row {
+   ## 화면 폭으로 분기하지 않는다
+
+   이 화면은 드로어 안에서만 열리고 드로어는 **520px 로 고정**돼 있다
+   (`--aot-wdrawer-w` — 페이지를 정확히 그만큼 밀어내므로 뷰포트를 따라 커지면
+   안 된다). 그래서 1440px 모니터에서도 쓸 수 있는 폭은 454px 다.
+
+   예전에는 단계가 5열 표였고 `@media (max-width: 768px)` 로 모바일만 접었다.
+   그 규칙은 **데스크탑에서 영영 걸리지 않았다** — 좁은 것은 뷰포트가 아니라
+   드로어이기 때문이다. 결과로 [목표]·[×] 버튼이 화면 밖 253px 에 놓여 누를 수
+   없었고, `overflow-x: hidden` 이라 스크롤로도 못 갔다.
+
+   모바일(309px)과 드로어(454px)는 둘 다 좁은 단일 컬럼이다. 좁은 쪽 하나에
+   맞추면 양쪽이 함께 맞는다 — 분기를 늘리면 한쪽만 고쳐진다. */
+
+/* ── 단계 항목 ─────────────────────────────────────────────────────── */
+
+.veg-stage-block { border-bottom: 1px solid var(--aot-color-border, #e5e5e5); }
+.veg-stage-block:last-child { border-bottom: none; }
+
+/* 접힌 줄 전체가 펼치기 버튼이다 — 좁은 화면에서 손가락이 닿을 면적이 필요하다. */
+.veg-stage-summary {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr auto;
+  grid-template-columns: 1em minmax(0, auto) minmax(0, 1fr);
+  align-items: baseline;
   gap: 0.5em;
-  align-items: center;
+  width: 100%;
+  padding: 0.6em 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
 }
-.veg-stage-head {
-  display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr auto;
-  gap: 0.5em;
+.veg-stage-caret {
+  justify-self: center;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  padding: 0.16em;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  opacity: 0.6;
+}
+.veg-stage-block.is-open .veg-stage-caret { transform: rotate(45deg); }
+.veg-stage-title { font-weight: 600; }
+/* 요약은 넘치면 자른다 — 줄이 늘어나면 접어 둔 뜻이 없어진다. */
+.veg-stage-meta {
+  font-size: var(--aot-font-size-xs, 0.8em);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veg-stage-detail { padding: 0 0 0.9em 1.5em; }
+
+/* 라벨은 값 **위**에 둔다. 520px 에서 label|value 2열은 값이 너무 좁아,
+   "곡선을 연결하면 그 / 항목은 단계 값 대신" 처럼 10자마다 끊긴다. */
+.veg-stage-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  margin: 0 0 0.6em;
+}
+.veg-stage-field > span {
+  font-size: var(--aot-font-size-xs, 0.8em);
   opacity: 0.75;
 }
-@media (max-width: 768px) {
-  .veg-stage-row, .veg-stage-head { grid-template-columns: 1fr 1fr; }
+
+/* 짧은 숫자 둘(일수·적산온도)만 나란히 둔다 — 여기까지가 좁은 폭에서 안전하다. */
+.veg-stage-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; }
+
+.veg-stage-sub {
+  margin: 0.4em 0 0.3em;
+  font-size: var(--aot-font-size-xs, 0.8em);
+  font-weight: 600;
+  opacity: 0.75;
 }
 
-/* 단계 목표: 여섯 칸이 한 줄에 다 들어가지 않으므로 흐르게 둔다. */
+/* ── 단계 목표 ─────────────────────────────────────────────────────── */
+/* 여섯 칸. 좁으면 한 열, 조금 넓으면 두 열 — **컨테이너 폭**으로 정한다.
+   뷰포트로 정하면 드로어 안에서는 늘 틀린 쪽이 걸린다. */
 .veg-stage-targets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5em, 1fr));
   gap: 0.5em 0.75em;
-  padding: 0.5em 0 0.75em 1em;
+  padding: 0 0 0.5em;
 }
 .veg-target-field {
   display: flex;
   flex-direction: column;
   gap: 0.15em;
-  min-width: 6.5em;
+  min-width: 0;          /* 격자 칸이 내용 최소폭에 밀려 넘치지 않게 */
   margin: 0;
 }
 .veg-target-field em { opacity: 0.7; font-style: normal; }
-.veg-stage-targets .aot-modal-body-text { flex-basis: 100%; }
+.veg-target-field input { min-width: 0; }
+
+/* ── 자원(관수·시비) ───────────────────────────────────────────────── */
+/* 공용 option-row(label|value 2열)를 그대로 쓴다 — 라벨이 짧아 454px 에서도
+   눌리지 않고, 드로어 위쪽 줄들(이름·종류·적용 대상)과 같은 모양이 된다.
+   여기서 세로로 쌓으면 같은 드로어 안에 두 가지 행 모양이 생긴다.
+
+   `select` 만 남은 폭을 채우게 한다 — 기본값은 내용 크기라 "없음" 하나면
+   칸이 우스꽝스럽게 좁아진다. */
+.veg-stage-detail .aot-modal-option-control select,
+.veg-stage-detail .aot-modal-option-control input { width: 100%; }
+
+/* ── 목록 카드 ─────────────────────────────────────────────────────── */
+/* 부가정보는 **한 줄로 자른다.** input 카드의 같은 열에는 짧은 것(측정 칩·장치
+   유형)이 들어가는데 여기에는 "식생 · cherry_tomato · 7단계 · 130일" 이 들어가,
+   그대로 두면 세 줄로 접히며 이름 열을 밀어낸다(드로어가 열리면 목록 폭이
+   260px 까지 좁아진다). 전체는 title 로 남는다. */
+.aot-entry-item .aot-col-uuid > .aot-modal-body-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* 목록 항목 아래 편집 영역 — 항목과 시각적으로 이어 보이게. */
 .aot-entry-detail { padding: 0 0 0.75em 0; }

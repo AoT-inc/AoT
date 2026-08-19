@@ -60,9 +60,12 @@ Clicking a Zone or Site shape opens a popup listing every sensor and output devi
   Run times follow the same rule as the device window (off = last run, on = live timer).
 - **Settings (schedule on)**: Each output has a **Settings** button — see [Scheduled On](#scheduled-on).
 
-### Clicking a Planting Plot — What Is Growing Here { #vegetation }
+### Clicking a Plot — What Is Here { #plot }
 
-Plots drawn in the design tool's [Planting mode](design-tool.md#vegetation) appear on the map; clicking one opens the operational view for that season.
+Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the map; clicking one opens its operational view.
+
+- **[Status]** — subject and variety, days elapsed, start date.
+- **[Overview] > Program** — current and next stage, accumulated heat, stage targets, and the actual state of the declared resources. Confirming, logging and undoing stage changes happens here too. See [Management Programs](programs.md#stage-events).
 
 - **Crop, variety, growing period**, and days elapsed.
 - **Area and dimensions** — width and length are shown together, because area alone cannot answer "how many rows fit here?".
@@ -73,7 +76,7 @@ Plots drawn in the design tool's [Planting mode](design-tool.md#vegetation) appe
 !!! note "Water volume is not calculated"
     Water is physically shared across overlapping areas, so summing per-crop requirements produces a wrong number. The widget shows the inputs and leaves the judgement to you.
 
-Plot labels (chips) appear from **zoom 16** — the map already carries many labels, so always-on labels would collide. Toggle them from the layer control or the **Show Plantings** setting; both share the same value.
+Plot labels (chips) appear from **zoom 16** — the map already carries many labels, so always-on labels would collide. Toggle them from the layer control or the **Show Plots** setting; both share the same value.
 
 ### Choosing the Representative Measurement { #representative-measurement }
 
@@ -211,7 +214,7 @@ Toggles, by type, whether the polygons you drew in the design tool are shown as 
 | Facility Shape | Building footprints. |
 | Equipment Shape | Shapes for equipment such as pipes. |
 | Device Shape | The area a device occupies. |
-| Show Plantings | Planting plots (what is planted where). Plot labels appear from zoom 16. |
+| Show Plots | Plots (what is where). Plot labels appear from zoom 16. |
 | Other Drawn Shapes | Freeform shapes made with the drawing tools. |
 | Device Shape Opacity | Opacity of the device shapes above (0–100) — 0 is transparent, 100 is fully opaque. |
 
