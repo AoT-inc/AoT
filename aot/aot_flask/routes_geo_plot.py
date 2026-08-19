@@ -140,6 +140,97 @@ def api_resource_functions():
     return jsonify({'ok': True, 'functions': out})
 
 
+@blueprint.route('/api/geo/coordinator/<string:function_uuid>/plot-targets',
+                 methods=['GET'])
+@login_required
+def api_coordinator_plot_targets(function_uuid):
+    """이 코디네이터가 지금 따르는 구획과 그 단계 목표 (**읽기 전용**).
+
+    제어도 같은 값을 읽는다(`coordinator_plot.control_targets`) — 화면과 제어가
+    다른 경로로 계산하면 곧 갈라지고, 그 갈라짐은 "화면에는 맞는데 안 그렇게
+    돈다" 로만 드러난다.
+    """
+    from flask_babel import gettext
+    from aot.aot_flask.geo import coordinator_plot
+    from aot.databases.models import CustomController
+
+    fn = CustomController.query.filter_by(unique_id=function_uuid,
+                                          device='env_coordinator').first()
+    if fn is None:
+        return jsonify({'ok': False, 'message': 'Coordinator not found'}), 404
+
+    data = coordinator_plot.display_state(
+        fn, on=_parse_on(request.args.get('on')))
+
+    # 라벨은 서버가 붙인다 — 화면이 각자 들고 있으면 항목을 늘릴 때 한쪽만
+    # 늘어난다(`_TARGET_FIELDS` 를 서버에 못 박은 것과 같은 이유).
+    labels = {
+        'vpd': 'VPD', 'co2': gettext('CO2'), 'dli': gettext('DLI'),
+        'gdd_daily': gettext('GDD'),
+        'temp_day': gettext('Day temp'), 'temp_night': gettext('Night temp'),
+        'rh': gettext('Humidity'),
+    }
+    for r in (data.get('targets') or []) + (data.get('unmapped') or []):
+        r['label'] = labels.get(r['key'], r['key'])
+
+    # 곡선은 이름으로 보인다 — uuid 는 사람이 읽을 것이 아니다.
+    ids = [r['method_id'] for r in (data.get('targets') or []) if r.get('method_id')]
+    if ids:
+        from aot.databases.models import Method
+        names = {m.unique_id: m.name
+                 for m in Method.query.filter(Method.unique_id.in_(ids)).all()}
+        for r in data['targets']:
+            if r.get('method_id'):
+                r['method_name'] = names.get(r['method_id'])
+
+    # 기준 구획 지정 버튼을 낼지는 **서버가 정한다** — 화면이 권한을 스스로
+    # 판단하면 곧 갈라지고, 그 갈라짐은 "눌러도 403" 으로만 드러난다.
+    data['can_pick'] = utils_general.user_has_permission(
+        'edit_settings', silent=True)
+
+    data['ok'] = True
+    data['function'] = {'unique_id': fn.unique_id, 'name': fn.name,
+                        'is_activated': bool(fn.is_activated)}
+    return jsonify(data)
+
+
+@blueprint.route('/api/geo/coordinator/<string:function_uuid>/reference-plot',
+                 methods=['POST'])
+@login_required
+def api_coordinator_set_reference_plot(function_uuid):
+    """기준 구획을 지정한다(R4 — 후보가 둘 이상일 때).
+
+    구획이 겹치는 것은 정상이라(간작·혼작) 후보가 둘 이상일 때 서버가 임의로
+    고르지 않는다. 이 지정이 그 답이고, 제어는 다음 사이클부터 그 구획의 단계
+    목표를 따른다 — 값을 복사해 두지 않으므로 여기서 옮길 것은 없다.
+    """
+    import json as _json
+    from aot.databases.models import CustomController
+
+    denied = _require_edit()
+    if denied:
+        return denied
+
+    fn = CustomController.query.filter_by(unique_id=function_uuid,
+                                          device='env_coordinator').first()
+    if fn is None:
+        return jsonify({'ok': False, 'message': 'Coordinator not found'}), 404
+
+    plot_uuid = (request.get_json(silent=True) or {}).get('plot_uuid') or ''
+    plot_uuid = str(plot_uuid).strip()
+    if plot_uuid and GeoPlot.query.filter_by(unique_id=plot_uuid).first() is None:
+        return jsonify({'ok': False, 'message': 'Plot not found'}), 404
+
+    try:
+        opts = _json.loads(fn.custom_options) if fn.custom_options else {}
+    except (TypeError, ValueError):
+        opts = {}
+    opts['source_plot_id'] = plot_uuid
+    fn.custom_options = _json.dumps(opts)
+    db.session.commit()
+    return jsonify({'ok': True, 'source_plot_id': plot_uuid})
+
+
 @blueprint.route('/api/geo/program-templates', methods=['GET'])
 @login_required
 def api_program_templates():

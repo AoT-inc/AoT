@@ -5965,3 +5965,370 @@ class TestEmptyStatesKeepTheirTitle(unittest.TestCase):
             self.assertIn(needle, src, '%s 번역 없음' % msgid)
             after = src.split(needle, 1)[1].split('"', 1)[0]
             self.assertTrue(after.strip(), '%s 번역이 비어 있다' % msgid)
+
+
+class _CoordPlotFixture(object):
+    """코디네이터 × 구획 테스트의 공용 준비물.
+
+    `unittest.TestCase` 를 상속하지 **않는다** — 상속하면 아래 두 클래스가
+    서로의 테스트를 다시 실행한다(같은 검사를 두 번 도는 것도 문제지만, 실패가
+    어느 쪽 것인지 읽을 수 없게 된다).
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        from flask import Flask
+        from aot.aot_flask.extensions import db
+        import aot.databases.models  # noqa: F401
+        from flask_babel import Babel
+
+        cls._tmp = tempfile.TemporaryDirectory()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'sqlite:///' + os.path.join(cls._tmp.name, 'coord_plot.db')
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(app)
+        Babel(app)
+        cls._ctx = app.app_context()
+        cls._ctx.push()
+        db.create_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        from aot.aot_flask.extensions import db
+        db.session.remove()
+        cls._ctx.pop()
+        cls._tmp.cleanup()
+
+    def setUp(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import CustomController, GeoPlot, GeoProgram
+        GeoPlot.query.delete()
+        GeoProgram.query.delete()
+        CustomController.query.delete()
+        db.session.commit()
+
+    _FAC = 'fac-coord-1'
+
+    def _coord(self, facility=_FAC, bay='', pinned=None):
+        import json
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import CustomController
+        opts = {'geo_facility_id': facility, 'bay_scope': bay,
+                'target_vpd': 1.1, 'target_co2': 700.0,
+                'vpd_sp_type': 'static', 'co2_sp_type': 'static',
+                'dli_target': 0.0}
+        if pinned:
+            opts['source_plot_id'] = pinned
+        fn = CustomController(name='C', device='env_coordinator',
+                              custom_options=json.dumps(opts))
+        db.session.add(fn)
+        db.session.commit()
+        return fn
+
+    def _plot(self, subject, bay=None, days_ago=5, ended_days_ago=None,
+              facility=_FAC):
+        # **날짜를 고정하지 않는다** — 프로그램 단계는 오늘 기준으로 계산되므로
+        # 박아 둔 날짜는 시간이 지나면 `past_end` 가 되어, 어느 날 갑자기
+        # "비교 행이 비었다" 로 실패한다(그렇게 한 번 겪었다).
+        from datetime import date, timedelta
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoPlot
+
+        today = date.today()
+        row = GeoPlot(geo_id='map-coord', kind='vegetation', subject=subject,
+                      facility_uuid=facility, bay_id=bay,
+                      started_on=today - timedelta(days=days_ago),
+                      ended_on=(None if ended_days_ago is None
+                                else today - timedelta(days=ended_days_ago)))
+        db.session.add(row)
+        db.session.commit()
+        return row
+
+
+class TestCoordinatorPlotResolver(_CoordPlotFixture, unittest.TestCase):
+    """기준 구획 선택 규칙(R0~R5) — 정본 `plot_context.plot_for_coordinator`.
+
+    설계: `docs/design/coordinator-plot-targets.md`.
+    """
+
+    # ── R2 / R3 / R4 ────────────────────────────────────────────────────
+
+    def test_no_facility_says_so(self):
+        from aot.aot_flask.geo import plot_context
+        out = plot_context.plot_for_coordinator(self._coord(facility=''))
+        self.assertEqual('no-facility', out['reason'])
+        self.assertIsNone(out['plot'])
+
+    def test_no_plot_leaves_the_coordinator_alone(self):
+        """R2 — 후보가 없으면 아무것도 하지 않는다. **폴백을 없애지 말 것**:
+        온실을 비워도 난방은 돌아야 한다."""
+        from aot.aot_flask.geo import plot_context
+        out = plot_context.plot_for_coordinator(self._coord())
+        self.assertEqual('none', out['reason'])
+        self.assertIsNone(out['plot'])
+
+    def test_single_candidate_is_the_reference(self):
+        from aot.aot_flask.geo import plot_context
+        self._plot('상추')
+        out = plot_context.plot_for_coordinator(self._coord())
+        self.assertEqual('only', out['reason'])
+        self.assertEqual('상추', out['plot']['subject'])
+
+    def test_two_candidates_are_never_auto_picked(self):
+        """R4 — 겹침(간작·혼작)이 정상인 도메인이라 자동 선택은 조용히 틀린다."""
+        from aot.aot_flask.geo import plot_context
+        self._plot('상추')
+        self._plot('바질')
+        out = plot_context.plot_for_coordinator(self._coord())
+        self.assertEqual('ambiguous', out['reason'])
+        self.assertIsNone(out['plot'])
+        self.assertEqual(2, len(out['candidates']))
+
+    def test_ended_plot_is_not_a_candidate(self):
+        from aot.aot_flask.geo import plot_context
+        self._plot('상추', days_ago=10, ended_days_ago=2)
+        out = plot_context.plot_for_coordinator(self._coord())
+        self.assertEqual('none', out['reason'])
+
+    # ── R5 ──────────────────────────────────────────────────────────────
+
+    def test_pinned_plot_wins_over_the_others(self):
+        from aot.aot_flask.geo import plot_context
+        a = self._plot('상추')
+        self._plot('바질')
+        out = plot_context.plot_for_coordinator(self._coord(pinned=a.unique_id))
+        self.assertEqual('pinned', out['reason'])
+        self.assertEqual('상추', out['plot']['subject'])
+
+    def test_pinned_gone_is_reported_not_silently_replaced(self):
+        """R5 — 지정이 사라지면 사실을 말한다. 조용히 다른 구획으로 갈아타면
+        사람은 자기가 고른 것이 아직 쓰인다고 믿는다."""
+        from aot.aot_flask.geo import plot_context
+        self._plot('상추')
+        out = plot_context.plot_for_coordinator(self._coord(pinned='gone-uuid'))
+        self.assertTrue(out['pinned_missing'])
+        self.assertEqual('gone-uuid', out['pinned'])   # 값은 지우지 않는다
+        self.assertEqual('only', out['reason'])        # 나머지 규칙 재적용
+
+    # ── 방향 비대칭 (의도된 것) ─────────────────────────────────────────
+
+    def test_bay_coordinator_sees_a_facility_wide_plot(self):
+        """구역 코디네이터 × 시설 전체 구획:
+        `plots_in_facility`(내 구역에서 무엇이 자라나) → **포함**,
+        `facility_control_for_plot`(이 구획을 맡는 제어가 누구냐) → **제외**.
+        답이 달라야 하는 서로 다른 질문이라 둘을 같게 만들지 말 것."""
+        from aot.aot_flask.geo import plot_context
+        row = self._plot('상추', bay=None)
+        out = plot_context.plot_for_coordinator(self._coord(bay='bay_1'))
+        self.assertEqual('only', out['reason'])
+
+        ctrl = plot_context.facility_control_for_plot(row)
+        self.assertEqual([], ctrl['coordinators'])
+
+    def test_other_bay_plot_is_not_a_candidate(self):
+        from aot.aot_flask.geo import plot_context
+        self._plot('상추', bay='bay_2')
+        out = plot_context.plot_for_coordinator(self._coord(bay='bay_1'))
+        self.assertEqual('none', out['reason'])
+
+
+class TestCoordinatorPlotWiring(unittest.TestCase):
+    """표시(Phase 1)의 배선 — 화면 두 곳이 **같은 구현**을 쓰는지."""
+
+    _JS = os.path.join(_ROOT, 'aot_flask', 'static', 'js', 'common',
+                       'aot-coordinator-plot.js')
+    _POPUP = os.path.join(_ROOT, 'aot_flask', 'static', 'js',
+                          'widgets', 'AoT_map', 'aot-map-popup.js')
+    _TPL = os.path.join(_ROOT, 'aot_flask', 'templates', 'pages',
+                        'function_options', 'custom_function_options.html')
+
+    def test_settings_page_has_the_anchor(self):
+        src = _read(self._TPL)
+        self.assertIn("each_function.device == 'env_coordinator'", src)
+        self.assertIn('class="aot-coord-plot"', src)
+
+    def test_facility_modal_uses_the_same_loader(self):
+        """모달이 자기 표를 따로 만들면 규칙이 곧 갈라진다 — 앵커만 낸다."""
+        src = _read(self._POPUP)
+        self.assertIn("'<div class=\"aot-coord-plot aot-ov-block\" data-compact=\"1\"'",
+                      src)
+        # 비교 규칙(어느 옵션과 견주는가)이 위젯 쪽에 복제되면 안 된다.
+        for leaked in ('target_vpd', 'vpd_sp_type', 'gdd_target_daily'):
+            self.assertNotIn(leaked, src)
+
+    def test_loader_is_in_the_map_widget_bundle(self):
+        """번들에 없으면 시설 모달의 앵커가 영영 안 채워진다(에러도 안 난다)."""
+        import json
+        cfg = json.load(open(os.path.join(
+            _ROOT, 'aot_flask', 'static', 'js', 'tools', 'bundles.json'),
+            encoding='utf-8'))
+        self.assertIn('common/aot-coordinator-plot.js',
+                      cfg['aot-map-widget']['inputs'])
+
+    def test_the_only_write_is_picking_the_reference_plot(self):
+        """목표는 프로그램에서 오고 제어가 매 사이클 읽는다 — 화면이 값을 옮길
+        일이 없다. 쓰기가 하나라도 늘면 그 경로만 승인·권한 판단을 비켜간다."""
+        import re
+        js = _read(self._JS)
+        posts = re.findall(r"fetch\('([^']+)'[\s\S]{0,120}?method: 'POST'", js)
+        self.assertEqual(1, len(posts), '쓰기 경로는 하나여야 한다: %r' % (posts,))
+        self.assertIn('/api/geo/coordinator/', posts[0])
+        for verb in ('PUT', 'DELETE'):
+            self.assertNotIn("method: '%s'" % verb, js)
+
+    def test_the_automatic_path_only_reads(self):
+        """`load()` 는 화면이 열릴 때마다 저절로 돈다 — 거기서 쓰면 아무도 누른
+        적 없는 설정 변경이 일어난다."""
+        js = _read(self._JS)
+        body = js.split('  function load(el) {', 1)[1].split('\n  function ', 1)[0]
+        self.assertNotIn('POST', body)
+
+    def test_empty_compact_card_removes_itself(self):
+        """시설 모달에는 [구획] 블록이 이미 있다 — 빈 카드가 또 서면 같은 사실을
+        두 블록이 각자 적는다."""
+        js = _read(self._JS)
+        body = js.split('function render(', 1)[1].split('\n  function ', 1)[0]
+        self.assertIn('if (compact) { el.remove(); return; }', body)
+
+
+
+class TestControlReadsTheProgram(_CoordPlotFixture, unittest.TestCase):
+    """제어가 읽는 목표의 정본은 **프로그램**이다.
+
+    코디네이터에는 목표 옵션이 없다 — 있으면 같은 사실이 두 곳에 남고, 사람이
+    어느 쪽을 고쳐야 하는지 매번 판단해야 한다.
+    """
+
+    def _program(self, targets, photo=None, methods=None, source='user',
+                 reviewed=True):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoProgram
+        from aot.utils.time_utils import utc_now
+        prog = GeoProgram(name='P', kind='vegetation', subject='상추',
+                          source=source,
+                          reviewed_at=(utc_now() if reviewed else None),
+                          stages=[{'key': 'veg', 'name': '생육', 'days': 30,
+                                   'targets': targets}],
+                          targets_methods=methods,
+                          photosynthesis=photo or {})
+        db.session.add(prog)
+        db.session.commit()
+        return prog
+
+    def _linked(self, **kw):
+        from aot.aot_flask.extensions import db
+        prog = self._program(**kw)
+        row = self._plot('상추')
+        row.program_uuid = prog.unique_id
+        db.session.commit()
+        return row
+
+    def test_targets_come_from_the_running_stage(self):
+        from aot.aot_flask.geo import coordinator_plot
+        self._linked(targets={'vpd': 0.9, 'co2': 800, 'dli': 14},
+                     photo={'gdd_daily': 13.0, 'T_base': 4.0})
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual('ok', t['reason'])
+        self.assertEqual(0.9, t['vpd']['value'])
+        self.assertEqual(800.0, t['co2']['value'])
+        self.assertEqual(14.0, t['dli'])
+        self.assertEqual(13.0, t['gdd_daily'])
+        self.assertEqual(4.0, t['T_base'])
+
+    def test_curve_comes_from_the_program_not_the_function(self):
+        """곡선 선택도 프로그램에 있다 — 예전에는 `vpd_sp_type='method'` 와
+        `vpd_method_id` 를 함수에 또 설정해야 했다."""
+        from aot.aot_flask.extensions import db
+        from aot.aot_flask.geo import coordinator_plot
+        from aot.databases.models import Method
+        m = Method(name='VPD 곡선', method_type='setpoint')
+        db.session.add(m)
+        db.session.commit()
+        self._linked(targets={'vpd': 0.9}, methods={'vpd': m.unique_id})
+
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual(m.unique_id, t['vpd']['method_id'])
+        # 곡선이 걸린 항목은 숫자를 미리 정하지 않는다 — 제어가 Method 를 돌린다.
+        self.assertIsNone(t['vpd']['value'])
+
+    def test_started_on_is_the_schedule(self):
+        """주차 진행의 기준은 구획의 시작일이다. 함수에 날짜를 또 적지 않는다."""
+        from aot.aot_flask.geo import coordinator_plot
+        row = self._linked(targets={'vpd': 0.9})
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual(row.started_on, t['started_on'])
+
+    def test_unreviewed_ai_program_is_not_used_for_control(self):
+        """AI 가 지어낸 단계 목표가 곧바로 온실 설정이 되지 않게 하는 장치를
+        여기서 우회하면 그 장치가 통째로 무의미해진다."""
+        from aot.aot_flask.geo import coordinator_plot
+        self._linked(targets={'vpd': 0.9}, source='ai', reviewed=False)
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual('program-unreviewed', t['reason'])
+        self.assertIsNone(t['vpd']['value'])
+
+    def test_no_plot_is_not_an_error(self):
+        """구획 없는 시설이 정상 구성이다 — 목표 없이 guide 범위로 돈다."""
+        from aot.aot_flask.geo import coordinator_plot
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual('none', t['reason'])
+        self.assertIsNone(t['vpd']['value'])
+        self.assertIsNone(t['dli'])
+
+    def test_plot_without_a_program_says_so(self):
+        from aot.aot_flask.geo import coordinator_plot
+        self._plot('상추')
+        t = coordinator_plot.control_targets(self._coord())
+        self.assertEqual('no-program', t['reason'])
+
+    # ── 옵션에서 걷어낸 것이 되살아나지 않게 ────────────────────────────
+
+    _INFO = os.path.join(_ROOT, 'functions', 'custom_functions',
+                         'env_coordinator_impl', '_function_info.py')
+    _COORD = os.path.join(_ROOT, 'functions', 'custom_functions',
+                          'env_coordinator.py')
+
+    def test_the_duplicated_options_are_gone(self):
+        src = _read(self._INFO)
+        for oid in ('target_vpd', 'target_co2', 'dli_target', 'gdd_target_daily',
+                    'vpd_sp_type', 'co2_sp_type', 'vpd_method_id', 'co2_method_id',
+                    'schedule_start_time', 'target_source'):
+            self.assertNotIn("'id': '%s'" % oid, src,
+                             '%s 가 되살아났다 — 설정이 다시 두 곳이 된다' % oid)
+
+    def test_the_safety_options_stay(self):
+        """걷어낸 것은 목표뿐이다. 안전 가이드라인과 장비는 이 시설의 것이라
+        프로그램으로 옮기면 그 프로그램을 다른 시설에 못 쓴다."""
+        src = _read(self._INFO)
+        for oid in ('temp_max', 'temp_min', 'humid_max', 'humid_min',
+                    'guide_T_min', 'guide_T_max', 'guide_RH_min', 'guide_RH_max',
+                    'schedule_end_time', 'schedule_week_offset', 'crop_preset'):
+            self.assertIn("'id': '%s'" % oid, src, '%s 가 사라졌다' % oid)
+
+    def test_preset_no_longer_writes_targets(self):
+        """프리셋이 목표를 채우던 경로(자동 동기화·강제 적용 버튼)는 없어졌다.
+        남아 있으면 프로그램 값을 저장만으로 되돌린다."""
+        src = _read(self._COORD)
+        for gone in ('_sync_crop_targets', '_CROP_PRESET_OPTION_MAP',
+                     'cmd_apply_crop_targets'):
+            self.assertNotIn(gone, src)
+
+    def test_setpoints_read_the_plot(self):
+        helpers = _read(os.path.join(
+            _ROOT, 'functions', 'custom_functions', 'env_coordinator_impl',
+            '_helpers_mixin.py'))
+        for fn_name in ('_get_vpd_setpoint', '_get_co2_setpoint'):
+            body = helpers.split('def %s' % fn_name, 1)[1].split('\n    def ', 1)[0]
+            self.assertIn('_plot_targets()', body)
+            self.assertNotIn('self.target_', body)
+
+    def test_cycle_clears_the_cache(self):
+        """사이클 안에서는 한 번만 읽는다 — 항목마다 읽으면 한 사이클에서 서로
+        다른 목표를 보게 된다."""
+        cyc = _read(os.path.join(
+            _ROOT, 'functions', 'custom_functions', 'env_coordinator_impl',
+            '_cycle_mixin.py'))
+        body = cyc.split('def _run_cycle', 1)[1][:800]
+        self.assertIn('self._plot_targets_cache = None', body)

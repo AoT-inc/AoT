@@ -49,14 +49,6 @@ from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
 # 작물 프리셋 속성 → 함수 옵션 매핑.
 #   (preset_attr, option_id, sp_type_attr)
 # sp_type_attr 이 있고 그 옵션이 'method' 이면 자동/강제 적용 모두 건너뛴다(메서드 우선).
-_CROP_PRESET_OPTION_MAP = [
-    ('dli_target', 'dli_target',       None),
-    ('gdd_daily',  'gdd_target_daily', None),
-    ('vpd_target', 'target_vpd',       'vpd_sp_type'),
-    ('co2_target', 'target_co2',       'co2_sp_type'),
-    ('temp_min',   'temp_min',         None),
-    ('temp_max',   'temp_max',         None),
-]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -80,7 +72,6 @@ class CustomModule(
         self.sensor_max_age = None
 
         # Growth Schedule
-        self.schedule_start_time   = None
         self.schedule_end_time     = None
         self.schedule_week_offset  = None
         self._schedule_ended_logged = False
@@ -104,9 +95,6 @@ class CustomModule(
 
         # VPD
         self.sensor_vpd              = None
-        self.vpd_sp_type             = None
-        self.target_vpd              = None
-        self.vpd_method_id_device_id = None
         self.priority_vpd            = None
         self.tolerance_vpd           = None
 
@@ -117,9 +105,6 @@ class CustomModule(
 
         # CO₂
         self.sensor_CO2_int          = None
-        self.co2_sp_type             = None
-        self.target_co2              = None
-        self.co2_method_id_device_id = None
         self.priority_co2            = None
         self.tolerance_co2           = None
 
@@ -157,8 +142,6 @@ class CustomModule(
 
         # Cumulative Goal Tracker (P5-5)
         self.cumulative_tracker_enabled = None
-        self.dli_target                 = None
-        self.gdd_target_daily           = None
         self._daily_acc                 = None  # DailyAccumulator (lazy init)
 
         # VPD Decomposition
@@ -267,9 +250,6 @@ class CustomModule(
         self._load_runtime_state()
         self._reload_profiles()
 
-        # 작물 프리셋이 바뀌면 DLI/GDD 목표를 자동 갱신(수동 입력은 보존)
-        self._sync_crop_targets()
-
         # 시간대: 장치 위치 좌표 기반으로 1회 결정 후 캐시
         self._cached_tz = self._get_facility_tz()
         if self._cached_tz:
@@ -306,7 +286,6 @@ class CustomModule(
             CustomController, unique_id=self.unique_id)
         self.setup_custom_options(
             FUNCTION_INFORMATION['custom_options'], custom_function)
-        self._sync_crop_targets()
         self._reload_profiles()
         self._cached_tz = self._CACHED_TZ_SENTINEL  # 위치 변경 시 tz 재결정
         # setpoint(목표값) 등이 바뀌었을 수 있으므로 다음 사이클은 개구부 정상
@@ -365,74 +344,6 @@ class CustomModule(
             if isinstance(o, dict) and 'id' in o and 'default_value' in o:
                 out[o['id']] = o['default_value']
         return out
-
-    def _sync_crop_targets(self) -> None:
-        """작물 프리셋 변경 시 목표 옵션(DLI/GDD/VPD/CO2/온도)을 자동 갱신.
-
-        규칙:
-          - 마커(crop_preset_applied)와 현재 crop_preset 이 같으면 no-op.
-          - 변수에 메서드를 쓰는 경우(*_sp_type=='method') → 건너뜀(사용자 메서드 우선).
-          - 현재값이 '옵션 기본값' 또는 '이전 프리셋 값'과 같으면(=자동값) 새 프리셋 값으로
-            갱신, 다르면(=사용자 수동 입력) 보존.
-          - 변경은 set_custom_option 으로 영속화되어 저장 후 UI 에 표시된다.
-        """
-        from aot.functions.utils.env_control.photosynthesis import (
-            get_crop_params, CROP_PRESETS,
-        )
-        try:
-            cur_key = self.crop_preset
-            applied = self.get_custom_option('crop_preset_applied', None)
-            if cur_key == applied:
-                return
-            new_crop = get_crop_params(cur_key)
-            old_crop = get_crop_params(applied) if (applied in CROP_PRESETS) else None
-            defaults = self._option_defaults()
-
-            for preset_attr, opt_id, sp_attr in _CROP_PRESET_OPTION_MAP:
-                if sp_attr and str(getattr(self, sp_attr, 'static')) == 'method':
-                    continue   # 메서드 사용 중 → 사용자 설정 우선
-                new_val = float(getattr(new_crop, preset_attr, 0.0) or 0.0)
-                if new_val <= 0:
-                    continue
-                cur = float(getattr(self, opt_id, 0.0) or 0.0)
-                opt_def = float(defaults.get(opt_id, 0.0) or 0.0)
-                old_val = (float(getattr(old_crop, preset_attr, 0.0) or 0.0)
-                           if old_crop else None)
-                is_auto = (cur == 0.0
-                           or abs(cur - opt_def) < 1e-9
-                           or (old_val is not None and abs(cur - old_val) < 1e-9))
-                if is_auto:
-                    setattr(self, opt_id, new_val)
-                    self.set_custom_option(opt_id, new_val)
-            self.set_custom_option('crop_preset_applied', cur_key or '')
-        except Exception:
-            # get_crop_params() 는 dict 조회+기본값이라 던지지 않는다 — 여기서
-            # 나는 예외는 사실상 전부 get/set_custom_option 의 DB 오류다. 즉
-            # "예상된 실패" 가 아니라 전부 "예상 밖 실패" 이므로 debug 로 묻으면
-            # 작물 프리셋 자동 동기화가 조용히 멈춘 채 아무도 모르게 된다.
-            self.logger.warning('crop target sync failed', exc_info=True)
-
-    def cmd_apply_crop_targets(self, args_dict: dict) -> str:
-        """선택된 작물 프리셋의 권장값을 목표 옵션에 강제로 채워 영속화한다.
-
-        자동 동기화는 수동 입력을 보존하지만, 이 버튼은 현재 값을 무시하고 프리셋
-        권장값으로 덮어쓴다(명시적 재적용). 단, 메서드 사용 변수는 여전히 건너뛴다.
-        """
-        from aot.functions.utils.env_control.photosynthesis import get_crop_params
-        crop = get_crop_params(self.crop_preset)
-        applied = []
-        for preset_attr, opt_id, sp_attr in _CROP_PRESET_OPTION_MAP:
-            if sp_attr and str(getattr(self, sp_attr, 'static')) == 'method':
-                continue
-            val = float(getattr(crop, preset_attr, 0.0) or 0.0)
-            if val <= 0:
-                continue
-            setattr(self, opt_id, val)
-            self.set_custom_option(opt_id, val)
-            applied.append(f'{opt_id}={val}')
-        self.set_custom_option('crop_preset_applied', self.crop_preset or '')
-        return (f"Applied {self.crop_preset} preset — " + ', '.join(applied)
-                if applied else f"No targets applied (methods in use?) for {self.crop_preset}")
 
     def cmd_emergency_stop(self, args_dict: dict) -> str:
         """긴급정지: 모든 액추에이터를 safe_default 또는 OFF로 즉시 이동 + 60s 지연.

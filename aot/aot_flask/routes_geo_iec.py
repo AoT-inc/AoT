@@ -152,10 +152,13 @@ def api_facility_iec_status(facility_uuid):
     # ── Setpoint deviation ────────────────────────────────────────────────────
     try:
         sp = GeoFacilitySetpoint.query.filter_by(facility_uuid=facility_uuid).first()
+        # 편차는 **제어가 따르는 목표**와 견준다. 저장된 열과 견주면 화면은
+        # "목표대로" 라는데 제어는 다른 값을 좇는 상태가 보이지 않는다.
+        eff = _effective_targets(facility_uuid)
 
-        if sp and sp.target_vpd_kpa is not None and indoor.get('vpd_kpa') is not None:
+        if eff.get('vpd') is not None and indoor.get('vpd_kpa') is not None:
             tol = 0.15
-            deviation = abs(indoor['vpd_kpa'] - sp.target_vpd_kpa)
+            deviation = abs(indoor['vpd_kpa'] - eff['vpd'])
             if deviation > tol * 3:
                 reasons.append('VPD dev {:.2f} kPa'.format(deviation))
                 if level != 'emergency':
@@ -176,9 +179,9 @@ def api_facility_iec_status(facility_uuid):
                 if level != 'emergency':
                     level = 'emergency'
 
-        if sp and sp.target_co2_ppm is not None and indoor.get('co2_ppm') is not None:
-            if indoor['co2_ppm'] > sp.target_co2_ppm * 1.1:
-                reasons.append('CO2 {}>{} ppm'.format(int(indoor['co2_ppm']), int(sp.target_co2_ppm)))
+        if eff.get('co2') is not None and indoor.get('co2_ppm') is not None:
+            if indoor['co2_ppm'] > eff['co2'] * 1.1:
+                reasons.append('CO2 {}>{} ppm'.format(int(indoor['co2_ppm']), int(eff['co2'])))
                 if level == 'idle':
                     level = 'warn'
     except Exception as exc:
@@ -218,18 +221,47 @@ def api_facility_iec_status(facility_uuid):
     })
 
 
+def _effective_targets(facility_uuid):
+    """이 시설의 제어가 **지금 따르는** 목표 → `{'vpd':…, 'co2':…, 'source':…}`.
+
+    화면이 현재값을 색칠할 기준이다. 저장된 열이 아니라 제어와 **같은 계산**을
+    거쳐야 한다 — 다른 경로로 구하면 화면은 맞는데 제어는 다르게 도는 상태가
+    생기고, 그건 화면만 보고는 알 수 없다.
+    """
+    try:
+        from aot.aot_flask.geo import coordinator_plot
+        fn = _find_facility_env_coordinator(facility_uuid)
+        if fn is None:
+            return {'vpd': None, 'co2': None, 'source': 'no-coordinator'}
+        t = coordinator_plot.control_targets(fn)
+        return {'vpd': (t.get('vpd') or {}).get('value'),
+                'co2': (t.get('co2') or {}).get('value'),
+                'vpd_method': bool((t.get('vpd') or {}).get('method_id')),
+                'co2_method': bool((t.get('co2') or {}).get('method_id')),
+                'plot_name': t.get('plot_name'),
+                'source': t.get('reason')}
+    except Exception:                                       # noqa: BLE001
+        return {'vpd': None, 'co2': None, 'source': 'error'}
+
+
 @blueprint.route('/api/aot/facility/<facility_uuid>/setpoints', methods=['GET', 'POST'])
 @login_required
 def api_facility_setpoints(facility_uuid):
     """IEC § C — read or write facility setpoints.
 
-    Columns mirror env_coordinator custom_options directly:
-      target_vpd_kpa   → target_vpd      (L1 primary VPD target)
-      guide_t_min/max  → guide_T_min/max (VPD decomposition T guidance)
-      guide_rh_min/max → guide_RH_min/max (VPD decomposition RH guidance)
-      temp_min/max_c   → temp_min/max    (hard safety constraint)
-      humid_min/max_pct→ humid_min/max   (hard safety constraint)
-      target_co2_ppm   → target_co2      (secondary CO2 target)
+    **여기서 정하는 것은 안전 범위뿐이다.** VPD·CO₂ 목표는 구획의 프로그램이
+    정본이고 제어가 매 사이클 그것을 읽는다 — 예전에는 같은 목표를 프로그램 ·
+    함수 옵션 · 이 API 세 곳에서 설정할 수 있었다. 목표를 여기로 보내면
+    거부하고 어디서 정하는지 말한다(조용히 무시하면 화면에는 저장된 것처럼
+    보이는데 제어는 그 값을 쓰지 않는다).
+
+    코디네이터 옵션으로 그대로 옮겨지는 열:
+      guide_t_min/max  → guide_T_min/max (VPD 분해의 온도 안내 범위)
+      guide_rh_min/max → guide_RH_min/max (습도 안내 범위)
+      temp_min/max_c   → temp_min/max    (하드 안전 한계)
+      humid_min/max_pct→ humid_min/max   (하드 안전 한계)
+
+    GET 응답의 `effective` 는 **지금 제어가 따르는 목표**다(프로그램에서 온다).
     """
     from aot.databases.models import GeoFacility
     from aot.databases.models.geo_facility_setpoint import GeoFacilitySetpoint
@@ -241,9 +273,11 @@ def api_facility_setpoints(facility_uuid):
 
     if request.method == 'GET':
         sp = GeoFacilitySetpoint.query.filter_by(facility_uuid=facility_uuid).first()
-        if not sp:
-            return jsonify({'ok': True, 'setpoints': None})
-        return jsonify({'ok': True, 'setpoints': sp.to_dict()})
+        out = sp.to_dict() if sp else {}
+        # 화면은 이 dict 하나만 본다 — 목표를 형제 키로 두면 호출부마다 합치는
+        # 코드가 생기고, 한 곳만 빠뜨리면 그 화면에서 목표가 사라진다.
+        out['effective'] = _effective_targets(facility_uuid)
+        return jsonify({'ok': True, 'setpoints': out})
 
     # POST — write
     if not utils_general.user_has_permission('edit_settings'):
@@ -267,7 +301,13 @@ def api_facility_setpoints(facility_uuid):
         if val is not None and not (lo <= val <= hi):
             errors.append('{} must be {}-{}'.format(name, lo, hi))
 
-    vpd       = _float('target_vpd_kpa')
+    # 목표는 여기서 받지 않는다 — 조용히 무시하면 저장된 것처럼 보이는데 제어는
+    # 그 값을 쓰지 않는다(이 저장소가 반복해서 겪은 "성공이라 답하는데 안 돈 것").
+    for gone in ('target_vpd_kpa', 'target_co2_ppm'):
+        if body.get(gone) is not None:
+            errors.append(
+                '{}: 목표는 구획의 프로그램에서 정합니다 (단계 목표)'.format(gone))
+
     g_t_min   = _float('guide_t_min_c')
     g_t_max   = _float('guide_t_max_c')
     g_rh_min  = _float('guide_rh_min_pct')
@@ -276,9 +316,7 @@ def api_facility_setpoints(facility_uuid):
     t_max     = _float('temp_max_c')
     h_min     = _float('humid_min_pct')
     h_max     = _float('humid_max_pct')
-    co2       = _float('target_co2_ppm')
 
-    _in_range(vpd,      0.1, 3.0,  'target_vpd_kpa')
     _in_range(g_t_min,  0,   40,   'guide_t_min_c')
     _in_range(g_t_max,  0,   45,   'guide_t_max_c')
     _in_range(g_rh_min, 10,  95,   'guide_rh_min_pct')
@@ -287,7 +325,6 @@ def api_facility_setpoints(facility_uuid):
     _in_range(t_max,    0,   50,   'temp_max_c')
     _in_range(h_min,    10,  95,   'humid_min_pct')
     _in_range(h_max,    10,  99,   'humid_max_pct')
-    _in_range(co2,      300, 2000, 'target_co2_ppm')
 
     if g_t_min is not None and g_t_max is not None and g_t_min >= g_t_max:
         errors.append('guide_t_min_c must be < guide_t_max_c')
@@ -308,7 +345,6 @@ def api_facility_setpoints(facility_uuid):
         sp.facility_uuid = facility_uuid
         db.session.add(sp)
 
-    if vpd      is not None: sp.target_vpd_kpa   = vpd
     if g_t_min  is not None: sp.guide_t_min_c    = g_t_min
     if g_t_max  is not None: sp.guide_t_max_c    = g_t_max
     if g_rh_min is not None: sp.guide_rh_min_pct = g_rh_min
@@ -317,7 +353,6 @@ def api_facility_setpoints(facility_uuid):
     if t_max    is not None: sp.temp_max_c        = t_max
     if h_min    is not None: sp.humid_min_pct     = h_min
     if h_max    is not None: sp.humid_max_pct     = h_max
-    if co2      is not None: sp.target_co2_ppm    = co2
 
     sp.source   = 'manual'
     sp.operator = current_user.name if current_user.is_authenticated else None
@@ -330,21 +365,21 @@ def api_facility_setpoints(facility_uuid):
         db.session.rollback()
         return jsonify({'ok': False, 'message': str(e)}), 500
 
-    # ── Mirror to env_coordinator CustomController.custom_options + cmd_reload ──
-    # Without this the GeoFacilitySetpoint row is updated but env_coordinator
-    # keeps the old self.target_vpd / self.guide_T_* values until restart.
+    # ── 코디네이터 옵션으로 옮기고 reload ────────────────────────────────
+    # 안 옮기면 GeoFacilitySetpoint 행만 바뀌고 코디네이터는 재시작 전까지 옛
+    # guide/한계 값을 그대로 쓴다. **목표는 여기 없다** — 프로그램이 정본이다.
     mirror_result = {'mirrored': False, 'reload_sent': False, 'detail': None}
     try:
         from aot.databases.models import CustomController
         import json as _json
         funcs = CustomController.query.filter_by(device='env_coordinator').all()
-        matched = [
-            f for f in funcs
-            if (_json.loads(f.custom_options or '{}') or {})
-                .get('geo_facility_id_device_id') == facility_uuid
-        ]
+        # 링크 판정은 헬퍼 하나로 — 여기서 다시 쓰면 저장 키가 갈릴 때
+        # (`geo_facility_id` vs `..._device_id`) 이 경로만 조용히 안 맞는다.
+        matched = [f for f in funcs
+                   if _function_belongs_to_facility(f, facility_uuid)]
+        # 목표(target_vpd/target_co2)는 옮기지 않는다 — 그 옵션은 더 이상
+        # 없고, 제어는 프로그램을 읽는다.
         _COL_TO_OPT = {
-            'target_vpd_kpa':   'target_vpd',
             'guide_t_min_c':    'guide_T_min',
             'guide_t_max_c':    'guide_T_max',
             'guide_rh_min_pct': 'guide_RH_min',
@@ -353,10 +388,8 @@ def api_facility_setpoints(facility_uuid):
             'temp_max_c':       'temp_max',
             'humid_min_pct':    'humid_min',
             'humid_max_pct':    'humid_max',
-            'target_co2_ppm':   'target_co2',
         }
         new_vals = {
-            'target_vpd_kpa':   vpd,
             'guide_t_min_c':    g_t_min,
             'guide_t_max_c':    g_t_max,
             'guide_rh_min_pct': g_rh_min,
@@ -365,7 +398,6 @@ def api_facility_setpoints(facility_uuid):
             'temp_max_c':       t_max,
             'humid_min_pct':    h_min,
             'humid_max_pct':    h_max,
-            'target_co2_ppm':   co2,
         }
         for func in matched:
             opts = _json.loads(func.custom_options or '{}') or {}
@@ -394,9 +426,11 @@ def api_facility_setpoints(facility_uuid):
         db.session.rollback()
         mirror_result['detail'] = 'mirror_failed: {}'.format(exc)
 
+    saved = sp.to_dict()
+    saved['effective'] = _effective_targets(facility_uuid)
     return jsonify({
         'ok': True,
-        'setpoints': sp.to_dict(),
+        'setpoints': saved,
         'mirror': mirror_result,
     })
 
@@ -516,8 +550,8 @@ def api_facility_control(facility_uuid):
         from aot.databases.models import CustomController
         funcs = CustomController.query.filter_by(device='env_coordinator').all()
         for f in funcs:
-            opts = _json.loads(f.custom_options or '{}') or {}
-            if opts.get('geo_facility_id_device_id') == facility_uuid:
+            if _function_belongs_to_facility(f, facility_uuid):
+                opts = _json.loads(f.custom_options or '{}') or {}
                 wind_threshold = float(opts.get('gate_wind_threshold') or 12.0)
                 break
     except Exception:

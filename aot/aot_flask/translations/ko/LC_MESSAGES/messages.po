@@ -28994,3 +28994,102 @@ msgstr "내려가는 중"
 
 msgid "rising"
 msgstr "올라가는 중"
+
+msgid "Plot this coordinator follows"
+msgstr "이 코디네이터가 따르는 구획"
+
+msgid "Link a facility to see what this coordinator is growing."
+msgstr "시설을 연결하면 무엇을 기르는지 여기에 보입니다."
+
+msgid "No plot is being grown in this scope right now."
+msgstr "지금 이 범위에서 기르는 구획이 없습니다."
+
+msgid "More than one plot is here — pick which one this coordinator follows."
+msgstr "구획이 둘 이상입니다 — 이 코디네이터가 따를 구획을 정하세요."
+
+msgid "The plot you pinned is no longer here."
+msgstr "지정한 구획이 더는 이 범위에 없습니다."
+
+msgid "Stage target"
+msgstr "단계 목표"
+
+msgid "Current setting"
+msgstr "지금 설정"
+
+msgid "For reference — this coordinator aims at VPD, so these are not settings here."
+msgstr "참고 — 이 코디네이터는 VPD 를 목표로 하므로 아래는 여기 설정이 아닙니다."
+
+msgid "Shown for comparison. Nothing here changes control."
+msgstr "비교용으로만 보입니다. 여기서 제어가 바뀌지 않습니다."
+
+msgid "Stage target vs current setting"
+msgstr "단계 목표 대비 지금 설정"
+
+msgid "Pull targets in"
+msgstr "목표 가져오기"
+
+msgid "The stage changed — pull the targets in again?"
+msgstr "단계가 바뀌었습니다 — 목표를 다시 가져오시겠습니까?"
+
+msgid "Limits (Min/Max Temperature and Humidity) are never changed."
+msgstr "한계(최저·최고 온도와 습도)는 바뀌지 않습니다."
+
+msgid "Could not pull the targets in."
+msgstr "목표를 가져오지 못했습니다."
+
+msgid "{n} targets updated"
+msgstr "목표 {n}건을 반영했습니다"
+
+msgid "Coordinator restarted"
+msgstr "코디네이터를 다시 시작했습니다"
+
+msgid "Restart the coordinator to apply"
+msgstr "적용하려면 코디네이터를 다시 시작하세요"
+
+msgid "Follow this one"
+msgstr "이것을 따르기"
+
+msgid "Could not save the choice."
+msgstr "선택을 저장하지 못했습니다."
+
+msgid "Where Targets Come From"
+msgstr "목표를 가져오는 곳"
+
+msgid "Plot being grown here"
+msgstr "여기서 기르는 구획"
+
+msgid "Manual only"
+msgstr "직접 입력만"
+
+msgid "Reference Plot (optional)"
+msgstr "기준 구획 (선택)"
+
+msgid "from the plot"
+msgstr "구획에서"
+
+msgid "Editing this here is overwritten the next time you pull the targets in."
+msgstr "여기서 고친 값은 다음에 목표를 가져올 때 덮어씌워집니다."
+
+msgid "Photosynthesis Model Crop"
+msgstr "광합성 모델 작물"
+
+msgid "Targets in effect"
+msgstr "적용 중인 목표"
+
+msgid "Targets come from the program. Safety limits below stay with this facility."
+msgstr "목표는 프로그램에서 옵니다. 아래 안전 한계는 이 시설의 설정입니다."
+
+msgid "This plot has no program, so there are no stage targets to follow."
+msgstr "이 구획에 프로그램이 없어 따를 단계 목표가 없습니다."
+
+msgid "The program was drafted by AI and has not been reviewed, so control does not use it."
+msgstr "AI 가 작성하고 아직 검토되지 않은 프로그램이라 제어에 쓰지 않습니다."
+
+msgid "The program has no stage running on this date."
+msgstr "이 날짜에 진행 중인 단계가 없습니다."
+
+msgid "No targets — the coordinator holds its safety range only."
+msgstr "목표 없음 — 안전 범위만 지킵니다."
+
+msgid "Stop Control On"
+msgstr "제어 종료일"

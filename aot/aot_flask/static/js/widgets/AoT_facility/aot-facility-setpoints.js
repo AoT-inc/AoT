@@ -1,17 +1,14 @@
-// aot-facility-setpoints.js — IEC setpoints via env-cell popup
-// Param names match env_coordinator custom_options 1:1.
+// aot-facility-setpoints.js — 시설의 **안전 범위**를 env-cell 팝업에서 설정한다.
+//
+// VPD·CO₂ **목표는 여기서 정하지 않는다** — 정본은 구획의 프로그램이고 제어가
+// 매 사이클 그것을 읽는다. 예전에는 이 팝업에서도 목표를 바꿀 수 있어, 같은
+// 값을 프로그램·함수 옵션·이 팝업 **세 곳**에서 설정할 수 있었다.
+// 목표는 읽어서 보여 주기만 한다(현재값 색칠의 기준).
 (function () {
   'use strict';
 
   // Groups of params shown in each env-cell popup
   var POPUP_GROUPS = {
-    vpd: {
-      title: 'VPD Target',
-      rows: [
-        { param: 'target_vpd_kpa', label: 'VPD target', unit: 'kPa', min: 0.1, max: 3.0, step: 0.05,
-          fmt: function(v){ return v.toFixed(2); }, curId: 'iec-sp-cur-vpd', lblId: null },
-      ],
-    },
     temp: {
       title: 'Temperature Setpoints',
       rows: [
@@ -36,13 +33,6 @@
           fmt: function(v){ return String(Math.round(v)); }, curId: 'iec-sp-cur-hmin', lblId: null, safety: true },
         { param: 'humid_max_pct', label: 'Safety RH max', unit: '%', min: 10, max: 99, step: 1,
           fmt: function(v){ return String(Math.round(v)); }, curId: 'iec-sp-cur-hmax', lblId: null, safety: true },
-      ],
-    },
-    co2: {
-      title: 'CO₂ Target',
-      rows: [
-        { param: 'target_co2_ppm', label: 'CO₂ target', unit: 'ppm', min: 300, max: 2000, step: 50,
-          fmt: function(v){ return String(Math.round(v)); }, curId: 'iec-sp-cur-co2', lblId: null },
       ],
     },
   };
@@ -203,7 +193,9 @@
     var envEl = document.getElementById('aot-facility-env-' + widgetId);
     if (!envEl) return;
 
-    var vpd_target = setpoints.target_vpd_kpa;
+    // 목표는 프로그램에서 온다 — 저장된 열이 아니라 서버가 준 `effective`.
+    var eff = setpoints.effective || {};
+    var vpd_target = eff.vpd;
     _colorCell(envEl, 'indoor_vpd', indoor.vpd_kpa, vpd_target, 0.1, false);
 
     var t_min = setpoints.guide_t_min_c != null ? setpoints.guide_t_min_c : 12.0;
@@ -214,7 +206,7 @@
     var rh_max = setpoints.guide_rh_max_pct != null ? setpoints.guide_rh_max_pct : 85.0;
     _colorCellRange(envEl, 'indoor_humidity', indoor.humidity_pct, rh_min, rh_max);
 
-    var co2_target = setpoints.target_co2_ppm != null ? setpoints.target_co2_ppm : 1000.0;
+    var co2_target = eff.co2;
     _colorCell(envEl, 'indoor_co2', indoor.co2_ppm, co2_target, 100, true);
   }
 
@@ -253,14 +245,21 @@
     var lblRHguide= document.getElementById('iec-sp-lbl-rhguide-' + widgetId);
     var lblCo2    = document.getElementById('iec-sp-lbl-co2-'     + widgetId);
 
-    if (lblVpd && sp.target_vpd_kpa != null)
-      lblVpd.textContent = 'target ' + sp.target_vpd_kpa.toFixed(2) + ' kPa';
+    var eff = sp.effective || {};
+    if (lblVpd) {
+      lblVpd.textContent = (eff.vpd != null)
+        ? 'target ' + eff.vpd.toFixed(2) + ' kPa'
+        : (eff.vpd_method ? (window._ ? window._('Follows a curve') : 'Follows a curve') : '');
+    }
     if (lblTguide && sp.guide_t_min_c != null && sp.guide_t_max_c != null)
       lblTguide.textContent = sp.guide_t_min_c.toFixed(0) + '–' + sp.guide_t_max_c.toFixed(0) + '°C';
     if (lblRHguide && sp.guide_rh_min_pct != null && sp.guide_rh_max_pct != null)
       lblRHguide.textContent = Math.round(sp.guide_rh_min_pct) + '–' + Math.round(sp.guide_rh_max_pct) + '%';
-    if (lblCo2 && sp.target_co2_ppm != null)
-      lblCo2.textContent = 'target ' + Math.round(sp.target_co2_ppm) + ' ppm';
+    if (lblCo2) {
+      lblCo2.textContent = (eff.co2 != null)
+        ? 'target ' + Math.round(eff.co2) + ' ppm'
+        : (eff.co2_method ? (window._ ? window._('Follows a curve') : 'Follows a curve') : '');
+    }
   }
 
   function _esc(s) {

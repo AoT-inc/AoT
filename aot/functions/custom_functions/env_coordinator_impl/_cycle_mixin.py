@@ -493,6 +493,10 @@ class CycleMixin:
     def _run_cycle(self, cycle_sec: float) -> None:
         uid     = self.unique_id
         max_age = self.sensor_max_age or 120.0
+        # 구획 목표는 사이클당 한 번만 읽는다. 항목마다 따로 읽으면 DB 를 여러
+        # 번 치는 것도 문제지만, 그 사이에 값이 바뀌면 **한 사이클 안에서 서로
+        # 다른 목표**를 보게 된다.
+        self._plot_targets_cache = None
 
         if not self._profiles:
             if getattr(self, 'debug_logging', False):
@@ -1376,10 +1380,16 @@ class CycleMixin:
         internal = internal or {}
 
         # ── Growth Schedule (시작/종료일 + 경과 주차) ────────────────────────
+        # 시작일은 구획의 것이다(함수에는 그 칸이 없다). 종료일은 성격이 달라
+        # 남아 있다 — 수확일이 아니라 "이후 제어 정지" 라는 안전 결정이다.
+        _pt = self._plot_targets()
+        _started = _pt.get('started_on')
         sched = {
-            'start': (getattr(self, 'schedule_start_time', '') or '').strip() or None,
+            'start': _started.isoformat() if _started else None,
             'end':   (getattr(self, 'schedule_end_time', '') or '').strip() or None,
             'week':  None,
+            'plot':  _pt.get('plot_name'),
+            'stage': (_pt.get('stage') or {}).get('name'),
         }
         if sched['start']:
             try:

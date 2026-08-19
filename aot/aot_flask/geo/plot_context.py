@@ -1117,6 +1117,81 @@ def plots_in_facility(facility_uuid, bay_id=None, on=None):
     return rows
 
 
+def plot_for_coordinator(fn, on=None):
+    """이 코디네이터가 따르는 **기준 구획** → dict. 정본은 여기 하나뿐이다.
+
+    코디네이터(데몬)와 화면이 같은 함수를 부른다. 규칙을 화면에 다시 쓰면
+    "읽는 경로마다 기준이 다름" 이 되고, 이 저장소는 그 실패를 이미 여러 번
+    겪었다. 정본 설계: `docs/design/coordinator-plot-targets.md`.
+
+    ## 규칙 (R0~R5)
+
+    - **R0** 스코프는 코디네이터 옵션의 `geo_facility_id` + `bay_scope`.
+    - **R1** 후보는 `plots_in_facility(facility, bay)` — 활성 판정(부등호)을
+      그쪽과 공유한다.
+    - **R2** 후보 0개면 아무것도 하지 않는다(`reason='none'`). 코디네이터는 자기
+      값으로 돈다 — **폴백을 없애지 말 것.** 온실을 비워도 난방은 돌아야 한다.
+    - **R3** 후보 1개면 그것이 기준이다. **저장하지 않는다** — 파생값을 컬럼에
+      쓰면 구획이 끝나도 옛 값이 남고, 사람이 고른 것인지 계산된 것인지
+      구분할 수 없게 된다(`expected_end` 와 같은 규율).
+    - **R4** 후보 2개 이상이면 **자동으로 고르지 않는다**(`reason='ambiguous'`).
+      겹침(간작·혼작)이 정상인 도메인이라 자동 선택은 조용히 틀린다. 사람이
+      `source_plot_id` 로 지정한다.
+    - **R5** 지정한 구획이 끝났거나 스코프 밖으로 갔거나 사라지면 판정에서
+      빼고 R2~R4 를 다시 적용하되, **옵션 값은 지우지 않는다**
+      (`pinned_missing=True` 로 화면이 말한다). 조용히 지우면 사람이 무엇을
+      골랐었는지 알 수 없다.
+
+    ## 방향이 다르면 기준도 다르다 — 이 비대칭은 의도된 것이다
+
+    `facility_control_for_plot()` 은 "이 **구획**을 맡는 제어가 누구인가" 라
+    구역 코디네이터 × 시설 전체 구획을 **제외**한다(구획 전체를 대표해 맡는다고
+    말할 수 없다). 여기는 "내 **구역**에서 무엇이 자라나" 라 같은 짝을
+    **포함**한다(그 작물은 이 구역에서도 자란다). 둘을 같게 만들지 말 것.
+    """
+    import json as _json
+
+    out = {'facility_uuid': None, 'bay_id': None, 'candidates': [],
+           'plot': None, 'reason': 'no-facility',
+           'pinned': None, 'pinned_missing': False}
+    if fn is None:
+        return out
+
+    try:
+        opts = _json.loads(fn.custom_options) if fn.custom_options else {}
+    except (TypeError, ValueError):
+        opts = {}
+    facility_uuid = (opts.get('geo_facility_id') or '').strip() or None
+    bay_id = (opts.get('bay_scope') or '').strip() or None
+    pinned = (opts.get('source_plot_id') or '').strip() or None
+    out['facility_uuid'] = facility_uuid
+    out['bay_id'] = bay_id
+    out['pinned'] = pinned
+    if not facility_uuid:
+        return out
+
+    rows = plots_in_facility(facility_uuid, bay_id=bay_id, on=on)
+    out['candidates'] = [plot_brief_for_control(r, on=on) for r in rows]
+
+    if pinned:
+        hit = [r for r in rows if r.unique_id == pinned]
+        if hit:
+            out['plot'] = plot_brief_for_control(hit[0], on=on)
+            out['reason'] = 'pinned'
+            return out
+        # R5 — 지정이 더는 후보가 아니다. 값은 남기고 사실만 말한다.
+        out['pinned_missing'] = True
+
+    if not rows:
+        out['reason'] = 'none'
+    elif len(rows) == 1:
+        out['plot'] = out['candidates'][0]
+        out['reason'] = 'only'
+    else:
+        out['reason'] = 'ambiguous'
+    return out
+
+
 def plot_brief_for_control(row, on=None):
     """제어 화면이 한 줄로 읽을 수 있는 최소 요약.
 

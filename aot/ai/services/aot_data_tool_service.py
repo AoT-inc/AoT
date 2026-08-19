@@ -109,6 +109,21 @@ def _map_for_device_p2(device_uuid, prefer=None):
         return None
 
 
+
+def _plot_started_on(controller):
+    """이 코디네이터가 따르는 구획의 시작일 → ISO 문자열|None.
+
+    예전에는 함수 옵션(`schedule_start_time`)에 같은 날짜를 또 적게 했다. 그
+    칸이 없어진 뒤로 옛 키를 읽으면 AI 는 늘 "작기 시작일 없음" 으로 본다.
+    """
+    try:
+        from aot.aot_flask.geo import coordinator_plot
+        d = coordinator_plot.control_targets(controller).get('started_on')
+        return d.isoformat() if d else None
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
 class AoTDataToolService:
     """
     AoT 내부 데이터를 AI 도구 규격에 맞게 제공하는 서비스 레이어.
@@ -7063,7 +7078,8 @@ class AoTDataToolService:
                         "guide_humid_pct": [o.get('guide_RH_min'), o.get('guide_RH_max')],
                     },
                     "window": {
-                        "season": [o.get('schedule_start_time'), o.get('schedule_end_time')],
+                        # 시작일은 구획에서 온다 — 함수 옵션에는 없다.
+                        "season": [_plot_started_on(c), o.get('schedule_end_time')],
                         "daily_enabled": o.get('time_enable'),
                         "daily": [o.get('time_start'), o.get('time_end')],
                     },
@@ -7502,7 +7518,7 @@ class AoTDataToolService:
                     "facility_name": fname,
                     "crop_preset": o.get('crop_preset'),
                     "controlled_by": c.unique_id,
-                    "season_window": [o.get('schedule_start_time'),
+                    "season_window": [_plot_started_on(c),
                                       o.get('schedule_end_time')],
                 })
 

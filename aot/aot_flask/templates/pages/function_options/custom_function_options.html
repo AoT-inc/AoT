@@ -113,6 +113,14 @@
 
 
 
+    {# 코디네이터가 따르는 구획과 그 단계 목표 — **표시 전용**이다.
+       설정은 여기(함수)에 있고 작물 목표는 프로그램에 있어, 둘을 나란히 두지
+       않으면 "어느 쪽이 실제로 도는 값인가" 를 화면이 답하지 못한다.
+       정본: docs/design/coordinator-plot-targets.md #}
+    {% if each_function.device == 'env_coordinator' %}
+    <div class="aot-coord-plot" data-function="{{each_function.unique_id}}"></div>
+    {% endif %}
+
     <div class="aot-modal-group-title">{{_('Basic Settings')}}</div>
     <div class="aot-modal-container">
         

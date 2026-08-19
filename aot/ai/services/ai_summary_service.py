@@ -14,6 +14,25 @@ from aot.databases.models.ai_summary import AISystemSummary
 
 logger = logging.getLogger(__name__)
 
+
+def _plot_targets_for(controller):
+    """이 코디네이터가 지금 따르는 목표 → dict (제어와 같은 계산).
+
+    AI 요약이 함수 옵션을 읽던 자리다. 목표가 프로그램으로 옮겨간 뒤로 그 키는
+    없으므로, 그대로 두면 AI 는 늘 "목표 없음" 으로 보고 조언한다.
+    """
+    try:
+        from aot.aot_flask.geo import coordinator_plot
+        t = coordinator_plot.control_targets(controller)
+        return {'vpd_kpa': (t.get('vpd') or {}).get('value'),
+                'co2_ppm': (t.get('co2') or {}).get('value'),
+                'dli': t.get('dli'), 'gdd_daily': t.get('gdd_daily'),
+                'plot': t.get('plot_name'), 'stage': (t.get('stage') or {}).get('name'),
+                'source': t.get('reason')}
+    except Exception:                                       # noqa: BLE001
+        return {'source': 'error'}
+
+
 class AISummaryService:
     """
     v26.0: Core service for generating hierarchical system summaries (Semantic Snapshots).
@@ -241,8 +260,10 @@ class AISummaryService:
                     'bay_scope': opts.get('bay_scope') or None,
                     'effect_engine': opts.get('effect_engine', 'legacy'),
                     'crop_preset': opts.get('crop_preset'),
-                    'target_vpd_kpa': opts.get('target_vpd'),
-                    'target_co2_ppm': opts.get('target_co2'),
+                    # 목표는 함수 옵션에 없다 — 구획의 프로그램이 정본이고
+                    # 제어와 같은 계산을 거쳐 온다. 옛 키를 그대로 읽으면 AI 가
+                    # 늘 "목표 없음" 으로 보고 엉뚱한 조언을 한다.
+                    'targets': _plot_targets_for(controller),
                     'temp_range_c': [opts.get('temp_min'), opts.get('temp_max')],
                     'humid_range_pct': [opts.get('humid_min'), opts.get('humid_max')],
                     'guide_temp_range_c': [opts.get('guide_T_min'), opts.get('guide_T_max')],

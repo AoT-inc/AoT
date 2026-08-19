@@ -112,17 +112,6 @@ FUNCTION_INFORMATION = {
                 'Immediately set all actuators to safe_default and pause control for 60 s.'
             ),
         },
-        {
-            'id': 'cmd_apply_crop_targets',
-            'type': 'button',
-            'wait_for_return': True,
-            'name': lazy_gettext('Apply Crop Preset Targets'),
-            'phrase': lazy_gettext(
-                'Force-fill VPD / CO₂ / Temp / DLI / GDD target fields from the selected '
-                'Crop Preset (overwrites current values; variables using a Method are skipped). '
-                'Save the function first if you just changed the crop preset.'
-            ),
-        },
     ],
 
     'custom_options': [
@@ -309,25 +298,12 @@ FUNCTION_INFORMATION = {
         },
 
         # ── Growth Schedule ───────────────────────────────────────────────────
+        # 시작일은 여기 없다 — 구획의 시작일이 정본이다. 남은 둘은 일정이
+        # 아니라 **운영 결정**이다: 언제 제어를 멈출 것인가, 경과 주차를
+        # 얼마나 보정할 것인가.
         {
             'type': 'header',
             'name': lazy_gettext('Growth Schedule'),
-        },
-        {
-            'id': 'schedule_start_time',
-            'type': 'text',
-            'html_type': 'date',
-            'default_value': '',
-            'required': False,
-            'name': lazy_gettext('Schedule Start (start date)'),
-            'phrase': lazy_gettext(
-                'Start / germination date. Pick from the calendar. '
-                'The date is interpreted in the device/facility local timezone '
-                '(the system stores it as UTC internally — no manual conversion '
-                'needed). Used to compute weeks_elapsed for all Method curves. '
-                'Leave empty to disable week-based progression (Methods use '
-                'wall-clock day only).'
-            ),
         },
         {
             'id': 'schedule_end_time',
@@ -335,14 +311,14 @@ FUNCTION_INFORMATION = {
             'html_type': 'date',
             'default_value': '',
             'required': False,
-            'name': lazy_gettext('Schedule End (harvest date)'),
+            'name': lazy_gettext('Stop Control On'),
             'phrase': lazy_gettext(
-                'Harvest / cycle-end date. Pick from the calendar. Interpreted '
-                'in the device/facility local timezone (same rules as Schedule '
-                'Start). Methods keep following actual elapsed weeks until this '
-                'date; once it passes, control stops — every actuator returns to '
-                'its configured end-behavior and coordination cycles halt. '
-                'Leave empty for no end date.'
+                'A safety stop, not a harvest date: once this date passes, every '
+                'actuator returns to its configured end-behavior and coordination '
+                'cycles halt. The date is read in the device/facility local '
+                'timezone. Leave empty for no stop date — the plot ending does '
+                'not stop control on its own, because an empty house still needs '
+                'its safety limits held.'
             ),
         },
         {
@@ -352,9 +328,9 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Week Offset'),
             'phrase': lazy_gettext(
-                'Direct week adjustment applied on top of elapsed weeks. '
-                'Use a positive value to fast-forward (e.g. system started mid-cycle), '
-                'or negative to compensate for downtime. Default 0.'
+                'Adjustment applied on top of the weeks elapsed since the plot '
+                'started. Positive fast-forwards (the system was installed '
+                'mid-cycle), negative compensates for downtime. Default 0.'
             ),
         },
 
@@ -464,41 +440,6 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('VPD'),
         },
         {
-            'id': 'vpd_sp_type',
-            'type': 'select',
-            'default_value': 'static',
-            'required': False,
-            'options_select': [
-                ('static', lazy_gettext('Static Target')),
-                ('method', lazy_gettext('Method (time-varying)')),
-            ],
-            'name': lazy_gettext('Setpoint Type'),
-            'phrase': lazy_gettext(
-                'Static: use the fixed target value below. '
-                'Method: follow an AoT Method curve.'
-            ),
-        },
-        {
-            'id': 'target_vpd',
-            'type': 'float',
-            'default_value': 0.8,
-            'required': False,
-            'name': lazy_gettext('Target VPD (kPa)'),
-            'phrase': lazy_gettext('Used when Setpoint Type = Static. 0 = disable VPD control.'),
-        },
-        {
-            'id': 'vpd_method_id',
-            'type': 'select_device',
-            'default_value': '',
-            'required': False,
-            'options_select': ['Method'],
-            'name': lazy_gettext('Method'),
-            'phrase': lazy_gettext(
-                'Used when Setpoint Type = Method. '
-                'Select an AoT Method that returns a VPD setpoint (kPa).'
-            ),
-        },
-        {
             'id': 'priority_vpd',
             'type': 'float',
             'default_value': 1.2,
@@ -566,41 +507,6 @@ FUNCTION_INFORMATION = {
         {
             'type': 'header',
             'name': lazy_gettext('CO₂'),
-        },
-        {
-            'id': 'co2_sp_type',
-            'type': 'select',
-            'default_value': 'static',
-            'required': False,
-            'options_select': [
-                ('static', lazy_gettext('Static Target')),
-                ('method', lazy_gettext('Method (time-varying)')),
-            ],
-            'name': lazy_gettext('CO₂ Setpoint Type'),
-            'phrase': lazy_gettext(
-                'Static: use the fixed target below. '
-                'Method: follow an AoT Method curve (ppm vs time-of-day / growth week).'
-            ),
-        },
-        {
-            'id': 'target_co2',
-            'type': 'float',
-            'default_value': 1000.0,
-            'required': False,
-            'name': lazy_gettext('Target CO₂ (ppm)'),
-            'phrase': lazy_gettext('Used when CO₂ Setpoint Type = Static.'),
-        },
-        {
-            'id': 'co2_method_id',
-            'type': 'select_device',
-            'default_value': '',
-            'required': False,
-            'options_select': ['Method'],
-            'name': lazy_gettext('CO₂ Method'),
-            'phrase': lazy_gettext(
-                'Used when CO₂ Setpoint Type = Method. '
-                'Select an AoT Method that returns a CO₂ setpoint (ppm).'
-            ),
         },
         {
             'id': 'priority_co2',
@@ -872,13 +778,26 @@ FUNCTION_INFORMATION = {
                 ('strawberry', lazy_gettext('Strawberry')),
                 ('pepper',     lazy_gettext('Pepper / Paprika')),
             ],
-            'name': lazy_gettext('Crop Preset'),
+            'name': lazy_gettext('Photosynthesis Model Crop'),
             'phrase': lazy_gettext(
-                'Crop recipe. On Save, fills the target options from this preset — '
-                'VPD, CO₂, Temp min/max, DLI and GDD — unless you changed a value or use a '
-                'Method for that variable (your setting wins). Use the "Apply Crop Preset" '
-                'button to force-overwrite. Also selects Big-Leaf model params (A_max, K_L, '
-                'K_C, T_opt, VPD_half), used only when Photosynthesis-Oriented Control is on.'
+                'Selects the Big-Leaf model parameters (A_max, K_L, K_C, T_opt, VPD_half) '
+                'used by Photosynthesis-Oriented Control to decide which factor is limiting. '
+                'It also fills the target options (VPD, CO₂, Temp min/max, DLI, GDD) on Save, '
+                'but only while "Where Targets Come From" is set to Crop Preset — once the '
+                'targets come from a plot, this preset no longer touches them.'
+            ),
+        },
+
+        {
+            'id': 'source_plot_id',
+            'type': 'text',
+            'default_value': '',
+            'required': False,
+            'name': lazy_gettext('Reference Plot (optional)'),
+            'phrase': lazy_gettext(
+                'Which plot this coordinator follows, when more than one is growing '
+                'in its scope. Leave empty when there is only one — it is picked '
+                'automatically. Set from the comparison card at the top of this page.'
             ),
         },
 
@@ -941,29 +860,6 @@ FUNCTION_INFORMATION = {
                 'Light is converted to PPFD by sensor unit (W/m² assumed if unknown). '
                 'Generates compensation suggestions when debt accumulates. '
                 'Requires a Light sensor for DLI tracking.'
-            ),
-        },
-        {
-            'id': 'dli_target',
-            'type': 'float',
-            'default_value': 0.0,
-            'required': False,
-            'name': lazy_gettext('DLI Target (mol/m²/day)'),
-            'phrase': lazy_gettext(
-                'Daily light integral target. 0 = use the selected crop preset default '
-                '(leafy greens ~14, tomato/cucumber/pepper ~22, strawberry ~17). '
-                'Turn the tracker off above to disable entirely.'
-            ),
-        },
-        {
-            'id': 'gdd_target_daily',
-            'type': 'float',
-            'default_value': 0.0,
-            'required': False,
-            'name': lazy_gettext('GDD Target (°C·day/day)'),
-            'phrase': lazy_gettext(
-                'Growing degree-day target per day. 0 = use the selected crop preset default '
-                '(≈ T_opt − T_base). Computed as max(0, T_mean − T_base) per cycle.'
             ),
         },
 

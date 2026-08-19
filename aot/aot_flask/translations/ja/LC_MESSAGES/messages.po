@@ -28753,3 +28753,102 @@ msgstr "下降中"
 
 msgid "rising"
 msgstr "上昇中"
+
+msgid "Plot this coordinator follows"
+msgstr "このコーディネーターが従う区画"
+
+msgid "Link a facility to see what this coordinator is growing."
+msgstr "施設を連携すると、何を育てているかがここに表示されます。"
+
+msgid "No plot is being grown in this scope right now."
+msgstr "現在この範囲で育てている区画はありません。"
+
+msgid "More than one plot is here — pick which one this coordinator follows."
+msgstr "区画が複数あります — このコーディネーターが従う区画を選んでください。"
+
+msgid "The plot you pinned is no longer here."
+msgstr "指定した区画はこの範囲にありません。"
+
+msgid "Stage target"
+msgstr "ステージ目標"
+
+msgid "Current setting"
+msgstr "現在の設定"
+
+msgid "For reference — this coordinator aims at VPD, so these are not settings here."
+msgstr "参考 — このコーディネーターはVPDを目標にするため、以下はここの設定ではありません。"
+
+msgid "Shown for comparison. Nothing here changes control."
+msgstr "比較用の表示です。ここで制御は変わりません。"
+
+msgid "Stage target vs current setting"
+msgstr "ステージ目標と現在の設定"
+
+msgid "Pull targets in"
+msgstr "目標を取り込む"
+
+msgid "The stage changed — pull the targets in again?"
+msgstr "ステージが変わりました — 目標を取り込み直しますか？"
+
+msgid "Limits (Min/Max Temperature and Humidity) are never changed."
+msgstr "制限（最低・最高の温度と湿度）は変更されません。"
+
+msgid "Could not pull the targets in."
+msgstr "目標を取り込めませんでした。"
+
+msgid "{n} targets updated"
+msgstr "目標を{n}件反映しました"
+
+msgid "Coordinator restarted"
+msgstr "コーディネーターを再起動しました"
+
+msgid "Restart the coordinator to apply"
+msgstr "適用するにはコーディネーターを再起動してください"
+
+msgid "Follow this one"
+msgstr "これに従う"
+
+msgid "Could not save the choice."
+msgstr "選択を保存できませんでした。"
+
+msgid "Where Targets Come From"
+msgstr "目標の取得元"
+
+msgid "Plot being grown here"
+msgstr "ここで育てている区画"
+
+msgid "Manual only"
+msgstr "手入力のみ"
+
+msgid "Reference Plot (optional)"
+msgstr "基準区画（任意）"
+
+msgid "from the plot"
+msgstr "区画から"
+
+msgid "Editing this here is overwritten the next time you pull the targets in."
+msgstr "ここで変更した値は、次に目標を取り込むときに上書きされます。"
+
+msgid "Photosynthesis Model Crop"
+msgstr "光合成モデルの作物"
+
+msgid "Targets in effect"
+msgstr "適用中の目標"
+
+msgid "Targets come from the program. Safety limits below stay with this facility."
+msgstr "目標はプログラムから来ます。下の安全制限はこの施設の設定です。"
+
+msgid "This plot has no program, so there are no stage targets to follow."
+msgstr "この区画にプログラムがないため、従うステージ目標がありません。"
+
+msgid "The program was drafted by AI and has not been reviewed, so control does not use it."
+msgstr "AIが作成し未確認のプログラムのため、制御には使用しません。"
+
+msgid "The program has no stage running on this date."
+msgstr "この日付で進行中のステージがありません。"
+
+msgid "No targets — the coordinator holds its safety range only."
+msgstr "目標なし — 安全範囲のみ維持します。"
+
+msgid "Stop Control On"
+msgstr "制御終了日"

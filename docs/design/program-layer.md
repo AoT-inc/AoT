@@ -17,7 +17,8 @@
 - 테이블은 `geo_program`, 클래스는 `GeoProgram` 이다. 옛 이름
   (`GeoCropProgram`)은 한 릴리스 동안 별칭으로만 남긴다.
 
-관련 정본: `geo-vegetation-planting.md`(식생 구획) · `map-modal-ia.md`(모달 IA)
+관련 정본: `geo-vegetation-planting.md`(식생 구획) · `map-modal-ia.md`(모달 IA) ·
+`coordinator-plot-targets.md`(제어가 이 목표를 가져오는 규칙)
 제안 경위: `.local/reports/program-layer-proposal-20260819.md`
 
 ---

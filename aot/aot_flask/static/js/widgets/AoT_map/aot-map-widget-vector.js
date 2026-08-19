@@ -4051,6 +4051,10 @@
                 // 현재 환경 + 센서 신뢰도를 맨 위에. 자동제어가 안 걸린 시설의
                 // [현황]은 예전에 "연동된 자동제어 없음" 한 줄이 전부여서, 수동
                 // 운영 시설에서는 탭이 통째로 빈 껍데기였다.
+                // 단계 목표 대비 카드는 DOM 에 붙은 뒤에 채워진다(공용 로더).
+                if (!ovSame && window.AoTCoordinatorPlot) {
+                    window.AoTCoordinatorPlot.scan();
+                }
                 _prependFacilityEnvNow(uid, facilityUuid, pane);
                 _appendFacilityPlots(uid, facilityUuid, pane);
                 _appendFacilitySchedule(uid, facilityUuid, pane);

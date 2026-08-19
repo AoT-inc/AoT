@@ -106,7 +106,6 @@ def widget_variables(widget_unique_id, widget_options):
             sp = GeoFacilitySetpoint.query.filter_by(facility_uuid=facility.unique_id).first()
             if sp:
                 setpoints_data = {
-                    'target_vpd_kpa':   sp.target_vpd_kpa,
                     'guide_t_min_c':    sp.guide_t_min_c,
                     'guide_t_max_c':    sp.guide_t_max_c,
                     'guide_rh_min_pct': sp.guide_rh_min_pct,
@@ -115,9 +114,14 @@ def widget_variables(widget_unique_id, widget_options):
                     'temp_max_c':       sp.temp_max_c,
                     'humid_min_pct':    sp.humid_min_pct,
                     'humid_max_pct':    sp.humid_max_pct,
-                    'target_co2_ppm':   sp.target_co2_ppm,
                     'source':           sp.source,
                 }
+            # 목표는 이 표에 없다 — 구획의 프로그램이 정본이라 제어와 **같은
+            # 계산**을 거쳐 온다(`_effective_targets`). 저장된 열을 쓰면 화면은
+            # "목표대로" 라는데 제어는 다른 값을 좇는 상태가 보이지 않는다.
+            from aot.aot_flask.routes_geo_iec import _effective_targets
+            setpoints_data = setpoints_data or {}
+            setpoints_data['effective'] = _effective_targets(facility.unique_id)
     except Exception:
         pass
 

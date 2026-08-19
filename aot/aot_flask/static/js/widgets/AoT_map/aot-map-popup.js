@@ -1114,6 +1114,14 @@
               '</div></div>';
       return html + _ovNotesBlock();
     }
+    // 단계 목표 ↔ 지금 설정. 채우는 것은 공용 로더(`aot-coordinator-plot.js`)
+    // 라 설정 화면과 **같은 구현**을 쓴다 — 규칙을 두 번 쓰면 곧 갈라진다.
+    // 여기서는 구획 이름을 다시 적지 않는다(바로 아래 [구획] 블록이 말한다).
+    if (fn.uuid) {
+      html += '<div class="aot-coord-plot aot-ov-block" data-compact="1"' +
+              ' data-function="' + _esc(fn.uuid) + '"></div>';
+    }
+
     if (stale || !summary) {
       var msg = !fn.active ? _t('Automatic control inactive')
                            : _t('Automatic control not responding (no cycle in 5 minutes)');

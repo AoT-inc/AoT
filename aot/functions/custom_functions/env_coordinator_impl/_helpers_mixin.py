@@ -72,7 +72,7 @@ class HelpersMixin:
     # ── Growth Schedule ───────────────────────────────────────────────────────
 
     def _get_weeks_elapsed(self) -> float:
-        """Return fractional weeks elapsed since schedule_start_time + week_offset.
+        """구획 시작일 이후 경과 주차(소수) + week_offset.
 
         Wall-clock policy: missed downtime is NOT compensated automatically.
         Use schedule_week_offset (positive = fast-forward) for manual adjustment.
@@ -82,9 +82,13 @@ class HelpersMixin:
             If the facility timezone is unset, the system local timezone is used.
             (Farmers do not think in terms of UTC, so never assume UTC.)
           - date+time (ISO 8601 with tz): used as-is.
-        Returns 0.0 when schedule_start_time is not set.
+        Returns 0.0 when there is no plot (no start date to count from).
         """
-        start_raw = (self.schedule_start_time or '').strip()
+        # **시작일의 정본은 구획의 `started_on` 이다.** 예전에는 같은 날짜를
+        # 함수 옵션(`schedule_start_time`)에도 적게 해서, 구획을 3월 2일에
+        # 시작해도 곡선은 사람이 따로 넣은 날짜를 기준으로 돌았다.
+        started = self._plot_targets().get('started_on')
+        start_raw = started.isoformat() if started else ''
         if not start_raw:
             return 0.0
         try:
@@ -308,126 +312,182 @@ class HelpersMixin:
 
         return None
 
+    # ── 구획(프로그램) 목표 ───────────────────────────────────────────────
+
+    def _load_plot_targets(self) -> dict:
+        """이 시설에서 지금 기르는 구획의 단계 목표를 읽는다 → dict.
+
+        **목표의 정본은 프로그램이다.** 코디네이터는 안전 가이드라인(한계·guide
+        범위)과 장비만 갖는다. 예전에는 같은 값을 함수 옵션에도 넣게 해서 사람이
+        두 곳에 설정해야 했다.
+
+        Flask 모델을 쓰므로 데몬 스레드에서는 앱 컨텍스트를 열어야 한다
+        (`_profile_loader_mixin` 과 같은 방식). 실패하면 **빈 목표**를 돌려준다 —
+        목표 없이 guide 범위 안에서 도는 것이 이미 정의된 동작이라, 여기서
+        예외를 올려 사이클을 죽이는 것보다 낫다.
+        """
+        empty = {'vpd': {'value': None, 'method_id': None},
+                 'co2': {'value': None, 'method_id': None},
+                 'dli': None, 'gdd_daily': None, 'T_base': None,
+                 'started_on': None, 'plot_uuid': None, 'plot_name': None,
+                 'stage': None, 'reason': 'unavailable'}
+        try:
+            from flask import has_app_context
+            from aot.aot_flask.geo import coordinator_plot
+            from aot.databases.models import CustomController
+
+            def _read():
+                fn = CustomController.query.filter_by(
+                    unique_id=self.unique_id).first()
+                return coordinator_plot.control_targets(fn) if fn else empty
+
+            if has_app_context():
+                return _read()
+            try:
+                from aot.ai.services.ai_scheduler_service import _flask_app as _app
+            except Exception:                                   # noqa: BLE001
+                _app = None
+            if _app is None:
+                return empty
+            with _app.app_context():
+                return _read()
+        except Exception as exc:                                # noqa: BLE001
+            self.logger.debug('_load_plot_targets failed: %s', exc)
+            return empty
+
+    def _plot_targets(self) -> dict:
+        """사이클 안에서 재사용하는 캐시. `_run_cycle` 이 매 사이클 비운다.
+
+        사이클 하나에서 VPD·CO₂·DLI·GDD 가 각자 읽으면 DB 를 네 번 친다. 더
+        나쁜 것은 **그 사이에 값이 바뀌면 한 사이클 안에서 서로 다른 목표를
+        보게 되는 것**이다.
+        """
+        cached = getattr(self, '_plot_targets_cache', None)
+        if cached is None:
+            cached = self._load_plot_targets()
+            self._plot_targets_cache = cached
+        return cached
+
     # ── CO₂ setpoint ─────────────────────────────────────────────────────────
 
     def _get_co2_setpoint(self) -> 'float | None':
-        """Return current CO₂ target (ppm) from static value or Method curve.
+        """지금 따라야 할 CO₂ 목표(ppm) → 없으면 None.
 
-        Returns None when CO₂ control is disabled (target_co2 = 0 or no method configured).
-        CO₂ sensor source is determined by geo/facility fittings (measurement_type='co2').
+        **정본은 구획의 단계 목표다**(`targets.co2`). 곡선이 걸려 있으면
+        (`targets_methods.co2`) 그 Method 를 돌린다. 구획이 없거나 이 항목에
+        목표가 없으면 None 이고, 그때 CO₂ 제어는 쉰다.
+
+        CO₂ 센서 출처는 geo/시설 fitting(measurement_type='co2')이 정한다.
         """
-        sp_type = self.co2_sp_type or 'static'
+        tgt = self._plot_targets().get('co2') or {}
+        method_id = (tgt.get('method_id') or '').strip()
 
-        if sp_type == 'static':
-            val = self.target_co2
+        if not method_id:
+            val = tgt.get('value')
             return float(val) if val and float(val) > 0 else None
 
-        if sp_type == 'method':
-            method_id = self.co2_method_id_device_id or ''
-            if not method_id:
-                return self._co2_last_sp
+        if getattr(self, '_co2_loaded_method_id', None) != method_id:
+            self._co2_method_handler = None
+            self._co2_loaded_method_id = method_id
 
-            if getattr(self, '_co2_loaded_method_id', None) != method_id:
-                self._co2_method_handler = None
-                self._co2_loaded_method_id = method_id
-
-            if self._co2_method_handler is None:
-                try:
-                    from aot.utils.method import load_method_handler
-                    self._co2_method_handler = load_method_handler(method_id, self.logger)
-                except Exception as exc:
-                    self.logger.error(
-                        'CO₂ method load failed (%s): %s', method_id, exc)
-                    return self._co2_last_sp
-
+        if self._co2_method_handler is None:
             try:
-                weeks_elapsed = self._get_weeks_elapsed() or None
-                facility_tz   = self._get_facility_tz()
-                sp_val, ended = self._co2_method_handler.calculate_setpoint(
-                    time.time(),
-                    weeks_elapsed=weeks_elapsed,
-                    facility_tz=facility_tz,
-                )
-                if ended:
-                    sp_val = self._co2_last_sp
-                if sp_val is not None:
-                    self._co2_last_sp = float(sp_val)
-                return self._co2_last_sp
+                from aot.utils.method import load_method_handler
+                self._co2_method_handler = load_method_handler(method_id, self.logger)
             except Exception as exc:
-                self.logger.error('CO₂ method calculate_setpoint error: %s', exc)
+                self.logger.error(
+                    'CO₂ method load failed (%s): %s', method_id, exc)
                 return self._co2_last_sp
+
+        try:
+            weeks_elapsed = self._get_weeks_elapsed() or None
+            facility_tz   = self._get_facility_tz()
+            sp_val, ended = self._co2_method_handler.calculate_setpoint(
+                time.time(),
+                weeks_elapsed=weeks_elapsed,
+                facility_tz=facility_tz,
+            )
+            if ended:
+                sp_val = self._co2_last_sp
+            if sp_val is not None:
+                self._co2_last_sp = float(sp_val)
+            return self._co2_last_sp
+        except Exception as exc:
+            self.logger.error('CO₂ method calculate_setpoint error: %s', exc)
+            return self._co2_last_sp
 
         return None
 
     # ── VPD setpoint ─────────────────────────────────────────────────────────
 
     def _get_vpd_setpoint(self) -> 'float | None':
-        """Return current VPD target (kPa) from static value or Method curve."""
-        sp_type = self.vpd_sp_type or 'static'
+        """지금 따라야 할 VPD 목표(kPa) → 없으면 None.
 
-        if sp_type == 'static':
-            val = self.target_vpd
+        **정본은 구획의 단계 목표다**(`targets.vpd` / `targets_methods.vpd`).
+        없으면 None 이고, 그때 `_run_cycle` 은 guide 범위 중앙으로 돈다 —
+        "구획이 없으면 안전 범위만" 이 이미 정의된 동작이다.
+        """
+        tgt = self._plot_targets().get('vpd') or {}
+        method_id = (tgt.get('method_id') or '').strip()
+
+        if not method_id:
+            val = tgt.get('value')
             return float(val) if val and float(val) > 0 else None
 
-        if sp_type == 'method':
-            method_id = self.vpd_method_id_device_id or ''
-            if not method_id:
-                return self._vpd_last_sp
+        # Detect method_id change -> reset handler
+        if getattr(self, '_vpd_loaded_method_id', None) != method_id:
+            self._vpd_method_handler = None
+            self._vpd_method_start = None
+            self._vpd_loaded_method_id = method_id
 
-            # Detect method_id change -> reset handler
-            if getattr(self, '_vpd_loaded_method_id', None) != method_id:
-                self._vpd_method_handler = None
-                self._vpd_method_start = None
-                self._vpd_loaded_method_id = method_id
-
-            if self._vpd_method_handler is None:
-                try:
-                    from aot.utils.method import load_method_handler, parse_db_time
-                    from aot.databases.models import CustomController
-                    from aot.utils.time_utils import utc_now
-                    from aot.config import AOT_DB_PATH
-                    from aot.databases.utils import session_scope
-
-                    self._vpd_method_handler = load_method_handler(method_id, self.logger)
-
-                    # Load method_start_time stored in the DB (if absent, store the current time)
-                    with session_scope(AOT_DB_PATH) as sess:
-                        ctrl = sess.query(CustomController).filter(
-                            CustomController.unique_id == self.unique_id).first()
-                        if ctrl is not None:
-                            stored = parse_db_time(ctrl.method_start_time)
-                            if stored is None:
-                                stored = utc_now()
-                                ctrl.method_start_time = stored.isoformat()
-                                sess.commit()
-                            self._vpd_method_start = stored
-                            sess.expunge_all()
-
-                    if self._vpd_method_start is None:
-                        self._vpd_method_start = utc_now()
-
-                except Exception as exc:
-                    self.logger.error(
-                        'VPD method load failed (%s): %s', method_id, exc)
-                    return self._vpd_last_sp
-
+        if self._vpd_method_handler is None:
             try:
-                weeks_elapsed = self._get_weeks_elapsed() or None
-                facility_tz   = self._get_facility_tz()
-                sp_val, ended = self._vpd_method_handler.calculate_setpoint(
-                    time.time(),
-                    method_start_time=self._vpd_method_start,
-                    weeks_elapsed=weeks_elapsed,
-                    facility_tz=facility_tz,
-                )
-                if ended:
-                    sp_val = self._vpd_last_sp
-                if sp_val is not None:
-                    self._vpd_last_sp = float(sp_val)
-                return self._vpd_last_sp
+                from aot.utils.method import load_method_handler, parse_db_time
+                from aot.databases.models import CustomController
+                from aot.utils.time_utils import utc_now
+                from aot.config import AOT_DB_PATH
+                from aot.databases.utils import session_scope
+
+                self._vpd_method_handler = load_method_handler(method_id, self.logger)
+
+                # Load method_start_time stored in the DB (if absent, store the current time)
+                with session_scope(AOT_DB_PATH) as sess:
+                    ctrl = sess.query(CustomController).filter(
+                        CustomController.unique_id == self.unique_id).first()
+                    if ctrl is not None:
+                        stored = parse_db_time(ctrl.method_start_time)
+                        if stored is None:
+                            stored = utc_now()
+                            ctrl.method_start_time = stored.isoformat()
+                            sess.commit()
+                        self._vpd_method_start = stored
+                        sess.expunge_all()
+
+                if self._vpd_method_start is None:
+                    self._vpd_method_start = utc_now()
+
             except Exception as exc:
-                self.logger.error('VPD method calculate_setpoint error: %s', exc)
+                self.logger.error(
+                    'VPD method load failed (%s): %s', method_id, exc)
                 return self._vpd_last_sp
+
+        try:
+            weeks_elapsed = self._get_weeks_elapsed() or None
+            facility_tz   = self._get_facility_tz()
+            sp_val, ended = self._vpd_method_handler.calculate_setpoint(
+                time.time(),
+                method_start_time=self._vpd_method_start,
+                weeks_elapsed=weeks_elapsed,
+                facility_tz=facility_tz,
+            )
+            if ended:
+                sp_val = self._vpd_last_sp
+            if sp_val is not None:
+                self._vpd_last_sp = float(sp_val)
+            return self._vpd_last_sp
+        except Exception as exc:
+            self.logger.error('VPD method calculate_setpoint error: %s', exc)
+            return self._vpd_last_sp
 
         return None
 
@@ -701,13 +761,16 @@ class HelpersMixin:
         if self._daily_acc is None:
             self._daily_acc = DailyAccumulator(day_local=local_today(tz))
 
+        # DLI/GDD 목표와 GDD 기준온도는 **구획의 프로그램**이 정본이다.
+        # T_base 가 갈리면 같은 구획의 GDD 가 화면(구획 모달)과 제어에서 서로
+        # 다른 값이 된다 — 프로그램에 없을 때만 광합성 모델 작물에서 온다.
+        pt = self._plot_targets()
         crop = get_crop_params(self.crop_preset)
-        T_base = crop.T_base
+        T_base = pt.get('T_base')
+        T_base = float(T_base) if T_base is not None else crop.T_base
 
-        # DLI/GDD 목표는 함수 옵션값을 단일 출처로 사용한다(작물 프리셋 선택 시
-        # _sync_crop_targets 가 옵션에 자동 반영). 0 = 해당 지표 비활성.
-        dli_t = float(self.dli_target or 0.0) or None
-        gdd_t = float(self.gdd_target_daily or 0.0) or None
+        dli_t = float(pt.get('dli') or 0.0) or None
+        gdd_t = float(pt.get('gdd_daily') or 0.0) or None
 
         # internal['light'] 는 시스템 관례상 W/m²(전천일사). light_unit 이 명시되면 사용.
         rolled = accumulate_cycle(
